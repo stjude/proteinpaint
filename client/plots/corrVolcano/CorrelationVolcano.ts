@@ -154,13 +154,16 @@ class CorrelationVolcano extends RxComponentInner {
 		const config = structuredClone(this.state.config)
 		if (config.childType != this.type && config.chartType != this.type) return
 
-		const interactions = new CorrVolcanoInteractions(this.app, this.dom)
-
 		const settings = config.settings.correlationVolcano
+
+		//Fill the term wrapper for the drug list from the ds
 		const variableTwLst = this.dsCorrVolcano.variables.termIds.map((id: string) => {
 			return { id }
 		})
 		for (const t of variableTwLst) await fillTermWrapper(t, this.app.vocabApi)
+
+		const interactions = new CorrVolcanoInteractions(this.app, this.dom, this.id, variableTwLst)
+
 		/** Request data from the server*/
 		const model = new Model(config, this.state, this.app, settings, variableTwLst)
 		const data = await model.getData()

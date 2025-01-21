@@ -18,7 +18,7 @@ export class View {
 		const plotDim = viewData.plotDim
 		this.renderDom(plotDim)
 		// Draw all circles for variables
-		this.renderVariables(this.viewData.variableItems, settings)
+		this.renderVariables(this.viewData.variableItems, settings, interactions)
 		this.renderLegend(dom, viewData.legendData)
 	}
 
@@ -66,7 +66,7 @@ export class View {
 		// return scaleG
 	}
 
-	renderVariables(variableItems, settings) {
+	renderVariables(variableItems, settings, interactions) {
 		for (const item of variableItems) {
 			const g = this.dom.plot
 				.append('circle')
@@ -76,6 +76,9 @@ export class View {
 				.attr('cx', item.x)
 				.attr('cy', item.y)
 				.attr('r', item.radius)
+				.on('click', () => {
+					interactions.launchSampleScatter(item)
+				})
 
 			new ItemToolTip(item, g, this.dom.tip, settings)
 		}
