@@ -1,5 +1,5 @@
 import type { TermWrapper } from '#types'
-import { scaleLinear, scaleLog } from 'd3-scale'
+import { scaleLinear } from 'd3-scale'
 import type { CorrVolcanoSettings } from '../CorrelationVolcano'
 
 export type ViewData = {
@@ -20,7 +20,7 @@ export class ViewModel {
 	/** Only one side, left or right */
 	readonly horizPad = 70
 	readonly bottomPad = 20
-	constructor(config, data, settings: CorrVolcanoSettings, variableTwLst: TermWrapper[]) {
+	constructor(config: any, data: any, settings: CorrVolcanoSettings, variableTwLst: TermWrapper[]) {
 		const pValueKey = settings.isAdjustedPValue ? 'adjusted_pvalue' : 'original_pvalue'
 		const d = this.transformPValues(data, pValueKey)
 		const [absYMax, absYMin] = this.setMinMax(d, pValueKey)
