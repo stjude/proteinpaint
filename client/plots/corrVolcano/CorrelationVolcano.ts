@@ -161,7 +161,7 @@ class CorrelationVolcano extends RxComponentInner {
 		const viewModel = new ViewModel(config, data, settings, variableTwLst)
 
 		/** Render correlation volcano plot */
-		new View(this.dom, viewModel.viewData, interactions)
+		new View(this.dom, viewModel.viewData, interactions, settings)
 	}
 }
 
