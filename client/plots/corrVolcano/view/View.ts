@@ -1,7 +1,13 @@
 import { axisstyle } from '#src/client'
 import { axisBottom, axisLeft } from 'd3-axis'
-import type { CorrVolcanoDom } from '../CorrelationVolcano'
-import type { ViewData } from '../viewModel/ViewModel'
+import type {
+	CorrVolcanoDom,
+	CorrVolcanoSettings,
+	LegendDataEntry,
+	PlotDimensions,
+	ViewData
+} from '../CorrelationVolcanoTypes'
+import type { CorrVolcanoInteractions } from '../interactions/CorrVolcanoInteractions'
 import { ItemToolTip } from './ItemToolTip'
 
 /** Using the data formated in ViewModel, renders the correlation
@@ -9,7 +15,12 @@ import { ItemToolTip } from './ItemToolTip'
 export class View {
 	dom: CorrVolcanoDom
 	viewData: ViewData
-	constructor(dom: CorrVolcanoDom, viewData: ViewData, interactions: any, settings: any) {
+	constructor(
+		dom: CorrVolcanoDom,
+		viewData: ViewData,
+		interactions: CorrVolcanoInteractions,
+		settings: CorrVolcanoSettings
+	) {
 		this.dom = dom
 		this.viewData = viewData
 
@@ -22,7 +33,7 @@ export class View {
 		this.renderLegend(dom, viewData.legendData)
 	}
 
-	renderDom(plotDim) {
+	renderDom(plotDim: PlotDimensions) {
 		this.dom.svg.attr('width', plotDim.svg.width).attr('height', plotDim.svg.height)
 
 		this.dom.title
@@ -72,12 +83,11 @@ export class View {
 			color: 'black',
 			showline: true
 		})
-		// return scaleG
 	}
 
-	renderVariables(variableItems, settings, interactions) {
+	renderVariables(variableItems, settings: CorrVolcanoSettings, interactions: CorrVolcanoInteractions) {
 		for (const item of variableItems) {
-			const g = this.dom.plot
+			const circle = this.dom.plot
 				.append('circle')
 				.attr('data-testid', `sjpp-corr-volcano-circle-${item.label}`)
 				.attr('stroke', item.color)
@@ -90,11 +100,11 @@ export class View {
 					interactions.launchSampleScatter(item)
 				})
 
-			new ItemToolTip(item, g, this.dom.tip, settings)
+			new ItemToolTip(item, circle, this.dom.tip, settings)
 		}
 	}
 
-	renderLegend(dom, legendData) {
+	renderLegend(dom: CorrVolcanoDom, legendData: LegendDataEntry[]) {
 		//Show min radius for sample size
 		const svg = dom.legend
 			.attr('width', 100)

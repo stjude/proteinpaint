@@ -2,47 +2,17 @@ import { getCompInit, copyMerge } from '#rx'
 import { RxComponentInner } from '../../types/rx.d'
 import { fillTermWrapper } from '#termsetting'
 import type { BasePlotConfig, MassAppApi, MassState } from '#mass/types/mass'
-import type { Elem, SvgG, SvgSvg, SvgText } from '../../types/d3'
 import { controlsInit } from '../controls'
+import type { CorrVolcanoDom, CorrVolcanoOpts, CorrVolcanoSettings } from './CorrelationVolcanoTypes'
 import { Menu } from '#dom'
 import { Model } from './model/Model'
 import { ViewModel } from './viewModel/ViewModel'
 import { View } from './view/View'
 import { CorrVolcanoInteractions } from './interactions/CorrVolcanoInteractions'
 
-/**
- * TODOs:
- * - WILL DO ALL TYPING AFTER INITIAL PROTOTYPE
- */
-
-export type CorrVolcanoSettings = {
-	height: number
-	isAdjustedPValue: boolean
-	method: 'pearson' | 'spearman'
-	width: number
-}
-
-export type CorrVolcanoPlotConfig = BasePlotConfig & {
-	featureTw: any
-}
-
-export type CorrVolcanoDom = {
-	controls: Elem
-	div: Elem
-	error: Elem
-	header?: Elem
-	legend: SvgG
-	plot: SvgG
-	svg: SvgSvg
-	title: SvgText
-	tip: Menu
-	xAxisLabel: SvgText
-	yAxisLabel: SvgText
-}
-
 class CorrelationVolcano extends RxComponentInner {
 	readonly type = 'correlationVolcano'
-	components: { controls: any }
+	private components: { controls: any }
 	dom: CorrVolcanoDom
 	dsCorrVolcano: any
 	variableTwLst: any
@@ -59,7 +29,7 @@ class CorrelationVolcano extends RxComponentInner {
 		const errorDiv = div.append('div').attr('id', 'sjpp-corrVolcano-error').style('opacity', 0.75)
 		const svg = div.append('svg').style('display', 'inline-block').attr('id', 'sjpp-corrVolcano-svg')
 		this.dom = {
-			controls: controls.style('display', 'block') as Elem,
+			controls: controls.style('display', 'block'),
 			div,
 			error: errorDiv,
 			svg,
@@ -157,7 +127,7 @@ class CorrelationVolcano extends RxComponentInner {
 		})
 	}
 
-	async init(appState) {
+	async init(appState: MassState) {
 		await this.setControls()
 		//Hack because obj not returning in getState(). Will fix later.
 		this.dsCorrVolcano = appState.termdbConfig.correlationVolcano
@@ -205,11 +175,11 @@ export function getDefaultCorrVolcanoSettings(overrides = {}) {
 	return Object.assign(defaults, overrides)
 }
 
-export async function getPlotConfig(opts: any, app: MassAppApi) {
+export async function getPlotConfig(opts: CorrVolcanoOpts, app: MassAppApi) {
 	//Opts.numeric returned from tree search when clicking on charts button
 	//See logic in shared/utils/src/termdb.usecase.js for how tree is limited
 	//May change this later
-	if (opts.numeric && !opts.featureTw) opts.featureTw = opts.numeric.term
+	if (opts.numeric && !opts.featureTw) opts.featureTw = { term: opts.numeric.term } as any
 	if (!opts.featureTw) throw 'opts.featureTw{} missing [correlationVolcano getPlotConfig()]'
 	try {
 		await fillTermWrapper(opts.featureTw, app.vocabApi)

@@ -1,6 +1,6 @@
 import type { TermWrapper } from '#types'
 import type { MassAppApi, MassState } from '#mass/types/mass'
-import type { CorrVolcanoPlotConfig, CorrVolcanoSettings } from '../CorrelationVolcano'
+import type { CorrVolcanoPlotConfig, CorrVolcanoSettings } from '../CorrelationVolcanoTypes'
 
 export class Model {
 	config: CorrVolcanoPlotConfig

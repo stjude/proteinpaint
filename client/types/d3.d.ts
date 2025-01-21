@@ -22,6 +22,7 @@ export type _Element_ = Selection<Element, any, any, any>
 export type Elem = Selection<HTMLElement, any, any, any>
 export type Div = Selection<HTMLDivElement, any, any, any>
 export type Svg = Selection<SVGElement, any, any, any>
+export type SvgCircle = Selection<SVGCircleElement, any, any, any>
 export type SvgG = Selection<SVGGElement, any, any, any>
 export type SvgLine = Selection<SVGLineElement, any, any, any>
 export type SvgRect = Selection<SVGRectElement, any, any, any>

@@ -1,18 +1,9 @@
 import type { TermWrapper } from '#types'
 import { scaleLinear } from 'd3-scale'
-import type { CorrVolcanoSettings } from '../CorrelationVolcano'
+import type { CorrelationVolcanoResponse } from '#types'
+import type { CorrVolcanoPlotConfig, CorrVolcanoSettings, ViewData } from '../CorrelationVolcanoTypes'
 
-export type ViewData = {
-	plotDim: any
-	variableItems: any
-	legendData: any
-}
-
-/** TODO, clean this up */
 export class ViewModel {
-	// config: any
-	// data: any
-	// settings: CorrVolcanoSettings
 	viewData: ViewData
 	readonly defaultMinRadius = 5
 	readonly defaultMaxRadius = 20
@@ -20,7 +11,12 @@ export class ViewModel {
 	/** Only one side, left or right */
 	readonly horizPad = 70
 	readonly bottomPad = 60
-	constructor(config: any, data: any, settings: CorrVolcanoSettings, variableTwLst: TermWrapper[]) {
+	constructor(
+		config: CorrVolcanoPlotConfig,
+		data: CorrelationVolcanoResponse,
+		settings: CorrVolcanoSettings,
+		variableTwLst: TermWrapper[]
+	) {
 		const pValueKey = settings.isAdjustedPValue ? 'adjusted_pvalue' : 'original_pvalue'
 		const d = this.transformPValues(data, pValueKey)
 		const [absYMax, absYMin] = this.setMinMax(d, pValueKey)
@@ -36,8 +32,11 @@ export class ViewModel {
 		}
 	}
 
-	transformPValues(data, key) {
+	transformPValues(data: CorrelationVolcanoResponse, key: string) {
+		//Items rendered in log scale
+		//Remove any items with negative p values
 		data.variableItems = data.variableItems.filter(v => v[key] > 0)
+		//For each item, transform the p value to -log10
 		for (const item of data.variableItems) {
 			if (item[key] > 0) item[key] = -Math.log10(item[key])
 			else item[key] = null
@@ -45,14 +44,21 @@ export class ViewModel {
 		return data
 	}
 
-	setMinMax(data: any, key: string) {
+	setMinMax(data: CorrelationVolcanoResponse, key: string) {
 		const sortedValues = data.variableItems.map(v => v[key]).sort((a, b) => a - b)
 		const max = sortedValues[sortedValues.length - 1]
 		const min = sortedValues[0]
 		return [max, min]
 	}
 
-	setPlotDimensions(config, settings, absYMax: number, absYMin: number, absXMax: number, absXMin: number) {
+	setPlotDimensions(
+		config: CorrVolcanoPlotConfig,
+		settings: CorrVolcanoSettings,
+		absYMax: number,
+		absYMin: number,
+		absXMax: number,
+		absXMin: number
+	) {
 		//Ensure the neg and pos side of the plot are equal
 		const maxXRange = Math.max(Math.abs(absXMin), absXMax)
 		const xScale = scaleLinear().domain(this.setDomain(-maxXRange, maxXRange, 0.05)).range([0, settings.width])
@@ -116,8 +122,14 @@ export class ViewModel {
 		}
 	}
 
-	setVariablesData(data, variableTwLst, plotDim, key, absSampleMax, absSampleMin) {
-		//5 and 15 are the min and max radius
+	setVariablesData(
+		data: any,
+		variableTwLst: any[],
+		plotDim: any,
+		key: string,
+		absSampleMax: number,
+		absSampleMin: number
+	) {
 		const radiusScale = scaleLinear()
 			.domain([absSampleMin, absSampleMax])
 			.range([this.defaultMinRadius, this.defaultMaxRadius])
@@ -131,7 +143,7 @@ export class ViewModel {
 		return data.variableItems
 	}
 
-	setLegendData(absSampleMin, absSampleMax) {
+	setLegendData(absSampleMin: number, absSampleMax: number) {
 		return [
 			{
 				label: absSampleMin,
