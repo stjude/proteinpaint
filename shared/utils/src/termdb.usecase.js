@@ -181,6 +181,18 @@ export function isUsableTerm(term, _usecase, termdbConfig, ds) {
 			}
 		// no specific rule for filter. pass and use default rules
 
+		case 'correlationVolcano':
+			if (usecase.detail == 'numeric') {
+				if (isNumericTerm(term)) {
+					uses.add('plot')
+				}
+				if (hasNumericChild(child_types)) uses.add('branch')
+			} else {
+				if (graphableTypes.has(term.type)) uses.add('plot')
+				if (!term.isleaf) uses.add('branch')
+			}
+			return uses
+
 		default:
 			if (graphableTypes.has(term.type)) uses.add('plot')
 			if (!term.isleaf) uses.add('branch')
