@@ -31,11 +31,12 @@ export class CorrVolcanoInteractions {
 	launchSampleScatter(item) {
 		const config = this.app.getState()
 		const plot = config.plots.find(p => p.id === this.id)
+		const term2 = this.variableTwLst.find((t: any) => t.$id === item.tw$id).term
 		const scatterConfig = {
 			chartType: 'sampleScatter',
-			name: 'Sample Scatter',
+			name: `${plot.featureTw.term.name} v ${term2.name}`,
 			term: { term: plot.featureTw.term },
-			term2: this.variableTwLst.find((t: any) => t.$id === item.tw$id).term,
+			term2,
 			filter: config.termfilter.filter
 		}
 		this.app.dispatch({

@@ -54,7 +54,7 @@ class CorrelationVolcano extends RxComponentInner {
 		}
 		const holder = opts.holder.classed('sjpp-corrVolcano-main', true)
 		const controls = opts.controls ? holder : holder.append('div')
-		const div = holder.append('div').style('padding', '5px')
+		const div = holder.append('div').style('padding', '5px').style('display', 'inline-block')
 		const errorDiv = div.append('div').attr('id', 'sjpp-corrVolcano-error').style('opacity', 0.75)
 		const svg = div.append('svg').style('display', 'inline-block').attr('id', 'sjpp-corrVolcano-svg')
 		this.dom = {
