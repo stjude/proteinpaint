@@ -3,6 +3,7 @@ import type { Menu } from '#dom'
 import type { Elem } from '../../types/d3'
 import type { ClientCopyGenome } from 'types/global'
 import type { BoxPlotSettings } from '../../plots/boxplot/BoxPlot'
+//import { TermWrapper } from '#types'
 
 export type MassAppApi = RxAppApi & {
 	Inner: MassApp
@@ -107,6 +108,8 @@ export type BasePlotConfig = {
 	chartType: string
 	groups: any[]
 	id: string
+	term?: any //TermWrapper
+	term2?: any //
 	settings: PlotSettings
 }
 
