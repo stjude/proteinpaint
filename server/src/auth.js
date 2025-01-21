@@ -417,7 +417,7 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 			if (Buffer.from(pwd, 'base64').toString() != cred.password) throw 'invalid password'
 			const id = await setSession(q, res, sessions, sessionsFile, '', req, cred)
 			code = 401 // in case of jwt processing error
-			const jwt = await getSignedJwt(req, q, id, cred, maxSessionAge, sessionsFile)
+			const jwt = await getSignedJwt(req, q, id, cred, {}, maxSessionAge, sessionsFile)
 			res.send({ status: 'ok', jwt, route: cred.route })
 		} catch (e) {
 			res.status(code)
@@ -503,15 +503,13 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 	*/
 	authApi.getDsAuth = function (req) {
 		const dsAuth = []
-		const embedder = req.query.embedder || req.get('host').split(':')[0]
-		for (const dslabelPattern in creds) {
+		const embedder = req.query.embedder || req.get('host')?.split(':')[0] // do not include port number
+		for (const [dslabelPattern, ds] of Object.entries(creds)) {
 			if (dslabelPattern.startsWith('__')) continue
-			const ds = creds[dslabelPattern]
-			for (const routePattern in ds) {
-				const route = ds[routePattern]
-				for (const embedderHostPattern in route) {
-					if (!isMatch(embedder, embedderHostPattern)) continue
-					const cred = route[embedderHostPattern]
+			if (dslabelPattern != req.query.dslabel && dslabelPattern != '*') continue
+			for (const [routePattern, route] of Object.entries(ds)) {
+				for (const [embedderHostPattern, cred] of Object.entries(route)) {
+					if (embedderHostPattern != '*' && !isMatch(embedder, embedderHostPattern)) continue
 					const query = Object.assign({}, req.query, { dslabel: dslabelPattern })
 					const id = getSessionId({ query, headers: req.headers, cookies: req.cookies }, cred)
 					const activeSession = sessions[dslabelPattern]?.[id]
@@ -572,6 +570,7 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 		let cred
 		if (!ds) {
 			// no checks for this ds, is open access
+			return { forbiddenRoutes, clientAuthResult: {} }
 		} else {
 			// has checks
 			for (const k in ds) {
@@ -604,7 +603,7 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 				}
 			}
 		}
-		return requiredCred
+		return requiredCred.length ? requiredCred : undefined
 	}
 
 	authApi.userCanAccess = function (req, ds) {
@@ -691,7 +690,7 @@ function getSessionId(req, cred) {
 	)
 }
 
-async function getSignedJwt(req, q, id, cred, clientAuthResult, getSignedJwt, maxSessionAge, sessionsFile, email = '') {
+async function getSignedJwt(req, q, id, cred, clientAuthResult, maxSessionAge, sessionsFile, email = '') {
 	if (!cred.secret) return
 	try {
 		const time = Date.now()
@@ -773,7 +772,8 @@ async function getSessions(creds, sessionsFile, maxSessionAge) {
 		const now = +new Date()
 		const latestSessionByDslabel = {}
 		for (const line of file.split('\n')) {
-			if (!line) continue
+			// expect json-encoded entries instead of tab-delimited values
+			if (!line || !line[0].startsWith('{')) continue
 			const session = JSON.parse(line)
 			session.time = Number(session.time)
 			const { dslabel, time } = session
@@ -908,7 +908,9 @@ export const authApi = {
 	},
 	// these open-acces, default methods may be replaced by maySetAuthRoutes()
 	getDsAuth: (req = undefined) => [],
-	getNonsensitiveInfo: (_a, _b) => {},
+	getNonsensitiveInfo: _ => {
+		forbiddenRoutes: []
+	},
 	userCanAccess: () => true,
 	getRequiredCredForDsEmbedder: (dslabel = undefined, embedder = undefined) => undefined,
 	getPayloadFromHeaderAuth: () => ({}),
