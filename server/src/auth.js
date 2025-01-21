@@ -908,7 +908,9 @@ export const authApi = {
 	},
 	// these open-acces, default methods may be replaced by maySetAuthRoutes()
 	getDsAuth: (req = undefined) => [],
-	getNonsensitiveInfo: (_a, _b) => {},
+	getNonsensitiveInfo: _ => {
+		forbiddenRoutes: []
+	},
 	userCanAccess: () => true,
 	getRequiredCredForDsEmbedder: (dslabel = undefined, embedder = undefined) => undefined,
 	getPayloadFromHeaderAuth: () => ({}),
