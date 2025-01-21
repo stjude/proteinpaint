@@ -126,7 +126,7 @@ function make(q, req, res, ds: Mds3WithCohort, genome) {
 	// ensure only safe auth info is revealed to client
 	c.requiredAuth = authApi.getRequiredCredForDsEmbedder(q.dslabel, q.embedder)
 	const info: any = authApi.getNonsensitiveInfo(req) // type any to avoid tsc err
-	c.clientAuthResult = info.clientAuthResult || {}
+	c.clientAuthResult = info?.clientAuthResult || {}
 
 	res.send({ termdbConfig: c })
 }
