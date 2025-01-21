@@ -11,7 +11,7 @@ use nalgebra::base::Matrix;
 use nalgebra::base::VecStorage;
 use nalgebra::DMatrix;
 use nalgebra::ViewStorage;
-use ndarray::Array1;
+//use ndarray::Array1;
 use ndarray::Array2;
 use ndarray::Dim;
 use serde::{Deserialize, Serialize};
@@ -25,7 +25,7 @@ use std::io::Read;
 use std::str::FromStr;
 use std::sync::{Arc, Mutex}; // Multithreading library
 use std::thread;
-use std::time::Instant;
+//use std::time::Instant;
 //use std::cmp::Ordering;
 //use std::env;
 use std::io;
@@ -73,43 +73,45 @@ fn input_data_from_HDF5(
     Vec<String>,
 ) {
     let file = HDF5File::open(&hdf5_filename).unwrap(); // open for reading
-    let ds_dim = file.dataset("dims").unwrap(); // open the dataset
+
+    //let ds_dim = file.dataset("dims").unwrap(); // open the dataset
     let mut input_vector: Vec<f64> = Vec::with_capacity(500 * 65000);
     let mut case_indexes: Vec<usize> = Vec::with_capacity(case_list.len());
     let mut control_indexes: Vec<usize> = Vec::with_capacity(control_list.len());
     // Check the data type and read the dataset accordingly
-    let data_dim: Array1<_> = ds_dim.read::<usize, Dim<[usize; 1]>>().unwrap();
-    let num_samples = data_dim[0]; // Number of total columns in the dataset
-    let num_genes = data_dim[1]; // Number of total rows in the dataset
-    println!("num_samples bulk:{}", num_samples);
-    println!("num_genes bulk:{}", num_genes);
+    //let data_dim: Array1<_> = ds_dim.read::<usize, Dim<[usize; 1]>>().unwrap();
+    //let num_samples = data_dim[0]; // Number of total columns in the dataset
+    //let num_genes = data_dim[1]; // Number of total rows in the dataset
 
-    let now_gene_names = Instant::now();
+    //println!("num_samples bulk:{}", num_samples);
+    //println!("num_genes bulk:{}", num_genes);
+
+    //let now_gene_names = Instant::now();
     let ds_gene_names = file.dataset("gene_names").unwrap();
-    println!("ds_gene_names:{:?}", ds_gene_names);
+    //println!("ds_gene_names:{:?}", ds_gene_names);
     let gene_names = ds_gene_names
         .read::<VarLenAscii, Dim<[usize; 1]>>()
         .unwrap();
-    println!("\tgene_names = {:?}", gene_names);
-    println!("\tgene_names.shape() = {:?}", gene_names.shape());
-    println!("\tgene_names.strides() = {:?}", gene_names.strides());
-    println!("\tgene_names.ndim() = {:?}", gene_names.ndim());
-    println!("Time for parsing gene names:{:?}", now_gene_names.elapsed());
+    //println!("\tgene_names = {:?}", gene_names);
+    //println!("\tgene_names.shape() = {:?}", gene_names.shape());
+    //println!("\tgene_names.strides() = {:?}", gene_names.strides());
+    //println!("\tgene_names.ndim() = {:?}", gene_names.ndim());
+    //println!("Time for parsing gene names:{:?}", now_gene_names.elapsed());
 
-    let now_gene_symbols = Instant::now();
+    //let now_gene_symbols = Instant::now();
     let ds_gene_symbols = file.dataset("gene_symbols").unwrap();
-    println!("ds_gene_symbols:{:?}", ds_gene_symbols);
+    //println!("ds_gene_symbols:{:?}", ds_gene_symbols);
     let gene_symbols = ds_gene_symbols
         .read::<VarLenAscii, Dim<[usize; 1]>>()
         .unwrap();
-    println!("\tgene_symbols = {:?}", gene_symbols);
-    println!("\tgene_symbols.shape() = {:?}", gene_symbols.shape());
-    println!("\tgene_symbols.strides() = {:?}", gene_symbols.strides());
-    println!("\tgene_symbols.ndim() = {:?}", gene_symbols.ndim());
-    println!(
-        "Time for parsing gene symbols:{:?}",
-        now_gene_symbols.elapsed()
-    );
+    //println!("\tgene_symbols = {:?}", gene_symbols);
+    //println!("\tgene_symbols.shape() = {:?}", gene_symbols.shape());
+    //println!("\tgene_symbols.strides() = {:?}", gene_symbols.strides());
+    //println!("\tgene_symbols.ndim() = {:?}", gene_symbols.ndim());
+    //println!(
+    //    "Time for parsing gene symbols:{:?}",
+    //    now_gene_symbols.elapsed()
+    //);
 
     let mut gene_names_string: Vec<String> = Vec::with_capacity(gene_names.len());
     let mut gene_symbols_string: Vec<String> = Vec::with_capacity(gene_symbols.len());
@@ -118,17 +120,17 @@ fn input_data_from_HDF5(
         gene_symbols_string.push(gene_symbols[i].to_string());
     }
 
-    let now_samples = Instant::now();
+    //let now_samples = Instant::now();
     let ds_samples = file.dataset("samples").unwrap();
     let samples = ds_samples.read::<VarLenAscii, Dim<[usize; 1]>>().unwrap();
-    println!("\tsamples = {:?}", samples);
-    println!("\tsamples.shape() = {:?}", samples.shape());
-    println!("\tsamples.strides() = {:?}", samples.strides());
-    println!("\tsamples.ndim() = {:?}", samples.ndim());
-    println!("Time for parsing samples:{:?}", now_samples.elapsed());
+    //println!("\tsamples = {:?}", samples);
+    //println!("\tsamples.shape() = {:?}", samples.shape());
+    //println!("\tsamples.strides() = {:?}", samples.strides());
+    //println!("\tsamples.ndim() = {:?}", samples.ndim());
+    //println!("Time for parsing samples:{:?}", now_samples.elapsed());
 
     //Find all columns values that are populated for the given gene
-    let now_counts = Instant::now();
+    //let now_counts = Instant::now();
     let ds_counts = file.dataset("counts").unwrap(); // open the dataset
 
     let mut global_sample_index = 0;
@@ -189,7 +191,7 @@ fn input_data_from_HDF5(
         global_sample_index += 1;
     }
 
-    println!("Time for parsing HDF5 data:{:?}", now_counts.elapsed());
+    //println!("Time for parsing HDF5 data:{:?}", now_counts.elapsed());
     //println!(
     //    "case + control length:{}",
     //    case_list.len() + control_list.len()
@@ -221,7 +223,7 @@ fn input_data_from_text(
     Vec<String>,
     Vec<String>,
 ) {
-    let input_time = Instant::now();
+    //let input_time = Instant::now();
     let mut file = File::open(filename).unwrap();
     let mut num_lines: usize = 0;
     let mut input_vector: Vec<f64> = Vec::with_capacity(500 * 65000);
@@ -350,7 +352,7 @@ fn input_data_from_text(
         let genes_symbols_temp = Arc::new(Mutex::new(Vec::<String>::new()));
         let input_vector_temp = Arc::new(Mutex::new(Vec::<f64>::new()));
         let mut handles = vec![]; // Vector to store handle which is used to prevent one thread going ahead of another
-        println!("Number of threads used:{}", max_threads);
+                                  //println!("Number of threads used:{}", max_threads);
         for thread_num in 0..max_threads {
             let case_indexes_original = Arc::clone(&case_indexes_original);
             let control_indexes_original = Arc::clone(&control_indexes_original);
@@ -485,7 +487,7 @@ fn input_data_from_text(
     //println!("num_columns:{}", num_columns);
     //println!("num_lines * num_columns:{}", num_lines * num_columns);
     //println!("input_vector:{:?}", input_vector.len());
-    println!("Time for inputting data:{:?}", input_time.elapsed());
+    //println!("Time for inputting data:{:?}", input_time.elapsed());
     let dm = DMatrix::from_row_slice(num_lines, num_columns, &input_vector);
     //println!("dm:{:?}", dm);
     (dm, case_indexes, control_indexes, gene_names, gene_symbols)
@@ -513,14 +515,15 @@ struct PValueIndexes {
 // Used to get the sample names from HDF5 file at PP server startup
 fn get_DE_samples(hdf5_filename: &String) {
     let file = HDF5File::open(&hdf5_filename).unwrap(); // open for reading
-    let now_samples = Instant::now();
+
+    //let now_samples = Instant::now();
     let ds_samples = file.dataset("samples").unwrap();
     let samples = ds_samples.read::<VarLenAscii, Dim<[usize; 1]>>().unwrap();
-    println!("\tsamples = {:?}", samples);
-    println!("\tsamples.shape() = {:?}", samples.shape());
-    println!("\tsamples.strides() = {:?}", samples.strides());
-    println!("\tsamples.ndim() = {:?}", samples.ndim());
-    println!("Time for parsing samples:{:?}", now_samples.elapsed());
+    //println!("\tsamples = {:?}", samples);
+    //println!("\tsamples.shape() = {:?}", samples.shape());
+    //println!("\tsamples.strides() = {:?}", samples.strides());
+    //println!("\tsamples.ndim() = {:?}", samples.ndim());
+    //println!("Time for parsing samples:{:?}", now_samples.elapsed());
 
     let mut output_string = "".to_string();
     for i in 0..samples.len() {
@@ -544,7 +547,7 @@ fn get_DE_samples(hdf5_filename: &String) {
             output_string += &",";
         }
     }
-    println!("output_string:{}", output_string);
+    println!("{}", output_string);
 }
 
 fn main() {
@@ -559,7 +562,7 @@ fn main() {
             let input_json = json::parse(&input);
             match input_json {
                 Ok(json_string) => {
-                    let now = Instant::now();
+                    //let now = Instant::now();
                     let file_name = &json_string["input_file"]
                         .to_owned()
                         .as_str()
@@ -567,7 +570,7 @@ fn main() {
                         .to_string()
                         .split(",")
                         .collect();
-                    println!("file_name:{}", file_name);
+                    //println!("file_name:{}", file_name);
                     let data_type_option = json_string["data_type"].as_str().to_owned();
                     match data_type_option {
                         Some(x) => {
@@ -643,7 +646,7 @@ fn main() {
                                         gene_symbols,
                                     ) = input_data_from_HDF5(file_name, &case_list, &control_list);
                                 }
-                                let filtering_time = Instant::now();
+                                //let filtering_time = Instant::now();
                                 let (
                                     filtered_matrix,
                                     lib_sizes,
@@ -658,21 +661,21 @@ fn main() {
                                     gene_names,
                                     gene_symbols,
                                 );
-                                println!("filtering time:{:?}", filtering_time.elapsed());
+                                //println!("filtering time:{:?}", filtering_time.elapsed());
                                 //println!("filtered_matrix_rows:{:?}", filtered_matrix.nrows());
                                 //println!("filtered_matrix_cols:{:?}", filtered_matrix.ncols());
-                                let cpm_normalization_time = Instant::now();
+                                //let cpm_normalization_time = Instant::now();
                                 let mut normalized_matrix = cpm(&filtered_matrix);
-                                println!(
-                                    "cpm normalization time:{:?}",
-                                    cpm_normalization_time.elapsed()
-                                );
-                                let tmm_normalization_time = Instant::now();
+                                //println!(
+                                //    "cpm normalization time:{:?}",
+                                //    cpm_normalization_time.elapsed()
+                                //);
+                                //let tmm_normalization_time = Instant::now();
                                 let norm_factors = tmm_normalization(filtered_matrix, &lib_sizes);
-                                println!(
-                                    "tmm normalization time:{:?}",
-                                    tmm_normalization_time.elapsed()
-                                );
+                                //println!(
+                                //    "tmm normalization time:{:?}",
+                                //    tmm_normalization_time.elapsed()
+                                //);
                                 //println!("norm_factors:{:?}", norm_factors);
 
                                 for col in 0..normalized_matrix.ncols() {
@@ -683,19 +686,19 @@ fn main() {
                                     }
                                 }
                                 //println!("normalized_matrix:{:?}", normalized_matrix);
-                                println!("Number of cases:{}", case_list.len());
-                                println!("Number of controls:{}", control_list.len());
-                                println!("Time for pre-processing:{:?}", now.elapsed());
+                                //println!("Number of cases:{}", case_list.len());
+                                //println!("Number of controls:{}", control_list.len());
+                                //println!("Time for pre-processing:{:?}", now.elapsed());
                                 // Using Wilcoxon test for differential gene expression
 
-                                let now2 = Instant::now();
+                                //let now2 = Instant::now();
                                 let mut p_values: Vec<PValueIndexes> =
                                     Vec::with_capacity(normalized_matrix.nrows());
                                 const THRESHOLD: usize = 50; // This determines whether the Wilcoxon exact test or the normal test will be used based on sample size.
 
                                 //println!("case_indexes:{:?}", case_indexes);
                                 //println!("control_indexes:{:?}", control_indexes);
-                                let num_normalized_rows = normalized_matrix.nrows();
+                                //let num_normalized_rows = normalized_matrix.nrows();
                                 if normalized_matrix.nrows() * normalized_matrix.ncols()
                                     < PAR_CUTOFF
                                 {
@@ -857,13 +860,13 @@ fn main() {
                                     p_values.append(&mut *p_values_temp.lock().unwrap());
                                 }
                                 //println!("p_values:{:?}", p_values);
-                                println!(
-                                    "Time for running {} wilcoxon tests:{:?}",
-                                    num_normalized_rows,
-                                    now2.elapsed()
-                                );
+                                //println!(
+                                //    "Time for running {} wilcoxon tests:{:?}",
+                                //    num_normalized_rows,
+                                //    now2.elapsed()
+                                //);
                                 let adjusted_p_values = adjust_p_values(p_values);
-                                println!("adjusted_p_values:{}", adjusted_p_values);
+                                println!("{}", adjusted_p_values);
                                 //let fold_changes =
                                 //    calculate_fold_change(normalized_matrix, case_indexes, control_indexes);
                             }
@@ -873,10 +876,10 @@ fn main() {
                         }
                     }
                 }
-                Err(error) => println!("Incorrect json: {}", error),
+                Err(error) => panic!("Incorrect json: {}", error),
             }
         }
-        Err(error) => println!("Piping error: {}", error),
+        Err(error) => panic!("Piping error: {}", error),
     }
 }
 
@@ -1321,7 +1324,7 @@ fn filter_by_expr(
             positives.push(row);
         }
     }
-    println!("positives length:{}", positives.len());
+    //println!("positives length:{}", positives.len());
     //println!("row_sums:{:?}", row_sums);
     //println!("keep_cpm:{:?}", keep_cpm);
     //println!("positive_cpm:{}", positive_cpm);
@@ -1337,8 +1340,8 @@ fn filter_by_expr(
     let mut filtered_genes: Vec<String> = Vec::with_capacity(positives.len());
     let mut filtered_gene_symbols: Vec<String> = Vec::with_capacity(positives.len());
     let mut i = 0;
-    println!("filtered_matrix rows:{}", filtered_matrix.nrows());
-    println!("filtered_matrix cols:{}", filtered_matrix.ncols());
+    //println!("filtered_matrix rows:{}", filtered_matrix.nrows());
+    //println!("filtered_matrix cols:{}", filtered_matrix.ncols());
     for index in positives {
         let row = raw_data.row(index);
         filtered_genes.push(gene_names[index].to_owned());
