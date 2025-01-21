@@ -127,9 +127,9 @@ tape(`initialization`, async test => {
 			[
 				'canDisplaySampleIds',
 				'getDsAuth',
-				'getForbiddenRoutesForDsEmbedder',
 				'getHealth',
 				'getJwtPayload',
+				'getNonsensitiveInfo',
 				'getPayloadFromHeaderAuth',
 				'getRequiredCredForDsEmbedder',
 				'maySetAuthRoutes',
@@ -137,23 +137,20 @@ tape(`initialization`, async test => {
 			],
 			'should set the expected methods with an empty dsCredentials'
 		)
+		const req = { query: { dslabel: 'no-cred', embedder: 'localhost' } }
+		test.deepEqual(authApi.getDsAuth(req), [], 'should return open-access dsAuth with an empty dsCredentials')
 		test.deepEqual(
-			authApi.getDsAuth({ query: {}, get() {} }),
-			[],
-			'should return open-access dsAuth with an empty dsCredentials'
+			authApi.getNonsensitiveInfo(req),
+			{ forbiddenRoutes: [], clientAuthResult: {} },
+			'should return open-access forbidden routes for ds embedder with empty dsCredentials'
 		)
 		test.deepEqual(
-			authApi.getForbiddenRoutesForDsEmbedder(),
-			[],
-			'should return open-access getForbiddenRoutesForDsEmbedder with an empty dsCredentials'
-		)
-		test.deepEqual(
-			authApi.getRequiredCredForDsEmbedder(),
+			authApi.getRequiredCredForDsEmbedder(req.query.dslabel, req.query.embedder),
 			undefined,
 			'should return open-access getRequiredCredForDsEmbedder with an empty dsCredentials'
 		)
 		test.deepEqual(
-			authApi.userCanAccess({ query: {} }),
+			authApi.userCanAccess(req),
 			true,
 			'should return open-access userCanAccess with an empty dsCredentials'
 		)
@@ -226,7 +223,7 @@ tape('legacy reshape', async test => {
 
 tape(`auth methods`, async test => {
 	test.timeoutAfter(500)
-	test.plan(4)
+	test.plan(5)
 
 	const app = appInit()
 	const serverconfig = {
@@ -253,19 +250,33 @@ tape(`auth methods`, async test => {
 	}
 
 	await authApi.maySetAuthRoutes(app, '', serverconfig)
+
+	const req0 = { query: { embedder: 'localhost', dslabel: 'ds100' }, get: () => 'localhost' }
 	test.deepEqual(
-		authApi.getDsAuth({ query: { embedder: 'some.domain' }, get: () => 'localhost' }),
+		authApi.getDsAuth(req0),
+		[
+			{ dslabel: 'ds100', route: 'termdb', type: 'jwt', insession: undefined },
+			{ dslabel: 'ds100', route: 'burden', type: 'forbidden', insession: false }
+		],
+		`should return the expected dsAuth array for a termdb-specified embedder`
+	)
+
+	const req1 = { query: { embedder: 'some.domain', dslabel: 'ds100' }, get: () => 'localhost' }
+	test.deepEqual(
+		authApi.getDsAuth(req1),
 		[{ dslabel: 'ds100', route: 'burden', type: 'forbidden', insession: false }],
 		`should return the expected dsAuth array for a specified embedder`
 	)
 	test.deepEqual(
-		authApi.getForbiddenRoutesForDsEmbedder('ds100', 'localhost'),
-		['burden'],
+		authApi.getNonsensitiveInfo(req1),
+		{ forbiddenRoutes: ['burden'], clientAuthResult: undefined },
 		`should return the expected forbidden routes for a wildcard embedder with cred.type='forbidden'`
 	)
+
+	const req2 = { query: { embedder: 'notlocalhost', dslabel: 'ds100' }, get: () => 'localhost' }
 	test.deepEqual(
-		authApi.getForbiddenRoutesForDsEmbedder('ds100', 'notlocalhost'),
-		[],
+		authApi.getNonsensitiveInfo(req2),
+		{ forbiddenRoutes: [], clientAuthResult: undefined },
 		`should return the expected forbidden routes for a non-wildcard embedder`
 	)
 	test.deepEqual(
@@ -824,7 +835,7 @@ tape(`/dslogin`, async test => {
 				cookie = val.split(';')[0].trim()
 			},
 			status(code) {
-				test.fail(`should not set the status code='' on a valid /dslogin request`)
+				test.fail(`should not set the status code='' on a valid /dslogin request [code=${code}]`)
 			},
 			headers: {}
 		}
