@@ -147,7 +147,7 @@ export type TermGroupSetting =
 
 export type BaseTW = {
 	id?: string
-	$id?: string
+	$id: string
 	isAtomic?: true
 	// plot-specific customizations that are applied to a tw copy
 	// todo: should rethink these
