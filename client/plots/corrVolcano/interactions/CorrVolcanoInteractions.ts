@@ -52,5 +52,6 @@ export class CorrVolcanoInteractions {
 		this.dom.svg.selectAll('line').remove()
 		this.dom.title.text('')
 		this.dom.yAxisLabel.text('')
+		this.dom.xAxisLabel.text('')
 	}
 }

@@ -19,7 +19,7 @@ export class ViewModel {
 	readonly topPad = 40
 	/** Only one side, left or right */
 	readonly horizPad = 70
-	readonly bottomPad = 20
+	readonly bottomPad = 60
 	constructor(config: any, data: any, settings: CorrVolcanoSettings, variableTwLst: TermWrapper[]) {
 		const pValueKey = settings.isAdjustedPValue ? 'adjusted_pvalue' : 'original_pvalue'
 		const d = this.transformPValues(data, pValueKey)
@@ -58,14 +58,19 @@ export class ViewModel {
 		const xScale = scaleLinear().domain(this.setDomain(-maxXRange, maxXRange, 0.05)).range([0, settings.width])
 		return {
 			svg: {
-				height: settings.height + this.topPad + this.bottomPad,
+				height: settings.height + this.topPad + this.bottomPad * 2,
 				width: settings.width + this.horizPad * 2
 			},
 			title: {
+				text: config.featureTw.term.name,
+				x: this.horizPad + settings.width / 2,
+				y: this.topPad / 2
+			},
+			xAxisLabel: {
 				//TODO: If this never changes, move to View
 				text: 'Correlation Coefficient',
 				x: this.horizPad + settings.width / 2,
-				y: this.topPad / 2
+				y: this.topPad + settings.height + this.bottomPad
 			},
 			yAxisLabel: {
 				text: this.getReadableType(config.featureTw.term.type),

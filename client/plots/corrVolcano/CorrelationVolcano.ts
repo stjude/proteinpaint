@@ -36,6 +36,7 @@ export type CorrVolcanoDom = {
 	svg: SvgSvg
 	title: SvgText
 	tip: Menu
+	xAxisLabel: SvgText
 	yAxisLabel: SvgText
 }
 
@@ -65,7 +66,8 @@ class CorrelationVolcano extends RxComponentInner {
 			plot: svg.append('g'),
 			title: svg.append('text'),
 			yAxisLabel: svg.append('text'),
-			legend: div.append('svg'),
+			xAxisLabel: svg.append('text'),
+			legend: div.append('svg').style('display', 'inline-block'),
 			tip: new Menu({ padding: '' })
 		}
 		if (opts.header)
@@ -97,10 +99,9 @@ class CorrelationVolcano extends RxComponentInner {
 				type: 'term',
 				configKey: 'featureTw',
 				chartType: 'correlationVolcano',
-				usecase: { target: 'correlationVolcano', detail: 'featureTw' },
-				label: 'Gene',
+				usecase: { target: 'correlationVolcano', detail: 'numeric' },
+				label: 'Feature',
 				vocabApi: this.app.vocabApi,
-				geneVariantEditMenuOnlyGrp: true,
 				menuOptions: 'replace'
 			},
 			{
