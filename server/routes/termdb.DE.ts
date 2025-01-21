@@ -56,8 +56,8 @@ async function run_DE(param: DERequest, ds: any, term_results: any) {
 	/*
 param{}
 samplelst{}
-    groups[]
-            values[] // using integer sample id
+groups[]
+    values[] // using integer sample id
 */
 	if (param.samplelst?.groups?.length != 2) throw '.samplelst.groups.length!=2'
 	if (param.samplelst.groups[0].values?.length < 1) throw 'samplelst.groups[0].values.length<1'
@@ -147,30 +147,18 @@ samplelst{}
 	if ((group1names.length <= sample_size_limit && group2names.length <= sample_size_limit) || param.method == 'edgeR') {
 		// edgeR will be used for DE analysis
 		const time1 = new Date().valueOf()
-		const r_output = await run_R(path.join(serverconfig.binpath, 'utils', 'edge.R'), JSON.stringify(expression_input))
+		result = JSON.parse(
+			await run_R(path.join(serverconfig.binpath, 'utils', 'edge.R'), JSON.stringify(expression_input))
+		)
 		const time2 = new Date().valueOf()
 		console.log('Time taken to run edgeR:', time2 - time1, 'ms')
-		for (const line of r_output.split('\n')) {
-			if (line.startsWith('adjusted_p_values:')) {
-				result = JSON.parse(line.replace('adjusted_p_values:', ''))
-			} else {
-				//console.log("line:", line)
-			}
-		}
 		param.method = 'edgeR'
 		//console.log("result:",result)
 	} else {
 		// Wilcoxon test will be used for DE analysis
 		const time1 = new Date().valueOf()
-		const rust_output = await run_rust('DEanalysis', JSON.stringify(expression_input))
+		result = JSON.parse(await run_rust('DEanalysis', JSON.stringify(expression_input)))
 		const time2 = new Date().valueOf()
-		for (const line of rust_output.split('\n')) {
-			if (line.startsWith('adjusted_p_values:')) {
-				result = JSON.parse(line.replace('adjusted_p_values:', ''))
-			} else {
-				//console.log(line)
-			}
-		}
 		console.log('Time taken to run rust DE pipeline:', time2 - time1, 'ms')
 		param.method = 'wilcoxon'
 	}
