@@ -317,7 +317,8 @@ function getChartTypeList(self, state) {
 		{
 			label: 'Correlation Volcano',
 			chartType: 'correlationVolcano',
-			clickTo: self.loadChartSpecificMenu
+			usecase: { target: 'correlationVolcano', detail: 'numeric' },
+			clickTo: self.showTree_select1term
 		}
 	]
 

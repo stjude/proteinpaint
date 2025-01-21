@@ -4,7 +4,7 @@ import { fillTermWrapper } from '#termsetting'
 import type { BasePlotConfig, MassAppApi, MassState } from '#mass/types/mass'
 import type { Elem, SvgG, SvgSvg, SvgText } from '../../types/d3'
 import { controlsInit } from '../controls'
-import { Menu, addGeneSearchbox } from '#dom'
+import { Menu } from '#dom'
 import { Model } from './model/Model'
 import { ViewModel } from './viewModel/ViewModel'
 import { View } from './view/View'
@@ -67,7 +67,7 @@ class CorrelationVolcano extends RxComponentInner {
 			title: svg.append('text'),
 			yAxisLabel: svg.append('text'),
 			xAxisLabel: svg.append('text'),
-			legend: div.append('svg').style('display', 'inline-block'),
+			legend: div.append('svg'),
 			tip: new Menu({ padding: '' })
 		}
 		if (opts.header)
@@ -102,6 +102,7 @@ class CorrelationVolcano extends RxComponentInner {
 				usecase: { target: 'correlationVolcano', detail: 'numeric' },
 				label: 'Feature',
 				vocabApi: this.app.vocabApi,
+				numericEditMenuVersion: ['continuous'],
 				menuOptions: 'replace'
 			},
 			{
@@ -194,34 +195,6 @@ class CorrelationVolcano extends RxComponentInner {
 export const corrVolcanoInit = getCompInit(CorrelationVolcano)
 export const componentInit = corrVolcanoInit
 
-export function makeChartBtnMenu(holder, chartsInstance) {
-	const genomeObj = chartsInstance.app.opts.genome
-	if (typeof genomeObj != 'object') throw 'chartsInstance.app.opts.genome not an object and needed for gene search box'
-	const arg = {
-		tip: new Menu({ padding: '' }),
-		genome: genomeObj,
-		row: holder.append('div').style('margin', '10px'),
-		searchOnly: 'gene',
-		callback: async () => {
-			try {
-				//Hardcoded type b/c fillTW unable to detect. Will fix later.
-				const featureTw = {
-					featureTw: {
-						term: { gene: result.geneSymbol, name: result.geneSymbol, type: 'geneExpression' }
-					}
-				}
-				const config = await getPlotConfig(featureTw, chartsInstance.app)
-				chartsInstance.prepPlot({ config })
-			} catch (e: any) {
-				// upon err, create div in chart button menu to display err
-				holder.append('div').text(`Error: ${e.message || e}`)
-				console.log(e)
-			}
-		}
-	}
-	const result = addGeneSearchbox(arg as any) //Hack to get around TS error. Will fix later.
-}
-
 export function getDefaultCorrVolcanoSettings(overrides = {}) {
 	const defaults: CorrVolcanoSettings = {
 		height: 400,
@@ -233,6 +206,10 @@ export function getDefaultCorrVolcanoSettings(overrides = {}) {
 }
 
 export async function getPlotConfig(opts: any, app: MassAppApi) {
+	//Opts.numeric returned from tree search when clicking on charts button
+	//See logic in shared/utils/src/termdb.usecase.js for how tree is limited
+	//May change this later
+	if (opts.numeric && !opts.featureTw) opts.featureTw = opts.numeric.term
 	if (!opts.featureTw) throw 'opts.featureTw{} missing [correlationVolcano getPlotConfig()]'
 	try {
 		await fillTermWrapper(opts.featureTw, app.vocabApi)
