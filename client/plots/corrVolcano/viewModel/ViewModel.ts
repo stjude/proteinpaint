@@ -37,6 +37,7 @@ export class ViewModel {
 	}
 
 	transformPValues(data, key) {
+		data.variableItems = data.variableItems.filter(v => v[key] > 0)
 		for (const item of data.variableItems) {
 			if (item[key] > 0) item[key] = -Math.log10(item[key])
 			else item[key] = null
@@ -52,7 +53,9 @@ export class ViewModel {
 	}
 
 	setPlotDimensions(config, settings, absYMax: number, absYMin: number, absXMax: number, absXMin: number) {
-		const xScale = scaleLinear().domain([absXMin, absXMax]).range([0, settings.width])
+		//Ensure the neg and pos side of the plot are equal
+		const maxXRange = Math.max(Math.abs(absXMin), absXMax)
+		const xScale = scaleLinear().domain(this.setDomain(-maxXRange, maxXRange, 0.05)).range([0, settings.width])
 		return {
 			svg: {
 				height: settings.height + this.topPad + this.bottomPad,
@@ -77,7 +80,7 @@ export class ViewModel {
 			yScale: {
 				//Do not use scaleLog() here. scaleLog is for raw values before the log transformation
 				//Using it will distort the values.
-				scale: scaleLinear().domain([absYMin, absYMax]).range([settings.height, 0]),
+				scale: scaleLinear().domain(this.setDomain(absYMin, absYMax)).range([settings.height, 0]),
 				x: this.horizPad,
 				y: this.topPad
 			},
@@ -87,6 +90,13 @@ export class ViewModel {
 				y2: this.topPad
 			}
 		}
+	}
+
+	/** Increase the domain slightly so all data points fit within the plot */
+	setDomain(min: number, max: number, percent = 0.1) {
+		const rangeInc = (max - min) * percent
+		const domain = [min - rangeInc, max + rangeInc]
+		return domain
 	}
 
 	//TODO: Add more types
