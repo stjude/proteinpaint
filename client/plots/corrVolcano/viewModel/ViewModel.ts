@@ -59,13 +59,13 @@ export class ViewModel {
 				width: settings.width + this.horizPad * 2
 			},
 			title: {
-				text: this.getReadableType(config.featureTw.term.type),
+				//TODO: If this never changes, move to View
+				text: 'Correlation Coefficient',
 				x: this.horizPad + settings.width / 2,
 				y: this.topPad / 2
 			},
 			yAxisLabel: {
-				//TODO: If this never changes, move to View
-				text: 'Correlation Coefficient',
+				text: this.getReadableType(config.featureTw.term.type),
 				x: this.horizPad / 3,
 				y: this.topPad + settings.height / 2
 			},
