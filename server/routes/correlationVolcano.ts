@@ -56,10 +56,10 @@ async function compute(q: CorrelationVolcanoRequest, ds: any, genome: any) {
 	}
 	// populate with each variable tw
 	for (const sid in data.samples) {
-		const featureValue = data.samples[sid][q.featureTw.$id]?.value
+		const featureValue = q.featureTw.$id === undefined ? undefined : data.samples[sid][q.featureTw.$id]?.value
 		if (!Number.isFinite(featureValue)) continue // missing value. ignore this sample
 		for (const tw of q.variableTwLst) {
-			const variableValue = data.samples[sid][tw.$id]?.value
+			const variableValue = tw.$id === undefined ? undefined : data.samples[sid][tw.$id]?.value
 			if (!Number.isFinite(variableValue)) continue // missing. ignore this from input into tw array
 			vtid2array.get(tw.$id).v1.push(featureValue)
 			vtid2array.get(tw.$id).v2.push(variableValue)

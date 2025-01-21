@@ -144,7 +144,7 @@ function sortObj(object: { [index: string]: any }) {
 	return Object.fromEntries(Object.entries(object).sort(([, a], [, b]) => (a as any) - (b as any)))
 }
 
-export function sortKey2values(data: ValidGetDataResponse, key2values: Map<string, any[]>, overlayTerm: TermWrapper) {
+export function sortKey2values(data: ValidGetDataResponse, key2values: Map<string, any[]>, overlayTerm?: TermWrapper) {
 	const orderedLabels = overlayTerm?.$id ? data.refs.byTermId[overlayTerm.$id]?.keyOrder : undefined
 
 	key2values = new Map(
