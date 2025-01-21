@@ -52,12 +52,13 @@ export class ViewModel {
 				width: settings.width + this.horizPad * 2
 			},
 			title: {
-				text: config.featureTw.term.name,
+				text: this.getReadableType(config.featureTw.term.type),
 				x: this.horizPad + settings.width / 2,
 				y: this.topPad / 2
 			},
 			yAxisLabel: {
-				text: '-log10(pvalue)',
+				//TODO: If this never changes, move to View
+				text: 'Correlation Coefficient',
 				x: this.horizPad / 3,
 				y: this.topPad + settings.height / 2
 			},
@@ -91,5 +92,15 @@ export class ViewModel {
 			item.radius = radiusScale(item.sampleSize)
 		}
 		return data.variableItems
+	}
+
+	//TODO: Add more types
+	getReadableType(type: string) {
+		switch (type) {
+			case 'geneExpression':
+				return 'Gene Expression'
+			default:
+				return 'Gene Expression'
+		}
 	}
 }
