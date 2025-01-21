@@ -43,17 +43,7 @@ export async function launch() {
 		*/
 		authApi.maySetAuthRoutes(app, basepath, serverconfig)
 
-		const routes = await Promise.all(
-			routeFiles.map(async file => {
-				// do not use `import('../routes/${scanned_filename}')`, since esbuild is not able to
-				// filer out dynamically imported files such as spec files; add to imported routeFiles[] instead
-				const _ = await import(file)
-				const route = Object.assign({}, _)
-				route.file = file
-				return route
-			})
-		)
-
+		const routes = await Promise.all(routeFiles)
 		const __dirname = import.meta.dirname
 		augen.setRoutes(app, routes, {
 			app,
