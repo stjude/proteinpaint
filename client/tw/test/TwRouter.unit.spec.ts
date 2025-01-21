@@ -104,6 +104,7 @@ tape('initRaw() categorical', async test => {
 	{
 		const term = getTermWithGS()
 		const tw: RawCatTW = {
+			$id: 'test.$id',
 			term,
 			isAtomic: true as const,
 			q: {}
@@ -115,6 +116,7 @@ tape('initRaw() categorical', async test => {
 	{
 		const term = getTermWithGS()
 		const tw: RawCatTW = {
+			$id: 'test.$id',
 			term,
 			isAtomic: true as const,
 			q: { type: 'predefined-groupset', isAtomic: true as const, predefined_groupset_idx: 0 }
@@ -135,6 +137,7 @@ tape('initRaw() categorical', async test => {
 	{
 		const term = getTermWithGS()
 		const tw: RawCatTW = {
+			$id: 'test.$id',
 			term,
 			isAtomic: true as const,
 			q: {

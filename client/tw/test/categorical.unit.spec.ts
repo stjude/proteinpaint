@@ -69,6 +69,7 @@ tape('\n', function (test) {
 tape('fill(invalid tw)', async test => {
 	// not typing with RawCatTW since these are not valid fill() argument
 	const tw = {
+		$id: 'test.$id',
 		term: { id: 'abc', type: 'integer' }
 	}
 	{
@@ -86,6 +87,7 @@ tape('fill(invalid tw)', async test => {
 
 tape(`fill() default q.type='values'`, async test => {
 	const tw: RawCatTW = {
+		$id: 'test.$id',
 		term: termjson.diaggrp,
 		q: { isAtomic: true },
 		isAtomic: true
@@ -96,6 +98,7 @@ tape(`fill() default q.type='values'`, async test => {
 		test.deepEqual(
 			fullTw,
 			{
+				$id: 'test.$id',
 				term: tw.term,
 				q: {
 					type: 'values',
@@ -118,6 +121,7 @@ tape(`fill() default q.type='values'`, async test => {
 tape('fill() predefined-groupset', async test => {
 	const term = getTermWithGS()
 	const tw: RawCatTW = {
+		$id: 'test.$id',
 		term,
 		q: { isAtomic: true, type: 'predefined-groupset', predefined_groupset_idx: 0 },
 		isAtomic: true
@@ -128,6 +132,7 @@ tape('fill() predefined-groupset', async test => {
 		test.deepEqual(
 			fullTw,
 			{
+				$id: 'test.$id',
 				term: tw.term,
 				q: {
 					type: 'predefined-groupset',
@@ -150,6 +155,7 @@ tape('fill() predefined-groupset', async test => {
 
 tape('fill() custom-groupset', async test => {
 	const tw: RawCatTW = {
+		$id: 'test.$id',
 		term: termjson.diaggrp,
 		q: {
 			isAtomic: true,
@@ -161,6 +167,7 @@ tape('fill() custom-groupset', async test => {
 	}
 
 	const expected = {
+		$id: 'test.$id',
 		term: tw.term, // term is not filled-in, so ok to reuse raw tw.term here
 		q: {
 			isAtomic: true,
