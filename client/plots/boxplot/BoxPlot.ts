@@ -10,7 +10,7 @@ import { Model } from './model/Model'
 import { ViewModel } from './viewModel/ViewModel'
 import { View } from './view/View'
 import { BoxPlotInteractions } from './interactions/BoxPlotInteractions'
-import getMaxLabelLgth from './viewModel/MaxLabelLength'
+import { getMaxLabelWidth } from '../summary.utils'
 
 /** Opts sent from mass */
 type TdbBoxPlotOpts = {
@@ -255,7 +255,7 @@ class TdbBoxplot extends RxComponentInner {
 				this.dom.error.style('padding', '20px 20px 20px 60px').text('No visible box plot data to render')
 				return
 			}
-			const maxLabelLgth = getMaxLabelLgth(
+			const maxLabelLgth = getMaxLabelWidth(
 				this.dom.boxplots,
 				data.plots.filter(p => !p.isHidden)
 			)

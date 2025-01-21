@@ -7,6 +7,7 @@ import { renderTable, Menu, table2col } from '#dom'
 import { rgb } from 'd3'
 import { format as d3format } from 'd3-format'
 import { TermTypes } from '#shared/terms.js'
+import { getMaxLabelWidth } from './summary.utils'
 
 export default function setViolinRenderer(self) {
 	self.render = function () {
@@ -151,17 +152,6 @@ export default function setViolinRenderer(self) {
 		})
 	}
 
-	function maxLabelSize(self, svg) {
-		// render all labels to get max label width
-		let maxLabelSize = 0
-		for (const p of self.data.plots) {
-			const l = svg.append('text').text(`${p.label}, n=${p.plotValueCount}`)
-			maxLabelSize = Math.max(maxLabelSize, l.node().getBBox().width)
-			l.remove()
-		}
-		return maxLabelSize
-	}
-
 	function createMargins(labelsize, settings, isH, isMinimal) {
 		let margins
 
@@ -187,7 +177,7 @@ export default function setViolinRenderer(self) {
 
 		const violinSvg = violinDiv.append('svg')
 
-		const labelsize = maxLabelSize(self, violinSvg)
+		const labelsize = getMaxLabelWidth(violinSvg, self.data.plots, plot => `${plot.label}, n=${plot.plotValueCount}`)
 
 		const margin = createMargins(labelsize, settings, isH, self.opts.mode == 'minimal')
 		const plotThickness = self.getPlotThickness()
