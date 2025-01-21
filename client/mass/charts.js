@@ -313,6 +313,11 @@ function getChartTypeList(self, state) {
 			label: state.termdbConfig.numericDictTermCluster?.appName || 'Numeric Dictionary Term cluster',
 			chartType: 'numericDictTermCluster',
 			clickTo: self.loadChartSpecificMenu
+		},
+		{
+			label: 'Correlation Volcano',
+			chartType: 'correlationVolcano',
+			clickTo: self.loadChartSpecificMenu
 		}
 	]
 

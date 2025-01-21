@@ -4,7 +4,7 @@ import { fillTermWrapper } from '#termsetting'
 import type { BasePlotConfig, MassAppApi, MassState } from '#mass/types/mass'
 import type { Elem, SvgG, SvgSvg, SvgText } from '../../types/d3'
 import { controlsInit } from '../controls'
-import { Menu } from '#dom'
+import { Menu, addGeneSearchbox } from '#dom'
 import { Model } from './model/Model'
 import { ViewModel } from './viewModel/ViewModel'
 import { View } from './view/View'
@@ -178,6 +178,34 @@ class CorrelationVolcano extends RxComponentInner {
 export const corrVolcanoInit = getCompInit(CorrelationVolcano)
 export const componentInit = corrVolcanoInit
 
+export function makeChartBtnMenu(holder, chartsInstance) {
+	const genomeObj = chartsInstance.app.opts.genome
+	if (typeof genomeObj != 'object') throw 'chartsInstance.app.opts.genome not an object and needed for gene search box'
+	const arg = {
+		tip: new Menu({ padding: '' }),
+		genome: genomeObj,
+		row: holder.append('div').style('margin', '10px'),
+		searchOnly: 'gene',
+		callback: async () => {
+			try {
+				//Hardcoded type b/c fillTW unable to detect. Will fix later.
+				const featureTw = {
+					featureTw: {
+						term: { gene: result.geneSymbol, name: result.geneSymbol, type: 'geneExpression' }
+					}
+				}
+				const config = await getPlotConfig(featureTw, chartsInstance.app)
+				chartsInstance.prepPlot({ config })
+			} catch (e: any) {
+				// upon err, create div in chart button menu to display err
+				holder.append('div').text(`Error: ${e.message || e}`)
+				console.log(e)
+			}
+		}
+	}
+	const result = addGeneSearchbox(arg as any) //Hack to get around TS error. Will fix later.
+}
+
 export function getDefaultCorrVolcanoSettings(overrides = {}) {
 	const defaults: CorrVolcanoSettings = {
 		height: 400,
@@ -198,6 +226,7 @@ export async function getPlotConfig(opts: any, app: MassAppApi) {
 	}
 
 	const config = {
+		chartType: 'correlationVolcano',
 		featureTw: opts.featureTw,
 		settings: {
 			controls: {
