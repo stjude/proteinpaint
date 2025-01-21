@@ -1,14 +1,30 @@
+import { to_svg } from '#src/client'
+
 export class CorrVolcanoInteractions {
 	app: any
 	dom: any
 	id: string
 	variableTwLst: any
-	constructor(app, dom, id, variableTwLst) {
+	constructor(app, dom, id) {
 		this.app = app
 		this.dom = dom
 		this.id = id
 		//TODO: should be in the state somehow
+		this.variableTwLst = []
+	}
+
+	setVars(app, id, variableTwLst) {
+		/** This is a hack
+		 * app and id are set after init and therefore not available
+		 * until plot init completes. Need to fix. */
+		this.app = app
+		this.id = id
 		this.variableTwLst = variableTwLst
+	}
+
+	download() {
+		const svg = this.dom.svg.node() as Node
+		to_svg(svg, `correlationVolcano`, { apply_dom_styles: true })
 	}
 
 	//When clicking on dot, launch the sample scatter by gene and drug

@@ -30,6 +30,7 @@ export type CorrVolcanoDom = {
 	controls: Elem
 	div: Elem
 	error: Elem
+	header?: Elem
 	legend: SvgG
 	plot: SvgG
 	svg: SvgSvg
@@ -43,6 +44,8 @@ class CorrelationVolcano extends RxComponentInner {
 	components: { controls: any }
 	dom: CorrVolcanoDom
 	dsCorrVolcano: any
+	variableTwLst: any
+	interactions: CorrVolcanoInteractions
 	constructor(opts: any) {
 		super()
 		this.opts = opts
@@ -51,7 +54,7 @@ class CorrelationVolcano extends RxComponentInner {
 		}
 		const holder = opts.holder.classed('sjpp-corrVolcano-main', true)
 		const controls = opts.controls ? holder : holder.append('div')
-		const div = holder.append('div').style('padding', '5px').style('display', 'block')
+		const div = holder.append('div').style('padding', '5px')
 		const errorDiv = div.append('div').attr('id', 'sjpp-corrVolcano-error').style('opacity', 0.75)
 		const svg = div.append('svg').style('display', 'inline-block').attr('id', 'sjpp-corrVolcano-svg')
 		this.dom = {
@@ -65,7 +68,11 @@ class CorrelationVolcano extends RxComponentInner {
 			legend: div.append('svg'),
 			tip: new Menu({ padding: '' })
 		}
+		if (opts.header)
+			this.dom.header = opts.header.text('CORRELATION VOLCANO').style('font-size', '0.7em').style('opacity', 0.6)
 		this.dsCorrVolcano = {}
+		this.variableTwLst = []
+		this.interactions = new CorrVolcanoInteractions(this.app, this.dom, this.id)
 	}
 
 	getState(appState: MassState) {
@@ -142,12 +149,23 @@ class CorrelationVolcano extends RxComponentInner {
 			holder: this.dom.controls.attr('class', 'pp-termdb-plot-controls').style('display', 'inline-block'),
 			inputs
 		})
+
+		this.components.controls.on('downloadClick.correlationVolcano', () => {
+			this.interactions.download()
+		})
 	}
 
 	async init(appState) {
 		await this.setControls()
 		//Hack because obj not returning in getState(). Will fix later.
 		this.dsCorrVolcano = appState.termdbConfig.correlationVolcano
+
+		//Fill the term wrapper for the drug list from the ds
+		this.variableTwLst = this.dsCorrVolcano.variables.termIds.map((id: string) => {
+			return { id }
+		})
+		for (const t of this.variableTwLst) await fillTermWrapper(t, this.app.vocabApi)
+		this.interactions.setVars(this.app, this.id, this.variableTwLst)
 	}
 
 	async main() {
@@ -156,27 +174,19 @@ class CorrelationVolcano extends RxComponentInner {
 
 		const settings = config.settings.correlationVolcano
 
-		//Fill the term wrapper for the drug list from the ds
-		const variableTwLst = this.dsCorrVolcano.variables.termIds.map((id: string) => {
-			return { id }
-		})
-		for (const t of variableTwLst) await fillTermWrapper(t, this.app.vocabApi)
-
-		const interactions = new CorrVolcanoInteractions(this.app, this.dom, this.id, variableTwLst)
-
 		/** Request data from the server*/
-		const model = new Model(config, this.state, this.app, settings, variableTwLst)
+		const model = new Model(config, this.state, this.app, settings, this.variableTwLst)
 		const data = await model.getData()
 		if (!data || data['error']) {
-			interactions.clearDom()
+			this.interactions.clearDom()
 			this.dom.error.text(data['error'] || 'No data returned from server')
 		}
 
 		/** Format returned data for rendering */
-		const viewModel = new ViewModel(config, data, settings, variableTwLst)
+		const viewModel = new ViewModel(config, data, settings, this.variableTwLst)
 
 		/** Render correlation volcano plot */
-		new View(this.dom, viewModel.viewData, interactions, settings)
+		new View(this.dom, viewModel.viewData, this.interactions, settings)
 	}
 }
 
