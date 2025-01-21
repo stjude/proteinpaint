@@ -32,13 +32,16 @@ export class ViewModel {
 		this.viewData = {
 			plotDim,
 			variableItems: this.setVariablesData(d, variableTwLst, plotDim, pValueKey, absSampleMax, absSampleMin),
-			legendData: {
-				minRad: this.defaultMinRadius,
-				maxRad: this.defaultMaxRadius,
-				minSampleSize: absSampleMin,
-				maxSampleSize: absSampleMax
-			}
+			legendData: this.setLegendData(absSampleMin, absSampleMax)
 		}
+	}
+
+	transformPValues(data, key) {
+		for (const item of data.variableItems) {
+			if (item[key] > 0) item[key] = -Math.log10(item[key])
+			else item[key] = null
+		}
+		return data
 	}
 
 	setMinMax(data: any, key: string) {
@@ -86,6 +89,18 @@ export class ViewModel {
 		}
 	}
 
+	//TODO: Add more types
+	getReadableType(type: string) {
+		switch (type) {
+			case 'geneExpression':
+				return 'Gene Expression'
+			case 'geneVariant':
+				return 'Gene Variant'
+			default:
+				return 'Gene Expression'
+		}
+	}
+
 	setVariablesData(data, variableTwLst, plotDim, key, absSampleMax, absSampleMin) {
 		//5 and 15 are the min and max radius
 		const radiusScale = scaleLinear()
@@ -101,23 +116,20 @@ export class ViewModel {
 		return data.variableItems
 	}
 
-	transformPValues(data, key) {
-		for (const item of data.variableItems) {
-			if (item[key] > 0) item[key] = -Math.log10(item[key])
-			else item[key] = null
-		}
-		return data
-	}
-
-	//TODO: Add more types
-	getReadableType(type: string) {
-		switch (type) {
-			case 'geneExpression':
-				return 'Gene Expression'
-			case 'geneVariant':
-				return 'Gene Variant'
-			default:
-				return 'Gene Expression'
-		}
+	setLegendData(absSampleMin, absSampleMax) {
+		return [
+			{
+				label: absSampleMin,
+				x: 25,
+				y: 30,
+				radius: this.defaultMinRadius
+			},
+			{
+				label: absSampleMax,
+				x: 25,
+				y: this.defaultMaxRadius + 50,
+				radius: this.defaultMaxRadius
+			}
+		]
 	}
 }

@@ -19,6 +19,7 @@ export class View {
 		this.renderDom(plotDim)
 		// Draw all circles for variables
 		this.renderVariables(this.viewData.variableItems, settings)
+		this.renderLegend(dom, viewData.legendData)
 	}
 
 	renderDom(plotDim) {
@@ -77,6 +78,28 @@ export class View {
 				.attr('r', item.radius)
 
 			new ItemToolTip(item, g, this.dom.tip, settings)
+		}
+	}
+
+	renderLegend(dom, legendData) {
+		//Show min radius for sample size
+		const svg = dom.legend.attr('width', 100).attr('height', 100)
+		svg.append('text').text('Sample size').attr('x', 10).attr('y', 15)
+
+		for (const c of legendData) {
+			svg
+				.append('circle')
+				.attr('fill', 'lightgrey')
+				.attr('stroke', 'lightgrey')
+				.attr('cx', c.x)
+				.attr('cy', c.y)
+				.attr('r', c.radius)
+
+			svg
+				.append('text')
+				.attr('x', c.x + 25)
+				.attr('y', c.y + 5)
+				.text(c.label)
 		}
 	}
 }
