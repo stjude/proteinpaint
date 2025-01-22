@@ -22,6 +22,9 @@ export type CorrVolcanoSettings = {
 	isAdjustedPValue: boolean
 	/** Correlation method */
 	method: 'pearson' | 'spearman'
+	/** statistically significant p value the user can alter
+	 * Default is 0.05 */
+	threshold: number
 	/** Desired width of the plot. */
 	width: number
 }
@@ -95,6 +98,12 @@ export type PlotDimensions = {
 		x: number
 		y1: number
 		y2: number
+	}
+	/** Line appearing at the threshold value */
+	thresholdLine: {
+		y: number
+		x1: number
+		x2: number
 	}
 }
 

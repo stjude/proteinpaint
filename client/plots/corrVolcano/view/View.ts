@@ -69,11 +69,23 @@ export class View {
 			.attr('class', 'sjpp-corr-volcano-divide-line')
 			.attr('stroke', 'black')
 			.attr('stroke-dasharray', '5 4')
-			.attr('stroke-opacity', 0.5)
+			.attr('stroke-opacity', 0.4)
 			.attr('x1', plotDim.divideLine.x)
 			.attr('x2', plotDim.divideLine.x)
 			.attr('y1', plotDim.divideLine.y1)
 			.attr('y2', plotDim.divideLine.y2)
+
+		//Draw the threshold line indicating statiscally significant values
+		this.dom.svg
+			.append('line')
+			.attr('class', 'sjpp-corr-volcano-threshold-line')
+			.attr('stroke', 'black')
+			.attr('stroke-dasharray', '5 4')
+			.attr('stroke-opacity', 0.4)
+			.attr('x1', plotDim.thresholdLine.x1)
+			.attr('x2', plotDim.thresholdLine.x2)
+			.attr('y1', plotDim.thresholdLine.y)
+			.attr('y2', plotDim.thresholdLine.y)
 	}
 
 	renderScale(scale, isLeft = false) {
