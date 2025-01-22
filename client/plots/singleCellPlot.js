@@ -684,6 +684,7 @@ class singleCellPlot {
 	renderPlots(result) {
 		this.dom.plotsDiv.selectAll('*').remove()
 		this.plots = []
+		if (result.nodata) return
 		for (const plot of result.plots) {
 			this.plots.push(plot)
 			const expCells = plot.expCells.sort((a, b) => a.geneExp - b.geneExp)
