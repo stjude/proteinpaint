@@ -152,14 +152,12 @@ export function setRenderers(self) {
 		ctx.fillStyle = cell.fill
 		ctx.fillRect(x, y, width, height)
 
-		/* // lines don't render as well as rects
-		ctx.lineWidth = width
-		ctx.strokeStyle = cell.fill
-		ctx.beginPath()
-		ctx.moveTo(x,y)
-		ctx.lineTo(x,height)
-		ctx.stroke()
-		*/
+		if (cell.border) {
+			// Draw the border
+			ctx.lineWidth = 0.8 // Set border width, you can adjust this value
+			ctx.strokeStyle = 'white' // Set the border color, you can use any color
+			ctx.strokeRect(x, y, width, height) // Draw the border
+		}
 	}
 
 	self.renderCell = function (cell) {
@@ -177,9 +175,10 @@ export function setRenderers(self) {
 			.attr('width', cell.width || self.dimensions.colw)
 			.attr('height', 'height' in cell ? Math.max(0, cell.height) : s.rowh)
 			.attr('shape-rendering', 'crispEdges')
-			//.attr('stroke', cell.fill)
-			.attr('stroke-width', 0)
 			.attr('fill', cell.fill)
+		if (cell.border) {
+			rect.attr('stroke', 'white').attr('stroke-width', 0.8)
+		}
 	}
 
 	self.renderLabels = function (s, l, d, duration) {

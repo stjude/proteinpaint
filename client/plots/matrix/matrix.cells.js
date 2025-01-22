@@ -206,6 +206,10 @@ export function setGeneVariantCellProps(cell, tw, anno, value, s, t, self, width
 				cell.width = colw
 				cell.x = cell.totalIndex * dx + cell.grpIndex * s.colgspace
 				cell.y = height * 0.33333
+				if (s.oncoPrintSNVindelCellBorder) {
+					// show white cell border for SNVindel in oncoPrint mode
+					cell.border = true
+				}
 			}
 		} else if (value.dt == dtcnv || value.dt == dtgeneexpression) {
 			cell.height = s.rowh
