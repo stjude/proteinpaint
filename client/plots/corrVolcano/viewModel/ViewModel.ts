@@ -5,12 +5,13 @@ import type { CorrVolcanoPlotConfig, CorrVolcanoSettings, ViewData } from '../Co
 
 export class ViewModel {
 	viewData: ViewData
+	//For rendering the circles and legend info
 	readonly defaultMinRadius = 5
 	readonly defaultMaxRadius = 20
-	readonly topPad = 40
+	readonly bottomPad = 60
 	/** Only one side, left or right */
 	readonly horizPad = 70
-	readonly bottomPad = 60
+	readonly topPad = 40
 	constructor(
 		config: CorrVolcanoPlotConfig,
 		data: CorrelationVolcanoResponse,
@@ -61,7 +62,8 @@ export class ViewModel {
 	) {
 		//Ensure the neg and pos side of the plot are equal
 		const maxXRange = Math.max(Math.abs(absXMin), absXMax)
-		const xScale = scaleLinear().domain(this.setDomain(-maxXRange, maxXRange, 0.05)).range([0, settings.width])
+		const xScale = scaleLinear().domain(this.setDomain(-maxXRange, maxXRange, 0.075)).range([0, settings.width])
+		const yScale = scaleLinear().domain(this.setDomain(absYMin, absYMax)).range([settings.height, 0])
 		return {
 			svg: {
 				height: settings.height + this.topPad + this.bottomPad * 2,
@@ -79,7 +81,7 @@ export class ViewModel {
 				y: this.topPad + settings.height + this.bottomPad
 			},
 			yAxisLabel: {
-				text: this.getReadableType(config.featureTw.term.type),
+				text: `-log10(p value)`,
 				x: this.horizPad / 3,
 				y: this.topPad + settings.height / 2
 			},
@@ -91,7 +93,7 @@ export class ViewModel {
 			yScale: {
 				//Do not use scaleLog() here. scaleLog is for raw values before the log transformation
 				//Using it will distort the values.
-				scale: scaleLinear().domain(this.setDomain(absYMin, absYMax)).range([settings.height, 0]),
+				scale: yScale,
 				x: this.horizPad,
 				y: this.topPad
 			},
@@ -99,6 +101,11 @@ export class ViewModel {
 				x: xScale(0) + this.horizPad,
 				y1: settings.height + this.topPad,
 				y2: this.topPad
+			},
+			thresholdLine: {
+				y: yScale(-Math.log10(settings.threshold)) + this.topPad,
+				x1: this.horizPad,
+				x2: settings.width + this.horizPad
 			}
 		}
 	}

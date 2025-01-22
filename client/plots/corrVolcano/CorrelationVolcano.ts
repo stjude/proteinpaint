@@ -103,6 +103,14 @@ class CorrelationVolcano extends RxComponentInner {
 				]
 			},
 			{
+				label: 'Significance cutoff',
+				title: 'Statistically significant p value',
+				type: 'number',
+				chartType: 'correlationVolcano',
+				settingsKey: 'threshold',
+				debounceInterval: 0.05
+			},
+			{
 				label: 'Height',
 				title: 'Set the height of the plot',
 				type: 'number',
@@ -172,9 +180,10 @@ export const componentInit = corrVolcanoInit
 
 export function getDefaultCorrVolcanoSettings(overrides = {}) {
 	const defaults: CorrVolcanoSettings = {
-		height: 500,
 		isAdjustedPValue: false,
 		method: 'pearson',
+		threshold: 0.05,
+		height: 500,
 		width: 500
 	}
 	return Object.assign(defaults, overrides)
