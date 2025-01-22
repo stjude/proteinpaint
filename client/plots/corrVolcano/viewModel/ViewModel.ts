@@ -28,7 +28,7 @@ export class ViewModel {
 
 		this.viewData = {
 			plotDim,
-			variableItems: this.setVariablesData(d, variableTwLst, plotDim, pValueKey, absSampleMax, absSampleMin),
+			variableItems: this.setVariablesData(d, settings, variableTwLst, plotDim, pValueKey, absSampleMax, absSampleMin),
 			legendData: this.setLegendData(absSampleMin, absSampleMax)
 		}
 	}
@@ -131,6 +131,7 @@ export class ViewModel {
 
 	setVariablesData(
 		data: any,
+		settings: CorrVolcanoSettings,
 		variableTwLst: any[],
 		plotDim: any,
 		key: string,
@@ -141,7 +142,7 @@ export class ViewModel {
 			.domain([absSampleMin, absSampleMax])
 			.range([this.defaultMinRadius, this.defaultMaxRadius])
 		for (const item of data.variableItems) {
-			item.color = item.correlation > 0 ? 'blue' : 'red'
+			item.color = item.correlation > 0 ? settings.corrColor : settings.antiCorrColor
 			item.label = variableTwLst.find(t => t.$id == item.tw$id).term.name
 			item.x = plotDim.xScale.scale(item.correlation) + this.horizPad
 			item.y = plotDim.yScale.scale(item[key]) + this.topPad
