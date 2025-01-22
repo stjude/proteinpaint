@@ -1,2 +1,2 @@
 Fixes:
-- Condensed Condensed MaxLabelLength.ts into a single function for box and violin plots and updated relevant calls
+- Condensed MaxLabelLength.ts into a single function for box and violin plots and updated relevant calls
