@@ -30,7 +30,7 @@ export class View {
 		this.renderDom(plotDim)
 		// Draw all circles for variables
 		this.renderVariables(this.viewData.variableItems, settings, interactions)
-		this.renderLegend(dom, viewData.legendData)
+		this.renderLegend(viewData.legendData)
 	}
 
 	renderDom(plotDim: PlotDimensions) {
@@ -104,9 +104,9 @@ export class View {
 		}
 	}
 
-	renderLegend(dom: CorrVolcanoDom, legendData: LegendDataEntry[]) {
+	renderLegend(legendData: LegendDataEntry[]) {
 		//Show min radius for sample size
-		const svg = dom.legend
+		const svg = this.dom.legend
 			.attr('width', 100)
 			.attr('height', 100)
 			.style('display', 'inline-block')
