@@ -82,7 +82,7 @@ class CorrelationVolcano extends RxComponentInner {
 			},
 			{
 				label: 'Correlation method',
-				title: 'Correlation method',
+				title: 'Change the correlation method',
 				type: 'radio',
 				chartType: 'correlationVolcano',
 				settingsKey: 'method',
@@ -103,8 +103,8 @@ class CorrelationVolcano extends RxComponentInner {
 				]
 			},
 			{
-				label: 'Significance cutoff',
-				title: 'Statistically significant p value',
+				label: 'Significant p value',
+				title: 'Set the significant p value threshold',
 				type: 'number',
 				chartType: 'correlationVolcano',
 				settingsKey: 'threshold',
