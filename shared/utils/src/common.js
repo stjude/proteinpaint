@@ -307,7 +307,7 @@ mclass[mclasscnvloss] = {
 export const mclasscnvAmp = 'CNV_amplification'
 mclass[mclasscnvAmp] = {
 	label: 'Copy number amplification',
-	color: '#900000',
+	color: '#ff0000',
 	dt: dtcnv,
 	desc: 'Copy number amplification',
 	key: mclasscnvAmp
@@ -316,7 +316,7 @@ mclass[mclasscnvAmp] = {
 export const mclasscnvHomozygousDel = 'CNV_homozygous_deletion'
 mclass[mclasscnvHomozygousDel] = {
 	label: 'Copy number homozygous deletion',
-	color: '#00457C',
+	color: '#0000ff',
 	dt: dtcnv,
 	desc: 'Copy number homozygous deletion',
 	key: mclasscnvHomozygousDel
