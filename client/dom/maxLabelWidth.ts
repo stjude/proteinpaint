@@ -1,3 +1,4 @@
+import type { Svg, SvgG } from '../types/d3'
 /**
  * Label Width Calculator for Data Visualizations
  *
@@ -41,33 +42,16 @@
  *               Each item should either have a label accessible via the provided getLabelText
  *               function, or follow one of the standard formats.
  *
- * @param getLabelText - Optional function to extract label text from each item. If not provided,
- *                      the function will attempt to handle common data formats:
- *                      - For box plots: item.boxplot.label
- *                      - For violin plots: "item.label, n=item.plotValueCount"
- *                      - For simple items: item.label
- *
  * @returns The width in pixels of the widest label in the provided items array
  *
  * @throws Will throw an error if the SVG selection is invalid or if label text
  *         cannot be extracted from an item when no getLabelText function is provided
  */
-export function getMaxLabelWidth<T extends object>(
-	svg: d3.Selection<any, any, any, any>,
-	items: T[],
-	getLabelText?: (item: T) => string
-): number {
+export function getMaxLabelWidth(svg: Svg | SvgG, items: (string | { label: string } | { text: string })[]): number {
 	let maxLabelLgth = 0
-
 	for (const item of items) {
-		// If no getLabelText function is provided, try to use standard formats
-		const text = getLabelText
-			? getLabelText(item)
-			: 'boxplot' in item
-			? (item as any).boxplot.label
-			: `${(item as any).label}${(item as any).plotValueCount ? `, n=${(item as any).plotValueCount}` : ''}`
-
 		// Create temporary text element for measurement
+		const text = typeof item === 'string' ? item : item['label'] || item['text']
 		const label = svg.append('text').text(text)
 
 		// Update maximum width if current label is wider
