@@ -142,7 +142,8 @@ export async function getPlotConfig(opts = {}, app) {
 				// - may add other optional hints later
 				showHints: [],
 				// settings for a specific tw
-				twSpecificSettings: {}
+				twSpecificSettings: {},
+				oncoPrintSNVindelCellBorder: false // whether to show white cell border for SNVindel in oncoPrint mode
 			}
 		}
 	}

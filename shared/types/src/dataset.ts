@@ -1012,6 +1012,8 @@ type MatrixSettings = {
 	 * tb.filter?.values[0]?.dt === 4).isOrdered */
 	sortByCNV?: boolean
 	cnvUnit?: 'log2ratio' | 'segmedian'
+	/** whether to show white cell border for SNVindel in oncoPrint mode */
+	oncoPrintSNVindelCellBorder?: boolean
 }
 
 type NumericDictTermClusterSettings = {
