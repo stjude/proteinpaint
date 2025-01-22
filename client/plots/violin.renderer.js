@@ -3,11 +3,10 @@ import { scaleLinear, scaleLog } from 'd3-scale'
 import { curveBasis, line } from 'd3-shape'
 import { getColors } from '#shared/common.js'
 import { brushX, brushY } from 'd3-brush'
-import { renderTable, Menu, table2col } from '#dom'
+import { renderTable, Menu, getMaxLabelWidth, table2col } from '#dom'
 import { rgb } from 'd3'
 import { format as d3format } from 'd3-format'
 import { TermTypes } from '#shared/terms.js'
-import { getMaxLabelWidth } from './summary.utils'
 
 export default function setViolinRenderer(self) {
 	self.render = function () {
@@ -177,7 +176,10 @@ export default function setViolinRenderer(self) {
 
 		const violinSvg = violinDiv.append('svg')
 
-		const labelsize = getMaxLabelWidth(violinSvg, self.data.plots, plot => `${plot.label}, n=${plot.plotValueCount}`)
+		const labelsize = getMaxLabelWidth(
+			violinSvg,
+			self.data.plots.map(plot => `${plot.label}, n=${plot.plotValueCount}`)
+		)
 
 		const margin = createMargins(labelsize, settings, isH, self.opts.mode == 'minimal')
 		const plotThickness = self.getPlotThickness()

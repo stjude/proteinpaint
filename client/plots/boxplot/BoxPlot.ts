@@ -3,14 +3,13 @@ import { fillTermWrapper } from '#termsetting'
 import { controlsInit, term0_term2_defaultQ, renderTerm1Label } from '../controls'
 import { RxComponentInner } from '../../types/rx.d'
 import { plotColor } from '#shared/common.js'
-import { Menu } from '#dom'
+import { Menu, getMaxLabelWidth } from '#dom'
 import type { Div, Elem, SvgG, SvgSvg, SvgText } from '../../types/d3'
 import type { BasePlotConfig, MassAppApi, MassState, PlotConfig } from '#mass/types/mass'
 import { Model } from './model/Model'
 import { ViewModel } from './viewModel/ViewModel'
 import { View } from './view/View'
 import { BoxPlotInteractions } from './interactions/BoxPlotInteractions'
-import { getMaxLabelWidth } from '../summary.utils'
 
 /** Opts sent from mass */
 type TdbBoxPlotOpts = {
@@ -257,7 +256,7 @@ class TdbBoxplot extends RxComponentInner {
 			}
 			const maxLabelLgth = getMaxLabelWidth(
 				this.dom.boxplots,
-				data.plots.filter(p => !p.isHidden)
+				data.plots.filter(p => !p.isHidden).map(p => p.boxplot.label)
 			)
 			const viewModel = new ViewModel(config, data, settings, maxLabelLgth, this.useDefaultSettings)
 
