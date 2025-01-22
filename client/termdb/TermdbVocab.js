@@ -1,6 +1,6 @@
 import { q_to_param } from './vocabulary'
 import { Vocab } from './Vocab'
-import { dofetch3, isInSession } from '../common/dofetch'
+import { dofetch3 } from '../common/dofetch'
 import { getNormalRoot } from '#filter'
 import { isUsableTerm, graphableTypes } from '#shared/termdb.usecase.js'
 import { throwMsgWithFilePathAndFnName } from '../dom/sayerror'

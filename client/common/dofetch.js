@@ -317,8 +317,15 @@ export function setAuth(opts) {
 	includeEmbedder = opts.dsAuth?.length > 0 || false
 }
 
+// check if a user is logged in, usually checked together with requiredAuth in termdb/config,
+// so access to unprotected ds/routes should not be affected by this check
 export function isInSession(dslabel, route) {
-	return dslabel && [...dsAuthOk].find(d => d.dslabel == dslabel && d.route == route)
+	if (!dslabel) return false
+	for (const a of dsAuthOk) {
+		if (a.dslabel == dslabel && a.route == route) return true
+	}
+	// no matching sessions found for this dslabel and route
+	return false
 }
 
 /* 
