@@ -6,6 +6,7 @@ import { run_rust } from '@sjcrh/proteinpaint-rust'
 import { getData } from '../src/termdb.matrix.js'
 import { get_ds_tdb } from '../src/termdb.js'
 import run_R from '../src/run_R.js'
+import { mayLog } from '#src/helpers.ts'
 import serverconfig from '../src/serverconfig.js'
 
 export const api: RouteApi = {
@@ -57,7 +58,7 @@ async function run_DE(param: DERequest, ds: any, term_results: any) {
 param{}
 samplelst{}
 groups[]
-    values[] // using integer sample id
+values[] // using integer sample id
 */
 	if (param.samplelst?.groups?.length != 2) throw '.samplelst.groups.length!=2'
 	if (param.samplelst.groups[0].values?.length < 1) throw 'samplelst.groups[0].values.length<1'
@@ -150,16 +151,14 @@ groups[]
 		result = JSON.parse(
 			await run_R(path.join(serverconfig.binpath, 'utils', 'edge.R'), JSON.stringify(expression_input))
 		)
-		const time2 = new Date().valueOf()
-		console.log('Time taken to run edgeR:', time2 - time1, 'ms')
+		mayLog('Time taken to run edgeR:', Date.now() - time1, 'ms')
 		param.method = 'edgeR'
 		//console.log("result:",result)
 	} else {
 		// Wilcoxon test will be used for DE analysis
 		const time1 = new Date().valueOf()
 		result = JSON.parse(await run_rust('DEanalysis', JSON.stringify(expression_input)))
-		const time2 = new Date().valueOf()
-		console.log('Time taken to run rust DE pipeline:', time2 - time1, 'ms')
+		mayLog('Time taken to run rust DE pipeline:', Date.now() - time1, 'ms')
 		param.method = 'wilcoxon'
 	}
 	//console.log("result:", result)

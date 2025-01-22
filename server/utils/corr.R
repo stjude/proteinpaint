@@ -35,4 +35,4 @@ names(output)[2] <- "correlation"
 names(output)[3] <- "original_p_value"
 names(output)[4] <- "adjusted_p_value"
 names(output)[5] <- "sample_size"
-cat(paste0("adjusted_p_values:", toJSON(output)))
+toJSON(output)
