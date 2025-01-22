@@ -77,13 +77,11 @@ export type PlotDimensions = {
 	}
 	/** Label below the x axis */
 	xAxisLabel: {
-		text: string
 		x: number
 		y: number
 	}
 	/** Label to the left of the y axis */
 	yAxisLabel: {
-		text: string
 		x: number
 		y: number
 	}

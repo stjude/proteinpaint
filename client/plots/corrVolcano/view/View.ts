@@ -49,14 +49,14 @@ export class View {
 			.style('font-weight', 600)
 			.attr('text-anchor', 'middle')
 			.attr('transform', `translate(${plotDim.yAxisLabel.x}, ${plotDim.yAxisLabel.y}) rotate(-90)`)
-			.text(plotDim.yAxisLabel.text)
+			.text('-log10(p value)')
 
 		this.dom.xAxisLabel
 			.attr('class', 'sjpp-corr-volcano-x-axis')
 			.style('font-weight', 600)
 			.attr('text-anchor', 'middle')
 			.attr('transform', `translate(${plotDim.xAxisLabel.x}, ${plotDim.xAxisLabel.y})`)
-			.text(plotDim.xAxisLabel.text)
+			.text('Correlation Coefficient')
 
 		//Y, left scale
 		this.renderScale(plotDim.yScale, true)
