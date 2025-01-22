@@ -15,6 +15,10 @@ export type CorrVolcanoOpts = {
 }
 
 export type CorrVolcanoSettings = {
+	/** Color for anti correlated, negative values. Default is red. */
+	antiCorrColor: string
+	/** Color for correlated, positive values. Default is blue. */
+	corrColor: string
 	/** Desired height of the plot. */
 	height: number
 	/** User has the ability to switch between adjusted or original

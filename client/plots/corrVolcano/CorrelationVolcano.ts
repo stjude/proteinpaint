@@ -125,6 +125,20 @@ class CorrelationVolcano extends RxComponentInner {
 				chartType: 'correlationVolcano',
 				settingsKey: 'width',
 				debounceInterval: 500
+			},
+			{
+				label: 'Correlation color',
+				type: 'color',
+				chartType: 'correlationVolcano',
+				settingsKey: 'corrColor',
+				title: 'Color of correlated values'
+			},
+			{
+				label: 'Anticorrelation color',
+				type: 'color',
+				chartType: 'correlationVolcano',
+				settingsKey: 'antiCorrColor',
+				title: 'Color of anticorrelated values'
 			}
 		]
 
@@ -180,6 +194,8 @@ export const componentInit = corrVolcanoInit
 
 export function getDefaultCorrVolcanoSettings(overrides = {}) {
 	const defaults: CorrVolcanoSettings = {
+		antiCorrColor: '#ff0000', //red
+		corrColor: '#0000ff', //blue
 		isAdjustedPValue: false,
 		method: 'pearson',
 		threshold: 0.05,
