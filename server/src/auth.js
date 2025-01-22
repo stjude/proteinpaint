@@ -499,14 +499,13 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 	})
 
 	/*
-		will return a list of dslabels that require credentials
+		will return a list of all dslabels that require credentials
 	*/
 	authApi.getDsAuth = function (req) {
 		const dsAuth = []
 		const embedder = req.query.embedder || req.get('host')?.split(':')[0] // do not include port number
 		for (const [dslabelPattern, ds] of Object.entries(creds)) {
 			if (dslabelPattern.startsWith('__')) continue
-			if (dslabelPattern != req.query.dslabel && dslabelPattern != '*') continue
 			for (const [routePattern, route] of Object.entries(ds)) {
 				for (const [embedderHostPattern, cred] of Object.entries(route)) {
 					if (embedderHostPattern != '*' && !isMatch(embedder, embedderHostPattern)) continue

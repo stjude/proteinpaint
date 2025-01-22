@@ -137,8 +137,13 @@ tape(`initialization`, async test => {
 			],
 			'should set the expected methods with an empty dsCredentials'
 		)
-		const req = { query: { dslabel: 'no-cred', embedder: 'localhost' } }
-		test.deepEqual(authApi.getDsAuth(req), [], 'should return open-access dsAuth with an empty dsCredentials')
+		test.deepEqual(
+			authApi.getDsAuth({ query: { embedder: 'localhost' } }),
+			[{ dslabel: 'testds', route: '/**', type: 'basic', insession: false }],
+			'should return all dslabels that require authorization for a given embedder'
+		)
+
+		const req = { query: { dslabel: 'no-cred-entry', embedder: 'localhost' } }
 		test.deepEqual(
 			authApi.getNonsensitiveInfo(req),
 			{ forbiddenRoutes: [], clientAuthResult: {} },
