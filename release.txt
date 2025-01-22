@@ -1,1 +1,2 @@
-
+Features:
+- oncoMatrix: show white border for snvIndel cell in oncoPrint mode when CNV also presents
