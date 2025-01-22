@@ -229,11 +229,10 @@ function validateDataNative(D: SingleCellDataNative, ds: any) {
 }
 
 function validateGeneExpressionNative(G: SingleCellGeneExpressionNative) {
-	G.sample2gene2expressionBins = {} // cache for binning gene expression values
-
 	// per-sample rds files are not validated up front, and simply used as-is on the fly
 
 	if (G.storage_type == 'RDS' || !G.storage_type) {
+		// TODO delete rds support when hdf5 is in place
 		// Check if the storage format is RDS file ? For now keeping this as the default format
 		// client actually queries /termdb/singlecellData route for gene exp data
 		G.get = async (q: TermdbSingleCellDataRequest) => {
@@ -261,15 +260,15 @@ function validateGeneExpressionNative(G: SingleCellGeneExpressionNative) {
 		// client actually queries /termdb/singlecellData route for gene exp data
 		G.get = async (q: TermdbSingleCellDataRequest) => {
 			// q {sample:str, gene:str}
-			const rdsfile = path.join(serverconfig.tpmasterdir, G.folder, (q.sample.eID || q.sample.sID) + '.h5')
+			const h5file = path.join(serverconfig.tpmasterdir, G.folder, (q.sample.eID || q.sample.sID) + '.h5')
 			try {
-				await fs.promises.stat(rdsfile)
+				await fs.promises.stat(h5file)
 			} catch (_) {
-				return {}
-				// do not throw when file is missing/unreabable, but returns blank data. this simplifies client logic
+				console.log(_)
+				throw 'h5 file not found'
 			}
 
-			const read_hdf5_input_type = { gene: q.gene, hdf5_file: rdsfile }
+			const read_hdf5_input_type = { gene: q.gene, hdf5_file: h5file }
 
 			let out // object of barcodes as keys, and values as value
 			try {
@@ -285,8 +284,9 @@ function validateGeneExpressionNative(G: SingleCellGeneExpressionNative) {
 					}
 				}
 			} catch (_) {
-				// if gene is not found will emit such msg
-				return {}
+				// arg should be an error string
+				console.log(_)
+				throw 'error reading h5 file: ' + _
 			}
 
 			return out
@@ -295,8 +295,6 @@ function validateGeneExpressionNative(G: SingleCellGeneExpressionNative) {
 }
 
 function gdc_validateGeneExpression(G, ds, genome) {
-	G.sample2gene2expressionBins = {} // cache for binning gene expression values
-
 	// client actually queries /termdb/singlecellData route for gene exp data
 	G.get = async (q: TermdbSingleCellDataRequest) => {
 		// q {sample: {eID: str, sID: str}, gene:str}
