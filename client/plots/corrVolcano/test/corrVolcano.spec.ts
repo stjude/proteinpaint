@@ -65,18 +65,18 @@ tape('Default correlation volcano', test => {
 		const dom = correlationVolcano.Inner.dom
 
 		//Simple rendering tests.
-		test.equal(dom.title.text(), 'KRAS', `Should display feature term wrapper name as title`)
+		test.equal(dom.title.text(), 'KRAS Gene Expression', `Should display feature term wrapper name as title`)
 		test.equal(
 			dom.xAxisLabel.text(),
 			'Correlation Coefficient',
 			`Should display 'Correlation Coefficient' as x-axis label`
 		)
-		test.equal(dom.yAxisLabel.text(), 'Gene Expression', `Should display 'Gene Expression' as y-axis label`)
+		test.equal(dom.yAxisLabel.text(), '-log10(p value)', `Should display '-log10(p value)' as y-axis label`)
 
 		testPlot(dom.plot)
 		testLegend(dom.legend)
 
-		if (test['_ok']) correlationVolcano.Inner.app.destroy()
+		// if (test['_ok']) correlationVolcano.Inner.app.destroy()
 		test.end()
 	}
 

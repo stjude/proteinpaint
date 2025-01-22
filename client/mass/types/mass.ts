@@ -106,7 +106,7 @@ type MassNav = {
 
 export type BasePlotConfig = {
 	chartType: string
-	groups: any[]
+	groups?: any[]
 	id: string
 	term?: any //TermWrapper
 	term2?: any //
