@@ -612,7 +612,7 @@ class singleCellPlot {
 		const uniqueColorColumns = new Set()
 		if (this.dom.colorBySelect) {
 			this.dom.colorBySelect.selectAll('*').remove()
-			for (const plot of this.state.termdbConfig?.queries.singleCell.data.plots) {
+			for (const plot of this.state.config.plots) {
 				const colorColumn = this.state.config.colorBy?.[plot.name] || plot.colorColumns[0]
 				if (!uniqueColorColumns.has(colorColumn) && plot.selected) {
 					this.dom.colorBySelect.append('option').text(colorColumn)
@@ -851,6 +851,8 @@ class singleCellPlot {
 		const step = 20
 		let y = 50
 		let x = 0
+		const configPlot = this.state.config.plots.find(p => p.name == plot.name)
+		const aliases = configPlot.colorColumns.find(c => c.name == plot.colorBy)?.aliases
 		for (const cluster in colorMap) {
 			const clusterCells = plot.cells.filter(item => item.category == cluster)
 			const hidden = this.config.hiddenClusters.includes(cluster)
@@ -868,6 +870,8 @@ class singleCellPlot {
 							? this.state.termdbConfig.queries.singleCell.data.refName
 							: cluster == 'query'
 							? this.state.config.sample
+							: aliases
+							? aliases[cluster]
 							: cluster
 					} n=${n}`
 				)
