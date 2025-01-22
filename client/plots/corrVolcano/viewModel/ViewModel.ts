@@ -1,5 +1,6 @@
 import type { TermWrapper } from '#types'
 import { scaleLinear } from 'd3-scale'
+import { getReadableType } from '#shared/terms.js'
 import type { CorrelationVolcanoResponse } from '#types'
 import type { CorrVolcanoPlotConfig, CorrVolcanoSettings, ViewData } from '../CorrelationVolcanoTypes'
 
@@ -70,18 +71,15 @@ export class ViewModel {
 				width: settings.width + this.horizPad * 2
 			},
 			title: {
-				text: config.featureTw.term.name,
+				text: `${config.featureTw.term.name} ${getReadableType(config.featureTw.term.type)}`,
 				x: this.horizPad + settings.width / 2,
 				y: this.topPad / 2
 			},
 			xAxisLabel: {
-				//TODO: If this never changes, move to View
-				text: 'Correlation Coefficient',
 				x: this.horizPad + settings.width / 2,
 				y: this.topPad + settings.height + this.bottomPad
 			},
 			yAxisLabel: {
-				text: `-log10(p value)`,
 				x: this.horizPad / 3,
 				y: this.topPad + settings.height / 2
 			},
@@ -115,18 +113,6 @@ export class ViewModel {
 		const rangeInc = (max - min) * percent
 		const domain = [min - rangeInc, max + rangeInc]
 		return domain
-	}
-
-	//TODO: Add more types
-	getReadableType(type: string) {
-		switch (type) {
-			case 'geneExpression':
-				return 'Gene Expression'
-			case 'geneVariant':
-				return 'Gene Variant'
-			default:
-				return 'Gene Expression'
-		}
 	}
 
 	setVariablesData(
