@@ -265,7 +265,7 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome) {
 				refName: q.singleCell.data.refName,
 				settings: q.singleCell.data.settings,
 				plots: q.singleCell.data.plots.map(p => {
-					return { name: p.name, colorColumns: p.colorColumns.map(c => c.name), selected: p.selected }
+					return { name: p.name, colorColumns: p.colorColumns, selected: p.selected }
 				})
 			}
 		}
