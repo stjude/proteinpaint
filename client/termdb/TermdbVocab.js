@@ -1191,6 +1191,13 @@ export class TermdbVocab extends Vocab {
 		return await dofetch3('termdb/getSampleImages', { method: 'GET', body: args })
 	}
 
+	async getImageFromPath(filePath) {
+		const args = { filePath }
+		args.genome = this.state.vocab.genome
+		args.dslabel = this.state.vocab.dslabel
+		return await dofetch3('termdb/getImageFromPath', { method: 'GET', body: args })
+	}
+
 	/* 
 		samples[]					!!! CRITICAL: the samples data must not be modified !!!
 			sample{} 			  the source sample object, will not be changed directly

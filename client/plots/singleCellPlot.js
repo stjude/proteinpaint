@@ -13,6 +13,7 @@ import { Tabs } from '../dom/toggleButtons.js'
 import * as THREE from 'three'
 import { getThreeCircle } from './sampleScatter.rendererThree.js'
 import { renderContours } from './sampleScatter.renderer.js'
+import path from 'path'
 /*
 this
 
@@ -30,6 +31,7 @@ const SAMPLES_TAB = 0
 const PLOTS_TAB = 1
 const GENE_EXPRESSION_TAB = 3
 const DIFFERENTIAL_EXPRESSION_TAB = 4
+const IMAGES_TAB = 5
 const noExpColor = '#F5F5F5' //lightGray
 
 class singleCellPlot {
@@ -91,7 +93,13 @@ class singleCellPlot {
 				active: activeTab == DIFFERENTIAL_EXPRESSION_TAB,
 				callback: () => this.setActiveTab(DIFFERENTIAL_EXPRESSION_TAB)
 			})
-
+		if (state.termdbConfig.queries?.singleCell?.images)
+			this.tabs.push({
+				label: state.termdbConfig.queries?.singleCell?.images.label,
+				id: IMAGES_TAB,
+				active: activeTab == IMAGES_TAB,
+				callback: () => this.setActiveTab(IMAGES_TAB)
+			})
 		const q = state.termdbConfig.queries
 		this.opts.holder.style('position', 'relative')
 		this.mainDivId = `${this.id}-sandbox`
@@ -360,6 +368,14 @@ class singleCellPlot {
 				this.dom.showDiv.style('display', 'none')
 				this.renderDETable()
 				break
+			case IMAGES_TAB:
+				this.dom.headerDiv.style('display', 'block')
+				this.dom.tableDiv.style('display', 'none')
+				this.dom.showDiv.style('display', 'none')
+				this.dom.deDiv.style('display', 'none')
+				this.dom.geDiv.style('display', 'none')
+				this.renderImage()
+				break
 		}
 	}
 
@@ -387,6 +403,15 @@ class singleCellPlot {
 			},
 			title: 'Reset plot to defaults'
 		})
+	}
+
+	async renderImage() {
+		this.dom.plotsDiv.selectAll('*').remove()
+		const sample = this.state.config.sample || this.samples[0].sample
+		const images = this.state.termdbConfig.queries.singleCell.images
+		const filePath = path.join(images.folder, sample, images.fileName)
+		const result = await this.app.vocabApi.getImageFromPath(filePath)
+		this.dom.plotsDiv.append('img').attr('src', result.image.src).attr('width', this.settings.svgw)
 	}
 
 	async renderDETable() {
@@ -589,12 +614,12 @@ class singleCellPlot {
 			this.dom.loadingDiv.selectAll('*').remove()
 			this.dom.loadingDiv.style('display', '').append('div').attr('class', 'sjpp-spinner')
 			this.legendRendered = false
-			this.showActiveTab()
 			this.dom.loadingDiv.style('display', '').append('div').attr('class', 'sjpp-spinner')
 			this.data = await this.getData()
 			if (this.data.error) throw this.data.error
 			this.dom.loadingDiv.style('display', 'none')
 			await this.renderPlots(this.data)
+			this.showActiveTab()
 			await this.setControls()
 			if (this.dom.header)
 				this.dom.header.html(` ${this.state.config.sample || this.samples[0].sample} single cell data`)

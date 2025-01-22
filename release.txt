@@ -1,1 +1,3 @@
+Features
 
+Supported showing InferCNV images per sample in the SingleCellPlot
