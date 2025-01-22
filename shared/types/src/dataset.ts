@@ -689,11 +689,20 @@ also, sampleView uses this to determine if to invoke the sc plot for a sample
 	samples: SingleCellSamplesGdc | SingleCellSamplesNative
 	/** defines tsne/umap type of clustering maps for each sample
 	 */
+	images: SCImages
 	data: SingleCellDataGdc | SingleCellDataNative
 	/** defines available gene-level expression values for each cell of each sample */
 	geneExpression?: SingleCellGeneExpressionGdc | SingleCellGeneExpressionNative
 	/** Precomputed top differentialy expressed genes for a cell cluster, against rest of cells */
 	DEgenes?: SingleCellDEgeneGdc
+}
+
+type SCImages = {
+	/** folder where the per-sample image files are stored */
+	folder: string
+	fileName: string
+	//Used to name the image tab in the single cell plot
+	label: string
 }
 
 type LdQuery = {

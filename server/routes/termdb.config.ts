@@ -260,6 +260,7 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome) {
 				sampleColumns: q.singleCell.samples.sampleColumns,
 				experimentColumns: q.singleCell.samples.experimentColumns
 			},
+			images: q.singleCell.images,
 			data: {
 				sameLegend: q.singleCell.data.sameLegend,
 				refName: q.singleCell.data.refName,
