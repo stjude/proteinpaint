@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- oncoMatrix: show white border for snvIndel cell in oncoPrint mode when CNV also presents
+- oncoMatrix: exclude splice region consequence by default
+
 
 ## 2.98.1
 
