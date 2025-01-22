@@ -10,6 +10,11 @@ import { ViewModel } from './viewModel/ViewModel'
 import { View } from './view/View'
 import { CorrVolcanoInteractions } from './interactions/CorrVolcanoInteractions'
 
+/** TODO:
+ *  - Clean up noted tech debt
+ *  - Add tests
+ */
+
 class CorrelationVolcano extends RxComponentInner {
 	readonly type = 'correlationVolcano'
 	private components: { controls: any }
@@ -167,10 +172,10 @@ export const componentInit = corrVolcanoInit
 
 export function getDefaultCorrVolcanoSettings(overrides = {}) {
 	const defaults: CorrVolcanoSettings = {
-		height: 400,
+		height: 500,
 		isAdjustedPValue: false,
 		method: 'pearson',
-		width: 400
+		width: 500
 	}
 	return Object.assign(defaults, overrides)
 }

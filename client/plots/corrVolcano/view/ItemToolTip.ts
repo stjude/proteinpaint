@@ -14,7 +14,7 @@ export class ItemToolTip {
 			th.attr('colspan', '2').style('text-align', 'center').text(item.label)
 			//Show p value
 			const [td1, td2] = table.addRow()
-			td1.text(`${settings.isAdjustedPValue ? 'Adjusted p-value ' : 'Original p-value'} (-log10)`)
+			td1.text(`${settings.isAdjustedPValue ? 'Adjusted' : 'Original'} -log10(p value)`)
 			const value = settings.isAdjustedPValue ? item.adjusted_pvalue : item.original_pvalue
 			td2.text(roundValue(value, 5))
 			const [td3, td4] = table.addRow()
