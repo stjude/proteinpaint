@@ -613,7 +613,7 @@ class singleCellPlot {
 		if (this.dom.colorBySelect) {
 			this.dom.colorBySelect.selectAll('*').remove()
 			for (const plot of this.state.config.plots) {
-				const colorColumn = this.state.config.colorBy?.[plot.name] || plot.colorColumns[0]
+				const colorColumn = this.state.config.colorBy?.[plot.name] || plot.colorColumns[0].name
 				if (!uniqueColorColumns.has(colorColumn) && plot.selected) {
 					this.dom.colorBySelect.append('option').text(colorColumn)
 					uniqueColorColumns.add(colorColumn)
