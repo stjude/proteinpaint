@@ -21,7 +21,7 @@ export class ViewModel {
 	) {
 		const pValueKey = settings.isAdjustedPValue ? 'adjusted_pvalue' : 'original_pvalue'
 		const d = this.transformPValues(data, pValueKey)
-		const [absYMax, absYMin] = this.setMinMax(d, pValueKey)
+		const [absYMax, absYMin] = this.setMinMax(d, `transformed_${pValueKey}`)
 		const [absXMax, absXMin] = this.setMinMax(d, 'correlation')
 		const [absSampleMax, absSampleMin] = this.setMinMax(d, 'sampleSize')
 
@@ -40,7 +40,7 @@ export class ViewModel {
 		data.variableItems = data.variableItems.filter(v => v[key] > 0)
 		//For each item, transform the p value to -log10
 		for (const item of data.variableItems) {
-			if (item[key] > 0) item[key] = -Math.log10(item[key])
+			if (item[key] > 0) item[`transformed_${key}`] = -Math.log10(item[key])
 			else item[key] = null
 		}
 		return data
@@ -63,7 +63,7 @@ export class ViewModel {
 	) {
 		//Ensure the neg and pos side of the plot are equal
 		const maxXRange = Math.max(Math.abs(absXMin), absXMax)
-		const xScale = scaleLinear().domain(this.setDomain(-maxXRange, maxXRange, 0.075)).range([0, settings.width])
+		const xScale = scaleLinear().domain(this.setDomain(-maxXRange, maxXRange, 0.05)).range([0, settings.width])
 		const yScale = scaleLinear().domain(this.setDomain(absYMin, absYMax)).range([settings.height, 0])
 		return {
 			svg: {
@@ -131,7 +131,7 @@ export class ViewModel {
 			item.color = item.correlation > 0 ? settings.corrColor : settings.antiCorrColor
 			item.label = variableTwLst.find(t => t.$id == item.tw$id).term.name
 			item.x = plotDim.xScale.scale(item.correlation) + this.horizPad
-			item.y = plotDim.yScale.scale(item[key]) + this.topPad
+			item.y = plotDim.yScale.scale(item[`transformed_${key}`]) + this.topPad
 			item.radius = radiusScale(item.sampleSize)
 		}
 		return data.variableItems
