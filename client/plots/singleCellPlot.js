@@ -869,7 +869,7 @@ class singleCellPlot {
 						cluster == 'ref'
 							? this.state.termdbConfig.queries.singleCell.data.refName
 							: cluster == 'query'
-							? this.state.config.sample
+							? this.state.config.sample || this.samples[0].sample
 							: aliases
 							? aliases[cluster]
 							: cluster
