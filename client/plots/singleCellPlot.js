@@ -13,7 +13,6 @@ import { Tabs } from '../dom/toggleButtons.js'
 import * as THREE from 'three'
 import { getThreeCircle } from './sampleScatter.rendererThree.js'
 import { renderContours } from './sampleScatter.renderer.js'
-import path from 'path'
 /*
 this
 
@@ -409,9 +408,9 @@ class singleCellPlot {
 		this.dom.plotsDiv.selectAll('*').remove()
 		const sample = this.state.config.sample || this.samples[0].sample
 		const images = this.state.termdbConfig.queries.singleCell.images
-		const filePath = path.join(images.folder, sample, images.fileName)
+		const filePath = `${images.folder}/${sample}/${images.fileName}`
 		const result = await this.app.vocabApi.getImageFromPath(filePath)
-		this.dom.plotsDiv.append('img').attr('src', result.image.src).attr('width', this.settings.svgw)
+		this.dom.plotsDiv.append('img').attr('src', result.src).attr('width', this.settings.svgw)
 	}
 
 	async renderDETable() {
