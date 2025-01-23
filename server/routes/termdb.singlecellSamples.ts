@@ -1,6 +1,6 @@
 import fs from 'fs'
 import path from 'path'
-import { read_file } from '#src/utils.js'
+import { read_file, file_is_readable } from '#src/utils.js'
 import { joinUrl, mayLog } from '#src/helpers.ts'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 import serverconfig from '#src/serverconfig.js'
@@ -167,16 +167,7 @@ function validateDataNative(D: SingleCellDataNative, ds: any) {
 					(q.sample.eID || q.sample.sID) + plot.fileSuffix
 				) //some plots share the same file, just read different columns
 				if (!file2Lines[tsvfile]) {
-					try {
-						await fs.promises.stat(tsvfile)
-					} catch (e: any) {
-						if (e.code == 'ENOENT') {
-							// no file found for this sample; allowed because sampleView tests if that sample has sc data or not
-							continue
-						}
-						if (e.code == 'EACCES') throw 'cannot read file, permission denied'
-						throw 'failed to load sc data file'
-					}
+					await file_is_readable(tsvfile)
 					file2Lines[tsvfile] = (await read_file(tsvfile)).trim().split('\n')
 				}
 				const colorColumn = plot.colorColumns.find(c => c.name == q.colorBy?.[plot.name]) || plot.colorColumns[0]
@@ -234,12 +225,7 @@ function validateGeneExpressionNative(G: SingleCellGeneExpressionNative) {
 	G.get = async (q: TermdbSingleCellDataRequest) => {
 		// q {sample:str, gene:str}
 		const h5file = path.join(serverconfig.tpmasterdir, G.folder, (q.sample.eID || q.sample.sID) + '.h5')
-		try {
-			await fs.promises.stat(h5file)
-		} catch (_) {
-			console.log(_)
-			throw 'h5 file not found'
-		}
+		await file_is_readable(h5file)
 
 		const read_hdf5_input_type = { gene: q.gene, hdf5_file: h5file }
 
@@ -256,9 +242,9 @@ function validateGeneExpressionNative(G: SingleCellGeneExpressionNative) {
 					console.log(line)
 				}
 			}
-		} catch (_) {
-			// arg should be an error string
-			console.log(_)
+		} catch (e) {
+			// arg should be an error string; if needed generate sanitised version by not showing file path
+			console.log(e)
 			throw 'error reading h5 file: ' + _
 		}
 
