@@ -1,4 +1,4 @@
-import type { BurdenRequest, BurdenResponse, RouteApi } from '#types'
+import type { BurdenRequest, BurdenResponse, RouteApi, CumBurdenData } from '#types'
 import { burdenPayload } from '#types/checkers'
 // may decide to use these checkers later
 //import { validBurdenRequest, validBurdenResponse } from '#types/checkers/routes.js'
@@ -29,48 +29,63 @@ function init({ genomes }) {
 			const ds = genome.datasets[q.dslabel]
 			if (!ds) throw `invalid q.genome=${req.query.dslabel}`
 			if (!ds.cohort.cumburden?.files) throw `missing ds.cohort.cumburden.files`
+			if (!ds.cohort?.cumburden?.db) throw `missing ds.cohort.cumburden.db`
 
-			const { /*estimates,*/ ci95 } = await getBurdenEstimates(req, ds)
-			//const { keys, rows } = formatPayload(estimates)
-			res.send({ status: 'ok', /*keys, rows,*/ ci95 } satisfies BurdenResponse)
+			for (const k in q) {
+				if (k != 'dslabel' && k != 'genome') q[k] = Number(q[k])
+			}
+			const data = Object.assign({}, defaults, q)
+			console.log(56, data)
+
+			// const id = Object.keys(q).filter(k => k != 'genome' && k != 'dslabel').sort().map(k => q[k]).join('-')
+			// const db = ds.cohort?.cumburden?.db
+			// let result = db.connection.prepare('SELECT id, status FROM estimates WHERE id=?').get(id); console.log(36, result)
+			// if (!result) result = {id, status: null}
+			const result = await getBurdenResult(q, data, ds.cohort.cumburden)
+
+			res.send({ status: 'ok', result }) // satisfies BurdenResponse)
 		} catch (e: any) {
 			res.send({ status: 'error', error: e.message || e })
 		}
 	}
 }
 
-async function getBurdenEstimates(
-	q: { query: { [x: string]: any } },
-	ds: { cohort: { cumburden: { files: { fit: any; surv: any; sample: any } } } }
+async function getBurdenResult(
+	q: BurdenRequest,
+	data: any,
+	cumburden: CumBurdenData //{ cohort: { cumburden: { files: { fit: any; surv: any; sample: any } } } }
 ) {
-	for (const k in q.query) {
-		q.query[k] = Number(q.query[k])
-	}
-	const data = Object.assign({}, defaults, q.query)
-	console.log(data)
-	//console.log(40, data, JSON.stringify(data))
-	// TODO: use the dataset location
-	const { fit, surv, sample } = ds.cohort.cumburden.files
-	if (!fit || !surv || !sample) throw `missing one or more of ds.cohort.burden.files.{fit, surv, sample}`
-	const args = [
-		`${serverconfig.tpmasterdir}/${fit}`,
-		`${serverconfig.tpmasterdir}/${surv}`,
-		`${serverconfig.tpmasterdir}/${sample}`
-	]
+	const id = Object.keys(q)
+		.filter(k => k in defaults)
+		.sort()
+		.map(k => q[k])
+		.join('-')
+	let result = cumburden.db.connection.prepare('SELECT * FROM estimates WHERE id=?').get(id)
+	console.log(36, result)
+	if (!result) {
+		result = { id }
+		//console.log(40, data, JSON.stringify(data))
+		// TODO: use the dataset location
+		const { fit, surv, sample } = cumburden.files
+		if (!fit || !surv || !sample) throw `missing one or more of ds.cohort.burden.files.{fit, surv, sample}`
+		const args = [
+			`${serverconfig.tpmasterdir}/${fit}`,
+			`${serverconfig.tpmasterdir}/${surv}`,
+			`${serverconfig.tpmasterdir}/${sample}`
+		]
 
-	const promises: any[] = []
-	// promises.push(
-	// 	run_R(await path.join(serverconfig.binpath, 'utils', 'burden.R'), JSON.stringify(data), args)
-	// )
-
-	for (let i = 1; i < 2; i++) {
-		const input = { ...data }
-		input.bootnum = i
-		promises.push(run_R(path.join(serverconfig.binpath, 'utils', 'ci95.R'), JSON.stringify(input), args))
+		const promises: any[] = []
+		const estimate = await run_R(path.join(serverconfig.binpath, 'utils', 'burden.R'), JSON.stringify(data), args)
+		cumburden.db.connection
+			.prepare('INSERT INTO estimates (id, status, estimate) VALUES (?, ?, ?)')
+			.run([result.id, 0, estimate])
+		result.status = 0
+		result.estimate = estimate
 	}
-	const /*[estimates, ...ci95]*/ ci95 = (await Promise.all(promises)).map(d => JSON.parse(d))
-	//console.log(ci95)
-	return { /*estimates,*/ ci95 }
+	for (const [k, v] of Object.entries(result)) {
+		if (k !== 'id' && typeof v == 'string') result[k] = JSON.parse(v)
+	}
+	return result
 }
 
 function formatPayload(estimates: object[]) {

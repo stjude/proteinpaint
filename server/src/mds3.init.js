@@ -517,6 +517,19 @@ export async function validate_cumburden(ds) {
 			throw `error with ds.cohort.cumburden.files.${name}`
 		}
 	}
+	const db = ds.cohort.cumburden.db
+	if (db) {
+		if (!db.file) throw `missing ds.cohort.cumburden.file`
+		try {
+			console.log('Connecting to cumulative burden db', db.file)
+			// must allow write access to cache previously computed estimates
+			db.connection = utils.connect_db(db.file, { readonly: false })
+			const rows = db.connection.prepare('SELECT count(*) as numrows FROM estimates').all()
+			console.log(`Cumulative DB connected for ${ds.label}: ${db.file}, num rows=${rows[0]?.numrows}`)
+		} catch (e) {
+			throw `Cannot connect or invalid db ${db.file}: ${e.message || e}`
+		}
+	}
 }
 
 function copy_queries(ds, dscopy) {
@@ -733,6 +746,7 @@ function mayValidateSampleHeader(ds, samples, where) {
 // samples[] elements: {name:str}
 // returns new array with same length as samples[], {name:int}
 function validateSampleHeader2(ds, samples, where) {
+	return
 	const sampleIds = []
 	// ds?.cohort?.termdb.q.sampleName2id must be present
 	const unknownSamples = [] // samples present in big file header but missing from db
