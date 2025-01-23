@@ -229,6 +229,7 @@ function validateDataNative(D: SingleCellDataNative, ds: any) {
 }
 
 function validateGeneExpressionNative(G: SingleCellGeneExpressionNative) {
+	G.sample2gene2expressionBins = {} // cache for binning gene expression values
 	// per-sample rds files are not validated up front, and simply used as-is on the fly
 
 	if (G.storage_type == 'RDS' || !G.storage_type) {
@@ -295,6 +296,7 @@ function validateGeneExpressionNative(G: SingleCellGeneExpressionNative) {
 }
 
 function gdc_validateGeneExpression(G, ds, genome) {
+	G.sample2gene2expressionBins = {} // cache for binning gene expression values
 	// client actually queries /termdb/singlecellData route for gene exp data
 	G.get = async (q: TermdbSingleCellDataRequest) => {
 		// q {sample: {eID: str, sID: str}, gene:str}
