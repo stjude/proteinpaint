@@ -1,4 +1,4 @@
-import type { Image, imgRequest, imgResponse, RouteApi } from '#types'
+import type { imgResponse, RouteApi } from '#types'
 import { imgPayload } from '#types/checkers'
 
 import path from 'path'
@@ -20,11 +20,9 @@ export const api: RouteApi = {
 	}
 }
 
-function init({ genomes }) {
+function init() {
 	return async (req, res): Promise<void> => {
-		console.log('getImageFromPath', req.query)
 		try {
-			const q: imgRequest = req.query
 			sendImage(req, res)
 		} catch (e: any) {
 			res.send({ status: 'error', error: e.message || e })
@@ -33,7 +31,7 @@ function init({ genomes }) {
 }
 
 async function sendImage(req, res) {
-	const [e, file, isurl] = utils.fileurl(req, true) // utils.fileurl({ query: { file: req.query.file } })
+	const [e, file] = utils.fileurl(req, true) // utils.fileurl({ query: { file: req.query.file } })
 	try {
 		if (e) throw 'invalid image file'
 		const data = await fs.promises.readFile(file)
