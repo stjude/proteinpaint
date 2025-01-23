@@ -231,10 +231,9 @@ function validateGeneExpressionNative(G: SingleCellGeneExpressionNative) {
 
 		let out // object of barcodes as keys, and values as value
 		try {
-			const time1 = new Date().valueOf()
+			const time1 = Date.now()
 			const rust_output = await run_rust('readHDF5', JSON.stringify(read_hdf5_input_type))
-			const time2 = new Date().valueOf()
-			console.log('Time taken to query HDF5 file:', time2 - time1, 'ms')
+			mayLog('Time taken to query HDF5 file:', Date.now() - time1, 'ms')
 			for (const line of rust_output.split('\n')) {
 				if (line.startsWith('output_string:')) {
 					out = JSON.parse(line.replace('output_string:', ''))
@@ -245,7 +244,7 @@ function validateGeneExpressionNative(G: SingleCellGeneExpressionNative) {
 		} catch (e) {
 			// arg should be an error string; if needed generate sanitised version by not showing file path
 			console.log(e)
-			throw 'error reading h5 file: ' + _
+			throw 'error reading h5 file: ' + e
 		}
 
 		return out
