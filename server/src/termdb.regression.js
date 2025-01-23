@@ -320,12 +320,11 @@ function makeRinput(q, sampledata) {
 				continue
 			}
 			if (tw.type == 'snplst') {
-				for (const snpid of tw.highAFsnps.keys()) {
-					if (!id2value.get(snpid)) {
-						// TODO: is this already handled in doImputation()?
-						skipsample = true
-						break
-					}
+				const snp2value = id2value.get(tw.$id)
+				const snps = [...tw.highAFsnps.keys()]
+				if (!snp2value || !snps.every(snp => Object.keys(snp2value).includes(snp))) {
+					skipsample = true
+					break
 				}
 			} else {
 				const independent = id2value.get(tw.$id)
@@ -370,7 +369,7 @@ function makeRinput(q, sampledata) {
 
 		// independent variable
 		for (const t of independent) {
-			const v = id2value.get(t.id)
+			const v = id2value.get(t.id) || id2value.get(t.$id)
 			if (!v) {
 				// sample has no value for this variable
 				// this variable is either a snplocus snp or an ancestry PC
@@ -378,7 +377,7 @@ function makeRinput(q, sampledata) {
 				// convert 'null' to 'NA' during json import
 				entry[t.id] = null
 			} else {
-				entry[t.id] = t.rtype === 'numeric' ? v.value : v.key
+				entry[t.id] = Object.keys(v).includes(t.id) ? v[t.id] : t.rtype == 'numeric' ? v.value : v.key
 			}
 		}
 
@@ -443,7 +442,8 @@ function makeRvariable_snps(tw, independent, q) {
 	// create one independent variable for each snp
 	for (const snpid of tw.highAFsnps.keys()) {
 		const thisSnp = {
-			id: snpid,
+			$id: tw.$id, // need this to retrieve data from getData() output
+			id: snpid, // need this to discriminate between snps
 			name: snpid,
 			type: tw.type
 		}
