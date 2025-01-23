@@ -377,7 +377,11 @@ function makeRinput(q, sampledata) {
 				// convert 'null' to 'NA' during json import
 				entry[t.id] = null
 			} else {
-				entry[t.id] = Object.keys(v).includes(t.id) ? v[t.id] : t.rtype == 'numeric' ? v.value : v.key
+				entry[t.id] = Object.hasOwn(v, t.id)
+					? v[t.id] // for snps, object keys will be snp ids
+					: t.rtype == 'numeric'
+					? v.value
+					: v.key
 			}
 		}
 
