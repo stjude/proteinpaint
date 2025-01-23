@@ -1318,17 +1318,25 @@ type AssayAvailability = {
 	assays?: AssaysEntry[]
 }
 
+export type CumBurdenData = {
+	files: {
+		fit: string
+		surv: string
+		sample: string
+	}
+	db: {
+		/** db file created by separate repo, pcb/utils/create.sql */
+		file: string
+		/** sqlite connection */
+		connection?: any
+	}
+}
+
 //Shared with genome.ts
 export type Cohort = {
 	/** if present, means correlation volcano plot analysis is enabled */
 	correlationVolcano?: CorrelationVolcano
-	cumburden?: {
-		files: {
-			fit: string
-			surv: string
-			sample: string
-		}
-	}
+	cumburden?: CumBurdenData
 	db: FileObj
 	/** customize the default chart to open on mass ui when there's no charts. if
 	 * missing it opens dictionary ui */
