@@ -20,6 +20,8 @@ export const api: RouteApi = {
 	}
 }
 
+const MAXBOOTNUM = 20
+
 function init({ genomes }) {
 	return async function handler(req, res): Promise<void> {
 		try {
@@ -31,19 +33,11 @@ function init({ genomes }) {
 			if (!ds.cohort.cumburden?.files) throw `missing ds.cohort.cumburden.files`
 			if (!ds.cohort?.cumburden?.db) throw `missing ds.cohort.cumburden.db`
 
-			for (const k in q) {
-				if (k != 'dslabel' && k != 'genome') q[k] = Number(q[k])
-			}
-			const data = Object.assign({}, defaults, q)
-			console.log(56, data)
+			const result = await getBurdenResult(q, ds.cohort.cumburden)
+			if (result.status < MAXBOOTNUM) await computeBootstrap(result, ds.cohort.cumburden)
+			if (!result.ci95) compute95ci(result, ds.cohort.cumburden)
 
-			// const id = Object.keys(q).filter(k => k != 'genome' && k != 'dslabel').sort().map(k => q[k]).join('-')
-			// const db = ds.cohort?.cumburden?.db
-			// let result = db.connection.prepare('SELECT id, status FROM estimates WHERE id=?').get(id); console.log(36, result)
-			// if (!result) result = {id, status: null}
-			const result = await getBurdenResult(q, data, ds.cohort.cumburden)
-
-			res.send({ status: 'ok', result }) // satisfies BurdenResponse)
+			res.send({ status: 'ok', /*estimates: result.estimate,*/ ci95: result.ci95 }) // satisfies BurdenResponse)
 		} catch (e: any) {
 			res.send({ status: 'error', error: e.message || e })
 		}
@@ -52,19 +46,13 @@ function init({ genomes }) {
 
 async function getBurdenResult(
 	q: BurdenRequest,
-	data: any,
 	cumburden: CumBurdenData //{ cohort: { cumburden: { files: { fit: any; surv: any; sample: any } } } }
 ) {
-	const id = Object.keys(q)
-		.filter(k => k in defaults)
-		.sort()
-		.map(k => q[k])
-		.join('-')
+	const { id, jsonInput } = normalizeInput(q)
 	let result = cumburden.db.connection.prepare('SELECT * FROM estimates WHERE id=?').get(id)
-	console.log(36, result)
 	if (!result) {
-		result = { id }
-		//console.log(40, data, JSON.stringify(data))
+		result = { id, status: null, input: jsonInput }
+		//console.log(40, input, JSON.stringify(input))
 		// TODO: use the dataset location
 		const { fit, surv, sample } = cumburden.files
 		if (!fit || !surv || !sample) throw `missing one or more of ds.cohort.burden.files.{fit, surv, sample}`
@@ -73,12 +61,10 @@ async function getBurdenResult(
 			`${serverconfig.tpmasterdir}/${surv}`,
 			`${serverconfig.tpmasterdir}/${sample}`
 		]
-
-		const promises: any[] = []
-		const estimate = await run_R(path.join(serverconfig.binpath, 'utils', 'burden.R'), JSON.stringify(data), args)
+		const estimate = await run_R(path.join(serverconfig.binpath, 'utils', 'burden.R'), jsonInput, args)
 		cumburden.db.connection
-			.prepare('INSERT INTO estimates (id, status, estimate) VALUES (?, ?, ?)')
-			.run([result.id, 0, estimate])
+			.prepare('INSERT INTO estimates (id, input, status, estimate) VALUES (?, ?, ?, ?)')
+			.run([result.id, jsonInput, 0, estimate])
 		result.status = 0
 		result.estimate = estimate
 	}
@@ -86,6 +72,70 @@ async function getBurdenResult(
 		if (k !== 'id' && typeof v == 'string') result[k] = JSON.parse(v)
 	}
 	return result
+}
+
+function normalizeInput(q) {
+	const keys = Object.keys(q)
+		.filter(k => k in defaults)
+		.sort()
+	const id = keys.map(k => q[k]).join('-')
+	const normalized = {}
+	for (const k of keys) normalized[k] = q[k]
+	const jsonInput = JSON.stringify(normalized)
+	return { id, jsonInput }
+}
+
+async function computeBootstrap(result, cumburden) {
+	if (typeof result.status != 'number' || !Number.isInteger(result.status))
+		throw `burden result.status is not an integer`
+	if (!cumburden.files.boot) throw `ds.cohort.cumburden.files.boot is missing`
+	const { dir, fit, surv, template } = cumburden.files.boot
+	const input = JSON.stringify(result.input)
+	for (let i = result.status + 1; i <= MAXBOOTNUM; i++) {
+		const args = [
+			`${serverconfig.tpmasterdir}/${dir}${i}/${fit}`,
+			`${serverconfig.tpmasterdir}/${dir}${i}/${surv}`,
+			`${serverconfig.tpmasterdir}/${template}`
+		]
+		// run serially to throttle CPU/memory usage for burden app
+		const estimate = await run_R(path.join(serverconfig.binpath, 'utils', 'burden.R'), input, args)
+		cumburden.db.connection.prepare(`UPDATE estimates SET status=?, boot${i}=?`).run(i, estimate)
+		result.status = i
+	}
+}
+
+function compute95ci(result, cumburden) {
+	const bootEstByChc = new Map()
+	// first loop through results for bootstrap runs 1-20
+	for (const [bootNum, bootResults] of Object.entries(result)) {
+		if (!bootNum.startsWith('boot') || !bootResults) continue
+		// process only boot* columns
+		for (const est of bootResults as any[]) {
+			if (!bootEstByChc.has(est.chc)) {
+				// for each chc, track bootstrap estimates by age
+				const ages = Object.keys(est).filter(k => k.startsWith('[') && k.endsWith(')'))
+				bootEstByChc.set(est.chc, new Map(ages.map(age => [age, []])))
+			}
+			for (const [age, burdenArr] of bootEstByChc.get(est.chc).entries()) {
+				burdenArr.push(est[age])
+			}
+		}
+	}
+	const lower = 0 // MAXBOOTNUM * 0.025
+	const upper = 19 // MAXBOOTNUM - 1 // MAXBOOTNUM * 0.975
+	result.ci95 = {}
+	for (const est of Object.values(result.estimate)) {
+		if (!result.ci95[est.chc]) result.ci95[est.chc] = {}
+		for (const [age, burdenArr] of bootEstByChc.get(est.chc).entries()) {
+			burdenArr.sort(sortNumericValue)
+			result.ci95[est.chc][age] = [est[age], burdenArr[lower], burdenArr[upper]]
+		}
+	}
+	cumburden.db.connection.prepare(`UPDATE estimates SET ci95=?`).run(JSON.stringify(result.ci95))
+}
+
+function sortNumericValue(a, b) {
+	return a < b ? -1 : 1
 }
 
 function formatPayload(estimates: object[]) {
