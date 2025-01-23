@@ -232,66 +232,38 @@ function validateGeneExpressionNative(G: SingleCellGeneExpressionNative) {
 	G.sample2gene2expressionBins = {} // cache for binning gene expression values
 	// per-sample rds files are not validated up front, and simply used as-is on the fly
 
-	if (G.storage_type == 'RDS' || !G.storage_type) {
-		// TODO delete rds support when hdf5 is in place
-		// Check if the storage format is RDS file ? For now keeping this as the default format
-		// client actually queries /termdb/singlecellData route for gene exp data
-		G.get = async (q: TermdbSingleCellDataRequest) => {
-			// q {sample: {eID: str, sID: str}, gene:str}
-			const rdsfile = path.join(serverconfig.tpmasterdir, G.folder, (q.sample.eID || q.sample.sID) + '.rds')
-			try {
-				await fs.promises.stat(rdsfile)
-			} catch (_) {
-				return {}
-				// do not throw when file is missing/unreabable, but returns blank data. this simplifies client logic
-			}
-
-			let out // object of barcodes as keys, and values as value
-			try {
-				out = JSON.parse(
-					await run_R(path.join(serverconfig.binpath, 'utils', 'getGeneFromMatrix.R'), null, [rdsfile, q.gene])
-				)
-			} catch (_) {
-				// if gene is not found will emit such msg
-				return {}
-			}
-			return out
+	G.get = async (q: TermdbSingleCellDataRequest) => {
+		// q {sample:str, gene:str}
+		const h5file = path.join(serverconfig.tpmasterdir, G.folder, (q.sample.eID || q.sample.sID) + '.h5')
+		try {
+			await fs.promises.stat(h5file)
+		} catch (_) {
+			console.log(_)
+			throw 'h5 file not found'
 		}
-	} else if (G.storage_type == 'HDF5') {
-		// client actually queries /termdb/singlecellData route for gene exp data
-		G.get = async (q: TermdbSingleCellDataRequest) => {
-			// q {sample:str, gene:str}
-			const h5file = path.join(serverconfig.tpmasterdir, G.folder, (q.sample.eID || q.sample.sID) + '.h5')
-			try {
-				await fs.promises.stat(h5file)
-			} catch (_) {
-				console.log(_)
-				throw 'h5 file not found'
-			}
 
-			const read_hdf5_input_type = { gene: q.gene, hdf5_file: h5file }
+		const read_hdf5_input_type = { gene: q.gene, hdf5_file: h5file }
 
-			let out // object of barcodes as keys, and values as value
-			try {
-				const time1 = new Date().valueOf()
-				const rust_output = await run_rust('readHDF5', JSON.stringify(read_hdf5_input_type))
-				const time2 = new Date().valueOf()
-				console.log('Time taken to query HDF5 file:', time2 - time1, 'ms')
-				for (const line of rust_output.split('\n')) {
-					if (line.startsWith('output_string:')) {
-						out = JSON.parse(line.replace('output_string:', ''))
-					} else {
-						console.log(line)
-					}
+		let out // object of barcodes as keys, and values as value
+		try {
+			const time1 = new Date().valueOf()
+			const rust_output = await run_rust('readHDF5', JSON.stringify(read_hdf5_input_type))
+			const time2 = new Date().valueOf()
+			console.log('Time taken to query HDF5 file:', time2 - time1, 'ms')
+			for (const line of rust_output.split('\n')) {
+				if (line.startsWith('output_string:')) {
+					out = JSON.parse(line.replace('output_string:', ''))
+				} else {
+					console.log(line)
 				}
-			} catch (_) {
-				// arg should be an error string
-				console.log(_)
-				throw 'error reading h5 file: ' + _
 			}
-
-			return out
+		} catch (_) {
+			// arg should be an error string
+			console.log(_)
+			throw 'error reading h5 file: ' + _
 		}
+
+		return out
 	}
 }
 
