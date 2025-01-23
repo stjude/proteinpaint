@@ -28,6 +28,7 @@ function init({ genomes }) {
 			const genome = genomes[req.query.genome]
 			if (!genome) throw `invalid q.genome=${req.query.genome}`
 			const q: BurdenRequest = req.query
+			Object.assign(q, defaultInputValues)
 			const ds = genome.datasets[q.dslabel]
 			if (!ds) throw `invalid q.genome=${req.query.dslabel}`
 			if (!ds.cohort.cumburden?.files) throw `missing ds.cohort.cumburden.files`
@@ -61,10 +62,22 @@ async function getBurdenResult(
 			`${serverconfig.tpmasterdir}/${surv}`,
 			`${serverconfig.tpmasterdir}/${sample}`
 		]
-		const estimate = await run_R(path.join(serverconfig.binpath, 'utils', 'burden.R'), jsonInput, args)
+		const estJson = await run_R(path.join(serverconfig.binpath, 'utils', 'burden.R'), jsonInput, args)
+		const estimate = JSON.parse(estJson)
+
+		// compute overall burden by adding burdens from all chc's for each age
+		// TODO: may implement this in burden.R
+		const ages = Object.keys(estimate[0]).filter(k => k.startsWith('['))
+		const overall = { chc: 0 }
+		for (const age of ages) {
+			overall[age] = 0
+			for (const est of estimate) overall[age] += est[age]
+		}
+		estimate.push(overall)
+
 		cumburden.db.connection
 			.prepare('INSERT INTO estimates (id, input, status, estimate) VALUES (?, ?, ?, ?)')
-			.run([result.id, jsonInput, 0, estimate])
+			.run([result.id, jsonInput, 0, JSON.stringify(estimate)])
 		result.status = 0
 		result.estimate = estimate
 	}
@@ -105,38 +118,37 @@ async function computeBootstrap(result, cumburden) {
 }
 
 async function compute95ci(result, cumburden) {
-	const bootEstByChc = new Map()
-	// first loop through results for bootstrap runs 1-20
+	const boots: any[] = []
 	for (const [bootNum, bootResults] of Object.entries(result)) {
 		if (!bootNum.startsWith('boot') || !bootResults) continue
 		// process only boot* columns
 		for (const est of bootResults as any[]) {
-			if (!bootEstByChc.has(est.chc)) {
-				// for each chc, track bootstrap estimates by age
-				const ages = Object.keys(est).filter(k => k.startsWith('[') && k.endsWith(')'))
-				bootEstByChc.set(est.chc, new Map(ages.map(age => [age, []])))
-			}
-			if (!bootEstByChc.get(est.chc)) continue
-			for (const [age, burdenArr] of bootEstByChc.get(est.chc).entries()) {
-				burdenArr.push(est[age])
-			}
+			boots.push({ ...est, boot: bootNum })
 		}
 	}
-	const lower = 0 // MAXBOOTNUM * 0.025
-	const upper = 19 // MAXBOOTNUM - 1 // MAXBOOTNUM * 0.975
-	result.ci95 = {}
-	for (const est of Object.values(result.estimate)) {
-		if (!bootEstByChc.get(est.chc)) continue
-		if (!result.ci95[est.chc]) result.ci95[est.chc] = {}
-		for (const [age, burdenArr] of bootEstByChc.get(est.chc).entries()) {
-			burdenArr.sort(sortNumericValue)
-			result.ci95[est.chc][age] = [
-				est[age],
-				Math.min(1, Math.max(burdenArr[lower], 0)),
-				Math.min(1, Math.max(burdenArr[upper], 0))
-			]
+
+	try {
+		const args = [result.input.diaggrp]
+		const input = JSON.stringify({ boots, burden: result.estimate.filter(est => est.chc !== 0) })
+		const lowup = await run_R(path.join(serverconfig.binpath, 'utils', 'burden-ci95.R'), input, args)
+		const { low, up, overall } = JSON.parse(lowup)
+		const ci95 = { 0: {} }
+		for (const est of Object.values(result.estimate as any[])) {
+			if (!ci95[est.chc]) ci95[est.chc] = {}
+			const lower = low.find(l => l.chc === est.chc)
+			const upper = up.find(u => u.chc === est.chc)
+			for (const [age, val] of Object.entries(est)) {
+				// age keys are in the format "[20,21)"
+				if (!age.startsWith('[')) continue
+				const burden = est.chc === 0 ? overall[0][age] : val
+				ci95[est.chc][age] = [burden, lower[age], upper[age]]
+			}
 		}
+		result.ci95 = ci95
+	} catch (e) {
+		console.log(e)
 	}
+
 	await cumburden.db.connection
 		.prepare(`UPDATE estimates SET ci95=? WHERE id=?`)
 		.run(JSON.stringify(result.ci95), result.id)
@@ -162,24 +174,24 @@ function formatPayload(estimates: object[]) {
 
 const defaultInputValues = Object.freeze({
 	diaggrp: 5,
-	sex: 0,
+	sex: 1,
 	white: 1,
-	agedx: 1,
+	agedx: 6,
 	// chemotherapy
 	steriod: 0,
 	bleo: 0,
-	vcr: 0, //12, // Vincristine
-	etop: 0, //2500, // Etoposide
+	vcr: 12, // Vincristine
+	etop: 2500, // Etoposide
 	itmt: 0, // Intrathecal methothrexate_grp: 0,
-	ced: 0, //1.6, // Cyclophosphamide, 0.7692 mean 7692.
-	cisp: 0, //300, // Cisplatin
+	ced: 1.6, // Cyclophosphamide, 0.7692 mean 7692.
+	cisp: 300, // Cisplatin
 	dox: 0, // Anthracycline, 3 mean 300 ml/m2
 	carbo: 0, //  Carboplatin
 	hdmtx: 0, // High-Dose Methotrexate
 	// radiation
-	brain: 0, //5.4,
-	chest: 0, //2.4,
+	brain: 5.4,
+	chest: 2.4,
 	heart: 0,
 	pelvis: 0,
-	abd: 0 //2.4
+	abd: 2.4
 })
