@@ -1193,8 +1193,6 @@ export class TermdbVocab extends Vocab {
 
 	async getImageFromPath(filePath) {
 		const args = { filePath }
-		args.genome = this.state.vocab.genome
-		args.dslabel = this.state.vocab.dslabel
 		return await dofetch3('termdb/getImageFromPath', { method: 'GET', body: args })
 	}
 
