@@ -1,2 +1,1 @@
-Fixes:
-- Condensed MaxLabelLength.ts into a single function for box and violin plots and updated relevant calls
+

@@ -9,6 +9,9 @@ Features:
 - oncoMatrix: exclude splice region consequence by default
 - A new correlation volcano plot available through the mass UI. This plot depicts the correlation of gene features, like expression, and a predefined list of variables. The radii shown are proportionate to sample size. Plot controls include changing the feature, p value (adjusted or original), correlation method, statistical signficance, plot height, plot width, and colors. Hovering over the data points displays a tooltip with the variable name, sample size, p value, and correlation. Clicking on any data point launches the sample scatter plot. The plot is downloadable from the button in the controls.
 
+Fixes:
+- Condensed MaxLabelLength.ts into a single function for box and violin plots and updated relevant calls
+
 
 ## 2.98.1
 
