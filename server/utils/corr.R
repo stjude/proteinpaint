@@ -19,7 +19,9 @@ coeffs <- c()
 pvalues <- c()
 sample_sizes <- c()
 for (i in 1:length(v1)) {
-    cor <- cor.test(as.numeric(unlist(v1[i])), as.numeric(unlist(v2[i])), method = input$method)
+    suppressWarnings({
+        cor <- cor.test(as.numeric(unlist(v1[i])), as.numeric(unlist(v2[i])), method = input$method)
+    })    
     coeffs <- c(coeffs, cor$estimate)
     pvalues <- c(pvalues, cor$p.value)
     sample_sizes <- c(sample_sizes, length(as.numeric(unlist(v1[i]))))
