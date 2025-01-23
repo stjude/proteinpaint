@@ -1323,6 +1323,12 @@ export type CumBurdenData = {
 		fit: string
 		surv: string
 		sample: string
+		boot: {
+			dir: string
+			fit: string
+			surv: string
+			template: string
+		}
 	}
 	db: {
 		/** db file created by separate repo, pcb/utils/create.sql */

@@ -35,6 +35,8 @@ cores <- ifelse(length(chc_nums) < availCores, length(chc_nums), availCores)
 
 load(fitsData)
 load(survData)
+# Qi made many newdata_chc_sampled so we have 1000 times more donors -- but in different files.
+load(sampleData)
 # survs[[1]]
 
 ############################ These are the input values in APP that users can change. Edgar, these should be the same as the APP before, variable names and units. #############
@@ -76,9 +78,6 @@ load(survData)
 
 ############### no TX
 #	steroidval=0;  bleoval=0; vcrval=0; etopval=0; itmtval=0; cedval=0; cispval=0; brainval=0;  doxval=0; chestval=0; abdval=0; heartval=0; pelvisval=0; carboval=0; hdmtxval=0
-
-# Qi made many newdata_chc_sampled so we have 1000 times more donors -- but in different files.
-load(sampleData)
 
 newdata_chc_sampled=do.call("rbind", replicate(6,newdata_chc_sampled, simplify = FALSE))
 newdata_chc_sampled$t.startage=seq(5,70,1)
