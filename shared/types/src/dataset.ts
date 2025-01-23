@@ -573,6 +573,8 @@ export type SingleCellGeneExpressionNative = {
 	storage_type: 'HDF5' | 'RDS'
 	/** dynamically added getter */
 	get?: (q: any) => any
+	/** cached gene exp bins */
+	sample2gene2expressionBins?: { [sample: string]: { [gene: string]: any } }
 }
 
 export type SingleCellGeneExpressionGdc = {
