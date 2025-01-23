@@ -35,9 +35,9 @@ function init({ genomes }) {
 
 			const result = await getBurdenResult(q, ds.cohort.cumburden)
 			if (result.status < MAXBOOTNUM) await computeBootstrap(result, ds.cohort.cumburden)
-			if (!result.ci95) compute95ci(result, ds.cohort.cumburden)
+			if (!result.ci95 || !Object.keys(result.ci95).length) await compute95ci(result, ds.cohort.cumburden)
 
-			res.send({ status: 'ok', /*estimates: result.estimate,*/ ci95: result.ci95 }) // satisfies BurdenResponse)
+			res.send({ status: 'ok', ...formatPayload(result.ci95) } satisfies BurdenResponse)
 		} catch (e: any) {
 			res.send({ status: 'error', error: e.message || e })
 		}
@@ -76,7 +76,7 @@ async function getBurdenResult(
 
 function normalizeInput(q) {
 	const keys = Object.keys(q)
-		.filter(k => k in defaults)
+		.filter(k => k in defaultInputValues)
 		.sort()
 	const id = keys.map(k => q[k]).join('-')
 	const normalized = {}
@@ -99,12 +99,12 @@ async function computeBootstrap(result, cumburden) {
 		]
 		// run serially to throttle CPU/memory usage for burden app
 		const estimate = await run_R(path.join(serverconfig.binpath, 'utils', 'burden.R'), input, args)
-		cumburden.db.connection.prepare(`UPDATE estimates SET status=?, boot${i}=?`).run(i, estimate)
+		cumburden.db.connection.prepare(`UPDATE estimates SET status=?, boot${i}=? WHERE id=?`).run(i, estimate, result.id)
 		result.status = i
 	}
 }
 
-function compute95ci(result, cumburden) {
+async function compute95ci(result, cumburden) {
 	const bootEstByChc = new Map()
 	// first loop through results for bootstrap runs 1-20
 	for (const [bootNum, bootResults] of Object.entries(result)) {
@@ -116,6 +116,7 @@ function compute95ci(result, cumburden) {
 				const ages = Object.keys(est).filter(k => k.startsWith('[') && k.endsWith(')'))
 				bootEstByChc.set(est.chc, new Map(ages.map(age => [age, []])))
 			}
+			if (!bootEstByChc.get(est.chc)) continue
 			for (const [age, burdenArr] of bootEstByChc.get(est.chc).entries()) {
 				burdenArr.push(est[age])
 			}
@@ -125,13 +126,20 @@ function compute95ci(result, cumburden) {
 	const upper = 19 // MAXBOOTNUM - 1 // MAXBOOTNUM * 0.975
 	result.ci95 = {}
 	for (const est of Object.values(result.estimate)) {
+		if (!bootEstByChc.get(est.chc)) continue
 		if (!result.ci95[est.chc]) result.ci95[est.chc] = {}
 		for (const [age, burdenArr] of bootEstByChc.get(est.chc).entries()) {
 			burdenArr.sort(sortNumericValue)
-			result.ci95[est.chc][age] = [est[age], burdenArr[lower], burdenArr[upper]]
+			result.ci95[est.chc][age] = [
+				est[age],
+				Math.min(1, Math.max(burdenArr[lower], 0)),
+				Math.min(1, Math.max(burdenArr[upper], 0))
+			]
 		}
 	}
-	cumburden.db.connection.prepare(`UPDATE estimates SET ci95=?`).run(JSON.stringify(result.ci95))
+	await cumburden.db.connection
+		.prepare(`UPDATE estimates SET ci95=? WHERE id=?`)
+		.run(JSON.stringify(result.ci95), result.id)
 }
 
 function sortNumericValue(a, b) {
@@ -139,30 +147,20 @@ function sortNumericValue(a, b) {
 }
 
 function formatPayload(estimates: object[]) {
-	const rawKeys = Object.keys(estimates[0])
-	const outKeys = [] as string[]
-	const keys = [] as string[]
-	for (const k of rawKeys) {
-		if (k == 'chc') {
-			keys.push(k)
-			outKeys.push(k)
-		} else {
-			const age = Number(k.slice(1).split(',')[0])
-			if (age <= 60 && age % 2 == 0) {
-				keys.push(k)
-				outKeys.push(`burden${age}`)
-			}
-		}
-	}
-	const rows = [] as number[][]
+	const rawKeys = Object.keys(estimates['1']) // estimates key is chcNum, will give age keys
+	const renamedKeys = rawKeys.map(k => `burden${k.split(',')[0].slice(1)}`)
+	const outKeys = ['chc', ...renamedKeys] as string[]
+	const rows = [] as any[] // number[][]
 	// v = an array of objects with age as keys as cumulative burden as value for a given CHC
-	for (const v of estimates) {
-		rows.push(keys.map(k => v[k]))
+	for (const [chc, burdenByAge] of Object.entries(estimates)) {
+		const arr = [chc]
+		for (const age of rawKeys) arr.push(burdenByAge[age])
+		rows.push(arr)
 	}
 	return { keys: outKeys, rows }
 }
 
-const defaults = Object.freeze({
+const defaultInputValues = Object.freeze({
 	diaggrp: 5,
 	sex: 0,
 	white: 1,
