@@ -141,7 +141,7 @@ export function illegalpath(s, checkWhiteList = false, checkBlackList = true) {
 		// only if the req.query.file begins with or glob-matches any of the path pattern then it's allowed
 		let nomatch = true
 		for (const p of serverconfig.whiteListPaths) {
-			if (s.startsWith(p) || (p[0] != '!' && minimatch(s, p, { debug: true }))) {
+			if (s.startsWith(p) || (p[0] != '!' && minimatch(s, p))) {
 				nomatch = false
 				break
 			}
