@@ -136,13 +136,12 @@ export function illegalpath(s, checkWhiteList = false, checkBlackList = true) {
 	if (s.includes(' ')) return true // must not include whitespace
 	if (s.indexOf('..') != -1) return true
 	if (s.match(/(\<script|script\>)/i)) return true // avoid the potential for parsing injected code in client side error message
-
 	if (checkWhiteList && serverconfig.whiteListPaths) {
 		// as /textfile route is dangerous, this server whitelists path pattern for it.
 		// only if the req.query.file begins with or glob-matches any of the path pattern then it's allowed
 		let nomatch = true
 		for (const p of serverconfig.whiteListPaths) {
-			if (s.startsWith(p) || (p[0] != '!' && minimatch(s, p))) {
+			if (s.startsWith(p) || (p[0] != '!' && minimatch(s, p, { debug: true }))) {
 				nomatch = false
 				break
 			}

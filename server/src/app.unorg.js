@@ -121,7 +121,7 @@ export function setRoutes(app, _genomes, serverconfig) {
 	app.post(basepath + '/tkbigwig', handle_tkbigwig)
 	app.post(basepath + '/tkld', handle_tkld(genomes))
 	app.get(basepath + '/tabixheader', handle_tabixheader)
-	app.get(basepath + '/img', handle_img)
+	//app.get(basepath + '/img', handle_img)
 	app.post(basepath + '/svmr', handle_svmr)
 	app.post(basepath + '/study', handle_study)
 	app.post(basepath + '/textfile', handle_textfile)
@@ -240,19 +240,19 @@ async function handle_tabixheader(req, res) {
 	}
 }
 
-async function handle_img(req, res) {
-	const [e, file, isurl] = utils.fileurl(req) // utils.fileurl({ query: { file: req.query.file } })
-	try {
-		if (e) throw 'invalid image file'
-		const data = await fs.promises.readFile(file)
-		res.send({
-			src: 'data:image/jpeg;base64,' + new Buffer.from(data).toString('base64'),
-			size: imagesize(file)
-		})
-	} catch (e) {
-		res.send({ error: e.message || e })
-	}
-}
+// async function handle_img(req, res) {
+// 	const [e, file, isurl] = utils.fileurl(req) // utils.fileurl({ query: { file: req.query.file } })
+// 	try {
+// 		if (e) throw 'invalid image file'
+// 		const data = await fs.promises.readFile(file)
+// 		res.send({
+// 			src: 'data:image/jpeg;base64,' + new Buffer.from(data).toString('base64'),
+// 			size: imagesize(file)
+// 		})
+// 	} catch (e) {
+// 		res.send({ error: e.message || e })
+// 	}
+// }
 
 function handle_dbdata(req, res) {
 	const query = () => {

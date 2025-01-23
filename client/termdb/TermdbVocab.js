@@ -1191,9 +1191,9 @@ export class TermdbVocab extends Vocab {
 		return await dofetch3('termdb/getSampleImages', { method: 'GET', body: args })
 	}
 
-	async getImageFromPath(filePath) {
-		const args = { filePath }
-		return await dofetch3('termdb/getImageFromPath', { method: 'GET', body: args })
+	async getImageFromPath(file) {
+		const args = { file }
+		return await dofetch3('img', { method: 'GET', body: args })
 	}
 
 	/* 
