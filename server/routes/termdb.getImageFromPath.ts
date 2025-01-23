@@ -24,11 +24,7 @@ function init({ genomes }) {
 		console.log('getImageFromPath', req.query)
 		try {
 			const q: TermdbGetImageFromPathRequest = req.query
-			const genome = genomes[q.genome]
-			if (!genome) throw 'invalid genome'
-			const ds = genome.datasets?.[q.dslabel]
-			if (!ds) throw 'invalid dslabel'
-			const image = await getImage(ds, q.filePath)
+			const image = await getImage(q.filePath)
 			res.send({ image }) satisfies TermdbGetImageFromPathResponse
 		} catch (e: any) {
 			res.send({ status: 'error', error: e.message || e })
@@ -36,7 +32,7 @@ function init({ genomes }) {
 	}
 }
 
-async function getImage(ds: any, filePath: string) {
+async function getImage(filePath: string) {
 	const file = path.join(serverconfig.tpmasterdir, filePath) //the file extension is assumed to be .jpg
 	const ext = path.extname(file).substring(1)
 	if (!fs.existsSync(file)) throw new Error(`File ${filePath} does not exist`)

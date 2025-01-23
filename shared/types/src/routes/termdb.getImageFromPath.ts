@@ -1,9 +1,6 @@
 import type { RoutePayload } from './routeApi.js'
 
 export type TermdbGetImageFromPathRequest = {
-	genome: string
-	/** Ds label */
-	dslabel: string
 	filePath: string
 }
 
