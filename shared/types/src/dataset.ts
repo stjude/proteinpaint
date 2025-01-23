@@ -689,7 +689,7 @@ also, sampleView uses this to determine if to invoke the sc plot for a sample
 	samples: SingleCellSamplesGdc | SingleCellSamplesNative
 	/** defines tsne/umap type of clustering maps for each sample
 	 */
-	images: SCImages
+	images?: SCImages
 	data: SingleCellDataGdc | SingleCellDataNative
 	/** defines available gene-level expression values for each cell of each sample */
 	geneExpression?: SingleCellGeneExpressionGdc | SingleCellGeneExpressionNative
