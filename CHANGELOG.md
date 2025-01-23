@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 Features:
 - oncoMatrix: show white border for snvIndel cell in oncoPrint mode when CNV also presents
 - oncoMatrix: exclude splice region consequence by default
+- A new correlation volcano plot available through the mass UI. This plot depicts the correlation of gene features, like expression, and a predefined list of variables. The radii shown are proportionate to sample size. Plot controls include changing the feature, p value (adjusted or original), correlation method, statistical signficance, plot height, plot width, and colors. Hovering over the data points displays a tooltip with the variable name, sample size, p value, and correlation. Clicking on any data point launches the sample scatter plot. The plot is downloadable from the button in the controls.
 
 
 ## 2.98.1
