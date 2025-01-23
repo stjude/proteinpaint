@@ -475,7 +475,7 @@ export async function getSamples(q, rows) {
 	return samples
 
 	function addSample(sample, term_id, key, value) {
-		if (limitMutatedSamples && !limitMutatedSamples.has(sample)) return // this sample is not mutated for given genes
+		// if (limitMutatedSamples && !limitMutatedSamples.has(sample)) return // this sample is not mutated for given genes
 		if (!samples[sample]) samples[sample] = { sample }
 		// this assumes unique term key/value for a given sample
 		// samples[sample][term_id] = { key, value }
