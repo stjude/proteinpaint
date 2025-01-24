@@ -108,15 +108,14 @@ export function setRenderers(self) {
 		const getLegendLabelWidth = (key, svg) => {
 			const legend = chart[`${key}Legend`]
 			if (!legend) return 0
-			const labels = [
-				...Array.from(legend.values())
-					.filter(({ key }) => key !== 'Ref')
-					.map(({ key, sampleCount }) => `${key}, n=(${sampleCount})`),
-				self.config[`${key}TW`]?.term?.name ?? ''
-			]
+			const labels = []
+			for (const [k, v] of legend.entries()) {
+				if (k != 'Ref') labels.push(`${k}, n=(${v.sampleCount})`)
+			}
+			labels.push(self.config[`${key}TW`]?.term?.name ?? '')
 			const size = self.config[`${key}TW`]?.term?.type == 'geneVariant' ? 1.1 : 1
 			// Add 20 for the icon (16) and space
-			return getMaxLabelWidth(svg, labels, size) + 20
+			return getMaxLabelWidth(svg, labels, size) + 30
 		}
 		// Used later to offset the shape legend
 		chart.colorLegendWidth = getLegendLabelWidth('color', svg)
