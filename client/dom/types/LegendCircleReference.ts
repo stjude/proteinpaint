@@ -25,8 +25,9 @@ export type LegendCircleReferenceOpts = {
 	/** If provided, displays a title above the
 	 * the circle reference. */
 	title?: string
-	/** x position */
-	x: number
-	/** y position */
-	y: number
+	/** If provided, an UI renderes to switch between an
+	 * ascending and descending scale. */
+	dotScaleCallback?: () => void
+	/** Code executed when min or max is changed */
+	minMaxCallback?: (min: number, max: number) => void
 }
