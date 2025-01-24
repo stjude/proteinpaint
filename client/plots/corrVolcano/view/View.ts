@@ -32,7 +32,7 @@ export class View {
 		const plotDim = viewData.plotDim
 		this.renderDom(plotDim)
 		// Draw all circles for variables
-		this.renderVariables(this.viewData.variableItems, settings, interactions)
+		this.renderVariables(plotDim.divideLine.x, this.viewData.variableItems, settings, interactions)
 		this.renderLegend(viewData.legendData)
 	}
 
@@ -100,7 +100,7 @@ export class View {
 		})
 	}
 
-	renderVariables(variableItems, settings: CorrVolcanoSettings, interactions: CorrVolcanoInteractions) {
+	renderVariables(x, variableItems, settings: CorrVolcanoSettings, interactions: CorrVolcanoInteractions) {
 		for (const item of variableItems) {
 			const circle = this.dom.plot
 				.append('circle')
@@ -108,8 +108,8 @@ export class View {
 				.attr('stroke', item.color)
 				.attr('fill', item.color)
 				.attr('fill-opacity', 0.5)
-				.attr('cx', item.x)
-				.attr('cy', item.y)
+				.attr('cx', x)
+				.attr('cy', 0)
 				.attr('r', 0)
 				.on('click', () => {
 					interactions.launchSampleScatter(item)
@@ -117,7 +117,7 @@ export class View {
 
 			new ItemToolTip(item, circle, this.dom.tip, settings)
 			//Animate the circle to its final radius
-			circle.transition().duration(500).attr('r', item.radius)
+			circle.transition().duration(500).attr('cx', item.x).attr('cy', item.y).attr('r', item.radius)
 		}
 	}
 
