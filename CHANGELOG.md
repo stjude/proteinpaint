@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.99.0
 
 Features:
 - oncoMatrix: show white border for snvIndel cell in oncoPrint mode when CNV also presents
