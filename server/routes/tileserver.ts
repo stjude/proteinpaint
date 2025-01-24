@@ -18,13 +18,13 @@ export const api: RouteApi = {
 }
 
 function init() {
-	return async (req, res): Promise<void> => {
+	return async (req: any, res: any): Promise<void> => {
 		try {
 			const { sampleId, TileGroup, z, x, y } = req.params satisfies TileRequest
 
 			const url = `${serverconfig.tileServerURL}/tileserver/layer/slide/${sampleId}/zoomify/${TileGroup}/${z}-${x}-${y}@1x.jpg`
 
-			const response = await ky.get(url)
+			const response = await ky.get(url, { timeout: 120000 })
 
 			const buffer = await response.arrayBuffer()
 			res.status(response.status).send(Buffer.from(buffer))

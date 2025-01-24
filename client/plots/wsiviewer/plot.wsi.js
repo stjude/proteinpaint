@@ -18,7 +18,6 @@ export default async function (dslabel, holder, genomeObj, sample_id) {
 	try {
 		const opts = {
 			holder: holder,
-
 			state: {
 				genome: genomeObj.name,
 				dslabel: dslabel,
