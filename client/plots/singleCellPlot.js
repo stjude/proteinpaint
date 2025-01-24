@@ -409,6 +409,10 @@ class singleCellPlot {
 		const sample = this.state.config.sample || this.samples[0].sample
 		const i = this.state.termdbConfig.queries.singleCell.images
 		const result = await dofetch3(`img?file=${i.folder}${i.folder.endsWith('/') ? '' : '/'}${sample}/${i.fileName}`)
+		if (!result.src || result.error) {
+			sayerror(this.dom.plotsDiv, 'Cannot load image: ' + (result.error || ''))
+			return
+		}
 		this.dom.plotsDiv.append('img').attr('src', result.src).attr('width', this.settings.svgw)
 	}
 
