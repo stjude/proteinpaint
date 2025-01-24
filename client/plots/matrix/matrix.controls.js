@@ -163,7 +163,8 @@ export class MatrixControls {
 						.map(t =>
 							t.tw.term.chr ? `${t.tw.term.chr}:${t.tw.term.start}-${t.tw.term.stop}` : t.tw.term.gene || t.tw.term.name
 						) // TODO term.gene replaces term.name
-					return { currentGeneNames }
+					if (currentGeneNames.length) return { currentGeneNames }
+					return {}
 				}
 			}
 		]
