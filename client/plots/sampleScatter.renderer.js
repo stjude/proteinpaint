@@ -115,10 +115,12 @@ export function setRenderers(self) {
 			labels.push(self.config[`${key}TW`]?.term?.name ?? '')
 			const size = self.config[`${key}TW`]?.term?.type == 'geneVariant' ? 1.1 : 1
 			// Add 20 for the icon (16) and space
-			return getMaxLabelWidth(svg, labels, size) + 30
+			return getMaxLabelWidth(svg, labels, size) + 20
 		}
-		// Used later to offset the shape legend
-		chart.colorLegendWidth = getLegendLabelWidth('color', svg)
+		/** Becomes the x offset for the shape legend.
+		 * When in continuous mode, color scale renders with a
+		 * default width of 150. */
+		chart.colorLegendWidth = self.config?.colorTW?.q.mode == 'continuous' ? 175 : getLegendLabelWidth('color', svg)
 		const shapeWidth = getLegendLabelWidth('shape', svg)
 		const width = s.svgw + chart.colorLegendWidth + shapeWidth + 125
 		svg
