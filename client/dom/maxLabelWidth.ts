@@ -35,14 +35,14 @@ import type { Svg, SvgG } from '../types/d3'
  *             for measurement. These elements are immediately removed after measuring.
  *
  * @param items - Array of strings containing label information.
- *
+ * @param size - Font size multiplier for labels. Default is 1.
  * @returns The width in pixels of the widest label in the provided items array
  */
-export function getMaxLabelWidth(svg: Svg | SvgG, items: string[]): number {
+export function getMaxLabelWidth(svg: Svg | SvgG, items: string[], size = 1): number {
 	let maxLabelLgth = 0
 	for (const item of items) {
 		// Create temporary text element for measurement
-		const label = svg.append('text').text(item)
+		const label = svg.append('text').text(item).style('font-size', `${size}em`)
 
 		// Update maximum width if current label is wider
 		maxLabelLgth = Math.max(maxLabelLgth, label.node()!.getBBox().width)
