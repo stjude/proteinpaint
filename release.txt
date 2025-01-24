@@ -1,1 +1,2 @@
-
+Fixes:
+- Dynamically render scatter plot width with legend items and reduce the space between legend sections
