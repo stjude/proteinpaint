@@ -114,8 +114,9 @@ export function setRenderers(self) {
 					.map(({ key, sampleCount }) => `${key}, n=(${sampleCount})`),
 				self.config[`${key}TW`]?.term?.name ?? ''
 			]
+			const size = self.config[`${key}TW`]?.term?.type == 'geneVariant' ? 1.1 : 1
 			// Add 20 for the icon (16) and space
-			return getMaxLabelWidth(svg, labels) + 20
+			return getMaxLabelWidth(svg, labels, size) + 20
 		}
 		// Used later to offset the shape legend
 		chart.colorLegendWidth = getLegendLabelWidth('color', svg)
