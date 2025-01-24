@@ -10,7 +10,10 @@ import type {
 import type { CorrVolcanoInteractions } from '../interactions/CorrVolcanoInteractions'
 import { ItemToolTip } from './ItemToolTip'
 
-/** Using the data formated in ViewModel, renders the correlation
+/**
+ * TODO - finish typing this file
+ *
+ * Using the data formated in ViewModel, renders the correlation
  * volcano plot. */
 export class View {
 	dom: CorrVolcanoDom
@@ -29,7 +32,7 @@ export class View {
 		const plotDim = viewData.plotDim
 		this.renderDom(plotDim)
 		// Draw all circles for variables
-		this.renderVariables(this.viewData.variableItems, settings, interactions)
+		this.renderVariables(plotDim.divideLine.x, this.viewData.variableItems, settings, interactions)
 		this.renderLegend(viewData.legendData)
 	}
 
@@ -56,14 +59,14 @@ export class View {
 			.style('font-weight', 600)
 			.attr('text-anchor', 'middle')
 			.attr('transform', `translate(${plotDim.xAxisLabel.x}, ${plotDim.xAxisLabel.y})`)
-			.text('Correlation Coefficient')
+			.html('Correlation Coefficient (&#961;)') //unicode for rho
 
 		//Y, left scale
 		this.renderScale(plotDim.yScale, true)
 		//X, bottom scale
 		this.renderScale(plotDim.xScale)
 
-		// Draw the line dividing the plot
+		// Draw a line demarcating correlation and anticorrelation
 		this.dom.svg
 			.append('line')
 			.attr('class', 'sjpp-corr-volcano-divide-line')
@@ -75,7 +78,7 @@ export class View {
 			.attr('y1', plotDim.divideLine.y1)
 			.attr('y2', plotDim.divideLine.y2)
 
-		//Draw the threshold line indicating statiscally significant values
+		//Draw threshold indicating statiscally significant values
 		this.dom.svg
 			.append('line')
 			.attr('class', 'sjpp-corr-volcano-threshold-line')
@@ -97,7 +100,7 @@ export class View {
 		})
 	}
 
-	renderVariables(variableItems, settings: CorrVolcanoSettings, interactions: CorrVolcanoInteractions) {
+	renderVariables(x, variableItems, settings: CorrVolcanoSettings, interactions: CorrVolcanoInteractions) {
 		for (const item of variableItems) {
 			const circle = this.dom.plot
 				.append('circle')
@@ -105,19 +108,20 @@ export class View {
 				.attr('stroke', item.color)
 				.attr('fill', item.color)
 				.attr('fill-opacity', 0.5)
-				.attr('cx', item.x)
-				.attr('cy', item.y)
-				.attr('r', item.radius)
+				.attr('cx', x)
+				.attr('cy', 0)
+				.attr('r', 0)
 				.on('click', () => {
 					interactions.launchSampleScatter(item)
 				})
 
 			new ItemToolTip(item, circle, this.dom.tip, settings)
+			//Animate the circle to its final radius
+			circle.transition().duration(500).attr('cx', item.x).attr('cy', item.y).attr('r', item.radius)
 		}
 	}
 
 	renderLegend(legendData: LegendDataEntry[]) {
-		//Show min radius for sample size
 		const svg = this.dom.legend
 			.attr('width', 100)
 			.attr('height', 100)

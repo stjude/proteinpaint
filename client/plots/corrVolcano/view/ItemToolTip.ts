@@ -12,22 +12,23 @@ export class ItemToolTip {
 			//Header
 			const [th, _] = table.addRow()
 			th.attr('colspan', '2').style('text-align', 'center').text(item.label)
-			//Show p value
-			const [td1, td2] = table.addRow()
-			td1.text(`${settings.isAdjustedPValue ? 'Adjusted' : 'Original'} p value`)
-			const value = settings.isAdjustedPValue ? item.adjusted_pvalue : item.original_pvalue
-			td2.text(roundValue(value, 5))
-			const [td3, td4] = table.addRow()
 			//Show correlation
-			td3.text('Correlation')
-			td4.text(item.correlation)
+			this.addLine(table, 'Correlation (&#961;)', item.correlation)
+			//Show p value
+			const pValueText = settings.isAdjustedPValue ? 'Adjusted p value' : 'Original p value'
+			const pValue = settings.isAdjustedPValue ? item.adjusted_pvalue : item.original_pvalue
+			this.addLine(table, pValueText, roundValue(pValue, 5))
 			//Show sample size
-			const [td5, td6] = table.addRow()
-			td5.text('Sample size')
-			td6.text(item.sampleSize)
+			this.addLine(table, 'Sample size', item.sampleSize)
 		})
 		circle.on('mouseout', () => {
 			tip.hide()
 		})
+	}
+
+	addLine(table: any, text: string, value: number) {
+		const [td1, td2] = table.addRow()
+		td1.html(text)
+		td2.text(value)
 	}
 }
