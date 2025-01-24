@@ -59,7 +59,7 @@
   },
   "dependencies": {
     "@sjcrh/augen": "2.87.0",
-    "@sjcrh/proteinpaint-rust": "2.84.0",
+    "@sjcrh/proteinpaint-rust": "2.99.0",
     "@sjcrh/proteinpaint-shared": "2.99.0",
     "@sjcrh/proteinpaint-types": "2.99.0",
     "@types/express": "^5.0.0",
