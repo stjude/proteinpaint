@@ -1,5 +1,8 @@
+import type { TermWrapper } from '#types'
 import { to_svg } from '#src/client'
+import { getReadableType } from '#shared/terms.js'
 
+//TODO - finish typing this file
 export class CorrVolcanoInteractions {
 	app: any
 	dom: any
@@ -13,7 +16,7 @@ export class CorrVolcanoInteractions {
 		this.variableTwLst = []
 	}
 
-	setVars(app, id, variableTwLst) {
+	setVars(app: any, id: string, variableTwLst: TermWrapper[]) {
 		/** This is a hack
 		 * app and id are set after init and therefore not available
 		 * until plot init completes. Need to fix. */
@@ -28,13 +31,13 @@ export class CorrVolcanoInteractions {
 	}
 
 	//When clicking on dot, launch the sample scatter by gene and drug
-	launchSampleScatter(item) {
+	launchSampleScatter(item: any) {
 		const config = this.app.getState()
 		const plot = config.plots.find(p => p.id === this.id)
 		const term2 = this.variableTwLst.find((t: any) => t.$id === item.tw$id).term
 		const scatterConfig = {
 			chartType: 'sampleScatter',
-			name: `${plot.featureTw.term.name} v ${term2.name}`,
+			name: `${plot.featureTw.term.name} ${getReadableType(plot.featureTw.term.type)} v ${term2.name}`,
 			term: { term: plot.featureTw.term },
 			term2,
 			filter: config.termfilter.filter
