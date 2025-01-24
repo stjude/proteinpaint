@@ -1,12 +1,11 @@
 import { zoom as d3zoom, zoomIdentity } from 'd3-zoom'
-import { icons as icon_functions, ColorScale } from '#dom'
+import { icons as icon_functions, ColorScale, Menu, getMaxLabelWidth } from '#dom'
 import { d3lasso } from '#common/lasso'
 import { dt2label, morigin } from '#shared/common.js'
 import { rgb } from 'd3-color'
 import { scaleLinear as d3Linear } from 'd3-scale'
 import { axisLeft, axisBottom } from 'd3-axis'
 import { select } from 'd3-selection'
-import { Menu } from '#dom/menu'
 import { getSamplelstTW, getFilter } from '../mass/groups.js'
 import { regressionPoly } from 'd3-regression'
 import { line, extent, contourDensity, geoPath, scaleSequential, max, interpolateGreys, interpolateOranges } from 'd3'
@@ -104,7 +103,29 @@ export function setRenderers(self) {
 		if (chart.colorLegend.get('Ref')?.sampleCount > 0) colorLegendSize += 60
 		const scaleHeight = self.config.scaleDotTW ? 200 : 100
 		self.legendHeight = Math.max(colorLegendSize, chart.shapeLegend.size * 30) + scaleHeight //legend step and header
-		const width = self.charts.length == 1 ? s.svgw + 800 : s.svgw + (self.config.shapeTW ? 600 : 350)
+
+		//Dynamically calculate the length of the legend labels
+		const getLegendLabelWidth = (key, svg) => {
+			const legend = chart[`${key}Legend`]
+			if (!legend) return 0
+			const labels = []
+			for (const [k, v] of legend.entries()) {
+				if (k != 'Ref') labels.push(`${k}, n=(${v.sampleCount})`)
+			}
+			labels.push(self.config[`${key}TW`]?.term?.name ?? '')
+			const size = self.config[`${key}TW`]?.term?.type == 'geneVariant' ? 1.1 : 1
+			// Add 20 for the icon (16) and space
+			return getMaxLabelWidth(svg, labels, size) + 20
+		}
+		/** Becomes the x offset for the shape legend.
+		 * When in continuous mode, color scale renders with a
+		 * default width of 150. */
+		chart.colorLegendWidth =
+			self.config?.colorTW?.q.mode == 'continuous'
+				? Math.max(175, getMaxLabelWidth(svg, [self.config.colorTW.term.name]) + 20)
+				: getLegendLabelWidth('color', svg)
+		const shapeWidth = getLegendLabelWidth('shape', svg)
+		const width = s.svgw + chart.colorLegendWidth + shapeWidth + 125
 		svg
 			.transition()
 			.duration(s.duration)
@@ -809,7 +830,7 @@ export function setRenderers(self) {
 		}
 
 		if (self.config.shapeTW) {
-			offsetX = !self.config.colorTW ? 0 : 300
+			offsetX = chart.colorLegendWidth
 			offsetY = 60
 			title = `${getTitle(self.config.shapeTW.term.name)}`
 			if (self.config.shapeTW.term.type == 'geneVariant' && self.config.shapeTW.q.type == 'values')
