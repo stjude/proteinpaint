@@ -94,7 +94,7 @@ class singleCellPlot {
 			})
 		if (state.termdbConfig.queries?.singleCell?.images)
 			this.tabs.push({
-				label: state.termdbConfig.queries?.singleCell?.images.label,
+				label: state.termdbConfig.queries.singleCell.images.label,
 				id: IMAGES_TAB,
 				active: activeTab == IMAGES_TAB,
 				callback: () => this.setActiveTab(IMAGES_TAB)
@@ -407,9 +407,8 @@ class singleCellPlot {
 	async renderImage() {
 		this.dom.plotsDiv.selectAll('*').remove()
 		const sample = this.state.config.sample || this.samples[0].sample
-		const images = this.state.termdbConfig.queries.singleCell.images
-		const filePath = `${images.folder}/${sample}/${images.fileName}`
-		const result = await this.app.vocabApi.getImageFromPath(filePath)
+		const i = this.state.termdbConfig.queries.singleCell.images
+		const result = await dofetch3(`img?file=${i.folder}${i.folder.endsWith('/') ? '' : '/'}${sample}/${i.fileName}`)
 		this.dom.plotsDiv.append('img').attr('src', result.src).attr('width', this.settings.svgw)
 	}
 

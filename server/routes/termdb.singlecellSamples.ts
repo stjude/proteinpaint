@@ -99,6 +99,17 @@ export async function validate_query_singleCell(ds: any, genome: any) {
 		validate_query_singleCell_DEgenes(ds)
 		// q.DEgenes.get() added
 	}
+
+	if (q.images) {
+		validateImages(q.images)
+		// will not add a get()
+	}
+}
+
+function validateImages(images) {
+	if (!images.folder) throw 'images.folder missing'
+	if (!images.label) images.label = 'Images'
+	if (!images.fileName) throw 'images.fileName missing'
 }
 
 async function validateSamplesNative(S: SingleCellSamplesNative, D: SingleCellDataNative, ds: any) {
