@@ -410,7 +410,8 @@ export function setRenderers(self) {
 					.map(t =>
 						t.tw.term.chr ? `${t.tw.term.chr}:${t.tw.term.start}-${t.tw.term.stop}` : t.tw.term.gene || t.tw.term.name
 					) // TODO term.gene replaces term.name
-				return { currentGeneNames }
+				if (currentGeneNames.length) return { currentGeneNames }
+				return {}
 			},
 			callback: async tw => {
 				// showing "processing data ..."" before pill is set
