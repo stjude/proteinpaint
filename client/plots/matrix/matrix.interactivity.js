@@ -101,7 +101,7 @@ export function setInteractivity(self) {
 					const label =
 						c.t.grp.type == 'hierCluster'
 							? v.value
-							: v && v.dt == 4 && v.value
+							: v && v.dt == dtcnv && v.value
 							? `${mclass[v.class].label} (${v.value.toFixed(2)})`
 							: p
 							? fusionLabel
