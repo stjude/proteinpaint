@@ -580,32 +580,24 @@ export type SingleCellGeneExpressionGdc = {
 	src: 'gdcapi'
 }
 
-export type SingleCellSamplesNative = {
-	src: 'native'
-	/** kept to prevent tsc err */
+export type SingleCellSamples = {
+	/** if missing refer to the samples as 'sample', this provides override e.g. 'case' */
+	/** logic to decide sample table columns (the one shown on singlecell app ui, displaying a table of samples with sc data)
+	a sample table will always have a sample column, to show sample.sample value
+	firstColumnName allow to change name of 1st column from "Sample" to different, e.g. "Case" for gdc
+	the other two properties allow to declare additional columns to be shown in table, that are for display only
+	when sample.experiments[] are used, a last column of experiment id will be auto added
+	*/
 	firstColumnName?: string
 	/** any columns to be added to sample table. each is a term id */
 	sampleColumns?: { termid: string }[]
 	/** used on client but not on ds */
 	experimentColumns?: { label: string }[]
-	get?: (q: any) => any
-}
-
-export type SingleCellSamplesGdc = {
-	src: 'gdcapi'
-	/** if missing refer to the samples as 'sample', this provides override e.g. 'case' */
-	/** logic to decide sample table columns (the one shown on singlecell app ui, displaying a table of samples with sc data)
-a sample table will always have a sample column, to show sample.sample value
-firstColumnName allow to change name of 1st column from "Sample" to different, e.g. "Case" for gdc
-the other two properties allow to declare additional columns to be shown in table, that are for display only
-when sample.experiments[] are used, a last column of experiment id will be auto added
-*/
-	firstColumnName?: string
-	/** same as SingleCellSamplesNative */
-	sampleColumns?: { termid: string }[]
-	/** used on client but not on ds */
-	experimentColumns?: { label: string }[]
-	get?: (q: any) => any
+	/** getter function to return list of samples with single-cell data. two sources:
+	- ds-supplied, to enclose ds-specific query details (gdc)
+	- if missing, will be added at launch. samples are found by looking through singleCell.data.plots[].folder
+	*/
+	get?: (q: any, ds: any) => any
 }
 
 export type SingleCellDataGdc = {
@@ -683,10 +675,10 @@ export type SingleCellDataNative = {
 
 export type SingleCellQuery = {
 	/** methods to identify samples with singlecell data,
-this data allows client-side to display a table with these samples for user to choose from
-also, sampleView uses this to determine if to invoke the sc plot for a sample
-*/
-	samples: SingleCellSamplesGdc | SingleCellSamplesNative
+	this data allows client-side to display a table with these samples for user to choose from
+	also, sampleView uses this to determine if to invoke the sc plot for a sample
+	*/
+	samples: SingleCellSamples
 	/** defines tsne/umap type of clustering maps for each sample
 	 */
 	data: SingleCellDataGdc | SingleCellDataNative

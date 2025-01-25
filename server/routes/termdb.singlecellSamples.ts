@@ -6,7 +6,7 @@ import { run_rust } from '@sjcrh/proteinpaint-rust'
 import serverconfig from '#src/serverconfig.js'
 import type {
 	SingleCellQuery,
-	SingleCellSamplesNative,
+	SingleCellSamples,
 	SingleCellDataNative,
 	SingleCellGeneExpressionNative,
 	Sample,
@@ -19,7 +19,7 @@ import type {
 } from '#types'
 import { termdbSingleCellSamplesPayload } from '#types/checkers'
 import { validate_query_singleCell_DEgenes } from './termdb.singlecellDEgenes.ts'
-import { gdc_validate_query_singleCell_samples, gdc_validate_query_singleCell_data } from '#src/mds3.gdc.js'
+import { gdc_validate_query_singleCell_data } from '#src/mds3.gdc.js'
 import ky from 'ky'
 
 /* route returns list of samples with sc data
@@ -50,7 +50,7 @@ function init({ genomes }) {
 			const ds = g.datasets[q.dslabel]
 			if (!ds) throw 'invalid dataset name'
 			if (!ds.queries?.singleCell) throw 'no singlecell data on this dataset'
-			result = await ds.queries.singleCell.samples.get(q)
+			result = await ds.queries.singleCell.samples.get(q, ds)
 		} catch (e: any) {
 			if (e.stack) console.log(e.stack)
 			result = {
@@ -66,14 +66,10 @@ function init({ genomes }) {
 export async function validate_query_singleCell(ds: any, genome: any) {
 	const q = ds.queries.singleCell as SingleCellQuery
 	if (!q) return
-	if (q.samples.src == 'gdcapi') {
-		gdc_validate_query_singleCell_samples(ds, genome)
-	} else if (q.samples.src == 'native') {
-		validateSamplesNative(q.samples as SingleCellSamplesNative, q.data as SingleCellDataNative, ds)
-	} else {
-		throw 'unknown singleCell.samples.src'
+	if (typeof q.samples.get != 'function') {
+		// add q.samples.get() for native ds. if already present, it is coded in ds e.g. gdc
+		validateSamplesNative(q.samples as SingleCellSamples, q.data as SingleCellDataNative, ds)
 	}
-	// q.samples.get() added
 
 	if (q.data.src == 'gdcapi') {
 		gdc_validate_query_singleCell_data(ds, genome)
@@ -112,7 +108,7 @@ function validateImages(images) {
 	if (!images.fileName) throw 'images.fileName missing'
 }
 
-async function validateSamplesNative(S: SingleCellSamplesNative, D: SingleCellDataNative, ds: any) {
+async function validateSamplesNative(S: SingleCellSamples, D: SingleCellDataNative, ds: any) {
 	// folder of every plot contains text files, one file per sample and named by sample names. each folder may contain variable number of samples. look into all folders to get union of samples as list of samples with sc data and return in this getter
 
 	// k: sample integer id
