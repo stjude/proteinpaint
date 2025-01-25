@@ -30,7 +30,6 @@ gdc_validate_query_geneExpression
 	geneExpression_getGenes
 	getExpressionData
 		getCases4expclustering
-gdc_validate_query_singleCell_samples
 gdc_validate_query_singleCell_data
 gdc_validate_query_singleCell_DEgenes
 	getSinglecellDEfile
@@ -2062,97 +2061,6 @@ async function convert2caseId(q, ds) {
 		if (h.case_id) return h.case_id
 	}
 	throw 'cannot convert to case_id (uuid)'
-}
-
-export function gdc_validate_query_singleCell_samples(ds, genome) {
-	// q: TermdbSinglecellsamplesRequest
-	ds.queries.singleCell.samples.get = async q => {
-		const filters = {
-			op: 'and',
-			content: [
-				{ op: '=', content: { field: 'data_format', value: 'tsv' } },
-				{ op: '=', content: { field: 'data_type', value: 'Single Cell Analysis' } },
-				{ op: '=', content: { field: 'experimental_strategy', value: 'scRNA-Seq' } }
-			]
-		}
-		const case_filters = { op: 'and', content: [] }
-
-		if (q.filter0) {
-			case_filters.content.push(q.filter0)
-		}
-
-		const json = {
-			filters,
-			size: 100,
-			fields: [
-				'cases.submitter_id',
-				'cases.project.project_id', // for display only NOTE it will be replaced to 'case.project.project_id' to be consistent with dict term id and used in sample obj property
-				'cases.samples.sample_type',
-				'cases.samples.submitter_id',
-				'cases.primary_site',
-				'cases.disease_type'
-			].join(',')
-		}
-
-		if (case_filters.content.length) json.case_filters = case_filters // speed
-
-		const { host, headers } = ds.getHostHeaders(q)
-		const re = await ky.post(joinUrl(host.rest, 'files'), { timeout: false, headers, json }).json()
-		if (!Number.isInteger(re.data?.pagination?.total)) throw 're.data.pagination.total is not int'
-		if (!Array.isArray(re.data?.hits)) throw 're.data.hits[] not array'
-
-		// api return is by file, must convert to file by case
-		//console.log(JSON.stringify(re.data.hits[0],null,2))
-
-		const case2files = new Map() // k: case submitter id, v: { project, disease, files:[{fileId, sampletype}]}
-
-		for (const h of re.data.hits) {
-			/*
-			{
-  "id": "d9bc1a51-3d27-4b98-b133-7c17067e7cb5",
-  "cases": [
-    {
-      "primary_site": "Kidney",
-      "disease_type": "Adenomas and Adenocarcinomas",
-      "project": {
-        "project_id": "CPTAC-3"
-      },
-      "samples": [
-        {
-          "submitter_id": "C3L-00606-01",
-          "sample_type": "Primary Tumor"
-        }
-      ]
-    }
-  ]
-}
-			*/
-
-			if (!h.id) throw 'h.id (fileId) missing'
-			const fileId = h.id
-			const c = h.cases?.[0]
-			if (!c) throw 'h.cases[0] missing'
-			const caseSubmitterId = c.submitter_id
-			if (!case2files.has(caseSubmitterId)) {
-				case2files.set(caseSubmitterId, {
-					sample: caseSubmitterId, // "sample" is universal key, though here is actually case
-					'case.primary_site': c.primary_site,
-					'case.disease_type': c.disease_type,
-					'case.project.project_id': c.project?.project_id,
-					experiments: []
-				})
-			}
-			if (!c.samples?.[0]) throw 'h.cases[0].samples[0] missing'
-			case2files.get(caseSubmitterId).experiments.push({
-				experimentID: fileId,
-				sampleName: c.samples[0].submitter_id,
-				sampleType: c.samples[0].sample_type
-			})
-		}
-		return {
-			samples: [...case2files.values()]
-		}
-	}
 }
 
 export function gdc_validate_query_singleCell_DEgenes(ds) {
