@@ -260,7 +260,7 @@ async function load_driver(q, ds) {
 			if (ds.queries.svfusion && !q.hardcodeCnvOnly) {
 				// todo
 				const d = await query_svfusion(q, ds)
-				result.skewer.push(...d)
+				if (d) result.skewer.push(...d)
 			}
 
 			if (ds.queries.geneCnv && !q.hardcodeCnvOnly) {
@@ -324,8 +324,9 @@ async function query_snvindel(q, ds) {
 
 async function query_svfusion(q, ds) {
 	if (q.rglst) {
-		if (!ds.queries.svfusion.byrange) throw 'q.rglst provided but svfusion.byrange missing'
-		return await ds.queries.svfusion.byrange.get(q)
+		if (ds.queries.svfusion.byrange) return await ds.queries.svfusion.byrange.get(q)
+		// some datasets only have svfusion.byname, do not show fusion on lollipop plot
+		return
 	}
 	throw 'insufficient query parameters for svfusion'
 }

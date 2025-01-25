@@ -128,9 +128,9 @@ export default class LabelsRenderer implements IRenderer {
 
 				td1.text('Break points')
 				td2.append('span').text(
-					` ${fusionTooltip.geneA ? fusionTooltip.geneA : ''} ${fusionTooltip.chrA}:${fusionTooltip.posA} 
+					` ${fusionTooltip.geneA ? fusionTooltip.geneA : '?'} ${fusionTooltip.chrA}:${fusionTooltip.posA}
 						${fusionTooltip.strandA == '+' ? 'forward' : 'reverse'} > ` +
-						`${fusionTooltip.geneB ? fusionTooltip.geneB : ''} ${fusionTooltip.chrB}:${fusionTooltip.posB} ${
+						`${fusionTooltip.geneB ? fusionTooltip.geneB : '?'} ${fusionTooltip.chrB}:${fusionTooltip.posB} ${
 							fusionTooltip.strandB == '+' ? 'forward' : 'reverse'
 						} `
 				)

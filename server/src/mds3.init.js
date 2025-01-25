@@ -1475,7 +1475,7 @@ function vcfFormat2sample(vlst, formatlst, sampleHeaderObj, addFormatValues) {
 async function validate_query_svfusion(ds, genome) {
 	const q = ds.queries.svfusion
 	if (!q) return
-	if (!q.byrange) throw 'byrange missing from queries.svfusion'
+	if (!q.byrange && !q.byname) throw 'both byrange and byname missing from queries.svfusion'
 	if (q.byrange) {
 		if (q.byrange.file) {
 			q.byrange.file = q.byrange.file.startsWith(serverconfig.tpmasterdir)
@@ -1485,6 +1485,17 @@ async function validate_query_svfusion(ds, genome) {
 			mayValidateSampleHeader(ds, q.byrange.samples, 'svfusion.byrange')
 		} else {
 			throw 'unknown query method for svfusion.byrange'
+		}
+	}
+	if (q.byname) {
+		if (q.byname.file) {
+			q.byname.file = q.byname.file.startsWith(serverconfig.tpmasterdir)
+				? q.byname.file
+				: path.join(serverconfig.tpmasterdir, q.byname.file)
+			q.byname.get = await svfusionByNameGetter_file(ds, genome)
+			//mayValidateSampleHeader(ds, q.byrange.samples, 'svfusion.byrange')
+		} else {
+			throw 'unknown query method for svfusion.byname'
 		}
 	}
 }
@@ -2192,6 +2203,169 @@ export async function svfusionByRangeGetter_file(ds, genome) {
 	}
 }
 
+export async function svfusionByNameGetter_file(ds, genome) {
+	const q = ds.queries.svfusion.byname
+	return async param => {
+		if (!Array.isArray(param.rglst)) throw 'q.rglst[] is not array'
+		if (param.rglst.length == 0) throw 'q.rglst[] blank array'
+
+		const formatFilter = getFormatFilter(param)
+
+		const limitSamples = await mayLimitSamples(param, q.samples, ds)
+		if (limitSamples?.size == 0) {
+			// got 0 sample after filtering, return blank array for no data
+			return []
+		}
+
+		const key2variants = new Map()
+		/*
+		key: key fields joined into a string
+		value: list of events described by the key
+		key fields include:
+		- dt sv/fusion
+		- chr of current breakpoint
+		- pos of current breakpoint
+		- strand of current breakpoint
+		- array index in pairlst[]
+		- partner gene name(s)
+		*/
+
+		const headerLine = await utils.get_header_txt(q.file)
+		const header = headerLine.toLowerCase().split('\t')
+		if (header.length <= 1) return 'invalid file header for fusions'
+
+		await utils.get_lines_txtfile({
+			args: [q.file],
+			callback: line => {
+				const l = line.split('\t')
+				const m = {}
+				for (let i = 0; i < header.length; i++) {
+					m[header[i]] = l[i]
+				}
+
+				for (const r of param.rglst) {
+					if (!r) continue
+					let rName = r.name
+					if (m['gene_a'].toLowerCase() != rName.toLowerCase() && m['gene_b'].toLowerCase() != rName.toLowerCase())
+						continue
+
+					const pos =
+						m['gene_a'].toLowerCase() == rName.toLowerCase()
+							? Number(m['position_a'])
+							: m['gene_b'].toLowerCase() == rName.toLowerCase()
+							? Number(m['position_b'])
+							: undefined
+
+					const j = { dt: 2, class: mclassfusionrna, mattr: { origin: m['origin'] } }
+
+					j.sample = ds.cohort.termdb.q.sampleName2id(m['sample_name'])
+
+					if (param.hiddenmclass && param.hiddenmclass.has(j.class)) return
+
+					if (j.sample && limitSamples) {
+						// to filter sample
+						if (!limitSamples.has(j.sample)) return
+					}
+
+					// collect key fields
+					let pairlstIdx, mname, strand
+					// later may add pairlstLength to support fusion events with more than 2 genes
+
+					// collect initial pairlst to add to key2variants{}, for showing svgraph
+					let pairlst
+
+					/* two types of possible file formats
+					1. {chrA, posA, chrB, posB, strandA, strandB}
+						legacy format used for mds, hardcoded for 2-gene events
+					2. {pairlst:[ {a,b}, {a,b}, ... ]}
+						new format that can support events with more than 2 genes
+						pairlst.length=1 for 2-gene event
+						pairlst.length=2 for 3-gene event, where lst[0].b and lst[1].a are on the same gene
+					*/
+					if (m['gene_a'].toLowerCase() == rName.toLowerCase()) {
+						pairlstIdx = 0
+						mname = m['gene_b'] || m['chr_b']
+						strand = m['strand_b']
+						//
+						pairlst = [
+							{
+								a: { chr: m['chr_a'], pos: m['position_a'], strand: m['strand_a'], name: m['gene_a'] },
+								b: { chr: m['chr_b'], pos: m['position_b'], strand, name: m['gene_b'] }
+							}
+						]
+					} else if (m['gene_b'].toLowerCase() == rName.toLowerCase()) {
+						pairlstIdx = 1
+						mname = m['gene_a'] || m['chr_a']
+						strand = m['strand_a']
+						pairlst = [
+							{
+								a: { chr: m['chr_a'], pos: m['position_a'], strand, name: m['gene_a'] },
+								b: { chr: m['chr_b'], pos: m['position_b'], strand: m['strand_b'], name: m['gene_b'] }
+							}
+						]
+					} else if (j.pairlst) {
+						// todo: support pairlst=[{chr,pos}, {chr,pos}, ...]
+						pairlst = j.pairlst
+						const idx = j.pairlst.findIndex(i => i.chr == chr && i.pos == pos)
+						if (idx == -1) throw 'current point missing from pairlst'
+						pairlstIdx = idx
+						// todo mname as joining names of rest of pairlst points
+					} else {
+						throw 'missing geneA and geneB'
+					}
+
+					// encode mname in case it has comma and will break v2s code when splitting by comma
+					const ssm_id = [j.dt, r.chr, pos, strand, pairlstIdx, encodeURIComponent(mname)].join(ssmIdFieldsSeparator)
+
+					let sampleObj // optional sample of this event; if valid, will be inserted into m.samples[]
+					if (j.sample) {
+						// has sample, prepare the sample obj
+						// if the sample is skipped by format, then the event will be skipped
+
+						// for ds with sampleidmap, j.sample value should be integer
+						// XXX not guarding against file uses non-integer sample values in such case
+
+						sampleObj = { sample_id: j.sample }
+						if (j.mattr) {
+							// mattr{} has sample-level attributes on this sv event, equivalent to FORMAT
+							if (formatFilter) {
+								// will do the same filtering as snvindel
+								for (const formatKey in formatFilter) {
+									const formatValue = formatKey in j.mattr ? j.mattr[formatKey] : unannotatedKey
+									if (formatFilter[formatKey].has(formatValue)) {
+										// sample is dropped by format filter
+										return
+									}
+								}
+							}
+							if (param.addFormatValues) {
+								// only attach format values when required
+								sampleObj.formatK2v = j.mattr
+							}
+						}
+					}
+					if (!key2variants.has(ssm_id)) {
+						key2variants.set(ssm_id, {
+							ssm_id,
+							dt: j.dt,
+							class: j.class,
+							chr: r.chr,
+							pos,
+							strand,
+							pairlstIdx,
+							mname,
+							pairlst, // if this key corresponds multiple events, add initial pairlst to allow showing svgraph without additional query to get other breakpoints
+							samples: []
+						})
+					}
+					if (sampleObj) key2variants.get(ssm_id).samples.push(sampleObj)
+				}
+			}
+		})
+		return [...key2variants.values()]
+	}
+}
+
 /*
 getter input:
 .rglst=[ { chr, start, stop} ]
@@ -2653,6 +2827,12 @@ async function getSvfusionByTerm(ds, term, genome, q) {
 		// tw.term.chr/start/stop are set
 		arg.rglst = [term]
 		return await ds.queries.svfusion.byrange.get(arg)
+	}
+	if (ds.queries.svfusion.byname) {
+		await mayMapGeneName2coord(term, genome)
+		// tw.term.chr/start/stop are set
+		arg.rglst = [term]
+		return await ds.queries.svfusion.byname.get(arg)
 	}
 	throw 'unknown queries.svfusion method'
 }
