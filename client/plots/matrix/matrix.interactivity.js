@@ -87,13 +87,24 @@ export function setInteractivity(self) {
 					// TODO: when the same label can apply to multiple values/hits in the same matrix cell,
 					// list that label only once but with a hit count, instead of listing that same label
 					// as multiple table rows in the mouseover
+
+					let fusionLabel
+					if (p)
+						fusionLabel =
+							p[0].a.name && p[0].b.name
+								? p[0].a.name + '::' + p[0].b.name
+								: p[0].a.name
+								? p[0].a.name + '::' + '?'
+								: p[0].b.name
+								? '?' + '::' + p[0].b.name
+								: ''
 					const label =
 						c.t.grp.type == 'hierCluster'
 							? v.value
 							: v && v.dt == 4 && v.value
 							? `${mclass[v.class].label} (${v.value.toFixed(2)})`
 							: p
-							? (p[0].a.name || p[0].a.chr) + '::' + (p[0].b.name || p[0].b.chr)
+							? fusionLabel
 							: v.mname
 							? `${v.mname} ${mclass[v.class].label}`
 							: mclass[v.class].label
@@ -449,13 +460,25 @@ export function setInteractivity(self) {
 					const v = c.value
 					const p = v.pairlst
 					const dtLabel = v.origin ? `${v.origin} ${dt2label[v.dt]}` : dt2label[v.dt]
+
+					let fusionLabel
+					if (p)
+						fusionLabel =
+							p[0].a.name && p[0].b.name
+								? p[0].a.name + '::' + p[0].b.name
+								: p[0].a.name
+								? p[0].a.name + '::' + '?'
+								: p[0].b.name
+								? '?' + '::' + p[0].b.name
+								: ''
+
 					const label =
 						c.t.grp.type == 'hierCluster'
 							? v.value
 							: v && v.dt == 4 && v.value
 							? `${mclass[v.class].label} (${v.value.toFixed(2)})`
 							: p
-							? (p[0].a.name || p[0].a.chr) + '::' + (p[0].b.name || p[0].b.chr)
+							? fusionLabel
 							: v.mname
 							? `${v.mname} ${mclass[v.class].label}`
 							: mclass[v.class].label

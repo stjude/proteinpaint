@@ -9,11 +9,12 @@ import { table2col } from '#dom/table2col'
 export default class FusionRenderer {
 	render(holder: any, fusions: Array<Fusion>) {
 		let radius = 0
-		if (fusions.length > 0) {
-			radius = fusions[0].target.radius
+		const fusionsWithTarget = fusions.filter(f => f.target)
+		if (fusionsWithTarget.length > 0) {
+			radius = fusionsWithTarget[0].target.radius
 			const fullArcRenderer = new FullArcRenderer(radius, 2, '#6464641A')
 			fullArcRenderer.render(holder)
-		}
+		} else return
 
 		const ribboon = d3.ribbon().radius(radius)
 

@@ -338,8 +338,12 @@ so that it can work for a termdb-less ds, e.g. clinvar, where termdbConfig canno
 }
 
 type SvFusion = {
-	byrange: {
-		/** file paths for sv fusion data */
+	byrange?: {
+		/** file paths for sv fusion BED data */
+		file?: string
+	}
+	byname?: {
+		/** file paths for sv fusion TXT data */
 		file?: string
 	}
 }

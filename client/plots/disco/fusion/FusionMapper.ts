@@ -36,20 +36,22 @@ export default class FusionMapper {
 				data.strandA
 			)
 
-			const target = new FusionSubgroup(
-				this.calculateStartAngle(data.chrB, data.posB),
-				this.calculateEndAngle(data.chrB, data.posB),
-				this.radius,
-				data.geneB,
-				data.value,
-				genes,
-				{
-					chromosome: data.chrB,
-					position: data.posB
-				},
-				data.strandB
-			)
-
+			let target
+			if (data.chrB && data.posB) {
+				target = new FusionSubgroup(
+					this.calculateStartAngle(data.chrB, data.posB),
+					this.calculateEndAngle(data.chrB, data.posB),
+					this.radius,
+					data.geneB,
+					data.value,
+					genes,
+					{
+						chromosome: data.chrB,
+						position: data.posB
+					},
+					data.strandB
+				)
+			}
 			const fusion = new Fusion(source, target, 'genes', -1, 'Endpoints')
 
 			fusions.push(fusion)
