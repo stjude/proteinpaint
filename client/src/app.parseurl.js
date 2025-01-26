@@ -106,14 +106,6 @@ upon error, throw err message as a string
 		})
 		return
 	}
-	if (urlp.has('gdcsinglecell')) {
-		const _ = await import('../gdc/singlecell.js')
-		_.gdcSinglecellUi({
-			holder: arg.holder,
-			debugmode: arg.debugmode
-		})
-		return
-	}
 
 	if (urlp.has('termdb')) {
 		const value = urlp.get('termdb')
