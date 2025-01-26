@@ -65,13 +65,12 @@ class singleCellPlot {
 
 		this.tabs = []
 		const activeTab = state.config.activeTab
-		if (this.samples.length > 1)
-			this.tabs.push({
-				label: 'Samples',
-				id: SAMPLES_TAB,
-				active: activeTab == SAMPLES_TAB,
-				callback: () => this.setActiveTab(SAMPLES_TAB)
-			})
+		this.tabs.push({
+			label: state.config.sample || this.samples[0].sample,
+			id: SAMPLES_TAB,
+			active: activeTab == SAMPLES_TAB,
+			callback: () => this.setActiveTab(SAMPLES_TAB)
+		})
 		if (state.config.plots.length > 1)
 			this.tabs.push({
 				label: 'Plots',
@@ -118,7 +117,8 @@ class singleCellPlot {
 			holder: contentDiv,
 			tabsPosition: 'horizontal',
 			tabs: this.tabs
-		}).main()
+		})
+		this.tabsComp.main()
 
 		const headerDiv = contentDiv.append('div').style('display', 'inline-block').style('padding-bottom', '20px')
 		const showDiv = headerDiv.append('div').style('padding-bottom', '10px')
@@ -1068,7 +1068,8 @@ class singleCellPlot {
 				if (rows[index][0].__experimentID) {
 					config.experimentID = rows[index][0].__experimentID
 				}
-
+				this.tabsComp.tabs[0].label = sample
+				this.tabsComp.update(0, this.tabs[0])
 				this.app.dispatch({ type: 'plot_edit', id: this.id, config })
 			},
 			selectedRows,
