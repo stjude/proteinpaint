@@ -1045,7 +1045,7 @@ class singleCellPlot {
 		div.selectAll('*').remove()
 		const [rows, columns] = await this.getTableData(state)
 		const selectedRows = []
-		let maxHeight = '14vh'
+		let maxHeight = '16vh'
 		const selectedSample = state.config.sample
 		const selectedIndex = state.config.sample ? this.samples.findIndex(s => s.sample == selectedSample) : 0
 		selectedRows.push(selectedIndex)
