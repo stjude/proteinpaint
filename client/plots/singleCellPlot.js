@@ -607,7 +607,7 @@ class singleCellPlot {
 			copyMerge(this.settings, this.config.settings.singleCellPlot)
 			this.plotColorByDivs = []
 			if (this.settings.showSamples) await this.renderSamplesTable(this.dom.tableDiv, this.state)
-			else this.dom.tableDiv.selectAll('*').remove()
+			this.dom.tableDiv.style('display', this.settings.showSamples ? 'block' : 'none')
 
 			this.dom.loadingDiv.selectAll('*').remove()
 			this.dom.loadingDiv.style('display', '').append('div').attr('class', 'sjpp-spinner')
