@@ -202,7 +202,8 @@ export function runproteinpaint(arg) {
 				!window.location.search.includes('mass-session-id') &&
 				!window.location.search.includes('mass-session-file') &&
 				!window.location.search.includes('mass-session-url') &&
-				!window.location.search.includes('massnative')
+				!window.location.search.includes('massnative') &&
+				!window.location.search.includes('mass')
 			) {
 				// all conditions are false. show header
 				const _ = await import('./header/AppHeader.ts')
