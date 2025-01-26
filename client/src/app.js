@@ -192,14 +192,19 @@ export function runproteinpaint(arg) {
 				}
 			}
 
+			// if any such condition is true, ppheader will not be shown. this avoids need to always add "&noheader=1" in url param and runpp() arg in such frequent cases
 			if (
 				!arg.noheader &&
+				!arg.mass &&
+				!arg.massSessionId &&
+				!arg.massSessionFile &&
 				!window.location.search.includes('noheader') &&
 				!window.location.search.includes('mass-session-id') &&
-				//Fix for header appearing on URL parameters
 				!window.location.search.includes('mass-session-file') &&
-				!window.location.search.includes('mass-session-url')
+				!window.location.search.includes('mass-session-url') &&
+				!window.location.search.includes('massnative')
 			) {
+				// all conditions are false. show header
 				const _ = await import('./header/AppHeader.ts')
 				const appHeader = new _.AppHeader({
 					headtip,
