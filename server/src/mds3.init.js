@@ -2203,6 +2203,7 @@ export async function svfusionByRangeGetter_file(ds, genome) {
 	}
 }
 
+// this getter processes svfusion file with data that are lacking breakpoint positions, and will return events without coordinates
 export async function svfusionByNameGetter_file(ds, genome) {
 	const q = ds.queries.svfusion.byname
 	return async param => {
