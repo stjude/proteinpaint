@@ -457,6 +457,7 @@ export function setInteractivity(self) {
 				const siblingCellLabels = {}
 				for (const c of sampleData.siblingCells) {
 					if (c.$id != sampleData.$id) continue
+					// FIXME code dup with line 90
 					const v = c.value
 					const p = v.pairlst
 					const dtLabel = v.origin ? `${v.origin} ${dt2label[v.dt]}` : dt2label[v.dt]
@@ -475,7 +476,7 @@ export function setInteractivity(self) {
 					const label =
 						c.t.grp.type == 'hierCluster'
 							? v.value
-							: v && v.dt == 4 && v.value
+							: v && v.dt == dtcnv && v.value
 							? `${mclass[v.class].label} (${v.value.toFixed(2)})`
 							: p
 							? fusionLabel
