@@ -2256,8 +2256,10 @@ export async function svfusionByNameGetter_file(ds, genome) {
 							? Number(m['position_b'])
 							: undefined
 
-					const j = { dt: 2, class: mclassfusionrna, mattr: { origin: m['origin'] } }
+					// FIXME since the file can contain both fusion/sv, file must incude a column to denote if each event is fusion/sv and should not hardcode dt
+					const j = { dt: dtfusionrna, class: mclassfusionrna, mattr: { origin: m['origin'] } }
 
+					// FIXME file should use sample name but not integer id
 					j.sample = ds.cohort.termdb.q.sampleName2id(m['sample_name'])
 
 					if (param.hiddenmclass && param.hiddenmclass.has(j.class)) return
