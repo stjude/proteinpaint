@@ -26,7 +26,6 @@ this
 			.sample
 */
 
-const SAMPLES_TAB = 0
 const PLOTS_TAB = 1
 const GENE_EXPRESSION_TAB = 3
 const DIFFERENTIAL_EXPRESSION_TAB = 4
@@ -65,13 +64,7 @@ class singleCellPlot {
 
 		this.tabs = []
 		const activeTab = state.config.activeTab
-		if (this.samples.length > 1)
-			this.tabs.push({
-				label: 'Samples',
-				id: SAMPLES_TAB,
-				active: activeTab == SAMPLES_TAB,
-				callback: () => this.setActiveTab(SAMPLES_TAB)
-			})
+
 		if (state.config.plots.length > 1)
 			this.tabs.push({
 				label: 'Plots',
@@ -113,18 +106,22 @@ class singleCellPlot {
 		const leftDiv = mainDiv.append('div').style('display', 'inline-block').style('vertical-align', 'top')
 		const controlsDiv = leftDiv.append('div').attr('class', 'pp-termdb-plot-controls')
 
-		const contentDiv = mainDiv.append('div').style('display', 'inline-block').style('vertical-align', 'top')
+		const contentDiv = mainDiv
+			.append('div')
+			.style('display', 'inline-block')
+			.style('vertical-align', 'top')
+			.style('padding', '10px')
+		const tableDiv = contentDiv.append('div').style('padding-bottom', '20px')
+
+		const tabsDiv = contentDiv.append('div').style('display', 'inline-block').style('padding-bottom', '10px')
 		this.tabsComp = await new Tabs({
-			holder: contentDiv,
+			holder: tabsDiv,
 			tabsPosition: 'horizontal',
 			tabs: this.tabs
 		}).main()
 
 		const headerDiv = contentDiv.append('div').style('display', 'inline-block').style('padding-bottom', '20px')
 		const showDiv = headerDiv.append('div').style('padding-bottom', '10px')
-
-		const tableDiv = headerDiv.append('div')
-		await this.renderSamplesTable(tableDiv, state)
 
 		if (state.config.plots.length > 1) this.renderShowPlots(showDiv, state)
 		// div to show optional DE genes (precomputed by seurat for each cluster, e.g. via gdc)
@@ -333,17 +330,8 @@ class singleCellPlot {
 	showActiveTab() {
 		const tab = this.state.config.activeTab || this.tabs[0].id
 		switch (tab) {
-			case SAMPLES_TAB:
-				this.dom.headerDiv.style('display', 'block')
-				this.dom.tableDiv.style('display', 'block')
-				this.dom.showDiv.style('display', 'none')
-				this.dom.deDiv.style('display', 'none')
-				this.dom.geDiv.style('display', 'none')
-
-				break
 			case PLOTS_TAB:
 				this.dom.headerDiv.style('display', 'block')
-				this.dom.tableDiv.style('display', 'none')
 				this.dom.showDiv.style('display', 'block')
 				this.dom.deDiv.style('display', 'none')
 				this.dom.geDiv.style('display', 'none')
@@ -353,7 +341,6 @@ class singleCellPlot {
 				this.dom.headerDiv.style('display', 'block')
 				this.dom.deDiv.style('display', 'none')
 				this.dom.geDiv.style('display', 'inline-block')
-				this.dom.tableDiv.style('display', 'none')
 				this.dom.showDiv.style('display', 'none')
 				this.dom.searchbox.node().focus()
 				if (this.state.config.gene) this.dom.searchbox.node().value = this.state.config.gene
@@ -363,13 +350,11 @@ class singleCellPlot {
 				this.dom.headerDiv.style('display', 'block')
 				this.dom.deDiv.style('display', 'inline-block')
 				this.dom.geDiv.style('display', 'none')
-				this.dom.tableDiv.style('display', 'none')
 				this.dom.showDiv.style('display', 'none')
 				this.renderDETable()
 				break
 			case IMAGES_TAB:
 				this.dom.headerDiv.style('display', 'block')
-				this.dom.tableDiv.style('display', 'none')
 				this.dom.showDiv.style('display', 'none')
 				this.dom.deDiv.style('display', 'none')
 				this.dom.geDiv.style('display', 'none')
@@ -508,6 +493,14 @@ class singleCellPlot {
 		this.dom.controlsHolder.selectAll('*').remove()
 		const inputs = [
 			{
+				label: 'Show samples',
+				boxLabel: '',
+				type: 'checkbox',
+				chartType: 'singleCellPlot',
+				settingsKey: 'showSamples',
+				title: 'Show or hide samples'
+			},
+			{
 				label: 'Chart width',
 				type: 'number',
 				chartType: 'singleCellPlot',
@@ -551,6 +544,7 @@ class singleCellPlot {
 				settingsKey: 'showGrid',
 				title: 'Show grid'
 			},
+
 			{
 				label: 'Show no expression',
 				boxLabel: '',
@@ -612,6 +606,8 @@ class singleCellPlot {
 			this.config = structuredClone(this.state.config) // this config can be edited to dispatch changes
 			copyMerge(this.settings, this.config.settings.singleCellPlot)
 			this.plotColorByDivs = []
+			if (this.settings.showSamples) await this.renderSamplesTable(this.dom.tableDiv, this.state)
+			else this.dom.tableDiv.selectAll('*').remove()
 
 			this.dom.loadingDiv.selectAll('*').remove()
 			this.dom.loadingDiv.style('display', '').append('div').attr('class', 'sjpp-spinner')
@@ -1049,11 +1045,10 @@ class singleCellPlot {
 		div.selectAll('*').remove()
 		const [rows, columns] = await this.getTableData(state)
 		const selectedRows = []
-		let maxHeight = '20vh'
+		let maxHeight = '14vh'
 		const selectedSample = state.config.sample
-		const selectedRow = this.samples.findIndex(s => s.sample == selectedSample)
-		const selectedRowIndex = selectedRow == -1 ? 0 : selectedRow
-		selectedRows.push(selectedRowIndex)
+		const selectedIndex = state.config.sample ? this.samples.findIndex(s => s.sample == selectedSample) : 0
+		selectedRows.push(selectedIndex)
 		renderTable({
 			rows,
 			columns,
@@ -1343,6 +1338,7 @@ export function getDefaultSingleCellSettings() {
 		svgw: 1000,
 		svgh: 1000,
 		showGrid: true,
+		showSamples: true,
 		sampleSize: 1.5,
 		sampleSizeThree: 0.02,
 		threeFOV: 60,
