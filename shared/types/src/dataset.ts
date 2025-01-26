@@ -339,11 +339,19 @@ so that it can work for a termdb-less ds, e.g. clinvar, where termdbConfig canno
 
 type SvFusion = {
 	byrange?: {
-		/** file paths for sv fusion BED data */
+		/** gz BED file path for sv fusion data: chr \t start \t stop \t {}
+		will only contain events with coordinates in both breakpoints
+		TODO use string sample name
+		*/
 		file?: string
 	}
 	byname?: {
-		/** file paths for sv fusion TXT data */
+		/** file paths for sv fusion TXT data. will contain events lacking breakpoint coordinates and can only be matched by gene names
+		TODO 
+		1. declare file format
+		2. use string sample name
+		3. add column to denote if an event is fusion or sv
+		*/
 		file?: string
 	}
 }
