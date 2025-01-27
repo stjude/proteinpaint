@@ -9,7 +9,6 @@ import serverconfig from './serverconfig.js'
 import { authApi } from './auth.js'
 import * as validator from './validator.js'
 import { decode as urlJsonDecode } from '#shared/urljson.js'
-
 import jsonwebtoken from 'jsonwebtoken'
 
 const basepath = serverconfig.basepath || ''
@@ -96,13 +95,13 @@ export function setAppMiddlewares(app) {
 		log(req)
 
 		/*
-		!!! put this code after logging the request, so these protected info are not logged !!!
-		!! more or less quick fix !!
-		in gdc environment, this will pass sessionid from cookie to req.query
-		to be added to request header where it's querying gdc api
-		by doing this, route code is worry-free and no need to pass "req{}" to gdc purpose-specific code doing the API calls
-		these *protected* contents are not used in non-gdc code
-		*/
+        !!! put this code after logging the request, so these protected info are not logged !!!
+        !! more or less quick fix !!
+        in gdc environment, this will pass sessionid from cookie to req.query
+        to be added to request header where it's querying gdc api
+        by doing this, route code is worry-free and no need to pass "req{}" to gdc purpose-specific code doing the API calls
+        these *protected* contents are not used in non-gdc code
+        */
 		req.query.__protected__ = {}
 		if (req.cookies?.sessionid) {
 			req.query.__protected__.sessionid = req.cookies.sessionid

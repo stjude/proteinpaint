@@ -829,9 +829,9 @@ export type WSImages = {
 	// type of the image, e.g. H&E
 	type: string
 	// path to the folder where sample images are stored
-	imageBySampleFolder: string
-	// TODO extend to support multiple sources
-	//sources?: []
+	imageBySampleFolder?: string
+
+	sources?: string
 }
 
 /*** types supporting Termdb ***/

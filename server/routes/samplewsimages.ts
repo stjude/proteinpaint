@@ -1,6 +1,5 @@
 import type { SampleWSImagesRequest, SampleWSImagesResponse, WSImage, RouteApi, Mds3 } from '#types'
 import { sampleWSImagesPayload } from '#types/checkers'
-
 /*
 given a sample, return all whole slide images for specified dataset
 */
@@ -29,7 +28,20 @@ function init({ genomes }) {
 			if (!ds) throw 'invalid dataset name'
 			const sampleId = query.sample_id
 
-			const images = await ds.queries.WSImages.getWSImages({ sampleId })
+			// TODO replace with real logic for getting fsspec json files when available
+			if (ds.queries.WSImages.sources) {
+				const images: WSImage[] = []
+				if (ds.queries.WSImages.sources) {
+					images.push({
+						filename: sampleId + '_fsspec.json',
+						metadata: ''
+					})
+				}
+				res.send({ sampleWSImages: images } satisfies SampleWSImagesResponse)
+				return
+			}
+
+			const images: WSImage[] = await ds.queries.WSImages.getWSImages({ sampleId })
 			res.send({ sampleWSImages: images } satisfies SampleWSImagesResponse)
 		} catch (e: any) {
 			console.log(e)

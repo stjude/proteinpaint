@@ -566,6 +566,10 @@ async function parseEmbedThenUrl(arg, app) {
 		return await launchDisco(arg, app)
 	}
 
+	if (arg.wsiViewer) {
+		return await launchWsiViewer(arg, app)
+	}
+
 	if (arg.geneSearch4GDCmds3) {
 		/* can generalize by changing to geneSearch4tk:{tkobj}
 		so it's no longer hardcoded for one dataset of one track type
@@ -1526,4 +1530,20 @@ async function launchDisco(arg, app) {
 		const _ = await import('#plots/disco/launch.adhoc.ts')
 		return await _.launch(arg.disco, genomeObj, app.holder0)
 	}
+}
+
+async function launchWsiViewer(arg, app) {
+	if (!arg.genome) throw '"genome" parameter missing'
+	const genomeObj = app.genomes[arg.genome]
+	if (!genomeObj) throw 'unknown genome'
+	const wsiViewer = await import('#plots/wsiviewer/plot.wsi.js')
+
+	// Extract sample-id from the URL
+	const urlParams = new URLSearchParams(window.location.search)
+	const sampleId = urlParams.get('sample_id')
+	if (!sampleId) {
+		throw 'sample-id parameter missing'
+	}
+
+	wsiViewer.default(arg.dslabel, app.holder, genomeObj, sampleId)
 }

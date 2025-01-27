@@ -9,6 +9,7 @@ export const routeFiles = [
 	import('../routes/brainImaging.ts'),
 	import('../routes/brainImagingSamples.ts'),
 	import('../routes/burden.ts'),
+	import('../routes/clearwsisession.ts'),
 	import('../routes/correlationVolcano.ts'),
 	import('../routes/dataset.ts'),
 	import('../routes/dsdata.ts'),
