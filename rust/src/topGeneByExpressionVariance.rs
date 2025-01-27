@@ -17,18 +17,13 @@ use nalgebra::base::dimension::Dyn;
 use nalgebra::base::Matrix;
 use nalgebra::base::VecStorage;
 use nalgebra::DMatrix;
-use serde::{Deserialize, Serialize};
 use serde_json;
-use statrs::statistics::Data;
-use statrs::statistics::Median;
-use statrs::statistics::OrderStatistics;
-use statrs::statistics::Statistics;
-use std::cmp::Ordering;
 use std::fs;
 use std::io;
 use std::io::Read;
 use std::str::FromStr;
 use std::time::Instant;
+mod stats_functions; // Importing calculate_variance function from stats_functions.rs
 
 fn input_data(
     filename: &String,
@@ -97,152 +92,6 @@ fn input_data(
     let dm = DMatrix::from_row_slice(num_lines, sample_list.len(), &input_vector);
     //println!("dm:{:?}", dm);
     (dm, gene_symbols)
-}
-
-#[allow(dead_code)]
-#[derive(Debug, Serialize, Deserialize)]
-struct GeneInfo {
-    gene_symbol: String,
-    rank_type: f64,
-}
-
-fn calculate_variance(
-    input_matrix: Matrix<f64, Dyn, Dyn, VecStorage<f64, Dyn, Dyn>>,
-    gene_symbols: Vec<String>,
-    mut min_sample_size: f64,
-    filter_extreme_values: bool,
-    rank_type: String,
-    min_count_option: Option<f64>,
-    min_total_count_option: Option<f64>,
-) -> Vec<GeneInfo> {
-    let mut min_count: f64 = 10.0;
-    match min_count_option {
-        Some(x) => min_count = x,
-        None => {}
-    }
-    let mut min_total_count: f64 = 15.0;
-    match min_total_count_option {
-        Some(x) => min_total_count = x,
-        None => {}
-    }
-    //const MIN_COUNT: f64 = 10.0; // Value of constant from R implementation
-    //const MIN_TOTAL_COUNT: f64 = 15.0; // Value of constant from R implementation
-    const LARGE_N: f64 = 10.0; // Value of constant from R implementation
-    const MIN_PROP: f64 = 0.7; // Value of constant from R implementation
-
-    if min_sample_size == 0.0 {
-        panic!("Only one condition present in groups");
-    }
-
-    if min_sample_size > LARGE_N {
-        min_sample_size = LARGE_N + (min_sample_size - LARGE_N) * MIN_PROP;
-    }
-
-    let mut lib_sizes = Vec::<f64>::new();
-    let lib_sizes_vector = input_matrix.row_sum();
-    //println!("lib_sizes_vector:{:?}", lib_sizes_vector);
-    for i in 0..lib_sizes_vector.ncols() {
-        lib_sizes.push(lib_sizes_vector[(0, i)].into());
-    }
-    //println!("lib_sizes:{:?}", lib_sizes);
-    //println!("min_sample_size:{}", min_sample_size);
-    let median_lib_size = Data::new(lib_sizes.clone()).median();
-    let cpm_cutoff = (min_count / median_lib_size) * 1000000.0;
-    //println!("cpm_cutoff:{}", cpm_cutoff);
-    let cpm_matrix = cpm(&input_matrix);
-    const TOL: f64 = 1e-14; // Value of constant from R implementation
-
-    let mut gene_infos = Vec::<GeneInfo>::new();
-    let row_sums = input_matrix.column_sum();
-    for row in 0..input_matrix.nrows() {
-        let mut trues = 0.0;
-        for col in 0..cpm_matrix.ncols() {
-            if cpm_matrix[(row, col)] >= cpm_cutoff {
-                trues += 1.0;
-            }
-        }
-        let mut keep_cpm_bool = false;
-        if trues >= min_sample_size - TOL {
-            keep_cpm_bool = true;
-            //keep_cpm.push(keep_cpm_bool);
-            //positive_cpm += 1;
-        }
-
-        let mut keep_total_bool = false;
-        if row_sums[(row, 0)] as f64 >= min_total_count - TOL {
-            keep_total_bool = true;
-            //keep_total.push(keep_total_bool);
-            //positive_total += 1;
-        }
-
-        let mut gene_counts: Vec<f64> = Vec::with_capacity(input_matrix.ncols());
-        for col in 0..input_matrix.ncols() {
-            gene_counts.push(input_matrix[(row, col)]);
-        }
-        if rank_type == "var" {
-            // Calculating variance
-            if gene_counts.clone().variance().is_nan() == true {
-            } else if filter_extreme_values == true
-                && keep_cpm_bool == true
-                && keep_total_bool == true
-            {
-                gene_infos.push(GeneInfo {
-                    rank_type: gene_counts.variance(),
-                    gene_symbol: gene_symbols[row].clone(),
-                });
-            } else if filter_extreme_values == false {
-                gene_infos.push(GeneInfo {
-                    rank_type: gene_counts.variance(),
-                    gene_symbol: gene_symbols[row].clone(),
-                });
-            }
-        } else {
-            // Calculating interquartile region
-            let mut gene_counts_data = Data::new(gene_counts);
-            if gene_counts_data.clone().interquartile_range().is_nan() == true {
-            } else if filter_extreme_values == true
-                && keep_cpm_bool == true
-                && keep_total_bool == true
-            {
-                gene_infos.push(GeneInfo {
-                    rank_type: gene_counts_data.interquartile_range(),
-                    gene_symbol: gene_symbols[row].clone(),
-                });
-            } else if filter_extreme_values == false {
-                gene_infos.push(GeneInfo {
-                    rank_type: gene_counts_data.interquartile_range(),
-                    gene_symbol: gene_symbols[row].clone(),
-                });
-            }
-        }
-    }
-    gene_infos.as_mut_slice().sort_by(|a, b| {
-        (a.rank_type)
-            .partial_cmp(&b.rank_type)
-            .unwrap_or(Ordering::Equal)
-    });
-    gene_infos
-}
-
-fn cpm(
-    input_matrix: &Matrix<f64, Dyn, Dyn, VecStorage<f64, Dyn, Dyn>>,
-) -> Matrix<f64, Dyn, Dyn, VecStorage<f64, Dyn, Dyn>> {
-    //let mut blank = Vec::<f64>::new();
-    let mut blank = Vec::with_capacity(input_matrix.nrows() * input_matrix.ncols());
-    for _i in 0..input_matrix.nrows() * input_matrix.ncols() {
-        blank.push(0.0);
-    }
-    let mut output_matrix = DMatrix::from_vec(input_matrix.nrows(), input_matrix.ncols(), blank);
-    let column_sums = input_matrix.row_sum();
-    for col in 0..input_matrix.ncols() {
-        let norm_factor = column_sums[(0, col)];
-        for row in 0..input_matrix.nrows() {
-            output_matrix[(row, col)] =
-                (input_matrix[(row, col)] as f64 * 1000000.0) / norm_factor as f64;
-        }
-    }
-    //println!("output_matrix:{:?}", output_matrix);
-    output_matrix
 }
 
 fn main() {
@@ -326,7 +175,7 @@ fn main() {
 
                     let samples_list: Vec<&str> = samples_string.split(",").collect();
                     let (input_matrix, gene_symbols) = input_data(&file_name, &samples_list);
-                    let gene_infos = calculate_variance(
+                    let gene_infos = stats_functions::calculate_variance(
                         input_matrix,
                         gene_symbols,
                         samples_list.len() as f64,

@@ -105,7 +105,6 @@ values[] // using integer sample id
 			//group2names_not_found_list.push(n)
 		}
 	}
-
 	//console.log('Sample size of group1:', group1names.length)
 	//console.log('Sample size of group2:', group2names.length)
 	const sample_size1 = group1names.length
@@ -121,6 +120,7 @@ values[] // using integer sample id
 	const cases_string = group1names.map(i => i).join(',')
 	const controls_string = group2names.map(i => i).join(',')
 	//group 1 by default is selected as the control group. Later on we can allow user to select which group is control and which is treatment. Reason to do this is to first select the group against which the comparison is to be made in the DE analysis. This is important for the interpretation of the results as analyses is context dependent based on the biological question. If the user wants to compare the expression of a specific gene between 2 groups, then the user should select the group that is not of interest as the control group.
+
 	const expression_input = {
 		case: controls_string,
 		control: cases_string,
@@ -145,17 +145,62 @@ values[] // using integer sample id
 
 	const sample_size_limit = 8 // Cutoff to determine if parametric estimation using edgeR should be used or non-parametric estimation using wilcoxon test
 	let result
-	if ((group1names.length <= sample_size_limit && group2names.length <= sample_size_limit) || param.method == 'edgeR') {
-		// edgeR will be used for DE analysis
+	if (group1names.length <= sample_size_limit && group2names.length <= sample_size_limit) {
+		// variance of genes do not need to be computed when sample size is very low as its already very fast
 		const time1 = new Date().valueOf()
 		result = JSON.parse(
 			await run_R(path.join(serverconfig.binpath, 'utils', 'edge.R'), JSON.stringify(expression_input))
 		)
 		mayLog('Time taken to run edgeR:', Date.now() - time1, 'ms')
 		param.method = 'edgeR'
+	} else if (param.method == 'edgeR') {
+		// edgeR will be used for DE analysis when param.method == 'edgeR'
+		const input_topVE_json = {
+			input_file: q.file,
+			data_type: 'do_calc_var',
+			case: cases_string,
+			control: controls_string,
+			//filter_extreme_values: q.filter_extreme_values,
+			num_genes: 3000, // Will be later defined in UI
+			rank_type: 'var', // Will be later defined in UI
+			min_count: param.min_count,
+			min_total_count: param.min_total_count,
+			filter_extreme_values: true // Will be later defined in UI
+		}
+		const time1 = new Date().valueOf()
+		const rust_output = await run_rust('DEanalysis', JSON.stringify(input_topVE_json))
+		mayLog('Time taken to calculate top variable genes:', Date.now() - time1, 'ms')
+		const rust_output_list = rust_output.split('\n')
+
+		let output_json
+		for (const item of rust_output_list) {
+			if (item.includes('output_json:')) {
+				output_json = JSON.parse(item.replace('output_json:', ''))
+			} else {
+				console.log(item)
+			}
+		}
+		expression_input.VarGenes = output_json.map(i => i.gene_symbol).join(',')
+		console.log('expression_input:', expression_input)
+
+		const time2 = new Date().valueOf()
+		result = JSON.parse(
+			await run_R(path.join(serverconfig.binpath, 'utils', 'edge.R'), JSON.stringify(expression_input))
+		)
+		mayLog('Time taken to run edgeR:', Date.now() - time2, 'ms')
+		param.method = 'edgeR'
 		//console.log("result:",result)
 	} else {
 		// Wilcoxon test will be used for DE analysis
+		const expression_input = {
+			case: controls_string,
+			control: cases_string,
+			data_type: 'do_DE',
+			input_file: q.file,
+			min_count: param.min_count,
+			min_total_count: param.min_total_count,
+			storage_type: param.storage_type
+		} as ExpressionInput
 		const time1 = new Date().valueOf()
 		result = JSON.parse(await run_rust('DEanalysis', JSON.stringify(expression_input)))
 		mayLog('Time taken to run rust DE pipeline:', Date.now() - time1, 'ms')
