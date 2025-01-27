@@ -1,7 +1,10 @@
+// should import the .ts file here, EXCEPT IF only the .js file is coded,
+// because both the server tsx and client esbuild bundlers will handle
+// the .ts extension correctly as part of bundling
 export * from './brainImaging.ts'
 export * from './brainImagingSamples.ts'
 export * from './burden.ts'
-export * from './clearwsisession.js'
+export * from './clearwsisession.ts'
 export * from './correlationVolcano.ts'
 export * from './dataset.ts'
 export * from './dsdata.ts'
