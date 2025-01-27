@@ -113,6 +113,7 @@ export function setRenderers(self) {
 				if (k != 'Ref') labels.push(`${k}, n=(${v.sampleCount})`)
 			}
 			labels.push(self.config[`${key}TW`]?.term?.name ?? '')
+			// A larger font size is applied for geneVariant terms only
 			const size = self.config[`${key}TW`]?.term?.type == 'geneVariant' ? 1.1 : 1
 			// Add 20 for the icon (16) and space
 			return getMaxLabelWidth(svg, labels, size) + 20
