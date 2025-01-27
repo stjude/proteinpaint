@@ -229,16 +229,11 @@ class singleCellPlot {
 				.on('change', e => {
 					let plots = structuredClone(this.state.config.plots)
 					plots.find(p => p.name == plot.name).selected = e.target.checked
-					const selectedPlots = plots.filter(p => p.selected)
-					const width = 1000
-					const height = 1000
-					let settings = {}
-					settings.svgh = width / selectedPlots.length
-					settings.svgw = height / selectedPlots.length
+
 					this.app.dispatch({
 						type: 'plot_edit',
 						id: this.id,
-						config: { plots, settings: { singleCellPlot: settings } }
+						config: { plots }
 					})
 				})
 			showDiv.append('label').attr('for', key).text(plot.name)
@@ -850,10 +845,11 @@ class singleCellPlot {
 					})
 				})
 			}
+			const clustersHeight = 20 * Object.keys(colorMap).length + 50 //added 50 for the title and padding
 			legendSVG = plot.plotDiv
 				.append('svg')
 				.attr('width', 250)
-				.attr('height', this.settings.svgh)
+				.attr('height', Math.max(this.settings.svgh, clustersHeight))
 				.style('vertical-align', 'top')
 			plot.legendSVG = legendSVG
 		}
