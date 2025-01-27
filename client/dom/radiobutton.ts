@@ -35,7 +35,7 @@ type OptionEntry = {
 	/** Text shown in tooltip */
 	title?: string
 	/** Should correspond to 'currValue' in callbacks */
-	value: string | number
+	value: string | number | boolean
 }
 
 type RadioApi = {
@@ -129,7 +129,7 @@ export function make_radios(opts: RadioButtonOpts): RadioApi {
 		divs,
 		labels,
 		inputs,
-		main(currValue: string | number) {
+		main(currValue: string | number | boolean) {
 			radio['currValue'] = currValue
 			inputs.property('checked', (d: OptionEntry) => d.value == radio['currValue'])
 		}

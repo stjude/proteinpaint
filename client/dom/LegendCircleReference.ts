@@ -18,6 +18,10 @@ export class LegendCircleReference {
 	isAscending: boolean
 	maxRadius: number
 	minRadius: number
+	prompt?: string
+	title?: string
+	dotScaleCallback?: (isAscending: boolean) => void
+	minMaxCallback?: (min: number, max: number) => void
 	readonly color = '#aaa'
 	readonly shift = 20
 	readonly width = 70
@@ -25,6 +29,7 @@ export class LegendCircleReference {
 	readonly x = 40
 	readonly y = 40
 	constructor(opts: LegendCircleReferenceOpts) {
+		this.validateOpts(opts)
 		this.g = opts.g
 		this.inputMax = opts.inputMax
 		this.inputMin = opts.inputMin
@@ -32,18 +37,29 @@ export class LegendCircleReference {
 		this.maxRadius = opts.maxRadius
 		this.minRadius = opts.minRadius
 
-		this.renderLegendComponent(opts)
+		if (opts.prompt) this.prompt = opts.prompt
+		if (opts.title) this.title = opts.title
+		if (opts.dotScaleCallback) this.dotScaleCallback = opts.dotScaleCallback
+		if (opts.minMaxCallback) this.minMaxCallback = opts.minMaxCallback
+
+		this.renderLegendComponent()
 	}
 
-	renderLegendComponent(opts: LegendCircleReferenceOpts) {
+	validateOpts(opts: LegendCircleReferenceOpts) {
+		if (!opts.g) throw `Missing g in LegendCircleReference`
+		if (opts.maxRadius > opts.inputMax) throw `Max radius must be less than inputMax`
+		if (opts.minRadius < opts.inputMin) throw `Min radius must be greater than inputMin`
+	}
+
+	renderLegendComponent() {
 		this.g.selectAll('*').remove()
 
-		if (opts.title)
+		if (this.title)
 			this.g
 				.append('text')
 				.style('font-weight', 'bold')
 				.attr('transform', `translate(${this.x},${this.y - this.maxRadius - 15})`)
-				.text(opts.title)
+				.text(this.title)
 
 		const minG = this.g.append('g').attr('transform', `translate(${this.x},${this.y})`)
 		const maxG = this.g.append('g').attr('transform', `translate(${this.x + this.width},${this.y})`)
@@ -65,14 +81,14 @@ export class LegendCircleReference {
 		const minBBox = minG.node()!.getBBox()
 		const maxBBox = maxG.node()!.getBBox()
 
-		if (opts.dotScaleCallback || opts.minMaxCallback) {
+		if (this.dotScaleCallback || this.minMaxCallback) {
 			this.g
 				.append('rect')
 				.attr('width', minBBox.width + maxBBox.width)
 				.attr('height', (this.isAscending ? maxBBox.height : minBBox.height) + 20)
 				.attr('fill', 'transparent')
 				.on('click', () => {
-					this.renderMenu(opts)
+					this.renderMenu()
 				})
 		}
 	}
@@ -99,17 +115,17 @@ export class LegendCircleReference {
 			.style('stroke', this.color)
 	}
 
-	renderMenu(opts) {
+	renderMenu() {
 		this.tip.clear().showunder(this.g.node())
 		const div = this.tip.d.append('div')
-		if (opts.minMaxCallback) {
+		if (this.minMaxCallback) {
 			const minMaxRow = div.append('div')
-			if (opts.prompt) minMaxRow.append('span').text(`${opts.prompt}: `).style('padding-right', '3px')
+			if (this.prompt) minMaxRow.append('span').text(`${this.prompt}: `).style('padding-right', '3px')
 
-			this.addInput(minMaxRow, 'Min', this.minRadius, opts.minMaxCallback)
-			this.addInput(minMaxRow, 'Max', this.maxRadius, opts.minMaxCallback)
+			this.addInput(minMaxRow, 'Min', this.minRadius, this.minMaxCallback)
+			this.addInput(minMaxRow, 'Max', this.maxRadius, this.minMaxCallback)
 		}
-		if (opts.dotScaleCallback) {
+		if (this.dotScaleCallback) {
 			const dotScaleRow = div.append('div')
 			make_radios({
 				holder: dotScaleRow,
@@ -118,23 +134,28 @@ export class LegendCircleReference {
 						checked: this.isAscending,
 						label: 'Ascending',
 						title: 'Show in ascending order',
-						value: 'ascending'
+						value: true
 					},
 					{
 						checked: !this.isAscending,
 						label: 'Descending',
 						title: 'Show in descending order',
-						value: 'descending'
+						value: false
 					}
 				],
-				callback: opts.dotScaleCallback
+				callback: value => {
+					this.isAscending = value
+					this.dotScaleCallback!(this.isAscending)
+					this.renderLegendComponent()
+					this.tip.hide()
+				}
 			})
 		}
 	}
 
 	addInput(div: Div, label: string, value: number, callback) {
 		div.append('label').text(label)
-		div
+		const input = div
 			.append('input')
 			.style('width', '50px')
 			.attr('type', 'number')
@@ -142,7 +163,11 @@ export class LegendCircleReference {
 			.attr('max', this.inputMax)
 			.attr('value', value)
 			.on('change', () => {
-				callback()
+				const value = input.property('value')
+				this[`${label.toLowerCase()}Radius`] = Number(value)
+				callback(this.minRadius, this.maxRadius)
+				this.renderLegendComponent()
+				this.tip.hide()
 			})
 	}
 }
