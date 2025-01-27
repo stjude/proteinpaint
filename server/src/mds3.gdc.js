@@ -5,7 +5,8 @@ import nodeFetch from 'node-fetch'
 import { combineSamplesById } from './mds3.variant2samples.js'
 import { filter2GDCfilter } from './mds3.gdc.filter.js'
 import { write_tmpfile } from './utils.js'
-import { joinUrl, mayLog } from './helpers'
+import { mayLog } from './helpers'
+import { joinUrl } from '#shared/joinUrl.js'
 import serverconfig from './serverconfig.js'
 
 const maxCase4geneExpCluster = 1000 // max number of cases allowed for gene exp clustering app; okay just to hardcode in code and not to define in ds

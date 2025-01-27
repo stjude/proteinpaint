@@ -1,7 +1,8 @@
 import fs from 'fs'
 import path from 'path'
 import { read_file, file_is_readable } from '#src/utils.js'
-import { joinUrl, mayLog } from '#src/helpers.ts'
+import { mayLog } from '#src/helpers.ts'
+import { joinUrl } from '#shared/joinUrl.js'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 import serverconfig from '#src/serverconfig.js'
 import type {

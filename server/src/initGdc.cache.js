@@ -1,9 +1,9 @@
 import ky from 'ky'
-import { joinUrl } from './helpers'
 import { isUsableTerm } from '#shared/termdb.usecase.js'
 import serverconfig from './serverconfig.js'
 import { cachedFetch, isRecoverableError } from './utils'
 import { deepEqual } from '#shared/helpers.js'
+import { joinUrl } from '#shared/joinUrl.js'
 
 // wait time for next check on stale case-id cache, 5min. feature flag allows testing with short internal
 const cacheCheckWait = serverconfig.features.gdcCacheCheckWait || 5 * 60 * 1000
