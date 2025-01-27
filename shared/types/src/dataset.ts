@@ -851,8 +851,14 @@ export type SelectCohortEntry = {
 	/** cohort-related static html shown in about tab */
 	description?: string
 	/** If the description is dependent on the user's role, 
-	define this callback to return description based on auth */
+	define this callback to return description based on auth
+	returns a static description
+	*/
 	descriptionByUser?: (auth: any) => string
+	/** similar to descriptionByUser but returns an object with one description per cohort,
+	about tab will switch description based on user-selected cohort
+	*/
+	descriptionByCohortBasedOnUserRole?: (auth: any) => object
 	/** subtext shown at the very bottom of the cohort/about tab subheader */
 	asterisk?: string
 	//The profile has clearOnChange. The terms used in the plots are not always the same for the profile.
