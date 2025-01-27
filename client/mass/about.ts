@@ -115,7 +115,17 @@ export class MassAbout {
 
 	async main() {
 		await this.renderCohortsTable()
-		if (this.opts.selectCohort?.description) this.dom.cohortDescription.html(this.opts.selectCohort.description)
+		if (this.opts.selectCohort) {
+			if (this.opts.selectCohort.description) {
+				this.dom.cohortDescription.html(this.opts.selectCohort.description)
+			} else if (this.opts.selectCohort.descriptionByCohort) {
+				this.dom.cohortDescription.html(
+					this.opts.selectCohort.descriptionByCohort[
+						this.state.termdbConfig.selectCohort.values[this.state.activeCohort].keys.join(',')
+					]
+				)
+			}
+		}
 	}
 
 	initCohort = appState => {

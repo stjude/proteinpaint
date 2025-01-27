@@ -320,6 +320,11 @@ function getSelectCohort(ds, req) {
 	if (ds.cohort.termdb.selectCohort.descriptionByUser) {
 		copy.description = ds.cohort.termdb.selectCohort.descriptionByUser(authApi.getNonsensitiveInfo(req))
 		delete copy.descriptionByUser
+	} else if (ds.cohort.termdb.selectCohort.descriptionByCohortBasedOnUserRole) {
+		copy.descriptionByCohort = ds.cohort.termdb.selectCohort.descriptionByCohortBasedOnUserRole(
+			authApi.getNonsensitiveInfo(req)
+		)
+		delete copy.descriptionByCohortBasedOnUserRole
 	}
 	return copy
 }
