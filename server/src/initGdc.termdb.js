@@ -1,8 +1,8 @@
-import { joinUrl } from './helpers'
 import { isUsableTerm } from '#shared/termdb.usecase.js'
 import serverconfig from './serverconfig.js'
 import { cachedFetch, isRecoverableError } from './utils'
 import { deepEqual } from '#shared/helpers.js'
+import { joinUrl } from '#shared/joinUrl.js'
 
 /*
 ********************   functions    *************
