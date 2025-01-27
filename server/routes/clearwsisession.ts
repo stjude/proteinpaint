@@ -1,6 +1,6 @@
 import type { RouteApi } from '#types'
-import { clearWSImagesSessionsPayload } from '@sjcrh/proteinpaint-types/routes/clearwsisessions.js'
-import type { ClearWSImagesSessionsResponse } from '@sjcrh/proteinpaint-types/routes/clearwsisessions.js'
+import type { ClearWSImagesSessionsResponse } from '#types'
+import { clearWSImagesSessionsPayload } from '#types/checkers'
 import SessionManager from '#src/wsisessions/SessionManager.js'
 import ky from 'ky'
 import serverconfig from '#src/serverconfig.js'

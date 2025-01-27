@@ -2,6 +2,7 @@
 export * from './brainImaging.ts'
 export * from './brainImagingSamples.ts'
 export * from './burden.ts'
+export * from './clearwsisession.js'
 export * from './correlationVolcano.ts'
 export * from './dataset.ts'
 export * from './dsdata.ts'
