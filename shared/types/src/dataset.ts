@@ -593,11 +593,11 @@ export type SingleCellSamples = {
 	sampleColumns?: { termid: string }[]
 	/** used on client but not on ds */
 	experimentColumns?: { label: string }[]
-	/** getter function to return list of samples with single-cell data. two sources:
-	- ds-supplied, to enclose ds-specific query details (gdc)
-	- if missing, will be added at launch. samples are found by looking through singleCell.data.plots[].folder
+	/** getter function to return list of samples with single-cell data
+	is either ds-supplied, to enclose ds-specific query details (gdc)
+	or is missing, to be added at launch with built-in logic (samples are found by looking through singleCell.data.plots[].folder)
 	*/
-	get?: (q: any, ds: any) => any
+	get?: (q: any) => any
 }
 
 export type SingleCellDataGdc = {

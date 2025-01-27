@@ -51,7 +51,7 @@ function init({ genomes }) {
 			const ds = g.datasets[q.dslabel]
 			if (!ds) throw 'invalid dataset name'
 			if (!ds.queries?.singleCell) throw 'no singlecell data on this dataset'
-			result = await ds.queries.singleCell.samples.get(q, ds)
+			result = await ds.queries.singleCell.samples.get(q)
 		} catch (e: any) {
 			if (e.stack) console.log(e.stack)
 			result = {
