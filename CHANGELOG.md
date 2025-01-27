@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.99.1
 
 Fixes:
 - Dynamically render scatter plot width with legend items and reduce the space between legend sections
