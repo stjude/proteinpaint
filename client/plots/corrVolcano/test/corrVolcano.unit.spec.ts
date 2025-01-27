@@ -1,4 +1,5 @@
 import tape from 'tape'
+import * as d3s from 'd3-selection'
 import { ViewModel } from '../viewModel/ViewModel'
 import type { CorrVolcanoSettings } from '../CorrelationVolcanoTypes'
 
@@ -6,6 +7,16 @@ import type { CorrVolcanoSettings } from '../CorrelationVolcanoTypes'
  * Tests
  *   - Default ViewModel
  */
+
+function getHolder() {
+	return d3s
+		.select('body')
+		.append('div')
+		.style('border', '1px solid #aaa')
+		.style('padding', '5px')
+		.style('margin', '5px')
+		.node()
+}
 
 const mockData = {
 	variableItems: [
@@ -84,8 +95,12 @@ tape('\n', function (test) {
 
 tape('Default ViewModel', test => {
 	test.timeoutAfter(100)
+	const holder = getHolder() as any
+	const dom = {
+		plot: holder?.append('svg')?.append('g')
+	}
 
-	const viewModel = new ViewModel(mockConfig, mockData, mockSettings, mockVariableTwLst as any)
+	const viewModel = new ViewModel(mockConfig, mockData, dom as any, mockSettings, mockVariableTwLst as any)
 	test.equal(viewModel.defaultMinRadius, 5, `Should set default minimum radius to 5`)
 	test.equal(viewModel.defaultMaxRadius, 20, `Should set default maximum radius to 20`)
 	test.equal(viewModel.bottomPad, 60, `Should set bottom padding to 60`)
@@ -115,7 +130,9 @@ tape('Default ViewModel', test => {
 				label: 'Asparaginase LC50 (normalized)',
 				x: 547.2727272727273,
 				y: 81.66666666666669,
-				radius: 20
+				radius: 20,
+				previousX: 547.2727272727273,
+				previousY: 81.66666666666669
 			},
 			{
 				tw$id: 'test$id3',
@@ -128,7 +145,9 @@ tape('Default ViewModel', test => {
 				label: 'Bortezomib LC50 (normalized)',
 				x: 291.42857142857144,
 				y: 498.3333333333333,
-				radius: 5
+				radius: 5,
+				previousX: 291.42857142857144,
+				previousY: 498.3333333333333
 			}
 		],
 		legendData: [

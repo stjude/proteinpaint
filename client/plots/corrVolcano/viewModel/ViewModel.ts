@@ -139,7 +139,7 @@ export class ViewModel {
 			.domain([absSampleMin, absSampleMax])
 			.range([this.defaultMinRadius, this.defaultMaxRadius])
 		const renderedCircles = dom.plot
-			.selectAll('circle')
+			?.selectAll('circle')
 			.nodes()
 			.map((d: any) => d.__data__)
 		for (const item of data.variableItems) {
@@ -148,7 +148,7 @@ export class ViewModel {
 			item.x = plotDim.xScale.scale(item.correlation) + this.horizPad
 			item.y = plotDim.yScale.scale(item[`transformed_${key}`]) + this.topPad
 			item.radius = radiusScale(item.sampleSize)
-			if (renderedCircles.length > 0) {
+			if (renderedCircles?.length > 0) {
 				const findRenderdCircle = renderedCircles.find((d: any) => d.tw$id === item.tw$id) as any
 				if (findRenderdCircle) {
 					item.previousX = findRenderdCircle.x
