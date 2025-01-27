@@ -1,5 +1,4 @@
-import { isNumeric } from './helpers'
-
+import { isNumeric } from './helpers.js'
 const reserved = ['false', 'true', 'null', 'undefined']
 const delimiters = ['"', '{', '[']
 function encode(rawObject) {
@@ -30,5 +29,4 @@ function decode(query) {
 	}
 	return query
 }
-
 export { decode, encode }
