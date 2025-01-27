@@ -266,7 +266,7 @@ function setRenderers(self) {
 				if (tab.contentHolder) tab.contentHolder.style('display', tab.active ? 'block' : 'none')
 				tab.tab.style('color', tab.active ? '#1575ad' : '#757373')
 				tab.line.style('visibility', tab.active ? 'visible' : 'hidden')
-				tab.tab.html(tab.label)
+				tab.tab.html(tab.label) // re-print tab label since the label value could have been updated by outside code
 			})
 	}
 }
