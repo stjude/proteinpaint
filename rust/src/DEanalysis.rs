@@ -25,11 +25,11 @@ use std::io::Read;
 use std::str::FromStr;
 use std::sync::{Arc, Mutex}; // Multithreading library
 use std::thread;
-//use std::time::Instant;
+use std::time::Instant;
 //use std::cmp::Ordering;
 //use std::env;
 use std::io;
-mod stats_functions; // Importing Wilcoxon function from stats_functions.rs
+mod stats_functions; // Importing Wilcoxon function and calculate_variance from stats_functions.rs
 const PAR_CUTOFF: usize = 100000; // Cutoff for triggering multithreading processing of data
 
 //const PAR_CUTOFF: usize = 1000000000000000;
@@ -59,6 +59,41 @@ fn binary_search(input: &Vec<usize>, y: usize) -> i64 {
         }
     }
     index
+}
+
+fn do_calc_var(
+    hdf5_filename: &String,
+    case_list: Vec<&str>,
+    control_list: Vec<&str>,
+    param: &str,
+    min_count_option: Option<f64>,
+    min_total_count_option: Option<f64>,
+    num_genes: Option<usize>,
+    filter_extreme_values: bool,
+) {
+    let now = Instant::now();
+    let (input_matrix, _case_indexes, _control_indexes, _gene_names, gene_symbols) =
+        input_data_from_HDF5(hdf5_filename, &case_list, &control_list);
+    let gene_infos = stats_functions::calculate_variance(
+        input_matrix,
+        gene_symbols,
+        (case_list.len() + control_list.len()) as f64,
+        filter_extreme_values,
+        param.to_string(),
+        min_count_option,
+        min_total_count_option,
+    );
+    let mut output_string = "[".to_string();
+    for j in 0..num_genes.unwrap() {
+        let i = gene_infos.len() - j - 1;
+        output_string += &serde_json::to_string(&gene_infos[i]).unwrap();
+        if i > gene_infos.len() - num_genes.unwrap() {
+            output_string += &",".to_string();
+        }
+    }
+    output_string += &"]".to_string();
+    println!("output_json:{}", output_string);
+    println!("Time for calculating variances:{:?}", now.elapsed());
 }
 
 fn input_data_from_HDF5(
@@ -576,6 +611,43 @@ fn main() {
                         Some(x) => {
                             if x == "get_samples" {
                                 get_DE_samples(file_name)
+                            } else if x == "do_calc_var" {
+                                let case_string =
+                                    &json_string["case"].to_owned().as_str().unwrap().to_string();
+                                let control_string = &json_string["control"]
+                                    .to_owned()
+                                    .as_str()
+                                    .unwrap()
+                                    .to_string();
+                                let filter_extreme_values_result =
+                                    &json_string["filter_extreme_values"];
+
+                                let filter_extreme_values;
+                                match filter_extreme_values_result.as_bool() {
+                                    Some(x) => {
+                                        filter_extreme_values = x;
+                                    }
+                                    None => {
+                                        filter_extreme_values = true; // If filter_extreme_values field is missing, set it to true by default
+                                    }
+                                }
+                                let num_genes = json_string["num_genes"].as_usize().to_owned();
+                                let param = json_string["rank_type"].as_str().to_owned().unwrap();
+                                let min_count_option = json_string["min_count"].as_f64().to_owned();
+                                let min_total_count_option =
+                                    json_string["min_total_count"].as_f64().to_owned();
+                                let case_list: Vec<&str> = case_string.split(",").collect();
+                                let control_list: Vec<&str> = control_string.split(",").collect();
+                                do_calc_var(
+                                    file_name,
+                                    case_list,
+                                    control_list,
+                                    param,
+                                    min_count_option,
+                                    min_total_count_option,
+                                    num_genes,
+                                    filter_extreme_values,
+                                );
                             } else if x == "do_DE" {
                                 let min_count_option = json_string["min_count"].as_f64().to_owned();
                                 let min_total_count_option =

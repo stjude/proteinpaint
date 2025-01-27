@@ -38,6 +38,8 @@ export type ExpressionInput = {
 	conf1?: any[]
 	/** Type of the confounding variable (categorical/float) */
 	conf1_type?: 'categorical' | 'float'
+	/** List of variable genes */
+	VarGenes?: string
 }
 
 export type DEResponse = {
