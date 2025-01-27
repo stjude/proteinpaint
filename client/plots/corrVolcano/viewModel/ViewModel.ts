@@ -2,7 +2,7 @@ import type { TermWrapper } from '#types'
 import { scaleLinear } from 'd3-scale'
 import { getReadableType } from '#shared/terms.js'
 import type { CorrelationVolcanoResponse } from '#types'
-import type { CorrVolcanoPlotConfig, CorrVolcanoSettings, ViewData } from '../CorrelationVolcanoTypes'
+import type { CorrVolcanoDom, CorrVolcanoPlotConfig, CorrVolcanoSettings, ViewData } from '../CorrelationVolcanoTypes'
 
 export class ViewModel {
 	viewData: ViewData
@@ -16,6 +16,7 @@ export class ViewModel {
 	constructor(
 		config: CorrVolcanoPlotConfig,
 		data: CorrelationVolcanoResponse,
+		dom: CorrVolcanoDom,
 		settings: CorrVolcanoSettings,
 		variableTwLst: TermWrapper[]
 	) {
@@ -29,7 +30,16 @@ export class ViewModel {
 
 		this.viewData = {
 			plotDim,
-			variableItems: this.setVariablesData(d, settings, variableTwLst, plotDim, pValueKey, absSampleMax, absSampleMin),
+			variableItems: this.setVariablesData(
+				absSampleMax,
+				absSampleMin,
+				d,
+				dom,
+				pValueKey,
+				plotDim,
+				settings,
+				variableTwLst
+			),
 			legendData: this.setLegendData(absSampleMin, absSampleMax)
 		}
 	}
@@ -116,23 +126,38 @@ export class ViewModel {
 	}
 
 	setVariablesData(
-		data: any,
-		settings: CorrVolcanoSettings,
-		variableTwLst: any[],
-		plotDim: any,
-		key: string,
 		absSampleMax: number,
-		absSampleMin: number
+		absSampleMin: number,
+		data: any,
+		dom: CorrVolcanoDom,
+		key: string,
+		plotDim: any,
+		settings: CorrVolcanoSettings,
+		variableTwLst: any[]
 	) {
 		const radiusScale = scaleLinear()
 			.domain([absSampleMin, absSampleMax])
 			.range([this.defaultMinRadius, this.defaultMaxRadius])
+		const renderedCircles = dom.plot
+			.selectAll('circle')
+			.nodes()
+			.map((d: any) => d.__data__)
 		for (const item of data.variableItems) {
 			item.color = item.correlation > 0 ? settings.corrColor : settings.antiCorrColor
 			item.label = variableTwLst.find(t => t.$id == item.tw$id).term.name
 			item.x = plotDim.xScale.scale(item.correlation) + this.horizPad
 			item.y = plotDim.yScale.scale(item[`transformed_${key}`]) + this.topPad
 			item.radius = radiusScale(item.sampleSize)
+			if (renderedCircles.length > 0) {
+				const findRenderdCircle = renderedCircles.find((d: any) => d.tw$id === item.tw$id) as any
+				if (findRenderdCircle) {
+					item.previousX = findRenderdCircle.x
+					item.previousY = findRenderdCircle.y
+				}
+			} else {
+				item.previousX = item.x
+				item.previousY = item.y
+			}
 		}
 		return data.variableItems
 	}

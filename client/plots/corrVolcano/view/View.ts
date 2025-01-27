@@ -1,5 +1,6 @@
 import { axisstyle } from '#src/client'
 import { axisBottom, axisLeft } from 'd3-axis'
+import { select } from 'd3-selection'
 import type {
 	CorrVolcanoDom,
 	CorrVolcanoSettings,
@@ -32,7 +33,7 @@ export class View {
 		const plotDim = viewData.plotDim
 		this.renderDom(plotDim)
 		// Draw all circles for variables
-		this.renderVariables(plotDim.divideLine.x, this.viewData.variableItems, settings, interactions)
+		renderVariables(this, settings, interactions)
 		this.renderLegend(viewData.legendData)
 	}
 
@@ -100,27 +101,6 @@ export class View {
 		})
 	}
 
-	renderVariables(x, variableItems, settings: CorrVolcanoSettings, interactions: CorrVolcanoInteractions) {
-		for (const item of variableItems) {
-			const circle = this.dom.plot
-				.append('circle')
-				.attr('data-testid', `sjpp-corr-volcano-circle-${item.label}`)
-				.attr('stroke', item.color)
-				.attr('fill', item.color)
-				.attr('fill-opacity', 0.5)
-				.attr('cx', x)
-				.attr('cy', 0)
-				.attr('r', 0)
-				.on('click', () => {
-					interactions.launchSampleScatter(item)
-				})
-
-			new ItemToolTip(item, circle, this.dom.tip, settings)
-			//Animate the circle to its final radius
-			circle.transition().duration(500).attr('cx', item.x).attr('cy', item.y).attr('r', item.radius)
-		}
-	}
-
 	renderLegend(legendData: LegendDataEntry[]) {
 		const svg = this.dom.legend
 			.attr('width', 100)
@@ -146,4 +126,32 @@ export class View {
 				.text(c.label)
 		}
 	}
+}
+
+function renderVariables(self, settings: CorrVolcanoSettings, interactions: CorrVolcanoInteractions) {
+	self.dom.plot
+		.selectAll('circle')
+		.data(self.viewData.variableItems)
+		.enter()
+		.append('circle')
+		.attr('id', item => `sjpp-corr-volcano-circle-${item.label}`)
+		.attr('stroke', item => item.color)
+		.attr('fill', item => item.color)
+		.attr('fill-opacity', 0.5)
+		.attr('cx', item => item.previousX)
+		.attr('cy', item => item.previousY)
+		//Allows for a subtle transition to new position
+		.attr('r', item => item.radius * 0.9)
+		.transition()
+		.duration(500)
+		.attr('cx', item => item.x)
+		.attr('cy', item => item.y)
+		.attr('r', item => item.radius)
+		.each(function (this, item) {
+			const circle = select(this)
+			new ItemToolTip(item, circle, self.dom.tip, settings)
+			circle.on('click', () => {
+				interactions.launchSampleScatter(item)
+			})
+		})
 }
