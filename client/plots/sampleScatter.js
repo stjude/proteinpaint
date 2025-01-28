@@ -1,6 +1,6 @@
 import { getCompInit, copyMerge } from '../rx'
 import { fillTermWrapper } from '#termsetting'
-import { Menu, shapesArray, select2Terms, ColorScale } from '#dom'
+import { Menu, shapesArray, select2Terms } from '#dom'
 import { controlsInit } from './controls'
 import { setRenderers } from './sampleScatter.renderer'
 import { setInteractivity } from './sampleScatter.interactivity'
