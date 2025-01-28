@@ -24,19 +24,19 @@ tape('Default LegendCircleReference', test => {
 	const svg = holder.append('svg').attr('width', 300).attr('height', 300)
 
 	const ui = new LegendCircleReference({
-		g: svg.append('g').attr('transform', 'translate(10, 10)'),
+		g: svg.append('g').attr('transform', 'translate(20, 20)'),
 		inputMax: 20,
 		inputMin: 5,
 		isAscending: true,
 		maxRadius: 20,
 		minRadius: 5,
-		prompt: 'Pixels',
 		title: 'Test title',
-		dotScaleCallback: () => {
-			test.pass('dotScaleCallback')
-		},
-		minMaxCallback: () => {
-			test.pass('minMaxCallback')
+		menu: {
+			minMaxLabel: 'Pixels',
+			showOrder: true,
+			callback: obj => {
+				console.log(obj) // so ts doesn't complain
+			}
 		}
 	})
 
@@ -45,6 +45,6 @@ tape('Default LegendCircleReference', test => {
 	test.equal(ui.g.selectAll('line').size(), 2, 'Should render 2 line elements')
 	test.equal(ui.g.selectAll('rect').size(), 1, 'Should render 1 rect element')
 
-	if (test['_ok']) holder.remove()
+	// if (test['_ok']) holder.remove()
 	test.end()
 })

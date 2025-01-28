@@ -18,10 +18,12 @@ export class LegendCircleReference {
 	isAscending: boolean
 	maxRadius: number
 	minRadius: number
-	prompt?: string
+	menu?: {
+		minMaxLabel?: string
+		showOrder?: boolean
+		callback: (obj: { min: number; max: number; isAscending: boolean }) => void
+	}
 	title?: string
-	dotScaleCallback?: (isAscending: boolean) => void
-	minMaxCallback?: (min: number, max: number) => void
 	readonly color = '#aaa'
 	readonly shift = 20
 	readonly width = 70
@@ -37,10 +39,8 @@ export class LegendCircleReference {
 		this.maxRadius = opts.maxRadius
 		this.minRadius = opts.minRadius
 
-		if (opts.prompt) this.prompt = opts.prompt
+		if (opts.menu) this.menu = opts.menu
 		if (opts.title) this.title = opts.title
-		if (opts.dotScaleCallback) this.dotScaleCallback = opts.dotScaleCallback
-		if (opts.minMaxCallback) this.minMaxCallback = opts.minMaxCallback
 
 		this.renderLegendComponent()
 	}
@@ -54,12 +54,7 @@ export class LegendCircleReference {
 	renderLegendComponent() {
 		this.g.selectAll('*').remove()
 
-		if (this.title)
-			this.g
-				.append('text')
-				.style('font-weight', 'bold')
-				.attr('transform', `translate(${this.x},${this.y - this.maxRadius - 15})`)
-				.text(this.title)
+		if (this.title) this.g.append('text').style('font-weight', 'bold').text(this.title)
 
 		const minG = this.g.append('g').attr('transform', `translate(${this.x},${this.y})`)
 		const maxG = this.g.append('g').attr('transform', `translate(${this.x + this.width},${this.y})`)
@@ -81,7 +76,7 @@ export class LegendCircleReference {
 		const minBBox = minG.node()!.getBBox()
 		const maxBBox = maxG.node()!.getBBox()
 
-		if (this.dotScaleCallback || this.minMaxCallback) {
+		if (this.menu) {
 			this.g
 				.append('rect')
 				.attr('width', minBBox.width + maxBBox.width)
@@ -116,19 +111,25 @@ export class LegendCircleReference {
 	}
 
 	renderMenu() {
+		if (!this.menu) return
 		this.tip.clear().showunder(this.g.node())
 		const div = this.tip.d.append('div')
-		if (this.minMaxCallback) {
-			const minMaxRow = div.append('div')
-			if (this.prompt) minMaxRow.append('span').text(`${this.prompt}: `).style('padding-right', '3px')
+		const minMaxRow = div.append('div')
+		if (this.menu?.minMaxLabel)
+			minMaxRow
+				.append('span')
+				.style('padding-right', '10px')
+				.style('opacity', 0.7)
+				.style('font-size', '.8em')
+				.text(`${this.menu.minMaxLabel.toUpperCase()}`)
 
-			this.addInput(minMaxRow, 'Min', this.minRadius, this.minMaxCallback)
-			this.addInput(minMaxRow, 'Max', this.maxRadius, this.minMaxCallback)
-		}
-		if (this.dotScaleCallback) {
-			const dotScaleRow = div.append('div')
+		this.addInput(minMaxRow, 'Min', this.minRadius)
+		this.addInput(minMaxRow, 'Max', this.maxRadius)
+
+		if (this.menu.showOrder) {
+			const orderRow = div.append('div')
 			make_radios({
-				holder: dotScaleRow,
+				holder: orderRow,
 				options: [
 					{
 						checked: this.isAscending,
@@ -144,8 +145,9 @@ export class LegendCircleReference {
 					}
 				],
 				callback: value => {
+					if (!this.menu) return //so TS doesn't complain
 					this.isAscending = value
-					this.dotScaleCallback!(this.isAscending)
+					this.menu.callback({ min: this.minRadius, max: this.maxRadius, isAscending: this.isAscending })
 					this.renderLegendComponent()
 					this.tip.hide()
 				}
@@ -153,7 +155,7 @@ export class LegendCircleReference {
 		}
 	}
 
-	addInput(div: Div, label: string, value: number, callback) {
+	addInput(div: Div, label: string, value: number) {
 		div.append('label').text(label)
 		const input = div
 			.append('input')
@@ -163,9 +165,10 @@ export class LegendCircleReference {
 			.attr('max', this.inputMax)
 			.attr('value', value)
 			.on('change', () => {
+				if (!this.menu) return //so TS doesn't complain
 				const value = input.property('value')
 				this[`${label.toLowerCase()}Radius`] = Number(value)
-				callback(this.minRadius, this.maxRadius)
+				this.menu.callback({ min: this.minRadius, max: this.maxRadius, isAscending: this.isAscending })
 				this.renderLegendComponent()
 				this.tip.hide()
 			})
