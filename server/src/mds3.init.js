@@ -681,6 +681,35 @@ async function validate_query_snvindel(ds, genome) {
 			throw 'unknown query method for queries.snvindel.m2csq'
 		}
 	}
+
+	if (q.populations) {
+		if (!Array.isArray(q.populations)) throw '.populations[] is not array'
+		if (q.populations.length == 0) throw 'q.populations[] blank'
+		for (const p of q.populations) {
+			if (!p.key) throw 'population.key missing'
+			if (!p.label) throw 'population.label missing'
+			if (!Array.isArray(p.sets)) throw 'population.sets[] is not array'
+			if (p.sets.length == 0) throw 'population.sets[] blank'
+			if (p.allowto_adjust_race && p.sets.length == 1) throw 'allowto_adjust_race cannot be true: sets[] is length of 1'
+			for (const s of p.sets) {
+				if (!s.infokey_AC) throw 'set.infokey_AC missing'
+				if (!s.infokey_AN) throw 'set.infokey_AN missing'
+				//verify info field
+				if (q.byrange?._tk?.info) {
+					if (!q.byrange._tk.info[s.infokey_AC]) throw 'unknown set.infokey_AC'
+					if (!q.byrange._tk.info[s.infokey_AN]) throw 'unknown set.infokey_AN'
+				} else {
+					throw 'unknown way to access snvindel info fields'
+				}
+				if (p.sets.length == 1) {
+					if (s.key) throw 'population.sets[] has single element, in such case set.key is not allowed'
+				} else {
+					if (!s.key) throw 'population.sets[] has multiple elements and set.key=termid is required'
+					if (!ds.cohort.termdb.q.termjsonByOneid(s.key)) throw 'term not found for populations.sets[].key=' + s.key
+				}
+			}
+		}
+	}
 }
 
 // this function assumes file header uses integer sample id. TODO when all files are migrated to using string sample name, delete this function

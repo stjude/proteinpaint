@@ -208,14 +208,15 @@ type VariantFilter = {
 
 /** one set of AC and AN info fields to retrieve data for this population */
 type PopulationINFOset = {
-	/** optional name for identifying this set, when the population is ancestry-stratified and a population has multiple sets */
+	/** optional term id for retrieving admix coefficient for an ancestry corresponding to this "PopulationINFOset" entry
+	for every sample carrying a variant.
+	this is required when sets[].length>1
+	this should not be set when sets[].length=1 */
 	key?: string
 	/** required info field */
 	infokey_AC: string
 	/** required info field */
 	infokey_AN: string
-	/** Optional */
-	termfilter_value?: string
 }
 
 /* define method to retrieve allele AC/AN in a population, by using bcf INFO fields; population could be ancestry-stratified
@@ -237,8 +238,6 @@ type Population = {
 	allowto_adjust_race?: boolean
 	/** when above is true, this flag is flip switch for this adjustion */
 	adjust_race?: boolean
-	/** optional term id used for race adjusting, must correspond to a term in dataset db */
-	termfilter?: string
 	/** if AC/AN of the population is ancestry-stratified, will be multiple elements of this array; otherwise just one */
 	sets: PopulationINFOset[]
 }
