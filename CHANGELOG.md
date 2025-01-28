@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- New component to show the difference in circle sizes across plots.
+
 
 ## 2.99.1
 

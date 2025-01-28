@@ -1,2 +1,1 @@
-Features
-- New component to show the difference in circle sizes across plots.
+
