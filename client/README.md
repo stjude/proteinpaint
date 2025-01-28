@@ -2,11 +2,27 @@
 
 The client code for the ProteinPaint application
 
-## Installation
+## Installation/Usage
 
-This should be installed as a workspace, follow the README at the project root.
+NOTE: The usage below is meant for data portals that prefer to bundle proteinpaint
+client code directly, instead of relying on a `runproteinpaint()` global that is
+exposed using `<script src='<proteinpaint_domain>/bin/proteinpaint.js'>`.
+
+```
+npm install @sjcrh/proteinpaint-client
+```
+Then
+```js
+import { runproteinpaint } from '@sjcrh/proteinpaint-client'
+
+runproteinpaint({
+  // arguments, see https://github.com/stjude/proteinpaint/wiki/Embedding
+})
+```
 
 ## Develop
+
+This should be installed as a workspace, follow the README at the [proteinpaint]() project root.
 
 From the proteinpaint/client directory:
 ```bash
