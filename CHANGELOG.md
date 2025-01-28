@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- Enable toggling between a linear and log axis scale in the mass box plot
+
 
 ## 2.100.0
 
