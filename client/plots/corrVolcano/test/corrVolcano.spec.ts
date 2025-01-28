@@ -6,6 +6,7 @@ DO NOT ENABLE THIS FILE ON CI. ITS FOR PROTOTYPING ONLY
 
 Tests:
     - Default correlation volcano plot
+	- No featureTw
  */
 
 /*************************
@@ -76,7 +77,7 @@ tape('Default correlation volcano', test => {
 		testPlot(dom.plot)
 		testLegend(dom.legend)
 
-		// if (test['_ok']) correlationVolcano.Inner.app.destroy()
+		if (test['_ok']) correlationVolcano.Inner.app.destroy()
 		test.end()
 	}
 
@@ -91,5 +92,32 @@ tape('Default correlation volcano', test => {
 		const legendCircles = legend.selectAll('circle').size()
 		const expected = 2
 		test.equal(legendCircles, expected, `Should display ${expected} circles in the legend`)
+	}
+})
+
+tape.skip('No featureTw', test => {
+	test.timeoutAfter(3000)
+
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'correlationVolcano'
+				}
+			]
+		},
+		correlationVolcano: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	async function runTests(correlationVolcano: any) {
+		correlationVolcano.on('postRender.test', null)
+		//TODO
+
+		// if (test['_ok']) correlationVolcano.Inner.app.destroy()
+		test.end()
 	}
 })

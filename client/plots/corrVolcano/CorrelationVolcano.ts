@@ -179,7 +179,7 @@ class CorrelationVolcano extends RxComponentInner {
 	}
 
 	async init(appState: MassState) {
-		await this.setControls()
+		if (this.getState(appState).config['featureTw']) await this.setControls()
 		//Hack because obj not returning in getState(). Will fix later.
 		this.dsCorrVolcano = appState.termdbConfig.correlationVolcano
 
@@ -195,8 +195,12 @@ class CorrelationVolcano extends RxComponentInner {
 		const config = structuredClone(this.state.config)
 		if (config.childType != this.type && config.chartType != this.type) return
 
-		const settings = config.settings.correlationVolcano
+		if (config.featureTw == null) {
+			this.interactions.showTree()
+			return
+		}
 
+		const settings = config.settings.correlationVolcano
 		/** Request data from the server*/
 		const model = new Model(config, this.state, this.app, settings, this.variableTwLst)
 		const data = await model.getData()
@@ -243,17 +247,20 @@ export async function getPlotConfig(opts: CorrVolcanoOpts, app: MassAppApi) {
 	//See logic in shared/utils/src/termdb.usecase.js for how tree is limited
 	//May change this later
 	if (opts.numeric && !opts.featureTw) opts.featureTw = { term: opts.numeric.term } as any
-	if (!opts.featureTw) throw 'opts.featureTw{} missing [correlationVolcano getPlotConfig()]'
-	try {
-		await fillTermWrapper(opts.featureTw, app.vocabApi)
-	} catch (e) {
-		console.error(new Error(`${e} [correlationVolcano getPlotConfig()]`))
-		throw `correlationVolcano getPlotConfig() failed`
+	/** If featureTw is passed, the plot will load per usual
+	 * else a UI will appear allowing the uses to select the feature */
+	if (opts.featureTw) {
+		try {
+			await fillTermWrapper(opts.featureTw, app.vocabApi)
+		} catch (e) {
+			console.error(new Error(`${e} [correlationVolcano getPlotConfig()]`))
+			throw `correlationVolcano getPlotConfig() failed`
+		}
 	}
 
 	const config = {
 		chartType: 'correlationVolcano',
-		featureTw: opts.featureTw,
+		featureTw: opts.featureTw ?? null,
 		settings: {
 			controls: {
 				term2: null,
