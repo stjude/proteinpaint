@@ -6,7 +6,7 @@ import { LegendCircleReference } from '#dom'
  reusable helper functions
 **************************/
 function getHolder() {
-	return select('body').append('div').style('max-width', '800px').style('border', '1px solid #555')
+	return select('body').append('div').style('max-width', '800px')
 }
 
 /**************
@@ -45,6 +45,6 @@ tape('Default LegendCircleReference', test => {
 	test.equal(ui.g.selectAll('line').size(), 2, 'Should render 2 line elements')
 	test.equal(ui.g.selectAll('rect').size(), 1, 'Should render 1 rect element')
 
-	// if (test['_ok']) holder.remove()
+	if (test['_ok']) holder.remove()
 	test.end()
 })
