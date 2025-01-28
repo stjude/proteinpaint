@@ -860,8 +860,19 @@ export function setRenderers(self) {
 
 							// This callback handles all mode changes and updates
 							callback: obj => {
-								// Store the selected mode for persistence
-								chart.cutoffMode = obj.cutoffMode
+								// First, let's handle the initial state where there might not be a stored mode
+								// or when we're actively switching modes
+								const isModeSwitching = obj.cutoffMode !== undefined
+
+								// If we're actively switching modes, update it. Otherwise, use the existing mode
+								if (isModeSwitching) {
+									chart.cutoffMode = obj.cutoffMode
+									// Also store it in the config for persistence
+									self.config.settings.sampleScatter.colorScaleMode = obj.cutoffMode
+								}
+
+								// Now use the current mode (whether it was just set or previously existing)
+								const currentMode = chart.cutoffMode || 'auto'
 
 								// Handle different modes for color scaling
 								if (obj.cutoffMode === 'auto') {
@@ -870,26 +881,26 @@ export function setRenderers(self) {
 									min = values[0]
 									max = values[values.length - 1]
 								} else if (obj.cutoffMode === 'fixed') {
-									// Fixed mode starts with the current data range as its initial values
-									// This gives users a reasonable starting point for their adjustments
 									if (obj.min !== undefined && obj.max !== undefined) {
-										// Only use provided values if they're explicitly set by user input
 										min = obj.min
 										max = obj.max
+										// Store these values in config for persistence
+										self.config.settings.sampleScatter.colorScaleMinFixed = min
+										self.config.settings.sampleScatter.colorScaleMaxFixed = max
 									} else {
-										// Otherwise reset to the data range
-										min = values[0]
-										max = values[values.length - 1]
+										// Use previously stored fixed values if they exist
+										min = self.config.settings.sampleScatter.colorScaleMinFixed || values[0]
+										max = self.config.settings.sampleScatter.colorScaleMaxFixed || values[values.length - 1]
 									}
 								} else if (obj.cutoffMode === 'percentile') {
-									// Percentile mode: Adjust max value based on data distribution
-									chart.percentile = obj.percentile
-									// Calculate index for the specified percentile
-									const index = Math.floor((values.length * obj.percentile) / 100)
-									chart.max = values[index]
-									min = values[0] // In percentile mode, we start with
-									// the first value of the array as min since it is already sorted
-									max = chart.max
+									// Use existing percentile or default to 95
+									const percentile = obj.percentile || chart.percentile || 95
+									chart.percentile = percentile
+									self.config.settings.sampleScatter.colorScalePercentile = percentile
+
+									min = values[0]
+									const index = Math.floor((values.length * percentile) / 100)
+									max = values[index]
 								}
 
 								// Update the color generator with our new range
@@ -897,8 +908,19 @@ export function setRenderers(self) {
 									.domain([min, max])
 									.range([self.config.startColor[chart.id], self.config.stopColor[chart.id]])
 
-								// Trigger a re-render to update the visualization
-								self.render()
+								// Save settings to config for state persistence
+								self.config.settings.sampleScatter.colorScaleMode = chart.cutoffMode
+								self.config.settings.sampleScatter.colorScaleMinFixed = obj.cutoffMode === 'fixed' ? min : null
+								self.config.settings.sampleScatter.colorScaleMaxFixed = obj.cutoffMode === 'fixed' ? max : null
+								self.config.settings.sampleScatter.colorScalePercentile =
+									obj.cutoffMode === 'percentile' ? chart.percentile : null
+
+								// Dispatch the updated config
+								self.app.dispatch({
+									type: 'plot_edit',
+									id: self.id,
+									config: self.config
+								})
 							}
 						}
 					})
