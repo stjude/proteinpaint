@@ -850,6 +850,7 @@ export type SelectCohortEntry = {
 	values: SelectCohortValuesEntry[]
 	/** cohort-related static html shown in about tab */
 	description?: string
+	descriptionByCohort?: { [index: string]: string }
 	/** If the description is dependent on the user's role, 
 	define this callback to return description based on auth
 	returns a static description
