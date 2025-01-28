@@ -152,8 +152,8 @@ export function updateTempRanges(xscale, s, range, inputRange, minvalue, maxvalu
  */
 
 export function setStartStopDisplays(range, inputRange) {
-	const start = range.startunbounded ? '' : inputRange?.startinclusive ? `${range.start} <=` : `${range.start} <`
-	const stop = range.stopunbounded ? '' : inputRange?.stopinclusive ? `<= ${range.stop}` : `< ${range.stop}`
+	const start = range.startunbounded ? '' : inputRange.startinclusive ? `${range.start} <=` : `${range.start} <`
+	const stop = range.stopunbounded ? '' : inputRange.stopinclusive ? `<= ${range.stop}` : `< ${range.stop}`
 
 	return [start, stop]
 }

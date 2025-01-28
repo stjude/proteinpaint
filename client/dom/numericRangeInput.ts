@@ -24,7 +24,7 @@ export class NumericRangeInput {
 					this.setRange()
 				}
 			})
-		this.range = this.setRange(range)
+		this.setRange(range)
 		this.callback = callback
 	}
 
