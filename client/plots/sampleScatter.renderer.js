@@ -81,16 +81,62 @@ export function setRenderers(self) {
 				self.config.colorTW?.term.continuousColorScale?.maxColor || rgb(gradientColor).darker().toString()
 		}
 
+		// Handle continuous color scaling when color term wrapper is in continuous mode
 		if (self.config.colorTW?.q.mode === 'continuous') {
-			const [min, max] = chart.cohortSamples
+			// Extract and sort all sample values for our calculations
+			// We filter out any values that are explicitly defined in the term values
+			// This gives us the raw numerical data we need for scaling
+			const values = chart.cohortSamples
 				.filter(s => !self.config.colorTW.term.values || !(s.category in self.config.colorTW.term.values))
-				.reduce(
-					(s, d) => [d.category < s[0] ? d.category : s[0], d.category > s[1] ? d.category : s[1]],
-					[chart.cohortSamples[0].category, chart.cohortSamples[0].category]
-				)
+				.map(s => s.category)
+				.sort((a, b) => a - b)
+
+			// Determine min/max based on current mode
+			let min, max
+			const settings = self.config.settings.sampleScatter
+
+			switch (settings.colorScaleMode) {
+				// Fixed mode: Use user-defined min/max values
+				// This is useful when you want consistent scaling across different views
+				case 'fixed':
+					min = settings.colorScaleMinFixed
+					max = settings.colorScaleMaxFixed
+					break
+
+				case 'percentile':
+					// Percentile mode: Scale based on data distribution
+					// We start at 0 to maintain a consistent baseline
+					min = 0 // Start at 0 for percentile mode
+					// Calculate the value at the specified percentile
+					// This helps handle outliers by focusing on the main distribution
+					const index = Math.floor((values.length * settings.colorScalePercentile) / 100)
+					max = values[index]
+					break
+
+				case 'auto':
+				default:
+					// Auto mode (default): Use the full range of the data
+					// This gives the most accurate representation of the actual data distribution
+					;[min, max] = values.reduce(
+						(mm, d) => [
+							d < mm[0] ? d : mm[0], // Track minimum value
+							d > mm[1] ? d : mm[1] // Track maximum value
+						],
+						[values[0], values[0]] // Initialize with first value
+					)
+					break
+			}
+
+			// Create the color generator using d3's linear scale
+			// This maps our numerical range to a color gradient
 			chart.colorGenerator = d3Linear()
 				.domain([min, max])
 				.range([self.config.startColor[chart.id], self.config.stopColor[chart.id]])
+
+			// Store the current range for reference
+			// This is useful when we need to recreate the color generator
+			// or check the current scaling values
+			chart.currentColorRange = { min, max }
 		}
 	}
 
@@ -775,25 +821,92 @@ export function setRenderers(self) {
 				offsetY += step
 
 				if (self.config.colorTW?.q?.mode === 'continuous') {
-					const [min, max] = chart.colorGenerator.domain()
+					// Get the current domain values from our color generator
+					// These values represent the minimum and maximum values in our dataset
+					let [min, max] = chart.colorGenerator.domain()
 
+					// Extract and sort all sample values for percentile calculations
+					// We filter for samples with sampleId to exclude reference data points
+					// This creates an array of numerical values that we can use for our different scaling modes
+					const values = chart.data.samples
+						.filter(s => 'sampleId' in s)
+						.map(s => s.category)
+						.sort((a, b) => a - b)
+
+					// Create a ColorScale component with enhanced mode functionality
 					const colorScale = new ColorScale({
-						holder: colorG,
-						barheight: 20,
-						barwidth: 150,
-						colors: [self.config.startColor[chart.id], self.config.stopColor[chart.id]],
-						domain: [min, max],
-						position: `0, 100`,
-						ticks: 4,
-						tickSize: 5,
-						topTicks: true,
+						// Basic visual configuration
+						holder: colorG, // SVG group to contain our color scale
+						barheight: 20, // Height of the color gradient bar
+						barwidth: 150, // Width of the color gradient bar
+						colors: [
+							// Start and end colors for our gradient
+							self.config.startColor[chart.id],
+							self.config.stopColor[chart.id]
+						],
+						domain: [min, max], // Current numerical range of our data
+						position: `0, 100`, // Position within the legend
+						ticks: 4, // Number of tick marks to show
+						tickSize: 5, // Size of tick marks
+						topTicks: true, // Display ticks above the gradient bar
+
+						// Callback for when gradient colors are changed via color picker
 						setColorsCallback: (val, idx) => {
 							this.changeGradientColor(chart, val, idx)
+						},
+
+						// Configuration for our enhanced scaling modes
+						numericInputs: {
+							// Start with either the chart's current mode or default to 'auto'
+							cutoffMode: chart.cutoffMode || 'auto',
+							// Default percentile value for percentile mode
+							defaultPercentile: chart.percentile || 95,
+
+							// This callback handles all mode changes and updates
+							callback: obj => {
+								// Store the selected mode for persistence
+								chart.cutoffMode = obj.cutoffMode
+
+								// Handle different modes for color scaling
+								if (obj.cutoffMode === 'auto') {
+									// Auto mode: Reset stored values and use data's natural range
+									chart.min = null
+									chart.max = null
+									// Calculate min/max from all values
+									;[min, max] = values.reduce(
+										(mm, val) => [Math.min(mm[0], val), Math.max(mm[1], val)],
+										[values[0], values[0]]
+									)
+								} else if (obj.cutoffMode === 'fixed') {
+									// Fixed mode: Use user-specified min/max values
+									// This allows for consistent visualization across different datasets
+									chart.min = obj.min
+									chart.max = obj.max
+									min = obj.min
+									max = obj.max
+								} else if (obj.cutoffMode === 'percentile') {
+									// Percentile mode: Adjust max value based on data distribution
+									chart.percentile = obj.percentile
+									// Calculate index for the specified percentile
+									const index = Math.floor((values.length * obj.percentile) / 100)
+									chart.max = values[index]
+									min = 0 // In percentile mode, we typically start at 0 for better interpretation
+									max = chart.max
+								}
+
+								// Update the color generator with our new range
+								chart.colorGenerator = d3Linear()
+									.domain([min, max])
+									.range([self.config.startColor[chart.id], self.config.stopColor[chart.id]])
+
+								// Trigger a re-render to update the visualization
+								self.render()
+							}
 						}
 					})
 
+					// Initialize the color scale with current settings
 					colorScale.updateScale()
-
 					offsetY += step
 				} else {
 					for (const [key, category] of chart.colorLegend) {
@@ -1081,8 +1194,13 @@ export function setRenderers(self) {
 		const colorKey = idx == 0 ? 'startColor' : 'stopColor'
 		self.config[colorKey][chart.id] = hexColor
 
-		chart.colorGenerator = d3Linear().range([self.config.startColor[chart.id], self.config.stopColor[chart.id]])
+		// Recreate color generator with current settings
+		const range = chart.currentColorRange || chart.colorGenerator.domain()
+		chart.colorGenerator = d3Linear()
+			.domain(range)
+			.range([self.config.startColor[chart.id], self.config.stopColor[chart.id]])
 
+		// Update the configuration
 		self.app.dispatch({
 			type: 'plot_edit',
 			id: self.id,

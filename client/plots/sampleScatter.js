@@ -1,6 +1,6 @@
 import { getCompInit, copyMerge } from '../rx'
 import { fillTermWrapper } from '#termsetting'
-import { Menu, shapesArray, select2Terms } from '#dom'
+import { Menu, shapesArray, select2Terms, ColorScale } from '#dom'
 import { controlsInit } from './controls'
 import { setRenderers } from './sampleScatter.renderer'
 import { setInteractivity } from './sampleScatter.interactivity'
@@ -691,6 +691,19 @@ export function getDefaultScatterSettings() {
 		fov: 50,
 		threeSize: 0.003,
 		threeFOV: 70,
+		// Color scale configuration settings
+		// These settings control how numerical values are mapped to colors
+		colorScaleMode: 'auto', // Default to automatic scaling based on data range
+		// Other options: 'fixed' (user-defined range) or
+		// 'percentile' (scale based on data distribution)
+
+		colorScalePercentile: 95, // Default percentile for percentile mode
+		// This means we'll scale colors based on values
+		// up to the 95th percentile by default
+		colorScaleMinFixed: null, // User-defined minimum value for fixed mode
+		// Null indicates this hasn't been set yet
+		colorScaleMaxFixed: null, // User-defined maximum value for fixed mode
+		// Null indicates this hasn't been set yet
 		//3D Plot settings
 		showContour: false,
 		colorContours: false
