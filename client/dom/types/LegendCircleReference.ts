@@ -10,19 +10,21 @@ export type LegendCircleReferenceOpts = {
 	inputMax: number
 	/** Lower limit user can input for size */
 	inputMin: number
+	maxLabel?: number
 	/** Default max radius in pixels or a scale */
 	maxRadius: number
 	/** If provided, renders a menu on click */
 	menu: {
 		/** If provided, displays a prompt (e.g. pixels, scales, etc.)
 		 * next to the min and max inputs*/
-		minMaxLabel: string
+		minMaxLabel?: string
 		/** If provided, an UI renderes to switch between an
 		 * ascending and descending scale. */
-		showOrder: boolean
+		showOrder?: boolean
 		/** Code executed when min, max, or order is changed */
 		callback: (obj: { min: number; max: number; isAscending: boolean }) => void
 	}
+	minLabel?: number
 	/** Default min radius in pixels or a scale */
 	minRadius: number
 	/** If provided, presents the user with the option

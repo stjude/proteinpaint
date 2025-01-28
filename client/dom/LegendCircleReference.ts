@@ -16,7 +16,9 @@ export class LegendCircleReference {
 	inputMax: number
 	inputMin: number
 	isAscending: boolean
+	maxLabel: number
 	maxRadius: number
+	minLabel: number
 	minRadius: number
 	menu?: {
 		minMaxLabel?: string
@@ -36,7 +38,9 @@ export class LegendCircleReference {
 		this.inputMax = opts.inputMax
 		this.inputMin = opts.inputMin
 		this.isAscending = opts.isAscending ?? true
+		this.maxLabel = opts.maxLabel ?? opts.maxRadius
 		this.maxRadius = opts.maxRadius
+		this.minLabel = opts.minLabel ?? opts.minRadius
 		this.minRadius = opts.minRadius
 
 		if (opts.menu) this.menu = opts.menu
@@ -54,20 +58,20 @@ export class LegendCircleReference {
 	renderLegendComponent() {
 		this.g.selectAll('*').remove()
 
-		if (this.title) this.g.append('text').style('font-weight', 'bold').text(this.title)
+		if (this.title) this.g.append('text').style('font-weight', 'bold').style('font-size', '0.8em').text(this.title)
 
 		const minG = this.g.append('g').attr('transform', `translate(${this.x},${this.y})`)
 		const maxG = this.g.append('g').attr('transform', `translate(${this.x + this.width},${this.y})`)
 
 		//Starting text and circle element
 		const startRadius = this.isAscending ? this.minRadius : this.maxRadius
-		this.renderLabel(minG, -startRadius - this.shift, this.minRadius)
+		this.renderLabel(minG, -startRadius - this.shift, this.minLabel)
 		this.renderReferenceCircle(minG, startRadius)
 
 		//Ending text and circle element
 		const endRadius = this.isAscending ? this.maxRadius : this.minRadius
 		this.renderReferenceCircle(maxG, endRadius)
-		this.renderLabel(maxG, endRadius + this.shift, this.maxRadius)
+		this.renderLabel(maxG, endRadius + this.shift, this.maxLabel)
 
 		//Lines connecting the top and bottom of the circles
 		this.renderScalingLine(minG, this.minRadius, this.maxRadius)
