@@ -15,6 +15,7 @@ import { addNewGroup } from '../mass/groups.js'
 import { setRenderersThree } from './sampleScatter.rendererThree.js'
 import { shapes } from './sampleScatter.js'
 import { roundValueAuto } from '#shared/roundValue.js'
+import { config } from 'process'
 
 export function setRenderers(self) {
 	setRenderersThree(self)
@@ -860,66 +861,38 @@ export function setRenderers(self) {
 
 							// This callback handles all mode changes and updates
 							callback: obj => {
-								// First, let's handle the initial state where there might not be a stored mode
-								// or when we're actively switching modes
-								const isModeSwitching = obj.cutoffMode !== undefined
-
-								// If we're actively switching modes, update it. Otherwise, use the existing mode
-								if (isModeSwitching) {
-									chart.cutoffMode = obj.cutoffMode
-									// Also store it in the config for persistence
-									self.config.settings.sampleScatter.colorScaleMode = obj.cutoffMode
-								}
-
-								// Now use the current mode (whether it was just set or previously existing)
-								const currentMode = chart.cutoffMode || 'auto'
-
 								// Handle different modes for color scaling
 								if (obj.cutoffMode === 'auto') {
-									// Auto mode: This is the default mode.
-									// Use first and last values since array is already sorted
 									min = values[0]
 									max = values[values.length - 1]
 								} else if (obj.cutoffMode === 'fixed') {
-									if (obj.min !== undefined && obj.max !== undefined) {
-										min = obj.min
-										max = obj.max
-										// Store these values in config for persistence
-										self.config.settings.sampleScatter.colorScaleMinFixed = min
-										self.config.settings.sampleScatter.colorScaleMaxFixed = max
-									} else {
-										// Use previously stored fixed values if they exist
-										min = self.config.settings.sampleScatter.colorScaleMinFixed || values[0]
-										max = self.config.settings.sampleScatter.colorScaleMaxFixed || values[values.length - 1]
-									}
+									min = obj.min
+									max = obj.max
 								} else if (obj.cutoffMode === 'percentile') {
-									// Use existing percentile or default to 95
-									const percentile = obj.percentile || chart.percentile || 95
-									chart.percentile = percentile
-									self.config.settings.sampleScatter.colorScalePercentile = percentile
-
 									min = values[0]
-									const index = Math.floor((values.length * percentile) / 100)
+									const index = Math.floor((values.length * obj.percentile) / 100)
 									max = values[index]
 								}
 
-								// Update the color generator with our new range
+								// Update the color generator with new range
 								chart.colorGenerator = d3Linear()
 									.domain([min, max])
 									.range([self.config.startColor[chart.id], self.config.stopColor[chart.id]])
-
-								// Save settings to config for state persistence
-								self.config.settings.sampleScatter.colorScaleMode = chart.cutoffMode
-								self.config.settings.sampleScatter.colorScaleMinFixed = obj.cutoffMode === 'fixed' ? min : null
-								self.config.settings.sampleScatter.colorScaleMaxFixed = obj.cutoffMode === 'fixed' ? max : null
-								self.config.settings.sampleScatter.colorScalePercentile =
-									obj.cutoffMode === 'percentile' ? chart.percentile : null
 
 								// Dispatch the updated config
 								self.app.dispatch({
 									type: 'plot_edit',
 									id: self.id,
-									config: self.config
+									config: {
+										settings: {
+											sampleScatter: {
+												colorScaleMode: obj.cutoffMode,
+												colorScaleMinFixed: obj.cutoffMode === 'fixed' ? min : null,
+												colorScaleMaxFixed: obj.cutoffMode === 'fixed' ? max : null,
+												colorScalePercentile: obj.cutoffMode === 'percentile' ? obj.percentile : null
+											}
+										}
+									}
 								})
 							}
 						}
