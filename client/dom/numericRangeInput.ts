@@ -5,7 +5,7 @@ type TvsRange = FullyBoundedBin & { value?: number }
 
 export class NumericRangeInput {
 	callback: (f: any) => void
-	private input: Input
+	input: Input
 	range: any
 
 	constructor(holder: Elem, range: any, callback: () => void) {

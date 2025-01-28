@@ -1,5 +1,10 @@
 import tape from 'tape'
-import { parseRange } from '../numericRangeInput'
+import * as d3s from 'd3-selection'
+import { parseRange, NumericRangeInput } from '../numericRangeInput'
+
+function getHolder() {
+	return d3s.select('body').append('div').style('padding', '5px').style('margin', '5px')
+}
 
 /**
  * Test Suite: parseRange()
@@ -60,6 +65,7 @@ tape('\n', function (test) {
  * Basic Value Tests *
  **********************/
 tape('parseRange function', function (test) {
+	test.timeoutAfter(500)
 	// Testing exact value inputs - checks both possible formats
 	test.test('handles exact value input', function (test) {
 		// First format: "x = value"
@@ -413,5 +419,31 @@ tape('parseRange function', function (test) {
 		test.end()
 	})
 
+	test.end()
+})
+
+tape('NumericRangeInput', function (test) {
+	test.timeoutAfter(100)
+	const holder = getHolder()
+	const mockRange = {
+		index: 0,
+		start: 0,
+		startinclusive: true,
+		startunbounded: false,
+		stop: 0.6,
+		stopinclusive: false,
+		stopunbounded: false
+	}
+	const callback = () => {
+		//So ts doesn't complain
+		console.log('test')
+	}
+
+	const input = new NumericRangeInput(holder.append('div') as any, mockRange, callback)
+
+	test.deepEqual(input.getRange(), mockRange, 'Should set range to input')
+	test.equal(input.input.node()!.value, `0 <= x <= 0.6`, 'Should return correct string to display in the input box')
+
+	if (test['_ok']) holder.remove()
 	test.end()
 })
