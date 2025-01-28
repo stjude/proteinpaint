@@ -19,6 +19,7 @@ import { ItemToolTip } from './ItemToolTip'
  * volcano plot. */
 export class View {
 	dom: CorrVolcanoDom
+	readonly duration = 500
 	viewData: ViewData
 	constructor(
 		dom: CorrVolcanoDom,
@@ -96,9 +97,15 @@ export class View {
 	}
 
 	renderScale(scale, isLeft = false) {
-		const scaleG = this.dom.plot.append('g').attr('transform', `translate(${scale.x}, ${scale.y})`)
+		const scaleG = this.dom.plot
+			.append('g')
+			.attr('transform', `translate(${scale.x}, ${scale.y})`)
+			.transition()
+			.duration(this.duration)
+			.call(isLeft ? axisLeft(scale.scale) : axisBottom(scale.scale))
+
 		axisstyle({
-			axis: scaleG.call(isLeft ? axisLeft(scale.scale) : axisBottom(scale.scale)),
+			axis: scaleG,
 			color: 'black',
 			showline: true
 		})
@@ -152,7 +159,7 @@ function renderVariables(self, settings: CorrVolcanoSettings, interactions: Corr
 		//Allows for a subtle transition to new position
 		.attr('r', item => item.radius * 0.9)
 		.transition()
-		.duration(500)
+		.duration(self.duration)
 		.attr('cx', item => item.x)
 		.attr('cy', item => item.y)
 		.attr('r', item => item.radius)
