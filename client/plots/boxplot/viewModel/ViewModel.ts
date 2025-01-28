@@ -52,7 +52,7 @@ export type PlotDimensions = {
 	/** Title of the plot and coordinates */
 	title: { x: number; y: number; text: string }
 	/** axis coordinates */
-	axis: { x: number; y: number }
+	axis: { x: number; y: number; format: (d: number) => string }
 }
 
 export class ViewModel {
@@ -121,7 +121,13 @@ export class ViewModel {
 			title: this.setTitleDimensions(config, settings, svg.height),
 			axis: {
 				x: settings.isVertical ? this.horizPad / 2 + this.incrPad + this.topPad : this.totalLabelSize,
-				y: this.topPad + (settings.isVertical ? settings.labelPad : this.incrPad + 20)
+				y: this.topPad + (settings.isVertical ? settings.labelPad : this.incrPad + 20),
+				format: settings.isLogScale
+					? d => {
+							// Only return values that are exact powers of 10
+							return d === 0 || Math.log10(d) % 1 === 0 ? d.toString() : ''
+					  }
+					: d => d.toString()
 			},
 			backgroundColor: settings.darkMode ? 'black' : 'white',
 			textColor: settings.darkMode ? 'white' : 'black'

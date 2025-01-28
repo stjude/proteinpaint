@@ -43,7 +43,7 @@ export class View {
 			//Fix for white background when downloading darkMode image.
 			.style('fill', plotDim.backgroundColor)
 
-		const setScaleFunc = settings.isLogScale ? scaleLog().base(2) : scaleLinear()
+		const setScaleFunc = settings.isLogScale ? scaleLog().base(10) : scaleLinear()
 		const scale = setScaleFunc.domain(plotDim.domain).range(plotDim.range)
 
 		this.renderTitle(plotDim, dom)
@@ -82,7 +82,13 @@ export class View {
 			.attr('id', 'sjpp-boxplot-axis')
 			.attr('transform', `translate(${plotDim.axis.x}, ${plotDim.axis.y})`)
 			.transition()
-			.call(this.settings.isVertical ? axisLeft(scale).tickPadding(5) : axisTop(scale))
+			.call(
+				this.settings.isVertical
+					? axisLeft(scale)
+							.tickPadding(6)
+							.tickFormat(d => plotDim.axis.format(d as number))
+					: axisTop(scale).tickFormat(d => plotDim.axis.format(d as number))
+			)
 
 		axisstyle({
 			axis: dom.axis,
