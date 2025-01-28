@@ -1,6 +1,7 @@
 import type { TermWrapper } from '#types'
 import { to_svg } from '#src/client'
 import { getReadableType } from '#shared/terms.js'
+import { appInit } from '#termdb/app'
 
 //TODO - finish typing this file
 export class CorrVolcanoInteractions {
@@ -28,6 +29,33 @@ export class CorrVolcanoInteractions {
 	download() {
 		const svg = this.dom.svg.node() as Node
 		to_svg(svg, `correlationVolcano`, { apply_dom_styles: true })
+	}
+
+	//If no featureTw is set, show the tree to select a feature
+	async showTree() {
+		this.dom.div.selectAll('*').remove()
+		await appInit({
+			vocabApi: this.app.vocabApi,
+			holder: this.dom.div,
+			state: this.app.getState(),
+			tree: {
+				click_term: _term => {
+					const term = _term.term || _term
+					this.app.dispatch({
+						type: 'plot_create',
+						config: {
+							chartType: 'correlationVolcano',
+							featureTw: _term.term ? _term : { term }
+						}
+					})
+
+					this.app.dispatch({
+						type: 'plot_delete',
+						id: this.id
+					})
+				}
+			}
+		})
 	}
 
 	//When clicking on dot, launch the sample scatter by gene and drug
