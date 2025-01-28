@@ -104,6 +104,7 @@ export function setRenderers(self) {
 		const scaleHeight = self.config.scaleDotTW ? 200 : 100
 		self.legendHeight = Math.max(colorLegendSize, chart.shapeLegend.size * 30) + scaleHeight //legend step and header
 
+		let size = self.getFontSize(chart)
 		//Dynamically calculate the length of the legend labels
 		const getLegendLabelWidth = (key, svg) => {
 			const legend = chart[`${key}Legend`]
@@ -113,8 +114,7 @@ export function setRenderers(self) {
 				if (k != 'Ref') labels.push(`${k}, n=(${v.sampleCount})`)
 			}
 			labels.push(self.config[`${key}TW`]?.term?.name ?? '')
-			// A larger font size is applied for geneVariant terms only
-			const size = self.config[`${key}TW`]?.term?.type == 'geneVariant' ? 1.1 : 1
+
 			// Add 20 for the icon (16) and space
 			return getMaxLabelWidth(svg, labels, size) + 20
 		}
@@ -714,6 +714,16 @@ export function setRenderers(self) {
 			})
 	}
 
+	self.getFontSize = function (chart) {
+		let fontSize = 1
+		const top = 15
+		if (chart.colorLegend.size > top || chart.shapeLegend.size > top) {
+			fontSize = Math.min(0.9, top / chart.colorLegend.size, top / chart.shapeLegend.size)
+			if (fontSize < 0.5) fontSize = 0.5
+		}
+		return fontSize
+	}
+
 	self.renderLegend = function (chart, step) {
 		const legendG = chart.legendG
 		legendG.selectAll('*').remove()
@@ -729,8 +739,7 @@ export function setRenderers(self) {
 		}
 
 		let title
-		let fontSize = Math.min(0.8, 20 / chart.colorLegend.size)
-		if (fontSize < 0.5) fontSize = 0.5
+		let fontSize = self.getFontSize(chart)
 		const colorG = legendG.style('font-size', `${fontSize}em`)
 		let title0 = self.config.term0
 			? `${self.config.term0.term.name + ' ' + chart.id}, n=${chart.cohortSamples.length}`
@@ -889,7 +898,7 @@ export function setRenderers(self) {
 			circleG
 				.append('path')
 				.attr('d', shapes[0])
-				.attr('transform', `translate(${x - 2}, ${y - 5}) scale(0.8)`)
+				.attr('transform', `translate(${x - 2}, ${y - 5}) scale(0.7)`)
 				.style('fill', category.color)
 				.style('stroke', rgb(category.color).darker())
 			if (!self.config.colorColumn)
