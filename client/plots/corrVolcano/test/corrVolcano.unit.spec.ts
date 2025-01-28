@@ -15,7 +15,6 @@ function getHolder() {
 		.style('border', '1px solid #aaa')
 		.style('padding', '5px')
 		.style('margin', '5px')
-		.node()
 }
 
 const mockData = {
@@ -44,7 +43,9 @@ const mockSettings = {
 	method: 'pearson',
 	threshold: 0.05,
 	height: 500,
-	width: 500
+	width: 500,
+	radiusMax: 20,
+	radiusMin: 5
 } satisfies CorrVolcanoSettings
 
 const mockVariableTwLst = [
@@ -97,12 +98,10 @@ tape('Default ViewModel', test => {
 	test.timeoutAfter(100)
 	const holder = getHolder() as any
 	const dom = {
-		plot: holder?.append('svg')?.append('g')
+		plot: holder.append('svg').append('g')
 	}
 
 	const viewModel = new ViewModel(mockConfig, mockData, dom as any, mockSettings, mockVariableTwLst as any)
-	test.equal(viewModel.defaultMinRadius, 5, `Should set default minimum radius to 5`)
-	test.equal(viewModel.defaultMaxRadius, 20, `Should set default maximum radius to 20`)
 	test.equal(viewModel.bottomPad, 60, `Should set bottom padding to 60`)
 	test.equal(viewModel.horizPad, 70, `Should set horizontal padding to 70`)
 	test.equal(viewModel.topPad, 40, `Should set top padding to 40`)
@@ -150,10 +149,10 @@ tape('Default ViewModel', test => {
 				previousY: 498.3333333333333
 			}
 		],
-		legendData: [
-			{ label: 373, x: 25, y: 30, radius: 5 },
-			{ label: 726, x: 25, y: 70, radius: 20 }
-		]
+		legendData: {
+			absMin: 373,
+			absMax: 726
+		}
 	}
 
 	test.deepEqual(
@@ -189,5 +188,6 @@ tape('Default ViewModel', test => {
 	)
 	test.deepEqual(viewModel.viewData.legendData, expectedViewData.legendData, `Should set the legend data as expected`)
 
+	if (test['_ok']) holder.remove()
 	test.end()
 })
