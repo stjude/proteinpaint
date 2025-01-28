@@ -258,7 +258,6 @@ class TdbBoxplot extends RxComponentInner {
 	async main() {
 		try {
 			const config = structuredClone(this.state.config)
-			console.log(this.app.vocabApi.termdbConfig.logscaleBase2)
 			if (config.childType != this.type && config.chartType != this.type) return
 
 			const settings = config.settings.boxplot
