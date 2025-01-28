@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.100.0
 
 Features:
 - New component to show the difference in circle sizes across plots.
