@@ -1,5 +1,5 @@
-import { Elem, Input } from '../types/d3'
-import { FullyBoundedBin } from '#types'
+import type { Elem, Input } from '../types/d3'
+import type { FullyBoundedBin } from '#types'
 
 type TvsRange = FullyBoundedBin & { value?: number }
 
