@@ -106,7 +106,7 @@ export function setRenderers(self) {
 				case 'percentile':
 					// Percentile mode: Scale based on data distribution
 					// We start at 0 to maintain a consistent baseline
-					min = 0 // Start at 0 for percentile mode
+					min = values[0] // Start at the first value of the array for percentile mode
 					// Calculate the value at the specified percentile
 					// This helps handle outliers by focusing on the main distribution
 					const index = Math.floor((values.length * settings.colorScalePercentile) / 100)
@@ -117,13 +117,9 @@ export function setRenderers(self) {
 				default:
 					// Auto mode (default): Use the full range of the data
 					// This gives the most accurate representation of the actual data distribution
-					;[min, max] = values.reduce(
-						(mm, d) => [
-							d < mm[0] ? d : mm[0], // Track minimum value
-							d > mm[1] ? d : mm[1] // Track maximum value
-						],
-						[values[0], values[0]] // Initialize with first value
-					)
+					min = values[0]
+					max = values[values.length - 1] // Since the values are already sorted in ascending
+					// order just get the first and last values
 					break
 			}
 
@@ -869,28 +865,30 @@ export function setRenderers(self) {
 
 								// Handle different modes for color scaling
 								if (obj.cutoffMode === 'auto') {
-									// Auto mode: Reset stored values and use data's natural range
-									chart.min = null
-									chart.max = null
-									// Calculate min/max from all values
-									;[min, max] = values.reduce(
-										(mm, val) => [Math.min(mm[0], val), Math.max(mm[1], val)],
-										[values[0], values[0]]
-									)
+									// Auto mode: This is the default mode.
+									// Use first and last values since array is already sorted
+									min = values[0]
+									max = values[values.length - 1]
 								} else if (obj.cutoffMode === 'fixed') {
-									// Fixed mode: Use user-specified min/max values
-									// This allows for consistent visualization across different datasets
-									chart.min = obj.min
-									chart.max = obj.max
-									min = obj.min
-									max = obj.max
+									// Fixed mode starts with the current data range as its initial values
+									// This gives users a reasonable starting point for their adjustments
+									if (obj.min !== undefined && obj.max !== undefined) {
+										// Only use provided values if they're explicitly set by user input
+										min = obj.min
+										max = obj.max
+									} else {
+										// Otherwise reset to the data range
+										min = values[0]
+										max = values[values.length - 1]
+									}
 								} else if (obj.cutoffMode === 'percentile') {
 									// Percentile mode: Adjust max value based on data distribution
 									chart.percentile = obj.percentile
 									// Calculate index for the specified percentile
 									const index = Math.floor((values.length * obj.percentile) / 100)
 									chart.max = values[index]
-									min = 0 // In percentile mode, we typically start at 0 for better interpretation
+									min = values[0] // In percentile mode, we start with
+									// the first value of the array as min since it is already sorted
 									max = chart.max
 								}
 
