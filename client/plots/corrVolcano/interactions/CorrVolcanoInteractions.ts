@@ -48,6 +48,22 @@ export class CorrVolcanoInteractions {
 		})
 	}
 
+	//Obj is returned from LegendCircleReference callback
+	async changeRadius(obj: { min: number; max: number }) {
+		this.app.dispatch({
+			type: 'plot_edit',
+			id: this.id,
+			config: {
+				settings: {
+					correlationVolcano: {
+						radiusMax: obj.max,
+						radiusMin: obj.min
+					}
+				}
+			}
+		})
+	}
+
 	clearDom() {
 		this.dom.error.style('padding', '').text('')
 		this.dom.plot.selectAll('*').remove()

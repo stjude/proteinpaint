@@ -1,10 +1,11 @@
 import { axisstyle } from '#src/client'
 import { axisBottom, axisLeft } from 'd3-axis'
 import { select } from 'd3-selection'
+import { LegendCircleReference } from '#dom'
 import type {
 	CorrVolcanoDom,
 	CorrVolcanoSettings,
-	LegendDataEntry,
+	LegendData,
 	PlotDimensions,
 	ViewData
 } from '../CorrelationVolcanoTypes'
@@ -23,7 +24,9 @@ export class View {
 		dom: CorrVolcanoDom,
 		viewData: ViewData,
 		interactions: CorrVolcanoInteractions,
-		settings: CorrVolcanoSettings
+		settings: CorrVolcanoSettings,
+		defaultMaxRadius: number,
+		defaultMinRadius: number
 	) {
 		this.dom = dom
 		this.viewData = viewData
@@ -34,7 +37,7 @@ export class View {
 		this.renderDom(plotDim)
 		// Draw all circles for variables
 		renderVariables(this, settings, interactions)
-		this.renderLegend(viewData.legendData)
+		this.renderLegend(viewData.legendData, settings, interactions, defaultMaxRadius, defaultMinRadius)
 	}
 
 	renderDom(plotDim: PlotDimensions) {
@@ -101,30 +104,36 @@ export class View {
 		})
 	}
 
-	renderLegend(legendData: LegendDataEntry[]) {
+	renderLegend(
+		legendData: LegendData,
+		settings: CorrVolcanoSettings,
+		interactions: CorrVolcanoInteractions,
+		defaultMaxRadius: number,
+		defaultMinRadius: number
+	) {
 		const svg = this.dom.legend
-			.attr('width', 100)
+			.attr('width', 400)
 			.attr('height', 100)
 			.style('display', 'inline-block')
 			.style('vertical-align', 'top')
 			.style('padding-top', '20px')
-		svg.append('text').text('Sample size').attr('x', 10).attr('y', 15)
 
-		for (const c of legendData) {
-			svg
-				.append('circle')
-				.attr('fill', 'lightgrey')
-				.attr('stroke', 'lightgrey')
-				.attr('cx', c.x)
-				.attr('cy', c.y)
-				.attr('r', c.radius)
-
-			svg
-				.append('text')
-				.attr('x', c.x + 25)
-				.attr('y', c.y + 5)
-				.text(c.label)
-		}
+		new LegendCircleReference({
+			g: svg.append('g').attr('transform', 'translate(20, 20)'),
+			inputMax: defaultMaxRadius,
+			inputMin: defaultMinRadius,
+			maxLabel: legendData.absMax,
+			maxRadius: settings.radiusMax,
+			minLabel: legendData.absMin,
+			minRadius: settings.radiusMin,
+			title: 'Sample Size',
+			menu: {
+				minMaxLabel: 'pixels',
+				callback: async obj => {
+					await interactions.changeRadius(obj)
+				}
+			}
+		})
 	}
 }
 

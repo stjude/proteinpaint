@@ -26,6 +26,10 @@ export type CorrVolcanoSettings = {
 	isAdjustedPValue: boolean
 	/** Correlation method */
 	method: 'pearson' | 'spearman'
+	/** Maximum radius of the circles Default is 20. */
+	radiusMax: number
+	/** Minimum radius of the circles. Default is 5.  */
+	radiusMin: number
 	/** statistically significant p value the user can alter
 	 * Default is 0.05 */
 	threshold: number
@@ -122,15 +126,9 @@ export type VariableItem = {
 }
 
 /** Dimensions of sample size circles */
-export type LegendDataEntry = {
-	/** Coorresponding ample size */
-	label: number
-	/** x coordinate */
-	x: number
-	/** y coordinate */
-	y: number
-	/** radius of the circle */
-	radius: number
+export type LegendData = {
+	absMin: number
+	absMax: number
 }
 
 /** Formated response data passed from the view model
@@ -140,5 +138,5 @@ export type ViewData = {
 	plotDim: PlotDimensions
 	/** Rendering specifics for each data point */
 	variableItems: VariableItem[]
-	legendData: LegendDataEntry[]
+	legendData: LegendData
 }
