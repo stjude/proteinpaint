@@ -6,9 +6,6 @@ import type { CorrVolcanoDom, CorrVolcanoPlotConfig, CorrVolcanoSettings, ViewDa
 
 export class ViewModel {
 	viewData: ViewData
-	//For rendering the circles and legend info
-	readonly defaultMinRadius = 5
-	readonly defaultMaxRadius = 20
 	readonly bottomPad = 60
 	/** Only one side, left or right */
 	readonly horizPad = 70
@@ -137,7 +134,7 @@ export class ViewModel {
 	) {
 		const radiusScale = scaleLinear()
 			.domain([absSampleMin, absSampleMax])
-			.range([this.defaultMinRadius, this.defaultMaxRadius])
+			.range([settings.radiusMin, settings.radiusMax])
 		const renderedCircles = dom.plot
 			?.selectAll('circle')
 			.nodes()
@@ -163,19 +160,9 @@ export class ViewModel {
 	}
 
 	setLegendData(absSampleMin: number, absSampleMax: number) {
-		return [
-			{
-				label: absSampleMin,
-				x: 25,
-				y: 30,
-				radius: this.defaultMinRadius
-			},
-			{
-				label: absSampleMax,
-				x: 25,
-				y: this.defaultMaxRadius + 50,
-				radius: this.defaultMaxRadius
-			}
-		]
+		return {
+			absMin: absSampleMin,
+			absMax: absSampleMax
+		}
 	}
 }

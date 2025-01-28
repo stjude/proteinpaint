@@ -18,6 +18,10 @@ import { CorrVolcanoInteractions } from './interactions/CorrVolcanoInteractions'
 class CorrelationVolcano extends RxComponentInner {
 	readonly type = 'correlationVolcano'
 	private components: { controls: any }
+	/** Max radius user may enter in control or legend menu */
+	readonly defaultInputMaxRadius = 35
+	/** Min radius user may enter in control or legend menu */
+	readonly defaultInputMinRadius = 1
 	dom: CorrVolcanoDom
 	dsCorrVolcano: any
 	variableTwLst: any
@@ -111,6 +115,26 @@ class CorrelationVolcano extends RxComponentInner {
 				debounceInterval: 0.05
 			},
 			{
+				label: 'Maximum radius size',
+				title: 'Set maximum radius size in pixels',
+				type: 'number',
+				chartType: 'correlationVolcano',
+				settingsKey: 'radiusMax',
+				min: this.defaultInputMinRadius,
+				max: this.defaultInputMaxRadius,
+				debounceInterval: 500
+			},
+			{
+				label: 'Minimum radius size',
+				title: 'Set minimum radius size in pixels',
+				type: 'number',
+				chartType: 'correlationVolcano',
+				settingsKey: 'radiusMin',
+				min: this.defaultInputMinRadius,
+				max: this.defaultInputMaxRadius,
+				debounceInterval: 500
+			},
+			{
 				label: 'Height',
 				title: 'Set the height of the plot',
 				type: 'number',
@@ -185,7 +209,14 @@ class CorrelationVolcano extends RxComponentInner {
 		const viewModel = new ViewModel(config, data, this.dom, settings, this.variableTwLst)
 
 		/** Render correlation volcano plot */
-		new View(this.dom, viewModel.viewData, this.interactions, settings)
+		new View(
+			this.dom,
+			viewModel.viewData,
+			this.interactions,
+			settings,
+			this.defaultInputMaxRadius,
+			this.defaultInputMinRadius
+		)
 	}
 }
 
@@ -200,7 +231,9 @@ export function getDefaultCorrVolcanoSettings(overrides = {}) {
 		method: 'pearson',
 		threshold: 0.05,
 		height: 500,
-		width: 500
+		width: 500,
+		radiusMax: 20,
+		radiusMin: 5
 	}
 	return Object.assign(defaults, overrides)
 }
