@@ -34,6 +34,7 @@ const mockSettings = {
 	color: 'blue',
 	darkMode: false,
 	labelPad: 10,
+	isLogScale: false,
 	isVertical: false,
 	orderByMedian: false,
 	rowHeight: 20,
