@@ -357,6 +357,10 @@ export async function getPlotConfig(opts, app) {
 		await fillTermWrapper(opts.term, app.vocabApi)
 		if (opts.term2) await fillTermWrapper(opts.term2, app.vocabApi)
 		if (opts.term0) await fillTermWrapper(opts.term0, app.vocabApi)
+		// dynamic scatterplot is a child type of summary and following args are possible; if present, initialize them
+		if (opts.colorTW) await fillTermWrapper(opts.colorTW, app.vocabApi)
+		if (opts.shapeTW) await fillTermWrapper(opts.shapeTW, app.vocabApi)
+		if (opts.scaleDotTW) await fillTermWrapper(opts.scaleDotTW, app.vocabApi)
 	} catch (e) {
 		throw `${e} [summary getPlotConfig()]`
 	}
