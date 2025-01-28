@@ -144,7 +144,7 @@ class TdbBoxplot extends RxComponentInner {
 				settingsKey: 'isLogScale',
 				options: [
 					{ label: 'Linear', value: false },
-					{ label: 'Log', value: true }
+					{ label: 'Log10', value: true }
 				]
 			},
 			{

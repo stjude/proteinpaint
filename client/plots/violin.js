@@ -141,7 +141,7 @@ class ViolinPlot {
 				settingsKey: 'unit',
 				options: [
 					{ label: 'Linear', value: 'abs' },
-					{ label: 'Log', value: 'log' }
+					{ label: 'Log10', value: 'log' }
 				]
 			},
 			{
