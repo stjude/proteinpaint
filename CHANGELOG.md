@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.101.0
 
 Features:
 - Enable toggling between a linear and log axis scale in the mass box plot
