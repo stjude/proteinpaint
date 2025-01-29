@@ -90,7 +90,7 @@ export function setRenderers(self) {
 				.filter(s => !self.config.colorTW.term.values || !(s.category in self.config.colorTW.term.values))
 				.map(s => s.category)
 				.sort((a, b) => a - b)
-
+			chart.colorValues = colorValues //to use it in renderLegend
 			// Determine min/max based on current mode
 			let min, max
 			const settings = self.config.settings.sampleScatter
@@ -823,10 +823,7 @@ export function setRenderers(self) {
 					// Extract and sort all sample values for our calculations
 					// We filter out any values that are explicitly defined in the term values
 					// This gives us the raw numerical data we need for scaling
-					const colorValues = chart.cohortSamples
-						.filter(s => !self.config.colorTW.term.values || !(s.category in self.config.colorTW.term.values))
-						.map(s => s.category)
-						.sort((a, b) => a - b)
+					const colorValues = chart.colorValues
 
 					// Create a ColorScale component with enhanced mode functionality
 					const colorScale = new ColorScale({
