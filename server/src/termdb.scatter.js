@@ -305,7 +305,8 @@ async function colorAndShapeSamples(refSamples, cohortSamples, data, q) {
 			}
 		}
 		let i = 0
-		for (const [category, value] of Object.entries(result.shapeMap)) {
+		const shapes = order(result.shapeMap, q.shapeTW, data?.refs)
+		for (const [category, value] of shapes) {
 			if ('shape' in value) continue
 			if (q.shapeTW.term.values?.[value.key]?.shape != undefined) value.shape = q.shapeTW.term.values?.[value.key].shape
 			else value.shape = i
@@ -323,7 +324,7 @@ async function colorAndShapeSamples(refSamples, cohortSamples, data, q) {
 				key: 'Ref'
 			}
 		])
-		result.shapeLegend = order(result.shapeMap, q.shapeTW, data?.refs)
+		result.shapeLegend = shapes
 		result.shapeLegend.push(['Ref', { sampleCount: refSamples.length, shape: 0, key: 'Ref' }])
 	}
 	return results
@@ -432,10 +433,13 @@ function order(map, tw, refs) {
 		})
 	} else if (refs?.byTermId[tw.$id]?.bins) {
 		const bins = refs.byTermId[tw.$id].bins
-		for (const bin of bins) if (map[bin.name]) entries.push([bin.name, map[bin.name]])
-		//If some category is not defined in the bins, should be added
-		for (const [category, value] of Object.entries(map))
-			if (!entries.some(e => e[0] === category)) entries.push([category, value])
+		entries.sort((a, b) => {
+			const binA = bins.findIndex(bin => bin.label == a[0])
+			const binB = bins.findIndex(bin => bin.label == b[0])
+			if (binA == -1) return 1 // put unknown values at the end
+			if (binB == -1) return -1 // put unknown values at the end
+			return binA - binB
+		})
 	} else {
 		entries.sort((a, b) => {
 			if (a[1].sampleCount > b[1].sampleCount) return -1
