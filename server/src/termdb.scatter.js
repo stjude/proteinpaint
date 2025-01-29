@@ -299,13 +299,13 @@ async function colorAndShapeSamples(refSamples, cohortSamples, data, q) {
 			}
 		}
 		let i = 0
-		for (const [category, value] of Object.entries(result.shapeMap)) {
+		const shapes = Object.entries(result.shapeMap).sort((a, b) => a[0].localeCompare(b[0]))
+		for (const [category, value] of shapes) {
 			if ('shape' in value) continue
 			if (q.shapeTW.term.values?.[value.key]?.shape != undefined) value.shape = q.shapeTW.term.values?.[value.key].shape
 			else value.shape = i
 			i++
 		}
-
 		result.colorLegend = q.colorTW
 			? order(result.colorMap, q.colorTW, data.refs)
 			: [['Default', { sampleCount: cohortSamples.length, color: 'blue', key: 'Default' }]]
@@ -431,10 +431,7 @@ function order(map, tw, refs) {
 		for (const [category, value] of Object.entries(map))
 			if (!entries.some(e => e[0] === category)) entries.push([category, value])
 	} else {
-		entries.sort((a, b) => {
-			if (a[1].sampleCount > b[1].sampleCount) return -1
-			else return 1
-		})
+		entries.sort((a, b) => a[0].localeCompare(b[0]))
 	}
 	return entries
 }
