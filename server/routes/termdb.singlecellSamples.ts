@@ -256,7 +256,7 @@ function validateGeneExpressionNative(G: SingleCellGeneExpressionNative) {
 			if (typeof e == 'string') {
 				const geneNotFound = `Gene '${q.gene}' not found in the HDF5 file`
 				// if the substring exists in rust error, means the gene is not found. throw a simple msg to alert downstream
-				if (e.includes(geneNotFound)) throw 'Gene not found'
+				if (e.includes(geneNotFound)) throw 'No expression data for this gene'
 			}
 			// encountered other error
 			console.log(e)
