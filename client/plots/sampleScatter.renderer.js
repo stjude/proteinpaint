@@ -68,17 +68,20 @@ export function setRenderers(self) {
 
 		chart.axisLeft = axisLeft(chart.yAxisScale)
 
-		const gradientColor = self.config.settings.sampleScatter.defaultColor
-
-		if (!self.config.startColor) self.config.startColor = self.config.stopColor = {}
+		const gradientColor = rgb(self.config.settings.sampleScatter.defaultColor)
+		if (!self.config.startColor) {
+			self.config.startColor = {}
+			self.config.stopColor = {}
+		}
 		// supply start and stop color, if term has hardcoded colors, use; otherwise use default
 		if (!self.config.startColor[chart.id]) {
 			self.config.startColor[chart.id] =
-				self.config.colorTW?.term.continuousColorScale?.minColor || rgb(gradientColor).brighter().brighter().toString()
+				self.config.colorTW?.term.continuousColorScale?.minColor || gradientColor.brighter().brighter().toString()
 		}
+
 		if (!self.config.stopColor[chart.id]) {
 			self.config.stopColor[chart.id] =
-				self.config.colorTW?.term.continuousColorScale?.maxColor || rgb(gradientColor).darker().toString()
+				self.config.colorTW?.term.continuousColorScale?.maxColor || gradientColor.darker().toString()
 		}
 
 		// Handle continuous color scaling when color term wrapper is in continuous mode
@@ -129,6 +132,7 @@ export function setRenderers(self) {
 
 			// Create the color generator using d3's linear scale
 			// This maps our numerical range to a color gradient
+			console.log('min', min, 'max', max)
 			chart.colorGenerator = d3Linear()
 				.domain([min, max])
 				.range([self.config.startColor[chart.id], self.config.stopColor[chart.id]])
