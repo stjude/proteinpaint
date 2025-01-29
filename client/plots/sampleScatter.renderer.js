@@ -83,6 +83,11 @@ export function setRenderers(self) {
 
 		// Handle continuous color scaling when color term wrapper is in continuous mode
 		if (self.config.colorTW?.q.mode === 'continuous') {
+			// Synchronize the chart's internal mode state with the application config.
+			// This ensures the color scale UI correctly reflects the current mode
+			// when switching between auto, fixed, and percentile modes.
+			chart.cutoffMode = self.config.settings.sampleScatter.colorScaleMode || 'auto'
+			chart.percentile = self.config.settings.sampleScatter.colorScalePercentile || 95
 			// Extract and sort all sample values for our calculations
 			// We filter out any values that are explicitly defined in the term values
 			// This gives us the raw numerical data we need for scaling
@@ -90,7 +95,7 @@ export function setRenderers(self) {
 				.filter(s => !self.config.colorTW.term.values || !(s.category in self.config.colorTW.term.values))
 				.map(s => s.category)
 				.sort((a, b) => a - b)
-			chart.colorValues = colorValues //to use it in renderLegend
+			chart.colorValues = colorValues // to use it in renderLegend
 			// Determine min/max based on current mode
 			let min, max
 			const settings = self.config.settings.sampleScatter
