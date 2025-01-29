@@ -250,10 +250,13 @@ class singleCellPlot {
 		})
 		this.dom.searchbox = this.dom.geneSearch?.searchbox
 
-		this.dom.colorBySelect = geDiv
-			.append('select')
+		this.dom.violinLabel = geDiv
+			.append('label')
+			.text('Show expression by:')
 			.style('display', state.config.gene ? 'inline-block' : 'none')
-			.style('margin-left', '20px')
+			.style('margin-right', '5px')
+
+		this.dom.colorBySelect = geDiv.append('select').style('display', state.config.gene ? 'inline-block' : 'none')
 
 		this.dom.colorBySelect.on('change', async () => {
 			const plot = state.termdbConfig?.queries.singleCell.data.plots[0]
@@ -482,6 +485,7 @@ class singleCellPlot {
 		for (const div of this.plotColorByDivs) div.style('display', 'none')
 		this.dom.violinBt?.style('display', gene ? 'inline-block' : 'none')
 		this.dom.colorBySelect?.style('display', gene ? 'inline-block' : 'none')
+		this.dom.violinLabel?.style('display', gene ? 'inline-block' : 'none')
 
 		this.app.dispatch({
 			type: 'plot_edit',
@@ -514,21 +518,21 @@ class singleCellPlot {
 				max: 1000
 			},
 			{
-				label: 'Sample size',
+				label: 'Dot size',
 				type: 'number',
 				chartType: 'singleCellPlot',
 				settingsKey: 'sampleSizeThree',
-				title: 'Sample size',
+				title: 'Dot size',
 				min: 0.001,
 				max: 0.1,
 				step: 0.001
 			},
 			{
-				label: 'Sample opacity',
+				label: 'Dot opacity',
 				type: 'number',
 				chartType: 'singleCellPlot',
 				settingsKey: 'opacity',
-				title: 'Sample size',
+				title: 'Dot opacity',
 				min: 0.1,
 				max: 1,
 				step: 0.1
@@ -540,14 +544,6 @@ class singleCellPlot {
 				chartType: 'singleCellPlot',
 				settingsKey: 'showGrid',
 				title: 'Show grid'
-			},
-			{
-				label: 'Show no expression',
-				boxLabel: '',
-				type: 'checkbox',
-				chartType: 'singleCellPlot',
-				settingsKey: 'showNoExpCells',
-				title: 'Show cells without expression'
 			}
 		]
 		inputs.push({
@@ -565,6 +561,19 @@ class singleCellPlot {
 				type: 'checkbox',
 				chartType: 'singleCellPlot',
 				settingsKey: 'colorContours'
+			})
+		if (
+			(this.state.config.activeTab == GENE_EXPRESSION_TAB ||
+				this.state.config.activeTab == DIFFERENTIAL_EXPRESSION_TAB) &&
+			this.state.config.gene
+		)
+			inputs.push({
+				label: 'Show not expressed',
+				boxLabel: '',
+				type: 'checkbox',
+				chartType: 'singleCellPlot',
+				settingsKey: 'showNoExpCells',
+				title: 'Show cells not expressed'
 			})
 		this.components = {
 			controls: await controlsInit({
@@ -715,7 +724,7 @@ class singleCellPlot {
 		if (!plot.plotDiv) {
 			const plotDiv = this.dom.plotsDiv.append('div').style('display', 'inline-block').style('vertical-align', 'top')
 			const leftDiv = plotDiv.append('div').style('display', 'inline-block').style('vertical-align', 'top')
-			plot.plotDiv = plotDiv.append('div').style('overflow', 'hidden').style('display', 'inline-block')
+			plot.plotDiv = plotDiv.append('div').style('display', 'inline-block')
 			this.addZoomIcons(leftDiv, plot)
 		}
 		const colorMap = {}
@@ -852,16 +861,16 @@ class singleCellPlot {
 
 		this.legendRendered = true
 
-		const legendG = legendSVG.append('g').attr('transform', `translate(20, 0)`).style('font-size', '0.9em')
 		if (
-			this.state.config.activeTab == GENE_EXPRESSION_TAB ||
-			this.state.config.activeTab == DIFFERENTIAL_EXPRESSION_TAB
+			(this.state.config.activeTab == GENE_EXPRESSION_TAB ||
+				this.state.config.activeTab == DIFFERENTIAL_EXPRESSION_TAB) &&
+			this.state.config.gene
 		) {
-			if (this.state.config.gene) this.renderColorGradient(plot, legendG, this.state.config.gene)
+			this.renderColorGradient(plot)
 			return
 		}
 
-		legendG
+		plot.legendSVG
 			.append('text')
 			.attr('transform', `translate(${0}, ${25})`)
 			.style('font-weight', 'bold')
@@ -877,7 +886,7 @@ class singleCellPlot {
 			const hidden = this.config.hiddenClusters.includes(cluster)
 			const n = clusterCells.length
 			const color = colorMap[cluster]
-			const itemG = legendG.append('g').attr('transform', c => `translate(${x}, ${y})`)
+			const itemG = plot.legendSVG.append('g').attr('transform', c => `translate(${x}, ${y})`)
 			itemG.append('circle').attr('r', 5).attr('fill', color)
 			itemG
 				.append('g')
@@ -914,20 +923,18 @@ class singleCellPlot {
 		}
 	}
 
-	renderColorGradient(plot, legendG, gene) {
+	renderColorGradient(plot) {
 		if (plot.cells.length == 0 || !plot.colorGenerator) return
 		const colors = [this.config.startColor[plot.name], this.config.stopColor[plot.name]]
-
-		let offsetY = 25
-		const step = 20
+		const gene = this.state.config.gene
+		let offsetY = 20
 		const barwidth = 100
-
-		legendG
+		plot.legendSVG
+			.append('g')
+			.attr('transform', `translate(${0}, ${offsetY})`)
 			.append('text')
-			.style('font-weight', '550')
-			.attr('transform', `translate(${barwidth * 0.05}, -5)`)
 			.text(`${gene} expression`)
-
+		const legendG = plot.legendSVG.append('g').attr('transform', `translate(0, ${2 * offsetY})`)
 		const colorScale = new ColorScale({
 			holder: legendG,
 			barwidth,
@@ -964,8 +971,6 @@ class singleCellPlot {
 			}
 		})
 		colorScale.updateScale()
-
-		offsetY += step
 	}
 
 	changeGradientColor = function (plot, newColor, idx) {
