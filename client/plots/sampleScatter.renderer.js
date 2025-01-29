@@ -15,7 +15,6 @@ import { addNewGroup } from '../mass/groups.js'
 import { setRenderersThree } from './sampleScatter.rendererThree.js'
 import { shapes } from './sampleScatter.js'
 import { roundValueAuto } from '#shared/roundValue.js'
-import { config } from 'process'
 
 export function setRenderers(self) {
 	setRenderersThree(self)
@@ -87,7 +86,7 @@ export function setRenderers(self) {
 			// Extract and sort all sample values for our calculations
 			// We filter out any values that are explicitly defined in the term values
 			// This gives us the raw numerical data we need for scaling
-			const values = chart.cohortSamples
+			const colorValues = chart.cohortSamples
 				.filter(s => !self.config.colorTW.term.values || !(s.category in self.config.colorTW.term.values))
 				.map(s => s.category)
 				.sort((a, b) => a - b)
@@ -106,20 +105,19 @@ export function setRenderers(self) {
 
 				case 'percentile':
 					// Percentile mode: Scale based on data distribution
-					// We start at 0 to maintain a consistent baseline
-					min = values[0] // Start at the first value of the array for percentile mode
+					min = colorValues[0] // Start at the first value of the array for percentile mode
 					// Calculate the value at the specified percentile
 					// This helps handle outliers by focusing on the main distribution
-					const index = Math.floor((values.length * settings.colorScalePercentile) / 100)
-					max = values[index]
+					const index = Math.floor((colorValues.length * settings.colorScalePercentile) / 100)
+					max = colorValues[index]
 					break
 
 				case 'auto':
 				default:
 					// Auto mode (default): Use the full range of the data
 					// This gives the most accurate representation of the actual data distribution
-					min = values[0]
-					max = values[values.length - 1] // Since the values are already sorted in ascending
+					min = colorValues[0]
+					max = colorValues[colorValues.length - 1] // Since the values are already sorted in ascending
 					// order just get the first and last values
 					break
 			}
@@ -822,11 +820,11 @@ export function setRenderers(self) {
 					// These values represent the minimum and maximum values in our dataset
 					let [min, max] = chart.colorGenerator.domain()
 
-					// Extract and sort all sample values for percentile calculations
-					// We filter for samples with sampleId to exclude reference data points
-					// This creates an array of numerical values that we can use for our different scaling modes
-					const values = chart.data.samples
-						.filter(s => 'sampleId' in s)
+					// Extract and sort all sample values for our calculations
+					// We filter out any values that are explicitly defined in the term values
+					// This gives us the raw numerical data we need for scaling
+					const colorValues = chart.cohortSamples
+						.filter(s => !self.config.colorTW.term.values || !(s.category in self.config.colorTW.term.values))
 						.map(s => s.category)
 						.sort((a, b) => a - b)
 
@@ -863,15 +861,15 @@ export function setRenderers(self) {
 							callback: obj => {
 								// Handle different modes for color scaling
 								if (obj.cutoffMode === 'auto') {
-									min = values[0]
-									max = values[values.length - 1]
+									min = colorValues[0]
+									max = colorValues[colorValues.length - 1]
 								} else if (obj.cutoffMode === 'fixed') {
 									min = obj.min
 									max = obj.max
 								} else if (obj.cutoffMode === 'percentile') {
-									min = values[0]
-									const index = Math.floor((values.length * obj.percentile) / 100)
-									max = values[index]
+									min = colorValues[0]
+									const index = Math.floor((colorValues.length * obj.percentile) / 100)
+									max = colorValues[index]
 								}
 
 								// Update the color generator with new range
