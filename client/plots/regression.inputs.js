@@ -316,12 +316,14 @@ function setRenderers(self) {
 		// the independent variables array will be used as-is
 		const selectedArray = Array.isArray(selected) ? selected : selected ? [selected] : []
 
+		mayConvertInteractionIds(selectedArray, section)
+
 		// process each selected variable
 		for (const variable of selectedArray) {
 			if (section.configKey == 'independent') {
 				if (!variable.interactions) variable.interactions = []
 				for (const id of variable.interactions) {
-					const tw = selected.find(i => i.$id == id)
+					const tw = selectedArray.find(i => i.$id == id)
 					if (!tw) throw 'interacting partner not found in independents: ' + id
 					if (!tw.interactions) tw.interactions = []
 					if (!tw.interactions.includes(variable.$id)) tw.interactions.push(variable.$id)
@@ -345,6 +347,26 @@ function setRenderers(self) {
 		}
 
 		mayAddBlankInput(section, self)
+	}
+
+	// interactions[] from url will contain term ids
+	// convert these to $ids
+	function mayConvertInteractionIds(selectedArray, section) {
+		if (section.configKey != 'independent') return
+		const id2$id = new Map() // id => $id
+		// first populate id2$id map
+		for (const v of selectedArray) {
+			if (v.id) id2$id.set(v.id, v.$id)
+		}
+		// then convert all ids in interactions[] to $ids
+		for (const v of selectedArray) {
+			if (v.interactions?.length) {
+				for (const [i, id] of v.interactions.entries()) {
+					const $id = id2$id.get(id)
+					if ($id) v.interactions[i] = $id
+				}
+			}
+		}
 	}
 
 	async function addInput(input) {
