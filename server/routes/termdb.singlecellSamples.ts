@@ -251,6 +251,14 @@ function validateGeneExpressionNative(G: SingleCellGeneExpressionNative) {
 			}
 		} catch (e) {
 			// arg should be an error string; if needed generate sanitised version by not showing file path
+
+			// possible for gene not found in hdf5. in such case rust will return lengthy error including file path which we do not want to show on client.
+			if (typeof e == 'string') {
+				const geneNotFound = `Gene '${q.gene}' not found in the HDF5 file`
+				// if the substring exists in rust error, means the gene is not found. throw a simple msg to alert downstream
+				if (e.includes(geneNotFound)) throw 'Gene not found'
+			}
+			// encountered other error
 			console.log(e)
 			throw 'error reading h5 file: ' + e
 		}
