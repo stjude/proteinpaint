@@ -47,13 +47,8 @@ class singleCellPlot {
 		const state = this.getState(appState)
 
 		const body = { genome: state.genome, dslabel: state.dslabel, filter0: state.termfilter.filter0 || null }
-		let result
-		try {
-			result = await dofetch3('termdb/singlecellSamples', { body })
-			if (result.error) throw result.error
-		} catch (e) {
-			throw e
-		}
+		const result = await dofetch3('termdb/singlecellSamples', { body })
+		if (result.error) throw result.error
 
 		this.samples = result.samples
 		// need to set the this.samples based on the current filter0
@@ -623,7 +618,7 @@ class singleCellPlot {
 		} catch (e) {
 			this.app.tip.hide()
 			this.dom.loadingDiv.style('display', 'none')
-			this.dom.plotsDiv.style('display', 'none')
+			this.dom.plotsDiv.selectAll('*').remove()
 			if (e.stack) console.log(e.stack)
 			sayerror(this.dom.errorDiv, e)
 		}
