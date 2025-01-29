@@ -715,10 +715,10 @@ export function setRenderers(self) {
 	}
 
 	self.getFontSize = function (chart) {
-		let fontSize = 1
+		let fontSize = 0.9
 		const top = 15
 		if (chart.colorLegend.size > top || chart.shapeLegend.size > top) {
-			fontSize = Math.min(0.9, top / chart.colorLegend.size, top / chart.shapeLegend.size)
+			fontSize = Math.min(0.9, (top + 5) / chart.colorLegend.size, (top + 5) / chart.shapeLegend.size)
 			if (fontSize < 0.5) fontSize = 0.5
 		}
 		return fontSize
