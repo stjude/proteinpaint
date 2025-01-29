@@ -1,4 +1,4 @@
-import { MinBaseQ, BaseTW, TermValues, BaseTerm } from '../index.ts'
+import type { MinBaseQ, BaseTW, TermValues, BaseTerm } from '../index.ts'
 
 export type RawRegularBin = Partial<RegularNumericBinConfig> & { preferredBins?: string }
 
