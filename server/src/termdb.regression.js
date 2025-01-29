@@ -447,7 +447,8 @@ function makeRvariable_snps(tw, independent, q) {
 			$id: tw.$id, // need this to retrieve data from getData() output
 			id: snpid, // need this to discriminate between snps
 			name: snpid,
-			type: tw.type
+			type: tw.type,
+			interactions: structuredClone(tw.interactions)
 		}
 		if (tw.q.geneticModel == 3) {
 			// by genotype
@@ -457,17 +458,6 @@ function makeRvariable_snps(tw, independent, q) {
 		} else {
 			// treat as numeric and do not assign refGrp
 			thisSnp.rtype = 'numeric'
-		}
-		// find out any other variable that's interacting with either this snp or this snplst term
-		// and fill into interactions array
-		// for now, do not support interactions between snps in the same snplst term
-		for (const tw2 of q.independent) {
-			if (tw2.interactions.includes(tw.$id)) {
-				// another term (tw2) is interacting with this snplst term
-				// in R input establish tw2's interaction with this snp
-				if (!thisSnp.interactions) thisSnp.interactions = []
-				thisSnp.interactions.push(tw2.$id)
-			}
 		}
 		independent.push(thisSnp)
 	}
