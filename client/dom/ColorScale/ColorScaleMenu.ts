@@ -50,6 +50,13 @@ export class ColorScaleMenu {
 					.text('Press ENTER to submit')
 					.style('display', 'none')
 
+				const percentRow = table
+					.append('tr')
+					.style('padding', '5px')
+					.append('td')
+					.attr('colspan', '2')
+					.style('display', this.cutoffMode == 'percentile' ? '' : 'none')
+
 				const minMaxPromptRow = table
 					.append('tr')
 					.style('text-align', 'center')
@@ -79,13 +86,6 @@ export class ColorScaleMenu {
 						.text(d => d.label)
 						.property('value', d => d.value)
 						.property('selected', d => d.selected)
-
-					const percentRow = table
-						.append('tr')
-						.style('padding', '5px')
-						.append('td')
-						.attr('colspan', '2')
-						.style('display', this.cutoffMode == 'percentile' ? '' : 'none')
 
 					const percentInput = this.appendValueInput(percentRow, this.percentile || null)
 
