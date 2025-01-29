@@ -87,7 +87,8 @@ export class ColorScaleMenu {
 						.property('value', d => d.value)
 						.property('selected', d => d.selected)
 
-					const percentInput = this.appendValueInput(percentRow, this.percentile || null)
+					//Do not allow users to put in negative or > 100 values
+					const percentInput = this.appendValueInput(percentRow, this.percentile || null, 0, 100)
 
 					const minMaxInputRow = table.append('tr').style('display', this.cutoffMode == 'fixed' ? 'table-row' : 'none')
 					const minInput = this.appendValueInput(minMaxInputRow.append('td'), 0)
@@ -161,7 +162,7 @@ export class ColorScaleMenu {
 			})
 	}
 
-	appendValueInput = (elem: any, elemValue: number | null) => {
+	appendValueInput = (elem: any, elemValue: number | null, min?: number, max?: number) => {
 		if (elemValue == null) return
 		const valueInput = elem
 			.append('input')
@@ -169,25 +170,30 @@ export class ColorScaleMenu {
 			.style('width', '60px')
 			.attr('value', this.domain[elemValue] || elemValue)
 			.style('padding', '3px')
-			.on('keyup', async (event: KeyboardEvent) => {
-				if (event.code != 'Enter') return
-				const valueNode = valueInput.node()
-				if (!valueNode) return
-				const value: number = parseFloat(valueNode.value)
-				const opts: any = {
-					cutoffMode: this.cutoffMode
-				}
-				if (this.cutoffMode == 'fixed') {
-					this.domain[elemValue] = value
-					opts.min = this.domain[0]
-					opts.max = this.domain[this.domain.length - 1]
-				} else if (this.cutoffMode == 'percentile') {
-					this.percentile = value
-					opts.percentile = value
-				}
-				await this.numInputCallback!(opts)
-				this.tip.hide()
-			})
+
+		//Limit input if necessary
+		if (min) valueInput.attr('min', min)
+		if (max) valueInput.attr('max', max)
+
+		valueInput.on('keyup', async (event: KeyboardEvent) => {
+			if (event.code != 'Enter') return
+			const valueNode = valueInput.node()
+			if (!valueNode) return
+			const value: number = parseFloat(valueNode.value)
+			const opts: any = {
+				cutoffMode: this.cutoffMode
+			}
+			if (this.cutoffMode == 'fixed') {
+				this.domain[elemValue] = value
+				opts.min = this.domain[0]
+				opts.max = this.domain[this.domain.length - 1]
+			} else if (this.cutoffMode == 'percentile') {
+				this.percentile = value
+				opts.percentile = value
+			}
+			await this.numInputCallback!(opts)
+			this.tip.hide()
+		})
 		return valueInput
 	}
 }
