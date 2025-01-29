@@ -1,3 +1,5 @@
+import { format } from 'd3-format'
+import { decimalPlacesUntilFirstNonZero } from '#shared/roundValue.js'
 import type { BoxPlotSettings } from '../BoxPlot'
 import type { BoxPlotResponse, BoxPlotEntry, BoxPlotData } from '#types'
 import type { PlotConfig } from '#mass/types/mass'
@@ -52,7 +54,7 @@ export type PlotDimensions = {
 	/** Title of the plot and coordinates */
 	title: { x: number; y: number; text: string }
 	/** axis coordinates */
-	axis: { x: number; y: number; format: (d: number) => string }
+	axis: { x: number; y: number; values(ticks: number[]): number[]; format(d: number): string }
 }
 
 export class ViewModel {
@@ -122,17 +124,41 @@ export class ViewModel {
 			axis: {
 				x: settings.isVertical ? this.horizPad / 2 + this.incrPad + this.topPad : this.totalLabelSize,
 				y: this.topPad + (settings.isVertical ? settings.labelPad : this.incrPad + 20),
-				format: settings.isLogScale
-					? d => {
-							// Only return values that are exact powers of 10
-							return d === 0 || Math.log10(d) % 1 === 0 ? d.toString() : ''
-					  }
-					: d => d.toString()
+				values: (ticks: number[]) => {
+					if (settings.isLogScale) return this.filterTickValues(ticks)
+					return ticks
+				},
+				format: (d: number) => {
+					if (settings.isLogScale) {
+						if (Number.isInteger(d)) return format('.0f')(d)
+						const dec = decimalPlacesUntilFirstNonZero(d)
+						if (dec > 1) return format(`.${dec + 1}f`)(d)
+						return format('.2f')(d)
+					}
+					return d.toString()
+				}
 			},
 			backgroundColor: settings.darkMode ? 'black' : 'white',
 			textColor: settings.darkMode ? 'white' : 'black'
 		}
 		return plotDim
+	}
+
+	filterTickValues(ticks: number[]) {
+		const signifcantLessThanOne = ticks.filter(t => t < 1).length / ticks.length
+		const formattedTicks = ticks.filter((t, i) => {
+			if (t === 0) return format('.0f')(t)
+			if (signifcantLessThanOne > 0.5) {
+				/** Scales with a significant number of values under 1
+				 * require more space. Show every fifth value if under 1 */
+				if (t < 1 && i % 5 === 0) return t
+				else if (i % 2 === 0) return t
+			}
+			const range = ticks[ticks.length - 1] - ticks[0]
+			const spread = range > 1000 ? 4 : range > 100 ? 3 : 2
+			if (i % spread === 0) return t
+		})
+		return formattedTicks
 	}
 
 	setSvgDimensions(settings: BoxPlotSettings, data: BoxPlotResponse) {
