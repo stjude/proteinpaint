@@ -38,15 +38,13 @@ export type NumericTerm = BaseTerm & {
 	bins: PresetNumericBins
 	values?: TermValues
 	unit?: string
+	/** tailored color scale for this term, so that when the term is used for color gradient in scatter, this set of colors will be used by default */
+	continuousColorScale?: { minColor: string; maxColor: string }
 	/*densityNotAvailable?: boolean //Not used?
 	logScale?: string | number
 	max?: number
 	min?: number
-	name?: string
 	skip0forPercentile?: boolean
-	tvs?: Tvs
-	values?: TermValues
-	unit?: string
 	valueConversion?: ValueConversion*/
 }
 
