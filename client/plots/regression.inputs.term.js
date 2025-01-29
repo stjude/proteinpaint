@@ -1,4 +1,4 @@
-import { termsettingInit } from '#termsetting'
+import { termsettingInit, get$id } from '#termsetting'
 import { get_bin_label } from '#shared/termdb.bins.js'
 import { InputValuesTable } from './regression.inputs.values.table'
 import { Menu } from '#dom/menu'
@@ -165,6 +165,10 @@ export class InputTerm {
 			await this.pill.main(this.getPillArgs())
 			this.renderInteractionPrompt()
 			await this.valuesTable.main()
+			// $id needs to be filled in here for non-dictionary terms
+			// TODO: should have a centralized location for filling in
+			// $id for non-dictionary terms
+			if (tw && !tw.$id) tw.$id = await get$id(this.parent.app.vocabApi.getTwMinCopy(tw))
 			const e = (tw && tw.error) || this.pill.error
 			if (e) errors.push(e)
 			if (errors.length) throw errors
