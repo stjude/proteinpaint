@@ -132,7 +132,6 @@ export function setRenderers(self) {
 
 			// Create the color generator using d3's linear scale
 			// This maps our numerical range to a color gradient
-			console.log('min', min, 'max', max)
 			chart.colorGenerator = d3Linear()
 				.domain([min, max])
 				.range([self.config.startColor[chart.id], self.config.stopColor[chart.id]])
