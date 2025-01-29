@@ -146,17 +146,15 @@ export class ViewModel {
 
 	filterTickValues(ticks: number[]) {
 		const signifcantLessThanOne = ticks.filter(t => t < 1).length / ticks.length
+		const range = ticks[ticks.length - 1] - ticks[0]
+		const spread = range > 1000 ? 4 : range > 100 ? 3 : 2
 		const formattedTicks = ticks.filter((t, i) => {
-			if (t === 0) return format('.0f')(t)
-			if (signifcantLessThanOne > 0.5) {
+			if (t === 0 || (i == ticks.length - 1 && i % spread !== 0)) return t
+			else if (t <= 1 && signifcantLessThanOne > 0.5) {
 				/** Scales with a significant number of values under 1
 				 * require more space. Show every fifth value if under 1 */
-				if (t < 1 && i % 5 === 0) return t
-				else if (i % 2 === 0) return t
-			}
-			const range = ticks[ticks.length - 1] - ticks[0]
-			const spread = range > 1000 ? 4 : range > 100 ? 3 : 2
-			if (i % spread === 0) return t
+				if (i % 5 === 0) return t
+			} else if (i % spread === 0) return t
 		})
 		return formattedTicks
 	}
