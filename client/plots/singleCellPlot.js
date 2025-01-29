@@ -47,13 +47,8 @@ class singleCellPlot {
 		const state = this.getState(appState)
 
 		const body = { genome: state.genome, dslabel: state.dslabel, filter0: state.termfilter.filter0 || null }
-		let result
-		try {
-			result = await dofetch3('termdb/singlecellSamples', { body })
-			if (result.error) throw result.error
-		} catch (e) {
-			throw e
-		}
+		const result = await dofetch3('termdb/singlecellSamples', { body })
+		if (result.error) throw result.error
 
 		this.samples = result.samples
 		// need to set the this.samples based on the current filter0
@@ -614,6 +609,7 @@ class singleCellPlot {
 			this.dom.loadingDiv.style('display', '').append('div').attr('class', 'sjpp-spinner')
 			this.data = await this.getData()
 			if (this.data.error) throw this.data.error
+			console.log('singleCellPlot data:', this.data)
 			this.dom.loadingDiv.style('display', 'none')
 			await this.renderPlots(this.data)
 			this.showActiveTab()
@@ -623,7 +619,7 @@ class singleCellPlot {
 		} catch (e) {
 			this.app.tip.hide()
 			this.dom.loadingDiv.style('display', 'none')
-			this.dom.plotsDiv.style('display', 'none')
+			this.dom.plotsDiv.selectAll('*').remove()
 			if (e.stack) console.log(e.stack)
 			sayerror(this.dom.errorDiv, e)
 		}
@@ -717,6 +713,7 @@ class singleCellPlot {
 	}
 
 	renderPlot(plot) {
+		console.log('renderPlot:', plot)
 		if (!plot.plotDiv) {
 			const plotDiv = this.dom.plotsDiv.append('div').style('display', 'inline-block').style('vertical-align', 'top')
 			const leftDiv = plotDiv.append('div').style('display', 'inline-block').style('vertical-align', 'top')
