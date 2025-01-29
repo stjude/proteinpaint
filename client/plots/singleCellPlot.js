@@ -609,7 +609,6 @@ class singleCellPlot {
 			this.dom.loadingDiv.style('display', '').append('div').attr('class', 'sjpp-spinner')
 			this.data = await this.getData()
 			if (this.data.error) throw this.data.error
-			console.log('singleCellPlot data:', this.data)
 			this.dom.loadingDiv.style('display', 'none')
 			await this.renderPlots(this.data)
 			this.showActiveTab()
@@ -713,7 +712,6 @@ class singleCellPlot {
 	}
 
 	renderPlot(plot) {
-		console.log('renderPlot:', plot)
 		if (!plot.plotDiv) {
 			const plotDiv = this.dom.plotsDiv.append('div').style('display', 'inline-block').style('vertical-align', 'top')
 			const leftDiv = plotDiv.append('div').style('display', 'inline-block').style('vertical-align', 'top')
