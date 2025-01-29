@@ -143,7 +143,7 @@ export class RegressionResults {
 	}
 
 	getIndependentInput(tid) {
-		/* arg is independent tw $id
+		/* arg is independent tw $id or snpid
 		return input instance
 		for accessing input.orderedLabels and input.term{refGrp, term{}, q{}} which is term-wrapper
 
@@ -1022,18 +1022,17 @@ function setRenderers(self) {
 			// variable is part of an interaction, but the current row
 			// is not an interaction row
 			for (const tid of tw.interactions) {
-				if (tid.startsWith('snplst') || tid.startsWith('snplocus')) {
-					// snplst or snplocus term id
+				const t = self.getIndependentInput(tid).term
+				if (t.term.snps) {
+					// snplst or snplocus term
 					// need to get term ids of individuals snps
-					const t = self.getIndependentInput(tid).term
-					if (!t.term.snps) throw 'expected .snps property'
 					for (const snp of t.term.snps) interactions.push(snp.snpid)
 				} else {
 					interactions.push(tid)
 				}
 			}
 			if (!interactions.length) throw 'interactions[] is empty'
-			const interactingTws = independentTws.filter(t => interactions.includes(t.term.id || t.term.name))
+			const interactingTws = independentTws.filter(t => interactions.includes(t.$id || t.id))
 			interactionsBaselines.push(...getBaselines(interactingTws))
 		}
 		if (category) {
@@ -1074,13 +1073,13 @@ function setRenderers(self) {
 
 		/** part 3: adjusting for covariates **/
 		// get term ids of current variable and any interacting variables
-		const tids = [tw.term.id || tw.term.name]
+		const tids = [tw.$id || tw.id]
 		if (tw.interactions?.length) {
-			if (tw2) tids.push(tw2.term.id || tw2.term.name)
+			if (tw2) tids.push(tw2.$id || tw2.id)
 			else tids.push(...interactions)
 		}
 		// get covariates (i.e., all other variables)
-		const covariates = independentTws.filter(t => !tids.includes(t.term.id || t.term.name)).map(t => styleVariable(t))
+		const covariates = independentTws.filter(t => !tids.includes(t.$id || t.id)).map(t => styleVariable(t))
 		if (regtype == 'cox') {
 			covariates.push(outcomeTw.q.timeScale == 'time' ? '"Years of follow-up"' : '"Attained age during follow-up"') // TODO: how to handle styling for this?
 		}

@@ -192,8 +192,7 @@ function parse_q(q, ds) {
 		if (!i.interactions) i.interactions = []
 		for (const x of i.interactions) {
 			// TODO allow tw.interactions[] array to contain snpid instead of snplst term id
-			if (!q.independent.find(y => y.term?.id == x || y.term?.name == x || y.id == x))
-				throw 'interacting term id missing from independent[]: ' + x
+			if (!q.independent.find(y => y.$id == x)) throw 'interacting term id missing from independent[]: ' + x
 		}
 	}
 
@@ -410,11 +409,10 @@ function makeRvariable_dictionaryTerm(tw, independent, q) {
 		rtype: tw.q.mode == 'continuous' || tw.q.mode == 'spline' ? 'numeric' : 'factor'
 	}
 	// map tw.interactions into thisTerm.interactions
-	if (tw.interactions.length > 0) {
-		console.log('FIXME interaction array should contain $id')
+	if (tw.interactions.length) {
 		thisTerm.interactions = []
 		for (const id of tw.interactions) {
-			const tw2 = q.independent.find(i => i.term?.id == id || i.term?.name == id || i.id == id)
+			const tw2 = q.independent.find(i => i.$id == id)
 			if (tw2.type == 'snplst') {
 				// this term is interacting with a snplst term, fill in all snps from this list into thisTerm.interactions
 				for (const s of tw2.highAFsnps.keys()) thisTerm.interactions.push(s)
@@ -464,11 +462,11 @@ function makeRvariable_snps(tw, independent, q) {
 		// and fill into interactions array
 		// for now, do not support interactions between snps in the same snplst term
 		for (const tw2 of q.independent) {
-			if (tw2.interactions.includes(tw.id)) {
+			if (tw2.interactions.includes(tw.$id)) {
 				// another term (tw2) is interacting with this snplst term
 				// in R input establish tw2's interaction with this snp
 				if (!thisSnp.interactions) thisSnp.interactions = []
-				thisSnp.interactions.push(tw2.term.id || tw2.term.name)
+				thisSnp.interactions.push(tw2.$id)
 			}
 		}
 		independent.push(thisSnp)
@@ -1403,7 +1401,7 @@ function replaceTermId(Rinput) {
 	for (const variable of Rinput.independent) {
 		variable.id = originalId2id[variable.id]
 		// interactions
-		if (variable.interactions && variable.interactions.length > 0) {
+		if (variable.interactions?.length) {
 			// assuming no interactions with time-to-event variables
 			for (const [i, intvariable] of variable.interactions.entries()) {
 				variable.interactions[i] = originalId2id[intvariable]
