@@ -216,7 +216,10 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 	delete serverconfig.dsCredentials
 
 	const maxSessionAge = serverconfig.maxSessionAge || 1000 * 3600 * 16
-	let sessions
+	// !!! do not use or save sessions data from/to a file !!!
+	// always start with an empty sessions tracking object,
+	// will fill-in as requests with auth or x-ds-*-token are received
+	const sessions = {}
 
 	// no need to setup additional middlewares and routes
 	// if there are no protected datasets
@@ -300,7 +303,7 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 
 		// may configure to avoid in-memory session tracking, to simulate a multi-server process setup
 		if (sessionTracking == 'jwt-only') {
-			console.log('!!! --- CLEARNING ALL SESSION DATA TO simulate stateless service --- !!!')
+			console.log('!!! --- CLEARING ALL SESSION DATA TO simulate stateless service --- !!!')
 			sessions = {}
 		}
 
@@ -365,7 +368,8 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 
 	try {
 		// 1. Get an empty or rehydrated sessions tracker object
-		sessions = await getSessions(creds, sessionsFile, maxSessionAge)
+		// !!! do not use or save sessions data from/to a file !!!
+		// sessions = await getSessions(creds, sessionsFile, maxSessionAge)
 		const time = Date.now()
 		const latestSessionByDslabel = {}
 		const unexpiredSessions = []
@@ -374,7 +378,7 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 			for (const id in sessions[dslabel]) {
 				const q = sessions[dslabel][id]
 				const session = await maySaveSession(
-					'',
+					'', // do not supply a filename to avoid a file write for each session data
 					q.dslabel,
 					q.id,
 					q.time,
@@ -388,7 +392,8 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 					latestSessionByDslabel[dslabel] = session
 			}
 		}
-		await fs.writeFile(sessionsFile, Object.values(latestSessionByDslabel).map(JSON.stringify).join('\n') + '\n')
+		// !!! do not use or save sessions data from/to a file !!!
+		// await fs.writeFile(sessionsFile, Object.values(latestSessionByDslabel).map(JSON.stringify).join('\n') + '\n')
 	} catch (e) {
 		throw e
 	}
@@ -449,9 +454,9 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 
 	app.post(basepath + '/jwt-status', async (req, res) => {
 		let code = 401 // assume unauthorized by default
+		const q = req.query
+		const cred = getRequiredCred(q, req.path)
 		try {
-			const q = req.query
-			const cred = getRequiredCred(q, req.path)
 			if (!cred) {
 				res.send({ status: 'ok' })
 				return
@@ -472,6 +477,7 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 		} catch (e) {
 			console.log(e)
 			res.status(code)
+			res.header('Set-Cookie', `${cred.cookieId}=; HttpOnly; SameSite=None; Secure; Max-Age=0`)
 			res.send(e instanceof Error || typeof e != 'object' ? { error: e } : e)
 		}
 	})
@@ -531,6 +537,7 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 						dslabel: dslabelPattern,
 						route: routePattern,
 						type: cred.type || 'basic',
+						headerKey: cred.headerKey,
 						insession
 					})
 				}
@@ -828,7 +835,8 @@ async function maySaveSession(sessionsFile, dslabel, id, time, email, ip, embedd
 		route,
 		clientAuthResult
 	}
-	if (sessionsFile) await fs.appendFile(sessionsFile, JSON.stringify(session) + '\n')
+	// !!! do not use or save sessions data from/to a file !!!
+	//if (sessionsFile) await fs.appendFile(sessionsFile, JSON.stringify(session) + '\n')
 	return session
 }
 

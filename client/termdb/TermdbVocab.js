@@ -10,6 +10,12 @@ import { fillTermWrapper } from '#termsetting'
 export class TermdbVocab extends Vocab {
 	// migrated from termdb/store
 	async getTermdbConfig() {
+		if (this.opts.getDatasetAccessToken) {
+			// mass app init may need clientAuthResult, so need to trigger
+			// login so termdb/config response would match the user log-in status
+			await this.maySetVerifiedToken(this.state.vocab.dslabel)
+		}
+
 		const data = await dofetch3('termdb/config', {
 			body: {
 				genome: this.vocab.genome,

@@ -124,7 +124,7 @@ export function dofetch2(path, init = {}, opts = {}) {
 	*/
 	return mayShowAuthUi(init, url).then(async () => {
 		if (!jwt) mayAddJwtToRequest(init, body, url)
-		const dataName = url + ' | ' + init.method + ' | ' + init.body
+		const dataName = url + ' | ' + init.method + ' | ' + init.body + ' | ' + init.headers?.authorization
 
 		if (opts.serverData) {
 			let result
@@ -315,6 +315,10 @@ export function setAuth(opts) {
 		if (auth.insession) dsAuthOk.add(auth)
 	}
 	includeEmbedder = opts.dsAuth?.length > 0 || false
+}
+
+export async function getRequiredAuth(dslabel, route) {
+	return dsAuth.find(d => (d.dslabel = dslabel && d.route == route))
 }
 
 // check if a user is logged in, usually checked together with requiredAuth in termdb/config,
