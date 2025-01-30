@@ -14,7 +14,6 @@ read_json_time <- system.time({
     json <- readLines(con, warn=FALSE)
     close(con)
     input <- fromJSON(json)
-    
     cases <- unlist(strsplit(input$case, ","))
     controls <- unlist(strsplit(input$control, ","))
     combined <- c("geneID", "geneSymbol", cases, controls)
@@ -27,11 +26,11 @@ read_counts_time <- system.time({
         geneIDs <- h5read(input$input_file, "gene_names")
         geneSymbols <- h5read(input$input_file, "gene_symbols")
         samples <- h5read(input$input_file, "samples")
-        
+
         # Find indices of case and control samples in the HDF5 file
         case_indices <- match(cases, samples)
         control_indices <- match(controls, samples)
-        
+
         # Check for missing samples
         if (any(is.na(case_indices))) {
             missing_cases <- cases[is.na(case_indices)]
@@ -41,7 +40,7 @@ read_counts_time <- system.time({
             missing_controls <- controls[is.na(control_indices)]
             stop(paste(missing_controls, "not found"))
         }
-        
+
         samples_indices <- c(case_indices, control_indices)
         read_counts <- t(h5read(input$input_file, "counts", index = list(samples_indices, 1:length(geneIDs))))
         colnames(read_counts) <- c(cases, controls)
@@ -64,6 +63,15 @@ read_counts_time <- system.time({
 # Create conditions vector
 conditions <- c(rep("Diseased", length(cases)), rep("Control", length(controls)))
 gene_id_symbols <- paste0(geneIDs, "\t", geneSymbols)
+
+if (length(input$VarGenes) != 0) { # Filter out variable genes for DE analysis
+   VarGenes <- unlist(strsplit(input$VarGenes, ","))
+   VarGenes_indices <- which(geneSymbols %in% VarGenes)
+   read_counts <- read_counts[VarGenes_indices, ]
+   geneSymbols <- geneSymbols[VarGenes_indices]
+   geneIDs <- geneIDs[VarGenes_indices]
+   gene_id_symbols <- gene_id_symbols[VarGenes_indices]
+}
 
 # Create DGEList object
 dge_list_time <- system.time({
@@ -93,7 +101,7 @@ if (length(input$conf1) == 0) { # No adjustment of confounding factors
         })
     })
     #cat("Dispersion time: ", dispersion_time[3], " seconds\n")
-    
+
     exact_test_time <- system.time({
         et <- exactTest(y)
     })
@@ -104,17 +112,17 @@ if (length(input$conf1) == 0) { # No adjustment of confounding factors
         design <- model.matrix(~ conf1 + conditions, data = y$samples)
     })
     #cat("Time for making design matrix: ", model_gen_time[3], " seconds\n")
-    
+
     dispersion_time <- system.time({
         y <- estimateDisp(y, design)
     })
     #cat("Dispersion time: ", dispersion_time[3], " seconds\n")
-    
+
     fit_time <- system.time({
         fit <- glmFit(y, design)
     })
     #cat("Fit time: ", fit_time[3], " seconds\n")
-    
+
     test_statistics_time <- system.time({
         et <- glmLRT(fit, coef = 2)
     })

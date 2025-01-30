@@ -72,7 +72,7 @@ fn do_calc_var(
     filter_extreme_values: bool,
 ) {
     let now = Instant::now();
-    let (input_matrix, _case_indexes, _control_indexes, _gene_names, gene_symbols) =
+    let (input_matrix, _case_indexes, _control_indexes, _gene_names, gene_symbols) = // Querying the HDF5 file to get gene counts corresponding to the samples of interest
         input_data_from_HDF5(hdf5_filename, &case_list, &control_list);
     let gene_infos = stats_functions::calculate_variance(
         input_matrix,
@@ -85,6 +85,7 @@ fn do_calc_var(
     );
     let mut output_string = "[".to_string();
     for j in 0..num_genes.unwrap() {
+        // Printing the JSON in decreasing order cumulative variance/iqr of genes
         let i = gene_infos.len() - j - 1;
         output_string += &serde_json::to_string(&gene_infos[i]).unwrap();
         if i > gene_infos.len() - num_genes.unwrap() {
@@ -610,8 +611,10 @@ fn main() {
                     match data_type_option {
                         Some(x) => {
                             if x == "get_samples" {
+                                // Invoked only at server startup
                                 get_DE_samples(file_name)
                             } else if x == "do_calc_var" {
+                                // Invoked for getting the top variable expressed genes for edgeR
                                 let case_string =
                                     &json_string["case"].to_owned().as_str().unwrap().to_string();
                                 let control_string = &json_string["control"]
@@ -649,6 +652,7 @@ fn main() {
                                     filter_extreme_values,
                                 );
                             } else if x == "do_DE" {
+                                // Actual DE analysis using the wilcoxon test
                                 let min_count_option = json_string["min_count"].as_f64().to_owned();
                                 let min_total_count_option =
                                     json_string["min_total_count"].as_f64().to_owned();
