@@ -2832,7 +2832,6 @@ async function getSvfusionByTerm(ds, term, genome, q) {
 		return await ds.queries.svfusion.byrange.get(arg)
 	}
 	if (ds.queries.svfusion.byname) {
-		await mayMapGeneName2coord(term, genome)
 		// tw.term.chr/start/stop are set
 		arg.rglst = [term]
 		return await ds.queries.svfusion.byname.get(arg)
