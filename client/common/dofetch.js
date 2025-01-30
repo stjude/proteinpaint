@@ -318,6 +318,7 @@ export function setAuth(opts) {
 }
 
 export function getRequiredAuth(dslabel, route) {
+	if (!dsAuth || !Array.isArray(dsAuth)) return
 	for (const a of dsAuth) {
 		if (a.dslabel == dslabel && a.route == route) return a
 	}
