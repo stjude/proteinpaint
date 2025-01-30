@@ -219,7 +219,7 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 	// !!! do not use or save sessions data from/to a file !!!
 	// always start with an empty sessions tracking object,
 	// will fill-in as requests with auth or x-ds-*-token are received
-	const sessions = {}
+	let sessions = {}
 
 	// no need to setup additional middlewares and routes
 	// if there are no protected datasets
