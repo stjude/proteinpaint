@@ -423,6 +423,9 @@ export function setRenderers(self) {
 
 	self.getColor = function (c, chart) {
 		if (self.config.colorTW?.q.mode == 'continuous' && 'sampleId' in c) {
+			const [min, max] = chart.colorGenerator.domain()
+			if (c.category < min) return chart.colorGenerator(min)
+			if (c.category > max) return chart.colorGenerator(max)
 			const color = chart.colorGenerator(c.category)
 			return color
 		}
