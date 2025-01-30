@@ -61,8 +61,8 @@ export class ColorScaleMenu {
 					.append('tr')
 					.style('text-align', 'center')
 					.style('display', this.setColorsCallback ? 'table-row' : 'none')
-				minMaxPromptRow.append('td').text('Min').style('padding-right', '10px')
-				minMaxPromptRow.append('td').text('Max')
+				minMaxPromptRow.append('td').text('Min').style('padding-left', '5px').style('text-align', 'left')
+				minMaxPromptRow.append('td').style('padding-left', '5px').style('text-align', 'left').text('Max')
 
 				if (this.numInputCallback) {
 					const options = [
@@ -148,6 +148,7 @@ export class ColorScaleMenu {
 	appendColorInput = (td: Td, idx: number) => {
 		const colorInput = td
 			.append('input')
+			.style('width', '60px')
 			.attr('type', 'color')
 			//Rm default color input styles
 			.style('padding', '0px')
