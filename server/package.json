@@ -1,6 +1,6 @@
 {
   "name": "@sjcrh/proteinpaint-server",
-  "version": "2.101.0",
+  "version": "2.102.0",
   "type": "module",
   "description": "a genomics visualization tool for exploring a cohort's genotype and phenotype data",
   "main": "src/app.js",
@@ -61,7 +61,7 @@
     "@sjcrh/augen": "2.87.0",
     "@sjcrh/proteinpaint-rust": "2.99.0",
     "@sjcrh/proteinpaint-shared": "2.99.1",
-    "@sjcrh/proteinpaint-types": "2.101.0",
+    "@sjcrh/proteinpaint-types": "2.102.0",
     "@types/express": "^5.0.0",
     "@types/express-session": "^1.18.1",
     "better-sqlite3": "^9.4.1",

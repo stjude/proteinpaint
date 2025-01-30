@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.102.0
 
 Features:
 - Users may change the size of the data points in the correlation volcano plot from the control panel or the legend. Clicking on the legend menu displays a menu to change the min and max radius in pixels.
