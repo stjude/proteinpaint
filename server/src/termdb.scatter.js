@@ -294,9 +294,9 @@ async function colorAndShapeSamples(refSamples, cohortSamples, data, q) {
 				} else if (isNumericTerm(q.colorTW.term)) {
 					const bins = data.refs.byTermId[q.colorTW.$id].bins
 					const bin = bins.find(bin => bin.label == category)
-					if (bin) value.color = bin.color
+					if (bin?.color) value.color = bin.color
 					else {
-						value.color = scheme[i - 1]
+						value.color = scheme[i - 1] //no bin or custom bin without color
 						i--
 					}
 				} else if (!(q.colorTW.term.type == 'geneVariant' && q.colorTW.q.type == 'values')) {
