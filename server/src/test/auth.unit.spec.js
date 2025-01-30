@@ -139,7 +139,7 @@ tape(`initialization`, async test => {
 		)
 		test.deepEqual(
 			authApi.getDsAuth({ query: { embedder: 'localhost' } }),
-			[{ dslabel: 'testds', route: '/**', type: 'basic', insession: false }],
+			[{ dslabel: 'testds', route: '/**', type: 'basic', headerKey: undefined, insession: false }],
 			'should return all dslabels that require authorization for a given embedder'
 		)
 
@@ -260,8 +260,8 @@ tape(`auth methods`, async test => {
 	test.deepEqual(
 		authApi.getDsAuth(req0),
 		[
-			{ dslabel: 'ds100', route: 'termdb', type: 'jwt', insession: undefined },
-			{ dslabel: 'ds100', route: 'burden', type: 'forbidden', insession: false }
+			{ dslabel: 'ds100', route: 'termdb', type: 'jwt', headerKey: 'x-ds-access-token', insession: undefined },
+			{ dslabel: 'ds100', route: 'burden', type: 'forbidden', headerKey: undefined, insession: false }
 		],
 		`should return the expected dsAuth array for a termdb-specified embedder`
 	)
@@ -269,7 +269,7 @@ tape(`auth methods`, async test => {
 	const req1 = { query: { embedder: 'some.domain', dslabel: 'ds100' }, get: () => 'localhost' }
 	test.deepEqual(
 		authApi.getDsAuth(req1),
-		[{ dslabel: 'ds100', route: 'burden', type: 'forbidden', insession: false }],
+		[{ dslabel: 'ds100', route: 'burden', type: 'forbidden', headerKey: undefined, insession: false }],
 		`should return the expected dsAuth array for a specified embedder`
 	)
 	test.deepEqual(
@@ -339,7 +339,7 @@ tape(`a valid request`, async test => {
 
 tape(`mismatched ip address in /jwt-status`, async test => {
 	test.timeoutAfter(500)
-	test.plan(2)
+	test.plan(4)
 
 	const app = appInit()
 	const serverconfig = {
@@ -377,7 +377,9 @@ tape(`mismatched ip address in /jwt-status`, async test => {
 				)
 			},
 			header(key, val) {
-				test.fail('should NOT set a session cookie')
+				console.log(379, key, val)
+				test.equal(key, 'Set-Cookie', 'should clear session cookie on unsuccessful login')
+				test.true(val.toLowerCase().includes('max-age=0'), 'should cause a session cookie to expire')
 			},
 			status(num) {
 				test.equal(num, 401, 'should set a 401 status')
@@ -392,7 +394,7 @@ tape(`mismatched ip address in /jwt-status`, async test => {
 
 tape(`invalid embedder`, async test => {
 	test.timeoutAfter(500)
-	test.plan(2)
+	test.plan(4)
 
 	const app = appInit()
 	const serverconfig = {
@@ -433,7 +435,8 @@ tape(`invalid embedder`, async test => {
 				)
 			},
 			header(key, val) {
-				test.fail('should NOT set a session cookie')
+				test.equal(key, 'Set-Cookie', 'should clear session cookie on unsuccessful login')
+				test.true(val.toLowerCase().includes('max-age=0'), 'should cause a session cookie to expire')
 			},
 			headers: {},
 			status(num) {
@@ -449,7 +452,7 @@ tape(`invalid embedder`, async test => {
 
 tape(`invalid dataset access`, async test => {
 	test.timeoutAfter(500)
-	test.plan(2)
+	test.plan(4)
 
 	const app = appInit()
 	const serverconfig = {
@@ -486,7 +489,8 @@ tape(`invalid dataset access`, async test => {
 				)
 			},
 			header(key, val) {
-				test.fail('should NOT set a session cookie')
+				test.equal(key, 'Set-Cookie', 'should clear session cookie on unsuccessful login')
+				test.true(val.toLowerCase().includes('max-age=0'), 'should cause a session cookie to expire')
 			},
 			headers: {},
 			status(num) {
@@ -502,7 +506,7 @@ tape(`invalid dataset access`, async test => {
 
 tape(`invalid jwt`, async test => {
 	test.timeoutAfter(500)
-	test.plan(6)
+	test.plan(12)
 
 	const app = appInit()
 	const serverconfig = {
@@ -540,7 +544,8 @@ tape(`invalid jwt`, async test => {
 				)
 			},
 			header(key, val) {
-				test.fail('should NOT set a session cookie')
+				test.equal(key, 'Set-Cookie', 'should clear session cookie on unsuccessful login')
+				test.true(val.toLowerCase().includes('max-age=0'), 'should cause a session cookie to expire')
 			},
 			headers: {},
 			status(num) {
@@ -567,7 +572,8 @@ tape(`invalid jwt`, async test => {
 				)
 			},
 			header(key, val) {
-				test.fail('should NOT set a session cookie')
+				test.equal(key, 'Set-Cookie', 'should clear session cookie on unsuccessful login')
+				test.true(val.toLowerCase().includes('max-age=0'), 'should cause a session cookie to expire')
 			},
 			headers: {},
 			status(num) {
@@ -595,7 +601,8 @@ tape(`invalid jwt`, async test => {
 				)
 			},
 			header(key, val) {
-				test.fail('should NOT set a session cookie')
+				test.equal(key, 'Set-Cookie', 'should clear session cookie on unsuccessful login')
+				test.true(val.toLowerCase().includes('max-age=0'), 'should cause a session cookie to expire')
 			},
 			headers: {},
 			status(num) {
