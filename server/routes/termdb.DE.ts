@@ -180,8 +180,13 @@ values[] // using integer sample id
 				console.log(item)
 			}
 		}
-		expression_input.VarGenes = output_json.map(i => i.gene_symbol).join(',')
-		console.log('expression_input:', expression_input)
+		expression_input.VarGenes = output_json.map(i => i.gene_symbol).join(',') // Comment this line out to run edgeR without gene filtering based on variance
+		//console.log('expression_input:', expression_input)
+
+		//fs.writeFile('test.txt', JSON.stringify(expression_input), function (err) {
+		//	// For catching input to rust pipeline, in case of an error
+		//	if (err) return console.log(err)
+		//})
 
 		const time2 = new Date().valueOf()
 		result = JSON.parse(
