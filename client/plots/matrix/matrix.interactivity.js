@@ -87,28 +87,7 @@ export function setInteractivity(self) {
 					// TODO: when the same label can apply to multiple values/hits in the same matrix cell,
 					// list that label only once but with a hit count, instead of listing that same label
 					// as multiple table rows in the mouseover
-
-					let fusionLabel
-					if (p)
-						fusionLabel =
-							p[0].a.name && p[0].b.name
-								? p[0].a.name + '::' + p[0].b.name
-								: p[0].a.name
-								? p[0].a.name + '::' + '?'
-								: p[0].b.name
-								? '?' + '::' + p[0].b.name
-								: ''
-					const label =
-						c.t.grp.type == 'hierCluster'
-							? v.value
-							: v && v.dt == dtcnv && v.value
-							? `${mclass[v.class].label} (${v.value.toFixed(2)})`
-							: p
-							? fusionLabel
-							: v.mname
-							? `${v.mname} ${mclass[v.class].label}`
-							: mclass[v.class].label
-
+					const label = getLabel(c, v, p)
 					/* display as two column tabel, do not display these info and do not show gradient CNV anymore
 				const info = []
 				if (v.label && v.label !== c.label) info.push(v.label)
@@ -457,32 +436,10 @@ export function setInteractivity(self) {
 				const siblingCellLabels = {}
 				for (const c of sampleData.siblingCells) {
 					if (c.$id != sampleData.$id) continue
-					// FIXME code dup with line 90
 					const v = c.value
 					const p = v.pairlst
 					const dtLabel = v.origin ? `${v.origin} ${dt2label[v.dt]}` : dt2label[v.dt]
-
-					let fusionLabel
-					if (p)
-						fusionLabel =
-							p[0].a.name && p[0].b.name
-								? p[0].a.name + '::' + p[0].b.name
-								: p[0].a.name
-								? p[0].a.name + '::' + '?'
-								: p[0].b.name
-								? '?' + '::' + p[0].b.name
-								: ''
-
-					const label =
-						c.t.grp.type == 'hierCluster'
-							? v.value
-							: v && v.dt == dtcnv && v.value
-							? `${mclass[v.class].label} (${v.value.toFixed(2)})`
-							: p
-							? fusionLabel
-							: v.mname
-							? `${v.mname} ${mclass[v.class].label}`
-							: mclass[v.class].label
+					const label = getLabel(c, v, p)
 					const color = c.fill == v.color || v.class == 'Blank' ? '' : c.fill
 
 					if (!siblingCellLabels[dtLabel]) {
@@ -3713,4 +3670,30 @@ function showByLegendFilter(menuGrp, targetData, self, target) {
 				config: self.config
 			})
 		})
+}
+
+//used by self.showCellInfo and self.mouseclick to get appropriate label
+function getLabel(c, v, p) {
+	let fusionLabel
+	if (p)
+		fusionLabel =
+			p[0].a.name && p[0].b.name
+				? p[0].a.name + '::' + p[0].b.name
+				: p[0].a.name
+				? p[0].a.name + '::' + '?'
+				: p[0].b.name
+				? '?' + '::' + p[0].b.name
+				: ''
+	const label =
+		c.t.grp.type == 'hierCluster'
+			? v.value
+			: v && v.dt == dtcnv && v.value
+			? `${mclass[v.class].label} (${v.value.toFixed(2)})`
+			: p
+			? fusionLabel
+			: v.mname
+			? `${v.mname} ${mclass[v.class].label}`
+			: mclass[v.class].label
+
+	return label
 }

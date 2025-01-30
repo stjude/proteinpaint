@@ -5,7 +5,6 @@ import serverconfig from '#src/serverconfig.js'
 import type { TermdbSingleSampleMutationRequest, TermdbSingleSampleMutationResponse, RouteApi } from '#types'
 import { termdbSingleSampleMutationPayload } from '#types/checkers'
 import { gdcValidate_query_singleSampleMutation } from '#src/mds3.gdc.js'
-import { getResult } from '#src/gene.js'
 
 export const api: RouteApi = {
 	endpoint: 'termdb/singleSampleMutation',
@@ -73,7 +72,6 @@ export async function validate_query_singleSampleMutation(ds: any, genome: any) 
 
 			const data = await read_file(file)
 			// object wraps around mlst[] so it's possible to add other attr e.g. total number of mutations that exceeds viewing limit
-
 			return { mlst: JSON.parse(data) }
 		}
 	} else {
