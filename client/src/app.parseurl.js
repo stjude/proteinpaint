@@ -3,6 +3,7 @@ import * as client from './client'
 import { loadstudycohort } from './tp.init'
 import { string2pos } from './coord'
 import * as mdsjson from './app.mdsjson'
+import { getTokenDefaults } from '#common/dofetch'
 import urlmap from '#common/urlmap'
 import { first_genetrack_tolist } from '#common/1stGenetk'
 import { corsMessage } from '#common/embedder-helpers'
@@ -223,10 +224,7 @@ upon error, throw err message as a string
 				fetchOpts.body.dslabel = dslabel
 				fetchOpts.body.route = route
 				fetchOpts.body.route = route
-
-				const jwtByDsRouteStr = localStorage.getItem('jwtByDsRoute') || `{}`
-				this.jwtByDsRoute = JSON.parse(jwtByDsRouteStr)
-				const jwt = this.jwtByDsRoute[dslabel][route]
+				const jwt = getTokenDefaults(dslabel, route)
 				fetchOpts.headers.authorization = `Bearer ${btoa(jwt)}`
 			}
 			res = await client.dofetch3(`/massSession`, fetchOpts)

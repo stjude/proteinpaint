@@ -318,7 +318,7 @@ export function setAuth(opts) {
 }
 
 export async function getRequiredAuth(dslabel, route) {
-	return dsAuth.find(d => (d.dslabel = dslabel && d.route == route))
+	return dsAuth.find(d => d.dslabel == dslabel && d.route == route)
 }
 
 // check if a user is logged in, usually checked together with requiredAuth in termdb/config,
@@ -407,9 +407,7 @@ async function defaultAuthUi(dslabel, auth) {
 					mask.remove()
 					dsAuthOk.add(auth)
 					if (res.jwt) {
-						if (!jwtByDsRoute[dslabel]) jwtByDsRoute[dslabel] = {}
-						jwtByDsRoute[dslabel][res.route] = res.jwt
-						localStorage.setItem('jwtByDsRoute', JSON.stringify(jwtByDsRoute))
+						setTokenByDsRoute(dslabel, route, res.jwt)
 					}
 					resolve(dslabel)
 				})
@@ -423,6 +421,32 @@ async function defaultAuthUi(dslabel, auth) {
 		btn.on('click', login)
 		pwd.on('change', login)
 	})
+}
+
+export function setTokenByDsRoute(dslabel, route, jwt) {
+	if (!jwtByDsRoute[dslabel]) jwtByDsRoute[dslabel] = {}
+	jwtByDsRoute[dslabel][route] = jwt
+	localStorage.setItem('jwtByDsRoute', JSON.stringify(jwtByDsRoute))
+}
+
+// get jwt string directly if route argument is supplied,
+// or if not, return a getDatasetAccessToken() function;
+// this avoids other code from needing to know about jwtByDsRoute
+export function getTokenDefaults(dslabel, route = '') {
+	if (!jwtByDsRoute[dslabel]) jwtByDsRoute[dslabel] = {}
+	const jwtByRoute = jwtByDsRoute[dslabel]
+	// option to
+	if (route) return jwtByDsRoute[route]
+	return {
+		// may be used if auth is required and only if there is NO
+		// `getDatasetAccessToken()` argument to runproteinpaint();
+		// by design, login 'tokens' are replaced with PP
+		// server-generated jwt that has more suitable/reliable
+		// persistence to improve user experience
+		getDatasetAccessToken: route => {
+			return this.jwtByRoute[route]
+		}
+	}
 }
 
 function mayAddJwtToRequest(init, body, url) {
