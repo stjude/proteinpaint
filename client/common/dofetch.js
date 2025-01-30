@@ -317,8 +317,10 @@ export function setAuth(opts) {
 	includeEmbedder = opts.dsAuth?.length > 0 || false
 }
 
-export async function getRequiredAuth(dslabel, route) {
-	return dsAuth.find(d => d.dslabel == dslabel && d.route == route)
+export function getRequiredAuth(dslabel, route) {
+	for (const a of dsAuth) {
+		if (a.dslabel == dslabel && a.route == route) return a
+	}
 }
 
 // check if a user is logged in, usually checked together with requiredAuth in termdb/config,

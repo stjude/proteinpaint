@@ -43,7 +43,7 @@ export class Vocab {
 		const protectedRoute = 'termdb'
 		const auth =
 			this.state.termdbConfig?.requiredAuth.find(a => a.route == protectedRoute) ||
-			(await getRequiredAuth(this.state.vocab.dslabel, protectedRoute))
+			getRequiredAuth(this.state.vocab.dslabel, protectedRoute)
 
 		if (!auth) {
 			this.verifiedToken = true
@@ -120,14 +120,18 @@ export class Vocab {
 	}
 
 	mayGetAuthHeaders(route = '') {
-		const auth = this.state.termdbConfig?.requiredAuth
+		const auth =
+			this.state.termdbConfig?.requiredAuth?.find(a => a.route == route) ||
+			getRequiredAuth(this.state.vocab.dslabel, route)
+
 		if (!auth) return {}
 		if (!this.verifiedToken) {
 			this.tokenVerificationMessage = `requires login for this data`
 			return
 		}
 		const headers = {}
-		if (auth.headerKey) headers[auth.headerKey] = this.verifiedToken
+		// TODO: may remove custom header later, after extensive testing that nothing would break in prod
+		if (auth.headerKey && typeof this.verifiedToken == 'string') headers[auth.headerKey] = this.verifiedToken
 		// in cases where CORS prevents an http-domain based session cookie from being passed to the PP server,
 		// then this header will be used by the PP server
 		if (this.sessionId) headers['x-sjppds-sessionid'] = this.sessionId
