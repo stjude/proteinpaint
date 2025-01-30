@@ -1,4 +1,4 @@
-import { termsettingInit } from '#termsetting'
+import { termsettingInit, get$id } from '#termsetting'
 import { get_bin_label } from '#shared/termdb.bins.js'
 import { InputValuesTable } from './regression.inputs.values.table'
 import { Menu } from '#dom/menu'
@@ -165,6 +165,10 @@ export class InputTerm {
 			await this.pill.main(this.getPillArgs())
 			this.renderInteractionPrompt()
 			await this.valuesTable.main()
+			// $id needs to be filled in here for non-dictionary terms
+			// TODO: should have a centralized location for filling in
+			// $id for non-dictionary terms
+			if (tw && !tw.$id) tw.$id = await get$id(this.parent.app.vocabApi.getTwMinCopy(tw))
 			const e = (tw && tw.error) || this.pill.error
 			if (e) errors.push(e)
 			if (errors.length) throw errors
@@ -459,11 +463,7 @@ export class InputTerm {
 		self.dom.tip.d
 			.append('div')
 			.selectAll('div')
-			.data(
-				self.parent.config.independent.filter(
-					tw => tw && tw.term.id !== self.term.term.id && tw.term.name !== self.term.term.name && tw.q.mode != 'spline'
-				)
-			)
+			.data(self.parent.config.independent.filter(tw => tw && tw.$id != self.term.$id && tw.q.mode != 'spline'))
 			.enter()
 			.append('div')
 			.style('margin', '5px')
@@ -472,7 +472,7 @@ export class InputTerm {
 				const checkbox = elem
 					.append('input')
 					.attr('type', 'checkbox')
-					.property('checked', self.term.interactions.includes(tw.term.id || tw.term.name))
+					.property('checked', self.term.interactions.includes(tw.$id))
 
 				elem.append('span').text(' ' + tw.term.name)
 			})
@@ -485,15 +485,12 @@ export class InputTerm {
 				self.dom.tip.hide()
 				self.term.interactions = []
 				self.dom.tip.d.selectAll('input').each(function (tw) {
-					if (select(this).property('checked')) self.term.interactions.push(tw.term.id || tw.term.name)
+					if (select(this).property('checked')) self.term.interactions.push(tw.$id)
 				})
 				for (const tw of self.parent.config.independent) {
-					const i = tw.interactions.indexOf(self.term.term.id || self.term.term.name)
-					if (self.term.interactions.includes(tw.term.id || tw.term.name)) {
-						if (i == -1) tw.interactions.push(self.term.term.id || self.term.term.name)
-					} else if (i != -1) {
-						tw.interactions.splice(i, 1)
-					}
+					const interactions = new Set(tw.interactions)
+					self.term.interactions.includes(tw.$id) ? interactions.add(self.term.$id) : interactions.delete(self.term.$id)
+					tw.interactions = [...interactions]
 				}
 				self.parent.editConfig(self, self.term)
 			})

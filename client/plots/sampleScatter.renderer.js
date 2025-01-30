@@ -132,7 +132,7 @@ export function setRenderers(self) {
 
 			// Create the color generator using d3's linear scale
 			// This maps our numerical range to a color gradient
-			console.log('min', min, 'max', max)
+
 			chart.colorGenerator = d3Linear()
 				.domain([min, max])
 				.range([self.config.startColor[chart.id], self.config.stopColor[chart.id]])
@@ -765,8 +765,8 @@ export function setRenderers(self) {
 	}
 
 	self.getFontSize = function (chart) {
-		let fontSize = 1
-		const top = 15
+		let fontSize = 0.9
+		const top = 20
 		if (chart.colorLegend.size > top || chart.shapeLegend.size > top) {
 			fontSize = Math.min(0.9, top / chart.colorLegend.size, top / chart.shapeLegend.size)
 			if (fontSize < 0.5) fontSize = 0.5

@@ -316,22 +316,21 @@ function setRenderers(self) {
 		// the independent variables array will be used as-is
 		const selectedArray = Array.isArray(selected) ? selected : selected ? [selected] : []
 
+		mayConvertInteractionIds(selectedArray, section)
+
 		// process each selected variable
 		for (const variable of selectedArray) {
 			if (section.configKey == 'independent') {
 				if (!variable.interactions) variable.interactions = []
 				for (const id of variable.interactions) {
-					const tw = selected.find(i => (i.term.id || i.term.name) == id)
+					const tw = selectedArray.find(i => i.$id == id)
 					if (!tw) throw 'interacting partner not found in independents: ' + id
 					if (!tw.interactions) tw.interactions = []
-					if (!tw.interactions.includes(variable.term.id || variable.term.name))
-						tw.interactions.push(variable.term.id || variable.term.name)
+					if (!tw.interactions.includes(variable.$id)) tw.interactions.push(variable.$id)
 				}
 			}
 
-			const input = section.inputLst.find(
-				input => input.term?.term.id == variable.term.id || input.term?.term.name == variable.term.name
-			)
+			const input = section.inputLst.find(input => input.term?.$id == variable.$id)
 			if (!input) {
 				section.inputLst.push(
 					new InputTerm({
@@ -348,6 +347,26 @@ function setRenderers(self) {
 		}
 
 		mayAddBlankInput(section, self)
+	}
+
+	// interactions[] from url will contain term ids
+	// convert these to $ids
+	function mayConvertInteractionIds(selectedArray, section) {
+		if (section.configKey != 'independent') return
+		const id2$id = new Map() // id => $id
+		// first populate id2$id map
+		for (const v of selectedArray) {
+			if (v.id) id2$id.set(v.id, v.$id)
+		}
+		// then convert all ids in interactions[] to $ids
+		for (const v of selectedArray) {
+			if (v.interactions?.length) {
+				for (const [i, id] of v.interactions.entries()) {
+					const $id = id2$id.get(id)
+					if ($id) v.interactions[i] = $id
+				}
+			}
+		}
 	}
 
 	async function addInput(input) {
@@ -411,8 +430,8 @@ function setInteractivity(self) {
 				// if the input.term has interaction pairs, then
 				// delete this term.id from those other input term.interactions
 				for (const other of input.section.inputLst) {
-					if (!other.term || !other.term.interactions) continue
-					const i = other.term.interactions.indexOf(input.term.term.id || input.term.term.name)
+					if (!other.term || !other.term.interactions?.length) continue
+					const i = other.term.interactions.indexOf(input.term.$id)
 					if (i != -1) other.term.interactions.splice(i, 1)
 				}
 			}
@@ -442,7 +461,7 @@ function setInteractivity(self) {
 				// this is a spline term, delete existing interactions with this term
 				for (const other of input.section.inputLst) {
 					if (!other.term || !other.term.interactions) continue
-					const i = other.term.interactions.indexOf(input.term.term.id || input.term.term.name)
+					const i = other.term.interactions.indexOf(input.term.$id)
 					if (i != -1) other.term.interactions.splice(i, 1)
 				}
 				variable.interactions = []

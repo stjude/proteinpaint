@@ -77,7 +77,8 @@ export class View {
 		 * renders the axis from max - min. Render the box plots, then change
 		 * the scale vector to match. */
 		if (settings.isVertical) scale.range([scale.range()[1], scale.range()[0]])
-
+		const ticks = scale.ticks()
+		const tickValues = plotDim.axis.values(ticks)
 		dom.axis
 			.attr('id', 'sjpp-boxplot-axis')
 			.attr('transform', `translate(${plotDim.axis.x}, ${plotDim.axis.y})`)
@@ -85,9 +86,12 @@ export class View {
 			.call(
 				this.settings.isVertical
 					? axisLeft(scale)
-							.tickPadding(6)
+							.tickValues(tickValues)
 							.tickFormat(d => plotDim.axis.format(d as number))
-					: axisTop(scale).tickFormat(d => plotDim.axis.format(d as number))
+							.tickPadding(8)
+					: axisTop(scale)
+							.tickValues(tickValues)
+							.tickFormat(d => plotDim.axis.format(d as number))
 			)
 
 		axisstyle({

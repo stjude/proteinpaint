@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 Features:
 - Users may change the size of the data points in the correlation volcano plot from the control panel or the legend. Clicking on the legend menu displays a menu to change the min and max radius in pixels.
 - If featureTw isn't provided to the correlation volcano plot, the dictionary will render so user may select the feature of interest.
+- Added fixed and percentile modes to samplescatter when colorTW mode=continuous
 
 
 ## 2.101.0
