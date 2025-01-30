@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Features:
+- Added fixed and percentile modes to samplescatter when colorTW mode=continuous
+
+
 ## 2.102.0
 
 Features:

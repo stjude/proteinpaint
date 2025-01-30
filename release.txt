@@ -1,2 +1,1 @@
-Features:
-- Added fixed and percentile modes to samplescatter when colorTW mode=continuous
+
