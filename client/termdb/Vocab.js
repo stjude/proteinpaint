@@ -1,4 +1,4 @@
-import { dofetch3, isInSession, getRequiredAuth } from '#common/dofetch'
+import { dofetch3, isInSession, getRequiredAuth, getTokenDefaults, setTokenByDsRoute } from '#common/dofetch'
 import { isDictionaryType } from '#shared/terms.js'
 
 export class Vocab {
@@ -9,17 +9,17 @@ export class Vocab {
 		this.vocab = opts.state.vocab
 		this.currAnnoData = { samples: {}, refs: { byTermId: {} }, lastTerms: [], lastFilter: {} }
 		/*
-            some categorical terms may not have an initial term.values object,
-            but is expected to be filled from data requests such as nestedChartSeriesData()
-            TODO: 
-            - add values-filling logic to other data requests besides nestedChartSeriesData()
-            - instead of this workaround, should query all available values in getterm()
-        */
+      some categorical terms may not have an initial term.values object,
+      but is expected to be filled from data requests such as nestedChartSeriesData()
+      TODO: 
+      - add values-filling logic to other data requests besides nestedChartSeriesData()
+      - instead of this workaround, should query all available values in getterm()
+  	*/
 		this.missingCatValsByTermId = {}
-		const jwtByDsRouteStr = localStorage.getItem('jwtByDsRoute') || `{}`
-		this.jwtByDsRoute = JSON.parse(jwtByDsRouteStr)
+
 		const dslabel = this.vocab?.dslabel || this.state?.dslabel
-		this.jwtByRoute = this.jwtByDsRoute[dslabel] || {}
+		const { getDatasetAccessToken } = getTokenDefaults(dslabel)
+		this.getDatasetAccessToken = this.opts.getDatasetAccessToken || getDatasetAccessToken
 	}
 
 	async main(stateOverride = null) {
@@ -39,23 +39,17 @@ export class Vocab {
 		// strict true boolean value means no auth required
 		if (this.verifiedToken === true) return this.verifiedToken
 
+		const protectedRoute = 'termdb'
 		const auth =
-			this.state.termdbConfig?.requiredAuth.find(a => a.route == 'termdb') ||
-			(await getRequiredAuth(this.state.vocab.dslabel, 'termdb'))
+			this.state.termdbConfig?.requiredAuth.find(a => a.route == protectedRoute) ||
+			(await getRequiredAuth(this.state.vocab.dslabel, protectedRoute))
 
 		if (!auth) {
 			this.verifiedToken = true
 			return
 		}
 
-		let token = await this.opts.getDatasetAccessToken?.()
-		// only use the jwt from localStorage if there is no callback to get a more up-to-date token;
-		// not having `opts.getDatasetAccessToken()` means that a jwt would have been generated
-		// by the PP server from a password login (that is, jwt is not from an embedder) and
-		// that dofetch code would have saved localStorage.setItem('jwtByDsRoute') as used below
-		// TODO: hide token retrieval details within a default `getDatasetAccessToken()` that
-		// accesses localStorage, so this.jwtByRoute[] option does not have to be known or handled here
-		if (!token && !this.opts.getDatasetAccessToken) token = this.jwtByRoute['termdb']
+		const token = await this.getDatasetAccessToken?.(protectedRoute)
 		if (this.verifedToken && token === this.verifiedToken) return this.verifiedToken
 
 		try {
@@ -69,9 +63,7 @@ export class Vocab {
 					[auth.headerKey]: token
 				}
 				const route = 'termdb'
-				if (!headers.authorization && token)
-					// && this.jwtByRoute[route])
-					headers.authorization = `Bearer ${btoa(token)}` // || this.jwtByRoute[route])}`
+				if (!headers.authorization && token) headers.authorization = `Bearer ${btoa(token)}`
 				const data = await dofetch3('/jwt-status', {
 					method: 'POST',
 					headers,
@@ -82,10 +74,10 @@ export class Vocab {
 					}
 				})
 				// NOTE: data.jwt is a more persistent, session-like token that
-				// "replaces" the embedder's jwt, which may have much more limited
-				// expiration dates or other concerns that prevents effective/performant
+				// "replaces" the embedder's jwt, which may have a much more limited
+				// expiration date or other concerns that prevents effective/performant
 				// reuse, for example, we don't want a user to login every 5 minutes
-				// if an embedder's jwt expires shortly
+				// if an embedder's jwt expires quickly
 
 				// TODO: later may check against expiration time in response if included
 				this.verifiedToken = data.status === 'ok' //&& token
@@ -98,19 +90,15 @@ export class Vocab {
 						(auth.headerKey && data[auth.headerKey]) || data['x-sjppds-sessionid'] || data['x-ds-access-token']
 					delete this.tokenVerificationMessage
 					delete this.tokenVerificationPayload
-					if (data.jwt) {
-						if (!this.jwtByDsRoute[dslabel]) {
-							this.jwtByDsRoute[dslabel] = {}
-							this.jwtByRoute = this.jwtByDsRoute[dslabel]
-						}
-						this.jwtByDsRoute[dslabel][data.route] = data.jwt
-						localStorage.setItem('jwtByDsRoute', JSON.stringify(this.jwtByDsRoute))
+					if (!this.getDatasetAccessToken && data.jwt) {
+						setTokenByDsRoute(dslabel, data.route, data.jwt)
 					}
 				}
 			} else {
-				// for termdb routes, assumes only jwt login is supported,
-				// for specific routes since mass app is public for most termdb routes,
+				// for termdb routes, assume only jwt login is supported for
+				// pre-specified routes, since mass app is public for most termdb routes,
 				// whereas basic/password login has been coded to protect all routes
+				// (nothing is shown except login form in landing page)
 				throw `unsupported requiredAuth='${auth.type}'`
 			}
 		} catch (e) {
@@ -138,10 +126,8 @@ export class Vocab {
 		// then this header will be used by the PP server
 		if (this.sessionId) headers['x-sjppds-sessionid'] = this.sessionId
 		// may use jwt to verify against a random server process in a farm
-		if (route && this.jwtByRoute[route]) {
-			const jwt = this.jwtByRoute[route]
-			headers.authorization = `Bearer ${btoa(jwt)}`
-		}
+		const jwt = this.getDatasetAccessToken?.(route)
+		if (jwt) headers.authorization = `Bearer ${btoa(jwt)}`
 		return headers
 	}
 
@@ -152,7 +138,7 @@ export class Vocab {
 	async trackDsAction({ action, details }) {
 		const headers = { 'x-sjppds-sessionid': this.sessionId }
 		// NOTE: do not hardcode the .termdb route here, there may be more tracked actions later
-		const jwt = this.jwtByRoute.termdb
+		const jwt = this.getDatasetAccessToken('termdb')
 		if (jwt) headers.authorization = 'Bearer ' + btoa(jwt)
 		await dofetch3('/authorizedActions', {
 			method: 'POST',
