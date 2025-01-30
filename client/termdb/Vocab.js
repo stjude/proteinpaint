@@ -20,6 +20,7 @@ export class Vocab {
 		const dslabel = this.vocab?.dslabel || this.state?.dslabel
 		const { getDatasetAccessToken } = getTokenDefaults(dslabel)
 		this.getDatasetAccessToken = this.opts.getDatasetAccessToken || getDatasetAccessToken
+		this.getSavedToken = getDatasetAccessToken
 	}
 
 	async main(stateOverride = null) {
@@ -130,8 +131,11 @@ export class Vocab {
 		// in cases where CORS prevents an http-domain based session cookie from being passed to the PP server,
 		// then this header will be used by the PP server
 		if (this.sessionId) headers['x-sjppds-sessionid'] = this.sessionId
-		// may use jwt to verify against a random server process in a farm
-		const jwt = this.getDatasetAccessToken?.(route)
+		// may use a saved jwt to verify against a random server process in a farm;
+		// at this point, should prefer to use a saved PP-server generated jwt instead of reusing an
+		// embedder's jwt callback, because a PP-issued jwt would already have a tracked session id
+		// so it's easier to verify
+		const jwt = this.getSavedToken(route) || this.getDatasetAccessToken?.(route)
 		if (jwt) headers.authorization = `Bearer ${btoa(jwt)}`
 		return headers
 	}

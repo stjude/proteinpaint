@@ -741,14 +741,18 @@ function mayAddSessionFromJwt(sessions, dslabel, id, req, cred) {
 	const token = Buffer.from(b64token, 'base64').toString()
 	try {
 		const payload = jsonwebtoken.verify(token, cred.secret)
-		// if (id) {
-		// 	if (payload.id != id) {console.log(`---- !!! jwt payload/cookie id mismatch !!! [${payload.id}][${id}] ---`)}
-		// 	else console.log('--- !!! id match !!! ---')
-		// }
-		// the request header custom key or cookie session ID should equal the signed payload.id in the header.authorization,
-		// otherwise an expired header.auth jwt may be reused even when a user has already logged out
-		if (id && payload.id != id && req.headers?.['x-sjppds-sessionid'] != payload.id) return
-		// do not overwrite existing
+		if (!payload.datasets.includes(dslabel)) return
+		if (!payload.id) {
+			// payload.id is only set in PP-issued jwt, so if it's missing, it indicates the verified jwt is
+			// embedder-issued and should be okay to skip the payload id check, set it instead;
+			// jwt expiration should already have been checked by jsonwebtoken.verify() above
+			payload.id = Math.random().toString() + '.' + Date.now().toString().slice(4)
+		} else if (id && payload.id != id && req.headers?.['x-sjppds-sessionid'] != payload.id) {
+			// the request header custom key or cookie session ID should equal the signed payload.id in the header.authorization,
+			// otherwise an expired header.auth jwt may be reused even when a user has already logged out;
+			return
+		}
+		// do not overwrite existing tracking object for dslabel
 		if (!sessions[dslabel]) sessions[dslabel] = {}
 		//if (sessions[dslabel][payload.id]) throw `session conflict`
 		const path = req.path[0] == '/' && !cred.route.startsWith('/') ? req.path.slice(1) : req.path
@@ -757,6 +761,7 @@ function mayAddSessionFromJwt(sessions, dslabel, id, req, cred) {
 			return payload.id
 		}
 	} catch (e) {
+		console.log(e)
 		// ok to not add a session from bearer jwt
 		return
 	}
