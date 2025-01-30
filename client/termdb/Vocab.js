@@ -73,11 +73,6 @@ export class Vocab {
 						embedder: location.hostname
 					}
 				})
-				// NOTE: data.jwt is a more persistent, session-like token that
-				// "replaces" the embedder's jwt, which may have a much more limited
-				// expiration date or other concerns that prevents effective/performant
-				// reuse, for example, we don't want a user to login every 5 minutes
-				// if an embedder's jwt expires quickly
 
 				// TODO: later may check against expiration time in response if included
 				this.verifiedToken = data.status === 'ok' //&& token
@@ -90,7 +85,17 @@ export class Vocab {
 						(auth.headerKey && data[auth.headerKey]) || data['x-sjppds-sessionid'] || data['x-ds-access-token']
 					delete this.tokenVerificationMessage
 					delete this.tokenVerificationPayload
-					if (!this.getDatasetAccessToken && data.jwt) {
+					if (data.jwt) {
+						// NOTE:
+						// - must save token in localStorage, so that mayAddJwtToRequest()
+						//   in dofetch can add it as header.authorization: Bearer token,
+						//   which addresses unshared login/session state in a multi-server farm
+						//
+						// - data.jwt is a more persistent, session-like token that
+						//   "replaces" the embedder's jwt, which may have a much more limited
+						//   expiration date or other concerns that prevents effective/performant
+						//   reuse, for example, we don't want a user to login every 5 minutes
+						//   if an embedder's jwt expires quickly
 						setTokenByDsRoute(dslabel, data.route, data.jwt)
 					}
 				}
