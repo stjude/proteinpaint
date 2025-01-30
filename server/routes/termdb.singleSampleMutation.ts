@@ -74,35 +74,7 @@ export async function validate_query_singleSampleMutation(ds: any, genome: any) 
 			const data = await read_file(file)
 			// object wraps around mlst[] so it's possible to add other attr e.g. total number of mutations that exceeds viewing limit
 
-			const mlst = JSON.parse(data)
-
-			for (const m of mlst) {
-				if (m.dt == 2) {
-					if (m.geneA) {
-						if (!m.chrA || !m.posA) {
-							const result = getResult(genome, { input: m.geneA, deep: 1 })
-
-							if (!result.gmlst || result.gmlst.length == 0) throw 'unknown gene name'
-							const gm = result.gmlst.find(i => i.isdefault) || result.gmlst[0]
-
-							m.chrA = m.chrA || gm.chr
-							m.posA = m.posA || gm.start
-						}
-					}
-					if (m.geneB) {
-						if (!m.chrB || !m.posB) {
-							const result = getResult(genome, { input: m.geneB, deep: 1 })
-
-							if (!result.gmlst || result.gmlst.length == 0) throw 'unknown gene name'
-							const gm = result.gmlst.find(i => i.isdefault) || result.gmlst[0]
-
-							m.chrB = m.chrB || gm.chr
-							m.posB = m.posB || gm.start
-						}
-					}
-				}
-			}
-			return { mlst }
+			return { mlst: JSON.parse(data) }
 		}
 	} else {
 		throw 'unknown singleSampleMutation.src'
