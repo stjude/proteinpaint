@@ -1,16 +1,10 @@
-import { existsSync, promises as fs } from 'fs'
+import { promises as fs } from 'fs'
 import path from 'path'
 import jsonwebtoken from 'jsonwebtoken'
+import { sleep } from './utils.js'
 import mm from 'micromatch'
 
 const { isMatch } = mm
-// TODO: may use this once babel is configured to transpile es6 node_modules
-//const sleep = require('./utils').sleep
-
-// TODO: may use utils.sleep
-function sleep(ms) {
-	return new Promise(resolve => setTimeout(resolve, ms))
-}
 
 // serverconfig.dsCredentials
 //
@@ -208,7 +202,6 @@ const authRouteByCredType = {
 async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 	const serverconfig = _serverconfig || require('./serverconfig')
 	const sessionTracking = serverconfig.features?.sessionTracking || ''
-	const sessionsFile = path.join(serverconfig.cachedir, 'dsSessions')
 	const actionsFile = path.join(serverconfig.cachedir, 'authorizedActions')
 	// the required security checks for each applicable dslabel, to be processed from serverconfig.dsCredentials
 	const creds = serverconfig.dsCredentials || {}
@@ -308,25 +301,8 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 		}
 
 		try {
-			const id = getSessionId(req, cred)
-			let altId
-			if (!id) {
-				if (req.method.toUpperCase() == 'OPTIONS') {
-					res.status(204)
-					res.send()
-					return
-				} else {
-					altId = mayAddSessionFromJwt(sessions, q.dslabel, id, req, cred)
-					if (!altId) {
-						code = 401
-						throw 'missing session cookie'
-					}
-				}
-			}
-			// a previous /dslogin to a particular server process may have set a session id that has since expired or become stale,
-			// in that case use, the Bearer jwt from the authorization header
-			if (!altId) altId = mayAddSessionFromJwt(sessions, q.dslabel, id, req, cred)
-			const session = sessions[q.dslabel]?.[id] || sessions[q.dslabel]?.[altId]
+			const id = getSessionId(req, cred, sessions)
+			const session = id && sessions[q.dslabel]?.[id]
 			if (!session) {
 				code = 401
 				throw `unestablished or expired browser session`
@@ -366,38 +342,6 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 
 	/*** call app.use() before any await lines ***/
 
-	try {
-		// 1. Get an empty or rehydrated sessions tracker object
-		// !!! do not use or save sessions data from/to a file !!!
-		// sessions = await getSessions(creds, sessionsFile, maxSessionAge)
-		const time = Date.now()
-		const latestSessionByDslabel = {}
-		const unexpiredSessions = []
-
-		for (const dslabel in sessions) {
-			for (const id in sessions[dslabel]) {
-				const q = sessions[dslabel][id]
-				const session = await maySaveSession(
-					'', // do not supply a filename to avoid a file write for each session data
-					q.dslabel,
-					q.id,
-					q.time,
-					q.email,
-					q.ip,
-					q.embedder,
-					q.route,
-					q.clientAuthResult
-				)
-				if (!latestSessionByDslabel[q.dslabel] || latestSessionByDslabel[dslabel].time < q.time)
-					latestSessionByDslabel[dslabel] = session
-			}
-		}
-		// !!! do not use or save sessions data from/to a file !!!
-		// await fs.writeFile(sessionsFile, Object.values(latestSessionByDslabel).map(JSON.stringify).join('\n') + '\n')
-	} catch (e) {
-		throw e
-	}
-
 	// app.use() from other route setters must be called before app.get|post|all
 	// so delay setting these optional routes (this is done in server/src/test/routes/gdc.js also)
 	await sleep(0)
@@ -420,9 +364,8 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 			const [type, pwd] = req.headers.authorization.split(' ')
 			if (type.toLowerCase() != 'basic') throw `unsupported authorization type='${type}', allowed: 'Basic'`
 			if (Buffer.from(pwd, 'base64').toString() != cred.password) throw 'invalid password'
-			const id = await setSession(q, res, sessions, sessionsFile, '', req, cred)
 			code = 401 // in case of jwt processing error
-			const jwt = await getSignedJwt(req, q, id, cred, {}, maxSessionAge, sessionsFile)
+			const jwt = await getSignedJwt(req, res, q, cred, {}, maxSessionAge, '', sessions)
 			res.send({ status: 'ok', jwt, route: cred.route })
 		} catch (e) {
 			res.status(code)
@@ -444,7 +387,6 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 			}
 			delete sessions[q.dslabel][id]
 			const ip = req.ip
-			await maySaveSession(sessionsFile, q.dslabel, id, 0, '', session.ip, session.embedder, session.route, {})
 			res.send({ status: 'ok' })
 		} catch (e) {
 			res.status(code)
@@ -469,11 +411,10 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 			const { email, ip, clientAuthResult } = getJwtPayload(q, req.headers, cred)
 
 			checkIPaddress(req, ip, cred)
-			const id = await setSession(q, res, sessions, sessionsFile, email, req, cred, clientAuthResult)
 			code = 401 // in case of jwt processing error
-			const jwt = await getSignedJwt(req, q, id, cred, clientAuthResult, maxSessionAge, sessionsFile, email)
-			// difficult to setup CORS cookie, will simply reply with cookie and use a custom header for now
-			res.send({ status: 'ok', jwt, route: cred.route, [cred.cookieId]: id, clientAuthResult })
+			const jwt = await getSignedJwt(req, res, q, cred, clientAuthResult, maxSessionAge, email, sessions)
+			// difficult to setup CORS cookie, will deprecate support
+			res.send({ status: 'ok', jwt, route: cred.route, clientAuthResult })
 		} catch (e) {
 			console.log(e)
 			res.status(code)
@@ -492,8 +433,7 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 				return
 			}
 			const id = getSessionId(req)
-			const altId = mayAddSessionFromJwt(sessions, q.dslabel, id, req, cred)
-			const session = sessions[q.dslabel]?.[id] || sessions[q.dslabel]?.[altId]
+			const session = sessions[q.dslabel]?.[id]
 			const email = session.email
 			const time = new Date()
 			await fs.appendFile(actionsFile, `${q.dslabel}\t${email}\t${time}\t${q.action}\t${JSON.stringify(q.details)}\n`)
@@ -516,7 +456,7 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 				for (const [embedderHostPattern, cred] of Object.entries(route)) {
 					if (embedderHostPattern != '*' && !isMatch(embedder, embedderHostPattern)) continue
 					const query = Object.assign({}, req.query, { dslabel: dslabelPattern })
-					const id = getSessionId({ query, headers: req.headers, cookies: req.cookies }, cred)
+					const id = getSessionId({ query, headers: req.headers, cookies: req.cookies }, cred, sessions)
 					const activeSession = sessions[dslabelPattern]?.[id]
 					const sessionStart = activeSession?.time || 0
 					// support a dataset-specific override to maxSessionAge
@@ -540,18 +480,6 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 						headerKey: cred.headerKey,
 						insession
 					})
-				}
-			}
-		}
-
-		if (dsAuth.find(ds => ds.insession)) {
-			// the session.start would have been updated for activeSessions,
-			const unexpiredSessions = []
-			for (const dslabel in sessions) {
-				for (const id in sessions[dslabel]) {
-					const q = sessions[dslabel][id]
-					// no need to await ??
-					maySaveSession(sessionsFile, q.dslabel, q.id, q.time, q.email, q.ip, q.embedder, q.route, q.clientAuthResult)
 				}
 			}
 		}
@@ -586,9 +514,8 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 				}
 			}
 		}
-		const id = getSessionId(req, cred)
-		const altId = mayAddSessionFromJwt(sessions, ds?.label, id, req, cred)
-		const activeSession = sessions[req.query.dslabel]?.[id] || sessions[req.query.dslabel]?.[altId]
+		const id = getSessionId(req, cred, sessions)
+		const activeSession = sessions[req.query.dslabel]?.[id]
 		return { forbiddenRoutes, clientAuthResult: activeSession?.clientAuthResult }
 	}
 
@@ -618,9 +545,8 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 		// !!! DEPRECATED: for 'basic' auth type, always require a login when runpp() is first called !!!
 		// this causes unnecessary additional logins when links are opened from a 'landing page'
 		// if (cred.type == 'basic' && req.path.startsWith('/genomes')) return false
-		const id = getSessionId(req, cred)
-		const altId = mayAddSessionFromJwt(sessions, ds.label, id, req, cred)
-		const activeSession = sessions[ds.label]?.[id] || sessions[ds.label]?.[altId]
+		const id = getSessionId(req, cred, sessions)
+		const activeSession = sessions[ds.label]?.[id]
 		const sessionStart = activeSession?.time || 0
 		return Date.now() - sessionStart < maxSessionAge
 	}
@@ -684,9 +610,16 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 	if (serverconfig.debugmode && !app.doNotFreezeAuth) Object.freeze(authApi)
 }
 
-function getSessionId(req, cred) {
+function getSessionId(req, cred, sessions) {
 	// embedder sites may use HTTP 2.0 which requires lowercased header key names
 	// using all lowercase is compatible for both http 1 and 2
+	if (sessions && req.headers?.authorization) {
+		const id = mayAddSessionFromJwt(sessions, req, cred)
+		if (id) return id
+	}
+
+	// TODO: should deprecate session tracking by cookie and custom http header field,
+	// and rely exclusively on jwt from headers.authorization
 	return (
 		req.cookies?.[`${cred?.cookieId}`] ||
 		req.cookies?.[`${req.query.dslabel}SessionId`] ||
@@ -696,30 +629,54 @@ function getSessionId(req, cred) {
 	)
 }
 
-async function getSignedJwt(req, q, id, cred, clientAuthResult, maxSessionAge, sessionsFile, email = '') {
+function getSessionIdFromJwt(jwt) {
+	// the last segment of the dot-separated jwt string is the signature,
+	// this hash can be used as a unique ID
+	return jwt.slice(-20)
+}
+
+// proteinpaint-issued JWT
+async function getSignedJwt(req, res, q, cred, clientAuthResult, maxSessionAge, email = '', sessions) {
 	if (!cred.secret) return
 	try {
 		const time = Date.now()
 		const iat = Math.floor(time / 1000)
 		const payload = {
 			dslabel: q.dslabel,
-			id,
 			iat,
 			time,
 			ip: req.ip,
+			// embedder pattern from dsCredential entry
 			embedder: q.embedder,
+			// route pattern from dsCredential entry
 			route: cred.route,
 			exp: iat + Math.floor(maxSessionAge / 1000),
-			email,
-			getSignedJwt
+			clientAuthResult,
+			email
 		}
 		if (cred.dsnames) payload.datasets = cred.dsnames.map(d => d.id)
 		const jwt = jsonwebtoken.sign(payload, cred.secret)
-		const clientAuthResultString = JSON.stringify(clientAuthResult || '{}')
-		await fs.appendFile(
-			sessionsFile,
-			[q.dslabel, id, time.email, req.ip, q.embedder, cred.route, clientAuthResultString].join('\t') + '\n'
-		)
+		const id = getSessionIdFromJwt(jwt)
+		const ip = req.ip // may use req.ips?
+		if (!sessions[q.dslabel]) sessions[q.dslabel] = {}
+		sessions[q.dslabel][id] = payload
+		if (!cred.cookieMode || cred.cookieMode == 'set-cookie') {
+			// For basic/password login that protects all routes (including /genomes),
+			// must use session cookie, since it's not practical for the client dofetch code
+			// to always add a header.authorization or other custom http header field to
+			// every request. Also, different cookie IDs are submitted all at once, so the
+			// auth middleware or active server route handler can pick which cookie/header to use.
+			// In contrast, credentials typically require selective custom header/bearer token data
+			// for the current requested data route that's being served, and it may not always
+			// be clear which specific session/token data to include in the client request.
+			//
+			// IMPORTANT: Session cookies only work when the proteinpaint server and client
+			// bundle are cohosted within the same embedder host/domain, otherwise CORS security
+			// will typically strip the 3rd-party PP cookie. TODO: Fix this if password-login
+			// is required for external embedders, otherwise just use jwt which already works.
+			//
+			res.header('Set-Cookie', `${cred.cookieId}=${id}; HttpOnly; SameSite=None; Secure`)
+		}
 		return jwt
 	} catch (e) {
 		throw e
@@ -728,8 +685,9 @@ async function getSignedJwt(req, q, id, cred, clientAuthResult, maxSessionAge, s
 
 // in a server farm, where the session state is not shared by all active PP servers,
 // the login details that is created by one server can be obtained from the JWT payload
-function mayAddSessionFromJwt(sessions, dslabel, id, req, cred) {
-	if (!req.headers?.authorization || (id && sessions[dslabel]?.[id])) return
+function mayAddSessionFromJwt(sessions, req, cred) {
+	const { dslabel, embedder } = req.query
+	if (!req.headers?.authorization) return
 	if (!cred.secret)
 		throw {
 			status: 'error',
@@ -739,110 +697,35 @@ function mayAddSessionFromJwt(sessions, dslabel, id, req, cred) {
 	const [type, b64token] = req.headers.authorization.split(' ')
 	if (type.toLowerCase() != 'bearer') throw `unsupported authorization type='${type}', allowed: 'Bearer'`
 	const token = Buffer.from(b64token, 'base64').toString()
+	const id = getSessionIdFromJwt(token)
 	try {
-		const payload = jsonwebtoken.verify(token, cred.secret)
-		if (!payload.datasets.includes(dslabel)) return
-		if (!payload.id) {
-			// payload.id is only set in PP-issued jwt, so if it's missing, it indicates the verified jwt is
-			// embedder-issued and should be okay to skip the payload id check, set it instead;
-			// jwt expiration should already have been checked by jsonwebtoken.verify() above
-			payload.id = Math.random().toString() + '.' + Date.now().toString().slice(4)
-		} else if (id && payload.id != id && req.headers?.['x-sjppds-sessionid'] != payload.id) {
-			// the request header custom key or cookie session ID should equal the signed payload.id in the header.authorization,
-			// otherwise an expired header.auth jwt may be reused even when a user has already logged out;
-			return
+		const payload = sessions[dslabel]?.[id] || jsonwebtoken.verify(token, cred.secret)
+		// signed payload dataset must match the requested dataset
+		if (payload.dslabel) {
+			if (payload.dslabel != dslabel) return
+		} else if (payload.datasets) {
+			if (!payload.datasets.includes(dslabel)) return
+		} else {
+			throw `jwt payload missing datasets[] and dslabel, must have one`
 		}
 		// do not overwrite existing tracking object for dslabel
 		if (!sessions[dslabel]) sessions[dslabel] = {}
-		//if (sessions[dslabel][payload.id]) throw `session conflict`
 		const path = req.path[0] == '/' && !cred.route.startsWith('/') ? req.path.slice(1) : req.path
-		if (isMatch(path, cred.route) || path == 'authorizedActions') {
-			sessions[dslabel][payload.id] = payload
-			return payload.id
+		// signed payload route must match the requested data route
+		if (
+			cred.route === '*' ||
+			isMatch(path, cred.route) ||
+			path == 'authorizedActions' ||
+			path.startsWith(cred.route + '/')
+		) {
+			if (!sessions[dslabel][id]) sessions[dslabel][id] = { ...payload, dslabel, embedder, route: cred.route }
+			return id
 		}
 	} catch (e) {
 		console.log(e)
 		// ok to not add a session from bearer jwt
 		return
 	}
-}
-
-/*
-	will return a sessions object that is used
-	for tracking sessions by [dslabel]{[id]: {id, time}}
-*/
-async function getSessions(creds, sessionsFile, maxSessionAge) {
-	const sessions = {}
-	for (const dslabel in creds) {
-		if (!sessions[dslabel]) sessions[dslabel] = {}
-	}
-
-	try {
-		const file = await fs.readFile(sessionsFile, 'utf8')
-		//rehydrate sessions from a cached file
-		const now = +new Date()
-		const latestSessionByDslabel = {}
-		for (const line of file.split('\n')) {
-			// expect json-encoded entries instead of tab-delimited values
-			if (!line || !line[0].startsWith('{')) continue
-			const session = JSON.parse(line)
-			session.time = Number(session.time)
-			const { dslabel, time } = session
-			if (!sessions[dslabel]) sessions[dslabel] = {}
-			if (now - time < maxSessionAge) {
-				if (!latestSessionByDslabel[dslabel] || latestSessionByDslabel[dslabel].time < time) {
-					latestSessionByDslabel[dslabel] = session
-				}
-			}
-		}
-		for (const [dslabel, session] of Object.entries(latestSessionByDslabel)) {
-			sessions[dslabel][session.id] = session
-		}
-		return sessions
-	} catch (e) {
-		// ok for the session backup to not exists, will be created later as needed
-		if (existsSync(sessionsFile)) console.log(e)
-		return sessions
-	}
-}
-
-async function setSession(q, res, sessions, sessionsFile, email, req, cred, clientAuthResult) {
-	const time = Date.now()
-	const id = Math.random().toString() + '.' + time.toString().slice(4)
-	const ip = req.ip // may use req.ips?
-	if (!sessions[q.dslabel]) sessions[q.dslabel] = {}
-	const session = await maySaveSession(
-		sessionsFile,
-		q.dslabel,
-		id,
-		time,
-		email,
-		ip,
-		q.embedder,
-		cred.route,
-		clientAuthResult
-	)
-	sessions[q.dslabel][id] = session //{ id, time, email, ip, embedder: q.embedder, route: cred.route, clientAuthResult }
-	if (!cred.cookieMode || cred.cookieMode == 'set-cookie') {
-		res.header('Set-Cookie', `${cred.cookieId}=${id}; HttpOnly; SameSite=None; Secure`)
-	}
-	return id
-}
-
-async function maySaveSession(sessionsFile, dslabel, id, time, email, ip, embedder, route, clientAuthResult) {
-	const session = {
-		dslabel,
-		id,
-		time,
-		email,
-		ip,
-		embedder,
-		route,
-		clientAuthResult
-	}
-	// !!! do not use or save sessions data from/to a file !!!
-	//if (sessionsFile) await fs.appendFile(sessionsFile, JSON.stringify(session) + '\n')
-	return session
 }
 
 /*

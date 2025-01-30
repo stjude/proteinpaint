@@ -16,7 +16,9 @@ export class TermdbVocab extends Vocab {
 			await this.maySetVerifiedToken(this.state.vocab.dslabel)
 		}
 
+		const headers = this.mayGetAuthHeaders('termdb')
 		const data = await dofetch3('termdb/config', {
+			headers,
 			body: {
 				genome: this.vocab.genome,
 				dslabel: this.vocab.dslabel,
@@ -1082,7 +1084,7 @@ export class TermdbVocab extends Vocab {
 	async getSamplesByName(opts) {
 		// the scatter plot may still render when not in session,
 		// but not have an option to list samples
-		const headers = this.mayGetAuthHeaders('termb')
+		const headers = this.mayGetAuthHeaders('termdb')
 
 		// dofetch* mayAdjustRequest() will automatically
 		// convert to GET query params or POST body, as needed

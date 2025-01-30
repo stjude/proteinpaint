@@ -377,7 +377,6 @@ tape(`mismatched ip address in /jwt-status`, async test => {
 				)
 			},
 			header(key, val) {
-				console.log(379, key, val)
 				test.equal(key, 'Set-Cookie', 'should clear session cookie on unsuccessful login')
 				test.true(val.toLowerCase().includes('max-age=0'), 'should cause a session cookie to expire')
 			},
