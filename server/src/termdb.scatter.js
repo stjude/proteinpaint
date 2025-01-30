@@ -296,7 +296,7 @@ async function colorAndShapeSamples(refSamples, cohortSamples, data, q) {
 					const bin = bins.find(bin => bin.label == category)
 					if (bin) value.color = bin.color
 					else {
-						value.color = scheme[i]
+						value.color = scheme[i - 1]
 						i--
 					}
 				} else if (!(q.colorTW.term.type == 'geneVariant' && q.colorTW.q.type == 'values')) {
