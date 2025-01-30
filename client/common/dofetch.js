@@ -426,30 +426,31 @@ async function defaultAuthUi(dslabel, auth) {
 	})
 }
 
+/*
+	setTokenByDsRoute() sets this storage item:
+
+	jwtByDsRoute = {
+		[dslabel]: { // the dataset that is being protected, should match one of the serverconfig.dsCredentials key
+			[route]:   // the route that is being protected, should match one of the serverconfig.dsCredentials[dslabel] key
+				"...jwt...string..." // ProteinPaint-issued jwt from a `/jwt-status` or `/dslogin` response, 
+				                     // which also includes dslabel and route to use as nested keys for this jwtByDsRoute
+		}
+	}
+	
+	Note that jwtByDsRoute does not have a nesting level of embedder, unlike serverconfig.dsCredentials, since
+	the embedder is detected directly from the winddow.location.hostname.
+
+	The stored token will be submitted as part of Vocab.mayGetAuthHeaders() or getSavedToken().
+*/
 export function setTokenByDsRoute(dslabel, route, jwt) {
 	if (!jwtByDsRoute[dslabel]) jwtByDsRoute[dslabel] = {}
 	jwtByDsRoute[dslabel][route] = jwt
 	localStorage.setItem('jwtByDsRoute', JSON.stringify(jwtByDsRoute))
 }
 
-// get jwt string directly if route argument is supplied,
-// or if not, return a getDatasetAccessToken() function;
-// this avoids other code from needing to know about jwtByDsRoute
-export function getTokenDefaults(dslabel, route = '') {
-	if (!jwtByDsRoute[dslabel]) jwtByDsRoute[dslabel] = {}
-	const jwtByRoute = jwtByDsRoute[dslabel]
-	// option to
-	if (route) return jwtByDsRoute[route]
-	return {
-		// may be used if auth is required and only if there is NO
-		// `getDatasetAccessToken()` argument to runproteinpaint();
-		// by design, login 'tokens' are replaced with PP
-		// server-generated jwt that has more suitable/reliable
-		// persistence to improve user experience
-		getDatasetAccessToken: route => {
-			return jwtByRoute[route]
-		}
-	}
+// get jwt string directly from localStorage/jwtByDsRoute tracking object
+export function getSavedToken(dslabel, route) {
+	return jwtByDsRoute[dslabel]?.[route]
 }
 
 function mayAddJwtToRequest(init, body, url) {
