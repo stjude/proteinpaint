@@ -444,7 +444,7 @@ export function getTokenDefaults(dslabel, route = '') {
 		// server-generated jwt that has more suitable/reliable
 		// persistence to improve user experience
 		getDatasetAccessToken: route => {
-			return this.jwtByRoute[route]
+			return jwtByRoute[route]
 		}
 	}
 }
