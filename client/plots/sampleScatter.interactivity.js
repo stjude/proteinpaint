@@ -501,14 +501,9 @@ export function setInteractivity(self) {
 
 	self.changeColor = async function (key, color) {
 		const tw = self.config.colorTW
-		if (!(tw.term.type == 'geneVariant' && tw.q.type == 'values') && tw.term.values[key])
-			tw.term.values[key].color = color
-		else {
-			if (!tw.term.values) tw.term.values = {}
-			if (!tw.term.values[key]) tw.term.values[key] = {}
-			tw.term.values[key].color = color
-		}
-
+		if (!tw.term.values) tw.term.values = {}
+		if (!tw.term.values[key]) tw.term.values[key] = {}
+		tw.term.values[key].color = color
 		await self.app.dispatch({
 			type: 'plot_edit',
 			id: self.id,
