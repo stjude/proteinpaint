@@ -1,4 +1,4 @@
-# Proteinpaint Client
+# ProteinPaint Client
 
 The client code for the ProteinPaint application
 
