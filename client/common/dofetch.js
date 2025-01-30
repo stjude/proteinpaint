@@ -407,7 +407,7 @@ async function defaultAuthUi(dslabel, auth) {
 					mask.remove()
 					dsAuthOk.add(auth)
 					if (res.jwt) {
-						setTokenByDsRoute(dslabel, route, res.jwt)
+						setTokenByDsRoute(dslabel, res.route, res.jwt)
 					}
 					resolve(dslabel)
 				})
