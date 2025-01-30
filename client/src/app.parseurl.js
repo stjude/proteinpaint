@@ -3,7 +3,7 @@ import * as client from './client'
 import { loadstudycohort } from './tp.init'
 import { string2pos } from './coord'
 import * as mdsjson from './app.mdsjson'
-import { getTokenDefaults } from '#common/dofetch'
+import { getSavedToken } from '#common/dofetch'
 import urlmap from '#common/urlmap'
 import { first_genetrack_tolist } from '#common/1stGenetk'
 import { corsMessage } from '#common/embedder-helpers'
@@ -224,8 +224,8 @@ upon error, throw err message as a string
 				fetchOpts.body.dslabel = dslabel
 				fetchOpts.body.route = route
 				fetchOpts.body.route = route
-				const jwt = getTokenDefaults(dslabel, route)
-				fetchOpts.headers.authorization = `Bearer ${btoa(jwt)}`
+				const jwt = getSavedToken(dslabel, route)
+				if (jwt) fetchOpts.headers.authorization = `Bearer ${btoa(jwt)}`
 			}
 			res = await client.dofetch3(`/massSession`, fetchOpts)
 			if (res.error) throw res.error
