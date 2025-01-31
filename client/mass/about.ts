@@ -240,6 +240,18 @@ export class MassAbout {
 		const rows: TableRow[] = []
 		const result = await this.app.vocabApi.getCohortsData()
 		if ('error' in result) throw result.error
+		if (this.selectCohort?.values) {
+			// selectCohort.values[] contains ordered set of cohorts
+			// ensure cohorts in cohorts table follow this order
+			const values = this.selectCohort.values
+			result.cohorts.sort((a, b) => {
+				const aIndex = values.findIndex(v => v.keys.toString() == a.cohort)
+				const bIndex = values.findIndex(v => v.keys.toString() == b.cohort)
+				if (aIndex < bIndex) return -1
+				if (aIndex > bIndex) return 1
+				return 0
+			})
+		}
 		if (!result.cfeatures.length) return
 		for (const feature of result.features) rows.push([{ value: feature.name }])
 		for (const cohort of result.cohorts) {
