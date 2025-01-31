@@ -787,7 +787,7 @@ class singleCellPlot {
 	}
 
 	getOpacity(d) {
-		if (this.config.hiddenClusters.includes(d.category)) return 0
+		if (this.config.hiddenClusters[d.category]) return 0
 		if (this.colorByGene && this.state.config.gene && !d.geneExp)
 			return this.settings.showNoExpCells ? this.settings.opacity : 0
 		return this.settings.opacity
@@ -878,14 +878,14 @@ class singleCellPlot {
 			.style('font-weight', 'bold')
 			.text(`${plot.colorBy}`)
 
-		const step = 20
+		const step = 25
 		let y = 50
 		let x = 0
 		const configPlot = this.state.config.plots.find(p => p.name == plot.name)
 		const aliases = configPlot.colorColumns.find(c => c.name == plot.colorBy)?.aliases
 		for (const cluster in colorMap) {
 			const clusterCells = plot.cells.filter(item => item.category == cluster)
-			const hidden = this.config.hiddenClusters.includes(cluster)
+			const hidden = this.config.hiddenClusters?.[cluster]
 			const n = clusterCells.length
 			const color = colorMap[cluster]
 			const itemG = plot.legendSVG.append('g').attr('transform', c => `translate(${x}, ${y})`)
@@ -906,23 +906,49 @@ class singleCellPlot {
 					} n=${n}`
 				)
 				.style('text-decoration', hidden ? 'line-through' : 'none')
-				.on('click', e => onCategoryClick(this, e, cluster, plot))
+				.on('click', e => this.showLegendItemMenu(e, cluster, plot))
 			y += step
 		}
+	}
 
-		function onCategoryClick(parent, e, cluster, plot) {
-			const itemG = e.target
-			const hidden = itemG.style['text-decoration'] == 'line-through'
-			itemG.style['text-decoration'] = hidden ? 'none' : 'line-through'
-			let hiddenClusters = parent.config.hiddenClusters
-			if (!hidden) hiddenClusters.push(cluster)
-			else hiddenClusters.splice(hiddenClusters.indexOf(cluster), 1)
-			parent.app.dispatch({
-				type: 'plot_edit',
-				id: parent.id,
-				config: { hiddenClusters }
+	hideCategory(key, hidden) {
+		this.app.dispatch({
+			type: 'plot_edit',
+			id: this.id,
+			config: { hiddenClusters: { [key]: hidden } }
+		})
+	}
+
+	showLegendItemMenu(e, key, plot) {
+		const hidden = this.state.config.hiddenClusters?.[key]
+		const menu = new Menu({ padding: '0px' })
+		const div = menu.d.append('div')
+		div
+			.append('div')
+			.attr('class', 'sja_menuoption sja_sharp_border')
+			.text(hidden ? 'Show' : 'Hide')
+			.on('click', () => {
+				this.hideCategory(key, !hidden, plot.legendSVG)
+				menu.hide()
 			})
-		}
+		div
+			.append('div')
+			.attr('class', 'sja_menuoption sja_sharp_border')
+			.text('Show only')
+			.on('click', () => {
+				for (const cluster in plot.colorMap) if (key != cluster) this.hideCategory(cluster, true, plot.legendSVG)
+				this.hideCategory(key, false, plot.legendSVG)
+				menu.hide()
+			})
+		div
+			.append('div')
+			.attr('class', 'sja_menuoption sja_sharp_border')
+			.text('Show all')
+			.on('click', () => {
+				menu.hide()
+				for (const mapKey in plot.colorMap) this.hideCategory(mapKey, false, plot.legendSVG)
+			})
+		menu.showunder(e.target)
 	}
 
 	renderColorGradient(plot) {
