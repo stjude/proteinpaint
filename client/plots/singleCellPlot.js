@@ -379,21 +379,21 @@ class singleCellPlot {
 	}
 
 	addZoomIcons(iconsDiv, plot) {
-		const zoomInDiv = iconsDiv.append('div').style('margin', '20px')
+		const zoomInDiv = iconsDiv.append('div').style('margin', '20px 0px')
 		icon_functions['zoomIn'](zoomInDiv, {
 			handler: () => {
 				plot.particles.position.z += 0.1
 			},
 			title: 'Zoom in. You can also zoom in moving the mouse wheel with the Ctrl key pressed.'
 		})
-		const zoomOutDiv = iconsDiv.append('div').style('margin', '20px')
+		const zoomOutDiv = iconsDiv.append('div').style('margin', '20px 0px')
 		icon_functions['zoomOut'](zoomOutDiv, {
 			handler: () => {
 				plot.particles.position.z -= 0.1
 			},
 			title: 'Zoom out. You can also zoom out moving the mouse wheel with the Ctrl key pressed.'
 		})
-		const identityDiv = iconsDiv.append('div').style('margin', '20px')
+		const identityDiv = iconsDiv.append('div').style('margin', '20px 0px')
 		icon_functions['restart'](identityDiv, {
 			handler: () => {
 				plot.particles.position.z = 0
@@ -405,7 +405,6 @@ class singleCellPlot {
 	}
 
 	async renderImage() {
-		this.dom.plotsDiv.selectAll('*').remove()
 		const sample = this.state.config.sample || this.samples[0].sample
 		const i = this.state.termdbConfig.queries.singleCell.images
 		const result = await dofetch3(`img?file=${i.folder}${i.folder.endsWith('/') ? '' : '/'}${sample}/${i.fileName}`)
@@ -576,7 +575,7 @@ class singleCellPlot {
 				this.state.config.activeTab == DIFFERENTIAL_EXPRESSION_TAB) &&
 			this.state.config.gene
 		)
-			inputs.push({
+			inputs.unshift({
 				label: 'Show not expressed',
 				boxLabel: '',
 				type: 'checkbox',
@@ -624,8 +623,9 @@ class singleCellPlot {
 			this.dom.loadingDiv.selectAll('*').remove()
 			this.dom.loadingDiv.style('display', '').append('div').attr('class', 'sjpp-spinner')
 			this.legendRendered = false
-			this.dom.loadingDiv.style('display', '').append('div').attr('class', 'sjpp-spinner')
+			this.dom.plotsDiv.selectAll('*').remove()
 			this.data = await this.getData()
+
 			if (this.data.error) throw this.data.error
 			this.dom.loadingDiv.style('display', 'none')
 			await this.renderPlots(this.data)
@@ -721,18 +721,28 @@ class singleCellPlot {
 		this.plots = []
 		if (result.nodata) return
 		for (const plot of result.plots) {
+			if (
+				this.state.config.activeTab == DIFFERENTIAL_EXPRESSION_TAB ||
+				(this.state.config.activeTab == GENE_EXPRESSION_TAB && this.state.config.gene && !plot.expCells.length)
+			)
+				continue
 			this.plots.push(plot)
 			const expCells = plot.expCells.sort((a, b) => a.geneExp - b.geneExp)
 			plot.cells = [...plot.noExpCells, ...expCells]
 			plot.id = plot.name.replace(/\s+/g, '')
 			this.renderPlot(plot)
 		}
+		if (this.plots.length == 0) this.dom.plotsDiv.append('div').text('No data to plot')
 	}
 
 	renderPlot(plot) {
 		if (!plot.plotDiv) {
 			const plotDiv = this.dom.plotsDiv.append('div').style('display', 'inline-block').style('vertical-align', 'top')
-			const leftDiv = plotDiv.append('div').style('display', 'inline-block').style('vertical-align', 'top')
+			const leftDiv = plotDiv
+				.append('div')
+				.style('display', 'inline-block')
+				.style('vertical-align', 'top')
+				.style('padding-top', '30px')
 			plot.plotDiv = plotDiv.append('div').style('display', 'inline-block')
 			this.addZoomIcons(leftDiv, plot)
 		}
@@ -834,6 +844,7 @@ class singleCellPlot {
 			const activeTab = this.tabs.find(tab => tab.active)
 			if (activeTab.id == PLOTS_TAB) {
 				const app = this.app
+				if (plot.colorColumns.length == 1) return
 				const plotColorByDiv = plot.headerDiv
 					.append('div')
 					.style('display', 'inline-block')
@@ -1391,8 +1402,8 @@ export async function getPlotConfig(opts, app) {
 
 export function getDefaultSingleCellSettings() {
 	return {
-		svgw: 1000,
-		svgh: 1000,
+		svgw: 600,
+		svgh: 600,
 		showGrid: true,
 		sampleSize: 1.5,
 		sampleSizeThree: 0.02,
