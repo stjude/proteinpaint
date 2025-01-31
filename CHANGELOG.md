@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.104.0
 
 Features:
 - scrna: allow to show extra properties in sample tab
