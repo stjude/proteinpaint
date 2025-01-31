@@ -183,6 +183,7 @@ fn main() {
                         rank_type.to_string(),
                         min_count,
                         min_total_count,
+                        false, // Setting log_transformation to false for now for hierarchial clustering
                     );
                     //println!("gene_infos:{:?}", gene_infos);
 

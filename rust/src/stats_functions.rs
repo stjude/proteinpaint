@@ -432,13 +432,14 @@ pub struct GeneInfo {
 
 #[allow(dead_code)]
 pub fn calculate_variance(
-    input_matrix: Matrix<f64, Dyn, Dyn, VecStorage<f64, Dyn, Dyn>>,
+    mut input_matrix: Matrix<f64, Dyn, Dyn, VecStorage<f64, Dyn, Dyn>>,
     gene_symbols: Vec<String>,
     mut min_sample_size: f64,
     filter_extreme_values: bool,
     rank_type: String,
     min_count_option: Option<f64>,
     min_total_count_option: Option<f64>,
+    log_transform: bool,
 ) -> Vec<GeneInfo> {
     let mut min_count: f64 = 10.0;
     match min_count_option {
@@ -463,6 +464,10 @@ pub fn calculate_variance(
         min_sample_size = LARGE_N + (min_sample_size - LARGE_N) * MIN_PROP;
     }
 
+    if log_transform == true {
+        // When this true the raw data is log transformed
+        input_matrix = input_matrix.map(|x| x.ln());
+    }
     let mut lib_sizes = Vec::<f64>::new();
     let lib_sizes_vector = input_matrix.row_sum();
     //println!("lib_sizes_vector:{:?}", lib_sizes_vector);
