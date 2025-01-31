@@ -1,2 +1,1 @@
-Fixes:
-- address section 508 issues in single cell plot, mostly to label control inputs
+

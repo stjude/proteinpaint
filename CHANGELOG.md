@@ -8,6 +8,9 @@ Features:
 - scrna: allow to show extra properties in sample tab
 - support fusion text file with missing coordinates or geneB
 
+Fixes:
+- address section 508 issues in single cell plot, mostly to label control inputs
+
 
 ## 2.103.0
 
