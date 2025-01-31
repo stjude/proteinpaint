@@ -593,7 +593,7 @@ class singleCellPlot {
 					settingsKey: 'contourThresholds',
 					title: 'Dot size',
 					min: 5,
-					max: 50,
+					max: 30,
 					step: 5
 				}
 			)
