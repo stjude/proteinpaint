@@ -383,10 +383,18 @@ export function setInteractivity(self) {
 		await _.default(arg)
 	}
 
-	self.onLegendClick = function (chart, legendG, name, key, e, category) {
+	self.onLegendClick = function (chart, name, key, e, category) {
 		const tw = self.config[name]
 		const isColorTW = name == 'colorTW'
 		const hidden = tw.q.hiddenValues ? key in tw.q.hiddenValues : false
+		const hiddenCount = tw.q.hiddenValues ? Object.keys(tw.q.hiddenValues).length : 0
+
+		if (hidden && hiddenCount == 1) {
+			//show hidden category and skip menu
+			this.hideCategory(tw, key, false)
+			dispatchConfig()
+			return
+		}
 		const menu = new Menu({ padding: '0px' })
 		const div = menu.d.append('div')
 		div
@@ -394,15 +402,9 @@ export function setInteractivity(self) {
 			.attr('class', 'sja_menuoption sja_sharp_border')
 			.text(hidden ? 'Show' : 'Hide')
 			.on('click', () => {
-				self.hideCategory(legendG, tw, key, !hidden)
+				self.hideCategory(tw, key, !hidden)
 				menu.hide()
-				const config = {}
-				config[name] = tw
-				self.app.dispatch({
-					type: 'plot_edit',
-					id: self.id,
-					config
-				})
+				dispatchConfig()
 			})
 		div
 			.append('div')
@@ -412,37 +414,25 @@ export function setInteractivity(self) {
 				const map = name == 'colorTW' ? chart.colorLegend : chart.shapeLegend
 				for (const mapKey of map.keys())
 					self.hideCategory(
-						legendG,
 						tw,
 						mapKey,
 						tw.term.type == 'geneVariant' && tw.q.type == 'values' ? !mapKey.startsWith(key) : mapKey != key
 					)
 
 				menu.hide()
-				const config = {}
-				config[name] = tw
-				self.app.dispatch({
-					type: 'plot_edit',
-					id: self.id,
-					config
-				})
+				dispatchConfig()
 			})
-		div
-			.append('div')
-			.attr('class', 'sja_menuoption sja_sharp_border')
-			.text('Show all')
-			.on('click', () => {
-				menu.hide()
-				const map = isColorTW ? chart.colorLegend : chart.shapeLegend
-				for (const mapKey of map.keys()) self.hideCategory(legendG, tw, mapKey, false)
-				const config = {}
-				config[name] = tw
-				self.app.dispatch({
-					type: 'plot_edit',
-					id: self.id,
-					config
+		if (hiddenCount > 1)
+			div
+				.append('div')
+				.attr('class', 'sja_menuoption sja_sharp_border')
+				.text('Show all')
+				.on('click', () => {
+					menu.hide()
+					const map = isColorTW ? chart.colorLegend : chart.shapeLegend
+					for (const mapKey of map.keys()) self.hideCategory(tw, mapKey, false)
+					dispatchConfig()
 				})
-			})
 		if (isColorTW) {
 			const color = rgb(category.color).formatHex()
 			const input = div
@@ -473,10 +463,27 @@ export function setInteractivity(self) {
 					shapeSelector(div, callback)
 				})
 		}
+
+		function dispatchConfig() {
+			self.app.dispatch({
+				type: 'plot_edit',
+				id: self.id,
+				config: { [name]: tw }
+			})
+		}
 		menu.showunder(e.target)
 	}
 
-	self.hideCategory = function (legendG, tw, key, hide) {
+	self.hideCategory = function (tw, key, hide) {
+		if (!tw.q) tw.q = {}
+		if (!tw.q.hiddenValues) tw.q.hiddenValues = {}
+		const value =
+			!(tw.term.type == 'geneVariant' && tw.q.type == 'values') && tw.term.values[key]
+				? tw.term.values[key]
+				: { key: key, label: key }
+
+		if (!hide) delete tw.q.hiddenValues[key]
+		else tw.q.hiddenValues[key] = value
 		if (key == 'Ref') {
 			self.settings.showRef = !hide
 			self.app.dispatch({
@@ -487,16 +494,6 @@ export function setInteractivity(self) {
 				}
 			})
 		}
-		if (!tw.q.hiddenValues) tw.q.hiddenValues = {}
-		const value =
-			!(tw.term.type == 'geneVariant' && tw.q.type == 'values') && tw.term.values[key]
-				? tw.term.values[key]
-				: { key: key, label: key }
-		const items = legendG.selectAll(`text[name="sjpp-scatter-legend-label"]`).nodes()
-		const itemG = items.find(item => key.startsWith(item.innerHTML))?.parentElement
-		if (itemG) itemG.style['text-decoration'] = hide ? 'line-through' : 'none'
-		if (!hide) delete tw.q.hiddenValues[key]
-		else tw.q.hiddenValues[key] = value
 	}
 
 	self.changeColor = async function (key, color) {

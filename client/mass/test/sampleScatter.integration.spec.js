@@ -492,7 +492,7 @@ tape('Test legend', function (test) {
 			count: expectedNum,
 			trigger: () => {
 				const chart = scatter.Inner.charts[0]
-				scatter.Inner.hideCategory(chart.legendG, scatter.Inner.config.colorTW, key, true)
+				scatter.Inner.hideCategory(scatter.Inner.config.colorTW, key, true)
 				scatter.Inner.app.dispatch({
 					type: 'plot_edit',
 					id: scatter.Inner.id,
