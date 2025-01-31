@@ -533,11 +533,14 @@ function setDropdownInput(opts) {
 }
 
 function setCheckboxInput(opts) {
+	const id = getElemId(opts.instanceNum)
+
 	const self = {
 		dom: {
 			row: opts.holder.style('display', 'table-row'),
 			labelTdb: opts.holder
 				.append('td')
+				.attr('id', id)
 				.attr('aria-label', opts.title)
 				.html(opts.label)
 				.attr('class', 'sja-termdb-config-row-label'),
@@ -548,12 +551,13 @@ function setCheckboxInput(opts) {
 		}
 	}
 
-	const label = self.dom.inputTd.append('label')
+	const label = self.dom.inputTd.append(opts.boxLabel ? 'label' : 'span')
 
 	self.dom.input = label
 		.append('input')
-		.attr('data-testid', opts.testid)
 		.attr('type', 'checkbox')
+		.attr('aria-labelledBy', opts.boxLabel ? undefined : id)
+		.attr('data-testid', opts.testid)
 		.on('change', () => {
 			const value = self.dom.input.property('checked')
 			if (opts.callback) opts.callback(value)

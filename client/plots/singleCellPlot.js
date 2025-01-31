@@ -510,6 +510,7 @@ class singleCellPlot {
 		const inputs = [
 			{
 				label: 'Chart width',
+				title: 'Chart width',
 				type: 'number',
 				chartType: 'singleCellPlot',
 				settingsKey: 'svgw',
@@ -518,6 +519,7 @@ class singleCellPlot {
 			},
 			{
 				label: 'Chart height',
+				title: 'Chart height',
 				type: 'number',
 				chartType: 'singleCellPlot',
 				settingsKey: 'svgh',
@@ -836,8 +838,9 @@ class singleCellPlot {
 					.append('div')
 					.style('display', 'inline-block')
 					.style('padding-bottom', '20px')
-				plotColorByDiv.append('label').text('Color by:').style('margin-right', '5px')
-				const colorBySelect = plotColorByDiv.append('select')
+				const label = plotColorByDiv.append('label')
+				label.append('span').text('Color by:').style('margin-right', '5px')
+				const colorBySelect = label.append('select')
 				this.plotColorByDivs.push(plotColorByDiv)
 				colorBySelect
 					.selectAll('option')

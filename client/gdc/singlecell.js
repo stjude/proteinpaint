@@ -70,6 +70,7 @@ export async function init(arg, holder, genomes) {
 	})
 	const api = {
 		update: async updateArg => {
+			if (!plotAppApi) return
 			if ('filter0' in updateArg) {
 				// the table and plots will need to be updated
 				//holder.selectAll('*').remove()
@@ -89,7 +90,6 @@ export async function init(arg, holder, genomes) {
 					]
 				})
 			} else {
-				console.log(75, plotAppApi)
 				// the plots may change, but the table should not change
 				plotAppApi.dispatch({
 					type: 'plot_edit',
