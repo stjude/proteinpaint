@@ -44,14 +44,13 @@ class singleCellPlot {
 	}
 
 	async init(appState) {
-		// generate sample table in init but not main is because sample table is constant and no need to update it on dispatch
+		// generate sample table in init() but not main() is because sample table is constant and no need to update it on dispatch
 		// TODO sample table still needs to be changed when gdc (external portal) cohort changes
 
 		const state = this.getState(appState)
 
 		const body = { genome: state.genome, dslabel: state.dslabel, filter0: state.termfilter.filter0 || null }
 		const result = await dofetch3('termdb/singlecellSamples', { body })
-		console.log(result.samples)
 		if (result.error) throw result.error
 
 		this.samples = result.samples
