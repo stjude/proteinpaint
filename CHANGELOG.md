@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- Comprehensive test suite for maxLabelWidth.ts
+
 
 ## 2.104.0
 

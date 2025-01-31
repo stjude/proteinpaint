@@ -1,2 +1,1 @@
-Features:
-- Comprehensive test suite for maxLabelWidth.ts
+
