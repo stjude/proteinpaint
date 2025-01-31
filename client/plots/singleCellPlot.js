@@ -114,7 +114,11 @@ class singleCellPlot {
 		const leftDiv = mainDiv.append('div').style('display', 'inline-block').style('vertical-align', 'top')
 		const controlsDiv = leftDiv.append('div').attr('class', 'pp-termdb-plot-controls')
 
-		const contentDiv = mainDiv.append('div').style('display', 'inline-block').style('vertical-align', 'top')
+		const contentDiv = mainDiv
+			.append('div')
+			.style('display', 'inline-block')
+			.style('vertical-align', 'top')
+			.style('padding-top', '10px')
 		this.tabsComp = await new Tabs({
 			holder: contentDiv,
 			tabsPosition: 'horizontal',
@@ -592,8 +596,28 @@ class singleCellPlot {
 			})
 		}
 		this.components.controls.on('downloadClick.singleCellPlot', () => {
-			for (const plot of this.plots) downloadSingleSVG(plot.svg, 'plot.svg', this.opts.holder.node())
+			for (const plot of this.plots) this.downloadPlot(plot)
 		})
+	}
+
+	downloadPlot(plot) {
+		downloadSingleSVG(plot.legendSVG, 'legend.svg', this.opts.holder.node())
+		const downloadImgName = plot.name
+		const a = document.createElement('a')
+		document.body.appendChild(a)
+		const dataURL = plot.canvas.toDataURL()
+
+		a.addEventListener(
+			'click',
+			() => {
+				// Download the image
+				a.download = downloadImgName + '.png'
+				a.href = dataURL
+				document.body.removeChild(a)
+			},
+			false
+		)
+		a.click()
 	}
 
 	getState(appState) {
@@ -876,8 +900,7 @@ class singleCellPlot {
 				.attr('width', 250)
 				.attr('height', Math.max(this.settings.svgh, clustersHeight))
 				.style('vertical-align', 'top')
-				.append('g')
-				.attr('transform', 'translate(20, 0)')
+
 			plot.legendSVG = legendSVG
 		}
 		legendSVG.selectAll('*').remove()
@@ -892,16 +915,16 @@ class singleCellPlot {
 			this.renderColorGradient(plot)
 			return
 		}
+		let x = 20
 
 		plot.legendSVG
 			.append('text')
-			.attr('transform', `translate(${0}, ${25})`)
+			.attr('transform', `translate(${x}, ${25})`)
 			.style('font-weight', 'bold')
 			.text(`${plot.colorBy}`)
 
 		const step = 25
 		let y = 50
-		let x = 0
 		const configPlot = this.state.config.plots.find(p => p.name == plot.name)
 		const aliases = configPlot.colorColumns.find(c => c.name == plot.colorBy)?.aliases
 		for (const cluster in colorMap) {
@@ -913,7 +936,7 @@ class singleCellPlot {
 			itemG.append('circle').attr('r', 5).attr('fill', color)
 			itemG
 				.append('g')
-				.attr('transform', `translate(${x + 10}, ${5})`)
+				.attr('transform', `translate(${x}, ${5})`)
 				.append('text')
 				.text(
 					`${
@@ -1093,7 +1116,6 @@ class singleCellPlot {
 	async renderSamplesTable(div, state) {
 		// need to do this after the this.samples has been set
 		if (this.samples.length == 0) {
-			this.dom.plotsDiv.selectAll('*').remove()
 			this.showNoMatchingDataMessage()
 
 			return
