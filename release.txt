@@ -1,5 +1,6 @@
 Features
-- Single Cell: Added legend menu upon click. Showed active sample on tab instead of moving samples table above. 
-This table moves the plot further down, better to keep it in a tab. Hided color by choice if only one. Clusters tab
+- Single Cell: Added legend menu upon click. Showed active sample on tab instead of moving samples table above  
+Hided color by choice if only one. Clusters tab
 removed and color by hidden for GDC, as it only choice if one can color by more than one category.
-Showed message if no expression found, instead of gray plot. Reduced plot size which reduces space with violin 
+Showed message if no expression found, instead of gray plot. Reduced plot size which reduces space with violin.
+On download click download plot and legend. Fixed legend clipping
