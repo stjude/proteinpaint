@@ -189,7 +189,7 @@ function onesearchui(block, div) {
 				const tr = tktable.append('tr')
 				//tr.append('td').style('font-size','.7em').text(cold.assayname || 'n/a')
 				//tr.append('td').style('font-size','.7em').text(cold.type)
-				const td1 = tr.append('td').style('color', '#aaa').style('font-size', '.7em')
+				const td1 = tr.append('td').style('color', '#555').style('font-size', '.7em')
 				if (hot) {
 					td1.text('SHOWN')
 				}
@@ -246,7 +246,7 @@ function hardlist4block(block, div) {
 	for (const tk of block.tklst) {
 		const tr = hardtable.append('tr')
 		const td1 = tr.append('td')
-		td1.text('SHOWN').style('color', '#aaa').style('font-size', '.7em')
+		td1.text('SHOWN').style('color', '#555').style('font-size', '.7em')
 
 		const handle = tr.append('td').text(tkhtmllabel(tk, block))
 
@@ -1259,7 +1259,7 @@ function facetmake(block, tkset, flet) {
 				const table = tip.d.append('table')
 				for (const t of tklst) {
 					const tr = table.append('tr')
-					const td1 = tr.append('td').style('color', '#858585').style('font-size', '.7em')
+					const td1 = tr.append('td').style('color', '#555').style('font-size', '.7em')
 					if (findtkbytkid(block, t.tkid)) {
 						td1.text('SHOWN')
 					}

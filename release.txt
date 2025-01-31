@@ -1,1 +1,2 @@
-
+Fixes:
+- address contrast issues in lollipop sample list table and tracks/more menus
