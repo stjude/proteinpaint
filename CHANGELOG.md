@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 Features:
 - scrna: allow to show extra properties in sample tab
 - support fusion text file with missing coordinates or geneB
+- Single Cell: Added legend menu upon click. Showed active sample on tab instead of moving samples table above
 
 Fixes:
 - address section 508 issues in single cell plot, mostly to label control inputs
