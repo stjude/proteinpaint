@@ -729,7 +729,7 @@ export function getDefaultScatterSettings() {
 		//3D Plot settings
 		showContour: false,
 		colorContours: false,
-		contourBandwidth: 20,
+		contourBandwidth: 30,
 		contourThresholds: 10
 	}
 }
