@@ -107,7 +107,10 @@ export function newSandboxDiv(sandbox_holder: Elem, opts: Partial<NewSandboxOpts
 		})
 
 	// placeholder for collapse btn
-	const collapseBtnDiv = header_row.append('div').classed('sjpp-output-sandbox-collapse-btn', true)
+	const collapseBtnDiv = header_row
+		.append('div')
+		.attr('title', 'Click to collapse or expand this chart sandbox')
+		.classed('sjpp-output-sandbox-collapse-btn', true)
 	// .classed('sja_menuoption', true)
 	//.style('vertical-align', 'middle')
 
