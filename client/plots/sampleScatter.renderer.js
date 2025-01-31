@@ -1295,6 +1295,7 @@ export function renderContours(contourG, data, width, height, colorContours) {
 		.y(s => s.y)
 		.weight(s => s.z)
 		.size([width, height])
+		.cellSize(2)
 		.bandwidth(30)
 		.thresholds(30)(data)
 
