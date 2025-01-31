@@ -1,2 +1,1 @@
-Features:
-- support fusion text file with missing coordinates or geneB
+

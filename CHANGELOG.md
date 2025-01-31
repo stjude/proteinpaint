@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 Features:
 - scrna: allow to show extra properties in sample tab
+- support fusion text file with missing coordinates or geneB
 
 
 ## 2.103.0
