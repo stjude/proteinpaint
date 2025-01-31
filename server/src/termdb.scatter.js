@@ -40,58 +40,7 @@ export async function mayInitiateScatterplots(ds) {
 	for (const p of ds.cohort.scatterplots.plots) {
 		if (!p.name) throw '.name missing from one of scatterplots.plots[]'
 		if (p.file) {
-			const lines = (await read_file(path.join(serverconfig.tpmasterdir, p.file))).trim().split('\n')
-			const xColumn = p.coordsColumns?.x || 1
-			const yColumn = p.coordsColumns?.y || 2
-			const headerFields = lines[0].split('\t')
-
-			p.filterableSamples = [] // array to keep filterable samples
-			p.referenceSamples = [] // optional array to keep reference samples
-
-			let invalidXY = 0,
-				sampleCount = 0
-			for (let i = 1; i < lines.length; i++) {
-				const l = lines[i].trim().split('\t')
-				// sampleName \t x \t y ...
-
-				const x = Number(l[xColumn]),
-					y = Number(l[yColumn])
-				if (Number.isNaN(x) || Number.isNaN(y)) {
-					invalidXY++
-					continue
-				}
-				const sample = { sample: l[0], x, y }
-				if (p.colorColumn) {
-					sample.sampleId = l[0]
-					sample.category = l[p.colorColumn.index]
-					sample.shape = 'Ref'
-					sample.z = 0
-				}
-				const id = ds.cohort.termdb.q.sampleName2id(l[0])
-				if (id == undefined) {
-					// no integer sample id found, this is a reference sample
-					// for rest of columns starting from 4th, attach as key/value pairs to the sample object for showing on client
-					if (headerFields[3]) {
-						sample.info = {}
-						for (let j = 3; j < headerFields.length; j++) {
-							sample.info[headerFields[j]] = l[j]
-						}
-					}
-					p.referenceSamples.push(sample)
-				} else {
-					// sample id can be undefined, e.g. reference samples
-					sampleCount++
-					sample.sampleId = id
-					p.filterableSamples.push(sample)
-				}
-			}
-
-			console.log(
-				p.filterableSamples.length,
-				`scatterplot lines from ${p.name} of ${ds.label},`,
-				p.referenceSamples ? p.referenceSamples.length + ' reference cases' : '',
-				invalidXY ? invalidXY + ' lines with invalid X/Y values' : ''
-			)
+			// file is potentially big and can slow down server launch. only load it the first time the plot is accessed
 		} else {
 			throw 'unknown data source of one of scatterplots.plots[]'
 		}
@@ -152,10 +101,10 @@ export async function trigger_getSampleScatter(req, q, res, ds, genome) {
 			const plot = ds.cohort.scatterplots.plots.find(p => p.name == q.plotName)
 			if (!plot) throw `plot not found with plotName ${q.plotName}`
 
-			const result = await getSamples(req, ds, plot)
+			const tmp = await getSamples(req, ds, plot)
+			refSamples = tmp[0]
+			cohortSamples = tmp[1]
 
-			refSamples = result[0]
-			cohortSamples = result[1]
 			if (q.colorColumn) {
 				//Samples are marked as ref as they dont have a db mapping, but they are not necessarily ref samples
 				let categories = new Set(refSamples.map(s => s.category))
@@ -187,18 +136,13 @@ export async function trigger_getSampleScatter(req, q, res, ds, genome) {
 }
 
 async function getSamples(req, ds, plot) {
-	if (plot.gdcapi) throw 'gdcapi not implemented yet'
+	if (!plot.filterableSamples) await loadFile(plot, ds) // this is the first time the plot is accessed. load the data in mem
 
-	// must make in-memory duplication of the objects as they will be modified by assigning .color/shape
-	let samples = [],
-		refSamples = []
-	if (plot.filterableSamples) samples = readSamples(plot.filterableSamples)
-	if (plot.referenceSamples) refSamples = readSamples(plot.referenceSamples)
-
-	return [refSamples, samples]
+	return [readSamples(plot.referenceSamples), readSamples(plot.filterableSamples)]
 
 	function readSamples(samples) {
 		const result = []
+		// must make in-memory duplication of the objects as they will be modified by assigning .color/shape
 		for (const i of JSON.parse(JSON.stringify(samples))) {
 			//When reading from a file coordinates can be displayed
 			//if (!authApi.canDisplaySampleIds(req, ds)) delete i.sample
@@ -334,7 +278,8 @@ async function colorAndShapeSamples(refSamples, cohortSamples, data, q) {
 function hasValue(dbSample, tw) {
 	const key = dbSample?.[tw?.$id]?.key
 	const hasKey = key !== undefined
-	if (!hasKey) console.log(JSON.stringify(dbSample) + ' missing value for the term ' + JSON.stringify(tw))
+	// a sample is allowed to be missing value for a term. no need to log out
+	//if (!hasKey) console.log(JSON.stringify(dbSample) + ' missing value for the term ' + JSON.stringify(tw))
 	return hasKey
 }
 
@@ -487,4 +432,61 @@ export async function trigger_getLowessCurve(req, q, res) {
 	const lowessCurve = []
 	for (const [i, x] of Object.entries(result.x)) lowessCurve.push([x, result.y[i]])
 	return res.send(lowessCurve)
+}
+
+// load a file for a plot
+async function loadFile(p, ds) {
+	const lines = (await read_file(path.join(serverconfig.tpmasterdir, p.file))).trim().split('\n')
+	const xColumn = p.coordsColumns?.x || 1
+	const yColumn = p.coordsColumns?.y || 2
+	const headerFields = lines[0].split('\t')
+
+	p.filterableSamples = [] // array to keep filterable samples
+	p.referenceSamples = [] // optional array to keep reference samples
+
+	let invalidXY = 0
+	for (let i = 1; i < lines.length; i++) {
+		const l = lines[i].trim().split('\t')
+		// sampleName \t x \t y ...
+
+		const x = Number(l[xColumn]),
+			y = Number(l[yColumn])
+		if (Number.isNaN(x) || Number.isNaN(y)) {
+			invalidXY++
+			continue
+		}
+		const sample = { sample: l[0], x, y }
+		if (p.colorColumn) {
+			sample.sampleId = l[0]
+			sample.category = l[p.colorColumn.index]
+			sample.shape = 'Ref'
+			sample.z = 0
+		}
+		const id = ds.cohort.termdb.q.sampleName2id(l[0])
+		if (id == undefined) {
+			// no integer sample id found, this is a reference sample
+			// for rest of columns starting from 4th, attach as key/value pairs to the sample object for showing on client
+			if (headerFields[3]) {
+				sample.info = {}
+				for (let j = 3; j < headerFields.length; j++) {
+					sample.info[headerFields[j]] = l[j]
+				}
+			}
+			p.referenceSamples.push(sample)
+		} else {
+			// sample id can be undefined, e.g. reference samples
+			sample.sampleId = id
+			p.filterableSamples.push(sample)
+		}
+	}
+
+	console.log(
+		p.name + ' (prebuilt scatter):',
+		p.filterableSamples.length,
+		'lines,',
+		p.referenceSamples.length,
+		'reference cases,',
+		invalidXY,
+		'lines with invalid X/Y values'
+	)
 }
