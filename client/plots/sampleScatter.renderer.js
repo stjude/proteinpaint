@@ -915,8 +915,8 @@ export function setRenderers(self) {
 						const hidden = self.config.colorTW?.q.hiddenValues ? key in self.config.colorTW.q.hiddenValues : false
 						const [circleG, itemG] = addLegendItem(colorG, category, name, key, offsetX, offsetY, hidden)
 						if (!self.config.colorColumn) {
-							circleG.on('click', e => self.onLegendClick(chart, legendG, 'colorTW', key, e, category))
-							itemG.on('click', event => self.onLegendClick(chart, legendG, 'colorTW', key, event, category))
+							circleG.on('click', e => self.onLegendClick(chart, 'colorTW', key, e, category))
+							itemG.on('click', event => self.onLegendClick(chart, 'colorTW', key, event, category))
 						}
 						offsetY += step
 					}
@@ -937,7 +937,7 @@ export function setRenderers(self) {
 					.attr('d', shapes[0])
 					.style('stroke', rgb(colorRefCategory.color).darker())
 
-				refColorG.on('click', e => self.onLegendClick(chart, legendG, 'colorTW', 'Ref', e, colorRefCategory))
+				refColorG.on('click', e => self.onLegendClick(chart, 'colorTW', 'Ref', e, colorRefCategory))
 				const refText = legendG
 					.append('g')
 					.append('text')
@@ -947,7 +947,7 @@ export function setRenderers(self) {
 					.style('text-decoration', !self.settings.showRef ? 'line-through' : 'none')
 					.attr('alignment-baseline', 'middle')
 
-				refText.on('click', e => self.onLegendClick(chart, legendG, 'colorTW', 'Ref', e, colorRefCategory))
+				refText.on('click', e => self.onLegendClick(chart, 'colorTW', 'Ref', e, colorRefCategory))
 			}
 			legendHeight = offsetY
 		}
@@ -989,7 +989,7 @@ export function setRenderers(self) {
 						.style('text-decoration', hidden ? 'line-through' : 'none')
 						.attr('alignment-baseline', 'middle')
 					offsetY += step
-					itemG.on('click', event => self.onLegendClick(chart, legendG, 'shapeTW', key, event, shape))
+					itemG.on('click', event => self.onLegendClick(chart, 'shapeTW', key, event, shape))
 				}
 			}
 			if (offsetY > legendHeight) legendHeight = offsetY
@@ -1014,8 +1014,7 @@ export function setRenderers(self) {
 				.attr('transform', `translate(${x - 2}, ${y - 5}) scale(0.7)`)
 				.style('fill', category.color)
 				.style('stroke', rgb(category.color).darker())
-			if (!self.config.colorColumn)
-				circleG.on('click', e => self.onLegendClick(chart, legendG, 'colorTW', key, e, category))
+			if (!self.config.colorColumn) circleG.on('click', e => self.onLegendClick(chart, 'colorTW', key, e, category))
 			const itemG = g.append('g')
 			itemG
 				.append('text')
@@ -1250,7 +1249,7 @@ export function setRenderers(self) {
 						.style('pointer-events', 'bounding-box')
 						.attr('d', shapes[index])
 						.style('stroke', rgb('gray').darker())
-					itemG.on('click', e => self.onLegendClick(chart, legendG, 'shapeTW', key, e, category))
+					itemG.on('click', e => self.onLegendClick(chart, 'shapeTW', key, e, category))
 				} else {
 					itemG
 						.append('path')
@@ -1258,7 +1257,7 @@ export function setRenderers(self) {
 						.attr('transform', `translate(${-2}, ${offsetY - 8}) scale(0.8)`)
 						.style('fill', category.color)
 						.style('stroke', rgb(category.color).darker())
-					itemG.on('click', e => self.onLegendClick(chart, legendG, 'colorTW', key, e, category))
+					itemG.on('click', e => self.onLegendClick(chart, 'colorTW', key, e, category))
 				}
 				const hidden = tw.q.hiddenValues ? key in tw.q.hiddenValues : false
 
@@ -1270,7 +1269,7 @@ export function setRenderers(self) {
 					.style('text-decoration', hidden ? 'line-through' : 'none')
 					.text(mkey.toUpperCase() + (key.includes(dtlabel) ? `, n=${category.sampleCount}` : ''))
 					.on('click', event =>
-						self.onLegendClick(chart, G, cname == 'shape' ? 'shapeTW' : 'colorTW', key, event, category)
+						self.onLegendClick(chart, cname == 'shape' ? 'shapeTW' : 'colorTW', key, event, category)
 					)
 
 				offsetY += 25
