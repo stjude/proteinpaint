@@ -338,7 +338,15 @@ export function setRenderers(self) {
 		const data = chart.data.samples.map(s => {
 			return { x: chart.xAxisScale(s.x), y: chart.yAxisScale(s.y), z: zAxisScale ? zAxisScale(s.category) : 1 }
 		})
-		renderContours(contourG, data, self.settings.svgw, self.settings.svgh, self.settings.colorContours)
+		renderContours(
+			contourG,
+			data,
+			self.settings.svgw,
+			self.settings.svgh,
+			self.settings.colorContours,
+			self.settings.contourBandwidth,
+			self.settings.contourThresholds
+		)
 	}
 
 	self.getStrokeWidth = function (c) {
@@ -1280,7 +1288,7 @@ export function setRenderers(self) {
 	}
 }
 
-export function renderContours(contourG, data, width, height, colorContours) {
+export function renderContours(contourG, data, width, height, colorContours, bandwidth, thresholds) {
 	// Create the horizontal and vertical scales.
 	const x = d3Linear()
 		.domain(extent(data, s => s.x))
@@ -1295,8 +1303,9 @@ export function renderContours(contourG, data, width, height, colorContours) {
 		.y(s => s.y)
 		.weight(s => s.z)
 		.size([width, height])
-		.bandwidth(30)
-		.thresholds(30)(data)
+		.cellSize(2)
+		.bandwidth(bandwidth)
+		.thresholds(thresholds)(data)
 
 	const colorScale = scaleSequential()
 		.domain([0, max(contours, d => d.value)])

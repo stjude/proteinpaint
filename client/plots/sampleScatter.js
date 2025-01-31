@@ -336,13 +336,35 @@ class Scatter {
 			}
 		]
 		if (this.settings.showContour)
-			inputs.push({
-				label: 'Color contours',
-				boxLabel: '',
-				type: 'checkbox',
-				chartType: 'sampleScatter',
-				settingsKey: 'colorContours'
-			})
+			inputs.push(
+				{
+					label: 'Color contours',
+					boxLabel: '',
+					type: 'checkbox',
+					chartType: 'sampleScatter',
+					settingsKey: 'colorContours'
+				},
+				{
+					label: 'Contour bandwidth',
+					type: 'number',
+					chartType: 'sampleScatter',
+					settingsKey: 'contourBandwidth',
+					title: 'Reduce to increase resolution. ',
+					min: 5,
+					max: 50,
+					step: 5
+				},
+				{
+					label: 'Contour thresholds',
+					type: 'number',
+					chartType: 'sampleScatter',
+					settingsKey: 'contourThresholds',
+					title: 'Dot size',
+					min: 5,
+					max: 50,
+					step: 5
+				}
+			)
 		if (this.config.sampleCategory) {
 			const options = Object.values(this.config.sampleCategory.tw.term.values).map(v => ({
 				label: v.label || v.key,
@@ -706,7 +728,9 @@ export function getDefaultScatterSettings() {
 		// Null indicates this hasn't been set yet
 		//3D Plot settings
 		showContour: false,
-		colorContours: false
+		colorContours: false,
+		contourBandwidth: 20,
+		contourThresholds: 10
 	}
 }
 

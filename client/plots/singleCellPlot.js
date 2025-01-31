@@ -568,13 +568,35 @@ class singleCellPlot {
 			title: 'Show contour map'
 		})
 		if (this.settings.showContour)
-			inputs.push({
-				label: 'Color contours',
-				boxLabel: '',
-				type: 'checkbox',
-				chartType: 'singleCellPlot',
-				settingsKey: 'colorContours'
-			})
+			inputs.push(
+				{
+					label: 'Color contours',
+					boxLabel: '',
+					type: 'checkbox',
+					chartType: 'singleCellPlot',
+					settingsKey: 'colorContours'
+				},
+				{
+					label: 'Contour bandwidth',
+					type: 'number',
+					chartType: 'singleCellPlot',
+					settingsKey: 'contourBandwidth',
+					title: 'Reduce to increase resolution. ',
+					min: 5,
+					max: 50,
+					step: 5
+				},
+				{
+					label: 'Contour thresholds',
+					type: 'number',
+					chartType: 'singleCellPlot',
+					settingsKey: 'contourThresholds',
+					title: 'Dot size',
+					min: 5,
+					max: 50,
+					step: 5
+				}
+			)
 		if (
 			(this.state.config.activeTab == GENE_EXPRESSION_TAB ||
 				this.state.config.activeTab == DIFFERENTIAL_EXPRESSION_TAB) &&
@@ -1304,7 +1326,14 @@ class singleCellPlot {
 	async renderContourMap(scene, xCoords, yCoords, zCoords, plot) {
 		const data = xCoords.map((x, i) => ({ x, y: yCoords[i], z: zCoords[i] }))
 		// Create the data URL
-		const imageUrl = getContourImage(data, this.settings.svgw, this.settings.svgh, this.settings.colorContours)
+		const imageUrl = getContourImage(
+			data,
+			this.settings.svgw,
+			this.settings.svgh,
+			this.settings.colorContours,
+			this.settings.contourBandwidth,
+			this.settings.contourThresholds
+		)
 		const loader = new THREE.TextureLoader()
 		loader.load(imageUrl, texture => {
 			// Create a plane geometry
@@ -1367,10 +1396,10 @@ class singleCellPlot {
 	}
 }
 
-export function getContourImage(data, width, height, colorContours) {
+export function getContourImage(data, width, height, colorContours, bandwidth, thresholds) {
 	const svg = create('svg').attr('width', width).attr('height', height)
 
-	renderContours(svg.append('g'), data, width, height, colorContours)
+	renderContours(svg.append('g'), data, width, height, colorContours, bandwidth, thresholds)
 
 	// Serialize the SVG element
 	const svgString = new XMLSerializer().serializeToString(svg.node())
@@ -1436,6 +1465,8 @@ export function getDefaultSingleCellSettings() {
 		opacity: 0.8,
 		showNoExpCells: false,
 		showContour: false,
-		colorContours: false
+		colorContours: false,
+		contourBandwidth: 20,
+		contourThresholds: 10
 	}
 }
