@@ -1,3 +1,5 @@
+# Test syntax: cat ~/sjpp/test.txt | time Rscript edge.R
+
 # Load required packages
 suppressWarnings({
     library(jsonlite)
@@ -42,7 +44,7 @@ read_counts_time <- system.time({
         }
 
         samples_indices <- c(case_indices, control_indices)
-        read_counts <- t(h5read(input$input_file, "counts", index = list(samples_indices, 1:length(geneIDs))))
+        read_counts <- as.data.frame(t(h5read(input$input_file, "counts", index = list(samples_indices, 1:length(geneIDs)))))
         colnames(read_counts) <- c(cases, controls)
     } else if (input$storage_type == "text") {
         suppressWarnings({
@@ -64,14 +66,34 @@ read_counts_time <- system.time({
 conditions <- c(rep("Diseased", length(cases)), rep("Control", length(controls)))
 gene_id_symbols <- paste0(geneIDs, "\t", geneSymbols)
 
+filter_genes_time <- system.time({
 if (length(input$VarGenes) != 0) { # Filter out variable genes for DE analysis
-   VarGenes <- unlist(strsplit(input$VarGenes, ","))
-   VarGenes_indices <- which(geneSymbols %in% VarGenes)
-   read_counts <- read_counts[VarGenes_indices, ]
-   geneSymbols <- geneSymbols[VarGenes_indices]
-   geneIDs <- geneIDs[VarGenes_indices]
-   gene_id_symbols <- gene_id_symbols[VarGenes_indices]
+   #VarGenes <- unlist(strsplit(input$VarGenes, ","))
+   #VarGenes_indices <- which(geneSymbols %in% VarGenes)
+   #read_counts <- read_counts[VarGenes_indices, ]
+   #geneSymbols <- geneSymbols[VarGenes_indices]
+   #geneIDs <- geneIDs[VarGenes_indices]
+   #gene_id_symbols <- gene_id_symbols[VarGenes_indices]
+
+   # Calculate the standard deviation of each row
+   row_sd <- apply(read_counts, 1, sd)
+   # Add the standard deviation as a new column to the dataframe
+   read_counts$Row_SD <- row_sd
+   # Add the gene_id_symbols as a new column to the dataframe
+   read_counts$gene_id_symbols <- gene_id_symbols
+   # Sort the dataframe based on the standard deviation column
+   read_counts <- read_counts[order(read_counts$Row_SD, decreasing = TRUE), ]
+   # Select top 3000 rows
+   read_counts <- head(read_counts,3000) # Currently hardcoded 3000 genes
+   # Get gene id symbols corresponding to the reordered read count matrix
+   gene_id_symbols <- read_counts$gene_id_symbols
+   # Remove column Row_SD from read_counts dataframe
+   read_counts <- read_counts[, !names(read_counts) %in% "Row_SD"]
+   # Remove column gene_id_symbols from read_counts dataframe
+   read_counts <- read_counts[, !names(read_counts) %in% "gene_id_symbols"]
 }
+})
+#cat("Time to filter genes: ", filter_genes_time[3], " seconds\n")
 
 # Create DGEList object
 dge_list_time <- system.time({

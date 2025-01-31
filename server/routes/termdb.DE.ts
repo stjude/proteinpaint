@@ -160,7 +160,7 @@ values[] // using integer sample id
 			data_type: 'do_calc_var',
 			case: cases_string,
 			control: controls_string,
-			log_transform: true, // Will be later defined in UI
+			log_transform: false, // Will be later defined in UI
 			//filter_extreme_values: q.filter_extreme_values,
 			num_genes: 3000, // Will be later defined in UI
 			rank_type: 'var', // Will be later defined in UI
