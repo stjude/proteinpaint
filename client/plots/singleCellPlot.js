@@ -601,6 +601,7 @@ class singleCellPlot {
 	}
 
 	downloadPlot(plot) {
+		console.log(plot)
 		downloadSingleSVG(plot.legendSVG, 'legend.svg', this.opts.holder.node())
 		const downloadImgName = plot.name
 		const a = document.createElement('a')
@@ -868,31 +869,32 @@ class singleCellPlot {
 			const activeTab = this.tabs.find(tab => tab.active)
 			if (activeTab.id == PLOTS_TAB) {
 				const app = this.app
-				if (plot.colorColumns.length == 1) return
-				const plotColorByDiv = plot.headerDiv
-					.append('div')
-					.style('display', 'inline-block')
-					.style('padding-bottom', '20px')
-				const label = plotColorByDiv.append('label')
-				label.append('span').text('Color by:').style('margin-right', '5px')
-				const colorBySelect = label.append('select')
-				this.plotColorByDivs.push(plotColorByDiv)
-				colorBySelect
-					.selectAll('option')
-					.data(plot.colorColumns)
-					.enter()
-					.append('option')
-					.attr('value', d => d)
-					.property('selected', d => d == this.state.config.colorBy?.[plot.name])
-					.html(d => d)
-				colorBySelect.on('change', () => {
-					const colorBy = colorBySelect.node().value
-					app.dispatch({
-						type: 'plot_edit',
-						id: this.id,
-						config: { colorBy: { [plot.name]: colorBy } }
+
+				if (plot.colorColumns.length == 1) {
+					const plotColorByDiv = plot.headerDiv
+						.append('div')
+						.style('display', 'inline-block')
+						.style('padding-bottom', '20px')
+					plotColorByDiv.append('label').text('Color by:').style('margin-right', '5px')
+					const colorBySelect = plotColorByDiv.append('select')
+					this.plotColorByDivs.push(plotColorByDiv)
+					colorBySelect
+						.selectAll('option')
+						.data(plot.colorColumns)
+						.enter()
+						.append('option')
+						.attr('value', d => d)
+						.property('selected', d => d == this.state.config.colorBy?.[plot.name])
+						.html(d => d)
+					colorBySelect.on('change', () => {
+						const colorBy = colorBySelect.node().value
+						app.dispatch({
+							type: 'plot_edit',
+							id: this.id,
+							config: { colorBy: { [plot.name]: colorBy } }
+						})
 					})
-				})
+				}
 			}
 			const clustersHeight = 20 * Object.keys(colorMap).length + 50 //added 50 for the title and padding
 			legendSVG = plot.plotDiv
