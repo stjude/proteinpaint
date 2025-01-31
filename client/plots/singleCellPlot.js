@@ -254,7 +254,7 @@ class singleCellPlot {
 			.append('label')
 			.text('Show expression by:')
 			.style('display', state.config.gene ? 'inline-block' : 'none')
-			.style('margin-right', '5px')
+			.style('margin', '0px 10px 0px 20px')
 
 		this.dom.colorBySelect = geDiv.append('select').style('display', state.config.gene ? 'inline-block' : 'none')
 
@@ -855,6 +855,8 @@ class singleCellPlot {
 				.attr('width', 250)
 				.attr('height', Math.max(this.settings.svgh, clustersHeight))
 				.style('vertical-align', 'top')
+				.append('g')
+				.attr('transform', 'translate(20, 0)')
 			plot.legendSVG = legendSVG
 		}
 		legendSVG.selectAll('*').remove()
