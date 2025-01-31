@@ -145,6 +145,7 @@ function setHeaders(req, res, next) {
 	res.header('Vary', 'Origin')
 	res.header(
 		'Access-Control-Allow-Origin',
+		// TODO: for protected routes, should defer to auth middleware to only set this for authorized embedders
 		req.get('origin') || req.get('referrer') || req.protocol + '://' + req.get('host').split(':')[0] || '*'
 	)
 	res.header('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS, HEAD')
@@ -158,6 +159,12 @@ function setHeaders(req, res, next) {
 			', x-auth-token, x-ds-access-token, x-sjppds-sessionid'
 	)
 	res.header('Access-Control-Allow-Credentials', true)
-
-	next()
+	if (req.method == 'OPTIONS') {
+		/* TODO: may activate letting auth middleware handle OPTIONS request with authorization/custom headers
+		if (req.headers?.['access-control-request-headers']?.split(',').includes('authorization')) next() // allow auth middleware to handle
+		else*/
+		res.send({ status: 'ok' })
+	} else {
+		next()
+	}
 }

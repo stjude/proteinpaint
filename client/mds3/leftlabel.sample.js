@@ -121,7 +121,7 @@ async function showSummary4terms(data, div, tk, block) {
 			label:
 				tk.mds.variant2samples.twLst.find(i => i.term.id == termid).term.name +
 				(numbycategory
-					? `<span style="opacity:.8;font-size:.8em;float:right;margin-left: 5px;">n=${numbycategory.length}</span>`
+					? `<span style="font-size:.8em;float:right;margin-left: 5px;">n=${numbycategory.length}</span>`
 					: '')
 		})
 	}
