@@ -347,10 +347,9 @@ type SvFusion = {
 	}
 	byname?: {
 		/** file paths for sv fusion TXT data. will contain events lacking breakpoint coordinates and can only be matched by gene names
-		TODO 
-		1. declare file format
-		2. use string sample name
-		3. add column to denote if an event is fusion or sv
+		should be tab seperated values with the following fields:
+		gene_a	refseq_a	chr_a	position_a	strand_a	gene_b	refseq_b	chr_b	position_b	strand_b	origin	sample_name	fusion_gene	event_type
+		TODO use string sample name
 		*/
 		file?: string
 	}

@@ -2257,8 +2257,10 @@ export async function svfusionByNameGetter_file(ds, genome) {
 							? Number(m['position_b'])
 							: undefined
 
-					// FIXME since the file can contain both fusion/sv, file must incude a column to denote if each event is fusion/sv and should not hardcode dt
-					const j = { dt: dtfusionrna, class: mclassfusionrna, mattr: { origin: m['origin'] } }
+					const eventType = m['event_type']
+					const dt = eventType == 'fusion' ? dtfusionrna : eventType == 'sv' ? dtsv : undefined
+					if (!dt) throw `unsupported event type: ${eventType}`
+					const j = { dt, class: dt == dtsv ? mclasssv : mclassfusionrna, mattr: { origin: m['origin'] } }
 
 					// FIXME file should use sample name but not integer id
 					j.sample = ds.cohort.termdb.q.sampleName2id(m['sample_name'])
@@ -2824,6 +2826,15 @@ async function getSvfusionByTerm(ds, term, genome, q) {
 		filter0: q.filter0, // hidden filter
 		filterObj: q.filter, // pp filter, must change key name to "filterObj" to be consistent with mds3 client
 		sessionid: q.sessionid
+	}
+	if (ds.queries.svfusion.byrange && ds.queries.svfusion.byname) {
+		await mayMapGeneName2coord(term, genome)
+		// tw.term.chr/start/stop are set
+		arg.rglst = [term]
+		const byrangeResult = await ds.queries.svfusion.byrange.get(arg)
+		const bynameResult = await ds.queries.svfusion.byname.get(arg)
+
+		return [...byrangeResult, ...bynameResult]
 	}
 	if (ds.queries.svfusion.byrange) {
 		await mayMapGeneName2coord(term, genome)
