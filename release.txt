@@ -1,2 +1,3 @@
-Fixes:
-- address contrast issues in lollipop sample list table and tracks/more menus
+
+- scrna: allow to show extra properties in sample tab
+
