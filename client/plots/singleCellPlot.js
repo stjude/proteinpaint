@@ -920,7 +920,14 @@ class singleCellPlot {
 	}
 
 	showLegendItemMenu(e, key, plot) {
+		let hiddenCount = 0
+		for (const cluster in this.state.config.hiddenClusters) if (this.state.config.hiddenClusters[cluster]) hiddenCount++
 		const hidden = this.state.config.hiddenClusters?.[key]
+		if (hidden && hiddenCount == 1) {
+			//show hidden category and skip menu
+			this.hideCategory(key, false, plot.legendSVG)
+			return
+		}
 		const menu = new Menu({ padding: '0px' })
 		const div = menu.d.append('div')
 		div
@@ -940,14 +947,15 @@ class singleCellPlot {
 				this.hideCategory(key, false, plot.legendSVG)
 				menu.hide()
 			})
-		div
-			.append('div')
-			.attr('class', 'sja_menuoption sja_sharp_border')
-			.text('Show all')
-			.on('click', () => {
-				menu.hide()
-				for (const mapKey in plot.colorMap) this.hideCategory(mapKey, false, plot.legendSVG)
-			})
+		if (hiddenCount > 1)
+			div
+				.append('div')
+				.attr('class', 'sja_menuoption sja_sharp_border')
+				.text('Show all')
+				.on('click', () => {
+					menu.hide()
+					for (const mapKey in plot.colorMap) this.hideCategory(mapKey, false, plot.legendSVG)
+				})
 		menu.showunder(e.target)
 	}
 
