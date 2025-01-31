@@ -70,6 +70,7 @@ fn do_calc_var(
     min_total_count_option: Option<f64>,
     num_genes: Option<usize>,
     filter_extreme_values: bool,
+    log_transform: bool,
 ) {
     let now = Instant::now();
     let (input_matrix, _case_indexes, _control_indexes, _gene_names, gene_symbols) = // Querying the HDF5 file to get gene counts corresponding to the samples of interest
@@ -82,6 +83,7 @@ fn do_calc_var(
         param.to_string(),
         min_count_option,
         min_total_count_option,
+        log_transform,
     );
     let mut output_string = "[".to_string();
     for j in 0..num_genes.unwrap() {
@@ -641,6 +643,17 @@ fn main() {
                                     json_string["min_total_count"].as_f64().to_owned();
                                 let case_list: Vec<&str> = case_string.split(",").collect();
                                 let control_list: Vec<&str> = control_string.split(",").collect();
+                                let log_transform_option = &json_string["log_transform"];
+                                let log_transform;
+                                match log_transform_option.as_bool() {
+                                    Some(x) => {
+                                        log_transform = x;
+                                    }
+                                    None => {
+                                        log_transform = false; // By default set log transform to false
+                                    }
+                                }
+
                                 do_calc_var(
                                     file_name,
                                     case_list,
@@ -650,6 +663,7 @@ fn main() {
                                     min_total_count_option,
                                     num_genes,
                                     filter_extreme_values,
+                                    log_transform,
                                 );
                             } else if x == "do_DE" {
                                 // Actual DE analysis using the wilcoxon test
