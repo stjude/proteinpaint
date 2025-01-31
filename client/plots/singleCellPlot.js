@@ -1427,8 +1427,8 @@ export async function getPlotConfig(opts, app) {
 
 export function getDefaultSingleCellSettings() {
 	return {
-		svgw: 600,
-		svgh: 600,
+		svgw: 800,
+		svgh: 800,
 		showGrid: true,
 		sampleSize: 1.5,
 		sampleSizeThree: 0.02,
