@@ -597,6 +597,8 @@ export type SingleCellSamples = {
 	or is missing, to be added at launch with built-in logic (samples are found by looking through singleCell.data.plots[].folder)
 	*/
 	get?: (q: any) => any
+	/** extra label to show along with sample, it becomes `sample.sample+' '+sample[newProp]` */
+	extraSampleTabLabel?: string
 }
 
 export type SingleCellDataGdc = {

@@ -1,1 +1,2 @@
-
+Features:
+- scrna: allow to show extra properties in sample tab
