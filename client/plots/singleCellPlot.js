@@ -409,6 +409,7 @@ class singleCellPlot {
 	}
 
 	async renderImage() {
+		this.dom.plotsDiv.selectAll('*').remove()
 		const sample = this.state.config.sample || this.samples[0].sample
 		const i = this.state.termdbConfig.queries.singleCell.images
 		const result = await dofetch3(`img?file=${i.folder}${i.folder.endsWith('/') ? '' : '/'}${sample}/${i.fileName}`)
