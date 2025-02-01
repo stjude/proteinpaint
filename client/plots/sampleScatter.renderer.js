@@ -1304,8 +1304,10 @@ export function renderContours(contourG, data, width, height, colorContours, ban
 		.weight(s => s.z)
 		.size([width, height])
 		.cellSize(2)
+
 		.bandwidth(bandwidth)
 		.thresholds(thresholds)(data)
+
 
 	const colorScale = scaleSequential()
 		.domain([0, max(contours, d => d.value)])
