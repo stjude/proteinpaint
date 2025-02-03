@@ -770,8 +770,10 @@ class singleCellPlot {
 		if (result.nodata) return
 		for (const plot of result.plots) {
 			if (
-				this.state.config.activeTab == DIFFERENTIAL_EXPRESSION_TAB ||
-				(this.state.config.activeTab == GENE_EXPRESSION_TAB && this.state.config.gene && !plot.expCells.length)
+				(this.state.config.activeTab == DIFFERENTIAL_EXPRESSION_TAB ||
+					this.state.config.activeTab == GENE_EXPRESSION_TAB) &&
+				this.state.config.gene &&
+				!plot.expCells.length
 			)
 				continue
 			this.plots.push(plot)
