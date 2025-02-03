@@ -31,6 +31,7 @@ const PLOTS_TAB = 1
 const GENE_EXPRESSION_TAB = 3
 const DIFFERENTIAL_EXPRESSION_TAB = 4
 const IMAGES_TAB = 5
+const VIOLIN_TAB = 6
 const noExpColor = '#F5F5F5' //lightGray
 
 class singleCellPlot {
@@ -86,6 +87,12 @@ class singleCellPlot {
 			active: activeTab == GENE_EXPRESSION_TAB,
 			callback: () => this.setActiveTab(GENE_EXPRESSION_TAB)
 		})
+		this.tabs.push({
+			label: 'Violin',
+			id: VIOLIN_TAB,
+			active: activeTab == VIOLIN_TAB,
+			callback: () => this.setActiveTab(VIOLIN_TAB)
+		})
 		if (state.termdbConfig.queries?.singleCell?.DEgenes)
 			this.tabs.push({
 				label: 'Differential Expression',
@@ -134,8 +141,8 @@ class singleCellPlot {
 
 		if (state.config.plots.length > 1) this.renderShowPlots(showDiv, state)
 		// div to show optional DE genes (precomputed by seurat for each cluster, e.g. via gdc)
-		const geDiv = headerDiv.append('div').style('display', 'inline-block')
-		const deDiv = headerDiv.append('div').style('display', 'inline-block')
+		const geDiv = headerDiv.append('div').style('display', 'none')
+		const deDiv = headerDiv.append('div').style('display', 'none')
 
 		const plotsDivParent = contentDiv.append('div')
 		const plotsDiv = plotsDivParent
@@ -252,7 +259,7 @@ class singleCellPlot {
 					this.app.dispatch({
 						type: 'plot_edit',
 						id: this.id,
-						config: { plots }
+						config: { plots, settings: { singleCellPlot: settings } }
 					})
 				})
 			showDiv.append('label').attr('for', key).text(plot.name)
@@ -273,73 +280,6 @@ class singleCellPlot {
 			focusOff: true
 		})
 		this.dom.searchbox = this.dom.geneSearch?.searchbox
-
-		this.dom.violinLabel = geDiv
-			.append('label')
-			.text('Show expression by:')
-			.style('display', state.config.gene ? 'inline-block' : 'none')
-			.style('margin', '0px 10px 0px 20px')
-
-		this.dom.colorBySelect = geDiv.append('select').style('display', state.config.gene ? 'inline-block' : 'none')
-
-		this.dom.colorBySelect.on('change', async () => {
-			const plot = state.termdbConfig?.queries.singleCell.data.plots[0]
-			const columnName = plot.columnName
-			const args = {
-				sample: state.config.sample.sampleName,
-				columnName,
-				category: this.dom.colorBySelect.node().value
-			}
-			const result = await this.app.vocabApi.getTopTermsByType(args)
-		})
-
-		this.dom.violinBt = geDiv
-			.append('button')
-			.text('Open violin')
-			.style('margin-left', '2px')
-			.style('display', state.config.gene ? 'inline-block' : 'none')
-		this.dom.violinBt.on('click', () => {
-			const gene = this.dom.geneSearch.geneSymbol || state.config.gene
-			const columnName = this.dom.colorBySelect.node().value
-			const plot = this.plots.find(p => p.colorColumns.some(c => c == columnName))
-
-			const values = {}
-			for (const cluster of plot.clusters) {
-				values[cluster] = { key: cluster, value: cluster }
-			}
-			this.app.dispatch({
-				type: 'plot_create',
-				config: {
-					chartType: 'violin',
-					settings: { violin: { plotThickness: 50 } },
-					term: {
-						term: {
-							type: TermTypes.SINGLECELL_GENE_EXPRESSION,
-							id: gene,
-							gene,
-							name: gene,
-							sample: {
-								sID: this.state.config.sample,
-								eID: this.state.config.experimentID
-							}
-						}
-					},
-					term2: {
-						term: {
-							type: TermTypes.SINGLECELL_CELLTYPE,
-							id: TermTypes.SINGLECELL_CELLTYPE,
-							name: 'Cell type',
-							sample: {
-								sID: this.state.config.sample,
-								eID: this.state.config.experimentID
-							},
-							plot: plot.name,
-							values
-						}
-					}
-				}
-			})
-		})
 	}
 
 	async setActiveTab(tab) {
@@ -347,7 +287,7 @@ class singleCellPlot {
 		await this.app.dispatch({ type: 'plot_edit', id: this.id, config: { activeTab: tab } })
 	}
 
-	showActiveTab() {
+	async showActiveTab() {
 		const tab = this.state.config.activeTab || this.tabs[0].id
 		switch (tab) {
 			case SAMPLES_TAB:
@@ -359,6 +299,7 @@ class singleCellPlot {
 
 				break
 			case PLOTS_TAB:
+				await this.renderPlots()
 				this.dom.headerDiv.style('display', 'block')
 				this.dom.tableDiv.style('display', 'none')
 				this.dom.showDiv.style('display', 'block')
@@ -367,6 +308,7 @@ class singleCellPlot {
 				break
 
 			case GENE_EXPRESSION_TAB:
+				await this.renderPlots()
 				this.dom.headerDiv.style('display', 'block')
 				this.dom.deDiv.style('display', 'none')
 				this.dom.geDiv.style('display', 'inline-block')
@@ -374,9 +316,9 @@ class singleCellPlot {
 				this.dom.showDiv.style('display', 'none')
 				this.dom.searchbox.node().focus()
 				if (this.state.config.gene) this.dom.searchbox.node().value = this.state.config.gene
-				this.fillColorBy()
 				break
 			case DIFFERENTIAL_EXPRESSION_TAB:
+				await this.renderPlots()
 				this.dom.headerDiv.style('display', 'block')
 				this.dom.deDiv.style('display', 'inline-block')
 				this.dom.geDiv.style('display', 'none')
@@ -391,6 +333,14 @@ class singleCellPlot {
 				this.dom.deDiv.style('display', 'none')
 				this.dom.geDiv.style('display', 'none')
 				this.renderImage()
+				break
+			case VIOLIN_TAB:
+				this.dom.headerDiv.style('display', 'block')
+				this.dom.tableDiv.style('display', 'none')
+				this.dom.showDiv.style('display', 'none')
+				this.dom.deDiv.style('display', 'none')
+				this.dom.geDiv.style('display', 'block')
+				this.renderViolin()
 				break
 		}
 	}
@@ -422,7 +372,6 @@ class singleCellPlot {
 	}
 
 	async renderImage() {
-		this.dom.plotsDiv.selectAll('*').remove()
 		const sample = this.state.config.sample || this.samples[0].sample
 		const i = this.state.termdbConfig.queries.singleCell.images
 		const result = await dofetch3(`img?file=${i.folder}${i.folder.endsWith('/') ? '' : '/'}${sample}/${i.fileName}`)
@@ -431,6 +380,76 @@ class singleCellPlot {
 			return
 		}
 		this.dom.plotsDiv.append('img').attr('src', result.src).attr('width', this.settings.svgw)
+	}
+
+	async renderViolin() {
+		this.dom.violinLabel = this.dom.geDiv
+			.append('label')
+			.text('Show expression by:')
+			.style('display', this.state.config.gene ? 'inline-block' : 'none')
+			.style('margin', '0px 10px 0px 20px')
+
+		this.dom.colorBySelect = this.dom.geDiv
+			.append('select')
+			.style('display', this.state.config.gene ? 'inline-block' : 'none')
+
+		this.dom.colorBySelect.on('change', async () => {
+			const plot = state.termdbConfig?.queries.singleCell.data.plots[0]
+			const columnName = plot.columnName
+			const args = {
+				sample: state.config.sample.sampleName,
+				columnName,
+				category: this.dom.colorBySelect.node().value
+			}
+			const result = await this.app.vocabApi.getTopTermsByType(args)
+		})
+		const gene = this.dom.geneSearch.geneSymbol || this.state.config.gene
+		if (!gene) return
+		const columnName = this.dom.colorBySelect.node().value
+
+		for (const plot of this.data.plots) {
+			this.initPlot(plot)
+
+			const opts = {
+				holder: this.dom.plotsDiv.append('div').style('vertical-align', 'top'),
+				state: {
+					vocab: this.state.vocab,
+					plots: [
+						{
+							chartType: 'violin',
+							settings: { violin: { plotThickness: 50 } },
+							term: {
+								term: {
+									type: TermTypes.SINGLECELL_GENE_EXPRESSION,
+									id: gene,
+									gene,
+									name: gene,
+									sample: {
+										sID: this.state.config.sample,
+										eID: this.state.config.experimentID
+									}
+								}
+							},
+							term2: {
+								term: {
+									type: TermTypes.SINGLECELL_CELLTYPE,
+									id: TermTypes.SINGLECELL_CELLTYPE,
+									name: 'Cell type',
+									sample: {
+										sID: this.state.config.sample,
+										eID: this.state.config.experimentID
+									},
+									plot: plot.name,
+									values: plot.clusters
+								}
+							}
+						}
+					]
+				}
+			}
+			const plotImport = await import('#plots/plot.app.js')
+			const plotAppApi = await plotImport.appInit(opts)
+		}
 	}
 
 	async renderDETable() {
@@ -507,9 +526,6 @@ class singleCellPlot {
 		const gene = this.dom.searchbox.node().value
 
 		for (const div of this.plotColorByDivs) div.style('display', 'none')
-		this.dom.violinBt?.style('display', gene ? 'inline-block' : 'none')
-		this.dom.colorBySelect?.style('display', gene ? 'inline-block' : 'none')
-		this.dom.violinLabel?.style('display', gene ? 'inline-block' : 'none')
 
 		this.app.dispatch({
 			type: 'plot_edit',
@@ -667,7 +683,8 @@ class singleCellPlot {
 			dslabel: appState.vocab.dslabel,
 			genome: appState.vocab.genome,
 			termdbConfig: appState.termdbConfig,
-			termfilter: appState.termfilter
+			termfilter: appState.termfilter,
+			vocab: appState.vocab
 		}
 	}
 
@@ -680,17 +697,16 @@ class singleCellPlot {
 			this.config = structuredClone(this.state.config) // this config can be edited to dispatch changes
 			copyMerge(this.settings, this.config.settings.singleCellPlot)
 			this.plotColorByDivs = []
-
+			this.plots = []
 			this.dom.loadingDiv.selectAll('*').remove()
 			this.dom.loadingDiv.style('display', '').append('div').attr('class', 'sjpp-spinner')
 			this.legendRendered = false
 			this.dom.plotsDiv.selectAll('*').remove()
 			this.data = await this.getData()
-
 			if (this.data.error) throw this.data.error
 			this.dom.loadingDiv.style('display', 'none')
-			await this.renderPlots(this.data)
 			this.showActiveTab()
+			this.fillColorBy()
 			await this.setControls()
 			if (this.dom.header)
 				this.dom.header.html(` ${this.state.config.sample || this.samples[0].sample} single cell data`)
@@ -777,9 +793,8 @@ class singleCellPlot {
 			.html('No matching cohort data.')
 	}
 
-	renderPlots(result) {
-		this.dom.plotsDiv.selectAll('*').remove()
-		this.plots = []
+	renderPlots() {
+		const result = this.data
 		if (result.nodata) return
 		for (const plot of result.plots) {
 			if (
@@ -789,10 +804,7 @@ class singleCellPlot {
 				!plot.expCells.length
 			)
 				continue
-			this.plots.push(plot)
-			const expCells = plot.expCells.sort((a, b) => a.geneExp - b.geneExp)
-			plot.cells = [...plot.noExpCells, ...expCells]
-			plot.id = plot.name.replace(/\s+/g, '')
+
 			this.renderPlot(plot)
 		}
 		if (this.plots.length == 0) this.dom.plotsDiv.append('div').text('No data to plot')
@@ -810,13 +822,7 @@ class singleCellPlot {
 			this.addZoomIcons(leftDiv, plot)
 		}
 		const colorMap = {}
-		let clusters = new Set(plot.cells.map(c => c.category))
-
-		plot.clusters = Array.from(clusters).sort((a, b) => {
-			const num1 = parseInt(a.split(' ')[1])
-			const num2 = parseInt(b.split(' ')[1])
-			return num1 - num2
-		})
+		this.initPlot(plot)
 		if (
 			this.state.config.activeTab == DIFFERENTIAL_EXPRESSION_TAB &&
 			!this.legendRendered &&
@@ -868,6 +874,20 @@ class singleCellPlot {
 		this.renderLegend(plot)
 	}
 
+	initPlot(plot) {
+		this.plots.push(plot)
+		const expCells = plot.expCells.sort((a, b) => a.geneExp - b.geneExp)
+		plot.cells = [...plot.noExpCells, ...expCells]
+		plot.id = plot.name.replace(/\s+/g, '')
+		let clusters = new Set(plot.cells.map(c => c.category))
+
+		plot.clusters = Array.from(clusters).sort((a, b) => {
+			const num1 = parseInt(a.split(' ')[1])
+			const num2 = parseInt(b.split(' ')[1])
+			return num1 - num2
+		})
+	}
+
 	getOpacity(d) {
 		if (this.config.hiddenClusters[d.category]) return 0
 		if (this.colorByGene && this.state.config.gene && !d.geneExp)
@@ -908,7 +928,7 @@ class singleCellPlot {
 			if (activeTab.id == PLOTS_TAB) {
 				const app = this.app
 
-				if (plot.colorColumns.length == 1) {
+				if (plot.colorColumns.length > 1) {
 					const plotColorByDiv = plot.headerDiv
 						.append('div')
 						.style('display', 'inline-block')
@@ -1164,7 +1184,7 @@ class singleCellPlot {
 		div.selectAll('*').remove()
 		const [rows, columns] = await this.getTableData(state)
 		const selectedRows = []
-		let maxHeight = '20vh'
+		let maxHeight = '60vh'
 		const selectedSample = state.config.sample
 		const selectedRow = this.samples.findIndex(s => s.sample == selectedSample)
 		const selectedRowIndex = selectedRow == -1 ? 0 : selectedRow
