@@ -237,7 +237,20 @@ class singleCellPlot {
 				.on('change', e => {
 					let plots = structuredClone(this.state.config.plots)
 					plots.find(p => p.name == plot.name).selected = e.target.checked
+					const selectedCount = plots.filter(p => p.selected).length
+					let settings = { svgw: 800, svgh: 800 }
 
+					if (selectedCount > 1) {
+						const width = 1000
+						const height = 1000
+						settings.svgh = width / selectedCount
+						settings.svgw = height / selectedCount
+					}
+					this.app.dispatch({
+						type: 'plot_edit',
+						id: this.id,
+						config: { plots, settings: { singleCellPlot: settings } }
+					})
 					this.app.dispatch({
 						type: 'plot_edit',
 						id: this.id,
@@ -1460,8 +1473,8 @@ export async function getPlotConfig(opts, app) {
 
 export function getDefaultSingleCellSettings() {
 	return {
-		svgw: 600,
-		svgh: 600,
+		svgw: 800,
+		svgh: 800,
 		showGrid: true,
 		sampleSize: 1.5,
 		sampleSizeThree: 0.02,
