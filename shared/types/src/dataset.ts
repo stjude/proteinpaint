@@ -598,7 +598,6 @@ export type SingleCellSamples = {
 	the other two properties allow to declare additional columns to be shown in table, that are for display only
 	when sample.experiments[] are used, a last column of experiment id will be auto added
 	*/
-	firstColumnName?: string
 	/** any columns to be added to sample table. each is a term id */
 	sampleColumns?: { termid: string }[]
 	/** used on client but not on ds */
@@ -937,7 +936,7 @@ type CorrelationVolcano = {
 	}
 }
 
-type MatrixSettingsControlLabels = {
+type UiLabels = {
 	samples?: string
 	sample?: string
 	Samples?: string
@@ -1006,7 +1005,7 @@ type MatrixSettings = {
 	svgCanvasSwitch?: number
 	cellEncoding?: string
 	cellbg?: string
-	controlLabels?: MatrixSettingsControlLabels
+	controlLabels?: UiLabels
 	sortSamplesBy?: string
 	sortPriority?: SortPriorityEntry[]
 	ignoreCnvValues?: boolean
@@ -1184,7 +1183,6 @@ keep this setting here for reason of:
 - mds3.variant2samples consider this setting, allows to handle other datasets of same issue
   */
 	useLower?: boolean
-
 	matrix?: Matrix
 	numericDictTermCluster?: NumericDictTermCluster
 	survival?: Survival
