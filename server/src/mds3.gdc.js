@@ -1066,7 +1066,12 @@ async function snvindel_byisoform(opts, ds) {
 		if (!h.ssm) throw '.ssm{} missing from a case'
 		if (!h.ssm.ssm_id) throw '.ssm.ssm_id missing from a case'
 		const ssm = id2ssm.get(h.ssm.ssm_id)
-		if (!ssm) throw 'ssm_id not found in ssms query'
+		if (!ssm) {
+			// Feb/3/2025 testing MYC on qa-int ends with this error. for such case, ignore and do not throw
+			console.log(`ssm_id not found in ssms query: ${h.ssm.ssm_id}`)
+			continue
+			//throw 'ssm_id not found in ssms query'
+		}
 		if (!h.case) throw '.case{} missing from a case'
 		ssm.cases.push(h.case)
 	}
