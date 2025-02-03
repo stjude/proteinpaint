@@ -159,32 +159,37 @@ export class MassAbout {
 					.property('checked', i === activeCohort)
 					.style('margin-right', '5px')
 					.style('margin-left', '0px')
-					.on('click', async () => {
+					.on('click', async event => {
 						const state = app.getState()
 						const clearOnChange = state.termdbConfig.selectCohort.clearOnChange
 						if (clearOnChange) {
 							const subactions: any[] = []
+							const toBeCleared: string[] = []
+							const plots = state.plots
+							const filter = state.termfilter.filter.lst.find(f => f.tag == 'filterUiRoot')?.lst
+							const groups = state.groups
 
-							if (clearOnChange.plots)
-								for (const plot of state.plots) {
-									subactions.push({
-										type: 'plot_delete',
-										id: plot.id
-									})
-								}
-							if (clearOnChange.filter)
+							if (clearOnChange.plots && plots?.length) toBeCleared.push('plots')
+							for (const plot of plots) {
 								subactions.push({
-									type: 'filter_replace',
-									filter: {
-										type: 'tvslst',
-										in: true,
-										join: '',
-										tag: 'filterUiRoot',
-										lst: []
-									}
+									type: 'plot_delete',
+									id: plot.id
 								})
-							if (clearOnChange.groups) {
-								for (const group of state.groups) {
+							}
+							if (clearOnChange.filter && filter?.length) toBeCleared.push('filters')
+							subactions.push({
+								type: 'filter_replace',
+								filter: {
+									type: 'tvslst',
+									in: true,
+									join: '',
+									tag: 'filterUiRoot',
+									lst: []
+								}
+							})
+							if (clearOnChange.groups && groups?.length) {
+								toBeCleared.push('groups')
+								for (const group of groups) {
 									subactions.push({
 										type: 'delete_group',
 										name: group.name
@@ -198,6 +203,17 @@ export class MassAbout {
 								}
 							}
 							subactions.push({ type: 'cohort_set', activeCohort: i })
+							if (toBeCleared.length) {
+								const confirm = window.confirm(
+									`Changing the cohort will clear all ${joinByComma(
+										toBeCleared
+									)}. To save the session, click "Cancel" and then click the "Session" button.`
+								)
+								if (!confirm) {
+									event.preventDefault()
+									return
+								}
+							}
 							app.dispatch({
 								type: 'app_refresh',
 								subactions
@@ -362,3 +378,10 @@ export class MassAbout {
 }
 
 export const aboutInit = getCompInit(MassAbout)
+
+function joinByComma(arr) {
+	if (!arr.length) return ''
+	else if (arr.length == 1) return arr[0]
+	else if (arr.length == 2) return arr.join(' and ')
+	else return `${arr.slice(0, -1).join(', ')}, and ${arr.slice(-1)}`
+}
