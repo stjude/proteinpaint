@@ -48,7 +48,7 @@ class singleCellPlot {
 		// TODO sample table still needs to be changed when gdc (external portal) cohort changes
 
 		const state = this.getState(appState)
-		const { controlLabels } = state.config.settings.singleCellPlot
+		const { uiLabels } = state.config.settings.singleCellPlot
 		const body = { genome: state.genome, dslabel: state.dslabel, filter0: state.termfilter.filter0 || null }
 		const result = await dofetch3('termdb/singlecellSamples', { body })
 		if (result.error) throw result.error
@@ -61,16 +61,14 @@ class singleCellPlot {
 			else return elem1.sample.localeCompare(elem2.sample)
 		})
 
+		const extraSampleTabLabel = state.termdbConfig.queries.singleCell.samples.extraSampleTabLabel
+			? ', ' + this.samples[0][state.termdbConfig.queries.singleCell.samples.extraSampleTabLabel]
+			: ''
+
 		this.tabs = []
 		const activeTab = state.config.activeTab
 		this.tabs.push({
-			label:
-				controlLabels.Sample +
-				' ' +
-				(state.config.sample || this.samples[0].sample) +
-				(state.termdbConfig.queries.singleCell.samples.extraSampleTabLabel
-					? ', ' + this.samples[0][state.termdbConfig.queries.singleCell.samples.extraSampleTabLabel]
-					: ''),
+			label: uiLabels.Sample + ' ' + (state.config.sample || this.samples[0].sample) + extraSampleTabLabel,
 			id: SAMPLES_TAB,
 			active: activeTab == SAMPLES_TAB,
 			callback: () => this.setActiveTab(SAMPLES_TAB)
@@ -1203,6 +1201,8 @@ class singleCellPlot {
 	}
 
 	async getTableData(state) {
+		const { uiLabels } = state.config.settings.singleCellPlot
+		const s = state.termdbConfig.queries?.singleCell?.samples || {}
 		const samples = this.samples
 		const rows = []
 		for (const sample of samples) {
@@ -1212,10 +1212,10 @@ class singleCellPlot {
 					const row = [{ value: sample.sample, __experimentID: exp.experimentID }]
 
 					// optional sample and experiment columns
-					for (const c of state.termdbConfig.queries.singleCell.samples.sampleColumns || []) {
+					for (const c of s.sampleColumns || []) {
 						row.push({ value: sample[c.termid] })
 					}
-					for (const c of state.termdbConfig.queries.singleCell.samples.experimentColumns || []) {
+					for (const c of s.experimentColumns || []) {
 						row.push({ value: sample[c.label] })
 					}
 
@@ -1230,7 +1230,7 @@ class singleCellPlot {
 				const row = [{ value: sample.sample }]
 
 				// optional sample columns
-				for (const c of state.termdbConfig.queries.singleCell.samples.sampleColumns || []) {
+				for (const c of s.sampleColumns || []) {
 					row.push({ value: sample[c.termid] })
 				}
 				rows.push(row)
@@ -1238,10 +1238,10 @@ class singleCellPlot {
 		}
 
 		// first column is sample and is hardcoded
-		const columns = [{ label: state.termdbConfig.queries.singleCell.samples.firstColumnName || 'Sample' }]
+		const columns = [{ label: uiLabels.Sample }]
 
 		// add in optional sample columns
-		for (const c of state.termdbConfig.queries.singleCell.samples.sampleColumns || []) {
+		for (const c of s.sampleColumns || []) {
 			columns.push({
 				label: (await this.app.vocabApi.getterm(c.termid)).name,
 				width: '15vw'
@@ -1249,7 +1249,7 @@ class singleCellPlot {
 		}
 
 		// add in optional experiment columns
-		for (const c of state.termdbConfig.queries.singleCell.samples.experimentColumns || []) {
+		for (const c of s.experimentColumns || []) {
 			columns.push({ label: c.label, width: '20vw' })
 		}
 
@@ -1485,18 +1485,15 @@ export function getDefaultSingleCellSettings() {
 		colorContours: false,
 		contourBandwidth: 20,
 		contourThresholds: 10,
-		controlLabels: {
-			// allow customized control inpu labels by dataset override,
+		uiLabels: {
+			// allow customized user interface labels (buttons, menus, etc) by dataset override,
 			// for example in GDC, use 'Case' instead of 'Sample'
+			// TODO: different plots should use the same uiLabels override,
+			// should not need to define separately for matrix, single cell, etc
 			Samples: 'Samples',
 			samples: 'samples',
 			Sample: 'Sample',
-			sample: 'sample',
-			Terms: 'Variables',
-			terms: 'variables',
-			Term: 'Variable',
-			term: 'Variable',
-			Mutations: 'Mutations'
+			sample: 'sample'
 		}
 	}
 }
