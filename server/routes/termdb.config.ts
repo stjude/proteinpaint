@@ -256,7 +256,6 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome) {
 		// samples and data are required properties
 		q2.singleCell = {
 			samples: {
-				firstColumnName: q.singleCell.samples.firstColumnName,
 				sampleColumns: q.singleCell.samples.sampleColumns,
 				experimentColumns: q.singleCell.samples.experimentColumns,
 				extraSampleTabLabel: q.singleCell.samples.extraSampleTabLabel
