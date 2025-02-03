@@ -1759,7 +1759,9 @@ async function createGenomebrowser(self, input, resultLst) {
 			}
 		},
 		click_snvindel: async m => {
-			self.displayResult_oneset(m.regressionResult.data)
+			// displayResult_oneset() will modify m.regressionResult.data
+			// during rendering, so need to input clone of data
+			self.displayResult_oneset(structuredClone(m.regressionResult.data))
 			await mayCheckLD(m, input, self)
 			const result_y = self.dom.oneSetResultDiv.node().getBoundingClientRect().top + window.scrollY
 			const nav_height = document.querySelector('.sjpp-nav').getBoundingClientRect().height
