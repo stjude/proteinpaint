@@ -1,1 +1,2 @@
-
+Fixes:
+- show DE dropdown options; support custom control labels; revert to 600 plot size
