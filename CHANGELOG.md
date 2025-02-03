@@ -7,6 +7,9 @@ All notable changes to this project will be documented in this file.
 Features:
 - Comprehensive test suite for maxLabelWidth.ts
 
+Fixes:
+- Restored Diff Exp dropdown options; supported overriding UILabels on dataset; calculated plot size when
+
 
 ## 2.104.0
 
