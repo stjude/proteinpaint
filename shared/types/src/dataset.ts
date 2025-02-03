@@ -594,8 +594,8 @@ export type SingleCellSamples = {
 	/** if missing refer to the samples as 'sample', this provides override e.g. 'case' */
 	/** logic to decide sample table columns (the one shown on singlecell app ui, displaying a table of samples with sc data)
 	a sample table will always have a sample column, to show sample.sample value
-	firstColumnName allow to change name of 1st column from "Sample" to different, e.g. "Case" for gdc
-	the other two properties allow to declare additional columns to be shown in table, that are for display only
+	- use uiLabels.Sample to customize the name of the first column
+	- the other two properties allow to declare additional columns to be shown in table, that are for display only
 	when sample.experiments[] are used, a last column of experiment id will be auto added
 	*/
 	/** any columns to be added to sample table. each is a term id */
