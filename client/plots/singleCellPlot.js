@@ -48,7 +48,7 @@ class singleCellPlot {
 		// TODO sample table still needs to be changed when gdc (external portal) cohort changes
 
 		const state = this.getState(appState)
-
+		const { controlLabels } = state.config.settings.singleCellPlot
 		const body = { genome: state.genome, dslabel: state.dslabel, filter0: state.termfilter.filter0 || null }
 		const result = await dofetch3('termdb/singlecellSamples', { body })
 		if (result.error) throw result.error
@@ -65,6 +65,8 @@ class singleCellPlot {
 		const activeTab = state.config.activeTab
 		this.tabs.push({
 			label:
+				controlLabels.Sample +
+				' ' +
 				(state.config.sample || this.samples[0].sample) +
 				(state.termdbConfig.queries.singleCell.samples.extraSampleTabLabel
 					? ', ' + this.samples[0][state.termdbConfig.queries.singleCell.samples.extraSampleTabLabel]
@@ -1458,8 +1460,8 @@ export async function getPlotConfig(opts, app) {
 
 export function getDefaultSingleCellSettings() {
 	return {
-		svgw: 800,
-		svgh: 800,
+		svgw: 600,
+		svgh: 600,
 		showGrid: true,
 		sampleSize: 1.5,
 		sampleSizeThree: 0.02,
@@ -1469,6 +1471,19 @@ export function getDefaultSingleCellSettings() {
 		showContour: false,
 		colorContours: false,
 		contourBandwidth: 20,
-		contourThresholds: 10
+		contourThresholds: 10,
+		controlLabels: {
+			// allow customized control inpu labels by dataset override,
+			// for example in GDC, use 'Case' instead of 'Sample'
+			Samples: 'Samples',
+			samples: 'samples',
+			Sample: 'Sample',
+			sample: 'sample',
+			Terms: 'Variables',
+			terms: 'variables',
+			Term: 'Variable',
+			term: 'Variable',
+			Mutations: 'Mutations'
+		}
 	}
 }
