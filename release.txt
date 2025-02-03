@@ -1,2 +1,3 @@
 Fixes:
-- show DE dropdown options; support custom control labels; revert to 600 plot size
+- Restored Diff Exp dropdown options; supported overriding UILabels on dataset; calculated plot size when
+the plots shown change
