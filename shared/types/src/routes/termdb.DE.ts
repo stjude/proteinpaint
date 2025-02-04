@@ -38,6 +38,8 @@ export type ExpressionInput = {
 	conf1?: any[]
 	/** Type of the confounding variable (categorical/float) */
 	conf1_type?: 'categorical' | 'float'
+	/** Number of variable genes to be included for DE analysis (optional) */
+	VarGenes?: number
 }
 
 export type DEResponse = {
