@@ -688,7 +688,6 @@ class singleCellPlot {
 			if (this.data.error) throw this.data.error
 			this.dom.loadingDiv.style('display', 'none')
 			this.showActiveTab()
-			this.fillColorBy()
 			await this.setControls()
 			if (this.dom.header)
 				this.dom.header.html(` ${this.state.config.sample || this.samples[0].sample} single cell data`)
@@ -698,21 +697,6 @@ class singleCellPlot {
 			this.dom.plotsDiv.selectAll('*').remove()
 			if (e.stack) console.log(e.stack)
 			sayerror(this.dom.errorDiv, e)
-		}
-	}
-
-	fillColorBy() {
-		// Only add unique colorColumn among plots as option
-		const uniqueColorColumns = new Set()
-		if (this.dom.colorBySelect) {
-			this.dom.colorBySelect.selectAll('*').remove()
-			for (const plot of this.state.config.plots) {
-				const colorColumn = this.state.config.colorBy?.[plot.name] || plot.colorColumns[0].name
-				if (!uniqueColorColumns.has(colorColumn) && plot.selected) {
-					this.dom.colorBySelect.append('option').text(colorColumn)
-					uniqueColorColumns.add(colorColumn)
-				}
-			}
 		}
 	}
 
