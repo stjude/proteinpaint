@@ -82,22 +82,21 @@ class singleCellPlot {
 			callback: () => this.setActiveTab(PLOTS_TAB)
 		})
 		if (state.termdbConfig.queries?.singleCell?.DEgenes) {
-			this.tabs.push(
-				{
-					label: 'Differential Expression',
-					id: DIFFERENTIAL_EXPRESSION_TAB,
-					active: activeTab == DIFFERENTIAL_EXPRESSION_TAB,
-					callback: () => this.setActiveTab(DIFFERENTIAL_EXPRESSION_TAB)
-				}
-				// {
-				// 	label: 'GSEA',
-				// 	id: GSEA_TAB,
-				// 	active: activeTab == GSEA_TAB,
-				// 	enabled: false,
-				// 	callback: () => this.setActiveTab(GSEA_TAB)
-				// }
-			)
+			this.tabs.push({
+				label: 'Differential Expression',
+				id: DIFFERENTIAL_EXPRESSION_TAB,
+				active: activeTab == DIFFERENTIAL_EXPRESSION_TAB,
+				callback: () => this.setActiveTab(DIFFERENTIAL_EXPRESSION_TAB)
+			})
+			if (this.app.opts.genome.termdbs)
+				this.tabs.push({
+					label: 'GSEA',
+					id: GSEA_TAB,
+					active: activeTab == GSEA_TAB,
+					callback: () => this.setActiveTab(GSEA_TAB)
+				})
 		}
+
 		this.tabs.push({
 			label: 'Gene Expression',
 			id: GENE_EXPRESSION_TAB,
@@ -202,42 +201,10 @@ class singleCellPlot {
 			this.dom.deselect = label.append('select').on('change', e => {
 				const display = this.dom.deselect.node().value ? 'inline-block' : 'none'
 				const cluster = this.dom.deselect.node().value.split(' ')[1]
+				this.genes = null
 				this.app.dispatch({ type: 'plot_edit', id: this.id, config: { cluster, gene: null } })
-				this.dom.GSEAbt.style('display', display)
 			})
 			this.dom.deselect.append('option').text('')
-
-			if (this.app.opts.genome.termdbs)
-				this.dom.GSEAbt = this.dom.deDiv
-					.append('button')
-					.style('margin-left', '5px')
-					.style('display', 'none')
-					.text('Gene set enrichment analysis')
-					.on('click', async e => {
-						const gsea_params = {
-							genes: this.genes,
-							fold_change: this.fold_changes,
-							genome: this.app.vocabApi.opts.state.vocab.genome
-						}
-						const config = {
-							chartType: 'gsea',
-							gsea_params: gsea_params,
-							// if getPlotHolder is defined, use this.mainDivId as insertBefore,
-							// so that in GDC frontend framework, plots that are launched from scRNAseq
-							// will be inserted before it. TODO: may insert after the scRNAseq plot instead???
-							insertBefore: this.app.opts?.app?.getPlotHolder ? this.mainDivId : this.id
-						}
-						const opts = {
-							holder: this.dom.plotsDiv,
-							state: {
-								vocab: this.state.vocab,
-								plots: [config]
-							}
-						}
-						const plotImport = await import('#plots/plot.app.js')
-						const plotAppApi = await plotImport.appInit(opts)
-					})
-			this.dom.DETableDiv = deDiv.append('div').style('padding-top', '10px')
 		}
 
 		this.settings = {}
@@ -343,7 +310,14 @@ class singleCellPlot {
 				this.dom.showDiv.style('display', 'none')
 				this.renderDETable()
 				break
-
+			case GSEA_TAB:
+				this.dom.headerDiv.style('display', 'block')
+				this.dom.deDiv.style('display', 'none')
+				this.dom.geDiv.style('display', 'none')
+				this.dom.tableDiv.style('display', 'none')
+				this.dom.showDiv.style('display', 'none')
+				this.renderGSEA()
+				break
 			case IMAGES_TAB:
 				this.dom.headerDiv.style('display', 'block')
 				this.dom.tableDiv.style('display', 'none')
@@ -457,9 +431,43 @@ class singleCellPlot {
 		}
 	}
 
+	async renderGSEA() {
+		if (!this.genes) {
+			this.dom.plotsDiv
+				.append('div')
+				.style('padding', '10px 0px')
+				.text('No differential expression genes to perform GSEA')
+			return
+		}
+		const gsea_params = {
+			genes: this.genes,
+			fold_change: this.fold_changes,
+			genome: this.app.vocabApi.opts.state.vocab.genome
+		}
+		const config = {
+			chartType: 'gsea',
+			gsea_params: gsea_params,
+			// if getPlotHolder is defined, use this.mainDivId as insertBefore,
+			// so that in GDC frontend framework, plots that are launched from scRNAseq
+			// will be inserted before it. TODO: may insert after the scRNAseq plot instead???
+			insertBefore: this.app.opts?.app?.getPlotHolder ? this.mainDivId : this.id
+		}
+		const opts = {
+			holder: this.dom.plotsDiv,
+			state: {
+				vocab: this.state.vocab,
+				plots: [config]
+			}
+		}
+		const plotImport = await import('#plots/plot.app.js')
+		const plotAppApi = await plotImport.appInit(opts)
+	}
+
 	async renderDETable() {
-		const DETableDiv = this.dom.DETableDiv
-		DETableDiv.selectAll('*').remove()
+		const DEDiv = this.dom.plotsDiv.append('div').style('width', '100%')
+		const DETableDiv = DEDiv.append('div')
+		const notesDiv = DEDiv.append('div')
+
 		//first plot
 		this.dom.deselect.selectAll('*').remove()
 		this.dom.deselect.append('option').text('')
@@ -468,7 +476,6 @@ class singleCellPlot {
 		for (const cluster of plot.clusters) this.dom.deselect.append('option').text(cluster)
 		const categoryName = this.state.config.cluster
 		this.dom.deselect.node().value = categoryName != undefined ? `Cluster ${categoryName}` : ''
-		if (this.dom.GSEAbt) this.dom.GSEAbt.style('display', categoryName ? 'inline-block' : 'none')
 		if (!categoryName) return
 		const columnName = this.state.termdbConfig.queries.singleCell.DEgenes.columnName
 		const sample =
@@ -507,8 +514,7 @@ class singleCellPlot {
 		renderTable({
 			rows,
 			columns,
-			maxWidth: '50vw',
-			maxHeight: '40vh',
+			maxHeight: '70vh',
 			div: DETableDiv,
 			singleMode: true,
 			noButtonCallback: (i, node) => {
@@ -526,9 +532,10 @@ class singleCellPlot {
 			},
 			selectedRows
 		})
-		DETableDiv.append('div')
+		notesDiv
+			.append('div')
 			.style('font-size', '0.9rem')
-			.style('padding-top', '5px')
+			.style('padding-top', '15px')
 			.text('Select a gene to view its expression.')
 		this.dom.loadingDiv.style('display', 'none')
 	}
@@ -664,7 +671,6 @@ class singleCellPlot {
 	}
 
 	downloadPlot(plot) {
-		console.log(plot)
 		downloadSingleSVG(plot.legendSVG, 'legend.svg', this.opts.holder.node())
 		const downloadImgName = plot.name
 		const a = document.createElement('a')
@@ -723,7 +729,6 @@ class singleCellPlot {
 		} catch (e) {
 			this.app.tip.hide()
 			this.dom.loadingDiv.style('display', 'none')
-			this.dom.plotsDiv.selectAll('*').remove()
 			if (e.stack) console.log(e.stack)
 			sayerror(this.dom.errorDiv, e)
 		}
