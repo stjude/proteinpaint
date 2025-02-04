@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 Features:
 - Comprehensive test suite for maxLabelWidth.ts
+- Added Violin tab to the SC plot
 
 Fixes:
 - Restored Diff Exp dropdown options; supported overriding UILabels on dataset; calculated plot size when
