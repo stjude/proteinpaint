@@ -269,4 +269,19 @@ function setRenderers(self) {
 				tab.tab.html(tab.label) // re-print tab label since the label value could have been updated by outside code
 			})
 	}
+
+	self.updateInactive = (index, config = {}) => {
+		self.dom.tabsHolder
+			.selectAll('button')
+			.data(self.tabs)
+			.classed('sjpp-active', tab => tab.active)
+			.each(tab => {
+				tab.wrapper.classed('sjpp-active', tab.active)
+				if (tab.isVisible) tab.wrapper.style('display', tab => (config && tab.isVisible() ? '' : 'none'))
+				if (tab.contentHolder) tab.contentHolder.style('display', tab.active ? 'block' : 'none')
+				tab.tab.style('color', tab.active ? '#1575ad' : '#757373')
+				tab.line.style('visibility', tab.active ? 'visible' : 'hidden')
+				tab.tab.html(tab.label) // re-print tab label since the label value could have been updated by outside code
+			})
+	}
 }

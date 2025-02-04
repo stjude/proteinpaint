@@ -93,6 +93,7 @@ class singleCellPlot {
 					label: 'GSEA',
 					id: GSEA_TAB,
 					active: activeTab == GSEA_TAB,
+					isVisible: () => this.genes,
 					callback: () => this.setActiveTab(GSEA_TAB)
 				})
 		}
@@ -105,7 +106,7 @@ class singleCellPlot {
 		})
 
 		this.tabs.push({
-			label: 'Violin',
+			label: 'Summary',
 			id: VIOLIN_TAB,
 			active: activeTab == VIOLIN_TAB,
 			callback: () => this.setActiveTab(VIOLIN_TAB)
@@ -492,6 +493,7 @@ class singleCellPlot {
 			DETableDiv.text('.genes[] missing')
 			return
 		}
+
 		const columns = [{ label: 'Gene' }, { label: 'Log2FC' }, { label: 'Adjusted P-value' }]
 		const rows = []
 		this.genes = []
@@ -511,6 +513,11 @@ class singleCellPlot {
 			if (gene.name == this.state.config.gene) selectedRows.push(i)
 			i++
 		}
+
+		const index = this.tabs.findIndex(t => t.id == GSEA_TAB)
+		const gseaTab = this.tabs[index]
+		gseaTab.active = false
+		this.tabsComp.updateInactive(index, gseaTab)
 		renderTable({
 			rows,
 			columns,
