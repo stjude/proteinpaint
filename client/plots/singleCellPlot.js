@@ -74,13 +74,12 @@ class singleCellPlot {
 			active: activeTab == SAMPLES_TAB,
 			callback: () => this.setActiveTab(SAMPLES_TAB)
 		})
-		if (state.config.plots.length > 1)
-			this.tabs.push({
-				label: 'Plots',
-				id: PLOTS_TAB,
-				active: activeTab == PLOTS_TAB,
-				callback: () => this.setActiveTab(PLOTS_TAB)
-			})
+		this.tabs.push({
+			label: 'Plots',
+			id: PLOTS_TAB,
+			active: activeTab == PLOTS_TAB,
+			callback: () => this.setActiveTab(PLOTS_TAB)
+		})
 		this.tabs.push({
 			label: 'Gene Expression',
 			id: GENE_EXPRESSION_TAB,
