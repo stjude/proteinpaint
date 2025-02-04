@@ -1,1 +1,3 @@
 
+Features
+- Added Violin tab to the SC plot
