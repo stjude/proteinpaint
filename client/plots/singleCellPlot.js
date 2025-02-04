@@ -142,6 +142,7 @@ class singleCellPlot {
 		if (state.config.plots.length > 1) this.renderShowPlots(showDiv, state)
 		// div to show optional DE genes (precomputed by seurat for each cluster, e.g. via gdc)
 		const geDiv = headerDiv.append('div').style('display', 'none')
+
 		const deDiv = headerDiv.append('div').style('display', 'none')
 
 		const plotsDivParent = contentDiv.append('div')
@@ -383,35 +384,20 @@ class singleCellPlot {
 	}
 
 	async renderViolin() {
-		this.dom.violinLabel = this.dom.geDiv
-			.append('label')
-			.text('Show expression by:')
-			.style('display', this.state.config.gene ? 'inline-block' : 'none')
-			.style('margin', '0px 10px 0px 20px')
-
-		this.dom.colorBySelect = this.dom.geDiv
-			.append('select')
-			.style('display', this.state.config.gene ? 'inline-block' : 'none')
-
-		this.dom.colorBySelect.on('change', async () => {
-			const plot = state.termdbConfig?.queries.singleCell.data.plots[0]
-			const columnName = plot.columnName
-			const args = {
-				sample: state.config.sample.sampleName,
-				columnName,
-				category: this.dom.colorBySelect.node().value
-			}
-			const result = await this.app.vocabApi.getTopTermsByType(args)
-		})
 		const gene = this.dom.geneSearch.geneSymbol || this.state.config.gene
 		if (!gene) return
-		const columnName = this.dom.colorBySelect.node().value
-
+		const colorBySet = new Set()
 		for (const plot of this.data.plots) {
-			this.initPlot(plot)
-
+			this.initPlot(plot) //the plot clusters are determined by the plot color by selection
+			const values = {}
+			for (const cluster of plot.clusters) {
+				values[cluster] = { key: cluster, value: cluster }
+			}
+			const colorBy = this.state.config.colorBy?.[plot.name] || plot.colorColumns[0]
+			if (!colorBySet.has(colorBy)) colorBySet.add(colorBy)
+			else continue //the gene expression is already plotted for this colorBy
 			const opts = {
-				holder: this.dom.plotsDiv.append('div').style('vertical-align', 'top'),
+				holder: this.dom.plotsDiv.append('div'),
 				state: {
 					vocab: this.state.vocab,
 					plots: [
@@ -439,8 +425,10 @@ class singleCellPlot {
 										sID: this.state.config.sample,
 										eID: this.state.config.experimentID
 									},
+									//plot and color by are used to read the sample categories from the plot
 									plot: plot.name,
-									values: plot.clusters
+									colorBy,
+									values
 								}
 							}
 						}
