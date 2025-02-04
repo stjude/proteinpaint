@@ -256,11 +256,6 @@ class singleCellPlot {
 						id: this.id,
 						config: { plots, settings: { singleCellPlot: settings } }
 					})
-					this.app.dispatch({
-						type: 'plot_edit',
-						id: this.id,
-						config: { plots, settings: { singleCellPlot: settings } }
-					})
 				})
 			showDiv.append('label').attr('for', key).text(plot.name)
 		}
