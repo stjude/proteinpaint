@@ -232,7 +232,8 @@ class Scatter {
 			usecase: { target: 'sampleScatter', detail: 'shapeTW' },
 			title: 'Categories to assign a shape',
 			label: 'Shape',
-			vocabApi: this.app.vocabApi
+			vocabApi: this.app.vocabApi,
+			numericEditMenuVersion: ['discrete']
 		}
 		const shapeSizeOption = {
 			label: 'Sample size',
