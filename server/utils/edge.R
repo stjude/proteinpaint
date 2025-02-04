@@ -1,3 +1,5 @@
+# Test syntax: cat ~/sjpp/test.txt | time Rscript edge.R
+
 # Load required packages
 suppressWarnings({
     library(jsonlite)
@@ -8,13 +10,39 @@ suppressWarnings({
     suppressPackageStartupMessages(library(dplyr))
 })
 
+filter_genes_by_global_variance <- function(read_counts, gene_id_symbols, num_variable_genes) {
+   # Calculate the standard deviation of each row
+   row_sd <- apply(read_counts, 1, sd)
+   # Add the standard deviation as a new column to the dataframe
+   read_counts$Row_SD <- row_sd
+   # Add the gene_id_symbols as a new column to the dataframe
+   read_counts$gene_id_symbols <- gene_id_symbols
+   # Sort the dataframe based on the standard deviation column
+   read_counts <- read_counts[order(read_counts$Row_SD, decreasing = TRUE), ]
+   # Select top 3000 rows
+   read_counts <- head(read_counts,num_variable_genes) # Currently hardcoded 3000 genes
+   # Get gene id symbols corresponding to the reordered read count matrix
+   gene_id_symbols <- read_counts$gene_id_symbols
+   # Remove column Row_SD from read_counts dataframe
+   read_counts <- read_counts[, !names(read_counts) %in% "Row_SD"]
+   # Remove column gene_id_symbols from read_counts dataframe
+   read_counts <- read_counts[, !names(read_counts) %in% "gene_id_symbols"]
+   return(list(read_counts = read_counts, gene_id_symbols = gene_id_symbols))
+}
+
+# Will implement this later
+filter_genes_by_group_variance <- function(read_counts, gene_id_symbols, num_variable_genes, cases, controls) {
+    # Divide the read counts into two groups
+    case_read_counts <- read_counts[, cases]
+    control_read_counts <- read_counts[, controls]
+}
+
 # Read JSON input from stdin
 read_json_time <- system.time({
     con <- file("stdin", "r")
     json <- readLines(con, warn=FALSE)
     close(con)
     input <- fromJSON(json)
-    
     cases <- unlist(strsplit(input$case, ","))
     controls <- unlist(strsplit(input$control, ","))
     combined <- c("geneID", "geneSymbol", cases, controls)
@@ -27,11 +55,11 @@ read_counts_time <- system.time({
         geneIDs <- h5read(input$input_file, "gene_names")
         geneSymbols <- h5read(input$input_file, "gene_symbols")
         samples <- h5read(input$input_file, "samples")
-        
+
         # Find indices of case and control samples in the HDF5 file
         case_indices <- match(cases, samples)
         control_indices <- match(controls, samples)
-        
+
         # Check for missing samples
         if (any(is.na(case_indices))) {
             missing_cases <- cases[is.na(case_indices)]
@@ -41,9 +69,9 @@ read_counts_time <- system.time({
             missing_controls <- controls[is.na(control_indices)]
             stop(paste(missing_controls, "not found"))
         }
-        
+
         samples_indices <- c(case_indices, control_indices)
-        read_counts <- t(h5read(input$input_file, "counts", index = list(samples_indices, 1:length(geneIDs))))
+        read_counts <- as.data.frame(t(h5read(input$input_file, "counts", index = list(samples_indices, 1:length(geneIDs)))))
         colnames(read_counts) <- c(cases, controls)
     } else if (input$storage_type == "text") {
         suppressWarnings({
@@ -64,6 +92,21 @@ read_counts_time <- system.time({
 # Create conditions vector
 conditions <- c(rep("Diseased", length(cases)), rep("Control", length(controls)))
 gene_id_symbols <- paste0(geneIDs, "\t", geneSymbols)
+
+filter_genes_time <- system.time({
+if (length(input$VarGenes) != 0) { # Filter out variable genes for DE analysis
+   filtered_read_counts <- filter_genes_by_global_variance(read_counts, gene_id_symbols, input$VarGenes)
+   read_counts <- filtered_read_counts$read_counts
+   gene_id_symbols <- filtered_read_counts$gene_id_symbols
+
+   #### Will implement filtering by per group variance later
+   #filtered_read_counts <- filter_genes_by_group_variance(read_counts, gene_id_symbols, num_variable_genes, cases, controls)
+   #read_counts <- filtered_read_counts$read_counts
+   #gene_id_symbols <- filtered_read_counts$gene_id_symbols
+}
+})
+
+#cat("Time to filter genes: ", filter_genes_time[3], " seconds\n")
 
 # Create DGEList object
 dge_list_time <- system.time({
@@ -93,7 +136,7 @@ if (length(input$conf1) == 0) { # No adjustment of confounding factors
         })
     })
     #cat("Dispersion time: ", dispersion_time[3], " seconds\n")
-    
+
     exact_test_time <- system.time({
         et <- exactTest(y)
     })
@@ -104,17 +147,17 @@ if (length(input$conf1) == 0) { # No adjustment of confounding factors
         design <- model.matrix(~ conf1 + conditions, data = y$samples)
     })
     #cat("Time for making design matrix: ", model_gen_time[3], " seconds\n")
-    
+
     dispersion_time <- system.time({
         y <- estimateDisp(y, design)
     })
     #cat("Dispersion time: ", dispersion_time[3], " seconds\n")
-    
+
     fit_time <- system.time({
         fit <- glmFit(y, design)
     })
     #cat("Fit time: ", fit_time[3], " seconds\n")
-    
+
     test_statistics_time <- system.time({
         et <- glmLRT(fit, coef = 2)
     })
