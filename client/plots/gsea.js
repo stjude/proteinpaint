@@ -38,7 +38,7 @@ class gsea {
 			.style('vertical-align', 'top')
 			.style('margin-top', '50px')
 
-		const tableDiv = this.opts.holder.append('div').style('margin-left', '50px')
+		const tableDiv = this.opts.holder.append('div').style('margin', '30px 0px')
 
 		this.dom = {
 			holder,

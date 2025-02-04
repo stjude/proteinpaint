@@ -26,10 +26,11 @@ this
 			.sample
 */
 
-const SAMPLES_TAB = 0
-const PLOTS_TAB = 1
-const GENE_EXPRESSION_TAB = 3
-const DIFFERENTIAL_EXPRESSION_TAB = 4
+const SAMPLES_TAB = 1
+const PLOTS_TAB = 2
+const DIFFERENTIAL_EXPRESSION_TAB = 3
+const GSEA_TAB = 7
+const GENE_EXPRESSION_TAB = 4
 const IMAGES_TAB = 5
 const VIOLIN_TAB = 6
 const noExpColor = '#F5F5F5' //lightGray
@@ -80,25 +81,37 @@ class singleCellPlot {
 			active: activeTab == PLOTS_TAB,
 			callback: () => this.setActiveTab(PLOTS_TAB)
 		})
+		if (state.termdbConfig.queries?.singleCell?.DEgenes) {
+			this.tabs.push(
+				{
+					label: 'Differential Expression',
+					id: DIFFERENTIAL_EXPRESSION_TAB,
+					active: activeTab == DIFFERENTIAL_EXPRESSION_TAB,
+					callback: () => this.setActiveTab(DIFFERENTIAL_EXPRESSION_TAB)
+				}
+				// {
+				// 	label: 'GSEA',
+				// 	id: GSEA_TAB,
+				// 	active: activeTab == GSEA_TAB,
+				// 	enabled: false,
+				// 	callback: () => this.setActiveTab(GSEA_TAB)
+				// }
+			)
+		}
 		this.tabs.push({
 			label: 'Gene Expression',
 			id: GENE_EXPRESSION_TAB,
 			active: activeTab == GENE_EXPRESSION_TAB,
 			callback: () => this.setActiveTab(GENE_EXPRESSION_TAB)
 		})
+
 		this.tabs.push({
 			label: 'Violin',
 			id: VIOLIN_TAB,
 			active: activeTab == VIOLIN_TAB,
 			callback: () => this.setActiveTab(VIOLIN_TAB)
 		})
-		if (state.termdbConfig.queries?.singleCell?.DEgenes)
-			this.tabs.push({
-				label: 'Differential Expression',
-				id: DIFFERENTIAL_EXPRESSION_TAB,
-				active: activeTab == DIFFERENTIAL_EXPRESSION_TAB,
-				callback: () => this.setActiveTab(DIFFERENTIAL_EXPRESSION_TAB)
-			})
+
 		if (state.termdbConfig.queries?.singleCell?.images)
 			this.tabs.push({
 				label: state.termdbConfig.queries.singleCell.images.label,
@@ -200,7 +213,7 @@ class singleCellPlot {
 					.style('margin-left', '5px')
 					.style('display', 'none')
 					.text('Gene set enrichment analysis')
-					.on('click', e => {
+					.on('click', async e => {
 						const gsea_params = {
 							genes: this.genes,
 							fold_change: this.fold_changes,
@@ -214,10 +227,15 @@ class singleCellPlot {
 							// will be inserted before it. TODO: may insert after the scRNAseq plot instead???
 							insertBefore: this.app.opts?.app?.getPlotHolder ? this.mainDivId : this.id
 						}
-						this.app.dispatch({
-							type: 'plot_create',
-							config
-						})
+						const opts = {
+							holder: this.dom.plotsDiv,
+							state: {
+								vocab: this.state.vocab,
+								plots: [config]
+							}
+						}
+						const plotImport = await import('#plots/plot.app.js')
+						const plotAppApi = await plotImport.appInit(opts)
 					})
 			this.dom.DETableDiv = deDiv.append('div').style('padding-top', '10px')
 		}
@@ -283,8 +301,13 @@ class singleCellPlot {
 	}
 
 	async showActiveTab() {
-		const tab = this.state.config.activeTab || this.tabs[0].id
-		switch (tab) {
+		const id = this.state.config.activeTab || this.tabs[0].id
+		const index = this.tabs.findIndex(t => t.id == id)
+		const tab = this.tabs[index]
+		tab.active = true
+		this.tabsComp.update(index, tab)
+
+		switch (id) {
 			case SAMPLES_TAB:
 				this.dom.headerDiv.style('display', 'block')
 				this.dom.tableDiv.style('display', 'block')
@@ -313,7 +336,6 @@ class singleCellPlot {
 				if (this.state.config.gene) this.dom.searchbox.node().value = this.state.config.gene
 				break
 			case DIFFERENTIAL_EXPRESSION_TAB:
-				await this.renderPlots()
 				this.dom.headerDiv.style('display', 'block')
 				this.dom.deDiv.style('display', 'inline-block')
 				this.dom.geDiv.style('display', 'none')
@@ -321,6 +343,7 @@ class singleCellPlot {
 				this.dom.showDiv.style('display', 'none')
 				this.renderDETable()
 				break
+
 			case IMAGES_TAB:
 				this.dom.headerDiv.style('display', 'block')
 				this.dom.tableDiv.style('display', 'none')
@@ -437,9 +460,14 @@ class singleCellPlot {
 	async renderDETable() {
 		const DETableDiv = this.dom.DETableDiv
 		DETableDiv.selectAll('*').remove()
-
+		//first plot
+		this.dom.deselect.selectAll('*').remove()
+		this.dom.deselect.append('option').text('')
+		const plot = this.data.plots[0]
+		this.initPlot(plot)
+		for (const cluster of plot.clusters) this.dom.deselect.append('option').text(cluster)
 		const categoryName = this.state.config.cluster
-		this.dom.deselect.node().value = `Cluster ${categoryName}` || ''
+		this.dom.deselect.node().value = categoryName != undefined ? `Cluster ${categoryName}` : ''
 		if (this.dom.GSEAbt) this.dom.GSEAbt.style('display', categoryName ? 'inline-block' : 'none')
 		if (!categoryName) return
 		const columnName = this.state.termdbConfig.queries.singleCell.DEgenes.columnName
@@ -480,7 +508,7 @@ class singleCellPlot {
 			rows,
 			columns,
 			maxWidth: '50vw',
-			maxHeight: '20vh',
+			maxHeight: '40vh',
 			div: DETableDiv,
 			singleMode: true,
 			noButtonCallback: (i, node) => {
@@ -491,7 +519,8 @@ class singleCellPlot {
 					config: {
 						gene,
 						sample: this.state.config.sample || this.samples?.[0]?.sample,
-						experimentID: this.state.config.experimentID || this.samples?.[0].experiments?.[0]?.experimentID
+						experimentID: this.state.config.experimentID || this.samples?.[0].experiments?.[0]?.experimentID,
+						activeTab: GENE_EXPRESSION_TAB
 					}
 				})
 			},
@@ -789,17 +818,7 @@ class singleCellPlot {
 		}
 		const colorMap = {}
 		this.initPlot(plot)
-		if (
-			this.state.config.activeTab == DIFFERENTIAL_EXPRESSION_TAB &&
-			!this.legendRendered &&
-			this.state.termdbConfig?.queries?.singleCell?.DEgenes
-		) {
-			//first plot
-			this.dom.deselect.selectAll('*').remove()
-			this.dom.deselect.append('option').text('')
-			for (const cluster of plot.clusters) this.dom.deselect.append('option').text(cluster)
-			if (this.state.config.cluster) this.dom.deselect.node().value = `Cluster ${this.state.config.cluster}` || ''
-		}
+
 		const cat2Color = getColors(plot.clusters.length + 2) //Helps to use the same color scheme in different samples
 		for (const cluster of plot.clusters)
 			colorMap[cluster] = plot.colorMap?.[cluster] ? plot.colorMap[cluster] : cat2Color(cluster)
@@ -1150,7 +1169,7 @@ class singleCellPlot {
 		div.selectAll('*').remove()
 		const [rows, columns] = await this.getTableData(state)
 		const selectedRows = []
-		let maxHeight = '60vh'
+		let maxHeight = '70vh'
 		const selectedSample = state.config.sample
 		const selectedRow = this.samples.findIndex(s => s.sample == selectedSample)
 		const selectedRowIndex = selectedRow == -1 ? 0 : selectedRow
