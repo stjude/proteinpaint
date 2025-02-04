@@ -211,7 +211,11 @@ async function getSampleData(q, ds, onlyChildren = false) {
 			}
 		} else if (tw.term.type == TermTypes.SINGLECELL_CELLTYPE) {
 			if (!q.ds.queries?.singleCell?.data) throw 'not supported by dataset: singleCell.data'
-			const data = await q.ds.queries.singleCell.data.get({ sample: tw.term.sample, plots: [tw.term.plot] })
+			const data = await q.ds.queries.singleCell.data.get({
+				sample: tw.term.sample,
+				plots: [tw.term.plot],
+				colorBy: { [tw.term.plot]: tw.term.colorBy }
+			})
 			const groups = tw.q?.customset?.groups
 			for (const cell of data.plots[0].noExpCells) {
 				const sampleId = cell.cellId

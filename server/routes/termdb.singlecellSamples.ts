@@ -72,6 +72,7 @@ export async function validate_query_singleCell(ds: any, genome: any) {
 		validateSamplesNative(q.samples as SingleCellSamples, q.data as SingleCellDataNative, ds)
 	}
 
+	//All the logic below should be moved to validate_query_singleCellData that should be defined in termdb.singlecellData.ts
 	if (q.data.src == 'gdcapi') {
 		gdc_validate_query_singleCell_data(ds, genome)
 	} else if (q.data.src == 'native') {
