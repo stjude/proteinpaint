@@ -1,5 +1,5 @@
 import { dofetch3 } from '#common/dofetch'
-import { make_radios, renderTable, sayerror, Menu } from '#dom'
+import { make_radios, renderTable, sayerror, Menu, table2col } from '#dom'
 import { fileSize } from '#shared/fileSize.js'
 
 /*
@@ -208,23 +208,13 @@ export async function gdcMAFui({ holder, filter0, callbacks, debugmode = false }
 }
 
 function makeControls(obj) {
-	const table = obj.controlDiv.append('table')
+	const table = table2col({ holder: obj.controlDiv })
+	table.addRow('Access', 'Open')
+	table.addRow('Workflow Type', 'Aliquot Ensemble Somatic Variant Merging and Masking')
 	{
-		const tr = table.append('tr')
-		tr.append('td').style('opacity', 0.7).text('Access')
-		tr.append('td').text('Open')
-	}
-	{
-		const tr = table.append('tr')
-		tr.append('td').style('opacity', 0.7).text('Workflow Type')
-		tr.append('td').text('Aliquot Ensemble Somatic Variant Merging and Masking')
-	}
-	{
-		const tr = table.append('tr')
-		tr.append('td').style('opacity', 0.7).text('Experimental Strategy')
-		const td = tr.append('td')
+		const [td1, td2] = table.addRow('Experimental Strategy')
 		make_radios({
-			holder: td,
+			holder: td2,
 			options: [
 				{ label: 'WXS', value: 'WXS', checked: obj.opts.experimentalStrategy == 'WXS' },
 				{
@@ -240,11 +230,10 @@ function makeControls(obj) {
 			}
 		})
 	}
+
 	{
-		const tr = table.append('tr')
-		tr.append('td').style('opacity', 0.7).text('Output Columns')
-		const td = tr.append('td')
-		const clickText = td
+		const [td1, td2] = table.addRow('Output Columns')
+		const clickText = td2
 			.append('span')
 			.attr('class', 'sja_clbtext')
 			.on('click', event => {
@@ -272,7 +261,7 @@ function makeControls(obj) {
 			clickText.text(
 				`${mafColumns.reduce((c, i) => c + (i.selected ? 1 : 0), 0)} of ${
 					mafColumns.length
-				} columns selected, click to change`
+				} columns selected. Click to change`
 			)
 		}
 	}
