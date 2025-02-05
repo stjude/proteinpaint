@@ -279,7 +279,8 @@ class singleCellPlot {
 		const index = this.tabs.findIndex(t => t.id == id)
 		const tab = this.tabs[index]
 		tab.active = true
-		if (id == SAMPLES_TAB) this.tabsComp.tabs[0].label = this.getSamplesTabLabel(this.state)
+		this.tabsComp.tabs[0].label = this.getSamplesTabLabel(this.state)
+		this.tabsComp.updateInactive(0, this.tabs[0])
 		this.tabsComp.update(index, tab)
 
 		this.dom.deDiv.style('display', 'none')
@@ -1235,7 +1236,7 @@ class singleCellPlot {
 		div.selectAll('*').remove()
 		const [rows, columns] = await this.getTableData(state)
 		const selectedRows = []
-		let maxHeight = '70vh'
+		let maxHeight = '60vh'
 		const selectedSample = state.config.sample
 		const selectedRow = this.samples.findIndex(s => s.sample == selectedSample)
 		const selectedRowIndex = selectedRow == -1 ? 0 : selectedRow
@@ -1250,7 +1251,7 @@ class singleCellPlot {
 			maxHeight,
 			noButtonCallback: index => {
 				const sample = rows[index][0].value
-				const config = { chartType: 'singleCellPlot', sample }
+				const config = { chartType: 'singleCellPlot', sample, activeTab: PLOTS_TAB }
 				if (rows[index][0].__experimentID) {
 					config.experimentID = rows[index][0].__experimentID
 				}
