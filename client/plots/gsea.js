@@ -109,6 +109,8 @@ class gsea {
 				later a proper fix is to add a radio toggle of Blitzgsea versus MSigDB, and do not use such hardcode
 				*/
 				{ label: 'REACTOME (blitzgsea)', value: 'REACTOME--blitzgsea' },
+				{ label: 'KEGG (blitzgsea)', value: 'KEGG--blitzgsea' },
+				{ label: 'WikiPathways (blitzgsea)', value: 'WikiPathways--blitzgsea' },
 				{ label: 'H: hallmark gene sets', value: 'H: hallmark gene sets' }
 			]
 		}
