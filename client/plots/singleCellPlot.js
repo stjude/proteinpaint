@@ -357,12 +357,7 @@ class singleCellPlot {
 		const selectDiv = this.dom.violinSelectDiv.style('display', 'inline-block')
 		selectDiv.selectAll('*').remove()
 		const plotDiv = this.dom.plotsDiv.append('div').style('width', '100%')
-		selectDiv.append('label').text('Show expression by: ')
-		const colorBySelect = selectDiv.append('select').on('change', async e => {
-			const colorBy = e.target.value
-			violinDiv.selectAll('*').remove()
-			this.renderViolin(colorBy, violinDiv)
-		})
+
 		const options = new Set()
 		let selectedOption = ''
 		for (const plot of this.data.plots) {
@@ -370,14 +365,24 @@ class singleCellPlot {
 			if (!selectedOption) selectedOption = colorBy
 			for (const c of plot.colorColumns) options.add(c)
 		}
-		colorBySelect
-			.selectAll('option')
-			.data(Array.from(options))
-			.enter()
-			.append('option')
-			.attr('value', d => d)
-			.attr('selected', d => (d == selectedOption ? d : null))
-			.html(d => d)
+
+		if (options.size > 1) {
+			selectDiv.append('label').text('Show expression by: ')
+			const colorBySelect = selectDiv.append('select').on('change', async e => {
+				const colorBy = e.target.value
+				violinDiv.selectAll('*').remove()
+				this.renderViolin(colorBy, violinDiv)
+			})
+
+			colorBySelect
+				.selectAll('option')
+				.data(Array.from(options))
+				.enter()
+				.append('option')
+				.attr('value', d => d)
+				.attr('selected', d => (d == selectedOption ? d : null))
+				.html(d => d)
+		} else selectDiv.append('label').text(`Expression by ${selectedOption}:`)
 		const violinDiv = this.dom.plotsDiv.append('div')
 		this.renderViolin(selectedOption, violinDiv)
 	}
