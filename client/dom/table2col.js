@@ -3,15 +3,19 @@ make a html table of two columns, for showing a list of key-value pairs.
 1st column shows key in gray text, 2nd column shows value in black text, or arbitrary button/svg etc
 as rows are added, as soon as table width exceeds a limit, it auto scrolls
 
-to create new table, do:
+to create new table:
 
 	const table = table2col({holder})
 
-when a new row needs to be added, do:
+to add a new row with only text data:
+
+	table.addRow('Key', 'Value')
+
+if need to insert html and other dynamic contents instead of plain text, do this instead:
 
 	const [td1,td2] = table.addRow()
-	td1.text('Key')
-	td2.text('Value')
+	td1.html(xx)
+	td2.append('input')...
 
 
 arg{}
@@ -29,7 +33,7 @@ export function table2col(arg) {
 	return {
 		scrollDiv,
 		table,
-		addRow: () => {
+		addRow: (text1, text2) => {
 			if (table.node().offsetHeight > 500) {
 				scrollDiv
 					.style('height', '450px')
@@ -40,6 +44,8 @@ export function table2col(arg) {
 			const tr = table.append('tr')
 			const td1 = tr.append('td').style('padding', '3px').style('color', '#555')
 			const td2 = tr.append('td')
+			if (text1 != undefined) td1.text(text1)
+			if (text2 != undefined) td2.text(text2)
 			return [td1, td2]
 		}
 	}
