@@ -72,7 +72,7 @@ class singleCellPlot {
 			callback: () => this.setActiveTab(SAMPLES_TAB)
 		})
 		this.tabs.push({
-			label: 'Clusters',
+			label: 'Plots',
 			id: PLOTS_TAB,
 			active: activeTab == PLOTS_TAB,
 			callback: () => this.setActiveTab(PLOTS_TAB)
