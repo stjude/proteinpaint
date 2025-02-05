@@ -132,14 +132,25 @@ class DEanalysis {
 				]
 			})
 			if (this.settings.method == 'edgeR') {
-				inputs.push({
-					type: 'term',
-					configKey: 'term',
-					chartType: 'DEanalysis',
-					usecase: { target: 'DEanalysis', detail: 'term' },
-					label: 'Confounding factors',
-					vocabApi: this.app.vocabApi
-				})
+				inputs.push(
+					{
+						type: 'term',
+						configKey: 'term',
+						chartType: 'DEanalysis',
+						usecase: { target: 'DEanalysis', detail: 'term' },
+						label: 'Confounding factors',
+						vocabApi: this.app.vocabApi
+					},
+					{
+						label: 'VarGenes',
+						type: 'number',
+						chartType: 'DEanalysis',
+						settingsKey: 'VarGenes',
+						title: 'Number of variable genes used for DE analysis',
+						min: 1000,
+						max: 4000
+					}
+				)
 			}
 		}
 
@@ -481,6 +492,13 @@ add:
 			}
 		]
 
+		if (self.settings.method == 'edgeR') {
+			addStats.push({
+				label: 'Number of variable genes used in parametric DE analysis',
+				value: self.settings.VarGenes
+			})
+		}
+
 		for (const dataRow of addStats) {
 			const [td1, td2] = table_stats.addRow()
 			td1.text(dataRow.label)
@@ -653,6 +671,7 @@ export async function getPlotConfig(opts, app) {
 					pvaluetable: false,
 					adjusted_original_pvalue: 'adjusted',
 					method: 'wilcoxon',
+					VarGenes: 3000,
 					gene_ora: undefined,
 					gsea: undefined
 				}
@@ -715,6 +734,7 @@ function circlemouseout(event, d) {
 	}
 }
 
+// This function is not currently used.
 export async function openHiercluster(term, samplelstTW, app, id, newId) {
 	// barchart config.term{} name is confusing, as it is actually a termsetting object, not t    erm
 	// thus convert the given term into a termwrapper
@@ -746,6 +766,10 @@ async function runDEanalysis(self) {
 		input.tw = self.config.term
 		self.settings.method = 'edgeR' // When adjustment of confounding variables is selected, the method should always be a parmetric method such as edgeR
 		input.method = 'edgeR'
+	}
+
+	if (input.method == 'edgeR') {
+		input.VarGenes = self.settings.VarGenes
 	}
 	const output = await dofetch3('DEanalysis', {
 		body: input
