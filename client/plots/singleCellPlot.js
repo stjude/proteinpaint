@@ -925,6 +925,8 @@ class singleCellPlot {
 	renderLegend(plot) {
 		const colorMap = plot.colorMap
 		let legendSVG = plot.legendSVG
+		const clustersHeight = 20 * Object.keys(colorMap).length + 50 //added 50 for the title and padding
+		const height = Math.max(this.settings.svgh, clustersHeight)
 		if (!plot.legendSVG) {
 			const activeTab = this.tabs.find(tab => tab.active)
 			if (activeTab.id == PLOTS_TAB) {
@@ -956,12 +958,8 @@ class singleCellPlot {
 					})
 				}
 			}
-			const clustersHeight = 20 * Object.keys(colorMap).length + 50 //added 50 for the title and padding
-			legendSVG = plot.plotDiv
-				.append('svg')
-				.attr('width', 250)
-				.attr('height', Math.max(this.settings.svgh, clustersHeight))
-				.style('vertical-align', 'top')
+
+			legendSVG = plot.plotDiv.append('svg').attr('width', 250).attr('height', height).style('vertical-align', 'top')
 
 			plot.legendSVG = legendSVG
 		}
@@ -984,8 +982,11 @@ class singleCellPlot {
 			.attr('transform', `translate(${x}, ${25})`)
 			.style('font-weight', 'bold')
 			.text(`${plot.colorBy}`)
-
-		const step = 25
+		let step = 25
+		if (height < 400) {
+			plot.legendSVG.style('font-size', '0.8em')
+			step = 20
+		}
 		let y = 50
 		const configPlot = this.state.config.plots.find(p => p.name == plot.name)
 		const aliases = configPlot.colorColumns.find(c => c.name == plot.colorBy)?.aliases
@@ -998,7 +999,7 @@ class singleCellPlot {
 			itemG.append('circle').attr('r', 5).attr('fill', color)
 			itemG
 				.append('g')
-				.attr('transform', `translate(${x}, ${5})`)
+				.attr('transform', `translate(15, 5)`)
 				.append('text')
 				.text(
 					`${
@@ -1495,8 +1496,8 @@ export async function getPlotConfig(opts, app) {
 
 export function getDefaultSingleCellSettings() {
 	return {
-		svgw: 800,
-		svgh: 800,
+		svgw: 600,
+		svgh: 600,
 		showGrid: true,
 		sampleSize: 1.5,
 		sampleSizeThree: 0.02,
