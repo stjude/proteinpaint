@@ -1,7 +1,6 @@
 import ky from 'ky'
 import { joinUrl } from '#shared/joinUrl.js'
 import { run_rust_stream } from '@sjcrh/proteinpaint-rust'
-import serverconfig from '#src/serverconfig.js'
 import type { GdcMafBuildRequest, RouteApi } from '#types'
 import { gdcMafPayload } from '#types/checkers'
 import { maxTotalSizeCompressed } from './gdc.maf.ts'
@@ -43,8 +42,8 @@ res{}
 */
 async function buildMaf(q: GdcMafBuildRequest, res, ds) {
 	const t0 = Date.now()
-	const { host, headers } = ds.getHostHeaders(q)
-	const fileLst2 = (await getFileLstUnderSizeLimit(q.fileIdLst, host, headers)) as string[]
+	const { host } = ds.getHostHeaders(q)
+	const fileLst2 = (await getFileLstUnderSizeLimit(q.fileIdLst, host)) as string[]
 
 	mayLog(`${fileLst2.length} out of ${q.fileIdLst.length} input MAF files accepted by size limit`, Date.now() - t0)
 
@@ -78,7 +77,7 @@ excess files are not processed in order not to crash server
 must not rely on file size sent by client, as that can be spoofed and never to be trusted
 it's inexpensive to query api for this
 */
-async function getFileLstUnderSizeLimit(lst: string[], host, headers) {
+async function getFileLstUnderSizeLimit(lst: string[], host) {
 	if (lst.length == 0) throw 'fileIdLst[] not array or blank'
 	const body = {
 		filters: {

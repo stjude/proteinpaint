@@ -78,7 +78,7 @@ async function listMafFiles(q: GdcMafRequest, ds: any) {
 		case_filters.content.push(q.filter0)
 	}
 
-	const { host, headers } = ds.getHostHeaders(q)
+	const { host } = ds.getHostHeaders(q)
 
 	const body: any = {
 		filters,
