@@ -412,8 +412,8 @@ class singleCellPlot {
 						term2: {
 							term: {
 								type: TermTypes.SINGLECELL_CELLTYPE,
-								id: TermTypes.SINGLECELL_CELLTYPE,
-								name: 'Cell type',
+								id: colorBy,
+								name: colorBy,
 								sample: {
 									sID: this.state.config.sample,
 									eID: this.state.config.experimentID
