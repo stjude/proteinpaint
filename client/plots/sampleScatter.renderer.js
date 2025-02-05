@@ -86,11 +86,6 @@ export function setRenderers(self) {
 
 		// Handle continuous color scaling when color term wrapper is in continuous mode
 		if (self.config.colorTW?.q.mode === 'continuous') {
-			// Synchronize the chart's internal mode state with the application config.
-			// This ensures the color scale UI correctly reflects the current mode
-			// when switching between auto, fixed, and percentile modes.
-			chart.cutoffMode = self.config.settings.sampleScatter.colorScaleMode || 'auto'
-			chart.percentile = self.config.settings.sampleScatter.colorScalePercentile || 95
 			// Extract and sort all sample values for our calculations
 			// We filter out any values that are explicitly defined in the term values
 			// This gives us the raw numerical data we need for scaling
@@ -870,9 +865,9 @@ export function setRenderers(self) {
 						// Configuration for our enhanced scaling modes
 						numericInputs: {
 							// Start with either the chart's current mode or default to 'auto'
-							cutoffMode: chart.cutoffMode || 'auto',
+							cutoffMode: this.settings.colorScaleMode,
 							// Default percentile value for percentile mode
-							defaultPercentile: chart.percentile || 95,
+							defaultPercentile: this.settings.colorScalePercentile,
 
 							// This callback handles all mode changes and updates
 							callback: obj => {
@@ -889,11 +884,6 @@ export function setRenderers(self) {
 									max = colorValues[index]
 								}
 
-								// Update the color generator with new range
-								chart.colorGenerator = d3Linear()
-									.domain([min, max])
-									.range([self.config.startColor[chart.id], self.config.stopColor[chart.id]])
-
 								// Dispatch the updated config
 								self.app.dispatch({
 									type: 'plot_edit',
@@ -904,7 +894,8 @@ export function setRenderers(self) {
 												colorScaleMode: obj.cutoffMode,
 												colorScaleMinFixed: obj.cutoffMode === 'fixed' ? min : null,
 												colorScaleMaxFixed: obj.cutoffMode === 'fixed' ? max : null,
-												colorScalePercentile: obj.cutoffMode === 'percentile' ? obj.percentile : null
+												colorScalePercentile:
+													obj.cutoffMode === 'percentile' ? obj.percentile : this.settings.colorScalePercentile
 											}
 										}
 									}
@@ -1307,7 +1298,6 @@ export function renderContours(contourG, data, width, height, colorContours, ban
 
 		.bandwidth(bandwidth)
 		.thresholds(thresholds)(data)
-
 
 	const colorScale = scaleSequential()
 		.domain([0, max(contours, d => d.value)])

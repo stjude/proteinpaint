@@ -863,18 +863,39 @@ class singleCellPlot {
 			let min, max
 			const expCells = plot.expCells
 
-			const values = expCells.map(cell => cell.geneExp)
+			const values = expCells.map(cell => cell.geneExp).sort()
+			plot.colorValues = values
 			if (values.length == 0) {
 				plot.colorGenerator = null
 			} else {
-				if (plot.min) min = plot.min
-				if (plot.max) max = plot.max
-				if (!min || !max) {
-					;[min, max] = values.reduce((s, d) => [d < s[0] ? d : s[0], d > s[1] ? d : s[1]], [values[0], values[0]])
-					if (!plot.min) plot.min = 0 //force min to start in 0
-					if (!plot.max) plot.max = max
+				switch (this.settings.colorScaleMode) {
+					// Fixed mode: Use user-defined min/max values
+					// This is useful when you want consistent scaling across different views
+					case 'fixed':
+						min = this.settings.colorScaleMinFixed
+						max = this.settings.colorScaleMaxFixed
+						break
+
+					case 'percentile':
+						// Percentile mode: Scale based on data distribution
+						min = values[0] // Start at the first value of the array for percentile mode
+						// Calculate the value at the specified percentile
+						// This helps handle outliers by focusing on the main distribution
+						const index = Math.floor((values.length * this.settings.colorScalePercentile) / 100)
+						max = values[index]
+						break
+
+					case 'auto':
+					default:
+						// Auto mode (default): Use the full range of the data
+						// This gives the most accurate representation of the actual data distribution
+						min = values[0]
+						max = values[values.length - 1] // Since the values are already sorted in ascending
+						// order just get the first and last values
+						break
 				}
-				plot.colorGenerator = d3Linear().domain([plot.min, plot.max]).range([startColor, stopColor])
+
+				plot.colorGenerator = d3Linear().domain([min, max]).range([startColor, stopColor])
 			}
 		}
 		this.renderLargePlotThree(plot)
@@ -1083,12 +1104,13 @@ class singleCellPlot {
 			.append('text')
 			.text(`${gene} expression`)
 		const legendG = plot.legendSVG.append('g').attr('transform', `translate(20, ${2 * offsetY})`)
+		console.log(this.settings)
 		const colorScale = new ColorScale({
 			holder: legendG,
 			barwidth,
 			barheight: 20,
 			colors,
-			domain: [plot.min, plot.max],
+			domain: plot.colorGenerator.domain(),
 
 			position: '0, 20',
 			ticks: 4,
@@ -1098,23 +1120,40 @@ class singleCellPlot {
 				this.changeGradientColor(plot, val, idx)
 			},
 			numericInputs: {
-				cutoffMode: plot.cutoffMode || 'auto',
-				defaultPercentile: plot.percentile || 95,
+				cutoffMode: this.settings.colorScaleMode,
+				defaultPercentile: this.settings.colorScalePercentile,
 				callback: obj => {
-					plot.cutoffMode = obj.cutoffMode
-					if (obj.cutoffMode == 'auto') {
-						plot.min = null
-						plot.max = null
-					} else if (obj.cutoffMode == 'fixed') {
-						plot.min = obj.min
-						plot.max = obj.max
-					} else if (obj.cutoffMode == 'percentile') {
-						plot.percentile = obj.percentile
-						//after doing this the color scale needs to be repainted as is not aware of the new max value
-						const index = Math.floor((plot.cells.length * obj.percentile) / 100)
-						plot.max = plot.cells[index]?.geneExp
+					let min, max
+					const colorValues = plot.colorValues
+					// Handle different modes for color scaling
+					if (obj.cutoffMode === 'auto') {
+						min = colorValues[0]
+						max = colorValues[colorValues.length - 1]
+					} else if (obj.cutoffMode === 'fixed') {
+						min = obj.min
+						max = obj.max
+					} else if (obj.cutoffMode === 'percentile') {
+						min = colorValues[0]
+						const index = Math.floor((colorValues.length * obj.percentile) / 100)
+						max = colorValues[index]
 					}
-					this.renderPlot(plot)
+
+					// Dispatch the updated config
+					this.app.dispatch({
+						type: 'plot_edit',
+						id: this.id,
+						config: {
+							settings: {
+								singleCellPlot: {
+									colorScaleMode: obj.cutoffMode,
+									colorScaleMinFixed: obj.cutoffMode === 'fixed' ? min : null,
+									colorScaleMaxFixed: obj.cutoffMode === 'fixed' ? max : null,
+									colorScalePercentile:
+										obj.cutoffMode === 'percentile' ? obj.percentile : this.settings.colorScalePercentile
+								}
+							}
+						}
+					})
 				}
 			}
 		})
@@ -1522,6 +1561,16 @@ export function getDefaultSingleCellSettings() {
 			samples: 'samples',
 			Sample: 'Sample',
 			sample: 'sample'
-		}
+		},
+		colorScaleMode: 'auto', // Default to automatic scaling based on data range
+		// Other options: 'fixed' (user-defined range) or
+		// 'percentile' (scale based on data distribution)
+
+		colorScalePercentile: 95, // Default percentile for percentile mode
+		// This means we'll scale colors based on values
+		// up to the 95th percentile by default
+		colorScaleMinFixed: null, // User-defined minimum value for fixed mode
+		// Null indicates this hasn't been set yet
+		colorScaleMaxFixed: null // User-defined maximum value for fixed mode
 	}
 }
