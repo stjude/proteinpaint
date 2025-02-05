@@ -498,7 +498,7 @@ class singleCellPlot {
 			this.state.config.experimentID || this.state.config.sample || this.samples?.[0]?.experiments[0]?.experimentID
 		const args = { genome: this.state.genome, dslabel: this.state.dslabel, categoryName, sample, columnName }
 		this.dom.loadingDiv.selectAll('*').remove()
-		this.dom.loadingDiv.style('display', '').append('div').attr('class', 'sjpp-spinner')
+		this.dom.loadingDiv.style('display', '').append('div').text('Loading...')
 		const result = await dofetch3('termdb/singlecellDEgenes', { body: args })
 		if (result.error) {
 			DETableDiv.text(result.error)
@@ -738,7 +738,7 @@ class singleCellPlot {
 			this.plotColorByDivs = []
 			this.plots = []
 			this.dom.loadingDiv.selectAll('*').remove()
-			this.dom.loadingDiv.style('display', '').append('div').attr('class', 'sjpp-spinner')
+			this.dom.loadingDiv.style('display', '').append('div').text('Loading...')
 			this.legendRendered = false
 			this.dom.plotsDiv.selectAll('*').remove()
 			this.data = await this.getData()
