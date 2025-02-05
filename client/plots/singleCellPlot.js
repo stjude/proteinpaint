@@ -51,7 +51,6 @@ class singleCellPlot {
 		// TODO sample table still needs to be changed when gdc (external portal) cohort changes
 
 		const state = this.getState(appState)
-		const { uiLabels } = state.config.settings.singleCellPlot
 		const body = { genome: state.genome, dslabel: state.dslabel, filter0: state.termfilter.filter0 || null }
 		const result = await dofetch3('termdb/singlecellSamples', { body })
 		if (result.error) throw result.error
@@ -64,14 +63,10 @@ class singleCellPlot {
 			else return elem1.sample.localeCompare(elem2.sample)
 		})
 
-		const extraSampleTabLabel = state.termdbConfig.queries.singleCell.samples.extraSampleTabLabel
-			? ', ' + this.samples[0][state.termdbConfig.queries.singleCell.samples.extraSampleTabLabel]
-			: ''
-
 		this.tabs = []
 		const activeTab = state.config.activeTab
 		this.tabs.push({
-			label: uiLabels.Sample + ' ' + (state.config.sample || this.samples[0].sample) + extraSampleTabLabel,
+			label: this.getSamplesTabLabel(state),
 			id: SAMPLES_TAB,
 			active: activeTab == SAMPLES_TAB,
 			callback: () => this.setActiveTab(SAMPLES_TAB)
@@ -216,6 +211,15 @@ class singleCellPlot {
 		select('.sjpp-output-sandbox-content').on('scroll', event => this.tip.hide())
 	}
 
+	getSamplesTabLabel(state) {
+		const { uiLabels } = state.config.settings.singleCellPlot
+
+		const extraSampleTabLabel = state.termdbConfig.queries.singleCell.samples.extraSampleTabLabel
+			? ', ' + this.samples[0][state.termdbConfig.queries.singleCell.samples.extraSampleTabLabel]
+			: ''
+		return uiLabels.Sample + ' ' + (state.config.sample || this.samples[0].sample) + extraSampleTabLabel
+	}
+
 	renderShowPlots(showDiv, state) {
 		showDiv.append('label').text('Plots:').style('font-size', '1.1em')
 
@@ -275,6 +279,7 @@ class singleCellPlot {
 		const index = this.tabs.findIndex(t => t.id == id)
 		const tab = this.tabs[index]
 		tab.active = true
+		if (id == SAMPLES_TAB) this.tabsComp.tabs[0].label = this.getSamplesTabLabel(this.state)
 		this.tabsComp.update(index, tab)
 
 		this.dom.deDiv.style('display', 'none')
@@ -1249,16 +1254,7 @@ class singleCellPlot {
 				if (rows[index][0].__experimentID) {
 					config.experimentID = rows[index][0].__experimentID
 				}
-				this.tabsComp.tabs[0].label =
-					sample +
-					(this.state.termdbConfig.queries.singleCell.samples.extraSampleTabLabel
-						? // index is table row (experiment) index and no longer this.samples[] array index because some samples may have >1 experiments. find the sample index by sample name
-						  ', ' +
-						  this.samples[this.samples.findIndex(i => i.sample == sample)][
-								this.state.termdbConfig.queries.singleCell.samples.extraSampleTabLabel
-						  ]
-						: '')
-				this.tabsComp.update(0, this.tabs[0])
+
 				this.app.dispatch({ type: 'plot_edit', id: this.id, config })
 			},
 			selectedRows,
