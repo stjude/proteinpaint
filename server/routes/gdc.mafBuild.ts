@@ -1,10 +1,11 @@
-import got from 'got'
-import path from 'path'
+import ky from 'ky'
+import { joinUrl } from '#shared/joinUrl.js'
 import { run_rust_stream } from '@sjcrh/proteinpaint-rust'
 import serverconfig from '#src/serverconfig.js'
 import type { GdcMafBuildRequest, RouteApi } from '#types'
 import { gdcMafPayload } from '#types/checkers'
 import { maxTotalSizeCompressed } from './gdc.maf.ts'
+import { mayLog } from '#src/helpers.ts'
 
 export const api: RouteApi = {
 	endpoint: 'gdc/mafBuild',
@@ -45,16 +46,12 @@ async function buildMaf(q: GdcMafBuildRequest, res, ds) {
 	const { host, headers } = ds.getHostHeaders(q)
 	const fileLst2 = (await getFileLstUnderSizeLimit(q.fileIdLst, host, headers)) as string[]
 
-	if (serverconfig.debugmode)
-		console.log(
-			`${fileLst2.length} out of ${q.fileIdLst.length} input MAF files accepted by size limit`,
-			Date.now() - t0
-		)
+	mayLog(`${fileLst2.length} out of ${q.fileIdLst.length} input MAF files accepted by size limit`, Date.now() - t0)
 
 	const arg = {
 		fileIdLst: fileLst2,
 		columns: q.columns,
-		host: path.join(host.rest, 'data') // must use the /data/ endpoint from current host
+		host: joinUrl(host.rest, 'data') // must use the /data/ endpoint from current host
 	}
 
 	const rustStream = run_rust_stream('gdcmaf', JSON.stringify(arg))
@@ -64,7 +61,7 @@ async function buildMaf(q: GdcMafBuildRequest, res, ds) {
 
 	rustStream.on('end', () => {
 		// report amount of time taken to run rust
-		if (serverconfig.debugmode) console.log('rust gdcmaf', Date.now() - t0)
+		mayLog('rust gdcmaf', Date.now() - t0)
 		res.end()
 	})
 
@@ -83,7 +80,7 @@ it's inexpensive to query api for this
 */
 async function getFileLstUnderSizeLimit(lst: string[], host, headers) {
 	if (lst.length == 0) throw 'fileIdLst[] not array or blank'
-	const data = {
+	const body = {
 		filters: {
 			op: 'in',
 			content: { field: 'file_id', value: lst }
@@ -91,13 +88,11 @@ async function getFileLstUnderSizeLimit(lst: string[], host, headers) {
 		size: 10000,
 		fields: 'file_size'
 	}
-	const response = await got.post(path.join(host.rest, 'files'), { headers, body: JSON.stringify(data) })
-	let re
-	try {
-		re = JSON.parse(response.body)
-	} catch (_) {
-		throw 'invalid json from getFileLstUnderSizeLimit'
-	}
+
+	const response = await ky.post(joinUrl(host.rest, 'files'), { timeout: false, json: body })
+	if (!response.ok) throw `HTTP Error: ${response.status} ${response.statusText}`
+	const re: any = await response.json() // type any to avoid tsc err
+
 	if (!Array.isArray(re.data?.hits)) throw 're.data.hits[] not array'
 	const out = [] as string[]
 	let cumsize = 0

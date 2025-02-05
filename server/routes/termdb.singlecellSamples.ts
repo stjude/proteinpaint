@@ -306,7 +306,6 @@ function gdc_validateGeneExpression(G, ds, genome) {
 			const { host } = ds.getHostHeaders(q)
 
 			const t = Date.now()
-			//const out = await ky.post(joinUrl(host.rest, 'scrna_seq/gene_expression'), { timeout: false, json: body }).json()
 			const response = await ky.post(joinUrl(host.rest, 'scrna_seq/gene_expression'), { timeout: false, json: body })
 			if (!response.ok) throw `HTTP Error: ${response.status} ${response.statusText}`
 			const out = await response.json()
