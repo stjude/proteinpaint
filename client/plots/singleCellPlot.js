@@ -398,6 +398,7 @@ class singleCellPlot {
 						chartType: 'violin',
 						settings: { violin: { plotThickness: 50 } },
 						term: {
+							$id: `${gene}-${this.state.config.sample}-${this.state.config.experimentID}`,
 							term: {
 								type: TermTypes.SINGLECELL_GENE_EXPRESSION,
 								id: gene,
@@ -410,6 +411,8 @@ class singleCellPlot {
 							}
 						},
 						term2: {
+							$id: `${colorBy}-${this.state.config.sample}-${this.state.config.experimentID}`,
+
 							term: {
 								type: TermTypes.SINGLECELL_CELLTYPE,
 								id: colorBy,
