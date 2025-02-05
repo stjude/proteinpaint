@@ -13,6 +13,7 @@ import { Tabs } from '../dom/toggleButtons.js'
 import * as THREE from 'three'
 import { getThreeCircle } from './sampleScatter.rendererThree.js'
 import { renderContours } from './sampleScatter.renderer.js'
+import { digestMessage } from '../termsetting/termsetting'
 /*
 this
 
@@ -398,7 +399,7 @@ class singleCellPlot {
 						chartType: 'violin',
 						settings: { violin: { plotThickness: 50 } },
 						term: {
-							$id: `${gene}-${this.state.config.sample}-${this.state.config.experimentID}`,
+							$id: digestMessage(`${gene}-${this.state.config.sample}-${this.state.config.experimentID}`),
 							term: {
 								type: TermTypes.SINGLECELL_GENE_EXPRESSION,
 								id: gene,
@@ -411,7 +412,7 @@ class singleCellPlot {
 							}
 						},
 						term2: {
-							$id: `${colorBy}-${this.state.config.sample}-${this.state.config.experimentID}`,
+							$id: digestMessage(`${colorBy}-${this.state.config.sample}-${this.state.config.experimentID}`),
 
 							term: {
 								type: TermTypes.SINGLECELL_CELLTYPE,
