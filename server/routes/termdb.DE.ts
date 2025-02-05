@@ -148,7 +148,7 @@ values[] // using integer sample id
 	if ((group1names.length <= sample_size_limit && group2names.length <= sample_size_limit) || param.method == 'edgeR') {
 		// edgeR will be used for DE analysis
 		if (param.method == 'edgeR') {
-			expression_input.VarGenes = 3000 // For now hardcoding this value. Will later be defined in UI. The reason this is behind "param.method == 'edgeR'" is because ranking of variable genes is not needed for low sample size groups.
+			expression_input.VarGenes = param.VarGenes // The reason this is behind "param.method == 'edgeR'" is because ranking of variable genes is not needed for low sample size groups.
 		}
 		const time1 = new Date().valueOf()
 		result = JSON.parse(
