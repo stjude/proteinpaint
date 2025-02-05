@@ -1,7 +1,7 @@
-import type { GdcMafRequest, GdcMafResponse, File, RouteApi } from '#types'
+import type { GdcMafRequest, GdcMafResponse, GdcMafFile, RouteApi } from '#types'
 import { gdcMafPayload } from '#types/checkers'
-import path from 'path'
-import got from 'got'
+import ky from 'ky'
+import { joinUrl } from '#shared/joinUrl.js'
 import serverconfig from '#src/serverconfig.js'
 
 /*
@@ -80,7 +80,7 @@ async function listMafFiles(q: GdcMafRequest, ds: any) {
 
 	const { host, headers } = ds.getHostHeaders(q)
 
-	const data: any = {
+	const body: any = {
 		filters,
 		size: maxFileNumber,
 		fields: [
@@ -89,26 +89,22 @@ async function listMafFiles(q: GdcMafRequest, ds: any) {
 			'cases.project.project_id', // for display only
 			'cases.case_id', // case uuid for making case url link to portal
 			'cases.submitter_id', // used when listing all cases & files
-			'cases.samples.sample_type'
-			// may add diagnosis and primary site
+			'cases.samples.tissue_type',
+			'cases.samples.tumor_descriptor'
 		].join(',')
 	}
-	if (case_filters.content.length) data.case_filters = case_filters
+	if (case_filters.content.length) body.case_filters = case_filters
 
-	const response = await got.post(path.join(host.rest, 'files'), { headers, body: JSON.stringify(data) })
+	const response = await ky.post(joinUrl(host.rest, 'files'), { timeout: false, json: body })
+	if (!response.ok) throw `HTTP Error: ${response.status} ${response.statusText}`
+	const re: any = await response.json() // type any to avoid tsc err
 
-	let re
-	try {
-		re = JSON.parse(response.body)
-	} catch (_) {
-		throw 'invalid JSON from ' + api.endpoint
-	}
 	if (!Number.isInteger(re.data?.pagination?.total)) throw 're.data.pagination.total is not int'
 	if (!Array.isArray(re.data?.hits)) throw 're.data.hits[] not array'
 
 	// flatten api return to table row objects
 	// it is possible to set a max size limit to limit the number of files passed to client
-	const files: File[] = []
+	const files: GdcMafFile[] = []
 
 	for (const h of re.data.hits) {
 		/*
@@ -121,12 +117,8 @@ async function listMafFiles(q: GdcMafRequest, ds: any) {
 			  	"project_id":"xx"
 			  },
 			  "samples": [
-				{
-				  "sample_type": "Blood Derived Normal"
-				},
-				{
-				  "sample_type": "Primary Tumor"
-				}
+			    { tumor_descriptor: 'Recurrence', tissue_type: 'Tumor' },
+  				{ tumor_descriptor: 'Not Applicable', tissue_type: 'Normal' }
 			  ]
 			}
 		  ],
@@ -155,19 +147,28 @@ async function listMafFiles(q: GdcMafRequest, ds: any) {
 		}
 		*/
 
-		const file: File = {
+		const file: GdcMafFile = {
 			id: h.id,
 			project_id: c.project.project_id,
 			file_size: h.file_size,
 			case_submitter_id: c.submitter_id,
-			case_uuid: c.case_id
+			case_uuid: c.case_id,
+			sample_types: []
 		}
 
 		if (c.samples) {
-			file.sample_types = c.samples.map((i: { sample_type: any }) => i.sample_type).sort()
-			// sort to show sample type names in consistent alphabetical order
-			// otherwise one file shows 'Blood, Primary' and another shows 'Primary, Blood'
-			// FIXME this includes samples not associated with current maf file
+			let normalTypeName // if found Normal in c.samples[], do not insert to sample_types[]; when completed the iteration, insert normalTypeName to sample_types[], as a way to keep it always at last; just sample_types.sort() won't work due to presence of "Primary" and "Metastatic" tumor descriptors that will cause Normal to appear 1st and last...
+			for (const { tumor_descriptor, tissue_type } of c.samples) {
+				// concatenate the two properties into 'sample_type' to show on client.
+				if (tissue_type == 'Normal') {
+					// ignore Not Applicable
+					normalTypeName = (tumor_descriptor == 'Not Applicable' ? '' : tumor_descriptor + ' ') + tissue_type
+					continue
+				}
+				// always include tissue descriptor for non-normal
+				file.sample_types.push(tumor_descriptor + ' ' + tissue_type)
+			}
+			if (normalTypeName) file.sample_types.push(normalTypeName)
 		}
 		files.push(file)
 	}
