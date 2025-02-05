@@ -1104,7 +1104,6 @@ class singleCellPlot {
 			.append('text')
 			.text(`${gene} expression`)
 		const legendG = plot.legendSVG.append('g').attr('transform', `translate(20, ${2 * offsetY})`)
-		console.log(this.settings)
 		const colorScale = new ColorScale({
 			holder: legendG,
 			barwidth,
