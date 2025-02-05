@@ -310,6 +310,7 @@ class singleCellPlot {
 			case VIOLIN_TAB:
 				this.dom.geDiv.style('display', 'inline-block')
 				this.renderViolinTab()
+				this.dom.searchbox.node().focus()
 				break
 		}
 	}
