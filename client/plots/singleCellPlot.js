@@ -16,6 +16,9 @@ import { digestMessage } from '#termsetting'
 /*
 
 hardcoded behaviors when this.samples[].experiments[] is present:
+
+- all samples must either have or not have .experiments[]
+- experiments[] supports tracking multiple experiments done on same sample
 - an experiment must be {experimentID,sampleName} along with optional prop
 - state tracks experimentID as well as this.samples[].sample
 - in sample table, both experimentID and sampleName are shown
@@ -30,14 +33,10 @@ this
 			sample: str
 			<termid>: <term value>
 			experiments?: []
-				experimentID: str // hardcoded and required
-				sampleName: str // hardcoded and required
+				experimentID: str // required to track which table row is selected and for backend to retrieve data for
+				sampleName: str // for display
 		}
 
-		all samples should either have or not have .experiments[]:
-		- if present, the sample may have more than 1 experiments that will be shown as different rows on sample table;
-		- otherwise, each sample obj is a single experiment and show as one row
-		
 
 	legendRendered=bool
 
@@ -1381,8 +1380,9 @@ class singleCellPlot {
 
 		// if samples are using experiments, add the hardcoded experiment column
 		if (samples.some(i => i.experiments)) {
-			columns.push({ label: 'Sample' })
-			columns.push({ label: 'Experiment' })
+			// two hardcoded column names
+			columns.push({ label: 'Sample' }) // corresponds to this.samples[].experiments[].sampleName
+			columns.push({ label: 'Experiment' }) // corresponds to this.samples[].experiments[].experimentID
 		}
 
 		//const index = columnNames.length == 1 ? 0 : columnNames.length - 1
