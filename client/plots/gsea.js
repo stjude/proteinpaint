@@ -16,7 +16,7 @@ const gsea_table_cols = [
 	{ label: 'Pathway name' },
 	{ label: 'enrichment score' },
 	{ label: 'normalized enrichment score' },
-	{ label: 'Geneset size' },
+	{ label: 'Geneset total size' },
 	{ label: 'pvalue' },
 	{ label: 'sidak' },
 	{ label: 'FDR' },
@@ -53,7 +53,7 @@ class gsea {
 		this.dom.controlsDiv.selectAll('*').remove()
 		const inputs = [
 			{
-				label: 'P-value filter cutoff (linear scale)',
+				label: 'P-value Filter Cutoff (Linear Scale)',
 				type: 'number',
 				chartType: 'gsea',
 				settingsKey: 'pvalue',
@@ -62,18 +62,18 @@ class gsea {
 				max: 1
 			},
 			{
-				label: 'P-value filter type',
+				label: 'P-value Filter Type',
 				type: 'radio',
 				chartType: 'gsea',
 				settingsKey: 'adjusted_original_pvalue',
 				title: 'Toggle between original and adjusted pvalues for volcano plot',
 				options: [
-					{ label: 'adjusted', value: 'adjusted' },
-					{ label: 'original', value: 'original' }
+					{ label: 'Adjusted', value: 'adjusted' },
+					{ label: 'Original', value: 'original' }
 				]
 			},
 			{
-				label: 'Gene set size filter cutoff',
+				label: 'Gene Set Size Filter Cutoff',
 				type: 'number',
 				chartType: 'gsea',
 				settingsKey: 'gene_set_size_cutoff',
@@ -82,7 +82,7 @@ class gsea {
 				max: 20000
 			},
 			{
-				label: 'Filter non-coding genes',
+				label: 'Filter Non-coding Genes',
 				type: 'checkbox',
 				chartType: 'gsea',
 				settingsKey: 'filter_non_coding_genes',
@@ -92,7 +92,7 @@ class gsea {
 		]
 
 		const geneSet = {
-			label: 'Gene set group',
+			label: 'Gene Set Group',
 			type: 'dropdown',
 			chartType: 'gsea',
 			settingsKey: 'pathway',
