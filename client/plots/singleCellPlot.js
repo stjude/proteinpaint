@@ -675,7 +675,7 @@ class singleCellPlot {
 		renderTable({
 			rows,
 			columns,
-			maxHeight: '70vh',
+			maxHeight: '60vh',
 			maxWidth: '45vw',
 			div: DETableDiv,
 			singleMode: true,
@@ -1307,7 +1307,7 @@ class singleCellPlot {
 			singleMode: true,
 			div: tableDiv,
 			maxWidth: columns.length > 3 ? '90vw' : '40vw',
-			maxHeight: '50vh',
+			maxHeight: '65vh',
 			noButtonCallback: index => {
 				// NOTE that "index" is not array index of this.samples[]
 				const sample = rows[index][0].value
@@ -1375,7 +1375,7 @@ class singleCellPlot {
 		for (const c of s.sampleColumns || []) {
 			columns.push({
 				label: (await this.app.vocabApi.getterm(c.termid)).name,
-				width: '15vw'
+				width: '14vw'
 			})
 		}
 
