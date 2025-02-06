@@ -161,23 +161,24 @@ class singleCellPlot {
 		})
 		this.tabsComp.main()
 
-		const headerDiv = contentDiv.append('div').style('display', 'inline-block').style('padding-bottom', '20px')
-		const sampleDiv = headerDiv
-			.append('div')
-			.html(await this.getSamplesTabLabel(state))
-			.style('padding-bottom', '20px')
-		const showDiv = headerDiv.append('div').style('padding-bottom', '10px')
+		const headerDiv = contentDiv.append('div').style('display', 'inline-block').style('padding-bottom', '10px')
 
-		const tableDiv = headerDiv.append('div')
-		await this.renderSamplesTable(tableDiv, state)
+		const showDiv = headerDiv.append('div').style('padding-bottom', '10px')
 
 		if (state.config.plots.length > 1) this.renderShowPlots(showDiv, state)
 		// div to show optional DE genes (precomputed by seurat for each cluster, e.g. via gdc)
 		const geDiv = headerDiv.append('div').style('display', 'none')
 		const violinSelectDiv = headerDiv.append('div').style('padding-left', '30px').style('display', 'none')
 		const deDiv = headerDiv.append('div').style('display', 'none')
-
+		const sampleDiv = headerDiv
+			.append('div')
+			.style('display', 'inline-block')
+			.html(await this.getSamplesTabLabel(state))
+			.style('padding', '10px 20px')
 		const plotsDivParent = contentDiv.append('div')
+		const samplesTableDiv = plotsDivParent.append('div').style('display', 'none')
+		this.renderSamplesTable(samplesTableDiv, state)
+
 		const plotsDiv = plotsDivParent
 			.append('div')
 			.style('display', 'flex')
@@ -196,13 +197,13 @@ class singleCellPlot {
 
 		this.dom = {
 			sampleDiv,
+			samplesTableDiv,
 			showDiv,
 			mainDiv,
 			loadingDiv,
 			tip: new Menu({ padding: '0px' }),
 			tooltip: new Menu({ padding: '2px', offsetX: 10, offsetY: 0 }),
 			controlsHolder: controlsDiv,
-			tableDiv,
 			geDiv,
 			violinSelectDiv,
 			deDiv,
@@ -377,8 +378,8 @@ class singleCellPlot {
 					let settings = { svgw: 800, svgh: 800 }
 
 					if (selectedCount > 1) {
-						const width = 1000
-						const height = 1000
+						const width = 900
+						const height = 900
 						settings.svgh = width / selectedCount
 						settings.svgw = height / selectedCount
 					}
@@ -422,16 +423,16 @@ class singleCellPlot {
 
 		this.dom.deDiv.style('display', 'none')
 		this.dom.geDiv.style('display', 'none')
-		this.dom.tableDiv.style('display', 'none')
 		this.dom.showDiv.style('display', 'none')
 		this.dom.violinSelectDiv.style('display', 'none')
+		this.dom.samplesTableDiv.style('display', 'none')
 		switch (id) {
 			case SAMPLES_TAB:
-				this.dom.tableDiv.style('display', 'block')
+				this.dom.samplesTableDiv.style('display', 'block')
 				break
 			case PLOTS_TAB:
 				await this.renderPlots()
-				this.dom.showDiv.style('display', 'block')
+				this.dom.showDiv.style('display', 'inline-block')
 				break
 
 			case GENE_EXPRESSION_TAB:
@@ -766,15 +767,19 @@ class singleCellPlot {
 				title: 'Show grid'
 			}
 		]
-		inputs.push({
-			label: 'Show contour map',
-			boxLabel: '',
-			type: 'checkbox',
-			chartType: 'singleCellPlot',
-			settingsKey: 'showContour',
-			title: 'Show contour map'
-		})
-		if (this.settings.showContour)
+		const enableContour = this.state.config.activeTab == GENE_EXPRESSION_TAB && this.state.config.gene
+		if (enableContour)
+			inputs.push({
+				label: 'Show contour map',
+				boxLabel: '',
+				type: 'checkbox',
+				chartType: 'singleCellPlot',
+				settingsKey: 'showContour',
+				title:
+					'Shows the density of point clouds. It uses gene expression to weight the points when calculating the density contours.'
+			})
+		if (enableContour && this.settings.showContour)
+			//enabled and active
 			inputs.push(
 				{
 					label: 'Color contours',
@@ -910,7 +915,7 @@ class singleCellPlot {
 		if (this.colorByGene && this.state.config.gene) {
 			// for gene expression sc plot, needs to add colorGenerator to plot even
 			// when legend is not needed for the plot
-			if (!this.config.startColor[plot.name]) this.config.startColor[plot.name] = 'white'
+			if (!this.config.startColor[plot.name]) this.config.startColor[plot.name] = '#fffee0'
 			if (!this.config.stopColor[plot.name]) this.config.stopColor[plot.name] = 'red'
 			const startColor = this.config.startColor[plot.name]
 			const stopColor = this.config.stopColor[plot.name]
@@ -1441,7 +1446,7 @@ class singleCellPlot {
 			particles.position.z -= event.deltaY / 500
 		})
 
-		if (this.settings.showContour) {
+		if (this.settings.showContour && this.state.config.gene && this.state.config.activeTab == GENE_EXPRESSION_TAB) {
 			const cells = plot.expCells.length > 0 ? plot.expCells : plot.cells
 			const xAxisScale = plot.xAxisScale.range([0, this.settings.svgw])
 			const yAxisScale = plot.yAxisScale.range([this.settings.svgh, 0])
@@ -1604,13 +1609,13 @@ export function getDefaultSingleCellSettings() {
 		svgh: 600,
 		showGrid: true,
 		sampleSize: 1.5,
-		sampleSizeThree: 0.02,
+		sampleSizeThree: 0.04,
 		threeFOV: 60,
 		opacity: 0.8,
 		showNoExpCells: false,
 		showContour: false,
 		colorContours: false,
-		contourBandwidth: 20,
+		contourBandwidth: 15,
 		contourThresholds: 10,
 		uiLabels: {
 			// allow customized user interface labels (buttons, menus, etc) by dataset override,
