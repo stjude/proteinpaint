@@ -3,23 +3,35 @@ import { scaleLinear as d3Linear } from 'd3-scale'
 import { dofetch3 } from '#common/dofetch'
 import { getColors, plotColor } from '#shared/common.js'
 import { controlsInit } from './controls'
-import { downloadSingleSVG } from '../common/svg.download.js'
+import { downloadSingleSVG } from '#common/svg.download'
 import { select } from 'd3-selection'
 import { rgb, create, extent, color } from 'd3'
 import { roundValueAuto } from '#shared/roundValue.js'
 import { TermTypes } from '#shared/terms.js'
-import { ColorScale, icons as icon_functions, addGeneSearchbox, renderTable, sayerror, Menu } from '#dom'
-import { Tabs } from '../dom/toggleButtons.js'
+import { ColorScale, icons as icon_functions, addGeneSearchbox, renderTable, sayerror, Menu, Tabs } from '#dom'
 import * as THREE from 'three'
 import { getThreeCircle } from './sampleScatter.rendererThree.js'
 import { renderContours } from './sampleScatter.renderer.js'
-import { digestMessage } from '../termsetting/termsetting'
+import { digestMessage } from '#termsetting'
 /*
 this
-
 	.samples[]
 		datastructure returned by /termdb/singlecellSamples
+		
+		element structure:
 
+		{
+			sample: str
+			<termid>: <term value>
+			experiments?: []
+				experimentID: str
+				sampleName: str
+				sampleType: str
+		}
+
+		when experiments[] is present, the sample may have more than 1 experiments that will be shown as different rows on sample table;
+		otherwise, each sample has a single experiment and is a single row in sample table
+		
 
 	.legendRendered=bool
 	.state{}
@@ -144,8 +156,7 @@ class singleCellPlot {
 		const headerDiv = contentDiv.append('div').style('display', 'inline-block').style('padding-bottom', '20px')
 		const sampleDiv = headerDiv
 			.append('div')
-			.text(this.getSamplesTabLabel(state))
-			.style('font-size', '1.1em')
+			.html(await this.getSamplesTabLabel(state))
 			.style('padding-bottom', '20px')
 		const showDiv = headerDiv.append('div').style('padding-bottom', '10px')
 
@@ -250,7 +261,7 @@ class singleCellPlot {
 			this.showActiveTab()
 			await this.setControls()
 
-			this.dom.sampleDiv.text(this.getSamplesTabLabel(this.state))
+			this.dom.sampleDiv.html(await this.getSamplesTabLabel(this.state))
 		} catch (e) {
 			this.app.tip.hide()
 			this.dom.loadingDiv.style('display', 'none')
@@ -304,13 +315,24 @@ class singleCellPlot {
 		}
 	}
 
-	getSamplesTabLabel(state) {
-		const { uiLabels } = state.config.settings.singleCellPlot
+	async getSamplesTabLabel(state) {
+		const sampleIdx = state.config.sample ? this.samples.findIndex(i => i.sample == state.config.sample) : 0
+		if (sampleIdx == -1) throw 'sample not found in this.samples[]'
 
-		const extraSampleTabLabel = state.termdbConfig.queries.singleCell.samples.extraSampleTabLabel
-			? '    Project: ' + this.samples[0][state.termdbConfig.queries.singleCell.samples.extraSampleTabLabel]
-			: ''
-		return uiLabels.Sample + ': ' + (state.config.sample || this.samples[0].sample) + extraSampleTabLabel
+		let extra = ''
+		if (state.termdbConfig.queries.singleCell.samples.extraSampleTabLabel) {
+			// value is a term id. get the term name
+			const termname = (
+				await this.app.vocabApi.getterm(state.termdbConfig.queries.singleCell.samples.extraSampleTabLabel)
+			).name
+			// get the term value from current sample
+			const sampleValue = this.samples[sampleIdx][state.termdbConfig.queries.singleCell.samples.extraSampleTabLabel]
+			extra = `<span style="margin-left:20px;font-size:.7em">${termname.toUpperCase()}</span> ${sampleValue}`
+		}
+
+		return `<span style="font-size:.7em">${state.config.settings.singleCellPlot.uiLabels.sample.toUpperCase()}</span>
+			${this.samples[sampleIdx].sample}
+			${extra}`
 	}
 
 	renderShowPlots(showDiv, state) {
@@ -1243,12 +1265,11 @@ class singleCellPlot {
 			.style('margin-bottom', '10px')
 		const tableDiv = div.append('div')
 		const [rows, columns] = await this.getTableData(state)
-		const selectedRows = []
-		let maxHeight = '50vh'
-		const selectedSample = state.config.sample
-		const index = this.samples.findIndex(s => s.sample == selectedSample)
-		const selectedRowIndex = index == -1 ? 0 : index
-		selectedRows.push(selectedRowIndex)
+		let sampleIdx = 0 // the first sample/experiment is selected by default on app launch
+		{
+			const i = this.samples.findIndex(i => i.sample == state.config.sample)
+			if (i != -1) sampleIdx = i // select sample already tracked in state
+		}
 		renderTable({
 			rows,
 			columns,
@@ -1256,17 +1277,22 @@ class singleCellPlot {
 			singleMode: true,
 			div: tableDiv,
 			maxWidth: columns.length > 3 ? '90vw' : '40vw',
-			maxHeight,
+			maxHeight: '50vh',
 			noButtonCallback: index => {
+				// NOTE that "index" is not array index of this.samples[]
 				const sample = rows[index][0].value
-				const config = { chartType: 'singleCellPlot', sample, activeTab: PLOTS_TAB }
+				const config = {
+					chartType: 'singleCellPlot',
+					sample, // track sample name to identify it in this.samples[]
+					activeTab: PLOTS_TAB // on selecting a sample from table, auto switch to plots to directly show this sample's plots, to save user a click
+				}
 				if (rows[index][0].__experimentID) {
 					config.experimentID = rows[index][0].__experimentID
 				}
 
 				this.app.dispatch({ type: 'plot_edit', id: this.id, config })
 			},
-			selectedRows,
+			selectedRows: [sampleIdx],
 			striped: true,
 			header: { style: { 'text-transform': 'capitalize' } } // to show header in title case; if it results in a conflict (e.g. a sample name showing in 1st tab has to be lower case), then use sampleColumns[].columnHeader as override of term name
 		})
