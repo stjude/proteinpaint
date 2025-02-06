@@ -123,7 +123,7 @@ async function showSummary4terms(data, div, tk, block) {
 				(numbycategory
 					? `<span style="font-size:.8em;float:right;margin-left: 5px;">n=${numbycategory.length}</span>`
 					: ''),
-			callback: function () {
+			keydownCallback: function (event) {
 				setTimeout(() => {
 					const tr = this.contentHolder.select('tbody').select('tr').node()
 					if (!tr) return
@@ -135,10 +135,6 @@ async function showSummary4terms(data, div, tk, block) {
 					//       should use start-stop input there
 					//
 					tr.focus()
-					// blur the row highlight almost immediately, purpose is to just briefly indicate
-					// that the first row is selected by keyboard navivation, which implies that
-					// pressing enter key is equivalent to clicking the first row
-					setTimeout(() => tr.blur(), 2000)
 				}, 100)
 			}
 		})

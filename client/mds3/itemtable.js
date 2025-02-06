@@ -221,6 +221,7 @@ async function itemtable_multiItems(arg) {
 		const div = rows[i][0].__td
 			.append('div')
 			.attr('class', 'sja_menuoption')
+			.attr('tabindex', 0)
 			.on('click', () => {
 				tableDiv.style('display', 'none')
 				goBackButton.style('display', '')
