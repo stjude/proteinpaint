@@ -45,7 +45,7 @@ class geneORA {
 		this.dom.controlsDiv.selectAll('*').remove()
 		const inputs = [
 			{
-				label: 'P-value filter cutoff (linear scale)',
+				label: 'P-value Filter Cutoff (Linear Scale)',
 				type: 'number',
 				chartType: 'geneORA',
 				settingsKey: 'pvalue',
@@ -54,18 +54,18 @@ class geneORA {
 				max: 1
 			},
 			{
-				label: 'P-value filter type',
+				label: 'P-value Filter Type',
 				type: 'radio',
 				chartType: 'geneORA',
 				settingsKey: 'adjusted_original_pvalue',
 				title: 'Toggle between original and adjusted pvalues for volcano plot',
 				options: [
-					{ label: 'adjusted', value: 'adjusted' },
-					{ label: 'original', value: 'original' }
+					{ label: 'Adjusted', value: 'adjusted' },
+					{ label: 'Original', value: 'original' }
 				]
 			},
 			{
-				label: 'Gene set size filter cutoff',
+				label: 'Gene Set Size Filter Cutoff',
 				type: 'number',
 				chartType: 'geneORA',
 				settingsKey: 'gene_set_size_cutoff',
@@ -74,7 +74,7 @@ class geneORA {
 				max: 20000
 			},
 			{
-				label: 'Filter non-coding genes',
+				label: 'Filter Non-coding Genes',
 				type: 'checkbox',
 				chartType: 'geneORA',
 				settingsKey: 'filter_non_coding_genes',
@@ -84,7 +84,7 @@ class geneORA {
 		]
 
 		const geneSet = {
-			label: 'Gene set group',
+			label: 'Gene Set Group',
 			type: 'dropdown',
 			chartType: 'geneORA',
 			settingsKey: 'pathway',
