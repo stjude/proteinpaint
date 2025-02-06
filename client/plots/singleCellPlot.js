@@ -219,7 +219,7 @@ class singleCellPlot {
 		if (q.singleCell?.DEgenes) {
 			const label = this.dom.deDiv
 				.append('label')
-				.html('View differentially expressed genes for cells of a cluster versus rest of the cells:&nbsp;')
+				.html('View DE genes for cells of a cluster versus rest of the cells:&nbsp;')
 			this.dom.deselect = label.append('select').on('change', e => {
 				const display = this.dom.deselect.node().value ? 'inline-block' : 'none'
 				const cluster = this.dom.deselect.node().value.split(' ')[1]
@@ -676,6 +676,7 @@ class singleCellPlot {
 			rows,
 			columns,
 			maxHeight: '70vh',
+			maxWidth: '45vw',
 			div: DETableDiv,
 			singleMode: true,
 			noButtonCallback: (i, node) => {
@@ -815,12 +816,12 @@ class singleCellPlot {
 			this.state.config.gene
 		)
 			inputs.unshift({
-				label: 'Show not expressed',
+				label: 'Show unexpressed cells',
 				boxLabel: '',
 				type: 'checkbox',
 				chartType: 'singleCellPlot',
 				settingsKey: 'showNoExpCells',
-				title: 'Show cells not expressed'
+				title: 'Show cells not expressing the selected gene'
 			})
 		this.components = {
 			controls: await controlsInit({
