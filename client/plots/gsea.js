@@ -16,7 +16,7 @@ const gsea_table_cols = [
 	{ label: 'Pathway name' },
 	{ label: 'enrichment score' },
 	{ label: 'normalized enrichment score' },
-	{ label: 'Geneset size' },
+	{ label: 'Geneset total size' },
 	{ label: 'pvalue' },
 	{ label: 'sidak' },
 	{ label: 'FDR' },
@@ -53,7 +53,7 @@ class gsea {
 		this.dom.controlsDiv.selectAll('*').remove()
 		const inputs = [
 			{
-				label: 'P-value filter cutoff (linear scale)',
+				label: 'P-value Filter Cutoff (Linear Scale)',
 				type: 'number',
 				chartType: 'gsea',
 				settingsKey: 'pvalue',
@@ -62,18 +62,18 @@ class gsea {
 				max: 1
 			},
 			{
-				label: 'P-value filter type',
+				label: 'P-value Filter Type',
 				type: 'radio',
 				chartType: 'gsea',
 				settingsKey: 'adjusted_original_pvalue',
 				title: 'Toggle between original and adjusted pvalues for volcano plot',
 				options: [
-					{ label: 'adjusted', value: 'adjusted' },
-					{ label: 'original', value: 'original' }
+					{ label: 'Adjusted', value: 'adjusted' },
+					{ label: 'Original', value: 'original' }
 				]
 			},
 			{
-				label: 'Gene set size filter cutoff',
+				label: 'Gene Set Size Filter Cutoff',
 				type: 'number',
 				chartType: 'gsea',
 				settingsKey: 'gene_set_size_cutoff',
@@ -82,7 +82,7 @@ class gsea {
 				max: 20000
 			},
 			{
-				label: 'Filter non-coding genes',
+				label: 'Filter Non-coding Genes',
 				type: 'checkbox',
 				chartType: 'gsea',
 				settingsKey: 'filter_non_coding_genes',
@@ -92,7 +92,7 @@ class gsea {
 		]
 
 		const geneSet = {
-			label: 'Gene set group',
+			label: 'Gene Set Group',
 			type: 'dropdown',
 			chartType: 'gsea',
 			settingsKey: 'pathway',
@@ -104,6 +104,13 @@ class gsea {
 				{ label: 'CC: subset of GO', value: 'CC: subset of GO' },
 				{ label: 'WikiPathways subset of CP', value: 'WikiPathways subset of CP' },
 				{ label: 'REACTOME subset of CP', value: 'REACTOME subset of CP' },
+				/* QUICK FIX
+				geneset name ending in "--blitzgsea" signals to use built-in genesets but not msigdb
+				later a proper fix is to add a radio toggle of Blitzgsea versus MSigDB, and do not use such hardcode
+				*/
+				{ label: 'REACTOME (blitzgsea)', value: 'REACTOME--blitzgsea' },
+				{ label: 'KEGG (blitzgsea)', value: 'KEGG--blitzgsea' },
+				{ label: 'WikiPathways (blitzgsea)', value: 'WikiPathways--blitzgsea' },
 				{ label: 'H: hallmark gene sets', value: 'H: hallmark gene sets' }
 			]
 		}
@@ -194,6 +201,7 @@ add:
 
 		// Generating the table
 		self.gsea_table_rows = []
+		Object.keys(output.data).sort((i, j) => Number(i.fdr) - Number(j.fdr)) // Sorting pathways in ascending order of FDR
 		for (const pathway_name of Object.keys(output.data)) {
 			const pathway = output.data[pathway_name]
 			if (
