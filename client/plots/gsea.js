@@ -108,12 +108,19 @@ class gsea {
 				geneset name ending in "--blitzgsea" signals to use built-in genesets but not msigdb
 				later a proper fix is to add a radio toggle of Blitzgsea versus MSigDB, and do not use such hardcode
 				*/
-				{ label: 'REACTOME (blitzgsea)', value: 'REACTOME--blitzgsea' },
-				{ label: 'KEGG (blitzgsea)', value: 'KEGG--blitzgsea' },
-				{ label: 'WikiPathways (blitzgsea)', value: 'WikiPathways--blitzgsea' },
 				{ label: 'H: hallmark gene sets', value: 'H: hallmark gene sets' }
 			]
 		}
+
+		// Now blitzgsea geneSets are inside serverconfig flag
+		if (JSON.parse(sessionStorage.getItem('optionalFeatures')).gsea_test == true) {
+			geneSet.options.push(
+				{ label: 'REACTOME (blitzgsea)', value: 'REACTOME--blitzgsea' },
+				{ label: 'KEGG (blitzgsea)', value: 'KEGG--blitzgsea' },
+				{ label: 'WikiPathways (blitzgsea)', value: 'WikiPathways--blitzgsea' }
+			)
+		}
+
 		if (!this.settings.pathway) {
 			geneSet.options.unshift({ label: '-', value: '-' })
 			this.settings.pathway = '-'
@@ -204,11 +211,7 @@ add:
 		Object.keys(output.data).sort((i, j) => Number(i.fdr) - Number(j.fdr)) // Sorting pathways in ascending order of FDR
 		for (const pathway_name of Object.keys(output.data)) {
 			const pathway = output.data[pathway_name]
-			if (
-				self.settings.adjusted_original_pvalue == 'adjusted' &&
-				self.settings.pvalue >= pathway.fdr &&
-				self.settings.gene_set_size_cutoff > pathway.geneset_size
-			) {
+			if (JSON.parse(sessionStorage.getItem('optionalFeatures')).gsea_test == true) {
 				const es = pathway.es ? roundValueAuto(pathway.es) : pathway.es
 				const nes = pathway.nes ? roundValueAuto(pathway.nes) : pathway.nes
 				const pval = pathway.pval ? roundValueAuto(pathway.pval) : pathway.pval
@@ -224,26 +227,48 @@ add:
 					{ value: fdr },
 					{ value: pathway.leading_edge }
 				])
-			} else if (
-				self.settings.adjusted_original_pvalue == 'original' &&
-				self.settings.pvalue >= pathway.pval &&
-				self.settings.gene_set_size_cutoff > pathway.geneset_size
-			) {
-				const es = pathway.es ? roundValueAuto(pathway.es) : pathway.es
-				const nes = pathway.nes ? roundValueAuto(pathway.nes) : pathway.nes
-				const pval = pathway.pval ? roundValueAuto(pathway.pval) : pathway.pval
-				const sidak = pathway.sidak ? roundValueAuto(pathway.sidak) : pathway.sidak
-				const fdr = pathway.fdr ? roundValueAuto(pathway.fdr) : pathway.fdr
-				self.gsea_table_rows.push([
-					{ value: pathway_name },
-					{ value: es },
-					{ value: nes },
-					{ value: pathway.geneset_size },
-					{ value: pval },
-					{ value: sidak },
-					{ value: fdr },
-					{ value: pathway.leading_edge }
-				])
+			} else {
+				if (
+					self.settings.adjusted_original_pvalue == 'adjusted' &&
+					self.settings.pvalue >= pathway.fdr &&
+					self.settings.gene_set_size_cutoff > pathway.geneset_size
+				) {
+					const es = pathway.es ? roundValueAuto(pathway.es) : pathway.es
+					const nes = pathway.nes ? roundValueAuto(pathway.nes) : pathway.nes
+					const pval = pathway.pval ? roundValueAuto(pathway.pval) : pathway.pval
+					const sidak = pathway.sidak ? roundValueAuto(pathway.sidak) : pathway.sidak
+					const fdr = pathway.fdr ? roundValueAuto(pathway.fdr) : pathway.fdr
+					self.gsea_table_rows.push([
+						{ value: pathway_name },
+						{ value: es },
+						{ value: nes },
+						{ value: pathway.geneset_size },
+						{ value: pval },
+						{ value: sidak },
+						{ value: fdr },
+						{ value: pathway.leading_edge }
+					])
+				} else if (
+					self.settings.adjusted_original_pvalue == 'original' &&
+					self.settings.pvalue >= pathway.pval &&
+					self.settings.gene_set_size_cutoff > pathway.geneset_size
+				) {
+					const es = pathway.es ? roundValueAuto(pathway.es) : pathway.es
+					const nes = pathway.nes ? roundValueAuto(pathway.nes) : pathway.nes
+					const pval = pathway.pval ? roundValueAuto(pathway.pval) : pathway.pval
+					const sidak = pathway.sidak ? roundValueAuto(pathway.sidak) : pathway.sidak
+					const fdr = pathway.fdr ? roundValueAuto(pathway.fdr) : pathway.fdr
+					self.gsea_table_rows.push([
+						{ value: pathway_name },
+						{ value: es },
+						{ value: nes },
+						{ value: pathway.geneset_size },
+						{ value: pval },
+						{ value: sidak },
+						{ value: fdr },
+						{ value: pathway.leading_edge }
+					])
+				}
 			}
 		}
 
