@@ -159,7 +159,9 @@ function setRenderers(self) {
 			.style('background-color', 'transparent')
 			.style('display', self.opts.tabsPosition == 'vertical' ? 'flex' : 'inline-grid')
 			.property('disabled', tab => (tab.disabled ? tab.disabled() : false))
-			.each(async function (this: any, tab) {
+			.each(async function (this: any, tab, index) {
+				if (index === 0) this.focus()
+
 				/* The whole button is clickable (i.e. the white space where the blue, 'active' line
 				is not visible). The event is on the button (i.e. tab.wrapper). The style changes 
 				when the button is active/inactive are on the text (i.e. tab.tab) and line 
@@ -249,9 +251,22 @@ function setRenderers(self) {
 				self.update(activeTabIndex)
 				if (tab.callback) await tab.callback(event, tab)
 			})
+			.on('keydown', async function (this: HTMLElement, event, tab) {
+				if (event.target.tagName == 'BUTTON') self.keyEventTarget = event.target
+				if (event.key == 'Escape') {
+					self.dom.holder.remove()
+					return false
+				} else if (event.key == 'Enter') {
+					// default behavior equals click event
+				} else if (event.key == 'ArrowDown') {
+					;(select(this) as any).on('click')(event, tab)
+					return false
+				}
+			})
 		const activeTabIndex = self.tabs.findIndex(t => t.active) //Fix for non-Rx implementations
 		self.update(activeTabIndex)
 	}
+
 	self.update = (activeTabIndex = 0, config = {}) => {
 		self.tabs.forEach((tab, i) => {
 			tab.active = activeTabIndex === i

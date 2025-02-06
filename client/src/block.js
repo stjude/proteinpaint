@@ -4582,7 +4582,7 @@ seekrange(chr,start,stop) {
 				.style('padding', '10px')
 				.style('margin', '20px 0px 20px 0px')
 			const row = div.append('div')
-			row.append('span').text('Highlight').style('opacity', 0.5).style('padding-right', '10px')
+			row.append('span').text('Highlight').style('opacity', 0.75).style('padding-right', '10px')
 			row
 				.append('button')
 				.text('Select a region')

@@ -122,7 +122,25 @@ async function showSummary4terms(data, div, tk, block) {
 				tk.mds.variant2samples.twLst.find(i => i.term.id == termid).term.name +
 				(numbycategory
 					? `<span style="font-size:.8em;float:right;margin-left: 5px;">n=${numbycategory.length}</span>`
-					: '')
+					: ''),
+			callback: function () {
+				setTimeout(() => {
+					const tr = this.contentHolder.select('tbody').select('tr').node()
+					if (!tr) return
+					// to support keyboard navigation, automatically highlight the first table row
+					// after this tab/button is clicked, use setTimeout() to ensure the table has
+					// finished rendering
+					//
+					// TODO: support violin plot range selection, which does not use table rows,
+					//       should use start-stop input there
+					//
+					tr.focus()
+					// blur the row highlight almost immediately, purpose is to just briefly indicate
+					// that the first row is selected by keyboard navivation, which implies that
+					// pressing enter key is equivalent to clicking the first row
+					setTimeout(() => tr.blur(), 2000)
+				}, 100)
+			}
 		})
 	}
 
