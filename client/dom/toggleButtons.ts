@@ -163,7 +163,16 @@ function setRenderers(self) {
 			.style('display', self.opts.tabsPosition == 'vertical' ? 'flex' : 'inline-grid')
 			.property('disabled', tab => (tab.disabled ? tab.disabled() : false))
 			.each(async function (this: any, tab, index) {
-				if (index === 0) this.focus()
+				if (tab.active) {
+					// assume that an active tabbed content div should receive focus when first rendered,
+					// otherwise using tabs to navigate would not be intuitive or user-friendly if it
+					// starts far away from recently rendered content
+					this.focus()
+					// blur the forced autofocus right away, only want the menu/pane to have priority when
+					// navigating by keyboard, don't want the browser's default element highlight
+					// (blue border in Chrome) to be distracting
+					this.blur()
+				}
 
 				/* The whole button is clickable (i.e. the white space where the blue, 'active' line
 				is not visible). The event is on the button (i.e. tab.wrapper). The style changes 
