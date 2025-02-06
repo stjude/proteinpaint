@@ -11,6 +11,7 @@ Features:
 Fixes:
 - Restored Diff Exp dropdown options; supported overriding UILabels on dataset; calculated plot size when
 - improve navigation-by-keyboard of md3 leftlabel sample, variant buttons and lists; more text contrast in More menu
+- GDC scrna UI shows sample submitter id
 
 
 ## 2.104.0
