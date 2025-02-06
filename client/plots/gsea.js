@@ -201,6 +201,7 @@ add:
 
 		// Generating the table
 		self.gsea_table_rows = []
+		Object.keys(output.data).sort((i, j) => i.fdr - j.fdr) // Sorting pathways in ascending order of FDR
 		for (const pathway_name of Object.keys(output.data)) {
 			const pathway = output.data[pathway_name]
 			if (
