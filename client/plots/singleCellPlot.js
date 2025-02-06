@@ -1258,7 +1258,8 @@ class singleCellPlot {
 				this.app.dispatch({ type: 'plot_edit', id: this.id, config })
 			},
 			selectedRows,
-			striped: true
+			striped: true,
+			header: { style: { 'text-transform': 'capitalize' } } // to show header in title case; if it results in a conflict (e.g. a sample name showing in 1st tab has to be lower case), then use sampleColumns[].columnHeader as override of term name
 		})
 	}
 
