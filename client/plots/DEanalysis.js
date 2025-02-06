@@ -8,7 +8,6 @@ import { select as d3select } from 'd3-selection'
 import { getCompInit, copyMerge } from '#rx'
 import { dofetch3 } from '#common/dofetch'
 import { scaleLog, scaleLinear } from 'd3-scale'
-import { d3lasso } from '../common/lasso'
 import { downloadTable } from '../dom/table'
 import { roundValueAuto } from '#shared/roundValue.js'
 
@@ -55,7 +54,7 @@ class DEanalysis {
 		this.dom.controlsDiv.selectAll('*').remove()
 		const inputs = [
 			{
-				label: 'Minimum read count',
+				label: 'Minimum Read Count',
 				type: 'number',
 				chartType: 'DEanalysis',
 				settingsKey: 'min_count',
@@ -64,7 +63,7 @@ class DEanalysis {
 				max: 10000
 			},
 			{
-				label: 'Minimum total read count',
+				label: 'Minimum Total Read Count',
 				type: 'number',
 				chartType: 'DEanalysis',
 				settingsKey: 'min_total_count',
@@ -73,7 +72,7 @@ class DEanalysis {
 				max: 10000
 			},
 			{
-				label: 'P-value significance (linear scale)',
+				label: 'P-value Significance (Linear Scale)',
 				type: 'number',
 				chartType: 'DEanalysis',
 				settingsKey: 'pvalue',
@@ -82,7 +81,7 @@ class DEanalysis {
 				max: 1
 			},
 			{
-				label: 'Fold change (log scale)',
+				label: 'Fold Change (Log Scale)',
 				type: 'number',
 				chartType: 'DEanalysis',
 				settingsKey: 'foldchange',
@@ -91,7 +90,7 @@ class DEanalysis {
 				max: 10
 			},
 			{
-				label: 'P-value table',
+				label: 'P-value Table',
 				type: 'checkbox',
 				chartType: 'DEanalysis',
 				settingsKey: 'pvaluetable',
@@ -138,7 +137,7 @@ class DEanalysis {
 						configKey: 'term',
 						chartType: 'DEanalysis',
 						usecase: { target: 'DEanalysis', detail: 'term' },
-						label: 'Confounding factors',
+						label: 'Confounding Factors',
 						vocabApi: this.app.vocabApi
 					},
 					{
@@ -157,7 +156,7 @@ class DEanalysis {
 		if (this.app.opts.genome.termdbs) {
 			// Check if genome build contains termdbs, only then enable gene ora
 			inputs.push({
-				label: 'Gene set overrepresentation analysis',
+				label: 'Gene Set Overrepresentation Analysis',
 				type: 'radio',
 				chartType: 'DEanalysis',
 				settingsKey: 'gene_ora',
@@ -173,7 +172,7 @@ class DEanalysis {
 		if (this.app.opts.genome.termdbs && !this.settings.gsea) {
 			// Check if genome build contains termdbs, only then enable gene ora
 			inputs.push({
-				label: 'Gene set enrichment analysis',
+				label: 'Gene Set Enrichment Analysis',
 				type: 'radio',
 				chartType: 'DEanalysis',
 				settingsKey: 'gsea',
