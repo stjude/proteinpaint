@@ -211,6 +211,7 @@ class MassGroups {
 		let row = menuDiv.append('div')
 
 		addMatrixMenuItems(this.tip, menuDiv, samplelstTW, this.app, id, this.state, () => this.newId)
+
 		if (this.state.currentCohortChartTypes.includes('DEanalysis') && samplelstTW.q.groups.length == 2)
 			addDEPlotMenuItem(menuDiv, this, this.state, samplelstTW)
 
@@ -314,7 +315,7 @@ function addDEPlotMenuItem(div, self, state, samplelstTW, tip) {
 	// small text to explain which is case/control
 	div
 		.append('div')
-		.text(`Case: ${self.state.groups[1].name}, control: ${self.state.groups[0].name}`)
+		.text(`Case: ${samplelstTW.q.groups[1].name}, control: ${samplelstTW.q.groups[0].name}`)
 		.style('font-size', '0.8em')
 		.style('text-align', 'right')
 		.style('opacity', 0.8)
