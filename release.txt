@@ -1,1 +1,2 @@
-
+Fixes:
+- GDC scrna UI shows sample submitter id
