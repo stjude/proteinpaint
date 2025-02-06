@@ -809,7 +809,7 @@ opts{}
 */
 async function getCnvFusion4oneCase(opts, ds) {
 	const fields = [
-		'cases.samples.sample_type',
+		'cases.samples.tissue_type',
 		'data_type',
 		'file_id',
 		'data_format',
@@ -844,15 +844,13 @@ async function getCnvFusion4oneCase(opts, ds) {
 		if (h.data_format == 'TXT') {
 			if (h.experimental_strategy == 'Genotyping Array') {
 				// is snp array, there're two files for tumor and normal. skip the normal one by sample_tye
-				const sample_type = h.cases?.[0].samples?.[0]?.sample_type
-				if (!sample_type) continue
-				if (sample_type.includes('Normal')) continue
+				if (h.cases?.[0].samples?.[0].tissue_type == 'Normal') continue
 				if (h.data_type != 'Masked Copy Number Segment') continue
 				snpFile = h.file_id
 				continue
 			}
 			if (h.experimental_strategy == 'WGS') {
-				// is wgs, no need to check sample_type, the file is usable
+				// is wgs, no need to check tissue_type, the file is usable
 				if (!h.file_id) continue
 				if (h.data_type != 'Copy Number Segment') continue
 				wgsFile = h.file_id
@@ -864,80 +862,21 @@ async function getCnvFusion4oneCase(opts, ds) {
 	const events = [] // collect cnv and fusion events into one array
 
 	if (wgsFile) {
-		// do not use headers here that has accept: 'application/json'
+		// if wgs available use first, ignore cnv
+		// do not use headers here since accept should be 'text/plain', not 'application/json'
 		const re = await ky(joinUrl(joinUrl(host.rest, 'data'), wgsFile), { timeout: false }).text()
-		const lines = re.split('\n')
+		const lines = re.trim().split('\n')
 		// first line is header
-		// GDC_Aliquot	Chromosome	Start	End	Copy_Number	Major_Copy_Number	Minor_Copy_Number
-		for (let i = 1; i < lines.length; i++) {
-			const l = lines[i].split('\t')
-			if (l.length != 7) continue
-			const total = Number(l[4]),
-				major = Number(l[5]),
-				minor = Number(l[6])
-			if (Number.isNaN(total) || Number.isNaN(major) || Number.isNaN(minor)) continue
-			const cnv = {
-				dt: common.dtcnv,
-				chr: l[1],
-				start: Number(l[2]),
-				stop: Number(l[3]),
-				value: total
-			}
-			if (!cnv.chr || Number.isNaN(cnv.start) || Number.isNaN(cnv.stop)) continue
-			events.push(cnv)
-
-			if (total > 0) {
-				// total copy number is >0, detect loh
-				/*
-				if (major + minor != total) continue // data err?
-				if (major == minor) continue // no loh
-				const loh = {
-					dt: common.dtloh,
-					chr: cnv.chr,
-					start: cnv.start,
-					stop: cnv.stop,
-					segmean: Math.abs(major - minor) / total
-				}
-				events.push(loh)
-				*/
-
-				if (minor == 0 && major > 0) {
-					// zhenyu 4/25/23 detect strict one allele loss
-					events.push({
-						dt: common.dtloh,
-						chr: cnv.chr,
-						start: cnv.start,
-						stop: cnv.stop,
-						// hardcode a value for plot to work.
-						// may make "segmean" value optional; if missing, indicates quanlitative event and should plot without color shading
-						// otherwise, the value quantifies allelic imbalance and is plotted with color shading
-						// all loh events in a plot should be uniformlly quanlitative or quantitative
-						segmean: 0.5
-					})
-				}
-			}
-		}
+		if (lines[0] != 'GDC_Aliquot_ID\tChromosome\tStart\tEnd\tNum_Probes\tSegment_Mean')
+			throw 'GDC WGS CNV file format has changed: ' + wgsFile
+		parseCnvFile(lines, events)
 	} else if (snpFile) {
 		// only load available snp file if no wgs cnv
-		// do not use headers here since accept should be 'text/plain', not 'application/json'
 		const re = await ky(joinUrl(joinUrl(host.rest, 'data'), snpFile), { timeout: false }).text()
-		const lines = re.split('\n')
-		// first line is header
-		// GDC_Aliquot	Chromosome	Start	End	Num_Probes	Segment_Mean
-		for (let i = 1; i < lines.length; i++) {
-			const l = lines[i].split('\t')
-			if (l.length != 6) continue
-			if (!l[1]) continue
-			const cnv = {
-				dt: common.dtcnv,
-				chr: 'chr' + l[1],
-				start: Number(l[2]),
-				stop: Number(l[3]),
-				value: Number(l[5])
-			}
-			if (Number.isNaN(cnv.start) || Number.isNaN(cnv.stop) || Number.isNaN(cnv.value)) continue
-			events.push(cnv)
-		}
+		const lines = re.trim().split('\n')
+		if (lines[0] != 'GDC_Aliquot\tChromosome\tStart\tEnd\tNum_Probes\tSegment_Mean')
+			throw 'GDC SNP CNV file format has changed: ' + snpFile
+		parseCnvFile(lines, events)
 	}
 
 	if (arribaFile) {
@@ -992,6 +931,82 @@ async function getCnvFusion4oneCase(opts, ds) {
 		return filters
 	}
 }
+
+function parseCnvFile(lines, events) {
+	for (let i = 1; i < lines.length; i++) {
+		const l = lines[i].split('\t')
+		if (l.length != 6) throw 'cnv file line not 6 columns: ' + l
+		if (!l[1]) throw 'cnv file line missing chr: ' + l
+		let chr = l[1]
+		if (!l[1].startsWith('chr')) chr = 'chr' + l[1] // snp file chr doesn't start with "chr"
+		const cnv = {
+			dt: common.dtcnv,
+			chr: l[1],
+			start: Number(l[2]),
+			stop: Number(l[3]),
+			value: Number(l[5])
+		}
+		if (Number.isNaN(cnv.start) || Number.isNaN(cnv.stop) || Number.isNaN(cnv.value))
+			throw 'start/stop/value not a number in cnv file: ' + l
+		events.push(cnv)
+	}
+}
+
+/* old code for wgs cnv file
+
+		const lines = re.split('\n')
+		console.log(lines)
+		// first line is header
+		// GDC_Aliquot	Chromosome	Start	End	Copy_Number	Major_Copy_Number	Minor_Copy_Number
+		for (let i = 1; i < lines.length; i++) {
+			const l = lines[i].split('\t')
+			if (l.length != 7) continue
+			const total = Number(l[4]),
+				major = Number(l[5]),
+				minor = Number(l[6])
+			if (Number.isNaN(total) || Number.isNaN(major) || Number.isNaN(minor)) continue
+			const cnv = {
+				dt: common.dtcnv,
+				chr: l[1],
+				start: Number(l[2]),
+				stop: Number(l[3]),
+				value: total
+			}
+			if (!cnv.chr || Number.isNaN(cnv.start) || Number.isNaN(cnv.stop)) continue
+			events.push(cnv)
+
+			if (total > 0) {
+				// total copy number is >0, detect loh
+				/
+				if (major + minor != total) continue // data err?
+				if (major == minor) continue // no loh
+				const loh = {
+					dt: common.dtloh,
+					chr: cnv.chr,
+					start: cnv.start,
+					stop: cnv.stop,
+					segmean: Math.abs(major - minor) / total
+				}
+				events.push(loh)
+				/
+
+				if (minor == 0 && major > 0) {
+					// zhenyu 4/25/23 detect strict one allele loss
+					events.push({
+						dt: common.dtloh,
+						chr: cnv.chr,
+						start: cnv.start,
+						stop: cnv.stop,
+						// hardcode a value for plot to work.
+						// may make "segmean" value optional; if missing, indicates quanlitative event and should plot without color shading
+						// otherwise, the value quantifies allelic imbalance and is plotted with color shading
+						// all loh events in a plot should be uniformlly quanlitative or quantitative
+						segmean: 0.5
+					})
+				}
+			}
+		}
+*/
 
 function parseArribaName(f, str) {
 	if (!str) return

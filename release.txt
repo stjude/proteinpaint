@@ -1,1 +1,2 @@
-
+Fixes:
+- at querying GDC cnv file, remove use of sample_type and adapt to new file format
