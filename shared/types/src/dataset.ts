@@ -607,7 +607,7 @@ export type SingleCellSamples = {
 	or is missing, to be added at launch with built-in logic (samples are found by looking through singleCell.data.plots[].folder)
 	*/
 	get?: (q: any) => any
-	/** extra label to show along with sample, it becomes `sample.sample+' '+sample[newProp]` */
+	/** extra label to show along with sample, must be a term id as in sampleColumns[] and allow to retrieve value from sample object */
 	extraSampleTabLabel?: string
 }
 

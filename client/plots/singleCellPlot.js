@@ -14,8 +14,14 @@ import { getThreeCircle } from './sampleScatter.rendererThree.js'
 import { renderContours } from './sampleScatter.renderer.js'
 import { digestMessage } from '#termsetting'
 /*
+
+hardcoded behaviors when this.samples[].experiments[] is present:
+- an experiment must be {experimentID,sampleName} along with optional prop
+- state tracks experimentID as well as this.samples[].sample
+- in sample table, both experimentID and sampleName are shown
+
 this
-	.samples[]
+	samples[]
 		datastructure returned by /termdb/singlecellSamples
 		
 		element structure:
@@ -24,19 +30,22 @@ this
 			sample: str
 			<termid>: <term value>
 			experiments?: []
-				experimentID: str
-				sampleName: str
-				sampleType: str
+				experimentID: str // hardcoded and required
+				sampleName: str // hardcoded and required
 		}
 
-		when experiments[] is present, the sample may have more than 1 experiments that will be shown as different rows on sample table;
-		otherwise, each sample has a single experiment and is a single row in sample table
+		all samples should either have or not have .experiments[]:
+		- if present, the sample may have more than 1 experiments that will be shown as different rows on sample table;
+		- otherwise, each sample obj is a single experiment and show as one row
 		
 
-	.legendRendered=bool
-	.state{}
-		.config{}
-			.sample
+	legendRendered=bool
+
+	state{}
+		config{}
+			sample // name of selected sample. matches to this.samples[].sample
+			experimentID // optional. set when this.samples[].experiments[] is present. allow to match to a specific experiment of a sample that has multiples
+
 */
 
 const SAMPLES_TAB = 1
@@ -319,7 +328,23 @@ class singleCellPlot {
 		const sampleIdx = state.config.sample ? this.samples.findIndex(i => i.sample == state.config.sample) : 0
 		if (sampleIdx == -1) throw 'sample not found in this.samples[]'
 
-		let extra = ''
+		const extraText = [] // extra text to show alongside sample name
+
+		if (state.config.experimentID) {
+			// experimentID is tracked in state, meaning this.samples[].experiments[] is present. and the id specifies which experiment, out of potential multiple of one sample, is currently selected.
+			// in such case, experiments[].sampleName should also be present, and display the sampleName next to config.sample which is actually person id
+			extraText.push(
+				'<span style="margin-left:15px;font-size:.7em">SAMPLE</span> ' +
+					this.samples[sampleIdx].experiments?.find(i => i.experimentID == state.config.experimentID)?.sampleName
+			)
+		} else if (this.samples[sampleIdx].experiments) {
+			// experimentID not in state, but sample carries exp array; this is possible when app launches. simply show first experiment of this sample
+			extraText.push(
+				'<span style="margin-left:15px;font-size:.7em">SAMPLE</span> ' +
+					this.samples[sampleIdx].experiments[0].sampleName
+			)
+		}
+
 		if (state.termdbConfig.queries.singleCell.samples.extraSampleTabLabel) {
 			// value is a term id. get the term name
 			const termname = (
@@ -327,12 +352,12 @@ class singleCellPlot {
 			).name
 			// get the term value from current sample
 			const sampleValue = this.samples[sampleIdx][state.termdbConfig.queries.singleCell.samples.extraSampleTabLabel]
-			extra = `<span style="margin-left:20px;font-size:.7em">${termname.toUpperCase()}</span> ${sampleValue}`
+			extraText.push(`<span style="margin-left:15px;font-size:.7em">${termname.toUpperCase()}</span> ${sampleValue}`)
 		}
 
 		return `<span style="font-size:.7em">${state.config.settings.singleCellPlot.uiLabels.sample.toUpperCase()}</span>
 			${this.samples[sampleIdx].sample}
-			${extra}`
+			${extraText.join('')}`
 	}
 
 	renderShowPlots(showDiv, state) {
@@ -1314,8 +1339,11 @@ class singleCellPlot {
 						row.push({ value: sample[c.termid] })
 					}
 					for (const c of s.experimentColumns || []) {
-						row.push({ value: sample[c.label] })
+						row.push({ value: exp[c.label] })
 					}
+
+					// hardcode to expect exp.sampleName and add this as a column
+					row.push({ value: exp.sampleName })
 
 					// hardcode to always add in experiment id column
 					row.push({ value: exp.experimentID })
@@ -1351,8 +1379,9 @@ class singleCellPlot {
 			columns.push({ label: c.label, width: '20vw' })
 		}
 
-		// if samples are using experiments, add the last hardcoded experiment column
+		// if samples are using experiments, add the hardcoded experiment column
 		if (samples.some(i => i.experiments)) {
+			columns.push({ label: 'Sample' })
 			columns.push({ label: 'Experiment' })
 		}
 
