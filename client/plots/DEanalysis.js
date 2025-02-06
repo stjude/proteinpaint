@@ -20,6 +20,13 @@ opts{}
 this{}
 	app{}
 		vocabApi
+	config
+		samplelst
+			groups[] // length of 2
+		settings
+			DEanalysis{}
+	state
+		// this is the mass state
 */
 
 const hlcolor = '#ffa200'
@@ -234,9 +241,9 @@ class DEanalysis {
 		output.high_sample_size_cutoff = 30 // high sample size cutoff for method toggle to not appear, so that very high sample-size groups are not analyzed by edgeR. The exact cutoff value will need to be determined with more examples.
 		await this.setControls(output)
 		this.dom.header.html(
-			this.config.state.groups[0].name +
+			this.config.samplelst.groups[0].name +
 				' vs ' +
-				this.config.state.groups[1].name +
+				this.config.samplelst.groups[1].name +
 				' <span style="font-size:.8em;opacity:.7">DIFFERENTIAL GENE EXPRESSION</span>'
 		)
 		render_volcano(this, output)
@@ -482,11 +489,11 @@ add:
 				value: num_significant_genes + num_non_significant_genes
 			},
 			{
-				label: self.config.state.groups[0].name + ' sample size (control group)',
+				label: self.config.samplelst.groups[0].name + ' sample size (control group)',
 				value: sample_size1
 			},
 			{
-				label: self.config.state.groups[1].name + ' sample size (treatment group)',
+				label: self.config.samplelst.groups[1].name + ' sample size (treatment group)',
 				value: sample_size2
 			}
 		]
