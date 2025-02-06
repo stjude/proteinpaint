@@ -142,7 +142,7 @@ class DEanalysis {
 						vocabApi: this.app.vocabApi
 					},
 					{
-						label: 'Variable Genes Cutoff',
+						label: 'Variable genes cutoff',
 						type: 'number',
 						chartType: 'DEanalysis',
 						settingsKey: 'VarGenes',
