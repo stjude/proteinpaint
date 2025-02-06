@@ -120,8 +120,11 @@ export function makelabel(tk, block, y) {
 		.attr('x', block.tkleftlabel_xshift)
 		.attr('tabindex', 0)
 		.on('keydown', function (event) {
-			if (event.key == 'Enter') text.node().dispatchEvent(new Event('click'))
+			// ignore this event if it bubbled up from a descendant element
+			if (event.target != textElem) return
+			if (event.key == 'Enter') textElem.dispatchEvent(new Event('click'))
 		})
 
+	const textElem = text.node()
 	return text
 }

@@ -288,6 +288,8 @@ export function renderTable({
 				}
 				tr.on('click', clickHandler)
 				tr.on('keydown', event => {
+					// ignore this event if it bubbled up from a descendant element
+					if (event.target.tagName != 'TR') return
 					if (event.key == 'Enter') clickHandler(event)
 				})
 			}

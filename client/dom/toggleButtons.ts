@@ -58,15 +58,18 @@ Note:
 	For easier debugging, in the console using inspect element > styles > properties > __data__	
 */
 
+type Tab = {
+	label: string
+	width?: number
+	callback?: (f: any) => void
+	disabled?: (f: any) => void
+	isVisible?: (f: any) => void
+	keydownCallback?: (event: any, tab: Tab) => void
+}
+
 export class Tabs {
 	opts: any
-	tabs: {
-		label: string
-		width?: number
-		callback?: (f: any) => void
-		disabled?: (f: any) => void
-		isVisible?: (f: any) => void
-	}[]
+	tabs: Tab[]
 	dom: {
 		holder: HTMLDivElement
 	}
@@ -225,6 +228,8 @@ function setRenderers(self) {
 					}
 				}
 
+				// TODO: window.event should not be used, see https://developer.mozilla.org/en-US/docs/Web/API/Window/event
+				// event should always be detected from an event handler/listener's first argument
 				if (tab.active && tab.callback) await tab.callback(event, tab)
 
 				tab.wrapper
@@ -251,16 +256,14 @@ function setRenderers(self) {
 				self.update(activeTabIndex)
 				if (tab.callback) await tab.callback(event, tab)
 			})
-			.on('keydown', async function (this: HTMLElement, event, tab) {
-				if (event.target.tagName == 'BUTTON') self.keyEventTarget = event.target
+			.on('keydown', async function (event, tab) {
+				// ignore this event if it bubbled up from a descendant element
+				if (event.target.tagName != 'BUTTON') return
 				if (event.key == 'Escape') {
-					self.dom.holder.remove()
 					return false
 				} else if (event.key == 'Enter') {
 					// default behavior equals click event
-				} else if (event.key == 'ArrowDown') {
-					;(select(this) as any).on('click')(event, tab)
-					return false
+					if (tab.keydownCallback) tab.keydownCallback(event, tab)
 				}
 			})
 		const activeTabIndex = self.tabs.findIndex(t => t.active) //Fix for non-Rx implementations
