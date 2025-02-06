@@ -142,11 +142,11 @@ class DEanalysis {
 						vocabApi: this.app.vocabApi
 					},
 					{
-						label: 'VarGenes',
+						label: 'Variable Genes Cutoff',
 						type: 'number',
 						chartType: 'DEanalysis',
 						settingsKey: 'VarGenes',
-						title: 'Number of variable genes used for DE analysis',
+						title: 'Top number of variably expressed genes to include in analysis',
 						min: 1000,
 						max: 4000
 					}
