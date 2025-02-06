@@ -1,4 +1,5 @@
 import { makeVariantLabel } from './leftlabel.variant'
+import { select } from 'd3-selection'
 // variant label is always made. sample label is optional and dynamically loads script when needed
 
 const labyspace = 5
@@ -107,7 +108,7 @@ export function positionLeftlabelg(tk, block) {
 }
 
 export function makelabel(tk, block, y) {
-	return tk.leftlabels.g
+	const text = tk.leftlabels.g
 		.append('text')
 		.attr('font-size', block.labelfontsize)
 		.attr('font-family', font)
@@ -117,4 +118,10 @@ export function makelabel(tk, block, y) {
 		.attr('class', 'sja_clbtext2')
 		.attr('fill', 'black')
 		.attr('x', block.tkleftlabel_xshift)
+		.attr('tabindex', 0)
+		.on('keydown', function (event) {
+			if (event.key == 'Enter') text.node().dispatchEvent(new Event('click'))
+		})
+
+	return text
 }

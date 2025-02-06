@@ -90,15 +90,19 @@ export function makeVariantLabel(data, tk, block, laby) {
 }
 
 function menu_variants(tk, block) {
-	tk.menutip.d
+	const listDiv = tk.menutip.d
 		.append('div')
 		.text('List')
 		.attr('class', 'sja_menuoption')
 		.attr('data-testid', 'sjpp_mds3tk_variantleftlabel_list')
+		.attr('tabindex', 0)
 		.style('border-radius', '0px')
 		.on('click', () => {
 			listVariantData(tk, block)
 		})
+
+	listDiv.node().focus()
+	setTimeout(() => listDiv.node().blur(), 2000)
 
 	if (tk.skewer && !tk.hardcodeCnvOnly) {
 		// these are skewer-specific options, if hardcoded cnv-only, do not show;
@@ -108,6 +112,7 @@ function menu_variants(tk, block) {
 				.text('Cancel highlight')
 				.style('border-radius', '0px')
 				.attr('class', 'sja_menuoption')
+				.attr('tabindex', 0)
 				.on('click', () => {
 					delete tk.skewer.hlssmid
 					tk.skewer.hlBoxG.selectAll('*').remove()
@@ -137,6 +142,7 @@ function menu_variants(tk, block) {
 					.text('Collapse')
 					.attr('class', 'sja_menuoption')
 					.attr('data-testid', 'sja_collapse_menuoption') // mds3tk_variantleftlabel_collapse
+					.attr('tabindex', 0)
 					.style('border-radius', '0px')
 					.on('click', () => {
 						fold_glyph(tk.skewer.data, tk)
@@ -148,6 +154,7 @@ function menu_variants(tk, block) {
 					.text('Expand')
 					.attr('class', 'sja_menuoption')
 					.attr('data-testid', 'sja_expand_menuoption') // mds3tk_variantleftlabel_expand
+					.attr('tabindex', 0)
 					.style('border-radius', '0px')
 					.on('click', () => {
 						settle_glyph(tk, block)
@@ -159,6 +166,7 @@ function menu_variants(tk, block) {
 				.append('div')
 				.text(tk.skewer.pointup ? 'Point down' : 'Point up')
 				.attr('class', 'sja_menuoption')
+				.attr('tabindex', 0)
 				.style('border-radius', '0px')
 				.on('click', () => {
 					tk.skewer.pointup = !tk.skewer.pointup
@@ -174,6 +182,7 @@ function menu_variants(tk, block) {
 					.text('Change variant shape')
 					.style('vertical-align', 'middle')
 					.attr('class', 'sja_menuoption')
+					.attr('tabindex', 0)
 					.on('click', () => {
 						if (called == false) {
 							called = true
@@ -198,6 +207,7 @@ function menu_variants(tk, block) {
 				.append('div')
 				.text(tk.skewer.hideDotLabels ? 'Show all variant labels' : 'Hide all variant labels')
 				.attr('class', 'sja_menuoption')
+				.attr('tabindex', 0)
 				.style('border-radius', '0px')
 				.on('click', () => {
 					tk.skewer.hideDotLabels = !tk.skewer.hideDotLabels
@@ -213,6 +223,7 @@ function menu_variants(tk, block) {
 			.append('div')
 			.text('Download')
 			.attr('class', 'sja_menuoption')
+			.attr('tabindex', 0)
 			.attr('data-testid', 'sjpp_mds3tk_variantdownload_menuoption')
 			.style('border-radius', '0px')
 			.on('click', () => {
@@ -220,6 +231,11 @@ function menu_variants(tk, block) {
 				tk.menutip.hide()
 			})
 	}
+
+	tk.menutip.d.on('keydown', function (event) {
+		if (event.key != 'Enter' || !event.target.className.includes('sja_menuoption')) return
+		event.target.dispatchEvent(new KeyboardEvent('click'))
+	})
 
 	mayAddSkewerModeOption(tk, block)
 }

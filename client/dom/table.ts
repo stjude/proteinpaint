@@ -260,7 +260,7 @@ export function renderTable({
 		tbody.selectAll('tr').remove()
 		for (const [i, row] of rows.entries()) {
 			let checkbox
-			const tr = tbody.append('tr').attr('class', 'sjpp_row_wrapper')
+			const tr = tbody.append('tr').attr('class', 'sjpp_row_wrapper').attr('tabindex', 0)
 			if (striped && i % 2 == 1) tr.style('background-color', 'rgb(245,245,245)')
 
 			// for Section 508 compliance: always create an aria-labelledby attribute on an input
@@ -271,8 +271,8 @@ export function renderTable({
 			// and should create an element id on it as needed
 			if (!row.ariaLabelledBy && row[0] && !row[0].elemId) row[0].elemId = ariaLabelledBy
 
-			if (buttons || noButtonCallback)
-				tr.on('click', (e: any) => {
+			if (buttons || noButtonCallback) {
+				const clickHandler = (e: any) => {
 					// fix for clicking on <a> check/unchecking box to the left
 					if (e.target.tagName == 'A') {
 						e.stopPropagation()
@@ -285,7 +285,13 @@ export function renderTable({
 						else checkbox.node().checked = !checkbox.node().checked
 						checkbox.dispatch('change')
 					}
+				}
+				tr.on('click', clickHandler)
+				tr.on('keydown', event => {
+					if (event.key == 'Enter') clickHandler(event)
 				})
+			}
+
 			if (showLines) {
 				tr.append('td')
 					.text(i + 1)
