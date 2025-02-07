@@ -1,8 +1,4 @@
-# TODOs:
-# separate main estimate computation from bootstrap computation
-    # main estimate computation will parallelize across chc_nums
-    # bootstrap computation will parallelize across bootstraps
-# incorporate final 95% CI computation into this script (see burden-ci95.R)
+# TODOs: see TODOs in the code
 
 
 ##### This code takes about 30 seconds to run. When user input the parameters (sexval to hdmtxval), run this for the original data and 20 for the bootstraped data at the same time, so we can have the burdern and 95% CI in about 30 seconds.
@@ -26,10 +22,12 @@ close(con)
 input <- fromJSON(json)
 # handle input arguments
 args <- commandArgs(trailingOnly = T)
-if (length(args) != 3) stop("Usage: echo <in_json> | Rscript burden.R fitsData survData sampleData > <out_json>")
-fitsData <- args[1]
-survData <- args[2]
-sampleData <- args[3]
+if (length(args) != 0) stop("Usage: echo <in_json> | Rscript burden.R > <out_json>")
+
+# register the parallel backend (used by foreach() for parallelization)
+availCores <- detectCores()
+if (is.na(availCores)) stop("cannot detect number of available cores")
+registerDoParallel(cores = availCores - 1) # use all available cores except one
 
 chc_nums <- c(1:32)[-c(2,5,14,20,23,26)] # CHCs. 6 out of 32 CHCs not used.
 
@@ -39,10 +37,8 @@ chc_nums <- c(1:32)[-c(2,5,14,20,23,26)] # CHCs. 6 out of 32 CHCs not used.
 #####################
 # setwd("R:/Biostatistics/Biostatistics2/Qi/QiCommon/St Jude/Nature Review/CHCs/App/Rdata")
 
-#save.image("~/test.RData")
-#stop("stop here")
-
-get_burden <- function(fitsData, survData, sampleData) {
+# function to compute burden estimate
+get_burden <- function(fitsData, survData, sampleData, parallelizeChcs) {
   load(fitsData)
   load(survData)
   # Qi made many newdata_chc_sampled so we have 1000 times more donors -- but in different files.
@@ -151,11 +147,24 @@ get_burden <- function(fitsData, survData, sampleData) {
   #	11="Germ cell tumor";
   
   #results <- mclapply(X = chc_nums, FUN = function(chc_num) predict(cphfits2[[chc_num]], newdata = data.frame(newdata_chc_sampled,primary=pr),type='expected'), mc.cores = cores)
-  #TODO: may revert this back to for loop (see Qi's original code)
-  results <- lapply(X = chc_nums, FUN = function(chc_num) predict(cphfits2[[chc_num]], newdata = data.frame(newdata_chc_sampled,primary=pr),type='expected'))
-  for(n in 1:length(results)){
-  	newdata_chc_sampled = data.frame(newdata_chc_sampled,results[[n]])
+  predictChc <- function(chc_num) {
+    predict(cphfits2[[chc_num]], newdata = data.frame(newdata_chc_sampled,primary=pr),type='expected')
   }
+  chcCols <- NULL
+  if (parallelizeChcs) {
+    # parallelize over chc_nums
+    chcCols <- foreach(chc_num = chc_nums, .combine = cbind) %dopar% {
+      predictChc(chc_num)
+    }
+  } else {
+    # do not parallelize over chc_nums
+    # parallelizing over bootstraps instead
+    chcCols <- foreach(chc_num = chc_nums, .combine = cbind) %do% {
+      predictChc(chc_num)
+    }
+  }
+  
+  newdata_chc_sampled = data.frame(newdata_chc_sampled, chcCols)
   names(newdata_chc_sampled)[25:50]=paste0("est_chc",chc_nums)
   newdata_chc_sampled = newdata_chc_sampled %>%
   	mutate(sumN_tmp = rowSums(dplyr::select(.,starts_with("est_chc"))))%>%
@@ -246,7 +255,7 @@ get_burden <- function(fitsData, survData, sampleData) {
   ##########################################################################
   person_burden=NULL
   
-  for(chc_num in chc_nums) {  #### Edgar, you may make this in separate runs to save time.
+  get_estimate <- function(chc_num) {  #### Edgar, you may make this in separate runs to save time.
     # print(chc_num)
     newdata_chc_sampled=newdata_chc_sampled1
     
@@ -343,7 +352,21 @@ get_burden <- function(fitsData, survData, sampleData) {
     
     for_web_BCCT$chc=chc_num
     
-    person_burden=rbind(person_burden,for_web_BCCT)
+    return(for_web_BCCT)
+  }
+  
+  results <- NULL
+  if (parallelizeChcs) {
+    # parallelize over chc_nums
+    results <- foreach(chc_num = chc_nums) %dopar% {
+      get_estimate(chc_num)
+    }
+  } else {
+    # do not parallelize over chc_nums
+    # parallelizing over bootstraps instead
+    results <- foreach(chc_num = chc_nums) %do% {
+      get_estimate(chc_num)
+    }
   }
   
   # this serial loop works
@@ -357,18 +380,19 @@ get_burden <- function(fitsData, survData, sampleData) {
   #results <- lapply(X = chc_nums, FUN = get_estimate)
   
   # combine rows into person_burden data frame
-  # for (n in 1:length(results)) {
-  #   row <- results[[n]]
-  #   if (!identical(names(row), names(results[[1]]))) {
-  #     # some rows may have empty column names because they
-  #     # used the columns names from the person_burden table, which
-  #     # is NULL when get_estimate() is run in parallel (see the
-  #     # if() statements in get_estimate())
-  #     # in this situation, use the column names from the first row
-  #     names(row) <- names(results[[1]])
-  #   }
-  #   person_burden <- rbind(person_burden, row)
-  # }
+  # TODO: need to verify this
+  for (n in 1:length(results)) {
+    row <- results[[n]]
+    if (!identical(names(row), names(results[[1]]))) {
+      # some rows may have empty column names because they
+      # used the columns names from the person_burden table, which
+      # is NULL when get_estimate() is run in parallel (see the
+      # if() statements in get_estimate())
+      # in this situation, use the column names from the first row
+      names(row) <- names(results[[1]])
+    }
+    person_burden <- rbind(person_burden, row)
+  }
   
   # person_burden[,30:31]
   # sum(person_burden[,31])  ## total burden at 50 years old. 8.971574 for this example.
@@ -379,29 +403,33 @@ get_burden <- function(fitsData, survData, sampleData) {
   return(person_burden)
 }
 
-#person_burden <- get_burden(fitsData, survData, sampleData)
 
-# specify number of iterations
-# number of bootstraps
-bootnums <- 20
-# iterations = main burden estimate + bootstraps
-iterations <- c("est", paste0("boot", 1:bootnums))
-
-# set up parallel analysis across iterations
-availCores <- detectCores()
-if (is.na(availCores)) stop("cannot detect number of available cores")
-cores <- ifelse(length(iterations) < availCores, length(iterations), availCores - 1)
-registerDoParallel(cores = cores)
-
-# compute burden estimates for main estimate and bootstraps
-out <- foreach(i = iterations, .combine = c) %dopar% {
-  lst <- list()
-  fitsData <- ifelse(i == "est", args[1], paste0("/Users/gmatt/data/tp/files/hg38/sjlife/burden/boot/", i, "/", "cphfits2.RData"))
-  survData <- ifelse(i == "est", args[2], paste0("/Users/gmatt/data/tp/files/hg38/sjlife/burden/boot/", i, "/", "surv.RData"))
-  sampleData <- "/Users/gmatt/data/tp/files/hg38/sjlife/burden/nchcsampledsex0age0steroid0bleo0vcr0etop0itmt0.RData" ##This does not matter by bootstrap. It is just to provide a dataframe with all the X's needed, and X's were updated by the user input values.
-  person_burden <- get_burden(fitsData, survData, sampleData)
-  lst[[i]] <- person_burden
-  lst
+# compute burden estimates
+# determine whether to compute a single main burden
+# estimate or multiple bootstrap burden estimates
+out <- NULL
+f <- input$datafiles
+sampleData <- file.path(f$dir, f$files$sample) # dataframe with all the X's needed, and X's are updated by input values
+if (input$showCI) {
+  # compute confidence interval
+  # parallelize burden computation across bootstraps
+  # do not parallelize across CHCs
+  bootnums <- 20 # number of bootstraps
+  out <- foreach(i = paste0("boot", 1:bootnums), .combine = c) %dopar% {
+    lst <- list()
+    fitsData <- file.path(f$dir, f$boosubdir, i, f$files$fit)
+    survData <- file.path(f$dir, f$boosubdir, i, f$files$surv)
+    person_burden <- get_burden(fitsData, survData, sampleData, FALSE)
+    lst[[i]] <- person_burden
+    lst
+  }
+} else {
+  # compute main estimate
+  # parallelize burden computation across CHCs
+  fitsData <- file.path(f$dir, f$files$fit)
+  survData <- file.path(f$dir, f$files$surv)
+  person_burden <- get_burden(fitsData, survData, sampleData, TRUE)
+  out <- list("main" = person_burden)
 }
 
 toJSON(out, digits = NA, na = "string")

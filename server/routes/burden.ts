@@ -33,6 +33,7 @@ function init({ genomes }) {
 			if (!ds) throw `invalid q.genome=${req.query.dslabel}`
 			if (!ds.cohort.cumburden?.files) throw `missing ds.cohort.cumburden.files`
 			if (!ds.cohort?.cumburden?.db) throw `missing ds.cohort.cumburden.db`
+			if (!ds.cohort?.cumburden?.bootsubdir) throw `missing ds.cohort.cumburden.bootsubdir`
 
 			const result = await getBurdenResult(q, ds.cohort.cumburden)
 			if (result.status < MAXBOOTNUM) await computeBootstrap(result, ds.cohort.cumburden)
@@ -49,20 +50,11 @@ async function getBurdenResult(
 	q: BurdenRequest,
 	cumburden: CumBurdenData //{ cohort: { cumburden: { files: { fit: any; surv: any; sample: any } } } }
 ) {
-	const { id, jsonInput } = normalizeInput(q)
+	const { id, jsonInput } = normalizeInput(q, cumburden)
 	let result = cumburden.db.connection.prepare('SELECT * FROM estimates WHERE id=?').get(id)
 	if (!result) {
 		result = { id, status: null, input: jsonInput }
-		//console.log(40, input, JSON.stringify(input))
-		// TODO: use the dataset location
-		const { fit, surv, sample } = cumburden.files
-		if (!fit || !surv || !sample) throw `missing one or more of ds.cohort.burden.files.{fit, surv, sample}`
-		const args = [
-			`${serverconfig.tpmasterdir}/${fit}`,
-			`${serverconfig.tpmasterdir}/${surv}`,
-			`${serverconfig.tpmasterdir}/${sample}`
-		]
-		const estJson = await run_R(path.join(serverconfig.binpath, 'utils', 'burden.R'), jsonInput, args)
+		const estJson = await run_R(path.join(serverconfig.binpath, 'utils', 'burden.R'), jsonInput, [])
 		const estimate = JSON.parse(estJson)
 
 		// compute overall burden by adding burdens from all chc's for each age
@@ -87,13 +79,18 @@ async function getBurdenResult(
 	return result
 }
 
-function normalizeInput(q) {
+function normalizeInput(q, cumburden) {
 	const keys = Object.keys(q)
 		.filter(k => k in defaultInputValues)
 		.sort()
 	const id = keys.map(k => q[k]).join('-')
-	const normalized = {}
+	const normalized: any = {}
 	for (const k of keys) normalized[k] = q[k]
+	normalized.datafiles = {
+		dir: path.join(serverconfig.tpmasterdir, cumburden.dir),
+		files: cumburden.files,
+		boosubdir: cumburden.bootsubdir
+	}
 	const jsonInput = JSON.stringify(normalized)
 	return { id, jsonInput }
 }
@@ -173,6 +170,7 @@ function formatPayload(estimates: object[]) {
 }
 
 const defaultInputValues = Object.freeze({
+	showCI: false, // 95% confidence interval
 	diaggrp: 5,
 	sex: 1,
 	white: 1,
