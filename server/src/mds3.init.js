@@ -504,12 +504,14 @@ function combineFilterAndTid2value(q, ds) {
 
 export async function validate_cumburden(ds) {
 	if (!ds.cohort?.cumburden) return
+	if (!ds.cohort.cumburden.dir) `missing ds.cohort.cumburden.dir`
 	if (!ds.cohort.cumburden.files) `missing ds.cohort.cumburden.files`
+	const dir = ds.cohort.cumburden.dir
 	const inputFiles = ds.cohort.cumburden.files
 	for (const name of ['fit', 'surv', 'sample']) {
 		const f = inputFiles[name]
 		if (!f) throw `missing ds.cohort.burden.files.${name}`
-		const out = spawnSync(serverconfig.Rscript, ['-e', `load('${serverconfig.tpmasterdir}/${f}')`], {
+		const out = spawnSync(serverconfig.Rscript, ['-e', `load('${serverconfig.tpmasterdir}/${dir}/${f}')`], {
 			encoding: 'utf-8'
 		})
 		if (out?.status || out?.stderr) {
