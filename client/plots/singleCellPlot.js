@@ -1088,7 +1088,7 @@ class singleCellPlot {
 			.style('font-weight', 'bold')
 			.text(`${plot.colorBy}`)
 		let step = 25
-		if (height < 400) {
+		if (height < 500) {
 			plot.legendSVG.style('font-size', '0.8em')
 			step = 20
 		}
