@@ -1,43 +1,10 @@
 # TODOs: see TODOs in the code
 
-
-##### This code takes about 30 seconds to run. When user input the parameters (sexval to hdmtxval), run this for the original data and 20 for the bootstraped data at the same time, so we can have the burdern and 95% CI in about 30 seconds.
-
-rm(list=ls())
-
-suppressPackageStartupMessages({
-  library(dplyr)  ### Qi changed to load plyr first, due to R message: If you need functions from both plyr and dplyr, please load plyr first, then dplyr:
-  library(survival)
-  library(jsonlite)
-  library(parallel)
-  library(doParallel)
-})
-
-options(warn=-1)
-
-# stream in json input data
-con <- file("stdin", "r")
-json <- readLines(con)
-close(con)
-input <- fromJSON(json)
-# handle input arguments
-args <- commandArgs(trailingOnly = T)
-if (length(args) != 0) stop("Usage: echo <in_json> | Rscript burden.R > <out_json>")
-
-# register the parallel backend (used by foreach() for parallelization)
-availCores <- detectCores()
-if (is.na(availCores)) stop("cannot detect number of available cores")
-registerDoParallel(cores = availCores - 1) # use all available cores except one
-
-chc_nums <- c(1:32)[-c(2,5,14,20,23,26)] # CHCs. 6 out of 32 CHCs not used.
-
-#####################
-# Functions for our method
-# Ref: https://stats.stackexchange.com/questions/46532/cox-baseline-hazard
-#####################
-# setwd("R:/Biostatistics/Biostatistics2/Qi/QiCommon/St Jude/Nature Review/CHCs/App/Rdata")
-
 # function to compute burden estimate
+# fitsData: file path to fit data
+# survData: file path to surv data
+# sampleData: file path to sample data
+# parallelizeChcs: boolean for whether to parallelize across chcs
 get_burden <- function(fitsData, survData, sampleData, parallelizeChcs) {
   load(fitsData)
   load(survData)
@@ -402,34 +369,3 @@ get_burden <- function(fitsData, survData, sampleData, parallelizeChcs) {
   #toJSON(person_burden, digits = NA, na = "string")
   return(person_burden)
 }
-
-
-# compute burden estimates
-# determine whether to compute a single main burden
-# estimate or multiple bootstrap burden estimates
-out <- NULL
-f <- input$datafiles
-sampleData <- file.path(f$dir, f$files$sample) # dataframe with all the X's needed, and X's are updated by input values
-if (input$showCI) {
-  # compute confidence interval
-  # parallelize burden computation across bootstraps
-  # do not parallelize across CHCs
-  bootnums <- 20 # number of bootstraps
-  out <- foreach(i = paste0("boot", 1:bootnums), .combine = c) %dopar% {
-    lst <- list()
-    fitsData <- file.path(f$dir, f$boosubdir, i, f$files$fit)
-    survData <- file.path(f$dir, f$boosubdir, i, f$files$surv)
-    person_burden <- get_burden(fitsData, survData, sampleData, FALSE)
-    lst[[i]] <- person_burden
-    lst
-  }
-} else {
-  # compute main estimate
-  # parallelize burden computation across CHCs
-  fitsData <- file.path(f$dir, f$files$fit)
-  survData <- file.path(f$dir, f$files$surv)
-  person_burden <- get_burden(fitsData, survData, sampleData, TRUE)
-  out <- list("main" = person_burden)
-}
-
-toJSON(out, digits = NA, na = "string")

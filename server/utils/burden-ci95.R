@@ -1,49 +1,96 @@
+rm(list=ls())
+
+suppressPackageStartupMessages({
+  library(dplyr)  ### Qi changed to load plyr first, due to R message: If you need functions from both plyr and dplyr, please load plyr first, then dplyr:
+  library(survival)
+  library(jsonlite)
+  library(parallel)
+  library(doParallel)
+})
+
 options(warn=-1)
-library(jsonlite)
 
-# pr=5   ### change for each DX
-# handle input arguments
-args <- commandArgs(trailingOnly = T)
-if (length(args) != 1) stop("Usage: echo <in_json> | Rscript burden-ci95.R bootstrapResults > <out_json>")
-pr <- args[1]
-
-#outall=NULL
-#for(bootnum in 1:20){
-#	bootnum=1 ##### loop this from 1 to 20. 
-#print(bootnum) 
-#setwd(paste("R:/Biostatistics/Biostatistics2/Qi/QiCommon/St Jude/Nickhill/Daisuke/2023/boot/boot",bootnum,sep=""))
-#out1=read.csv(file=paste("./bootprimary",pr,".csv",sep=""))
-#out1$boot=bootnum
-#outall=rbind(outall,out1)
-#}
+# stream in json input data
 con <- file("stdin", "r")
 json <- readLines(con)
 close(con)
 input <- fromJSON(json)
-outall <- input$boots
+# handle input arguments
+args <- commandArgs(trailingOnly = T)
+if (length(args) != 0) stop("Usage: echo <in_json> | Rscript burden.R > <out_json>")
 
-save.image("~/burden-ci95.RData") # load as workspace in RStudio session 
+# register the parallel backend (used by foreach() for parallelization)
+availCores <- detectCores()
+if (is.na(availCores)) stop("cannot detect number of available cores")
+registerDoParallel(cores = availCores - 1) # use all available cores except one
+
+chc_nums <- c(1:32)[-c(2,5,14,20,23,26)] # CHCs. 6 out of 32 CHCs not used.
+
+#####################
+# Functions for our method
+# Ref: https://stats.stackexchange.com/questions/46532/cox-baseline-hazard
+#####################
+# setwd("R:/Biostatistics/Biostatistics2/Qi/QiCommon/St Jude/Nature Review/CHCs/App/Rdata")
+
+
+#################################
+# Bootstrapping burden estimate #
+#################################
+
+# import get_burden() function
+source(file.path(input$binpath, "utils/getBurden.R"))
+
+# compute burden estimate for each bootstrap
+# parallelize across bootstraps (not across chcs)
+bootnums <- 20 # number of bootstraps
+f <- input$datafiles
+sampleData <- file.path(f$dir, f$files$sample) # dataframe with all the X's needed, and X's are updated by input values
+outall <- foreach(i = 1:bootnums, .combine = rbind) %dopar% {
+  fitsData <- file.path(f$dir, f$boosubdir, paste0("boot",i), f$files$fit)
+  survData <- file.path(f$dir, f$boosubdir, paste0("boot",i), f$files$surv)
+  person_burden <- get_burden(fitsData, survData, sampleData, FALSE)
+  person_burden$boot <- i
+  person_burden
+}
+
+
+###########################
+# 95% confidence interval #
+###########################
+
+# pr=5
+# outall=NULL
+# for(bootnum in 1:20){
+# #bootnum=1 ##### loop this from 1 to 20.
+# print(bootnum)
+# setwd(paste("/Users/gmatt/data/tp/files/hg38/sjlife/burden/boot/boot",bootnum,sep=""))
+# out1=read.csv(file=paste("./bootprimary",pr,".csv",sep=""))
+# out1$boot=bootnum
+# outall=rbind(outall,out1)
+# }
+
+
 ### For each cell (each chc and age combination), there are 20 values. get the SD from the 20 bootstrapped burdens.
 SDall=NULL
-for(chc_num in c(1:32)[-c(2,5,14,20,23,26)]){ 
-#	chc_num=1
-data=outall[outall$chc==chc_num,]  ## data for this chc_num from the 20 bootstraps on each age point
-data=data[,!colnames(data) %in% c("chc","boot")]
-# for each column (each age point), get the SD
-sd1=apply(data,2,sd) 
-sd1$chc=chc_num
-SDall=rbind(SDall,sd1)
+for(chc_num in chc_nums){ 
+  #	chc_num=1
+  data=outall[outall$chc==chc_num,]  ## data for this chc_num from the 20 bootstraps on each age point
+  data=data[,!colnames(data) %in% c("chc","boot")]
+  # for each column (each age point), get the SD
+  sd1=apply(data,2,sd) 
+  sd1$chc=chc_num
+  SDall=rbind(SDall,sd1)
 }
 
 # #### burden for total of the 26 CHCs is the sum of the 26 burdens. So for each boot, take all the 26 and then sum up, to result in a column with 20 rows.
 
 btotal=NULL
-for(bootnum in 1:20){
-#	bootnum=1
-data=outall[outall$boot==bootnum,]
-data=data[,!colnames(data) %in% c("chc","boot")]
-total=apply(data,2,sum) 
-btotal=rbind(btotal,total)
+for(bootnum in 1:bootnums){
+  #	bootnum=1
+  data=outall[outall$boot==bootnum,]
+  data=data[,!colnames(data) %in% c("chc","boot")]
+  total=apply(data,2,sum) 
+  btotal=rbind(btotal,total)
 }
 ### get SD for the total burdern from the 20 rows
 sdtotal=apply(btotal,2,sd)
@@ -83,6 +130,5 @@ up$chc=oburden$chc
 # lines(seq(20,94,1),low[low$chc==0,!colnames(low) %in% "chc"],lty=2)
 # lines(seq(20,94,1),up[up$chc==0,!colnames(up) %in% "chc"],lty=2)
 
-# toJSON(low, digits = NA, na = "string")
 ci <- list(low = low, up = up, overall=burdentotal)
-toJSON(ci)
+toJSON(ci, digits = NA, na = "string")
