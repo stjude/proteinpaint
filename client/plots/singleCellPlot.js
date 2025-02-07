@@ -390,8 +390,8 @@ class singleCellPlot {
 					let settings = { svgw: 800, svgh: 800 }
 
 					if (selectedCount > 1) {
-						const width = 900
-						const height = 900
+						const width = 800
+						const height = 800
 						settings.svgh = width / selectedCount
 						settings.svgw = height / selectedCount
 					}
