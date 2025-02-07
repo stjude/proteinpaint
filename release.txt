@@ -1,5 +1,1 @@
 
-Features
-- On the SC plot sample info now shows on every plot at the top after the tab controls. Used yellow color as starting color in the color scale and
- increased the default sample size to improve the visualization. Contours only enabled when overlaying a gene to avoid the confusion with the
- cluster contours that do not use color info. Adjusted contour bandwidth after reducing default plot size. 

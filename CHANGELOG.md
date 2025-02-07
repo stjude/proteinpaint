@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 Features:
 - Comprehensive test suite for maxLabelWidth.ts
 - Added Violin tab to the SC plot
+- On the SC plot sample info now shows on every plot at the top after the tab controls. Used yellow color as starting color in the color scale and
 
 Fixes:
 - Restored Diff Exp dropdown options; supported overriding UILabels on dataset; calculated plot size when
