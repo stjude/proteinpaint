@@ -6,6 +6,7 @@ import { getCompInit, copyMerge } from '#rx'
 import { Menu } from '../dom/menu'
 import { newSandboxDiv } from '../dom/sandbox.ts'
 import { select, pointer } from 'd3-selection'
+import { downloadTable } from '../dom/table'
 import { roundValueAuto } from '#shared/roundValue.js'
 
 const hlcolor = '#ffa200'
@@ -114,7 +115,7 @@ class geneORA {
 			})
 		}
 		this.components.controls.on('downloadClick.geneORA', () => {
-			downloadTable(this.table_rows, this.table_cols)
+			downloadTable(this.gene_ora_table_rows, this.gene_ora_table_cols)
 		})
 	}
 	getState(appState) {
