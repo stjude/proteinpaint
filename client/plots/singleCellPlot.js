@@ -163,6 +163,12 @@ class singleCellPlot {
 
 		const headerDiv = contentDiv.append('div').style('display', 'inline-block').style('padding-bottom', '10px')
 
+		const samplesPromptDiv = headerDiv
+			.append('div')
+			.style('display', 'none')
+			.text('Select a sample below to see its plots')
+			.style('font-size', '1.1em')
+			.style('padding-right', '40px')
 		const showDiv = headerDiv.append('div').style('padding-bottom', '10px')
 
 		if (state.config.plots.length > 1) this.renderShowPlots(showDiv, state)
@@ -177,7 +183,6 @@ class singleCellPlot {
 			.style('padding', '10px 20px')
 		const plotsDivParent = contentDiv.append('div')
 		const samplesTableDiv = plotsDivParent.append('div').style('display', 'none')
-		this.renderSamplesTable(samplesTableDiv, state)
 
 		const plotsDiv = plotsDivParent
 			.append('div')
@@ -197,6 +202,7 @@ class singleCellPlot {
 
 		this.dom = {
 			sampleDiv,
+			samplesPromptDiv,
 			samplesTableDiv,
 			showDiv,
 			mainDiv,
@@ -211,6 +217,8 @@ class singleCellPlot {
 			plotsDivParent,
 			errorDiv
 		}
+		this.renderSamplesTable(samplesTableDiv, state)
+
 		if (q.singleCell?.geneExpression) this.renderGeneExpressionControls(geDiv, state)
 
 		const offsetX = 80
@@ -426,9 +434,11 @@ class singleCellPlot {
 		this.dom.showDiv.style('display', 'none')
 		this.dom.violinSelectDiv.style('display', 'none')
 		this.dom.samplesTableDiv.style('display', 'none')
+		this.dom.samplesPromptDiv.style('display', 'none')
 		switch (id) {
 			case SAMPLES_TAB:
 				this.dom.samplesTableDiv.style('display', 'block')
+				this.dom.samplesPromptDiv.style('display', 'inline-block')
 				break
 			case PLOTS_TAB:
 				await this.renderPlots()
@@ -1288,12 +1298,6 @@ class singleCellPlot {
 		}
 
 		div.selectAll('*').remove()
-		const headerDiv = div
-			.append('div')
-			.text('Select a sample to view its data:')
-			.style('font-size', '1.1em')
-			.style('margin-bottom', '10px')
-		const tableDiv = div.append('div')
 		const [rows, columns] = await this.getTableData(state)
 		let sampleIdx = 0 // the first sample/experiment is selected by default on app launch
 		{
@@ -1305,9 +1309,9 @@ class singleCellPlot {
 			columns,
 			resize: true,
 			singleMode: true,
-			div: tableDiv,
+			div,
 			maxWidth: columns.length > 3 ? '90vw' : '40vw',
-			maxHeight: '65vh',
+			maxHeight: '60vh',
 			noButtonCallback: index => {
 				// NOTE that "index" is not array index of this.samples[]
 				const sample = rows[index][0].value
