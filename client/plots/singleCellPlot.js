@@ -84,6 +84,9 @@ class singleCellPlot {
 		})
 		this.tabs = []
 		const activeTab = state.config.activeTab
+		// shared isVisible function for tabs that require config.sample
+		const isVisible = () => this.state?.config.sample
+
 		this.tabs.push({
 			label: 'Samples',
 			id: SAMPLES_TAB,
@@ -94,7 +97,7 @@ class singleCellPlot {
 			label: 'Plots',
 			id: PLOTS_TAB,
 			active: activeTab == PLOTS_TAB,
-			isVisible: () => state.config.sample != undefined || this.state?.config.sample,
+			isVisible,
 			callback: () => this.setActiveTab(PLOTS_TAB)
 		})
 		if (state.termdbConfig.queries?.singleCell?.DEgenes) {
@@ -102,7 +105,7 @@ class singleCellPlot {
 				label: 'Differential Expression',
 				id: DIFFERENTIAL_EXPRESSION_TAB,
 				active: activeTab == DIFFERENTIAL_EXPRESSION_TAB,
-				isVisible: () => state.config.sample != undefined || this.state?.config.sample,
+				isVisible,
 				callback: () => this.setActiveTab(DIFFERENTIAL_EXPRESSION_TAB)
 			})
 			if (this.app.opts.genome.termdbs)
@@ -119,7 +122,7 @@ class singleCellPlot {
 			label: 'Gene Expression',
 			id: GENE_EXPRESSION_TAB,
 			active: activeTab == GENE_EXPRESSION_TAB,
-			isVisible: () => state.config.sample != undefined || this.state?.config.sample,
+			isVisible,
 			callback: () => this.setActiveTab(GENE_EXPRESSION_TAB)
 		})
 
@@ -127,7 +130,7 @@ class singleCellPlot {
 			label: 'Summary',
 			id: VIOLIN_TAB,
 			active: activeTab == VIOLIN_TAB,
-			isVisible: () => state.config.sample != undefined || this.state?.config.sample,
+			isVisible,
 			callback: () => this.setActiveTab(VIOLIN_TAB)
 		})
 
@@ -136,7 +139,7 @@ class singleCellPlot {
 				label: state.termdbConfig.queries.singleCell.images.label,
 				id: IMAGES_TAB,
 				active: activeTab == IMAGES_TAB,
-				isVisible: () => state.config.sample != undefined || this.state?.config.sample,
+				isVisible,
 				callback: () => this.setActiveTab(IMAGES_TAB)
 			})
 		const q = state.termdbConfig.queries
