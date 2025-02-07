@@ -36,8 +36,7 @@ function init({ genomes }) {
 			if (!ds.cohort?.cumburden?.bootsubdir) throw `missing ds.cohort.cumburden.bootsubdir`
 
 			const result = await getBurdenResult(q, ds.cohort.cumburden)
-			if (result.status < MAXBOOTNUM) await computeBootstrap(result, ds.cohort.cumburden)
-			if (!result.ci95 || !Object.keys(result.ci95).length) await compute95ci(result, ds.cohort.cumburden)
+			if (q.showCI && (!result.ci95 || !Object.keys(result.ci95).length)) await compute95ci(result, ds.cohort.cumburden)
 
 			res.send({ status: 'ok', ...formatPayload(result.ci95) } satisfies BurdenResponse)
 		} catch (e: any) {
@@ -54,7 +53,7 @@ async function getBurdenResult(
 	let result = cumburden.db.connection.prepare('SELECT * FROM estimates WHERE id=?').get(id)
 	if (!result) {
 		result = { id, status: null, input: jsonInput }
-		const estJson = await run_R(path.join(serverconfig.binpath, 'utils', 'burden.R'), jsonInput, [])
+		const estJson = await run_R(path.join(serverconfig.binpath, 'utils', 'burden-main.R'), jsonInput, [])
 		const estimate = JSON.parse(estJson)
 
 		// compute overall burden by adding burdens from all chc's for each age
@@ -91,6 +90,7 @@ function normalizeInput(q, cumburden) {
 		files: cumburden.files,
 		boosubdir: cumburden.bootsubdir
 	}
+	normalized.binpath = serverconfig.binpath
 	const jsonInput = JSON.stringify(normalized)
 	return { id, jsonInput }
 }
@@ -115,19 +115,13 @@ async function computeBootstrap(result, cumburden) {
 }
 
 async function compute95ci(result, cumburden) {
-	const boots: any[] = []
-	for (const [bootNum, bootResults] of Object.entries(result)) {
-		if (!bootNum.startsWith('boot') || !bootResults) continue
-		// process only boot* columns
-		for (const est of bootResults as any[]) {
-			boots.push({ ...est, boot: bootNum })
-		}
-	}
-
 	try {
-		const args = [result.input.diaggrp]
-		const input = JSON.stringify({ boots, burden: result.estimate.filter(est => est.chc !== 0) })
-		const lowup = await run_R(path.join(serverconfig.binpath, 'utils', 'burden-ci95.R'), input, args)
+		if (!result.input) throw 'result{} does not have .input'
+		// use same input that was used for main burden estimate
+		const input = structuredClone(result.input)
+		// attach main burden estimate to the input
+		input.burden = result.estimate.filter(est => est.chc !== 0)
+		const lowup = await run_R(path.join(serverconfig.binpath, 'utils', 'burden-ci95.R'), JSON.stringify(input), [])
 		const { low, up, overall } = JSON.parse(lowup)
 		const ci95 = { 0: {} }
 		for (const est of Object.values(result.estimate as any[])) {
@@ -170,7 +164,6 @@ function formatPayload(estimates: object[]) {
 }
 
 const defaultInputValues = Object.freeze({
-	showCI: false, // 95% confidence interval
 	diaggrp: 5,
 	sex: 1,
 	white: 1,

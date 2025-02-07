@@ -5,6 +5,8 @@ export type BurdenRequest = {
 	genome: string
 	/** a user-defined dataset label in the serverconfig.json, such as ClinVar, SJLife, GDC, etc */
 	dslabel: string
+	/** boolean for whether to show 95% confidence interval */
+	showCI: boolean
 	/** the diagnosis group:
 	 * 1= "Acute lymphoblastic leukemia (ALL)"
 	 * 2= "Acute Myeloid Leukemia (AML)"
