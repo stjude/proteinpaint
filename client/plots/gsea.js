@@ -7,21 +7,10 @@ import { controlsInit } from './controls'
 import { getCompInit, copyMerge } from '#rx'
 import { Menu } from '../dom/menu'
 import { scaleLog, scaleLinear } from 'd3-scale'
+import { downloadTable } from '../dom/table'
 import { roundValueAuto } from '#shared/roundValue.js'
 
 const tip = new Menu()
-
-// table columns showing analysis results for each gene set
-const gsea_table_cols = [
-	{ label: 'Pathway name' },
-	{ label: 'enrichment score' },
-	{ label: 'normalized enrichment score' },
-	{ label: 'Geneset total size' },
-	{ label: 'pvalue' },
-	{ label: 'sidak' },
-	{ label: 'FDR' },
-	{ label: 'Leading edge' }
-]
 
 class gsea {
 	constructor() {
@@ -136,7 +125,7 @@ class gsea {
 			})
 		}
 		this.components.controls.on('downloadClick.gsea', () => {
-			downloadTable(this.table_rows, this.table_cols)
+			downloadTable(this.gsea_table_rows, this.gsea_table_cols)
 		})
 	}
 	getState(appState) {
@@ -274,8 +263,19 @@ add:
 
 		self.dom.tableDiv.selectAll('*').remove()
 		const d_gsea = self.dom.tableDiv.append('div')
+		// table columns showing analysis results for each gene set
+		self.gsea_table_cols = [
+			{ label: 'Pathway name' },
+			{ label: 'enrichment score' },
+			{ label: 'normalized enrichment score' },
+			{ label: 'Geneset total size' },
+			{ label: 'pvalue' },
+			{ label: 'sidak' },
+			{ label: 'FDR' },
+			{ label: 'Leading edge' }
+		]
 		renderTable({
-			columns: gsea_table_cols,
+			columns: self.gsea_table_cols,
 			rows: self.gsea_table_rows,
 			div: d_gsea,
 			showLines: true,
