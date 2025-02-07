@@ -173,8 +173,7 @@ class singleCellPlot {
 		const samplesPromptDiv = headerDiv
 			.append('div')
 			.style('display', 'none')
-			.text('Select a sample below to see its data')
-			.style('font-size', '1.1em')
+			.text('Select a sample below to see its data:')
 			.style('padding-right', '40px')
 		const showDiv = headerDiv.append('div').style('padding-bottom', '10px')
 
@@ -637,8 +636,8 @@ class singleCellPlot {
 
 	async renderDETable() {
 		const DEDiv = this.dom.plotsDiv.append('div').style('width', '100%')
-		const DETableDiv = DEDiv.append('div')
 		const notesDiv = DEDiv.append('div')
+		const DETableDiv = DEDiv.append('div')
 
 		//first plot
 		this.dom.deselect.selectAll('*').remove()
@@ -692,7 +691,7 @@ class singleCellPlot {
 		renderTable({
 			rows,
 			columns,
-			maxHeight: '60vh',
+			maxHeight: '50vh',
 			maxWidth: '45vw',
 			div: DETableDiv,
 			singleMode: true,
@@ -711,11 +710,7 @@ class singleCellPlot {
 			},
 			selectedRows
 		})
-		notesDiv
-			.append('div')
-			.style('font-size', '0.9rem')
-			.style('padding-top', '15px')
-			.text('Select a gene to view its expression.')
+		notesDiv.append('div').style('padding-bottom', '10px').text('Select a gene to view its expression:')
 		this.dom.loadingDiv.style('display', 'none')
 	}
 
@@ -1324,7 +1319,7 @@ class singleCellPlot {
 			singleMode: true,
 			div,
 			maxWidth: columns.length > 3 ? '90vw' : '40vw',
-			maxHeight: '60vh',
+			maxHeight: '50vh',
 			noButtonCallback: index => {
 				// NOTE that "index" is not array index of this.samples[]
 				const sample = rows[index][0].value
