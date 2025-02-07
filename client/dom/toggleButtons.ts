@@ -200,9 +200,9 @@ function setRenderers(self) {
 						.append('div')
 						.style('display', self.opts.linePosition == 'right' ? 'inline-flex' : 'flex')
 				}
-
+				const isVisible = tab.isVisible ? tab.isVisible() : true
 				if (tab.disabled && tab.isVisible) {
-					tab.wrapper.style('cursor', tab.disabled() == true && tab.isVisible() == true ? 'not-allowed' : 'pointer')
+					tab.wrapper.style('cursor', tab.disabled() == true && isVisible ? 'not-allowed' : 'pointer')
 				}
 
 				tab.tab //Button text
@@ -210,6 +210,8 @@ function setRenderers(self) {
 					.style('text-align', textAlign)
 					.style('padding', '5px')
 					.html(tab.label)
+				tab.wrapper.style('display', isVisible ? 'inline-block' : 'none')
+
 				tab.line //Bolded, blue line indicating the active button
 					.style('background-color', '#1575ad')
 					.style('visibility', tab.active ? 'visible' : 'hidden')
