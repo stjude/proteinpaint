@@ -62,15 +62,13 @@ class gsea {
 				max: 1
 			},
 			{
-				label: 'P-value filter type',
-				type: 'radio',
+				label: 'FDR Filter Cutoff (Linear Scale)',
+				type: 'number',
 				chartType: 'gsea',
-				settingsKey: 'adjusted_original_pvalue',
+				settingsKey: 'fdr',
 				title: 'Toggle between original and adjusted pvalues for volcano plot',
-				options: [
-					{ label: 'adjusted', value: 'adjusted' },
-					{ label: 'original', value: 'original' }
-				]
+				min: 0,
+				max: 1
 			},
 			{
 				label: 'Gene set size filter cutoff',
@@ -196,48 +194,45 @@ add:
 		self.gsea_table_rows = []
 		for (const pathway_name of Object.keys(output.data)) {
 			const pathway = output.data[pathway_name]
+			// if (JSON.parse(sessionStorage.getItem('optionalFeatures')).gsea_test == true) {
+			// 	const es = pathway.es ? roundValueAuto(pathway.es) : pathway.es
+			// 	const nes = pathway.nes ? roundValueAuto(pathway.nes) : pathway.nes
+			// 	const pval = pathway.pval ? roundValueAuto(pathway.pval) : pathway.pval
+			// 	const sidak = pathway.sidak ? roundValueAuto(pathway.sidak) : pathway.sidak
+			// 	const fdr = pathway.fdr ? roundValueAuto(pathway.fdr) : pathway.fdr
+			// 	self.gsea_table_rows.push([
+			// 		{ value: pathway_name },
+			// 		{ value: es },
+			// 		{ value: nes },
+			// 		{ value: pathway.geneset_size },
+			// 		{ value: pval },
+			// 		{ value: sidak },
+			// 		{ value: fdr },
+			// 		{ value: pathway.leading_edge }
+			// 	])
+			// } 
+			// else {
 			if (
-				self.settings.adjusted_original_pvalue == 'adjusted' &&
-				self.settings.pvalue >= pathway.fdr &&
-				self.settings.gene_set_size_cutoff > pathway.geneset_size
-			) {
-				const es = pathway.es ? roundValueAuto(pathway.es) : pathway.es
-				const nes = pathway.nes ? roundValueAuto(pathway.nes) : pathway.nes
-				const pval = pathway.pval ? roundValueAuto(pathway.pval) : pathway.pval
-				const sidak = pathway.sidak ? roundValueAuto(pathway.sidak) : pathway.sidak
-				const fdr = pathway.fdr ? roundValueAuto(pathway.fdr) : pathway.fdr
-				self.gsea_table_rows.push([
-					{ value: pathway_name },
-					{ value: es },
-					{ value: nes },
-					{ value: pathway.geneset_size },
-					{ value: pval },
-					{ value: sidak },
-					{ value: fdr },
-					{ value: pathway.leading_edge }
-				])
-			} else if (
-				self.settings.adjusted_original_pvalue == 'original' &&
-				self.settings.pvalue >= pathway.pval &&
-				self.settings.gene_set_size_cutoff > pathway.geneset_size
-			) {
-				const es = pathway.es ? roundValueAuto(pathway.es) : pathway.es
-				const nes = pathway.nes ? roundValueAuto(pathway.nes) : pathway.nes
-				const pval = pathway.pval ? roundValueAuto(pathway.pval) : pathway.pval
-				const sidak = pathway.sidak ? roundValueAuto(pathway.sidak) : pathway.sidak
-				const fdr = pathway.fdr ? roundValueAuto(pathway.fdr) : pathway.fdr
-				self.gsea_table_rows.push([
-					{ value: pathway_name },
-					{ value: es },
-					{ value: nes },
-					{ value: pathway.geneset_size },
-					{ value: pval },
-					{ value: sidak },
-					{ value: fdr },
-					{ value: pathway.leading_edge }
-				])
+					self.settings.pvalue >= pathway.pval && self.settings.fdr < pathway.fdr || self.settings.fdr >= pathway.fdr && self.settings.pvalue < pathway.pval
+				) {
+					const es = pathway.es ? roundValueAuto(pathway.es) : pathway.es
+					const nes = pathway.nes ? roundValueAuto(pathway.nes) : pathway.nes
+					const pval = pathway.pval ? roundValueAuto(pathway.pval) : pathway.pval
+					const sidak = pathway.sidak ? roundValueAuto(pathway.sidak) : pathway.sidak
+					const fdr = pathway.fdr ? roundValueAuto(pathway.fdr) : pathway.fdr
+					self.gsea_table_rows.push([
+						{ value: pathway_name },
+						{ value: es },
+						{ value: nes },
+						{ value: pathway.geneset_size },
+						{ value: pval },
+						{ value: sidak },
+						{ value: fdr },
+						{ value: pathway.leading_edge }
+					])
+				} 
 			}
-		}
+		// }
 
 		self.dom.tableDiv.selectAll('*').remove()
 		const d_gsea = self.dom.tableDiv.append('div')
@@ -347,9 +342,10 @@ export async function getPlotConfig(opts, app) {
 			settings: {
 				gsea: {
 					pvalue: 0.05,
-					adjusted_original_pvalue: 'adjusted',
+					// adjusted_original_pvalue: 'adjusted',
+					fdr: 0.05,
 					pathway: undefined,
-					gene_set_size_cutoff: 2000,
+					// gene_set_size_cutoff: 2000,
 					filter_non_coding_genes: true
 				},
 				controls: { isOpen: true }
