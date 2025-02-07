@@ -82,7 +82,7 @@ class singleCellPlot {
 			if (result == 1 || result == -1) return result
 			else return elem1.sample.localeCompare(elem2.sample)
 		})
-
+		const initialSample = state.config.sample != undefined
 		this.tabs = []
 		const activeTab = state.config.activeTab
 		this.tabs.push({
@@ -95,6 +95,7 @@ class singleCellPlot {
 			label: 'Plots',
 			id: PLOTS_TAB,
 			active: activeTab == PLOTS_TAB,
+			isVisible: () => initialSample || this.state?.config.sample,
 			callback: () => this.setActiveTab(PLOTS_TAB)
 		})
 		if (state.termdbConfig.queries?.singleCell?.DEgenes) {
@@ -102,6 +103,7 @@ class singleCellPlot {
 				label: 'Differential Expression',
 				id: DIFFERENTIAL_EXPRESSION_TAB,
 				active: activeTab == DIFFERENTIAL_EXPRESSION_TAB,
+				isVisible: () => initialSample || this.state?.config.sample,
 				callback: () => this.setActiveTab(DIFFERENTIAL_EXPRESSION_TAB)
 			})
 			if (this.app.opts.genome.termdbs)
@@ -118,6 +120,7 @@ class singleCellPlot {
 			label: 'Gene Expression',
 			id: GENE_EXPRESSION_TAB,
 			active: activeTab == GENE_EXPRESSION_TAB,
+			isVisible: () => initialSample || this.state?.config.sample,
 			callback: () => this.setActiveTab(GENE_EXPRESSION_TAB)
 		})
 
@@ -125,6 +128,7 @@ class singleCellPlot {
 			label: 'Summary',
 			id: VIOLIN_TAB,
 			active: activeTab == VIOLIN_TAB,
+			isVisible: () => initialSample || this.state?.config.sample,
 			callback: () => this.setActiveTab(VIOLIN_TAB)
 		})
 
@@ -133,6 +137,7 @@ class singleCellPlot {
 				label: state.termdbConfig.queries.singleCell.images.label,
 				id: IMAGES_TAB,
 				active: activeTab == IMAGES_TAB,
+				isVisible: () => initialSample || this.state?.config.sample,
 				callback: () => this.setActiveTab(IMAGES_TAB)
 			})
 		const q = state.termdbConfig.queries
@@ -166,7 +171,7 @@ class singleCellPlot {
 		const samplesPromptDiv = headerDiv
 			.append('div')
 			.style('display', 'none')
-			.text('Select a sample below to see its plots')
+			.text('Select a sample below to see its data')
 			.style('font-size', '1.1em')
 			.style('padding-right', '40px')
 		const showDiv = headerDiv.append('div').style('padding-bottom', '10px')
@@ -333,8 +338,8 @@ class singleCellPlot {
 	}
 
 	async getSamplesTabLabel(state) {
-		const sampleIdx = state.config.sample ? this.samples.findIndex(i => i.sample == state.config.sample) : 0
-		if (sampleIdx == -1) throw 'sample not found in this.samples[]'
+		const sampleIdx = this.samples.findIndex(i => i.sample == state.config.sample)
+		if (sampleIdx == -1) return ''
 
 		const extraText = [] // extra text to show alongside sample name
 
@@ -1299,10 +1304,11 @@ class singleCellPlot {
 
 		div.selectAll('*').remove()
 		const [rows, columns] = await this.getTableData(state)
+		const selectedRows = []
 		let sampleIdx = 0 // the first sample/experiment is selected by default on app launch
 		{
 			const i = this.samples.findIndex(i => i.sample == state.config.sample)
-			if (i != -1) sampleIdx = i // select sample already tracked in state
+			if (i != -1) selectedRows.push(i)
 		}
 		renderTable({
 			rows,
@@ -1326,7 +1332,7 @@ class singleCellPlot {
 
 				this.app.dispatch({ type: 'plot_edit', id: this.id, config })
 			},
-			selectedRows: [sampleIdx],
+			selectedRows,
 			striped: true,
 			header: { style: { 'text-transform': 'capitalize' } } // to show header in title case; if it results in a conflict (e.g. a sample name showing in 1st tab has to be lower case), then use sampleColumns[].columnHeader as override of term name
 		})
