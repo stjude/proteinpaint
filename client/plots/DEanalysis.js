@@ -493,7 +493,7 @@ add:
 				value: sample_size1
 			},
 			{
-				label: self.config.samplelst.groups[1].name + ' sample size (treatment group)',
+				label: self.config.samplelst.groups[1].name + ' sample size (case group)',
 				value: sample_size2
 			}
 		]
