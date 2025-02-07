@@ -1319,17 +1319,15 @@ type AssayAvailability = {
 }
 
 export type CumBurdenData = {
+	/** directory containing cumulative burden data */
+	dir: string
 	files: {
 		fit: string
 		surv: string
 		sample: string
-		boot: {
-			dir: string
-			fit: string
-			surv: string
-			template: string
-		}
 	}
+	/** subdirectory containing bootstrap data */
+	bootsubdir: string
 	db: {
 		/** db file created by separate repo, pcb/utils/create.sql */
 		file: string
