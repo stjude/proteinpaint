@@ -84,8 +84,10 @@ class singleCellPlot {
 		})
 		this.tabs = []
 		const activeTab = state.config.activeTab
-		// shared isVisible function for tabs that require config.sample
-		const isVisible = () => state.config.sample || this.state?.config.sample
+		// shared isVisible function for tabs that require config.sample;
+		// note that tab.isVisible() will be called on tab.update(), which
+		// is called in main() -> showActiveTab() below
+		const isVisible = () => this.state?.config.sample
 
 		this.tabs.push({
 			label: 'Samples',

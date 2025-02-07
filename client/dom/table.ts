@@ -326,6 +326,8 @@ export function renderTable({
 					})
 
 				if (i === selectedRows[0]) {
+					// if there is at least one selected row, scroll to that table row,
+					// so that it's visible and obvious to the user which rows are pre-selected
 					setTimeout(() => {
 						td.node().parentNode.scrollIntoView({ behavior: 'smooth', block: 'center' })
 					}, 500)

@@ -62,7 +62,7 @@ type Tab = {
 	label: string
 	width?: number
 	callback?: (f: any) => void
-	disabled?: (f: any) => void
+	disabled?: (f: any) => boolean
 	isVisible?: (f: any) => void
 	keydownCallback?: (event: any, tab: Tab) => void
 }
@@ -160,7 +160,10 @@ function setRenderers(self) {
 			.style('min-width', tab => (tab.width ? null : Math.max(self.defaultTabWidth)))
 			.style('border', 'none')
 			.style('background-color', 'transparent')
-			.style('display', self.opts.tabsPosition == 'vertical' ? 'flex' : 'inline-grid')
+			.style('display', tab => {
+				if (!tab.isVisible || tab.isVisible()) return self.opts.tabsPosition == 'vertical' ? 'flex' : 'inline-grid'
+				else return 'none'
+			})
 			.property('disabled', tab => (tab.disabled ? tab.disabled() : false))
 			.each(async function (this: any, tab, index) {
 				if (tab.active) {
@@ -178,7 +181,9 @@ function setRenderers(self) {
 				is not visible). The event is on the button (i.e. tab.wrapper). The style changes 
 				when the button is active/inactive are on the text (i.e. tab.tab) and line 
 				(i.e. tab.line) */
-				tab.wrapper = select(this)
+				const isVisible = tab.isVisible ? tab.isVisible() : true
+				tab.wrapper = select(this).style('cursor', isVisible && tab.disabled?.() ? 'not-allowed' : 'pointer')
+
 				if (self.opts.linePosition == 'right') tab.wrapper.style('justify-self', 'end')
 				if (self.opts.linePosition == 'left') tab.wrapper.style('justify-self', 'start')
 
@@ -200,17 +205,12 @@ function setRenderers(self) {
 						.append('div')
 						.style('display', self.opts.linePosition == 'right' ? 'inline-flex' : 'flex')
 				}
-				const isVisible = tab.isVisible ? tab.isVisible() : true
-				if (tab.disabled && tab.isVisible) {
-					tab.wrapper.style('cursor', tab.disabled() == true && isVisible ? 'not-allowed' : 'pointer')
-				}
 
 				tab.tab //Button text
 					.style('color', tab.active ? '#1575ad' : '#757373')
 					.style('text-align', textAlign)
 					.style('padding', '5px')
 					.html(tab.label)
-				tab.wrapper.style('display', isVisible ? 'inline-block' : 'none')
 
 				tab.line //Bolded, blue line indicating the active button
 					.style('background-color', '#1575ad')
