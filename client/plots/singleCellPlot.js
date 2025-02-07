@@ -439,7 +439,7 @@ class singleCellPlot {
 		this.dom.geDiv.style('display', 'none')
 		this.dom.showDiv.style('display', 'none')
 		this.dom.violinSelectDiv.style('display', 'none')
-		this.dom.samplesTableDiv.style('display', 'none')
+		this.dom.samplesTableDiv.style('display', 'none').style('padding-bottom', '10px')
 		this.dom.samplesPromptDiv.style('display', 'none')
 		switch (id) {
 			case SAMPLES_TAB:
@@ -637,7 +637,7 @@ class singleCellPlot {
 	async renderDETable() {
 		const DEDiv = this.dom.plotsDiv.append('div').style('width', '100%')
 		const notesDiv = DEDiv.append('div')
-		const DETableDiv = DEDiv.append('div')
+		const DETableDiv = DEDiv.append('div').style('padding-bottom', '10px')
 
 		//first plot
 		this.dom.deselect.selectAll('*').remove()
@@ -708,7 +708,8 @@ class singleCellPlot {
 					}
 				})
 			},
-			selectedRows
+			selectedRows,
+			resize: true
 		})
 		notesDiv.append('div').style('padding-bottom', '10px').text('Select a gene to view its expression:')
 		this.dom.loadingDiv.style('display', 'none')
