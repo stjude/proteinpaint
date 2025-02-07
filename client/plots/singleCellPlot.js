@@ -1059,7 +1059,12 @@ class singleCellPlot {
 				}
 			}
 
-			legendSVG = plot.plotDiv.append('svg').attr('width', 250).attr('height', height).style('vertical-align', 'top')
+			legendSVG = plot.plotDiv
+				.append('svg')
+				.attr('width', 250)
+				.attr('height', height)
+				.style('display', 'inline-block')
+				.style('vertical-align', 'top')
 
 			plot.legendSVG = legendSVG
 		}
@@ -1407,7 +1412,8 @@ class singleCellPlot {
 
 	renderLargePlotThree = async function (plot) {
 		if (!plot.canvas) {
-			plot.canvas = plot.plotDiv.append('canvas').node()
+			const canvas = plot.plotDiv.append('canvas').style('display', 'inline-block').style('vertical-align', 'top')
+			plot.canvas = canvas.node()
 			plot.canvas.width = this.settings.svgw
 			plot.canvas.height = this.settings.svgh
 			plot.renderer = new THREE.WebGLRenderer({ antialias: true, canvas: plot.canvas, preserveDrawingBuffer: true })
