@@ -325,6 +325,12 @@ export function renderTable({
 						}
 					})
 
+				if (i === selectedRows[0]) {
+					setTimeout(() => {
+						td.node().parentNode.scrollIntoView({ behavior: 'smooth', block: 'center' })
+					}, 500)
+				}
+
 				const checked = checkbox.property('checked')
 				for (const key in selectedRowStyle) {
 					tr.style(key, checked ? selectedRowStyle[key] : '')
