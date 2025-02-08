@@ -162,7 +162,7 @@ class singleCellPlot {
 			.append('div')
 			.style('display', 'inline-block')
 			.style('vertical-align', 'top')
-			.style('padding-top', '10px')
+			.style('padding', '10px')
 		this.tabsComp = await new Tabs({
 			holder: contentDiv,
 			tabsPosition: 'horizontal',
@@ -398,6 +398,7 @@ class singleCellPlot {
 						const height = 800
 						settings.svgh = width / selectedCount
 						settings.svgw = height / selectedCount
+						settings.contourBandwidth = 10
 					}
 					this.app.dispatch({
 						type: 'plot_edit',
