@@ -2048,7 +2048,6 @@ async function convert2caseId(q, ds) {
 	- sample submitter id (TCGA-B5-A1MR-01A)
 	*/
 	const { host, headers } = ds.getHostHeaders(q)
-	console.log(10)
 	const re = await ky
 		.post(joinUrl(host.rest, 'cases'), {
 			timeout: false,
