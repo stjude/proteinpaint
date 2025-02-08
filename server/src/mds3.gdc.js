@@ -861,22 +861,12 @@ async function getCnvFusion4oneCase(opts, ds) {
 
 	const events = [] // collect cnv and fusion events into one array
 
-	if (wgsFile) {
-		// if wgs available use first, ignore cnv
+	if (wgsFile || snpFile) {
+		// has cnv file based on either wgs or snp array; wgs has priority
 		// do not use headers here since accept should be 'text/plain', not 'application/json'
-		const re = await ky(joinUrl(joinUrl(host.rest, 'data'), wgsFile), { timeout: false }).text()
-		const lines = re.trim().split('\n')
-		// first line is header
-		if (lines[0] != 'GDC_Aliquot_ID\tChromosome\tStart\tEnd\tNum_Probes\tSegment_Mean')
-			throw 'GDC WGS CNV file format has changed: ' + wgsFile
-		parseCnvFile(lines, events)
-	} else if (snpFile) {
-		// only load available snp file if no wgs cnv
-		const re = await ky(joinUrl(joinUrl(host.rest, 'data'), snpFile), { timeout: false }).text()
-		const lines = re.trim().split('\n')
-		if (lines[0] != 'GDC_Aliquot\tChromosome\tStart\tEnd\tNum_Probes\tSegment_Mean')
-			throw 'GDC SNP CNV file format has changed: ' + snpFile
-		parseCnvFile(lines, events)
+		const re = await ky(joinUrl(joinUrl(host.rest, 'data'), wgsFile || snpFile), { timeout: false }).text()
+		parseCnvFile(re.trim().split('\n'), events)
+		//console.log(11, wgsFile ? 'wgs' : 'snp') // for testing to find out which is used
 	}
 
 	if (arribaFile) {
@@ -932,81 +922,86 @@ async function getCnvFusion4oneCase(opts, ds) {
 	}
 }
 
+/*
+cnv files come in different formats. detect by header line
+*/
 function parseCnvFile(lines, events) {
-	for (let i = 1; i < lines.length; i++) {
-		const l = lines[i].split('\t')
-		if (l.length != 6) throw 'cnv file line not 6 columns: ' + l
-		if (!l[1]) throw 'cnv file line missing chr: ' + l
-		let chr = l[1]
-		if (!l[1].startsWith('chr')) chr = 'chr' + l[1] // snp file chr doesn't start with "chr"
-		const cnv = {
-			dt: common.dtcnv,
-			chr: l[1],
-			start: Number(l[2]),
-			stop: Number(l[3]),
-			value: Number(l[5])
-		}
-		if (Number.isNaN(cnv.start) || Number.isNaN(cnv.stop) || Number.isNaN(cnv.value))
-			throw 'start/stop/value not a number in cnv file: ' + l
-		events.push(cnv)
-	}
-}
-
-/* old code for wgs cnv file
-
-		const lines = re.split('\n')
-		console.log(lines)
-		// first line is header
-		// GDC_Aliquot	Chromosome	Start	End	Copy_Number	Major_Copy_Number	Minor_Copy_Number
-		for (let i = 1; i < lines.length; i++) {
-			const l = lines[i].split('\t')
-			if (l.length != 7) continue
-			const total = Number(l[4]),
-				major = Number(l[5]),
-				minor = Number(l[6])
-			if (Number.isNaN(total) || Number.isNaN(major) || Number.isNaN(minor)) continue
-			const cnv = {
-				dt: common.dtcnv,
-				chr: l[1],
-				start: Number(l[2]),
-				stop: Number(l[3]),
-				value: total
-			}
-			if (!cnv.chr || Number.isNaN(cnv.start) || Number.isNaN(cnv.stop)) continue
-			events.push(cnv)
-
-			if (total > 0) {
-				// total copy number is >0, detect loh
-				/
-				if (major + minor != total) continue // data err?
-				if (major == minor) continue // no loh
-				const loh = {
-					dt: common.dtloh,
-					chr: cnv.chr,
-					start: cnv.start,
-					stop: cnv.stop,
-					segmean: Math.abs(major - minor) / total
+	switch (lines[0]) {
+		case 'GDC_Aliquot_ID\tChromosome\tStart\tEnd\tNum_Probes\tSegment_Mean':
+		case 'GDC_Aliquot\tChromosome\tStart\tEnd\tNum_Probes\tSegment_Mean':
+			for (let i = 1; i < lines.length; i++) {
+				const l = lines[i].split('\t')
+				if (l.length != 6) throw 'cnv file line not 6 columns: ' + l
+				if (!l[1]) throw 'cnv file line missing chr: ' + l
+				let chr = l[1]
+				if (!l[1].startsWith('chr')) chr = 'chr' + l[1] // snp file chr doesn't start with "chr"
+				if (chr.toLowerCase() == 'chrm') continue // TODO delete when disco is fixed
+				const cnv = {
+					dt: common.dtcnv,
+					chr,
+					start: Number(l[2]),
+					stop: Number(l[3]),
+					value: Number(l[5])
 				}
-				events.push(loh)
-				/
+				if (Number.isNaN(cnv.start) || Number.isNaN(cnv.stop) || Number.isNaN(cnv.value))
+					throw 'start/stop/value not a number in cnv file: ' + l
+				events.push(cnv)
+			}
+			return
+		case 'GDC_Aliquot\tChromosome\tStart\tEnd\tCopy_Number\tMajor_Copy_Number\tMinor_Copy_Number':
+			for (let i = 1; i < lines.length; i++) {
+				const l = lines[i].split('\t')
+				if (l.length != 7) continue
+				const total = Number(l[4]),
+					major = Number(l[5]),
+					minor = Number(l[6])
+				if (Number.isNaN(total) || Number.isNaN(major) || Number.isNaN(minor)) continue
+				const cnv = {
+					dt: common.dtcnv,
+					chr: l[1],
+					start: Number(l[2]),
+					stop: Number(l[3]),
+					value: total
+				}
+				if (!cnv.chr || Number.isNaN(cnv.start) || Number.isNaN(cnv.stop)) continue
+				events.push(cnv)
 
-				if (minor == 0 && major > 0) {
-					// zhenyu 4/25/23 detect strict one allele loss
-					events.push({
+				if (total > 0) {
+					// total copy number is >0, detect loh
+					/*
+					if (major + minor != total) continue // data err?
+					if (major == minor) continue // no loh
+					const loh = {
 						dt: common.dtloh,
 						chr: cnv.chr,
 						start: cnv.start,
 						stop: cnv.stop,
-						// hardcode a value for plot to work.
-						// may make "segmean" value optional; if missing, indicates quanlitative event and should plot without color shading
-						// otherwise, the value quantifies allelic imbalance and is plotted with color shading
-						// all loh events in a plot should be uniformlly quanlitative or quantitative
-						segmean: 0.5
-					})
+						segmean: Math.abs(major - minor) / total
+					}
+					events.push(loh)
+					*/
+
+					if (minor == 0 && major > 0) {
+						// zhenyu 4/25/23 detect strict one allele loss
+						events.push({
+							dt: common.dtloh,
+							chr: cnv.chr,
+							start: cnv.start,
+							stop: cnv.stop,
+							// hardcode a value for plot to work.
+							// may make "segmean" value optional; if missing, indicates quanlitative event and should plot without color shading
+							// otherwise, the value quantifies allelic imbalance and is plotted with color shading
+							// all loh events in a plot should be uniformlly quanlitative or quantitative
+							segmean: 0.5
+						})
+					}
 				}
 			}
-		}
-*/
+			return
+		default:
+			throw 'unknown CNV file header line: ' + lines[0]
+	}
+}
 
 function parseArribaName(f, str) {
 	if (!str) return
