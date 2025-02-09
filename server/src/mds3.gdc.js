@@ -2259,6 +2259,7 @@ export function gdc_validate_query_singleCell_data(ds, genome) {
 
 async function getSingleSampleMutations(query, ds, genome) {
 	// query = {case_id}
+	// on localhost to simulate access to controlled fusion data, add query.token=''
 
 	// object is returned, can add any other attr e.g. total number of events exceeding view limit
 	const result = {
