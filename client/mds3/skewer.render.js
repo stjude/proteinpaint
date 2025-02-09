@@ -649,17 +649,21 @@ export function unfold_glyph(newlst, tk, block) {
 				d.y = d.yoffset * (tk.skewer.pointup ? -1 : 1)
 				return 'translate(0,' + d.y + ')'
 			})
-		// setTimeout(function () {
 		set
 			.selectAll('.sja_aa_disckick')
 			.transition()
 			.duration(dur)
 			.attr('transform', 'scale(1)')
 			.on('end', () => {
+				// on disckick fully expanded, make ssk_kick visible
+				set
+					.selectAll('.sja_aa_ssk_kick')
+					.attr('transform', 'scale(1)')
+					.attr('y', tk.skewer.pointup ? 0 : -tk.skewer.stem1)
+
 				//For e2e testing
 				set.selectAll('.sja_aa_disckick').classed('sjpp-active', true)
 			})
-		// }, dur)
 		set.selectAll('.sja_aa_discnum').transition().duration(dur).attr('fill-opacity', 1).attr('stroke-opacity', 1)
 		set
 			.filter(d => d.groups.length > 1)
@@ -669,10 +673,11 @@ export function unfold_glyph(newlst, tk, block) {
 			.attr('fill-opacity', 1)
 			.attr('transform', 'scale(1)')
 		set.selectAll('.sja_aa_discrim').transition().duration(dur).attr('fill-opacity', 1).attr('stroke-opacity', 1)
-		set
-			.selectAll('.sja_aa_ssk_kick')
-			.attr('transform', 'scale(1)')
-			.attr('y', tk.skewer.pointup ? 0 : -tk.skewer.stem1)
+
+		/**** do not expand sja_aa_ssk_kick at this moment but wait till disckick is fully expanded:
+		if ssk is expanded right now, cursor hover over it will halt disckick expanding transition and cause the discs to be unclickable
+		*/
+
 		set
 			.selectAll('.sja_aa_ssk_bg')
 			.attr('transform', 'scale(1)')
@@ -892,7 +897,7 @@ export function fold_glyph(lst, tk) {
 	set
 		.selectAll('.sja_aa_disckick')
 		.transition()
-		.duration(0)
+		.duration(0) // must add a transition so .on(end) below can be triggered
 		.attr('transform', 'scale(0)')
 		.on('end', () => {
 			//For e2e testing
