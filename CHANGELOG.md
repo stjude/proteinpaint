@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Fixes:
+- at querying GDC cnv file, remove use of sample_type and adapt to new file format
+
+
 ## 2.105.0
 
 Features:
