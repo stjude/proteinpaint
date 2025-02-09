@@ -1,16 +1,10 @@
 import { dofetch3 } from '#common/dofetch'
-import { sayerror } from '../dom/sayerror'
+import { sayerror, addGeneSearchbox, string2variant, Menu, Tabs, renderTable, table2col, make_one_checkbox } from '#dom'
 import { first_genetrack_tolist } from '#common/1stGenetk'
 import { contigNameNoChr2, mclass } from '#shared/common.js'
 import urlmap from '#common/urlmap'
-import { addGeneSearchbox, string2variant } from '../dom/genesearch.ts'
-import { Menu } from '#dom/menu'
-import { Tabs } from '../dom/toggleButtons'
-import { renderTable } from '../dom/table'
-import { table2col } from '../dom/table2col'
 import { fileSize } from '#shared/fileSize.js'
 import { keyupEnter } from '../src/client'
-import { make_one_checkbox } from '#dom/checkbox'
 
 /*
 
@@ -617,7 +611,7 @@ export async function bamsliceui({
 			.on('click', event => {
 				tip.clear().showunder(event.target)
 				{
-					// finished summarizing assay types for bams. show checkboxes for assays
+					// show checkboxes for assays
 					const row = tip.d.append('div').style('margin', '10px')
 					for (const [k, o] of assays) {
 						make_one_checkbox({
@@ -658,13 +652,16 @@ export async function bamsliceui({
 
 			// make tr for each case
 			for (const caseName in data.case2files) {
+				// get the list of visible bam files passed assay filter
+				const files = data.case2files[caseName].filter(f => assays.get(f.experimental_strategy).checked)
+				if (files.length == 0) continue // no files for this case due to assay filtering. do not show row
+
 				const tr = table.append('tr').attr('class', 'sja_clb_gray')
 				tr.append('td').style('vertical-align', 'top').style('color', '#555').text(caseName)
 				const td2 = tr.append('td')
-				for (const f of data.case2files[caseName]) {
+				for (const f of files) {
 					// make a div for each file
 					// f { tissue_type, tumor_descriptor, experimental_strategy, file_size, file_uuid }
-					if (!assays.get(f.experimental_strategy).checked) continue // assay type of this bam is unchecked
 					td2
 						.append('div')
 						.attr('class', 'sja_clbtext')
@@ -683,7 +680,7 @@ export async function bamsliceui({
 						})
 				}
 			}
-			table.select('.sja_clbtext')?.node()?.focus()
+			table.select('.sja_clbtext')?.node()?.focus() // auto focus on the first bam file
 		}
 	}
 
