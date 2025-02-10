@@ -59,8 +59,9 @@ try:
                   cursor.execute(query2)  # Execute the query
                   rows2 = cursor.fetchall()  # Fetch all rows from the executed query
                   row3 = json.loads(rows2[0][0])  # Parse the JSON data
-                  msigdb_library[row[0]] = list(map(extract_symbols, row3))  # Extract gene symbols and add to the library
-              
+                  msigdb_library[row[0]] = list(set(map(extract_symbols, row3)))  # Extract only unique gene symbols and add them to the library. "set" command selects only unique genes 
+              #print ("msigdb_library:",msigdb_library) 
+                  
               # Close the cursor and connection to the database
               cursor.close()  # Close the cursor
               conn.close()  # Close the connection
