@@ -1348,8 +1348,10 @@ class singleCellPlot {
 				const config = {
 					chartType: 'singleCellPlot',
 					sample, // track sample name to identify it in this.samples[]
-					activeTab: PLOTS_TAB // on selecting a sample from table, auto switch to plots to directly show this sample's plots, to save user a click
+					activeTab: PLOTS_TAB, // on selecting a sample from table, auto switch to plots to directly show this sample's plots, to save user a click
+					cluster: null // reset cluster
 				}
+				this.genes = null // reset DE genes
 				if (rows[index][0].__experimentID) {
 					config.experimentID = rows[index][0].__experimentID
 				}
