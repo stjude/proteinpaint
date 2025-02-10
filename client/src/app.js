@@ -217,7 +217,7 @@ export function runproteinpaint(arg) {
 				await appHeader.makeheader()
 			}
 
-			app.holder0 = app.holder.append('div').style('margin', '20px')
+			app.holder0 = app.holder.append('div').style('margin', '10px')
 
 			const subapp = await parseEmbedThenUrl(arg, app)
 			const appInstance = subapp || app
