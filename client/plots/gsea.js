@@ -200,7 +200,11 @@ add:
 		Object.keys(output.data).sort((i, j) => Number(i.fdr) - Number(j.fdr)) // Sorting pathways in ascending order of FDR
 		for (const pathway_name of Object.keys(output.data)) {
 			const pathway = output.data[pathway_name]
-			if (JSON.parse(sessionStorage.getItem('optionalFeatures')).gsea_test == true) {
+			if (
+				self.settings.adjusted_original_pvalue == 'adjusted' &&
+				self.settings.pvalue >= pathway.fdr &&
+				self.settings.gene_set_size_cutoff > pathway.geneset_size
+			) {
 				const es = pathway.es ? roundValueAuto(pathway.es) : pathway.es
 				const nes = pathway.nes ? roundValueAuto(pathway.nes) : pathway.nes
 				const pval = pathway.pval ? roundValueAuto(pathway.pval) : pathway.pval
@@ -216,48 +220,26 @@ add:
 					{ value: fdr },
 					{ value: pathway.leading_edge }
 				])
-			} else {
-				if (
-					self.settings.adjusted_original_pvalue == 'adjusted' &&
-					self.settings.pvalue >= pathway.fdr &&
-					self.settings.gene_set_size_cutoff > pathway.geneset_size
-				) {
-					const es = pathway.es ? roundValueAuto(pathway.es) : pathway.es
-					const nes = pathway.nes ? roundValueAuto(pathway.nes) : pathway.nes
-					const pval = pathway.pval ? roundValueAuto(pathway.pval) : pathway.pval
-					const sidak = pathway.sidak ? roundValueAuto(pathway.sidak) : pathway.sidak
-					const fdr = pathway.fdr ? roundValueAuto(pathway.fdr) : pathway.fdr
-					self.gsea_table_rows.push([
-						{ value: pathway_name },
-						{ value: es },
-						{ value: nes },
-						{ value: pathway.geneset_size },
-						{ value: pval },
-						{ value: sidak },
-						{ value: fdr },
-						{ value: pathway.leading_edge }
-					])
-				} else if (
-					self.settings.adjusted_original_pvalue == 'original' &&
-					self.settings.pvalue >= pathway.pval &&
-					self.settings.gene_set_size_cutoff > pathway.geneset_size
-				) {
-					const es = pathway.es ? roundValueAuto(pathway.es) : pathway.es
-					const nes = pathway.nes ? roundValueAuto(pathway.nes) : pathway.nes
-					const pval = pathway.pval ? roundValueAuto(pathway.pval) : pathway.pval
-					const sidak = pathway.sidak ? roundValueAuto(pathway.sidak) : pathway.sidak
-					const fdr = pathway.fdr ? roundValueAuto(pathway.fdr) : pathway.fdr
-					self.gsea_table_rows.push([
-						{ value: pathway_name },
-						{ value: es },
-						{ value: nes },
-						{ value: pathway.geneset_size },
-						{ value: pval },
-						{ value: sidak },
-						{ value: fdr },
-						{ value: pathway.leading_edge }
-					])
-				}
+			} else if (
+				self.settings.adjusted_original_pvalue == 'original' &&
+				self.settings.pvalue >= pathway.pval &&
+				self.settings.gene_set_size_cutoff > pathway.geneset_size
+			) {
+				const es = pathway.es ? roundValueAuto(pathway.es) : pathway.es
+				const nes = pathway.nes ? roundValueAuto(pathway.nes) : pathway.nes
+				const pval = pathway.pval ? roundValueAuto(pathway.pval) : pathway.pval
+				const sidak = pathway.sidak ? roundValueAuto(pathway.sidak) : pathway.sidak
+				const fdr = pathway.fdr ? roundValueAuto(pathway.fdr) : pathway.fdr
+				self.gsea_table_rows.push([
+					{ value: pathway_name },
+					{ value: es },
+					{ value: nes },
+					{ value: pathway.geneset_size },
+					{ value: pval },
+					{ value: sidak },
+					{ value: fdr },
+					{ value: pathway.leading_edge }
+				])
 			}
 		}
 
