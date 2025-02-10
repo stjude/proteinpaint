@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 Fixes:
 - at querying GDC cnv file, remove use of sample_type and adapt to new file format
 - hide cases with 0 bam files in gdc bam ui bam table;
+- mds3 tk bug fix for expanded skewers to be clickable
 
 
 ## 2.105.0
