@@ -13,6 +13,8 @@ import * as THREE from 'three'
 import { getThreeCircle } from './sampleScatter.rendererThree.js'
 import { renderContours } from './sampleScatter.renderer.js'
 import { digestMessage } from '#termsetting'
+import { downloadTable } from '../dom/table'
+
 /*
 
 hardcoded behaviors when this.samples[].experiments[] is present:
@@ -687,6 +689,7 @@ class singleCellPlot {
 			if (gene.name == this.state.config.gene) selectedRows.push(i)
 			i++
 		}
+		this.DETable = { rows, columns }
 
 		const index = this.tabs.findIndex(t => t.id == GSEA_TAB)
 		const gseaTab = this.tabs[index]
@@ -849,8 +852,21 @@ class singleCellPlot {
 			})
 		}
 		this.components.controls.on('downloadClick.singleCellPlot', () => {
-			for (const plot of this.plots) this.downloadPlot(plot)
+			if (this.state.config.activeTab == GENE_EXPRESSION_TAB || this.state.config.activeTab == PLOTS_TAB)
+				for (const plot of this.plots) this.downloadPlot(plot)
+			else {
+				if (this.state.config.activeTab == DIFFERENTIAL_EXPRESSION_TAB)
+					if (this.DETable) this.downloadSCTable('DE.tsv', this.DETable)
+				if (!this.state.config.activeTab || this.state.config.activeTab == SAMPLES_TAB)
+					this.downloadSCTable('samples.tsv', this.samplesTable)
+
+				//download tables on table tabs, image on image tab, violin on violin tab
+			}
 		})
+	}
+
+	downloadSCTable(name, table) {
+		downloadTable(table.rows, table.columns, name)
 	}
 
 	downloadPlot(plot) {
@@ -1311,6 +1327,7 @@ class singleCellPlot {
 
 		div.selectAll('*').remove()
 		const [rows, columns] = await this.getTableData(state)
+		this.samplesTable = { rows, columns }
 		const selectedRows = []
 		let sampleIdx = 0 // the first sample/experiment is selected by default on app launch
 		{
