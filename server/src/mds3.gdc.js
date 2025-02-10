@@ -935,7 +935,6 @@ function parseCnvFile(lines, events) {
 				if (!l[1]) throw 'cnv file line missing chr: ' + l
 				let chr = l[1]
 				if (!l[1].startsWith('chr')) chr = 'chr' + l[1] // snp file chr doesn't start with "chr"
-				if (chr.toLowerCase() == 'chrm') continue // TODO delete when disco is fixed
 				const cnv = {
 					dt: common.dtcnv,
 					chr,
