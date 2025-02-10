@@ -1,7 +1,1 @@
 
-Features
-- On the SC plot: 
-  Download content based on the active tab. It allows to download DE table and fixes broken download. 
-  Updated default contours bandwidth when the plot size is automatically reduced. 
-  Hided Samples tab on init, when the sample is not selected. 
-  Cleared DE calculation when the sample is changed.

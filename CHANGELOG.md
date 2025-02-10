@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- On the SC plot:
+
 Fixes:
 - at querying GDC cnv file, remove use of sample_type and adapt to new file format
 - hide cases with 0 bam files in gdc bam ui bam table;
