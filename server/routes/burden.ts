@@ -28,7 +28,6 @@ function init({ genomes }) {
 			const genome = genomes[req.query.genome]
 			if (!genome) throw `invalid q.genome=${req.query.genome}`
 			const q: BurdenRequest = req.query
-			Object.assign(q, defaultInputValues)
 			const ds = genome.datasets[q.dslabel]
 			if (!ds) throw `invalid q.genome=${req.query.dslabel}`
 			if (!ds.cohort.cumburden?.files) throw `missing ds.cohort.cumburden.files`
@@ -36,9 +35,12 @@ function init({ genomes }) {
 			if (!ds.cohort?.cumburden?.bootsubdir) throw `missing ds.cohort.cumburden.bootsubdir`
 
 			const result = await getBurdenResult(q, ds.cohort.cumburden)
-			if (q.showCI && (!result.ci95 || !Object.keys(result.ci95).length)) await compute95ci(result, ds.cohort.cumburden)
-
-			res.send({ status: 'ok', ...formatPayload(result.ci95) } satisfies BurdenResponse)
+			if (!q.showCI) {
+				res.send({ status: 'ok', ...formatPayload(result.estimate) } satisfies BurdenResponse)
+			} else {
+				if (!result.ci95) await compute95ci(result, ds.cohort.cumburden)
+				res.send({ status: 'ok', ...formatPayload(result.ci95) } satisfies BurdenResponse)
+			}
 		} catch (e: any) {
 			res.send({ status: 'error', error: e.message || e })
 		}
@@ -60,9 +62,9 @@ async function getBurdenResult(
 		// TODO: may implement this in burden.R
 		const ages = Object.keys(estimate[0]).filter(k => k.startsWith('['))
 		const overall = { chc: 0 }
-		for (const age of ages) {
-			overall[age] = 0
-			for (const est of estimate) overall[age] += est[age]
+		for(const age of ages) {
+			overall[age] = [0]
+			for(const est of estimate) overall[age][0] += est[age]
 		}
 		estimate.push(overall)
 
@@ -95,25 +97,6 @@ function normalizeInput(q, cumburden) {
 	return { id, jsonInput }
 }
 
-async function computeBootstrap(result, cumburden) {
-	if (typeof result.status != 'number' || !Number.isInteger(result.status))
-		throw `burden result.status is not an integer`
-	if (!cumburden.files.boot) throw `ds.cohort.cumburden.files.boot is missing`
-	const { dir, fit, surv, template } = cumburden.files.boot
-	const input = JSON.stringify(result.input)
-	for (let i = result.status + 1; i <= MAXBOOTNUM; i++) {
-		const args = [
-			`${serverconfig.tpmasterdir}/${dir}${i}/${fit}`,
-			`${serverconfig.tpmasterdir}/${dir}${i}/${surv}`,
-			`${serverconfig.tpmasterdir}/${template}`
-		]
-		// run serially to throttle CPU/memory usage for burden app
-		const estimate = await run_R(path.join(serverconfig.binpath, 'utils', 'burden.R'), input, args)
-		cumburden.db.connection.prepare(`UPDATE estimates SET status=?, boot${i}=? WHERE id=?`).run(i, estimate, result.id)
-		result.status = i
-	}
-}
-
 async function compute95ci(result, cumburden) {
 	try {
 		if (!result.input) throw 'result{} does not have .input'
@@ -123,6 +106,7 @@ async function compute95ci(result, cumburden) {
 		input.burden = result.estimate.filter(est => est.chc !== 0)
 		const lowup = await run_R(path.join(serverconfig.binpath, 'utils', 'burden-ci95.R'), JSON.stringify(input), [])
 		const { low, up, overall } = JSON.parse(lowup)
+		// index by chc number, where 0 = overall burden (total burden from all chc's per age)
 		const ci95 = { 0: {} }
 		for (const est of Object.values(result.estimate as any[])) {
 			if (!ci95[est.chc]) ci95[est.chc] = {}
@@ -157,13 +141,16 @@ function formatPayload(estimates: object[]) {
 	// v = an array of objects with age as keys as cumulative burden as value for a given CHC
 	for (const [chc, burdenByAge] of Object.entries(estimates)) {
 		const arr = [chc]
-		for (const age of rawKeys) arr.push(burdenByAge[age])
+		for (const age of rawKeys) {
+			arr.push(Array.isArray(burdenByAge[age]) ? burdenByAge[age] : [burdenByAge[age]] )
+		}
 		rows.push(arr)
 	}
 	return { keys: outKeys, rows }
 }
 
 const defaultInputValues = Object.freeze({
+	showCI: false,
 	diaggrp: 5,
 	sex: 1,
 	white: 1,
