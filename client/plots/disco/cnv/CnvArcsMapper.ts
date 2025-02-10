@@ -90,6 +90,11 @@ export default class CnvArcsMapper {
 		const arcs: Array<CnvArc> = []
 
 		arcData.forEach(data => {
+			if (!data.chr || this.reference.chromosomesOrder.indexOf(data.chr) == -1) {
+				// when chr is unknown or not in reference chromosomes (chr1-22, X, Y), do not render arc
+				return
+			}
+
 			let startAngle = this.calculateStartAngle(data)
 			let endAngle = this.calculateEndAngle(data)
 
