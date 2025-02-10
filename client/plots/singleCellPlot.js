@@ -8,12 +8,20 @@ import { select } from 'd3-selection'
 import { rgb, create, extent, color } from 'd3'
 import { roundValueAuto } from '#shared/roundValue.js'
 import { TermTypes } from '#shared/terms.js'
-import { ColorScale, icons as icon_functions, addGeneSearchbox, renderTable, sayerror, Menu, Tabs } from '#dom'
+import {
+	ColorScale,
+	icons as icon_functions,
+	addGeneSearchbox,
+	renderTable,
+	sayerror,
+	Menu,
+	Tabs,
+	downloadTable
+} from '#dom'
 import * as THREE from 'three'
 import { getThreeCircle } from './sampleScatter.rendererThree.js'
 import { renderContours } from './sampleScatter.renderer.js'
 import { digestMessage } from '#termsetting'
-import { downloadTable } from '../dom/table'
 
 /*
 
