@@ -480,8 +480,7 @@ export function renderTable({
 	return api
 }
 
-export async function downloadTable(rows, cols) {
-	const filename = `table.tsv`
+export async function downloadTable(rows, cols, filename = 'table.tsv') {
 	let lines = ''
 	for (const column of cols) {
 		lines += `${column.label}\t`
