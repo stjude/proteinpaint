@@ -92,6 +92,7 @@ class singleCellPlot {
 		this.tabs.push({
 			label: 'Samples',
 			id: SAMPLES_TAB,
+			isVisible,
 			active: activeTab == SAMPLES_TAB,
 			callback: () => this.setActiveTab(SAMPLES_TAB)
 		})
