@@ -112,6 +112,8 @@ export type TableArgs = {
 	dataTestId?: any
 	/** Show download icon that allows to download the table content */
 	showDownload?: boolean
+	/** Optional filename for the file downloaded */
+	downloadFilename?: string
 }
 
 /** incremented input ID will guarantee no collision from using getUniqueNameOrId()*/
@@ -149,7 +151,8 @@ export function renderTable({
 	selectedRowStyle = {},
 	inputName = null,
 	dataTestId = null,
-	showDownload = false
+	showDownload = false,
+	downloadFilename = 'table.tsv'
 }: TableArgs) {
 	validateInput()
 	let _selectedRowStyle = selectedRowStyle
@@ -189,7 +192,7 @@ export function renderTable({
 			height: 15,
 			title: 'Download table',
 			handler: () => {
-				downloadTable(rows, columns)
+				downloadTable(rows, columns, downloadFilename)
 			}
 		})
 	}
