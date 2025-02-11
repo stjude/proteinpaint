@@ -387,6 +387,39 @@ class singleCellPlot {
 			${extraText.join('')}`
 	}
 
+	async getSampleFilename(state) {
+		const sampleIdx = this.samples.findIndex(i => i.sample == state.config.sample)
+		if (sampleIdx == -1) return ''
+
+		const extraText = [] // extra text to show alongside sample name
+
+		if (state.config.experimentID) {
+			// experimentID is tracked in state, meaning this.samples[].experiments[] is present. and the id specifies which experiment, out of potential multiple of one sample, is currently selected.
+			// in such case, experiments[].sampleName should also be present, and display the sampleName next to config.sample which is actually person id
+			extraText.push(
+				'SAMPLE-' +
+					this.samples[sampleIdx].experiments?.find(i => i.experimentID == state.config.experimentID)?.sampleName
+			)
+		} else if (this.samples[sampleIdx].experiments) {
+			// experimentID not in state, but sample carries exp array; this is possible when app launches. simply show first experiment of this sample
+			extraText.push('SAMPLE-' + this.samples[sampleIdx].experiments[0].sampleName)
+		}
+
+		if (state.termdbConfig.queries.singleCell.samples.extraSampleTabLabel) {
+			// value is a term id. get the term name
+			const termname = (
+				await this.app.vocabApi.getterm(state.termdbConfig.queries.singleCell.samples.extraSampleTabLabel)
+			).name
+			// get the term value from current sample
+			const sampleValue = this.samples[sampleIdx][state.termdbConfig.queries.singleCell.samples.extraSampleTabLabel]
+			extraText.push(`${termname.toUpperCase()}-${sampleValue}`)
+		}
+		const filename = `${state.config.settings.singleCellPlot.uiLabels.sample.toUpperCase()}-
+			${this.samples[sampleIdx].sample}
+			${extraText.join('-')}`
+		return filename.replace(' ', '_')
+	}
+
 	renderShowPlots(showDiv, state) {
 		showDiv.append('label').text('Plots:').style('font-size', '1.1em')
 
@@ -858,7 +891,10 @@ class singleCellPlot {
 				inputs
 			})
 		}
-		this.components.controls.on('downloadClick.singleCellPlot', () => {
+		this.components.controls.on('downloadClick.singleCellPlot', async () => {
+			if (!this.state) return
+			const filename = await this.getSampleFilename(this.state)
+			console.log('Downloading', filename)
 			if (this.state.config.activeTab == GENE_EXPRESSION_TAB || this.state.config.activeTab == PLOTS_TAB)
 				for (const plot of this.plots) this.downloadPlot(plot)
 			else {
@@ -1376,8 +1412,24 @@ class singleCellPlot {
 		const s = state.termdbConfig.queries?.singleCell?.samples || {}
 		const samples = this.samples
 		const rows = []
+		const hasExperiments = samples.some(i => i.experiments)
+		// first column is sample and is hardcoded
+		const columns = [{ label: uiLabels.Sample }]
+		if (hasExperiments) columns.push({ label: 'Sample' }) //add after the case column
+
+		// add in optional sample columns
+		for (const c of s.sampleColumns || []) {
+			columns.push({
+				label: (await this.app.vocabApi.getterm(c.termid)).name,
+				width: '14vw'
+			})
+		}
+
+		// if samples are using experiments, add the hardcoded experiment column at the end
+		if (hasExperiments) columns.push({ label: 'Experiment' }) // corresponds to this.samples[].experiments[].experimentID
+
 		for (const sample of samples) {
-			if (sample.experiments)
+			if (hasExperiments)
 				//GDC
 				for (const exp of sample.experiments) {
 					// first cell is always sample name. sneak in experiment object to be accessed in click callback
@@ -1405,24 +1457,6 @@ class singleCellPlot {
 				}
 				rows.push(row)
 			}
-		}
-
-		// first column is sample and is hardcoded
-		const columns = [{ label: uiLabels.Sample }]
-
-		// add in optional sample columns
-		for (const c of s.sampleColumns || []) {
-			columns.push({
-				label: (await this.app.vocabApi.getterm(c.termid)).name,
-				width: '14vw'
-			})
-		}
-
-		// if samples are using experiments, add the hardcoded experiment column
-		if (samples.some(i => i.experiments)) {
-			// two hardcoded column names
-			columns.splice(1, 0, { label: 'Sample' }) //add after the case column
-			columns.push({ label: 'Experiment' }) // corresponds to this.samples[].experiments[].experimentID
 		}
 
 		//const index = columnNames.length == 1 ? 0 : columnNames.length - 1
