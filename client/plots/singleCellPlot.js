@@ -744,7 +744,7 @@ class singleCellPlot {
 		this.DETable = { rows, columns }
 		const index = this.tabs.findIndex(t => t.id == DIFFERENTIAL_EXPRESSION_TAB)
 		this.tabsComp.update(index) //rerun isVisible() for GSEA tab to show
-
+		const downloadFilename = `${await this.getSampleFilename(this.state)}_DE_GENES.tsv`
 		renderTable({
 			rows,
 			columns,
@@ -766,7 +766,8 @@ class singleCellPlot {
 			},
 			selectedRows,
 			resize: true,
-			showDownload: true
+			showDownload: true,
+			downloadFilename
 		})
 		notesDiv.append('div').style('padding-bottom', '10px').text('Select a gene to view its expression:')
 		this.dom.loadingDiv.style('display', 'none')
