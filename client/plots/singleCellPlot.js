@@ -198,7 +198,7 @@ class singleCellPlot {
 		const sampleDiv = headerDiv
 			.append('div')
 			.style('display', 'inline-block')
-			.html(await this.getSamplesTabLabel(state))
+			.html(await this.getSampleDetails(state))
 			.style('padding', '10px 20px')
 		const plotsDivParent = contentDiv.append('div')
 		const samplesTableDiv = plotsDivParent.append('div').style('display', 'none')
@@ -297,7 +297,7 @@ class singleCellPlot {
 			this.showActiveTab()
 			await this.setControls()
 
-			this.dom.sampleDiv.html(await this.getSamplesTabLabel(this.state))
+			this.dom.sampleDiv.html(await this.getSampleDetails(this.state))
 		} catch (e) {
 			this.app.tip.hide()
 			this.dom.loadingDiv.style('display', 'none')
@@ -351,7 +351,7 @@ class singleCellPlot {
 		}
 	}
 
-	async getSamplesTabLabel(state) {
+	async getSampleDetails(state) {
 		const sampleIdx = this.samples.findIndex(i => i.sample == state.config.sample)
 		if (sampleIdx == -1) return ''
 
