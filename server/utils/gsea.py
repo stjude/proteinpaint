@@ -27,7 +27,6 @@ try:
             table_name = json_object['geneset_group']  # Get the gene set group from the JSON object
             filter_non_coding_genes = json_object['filter_non_coding_genes']  # Get the filter_non_coding_genes flag from the JSON object
             db = json_object['db']  # Get the database path from the JSON object
-            
             # Create a DataFrame for the signature
             df = {'Genes': genes, 'fold_change': fold_change}  # Create a dictionary with genes and fold change
             signature = pd.DataFrame(df)  # Convert the dictionary to a DataFrame
@@ -95,7 +94,8 @@ try:
                 # Initial GSEA calculation and save the result to a pickle file
                 start_gsea_time = time.time()  # Record the start time of GSEA
                 if __name__ == "__main__":
-                    result = blitz.gsea(signature, msigdb_library, permutations=1000).T  # Perform GSEA and transpose the result
+                    num_permutations = json_object['num_permutations'] # Number of permutations for GSEA analysis
+                    result = blitz.gsea(signature, msigdb_library, permutations=num_permutations).T  # Perform GSEA and transpose the result
                     random_num = np.random.rand()  # Generate a random number for unique pickle filename
                     pickle_filename = f"gsea_result_{random_num}.pkl"  # Create a filename for the pickle file
                     result.to_pickle(os.path.join(cachedir, pickle_filename))  # Save the result to the pickle file

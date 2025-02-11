@@ -68,6 +68,7 @@ async function run_genesetEnrichment_analysis(
 		cachedir: serverconfig.cachedir,
 		geneset_name: q.geneset_name,
 		pickle_file: q.pickle_file,
+		num_permutations: q.num_permutations,
 		genedb: path.join(serverconfig.tpmasterdir, genomes[q.genome].genedb.dbfile),
 		filter_non_coding_genes: q.filter_non_coding_genes
 	}

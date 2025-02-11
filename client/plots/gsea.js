@@ -42,7 +42,7 @@ class gsea {
 		this.dom.controlsDiv.selectAll('*').remove()
 		const inputs = [
 			{
-				label: 'P-value Filter Cutoff (Linear Scale)',
+				label: 'FDR Filter Cutoff (Linear Scale)',
 				type: 'number',
 				chartType: 'gsea',
 				settingsKey: 'pvalue',
@@ -51,24 +51,40 @@ class gsea {
 				max: 1
 			},
 			{
-				label: 'P-value Filter Type',
-				type: 'radio',
-				chartType: 'gsea',
-				settingsKey: 'adjusted_original_pvalue',
-				title: 'Toggle between original and adjusted pvalues for volcano plot',
-				options: [
-					{ label: 'Adjusted', value: 'adjusted' },
-					{ label: 'Original', value: 'original' }
-				]
-			},
-			{
-				label: 'Gene Set Size Filter Cutoff',
+				label: 'Number of Gene Sets',
 				type: 'number',
 				chartType: 'gsea',
-				settingsKey: 'gene_set_size_cutoff',
-				title: 'Gene set size cutoff. Helps in filtering out large gene sets',
+				settingsKey: 'top_genesets',
+				title: 'Number of top gene sets to be displayed',
 				min: 0,
-				max: 20000
+				max: 5000
+			},
+			{
+				label: 'Number of Permutations',
+				type: 'number',
+				chartType: 'gsea',
+				settingsKey: 'num_permutations',
+				title: 'Number of permutations to be used for GSEA',
+				min: 0,
+				max: 40000 // Setting it to pretty lenient limit for testing
+			},
+			{
+				label: 'Minimum Gene Set Size Filter Cutoff',
+				type: 'number',
+				chartType: 'gsea',
+				settingsKey: 'min_gene_set_size_cutoff',
+				title: 'Minimum Gene set size cutoff. Helps in filtering out small gene sets',
+				min: 0,
+				max: 1000
+			},
+			{
+				label: 'Maximum Gene Set Size Filter Cutoff',
+				type: 'number',
+				chartType: 'gsea',
+				settingsKey: 'max_gene_set_size_cutoff',
+				title: 'Maximum Gene set size cutoff. Helps in filtering out large gene sets',
+				min: 2000,
+				max: 25000
 			},
 			{
 				label: 'Filter Non-coding Genes',
@@ -166,6 +182,7 @@ add:
 		self.dom.tableDiv.selectAll('*').remove()
 		self.config.gsea_params.geneSetGroup = self.settings.pathway
 		self.config.gsea_params.filter_non_coding_genes = self.settings.filter_non_coding_genes
+		self.config.gsea_params.num_permutations = self.settings.num_permutations
 		const wait = self.dom.detailsDiv.append('div').text('Loading...')
 		//console.log('self.config.gsea_params:', self.config.gsea_params)
 		let output
@@ -198,32 +215,13 @@ add:
 		// Generating the table
 		self.gsea_table_rows = []
 		Object.keys(output.data).sort((i, j) => Number(i.fdr) - Number(j.fdr)) // Sorting pathways in ascending order of FDR
-		for (const pathway_name of Object.keys(output.data)) {
+		for (let iter = 0; iter < self.settings.top_genesets; iter++) {
+			const pathway_name = Object.keys(output.data)[iter]
 			const pathway = output.data[pathway_name]
 			if (
-				self.settings.adjusted_original_pvalue == 'adjusted' &&
 				self.settings.pvalue >= pathway.fdr &&
-				self.settings.gene_set_size_cutoff > pathway.geneset_size
-			) {
-				const es = pathway.es ? roundValueAuto(pathway.es) : pathway.es
-				const nes = pathway.nes ? roundValueAuto(pathway.nes) : pathway.nes
-				const pval = pathway.pval ? roundValueAuto(pathway.pval) : pathway.pval
-				const sidak = pathway.sidak ? roundValueAuto(pathway.sidak) : pathway.sidak
-				const fdr = pathway.fdr ? roundValueAuto(pathway.fdr) : pathway.fdr
-				self.gsea_table_rows.push([
-					{ value: pathway_name },
-					{ value: es },
-					{ value: nes },
-					{ value: pathway.geneset_size },
-					{ value: pval },
-					{ value: sidak },
-					{ value: fdr },
-					{ value: pathway.leading_edge }
-				])
-			} else if (
-				self.settings.adjusted_original_pvalue == 'original' &&
-				self.settings.pvalue >= pathway.pval &&
-				self.settings.gene_set_size_cutoff > pathway.geneset_size
+				self.settings.max_gene_set_size_cutoff >= pathway.geneset_size &&
+				self.settings.min_gene_set_size_cutoff <= pathway.geneset_size
 			) {
 				const es = pathway.es ? roundValueAuto(pathway.es) : pathway.es
 				const nes = pathway.nes ? roundValueAuto(pathway.nes) : pathway.nes
@@ -362,9 +360,11 @@ export async function getPlotConfig(opts, app) {
 			settings: {
 				gsea: {
 					pvalue: 0.05,
-					adjusted_original_pvalue: 'adjusted',
+					num_permutations: 1000,
+					top_genesets: 40,
 					pathway: undefined,
-					gene_set_size_cutoff: 2000,
+					min_gene_set_size_cutoff: 0,
+					max_gene_set_size_cutoff: 20000,
 					filter_non_coding_genes: true
 				},
 				controls: { isOpen: true }
