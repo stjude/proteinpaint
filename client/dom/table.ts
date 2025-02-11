@@ -110,6 +110,7 @@ export type TableArgs = {
 	 * as the <input name=?> if the same name is always used, multiple tables
 	 * created in one page will conflict in row selection */
 	dataTestId?: any
+	showDownload?: boolean
 }
 
 /** incremented input ID will guarantee no collision from using getUniqueNameOrId()*/
@@ -147,7 +148,7 @@ export function renderTable({
 	selectedRowStyle = {},
 	inputName = null,
 	dataTestId = null,
-	hideDownload = false
+	showDownload = false
 }: TableArgs) {
 	validateInput()
 	let _selectedRowStyle = selectedRowStyle
@@ -175,7 +176,7 @@ export function renderTable({
 
 	const uniqueInputName = inputName || getUniqueNameOrId('input')
 	const parentDiv = div.append('div').style('background-color', 'white').style('display', 'inline-block')
-	if (!hideDownload) {
+	if (showDownload) {
 		const downloadDiv = div
 			.append('div')
 			.style('display', 'inline-block')
