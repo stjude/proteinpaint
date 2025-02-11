@@ -303,6 +303,11 @@ export default class DataMapper {
 
 	private filterCnvs(data: Data) {
 		if (this.cnvFilter(data)) {
+			if (!data.chr || this.reference.chromosomesOrder.indexOf(data.chr) == -1) {
+				// when chr is unknown or not in reference chromosomes (chr1-22, X, Y), do not render arc
+				return
+			}
+
 			if (this.cnvGainMaxValue == undefined || this.cnvGainMaxValue < data.value) {
 				this.cnvGainMaxValue = data.value
 			}
@@ -310,7 +315,6 @@ export default class DataMapper {
 			if (this.cnvLossMaxValue == undefined || this.cnvLossMaxValue > data.value) {
 				this.cnvLossMaxValue = data.value
 			}
-
 			this.cnvData.push(data)
 		}
 	}
