@@ -110,6 +110,7 @@ export type TableArgs = {
 	 * as the <input name=?> if the same name is always used, multiple tables
 	 * created in one page will conflict in row selection */
 	dataTestId?: any
+	/** Show download icon that allows to download the table content */
 	showDownload?: boolean
 }
 
