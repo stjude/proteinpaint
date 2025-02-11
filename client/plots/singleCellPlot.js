@@ -762,7 +762,8 @@ class singleCellPlot {
 				})
 			},
 			selectedRows,
-			resize: true
+			resize: true,
+			showDownload: true
 		})
 		notesDiv.append('div').style('padding-bottom', '10px').text('Select a gene to view its expression:')
 		this.dom.loadingDiv.style('display', 'none')
@@ -1401,7 +1402,7 @@ class singleCellPlot {
 			selectedRows,
 			striped: true,
 			header: { style: { 'text-transform': 'capitalize' } }, // to show header in title case; if it results in a conflict (e.g. a sample name showing in 1st tab has to be lower case), then use sampleColumns[].columnHeader as override of term name
-			hideDownload: true
+			showDownload: false
 		})
 	}
 
