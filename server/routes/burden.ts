@@ -36,10 +36,10 @@ function init({ genomes }) {
 
 			const result = await getBurdenResult(q, ds.cohort.cumburden)
 			if (!q.showCI) {
-				res.send({ status: 'ok', ...formatPayload(result.estimate) } satisfies BurdenResponse)
+				res.send({ status: 'ok', /*estimate: result.estimate,*/ ...formatPayload(result.estimate) } satisfies BurdenResponse)
 			} else {
 				if (!result.ci95) await compute95ci(result, ds.cohort.cumburden)
-				res.send({ status: 'ok', ...formatPayload(result.ci95) } satisfies BurdenResponse)
+				res.send({ status: 'ok', /*ci95: result.ci95,*/ ...formatPayload(result.ci95) } satisfies BurdenResponse)
 			}
 		} catch (e: any) {
 			res.send({ status: 'error', error: e.message || e })
@@ -68,11 +68,17 @@ async function getBurdenResult(
 		}
 		estimate.push(overall)
 
+		// reshape to match the ci95 data shape (see details in compute95ci)
+		const burden = {}
+		for(const est of estimate) {
+			burden[est.chc] = est
+		}
+
 		cumburden.db.connection
 			.prepare('INSERT INTO estimates (id, input, status, estimate) VALUES (?, ?, ?, ?)')
-			.run([result.id, jsonInput, 0, JSON.stringify(estimate)])
+			.run([result.id, jsonInput, 0, JSON.stringify(burden)])
 		result.status = 0
-		result.estimate = estimate
+		result.estimate = burden
 	}
 	for (const [k, v] of Object.entries(result)) {
 		if (k !== 'id' && typeof v == 'string') result[k] = JSON.parse(v)
@@ -102,11 +108,18 @@ async function compute95ci(result, cumburden) {
 		if (!result.input) throw 'result{} does not have .input'
 		// use same input that was used for main burden estimate
 		const input = structuredClone(result.input)
-		// attach main burden estimate to the input
-		input.burden = result.estimate.filter(est => est.chc !== 0)
+		// attach main burden estimate to the input, but filter out overall estimate
+		input.burden = Object.values(result.estimate).filter((est: any) => est.chc !== 0)
 		const lowup = await run_R(path.join(serverconfig.binpath, 'utils', 'burden-ci95.R'), JSON.stringify(input), [])
 		const { low, up, overall } = JSON.parse(lowup)
-		// index by chc number, where 0 = overall burden (total burden from all chc's per age)
+		
+		// ci95 = {
+		//   [chcnum]: {
+		//     [age]: [burden, lowerCI, upperCI]
+		// 	 }
+		// }
+		// reshape to combine main and 95 %CI estimates as one entry per age per CHC,
+		// where chc=0 is overall burden (total burden from all chc's per age)
 		const ci95 = { 0: {} }
 		for (const est of Object.values(result.estimate as any[])) {
 			if (!ci95[est.chc]) ci95[est.chc] = {}
@@ -134,23 +147,23 @@ function sortNumericValue(a, b) {
 }
 
 function formatPayload(estimates: object[]) {
-	const rawKeys = Object.keys(estimates['1']) // estimates key is chcNum, will give age keys
+	const rawKeys = Object.keys(estimates['1']).filter(k => k.startsWith('[')) // estimates key is chcNum, will give age keys
 	const renamedKeys = rawKeys.map(k => `burden${k.split(',')[0].slice(1)}`)
 	const outKeys = ['chc', ...renamedKeys] as string[]
 	const rows = [] as any[] // number[][]
-	// v = an array of objects with age as keys as cumulative burden as value for a given CHC
+	// estimates{}
+	// - key: chc number, where 0 = overall
+	// - values: {[age]: []}
 	for (const [chc, burdenByAge] of Object.entries(estimates)) {
 		const arr = [chc]
-		for (const age of rawKeys) {
-			arr.push(Array.isArray(burdenByAge[age]) ? burdenByAge[age] : [burdenByAge[age]] )
-		}
+		for (const age of rawKeys) arr.push(Array.isArray(burdenByAge[age]) ? burdenByAge[age] : [burdenByAge[age]])
 		rows.push(arr)
 	}
 	return { keys: outKeys, rows }
 }
 
 const defaultInputValues = Object.freeze({
-	showCI: false,
+	// showCI: false, do not track so it's not computed as part of unique ID
 	diaggrp: 5,
 	sex: 1,
 	white: 1,
