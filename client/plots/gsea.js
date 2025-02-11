@@ -42,29 +42,11 @@ class gsea {
 		this.dom.controlsDiv.selectAll('*').remove()
 		const inputs = [
 			{
-				label: 'FDR Filter Cutoff (Linear Scale)',
-				type: 'number',
-				chartType: 'gsea',
-				settingsKey: 'fdr_cutoff',
-				title: 'P-value significance',
-				min: 0,
-				max: 1
-			},
-			{
-				label: 'Number of Gene Sets',
-				type: 'number',
-				chartType: 'gsea',
-				settingsKey: 'top_genesets',
-				title: 'Number of top gene sets to be displayed',
-				min: 0,
-				max: 5000
-			},
-			{
 				label: 'Number of Permutations',
 				type: 'number',
 				chartType: 'gsea',
 				settingsKey: 'num_permutations',
-				title: 'Number of permutations to be used for GSEA',
+				title: 'Number of permutations to be used for GSEA. Higher number increases accuracy but also compute time.',
 				min: 0,
 				max: 40000 // Setting it to pretty lenient limit for testing
 			},
@@ -91,8 +73,43 @@ class gsea {
 				settingsKey: 'filter_non_coding_genes',
 				title: 'Filter non-coding genes',
 				boxLabel: ''
+			},
+			{
+				label: 'FDR or Top Gene Sets',
+				type: 'radio',
+				chartType: 'gsea',
+				settingsKey: 'fdr_or_top',
+				title: 'Toggle between FDR cutoff and top gene sets in ascending order of FDR',
+				options: [
+					{ label: 'FDR', value: 'fdr' },
+					{ label: 'Top Gene Sets', value: 'top' }
+				]
 			}
 		]
+
+		if (this.settings.fdr_or_top == 'fdr') {
+			inputs.push({
+				label: 'FDR Filter Cutoff (Linear Scale)',
+				type: 'number',
+				chartType: 'gsea',
+				settingsKey: 'fdr_cutoff',
+				title: 'P-value significance',
+				min: 0,
+				max: 1
+			})
+		} else if (this.settings.fdr_or_top == 'top') {
+			inputs.push({
+				label: 'Number of top Gene Sets by FDR',
+				type: 'number',
+				chartType: 'gsea',
+				settingsKey: 'top_genesets',
+				title: 'Number of top gene sets to be displayed in ascending order of FDR',
+				min: 0,
+				max: 5000
+			})
+		} else {
+			throw 'unknown FDR/top option'
+		}
 
 		const geneSet = {
 			label: 'Gene Set Group',
@@ -363,7 +380,8 @@ export async function getPlotConfig(opts, app) {
 					pathway: undefined,
 					min_gene_set_size_cutoff: 0,
 					max_gene_set_size_cutoff: 20000,
-					filter_non_coding_genes: true
+					filter_non_coding_genes: true,
+					fdr_or_top: 'fdr'
 				},
 				controls: { isOpen: true }
 			}
