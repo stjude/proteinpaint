@@ -1,1 +1,5 @@
+Features
 
+- SC plot: Showed control settings only in Plots and Gene Expression. Showed Sample column after Case. Added download icon in the DE table. The downloaded plots now 
+contain the sample info in the filename.
+- Table: Added download table option
