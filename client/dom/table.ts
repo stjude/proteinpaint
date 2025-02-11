@@ -1,7 +1,6 @@
 import { select } from 'd3-selection'
 import { icons, Menu } from '#dom'
 import type { Th } from '../types/d3'
-import { icons as icon_functions } from '#dom'
 
 export type Cell = {
 	/** to print in <a> element */
@@ -187,7 +186,7 @@ export function renderTable({
 			.style('padding', '5px')
 			.style('vertical-align', 'top')
 
-		icon_functions['download'](downloadDiv, {
+		icons['download'](downloadDiv, {
 			width: 15,
 			height: 15,
 			title: 'Download table',
