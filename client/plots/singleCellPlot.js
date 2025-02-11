@@ -491,6 +491,7 @@ class singleCellPlot {
 		this.dom.violinSelectDiv.style('display', 'none')
 		this.dom.samplesTableDiv.style('display', 'none').style('padding-bottom', '10px')
 		this.dom.samplesPromptDiv.style('display', 'none')
+		this.dom.controlsHolder.style('display', 'none')
 		switch (id) {
 			case SAMPLES_TAB:
 				this.dom.samplesTableDiv.style('display', 'block')
@@ -499,9 +500,11 @@ class singleCellPlot {
 			case PLOTS_TAB:
 				await this.renderPlots()
 				this.dom.showDiv.style('display', 'inline-block')
+				this.dom.controlsHolder.style('display', 'block')
 				break
 
 			case GENE_EXPRESSION_TAB:
+				this.dom.controlsHolder.style('display', 'block')
 				await this.renderPlots()
 				this.dom.geDiv.style('display', 'inline-block')
 				this.dom.searchbox.node().focus()
@@ -687,6 +690,7 @@ class singleCellPlot {
 	async renderDETable() {
 		const DEDiv = this.dom.plotsDiv.append('div').style('width', '100%')
 		const notesDiv = DEDiv.append('div')
+
 		const DETableDiv = DEDiv.append('div').style('padding-bottom', '10px')
 
 		//first plot
@@ -898,14 +902,6 @@ class singleCellPlot {
 			const filename = await this.getSampleFilename(this.state)
 			if (this.state.config.activeTab == GENE_EXPRESSION_TAB || this.state.config.activeTab == PLOTS_TAB)
 				for (const plot of this.plots) this.downloadPlot(plot, filename)
-			else {
-				if (this.state.config.activeTab == DIFFERENTIAL_EXPRESSION_TAB)
-					if (this.DETable) this.downloadSCTable(`${filename}_DETABLE.tsv`, this.DETable)
-				if (!this.state.config.activeTab || this.state.config.activeTab == SAMPLES_TAB)
-					this.downloadSCTable('samples.tsv', this.samplesTable)
-
-				//download tables on table tabs, image on image tab, violin on violin tab
-			}
 		})
 	}
 
