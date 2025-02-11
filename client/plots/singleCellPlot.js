@@ -1382,14 +1382,12 @@ class singleCellPlot {
 				for (const exp of sample.experiments) {
 					// first cell is always sample name. sneak in experiment object to be accessed in click callback
 					const row = [{ value: sample.sample, __experimentID: exp.experimentID }]
-
+					// hardcode to expect exp.sampleName and add this as a column
+					row.push({ value: exp.sampleName })
 					// optional sample and experiment columns
 					for (const c of s.sampleColumns || []) {
 						row.push({ value: sample[c.termid] })
 					}
-
-					// hardcode to expect exp.sampleName and add this as a column
-					row.splice(1, 0, { value: exp.sampleName })
 
 					// hardcode to always add in experiment id column
 					row.push({ value: exp.experimentID })
@@ -1424,7 +1422,6 @@ class singleCellPlot {
 		if (samples.some(i => i.experiments)) {
 			// two hardcoded column names
 			columns.splice(1, 0, { label: 'Sample' }) //add after the case column
-
 			columns.push({ label: 'Experiment' }) // corresponds to this.samples[].experiments[].experimentID
 		}
 
