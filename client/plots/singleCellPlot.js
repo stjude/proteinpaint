@@ -718,7 +718,11 @@ class singleCellPlot {
 			return
 		}
 
-		const columns = [{ label: 'Gene' }, { label: 'Log2FC' }, { label: 'Adjusted P-value' }]
+		const columns = [
+			{ label: 'Gene', width: '15vw' },
+			{ label: 'Log2FC', width: '12vw' },
+			{ label: 'Adjusted P-value', width: '12vw' }
+		]
 		const rows = []
 		this.genes = []
 		this.fold_changes = []
@@ -745,7 +749,6 @@ class singleCellPlot {
 			rows,
 			columns,
 			maxHeight: '50vh',
-			maxWidth: '45vw',
 			div: DETableDiv,
 			singleMode: true,
 			noButtonCallback: (i, node) => {
@@ -1381,7 +1384,7 @@ class singleCellPlot {
 			resize: true,
 			singleMode: true,
 			div,
-			maxWidth: columns.length > 3 ? '90vw' : '40vw',
+			maxWidth: columns.length > 3 ? '95vw' : '40vw',
 			maxHeight: '50vh',
 			noButtonCallback: index => {
 				// NOTE that "index" is not array index of this.samples[]
