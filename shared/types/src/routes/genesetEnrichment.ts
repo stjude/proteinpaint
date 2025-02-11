@@ -15,6 +15,8 @@ export type GenesetEnrichmentRequest = {
 	geneset_name?: string
 	/** Pickle file to be queried for generating gsea image of a particular geneset */
 	pickle_file?: string
+	/** Number of permutations to be carried out for GSEA analysis, this variable will become compulsory once GSEA becomes stateless */
+	num_permutations?: number
 }
 
 type pathway_attributes = {
