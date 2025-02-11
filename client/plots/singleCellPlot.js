@@ -402,7 +402,8 @@ class singleCellPlot {
 					let plots = structuredClone(this.state.config.plots)
 					plots.find(p => p.name == plot.name).selected = e.target.checked
 					const selectedCount = plots.filter(p => p.selected).length
-					let settings = { svgw: 800, svgh: 800 }
+					const defaultSettings = getDefaultSingleCellSettings()
+					let settings = { svgw: defaultSettings.svgw, svgh: defaultSettings.svgh }
 
 					if (selectedCount > 1) {
 						const width = 800
@@ -1377,6 +1378,7 @@ class singleCellPlot {
 		const rows = []
 		for (const sample of samples) {
 			if (sample.experiments)
+				//GDC
 				for (const exp of sample.experiments) {
 					// first cell is always sample name. sneak in experiment object to be accessed in click callback
 					const row = [{ value: sample.sample, __experimentID: exp.experimentID }]
@@ -1385,12 +1387,9 @@ class singleCellPlot {
 					for (const c of s.sampleColumns || []) {
 						row.push({ value: sample[c.termid] })
 					}
-					for (const c of s.experimentColumns || []) {
-						row.push({ value: exp[c.label] })
-					}
 
 					// hardcode to expect exp.sampleName and add this as a column
-					row.push({ value: exp.sampleName })
+					row.splice(1, 0, { value: exp.sampleName })
 
 					// hardcode to always add in experiment id column
 					row.push({ value: exp.experimentID })
@@ -1421,15 +1420,11 @@ class singleCellPlot {
 			})
 		}
 
-		// add in optional experiment columns
-		for (const c of s.experimentColumns || []) {
-			columns.push({ label: c.label, width: '20vw' })
-		}
-
 		// if samples are using experiments, add the hardcoded experiment column
 		if (samples.some(i => i.experiments)) {
 			// two hardcoded column names
-			columns.push({ label: 'Sample' }) // corresponds to this.samples[].experiments[].sampleName
+			columns.splice(1, 0, { label: 'Sample' }) //add after the case column
+
 			columns.push({ label: 'Experiment' }) // corresponds to this.samples[].experiments[].experimentID
 		}
 
