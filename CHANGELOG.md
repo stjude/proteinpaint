@@ -6,6 +6,8 @@ All notable changes to this project will be documented in this file.
 
 Features:
 - On the SC plot:
+- SC plot: Showed control settings only in Plots and Gene Expression. Showed Sample column after Case. Added download icon in the DE table. The downloaded plots now
+- Table: Added download table option
 
 Fixes:
 - at querying GDC cnv file, remove use of sample_type and adapt to new file format
