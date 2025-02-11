@@ -281,7 +281,7 @@ function setRenderers(self) {
 		self.update(activeTabIndex)
 	}
 
-	self.update = (activeTabIndex = 0, config = {}) => {
+	self.update = (activeTabIndex = 0) => {
 		self.tabs.forEach((tab, i) => {
 			tab.active = activeTabIndex === i
 		})
@@ -290,23 +290,9 @@ function setRenderers(self) {
 			.data(self.tabs)
 			.classed('sjpp-active', tab => tab.active)
 			.each(tab => {
+				const isVisible = tab.isVisible ? tab.isVisible() : true
 				tab.wrapper.classed('sjpp-active', tab.active)
-				if (tab.isVisible) tab.wrapper.style('display', tab => (config && tab.isVisible() ? '' : 'none'))
-				if (tab.contentHolder) tab.contentHolder.style('display', tab.active ? 'block' : 'none')
-				tab.tab.style('color', tab.active ? '#1575ad' : '#757373')
-				tab.line.style('visibility', tab.active ? 'visible' : 'hidden')
-				tab.tab.html(tab.label) // re-print tab label since the label value could have been updated by outside code
-			})
-	}
-
-	self.updateInactive = (index, config = {}) => {
-		self.dom.tabsHolder
-			.selectAll('button')
-			.data(self.tabs)
-			.classed('sjpp-active', tab => tab.active)
-			.each(tab => {
-				tab.wrapper.classed('sjpp-active', tab.active)
-				if (tab.isVisible) tab.wrapper.style('display', tab => (config && tab.isVisible() ? '' : 'none'))
+				if (tab.isVisible) tab.wrapper.style('display', isVisible ? '' : 'none')
 				if (tab.contentHolder) tab.contentHolder.style('display', tab.active ? 'block' : 'none')
 				tab.tab.style('color', tab.active ? '#1575ad' : '#757373')
 				tab.line.style('visibility', tab.active ? 'visible' : 'hidden')

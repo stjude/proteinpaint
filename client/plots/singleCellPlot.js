@@ -173,7 +173,7 @@ class singleCellPlot {
 			.append('div')
 			.style('display', 'inline-block')
 			.style('vertical-align', 'top')
-			.style('padding', '10px')
+			.style('padding-left', '10px')
 		this.tabsComp = await new Tabs({
 			holder: contentDiv,
 			tabsPosition: 'horizontal',
@@ -447,7 +447,7 @@ class singleCellPlot {
 		const index = this.tabs.findIndex(t => t.id == id)
 		const tab = this.tabs[index]
 		tab.active = true
-		this.tabsComp.update(index, tab)
+		this.tabsComp.update(index)
 
 		this.dom.deDiv.style('display', 'none')
 		this.dom.geDiv.style('display', 'none')
@@ -698,11 +698,9 @@ class singleCellPlot {
 			i++
 		}
 		this.DETable = { rows, columns }
+		const index = this.tabs.findIndex(t => t.id == DIFFERENTIAL_EXPRESSION_TAB)
+		this.tabsComp.update(index) //rerun isVisible() for GSEA tab to show
 
-		const index = this.tabs.findIndex(t => t.id == GSEA_TAB)
-		const gseaTab = this.tabs[index]
-		gseaTab.active = false
-		this.tabsComp.updateInactive(index, gseaTab)
 		renderTable({
 			rows,
 			columns,
