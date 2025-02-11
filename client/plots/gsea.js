@@ -45,7 +45,7 @@ class gsea {
 				label: 'FDR Filter Cutoff (Linear Scale)',
 				type: 'number',
 				chartType: 'gsea',
-				settingsKey: 'pvalue',
+				settingsKey: 'fdr_cutoff',
 				title: 'P-value significance',
 				min: 0,
 				max: 1
@@ -74,8 +74,7 @@ class gsea {
 				chartType: 'gsea',
 				settingsKey: 'min_gene_set_size_cutoff',
 				title: 'Minimum Gene set size cutoff. Helps in filtering out small gene sets',
-				min: 0,
-				max: 1000
+				min: 0
 			},
 			{
 				label: 'Maximum Gene Set Size Filter Cutoff',
@@ -83,7 +82,6 @@ class gsea {
 				chartType: 'gsea',
 				settingsKey: 'max_gene_set_size_cutoff',
 				title: 'Maximum Gene set size cutoff. Helps in filtering out large gene sets',
-				min: 2000,
 				max: 25000
 			},
 			{
@@ -219,7 +217,7 @@ add:
 			const pathway_name = Object.keys(output.data)[iter]
 			const pathway = output.data[pathway_name]
 			if (
-				self.settings.pvalue >= pathway.fdr &&
+				self.settings.fdr_cutoff >= pathway.fdr &&
 				self.settings.max_gene_set_size_cutoff >= pathway.geneset_size &&
 				self.settings.min_gene_set_size_cutoff <= pathway.geneset_size
 			) {
@@ -359,7 +357,7 @@ export async function getPlotConfig(opts, app) {
 			//samplelst: { groups: app.opts.state.groups}
 			settings: {
 				gsea: {
-					pvalue: 0.05,
+					fdr_cutoff: 0.05,
 					num_permutations: 1000,
 					top_genesets: 40,
 					pathway: undefined,
