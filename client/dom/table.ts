@@ -177,7 +177,7 @@ export function renderTable({
 	const downloadDiv = div
 		.append('div')
 		.style('display', 'inline-block')
-		.style('padding-left', '5px')
+		.style('padding', '5px')
 		.style('vertical-align', 'top')
 
 	icon_functions['download'](downloadDiv, {
