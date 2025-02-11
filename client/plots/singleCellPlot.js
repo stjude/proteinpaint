@@ -397,12 +397,12 @@ class singleCellPlot {
 			// experimentID is tracked in state, meaning this.samples[].experiments[] is present. and the id specifies which experiment, out of potential multiple of one sample, is currently selected.
 			// in such case, experiments[].sampleName should also be present, and display the sampleName next to config.sample which is actually person id
 			extraText.push(
-				'SAMPLE-' +
+				'SAMPLE_' +
 					this.samples[sampleIdx].experiments?.find(i => i.experimentID == state.config.experimentID)?.sampleName
 			)
 		} else if (this.samples[sampleIdx].experiments) {
 			// experimentID not in state, but sample carries exp array; this is possible when app launches. simply show first experiment of this sample
-			extraText.push('SAMPLE-' + this.samples[sampleIdx].experiments[0].sampleName)
+			extraText.push('SAMPLE_' + this.samples[sampleIdx].experiments[0].sampleName)
 		}
 
 		if (state.termdbConfig.queries.singleCell.samples.extraSampleTabLabel) {
@@ -412,12 +412,12 @@ class singleCellPlot {
 			).name
 			// get the term value from current sample
 			const sampleValue = this.samples[sampleIdx][state.termdbConfig.queries.singleCell.samples.extraSampleTabLabel]
-			extraText.push(`${termname.toUpperCase()}-${sampleValue}`)
+			extraText.push(`${termname.toUpperCase()}_${sampleValue}`)
 		}
-		const filename = `${state.config.settings.singleCellPlot.uiLabels.sample.toUpperCase()}-
-			${this.samples[sampleIdx].sample}
-			${extraText.join('-')}`
-		return filename.replace(' ', '_')
+		const filename = `${state.config.settings.singleCellPlot.uiLabels.sample.toUpperCase()}_
+			${this.samples[sampleIdx].sample}_
+			${extraText.join('_')}`
+		return filename.replace(/[^0-9a-z_]/gi, '')
 	}
 
 	renderShowPlots(showDiv, state) {
@@ -896,10 +896,10 @@ class singleCellPlot {
 			const filename = await this.getSampleFilename(this.state)
 			console.log('Downloading', filename)
 			if (this.state.config.activeTab == GENE_EXPRESSION_TAB || this.state.config.activeTab == PLOTS_TAB)
-				for (const plot of this.plots) this.downloadPlot(plot)
+				for (const plot of this.plots) this.downloadPlot(plot, filename)
 			else {
 				if (this.state.config.activeTab == DIFFERENTIAL_EXPRESSION_TAB)
-					if (this.DETable) this.downloadSCTable('DE.tsv', this.DETable)
+					if (this.DETable) this.downloadSCTable(`${filename}_DE.tsv`, this.DETable)
 				if (!this.state.config.activeTab || this.state.config.activeTab == SAMPLES_TAB)
 					this.downloadSCTable('samples.tsv', this.samplesTable)
 
@@ -912,8 +912,8 @@ class singleCellPlot {
 		downloadTable(table.rows, table.columns, name)
 	}
 
-	downloadPlot(plot) {
-		downloadSingleSVG(plot.legendSVG, 'legend.svg', this.opts.holder.node())
+	downloadPlot(plot, filename) {
+		downloadSingleSVG(plot.legendSVG, filename + '_LEGEND.svg', this.opts.holder.node())
 		const downloadImgName = plot.name
 		const a = document.createElement('a')
 		document.body.appendChild(a)
@@ -923,7 +923,7 @@ class singleCellPlot {
 			'click',
 			() => {
 				// Download the image
-				a.download = downloadImgName + '.png'
+				a.download = filename + '_' + downloadImgName + '.png'
 				a.href = dataURL
 				document.body.removeChild(a)
 			},
