@@ -146,7 +146,8 @@ export function renderTable({
 	resize = false,
 	selectedRowStyle = {},
 	inputName = null,
-	dataTestId = null
+	dataTestId = null,
+	hideDownload = false
 }: TableArgs) {
 	validateInput()
 	let _selectedRowStyle = selectedRowStyle
@@ -174,20 +175,22 @@ export function renderTable({
 
 	const uniqueInputName = inputName || getUniqueNameOrId('input')
 	const parentDiv = div.append('div').style('background-color', 'white').style('display', 'inline-block')
-	const downloadDiv = div
-		.append('div')
-		.style('display', 'inline-block')
-		.style('padding', '5px')
-		.style('vertical-align', 'top')
+	if (!hideDownload) {
+		const downloadDiv = div
+			.append('div')
+			.style('display', 'inline-block')
+			.style('padding', '5px')
+			.style('vertical-align', 'top')
 
-	icon_functions['download'](downloadDiv, {
-		width: 15,
-		height: 15,
-		title: 'Download table',
-		handler: () => {
-			downloadTable(rows, columns)
-		}
-	})
+		icon_functions['download'](downloadDiv, {
+			width: 15,
+			height: 15,
+			title: 'Download table',
+			handler: () => {
+				downloadTable(rows, columns)
+			}
+		})
+	}
 
 	if (resize) {
 		if (rows.length > 15) parentDiv.style('height', maxHeight)
