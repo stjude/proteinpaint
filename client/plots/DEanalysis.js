@@ -7,7 +7,7 @@ import { controlsInit } from './controls'
 import { select as d3select } from 'd3-selection'
 import { getCompInit, copyMerge } from '#rx'
 import { dofetch3 } from '#common/dofetch'
-import { scaleLog, scaleLinear } from 'd3-scale'
+import { scaleLinear } from 'd3-scale'
 import { downloadTable } from '../dom/table'
 import { roundValueAuto } from '#shared/roundValue.js'
 
@@ -65,7 +65,7 @@ class DEanalysis {
 				type: 'number',
 				chartType: 'DEanalysis',
 				settingsKey: 'min_count',
-				title: 'Relative cpm cutoff for filtering a gene compared to all samples and genes in dataset',
+				title: 'The smallest number of reads required for a gene to be considered in the analysis',
 				min: 0,
 				max: 10000
 			},
@@ -74,7 +74,7 @@ class DEanalysis {
 				type: 'number',
 				chartType: 'DEanalysis',
 				settingsKey: 'min_total_count',
-				title: 'Minimum total read count required for each sample',
+				title: 'The smallest total number of reads required for a gene to be considered in the analysis',
 				min: 0,
 				max: 10000
 			},
@@ -83,7 +83,7 @@ class DEanalysis {
 				type: 'number',
 				chartType: 'DEanalysis',
 				settingsKey: 'pvalue',
-				title: 'P-value significance',
+				title: 'The p-value threshold to determine statistical significance',
 				min: 0,
 				max: 1
 			},
@@ -92,7 +92,7 @@ class DEanalysis {
 				type: 'number',
 				chartType: 'DEanalysis',
 				settingsKey: 'foldchange',
-				title: 'Fold change',
+				title: 'The fold change threshold to determine biological significance',
 				min: -10,
 				max: 10
 			},
@@ -101,7 +101,7 @@ class DEanalysis {
 				type: 'checkbox',
 				chartType: 'DEanalysis',
 				settingsKey: 'pvaluetable',
-				title: 'Display table showing original and adjusted pvalues for all significant genes',
+				title: 'A table showing both original and adjusted pvalues for all significant genes',
 				boxLabel: ''
 			},
 			{
@@ -131,7 +131,7 @@ class DEanalysis {
 				type: 'radio',
 				chartType: 'DEanalysis',
 				settingsKey: 'method',
-				title: 'Toggle between edgeR and wilcoxon test',
+				title: 'Toggle between edgeR and Wilcoxon rank-sum test',
 				options: [
 					{ label: 'edgeR', value: 'edgeR' },
 					{ label: 'wilcoxon', value: 'wilcoxon' }
@@ -145,6 +145,7 @@ class DEanalysis {
 						chartType: 'DEanalysis',
 						usecase: { target: 'DEanalysis', detail: 'term' },
 						label: 'Confounding Factors',
+						title: 'Select confounding factors to adjust for in the analysis',
 						vocabApi: this.app.vocabApi
 					},
 					{
@@ -152,7 +153,7 @@ class DEanalysis {
 						type: 'number',
 						chartType: 'DEanalysis',
 						settingsKey: 'VarGenes',
-						title: 'Top number of variably expressed genes to include in analysis',
+						title: 'Top number of genes with the highest variability to include in analysis',
 						min: 1000,
 						max: 4000
 					}
@@ -167,7 +168,7 @@ class DEanalysis {
 				type: 'radio',
 				chartType: 'DEanalysis',
 				settingsKey: 'gene_ora',
-				title: 'Toggle between analyzing upregulated, downregulated or both genes',
+				title: 'Toggle to check if certain gene sets are overrepresented among upregulated, downregulated, or both sets of genes',
 				options: [
 					{ label: 'upregulated', value: 'upregulated' },
 					{ label: 'downregulated', value: 'downregulated' },
@@ -180,10 +181,10 @@ class DEanalysis {
 			// Check if genome build contains termdbs, only then enable gene ora
 			inputs.push({
 				label: 'Gene Set Enrichment Analysis',
-				type: 'radio',
+				type: 'checkbox',
 				chartType: 'DEanalysis',
 				settingsKey: 'gsea',
-				title: 'Gene set enrichment analysis',
+				title: 'Select to check if certain gene sets are enriched among the two biological conditions',
 				options: [{ label: 'Submit', value: 'Submit' }]
 			})
 		}
@@ -195,7 +196,7 @@ class DEanalysis {
 				type: 'radio',
 				chartType: 'DEanalysis',
 				settingsKey: 'hierCluster',
-				title: 'Toggle between various methods for selecting genes for hierarchial clustering',
+				title: 'Toggle between various methods of clustering analyses',
 				options: [
 					{ label: 'Top 100 genes', value: 'top100' },
 					{ label: 'Top 100 upregulated', value: 'top100up' },
