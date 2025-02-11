@@ -414,6 +414,8 @@ class singleCellPlot {
 			const sampleValue = this.samples[sampleIdx][state.termdbConfig.queries.singleCell.samples.extraSampleTabLabel]
 			extraText.push(`${termname.toUpperCase()}_${sampleValue}`)
 		}
+		if (this.state.config.activeTab == GENE_EXPRESSION_TAB) extraText.push(this.state.config.gene)
+		if (this.state.config.activeTab == DIFFERENTIAL_EXPRESSION_TAB) extraText.push(this.state.config.cluster)
 		const filename = `${state.config.settings.singleCellPlot.uiLabels.sample.toUpperCase()}_
 			${this.samples[sampleIdx].sample}_
 			${extraText.join('_')}`
@@ -894,12 +896,11 @@ class singleCellPlot {
 		this.components.controls.on('downloadClick.singleCellPlot', async () => {
 			if (!this.state) return
 			const filename = await this.getSampleFilename(this.state)
-			console.log('Downloading', filename)
 			if (this.state.config.activeTab == GENE_EXPRESSION_TAB || this.state.config.activeTab == PLOTS_TAB)
 				for (const plot of this.plots) this.downloadPlot(plot, filename)
 			else {
 				if (this.state.config.activeTab == DIFFERENTIAL_EXPRESSION_TAB)
-					if (this.DETable) this.downloadSCTable(`${filename}_DE.tsv`, this.DETable)
+					if (this.DETable) this.downloadSCTable(`${filename}_DETABLE.tsv`, this.DETable)
 				if (!this.state.config.activeTab || this.state.config.activeTab == SAMPLES_TAB)
 					this.downloadSCTable('samples.tsv', this.samplesTable)
 
