@@ -1,6 +1,7 @@
 import { select } from 'd3-selection'
 import { icons, Menu } from '#dom'
 import type { Th } from '../types/d3'
+import { icons as icon_functions } from '#dom'
 
 export type Cell = {
 	/** to print in <a> element */
@@ -172,8 +173,21 @@ export function renderTable({
 	}
 
 	const uniqueInputName = inputName || getUniqueNameOrId('input')
+	const parentDiv = div.append('div').style('background-color', 'white').style('display', 'inline-block')
+	const downloadDiv = div
+		.append('div')
+		.style('display', 'inline-block')
+		.style('padding-left', '5px')
+		.style('vertical-align', 'top')
 
-	const parentDiv = div.append('div').style('background-color', 'white')
+	icon_functions['download'](downloadDiv, {
+		width: 15,
+		height: 15,
+		title: 'Download table',
+		handler: () => {
+			downloadTable(rows, columns)
+		}
+	})
 
 	if (resize) {
 		if (rows.length > 15) parentDiv.style('height', maxHeight)
