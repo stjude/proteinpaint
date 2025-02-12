@@ -85,7 +85,7 @@ export async function init(arg, holder, genomes) {
 						{
 							type: 'plot_edit',
 							id: plotAppApi.getState().plots[0].id,
-							config: { sample: undefined }
+							config: { sample: undefined, activeTab: 0 }
 						}
 					]
 				})

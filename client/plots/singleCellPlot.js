@@ -232,7 +232,6 @@ class singleCellPlot {
 			plotsDivParent,
 			errorDiv
 		}
-		this.renderSamplesTable(samplesTableDiv, state)
 
 		if (q.singleCell?.geneExpression) this.renderGeneExpressionControls(geDiv, state)
 
@@ -492,6 +491,7 @@ class singleCellPlot {
 			case SAMPLES_TAB:
 				this.dom.samplesTableDiv.style('display', 'block')
 				this.dom.samplesPromptDiv.style('display', 'inline-block')
+				this.renderSamplesTable()
 				break
 			case PLOTS_TAB:
 				await this.renderPlots()
@@ -1382,14 +1382,15 @@ class singleCellPlot {
 		this.tip.hide()
 	}
 
-	async renderSamplesTable(div, state) {
+	async renderSamplesTable() {
 		// need to do this after the this.samples has been set
 		if (this.samples.length == 0) {
 			this.showNoMatchingDataMessage()
 
 			return
 		}
-
+		const div = this.dom.samplesTableDiv
+		const state = this.state
 		div.selectAll('*').remove()
 		const [rows, columns] = await this.getTableData(state)
 		this.samplesTable = { rows, columns }
