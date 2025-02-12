@@ -606,7 +606,7 @@ class singleCellPlot {
 				vocab: this.state.vocab,
 				plots: [
 					{
-						chartType: 'violin',
+						chartType: 'summary',
 						settings: { violin: { plotThickness: 50 } },
 						term: {
 							$id: await digestMessage(`${gene}-${this.state.config.sample}-${this.state.config.experimentID}`),
@@ -1388,20 +1388,20 @@ class singleCellPlot {
 			return
 		}
 		const div = this.dom.samplesTableDiv
+
 		div.selectAll('*').remove()
 		const [rows, columns] = await this.getTableData(state)
+		if (columns.length > 5) div.style('font-size', '0.9em')
 		const selectedRows = []
-		{
-			const i = this.samples.findIndex(i => i.sample == state.config.sample)
-			if (i != -1) selectedRows.push(i)
-		}
+		const i = this.samples.findIndex(i => i.sample == state.config.sample)
+		if (i != -1) selectedRows.push(i)
 		renderTable({
 			rows,
 			columns,
 			resize: true,
 			singleMode: true,
 			div,
-			maxWidth: columns.length > 3 ? '95vw' : '40vw',
+			maxWidth: columns.length > 3 ? '98vw' : '40vw',
 			maxHeight: '50vh',
 			noButtonCallback: index => {
 				// NOTE that "index" is not array index of this.samples[]
