@@ -45,6 +45,11 @@ ko['name'] = ko['name'].apply(modNam)
 ko['coords'] = ko['coords'].apply(modCor)
 ko = ko.to_json(orient='records')
 
+### path
+path = nodes[nodes['name'].str.startswith('path')]
+# select required columns
+path = path.filter(items['x','y','graphics_name','fgcolor','width','height','xmin','xmax','ymin','ymax'])
+
 
 #nodes['x'] = pd.to_numeric(nodes['x'], errors="coerce")
 #nodes.dropna(subset=["x"],inplace=True)
