@@ -168,7 +168,6 @@ class singleCellPlot {
 			tabs: this.tabs
 		})
 		this.tabsComp.main()
-
 		const headerDiv = contentDiv.append('div').style('display', 'inline-block').style('padding-bottom', '10px')
 
 		const samplesPromptDiv = headerDiv
@@ -189,7 +188,7 @@ class singleCellPlot {
 			.html(await this.getSampleDetails(state))
 			.style('padding', '10px 20px')
 		const plotsDivParent = contentDiv.append('div')
-		const samplesTableDiv = plotsDivParent.append('div').style('display', 'none')
+		const samplesTableDiv = plotsDivParent.append('div').style('padding-bottom', '10px')
 
 		const plotsDiv = plotsDivParent
 			.append('div')
@@ -271,6 +270,7 @@ class singleCellPlot {
 			this.app.dispatch({ type: 'plot_edit', id: this.id, config: { activeTab: SAMPLES_TAB } })
 			return
 		}
+		this.dom.mainDiv.style('display', 'block') // show the main div in case it was hidden because no data was found
 		try {
 			const body = {
 				genome: this.state.genome,
@@ -306,6 +306,7 @@ class singleCellPlot {
 	}
 
 	async getData() {
+		if (!this.state.config.sample) return
 		const plots = []
 		for (const plot of this.config.plots) {
 			if (plot.selected) plots.push(plot.name)
@@ -480,7 +481,7 @@ class singleCellPlot {
 		this.dom.geDiv.style('display', 'none')
 		this.dom.showDiv.style('display', 'none')
 		this.dom.violinSelectDiv.style('display', 'none')
-		this.dom.samplesTableDiv.style('display', 'none').style('padding-bottom', '10px')
+		this.dom.samplesTableDiv.style('display', 'none')
 		this.dom.samplesPromptDiv.style('display', 'none')
 		this.dom.controlsHolder.style('display', 'none')
 		switch (id) {
@@ -951,8 +952,9 @@ class singleCellPlot {
 	}
 
 	showNoMatchingDataMessage() {
-		this.dom.mainDiv.style('opacity', 0.001).style('display', 'none')
 		this.dom.loadingDiv.style('display', '').html('')
+		this.dom.plotsDiv.selectAll('*').remove()
+		this.dom.mainDiv.style('display', 'none')
 		const div = this.dom.loadingDiv
 			.append('div')
 			.style('display', 'inline-block')
@@ -1380,7 +1382,6 @@ class singleCellPlot {
 
 	async renderSamplesTable() {
 		const state = this.state
-
 		// need to do this after the this.samples has been set
 		if (this.samples.length == 0) {
 			this.showNoMatchingDataMessage()
@@ -1390,9 +1391,7 @@ class singleCellPlot {
 		const div = this.dom.samplesTableDiv
 		div.selectAll('*').remove()
 		const [rows, columns] = await this.getTableData(state)
-		this.samplesTable = { rows, columns }
 		const selectedRows = []
-		let sampleIdx = 0 // the first sample/experiment is selected by default on app launch
 		{
 			const i = this.samples.findIndex(i => i.sample == state.config.sample)
 			if (i != -1) selectedRows.push(i)
