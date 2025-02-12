@@ -48,8 +48,8 @@ ko = ko.to_json(orient='records')
 ### path
 path = nodes[nodes['name'].str.startswith('path')]
 # select required columns
-path = path.filter(items['x','y','graphics_name','fgcolor','width','height','xmin','xmax','ymin','ymax'])
-
+path = path.filter(items=['x','y','graphics_name','fgcolor','width','height','xmin','xmax','ymin','ymax'])
+path = path.to_json(orient='records')
 
 #nodes['x'] = pd.to_numeric(nodes['x'], errors="coerce")
 #nodes.dropna(subset=["x"],inplace=True)
@@ -69,5 +69,5 @@ path = path.filter(items['x','y','graphics_name','fgcolor','width','height','xmi
 #coords.reset_index(drop=True,inplace=True)
 #coords = coords.to_json(orient='records')
 
-sys.stdout.write(json.dumps([cpd_gl,ko]))
+sys.stdout.write(json.dumps([cpd_gl,ko,path]))
 

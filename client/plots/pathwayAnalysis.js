@@ -54,6 +54,8 @@ async function renderPathway(self, kdata) {
 	holder.selectAll('*').remove()
 	const cpd = JSON.parse(kdata[0])
 	const ko = JSON.parse(kdata[1])
+	const path = JSON.parse(kdata[2])
+	console.log(path)
 	const width = 900,
 		height = 600
 	const margin = { top: 20, right: 30, bottom: 30, left: 40 }
@@ -185,6 +187,19 @@ async function renderPathway(self, kdata) {
 		.on('mouseout', function () {
 			tooltip.style('visibility', 'hidden')
 		})
+	pa_area
+		.append('g')
+		.selectAll('text')
+		.data(path)
+		.enter()
+		.append('text')
+		.attr('x', d => xScale(d.x))
+		.attr('y', d => yScale(d.y))
+		.text(d => d.graphics_name)
+		.attr('fill', d => d.fgcolor)
+		.attr('font-size', 10)
+		.attr('text-anchor', 'middle')
+		.attr('alignment-baseline', 'middle')
 	/*
     nodes.forEach(node => {
         pa_area.append('circle')
