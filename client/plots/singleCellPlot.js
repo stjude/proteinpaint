@@ -200,12 +200,12 @@ class singleCellPlot {
 		const loadingDiv = this.opts.holder
 			.append('div')
 			.style('position', 'absolute')
-			.style('top', 0)
+			.style('top', '0')
 			.style('left', '0')
 			.style('width', '100%')
 			.style('height', '100%')
 			.style('background-color', 'rgba(255, 255, 255, 0.8)')
-			.style('text-align', 'end')
+			.style('text-align', 'center')
 
 		this.dom = {
 			sampleDiv,
