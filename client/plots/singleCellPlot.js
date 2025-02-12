@@ -1220,7 +1220,7 @@ class singleCellPlot {
 			this.hideCategory(key, false, plot.legendSVG)
 			return
 		}
-		const menu = new Menu({ padding: '0px' })
+		const menu = this.tip.clear()
 		const div = menu.d.append('div')
 		div
 			.append('div')
