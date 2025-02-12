@@ -60,11 +60,12 @@ this
 const SAMPLES_TAB = 1
 const PLOTS_TAB = 2
 const DIFFERENTIAL_EXPRESSION_TAB = 3
-const GSEA_TAB = 7
 const GENE_EXPRESSION_TAB = 4
 const IMAGES_TAB = 5
 const VIOLIN_TAB = 6
 const noExpColor = '#F5F5F5' //lightGray
+const DE_GENES_TAB = 8
+const DE_GSEA_TAB = 7
 
 class singleCellPlot {
 	constructor() {
@@ -121,14 +122,6 @@ class singleCellPlot {
 				isVisible,
 				callback: () => this.setActiveTab(DIFFERENTIAL_EXPRESSION_TAB)
 			})
-			if (this.app.opts.genome.termdbs)
-				this.tabs.push({
-					label: 'GSEA',
-					id: GSEA_TAB,
-					active: activeTab == GSEA_TAB,
-					isVisible: () => this.genes,
-					callback: () => this.setActiveTab(GSEA_TAB)
-				})
 		}
 
 		this.tabs.push({
@@ -514,9 +507,7 @@ class singleCellPlot {
 				this.dom.deDiv.style('display', 'inline-block')
 				this.renderDETable()
 				break
-			case GSEA_TAB:
-				this.renderGSEA()
-				break
+
 			case IMAGES_TAB:
 				this.renderImage()
 				break
@@ -655,14 +646,7 @@ class singleCellPlot {
 		const plotAppApi = await plotImport.appInit(opts)
 	}
 
-	async renderGSEA() {
-		if (!this.genes) {
-			this.dom.plotsDiv
-				.append('div')
-				.style('padding', '10px 0px')
-				.text('No differential expression genes to perform GSEA')
-			return
-		}
+	async renderGSEA(holder) {
 		const gsea_params = {
 			genes: this.genes,
 			fold_change: this.fold_changes,
@@ -677,7 +661,7 @@ class singleCellPlot {
 			insertBefore: this.app.opts?.app?.getPlotHolder ? this.mainDivId : this.id
 		}
 		const opts = {
-			holder: this.dom.plotsDiv,
+			holder,
 			state: {
 				vocab: this.state.vocab,
 				plots: [config]
@@ -688,11 +672,6 @@ class singleCellPlot {
 	}
 
 	async renderDETable() {
-		const DEDiv = this.dom.plotsDiv.append('div').style('width', '100%')
-		const notesDiv = DEDiv.append('div')
-
-		const DETableDiv = DEDiv.append('div').style('padding-bottom', '10px')
-
 		//first plot
 		this.dom.deselect.selectAll('*').remove()
 		this.dom.deselect.append('option').text('')
@@ -710,14 +689,50 @@ class singleCellPlot {
 		this.dom.loadingDiv.style('display', '').append('div').text('Loading...')
 		const result = await dofetch3('termdb/singlecellDEgenes', { body: args })
 		if (result.error) {
-			DETableDiv.text(result.error)
+			tableDiv.text(result.error)
 			return
 		}
 		if (!Array.isArray(result.genes)) {
-			DETableDiv.text('.genes[] missing')
+			tableDiv.text('.genes[] missing')
 			return
 		}
+		const DEContentDiv = this.dom.plotsDiv.append('div').style('width', '100%')
 
+		const tabsDiv = DEContentDiv.append('div')
+		const tableDiv = DEContentDiv.append('div')
+		const GSEADiv = DEContentDiv.append('div').style('display', 'none')
+		const tabs = [
+			{
+				label: 'Genes',
+				id: DE_GENES_TAB,
+				active: true,
+				callback: () => showActiveDETab(DE_GENES_TAB)
+			}
+		]
+		if (this.app.opts.genome.termdbs)
+			tabs.push({
+				label: 'GSEA',
+				id: DE_GSEA_TAB,
+				active: false,
+				callback: () => showActiveDETab(DE_GSEA_TAB)
+			})
+		function showActiveDETab(id) {
+			tableDiv.style('display', 'none')
+			GSEADiv.style('display', 'none')
+			if (id == DE_GENES_TAB) tableDiv.style('display', 'block')
+			if (id == DE_GSEA_TAB) GSEADiv.style('display', 'block')
+		}
+
+		const deTabs = await new Tabs({
+			holder: tabsDiv,
+			tabsPosition: 'horizontal',
+			tabs
+		})
+		deTabs.main()
+
+		tableDiv.append('div').style('padding-bottom', '10px').text('Select a gene to view its expression:')
+
+		const tableDivContent = tableDiv.append('div').style('padding-bottom', '10px')
 		const columns = [
 			{ label: 'Gene', width: '15vw' },
 			{ label: 'Log2FC', width: '12vw' },
@@ -742,14 +757,12 @@ class singleCellPlot {
 			i++
 		}
 		this.DETable = { rows, columns }
-		const index = this.tabs.findIndex(t => t.id == DIFFERENTIAL_EXPRESSION_TAB)
-		this.tabsComp.update(index) //rerun isVisible() for GSEA tab to show
 		const downloadFilename = `${await this.getSampleFilename(this.state)}_DE_GENES.tsv`
 		renderTable({
 			rows,
 			columns,
 			maxHeight: '50vh',
-			div: DETableDiv,
+			div: tableDivContent,
 			singleMode: true,
 			noButtonCallback: (i, node) => {
 				const gene = result.genes[i].name
@@ -769,8 +782,8 @@ class singleCellPlot {
 			showDownload: true,
 			downloadFilename
 		})
-		notesDiv.append('div').style('padding-bottom', '10px').text('Select a gene to view its expression:')
 		this.dom.loadingDiv.style('display', 'none')
+		this.renderGSEA(GSEADiv)
 	}
 
 	colorByGeneExp() {
