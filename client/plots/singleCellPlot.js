@@ -201,11 +201,11 @@ class singleCellPlot {
 			.append('div')
 			.style('position', 'absolute')
 			.style('top', 0)
-			.style('left', 0)
+			.style('left', '0')
 			.style('width', '100%')
 			.style('height', '100%')
 			.style('background-color', 'rgba(255, 255, 255, 0.8)')
-			.style('text-align', 'center')
+			.style('text-align', 'end')
 
 		this.dom = {
 			sampleDiv,
@@ -610,7 +610,7 @@ class singleCellPlot {
 				vocab: this.state.vocab,
 				plots: [
 					{
-						chartType: 'summary',
+						chartType: 'violin',
 						settings: { violin: { plotThickness: 50 } },
 						term: {
 							$id: await digestMessage(`${gene}-${this.state.config.sample}-${this.state.config.experimentID}`),
