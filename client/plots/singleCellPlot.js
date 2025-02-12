@@ -722,13 +722,14 @@ class singleCellPlot {
 			if (id == DE_GENES_TAB) tableDiv.style('display', 'block')
 			if (id == DE_GSEA_TAB) GSEADiv.style('display', 'block')
 		}
-
-		const deTabs = await new Tabs({
-			holder: tabsDiv,
-			tabsPosition: 'horizontal',
-			tabs
-		})
-		deTabs.main()
+		if (tabs.length > 1) {
+			const deTabs = await new Tabs({
+				holder: tabsDiv,
+				tabsPosition: 'horizontal',
+				tabs
+			})
+			deTabs.main()
+		}
 
 		tableDiv.append('div').style('padding-bottom', '10px').text('Select a gene to view its expression:')
 
