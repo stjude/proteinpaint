@@ -65,7 +65,7 @@ function setInteractivity(self) {
 }
 
 function burgerBtnInit(opts) {
-	const burguerDiv = opts.holder.style('margin', '10px')
+	const burguerDiv = opts.holder.style('margin', '10px 0px 10px 10px')
 	icon_functions['burguer'](burguerDiv, { handler: opts.callback, title: opts.title || 'Settings' })
 
 	const self = {
