@@ -953,7 +953,6 @@ class singleCellPlot {
 
 	showNoMatchingDataMessage() {
 		this.dom.loadingDiv.style('display', '').html('')
-		this.dom.plotsDiv.selectAll('*').remove()
 		this.dom.mainDiv.style('display', 'none')
 		const div = this.dom.loadingDiv
 			.append('div')
