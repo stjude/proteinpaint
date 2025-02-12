@@ -162,6 +162,7 @@ class singleCellPlot {
 			.style('display', 'inline-block')
 			.style('vertical-align', 'top')
 			.style('padding-left', '10px')
+			.style('min-height', '300px')
 		this.tabsComp = await new Tabs({
 			holder: contentDiv,
 			tabsPosition: 'horizontal',
@@ -271,6 +272,8 @@ class singleCellPlot {
 			return
 		}
 		this.dom.mainDiv.style('display', 'block') // show the main div in case it was hidden because no data was found
+		this.dom.loadingDiv.selectAll('*').remove()
+		this.dom.loadingDiv.style('display', '').append('div').text('Loading...')
 		try {
 			const body = {
 				genome: this.state.genome,
@@ -280,23 +283,24 @@ class singleCellPlot {
 			const result = await dofetch3('termdb/singlecellSamples', { body })
 			if (result.error) throw result.error
 			this.samples = result.samples
+			if (this.samples.length == 0) {
+				this.showNoMatchingDataMessage()
+				return
+			}
 			this.colorByGene =
 				this.state.config.activeTab == GENE_EXPRESSION_TAB || this.state.config.activeTab == DIFFERENTIAL_EXPRESSION_TAB
 			this.config = structuredClone(this.state.config) // this config can be edited to dispatch changes
 			copyMerge(this.settings, this.config.settings.singleCellPlot)
 			this.plotColorByDivs = []
 			this.plots = []
-			this.dom.loadingDiv.selectAll('*').remove()
-			this.dom.loadingDiv.style('display', '').append('div').text('Loading...')
+
 			this.legendRendered = false
 			this.dom.plotsDiv.selectAll('*').remove()
 			await this.getData()
-
-			this.dom.loadingDiv.style('display', 'none')
-
 			await this.setControls()
 			this.dom.sampleDiv.html(await this.getSampleDetails(this.state))
 			this.showActiveTab()
+			this.dom.loadingDiv.style('display', 'none')
 		} catch (e) {
 			this.app.tip.hide()
 			this.dom.loadingDiv.style('display', 'none')
@@ -685,8 +689,6 @@ class singleCellPlot {
 		const sample =
 			this.state.config.experimentID || this.state.config.sample || this.samples?.[0]?.experiments[0]?.experimentID
 		const args = { genome: this.state.genome, dslabel: this.state.dslabel, categoryName, sample, columnName }
-		this.dom.loadingDiv.selectAll('*').remove()
-		this.dom.loadingDiv.style('display', '').append('div').text('Loading...')
 		const result = await dofetch3('termdb/singlecellDEgenes', { body: args })
 		if (result.error) {
 			tableDiv.text(result.error)
@@ -786,7 +788,6 @@ class singleCellPlot {
 			showDownload: true,
 			downloadFilename
 		})
-		this.dom.loadingDiv.style('display', 'none')
 		this.renderGSEA(GSEADiv)
 	}
 
@@ -958,8 +959,6 @@ class singleCellPlot {
 			.append('div')
 			.style('display', 'inline-block')
 			.style('text-align', 'center')
-			.style('position', 'relative')
-			.style('left', '-150px')
 			.style('font-size', '1.2em')
 			.style('margin', '2em 1em')
 			.html('No matching cohort data.')
@@ -1146,6 +1145,7 @@ class singleCellPlot {
 				.attr('height', height)
 				.style('display', 'inline-block')
 				.style('vertical-align', 'top')
+				.style('font-size', '0.9em')
 
 			plot.legendSVG = legendSVG
 		}
@@ -1382,11 +1382,7 @@ class singleCellPlot {
 	async renderSamplesTable() {
 		const state = this.state
 		// need to do this after the this.samples has been set
-		if (this.samples.length == 0) {
-			this.showNoMatchingDataMessage()
 
-			return
-		}
 		const div = this.dom.samplesTableDiv
 
 		div.selectAll('*').remove()
