@@ -82,18 +82,11 @@ class singleCellPlot {
 		// TODO sample table still needs to be changed when gdc (external portal) cohort changes
 
 		const state = this.getState(appState)
-		const body = { genome: state.genome, dslabel: state.dslabel, filter0: state.termfilter.filter0 || null }
-		const result = await dofetch3('termdb/singlecellSamples', { body })
-		if (result.error) throw result.error
+
 		if (this.opts.header) this.opts.header.html(`SINGLE CELL PLOT`).style('font-size', '0.9em')
-		this.samples = result.samples
+
 		// need to set the this.samples based on the current filter0
-		// TODO no need to sort samples?
-		this.samples.sort((elem1, elem2) => {
-			const result = elem1.primarySite?.localeCompare(elem2.primarySite) // FIXME not good to hardcode gdc-specific property. won't work for non-gdc ds
-			if (result == 1 || result == -1) return result
-			else return elem1.sample.localeCompare(elem2.sample)
-		})
+
 		this.tabs = []
 		const activeTab = state.config.activeTab
 		// shared isVisible function for tabs that require config.sample;
@@ -124,15 +117,14 @@ class singleCellPlot {
 				callback: () => this.setActiveTab(DIFFERENTIAL_EXPRESSION_TAB)
 			})
 		}
-
-		this.tabs.push({
-			// TODO only add tab if(state.termdbConfig.queries.singleCell.geneExpression) {}
-			label: 'Gene Expression',
-			id: GENE_EXPRESSION_TAB,
-			active: activeTab == GENE_EXPRESSION_TAB,
-			isVisible,
-			callback: () => this.setActiveTab(GENE_EXPRESSION_TAB)
-		})
+		if (state.termdbConfig.queries.singleCell.geneExpression)
+			this.tabs.push({
+				label: 'Gene Expression',
+				id: GENE_EXPRESSION_TAB,
+				active: activeTab == GENE_EXPRESSION_TAB,
+				isVisible,
+				callback: () => this.setActiveTab(GENE_EXPRESSION_TAB)
+			})
 
 		// summary tab is not limited to geneExp, as later it can be applied to cell category terms too (if there are multiple)
 		this.tabs.push({
@@ -152,7 +144,7 @@ class singleCellPlot {
 				callback: () => this.setActiveTab(IMAGES_TAB)
 			})
 		const q = state.termdbConfig.queries
-		this.opts.holder.style('position', 'relative')
+		this.opts.holder.style('position', 'relative').style('min-height', '200px')
 		this.mainDivId = `${this.id}-sandbox`
 		const errorDiv = this.opts.holder.append('div')
 		const mainDiv = this.opts.holder
@@ -170,13 +162,13 @@ class singleCellPlot {
 			.style('display', 'inline-block')
 			.style('vertical-align', 'top')
 			.style('padding-left', '10px')
+			.style('min-height', '300px')
 		this.tabsComp = await new Tabs({
 			holder: contentDiv,
 			tabsPosition: 'horizontal',
 			tabs: this.tabs
 		})
 		this.tabsComp.main()
-
 		const headerDiv = contentDiv.append('div').style('display', 'inline-block').style('padding-bottom', '10px')
 
 		const samplesPromptDiv = headerDiv
@@ -197,7 +189,7 @@ class singleCellPlot {
 			.html(await this.getSampleDetails(state))
 			.style('padding', '10px 20px')
 		const plotsDivParent = contentDiv.append('div')
-		const samplesTableDiv = plotsDivParent.append('div').style('display', 'none')
+		const samplesTableDiv = plotsDivParent.append('div').style('padding-bottom', '10px')
 
 		const plotsDiv = plotsDivParent
 			.append('div')
@@ -208,8 +200,8 @@ class singleCellPlot {
 		const loadingDiv = this.opts.holder
 			.append('div')
 			.style('position', 'absolute')
-			.style('top', 0)
-			.style('left', 0)
+			.style('top', '0')
+			.style('left', '0')
 			.style('width', '100%')
 			.style('height', '100%')
 			.style('background-color', 'rgba(255, 255, 255, 0.8)')
@@ -232,7 +224,6 @@ class singleCellPlot {
 			plotsDivParent,
 			errorDiv
 		}
-		this.renderSamplesTable(samplesTableDiv, state)
 
 		if (q.singleCell?.geneExpression) this.renderGeneExpressionControls(geDiv, state)
 
@@ -276,24 +267,40 @@ class singleCellPlot {
 	// called in relevant dispatch when reactsTo==true
 	// or current.state != replcament.state
 	async main() {
+		if (this.state.config.activeTab && this.state.config.activeTab != SAMPLES_TAB && !this.state.config.sample) {
+			this.app.dispatch({ type: 'plot_edit', id: this.id, config: { activeTab: SAMPLES_TAB } })
+			return
+		}
+		this.dom.mainDiv.style('display', 'block') // show the main div in case it was hidden because no data was found
+		this.dom.loadingDiv.selectAll('*').remove()
+		this.dom.loadingDiv.style('display', '').append('div').text('Loading...')
 		try {
+			const body = {
+				genome: this.state.genome,
+				dslabel: this.state.dslabel,
+				filter0: this.state.termfilter.filter0 || null
+			}
+			const result = await dofetch3('termdb/singlecellSamples', { body })
+			if (result.error) throw result.error
+			this.samples = result.samples
+			if (this.samples.length == 0) {
+				this.showNoMatchingDataMessage()
+				return
+			}
 			this.colorByGene =
 				this.state.config.activeTab == GENE_EXPRESSION_TAB || this.state.config.activeTab == DIFFERENTIAL_EXPRESSION_TAB
 			this.config = structuredClone(this.state.config) // this config can be edited to dispatch changes
 			copyMerge(this.settings, this.config.settings.singleCellPlot)
 			this.plotColorByDivs = []
 			this.plots = []
-			this.dom.loadingDiv.selectAll('*').remove()
-			this.dom.loadingDiv.style('display', '').append('div').text('Loading...')
+
 			this.legendRendered = false
 			this.dom.plotsDiv.selectAll('*').remove()
-			this.data = await this.getData()
-			if (this.data.error) throw this.data.error
-			this.dom.loadingDiv.style('display', 'none')
-			this.showActiveTab()
+			await this.getData()
 			await this.setControls()
-
 			this.dom.sampleDiv.html(await this.getSampleDetails(this.state))
+			this.showActiveTab()
+			this.dom.loadingDiv.style('display', 'none')
 		} catch (e) {
 			this.app.tip.hide()
 			this.dom.loadingDiv.style('display', 'none')
@@ -303,6 +310,7 @@ class singleCellPlot {
 	}
 
 	async getData() {
+		if (!this.state.config.sample) return
 		const plots = []
 		for (const plot of this.config.plots) {
 			if (plot.selected) plots.push(plot.name)
@@ -314,21 +322,12 @@ class singleCellPlot {
 			plots,
 			filter0: this.state.termfilter.filter0
 		}
-
 		// change the sample to contains both sampleID and experimentID, so that they could
 		// both be used to query data. (GDC sc gene expression only support sample uuid now)
-		if (this.state.config.sample) {
-			// a sample has already been selected
-			body.sample = {
-				eID: this.state.config.experimentID,
-				sID: this.state.config.sample
-			}
-		} else {
-			// no given sample in state.config{}, assume that this.samples[] are already loaded, then use 1st sample
-			body.sample = {
-				eID: this.samples?.[0]?.experiments?.[0]?.experimentID,
-				sID: this.samples?.[0]?.sample
-			}
+		// a sample has already been selected
+		body.sample = {
+			eID: this.state.config.experimentID,
+			sID: this.state.config.sample
 		}
 		if (
 			this.state.config.gene &&
@@ -340,7 +339,7 @@ class singleCellPlot {
 			const result = await dofetch3('termdb/singlecellData', { body })
 			if (result.error) throw result.error
 			this.refName = result.refName
-			return result
+			this.data = result
 		} catch (e) {
 			if (e.stack) console.log(e.stack)
 			return { error: e }
@@ -348,6 +347,7 @@ class singleCellPlot {
 	}
 
 	async getSampleDetails(state) {
+		if (!this.samples) return ''
 		const sampleIdx = this.samples.findIndex(i => i.sample == state.config.sample)
 		if (sampleIdx == -1) return ''
 
@@ -485,13 +485,14 @@ class singleCellPlot {
 		this.dom.geDiv.style('display', 'none')
 		this.dom.showDiv.style('display', 'none')
 		this.dom.violinSelectDiv.style('display', 'none')
-		this.dom.samplesTableDiv.style('display', 'none').style('padding-bottom', '10px')
+		this.dom.samplesTableDiv.style('display', 'none')
 		this.dom.samplesPromptDiv.style('display', 'none')
 		this.dom.controlsHolder.style('display', 'none')
 		switch (id) {
 			case SAMPLES_TAB:
 				this.dom.samplesTableDiv.style('display', 'block')
 				this.dom.samplesPromptDiv.style('display', 'inline-block')
+				this.renderSamplesTable()
 				break
 			case PLOTS_TAB:
 				await this.renderPlots()
@@ -688,8 +689,6 @@ class singleCellPlot {
 		const sample =
 			this.state.config.experimentID || this.state.config.sample || this.samples?.[0]?.experiments[0]?.experimentID
 		const args = { genome: this.state.genome, dslabel: this.state.dslabel, categoryName, sample, columnName }
-		this.dom.loadingDiv.selectAll('*').remove()
-		this.dom.loadingDiv.style('display', '').append('div').text('Loading...')
 		const result = await dofetch3('termdb/singlecellDEgenes', { body: args })
 		if (result.error) {
 			tableDiv.text(result.error)
@@ -789,7 +788,6 @@ class singleCellPlot {
 			showDownload: true,
 			downloadFilename
 		})
-		this.dom.loadingDiv.style('display', 'none')
 		this.renderGSEA(GSEADiv)
 	}
 
@@ -955,14 +953,13 @@ class singleCellPlot {
 	}
 
 	showNoMatchingDataMessage() {
-		this.dom.mainDiv.style('opacity', 0.001).style('display', 'none')
-		this.dom.loadingDiv.style('display', '').html('')
-		const div = this.dom.loadingDiv
+		this.dom.mainDiv.style('display', 'none')
+		this.dom.loadingDiv.selectAll('*').remove()
+		this.dom.loadingDiv
+			.style('display', '')
 			.append('div')
 			.style('display', 'inline-block')
 			.style('text-align', 'center')
-			.style('position', 'relative')
-			.style('left', '-150px')
 			.style('font-size', '1.2em')
 			.style('margin', '2em 1em')
 			.html('No matching cohort data.')
@@ -1149,6 +1146,7 @@ class singleCellPlot {
 				.attr('height', height)
 				.style('display', 'inline-block')
 				.style('vertical-align', 'top')
+				.style('font-size', '0.9em')
 
 			plot.legendSVG = legendSVG
 		}
@@ -1224,7 +1222,7 @@ class singleCellPlot {
 			this.hideCategory(key, false, plot.legendSVG)
 			return
 		}
-		const menu = new Menu({ padding: '0px' })
+		const menu = this.tip.clear()
 		const div = menu.d.append('div')
 		div
 			.append('div')
@@ -1382,30 +1380,25 @@ class singleCellPlot {
 		this.tip.hide()
 	}
 
-	async renderSamplesTable(div, state) {
+	async renderSamplesTable() {
+		const state = this.state
 		// need to do this after the this.samples has been set
-		if (this.samples.length == 0) {
-			this.showNoMatchingDataMessage()
 
-			return
-		}
+		const div = this.dom.samplesTableDiv
 
 		div.selectAll('*').remove()
 		const [rows, columns] = await this.getTableData(state)
-		this.samplesTable = { rows, columns }
+		if (columns.length > 5) div.style('font-size', '0.9em')
 		const selectedRows = []
-		let sampleIdx = 0 // the first sample/experiment is selected by default on app launch
-		{
-			const i = this.samples.findIndex(i => i.sample == state.config.sample)
-			if (i != -1) selectedRows.push(i)
-		}
+		const i = this.samples.findIndex(i => i.sample == state.config.sample)
+		if (i != -1) selectedRows.push(i)
 		renderTable({
 			rows,
 			columns,
 			resize: true,
 			singleMode: true,
 			div,
-			maxWidth: columns.length > 3 ? '95vw' : '40vw',
+			maxWidth: columns.length > 3 ? '98vw' : '40vw',
 			maxHeight: '50vh',
 			noButtonCallback: index => {
 				// NOTE that "index" is not array index of this.samples[]
