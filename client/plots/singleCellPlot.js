@@ -267,6 +267,10 @@ class singleCellPlot {
 	// called in relevant dispatch when reactsTo==true
 	// or current.state != replcament.state
 	async main() {
+		if (this.state.config.activeTab && this.state.config.activeTab != SAMPLES_TAB && !this.state.config.sample) {
+			this.app.dispatch({ type: 'plot_edit', id: this.id, config: { activeTab: SAMPLES_TAB } })
+			return
+		}
 		try {
 			const body = {
 				genome: this.state.genome,
@@ -286,9 +290,10 @@ class singleCellPlot {
 			this.dom.loadingDiv.style('display', '').append('div').text('Loading...')
 			this.legendRendered = false
 			this.dom.plotsDiv.selectAll('*').remove()
-			this.data = await this.getData()
-			if (this.data.error) throw this.data.error
+			await this.getData()
+
 			this.dom.loadingDiv.style('display', 'none')
+
 			await this.setControls()
 			this.dom.sampleDiv.html(await this.getSampleDetails(this.state))
 			this.showActiveTab()
@@ -314,18 +319,10 @@ class singleCellPlot {
 		}
 		// change the sample to contains both sampleID and experimentID, so that they could
 		// both be used to query data. (GDC sc gene expression only support sample uuid now)
-		if (this.state.config.sample) {
-			// a sample has already been selected
-			body.sample = {
-				eID: this.state.config.experimentID,
-				sID: this.state.config.sample
-			}
-		} else {
-			// no given sample in state.config{}, assume that this.samples[] are already loaded, then use 1st sample
-			body.sample = {
-				eID: this.samples?.[0]?.experiments?.[0]?.experimentID,
-				sID: this.samples?.[0]?.sample
-			}
+		// a sample has already been selected
+		body.sample = {
+			eID: this.state.config.experimentID,
+			sID: this.state.config.sample
 		}
 		if (
 			this.state.config.gene &&
@@ -337,7 +334,7 @@ class singleCellPlot {
 			const result = await dofetch3('termdb/singlecellData', { body })
 			if (result.error) throw result.error
 			this.refName = result.refName
-			return result
+			this.data = result
 		} catch (e) {
 			if (e.stack) console.log(e.stack)
 			return { error: e }
