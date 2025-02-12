@@ -24,6 +24,7 @@ try:
             cachedir = json_object['cachedir']  # Get the cache directory from the JSON object
             genes = json_object['genes']  # Get the genes from the JSON object
             fold_change = json_object['fold_change']  # Get the fold change values from the JSON object
+            num_permutations = json_object['num_permutations'] # Number of permutations for GSEA analysis
             table_name = json_object['geneset_group']  # Get the gene set group from the JSON object
             filter_non_coding_genes = json_object['filter_non_coding_genes']  # Get the filter_non_coding_genes flag from the JSON object
             db = json_object['db']  # Get the database path from the JSON object
@@ -84,8 +85,12 @@ try:
                 # Check if geneset_name and pickle_file are present for generating the plot
                 geneset_name = json_object['geneset_name']  # Get the gene set name from the JSON object
                 pickle_file = json_object['pickle_file']  # Get the pickle file name from the JSON object
-                result = pd.read_pickle(os.path.join(cachedir, pickle_file))  # Load the result from the pickle file
-                fig = blitz.plot.running_sum(signature, geneset_name, msigdb_library, result=result.T, compact=True)  # Generate the running sum plot
+                if os.path.isfile(os.path.join(cachedir, pickle_file)): # Check if the pickle file exists as it may not be in the same server that did the original GSEA computation
+                    result = pd.read_pickle(os.path.join(cachedir, pickle_file))  # Load the result from the pickle file
+                    fig = blitz.plot.running_sum(signature, geneset_name, msigdb_library, result=result.T, compact=True)  # Generate the running sum plot
+                else: # If pickle file is not found, redo the GSEA computation from scratch
+                    result = blitz.gsea(signature, msigdb_library, permutations=num_permutations).T  # Perform GSEA computation and transpose the result
+                    fig = blitz.plot.running_sum(signature, geneset_name, msigdb_library, result=result.T, compact=True)  # Generate the running sum plot
                 random_num = np.random.rand()  # Generate a random number for unique png filename
                 png_filename = f"gsea_plot_{random_num}.png"  # Create a filename for the plot
                 fig.savefig(os.path.join(cachedir, png_filename), bbox_inches='tight')  # Save the plot as a PNG file
@@ -94,8 +99,7 @@ try:
                 # Initial GSEA calculation and save the result to a pickle file
                 start_gsea_time = time.time()  # Record the start time of GSEA
                 if __name__ == "__main__":
-                    num_permutations = json_object['num_permutations'] # Number of permutations for GSEA analysis
-                    result = blitz.gsea(signature, msigdb_library, permutations=num_permutations).T  # Perform GSEA and transpose the result
+                    result = blitz.gsea(signature, msigdb_library, permutations=num_permutations).T  # Perform GSEA computation and transpose the result
                     random_num = np.random.rand()  # Generate a random number for unique pickle filename
                     pickle_filename = f"gsea_result_{random_num}.pkl"  # Create a filename for the pickle file
                     result.to_pickle(os.path.join(cachedir, pickle_filename))  # Save the result to the pickle file

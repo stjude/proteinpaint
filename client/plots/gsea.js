@@ -235,11 +235,7 @@ add:
 		if (self.settings.fdr_or_top == 'top') {
 			// Sorting the top (top_genesets) genesets in decreasing order
 			output_keys.sort((i, j) => Number(i.value.fdr) - Number(j.value.fdr))
-			let top_genesets = self.settings.top_genesets
-			if (self.settings.top_genesets > output_keys.length) {
-				// If the length of the table is less than the top cutoff, only iterate
-				top_genesets = output_keys.length
-			}
+			const top_genesets = Math.min(self.settings.top_genesets, output_keys.length) // If the length of the table is less than the top cutoff, only iterate till the end of the table
 			for (let iter = 0; iter < top_genesets; iter++) {
 				const pathway_name = output_keys[iter].key
 				if (
@@ -338,9 +334,10 @@ add:
 					geneset_name: self.gsea_table_rows[index][0].value,
 					genes: self.config.gsea_params.genes,
 					fold_change: self.config.gsea_params.fold_change,
-					geneSetGroup: self.config.gsea_params.geneSetGroup,
+					geneSetGroup: self.settings.pathway,
 					pickle_file: output.pickle_file,
-					filter_non_coding_genes: self.settings.filter_non_coding_genes
+					filter_non_coding_genes: self.settings.filter_non_coding_genes,
+					num_permutations: self.settings.num_permutations
 				}
 				const holder = self.dom.holder
 				holder.selectAll('*').remove()
