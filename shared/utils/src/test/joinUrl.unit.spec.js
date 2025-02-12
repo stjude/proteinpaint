@@ -7,7 +7,7 @@ tape('\n', function (test) {
 })
 
 tape('joinUrl', test => {
-	test.throws(() => joinUrl(1, ''), /both arguments must be string/, 'throws on non-string argument')
+	test.throws(() => joinUrl(1, ''), /first argument must be string type/, 'throws on non-string argument')
 	test.throws(() => joinUrl('', ''), /blank string not allowed/, 'throws on blank string')
 	test.throws(() => joinUrl('abc', ''), /blank string not allowed/, 'throws on blank string')
 	test.throws(() => joinUrl('', 'abc'), /blank string not allowed/, 'throws on blank string')
@@ -16,7 +16,7 @@ tape('joinUrl', test => {
 	test.equal(joinUrl('/abc', '/def'), '/abc/def', 'url joined')
 	test.equal(joinUrl('/abc/', '/def'), '/abc/def', 'url joined')
 	test.equal(joinUrl('x://abc/d/e/', '/f/g/'), 'x://abc/d/e/f/g/', 'double slash // is preserved')
-	test.equal(joinUrl(joinUrl('x://abc/d/', 'e/f'), '/g/h/'), 'x://abc/d/e/f/g/h/', '3 pieces joined')
+	test.equal(joinUrl('x://abc/d/', 'e/f', '/g/h/'), 'x://abc/d/e/f/g/h/', '3 pieces joined')
 	test.equal(
 		joinUrl(
 			joinUrl('https://api.gdc.cancer.gov/', 'ssms'),
