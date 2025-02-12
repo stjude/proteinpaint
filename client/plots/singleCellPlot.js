@@ -144,7 +144,7 @@ class singleCellPlot {
 				callback: () => this.setActiveTab(IMAGES_TAB)
 			})
 		const q = state.termdbConfig.queries
-		this.opts.holder.style('position', 'relative')
+		this.opts.holder.style('position', 'relative').style('min-height', '200px')
 		this.mainDivId = `${this.id}-sandbox`
 		const errorDiv = this.opts.holder.append('div')
 		const mainDiv = this.opts.holder
@@ -953,9 +953,10 @@ class singleCellPlot {
 	}
 
 	showNoMatchingDataMessage() {
-		this.dom.loadingDiv.style('display', '').html('')
 		this.dom.mainDiv.style('display', 'none')
-		const div = this.dom.loadingDiv
+		this.dom.loadingDiv.selectAll('*').remove()
+		this.dom.loadingDiv
+			.style('display', '')
 			.append('div')
 			.style('display', 'inline-block')
 			.style('text-align', 'center')
