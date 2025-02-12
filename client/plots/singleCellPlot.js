@@ -88,12 +88,7 @@ class singleCellPlot {
 		if (this.opts.header) this.opts.header.html(`SINGLE CELL PLOT`).style('font-size', '0.9em')
 		this.samples = result.samples
 		// need to set the this.samples based on the current filter0
-		// TODO no need to sort samples?
-		this.samples.sort((elem1, elem2) => {
-			const result = elem1.primarySite?.localeCompare(elem2.primarySite) // FIXME not good to hardcode gdc-specific property. won't work for non-gdc ds
-			if (result == 1 || result == -1) return result
-			else return elem1.sample.localeCompare(elem2.sample)
-		})
+
 		this.tabs = []
 		const activeTab = state.config.activeTab
 		// shared isVisible function for tabs that require config.sample;
@@ -124,15 +119,14 @@ class singleCellPlot {
 				callback: () => this.setActiveTab(DIFFERENTIAL_EXPRESSION_TAB)
 			})
 		}
-
-		this.tabs.push({
-			// TODO only add tab if(state.termdbConfig.queries.singleCell.geneExpression) {}
-			label: 'Gene Expression',
-			id: GENE_EXPRESSION_TAB,
-			active: activeTab == GENE_EXPRESSION_TAB,
-			isVisible,
-			callback: () => this.setActiveTab(GENE_EXPRESSION_TAB)
-		})
+		if (state.termdbConfig.queries.singleCell.geneExpression)
+			this.tabs.push({
+				label: 'Gene Expression',
+				id: GENE_EXPRESSION_TAB,
+				active: activeTab == GENE_EXPRESSION_TAB,
+				isVisible,
+				callback: () => this.setActiveTab(GENE_EXPRESSION_TAB)
+			})
 
 		// summary tab is not limited to geneExp, as later it can be applied to cell category terms too (if there are multiple)
 		this.tabs.push({
