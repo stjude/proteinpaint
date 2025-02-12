@@ -634,7 +634,7 @@ export function setRenderers(self) {
 		// const helpDiv = toolsDiv
 		// 	.insert('div')
 		// 	.style('display', display)
-		// 	.style('margin', '20px')
+		// 	.style('margin', '15px 10px')
 		// 	.attr('name', 'sjpp-help-btn') //For unit tests
 		// icon_functions['help'](helpDiv, {
 		// 	handler: () => window.open('https://github.com/stjude/proteinpaint/wiki/Scatter-plot', '_blank')
@@ -643,13 +643,13 @@ export function setRenderers(self) {
 		const homeDiv = toolsDiv
 			.insert('div')
 			.style('display', display)
-			.style('margin', '20px')
+			.style('margin', '15px 10px')
 			.attr('name', 'sjpp-reset-btn') //For unit tests
 		icon_functions['restart'](homeDiv, { handler: resetToIdentity, title: 'Reset plot to defaults' })
 		const zoomInDiv = toolsDiv
 			.insert('div')
 			.style('display', display)
-			.style('margin', '20px')
+			.style('margin', '15px 10px')
 			.attr('name', 'sjpp-zoom-in-btn') //For unit tests
 		icon_functions['zoomIn'](zoomInDiv, {
 			handler: zoomIn,
@@ -658,14 +658,14 @@ export function setRenderers(self) {
 		const zoomOutDiv = toolsDiv
 			.insert('div')
 			.style('display', display)
-			.style('margin', '20px')
+			.style('margin', '15px 10px')
 			.attr('name', 'sjpp-zoom-out-btn') //For unit tests
 		icon_functions['zoomOut'](zoomOutDiv, {
 			handler: zoomOut,
 			title: 'Zoom out. You can also zoom out pressing the Ctrl key and using the mouse wheel'
 		})
-		const searchDiv = toolsDiv.insert('div').style('display', display).style('margin', '20px')
-		const lassoDiv = toolsDiv.insert('div').style('display', display).style('margin', '20px')
+		const searchDiv = toolsDiv.insert('div').style('display', display).style('margin', '15px 10px')
+		const lassoDiv = toolsDiv.insert('div').style('display', display).style('margin', '15px 10px')
 		if (!(self.is2DLarge || self.is3D)) {
 			icon_functions['search'](searchDiv, { handler: e => self.searchSample(e), title: 'Search samples' })
 			icon_functions['lasso'](lassoDiv, {
@@ -674,7 +674,7 @@ export function setRenderers(self) {
 				title: 'Select a group of samples'
 			})
 		}
-		self.dom.groupDiv = toolsDiv.insert('div').style('display', display).style('margin', '20px')
+		self.dom.groupDiv = toolsDiv.insert('div').style('display', display).style('margin', '15px 10px')
 
 		const mainG = self.charts[0].mainG
 		const zoom = d3zoom()

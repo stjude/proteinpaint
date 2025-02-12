@@ -65,7 +65,7 @@ function setInteractivity(self) {
 }
 
 function burgerBtnInit(opts) {
-	const burguerDiv = opts.holder.style('margin', '15px 20px')
+	const burguerDiv = opts.holder.style('margin', '10px')
 	icon_functions['burguer'](burguerDiv, { handler: opts.callback, title: opts.title || 'Settings' })
 
 	const self = {
@@ -85,7 +85,7 @@ function burgerBtnInit(opts) {
 }
 
 function helpBtnInit(opts) {
-	const infoDiv = opts.holder.style('margin', '20px')
+	const infoDiv = opts.holder.style('margin', '10px')
 
 	icon_functions['help'](infoDiv, { handler: opts.callback, title: 'Documentation' })
 
@@ -109,7 +109,7 @@ function helpBtnInit(opts) {
 }
 
 function downloadBtnInit(opts) {
-	const downloadDiv = opts.holder.style('margin-left', '20px')
+	const downloadDiv = opts.holder.style('margin-left', '10px')
 	icon_functions['download'](downloadDiv, { handler: opts.callback, title: opts.title || 'Download plot image' })
 
 	const self = {
