@@ -8,6 +8,7 @@ Features:
 - On the SC plot:
 - SC plot: Showed control settings only in Plots and Gene Expression. Showed Sample column after Case. Added download icon in the DE table. The downloaded plots now
 - Table: Added download table option
+- In the SC plot added tabs Differentially Expressed Genes and Gene Set Enrichment Analysis under Differential Expression
 
 Fixes:
 - at querying GDC cnv file, remove use of sample_type and adapt to new file format

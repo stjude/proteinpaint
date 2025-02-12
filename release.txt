@@ -1,3 +1,1 @@
-Features
 
-- In the SC plot added tabs Differentially Expressed Genes and Gene Set Enrichment Analysis under Differential Expression
