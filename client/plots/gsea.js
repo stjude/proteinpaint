@@ -259,11 +259,11 @@ add:
 						: output_keys[iter].value.fdr
 					self.gsea_table_rows.push([
 						{ value: pathway_name },
-						{ value: es },
+						//{ value: es },
 						{ value: nes },
 						{ value: output_keys[iter].value.geneset_size },
 						{ value: pval },
-						{ value: sidak },
+						//{ value: sidak },
 						{ value: fdr },
 						{ value: output_keys[iter].value.leading_edge }
 					])
@@ -294,11 +294,11 @@ add:
 						: output_keys[iter].value.fdr
 					self.gsea_table_rows.push([
 						{ value: pathway_name },
-						{ value: es },
+						//{ value: es },
 						{ value: nes },
 						{ value: output_keys[iter].value.geneset_size },
 						{ value: pval },
-						{ value: sidak },
+						//{ value: sidak },
 						{ value: fdr },
 						{ value: output_keys[iter].value.leading_edge }
 					])
@@ -311,11 +311,11 @@ add:
 		// table columns showing analysis results for each gene set
 		self.gsea_table_cols = [
 			{ label: 'Geneset' },
-			{ label: 'Enrichment Score' },
+			//{ label: 'Enrichment Score' },
 			{ label: 'Normalized Enrichment Score' },
 			{ label: 'Geneset Size' },
 			{ label: 'P value' },
-			{ label: 'Sidak' },
+			//{ label: 'Sidak' },
 			{ label: 'FDR' },
 			{ label: 'Leading Edge' }
 		]
