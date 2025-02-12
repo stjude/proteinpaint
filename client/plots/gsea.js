@@ -232,81 +232,81 @@ add:
 		const output_keys = Object.entries(output.data).map(([key, value]) => {
 			return { key, value } // Convert to an array of objects
 		})
-		output_keys.filter(i => self.settings.fdr_cutoff >= Number(i.value.fdr)) // Filtering gene sets according to FDR cutoff
-		// Sorting the top (top_genesets) genesets in decreasing order
-		output_keys.sort((i, j) => Number(j.value.nes) - Number(i.value.nes))
-		let top_genesets = self.settings.top_genesets
-		if (self.settings.top_genesets > output_keys.length) {
-			top_genesets = output_keys.length
-		}
-		for (let iter = 0; iter < top_genesets; iter++) {
-			const pathway_name = output_keys[iter].key
-			if (
-				self.settings.fdr_cutoff >= output_keys[iter].value.fdr &&
-				self.settings.max_gene_set_size_cutoff >= output_keys[iter].value.geneset_size &&
-				self.settings.min_gene_set_size_cutoff <= output_keys[iter].value.geneset_size
-			) {
-				const es = output_keys[iter].value.es ? roundValueAuto(output_keys[iter].value.es) : output_keys[iter].value.es
-				const nes = output_keys[iter].value.nes
-					? roundValueAuto(output_keys[iter].value.nes)
-					: output_keys[iter].value.nes
-				const pval = output_keys[iter].value.pval
-					? roundValueAuto(output_keys[iter].value.pval)
-					: output_keys[iter].value.pval
-				const sidak = output_keys[iter].value.sidak
-					? roundValueAuto(output_keys[iter].value.sidak)
-					: output_keys[iter].value.sidak
-				const fdr = output_keys[iter].value.fdr
-					? roundValueAuto(output_keys[iter].value.fdr)
-					: output_keys[iter].value.fdr
-				self.gsea_table_rows.push([
-					{ value: pathway_name },
-					{ value: es },
-					{ value: nes },
-					{ value: output_keys[iter].value.geneset_size },
-					{ value: pval },
-					{ value: sidak },
-					{ value: fdr },
-					{ value: output_keys[iter].value.leading_edge }
-				])
+		if (self.settings.fdr_or_top == 'top') {
+			// Sorting the top (top_genesets) genesets in decreasing order
+			output_keys.sort((i, j) => Number(i.value.fdr) - Number(j.value.fdr))
+			let top_genesets = self.settings.top_genesets
+			if (self.settings.top_genesets > output_keys.length) {
+				// If the length of the table is less than the top cutoff, only iterate
+				top_genesets = output_keys.length
 			}
-		}
-		let top_deactivated_genesets = top_genesets // It is possible that if the number of genesets is too low and a very high "top_genesets" cutoff could print the geneset twice. In such a case only those genesets will be displayed again which have not been displayed by the previous for loop.
-		if (output_keys.length - top_genesets < top_genesets) {
-			top_deactivated_genesets = output_keys.length - top_genesets
-		}
-
-		for (let iter2 = 0; iter2 < top_deactivated_genesets; iter2++) {
-			const iter = output_keys.length - 1 - top_deactivated_genesets + iter2
-			const pathway_name = output_keys[iter].key
-			if (
-				self.settings.fdr_cutoff >= output_keys[iter].value.fdr &&
-				self.settings.max_gene_set_size_cutoff >= output_keys[iter].value.geneset_size &&
-				self.settings.min_gene_set_size_cutoff <= output_keys[iter].value.geneset_size
-			) {
-				const es = output_keys[iter].value.es ? roundValueAuto(output_keys[iter].value.es) : output_keys[iter].value.es
-				const nes = output_keys[iter].value.nes
-					? roundValueAuto(output_keys[iter].value.nes)
-					: output_keys[iter].value.nes
-				const pval = output_keys[iter].value.pval
-					? roundValueAuto(output_keys[iter].value.pval)
-					: output_keys[iter].value.pval
-				const sidak = output_keys[iter].value.sidak
-					? roundValueAuto(output_keys[iter].value.sidak)
-					: output_keys[iter].value.sidak
-				const fdr = output_keys[iter].value.fdr
-					? roundValueAuto(output_keys[iter].value.fdr)
-					: output_keys[iter].value.fdr
-				self.gsea_table_rows.push([
-					{ value: pathway_name },
-					{ value: es },
-					{ value: nes },
-					{ value: output_keys[iter].value.geneset_size },
-					{ value: pval },
-					{ value: sidak },
-					{ value: fdr },
-					{ value: output_keys[iter].value.leading_edge }
-				])
+			for (let iter = 0; iter < top_genesets; iter++) {
+				const pathway_name = output_keys[iter].key
+				if (
+					self.settings.max_gene_set_size_cutoff >= output_keys[iter].value.geneset_size &&
+					self.settings.min_gene_set_size_cutoff <= output_keys[iter].value.geneset_size
+				) {
+					const es = output_keys[iter].value.es
+						? roundValueAuto(output_keys[iter].value.es)
+						: output_keys[iter].value.es
+					const nes = output_keys[iter].value.nes
+						? roundValueAuto(output_keys[iter].value.nes)
+						: output_keys[iter].value.nes
+					const pval = output_keys[iter].value.pval
+						? roundValueAuto(output_keys[iter].value.pval)
+						: output_keys[iter].value.pval
+					const sidak = output_keys[iter].value.sidak
+						? roundValueAuto(output_keys[iter].value.sidak)
+						: output_keys[iter].value.sidak
+					const fdr = output_keys[iter].value.fdr
+						? roundValueAuto(output_keys[iter].value.fdr)
+						: output_keys[iter].value.fdr
+					self.gsea_table_rows.push([
+						{ value: pathway_name },
+						{ value: es },
+						{ value: nes },
+						{ value: output_keys[iter].value.geneset_size },
+						{ value: pval },
+						{ value: sidak },
+						{ value: fdr },
+						{ value: output_keys[iter].value.leading_edge }
+					])
+				}
+			}
+		} else if (self.settings.fdr_or_top == 'fdr') {
+			for (let iter = 0; iter < output_keys.length; iter++) {
+				const pathway_name = output_keys[iter].key
+				if (
+					self.settings.fdr_cutoff >= output_keys[iter].value.fdr &&
+					self.settings.max_gene_set_size_cutoff >= output_keys[iter].value.geneset_size &&
+					self.settings.min_gene_set_size_cutoff <= output_keys[iter].value.geneset_size
+				) {
+					const es = output_keys[iter].value.es
+						? roundValueAuto(output_keys[iter].value.es)
+						: output_keys[iter].value.es
+					const nes = output_keys[iter].value.nes
+						? roundValueAuto(output_keys[iter].value.nes)
+						: output_keys[iter].value.nes
+					const pval = output_keys[iter].value.pval
+						? roundValueAuto(output_keys[iter].value.pval)
+						: output_keys[iter].value.pval
+					const sidak = output_keys[iter].value.sidak
+						? roundValueAuto(output_keys[iter].value.sidak)
+						: output_keys[iter].value.sidak
+					const fdr = output_keys[iter].value.fdr
+						? roundValueAuto(output_keys[iter].value.fdr)
+						: output_keys[iter].value.fdr
+					self.gsea_table_rows.push([
+						{ value: pathway_name },
+						{ value: es },
+						{ value: nes },
+						{ value: output_keys[iter].value.geneset_size },
+						{ value: pval },
+						{ value: sidak },
+						{ value: fdr },
+						{ value: output_keys[iter].value.leading_edge }
+					])
+				}
 			}
 		}
 
@@ -435,7 +435,7 @@ export async function getPlotConfig(opts, app) {
 					min_gene_set_size_cutoff: 0,
 					max_gene_set_size_cutoff: 20000,
 					filter_non_coding_genes: true,
-					fdr_or_top: 'fdr'
+					fdr_or_top: 'top'
 				},
 				controls: { isOpen: true }
 			}
