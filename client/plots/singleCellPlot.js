@@ -82,11 +82,9 @@ class singleCellPlot {
 		// TODO sample table still needs to be changed when gdc (external portal) cohort changes
 
 		const state = this.getState(appState)
-		const body = { genome: state.genome, dslabel: state.dslabel, filter0: state.termfilter.filter0 || null }
-		const result = await dofetch3('termdb/singlecellSamples', { body })
-		if (result.error) throw result.error
+
 		if (this.opts.header) this.opts.header.html(`SINGLE CELL PLOT`).style('font-size', '0.9em')
-		this.samples = result.samples
+
 		// need to set the this.samples based on the current filter0
 
 		this.tabs = []
@@ -270,6 +268,14 @@ class singleCellPlot {
 	// or current.state != replcament.state
 	async main() {
 		try {
+			const body = {
+				genome: this.state.genome,
+				dslabel: this.state.dslabel,
+				filter0: this.state.termfilter.filter0 || null
+			}
+			const result = await dofetch3('termdb/singlecellSamples', { body })
+			if (result.error) throw result.error
+			this.samples = result.samples
 			this.colorByGene =
 				this.state.config.activeTab == GENE_EXPRESSION_TAB || this.state.config.activeTab == DIFFERENTIAL_EXPRESSION_TAB
 			this.config = structuredClone(this.state.config) // this config can be edited to dispatch changes
@@ -283,10 +289,9 @@ class singleCellPlot {
 			this.data = await this.getData()
 			if (this.data.error) throw this.data.error
 			this.dom.loadingDiv.style('display', 'none')
-			this.showActiveTab()
 			await this.setControls()
-
 			this.dom.sampleDiv.html(await this.getSampleDetails(this.state))
+			this.showActiveTab()
 		} catch (e) {
 			this.app.tip.hide()
 			this.dom.loadingDiv.style('display', 'none')
@@ -307,7 +312,6 @@ class singleCellPlot {
 			plots,
 			filter0: this.state.termfilter.filter0
 		}
-
 		// change the sample to contains both sampleID and experimentID, so that they could
 		// both be used to query data. (GDC sc gene expression only support sample uuid now)
 		if (this.state.config.sample) {
@@ -341,6 +345,7 @@ class singleCellPlot {
 	}
 
 	async getSampleDetails(state) {
+		if (!this.samples) return ''
 		const sampleIdx = this.samples.findIndex(i => i.sample == state.config.sample)
 		if (sampleIdx == -1) return ''
 
@@ -1377,6 +1382,8 @@ class singleCellPlot {
 	}
 
 	async renderSamplesTable() {
+		const state = this.state
+
 		// need to do this after the this.samples has been set
 		if (this.samples.length == 0) {
 			this.showNoMatchingDataMessage()
@@ -1384,7 +1391,6 @@ class singleCellPlot {
 			return
 		}
 		const div = this.dom.samplesTableDiv
-		const state = this.state
 		div.selectAll('*').remove()
 		const [rows, columns] = await this.getTableData(state)
 		this.samplesTable = { rows, columns }
