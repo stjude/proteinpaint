@@ -180,7 +180,7 @@ class singleCellPlot {
 			.append('div')
 			.style('display', 'none')
 			.text('Select a sample below to see its data:')
-			.style('padding-right', '40px')
+			.style('padding', '0px 40px 10px 10px')
 		const showDiv = headerDiv.append('div').style('padding-bottom', '10px')
 
 		if (state.config.plots.length > 1) this.renderShowPlots(showDiv, state)
