@@ -2,7 +2,7 @@ import { getCompInit } from '#rx'
 import { dofetch3 } from '#common/dofetch'
 import { select as d3select } from 'd3-selection'
 import { scaleLinear } from 'd3-scale'
-import { line as d3line } from 'd3-shape'
+import { line as d3line, curveBasis as d3curveBasis } from 'd3-shape'
 import { min as d3min, max as d3max } from 'd3-array'
 import { zoom as d3zoom, zoomIdentity } from 'd3-zoom'
 
@@ -52,22 +52,38 @@ class pathwayAnalysis {
 async function renderPathway(self, kdata) {
 	const holder = self.dom.holder
 	holder.selectAll('*').remove()
-	const nodes = JSON.parse(kdata[0])
-	const coords = JSON.parse(kdata[1])
+	const cpd = JSON.parse(kdata[0])
+	const ko = JSON.parse(kdata[1])
 	const width = 900,
 		height = 600
 	const margin = { top: 20, right: 30, bottom: 30, left: 40 }
-	console.log([d3min(coords, d => Math.min(d.x, d.xend)) - 10, d3max(coords, d => Math.max(d.x, d.xend)) + 10])
-	console.log([d3min(coords, d => Math.min(d.y, d.yend)) - 10, d3max(coords, d => Math.max(d.y, d.yend)) + 10])
+	// calculate the min and max of x and y
+	const cpdMinx = d3min(cpd, d => d.x)
+	const cpdMiny = d3min(cpd, d => d.y)
+	const cpdMaxx = d3max(cpd, d => d.x)
+	const cpdMaxy = d3max(cpd, d => d.y)
+	const koMinx = d3min(ko, d => d3min(d.coords, c => c[0]))
+	const koMaxx = d3max(ko, d => d3max(d.coords, c => c[0]))
+	const koMiny = d3min(ko, d => d3min(d.coords, c => c[1]))
+	const koMaxy = d3max(ko, d => d3max(d.coords, c => c[1]))
+	const minx = Math.min(cpdMinx, koMinx)
+	const maxx = Math.max(cpdMaxx, koMaxx)
+	const miny = Math.min(cpdMiny, koMiny)
+	const maxy = Math.max(cpdMaxy, koMaxy)
+	console.log([minx - 10, maxx + 10])
+	console.log([miny - 10, maxy + 10])
+
 	const xScale = scaleLinear()
-		.domain([d3min(coords, d => Math.min(d.x, d.xend)) - 10, d3max(coords, d => Math.max(d.x, d.xend)) + 10])
+		.domain([minx - 10, maxx + 10])
 		.range([margin.left, width - margin.right])
 	const yScale = scaleLinear()
-		.domain([d3min(coords, d => Math.min(d.y, d.yend)) - 10, d3max(coords, d => Math.max(d.y, d.yend)) + 10])
+		.domain([miny - 10, maxy + 10])
 		.range([height - margin.bottom, margin.top])
 	const line = d3line()
-		.x(d => xScale(d.x))
-		.y(d => yScale(d.y))
+		.curve(d3curveBasis)
+		.x(d => xScale(d[0]))
+		.y(d => yScale(d[1]))
+
 	const zoom = d3zoom().scaleExtent([0.7, 10]).on('zoom', zoomed)
 	function zoomed({ transform }) {
 		svg.attr('transform', transform)
@@ -113,7 +129,6 @@ async function renderPathway(self, kdata) {
 		.style('padding', '5px')
 
 	const pa_area = svg.append('g')
-	console.log(nodes)
 	pa_area
 		.append('g')
 		.append('rect')
@@ -125,13 +140,14 @@ async function renderPathway(self, kdata) {
 		.attr('fill', '#ffffff')
 		.style('stroke-width', 1)
 		.style('stroke', '#000000')
+
 	pa_area
 		.append('g')
 		.selectAll('path')
-		.data(coords)
+		.data(ko)
 		.enter()
 		.append('path')
-		.attr('d', d => line([d, { x: d.xend, y: d.yend }]))
+		.attr('d', d => line(d.coords))
 		.attr('fill', 'none')
 		.attr('stroke', d => d.fgcolor)
 		.attr('stroke-width', 0.7)
@@ -150,7 +166,7 @@ async function renderPathway(self, kdata) {
 	pa_area
 		.append('g')
 		.selectAll('circle')
-		.data(nodes)
+		.data(cpd)
 		.enter()
 		.append('circle')
 		.attr('cx', d => xScale(d.x))
