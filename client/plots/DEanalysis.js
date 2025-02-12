@@ -168,7 +168,8 @@ class DEanalysis {
 				type: 'radio',
 				chartType: 'DEanalysis',
 				settingsKey: 'gene_ora',
-				title: 'Toggle to check if certain gene sets are overrepresented among upregulated, downregulated, or both sets of genes',
+				title:
+					'Toggle to check if certain gene sets are overrepresented among upregulated, downregulated, or both sets of genes',
 				options: [
 					{ label: 'upregulated', value: 'upregulated' },
 					{ label: 'downregulated', value: 'downregulated' },
@@ -181,7 +182,7 @@ class DEanalysis {
 			// Check if genome build contains termdbs, only then enable gene ora
 			inputs.push({
 				label: 'Gene Set Enrichment Analysis',
-				type: 'checkbox',
+				type: 'radio',
 				chartType: 'DEanalysis',
 				settingsKey: 'gsea',
 				title: 'Select to check if certain gene sets are enriched among the two biological conditions',
