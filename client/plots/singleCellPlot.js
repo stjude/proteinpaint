@@ -88,6 +88,7 @@ class singleCellPlot {
 		if (this.opts.header) this.opts.header.html(`SINGLE CELL PLOT`).style('font-size', '0.9em')
 		this.samples = result.samples
 		// need to set the this.samples based on the current filter0
+		// TODO no need to sort samples?
 		this.samples.sort((elem1, elem2) => {
 			const result = elem1.primarySite?.localeCompare(elem2.primarySite) // FIXME not good to hardcode gdc-specific property. won't work for non-gdc ds
 			if (result == 1 || result == -1) return result
@@ -114,7 +115,7 @@ class singleCellPlot {
 			isVisible,
 			callback: () => this.setActiveTab(PLOTS_TAB)
 		})
-		if (state.termdbConfig.queries?.singleCell?.DEgenes) {
+		if (state.termdbConfig.queries.singleCell.DEgenes) {
 			this.tabs.push({
 				label: 'Differential Expression',
 				id: DIFFERENTIAL_EXPRESSION_TAB,
@@ -125,6 +126,7 @@ class singleCellPlot {
 		}
 
 		this.tabs.push({
+			// TODO only add tab if(state.termdbConfig.queries.singleCell.geneExpression) {}
 			label: 'Gene Expression',
 			id: GENE_EXPRESSION_TAB,
 			active: activeTab == GENE_EXPRESSION_TAB,
@@ -132,6 +134,7 @@ class singleCellPlot {
 			callback: () => this.setActiveTab(GENE_EXPRESSION_TAB)
 		})
 
+		// summary tab is not limited to geneExp, as later it can be applied to cell category terms too (if there are multiple)
 		this.tabs.push({
 			label: 'Summary',
 			id: VIOLIN_TAB,
@@ -140,7 +143,7 @@ class singleCellPlot {
 			callback: () => this.setActiveTab(VIOLIN_TAB)
 		})
 
-		if (state.termdbConfig.queries?.singleCell?.images)
+		if (state.termdbConfig.queries.singleCell.images)
 			this.tabs.push({
 				label: state.termdbConfig.queries.singleCell.images.label,
 				id: IMAGES_TAB,
@@ -709,13 +712,16 @@ class singleCellPlot {
 				callback: () => showActiveDETab(DE_GENES_TAB)
 			}
 		]
-		if (this.app.opts.genome.termdbs)
+		if (this.app.opts.genome.termdbs) {
+			// assumption is that can run gsea on the differential genes, when the genome-level termdb is available (which is right now geneset dbs)
 			tabs.push({
 				label: 'Gene Set Enrichment Analysis',
 				id: DE_GSEA_TAB,
 				active: false,
 				callback: () => showActiveDETab(DE_GSEA_TAB)
 			})
+		}
+
 		function showActiveDETab(id) {
 			tableDiv.style('display', 'none')
 			GSEADiv.style('display', 'none')
