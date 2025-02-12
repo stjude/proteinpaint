@@ -235,7 +235,11 @@ add:
 		output_keys.filter(i => self.settings.fdr_cutoff >= Number(i.value.fdr)) // Filtering gene sets according to FDR cutoff
 		// Sorting the top (top_genesets) genesets in decreasing order
 		output_keys.sort((i, j) => Number(j.value.nes) - Number(i.value.nes))
-		for (let iter = 0; iter < self.settings.top_genesets; iter++) {
+		let top_genesets = self.settings.top_genesets
+		if (self.settings.top_genesets > output_keys.length) {
+			top_genesets = output_keys.length
+		}
+		for (let iter = 0; iter < top_genesets; iter++) {
 			const pathway_name = output_keys[iter].key
 			if (
 				self.settings.fdr_cutoff >= output_keys[iter].value.fdr &&
@@ -267,9 +271,9 @@ add:
 				])
 			}
 		}
-		let top_deactivated_genesets = self.settings.top_genesets // It is possible that if the number of genesets is too low and a very high "top_genesets" cutoff could print the geneset twice. In such a case only those genesets will be displayed again which have not been displayed by the previous for loop.
-		if (output_keys.length - self.settings.top_genesets < self.settings.top_genesets) {
-			top_deactivated_genesets = output_keys.length - self.settings.top_genesets
+		let top_deactivated_genesets = top_genesets // It is possible that if the number of genesets is too low and a very high "top_genesets" cutoff could print the geneset twice. In such a case only those genesets will be displayed again which have not been displayed by the previous for loop.
+		if (output_keys.length - top_genesets < top_genesets) {
+			top_deactivated_genesets = output_keys.length - top_genesets
 		}
 
 		for (let iter2 = 0; iter2 < top_deactivated_genesets; iter2++) {
