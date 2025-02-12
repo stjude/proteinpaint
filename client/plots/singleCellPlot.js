@@ -703,7 +703,7 @@ class singleCellPlot {
 		const GSEADiv = DEContentDiv.append('div').style('display', 'none')
 		const tabs = [
 			{
-				label: 'Genes',
+				label: 'Differentially Expressed Genes',
 				id: DE_GENES_TAB,
 				active: true,
 				callback: () => showActiveDETab(DE_GENES_TAB)
@@ -711,7 +711,7 @@ class singleCellPlot {
 		]
 		if (this.app.opts.genome.termdbs)
 			tabs.push({
-				label: 'GSEA',
+				label: 'Gene Set Enrichment Analysis',
 				id: DE_GSEA_TAB,
 				active: false,
 				callback: () => showActiveDETab(DE_GSEA_TAB)
