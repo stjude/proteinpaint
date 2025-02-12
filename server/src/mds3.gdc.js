@@ -864,7 +864,7 @@ async function getCnvFusion4oneCase(opts, ds) {
 	if (wgsFile || snpFile) {
 		// has cnv file based on either wgs or snp array; wgs has priority
 		// do not use headers here since accept should be 'text/plain', not 'application/json'
-		const re = await ky(joinUrl(joinUrl(host.rest, 'data'), wgsFile || snpFile), { timeout: false }).text()
+		const re = await ky(joinUrl(host.rest, 'data', wgsFile || snpFile), { timeout: false }).text()
 		parseCnvFile(re.trim().split('\n'), events)
 		//console.log(11, wgsFile ? 'wgs' : 'snp') // for testing to find out which is used
 	}
@@ -872,7 +872,7 @@ async function getCnvFusion4oneCase(opts, ds) {
 	if (arribaFile) {
 		try {
 			// must use headers to access controlled fusion file
-			const re = await ky(joinUrl(joinUrl(host.rest, 'data'), arribaFile), { headers, timeout: false }).text()
+			const re = await ky(joinUrl(host.rest, 'data', arribaFile), { headers, timeout: false }).text()
 			const lines = re.split('\n')
 			// first line is header
 			// #chrom1 start1  end1    chrom2  start2  end2    name    score   strand1 strand2 strand1(gene/fusion)    strand2(gene/fusion)    site1   site2   type    direction1      direction2      split_reads1    split_reads2    discordant_mates        coverage1       coverage2       closest_genomic_breakpoint1     closest_genomic_breakpoint2     filters fusion_transcript       reading_frame   peptide_sequence        read_identifiers
@@ -2093,7 +2093,7 @@ async function getCaseidByFileid(q, fileId, ds) {
 		fields: 'cases.case_id'
 	}
 	const { host, headers } = ds.getHostHeaders(q)
-	const re = await ky.post(joinUrl(joinUrl(host.rest, 'files'), fileId), { timeout: false, headers, json }).json()
+	const re = await ky.post(joinUrl(host.rest, 'files', fileId), { timeout: false, headers, json }).json()
 	if (!re.data?.cases?.[0].case_id) throw 'structure not re.data.cases[].case_id'
 	return re.data?.cases[0].case_id
 }
@@ -2163,7 +2163,7 @@ async function getSinglecellDEgenes(q, degFileId, ds) {
 	// with seurat.deg.tsv file id, read file content and find DE genes belonging to given cluster
 	const { host } = ds.getHostHeaders(q)
 	// do not use headers here that has accept: 'application/json'
-	const re = await ky(joinUrl(joinUrl(host.rest, 'data'), degFileId), { timeout: false }).text()
+	const re = await ky(joinUrl(host.rest, 'data', degFileId), { timeout: false }).text()
 	const lines = re.trim().split('\n')
 	/*
         this tsv file first line is header:
@@ -2194,7 +2194,7 @@ export function gdc_validate_query_singleCell_data(ds, genome) {
 	ds.queries.singleCell.data.get = async q => {
 		const { host } = ds.getHostHeaders(q)
 		// do not use headers here that has accept: 'application/json'
-		const re = await ky(joinUrl(joinUrl(host.rest, 'data'), q.sample.eID || q.sample.sID), { timeout: false }).text()
+		const re = await ky(joinUrl(host.rest, 'data', q.sample.eID || q.sample.sID), { timeout: false }).text()
 		const lines = re.trim().split('\n')
 		const datasetPlots = ds.queries.singleCell.data.plots
 		/*
