@@ -91,6 +91,7 @@ try:
                 else: # If pickle file is not found, redo the GSEA computation from scratch
                     result = blitz.gsea(signature, msigdb_library, permutations=num_permutations).T  # Perform GSEA computation and transpose the result
                     fig = blitz.plot.running_sum(signature, geneset_name, msigdb_library, result=result.T, compact=True)  # Generate the running sum plot
+                    result.to_pickle(os.path.join(cachedir, pickle_file))  # Save the result to a pickle file with same name
                 random_num = np.random.rand()  # Generate a random number for unique png filename
                 png_filename = f"gsea_plot_{random_num}.png"  # Create a filename for the plot
                 fig.savefig(os.path.join(cachedir, png_filename), bbox_inches='tight')  # Save the plot as a PNG file
