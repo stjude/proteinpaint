@@ -143,7 +143,7 @@ export function setRenderers(self) {
 		const svg = chart.svg
 
 		let step = Math.min((20 * 40) / chart.colorLegend.size, 25)
-		if (step < 12) step = 12
+		if (step < 18) step = 18
 		let colorLegendSize = chart.colorLegend.size * step
 		if (chart.colorLegend.get('Ref')?.sampleCount > 0) colorLegendSize += 60
 		const scaleHeight = self.config.scaleDotTW ? 200 : 100
