@@ -839,11 +839,11 @@ export function setRenderers(self) {
 					// We filter out any values that are explicitly defined in the term values
 					// This gives us the raw numerical data we need for scaling
 					const colorValues = chart.colorValues
-
+					const scaleG = colorG.append('g')
 					// Create a ColorScale component with enhanced mode functionality
 					const colorScale = new ColorScale({
 						// Basic visual configuration
-						holder: colorG, // SVG group to contain our color scale
+						holder: scaleG, // SVG group to contain our color scale
 						barheight: 20, // Height of the color gradient bar
 						barwidth: 150, // Width of the color gradient bar
 						colors: [
