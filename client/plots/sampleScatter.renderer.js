@@ -770,11 +770,11 @@ export function setRenderers(self) {
 			})
 	}
 
-	self.getFontSize = function (chart) {
+	self.getFontSize = function (legend) {
 		let fontSize = 0.9
 		const top = 20
-		if (chart.colorLegend.size > top || chart.shapeLegend.size > top) {
-			fontSize = Math.min(0.9, top / chart.colorLegend.size, top / chart.shapeLegend.size)
+		if (legend.size > top) {
+			fontSize = Math.min(0.9, top / legend.size)
 			if (fontSize < 0.7) fontSize = 0.7
 		}
 		return fontSize
@@ -801,8 +801,7 @@ export function setRenderers(self) {
 		if (self.filterSampleStr) title0 += `, search = ${self.filterSampleStr}`
 		legendG.append('text').attr('x', 0).attr('y', offsetY).text(title0).style('font-weight', 'bold')
 
-		let fontSize = self.getFontSize(chart)
-		const colorG = legendG.append('g').style('font-size', `${fontSize}em`)
+		const colorG = legendG.append('g').style('font-size', `${self.getFontSize(chart.colorLegend)}em`)
 		offsetY += step + 10
 		if (self.config.colorTW || self.config.colorColumn) {
 			title = `${getTitle(
@@ -959,7 +958,7 @@ export function setRenderers(self) {
 			if (self.config.shapeTW.term.type == 'geneVariant' && self.config.shapeTW.q.type == 'values')
 				self.renderGeneVariantLegend(chart, offsetX, offsetY, legendG, self.config.shapeTW, 'shape', chart.shapeLegend)
 			else {
-				const shapeG = legendG.append('g')
+				const shapeG = legendG.append('g').style('font-size', `${self.getFontSize(chart.shapeLegend)}em`)
 
 				shapeG.append('text').attr('x', offsetX).attr('y', offsetY).text(title).style('font-weight', 'bold')
 				offsetY += step
