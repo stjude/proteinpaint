@@ -161,7 +161,7 @@ export function setRenderers(self) {
 			labels.push(self.config[`${key}TW`]?.term?.name ?? '')
 
 			// Add 20 for the icon (16) and space
-			return getMaxLabelWidth(svg, labels, size) + 50
+			return getMaxLabelWidth(svg, labels, size) + 70
 		}
 		/** Becomes the x offset for the shape legend.
 		 * When in continuous mode, color scale renders with a
