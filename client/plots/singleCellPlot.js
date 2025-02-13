@@ -82,7 +82,6 @@ class singleCellPlot {
 		// TODO sample table still needs to be changed when gdc (external portal) cohort changes
 
 		const state = this.getState(appState)
-
 		if (this.opts.header) this.opts.header.html(`SINGLE CELL PLOT`).style('font-size', '0.9em')
 
 		// need to set the this.samples based on the current filter0
@@ -176,7 +175,7 @@ class singleCellPlot {
 			.style('display', 'none')
 			.text('Select a sample below to see its data:')
 			.style('padding', '0px 40px 10px 10px')
-		const showDiv = headerDiv.append('div').style('padding-bottom', '10px')
+		const showDiv = headerDiv.append('div').style('padding-bottom', '10px').style('display', 'none')
 
 		if (state.config.plots.length > 1) this.renderShowPlots(showDiv, state)
 		// div to show optional DE genes (precomputed by seurat for each cluster, e.g. via gdc)
@@ -204,7 +203,7 @@ class singleCellPlot {
 			.style('left', '0')
 			.style('width', '100%')
 			.style('height', '100%')
-			.style('background-color', 'rgba(255, 255, 255, 0.8)')
+			.style('background-color', 'rgba(255, 255, 255, 0.95)')
 			.style('text-align', 'center')
 
 		this.dom = {
@@ -273,7 +272,12 @@ class singleCellPlot {
 		}
 		this.dom.mainDiv.style('display', 'block') // show the main div in case it was hidden because no data was found
 		this.dom.loadingDiv.selectAll('*').remove()
-		this.dom.loadingDiv.style('display', '').append('div').text('Loading...')
+		this.dom.loadingDiv
+			.style('display', '')
+			.append('div')
+			.style('position', 'relative')
+			.style('top', '50%')
+			.text('Loading...')
 		try {
 			const body = {
 				genome: this.state.genome,
@@ -955,14 +959,7 @@ class singleCellPlot {
 	showNoMatchingDataMessage() {
 		this.dom.mainDiv.style('display', 'none')
 		this.dom.loadingDiv.selectAll('*').remove()
-		this.dom.loadingDiv
-			.style('display', '')
-			.append('div')
-			.style('display', 'inline-block')
-			.style('text-align', 'center')
-			.style('font-size', '1.2em')
-			.style('margin', '2em 1em')
-			.html('No matching cohort data.')
+		this.dom.loadingDiv.style('display', '').append('div').style('font-size', '1.2em').html('No matching cohort data.')
 	}
 
 	renderPlots() {
