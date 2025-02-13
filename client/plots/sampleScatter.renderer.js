@@ -795,13 +795,14 @@ export function setRenderers(self) {
 		}
 
 		let title
-		let fontSize = self.getFontSize(chart)
-		const colorG = legendG.style('font-size', `${fontSize}em`)
 		let title0 = self.config.term0
 			? `${self.config.term0.term.name + ' ' + chart.id}, n=${chart.cohortSamples.length}`
 			: `${chart.cohortSamples.length} ${self.config.sampleType ? self.config.sampleType + 's' : 'samples'}`
 		if (self.filterSampleStr) title0 += `, search = ${self.filterSampleStr}`
-		colorG.append('text').attr('x', 0).attr('y', offsetY).text(title0).style('font-weight', 'bold')
+		legendG.append('text').attr('x', 0).attr('y', offsetY).text(title0).style('font-weight', 'bold')
+
+		let fontSize = self.getFontSize(chart)
+		const colorG = legendG.append('g').style('font-size', `${fontSize}em`)
 		offsetY += step + 10
 		if (self.config.colorTW || self.config.colorColumn) {
 			title = `${getTitle(
@@ -821,7 +822,7 @@ export function setRenderers(self) {
 					chart.colorLegend
 				)
 			else {
-				colorG
+				legendG
 					.append('text')
 					.attr('id', 'legendTitle')
 					.attr('x', offsetX)
