@@ -775,7 +775,7 @@ export function setRenderers(self) {
 		const top = 20
 		if (chart.colorLegend.size > top || chart.shapeLegend.size > top) {
 			fontSize = Math.min(0.9, top / chart.colorLegend.size, top / chart.shapeLegend.size)
-			if (fontSize < 0.5) fontSize = 0.5
+			if (fontSize < 0.7) fontSize = 0.7
 		}
 		return fontSize
 	}
@@ -974,7 +974,7 @@ export function setRenderers(self) {
 
 					itemG
 						.append('path')
-						.attr('transform', () => `translate(${offsetX}, ${offsetY - 5}) scale(1)`)
+						.attr('transform', () => `translate(${offsetX}, ${offsetY - 5}) scale(0.8)`)
 						.style('pointer-events', 'bounding-box')
 						.style('fill', color)
 						.attr('d', symbol)
