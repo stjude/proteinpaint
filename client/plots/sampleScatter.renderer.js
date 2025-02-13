@@ -960,7 +960,7 @@ export function setRenderers(self) {
 			else {
 				const shapeG = legendG.append('g').style('font-size', `${self.getFontSize(chart.shapeLegend)}em`)
 
-				shapeG.append('text').attr('x', offsetX).attr('y', offsetY).text(title).style('font-weight', 'bold')
+				legendG.append('text').attr('x', offsetX).attr('y', offsetY).text(title).style('font-weight', 'bold')
 				offsetY += step
 				const color = 'gray'
 				for (const [key, shape] of chart.shapeLegend) {
