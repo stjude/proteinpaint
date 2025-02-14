@@ -155,10 +155,11 @@ async function getSamples(req, ds, plot) {
 async function colorAndShapeSamples(refSamples, cohortSamples, data, q) {
 	const results = {}
 	let fCount = 0
+	const hasTerms = Object.keys(data.samples).length > 0
 	for (const sample of cohortSamples) {
 		// use either data object to look up samples
 		const dbSample = data.samples[sample.sampleId.toString()]
-		if (!dbSample) {
+		if (!dbSample && hasTerms) {
 			fCount++
 			//console.log(JSON.stringify(sample) + ' not in the database or filtered')
 			continue
@@ -223,7 +224,6 @@ async function colorAndShapeSamples(refSamples, cohortSamples, data, q) {
 	for (const [divideBy, result] of Object.entries(results)) max = Math.max(max, Object.keys(result.colorMap).length)
 	const k2c = getColors(max)
 	const scheme = schemeCategory20
-
 	for (const [divideBy, result] of Object.entries(results)) {
 		if (q.colorTW && q.colorTW.q.mode !== 'continuous') {
 			let i = 20
