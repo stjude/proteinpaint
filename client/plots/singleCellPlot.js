@@ -91,7 +91,7 @@ class singleCellPlot {
 		// shared isVisible function for tabs that require config.sample;
 		// note that tab.isVisible() will be called on tab.update(), which
 		// is called in main() -> showActiveTab() below
-		const isVisible = () => this.state?.config.sample
+		const isVisible = () => this.state?.config.sample && this.isValidSample
 
 		this.tabs.push({
 			label: 'Samples',
@@ -266,10 +266,6 @@ class singleCellPlot {
 	// called in relevant dispatch when reactsTo==true
 	// or current.state != replcament.state
 	async main() {
-		if (this.state.config.activeTab && this.state.config.activeTab != SAMPLES_TAB && !this.state.config.sample) {
-			this.app.dispatch({ type: 'plot_edit', id: this.id, config: { activeTab: SAMPLES_TAB } })
-			return
-		}
 		this.dom.mainDiv.style('display', 'block') // show the main div in case it was hidden because no data was found
 		this.dom.loadingDiv.selectAll('*').remove()
 		this.dom.loadingDiv
@@ -291,6 +287,7 @@ class singleCellPlot {
 				this.showNoMatchingDataMessage()
 				return
 			}
+			this.isValidSample = this.state.config.sample && this.samples.find(i => i.sample == this.state.config.sample)
 			this.colorByGene =
 				this.state.config.activeTab == GENE_EXPRESSION_TAB || this.state.config.activeTab == DIFFERENTIAL_EXPRESSION_TAB
 			this.config = structuredClone(this.state.config) // this config can be edited to dispatch changes
@@ -479,7 +476,11 @@ class singleCellPlot {
 	}
 
 	async showActiveTab() {
-		const id = this.state.config.activeTab || this.tabs[0].id
+		let id = this.state.config.activeTab || this.tabs[0].id
+		if (!this.isValidSample && id != SAMPLES_TAB) {
+			id = SAMPLES_TAB
+			this.config.activeTab = SAMPLES_TAB
+		}
 		const index = this.tabs.findIndex(t => t.id == id)
 		const tab = this.tabs[index]
 		tab.active = true

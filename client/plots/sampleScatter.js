@@ -241,7 +241,8 @@ class Scatter {
 			chartType: 'sampleScatter',
 			settingsKey: 'size',
 			title: 'Sample size, represents the factor used to scale the sample',
-			min: 0
+			min: 0,
+			step: 0.1
 		}
 		const step = (maxShapeSize - minShapeSize) / 10
 		const minShapeSizeOption = {
@@ -280,7 +281,8 @@ class Scatter {
 			chartType: 'sampleScatter',
 			settingsKey: 'refSize',
 			title: 'It represents the area of the reference symbol in square pixels',
-			min: 0
+			min: 0,
+			step: 0.1
 		}
 		const showAxes = {
 			boxLabel: '',

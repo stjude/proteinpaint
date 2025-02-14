@@ -81,12 +81,12 @@ export async function init(arg, holder, genomes) {
 						{
 							type: 'filter_replace',
 							filter0: updateArg.filter0
-						},
-						{
-							type: 'plot_edit',
-							id: plotAppApi.getState().plots[0].id,
-							config: { sample: undefined, activeTab: 0 }
 						}
+						// {
+						// 	type: 'plot_edit',
+						// 	id: plotAppApi.getState().plots[0].id,
+						// 	config: { sample: undefined, activeTab: 0 }
+						// }
 					]
 				})
 			} else {
