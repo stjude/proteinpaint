@@ -177,7 +177,6 @@ export function renderTable({
 
 	const uniqueInputName = inputName || getUniqueNameOrId('input')
 	const parentDiv = div.append('div').style('background-color', 'white').style('display', 'inline-block')
-	console.log('download is: ', download)
 	if (download) {
 		const downloadDiv = div
 			.append('div')
