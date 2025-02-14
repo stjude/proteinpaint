@@ -1222,13 +1222,21 @@ export function setRenderers(self) {
 			.style('font-weight', 'bold')
 
 		offsetX += step
-		const mutations = chart.cohortSamples[0]['cat_info'][cname]
+		const mutations = []
+		for (const [key, value] of map)
+			if (value.mutation)
+				//if no mutation is Ref
+				mutations.push(value.mutation)
+
+		const mutationsLabels = new Set()
 		offsetY += 10
 		for (const mutation of mutations) {
-			offsetY += 15
 			const dt = mutation.dt
 			const origin = morigin[mutation.origin]?.label
 			const dtlabel = origin ? `${origin[0]} ${dt2label[dt]}` : dt2label[dt]
+			if (!mutationsLabels.has(dtlabel)) mutationsLabels.add(dtlabel)
+			else continue
+			offsetY += 15
 
 			G.append('text')
 				.attr('x', offsetX - step)
@@ -1239,7 +1247,9 @@ export function setRenderers(self) {
 			for (const [key, category] of map) {
 				if (key == 'Ref') continue
 				if (!key.includes(dtlabel)) continue
-				const mkey = key.split(', ')[0]
+				const [mkey, cat_dtlabel] = key.split(', ')
+
+				if (!cat_dtlabel.includes(dtlabel)) continue
 				const itemG = G.append('g')
 				if (cname == 'shape') {
 					const index = category.shape % shapes.length
