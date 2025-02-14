@@ -46,7 +46,7 @@ class DEanalysis {
 			.append('button')
 			.text('Submit')
 			.on('click', () => {
-				this.app.dispatch({ type: 'plot_edit', id: this.id, settings: { DEanalysis: { gsea: true } } })
+				this.app.dispatch({ type: 'plot_edit', id: this.id, config: { settings: { DEanalysis: { gsea: true } } } })
 			})
 		const detailsDiv = mainDiv
 			.append('div')
@@ -238,6 +238,7 @@ class DEanalysis {
 	async main() {
 		this.config = JSON.parse(JSON.stringify(this.state.config))
 		this.settings = this.config.settings.DEanalysis
+		console.log('this.settings:', this.settings)
 		if (this.dom.detailsDiv) {
 			this.dom.detailsDiv.selectAll('*').remove()
 		}
