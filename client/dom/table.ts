@@ -501,25 +501,70 @@ export function renderTable({
 	return api
 }
 
+/**
+ * Downloads table data as a TSV (Tab-Separated Values) file.
+ *
+ * @param {Array<Array<Cell>>} rows - Array of rows, where each row is an array of cell objects.
+ *        Each cell object can have one of the following properties:
+ *        - value: The primary content to display (can be string, number, including 0)
+ *        - url: A URL to be used if value is not present
+ *        - color: A color value to be used if neither value nor url is present
+ * @param {Array<Column>} cols - Array of column definition objects.
+ *        Each column object must have:
+ *        - label: string - The header text for the column
+ * @param {string} [filename='table.tsv'] - Optional custom filename for the downloaded file
+ *
+ * @example
+ * // Basic usage
+ * const rows = [
+ *   [{ value: "John" }, { value: 25 }, { value: "New York" }],
+ *   [{ value: "Jane" }, { value: 0 }, { value: "Boston" }]
+ * ];
+ * const cols = [
+ *   { label: "Name" },
+ *   { label: "Age" },
+ *   { label: "City" }
+ * ];
+ * await downloadTable(rows, cols, "users.tsv");
+ *
+ * @example
+ * // Using different cell property types
+ * const rows = [
+ *   [{ value: "Doc" }, { url: "https://example.com" }, { color: "#FF0000" }]
+ * ];
+ * const cols = [
+ *   { label: "Name" },
+ *   { label: "Link" },
+ *   { label: "Color" }
+ * ];
+ * await downloadTable(rows, cols);
+ *
+ * @returns {Promise<void>} - The function creates and triggers a download in the browser
+ */
 export async function downloadTable(rows, cols, filename = 'table.tsv') {
 	let lines = ''
+
+	// Add header row with column labels
 	for (const column of cols) {
 		lines += `${column.label}\t`
 	}
 	lines += '\n'
 
+	// Add data rows
 	for (const row of rows) {
 		for (const cell of row) {
 			let value = ''
-			if (cell.value) value = cell.value
+			// Check for cell.value existence to properly handle zero values
+			if ('value' in cell) value = cell.value
 			else if (cell.url) value = cell.url
 			else if (cell.color) value = cell.color
 			lines += `${value}\t`
 		}
 		lines += '\n'
 	}
-	const dataStr = 'data:text/tsv;charset=utf-8,' + encodeURIComponent(lines)
 
+	// Create and trigger download
+	const dataStr = 'data:text/tsv;charset=utf-8,' + encodeURIComponent(lines)
 	const link = document.createElement('a')
 	link.setAttribute('href', dataStr)
 	// If you don't know the name or want to use
