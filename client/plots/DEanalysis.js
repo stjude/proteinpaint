@@ -40,6 +40,14 @@ class DEanalysis {
 		const controlsDiv = this.opts.holder.append('div').style('display', 'inline-block')
 		const mainDiv = this.opts.holder.append('div').style('display', 'inline-block').style('margin-left', '50px')
 		const holder = mainDiv.append('div').style('display', 'inline-block')
+		const bottomDiv = mainDiv.append('div').style('margin-bottom', '10px')
+		bottomDiv.append('label').text('Recalculate Gene Expression Analysis:').style('padding', '10px')
+		bottomDiv
+			.append('button')
+			.text('Submit')
+			.on('click', () => {
+				this.app.dispatch({ type: 'plot_edit', id: this.id, settings: { DEanalysis: { gsea: true } } })
+			})
 		const detailsDiv = mainDiv
 			.append('div')
 			.style('display', 'inline-block')
