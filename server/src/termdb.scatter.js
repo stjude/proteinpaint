@@ -313,12 +313,11 @@ function assignGeneVariantValue(dbSample, sample, tw, categoryMap, category) {
 
 			let mapValue
 			if (categoryMap[value] == undefined) {
-				mapValue = { color: class_info.color, sampleCount: 1, hasOrigin: 'origin' in mutation, key: value }
+				mapValue = { color: class_info.color, sampleCount: 1, mutation, key: value }
 				categoryMap[value] = mapValue
 			} else {
 				mapValue = categoryMap[value]
 				mapValue.sampleCount = mapValue.sampleCount + 1
-				mapValue.hasOrigin = mapValue.hasOrigin || 'origin' in mutation
 			}
 		}
 		sample[category] = getMutation(true, dbSample, tw) || getMutation(false, dbSample, tw)
