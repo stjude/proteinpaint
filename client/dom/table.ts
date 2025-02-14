@@ -109,10 +109,9 @@ export type TableArgs = {
 	 * as the <input name=?> if the same name is always used, multiple tables
 	 * created in one page will conflict in row selection */
 	dataTestId?: any
-	/** Show download icon that allows to download the table content */
-	showDownload?: boolean
-	/** Optional filename for the file downloaded */
-	downloadFilename?: string
+	/** Show download icon that allows to download the table content and allow
+	 * the passing of an optional filename for the file being downloaded */
+	download?: { fileName?: string }
 }
 
 /** incremented input ID will guarantee no collision from using getUniqueNameOrId()*/
@@ -150,8 +149,7 @@ export function renderTable({
 	selectedRowStyle = {},
 	inputName = null,
 	dataTestId = null,
-	showDownload = false,
-	downloadFilename = 'table.tsv'
+	download = { fileName: '' }
 }: TableArgs) {
 	validateInput()
 	let _selectedRowStyle = selectedRowStyle
@@ -179,7 +177,8 @@ export function renderTable({
 
 	const uniqueInputName = inputName || getUniqueNameOrId('input')
 	const parentDiv = div.append('div').style('background-color', 'white').style('display', 'inline-block')
-	if (showDownload) {
+	console.log('download is: ', download)
+	if (download) {
 		const downloadDiv = div
 			.append('div')
 			.style('display', 'inline-block')
@@ -191,7 +190,7 @@ export function renderTable({
 			height: 15,
 			title: 'Download table',
 			handler: () => {
-				downloadTable(rows, columns, downloadFilename)
+				downloadTable(rows, columns, download.fileName || 'table.tsv')
 			}
 		})
 	}
