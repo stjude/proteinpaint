@@ -178,15 +178,15 @@ class DEanalysis {
 			})
 		}
 
-		if (this.app.opts.genome.termdbs && !this.settings.gsea) {
+		if (this.app.opts.genome.termdbs) {
 			// Check if genome build contains termdbs, only then enable gene ora
 			inputs.push({
 				label: 'Gene Set Enrichment Analysis',
-				type: 'radio',
+				type: 'checkbox',
 				chartType: 'DEanalysis',
 				settingsKey: 'gsea',
 				title: 'Select to check if certain gene sets are enriched among the two biological conditions',
-				options: [{ label: 'Submit', value: 'Submit' }]
+				boxLabel: 'Submit'
 			})
 		}
 
@@ -235,6 +235,12 @@ class DEanalysis {
 		}
 		if (this.dom.holder) {
 			this.dom.holder.selectAll('*').remove()
+		}
+		if (!this.settings.old_DE_method) {
+			this.settings.old_DE_method = this.settings.method
+		} else if (this.settings.old_DE_method != this.settings.method) {
+			this.settings.gsea = false
+			this.settings.old_DE_method = this.settings.method
 		}
 		const wait = this.dom.detailsDiv.append('div').text('Loading...')
 		const output = await runDEanalysis(this) // "this.config" was changed from "this.state.config". Hope this does not create any problems.
@@ -623,6 +629,7 @@ add:
 		if (self.settings.gsea && self.app.opts.genome.termdbs) {
 			// Currently backend only uses msigdb, but in future may use other databases in genome.termdbs{}. In ui will need to generate a <select> to choose one key of termdbs{}.
 			//self.settings.gsea = false
+			console.log('GSEA invoked')
 			const input_genes = output.data.map(i => i.gene_symbol)
 			const gsea_params = {
 				genes: input_genes,
