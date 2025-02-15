@@ -187,19 +187,6 @@ async function renderPathway(self, kdata) {
 		.on('mouseout', function () {
 			tooltip.style('visibility', 'hidden')
 		})
-	pa_area
-		.append('g')
-		.selectAll('text')
-		.data(path)
-		.enter()
-		.append('text')
-		.attr('x', d => xScale(d.x))
-		.attr('y', d => yScale(d.y))
-		.text(d => d.graphics_name)
-		.attr('fill', d => d.fgcolor)
-		.attr('font-size', 10)
-		.attr('text-anchor', 'middle')
-		.attr('alignment-baseline', 'middle')
 	/*
     nodes.forEach(node => {
         pa_area.append('circle')
