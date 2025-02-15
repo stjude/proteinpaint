@@ -144,7 +144,7 @@ if (length(input$conf1) == 0) { # No adjustment of confounding factors
 } else { # Adjusting for confounding factors
     y$samples <- data.frame(conditions = conditions, conf1 = input$conf1)
     model_gen_time <- system.time({
-        design <- model.matrix(~ conf1 + conditions, data = y$samples)
+        design <- model.matrix(~ conditions + conf1, data = y$samples)
     })
     #cat("Time for making design matrix: ", model_gen_time[3], " seconds\n")
 
