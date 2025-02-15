@@ -109,9 +109,11 @@ export type TableArgs = {
 	 * as the <input name=?> if the same name is always used, multiple tables
 	 * created in one page will conflict in row selection */
 	dataTestId?: any
-	/** Show download icon that allows to download the table content and allow
-	 * the passing of an optional filename for the file being downloaded */
-	download?: { fileName?: string }
+	/** Show download icon that allows to download the table content and allow; object allows customization options e.g. placement of the button, styling, tooltip etc */
+	download?: {
+		/** optionally, provide download file name, if missing a default one is used */
+		fileName?: string
+	}
 }
 
 /** incremented input ID will guarantee no collision from using getUniqueNameOrId()*/
@@ -149,7 +151,7 @@ export function renderTable({
 	selectedRowStyle = {},
 	inputName = null,
 	dataTestId = null,
-	download = { fileName: '' }
+	download = null
 }: TableArgs) {
 	validateInput()
 	let _selectedRowStyle = selectedRowStyle
