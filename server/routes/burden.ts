@@ -150,12 +150,12 @@ function formatPayload(estimates: object[]) {
 	const rawKeys = Object.keys(estimates['1']).filter(k => k.startsWith('[')) // estimates key is chcNum, will give age keys
 	const renamedKeys = rawKeys.map(k => `burden${k.split(',')[0].slice(1)}`)
 	const outKeys = ['chc', ...renamedKeys] as string[]
-	const rows = [] as any[] // number[][]
+	const rows: any[] = [] 
 	// estimates{}
 	// - key: chc number, where 0 = overall
 	// - values: {[age]: []}
 	for (const [chc, burdenByAge] of Object.entries(estimates)) {
-		const arr = [chc]
+		const arr: (string | number[])[] = [chc]
 		for (const age of rawKeys) arr.push(Array.isArray(burdenByAge[age]) ? burdenByAge[age] : [burdenByAge[age]])
 		rows.push(arr)
 	}
