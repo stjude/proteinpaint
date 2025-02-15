@@ -151,7 +151,7 @@ export function renderTable({
 	selectedRowStyle = {},
 	inputName = null,
 	dataTestId = null,
-	download = null
+	download = undefined
 }: TableArgs) {
 	validateInput()
 	let _selectedRowStyle = selectedRowStyle

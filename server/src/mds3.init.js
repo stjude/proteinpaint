@@ -667,7 +667,7 @@ async function validate_query_snvindel(ds, genome) {
 
 			// repeat as above
 			q.byrange.get = await snvindelByRangeGetter_bcf(ds, genome)
-			if (!q.byrange._tk.samples.length) {
+			if (!q.byrange._tk.samples?.length) {
 				// vcf header parsing returns blank array when file has no sample
 				delete q.byrange._tk.samples
 			}
@@ -748,7 +748,6 @@ function mayValidateSampleHeader(ds, samples, where) {
 // samples[] elements: {name:str}
 // returns new array with same length as samples[], {name:int}
 function validateSampleHeader2(ds, samples, where) {
-	return
 	const sampleIds = []
 	// ds?.cohort?.termdb.q.sampleName2id must be present
 	const unknownSamples = [] // samples present in big file header but missing from db
