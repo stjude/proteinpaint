@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.107.0
 
 Features:
 - Refactored showDownload/downloadFilename into a single function. Fixed bug with 0 values not being included in downloads
