@@ -1,5 +1,6 @@
 import { select } from 'd3-selection'
 import { icons, Menu } from '#dom'
+import { getBarplotRenderer, shouldBeBarplot } from 'plots/table.barplot.viz'
 import type { Th } from '../types/d3'
 
 export type Cell = {
@@ -37,6 +38,13 @@ export type Column = {
 	/** Used for sorting function
 	 * Do not use this field for html columns */
 	sortable?: boolean
+	/** Use to enable barplot for specific column values */
+	barplot?: {
+		minimumRange?: [number, number]
+		axisWidth?: number
+		colorNegative?: string
+		colorPositive?: string
+	}
 }
 
 export type Button = {
@@ -126,6 +134,28 @@ function getUniqueNameOrId(str = 'elem') {
 	return `sjpp-${str}-${idIncr++}-${randomSuffix}`
 }
 
+// For making sure we have enough space for both text and bar in the barplots of DE and NES scores
+function calculateRequiredWidth(column: Column): string {
+	// Start with the base width for the plot itself
+	const plotWidth = column.barplot?.axisWidth || 100
+
+	// Add padding for left and right sides
+	const padding = {
+		left: 10,
+		right: 10,
+		text: 5 // padding between bars and text
+	}
+
+	// Add space for the value labels (approximately 40px for 4 digits plus decimal)
+	const labelSpace = 40
+
+	// Calculate total width needed
+	const totalWidth = plotWidth + padding.left + padding.right + padding.text * 2 + labelSpace * 2
+
+	// Return as pixel value
+	return `${totalWidth}px`
+}
+
 /*
 Prints an html table, using the specified columns and rows
 See the paramters in TableArgs; function has no return
@@ -176,6 +206,21 @@ export function renderTable({
 		// this check is disabled for now as it breaks gdc bam slicing ui
 		//if (singleMode == true && (!buttons || !noButtonCallback)) throw `Missing buttons array and noButtonCallback but singleMode = true`
 	}
+
+	const barplotRenderers = new Map()
+	columns.forEach((column, index) => {
+		if (shouldBeBarplot(column)) {
+			// Get all values for this column
+			const columnData = rows.map(row => row[index])
+			// If the column doesn't have a specified width, calculate and set it
+			if (!column.width) {
+				column.width = calculateRequiredWidth(column)
+				console.log('Calculated width for column:', column.label, column.width)
+			}
+
+			barplotRenderers.set(index, getBarplotRenderer(columnData, column))
+		}
+	})
 
 	const uniqueInputName = inputName || getUniqueNameOrId('input')
 	const parentDiv = div.append('div').style('background-color', 'white').style('display', 'inline-block')
@@ -255,7 +300,16 @@ export function renderTable({
 
 	if (showHeader) {
 		for (const [i, c] of columns.entries()) {
-			const th = theadRow.append('th').text(c.label).attr('class', 'sjpp_table_item sjpp_table_header')
+			const th = theadRow.append('th').attr('class', 'sjpp_table_item sjpp_table_header')
+			const barplotRenderer = barplotRenderers.get(i)
+			if (barplotRenderer) {
+				// This is a barplot column, render the axis
+				barplotRenderer(th)
+			} else {
+				// Regular column header
+				th.text(c.label)
+			}
+
 			if (c.width) th.style('width', c.width)
 			if (c.tooltip) th.attr('title', c.tooltip)
 			if (header?.allowSort) {
@@ -384,52 +438,59 @@ export function renderTable({
 				cell.__td = td
 
 				const column = columns[colIdx]
-				if (column.editCallback && cell.value) {
-					td.on('click', (event: MouseEvent) => {
-						event.stopImmediatePropagation()
-						const isEdit = td.select('input').empty()
-						if (!isEdit) return
-						td.html('')
-						const input = td
-							.append('input')
-							.attr('value', cell.value)
-							.on('change', () => {
-								const value = input.node().value
-								cell.value = value
-								td.text(cell.value)
-								column.editCallback!(i, cell)
-							})
-						input.node().focus()
-						input.node().select()
-					})
-				}
-				if (column.width) td.style('width', column.width)
-				if (column.align) td.style('text-align', column.align)
+				const barplotRenderer = barplotRenderers.get(colIdx)
+				if (barplotRenderer) {
+					// This is a barplot cell
+					const value = typeof cell === 'object' ? cell.value : cell
+					barplotRenderer(td, value)
+				} else {
+					if (column.editCallback && cell.value) {
+						td.on('click', (event: MouseEvent) => {
+							event.stopImmediatePropagation()
+							const isEdit = td.select('input').empty()
+							if (!isEdit) return
+							td.html('')
+							const input = td
+								.append('input')
+								.attr('value', cell.value)
+								.on('change', () => {
+									const value = input.node().value
+									cell.value = value
+									td.text(cell.value)
+									column.editCallback!(i, cell)
+								})
+							input.node().focus()
+							input.node().select()
+						})
+					}
+					if (column.width) td.style('width', column.width)
+					if (column.align) td.style('text-align', column.align)
 
-				if (column.nowrap) td.style('white-space', 'nowrap')
-				if (cell.url) {
-					td.append('a')
-						.text(cell.value || cell.value == 0 ? cell.value : cell.url) //Fix for if .value missing, url does not display
-						.attr('href', cell.url)
-						.attr('target', '_blank')
-				} else if (cell.html) {
-					td.html(cell.html)
-				} else if ('value' in cell) {
-					td.text(cell.value)
-					if (cell.color) td.style('color', cell.color)
-				} else if (cell.color) {
-					if (cell.disabled) {
-						td.style('background-color', cell.color)
-					} else {
-						const input = td
-							.append('input')
-							.attr('type', 'color')
-							.attr('value', cell.color)
-							.on('change', () => {
-								const color = input.node().value
-								cell.color = color
-								if (column.editCallback) column.editCallback(i, cell)
-							})
+					if (column.nowrap) td.style('white-space', 'nowrap')
+					if (cell.url) {
+						td.append('a')
+							.text(cell.value || cell.value == 0 ? cell.value : cell.url) //Fix for if .value missing, url does not display
+							.attr('href', cell.url)
+							.attr('target', '_blank')
+					} else if (cell.html) {
+						td.html(cell.html)
+					} else if ('value' in cell) {
+						td.text(cell.value)
+						if (cell.color) td.style('color', cell.color)
+					} else if (cell.color) {
+						if (cell.disabled) {
+							td.style('background-color', cell.color)
+						} else {
+							const input = td
+								.append('input')
+								.attr('type', 'color')
+								.attr('value', cell.color)
+								.on('change', () => {
+									const color = input.node().value
+									cell.color = color
+									if (column.editCallback) column.editCallback(i, cell)
+								})
+						}
 					}
 				}
 			}
