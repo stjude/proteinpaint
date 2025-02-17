@@ -1,1 +1,2 @@
-
+Fixes:
+- HierCluster: should only cluster overlapping tested samples shared across all the selected genes/metabilites/terms
