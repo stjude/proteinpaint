@@ -127,17 +127,37 @@ async function getNumericDictTermAnnotation(q, ds, genome) {
 // default numCases should be matched to maxCase4geneExpCluster in mds3.gdc.js
 async function doClustering(data: any, q: TermdbClusterRequest, numCases = 1000) {
 	// get set of unique sample names, to generate col_names dimension
-	const sampleSet = new Set()
-	/* make one pass of whole matrix to collect complete set of samples from all genes
-	this is fast and no performance concern
-	also as a safeguard against genes that is completely blank (gdc), and possible to be missing data for some samples
-	*/
+	const sampleSet: Set<string> = new Set()
+	// make one pass of whole matrix to collect samples that have values for all terms
+	let firstTerm = true
 	for (const o of data.values()) {
 		// o: {sampleId: value}
-		for (const s in o) sampleSet.add(s)
+		const currentSampleIds = new Set(Object.keys(o)) // Extract sample IDs from current term
+		if (firstTerm) {
+			// Initialize sampleSet with the first term's sample IDs
+			currentSampleIds.forEach(id => sampleSet.add(id))
+			firstTerm = false
+		} else {
+			// Intersect sampleSet with the current term's sample IDs
+			for (const id of sampleSet) {
+				if (!currentSampleIds.has(id)) {
+					sampleSet.delete(id)
+				}
+			}
+		}
 		if (sampleSet.size >= numCases) break
 	}
-	if (sampleSet.size == 0) throw 'termdb.cluster: no samples'
+
+	const termType =
+		q.dataType == 'geneExpression'
+			? 'genes'
+			: q.dataType == 'metaboliteIntensity'
+			? 'metabolites'
+			: q.dataType == 'numericDictTerm'
+			? 'terms'
+			: 'terms'
+	if (sampleSet.size == 0)
+		throw `termdb.cluster: There are no overlapping tested samples shared across the selected ${termType}`
 
 	// Checking if cluster and distance method for hierarchial clustering is valid
 	if (!clusterMethodLst.find(i => i.value == q.clusterMethod)) throw 'Invalid cluster method'
