@@ -18,6 +18,7 @@
 import { scaleLinear } from 'd3-scale'
 import { axisBottom } from 'd3-axis'
 import { axisstyle } from '#dom'
+import type { Cell, Column } from '../dom/table'
 
 /**
  * Creates a renderer function for generating barplot visualizations within table cells.
