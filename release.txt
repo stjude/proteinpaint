@@ -1,2 +1,1 @@
-Features:
-- Added ability to visualize log2FC and NES scores as barplots within table columns
+

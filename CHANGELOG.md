@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Features:
+- Added ability to visualize log2FC and NES scores as barplots within table columns
+
+
 ## 2.107.0
 
 Features:
