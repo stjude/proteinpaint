@@ -39,7 +39,8 @@ export type Column = {
 	/** Used for sorting function
 	 * Do not use this field for html columns */
 	sortable?: boolean
-	/** assume all values from this column are numbers; this renders the column into a barplot */
+	/** assume all values from this column are numbers; this renders the column into a barplot
+	note that this cannot be used together with `sortable:true` */
 	barplot?: Barplot
 }
 
@@ -272,7 +273,7 @@ export function renderTable({
 
 	if (showHeader) {
 		for (const [i, c] of columns.entries()) {
-			const th = theadRow.append('th').attr('class', 'sjpp_table_item sjpp_table_header')
+			const th = theadRow.append('th').text(c.label).attr('class', 'sjpp_table_item sjpp_table_header')
 			if (c.width) th.style('width', c.width)
 			if (c.tooltip) th.attr('title', c.tooltip)
 			if (header?.allowSort) {
@@ -292,12 +293,11 @@ export function renderTable({
 			}
 			if (c.barplot) {
 				// barplot column
+				th.text('') // quick fix; th.text() has been assigned above in order that sort button can show. here clear the text to render axis svg instead
 				prepareBarPlot(c.barplot, i, rows)
 				drawBarplotAxis(c, th)
 				continue
 			}
-			// Regular column header
-			th.text(c.label)
 		}
 	}
 
