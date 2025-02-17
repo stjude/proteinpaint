@@ -1,5 +1,9 @@
+import type { MassAppApi } from '#mass/types/mass'
+// import type { DEanalysisSettings } from '../DEanalysisTypes'
+
 export class Model {
-	constructor() {
-		console.log('Model')
+	app: MassAppApi
+	constructor(app) {
+		this.app = app
 	}
 }

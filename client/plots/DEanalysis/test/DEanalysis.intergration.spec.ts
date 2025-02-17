@@ -2,7 +2,10 @@ import tape from 'tape'
 import * as helpers from '../../../test/front.helpers.js'
 
 /*
+DO NOT ENABLE THIS FILE ON CI. ITS FOR PROTOTYPING ONLY
+
 Tests:
+    - Default DE analysis
  */
 
 /*************************
@@ -15,8 +18,10 @@ const runpp = helpers.getRunPp('mass', {
 			header_mode: 'hidden'
 		},
 		vocab: {
-			dslabel: 'TermdbTest',
-			genome: 'hg38-test'
+			//Eventually need to add data to TermdbTest
+			//and switch dataset and genome
+			dslabel: 'ALL-pharmacotyping',
+			genome: 'hg38'
 		}
 	},
 	debug: 1
@@ -31,7 +36,7 @@ tape('\n', function (test) {
 	test.end()
 })
 
-tape('Default DEanalysis ', test => {
+tape('Default DE analysis ', test => {
 	test.timeoutAfter(3000)
 
 	runpp({
@@ -52,7 +57,9 @@ tape('Default DEanalysis ', test => {
 	async function runTests(DEanalysis) {
 		DEanalysis.on('postRender.test', null)
 
-		if (test['_ok']) DEanalysis.Inner.app.destroy()
+		test.true(true, 'DEanalysis rendered')
+
+		// if (test['_ok']) DEanalysis.Inner.app.destroy()
 		test.end()
 	}
 })
