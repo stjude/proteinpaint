@@ -411,7 +411,9 @@ export function renderTable({
 				const column = columns[colIdx]
 
 				if (column.barplot) {
-					drawBarplotInCell(cell.value, td, column.barplot)
+					if (typeof cell.value === 'number') {
+						drawBarplotInCell(cell.value, td, column.barplot)
+					}
 					continue
 				}
 
@@ -652,8 +654,8 @@ function prepareBarPlot(cb: Barplot, i: number, rows: any) {
 	if (!cb.colorPositive) cb.colorPositive = '#d49353'
 	if (!cb.colorNegative) cb.colorNegative = '#5256d1'
 	if (!cb.xpadding) cb.xpadding = 5
-	let min = null,
-		max = null
+	let min: number | null = null,
+		max: number | null = null
 	for (const r of rows) {
 		const v = r[i].value
 		if (!Number.isFinite(v)) continue // ignore invalid value
@@ -661,17 +663,19 @@ function prepareBarPlot(cb: Barplot, i: number, rows: any) {
 			min = v
 			max = v
 		} else {
-			min = Math.min(min, v)
-			max = Math.max(max, v)
+			min = Math.min(min as number, v)
+			max = Math.max(max as number, v)
 		}
 	}
-	if (min < 0 && max > 0) {
+	if (min !== null && max !== null && min < 0 && max > 0) {
 		// force equal span on both sides
 		const a = Math.max(-min, max)
 		min = -a
 		max = a
 	}
-	cb.scale = scaleLinear().domain([min, max]).range([0, cb.axisWidth])
+	cb.scale = scaleLinear()
+		.domain([min ?? 0, max ?? 0])
+		.range([0, cb.axisWidth])
 }
 
 function drawBarplotAxis(c: Column, th: any) {
@@ -682,9 +686,10 @@ function drawBarplotAxis(c: Column, th: any) {
 	const ticksize = 4 // where is ticksize applied in axis?
 	const svg = th
 		.append('svg')
-		.attr('width', 2 * cb.xpadding + cb.axisWidth)
+		.attr('width', 2 * (cb?.xpadding ?? 0) + (cb?.axisWidth ?? 0))
 		.attr('height', labfontsize + ypad + tickfontsize + ticksize + 1) // plus 1 so axis bottom line can fully show
-	const axis = axisTop().ticks(4).scale(cb.scale)
+	if (!cb) return
+	const axis = axisTop(cb.scale).ticks(4)
 	axisstyle({
 		axis: svg
 			.append('g')
@@ -699,7 +704,7 @@ function drawBarplotAxis(c: Column, th: any) {
 		.attr('font-size', labfontsize)
 		.attr('text-anchor', 'middle')
 		.text(c.label)
-		.attr('x', cb.xpadding + cb.axisWidth / 2)
+		.attr('x', (cb.xpadding ?? 0) + (cb.axisWidth ?? 0) / 2)
 		.attr('y', labfontsize)
 }
 
@@ -727,7 +732,7 @@ function drawBarplotInCell(value: number, td: any, c: Barplot) {
 	const height = 14
 	td.append('svg')
 		.style('margin-top', '4px') // poor fix for the svg to appear in middle of <td> vertically
-		.attr('width', 2 * c.xpadding + c.axisWidth)
+		.attr('width', 2 * (c.xpadding ?? 0) + (c.axisWidth ?? 0))
 		.attr('height', height)
 		.append('rect')
 		.attr('x', x1)
