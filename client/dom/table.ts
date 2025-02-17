@@ -1,6 +1,7 @@
 import { select } from 'd3-selection'
-import { icons, Menu } from '#dom'
-import { getBarplotRenderer, shouldBeBarplot } from 'plots/table.barplot.viz'
+import { icons, Menu, axisstyle } from '#dom'
+import { axisTop } from 'd3-axis'
+import { scaleLinear } from 'd3-scale'
 import type { Th } from '../types/d3'
 
 export type Cell = {
@@ -38,13 +39,21 @@ export type Column = {
 	/** Used for sorting function
 	 * Do not use this field for html columns */
 	sortable?: boolean
-	/** Use to enable barplot for specific column values */
-	barplot?: {
-		minimumRange?: [number, number]
-		axisWidth?: number
-		colorNegative?: string
-		colorPositive?: string
-	}
+	/** assume all values from this column are numbers; this renders the column into a barplot */
+	barplot?: Barplot
+}
+
+type Barplot = {
+	/** width of numerical axis, also defines bar plotting width */
+	axisWidth?: number
+	/** color for negative value bars */
+	colorNegative?: string
+	/** color for positive value bars */
+	colorPositive?: string
+	/** horizontal padding on left/right of axis, svg scale width=axisWidth+xpadding*2 */
+	xpadding?: number
+	/** dynamically assigned d3 scale */
+	scale?: any
 }
 
 export type Button = {
@@ -134,28 +143,6 @@ function getUniqueNameOrId(str = 'elem') {
 	return `sjpp-${str}-${idIncr++}-${randomSuffix}`
 }
 
-// For making sure we have enough space for both text and bar in the barplots of DE and NES scores
-function calculateRequiredWidth(column: Column): string {
-	// Start with the base width for the plot itself
-	const plotWidth = column.barplot?.axisWidth || 100
-
-	// Add padding for left and right sides
-	const padding = {
-		left: 10,
-		right: 10,
-		text: 5 // padding between bars and text
-	}
-
-	// Add space for the value labels (approximately 40px for 4 digits plus decimal)
-	const labelSpace = 40
-
-	// Calculate total width needed
-	const totalWidth = plotWidth + padding.left + padding.right + padding.text * 2 + labelSpace * 2
-
-	// Return as pixel value
-	return `${totalWidth}px`
-}
-
 /*
 Prints an html table, using the specified columns and rows
 See the paramters in TableArgs; function has no return
@@ -206,21 +193,6 @@ export function renderTable({
 		// this check is disabled for now as it breaks gdc bam slicing ui
 		//if (singleMode == true && (!buttons || !noButtonCallback)) throw `Missing buttons array and noButtonCallback but singleMode = true`
 	}
-
-	const barplotRenderers = new Map()
-	columns.forEach((column, index) => {
-		if (shouldBeBarplot(column)) {
-			// Get all values for this column
-			const columnData = rows.map(row => row[index])
-			// If the column doesn't have a specified width, calculate and set it
-			if (!column.width) {
-				column.width = calculateRequiredWidth(column)
-				console.log('Calculated width for column:', column.label, column.width)
-			}
-
-			barplotRenderers.set(index, getBarplotRenderer(columnData, column))
-		}
-	})
 
 	const uniqueInputName = inputName || getUniqueNameOrId('input')
 	const parentDiv = div.append('div').style('background-color', 'white').style('display', 'inline-block')
@@ -301,15 +273,6 @@ export function renderTable({
 	if (showHeader) {
 		for (const [i, c] of columns.entries()) {
 			const th = theadRow.append('th').attr('class', 'sjpp_table_item sjpp_table_header')
-			const barplotRenderer = barplotRenderers.get(i)
-			if (barplotRenderer) {
-				// This is a barplot column, render the axis
-				barplotRenderer(th)
-			} else {
-				// Regular column header
-				th.text(c.label)
-			}
-
 			if (c.width) th.style('width', c.width)
 			if (c.tooltip) th.attr('title', c.tooltip)
 			if (header?.allowSort) {
@@ -327,6 +290,14 @@ export function renderTable({
 			if (header?.style) {
 				for (const k in header.style) th.style(k, header.style[k])
 			}
+			if (c.barplot) {
+				// barplot column
+				prepareBarPlot(c.barplot, i, rows)
+				drawBarplotAxis(c, th)
+				continue
+			}
+			// Regular column header
+			th.text(c.label)
 		}
 	}
 
@@ -438,59 +409,59 @@ export function renderTable({
 				cell.__td = td
 
 				const column = columns[colIdx]
-				const barplotRenderer = barplotRenderers.get(colIdx)
-				if (barplotRenderer) {
-					// This is a barplot cell
-					const value = typeof cell === 'object' ? cell.value : cell
-					barplotRenderer(td, value)
-				} else {
-					if (column.editCallback && cell.value) {
-						td.on('click', (event: MouseEvent) => {
-							event.stopImmediatePropagation()
-							const isEdit = td.select('input').empty()
-							if (!isEdit) return
-							td.html('')
-							const input = td
-								.append('input')
-								.attr('value', cell.value)
-								.on('change', () => {
-									const value = input.node().value
-									cell.value = value
-									td.text(cell.value)
-									column.editCallback!(i, cell)
-								})
-							input.node().focus()
-							input.node().select()
-						})
-					}
-					if (column.width) td.style('width', column.width)
-					if (column.align) td.style('text-align', column.align)
 
-					if (column.nowrap) td.style('white-space', 'nowrap')
-					if (cell.url) {
-						td.append('a')
-							.text(cell.value || cell.value == 0 ? cell.value : cell.url) //Fix for if .value missing, url does not display
-							.attr('href', cell.url)
-							.attr('target', '_blank')
-					} else if (cell.html) {
-						td.html(cell.html)
-					} else if ('value' in cell) {
-						td.text(cell.value)
-						if (cell.color) td.style('color', cell.color)
-					} else if (cell.color) {
-						if (cell.disabled) {
-							td.style('background-color', cell.color)
-						} else {
-							const input = td
-								.append('input')
-								.attr('type', 'color')
-								.attr('value', cell.color)
-								.on('change', () => {
-									const color = input.node().value
-									cell.color = color
-									if (column.editCallback) column.editCallback(i, cell)
-								})
-						}
+				if (column.barplot) {
+					drawBarplotInCell(cell.value, td, column.barplot)
+					continue
+				}
+
+				// column is not barplot
+				if (column.editCallback && cell.value) {
+					td.on('click', (event: MouseEvent) => {
+						event.stopImmediatePropagation()
+						const isEdit = td.select('input').empty()
+						if (!isEdit) return
+						td.html('')
+						const input = td
+							.append('input')
+							.attr('value', cell.value)
+							.on('change', () => {
+								const value = input.node().value
+								cell.value = value
+								td.text(cell.value)
+								column.editCallback!(i, cell)
+							})
+						input.node().focus()
+						input.node().select()
+					})
+				}
+				if (column.width) td.style('width', column.width)
+				if (column.align) td.style('text-align', column.align)
+
+				if (column.nowrap) td.style('white-space', 'nowrap')
+				if (cell.url) {
+					td.append('a')
+						.text(cell.value || cell.value == 0 ? cell.value : cell.url) //Fix for if .value missing, url does not display
+						.attr('href', cell.url)
+						.attr('target', '_blank')
+				} else if (cell.html) {
+					td.html(cell.html)
+				} else if ('value' in cell) {
+					td.text(cell.value)
+					if (cell.color) td.style('color', cell.color)
+				} else if (cell.color) {
+					if (cell.disabled) {
+						td.style('background-color', cell.color)
+					} else {
+						const input = td
+							.append('input')
+							.attr('type', 'color')
+							.attr('value', cell.color)
+							.on('change', () => {
+								const color = input.node().value
+								cell.color = color
+								if (column.editCallback) column.editCallback(i, cell)
+							})
 					}
 				}
 			}
@@ -674,4 +645,94 @@ function sortTableCallBack(i: number, rows: any, opt: string) {
 		}
 	})
 	return newRows
+}
+
+function prepareBarPlot(cb: Barplot, i: number, rows: any) {
+	if (!cb.axisWidth) cb.axisWidth = 130
+	if (!cb.colorPositive) cb.colorPositive = '#d49353'
+	if (!cb.colorNegative) cb.colorNegative = '#5256d1'
+	if (!cb.xpadding) cb.xpadding = 5
+	let min = null,
+		max = null
+	for (const r of rows) {
+		const v = r[i].value
+		if (!Number.isFinite(v)) continue // ignore invalid value
+		if (min == null) {
+			min = v
+			max = v
+		} else {
+			min = Math.min(min, v)
+			max = Math.max(max, v)
+		}
+	}
+	if (min < 0 && max > 0) {
+		// force equal span on both sides
+		const a = Math.max(-min, max)
+		min = -a
+		max = a
+	}
+	cb.scale = scaleLinear().domain([min, max]).range([0, cb.axisWidth])
+}
+
+function drawBarplotAxis(c: Column, th: any) {
+	const cb = c.barplot
+	const labfontsize = 14
+	const ypad = 5 // padding between axis label and axis
+	const tickfontsize = 12
+	const ticksize = 4 // where is ticksize applied in axis?
+	const svg = th
+		.append('svg')
+		.attr('width', 2 * cb.xpadding + cb.axisWidth)
+		.attr('height', labfontsize + ypad + tickfontsize + ticksize + 1) // plus 1 so axis bottom line can fully show
+	const axis = axisTop().ticks(4).scale(cb.scale)
+	axisstyle({
+		axis: svg
+			.append('g')
+			.attr('transform', `translate(0,${labfontsize + ypad + tickfontsize + ticksize})`)
+			.call(axis),
+		color: 'black',
+		showline: true
+	})
+	svg
+		.append('text')
+		.attr('fill', 'black')
+		.attr('font-size', labfontsize)
+		.attr('text-anchor', 'middle')
+		.text(c.label)
+		.attr('x', cb.xpadding + cb.axisWidth / 2)
+		.attr('y', labfontsize)
+}
+
+function drawBarplotInCell(value: number, td: any, c: Barplot) {
+	if (!Number.isFinite(value)) return
+	const [min, max] = c.scale.domain()
+	let x1, x2, color
+	if (min >= 0) {
+		// all positive values
+		x1 = 0 // bar starts at left and extends to right
+		x2 = c.scale(value)
+		color = c.colorPositive
+	} else if (max <= 0) {
+		// all neg values
+		x2 = c.axisWidth //bar starts at right and extends to left
+		x1 = c.scale(value)
+		color = c.colorNegative
+	} else {
+		const x0 = c.scale(0)
+		const xv = c.scale(value)
+		x1 = Math.min(x0, xv)
+		x2 = Math.max(x0, xv)
+		color = value > 0 ? c.colorPositive : c.colorNegative
+	}
+	const height = 14
+	td.append('svg')
+		.style('margin-top', '4px') // poor fix for the svg to appear in middle of <td> vertically
+		.attr('width', 2 * c.xpadding + c.axisWidth)
+		.attr('height', height)
+		.append('rect')
+		.attr('x', x1)
+		.attr('y', 0)
+		.attr('width', x2 - x1)
+		.attr('height', height)
+		.attr('fill', color)
 }

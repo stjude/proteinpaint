@@ -312,7 +312,7 @@ add:
 		self.gsea_table_cols = [
 			{ label: 'Geneset' },
 			//{ label: 'Enrichment Score' },
-			{ label: 'Normalized Enrichment Score' },
+			{ label: 'Normalized Enrichment Score', barplot: { axisWidth: 200 } },
 			{ label: 'Geneset Size' },
 			{ label: 'P value' },
 			//{ label: 'Sidak' },
