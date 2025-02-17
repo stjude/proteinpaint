@@ -1,6 +1,6 @@
 import type { TermWrapper } from '#types'
 import { scaleLinear } from 'd3-scale'
-import { getReadableType } from '#shared/terms.js'
+import { termType2label } from '#shared/terms.js'
 import type { CorrelationVolcanoResponse } from '#types'
 import type { CorrVolcanoDom, CorrVolcanoPlotConfig, CorrVolcanoSettings, ViewData } from '../CorrelationVolcanoTypes'
 
@@ -78,7 +78,7 @@ export class ViewModel {
 				width: settings.width + this.horizPad * 2
 			},
 			title: {
-				text: `${config.featureTw.term.name} ${getReadableType(config.featureTw.term.type)}`,
+				text: `${config.featureTw.term.name} ${termType2label(config.featureTw.term.type)}`,
 				x: this.horizPad + settings.width / 2,
 				y: this.topPad / 2
 			},

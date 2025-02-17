@@ -185,24 +185,24 @@ export function getParentType(types, ds) {
 	return null //no parent found
 }
 
-//Returns human readable type (nice label) for the given type
-export function getReadableType(type) {
-	const typeMap = {
-		categorical: 'Categorical',
-		condition: 'Condition',
-		float: 'Numeric',
-		integer: 'Numeric',
-		geneExpression: 'Gene Expression',
-		geneVariant: 'Gene Variant',
-		metaboliteIntensity: 'Metabolite Intensity',
-		multiValue: 'Multi Value',
-		samplelst: 'Sample List',
-		singleCellGeneExpression: 'Single Cell, Gene Expression',
-		singleCellCellType: 'Single Cell, Cell Type',
-		snplocus: 'SNP Locus',
-		snp: 'SNP',
-		snplst: 'SNP List'
-	}
+//Returns human readable label for each term type; label is just for printing and not computing
+const typeMap = {
+	categorical: 'Categorical',
+	condition: 'Condition',
+	float: 'Numerical',
+	integer: 'Numerical',
+	geneExpression: 'Gene Expression',
+	geneVariant: 'Gene Variant',
+	metaboliteIntensity: 'Metabolite Intensity',
+	multiValue: 'Multi Value',
+	samplelst: 'Sample List',
+	singleCellGeneExpression: 'Single Cell, Gene Expression',
+	singleCellCellType: 'Single Cell, Cell Type',
+	snplocus: 'SNP Locus',
+	snp: 'SNP',
+	snplst: 'SNP List'
+}
 
-	return typeMap[type] || 'Unknown type [shared/utils/src/terms.js getReadableType()]'
+export function termType2label(type) {
+	return typeMap[type] || 'Unknown term type'
 }

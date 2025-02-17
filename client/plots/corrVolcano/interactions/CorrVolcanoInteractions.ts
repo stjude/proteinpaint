@@ -1,6 +1,6 @@
 import type { TermWrapper } from '#types'
 import { to_svg } from '#src/client'
-import { getReadableType } from '#shared/terms.js'
+import { termType2label } from '#shared/terms.js'
 import { appInit } from '#termdb/app'
 
 //TODO - finish typing this file
@@ -65,7 +65,7 @@ export class CorrVolcanoInteractions {
 		const term2 = this.variableTwLst.find((t: any) => t.$id === item.tw$id).term
 		const scatterConfig = {
 			chartType: 'sampleScatter',
-			name: `${plot.featureTw.term.name} ${getReadableType(plot.featureTw.term.type)} v ${term2.name}`,
+			name: `${plot.featureTw.term.name} ${termType2label(plot.featureTw.term.type)} v ${term2.name}`,
 			term: { term: plot.featureTw.term },
 			term2,
 			filter: config.termfilter.filter
