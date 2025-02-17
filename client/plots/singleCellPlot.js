@@ -746,7 +746,7 @@ class singleCellPlot {
 		const tableDivContent = tableDiv.append('div').style('padding-bottom', '10px')
 		const columns = [
 			{ label: 'Gene', width: '15vw' },
-			{ label: 'Log2FC', width: '12vw' },
+			{ label: 'Log2FC', width: '12vw', barplot: {} },
 			{ label: 'Adjusted P-value', width: '12vw' }
 		]
 		const rows = []
@@ -756,11 +756,7 @@ class singleCellPlot {
 		const selectedRows = []
 		let i = 0
 		for (const gene of result.genes) {
-			const row = [
-				{ value: gene.name },
-				{ value: roundValueAuto(gene.avg_log2FC) },
-				{ value: roundValueAuto(gene.p_val_adj) }
-			]
+			const row = [{ value: gene.name }, { value: gene.avg_log2FC }, { value: roundValueAuto(gene.p_val_adj) }]
 			rows.push(row)
 			this.genes.push(gene.name)
 			this.fold_changes.push(gene.avg_log2FC)
