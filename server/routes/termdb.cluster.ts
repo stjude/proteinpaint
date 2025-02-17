@@ -171,7 +171,7 @@ async function doClustering(data: any, q: TermdbClusterRequest, numCases = 1000)
 		inputData.row_names.push(gene)
 		const row: number[] = []
 		for (const s of inputData.col_names) {
-			row.push(o[s] || 0)
+			row.push(o[s])
 		}
 		inputData.matrix.push(q.zScoreTransformation ? getZscore(row) : row)
 	}
