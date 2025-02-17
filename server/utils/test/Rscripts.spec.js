@@ -260,3 +260,58 @@ tape('wilcoxon.R', async function (test) {
 	test.deepEqual(out, exp, 'wilcoxon should match expected output')
 	test.end()
 })
+
+// corr.R tests
+// Helper function to extract the relevant correlation and p-value data pieces and compare results
+const compareCorrelationResults = (actual, expected, tolerance = 0.0001) => {
+	const actualResult = actual[0]
+	const expectedResult = expected[0]
+
+	// Compare with tolerance for floating point numbers
+	const isCorrelationMatch = Math.abs(actualResult.correlation - expectedResult.correlation) < tolerance
+	const isPValueMatch = Math.abs(actualResult.original_p_value - expectedResult.original_p_value) < tolerance
+
+	/**  Return our comparison result
+	 * isMatch: true if both correlation and p-value match within tolerance
+	 * details: object containing the comparison details
+	 * - correlation: object containing the comparison details for correlation
+	 * - pValue: object containing the comparison details for p-value
+	 */
+	return {
+		isMatch: isCorrelationMatch && isPValueMatch,
+		details: {
+			correlation: {
+				actual: actualResult.correlation,
+				expected: expectedResult.correlation,
+				matches: isCorrelationMatch,
+				difference: Math.abs(actualResult.correlation - expectedResult.correlation)
+			},
+			pValue: {
+				actual: actualResult.original_p_value,
+				expected: expectedResult.original_p_value,
+				matches: isPValueMatch,
+				difference: Math.abs(actualResult.original_p_value - expectedResult.original_p_value)
+			}
+		}
+	}
+}
+
+// Running the test
+tape('corr.R spearman', async function (test) {
+	test.timeoutAfter(5000)
+	test.plan(1)
+
+	const infile = path.join(serverconfig.binpath, 'test/testdata/R/corr_input.json')
+	const expfile = path.join(serverconfig.binpath, 'test/testdata/R/corr_spearman_output.json')
+
+	const Rout = await lines2R(path.join(__dirname, '../Corr.R'), [], [infile])
+	const actual = JSON.parse(Rout[0])
+	const expected = JSON.parse(await read_file(expfile))
+
+	const comparison = compareCorrelationResults(actual, expected)
+
+	test.ok(
+		comparison.isMatch,
+		`Correlation values should match within tolerance.\n${JSON.stringify(comparison.details, null, 2)}`
+	)
+})
