@@ -195,12 +195,12 @@ const typeMap = {
 	geneVariant: 'Gene Variant',
 	metaboliteIntensity: 'Metabolite Intensity',
 	multiValue: 'Multi Value',
-	samplelst: 'Sample List',
 	singleCellGeneExpression: 'Single Cell, Gene Expression',
 	singleCellCellType: 'Single Cell, Cell Type',
 	snplocus: 'SNP Locus',
 	snp: 'SNP',
-	snplst: 'SNP List'
+	snplst: 'SNP List',
+	numericDictTerm: 'Numeric Dictionary Term'
 }
 
 export function termType2label(type) {

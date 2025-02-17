@@ -21,6 +21,7 @@ import { clusterMethodLst, distanceMethodLst } from '#shared/clustering.js'
 import { getResult as getResultGene } from '#src/gene.js'
 import { TermTypes, NUMERIC_DICTIONARY_TERM } from '#shared/terms.js'
 import { getData } from '#src/termdb.matrix.js'
+import { termType2label } from '#shared/terms.js'
 
 export const api: RouteApi = {
 	endpoint: 'termdb/cluster',
@@ -145,19 +146,12 @@ async function doClustering(data: any, q: TermdbClusterRequest, numCases = 1000)
 				}
 			}
 		}
-		if (sampleSet.size >= numCases) break
 	}
 
-	const termType =
-		q.dataType == 'geneExpression'
-			? 'genes'
-			: q.dataType == 'metaboliteIntensity'
-			? 'metabolites'
-			: q.dataType == 'numericDictTerm'
-			? 'terms'
-			: 'terms'
 	if (sampleSet.size == 0)
-		throw `termdb.cluster: There are no overlapping tested samples shared across the selected ${termType}`
+		throw `termdb.cluster: There are no overlapping tested samples shared across the selected ${termType2label(
+			q.dataType
+		)}`
 
 	// Checking if cluster and distance method for hierarchial clustering is valid
 	if (!clusterMethodLst.find(i => i.value == q.clusterMethod)) throw 'Invalid cluster method'
@@ -166,7 +160,7 @@ async function doClustering(data: any, q: TermdbClusterRequest, numCases = 1000)
 	const inputData = {
 		matrix: [] as number[][],
 		row_names: [] as string[], // genes
-		col_names: [...sampleSet] as string[], // samples
+		col_names: [...sampleSet].slice(0, numCases) as string[], // samples
 		cluster_method: q.clusterMethod as string,
 		distance_method: q.distanceMethod as string,
 		plot_image: false // When true causes cluster.rs to plot the image into a png file (EXPERIMENTAL)
