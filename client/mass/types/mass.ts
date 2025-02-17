@@ -3,6 +3,8 @@ import type { Menu } from '#dom'
 import type { Elem } from '../../types/d3'
 import type { ClientCopyGenome } from 'types/global'
 import type { BoxPlotSettings } from '../../plots/boxplot/BoxPlot'
+import type { CorrVolcanoSettings } from '#plots/corrVolcano/CorrelationVolcanoTypes.ts'
+import type { DEanalysisSettings } from '../../plots/DEanalysis/DEanalysisTypes.ts'
 //import { TermWrapper } from '#types'
 
 export type MassAppApi = RxAppApi & {
@@ -118,7 +120,8 @@ type PlotSettings = {
 	boxplot?: BoxPlotSettings
 	common?: any
 	controls?: any
-	correlationVolcano?: any
+	correlationVolcano?: CorrVolcanoSettings
+	DEanalysis?: DEanalysisSettings
 	sampleScatter?: any
 	violin?: any
 }
