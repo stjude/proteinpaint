@@ -7,12 +7,13 @@ Run test script as follows (from 'server/'):
 
 *********************************************/
 
-const tape = require('tape')
-const fs = require('fs')
-const lines2R = require('../../src/lines2R')
-const serverconfig = require('../../src/serverconfig')
-const path = require('path')
-const read_file = require('../../src/utils').read_file
+
+import tape from 'tape'
+// const lines2R = require('../../src/lines2R')
+import serverconfig from '../../src/serverconfig.js'
+import path from 'path'
+import * as utils from '../../src/utils.js'
+// import { lines2R } from '../../src/lines2R'
 
 tape('\n', function (test) {
 	test.pass('-***- R scripts specs -***-')
@@ -214,7 +215,7 @@ tape('survival.R', async function (test) {
 	const expfile = path.join(serverconfig.binpath, 'test/testdata/R/survival_output.json')
 	const Rout = await lines2R(path.join(__dirname, '../survival.R'), [], [infile])
 	const out = JSON.parse(Rout[0])
-	const exp = JSON.parse(await read_file(expfile))
+	const exp = JSON.parse(await utils.read_file(expfile))
 	test.deepEqual(out, exp, 'survival should match expected output')
 	test.end()
 })
@@ -227,7 +228,7 @@ tape('cuminc.R', async function (test) {
 	const expfile = path.join(serverconfig.binpath, 'test/testdata/R/cuminc_output.json')
 	const Rout = await lines2R(path.join(__dirname, '../cuminc.R'), [], [infile])
 	const out = JSON.parse(Rout[0])
-	const exp = JSON.parse(await read_file(expfile))
+	const exp = JSON.parse(await utils.read_file(expfile))
 	test.deepEqual(out, exp, 'cuminc should match expected output')
 	test.end()
 })
@@ -242,7 +243,7 @@ tape('regression.R', async function (test) {
 		const Rout = await lines2R(path.join(__dirname, '../regression.R'), [], [infile])
 		const out = JSON.parse(Rout[0])
 		delete out.benchmark
-		const exp = JSON.parse(await read_file(expfile))
+		const exp = JSON.parse(await utils.read_file(expfile))
 		test.deepEqual(out, exp, `${type} regression should match expected output`)
 	}
 	test.end()
@@ -256,7 +257,7 @@ tape('wilcoxon.R', async function (test) {
 	const expfile = path.join(serverconfig.binpath, 'test/testdata/R/wilcoxon_output.json')
 	const Rout = await lines2R(path.join(__dirname, '../wilcoxon.R'), [], [infile])
 	const out = JSON.parse(Rout[0])
-	const exp = JSON.parse(await read_file(expfile))
+	const exp = JSON.parse(await utils.read_file(expfile))
 	test.deepEqual(out, exp, 'wilcoxon should match expected output')
 	test.end()
 })
