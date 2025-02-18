@@ -65,10 +65,10 @@ values[] // using integer sample id
 	if (param.samplelst.groups[1].values?.length < 1) throw 'samplelst.groups[1].values.length<1'
 	// txt file uses string sample name, must convert integer sample id to string
 	const q = ds.queries.rnaseqGeneCount
-	param.storage_type = ds.queries.rnaseqGeneCount.storage_type
-
 	if (!q) return
 	if (!q.file) throw 'unknown data type for rnaseqGeneCount'
+	if (!q.storage_type) throw 'storage_type is not defined' // This check is redundant because in ts this is already defined as a mandatory field. Still keeping it as a backup (when storage_type will be permanently switched to HDF5).
+	param.storage_type = q.storage_type
 	const group1names = [] as string[]
 	//let group1names_not_found = 0
 	//const group1names_not_found_list = []
@@ -81,7 +81,13 @@ values[] // using integer sample id
 			if (param.tw) {
 				if (term_results.samples[s.sampleId]) {
 					// For some samples the confounding variables are not availble. Need to check!!!
-					conf1_group1.push(term_results.samples[s.sampleId][param.tw.$id]['value'])
+					if (param.tw.q.mode == 'continuous') {
+						// When confounding variable is continuous use 'value'
+						conf1_group1.push(term_results.samples[s.sampleId][param.tw.$id]['value'])
+					} else {
+						// When confounding variable is discrete use 'key'
+						conf1_group1.push(term_results.samples[s.sampleId][param.tw.$id]['key'])
+					}
 					group1names.push(n)
 				}
 			} else {
@@ -104,7 +110,13 @@ values[] // using integer sample id
 			if (param.tw) {
 				if (term_results.samples[s.sampleId]) {
 					// For some samples the confounding variables are not availble. Need to check!!!
-					conf1_group2.push(term_results.samples[s.sampleId][param.tw.$id]['value'])
+					if (param.tw.q.mode == 'continuous') {
+						// When confounding variable is continuous use 'value'
+						conf1_group2.push(term_results.samples[s.sampleId][param.tw.$id]['value'])
+					} else {
+						// When confounding variable is discrete use 'key'
+						conf1_group2.push(term_results.samples[s.sampleId][param.tw.$id]['key'])
+					}
 					group2names.push(n)
 				}
 			} else {
@@ -143,6 +155,7 @@ values[] // using integer sample id
 	} as ExpressionInput
 
 	if (param.tw) {
+		//console.log("param.tw.q.mode:",param.tw.q.mode)
 		expression_input.conf1 = [...conf1_group2, ...conf1_group1] // Make sure the order of the groups is same as in expression_input case and control
 		expression_input.conf1_type = param.tw.q.mode // Parses the type of the confounding variable
 		if (new Set(expression_input.conf1).size === 1) {
