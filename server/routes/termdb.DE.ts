@@ -64,9 +64,9 @@ values[] // using integer sample id
 	if (param.samplelst.groups[0].values?.length < 1) throw 'samplelst.groups[0].values.length<1'
 	if (param.samplelst.groups[1].values?.length < 1) throw 'samplelst.groups[1].values.length<1'
 	// txt file uses string sample name, must convert integer sample id to string
+	const q = ds.queries.rnaseqGeneCount
 	param.storage_type = ds.queries.rnaseqGeneCount.storage_type
 
-	const q = ds.queries.rnaseqGeneCount
 	if (!q) return
 	if (!q.file) throw 'unknown data type for rnaseqGeneCount'
 	const group1names = [] as string[]
@@ -78,9 +78,14 @@ values[] // using integer sample id
 		const n = ds.cohort.termdb.q.id2sampleName(s.sampleId)
 		if (!n) continue
 		if (q.allSampleSet.has(n)) {
-			group1names.push(n)
 			if (param.tw) {
-				conf1_group1.push(term_results.samples[s.sampleId][param.tw.$id]['value'])
+				if (term_results.samples[s.sampleId]) {
+					// For some samples the confounding variables are not availble. Need to check!!!
+					conf1_group1.push(term_results.samples[s.sampleId][param.tw.$id]['value'])
+					group1names.push(n)
+				}
+			} else {
+				group1names.push(n)
 			}
 		} else {
 			//group1names_not_found += 1
@@ -96,9 +101,14 @@ values[] // using integer sample id
 		const n = ds.cohort.termdb.q.id2sampleName(s.sampleId)
 		if (!n) continue
 		if (q.allSampleSet.has(n)) {
-			group2names.push(n)
 			if (param.tw) {
-				conf1_group2.push(term_results.samples[s.sampleId][param.tw.$id]['value'])
+				if (term_results.samples[s.sampleId]) {
+					// For some samples the confounding variables are not availble. Need to check!!!
+					conf1_group2.push(term_results.samples[s.sampleId][param.tw.$id]['value'])
+					group2names.push(n)
+				}
+			} else {
+				group2names.push(n)
 			}
 		} else {
 			//group2names_not_found += 1
@@ -108,6 +118,7 @@ values[] // using integer sample id
 
 	//console.log('Sample size of group1:', group1names.length)
 	//console.log('Sample size of group2:', group2names.length)
+
 	const sample_size1 = group1names.length
 	const sample_size2 = group2names.length
 	//console.log('group1names_not_found_list:', group1names_not_found_list)
