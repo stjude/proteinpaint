@@ -145,7 +145,7 @@ export function sample_match_termvaluesetting(row, filter, _term = null, sample 
 						) && true //; console.log(114, t.values[0].dt, samplevalue.dt, thistermmatch)
 				}
 			} else {
-				throw 'unknown term type'
+				throw 'unknown term type [sample_match_termvaluesetting() shared/utils/src/filter.js]'
 			}
 
 			if (t.isnot) {

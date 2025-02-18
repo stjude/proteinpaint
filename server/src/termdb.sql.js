@@ -450,7 +450,7 @@ export async function get_term_cte(q, values, index, filter, termWrapper = null)
 	} else if (term.type == 'multivalue') {
 		CTE = await multivalueCTE.getCTE(tablename, termWrapper || { term, q: termq }, values)
 	} else {
-		throw 'unknown term type'
+		throw 'unknown term type [get_term_cte() server/src/termdb.sql.js]'
 	}
 	return CTE
 }
@@ -558,7 +558,7 @@ function get_label4key(key, term, q, ds) {
 		return key in term.values ? term.values[key].label : key
 	}
 	if (term.type == 'integer' || term.type == 'float') throw 'should not work for numeric term'
-	throw 'unknown term type'
+	throw 'unknown term type [get_label4key() server/src/termdb.sq.js]'
 }
 
 export function getUncomputableClause(term, q, tableAlias = '') {
