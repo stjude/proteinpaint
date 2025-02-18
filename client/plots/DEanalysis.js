@@ -770,8 +770,10 @@ async function runDEanalysis(self) {
 		min_total_count: self.settings.min_total_count,
 		method: self.settings.method
 	}
+
 	if (self.config.term) {
 		input.tw = self.config.term
+		input.tw_type = self.config.term.q.mode
 		self.settings.method = 'edgeR' // When adjustment of confounding variables is selected, the method should always be a parmetric method such as edgeR
 		input.method = 'edgeR'
 	}
