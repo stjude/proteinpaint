@@ -17,8 +17,6 @@ export type DERequest = {
 	method?: string
 	/** Term for confounding variable (if present) */
 	tw?: any
-	/** Type of term for confounding variable */
-	tw_type?: 'continuous' | 'discrete'
 	/** Number of variable genes (defined only for parametric DE methods) */
 	VarGenes?: number
 }
