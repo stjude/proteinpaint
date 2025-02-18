@@ -142,7 +142,15 @@ if (length(input$conf1) == 0) { # No adjustment of confounding factors
     })
     #cat("Exact test time: ", exact_test_time[3], " seconds\n")
 } else { # Adjusting for confounding factors
-    y$samples <- data.frame(conditions = conditions, conf1 = input$conf1)
+
+    # Check the type of confounding variable
+    if (input$conf1_type == "float") { # If this is float, the input conf1 vector should be converted into a numeric vector
+      conf1 <- as.numeric(input$conf1)
+    } else { # When input$conf1_type == "categorical" keep the vector as string. PLEASE ASK WHAT OTHER POSSIBLE TERM TYPES ARE POSSIBLE
+      conf1 <- input$conf1
+    }
+
+    y$samples <- data.frame(conditions = conditions, conf1 = conf1)
     model_gen_time <- system.time({
         design <- model.matrix(~ conditions + conf1, data = y$samples)
     })
