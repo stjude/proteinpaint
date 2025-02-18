@@ -678,7 +678,7 @@ export async function getPlotConfig(opts, app) {
 					min_total_count: 15,
 					pvaluetable: false,
 					adjusted_original_pvalue: 'adjusted',
-					method: 'wilcoxon',
+					method: 'edgeR',
 					VarGenes: 3000,
 					gene_ora: undefined,
 					gsea: undefined
