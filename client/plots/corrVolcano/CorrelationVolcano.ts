@@ -203,9 +203,10 @@ class CorrelationVolcano extends RxComponentInner {
 		/** Request data from the server*/
 		const model = new Model(config, this.state, this.app, settings, this.variableTwLst)
 		const data = await model.getData()
-		if (!data || data['error']) {
+		if (!data || data.error) {
 			this.interactions.clearDom()
-			this.dom.error.text(data['error'] || 'No data returned from server')
+			this.dom.error.text(data.error || 'No data returned from server')
+			return
 		}
 
 		/** Format returned data for rendering */
