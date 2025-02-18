@@ -133,7 +133,7 @@ values[] // using integer sample id
 
 	if (param.tw) {
 		expression_input.conf1 = [...conf1_group2, ...conf1_group1] // Make sure the order of the groups is same as in expression_input case and control
-		expression_input.conf1_type = param.tw.term.type
+		expression_input.conf1_type = param.tw_type // Parses the type of the confounding variable
 	}
 
 	//console.log('expression_input:', expression_input)
