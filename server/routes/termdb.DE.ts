@@ -134,6 +134,10 @@ values[] // using integer sample id
 	if (param.tw) {
 		expression_input.conf1 = [...conf1_group2, ...conf1_group1] // Make sure the order of the groups is same as in expression_input case and control
 		expression_input.conf1_type = param.tw.q.mode // Parses the type of the confounding variable
+		if (new Set(expression_input.conf1).size === 1) {
+			// If all elements in the confounding variable are equal, throw error as R script crashes if the confounding variable has only 1 level
+			throw 'Confounding variable has only one value'
+		}
 	}
 
 	//console.log('expression_input:', expression_input)

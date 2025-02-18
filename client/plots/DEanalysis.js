@@ -237,8 +237,17 @@ class DEanalysis {
 			this.dom.holder.selectAll('*').remove()
 		}
 		const wait = this.dom.detailsDiv.append('div').text('Loading...')
-		const output = await runDEanalysis(this) // "this.config" was changed from "this.state.config". Hope this does not create any problems.
-		wait.remove()
+		let output
+		try {
+			output = await runDEanalysis(this) // "this.config" was changed from "this.state.config". Hope this does not create any problems.
+			wait.remove()
+			if (output.error) {
+				throw output.error
+			}
+		} catch (e) {
+			alert('Error: ' + e)
+			return
+		}
 		output.mid_sample_size_cutoff = 8 // mid sample size cutoff for method toggle to appear
 		output.high_sample_size_cutoff = 30 // high sample size cutoff for method toggle to not appear, so that very high sample-size groups are not analyzed by edgeR. The exact cutoff value will need to be determined with more examples.
 		await this.setControls(output)
