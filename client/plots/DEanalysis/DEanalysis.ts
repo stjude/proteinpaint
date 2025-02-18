@@ -5,7 +5,7 @@ import { Menu } from '#dom'
 // import { controlsInit } from '../controls'
 import type { DEanalysisDom, DEanalysisOpts, DEanalysisSettings } from './DEanalysisTypes'
 import { DEAnalysisInteractions } from './interactions/DEAnalysisInteractions'
-// import { Model } from './model/Model'
+import { Model } from './model/Model'
 // import { View } from './view/View'
 // import { ViewModel } from './viewModel/ViewModel'
 
@@ -20,11 +20,11 @@ export class DEanalysis extends RxComponentInner {
 		this.components = {
 			controls: {}
 		}
-		const holder = opts.holder.classed('sjpp-DEanalysis-main', true)
+		const holder = opts.holder.classed('sjpp-de-analysis-main', true)
 		const controls = opts.controls ? holder : holder.append('div')
 		const div = holder.append('div').style('padding', '5px')
-		const errorDiv = div.append('div').attr('id', 'sjpp-DEanalysis-error').style('opacity', 0.75)
-		const svg = div.append('svg').style('display', 'inline-block').attr('id', 'sjpp-DEanalysis-svg')
+		const errorDiv = div.append('div').attr('id', 'sjpp-de-analysis-error').style('opacity', 0.75)
+		const svg = div.append('svg').style('display', 'inline-block').attr('id', 'sjpp-de-analysis-svg')
 		this.dom = {
 			controls: controls.style('display', 'block'),
 			div,
@@ -57,9 +57,17 @@ export class DEanalysis extends RxComponentInner {
 		}
 	}
 
-	main() {
-		const config = structuredClone(this.state)
+	async main() {
+		const config = structuredClone(this.state.config)
 		if (config.chartType != this.type) return
+
+		const model = new Model(this.app, config, config.settings.DEanalysis)
+		const data = await model.getData()
+		if (!data || data['error']) {
+			this.interactions.clearDom()
+			this.dom.error.text(data['error'] || 'No data returned from server')
+		}
+		console.log(data)
 
 		// const settings = config.settings.DEanalysis
 	}
@@ -71,7 +79,8 @@ export const componentInit = DEanalysisInit
 function getDefaultDEanalysisSettings(overrides: Partial<DEanalysisSettings>): DEanalysisSettings {
 	const defaults: DEanalysisSettings = {
 		minCount: 10,
-		minTotalCount: 15
+		minTotalCount: 15,
+		varGenesCutoff: 3000
 	}
 	return Object.assign(defaults, overrides)
 }
