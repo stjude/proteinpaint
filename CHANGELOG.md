@@ -7,6 +7,9 @@ All notable changes to this project will be documented in this file.
 Features:
 - Added ability to visualize log2FC and NES scores as barplots within table columns
 
+Fixes:
+- HierCluster: should only cluster overlapping tested samples shared across all the selected genes/metabilites/terms
+
 
 ## 2.107.0
 
