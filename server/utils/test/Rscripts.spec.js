@@ -7,12 +7,17 @@ Run test script as follows (from 'server/'):
 
 *********************************************/
 
-
 import tape from 'tape'
 import serverconfig from '../../src/serverconfig.js'
 import path from 'path'
 import * as utils from '../../src/utils.js'
-// import run_R from '../../src/run_R.js'
+import run_R from '../../src/run_R.js'
+import { fileURLToPath } from 'url'
+import { dirname } from 'path'
+
+// Creating __dirname equivalent for ES6 modules
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = dirname(__filename)
 
 tape('\n', function (test) {
 	test.pass('-***- R scripts specs -***-')
@@ -306,7 +311,7 @@ tape('corr.R spearman', async function (test) {
 
 	const Rout = await run_R(path.join(__dirname, '../Corr.R'), [], [infile])
 	const actual = JSON.parse(Rout[0])
-	const expected = JSON.parse(await read_file(expfile))
+	const expected = JSON.parse(await utils.read_file(expfile))
 
 	const comparison = compareCorrelationResults(actual, expected)
 
