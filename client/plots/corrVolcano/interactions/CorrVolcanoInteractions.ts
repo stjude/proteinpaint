@@ -67,7 +67,7 @@ export class CorrVolcanoInteractions {
 			chartType: 'sampleScatter',
 			name: `${plot.featureTw.term.name} ${termType2label(plot.featureTw.term.type)} v ${term2.name}`,
 			term: { term: plot.featureTw.term },
-			term2,
+			term2: { id: term2.id },
 			filter: config.termfilter.filter
 		}
 		this.app.dispatch({

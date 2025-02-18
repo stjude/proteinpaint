@@ -1,6 +1,6 @@
 import { getCompInit, copyMerge } from '#rx'
 import { RxComponentInner } from '../../types/rx.d'
-import { fillTermWrapper } from '#termsetting'
+import { fillTermWrapper, fillTwLst } from '#termsetting'
 import type { BasePlotConfig, MassAppApi, MassState } from '#mass/types/mass'
 import { controlsInit } from '../controls'
 import type { CorrVolcanoDom, CorrVolcanoOpts, CorrVolcanoSettings } from './CorrelationVolcanoTypes'
@@ -23,7 +23,6 @@ class CorrelationVolcano extends RxComponentInner {
 	/** Min radius user may enter in control or legend menu */
 	readonly defaultInputMinRadius = 1
 	dom: CorrVolcanoDom
-	dsCorrVolcano: any
 	variableTwLst: any
 	interactions: CorrVolcanoInteractions
 	constructor(opts: any) {
@@ -51,7 +50,6 @@ class CorrelationVolcano extends RxComponentInner {
 		}
 		if (opts.header)
 			this.dom.header = opts.header.text('CORRELATION VOLCANO').style('font-size', '0.7em').style('opacity', 0.6)
-		this.dsCorrVolcano = {}
 		this.variableTwLst = []
 		this.interactions = new CorrVolcanoInteractions(this.app, this.dom, this.id)
 	}
@@ -181,13 +179,14 @@ class CorrelationVolcano extends RxComponentInner {
 	async init(appState: MassState) {
 		if (this.getState(appState).config['featureTw']) await this.setControls()
 		//Hack because obj not returning in getState(). Will fix later.
-		this.dsCorrVolcano = appState.termdbConfig.correlationVolcano
+		const dsCorrVolcano = appState.termdbConfig.correlationVolcano
 
 		//Fill the term wrapper for the drug list from the ds
-		this.variableTwLst = this.dsCorrVolcano.variables.termIds.map((id: string) => {
+		this.variableTwLst = dsCorrVolcano.variables.termIds.map((id: string) => {
 			return { id }
 		})
-		for (const t of this.variableTwLst) await fillTermWrapper(t, this.app.vocabApi)
+
+		await fillTwLst(this.variableTwLst, this.app.vocabApi)
 		this.interactions.setVars(this.app, this.id, this.variableTwLst)
 	}
 
