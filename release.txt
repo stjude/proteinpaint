@@ -1,1 +1,2 @@
-
+Fixes:
+- Update termsetting pill for gene expression terms
