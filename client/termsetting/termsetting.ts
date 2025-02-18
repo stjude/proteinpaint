@@ -439,7 +439,8 @@ function setRenderers(self) {
 		self.dom.pilldiv.style('display', self.opts.buttons ? 'inline-block' : 'block')
 		self.dom.btnDiv.style('display', self.opts.buttons ? 'inline-block' : 'none')
 
-		const pills = self.dom.pilldiv.selectAll('.ts_pill').data([self.term], (d: any) => d.id)
+		//Gene expression terms do not have an id. Use the name if an id is not available.
+		const pills = self.dom.pilldiv.selectAll('.ts_pill').data([self.term], (d: any) => d.id || d.name)
 
 		// this exit is really nice
 		pills.exit().each(self.exitPill)
