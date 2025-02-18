@@ -30,7 +30,8 @@ export class Model {
 	setRequestOpts() {
 		const opts: { [index: string]: any } = {
 			tw: this.getContinousTerm(),
-			filter: this.state.termfilter.filter
+			filter: this.state.termfilter.filter,
+			filter0: this.state.termfilter.filter0
 		}
 		if (this.config.term2)
 			opts.overlayTw = this.getContinousTerm() == this.config.term ? this.config.term2 : this.config.term
