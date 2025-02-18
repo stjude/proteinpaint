@@ -7,6 +7,8 @@ import { loadFilterTerms } from './profilePlot.js'
 import { Tabs } from '../dom/toggleButtons.js'
 
 const YES_NO_TAB = 'Yes/No Barchart'
+const IMPRESSIONS_TAB = 'Impressions'
+const LIKERT_TAB = 'Likert Scale'
 export class profileForms extends profilePlot {
 	id: any
 	type: string
@@ -23,6 +25,7 @@ export class profileForms extends profilePlot {
 	twLst: any
 	filterG: any
 	keys: any
+	activePlot: any
 
 	constructor(opts) {
 		super()
@@ -53,14 +56,17 @@ export class profileForms extends profilePlot {
 		}
 
 		const topDiv = rightDiv.append('div')
+		const domain = config.tw.term.id.split('__').slice(1).join(' / ')
+		topDiv.append('div').style('padding-bottom', '10px').style('font-weight', 'bold').text(domain)
+
+		const headerDiv = rightDiv.append('div').style('padding-bottom', '10px')
 		await new Tabs({
 			holder: topDiv,
 			tabsPosition: 'horizontal',
 			tabs
 		}).main()
 
-		rightDiv.append('div').style('font-weight', 'bold').text(config.tw.term.name)
-		const shift = 750
+		const shift = 600
 		const shiftTop = 60
 		const svg = rightDiv
 			.style('padding', '10px')
@@ -87,6 +93,7 @@ export class profileForms extends profilePlot {
 
 		this.dom = copyMerge(this.dom, {
 			svg,
+			headerDiv,
 			mainG,
 			gridG,
 			legendG,
@@ -96,20 +103,25 @@ export class profileForms extends profilePlot {
 
 	async main() {
 		super.main()
+
+		this.activePlot = this.state.config.activeTab
+			? this.state.config.plots.find(p => p.name == this.state.config.activeTab)
+			: this.state.config.plots[0]
 		await this.setControls()
 		this.renderPlot()
 		this.filterG.selectAll('*').remove()
 		this.addFilterLegend()
 	}
 
-	getPercentsDict(tw, samples): { [key: string]: number } {
-		if (!tw) throw 'tw not defined'
-		//not specified when called
-		//if defined in the settings a site is provided and the user can decide what to see, otherwise it is admin view and if the site was set sampleData is not null
+	getDict(key, sample) {
+		const termData = sample[key].value
+		return JSON.parse(termData)
+	}
+
+	getPercentsDict(getDict, samples): { [key: string]: number } {
 		const percentageDict = {}
 		for (const sample of samples) {
-			const termData = sample[tw.$id].value
-			const percents: { [key: string]: number } = JSON.parse(termData)
+			const percents: { [key: string]: number } = getDict(sample)
 			for (const key in percents) {
 				const value = percents[key]
 				if (!percentageDict[key]) percentageDict[key] = 0
@@ -133,26 +145,50 @@ export class profileForms extends profilePlot {
 	}
 
 	renderPlot() {
+		this.dom.headerDiv.style('display', 'none')
 		this.dom.mainG.selectAll('*').remove()
 		this.dom.gridG.selectAll('*').remove()
 		this.dom.xAxisG.selectAll('*').remove()
 		this.dom.legendG.selectAll('*').remove()
-		const samples = this.settings.isAggregate || !this.sampleData ? this.data.lst : [this.sampleData]
-		if (this.state.config.activeTab === undefined || this.state.config.activeTab == YES_NO_TAB)
-			this.renderPlotYesNo(samples)
+		const samples = this.sampleData ? [this.sampleData] : this.data.lst
+		switch (this.state.config.activeTab) {
+			case IMPRESSIONS_TAB:
+				this.renderImpressions(samples)
+				break
+			case LIKERT_TAB:
+				this.renderLikert(samples)
+				break
+			default:
+				this.renderYesNo(samples)
+		}
 	}
 
-	renderPlotYesNo(samples) {
+	renderImpressions(samples) {}
+
+	renderLikert(samples) {
+		this.dom.headerDiv.style('display', 'block')
+		this.dom.headerDiv.selectAll('*').remove()
+		let y = 0
+		const step = 30
+		for (const tw of this.activePlot.terms) {
+			const getDict = sample => this.getDict(tw.$id, sample)
+			const dict = this.getPercentsDict(getDict, samples) //get the dict for each drug for the list of samples
+			console.log(dict)
+			this.renderRect(dict, y, 25, tw.term.name)
+			y += step
+		}
+	}
+
+	renderYesNo(samples) {
 		this.xAxisScale = d3Linear().domain([0, 100]).range([0, this.settings.svgw])
 		this.dom.xAxisG.call(axisTop(this.xAxisScale))
 		const height = 30
 		let y = 0
 		let showSCBar = false
-		const activePlot = this.state.config.activeTab
-			? this.state.config.plots.find(p => p.name == this.state.config.activeTab)
-			: this.state.config.plots[0]
+		const activePlot = this.activePlot
 		for (const tw of activePlot.terms) {
-			const percents: { [key: string]: number } = this.getPercentsDict(tw, samples)
+			const getDict = sample => this.getDict(tw.$id, sample)
+			const percents: { [key: string]: number } = this.getPercentsDict(getDict, samples)
 			const scTerm = activePlot.scTerms.find(t => t.term.id.includes(tw.term.id))
 			const scPercents: { [key: string]: number } = this.getSCPercentsDict(scTerm, samples)
 			const scPercentKeys = Object.keys(scPercents).sort((a, b) => a.localeCompare(b))
@@ -180,9 +216,9 @@ export class profileForms extends profilePlot {
 				.append('text')
 				.attr('x', -15)
 				.attr('y', showSCBar ? y : y + height / 2)
-				.text(tw.term.name)
+				.text(getText(tw.term.name))
 				.attr('text-anchor', 'end')
-				.attr('font-size', '0.9em')
+				.attr('font-size', '0.8em')
 
 			y += height + 40
 		}
@@ -222,6 +258,38 @@ export class profileForms extends profilePlot {
 
 	getColor(key: string) {
 		return key == 'Yes' ? this.state.config.color : key == 'No' ? '#aaa' : `url(#${this.id}_diagonalHatch)`
+	}
+
+	renderRect(dict: { [key: string]: number }, y: number, height: number, text) {
+		const categories = this.activePlot.categories
+		const itemG = this.dom.mainG.append('g').attr('transform', `translate(0, ${y})`)
+		const total = Object.values(dict).reduce((a, b) => a + b, 0)
+		let x = 0
+		for (const category of categories) {
+			const key = category.name
+			const color = category.color
+			this.keys.add(key)
+			const value = dict[key]
+			if (!value) continue
+			const width = (value / total) * this.settings.svgw
+			itemG
+				.append('rect')
+				.attr('x', x)
+				.attr('y', y)
+				.attr('width', width)
+				.attr('height', height)
+				.attr('stroke', 'gray')
+				.attr('fill', color)
+				.datum({ key, value })
+				.on('mouseover', this.onMouseOver.bind(this))
+
+			x += width
+		}
+		itemG
+			.append('text')
+			.text(text)
+			.attr('y', y + height)
+			.attr('text-anchor', 'end')
 	}
 
 	renderRects(percents: { [key: string]: number }, y: number, height: number, scPercentKeys: string[]) {
@@ -330,3 +398,8 @@ export function getDefaultProfileFormsSettings() {
 export const profileFormsInit = getCompInit(profileForms)
 // this alias will allow abstracted dynamic imports
 export const componentInit = profileFormsInit
+
+function getText(name, size = 90) {
+	if (name.length > size) name = name.slice(0, size) + '...'
+	return name
+}
