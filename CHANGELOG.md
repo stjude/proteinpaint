@@ -11,6 +11,7 @@ Fixes:
 - HierCluster: should only cluster overlapping tested samples shared across all the selected genes/metabilites/terms
 - Include filter0 in box plot server request args
 - Update termsetting pill for gene expression terms
+- mds3 tk sample summary can account for cnv-only mode and cnv filters
 
 
 ## 2.107.0
