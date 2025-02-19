@@ -120,6 +120,7 @@ export class View {
 	) {
 		const svg = this.dom.legend
 			.attr('width', 400)
+			//TODO: calculate the height based on the number of skipped terms and max radius
 			.attr('height', 400)
 			.style('display', 'inline-block')
 			.style('vertical-align', 'top')
@@ -146,15 +147,19 @@ export class View {
 		})
 
 		/** Show terms with no data to the user */
-		if (legendData.invalidTerms.length > 0) {
+		if (legendData.skippedVariables.length > 0) {
 			const newYPos = startYPos + settings.radiusMax + 60
 			let incrY = 30
-			const invalidTermsG = svg.append('g').attr('transform', `translate(${startXPos}, ${newYPos})`)
+			const skippedVariablesG = svg.append('g').attr('transform', `translate(${startXPos}, ${newYPos})`)
 			//Styling matches the legend circle reference
-			invalidTermsG.append('text').style('font-weight', 'bold').style('font-size', '0.8em').text('Invalid Terms')
+			skippedVariablesG
+				.append('text')
+				.style('font-weight', 'bold')
+				.style('font-size', '0.8em')
+				.text('Skipped Variables')
 
-			for (const term of legendData.invalidTerms) {
-				invalidTermsG
+			for (const term of legendData.skippedVariables) {
+				skippedVariablesG
 					.append('text')
 					.attr('transform', `translate(${startXPos}, ${incrY})`)
 					.style('font-size', '0.8em')

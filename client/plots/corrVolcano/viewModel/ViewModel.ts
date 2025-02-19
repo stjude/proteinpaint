@@ -30,7 +30,7 @@ export class ViewModel {
 		this.viewData = {
 			plotDim,
 			variableItems: this.setVariablesData(absSampleMax, absSampleMin, d, dom, pValueKey, plotDim, settings),
-			legendData: this.setLegendData(absSampleMin, absSampleMax, data.invalidTerms)
+			legendData: this.setLegendData(absSampleMin, absSampleMax, data.skippedVariables)
 		}
 	}
 
@@ -151,14 +151,14 @@ export class ViewModel {
 		return data.variableItems
 	}
 
-	setLegendData(absSampleMin: number, absSampleMax: number, invalidTerms: { tw$id: string }[]) {
+	setLegendData(absSampleMin: number, absSampleMax: number, skippedVariables: { tw$id: string }[]) {
 		const opts = {
 			absMin: absSampleMin,
 			absMax: absSampleMax,
-			invalidTerms:
-				invalidTerms.length == 0
+			skippedVariables:
+				skippedVariables.length == 0
 					? []
-					: invalidTerms.map((t: any) => {
+					: skippedVariables.map((t: any) => {
 							return { label: this.variableTwLst.find(tw => tw.$id == t.tw$id)!.term.name }
 					  })
 		}
