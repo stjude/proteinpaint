@@ -18,6 +18,11 @@ export type CorrelationVolcanoRequest = {
 }
 
 export type CorrelationVolcanoResponse = {
+	/** Terms with not enough vectors to calculate correlation to be shown in legend */
+	invalidTerms: {
+		/** matching tw $id */
+		tw$id: string
+	}[]
 	/** each element is test result of one variable corresponding to variableTwLst */
 	variableItems: {
 		/** correlation coefficient, -1 to 1 */

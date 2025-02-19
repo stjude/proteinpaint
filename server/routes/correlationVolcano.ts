@@ -66,9 +66,21 @@ async function compute(q: CorrelationVolcanoRequest, ds: any, genome: any) {
 		}
 	}
 
+	//Ensure terms have at least 2 vectors in each array to calculate correlation
+	//If not, show term in legend on client
+	const [validTerms, invalidTerms] = Array.from(vtid2array.values()).reduce(
+		([valid, invalid], t) => {
+			const v = t.v1.length > 1 && t.v2.length > 1 ? valid : invalid
+			if (v === valid) valid.push(t)
+			if (v === invalid) invalid.push({ tw$id: t.id })
+			return [valid, invalid]
+		},
+		[[], []] as [{ v1: string; v2: string; id: string }[], { tw$id: string }[]]
+	)
+
 	const input = {
 		method: q.correlationMethod || 'pearson',
-		terms: [...vtid2array.values()]
+		terms: validTerms
 	}
 
 	//console.log("input:",input)
@@ -82,7 +94,7 @@ async function compute(q: CorrelationVolcanoRequest, ds: any, genome: any) {
 		terms: JSON.parse(await run_R(path.join(serverconfig.binpath, 'utils', 'corr.R'), JSON.stringify(input)))
 	}
 	mayLog('Time taken to run correlation analysis:', Date.now() - time1)
-	const result: CorrelationVolcanoResponse = { variableItems: [] }
+	const result: CorrelationVolcanoResponse = { invalidTerms, variableItems: [] }
 	for (const t of output.terms) {
 		const t2 = {
 			tw$id: t.id,
