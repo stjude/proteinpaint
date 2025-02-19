@@ -37,27 +37,29 @@ function init({ genomes }) {
 					{
 						filter: q.filter,
 						filter0: q.filter0,
-						terms
+						terms: terms
 					},
 					ds,
 					genome
 				)
 				if (term_results.error) throw term_results.error
 			}
+
 			let term_results2: any = []
-			if (q.tw) {
+			if (q.tw2) {
 				const terms2 = [q.tw2]
 				term_results2 = await getData(
 					{
 						filter: q.filter,
 						filter0: q.filter0,
-						terms2
+						terms: terms2
 					},
 					ds,
 					genome
 				)
-				if (term_results.error) throw term_results.error
+				if (term_results2.error) throw term_results2.error
 			}
+
 			const results = await run_DE(req.query as DERequest, ds, term_results, term_results2)
 			res.send(results)
 		} catch (e: any) {
