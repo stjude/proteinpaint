@@ -117,7 +117,7 @@ function mean(data) {
 	return data.reduce((sum, value) => sum + value, 0) / data.length
 }
 
-function stdDev(data) {
+export function stdDev(data) {
 	const meanValue = mean(data)
 	const squaredDifferences = data.map(value => Math.pow(value - meanValue, 2))
 	const variance = squaredDifferences.reduce((sum, value) => sum + value, 0) / data.length

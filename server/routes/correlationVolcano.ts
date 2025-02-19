@@ -4,6 +4,7 @@ import { getData } from '../src/termdb.matrix.js'
 import run_R from '../src/run_R.js'
 import serverconfig from '../src/serverconfig.js'
 import { mayLog } from '#src/helpers.ts'
+import { stdDev } from '#shared/violin.bins.js'
 import path from 'path'
 
 export const api: RouteApi = {
@@ -38,6 +39,9 @@ function init({ genomes }) {
 }
 
 async function compute(q: CorrelationVolcanoRequest, ds: any, genome: any) {
+	const valueCutoff = 3 // minimum number of values to calculate correlation
+	const sdCutoff = 0.05 // minimum standard deviation to calculate correlation
+
 	const terms = [q.featureTw, ...q.variableTwLst]
 	const data = await getData(
 		{
@@ -73,9 +77,9 @@ async function compute(q: CorrelationVolcanoRequest, ds: any, genome: any) {
 	const [acceptedVariables, skippedVariables] = Array.from(vtid2array.values()).reduce(
 		([accepted, skipped], t) => {
 			//Need enough values to calculate correlation
-			const grterThanOne = t.v1.length > 3 && t.v2.length > 3
+			const grterThanOne = t.v1.length > valueCutoff && t.v2.length > valueCutoff
 			//Need enough to variance in data to calculate correlation
-			const significantSD = standardDeviation(t.v1) > 0.05 && standardDeviation(t.v2) > 0.05
+			const significantSD = stdDev(t.v1) > sdCutoff && stdDev(t.v2) > sdCutoff
 			const v = grterThanOne && significantSD ? accepted : skipped
 			if (v === accepted) accepted.push(t)
 			if (v === skipped) skipped.push({ tw$id: t.id })
@@ -138,14 +142,4 @@ export function validate_correlationVolcano(ds: any) {
 	} else {
 		throw 'unknown cv.variables.type'
 	}
-}
-
-//TODO consider moving to shared, stats.ts or similar
-function standardDeviation(arr: number[]) {
-	const mean = arr.reduce((s, i) => s + i, 0) / arr.length
-	let s = 0
-	for (const v of arr) {
-		s += Math.pow(v - mean, 2)
-	}
-	return Math.sqrt(s / (arr.length - 1))
 }
