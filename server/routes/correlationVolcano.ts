@@ -66,11 +66,16 @@ async function compute(q: CorrelationVolcanoRequest, ds: any, genome: any) {
 		}
 	}
 
-	//Ensure terms have at least 2 vectors in each array to calculate correlation
-	//If not, show term in legend on client
+	/** To calculate correlation, ensure variables: 
+	 * 1) have at least 2 vectors in each array 
+	 * 2) both vectors have a standard deviation greater than 0.05
+	If not, show term in legend on client*/
 	const [acceptedVariables, skippedVariables] = Array.from(vtid2array.values()).reduce(
 		([accepted, skipped], t) => {
-			const v = t.v1.length > 1 && t.v2.length > 1 ? accepted : skipped
+			const grterThanOne = t.v1.length > 1 && t.v2.length > 1
+			//Need enough to variance in data to calculate correlation
+			const significantSD = standardDeviation(t.v1) > 0.05 && standardDeviation(t.v2) > 0.05
+			const v = grterThanOne && significantSD ? accepted : skipped
 			if (v === accepted) accepted.push(t)
 			if (v === skipped) skipped.push({ tw$id: t.id })
 			return [accepted, skipped]
@@ -129,4 +134,14 @@ export function validate_correlationVolcano(ds: any) {
 	} else {
 		throw 'unknown cv.variables.type'
 	}
+}
+
+//TODO consider moving to shared, stats.ts or similar
+function standardDeviation(arr: number[]) {
+	const mean = arr.reduce((s, i) => s + i, 0) / arr.length
+	let s = 0
+	for (const v of arr) {
+		s += Math.pow(v - mean, 2)
+	}
+	return Math.sqrt(s / (arr.length - 1))
 }
