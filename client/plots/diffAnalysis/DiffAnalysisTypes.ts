@@ -2,11 +2,11 @@ import type { Elem, SvgSvg } from '../../types/d3'
 import type { Menu } from '#dom'
 import type { PlotConfig } from '#mass/types/mass'
 
-export type DEanalysisPlotConfig = PlotConfig & {
+export type DiffAnalysisPlotConfig = PlotConfig & {
 	samplelst: string[]
 }
 
-export type DEanalysisDom = {
+export type DiffAnalysisDom = {
 	/** Control panel to the left of the plot. Container is either provided or created */
 	controls: Elem
 	/** Holder */
@@ -25,7 +25,7 @@ export type DEanalysisDom = {
 }
 
 /** Opts to init the DEanalysis plot */
-export type DEanalysisOpts = {
+export type DiffAnalysisOpts = {
 	/** Container for the plot */
 	holder: Elem
 	/** Optional container for the controls. */
@@ -33,11 +33,11 @@ export type DEanalysisOpts = {
 	/** Optional sandbox header */
 	header?: Elem
 	/** Settings overrides, in runpp() call */
-	overrides?: Partial<DEanalysisSettings>
+	overrides?: Partial<DiffAnalysisSettings>
 }
 
 /** Settings DEanalysis */
-export type DEanalysisSettings = {
+export type DiffAnalysisSettings = {
 	/** smallest number of reads required for a gene to be considered in the analysis */
 	minCount: number
 	/** smallest total number of reads required for a gene to be considered in the analysis */
