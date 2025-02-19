@@ -32,13 +32,18 @@ export class DEanalysis extends RxComponentInner {
 			svg,
 			tip: new Menu({ padding: '' })
 		}
-		const dataType = 'gene' //Plan is to implement different data types (i.e. gene, mutation, etc.)
 
-		if (opts.header)
-			this.dom.header = opts.header
-				.text(`DIFFERENTIAL ${dataType.toUpperCase()} EXPRESSION`)
-				.style('font-size', '0.7em')
-				.style('opacity', 0.6)
+		// if (opts.header) this.dom.header = opts.header.style('font-size', '0.7em').style('opacity', 0.6)
+		if (opts.header) {
+			this.dom.header = {
+				title: opts.header.append('span'),
+				fixed: opts.header
+					.append('span')
+					.style('font-size', '0.7em')
+					.style('opacity', 0.6)
+					.text(' DIFFERENTIAL ANALYSIS')
+			}
+		}
 
 		this.interactions = new DEAnalysisInteractions()
 	}
@@ -63,9 +68,14 @@ export class DEanalysis extends RxComponentInner {
 
 		const model = new Model(this.app, config, config.settings.DEanalysis)
 		const data = await model.getData()
-		if (!data || data['error']) {
+		if (!data || data.error) {
 			this.interactions.clearDom()
-			this.dom.error.text(data['error'] || 'No data returned from server')
+			this.dom.error.text(data.error || 'No data returned from server')
+		}
+
+		if (this.dom.header) {
+			const samplelst = config.samplelst.groups
+			this.dom.header.title.text(`${samplelst[0].name} vs ${samplelst[1].name} `)
 		}
 		console.log(data)
 
