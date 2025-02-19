@@ -51,15 +51,7 @@ export async function validate_query_singleSampleMutation(ds: any, genome: any) 
 			/* as mds3 client may not be using integer sample id for now,
 			the argument is string id and has to be mapped to integer id
 			*/
-			let fileName = q.sample
-			if (ds.cohort?.termdb?.q?.sampleName2id) {
-				// has name-to-id converter
-				fileName = ds.cohort.termdb.q.sampleName2id(q.sample)
-				if (fileName == undefined) {
-					// unable to convert string id to integer
-					return []
-				}
-			}
+			const fileName = q.sample
 
 			const file = path.join(serverconfig.tpmasterdir, _q.folder, fileName.toString())
 			try {
