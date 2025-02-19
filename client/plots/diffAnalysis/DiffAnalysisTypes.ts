@@ -48,10 +48,21 @@ export type DiffAnalysisOpts = {
 
 /** Settings DEanalysis */
 export type DiffAnalysisSettings = {
+	/** largest absolute fold change to be considered in the analysis */
+	foldChangeCutoff: number
 	/** smallest number of reads required for a gene to be considered in the analysis */
 	minCount: number
 	/** smallest total number of reads required for a gene to be considered in the analysis */
 	minTotalCount: number
+	/** p value cutoff for significance */
+	pValue: number
+	/** Users may switch between 'original' and 'adjusted' p values */
+	pValueType: 'original' | 'adjusted'
 	/** Number of variable genes used in parametric DE analysis*/
 	varGenesCutoff: number
+}
+
+/** Formatted data from the view model */
+export type DiffAnalysisViewData = {
+	legendData: { label: string; value: number }[]
 }
