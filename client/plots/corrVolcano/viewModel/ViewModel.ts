@@ -5,6 +5,7 @@ import type { CorrelationVolcanoResponse } from '#types'
 import type { CorrVolcanoDom, CorrVolcanoPlotConfig, CorrVolcanoSettings, ViewData } from '../CorrelationVolcanoTypes'
 
 export class ViewModel {
+	variableTwLst: TermWrapper[]
 	viewData: ViewData
 	readonly bottomPad = 60
 	/** Only one side, left or right */
@@ -17,6 +18,7 @@ export class ViewModel {
 		settings: CorrVolcanoSettings,
 		variableTwLst: TermWrapper[]
 	) {
+		this.variableTwLst = variableTwLst
 		const pValueKey = settings.isAdjustedPValue ? 'adjusted_pvalue' : 'original_pvalue'
 		const d = this.transformPValues(data, pValueKey)
 		const [absYMax, absYMin] = this.setMinMax(d, `transformed_${pValueKey}`)
@@ -27,17 +29,8 @@ export class ViewModel {
 
 		this.viewData = {
 			plotDim,
-			variableItems: this.setVariablesData(
-				absSampleMax,
-				absSampleMin,
-				d,
-				dom,
-				pValueKey,
-				plotDim,
-				settings,
-				variableTwLst
-			),
-			legendData: this.setLegendData(absSampleMin, absSampleMax)
+			variableItems: this.setVariablesData(absSampleMax, absSampleMin, d, dom, pValueKey, plotDim, settings),
+			legendData: this.setLegendData(absSampleMin, absSampleMax, data.invalidTerms)
 		}
 	}
 
@@ -129,8 +122,7 @@ export class ViewModel {
 		dom: CorrVolcanoDom,
 		key: string,
 		plotDim: any,
-		settings: CorrVolcanoSettings,
-		variableTwLst: any[]
+		settings: CorrVolcanoSettings
 	) {
 		const radiusScale = scaleLinear()
 			.domain([absSampleMin, absSampleMax])
@@ -141,7 +133,7 @@ export class ViewModel {
 			.map((d: any) => d.__data__)
 		for (const item of data.variableItems) {
 			item.color = item.correlation > 0 ? settings.corrColor : settings.antiCorrColor
-			item.label = variableTwLst.find(t => t.$id == item.tw$id).term.name
+			item.label = this.variableTwLst.find(t => t.$id == item.tw$id)!.term.name
 			item.x = plotDim.xScale.scale(item.correlation) + this.horizPad
 			item.y = plotDim.yScale.scale(item[`transformed_${key}`]) + this.topPad
 			item.radius = radiusScale(item.sampleSize)
@@ -159,10 +151,18 @@ export class ViewModel {
 		return data.variableItems
 	}
 
-	setLegendData(absSampleMin: number, absSampleMax: number) {
-		return {
+	setLegendData(absSampleMin: number, absSampleMax: number, invalidTerms: { tw$id: string }[]) {
+		const opts = {
 			absMin: absSampleMin,
-			absMax: absSampleMax
+			absMax: absSampleMax,
+			invalidTerms:
+				invalidTerms.length == 0
+					? []
+					: invalidTerms.map((t: any) => {
+							return { label: this.variableTwLst.find(tw => tw.$id == t.tw$id)!.term.name }
+					  })
 		}
+
+		return opts
 	}
 }
