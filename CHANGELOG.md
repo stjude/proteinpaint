@@ -10,6 +10,7 @@ Features:
 Fixes:
 - HierCluster: should only cluster overlapping tested samples shared across all the selected genes/metabilites/terms
 - Include filter0 in box plot server request args
+- Update termsetting pill for gene expression terms
 
 
 ## 2.107.0
