@@ -67,12 +67,13 @@ async function compute(q: CorrelationVolcanoRequest, ds: any, genome: any) {
 	}
 
 	/** To calculate correlation, ensure variables: 
-	 * 1) have at least 2 vectors in each array 
+	 * 1) have at least 4 vectors in each array 
 	 * 2) both vectors have a standard deviation greater than 0.05
 	If not, show term in legend on client*/
 	const [acceptedVariables, skippedVariables] = Array.from(vtid2array.values()).reduce(
 		([accepted, skipped], t) => {
-			const grterThanOne = t.v1.length > 1 && t.v2.length > 1
+			//Need enough values to calculate correlation
+			const grterThanOne = t.v1.length > 3 && t.v2.length > 3
 			//Need enough to variance in data to calculate correlation
 			const significantSD = standardDeviation(t.v1) > 0.05 && standardDeviation(t.v2) > 0.05
 			const v = grterThanOne && significantSD ? accepted : skipped
@@ -82,6 +83,10 @@ async function compute(q: CorrelationVolcanoRequest, ds: any, genome: any) {
 		},
 		[[], []] as [{ v1: string; v2: string; id: string }[], { tw$id: string }[]]
 	)
+
+	const result: CorrelationVolcanoResponse = { skippedVariables, variableItems: [] }
+
+	if (!acceptedVariables.length) return result
 
 	const input = {
 		method: q.correlationMethod || 'pearson',
@@ -99,7 +104,6 @@ async function compute(q: CorrelationVolcanoRequest, ds: any, genome: any) {
 		terms: JSON.parse(await run_R(path.join(serverconfig.binpath, 'utils', 'corr.R'), JSON.stringify(input)))
 	}
 	mayLog('Time taken to run correlation analysis:', Date.now() - time1)
-	const result: CorrelationVolcanoResponse = { skippedVariables, variableItems: [] }
 	for (const t of output.terms) {
 		const t2 = {
 			tw$id: t.id,
