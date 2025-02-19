@@ -336,15 +336,11 @@ class singleCellPlot {
 		)
 			body.gene = this.state.config.gene
 		else body.colorBy = this.state.config.colorBy
-		try {
-			const result = await dofetch3('termdb/singlecellData', { body })
-			if (result.error) throw result.error
-			this.refName = result.refName
-			this.data = result
-		} catch (e) {
-			if (e.stack) console.log(e.stack)
-			return { error: e }
-		}
+		//if error it will be catched on main
+		const result = await dofetch3('termdb/singlecellData', { body })
+		if (result.error) throw result.error
+		this.refName = result.refName
+		this.data = result
 	}
 
 	async getSampleDetails(state) {
