@@ -44,7 +44,21 @@ function init({ genomes }) {
 				)
 				if (term_results.error) throw term_results.error
 			}
-			const results = await run_DE(req.query as DERequest, ds, term_results)
+			let term_results2: any = []
+			if (q.tw) {
+				const terms2 = [q.tw2]
+				term_results2 = await getData(
+					{
+						filter: q.filter,
+						filter0: q.filter0,
+						terms2
+					},
+					ds,
+					genome
+				)
+				if (term_results.error) throw term_results.error
+			}
+			const results = await run_DE(req.query as DERequest, ds, term_results, term_results2)
 			res.send(results)
 		} catch (e: any) {
 			res.send({ status: 'error', error: e.message || e })
@@ -53,7 +67,7 @@ function init({ genomes }) {
 	}
 }
 
-async function run_DE(param: DERequest, ds: any, term_results: any) {
+async function run_DE(param: DERequest, ds: any, term_results: any, term_results2: any) {
 	/*
 param{}
 samplelst{}
@@ -73,12 +87,14 @@ values[] // using integer sample id
 	//let group1names_not_found = 0
 	//const group1names_not_found_list = []
 	const conf1_group1: (string | number)[] = []
+	const conf2_group1: (string | number)[] = []
 	for (const s of param.samplelst.groups[0].values) {
 		if (!Number.isInteger(s.sampleId)) continue
 		const n = ds.cohort.termdb.q.id2sampleName(s.sampleId)
 		if (!n) continue
 		if (q.allSampleSet.has(n)) {
-			if (param.tw) {
+			if (param.tw && !param.tw2) {
+				// When first confounding variable is defined but second is not
 				if (term_results.samples[s.sampleId]) {
 					// For some samples the confounding variables are not availble. Need to check!!!
 					if (param.tw.q.mode == 'continuous') {
@@ -90,7 +106,41 @@ values[] // using integer sample id
 					}
 					group1names.push(n)
 				}
+			} else if (!param.tw && param.tw2) {
+				// When first confounding variable is not defined but second is. Will later disable this option from UI so that second variable is only shown when first is defined
+				if (term_results2.samples[s.sampleId]) {
+					// For some samples the confounding variables are not availble. Need to check!!!
+					if (param.tw2.q.mode == 'continuous') {
+						// When confounding variable is continuous use 'value'
+						conf2_group1.push(term_results2.samples[s.sampleId][param.tw2.$id]['value'])
+					} else {
+						// When confounding variable is discrete use 'key'
+						conf2_group1.push(term_results2.samples[s.sampleId][param.tw2.$id]['key'])
+					}
+					group1names.push(n)
+				}
+			} else if (param.tw && param.tw2) {
+				// When both confounding variables are defined
+				if (term_results.samples[s.sampleId] && term_results2.samples[s.sampleId]) {
+					if (param.tw.q.mode == 'continuous') {
+						// When confounding variable is continuous use 'value'
+						conf1_group1.push(term_results.samples[s.sampleId][param.tw.$id]['value'])
+					} else {
+						// When confounding variable is discrete use 'key'
+						conf1_group1.push(term_results.samples[s.sampleId][param.tw.$id]['key'])
+					}
+
+					if (param.tw2.q.mode == 'continuous') {
+						// When confounding variable is continuous use 'value'
+						conf2_group1.push(term_results2.samples[s.sampleId][param.tw2.$id]['value'])
+					} else {
+						// When confounding variable is discrete use 'key'
+						conf2_group1.push(term_results2.samples[s.sampleId][param.tw2.$id]['key'])
+					}
+					group1names.push(n)
+				}
 			} else {
+				// When no confounding variables are present
 				group1names.push(n)
 			}
 		} else {
@@ -102,12 +152,14 @@ values[] // using integer sample id
 	//let group2names_not_found = 0
 	//const group2names_not_found_list = []
 	const conf1_group2: (string | number)[] = []
+	const conf2_group2: (string | number)[] = []
 	for (const s of param.samplelst.groups[1].values) {
 		if (!Number.isInteger(s.sampleId)) continue
 		const n = ds.cohort.termdb.q.id2sampleName(s.sampleId)
 		if (!n) continue
 		if (q.allSampleSet.has(n)) {
-			if (param.tw) {
+			if (param.tw && !param.tw2) {
+				// When first confounding variable is defined but second is not
 				if (term_results.samples[s.sampleId]) {
 					// For some samples the confounding variables are not availble. Need to check!!!
 					if (param.tw.q.mode == 'continuous') {
@@ -119,7 +171,41 @@ values[] // using integer sample id
 					}
 					group2names.push(n)
 				}
+			} else if (!param.tw && param.tw2) {
+				// When first confounding variable is not defined but second is. Will later disable this option from UI so that second variable is only shown when first is defined
+				if (term_results2.samples[s.sampleId]) {
+					// For some samples the confounding variables are not availble. Need to check!!!
+					if (param.tw2.q.mode == 'continuous') {
+						// When confounding variable is continuous use 'value'
+						conf2_group2.push(term_results2.samples[s.sampleId][param.tw2.$id]['value'])
+					} else {
+						// When confounding variable is discrete use 'key'
+						conf2_group2.push(term_results2.samples[s.sampleId][param.tw2.$id]['key'])
+					}
+					group2names.push(n)
+				}
+			} else if (param.tw && param.tw2) {
+				// When both confounding variables are defined
+				if (term_results.samples[s.sampleId] && term_results2.samples[s.sampleId]) {
+					if (param.tw.q.mode == 'continuous') {
+						// When confounding variable is continuous use 'value'
+						conf1_group2.push(term_results.samples[s.sampleId][param.tw.$id]['value'])
+					} else {
+						// When confounding variable is discrete use 'key'
+						conf1_group2.push(term_results.samples[s.sampleId][param.tw.$id]['key'])
+					}
+
+					if (param.tw2.q.mode == 'continuous') {
+						// When confounding variable is continuous use 'value'
+						conf2_group2.push(term_results2.samples[s.sampleId][param.tw2.$id]['value'])
+					} else {
+						// When confounding variable is discrete use 'key'
+						conf2_group2.push(term_results2.samples[s.sampleId][param.tw2.$id]['key'])
+					}
+					group2names.push(n)
+				}
 			} else {
+				// When no confounding variables are present
 				group2names.push(n)
 			}
 		} else {
@@ -160,7 +246,17 @@ values[] // using integer sample id
 		expression_input.conf1_mode = param.tw.q.mode // Parses the type of the confounding variable
 		if (new Set(expression_input.conf1).size === 1) {
 			// If all elements in the confounding variable are equal, throw error as R script crashes if the confounding variable has only 1 level
-			throw 'Confounding variable has only one value'
+			throw 'Confounding variable 1 has only one value'
+		}
+	}
+
+	if (param.tw2) {
+		//console.log("param.tw.q.mode:",param.tw.q.mode)
+		expression_input.conf2 = [...conf2_group2, ...conf2_group1] // Make sure the order of the groups is same as in expression_input case and control
+		expression_input.conf2_mode = param.tw2.q.mode // Parses the type of the confounding variable
+		if (new Set(expression_input.conf2).size === 1) {
+			// If all elements in the confounding variable are equal, throw error as R script crashes if the confounding variable has only 1 level
+			throw 'Confounding variable 2 has only one value'
 		}
 	}
 
