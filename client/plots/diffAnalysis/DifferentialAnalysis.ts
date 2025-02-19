@@ -7,7 +7,7 @@ import type { DiffAnalysisDom, DiffAnalysisOpts, DiffAnalysisSettings } from './
 import { DiffAnalysisInteractions } from './interactions/DiffAnalysisInteractions'
 import { Model } from './model/Model'
 import { ViewModel } from './viewModel/ViewModel'
-//import { View } from './view/View'
+import { View } from './view/View'
 
 export class DifferentialAnalysis extends RxComponentInner {
 	readonly type = 'differentialAnalysis'
@@ -32,11 +32,7 @@ export class DifferentialAnalysis extends RxComponentInner {
 			svg,
 			xAxis: svg.append('g').attr('id', 'sjpp-diff-analysis-xAxis'),
 			yAxis: svg.append('g').attr('id', 'sjpp-diff-analysis-yAxis'),
-			xAxisLabel: svg
-				.append('text')
-				.attr('id', 'sjpp-diff-analysis-xAxisLabel')
-				.attr('text-anchor', 'middle')
-				.text('log2(fold change)'),
+			xAxisLabel: svg.append('text').attr('id', 'sjpp-diff-analysis-xAxisLabel').attr('text-anchor', 'middle'),
 			yAxisLabel: svg.append('text').attr('id', 'sjpp-diff-analysis-yAxisLabel').attr('text-anchor', 'middle'),
 			plot: svg.append('g').attr('id', 'sjpp-diff-analysis-plot'),
 
@@ -54,7 +50,7 @@ export class DifferentialAnalysis extends RxComponentInner {
 			}
 		}
 
-		this.interactions = new DiffAnalysisInteractions()
+		this.interactions = new DiffAnalysisInteractions(this.dom)
 	}
 
 	getState(appState: MassState) {
@@ -90,6 +86,8 @@ export class DifferentialAnalysis extends RxComponentInner {
 		const settings = config.settings.differentialAnalysis
 
 		const view = new ViewModel(config, this.dom, data, settings)
+
+		new View(this.dom, this.interactions, view.viewData)
 	}
 }
 
@@ -99,11 +97,13 @@ export const componentInit = DiffAnalysisInit
 function getDefaultDiffAnalysisSettings(overrides: Partial<DiffAnalysisSettings>): DiffAnalysisSettings {
 	const defaults: DiffAnalysisSettings = {
 		foldChangeCutoff: 0,
+		height: 400,
 		minCount: 10,
 		minTotalCount: 15,
 		pValue: 0.05,
 		pValueType: 'original',
-		varGenesCutoff: 3000
+		varGenesCutoff: 3000,
+		width: 400
 	}
 	return Object.assign(defaults, overrides)
 }

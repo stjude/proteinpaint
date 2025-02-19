@@ -9,20 +9,18 @@ import { roundValueAuto } from '#shared/roundValue.js'
 
 //TODO: Add types
 export class ViewModel {
-	viewData: DiffAnalysisViewData
 	response: any
 	pValueCutoff: number
 	pValueTable: any
 	settings: DiffAnalysisSettings
 	type: string
+	viewData: DiffAnalysisViewData
 	numSignificant = 0
 	numNonSignificant = 0
 	minLogFoldChange = 0
 	maxLogFoldChange = 0
 	minLogPValue = 0
 	maxLogPValue = 0
-	readonly plotHeight = 400 //TODO: May change this to a settings control
-	readonly plotWidth = 400 //TODO: May change this to a settings control
 	readonly bottomPad = 60
 	readonly horizPad = 70
 	readonly topPad = 40
@@ -42,7 +40,11 @@ export class ViewModel {
 
 		this.setMinMaxValues()
 
+		const plotDim = this.setPlotDimensions()
+
 		this.viewData = {
+			plotDim,
+			pointData: this.setPointData(plotDim),
 			legendData: this.setLegendData(config)
 		}
 	}
@@ -59,46 +61,44 @@ export class ViewModel {
 	}
 
 	setPlotDimensions() {
-		const xScale = scaleLinear().domain([this.minLogFoldChange, this.maxLogFoldChange]).range([0, this.plotWidth])
-		const yScale = scaleLinear().domain([this.minLogPValue, this.maxLogPValue]).range([this.plotHeight, 0])
+		const xScale = scaleLinear().domain([this.minLogFoldChange, this.maxLogFoldChange]).range([0, this.settings.width])
+		const yScale = scaleLinear().domain([this.minLogPValue, this.maxLogPValue]).range([this.settings.height, 0])
 		return {
 			svg: {
-				height: this.plotHeight + this.topPad + this.bottomPad,
-				width: this.plotWidth + this.horizPad * 2
-			},
-			xScale: {
-				scale: xScale
-				// x: ,
-				// y
+				height: this.settings.height + this.topPad + this.bottomPad * 2,
+				width: this.settings.width + this.horizPad * 2
 			},
 			xAxisLabel: {
-				// x: ,
-				// y
+				x: this.horizPad + this.settings.width / 2,
+				y: this.topPad + this.settings.height + this.bottomPad
 			},
-			yScale: {
-				scale: yScale
-				// x: ,
-				// y
+			xScale: {
+				scale: xScale,
+				x: this.horizPad,
+				y: this.settings.height + this.topPad
 			},
 			yAxisLabel: {
-				text: `-log10(${this.settings.pValueType} P value)`
-				// x: ,
-				// y
+				text: `-log10(${this.settings.pValueType} P value)`,
+				x: this.horizPad / 3,
+				y: this.topPad + this.settings.height / 2
+			},
+			yScale: {
+				scale: yScale,
+				x: this.horizPad,
+				y: this.topPad
 			},
 			logFoldChangeLine: {
-				x1: xScale(0),
-				x2: xScale(0),
-				y: this.plotHeight
+				x: xScale(0) + this.horizPad,
+				y: this.settings.height
 			}
 		}
 	}
 
-	setPointData() {
-		//radius
-		//x
-		//y
-		//tooltip data
-		for (const d of this.response.data) {
+	setPointData(plotDim) {
+		//tooltip data??
+		const radius = Math.max(this.settings.width, this.settings.height) / 80
+		const dataCopy = structuredClone(this.response.data)
+		for (const d of dataCopy) {
 			const significant = this.isSignificant(d)
 			if (significant) {
 				d.color = 'red'
@@ -116,7 +116,11 @@ export class ViewModel {
 				d.color = 'black'
 				this.numNonSignificant++
 			}
+			d.x = plotDim.xScale.scale(d.fold_change) + this.horizPad
+			d.y = plotDim.yScale.scale(d[`adjusted_p_value`]) + this.topPad
+			d.radius = radius
 		}
+		return dataCopy
 	}
 
 	isSignificant(d: any) {
