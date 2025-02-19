@@ -37,11 +37,7 @@ export class DifferentialAnalysis extends RxComponentInner {
 				.attr('id', 'sjpp-diff-analysis-xAxisLabel')
 				.attr('text-anchor', 'middle')
 				.text('log2(fold change)'),
-			yAxisLabel: svg
-				.append('text')
-				.attr('id', 'sjpp-diff-analysis-yAxisLabel')
-				.attr('text-anchor', 'middle')
-				.text('-log10(adjusted P value)'),
+			yAxisLabel: svg.append('text').attr('id', 'sjpp-diff-analysis-yAxisLabel').attr('text-anchor', 'middle'),
 			plot: svg.append('g').attr('id', 'sjpp-diff-analysis-plot'),
 
 			tip: new Menu({ padding: '' })
@@ -91,9 +87,9 @@ export class DifferentialAnalysis extends RxComponentInner {
 			this.dom.header.title.text(`${samplelst[0].name} vs ${samplelst[1].name} `)
 		}
 
-		const view = new ViewModel(this.dom, data)
+		const settings = config.settings.differentialAnalysis
 
-		// const settings = config.settings.differentialAnalysis
+		const view = new ViewModel(config, this.dom, data, settings)
 	}
 }
 
@@ -102,8 +98,11 @@ export const componentInit = DiffAnalysisInit
 
 function getDefaultDiffAnalysisSettings(overrides: Partial<DiffAnalysisSettings>): DiffAnalysisSettings {
 	const defaults: DiffAnalysisSettings = {
+		foldChangeCutoff: 0,
 		minCount: 10,
 		minTotalCount: 15,
+		pValue: 0.05,
+		pValueType: 'original',
 		varGenesCutoff: 3000
 	}
 	return Object.assign(defaults, overrides)
