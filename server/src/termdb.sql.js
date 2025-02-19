@@ -105,6 +105,9 @@ return a sample count of sample names passing through the filter
 	const filter = await getFilterCTEs(j, ds)
 	let statement, row
 	let sample_type
+	//the filters either return a sample type or none as the samples are converted to the common type.
+	// For example, if you have a filter that returns patients, like a gender filter in PNET, and another filter that returns samples, the patients filter will be forced to return samples
+	//  if another sample filter is present in order to build a common filter with the samples intersected.
 	if (ds.cohort.db.tableColumns['sampleidmap'].includes('sample_type')) {
 		statement = `WITH ${filter.filters}
 		SELECT count (distinct sample) as count, sample_type
