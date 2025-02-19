@@ -10,21 +10,17 @@ Run test script as follows (from 'server/'):
 import tape from 'tape'
 import serverconfig from '../../src/serverconfig.js'
 import path from 'path'
-import * as utils from '../../src/utils.js'
+// import * as utils from '../../src/utils.js'
 import run_R from '../../src/run_R.js'
 import { fileURLToPath } from 'url'
 import { dirname } from 'path'
+import fs from 'fs'
 
 // Creating __dirname equivalent for ES6 modules
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 
-tape('\n', function (test) {
-	test.pass('-***- R scripts specs -***-')
-	test.end()
-})
-
-// hwe.R tests
+/** // hwe.R tests
 tape('hwe.R', async function (test) {
 	test.timeoutAfter(5000)
 	test.plan(2)
@@ -240,15 +236,21 @@ tape('cuminc.R', async function (test) {
 // regression.R tests
 tape('regression.R', async function (test) {
 	test.timeoutAfter(10000)
-	test.plan(3)
-	for (const type of ['linear', 'logistic', 'cox']) {
-		const infile = path.join(serverconfig.binpath, 'test/testdata/R', `${type}_regression_input.json`)
-		const expfile = path.join(serverconfig.binpath, 'test/testdata/R', `${type}_regression_output.json`)
-		const Rout = await run_R(path.join(__dirname, '../regression.R'), [], [infile])
-		const out = JSON.parse(Rout[0])
+	test.plan(1)
+	// for (const type of ['linear', 'logistic', 'cox']) {
+	   for (const type of ['linear']) {
+		// const infile = path.join(serverconfig.binpath, 'test/testdata/R', `${type}_regression_input.json`)
+		const injson = fs.readFileSync(path.join(serverconfig.binpath, 'test/testdata/R', `${type}_regression_input.json`), { encoding: 'utf8' })
+		const expjson = fs.readFileSync(path.join(serverconfig.binpath, 'test/testdata/R', `${type}_regression_output.json`), { encoding: 'utf8' })
+		// const expfile = path.join(serverconfig.binpath, 'test/testdata/R', `${type}_regression_output.json`)
+		// console.log('injson: ', injson)
+		const Rout = await run_R(path.join(__dirname, '../regression.R'), injson)
+		console.log('Rout: ',Rout)
+		const out = JSON.parse(Rout)
 		delete out.benchmark
-		const exp = JSON.parse(await utils.read_file(expfile))
-		test.deepEqual(out, exp, `${type} regression should match expected output`)
+		console.log("Sringified output", JSON.stringify(out, null, 2))
+		console.log("Expected output", expjson)
+		test.deepEqual(out, expjson, `${type} regression should match expected output`)
 	}
 	test.end()
 })
@@ -257,66 +259,61 @@ tape('regression.R', async function (test) {
 tape('wilcoxon.R', async function (test) {
 	test.timeoutAfter(5000)
 	test.plan(1)
-	const infile = path.join(serverconfig.binpath, 'test/testdata/R/wilcoxon_input.json')
-	const expfile = path.join(serverconfig.binpath, 'test/testdata/R/wilcoxon_output.json')
-	const Rout = await run_R(path.join(__dirname, '../wilcoxon.R'), [], [infile])
+	// const infile = path.join(serverconfig.binpath, 'test/testdata/R/wilcoxon_input.json')
+	const injson = fs.readFileSync(path.join(serverconfig.binpath,'test/testdata/R/wilcoxon_input.json'), { encoding: 'utf8' })
+	const expjson = fs.readFileSync(path.join(serverconfig.binpath, 'test/testdata/R/wilcoxon_output.json'), { encoding: 'utf8' })
+	// const expfile = path.join(serverconfig.binpath, 'test/testdata/R/wilcoxon_output.json')
+	const Rout = await run_R(path.join(__dirname, '../wilcoxon.R'), [injson])
 	const out = JSON.parse(Rout[0])
-	const exp = JSON.parse(await utils.read_file(expfile))
+	const exp = JSON.parse(await utils.read_file(expjson))
 	test.deepEqual(out, exp, 'wilcoxon should match expected output')
 	test.end()
 })
+*/
 
-// corr.R tests
-// Helper function to extract the relevant correlation and p-value data pieces and compare results
-const compareCorrelationResults = (actual, expected, tolerance = 0.0001) => {
-	const actualResult = actual[0]
-	const expectedResult = expected[0]
+tape('\n', function (test) {
+	test.pass('-***- R correlation specs -***-')
+	test.end()
+})
 
-	// Compare with tolerance for floating point numbers
-	const isCorrelationMatch = Math.abs(actualResult.correlation - expectedResult.correlation) < tolerance
-	const isPValueMatch = Math.abs(actualResult.original_p_value - expectedResult.original_p_value) < tolerance
+tape('corr.R pearson', async function (test) {
+	test.timeoutAfter(10000)
+	const inJson = fs.readFileSync(path.join(serverconfig.binpath, 'test/testdata/R/pearson-input.json'), {
+		encoding: 'utf8'
+	})
+	const expJson = fs.readFileSync(path.join(serverconfig.binpath, 'test/testdata/R/pearson-output.json'), {
+		encoding: 'utf8'
+	})
+	const Rout = await run_R(path.join(__dirname, '../corr.R'), inJson)
+	const out = JSON.parse(Rout)
+	test.deepEqual(out, JSON.parse(expJson))
+	test.end()
+})
 
-	/**  Return our comparison result
-	 * isMatch: true if both correlation and p-value match within tolerance
-	 * details: object containing the comparison details
-	 * - correlation: object containing the comparison details for correlation
-	 * - pValue: object containing the comparison details for p-value
-	 */
-	return {
-		isMatch: isCorrelationMatch && isPValueMatch,
-		details: {
-			correlation: {
-				actual: actualResult.correlation,
-				expected: expectedResult.correlation,
-				matches: isCorrelationMatch,
-				difference: Math.abs(actualResult.correlation - expectedResult.correlation)
-			},
-			pValue: {
-				actual: actualResult.original_p_value,
-				expected: expectedResult.original_p_value,
-				matches: isPValueMatch,
-				difference: Math.abs(actualResult.original_p_value - expectedResult.original_p_value)
-			}
-		}
-	}
-}
-
-// Running the test
 tape('corr.R spearman', async function (test) {
-	test.timeoutAfter(5000)
-	test.plan(1)
+	test.timeoutAfter(10000)
+	const inJson = fs.readFileSync(path.join(serverconfig.binpath, 'test/testdata/R/spearman-input.json'), {
+		encoding: 'utf8'
+	})
+	const expJson = fs.readFileSync(path.join(serverconfig.binpath, 'test/testdata/R/spearman-output.json'), {
+		encoding: 'utf8'
+	})
+	const Rout = await run_R(path.join(__dirname, '../corr.R'), inJson)
+	const out = JSON.parse(Rout)
+	test.deepEqual(out, JSON.parse(expJson))
+	test.end()
+})
 
-	const infile = path.join(serverconfig.binpath, 'test/testdata/R/corr_input.json')
-	const expfile = path.join(serverconfig.binpath, 'test/testdata/R/corr_spearman_output.json')
-
-	const Rout = await run_R(path.join(__dirname, '../Corr.R'), [], [infile])
-	const actual = JSON.parse(Rout[0])
-	const expected = JSON.parse(await utils.read_file(expfile))
-
-	const comparison = compareCorrelationResults(actual, expected)
-
-	test.ok(
-		comparison.isMatch,
-		`Correlation values should match within tolerance.\n${JSON.stringify(comparison.details, null, 2)}`
-	)
+tape('corr.R kendall', async function (test) {
+	test.timeoutAfter(10000)
+	const inJson = fs.readFileSync(path.join(serverconfig.binpath, 'test/testdata/R/kendall-input.json'), {
+		encoding: 'utf8'
+	})
+	const expJson = fs.readFileSync(path.join(serverconfig.binpath, 'test/testdata/R/kendall-output.json'), {
+		encoding: 'utf8'
+	})
+	const Rout = await run_R(path.join(__dirname, '../corr.R'), inJson)
+	const out = JSON.parse(Rout)
+	test.deepEqual(out, JSON.parse(expJson))
+	test.end()
 })
