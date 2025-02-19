@@ -1,4 +1,4 @@
-import type { Elem, SvgSvg } from '../../types/d3'
+import type { Elem, SvgG, SvgSvg, SvgText } from '../../types/d3'
 import type { Menu } from '#dom'
 import type { PlotConfig } from '#mass/types/mass'
 
@@ -18,10 +18,20 @@ export type DiffAnalysisDom = {
 		title: Elem
 		fixed: Elem
 	}
+	/** Holder for data points, p value line, and fold change line */
+	plot: SvgG
 	/** Holder for plot, axis labels, and title */
 	svg: SvgSvg
 	/** Shared tooltip */
 	tip: Menu
+	/** X axis */
+	xAxis: SvgG
+	/** X axis label */
+	xAxisLabel: SvgText
+	/** Y axis */
+	yAxis: SvgG
+	/** Y axis label */
+	yAxisLabel: SvgText
 }
 
 /** Opts to init the DEanalysis plot */
