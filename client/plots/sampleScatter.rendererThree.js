@@ -155,7 +155,7 @@ export function setRenderersThree(self) {
 		const controls = new OrbitControls.OrbitControls(camera, self.canvas)
 		if (self.settings.showContour) self.renderContourMap(scene, camera, material, vertices, zAxisScale, chart)
 		else {
-			camera.position.set(1, 1, 2)
+			camera.position.set(1.5, 1.2, 1.8)
 			camera.lookAt(scene.position)
 			camera.updateMatrix()
 			controls.update()

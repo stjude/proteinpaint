@@ -393,7 +393,7 @@ class Scatter {
 		}
 
 		if (!this.is2DLarge) {
-			const isPremade = this.config.name !== undefined
+			const isPremade = this.config.name !== undefined && !this.config.term
 			inputs.unshift({
 				type: 'term',
 				configKey: 'term0',
@@ -404,7 +404,7 @@ class Scatter {
 				vocabApi: this.app.vocabApi,
 				numericEditMenuVersion: ['discrete', 'continuous'],
 				processInput: tw => {
-					if (!isPremade && isNumericTerm(tw?.term) && !tw.q.mode) tw.q = { mode: 'continuous' } //use continuous mode by default if not premade plot
+					if (!isPremade && isNumericTerm(tw?.term)) tw.q = { mode: 'continuous' } //use continuous mode by default if not premade plot
 				}
 			})
 		} else {
