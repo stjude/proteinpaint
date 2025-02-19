@@ -1483,6 +1483,10 @@ class singleCellPlot {
 
 		const renderer = plot.renderer
 
+		//WebGLRenderer.outputColorSpace property determines the color space of the final rendered output. By default this is set to THREE.SRGBColorSpace, so that the rendered image is correctly displayed on standard monitors.
+		//There are times where you may want to set the output color space to THREE.LinearSRGBColorSpace, so that color information is not altered before post processing effects are applied.
+		//This fixes the issue where the colors are washed out and look lighter than in the legend
+		renderer.outputColorSpace = THREE.LinearSRGBColorSpace
 		const DragControls = await import('three/examples/jsm/controls/DragControls.js')
 
 		const fov = this.settings.threeFOV
