@@ -14,7 +14,10 @@ export type DEanalysisDom = {
 	/** Plot specific div for error messages. */
 	error: Elem
 	/** Sandbox header, if provided */
-	header?: Elem
+	header?: {
+		title: Elem
+		fixed: Elem
+	}
 	/** Holder for plot, axis labels, and title */
 	svg: SvgSvg
 	/** Shared tooltip */
