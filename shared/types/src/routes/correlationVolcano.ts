@@ -19,7 +19,7 @@ export type CorrelationVolcanoRequest = {
 
 export type CorrelationVolcanoResponse = {
 	/** Terms with not enough vectors to calculate correlation to be shown in legend */
-	invalidTerms: {
+	skippedVariables: {
 		/** matching tw $id */
 		tw$id: string
 	}[]
