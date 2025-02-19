@@ -263,7 +263,7 @@ function processCustomBinInputs(self) {
 	const inputDivs = self.dom.bins_table.node().querySelectorAll('input')
 	//let prevBin
 	const val = self.q.lst![0].stop // should not get value from dom.customBinBoundaryInput as value can be percentile
-	if (!val) throw 'val is undefined'
+	if (!val && val !== 0) throw 'val is undefined'
 
 	const bins = [
 		{
