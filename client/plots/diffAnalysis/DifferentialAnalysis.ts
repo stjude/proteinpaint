@@ -6,11 +6,11 @@ import { Menu } from '#dom'
 import type { DiffAnalysisDom, DiffAnalysisOpts, DiffAnalysisSettings } from './DiffAnalysisTypes'
 import { DiffAnalysisInteractions } from './interactions/DiffAnalysisInteractions'
 import { Model } from './model/Model'
-import { View } from './view/View'
-// import { ViewModel } from './viewModel/ViewModel'
+import { ViewModel } from './viewModel/ViewModel'
+//import { View } from './view/View'
 
 export class DifferentialAnalysis extends RxComponentInner {
-	readonly type = 'differentialAnalysis' // This will change to 'DEanalysis' after this version is stable
+	readonly type = 'differentialAnalysis'
 	components: { controls: any }
 	dom: DiffAnalysisDom
 	interactions: DiffAnalysisInteractions
@@ -20,27 +20,40 @@ export class DifferentialAnalysis extends RxComponentInner {
 		this.components = {
 			controls: {}
 		}
-		const holder = opts.holder.classed('sjpp-de-analysis-main', true)
+		const holder = opts.holder.classed('sjpp-diff-analysis-main', true)
 		const controls = opts.controls ? holder : holder.append('div')
 		const div = holder.append('div').style('padding', '5px')
-		const errorDiv = div.append('div').attr('id', 'sjpp-de-analysis-error').style('opacity', 0.75)
-		const svg = div.append('svg').style('display', 'inline-block').attr('id', 'sjpp-de-analysis-svg')
+		const errorDiv = div.append('div').attr('id', 'sjpp-diff-analysis-error').style('opacity', 0.75)
+		const svg = div.append('svg').style('display', 'inline-block').attr('id', 'sjpp-diff-analysis-svg')
 		this.dom = {
 			controls: controls.style('display', 'block'),
 			div,
 			error: errorDiv,
 			svg,
+			xAxis: svg.append('g').attr('id', 'sjpp-diff-analysis-xAxis'),
+			yAxis: svg.append('g').attr('id', 'sjpp-diff-analysis-yAxis'),
+			xAxisLabel: svg
+				.append('text')
+				.attr('id', 'sjpp-diff-analysis-xAxisLabel')
+				.attr('text-anchor', 'middle')
+				.text('log2(fold change)'),
+			yAxisLabel: svg
+				.append('text')
+				.attr('id', 'sjpp-diff-analysis-yAxisLabel')
+				.attr('text-anchor', 'middle')
+				.text('-log10(adjusted P value)'),
+			plot: svg.append('g').attr('id', 'sjpp-diff-analysis-plot'),
+
 			tip: new Menu({ padding: '' })
 		}
 
-		// if (opts.header) this.dom.header = opts.header.style('font-size', '0.7em').style('opacity', 0.6)
 		if (opts.header) {
 			this.dom.header = {
 				title: opts.header.append('span'),
 				fixed: opts.header
 					.append('span')
-					.style('font-size', '0.7em')
-					.style('opacity', 0.6)
+					.style('font-size', '0.8em')
+					.style('opacity', 0.7)
 					.text(' DIFFERENTIAL ANALYSIS')
 			}
 		}
@@ -56,7 +69,7 @@ export class DifferentialAnalysis extends RxComponentInner {
 		return {
 			config: Object.assign({}, config, {
 				settings: {
-					DEanalysis: config.settings.DEanalysis
+					differentialAnalysis: config.settings.differentialAnalysis
 				}
 			})
 		}
@@ -66,7 +79,7 @@ export class DifferentialAnalysis extends RxComponentInner {
 		const config = structuredClone(this.state.config)
 		if (config.chartType != this.type) return
 
-		const model = new Model(this.app, config, config.settings.DEanalysis)
+		const model = new Model(this.app, config, config.settings.differentialAnalysis)
 		const data = await model.getData()
 		if (!data || data.error) {
 			this.interactions.clearDom()
@@ -78,14 +91,14 @@ export class DifferentialAnalysis extends RxComponentInner {
 			this.dom.header.title.text(`${samplelst[0].name} vs ${samplelst[1].name} `)
 		}
 
-		const view = new View(data)
+		const view = new ViewModel(this.dom, data)
 
-		// const settings = config.settings.DEanalysis
+		// const settings = config.settings.differentialAnalysis
 	}
 }
 
-export const DEanalysisInit = getCompInit(DifferentialAnalysis)
-export const componentInit = DEanalysisInit
+export const DiffAnalysisInit = getCompInit(DifferentialAnalysis)
+export const componentInit = DiffAnalysisInit
 
 function getDefaultDiffAnalysisSettings(overrides: Partial<DiffAnalysisSettings>): DiffAnalysisSettings {
 	const defaults: DiffAnalysisSettings = {
@@ -104,7 +117,7 @@ export function getPlotConfig(opts: DiffAnalysisOpts, app: MassAppApi) {
 				term2: null,
 				term0: null
 			},
-			DEanalysis: getDefaultDiffAnalysisSettings(opts.overrides || {})
+			differentialAnalysis: getDefaultDiffAnalysisSettings(opts.overrides || {})
 		}
 	}
 	return copyMerge(config, opts)
