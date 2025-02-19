@@ -22,12 +22,6 @@ export default async function run_R(path, data, args) {
 		throw `${path} does not exist`
 	}
 
-	// Input validation - ensure data is in the correct format
-	/** if (data && !Array.isArray(data)) {
-        // If data is not an array, throw the specific error the tests expect
-        throw new TypeError('lines.join is not a function')
-    }*/
-
 	return new Promise((resolve, reject) => {
 		const _stdout = []
 		const _stderr = []
