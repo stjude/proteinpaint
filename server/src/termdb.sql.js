@@ -105,11 +105,15 @@ return a sample count of sample names passing through the filter
 	const filter = await getFilterCTEs(j, ds)
 	let statement, row
 	let sample_type
+	//the filters either return a sample type or none as the samples are converted to the common type.
+	// For example, if you have a filter that returns patients, like a gender filter in PNET, and another filter that returns samples, the patients filter will be forced to return samples
+	//  if another sample filter is present in order to build a common filter with the samples intersected.
 	if (ds.cohort.db.tableColumns['sampleidmap'].includes('sample_type')) {
 		statement = `WITH ${filter.filters}
 		SELECT count (distinct sample) as count, sample_type
 		FROM ${filter.CTEname} join sampleidmap on sample = sampleidmap.id group by sample_type`
 		row = ds.cohort.db.connection.prepare(statement).get(filter.values)
+		if (!row) return { count: '0 samples' } //no samples found
 		sample_type = ds.cohort.termdb.sampleTypes[row.sample_type]
 		sample_type = row.count > 1 ? sample_type.plural_name : sample_type.name
 	} else {
@@ -117,6 +121,7 @@ return a sample count of sample names passing through the filter
 		SELECT count (distinct sample) as count
 		FROM ${filter.CTEname} join sampleidmap on sample = sampleidmap.id`
 		row = ds.cohort.db.connection.prepare(statement).get(filter.values)
+		if (!row) return { count: '0 samples' } //no samples found
 		sample_type = row.count > 1 ? 'samples' : 'sample'
 	}
 
