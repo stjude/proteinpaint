@@ -25,7 +25,8 @@ export class Model {
 			method: 'edgeR', //Eventually this can be removed from the backend code since wilcoxon is no longer needed.
 			min_count: this.settings.minCount,
 			min_total_count: this.settings.minTotalCount,
-			samplelst: this.config.samplelst
+			samplelst: this.config.samplelst,
+			VarGenes: this.settings.varGenesCutoff
 		}
 
 		return body
