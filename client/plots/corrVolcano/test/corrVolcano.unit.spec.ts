@@ -18,6 +18,7 @@ function getHolder() {
 }
 
 const mockData = {
+	skippedVariables: [],
 	variableItems: [
 		{
 			tw$id: 'test$id2',
@@ -151,7 +152,8 @@ tape('Default ViewModel', test => {
 		],
 		legendData: {
 			absMin: 373,
-			absMax: 726
+			absMax: 726,
+			skippedVariables: []
 		}
 	}
 
