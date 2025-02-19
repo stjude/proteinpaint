@@ -110,6 +110,7 @@ return a sample count of sample names passing through the filter
 		SELECT count (distinct sample) as count, sample_type
 		FROM ${filter.CTEname} join sampleidmap on sample = sampleidmap.id group by sample_type`
 		row = ds.cohort.db.connection.prepare(statement).get(filter.values)
+		if (!row) return { count: '0 samples' } //no samples found
 		sample_type = ds.cohort.termdb.sampleTypes[row.sample_type]
 		sample_type = row.count > 1 ? sample_type.plural_name : sample_type.name
 	} else {
@@ -117,6 +118,7 @@ return a sample count of sample names passing through the filter
 		SELECT count (distinct sample) as count
 		FROM ${filter.CTEname} join sampleidmap on sample = sampleidmap.id`
 		row = ds.cohort.db.connection.prepare(statement).get(filter.values)
+		if (!row) return { count: '0 samples' } //no samples found
 		sample_type = row.count > 1 ? 'samples' : 'sample'
 	}
 
