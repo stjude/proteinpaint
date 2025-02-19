@@ -149,15 +149,6 @@ class DEanalysis {
 						vocabApi: this.app.vocabApi
 					},
 					{
-						type: 'term',
-						configKey: 'term2',
-						chartType: 'DEanalysis',
-						usecase: { target: 'DEanalysis', detail: 'term' },
-						label: 'Confounding Factor 2',
-						title: 'Select confounding factors to adjust for in the analysis',
-						vocabApi: this.app.vocabApi
-					},
-					{
 						label: 'Variable Genes Cutoff',
 						type: 'number',
 						chartType: 'DEanalysis',
@@ -167,6 +158,18 @@ class DEanalysis {
 						max: 4000
 					}
 				)
+				if (this.config.term) {
+					// Only when first confounding variable 1 has been selected, the option for a second confounding variable will be shown
+					inputs.push({
+						type: 'term',
+						configKey: 'term2',
+						chartType: 'DEanalysis',
+						usecase: { target: 'DEanalysis', detail: 'term' },
+						label: 'Confounding Factor 2',
+						title: 'Select confounding factors to adjust for in the analysis',
+						vocabApi: this.app.vocabApi
+					})
+				}
 			}
 		}
 
@@ -789,7 +792,6 @@ async function runDEanalysis(self) {
 		method: self.settings.method
 	}
 
-	console.log('self.config:', self.config)
 	if (self.config.term) {
 		input.tw = self.config.term
 		self.settings.method = 'edgeR' // When adjustment of confounding variables is selected, the method should always be a parmetric method such as edgeR
