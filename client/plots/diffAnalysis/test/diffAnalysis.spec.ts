@@ -32,18 +32,18 @@ const runpp = helpers.getRunPp('mass', {
 ***************/
 
 tape('\n', function (test) {
-	test.pass('-***- plots/DEanalysis -***-')
+	test.pass('-***- plots/DiffAnalysis/DifferentialAnalysis -***-')
 	test.end()
 })
 
-tape('Default DE analysis ', test => {
+tape('Default DiffAnalysis ', test => {
 	test.timeoutAfter(10000)
 
 	runpp({
 		state: {
 			plots: [
 				{
-					chartType: 'DEanalysis2', //Will change to DEanalysis once draft is stable,
+					chartType: 'differentialAnalysis', //Will change to DEanalysis once draft is stable,
 					samplelst: {
 						groups: [
 							{
@@ -131,19 +131,19 @@ tape('Default DE analysis ', test => {
 				}
 			]
 		},
-		DEanalysis: {
+		differentialAnalysis: {
 			callbacks: {
 				'postRender.test': runTests
 			}
 		}
 	})
 
-	async function runTests(DEanalysis) {
-		DEanalysis.on('postRender.test', null)
+	async function runTests(differentialAnalysis) {
+		differentialAnalysis.on('postRender.test', null)
 
-		// test.true(true, 'DEanalysis rendered')
+		// test.true(true, 'differentialAnalysis rendered')
 
-		// if (test['_ok']) DEanalysis.Inner.app.destroy()
+		// if (test['_ok']) differentialAnalysis.Inner.app.destroy()
 		test.end()
 	}
 })

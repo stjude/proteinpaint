@@ -1,12 +1,12 @@
 import type { MassAppApi } from '#mass/types/mass'
 import { dofetch3 } from '#common/dofetch'
-import type { DEanalysisPlotConfig, DEanalysisSettings } from '../DEanalysisTypes'
+import type { DiffAnalysisPlotConfig, DiffAnalysisSettings } from '../DiffAnalysisTypes'
 
 export class Model {
 	app: MassAppApi
-	config: DEanalysisPlotConfig
-	settings: DEanalysisSettings
-	constructor(app: MassAppApi, config: DEanalysisPlotConfig, settings: DEanalysisSettings) {
+	config: DiffAnalysisPlotConfig
+	settings: DiffAnalysisSettings
+	constructor(app: MassAppApi, config: DiffAnalysisPlotConfig, settings: DiffAnalysisSettings) {
 		this.app = app
 		this.config = config
 		this.settings = settings
