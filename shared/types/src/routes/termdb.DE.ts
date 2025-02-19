@@ -38,8 +38,8 @@ export type ExpressionInput = {
 	storage_type: 'HDF5' | 'text'
 	/** Confounding variable for DE analysis. Maybe array of string (Gender: Male/female) or number (Age). For now supporting 1 confounding variable. Later will add support for multiple confounding variables */
 	conf1?: any[]
-	/** Type of the confounding variable (categorical/float) */
-	conf1_type?: 'categorical' | 'float'
+	/** Type of the confounding variable (continuous/discrete) */
+	conf1_mode?: 'continuous' | 'discrete'
 	/** Number of variable genes to be included for DE analysis (optional) */
 	VarGenes?: number
 }

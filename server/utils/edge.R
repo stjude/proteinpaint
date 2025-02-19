@@ -144,10 +144,10 @@ if (length(input$conf1) == 0) { # No adjustment of confounding factors
 } else { # Adjusting for confounding factors
 
     # Check the type of confounding variable
-    if (input$conf1_type == "continuous") { # If this is float, the input conf1 vector should be converted into a numeric vector
+    if (input$conf1_mode == "continuous") { # If this is float, the input conf1 vector should be converted into a numeric vector
       conf1 <- as.numeric(input$conf1)
-    } else { # When input$conf1_type == "discrete" keep the vector as string. PLEASE ASK WHAT OTHER POSSIBLE TERM TYPES ARE POSSIBLE
-      conf1 <- input$conf1
+    } else { # When input$conf1_mode == "discrete" keep the vector as string. PLEASE ASK WHAT OTHER POSSIBLE TERM TYPES ARE POSSIBLE
+      conf1 <- as.factor(input$conf1)
     }
 
     y$samples <- data.frame(conditions = conditions, conf1 = conf1)
