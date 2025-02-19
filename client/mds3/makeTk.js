@@ -615,8 +615,17 @@ function addV2Sgetter_native(tk, block) {
 		const par = {
 			genome: block.genome.name,
 			variant2samples: 1,
-			get: arg.querytype
+			get: arg.querytype,
+			hardcodeCnvOnly: tk.hardcodeCnvOnly
 		}
+
+		if (tk.cnv) {
+			// for querying cnv
+			if (tk.cnv.cnvMaxLength) par.cnvMaxLength = tk.cnv.cnvMaxLength
+			if (tk.cnv.cnvGainCutoff) par.cnvGainCutoff = tk.cnv.cnvGainCutoff
+			if (tk.cnv.cnvLossCutoff) par.cnvLossCutoff = tk.cnv.cnvLossCutoff
+		}
+
 		if (tk.mds.label) {
 			par.dslabel = tk.mds.label
 		} else if (tk.bcf) {
