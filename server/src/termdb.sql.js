@@ -103,25 +103,31 @@ return a sample count of sample names passing through the filter
 	}
 
 	const filter = await getFilterCTEs(j, ds)
-	let statement, row
-	let sample_type
 	if (ds.cohort.db.tableColumns['sampleidmap'].includes('sample_type')) {
-		statement = `WITH ${filter.filters}
+		const statement = `WITH ${filter.filters}
 		SELECT count (distinct sample) as count, sample_type
 		FROM ${filter.CTEname} join sampleidmap on sample = sampleidmap.id group by sample_type`
-		row = ds.cohort.db.connection.prepare(statement).get(filter.values)
-		sample_type = ds.cohort.termdb.sampleTypes[row.sample_type]
-		sample_type = row.count > 1 ? sample_type.plural_name : sample_type.name
+		const rows = ds.cohort.db.connection.prepare(statement).all(filter.values)
+		const text = [] 
+		for(const row of rows) {
+			const st = ds.cohort.termdb.sampleTypes[row.sample_type]
+			const name = row.count > 1 ? st.plural_name : st.name
+			text.push(`${row.count} ${name}`)
+		}
+		return {count: text.join('; ')}
 	} else {
-		statement = `WITH ${filter.filters}
+		const statement = `WITH ${filter.filters}
 		SELECT count (distinct sample) as count
 		FROM ${filter.CTEname} join sampleidmap on sample = sampleidmap.id`
-		row = ds.cohort.db.connection.prepare(statement).get(filter.values)
-		sample_type = row.count > 1 ? 'samples' : 'sample'
+		const row = ds.cohort.db.connection.prepare(statement).get(filter.values)
+		if (row) {
+			const sampleLabel = row.count > 1 ? 'samples' : 'sample'
+			return { count: `${row.count} ${sampleLabel}` }
+		}
 	}
-
-	return { count: `${row.count} ${sample_type}` }
+	return {count: ''}
 }
+
 export async function get_summary_numericcategories(q) {
 	/*
 	q{}
