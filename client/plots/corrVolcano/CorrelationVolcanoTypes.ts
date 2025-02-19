@@ -129,6 +129,7 @@ export type VariableItem = {
 export type LegendData = {
 	absMin: number
 	absMax: number
+	invalidTerms: { label: string }[]
 }
 
 /** Formated response data passed from the view model

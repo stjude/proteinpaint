@@ -120,13 +120,16 @@ export class View {
 	) {
 		const svg = this.dom.legend
 			.attr('width', 400)
-			.attr('height', 100)
+			.attr('height', 400)
 			.style('display', 'inline-block')
 			.style('vertical-align', 'top')
 			.style('padding-top', '20px')
 
+		const startXPos = 20
+		const startYPos = 20
+
 		new LegendCircleReference({
-			g: svg.append('g').attr('transform', 'translate(20, 20)'),
+			g: svg.append('g').attr('transform', `translate(${startXPos}, ${startYPos})`),
 			inputMax: defaultMaxRadius,
 			inputMin: defaultMinRadius,
 			maxLabel: legendData.absMax,
@@ -141,6 +144,24 @@ export class View {
 				}
 			}
 		})
+
+		/** Show terms with no data to the user */
+		if (legendData.invalidTerms.length > 0) {
+			const newYPos = startYPos + settings.radiusMax + 60
+			let incrY = 30
+			const invalidTermsG = svg.append('g').attr('transform', `translate(${startXPos}, ${newYPos})`)
+			//Styling matches the legend circle reference
+			invalidTermsG.append('text').style('font-weight', 'bold').style('font-size', '0.8em').text('Invalid Terms')
+
+			for (const term of legendData.invalidTerms) {
+				invalidTermsG
+					.append('text')
+					.attr('transform', `translate(${startXPos}, ${incrY})`)
+					.style('font-size', '0.8em')
+					.text(term.label)
+				incrY += 20
+			}
+		}
 	}
 }
 
