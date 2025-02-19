@@ -1,4 +1,4 @@
-export class DEAnalysisInteractions {
+export class DiffAnalysisInteractions {
 	constructor() {
 		console.log('Interactions')
 	}

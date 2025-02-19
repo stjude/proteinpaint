@@ -1,4 +1,4 @@
-export function getDEanalysisControls() {
+export function getDiffAnalysisControls() {
 	const inputs = [
 		{
 			label: 'Minimum Read Count',

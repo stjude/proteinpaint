@@ -3,4 +3,4 @@
  * When draft is stable, delete this file and copy code below into DEanalysis.js
  */
 
-export * from './DEanalysis/DEanalysis'
+export * from './DiffAnalysis/DifferentialAnalysis'

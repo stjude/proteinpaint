@@ -3,17 +3,17 @@ import { RxComponentInner } from '../../types/rx.d'
 import { getCompInit, copyMerge } from '#rx'
 import { Menu } from '#dom'
 // import { controlsInit } from '../controls'
-import type { DEanalysisDom, DEanalysisOpts, DEanalysisSettings } from './DEanalysisTypes'
-import { DEAnalysisInteractions } from './interactions/DEAnalysisInteractions'
+import type { DiffAnalysisDom, DiffAnalysisOpts, DiffAnalysisSettings } from './DiffAnalysisTypes'
+import { DiffAnalysisInteractions } from './interactions/DiffAnalysisInteractions'
 import { Model } from './model/Model'
-// import { View } from './view/View'
+import { View } from './view/View'
 // import { ViewModel } from './viewModel/ViewModel'
 
-export class DEanalysis extends RxComponentInner {
-	readonly type = 'DEanalysis2' // This will change to 'DEanalysis' after this version is stable
+export class DifferentialAnalysis extends RxComponentInner {
+	readonly type = 'differentialAnalysis' // This will change to 'DEanalysis' after this version is stable
 	components: { controls: any }
-	dom: DEanalysisDom
-	interactions: DEAnalysisInteractions
+	dom: DiffAnalysisDom
+	interactions: DiffAnalysisInteractions
 
 	constructor(opts: any) {
 		super()
@@ -45,7 +45,7 @@ export class DEanalysis extends RxComponentInner {
 			}
 		}
 
-		this.interactions = new DEAnalysisInteractions()
+		this.interactions = new DiffAnalysisInteractions()
 	}
 
 	getState(appState: MassState) {
@@ -77,17 +77,18 @@ export class DEanalysis extends RxComponentInner {
 			const samplelst = config.samplelst.groups
 			this.dom.header.title.text(`${samplelst[0].name} vs ${samplelst[1].name} `)
 		}
-		console.log(data)
+
+		const view = new View(data)
 
 		// const settings = config.settings.DEanalysis
 	}
 }
 
-export const DEanalysisInit = getCompInit(DEanalysis)
+export const DEanalysisInit = getCompInit(DifferentialAnalysis)
 export const componentInit = DEanalysisInit
 
-function getDefaultDEanalysisSettings(overrides: Partial<DEanalysisSettings>): DEanalysisSettings {
-	const defaults: DEanalysisSettings = {
+function getDefaultDiffAnalysisSettings(overrides: Partial<DiffAnalysisSettings>): DiffAnalysisSettings {
+	const defaults: DiffAnalysisSettings = {
 		minCount: 10,
 		minTotalCount: 15,
 		varGenesCutoff: 3000
@@ -95,15 +96,15 @@ function getDefaultDEanalysisSettings(overrides: Partial<DEanalysisSettings>): D
 	return Object.assign(defaults, overrides)
 }
 
-export function getPlotConfig(opts: DEanalysisOpts, app: MassAppApi) {
+export function getPlotConfig(opts: DiffAnalysisOpts, app: MassAppApi) {
 	const config = {
-		chartType: 'DEanalysis2',
+		chartType: 'differentialAnalysis',
 		settings: {
 			controls: {
 				term2: null,
 				term0: null
 			},
-			DEanalysis: getDefaultDEanalysisSettings(opts.overrides || {})
+			DEanalysis: getDefaultDiffAnalysisSettings(opts.overrides || {})
 		}
 	}
 	return copyMerge(config, opts)
