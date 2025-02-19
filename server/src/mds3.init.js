@@ -505,18 +505,27 @@ function combineFilterAndTid2value(q, ds) {
 export async function validate_cumburden(ds) {
 	if (!ds.cohort?.cumburden) return
 	if (!ds.cohort.cumburden.dir) `missing ds.cohort.cumburden.dir`
-	if (!ds.cohort.cumburden.files) `missing ds.cohort.cumburden.files`
 	const dir = ds.cohort.cumburden.dir
+	// in dev, pp-irt, and other environments with debugmode=true, support updateAttr[] ds overrides
+	// to be able to access tp_native_dir or very specific writable container mount,
+	// but do not allow when debugmode is false
+	if (dir.includes('..') && !serverconfig.debugmode) throw `'..' path segment is not allowed in ds.cohort.cumburden.dir`
+	if (!fs.existsSync(path.join(serverconfig.tpmasterdir, dir))) `ds.cohort.cumburden.dir='${dir}' not found`
+	
+	if (!ds.cohort.cumburden.files) `missing ds.cohort.cumburden.files`
 	const inputFiles = ds.cohort.cumburden.files
 	for (const name of ['fit', 'surv', 'sample']) {
-		const f = inputFiles[name]
-		if (!f) throw `missing ds.cohort.burden.files.${name}`
-		const out = spawnSync(serverconfig.Rscript, ['-e', `load('${serverconfig.tpmasterdir}/${dir}/${f}')`], {
+		const fname = inputFiles[name]
+		if (!fname) throw `missing ds.cohort.burden.files.${name}`
+		if (fname.includes('..') && !serverconfig.debugmode) throw `'..' path segment is not allowed in ds.cohort.cumburden.files.${name}`
+		const f = path.join(serverconfig.tpmasterdir, dir, fname)
+		if (!fs.existsSync(f)) throw `ds.cohort.burden.files.${name}='${fname}' not found`
+		const out = spawnSync(serverconfig.Rscript, ['-e', `load('${f}')`], {
 			encoding: 'utf-8'
 		})
 		if (out?.status || out?.stderr) {
 			console.log(out)
-			throw `error with ds.cohort.cumburden.files.${name}`
+			throw `validation error, R loading of ds.cohort.cumburden.files.${name}`
 		}
 	}
 	const db = ds.cohort.cumburden.db
