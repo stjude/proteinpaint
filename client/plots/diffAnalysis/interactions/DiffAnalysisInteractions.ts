@@ -1,9 +1,13 @@
+import type { DiffAnalysisDom } from '../DiffAnalysisTypes'
+
 export class DiffAnalysisInteractions {
-	constructor() {
-		console.log('Interactions')
+	dom: DiffAnalysisDom
+	constructor(dom) {
+		this.dom = dom
 	}
 
 	clearDom() {
-		//TODO
+		this.dom.plot.selectAll('*').remove()
+		this.dom.yAxisLabel.text('')
 	}
 }

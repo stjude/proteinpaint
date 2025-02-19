@@ -60,9 +60,15 @@ export type DiffAnalysisSettings = {
 	pValueType: 'original' | 'adjusted'
 	/** Number of variable genes used in parametric DE analysis*/
 	varGenesCutoff: number
+	/** plot height */
+	height: number
+	/** plot width */
+	width: number
 }
 
 /** Formatted data from the view model */
 export type DiffAnalysisViewData = {
 	legendData: { label: string; value: number }[]
+	plotDim: any
+	pointData: any
 }
