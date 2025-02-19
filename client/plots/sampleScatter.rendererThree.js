@@ -5,7 +5,6 @@ import HelvetikerFont from 'three/examples/fonts/helvetiker_regular.typeface.jso
 import * as THREE from 'three'
 import { scaleLinear as d3Linear } from 'd3-scale'
 import { getContourImage } from './singleCellPlot.js'
-import { min } from 'd3'
 
 export function setRenderersThree(self) {
 	self.render2DSerieLarge = async function (chart) {
@@ -18,8 +17,8 @@ export function setRenderersThree(self) {
 		self.canvas.height = self.settings.svgh
 		chart.chartDiv.style('margin', '20px 20px')
 		chart.legendDiv = self.mainDiv.insert('div').style('display', 'inline-block').style('vertical-align', 'top')
-		let step = Math.min((20 * 40) / chart.colorLegend.size, 20)
-		if (step < 12) step = 12
+		let step = Math.min((20 * 40) / chart.colorLegend.size, 25)
+		if (step < 15) step = 15
 		const height = (chart.colorLegend.size + 6) * step
 		chart.legendG = chart.legendDiv
 			.append('svg')
@@ -153,20 +152,22 @@ export function setRenderersThree(self) {
 			map: tex,
 			vertexColors: true
 		})
-
+		const controls = new OrbitControls.OrbitControls(camera, self.canvas)
 		if (self.settings.showContour) self.renderContourMap(scene, camera, material, vertices, zAxisScale, chart)
 		else {
 			camera.position.set(1, 1, 2)
 			camera.lookAt(scene.position)
 			camera.updateMatrix()
-			const controls = new OrbitControls.OrbitControls(camera, self.canvas)
-			controls.enableZoom = false
 			controls.update()
 			const axesHelper = new THREE.AxesHelper(1)
 			scene.add(axesHelper)
 			if (self.settings.showAxes) {
 				self.addLabels(scene, chart)
 			}
+
+			document.addEventListener('mousewheel', event => {
+				controls.enableZoom = event.ctrlKey
+			})
 
 			const geometry = new THREE.BufferGeometry()
 			geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3))
@@ -178,12 +179,14 @@ export function setRenderersThree(self) {
 		const renderer = new THREE.WebGLRenderer({ antialias: true, canvas: self.canvas, preserveDrawingBuffer: true })
 		renderer.setSize(self.settings.svgw, self.settings.svgh)
 		renderer.setPixelRatio(window.devicePixelRatio)
+		renderer.outputColorSpace = THREE.LinearSRGBColorSpace
+
 		//document.addEventListener( 'pointermove', onPointerMove );
 
 		function animate() {
 			requestAnimationFrame(animate)
 			// required if controls.enableDamping or controls.autoRotate are set to true
-
+			controls.enableZoom = false
 			renderer.render(scene, camera)
 		}
 		animate()

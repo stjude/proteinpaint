@@ -714,7 +714,7 @@ export function getDefaultScatterSettings() {
 		defaultColor: plotColor,
 		regression: 'None',
 		fov: 50,
-		threeSize: 0.003,
+		threeSize: 0.005,
 		threeFOV: 70,
 		// Color scale configuration settings
 		// These settings control how numerical values are mapped to colors
