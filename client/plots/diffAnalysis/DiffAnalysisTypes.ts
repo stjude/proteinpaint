@@ -7,6 +7,7 @@ export type DiffAnalysisPlotConfig = PlotConfig & {
 }
 
 export type DiffAnalysisDom = {
+	actions: Elem
 	/** Control panel to the left of the plot. Container is either provided or created */
 	controls: Elem
 	/** Holder */
