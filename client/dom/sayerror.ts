@@ -21,15 +21,18 @@ export function sayerror(holder: any, o: any) {
 		msg = o.message || o.error
 		if (o.stack) console.log(o.stack) // print out stack
 	}
-	const div = holder.append('div').attr('class', 'sja_errorbar')
-	// msg can contain injected XSS, so never do .html(msg)
-	div.append('div').text(msg)
+	holder.style('padding-left', '10px') //to align with sandbox padding
+	const div = holder.append('div').attr('class', 'sja_errorbar').style('border-radius', '5px')
 	div
 		.append('div')
+		.style('padding-right', '8px')
 		.html('&#10005;')
+		.style('display', 'inline-block')
 		.on('click', () => {
 			disappear(div, true)
 		})
+	// msg can contain injected XSS, so never do .html(msg)
+	div.append('div').style('display', 'inline-block').text(msg)
 }
 
 export function throwMsgWithFilePathAndFnName(message: string) {
@@ -72,6 +75,16 @@ export function showErrorsWithCounter(errs: string | string[], holder: any) {
 			errorsDiv.style('display', showErrors ? 'block' : 'none')
 		})
 
+	// Close button
+	wrapper
+		.append('div')
+		.style('padding-right', '8px')
+		.style('display', 'inline-block')
+		.html('&#10005;')
+		.on('click', () => {
+			disappear(wrapper, true)
+		})
+
 	// Counter
 	const counterTextDiv = wrapper.append('div').style('display', 'inline-block')
 
@@ -86,16 +99,6 @@ export function showErrorsWithCounter(errs: string | string[], holder: any) {
 
 	// Text
 	counterTextDiv.append('div').text('errors found.').style('padding', '3px').style('display', 'inline-block')
-
-	// Close button
-	wrapper
-		.append('div')
-		.style('display', 'inline-block')
-		.style('float', 'right')
-		.html('&#10005;')
-		.on('click', () => {
-			disappear(wrapper, true)
-		})
 
 	//Error messages
 	const errorsDiv = wrapper.append('div').style('display', 'none').style('margin-left', '10px')
