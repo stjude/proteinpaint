@@ -113,7 +113,7 @@ export class ViewModel {
 					{ value: roundValueAuto(Math.pow(10, -d.adjusted_p_value)) }
 				]
 				if (this.type == 'genes') {
-					row.splice(1, 0, { value: d.gene_name }, { value: d.gene_symbol })
+					row.splice(0, 0, { value: d.gene_name }, { value: d.gene_symbol })
 				}
 				this.pValueTable.rows.push(row)
 			} else {
@@ -170,7 +170,7 @@ export class ViewModel {
 
 	setPTableData() {
 		if (this.type == 'genes') {
-			this.pValueTable.columns.splice(1, 0, { label: 'Gene Name' }, { label: 'Gene Symbol' })
+			this.pValueTable.columns.splice(0, 0, { label: 'Gene Name' }, { label: 'Gene Symbol' })
 		}
 
 		const foldChangeIdx = this.pValueTable.columns.findIndex(c => c.label.includes('Fold change'))

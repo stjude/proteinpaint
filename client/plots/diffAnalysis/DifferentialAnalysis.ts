@@ -66,6 +66,7 @@ export class DifferentialAnalysis extends RxComponentInner {
 		}
 	}
 
+	//TODO: Move this to a separate file.
 	async setControls() {
 		const inputs = [
 			{
@@ -111,8 +112,8 @@ export class DifferentialAnalysis extends RxComponentInner {
 				settingsKey: 'pValueType',
 				title: 'Toggle between original and adjusted pvalues for volcano plot',
 				options: [
-					{ label: 'adjusted', value: 'adjusted' },
-					{ label: 'original', value: 'original' }
+					{ label: 'Adjusted', value: 'adjusted' },
+					{ label: 'Original', value: 'original' }
 				]
 			},
 			{
@@ -140,6 +141,8 @@ export class DifferentialAnalysis extends RxComponentInner {
 			holder: this.dom.controls.attr('class', 'pp-termdb-plot-controls').style('display', 'inline-block'),
 			inputs
 		})
+
+		this.components.controls.on('downloadClick.differentialAnalysis', () => this.interactions.download())
 	}
 
 	async init() {
@@ -165,6 +168,8 @@ export class DifferentialAnalysis extends RxComponentInner {
 			}
 			/** Format response into an object for rendering */
 			const view = new ViewModel(config, response, settings)
+			//Pass table data for downloading
+			this.interactions.pValueTableData = view.viewData.pValueTableData
 			/** Render formatted data */
 			new View(this.dom, this.interactions, settings, view.viewData)
 		} catch (e: any) {
