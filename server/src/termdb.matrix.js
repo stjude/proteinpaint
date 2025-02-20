@@ -161,20 +161,21 @@ async function getSampleData(q, ds, onlyChildren = false) {
 				filter0: q.filter0
 			}
 			const data = await q.ds.queries[tw.term.type].get(args)
-			for (const sampleId in data.term2sample2value.get(tw.term.name)) {
-				if (!(sampleId in samples)) {
-					samples[sampleId] = { sample: sampleId }
+			if (data.term2sample2value.size > 0)
+				for (const sampleId in data.term2sample2value.get(tw.term.name)) {
+					if (!(sampleId in samples)) {
+						samples[sampleId] = { sample: sampleId }
+					}
+					const values = data.term2sample2value.get(tw.term.name)
+					const value = Number(values[sampleId])
+					let key = value
+					if (lstOfBins) {
+						// term is in binning mode. key should be changed into the label of the bin to which value belongs
+						const bin = getBin(lstOfBins, value)
+						key = get_bin_label(lstOfBins[bin], tw.q)
+					}
+					samples[sampleId][tw.$id] = { key, value }
 				}
-				const values = data.term2sample2value.get(tw.term.name)
-				const value = Number(values[sampleId])
-				let key = value
-				if (lstOfBins) {
-					// term is in binning mode. key should be changed into the label of the bin to which value belongs
-					const bin = getBin(lstOfBins, value)
-					key = get_bin_label(lstOfBins[bin], tw.q)
-				}
-				samples[sampleId][tw.$id] = { key, value }
-			}
 		} else if (tw.term.type == TermTypes.SINGLECELL_GENE_EXPRESSION) {
 			if (!q.ds.queries?.singleCell?.geneExpression) throw 'not supported by dataset: singleCell.geneExpression'
 			let lst // list of bins based on tw config
