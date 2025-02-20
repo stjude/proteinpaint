@@ -680,7 +680,7 @@ export function setRenderers(self) {
 
 		const mainG = self.charts[0].mainG
 		const zoom = d3zoom()
-			.scaleExtent([0.5, self.config.scaleDotTW ? 4 : 10])
+			.scaleExtent([0.1, self.config.scaleDotTW ? 4 : 10])
 			.on('zoom', handleZoom)
 			.filter(event => {
 				if (event.type === 'wheel') return event.ctrlKey
