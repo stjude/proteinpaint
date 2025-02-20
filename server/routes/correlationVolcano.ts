@@ -7,6 +7,10 @@ import { mayLog } from '#src/helpers.ts'
 import { stdDev } from '#shared/violin.bins.js'
 import path from 'path'
 
+// to avoid crashing r, an array must meet below; otherwise the variable is skipped
+const minArrayLength = 3 // minimum number of values
+const minSD = 0.05 // minimum standard deviation
+
 export const api: RouteApi = {
 	endpoint: 'termdb/correlationVolcano',
 	methods: {
@@ -39,9 +43,6 @@ function init({ genomes }) {
 }
 
 async function compute(q: CorrelationVolcanoRequest, ds: any, genome: any) {
-	const valueCutoff = 3 // minimum number of values to calculate correlation
-	const sdCutoff = 0.05 // minimum standard deviation to calculate correlation
-
 	const terms = [q.featureTw, ...q.variableTwLst]
 	const data = await getData(
 		{
@@ -71,15 +72,15 @@ async function compute(q: CorrelationVolcanoRequest, ds: any, genome: any) {
 	}
 
 	/** To calculate correlation, ensure variables: 
-	 * 1) have at least 4 vectors in each array 
+	 * 1) not less that minimum number of values in each array 
 	 * 2) both vectors have a standard deviation greater than 0.05
 	If not, show term in legend on client*/
 	const [acceptedVariables, skippedVariables] = Array.from(vtid2array.values()).reduce(
 		([accepted, skipped], t) => {
 			//Need enough values to calculate correlation
-			const grterThanOne = t.v1.length > valueCutoff && t.v2.length > valueCutoff
+			const grterThanOne = t.v1.length > minArrayLength && t.v2.length > minArrayLength
 			//Need enough to variance in data to calculate correlation
-			const significantSD = stdDev(t.v1) > sdCutoff && stdDev(t.v2) > sdCutoff
+			const significantSD = stdDev(t.v1) > minSD && stdDev(t.v2) > minSD
 			const v = grterThanOne && significantSD ? accepted : skipped
 			if (v === accepted) accepted.push(t)
 			if (v === skipped) skipped.push({ tw$id: t.id })
