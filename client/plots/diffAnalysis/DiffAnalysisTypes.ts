@@ -72,7 +72,7 @@ export type DiffAnalysisSettings = {
 export type DiffAnalysisViewData = {
 	statsData: { label: string; value: number }[]
 	plotDim: DiffAnalysisPlotDim
-	pointData: PointDataEntry[]
+	pointData: DataPointEntry[]
 	pValueTableData: any
 }
 
@@ -86,7 +86,7 @@ export type DiffAnalysisPlotDim = {
 	yScale: { x: number; y: number; scale: any }
 }
 
-export type PointDataEntry = {
+export type DataPointEntry = {
 	adjusted_p_value: number
 	/** color indicating significance */
 	color: string
