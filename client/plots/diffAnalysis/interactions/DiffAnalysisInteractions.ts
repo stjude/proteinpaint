@@ -2,7 +2,7 @@ import type { DiffAnalysisDom } from '../DiffAnalysisTypes'
 
 export class DiffAnalysisInteractions {
 	dom: DiffAnalysisDom
-	constructor(dom) {
+	constructor(dom: DiffAnalysisDom) {
 		this.dom = dom
 	}
 
