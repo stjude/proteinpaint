@@ -21,6 +21,8 @@ export type DERequest = {
 	tw2?: any
 	/** Number of variable genes (defined only for parametric DE methods) */
 	VarGenes?: number
+	/** Flips design matrix in edgeR so as to analyze the confounding variable(s) first before the groups */
+	flip_design_matrix: 'false' | 'true'
 }
 
 export type ExpressionInput = {
@@ -48,6 +50,8 @@ export type ExpressionInput = {
 	conf2_mode?: 'continuous' | 'discrete'
 	/** Number of variable genes to be included for DE analysis (optional) */
 	VarGenes?: number
+	/** Flips design matrix in edgeR so as to analyze the confounding variable(s) first before the groups */
+	flip_design_matrix: 'false' | 'true'
 }
 
 export type DEResponse = {
