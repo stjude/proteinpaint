@@ -126,9 +126,14 @@ export async function trigger_getSampleScatter(req, q, res, ds, genome) {
 				return
 			}
 		}
-
+		const s0 = cohortSamples[0]
+		const [xMin, xMax, yMin, yMax] = cohortSamples.reduce(
+			(s, d) => [d.x < s[0] ? d.x : s[0], d.x > s[1] ? d.x : s[1], d.y < s[2] ? d.y : s[2], d.y > s[3] ? d.y : s[3]],
+			[s0.x, s0.x, s0.y, s0.y]
+		)
+		const range = { xMin, xMax, yMin, yMax }
 		const result = await colorAndShapeSamples(refSamples, cohortSamples, data, q)
-		res.send(result)
+		res.send({ result, range })
 	} catch (e) {
 		if (e.stack) console.log(e.stack)
 		res.send({ error: e.message || e })
