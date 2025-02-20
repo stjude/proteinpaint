@@ -161,7 +161,6 @@ async function getSampleData(q, ds, onlyChildren = false) {
 				filter0: q.filter0
 			}
 			const data = await q.ds.queries[tw.term.type].get(args)
-			console.log('data', data)
 			for (const sampleId in data.term2sample2value[tw.term.name]) {
 				if (!(sampleId in samples)) {
 					samples[sampleId] = { sample: sampleId }
