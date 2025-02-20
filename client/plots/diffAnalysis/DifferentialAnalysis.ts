@@ -30,12 +30,9 @@ export class DifferentialAnalysis extends RxComponentInner {
 			div,
 			error: errorDiv,
 			svg,
-			xAxis: svg.append('g').attr('id', 'sjpp-diff-analysis-xAxis'),
-			yAxis: svg.append('g').attr('id', 'sjpp-diff-analysis-yAxis'),
 			xAxisLabel: svg.append('text').attr('id', 'sjpp-diff-analysis-xAxisLabel').attr('text-anchor', 'middle'),
 			yAxisLabel: svg.append('text').attr('id', 'sjpp-diff-analysis-yAxisLabel').attr('text-anchor', 'middle'),
-			plot: svg.append('g').attr('id', 'sjpp-diff-analysis-plot'),
-
+			plot: svg.append('rect').attr('id', 'sjpp-diff-analysis-plot'),
 			tip: new Menu({ padding: '' })
 		}
 
@@ -72,10 +69,10 @@ export class DifferentialAnalysis extends RxComponentInner {
 		if (config.chartType != this.type) return
 
 		const model = new Model(this.app, config, config.settings.differentialAnalysis)
-		const data = await model.getData()
-		if (!data || data.error) {
+		const response = await model.getData()
+		if (!response || response.error) {
 			this.interactions.clearDom()
-			this.dom.error.text(data.error || 'No data returned from server')
+			this.dom.error.text(response.error || 'No data returned from server')
 		}
 
 		if (this.dom.header) {
@@ -84,9 +81,9 @@ export class DifferentialAnalysis extends RxComponentInner {
 		}
 
 		const settings = config.settings.differentialAnalysis
-
-		const view = new ViewModel(config, this.dom, data, settings)
-
+		/** Format response into an object for rendering */
+		const view = new ViewModel(config, response, settings)
+		/** Render formatted data */
 		new View(this.dom, this.interactions, view.viewData)
 	}
 }
@@ -101,7 +98,7 @@ function getDefaultDiffAnalysisSettings(overrides: Partial<DiffAnalysisSettings>
 		minCount: 10,
 		minTotalCount: 15,
 		pValue: 0.05,
-		pValueType: 'original',
+		pValueType: 'adjusted',
 		varGenesCutoff: 3000,
 		width: 400
 	}
