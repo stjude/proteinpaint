@@ -127,7 +127,8 @@ export async function trigger_getSampleScatter(req, q, res, ds, genome) {
 			}
 		}
 		const s0 = cohortSamples[0]
-		const [xMin, xMax, yMin, yMax] = cohortSamples.reduce(
+		const samples = [...cohortSamples, ...refSamples]
+		const [xMin, xMax, yMin, yMax] = samples.reduce(
 			(s, d) => [d.x < s[0] ? d.x : s[0], d.x > s[1] ? d.x : s[1], d.y < s[2] ? d.y : s[2], d.y > s[3] ? d.y : s[3]],
 			[s0.x, s0.x, s0.y, s0.y]
 		)
