@@ -73,6 +73,7 @@ export type DiffAnalysisViewData = {
 	statsData: { label: string; value: number }[]
 	plotDim: DiffAnalysisPlotDim
 	pointData: PointDataEntry[]
+	pValueTableData: any
 }
 
 export type DiffAnalysisPlotDim = {
