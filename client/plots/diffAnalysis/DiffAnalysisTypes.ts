@@ -24,8 +24,12 @@ export type DiffAnalysisDom = {
 	svg: SvgSvg
 	/** Shared tooltip */
 	tip: Menu
+	/** X axis */
+	xAxis: SvgG
 	/** X axis label */
 	xAxisLabel: SvgText
+	/** Y axis */
+	yAxis: SvgG
 	/** Y axis label */
 	yAxisLabel: SvgText
 }
@@ -54,6 +58,8 @@ export type DiffAnalysisSettings = {
 	pValue: number
 	/** Users may switch between 'original' and 'adjusted' p values */
 	pValueType: 'original' | 'adjusted'
+	/** Show a table of p values */
+	showPValueTable: boolean
 	/** Number of variable genes used in parametric DE analysis*/
 	varGenesCutoff: number
 	/** plot height */
