@@ -37,11 +37,13 @@ export class ViewModel {
 		this.setMinMaxValues()
 
 		const plotDim = this.setPlotDimensions()
+		this.setPTableData()
 
 		this.viewData = {
 			plotDim,
 			pointData: this.setPointData(plotDim),
-			statsData: this.setStatsData(config)
+			statsData: this.setStatsData(config),
+			pValueTableData: this.pValueTable
 		}
 	}
 

@@ -166,7 +166,7 @@ export class DifferentialAnalysis extends RxComponentInner {
 			/** Format response into an object for rendering */
 			const view = new ViewModel(config, response, settings)
 			/** Render formatted data */
-			new View(this.dom, this.interactions, view.viewData)
+			new View(this.dom, this.interactions, settings, view.viewData)
 		} catch (e: any) {
 			if (e instanceof Error) console.error(e.message || e)
 			else if (e.stack) console.log(e.stack)
