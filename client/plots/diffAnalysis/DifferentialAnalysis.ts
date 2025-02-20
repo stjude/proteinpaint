@@ -24,11 +24,13 @@ export class DifferentialAnalysis extends RxComponentInner {
 		const controls = opts.controls ? holder : holder.append('div')
 		const div = holder.append('div').style('padding', '5px').style('display', 'inline-block')
 		const errorDiv = div.append('div').attr('id', 'sjpp-diff-analysis-error').style('opacity', 0.75)
+		const actions = div.append('div').attr('id', 'sjpp-diff-analysis-actions').style('display', 'block')
 		const svg = div.append('svg').style('display', 'inline-block').attr('id', 'sjpp-diff-analysis-svg')
 		this.dom = {
 			controls: controls.style('display', 'block'),
 			div,
 			error: errorDiv,
+			actions,
 			svg,
 			xAxis: svg.append('g').attr('id', 'sjpp-diff-analysis-xAxis'),
 			yAxis: svg.append('g').attr('id', 'sjpp-diff-analysis-yAxis'),
@@ -49,7 +51,7 @@ export class DifferentialAnalysis extends RxComponentInner {
 			}
 		}
 
-		this.interactions = new DiffAnalysisInteractions(this.dom)
+		this.interactions = new DiffAnalysisInteractions(this.app, this.id, this.dom)
 	}
 
 	getState(appState: MassState) {
@@ -70,7 +72,7 @@ export class DifferentialAnalysis extends RxComponentInner {
 	async setControls() {
 		const inputs = [
 			{
-				label: 'Minimum Read Count',
+				label: 'Minimum read count',
 				type: 'number',
 				chartType: 'differentialAnalysis',
 				settingsKey: 'minCount',
@@ -79,7 +81,7 @@ export class DifferentialAnalysis extends RxComponentInner {
 				max: 10000
 			},
 			{
-				label: 'Minimum Total Read Count',
+				label: 'Minimum total read count',
 				type: 'number',
 				chartType: 'differentialAnalysis',
 				settingsKey: 'minTotalCount',
@@ -88,7 +90,7 @@ export class DifferentialAnalysis extends RxComponentInner {
 				max: 10000
 			},
 			{
-				label: 'P value Significance (Linear Scale)',
+				label: 'P value significance (linear)',
 				type: 'number',
 				chartType: 'differentialAnalysis',
 				settingsKey: 'pValue',
@@ -97,7 +99,7 @@ export class DifferentialAnalysis extends RxComponentInner {
 				max: 1
 			},
 			{
-				label: 'Fold Change (Log Scale)',
+				label: 'Fold change (log)',
 				type: 'number',
 				chartType: 'differentialAnalysis',
 				settingsKey: 'foldChangeCutoff',
@@ -117,7 +119,7 @@ export class DifferentialAnalysis extends RxComponentInner {
 				]
 			},
 			{
-				label: 'Variable Genes Cutoff',
+				label: 'Variable genes cutoff',
 				type: 'number',
 				chartType: 'differentialAnalysis',
 				settingsKey: 'varGenesCutoff',
@@ -126,7 +128,7 @@ export class DifferentialAnalysis extends RxComponentInner {
 				max: 4000
 			},
 			{
-				label: 'Show P value Table',
+				label: 'Show P value table',
 				type: 'checkbox',
 				chartType: 'differentialAnalysis',
 				settingsKey: 'showPValueTable',
@@ -147,6 +149,7 @@ export class DifferentialAnalysis extends RxComponentInner {
 
 	async init() {
 		await this.setControls()
+		this.interactions.setVar(this.app, this.id)
 	}
 
 	async main() {
@@ -171,7 +174,7 @@ export class DifferentialAnalysis extends RxComponentInner {
 			//Pass table data for downloading
 			this.interactions.pValueTableData = view.viewData.pValueTableData
 			/** Render formatted data */
-			new View(this.dom, this.interactions, settings, view.viewData)
+			new View(this.app, this.dom, this.interactions, settings, view.viewData)
 		} catch (e: any) {
 			if (e instanceof Error) console.error(e.message || e)
 			else if (e.stack) console.log(e.stack)
