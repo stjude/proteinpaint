@@ -86,8 +86,6 @@ values[] // using integer sample id
 	if (!q.storage_type) throw 'storage_type is not defined' // This check is redundant because in ts this is already defined as a mandatory field. Still keeping it as a backup (when storage_type will be permanently switched to HDF5).
 	param.storage_type = q.storage_type
 	const group1names = [] as string[]
-	//let group1names_not_found = 0
-	//const group1names_not_found_list = []
 	const conf1_group1: (string | number)[] = []
 	const conf2_group1: (string | number)[] = []
 	for (const s of param.samplelst.groups[0].values) {
@@ -145,14 +143,9 @@ values[] // using integer sample id
 				// When no confounding variables are present
 				group1names.push(n)
 			}
-		} else {
-			//group1names_not_found += 1
-			//group1names_not_found_list.push(n)
 		}
 	}
 	const group2names = [] as string[]
-	//let group2names_not_found = 0
-	//const group2names_not_found_list = []
 	const conf1_group2: (string | number)[] = []
 	const conf2_group2: (string | number)[] = []
 	for (const s of param.samplelst.groups[1].values) {
@@ -210,21 +203,12 @@ values[] // using integer sample id
 				// When no confounding variables are present
 				group2names.push(n)
 			}
-		} else {
-			//group2names_not_found += 1
-			//group2names_not_found_list.push(n)
 		}
 	}
 
-	//console.log('Sample size of group1:', group1names.length)
-	//console.log('Sample size of group2:', group2names.length)
-
 	const sample_size1 = group1names.length
 	const sample_size2 = group2names.length
-	//console.log('group1names_not_found_list:', group1names_not_found_list)
-	//console.log('group2names_not_found_list:', group2names_not_found_list)
-	//console.log('Number of group1 names not found:', group1names_not_found)
-	//console.log('Number of group2 names not found:', group2names_not_found)
+
 	if (sample_size1 < 1) throw 'sample size of group1 < 1'
 	if (sample_size2 < 1) throw 'sample size of group2 < 1'
 	// pass group names and txt file to rust
@@ -250,6 +234,10 @@ values[] // using integer sample id
 			// If all elements in the confounding variable are equal, throw error as R script crashes if the confounding variable has only 1 level
 			throw 'Confounding variable 1 has only one value'
 		}
+		if (param.flip_design_matrix) {
+			// Flips design matrix in edgeR so as to analyze the confounding variable(s) first before the groups (when true)
+			expression_input.flip_design_matrix = param.flip_design_matrix
+		}
 	}
 
 	if (param.tw2) {
@@ -261,6 +249,8 @@ values[] // using integer sample id
 			throw 'Confounding variable 2 has only one value'
 		}
 	}
+
+	// The commented out code below helps in printing out the JSON object to a file which can later be passed through the command line to inspect the R/rust code.
 
 	//console.log('expression_input:', expression_input)
 	//console.log("param.method:",param.method)
@@ -282,7 +272,6 @@ values[] // using integer sample id
 		)
 		mayLog('Time taken to run edgeR:', Date.now() - time1, 'ms')
 		param.method = 'edgeR'
-		//console.log("result:",result)
 	} else {
 		// Wilcoxon test will be used for DE analysis
 		const time1 = new Date().valueOf()
@@ -290,6 +279,5 @@ values[] // using integer sample id
 		mayLog('Time taken to run rust DE pipeline:', Date.now() - time1, 'ms')
 		param.method = 'wilcoxon'
 	}
-	//console.log("result:", result)
 	return { data: result, sample_size1: sample_size1, sample_size2: sample_size2, method: param.method } as DEResponse
 }
