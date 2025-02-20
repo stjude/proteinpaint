@@ -1,9 +1,4 @@
-import type {
-	DiffAnalysisDom,
-	DiffAnalysisViewData,
-	DiffAnalysisPlotConfig,
-	DiffAnalysisSettings
-} from '../DiffAnalysisTypes'
+import type { DiffAnalysisViewData, DiffAnalysisPlotConfig, DiffAnalysisSettings } from '../DiffAnalysisTypes'
 import { scaleLinear } from 'd3-scale'
 import { roundValueAuto } from '#shared/roundValue.js'
 
@@ -21,10 +16,11 @@ export class ViewModel {
 	maxLogFoldChange = 0
 	minLogPValue = 0
 	maxLogPValue = 0
+	readonly offset = 10
 	readonly bottomPad = 60
 	readonly horizPad = 70
 	readonly topPad = 40
-	constructor(config: DiffAnalysisPlotConfig, dom: DiffAnalysisDom, response: any, settings: DiffAnalysisSettings) {
+	constructor(config: DiffAnalysisPlotConfig, response: any, settings: DiffAnalysisSettings) {
 		this.response = response
 		this.pValueCutoff = -Math.log10(settings.pValue)
 		this.pValueTable = {
@@ -45,7 +41,7 @@ export class ViewModel {
 		this.viewData = {
 			plotDim,
 			pointData: this.setPointData(plotDim),
-			legendData: this.setLegendData(config)
+			statsData: this.setStatsData(config)
 		}
 	}
 
@@ -69,33 +65,39 @@ export class ViewModel {
 				width: this.settings.width + this.horizPad * 2
 			},
 			xAxisLabel: {
-				x: this.horizPad + this.settings.width / 2,
+				x: this.horizPad + this.settings.width / 2 + this.offset,
 				y: this.topPad + this.settings.height + this.bottomPad
 			},
 			xScale: {
 				scale: xScale,
-				x: this.horizPad,
-				y: this.settings.height + this.topPad
+				x: this.horizPad + this.offset * 2,
+				y: this.settings.height + this.topPad + this.offset
 			},
 			yAxisLabel: {
 				text: `-log10(${this.settings.pValueType} P value)`,
 				x: this.horizPad / 3,
-				y: this.topPad + this.settings.height / 2
+				y: this.topPad + this.settings.height / 2 + this.offset
 			},
 			yScale: {
 				scale: yScale,
 				x: this.horizPad,
-				y: this.topPad
+				y: this.topPad - this.offset
+			},
+			plot: {
+				height: this.settings.height,
+				width: this.settings.width,
+				x: this.horizPad + this.offset * 2,
+				y: this.topPad - this.offset
 			},
 			logFoldChangeLine: {
-				x: xScale(0) + this.horizPad,
-				y: this.settings.height
+				x: xScale(0) + this.horizPad + this.offset * 2,
+				y1: this.topPad - this.offset,
+				y2: this.settings.height + this.offset * 2
 			}
 		}
 	}
 
 	setPointData(plotDim) {
-		//tooltip data??
 		const radius = Math.max(this.settings.width, this.settings.height) / 80
 		const dataCopy = structuredClone(this.response.data)
 		for (const d of dataCopy) {
@@ -116,8 +118,8 @@ export class ViewModel {
 				d.color = 'black'
 				this.numNonSignificant++
 			}
-			d.x = plotDim.xScale.scale(d.fold_change) + this.horizPad
-			d.y = plotDim.yScale.scale(d[`adjusted_p_value`]) + this.topPad
+			d.x = plotDim.xScale.scale(d.fold_change) + this.horizPad + this.offset * 2
+			d.y = plotDim.yScale.scale(d[`${this.settings.pValueType}_p_value`]) + this.topPad - this.offset
 			d.radius = radius
 		}
 		return dataCopy
@@ -130,7 +132,7 @@ export class ViewModel {
 		)
 	}
 
-	setLegendData(config: any) {
+	setStatsData(config: any) {
 		const tableRows = [
 			{
 				label: `Percentage of significant ${this.type}`,

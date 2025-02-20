@@ -24,12 +24,8 @@ export type DiffAnalysisDom = {
 	svg: SvgSvg
 	/** Shared tooltip */
 	tip: Menu
-	/** X axis */
-	xAxis: SvgG
 	/** X axis label */
 	xAxisLabel: SvgText
-	/** Y axis */
-	yAxis: SvgG
 	/** Y axis label */
 	yAxisLabel: SvgText
 }
@@ -68,7 +64,34 @@ export type DiffAnalysisSettings = {
 
 /** Formatted data from the view model */
 export type DiffAnalysisViewData = {
-	legendData: { label: string; value: number }[]
-	plotDim: any
-	pointData: any
+	statsData: { label: string; value: number }[]
+	plotDim: DiffAnalysisPlotDim
+	pointData: PointDataEntry[]
+}
+
+export type DiffAnalysisPlotDim = {
+	logFoldChangeLine: { x: number; y1: number; y2: number }
+	plot: { width: number; height: number; x: number; y: number }
+	svg: { width: number; height: number }
+	xAxisLabel: { x: number; y: number }
+	xScale: { x: number; y: number; scale: any }
+	yAxisLabel: { x: number; y: number; text: string }
+	yScale: { x: number; y: number; scale: any }
+}
+
+export type PointDataEntry = {
+	adjusted_p_value: number
+	/** color indicating significance */
+	color: string
+	fold_change: number
+	gene_name: string
+	gene_symbol: string
+	log_fold_change: number
+	original_p_value: number
+	/** x coordinate */
+	x: number
+	/** y coordinate */
+	y: number
+	/** radius */
+	radius: number
 }
