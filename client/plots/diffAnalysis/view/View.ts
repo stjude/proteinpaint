@@ -7,9 +7,10 @@ import type {
 	DiffAnalysisPlotDim,
 	DiffAnalysisSettings,
 	DiffAnalysisViewData,
-	PointDataEntry
+	DataPointEntry
 } from '../DiffAnalysisTypes'
 import type { DiffAnalysisInteractions } from '../interactions/DiffAnalysisInteractions'
+import { DataPointToolTip } from './DataPointToolTip'
 
 export class View {
 	dom: DiffAnalysisDom
@@ -29,7 +30,7 @@ export class View {
 
 		const plotDim = this.viewData.plotDim
 		this.renderDom(plotDim)
-		this.renderDataPoints()
+		renderDataPoints(this)
 		this.renderFoldChangeLine(plotDim)
 		this.renderStatsTable()
 		if (settings.showPValueTable) this.renderPValueTable()
@@ -72,36 +73,6 @@ export class View {
 		})
 	}
 
-	renderDataPoints() {
-		this.dom.plot
-			.selectAll('circle')
-			.data(this.viewData.pointData)
-			.enter()
-			.append('circle')
-			.attr('stroke', (d: PointDataEntry) => d.color)
-			.attr('stroke-opacity', 0.2)
-			.attr('stroke-width', 1)
-			// orange yellow fill shown on hover
-			.attr('fill', '#ffa200')
-			.attr('fill-opacity', 0)
-			.attr('cx', (d: PointDataEntry) => d.x)
-			.attr('cy', (d: PointDataEntry) => d.y)
-			.attr('r', (d: PointDataEntry) => d.radius)
-			.each(function (this, d: PointDataEntry) {
-				const circle = select(this)
-				//TODO: add tooltip
-				circle.on('click', () => {
-					//TODO: launch genome browser
-				})
-			})
-			.on('mouseover', (d: PointDataEntry) => {
-				//TODO: change color
-			})
-			.on('mouseout', (d: PointDataEntry) => {
-				//TODO: change color back
-			})
-	}
-
 	renderFoldChangeLine(plotDim: DiffAnalysisPlotDim) {
 		//logFoldChangeLine
 		this.dom.plot
@@ -140,4 +111,28 @@ export class View {
 			resize: true
 		})
 	}
+}
+
+function renderDataPoints(self) {
+	self.dom.plot
+		.selectAll('circle')
+		.data(self.viewData.pointData)
+		.enter()
+		.append('circle')
+		.attr('stroke', (d: DataPointEntry) => d.color)
+		.attr('stroke-opacity', 0.2)
+		.attr('stroke-width', 1)
+		// orange-yellow fill shown on hover
+		.attr('fill', '#ffa200')
+		.attr('fill-opacity', 0)
+		.attr('cx', (d: DataPointEntry) => d.x)
+		.attr('cy', (d: DataPointEntry) => d.y)
+		.attr('r', (d: DataPointEntry) => d.radius)
+		.each(function (this, d: DataPointEntry) {
+			const circle = select(this)
+			new DataPointToolTip(d, circle, self.dom.tip)
+			circle.on('click', () => {
+				//TODO: launch genome browser
+			})
+		})
 }
