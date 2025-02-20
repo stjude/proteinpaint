@@ -156,7 +156,7 @@ export function setRenderers(self) {
 			}
 			labels.push(self.config[`${key}TW`]?.term?.name ?? '')
 
-			// Add 20 for the icon (16) and space
+			// Add 70 for icons, paddings, etc.
 			return getMaxLabelWidth(svg, labels, size) + 70
 		}
 		/** Becomes the x offset for the shape legend.
@@ -165,7 +165,7 @@ export function setRenderers(self) {
 		if (self.config.colorTW)
 			chart.colorLegendWidth =
 				self.config?.colorTW?.q.mode == 'continuous'
-					? Math.max(175, getMaxLabelWidth(svg, [self.config.colorTW.term.name]) + 20)
+					? Math.max(175, getMaxLabelWidth(svg, [self.config.colorTW.term.name]) + 40)
 					: getLegendLabelWidth('color', svg)
 		else chart.colorLegendWidth = 0
 		const shapeWidth = getLegendLabelWidth('shape', svg)
