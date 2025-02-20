@@ -1,3 +1,4 @@
+import type { MassAppApi } from '#mass/types/mass'
 import { axisstyle } from '#src/client'
 import { axisBottom, axisLeft } from 'd3-axis'
 import { table2col, renderTable } from '#dom'
@@ -11,12 +12,14 @@ import type {
 } from '../DiffAnalysisTypes'
 import type { DiffAnalysisInteractions } from '../interactions/DiffAnalysisInteractions'
 import { DataPointToolTip } from './DataPointToolTip'
+import { GSEAButton } from './GSEAButton'
 
 export class View {
 	dom: DiffAnalysisDom
 	interactions: DiffAnalysisInteractions
 	viewData: DiffAnalysisViewData
 	constructor(
+		app: MassAppApi,
 		dom: DiffAnalysisDom,
 		interactions: DiffAnalysisInteractions,
 		settings: DiffAnalysisSettings,
@@ -29,11 +32,18 @@ export class View {
 		this.interactions.clearDom()
 
 		const plotDim = this.viewData.plotDim
+		this.renderUserActions(app, settings)
 		this.renderDom(plotDim)
 		renderDataPoints(this)
 		this.renderFoldChangeLine(plotDim)
 		this.renderStatsTable()
 		if (settings.showPValueTable) this.renderPValueTable()
+	}
+
+	renderUserActions(app, settings) {
+		this.dom.actions.style('margin-left', '20px').style('padding', '5px')
+		if (app.opts.genome.termdbs)
+			new GSEAButton(this.dom.actions.append('div'), this.dom.tip, this.interactions, settings, this.viewData.pointData)
 	}
 
 	renderDom(plotDim: DiffAnalysisPlotDim) {
