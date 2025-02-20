@@ -26,16 +26,10 @@ export default class WSIViewer {
 
 	private thumbnailsContainer: any
 
-	// Field to store sample ID to wsi session ID mapping
-	private readonly wsiSessions: Map<string, string | undefined>
-
 	constructor(opts: any) {
 		this.type = 'WSIViewer'
 		this.opts = opts
 		this.wsiViewerInteractions = new WSIViewerInteractions(this, opts)
-		this.wsiSessions = new Map()
-		// Add event listener for tab/window close
-		window.addEventListener('beforeunload', this.onTabClosed.bind(this))
 	}
 
 	async main(): Promise<void> {
@@ -52,13 +46,12 @@ export default class WSIViewer {
 			return
 		}
 
-		const layers = await this.getLayers(state, plotConfig.wsimages)
+		let layers: TileLayer<Zoomify>[] = []
 
-		if (layers.length === 0) {
-			holder
-				.append('div')
-				.style('margin-left', '10px')
-				.text('There was an error loading the WSI images. Please try again later.')
+		try {
+			layers = await this.getLayers(state, plotConfig.wsimages)
+		} catch (e: any) {
+			holder.append('div').style('margin-left', '10px').text(e.message)
 			return
 		}
 
@@ -96,26 +89,32 @@ export default class WSIViewer {
 	private async getLayers(state: any, wsimages: WSImage[]): Promise<Array<TileLayer<Zoomify>>> {
 		const layers: Array<TileLayer<Zoomify>> = []
 
+		const genome = state.genome || state.vocab.genome
+		const dslabel = state.dslabel || state.vocab.dslabel
+		const sampleId = state.sample_id
+
 		for (let i = 0; i < wsimages.length; i++) {
+			const wsimage = wsimages[i].filename
+
 			const body: WSImagesRequest = {
-				genome: state.genome || state.vocab.genome,
-				dslabel: state.dslabel || state.vocab.dslabel,
-				sampleId: state.sample_id,
+				genome: genome,
+				dslabel: dslabel,
+				sampleId: sampleId,
 				wsimage: wsimages[i].filename
 			}
 
 			const data: WSImagesResponse = await dofetch3('wsimages', { body })
 
 			if (data.status === 'error') {
-				return []
+				throw new Error(`${data.error}`)
 			}
-
-			this.wsiSessions.set(wsimages[i].filename, data.browserImageInstanceId)
 
 			const imgWidth = data.slide_dimensions[0]
 			const imgHeight = data.slide_dimensions[1]
 
-			const zoomifyUrl = `/tileserver/layer/slide/${data.wsiSessionId}/zoomify/{TileGroup}/{z}-{x}-{y}@1x.jpg`
+			const queryParams = `wsi_image=${wsimage}&dslabel=${dslabel}&genome=${genome}&sample_id=${sampleId}`
+
+			const zoomifyUrl = `/tileserver/layer/slide/${data.wsiSessionId}/zoomify/{TileGroup}/{z}-{x}-{y}@1x.jpg?${queryParams}`
 
 			const source = new Zoomify({
 				url: zoomifyUrl,
@@ -125,7 +124,7 @@ export default class WSIViewer {
 			})
 
 			const options = {
-				preview: `/tileserver/layer/slide/${data.wsiSessionId}/zoomify/TileGroup0/0-0-0@1x.jpg`,
+				preview: `/tileserver/layer/slide/${data.wsiSessionId}/zoomify/TileGroup0/0-0-0@1x.jpg?${queryParams}`,
 				metadata: wsimages[i].metadata,
 				source: source,
 				baseLayer: true
@@ -136,16 +135,6 @@ export default class WSIViewer {
 			layers.push(layer)
 		}
 		return layers
-	}
-
-	private onTabClosed() {
-		const hasNonUndefinedValue = Array.from(this.wsiSessions.values()).some(value => value !== undefined)
-		if (hasNonUndefinedValue) {
-			dofetch3('clearwsisession', {
-				method: 'DELETE',
-				body: { sessions: JSON.stringify(Array.from(this.wsiSessions)) }
-			})
-		}
 	}
 
 	private generateThumbnails(layers: Array<TileLayer<Zoomify>>, setting: Settings) {

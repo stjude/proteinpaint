@@ -1,10 +1,15 @@
 import type { TileRequest /*, TileResponse*/, RouteApi } from '#types'
 import { tilePayload } from '#types/checkers'
 import ky from 'ky'
+import { TileServerShard } from '#src/sharding/TileServerShard.ts'
+import { TileServerShardingAlgorithm } from '#src/sharding/TileServerShardingAlgorithm.ts'
+import { ShardManager } from '#src/sharding/ShardManager.ts'
+import SessionManager from '#src/wsisessions/SessionManager.ts'
 import serverconfig from '#src/serverconfig.js'
+import path from 'path'
 
 export const api: RouteApi = {
-	endpoint: `tileserver/layer/slide/:sampleId/zoomify/:TileGroup/:z-:x-:y@1x.jpg`,
+	endpoint: `tileserver/layer/slide/:sessionId/zoomify/:TileGroup/:z-:x-:y@1x.jpg`,
 	methods: {
 		get: {
 			...tilePayload,
@@ -17,14 +22,43 @@ export const api: RouteApi = {
 	}
 }
 
-function init() {
+function init({ genomes }) {
 	return async (req: any, res: any): Promise<void> => {
 		try {
-			const { sampleId, TileGroup, z, x, y } = req.params satisfies TileRequest
+			const { sessionId, TileGroup, z, x, y } = req.params satisfies TileRequest
+			const query = req.query
+			const wsiImage = query.wsi_image
+			if (!wsiImage) throw new Error('No wsi_image param provided')
+			const dslabel = query.dslabel
+			if (!dslabel) throw new Error('No dslabel param provided')
+			const g = genomes[query.genome]
+			if (!g) throw new Error('Invalid genome name')
+			const ds = g.datasets[query.dslabel]
+			if (!ds) throw new Error('Invalid dataset name')
+			const sampleId = query.sample_id
+			if (!sampleId) throw new Error('Invalid sample id')
 
-			const url = `${serverconfig.tileServerURL}/tileserver/layer/slide/${sampleId}/zoomify/${TileGroup}/${z}-${x}-${y}@1x.jpg`
+			const mount = serverconfig.features?.tileserver?.mount
+			if (!mount) throw new Error('No mount available for TileServer')
+
+			const wsiImagePath = path.join(`${mount}/${ds.queries.WSImages.imageBySampleFolder}/${sampleId}`, wsiImage)
+
+			if (!wsiImage) throw new Error('Invalid wsi_image')
+
+			const shardManager = ShardManager.getInstance()
+			const tileServer: TileServerShard = await shardManager.shardingAlgorithmsMap
+				?.get(TileServerShardingAlgorithm.TILE_SERVER_SHARDING_KEY)
+				?.getShard(wsiImagePath)
+
+			if (!tileServer) {
+				throw new Error('No tile server')
+			}
+
+			const url = `${tileServer.url}/tileserver/layer/slide/${sessionId}/zoomify/${TileGroup}/${z}-${x}-${y}@1x.jpg`
 
 			const response = await ky.get(url, { timeout: 120000 })
+
+			await SessionManager.getInstance().updateSession(wsiImagePath)
 
 			const buffer = await response.arrayBuffer()
 			res.status(response.status).send(Buffer.from(buffer))
