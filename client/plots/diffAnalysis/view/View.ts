@@ -38,16 +38,17 @@ export class View {
 		this.renderScale(plotDim.yScale, true)
 
 		this.dom.plot
+			.append('rect')
 			.attr('width', plotDim.plot.width)
 			.attr('height', plotDim.plot.height)
 			.attr('stroke', '#ededed')
-			.attr('fill', 'none')
+			.attr('fill', 'transparent')
 			.attr('shape-rendering', 'crispEdges')
 			.attr('transform', `translate(${plotDim.plot.x}, ${plotDim.plot.y})`)
 	}
 
 	renderScale(scale: any, isLeft = false) {
-		const scaleG = this.dom.svg
+		const scaleG = this.dom[isLeft ? 'yAxis' : 'xAxis']
 			.append('g')
 			.attr('transform', `translate(${scale.x}, ${scale.y})`)
 			.call(isLeft ? axisLeft(scale.scale) : axisBottom(scale.scale))
@@ -60,7 +61,7 @@ export class View {
 	}
 
 	renderDataPoints() {
-		this.dom.svg
+		this.dom.plot
 			.selectAll('circle')
 			.data(this.viewData.pointData)
 			.enter()
@@ -91,7 +92,7 @@ export class View {
 
 	renderFoldChangeLine(plotDim: DiffAnalysisPlotDim) {
 		//logFoldChangeLine
-		this.dom.svg
+		this.dom.plot
 			.append('line')
 			.attr('stroke', '#ccc')
 			.attr('shape-rendering', 'crispEdges')
