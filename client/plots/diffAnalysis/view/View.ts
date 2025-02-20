@@ -1,15 +1,26 @@
 import { axisstyle } from '#src/client'
 import { axisBottom, axisLeft } from 'd3-axis'
-import { table2col } from '#dom'
+import { table2col, renderTable } from '#dom'
 import { select } from 'd3-selection'
-import type { DiffAnalysisDom, DiffAnalysisPlotDim, DiffAnalysisViewData, PointDataEntry } from '../DiffAnalysisTypes'
+import type {
+	DiffAnalysisDom,
+	DiffAnalysisPlotDim,
+	DiffAnalysisSettings,
+	DiffAnalysisViewData,
+	PointDataEntry
+} from '../DiffAnalysisTypes'
 import type { DiffAnalysisInteractions } from '../interactions/DiffAnalysisInteractions'
 
 export class View {
 	dom: DiffAnalysisDom
 	interactions: DiffAnalysisInteractions
 	viewData: DiffAnalysisViewData
-	constructor(dom: DiffAnalysisDom, interactions: DiffAnalysisInteractions, viewData: DiffAnalysisViewData) {
+	constructor(
+		dom: DiffAnalysisDom,
+		interactions: DiffAnalysisInteractions,
+		settings: DiffAnalysisSettings,
+		viewData: DiffAnalysisViewData
+	) {
 		this.dom = dom
 		this.interactions = interactions
 		this.viewData = viewData
@@ -21,6 +32,7 @@ export class View {
 		this.renderDataPoints()
 		this.renderFoldChangeLine(plotDim)
 		this.renderStatsTable()
+		if (settings.showPValueTable) this.renderPValueTable()
 	}
 
 	renderDom(plotDim: DiffAnalysisPlotDim) {
@@ -115,5 +127,17 @@ export class View {
 			td1.text(d.label)
 			td2.style('text-align', 'end').text(d.value)
 		}
+	}
+
+	renderPValueTable() {
+		const tableDiv = this.dom.div.append('div')
+		renderTable({
+			columns: this.viewData.pValueTableData.columns,
+			rows: this.viewData.pValueTableData.rows,
+			div: tableDiv.append('div'),
+			showLines: true,
+			maxHeight: '150vh',
+			resize: true
+		})
 	}
 }
