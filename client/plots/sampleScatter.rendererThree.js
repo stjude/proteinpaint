@@ -165,9 +165,14 @@ export function setRenderersThree(self) {
 				self.addLabels(scene, chart)
 			}
 
-			document.addEventListener('mousewheel', event => {
-				controls.enableZoom = event.ctrlKey
-			})
+			document.addEventListener(
+				'wheel',
+				event => {
+					if (event.ctrlKey) event.preventDefault()
+					controls.enableZoom = event.ctrlKey
+				},
+				{ passive: false }
+			)
 
 			const geometry = new THREE.BufferGeometry()
 			geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3))
@@ -186,7 +191,7 @@ export function setRenderersThree(self) {
 		function animate() {
 			requestAnimationFrame(animate)
 			// required if controls.enableDamping or controls.autoRotate are set to true
-			controls.enableZoom = false
+
 			renderer.render(scene, camera)
 		}
 		animate()
