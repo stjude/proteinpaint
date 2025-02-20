@@ -334,7 +334,7 @@ function enterRange(self, tr, brush, i) {
 			.style('margin-left', '20px')
 			.style('font-style', 'italic')
 			.style('color', '#888')
-			.html('Option 1: Drag the rectangle to select a range. Overlapping ranges will be merged')
+			.html('Option 1: Drag the rectangle to select a range. Overlapping ranges will be merged.')
 	}
 
 	// A note showing there is also the option to type values to select range
@@ -350,9 +350,9 @@ function enterRange(self, tr, brush, i) {
 			.style('font-style', 'italic')
 			.style('color', '#888')
 			.html(
-				`Option 2: Type in values to select a range. ${
-					self.tvs.term.valueConversion ? `Values are in the unit of ${self.tvs.term.valueConversion.fromUnit}` : ''
-				}.`
+				`Option 2: Type in values to select a range.${
+					self.tvs.term.valueConversion ? ` Values are in the unit of ${self.tvs.term.valueConversion.fromUnit}.` : ''
+				}`
 			)
 	}
 
