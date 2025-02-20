@@ -89,6 +89,7 @@ export async function trigger_getSampleScatter(req, q, res, ds, genome) {
 		if (q.scaleDotTW) terms.push(q.scaleDotTW)
 		if (q.coordTWs) for (const tw of q.coordTWs) terms.push(tw)
 		const data = await getData({ filter: q.filter, filter0: q.filter0, terms }, ds, genome, true)
+		if (data.error) throw data.error
 		let result
 		if (q.coordTWs.length == 2) {
 			const tmp = await getSampleCoordinatesByTerms(req, q, ds, data)
