@@ -128,14 +128,15 @@ class Scatter {
 		const reqOpts = this.getDataRequestOpts()
 		if (reqOpts.coordTWs.length == 1) return //To allow removing a term in the controls, though nothing is rendered (summary tab with violin active)
 
-		const results = await this.app.vocabApi.getScatterData(reqOpts)
-		if (results.error) throw results.error
+		const data = await this.app.vocabApi.getScatterData(reqOpts)
+		if (data.error) throw data.error
+		this.range = data.range
 		this.charts = []
 		let i = 0
-		for (const [key, data] of Object.entries(results)) {
-			if (!Array.isArray(data.samples)) throw 'data.samples[] not array'
+		for (const [key, chartData] of Object.entries(data.result)) {
+			if (!Array.isArray(chartData.samples)) throw 'data.samples[] not array'
 			if (data.isLast) this.createChart(key, data, i)
-			else this.createChart(key, data, 0)
+			else this.createChart(key, chartData, 0)
 		}
 		this.initRanges()
 		this.is3D = this.config.term0?.q.mode == 'continuous'

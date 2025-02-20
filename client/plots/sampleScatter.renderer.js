@@ -47,14 +47,17 @@ export function setRenderers(self) {
 
 		const extraSpaceX = (chart.xMax - chart.xMin) * 0.01 //extra space added to avoid clipping the particles on the X axis
 		const extraSpaceY = (chart.yMax - chart.yMin) * 0.01 //extra space added to avoid clipping the particles on the Y axis
-
+		const xMin = this.range.xMin
+		const xMax = this.range.xMax
+		const yMin = this.range.yMin
+		const yMax = this.range.yMax
 		chart.xAxisScale = d3Linear()
-			.domain([chart.xMin - extraSpaceX, chart.xMax + extraSpaceX])
+			.domain([xMin - extraSpaceX, xMax + extraSpaceX])
 			.range([offsetX, self.settings.svgw + offsetX])
 
 		chart.axisBottom = axisBottom(chart.xAxisScale)
 		chart.yAxisScale = d3Linear()
-			.domain([chart.yMax + extraSpaceY, chart.yMin - extraSpaceY])
+			.domain([yMax + extraSpaceY, yMin - extraSpaceY])
 			.range([offsetY, self.settings.svgh + offsetY])
 
 		chart.zAxisScale = d3Linear().domain([chart.zMin, chart.zMax]).range([0, self.settings.svgd])
@@ -680,7 +683,7 @@ export function setRenderers(self) {
 
 		const mainG = self.charts[0].mainG
 		const zoom = d3zoom()
-			.scaleExtent([0.5, self.config.scaleDotTW ? 4 : 10])
+			.scaleExtent([0.1, self.config.scaleDotTW ? 4 : 10])
 			.on('zoom', handleZoom)
 			.filter(event => {
 				if (event.type === 'wheel') return event.ctrlKey
