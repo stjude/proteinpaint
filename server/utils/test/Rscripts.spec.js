@@ -243,13 +243,9 @@ tape('regression.R', async function (test) {
 		const injson = fs.readFileSync(path.join(serverconfig.binpath, 'test/testdata/R', `${type}_regression_input.json`), { encoding: 'utf8' })
 		const expjson = fs.readFileSync(path.join(serverconfig.binpath, 'test/testdata/R', `${type}_regression_output.json`), { encoding: 'utf8' })
 		// const expfile = path.join(serverconfig.binpath, 'test/testdata/R', `${type}_regression_output.json`)
-		// console.log('injson: ', injson)
 		const Rout = await run_R(path.join(__dirname, '../regression.R'), injson)
-		console.log('Rout: ',Rout)
 		const out = JSON.parse(Rout)
 		delete out.benchmark
-		console.log("Sringified output", JSON.stringify(out, null, 2))
-		console.log("Expected output", expjson)
 		test.deepEqual(out, expjson, `${type} regression should match expected output`)
 	}
 	test.end()
