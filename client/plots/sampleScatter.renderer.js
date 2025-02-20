@@ -44,13 +44,13 @@ export function setRenderers(self) {
 		if (chart.data.samples.length == 0) return
 		const offsetX = self.axisOffset.x
 		const offsetY = self.axisOffset.y
-
-		const extraSpaceX = (chart.xMax - chart.xMin) * 0.01 //extra space added to avoid clipping the particles on the X axis
-		const extraSpaceY = (chart.yMax - chart.yMin) * 0.01 //extra space added to avoid clipping the particles on the Y axis
 		const xMin = this.range.xMin
 		const xMax = this.range.xMax
 		const yMin = this.range.yMin
 		const yMax = this.range.yMax
+		const extraSpaceX = (xMax - xMin) * 0.01 //extra space added to avoid clipping the particles on the X axis
+		const extraSpaceY = (yMax - yMin) * 0.01 //extra space added to avoid clipping the particles on the Y axis
+
 		chart.xAxisScale = d3Linear()
 			.domain([xMin - extraSpaceX, xMax + extraSpaceX])
 			.range([offsetX, self.settings.svgw + offsetX])
@@ -61,13 +61,6 @@ export function setRenderers(self) {
 			.range([offsetY, self.settings.svgh + offsetY])
 
 		chart.zAxisScale = d3Linear().domain([chart.zMin, chart.zMax]).range([0, self.settings.svgd])
-
-		chart.xScaleMin = chart.xAxisScale(chart.xMin)
-		chart.xScaleMax = chart.xAxisScale(chart.xMax)
-		chart.yScaleMin = chart.xAxisScale(chart.yMin)
-		chart.yScaleMax = chart.yAxisScale(chart.yMax)
-		chart.zScaleMin = chart.xAxisScale(chart.zMin)
-		chart.zScaleMax = chart.zAxisScale(chart.zMax)
 
 		chart.axisLeft = axisLeft(chart.yAxisScale)
 

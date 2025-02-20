@@ -96,10 +96,10 @@ export function setRenderersThree(self) {
 
 	self.render3DSerie = async function (chart) {
 		const xAxisScale = d3Linear()
-			.domain([chart.xMin, chart.xMax])
+			.domain([self.range.xMin, self.range.xMax])
 			.range([self.settings.showContour ? -1 : 0, 1])
 		const yAxisScale = d3Linear()
-			.domain([chart.yMin, chart.yMax])
+			.domain([self.range.yMin, self.range.yMax])
 			.range([self.settings.showContour ? -1 : 0, 1])
 		const zAxisScale = chart.zAxisScale.range([0, 1])
 
