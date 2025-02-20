@@ -1,7 +1,7 @@
 import type { MassAppApi } from '#mass/types/mass'
 import { downloadTable } from '#dom'
 import { to_svg } from '#src/client'
-import type { DiffAnalysisDom } from '../DiffAnalysisTypes'
+import type { DiffAnalysisDom, DiffAnalysisPlotConfig } from '../DiffAnalysisTypes'
 
 export class DiffAnalysisInteractions {
 	app: MassAppApi
@@ -40,6 +40,26 @@ export class DiffAnalysisInteractions {
 		for (const opt of opts) {
 			this.dom.tip.d.append('div').attr('class', 'sja_menuoption').text(opt.text).on('click', opt.callback)
 		}
+	}
+
+	async launchBoxPlot(geneSymbol: string) {
+		const config = this.app.getState().plots.find((p: DiffAnalysisPlotConfig) => p.id === this.id)
+		this.app.dispatch({
+			type: 'plot_create',
+			config: {
+				chartType: 'summary',
+				childType: 'boxplot',
+				groups: config.samplelst.groups,
+				term: {
+					q: { mode: 'continuous' },
+					term: {
+						gene: geneSymbol,
+						name: geneSymbol,
+						type: 'geneExpression' //eventually type will come from state
+					}
+				}
+			}
+		})
 	}
 
 	launchGSEA(value: string, foldChangeCutoff: number, data: any) {

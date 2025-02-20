@@ -140,9 +140,6 @@ function renderDataPoints(self) {
 		.attr('r', (d: DataPointEntry) => d.radius)
 		.each(function (this, d: DataPointEntry) {
 			const circle = select(this)
-			new DataPointToolTip(d, circle, self.dom.tip)
-			circle.on('click', () => {
-				//TODO: launch genome browser
-			})
+			new DataPointToolTip(d, circle, self.dom.tip, self.interactions)
 		})
 }
