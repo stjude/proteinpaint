@@ -328,9 +328,11 @@ export function setRenderers(self) {
 			zAxisScale = d3Linear().domain([zMin, zMax]).range([0, 1])
 		}
 
-		const data = chart.data.samples.map(s => {
-			return { x: chart.xAxisScale(s.x), y: chart.yAxisScale(s.y), z: zAxisScale ? zAxisScale(s.category) : 1 }
-		})
+		const data = chart.data.samples
+			.filter(s => self.getOpacity(s) > 0)
+			.map(s => {
+				return { x: chart.xAxisScale(s.x), y: chart.yAxisScale(s.y), z: zAxisScale ? zAxisScale(s.category) : 1 }
+			})
 		renderContours(
 			contourG,
 			data,
