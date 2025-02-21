@@ -20,27 +20,75 @@ import fs from 'fs'
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 
-/** // hwe.R tests
-tape('hwe.R', async function (test) {
-	test.timeoutAfter(5000)
-	test.plan(2)
-	const invalidInput = '68\t28\t4,5\t40\t3,56\t4\t43,83\t45\t13'
-	try {
-		const output = await run_R(path.join(__dirname, '../hwe.R'), invalidInput)
-		test.fail('should emit an error on invalid input')
-	} catch (error) {
-		test.deepEqual(error, TypeError('lines.join is not a function'), 'should emit an error on invalid input')
-	}
-	const validInput = ['68\t28\t4', '5\t40\t3', '56\t4\t43', '83\t45\t13']
-	const output = await run_R(path.join(__dirname, '../hwe.R'), validInput)
-	test.deepEqual(
-		output.map(Number),
-		[0.515367, 0.000006269428, 1.385241e-24, 0.07429809],
-		'should match expected output'
-	)
+// Initial message to test tape and let use know we are starting the R scripts tests
+tape('\n', function (test) {
+	test.pass('-***- R specs -***-')
 	test.end()
 })
 
+/**
+ * Tests for the Hardy-Weinberg Equilibrium (HWE) R script
+ * This test suite validates the behavior of hwe.R, which calculates
+ * Hardy-Weinberg equilibrium p-values for genetic data.
+ *
+ * The script processes tab-separated genotype counts (AA, AB, BB format)
+ * and returns p-values indicating whether the population is in
+ * Hardy-Weinberg equilibrium.
+ */
+
+// hwe.R tests
+tape('hwe.R', async function (test) {
+	test.timeoutAfter(5000)
+	// Plan for two distinct tests: invalid input handling and valid data processing
+	test.plan(2)
+
+	/**
+	 * Test 1: Invalid Input Handling
+	 *
+	 * Tests how the R script handles malformed input data.
+	 * We try some toy data which should trigger an error.
+	 */
+	const invalidInput = '68\t28\t4,5\t40\t3,56\t4\t43,83\t45\t13'
+	try {
+		await run_R(path.join(__dirname, '../hwe.R'), invalidInput)
+		test.fail('should emit an error on invalid input')
+	} catch (error) {
+		test.ok(
+			// We check for either 'non-numeric argument' (R error) or 'Error'
+			error.includes('non-numeric argument') || error.includes('Error'),
+			'should emit an error on invalid input'
+		)
+	}
+
+	/**
+	 * Test 2: Valid Input Processing
+	 *
+	 * Tests the R script with properly formatted genetic data.
+	 * Each row contains three tab-separated numbers representing
+	 * genotype counts in a population (AA, AB, BB format).
+	 *
+	 * The expected p-values indicate:
+	 * - 0.515367: No significant deviation from HWE
+	 * - 0.000006269428: Strong evidence against HWE
+	 * - 1.385241e-24: Extreme deviation from HWE
+	 * - 0.07429809: Weak evidence against HWE
+	 */
+	const validInput = ['68\t28\t4', '5\t40\t3', '56\t4\t43', '83\t45\t13']
+	const inputString = validInput.join('\n')
+	const output = await run_R(path.join(__dirname, '../hwe.R'), inputString)
+
+	// Split the output string into an array of strings, one per line and trim any empty lines
+	const outputArray = output.split('\n').filter(line => line.trim() !== '')
+
+	// Convert each string to a number
+	const numericOutput = outputArray.map(Number)
+
+	// Compare calculated p-values with expected results
+	test.deepEqual(numericOutput, [0.515367, 0.000006269428, 1.385241e-24, 0.07429809], 'should match expected output')
+	test.end()
+})
+
+/** 
 // fisher.R tests
 tape('fisher.R', async function (test) {
 	test.timeoutAfter(5000)
@@ -271,6 +319,18 @@ tape('\n', function (test) {
 	test.pass('-***- R correlation specs -***-')
 	test.end()
 })
+
+/**
+ * Correlation Tests Suite
+ *
+ * This test suite validates three different correlation methods implemented in corr.R:
+ * 1. Pearson correlation
+ * 2. Spearman correlation
+ * 3. Kendall correlation
+ *
+ * Each test reads input data and expected output from JSON files, runs the R script,
+ * and compares the results with expected values.
+ */
 
 tape('corr.R pearson', async function (test) {
 	test.timeoutAfter(10000)
