@@ -3,7 +3,7 @@ import { roundValueAuto } from '#shared/roundValue.js'
 import type { Menu } from '#dom'
 import type { SvgCircle } from '../../../types/d3'
 import type { DataPointEntry } from '../DiffAnalysisTypes'
-import { DiffAnalysisInteractions } from '../interactions/DiffAnalysisInteractions'
+import type { DiffAnalysisInteractions } from '../interactions/DiffAnalysisInteractions'
 
 export class DataPointToolTip {
 	constructor(d: DataPointEntry, circle: SvgCircle, tip: Menu, interactions: DiffAnalysisInteractions) {
