@@ -13,7 +13,7 @@ import { View } from './view/View'
  * - type this file
  * - remove method from server request -> always 'edgeR'
  */
-export class DifferentialAnalysis extends RxComponentInner {
+class DifferentialAnalysis extends RxComponentInner {
 	readonly type = 'differentialAnalysis'
 	components: { controls: any }
 	dom: DiffAnalysisDom
@@ -27,20 +27,15 @@ export class DifferentialAnalysis extends RxComponentInner {
 		const holder = opts.holder.classed('sjpp-diff-analysis-main', true)
 		const controls = opts.controls ? holder : holder.append('div')
 		const div = holder.append('div').style('padding', '5px').style('display', 'inline-block')
-		const errorDiv = div.append('div').attr('id', 'sjpp-diff-analysis-error').style('opacity', 0.75)
-		const actions = div.append('div').attr('id', 'sjpp-diff-analysis-actions').style('display', 'block')
-		const svg = div.append('svg').style('display', 'inline-block').attr('id', 'sjpp-diff-analysis-svg')
+		const error = div.append('div').attr('id', 'sjpp-diff-analysis-error').style('opacity', 0.75)
+		const tabs = div.append('div').attr('id', 'sjpp-diff-analysis-tabs')
+		const tabsContent = div.append('div').attr('id', 'sjpp-diff-analysis-tabs-content')
 		this.dom = {
 			controls: controls.style('display', 'block'),
 			div,
-			error: errorDiv,
-			actions,
-			svg,
-			xAxis: svg.append('g').attr('id', 'sjpp-diff-analysis-xAxis'),
-			yAxis: svg.append('g').attr('id', 'sjpp-diff-analysis-yAxis'),
-			xAxisLabel: svg.append('text').attr('id', 'sjpp-diff-analysis-xAxisLabel').attr('text-anchor', 'middle'),
-			yAxisLabel: svg.append('text').attr('id', 'sjpp-diff-analysis-yAxisLabel').attr('text-anchor', 'middle'),
-			plot: svg.append('g').attr('id', 'sjpp-diff-analysis-plot'),
+			error: error,
+			tabs,
+			tabsContent,
 			tip: new Menu({ padding: '' })
 		}
 
