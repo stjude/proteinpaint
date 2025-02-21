@@ -159,6 +159,7 @@ function setHeaders(req, res, next) {
 			', x-auth-token, x-ds-access-token, x-sjppds-sessionid'
 	)
 	res.header('Access-Control-Allow-Credentials', true)
+	res.header('Document-Policy', 'js-profiling')
 	if (req.method == 'OPTIONS') {
 		/* TODO: may activate letting auth middleware handle OPTIONS request with authorization/custom headers
 		if (req.headers?.['access-control-request-headers']?.split(',').includes('authorization')) next() // allow auth middleware to handle
