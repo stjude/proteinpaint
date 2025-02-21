@@ -866,7 +866,7 @@ fn main() {
                                 //    now2.elapsed()
                                 //);
                                 let adjusted_p_values = adjust_p_values(p_values);
-                                println!("{}", adjusted_p_values);
+                                println!("output_string:{}", adjusted_p_values);
                                 //let fold_changes =
                                 //    calculate_fold_change(normalized_matrix, case_indexes, control_indexes);
                             }
