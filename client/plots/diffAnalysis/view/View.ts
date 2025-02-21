@@ -14,6 +14,7 @@ import type { DiffAnalysisInteractions } from '../interactions/DiffAnalysisInter
 import { DataPointToolTip } from './DataPointToolTip'
 import { gseaMenu } from './GSEAMenu'
 
+/** TODO: finish typing this file */
 export class View {
 	dom: DiffAnalysisDom
 	interactions: DiffAnalysisInteractions
@@ -48,6 +49,7 @@ export class View {
 			)
 		}
 		this.addActionButton('Confounding factors', () => this.interactions.confoundersMenu())
+		this.addActionButton('Genes', () => this.interactions.launchGeneSetEdit())
 	}
 
 	addActionButton(text: string, callback: any) {
@@ -150,8 +152,8 @@ function renderDataPoints(self) {
 		.attr('stroke-opacity', 0.2)
 		.attr('stroke-width', 1)
 		// orange-yellow fill shown on hover
-		.attr('fill', '#ffa200')
-		.attr('fill-opacity', 0)
+		.attr('fill', (d: DataPointEntry) => (d.highlighted ? d.color : '#ffa200'))
+		.attr('fill-opacity', (d: DataPointEntry) => (d.highlighted ? 0.9 : 0))
 		.attr('cx', (d: DataPointEntry) => d.x)
 		.attr('cy', (d: DataPointEntry) => d.y)
 		.attr('r', (d: DataPointEntry) => d.radius)
