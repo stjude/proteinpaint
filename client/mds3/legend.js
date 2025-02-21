@@ -893,8 +893,9 @@ function may_create_cnv(tk, block) {
 function may_update_cnv(tk) {
 	if (!tk.cnv) return
 	// tk is equipped with cnv. determine if cnv data is actually shown
-	if (tk.cnv.cnvLst.length == 0) {
+	if (!tk.cnv.cnvLst || tk.cnv.cnvLst.length == 0) {
 		// no cnv shown in this region. hide colorscale
+		// possible for cnvLst to be missing! e.g. on server error
 		tk.legend.cnv.colorscaleHolder.style('display', 'none')
 		tk.legend.cnv.noCnv.style('display', 'inline-block')
 	} else {
