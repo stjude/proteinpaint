@@ -1,7 +1,6 @@
 import type { MassAppApi } from '#mass/types/mass'
 import { downloadTable, GeneSetEditUI } from '#dom'
 import { to_svg } from '#src/client'
-import { select } from 'd3-selection'
 import type { DiffAnalysisDom, DiffAnalysisPlotConfig } from '../DiffAnalysisTypes'
 
 export class DiffAnalysisInteractions {
@@ -49,12 +48,6 @@ export class DiffAnalysisInteractions {
 	clearDom() {
 		this.dom.tabs.selectAll('*').remove()
 		this.dom.tabsContent.selectAll('*').remove()
-		// this.dom.div.selectAll('table').remove()
-		// this.dom.actions.selectAll('*').remove()
-		// this.dom.plot.selectAll('*').remove()
-		// this.dom.xAxis.selectAll('*').remove()
-		// this.dom.yAxisLabel.text('')
-		// this.dom.yAxis.selectAll('*').remove()
 	}
 
 	download() {
@@ -108,20 +101,20 @@ export class DiffAnalysisInteractions {
 			holder,
 			genome: this.app.opts.genome,
 			vocabApi: this.app.vocabApi,
-			geneList: plotConfig.settings.highlightGenes,
+			geneList: plotConfig.highlightData,
 			callback: async result => {
 				const highlightedData = result.geneList.map(d => d.gene)
 				await this.app.dispatch({
 					type: 'plot_edit',
 					id: this.id,
-					config: { settings: { differentialAnalysis: { highlightedData } } }
+					config: { highlightedData }
 				})
 				this.dom.tip.hide()
 			}
 		})
 	}
 
-	launchGSEA(value: string, foldChangeCutoff: number, data: any) {
+	async launchGeneORA(value: string, foldChangeCutoff: number, data: any) {
 		const sample_genes: any = []
 		const background_genes: any = []
 
@@ -152,10 +145,13 @@ export class DiffAnalysisInteractions {
 
 		this.app.dispatch({
 			type: 'plot_create',
+			controls: this.dom.controls,
 			config: {
 				chartType: 'geneORA',
 				geneORAparams
 			}
 		})
 	}
+
+	async launchGSEA() {}
 }
