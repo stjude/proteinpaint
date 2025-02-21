@@ -197,9 +197,6 @@ multiple_testing_correction_time <- system.time({
 })
 #cat("Time for multiple testing correction: ", multiple_testing_correction_time[3], " seconds\n")
 
-# Output results
-toJSON(output)
-
 #-----------------------------------#
 # Will implement this later
 filter_genes_by_group_variance <- function(read_counts, gene_id_symbols, num_variable_genes, cases, controls) {
@@ -207,3 +204,6 @@ filter_genes_by_group_variance <- function(read_counts, gene_id_symbols, num_var
     case_read_counts <- read_counts[, cases]
     control_read_counts <- read_counts[, controls]
 }
+
+# Output results
+cat(paste0("output_string:",toJSON(output)))
