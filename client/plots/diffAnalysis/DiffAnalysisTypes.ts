@@ -25,8 +25,6 @@ export type DiffAnalysisDom = {
 	controls: Elem
 	/** Holder */
 	div: Elem
-	/** Plot specific div for error messages. */
-	error: Elem
 	/** Sandbox header, if provided */
 	header?: {
 		title: Elem
@@ -48,7 +46,7 @@ export type DiffAnalysisOpts = {
 	/** Optional sandbox header */
 	header?: Elem
 	/** Settings overrides, in runpp() call */
-	overrides?: Partial<DiffAnalysisSettings>
+	overrides?: Partial<VolcanoSettings>
 	/** Data points highlighted in the volcano plot */
 	highlightedData: string[]
 }
@@ -59,28 +57,8 @@ export type DiffAnalysisPlotConfig = PlotConfig & {
 	}
 	/** Data points highlighted in the volcano plot */
 	highlightedData: string[]
-}
-
-/** Settings DEanalysis */
-export type DiffAnalysisSettings = {
-	/** largest absolute fold change to be considered in the analysis */
-	foldChangeCutoff: number
-	/** smallest number of reads required for a gene to be considered in the analysis */
-	minCount: number
-	/** smallest total number of reads required for a gene to be considered in the analysis */
-	minTotalCount: number
-	/** p value cutoff for significance */
-	pValue: number
-	/** Users may switch between 'original' and 'adjusted' p values */
-	pValueType: 'original' | 'adjusted'
-	/** Show a table of p values */
-	showPValueTable: boolean
-	/** Number of variable genes used in parametric DE analysis*/
-	varGenesCutoff: number
-	/** plot height */
-	height: number
-	/** plot width */
-	width: number
+	/** Which tabs and plot ought to render */
+	visiblePlots: string[]
 }
 
 /** Formatted data from the view model */
@@ -115,4 +93,27 @@ export type VolcanoPlotDom = {
 	yAxis: SvgG
 	/** Y axis label */
 	yAxisLabel: SvgText
+}
+
+/** Settings for the differential analysis volcano */
+export type VolcanoSettings = {
+	activeTab: string
+	/** largest absolute fold change to be considered in the analysis */
+	foldChangeCutoff: number
+	/** smallest number of reads required for a gene to be considered in the analysis */
+	minCount: number
+	/** smallest total number of reads required for a gene to be considered in the analysis */
+	minTotalCount: number
+	/** p value cutoff for significance */
+	pValue: number
+	/** Users may switch between 'original' and 'adjusted' p values */
+	pValueType: 'original' | 'adjusted'
+	/** Show a table of p values */
+	showPValueTable: boolean
+	/** Number of variable genes used in parametric DE analysis*/
+	varGenesCutoff: number
+	/** plot height */
+	height: number
+	/** plot width */
+	width: number
 }
