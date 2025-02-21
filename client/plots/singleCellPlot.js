@@ -1395,12 +1395,25 @@ class singleCellPlot {
 				const hiddenClusters = {}
 				// reset hidden clusters when changing sample
 				for (const cluster in this.config.hiddenClusters) hiddenClusters[cluster] = false
+				// reset these settings when changing sample
+				const settings = {
+					colorScaleMode: 'auto',
+					colorScaleMinFixed: null,
+					colorScaleMaxFixed: null,
+					colorScalePercentile: 95,
+					showNoExpCells: false,
+					showContour: false,
+					colorContours: false,
+					contourBandwidth: 15,
+					contourThresholds: 10
+				}
 				const config = {
 					chartType: 'singleCellPlot',
 					sample, // track sample name to identify it in this.samples[]
 					activeTab: PLOTS_TAB, // on selecting a sample from table, auto switch to plots to directly show this sample's plots, to save user a click
 					cluster: null, // reset cluster
-					hiddenClusters // reset hidden clusters
+					hiddenClusters, // reset hidden clusters
+					settings: { singleCellPlot: settings }
 				}
 				this.genes = null // reset DE genes
 				if (rows[index][0].__experimentID) {
