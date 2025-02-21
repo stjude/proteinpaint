@@ -409,9 +409,13 @@ class singleCellPlot {
 		}
 		if (this.state.config.activeTab == GENE_EXPRESSION_TAB) extraText.push(this.state.config.gene)
 		if (this.state.config.activeTab == DIFFERENTIAL_EXPRESSION_TAB) extraText.push(this.state.config.cluster)
+		if (this.state.config.activeTab == VIOLIN_TAB && this.dom.expressionBySelect)
+			extraText.push(this.dom.expressionBySelect.node().value)
+
 		const filename = `${state.config.settings.singleCellPlot.uiLabels.sample.toUpperCase()}_
 			${this.samples[sampleIdx].sample}_
 			${extraText.join('_')}`
+
 		return filename.replace(/[^0-9a-z_]/gi, '')
 	}
 
@@ -577,13 +581,13 @@ class singleCellPlot {
 
 		if (options.size > 1) {
 			selectDiv.append('label').text('Show expression by: ')
-			const colorBySelect = selectDiv.append('select').on('change', async e => {
-				const colorBy = e.target.value
+			const expressionBySelect = selectDiv.append('select').on('change', async e => {
+				const expressionBy = e.target.value
 				violinDiv.selectAll('*').remove()
-				this.renderViolin(colorBy, violinDiv)
+				this.renderViolin(expressionBy, violinDiv)
 			})
-
-			colorBySelect
+			this.dom.expressionBySelect = expressionBySelect
+			expressionBySelect
 				.selectAll('option')
 				.data(Array.from(options))
 				.enter()
@@ -604,7 +608,7 @@ class singleCellPlot {
 		for (const cluster of plot.clusters) {
 			values[cluster] = { key: cluster, value: cluster }
 		}
-
+		const downloadFilename = (await this.getSampleFilename(this.state)) + '_VIOLIN'
 		const opts = {
 			holder: violinDiv,
 			state: {
@@ -642,7 +646,8 @@ class singleCellPlot {
 								colorBy,
 								values
 							}
-						}
+						},
+						downloadFilename
 					}
 				]
 			}
