@@ -1,5 +1,5 @@
 import type { MassAppApi } from '#mass/types/mass'
-import { downloadTable } from '#dom'
+import { downloadTable, GeneSetEditUI } from '#dom'
 import { to_svg } from '#src/client'
 import type { DiffAnalysisDom, DiffAnalysisPlotConfig } from '../DiffAnalysisTypes'
 
@@ -92,6 +92,28 @@ export class DiffAnalysisInteractions {
 						type: 'geneExpression' //eventually type will come from state
 					}
 				}
+			}
+		})
+	}
+
+	/** TODO: limit list to available genes
+	 * Hide msigdb?? */
+	launchGeneSetEdit() {
+		const plotConfig = this.app.getState().plots.find((p: DiffAnalysisPlotConfig) => p.id === this.id)
+		const holder = this.dom.tip.d.append('div').style('padding', '5px') as any
+		new GeneSetEditUI({
+			holder,
+			genome: this.app.opts.genome,
+			vocabApi: this.app.vocabApi,
+			geneList: plotConfig.settings.highlightGenes,
+			callback: async result => {
+				const highlightedData = result.geneList.map(d => d.gene)
+				await this.app.dispatch({
+					type: 'plot_edit',
+					id: this.id,
+					config: { settings: { differentialAnalysis: { highlightedData } } }
+				})
+				this.dom.tip.hide()
 			}
 		})
 	}

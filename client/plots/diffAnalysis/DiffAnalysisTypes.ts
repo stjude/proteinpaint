@@ -51,6 +51,8 @@ export type DiffAnalysisOpts = {
 export type DiffAnalysisSettings = {
 	/** largest absolute fold change to be considered in the analysis */
 	foldChangeCutoff: number
+	/** Data points highlighted in the volcano plot */
+	highlightedData: string[]
 	/** smallest number of reads required for a gene to be considered in the analysis */
 	minCount: number
 	/** smallest total number of reads required for a gene to be considered in the analysis */
@@ -92,6 +94,7 @@ export type DataPointEntry = {
 	/** color indicating significance */
 	color: string
 	fold_change: number
+	highlighted: boolean
 	gene_name: string
 	gene_symbol: string
 	log_fold_change: number

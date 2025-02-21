@@ -19,6 +19,7 @@ export class DataPointToolTip {
 			this.addLine(table, 'Original p value (log)', roundValueAuto(d.original_p_value))
 			this.addLine(table, 'Adjusted p value(log)', roundValueAuto(d.adjusted_p_value))
 		})
+		if (d.highlighted) return
 		circle.on('mouseout', () => {
 			// Remove highlight and tooltip on mouseout
 			circle.attr('fill-opacity', 0)
