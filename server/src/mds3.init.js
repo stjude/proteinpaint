@@ -1219,7 +1219,7 @@ export async function snvindelByRangeGetter_bcf(ds, genome) {
 
 			const l = []
 			for (const s of limitSamples) {
-				l.push(q.tempflag_sampleNameInVcfHeader ? ds.cohort.termdb.q.id2sampleName(s) : s)
+				l.push(ds.cohort.termdb.q.id2sampleName(s))
 			}
 			bcfArgs.push('-s', l.join(','))
 		}
