@@ -16,6 +16,9 @@ export class ViewModel {
 	maxLogFoldChange = 0
 	minLogPValue = 0
 	maxLogPValue = 0
+	readonly defaultSignColor = 'red'
+	readonly defaultNonSignColor = 'black'
+	readonly defaultHighlightColor = '#ffa200'
 	readonly offset = 10
 	readonly bottomPad = 60
 	readonly horizPad = 70
@@ -105,7 +108,7 @@ export class ViewModel {
 		for (const d of dataCopy) {
 			const significant = this.isSignificant(d)
 			if (significant) {
-				d.color = 'red'
+				this.getGenesColor(d)
 				this.numSignificant++
 				const row = [
 					{ value: roundValueAuto(d.fold_change) },
@@ -117,7 +120,7 @@ export class ViewModel {
 				}
 				this.pValueTable.rows.push(row)
 			} else {
-				d.color = 'black'
+				d.color = this.defaultNonSignColor
 				this.numNonSignificant++
 			}
 			d.x = plotDim.xScale.scale(d.fold_change) + this.horizPad + this.offset * 2
@@ -132,6 +135,18 @@ export class ViewModel {
 			d[`${this.settings.pValueType}_p_value`] > this.pValueCutoff &&
 			Math.abs(d.fold_change) > this.settings.foldChangeCutoff
 		)
+	}
+
+	//TODO: hightlight per term color
+	getGenesColor(d) {
+		if (!d.gene_symbol) return this.defaultSignColor
+
+		if (this.settings.highlightedData.includes(d.gene_symbol)) {
+			d.color = this.defaultHighlightColor
+			d.highlighted = true
+		} else {
+			d.color = this.defaultSignColor
+		}
 	}
 
 	setStatsData(config: any) {

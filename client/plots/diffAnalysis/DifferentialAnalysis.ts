@@ -9,6 +9,10 @@ import { Model } from './model/Model'
 import { ViewModel } from './viewModel/ViewModel'
 import { View } from './view/View'
 
+/** TODO:
+ * - type this file
+ * - remove method from server request -> always 'edgeR'
+ */
 export class DifferentialAnalysis extends RxComponentInner {
 	readonly type = 'differentialAnalysis'
 	components: { controls: any }
@@ -68,7 +72,8 @@ export class DifferentialAnalysis extends RxComponentInner {
 		}
 	}
 
-	//TODO: Move this to a separate file.
+	/**TODO: Move this to a separate file.
+	 * include logic for changing the controls when gsea is launched */
 	async setControls() {
 		const inputs = [
 			{
@@ -190,6 +195,7 @@ function getDefaultDiffAnalysisSettings(overrides = {}): DiffAnalysisSettings {
 	const defaults: DiffAnalysisSettings = {
 		foldChangeCutoff: 0,
 		height: 400,
+		highlightedData: [],
 		minCount: 10,
 		minTotalCount: 15,
 		pValue: 0.05,
