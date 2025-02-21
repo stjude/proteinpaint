@@ -409,9 +409,13 @@ class singleCellPlot {
 		}
 		if (this.state.config.activeTab == GENE_EXPRESSION_TAB) extraText.push(this.state.config.gene)
 		if (this.state.config.activeTab == DIFFERENTIAL_EXPRESSION_TAB) extraText.push(this.state.config.cluster)
+		if (this.state.config.activeTab == VIOLIN_TAB && this.dom.expressionBySelect)
+			extraText.push(this.dom.expressionBySelect.node().value)
+
 		const filename = `${state.config.settings.singleCellPlot.uiLabels.sample.toUpperCase()}_
 			${this.samples[sampleIdx].sample}_
 			${extraText.join('_')}`
+
 		return filename.replace(/[^0-9a-z_]/gi, '')
 	}
 
@@ -577,13 +581,13 @@ class singleCellPlot {
 
 		if (options.size > 1) {
 			selectDiv.append('label').text('Show expression by: ')
-			const colorBySelect = selectDiv.append('select').on('change', async e => {
-				const colorBy = e.target.value
+			const expressionBySelect = selectDiv.append('select').on('change', async e => {
+				const expressionBy = e.target.value
 				violinDiv.selectAll('*').remove()
-				this.renderViolin(colorBy, violinDiv)
+				this.renderViolin(expressionBy, violinDiv)
 			})
-
-			colorBySelect
+			this.dom.expressionBySelect = expressionBySelect
+			expressionBySelect
 				.selectAll('option')
 				.data(Array.from(options))
 				.enter()
@@ -604,7 +608,7 @@ class singleCellPlot {
 		for (const cluster of plot.clusters) {
 			values[cluster] = { key: cluster, value: cluster }
 		}
-
+		const downloadFilename = (await this.getSampleFilename(this.state)) + '_VIOLIN'
 		const opts = {
 			holder: violinDiv,
 			state: {
@@ -642,7 +646,8 @@ class singleCellPlot {
 								colorBy,
 								values
 							}
-						}
+						},
+						downloadFilename
 					}
 				]
 			}
@@ -657,13 +662,15 @@ class singleCellPlot {
 			fold_change: this.fold_changes,
 			genome: this.app.vocabApi.opts.state.vocab.genome
 		}
+		const downloadFilename = (await this.getSampleFilename(this.state)) + '_GSEA'
 		const config = {
 			chartType: 'gsea',
 			gsea_params: gsea_params,
 			// if getPlotHolder is defined, use this.mainDivId as insertBefore,
 			// so that in GDC frontend framework, plots that are launched from scRNAseq
 			// will be inserted before it. TODO: may insert after the scRNAseq plot instead???
-			insertBefore: this.app.opts?.app?.getPlotHolder ? this.mainDivId : this.id
+			insertBefore: this.app.opts?.app?.getPlotHolder ? this.mainDivId : this.id,
+			downloadFilename
 		}
 		const opts = {
 			holder,
@@ -1392,11 +1399,28 @@ class singleCellPlot {
 			noButtonCallback: index => {
 				// NOTE that "index" is not array index of this.samples[]
 				const sample = rows[index][0].value
+				const hiddenClusters = {}
+				// reset hidden clusters when changing sample
+				for (const cluster in this.config.hiddenClusters) hiddenClusters[cluster] = false
+				// reset these settings when changing sample
+				const settings = {
+					colorScaleMode: 'auto',
+					colorScaleMinFixed: null,
+					colorScaleMaxFixed: null,
+					colorScalePercentile: 95,
+					showNoExpCells: false,
+					showContour: false,
+					colorContours: false,
+					contourBandwidth: 15,
+					contourThresholds: 10
+				}
 				const config = {
 					chartType: 'singleCellPlot',
 					sample, // track sample name to identify it in this.samples[]
 					activeTab: PLOTS_TAB, // on selecting a sample from table, auto switch to plots to directly show this sample's plots, to save user a click
-					cluster: null // reset cluster
+					cluster: null, // reset cluster
+					hiddenClusters, // reset hidden clusters
+					settings: { singleCellPlot: settings }
 				}
 				this.genes = null // reset DE genes
 				if (rows[index][0].__experimentID) {
@@ -1663,7 +1687,7 @@ export async function getPlotConfig(opts, app) {
 			}
 
 		const config = {
-			hiddenClusters: [],
+			hiddenClusters: {},
 			settings: {
 				singleCellPlot: settings,
 				controls: { isOpen: false }

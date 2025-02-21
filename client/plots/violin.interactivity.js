@@ -20,7 +20,7 @@ export function setInteractivity(self) {
 		// 	numChartsPerRow = 0
 
 		self.dom.violinDiv.selectAll('.sjpp-violin-plot').each(function () {
-			to_svg(this, 'violin', { apply_dom_styles: true })
+			to_svg(this, self.state.config.downloadFilename || 'violin', { apply_dom_styles: true })
 		})
 	}
 
