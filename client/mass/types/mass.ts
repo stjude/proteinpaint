@@ -4,7 +4,7 @@ import type { Elem } from '../../types/d3'
 import type { ClientCopyGenome } from 'types/global'
 import type { BoxPlotSettings } from '../../plots/boxplot/BoxPlot'
 import type { CorrVolcanoSettings } from '#plots/corrVolcano/CorrelationVolcanoTypes.ts'
-import type { DiffAnalysisSettings } from '../../plots/diffAnalysis/DiffAnalysisTypes.ts'
+import type { VolcanoSettings } from '../../plots/diffAnalysis/DiffAnalysisTypes.ts'
 //import { TermWrapper } from '#types'
 
 export type MassAppApi = RxAppApi & {
@@ -121,9 +121,9 @@ type PlotSettings = {
 	common?: any
 	controls?: any
 	correlationVolcano?: CorrVolcanoSettings
-	differentialAnalysis?: DiffAnalysisSettings
 	sampleScatter?: any
 	violin?: any
+	volcano?: VolcanoSettings
 }
 
 export type PlotConfig = BasePlotConfig & {

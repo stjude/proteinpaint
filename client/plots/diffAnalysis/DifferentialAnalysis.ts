@@ -2,12 +2,9 @@ import type { BasePlotConfig, MassAppApi, MassState } from '#mass/types/mass'
 import { RxComponentInner } from '../../types/rx.d'
 import { getCompInit, copyMerge } from '#rx'
 import { Menu } from '#dom'
-import { controlsInit } from '../controls'
-import type { DiffAnalysisDom, DiffAnalysisOpts, DiffAnalysisSettings } from './DiffAnalysisTypes'
-import { DiffAnalysisInteractions } from './interactions/DiffAnalysisInteractions'
-import { Model } from './model/Model'
-import { ViewModel } from './viewModel/ViewModel'
+import type { DiffAnalysisDom, DiffAnalysisOpts } from './DiffAnalysisTypes'
 import { View } from './view/View'
+import { getDefaultVolcanoSettings } from './Volcano'
 
 /** TODO:
  * - type this file
@@ -15,25 +12,24 @@ import { View } from './view/View'
  */
 class DifferentialAnalysis extends RxComponentInner {
 	readonly type = 'differentialAnalysis'
-	components: { controls: any }
+	components: { controls: any; plots: any }
 	dom: DiffAnalysisDom
-	interactions: DiffAnalysisInteractions
+	plots = {}
 
 	constructor(opts: any) {
 		super()
 		this.components = {
-			controls: {}
+			controls: {},
+			plots: {}
 		}
 		const holder = opts.holder.classed('sjpp-diff-analysis-main', true)
 		const controls = opts.controls ? holder : holder.append('div')
 		const div = holder.append('div').style('padding', '5px').style('display', 'inline-block')
-		const error = div.append('div').attr('id', 'sjpp-diff-analysis-error').style('opacity', 0.75)
-		const tabs = div.append('div').attr('id', 'sjpp-diff-analysis-tabs')
+		const tabs = div.append('div').attr('id', 'sjpp-diff-analysis-tabs').style('display', 'inline-block')
 		const tabsContent = div.append('div').attr('id', 'sjpp-diff-analysis-tabs-content')
 		this.dom = {
 			controls: controls.style('display', 'block'),
 			div,
-			error: error,
 			tabs,
 			tabsContent,
 			tip: new Menu({ padding: '' })
@@ -49,8 +45,6 @@ class DifferentialAnalysis extends RxComponentInner {
 					.text(' DIFFERENTIAL ANALYSIS')
 			}
 		}
-
-		this.interactions = new DiffAnalysisInteractions(this.app, this.id, this.dom)
 	}
 
 	getState(appState: MassState) {
@@ -59,158 +53,61 @@ class DifferentialAnalysis extends RxComponentInner {
 			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
 		}
 		return {
-			config: Object.assign({}, config, {
-				settings: {
-					differentialAnalysis: config.settings.differentialAnalysis
-				}
-			})
+			config
 		}
 	}
 
-	/**TODO: Move this to a separate file.
-	 * include logic for changing the controls when gsea is launched */
-	async setControls() {
-		const inputs = [
-			{
-				label: 'Minimum read count',
-				type: 'number',
-				chartType: 'differentialAnalysis',
-				settingsKey: 'minCount',
-				title: 'The smallest number of reads required for a gene to be considered in the analysis',
-				min: 0,
-				max: 10000
-			},
-			{
-				label: 'Minimum total read count',
-				type: 'number',
-				chartType: 'differentialAnalysis',
-				settingsKey: 'minTotalCount',
-				title: 'The smallest total number of reads required for a gene to be considered in the analysis',
-				min: 0,
-				max: 10000
-			},
-			{
-				label: 'P value significance (linear)',
-				type: 'number',
-				chartType: 'differentialAnalysis',
-				settingsKey: 'pValue',
-				title: 'The p-value threshold to determine statistical significance',
-				min: 0,
-				max: 1
-			},
-			{
-				label: 'Fold change (log)',
-				type: 'number',
-				chartType: 'differentialAnalysis',
-				settingsKey: 'foldChangeCutoff',
-				title: 'The fold change threshold to determine biological significance',
-				min: -10,
-				max: 10
-			},
-			{
-				label: 'P value',
-				type: 'radio',
-				chartType: 'differentialAnalysis',
-				settingsKey: 'pValueType',
-				title: 'Toggle between original and adjusted pvalues for volcano plot',
-				options: [
-					{ label: 'Adjusted', value: 'adjusted' },
-					{ label: 'Original', value: 'original' }
-				]
-			},
-			{
-				label: 'Variable genes cutoff',
-				type: 'number',
-				chartType: 'differentialAnalysis',
-				settingsKey: 'varGenesCutoff',
-				title: 'Top number of genes with the highest variability to include in analysis',
-				min: 1000,
-				max: 4000
-			},
-			{
-				label: 'Show P value table',
-				type: 'checkbox',
-				chartType: 'differentialAnalysis',
-				settingsKey: 'showPValueTable',
-				title: 'Show table with both original and adjusted p values for all significant genes',
-				boxLabel: ''
-			}
-		]
+	async setPlotComponents(config) {
+		// !!! quick fix for rollup to bundle,
+		// will eventually need to move to a subnested folder structure
+		let _
+		if (config.childType == 'volcano') _ = await import(`./Volcano.ts`)
+		else if (config.childType == 'gsea') _ = await import(`#plots/gsea.js`)
+		else if (config.childType == 'geneORA') _ = await import(`#plots/geneORA.js`)
+		else throw `unsupported childType='${config.childType}'`
 
-		this.components.controls = await controlsInit({
+		this.plots[config.childType] = this.dom.tabsContent.append('div')
+
+		// assumes only 1 chart per chartType would be rendered in the summary sandbox
+		this.components.plots[config.childType] = await _.componentInit({
 			app: this.app,
+			holder: this.plots[config.childType],
 			id: this.id,
-			holder: this.dom.controls.attr('class', 'pp-termdb-plot-controls').style('display', 'inline-block'),
-			inputs
+			parent: this.api
 		})
-
-		this.components.controls.on('downloadClick.differentialAnalysis', () => this.interactions.download())
-	}
-
-	async init() {
-		await this.setControls()
-		this.interactions.setVar(this.app, this.id)
 	}
 
 	async main() {
 		const config = structuredClone(this.state.config)
 		if (config.chartType != this.type) return
 
-		try {
-			const settings = config.settings.differentialAnalysis
-			/** Fetch data */
-			const model = new Model(this.app, config, settings)
-			const response = await model.getData()
-			if (!response || response.error) {
-				this.interactions.clearDom()
-				this.dom.error.text(response.error || 'No data returned from server')
-			}
-			if (this.dom.header) {
-				const samplelst = config.samplelst.groups
-				this.dom.header.title.text(`${samplelst[0].name} vs ${samplelst[1].name} `)
-			}
-			/** Format response into an object for rendering */
-			const view = new ViewModel(config, response, settings)
-			//Pass table data for downloading
-			this.interactions.pValueTableData = view.viewData.pValueTableData
-			/** Render formatted data */
-			new View(this.app, this.dom, this.interactions, settings, view.viewData)
-		} catch (e: any) {
-			if (e instanceof Error) console.error(e.message || e)
-			else if (e.stack) console.log(e.stack)
-			throw e
+		if (!this.components.plots[config.childType]) {
+			await this.setPlotComponents(config)
 		}
+
+		if (this.dom.header) {
+			const samplelst = config.samplelst.groups
+			this.dom.header.title.text(`${samplelst[0].name} vs ${samplelst[1].name} `)
+		}
+
+		new View(this.app, config, this.dom, this.state.viewData)
 	}
 }
 
 export const DiffAnalysisInit = getCompInit(DifferentialAnalysis)
 export const componentInit = DiffAnalysisInit
 
-function getDefaultDiffAnalysisSettings(overrides = {}): DiffAnalysisSettings {
-	const defaults: DiffAnalysisSettings = {
-		foldChangeCutoff: 0,
-		height: 400,
-		minCount: 10,
-		minTotalCount: 15,
-		pValue: 0.05,
-		pValueType: 'adjusted',
-		showPValueTable: false,
-		varGenesCutoff: 3000,
-		width: 400
-	}
-	return Object.assign(defaults, overrides)
-}
-
 export function getPlotConfig(opts: DiffAnalysisOpts, app: MassAppApi) {
 	const config = {
 		chartType: 'differentialAnalysis',
+		childType: 'volcano',
+		visiblePlots: ['volcano'],
 		highlightedData: opts.highlightedData || [],
 		settings: {
 			controls: {
-				term2: null,
-				term0: null
+				isOpen: false
 			},
-			differentialAnalysis: getDefaultDiffAnalysisSettings(opts.overrides || {})
+			volcano: getDefaultVolcanoSettings(opts.overrides)
 		}
 	}
 	return copyMerge(config, opts)

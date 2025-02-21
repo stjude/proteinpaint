@@ -19,6 +19,7 @@ export type RxAppApi = {
 /** rx.getComponentInit() will set this.app, this.id, this.opts
  * Combine this pseudoclass with class to avoid type errors */
 export class RxComponentInner {
+	api: any
 	app: any
 	id: any
 	opts: any
