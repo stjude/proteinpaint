@@ -1,6 +1,7 @@
 import type { MassAppApi } from '#mass/types/mass'
 import { downloadTable, GeneSetEditUI } from '#dom'
 import { to_svg } from '#src/client'
+import { select } from 'd3-selection'
 import type { DiffAnalysisDom, DiffAnalysisPlotConfig } from '../DiffAnalysisTypes'
 
 export class DiffAnalysisInteractions {
@@ -46,12 +47,14 @@ export class DiffAnalysisInteractions {
 	}
 
 	clearDom() {
-		this.dom.div.selectAll('table').remove()
-		this.dom.actions.selectAll('*').remove()
-		this.dom.plot.selectAll('*').remove()
-		this.dom.xAxis.selectAll('*').remove()
-		this.dom.yAxisLabel.text('')
-		this.dom.yAxis.selectAll('*').remove()
+		this.dom.tabs.selectAll('*').remove()
+		this.dom.tabsContent.selectAll('*').remove()
+		// this.dom.div.selectAll('table').remove()
+		// this.dom.actions.selectAll('*').remove()
+		// this.dom.plot.selectAll('*').remove()
+		// this.dom.xAxis.selectAll('*').remove()
+		// this.dom.yAxisLabel.text('')
+		// this.dom.yAxis.selectAll('*').remove()
 	}
 
 	download() {
@@ -60,7 +63,7 @@ export class DiffAnalysisInteractions {
 			{
 				text: 'Download plot',
 				callback: () => {
-					const svg = this.dom.svg.node() as Node
+					const svg = this.dom.tabsContent.select('svg').node() as Node
 					to_svg(svg, `boxplot`, { apply_dom_styles: true })
 				}
 			},

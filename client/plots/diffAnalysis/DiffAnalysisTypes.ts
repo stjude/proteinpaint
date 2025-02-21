@@ -1,13 +1,26 @@
-import type { Elem, SvgG, SvgSvg, SvgText } from '../../types/d3'
+import type { Div, Elem, SvgG, SvgSvg, SvgText } from '../../types/d3'
 import type { Menu } from '#dom'
 import type { PlotConfig } from '#mass/types/mass'
 
-export type DiffAnalysisPlotConfig = PlotConfig & {
-	samplelst: string[]
+export type DataPointEntry = {
+	adjusted_p_value: number
+	/** color indicating significance */
+	color: string
+	fold_change: number
+	highlighted: boolean
+	gene_name: string
+	gene_symbol: string
+	log_fold_change: number
+	original_p_value: number
+	/** x coordinate */
+	x: number
+	/** y coordinate */
+	y: number
+	/** radius */
+	radius: number
 }
 
 export type DiffAnalysisDom = {
-	actions: Elem
 	/** Control panel to the left of the plot. Container is either provided or created */
 	controls: Elem
 	/** Holder */
@@ -19,20 +32,11 @@ export type DiffAnalysisDom = {
 		title: Elem
 		fixed: Elem
 	}
-	/** Holder for data points, p value line, and fold change line */
-	plot: SvgG
-	/** Holder for plot, axis labels, and title */
-	svg: SvgSvg
+	/** Toggle volcano and gsea plots */
+	tabs: Elem
+	tabsContent: Elem
 	/** Shared tooltip */
 	tip: Menu
-	/** X axis */
-	xAxis: SvgG
-	/** X axis label */
-	xAxisLabel: SvgText
-	/** Y axis */
-	yAxis: SvgG
-	/** Y axis label */
-	yAxisLabel: SvgText
 }
 
 /** Opts to init the DEanalysis plot */
@@ -45,6 +49,10 @@ export type DiffAnalysisOpts = {
 	header?: Elem
 	/** Settings overrides, in runpp() call */
 	overrides?: Partial<DiffAnalysisSettings>
+}
+
+export type DiffAnalysisPlotConfig = PlotConfig & {
+	samplelst: string[]
 }
 
 /** Settings DEanalysis */
@@ -89,20 +97,18 @@ export type DiffAnalysisPlotDim = {
 	yScale: { x: number; y: number; scale: any }
 }
 
-export type DataPointEntry = {
-	adjusted_p_value: number
-	/** color indicating significance */
-	color: string
-	fold_change: number
-	highlighted: boolean
-	gene_name: string
-	gene_symbol: string
-	log_fold_change: number
-	original_p_value: number
-	/** x coordinate */
-	x: number
-	/** y coordinate */
-	y: number
-	/** radius */
-	radius: number
+export type VolcanoPlotDom = {
+	actions: Div
+	/** Holder for data points, p value line, and fold change line */
+	plot: SvgG
+	/** Holder for plot, axis labels, and title */
+	svg: SvgSvg
+	/** X axis */
+	xAxis: SvgG
+	/** X axis label */
+	xAxisLabel: SvgText
+	/** Y axis */
+	yAxis: SvgG
+	/** Y axis label */
+	yAxisLabel: SvgText
 }
