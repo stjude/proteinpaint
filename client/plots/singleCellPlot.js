@@ -1392,11 +1392,15 @@ class singleCellPlot {
 			noButtonCallback: index => {
 				// NOTE that "index" is not array index of this.samples[]
 				const sample = rows[index][0].value
+				const hiddenClusters = {}
+				// reset hidden clusters when changing sample
+				for (const cluster in this.config.hiddenClusters) hiddenClusters[cluster] = false
 				const config = {
 					chartType: 'singleCellPlot',
 					sample, // track sample name to identify it in this.samples[]
 					activeTab: PLOTS_TAB, // on selecting a sample from table, auto switch to plots to directly show this sample's plots, to save user a click
-					cluster: null // reset cluster
+					cluster: null, // reset cluster
+					hiddenClusters // reset hidden clusters
 				}
 				this.genes = null // reset DE genes
 				if (rows[index][0].__experimentID) {
@@ -1663,7 +1667,7 @@ export async function getPlotConfig(opts, app) {
 			}
 
 		const config = {
-			hiddenClusters: [],
+			hiddenClusters: {},
 			settings: {
 				singleCellPlot: settings,
 				controls: { isOpen: false }
