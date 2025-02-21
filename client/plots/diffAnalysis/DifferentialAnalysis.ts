@@ -190,7 +190,6 @@ function getDefaultDiffAnalysisSettings(overrides = {}): DiffAnalysisSettings {
 	const defaults: DiffAnalysisSettings = {
 		foldChangeCutoff: 0,
 		height: 400,
-		highlightedData: [],
 		minCount: 10,
 		minTotalCount: 15,
 		pValue: 0.05,
@@ -205,6 +204,7 @@ function getDefaultDiffAnalysisSettings(overrides = {}): DiffAnalysisSettings {
 export function getPlotConfig(opts: DiffAnalysisOpts, app: MassAppApi) {
 	const config = {
 		chartType: 'differentialAnalysis',
+		highlightedData: opts.highlightedData || [],
 		settings: {
 			controls: {
 				term2: null,

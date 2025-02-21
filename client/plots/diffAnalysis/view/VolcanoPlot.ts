@@ -13,7 +13,7 @@ import type {
 } from '../DiffAnalysisTypes'
 import type { DiffAnalysisInteractions } from '../interactions/DiffAnalysisInteractions'
 import { DataPointToolTip } from './DataPointToolTip'
-import { gseaMenu } from './GSEAMenu'
+import { geneORAMenu } from './GeneORAMenu'
 
 export class VolcanoPlot {
 	dom: DiffAnalysisDom
@@ -55,7 +55,7 @@ export class VolcanoPlot {
 		this.volcanoDom.actions.style('margin-left', '20px').style('padding', '5px')
 		if (app.opts.genome.termdbs) {
 			this.addActionButton('Launch gene set enrichment analysis', () =>
-				gseaMenu(this.dom.tip, this.interactions, settings, this.viewData.pointData)
+				geneORAMenu(this.dom.tip, this.interactions, settings, this.viewData.pointData)
 			)
 		}
 		this.addActionButton('Confounding factors', () => this.interactions.confoundersMenu())

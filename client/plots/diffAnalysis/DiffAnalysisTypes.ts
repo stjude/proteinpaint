@@ -49,18 +49,22 @@ export type DiffAnalysisOpts = {
 	header?: Elem
 	/** Settings overrides, in runpp() call */
 	overrides?: Partial<DiffAnalysisSettings>
+	/** Data points highlighted in the volcano plot */
+	highlightedData: string[]
 }
 
 export type DiffAnalysisPlotConfig = PlotConfig & {
-	samplelst: string[]
+	samplelst: {
+		groups: { name: string; samplelst: string[] }[]
+	}
+	/** Data points highlighted in the volcano plot */
+	highlightedData: string[]
 }
 
 /** Settings DEanalysis */
 export type DiffAnalysisSettings = {
 	/** largest absolute fold change to be considered in the analysis */
 	foldChangeCutoff: number
-	/** Data points highlighted in the volcano plot */
-	highlightedData: string[]
 	/** smallest number of reads required for a gene to be considered in the analysis */
 	minCount: number
 	/** smallest total number of reads required for a gene to be considered in the analysis */

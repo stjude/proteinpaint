@@ -4,6 +4,7 @@ import { roundValueAuto } from '#shared/roundValue.js'
 
 //TODO: Add types
 export class ViewModel {
+	config: DiffAnalysisPlotConfig
 	response: any
 	pValueCutoff: number
 	pValueTable: any
@@ -24,6 +25,7 @@ export class ViewModel {
 	readonly horizPad = 70
 	readonly topPad = 40
 	constructor(config: DiffAnalysisPlotConfig, response: any, settings: DiffAnalysisSettings) {
+		this.config = config
 		this.response = response
 		this.pValueCutoff = -Math.log10(settings.pValue)
 		this.pValueTable = {
@@ -45,7 +47,7 @@ export class ViewModel {
 		this.viewData = {
 			plotDim,
 			pointData: this.setPointData(plotDim),
-			statsData: this.setStatsData(config),
+			statsData: this.setStatsData(),
 			pValueTableData: this.pValueTable
 		}
 	}
@@ -141,7 +143,7 @@ export class ViewModel {
 	getGenesColor(d) {
 		if (!d.gene_symbol) return this.defaultSignColor
 
-		if (this.settings.highlightedData.includes(d.gene_symbol)) {
+		if (this.config.highlightedData.includes(d.gene_symbol)) {
 			d.color = this.defaultHighlightColor
 			d.highlighted = true
 		} else {
@@ -149,7 +151,7 @@ export class ViewModel {
 		}
 	}
 
-	setStatsData(config: any) {
+	setStatsData() {
 		const tableRows = [
 			{
 				label: `Percentage of significant ${this.type}`,
@@ -164,11 +166,11 @@ export class ViewModel {
 				value: this.numSignificant + this.numNonSignificant
 			},
 			{
-				label: config.samplelst.groups[0].name + ' sample size (control group)',
+				label: this.config.samplelst.groups[0].name + ' sample size (control group)',
 				value: this.response.sample_size1
 			},
 			{
-				label: config.samplelst.groups[1].name + ' sample size (case group)',
+				label: this.config.samplelst.groups[1].name + ' sample size (case group)',
 				value: this.response.sample_size2
 			}
 		]
