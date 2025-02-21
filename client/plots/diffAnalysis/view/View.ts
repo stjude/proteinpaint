@@ -12,7 +12,7 @@ import type {
 } from '../DiffAnalysisTypes'
 import type { DiffAnalysisInteractions } from '../interactions/DiffAnalysisInteractions'
 import { DataPointToolTip } from './DataPointToolTip'
-import { GSEAButton } from './GSEAButton'
+import { gseaMenu } from './GSEAMenu'
 
 export class View {
 	dom: DiffAnalysisDom
@@ -42,8 +42,25 @@ export class View {
 
 	renderUserActions(app, settings) {
 		this.dom.actions.style('margin-left', '20px').style('padding', '5px')
-		if (app.opts.genome.termdbs)
-			new GSEAButton(this.dom.actions.append('div'), this.dom.tip, this.interactions, settings, this.viewData.pointData)
+		if (app.opts.genome.termdbs) {
+			this.addActionButton('Launch gene set enrichment analysis', () =>
+				gseaMenu(this.dom.tip, this.interactions, settings, this.viewData.pointData)
+			)
+		}
+		this.addActionButton('Confounding factors', () => this.interactions.confoundersMenu())
+	}
+
+	addActionButton(text: string, callback: any) {
+		const button = this.dom.actions
+			.append('button')
+			.attr('class', 'sja_menuoption')
+			.style('margin', '3px')
+			.style('padding', '3px')
+			.text(text)
+			.on('click', () => {
+				this.dom.tip.clear().showunder(button.node())
+				callback()
+			})
 	}
 
 	renderDom(plotDim: DiffAnalysisPlotDim) {

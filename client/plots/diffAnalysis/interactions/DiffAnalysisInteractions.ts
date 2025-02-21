@@ -20,6 +20,40 @@ export class DiffAnalysisInteractions {
 		this.id = id
 	}
 
+	/** Launches a multi-term select tree
+	 * On submit, dispatches a plot_edit action with the new confounders */
+	async confoundersMenu() {
+		console.log('TODO: Server request does not support infinite confounders')
+		return
+		// const termdb = await import('#termdb/app')
+		// await termdb.appInit({
+		// 	holder: this.dom.tip.d.append('div').style('padding', '5px'),
+		// 	vocabApi: this.app.vocabApi,
+		// 	state: {
+		// 		dslabel: this.app.vocabApi.opts.state.vocab.dslabel,
+		// 		genome: this.app.vocabApi.opts.state.vocab.genome
+		// 	},
+		// 	tree: {
+		// 		submit_lst: (terms: any) => {
+		// 			this.app.dispatch({
+		// 				type: 'plot_edit',
+		// 				id: this.id
+		// 				//TODO: server request does not support infinite confounders
+		// 			})
+		// 		}
+		// 	}
+		// })
+	}
+
+	clearDom() {
+		this.dom.div.selectAll('table').remove()
+		this.dom.actions.selectAll('*').remove()
+		this.dom.plot.selectAll('*').remove()
+		this.dom.xAxis.selectAll('*').remove()
+		this.dom.yAxisLabel.text('')
+		this.dom.yAxis.selectAll('*').remove()
+	}
+
 	download() {
 		this.dom.tip.clear().showunder(this.dom.controls.select('div').node())
 		const opts = [
@@ -98,14 +132,5 @@ export class DiffAnalysisInteractions {
 				geneORAparams
 			}
 		})
-	}
-
-	clearDom() {
-		this.dom.div.selectAll('table').remove()
-		this.dom.actions.selectAll('*').remove()
-		this.dom.plot.selectAll('*').remove()
-		this.dom.xAxis.selectAll('*').remove()
-		this.dom.yAxisLabel.text('')
-		this.dom.yAxis.selectAll('*').remove()
 	}
 }
