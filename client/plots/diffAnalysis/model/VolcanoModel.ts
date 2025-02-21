@@ -1,12 +1,12 @@
 import type { MassAppApi } from '#mass/types/mass'
 import { dofetch3 } from '#common/dofetch'
-import type { DiffAnalysisPlotConfig, DiffAnalysisSettings } from '../DiffAnalysisTypes'
+import type { DiffAnalysisPlotConfig, VolcanoSettings } from '../DiffAnalysisTypes'
 
-export class Model {
+export class VolcanoModel {
 	app: MassAppApi
 	config: DiffAnalysisPlotConfig
-	settings: DiffAnalysisSettings
-	constructor(app: MassAppApi, config: DiffAnalysisPlotConfig, settings: DiffAnalysisSettings) {
+	settings: VolcanoSettings
+	constructor(app: MassAppApi, config: DiffAnalysisPlotConfig, settings: VolcanoSettings) {
 		this.app = app
 		this.config = config
 		this.settings = settings

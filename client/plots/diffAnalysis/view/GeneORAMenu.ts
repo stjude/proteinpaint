@@ -1,6 +1,6 @@
 import { make_radios } from '#dom'
 
-export function geneORAMenu(tip, interactions, settings, pointData) {
+export function geneORAMenu(tip, interactions) {
 	const holder = tip.d.append('div').style('padding', '10px')
 	make_radios({
 		holder,
@@ -12,7 +12,7 @@ export function geneORAMenu(tip, interactions, settings, pointData) {
 		styles: { display: 'block' },
 		callback: value => {
 			tip.hide()
-			interactions.launchGeneORA(value, settings.foldChangeCutoff, pointData)
+			interactions.pushPlot('geneORA', value)
 		}
 	})
 }

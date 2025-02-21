@@ -7,25 +7,26 @@ import type {
 	DataPointEntry,
 	DiffAnalysisDom,
 	DiffAnalysisPlotDim,
-	DiffAnalysisSettings,
+	VolcanoSettings,
 	DiffAnalysisViewData,
 	VolcanoPlotDom
 } from '../DiffAnalysisTypes'
-import type { DiffAnalysisInteractions } from '../interactions/DiffAnalysisInteractions'
+import type { VolcanoInteractions } from '../interactions/VolcanoInteractions'
 import { DataPointToolTip } from './DataPointToolTip'
 import { geneORAMenu } from './GeneORAMenu'
 
-export class VolcanoPlot {
-	dom: DiffAnalysisDom
-	interactions: DiffAnalysisInteractions
+export class VolcanoPlotView {
+	type = 'volcano'
+	dom: any
+	interactions: VolcanoInteractions
 	volcanoDom: VolcanoPlotDom
 	viewData: DiffAnalysisViewData
 	constructor(
 		app: MassAppApi,
-		dom: DiffAnalysisDom,
-		settings: DiffAnalysisSettings,
+		dom: any,
+		settings: VolcanoSettings,
 		viewData: DiffAnalysisViewData,
-		interactions: DiffAnalysisInteractions
+		interactions: VolcanoInteractions
 	) {
 		this.dom = dom
 		this.interactions = interactions
@@ -55,8 +56,9 @@ export class VolcanoPlot {
 		this.volcanoDom.actions.style('margin-left', '20px').style('padding', '5px')
 		if (app.opts.genome.termdbs) {
 			this.addActionButton('Launch gene set enrichment analysis', () =>
-				geneORAMenu(this.dom.tip, this.interactions, settings, this.viewData.pointData)
+				geneORAMenu(this.dom.tip, this.interactions)
 			)
+			this.addActionButton('Gene Set Enrichment Analysis', () => this.interactions.pushPlot('gsea'))
 		}
 		this.addActionButton('Confounding factors', () => this.interactions.confoundersMenu())
 		this.addActionButton('Genes', () => this.interactions.launchGeneSetEdit())

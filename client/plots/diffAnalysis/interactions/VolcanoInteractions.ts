@@ -1,14 +1,17 @@
 import type { MassAppApi } from '#mass/types/mass'
 import { downloadTable, GeneSetEditUI } from '#dom'
 import { to_svg } from '#src/client'
-import type { DiffAnalysisDom, DiffAnalysisPlotConfig } from '../DiffAnalysisTypes'
+import type { DiffAnalysisPlotConfig } from '../DiffAnalysisTypes'
 
-export class DiffAnalysisInteractions {
+/** TODO: 
+ * 	- fix/add types
+ */
+export class VolcanoInteractions {
 	app: MassAppApi
-	dom: DiffAnalysisDom
+	dom: any
 	id: string
 	pValueTableData: any
-	constructor(app: MassAppApi, id: string, dom: DiffAnalysisDom) {
+	constructor(app: MassAppApi, id: string, dom: any) {
 		this.app = app
 		this.dom = dom
 		this.id = id
@@ -114,44 +117,48 @@ export class DiffAnalysisInteractions {
 		})
 	}
 
-	async launchGeneORA(value: string, foldChangeCutoff: number, data: any) {
-		const sample_genes: any = []
-		const background_genes: any = []
-
-		for (const d of data) {
-			if (d.gene_symbol.length > 0) {
-				// Do not include blank rows
-				if (value == 'upregulated' && foldChangeCutoff < Math.abs(d.fold_change) && d.fold_change > 0) {
-					sample_genes.push(d.gene_symbol)
-				}
-				if (value == 'downregulated' && foldChangeCutoff < Math.abs(d.fold_change) && d.fold_change < 0) {
-					sample_genes.push(d.gene_symbol)
-				}
-				if (value == 'both' && foldChangeCutoff < Math.abs(d.fold_change)) {
-					sample_genes.push(d.gene_symbol)
-				}
-				background_genes.push(d.gene_symbol)
+	async launchGSEA(settings) {
+		const gsea_params = {
+			// genes: this.genes,
+			fold_change: settings.foldChangeCutoff,
+			genome: this.app.vocabApi.opts.state.vocab.genome
+		}
+		const config = {
+			chartType: 'gsea',
+			gsea_params,
+		}
+		const opts = {
+			holder: this.dom.tabsContent,
+			state: {
+				vocab: this.app.opts.state.vocab,
+				plots: [config]
 			}
 		}
+		const plotImport = await import('#plots/plot.app.js')
+		const plotAppApi = await plotImport.appInit(opts)
 
-		const geneORAparams = {
-			sample_genes: sample_genes.toString(),
-			background_genes: background_genes.toString(),
-			genome: this.app.vocabApi.opts.state.vocab.genome,
-			ora_request_type: value,
-			num_samples_genes: sample_genes.length,
-			num_background_genes: background_genes.length
-		}
-
-		this.app.dispatch({
-			type: 'plot_create',
-			controls: this.dom.controls,
-			config: {
-				chartType: 'geneORA',
-				geneORAparams
-			}
-		})
 	}
 
-	async launchGSEA() {}
+	pushPlot(plot: string, value?: {[index:string]: any}) {
+		const plotConfig = this.app.getState().plots.find((p: DiffAnalysisPlotConfig) => p.id === this.id)
+		const visiblePlots = structuredClone(plotConfig.settings.differentialAnalysis.visiblePlots)
+		visiblePlots.push(plot)
+		const config = {
+			activeTab: plot,
+			settings: {
+				differentialAnalysis: {
+					visiblePlots
+				}
+			}
+		}
+		if (value) {
+			config.settings.differentialAnalysis[plot] = value
+		}
+		
+		this.app.dispatch({
+			type: 'plot_edit',
+			id: this.id,
+			config
+		})
+	}
 }
