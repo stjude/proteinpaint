@@ -361,7 +361,7 @@ tape('error handling', function (test) {
 		}
 	})
 	function testWrongGenome(app) {
-		const d = app.Inner.dom.errdiv.selectAll('.sja_errorbar').select('div')
+		const d = app.Inner.dom.errdiv.selectAll('.sja_errorbar').select('div:nth-child(2)')
 		test.equal(d.text(), 'Error: invalid genome', 'should show for invalid genome')
 	}
 
@@ -375,7 +375,7 @@ tape('error handling', function (test) {
 		}
 	})
 	function testWrongDslabel(app) {
-		const d = app.Inner.dom.errdiv.select('.sja_errorbar').select('div')
+		const d = app.Inner.dom.errdiv.select('.sja_errorbar').select('div:nth-child(2)')
 		test.equal(d.text(), 'Error: invalid dslabel', 'should show for genome-level termdb not available')
 	}
 })
