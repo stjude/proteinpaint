@@ -11,7 +11,7 @@ Standard output of the R script is returned.
 */
 
 import fs from 'fs'
-import serverconfig from './serverconfig'
+import serverconfig from './serverconfig.js'
 import { spawn } from 'child_process'
 import { Readable } from 'stream'
 
