@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- Add new test for corr.R
+
 
 ## 2.108.0
 
