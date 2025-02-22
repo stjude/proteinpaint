@@ -7,7 +7,6 @@ import { controlsInit } from './controls'
 import { getCompInit, copyMerge } from '#rx'
 import { Menu } from '../dom/menu'
 import { scaleLog, scaleLinear } from 'd3-scale'
-import { downloadTable } from '../dom/table'
 import { roundValueAuto } from '#shared/roundValue.js'
 
 const tip = new Menu()
@@ -156,7 +155,23 @@ class gsea {
 			})
 		}
 		this.components.controls.on('downloadClick.gsea', () => {
-			downloadTable(this.gsea_table_rows, this.gsea_table_cols)
+			if (!this.imageUrl) return alert('No image to download')
+			const dataUrl = this.imageUrl
+			const downloadImgName = this.state.config.downloadFilename + '_GSEA_IMG' || 'GSEA_IMG'
+			const a = document.createElement('a')
+			document.body.appendChild(a)
+
+			a.addEventListener(
+				'click',
+				() => {
+					// Download the image
+					a.download = downloadImgName + '.png'
+					a.href = dataUrl
+					document.body.removeChild(a)
+				},
+				false
+			)
+			a.click()
 		})
 	}
 	getState(appState) {
@@ -319,7 +334,11 @@ add:
 			{ label: 'FDR' },
 			{ label: 'Leading Edge' }
 		]
+		let download = {}
+
+		if (self.state.config.downloadFilename) download.fileName = self.state.config.downloadFilename
 		renderTable({
+			download,
 			columns: self.gsea_table_cols,
 			rows: self.gsea_table_rows,
 			div: d_gsea,
@@ -346,10 +365,10 @@ add:
 				wait.remove()
 				//render_gsea_plot(self, plot_data)
 				if (image.error) throw image.error
-				const imageUrl = URL.createObjectURL(image)
+				self.imageUrl = URL.createObjectURL(image)
 				const png_width = 600
 				const png_height = 400
-				const img = holder.append('img').attr('width', png_width).attr('height', png_height).attr('src', imageUrl)
+				holder.append('img').attr('width', png_width).attr('height', png_height).attr('src', self.imageUrl)
 			}
 		})
 	}
