@@ -185,6 +185,7 @@ class gsea {
 	async main() {
 		this.config = structuredClone(this.state.config)
 		this.settings = this.config.settings.gsea
+		this.imageUrl = null // Reset the image URL
 		await this.setControls()
 		if (this.dom.header)
 			this.dom.header.html(
