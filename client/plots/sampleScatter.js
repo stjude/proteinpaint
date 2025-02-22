@@ -603,34 +603,43 @@ export function downloadImage(imageURL) {
 export async function getPlotConfig(opts, app) {
 	//if (!opts.colorTW) throw 'sampleScatter getPlotConfig: opts.colorTW{} missing'
 	//if (!opts.name && !(opts.term && opts.term2)) throw 'sampleScatter getPlotConfig: missing coordinates input'
-	try {
-		if (opts.colorTW) await fillTermWrapper(opts.colorTW, app.vocabApi)
-		if (opts.shapeTW) await fillTermWrapper(opts.shapeTW, app.vocabApi)
-		if (opts.term) await fillTermWrapper(opts.term, app.vocabApi)
-		if (opts.term2) await fillTermWrapper(opts.term2, app.vocabApi)
-		if (opts.term0) await fillTermWrapper(opts.term0, app.vocabApi)
-		if (opts.scaleDotTW) await fillTermWrapper(opts.scaleDotTW, app.vocabApi)
-		if (opts.sampleCategory) await fillTermWrapper(opts.sampleCategory.tw, app.vocabApi)
 
-		let settings = getDefaultScatterSettings()
-		if (opts.settings) copyMerge(settings, opts.settings)
-		if (!opts.term && !opts.term2) settings.showAxes = false
-		const config = {
-			groups: [],
-			settings: {
-				controls: {
-					isOpen: false // control panel is hidden by default
-				},
-				sampleScatter: settings
+	const plot = {
+		groups: [],
+		settings: {
+			controls: {
+				isOpen: false // control panel is hidden by default
 			},
+			sampleScatter: getDefaultScatterSettings(),
 			startColor: {}, //dict to store the start color of the gradient for each chart when using continuous color
 			stopColor: {} //dict to store the stop color of the gradient for each chart when using continuous color
 		}
-		// may apply term-specific changes to the default object
-		const result = copyMerge(config, opts)
-		if (result.term0?.q?.mode == 'continuous' && !app.hasWebGL())
+	}
+
+	try {
+		let defaultConfig = {}
+		// observe default config specified in ds, if available
+		if (opts.name) {
+			const p = app.vocabApi?.termdbConfig?.scatterplots?.find(i => i.name == opts.name)
+			if (p) defaultConfig = p
+		}
+		copyMerge(plot, opts, defaultConfig)
+
+		if (plot.colorTW) await fillTermWrapper(plot.colorTW, app.vocabApi)
+		if (plot.shapeTW) await fillTermWrapper(plot.shapeTW, app.vocabApi)
+		if (plot.term) await fillTermWrapper(plot.term, app.vocabApi)
+		if (plot.term2) await fillTermWrapper(plot.term2, app.vocabApi)
+		if (plot.term0) await fillTermWrapper(plot.term0, app.vocabApi)
+		if (plot.scaleDotTW) await fillTermWrapper(plot.scaleDotTW, app.vocabApi)
+		if (plot.sampleCategory) await fillTermWrapper(plot.sampleCategory.tw, app.vocabApi)
+
+		// apply term-specific changes to the default object
+		if (!plot.term && !plot.term2) plot.settings.sampleScatter.showAxes = false
+
+		if (plot.term0?.q?.mode == 'continuous' && !app.hasWebGL())
 			throw 'Can not load Z/Divide by term in continuous mode as WebGL is not supported'
-		return result
+
+		return plot
 	} catch (e) {
 		console.log(e)
 		throw `${e} [sampleScatter getPlotConfig()]`
