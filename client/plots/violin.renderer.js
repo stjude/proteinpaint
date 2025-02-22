@@ -4,7 +4,7 @@ import { curveBasis, line } from 'd3-shape'
 import { getColors } from '#shared/common.js'
 import { brushX, brushY } from 'd3-brush'
 import { renderTable, Menu, getMaxLabelWidth, table2col } from '#dom'
-import { rgb } from 'd3'
+import { rgb, create } from 'd3'
 import { format as d3format } from 'd3-format'
 import { TermTypes } from '#shared/terms.js'
 
@@ -57,11 +57,32 @@ export default function setViolinRenderer(self) {
 
 		const svgData = renderSvg(t1, self, isH, settings)
 		renderScale(t1, t2, settings, isH, svgData, self)
-
+		let y = self.settings.rowSpace
 		for (const [plotIdx, plot] of self.data.plots.entries()) {
-			const violinG = createViolinG(svgData, plot, plotIdx, isH)
+			const plotThickness = self.settings.plotThickness
+			// The scale uses half of the plotThickness as the maximum value as the image is symmetrical
+			// Only one half of the image is computed and the other half is mirrored
+			const wScale = scaleLinear()
+				.domain([plot.density.densityMax, plot.density.densityMin])
+				.range([plotThickness / 2, 0])
+			let areaBuilder
+			//when doing this interpolation, the violin plot will be smoother and some padding may be added
+			//between the plot and the axis
+			if (isH) {
+				areaBuilder = line()
+					.curve(curveBasis)
+					.x(d => svgData.axisScale(d.x0))
+					.y(d => wScale(d.density))
+			} else {
+				areaBuilder = line()
+					.curve(curveBasis)
+					.x(d => wScale(d.density))
+					.y(d => svgData.axisScale(d.x0))
+			}
+			//if only one plot pass area builder to calculate the exact height of the plot
+			const { violinG, height } = renderViolinPlot(svgData, plot, isH, wScale, areaBuilder, y, imageOffset)
+			y += height
 			if (self.opts.mode != 'minimal') renderLabels(t1, t2, violinG, plot, isH, settings, tip)
-			renderViolinPlot(plot, self, isH, svgData, violinG, imageOffset)
 
 			if (self.config.term.term.type == TermTypes.SINGLECELL_GENE_EXPRESSION) {
 				// is sc data, disable brushing for now because 1) no use 2) avoid bug of listing cells
@@ -252,16 +273,51 @@ export default function setViolinRenderer(self) {
 		}
 	}
 
-	function createViolinG(svg, plot, plotIdx, isH) {
+	function renderViolinPlot(svgData, plot, isH, wScale, areaBuilder, y, imageOffset) {
+		const label = plot.label?.split(',')[0]
+		const catTerm = self.config.term.q.mode == 'discrete' ? self.config.term : self.config.term2
+		const category = catTerm?.term.values ? Object.values(catTerm.term.values).find(o => o.label == label) : null
+
+		const color = category?.color ? category.color : self.config.settings.violin.defaultColor
+		// : plot.divideTwBins
+		// ? plot.divideTwBins.color
+		// : self.config.term2
+		// ? self.k2c(plotIdx)
+		// : self.config.settings.violin.defaultColor
+		if (!plot.color) plot.color = color
+		if (category && !category.color) category.color = color
 		// <g> of one plot
 		// adding .5 to plotIdx allows to anchor each plot <g> to the middle point
+		const svg = svgData.svgG
+		const violinG = svg.append('g').datum(plot).attr('class', 'sjpp-violinG')
+		renderArea(violinG, plot, areaBuilder)
+		//render symmetrical violin plot
+		renderArea(violinG, plot, isH ? areaBuilder.y(d => -wScale(d.density)) : areaBuilder.x(d => -wScale(d.density)))
 
-		const height = self.getPlotThicknessWithPadding()
-		const step = height * (plotIdx + 0.5)
-		const translate = isH ? `translate(0, ${step}) ` : `translate(${step}, 0)`
-		const violinG = svg.svgG.append('g').datum(plot).attr('transform', translate).attr('class', 'sjpp-violinG')
+		renderSymbolImage(self, violinG, plot, isH, imageOffset)
+		if (self.opts.mode != 'minimal') renderMedian(violinG, isH, plot, svgData, self)
+		renderLines(violinG, isH, self.config.settings.violin.lines, svgData)
+		if (self.state.config.value) {
+			const value = svgData.axisScale(self.state.config.value)
+			const s = self.config.settings.violin
+			violinG
+				.append('line')
+				.style('stroke', 'black')
+				.style('stroke-width', s.medianThickness)
+				.attr('x1', 200)
+				.attr('x2', 200)
+				.attr('x1', isH ? value : -s.medianLength)
+				.attr('x2', isH ? value : s.medianLength)
+				.attr('y1', isH ? -s.medianLength : value)
+				.attr('y2', isH ? s.medianLength : value)
+		}
+		const rect = violinG.node().getBBox()
+		let height = isH ? rect.height : rect.width
+		height += self.settings.rowSpace
+		const translate = isH ? `translate(0, ${y + height / 2}) ` : `translate(${y + height / 2}, 0)`
+		violinG.attr('transform', translate)
 
-		return violinG
+		return { violinG, height }
 	}
 
 	function renderLabels(t1, t2, violinG, plot, isH, settings, tip) {
@@ -293,61 +349,6 @@ export default function setViolinRenderer(self) {
 			.attr('text-anchor', 'end')
 			.attr('dominant-baseline', 'central')
 			.attr('transform', isH ? null : 'rotate(-90)')
-	}
-
-	function renderViolinPlot(plot, self, isH, svgData, violinG, imageOffset) {
-		const plotThickness = self.settings.plotThickness
-		// The scale uses half of the plotThickness as the maximum value as the image is symmetrical
-		// Only one half of the image is computed and the other half is mirrored
-		const wScale = scaleLinear()
-			.domain([plot.density.densityMax, plot.density.densityMin])
-			.range([plotThickness / 2, 0])
-		let areaBuilder
-		if (isH) {
-			areaBuilder = line()
-				.curve(curveBasis)
-				.x(d => svgData.axisScale(d.x0))
-				.y(d => wScale(d.density))
-		} else {
-			areaBuilder = line()
-				.curve(curveBasis)
-				.x(d => wScale(d.density))
-				.y(d => svgData.axisScale(d.x0))
-		}
-
-		const label = plot.label?.split(',')[0]
-		const catTerm = self.config.term.q.mode == 'discrete' ? self.config.term : self.config.term2
-		const category = catTerm?.term.values ? Object.values(catTerm.term.values).find(o => o.label == label) : null
-
-		const color = category?.color ? category.color : self.config.settings.violin.defaultColor
-		// : plot.divideTwBins
-		// ? plot.divideTwBins.color
-		// : self.config.term2
-		// ? self.k2c(plotIdx)
-		// : self.config.settings.violin.defaultColor
-		if (!plot.color) plot.color = color
-		if (category && !category.color) category.color = color
-
-		renderArea(violinG, plot, areaBuilder)
-		renderArea(violinG, plot, isH ? areaBuilder.y(d => -wScale(d.density)) : areaBuilder.x(d => -wScale(d.density)))
-
-		renderSymbolImage(self, violinG, plot, isH, imageOffset)
-		if (self.opts.mode != 'minimal') renderMedian(violinG, isH, plot, svgData, self)
-		renderLines(violinG, isH, self.config.settings.violin.lines, svgData)
-		if (self.state.config.value) {
-			const value = svgData.axisScale(self.state.config.value)
-			const s = self.config.settings.violin
-			violinG
-				.append('line')
-				.style('stroke', 'black')
-				.style('stroke-width', s.medianThickness)
-				.attr('x1', 200)
-				.attr('x2', 200)
-				.attr('x1', isH ? value : -s.medianLength)
-				.attr('x2', isH ? value : s.medianLength)
-				.attr('y1', isH ? -s.medianLength : value)
-				.attr('y2', isH ? s.medianLength : value)
-		}
 	}
 
 	function renderArea(violinG, plot, areaBuilder) {
