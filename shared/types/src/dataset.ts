@@ -899,8 +899,10 @@ type ScatterPlotsEntry = {
 	settings?: { [index: string]: any }
 	/** by default the dots are called "samples" on the plot, use this to call it by diff name e.g. "cells" */
 	sampleType?: string
-	/** a plot can be colored by either a dict term termsetting (colorTW) or file column values (colorColumn) */
+	/** a termsetting to supply dot color */
 	colorTW?: { id: string }
+	/** a termsetting to supply dot shape */
+	shapeTW?: { id: string } // TODO replace with tw type
 	colorColumn?: ColorColumn
 	/** provide a sampletype term to filter for specific type of samples for subjects with multiple samples and show in the plot.
 e.g. to only show D samples from all patients
