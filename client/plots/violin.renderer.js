@@ -61,7 +61,7 @@ export default function setViolinRenderer(self) {
 		for (const [plotIdx, plot] of self.data.plots.entries()) {
 			const violinG = createViolinG(svgData, plot, plotIdx, isH)
 			if (self.opts.mode != 'minimal') renderLabels(t1, t2, violinG, plot, isH, settings, tip)
-			renderViolinPlot(plot, self, isH, svgData, plotIdx, violinG, imageOffset)
+			renderViolinPlot(plot, self, isH, svgData, violinG, imageOffset)
 
 			if (self.config.term.term.type == TermTypes.SINGLECELL_GENE_EXPRESSION) {
 				// is sc data, disable brushing for now because 1) no use 2) avoid bug of listing cells
@@ -89,9 +89,8 @@ export default function setViolinRenderer(self) {
 		}
 	}
 
-	self.getPlotThickness = function () {
-		//self.settings.plotThickness may be undefined if loading a state, because main is not executed
-		return (self.settings.plotThickness || 145) + self.settings.rowSpace
+	self.getPlotThicknessWithPadding = function () {
+		return self.settings.plotThickness + self.settings.rowSpace
 	}
 
 	self.renderPvalueTable = function () {
@@ -138,7 +137,7 @@ export default function setViolinRenderer(self) {
 		const rows = self.data.pvalues
 		const isH = this.settings.orientation === 'horizontal'
 		const maxHeight = isH
-			? self.getPlotThickness() * this.data.plots.length
+			? self.getPlotThicknessWithPadding() * this.data.plots.length + 10 //add axes height
 			: this.settings.svgw + this.config.term.term.name.length
 		renderTable({
 			rows,
@@ -182,18 +181,15 @@ export default function setViolinRenderer(self) {
 		)
 
 		const margin = createMargins(labelsize, settings, isH, self.opts.mode == 'minimal')
-		const plotThickness = self.getPlotThickness()
+		const plotThickness = self.getPlotThicknessWithPadding()
+		const width =
+			margin.left + margin.top + (isH ? settings.svgw : plotThickness * self.data.plots.length + t1.term.name.length)
+		const height =
+			margin.bottom + margin.top + (isH ? plotThickness * self.data.plots.length : settings.svgw + t1.term.name.length)
+
 		violinSvg
-			.attr(
-				'width',
-				margin.left + margin.top + (isH ? settings.svgw : plotThickness * self.data.plots.length + t1.term.name.length)
-			)
-			.attr(
-				'height',
-				margin.bottom +
-					margin.top +
-					(isH ? plotThickness * self.data.plots.length : settings.svgw + t1.term.name.length)
-			)
+			.attr('width', width)
+			.attr('height', height)
 			.classed('sjpp-violin-plot', true)
 			.attr('data-testid', 'sja_violin_plot')
 
@@ -260,16 +256,10 @@ export default function setViolinRenderer(self) {
 		// <g> of one plot
 		// adding .5 to plotIdx allows to anchor each plot <g> to the middle point
 
-		const violinG = svg.svgG
-			.append('g')
-			.datum(plot)
-			.attr(
-				'transform',
-				isH
-					? 'translate(0,' + self.getPlotThickness() * (plotIdx + 0.5) + ')'
-					: 'translate(' + self.getPlotThickness() * (plotIdx + 0.5) + ',0)'
-			)
-			.attr('class', 'sjpp-violinG')
+		const height = self.getPlotThicknessWithPadding()
+		const step = height * (plotIdx + 0.5)
+		const translate = isH ? `translate(0, ${step}) ` : `translate(${step}, 0)`
+		const violinG = svg.svgG.append('g').datum(plot).attr('transform', translate).attr('class', 'sjpp-violinG')
 
 		return violinG
 	}
@@ -305,12 +295,13 @@ export default function setViolinRenderer(self) {
 			.attr('transform', isH ? null : 'rotate(-90)')
 	}
 
-	function renderViolinPlot(plot, self, isH, svgData, plotIdx, violinG, imageOffset) {
-		const plotThickness = self.getPlotThickness()
-		// times 0.45 will leave out 10% as spacing between plots
+	function renderViolinPlot(plot, self, isH, svgData, violinG, imageOffset) {
+		const plotThickness = self.settings.plotThickness
+		// The scale uses half of the plotThickness as the maximum value as the image is symmetrical
+		// Only one half of the image is computed and the other half is mirrored
 		const wScale = scaleLinear()
 			.domain([plot.density.densityMax, plot.density.densityMin])
-			.range([plotThickness * 0.45, 0])
+			.range([plotThickness / 2, 0])
 		let areaBuilder
 		if (isH) {
 			areaBuilder = line()
@@ -412,7 +403,7 @@ export default function setViolinRenderer(self) {
 
 	function renderLines(violinG, isH, lines, svgData) {
 		// render straight lines on plot
-		const plotThickness = self.settings.plotThickness || 150 //When loading plot from state plotThickness is not initialized
+		const plotThickness = self.settings.plotThickness
 
 		violinG.selectAll('.sjpp-vp-line').remove()
 		if (!lines?.length) return

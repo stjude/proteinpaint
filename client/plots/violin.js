@@ -272,10 +272,6 @@ class ViolinPlot {
 		const args = this.validateArgs()
 		this.data = await this.app.vocabApi.getViolinPlotData(args)
 
-		if (this.settings.plotThickness == undefined) {
-			const thickness = this.data.plots.length == 1 ? 200 : 150
-			this.settings.plotThickness = Math.min(1400 / this.data.plots.length, thickness)
-		}
 		if (this.data.error) throw this.data.error
 		/*
 		.min
@@ -383,7 +379,7 @@ export function getDefaultViolinSettings(app, overrides = {}) {
 		lines: [],
 		unit: 'abs', // abs: absolute scale, log: log scale
 		rowSpace: 5,
-		plotThickness: undefined,
+		plotThickness: 100,
 		medianLength: 7,
 		medianThickness: 3,
 		ticks: 20,
