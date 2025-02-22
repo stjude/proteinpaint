@@ -1,1 +1,4 @@
 
+Fix
+- In GSEA the image downloaded from the burguer menu icon it is updated every time a table row 
+is selected but it needs to be cleared on main  to avoid downloading a wrong image (jira-sv-2571).
