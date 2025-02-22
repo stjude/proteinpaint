@@ -1,0 +1,63 @@
+<html>
+<head>
+	<!-- <script src='/bin/proteinpaint.js'></script> -->
+	<!-- <script>window.testHost='http://localhost:3000'</script> -->
+	<script type="module" src='/bin/test/_.._/test/internals-test.js'></script>
+	<!-- <script src="https://unpkg.com/source-map@0.7.3/dist/source-map.js"></script>
+	<script>
+	    sourceMap.SourceMapConsumer.initialize({
+	        "lib/mappings.wasm": "https://unpkg.com/source-map@0.7.3/lib/mappings.wasm"
+	    });
+	</script> -->
+</head>
+<body>
+<!-- <script type="module">
+// const rawSourceMap = {
+//   version: 3,
+//   file: 'min.js',
+//   names: ['bar', 'baz', 'n'],
+//   sources: ['one.js', 'two.js'],
+//   sourceRoot: 'http://example.com/www/js/',
+//   mappings: 'CAAC,IAAI,IAAM,SAAUA,GAClB,OAAOC,IAAID;CCDb,IAAI,IAAM,SAAUE,GAClB,OAAOA'
+// };
+
+const rawSourceMap = {
+  "version": 3,
+  "sources": ["../../../client/filter/tvs.categorical.js"],
+  "sourcesContent": ["/*\n********************** EXPORTED\nhandler:\n\t// internal functions as part of handler\n\tterm_name_gen()\n\tget_pill_label()\n\tgetSelectRemovePos()\n\tfillMenu()\n\tsetTvsDefaults()\n\n********************** INTERNAL\nvalidateCategoricalTvs()\n\n*/\n\nexport const handler = {\n\ttype: 'categorical',\n\tterm_name_gen,\n\tget_pill_label,\n\tgetSelectRemovePos,\n\tfillMenu,\n\tsetTvsDefaults\n}\n\nasync function fillMenu(self, div, tvs) {\n\tconst data = await self.opts.vocabApi.getCategories(tvs.term, self.filter, self.opts.getCategoriesArguments || {})\n\tconst sortedVals = data.lst.sort((a, b) => {\n\t\treturn b.samplecount - a.samplecount\n\t})\n\n\tconst callback = indexes => {\n\t\t//update term values by ckeckbox values\n\n\t\t// for categorical terms, force v.key to a string\n\t\tconst new_tvs = JSON.parse(JSON.stringify(tvs))\n\t\tdelete new_tvs.groupset_label\n\t\tnew_tvs.values = sortedVals.filter((v, index, array) => indexes.includes(index))\n\t\ttry {\n\t\t\tvalidateCategoricalTvs(new_tvs)\n\t\t} catch (e) {\n\t\t\twindow.alert(e)\n\t\t\treturn\n\t\t}\n\t\tself.dom.tip.hide()\n\t\tself.opts.callback(new_tvs)\n\t}\n\n\tconst values_table = self.makeValueTable(div, tvs, sortedVals, callback).node()\n}\n\nfunction term_name_gen(d) {\n\tconst name = d.term.name\n\treturn name.length < 21 ? name : '<label title=\"' + name + '\">' + name.substring(0, 18) + '...' + '</label>'\n}\n\nfunction get_pill_label(tvs) {\n\tif (tvs.values.length == 1) {\n\t\t// single\n\t\tconst v = tvs.values[0]\n\t\tif (v.label) return { txt: v.label }\n\t\tconst value = tvs.term.values?.[v.key]\n\t\tif (value) {\n\t\t\treturn { txt: value.key || value.label }\n\t\t\tconsole.log(tvs.term, v.key)\n\t\t}\n\t\t//console.error(`key \"${v.key}\" not found in values{} of ${tvs.term.name}`) // gdc terms always lacks list of categories since they are expensive to retrieve from api for every term, thus suppress this error\n\t\treturn { txt: v.key }\n\t}\n\t// multiple\n\tif (tvs.groupset_label) return { txt: tvs.groupset_label }\n\treturn { txt: tvs.values.length + ' groups' }\n}\n\nfunction getSelectRemovePos(j) {\n\treturn j\n}\n\nfunction setTvsDefaults(tvs) {\n\tif (!tvs.values) tvs.values = []\n}\n\nfunction validateCategoricalTvs(tvs) {\n\tif (!tvs.term) throw 'tvs.term is not defined'\n\tif (!tvs.values) throw `.values[] missing for a term ${tvs.term.name}`\n\tif (!Array.isArray(tvs.values)) throw `.values[] is not an array for a term ${tvs.term.name}`\n\tif (!tvs.values.length) throw `no categories selected for ${tvs.term.name}`\n\tif (!tvs.values.every(v => v.key !== undefined))\n\t\tthrow `every value in tvs.values[] must have 'key' defined for ${tvs.term.name}`\n}\n"],
+  "mappings": ";;;;;;;AAAA;AAAA;AAAA;AAeO,IAAM,UAAU;AAAA,EACtB,MAAM;AAAA,EACN;AAAA,EACA;AAAA,EACA;AAAA,EACA;AAAA,EACA;AACD;AAEA,eAAe,SAAS,MAAM,KAAK,KAAK;AACvC,QAAM,OAAO,MAAM,KAAK,KAAK,SAAS,cAAc,IAAI,MAAM,KAAK,QAAQ,KAAK,KAAK,0BAA0B,CAAC,CAAC;AACjH,QAAM,aAAa,KAAK,IAAI,KAAK,CAAC,GAAG,MAAM;AAC1C,WAAO,EAAE,cAAc,EAAE;AAAA,EAC1B,CAAC;AAED,QAAM,WAAW,aAAW;AAI3B,UAAM,UAAU,KAAK,MAAM,KAAK,UAAU,GAAG,CAAC;AAC9C,WAAO,QAAQ;AACf,YAAQ,SAAS,WAAW,OAAO,CAAC,GAAG,OAAO,UAAU,QAAQ,SAAS,KAAK,CAAC;AAC/E,QAAI;AACH,6BAAuB,OAAO;AAAA,IAC/B,SAAS,GAAG;AACX,aAAO,MAAM,CAAC;AACd;AAAA,IACD;AACA,SAAK,IAAI,IAAI,KAAK;AAClB,SAAK,KAAK,SAAS,OAAO;AAAA,EAC3B;AAEA,QAAM,eAAe,KAAK,eAAe,KAAK,KAAK,YAAY,QAAQ,EAAE,KAAK;AAC/E;AAEA,SAAS,cAAc,GAAG;AACzB,QAAM,OAAO,EAAE,KAAK;AACpB,SAAO,KAAK,SAAS,KAAK,OAAO,mBAAmB,OAAO,OAAO,KAAK,UAAU,GAAG,EAAE,IAAI;AAC3F;AAEA,SAAS,eAAe,KAAK;AAC5B,MAAI,IAAI,OAAO,UAAU,GAAG;AAE3B,UAAM,IAAI,IAAI,OAAO,CAAC;AACtB,QAAI,EAAE;AAAO,aAAO,EAAE,KAAK,EAAE,MAAM;AACnC,UAAM,QAAQ,IAAI,KAAK,SAAS,EAAE,GAAG;AACrC,QAAI,OAAO;AACV,aAAO,EAAE,KAAK,MAAM,OAAO,MAAM,MAAM;AACvC,cAAQ,IAAI,IAAI,MAAM,EAAE,GAAG;AAAA,IAC5B;AAEA,WAAO,EAAE,KAAK,EAAE,IAAI;AAAA,EACrB;AAEA,MAAI,IAAI;AAAgB,WAAO,EAAE,KAAK,IAAI,eAAe;AACzD,SAAO,EAAE,KAAK,IAAI,OAAO,SAAS,UAAU;AAC7C;AAEA,SAAS,mBAAmB,GAAG;AAC9B,SAAO;AACR;AAEA,SAAS,eAAe,KAAK;AAC5B,MAAI,CAAC,IAAI;AAAQ,QAAI,SAAS,CAAC;AAChC;AAEA,SAAS,uBAAuB,KAAK;AACpC,MAAI,CAAC,IAAI;AAAM,UAAM;AACrB,MAAI,CAAC,IAAI;AAAQ,UAAM,gCAAgC,IAAI,KAAK,IAAI;AACpE,MAAI,CAAC,MAAM,QAAQ,IAAI,MAAM;AAAG,UAAM,wCAAwC,IAAI,KAAK,IAAI;AAC3F,MAAI,CAAC,IAAI,OAAO;AAAQ,UAAM,8BAA8B,IAAI,KAAK,IAAI;AACzE,MAAI,CAAC,IAAI,OAAO,MAAM,OAAK,EAAE,QAAQ,MAAS;AAC7C,UAAM,2DAA2D,IAAI,KAAK,IAAI;AAChF;",
+  "names": []
+}
+
+const whatever = await sourceMap.SourceMapConsumer.with(rawSourceMap, null, consumer => {
+
+  console.log(consumer.sources);
+  // [ 'http://example.com/www/js/one.js',
+  //   'http://example.com/www/js/two.js' ]
+
+  console.log(consumer.originalPositionFor({
+    line: 20,
+    column: 28
+  }));
+  // { source: 'http://example.com/www/js/two.js',
+  //   line: 2,
+  //   column: 10,
+  //   name: 'n' }
+
+  // console.log(consumer.generatedPositionFor({
+  //   source: 'http://example.com/www/js/two.js',
+  //   line: 2,
+  //   column: 10
+  // }));
+  // { line: 2, column: 28 }
+
+  // consumer.eachMapping(function (m) {
+  //   // ...
+  // });
+
+  //return computeWhatever();
+});
+
+</script> -->
+</body>
+</html>
