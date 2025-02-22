@@ -11,6 +11,8 @@ Fixes:
 - Cleared single cell plot state related to the sample (jira-sv-2568)
 - Passed download filename to the violin with more details (jira-sv-2569)
 - Passed download filename to the GSEA. Updated GSEA download to download image on burguer menu download icon and download plot on table icon (jira-sv-2571)
+- mds3 tk cnv legend will handle case when no cnv data is present due to server error and not to crash
+
 
 ## 2.108.0
 
