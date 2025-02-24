@@ -116,6 +116,24 @@ class Volcano extends RxComponentInner {
 				boxLabel: ''
 			},
 			{
+				label: 'Plot height',
+				type: 'number',
+				chartType: 'volcano',
+				settingsKey: 'height',
+				title: 'Height of the plot in pixels',
+				min: 300,
+				max: 1000
+			},
+			{
+				label: 'Plot width',
+				type: 'number',
+				chartType: 'volcano',
+				settingsKey: 'width',
+				title: 'Width of the plot in pixels',
+				min: 300,
+				max: 1000
+			},
+			{
 				label: 'Significant value color',
 				type: 'color',
 				chartType: 'volcano',
