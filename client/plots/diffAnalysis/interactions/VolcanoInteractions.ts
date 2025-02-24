@@ -49,8 +49,9 @@ export class VolcanoInteractions {
 	}
 
 	clearDom() {
-		this.dom.tabs.selectAll('*').remove()
-		this.dom.tabsContent.selectAll('*').remove()
+		this.dom.holder.selectAll('div[id="sjpp-volcano-actions"]').remove()
+		this.dom.holder.selectAll('svg[id="sjpp-volcano-svg"]').remove()
+		this.dom.holder.selectAll('div[id="sjpp-volcano-stats"]').remove()
 	}
 
 	download() {

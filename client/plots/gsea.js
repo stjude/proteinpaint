@@ -14,10 +14,18 @@ const tip = new Menu()
 class gsea {
 	constructor() {
 		this.type = 'gsea'
+		/** TODO: this.components and this.dom needs to be in the constructor for the
+		 * plot to access the opts sent from the parent. For now the controls will appear
+		 * wonky in the differential analysis plot as opts.controls are not accessible.
+		 */
+		// this.components = {
+		// 	controls: {}
+		// }
+		// this.dom = {}
 	}
 	async init(opts) {
 		const config = opts.plots.find(p => p.id === this.id)
-		const controlsDiv = this.opts.holder.append('div').style('display', 'inline-block')
+		const controlsDiv = opts.controls || this.opts.holder.append('div').style('display', 'inline-block')
 		const mainDiv = this.opts.holder.append('div').style('display', 'inline-block').style('margin-left', '50px')
 		const holder = mainDiv.append('div').style('display', 'inline-block')
 		const detailsDiv = mainDiv
@@ -154,6 +162,7 @@ class gsea {
 				inputs: inputs
 			})
 		}
+
 		this.components.controls.on('downloadClick.gsea', () => {
 			if (!this.imageUrl) return alert('No image to download')
 			const dataUrl = this.imageUrl
@@ -184,6 +193,7 @@ class gsea {
 
 	async main() {
 		this.config = structuredClone(this.state.config)
+		if (this.config.chartType != this.type && this.config.childType != this.type) return
 		this.settings = this.config.settings.gsea
 		await this.setControls()
 		if (this.dom.header)
@@ -437,22 +447,27 @@ function render_gsea_plot(self, plot_data) {
 	}
 }
 
+export function getDefaultGseaSettings() {
+	return {
+		fdr_cutoff: 0.05,
+		num_permutations: 1000,
+		top_genesets: 40,
+		pathway: undefined,
+		min_gene_set_size_cutoff: 0,
+		max_gene_set_size_cutoff: 20000,
+		filter_non_coding_genes: true,
+		fdr_or_top: 'top'
+	}
+}
+
 export async function getPlotConfig(opts, app) {
+	console.log('plot config called', opts)
 	try {
 		const config = {
 			//idea for fixing nav button
 			//samplelst: { groups: app.opts.state.groups}
 			settings: {
-				gsea: {
-					fdr_cutoff: 0.05,
-					num_permutations: 1000,
-					top_genesets: 40,
-					pathway: undefined,
-					min_gene_set_size_cutoff: 0,
-					max_gene_set_size_cutoff: 20000,
-					filter_non_coding_genes: true,
-					fdr_or_top: 'top'
-				},
+				gsea: getDefaultGseaSettings(),
 				controls: { isOpen: true }
 			}
 		}
@@ -470,8 +485,8 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 	/*
 	holder: the holder in the tooltip
 	chartsInstance: MassCharts instance
-        termdbConfig is accessible at chartsInstance.state.termdbConfig{}
-        mass option is accessible at chartsInstance.app.opts{}
+		termdbConfig is accessible at chartsInstance.state.termdbConfig{}
+		mass option is accessible at chartsInstance.app.opts{}
 	*/
 	// to fill in menu, create options in "holder"
 	// to hide menu, call chartsInstance.dom.tip.hide()

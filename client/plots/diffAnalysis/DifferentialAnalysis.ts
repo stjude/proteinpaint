@@ -1,41 +1,53 @@
 import type { BasePlotConfig, MassAppApi, MassState } from '#mass/types/mass'
+import type { Elem } from '../../types/d3'
 import { RxComponentInner } from '../../types/rx.d'
 import { getCompInit, copyMerge } from '#rx'
 import { Menu } from '#dom'
 import type { DiffAnalysisDom, DiffAnalysisOpts } from './DiffAnalysisTypes'
-import { View } from './view/View'
+import { DiffAnalysisView } from './view/DiffAnalysisView'
 import { getDefaultVolcanoSettings } from './Volcano'
+import { getDefaultGseaSettings } from '#plots/gsea.js'
 
 /** TODO:
  * - type this file
- * - remove method from server request -> always 'edgeR'
  */
 class DifferentialAnalysis extends RxComponentInner {
 	readonly type = 'differentialAnalysis'
-	components: { controls: any; plots: any }
+	components: {
+		plots: any
+	}
 	dom: DiffAnalysisDom
-	plots = {}
-	tabs = {}
+	plotTabs: any
+	plotsDiv: {
+		volcano: Elem
+		gsea: Elem
+	}
 
 	constructor(opts: any) {
 		super()
 		this.components = {
-			controls: {},
 			plots: {}
 		}
 		const holder = opts.holder.classed('sjpp-diff-analysis-main', true)
 		const controls = opts.controls ? holder : holder.append('div')
 		const div = holder.append('div').style('padding', '5px').style('display', 'inline-block')
-		const tabs = div.append('div').attr('id', 'sjpp-diff-analysis-tabs').style('display', 'inline-block')
+		const tabsDiv = div.append('div').attr('id', 'sjpp-diff-analysis-tabs').style('display', 'inline-block')
 		const tabsContent = div.append('div').attr('id', 'sjpp-diff-analysis-tabs-content')
 		this.dom = {
 			controls: controls.style('display', 'block'),
 			div,
-			tabs,
+			tabsDiv,
 			tabsContent,
 			tip: new Menu({ padding: '' })
 		}
+		const volcanoDiv = tabsContent.append('div').style('display', 'none')
+		const gseaDiv = tabsContent.append('div').style('display', 'none')
+		this.plotsDiv = {
+			volcano: volcanoDiv,
+			gsea: gseaDiv
+		}
 
+		//TODO: include type. move to main()
 		if (opts.header) {
 			this.dom.header = {
 				title: opts.header.append('span'),
@@ -58,49 +70,60 @@ class DifferentialAnalysis extends RxComponentInner {
 		}
 	}
 
-	async setPlotComponents(config) {
-		// !!! quick fix for rollup to bundle,
-		// will eventually need to move to a subnested folder structure
-		let _
-		if (config.childType == 'volcano') _ = await import(`./Volcano.ts`)
-		else if (config.childType == 'gsea') _ = await import(`#plots/gsea.js`)
-		else if (config.childType == 'geneORA') _ = await import(`#plots/geneORA.js`)
-		else throw `unsupported childType='${config.childType}'`
-
-		this.plots[config.childType] = this.dom.tabsContent.append('div')
-
-		// assumes only 1 chart per chartType would be rendered in the summary sandbox
-		this.components.plots[config.childType] = await _.componentInit({
-			app: this.app,
-			holder: this.plots[config.childType],
-			id: this.id,
-			parent: this.api
-		})
-
-		this.tabs = new View(this.app, config, this.dom)
+	reactsTo(action) {
+		if (action.type.includes('cache_termq')) return true
+		if (action.type.startsWith('plot_')) {
+			return action.id === this.id
+		}
+		if (action.type.startsWith('filter')) return true
+		if (action.type.startsWith('cohort')) return true
+		if (action.type == 'app_refresh') return true
 	}
 
-	async main() {
+	async init(appState: MassState) {
+		const state = this.getState(appState)
+		const config = structuredClone(state.config)
+
+		const volcano = await import(`./Volcano.ts`)
+		const gsea = await import(`#plots/gsea.js`)
+
+		this.components.plots = {
+			volcano: await volcano.componentInit({
+				app: this.app,
+				holder: this.plotsDiv.volcano,
+				id: this.id,
+				parent: this.api,
+				controls: this.dom.controls
+			}),
+			gsea: await gsea.componentInit({
+				app: this.app,
+				holder: this.plotsDiv.gsea,
+				id: this.id,
+				parent: this.api,
+				controls: this.dom.controls
+			})
+		}
+		this.plotTabs = new DiffAnalysisView(this.app, config, this.dom)
+	}
+
+	main() {
 		const config = structuredClone(this.state.config)
 		if (config.chartType != this.type) return
-
-		if (!this.components.plots[config.childType]) {
-			await this.setPlotComponents(config)
-		}
 
 		for (const childType in this.components.plots) {
 			const chart = this.components.plots[childType]
 			if (chart.type != config.childType) {
-				this.plots[chart.type].style('display', 'none')
+				this.plotsDiv[chart.type].style('display', 'none')
 			}
 		}
-
-		this.plots[config.childType].style('display', '')
+		this.plotsDiv[config.childType].style('display', '')
 
 		if (this.dom.header) {
 			const samplelst = config.samplelst.groups
 			this.dom.header.title.text(`${samplelst[0].name} vs ${samplelst[1].name} `)
 		}
+
+		this.plotTabs.update(config)
 	}
 }
 
@@ -117,7 +140,8 @@ export function getPlotConfig(opts: DiffAnalysisOpts, app: MassAppApi) {
 				isOpen: false
 			},
 			differentialAnalysis: { visiblePlots: ['volcano'] },
-			volcano: getDefaultVolcanoSettings(opts.overrides)
+			volcano: getDefaultVolcanoSettings(opts.overrides),
+			gsea: getDefaultGseaSettings()
 		}
 	}
 	return copyMerge(config, opts)
