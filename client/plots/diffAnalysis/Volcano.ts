@@ -114,6 +114,27 @@ class Volcano extends RxComponentInner {
 				settingsKey: 'showPValueTable',
 				title: 'Show table with both original and adjusted p values for all significant genes',
 				boxLabel: ''
+			},
+			{
+				label: 'Significant value color',
+				type: 'color',
+				chartType: 'volcano',
+				title: 'Default color for highlighted data points.',
+				settingsKey: 'defaultSignColor'
+			},
+			{
+				label: 'Non-significant value color',
+				type: 'color',
+				chartType: 'volcano',
+				title: 'Default color for highlighted data points.',
+				settingsKey: 'defaultNonSignColor'
+			},
+			{
+				label: 'Highlight color',
+				type: 'color',
+				chartType: 'volcano',
+				title: 'Default color for highlighted data points.',
+				settingsKey: 'defaultHighlightColor'
 			}
 		]
 
@@ -168,6 +189,9 @@ export const componentInit = boxplotInit
 
 export function getDefaultVolcanoSettings(overrides = {}): VolcanoSettings {
 	const defaults: VolcanoSettings = {
+		defaultSignColor: 'red',
+		defaultNonSignColor: 'black',
+		defaultHighlightColor: '#ffa200', // orange-yellow
 		foldChangeCutoff: 0,
 		height: 400,
 		minCount: 10,

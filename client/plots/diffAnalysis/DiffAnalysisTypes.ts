@@ -97,6 +97,12 @@ export type VolcanoPlotDom = {
 
 /** Settings for the differential analysis volcano */
 export type VolcanoSettings = {
+	/** Default color for highlighted data points. Maybe overridden by assigned term color */
+	defaultHighlightColor: string
+	/** Default color for non-significant data points. Maybe overridden by assigned term color */
+	defaultNonSignColor: string
+	/** Default color for significant data points. Maybe overridden by assigned term color */
+	defaultSignColor: string
 	/** largest absolute fold change to be considered in the analysis */
 	foldChangeCutoff: number
 	/** smallest number of reads required for a gene to be considered in the analysis */

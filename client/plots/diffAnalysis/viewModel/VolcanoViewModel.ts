@@ -17,9 +17,6 @@ export class VolcanoViewModel {
 	maxLogFoldChange = 0
 	minLogPValue = 0
 	maxLogPValue = 0
-	readonly defaultSignColor = 'red'
-	readonly defaultNonSignColor = 'black'
-	readonly defaultHighlightColor = '#ffa200'
 	readonly offset = 10
 	readonly bottomPad = 60
 	readonly horizPad = 70
@@ -37,6 +34,7 @@ export class VolcanoViewModel {
 			rows: []
 		}
 		this.settings = settings
+
 		this.type = 'genes' //Eventually this will be other types (e.g. 'mutations', 'proteins', etc.)
 
 		this.setMinMaxValues()
@@ -122,7 +120,7 @@ export class VolcanoViewModel {
 				}
 				this.pValueTable.rows.push(row)
 			} else {
-				d.color = this.defaultNonSignColor
+				d.color = this.settings.defaultNonSignColor
 				this.numNonSignificant++
 			}
 			d.x = plotDim.xScale.scale(d.fold_change) + this.horizPad + this.offset * 2
@@ -141,13 +139,13 @@ export class VolcanoViewModel {
 
 	//TODO: hightlight per term color
 	getGenesColor(d) {
-		if (!d.gene_symbol) return this.defaultSignColor
+		if (!d.gene_symbol) return this.settings.defaultSignColor
 
 		if (this.config.highlightedData.includes(d.gene_symbol)) {
-			d.color = this.defaultHighlightColor
+			d.color = this.settings.defaultHighlightColor
 			d.highlighted = true
 		} else {
-			d.color = this.defaultSignColor
+			d.color = this.settings.defaultSignColor
 		}
 	}
 
