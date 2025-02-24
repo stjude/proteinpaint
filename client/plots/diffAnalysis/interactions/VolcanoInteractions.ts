@@ -78,12 +78,19 @@ export class VolcanoInteractions {
 
 	async launchBoxPlot(geneSymbol: string) {
 		const config = this.app.getState().plots.find((p: DiffAnalysisPlotConfig) => p.id === this.id)
+		const values = {}
+		for (const group of config.samplelst.groups) {
+			values[group.name] = {
+				key: group.name,
+				label: group.name,
+				list: group.values
+			}
+		}
 		this.app.dispatch({
 			type: 'plot_create',
 			config: {
 				chartType: 'summary',
 				childType: 'boxplot',
-				groups: config.samplelst.groups,
 				term: {
 					q: { mode: 'continuous' },
 					term: {
@@ -91,13 +98,21 @@ export class VolcanoInteractions {
 						name: geneSymbol,
 						type: 'geneExpression' //eventually type will come from state
 					}
+				},
+				term2: {
+					//eventually will come from state. This is a work around
+					q: { groups: config.samplelst.groups, type: 'custom-samplelst' },
+					term: {
+						name: `${config.samplelst.groups[0].name} vs ${config.samplelst.groups[1].name}`,
+						type: 'samplelst',
+						values
+					}
 				}
 			}
 		})
 	}
 
-	/** TODO: limit list to available genes
-	 * Hide msigdb?? */
+	/** TODO: show unavailable genes greyed out with message to user. */
 	launchGeneSetEdit() {
 		const plotConfig = this.app.getState().plots.find((p: DiffAnalysisPlotConfig) => p.id === this.id)
 		const holder = this.dom.tip.d.append('div').style('padding', '5px') as any
@@ -115,53 +130,6 @@ export class VolcanoInteractions {
 				})
 				this.dom.tip.hide()
 			}
-		})
-	}
-
-	// async launchGSEA(settings) {
-	// 	const gsea_params = {
-	// 		// genes: this.genes,
-	// 		fold_change: settings.foldChangeCutoff,
-	// 		genome: this.app.vocabApi.opts.state.vocab.genome
-	// 	}
-	// 	const config = {
-	// 		chartType: 'gsea',
-	// 		gsea_params,
-	// 	}
-	// 	const opts = {
-	// 		holder: this.dom.tabsContent,
-	// 		state: {
-	// 			vocab: this.app.opts.state.vocab,
-	// 			plots: [config]
-	// 		}
-	// 	}
-	// 	const plotImport = await import('#plots/plot.app.js')
-	// 	const plotAppApi = await plotImport.appInit(opts)
-
-	// }
-
-	pushPlot(plot: string, value?: { [index: string]: any }) {
-		const plotConfig = this.app.getState().plots.find((p: DiffAnalysisPlotConfig) => p.id === this.id)
-		const visiblePlots = structuredClone(plotConfig.settings.differentialAnalysis.visiblePlots)
-		visiblePlots.push(plot)
-		const config = {
-			childType: plot,
-			settings: {
-				differentialAnalysis: {
-					visiblePlots
-				}
-			}
-		} as any
-		//TODO: fix this
-		if (plot == 'geneORA') {
-			config.settings.geneORA = config.settings.geneORA || {}
-			config.settings.geneORA.pathway = value
-		}
-
-		this.app.dispatch({
-			type: 'plot_edit',
-			id: this.id,
-			config
 		})
 	}
 }

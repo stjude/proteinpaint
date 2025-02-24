@@ -9,10 +9,8 @@ import { VolcanoViewModel } from './viewModel/VolcanoViewModel'
 import { VolcanoInteractions } from './interactions/VolcanoInteractions'
 import { VolcanoPlotView } from './view/VolcanoPlotView'
 
-/**
- * TODO:
- * - remove method from server request -> always 'edgeR'
- */
+/** TODO:
+ * - Fix all the types */
 class Volcano extends RxComponentInner {
 	readonly type = 'volcano'
 	components: { controls: any }
@@ -156,7 +154,7 @@ class Volcano extends RxComponentInner {
 			//Pass table data for downloading
 			this.interactions.pValueTableData = viewModel.viewData.pValueTableData
 			/** Render formatted data */
-			new VolcanoPlotView(this.app, this.dom, settings, viewModel.viewData, this.interactions)
+			new VolcanoPlotView(this.dom, settings, viewModel.viewData, this.interactions)
 		} catch (e: any) {
 			if (e instanceof Error) console.error(e.message || e)
 			else if (e.stack) console.log(e.stack)

@@ -5,7 +5,7 @@ import type { SvgCircle } from '../../../types/d3'
 import type { VolcanoInteractions } from '../interactions/VolcanoInteractions'
 import type { DataPointEntry } from '../DiffAnalysisTypes'
 
-export class DataPointToolTip {
+export class DataPointMouseEvents {
 	constructor(d: DataPointEntry, circle: SvgCircle, tip: Menu, interactions: VolcanoInteractions) {
 		circle.on('mouseover', () => {
 			//Show highlight and tooltip on hover

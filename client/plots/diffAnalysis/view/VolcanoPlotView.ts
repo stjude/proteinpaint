@@ -1,4 +1,3 @@
-import type { MassAppApi } from '#mass/types/mass'
 import { axisstyle } from '#src/client'
 import { axisBottom, axisLeft } from 'd3-axis'
 import { table2col, renderTable } from '#dom'
@@ -11,8 +10,7 @@ import type {
 	VolcanoPlotDom
 } from '../DiffAnalysisTypes'
 import type { VolcanoInteractions } from '../interactions/VolcanoInteractions'
-import { DataPointToolTip } from './DataPointToolTip'
-// import { geneORAMenu } from './GeneORAMenu'
+import { DataPointMouseEvents } from './DataPointMouseEvents'
 
 export class VolcanoPlotView {
 	type = 'volcano'
@@ -20,13 +18,7 @@ export class VolcanoPlotView {
 	interactions: VolcanoInteractions
 	volcanoDom: VolcanoPlotDom
 	viewData: DiffAnalysisViewData
-	constructor(
-		app: MassAppApi,
-		dom: any,
-		settings: VolcanoSettings,
-		viewData: DiffAnalysisViewData,
-		interactions: VolcanoInteractions
-	) {
+	constructor(dom: any, settings: VolcanoSettings, viewData: DiffAnalysisViewData, interactions: VolcanoInteractions) {
 		this.dom = dom
 		this.interactions = interactions
 		this.viewData = viewData
@@ -43,7 +35,7 @@ export class VolcanoPlotView {
 		}
 
 		const plotDim = this.viewData.plotDim
-		this.renderUserActions(app)
+		this.renderUserActions()
 		this.renderPlot(plotDim)
 		renderDataPoints(this)
 		this.renderFoldChangeLine(plotDim)
@@ -51,12 +43,8 @@ export class VolcanoPlotView {
 		this.renderPValueTable(settings)
 	}
 
-	renderUserActions(app) {
+	renderUserActions() {
 		this.volcanoDom.actions.style('margin-left', '20px').style('padding', '5px')
-		// if (app.opts.genome.termdbs) {
-		// 	this.addActionButton('Launch gene set enrichment analysis', () => geneORAMenu(this.dom.tip, this.interactions))
-		// 	this.addActionButton('Gene Set Enrichment Analysis', () => this.interactions.pushPlot('gsea'))
-		// }
 		this.addActionButton('Confounding factors', () => this.interactions.confoundersMenu())
 		this.addActionButton('Genes', () => this.interactions.launchGeneSetEdit())
 	}
@@ -173,6 +161,6 @@ function renderDataPoints(self) {
 		.attr('r', (d: DataPointEntry) => d.radius)
 		.each(function (this, d: DataPointEntry) {
 			const circle = select(this)
-			new DataPointToolTip(d, circle, self.dom.tip, self.interactions)
+			new DataPointMouseEvents(d, circle, self.dom.tip, self.interactions)
 		})
 }
