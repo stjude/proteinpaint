@@ -13,6 +13,7 @@ Standard output of the R script is returned.
 import fs from 'fs'
 import serverconfig from './serverconfig.js'
 import { spawn } from 'child_process'
+import { mayLog } from '#src/helpers.ts'
 import { Readable } from 'stream'
 
 export default async function run_R(path, data, args) {
@@ -60,7 +61,20 @@ export default async function run_R(path, data, args) {
 				reject(errmsg)
 			}
 			// return standard out from R
-			resolve(stdout)
+			let result
+			let result_found = false
+			for (const line of stdout.split('\n')) {
+				// Split lines using new line character
+				if (line.startsWith('output_string:')) {
+					result = line.replace('output_string:', '')
+					result_found = true
+				} else {
+					// The line below prints any other R stdout line which may be used for debugging process
+					mayLog(line) // Prints other lines being printed in the R code for testing/debugging
+				}
+			}
+			if (!result_found) reject('Output JSON not found for R script:' + path) // If a line with 'output_string:' not found, this will throw an error
+			resolve(result)
 		})
 	})
 }

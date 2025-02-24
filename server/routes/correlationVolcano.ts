@@ -105,21 +105,9 @@ async function compute(q: CorrelationVolcanoRequest, ds: any, genome: any) {
 	//})
 
 	const time1 = Date.now()
-	let r_json
-	const r_output = await run_R(path.join(serverconfig.binpath, 'utils', 'corr.R'), JSON.stringify(input))
-	for (const line of r_output.split('\n')) {
-		// Split lines using new line character
-		if (line.startsWith('output_string:')) {
-			r_json = JSON.parse(line.replace('output_string:', ''))
-		} else {
-			// Prints other lines being printed in the R code for testing/debugging
-			mayLog(line)
-		}
-	}
 	const output = {
-		terms: r_json
+		terms: JSON.parse(await run_R(path.join(serverconfig.binpath, 'utils', 'corr.R'), JSON.stringify(input)))
 	}
-
 	mayLog('Time taken to run correlation analysis:', Date.now() - time1)
 	for (const t of output.terms) {
 		const t2 = {
