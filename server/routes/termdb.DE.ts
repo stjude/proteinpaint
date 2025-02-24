@@ -263,29 +263,15 @@ values[] // using integer sample id
 			expression_input.VarGenes = param.VarGenes // The reason this is behind "param.method == 'edgeR'" is because ranking of variable genes is not needed for low sample size groups.
 		}
 		const time1 = new Date().valueOf()
-		const r_output = await run_R(path.join(serverconfig.binpath, 'utils', 'edge.R'), JSON.stringify(expression_input))
+		result = JSON.parse(
+			await run_R(path.join(serverconfig.binpath, 'utils', 'edge.R'), JSON.stringify(expression_input))
+		)
 		mayLog('Time taken to run edgeR:', Date.now() - time1, 'ms')
-		for (const line of r_output.split('\n')) {
-			// Split lines using new line character
-			if (line.startsWith('output_string:')) {
-				result = JSON.parse(line.replace('output_string:', ''))
-			} else {
-				mayLog(line) // Prints other lines being printed in the R code for testing/debugging
-			}
-		}
 		param.method = 'edgeR'
 	} else {
 		// Wilcoxon test will be used for DE analysis
 		const time1 = new Date().valueOf()
-		const rust_output = await run_rust('DEanalysis', JSON.stringify(expression_input))
-		for (const line of rust_output.split('\n')) {
-			// Split lines using new line character
-			if (line.startsWith('output_string:')) {
-				result = JSON.parse(line.replace('output_string:', ''))
-			} else {
-				mayLog(line) // Prints other lines being printed in the Rust code for testing/debugging
-			}
-		}
+		result = JSON.parse(await run_rust('DEanalysis', JSON.stringify(expression_input)))
 		mayLog('Time taken to run rust DE pipeline:', Date.now() - time1, 'ms')
 		param.method = 'wilcoxon'
 	}
