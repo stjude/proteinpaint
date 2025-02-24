@@ -1,68 +1,64 @@
 import type { MassAppApi } from '#mass/types/mass'
 import { Tabs } from '#dom'
-import type {
-	DataPointEntry,
-	DiffAnalysisDom,
-	DiffAnalysisPlotConfig,
-	DiffAnalysisViewData
-} from '../DiffAnalysisTypes'
+import type { DataPointEntry, DiffAnalysisDom } from '../DiffAnalysisTypes'
+import { getPlotConfig } from '#plots/boxplot.js'
 
 /** TODO: finish typing this file */
 export class View {
 	app: MassAppApi
+	config: any
 	dom: DiffAnalysisDom
-	config: DiffAnalysisPlotConfig
-	constructor(app: MassAppApi, config: DiffAnalysisPlotConfig, dom: DiffAnalysisDom, viewData: DiffAnalysisViewData) {
+	viewData: any
+	constructor(app: MassAppApi, config, dom: DiffAnalysisDom) {
 		this.app = app
-		this.config = config
 		this.dom = dom
+		this.config = config
+		this.viewData = []
 
-		this.renderDom(config, dom, viewData)
+		this.renderDom()
 	}
 
-	renderDom(config, dom, viewData) {
+	setViewData(viewData: DataPointEntry[]) {
+		this.viewData = viewData
+	}
+
+	renderDom() {
+		const settings = this.config.settings.differentialAnalysis
 		const tabs = [
 			{
-				active: config.activeTab === 'volcano',
+				active: this.config.childType === 'volcano',
 				id: 'volcano',
 				label: 'Volcano',
-				callback: async tab => {
-					await this.tabCallback(tab)
-					// new VolcanoPlot(app, dom, settings, viewData, interactions)
-				}
+				callback: async tab => await this.tabCallback(tab)
 			},
 			{
-				active: config.activeTab === 'gsea',
+				active: this.config.childType === 'gsea',
 				id: 'gsea',
 				label: 'Gene Set Enrichment Analysis',
-				isVisible: () => config.visiblePlots.includes('gsea'),
-				callback: async tab => {
-					// interactions.launchGSEA(settings)
-					await this.tabCallback(tab)
-				}
+				isVisible: () => settings.visiblePlots.includes('gsea'),
+				callback: async tab => await this.tabCallback(tab)
 			},
 			{
-				active: config.activeTab === 'geneORA',
+				active: this.config.childType === 'geneORA',
 				id: 'geneORA',
 				label: 'Gene Set Overrepresentation Analysis',
-				isVisible: () => config.visiblePlots.includes('geneORA'),
-				callback: async tab => {
-					// const plotConfig = this.getGeneORAConfig(settings.geneORA, settings.foldChangeCutoff, viewData.pointData)
-					// await this.tabCallback(tab, plotConfig)
-				}
+				isVisible: () => settings.visiblePlots.includes('geneORA'),
+				getPlotConfig: () =>
+					this.getGeneORAConfig(settings.geneORA, settings.foldChangeCutoff, this.viewData.pointData),
+				callback: async tab => await this.tabCallback(tab)
 			}
 		]
 
-		new Tabs({ holder: dom.tabs, content: dom.tabsContent, tabs }).main()
+		new Tabs({ holder: this.dom.tabs, content: this.dom.tabsContent, tabs }).main()
 	}
 
-	async tabCallback(tab, plotConfig?) {
+	async tabCallback(tab) {
 		if (!tab || !tab.id) return
-		const config = Object.assign(plotConfig, { activeTab: tab.id })
+		const plotConfig = tab.getPlotConfig()
 		this.app.dispatch({
 			type: 'plot_edit',
 			id: this.config.id,
-			config
+			config: plotConfig
 		})
 	}
 

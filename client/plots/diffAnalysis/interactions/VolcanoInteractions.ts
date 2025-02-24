@@ -3,7 +3,7 @@ import { downloadTable, GeneSetEditUI } from '#dom'
 import { to_svg } from '#src/client'
 import type { DiffAnalysisPlotConfig } from '../DiffAnalysisTypes'
 
-/** TODO: 
+/** TODO:
  * 	- fix/add types
  */
 export class VolcanoInteractions {
@@ -117,44 +117,46 @@ export class VolcanoInteractions {
 		})
 	}
 
-	async launchGSEA(settings) {
-		const gsea_params = {
-			// genes: this.genes,
-			fold_change: settings.foldChangeCutoff,
-			genome: this.app.vocabApi.opts.state.vocab.genome
-		}
-		const config = {
-			chartType: 'gsea',
-			gsea_params,
-		}
-		const opts = {
-			holder: this.dom.tabsContent,
-			state: {
-				vocab: this.app.opts.state.vocab,
-				plots: [config]
-			}
-		}
-		const plotImport = await import('#plots/plot.app.js')
-		const plotAppApi = await plotImport.appInit(opts)
+	// async launchGSEA(settings) {
+	// 	const gsea_params = {
+	// 		// genes: this.genes,
+	// 		fold_change: settings.foldChangeCutoff,
+	// 		genome: this.app.vocabApi.opts.state.vocab.genome
+	// 	}
+	// 	const config = {
+	// 		chartType: 'gsea',
+	// 		gsea_params,
+	// 	}
+	// 	const opts = {
+	// 		holder: this.dom.tabsContent,
+	// 		state: {
+	// 			vocab: this.app.opts.state.vocab,
+	// 			plots: [config]
+	// 		}
+	// 	}
+	// 	const plotImport = await import('#plots/plot.app.js')
+	// 	const plotAppApi = await plotImport.appInit(opts)
 
-	}
+	// }
 
-	pushPlot(plot: string, value?: {[index:string]: any}) {
+	pushPlot(plot: string, value?: { [index: string]: any }) {
 		const plotConfig = this.app.getState().plots.find((p: DiffAnalysisPlotConfig) => p.id === this.id)
 		const visiblePlots = structuredClone(plotConfig.settings.differentialAnalysis.visiblePlots)
 		visiblePlots.push(plot)
 		const config = {
-			activeTab: plot,
+			childType: plot,
 			settings: {
 				differentialAnalysis: {
 					visiblePlots
 				}
 			}
+		} as any
+		//TODO: fix this
+		if (plot == 'geneORA') {
+			config.settings.geneORA = config.settings.geneORA || {}
+			config.settings.geneORA.pathway = value
 		}
-		if (value) {
-			config.settings.differentialAnalysis[plot] = value
-		}
-		
+
 		this.app.dispatch({
 			type: 'plot_edit',
 			id: this.id,
