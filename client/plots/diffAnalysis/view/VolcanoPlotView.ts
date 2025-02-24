@@ -12,7 +12,7 @@ import type {
 } from '../DiffAnalysisTypes'
 import type { VolcanoInteractions } from '../interactions/VolcanoInteractions'
 import { DataPointToolTip } from './DataPointToolTip'
-import { geneORAMenu } from './GeneORAMenu'
+// import { geneORAMenu } from './GeneORAMenu'
 
 export class VolcanoPlotView {
 	type = 'volcano'
@@ -30,16 +30,16 @@ export class VolcanoPlotView {
 		this.dom = dom
 		this.interactions = interactions
 		this.viewData = viewData
-		const actions = this.dom.holder.append('div').attr('id', 'sjpp-diff-analysis-actions').style('display', 'block')
-		const svg = this.dom.holder.append('svg').style('display', 'inline-block').attr('id', 'sjpp-diff-analysis-svg')
+		const actions = this.dom.holder.append('div').attr('id', 'sjpp-volcano-actions').style('display', 'block')
+		const svg = this.dom.holder.append('svg').style('display', 'inline-block').attr('id', 'sjpp-volcano-svg')
 		this.volcanoDom = {
 			actions,
 			svg,
-			xAxis: svg.append('g').attr('id', 'sjpp-diff-analysis-xAxis'),
-			yAxis: svg.append('g').attr('id', 'sjpp-diff-analysis-yAxis'),
-			xAxisLabel: svg.append('text').attr('id', 'sjpp-diff-analysis-xAxisLabel').attr('text-anchor', 'middle'),
-			yAxisLabel: svg.append('text').attr('id', 'sjpp-diff-analysis-yAxisLabel').attr('text-anchor', 'middle'),
-			plot: svg.append('g').attr('id', 'sjpp-diff-analysis-plot')
+			xAxis: svg.append('g').attr('id', 'sjpp-volcano-xAxis'),
+			yAxis: svg.append('g').attr('id', 'sjpp-volcano-yAxis'),
+			xAxisLabel: svg.append('text').attr('id', 'sjpp-volcano-xAxisLabel').attr('text-anchor', 'middle'),
+			yAxisLabel: svg.append('text').attr('id', 'sjpp-volcano-yAxisLabel').attr('text-anchor', 'middle'),
+			plot: svg.append('g').attr('id', 'sjpp-volcano-plot')
 		}
 
 		const plotDim = this.viewData.plotDim
@@ -48,15 +48,15 @@ export class VolcanoPlotView {
 		renderDataPoints(this)
 		this.renderFoldChangeLine(plotDim)
 		this.renderStatsTable()
-		if (settings.showPValueTable) this.renderPValueTable()
+		this.renderPValueTable(settings)
 	}
 
 	renderUserActions(app) {
 		this.volcanoDom.actions.style('margin-left', '20px').style('padding', '5px')
-		if (app.opts.genome.termdbs) {
-			this.addActionButton('Launch gene set enrichment analysis', () => geneORAMenu(this.dom.tip, this.interactions))
-			this.addActionButton('Gene Set Enrichment Analysis', () => this.interactions.pushPlot('gsea'))
-		}
+		// if (app.opts.genome.termdbs) {
+		// 	this.addActionButton('Launch gene set enrichment analysis', () => geneORAMenu(this.dom.tip, this.interactions))
+		// 	this.addActionButton('Gene Set Enrichment Analysis', () => this.interactions.pushPlot('gsea'))
+		// }
 		this.addActionButton('Confounding factors', () => this.interactions.confoundersMenu())
 		this.addActionButton('Genes', () => this.interactions.launchGeneSetEdit())
 	}
@@ -127,6 +127,7 @@ export class VolcanoPlotView {
 		const statsData = this.viewData.statsData
 		const holder = this.dom.holder
 			.append('div')
+			.attr('id', 'sjpp-volcano-stats')
 			.style('display', 'inline-block')
 			.style('vertical-align', 'top')
 			.style('margin-top', '50px')
@@ -138,8 +139,12 @@ export class VolcanoPlotView {
 		}
 	}
 
-	renderPValueTable() {
-		const tableDiv = this.dom.holder.append('div')
+	renderPValueTable(settings) {
+		if (!settings.showPValueTable) {
+			this.dom.holder.selectAll('div[id="sjpp-volcano-pValueTable"]').remove()
+			return
+		}
+		const tableDiv = this.dom.holder.append('div').attr('id', 'sjpp-volcano-pValueTable')
 		renderTable({
 			columns: this.viewData.pValueTableData.columns,
 			rows: this.viewData.pValueTableData.rows,

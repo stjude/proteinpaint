@@ -9,6 +9,10 @@ import { VolcanoViewModel } from './viewModel/VolcanoViewModel'
 import { VolcanoInteractions } from './interactions/VolcanoInteractions'
 import { VolcanoPlotView } from './view/VolcanoPlotView'
 
+/**
+ * TODO:
+ * - remove method from server request -> always 'edgeR'
+ */
 class Volcano extends RxComponentInner {
 	readonly type = 'volcano'
 	components: { controls: any }
@@ -21,7 +25,7 @@ class Volcano extends RxComponentInner {
 			controls: {}
 		}
 		const holder = opts.holder.classed('sjpp-diff-analysis-main', true)
-		const controls = opts.controls ? holder : holder.append('div')
+		const controls = opts.controls || holder.append('div')
 		const error = opts.holder.append('div').attr('id', 'sjpp-diff-analysis-error').style('opacity', 0.75)
 		this.dom = {
 			holder,
@@ -123,6 +127,9 @@ class Volcano extends RxComponentInner {
 		})
 
 		this.components.controls.on('downloadClick.differentialAnalysis', () => this.interactions.download())
+		this.components.controls.on('helpClick.differentialAnalysis', () =>
+			window.open('https://github.com/stjude/proteinpaint/wiki/Differential-analysis')
+		)
 	}
 
 	async init() {
@@ -132,14 +139,15 @@ class Volcano extends RxComponentInner {
 
 	async main() {
 		const config = structuredClone(this.state.config)
+		if (config.chartType != this.type && config.childType != this.type) return
 
 		try {
+			this.interactions.clearDom()
 			const settings = config.settings.volcano
 			/** Fetch data */
 			const model = new VolcanoModel(this.app, config, settings)
 			const response = await model.getData()
 			if (!response || response.error) {
-				this.interactions.clearDom()
 				this.dom.error.text(response.error || 'No data returned from server')
 			}
 

@@ -31,7 +31,7 @@ export type DiffAnalysisDom = {
 		fixed: Elem
 	}
 	/** Toggle volcano and gsea plots */
-	tabs: Elem
+	tabsDiv: Elem
 	tabsContent: Elem
 	/** Shared tooltip */
 	tip: Menu
