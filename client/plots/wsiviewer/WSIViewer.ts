@@ -26,16 +26,10 @@ export default class WSIViewer {
 
 	private thumbnailsContainer: any
 
-	// Field to store sample ID to wsi session ID mapping
-	private readonly wsiSessions: Map<string, string | undefined>
-
 	constructor(opts: any) {
 		this.type = 'WSIViewer'
 		this.opts = opts
 		this.wsiViewerInteractions = new WSIViewerInteractions(this, opts)
-		this.wsiSessions = new Map()
-		// Add event listener for tab/window close
-		window.addEventListener('beforeunload', this.onTabClosed.bind(this))
 	}
 
 	async main(): Promise<void> {
@@ -110,8 +104,6 @@ export default class WSIViewer {
 				return []
 			}
 
-			this.wsiSessions.set(wsimages[i].filename, data.browserImageInstanceId)
-
 			const imgWidth = data.slide_dimensions[0]
 			const imgHeight = data.slide_dimensions[1]
 
@@ -136,16 +128,6 @@ export default class WSIViewer {
 			layers.push(layer)
 		}
 		return layers
-	}
-
-	private onTabClosed() {
-		const hasNonUndefinedValue = Array.from(this.wsiSessions.values()).some(value => value !== undefined)
-		if (hasNonUndefinedValue) {
-			dofetch3('clearwsisession', {
-				method: 'DELETE',
-				body: { sessions: JSON.stringify(Array.from(this.wsiSessions)) }
-			})
-		}
 	}
 
 	private generateThumbnails(layers: Array<TileLayer<Zoomify>>, setting: Settings) {

@@ -1,7 +1,9 @@
 import type { TileRequest /*, TileResponse*/, RouteApi } from '#types'
 import { tilePayload } from '#types/checkers'
 import ky from 'ky'
-import serverconfig from '#src/serverconfig.js'
+import { TileServerShard } from '#src/shardig/TileServerShard.js'
+import { TileServerShardingAlgorithm } from '#src/shardig/TileServerShardingAlgorithm.js'
+import { ShardManager } from '#src/shardig/ShardManager.js'
 
 export const api: RouteApi = {
 	endpoint: `tileserver/layer/slide/:sampleId/zoomify/:TileGroup/:z-:x-:y@1x.jpg`,
@@ -22,7 +24,17 @@ function init() {
 		try {
 			const { sampleId, TileGroup, z, x, y } = req.params satisfies TileRequest
 
-			const url = `${serverconfig.tileServerURL}/tileserver/layer/slide/${sampleId}/zoomify/${TileGroup}/${z}-${x}-${y}@1x.jpg`
+			const shardManager = ShardManager.getInstance()
+			// Pass here WSI image, not sampleId
+			const tileServer: TileServerShard = shardManager.shardingAlgorithmsMap
+				?.get(TileServerShardingAlgorithm.TILE_SERVER_SHARDING_KEY)
+				?.getShard(sampleId)
+
+			if (!tileServer) {
+				throw new Error('No tile server')
+			}
+
+			const url = `${tileServer.url}/tileserver/layer/slide/${sampleId}/zoomify/${TileGroup}/${z}-${x}-${y}@1x.jpg`
 
 			const response = await ky.get(url, { timeout: 120000 })
 
