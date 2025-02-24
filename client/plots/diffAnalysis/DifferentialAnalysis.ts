@@ -15,6 +15,7 @@ class DifferentialAnalysis extends RxComponentInner {
 	components: { controls: any; plots: any }
 	dom: DiffAnalysisDom
 	plots = {}
+	tabs = {}
 
 	constructor(opts: any) {
 		super()
@@ -75,6 +76,8 @@ class DifferentialAnalysis extends RxComponentInner {
 			id: this.id,
 			parent: this.api
 		})
+
+		this.tabs = new View(this.app, config, this.dom)
 	}
 
 	async main() {
@@ -85,12 +88,19 @@ class DifferentialAnalysis extends RxComponentInner {
 			await this.setPlotComponents(config)
 		}
 
+		for (const childType in this.components.plots) {
+			const chart = this.components.plots[childType]
+			if (chart.type != config.childType) {
+				this.plots[chart.type].style('display', 'none')
+			}
+		}
+
+		this.plots[config.childType].style('display', '')
+
 		if (this.dom.header) {
 			const samplelst = config.samplelst.groups
 			this.dom.header.title.text(`${samplelst[0].name} vs ${samplelst[1].name} `)
 		}
-
-		new View(this.app, config, this.dom, this.state.viewData)
 	}
 }
 
@@ -101,12 +111,12 @@ export function getPlotConfig(opts: DiffAnalysisOpts, app: MassAppApi) {
 	const config = {
 		chartType: 'differentialAnalysis',
 		childType: 'volcano',
-		visiblePlots: ['volcano'],
 		highlightedData: opts.highlightedData || [],
 		settings: {
 			controls: {
 				isOpen: false
 			},
+			differentialAnalysis: { visiblePlots: ['volcano'] },
 			volcano: getDefaultVolcanoSettings(opts.overrides)
 		}
 	}

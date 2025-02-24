@@ -2,11 +2,11 @@ import { table2col } from '#dom'
 import { roundValueAuto } from '#shared/roundValue.js'
 import type { Menu } from '#dom'
 import type { SvgCircle } from '../../../types/d3'
+import type { VolcanoInteractions } from '../interactions/VolcanoInteractions'
 import type { DataPointEntry } from '../DiffAnalysisTypes'
-import type { DiffAnalysisInteractions } from '../interactions/DiffAnalysisInteractions'
 
 export class DataPointToolTip {
-	constructor(d: DataPointEntry, circle: SvgCircle, tip: Menu, interactions: DiffAnalysisInteractions) {
+	constructor(d: DataPointEntry, circle: SvgCircle, tip: Menu, interactions: VolcanoInteractions) {
 		circle.on('mouseover', () => {
 			//Show highlight and tooltip on hover
 			circle.attr('fill-opacity', 0.9)

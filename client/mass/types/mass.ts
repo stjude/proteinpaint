@@ -121,6 +121,9 @@ type PlotSettings = {
 	common?: any
 	controls?: any
 	correlationVolcano?: CorrVolcanoSettings
+	DEanalysis?: any
+	geneORA?: any
+	gsea?: any
 	sampleScatter?: any
 	violin?: any
 	volcano?: VolcanoSettings

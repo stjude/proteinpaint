@@ -148,7 +148,6 @@ class Volcano extends RxComponentInner {
 			//Pass table data for downloading
 			this.interactions.pValueTableData = viewModel.viewData.pValueTableData
 			/** Render formatted data */
-			console.log(this.dom)
 			new VolcanoPlotView(this.app, this.dom, settings, viewModel.viewData, this.interactions)
 		} catch (e: any) {
 			if (e instanceof Error) console.error(e.message || e)
@@ -163,7 +162,6 @@ export const componentInit = boxplotInit
 
 export function getDefaultVolcanoSettings(overrides = {}): VolcanoSettings {
 	const defaults: VolcanoSettings = {
-		activeTab: 'volcano',
 		foldChangeCutoff: 0,
 		height: 400,
 		minCount: 10,
