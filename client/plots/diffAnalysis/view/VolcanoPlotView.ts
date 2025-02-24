@@ -2,6 +2,7 @@ import { axisstyle } from '#src/client'
 import { axisBottom, axisLeft } from 'd3-axis'
 import { table2col, renderTable } from '#dom'
 import { select } from 'd3-selection'
+import { rgb } from 'd3-color'
 import type {
 	DataPointEntry,
 	DiffAnalysisPlotDim,
@@ -16,11 +17,13 @@ export class VolcanoPlotView {
 	type = 'volcano'
 	dom: any
 	interactions: VolcanoInteractions
+	settings: VolcanoSettings
 	volcanoDom: VolcanoPlotDom
 	viewData: DiffAnalysisViewData
 	constructor(dom: any, settings: VolcanoSettings, viewData: DiffAnalysisViewData, interactions: VolcanoInteractions) {
 		this.dom = dom
 		this.interactions = interactions
+		this.settings = settings
 		this.viewData = viewData
 		const actions = this.dom.holder.append('div').attr('id', 'sjpp-volcano-actions').style('display', 'block')
 		const svg = this.dom.holder.append('svg').style('display', 'inline-block').attr('id', 'sjpp-volcano-svg')
@@ -40,7 +43,7 @@ export class VolcanoPlotView {
 		renderDataPoints(this)
 		this.renderFoldChangeLine(plotDim)
 		this.renderStatsTable()
-		this.renderPValueTable(settings)
+		this.renderPValueTable()
 	}
 
 	renderUserActions() {
@@ -127,8 +130,8 @@ export class VolcanoPlotView {
 		}
 	}
 
-	renderPValueTable(settings) {
-		if (!settings.showPValueTable) {
+	renderPValueTable() {
+		if (!this.settings.showPValueTable) {
 			this.dom.holder.selectAll('div[id="sjpp-volcano-pValueTable"]').remove()
 			return
 		}
@@ -150,11 +153,12 @@ function renderDataPoints(self) {
 		.data(self.viewData.pointData)
 		.enter()
 		.append('circle')
-		.attr('stroke', (d: DataPointEntry) => d.color)
+		.attr('stroke', (d: DataPointEntry) => rgb(d.color).formatHex())
 		.attr('stroke-opacity', 0.2)
 		.attr('stroke-width', 1)
-		// orange-yellow fill shown on hover
-		.attr('fill', (d: DataPointEntry) => (d.highlighted ? d.color : '#ffa200'))
+		.attr('fill', (d: DataPointEntry) =>
+			d.highlighted ? rgb(d.color).formatHex() : self.settings.defaultHighlightColor
+		)
 		.attr('fill-opacity', (d: DataPointEntry) => (d.highlighted ? 0.9 : 0))
 		.attr('cx', (d: DataPointEntry) => d.x)
 		.attr('cy', (d: DataPointEntry) => d.y)
