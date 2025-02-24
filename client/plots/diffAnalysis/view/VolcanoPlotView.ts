@@ -5,7 +5,6 @@ import { table2col, renderTable } from '#dom'
 import { select } from 'd3-selection'
 import type {
 	DataPointEntry,
-	DiffAnalysisDom,
 	DiffAnalysisPlotDim,
 	VolcanoSettings,
 	DiffAnalysisViewData,
@@ -31,8 +30,8 @@ export class VolcanoPlotView {
 		this.dom = dom
 		this.interactions = interactions
 		this.viewData = viewData
-		const actions = dom.tabsContent.append('div').attr('id', 'sjpp-diff-analysis-actions').style('display', 'block')
-		const svg = dom.tabsContent.append('svg').style('display', 'inline-block').attr('id', 'sjpp-diff-analysis-svg')
+		const actions = this.dom.holder.append('div').attr('id', 'sjpp-diff-analysis-actions').style('display', 'block')
+		const svg = this.dom.holder.append('svg').style('display', 'inline-block').attr('id', 'sjpp-diff-analysis-svg')
 		this.volcanoDom = {
 			actions,
 			svg,
@@ -44,7 +43,7 @@ export class VolcanoPlotView {
 		}
 
 		const plotDim = this.viewData.plotDim
-		this.renderUserActions(app, settings)
+		this.renderUserActions(app)
 		this.renderPlot(plotDim)
 		renderDataPoints(this)
 		this.renderFoldChangeLine(plotDim)
@@ -52,12 +51,10 @@ export class VolcanoPlotView {
 		if (settings.showPValueTable) this.renderPValueTable()
 	}
 
-	renderUserActions(app, settings) {
+	renderUserActions(app) {
 		this.volcanoDom.actions.style('margin-left', '20px').style('padding', '5px')
 		if (app.opts.genome.termdbs) {
-			this.addActionButton('Launch gene set enrichment analysis', () =>
-				geneORAMenu(this.dom.tip, this.interactions)
-			)
+			this.addActionButton('Launch gene set enrichment analysis', () => geneORAMenu(this.dom.tip, this.interactions))
 			this.addActionButton('Gene Set Enrichment Analysis', () => this.interactions.pushPlot('gsea'))
 		}
 		this.addActionButton('Confounding factors', () => this.interactions.confoundersMenu())
@@ -128,7 +125,7 @@ export class VolcanoPlotView {
 
 	renderStatsTable() {
 		const statsData = this.viewData.statsData
-		const holder = this.dom.tabsContent
+		const holder = this.dom.holder
 			.append('div')
 			.style('display', 'inline-block')
 			.style('vertical-align', 'top')
@@ -142,7 +139,7 @@ export class VolcanoPlotView {
 	}
 
 	renderPValueTable() {
-		const tableDiv = this.dom.tabsContent.append('div')
+		const tableDiv = this.dom.holder.append('div')
 		renderTable({
 			columns: this.viewData.pValueTableData.columns,
 			rows: this.viewData.pValueTableData.rows,

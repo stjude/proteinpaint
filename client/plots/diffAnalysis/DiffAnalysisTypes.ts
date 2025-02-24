@@ -97,7 +97,6 @@ export type VolcanoPlotDom = {
 
 /** Settings for the differential analysis volcano */
 export type VolcanoSettings = {
-	activeTab: string
 	/** largest absolute fold change to be considered in the analysis */
 	foldChangeCutoff: number
 	/** smallest number of reads required for a gene to be considered in the analysis */
