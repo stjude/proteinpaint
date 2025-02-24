@@ -75,25 +75,19 @@ async function getSessionId(cookieJar, getCookieString, setCookie, wsimage, ds, 
 		?.get(TileServerShardingAlgorithm.TILE_SERVER_SHARDING_KEY)
 		?.getShard(wsimage)
 
-	if (!tileServer) {
-		throw new Error('No tile server found')
-	}
+	if (!tileServer) throw new Error('No tile server found')
 
 	const redis: RedisShard = shardManager.shardingAlgorithmsMap
 		?.get(RedisShardingAlgorithm.REDIS_SHARDING_KEY)
 		?.getShard(wsimage)
 
-	if (!redis) {
-		throw new Error('No redis found')
-	}
+	if (!redis) throw new Error('No redis found')
 
 	const sessionManager = SessionManager.getInstance(redis.url)
 
 	const sessionData = await sessionManager.getSession(wsimage)
 
-	if (sessionData) {
-		return sessionData.imageSessionId
-	}
+	if (sessionData) return sessionData.imageSessionId
 
 	await ky.get(`${tileServer.url}/tileserver/session_id`, {
 		timeout: 50000,
@@ -120,17 +114,9 @@ async function getSessionId(cookieJar, getCookieString, setCookie, wsimage, ds, 
 		hooks: getHooks(cookieJar, getCookieString, setCookie)
 	})
 
-	return sessionId
-}
+	await sessionManager.setSession(wsimage, sessionId)
 
-async function manageUserSession(sessionManager, sessionData, wsimage, userId, sessionId) {
-	if (!sessionData) {
-		await sessionManager.setSession(wsimage, new SessionData(sessionId, [userId]))
-	} else if (!sessionData.userSessionIds || !sessionData.userSessionIds.includes(userId)) {
-		sessionData.userSessionIds = sessionData.userSessionIds || []
-		sessionData.userSessionIds.push(userId)
-		await sessionManager.setSession(wsimage, sessionData)
-	}
+	return sessionId
 }
 
 async function getWsiImageDimensions(sessionId, getCookieString, wsimage) {

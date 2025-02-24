@@ -10,6 +10,7 @@ export default class RedisClientHolder {
 	}
 
 	private constructor(redisUrl: string) {
+		// TODO add the secret to client config
 		this.client = createClient({
 			url: redisUrl
 		})
