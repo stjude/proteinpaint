@@ -20,6 +20,37 @@ import fs from 'fs'
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 
+// Helpers
+// Simple function to round numbers in our objects
+/*function roundNumbers(obj, decimals = 10) {
+	// Handle arrays
+	if (Array.isArray(obj)) {
+		return obj.map(item => roundNumbers(item, decimals))
+	}
+
+	// Handle objects
+	if (obj && typeof obj === 'object') {
+		const result = {}
+		for (const key in obj) {
+			result[key] = roundNumbers(obj[key], decimals)
+		}
+		return result
+	}
+
+	// Round numbers (both actual numbers and number strings)
+	if (typeof obj === 'number') {
+		return Number(obj.toFixed(decimals))
+	}
+
+	// Handle numeric strings but preserve 'NA' strings
+	if (typeof obj === 'string' && obj !== 'NA' && !isNaN(parseFloat(obj))) {
+		return String(Number(parseFloat(obj).toFixed(decimals)))
+	}
+
+	// Return everything else unchanged
+	return obj
+}*/
+
 /** 
 // fisher.2x3.R tests
 tape('fisher.2x3.R', async function (test) {
@@ -166,7 +197,7 @@ tape('km.R', async function (test) {
  * 2. Runs the R script with this input data
  * 3. Compares the output with the expected results after normalizing precision
  */
-tape('survival.R', async function (test) {
+tape.only('survival.R', async function (test) {
 	test.timeoutAfter(5000)
 	test.plan(1)
 
@@ -187,43 +218,26 @@ tape('survival.R', async function (test) {
 	let out = JSON.parse(Rout)
 	let exp = JSON.parse(expJson)
 
-	// Simple function to round numbers in our objects
-	function roundNumbers(obj, decimals = 10) {
-		// Handle arrays
-		if (Array.isArray(obj)) {
-			return obj.map(item => roundNumbers(item, decimals))
-		}
-
-		// Handle objects
-		if (obj && typeof obj === 'object') {
-			const result = {}
-			for (const key in obj) {
-				result[key] = roundNumbers(obj[key], decimals)
-			}
-			return result
-		}
-
-		// Round numbers (both actual numbers and number strings)
-		if (typeof obj === 'number') {
-			return Number(obj.toFixed(decimals))
-		}
-
-		// Handle numeric strings but preserve 'NA' strings
-		if (typeof obj === 'string' && obj !== 'NA' && !isNaN(parseFloat(obj))) {
-			return String(Number(parseFloat(obj).toFixed(decimals)))
-		}
-
-		// Return everything else unchanged
-		return obj
-	}
-
 	// Round values to avoid precision issues
-	out = roundNumbers(out)
-	exp = roundNumbers(exp)
+	out = roundEstimates(out)
+	exp = roundEstimates(exp)
 
 	// Test if they match
 	test.deepEqual(out, exp, 'survival analysis results should match expected output')
 	test.end()
+
+	// Function to round estimate values to fixed number of digits
+	function roundEstimates(data, digits = 10) {
+		if (!data.estimates) throw 'estimates missing'
+		const estimates = data.estimates.map(x => {
+			x.surv = Number.isFinite(x.surv) ? Number(x.surv.toFixed(digits)) : x.surv
+			x.upper = Number.isFinite(x.upper) ? Number(x.upper.toFixed(digits)) : x.upper
+			x.lower = Number.isFinite(x.lower) ? Number(x.lower.toFixed(digits)) : x.lower
+			return x
+		})
+		data.estimates = estimates
+		return data
+	}
 })
 /**
 // cuminc.R tests
