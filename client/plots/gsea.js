@@ -1,12 +1,9 @@
 import * as d3axis from 'd3-axis'
-import { axisstyle } from '#dom/axisstyle'
-import { renderTable } from '../dom/table'
-import { table2col } from '#dom/table2col'
+import { axisstyle, Menu, renderTable, table2col } from '#dom'
 import { dofetch3 } from '#common/dofetch'
 import { controlsInit } from './controls'
 import { getCompInit, copyMerge } from '#rx'
-import { Menu } from '../dom/menu'
-import { scaleLog, scaleLinear } from 'd3-scale'
+import { scaleLinear } from 'd3-scale'
 import { roundValueAuto } from '#shared/roundValue.js'
 
 const tip = new Menu()
