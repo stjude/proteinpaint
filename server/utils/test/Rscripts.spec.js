@@ -77,14 +77,11 @@ tape('hwe.R', async function (test) {
 	const inputString = validInput.join('\n')
 	const output = await run_R(path.join(__dirname, '../hwe.R'), inputString)
 
-	// Split the output string into an array of strings, one per line and trim any empty lines
-	const outputArray = output.split('\n').filter(line => line.trim() !== '')
-
-	// Convert each string to a number
-	const numericOutput = outputArray.map(Number)
+	// Split the output string into an array of strings, then convert to numbers
+	const outputArray = output.split('\n').map(Number)
 
 	// Compare calculated p-values with expected results
-	test.deepEqual(numericOutput, [0.515367, 0.000006269428, 1.385241e-24, 0.07429809], 'should match expected output')
+	test.deepEqual(outputArray, [0.515367, 0.000006269428, 1.385241e-24, 0.07429809], 'should match expected output')
 	test.end()
 })
 
