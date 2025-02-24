@@ -7,7 +7,11 @@ import { promisify } from 'util'
 import type { WSImagesRequest, WSImagesResponse, RouteApi } from '#types'
 import { wsImagesPayload } from '#types/checkers'
 import SessionManager, { SessionData } from '../src/wsisessions/SessionManager.ts'
-import crypto from 'crypto'
+import { ShardManager } from '#src/shardig/ShardManager.js'
+import { TileServerShardingAlgorithm } from '#src/shardig/TileServerShardingAlgorithm.js'
+import { RedisShardingAlgorithm } from '#src/shardig/RedisShardingAlgorithm.js'
+import { RedisShard } from '#src/shardig/RedisShard.js'
+import { TileServerShard } from '#src/shardig/TileServerShard.js'
 
 const routePath = 'wsimages'
 export const api: RouteApi = {
@@ -40,27 +44,11 @@ function init({ genomes }) {
 			const cookieJar = new CookieJar()
 			const setCookie = promisify(cookieJar.setCookie.bind(cookieJar))
 			const getCookieString = promisify(cookieJar.getCookieString.bind(cookieJar))
-			let sessionManager
-			let sessionData
-			let userSessionId: string | undefined = undefined
+			const userSessionId: string | undefined = undefined
 
-			if (serverconfig.redis) {
-				sessionManager = SessionManager.getInstance(serverconfig.redis.url)
+			const sessionId = await getSessionId(cookieJar, getCookieString, setCookie, wsimage, ds, sampleId)
 
-				userSessionId = crypto.createHash('sha256').update(crypto.randomBytes(32).toString('hex')).digest('hex')
-
-				sessionData = await sessionManager.getSession(wsimage)
-			}
-
-			const sessionId = sessionData
-				? sessionData.imageSessionId
-				: await getSessionId(cookieJar, getCookieString, setCookie, wsimage, ds, sampleId)
-
-			if (serverconfig.redis && sessionManager) {
-				await manageUserSession(sessionManager, sessionData, wsimage, userSessionId, sessionId)
-			}
-
-			const getWsiImageResponse: any = await getWsiImageDimensions(sessionId, getCookieString)
+			const getWsiImageResponse: any = await getWsiImageDimensions(sessionId, getCookieString, wsimage)
 
 			const payload: WSImagesResponse = {
 				status: 'ok',
@@ -81,22 +69,48 @@ function init({ genomes }) {
 }
 
 async function getSessionId(cookieJar, getCookieString, setCookie, wsimage, ds, sampleId) {
-	await ky.get(`${serverconfig.tileServerURL}/tileserver/session_id`, {
+	const shardManager = ShardManager.getInstance()
+
+	const tileServer: TileServerShard = shardManager.shardingAlgorithmsMap
+		?.get(TileServerShardingAlgorithm.TILE_SERVER_SHARDING_KEY)
+		?.getShard(wsimage)
+
+	if (!tileServer) {
+		throw new Error('No tile server found')
+	}
+
+	const redis: RedisShard = shardManager.shardingAlgorithmsMap
+		?.get(RedisShardingAlgorithm.REDIS_SHARDING_KEY)
+		?.getShard(wsimage)
+
+	if (!redis) {
+		throw new Error('No redis found')
+	}
+
+	const sessionManager = SessionManager.getInstance(redis.url)
+
+	const sessionData = await sessionManager.getSession(wsimage)
+
+	if (sessionData) {
+		return sessionData.imageSessionId
+	}
+
+	await ky.get(`${tileServer.url}/tileserver/session_id`, {
 		timeout: 50000,
 		hooks: getHooks(cookieJar, getCookieString, setCookie)
 	})
 
-	const cookieString = await getCookieString(`${serverconfig.tileServerURL}/tileserver/session_id`)
+	const cookieString = await getCookieString(`${tileServer.url}/tileserver/session_id`)
 	const sessionId = cookieString.match(/session_id=([^;]*)/)?.[1]
 	if (!sessionId) throw new Error('session_id not found')
 
 	const sampleWsiTileServer = path.join(
-		`${serverconfig.tileServerMount}/${ds.queries.WSImages.imageBySampleFolder}/${sampleId}`,
+		`${tileServer.mount}/${ds.queries.WSImages.imageBySampleFolder}/${sampleId}`,
 		wsimage
 	)
 	const data = qs.stringify({ slide_path: sampleWsiTileServer })
 
-	await ky.put(`${serverconfig.tileServerURL}/tileserver/slide`, {
+	await ky.put(`${tileServer.url}/tileserver/slide`, {
 		body: data,
 		timeout: 50000,
 		headers: {
@@ -119,9 +133,19 @@ async function manageUserSession(sessionManager, sessionData, wsimage, userId, s
 	}
 }
 
-async function getWsiImageDimensions(sessionId, getCookieString) {
+async function getWsiImageDimensions(sessionId, getCookieString, wsimage) {
+	const shardManager = ShardManager.getInstance()
+
+	const tileServer: TileServerShard = shardManager.shardingAlgorithmsMap
+		?.get(TileServerShardingAlgorithm.TILE_SERVER_SHARDING_KEY)
+		?.getShard(wsimage)
+
+	if (!tileServer) {
+		throw new Error('No tile server')
+	}
+
 	return await ky
-		.get(`${serverconfig.tileServerURL}/tileserver/slide`, {
+		.get(`${tileServer.url}/tileserver/slide`, {
 			timeout: 120000,
 			hooks: {
 				beforeRequest: [
