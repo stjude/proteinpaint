@@ -22,6 +22,7 @@ export const api: RouteApi = {
 function init() {
 	return async (req: any, res: any): Promise<void> => {
 		try {
+			// TODO fix this, or remove this endpoint?
 			if (serverconfig.redis) {
 				const sessionsString = req.query.sessions
 				const sessionsArray = JSON.parse(sessionsString)
@@ -33,24 +34,8 @@ function init() {
 				for (const [key, value] of sessions.entries()) {
 					const sessionData = await sessionManager.getSession(key)
 					if (sessionData) {
-						const userSessionIds = sessionData.userSessionIds
-						// Validate that at least one of the `userSessionIds` is equal to `value`
-						if (!userSessionIds.some((sessionId: string) => sessionId === value)) {
-							break
-						}
-
-						// Filter out the `value` from the `userSessionIds`
-						const newSessions = userSessionIds.filter((sessionId: string) => sessionId !== value)
-						if (newSessions.length === 0) {
-							await ky.put(`${serverconfig.tileServerURL}/tileserver/reset/${sessionData.imageSessionId}`)
-							await sessionManager.deleteSession(key)
-						} else {
-							// Update the sessionData with the filtered sessions
-							sessionData.userSessionIds = newSessions
-
-							// Persist the updated session data
-							await sessionManager.setSession(key, sessionData)
-						}
+						await ky.put(`${serverconfig.tileServerURL}/tileserver/reset/${sessionData.imageSessionId}`)
+						await sessionManager.deleteSession(key)
 					}
 				}
 
