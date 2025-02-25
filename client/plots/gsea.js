@@ -9,21 +9,14 @@ import { roundValueAuto } from '#shared/roundValue.js'
 const tip = new Menu()
 
 class gsea {
-	constructor() {
+	constructor(opts) {
 		this.type = 'gsea'
-		/** TODO: this.components and this.dom needs to be in the constructor for the
-		 * plot to access the opts sent from the parent. For now the controls will appear
-		 * wonky in the differential analysis plot as opts.controls are not accessible.
-		 */
-		// this.components = {
-		// 	controls: {}
-		// }
-		// this.dom = {}
-	}
-	async init(opts) {
-		const config = opts.plots.find(p => p.id === this.id)
-		const controlsDiv = opts.controls || this.opts.holder.append('div').style('display', 'inline-block')
-		const mainDiv = this.opts.holder.append('div').style('display', 'inline-block').style('margin-left', '50px')
+		this.opts = opts
+		this.components = {
+			controls: {}
+		}
+		const controlsDiv = opts.controls || opts.holder.append('div').style('display', 'inline-block')
+		const mainDiv = opts.holder.append('div').style('display', 'inline-block').style('margin-left', '50px')
 		const holder = mainDiv.append('div').style('display', 'inline-block')
 		const detailsDiv = mainDiv
 			.append('div')
@@ -31,15 +24,19 @@ class gsea {
 			.style('vertical-align', 'top')
 			.style('margin-top', '50px')
 
-		const tableDiv = this.opts.holder.append('div').style('margin', '30px 0px')
+		const tableDiv = opts.holder.append('div').style('margin', '30px 0px')
 
 		this.dom = {
 			holder,
-			header: this.opts.header,
+			header: opts.header,
 			controlsDiv,
 			detailsDiv,
 			tableDiv
 		}
+	}
+
+	async init(opts) {
+		const config = opts.plots.find(p => p.id === this.id)
 	}
 
 	async setControls() {
@@ -151,14 +148,12 @@ class gsea {
 		}
 		inputs.push(geneSet)
 
-		this.components = {
-			controls: await controlsInit({
-				app: this.app,
-				id: this.id,
-				holder: this.dom.controlsDiv,
-				inputs: inputs
-			})
-		}
+		this.components.controls = await controlsInit({
+			app: this.app,
+			id: this.id,
+			holder: this.dom.controlsDiv,
+			inputs: inputs
+		})
 
 		this.components.controls.on('downloadClick.gsea', () => {
 			if (!this.imageUrl) return alert('No image to download')

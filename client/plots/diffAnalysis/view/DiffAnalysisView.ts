@@ -28,7 +28,7 @@ export class DiffAnalysisView {
 }
 
 function setRenderers(self) {
-	self.getTabsOptions = (self) =>{
+	self.getTabsOptions = self => {
 		const tabs = [
 			{
 				active: self.config.childType === 'volcano',
@@ -36,7 +36,7 @@ function setRenderers(self) {
 				label: 'Volcano',
 				getPlotConfig: () => {
 					return {
-						childType: 'volcano',
+						childType: 'volcano'
 					}
 				},
 				callback: self.tabCallback
@@ -48,6 +48,11 @@ function setRenderers(self) {
 				getPlotConfig: () => {
 					return {
 						childType: 'gsea',
+						settings: {
+							controls: {
+								isOpen: true
+							}
+						}
 					}
 				},
 				callback: self.tabCallback
@@ -65,6 +70,5 @@ function setRenderers(self) {
 			id: self.config.id,
 			config: plotConfig
 		})
-	
 	}
 }
