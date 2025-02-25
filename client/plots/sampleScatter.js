@@ -623,9 +623,7 @@ export async function getPlotConfig(opts, app) {
 			const p = app.vocabApi?.termdbConfig?.scatterplots?.find(i => i.name == opts.name)
 			if (p) defaultConfig = p
 		}
-		if (defaultConfig.colorTW && opts.colorTW) delete defaultConfig.colorTW //priority to opts.colorTW
-		if (defaultConfig.shapeTW && opts.shapeTW) delete defaultConfig.shapeTW //priority to opts.shapeTW
-		copyMerge(plot, opts, defaultConfig)
+		copyMerge(plot, defaultConfig, opts)
 
 		if (plot.colorTW) await fillTermWrapper(plot.colorTW, app.vocabApi)
 		if (plot.shapeTW) await fillTermWrapper(plot.shapeTW, app.vocabApi)
