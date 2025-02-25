@@ -107,7 +107,7 @@ export default class WSIViewer {
 			const imgWidth = data.slide_dimensions[0]
 			const imgHeight = data.slide_dimensions[1]
 
-			const zoomifyUrl = `/tileserver/layer/slide/${data.wsiSessionId}/zoomify/{TileGroup}/{z}-{x}-{y}@1x.jpg`
+			const zoomifyUrl = `/tileserver/layer/slide/${data.wsiSessionId}/zoomify/{TileGroup}/{z}-{x}-{y}@1x.jpg?wsi_image=${wsimages[i].filename}`
 
 			const source = new Zoomify({
 				url: zoomifyUrl,
@@ -117,7 +117,7 @@ export default class WSIViewer {
 			})
 
 			const options = {
-				preview: `/tileserver/layer/slide/${data.wsiSessionId}/zoomify/TileGroup0/0-0-0@1x.jpg`,
+				preview: `/tileserver/layer/slide/${data.wsiSessionId}/zoomify/TileGroup0/0-0-0@1x.jpg?wsi_image=${wsimages[i].filename}`,
 				metadata: wsimages[i].metadata,
 				source: source,
 				baseLayer: true

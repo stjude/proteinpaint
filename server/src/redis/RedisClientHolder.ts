@@ -45,6 +45,10 @@ export default class RedisClientHolder {
 		return this.client.get(key)
 	}
 
+	public async getAll(): Promise<string[]> {
+		return this.client.keys('*')
+	}
+
 	public async delete(key: string): Promise<number> {
 		return this.client.del(key)
 	}

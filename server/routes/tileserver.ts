@@ -24,11 +24,14 @@ function init() {
 		try {
 			const { sampleId, TileGroup, z, x, y } = req.params satisfies TileRequest
 
+			const wsiImage = req.query.wsi_image
+
+			if (!wsiImage) throw new Error('Invalid wsi_image')
+
 			const shardManager = ShardManager.getInstance()
-			// Pass here WSI image, not sampleId
 			const tileServer: TileServerShard = shardManager.shardingAlgorithmsMap
 				?.get(TileServerShardingAlgorithm.TILE_SERVER_SHARDING_KEY)
-				?.getShard(sampleId)
+				?.getShard(wsiImage)
 
 			if (!tileServer) {
 				throw new Error('No tile server')
