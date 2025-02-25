@@ -196,6 +196,16 @@ class ViolinPlot {
 				debounceInterval: 1000
 			},
 			{
+				label: 'Plot padding',
+				type: 'number',
+				chartType: 'violin',
+				settingsKey: 'rowSpace',
+				step: 1,
+				max: 20,
+				min: 0,
+				debounceInterval: 1000
+			},
+			{
 				label: 'Median length',
 				title: 'Length of median',
 				type: 'number',
