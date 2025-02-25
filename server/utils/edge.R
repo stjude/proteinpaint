@@ -206,4 +206,4 @@ filter_genes_by_group_variance <- function(read_counts, gene_id_symbols, num_var
 }
 
 # Output results
-cat(paste0("output_string:",toJSON(output)))
+cat(paste0("output_string:",toJSON(output),"\n"))

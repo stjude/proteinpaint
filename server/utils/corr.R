@@ -37,4 +37,4 @@ names(output)[4] <- "adjusted_p_value"
 names(output)[5] <- "sample_size"
 
 # Output results
-cat(paste0("output_string:",toJSON(output)))
+cat(paste0("output_string:",toJSON(output),"\n"))
