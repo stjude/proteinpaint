@@ -388,8 +388,8 @@ export function getDefaultViolinSettings(app, overrides = {}) {
 		rightMargin: 50,
 		lines: [],
 		unit: 'abs', // abs: absolute scale, log: log scale
-		rowSpace: 5,
-		plotThickness: 150,
+		rowSpace: 10,
+		plotThickness: 130,
 		medianLength: 7,
 		medianThickness: 3,
 		ticks: 20,
