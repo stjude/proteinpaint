@@ -43,4 +43,51 @@ export default class SessionManager {
 	public async deleteSession(key: string): Promise<void> {
 		await this.redisClient.delete(key)
 	}
+
+	// TODO invalidateSessions should tested more
+	//  maxIdleTime - time in minutes
+	public async invalidateSessions(maxSessions: number, maxIdleTime: number): Promise<void> {
+		const keys = await this.redisClient.getAll()
+		const keySessions: { key: string; sessionData: SessionData | undefined }[] = await Promise.all(
+			keys.map(async key => ({
+				key,
+				sessionData: await this.getSession(key)
+			}))
+		)
+
+		// Get current time for comparison
+		const now = new Date().getTime()
+
+		// Filter out sessions that have not been accessed within the 'maxIdleTime' minutes
+		const idleSessions = keySessions.filter(({ sessionData }) => {
+			if (sessionData) {
+				const lastAccessed = new Date(sessionData.lastAccessTimestamp).getTime()
+				return now - lastAccessed > maxIdleTime * 60000
+			}
+			return false
+		})
+
+		// Check if total number of sessions exceeds the limit 'maxSessions'
+		if (keySessions.length >= maxSessions) {
+			// Sort sessions by their last access time to identify the least recently used
+			const sortedByLRU = keySessions.sort((a, b) => {
+				if (a.sessionData && b.sessionData) {
+					return (
+						new Date(a.sessionData.lastAccessTimestamp).getTime() -
+						new Date(b.sessionData.lastAccessTimestamp).getTime()
+					)
+				}
+				return 0
+			})
+
+			// Determine which sessions to delete based on being beyond the 'maxSessions' limit
+			const sessionsToDelete = sortedByLRU.slice(0, sortedByLRU.length - maxSessions)
+
+			// Combine idle sessions and LRU sessions that need to be deleted
+			const allSessionsToDelete = [...new Set([...idleSessions, ...sessionsToDelete])]
+
+			// Delete all sessions that are either idle or are the least recently used beyond the limit
+			await Promise.all(allSessionsToDelete.map(({ key }) => this.deleteSession(key)))
+		}
+	}
 }
