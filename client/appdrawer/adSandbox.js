@@ -465,27 +465,25 @@ async function addArrowBtns(args, type, bdiv, rdiv, pageArgs) {
 // ******* App Drawer Specific Helper Functions *********
 
 function showURLLaunch(urlparam, div, section) {
-	if (urlparam) {
-		const URLbtn = utils.makeButton({ div, text: section == 'apps' ? 'Run app from URL' : 'Run track from URL' })
-		URLbtn.on('click', event => {
-			const hostURL = getHostURL()
-			event.stopPropagation()
-			window.open(`${hostURL}${urlparam}`, '_blank')
-		})
-	}
+	if (!urlparam) return
+	const URLbtn = utils.makeButton({ div, text: section == 'apps' ? 'Run app from URL' : 'Run track from URL' })
+	URLbtn.on('click', event => {
+		const hostURL = getHostURL()
+		event.stopPropagation()
+		window.open(`${hostURL}${urlparam}`, '_blank')
+	})
 }
 
 function makeDataDownload(download, div, section) {
-	if (download) {
-		const dataBtn = utils.makeButton({
-			div,
-			text: section == 'apps' ? 'Download App File(s)' : 'Download Track File(s)'
-		})
-		dataBtn.on('click', event => {
-			event.stopPropagation()
-			window.open(`${download}`, '_self', 'download')
-		})
-	}
+	if (!download) return
+	const dataBtn = utils.makeButton({
+		div,
+		text: section == 'apps' ? 'Download App File(s)' : 'Download Track File(s)'
+	})
+	dataBtn.on('click', event => {
+		event.stopPropagation()
+		window.open(`${download}`, '_self', 'download')
+	})
 }
 
 async function showCode(ppcalls, btns) {
