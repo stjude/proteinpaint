@@ -616,7 +616,7 @@ class singleCellPlot {
 				plots: [
 					{
 						chartType: 'violin',
-						settings: { violin: { plotThickness: 50 } },
+						settings: { violin: { plotThickness: 90 } },
 						term: {
 							$id: await digestMessage(`${gene}-${this.state.config.sample}-${this.state.config.experimentID}`),
 							term: {
