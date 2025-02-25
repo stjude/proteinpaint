@@ -58,13 +58,13 @@ export default function setViolinRenderer(self) {
 		const svgData = renderSvg(t1, self, isH, settings)
 		renderScale(t1, t2, settings, isH, svgData, self)
 		let y = self.settings.rowSpace
+		const thickness = self.settings.plotThickness || self.getAutoThickness()
 		for (const [plotIdx, plot] of self.data.plots.entries()) {
-			const plotThickness = self.settings.plotThickness
 			// The scale uses half of the plotThickness as the maximum value as the image is symmetrical
 			// Only one half of the image is computed and the other half is mirrored
 			const wScale = scaleLinear()
 				.domain([plot.density.densityMax, plot.density.densityMin])
-				.range([plotThickness / 2, 0])
+				.range([thickness / 2, 0])
 			let areaBuilder
 			//when doing this interpolation, the violin plot will be smoother and some padding may be added
 			//between the plot and the axis
@@ -109,9 +109,15 @@ export default function setViolinRenderer(self) {
 			td2.style('text-align', 'center').text(stat.value ?? 0)
 		}
 	}
+	self.getAutoThickness = function () {
+		if (self.data.plots.length === 1) return 150
+		const count = self.data.plots.length
+		return Math.min(130, Math.max(60, 600 / count)) //clamp between 60 and 130
+	}
 
 	self.getPlotThicknessWithPadding = function () {
-		return self.settings.plotThickness + self.settings.rowSpace
+		const plotThickness = self.settings.plotThickness || self.getAutoThickness()
+		return plotThickness + self.settings.rowSpace
 	}
 
 	self.renderPvalueTable = function () {
