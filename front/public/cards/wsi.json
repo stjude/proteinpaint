@@ -3,7 +3,6 @@
     "ppcalls": [
         {
             "runargs": {
-                "noheader": true,
                 "mass": {
                     "state": {
                         "dslabel": "TermdbTest",
