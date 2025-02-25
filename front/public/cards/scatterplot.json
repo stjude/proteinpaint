@@ -5,7 +5,6 @@
             "label": "Tumor Methylome tSNE",
             "message": "<ul style='line-height:1.5;'><li><strong>Change the plot configuration</strong>: click on the burger button (three stacked lines) in the top left of the plot. The menu provides options to change the term, dot sizes, etc.</li><li><strong>Create groups</strong>: click on the paint brush, lasso the samples of interest, and use the pop-up menu for next steps.</li><li>Open other plots and analysis tools by clicking on the grey buttons above the scatter plot.</li></ul> ",
             "runargs": {
-                "noheader": true,
                 "mass": {
                     "state": {
                         "vocab": {
@@ -39,7 +38,6 @@
             "label": "Age and Heart",
             "runargs": {
                 "host": "https://survivorship.proteinpaint.stjude.org/",
-                "noheader": true,
                 "mass": {
                     "state": {
                         "vocab": {
@@ -87,7 +85,6 @@
             "label": "3D PCA",
             "runargs": {
                 "host": "https://survivorship.proteinpaint.stjude.org/",
-                "noheader": true,
                 "mass": {
                     "state": {
                         "dslabel": "SJLife",
@@ -126,7 +123,6 @@
         {
             "label": "GDC Gene Expression",
             "runargs": {
-                "noheader": true,
                 "mass": {
                     "state": {
                         "vocab": {
