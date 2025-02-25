@@ -906,7 +906,7 @@ export function setRenderers(self) {
 
 					// Initialize the color scale with current settings
 					colorScale.updateScale()
-					offsetY += step
+					offsetY += step * 2
 				} else {
 					for (const [key, category] of chart.colorLegend) {
 						if (key == 'Ref') continue
