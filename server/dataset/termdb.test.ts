@@ -162,7 +162,7 @@ export default {
 		snvindel: {
 			forTrack: true,
 			byrange: {
-				bcffile: 'files/hg38/TermdbTest/TermdbTest.bcf.gz'
+				bcffile: 'files/hg38/TermdbTest/TermdbTest2.bcf.gz'
 			},
 			skewerRim: {
 				type: 'format',
@@ -173,13 +173,13 @@ export default {
 		},
 		svfusion: {
 			byrange: {
-				file: 'files/hg38/TermdbTest/TermdbTest_Fusion.gz'
+				file: 'files/hg38/TermdbTest/TermdbTest_Fusion2.gz'
 			}
 		},
 		cnv: {
 			byrange: {
 				src: 'native',
-				file: 'files/hg38/TermdbTest/TermdbTest_CNV_gene.gz'
+				file: 'files/hg38/TermdbTest/TermdbTest_CNV2_gene.gz'
 			}
 		},
 		/*
@@ -191,7 +191,7 @@ export default {
 		singleSampleMutation: {
 			src: 'native',
 			sample_id_key: 'sample_id',
-			folder: 'files/hg38/TermdbTest/mutationpersample/'
+			folder: 'files/hg38/TermdbTest/mutationpersample2/'
 		},
 		singleSampleGenomeQuantification: {
 			// to show genome-wide quantification plot for a sample
