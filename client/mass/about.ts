@@ -243,7 +243,7 @@ export class MassAbout {
 				.append('div')
 				.style('margin-left', '10px')
 				.style('padding-top', '20px')
-				.style('padding-bottom', '20px')
+				.style('padding-bottom', '30px')
 				.style('font-size', 'small')
 				.text(this.selectCohort.asterisk)
 		}
@@ -347,7 +347,9 @@ export class MassAbout {
 	}
 
 	showServerInfo = () => {
-		if (!this.app.opts.pkgver && !this.app.opts.launchDate) return
+		const state = this.app.getState()
+		const dataRelease = state.termdbConfig.massNav?.tabs?.about?.dataRelease
+		if (!dataRelease && !this.app.opts.pkgver && !this.app.opts.launchDate) return
 		const div = this.subheader
 			.append('div')
 			.attr('data-testid', 'sjpp-about-server-info')
@@ -355,12 +357,24 @@ export class MassAbout {
 			.style('padding-bottom', '5px')
 			.style('font-size', '.8em')
 
+		if (dataRelease) {
+			div
+				.append('div')
+				.attr('data-testid', 'sjpp-about-data-release')
+				.style('display', 'inline-block')
+				.text('Data Release: ')
+				.append('a')
+				.property('href', dataRelease.link)
+				.property('target', '_blank')
+				.text(dataRelease.version)
+		}
+
 		if (this.app.opts.pkgver) {
 			div
 				.append('div')
-				.attr('data-testid', 'sjpp-about-release')
+				.attr('data-testid', 'sjpp-about-software-release')
 				.style('display', 'inline-block')
-				.text('Release version: ')
+				.text(`${dataRelease ? '; ' : ''}Software Release: `)
 				.append('a')
 				.property('href', 'https://github.com/stjude/proteinpaint/pkgs/container/ppfull')
 				.property('target', `${this.app.opts.pkgver}`)
@@ -372,7 +386,7 @@ export class MassAbout {
 				.append('div')
 				.attr('data-testid', 'sjpp-about-server')
 				.style('display', 'inline-block')
-				.text(`${this.app.opts.pkgver ? ', ' : ''}server launched: ${this.app.opts.launchDate}`)
+				.text(`${this.app.opts.pkgver ? '; ' : ''}Server Launched: ${this.app.opts.launchDate}`)
 		}
 	}
 }

@@ -1379,6 +1379,7 @@ type MassNav = {
 			 * maybe used for other tabs as well.
 			 */
 			html?: string
+			dataRelease?: DataRelease
 			/** "active" items, shown as clickable buttons in about tab. click an item to launch a plot */
 			activeItems?: {
 				items: ActiveItem[]
@@ -1390,6 +1391,13 @@ type MassNav = {
 	activeColor?: string
 	/** customize background color of active navigation tab on hover */
 	activeColorHover?: string
+}
+
+type DataRelease = {
+	/** data release version */
+	version: string
+	/** link to data release page */
+	link: string
 }
 
 type ActiveItem = {
