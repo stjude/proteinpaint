@@ -186,12 +186,12 @@ class ViolinPlot {
 			},
 			{
 				label: 'Plot thickness',
-				title: 'Thickness of plots, can be between 40 and 200',
+				title: 'If not specified, the plot thickness is calculated based on the number of categories',
 				type: 'number',
 				chartType: 'violin',
 				settingsKey: 'plotThickness',
 				step: 10,
-				max: 500,
+				max: 200,
 				min: 40,
 				debounceInterval: 1000
 			},
@@ -389,7 +389,6 @@ export function getDefaultViolinSettings(app, overrides = {}) {
 		lines: [],
 		unit: 'abs', // abs: absolute scale, log: log scale
 		rowSpace: 10,
-		plotThickness: 130,
 		medianLength: 7,
 		medianThickness: 3,
 		ticks: 20,
