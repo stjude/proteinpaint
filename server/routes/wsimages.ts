@@ -44,7 +44,6 @@ function init({ genomes }) {
 			const cookieJar = new CookieJar()
 			const setCookie = promisify(cookieJar.setCookie.bind(cookieJar))
 			const getCookieString = promisify(cookieJar.getCookieString.bind(cookieJar))
-			const userSessionId: string | undefined = undefined
 
 			const sessionId = await getSessionId(cookieJar, getCookieString, setCookie, wsimage, ds, sampleId)
 
@@ -53,7 +52,6 @@ function init({ genomes }) {
 			const payload: WSImagesResponse = {
 				status: 'ok',
 				wsiSessionId: sessionId,
-				browserImageInstanceId: serverconfig.redis ? userSessionId : undefined,
 				slide_dimensions: getWsiImageResponse.slide_dimensions
 			}
 
@@ -85,7 +83,11 @@ async function getSessionId(cookieJar, getCookieString, setCookie, wsimage, ds, 
 
 	const sessionManager = SessionManager.getInstance(redis.url)
 
+	await sessionManager.invalidateSessions(1, 1)
+
 	const sessionData = await sessionManager.getSession(wsimage)
+
+	console.log('sessionData', sessionData)
 
 	if (sessionData) return sessionData.imageSessionId
 
