@@ -1380,6 +1380,11 @@ type MassNav = {
 			 */
 			html?: string
 			dataRelease?: DataRelease
+			/** array of links to help pages
+			 * will be displayed in drop-down menu of help button
+			 * if undefined, then help button will not appear
+			 */
+			helpPages?: HelpPage[]
 			/** "active" items, shown as clickable buttons in about tab. click an item to launch a plot */
 			activeItems?: {
 				items: ActiveItem[]
@@ -1398,6 +1403,13 @@ type DataRelease = {
 	version: string
 	/** link to data release page */
 	link: string
+}
+
+type HelpPage = {
+	/** label of link */
+	label: string
+	/** link of help page */
+	url: string
 }
 
 type ActiveItem = {

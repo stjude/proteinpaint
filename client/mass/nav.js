@@ -364,7 +364,7 @@ function setRenderers(self) {
 				})
 		}
 
-		const helpPages = appState.termdbConfig.helpPages
+		const helpPages = appState.termdbConfig.massNav?.tabs?.about?.helpPages
 		if (helpPages) {
 			// if help pages are defined, then show a help button
 			self.dom.helpBtn = self.dom.helpDiv
@@ -373,11 +373,8 @@ function setRenderers(self) {
 				.style('margin', '10px')
 				.html('Help &#9660;')
 				.on('click', event => {
-					const p = event.target.getBoundingClientRect()
-					const div = headtip
-						.clear()
-						.show(p.left - 0, p.top + p.height + 5)
-						.d.append('div')
+					const tip = headtip.clear()
+					const div = tip.d.append('div')
 					for (const page of helpPages) {
 						div
 							.append('div')
@@ -387,6 +384,7 @@ function setRenderers(self) {
 							.attr('target', '_blank')
 							.text(page.label)
 					}
+					tip.showunder(event.target)
 				})
 		}
 	}
