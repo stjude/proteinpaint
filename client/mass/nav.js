@@ -334,6 +334,12 @@ function setRenderers(self) {
 			.on('click', (event, d) => {
 				self.setTab(event, d)
 			})
+			.on('mouseover', (event, d) => {
+				self.mouseover(event, d)
+			})
+			.on('mouseout', () => {
+				self.mouseout()
+			})
 
 		self.dom.trs = table.selectAll('tr')
 		self.dom.tds = table.selectAll('td')
@@ -512,6 +518,18 @@ function setInteractivity(self) {
 				config: { chartType: defaultChartType }
 			})
 		}
+	}
+
+	self.mouseover = (event, d) => {
+		self.dom.tds.style('background-color', t => {
+			//light yellow for inactive tabs and gray-yellow for this active tab
+			if (t.colNum === d.colNum) return self.activeTab == t.colNum ? '#d6d6c3' : '#fcfceb'
+			return self.activeTab == t.colNum ? navTabActiveColor : 'transparent'
+		})
+	}
+
+	self.mouseout = () => {
+		self.dom.tds.style('background-color', t => (self.activeTab == t.colNum ? navTabActiveColor : 'transparent'))
 	}
 
 	self.getSessionFile = async event => {
