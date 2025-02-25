@@ -428,7 +428,8 @@ function setRenderers(self) {
 		self.dom.header.style('border-bottom', self.state.nav.header_mode === 'with_tabs' ? '1px solid #000' : '')
 		self.dom.tds
 			.style('display', '')
-			.style('color', d => (d.colNum == self.activeTab ? '#000' : 'gray'))
+			//Only show black text when the tab is active and the subheader is displayed
+			.style('color', d => (d.colNum == self.activeTab && self.displaySubheader == true ? '#000' : 'gray'))
 			.style('background-color', d =>
 				d.colNum == self.activeTab && self.dom.subheaderDiv.style('display') != 'none'
 					? self.state.termdbConfig.massNav?.activeColor || navTabActiveColor
@@ -522,14 +523,16 @@ function setInteractivity(self) {
 
 	self.mouseover = (event, d) => {
 		self.dom.tds.style('background-color', t => {
-			//light yellow for inactive tabs and gray-yellow for this active tab
+			//light yellow for inactive tabs and grey-yellow for this active tab
 			if (t.colNum === d.colNum) return self.activeTab == t.colNum ? '#d6d6c3' : '#fcfceb'
 			return self.activeTab == t.colNum ? navTabActiveColor : 'transparent'
 		})
 	}
 
 	self.mouseout = () => {
-		self.dom.tds.style('background-color', t => (self.activeTab == t.colNum ? navTabActiveColor : 'transparent'))
+		self.dom.tds.style('background-color', t =>
+			self.activeTab == t.colNum && self.displaySubheader == true ? navTabActiveColor : 'transparent'
+		)
 	}
 
 	self.getSessionFile = async event => {
