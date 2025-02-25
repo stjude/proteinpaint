@@ -57,13 +57,13 @@
                                     }
                                 },
                                 "term": {
-                                    "id": "agebaseline",
+                                    "id": "agebaseline_s",
                                     "q": {
                                         "mode": "continuous"
                                     }
                                 },
                                 "term2": {
-                                    "id": "LV_Ejection_Fraction_3D",
+                                    "id": "LV_Ejection_Fraction_3D_s",
                                     "q": {
                                         "mode": "continuous"
                                     }
@@ -95,6 +95,7 @@
                         "plots": [
                             {
                                 "chartType": "summary",
+                                "childType": "sampleScatter",
                                 "term": {
                                     "id": "eur_sjlife_pc1",
                                     "q": {
