@@ -30,13 +30,6 @@ filter_genes_by_global_variance <- function(read_counts, gene_id_symbols, num_va
    return(list(read_counts = read_counts, gene_id_symbols = gene_id_symbols))
 }
 
-# Will implement this later
-filter_genes_by_group_variance <- function(read_counts, gene_id_symbols, num_variable_genes, cases, controls) {
-    # Divide the read counts into two groups
-    case_read_counts <- read_counts[, cases]
-    control_read_counts <- read_counts[, controls]
-}
-
 # Read JSON input from stdin
 read_json_time <- system.time({
     con <- file("stdin", "r")
@@ -206,3 +199,11 @@ multiple_testing_correction_time <- system.time({
 
 # Output results
 toJSON(output)
+
+#-----------------------------------#
+# Will implement this later
+filter_genes_by_group_variance <- function(read_counts, gene_id_symbols, num_variable_genes, cases, controls) {
+    # Divide the read counts into two groups
+    case_read_counts <- read_counts[, cases]
+    control_read_counts <- read_counts[, controls]
+}
