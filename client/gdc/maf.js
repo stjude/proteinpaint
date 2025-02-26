@@ -314,7 +314,6 @@ async function getFilesAndShowTable(obj) {
 		]
 		rows.push(row)
 	}
-	rows.sort((a, b) => b[3].value - a[3].value) // default sort to descending order by file size
 	renderTable({
 		rows,
 		columns: tableColumns,
