@@ -173,6 +173,9 @@ async function listMafFiles(q: GdcMafRequest, ds: any) {
 		files.push(file)
 	}
 
+	// sort files in descending order of file size and show on table as default
+	files.sort((a, b) => b.file_size - a.file_size)
+
 	const result = {
 		files,
 		filesTotal: re.data.pagination.total,
