@@ -234,10 +234,6 @@ values[] // using integer sample id
 			// If all elements in the confounding variable are equal, throw error as R script crashes if the confounding variable has only 1 level
 			throw 'Confounding variable 1 has only one value'
 		}
-		if (param.flip_design_matrix) {
-			// Flips design matrix in edgeR so as to analyze the confounding variable(s) first before the groups (when true)
-			expression_input.flip_design_matrix = param.flip_design_matrix
-		}
 	}
 
 	if (param.tw2) {
