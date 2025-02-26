@@ -293,7 +293,9 @@ async function getFilesAndShowTable(obj) {
 	for (const f of result.files) {
 		const row = [
 			{
-				html: `<a href=https://portal.gdc.cancer.gov/cases/${f.case_uuid} target=_blank>${f.case_submitter_id}</a>`,
+				//html: `<a href=https://portal.gdc.cancer.gov/cases/${f.case_uuid} target=_blank>${f.case_submitter_id}</a>`,
+				// no longer links to case but links to maf file which makes more sense
+				html: `<a href=https://portal.gdc.cancer.gov/files/${f.id} target=_blank>${f.case_submitter_id}</a>`,
 				value: f.case_submitter_id
 			},
 			{ value: f.project_id },

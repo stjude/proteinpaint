@@ -170,6 +170,9 @@ async function listMafFiles(q: GdcMafRequest, ds: any) {
 			}
 			if (normalTypeName) file.sample_types.push(normalTypeName)
 		}
+
+		// dedup sample type. helps with such maf file https://portal.gdc.cancer.gov/files/efb54683-2d2c-44c2-9bc7-911588d5cc64 which will show repeating Tumor and hard to resolve
+		file.sample_types = [...new Set(file.sample_types)]
 		files.push(file)
 	}
 
