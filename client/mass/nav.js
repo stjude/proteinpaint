@@ -13,7 +13,11 @@ import { getFilterItemByTag, filterRxCompInit } from '#filter/filter'
 todo: steps to add a new tab
 */
 
-const navTabActiveColor = '#ececec' // default active color of nav tab
+const activeTabBgColor = '#ececec', // default bg color of active tab; inactive tab is transparent
+	activeTabBgColorHover = '#e0e0e0',
+	activeTabTextColor = 'black',
+	inactiveTabBgColorHover = '#fcfced',
+	inactiveTabTextColor = 'gray'
 
 // to be used for assigning unique
 // radio button names by object instance
@@ -429,10 +433,12 @@ function setRenderers(self) {
 		self.dom.tds
 			.style('display', '')
 			//Only show black text when the tab is active and the subheader is displayed
-			.style('color', d => (d.colNum == self.activeTab && self.displaySubheader == true ? '#000' : 'gray'))
+			.style('color', d =>
+				d.colNum == self.activeTab && self.displaySubheader == true ? activeTabTextColor : inactiveTabTextColor
+			)
 			.style('background-color', d =>
 				d.colNum == self.activeTab && self.dom.subheaderDiv.style('display') != 'none'
-					? self.state.termdbConfig.massNav?.activeColor || navTabActiveColor
+					? self.state.termdbConfig.massNav?.activeColor || activeTabBgColor
 					: 'transparent'
 			)
 			.html(function (d, i) {
@@ -493,6 +499,9 @@ function setRenderers(self) {
 function setInteractivity(self) {
 	self.setTab = async (event, d) => {
 		if (d.colNum === self.activeTab && !self.searching) {
+			//clicking on an active tab. turn it to hidden
+			// FIXME in such case self.activeTab may not keep original value; may set activeTab=-1 to indicate all tabs are inactive
+			//self.activeTab=-1
 			self.prevCohort = self.activeCohort
 			/** Fix to ensure the subheader is displayed/not displayed when
 			 * sharing or saving the session.
@@ -522,16 +531,19 @@ function setInteractivity(self) {
 	}
 
 	self.mouseover = (event, d) => {
-		const defaultActiveColor = self.state.termdbConfig.massNav?.activeColor || navTabActiveColor
+		const defaultActiveColor = self.state.termdbConfig.massNav?.activeColor || activeTabBgColor
 		self.dom.tds.style('background-color', t => {
 			//light yellow for inactive tabs and grey-yellow for this active tab
-			if (t.colNum === d.colNum) return self.activeTab == t.colNum ? '#d6d6c3' : '#fcfceb'
+			if (t.colNum === d.colNum)
+				return self.activeTab == t.colNum
+					? self.state.termdbConfig.massNav?.activeColorHover || activeTabBgColorHover
+					: inactiveTabBgColorHover
 			return self.activeTab == t.colNum ? defaultActiveColor : 'transparent'
 		})
 	}
 
 	self.mouseout = () => {
-		const defaultActiveColor = self.state.termdbConfig.massNav?.activeColor || navTabActiveColor
+		const defaultActiveColor = self.state.termdbConfig.massNav?.activeColor || activeTabBgColor
 		self.dom.tds.style('background-color', t =>
 			self.activeTab == t.colNum && self.displaySubheader == true ? defaultActiveColor : 'transparent'
 		)
