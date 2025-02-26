@@ -1,6 +1,7 @@
 import { select } from 'd3-selection'
 import { icons, Menu, axisstyle } from '#dom'
 import { axisTop } from 'd3-axis'
+import { format as d3format } from 'd3-format'
 import { scaleLinear } from 'd3-scale'
 import type { Th } from '../types/d3'
 
@@ -53,8 +54,12 @@ type Barplot = {
 	colorPositive?: string
 	/** horizontal padding on left/right of axis, svg scale width=axisWidth+xpadding*2 */
 	xpadding?: number
-	/** dynamically assigned d3 scale */
+	/** dynamically assigned d3 scale; not a parameter */
 	scale?: any
+	/** number of ticks to override an default */
+	tickCount?: number
+	/** tick format string */
+	tickFormat?: string
 }
 
 export type Button = {
@@ -66,7 +71,7 @@ export type Button = {
 	disabled?: (index: number) => boolean
 	button: any
 	/** Called when selecting rows, it would update the button text */
-	onChange?: (idx: number[], button: any) => void //
+	onChange?: (idx: number[], button: any) => void
 	/** to customize button style or to assist detection in testing */
 	class?: string
 }
@@ -679,17 +684,18 @@ function prepareBarPlot(cb: Barplot, i: number, rows: any) {
 }
 
 function drawBarplotAxis(c: Column, th: any) {
-	const cb = c.barplot
+	const cb = c.barplot! // assert it is truthy
 	const labfontsize = 14
 	const ypad = 5 // padding between axis label and axis
 	const tickfontsize = 12
 	const ticksize = 4 // where is ticksize applied in axis?
 	const svg = th
 		.append('svg')
-		.attr('width', 2 * (cb?.xpadding ?? 0) + (cb?.axisWidth ?? 0))
+		.attr('width', 2 * (cb.xpadding || 0) + (cb.axisWidth || 0))
 		.attr('height', labfontsize + ypad + tickfontsize + ticksize + 1) // plus 1 so axis bottom line can fully show
-	if (!cb) return
-	const axis = axisTop(cb.scale).ticks(4)
+	const axis = axisTop(cb.scale).ticks(cb.tickCount || 4)
+	if (cb.tickFormat) axis.tickFormat(d3format(cb.tickFormat))
+
 	axisstyle({
 		axis: svg
 			.append('g')
@@ -704,7 +710,7 @@ function drawBarplotAxis(c: Column, th: any) {
 		.attr('font-size', labfontsize)
 		.attr('text-anchor', 'middle')
 		.text(c.label)
-		.attr('x', (cb.xpadding ?? 0) + (cb.axisWidth ?? 0) / 2)
+		.attr('x', (cb.xpadding || 0) + (cb.axisWidth || 0) / 2)
 		.attr('y', labfontsize)
 }
 

@@ -19,7 +19,7 @@ const tableColumns = [
 	{ label: 'Case', sortable: true },
 	{ label: 'Project', sortable: true },
 	{ label: 'Samples' },
-	{ label: 'File Size', sortable: true }
+	{ label: 'File Size', barplot: { tickFormat: '~s' }, sortable: true } // barchart column not sortable yet
 ]
 
 // list of gdc maf file columns; selected ones are used for output
@@ -308,10 +308,13 @@ async function getFilesAndShowTable(obj) {
 					})
 					.join(' ')
 			},
-			{ value: fileSize(f.file_size), url: 'https://portal.gdc.cancer.gov/files/' + f.id }
+			{ value: f.file_size }
+			// do not send in text-formated file size, table sorting not smart to handle such
+			//{ value: fileSize(f.file_size), url: 'https://portal.gdc.cancer.gov/files/' + f.id }
 		]
 		rows.push(row)
 	}
+	rows.sort((a, b) => b[3].value - a[3].value) // default sort to descending order by file size
 	renderTable({
 		rows,
 		columns: tableColumns,
