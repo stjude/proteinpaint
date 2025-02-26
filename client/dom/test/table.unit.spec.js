@@ -132,14 +132,13 @@ tape('Render table', function (test) {
 				else if (d.value) return d.value
 				else if (d.html) return d.html
 			})
-			// const renderedData = renderedRowsMap.get((i + 1).toString())
-			// if (renderedData.toString() !== testData.toString()) {
-			// 	badLineNum.push(i + 1)
-			// 	break
-			// }
+			const renderedData = renderedRowsMap.get((i + 1).toString())
+			if (renderedData.toString() !== testData.toString()) {
+				badLineNum.push(i + 1)
+				break
+			}
 		}
-		// Ignore id entry
-		if (badLineNum.length > 1) test.fail(`Table data misaligned starting at line = ${badLineNum}`)
+		if (badLineNum.length) test.fail(`Table data misaligned starting at line = ${badLineNum}`)
 		else test.pass(`Rendered data matched test row data`)
 	}
 
@@ -252,8 +251,7 @@ tape('Return correct rows on button click', async test => {
 						if (checkedBoxes.some(d => d == i)) ++correctSelect
 						else wrongSelect.push(i)
 					}
-					//ignore id entry
-					if (wrongSelect.length > 0) test.fail(`Should not returned row(s) = ${wrongSelect}`)
+					if (wrongSelect.length) test.fail(`Should not returned row(s) = ${wrongSelect}`)
 					test.equal(correctSelect, checkedBoxes.length, `Should only return selected checked rows = ${correctSelect}`)
 				}
 			}

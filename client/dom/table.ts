@@ -22,7 +22,6 @@ export type Cell = {
 	disabled?: boolean
 	/** may be used as a reference ID for aria-labelledby, or other use */
 	elemId?: string
-	id?: number
 }
 
 export type Column = {
@@ -181,13 +180,14 @@ export function renderTable({
 	validateInput()
 	let _selectedRowStyle = selectedRowStyle
 
-	/** Assign a persistent id that does not change on sort
-	 * Arg is mutable. Use structuredClone to avoid changing
-	 * the input rows */
-	let _rows = structuredClone(rows)
-	_rows.forEach((row, i) => {
-		row.push({ id: i })
-	})
+	/** Preserve the original index for the rows
+	 * This is the index returned to the caller
+	 * when a row is selected */
+	const idxMap = rows.map((row, index) => ({
+		originalIndex: index,
+		value: row,
+		key: JSON.stringify(row)
+	}))
 
 	function validateInput() {
 		if (!columns || columns?.length == 0) throw `Missing columns data`
@@ -230,7 +230,7 @@ export function renderTable({
 	}
 
 	if (resize) {
-		if (_rows.length > 15) parentDiv.style('height', maxHeight)
+		if (rows.length > 15) parentDiv.style('height', maxHeight)
 		parentDiv.style('max-width', maxWidth)
 		parentDiv.style('resize', 'both')
 	} else {
@@ -295,12 +295,12 @@ export function renderTable({
 				//Only create sort button for columns with data
 				//(i.e. not html columns)
 				if (c.sortable) {
-					const callback = (opt: string) => sortTableCallBack(i, _rows, opt)
+					const callback = (opt: string) => sortTableCallBack(i, rows, opt)
 					const updateTable = (newRows: any) => {
-						_rows = newRows
+						rows = newRows
 						updateRows()
 					}
-					createSortButton(c, th, callback, updateTable)
+					createSortButton(th, callback, updateTable)
 				}
 			}
 			if (header?.style) {
@@ -309,7 +309,7 @@ export function renderTable({
 			if (c.barplot) {
 				// barplot column
 				th.text('') // quick fix; th.text() has been assigned above in order that sort button can show. here clear the text to render axis svg instead
-				prepareBarPlot(c.barplot, i, _rows)
+				prepareBarPlot(c.barplot, i, rows)
 				drawBarplotAxis(c, th)
 				continue
 			}
@@ -318,8 +318,7 @@ export function renderTable({
 	const tbody = table.append('tbody')
 	function updateRows() {
 		tbody.selectAll('tr').remove()
-		for (const [i, row] of _rows.entries()) {
-			if (i == _rows.length - 1) continue //skip id entry
+		for (const [i, row] of rows.entries()) {
 			let checkbox
 			const tr = tbody.append('tr').attr('class', 'sjpp_row_wrapper').attr('tabindex', 0)
 			if (striped && i % 2 == 1) tr.style('background-color', 'rgb(245,245,245)')
@@ -369,11 +368,12 @@ export function renderTable({
 					// should be in singleMode and do not want to show radio buttons for cleaner look. <input> elements are still rendered since "checkbox" element is required for selection. thus simply hide <td>.
 					td.style('display', 'none')
 				}
+				const checkboxValue = idxMap.findIndex(r => row == r.value)
 				checkbox = td
 					.append('input')
 					.attr('type', singleMode ? 'radio' : 'checkbox')
 					.attr('name', uniqueInputName)
-					.attr('value', row[row.length - 1].id)
+					.attr('value', checkboxValue)
 					.attr('aria-labelledby', ariaLabelledBy)
 					.property('checked', selectAll || selectedRows.includes(i))
 					.on('change', () => {
@@ -415,7 +415,6 @@ export function renderTable({
 				}
 			}
 			for (const [colIdx, cell] of row.entries()) {
-				if (colIdx == row.length - 1) continue //skip id entry
 				const td = tr
 					.append('td')
 					.attr('id', cell.elemId || null)
@@ -625,10 +624,9 @@ export async function downloadTable(rows, cols, filename = 'table.tsv') {
 	link.remove()
 }
 
-function createSortButton(col: Column, th: Th, callback, updateTable) {
+function createSortButton(th: Th, callback, updateTable) {
 	const sortDiv = th.append('div').style('display', 'inline-block').attr('class', 'sjpp-table-sort-button')
 	icons['updown'](sortDiv, {
-		// title: `Sort table by ${col.label}`,
 		handler: () => {
 			const menu = new Menu({ padding: '' })
 			menu.showunder(sortDiv.node())
