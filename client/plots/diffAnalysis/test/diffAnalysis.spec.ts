@@ -2,7 +2,8 @@ import tape from 'tape'
 import * as helpers from '../../../test/front.helpers.js'
 
 /*
-DO NOT ENABLE THIS FILE ON CI. ITS FOR PROTOTYPING ONLY
+DO NOT ENABLE THIS FILE ON CI. ITS FOR PROTOTYPING 
+AND MANUAL CHECKS ONLY
 
 Tests:
     - Default DE analysis
@@ -38,12 +39,12 @@ tape('\n', function (test) {
 
 tape('Default DiffAnalysis ', test => {
 	test.timeoutAfter(10000)
-
 	runpp({
 		state: {
 			plots: [
 				{
 					chartType: 'differentialAnalysis', //Will change to DEanalysis once draft is stable,
+					childType: 'volcano',
 					samplelst: {
 						groups: [
 							{

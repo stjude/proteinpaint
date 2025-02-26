@@ -18,10 +18,8 @@ class DifferentialAnalysis extends RxComponentInner {
 	}
 	dom: DiffAnalysisDom
 	plotTabs: any
-	plotsDiv: {
-		volcano: Elem
-		gsea: Elem
-	}
+	plotsDiv: { [key: string]: Elem }
+	plotControlsDiv: { [key: string]: Elem }
 
 	constructor(opts: any) {
 		super()
@@ -30,18 +28,28 @@ class DifferentialAnalysis extends RxComponentInner {
 		}
 		const holder = opts.holder.classed('sjpp-diff-analysis-main', true)
 		const controls = opts.controls ? holder : holder.append('div')
-		const div = holder.append('div').style('padding', '5px').style('display', 'inline-block')
+		const div = holder
+			.append('div')
+			.style('padding', '5px')
+			.style('display', 'inline-block')
+			.style('vertical-align', 'top')
 		const tabsDiv = div.append('div').attr('id', 'sjpp-diff-analysis-tabs').style('display', 'inline-block')
-		const tabsContent = div.append('div').attr('id', 'sjpp-diff-analysis-tabs-content')
+		const plots = div.append('div').attr('id', 'sjpp-diff-analysis-tabs-content')
 		this.dom = {
-			controls: controls.style('display', 'block'),
+			controls: controls.style('display', 'inline-block'),
 			div,
 			tabsDiv,
-			tabsContent,
+			plots: plots,
 			tip: new Menu({ padding: '' })
 		}
-		const volcanoDiv = tabsContent.append('div').style('display', 'none')
-		const gseaDiv = tabsContent.append('div').style('display', 'none')
+		const volcanoControlsDiv = controls.append('div').style('display', 'none')
+		const gseaControlsDiv = controls.append('div').style('display', 'none')
+		this.plotControlsDiv = {
+			volcano: volcanoControlsDiv,
+			gsea: gseaControlsDiv
+		}
+		const volcanoDiv = plots.append('div').style('display', 'none')
+		const gseaDiv = plots.append('div').style('display', 'none')
 		this.plotsDiv = {
 			volcano: volcanoDiv,
 			gsea: gseaDiv
@@ -93,14 +101,14 @@ class DifferentialAnalysis extends RxComponentInner {
 				holder: this.plotsDiv.volcano,
 				id: this.id,
 				parent: this.api,
-				controls: this.dom.controls
+				controls: this.plotControlsDiv.volcano
 			}),
 			gsea: await gsea.componentInit({
 				app: this.app,
 				holder: this.plotsDiv.gsea,
 				id: this.id,
 				parent: this.api,
-				controls: this.dom.controls
+				controls: this.plotControlsDiv.gsea
 			})
 		}
 		this.plotTabs = new DiffAnalysisView(this.app, config, this.dom)
@@ -114,9 +122,11 @@ class DifferentialAnalysis extends RxComponentInner {
 			const chart = this.components.plots[childType]
 			if (chart.type != config.childType) {
 				this.plotsDiv[chart.type].style('display', 'none')
+				this.plotControlsDiv[chart.type].style('display', 'none')
 			}
 		}
 		this.plotsDiv[config.childType].style('display', '')
+		this.plotControlsDiv[config.childType].style('display', '')
 
 		if (this.dom.header) {
 			const samplelst = config.samplelst.groups
@@ -139,7 +149,6 @@ export function getPlotConfig(opts: DiffAnalysisOpts, app: MassAppApi) {
 			controls: {
 				isOpen: false
 			},
-			differentialAnalysis: { visiblePlots: ['volcano'] },
 			volcano: getDefaultVolcanoSettings(opts.overrides),
 			gsea: getDefaultGseaSettings()
 		}

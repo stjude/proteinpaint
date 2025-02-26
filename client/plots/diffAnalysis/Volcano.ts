@@ -107,6 +107,22 @@ class Volcano extends RxComponentInner {
 				min: 1000,
 				max: 4000
 			},
+			//Not enabling this feature
+			//needs more discussion
+			// {
+			// 	label: 'Gene Set Overrepresentation Analysis',
+			// 	type: 'radio',
+			// 	chartType: 'volcano',
+			// 	settingsKey: 'geneORA',
+			//     styles: { display: 'block' },
+			// 	title: 'Toggle to check if certain gene sets are overrepresented among upregulated, downregulated, or both sets of genes',
+			// 	options: [
+			// 		{ label: 'Upregulated', value: 'upregulated' },
+			// 		{ label: 'Downregulated', value: 'downregulated' },
+			// 		{ label: 'Both', value: 'both' }
+			// 	],
+			//     getDisplayStyle: () => (this.app.opts.genome.termdbs ? '' : 'none')
+			// },
 			{
 				label: 'Show P value table',
 				type: 'checkbox',
@@ -211,6 +227,8 @@ export function getDefaultVolcanoSettings(overrides = {}): VolcanoSettings {
 		defaultNonSignColor: 'black',
 		defaultHighlightColor: '#ffa200', // orange-yellow
 		foldChangeCutoff: 0,
+		/** Not enabling this feature for now */
+		// geneORA: undefined,
 		height: 400,
 		minCount: 10,
 		minTotalCount: 15,

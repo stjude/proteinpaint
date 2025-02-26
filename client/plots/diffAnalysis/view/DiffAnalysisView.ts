@@ -17,7 +17,7 @@ export class DiffAnalysisView {
 		this.config = config
 		setRenderers(this)
 		this.tabsData = this.getTabsOptions(this)
-		this.tabs = new Tabs({ holder: this.dom.tabsDiv, content: this.dom.tabsContent, tabs: this.tabsData })
+		this.tabs = new Tabs({ holder: this.dom.tabsDiv, content: this.dom.plots, tabs: this.tabsData })
 		this.tabs.main()
 	}
 
