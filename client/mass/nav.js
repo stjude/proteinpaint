@@ -535,10 +535,10 @@ function setInteractivity(self) {
 		self.dom.tds.style('background-color', t => {
 			//light yellow for inactive tabs and grey-yellow for this active tab
 			if (t.colNum === d.colNum)
-				return self.activeTab == t.colNum
+				return self.activeTab == t.colNum && self.displaySubheader == true
 					? self.state.termdbConfig.massNav?.activeColorHover || activeTabBgColorHover
 					: inactiveTabBgColorHover
-			return self.activeTab == t.colNum ? defaultActiveColor : 'transparent'
+			return self.activeTab == t.colNum && self.displaySubheader == true ? defaultActiveColor : 'transparent'
 		})
 	}
 
