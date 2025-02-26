@@ -7,6 +7,7 @@ export type DataPointEntry = {
 	/** color indicating significance */
 	color: string
 	fold_change: number
+	/** If true, the fill opacity increases to show the highlight color */
 	highlighted: boolean
 	gene_name: string
 	gene_symbol: string
@@ -32,7 +33,8 @@ export type DiffAnalysisDom = {
 	}
 	/** Toggle volcano and gsea plots */
 	tabsDiv: Elem
-	tabsContent: Elem
+	/** Container for the plots */
+	plots: Elem
 	/** Shared tooltip */
 	tip: Menu
 }
@@ -53,7 +55,10 @@ export type DiffAnalysisOpts = {
 
 export type DiffAnalysisPlotConfig = PlotConfig & {
 	samplelst: {
-		groups: { name: string; samplelst: string[] }[]
+		groups: {
+			name: string
+			samplelst: string[]
+		}[]
 	}
 	/** Data points highlighted in the volcano plot */
 	highlightedData: string[]
@@ -105,6 +110,8 @@ export type VolcanoSettings = {
 	defaultSignColor: string
 	/** largest absolute fold change to be considered in the analysis */
 	foldChangeCutoff: number
+	/** Not enabling this feature for now */
+	// geneORA: 'upregulated' | 'downregulated' | 'both' | undefined
 	/** smallest number of reads required for a gene to be considered in the analysis */
 	minCount: number
 	/** smallest total number of reads required for a gene to be considered in the analysis */
