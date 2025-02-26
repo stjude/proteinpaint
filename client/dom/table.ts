@@ -180,14 +180,11 @@ export function renderTable({
 	validateInput()
 	let _selectedRowStyle = selectedRowStyle
 
-	/** Preserve the original index for the rows
-	 * This is the index returned to the caller
-	 * when a row is selected */
-	const idxMap = rows.map((row, index) => ({
-		originalIndex: index,
-		value: row,
-		key: JSON.stringify(row)
-	}))
+	/** make a shallow copy of the rows[] array to preserve the original index for the rows, not affected by sorting
+	table may allow to sort rows by a column. in such case, table still needs to report original index of selected rows
+	to a callback, so that the downstream code can correctly access data for the selected rows after sorting
+	*/
+	const rowsCopy = rows.map(i => i)
 
 	function validateInput() {
 		if (!columns || columns?.length == 0) throw `Missing columns data`
@@ -368,7 +365,7 @@ export function renderTable({
 					// should be in singleMode and do not want to show radio buttons for cleaner look. <input> elements are still rendered since "checkbox" element is required for selection. thus simply hide <td>.
 					td.style('display', 'none')
 				}
-				const checkboxValue = idxMap.findIndex(r => row == r.value)
+				const checkboxValue = rowsCopy.findIndex(r => row == r)
 				checkbox = td
 					.append('input')
 					.attr('type', singleMode ? 'radio' : 'checkbox')
