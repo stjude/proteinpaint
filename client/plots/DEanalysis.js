@@ -160,17 +160,15 @@ class DEanalysis {
 				)
 				if (this.config.term) {
 					// Only when first confounding variable 1 has been selected, the option for a second confounding variable will be shown
-					inputs.push(
-						{
-							type: 'term',
-							configKey: 'term2',
-							chartType: 'DEanalysis',
-							usecase: { target: 'DEanalysis', detail: 'term' },
-							label: 'Confounding Factor 2',
-							title: 'Select confounding factors to adjust for in the analysis',
-							vocabApi: this.app.vocabApi
-						},
-					)
+					inputs.push({
+						type: 'term',
+						configKey: 'term2',
+						chartType: 'DEanalysis',
+						usecase: { target: 'DEanalysis', detail: 'term' },
+						label: 'Confounding Factor 2',
+						title: 'Select confounding factors to adjust for in the analysis',
+						vocabApi: this.app.vocabApi
+					})
 				}
 			}
 		}
@@ -702,7 +700,6 @@ export async function getPlotConfig(opts, app) {
 					pvaluetable: false,
 					adjusted_original_pvalue: 'adjusted',
 					method: 'edgeR',
-					flip_design_matrix: false,
 					VarGenes: 3000,
 					gene_ora: undefined,
 					gsea: undefined
@@ -799,9 +796,6 @@ async function runDEanalysis(self) {
 		input.tw = self.config.term
 		self.settings.method = 'edgeR' // When adjustment of confounding variables is selected, the method should always be a parmetric method such as edgeR
 		input.method = 'edgeR'
-		if (self.settings.flip_design_matrix) {
-			input.flip_design_matrix = self.settings.flip_design_matrix
-		}
 	}
 
 	if (self.config.term2) {
