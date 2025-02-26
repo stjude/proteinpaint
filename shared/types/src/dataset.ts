@@ -1388,6 +1388,8 @@ type MassNav = {
 	}
 	/** customize background color of active navigation tab */
 	activeColor?: string
+	/** customize background color of active navigation tab on hover */
+	activeColorHover?: string
 }
 
 type ActiveItem = {
