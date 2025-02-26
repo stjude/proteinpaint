@@ -181,6 +181,14 @@ export function renderTable({
 	validateInput()
 	let _selectedRowStyle = selectedRowStyle
 
+	/** Assign a persistent id that does not change on sort
+	 * Arg is mutable. Use structuredClone to avoid changing
+	 * the input rows */
+	let _rows = structuredClone(rows)
+	_rows.forEach((row, i) => {
+		row.push({ id: i })
+	})
+
 	function validateInput() {
 		if (!columns || columns?.length == 0) throw `Missing columns data`
 		if (!rows) throw `Missing rows data`
@@ -220,8 +228,9 @@ export function renderTable({
 			}
 		})
 	}
+
 	if (resize) {
-		if (rows.length > 15) parentDiv.style('height', maxHeight)
+		if (_rows.length > 15) parentDiv.style('height', maxHeight)
 		parentDiv.style('max-width', maxWidth)
 		parentDiv.style('resize', 'both')
 	} else {
@@ -286,9 +295,9 @@ export function renderTable({
 				//Only create sort button for columns with data
 				//(i.e. not html columns)
 				if (c.sortable) {
-					const callback = (opt: string) => sortTableCallBack(i, rows, opt)
+					const callback = (opt: string) => sortTableCallBack(i, _rows, opt)
 					const updateTable = (newRows: any) => {
-						rows = newRows
+						_rows = newRows
 						updateRows()
 					}
 					createSortButton(c, th, callback, updateTable)
@@ -300,23 +309,17 @@ export function renderTable({
 			if (c.barplot) {
 				// barplot column
 				th.text('') // quick fix; th.text() has been assigned above in order that sort button can show. here clear the text to render axis svg instead
-				prepareBarPlot(c.barplot, i, rows)
+				prepareBarPlot(c.barplot, i, _rows)
 				drawBarplotAxis(c, th)
 				continue
 			}
 		}
 	}
-
-	//Assign a persistent id that does not change on sort
-	rows.forEach((row, i) => {
-		row.push({ id: i })
-	})
-
 	const tbody = table.append('tbody')
 	function updateRows() {
 		tbody.selectAll('tr').remove()
-		for (const [i, row] of rows.entries()) {
-			if (i == rows.length - 1) continue //skip id entry
+		for (const [i, row] of _rows.entries()) {
+			if (i == _rows.length - 1) continue //skip id entry
 			let checkbox
 			const tr = tbody.append('tr').attr('class', 'sjpp_row_wrapper').attr('tabindex', 0)
 			if (striped && i % 2 == 1) tr.style('background-color', 'rgb(245,245,245)')
