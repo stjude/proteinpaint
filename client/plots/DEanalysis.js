@@ -170,14 +170,6 @@ class DEanalysis {
 							title: 'Select confounding factors to adjust for in the analysis',
 							vocabApi: this.app.vocabApi
 						},
-						{
-							label: 'Switch model analysis order',
-							type: 'checkbox',
-							chartType: 'DEanalysis',
-							settingsKey: 'flip_design_matrix',
-							title: 'Causes design matrix to analyze confounding factors first before the groups',
-							boxLabel: ''
-						}
 					)
 				}
 			}
