@@ -522,16 +522,18 @@ function setInteractivity(self) {
 	}
 
 	self.mouseover = (event, d) => {
+		const defaultActiveColor = self.state.termdbConfig.massNav?.activeColor || navTabActiveColor
 		self.dom.tds.style('background-color', t => {
 			//light yellow for inactive tabs and grey-yellow for this active tab
 			if (t.colNum === d.colNum) return self.activeTab == t.colNum ? '#d6d6c3' : '#fcfceb'
-			return self.activeTab == t.colNum ? navTabActiveColor : 'transparent'
+			return self.activeTab == t.colNum ? defaultActiveColor : 'transparent'
 		})
 	}
 
 	self.mouseout = () => {
+		const defaultActiveColor = self.state.termdbConfig.massNav?.activeColor || navTabActiveColor
 		self.dom.tds.style('background-color', t =>
-			self.activeTab == t.colNum && self.displaySubheader == true ? navTabActiveColor : 'transparent'
+			self.activeTab == t.colNum && self.displaySubheader == true ? defaultActiveColor : 'transparent'
 		)
 	}
 
