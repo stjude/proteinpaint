@@ -149,17 +149,13 @@ if (length(input$conf1) == 0) { # No adjustment of confounding factors
     } else { # When input$conf1_mode == "discrete" keep the vector as string.
       conf1 <- as.factor(input$conf1)
     }
- 
+
     if (length(input$conf2) == 0) { # No adjustment of confounding factor 2
           y$samples <- data.frame(conditions = conditions, conf1 = conf1)
           model_gen_time <- system.time({
-             if (length(input$flip_design_matrix) == 0) { # When flip_design_matrix is not defined analyze groups (conditions) first
                  design <- model.matrix(~ conditions + conf1, data = y$samples)
-             } else { # When flip_design_matrix is defined analyze the confounding variable first
-                 design <- model.matrix(~ conf1 + conditions, data = y$samples)
-             }    
           })
-          #cat("Time for making design matrix: ", model_gen_time[3], " seconds\n")   
+          #cat("Time for making design matrix: ", model_gen_time[3], " seconds\n")
     } else {
           # Check the type of confounding variable 2
           if (input$conf2_mode == "continuous") { # If this is float, the input conf2 vector should be converted into a numeric vector
@@ -169,14 +165,10 @@ if (length(input$conf1) == 0) { # No adjustment of confounding factors
           }
           y$samples <- data.frame(conditions = conditions, conf1 = conf1, conf2 = conf2)
           model_gen_time <- system.time({
-             if (length(input$flip_design_matrix) == 0) { # When flip_design_matrix is not defined analyze groups (conditions) first   
                  design <- model.matrix(~ conditions + conf1 + conf2, data = y$samples)
-             } else { # When flip_design_matrix is defined analyze the confounding variables first
-                 design <- model.matrix(~ conf1 + conf2 + conditions, data = y$samples)
-             }    
           })
           #cat("Time for making design matrix: ", model_gen_time[3], " seconds\n")
-    }    
+    }
 
     dispersion_time <- system.time({
         y <- estimateDisp(y, design)
