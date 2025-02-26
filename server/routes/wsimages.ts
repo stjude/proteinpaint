@@ -83,7 +83,9 @@ async function getSessionId(cookieJar, getCookieString, setCookie, wsimage, ds, 
 
 	const sessionManager = SessionManager.getInstance(redis.url)
 
-	await sessionManager.invalidateSessions(1, 1)
+	const validateSuccesful = await sessionManager.invalidateSessions(3, 5)
+
+	if (!validateSuccesful) throw new Error('Session invalidation failed')
 
 	const sessionData = await sessionManager.getSession(wsimage)
 
