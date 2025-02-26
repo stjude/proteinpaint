@@ -189,7 +189,7 @@ if (length(input$conf1) == 0) { # No adjustment of confounding factors
     #cat("Fit time: ", fit_time[3], " seconds\n")
 
     test_statistics_time <- system.time({
-        et <- glmLRT(fit, coef = 2)
+        et <- glmLRT(fit, coef = "conditionsDiseased")
     })
     #cat("Test statistics time: ", test_statistics_time[3], " seconds\n")
 }
