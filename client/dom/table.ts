@@ -4,6 +4,7 @@ import { axisTop } from 'd3-axis'
 import { format as d3format } from 'd3-format'
 import { scaleLinear } from 'd3-scale'
 import type { Th } from '../types/d3'
+import type { AxisDomain } from 'd3-axis'
 
 export type Cell = {
 	/** to print in <a> element */
@@ -701,7 +702,7 @@ function drawBarplotAxis(c: Column, th: any) {
 		.attr('width', 2 * (cb.xpadding || 0) + (cb.axisWidth || 0))
 		.attr('height', labfontsize + ypad + tickfontsize + ticksize + 1) // plus 1 so axis bottom line can fully show
 	const axis = axisTop(cb.scale).ticks(cb.tickCount || 4)
-	if (cb.tickFormat) axis.tickFormat(d3format(cb.tickFormat))
+	if (cb.tickFormat) axis.tickFormat(d3format(cb.tickFormat) as (domainValue: AxisDomain, index: number) => string)
 
 	axisstyle({
 		axis: svg

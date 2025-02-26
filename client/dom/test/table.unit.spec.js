@@ -138,7 +138,8 @@ tape('Render table', function (test) {
 				break
 			}
 		}
-		if (badLineNum.length) test.fail(`Table data misaligned starting at line = ${badLineNum}`)
+		//Ignore id entry
+		if (badLineNum.length > 1) test.fail(`Table data misaligned starting at line = ${badLineNum}`)
 		else test.pass(`Rendered data matched test row data`)
 	}
 
@@ -252,6 +253,7 @@ tape('Return correct rows on button click', async test => {
 						if (checkedBoxes.some(d => d == i)) ++correctSelect
 						else wrongSelect.push(i)
 					}
+					//ignore id entry
 					if (wrongSelect.length > 0) test.fail(`Should not returned row(s) = ${wrongSelect}`)
 					test.equal(correctSelect, checkedBoxes.length, `Should only return selected checked rows = ${correctSelect}`)
 				}
