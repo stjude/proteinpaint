@@ -750,7 +750,7 @@ function drawBarplotInCell(value: number, td: any, c: Barplot) {
 		.append('rect')
 		.attr('x', x1)
 		.attr('y', 0)
-		.attr('width', x2 - x1)
+		.attr('width', Math.max(1, x2 - x1)) // avoid bar width of fraction of pixel
 		.attr('height', height)
 		.attr('fill', color)
 }
