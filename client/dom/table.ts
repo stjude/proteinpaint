@@ -21,6 +21,7 @@ export type Cell = {
 	disabled?: boolean
 	/** may be used as a reference ID for aria-labelledby, or other use */
 	elemId?: string
+	id?: number
 }
 
 export type Column = {
@@ -218,7 +219,6 @@ export function renderTable({
 			}
 		})
 	}
-
 	if (resize) {
 		if (rows.length > 15) parentDiv.style('height', maxHeight)
 		parentDiv.style('max-width', maxWidth)
@@ -306,10 +306,16 @@ export function renderTable({
 		}
 	}
 
+	//Assign a persistent id that does not change on sort
+	rows.forEach((row, i) => {
+		row.push({ id: i })
+	})
+
 	const tbody = table.append('tbody')
 	function updateRows() {
 		tbody.selectAll('tr').remove()
 		for (const [i, row] of rows.entries()) {
+			if (i == rows.length - 1) continue //skip id entry
 			let checkbox
 			const tr = tbody.append('tr').attr('class', 'sjpp_row_wrapper').attr('tabindex', 0)
 			if (striped && i % 2 == 1) tr.style('background-color', 'rgb(245,245,245)')
@@ -363,7 +369,7 @@ export function renderTable({
 					.append('input')
 					.attr('type', singleMode ? 'radio' : 'checkbox')
 					.attr('name', uniqueInputName)
-					.attr('value', i)
+					.attr('value', row[row.length - 1].id)
 					.attr('aria-labelledby', ariaLabelledBy)
 					.property('checked', selectAll || selectedRows.includes(i))
 					.on('change', () => {
@@ -405,6 +411,7 @@ export function renderTable({
 				}
 			}
 			for (const [colIdx, cell] of row.entries()) {
+				if (colIdx == row.length - 1) continue //skip id entry
 				const td = tr
 					.append('td')
 					.attr('id', cell.elemId || null)
