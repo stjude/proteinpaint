@@ -56,7 +56,7 @@ class DifferentialAnalysis extends RxComponentInner {
 			volcano: volcanoDiv,
 			gsea: gseaDiv
 		}
-		this.interactions = new DiffAnalysisInteractions()
+		this.interactions = new DiffAnalysisInteractions(this.app)
 
 		//TODO: include type. move to main()
 		if (opts.header) {
