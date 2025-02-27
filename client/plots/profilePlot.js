@@ -37,16 +37,28 @@ export class profilePlot {
 			logged, //later change to read login info
 			site,
 			sites,
+			user,
 			activeCohort: appState.activeCohort
 		}
+	}
+
+	isAggregate() {
+		if (!this.state.logged) return true
+		if (!('isAggregate' in this.settings) || this.settings.isAggregate == undefined)
+			//no previous configuration
+			return this.state.sites.length > 1 || this.state.user == 'admin'
+		return this.settings.isAggregate
 	}
 
 	async init(appState) {
 		const config = appState.plots.find(p => p.id === this.id)
 		const state = this.getState(appState)
 		if (this.opts.header) {
-			const suffix = state.logged ? (state.site ? state.site : 'Admin') : 'Public'
-			this.opts.header.text(config.header ? config.header + ` / ${suffix}` : config.chartType + ` / ${suffix}`)
+			let chartName = config.chartType.match(/[A-Z][a-z]+/g)
+			chartName = chartName.join(' ')
+			this.opts.header
+				.style('text-transform', 'capitalize')
+				.text(config.header ? config.header + ` / ${state.user}` : chartName + ` / ${state.user}`)
 		}
 		const div = this.opts.holder.append('div').style('display', 'inline-block')
 		const leftDiv = div.append('div').style('display', 'inline-block').style('vertical-align', 'top')
@@ -208,7 +220,6 @@ export class profilePlot {
 		})
 		const chartType = this.type
 		this.dom.controlsDiv.selectAll('*').remove()
-
 		let inputs = []
 		if (this.state.logged && this.state.sites?.length == 1 && chartType != 'profileRadarFacility') {
 			const dataInput = {
@@ -224,12 +235,8 @@ export class profilePlot {
 			}
 			inputs.push(dataInput)
 		}
-		if (
-			!this.state.logged ||
-			this.state.sites?.length > 1 ||
-			this.settings.isAggregate ||
-			chartType == 'profileRadarFacility'
-		) {
+		const isAggregate = this.isAggregate()
+		if (isAggregate || chartType == 'profileRadarFacility') {
 			inputs.push(
 				...[
 					{
@@ -349,60 +356,23 @@ export class profilePlot {
 	}
 
 	async loadSampleData(chartType, inputs) {
-		if (chartType != 'profileRadarFacility') {
-			if (this.state.logged) {
-				if (this.state.site && !this.settings.isAggregate) {
-					this.settings.site = this.sampleidmap[this.state.site]?.id
-					this.loadSites()
-				} //Admin
-				else if (!this.state.site) {
-					this.sites = this.data.lst.map(s => {
-						return { label: this.data.refs.bySampleId[s.sample].label, value: s.sample }
-					})
-					this.sites.sort((a, b) => {
-						if (a.label < b.label) return -1
-						if (a.label > b.label) return 1
-						return 0
-					})
-					this.sites.unshift({ label: '', value: '' })
-				}
-				if (this.sites.length > 1)
-					inputs.push({
-						label: 'Site',
-						type: 'dropdown',
-						chartType,
-						options: this.sites,
-						settingsKey: 'site',
-						callback: value => this.setSite(value)
-					})
-				this.sampleData = await this.getSampleData()
+		if (this.state.logged) {
+			if (this.state.site && !this.settings.isAggregate) {
+				this.loadSites()
+			} //Admin
+			else if (!this.state.site) {
+				this.sites = this.data.lst.map(s => {
+					return { label: this.data.refs.bySampleId[s.sample].label, value: s.sample }
+				})
+				this.sites.sort((a, b) => {
+					if (a.label < b.label) return -1
+					if (a.label > b.label) return 1
+					return 0
+				})
+				this.sites.unshift({ label: '', value: '' })
 			}
-		} else {
-			if (this.state.logged) {
-				let result
-
-				if (this.state.site && !this.settings.isAggregate) {
-					this.settings.site = this.sampleidmap[this.state.site].id
-					this.loadSites()
-					this.sampleData = await this.getSampleData()
-				} //Admin
-				else {
-					result = await this.app.vocabApi.getAnnotatedSampleData({
-						terms: this.twLst,
-						termsPerRequest: 30
-					})
-					this.sites = result.lst.map(s => {
-						return { label: result.refs.bySampleId[s.sample].label, value: s.sample }
-					})
-					this.sites.sort((a, b) => {
-						if (a.label < b.label) return -1
-						if (a.label > b.label) return 1
-						return 0
-					})
-					if (!this.settings.site) this.settings.site = this.sites[0].value
-					this.sampleData = result.samples[Number(this.settings.site)]
-				}
-				inputs.unshift({
+			if (this.sites.length > 1)
+				inputs.push({
 					label: 'Site',
 					type: 'dropdown',
 					chartType,
@@ -410,12 +380,13 @@ export class profilePlot {
 					settingsKey: 'site',
 					callback: value => this.setSite(value)
 				})
-			}
+			this.sampleData = await this.getSampleData()
 		}
 	}
 
 	loadSites() {
 		this.sites = []
+		if (this.type != 'profileRadarFacility') this.sites.push({ label: '', value: '' })
 		for (const site of this.state.sites) {
 			const id = this.sampleidmap[site]?.id
 			this.sites.push({ label: site, value: id })
@@ -675,18 +646,19 @@ export function clearLocalFilters(plot) {
 
 export function getDefaultProfilePlotSettings() {
 	return {
-		isAggregate: false,
+		isAggregate: undefined,
 		showTable: true
 	}
 }
 
 export function getProfileLogin(app, cohort = FULL_COHORT) {
 	const auth = app.vocabApi.getClientAuthResult()
-	if (!auth) return [false, null, 'public']
+	//console.log(auth)
+	if (!auth) return { logged: false, sites: [], user: 'public' }
 	const auth_info = cohort == FULL_COHORT ? auth.full : auth.abbrev
 	const logged = auth_info?.role != 'public'
-	if (!auth_info) return [false, null, 'public'] //no login info for the cohort, treat it as not logged in, public view for that cohort
-	const user = auth_info?.role
+	if (!auth_info) return { logged: false, sites: [], user: 'public' } //no login info for the cohort, treat it as not logged in, public view for that cohort
+	const user = auth_info?.role || 'public'
 	const sites = user == 'admin' ? null : auth_info.sites //site only matters if you are not admin
 	return { logged, sites, user }
 }
