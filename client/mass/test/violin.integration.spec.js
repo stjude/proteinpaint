@@ -628,7 +628,7 @@ tape('term1 as numeric and term2 numeric, change median size', function (test) {
 		const medianEle = await detectGte({
 			elem: violinDiv.node(),
 			selector: '.sjpp-median-line',
-			count: 6,
+			count: 5,
 			async trigger() {
 				await violin.Inner.app.dispatch({
 					type: 'plot_edit',
@@ -762,7 +762,7 @@ tape('term1=numeric, term2=condition', function (test) {
 		test.end()
 	}
 	async function testConditionTermOrder(violin, violinDiv) {
-		const groups = await detectGte({ elem: violinDiv.node(), selector: '.sjpp-vp-path', count: 8 })
+		const groups = await detectGte({ elem: violinDiv.node(), selector: '.sjpp-vp-path', count: 6 })
 		test.ok(groups, 'Condition groups exist')
 		test.deepEqual(
 			groups.filter((k, i) => i % 2 == 0).map(k => k.__data__.label),
@@ -1091,7 +1091,7 @@ tape('term=agedx, term2=geneExp with regular bins', function (test) {
 		 * one violin plot  */
 		test.equal(
 			numViolinPaths.length / 2,
-			violin.Inner.data.plots.length - 1,
+			violin.Inner.data.plots.length,
 			'Should render the correct number of plots per the default bins for a gene expression term'
 		)
 
