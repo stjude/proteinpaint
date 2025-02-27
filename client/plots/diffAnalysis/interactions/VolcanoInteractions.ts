@@ -11,11 +11,13 @@ export class VolcanoInteractions {
 	dom: any
 	id: string
 	pValueTableData: any
+	data: any
 	constructor(app: MassAppApi, id: string, dom: any) {
 		this.app = app
 		this.dom = dom
 		this.id = id
 		this.pValueTableData = []
+		this.data = []
 	}
 
 	/** Launches a multi-term select tree
@@ -112,11 +114,15 @@ export class VolcanoInteractions {
 	launchGeneSetEdit() {
 		const plotConfig = this.app.getState().plots.find((p: DiffAnalysisPlotConfig) => p.id === this.id)
 		const holder = this.dom.tip.d.append('div').style('padding', '5px') as any
+		const limitedGenesList = this.data.map(d => d.gene_symbol)
 		new GeneSetEditUI({
 			holder,
 			genome: this.app.opts.genome,
 			vocabApi: this.app.vocabApi,
-			geneList: plotConfig.highlightData,
+			limitedGenesList,
+			geneList: plotConfig.highlightedData.map(d => {
+				return { gene: d } //Formatted to Gene type in GeneSetEditUI
+			}),
 			callback: async result => {
 				const highlightedData = result.geneList.map(d => d.gene)
 				await this.app.dispatch({

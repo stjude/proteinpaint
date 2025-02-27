@@ -218,6 +218,7 @@ class Volcano extends RxComponentInner {
 			const viewModel = new VolcanoViewModel(config, response, settings)
 			//Pass table data for downloading
 			this.interactions.pValueTableData = viewModel.viewData.pValueTableData
+			this.interactions.data = response.data
 			this.dom.wait.style('display', 'none')
 			/** Render formatted data */
 			new VolcanoPlotView(this.dom, settings, viewModel.viewData, this.interactions)
