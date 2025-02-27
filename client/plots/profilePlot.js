@@ -27,7 +27,8 @@ export class profilePlot {
 	getState(appState) {
 		const config = appState.plots.find(p => p.id === this.id)
 		if (!config) throw `No plot with id='${this.id}' found`
-		const [logged, site, user] = getProfileLogin(this.app, appState.activeCohort) //later on replace with real login info
+		const { logged, sites, user } = getProfileLogin(this.app, appState.activeCohort) //later on replace with real login info
+		const site = sites?.[0]
 		return {
 			config,
 			termfilter: appState.termfilter,
@@ -35,6 +36,7 @@ export class profilePlot {
 			vocab: appState.vocab,
 			logged, //later change to read login info
 			site,
+			sites,
 			activeCohort: appState.activeCohort
 		}
 	}
@@ -208,7 +210,7 @@ export class profilePlot {
 		this.dom.controlsDiv.selectAll('*').remove()
 
 		let inputs = []
-		if (this.state.logged && this.state.site && chartType != 'profileRadarFacility') {
+		if (this.state.logged && this.state.sites?.length == 1 && chartType != 'profileRadarFacility') {
 			const dataInput = {
 				label: 'Data',
 				type: 'radio',
@@ -220,10 +222,14 @@ export class profilePlot {
 					{ label: 'Aggregate', value: true }
 				]
 			}
-
 			inputs.push(dataInput)
 		}
-		if (!this.state.logged || !this.state.site || this.settings.isAggregate || chartType == 'profileRadarFacility') {
+		if (
+			!this.state.logged ||
+			this.state.sites?.length > 1 ||
+			this.settings.isAggregate ||
+			chartType == 'profileRadarFacility'
+		) {
 			inputs.push(
 				...[
 					{
@@ -347,7 +353,7 @@ export class profilePlot {
 			if (this.state.logged) {
 				if (this.state.site && !this.settings.isAggregate) {
 					this.settings.site = this.sampleidmap[this.state.site]?.id
-					this.sites = [{ label: this.state.site, value: this.settings.site }]
+					this.loadSites()
 				} //Admin
 				else if (!this.state.site) {
 					this.sites = this.data.lst.map(s => {
@@ -359,6 +365,8 @@ export class profilePlot {
 						return 0
 					})
 					this.sites.unshift({ label: '', value: '' })
+				}
+				if (this.sites.length > 1)
 					inputs.push({
 						label: 'Site',
 						type: 'dropdown',
@@ -367,8 +375,6 @@ export class profilePlot {
 						settingsKey: 'site',
 						callback: value => this.setSite(value)
 					})
-				}
-
 				this.sampleData = await this.getSampleData()
 			}
 		} else {
@@ -377,8 +383,7 @@ export class profilePlot {
 
 				if (this.state.site && !this.settings.isAggregate) {
 					this.settings.site = this.sampleidmap[this.state.site].id
-					this.sites = [{ label: this.state.site, value: this.settings.site }]
-
+					this.loadSites()
 					this.sampleData = await this.getSampleData()
 				} //Admin
 				else {
@@ -406,6 +411,14 @@ export class profilePlot {
 					callback: value => this.setSite(value)
 				})
 			}
+		}
+	}
+
+	loadSites() {
+		this.sites = []
+		for (const site of this.state.sites) {
+			const id = this.sampleidmap[site]?.id
+			this.sites.push({ label: site, value: id })
 		}
 	}
 
@@ -674,6 +687,6 @@ export function getProfileLogin(app, cohort = FULL_COHORT) {
 	const logged = auth_info?.role != 'public'
 	if (!auth_info) return [false, null, 'public'] //no login info for the cohort, treat it as not logged in, public view for that cohort
 	const user = auth_info?.role
-	const site = user == 'admin' ? null : auth_info.site //site only matters if you are not admin
-	return [logged, site, user]
+	const sites = user == 'admin' ? null : auth_info.sites //site only matters if you are not admin
+	return { logged, sites, user }
 }
