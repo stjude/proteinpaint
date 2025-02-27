@@ -37,7 +37,6 @@
         {
             "label": "Age and Heart",
             "runargs": {
-                "host": "https://survivorship.proteinpaint.stjude.org/",
                 "mass": {
                     "state": {
                         "vocab": {
@@ -84,7 +83,6 @@
         {
             "label": "3D PCA",
             "runargs": {
-                "host": "https://survivorship.proteinpaint.stjude.org/",
                 "mass": {
                     "state": {
                         "dslabel": "SJLife",
