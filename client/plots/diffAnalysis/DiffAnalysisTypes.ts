@@ -2,6 +2,12 @@ import type { Div, Elem, SvgG, SvgSvg, SvgText } from '../../types/d3'
 import type { Menu } from '#dom'
 import type { PlotConfig } from '#mass/types/mass'
 
+/** TODO
+ * - add comments
+ * - fix types
+ * - move types dir and volcano types to separate file
+ */
+
 export type DataPointEntry = {
 	adjusted_p_value: number
 	/** color indicating significance */
@@ -74,6 +80,8 @@ export type DiffAnalysisViewData = {
 	pValueTableData: any
 }
 
+//TODO: This needs to be cleared up.
+//Should not be DADom and VolcanoDom
 export type DiffAnalysisPlotDim = {
 	logFoldChangeLine: { x: number; y1: number; y2: number }
 	plot: { width: number; height: number; x: number; y: number }

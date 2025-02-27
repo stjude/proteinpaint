@@ -15,7 +15,7 @@ import { VolcanoPlotView } from './view/VolcanoPlotView'
 class Volcano extends RxComponentInner {
 	readonly type = 'volcano'
 	components: { controls: any }
-	dom: { holder: any; controls: any; error: any; tip: any }
+	dom: { holder: any; controls: any; error: any; wait: any; tip: any }
 	interactions: VolcanoInteractions
 	diffAnalysisInteractions?: DiffAnalysisInteractions
 
@@ -31,6 +31,12 @@ class Volcano extends RxComponentInner {
 			holder,
 			controls,
 			error,
+			wait: holder
+				.append('div')
+				.attr('id', 'sjpp-diff-analysis-wait')
+				.style('opacity', 0.75)
+				.style('padding', '20px')
+				.text('Loading...'),
 			tip: new Menu({ padding: '' })
 		}
 		if (opts.diffAnalysisInteractions) this.diffAnalysisInteractions = opts.diffAnalysisInteractions
@@ -198,6 +204,7 @@ class Volcano extends RxComponentInner {
 
 		try {
 			this.interactions.clearDom()
+			this.dom.wait.style('display', 'block')
 			const settings = config.settings.volcano
 			/** Fetch data */
 			const model = new VolcanoModel(this.app, config, settings)
@@ -211,6 +218,7 @@ class Volcano extends RxComponentInner {
 			const viewModel = new VolcanoViewModel(config, response, settings)
 			//Pass table data for downloading
 			this.interactions.pValueTableData = viewModel.viewData.pValueTableData
+			this.dom.wait.style('display', 'none')
 			/** Render formatted data */
 			new VolcanoPlotView(this.dom, settings, viewModel.viewData, this.interactions)
 		} catch (e: any) {
