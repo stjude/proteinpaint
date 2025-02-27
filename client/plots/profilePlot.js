@@ -46,7 +46,7 @@ export class profilePlot {
 		if (!this.state.logged) return true
 		if (!('isAggregate' in this.settings) || this.settings.isAggregate == undefined)
 			//no previous configuration
-			return this.state.sites.length > 1 || this.state.user == 'admin'
+			return this.state.sites?.length > 1 || this.state.user == 'admin'
 		return this.settings.isAggregate
 	}
 
@@ -371,7 +371,7 @@ export class profilePlot {
 				})
 				this.sites.unshift({ label: '', value: '' })
 			}
-			if (this.sites.length > 1)
+			if (this.isAggregate())
 				inputs.push({
 					label: 'Site',
 					type: 'dropdown',
