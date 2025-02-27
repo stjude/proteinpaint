@@ -10,6 +10,7 @@ Fixes:
 - Passed download filename to the GSEA. Updated GSEA download to download image on burguer menu download icon and download plot on table icon (jira-sv-2571)
 - Updated labels requested on [JIRA] (FEAT-857)
 - Fixed bug in the download image in GSEA
+- hierCluster: remove term from hierCluster when no sample was tested for the term
 
 
 ## 2.108.0

@@ -1,2 +1,1 @@
-Fixes:
-- hierCluster: remove term from hierCluster when no sample was tested for the term
+
