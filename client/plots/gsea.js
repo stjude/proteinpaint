@@ -453,7 +453,6 @@ export function getDefaultGseaSettings() {
 }
 
 export async function getPlotConfig(opts, app) {
-	console.log('plot config called', opts)
 	try {
 		const config = {
 			//idea for fixing nav button
