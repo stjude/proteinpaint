@@ -132,6 +132,19 @@ function divideValues(q: ViolinRequest, data: ValidGetDataResponse, sampleType: 
 	const useLog = q.unit == 'log'
 
 	const { absMax, absMin, key2values, uncomputableValues } = parseValues(q, data, sampleType, useLog, overlayTerm)
+
+	//Do not show a violin plot for values with less than 5 samples
+	//Instead, add as an uncomputable value and show in legend
+	for (const [k, v] of key2values) {
+		if (v.length < 5) {
+			let label
+			if (overlayTerm) label = overlayTerm?.term?.values?.[k]?.label || k
+			else label = q.tw.term.values[k].label
+			key2values.delete(k)
+			uncomputableValues[label] = v.length
+		}
+	}
+
 	return {
 		key2values,
 		min: absMin,

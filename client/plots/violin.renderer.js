@@ -514,6 +514,8 @@ function getLegendGrps(termNum, self) {
 			? t1
 			: t2?.q.mode === 'continuous' && t2?.q.hiddenValues && Object.keys(t2?.q.hiddenValues).length > 0
 			? t2
+			: t2 && self.data.uncomputableValues
+			? t2
 			: null,
 		legendGrps,
 		headingStyle,
