@@ -18,11 +18,6 @@ export class VolcanoInteractions {
 		this.pValueTableData = []
 	}
 
-	setVar(app, id) {
-		this.app = app
-		this.id = id
-	}
-
 	/** Launches a multi-term select tree
 	 * On submit, dispatches a plot_edit action with the new confounders */
 	async confoundersMenu() {
@@ -61,7 +56,8 @@ export class VolcanoInteractions {
 				text: 'Download plot',
 				callback: () => {
 					const svg = this.dom.holder.select('svg').node() as Node
-					to_svg(svg, `boxplot`, { apply_dom_styles: true })
+					//TODO: add title to svg based on config
+					to_svg(svg, `Differential analysis volcano`, { apply_dom_styles: true })
 				}
 			},
 			{

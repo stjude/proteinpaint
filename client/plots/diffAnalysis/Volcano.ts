@@ -16,7 +16,7 @@ class Volcano extends RxComponentInner {
 	readonly type = 'volcano'
 	components: { controls: any }
 	dom: { holder: any; controls: any; error: any; wait: any; tip: any }
-	interactions: VolcanoInteractions
+	interactions?: VolcanoInteractions
 	diffAnalysisInteractions?: DiffAnalysisInteractions
 
 	constructor(opts: any) {
@@ -40,7 +40,6 @@ class Volcano extends RxComponentInner {
 			tip: new Menu({ padding: '' })
 		}
 		if (opts.diffAnalysisInteractions) this.diffAnalysisInteractions = opts.diffAnalysisInteractions
-		this.interactions = new VolcanoInteractions(this.app, this.id, this.dom)
 	}
 
 	getState(appState: MassState) {
@@ -187,15 +186,15 @@ class Volcano extends RxComponentInner {
 			inputs
 		})
 
-		this.components.controls.on('downloadClick.differentialAnalysis', () => this.interactions.download())
+		this.components.controls.on('downloadClick.differentialAnalysis', () => this.interactions!.download())
 		this.components.controls.on('helpClick.differentialAnalysis', () =>
 			window.open('https://github.com/stjude/proteinpaint/wiki/Differential-analysis')
 		)
 	}
 
 	async init() {
+		this.interactions = new VolcanoInteractions(this.app, this.id, this.dom)
 		await this.setControls()
-		this.interactions.setVar(this.app, this.id)
 	}
 
 	async main() {
@@ -203,6 +202,7 @@ class Volcano extends RxComponentInner {
 		if (config.chartType != this.type && config.childType != this.type) return
 
 		try {
+			if (!this.interactions) throw 'Interactions not initialized [main() Volcano.ts]'
 			this.interactions.clearDom()
 			this.dom.wait.style('display', 'block')
 			const settings = config.settings.volcano
