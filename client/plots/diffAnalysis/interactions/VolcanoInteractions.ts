@@ -60,7 +60,7 @@ export class VolcanoInteractions {
 			{
 				text: 'Download plot',
 				callback: () => {
-					const svg = this.dom.tabsContent.select('svg').node() as Node
+					const svg = this.dom.holder.select('svg').node() as Node
 					to_svg(svg, `boxplot`, { apply_dom_styles: true })
 				}
 			},
