@@ -44,9 +44,7 @@ export class profilePlot {
 
 	isAggregate() {
 		if (!this.state.logged) return true
-		if (!('isAggregate' in this.settings) || this.settings.isAggregate == undefined)
-			//no previous configuration
-			return this.state.sites?.length > 1 || this.state.user == 'admin'
+		if (this.state.sites?.length > 1 || this.state.user == 'admin') return true
 		return this.settings.isAggregate
 	}
 
@@ -221,7 +219,8 @@ export class profilePlot {
 		const chartType = this.type
 		this.dom.controlsDiv.selectAll('*').remove()
 		let inputs = []
-		if (this.state.logged && this.state.sites?.length == 1 && chartType != 'profileRadarFacility') {
+		const isAggregate = this.isAggregate()
+		if (this.state.sites?.length == 1 && chartType != 'profileRadarFacility') {
 			const dataInput = {
 				label: 'Data',
 				type: 'radio',
@@ -235,7 +234,6 @@ export class profilePlot {
 			}
 			inputs.push(dataInput)
 		}
-		const isAggregate = this.isAggregate()
 		if (isAggregate || chartType == 'profileRadarFacility') {
 			inputs.push(
 				...[
@@ -646,14 +644,13 @@ export function clearLocalFilters(plot) {
 
 export function getDefaultProfilePlotSettings() {
 	return {
-		isAggregate: undefined,
+		isAggregate: false,
 		showTable: true
 	}
 }
 
 export function getProfileLogin(app, cohort = FULL_COHORT) {
 	const auth = app.vocabApi.getClientAuthResult()
-	//console.log(auth)
 	if (!auth) return { logged: false, sites: [], user: 'public' }
 	const auth_info = cohort == FULL_COHORT ? auth.full : auth.abbrev
 	const logged = auth_info?.role != 'public'
