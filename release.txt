@@ -1,1 +1,2 @@
-
+Fix
+- Violin with less than five samples will appear as uncomputable. 
