@@ -40,6 +40,11 @@ export default function setViolinRenderer(self) {
 
 		//filter out hidden values and only keep plots which are not hidden in term2.q.hiddenvalues
 		self.data.plots = self.data.plots.filter(p => !termNum?.q?.hiddenValues?.[p.label || p.seriesId])
+		if (settings.orderByMedian == true) {
+			self.data.plots.sort(
+				(a, b) => a.summaryStats.find(x => x.id === 'median').value - b.summaryStats.find(x => x.id === 'median').value
+			)
+		}
 		this.k2c = getColors(self.data.plots.length)
 		if (self.legendRenderer) self.legendRenderer(getLegendGrps(termNum, self))
 
