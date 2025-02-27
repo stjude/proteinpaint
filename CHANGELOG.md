@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 Features:
 - Add new test for corr.R
+- New control add to sort the violin plots by either the default or median values.
 
 Fixes:
 - Cleared single cell plot state related to the sample (jira-sv-2568)

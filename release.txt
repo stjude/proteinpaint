@@ -1,2 +1,1 @@
-Feature
-- New control add to sort the violin plots by either the default or median values. 
+
