@@ -89,10 +89,14 @@ async function getResult(q: TermdbClusterRequest, ds: any, genome) {
 		;({ term2sample2value, byTermId, bySampleId } = await ds.queries[q.dataType].get(_q))
 	}
 
-	// remove term with a sample2value map of size 0 from term2sample2value
-	// TODO: need to fix client side code so that the deleted term won't be shown from "edit current group"
-	for (const [term, sample2valueMap] of term2sample2value) {
-		if ([...Object.keys(sample2valueMap)].length === 0) {
+	/* remove term with a sample2value map of size 0 from term2sample2value
+	such term will cause all samples to be dropped from clustering plot
+	this has two practical applications with gdc:
+	1. local testing with gdc using inconsistent gencode versions (gdc:36). for some genes local will use a geneid not found in gdc and cause issue for clustering
+	2. somehow in v36 genedb there can still be geneid not in gdc. this helps avoid app crashing in gdc environment
+	*/
+	for (const [term, obj] of term2sample2value) {
+		if (Object.keys(obj).length === 0) {
 			term2sample2value.delete(term)
 			delete byTermId[term]
 		}
