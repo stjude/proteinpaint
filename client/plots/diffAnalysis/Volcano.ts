@@ -4,6 +4,7 @@ import { getCompInit, copyMerge } from '#rx'
 import { Menu } from '#dom'
 import { RxComponentInner } from '../../types/rx.d'
 import { controlsInit } from '../controls'
+import type { DiffAnalysisInteractions } from './interactions/DiffAnalysisInteractions'
 import { VolcanoModel } from './model/VolcanoModel'
 import { VolcanoViewModel } from './viewModel/VolcanoViewModel'
 import { VolcanoInteractions } from './interactions/VolcanoInteractions'
@@ -16,6 +17,7 @@ class Volcano extends RxComponentInner {
 	components: { controls: any }
 	dom: { holder: any; controls: any; error: any; tip: any }
 	interactions: VolcanoInteractions
+	diffAnalysisInteractions?: DiffAnalysisInteractions
 
 	constructor(opts: any) {
 		super()
@@ -31,7 +33,7 @@ class Volcano extends RxComponentInner {
 			error,
 			tip: new Menu({ padding: '' })
 		}
-
+		if (opts.diffAnalysisInteractions) this.diffAnalysisInteractions = opts.diffAnalysisInteractions
 		this.interactions = new VolcanoInteractions(this.app, this.id, this.dom)
 	}
 
@@ -203,6 +205,7 @@ class Volcano extends RxComponentInner {
 			if (!response || response.error) {
 				this.dom.error.text(response.error || 'No data returned from server')
 			}
+			if (this.diffAnalysisInteractions) this.diffAnalysisInteractions.setVar(this.app, response)
 
 			/** Format response into an object for rendering */
 			const viewModel = new VolcanoViewModel(config, response, settings)

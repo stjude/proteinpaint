@@ -7,6 +7,7 @@ import type { DiffAnalysisDom, DiffAnalysisOpts } from './DiffAnalysisTypes'
 import { DiffAnalysisView } from './view/DiffAnalysisView'
 import { getDefaultVolcanoSettings } from './Volcano'
 import { getDefaultGseaSettings } from '#plots/gsea.js'
+import { DiffAnalysisInteractions } from './interactions/DiffAnalysisInteractions.ts'
 
 /** TODO:
  * - type this file
@@ -17,6 +18,7 @@ class DifferentialAnalysis extends RxComponentInner {
 		plots: any
 	}
 	dom: DiffAnalysisDom
+	interactions: DiffAnalysisInteractions
 	plotTabs: any
 	plotsDiv: { [key: string]: Elem }
 	plotControlsDiv: { [key: string]: Elem }
@@ -54,6 +56,7 @@ class DifferentialAnalysis extends RxComponentInner {
 			volcano: volcanoDiv,
 			gsea: gseaDiv
 		}
+		this.interactions = new DiffAnalysisInteractions()
 
 		//TODO: include type. move to main()
 		if (opts.header) {
@@ -101,7 +104,8 @@ class DifferentialAnalysis extends RxComponentInner {
 				holder: this.plotsDiv.volcano,
 				id: this.id,
 				parent: this.api,
-				controls: this.plotControlsDiv.volcano
+				controls: this.plotControlsDiv.volcano,
+				diffAnalysisInteractions: this.interactions
 			}),
 			gsea: await gsea.componentInit({
 				app: this.app,
@@ -111,7 +115,7 @@ class DifferentialAnalysis extends RxComponentInner {
 				controls: this.plotControlsDiv.gsea
 			})
 		}
-		this.plotTabs = new DiffAnalysisView(this.app, config, this.dom)
+		this.plotTabs = new DiffAnalysisView(this.app, config, this.dom, this.interactions)
 	}
 
 	main() {
