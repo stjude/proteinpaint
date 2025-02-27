@@ -89,6 +89,15 @@ async function getResult(q: TermdbClusterRequest, ds: any, genome) {
 		;({ term2sample2value, byTermId, bySampleId } = await ds.queries[q.dataType].get(_q))
 	}
 
+	// remove term with a sample2value map of size 0 from term2sample2value
+	// TODO: need to fix client side code so that the deleted term won't be shown from "edit current group"
+	for (const [term, sample2valueMap] of term2sample2value) {
+		if ([...Object.keys(sample2valueMap)].length === 0) {
+			term2sample2value.delete(term)
+			delete byTermId[term]
+		}
+	}
+
 	if (term2sample2value.size == 0) throw 'no data'
 	if (term2sample2value.size == 1) {
 		// get data for only 1 gene; still return data, may create violin plot later
