@@ -145,6 +145,18 @@ class ViolinPlot {
 				]
 			},
 			{
+				label: 'Order by',
+				title: 'Order violin plots by parameters',
+				type: 'radio',
+				chartType: 'violin',
+				settingsKey: 'orderByMedian',
+				options: [
+					{ label: 'Default', value: false },
+					{ label: 'Median', value: true }
+				],
+				getDisplayStyle: () => (this.data.plots.length > 1 ? '' : 'none')
+			},
+			{
 				label: 'Symbol size',
 				type: 'number',
 				chartType: 'violin',
@@ -340,7 +352,8 @@ class ViolinPlot {
 			rightMargin: s.rightMargin,
 			unit: s.unit,
 			isKDE: s.method == 0,
-			ticks: s.ticks
+			ticks: s.ticks,
+			orderByMedian: s.orderByMedian
 		}
 
 		if (this.opts.mode == 'minimal') {
@@ -393,7 +406,8 @@ export function getDefaultViolinSettings(app, overrides = {}) {
 		medianThickness: 3,
 		ticks: 20,
 		defaultColor: plotColor,
-		method: 0
+		method: 0,
+		orderByMedian: false
 	}
 	return Object.assign(defaults, overrides)
 }
