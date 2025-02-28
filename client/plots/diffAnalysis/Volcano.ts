@@ -9,6 +9,7 @@ import { VolcanoModel } from './model/VolcanoModel'
 import { VolcanoViewModel } from './viewModel/VolcanoViewModel'
 import { VolcanoInteractions } from './interactions/VolcanoInteractions'
 import { VolcanoPlotView } from './view/VolcanoPlotView'
+import { VolcanoControlInputs } from './VolcanoControlInputs'
 
 /** TODO:
  * - Fix all the types */
@@ -17,6 +18,7 @@ class Volcano extends RxComponentInner {
 	components: { controls: any }
 	dom: { holder: any; controls: any; error: any; wait: any; tip: any }
 	interactions?: VolcanoInteractions
+	termType: string //'geneExpresion', etc.
 	diffAnalysisInteractions?: DiffAnalysisInteractions
 
 	constructor(opts: any) {
@@ -24,6 +26,7 @@ class Volcano extends RxComponentInner {
 		this.components = {
 			controls: {}
 		}
+		this.termType = opts.termType
 		const holder = opts.holder.classed('sjpp-diff-analysis-main', true)
 		const controls = opts.controls || holder.append('div')
 		const error = opts.holder.append('div').attr('id', 'sjpp-diff-analysis-error').style('opacity', 0.75)
@@ -42,6 +45,16 @@ class Volcano extends RxComponentInner {
 		if (opts.diffAnalysisInteractions) this.diffAnalysisInteractions = opts.diffAnalysisInteractions
 	}
 
+	reactsTo(action) {
+		if (action.type.includes('cache_termq')) return true
+		if (action.type.startsWith('plot_')) {
+			return action.id === this.id
+		}
+		if (action.type.startsWith('filter')) return true
+		if (action.type.startsWith('cohort')) return true
+		if (action.type == 'app_refresh') return true
+	}
+
 	getState(appState: MassState) {
 		const config = appState.plots.find((p: BasePlotConfig) => p.id === this.id)
 		if (!config) {
@@ -57,133 +70,13 @@ class Volcano extends RxComponentInner {
 	}
 
 	async setControls() {
-		const inputs = [
-			{
-				label: 'Minimum read count',
-				type: 'number',
-				chartType: 'volcano',
-				settingsKey: 'minCount',
-				title: 'The smallest number of reads required for a gene to be considered in the analysis',
-				min: 0,
-				max: 10000
-			},
-			{
-				label: 'Minimum total read count',
-				type: 'number',
-				chartType: 'volcano',
-				settingsKey: 'minTotalCount',
-				title: 'The smallest total number of reads required for a gene to be considered in the analysis',
-				min: 0,
-				max: 10000
-			},
-			{
-				label: 'P value significance (linear)',
-				type: 'number',
-				chartType: 'volcano',
-				settingsKey: 'pValue',
-				title: 'The p-value threshold to determine statistical significance',
-				min: 0,
-				max: 1
-			},
-			{
-				label: 'Fold change (log)',
-				type: 'number',
-				chartType: 'volcano',
-				settingsKey: 'foldChangeCutoff',
-				title: 'The fold change threshold to determine biological significance',
-				min: -10,
-				max: 10
-			},
-			{
-				label: 'P value',
-				type: 'radio',
-				chartType: 'volcano',
-				settingsKey: 'pValueType',
-				title: 'Toggle between original and adjusted pvalues for volcano plot',
-				options: [
-					{ label: 'Adjusted', value: 'adjusted' },
-					{ label: 'Original', value: 'original' }
-				]
-			},
-			{
-				label: 'Variable genes cutoff',
-				type: 'number',
-				chartType: 'volcano',
-				settingsKey: 'varGenesCutoff',
-				title: 'Top number of genes with the highest variability to include in analysis',
-				min: 1000,
-				max: 4000
-			},
-			//Not enabling this feature
-			//needs more discussion
-			// {
-			// 	label: 'Gene Set Overrepresentation Analysis',
-			// 	type: 'radio',
-			// 	chartType: 'volcano',
-			// 	settingsKey: 'geneORA',
-			//     styles: { display: 'block' },
-			// 	title: 'Toggle to check if certain gene sets are overrepresented among upregulated, downregulated, or both sets of genes',
-			// 	options: [
-			// 		{ label: 'Upregulated', value: 'upregulated' },
-			// 		{ label: 'Downregulated', value: 'downregulated' },
-			// 		{ label: 'Both', value: 'both' }
-			// 	],
-			//     getDisplayStyle: () => (this.app.opts.genome.termdbs ? '' : 'none')
-			// },
-			{
-				label: 'Show P value table',
-				type: 'checkbox',
-				chartType: 'volcano',
-				settingsKey: 'showPValueTable',
-				title: 'Show table with both original and adjusted p values for all significant genes',
-				boxLabel: ''
-			},
-			{
-				label: 'Plot height',
-				type: 'number',
-				chartType: 'volcano',
-				settingsKey: 'height',
-				title: 'Height of the plot in pixels',
-				min: 300,
-				max: 1000
-			},
-			{
-				label: 'Plot width',
-				type: 'number',
-				chartType: 'volcano',
-				settingsKey: 'width',
-				title: 'Width of the plot in pixels',
-				min: 300,
-				max: 1000
-			},
-			{
-				label: 'Significant value color',
-				type: 'color',
-				chartType: 'volcano',
-				title: 'Default color for highlighted data points.',
-				settingsKey: 'defaultSignColor'
-			},
-			{
-				label: 'Non-significant value color',
-				type: 'color',
-				chartType: 'volcano',
-				title: 'Default color for highlighted data points.',
-				settingsKey: 'defaultNonSignColor'
-			},
-			{
-				label: 'Highlight color',
-				type: 'color',
-				chartType: 'volcano',
-				title: 'Default color for highlighted data points.',
-				settingsKey: 'defaultHighlightColor'
-			}
-		]
+		const controls = new VolcanoControlInputs(this.termType)
 
 		this.components.controls = await controlsInit({
 			app: this.app,
 			id: this.id,
 			holder: this.dom.controls.attr('class', 'pp-termdb-plot-controls').style('display', 'inline-block'),
-			inputs
+			inputs: controls.inputs
 		})
 
 		this.components.controls.on('downloadClick.differentialAnalysis', () => this.interactions!.download())
@@ -209,7 +102,7 @@ class Volcano extends RxComponentInner {
 			/** Fetch data */
 			const model = new VolcanoModel(this.app, config, settings)
 			const response = await model.getData()
-			if (!response || response.error) {
+			if (!response || response.error || !response.data.length) {
 				this.dom.error.text(response.error || 'No data returned from server')
 			}
 			if (this.diffAnalysisInteractions) this.diffAnalysisInteractions.setVar(this.app, response)
@@ -230,8 +123,8 @@ class Volcano extends RxComponentInner {
 	}
 }
 
-export const boxplotInit = getCompInit(Volcano)
-export const componentInit = boxplotInit
+export const volcanoInit = getCompInit(Volcano)
+export const componentInit = volcanoInit
 
 export function getDefaultVolcanoSettings(overrides = {}): VolcanoSettings {
 	const defaults: VolcanoSettings = {
@@ -254,12 +147,14 @@ export function getDefaultVolcanoSettings(overrides = {}): VolcanoSettings {
 }
 
 export function getPlotConfig(opts: any) {
+	//if (!opts.termType) throw '.termType is required [Volcano getPlotConfig()]'
 	const config = {
-		samplelst: opts.samplelst,
 		highlightedData: opts.highlightedData,
+		samplelst: opts.samplelst,
 		settings: {
 			volcano: getDefaultVolcanoSettings(opts.overrides || {})
-		}
+		},
+		termType: opts.termType
 	}
 
 	return copyMerge(config, opts)
