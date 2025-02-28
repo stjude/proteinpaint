@@ -49,6 +49,8 @@ export type DiffAnalysisDom = {
 export type DiffAnalysisOpts = {
 	/** Container for the plot */
 	holder: Elem
+	/** Type of differential analysis, determined by available data */
+	termType: string
 	/** Optional container for the controls. */
 	controls?: Elem
 	/** Optional sandbox header */
@@ -60,16 +62,16 @@ export type DiffAnalysisOpts = {
 }
 
 export type DiffAnalysisPlotConfig = PlotConfig & {
+	/** Data points highlighted in the volcano plot */
+	highlightedData: string[]
 	samplelst: {
 		groups: {
 			name: string
 			samplelst: string[]
 		}[]
 	}
-	/** Data points highlighted in the volcano plot */
-	highlightedData: string[]
-	/** Which tabs and plot ought to render */
-	visiblePlots: string[]
+	/** Determines the kind of diff analysis */
+	termType: string
 }
 
 /** Formatted data from the view model */
