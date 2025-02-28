@@ -9,10 +9,11 @@ export default class RedisClientHolder {
 		return this.client
 	}
 
-	private constructor(redisUrl: string) {
-		// TODO add the secret to client config
+	private constructor(redisUrl: string, secret: any) {
+		// TODO Handle multiple redis instances
 		this.client = createClient({
-			url: redisUrl
+			url: redisUrl,
+			password: secret
 		})
 
 		this.client.on('error', (err: any) => {
@@ -30,9 +31,9 @@ export default class RedisClientHolder {
 		this.client.connect()
 	}
 
-	public static getInstance(redisUrl: string): RedisClientHolder {
+	public static getInstance(redisUrl: string, secret: any): RedisClientHolder {
 		if (!RedisClientHolder.instance) {
-			RedisClientHolder.instance = new RedisClientHolder(redisUrl)
+			RedisClientHolder.instance = new RedisClientHolder(redisUrl, secret)
 		}
 		return RedisClientHolder.instance
 	}
