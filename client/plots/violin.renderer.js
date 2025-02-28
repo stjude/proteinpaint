@@ -62,7 +62,7 @@ export default function setViolinRenderer(self) {
 
 		const svgData = renderSvg(t1, self, isH, settings)
 		renderScale(t1, t2, settings, isH, svgData, self)
-		let y = self.settings.rowSpace
+		let y = 0
 		const thickness = self.settings.plotThickness || self.getAutoThickness()
 		for (const [plotIdx, plot] of self.data.plots.entries()) {
 			// The scale uses half of the plotThickness as the maximum value as the image is symmetrical
