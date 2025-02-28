@@ -21,6 +21,8 @@ export type DERequest = {
 	tw2?: any
 	/** Number of variable genes (defined only for parametric DE methods) */
 	VarGenes?: number
+	/** Cutoff to invoke Quasi-Likelihood pipeline in edgeR */
+	ql_cutoff?: number
 }
 
 export type ExpressionInput = {
@@ -48,6 +50,8 @@ export type ExpressionInput = {
 	conf2_mode?: 'continuous' | 'discrete'
 	/** Number of variable genes to be included for DE analysis (optional) */
 	VarGenes?: number
+	/** Cutoff to invoke Quasi-Likelihood pipeline in edgeR */
+	ql_cutoff?: number
 }
 
 export type DEResponse = {

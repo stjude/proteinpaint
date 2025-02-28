@@ -226,6 +226,10 @@ values[] // using integer sample id
 		storage_type: param.storage_type
 	} as ExpressionInput
 
+	if (param.ql_cutoff) {
+		expression_input.ql_cutoff = param.ql_cutoff
+	}
+
 	if (param.tw) {
 		//console.log("param.tw.q.mode:",param.tw.q.mode)
 		expression_input.conf1 = [...conf1_group2, ...conf1_group1] // Make sure the order of the groups is same as in expression_input case and control

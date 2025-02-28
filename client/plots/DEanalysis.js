@@ -156,6 +156,15 @@ class DEanalysis {
 						title: 'Top number of genes with the highest variability to include in analysis',
 						min: 1000,
 						max: 4000
+					},
+					{
+						label: 'Quasi-Likelihood Cutoff',
+						type: 'number',
+						chartType: 'DEanalysis',
+						settingsKey: 'ql_cutoff',
+						title: 'Cutoff to invoke the quasi-likelihood pipeline in edgeR',
+						min: 0,
+						max: 600
 					}
 				)
 				if (this.config.term) {
@@ -701,6 +710,7 @@ export async function getPlotConfig(opts, app) {
 					adjusted_original_pvalue: 'adjusted',
 					method: 'edgeR',
 					VarGenes: 3000,
+					ql_cutoff: 100,
 					gene_ora: undefined,
 					gsea: undefined
 				}
@@ -804,6 +814,7 @@ async function runDEanalysis(self) {
 
 	if (input.method == 'edgeR') {
 		input.VarGenes = self.settings.VarGenes
+		input.ql_cutoff = self.settings.ql_cutoff
 	}
 
 	const output = await dofetch3('DEanalysis', {

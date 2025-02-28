@@ -119,7 +119,7 @@ normalization_time <- system.time({
 })
 #cat("Normalization time: ", normalization_time[3], " seconds\n")
 
-QL_cutoff <- 100 # Sample size cutoff to invoke Quasi likelihood pipeline. If sample sizes for both groups are below this threshold then maximum likelihood method will be used
+QL_cutoff <- input$ql_cutoff # Sample size cutoff to invoke Quasi likelihood pipeline. If sample sizes for both groups are below this threshold then maximum likelihood method will be used
 
 # Differential expression analysis
 if (length(input$conf1) == 0) { # No adjustment of confounding factors
