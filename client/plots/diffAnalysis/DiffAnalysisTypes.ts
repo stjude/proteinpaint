@@ -130,6 +130,8 @@ export type VolcanoSettings = {
 	pValue: number
 	/** Users may switch between 'original' and 'adjusted' p values */
 	pValueType: 'original' | 'adjusted'
+	/** Toggle between ranking the genes by variance or abs(foldChange) */
+	rankBy: 'abs(foldChange)' | 'pValue'
 	/** Show a table of p values */
 	showPValueTable: boolean
 	/** Number of variable genes used in parametric DE analysis*/

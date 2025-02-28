@@ -138,6 +138,19 @@ export class VolcanoControlInputs {
 				title: 'Top number of genes with the highest variability to include in analysis',
 				min: 1000,
 				max: 4000
+			},
+			{
+				label: 'Rank Genes by',
+				type: 'radio',
+				chartType: 'volcano',
+				settingsKey: 'rankBy',
+				title: 'Rank genes by either the absolute value of the fold change or the variance',
+				options: [
+					{ label: 'abs(Fold Change)', value: 'abs(foldChange)' },
+					{ label: 'Variance', value: 'variance' }
+				],
+				//TODO: will enable this feature when there is backhand support
+				getDisplayStyle: () => 'none'
 			}
 			//Not enabling this feature
 			//needs more discussion
