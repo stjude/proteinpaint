@@ -1,6 +1,7 @@
-import type { MassState, BasePlotConfig } from '#mass/types/mass'
-import type { VolcanoSettings } from './DiffAnalysisTypes'
+import type { MassState, BasePlotConfig, MassAppApi } from '#mass/types/mass'
+import type { VolcanoSettings } from './VolcanoTypes'
 import { getCompInit, copyMerge } from '#rx'
+import { fillTermWrapper } from '#termsetting'
 import { Menu } from '#dom'
 import { RxComponentInner } from '../../types/rx.d'
 import { controlsInit } from '../controls'
@@ -147,10 +148,22 @@ export function getDefaultVolcanoSettings(overrides = {}): VolcanoSettings {
 	return Object.assign(defaults, overrides)
 }
 
-export function getPlotConfig(opts: any) {
-	//if (!opts.termType) throw '.termType is required [Volcano getPlotConfig()]'
+export async function getPlotConfig(opts: any, app: MassAppApi) {
+	if (!opts.termType) throw '.termType is required [Volcano getPlotConfig()]'
+	if (opts.confounderTws) {
+		try {
+			for (const tw of opts.confounderTws) {
+				await fillTermWrapper(tw, app.vocabApi)
+			}
+		} catch (e: any) {
+			console.error(new Error(`${e} [volcano getPlotConfig()]`))
+			throw `volcano getPlotConfig() failed`
+		}
+	}
+
 	const config = {
-		highlightedData: opts.highlightedData,
+		confounderTws: opts.confounderTws || [],
+		highlightedData: opts.highlightedData || [],
 		samplelst: opts.samplelst,
 		settings: {
 			volcano: getDefaultVolcanoSettings(opts.overrides || {})
