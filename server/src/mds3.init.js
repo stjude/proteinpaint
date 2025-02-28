@@ -2571,24 +2571,131 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 		// rehydrate term.groupsetting
 		if (!tw.term.groupsetting) tw.term.groupsetting = geneVariantTermGroupsetting
 
+		/////////////////////////////////////////
+		/// scenarios for testing groupsetting ///
+		/////////////////////////////////////////
+		//console.log('tw:', tw)
+		tw.q.type = 'custom-groupset'
+		/*// custom groupset for "CNV=gain vs. other"
+		tw.q.customset = {groups: [
+			{
+				name: 'Group 1',
+				type: 'dtlst',
+				in: true,
+				join: 'and',
+				lst: [{type: 'dt', dt: 4, mclasses: ['CNV_amp']}]
+			},
+			{
+				name: 'Group 2',
+				type: 'dtlst',
+				in: false,
+				join: 'and',
+				lst: [{type: 'dt', dt: 4, mclasses: ['CNV_amp']}]
+			}
+		]}*/
+		/*// custom groupset for "CNV=loss OR SNV=M vs. other"
+		tw.q.customset = {groups: [
+			{
+				name: 'Group 1',
+				type: 'dtlst',
+				in: true,
+				join: 'or',
+				lst: [
+					{type: 'dt', dt: 4, mclasses: ['CNV_loss']},
+					{type: 'dt', dt: 1, mclasses: ['M']}
+				]
+			},
+			{
+				name: 'Group 2',
+				type: 'dtlst',
+				in: false,
+				join: 'or',
+				lst: [
+					{type: 'dt', dt: 4, mclasses: ['CNV_loss']},
+					{type: 'dt', dt: 1, mclasses: ['M']}
+				]
+			}
+		]}*/
+		/*// custom groupset for "CNV=loss AND SNV=M vs. other"
+		tw.q.customset = {groups: [
+			{
+				name: 'Group 1',
+				type: 'dtlst',
+				in: true,
+				join: 'and',
+				lst: [
+					{type: 'dt', dt: 4, mclasses: ['CNV_loss']},
+					{type: 'dt', dt: 1, mclasses: ['M']}
+				]
+			},
+			{
+				name: 'Group 2',
+				type: 'dtlst',
+				in: false,
+				join: 'and',
+				lst: [
+					{type: 'dt', dt: 4, mclasses: ['CNV_loss']},
+					{type: 'dt', dt: 1, mclasses: ['M']}
+				]
+			}
+		]}*/
+		/*// custom groupset for "CNV=loss vs. SNV=M"
+		tw.q.customset = {groups: [
+			{
+				name: 'Group 1',
+				type: 'dtlst',
+				in: true,
+				join: 'and',
+				lst: [{type: 'dt', dt: 4, mclasses: ['CNV_loss']}]
+			},
+			{
+				name: 'Group 2',
+				type: 'dtlst',
+				in: true,
+				join: 'and',
+				lst: [{type: 'dt', dt: 1, mclasses: ['M']}]
+			}
+		]}*/
+		// custom groupset for "CNV=loss AND SNV!=M vs. SNV=M AND CNV!=loss"
+		tw.q.customset = {
+			groups: [
+				{
+					name: 'Group 1',
+					type: 'dtlst',
+					in: true,
+					join: 'and',
+					lst: [
+						{ type: 'dt', dt: 4, mclasses: ['CNV_loss'] },
+						{ type: 'dt', dt: 1, mclasses: ['M'], isnot: true }
+					]
+				},
+				{
+					name: 'Group 2',
+					type: 'dtlst',
+					in: true,
+					join: 'and',
+					lst: [
+						{ type: 'dt', dt: 1, mclasses: ['M'] },
+						{ type: 'dt', dt: 4, mclasses: ['CNV_loss'], isnot: true }
+					]
+				}
+			]
+		}
+		/////////////////////////////////////////
+		/////////////////////////////////////////
+
 		// NOTE: the following has some code duplication with
 		// mds3.load.js query_snvindel() etc
 		// primary concern is tw.term may be missing coord/isoform
 		// to perform essential query
 
-		// prepare dts to query
-		// if term is using groupsetting, then query the specified dt
-		// otherwise, query all dts in dataset
+		// query all dts specified in dataset
 		const sample2mlst = new Map()
 		const dts = []
-		if (tw.q.type == 'predefined-groupset' || tw.q.type == 'custom-groupset') {
-			dts.push(tw.q.dt)
-		} else {
-			if (ds.queries.snvindel) dts.push(dtsnvindel)
-			if (ds.queries.svfusion) dts.push(dtfusionrna)
-			if (ds.queries.cnv) dts.push(dtcnv)
-			if (ds.queries.geneCnv) dts.push('geneCnv')
-		}
+		if (ds.queries.snvindel) dts.push(dtsnvindel)
+		if (ds.queries.svfusion) dts.push(dtfusionrna)
+		if (ds.queries.cnv) dts.push(dtcnv)
+		if (ds.queries.geneCnv) dts.push('geneCnv')
 
 		// retrieve mutation data for each dt
 		for (const dt of dts) {
@@ -2682,17 +2789,40 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 
 		const data = new Map() // to return
 		for (const [sample, mlst] of sample2mlst) {
-			const mclasses = mlst.map(m => m.class)
 			if (groupset) {
 				// groupsetting is active
-				// get first group of groupset with a mutation value
-				// that matches a mutation in the sample
+				// get the first group of groupset that the sample can be assigned to
 				// NOTE: this depends on .groups[] being arranged in order
 				// of priority (see client/termsetting/handlers/geneVariant.ts)
 				const group = groupset.groups.find(group => {
-					return group.values.some(v => mclasses.includes(v.key))
+					// TODO: test group.lst elements that are type='dtlst'
+					if (group.type != 'dtlst') throw 'unexpected group.type value'
+					if (group.join != 'and' && group.join != 'or') throw 'unexpected group.join value'
+
+					// determine if sample mutations are in group mutations
+					const inGrplst =
+						group.join == 'and'
+							? // determine if all dts of group match the mlst of sample
+							  group.lst.every(dt => dtMatchesMlst(dt, mlst))
+							: // determine if any dts of group match the mlst of sample
+							  group.lst.some(dt => dtMatchesMlst(dt, mlst))
+
+					// for group.in=true, sample is in group if sample mutations are in group mutations
+					// for group.in=false, sample is in group if sample mutations are not in group mutations
+					return group.in ? inGrplst : !inGrplst
+
+					// function to determine if the dt of group matches the mlst of sample
+					function dtMatchesMlst(dt, mlst) {
+						// determine if any mclass in mlst matches an mclass in the dt object
+						const inMlst = mlst.some(m => dt.dt == m.dt && dt.mclasses.includes(m.class))
+						// for dt.isnot=false, dt and mlst match if their mclasses match
+						// for dt.isnot=true, dt and mlst match if their mclasses do not match
+						return dt.isnot ? !inMlst : inMlst
+					}
 				})
+
 				if (!group || group.uncomputable) continue
+
 				// store sample data
 				// key will be the name of the assigned group
 				data.set(sample, {
