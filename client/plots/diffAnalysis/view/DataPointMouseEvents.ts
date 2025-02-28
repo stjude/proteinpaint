@@ -3,7 +3,7 @@ import { roundValueAuto } from '#shared/roundValue.js'
 import type { Menu } from '#dom'
 import type { SvgCircle } from '../../../types/d3'
 import type { VolcanoInteractions } from '../interactions/VolcanoInteractions'
-import type { DataPointEntry } from '../DiffAnalysisTypes'
+import type { DataPointEntry } from '../VolcanoTypes'
 
 export class DataPointMouseEvents {
 	constructor(d: DataPointEntry, circle: SvgCircle, tip: Menu, interactions: VolcanoInteractions) {

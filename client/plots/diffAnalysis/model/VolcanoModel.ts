@@ -1,12 +1,12 @@
 import type { MassAppApi } from '#mass/types/mass'
 import { dofetch3 } from '#common/dofetch'
-import type { DiffAnalysisPlotConfig, VolcanoSettings } from '../DiffAnalysisTypes'
+import type { VolcanoPlotConfig, VolcanoSettings } from '../VolcanoTypes'
 
 export class VolcanoModel {
 	app: MassAppApi
-	config: DiffAnalysisPlotConfig
+	config: VolcanoPlotConfig
 	settings: VolcanoSettings
-	constructor(app: MassAppApi, config: DiffAnalysisPlotConfig, settings: VolcanoSettings) {
+	constructor(app: MassAppApi, config: VolcanoPlotConfig, settings: VolcanoSettings) {
 		this.app = app
 		this.config = config
 		this.settings = settings
@@ -27,6 +27,12 @@ export class VolcanoModel {
 			min_total_count: this.settings.minTotalCount,
 			samplelst: this.config.samplelst,
 			VarGenes: this.settings.varGenesCutoff
+		} as any
+		//This is a workaround until the server can accept an arr of confounder tws
+		const confounders = this.config.confounderTws
+		if (confounders?.length) {
+			body.tw = this.config.confounderTws[0]
+			if (confounders.length > 1) body.tw2 = this.config.confounderTws[1]
 		}
 
 		return body

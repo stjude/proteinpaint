@@ -1,16 +1,16 @@
-import type { DiffAnalysisViewData, DiffAnalysisPlotConfig, VolcanoSettings } from '../DiffAnalysisTypes'
+import type { VolcanoViewData, VolcanoPlotConfig, VolcanoSettings } from '../VolcanoTypes'
 import { scaleLinear } from 'd3-scale'
 import { roundValueAuto } from '#shared/roundValue.js'
 
 //TODO: Add/fix types
 export class VolcanoViewModel {
-	config: DiffAnalysisPlotConfig
+	config: VolcanoPlotConfig
 	response: any
 	pValueCutoff: number
 	pValueTable: any
 	settings: VolcanoSettings
 	type: string
-	viewData: DiffAnalysisViewData
+	viewData: VolcanoViewData
 	numSignificant = 0
 	numNonSignificant = 0
 	minLogFoldChange = 0
@@ -21,7 +21,7 @@ export class VolcanoViewModel {
 	readonly bottomPad = 60
 	readonly horizPad = 70
 	readonly topPad = 40
-	constructor(config: DiffAnalysisPlotConfig, response: any, settings: VolcanoSettings) {
+	constructor(config: VolcanoPlotConfig, response: any, settings: VolcanoSettings) {
 		this.config = config
 		this.response = response
 		this.pValueCutoff = -Math.log10(settings.pValue)
