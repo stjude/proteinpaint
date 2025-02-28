@@ -34,9 +34,10 @@ export default function initBinConfig(data, opts = {}) {
 		const l = data.length
 		const min = data[0]
 		const max = data[l - 1]
-		const binSize = (max - min) / 8
-		// first bin stop will equal either (minimum + bin size) or (5th percentile), whichever is larger.
 		let p5idx = Math.round(l * 0.05) - 1
+		const p98idx = Math.round(l * 0.98) - 1
+		const binSize = (data[p98idx] - data[p5idx]) / 8 //calculate bin size using the 98th percentile to reduce outlier influence
+		// first bin stop will equal either (minimum + bin size) or (5th percentile), whichever is larger.
 		if (p5idx < 0) p5idx = 0
 		const p5 = data[p5idx]
 		const firstBinStop = Math.max(min + binSize, p5)
