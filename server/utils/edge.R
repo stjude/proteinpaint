@@ -123,16 +123,15 @@ QL_cutoff <- 100 # Sample size cutoff to invoke Quasi likelihood pipeline. If sa
 
 # Differential expression analysis
 if (length(input$conf1) == 0) { # No adjustment of confounding factors
-    if (length(controls) <= QL_cutoff & length(cases) <= QL_cutoff) { # Only when the sample sizes of both groups are below the QL cutoff, only then maximum likelihood gets invoked otherwise quasi-likelihood pipeline is invoked
-        dispersion_time <- system.time({
-            suppressWarnings({
-                suppressMessages({
-                    y <- estimateDisp(y)
-                })
+    dispersion_time <- system.time({
+        suppressWarnings({
+            suppressMessages({
+                y <- estimateDisp(y)
             })
         })
-        #cat("Dispersion time: ", dispersion_time[3], " seconds\n")
-        
+    })
+    #cat("Dispersion time: ", dispersion_time[3], " seconds\n")
+    if (length(controls) <= QL_cutoff & length(cases) <= QL_cutoff) { # Only when the sample sizes of both groups are below the QL cutoff, only then maximum likelihood gets invoked otherwise quasi-likelihood pipeline is invoked
         exact_test_time <- system.time({
             et <- exactTest(y)
         })
@@ -185,12 +184,12 @@ if (length(input$conf1) == 0) { # No adjustment of confounding factors
           #cat("Time for making design matrix: ", model_gen_time[3], " seconds\n")
     }
 
+    dispersion_time <- system.time({
+        y <- estimateDisp(y, design)
+    })
+    #cat("Dispersion time: ", dispersion_time[3], " seconds\n")    
+
     if (length(controls) <= QL_cutoff & length(cases) <= QL_cutoff) { # Only when the sample sizes of both groups are below the QL cutoff, only then maximum likelihood gets invoked otherwise quasi-likelihood pipeline is invoked
-          dispersion_time <- system.time({
-              y <- estimateDisp(y, design)
-          })
-          #cat("Dispersion time: ", dispersion_time[3], " seconds\n")
-          
           fit_time <- system.time({
               fit <- glmFit(y, design)
           })
