@@ -6,9 +6,8 @@ export class DiffAnalysisInteractions {
 		this.volcanoResponse = []
 	}
 
-	setVar(app, data) {
-		this.app = app
-		this.volcanoResponse = data
+	setVar(key, value) {
+		this[key] = value
 	}
 
 	getGseaParameters() {

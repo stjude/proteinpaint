@@ -221,8 +221,10 @@ class MassGroups {
 
 		addMatrixMenuItems(this.tip, menuDiv, samplelstTW, this.app, id, this.state, () => this.newId)
 
+		//TODO: need to 'diffAnalysis' to `currentCohortChartTypes` in the future
 		if (this.state.currentCohortChartTypes.includes('DEanalysis') && samplelstTW.q.groups.length == 2)
 			addDEPlotMenuItem(menuDiv, this, this.state, samplelstTW)
+		addDiffAnalysisPlotMenuItem(menuDiv, this, this.state, samplelstTW)
 
 		if (this.state.currentCohortChartTypes.includes('survival'))
 			addPlotMenuItem('survival', menuDiv, 'Compare survival', this.tip, samplelstTW, id, this, true)
@@ -329,6 +331,36 @@ function addDEPlotMenuItem(div, self, state, samplelstTW, tip) {
 		.style('text-align', 'right')
 		.style('opacity', 0.8)
 		.style('padding', '3px')
+}
+
+function addDiffAnalysisPlotMenuItem(div, self, state, samplelstTW) {
+	div
+		.append('div')
+		.attr('class', 'sja_menuoption sja_sharp_border')
+		.text('Differential analysis')
+		.on('click', e => {
+			//Move this to diff analysis plot??
+			//Do the check but not add to the state??
+			const groups = []
+			for (const group of samplelstTW.q.groups) {
+				if (group.values && group.values.length > 0) {
+					groups.push(group)
+				} else {
+					throw 'group does not contain samples for differential analysis'
+				}
+			}
+			const config = {
+				chartType: 'differentialAnalysis',
+				state,
+				samplelst: { groups },
+				tw: samplelstTW
+			}
+			self.tip.hide()
+			self.app.dispatch({
+				type: 'plot_create',
+				config
+			})
+		})
 }
 
 function initUI(self) {
