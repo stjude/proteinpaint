@@ -139,6 +139,7 @@ export function getDefaultVolcanoSettings(overrides = {}): VolcanoSettings {
 		minTotalCount: 15,
 		pValue: 0.05,
 		pValueType: 'adjusted',
+		rankBy: 'abs(foldChange)',
 		showPValueTable: false,
 		varGenesCutoff: 3000,
 		width: 400
