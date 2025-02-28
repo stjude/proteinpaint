@@ -81,7 +81,7 @@ async function getSessionId(cookieJar, getCookieString, setCookie, wsimage, ds, 
 
 	if (!redis) throw new Error('No redis found')
 
-	const sessionManager = SessionManager.getInstance(redis.url)
+	const sessionManager = SessionManager.getInstance(redis.url, redis.secret)
 
 	const validateSuccesful = await sessionManager.invalidateSessions(3, 5)
 

@@ -14,13 +14,13 @@ export default class SessionManager {
 	private static instance: SessionManager
 	private redisClient: RedisClientHolder
 
-	private constructor(redisUrl: string) {
-		this.redisClient = RedisClientHolder.getInstance(redisUrl)
+	private constructor(redisUrl: string, secret: any) {
+		this.redisClient = RedisClientHolder.getInstance(redisUrl, secret)
 	}
 
-	public static getInstance(redisUrl: string): SessionManager {
+	public static getInstance(redisUrl: string, secret: any): SessionManager {
 		if (!SessionManager.instance) {
-			SessionManager.instance = new SessionManager(redisUrl)
+			SessionManager.instance = new SessionManager(redisUrl, secret)
 		}
 		return SessionManager.instance
 	}
