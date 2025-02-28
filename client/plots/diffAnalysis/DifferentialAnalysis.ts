@@ -19,7 +19,7 @@ class DifferentialAnalysis extends RxComponentInner {
 		plots: any
 	}
 	dom: DiffAnalysisDom
-	interactions: DiffAnalysisInteractions
+	interactions?: DiffAnalysisInteractions
 	plotTabs: any
 	plotsDiv: { [key: string]: Elem }
 	plotControlsDiv: { [key: string]: Elem }
@@ -60,7 +60,6 @@ class DifferentialAnalysis extends RxComponentInner {
 			volcano: volcanoDiv,
 			gsea: gseaDiv
 		}
-		this.interactions = new DiffAnalysisInteractions(this.app)
 
 		//TODO: include type. move to main()
 		if (opts.header) {
@@ -97,6 +96,8 @@ class DifferentialAnalysis extends RxComponentInner {
 	}
 
 	async init(appState: MassState) {
+		this.interactions = new DiffAnalysisInteractions(this.app)
+
 		const state = this.getState(appState)
 		const config = structuredClone(state.config) as DiffAnalysisPlotConfig
 
@@ -137,10 +138,8 @@ class DifferentialAnalysis extends RxComponentInner {
 		}
 		this.plotsDiv[config.childType].style('display', '')
 		this.plotControlsDiv[config.childType].style('display', '')
-
 		if (this.dom.header) {
-			const samplelst = config.samplelst.groups
-			this.dom.header.title.text(`${samplelst[0].name} vs ${samplelst[1].name} `)
+			this.dom.header.title.text(config.tw.name)
 		}
 
 		this.plotTabs.update(config)
@@ -151,7 +150,9 @@ export const DiffAnalysisInit = getCompInit(DifferentialAnalysis)
 export const componentInit = DiffAnalysisInit
 
 export function getPlotConfig(opts: DiffAnalysisOpts, app: MassAppApi) {
-	//If (!opts.termType) throw '.termType is required [DifferentialAnalysis getPlotConfig()]'
+	//if (!opts.termType) throw '.termType is required [DifferentialAnalysis getPlotConfig()]'
+	//Make this a requirement?
+	//if (!opts.tw)	throw '.tw is required [DifferentialAnalysis getPlotConfig()]'
 	const config = {
 		chartType: 'differentialAnalysis',
 		childType: 'volcano',

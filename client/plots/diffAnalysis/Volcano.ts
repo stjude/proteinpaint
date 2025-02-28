@@ -105,7 +105,7 @@ class Volcano extends RxComponentInner {
 			if (!response || response.error || !response.data.length) {
 				this.dom.error.text(response.error || 'No data returned from server')
 			}
-			if (this.diffAnalysisInteractions) this.diffAnalysisInteractions.setVar(this.app, response)
+			if (this.diffAnalysisInteractions) this.diffAnalysisInteractions.setVar('volcanoResponse', response)
 
 			/** Format response into an object for rendering */
 			const viewModel = new VolcanoViewModel(config, response, settings)
