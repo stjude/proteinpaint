@@ -94,17 +94,12 @@ export class VolcanoInteractions {
 					term: {
 						gene: geneSymbol,
 						name: geneSymbol,
-						type: 'geneExpression' //eventually type will come from state
+						type: config.termType
 					}
 				},
 				term2: {
-					//eventually will come from state. This is a work around
-					q: { groups: config.samplelst.groups, type: 'custom-samplelst' },
-					term: {
-						name: `${config.samplelst.groups[0].name} vs ${config.samplelst.groups[1].name}`,
-						type: 'samplelst',
-						values
-					}
+					q: { groups: config.tw.q.groups, type: 'custom-samplelst' },
+					term: config.tw.term
 				}
 			}
 		})
