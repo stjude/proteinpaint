@@ -115,7 +115,6 @@ filter_time <- system.time({
 
 normalization_time <- system.time({
     y <- y[keep, keep.lib.sizes = FALSE]
-    y <- calcNormFactors(y, method = "TMM")
 })
 #cat("Normalization time: ", normalization_time[3], " seconds\n")
 
@@ -123,24 +122,28 @@ QL_cutoff <- input$ql_cutoff # Sample size cutoff to invoke Quasi likelihood pip
 
 # Differential expression analysis
 if (length(input$conf1) == 0) { # No adjustment of confounding factors
-    dispersion_time <- system.time({
-        suppressWarnings({
-            suppressMessages({
-                y <- estimateDisp(y)
+    if (length(controls) <= QL_cutoff & length(cases) <= QL_cutoff) { # Only when the sample sizes of both groups are below the QL cutoff, only then maximum likelihood gets invoked otherwise quasi-likelihood pipeline is invoked
+        y <- calcNormFactors(y, method = "TMM")
+        dispersion_time <- system.time({
+            suppressWarnings({
+                suppressMessages({
+                    y <- estimateDisp(y)
+                })
             })
         })
-    })
-    #cat("Dispersion time: ", dispersion_time[3], " seconds\n")
-    if (length(controls) <= QL_cutoff & length(cases) <= QL_cutoff) { # Only when the sample sizes of both groups are below the QL cutoff, only then maximum likelihood gets invoked otherwise quasi-likelihood pipeline is invoked
+        #cat("Dispersion time: ", dispersion_time[3], " seconds\n")
+        
         exact_test_time <- system.time({
             et <- exactTest(y)
         })
         #cat("Exact test time: ", exact_test_time[3], " seconds\n")
     } else { # Quasi-likelihood pipeline invoked
+        y <- normLibSizes(y)
+        design <- model.matrix(~conditions) # Based on the protocol defined in section 1.4 of edgeR manual https://bioconductor.org/packages/release/bioc/vignettes/edgeR/inst/doc/edgeRUsersGuide.pdf
         fit_time <- system.time({
             suppressWarnings({
                 suppressMessages({
-                    fit <- glmQLFit(y)
+                    fit <- glmQLFit(y,design)
                 })
             })
         })
@@ -184,12 +187,13 @@ if (length(input$conf1) == 0) { # No adjustment of confounding factors
           #cat("Time for making design matrix: ", model_gen_time[3], " seconds\n")
     }
 
-    dispersion_time <- system.time({
-        y <- estimateDisp(y, design)
-    })
-    #cat("Dispersion time: ", dispersion_time[3], " seconds\n")    
-
     if (length(controls) <= QL_cutoff & length(cases) <= QL_cutoff) { # Only when the sample sizes of both groups are below the QL cutoff, only then maximum likelihood gets invoked otherwise quasi-likelihood pipeline is invoked
+          y <- calcNormFactors(y, method = "TMM")
+          dispersion_time <- system.time({
+              y <- estimateDisp(y, design)
+          })
+          #cat("Dispersion time: ", dispersion_time[3], " seconds\n")    
+        
           fit_time <- system.time({
               fit <- glmFit(y, design)
           })
@@ -200,6 +204,7 @@ if (length(input$conf1) == 0) { # No adjustment of confounding factors
           })
           #cat("Test statistics time: ", test_statistics_time[3], " seconds\n")
     } else { # Quasi-likelihood pipeline invoked
+          y <- normLibSizes(y)
           fit_time <- system.time({
               suppressWarnings({
                   suppressMessages({
@@ -207,8 +212,7 @@ if (length(input$conf1) == 0) { # No adjustment of confounding factors
                   })
               })
           })
-          #cat("QL fit time: ", fit_time[3], " seconds\n")        
-          
+          #cat("QL fit time: ", fit_time[3], " seconds\n")
           test_time <- system.time({
               suppressWarnings({
                   suppressMessages({
