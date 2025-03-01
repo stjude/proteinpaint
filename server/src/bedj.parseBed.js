@@ -69,7 +69,7 @@ to parse line as gene file, require following:
 
 */
 
-import checkReadingFrame from './checkReadingFrame'
+import checkReadingFrame from './checkReadingFrame.js'
 
 //a valid exonFrames field can only contain members of validFrames, names -1, 0, 1, or 2
 const validFrames = new Set(['-1', '0', '1', '2'])
