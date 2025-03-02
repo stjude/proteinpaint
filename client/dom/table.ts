@@ -29,6 +29,8 @@ export type Column = {
 	label: string
 	/** column width */
 	width?: string
+	/** method to fill contents to a cell. cell.url/value/html/color will override this setting! doesn't support async */
+	fillCell?: (td: any, i: number) => void
 	/** Makes this column editable  and allows to notify the change
 	 * through the callback. It is only allowed for cells with a value or a color field */
 	editCallback?: (i: number, cell: Cell) => void
@@ -256,23 +258,29 @@ export function renderTable({
 	if (showLines) theadRow.append('td').style('width', '1vw')
 
 	if (buttons || noButtonCallback) {
-		const cell = theadRow.append('td').attr('class', 'sjpp_table_header').style('width', '1.5vw')
-		if (!singleMode) {
-			const checkboxH = cell
-				.append('input')
-				// TODO: should use a globally-unique element id for the checkbox
-				.attr('id', 'checkboxHeader')
-				.attr('type', 'checkbox')
-				.attr('title', 'Check or uncheck all')
-				.on('change', () => {
-					const nodes = tbody.selectAll('input').nodes()
-					tbody.selectAll('input').property('checked', checkboxH.node().checked)
-					if (buttons) updateButtons()
-					if (noButtonCallback) for (const [i, node] of nodes.entries()) noButtonCallback(i, node)
-				})
-			checkboxH.node().checked = selectAll
-			if (!showHeader)
-				theadRow.append('th').text('Check/Uncheck All').attr('class', 'sjpp_table_header sjpp_table_item')
+		// rows are clickable
+		if (noRadioBtn) {
+			// should be in singleMode and do not want to show radio buttons
+		} else {
+			// create column for radio button
+			const cell = theadRow.append('td').attr('class', 'sjpp_table_header').style('width', '1.5vw')
+			if (!singleMode) {
+				const checkboxH = cell
+					.append('input')
+					// TODO: should use a globally-unique element id for the checkbox
+					.attr('id', 'checkboxHeader')
+					.attr('type', 'checkbox')
+					.attr('title', 'Check or uncheck all')
+					.on('change', () => {
+						const nodes = tbody.selectAll('input').nodes()
+						tbody.selectAll('input').property('checked', checkboxH.node().checked)
+						if (buttons) updateButtons()
+						if (noButtonCallback) for (const [i, node] of nodes.entries()) noButtonCallback(i, node)
+					})
+				checkboxH.node().checked = selectAll
+				if (!showHeader)
+					theadRow.append('th').text('Check/Uncheck All').attr('class', 'sjpp_table_header sjpp_table_item')
+			}
 		}
 	}
 
@@ -315,10 +323,10 @@ export function renderTable({
 	const tbody = table.append('tbody')
 	function updateRows() {
 		tbody.selectAll('tr').remove()
-		for (const [i, row] of rows.entries()) {
+		for (const [rowIdx, row] of rows.entries()) {
 			let checkbox
 			const tr = tbody.append('tr').attr('class', 'sjpp_row_wrapper').attr('tabindex', 0)
-			if (striped && i % 2 == 1) tr.style('background-color', 'rgb(245,245,245)')
+			if (striped && rowIdx % 2 == 1) tr.style('background-color', 'rgb(245,245,245)')
 
 			// for Section 508 compliance: always create an aria-labelledby attribute on an input
 			// NOTE: a title attribute, wrapping with a label element, or other solutions are possible,
@@ -353,7 +361,7 @@ export function renderTable({
 
 			if (showLines) {
 				tr.append('td')
-					.text(i + 1)
+					.text(rowIdx + 1)
 					.style('text-align', 'center')
 					.style('width', '1vw')
 					.style('font-size', '0.8rem')
@@ -372,10 +380,10 @@ export function renderTable({
 					.attr('name', uniqueInputName)
 					.attr('value', checkboxValue)
 					.attr('aria-labelledby', ariaLabelledBy)
-					.property('checked', selectAll || selectedRows.includes(i))
+					.property('checked', selectAll || selectedRows.includes(rowIdx))
 					.on('change', () => {
 						if (buttons) updateButtons()
-						else noButtonCallback!(i, checkbox.node())
+						else noButtonCallback!(rowIdx, checkbox.node())
 
 						const checked = checkbox.property('checked')
 						for (const key in _selectedRowStyle) {
@@ -383,7 +391,7 @@ export function renderTable({
 						}
 					})
 
-				if (i === selectedRows[0] && tr.node()) {
+				if (rowIdx === selectedRows[0] && tr.node()) {
 					// if there is at least one selected row, scroll to the  table row,
 					// so that it's visible and obvious to the user which rows are pre-selected
 					setTimeout(() => {
@@ -404,11 +412,11 @@ export function renderTable({
 						.append('button')
 						.style('white-space', 'normal')
 						.text(button.text)
-						.on('click', event => button.callback(event, i))
+						.on('click', event => button.callback(event, rowIdx))
 					if (button.dataTestId) {
 						button.button.attr('data-testid', button.dataTestId)
 					}
-					if ('disabled' in button) button.button.node().disabled = button.disabled!(i)
+					if ('disabled' in button) button.button.node().disabled = button.disabled!(rowIdx)
 				}
 			}
 			for (const [colIdx, cell] of row.entries()) {
@@ -443,7 +451,7 @@ export function renderTable({
 								const value = input.node().value
 								cell.value = value
 								td.text(cell.value)
-								column.editCallback!(i, cell)
+								column.editCallback!(rowIdx, cell)
 							})
 						input.node().focus()
 						input.node().select()
@@ -474,9 +482,11 @@ export function renderTable({
 							.on('change', () => {
 								const color = input.node().value
 								cell.color = color
-								if (column.editCallback) column.editCallback(i, cell)
+								if (column.editCallback) column.editCallback(rowIdx, cell)
 							})
 					}
+				} else if (column.fillCell) {
+					column.fillCell(td, rowIdx)
 				}
 			}
 		}

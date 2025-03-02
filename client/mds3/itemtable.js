@@ -4,6 +4,29 @@ import { appear, renderTable, table2col, makeSsmLink } from '#dom'
 import { dofetch3 } from '#common/dofetch'
 
 /*
+when there's just one item, print a vertical 2-col table to show details
+when there are multiple items (all same type!!), print a table to list all items
+this table is different from "sampletable" in that it focuses on a brief overview of multiple items, and only print occurrence of each item and no other sample-level detail
+	TODO always nice to add in more columns for better description of the items, e.g. vcf info fields
+
+arg{}
+.div
+	contents are rendered here
+.tipDiv
+	optional. the menu.d DOM element of the menu;
+	if provided, may try to move it left if table may be too wide and tipDiv is too much to right
+.mlst[]
+	!!! all of the same dt !!!
+	.occurrence=int must be set for each variant
+.tk
+.block
+.tippos{left,top}
+	if provided, is the x/y position of the tk.itemtip in which the table is displayed, and will allow moving tk.itemtip to left when it decides the table has too many columns
+	if not provided, the function does not know which menu tip it is printing into and will not try to move it
+.doNotListSample4multim
+	only set to true by leftlabel.variant to not to generate a sample handle
+
+
 itemtable
 	itemtable_oneItem
 		table_snvindel
@@ -16,40 +39,13 @@ mayMoveTipDiv2left
 add_csqButton
 print_snv
 printSvPair
-
-
-.occurrence must be set for each variant
-all mlst of one data type
-should work for all types of data
-
-TODO
-print vcf info about variant attributes
-
 */
 
 const cutoff_tableview = 10
 
-/*
-for a list of variants, print details of both variant and samples
-
-arg{}
-.div
-	contents are rendered here
-.tipDiv
-	optional. the menu.d DOM element of the menu; if provided, may try to move it left if table may be too wide and tipDiv is too much to right
-.mlst[]
-	all of the same dt
-.tk
-	.menutip
-	.itemtip
-.block
-.tippos{left,top}
-	if provided, is the x/y position of the tk.itemtip in which the table is displayed, and will allow moving tk.itemtip to left when it decides the table has too many columns
-	if not provided, the function does not know which menu tip it is printing into and will not try to move it
-*/
 export async function itemtable(arg) {
-	for (const m of arg.mlst) {
-		if (m.dt != dtsnvindel && m.dt != dtfusionrna && m.dt != dtsv && m.dt != dtcnv) throw 'mlst[] contains unknown dt'
+	if (arg.mlst.find(m => m.dt != dtsnvindel && m.dt != dtfusionrna && m.dt != dtsv && m.dt != dtcnv)) {
+		throw 'mlst[] contains unknown dt'
 	}
 
 	if (arg.mlst.length == 1) {
@@ -129,24 +125,52 @@ mlst table has optional columns, only the first column is clickable menu option,
 3. numeric value if used, as text
 */
 async function itemtable_multiItems(arg) {
-	// upon clicking an option for a variant
-	// hide tableDiv and display go-back button allowing to go back to tableDiv
-	const goBackButton = arg.div.append('div').style('margin-bottom', '10px').style('display', 'none')
-	goBackButton
-		.append('span')
-		.html('&#8810; Back to list')
-		.attr('class', 'sja_clbtext')
-		.on('click', () => {
-			tableDiv.style('display', '')
-			goBackButton.style('display', 'none')
-			singleVariantDiv.style('display', 'none')
-		})
-
+	// upon clicking an option for a variant, hide tableDiv and display go-back button allowing to go back to tableDiv
+	const goBackButton = arg.div.append('div').style('margin', '10px').append('button').style('display', 'none')
+	goBackButton.html('&#8810; Back to list').on('click', () => {
+		tableDiv.style('display', '')
+		goBackButton.style('display', 'none')
+		singleVariantDiv.style('display', 'none')
+	})
 	const singleVariantDiv = arg.div.append('div').style('display', 'none')
 
 	///////////////// determine table columns
 
-	const columns = [{ label: 'Click a variant to see details' }]
+	const columns = [
+		{
+			label: 'Click a variant to see details',
+			fillCell: (td, i) => {
+				// to render an item into a cell, not convenient to use "value" or "html", use fillCell() to create elements with click handler
+				const m = arg.mlst[i]
+				if (m.dt == dtsnvindel) {
+					td.append('span').text(arg.tk.mnamegetter(m))
+					td.append('span')
+						.text(mclass[m.class].label)
+						.style('font-size', '.8em')
+						.style('margin-left', '10px')
+						.style('color', mclass[m.class].color)
+					td.append('span')
+						.text(`${m.chr}:${m.pos + 1}${m.ref ? ', ' + m.ref + '>' + m.alt : ''}`)
+						.style('font-size', '.8em')
+						.style('margin-left', '10px')
+				} else if (m.dt == dtsv || m.dt == dtfusionrna) {
+					td.append('span').text(mclass[m.class].label).style('font-size', '.7em').style('margin-right', '8px')
+
+					printSvPair(m.pairlst[0], td)
+				} else if (m.dt == dtcnv) {
+					td.append('span')
+						.style('background', arg.tk.cnv.colorScale(m.value))
+						.text(m.value)
+						.style('font-size', '.8em')
+						.style('padding', '0px 3px')
+					td.append('span').style('margin-left', '10px').text(`${m.chr}:${m.start}-${m.stop}`)
+					// sample?
+				} else {
+					td.text('error: unknown m.dt')
+				}
+			}
+		}
+	]
 	const hasOccurrence = arg.mlst.some(i => i.occurrence)
 	if (hasOccurrence) {
 		columns.push({ label: 'Occurrence' })
@@ -211,58 +235,19 @@ async function itemtable_multiItems(arg) {
 		div: tableDiv,
 		columns,
 		rows,
-		striped: false,
-		resize: true
+		resize: true,
+		noButtonCallback: i => {
+			tableDiv.style('display', 'none')
+			goBackButton.style('display', '')
+			singleVariantDiv.style('display', '').selectAll('*').remove()
+			const a2 = Object.assign({}, arg)
+			a2.mlst = [arg.mlst[i]]
+			a2.div = singleVariantDiv
+			itemtable(a2)
+		},
+		singleMode: true,
+		noRadioBtn: true
 	})
-
-	// print buttons for each m in table
-	for (const [i, m] of arg.mlst.entries()) {
-		// create a button, click to show this variant by itself
-		const div = rows[i][0].__td
-			.append('div')
-			.attr('class', 'sja_menuoption')
-			.attr('tabindex', 0)
-			.on('click', () => {
-				tableDiv.style('display', 'none')
-				goBackButton.style('display', '')
-				singleVariantDiv.style('display', '').selectAll('*').remove()
-				const a2 = Object.assign({}, arg)
-				a2.mlst = [m]
-				a2.div = singleVariantDiv
-				itemtable(a2)
-			})
-
-		// print variant name in div button
-		if (m.dt == dtsnvindel) {
-			div.append('span').text(arg.tk.mnamegetter(m))
-			div
-				.append('span')
-				.text(mclass[m.class].label)
-				.style('font-size', '.8em')
-				.style('margin-left', '10px')
-				.style('color', mclass[m.class].color)
-			div
-				.append('span')
-				.text(`${m.chr}:${m.pos + 1}${m.ref ? ', ' + m.ref + '>' + m.alt : ''}`)
-				.style('font-size', '.8em')
-				.style('margin-left', '10px')
-		} else if (m.dt == dtsv || m.dt == dtfusionrna) {
-			div.append('span').text(mclass[m.class].label).style('font-size', '.7em').style('margin-right', '8px')
-
-			printSvPair(m.pairlst[0], div)
-		} else if (m.dt == dtcnv) {
-			div
-				.append('span')
-				.style('background', arg.tk.cnv.colorScale(m.value))
-				.text(m.value)
-				.style('font-size', '.8em')
-				.style('padding', '0px 3px')
-			div.append('span').style('margin-left', '10px').text(`${m.chr}:${m.start}-${m.stop}`)
-			// sample?
-		} else {
-			div.text('error: unknown m.dt')
-		}
-	}
 
 	if (!arg.doNotListSample4multim && arg.tk.mds.variant2samples) {
 		const totalOccurrence = arg.mlst.reduce((i, j) => i + (j.occurrence || 0), 0)
