@@ -91,7 +91,10 @@ export type TableArgs = {
 	rows: TableRow[]
 	/** Holder to render the table */
 	div: any
-	/** List of buttons to render in a column */
+	/** adds a special column. in each row at this column, render some buttons to perform action on that row.
+	column position and header is fixed!
+	good for Delete btn
+	*/
 	columnButtons?: Button[]
 	/** List of buttons to do actions after the table is edited */
 	buttons?: Button[]
