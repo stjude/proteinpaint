@@ -3,7 +3,7 @@ import { renderTable } from '../table'
 import * as d3s from 'd3-selection'
 
 /*
- Tests: 
+Tests: 
 	Render table
 	Missing columns array
 	Missing rows array
@@ -11,7 +11,8 @@ import * as d3s from 'd3-selection'
 	Missing and excess row data
 	Return correct rows on button click
 	Sort buttons
- */
+	fillCell
+*/
 
 /*************************
  reusable helper functions
@@ -48,6 +49,22 @@ const testRowData = [
 		}
 	]
 ]
+
+const testOpts = {
+	columns: [
+		{ label: 'String', sortable: true },
+		{ label: 'Number', sortable: true },
+		{ label: 'Date', sortable: true }
+	],
+	rows: [
+		[{ value: 'C' }, { value: 200 }, { value: '2021-01-01' }],
+		[{ value: 'A' }, { value: 300 }, { value: '2021-01-02' }],
+		[{ value: 'B' }, { value: 100 }, { value: '2021-01-03' }]
+	],
+	header: {
+		allowSort: true
+	}
+}
 
 /**************
  test sections
@@ -275,29 +292,34 @@ tape('Sort button', async test => {
 	test.timeoutAfter(100)
 
 	const holder = getHolder()
-	const opts = {
-		columns: [
-			{ label: 'String', sortable: true },
-			{ label: 'Number', sortable: true },
-			{ label: 'Date', sortable: true }
-		],
-		rows: [
-			[{ value: 'C' }, { value: 200 }, { value: '2021-01-01' }],
-			[{ value: 'A' }, { value: 300 }, { value: '2021-01-02' }],
-			[{ value: 'B' }, { value: 100 }, { value: '2021-01-03' }]
-		],
-		div: holder,
-		header: {
-			allowSort: true
-		}
-	}
+	testOpts.div = holder
 
-	renderTable(opts)
+	renderTable(testOpts)
 	test.equal(
 		holder.selectAll('.sjpp-table-sort-button').nodes().length,
-		opts.columns.length,
+		testOpts.columns.length,
 		'Should display sort buttons'
 	)
+
+	if (test._ok) holder.remove()
+	test.end()
+})
+
+tape('fillCell', async test => {
+	const holder = getHolder()
+	const opts = JSON.parse(JSON.stringify(testOpts))
+	opts.div = holder
+	// apply fillCell() for 2nd column
+	opts.columns[1].fillCell = (td, i) => {
+		td.text('fillCell called at ' + i)
+	}
+	for (const r of opts.rows) delete r[1].value // must delete cell.value otherwise fillCell won't be called
+
+	renderTable(opts)
+	for (const [i, row] of opts.rows.entries()) {
+		const text = 'fillCell called at ' + i
+		test.equal(row[1].__td.node().innerHTML, text, text)
+	}
 
 	if (test._ok) holder.remove()
 	test.end()
