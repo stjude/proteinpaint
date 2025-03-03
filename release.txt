@@ -1,2 +1,1 @@
-Fixes:
-- support gdc/singlecell state overrides, such as for demo mode
+

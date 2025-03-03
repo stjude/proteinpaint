@@ -11,6 +11,7 @@ Fixes:
 - Updated labels requested on [JIRA] (FEAT-857)
 - Fixed bug in the download image in GSEA
 - hierCluster: remove term from hierCluster when no sample was tested for the term
+- support gdc/singlecell state overrides, such as for demo mode
 
 
 ## 2.108.0
