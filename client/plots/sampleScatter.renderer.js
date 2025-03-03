@@ -243,7 +243,7 @@ export function setRenderers(self) {
 		if (self.settings.showAxes && !(self.is2DLarge || self.is3D)) {
 			axisG.style('opacity', 1)
 			if (self.config.term) {
-				let termName = self.config.term.term.name
+				let termName = getTitle(self.config.term.term.name, 60)
 				if (!self.config.colorTW && !self.config.shapeTW && !self.config.term0)
 					termName = `${termName}, n=${chart.cohortSamples.length}`
 
@@ -268,6 +268,7 @@ export function setRenderers(self) {
 						.attr('text-anchor', 'middle')
 						.text(term0Name)
 				}
+				const term2Name = getTitle(self.config.term2.term.name, 60)
 				labelsG
 					.append('text')
 					.attr(
@@ -275,7 +276,7 @@ export function setRenderers(self) {
 						`translate(${self.axisOffset.x - 50}, ${self.settings.svgh / 2 + self.axisOffset.y}) rotate(-90)`
 					)
 					.attr('text-anchor', 'middle')
-					.text(self.config.term2.term.name)
+					.text(term2Name)
 			}
 		} else {
 			axisG.style('opacity', 0)
@@ -806,6 +807,7 @@ export function setRenderers(self) {
 		if (self.config.colorTW || self.config.colorColumn) {
 			title = `${getTitle(
 				self.config.colorTW?.term?.name || self.config.colorColumn.name,
+				30,
 				self.config.shapeTW == undefined
 			)}`
 			const colorRefCategory = chart.colorLegend.get('Ref')
@@ -999,12 +1001,6 @@ export function setRenderers(self) {
 			self.drawScaleDotLegend(chart)
 		}
 
-		function getTitle(name, complete = false) {
-			const size = 30
-			if (name.length > size && !complete) name = name.slice(0, size) + '...'
-			return name
-		}
-
 		function addLegendItem(g, category, name, key, x, y, hidden = false) {
 			const circleG = g.append('g')
 			circleG
@@ -1027,6 +1023,11 @@ export function setRenderers(self) {
 
 			return [circleG, itemG]
 		}
+	}
+
+	function getTitle(name, size = 30, complete = false) {
+		if (name.length > size && !complete) name = name.slice(0, size) + '...'
+		return name
 	}
 
 	self.drawScaleDotLegend = function (chart) {
