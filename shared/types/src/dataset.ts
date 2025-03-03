@@ -1380,11 +1380,9 @@ type MassNav = {
 			 */
 			html?: string
 			dataRelease?: DataRelease
-			/** array of links to help pages
-			 * will be displayed in drop-down menu of help button
-			 * if undefined, then help button will not appear
-			 */
-			helpPages?: HelpPage[]
+			/** html string, can include links to other
+			 * pages (e.g., tutorials, google group) */
+			additionalInfo?: string
 			/** "active" items, shown as clickable buttons in about tab. click an item to launch a plot */
 			activeItems?: {
 				items: ActiveItem[]

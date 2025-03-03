@@ -348,8 +348,10 @@ export class MassAbout {
 
 	showServerInfo = () => {
 		const state = this.app.getState()
-		const dataRelease = state.termdbConfig.massNav?.tabs?.about?.dataRelease
-		if (!dataRelease && !this.app.opts.pkgver && !this.app.opts.launchDate) return
+		const about = state.termdbConfig.massNav?.tabs?.about
+		if (!about && !this.app.opts.pkgver && !this.app.opts.launchDate) return
+		const dataRelease = about?.dataRelease
+		const additionalInfo = about?.additionalInfo
 		const div = this.subheader
 			.append('div')
 			.attr('data-testid', 'sjpp-about-server-info')
@@ -357,37 +359,22 @@ export class MassAbout {
 			.style('padding-bottom', '5px')
 			.style('font-size', '.8em')
 
+		const htmlArr: string[] = []
 		if (dataRelease) {
-			div
-				.append('div')
-				.attr('data-testid', 'sjpp-about-data-release')
-				.style('display', 'inline-block')
-				.text('Data Release: ')
-				.append('a')
-				.property('href', dataRelease.link)
-				.property('target', '_blank')
-				.text(dataRelease.version)
+			htmlArr.push(`Data Release: <a href=${dataRelease.link} target=_blank>${dataRelease.version}</a>`)
 		}
-
 		if (this.app.opts.pkgver) {
-			div
-				.append('div')
-				.attr('data-testid', 'sjpp-about-software-release')
-				.style('display', 'inline-block')
-				.text(`${dataRelease ? '; ' : ''}Software Release: `)
-				.append('a')
-				.property('href', 'https://github.com/stjude/proteinpaint/pkgs/container/ppfull')
-				.property('target', `${this.app.opts.pkgver}`)
-				.text(`${this.app.opts.pkgver}`)
+			htmlArr.push(
+				`Software Release: <a href=https://github.com/stjude/proteinpaint/pkgs/container/ppfull target=_blank>${this.app.opts.pkgver}</a>`
+			)
 		}
-
 		if (this.app.opts.launchDate) {
-			div
-				.append('div')
-				.attr('data-testid', 'sjpp-about-server')
-				.style('display', 'inline-block')
-				.text(`${this.app.opts.pkgver ? '; ' : ''}Server Launched: ${this.app.opts.launchDate}`)
+			htmlArr.push(`Server Launched: ${this.app.opts.launchDate}`)
 		}
+		if (additionalInfo) {
+			htmlArr.push(additionalInfo)
+		}
+		div.append('div').html(htmlArr.join('; '))
 	}
 }
 
