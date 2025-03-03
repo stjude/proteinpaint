@@ -66,10 +66,10 @@ runs:
       with:
         path: server
 
-#    - name: Run deploy action
-#      uses: peter-evans/repository-dispatch@v2
-#      with:
-#        token: ${{ inputs.PAT }}
-#        repository: stjude/sj-pp
-#        event-type: version-update
-#        client-payload: '{"pp_version": "${{ steps.pp-version.outputs.current-version }}", "front_version": "${{ steps.front-version.outputs.current-version }}", "server_version": "${{ steps.server-version.outputs.current-version}}", "docker_version": "${{ steps.docker-publish.outputs.docker_version}}", "branch": "${{ steps.docker-publish.outputs.branch }}"}'
+    - name: Run deploy action
+      uses: peter-evans/repository-dispatch@v2
+      with:
+        token: ${{ inputs.PAT }}
+        repository: stjude/sj-pp
+        event-type: version-update
+        client-payload: '{"pp_version": "${{ steps.pp-version.outputs.current-version }}", "front_version": "${{ steps.front-version.outputs.current-version }}", "server_version": "${{ steps.server-version.outputs.current-version}}", "docker_version": "${{ steps.docker-publish.outputs.docker_version}}", "branch": "${{ steps.docker-publish.outputs.branch }}"}'
