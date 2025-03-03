@@ -404,7 +404,7 @@ export function getDefaultViolinSettings(app, overrides = {}) {
 		rowSpace: 10,
 		medianLength: 7,
 		medianThickness: 3,
-		ticks: 20,
+		ticks: 15,
 		defaultColor: plotColor,
 		method: 0,
 		orderByMedian: false
