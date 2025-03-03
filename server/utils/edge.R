@@ -118,48 +118,28 @@ normalization_time <- system.time({
 })
 #cat("Normalization time: ", normalization_time[3], " seconds\n")
 
-QL_cutoff <- input$ql_cutoff # Sample size cutoff to invoke Quasi likelihood pipeline. If sample sizes for both groups are below this threshold then maximum likelihood method will be used
-
 # Differential expression analysis
 if (length(input$conf1) == 0) { # No adjustment of confounding factors
-    if (length(controls) <= QL_cutoff & length(cases) <= QL_cutoff) { # Only when the sample sizes of both groups are below the QL cutoff, only then maximum likelihood gets invoked otherwise quasi-likelihood pipeline is invoked
-        y <- calcNormFactors(y, method = "TMM")
-        dispersion_time <- system.time({
-            suppressWarnings({
-                suppressMessages({
-                    y <- estimateDisp(y)
-                })
+    y <- normLibSizes(y)
+    design <- model.matrix(~conditions) # Based on the protocol defined in section 1.4 of edgeR manual https://bioconductor.org/packages/release/bioc/vignettes/edgeR/inst/doc/edgeRUsersGuide.pdf
+    fit_time <- system.time({
+        suppressWarnings({
+            suppressMessages({
+                fit <- glmQLFit(y,design)
             })
         })
-        #cat("Dispersion time: ", dispersion_time[3], " seconds\n")
-        
-        exact_test_time <- system.time({
-            et <- exactTest(y)
-        })
-        #cat("Exact test time: ", exact_test_time[3], " seconds\n")
-    } else { # Quasi-likelihood pipeline invoked
-        y <- normLibSizes(y)
-        design <- model.matrix(~conditions) # Based on the protocol defined in section 1.4 of edgeR manual https://bioconductor.org/packages/release/bioc/vignettes/edgeR/inst/doc/edgeRUsersGuide.pdf
-        fit_time <- system.time({
-            suppressWarnings({
-                suppressMessages({
-                    fit <- glmQLFit(y,design)
-                })
+    })
+    #cat("QL fit time: ", fit_time[3], " seconds\n")        
+    
+    test_time <- system.time({
+        suppressWarnings({
+            suppressMessages({
+                et <- glmQLFTest(fit)
             })
         })
-        #cat("QL fit time: ", fit_time[3], " seconds\n")        
-
-        test_time <- system.time({
-            suppressWarnings({
-                suppressMessages({
-                    et <- glmQLFTest(fit)
-                })
-            })
-        })
-        #cat("QL test time: ", test_time[3], " seconds\n")        
-    }
+    })
+    #cat("QL test time: ", test_time[3], " seconds\n")
 } else { # Adjusting for confounding factors
-
     # Check the type of confounding variable
     if (input$conf1_mode == "continuous") { # If this is float, the input conf1 vector should be converted into a numeric vector
       conf1 <- as.numeric(input$conf1)
@@ -187,41 +167,23 @@ if (length(input$conf1) == 0) { # No adjustment of confounding factors
           #cat("Time for making design matrix: ", model_gen_time[3], " seconds\n")
     }
 
-    if (length(controls) <= QL_cutoff & length(cases) <= QL_cutoff) { # Only when the sample sizes of both groups are below the QL cutoff, only then maximum likelihood gets invoked otherwise quasi-likelihood pipeline is invoked
-          y <- calcNormFactors(y, method = "TMM")
-          dispersion_time <- system.time({
-              y <- estimateDisp(y, design)
-          })
-          #cat("Dispersion time: ", dispersion_time[3], " seconds\n")    
-        
-          fit_time <- system.time({
-              fit <- glmFit(y, design)
-          })
-          #cat("Fit time: ", fit_time[3], " seconds\n")
-          
-          test_statistics_time <- system.time({
-              et <- glmLRT(fit, coef = "conditionsDiseased")
-          })
-          #cat("Test statistics time: ", test_statistics_time[3], " seconds\n")
-    } else { # Quasi-likelihood pipeline invoked
-          y <- normLibSizes(y)
-          fit_time <- system.time({
-              suppressWarnings({
-                  suppressMessages({
-                      fit <- glmQLFit(y,design)
-                  })
-              })
-          })
-          #cat("QL fit time: ", fit_time[3], " seconds\n")
-          test_time <- system.time({
-              suppressWarnings({
-                  suppressMessages({
-                      et <- glmQLFTest(fit, coef = "conditionsDiseased")
-                  })
-              })
-          })
-          #cat("QL test time: ", test_time[3], " seconds\n")
-    }    
+    y <- normLibSizes(y)
+    fit_time <- system.time({
+        suppressWarnings({
+            suppressMessages({
+                fit <- glmQLFit(y,design)
+            })
+        })
+    })
+    #cat("QL fit time: ", fit_time[3], " seconds\n")
+    test_time <- system.time({
+        suppressWarnings({
+            suppressMessages({
+                et <- glmQLFTest(fit, coef = "conditionsDiseased")
+            })
+        })
+    })
+    #cat("QL test time: ", test_time[3], " seconds\n")    
 }
 
 # Multiple testing correction
