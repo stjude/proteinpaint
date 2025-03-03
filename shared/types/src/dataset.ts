@@ -1403,13 +1403,6 @@ type DataRelease = {
 	link: string
 }
 
-type HelpPage = {
-	/** label of link */
-	label: string
-	/** link of help page */
-	url: string
-}
-
 type ActiveItem = {
 	/** string or html to show inside the button for the item, potentially allow to include <image> as logo */
 	title: string
