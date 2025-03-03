@@ -168,7 +168,7 @@ if (length(input$conf1) == 0) { # No adjustment of confounding factors
     }
 
     if (length(input$conf2) == 0) { # No adjustment of confounding factor 2
-          y$samples <- data.frame(conditions = conditions, conf1 = conf1)
+          y$samples <- data.frame(y$samples, conditions = conditions, conf1 = conf1)
           model_gen_time <- system.time({
                  design <- model.matrix(~ conditions + conf1, data = y$samples)
           })
@@ -180,7 +180,7 @@ if (length(input$conf1) == 0) { # No adjustment of confounding factors
           } else { # When input$conf2_mode == "discrete" keep the vector as string.
             conf2 <- as.factor(input$conf2)
           }
-          y$samples <- data.frame(conditions = conditions, conf1 = conf1, conf2 = conf2)
+          y$samples <- data.frame(y$samples, conditions = conditions, conf1 = conf1, conf2 = conf2)
           model_gen_time <- system.time({
                  design <- model.matrix(~ conditions + conf1 + conf2, data = y$samples)
           })
@@ -205,9 +205,6 @@ if (length(input$conf1) == 0) { # No adjustment of confounding factors
           #cat("Test statistics time: ", test_statistics_time[3], " seconds\n")
     } else { # Quasi-likelihood pipeline invoked
           y <- normLibSizes(y)
-          dispersion_time <- system.time({
-              y <- estimateDisp(y, design)
-          })        
           fit_time <- system.time({
               suppressWarnings({
                   suppressMessages({
