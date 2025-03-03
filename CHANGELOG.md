@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.109.0
 
 Features:
 - Add new test for corr.R
