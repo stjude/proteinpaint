@@ -40,15 +40,17 @@ export function getBinsDensity(scale, plot, isKDE = false, ticks = 20) {
 	values.sort((a, b) => a - b) //need to provide it so it compares properly integers and floats
 	const l = values.length
 	let p2ndidx = Math.ceil(l * 0.02) - 1
-	let p98idx = Math.round(l * 0.98) - 1
+	let p98idx = Math.ceil(l * 0.98) - 1
 
 	const p2nd = values[p2ndidx]
 	const p98 = values[p98idx]
 	let thresholds = []
 	//Divided thresholds(or bins) into 3 parts, below p2nd, between p2nd and p98, above p98. This allows to handle outliers better.
+	//When there are no outliers, p2nd and p98 will be the same or very close to valuesMin and valuesMax respectively
 	if (p2nd > valuesMin) thresholds = [...getThresholds(valuesMin, p2nd, ticks)]
 	if (p98 > p2nd) thresholds.push(...getThresholds(p2nd, p98, ticks))
 	if (p98 < valuesMax) thresholds.push(...getThresholds(p98, valuesMax, ticks))
+
 	const result = isKDE
 		? kde(gaussianKernel, thresholds, plot.values, valuesMin, valuesMax)
 		: getBinsHist(scale, plot.values, thresholds, valuesMin, valuesMax)
