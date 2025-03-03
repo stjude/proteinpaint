@@ -205,6 +205,9 @@ if (length(input$conf1) == 0) { # No adjustment of confounding factors
           #cat("Test statistics time: ", test_statistics_time[3], " seconds\n")
     } else { # Quasi-likelihood pipeline invoked
           y <- normLibSizes(y)
+          dispersion_time <- system.time({
+              y <- estimateDisp(y, design)
+          })        
           fit_time <- system.time({
               suppressWarnings({
                   suppressMessages({
