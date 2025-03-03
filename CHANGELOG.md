@@ -15,6 +15,12 @@ Fixes:
 - mds3 tk cnv legend will handle case when no cnv data is present due to server error and not to crash
 
 
+## 2.108.2-0
+
+Fixes
+- support gdc/singlecell state overrides, such as for demo mode
+
+
 ## 2.108.1-0
 
 Fixes:

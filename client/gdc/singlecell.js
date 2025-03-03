@@ -34,7 +34,7 @@ export async function init(arg, holder, genomes) {
 			genome: gdcGenome,
 			dslabel: gdcDslabel,
 			termfilter: { filter0: arg.filter0 },
-			plots: [{ chartType: 'singleCellPlot' }]
+			plots: arg.state?.plots || [{chartType: 'singleCellPlot'}]
 		},
 		noheader: true,
 		nobox: true,
@@ -66,7 +66,9 @@ export async function init(arg, holder, genomes) {
 			},
 			arg.opts?.app || {}
 		),
-		singleCellPlot: arg.opts?.singleCell || {}
+		opts: {
+			singleCellPlot: arg.opts?.singleCellPlot || {}
+		}
 	})
 	const api = {
 		update: async updateArg => {

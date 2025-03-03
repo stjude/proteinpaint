@@ -68,6 +68,7 @@ runs:
 
     - name: Run deploy action
       uses: peter-evans/repository-dispatch@v2
+      if: ${{ !startsWith(github.ref_name, 'release') }}
       with:
         token: ${{ inputs.PAT }}
         repository: stjude/sj-pp
