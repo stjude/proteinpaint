@@ -151,7 +151,7 @@ class Scatter {
 
 	createChart(id, data, i) {
 		const cohortSamples = data.samples.filter(sample => 'sampleId' in sample)
-		if (cohortSamples.length > 10000) this.is2DLarge = true
+		if (cohortSamples.length > 20000) this.is2DLarge = true
 		const colorLegend = new Map(data.colorLegend)
 		const shapeLegend = new Map(data.shapeLegend)
 		this.charts.splice(i, 0, { id, data, cohortSamples, colorLegend, shapeLegend })
