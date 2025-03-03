@@ -39,8 +39,7 @@ export function getBinsDensity(scale, plot, isKDE = false, ticks = 20) {
 	const values = plot.values
 	values.sort((a, b) => a - b) //need to provide it so it compares properly integers and floats
 	const l = values.length
-	let p2ndidx = Math.round(l * 0.02) - 1
-	if (p2ndidx < 0) p2ndidx = 0
+	let p2ndidx = Math.ceil(l * 0.02) - 1
 	let p98idx = Math.round(l * 0.98) - 1
 
 	const p2nd = values[p2ndidx]
