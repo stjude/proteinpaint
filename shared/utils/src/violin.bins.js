@@ -45,16 +45,14 @@ export function getBinsDensity(scale, plot, isKDE = false, ticks = 20) {
 
 	const p2nd = values[p2ndidx]
 	const p98 = values[p98idx]
-	console.log('p2nd', p2nd, 'p98', p98, 'valuesMin', valuesMin, 'valuesMax', valuesMax)
 	let thresholds = []
 	//Divided thresholds(or bins) into 3 parts, below p2nd, between p2nd and p98, above p98. This allows to handle outliers better.
 	if (p2nd > valuesMin) thresholds = [...getThresholds(valuesMin, p2nd, ticks)]
 	if (p98 > p2nd) thresholds.push(...getThresholds(p2nd, p98, ticks))
 	if (p98 < valuesMax) thresholds.push(...getThresholds(p98, valuesMax, ticks))
-	console.log('thresholds', thresholds)
 	const result = isKDE
 		? kde(gaussianKernel, thresholds, plot.values, valuesMin, valuesMax)
-		: getBinsHist(scale, plot.values, ticks, valuesMin, valuesMax)
+		: getBinsHist(scale, plot.values, thresholds, valuesMin, valuesMax)
 
 	result.bins.unshift({ x0: valuesMin, density: result.densityMin }) //This allows to start the plot from min prob, avoids rendering issues
 
@@ -158,10 +156,10 @@ function silvermanBandwidth(data) {
 	return h
 }
 
-function getBinsHist(scale, values, ticks, valuesMin, valuesMax) {
+function getBinsHist(scale, values, thresholds, valuesMin, valuesMax) {
 	const binBuilder = bin()
 		.domain(scale.domain()) /* extent of the data that is lowest to highest*/
-		.thresholds(scale.ticks(ticks)) /* buckets are created which are separated by the threshold*/
+		.thresholds(thresholds) /* buckets are created which are separated by the threshold*/
 		.value(d => d) /* bin the data points into this bucket*/
 	const bins0 = binBuilder(values)
 	const bins = []
