@@ -152,9 +152,10 @@ export function setRenderers(self) {
 		ctx.fillStyle = cell.fill
 		ctx.fillRect(x, y, width, height)
 
+		const borderWidth = Math.min(width, height) * 0.1
 		if (cell.border) {
 			// Draw the border
-			ctx.lineWidth = 0.8 // Set border width, you can adjust this value
+			ctx.lineWidth = borderWidth // Set border width, you can adjust this value
 			ctx.strokeStyle = 'white' // Set the border color, you can use any color
 			ctx.strokeRect(x, y, width, height) // Draw the border
 		}

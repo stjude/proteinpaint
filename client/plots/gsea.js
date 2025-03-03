@@ -187,6 +187,7 @@ class gsea {
 		this.config = structuredClone(this.state.config)
 		if (this.config.chartType != this.type && this.config.childType != this.type) return
 		this.settings = this.config.settings.gsea
+		this.imageUrl = null // Reset the image URL
 		await this.setControls()
 		if (this.dom.header)
 			this.dom.header.html(

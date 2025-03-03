@@ -232,7 +232,7 @@ class singleCellPlot {
 		if (q.singleCell?.DEgenes) {
 			const label = this.dom.deDiv
 				.append('label')
-				.html('View DE genes for cells of a cluster versus rest of the cells:&nbsp;')
+				.html('View differentially expressed genes for cells of a cluster versus rest of the cells:&nbsp;')
 			this.dom.deselect = label.append('select').on('change', e => {
 				const display = this.dom.deselect.node().value ? 'inline-block' : 'none'
 				const cluster = this.dom.deselect.node().value.split(' ')[1]
@@ -721,7 +721,7 @@ class singleCellPlot {
 		if (this.app.opts.genome.termdbs) {
 			// assumption is that can run gsea on the differential genes, when the genome-level termdb is available (which is right now geneset dbs)
 			tabs.push({
-				label: 'Gene Set Enrichment Analysis',
+				label: 'Gene Set Enrichment Analysis(GSEA)',
 				id: DE_GSEA_TAB,
 				active: false,
 				callback: () => showActiveDETab(DE_GSEA_TAB)
