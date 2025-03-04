@@ -2656,7 +2656,7 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 				lst: [{type: 'dt', dt: 1, mclasses: ['M']}]
 			}
 		]}*/
-		// custom groupset for "CNV=loss AND SNV!=M vs. SNV=M AND CNV!=loss"
+		/*// custom groupset for "CNV=loss AND SNV!=M vs. SNV=M AND CNV!=loss"
 		tw.q.customset = {
 			groups: [
 				{
@@ -2677,6 +2677,82 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 					lst: [
 						{ type: 'dt', dt: 1, mclasses: ['M'] },
 						{ type: 'dt', dt: 4, mclasses: ['CNV_loss'], isnot: true }
+					]
+				}
+			]
+		}*/
+		/*// custom groupset for "SNV=M vs. Other vs. Not tested"
+		// the 'Not tested' group needs be before the 'Other' group
+		// in groups[] so that the not tested samples do not get grouped
+		// in the 'Other' group
+		tw.q.customset = {
+			groups: [
+				{
+					name: 'Not tested',
+					type: 'dtlst',
+					in: true,
+					join: 'and',
+					lst: [
+						{ type: 'dt', dt: 1, mclasses: ['Blank'], origin: 'germline' },
+						{ type: 'dt', dt: 1, mclasses: ['Blank'], origin: 'somatic' }
+					],
+					uncomputable: true
+				},
+				{
+					name: 'SNV=M',
+					type: 'dtlst',
+					in: true,
+					join: 'or',
+					lst: [
+						{ type: 'dt', dt: 1, mclasses: ['M'], origin: 'germline' },
+						{ type: 'dt', dt: 1, mclasses: ['M'], origin: 'somatic' }
+					]
+				},
+				{
+					name: 'Other',
+					type: 'dtlst',
+					in: false,
+					join: 'or',
+					lst: [
+						{ type: 'dt', dt: 1, mclasses: ['M'], origin: 'germline' },
+						{ type: 'dt', dt: 1, mclasses: ['M'], origin: 'somatic' }
+					]
+				}
+			]
+		}*/
+		// custom groupset for "SNV=F vs. Other vs. Not tested"
+		// tested with ELP1 gene
+		tw.q.customset = {
+			groups: [
+				{
+					name: 'Not tested',
+					type: 'dtlst',
+					in: true,
+					join: 'and',
+					lst: [
+						{ type: 'dt', dt: 1, mclasses: ['Blank'], origin: 'germline' },
+						{ type: 'dt', dt: 1, mclasses: ['Blank'], origin: 'somatic' }
+					],
+					uncomputable: true
+				},
+				{
+					name: 'SNV=F',
+					type: 'dtlst',
+					in: true,
+					join: 'or',
+					lst: [
+						{ type: 'dt', dt: 1, mclasses: ['F'], origin: 'germline' },
+						{ type: 'dt', dt: 1, mclasses: ['F'], origin: 'somatic' }
+					]
+				},
+				{
+					name: 'Other',
+					type: 'dtlst',
+					in: false,
+					join: 'or',
+					lst: [
+						{ type: 'dt', dt: 1, mclasses: ['F'], origin: 'germline' },
+						{ type: 'dt', dt: 1, mclasses: ['F'], origin: 'somatic' }
 					]
 				}
 			]
@@ -2814,7 +2890,7 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 					// function to determine if the dt of group matches the mlst of sample
 					function dtMatchesMlst(dt, mlst) {
 						// determine if any mclass in mlst matches an mclass in the dt object
-						const inMlst = mlst.some(m => dt.dt == m.dt && dt.mclasses.includes(m.class))
+						const inMlst = mlst.some(m => dt.dt == m.dt && dt.origin == m.origin && dt.mclasses.includes(m.class))
 						// for dt.isnot=false, dt and mlst match if their mclasses match
 						// for dt.isnot=true, dt and mlst match if their mclasses do not match
 						return dt.isnot ? !inMlst : inMlst
