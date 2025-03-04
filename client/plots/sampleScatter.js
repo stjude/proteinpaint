@@ -29,6 +29,9 @@ export const minShapeSize = 0.2
 export const maxShapeSize = 4
 //icons have size 16x16
 export const shapes = shapesArray
+
+const numberOfSamplesCutoff = 20000 // if map is greater than cutoff, switch from svg to canvas rendering
+
 class Scatter {
 	constructor() {
 		this.type = 'sampleScatter'
@@ -151,7 +154,7 @@ class Scatter {
 
 	createChart(id, data, i) {
 		const cohortSamples = data.samples.filter(sample => 'sampleId' in sample)
-		if (cohortSamples.length > 20000) this.is2DLarge = true
+		if (cohortSamples.length > numberOfSamplesCutoff) this.is2DLarge = true
 		const colorLegend = new Map(data.colorLegend)
 		const shapeLegend = new Map(data.shapeLegend)
 		this.charts.splice(i, 0, { id, data, cohortSamples, colorLegend, shapeLegend })
