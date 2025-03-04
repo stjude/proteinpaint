@@ -17,7 +17,7 @@
     "dev": "npm run start",
     "prestart": "tsx emitImports.js dev > server.js",
     "start": "tsx watch . /start.js",
-    "test:unit": "tsx emitImports.js unit > serverTests.js && tsx serverTests.js && rm -rf ./cache",
+    "test:unit": "tsx emitImports.js unit > serverTests.js && c8 tsx serverTests.js && rm -rf ./cache",
     "getconf": "../build/getConfigProp.js",
     "doc": "../augen/build.sh routes shared/types/routes shared/checkers ../public/docs/server",
     "mjs": "esbuild \"$DIR/*.ts\" --platform=node --outdir=\"$DIR\" --format=esm",
