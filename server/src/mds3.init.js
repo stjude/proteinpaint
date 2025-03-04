@@ -71,9 +71,11 @@ validate_query_snvindel
 	mayValidateSampleHeader
 validate_query_svfusion
 	svfusionByRangeGetter_file
+		validateSampleHeader2
 validate_query_geneCnv
 validate_query_cnv
 	cnvByRangeGetter_file
+		validateSampleHeader2
 validate_query_probe2cnv
 validate_query_ld
 validate_query_geneExpression
@@ -511,13 +513,14 @@ export async function validate_cumburden(ds) {
 	// but do not allow when debugmode is false
 	if (dir.includes('..') && !serverconfig.debugmode) throw `'..' path segment is not allowed in ds.cohort.cumburden.dir`
 	if (!fs.existsSync(path.join(serverconfig.tpmasterdir, dir))) `ds.cohort.cumburden.dir='${dir}' not found`
-	
+
 	if (!ds.cohort.cumburden.files) `missing ds.cohort.cumburden.files`
 	const inputFiles = ds.cohort.cumburden.files
 	for (const name of ['fit', 'surv', 'sample']) {
 		const fname = inputFiles[name]
 		if (!fname) throw `missing ds.cohort.burden.files.${name}`
-		if (fname.includes('..') && !serverconfig.debugmode) throw `'..' path segment is not allowed in ds.cohort.cumburden.files.${name}`
+		if (fname.includes('..') && !serverconfig.debugmode)
+			throw `'..' path segment is not allowed in ds.cohort.cumburden.files.${name}`
 		const f = path.join(serverconfig.tpmasterdir, dir, fname)
 		if (!fs.existsSync(f)) throw `ds.cohort.burden.files.${name}='${fname}' not found`
 		const out = spawnSync(serverconfig.Rscript, ['-e', `load('${f}')`], {
@@ -1104,10 +1107,7 @@ export async function snvindelByRangeGetter_bcf(ds, genome) {
 	if (q._tk?.samples.length) {
 		// has samples
 		if (!q._tk.format) throw 'bcf file has samples but no FORMAT'
-		if (q.tempflag_sampleNameInVcfHeader) {
-			// this flag is temporary while bcf files are being migrated to be using string sample names. TODO once all files are migrated, delete the flag from all datasets and always run this routine
-			q._tk.samples = validateSampleHeader2(ds, q._tk.samples, 'snvindel.byrange')
-		}
+		q._tk.samples = validateSampleHeader2(ds, q._tk.samples, 'snvindel.byrange') // snvindel is using string sample name
 	} else {
 		if (q._tk.format) throw 'bcf file has FORMAT but no samples'
 	}
@@ -1219,7 +1219,7 @@ export async function snvindelByRangeGetter_bcf(ds, genome) {
 
 			const l = []
 			for (const s of limitSamples) {
-				l.push(q.tempflag_sampleNameInVcfHeader ? ds.cohort.termdb.q.id2sampleName(s) : s)
+				l.push(ds.cohort.termdb.q.id2sampleName(s))
 			}
 			bcfArgs.push('-s', l.join(','))
 		}
@@ -2068,6 +2068,7 @@ export async function svfusionByRangeGetter_file(ds, genome) {
 		q.samples = l.slice(1).map(i => {
 			return { name: i }
 		})
+		q.samples = validateSampleHeader2(ds, q.samples, 'svfusion.byrange') // svfusion is using string sample names
 	}
 
 	// same parameter as snvindel.byrange.get()
@@ -2120,9 +2121,12 @@ export async function svfusionByRangeGetter_file(ds, genome) {
 
 					if (param.hiddenmclass && param.hiddenmclass.has(j.class)) return
 
-					if (j.sample && limitSamples) {
-						// to filter sample
-						if (!limitSamples.has(j.sample)) return
+					if (j.sample) {
+						j.sample = ds.cohort.termdb.q.sampleName2id(j.sample)
+						if (limitSamples) {
+							// to filter sample
+							if (!limitSamples.has(j.sample)) return
+						}
 					}
 
 					// collect key fields
@@ -2424,6 +2428,7 @@ export async function cnvByRangeGetter_file(ds, genome) {
 		q.samples = l.slice(1).map(i => {
 			return { name: i }
 		})
+		q.samples = validateSampleHeader2(ds, q.samples, 'cnv.byrange') // cnv is using string sample names
 	}
 
 	/* extra parameters from snvindel.byrange.get():
@@ -2492,9 +2497,12 @@ export async function cnvByRangeGetter_file(ds, genome) {
 
 					if (param.hiddenmclass && param.hiddenmclass.has(j.class)) return
 
-					if (j.sample && limitSamples) {
-						// to filter sample
-						if (!limitSamples.has(j.sample)) return
+					if (j.sample) {
+						j.sample = ds.cohort.termdb.q.sampleName2id(j.sample)
+						if (limitSamples) {
+							// to filter sample
+							if (!limitSamples.has(j.sample)) return
+						}
 					}
 
 					if (j.sample) {
