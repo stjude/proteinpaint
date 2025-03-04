@@ -1379,7 +1379,13 @@ type MassNav = {
 			 * maybe used for other tabs as well.
 			 */
 			html?: string
-			dataRelease?: DataRelease
+			/** declare data release. should only use for "about" */
+			dataRelease?: {
+				/** data release version */
+				version: string
+				/** link to data release page */
+				link: string
+			}
 			/** html string, can include links to other
 			 * pages (e.g., tutorials, google group) */
 			additionalInfo?: string
@@ -1394,13 +1400,6 @@ type MassNav = {
 	activeColor?: string
 	/** customize background color of active navigation tab on hover */
 	activeColorHover?: string
-}
-
-type DataRelease = {
-	/** data release version */
-	version: string
-	/** link to data release page */
-	link: string
 }
 
 type ActiveItem = {
