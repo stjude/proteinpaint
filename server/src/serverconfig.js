@@ -5,13 +5,19 @@
 
 import fs from 'fs'
 import path from 'path'
+import { fileURLToPath } from 'url'
+
+// import.meta.dirname is undefined when using docker dev environment
+// use __dirname and __filename global variable convention from commonjs
+const __dirname = import.meta.dirname || (new URL('.', import.meta.url)).pathname
+const __filename = import.meta.filename || fileURLToPath(import.meta.url)
 
 // do not assume that serverconfig.json is in the same dir as server.js
 // for example, when using proteinpaint as an npm module or binary
 // or when calling a pp utility script from a tp data directory
 const workdirconfig = process.cwd() ? process.cwd() + '/serverconfig.json' : ''
-const serverdirconfig = path.join(import.meta.dirname, '../serverconfig.json')
-const pprootdirconfig = path.join(import.meta.dirname, '../../serverconfig.json')
+const serverdirconfig = path.join(__dirname, '../serverconfig.json')
+const pprootdirconfig = path.join(__dirname, '../../serverconfig.json')
 // check which config file exists in order of usage priority
 const serverconfigfile =
 	workdirconfig && fs.existsSync(workdirconfig)
@@ -83,9 +89,9 @@ if (!serverconfig.binpath) {
 	} else {
 		const specfile = process.argv.find(n => n.includes('.spec.js'))
 		if (specfile) {
-			serverconfig.binpath = path.dirname(import.meta.dirname)
-		} else if (import.meta.filename.includes('node_modules/@sjcrh/proteinpaint-server')) {
-			const p = import.meta.filename.split('/proteinpaint-server')[0]
+			serverconfig.binpath = path.dirname(__dirname)
+		} else if (__filename.includes('node_modules/@sjcrh/proteinpaint-server')) {
+			const p = __filename.split('/proteinpaint-server')[0]
 			serverconfig.binpath = `${p}/proteinpaint-server`
 		} else {
 			const jsfile = process.argv.find(
@@ -106,9 +112,9 @@ if (!serverconfig.binpath) {
 			} else {
 				if (fs.existsSync('./server')) serverconfig.binpath = fs.realpathSync('./server')
 				else if (fs.existsSync('./src')) serverconfig.binpath = fs.realpathSync('./src/..')
-				else if (import.meta.dirname.includes('/server/'))
-					serverconfig.binpath = import.meta.dirname.split('/server/')[0] + '/server'
-				else if (import.meta.dirname.includes('/proteinpaint')) serverconfig.binpath = import.meta.dirname
+				else if (__dirname.includes('/server/'))
+					serverconfig.binpath = __dirname.split('/server/')[0] + '/server'
+				else if (__dirname.includes('/proteinpaint')) serverconfig.binpath = __dirname
 				else throw 'unable to determine the serverconfig.binpath'
 			}
 		}

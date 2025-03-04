@@ -44,7 +44,9 @@ export async function launch() {
 		authApi.maySetAuthRoutes(app, basepath, serverconfig)
 
 		const routes = await Promise.all(routeFiles)
-		const __dirname = import.meta.dirname
+
+		const __dirname = import.meta.dirname || (new URL('.', import.meta.url)).pathname
+
 		augen.setRoutes(app, routes, {
 			app,
 			genomes,
