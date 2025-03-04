@@ -1187,9 +1187,10 @@ export async function getPlotConfig(opts, app) {
 // a function used by generatePvalueTable to negate a term label
 // TODO: add more conditions for better negation than "not termLable"
 export function negateTermLabel(termLabel) {
-	if (termLabel.toUpperCase().startsWith('NOT ')) {
-		return termLabel.substring(4) // Remove the "not" prefix
+	const termLabelStr = String(termLabel)
+	if (termLabelStr.toUpperCase().startsWith('NOT ')) {
+		return termLabelStr.substring(4) // Remove the "not" prefix
 	} else {
-		return 'not ' + termLabel // Otherwise, add "not" prefix
+		return 'not ' + termLabelStr // Otherwise, add "not" prefix
 	}
 }
