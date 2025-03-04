@@ -5,14 +5,27 @@ import fs from 'fs'
 import MCR from 'monocart-coverage-reports'
 import path from 'path'
 
+// user __dirname later to detect relative path to public dir,
+// since the unit test may be triggered from the pp dir with --workspace option
+const __dirname = import.meta.dirname
 
-(async () => {
+runTest().catch(console.error)
+
+async function runTest() {
   const app = express()
-  const staticDir = express.static(path.join(process.cwd(), '../public'))
-  app.use(staticDir)
-  const server = app.listen(3000)
+  const publicDir = path.join(__dirname, '../../public')
+  const staticMiddleware = express.static(publicDir)
+  app.use(staticMiddleware)
+  const port = 3000
+  const server = app.listen(port)
 
-  const browser = await puppeteer.launch()
+  const browser = await puppeteer.launch({
+    headless: true,
+    args: [
+      `--no-sandbox`,
+      `--disable-setuid-sandbox`,
+    ],
+  })
   const page = await browser.newPage()
  
   // Enable both JavaScript and CSS coverage
@@ -44,14 +57,26 @@ import path from 'path'
       */
       if (msg.startsWith('1..') || lastLines.length) lastLines.push(msg)
     })
-    // .on('pageerror', ({ message }) => console.log(message))
     // .on('response', response =>
-    //   console.log(`${response.status()} ${response.url()}`))
-    // .on('requestfailed', request =>
-    //   console.log(`${request.failure().errorText} ${request.url()}`))
+    //   console.log(`63 ${response.status()} ${response.url()}`)
+    // )
+    .on('pageerror', (e) => {
+      console.log('-- pageerror --', e.message)
+      console.trace(e)
+    })
+    .on('requestfailed', request =>
+      console.log('-- requestfailed --', `${request.failure().errorText} ${request.url()}`)
+    )
 
   // Navigate to test page
-  await page.goto('http://localhost:3000/puppet.html?name=*.unit');
+  await page.goto(`http://localhost:${port}/puppet.html?name=*.unit`, {timeout: 1000})
+    .then(r => {
+      if (r.status() != 200) throw `Error loading page: ${r.status()}`
+    })
+    .catch(e => {
+      console.error('--- page.goto().catch ---', e)
+      process.exit(1)
+    })
 
   const i = setInterval(async ()=>{
     // see page.on('console') above for the expected last lines texts that are being detected
@@ -59,32 +84,32 @@ import path from 'path'
     clearInterval(i)
     if (!lastLines.find(l => l.startsWith('# ok'))) {
       console.error(`\n!!! test failed !!!\n`)
-      //await browser.close()
-      //process.exit(1)
+      await browser.close()
+      process.exit(1)
     }
     // Disable both JavaScript and CSS coverage
     const [jsCoverage /*, cssCoverage*/] = await Promise.all([
       page.coverage.stopJSCoverage(),
       //page.coverage.stopCSSCoverage(),
-    ])//; console.log(58, Object.keys(jsCoverage).length)
+    ])
     const matched = jsCoverage.filter(({rawScriptCoverage: c}) => 
       c.url.includes('/bin/test') && !c.url.includes('_.._') && !c.url.includes('node_modules')
     )
-    fs.writeFileSync(`${process.cwd()}/results.json`, JSON.stringify(matched))
+    //fs.writeFileSync(`${process.cwd()}/results.json`, JSON.stringify(matched))
     
     const coverageList = matched.map((it,i) => {
-        return {
-            source: it.text,
-            ... it.rawScriptCoverage
-        };
+      return {
+          source: it.text,
+          ... it.rawScriptCoverage
+      };
     });
 
     const mcr = MCR({
-        name: 'My Coverage Report',
-        sourceFilter: (path) => !path.includes('/bin/test') && !path.includes('_.._') && !path.includes('node_modules'),
-        outputDir: './.nyc_output',
-        reports: ["v8", "console-details", "html"],
-        cleanCache: true
+      name: 'Unit Test Coverage',
+      sourceFilter: (path) => !path.includes('/bin/test') && !path.includes('_.._') && !path.includes('node_modules'),
+      outputDir: './.nyc_output',
+      reports: ["v8", "console-summary", "html"],
+      cleanCache: true
     })
 
     const report = await mcr.add(coverageList);
@@ -93,4 +118,4 @@ import path from 'path'
     await browser.close()
     server.close()
   }, 100)
-})()
+}
