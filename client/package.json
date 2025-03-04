@@ -35,7 +35,7 @@
     "test": "./test.sh *.spec.js",
     "test:unit": "./test.sh *.unit.spec.*",
     "test:integration": "./test.sh *.integration.spec.*",
-    "test:puppet": "rm -rf .nyc_output && node test/puppet.js && nyc report --reporter=text --sourceMap",
+    "test:puppet": "rm -rf .nyc_output && node test/puppet.js",
     "tsc": "tsc -p tsconfig-x.json",
     "examples": "node ./test/import-specs.js name=_x_.examples && npm run tape",
     "build": "rm -rf dist && node esbuild.config.mjs",
