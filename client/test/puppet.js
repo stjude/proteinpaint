@@ -1,10 +1,17 @@
-//import pti from 'puppeteer-to-istanbul'
+// reuse expressjs, as installed in the server workspace
+import express from 'express'
 import puppeteer from 'puppeteer'
 import fs from 'fs'
 import MCR from 'monocart-coverage-reports'
+import path from 'path'
 
 
 (async () => {
+  const app = express()
+  const staticDir = express.static(path.join(process.cwd(), '../public'))
+  app.use(staticDir)
+  const server = app.listen(3000)
+
   const browser = await puppeteer.launch()
   const page = await browser.newPage()
  
@@ -63,17 +70,15 @@ import MCR from 'monocart-coverage-reports'
     const matched = jsCoverage.filter(({rawScriptCoverage: c}) => 
       c.url.includes('/bin/test') && !c.url.includes('_.._') && !c.url.includes('node_modules')
     )
-    fs.writeFileSync(`${process.cwd()}/results.json`, JSON.stringify(matched)); console.log(59)
-    // pti.write(matched, { includeHostname: true , storagePath: './.nyc_output' }); console.log(61)
+    fs.writeFileSync(`${process.cwd()}/results.json`, JSON.stringify(matched))
     
-    const coverageList = matched.map((it,i) => { if (i===0) console.log(65, Object.keys(it.rawScriptCoverage))
+    const coverageList = matched.map((it,i) => {
         return {
             source: it.text,
             ... it.rawScriptCoverage
         };
     });
 
-    
     const mcr = MCR({
         name: 'My Coverage Report',
         sourceFilter: (path) => !path.includes('/bin/test') && !path.includes('_.._') && !path.includes('node_modules'),
@@ -86,5 +91,6 @@ import MCR from 'monocart-coverage-reports'
     console.log('puppeteer coverage added', report.type);
     await mcr.generate()
     await browser.close()
+    server.close()
   }, 100)
 })()
