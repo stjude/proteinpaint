@@ -115,7 +115,7 @@ filter_time <- system.time({
 
 normalization_time <- system.time({
     y <- y[keep, keep.lib.sizes = FALSE]
-    y <- normLibSizes(y)
+    y <- normLibSizes(y, method="TMM") # Using TMM method for normalization
 })
 #cat("Normalization time: ", normalization_time[3], " seconds\n")
 
@@ -125,12 +125,12 @@ if (length(input$conf1) == 0) { # No adjustment of confounding factors
     fit_time <- system.time({
         suppressWarnings({
             suppressMessages({
-                fit <- glmQLFit(y,design)
+                fit <- glmQLFit(y,design) # The glmQLFit() replaces glmFit() which implements the quasi-likelihood function. This is better able to account for overdispersion as it employs a more lenient approach where variance is not a fixed function of the mean.
             })
         })
     })
-    #cat("QL fit time: ", fit_time[3], " seconds\n")        
-    
+    #cat("QL fit time: ", fit_time[3], " seconds\n")
+
     test_time <- system.time({
         suppressWarnings({
             suppressMessages({
@@ -182,7 +182,7 @@ if (length(input$conf1) == 0) { # No adjustment of confounding factors
             })
         })
     })
-    #cat("QL test time: ", test_time[3], " seconds\n")    
+    #cat("QL test time: ", test_time[3], " seconds\n")
 }
 
 # Multiple testing correction
