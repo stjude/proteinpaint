@@ -101,29 +101,11 @@ class MassGroups {
 
 		const name = samplelstGroups.length == 1 ? samplelstGroups[0].name : 'Sample groups'
 		const tw = getSamplelstTW(samplelstGroups, name, this.app.vocabApi)
-
 		/* 
-		QUICK FIX
 		when samplelstGroups has 1 group,
-		tw.q.groups[0] should be samplelstGroups[0]
-		tw.q.groups[1] should be rest of samples. BUT it has same content as groups[0]
-
-		getSamplelstTW() TODO:
-		- add this fix back to getSamplelstTW()
-		- change to async
-		- resolve 3rd arg
-		- fix all usages in plot and test
+		tw.q.groups[0] has values as samplelstGroups[0].items, with a filter of {in: true}
+		tw.q.groups[1] has values as samplelstGroups[0].items, with a filter of {in: false}
 		*/
-		if (samplelstGroups.length == 1) {
-			tw.q.groups[1].values = [] // set 2nd group to blank
-			// retrieve full list of samples based on current filter. those not in 1st group are put in 2nd group
-			for (const s of await this.app.vocabApi.getFilteredSampleList(this.state.termfilter.filter)) {
-				// s={id,name}, q.groups[].values[]={sampleId,sample}
-				if (tw.q.groups[0].values.indexOf(i => i.sampleId == s.id) == -1) {
-					tw.q.groups[1].values.push({ sampleId: s.id, sample: s.name })
-				}
-			}
-		}
 
 		//when there is only one group and need to create a others group
 		if (groups.length == 1) {
