@@ -76,6 +76,7 @@ To use VSCode with the Docker container, you can use the Dev Containers extensio
 ```bash
 npm install
 npm run build
+npm run sethooks
 cp container/dev/serverconfig.json .
 npm run dev1
 ```
