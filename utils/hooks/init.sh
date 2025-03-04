@@ -1,3 +1,5 @@
+#!/bin/bash
+
 # called from the proteinpaint directory
 
 PPDIR=$(pwd)
@@ -5,11 +7,11 @@ HOOKS=$(git rev-parse --git-path hooks)
 mv -f $HOOKS/pre-commit $HOOKS/pre-commit-bkup
 cd $HOOKS
 ls $PPDIR/utils/hooks/
-ln -s $PPDIR/utils/hooks/post-checkout .
-ln -s $PPDIR/utils/hooks/pre-commit .
-ln -s $PPDIR/utils/hooks/commit-msg .
-ln -s $PPDIR/utils/hooks/post-commit .
-ln -s $PPDIR/utils/hooks/pre-push .
+ln -sf $PPDIR/utils/hooks/post-checkout .
+ln -sf $PPDIR/utils/hooks/pre-commit .
+ln -sf $PPDIR/utils/hooks/commit-msg .
+ln -sf $PPDIR/utils/hooks/post-commit .
+ln -sf $PPDIR/utils/hooks/pre-push .
 cd $PPDIR
 
 STATUS="$(which pre-commit)"
