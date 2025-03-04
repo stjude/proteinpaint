@@ -30,18 +30,13 @@ export default {
 	cohort: {
 		massNav: {
 			tabs: {
-				// about: {
-				// 	hide: true,
-				// 	order: 4,
-				// 	top: 'test',
-				// 	mid: 'test about',
-				// 	btm: 'test',
-				// 	html: 'Test'
-				// },
-				// charts: {
-				// 	top: 'test charts',
-				// 	mid: 'mid test'
-				// }
+				about: {
+					dataRelease: {
+						version: '?',
+						link: 'testLink'
+					},
+					additionalInfo: '<a href=testLink>Tutorial</a> <a href=testLink>Get help</a>'
+				}
 			}
 		},
 		db: {

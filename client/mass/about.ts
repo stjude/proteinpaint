@@ -241,10 +241,8 @@ export class MassAbout {
 		if (this.selectCohort.asterisk) {
 			this.dom.cohortAsterisk = this.subheader
 				.append('div')
-				.style('margin-left', '10px')
-				.style('padding-top', '20px')
-				.style('padding-bottom', '30px')
-				.style('font-size', 'small')
+				.style('margin', '10px')
+				.style('font-size', '.8em')
 				.text(this.selectCohort.asterisk)
 		}
 	}
@@ -355,8 +353,7 @@ export class MassAbout {
 		const div = this.subheader
 			.append('div')
 			.attr('data-testid', 'sjpp-about-server-info')
-			.style('margin-left', '10px')
-			.style('padding-bottom', '5px')
+			.style('margin', '10px')
 			.style('font-size', '.8em')
 
 		const htmlArr: string[] = []

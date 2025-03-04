@@ -363,30 +363,6 @@ function setRenderers(self) {
 					self.getSessionFile(event)
 				})
 		}
-
-		const helpPages = appState.termdbConfig.massNav?.tabs?.about?.helpPages
-		if (helpPages) {
-			// if help pages are defined, then show a help button
-			self.dom.helpBtn = self.dom.helpDiv
-				.style('display', 'inline-block')
-				.append('button')
-				.style('margin', '10px')
-				.html('Help &#9660;')
-				.on('click', event => {
-					const tip = headtip.clear()
-					const div = tip.d.append('div')
-					for (const page of helpPages) {
-						div
-							.append('div')
-							.style('margin', '15px')
-							.append('a')
-							.attr('href', page.url)
-							.attr('target', '_blank')
-							.text(page.label)
-					}
-					tip.showunder(event.target)
-				})
-		}
 	}
 
 	self.deletePlots = () => {
