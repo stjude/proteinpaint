@@ -384,7 +384,7 @@ async function getFilesAndShowTable(obj) {
 		// download the file to client
 		const a = document.createElement('a')
 		a.href = URL.createObjectURL(data)
-		a.download = `cohortMAF.${new Date().toISOString().split('T')[0]}.gz`
+		a.download = `cohortMAF.${new Date().toISOString().split('T')[0]}.maf.gz`
 		a.style.display = 'none'
 		document.body.appendChild(a)
 		a.click()
