@@ -8,16 +8,15 @@ import path from 'path'
 // user __dirname later to detect relative path to public dir,
 // since the unit test may be triggered from the pp dir with --workspace option
 const __dirname = import.meta.dirname
+const port = 6789
 
-runTest().catch(console.error)
+const params = process.argv[2] || ''
+if (!params) throw `missing puppet.js params argument`
 
-async function runTest() {
-  const app = express()
-  const publicDir = path.join(__dirname, '../../public')
-  const staticMiddleware = express.static(publicDir)
-  app.use(staticMiddleware)
-  const port = 3000
-  const server = app.listen(port)
+runTest(params).catch(console.error)
+
+async function runTest(params) {
+  const server = initServer(params)
 
   const browser = await puppeteer.launch({
     headless: true,
@@ -69,9 +68,9 @@ async function runTest() {
     )
 
   // Navigate to test page
-  await page.goto(`http://localhost:${port}/puppet.html?name=*.unit`, {timeout: 1000})
+  await page.goto(`http://localhost:${port}/puppet.html?${params}`, {timeout: 1000})
     .then(r => {
-      if (r.status() != 200) throw `Error loading page: ${r.status()}`
+      if (!r.ok()) throw `Error loading page: ${r.status()}`
     })
     .catch(e => {
       console.error('--- page.goto().catch ---', e)
@@ -105,7 +104,7 @@ async function runTest() {
     });
 
     const mcr = MCR({
-      name: 'Unit Test Coverage',
+      name: `Test Coverage for ${params}`,
       sourceFilter: (path) => !path.includes('/bin/test') && !path.includes('_.._') && !path.includes('node_modules'),
       outputDir: './.nyc_output',
       reports: ["v8", "console-summary", "html"],
@@ -116,6 +115,22 @@ async function runTest() {
     console.log('puppeteer coverage added', report.type);
     await mcr.generate()
     await browser.close()
-    server.close()
+    if (server) server.close()
   }, 100)
+}
+
+function initServer(params) {
+  // NOTES:
+  // - integration and other non-unit tests must use an active PP server with test genome and dataset
+  // as runproteinpaint({host}); client unit tests do NOT need this active PP server instance
+  // 
+  // - the minimal expressjs instance below serves only static spec code files,
+  // so that dynamically-loaded code chunks can be imported at runtime, and also minimize loading
+  // irrelevant code chunks when more specific name= pattern is supplied in params
+  // 
+  const app = express()
+  const publicDir = path.join(__dirname, '../../public')
+  const staticMiddleware = express.static(publicDir)
+  app.use(staticMiddleware)
+  return app.listen(port)
 }

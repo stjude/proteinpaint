@@ -4,6 +4,10 @@ set -euxo pipefail
 
 # glob string pattern for matching filenames to test
 NAMEPATTERN=$1
+DIRPATTERN=""
+if (($# == 2)); then
+ DIRPATTERN=$2
+fi
 
 TESTHOST=http://localhost:3000
 if [[ "$NAMEPATTERN" == *"integration"* ]]; then
@@ -30,9 +34,5 @@ node emitImports.mjs $NAMEPATTERN > ./$TESTFILE
 
 ENV=test node esbuild.config.mjs
 
-if [[ "$NAMEPATTERN" == *"unit"* ]]; then
-	npm run test:puppet
-else
-	INITJS="window.testHost='$TESTHOST';import('/bin/test/_.._/test/internals-test.js');"
-	echo "$INITJS" | npx tape-run --static ../public
-fi
+rm -rf .nyc_output 
+node test/puppet.js "dir=$DIRPATTERN&name=$NAMEPATTERN"
