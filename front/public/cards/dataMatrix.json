@@ -10,10 +10,13 @@
                 "parseurl": false,
 				"launchGdcMatrix": true,
                 "filter0": { "op": "in", "content": { "field": "cases.disease_type", "value":  "Gliomas" } },
-				"settings": { "matrix": { "maxGenes": 20, "maxSample": 10000 }},
+				"settings":{
+					"matrix": { "maxGenes": 10, "maxSample": 10000 }
+				},
 				"termgroups":[{"lst":[
-					{"id":"case.disease_type"},
-					{"id":"case.diagnoses.age_at_diagnosis","q":{"mode":"continuous"}}
+					{"id":"case.project.name"},
+					{"id":"case.diagnoses.age_at_diagnosis","q":{"mode":"continuous"}},
+					{"term":{"type":"geneExpression","gene":"IDH1"},"q":{"mode":"continuous"}}
 				]}]
          	},
             "testSpec": {
