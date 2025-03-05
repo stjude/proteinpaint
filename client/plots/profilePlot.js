@@ -51,6 +51,7 @@ export class profilePlot {
 	async init(appState) {
 		const config = appState.plots.find(p => p.id === this.id)
 		const state = this.getState(appState)
+		this.isRadarFacility = this.type == 'profileRadarFacility'
 		if (this.opts.header) {
 			let chartName = config.chartType.match(/[A-Z][a-z]+/g)
 			chartName = chartName.join(' ')
@@ -220,7 +221,7 @@ export class profilePlot {
 		this.dom.controlsDiv.selectAll('*').remove()
 		let inputs = []
 		const isAggregate = this.isAggregate()
-		if (this.state.sites?.length == 1 && chartType != 'profileRadarFacility') {
+		if (this.state.sites?.length == 1 && !this.isRadarFacility) {
 			const dataInput = {
 				label: 'Data',
 				type: 'radio',
@@ -234,7 +235,7 @@ export class profilePlot {
 			}
 			inputs.push(dataInput)
 		}
-		if (isAggregate || chartType == 'profileRadarFacility') {
+		if (isAggregate || this.isRadarFacility) {
 			inputs.push(
 				...[
 					{
@@ -357,6 +358,11 @@ export class profilePlot {
 		if (this.state.logged) {
 			if (this.state.site && !this.settings.isAggregate) {
 				this.loadSites()
+				if (this.state.sites.length == 1) {
+					//select site if only choice to load its data
+					const id = this.sampleidmap[this.state.sites[0]]?.id
+					this.settings.site = id
+				}
 			} //Admin
 			else if (!this.state.site) {
 				this.sites = this.data.lst.map(s => {
@@ -369,7 +375,8 @@ export class profilePlot {
 				})
 				this.sites.unshift({ label: '', value: '' })
 			}
-			if (this.isAggregate())
+			const isAggregate = this.isAggregate()
+			if (isAggregate && (this.state.sites?.length > 1 || this.state.user == 'admin'))
 				inputs.push({
 					label: 'Site',
 					type: 'dropdown',
@@ -384,7 +391,7 @@ export class profilePlot {
 
 	loadSites() {
 		this.sites = []
-		if (this.type != 'profileRadarFacility') this.sites.push({ label: '', value: '' })
+		if (!this.isRadarFacility) this.sites.push({ label: '', value: '' })
 		for (const site of this.state.sites) {
 			const id = this.sampleidmap[site]?.id
 			this.sites.push({ label: site, value: id })
@@ -412,7 +419,7 @@ export class profilePlot {
 	setFilterValue(key, value) {
 		const config = this.config
 		this.settings[key] = value
-		if (this.type != 'profileRadarFacility') this.settings.site = '' //always clear site when a filter is changed
+		if (!this.isRadarFacility) this.settings.site = '' //always clear site when a filter is changed
 		config.filter = this.getFilter()
 		this.app.dispatch({ type: 'plot_edit', id: this.id, config: this.config })
 	}
@@ -427,7 +434,7 @@ export class profilePlot {
 
 	clearFiltersExcept(ids) {
 		for (const tw of this.config.filterTWs) if (!ids.includes(tw.term.id)) this.settings[tw.term.id] = ''
-		if (this.config.chartType != 'profileRadarFacility') this.settings.site = ''
+		if (!this.isRadarFacility) this.settings.site = ''
 	}
 
 	setSite(site) {
@@ -464,7 +471,7 @@ export class profilePlot {
 	}
 
 	addFilterLegend() {
-		if (!this.settings.site || this.config.chartType == 'profileRadarFacility') {
+		if (!this.settings.site || this.isRadarFacility) {
 			const hasFilters = this.config.filterTWs.some(tw => this.settings[tw.term.id])
 			const title = hasFilters ? 'Filters' : 'No filter applied'
 			this.filterG
@@ -476,7 +483,7 @@ export class profilePlot {
 				.attr('transform', `translate(0, -5)`)
 			for (const tw of this.config.filterTWs) this.addFilterLegendItem(tw.term.name, this.settings[tw.term.id])
 		}
-		if (this.settings.site && this.config.chartType != 'profileRadarFacility') {
+		if (this.settings.site && !this.isRadarFacility) {
 			const label = this.sites.find(s => s.value == this.settings.site).label
 			this.addFilterLegendItem('Facility', label)
 		}
@@ -545,9 +552,8 @@ export class profilePlot {
 	getPercentage(d, isAggregate = null) {
 		if (!d) return null
 		if (isAggregate == null)
-			//not specified when called
-			//if defined in the settings a site is provided and the user can decide what to see, otherwise it is admin view and if the site was set sampleData is not null
-			isAggregate = this.settings.isAggregate || this.sampleData == null //if defined in the settings a site is provided and the user can decide what to see, otherwise it is admin view and if the site was set sampleData is not null
+			// if not specified when called (not profileRadarFacility), if a sample is loaded do not aggregate
+			isAggregate = this.sampleData == null
 		if (isAggregate) {
 			const maxScore = d.maxScore.term ? this.data.lst[0]?.[d.maxScore.$id]?.value : d.maxScore
 			let scores = this.data.lst.map(sample => (sample[d.score.$id]?.value / maxScore) * 100)
