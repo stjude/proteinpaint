@@ -1,7 +1,7 @@
 # Differential Analysis App
 The app is designed to launch plots as components. To share data between components, use DiffAnalysisInteractions.
 
-The differential analysis plot is heavily dependent on the volcano plot data. However the volcano plot can be launched independently. 
+The differential analysis plot is heavily dependent on the volcano plot data.
 
 ## Adding a component
 - Add the import statement for the plot
