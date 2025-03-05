@@ -110,7 +110,11 @@ class MassGroups {
 		//when there is only one group and need to create a others group
 		if (groups.length == 1) {
 			// find the sample count in current cohort
-			const countSampleCount = await this.app.vocabApi.getCohortSampleCount(this.activeCohortName)
+			let countSampleCount
+			if (this.state.termfilter.filter.lst.length)
+				countSampleCount = await this.app.vocabApi.getFilteredSampleCount(this.state.termfilter.filter)
+			else countSampleCount = await this.app.vocabApi.getCohortSampleCount(this.activeCohortName)
+
 			const countSampleCountInt = parseInt(countSampleCount, 10)
 
 			// get the sample count in "others" group
