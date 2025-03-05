@@ -32,7 +32,7 @@ export type DiffAnalysisDom = {
 export type DiffAnalysisOpts = {
 	/** Container for the plot */
 	holder: Elem
-	/** Type of differential analysis, determined by available data */
+	/** A numerical term type that determines the type of data used in this analysis */
 	termType: string
 	/** Optional container for the controls. */
 	controls?: Elem
