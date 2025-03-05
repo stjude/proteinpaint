@@ -69,5 +69,14 @@ tape('Default Multi term edit UI', async test => {
 	const menu = holder.selectAll('div[data-testid="sjpp-multi-tw-edit-ui"]')._parents
 	test.equal(menu.length, 1, 'Should render edit UI')
 
+	const header = holder.select('div[data-testid="sjpp-edit-ui-header"]').node()
+	test.ok(header && header.textContent == testOpts.headerText, 'Should render header with custom text')
+
+	test.equal(holder.selectAll('.add_term_btn').size(), 1, 'Should render add term button')
+
+	const submitBtn = holder.select('div[data-testid="sjpp-edit-ui-submit"] > button').node()
+	test.ok(submitBtn && submitBtn.textContent == testOpts.buttonLabel, 'Should render submit button with custom text')
+
+	if (test['_ok']) holder.remove()
 	test.end()
 })
