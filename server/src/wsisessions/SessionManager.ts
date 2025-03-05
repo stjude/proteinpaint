@@ -46,7 +46,13 @@ export default class SessionManager {
 
 	// TODO invalidateSessions should tested more
 	//  maxIdleTime - time in minutes
-	public async invalidateSessions(maxSessions: number, maxIdleTime: number): Promise<boolean> {
+	public async invalidateSessions(
+		maxSessions: number,
+		maxIdleTime: number
+	): Promise<{
+		success: boolean
+		deletedKeys: (string | undefined)[]
+	}> {
 		const keys = await this.redisClient.getAll()
 		const keySessions: { key: string; sessionData: SessionData | undefined }[] = await Promise.all(
 			keys.map(async key => ({
@@ -89,11 +95,13 @@ export default class SessionManager {
 		}
 
 		// Delete all sessions that are either idle or are the least recently used beyond the limit
-		if (keys.length >= maxSessions && allSessionsToDelete.length == 0) {
-			return false
+		const deletedKeys = allSessionsToDelete.map(session => session.sessionData?.imageSessionId)
+
+		if (keys.length >= maxSessions && allSessionsToDelete.length === 0) {
+			return { success: false, deletedKeys: [] }
 		} else {
 			await Promise.all(allSessionsToDelete.map(({ key }) => this.deleteSession(key)))
-			return true
+			return { success: true, deletedKeys }
 		}
 	}
 }

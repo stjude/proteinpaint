@@ -83,13 +83,15 @@ async function getSessionId(cookieJar, getCookieString, setCookie, wsimage, ds, 
 
 	const sessionManager = SessionManager.getInstance(redis.url, redis.secret)
 
-	const validateSuccesful = await sessionManager.invalidateSessions(3, 5)
-
-	if (!validateSuccesful) throw new Error('Session invalidation failed')
-
 	const sessionData = await sessionManager.getSession(wsimage)
 
 	if (sessionData) return sessionData.imageSessionId
+
+	const invalidateResult = await sessionManager.invalidateSessions(20, 60)
+
+	if (!invalidateResult.success) throw new Error('Session invalidation failed')
+
+	await invalidateSessions(invalidateResult, tileServer)
 
 	await ky.get(`${tileServer.url}/tileserver/session_id`, {
 		timeout: 50000,
@@ -119,6 +121,16 @@ async function getSessionId(cookieJar, getCookieString, setCookie, wsimage, ds, 
 	await sessionManager.setSession(wsimage, sessionId)
 
 	return sessionId
+}
+
+async function invalidateSessions(invalidateResult, tileServer) {
+	for (const key of invalidateResult.deletedKeys) {
+		try {
+			await ky.put(`${tileServer.url}/tileserver/reset/${key}`)
+		} catch (error) {
+			console.info(`Error resetting tile server for key ${key}:`, error)
+		}
+	}
 }
 
 async function getWsiImageDimensions(sessionId, getCookieString, wsimage) {
