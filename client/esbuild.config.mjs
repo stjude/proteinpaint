@@ -19,7 +19,7 @@ const libReplacers =
 	ENV == 'dev'
 		? [nodeLibToBrowser()]
 		: ENV == 'test'
-		? [nodeLibToBrowser(), polyfillNode()]
+		? [polyfillNode(), nodeLibToBrowser()]
 		: [excludeSpecFiles(), nodeLibToBrowser()]
 
 const ctx = await context({

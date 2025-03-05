@@ -132,9 +132,11 @@ function log(req) {
 	for (const k in req.query) {
 		if (k != 'jwt') j[k] = req.query[k]
 	}
+	const pathname = url.parse(req.url).pathname
+	if (pathname.endsWith('.js.map')) return
 	console.log(
 		'%s\t%s\t%s\t%s',
-		url.parse(req.url).pathname,
+		pathname,
 		new Date(),
 		req.header('x-forwarded-for') || req.connection.remoteAddress,
 		JSON.stringify(j).replace(/\\"/g, '"')
