@@ -81,13 +81,17 @@ export class MultiTermWrapperEditUI {
 			vocabApi: this.app.vocabApi,
 			numericEditMenuVersion: ['continuous', 'discrete'],
 			callback: (tw: any) => {
-				const idx = this.twList.findIndex(t => t.$id === d.$id)
-				if (!tw?.term) {
-					this.twList.splice(idx, 1)
+				/** Make a copy of the twList. When the edit UI is opened
+				 * with a list of terms, the object is sealed.*/
+				const twListCopy = this.twList.slice(0)
+				const idx = twListCopy.findIndex(t => t.$id === d.tw.$id)
+				if (idx !== -1 && !tw?.term) {
+					twListCopy.splice(idx, 1)
 				} else if (idx == -1) {
-					tw.$id = d.$id
-					this.twList.push(tw)
-				} else this.twList[idx] = tw
+					tw.$id = d.tw.$id
+					twListCopy.push(tw)
+				} else twListCopy[idx] = tw
+				this.twList = twListCopy
 				this.update(this)
 			}
 		} as any
@@ -104,39 +108,41 @@ export class MultiTermWrapperEditUI {
 		return pill
 	}
 
-	async renderTerm(tw) {
-		if (!tw?.pill) return
+	async renderTerm(d) {
+		if (!d?.pill) return
 		const pillOps = {
-			term: tw.term,
-			q: tw.q
+			term: d.tw.term,
+			q: d.tw.q
 		} as any
 		if (this.state) {
 			pillOps.activeCohort = this.state.activeCohort
 			pillOps.filter = this.state?.termfilter?.filter
 		}
-		await tw.pill.main(pillOps)
+		await d.pill.main(pillOps)
 	}
 }
 
 function setRenderers(self) {
 	self.update = () => {
 		self.dom.tws.selectAll('div').remove()
-		const twListCopy = self.twList.slice()
+		const twListCopy = self.twList.map(tw => {
+			return { tw }
+		})
 
 		if (twListCopy.length < self.maxNum) {
 			/** Insert a blank tw to trigger a new termsetting init
 			 * until limit is reached */
 			twListCopy.push({ tw: { $id: Math.random().toString() } } as any)
 		}
-		const tws = self.dom.tws.selectAll(':scope>.sjpp-edit-ui-pill').data(twListCopy, tw => tw.tw?.$id)
+		const tws = self.dom.tws.selectAll(':scope>.sjpp-edit-ui-pill').data(twListCopy, d => d.tw?.$id)
 		tws.exit().remove()
 		tws.each(self.renderTerm)
 		tws.enter().append('div').attr('class', 'sjpp-edit-ui-pill').each(self.addTerm)
 	}
 
-	self.addTerm = async function (tw) {
+	self.addTerm = async function (d) {
 		const div = select(this)
-		tw.pill = await self.getNewPill(tw, div)
-		self.renderTerm(tw)
+		d.pill = await self.getNewPill(d, div)
+		self.renderTerm(d)
 	}
 }
