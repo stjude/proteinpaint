@@ -792,6 +792,21 @@ async function runDEanalysis(self) {
 		method: self.settings.method
 	}
 
+	// retrieve the sampleId/sampleName for samples in the "others" group instead of using {in: false}
+	const othersSamplesGroup = self.config.samplelst.groups.find(g => !g.in)
+	if (othersSamplesGroup) {
+		const samplesGroup = self.config.samplelst.groups.find(g => g.in)
+		othersSamplesGroup.values = []
+		// retrieve full list of samples based on current filter. put samples not in samplesGroup in "others" group
+		for (const s of await self.app.vocabApi.getFilteredSampleList(self.config.state.termfilter.filter)) {
+			// s={id,name}, samplelst.groups[].values[]={sampleId,sample}
+			if (samplesGroup.values.indexOf(i => i.sampleId == s.id) == -1) {
+				othersSamplesGroup.values.push({ sampleId: s.id, sample: s.name })
+			}
+		}
+		othersSamplesGroup.in = true
+	}
+
 	if (self.config.term) {
 		input.tw = self.config.term
 		self.settings.method = 'edgeR' // When adjustment of confounding variables is selected, the method should always be a parmetric method such as edgeR
