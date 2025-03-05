@@ -2890,7 +2890,10 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 					// function to determine if the dt of group matches the mlst of sample
 					function dtMatchesMlst(dt, mlst) {
 						// determine if any mclass in mlst matches an mclass in the dt object
-						const inMlst = mlst.some(m => dt.dt == m.dt && dt.origin == m.origin && dt.mclasses.includes(m.class))
+						const inMlst = mlst.some(m => {
+							const match = dt.dt == m.dt && dt.mclasses.includes(m.class)
+							return dt.origin ? match && dt.origin == m.origin : match
+						})
 						// for dt.isnot=false, dt and mlst match if their mclasses match
 						// for dt.isnot=true, dt and mlst match if their mclasses do not match
 						return dt.isnot ? !inMlst : inMlst
