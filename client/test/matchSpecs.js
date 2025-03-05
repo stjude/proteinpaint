@@ -1,5 +1,5 @@
 import process from 'process'
-import minimatch from 'minimatch'
+import { minimatch } from 'minimatch'
 
 window.process = process
 
