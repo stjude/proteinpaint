@@ -2,7 +2,7 @@ import type { MassState, BasePlotConfig, MassAppApi } from '#mass/types/mass'
 import type { VolcanoSettings } from './VolcanoTypes'
 import { getCompInit, copyMerge } from '#rx'
 import { fillTermWrapper } from '#termsetting'
-import { Menu } from '#dom'
+import { Menu, sayerror } from '#dom'
 import { RxComponentInner } from '../../types/rx.d'
 import { controlsInit } from '../controls'
 import type { DiffAnalysisInteractions } from './interactions/DiffAnalysisInteractions'
@@ -97,17 +97,18 @@ class Volcano extends RxComponentInner {
 
 		try {
 			if (!this.interactions) throw 'Interactions not initialized [main() Volcano.ts]'
-			this.interactions.clearDom()
+
 			this.dom.wait.style('display', 'block')
 			const settings = config.settings.volcano
 			/** Fetch data */
 			const model = new VolcanoModel(this.app, config, settings)
 			const response = await model.getData()
 			if (!response || response.error || !response.data.length) {
-				this.dom.error.text(response.error || 'No data returned from server')
+				sayerror(this.dom.error, response.error || 'No data returned from server')
 				this.dom.wait.style('display', 'none')
 				return
 			}
+			this.interactions.clearDom()
 			if (this.diffAnalysisInteractions) this.diffAnalysisInteractions.setVar('volcanoResponse', response)
 
 			/** Format response into an object for rendering */

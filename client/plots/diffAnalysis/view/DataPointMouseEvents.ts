@@ -19,11 +19,12 @@ export class DataPointMouseEvents {
 			this.addLine(table, 'Original p value (log)', roundValueAuto(d.original_p_value))
 			this.addLine(table, 'Adjusted p value(log)', roundValueAuto(d.adjusted_p_value))
 		})
-		if (d.highlighted) return
+
 		circle.on('mouseout', () => {
+			tip.hide()
+			if (d.highlighted) return
 			// Remove highlight and tooltip on mouseout
 			circle.attr('fill-opacity', 0)
-			tip.hide()
 		})
 		circle.on('click', async () => {
 			await interactions.launchBoxPlot(d.gene_symbol)
