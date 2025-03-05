@@ -105,6 +105,8 @@ class Volcano extends RxComponentInner {
 			const response = await model.getData()
 			if (!response || response.error || !response.data.length) {
 				this.dom.error.text(response.error || 'No data returned from server')
+				this.dom.wait.style('display', 'none')
+				return
 			}
 			if (this.diffAnalysisInteractions) this.diffAnalysisInteractions.setVar('volcanoResponse', response)
 
