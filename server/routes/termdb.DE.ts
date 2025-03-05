@@ -221,6 +221,7 @@ values[] // using integer sample id
 		control: cases_string,
 		data_type: 'do_DE',
 		input_file: q.file,
+		cachedir: serverconfig.cachedir,
 		min_count: param.min_count,
 		min_total_count: param.min_total_count,
 		storage_type: param.storage_type
@@ -256,24 +257,32 @@ values[] // using integer sample id
 	//})
 
 	const sample_size_limit = 8 // Cutoff to determine if parametric estimation using edgeR should be used or non-parametric estimation using wilcoxon test
-	let result
 	if ((group1names.length <= sample_size_limit && group2names.length <= sample_size_limit) || param.method == 'edgeR') {
 		// edgeR will be used for DE analysis
 		if (param.method == 'edgeR') {
 			expression_input.VarGenes = param.VarGenes // The reason this is behind "param.method == 'edgeR'" is because ranking of variable genes is not needed for low sample size groups.
 		}
 		const time1 = new Date().valueOf()
-		result = JSON.parse(
+		const result = JSON.parse(
 			await run_R(path.join(serverconfig.binpath, 'utils', 'edge.R'), JSON.stringify(expression_input))
 		)
 		mayLog('Time taken to run edgeR:', Date.now() - time1, 'ms')
 		param.method = 'edgeR'
+		const imagePath: string = path.join(serverconfig.cachedir, result.edgeR_fit_quality_image_name[0]) // Retrieve the edgeR quality image and send it to client side. Does not need to be an array, will address this later.
+		console.log('imagePath:', imagePath)
+		return {
+			data: result.gene_data,
+			sample_size1: sample_size1,
+			sample_size2: sample_size2,
+			method: param.method,
+			imagePath: imagePath
+		} as DEResponse
 	} else {
 		// Wilcoxon test will be used for DE analysis
 		const time1 = new Date().valueOf()
-		result = JSON.parse(await run_rust('DEanalysis', JSON.stringify(expression_input)))
+		const result = JSON.parse(await run_rust('DEanalysis', JSON.stringify(expression_input)))
 		mayLog('Time taken to run rust DE pipeline:', Date.now() - time1, 'ms')
 		param.method = 'wilcoxon'
+		return { data: result, sample_size1: sample_size1, sample_size2: sample_size2, method: param.method } as DEResponse
 	}
-	return { data: result, sample_size1: sample_size1, sample_size2: sample_size2, method: param.method } as DEResponse
 }
