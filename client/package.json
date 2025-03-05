@@ -84,7 +84,6 @@
     "source-map-loader": "^4.0.1",
     "style-loader": "^3.3.1",
     "tape": "^5.2.2",
-    "tape-run": "^11.0.0",
     "three": "^0.152.2",
     "webpack": "^5.90.3",
     "webpack-cli": "^4.10.0",
