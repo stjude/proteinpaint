@@ -132,6 +132,7 @@ tape('Default DiffAnalysis ', test => {
 					samplelst: {
 						groups
 					},
+					termType: 'geneExpression',
 					tw: {
 						q: {
 							groups
