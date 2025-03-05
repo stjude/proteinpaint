@@ -30,7 +30,7 @@ class DifferentialAnalysis extends RxComponentInner {
 		this.components = {
 			plots: {}
 		}
-		this.termType = opts.termType || 'geneExpression' //Eventually remove this
+		this.termType = opts.termType
 		const holder = opts.holder.classed('sjpp-diff-analysis-main', true)
 		const controls = opts.controls ? holder : holder.append('div')
 		const div = holder
@@ -150,13 +150,11 @@ export const DiffAnalysisInit = getCompInit(DifferentialAnalysis)
 export const componentInit = DiffAnalysisInit
 
 export function getPlotConfig(opts: DiffAnalysisOpts, app: MassAppApi) {
-	//if (!opts.termType) throw '.termType is required [DifferentialAnalysis getPlotConfig()]'
-	//Make this a requirement?
-	//if (!opts.tw)	throw '.tw is required [DifferentialAnalysis getPlotConfig()]'
+	if (!opts.termType) throw '.termType is required [DifferentialAnalysis getPlotConfig()]'
 	const config = {
 		chartType: 'differentialAnalysis',
 		childType: 'volcano',
-		termType: opts.termType || 'geneExpression', //Eventually will remove this hardcoding
+		termType: opts.termType,
 		highlightedData: opts.highlightedData || [],
 		settings: {
 			controls: {
