@@ -1,5 +1,5 @@
 import type { MassAppApi } from '#mass/types/mass'
-import { downloadTable, GeneSetEditUI, MultiTermWrapperEditUI } from '#dom'
+import { downloadTable, GeneSetEditUI, Menu, MultiTermWrapperEditUI } from '#dom'
 import { to_svg } from '#src/client'
 import type { VolcanoPlotConfig } from '../VolcanoTypes'
 
@@ -25,17 +25,18 @@ export class VolcanoInteractions {
 	async confoundersMenu() {
 		const state = this.app.getState()
 		const config = state.plots.find((p: VolcanoPlotConfig) => p.id === this.id)
+		const menu = new Menu({ padding: '' }) as unknown as any
 		const ui = new MultiTermWrapperEditUI({
 			app: this.app,
 			callback: async tws => {
-				this.dom.tip.hide()
+				menu.hide()
 				await this.app.dispatch({
 					type: 'plot_edit',
 					id: this.id,
 					config: { confounderTws: tws }
 				})
 			},
-			holder: this.dom.tip.d,
+			holder: menu.d,
 			headerText: 'Select confounders',
 			maxNum: 2,
 			state,
