@@ -8,7 +8,7 @@ import fetch from 'node-fetch'
 import bettersqlite from 'better-sqlite3'
 import serverconfig from './serverconfig.js'
 import { Readable } from 'stream'
-import minimatch from 'minimatch'
+import { minimatch } from 'minimatch'
 import crypto from 'crypto'
 import nodeFetch from 'node-fetch'
 
