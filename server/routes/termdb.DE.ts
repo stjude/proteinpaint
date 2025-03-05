@@ -270,14 +270,24 @@ values[] // using integer sample id
 		param.method = 'edgeR'
 		const imagePath: string = path.join(serverconfig.cachedir, result.edgeR_fit_quality_image_name[0]) // Retrieve the edgeR quality image and send it to client side. Does not need to be an array, will address this later.
 		console.log('imagePath:', imagePath)
-		let base64Image
-		fs.readFile(imagePath, (err, data) => {
+		const base64Image = await fs.readFile(imagePath, async (err, data) => {
 			if (err) {
 				throw ('Error reading image file:', imagePath)
 			}
-			base64Image = data.toString('base64')
-			//console.log("base64Image:",base64Image)
+			console.log('Hello')
+			console.log('base64Image inside:', data.toString('base64'))
+			return data.toString('base64')
 		})
+		//base64Image = readFileAsync(imagePath)
+		//let base64Image
+		//(async () => {
+		//    try {
+		//        const base64Image = await readFileAsync(imagePath);
+		//        console.log('File contents:', base64Image);
+		//    } catch (err) {
+		//        console.error('Error reading file:', err);
+		//    }
+		//})();
 		console.log('base64Image:', base64Image)
 		return {
 			data: result.gene_data,
@@ -293,5 +303,14 @@ values[] // using integer sample id
 		mayLog('Time taken to run rust DE pipeline:', Date.now() - time1, 'ms')
 		param.method = 'wilcoxon'
 		return { data: result, sample_size1: sample_size1, sample_size2: sample_size2, method: param.method } as DEResponse
+	}
+}
+
+async function readFileAsync(filePath) {
+	try {
+		const data = await fs.readFile(filePath)
+		return data.toString('base64') // Return the data
+	} catch (err) {
+		throw ('Error reading image file: ', filePath) // Throw the error to be handled by the caller
 	}
 }
