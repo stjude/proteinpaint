@@ -1,16 +1,10 @@
-import { createClient } from 'redis'
-import type { RedisClientType } from 'redis'
+import { createClient, RedisClientType } from 'redis'
 
 export default class RedisClientHolder {
-	private static instance: RedisClientHolder | null = null
+	private static instances: Map<string, RedisClientHolder> = new Map()
 	private readonly client: RedisClientType
 
-	public getClient(): RedisClientType {
-		return this.client
-	}
-
 	private constructor(redisUrl: string, secret: any) {
-		// TODO Handle multiple redis instances
 		this.client = createClient({
 			url: redisUrl,
 			password: secret
@@ -32,10 +26,16 @@ export default class RedisClientHolder {
 	}
 
 	public static getInstance(redisUrl: string, secret: any): RedisClientHolder {
-		if (!RedisClientHolder.instance) {
-			RedisClientHolder.instance = new RedisClientHolder(redisUrl, secret)
+		let instance = RedisClientHolder.instances.get(redisUrl)
+		if (!instance) {
+			instance = new RedisClientHolder(redisUrl, secret)
+			RedisClientHolder.instances.set(redisUrl, instance)
 		}
-		return RedisClientHolder.instance
+		return instance
+	}
+
+	public getClient(): RedisClientType {
+		return this.client
 	}
 
 	public async set(key: string, value: string): Promise<void> {

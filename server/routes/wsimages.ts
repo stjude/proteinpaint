@@ -89,8 +89,6 @@ async function getSessionId(cookieJar, getCookieString, setCookie, wsimage, ds, 
 
 	const sessionData = await sessionManager.getSession(wsimage)
 
-	console.log('sessionData', sessionData)
-
 	if (sessionData) return sessionData.imageSessionId
 
 	await ky.get(`${tileServer.url}/tileserver/session_id`, {
