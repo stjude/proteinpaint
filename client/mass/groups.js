@@ -222,9 +222,10 @@ class MassGroups {
 		addMatrixMenuItems(this.tip, menuDiv, samplelstTW, this.app, id, this.state, () => this.newId)
 
 		//TODO: need to 'diffAnalysis' to `currentCohortChartTypes` in the future
-		if (this.state.currentCohortChartTypes.includes('DEanalysis') && samplelstTW.q.groups.length == 2)
+		if (this.state.currentCohortChartTypes.includes('DEanalysis') && samplelstTW.q.groups.length == 2) {
 			addDEPlotMenuItem(menuDiv, this, this.state, samplelstTW)
-		addDiffAnalysisPlotMenuItem(menuDiv, this, this.state, samplelstTW)
+			addDiffAnalysisPlotMenuItem(menuDiv, this, this.state, samplelstTW)
+		}
 
 		if (this.state.currentCohortChartTypes.includes('survival'))
 			addPlotMenuItem('survival', menuDiv, 'Compare survival', this.tip, samplelstTW, id, this, true)
