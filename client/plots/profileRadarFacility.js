@@ -30,11 +30,17 @@ class profileRadarFacility extends profilePlot {
 	}
 
 	async loadSampleData(chartType, inputs) {
+		const isAggregate = this.isAggregate()
 		if (this.state.logged) {
 			let result
 
-			if (this.state.site && !this.settings.isAggregate) {
+			if (this.state.site && !isAggregate) {
 				this.loadSites()
+				if (!this.settings.site) {
+					//select site if only choice to load its data
+					const id = this.sampleidmap[this.state.sites[0]]?.id
+					this.settings.site = id
+				}
 				this.sampleData = await this.getSampleData()
 			} //Admin
 			else {
@@ -127,7 +133,7 @@ class profileRadarFacility extends profilePlot {
 			data2 = []
 		for (const item of this.terms) {
 			const iangle = i * this.angle - Math.PI / 2
-			const percentage1 = this.getPercentage(item) //facility
+			const percentage1 = this.getPercentage(item, false) //facility
 			const percentage2 = this.getPercentage(item, true)
 
 			this.radarG
