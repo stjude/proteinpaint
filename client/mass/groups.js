@@ -354,6 +354,8 @@ function addDiffAnalysisPlotMenuItem(div, self, state, samplelstTW) {
 				chartType: 'differentialAnalysis',
 				state,
 				samplelst: { groups },
+				//Eventually termType will be dynamic
+				termType: 'geneExpression',
 				tw: samplelstTW
 			}
 			self.tip.hide()
