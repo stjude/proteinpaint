@@ -1,4 +1,4 @@
-//import fs from 'fs'
+import fs from 'fs'
 import path from 'path'
 import type { DERequest, DEResponse, ExpressionInput, RouteApi } from '#types'
 import { diffExpPayload } from '#types/checkers'
@@ -270,12 +270,21 @@ values[] // using integer sample id
 		param.method = 'edgeR'
 		const imagePath: string = path.join(serverconfig.cachedir, result.edgeR_fit_quality_image_name[0]) // Retrieve the edgeR quality image and send it to client side. Does not need to be an array, will address this later.
 		console.log('imagePath:', imagePath)
+		let base64Image
+		fs.readFile(imagePath, (err, data) => {
+			if (err) {
+				throw ('Error reading image file:', imagePath)
+			}
+			base64Image = data.toString('base64')
+			//console.log("base64Image:",base64Image)
+		})
+		console.log('base64Image:', base64Image)
 		return {
 			data: result.gene_data,
 			sample_size1: sample_size1,
 			sample_size2: sample_size2,
 			method: param.method,
-			imagePath: imagePath
+			imagePath: base64Image
 		} as DEResponse
 	} else {
 		// Wilcoxon test will be used for DE analysis
