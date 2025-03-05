@@ -5,6 +5,7 @@ import type { GdcMafBuildRequest, RouteApi } from '#types'
 import { gdcMafPayload } from '#types/checkers'
 import { maxTotalSizeCompressed } from './gdc.maf.ts'
 import { mayLog } from '#src/helpers.ts'
+import express from 'express'
 
 export const api: RouteApi = {
 	endpoint: 'gdc/mafBuild',
@@ -53,6 +54,27 @@ async function buildMaf(q: GdcMafBuildRequest, res, ds) {
 		host: joinUrl(host.rest, 'data') // must use the /data/ endpoint from current host
 	}
 
+	const app = express()
+	app.get('/multipart', (req, res) => {
+		const boundary = 'GDC_MAF_MULTIPART_BOUNDARY_2025'
+		res.setHeader('Content-Type', `multipart/mixed; boundary="${boundary}"`)
+		res.write(`--${boundary}\r\n`)
+		res.write('Content-Type: application/octet-stream\r\n')
+		res.write('Content-Disposition: attachment; filename=cohort.maf.gz\r\n\r\n')
+
+		const rustStream = run_rust_stream('gdcmaf', JSON.stringify(arg))
+		rustStream.pipe(res, { end: false })
+
+		rustStream.on('end', () => {
+			res.write(`\r\n--${boundary}--\r\n`)
+			res.write('Content-Type: application/json\r\n\r\n')
+			res.write(JSON.stringify({ message: 'Processing complete' }) + '\r\n')
+
+			res.write(`--${boundary}--\r\n`)
+			res.end()
+		})
+	})
+	/*
 	const rustStream = run_rust_stream('gdcmaf', JSON.stringify(arg))
 	res.setHeader('Content-Type', 'application/octet-stream')
 	res.setHeader('Content-Disposition', 'attachment; filename=cohort.maf.gz')
@@ -69,6 +91,7 @@ async function buildMaf(q: GdcMafBuildRequest, res, ds) {
 		res.statusCode = 500
 		res.end('Internal Server Error')
 	})
+	*/
 }
 
 /*
