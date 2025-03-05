@@ -185,6 +185,16 @@ if (length(input$conf1) == 0) { # No adjustment of confounding factors
     #cat("QL test time: ", test_time[3], " seconds\n")
 }
 
+# Saving fit image
+set.seed(as.integer(Sys.time())) # Set the seed according to current time
+cachedir <- input$cachedir # Importing serverconfig.cachedir
+random_number <- runif(1, min = 0, max = 1) # Generating random number
+image_name <- paste0("edgeR_temp_",random_number,".png") # Generating random image name so that simultaneous server side requests do NOT generate the same edgeR file name
+png(filename = paste0(cachedir,"/",image_name), width = 1000, height = 1000, res = 200) # Opening a png device
+par(mar = c(1, 1, 1, 1)) # Creating a margin
+plotQLDisp(fit) # Plot the edgeR fit
+# dev.off() # Gives a null device message which breaks JSON. Commenting it out for now, will investigate it later
+
 # Multiple testing correction
 multiple_testing_correction_time <- system.time({
     logfc <- et$table$logFC
@@ -201,10 +211,13 @@ multiple_testing_correction_time <- system.time({
     names(output)[4] <- "original_p_value"
     names(output)[5] <- "adjusted_p_value"
 })
+final_output <- c()
+final_output$gene_data <- output
+final_output$edgeR_fit_quality_image_name <- image_name
 #cat("Time for multiple testing correction: ", multiple_testing_correction_time[3], " seconds\n")
 
 # Output results
-toJSON(output)
+toJSON(final_output)
 
 #-----------------------------------#
 # Will implement this later
