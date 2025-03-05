@@ -115,27 +115,31 @@ filter_time <- system.time({
 
 normalization_time <- system.time({
     y <- y[keep, keep.lib.sizes = FALSE]
-    y <- calcNormFactors(y, method = "TMM")
+    y <- normLibSizes(y, method="TMM") # Using TMM method for normalization
 })
 #cat("Normalization time: ", normalization_time[3], " seconds\n")
 
 # Differential expression analysis
 if (length(input$conf1) == 0) { # No adjustment of confounding factors
-    dispersion_time <- system.time({
+    design <- model.matrix(~conditions) # Based on the protocol defined in section 1.4 of edgeR manual https://bioconductor.org/packages/release/bioc/vignettes/edgeR/inst/doc/edgeRUsersGuide.pdf
+    fit_time <- system.time({
         suppressWarnings({
             suppressMessages({
-                y <- estimateDisp(y)
+                fit <- glmQLFit(y,design) # The glmQLFit() replaces glmFit() which implements the quasi-likelihood function. This is better able to account for overdispersion as it employs a more lenient approach where variance is not a fixed function of the mean.
             })
         })
     })
-    #cat("Dispersion time: ", dispersion_time[3], " seconds\n")
+    #cat("QL fit time: ", fit_time[3], " seconds\n")
 
-    exact_test_time <- system.time({
-        et <- exactTest(y)
+    test_time <- system.time({
+        suppressWarnings({
+            suppressMessages({
+                et <- glmQLFTest(fit)
+            })
+        })
     })
-    #cat("Exact test time: ", exact_test_time[3], " seconds\n")
+    #cat("QL test time: ", test_time[3], " seconds\n")
 } else { # Adjusting for confounding factors
-
     # Check the type of confounding variable
     if (input$conf1_mode == "continuous") { # If this is float, the input conf1 vector should be converted into a numeric vector
       conf1 <- as.numeric(input$conf1)
@@ -144,7 +148,7 @@ if (length(input$conf1) == 0) { # No adjustment of confounding factors
     }
 
     if (length(input$conf2) == 0) { # No adjustment of confounding factor 2
-          y$samples <- data.frame(conditions = conditions, conf1 = conf1)
+          y$samples <- data.frame(y$samples, conditions = conditions, conf1 = conf1)
           model_gen_time <- system.time({
                  design <- model.matrix(~ conditions + conf1, data = y$samples)
           })
@@ -156,28 +160,40 @@ if (length(input$conf1) == 0) { # No adjustment of confounding factors
           } else { # When input$conf2_mode == "discrete" keep the vector as string.
             conf2 <- as.factor(input$conf2)
           }
-          y$samples <- data.frame(conditions = conditions, conf1 = conf1, conf2 = conf2)
+          y$samples <- data.frame(y$samples, conditions = conditions, conf1 = conf1, conf2 = conf2)
           model_gen_time <- system.time({
                  design <- model.matrix(~ conditions + conf1 + conf2, data = y$samples)
           })
           #cat("Time for making design matrix: ", model_gen_time[3], " seconds\n")
     }
 
-    dispersion_time <- system.time({
-        y <- estimateDisp(y, design)
-    })
-    #cat("Dispersion time: ", dispersion_time[3], " seconds\n")
-
     fit_time <- system.time({
-        fit <- glmFit(y, design)
+        suppressWarnings({
+            suppressMessages({
+                fit <- glmQLFit(y,design)
+            })
+        })
     })
-    #cat("Fit time: ", fit_time[3], " seconds\n")
-
-    test_statistics_time <- system.time({
-        et <- glmLRT(fit, coef = "conditionsDiseased")
+    #cat("QL fit time: ", fit_time[3], " seconds\n")
+    test_time <- system.time({
+        suppressWarnings({
+            suppressMessages({
+                et <- glmQLFTest(fit, coef = "conditionsDiseased")
+            })
+        })
     })
-    #cat("Test statistics time: ", test_statistics_time[3], " seconds\n")
+    #cat("QL test time: ", test_time[3], " seconds\n")
 }
+
+# Saving fit image
+set.seed(as.integer(Sys.time())) # Set the seed according to current time
+cachedir <- input$cachedir # Importing serverconfig.cachedir
+random_number <- runif(1, min = 0, max = 1) # Generating random number
+image_name <- paste0("edgeR_temp_",random_number,".png") # Generating random image name so that simultaneous server side requests do NOT generate the same edgeR file name
+png(filename = paste0(cachedir,"/",image_name), width = 1000, height = 1000, res = 200) # Opening a png device
+par(mar = c(1, 1, 1, 1)) # Creating a margin
+plotQLDisp(fit) # Plot the edgeR fit
+# dev.off() # Gives a null device message which breaks JSON. Commenting it out for now, will investigate it later
 
 # Multiple testing correction
 multiple_testing_correction_time <- system.time({
@@ -195,10 +211,13 @@ multiple_testing_correction_time <- system.time({
     names(output)[4] <- "original_p_value"
     names(output)[5] <- "adjusted_p_value"
 })
+final_output <- c()
+final_output$gene_data <- output
+final_output$edgeR_fit_quality_image_name <- image_name
 #cat("Time for multiple testing correction: ", multiple_testing_correction_time[3], " seconds\n")
 
 # Output results
-toJSON(output)
+toJSON(final_output)
 
 #-----------------------------------#
 # Will implement this later

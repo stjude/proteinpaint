@@ -59,6 +59,8 @@ export type DEResponse = {
 	sample_size2: number
 	/** Method of DE used wilcoxon/edgeR */
 	method: string
+	/** Image name from edgeR describing the quality of the fitting, this is only generated for edgeR not for wilcoxon method  */
+	imagePath?: string
 }
 
 export const diffExpPayload: RoutePayload = {
