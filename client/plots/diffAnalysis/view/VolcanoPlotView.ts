@@ -1,6 +1,5 @@
-import { axisstyle } from '#src/client'
 import { axisBottom, axisLeft } from 'd3-axis'
-import { table2col, renderTable } from '#dom'
+import { axisstyle, Menu, table2col, renderTable } from '#dom'
 import { select } from 'd3-selection'
 import { rgb } from 'd3-color'
 import type {
@@ -60,7 +59,7 @@ export class VolcanoPlotView {
 			.style('padding', '3px')
 			.text(text)
 			.on('click', () => {
-				this.dom.tip.clear().showunder(button.node())
+				this.dom.actionsTip.clear().showunder(button.node())
 				callback()
 			})
 	}
