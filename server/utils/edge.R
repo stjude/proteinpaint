@@ -115,7 +115,7 @@ filter_time <- system.time({
 
 normalization_time <- system.time({
     y <- y[keep, keep.lib.sizes = FALSE]
-    y <- normLibSizes(y, method="TMM") # Using TMM method for normalization
+    y <- normLibSizes(y) # Using TMM method for normalization
 })
 #cat("Normalization time: ", normalization_time[3], " seconds\n")
 
