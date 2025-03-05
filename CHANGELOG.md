@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Fixes:
+- allow DE to work for custom term based on a single group
+- fix issues with custom term based on a single group: 'others' group has sample size of 0
+- fix the incorrect sample count of 'others' group upon clicking the custom term based on a single group while global filter presents
+
 
 ## 2.109.0
 
