@@ -2,7 +2,7 @@
 import fs from 'fs'
 import path from 'path'
 import * as glob from 'glob'
-import minimatch from 'minimatch'
+import { minimatch } from 'minimatch'
 import serverconfig from '../../serverconfig.js'
 
 export default function setRoutes(app, basepath) {
