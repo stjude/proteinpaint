@@ -17,7 +17,7 @@ import { VolcanoControlInputs } from './VolcanoControlInputs'
 class Volcano extends RxComponentInner {
 	readonly type = 'volcano'
 	components: { controls: any }
-	dom: { holder: any; controls: any; error: any; wait: any; tip: any }
+	dom: { holder: any; controls: any; error: any; wait: any; tip: Menu; actionsTip: Menu }
 	interactions?: VolcanoInteractions
 	termType: string //'geneExpresion', etc.
 	diffAnalysisInteractions?: DiffAnalysisInteractions
@@ -41,7 +41,8 @@ class Volcano extends RxComponentInner {
 				.style('opacity', 0.75)
 				.style('padding', '20px')
 				.text('Loading...'),
-			tip: new Menu({ padding: '' })
+			tip: new Menu({ padding: '' }),
+			actionsTip: new Menu({ padding: '' })
 		}
 		if (opts.diffAnalysisInteractions) this.diffAnalysisInteractions = opts.diffAnalysisInteractions
 	}

@@ -1,5 +1,5 @@
 import type { MassAppApi } from '#mass/types/mass'
-import { downloadTable, GeneSetEditUI, Menu, MultiTermWrapperEditUI } from '#dom'
+import { downloadTable, GeneSetEditUI, MultiTermWrapperEditUI } from '#dom'
 import { to_svg } from '#src/client'
 import type { VolcanoPlotConfig } from '../VolcanoTypes'
 
@@ -25,18 +25,17 @@ export class VolcanoInteractions {
 	async confoundersMenu() {
 		const state = this.app.getState()
 		const config = state.plots.find((p: VolcanoPlotConfig) => p.id === this.id)
-		const menu = new Menu({ padding: '' }) as unknown as any
 		const ui = new MultiTermWrapperEditUI({
 			app: this.app,
 			callback: async tws => {
-				menu.hide()
+				this.dom.actionsTip.hide()
 				await this.app.dispatch({
 					type: 'plot_edit',
 					id: this.id,
 					config: { confounderTws: tws }
 				})
 			},
-			holder: menu.d,
+			holder: this.dom.actionsTip.d,
 			headerText: 'Select confounders',
 			maxNum: 2,
 			state,
@@ -53,7 +52,7 @@ export class VolcanoInteractions {
 	}
 
 	download() {
-		this.dom.tip.clear().showunder(this.dom.controls.select('div').node())
+		this.dom.actionsTip.clear().showunder(this.dom.controls.select('div').node())
 		const opts = [
 			{
 				text: 'Download plot',
@@ -71,7 +70,7 @@ export class VolcanoInteractions {
 			}
 		]
 		for (const opt of opts) {
-			this.dom.tip.d.append('div').attr('class', 'sja_menuoption').text(opt.text).on('click', opt.callback)
+			this.dom.actionsTip.d.append('div').attr('class', 'sja_menuoption').text(opt.text).on('click', opt.callback)
 		}
 	}
 
@@ -109,7 +108,7 @@ export class VolcanoInteractions {
 	/** TODO: show unavailable genes greyed out with message to user. */
 	launchGeneSetEdit() {
 		const plotConfig = this.app.getState().plots.find((p: VolcanoPlotConfig) => p.id === this.id)
-		const holder = this.dom.tip.d.append('div').style('padding', '5px') as any
+		const holder = this.dom.actionsTip.d.append('div').style('padding', '5px') as any
 		const limitedGenesList = this.data.map(d => d.gene_symbol)
 		new GeneSetEditUI({
 			holder,
@@ -126,7 +125,7 @@ export class VolcanoInteractions {
 					id: this.id,
 					config: { highlightedData }
 				})
-				this.dom.tip.hide()
+				this.dom.actionsTip.hide()
 			}
 		})
 	}
