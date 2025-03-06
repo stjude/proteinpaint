@@ -34,22 +34,13 @@ import * as d3 from 'd3'
 
 export function getBinsDensity(plot, isKDE = false, ticks = 20) {
 	const [valuesMin, valuesMax] = d3.extent(plot.values) //Min and max on plot
+
 	//Commented out as it seems to be handled by kde with automatic bandwidth
 	//if (valuesMin == valuesMax) return { bins: [{ x0: valuesMin, density: 1 }], densityMax: valuesMax, densityMin: 0}
 	const values = plot.values
 	values.sort((a, b) => a - b) //need to provide it so it compares properly integers and floats
-	const l = values.length
-	let p2ndidx = Math.ceil(l * 0.02) - 1
-	let p98idx = Math.ceil(l * 0.98) - 1
 
-	const p2nd = values[p2ndidx]
-	const p98 = values[p98idx]
-	let thresholds = []
-	//Divided thresholds(or bins) into 3 parts, below p2nd, between p2nd and p98, above p98. This allows to handle outliers better.
-	//When there are no outliers, p2nd and p98 will be the same or very close to valuesMin and valuesMax respectively
-	if (p2nd > valuesMin) thresholds = [...getThresholds(valuesMin, p2nd, ticks)]
-	if (p98 >= p2nd) thresholds.push(...getThresholds(p2nd, p98, ticks))
-	if (p98 < valuesMax) thresholds.push(...getThresholds(p98, valuesMax, ticks))
+	const thresholds = calculateKDEThresholds(values, ticks)
 
 	const result = isKDE
 		? kde(gaussianKernel, thresholds, plot.values, valuesMin, valuesMax)
@@ -172,4 +163,47 @@ function getBinsHist(values, thresholds, valuesMin, valuesMax) {
 		bins.push({ x0: bin.x0, density: bin.length })
 	}
 	return { bins, densityMin: 0, densityMax }
+}
+
+export function calculateKDEThresholds(data, numThresholds) {
+	if (!Array.isArray(data) || data.length < 2 || numThresholds < 1) {
+		return []
+	}
+
+	// 1. Simplified KDE (Illustrative)
+	const sortedData = [...data].sort((a, b) => a - b)
+	const minVal = sortedData[0]
+	const maxVal = sortedData[sortedData.length - 1]
+	const numPoints = 100 // Resolution of the KDE
+	const kdeValues = []
+
+	for (let i = 0; i < numPoints; i++) {
+		const x = minVal + (i / (numPoints - 1)) * (maxVal - minVal)
+		// Very simplified KDE (replace with actual KDE)
+		let density = 0
+		sortedData.forEach(val => {
+			density += Math.exp(-0.5 * Math.pow((x - val) / 5, 2)) // Gaussian kernel
+		})
+		kdeValues.push({ x, density })
+	}
+
+	// 2. Calculate Thresholds (Equal Probability, simplified)
+	const totalDensity = kdeValues.reduce((sum, val) => sum + val.density, 0)
+	const targetDensityPerBin = totalDensity / (numThresholds + 1)
+	const thresholds = []
+	let currentDensitySum = 0
+	let currentBin = 0
+
+	for (let i = 0; i < kdeValues.length - 1; i++) {
+		currentDensitySum += kdeValues[i].density
+		if (currentDensitySum >= (currentBin + 1) * targetDensityPerBin) {
+			thresholds.push(kdeValues[i].x)
+			currentBin++
+			if (currentBin >= numThresholds) {
+				break
+			}
+		}
+	}
+
+	return thresholds
 }

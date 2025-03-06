@@ -5,6 +5,10 @@ Initialize a bin configuration for a numeric dataset
     {}: output bin config as JavaScript object (default)
     {format: 'string'}: output bin config as JSON string
 */
+
+import { roundValueAuto } from './roundValue.js'
+import { calculateKDEThresholds } from './violin.bins.js'
+
 export default function initBinConfig(data, opts = {}) {
 	if (data.find(d => !Number.isFinite(d))) throw 'non-numeric values found'
 
@@ -27,34 +31,59 @@ export default function initBinConfig(data, opts = {}) {
 			]
 		}
 	} else {
+		data.sort((a, b) => a - b)
+		const l = data.length
+
+		const thresholds = calculateKDEThresholds(data, 8)
+		const lst = []
+		for (let i = 0; i < thresholds.length; i++) {
+			const threshold = thresholds[i]
+			const labelValue = roundValueAuto(threshold)
+			let bin
+			if (i == 0) bin = { stop: threshold, stopinclusive: true, label: '<=' + labelValue }
+			else if (i == thresholds.length - 1) bin = { start: threshold, startinclusive: true, label: '>' + labelValue }
+			else
+				bin = {
+					start: threshold,
+					startinclusive: false,
+					stop: thresholds[i + 1],
+					stopinclusive: true,
+					label: labelValue + ' to ≤ ' + roundValueAuto(thresholds[i + 1])
+				}
+			lst.push(bin)
+		}
+		binConfig = {
+			type: 'custom-bin',
+			lst
+		}
+		//const min = data[0]
+		//const max = data[l - 1]
+
 		// multiple unique values in data array
 		// prepare regular bin config
 
 		// compute the bin size for a maximum bin number of 8
-		data.sort((a, b) => a - b)
-		const l = data.length
-		const min = data[0]
-		const max = data[l - 1]
-		const p5idx = Math.ceil(l * 0.05) - 1
-		const p98idx = Math.ceil(l * 0.98) - 1
-		const p5 = data[p5idx]
-		const p98 = data[p98idx]
-		// use 98th and 5th percentiles to compute bin size to reduce outlier influence
-		// if 98th = 5th, use max and min instead
-		const binSize = p98 != p5 ? (p98 - p5) / 8 : (max - min) / 8
-		// first bin stop will equal either (minimum + bin size) or (5th percentile), whichever is larger.
-		const firstBinStop = Math.max(min + binSize, p5)
-		// round the bin values
-		let [binSize_rnd, firstBinStop_rnd, lastBinStart_rnd, rounding] = roundBinVals(binSize, firstBinStop, max, min)
-		// generate the bin configuration
-		binConfig = {
-			type: 'regular-bin',
-			startinclusive: true,
-			bin_size: binSize_rnd,
-			first_bin: { stop: firstBinStop_rnd }
-		}
-		if (lastBinStart_rnd) binConfig.last_bin = { start: lastBinStart_rnd }
-		if (rounding) binConfig.rounding = rounding
+
+		// const p5idx = Math.ceil(l * 0.05) - 1
+		// const p98idx = Math.ceil(l * 0.98) - 1
+		// const p5 = data[p5idx]
+		// const p98 = data[p98idx]
+		// // use 98th and 5th percentiles to compute bin size to reduce outlier influence
+		// // if 98th = 5th, use max and min instead
+		// const binSize = p98 != p5 ? (p98 - p5) / 8 : (max - min) / 8
+		// // first bin stop will equal either (minimum + bin size) or (5th percentile), whichever is larger.
+		// const firstBinStop = Math.max(min + binSize, p5)
+		// // round the bin values
+		// let [binSize_rnd, firstBinStop_rnd, lastBinStart_rnd, rounding] = roundBinVals(binSize, firstBinStop, max, min)
+		// // generate the bin configuration
+		// binConfig = {
+		// 	type: 'regular-bin',
+		// 	startinclusive: true,
+		// 	bin_size: binSize_rnd,
+		// 	first_bin: { stop: firstBinStop_rnd }
+		// }
+		// if (lastBinStart_rnd) binConfig.last_bin = { start: lastBinStart_rnd }
+		// if (rounding) binConfig.rounding = rounding
 	}
 	if ('format' in opts) {
 		if (opts.format === 'string') {
