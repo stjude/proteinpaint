@@ -82,6 +82,7 @@ export type ValidResponse = {
 	byTermId: { [index: string]: any }
 	/**  */
 	bySampleId: { [index: string]: any }
+	/** list of term names that are excluded from analysis for lacking any numerical data */
 	removedHierClusterTerms?: string[]
 }
 
