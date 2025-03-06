@@ -15,7 +15,7 @@ function getHolder() {
  test sections
 ***************/
 tape('\n', function (test) {
-	test.pass('-***- dom/GeneSetEdit -***-')
+	test.pass('-***- dom/GeneSetEdit//GeneSetEditUI -***-')
 	test.end()
 })
 
