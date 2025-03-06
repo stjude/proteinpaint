@@ -36,11 +36,8 @@ export async function get_densityplot(term, samples) {
 		}
 	}
 
-	const xscale = scaleLinear()
-		.domain([minvalue, maxvalue])
-		.range([xpad, xpad + width])
 	const ticks = 20
-	const density = getBinsDensity(xscale, { values }, true, ticks)
+	const density = getBinsDensity({ values }, true, ticks)
 	if (!Array.isArray(density.bins)) throw 'getBinsDensity does not return []'
 	if (density.bins.length == 0) throw 'getBinsDensity returns an empty array'
 

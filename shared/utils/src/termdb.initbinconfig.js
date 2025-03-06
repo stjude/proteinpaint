@@ -7,6 +7,7 @@ Initialize a bin configuration for a numeric dataset
 */
 export default function initBinConfig(data, opts = {}) {
 	if (data.find(d => !Number.isFinite(d))) throw 'non-numeric values found'
+
 	let binConfig
 	const s = new Set(data)
 	if (s.size === 1) {

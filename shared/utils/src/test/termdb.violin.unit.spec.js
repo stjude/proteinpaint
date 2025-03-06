@@ -1,10 +1,7 @@
 import tape from 'tape'
 import { getBinsDensity } from '../violin.bins'
-import { scaleLinear } from 'd3-scale'
 
 const v = { values: [0, 1, 2, 2, 2, 3, 4, 5, 0, 4, 5, 6, 6, 7, 8, 9, 10] }
-
-const axisScale = scaleLinear().domain([0, 10]).range([0, 100])
 
 /**************
  test sections
@@ -109,7 +106,7 @@ tape('compute bins given an array', function (test) {
 			density: 0.03465146873165242
 		}
 	]
-	const result = getBinsDensity(axisScale, v, true, 20)
+	const result = getBinsDensity(v, true, 20)
 	test.deepEqual(result.bins, bins, 'should match expected output')
 	test.end()
 })
