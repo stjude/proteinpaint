@@ -73,7 +73,6 @@
     "node-notifier": "^9.0.1",
     "node-polyfill-webpack-plugin": "^1.1.4",
     "normalize.css": "^8.0.1",
-    "npm": "^11.1.0",
     "ol": "^10.0.0",
     "openseadragon": "^4.1.1",
     "partjson": "^0.58.2",
