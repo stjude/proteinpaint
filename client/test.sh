@@ -34,5 +34,12 @@ node emitImports.mjs $NAMEPATTERN > ./$TESTFILE
 
 ENV=test node esbuild.config.mjs
 
+# puppeteer needs headless chrome, as needed
+set +u # disable unbound variable check
+if [[ "$PUPPETEER_SKIP_DOWNLOAD" != "" ]]; then
+	NODE_TLS_REJECT_UNAUTHORIZED=0 npx puppeteer browsers install chrome
+fi
+set -u # reenable unbound variable check
+
 rm -rf .nyc_output 
 node test/puppet.js "dir=$DIRPATTERN&name=$NAMEPATTERN"
