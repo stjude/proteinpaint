@@ -163,9 +163,9 @@ async fn main() -> Result<(),Box<dyn std::error::Error>> {
     );
 
     // output
-    // boundary
-    println!("Content-Type: application/octet-stream\r\n");
-    println!("\r\n");
+    println!("\r\nContent-Disposition: attachment; filename=cohort.maf.gz");
+    println!("Content-Type: application/octet-stream");
+    println!("");
 
     // binary output
     let mut encoder = GzEncoder::new(io::stdout(), Compression::default());
@@ -191,17 +191,17 @@ async fn main() -> Result<(),Box<dyn std::error::Error>> {
         async {}
     }).await;
 
-    println!("GDC_MAF_MULTIPART_BOUNDARY_2025\r\n");
-    println!("Content-Type: application/json\r\n");
-    println!("\r\n");
-
     // After processing all downloads, output the errors as JSON to stderr
     let errors = errors.lock().unwrap();
     if !errors.is_empty() {
+    		println!("\r\nGDC_MAF_MULTIPART_BOUNDARY_2025");
+		    println!("Content-Type: application/json");
+		    println!("");
+
         let error_json = json!({
             "errors": errors.iter().collect::<Vec<&ErrorEntry>>()
         });
-        println!("{}", serde_json::to_string_pretty(&error_json)?);
+        println!("{}", serde_json::to_string(&error_json)?);
     };
 
     Ok(())

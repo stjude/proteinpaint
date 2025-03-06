@@ -190,7 +190,7 @@ in such case it will not try to parse it as json
 also the caller should just call dofetch2() without a serverData{}
 rather than dofetch3
 */
-function processResponse(r) {
+async function processResponse(r) {
 	const ct = r.headers.get('content-type') // content type is always present
 	if (!ct) throw `missing response.header['content-type']`
 	if (ct.includes('/json')) {
@@ -199,9 +199,64 @@ function processResponse(r) {
 	if (ct.includes('/text')) {
 		return r.text()
 	}
+	if (ct.includes('multipart')) {
+		const boundary = ct.split('boundary=')[1]
+		return processMultiPart(r, boundary)
+	}
 	// call blob() as catch-all
 	// https://developer.mozilla.org/en-US/docs/Web/API/Response
 	return r.blob()
+}
+
+async function processMultiPart(res, boundary) {
+	const reader = res.body.getReader()
+	const parts = []
+
+	let buffer = '';
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += new TextDecoder().decode(value);
+
+    let boundaryIndex = buffer.indexOf(`--${boundary}`);
+    while (boundaryIndex !== -1) {
+      const partEndIndex = buffer.indexOf(`--${boundary}`, boundaryIndex + boundary.length)
+      if(partEndIndex === -1) break;
+
+      const part = buffer.substring(boundaryIndex, partEndIndex)
+      parts.push(processPart(part, boundary));
+      buffer = buffer.substring(partEndIndex);
+      boundaryIndex = buffer.indexOf(`--${boundary}`);
+    }
+  }
+
+  return parts
+}
+
+function processPart(part, boundary) {
+	const lines = part.split('\n').slice(1)
+	const firstEmptyLineIndex = lines.findIndex(l => l.trim() === '')
+	const headerLines = lines.slice(0, firstEmptyLineIndex).map(line => line.trim())
+	const headers = {}
+	for(const line of headerLines) {
+		const [key, val] = line.split(':')
+		headers[key.trim().toLowerCase()] = val.trim().toLowerCase()
+	}
+	const body = lines.slice(firstEmptyLineIndex).join('\n')
+	
+  const ct = headers['content-type']
+  if (ct === 'application/octet-stream') {
+    // Process binary data
+    const byteArray = new Uint8Array(body.length);
+    for (let i = 0; i < body.length; i++) {
+      byteArray[i] = body.charCodeAt(i);
+    }
+    return {headers, body: new Blob(byteArray, {type: ct})}
+  } else if (ct.includes('/json')) {
+    return {headers, body: JSON.parse(body)}
+  } else {
+    return {headers, body}
+  }
 }
 
 const defaultServerDataCache = {}

@@ -53,27 +53,22 @@ async function buildMaf(q: GdcMafBuildRequest, res, ds) {
 		columns: q.columns,
 		host: joinUrl(host.rest, 'data') // must use the /data/ endpoint from current host
 	}
+	
+	const boundary = 'GDC_MAF_MULTIPART_BOUNDARY_2025'
+	res.setHeader('Content-Type', `multipart/mixed; boundary=${boundary}`)
+	res.write(`--${boundary}`)
 
-	const app = express()
-	app.get('/multipart', (req, res) => {
-		const boundary = 'GDC_MAF_MULTIPART_BOUNDARY_2025'
-		res.setHeader('Content-Type', `multipart/mixed; boundary="${boundary}"`)
-		res.write(`--${boundary}\r\n`)
-		res.write('Content-Type: application/octet-stream\r\n')
-		res.write('Content-Disposition: attachment; filename=cohort.maf.gz\r\n\r\n')
+	const rustStream = run_rust_stream('gdcmaf', JSON.stringify(arg))
+	rustStream.pipe(res, { end: false })
 
-		const rustStream = run_rust_stream('gdcmaf', JSON.stringify(arg))
-		rustStream.pipe(res, { end: false })
-
-		rustStream.on('end', () => {
-			res.write(`\r\n--${boundary}--\r\n`)
-			res.write('Content-Type: application/json\r\n\r\n')
-			res.write(JSON.stringify({ message: 'Processing complete' }) + '\r\n')
-
-			res.write(`--${boundary}--\r\n`)
-			res.end()
-		})
+	rustStream.on('end', () => {
+		res.write(`\n--${boundary}`)
+		res.write('\nContent-Type: application/json')
+		res.write('\n\n' + JSON.stringify({ message: 'Processing complete' }))
+		res.write(`\n--${boundary}--`)
+		res.end()
 	})
+	
 	/*
 	const rustStream = run_rust_stream('gdcmaf', JSON.stringify(arg))
 	res.setHeader('Content-Type', 'application/octet-stream')
