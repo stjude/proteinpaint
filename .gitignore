@@ -13,6 +13,8 @@ dist/*
 .sse/*
 !.sse/README.md
 
+dataset
+dataset/*
 server/app.js
 server/genome/*.js
 server/dataset/*.js
