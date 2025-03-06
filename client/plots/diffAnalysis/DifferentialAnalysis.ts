@@ -3,7 +3,8 @@ import type { Elem } from '../../types/d3'
 import { RxComponentInner } from '../../types/rx.d'
 import { getCompInit, copyMerge } from '#rx'
 import { Menu } from '#dom'
-import type { DiffAnalysisDom, DiffAnalysisOpts } from './DiffAnalysisTypes'
+import { termType2label } from '#shared/terms.js'
+import type { DiffAnalysisDom, DiffAnalysisOpts, DiffAnalysisPlotConfig } from './DiffAnalysisTypes'
 import { DiffAnalysisView } from './view/DiffAnalysisView'
 import { getDefaultVolcanoSettings } from './Volcano'
 import { getDefaultGseaSettings } from '#plots/gsea.js'
@@ -18,16 +19,18 @@ class DifferentialAnalysis extends RxComponentInner {
 		plots: any
 	}
 	dom: DiffAnalysisDom
-	interactions: DiffAnalysisInteractions
+	interactions?: DiffAnalysisInteractions
 	plotTabs: any
 	plotsDiv: { [key: string]: Elem }
 	plotControlsDiv: { [key: string]: Elem }
+	termType: string
 
 	constructor(opts: any) {
 		super()
 		this.components = {
 			plots: {}
 		}
+		this.termType = opts.termType
 		const holder = opts.holder.classed('sjpp-diff-analysis-main', true)
 		const controls = opts.controls ? holder : holder.append('div')
 		const div = holder
@@ -44,6 +47,7 @@ class DifferentialAnalysis extends RxComponentInner {
 			plots: plots,
 			tip: new Menu({ padding: '' })
 		}
+		//TODO: Fix this. Move to init()
 		const volcanoControlsDiv = controls.append('div').style('display', 'none')
 		const gseaControlsDiv = controls.append('div').style('display', 'none')
 		this.plotControlsDiv = {
@@ -56,17 +60,17 @@ class DifferentialAnalysis extends RxComponentInner {
 			volcano: volcanoDiv,
 			gsea: gseaDiv
 		}
-		this.interactions = new DiffAnalysisInteractions(this.app)
 
 		//TODO: include type. move to main()
 		if (opts.header) {
+			const typeStr = termType2label(this.termType).toUpperCase()
 			this.dom.header = {
 				title: opts.header.append('span'),
 				fixed: opts.header
 					.append('span')
 					.style('font-size', '0.8em')
 					.style('opacity', 0.7)
-					.text(' DIFFERENTIAL ANALYSIS')
+					.text(` DIFFERENTIAL ${typeStr} ANALYSIS`)
 			}
 		}
 	}
@@ -92,8 +96,10 @@ class DifferentialAnalysis extends RxComponentInner {
 	}
 
 	async init(appState: MassState) {
+		this.interactions = new DiffAnalysisInteractions(this.app)
+
 		const state = this.getState(appState)
-		const config = structuredClone(state.config)
+		const config = structuredClone(state.config) as DiffAnalysisPlotConfig
 
 		const volcano = await import(`./Volcano.ts`)
 		const gsea = await import(`#plots/gsea.js`)
@@ -105,7 +111,8 @@ class DifferentialAnalysis extends RxComponentInner {
 				id: this.id,
 				parent: this.api,
 				controls: this.plotControlsDiv.volcano,
-				diffAnalysisInteractions: this.interactions
+				diffAnalysisInteractions: this.interactions,
+				termType: config.termType
 			}),
 			gsea: await gsea.componentInit({
 				app: this.app,
@@ -131,10 +138,8 @@ class DifferentialAnalysis extends RxComponentInner {
 		}
 		this.plotsDiv[config.childType].style('display', '')
 		this.plotControlsDiv[config.childType].style('display', '')
-
 		if (this.dom.header) {
-			const samplelst = config.samplelst.groups
-			this.dom.header.title.text(`${samplelst[0].name} vs ${samplelst[1].name} `)
+			this.dom.header.title.text(config.tw.name)
 		}
 
 		this.plotTabs.update(config)
@@ -145,9 +150,11 @@ export const DiffAnalysisInit = getCompInit(DifferentialAnalysis)
 export const componentInit = DiffAnalysisInit
 
 export function getPlotConfig(opts: DiffAnalysisOpts, app: MassAppApi) {
+	if (!opts.termType) throw '.termType is required [DifferentialAnalysis getPlotConfig()]'
 	const config = {
 		chartType: 'differentialAnalysis',
 		childType: 'volcano',
+		termType: opts.termType,
 		highlightedData: opts.highlightedData || [],
 		settings: {
 			controls: {

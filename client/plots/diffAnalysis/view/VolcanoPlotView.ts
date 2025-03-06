@@ -1,15 +1,14 @@
-import { axisstyle } from '#src/client'
 import { axisBottom, axisLeft } from 'd3-axis'
-import { table2col, renderTable } from '#dom'
+import { axisstyle, Menu, table2col, renderTable } from '#dom'
 import { select } from 'd3-selection'
 import { rgb } from 'd3-color'
 import type {
 	DataPointEntry,
-	DiffAnalysisPlotDim,
+	VolcanoPlotDimensions,
+	VolcanoPlotDom,
 	VolcanoSettings,
-	DiffAnalysisViewData,
-	VolcanoPlotDom
-} from '../DiffAnalysisTypes'
+	VolcanoViewData
+} from '../VolcanoTypes'
 import type { VolcanoInteractions } from '../interactions/VolcanoInteractions'
 import { DataPointMouseEvents } from './DataPointMouseEvents'
 
@@ -19,8 +18,8 @@ export class VolcanoPlotView {
 	interactions: VolcanoInteractions
 	settings: VolcanoSettings
 	volcanoDom: VolcanoPlotDom
-	viewData: DiffAnalysisViewData
-	constructor(dom: any, settings: VolcanoSettings, viewData: DiffAnalysisViewData, interactions: VolcanoInteractions) {
+	viewData: VolcanoViewData
+	constructor(dom: any, settings: VolcanoSettings, viewData: VolcanoViewData, interactions: VolcanoInteractions) {
 		this.dom = dom
 		this.interactions = interactions
 		this.settings = settings
@@ -60,12 +59,12 @@ export class VolcanoPlotView {
 			.style('padding', '3px')
 			.text(text)
 			.on('click', () => {
-				this.dom.tip.clear().showunder(button.node())
+				this.dom.actionsTip.clear().showunder(button.node())
 				callback()
 			})
 	}
 
-	renderPlot(plotDim: DiffAnalysisPlotDim) {
+	renderPlot(plotDim: VolcanoPlotDimensions) {
 		this.volcanoDom.svg.attr('width', plotDim.svg.width).attr('height', plotDim.svg.height)
 
 		this.volcanoDom.yAxisLabel
@@ -102,7 +101,7 @@ export class VolcanoPlotView {
 		})
 	}
 
-	renderFoldChangeLine(plotDim: DiffAnalysisPlotDim) {
+	renderFoldChangeLine(plotDim: VolcanoPlotDimensions) {
 		//logFoldChangeLine
 		this.volcanoDom.plot
 			.append('line')

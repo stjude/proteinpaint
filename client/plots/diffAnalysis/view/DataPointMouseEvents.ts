@@ -3,7 +3,7 @@ import { roundValueAuto } from '#shared/roundValue.js'
 import type { Menu } from '#dom'
 import type { SvgCircle } from '../../../types/d3'
 import type { VolcanoInteractions } from '../interactions/VolcanoInteractions'
-import type { DataPointEntry } from '../DiffAnalysisTypes'
+import type { DataPointEntry } from '../VolcanoTypes'
 
 export class DataPointMouseEvents {
 	constructor(d: DataPointEntry, circle: SvgCircle, tip: Menu, interactions: VolcanoInteractions) {
@@ -19,11 +19,12 @@ export class DataPointMouseEvents {
 			this.addLine(table, 'Original p value (log)', roundValueAuto(d.original_p_value))
 			this.addLine(table, 'Adjusted p value(log)', roundValueAuto(d.adjusted_p_value))
 		})
-		if (d.highlighted) return
+
 		circle.on('mouseout', () => {
+			tip.hide()
+			if (d.highlighted) return
 			// Remove highlight and tooltip on mouseout
 			circle.attr('fill-opacity', 0)
-			tip.hide()
 		})
 		circle.on('click', async () => {
 			await interactions.launchBoxPlot(d.gene_symbol)

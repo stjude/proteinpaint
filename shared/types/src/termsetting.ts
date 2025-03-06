@@ -84,6 +84,8 @@ type BaseTermSettingOpts = {
 	abbrCutoff?: number
 	activeCohort?: number
 	disable_terms?: string[]
+	// This is not used anywhere.
+	// Ok to remove?
 	handler: Handler
 	noTermPromptOptions?: NoTermPromptOptsEntry[]
 }
