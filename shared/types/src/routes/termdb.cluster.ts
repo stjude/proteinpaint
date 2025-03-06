@@ -82,6 +82,7 @@ export type ValidResponse = {
 	byTermId: { [index: string]: any }
 	/**  */
 	bySampleId: { [index: string]: any }
+	removedHierClusterTerms?: string[]
 }
 
 //response of just 1 gene, thus unable to do clustering
