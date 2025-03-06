@@ -243,7 +243,8 @@ class MassGroups {
 			showTermsTree(
 				summarizeDiv,
 				term => {
-					openSummaryPlot(term, samplelstTW, this.app, id, () => this.newId)
+					const tw = term.type == 'geneExpression' ? { term, q: { mode: 'continuous' } } : term
+					openSummaryPlot(tw, samplelstTW, this.app, id, () => this.newId)
 				},
 				this.app,
 				this.tip
@@ -611,7 +612,7 @@ export async function openSummaryPlot(term, samplelstTW, app, id, newId) {
 
 	let config = {
 		chartType: 'summary',
-		childType: 'barchart',
+		childType: tw.q?.mode == 'continuous' ? 'violin' : 'barchart',
 		term: tw,
 		term2: samplelstTW
 	}
