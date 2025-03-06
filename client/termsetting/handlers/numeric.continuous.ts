@@ -116,6 +116,7 @@ export function getHandler(self) {
 				.html('Apply')
 				.on('click', () => {
 					self.q.mode = 'continuous'
+					self.dom.tip.hide()
 					self.runCallback()
 				})
 		}

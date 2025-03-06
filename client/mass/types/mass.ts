@@ -14,6 +14,7 @@ export type MassAppApi = RxAppApi & {
 	opts: {
 		/** TODO!! -> {} */
 		callbacks: any
+		debug: boolean
 		genome: ClientCopyGenome
 		holder: Elem
 		/** Current release version. See https://github.com/stjude/proteinpaint/releases */

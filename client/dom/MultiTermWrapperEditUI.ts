@@ -73,13 +73,15 @@ export class MultiTermWrapperEditUI {
 	async getNewPill(d, div) {
 		const _opts = {
 			abbrCutoff: 50,
+			debug: this.app.opts?.debug,
 			//Do not allow users to select the same term more than once
 			disable_terms: this.twList.map(tw => tw.term.id),
+			genomeObj: this.app.opts.genome,
 			holder: div,
-			placeholder: 'Add term',
 			menuOptions: '!replace',
-			vocabApi: this.app.vocabApi,
 			numericEditMenuVersion: ['continuous', 'discrete'],
+			placeholder: 'Add term',
+			vocabApi: this.app.vocabApi,
 			callback: (tw: any) => {
 				/** Make a copy of the twList. When the edit UI is opened
 				 * with a list of terms, the object is sealed.*/
@@ -108,17 +110,26 @@ export class MultiTermWrapperEditUI {
 		return pill
 	}
 
-	async renderTerm(d) {
+	async renderTerm(d, numericOpts = false) {
 		if (!d?.pill) return
-		const pillOps = {
+		const pillOps = this.getPillOpts(d, numericOpts)
+		await d.pill.main(pillOps)
+	}
+
+	getPillOpts(d, numericOpts) {
+		const pillOps: any = {
 			term: d.tw.term,
 			q: d.tw.q
-		} as any
+		}
+		if (d.tw.$id) pillOps.$id = d.tw.$id
 		if (this.state) {
 			pillOps.activeCohort = this.state.activeCohort
 			pillOps.filter = this.state?.termfilter?.filter
 		}
-		await d.pill.main(pillOps)
+		if (numericOpts) {
+			pillOps.numericEditMenuVersion = ['continuous', 'discrete']
+		}
+		return pillOps
 	}
 }
 
@@ -138,11 +149,14 @@ function setRenderers(self) {
 		tws.exit().remove()
 		tws.each(self.renderTerm)
 		tws.enter().append('div').attr('class', 'sjpp-edit-ui-pill').each(self.addTerm)
+
+		self.dom.submitBtn.property('disabled', self.twList.length == 0)
+		self.dom.footer.text(`${self.twList.length} terms selected`)
 	}
 
 	self.addTerm = async function (d) {
 		const div = select(this)
 		d.pill = await self.getNewPill(d, div)
-		self.renderTerm(d)
+		self.renderTerm(d, true)
 	}
 }
