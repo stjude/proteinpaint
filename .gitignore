@@ -49,6 +49,7 @@ public/ALCL.html
 public/builds/*
 public/static/*.docx
 public/static/*.pdf
+public/profile
 **/rev.txt
 public/docs/*/*
 public/docs/readme.json
