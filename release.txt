@@ -1,2 +1,1 @@
-Fixes:
-- termdb.cluster: gene/terms present in request body but skipped by backend should be messaged to client 
+

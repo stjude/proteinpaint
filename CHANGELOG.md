@@ -8,6 +8,7 @@ Fixes:
 - allow DE to work for custom term based on a single group
 - fix issues with custom term based on a single group: 'others' group has sample size of 0
 - fix the incorrect sample count of 'others' group upon clicking the custom term based on a single group while global filter presents
+- termdb.cluster: gene/terms present in request body but skipped by backend should be messaged to client
 
 
 ## 2.109.0
