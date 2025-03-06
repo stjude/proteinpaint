@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.109.1
 
 Fixes:
 - allow DE to work for custom term based on a single group
