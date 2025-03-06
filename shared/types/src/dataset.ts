@@ -556,21 +556,23 @@ export type MetaboliteIntensityQuery = MetaboliteIntensityQueryNative
 
 /** the geneExpression query */
 export type GeneExpressionQueryGdc = {
-	src: 'gdcapi' | string
+	src: 'gdcapi'
 	geneExpression2bins?: { [index: string]: any }
 }
 
 export type GeneExpressionQueryNative = {
-	src: 'native' | string
+	src: 'native'
+	/** bgzip-compressed, tabix-index file.
+	first line must be "#chr \t start \t stop \t gene \t sample1 \t ..." */
 	file: string
 	/** dynamically added during server launch, list of sample integer IDs from file */
 	samples?: number[]
+	/** dynamically added flag during launch */
 	nochr?: boolean
+	/** dynamically added getter */
 	get?: (param: any) => void
 	/** This dictionary is used to store/cache the default bins calculated for a geneExpression term when initialized in the fillTermWrapper */
 	geneExpression2bins?: { [index: string]: any }
-	/** Type of data format HDF5 or bed */
-	storage_type?: 'HDF5' | 'bed'
 }
 
 export type GeneExpressionQuery = GeneExpressionQueryGdc | GeneExpressionQueryNative
