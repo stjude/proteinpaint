@@ -598,7 +598,8 @@ export class GeneSetEditUI {
 
 	renderGene(div: Div, gene: Gene) {
 		let notInList = false
-		if (!this.limitedGenesList?.includes(gene.gene)) {
+		//Check if list is present, then run check
+		if (this.limitedGenesList && !this.limitedGenesList?.includes(gene.gene)) {
 			notInList = true
 		}
 		if (gene.mutationStat) {
