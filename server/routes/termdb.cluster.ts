@@ -95,8 +95,10 @@ async function getResult(q: TermdbClusterRequest, ds: any, genome) {
 	1. local testing with gdc using inconsistent gencode versions (gdc:36). for some genes local will use a geneid not found in gdc and cause issue for clustering
 	2. somehow in v36 genedb there can still be geneid not in gdc. this helps avoid app crashing in gdc environment
 	*/
+	const removedHierClusterTerms: string[] = []
 	for (const [term, obj] of term2sample2value) {
 		if (Object.keys(obj).length === 0) {
+			removedHierClusterTerms.push(term)
 			term2sample2value.delete(term)
 			delete byTermId[term]
 		}
@@ -113,7 +115,7 @@ async function getResult(q: TermdbClusterRequest, ds: any, genome) {
 	const t = Date.now() // use "t=new Date()" will lead to tsc error
 	const clustering: Clustering = await doClustering(term2sample2value, q, Object.keys(bySampleId).length)
 	if (serverconfig.debugmode) console.log('clustering done:', Date.now() - t, 'ms')
-	return { clustering, byTermId, bySampleId } as ValidResponse
+	return { clustering, byTermId, bySampleId, removedHierClusterTerms } as ValidResponse
 }
 
 async function getNumericDictTermAnnotation(q, ds, genome) {
