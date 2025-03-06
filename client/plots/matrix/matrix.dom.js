@@ -5,6 +5,7 @@ export function setMatrixDom(opts) {
 	const holder = opts.controls ? opts.holder : opts.holder.append('div')
 	holder.style('position', 'relative')
 	const controls = this.opts.controls || holder.append('div')
+	const errorDiv = holder.append('div')
 	const loadingDiv = holder
 		.append('div')
 		.style('position', 'relative')
@@ -40,6 +41,7 @@ export function setMatrixDom(opts) {
 		contentNode: opts.holder.node().closest('.sjpp-output-sandbox-content') || opts.holder.node().parentNode,
 		errdiv,
 		controls,
+		errorDiv,
 		loadingDiv,
 		svg,
 		clipRect: svg
