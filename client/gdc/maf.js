@@ -375,7 +375,7 @@ async function getFilesAndShowTable(obj) {
 			//     body: any
 		  //   }
 			// ] 
-			data = await dofetch3('gdc/mafBuild', { body: { fileIdLst, columns: outColumns } }); console.log(374, data)
+			data = await dofetch3('gdc/mafBuild', { body: { fileIdLst, columns: outColumns } })
 			if (data.find(d => d.body?.error)) throw data.error
 		} catch (e) {
 			sayerror(obj.errDiv, e)
@@ -390,7 +390,7 @@ async function getFilesAndShowTable(obj) {
 
 		// download the file to client
 		const a = document.createElement('a')
-		const octetData = data.find(d => d.headers['content-type'] == 'application/octet-stream'); console.log(389, octetData)
+		const octetData = data.find(d => d.headers['content-type'] == 'application/octet-stream')
 		a.href = URL.createObjectURL(octetData.body)
 		a.download = `cohortMAF.${new Date().toISOString().split('T')[0]}.gz`
 		a.style.display = 'none'

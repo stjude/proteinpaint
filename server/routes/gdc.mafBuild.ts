@@ -5,7 +5,6 @@ import type { GdcMafBuildRequest, RouteApi } from '#types'
 import { gdcMafPayload } from '#types/checkers'
 import { maxTotalSizeCompressed } from './gdc.maf.ts'
 import { mayLog } from '#src/helpers.ts'
-import express from 'express'
 
 export const api: RouteApi = {
 	endpoint: 'gdc/mafBuild',
