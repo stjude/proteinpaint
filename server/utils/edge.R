@@ -191,7 +191,7 @@ cachedir <- input$cachedir # Importing serverconfig.cachedir
 random_number <- runif(1, min = 0, max = 1) # Generating random number
 image_name <- paste0("edgeR_temp_",random_number,".png") # Generating random image name so that simultaneous server side requests do NOT generate the same edgeR file name
 png(filename = paste0(cachedir,"/",image_name), width = 1000, height = 1000, res = 200) # Opening a png device
-par(mar = c(1, 1, 1, 1)) # Creating a margin
+par(oma = c(1, 1, 1, 1)) # Creating a margin
 plotQLDisp(fit) # Plot the edgeR fit
 # dev.off() # Gives a null device message which breaks JSON. Commenting it out for now, will investigate it later
 
