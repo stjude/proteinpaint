@@ -41,6 +41,7 @@ export function getBinsDensity(plot, isKDE = false, ticks = 20) {
 	values.sort((a, b) => a - b) //need to provide it so it compares properly integers and floats
 
 	const thresholds = calculateKDEThresholds(values, ticks)
+	//console.log('thresholds', thresholds)
 
 	const result = isKDE
 		? kde(gaussianKernel, thresholds, plot.values, valuesMin, valuesMax)
@@ -165,7 +166,7 @@ function getBinsHist(values, thresholds, valuesMin, valuesMax) {
 	return { bins, densityMin: 0, densityMax }
 }
 
-export function calculateKDEThresholds(data, numThresholds) {
+export function calculateKDEThresholds(data, numThresholds, isInteger) {
 	if (!Array.isArray(data) || data.length < 2 || numThresholds < 1) {
 		return []
 	}
@@ -197,7 +198,8 @@ export function calculateKDEThresholds(data, numThresholds) {
 	for (let i = 0; i < kdeValues.length - 1; i++) {
 		currentDensitySum += kdeValues[i].density
 		if (currentDensitySum >= (currentBin + 1) * targetDensityPerBin) {
-			thresholds.push(kdeValues[i].x)
+			const threshold = kdeValues[i].x
+			thresholds.push(isInteger ? Math.round(threshold) : threshold)
 			currentBin++
 			if (currentBin >= numThresholds) {
 				break

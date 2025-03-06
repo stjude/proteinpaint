@@ -22,10 +22,11 @@ export function roundValue(value, digits) {
  * TODO: Review digit logic.
  */
 
-export function roundValueAuto(value, format = false) {
+export function roundValueAuto(value, format = false, shortFormat = false) {
 	if (!value && value != 0) return value
 	const dp = decimalPlacesUntilFirstNonZero(value)
-	const digits = Math.abs(value) > 1 ? 2 : dp > 0 ? dp + 1 : 2
+	const roundTo = shortFormat ? 1 : 2
+	const digits = Math.abs(value) > 1 ? roundTo : dp > 0 ? dp + 1 : roundTo
 	if (format) return formatValue(value, digits)
 	return roundValue(value, digits)
 }

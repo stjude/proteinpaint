@@ -1,9 +1,11 @@
 /*
 Initialize a bin configuration for a numeric dataset
+outputs bin config as JavaScript object (default) unless format: 'string' is specified
+
 <data>: array of numeric data values
-<opts> (optional): object of options
-    {}: output bin config as JavaScript object (default)
+<opts> (optional): dict of options
     {format: 'string'}: output bin config as JSON string
+	{dataType: 'integer}
 */
 
 import { roundValueAuto } from './roundValue.js'
@@ -34,11 +36,11 @@ export default function initBinConfig(data, opts = {}) {
 		data.sort((a, b) => a - b)
 		const l = data.length
 
-		const thresholds = calculateKDEThresholds(data, 8)
+		const thresholds = calculateKDEThresholds(data, 8, false)
 		const lst = []
 		for (let i = 0; i < thresholds.length; i++) {
 			const threshold = thresholds[i]
-			const labelValue = roundValueAuto(threshold)
+			const labelValue = roundValueAuto(threshold, true, true)
 			let bin
 			if (i == 0) bin = { stop: threshold, stopinclusive: true, label: '<=' + labelValue }
 			else if (i == thresholds.length - 1) bin = { start: threshold, startinclusive: true, label: '>' + labelValue }
@@ -48,7 +50,7 @@ export default function initBinConfig(data, opts = {}) {
 					startinclusive: false,
 					stop: thresholds[i + 1],
 					stopinclusive: true,
-					label: labelValue + ' to ≤ ' + roundValueAuto(thresholds[i + 1])
+					label: labelValue + ' to ≤ ' + roundValueAuto(thresholds[i + 1], true, true)
 				}
 			lst.push(bin)
 		}
@@ -56,6 +58,7 @@ export default function initBinConfig(data, opts = {}) {
 			type: 'custom-bin',
 			lst
 		}
+		//console.log(binConfig)
 		//const min = data[0]
 		//const max = data[l - 1]
 
