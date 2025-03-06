@@ -1,12 +1,16 @@
 import RedisClientHolder from '../redis/RedisClientHolder.ts'
+import { RedisShard } from '#src/shardig/RedisShard.js'
+import { TileServerShard } from '#src/shardig/TileServerShard.js'
 
 export class SessionData {
 	public imageSessionId: string
 	public lastAccessTimestamp: string
+	public tileServerShard: TileServerShard
 
-	public constructor(imageSessionId: string, lastAccessTimestamp: string) {
+	public constructor(imageSessionId: string, lastAccessTimestamp: string, tileServerShard: TileServerShard) {
 		this.imageSessionId = imageSessionId
 		this.lastAccessTimestamp = lastAccessTimestamp
+		this.tileServerShard = tileServerShard
 	}
 }
 
@@ -14,20 +18,20 @@ export default class SessionManager {
 	private static instance: SessionManager
 	private redisClient: RedisClientHolder
 
-	private constructor(redisUrl: string, secret: any) {
-		this.redisClient = RedisClientHolder.getInstance(redisUrl, secret)
+	private constructor(redisShard: RedisShard) {
+		this.redisClient = RedisClientHolder.getInstance(redisShard.url, redisShard.secret)
 	}
 
-	public static getInstance(redisUrl: string, secret: any): SessionManager {
+	public static getInstance(redis: RedisShard): SessionManager {
 		if (!SessionManager.instance) {
-			SessionManager.instance = new SessionManager(redisUrl, secret)
+			SessionManager.instance = new SessionManager(redis)
 		}
 		return SessionManager.instance
 	}
 
-	public async setSession(key: string, imageSessionId: string): Promise<void> {
+	public async setSession(key: string, imageSessionId: string, tileServerShard: TileServerShard): Promise<void> {
 		const lastAccessTimestamp = new Date().toISOString() // Get current time in ISO 8601 format
-		const sessionData = new SessionData(imageSessionId, lastAccessTimestamp)
+		const sessionData = new SessionData(imageSessionId, lastAccessTimestamp, tileServerShard)
 		const serializedData = JSON.stringify(sessionData)
 		await this.redisClient.set(key, serializedData)
 	}
@@ -44,14 +48,14 @@ export default class SessionManager {
 		await this.redisClient.delete(key)
 	}
 
-	// TODO invalidateSessions should tested more
+	// TODO don't delete all sessions, only the ones that are 50% of the limit
 	//  maxIdleTime - time in minutes
 	public async invalidateSessions(
 		maxSessions: number,
 		maxIdleTime: number
 	): Promise<{
 		success: boolean
-		deletedKeys: (string | undefined)[]
+		deletedKeys: (SessionData | undefined)[]
 	}> {
 		const keys = await this.redisClient.getAll()
 		const keySessions: { key: string; sessionData: SessionData | undefined }[] = await Promise.all(
@@ -95,7 +99,7 @@ export default class SessionManager {
 		}
 
 		// Delete all sessions that are either idle or are the least recently used beyond the limit
-		const deletedKeys = allSessionsToDelete.map(session => session.sessionData?.imageSessionId)
+		const deletedKeys = allSessionsToDelete.map(session => session.sessionData)
 
 		if (keys.length >= maxSessions && allSessionsToDelete.length === 0) {
 			return { success: false, deletedKeys: [] }

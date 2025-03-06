@@ -81,17 +81,17 @@ async function getSessionId(cookieJar, getCookieString, setCookie, wsimage, ds, 
 
 	if (!redis) throw new Error('No redis found')
 
-	const sessionManager = SessionManager.getInstance(redis.url, redis.secret)
+	const sessionManager = SessionManager.getInstance(redis)
 
 	const sessionData = await sessionManager.getSession(wsimage)
 
 	if (sessionData) return sessionData.imageSessionId
 
-	const invalidateResult = await sessionManager.invalidateSessions(20, 60)
+	const invalidateResult = await sessionManager.invalidateSessions(3, 5)
 
 	if (!invalidateResult.success) throw new Error('Session invalidation failed')
 
-	await invalidateSessions(invalidateResult, tileServer)
+	await invalidateSessions(invalidateResult)
 
 	await ky.get(`${tileServer.url}/tileserver/session_id`, {
 		timeout: 50000,
@@ -118,17 +118,19 @@ async function getSessionId(cookieJar, getCookieString, setCookie, wsimage, ds, 
 		hooks: getHooks(cookieJar, getCookieString, setCookie)
 	})
 
-	await sessionManager.setSession(wsimage, sessionId)
+	await sessionManager.setSession(wsimage, sessionId, tileServer)
 
 	return sessionId
 }
 
-async function invalidateSessions(invalidateResult, tileServer) {
-	for (const key of invalidateResult.deletedKeys) {
+async function invalidateSessions(invalidateResult: { success: boolean; deletedKeys: (SessionData | undefined)[] }) {
+	for (const sessionData of invalidateResult.deletedKeys) {
 		try {
-			await ky.put(`${tileServer.url}/tileserver/reset/${key}`)
+			if (sessionData?.tileServerShard) {
+				await ky.put(`${sessionData.tileServerShard.url}/tileserver/reset/${sessionData.imageSessionId}`)
+			}
 		} catch (error) {
-			console.info(`Error resetting tile server for key ${key}:`, error)
+			console.info(`Error resetting tile server for sessionId ${sessionData?.imageSessionId}}:`, error)
 		}
 	}
 }
