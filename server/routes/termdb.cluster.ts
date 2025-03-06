@@ -22,6 +22,7 @@ import { getResult as getResultGene } from '#src/gene.js'
 import { TermTypes, NUMERIC_DICTIONARY_TERM } from '#shared/terms.js'
 import { getData } from '#src/termdb.matrix.js'
 import { termType2label } from '#shared/terms.js'
+import { mayLog } from '#src/helpers.ts'
 
 export const api: RouteApi = {
 	endpoint: 'termdb/cluster',
@@ -114,8 +115,10 @@ async function getResult(q: TermdbClusterRequest, ds: any, genome) {
 	// have data for multiple genes, run clustering
 	const t = Date.now() // use "t=new Date()" will lead to tsc error
 	const clustering: Clustering = await doClustering(term2sample2value, q, Object.keys(bySampleId).length)
-	if (serverconfig.debugmode) console.log('clustering done:', Date.now() - t, 'ms')
-	return { clustering, byTermId, bySampleId, removedHierClusterTerms } as ValidResponse
+	mayLog('clustering done:', Date.now() - t, 'ms')
+	const result = { clustering, byTermId, bySampleId } as ValidResponse
+	if (removedHierClusterTerms.length) result.removedHierClusterTerms = removedHierClusterTerms
+	return result
 }
 
 async function getNumericDictTermAnnotation(q, ds, genome) {
