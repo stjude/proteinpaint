@@ -6,7 +6,7 @@ import { get$id } from '#termsetting'
 import { getCurrentCohortChartTypes } from './charts'
 import { getColors } from '#shared/common.js'
 import { rgb } from 'd3-color'
-import { TermTypes } from '#shared/terms.js'
+import { TermTypes, isNumericTerm } from '#shared/terms.js'
 
 /*
 this
@@ -243,7 +243,7 @@ class MassGroups {
 			showTermsTree(
 				summarizeDiv,
 				term => {
-					const tw = term.type == 'geneExpression' ? { term, q: { mode: 'continuous' } } : term
+					const tw = isNumericTerm(term) ? { term, q: { mode: 'continuous' } } : term
 					openSummaryPlot(tw, samplelstTW, this.app, id, () => this.newId)
 				},
 				this.app,
