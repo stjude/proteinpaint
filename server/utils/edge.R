@@ -177,10 +177,6 @@ if (length(input$conf1) == 0) { # No adjustment of confounding factors
           })
           #cat("Time for making design matrix: ", model_gen_time[3], " seconds\n")
     }
-    #print ("y$samples")
-    #print (y$samples)
-    #print ("design")
-    #print (design)
 
     fit_time <- system.time({
         suppressWarnings({
