@@ -1,2 +1,1 @@
-Features
-- New display mode options in the box plot. In addition to dark mode, users can render the plots filled and unfilled (default). 
+

@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 Features:
 - Allow sorting on barplot columns in tables.
+- New display mode options in the box plot. In addition to dark mode, users can render the plots filled and unfilled (default).
 
 Fixes:
 - Do not render a violin for plots with less than or equal to five samples.
