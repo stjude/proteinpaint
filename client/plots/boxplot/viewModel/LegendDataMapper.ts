@@ -1,24 +1,6 @@
-import type { FormattedPlotEntry } from './ViewModel'
+import type { FormattedPlotEntry, LegendData, LegendItemEntry } from '../BoxPlotTypes'
 import type { BoxPlotResponse } from '#types'
 import type { PlotConfig } from '#mass/types/mass'
-
-export type LegendItemEntry = {
-	/** Key for value look up in tw.term object */
-	key: string
-	/** If true, line-through text */
-	isHidden: boolean
-	/** If true, triggers a callback to unhide a plot on click,
-	 * creates an icon, and tooltip for the item.
-	 */
-	isPlot: boolean
-	/** Text shown in the legend
-	 * Uncomputable values and hidden plots report total count as n
-	 * Descriptive stats report value after colon
-	 */
-	text: string
-}
-
-export type LegendData = { label: string; items: LegendItemEntry[] }[]
 
 export class LegendDataMapper {
 	legendData: LegendData = []

@@ -1,61 +1,9 @@
 import { format } from 'd3-format'
 import { decimalPlacesUntilFirstNonZero } from '#shared/roundValue.js'
-import type { BoxPlotSettings } from '../BoxPlot'
-import type { BoxPlotResponse, BoxPlotEntry, BoxPlotData } from '#types'
+import type { BoxPlotResponse } from '#types'
 import type { PlotConfig } from '#mass/types/mass'
-import type { LegendItemEntry } from './LegendDataMapper'
+import type { BoxPlotSettings, PlotDimensions, ViewData } from '../BoxPlotTypes'
 import { LegendDataMapper } from './LegendDataMapper'
-
-/**
- * Calculates the dimensions and html attributes for the svg and
- * individual boxplots. The data is passed to the View class.
- */
-
-export type ViewData = {
-	plotDim: PlotDimensions
-	plots: FormattedPlotEntry[]
-	legend: { label: string; items: LegendItemEntry[] }[]
-}
-
-/** Processed box plot obj with dimensions needs for
- * rendering in the view. */
-export type FormattedPlotEntry = BoxPlotEntry & {
-	boxplot: BoxPlotData & {
-		label: string
-		/** if outliers are present, set the radius
-		 * instead of using the rather large default */
-		radius?: number
-	}
-	/** offset for the label div */
-	x: number
-	/** incrementing, descending offset for each new plot  */
-	y: number
-	/** Plot label color. Changes per darkMode selection */
-	labColor: string
-}
-
-export type PlotDimensions = {
-	/** Changes background color between white and soft black
-	 * based on darkMode selection */
-	backgroundColor: string
-	/** Domain for the axis */
-	domain: number[]
-	/** Range for the axis */
-	range: number[]
-	svg: {
-		/** Width of the svg */
-		width: number
-		/** Height of the svg */
-		height: number
-	}
-	/** Changes text color for the axis, plot labels, and legend
-	 * between black and white based on darkMode selection */
-	textColor: string
-	/** Title of the plot and coordinates */
-	title: { x: number; y: number; text: string }
-	/** axis coordinates */
-	axis: { x: number; y: number; values(ticks: number[]): number[]; format(d: number): string }
-}
 
 export class ViewModel {
 	/** Top padding for the svg */

@@ -1,7 +1,6 @@
-import type { BoxPlotDom } from '../BoxPlot'
+import type { BoxPlotDom, LegendItemEntry } from '../BoxPlotTypes'
 import type { MassAppApi, PlotConfig } from '#mass/types/mass'
 import type { RenderedPlot } from '../view/RenderedPlot'
-import type { LegendItemEntry } from '../viewModel/LegendDataMapper'
 import { to_svg } from '#src/client'
 import { ListSamples } from './ListSamples'
 import { filterJoin, getFilterItemByTag } from '#filter'
