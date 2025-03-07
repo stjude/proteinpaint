@@ -4,9 +4,11 @@ import { curveBasis, line } from 'd3-shape'
 import { getColors } from '#shared/common.js'
 import { brushX, brushY } from 'd3-brush'
 import { renderTable, Menu, getMaxLabelWidth, table2col } from '#dom'
-import { rgb, create } from 'd3'
+import { rgb } from 'd3'
 import { format as d3format } from 'd3-format'
 import { TermTypes } from '#shared/terms.js'
+
+const minSampleSize = 5 // a group below cutoff will not render a violin plot
 
 export default function setViolinRenderer(self) {
 	self.render = function () {
@@ -214,8 +216,8 @@ export default function setViolinRenderer(self) {
 
 		const margin = createMargins(labelsize, settings, isH, self.opts.mode == 'minimal')
 		const plotThickness = self.getPlotThicknessWithPadding()
-		const plotsWViolin = self.data.plots.filter(p => p.plotValueCount > 5)
-		const plotsWOutViolin = self.data.plots.filter(p => p.plotValueCount <= 5)
+		const plotsWViolin = self.data.plots.filter(p => p.plotValueCount > minSampleSize)
+		const plotsWOutViolin = self.data.plots.filter(p => p.plotValueCount <= minSampleSize)
 		const width =
 			margin.left +
 			margin.top +
@@ -371,7 +373,7 @@ export default function setViolinRenderer(self) {
 	function renderArea(violinG, plot, areaBuilder) {
 		if (plot.density.densityMax == 0) return
 		//Do not render the violin if there are less than 5 values (only beans)
-		if (plot.plotValueCount <= 5) return
+		if (plot.plotValueCount <= minSampleSize) return
 		violinG
 			.append('path')
 			.attr('class', 'sjpp-vp-path')
