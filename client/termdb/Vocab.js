@@ -146,7 +146,7 @@ export class Vocab {
 	async trackDsAction({ action, details }) {
 		const headers = { 'x-sjppds-sessionid': this.sessionId }
 		// NOTE: do not hardcode the .termdb route here, there may be more tracked actions later
-		const jwt = this.opts.getDatasetAccessToken('termdb')
+		const jwt = this.opts.getDatasetAccessToken?.('termdb')
 		if (jwt) headers.authorization = 'Bearer ' + btoa(jwt)
 		await dofetch3('/authorizedActions', {
 			method: 'POST',
