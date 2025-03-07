@@ -285,7 +285,7 @@ values[] // using integer sample id
 				})
 				return image
 			} catch (e) {
-				throw 'Error reading image file:' + imagePath
+				throw `Error reading image file: ${imagePath}. Error${e}`
 			}
 		}
 
