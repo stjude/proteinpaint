@@ -162,11 +162,11 @@ tape('Box plot with user settings', test => {
 
 	const settings = {
 		boxplotWidth: 300,
-		color: 'yellow',
+		color: 'rgb(255, 255, 0)',
 		labelPad: 40,
 		rowHeight: 30,
 		rowSpace: 20,
-		darkMode: true
+		displayMode: 'dark'
 	}
 
 	runpp({
@@ -205,7 +205,9 @@ tape('Box plot with user settings', test => {
 
 		test.true(
 			dom.div.style('background-color') == 'black' && dom.axis.select('path').attr('stroke') == 'white',
-			`Should render boxplot with dark background and white text when darkMode is ${settings.darkMode}.`
+			`Should render boxplot with dark background and white text when displayMode == dark is ${
+				settings.displayMode == 'dark'
+			}.`
 		)
 
 		if (test['_ok']) boxplot.Inner.app.destroy()

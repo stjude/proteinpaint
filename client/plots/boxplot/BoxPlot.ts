@@ -148,12 +148,16 @@ class TdbBoxplot extends RxComponentInner {
 				getDisplayStyle: (plot: PlotConfig) => (plot.term2 ? 'none' : '')
 			},
 			{
-				label: 'Dark mode',
+				label: 'Display mode',
 				title: 'Apply a dark theme to the plot',
-				type: 'checkbox',
+				type: 'radio',
 				chartType: 'boxplot',
-				boxLabel: '',
-				settingsKey: 'darkMode'
+				settingsKey: 'displayMode',
+				options: [
+					{ label: 'Default', value: 'default' },
+					{ label: 'Filled', value: 'filled' },
+					{ label: 'Dark mode', value: 'dark' }
+				]
 			}
 		]
 		this.components.controls = await controlsInit({
@@ -255,7 +259,7 @@ export function getDefaultBoxplotSettings(app, overrides = {}) {
 	const defaults: BoxPlotSettings = {
 		boxplotWidth: 550,
 		color: plotColor,
-		darkMode: false,
+		displayMode: 'default',
 		labelPad: 10,
 		isLogScale: false,
 		isVertical: false,

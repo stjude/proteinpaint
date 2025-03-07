@@ -25,7 +25,8 @@ export class BoxPlotInteractions {
 	download() {
 		//May add more options in the future
 		const svg = this.dom.svg.node() as Node
-		to_svg(svg, `boxplot`, { apply_dom_styles: true })
+		const plotConfig = this.app.getState().plots.find((p: PlotConfig) => p.id === this.id)
+		to_svg(svg, `${plotConfig.term.term.name} box plot`, { apply_dom_styles: true })
 	}
 
 	help() {
