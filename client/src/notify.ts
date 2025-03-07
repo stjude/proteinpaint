@@ -306,15 +306,17 @@ function handleMessageData(_data, opts = {} as any) {
 		if (refresh.mode == 'none') {
 			// console.log(`skipped refresh in sessionRefresh.mode='none'`)
 		} else if (refresh.mode == 'appOnly') {
+			console.clear()
 			if (refresh.pendingCall) clearTimeout(refresh.pendingCall)
 			// debounce
 			refresh.pendingCall = setTimeout(refresh.callback, 500)
 		} else if (refresh.mode == 'full') {
-			if (refresh.pendingCall) clearTimeout(refresh.pendingCall)
+			if (refresh.pendingCall) clearTimeout(refresh.pendingCall)//
 			// debounce
 			refresh.pendingCall = setTimeout(() => window.location.reload(), 500)
 		} else if (!refresh.modeOptions[refresh.mode]) {
 			console.warn(`invalid value ${refresh.key}='${refresh.mode}', triggering refresh instead`)
+			console.clear()
 			//refresh.callback()
 			if (refresh.pendingCall) clearTimeout(refresh.pendingCall)
 			// debounce

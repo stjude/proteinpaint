@@ -190,7 +190,7 @@ in such case it will not try to parse it as json
 also the caller should just call dofetch2() without a serverData{}
 rather than dofetch3
 */
-function processResponse(r) {
+async function processResponse(r) {
 	const ct = r.headers.get('content-type') // content type is always present
 	if (!ct) throw `missing response.header['content-type']`
 	if (ct.includes('/json')) {
@@ -199,9 +199,90 @@ function processResponse(r) {
 	if (ct.includes('/text')) {
 		return r.text()
 	}
+	if (ct.includes('multipart')) {
+		const boundary = ct.split('boundary=')[1]
+		return processMultiPart(r, boundary)
+	}
 	// call blob() as catch-all
 	// https://developer.mozilla.org/en-US/docs/Web/API/Response
 	return r.blob()
+}
+
+/*
+	manually tested to handle gdc.mafBuild multipart/mixed response
+
+	expected chunk format
+	--boundary-text-from-HTTP-headers-content-type
+	header-key1: header-value1
+	header-key2: header-value2
+
+	...json, text, blob, value, etc...
+	--boundary-text-from-HTTP-headers-content-type
+	... same format as previous chunk ...
+
+	--boundary-text-from-HTTP-headers-content-type--
+*/
+async function processMultiPart(res, _boundary) {
+	const boundary = `--${_boundary}`
+	const parts = []
+	const decoder = new TextDecoder()
+	const bytes = []
+
+	let chunks=[], headerStr
+	for await (const chunk of res.body) {
+    const text = (decoder.decode(chunk)).trimStart()
+    if (text.startsWith(boundary) && (text.endsWith('\n\n') || text.endsWith(boundary + '--'))) {
+    	if (headerStr && chunks.length) {
+    		parts.push(processPart(headerStr, chunks, text))
+    		chunks = []
+    	}
+    	headerStr = text.slice(boundary.length+1)
+    	// assume that multiple text-only parts might be read as one chunk,
+    	// detect and handle such cases; this also assumes that non-text chunk
+    	// will NOT be streamed/read in the same chunk as text-only header segments
+    	const segments = headerStr.split(boundary)
+    	if (segments.length > 1) {
+    		for(const s of segments) {
+	    		const j = s.indexOf('\n\n')
+	    		if (j == -1) break
+	    		const headers = s.slice(0, j)
+	    		const subchunk = s.slice(j)
+	    		if (!subchunk) {
+	    			headerStr = headers
+	    			break
+	    		}
+	    		parts.push(processPart(headers, [], subchunk.trim()))
+	    	}
+    	}
+    	continue
+    } else {
+    	chunks.push(chunk)
+    }
+  }
+  return parts
+}
+
+function processPart(headerStr, chunks, text) {
+	const headerLines = headerStr.split('\n')
+	const headers = {}
+	for(const line of headerLines) {
+		if (line === '') continue
+		const [key, val] = line.split(':')
+		headers[key.trim().toLowerCase()] = val.trim().toLowerCase()
+	}
+	
+  const type = headers['content-type']
+  if (type === 'application/octet-stream') {
+    return {headers, body: new Blob(chunks, {type})}
+  } else if (type.includes('/json')) {
+    return {headers, body: JSON.parse(text)}
+  } else if (type.includes('/text')) {
+    return {headers, body: text}
+  } else {
+  	// call blob() as catch-all
+  	// https://developer.mozilla.org/en-US/docs/Web/API/Response
+    return {headers, body: new Blob(chunks, {type})}
+  }
 }
 
 const defaultServerDataCache = {}

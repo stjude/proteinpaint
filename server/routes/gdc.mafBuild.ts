@@ -52,20 +52,36 @@ async function buildMaf(q: GdcMafBuildRequest, res, ds) {
 		columns: q.columns,
 		host: joinUrl(host.rest, 'data') // must use the /data/ endpoint from current host
 	}
+	const boundary = 'GDC_MAF_MULTIPART_BOUNDARY_2025'
+	res.setHeader('content-type', `multipart/mixed; boundary=${boundary}`)
+	res.write(`--${boundary}`)
+	res.write('\ncontent-disposition: attachment; filename=cohort.maf.gz')
+	res.write('\ncontent-type: application/octet-stream\n\n')
+	res.flush() // header text should be sent as a separate chunk from the content that will be streamed next
 
 	const rustStream = run_rust_stream('gdcmaf', JSON.stringify(arg))
-	res.setHeader('Content-Type', 'application/octet-stream')
-	res.setHeader('Content-Disposition', 'attachment; filename=cohort.maf.gz')
-	rustStream.pipe(res)
+	rustStream.pipe(res, { end: false })
 
 	rustStream.on('end', () => {
+		res.write(`\n--${boundary}`)
+		res.write('\ncontent-type: application/json')
+		res.flush()
+		res.write('\n\n' + JSON.stringify({ ok: true, status: 'ok', message: 'Processing complete' }))
+		res.flush()
+		res.write(`\n--${boundary}--`)
 		// report amount of time taken to run rust
 		mayLog('rust gdcmaf', Date.now() - t0)
 		res.end()
 	})
 
-	rustStream.on('error', err => {
-		console.error(err)
+	rustStream.on('error', error => {
+		res.write(`\n--${boundary}`)
+		res.write('\ncontent-type: application/json')
+		res.flush()
+		res.write('\n\n' + JSON.stringify({ status: 'error', error }))
+		res.flush()
+		res.write(`\n--${boundary}--`)
+		console.error(error)
 		res.statusCode = 500
 		res.end('Internal Server Error')
 	})
