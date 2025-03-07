@@ -9,6 +9,9 @@ import summaryStats from '#shared/descriptive.stats.js'
 import { isNumericTerm } from '#shared/terms.js'
 import { getBinsDensity } from '#shared/violin.bins.js'
 import { numericBins, parseValues } from './termdb.boxplot.ts'
+import serverconfig from '../src/serverconfig.js'
+import run_R from '../src/run_R.js'
+import path from 'path'
 
 const minSampleSize = 5 // a group below cutoff will not compute violin
 
@@ -82,7 +85,7 @@ export async function trigger_getViolinPlotData(
 	// wilcoxon test data to return to client
 	await getWilcoxonData(q.divideTw, result)
 
-	createCanvasImg(q, result, ds)
+	await createCanvasImg(q, result, ds)
 
 	return result
 }
@@ -209,7 +212,7 @@ function setResponse(valuesObject: any, data: ValidGetDataResponse, q: ViolinReq
 	return result
 }
 
-function createCanvasImg(q: ViolinRequest, result: { [index: string]: any }, ds: { [index: string]: any }) {
+async function createCanvasImg(q: ViolinRequest, result: { [index: string]: any }, ds: { [index: string]: any }) {
 	// size on x-y for creating circle and ticks
 	if (!q.radius) q.radius = 5
 	// assign defaults as needed
@@ -281,10 +284,32 @@ function createCanvasImg(q: ViolinRequest, result: { [index: string]: any }, ds:
 
 		plot.src = canvas.toDataURL()
 		// create bins for violins
-		plot.density = getBinsDensity(plot, q.isKDE, q.ticks)
+		plot.density = await getDensity(plot.values)
 
 		//generate summary stat values
 		plot.summaryStats = summaryStats(plot.values).values
 		delete plot.values
 	}
+}
+
+export async function getDensity(data) {
+	if (data.length == 1) {
+		return { bins: [{ x0: data[0], density: 0 }], densityMin: 0, densityMax: 0, xMin: data[0], xMax: data[0] }
+	}
+	const densityScript = path.join(serverconfig.binpath, 'utils', 'density.R')
+	const result: { x: number[]; y: number[] } = JSON.parse(await run_R(densityScript, JSON.stringify(data)))
+	const bins: any = []
+	let densityMin = Infinity
+	let densityMax = -Infinity
+	let xMin = Infinity
+	let xMax = -Infinity
+	for (const [i, x] of Object.entries(result.x)) {
+		const density = result.y[i]
+		xMin = Math.min(xMin, x)
+		xMax = Math.max(xMax, x)
+		densityMin = Math.min(densityMin, density)
+		densityMax = Math.max(densityMax, density)
+		bins.push({ x0: x, density })
+	}
+	return { bins, densityMin, densityMax, xMin, xMax }
 }
