@@ -7,6 +7,9 @@ All notable changes to this project will be documented in this file.
 Features:
 - Allow sorting on barplot columns in tables.
 
+Fixes:
+- Do not render a violin for plots with less than or equal to five samples.
+
 
 ## 2.109.1
 
