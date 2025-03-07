@@ -243,7 +243,8 @@ class MassGroups {
 			showTermsTree(
 				summarizeDiv,
 				term => {
-					const tw = isNumericTerm(term) ? { term, q: { mode: 'continuous' } } : term
+					const tw = { term }
+					if (isNumericTerm(term)) tw.q = { mode: 'continuous' }
 					openSummaryPlot(tw, samplelstTW, this.app, id, () => this.newId)
 				},
 				this.app,
@@ -604,13 +605,8 @@ export async function openPlot(chartType, term, term2, app, id, newId) {
 	})
 }
 
-export async function openSummaryPlot(term, samplelstTW, app, id, newId) {
-	// barchart config.term{} name is confusing, as it is actually a termsetting object, not term
-	// thus convert the given term into a termwrapper
-	// tw.q can be missing and will be filled in with default setting
-	const tw = term.term ? term : { term }
-
-	let config = {
+export async function openSummaryPlot(tw, samplelstTW, app, id, newId) {
+	const config = {
 		chartType: 'summary',
 		childType: tw.q?.mode == 'continuous' ? 'violin' : 'barchart',
 		term: tw,

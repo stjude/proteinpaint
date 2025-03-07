@@ -743,7 +743,7 @@ export function setInteractivity(self) {
 			showTermsTree(
 				summarizeDiv,
 				term => {
-					openSummaryPlot(term, tw, self.app, self.id)
+					openSummaryPlot({ term }, tw, self.app, self.id)
 				},
 				self.app,
 				self.dom.tip
