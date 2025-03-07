@@ -1,1 +1,2 @@
-
+Features
+ - Allow sorting on barplot columns in tables. 
