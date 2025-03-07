@@ -5,6 +5,8 @@ import { boxplot_getvalue } from '../src/utils.js'
 import { sortKey2values } from './termdb.violin.ts'
 import { roundValueAuto } from '#shared/roundValue.js'
 
+const minSampleSize = 5 // a group below cutoff will not compute boxplot
+
 export const api: RouteApi = {
 	endpoint: 'termdb/boxplot',
 	methods: {
@@ -131,7 +133,7 @@ function setHiddenPlots(term: any, plots: any) {
 
 function setDescrStats(boxplot: BoxPlotData, sortedValues: number[]) {
 	/** Return the total value for legend rendering */
-	if (sortedValues.length < 5) return [{ id: 'total', label: 'Total', value: sortedValues.length }]
+	if (sortedValues.length < minSampleSize) return [{ id: 'total', label: 'Total', value: sortedValues.length }]
 	//boxplot_getvalue() already returns calculated stats
 	//Format data rather than recalculate
 	const mean = sortedValues.reduce((s, i) => s + i, 0) / sortedValues.length

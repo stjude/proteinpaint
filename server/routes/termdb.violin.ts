@@ -10,6 +10,8 @@ import { isNumericTerm } from '#shared/terms.js'
 import { getBinsDensity } from '#shared/violin.bins.js'
 import { numericBins, parseValues } from './termdb.boxplot.ts'
 
+const minSampleSize = 5 // a group below cutoff will not compute violin
+
 export const api: RouteApi = {
 	endpoint: 'termdb/violin',
 	methods: {
@@ -248,9 +250,9 @@ function createCanvasImg(q: ViolinRequest, result: { [index: string]: any }, ds:
 		ctx.strokeStyle = 'rgba(0,0,0,0.8)'
 		ctx.lineWidth = q.strokeWidth / q.devicePixelRatio
 		ctx.globalAlpha = 0.5
-		// No violin is rendered when the values is less than 5
+		// No violin is rendered when the values is less than cutoff
 		//Render in black so the user can see the data
-		ctx.fillStyle = plot.values.length <= 5 ? 'black' : '#ffe6e6'
+		ctx.fillStyle = plot.values.length <= minSampleSize ? 'black' : '#ffe6e6'
 
 		//scaling for sharper image
 		if (q.devicePixelRatio != 1) {
