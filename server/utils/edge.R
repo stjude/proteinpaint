@@ -119,6 +119,17 @@ normalization_time <- system.time({
 })
 #cat("Normalization time: ", normalization_time[3], " seconds\n")
 
+# Saving MDS plot image
+set.seed(as.integer(Sys.time())) # Set the seed according to current time
+cachedir <- input$cachedir # Importing serverconfig.cachedir
+random_number <- runif(1, min = 0, max = 1) # Generating random number
+mds_image_name <- paste0("edgeR_mds_temp_",random_number,".png") # Generating random image name so that simultaneous server side requests do NOT generate the same edgeR file name
+png(filename = paste0(cachedir,"/",mds_image_name), width = 1000, height = 1000, res = 200) # Opening a png device
+par(oma = c(1, 1, 1, 1)) # Creating a margin
+plotMDS(y) # Plot the edgeR MDS plot
+# dev.off() # Gives a null device message which breaks JSON. Commenting it out for now, will investigate it later
+
+
 # Differential expression analysis
 if (length(input$conf1) == 0) { # No adjustment of confounding factors
     design <- model.matrix(~conditions) # Based on the protocol defined in section 1.4 of edgeR manual https://bioconductor.org/packages/release/bioc/vignettes/edgeR/inst/doc/edgeRUsersGuide.pdf
@@ -166,6 +177,10 @@ if (length(input$conf1) == 0) { # No adjustment of confounding factors
           })
           #cat("Time for making design matrix: ", model_gen_time[3], " seconds\n")
     }
+    #print ("y$samples")
+    #print (y$samples)
+    #print ("design")
+    #print (design)
 
     fit_time <- system.time({
         suppressWarnings({
@@ -185,12 +200,12 @@ if (length(input$conf1) == 0) { # No adjustment of confounding factors
     #cat("QL test time: ", test_time[3], " seconds\n")
 }
 
-# Saving fit image
+# Saving QL fit image
 set.seed(as.integer(Sys.time())) # Set the seed according to current time
 cachedir <- input$cachedir # Importing serverconfig.cachedir
 random_number <- runif(1, min = 0, max = 1) # Generating random number
-image_name <- paste0("edgeR_temp_",random_number,".png") # Generating random image name so that simultaneous server side requests do NOT generate the same edgeR file name
-png(filename = paste0(cachedir,"/",image_name), width = 1000, height = 1000, res = 200) # Opening a png device
+ql_image_name <- paste0("edgeR_ql_temp_",random_number,".png") # Generating random image name so that simultaneous server side requests do NOT generate the same edgeR file name
+png(filename = paste0(cachedir,"/",ql_image_name), width = 1000, height = 1000, res = 200) # Opening a png device
 par(oma = c(1, 1, 1, 1)) # Creating a margin
 plotQLDisp(fit) # Plot the edgeR fit
 # dev.off() # Gives a null device message which breaks JSON. Commenting it out for now, will investigate it later
@@ -213,7 +228,8 @@ multiple_testing_correction_time <- system.time({
 })
 final_output <- c()
 final_output$gene_data <- output
-final_output$edgeR_fit_quality_image_name <- image_name
+final_output$edgeR_ql_image_name <- ql_image_name
+final_output$edgeR_mds_image_name <- mds_image_name
 #cat("Time for multiple testing correction: ", multiple_testing_correction_time[3], " seconds\n")
 
 # Output results
