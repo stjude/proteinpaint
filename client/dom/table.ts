@@ -760,6 +760,7 @@ function drawBarplotInCell(value: number, td: any, c: Barplot) {
 		.attr('width', 2 * (c.xpadding ?? 0) + (c.axisWidth ?? 0))
 		.attr('height', height)
 		.append('rect')
+		.attr('data-testid', 'sjpp-table-barplot-item')
 		.attr('x', x1)
 		.attr('y', 0)
 		.attr('width', Math.max(1, x2 - x1)) // avoid bar width of fraction of pixel
