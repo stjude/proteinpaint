@@ -87,8 +87,8 @@ export class ViewModel {
 					return d.toString()
 				}
 			},
-			backgroundColor: settings.darkMode ? 'black' : 'white',
-			textColor: settings.darkMode ? 'white' : 'black'
+			backgroundColor: settings.displayMode == 'dark' ? 'black' : 'white',
+			textColor: settings.displayMode == 'dark' ? 'white' : 'black'
 		}
 		return plotDim
 	}
@@ -135,7 +135,7 @@ export class ViewModel {
 			//Set the color for all plots
 			if (!plot.color) plot.color = config?.term2?.term?.values?.[plot.seriesId]?.color || settings.color
 			//Brighten the colors in dark mode for better visibility
-			if (settings.darkMode) plot.color = rgb(plot.color).brighter(0.75)
+			if (settings.displayMode == 'dark') plot.color = rgb(plot.color).brighter(0.75)
 			//Ignore if hidden after the color is set
 			if (plot.isHidden) continue
 			if (plot.boxplot.out.length) {
@@ -145,7 +145,7 @@ export class ViewModel {
 				if (maxOut && maxOut.value > data.absMax) data.absMax = maxOut.value
 				plot.boxplot.radius = this.outRadius
 			}
-			plot.labColor = settings.darkMode ? 'white' : 'black'
+			plot.labColor = settings.displayMode == 'dark' ? 'white' : 'black'
 			plot.x = settings.isVertical ? this.horizPad / 2 + this.incrPad : this.totalLabelSize
 			plot.y = this.topPad + (settings.isVertical ? settings.boxplotWidth + settings.labelPad : this.incrPad)
 			this.incrPad += this.totalRowSize

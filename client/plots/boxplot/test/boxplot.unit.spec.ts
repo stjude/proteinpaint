@@ -32,7 +32,7 @@ const mockDescrStats2 = [
 const mockSettings = {
 	boxplotWidth: 20,
 	color: 'blue',
-	darkMode: false,
+	displayMode: 'default',
 	labelPad: 10,
 	isLogScale: false,
 	isVertical: false,

@@ -17,8 +17,11 @@ export type BoxPlotSettings = {
 	boxplotWidth: number
 	/** Default is common plot color.  */
 	color: string
-	/** Toggle between a white and black background */
-	darkMode: boolean
+	/** Toggle between different display modes
+	 * 'default': colored lines on white background
+	 * 'filled': black lines with filled rects on white background
+	 * 'dark': lighted colored lines on black background */
+	displayMode: string
 	/** Padding between the left hand label and boxplot */
 	labelPad: number
 	/** Toggle between a linear and log scale
@@ -74,7 +77,7 @@ export type FormattedPlotEntry = BoxPlotEntry & {
 	x: number
 	/** incrementing, descending offset for each new plot  */
 	y: number
-	/** Plot label color. Changes per darkMode selection */
+	/** Plot label color. Changes per displayMode selection */
 	labColor: string
 }
 
@@ -102,7 +105,7 @@ export type LegendData = { label: string; items: LegendItemEntry[] }[]
  */
 export type PlotDimensions = {
 	/** Changes background color between white and soft black
-	 * based on darkMode selection */
+	 * based on displayMode selection */
 	backgroundColor: string
 	/** Domain for the axis */
 	domain: number[]
@@ -115,7 +118,7 @@ export type PlotDimensions = {
 		height: number
 	}
 	/** Changes text color for the axis, plot labels, and legend
-	 * between black and white based on darkMode selection */
+	 * between black and white based on displayMode selection */
 	textColor: string
 	/** Title of the plot and coordinates */
 	title: { x: number; y: number; text: string }
