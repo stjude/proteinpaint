@@ -1,1 +1,2 @@
-
+Fixes:
+- Show violin plot when summarizing gene exp data for a custom term
