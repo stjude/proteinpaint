@@ -9,6 +9,7 @@ Features:
 
 Fixes:
 - Do not render a violin for plots with less than or equal to five samples.
+- Show violin plot when summarizing nuermic term types for a custom term
 
 
 ## 2.109.1
