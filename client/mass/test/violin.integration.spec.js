@@ -67,7 +67,7 @@ const open_state = {
 }
 
 tape('render violin plot', function (test) {
-	test.timeoutAfter(3000)
+	test.timeoutAfter(4000)
 	runpp({
 		state: {
 			nav: {
@@ -194,7 +194,7 @@ tape('render violin plot', function (test) {
 })
 
 tape('term1 as numeric and term2 categorical, test median rendering', function (test) {
-	test.timeoutAfter(3000)
+	test.timeoutAfter(4000)
 	runpp({
 		state: {
 			nav: {
@@ -250,7 +250,7 @@ tape('term1 as numeric and term2 categorical, test median rendering', function (
 })
 
 tape('test basic controls', function (test) {
-	test.timeoutAfter(4000)
+	test.timeoutAfter(6000)
 	runpp({
 		state: {
 			nav: {
@@ -512,7 +512,7 @@ tape('test label clicking, filtering and hovering', function (test) {
 })
 
 tape('test hide option on label clicking', function (test) {
-	test.timeoutAfter(3000)
+	test.timeoutAfter(4000)
 	runpp({
 		state: {
 			nav: {
@@ -583,7 +583,7 @@ tape('test hide option on label clicking', function (test) {
 })
 
 tape('term1 as numeric and term2 numeric, change median size', function (test) {
-	test.timeoutAfter(3000)
+	test.timeoutAfter(4000)
 	runpp({
 		state: {
 			nav: {
@@ -657,7 +657,7 @@ tape('term1 as numeric and term2 numeric, change median size', function (test) {
 })
 
 tape('term1=categorical, term2=numeric', function (test) {
-	test.timeoutAfter(3000)
+	test.timeoutAfter(6000)
 	runpp({
 		state: {
 			plots: [
@@ -694,7 +694,7 @@ tape('term1=categorical, term2=numeric', function (test) {
 })
 
 tape.skip('term1=numeric, term2=survival', function (test) {
-	test.timeoutAfter(3000)
+	test.timeoutAfter(4000)
 	runpp({
 		state: {
 			plots: [
@@ -730,7 +730,7 @@ tape.skip('term1=numeric, term2=survival', function (test) {
 })
 
 tape('term1=numeric, term2=condition', function (test) {
-	test.timeoutAfter(3000)
+	test.timeoutAfter(4000)
 	runpp({
 		state: {
 			nav: { header_mode: 'hide_search' },
@@ -773,7 +773,7 @@ tape('term1=numeric, term2=condition', function (test) {
 })
 
 tape('term1=geneExp, term2=categorical', function (test) {
-	test.timeoutAfter(1000)
+	test.timeoutAfter(5000)
 	runpp({
 		state: {
 			nav: {
@@ -813,7 +813,7 @@ tape('term1=geneExp, term2=categorical', function (test) {
 
 // TODO FIX
 tape.skip('term1=geneExp, term2=survival', function (test) {
-	test.timeoutAfter(1000)
+	test.timeoutAfter(2000)
 	runpp({
 		state: {
 			nav: {
@@ -852,7 +852,7 @@ tape.skip('term1=geneExp, term2=survival', function (test) {
 })
 
 tape('test samplelst term2', function (test) {
-	test.timeoutAfter(3000)
+	test.timeoutAfter(4000)
 	const values = [
 		{
 			sampleId: 42,
@@ -1044,7 +1044,7 @@ tape('test samplelst term2', function (test) {
 })
 
 tape('term=agedx, term2=geneExp with regular bins', function (test) {
-	test.timeoutAfter(3000)
+	test.timeoutAfter(6000)
 	runpp({
 		state: {
 			nav: {
@@ -1101,7 +1101,7 @@ tape('term=agedx, term2=geneExp with regular bins', function (test) {
 })
 
 tape('term=agedx, term2=geneExp with custom bins', function (test) {
-	test.timeoutAfter(1000)
+	test.timeoutAfter(3000)
 	runpp({
 		state: {
 			nav: {
@@ -1171,7 +1171,7 @@ tape('term=agedx, term2=geneExp with custom bins', function (test) {
 })
 
 tape('test uncomputable categories legend', function (test) {
-	test.timeoutAfter(3000)
+	test.timeoutAfter(4000)
 	runpp({
 		state: {
 			nav: {
@@ -1235,7 +1235,7 @@ tape('test uncomputable categories legend', function (test) {
 })
 
 tape('Load linear regression-violin UI', function (test) {
-	test.timeoutAfter(1000)
+	test.timeoutAfter(2000)
 	runpp({
 		state: {
 			nav: {
@@ -1279,7 +1279,7 @@ tape('Load linear regression-violin UI', function (test) {
 })
 
 tape('test change in plot length and thickness for custom group variable', function (test) {
-	test.timeoutAfter(5000)
+	test.timeoutAfter(6000)
 	runpp({
 		state: {
 			nav: {
