@@ -1,5 +1,6 @@
 import { format } from 'd3-format'
 import { decimalPlacesUntilFirstNonZero } from '#shared/roundValue.js'
+import { rgb } from 'd3-color'
 import type { BoxPlotResponse } from '#types'
 import type { PlotConfig } from '#mass/types/mass'
 import type { BoxPlotSettings, PlotDimensions, ViewData } from '../BoxPlotTypes'
@@ -133,6 +134,8 @@ export class ViewModel {
 
 			//Set the color for all plots
 			if (!plot.color) plot.color = config?.term2?.term?.values?.[plot.seriesId]?.color || settings.color
+			//Brighten the colors in dark mode for better visibility
+			if (settings.darkMode) plot.color = rgb(plot.color).brighter(0.75)
 			//Ignore if hidden after the color is set
 			if (plot.isHidden) continue
 			if (plot.boxplot.out.length) {
