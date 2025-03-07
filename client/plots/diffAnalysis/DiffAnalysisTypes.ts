@@ -2,7 +2,6 @@ import type { Elem } from '../../types/d3'
 import type { Menu } from '#dom'
 import type { PlotConfig } from '#mass/types/mass'
 import type { TermWrapper } from '@sjcrh/proteinpaint-types'
-import type { VolcanoSettings } from './VolcanoTypes'
 
 /** TODO
  * - add comments
@@ -39,7 +38,7 @@ export type DiffAnalysisOpts = {
 	/** Optional sandbox header */
 	header?: Elem
 	/** Settings overrides, in runpp() call */
-	overrides?: Partial<VolcanoSettings>
+	overrides?: any
 	/** Data points highlighted in the volcano plot */
 	highlightedData: string[]
 }

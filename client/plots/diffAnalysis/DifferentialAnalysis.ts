@@ -6,7 +6,7 @@ import { Menu } from '#dom'
 import { termType2label } from '#shared/terms.js'
 import type { DiffAnalysisDom, DiffAnalysisOpts, DiffAnalysisPlotConfig } from './DiffAnalysisTypes'
 import { DiffAnalysisView } from './view/DiffAnalysisView'
-import { getDefaultVolcanoSettings } from './Volcano'
+import { getDefaultVolcanoSettings } from '../volcano/Volcano.ts'
 import { getDefaultGseaSettings } from '#plots/gsea.js'
 import { DiffAnalysisInteractions } from './interactions/DiffAnalysisInteractions.ts'
 
@@ -101,7 +101,7 @@ class DifferentialAnalysis extends RxComponentInner {
 		const state = this.getState(appState)
 		const config = structuredClone(state.config) as DiffAnalysisPlotConfig
 
-		const volcano = await import(`./Volcano.ts`)
+		const volcano = await import(`../volcano/Volcano.ts`)
 		const gsea = await import(`#plots/gsea.js`)
 
 		this.components.plots = {

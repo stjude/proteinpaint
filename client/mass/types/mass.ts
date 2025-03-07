@@ -4,7 +4,7 @@ import type { Elem } from '../../types/d3'
 import type { ClientCopyGenome } from 'types/global'
 import type { BoxPlotSettings } from '../../plots/boxplot/BoxPlot'
 import type { CorrVolcanoSettings } from '#plots/corrVolcano/CorrelationVolcanoTypes.ts'
-import type { VolcanoSettings } from '../../plots/diffAnalysis/VolcanoTypes.ts'
+import type { VolcanoSettings } from '../../plots/volcano/VolcanoTypes.ts'
 //import { TermWrapper } from '#types'
 
 export type MassAppApi = RxAppApi & {
