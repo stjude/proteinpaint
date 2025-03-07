@@ -288,16 +288,44 @@ tape('Return correct rows on button click', async test => {
 	test.end()
 })
 
+tape('Bar plot rendering', async test => {
+	test.timeoutAfter(100)
+
+	const holder = getHolder()
+	const testCopy = structuredClone(testOpts)
+	testCopy.div = holder
+	testCopy.columns.push({ label: 'Bar plot', barplot: { colorNegative: 'red', colorPositive: 'green' } })
+	testCopy.rows[0].push({ value: -5 })
+	testCopy.rows[1].push({ value: 5 })
+	testCopy.rows[2].push({ value: 1 })
+	renderTable(testCopy)
+
+	const foundBarplots = holder.selectAll('rect[data-testid="sjpp-table-barplot-item"]').nodes()
+	test.equal(foundBarplots.length, testCopy.rows.length, 'Should display bar plots')
+
+	if (test._ok) holder.remove()
+	test.end()
+})
+
 tape('Sort button', async test => {
 	test.timeoutAfter(100)
 
 	const holder = getHolder()
-	testOpts.div = holder
+	const testCopy = structuredClone(testOpts)
+	testCopy.div = holder
+	testCopy.columns.push({
+		label: 'Bar plot',
+		barplot: { colorNegative: 'red', colorPositive: 'green' },
+		sortable: true
+	})
+	testCopy.rows[0].push({ value: -5 })
+	testCopy.rows[1].push({ value: 5 })
+	testCopy.rows[2].push({ value: 1 })
+	renderTable(testCopy)
 
-	renderTable(testOpts)
 	test.equal(
 		holder.selectAll('.sjpp-table-sort-button').nodes().length,
-		testOpts.columns.length,
+		testCopy.columns.length,
 		'Should display sort buttons'
 	)
 
@@ -320,25 +348,6 @@ tape('fillCell', async test => {
 		const text = 'fillCell called at ' + i
 		test.equal(row[1].__td.node().innerHTML, text, text)
 	}
-
-	if (test._ok) holder.remove()
-	test.end()
-})
-
-tape('Bar plot rendering', async test => {
-	test.timeoutAfter(100)
-
-	const holder = getHolder()
-	const testCopy = structuredClone(testOpts)
-	testCopy.div = holder
-	testCopy.columns.push({ label: 'Bar plot', barplot: { colorNegative: 'red', colorPositive: 'green' } })
-	testCopy.rows[0].push({ value: -5 })
-	testCopy.rows[1].push({ value: 5 })
-	testCopy.rows[2].push({ value: 1 })
-	renderTable(testCopy)
-
-	const foundBarplots = holder.selectAll('rect[data-testid="sjpp-table-barplot-item"]').nodes()
-	test.equal(foundBarplots.length, testCopy.rows.length, 'Should display bar plots')
 
 	if (test._ok) holder.remove()
 	test.end()

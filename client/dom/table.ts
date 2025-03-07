@@ -302,14 +302,7 @@ export function renderTable({
 			if (header?.allowSort) {
 				//Only create sort button for columns with data
 				//(i.e. not html columns)
-				if (c.sortable) {
-					const callback = (opt: string) => sortTableCallBack(i, rows, opt)
-					const updateTable = (newRows: any) => {
-						rows = newRows
-						updateRows()
-					}
-					createSortButton(th, callback, updateTable)
-				}
+				if (c.sortable) addSort(th, i)
 			}
 			if (header?.style) {
 				for (const k in header.style) th.style(k, header.style[k])
@@ -319,10 +312,20 @@ export function renderTable({
 				th.text('') // quick fix; th.text() has been assigned above in order that sort button can show. here clear the text to render axis svg instead
 				prepareBarPlot(c.barplot, i, rows)
 				drawBarplotAxis(c, th)
+				if (c.sortable) addSort(th, i) //Add the sort after the scale and title is created
 				continue
 			}
 		}
 	}
+	function addSort(th, i) {
+		const callback = (opt: string) => sortTableCallBack(i, rows, opt)
+		const updateTable = (newRows: any) => {
+			rows = newRows
+			updateRows()
+		}
+		createSortButton(th, callback, updateTable)
+	}
+
 	const tbody = table.append('tbody')
 	function updateRows() {
 		tbody.selectAll('tr').remove()
