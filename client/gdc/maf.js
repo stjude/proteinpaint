@@ -324,7 +324,7 @@ async function getFilesAndShowTable(obj) {
 		selectAll: true, // comment out for quicker testing
 		dataTestId: 'sja_mafFileTable',
 		header: { allowSort: true },
-		selectedRows: [], //[198], // comment out for quicker testing
+		selectedRows: [], //[198], // uncomment out for quicker testing
 		buttons: [
 			{
 				text: 'Aggregate selected MAF files and download',
@@ -377,8 +377,9 @@ async function getFilesAndShowTable(obj) {
 		  //   }
 			// ] 
 			data = await dofetch3('gdc/mafBuild', { body: { fileIdLst, columns: outColumns } })
-			const err = data.find(d => d.body?.error)
-			if (err) throw err.body.error || err.body.message
+			// console.log(380, 'gdc/mafBuild response', data)
+			const err = data.find(d => d.body?.error || d.body?.errors)
+			// if (err) throw err.body.error || JSON.stringify(err.body.errors, null, '  ') || err.body.message
 		} catch (e) {
 			sayerror(obj.errDiv, e)
 			button.innerHTML = oldText
@@ -391,8 +392,12 @@ async function getFilesAndShowTable(obj) {
 
 		const confirm = data.pop()
 		if (!confirm?.body?.ok) {
-			console.log(confirm, data)
-			throw confirm?.body?.message || 'error in maf data processing'
+			// console.log(394, confirm, data)
+			if (confirm.body?.error || confirm.body?.errors || confirm.body?.message) {
+				sayerror(obj.errDiv, JSON.stringify(confirm.body, null, '  '))
+				//return
+			}
+			//throw confirm?.body?.message || 'error in maf data processing'
 		} // else console.log(392, confirm.body)
 
 		// download the file to client
