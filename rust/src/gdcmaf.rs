@@ -108,7 +108,6 @@ async fn main() -> Result<(),Box<dyn std::error::Error>> {
     //downloading maf files parallelly and merge them into single maf file
     let download_futures = futures::stream::iter(
         url.into_iter().map(|url|{
-            let errors = &errors;
             async move {
                 match reqwest::get(&url).await {
                     Ok(resp) if resp.status().is_success() => {
@@ -123,39 +122,23 @@ async fn main() -> Result<(),Box<dyn std::error::Error>> {
                                     }
                                     Err(e) => {
                                         let error_msg = format!("Decompression failed: {}", e);
-                                        errors.lock().unwrap().push(ErrorEntry {
-                                            url: url.clone(),
-                                            error: error_msg.clone(),
-                                        });
-                                        return Err((url.clone(), error_msg))
+                                        Err((url.clone(), error_msg))
                                     }
                                 }
                             }
                             Err(e) => {
                                 let error_msg = format!("Decompression failed: {}", e);
-                                errors.lock().unwrap().push(ErrorEntry {
-                                    url: url.clone(),
-                                    error: error_msg.clone(),
-                                });
-                                return Err((url.clone(), error_msg))
+                                Err((url.clone(), error_msg))
                             }
                         }
                     }
                     Ok(resp) => {
                         let error_msg = format!("HTTP error: {}", resp.status());
-                        errors.lock().unwrap().push(ErrorEntry {
-                            url: url.clone(),
-                            error: error_msg.clone(),
-                        });
-                        return Err((url.clone(), error_msg))
+                        Err((url.clone(), error_msg))
                     }
                     Err(e) => {
                         let error_msg = format!("Server request failed: {}", e);
-                        errors.lock().unwrap().push(ErrorEntry {
-                            url: url.clone(),
-                            error: error_msg.clone(),
-                        });
-                        return Err((url.clone(), error_msg))
+                        Err((url.clone(), error_msg))
                     }
                 }
             }
@@ -184,8 +167,11 @@ async fn main() -> Result<(),Box<dyn std::error::Error>> {
                     });
                 }
             }
-            Err((url, _error)) => {
-                eprintln!("{}",url);
+            Err((url, error)) => {
+                errors.lock().unwrap().push(ErrorEntry {
+                    url,
+                    error,
+                })
             }
         }
     };
