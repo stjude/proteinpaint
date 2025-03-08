@@ -9,7 +9,7 @@ export default class RedisClientHolder {
 	private static instance: RedisClientHolder = new RedisClientHolder()
 	private clients: Map<string, RedisClientType> = new Map()
 	private shardManager = ShardManager.getInstance()
-	private redisShardingAlgorithm: ShardingAlgorithm<any> = this.shardManager.shardingAlgorithmsMap.get(
+	private redisShardingAlgorithm: ShardingAlgorithm<any> | undefined = this.shardManager.shardingAlgorithmsMap.get(
 		RedisShardingAlgorithm.REDIS_SHARDING_KEY
 	)
 
@@ -51,7 +51,7 @@ export default class RedisClientHolder {
 	}
 
 	public async set(key: string, value: string): Promise<void> {
-		const redisShard: RedisShard = this.redisShardingAlgorithm.getShard(key)
+		const redisShard: RedisShard = this.redisShardingAlgorithm?.getShard(key)
 
 		const client = this.getClient(redisShard.url)
 		if (client) {
@@ -66,12 +66,12 @@ export default class RedisClientHolder {
 	}
 
 	public async get(key: string): Promise<string | null | undefined> {
-		const redisShard: RedisShard = this.redisShardingAlgorithm.getShard(key)
+		const redisShard: RedisShard = this.redisShardingAlgorithm?.getShard(key)
 		return this.clients.get(redisShard.url)?.get(key)
 	}
 
 	public async getAll(key: string): Promise<string[]> {
-		const redisShard: RedisShard = this.redisShardingAlgorithm.getShard(key)
+		const redisShard: RedisShard = this.redisShardingAlgorithm?.getShard(key)
 
 		return this.clients.get(redisShard.url)?.keys('*') || []
 	}
