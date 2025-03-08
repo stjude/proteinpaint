@@ -407,7 +407,6 @@ async function getFilesAndShowTable(obj) {
 
 		const runStatus = data.pop()
 		if (!runStatus?.body?.ok) {
-			console.log(394, runStatus)
 			// revise if run status is changed
 			mayDisplayRunStatusErrors(runStatus.body?.errors)
 			// other unstructured errors; display as plain text
