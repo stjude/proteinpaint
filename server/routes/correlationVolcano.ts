@@ -4,7 +4,6 @@ import { getData } from '../src/termdb.matrix.js'
 import run_R from '../src/run_R.js'
 import serverconfig from '../src/serverconfig.js'
 import { mayLog } from '#src/helpers.ts'
-import { stdDev } from '#shared/violin.bins.js'
 import path from 'path'
 
 // to avoid crashing r, an array must meet below; otherwise the variable is skipped
@@ -143,4 +142,15 @@ export function validate_correlationVolcano(ds: any) {
 	} else {
 		throw 'unknown cv.variables.type'
 	}
+}
+
+export function mean(data) {
+	return data.reduce((sum, value) => sum + value, 0) / data.length
+}
+
+export function stdDev(data) {
+	const meanValue = mean(data)
+	const squaredDifferences = data.map(value => Math.pow(value - meanValue, 2))
+	const variance = squaredDifferences.reduce((sum, value) => sum + value, 0) / data.length
+	return Math.sqrt(variance)
 }
