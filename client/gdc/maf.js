@@ -408,7 +408,7 @@ async function getFilesAndShowTable(obj) {
 		const runStatus = data.pop()
 		if (!runStatus?.body?.ok) {
 			// revise if run status is changed
-			mayDisplayRunStatusErrors(runStatus.body?.errors)
+			if (Array.isArray(runStatus.body?.errors)) displayRunStatusErrors(runStatus.body.errors)
 			// other unstructured errors; display as plain text
 			if (runStatus.body?.error) sayerror(obj.errDiv, runStatus.body.error)
 			if (runStatus.body?.message) sayerror(obj.errDiv, runStatus.body.message)
@@ -439,7 +439,8 @@ async function getFilesAndShowTable(obj) {
 			.style('display', 'none')
 	}
 
-	function mayDisplayRunStatusErrors(errors) {
+	function displayRunStatusErrors(errors) {
+		// errors[] each ele: {error:str, url:str}
 		const emptyFiles = [],
 			failedFiles = []
 		for (const e of errors) {
