@@ -67,31 +67,19 @@ function init({ genomes }) {
 }
 
 async function getSessionId(cookieJar, getCookieString, setCookie, wsimage, ds, sampleId) {
-	const shardManager = ShardManager.getInstance()
-
-	const tileServer: TileServerShard = shardManager.shardingAlgorithmsMap
-		?.get(TileServerShardingAlgorithm.TILE_SERVER_SHARDING_KEY)
-		?.getShard(wsimage)
-
-	if (!tileServer) throw new Error('No tile server found')
-
-	const redis: RedisShard = shardManager.shardingAlgorithmsMap
-		?.get(RedisShardingAlgorithm.REDIS_SHARDING_KEY)
-		?.getShard(wsimage)
-
-	if (!redis) throw new Error('No redis found')
-
-	const sessionManager = SessionManager.getInstance(redis)
+	const sessionManager = SessionManager.getInstance()
 
 	const sessionData = await sessionManager.getSession(wsimage)
 
 	if (sessionData) return sessionData.imageSessionId
 
-	const invalidateResult = await sessionManager.invalidateSessions(3, 5)
+	const invalidateResult = await sessionManager.invalidateSessions(wsimage, 20, 60)
 
 	if (!invalidateResult.success) throw new Error('Session invalidation failed')
 
 	await invalidateSessions(invalidateResult)
+
+	const tileServer = sessionManager.getTileServerShard(wsimage)
 
 	await ky.get(`${tileServer.url}/tileserver/session_id`, {
 		timeout: 50000,

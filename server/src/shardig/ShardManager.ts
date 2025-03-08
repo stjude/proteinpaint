@@ -5,7 +5,7 @@ import { RedisShardingAlgorithm } from '#src/shardig/RedisShardingAlgorithm.ts'
 
 export class ShardManager {
 	private static instance: ShardManager | undefined
-	public shardingAlgorithmsMap: Map<string, ShardingAlgorithm<any>> | undefined
+	public shardingAlgorithmsMap: Map<string, ShardingAlgorithm<any>>
 
 	private constructor(map: Map<string, ShardingAlgorithm<any>>) {
 		this.shardingAlgorithmsMap = map
