@@ -311,5 +311,6 @@ export async function getDensity(data) {
 		densityMax = Math.max(densityMax, density)
 		bins.push({ x0: x, density })
 	}
+	bins.unshift({ x0: xMin, density: 0 }) //close the path
 	return { bins, densityMin, densityMax, xMin, xMax }
 }
