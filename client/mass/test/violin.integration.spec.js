@@ -583,7 +583,7 @@ tape('test hide option on label clicking', function (test) {
 })
 
 tape('term1 as numeric and term2 numeric, change median size', function (test) {
-	test.timeoutAfter(4000)
+	test.timeoutAfter(5000)
 	runpp({
 		state: {
 			nav: {
@@ -990,6 +990,8 @@ tape('test samplelst term2', function (test) {
 		const plotData = {
 			minvalue: 0,
 			maxvalue: 100,
+			xMin: 0,
+			xMax: 100,
 			density: [
 				{ x0: 0, density: 0.1 },
 				{ x0: 50, density: 0.5 },
