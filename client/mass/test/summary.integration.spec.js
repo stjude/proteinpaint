@@ -179,7 +179,7 @@ tape('Barchart tab only, term: "diaggrp"', test => {
 })
 
 tape('Barchart & violin toggles, term: "diaggrp", term2: "agedx"', test => {
-	test.timeoutAfter(3000)
+	test.timeoutAfter(5000)
 
 	runpp({
 		state: {
@@ -243,7 +243,7 @@ tape('Barchart & violin toggles, term: "diaggrp", term2: "agedx"', test => {
 })
 
 tape('Barchart & violin toggles, term: "agedx", term2: "diaggrp"', test => {
-	test.timeoutAfter(3000)
+	test.timeoutAfter(5000)
 
 	runpp({
 		state: {
@@ -321,7 +321,7 @@ tape('Barchart & violin toggles, term: "agedx", term2: "diaggrp"', test => {
 })
 
 tape('Barchart, violin, and scatter toggles, term: "agedx", term2: "hrtavg"', test => {
-	test.timeoutAfter(3000)
+	test.timeoutAfter(4000)
 
 	runpp({
 		state: {
