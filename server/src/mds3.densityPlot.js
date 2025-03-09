@@ -35,9 +35,9 @@ export async function get_densityplot(term, samples) {
 		}
 	}
 
-	const density = getDensity(values)
-	if (!Array.isArray(density.bins)) throw 'getBinsDensity does not return []'
-	if (density.bins.length == 0) throw 'getBinsDensity returns an empty array'
+	const density = await getDensity(values)
+	if (!Array.isArray(density.bins)) throw 'getDensity does not return []'
+	if (density.bins.length == 0) throw 'getDensity returns an empty array'
 
 	const result = {
 		minvalue,
@@ -48,8 +48,7 @@ export async function get_densityplot(term, samples) {
 		densityMin: density.densityMin,
 		density: density.bins,
 		samplecount: values.length,
-		unit: term.unit,
-		ticks
+		unit: term.unit
 	}
 
 	return result

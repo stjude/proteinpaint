@@ -11,7 +11,6 @@ export class violinRenderer {
 		this.callback = callback
 		this.shiftx = shiftx
 		this.shifty = shifty
-		console.log(plot)
 		this.svg = holder
 			.append('svg')
 			.attr('width', `${width + 50}px`)
