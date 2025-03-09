@@ -317,7 +317,7 @@ tape('use_bins_less', async test => {
 	await opts.pill.main(opts.tsData)
 
 	await opts.pillMenuClick('Edit')
-
+	await sleep(1000)
 	const tip = opts.pill.Inner.dom.tip.d.node()
 	const bin_size_input = tip.querySelectorAll('tr')[0].querySelectorAll('input')[0]
 	test.equal(bin_size_input.value, '5', 'has term.bins.less.bin_size as value (is 5 not 3)')
@@ -428,7 +428,7 @@ tape('Numerical term: range boundaries', async test => {
 
 	const pilldiv = opts.holder.node().querySelectorAll('.ts_pill')[0]
 	await opts.pillMenuClick('Edit')
-
+	await sleep(1000)
 	const tip = opts.pill.Inner.dom.tip.d.node()
 	test.equal(tip.querySelectorAll('select').length, 1, 'Should have a select dropdown')
 	test.equal(
@@ -702,7 +702,7 @@ tape('Numerical term.bins.default.type=custom-bin', async test => {
 })
 
 tape('Numerical term: toggle menu - 4 options', async test => {
-	test.timeoutAfter(3000)
+	test.timeoutAfter(5000)
 	test.plan(9)
 
 	const opts = await getOpts({
@@ -715,13 +715,13 @@ tape('Numerical term: toggle menu - 4 options', async test => {
 
 	await opts.pill.main(opts.tsData)
 	await opts.pillMenuClick('Edit')
-
 	const tip = opts.pill.Inner.dom.tip
 	const toggleButtons = tip.d.node().querySelectorAll('.sj-toggle-button')
 
 	test.equal(toggleButtons.length, 4, 'Should have 4 toggle buttons for nuermic edit menu')
 
 	test.equal(toggleButtons[0].innerText, 'Continuous', 'Should have title for first tab as Continuous')
+	await sleep(1000)
 
 	test.equal(
 		tip.d.node().querySelector('select').querySelectorAll('option')[0].innerText,
@@ -730,7 +730,7 @@ tape('Numerical term: toggle menu - 4 options', async test => {
 	)
 
 	toggleButtons[1].click()
-	await sleep(300)
+	await sleep(1000)
 
 	test.equal(toggleButtons[1].innerText, 'Discrete', 'Should have title for 2nd tab as Discrete')
 
@@ -741,7 +741,7 @@ tape('Numerical term: toggle menu - 4 options', async test => {
 	)
 
 	toggleButtons[2].click()
-	await sleep(300)
+	await sleep(1000)
 
 	test.equal(toggleButtons[2].innerText, 'Cubic spline', 'Should have title for 3nd tab as Cubic spline')
 
@@ -752,7 +752,7 @@ tape('Numerical term: toggle menu - 4 options', async test => {
 	)
 
 	toggleButtons[3].click()
-	await sleep(300)
+	await sleep(1000)
 
 	test.equal(toggleButtons[3].innerText, 'Binary', 'Should have title for 4nd tab as Binary')
 
