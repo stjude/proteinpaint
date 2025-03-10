@@ -216,6 +216,12 @@ function getChartTypeList(self, state) {
 		},
 
 		{
+			label: 'Pathway Analysis',
+			chartType: 'pathwayAnalysis',
+			clickTo: self.loadChartSpecificMenu
+		},
+
+		{
 			label: self.getRegressionBtnLabel(state),
 			chartType: 'regression',
 			clickTo: self.loadChartSpecificMenu
