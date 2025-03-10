@@ -134,7 +134,8 @@ export async function barchart_data(q, ds, tdb) {
 				if (q?.binColored) {
 					for (const bin of bins[i]) {
 						const qbin = q.binColored
-						if (bin.start == qbin.start && bin.stop == qbin.stop) bin.color = qbin.color
+						const binMatched = qbin.find(i => bin.start == i.start && bin.stop == i.stop)
+						if (binMatched) bin.color = binMatched.color
 					}
 				}
 				for (const [sampleId, values] of Object.entries(data.samples)) {
