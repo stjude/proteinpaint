@@ -118,9 +118,8 @@ export class VolcanoPlotView {
 		const holder = this.dom.holder
 			.append('div')
 			.attr('id', 'sjpp-volcano-stats')
-			.style('display', 'inline-block')
+			.style('display', 'block')
 			.style('vertical-align', 'top')
-			.style('margin-top', '50px')
 		const table = table2col({ holder })
 		for (const d of statsData) {
 			const [td1, td2] = table.addRow()
