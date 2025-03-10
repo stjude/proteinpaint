@@ -1,6 +1,7 @@
 import { dofetch3 } from '#common/dofetch'
 import { make_radios, renderTable, sayerror, Menu, table2col } from '#dom'
 import { fileSize } from '#shared/fileSize.js'
+import { select } from 'd3-selection'
 
 /*
 a UI to list open-access maf files from current cohort
@@ -342,12 +343,23 @@ async function getFilesAndShowTable(obj) {
 			button.disabled = true
 			return
 		}
+
+		// TEMP fix! later add `buttonsToLeft:true` at line 321; this fix avoid changing table.ts to make it easy to cherrypick for 2.16 gdc release
+		select(button.parentElement).style('float', 'left')
+
 		button.disabled = false
 		button.innerHTML =
 			sum < result.maxTotalSizeCompressed
 				? `Download ${fileSize(sum)} compressed MAF data`
 				: `Download ${fileSize(result.maxTotalSizeCompressed)} compressed MAF data (${fileSize(sum)} selected)`
 	}
+
+	/* after table is created, on clicking download btn for first time, create two <span> after download btn,
+	in order to show server-sent download status
+	scope them for easy access by helpers,
+	detect if these placeholders are truthy so as to only create them once
+	*/
+	let serverMessage1, serverMessage2
 
 	async function submitSelectedFiles(lst, button) {
 		const outColumns = mafColumns.filter(i => i.selected).map(i => i.column)
@@ -356,30 +368,33 @@ async function getFilesAndShowTable(obj) {
 			return
 		}
 
+		mayCreateServerMessageSpan(button)
+
 		const fileIdLst = []
 		for (const i of lst) {
 			fileIdLst.push(result.files[i].id)
 		}
 		if (fileIdLst.length == 0) return
+
 		const oldText = button.innerHTML
 		button.innerHTML = 'Loading... Please wait'
 		button.disabled = true
+		serverMessage1.style('display', 'none')
+		serverMessage2.style('display', 'none')
 
 		// may disable the "Aggregate" button here and re-enable later
 
 		let data
 		try {
-			// expect multipart response, as preprocessed by dofetch into an array of response data entries
-			// [
-			// 	 {
-			//	   headers: {'content-type': '...', [key?]: string}, 
-			//     body: any
-		  //   }
-			// ] 
+			/* expect multipart response, as preprocessed by dofetch into an array of response data entries
+			 [
+			 	 {
+					   headers: {'content-type': '...', [key?]: string}, 
+			    	  body: any
+		     	 }
+			 ] 
+			*/
 			data = await dofetch3('gdc/mafBuild', { body: { fileIdLst, columns: outColumns } })
-			// console.log(380, 'gdc/mafBuild response', data)
-			const err = data.find(d => d.body?.error || d.body?.errors)
-			// if (err) throw err.body.error || JSON.stringify(err.body.errors, null, '  ') || err.body.message
 		} catch (e) {
 			sayerror(obj.errDiv, e)
 			button.innerHTML = oldText
@@ -390,19 +405,18 @@ async function getFilesAndShowTable(obj) {
 		button.innerHTML = oldText
 		button.disabled = false
 
-		const confirm = data.pop()
-		if (!confirm?.body?.ok) {
-			// console.log(394, confirm, data)
-			if (confirm.body?.error || confirm.body?.errors || confirm.body?.message) {
-				sayerror(obj.errDiv, JSON.stringify(confirm.body, null, '  '))
-				//return
-			}
-			//throw confirm?.body?.message || 'error in maf data processing'
-		} // else console.log(392, confirm.body)
+		const runStatus = data.pop()
+		if (!runStatus?.body?.ok) {
+			// revise if run status is changed
+			if (Array.isArray(runStatus.body?.errors)) displayRunStatusErrors(runStatus.body.errors)
+			// other unstructured errors; display as plain text
+			if (runStatus.body?.error) sayerror(obj.errDiv, runStatus.body.error)
+			if (runStatus.body?.message) sayerror(obj.errDiv, runStatus.body.message)
+		}
 
 		// download the file to client
 		const octetData = data.find(d => d.headers['content-type'] == 'application/octet-stream')
-		if (!octetData) throw 'missing octet data' 
+		if (!octetData) throw 'missing octet data'
 		const href = URL.createObjectURL(octetData.body)
 		// console.log(394, [octetData?.body.size, href.length, href], octetData)
 		const a = document.createElement('a')
@@ -412,5 +426,68 @@ async function getFilesAndShowTable(obj) {
 		document.body.appendChild(a)
 		a.click()
 		document.body.removeChild(a)
+	}
+
+	function mayCreateServerMessageSpan(button) {
+		if (serverMessage1) return // message <span> are already created
+		const holder = select(button.parentElement)
+		serverMessage1 = holder.append('span').attr('class', 'sja_clbtext').style('display', 'none')
+		serverMessage2 = holder
+			.append('span')
+			.attr('class', 'sja_clbtext')
+			.style('margin-left', '10px')
+			.style('display', 'none')
+	}
+
+	function displayRunStatusErrors(errors) {
+		// errors[] each ele: {error:str, url:str}
+		const emptyFiles = [],
+			failedFiles = []
+		for (const e of errors) {
+			if (typeof e.error != 'string') throw '.error=string missing from an entry'
+			if (e.error.startsWith('Empty')) {
+				if (!e.url) throw 'url missing from an "Empty" entry'
+				emptyFiles.push(e.url)
+			} else if (e.error.startsWith('Server request failed')) {
+				if (!e.url) throw 'url missing from a "failed" entry'
+				failedFiles.push(e.url)
+			} else {
+				throw 'unknown error msg from an entry'
+			}
+		}
+		if (emptyFiles.length) {
+			serverMessage1
+				.text(`${emptyFiles.length} empty file${emptyFiles.length > 1 ? 's' : ''}`)
+				.style('display', '')
+				.on('click', event => listFilesInMenu(emptyFiles, event.target))
+		}
+		if (failedFiles.length) {
+			serverMessage2
+				.text(`${failedFiles.length} file${failedFiles.length > 1 ? 's' : ''} failed download`)
+				.style('display', '')
+				.on('click', event => listFilesInMenu(failedFiles, event.target))
+		}
+	}
+	function listFilesInMenu(lst, div) {
+		// lst[] is array of file url, ends with file uuid
+		renderTable({
+			rows: lst.map(url => {
+				const l = url.split('/')
+				const uuid = l[l.length - 1]
+				const fo = result.files.find(i => i.id == uuid)
+				if (fo) {
+					return [
+						{ html: `<a href=${url} target=_blank>${fo.case_submitter_id}</a>` },
+						{ value: fo.project_id },
+						{ value: fileSize(fo.file_size) }
+					]
+				}
+				// file is not found; could happen in testing when backend hardcodes a uuid not in result.files[]
+				return [{ value: uuid }, { value: '?' }, { value: '?' }]
+			}),
+			columns: [{ column: '' }, { column: '' }, { column: '' }],
+			showHeader: false,
+			div: tip.clear().showunder(div).d
+		})
 	}
 }
