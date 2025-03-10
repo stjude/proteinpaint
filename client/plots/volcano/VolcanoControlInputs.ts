@@ -137,7 +137,7 @@ export class VolcanoControlInputs {
 				settingsKey: 'varGenesCutoff',
 				title: 'Top number of genes with the highest variability to include in analysis',
 				min: 1000,
-				max: 4000
+				max: 7000
 			},
 			{
 				label: 'Rank Genes by',
