@@ -23,7 +23,7 @@ Object.freeze(process.argv)
 export async function launch() {
 	try {
 		const trackedDatasets = await initGenomesDs(serverconfig)
-		processTrackedDs(trackedDatasets)
+		const doneLoading = processTrackedDs(trackedDatasets)
 
 		// no error from server initiation
 		console.log(`\n${new Date()} ${serverconfig.commitHash || ''}`)
@@ -31,7 +31,7 @@ export async function launch() {
 		console.log('setting app middlewares ...')
 		const app = express()
 		app.disable('x-powered-by')
-		setAppMiddlewares(app)
+		setAppMiddlewares(app, doneLoading)
 
 		console.log('setting server routes ...')
 		await setOptionalRoutes(app)
@@ -252,4 +252,6 @@ function processTrackedDs(trackedDatasets) {
 			}
 		}
 	}
+
+	return done.map(getLabel)
 }

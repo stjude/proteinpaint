@@ -3,7 +3,8 @@ export { runproteinpaint } from '#src/app'
 
 const serverData = Object.create(null)
 
-export function getRunPp(appname = '', defaultArgs = {}, host = 'http://localhost:3000') {
+export function getRunPp(appname = '', defaultArgs = {}, _host = 'http://localhost:3000') {
+	const host = window.testHost || _host
 	/*
 		Wrap runproteinpaint() to make repeated calls to it more
 		convenient and easier to read
