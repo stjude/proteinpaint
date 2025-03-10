@@ -207,7 +207,7 @@ type Filter = {
 
 type VariantFilter = {
 	opts: { joinWith: string[] }
-	filter: Filter
+	filter?: Filter
 	terms: FilterTermEntry[]
 }
 
@@ -788,6 +788,7 @@ type SingleSampleGbtk = {
 
 type Mds3Queries = {
 	defaultBlock2GeneMode?: boolean
+	geneVariantFilter?: VariantFilter
 	snvindel?: SnvIndelQuery
 	svfusion?: SvFusion
 	cnv?: CnvSegment

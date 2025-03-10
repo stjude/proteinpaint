@@ -1,4 +1,4 @@
-import type { Mds3 } from '#types'
+import type { Mds3, FilterTermEntry } from '#types'
 import serverconfig from '@sjcrh/proteinpaint-server/src/serverconfig.js'
 import * as path from 'path'
 import { existsSync, unlinkSync, symlinkSync, access, constants } from 'fs'
@@ -24,6 +24,34 @@ reason:
 */
 
 copyDataFilesFromRepo2Tp()
+
+// custom dt terms used by geneVariant term
+// for each term, can specify default filtering settings
+// by adding a tvs object (see FilterTermEntry)
+const dtTerms: FilterTermEntry[] = [
+	{
+		id: 'cnv',
+		name: 'CNV',
+		parent_id: null,
+		isleaf: true,
+		type: 'dtcnv',
+		min: -1.0,
+		max: 1.0
+	},
+	{
+		id: 'snvindel',
+		name: 'SNV/indel',
+		parent_id: null,
+		isleaf: true,
+		type: 'dtsnvindel'
+	}
+]
+
+const geneVariantFilter = {
+	opts: { joinWith: ['and'] },
+	// will load dt terms as custom terms in frontend vocab
+	terms: dtTerms
+}
 
 export default {
 	isMds3: true,
@@ -158,6 +186,9 @@ export default {
 	queries: {
 		// temporary fix for genomeBrowser app to show gene model
 		defaultBlock2GeneMode: true,
+
+		// custom variant terms and filters that will be loaded in frontend vocab
+		geneVariantFilter,
 
 		snvindel: {
 			forTrack: true,
