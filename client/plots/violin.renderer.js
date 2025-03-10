@@ -67,6 +67,7 @@ export default function setViolinRenderer(self) {
 		let y = 0
 		const thickness = self.settings.plotThickness || self.getAutoThickness()
 		for (const [plotIdx, plot] of self.data.plots.entries()) {
+			//R x values are not the same as the plot values, so we need to use a scale to map them to the plot values
 			const xAxisScale = scaleLinear().domain([plot.density.xMin, plot.density.xMax]).range([0, settings.svgw])
 			// The scale uses half of the plotThickness as the maximum value as the image is symmetrical
 			// Only one half of the image is computed and the other half is mirrored
@@ -88,7 +89,7 @@ export default function setViolinRenderer(self) {
 					.y(d => xAxisScale(d.x0))
 			}
 			//if only one plot pass area builder to calculate the exact height of the plot
-			const { violinG, height } = renderViolinPlot(svgData, plot, isH, wScale, areaBuilder, y, imageOffset)
+			const { violinG, height } = renderViolinPlot(svgData, plot, isH, xAxisScale, wScale, areaBuilder, y, imageOffset)
 			y += height
 			if (self.opts.mode != 'minimal') renderLabels(t1, t2, violinG, plot, isH, settings, tip)
 
@@ -287,7 +288,7 @@ export default function setViolinRenderer(self) {
 		}
 	}
 
-	function renderViolinPlot(svgData, plot, isH, wScale, areaBuilder, y, imageOffset) {
+	function renderViolinPlot(svgData, plot, isH, xScale, wScale, areaBuilder, y, imageOffset) {
 		const label = plot.label?.split(',')[0]
 		const catTerm = self.config.term.q.mode == 'discrete' ? self.config.term : self.config.term2
 		const category = catTerm?.term.values ? Object.values(catTerm.term.values).find(o => o.label == label) : null
@@ -309,10 +310,10 @@ export default function setViolinRenderer(self) {
 		renderArea(violinG, plot, isH ? areaBuilder.y(d => -wScale(d.density)) : areaBuilder.x(d => -wScale(d.density)))
 
 		renderSymbolImage(self, violinG, plot, isH, imageOffset)
-		if (self.opts.mode != 'minimal') renderMedian(violinG, isH, plot, svgData, self)
+		if (self.opts.mode != 'minimal') renderMedian(violinG, isH, plot, xScale, self)
 		renderLines(violinG, isH, self.config.settings.violin.lines, svgData)
 		if (self.state.config.value) {
-			const value = svgData.axisScale(self.state.config.value)
+			const value = xScale(self.state.config.value)
 			const s = self.config.settings.violin
 			violinG
 				.append('line')
@@ -393,9 +394,10 @@ export default function setViolinRenderer(self) {
 			.attr('transform', isH ? `translate(0, -${imageOffset})` : `translate(-${imageOffset}, 0)`)
 	}
 
-	function renderMedian(violinG, isH, plot, svgData, self) {
+	function renderMedian(violinG, isH, plot, xAxisScale, self) {
 		const s = self.config.settings.violin
 		//render median values on plots
+		const median = plot.summaryStats.find(x => x.id === 'median').value
 		if (plot.plotValueCount >= 2) {
 			violinG
 				.append('line')
@@ -407,10 +409,10 @@ export default function setViolinRenderer(self) {
 				.style('stroke-width', s.medianThickness)
 				.style('stroke', 'red')
 				.style('opacity', '1')
-				.attr('y1', isH ? -s.medianLength : svgData.axisScale(plot.summaryStats.find(x => x.id === 'median').value))
-				.attr('y2', isH ? s.medianLength : svgData.axisScale(plot.summaryStats.find(x => x.id === 'median').value))
-				.attr('x1', isH ? svgData.axisScale(plot.summaryStats.find(x => x.id === 'median').value) : -s.medianLength)
-				.attr('x2', isH ? svgData.axisScale(plot.summaryStats.find(x => x.id === 'median').value) : s.medianLength)
+				.attr('y1', isH ? -s.medianLength : median)
+				.attr('y2', isH ? s.medianLength : median)
+				.attr('x1', isH ? xAxisScale(median) : -s.medianLength)
+				.attr('x2', isH ? xAxisScale(median) : s.medianLength)
 		} else return
 	}
 
