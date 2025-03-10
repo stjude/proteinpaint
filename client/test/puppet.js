@@ -15,8 +15,9 @@ if (!params) throw `missing puppet.js params argument`
 
 runTest(params).catch(console.error)
 
-async function runTest(params) {
-  const server = initServer(params)
+async function runTest(paramsStr) {
+  const server = initServer()
+  const paramsArr = paramsStr.split(' '); console.log(21, paramsArr)
 
   const browser = await puppeteer.launch({
     headless: true,
@@ -26,16 +27,6 @@ async function runTest(params) {
     ],
   })
   const page = await browser.newPage()
- 
-  // Enable both JavaScript and CSS coverage
-  await Promise.all([
-    page.coverage.startJSCoverage({
-      resetOnNavigation: false,
-      includeRawScriptCoverage: true
-    }),
-    //page.coverage.startCSSCoverage()
-  ]);
-
   const lastLines = []
   let reachedSummary = false
   page
@@ -67,59 +58,76 @@ async function runTest(params) {
       console.log('-- requestfailed --', `${request.failure().errorText} ${request.url()}`)
     )
 
-  // Navigate to test page
-  await page.goto(`http://localhost:${port}/puppet.html?${params}`, {timeout: 1000})
-    .then(r => {
-      if (!r.ok()) throw `Error loading page: ${r.status()}`
-    })
-    .catch(e => {
-      console.error('--- page.goto().catch ---', e)
-      process.exit(1)
-    })
-
-  const i = setInterval(async ()=>{
-    // see page.on('console') above for the expected last lines texts that are being detected
-    if (lastLines.length < 4 || !lastLines.find(t => t.includes('# ok') || t.includes('# fail'))) return
-    clearInterval(i)
-    if (!lastLines.find(l => l.startsWith('# ok'))) {
-      console.error(`\n!!! test failed !!!\n`)
-      await browser.close()
-      process.exit(1)
-    }
-    // Disable both JavaScript and CSS coverage
-    const [jsCoverage /*, cssCoverage*/] = await Promise.all([
-      page.coverage.stopJSCoverage(),
-      //page.coverage.stopCSSCoverage(),
+  for(const params of paramsArr) {
+    // Enable both JavaScript and CSS coverage
+    await Promise.all([
+      page.coverage.startJSCoverage({
+        resetOnNavigation: false,
+        includeRawScriptCoverage: true
+      }),
+      //page.coverage.startCSSCoverage()
     ])
-    const matched = jsCoverage.filter(({rawScriptCoverage: c}) => 
-      c.url.includes('/bin/test') && !c.url.includes('_.._') && !c.url.includes('node_modules')
-    )
-    //fs.writeFileSync(`${process.cwd()}/results.json`, JSON.stringify(matched))
-    
-    const coverageList = matched.map((it,i) => {
-      return {
-          source: it.text,
-          ... it.rawScriptCoverage
-      };
-    });
 
-    const mcr = MCR({
-      name: `Test Coverage for ${params}`,
-      sourceFilter: (path) => !path.includes('/bin/test') && !path.includes('_.._') && !path.includes('node_modules'),
-      outputDir: './.nyc_output',
-      reports: ["v8", "console-summary", "html"],
-      cleanCache: true
+    console.log(70, port, params, `http://localhost:${port}/puppet.html?${params}`)
+    // Navigate to test page
+    await page.goto(`http://localhost:${port}/puppet.html?${params}`, {timeout: 1000})
+      .then(r => {
+        if (!r.ok()) throw `Error loading page: ${r.status()}`
+      })
+      .catch(e => {
+        console.error('--- page.goto().catch ---', e)
+        process.exit(1)
+      })
+
+    await new Promise((resolve, reject) => {
+      const i = setInterval(async ()=>{
+        // see page.on('console') above for the expected last lines texts that are being detected
+        if (lastLines.length < 4 || !lastLines.find(t => t.includes('# ok') || t.includes('# fail'))) return
+        clearInterval(i)
+        if (!lastLines.find(l => l.startsWith('# ok'))) {
+          console.error(`\n!!! test failed !!!\n`)
+          await browser.close()
+          process.exit(1)
+        }
+        // Disable both JavaScript and CSS coverage
+        const [jsCoverage /*, cssCoverage*/] = await Promise.all([
+          page.coverage.stopJSCoverage(),
+          //page.coverage.stopCSSCoverage(),
+        ])
+        const matched = jsCoverage.filter(({rawScriptCoverage: c}) => 
+          c.url.includes('/bin/test') && !c.url.includes('_.._') && !c.url.includes('node_modules')
+        )
+        fs.writeFileSync(`${process.cwd()}/results-${paramsArr.indexOf(params)}.json`, JSON.stringify(matched))
+        
+        const coverageList = matched.map((it,i) => {
+          return {
+              source: it.text,
+              ... it.rawScriptCoverage
+          };
+        });
+
+        const mcr = MCR({
+          name: `Test Coverage for ${params}`,
+          sourceFilter: (path) => !path.includes('/bin/test') && !path.includes('_.._') && !path.includes('node_modules'),
+          outputDir: './.nyc_output',
+          reports: ["v8", "console-summary", "html", "json", "markdown-details"],
+          cleanCache: true
+        })
+
+        const report = await mcr.add(coverageList)
+        await mcr.generate()
+        // delete all entries
+        lastLines.splice(0, lastLines.length)
+        resolve()
+      }, 100)
     })
+  }
 
-    const report = await mcr.add(coverageList);
-    console.log('puppeteer coverage added', report.type);
-    await mcr.generate()
-    await browser.close()
-    if (server) server.close()
-  }, 100)
+  await browser.close()
+  if (server) server.close()
 }
 
-function initServer(params) {
+function initServer() {
   // NOTES:
   // - integration and other non-unit tests must use an active PP server with test genome and dataset
   // as runproteinpaint({host}); client unit tests do NOT need this active PP server instance
@@ -129,6 +137,7 @@ function initServer(params) {
   // irrelevant code chunks when more specific name= pattern is supplied in params
   // 
   const app = express()
+  
   const publicDir = path.join(__dirname, '../../public')
   const staticMiddleware = express.static(publicDir)
   app.use(staticMiddleware)
