@@ -12,6 +12,7 @@ Fixes:
 - Do not render a violin for plots with less than or equal to five samples.
 - Show violin plot when summarizing nuermic term types for a custom term
 - handle stderr from rust code in node js stream_rust() helper and route handler
+- mds3 tk populate legend with predefined shapes
 
 
 ## 2.109.1
