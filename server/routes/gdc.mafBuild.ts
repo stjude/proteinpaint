@@ -1,6 +1,6 @@
 import ky from 'ky'
 import { joinUrl } from '#shared/joinUrl.js'
-import { run_rust_stream } from '@sjcrh/proteinpaint-rust'
+import { stream_rust } from '@sjcrh/proteinpaint-rust'
 import type { GdcMafBuildRequest, RouteApi } from '#types'
 import { gdcMafPayload } from '#types/checkers'
 import { maxTotalSizeCompressed } from './gdc.maf.ts'
@@ -36,6 +36,14 @@ function init({ genomes }) {
 	}
 }
 
+type EmitJsonDataArg = string | {
+	status?: 'string'
+	ok?: boolean
+	error?: string
+	errors?: any[] 
+	message?: string
+}
+
 /*
 q{}
 res{}
@@ -52,23 +60,29 @@ async function buildMaf(q: GdcMafBuildRequest, res, ds) {
 		columns: q.columns,
 		host: joinUrl(host.rest, 'data') // must use the /data/ endpoint from current host
 	}
+	// uncomment for manual error testing
+	// const arg = {"host": "https://api.gdc.cancer.gov/data/","columns": ["Hugo_Symbol", "Entrez_Gene_Id", "Center", "NCBI_Build", "Chromosome", "Start_Position"], "fileIdLst": ["8b31d6d1-56f7-4aa8-b026-c64bafd531e7", "83ea587b-1e92-41b3-a8e3-12df30496724"]}; 
 
-	const rustStream = run_rust_stream('gdcmaf', JSON.stringify(arg))
-	res.setHeader('Content-Type', 'application/octet-stream')
-	res.setHeader('Content-Disposition', 'attachment; filename=cohort.maf.gz')
-	rustStream.pipe(res)
+	const boundary = 'GDC_MAF_MULTIPART_BOUNDARY'
+	res.setHeader('content-type', `multipart/mixed; boundary=${boundary}`)
+	res.write(`--${boundary}`)
+	res.write('\ncontent-disposition: attachment; filename=cohort.maf.gz')
+	res.write('\ncontent-type: application/octet-stream\n\n')
+	res.flush() // header text should be sent as a separate chunk from the content that will be streamed next
 
-	rustStream.on('end', () => {
+	const rustStream = stream_rust('gdcmaf', JSON.stringify(arg), emitJson)
+	rustStream.pipe(res, { end: false })
+
+	function emitJson(data?: EmitJsonDataArg, end: boolean = true) {
+		res.write(`\n--${boundary}`)
+		res.write('\ncontent-type: application/json')
+		const json = typeof data === 'string' ? data : JSON.stringify(data || {ok: true, status: 'ok'})
+		res.write('\n\n' + json)
+		res.write(`\n--${boundary}--`)
 		// report amount of time taken to run rust
 		mayLog('rust gdcmaf', Date.now() - t0)
-		res.end()
-	})
-
-	rustStream.on('error', err => {
-		console.error(err)
-		res.statusCode = 500
-		res.end('Internal Server Error')
-	})
+		if (end) res.end()
+	}
 }
 
 /*
