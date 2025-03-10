@@ -126,7 +126,8 @@ random_number <- runif(1, min = 0, max = 1) # Generating random number
 mds_image_name <- paste0("edgeR_mds_temp_",random_number,".png") # Generating random image name so that simultaneous server side requests do NOT generate the same edgeR file name
 png(filename = paste0(cachedir,"/",mds_image_name), width = 1000, height = 1000, res = 200) # Opening a png device
 par(oma = c(1, 1, 1, 1)) # Creating a margin
-plotMDS(y) # Plot the edgeR MDS plot
+mds_conditions <- c(rep("T", length(cases)), rep("C", length(controls))) # Case samples are labelled "T" and control samples are labelled "C". Single-letter labelling added because otherwise labels get overwritten on each other.
+plotMDS(y, labels = mds_conditions) # Plot the edgeR MDS plot
 # dev.off() # Gives a null device message which breaks JSON. Commenting it out for now, will investigate it later
 
 
