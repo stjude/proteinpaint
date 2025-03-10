@@ -16,11 +16,11 @@ const patterns = [
 	//`${CURRSPECDIR}/test/${SPECNAME}.spec.*s`,
 	`${NESTEDSPECDIR}/test/${SPECNAME}.spec.*s`
 ]
-
+console.log(19, params, SPECNAME, NESTEDSPECDIR, patterns, minimatch(`${NESTEDSPECDIR}/test/${SPECNAME}.spec.*s`, 'random'))
 export const specsMatched = []
 
 export function matchSpecs(filepath) {
-	if (window.testHost) return true
+	//if (window.testHost) return true
 	if (!params.dir && !params.name) return false
 	for (const pattern of patterns) {
 		if (pattern && minimatch(filepath, pattern)) {

@@ -4,6 +4,9 @@ import puppeteer from 'puppeteer'
 import fs from 'fs'
 import MCR from 'monocart-coverage-reports'
 import path from 'path'
+import crypto from 'crypto'
+import { decode as urlJsonDecode } from '#shared/urljson.js'
+import bodyParser from 'body-parser'
 
 // user __dirname later to detect relative path to public dir,
 // since the unit test may be triggered from the pp dir with --workspace option
@@ -17,7 +20,7 @@ runTest(params).catch(console.error)
 
 async function runTest(paramsStr) {
   const server = initServer()
-  const paramsArr = paramsStr.split(' '); console.log(21, paramsArr)
+  const paramsArr = paramsStr.split(' '); console.log(21, paramsArr); return;
 
   const browser = await puppeteer.launch({
     headless: true,
@@ -97,7 +100,7 @@ async function runTest(paramsStr) {
         const matched = jsCoverage.filter(({rawScriptCoverage: c}) => 
           c.url.includes('/bin/test') && !c.url.includes('_.._') && !c.url.includes('node_modules')
         )
-        fs.writeFileSync(`${process.cwd()}/results-${paramsArr.indexOf(params)}.json`, JSON.stringify(matched))
+        //fs.writeFileSync(`${process.cwd()}/results-${paramsArr.indexOf(params)}.json`, JSON.stringify(matched))
         
         const coverageList = matched.map((it,i) => {
           return {
@@ -141,5 +144,36 @@ function initServer() {
   const publicDir = path.join(__dirname, '../../public')
   const staticMiddleware = express.static(publicDir)
   app.use(staticMiddleware)
+  app.use(bodyParser.json({ limit: '5mb' }))
+  app.use(bodyParser.text({ limit: '5mb' }))
+  app.use(bodyParser.urlencoded({ extended: true }))
+  app.get('*', routeHandler)
+  app.post('*', routeHandler)
+
+  const cacheDir = `${publicDir}/testrunData`
+  function routeHandler(req, res) {
+    const cacheSubdir = path.join(cacheDir, req.path.slice(1).replaceAll('/', '.'))
+    if (!fs.existsSync(cacheSubdir)) {
+      res.status(404)
+      res.send({error: 'missing cacheSubdir'})
+      return
+    }
+    const obj = Object.assign({}, req.query || {}, req.body || {})
+    const jsonQuery = JSON.stringify(obj)
+    const id = crypto
+        .createHash('sha1')
+        .update(jsonQuery)
+        .digest('hex')
+    const cacheFile = `${cacheSubdir}/${id}`
+    if (!fs.existsSync(cacheFile)) {
+      res.status(404)
+      res.send({error: `missing cacheFile='${cacheFile}'`})
+      return
+    }
+    res.header('content-type', 'application/json')
+    const content = fs.readFileSync(cacheFile, {encoding: 'utf8'})
+    //console.log(197, req.path, cacheFile, body)
+    res.send(content)
+  }
   return app.listen(port)
 }

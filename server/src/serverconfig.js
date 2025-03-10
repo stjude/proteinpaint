@@ -231,7 +231,10 @@ if (process.argv.find(a => a == 'validate')) {
 	serverconfig.features.stopGdcCacheAliquot = true
 }
 
-if (!serverconfig.backend_only && fs.existsSync(path.join(process.cwd(), './public'))) {
+const publicDir = path.join(process.cwd(), './public')
+if (!serverconfig.backend_only && fs.existsSync(publicDir)) serverconfig.publicDir = publicDir
+
+if (serverconfig.publicDir) {
 	const defaultTarget = path.join(serverconfig.binpath, 'cards')
 	if (!serverconfig.cards) {
 		serverconfig.cards = {

@@ -50,7 +50,6 @@ tape('Linear: continuous outcome = "agedx", cat. independents = "sex" + "genetic
 		const regDom = regression.Inner.dom
 
 		//**** Inputs ****
-		test.ok(regDom.inputs.node().querySelector('.sjpp-vp-violinDiv'), `Should render violin plot for outcome variable`)
 		test.equal(
 			regDom.inputs
 				.selectAll('table')
@@ -140,6 +139,10 @@ tape('Linear: continuous outcome = "agedx", cat. independents = "sex" + "genetic
 			results = checkTableRow(table, i, [header, data.other.rows[i]])
 			test.equal(results, true, `Should render all ${header} data in ${tableLabel}`)
 		}
+
+		const elem = regDom.inputs.node()
+		await detectOne({selector: '.sjpp-vp-violinDiv', elem})
+		test.ok(elem.querySelector('.sjpp-vp-violinDiv'), `Should render violin plot for outcome variable`)
 
 		if (test._ok) regression.Inner.app.destroy()
 		test.end()
@@ -303,6 +306,7 @@ tape('Linear: continuous outcome = "agedx", cubic spline independent = "aaclassi
 		const $id = tid2$id('aaclassic_5', regression)
 
 		//**** Inputs ****
+		// await detectGte({elem: regDom.inputs.node(), selector: '.sjpp-vp-violinDiv', count: 3})
 		const knotLines = regDom.inputs.selectAll('.sjpp-vp-violinDiv .sjpp-vp-line').nodes()
 		test.equal(knotLines.length, numOfKnots, `Should render 3 lines over the independent variable violin plot`)
 
