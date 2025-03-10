@@ -40,7 +40,7 @@ tape('init errors', function (test) {
 		}
 	})
 	function testMissingState(app) {
-		const d = app.Inner.dom.errdiv.selectAll('.sja_errorbar').select('div')
+		const d = app.Inner.dom.errdiv.selectAll('.sja_errorbar').select('div:nth-child(2)')
 		setTimeout(() => {
 			test.equal(d.text(), 'Error: .state{} missing', 'should be displayed for missing .state{}')
 		}, 200)
@@ -59,7 +59,7 @@ tape('init errors', function (test) {
 		}
 	})
 	function testMissingGenome(app) {
-		const d = app.Inner.dom.errdiv.selectAll('.sja_errorbar').select('div')
+		const d = app.Inner.dom.errdiv.selectAll('.sja_errorbar').select('div:nth-child(2)')
 		setTimeout(() => {
 			test.equal(d.text(), 'Error: .state[.vocab].genome missing', 'should be displayed for missing .state.genome')
 		}, 200)
@@ -78,7 +78,7 @@ tape('init errors', function (test) {
 		}
 	})
 	function testMissingDslabel(app) {
-		const d = app.Inner.dom.errdiv.selectAll('.sja_errorbar').select('div')
+		const d = app.Inner.dom.errdiv.selectAll('.sja_errorbar').select('div:nth-child(2)')
 		setTimeout(() => {
 			test.equal(d.text(), 'Error: .state[.vocab].dslabel missing', 'should be displayed for missing .state.dslabel')
 			test.end()

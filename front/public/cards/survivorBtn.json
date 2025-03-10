@@ -6,8 +6,6 @@
         "availableGenomes": ["hg38"],
         "runargs": {
             "host": "https://survivorship.proteinpaint.stjude.org",
-            "nobox":true,
-            "noheader": true,
             "mass": {
                 "state": {
                     "dslabel": "SJLife",

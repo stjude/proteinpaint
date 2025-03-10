@@ -1,10 +1,10 @@
 import type { RoutePayload } from './routeApi.js'
-import { ErrorResponse } from './errorResponse.ts'
-import { Filter } from '../filter.ts'
-import { Term } from '../terms/term.ts'
-import { GeneExpressionTerm } from '../terms/geneExpression.ts'
-import { MetaboliteIntensityTerm } from '../terms/metaboliteIntensity.ts'
-import { NumericDictTerm } from '../terms/numeric.ts'
+import type { ErrorResponse } from './errorResponse.ts'
+import type { Filter } from '../filter.ts'
+import type { Term } from '../terms/term.ts'
+import type { GeneExpressionTerm } from '../terms/geneExpression.ts'
+import type { MetaboliteIntensityTerm } from '../terms/metaboliteIntensity.ts'
+import type { NumericDictTerm } from '../terms/numeric.ts'
 
 export type Gene = {
 	/** gene symbol, required */
@@ -82,6 +82,8 @@ export type ValidResponse = {
 	byTermId: { [index: string]: any }
 	/**  */
 	bySampleId: { [index: string]: any }
+	/** list of term names that are excluded from analysis for lacking any numerical data */
+	removedHierClusterTerms?: string[]
 }
 
 //response of just 1 gene, thus unable to do clustering

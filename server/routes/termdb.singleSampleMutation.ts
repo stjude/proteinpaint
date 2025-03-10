@@ -46,22 +46,9 @@ export async function validate_query_singleSampleMutation(ds: any, genome: any) 
 		gdcValidate_query_singleSampleMutation(ds, genome)
 	} else if (_q.src == 'native') {
 		// using a folder to store text files for individual samples
-		// file names are integer sample id
+		// file names are string sample name
 		_q.get = async (q: TermdbSingleSampleMutationRequest) => {
-			/* as mds3 client may not be using integer sample id for now,
-			the argument is string id and has to be mapped to integer id
-			*/
-			let fileName = q.sample
-			if (ds.cohort?.termdb?.q?.sampleName2id) {
-				// has name-to-id converter
-				fileName = ds.cohort.termdb.q.sampleName2id(q.sample)
-				if (fileName == undefined) {
-					// unable to convert string id to integer
-					return []
-				}
-			}
-
-			const file = path.join(serverconfig.tpmasterdir, _q.folder, fileName.toString())
+			const file = path.join(serverconfig.tpmasterdir, _q.folder, q.sample)
 			try {
 				await fs.promises.stat(file)
 			} catch (e: any) {

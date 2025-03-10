@@ -54,11 +54,13 @@ export type CallbackArg = {
 	geneList: Gene[]
 }
 
-/** optional instruction to add new button(s) and pull in gene sets by custom-designed means. used by gdc oncomatrix react wrapper to call the GFF gene set modal */
+/** optional instruction to add new button(s) and pull in gene sets by custom-designed means.
+ * used by gdc oncomatrix react wrapper to call the GFF gene set modal */
 type CustomInputs = {
 	/** button name */
 	label: string
-	/** callback to trigger upon clicking this button. should show some ui to collect gene names and bring them into holding box */
+	/** callback to trigger upon clicking this button. should show some ui to collect
+	 * gene names and bring them into holding box */
 	showInput: (arg: any) => void
 }[]
 
@@ -80,6 +82,9 @@ export type GeneSetEditArg = {
 	/** Title appearing above the UI */
 	titleText?: string
 	customInputs?: CustomInputs
+	/** Pass the genes available to be used by the caller. When not in the limited
+	 * list, genes will appear with a strikethrough */
+	limitedGenesList?: string[]
 }
 
 export class GeneSetEditUI {
@@ -104,6 +109,7 @@ export class GeneSetEditUI {
 	geneList: Gene[]
 	titleText?: string
 	customInputs?: CustomInputs
+	limitedGenesList?: string[]
 
 	constructor(opts: GeneSetEditArg) {
 		this.holder = opts.holder
@@ -124,6 +130,9 @@ export class GeneSetEditUI {
 
 		if (this.titleText) {
 			div.append('div').style('margin-bottom', '10px').html(this.titleText)
+		}
+		if (opts.limitedGenesList) {
+			this.limitedGenesList = opts.limitedGenesList
 		}
 
 		const headerDiv = div.append('div')
@@ -588,8 +597,13 @@ export class GeneSetEditUI {
 	}
 
 	renderGene(div: Div, gene: Gene) {
+		let notInList = false
+		//Check if list is present, then run check
+		if (this.limitedGenesList && !this.limitedGenesList?.includes(gene.gene)) {
+			notInList = true
+		}
 		if (gene.mutationStat) {
-			div.html(`${gene.gene}&nbsp;&nbsp;`)
+			div.style('text-decoration', notInList ? 'line-through' : '').html(`${gene.gene}&nbsp;&nbsp;`)
 			for (const m of gene.mutationStat) {
 				// m is {class,count} or {dt,count}; if class is given, bgcolor is determined by class; otherwise by dt and logicis  a bit shaky now (may
 				let bgcolor: string
@@ -621,7 +635,11 @@ export class GeneSetEditUI {
 		} else if(gene.expStat) {
 		*/
 		} else {
-			div.insert('div').style('display', 'inline-block').html(gene.gene)
+			div
+				.insert('div')
+				.style('display', 'inline-block')
+				.style('text-decoration', notInList ? 'line-through' : '')
+				.html(gene.gene)
 		}
 	}
 

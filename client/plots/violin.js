@@ -145,6 +145,18 @@ class ViolinPlot {
 				]
 			},
 			{
+				label: 'Order by',
+				title: 'Order violin plots by parameters',
+				type: 'radio',
+				chartType: 'violin',
+				settingsKey: 'orderByMedian',
+				options: [
+					{ label: 'Default', value: false },
+					{ label: 'Median', value: true }
+				],
+				getDisplayStyle: () => (this.data.plots.length > 1 ? '' : 'none')
+			},
+			{
 				label: 'Symbol size',
 				type: 'number',
 				chartType: 'violin',
@@ -186,13 +198,23 @@ class ViolinPlot {
 			},
 			{
 				label: 'Plot thickness',
-				title: 'Thickness of plots, can be between 40 and 200',
+				title: 'If not specified, the plot thickness is calculated based on the number of categories',
 				type: 'number',
 				chartType: 'violin',
 				settingsKey: 'plotThickness',
 				step: 10,
-				max: 500,
+				max: 200,
 				min: 40,
+				debounceInterval: 1000
+			},
+			{
+				label: 'Plot padding',
+				type: 'number',
+				chartType: 'violin',
+				settingsKey: 'rowSpace',
+				step: 1,
+				max: 20,
+				min: 0,
 				debounceInterval: 1000
 			},
 			{
@@ -272,10 +294,6 @@ class ViolinPlot {
 		const args = this.validateArgs()
 		this.data = await this.app.vocabApi.getViolinPlotData(args)
 
-		if (this.settings.plotThickness == undefined) {
-			const thickness = this.data.plots.length == 1 ? 200 : 150
-			this.settings.plotThickness = Math.min(1400 / this.data.plots.length, thickness)
-		}
 		if (this.data.error) throw this.data.error
 		/*
 		.min
@@ -334,7 +352,8 @@ class ViolinPlot {
 			rightMargin: s.rightMargin,
 			unit: s.unit,
 			isKDE: s.method == 0,
-			ticks: s.ticks
+			ticks: s.ticks,
+			orderByMedian: s.orderByMedian
 		}
 
 		if (this.opts.mode == 'minimal') {
@@ -382,13 +401,13 @@ export function getDefaultViolinSettings(app, overrides = {}) {
 		rightMargin: 50,
 		lines: [],
 		unit: 'abs', // abs: absolute scale, log: log scale
-		rowSpace: 5,
-		plotThickness: undefined,
+		rowSpace: 10,
 		medianLength: 7,
 		medianThickness: 3,
-		ticks: 20,
+		ticks: 15,
 		defaultColor: plotColor,
-		method: 0
+		method: 0,
+		orderByMedian: false
 	}
 	return Object.assign(defaults, overrides)
 }

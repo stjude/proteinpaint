@@ -50,7 +50,7 @@ ENV PATH="/opt/venv/bin:$PATH"
 
 RUN python3 -m venv /opt/venv && \
     pip install --upgrade pip && \
-    pip install blitzgsea matplotlib nibabel numpy && \
+    pip install blitzgsea matplotlib nibabel numpy pre-commit && \
     ## clean up
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /tmp/downloaded_packages/ /tmp/*.rds

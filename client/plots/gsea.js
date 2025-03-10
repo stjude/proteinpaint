@@ -1,24 +1,22 @@
 import * as d3axis from 'd3-axis'
-import { axisstyle } from '#dom/axisstyle'
-import { renderTable } from '../dom/table'
-import { table2col } from '#dom/table2col'
+import { axisstyle, Menu, renderTable, table2col } from '#dom'
 import { dofetch3 } from '#common/dofetch'
 import { controlsInit } from './controls'
 import { getCompInit, copyMerge } from '#rx'
-import { Menu } from '../dom/menu'
-import { scaleLog, scaleLinear } from 'd3-scale'
+import { scaleLinear } from 'd3-scale'
 import { roundValueAuto } from '#shared/roundValue.js'
 
 const tip = new Menu()
 
 class gsea {
-	constructor() {
+	constructor(opts) {
 		this.type = 'gsea'
-	}
-	async init(opts) {
-		const config = opts.plots.find(p => p.id === this.id)
-		const controlsDiv = this.opts.holder.append('div').style('display', 'inline-block')
-		const mainDiv = this.opts.holder.append('div').style('display', 'inline-block').style('margin-left', '50px')
+		this.opts = opts
+		this.components = {
+			controls: {}
+		}
+		const controlsDiv = opts.controls || opts.holder.append('div').style('display', 'inline-block')
+		const mainDiv = opts.holder.append('div').style('display', 'inline-block').style('margin-left', '50px')
 		const holder = mainDiv.append('div').style('display', 'inline-block')
 		const detailsDiv = mainDiv
 			.append('div')
@@ -26,15 +24,19 @@ class gsea {
 			.style('vertical-align', 'top')
 			.style('margin-top', '50px')
 
-		const tableDiv = this.opts.holder.append('div').style('margin', '30px 0px')
+		const tableDiv = opts.holder.append('div').style('margin', '30px 0px')
 
 		this.dom = {
 			holder,
-			header: this.opts.header,
+			header: opts.header,
 			controlsDiv,
 			detailsDiv,
 			tableDiv
 		}
+	}
+
+	async init(opts) {
+		const config = opts.plots.find(p => p.id === this.id)
 	}
 
 	async setControls() {
@@ -146,14 +148,13 @@ class gsea {
 		}
 		inputs.push(geneSet)
 
-		this.components = {
-			controls: await controlsInit({
-				app: this.app,
-				id: this.id,
-				holder: this.dom.controlsDiv,
-				inputs: inputs
-			})
-		}
+		this.components.controls = await controlsInit({
+			app: this.app,
+			id: this.id,
+			holder: this.dom.controlsDiv,
+			inputs: inputs
+		})
+
 		this.components.controls.on('downloadClick.gsea', () => {
 			if (!this.imageUrl) return alert('No image to download')
 			const dataUrl = this.imageUrl
@@ -184,6 +185,7 @@ class gsea {
 
 	async main() {
 		this.config = structuredClone(this.state.config)
+		if (this.config.chartType != this.type && this.config.childType != this.type) return
 		this.settings = this.config.settings.gsea
 		this.imageUrl = null // Reset the image URL
 		await this.setControls()
@@ -438,22 +440,26 @@ function render_gsea_plot(self, plot_data) {
 	}
 }
 
+export function getDefaultGseaSettings() {
+	return {
+		fdr_cutoff: 0.05,
+		num_permutations: 1000,
+		top_genesets: 40,
+		pathway: undefined,
+		min_gene_set_size_cutoff: 0,
+		max_gene_set_size_cutoff: 20000,
+		filter_non_coding_genes: true,
+		fdr_or_top: 'top'
+	}
+}
+
 export async function getPlotConfig(opts, app) {
 	try {
 		const config = {
 			//idea for fixing nav button
 			//samplelst: { groups: app.opts.state.groups}
 			settings: {
-				gsea: {
-					fdr_cutoff: 0.05,
-					num_permutations: 1000,
-					top_genesets: 40,
-					pathway: undefined,
-					min_gene_set_size_cutoff: 0,
-					max_gene_set_size_cutoff: 20000,
-					filter_non_coding_genes: true,
-					fdr_or_top: 'top'
-				},
+				gsea: getDefaultGseaSettings(),
 				controls: { isOpen: true }
 			}
 		}
@@ -471,8 +477,8 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 	/*
 	holder: the holder in the tooltip
 	chartsInstance: MassCharts instance
-        termdbConfig is accessible at chartsInstance.state.termdbConfig{}
-        mass option is accessible at chartsInstance.app.opts{}
+		termdbConfig is accessible at chartsInstance.state.termdbConfig{}
+		mass option is accessible at chartsInstance.app.opts{}
 	*/
 	// to fill in menu, create options in "holder"
 	// to hide menu, call chartsInstance.dom.tip.hide()

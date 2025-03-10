@@ -32,15 +32,28 @@ output:
 import { bin } from 'd3-array'
 import * as d3 from 'd3'
 
-export function getBinsDensity(scale, plot, isKDE = false, ticks = 20) {
+export function getBinsDensity(plot, isKDE = false, ticks = 20) {
 	const [valuesMin, valuesMax] = d3.extent(plot.values) //Min and max on plot
-
 	//Commented out as it seems to be handled by kde with automatic bandwidth
 	//if (valuesMin == valuesMax) return { bins: [{ x0: valuesMin, density: 1 }], densityMax: valuesMax, densityMin: 0}
+	const values = plot.values
+	values.sort((a, b) => a - b) //need to provide it so it compares properly integers and floats
+	const l = values.length
+	let p2ndidx = Math.ceil(l * 0.02) - 1
+	let p98idx = Math.ceil(l * 0.98) - 1
+
+	const p2nd = values[p2ndidx]
+	const p98 = values[p98idx]
+	let thresholds = []
+	//Divided thresholds(or bins) into 3 parts, below p2nd, between p2nd and p98, above p98. This allows to handle outliers better.
+	//When there are no outliers, p2nd and p98 will be the same or very close to valuesMin and valuesMax respectively
+	if (p2nd > valuesMin) thresholds = [...getThresholds(valuesMin, p2nd, ticks)]
+	if (p98 >= p2nd) thresholds.push(...getThresholds(p2nd, p98, ticks))
+	if (p98 < valuesMax) thresholds.push(...getThresholds(p98, valuesMax, ticks))
 
 	const result = isKDE
-		? kde(gaussianKernel, scale.ticks(ticks), plot.values, valuesMin, valuesMax)
-		: getBinsHist(scale, plot.values, ticks, valuesMin, valuesMax)
+		? kde(gaussianKernel, thresholds, plot.values, valuesMin, valuesMax)
+		: getBinsHist(plot.values, thresholds, valuesMin, valuesMax)
 
 	result.bins.unshift({ x0: valuesMin, density: result.densityMin }) //This allows to start the plot from min prob, avoids rendering issues
 
@@ -48,6 +61,18 @@ export function getBinsDensity(scale, plot, isKDE = false, ticks = 20) {
 	result.bins.push({ x0: valuesMax, density: result.bins[result.bins.length - 1].density })
 	result.bins.push({ x0: valuesMax, density: result.densityMin })
 	return result
+}
+
+function getThresholds(start, end, bins) {
+	const thresholds = []
+	const bin_size = (end - start) / bins
+
+	let pos = start
+	for (let i = 0; i < bins; i++) {
+		thresholds.push(pos)
+		pos += bin_size
+	}
+	return thresholds
 }
 
 function epanechnikov(bandwidth) {
@@ -132,10 +157,10 @@ function silvermanBandwidth(data) {
 	return h
 }
 
-function getBinsHist(scale, values, ticks, valuesMin, valuesMax) {
+function getBinsHist(values, thresholds, valuesMin, valuesMax) {
 	const binBuilder = bin()
-		.domain(scale.domain()) /* extent of the data that is lowest to highest*/
-		.thresholds(scale.ticks(ticks)) /* buckets are created which are separated by the threshold*/
+		.domain([valuesMin, valuesMax]) /* extent of the data that is lowest to highest*/
+		.thresholds(thresholds) /* buckets are created which are separated by the threshold*/
 		.value(d => d) /* bin the data points into this bucket*/
 	const bins0 = binBuilder(values)
 	const bins = []

@@ -1,6 +1,6 @@
 {
   "name": "@sjcrh/augen",
-  "version": "2.87.0",
+  "version": "2.109.1-0",
   "description": "Automatic generator of server routes, unit tests, and API documentation",
   "type": "module",
   "main": "src/augen.js",
@@ -25,7 +25,7 @@
   "devDependencies": {
     "esbuild": "^0.19.12",
     "express": "^4.17.1",
-    "glob": "^7.2.3",
+    "glob": "^10.4.5",
     "tape": "^5.2.2",
     "tsx": "^4.7.1"
   },

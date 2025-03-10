@@ -1,4 +1,4 @@
-import type { LegendData, LegendItemEntry } from '../viewModel/LegendDataMapper'
+import type { LegendData, LegendItemEntry } from '../BoxPlotTypes'
 import type { BoxPlotInteractions } from '../interactions/BoxPlotInteractions'
 import type { Div } from '../../../types/d3'
 

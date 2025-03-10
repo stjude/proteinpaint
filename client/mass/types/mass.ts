@@ -2,7 +2,9 @@ import type { RxAppApi } from '../../types/rx'
 import type { Menu } from '#dom'
 import type { Elem } from '../../types/d3'
 import type { ClientCopyGenome } from 'types/global'
-import type { BoxPlotSettings } from '../../plots/boxplot/BoxPlot'
+import type { BoxPlotSettings } from '../../plots/boxplot/BoxPlotTypes'
+import type { CorrVolcanoSettings } from '#plots/corrVolcano/CorrelationVolcanoTypes.ts'
+import type { VolcanoSettings } from '../../plots/volcano/VolcanoTypes.ts'
 //import { TermWrapper } from '#types'
 
 export type MassAppApi = RxAppApi & {
@@ -12,6 +14,7 @@ export type MassAppApi = RxAppApi & {
 	opts: {
 		/** TODO!! -> {} */
 		callbacks: any
+		debug: boolean
 		genome: ClientCopyGenome
 		holder: Elem
 		/** Current release version. See https://github.com/stjude/proteinpaint/releases */
@@ -118,9 +121,13 @@ type PlotSettings = {
 	boxplot?: BoxPlotSettings
 	common?: any
 	controls?: any
-	correlationVolcano?: any
+	correlationVolcano?: CorrVolcanoSettings
+	DEanalysis?: any
+	geneORA?: any
+	gsea?: any
 	sampleScatter?: any
 	violin?: any
+	volcano?: VolcanoSettings
 }
 
 export type PlotConfig = BasePlotConfig & {

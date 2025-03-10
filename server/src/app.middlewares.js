@@ -132,9 +132,11 @@ function log(req) {
 	for (const k in req.query) {
 		if (k != 'jwt') j[k] = req.query[k]
 	}
+	const pathname = url.parse(req.url).pathname
+	if (pathname.endsWith('.js.map')) return
 	console.log(
 		'%s\t%s\t%s\t%s',
-		url.parse(req.url).pathname,
+		pathname,
 		new Date(),
 		req.header('x-forwarded-for') || req.connection.remoteAddress,
 		JSON.stringify(j).replace(/\\"/g, '"')
@@ -159,6 +161,7 @@ function setHeaders(req, res, next) {
 			', x-auth-token, x-ds-access-token, x-sjppds-sessionid'
 	)
 	res.header('Access-Control-Allow-Credentials', true)
+	res.header('Document-Policy', 'js-profiling')
 	if (req.method == 'OPTIONS') {
 		/* TODO: may activate letting auth middleware handle OPTIONS request with authorization/custom headers
 		if (req.headers?.['access-control-request-headers']?.split(',').includes('authorization')) next() // allow auth middleware to handle

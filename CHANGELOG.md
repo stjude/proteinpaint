@@ -2,17 +2,6 @@
 
 All notable changes to this project will be documented in this file.
 
-
-## 2.109.0
-
-Features:
-- Add new test for corr.R
-- New control add to sort the violin plots by either the default or median values.
-
-Fixes:
-- mds3 tk cnv legend will handle case when no cnv data is present due to server error and not to crash
-
-
 ## 2.108.2-0
 
 Fixes

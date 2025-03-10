@@ -15,8 +15,10 @@ export type DERequest = {
 	storage_type: 'text' | 'HDF5'
 	/** Method of DE used wilcoxon/edgeR */
 	method?: string
-	/** Term for confounding variable (if present) */
+	/** Term for confounding variable1 (if present) */
 	tw?: any
+	/** Term for confounding variable2 (if present) */
+	tw2?: any
 	/** Number of variable genes (defined only for parametric DE methods) */
 	VarGenes?: number
 }
@@ -36,10 +38,14 @@ export type ExpressionInput = {
 	min_total_count: number
 	/** Type of storage file: HDF5 or text. Text will be deprecated in the future */
 	storage_type: 'HDF5' | 'text'
-	/** Confounding variable for DE analysis. Maybe array of string (Gender: Male/female) or number (Age). For now supporting 1 confounding variable. Later will add support for multiple confounding variables */
+	/** Confounding variable1 for DE analysis. Maybe array of string (Gender: Male/female) or number (Age). For now supporting 1 confounding variable. */
 	conf1?: any[]
-	/** Type of the confounding variable (continuous/discrete) */
+	/** Type of the confounding variable1 (continuous/discrete) */
 	conf1_mode?: 'continuous' | 'discrete'
+	/** Confounding variable2 for DE analysis. Maybe array of string (Gender: Male/female) or number (Age). For now supporting 1 confounding variable. */
+	conf2?: any[]
+	/** Type of the confounding variable2 (continuous/discrete) */
+	conf2_mode?: 'continuous' | 'discrete'
 	/** Number of variable genes to be included for DE analysis (optional) */
 	VarGenes?: number
 }
@@ -53,6 +59,10 @@ export type DEResponse = {
 	sample_size2: number
 	/** Method of DE used wilcoxon/edgeR */
 	method: string
+	/** Image name from edgeR describing the quality of the fitting from QL pipeline, this is only generated for edgeR not for wilcoxon method  */
+	ql_image?: string
+	/** Image name from edgeR showing the MDS plot of samples from both groups, this is only generated for edgeR not for wilcoxon method */
+	mds_image?: string
 }
 
 export const diffExpPayload: RoutePayload = {

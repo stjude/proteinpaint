@@ -44,27 +44,23 @@ export function setRenderers(self) {
 		if (chart.data.samples.length == 0) return
 		const offsetX = self.axisOffset.x
 		const offsetY = self.axisOffset.y
-
-		const extraSpaceX = (chart.xMax - chart.xMin) * 0.01 //extra space added to avoid clipping the particles on the X axis
-		const extraSpaceY = (chart.yMax - chart.yMin) * 0.01 //extra space added to avoid clipping the particles on the Y axis
+		const xMin = this.range.xMin
+		const xMax = this.range.xMax
+		const yMin = this.range.yMin
+		const yMax = this.range.yMax
+		const extraSpaceX = (xMax - xMin) * 0.01 //extra space added to avoid clipping the particles on the X axis
+		const extraSpaceY = (yMax - yMin) * 0.01 //extra space added to avoid clipping the particles on the Y axis
 
 		chart.xAxisScale = d3Linear()
-			.domain([chart.xMin - extraSpaceX, chart.xMax + extraSpaceX])
+			.domain([xMin - extraSpaceX, xMax + extraSpaceX])
 			.range([offsetX, self.settings.svgw + offsetX])
 
 		chart.axisBottom = axisBottom(chart.xAxisScale)
 		chart.yAxisScale = d3Linear()
-			.domain([chart.yMax + extraSpaceY, chart.yMin - extraSpaceY])
+			.domain([yMax + extraSpaceY, yMin - extraSpaceY])
 			.range([offsetY, self.settings.svgh + offsetY])
 
 		chart.zAxisScale = d3Linear().domain([chart.zMin, chart.zMax]).range([0, self.settings.svgd])
-
-		chart.xScaleMin = chart.xAxisScale(chart.xMin)
-		chart.xScaleMax = chart.xAxisScale(chart.xMax)
-		chart.yScaleMin = chart.xAxisScale(chart.yMin)
-		chart.yScaleMax = chart.yAxisScale(chart.yMax)
-		chart.zScaleMin = chart.xAxisScale(chart.zMin)
-		chart.zScaleMax = chart.zAxisScale(chart.zMax)
 
 		chart.axisLeft = axisLeft(chart.yAxisScale)
 
@@ -160,7 +156,7 @@ export function setRenderers(self) {
 			}
 			labels.push(self.config[`${key}TW`]?.term?.name ?? '')
 
-			// Add 20 for the icon (16) and space
+			// Add 70 for icons, paddings, etc.
 			return getMaxLabelWidth(svg, labels, size) + 70
 		}
 		/** Becomes the x offset for the shape legend.
@@ -169,7 +165,7 @@ export function setRenderers(self) {
 		if (self.config.colorTW)
 			chart.colorLegendWidth =
 				self.config?.colorTW?.q.mode == 'continuous'
-					? Math.max(175, getMaxLabelWidth(svg, [self.config.colorTW.term.name]) + 20)
+					? Math.max(175, getMaxLabelWidth(svg, [self.config.colorTW.term.name]) + 40)
 					: getLegendLabelWidth('color', svg)
 		else chart.colorLegendWidth = 0
 		const shapeWidth = getLegendLabelWidth('shape', svg)
@@ -247,7 +243,7 @@ export function setRenderers(self) {
 		if (self.settings.showAxes && !(self.is2DLarge || self.is3D)) {
 			axisG.style('opacity', 1)
 			if (self.config.term) {
-				let termName = self.config.term.term.name
+				let termName = getTitle(self.config.term.term.name, 60)
 				if (!self.config.colorTW && !self.config.shapeTW && !self.config.term0)
 					termName = `${termName}, n=${chart.cohortSamples.length}`
 
@@ -272,6 +268,7 @@ export function setRenderers(self) {
 						.attr('text-anchor', 'middle')
 						.text(term0Name)
 				}
+				const term2Name = getTitle(self.config.term2.term.name, 60)
 				labelsG
 					.append('text')
 					.attr(
@@ -279,7 +276,7 @@ export function setRenderers(self) {
 						`translate(${self.axisOffset.x - 50}, ${self.settings.svgh / 2 + self.axisOffset.y}) rotate(-90)`
 					)
 					.attr('text-anchor', 'middle')
-					.text(self.config.term2.term.name)
+					.text(term2Name)
 			}
 		} else {
 			axisG.style('opacity', 0)
@@ -332,9 +329,11 @@ export function setRenderers(self) {
 			zAxisScale = d3Linear().domain([zMin, zMax]).range([0, 1])
 		}
 
-		const data = chart.data.samples.map(s => {
-			return { x: chart.xAxisScale(s.x), y: chart.yAxisScale(s.y), z: zAxisScale ? zAxisScale(s.category) : 1 }
-		})
+		const data = chart.data.samples
+			.filter(s => self.getOpacity(s) > 0)
+			.map(s => {
+				return { x: chart.xAxisScale(s.x), y: chart.yAxisScale(s.y), z: zAxisScale ? zAxisScale(s.category) : 1 }
+			})
 		renderContours(
 			contourG,
 			data,
@@ -680,7 +679,7 @@ export function setRenderers(self) {
 
 		const mainG = self.charts[0].mainG
 		const zoom = d3zoom()
-			.scaleExtent([0.5, self.config.scaleDotTW ? 4 : 10])
+			.scaleExtent([0.1, self.config.scaleDotTW ? 4 : 10])
 			.on('zoom', handleZoom)
 			.filter(event => {
 				if (event.type === 'wheel') return event.ctrlKey
@@ -808,6 +807,7 @@ export function setRenderers(self) {
 		if (self.config.colorTW || self.config.colorColumn) {
 			title = `${getTitle(
 				self.config.colorTW?.term?.name || self.config.colorColumn.name,
+				30,
 				self.config.shapeTW == undefined
 			)}`
 			const colorRefCategory = chart.colorLegend.get('Ref')
@@ -908,7 +908,7 @@ export function setRenderers(self) {
 
 					// Initialize the color scale with current settings
 					colorScale.updateScale()
-					offsetY += step
+					offsetY += step * 2
 				} else {
 					for (const [key, category] of chart.colorLegend) {
 						if (key == 'Ref') continue
@@ -1001,12 +1001,6 @@ export function setRenderers(self) {
 			self.drawScaleDotLegend(chart)
 		}
 
-		function getTitle(name, complete = false) {
-			const size = 30
-			if (name.length > size && !complete) name = name.slice(0, size) + '...'
-			return name
-		}
-
 		function addLegendItem(g, category, name, key, x, y, hidden = false) {
 			const circleG = g.append('g')
 			circleG
@@ -1029,6 +1023,11 @@ export function setRenderers(self) {
 
 			return [circleG, itemG]
 		}
+	}
+
+	function getTitle(name, size = 30, complete = false) {
+		if (name.length > size && !complete) name = name.slice(0, size) + '...'
+		return name
 	}
 
 	self.drawScaleDotLegend = function (chart) {

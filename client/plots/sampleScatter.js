@@ -29,6 +29,9 @@ export const minShapeSize = 0.2
 export const maxShapeSize = 4
 //icons have size 16x16
 export const shapes = shapesArray
+
+const numberOfSamplesCutoff = 20000 // if map is greater than cutoff, switch from svg to canvas rendering
+
 class Scatter {
 	constructor() {
 		this.type = 'sampleScatter'
@@ -128,14 +131,15 @@ class Scatter {
 		const reqOpts = this.getDataRequestOpts()
 		if (reqOpts.coordTWs.length == 1) return //To allow removing a term in the controls, though nothing is rendered (summary tab with violin active)
 
-		const results = await this.app.vocabApi.getScatterData(reqOpts)
-		if (results.error) throw results.error
+		const data = await this.app.vocabApi.getScatterData(reqOpts)
+		if (data.error) throw data.error
+		this.range = data.range
 		this.charts = []
 		let i = 0
-		for (const [key, data] of Object.entries(results)) {
-			if (!Array.isArray(data.samples)) throw 'data.samples[] not array'
+		for (const [key, chartData] of Object.entries(data.result)) {
+			if (!Array.isArray(chartData.samples)) throw 'data.samples[] not array'
 			if (data.isLast) this.createChart(key, data, i)
-			else this.createChart(key, data, 0)
+			else this.createChart(key, chartData, 0)
 		}
 		this.initRanges()
 		this.is3D = this.config.term0?.q.mode == 'continuous'
@@ -150,7 +154,7 @@ class Scatter {
 
 	createChart(id, data, i) {
 		const cohortSamples = data.samples.filter(sample => 'sampleId' in sample)
-		if (cohortSamples.length > 10000) this.is2DLarge = true
+		if (cohortSamples.length > numberOfSamplesCutoff) this.is2DLarge = true
 		const colorLegend = new Map(data.colorLegend)
 		const shapeLegend = new Map(data.shapeLegend)
 		this.charts.splice(i, 0, { id, data, cohortSamples, colorLegend, shapeLegend })
@@ -602,34 +606,43 @@ export function downloadImage(imageURL) {
 export async function getPlotConfig(opts, app) {
 	//if (!opts.colorTW) throw 'sampleScatter getPlotConfig: opts.colorTW{} missing'
 	//if (!opts.name && !(opts.term && opts.term2)) throw 'sampleScatter getPlotConfig: missing coordinates input'
-	try {
-		if (opts.colorTW) await fillTermWrapper(opts.colorTW, app.vocabApi)
-		if (opts.shapeTW) await fillTermWrapper(opts.shapeTW, app.vocabApi)
-		if (opts.term) await fillTermWrapper(opts.term, app.vocabApi)
-		if (opts.term2) await fillTermWrapper(opts.term2, app.vocabApi)
-		if (opts.term0) await fillTermWrapper(opts.term0, app.vocabApi)
-		if (opts.scaleDotTW) await fillTermWrapper(opts.scaleDotTW, app.vocabApi)
-		if (opts.sampleCategory) await fillTermWrapper(opts.sampleCategory.tw, app.vocabApi)
 
-		let settings = getDefaultScatterSettings()
-		if (opts.settings) copyMerge(settings, opts.settings)
-		if (!opts.term && !opts.term2) settings.showAxes = false
-		const config = {
-			groups: [],
-			settings: {
-				controls: {
-					isOpen: false // control panel is hidden by default
-				},
-				sampleScatter: settings
+	const plot = {
+		groups: [],
+		settings: {
+			controls: {
+				isOpen: false // control panel is hidden by default
 			},
+			sampleScatter: getDefaultScatterSettings(),
 			startColor: {}, //dict to store the start color of the gradient for each chart when using continuous color
 			stopColor: {} //dict to store the stop color of the gradient for each chart when using continuous color
 		}
-		// may apply term-specific changes to the default object
-		const result = copyMerge(config, opts)
-		if (result.term0?.q?.mode == 'continuous' && !app.hasWebGL())
+	}
+
+	try {
+		let defaultConfig = {}
+		// observe default config specified in ds, if available
+		if (opts.name) {
+			const p = app.vocabApi?.termdbConfig?.scatterplots?.find(i => i.name == opts.name)
+			if (p) defaultConfig = p
+		}
+		copyMerge(plot, defaultConfig, opts)
+
+		if (plot.colorTW) await fillTermWrapper(plot.colorTW, app.vocabApi)
+		if (plot.shapeTW) await fillTermWrapper(plot.shapeTW, app.vocabApi)
+		if (plot.term) await fillTermWrapper(plot.term, app.vocabApi)
+		if (plot.term2) await fillTermWrapper(plot.term2, app.vocabApi)
+		if (plot.term0) await fillTermWrapper(plot.term0, app.vocabApi)
+		if (plot.scaleDotTW) await fillTermWrapper(plot.scaleDotTW, app.vocabApi)
+		if (plot.sampleCategory) await fillTermWrapper(plot.sampleCategory.tw, app.vocabApi)
+
+		// apply term-specific changes to the default object
+		if (!plot.term && !plot.term2) plot.settings.sampleScatter.showAxes = false
+
+		if (plot.term0?.q?.mode == 'continuous' && !app.hasWebGL())
 			throw 'Can not load Z/Divide by term in continuous mode as WebGL is not supported'
-		return result
+
+		return plot
 	} catch (e) {
 		console.log(e)
 		throw `${e} [sampleScatter getPlotConfig()]`

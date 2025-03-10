@@ -688,7 +688,7 @@ tape('term1=categorical, term2=numeric', function (test) {
 		test.end()
 	}
 	async function testViolin(violin, violinDiv) {
-		const groups = await detectGte({ elem: violinDiv.node(), selector: '.sjpp-vp-path', count: 6 })
+		const groups = await detectGte({ elem: violinDiv.node(), selector: '.sjpp-vp-path', count: 2 })
 		test.ok(groups, 'Categorical groups exist')
 	}
 })
@@ -762,11 +762,11 @@ tape('term1=numeric, term2=condition', function (test) {
 		test.end()
 	}
 	async function testConditionTermOrder(violin, violinDiv) {
-		const groups = await detectGte({ elem: violinDiv.node(), selector: '.sjpp-vp-path', count: 8 })
+		const groups = await detectGte({ elem: violinDiv.node(), selector: '.sjpp-vp-path', count: 1 })
 		test.ok(groups, 'Condition groups exist')
 		test.deepEqual(
 			groups.filter((k, i) => i % 2 == 0).map(k => k.__data__.label),
-			violin.Inner.data.plots.filter(plot => plot.plotValueCount > 1).map(k => k.label),
+			violin.Inner.data.plots.filter(plot => plot.plotValueCount > 5).map(k => k.label),
 			'Order of conditional categories in term2 is accurate'
 		)
 	}
@@ -806,7 +806,7 @@ tape('term1=geneExp, term2=categorical', function (test) {
 		test.end()
 	}
 	async function testViolin(violin, violinDiv) {
-		const groups = await detectGte({ elem: violinDiv.node(), selector: '.sjpp-vp-path', count: 6 })
+		const groups = await detectGte({ elem: violinDiv.node(), selector: '.sjpp-vp-path', count: 2 })
 		test.ok(groups, 'categorical groups exist')
 	}
 })
@@ -1091,7 +1091,7 @@ tape('term=agedx, term2=geneExp with regular bins', function (test) {
 		 * one violin plot  */
 		test.equal(
 			numViolinPaths.length / 2,
-			violin.Inner.data.plots.length - 1,
+			violin.Inner.data.plots.filter(p => p.plotValueCount > 5).length,
 			'Should render the correct number of plots per the default bins for a gene expression term'
 		)
 

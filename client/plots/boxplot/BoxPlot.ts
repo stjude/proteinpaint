@@ -4,71 +4,13 @@ import { controlsInit, term0_term2_defaultQ, renderTerm1Label } from '../control
 import { RxComponentInner } from '../../types/rx.d'
 import { plotColor } from '#shared/common.js'
 import { Menu, getMaxLabelWidth } from '#dom'
-import type { Div, Elem, SvgG, SvgSvg, SvgText } from '../../types/d3'
+import type { Elem } from '../../types/d3'
 import type { BasePlotConfig, MassAppApi, MassState, PlotConfig } from '#mass/types/mass'
+import type { TdbBoxPlotOpts, BoxPlotSettings, BoxPlotDom } from './BoxPlotTypes'
 import { Model } from './model/Model'
 import { ViewModel } from './viewModel/ViewModel'
 import { View } from './view/View'
 import { BoxPlotInteractions } from './interactions/BoxPlotInteractions'
-
-/** Opts sent from mass */
-type TdbBoxPlotOpts = {
-	holder: Elem
-	controls?: Elem
-	header?: Elem
-	numericEditMenuVersion?: string[]
-}
-
-/** User controlled settings. Some settings are calculated based on
- * the number of boxplots */
-export type BoxPlotSettings = {
-	/** Width of the boxplots and scale, excluding labels */
-	boxplotWidth: number
-	/** Default is common plot color.  */
-	color: string
-	/** Toggle between a white and black background */
-	darkMode: boolean
-	/** Padding between the left hand label and boxplot */
-	labelPad: number
-	/** Toggle between a linear and log scale
-	 * When true, renders a log scale. Default is false */
-	isLogScale: boolean
-	/** Toggle between vertical and horizontal orientation.
-	 * The default is false */
-	isVertical: boolean
-	/** If true, order box plots from smallest to largest median value
-	 * Default is by alphanumeric order or by bin
-	 * May change this later to `orderBy` if more options arise */
-	orderByMedian: boolean
-	/** Height of individual boxplots */
-	rowHeight: number
-	/** Space between the boxplots */
-	rowSpace: number
-}
-
-/** Descriptions of the dom elements for the box plot */
-export type BoxPlotDom = {
-	/** Div for boxplots below the scale */
-	boxplots: SvgG
-	/** Controls div for the hamburger menu */
-	controls: Elem
-	/** Main div */
-	div: Div
-	/** Error messages */
-	error: Div
-	/** Sandbox header */
-	header?: Elem
-	/** Legend */
-	legend: Div
-	/** Displays the term1 name as the plot title */
-	plotTitle: SvgText
-	/** Main svg holder */
-	svg: SvgSvg
-	/** Y-axis shown above the boxplots */
-	axis: any
-	/** box plot tooltip (e.g. over the outliers) */
-	tip: Menu
-}
 
 class TdbBoxplot extends RxComponentInner {
 	readonly type = 'boxplot'
@@ -206,12 +148,16 @@ class TdbBoxplot extends RxComponentInner {
 				getDisplayStyle: (plot: PlotConfig) => (plot.term2 ? 'none' : '')
 			},
 			{
-				label: 'Dark mode',
+				label: 'Display mode',
 				title: 'Apply a dark theme to the plot',
-				type: 'checkbox',
+				type: 'radio',
 				chartType: 'boxplot',
-				boxLabel: '',
-				settingsKey: 'darkMode'
+				settingsKey: 'displayMode',
+				options: [
+					{ label: 'Default', value: 'default' },
+					{ label: 'Filled', value: 'filled' },
+					{ label: 'Dark mode', value: 'dark' }
+				]
 			}
 		]
 		this.components.controls = await controlsInit({
@@ -313,7 +259,7 @@ export function getDefaultBoxplotSettings(app, overrides = {}) {
 	const defaults: BoxPlotSettings = {
 		boxplotWidth: 550,
 		color: plotColor,
-		darkMode: false,
+		displayMode: 'default',
 		labelPad: 10,
 		isLogScale: false,
 		isVertical: false,

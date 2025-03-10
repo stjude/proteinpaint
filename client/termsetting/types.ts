@@ -47,8 +47,10 @@ type NumericContEditOptsEntry = {
 }
 
 export type UseCase = {
+	/** chart type */
 	target: string
-	detail?: string //Maybe?
+	/** refine logic per specifics (e.g. 'numeric' or 'term') */
+	detail?: string
 	regressionType?: string //Maybe?
 	term1type?: string //Maybe? not documented
 }
@@ -64,10 +66,13 @@ export type SampleCountsEntry = {
 }
 
 type BaseTermSettingOpts = {
-	//Optional
+	/** If provided, max number of characters in the pill before
+	 * truncating the label. */
 	abbrCutoff?: number
 	activeCohort?: number
 	disable_terms?: Term[]
+	// This is not used anywhere.
+	// Ok to remove?
 	handler: Handler
 	noTermPromptOptions?: NoTermPromptOptsEntry[]
 }
@@ -103,7 +108,7 @@ export type TermSettingOpts = BaseTermSettingOpts & {
 	use_bins_less?: boolean
 	usecase?: UseCase
 	debug?: boolean | number //true or 1
-	//'snplocus' types
+	/** See client copy genome type */
 	genomeObj?: any
 
 	//vocab??
@@ -114,7 +119,7 @@ export type TermSettingOpts = BaseTermSettingOpts & {
 	// ?
 	customFillTw?: (f: TermWrapper) => void
 
-	// to pass in purpose and context-specific arguments that will be merged to client request parameters
+	/** to pass in purpose and context-specific arguments that will be merged to client request parameters */
 	getBodyParams?: () => any
 }
 

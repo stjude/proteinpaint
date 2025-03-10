@@ -24,6 +24,7 @@ server/src/app.js
 server/src/health.js
 server/src/hicstat.js
 server/package*/*
+server/coverage/*
 
 shared/types/docs.json
 shared/types/*.js
@@ -78,6 +79,7 @@ client/test/wpCompileTime.js
 client/test/*.bundle.js*
 client/test/init-esm.js
 client/test/bundle/*
+client/.nyc_output/*
 
 cairo-*/*
 canvas/*

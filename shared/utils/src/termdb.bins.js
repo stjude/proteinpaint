@@ -109,7 +109,6 @@ export function compute_bins(binconfig, summaryfxn, valueConversion) {
   
 binconfig   
   configuration of bins per the Numerical Binning Scheme
-  https://docs.google.com/document/d/18Qh52MOnwIRXrcqYR43hB9ezv203y_CtJIjRgDcI42I/edit#heading=h.arwagpbhlgr3
 
 summaryfxn (percentiles)=> return {min, max, pX, pY, ...}
   - required function

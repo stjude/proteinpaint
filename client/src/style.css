@@ -194,13 +194,7 @@ by normalize.css are covered here
     /*border-width: 1px 0px;*/
 }
 
-.sja_errorbar>:nth-child(2) {
-    position: absolute;
-    padding: 5px 10px;
-    cursor: default;
-    top: 0px;
-    right: 10px;
-}
+
 
 .sja_inset_a {
     background-color: #ebedeb;

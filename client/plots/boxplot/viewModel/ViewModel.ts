@@ -1,61 +1,10 @@
 import { format } from 'd3-format'
 import { decimalPlacesUntilFirstNonZero } from '#shared/roundValue.js'
-import type { BoxPlotSettings } from '../BoxPlot'
-import type { BoxPlotResponse, BoxPlotEntry, BoxPlotData } from '#types'
+import { rgb } from 'd3-color'
+import type { BoxPlotResponse } from '#types'
 import type { PlotConfig } from '#mass/types/mass'
-import type { LegendItemEntry } from './LegendDataMapper'
+import type { BoxPlotSettings, PlotDimensions, ViewData } from '../BoxPlotTypes'
 import { LegendDataMapper } from './LegendDataMapper'
-
-/**
- * Calculates the dimensions and html attributes for the svg and
- * individual boxplots. The data is passed to the View class.
- */
-
-export type ViewData = {
-	plotDim: PlotDimensions
-	plots: FormattedPlotEntry[]
-	legend: { label: string; items: LegendItemEntry[] }[]
-}
-
-/** Processed box plot obj with dimensions needs for
- * rendering in the view. */
-export type FormattedPlotEntry = BoxPlotEntry & {
-	boxplot: BoxPlotData & {
-		label: string
-		/** if outliers are present, set the radius
-		 * instead of using the rather large default */
-		radius?: number
-	}
-	/** offset for the label div */
-	x: number
-	/** incrementing, descending offset for each new plot  */
-	y: number
-	/** Plot label color. Changes per darkMode selection */
-	labColor: string
-}
-
-export type PlotDimensions = {
-	/** Changes background color between white and soft black
-	 * based on darkMode selection */
-	backgroundColor: string
-	/** Domain for the axis */
-	domain: number[]
-	/** Range for the axis */
-	range: number[]
-	svg: {
-		/** Width of the svg */
-		width: number
-		/** Height of the svg */
-		height: number
-	}
-	/** Changes text color for the axis, plot labels, and legend
-	 * between black and white based on darkMode selection */
-	textColor: string
-	/** Title of the plot and coordinates */
-	title: { x: number; y: number; text: string }
-	/** axis coordinates */
-	axis: { x: number; y: number; values(ticks: number[]): number[]; format(d: number): string }
-}
 
 export class ViewModel {
 	/** Top padding for the svg */
@@ -138,8 +87,8 @@ export class ViewModel {
 					return d.toString()
 				}
 			},
-			backgroundColor: settings.darkMode ? 'black' : 'white',
-			textColor: settings.darkMode ? 'white' : 'black'
+			backgroundColor: settings.displayMode == 'dark' ? 'black' : 'white',
+			textColor: settings.displayMode == 'dark' ? 'white' : 'black'
 		}
 		return plotDim
 	}
@@ -185,6 +134,8 @@ export class ViewModel {
 
 			//Set the color for all plots
 			if (!plot.color) plot.color = config?.term2?.term?.values?.[plot.seriesId]?.color || settings.color
+			//Brighten the colors in dark mode for better visibility
+			if (settings.displayMode == 'dark') plot.color = rgb(plot.color).brighter(0.75)
 			//Ignore if hidden after the color is set
 			if (plot.isHidden) continue
 			if (plot.boxplot.out.length) {
@@ -194,7 +145,7 @@ export class ViewModel {
 				if (maxOut && maxOut.value > data.absMax) data.absMax = maxOut.value
 				plot.boxplot.radius = this.outRadius
 			}
-			plot.labColor = settings.darkMode ? 'white' : 'black'
+			plot.labColor = settings.displayMode == 'dark' ? 'white' : 'black'
 			plot.x = settings.isVertical ? this.horizPad / 2 + this.incrPad : this.totalLabelSize
 			plot.y = this.topPad + (settings.isVertical ? settings.boxplotWidth + settings.labelPad : this.incrPad)
 			this.incrPad += this.totalRowSize

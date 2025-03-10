@@ -27,7 +27,8 @@ export class profilePlot {
 	getState(appState) {
 		const config = appState.plots.find(p => p.id === this.id)
 		if (!config) throw `No plot with id='${this.id}' found`
-		const [logged, site, user] = getProfileLogin(this.app, appState.activeCohort) //later on replace with real login info
+		const { logged, sites, user } = getProfileLogin(this.app, appState.activeCohort) //later on replace with real login info
+		const site = sites?.[0]
 		return {
 			config,
 			termfilter: appState.termfilter,
@@ -35,16 +36,28 @@ export class profilePlot {
 			vocab: appState.vocab,
 			logged, //later change to read login info
 			site,
+			sites,
+			user,
 			activeCohort: appState.activeCohort
 		}
+	}
+
+	isAggregate() {
+		if (!this.state.logged) return true
+		if (this.state.sites?.length > 1 || this.state.user == 'admin') return true
+		return this.settings.isAggregate
 	}
 
 	async init(appState) {
 		const config = appState.plots.find(p => p.id === this.id)
 		const state = this.getState(appState)
+		this.isRadarFacility = this.type == 'profileRadarFacility'
 		if (this.opts.header) {
-			const suffix = state.logged ? (state.site ? state.site : 'Admin') : 'Public'
-			this.opts.header.text(config.header ? config.header + ` / ${suffix}` : config.chartType + ` / ${suffix}`)
+			let chartName = config.chartType.match(/[A-Z][a-z]+/g)
+			chartName = chartName.join(' ')
+			this.opts.header
+				.style('text-transform', 'capitalize')
+				.text(config.header ? config.header + ` / ${state.user}` : chartName + ` / ${state.user}`)
 		}
 		const div = this.opts.holder.append('div').style('display', 'inline-block')
 		const leftDiv = div.append('div').style('display', 'inline-block').style('vertical-align', 'top')
@@ -206,9 +219,9 @@ export class profilePlot {
 		})
 		const chartType = this.type
 		this.dom.controlsDiv.selectAll('*').remove()
-
 		let inputs = []
-		if (this.state.logged && this.state.site && chartType != 'profileRadarFacility') {
+		const isAggregate = this.isAggregate()
+		if (this.state.sites?.length == 1 && !this.isRadarFacility) {
 			const dataInput = {
 				label: 'Data',
 				type: 'radio',
@@ -220,10 +233,9 @@ export class profilePlot {
 					{ label: 'Aggregate', value: true }
 				]
 			}
-
 			inputs.push(dataInput)
 		}
-		if (!this.state.logged || !this.state.site || this.settings.isAggregate || chartType == 'profileRadarFacility') {
+		if (isAggregate || this.isRadarFacility) {
 			inputs.push(
 				...[
 					{
@@ -343,61 +355,29 @@ export class profilePlot {
 	}
 
 	async loadSampleData(chartType, inputs) {
-		if (chartType != 'profileRadarFacility') {
-			if (this.state.logged) {
-				if (this.state.site && !this.settings.isAggregate) {
-					this.settings.site = this.sampleidmap[this.state.site]?.id
-					this.sites = [{ label: this.state.site, value: this.settings.site }]
-				} //Admin
-				else if (!this.state.site) {
-					this.sites = this.data.lst.map(s => {
-						return { label: this.data.refs.bySampleId[s.sample].label, value: s.sample }
-					})
-					this.sites.sort((a, b) => {
-						if (a.label < b.label) return -1
-						if (a.label > b.label) return 1
-						return 0
-					})
-					this.sites.unshift({ label: '', value: '' })
-					inputs.push({
-						label: 'Site',
-						type: 'dropdown',
-						chartType,
-						options: this.sites,
-						settingsKey: 'site',
-						callback: value => this.setSite(value)
-					})
+		if (this.state.logged) {
+			if (this.state.site && !this.settings.isAggregate) {
+				this.loadSites()
+				if (this.state.sites.length == 1) {
+					//select site if only choice to load its data
+					const id = this.sampleidmap[this.state.sites[0]]?.id
+					this.settings.site = id
 				}
-
-				this.sampleData = await this.getSampleData()
+			} //Admin
+			else if (!this.state.site) {
+				this.sites = this.data.lst.map(s => {
+					return { label: this.data.refs.bySampleId[s.sample].label, value: s.sample }
+				})
+				this.sites.sort((a, b) => {
+					if (a.label < b.label) return -1
+					if (a.label > b.label) return 1
+					return 0
+				})
+				this.sites.unshift({ label: '', value: '' })
 			}
-		} else {
-			if (this.state.logged) {
-				let result
-
-				if (this.state.site && !this.settings.isAggregate) {
-					this.settings.site = this.sampleidmap[this.state.site].id
-					this.sites = [{ label: this.state.site, value: this.settings.site }]
-
-					this.sampleData = await this.getSampleData()
-				} //Admin
-				else {
-					result = await this.app.vocabApi.getAnnotatedSampleData({
-						terms: this.twLst,
-						termsPerRequest: 30
-					})
-					this.sites = result.lst.map(s => {
-						return { label: result.refs.bySampleId[s.sample].label, value: s.sample }
-					})
-					this.sites.sort((a, b) => {
-						if (a.label < b.label) return -1
-						if (a.label > b.label) return 1
-						return 0
-					})
-					if (!this.settings.site) this.settings.site = this.sites[0].value
-					this.sampleData = result.samples[Number(this.settings.site)]
-				}
-				inputs.unshift({
+			const isAggregate = this.isAggregate()
+			if (isAggregate && (this.state.sites?.length > 1 || this.state.user == 'admin'))
+				inputs.push({
 					label: 'Site',
 					type: 'dropdown',
 					chartType,
@@ -405,7 +385,16 @@ export class profilePlot {
 					settingsKey: 'site',
 					callback: value => this.setSite(value)
 				})
-			}
+			this.sampleData = await this.getSampleData()
+		}
+	}
+
+	loadSites() {
+		this.sites = []
+		if (!this.isRadarFacility) this.sites.push({ label: '', value: '' })
+		for (const site of this.state.sites) {
+			const id = this.sampleidmap[site]?.id
+			this.sites.push({ label: site, value: id })
 		}
 	}
 
@@ -430,7 +419,7 @@ export class profilePlot {
 	setFilterValue(key, value) {
 		const config = this.config
 		this.settings[key] = value
-		if (this.type != 'profileRadarFacility') this.settings.site = '' //always clear site when a filter is changed
+		if (!this.isRadarFacility) this.settings.site = '' //always clear site when a filter is changed
 		config.filter = this.getFilter()
 		this.app.dispatch({ type: 'plot_edit', id: this.id, config: this.config })
 	}
@@ -445,7 +434,7 @@ export class profilePlot {
 
 	clearFiltersExcept(ids) {
 		for (const tw of this.config.filterTWs) if (!ids.includes(tw.term.id)) this.settings[tw.term.id] = ''
-		if (this.config.chartType != 'profileRadarFacility') this.settings.site = ''
+		if (!this.isRadarFacility) this.settings.site = ''
 	}
 
 	setSite(site) {
@@ -482,7 +471,7 @@ export class profilePlot {
 	}
 
 	addFilterLegend() {
-		if (!this.settings.site || this.config.chartType == 'profileRadarFacility') {
+		if (!this.settings.site || this.isRadarFacility) {
 			const hasFilters = this.config.filterTWs.some(tw => this.settings[tw.term.id])
 			const title = hasFilters ? 'Filters' : 'No filter applied'
 			this.filterG
@@ -494,7 +483,7 @@ export class profilePlot {
 				.attr('transform', `translate(0, -5)`)
 			for (const tw of this.config.filterTWs) this.addFilterLegendItem(tw.term.name, this.settings[tw.term.id])
 		}
-		if (this.settings.site && this.config.chartType != 'profileRadarFacility') {
+		if (this.settings.site && !this.isRadarFacility) {
 			const label = this.sites.find(s => s.value == this.settings.site).label
 			this.addFilterLegendItem('Facility', label)
 		}
@@ -563,9 +552,8 @@ export class profilePlot {
 	getPercentage(d, isAggregate = null) {
 		if (!d) return null
 		if (isAggregate == null)
-			//not specified when called
-			//if defined in the settings a site is provided and the user can decide what to see, otherwise it is admin view and if the site was set sampleData is not null
-			isAggregate = this.settings.isAggregate || this.sampleData == null //if defined in the settings a site is provided and the user can decide what to see, otherwise it is admin view and if the site was set sampleData is not null
+			// if not specified when called (not profileRadarFacility), if a sample is loaded do not aggregate
+			isAggregate = this.sampleData == null
 		if (isAggregate) {
 			const maxScore = d.maxScore.term ? this.data.lst[0]?.[d.maxScore.$id]?.value : d.maxScore
 			let scores = this.data.lst.map(sample => (sample[d.score.$id]?.value / maxScore) * 100)
@@ -669,11 +657,11 @@ export function getDefaultProfilePlotSettings() {
 
 export function getProfileLogin(app, cohort = FULL_COHORT) {
 	const auth = app.vocabApi.getClientAuthResult()
-	if (!auth) return [false, null, 'public']
+	if (!auth) return { logged: false, sites: [], user: 'public' }
 	const auth_info = cohort == FULL_COHORT ? auth.full : auth.abbrev
 	const logged = auth_info?.role != 'public'
-	if (!auth_info) return [false, null, 'public'] //no login info for the cohort, treat it as not logged in, public view for that cohort
-	const user = auth_info?.role
-	const site = user == 'admin' ? null : auth_info.site //site only matters if you are not admin
-	return [logged, site, user]
+	if (!auth_info) return { logged: false, sites: [], user: 'public' } //no login info for the cohort, treat it as not logged in, public view for that cohort
+	const user = auth_info?.role || 'public'
+	const sites = user == 'admin' ? null : auth_info.sites //site only matters if you are not admin
+	return { logged, sites, user }
 }

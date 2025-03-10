@@ -3,8 +3,7 @@ import { drawBoxplot, Menu } from '#dom'
 import { scaleLinear, scaleLog } from 'd3-scale'
 import { axisstyle } from '#src/client'
 import { axisTop, axisLeft } from 'd3-axis'
-import type { BoxPlotDom, BoxPlotSettings } from '../BoxPlot'
-import type { ViewData, PlotDimensions } from '../viewModel/ViewModel'
+import type { BoxPlotDom, BoxPlotSettings, ViewData, PlotDimensions } from '../BoxPlotTypes'
 import type { MassAppApi } from '#mass/types/mass'
 import type { BoxPlotInteractions } from '../interactions/BoxPlotInteractions'
 import type { RenderedPlot } from './RenderedPlot'
@@ -40,7 +39,7 @@ export class View {
 			.transition()
 			.attr('width', plotDim.svg.width)
 			.attr('height', plotDim.svg.height)
-			//Fix for white background when downloading darkMode image.
+			//Fix for white background when downloading dark mode image.
 			.style('fill', plotDim.backgroundColor)
 
 		const setScaleFunc = settings.isLogScale ? scaleLog().base(10) : scaleLinear()
@@ -115,7 +114,7 @@ export class View {
 			drawBoxplot({
 				bp: plot.boxplot,
 				g,
-				color: plot.color,
+				color: settings.displayMode == 'filled' ? 'black' : plot.color,
 				scale: scale,
 				rowheight: settings.rowHeight,
 				labpad: settings.labelPad,
@@ -140,7 +139,10 @@ export class View {
 					settings.isVertical
 				)
 			}
+			if (settings.displayMode !== 'default') {
+				const fillColor = settings.displayMode == 'filled' ? plot.color : data.plotDim.backgroundColor
+				g.selectAll('g[id^="sjpp-boxplot-"] > rect').style('fill', fillColor!)
+			}
 		}
-		dom.boxplots.selectAll('g[id^="sjpp-boxplot-"] > rect').style('fill', data.plotDim.backgroundColor)
 	}
 }

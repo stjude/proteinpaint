@@ -227,8 +227,9 @@ tape('large test data: integers', function (test) {
 		{
 			type: 'regular-bin',
 			startinclusive: true,
-			bin_size: 5,
-			first_bin: { stop: 5 }
+			bin_size: 1,
+			first_bin: { stop: 1 },
+			last_bin: { start: 7 }
 		},
 		'should match expected output'
 	)
@@ -257,8 +258,9 @@ tape('large test data: floats', function (test) {
 		{
 			type: 'regular-bin',
 			startinclusive: true,
-			bin_size: 0.5,
-			first_bin: { stop: 0.5 },
+			bin_size: 0.2,
+			first_bin: { stop: 0.2 },
+			last_bin: { start: 1.4 },
 			rounding: '.1f'
 		},
 		'should match expected output'

@@ -80,10 +80,14 @@ export type Handler = {
 }
 
 type BaseTermSettingOpts = {
-	//Optional
+	/** Set the max number of characters in a pill
+	 * before the pill name is truncated. */
 	abbrCutoff?: number
 	activeCohort?: number
+	/** tw.term.ids */
 	disable_terms?: string[]
+	// This is not used anywhere.
+	// Ok to remove?
 	handler: Handler
 	noTermPromptOptions?: NoTermPromptOptsEntry[]
 }

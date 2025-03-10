@@ -6,7 +6,7 @@ import { get$id } from '#termsetting'
 import { getCurrentCohortChartTypes } from './charts'
 import { getColors } from '#shared/common.js'
 import { rgb } from 'd3-color'
-import { TermTypes } from '#shared/terms.js'
+import { TermTypes, isNumericTerm } from '#shared/terms.js'
 
 /*
 this
@@ -101,34 +101,20 @@ class MassGroups {
 
 		const name = samplelstGroups.length == 1 ? samplelstGroups[0].name : 'Sample groups'
 		const tw = getSamplelstTW(samplelstGroups, name, this.app.vocabApi)
-
 		/* 
-		QUICK FIX
 		when samplelstGroups has 1 group,
-		tw.q.groups[0] should be samplelstGroups[0]
-		tw.q.groups[1] should be rest of samples. BUT it has same content as groups[0]
-
-		getSamplelstTW() TODO:
-		- add this fix back to getSamplelstTW()
-		- change to async
-		- resolve 3rd arg
-		- fix all usages in plot and test
+		tw.q.groups[0] has values as samplelstGroups[0].items, with a filter of {in: true}
+		tw.q.groups[1] has values as samplelstGroups[0].items, with a filter of {in: false}
 		*/
-		if (samplelstGroups.length == 1) {
-			tw.q.groups[1].values = [] // set 2nd group to blank
-			// retrieve full list of samples based on current filter. those not in 1st group are put in 2nd group
-			for (const s of await this.app.vocabApi.getFilteredSampleList(this.state.termfilter.filter)) {
-				// s={id,name}, q.groups[].values[]={sampleId,sample}
-				if (tw.q.groups[0].values.indexOf(i => i.sampleId == s.id) == -1) {
-					tw.q.groups[1].values.push({ sampleId: s.id, sample: s.name })
-				}
-			}
-		}
 
 		//when there is only one group and need to create a others group
 		if (groups.length == 1) {
 			// find the sample count in current cohort
-			const countSampleCount = await this.app.vocabApi.getCohortSampleCount(this.activeCohortName)
+			let countSampleCount
+			if (this.state.termfilter.filter.lst.length)
+				countSampleCount = await this.app.vocabApi.getFilteredSampleCount(this.state.termfilter.filter)
+			else countSampleCount = await this.app.vocabApi.getCohortSampleCount(this.activeCohortName)
+
 			const countSampleCountInt = parseInt(countSampleCount, 10)
 
 			// get the sample count in "others" group
@@ -235,8 +221,11 @@ class MassGroups {
 
 		addMatrixMenuItems(this.tip, menuDiv, samplelstTW, this.app, id, this.state, () => this.newId)
 
-		if (this.state.currentCohortChartTypes.includes('DEanalysis') && samplelstTW.q.groups.length == 2)
+		//TODO: need to 'diffAnalysis' to `currentCohortChartTypes` in the future
+		if (this.state.currentCohortChartTypes.includes('DEanalysis') && samplelstTW.q.groups.length == 2) {
 			addDEPlotMenuItem(menuDiv, this, this.state, samplelstTW)
+			addDiffAnalysisPlotMenuItem(menuDiv, this, this.state, samplelstTW)
+		}
 
 		if (this.state.currentCohortChartTypes.includes('survival'))
 			addPlotMenuItem('survival', menuDiv, 'Compare survival', this.tip, samplelstTW, id, this, true)
@@ -254,7 +243,9 @@ class MassGroups {
 			showTermsTree(
 				summarizeDiv,
 				term => {
-					openSummaryPlot(term, samplelstTW, this.app, id, () => this.newId)
+					const tw = { term }
+					if (isNumericTerm(term)) tw.q = { mode: 'continuous' }
+					openSummaryPlot(tw, samplelstTW, this.app, id, () => this.newId)
 				},
 				this.app,
 				this.tip
@@ -343,6 +334,38 @@ function addDEPlotMenuItem(div, self, state, samplelstTW, tip) {
 		.style('text-align', 'right')
 		.style('opacity', 0.8)
 		.style('padding', '3px')
+}
+
+function addDiffAnalysisPlotMenuItem(div, self, state, samplelstTW) {
+	div
+		.append('div')
+		.attr('class', 'sja_menuoption sja_sharp_border')
+		.text('Differential analysis')
+		.on('click', e => {
+			//Move this to diff analysis plot??
+			//Do the check but not add to the state??
+			const groups = []
+			for (const group of samplelstTW.q.groups) {
+				if (group.values && group.values.length > 0) {
+					groups.push(group)
+				} else {
+					throw 'group does not contain samples for differential analysis'
+				}
+			}
+			const config = {
+				chartType: 'differentialAnalysis',
+				state,
+				samplelst: { groups },
+				//Eventually termType will be dynamic
+				termType: 'geneExpression',
+				tw: samplelstTW
+			}
+			self.tip.hide()
+			self.app.dispatch({
+				type: 'plot_create',
+				config
+			})
+		})
 }
 
 function initUI(self) {
@@ -582,15 +605,10 @@ export async function openPlot(chartType, term, term2, app, id, newId) {
 	})
 }
 
-export async function openSummaryPlot(term, samplelstTW, app, id, newId) {
-	// barchart config.term{} name is confusing, as it is actually a termsetting object, not term
-	// thus convert the given term into a termwrapper
-	// tw.q can be missing and will be filled in with default setting
-	const tw = term.term ? term : { term }
-
-	let config = {
+export async function openSummaryPlot(tw, samplelstTW, app, id, newId) {
+	const config = {
 		chartType: 'summary',
-		childType: 'barchart',
+		childType: tw.q?.mode == 'continuous' ? 'violin' : 'barchart',
 		term: tw,
 		term2: samplelstTW
 	}

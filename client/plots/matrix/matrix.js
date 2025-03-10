@@ -14,6 +14,7 @@ import { getTermGroups } from './matrix.xtw'
 import svgLegend from '#dom/svg.legend'
 import { mclass, dt2label, morigin, dtsnvindel, dtcnv } from '#shared/common.js'
 import { select } from 'd3-selection'
+import { sayerror } from '#dom'
 
 export class Matrix {
 	constructor(opts) {
@@ -239,6 +240,13 @@ export class Matrix {
 			})
 			await this.adjustSvgDimensions(prevTranspose)
 			this.controlsRenderer.main()
+			if (this.data.removedHierClusterTerms) {
+				sayerror(
+					this.dom.errorDiv,
+					`Failed to get values for hierCluster ${this.data.removedHierClusterTerms.length > 1 ? 'terms' : 'term'}: ` +
+						this.data.removedHierClusterTerms.join(', ')
+				)
+			}
 		} catch (e) {
 			// a new token message error may have been triggered by the data request here,
 			// even if the initial state did not have a token message at the start of a dispatch

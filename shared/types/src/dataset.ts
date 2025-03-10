@@ -556,21 +556,23 @@ export type MetaboliteIntensityQuery = MetaboliteIntensityQueryNative
 
 /** the geneExpression query */
 export type GeneExpressionQueryGdc = {
-	src: 'gdcapi' | string
+	src: 'gdcapi'
 	geneExpression2bins?: { [index: string]: any }
 }
 
 export type GeneExpressionQueryNative = {
-	src: 'native' | string
+	src: 'native'
+	/** bgzip-compressed, tabix-index file.
+	first line must be "#chr \t start \t stop \t gene \t sample1 \t ..." */
 	file: string
 	/** dynamically added during server launch, list of sample integer IDs from file */
 	samples?: number[]
+	/** dynamically added flag during launch */
 	nochr?: boolean
+	/** dynamically added getter */
 	get?: (param: any) => void
 	/** This dictionary is used to store/cache the default bins calculated for a geneExpression term when initialized in the fillTermWrapper */
 	geneExpression2bins?: { [index: string]: any }
-	/** Type of data format HDF5 or bed */
-	storage_type?: 'HDF5' | 'bed'
 }
 
 export type GeneExpressionQuery = GeneExpressionQueryGdc | GeneExpressionQueryNative
@@ -899,8 +901,10 @@ type ScatterPlotsEntry = {
 	settings?: { [index: string]: any }
 	/** by default the dots are called "samples" on the plot, use this to call it by diff name e.g. "cells" */
 	sampleType?: string
-	/** a plot can be colored by either a dict term termsetting (colorTW) or file column values (colorColumn) */
+	/** a termsetting to supply dot color */
 	colorTW?: { id: string }
+	/** a termsetting to supply dot shape */
+	shapeTW?: { id: string } // TODO replace with tw type
 	colorColumn?: ColorColumn
 	/** provide a sampletype term to filter for specific type of samples for subjects with multiple samples and show in the plot.
 e.g. to only show D samples from all patients
@@ -1377,6 +1381,16 @@ type MassNav = {
 			 * maybe used for other tabs as well.
 			 */
 			html?: string
+			/** declare data release. should only use for "about" */
+			dataRelease?: {
+				/** data release version */
+				version: string
+				/** link to data release page */
+				link: string
+			}
+			/** html string, can include links to other
+			 * pages (e.g., tutorials, google group) */
+			additionalInfo?: string
 			/** "active" items, shown as clickable buttons in about tab. click an item to launch a plot */
 			activeItems?: {
 				items: ActiveItem[]
@@ -1386,6 +1400,8 @@ type MassNav = {
 	}
 	/** customize background color of active navigation tab */
 	activeColor?: string
+	/** customize background color of active navigation tab on hover */
+	activeColorHover?: string
 }
 
 type ActiveItem = {

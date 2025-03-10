@@ -22,6 +22,7 @@ import { getResult as getResultGene } from '#src/gene.js'
 import { TermTypes, NUMERIC_DICTIONARY_TERM } from '#shared/terms.js'
 import { getData } from '#src/termdb.matrix.js'
 import { termType2label } from '#shared/terms.js'
+import { mayLog } from '#src/helpers.ts'
 
 export const api: RouteApi = {
 	endpoint: 'termdb/cluster',
@@ -95,8 +96,10 @@ async function getResult(q: TermdbClusterRequest, ds: any, genome) {
 	1. local testing with gdc using inconsistent gencode versions (gdc:36). for some genes local will use a geneid not found in gdc and cause issue for clustering
 	2. somehow in v36 genedb there can still be geneid not in gdc. this helps avoid app crashing in gdc environment
 	*/
+	const removedHierClusterTerms: string[] = []
 	for (const [term, obj] of term2sample2value) {
 		if (Object.keys(obj).length === 0) {
+			removedHierClusterTerms.push(term)
 			term2sample2value.delete(term)
 			delete byTermId[term]
 		}
@@ -112,8 +115,10 @@ async function getResult(q: TermdbClusterRequest, ds: any, genome) {
 	// have data for multiple genes, run clustering
 	const t = Date.now() // use "t=new Date()" will lead to tsc error
 	const clustering: Clustering = await doClustering(term2sample2value, q, Object.keys(bySampleId).length)
-	if (serverconfig.debugmode) console.log('clustering done:', Date.now() - t, 'ms')
-	return { clustering, byTermId, bySampleId } as ValidResponse
+	mayLog('clustering done:', Date.now() - t, 'ms')
+	const result = { clustering, byTermId, bySampleId } as ValidResponse
+	if (removedHierClusterTerms.length) result.removedHierClusterTerms = removedHierClusterTerms
+	return result
 }
 
 async function getNumericDictTermAnnotation(q, ds, genome) {
@@ -274,7 +279,7 @@ async function validateNative(q: GeneExpressionQueryNative, ds: any, genome: any
 		const limitSamples = await mayLimitSamples(param, q.samples, ds)
 		if (limitSamples?.size == 0) {
 			// got 0 sample after filtering, must still return expected structure with no data
-			return { term2sample2value: new Set(), byTermId: {}, bySampleId: {} }
+			return { term2sample2value: new Map(), byTermId: {}, bySampleId: {} }
 		}
 
 		// has at least 1 sample passing filter and with exp data

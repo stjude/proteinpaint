@@ -241,10 +241,8 @@ export class MassAbout {
 		if (this.selectCohort.asterisk) {
 			this.dom.cohortAsterisk = this.subheader
 				.append('div')
-				.style('margin-left', '10px')
-				.style('padding-top', '20px')
-				.style('padding-bottom', '20px')
-				.style('font-size', 'small')
+				.style('margin', '10px')
+				.style('font-size', '.8em')
 				.text(this.selectCohort.asterisk)
 		}
 	}
@@ -347,33 +345,33 @@ export class MassAbout {
 	}
 
 	showServerInfo = () => {
-		if (!this.app.opts.pkgver && !this.app.opts.launchDate) return
+		const state = this.app.getState()
+		const about = state.termdbConfig.massNav?.tabs?.about
+		if (!about && !this.app.opts.pkgver && !this.app.opts.launchDate) return
+		const dataRelease = about?.dataRelease
+		const additionalInfo = about?.additionalInfo
 		const div = this.subheader
 			.append('div')
 			.attr('data-testid', 'sjpp-about-server-info')
-			.style('margin-left', '10px')
-			.style('padding-bottom', '5px')
+			.style('margin', '10px')
 			.style('font-size', '.8em')
 
+		const htmlArr: string[] = []
+		if (dataRelease) {
+			htmlArr.push(`Data Release: <a href=${dataRelease.link} target=_blank>${dataRelease.version}</a>`)
+		}
 		if (this.app.opts.pkgver) {
-			div
-				.append('div')
-				.attr('data-testid', 'sjpp-about-release')
-				.style('display', 'inline-block')
-				.text('Release version: ')
-				.append('a')
-				.property('href', 'https://github.com/stjude/proteinpaint/pkgs/container/ppfull')
-				.property('target', `${this.app.opts.pkgver}`)
-				.text(`${this.app.opts.pkgver}`)
+			htmlArr.push(
+				`Software Release: <a href=https://github.com/stjude/proteinpaint/pkgs/container/ppfull target=_blank>${this.app.opts.pkgver}</a>`
+			)
 		}
-
 		if (this.app.opts.launchDate) {
-			div
-				.append('div')
-				.attr('data-testid', 'sjpp-about-server')
-				.style('display', 'inline-block')
-				.text(`${this.app.opts.pkgver ? ', ' : ''}server launched: ${this.app.opts.launchDate}`)
+			htmlArr.push(`Server Launched: ${this.app.opts.launchDate}`)
 		}
+		if (additionalInfo) {
+			htmlArr.push(additionalInfo)
+		}
+		div.append('div').html(htmlArr.join('; '))
 	}
 }
 

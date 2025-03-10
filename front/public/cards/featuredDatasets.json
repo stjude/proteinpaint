@@ -70,8 +70,6 @@
             "searchbar": "none",
             "availableGenomes": ["hg38"],
             "runargs": {
-                "nobox":true,
-                "noheader": true,
                 "mass": {
                     "state": {
                         "dslabel": "SJLife",

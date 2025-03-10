@@ -98,6 +98,7 @@ function create_mclass(tk, block) {
 function may_create_variantShapeName(tk) {
 	if (!tk.legend.customShapeLabels || !tk.custom_variants) return
 	if (!tk.legend.variantShapeName) tk.legend.variantShapeName = []
+
 	for (const data of tk.custom_variants) {
 		if (!data.shape) data.shape = 'filledCircle' //Quick fix since legend renders simultaneously with skewers
 		const shapeObj = tk.legend.variantShapeName.find(v => v.key == data.shape)
@@ -109,6 +110,19 @@ function may_create_variantShapeName(tk) {
 			})
 		} else {
 			shapeObj.num = ++shapeObj.num
+		}
+	}
+
+	// custom_variants[] initial items may have limited set of shapes; later the items maybe dynamically reassigned with additional shape not found in variantShapeName[] that will break code; since all shapes should be declared in customShapeLabels{}, populate them into variantShapeName[] to avoid this issue
+	if (tk.legend.customShapeLabels) {
+		for (const shape in tk.legend.customShapeLabels) {
+			if (!tk.legend.variantShapeName.find(i => i.key == shape)) {
+				tk.legend.variantShapeName.push({
+					key: shape,
+					origShape: shape,
+					num: 0
+				})
+			}
 		}
 	}
 
@@ -893,8 +907,9 @@ function may_create_cnv(tk, block) {
 function may_update_cnv(tk) {
 	if (!tk.cnv) return
 	// tk is equipped with cnv. determine if cnv data is actually shown
-	if (tk.cnv.cnvLst.length == 0) {
+	if (!tk.cnv.cnvLst || tk.cnv.cnvLst.length == 0) {
 		// no cnv shown in this region. hide colorscale
+		// possible for cnvLst to be missing! e.g. on server error
 		tk.legend.cnv.colorscaleHolder.style('display', 'none')
 		tk.legend.cnv.noCnv.style('display', 'inline-block')
 	} else {

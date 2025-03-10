@@ -176,7 +176,8 @@ export class HierCluster extends Matrix {
 		this.hierClusterSamples = {
 			refs: { byTermId, bySampleId: d.bySampleId },
 			lst: c.col.order.map(c => samples[c.name]),
-			samples
+			samples,
+			removedHierClusterTerms: d.removedHierClusterTerms
 		}
 	}
 
@@ -228,6 +229,7 @@ export class HierCluster extends Matrix {
 	combineData() {
 		if (!this.hierClusterSamples) return
 		const d = this.data // matrix data
+		const removedHierClusterTerms = this.hierClusterSamples.removedHierClusterTerms
 		const samples = {}
 		const lst = []
 		// the gene expression samples will be used as a filter for the matrix samples
@@ -247,7 +249,7 @@ export class HierCluster extends Matrix {
 		for (const $id of Object.keys(t)) {
 			d.refs.byTermId[$id] = Object.assign({}, d.refs.byTermId[$id] || {}, t[$id])
 		}
-		this.data = { samples, lst, refs: d.refs }
+		this.data = { samples, lst, refs: d.refs, removedHierClusterTerms }
 	}
 
 	setHierColorScale(c) {
