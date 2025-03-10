@@ -292,7 +292,7 @@ function handleColorClick(d, self, color) {
 				id: term.id,
 				isAtomic: true,
 				term: term.term,
-				q: getUpdatedQfromClick(d, term, d.isHidden, binColored)
+				q: getUpdatedQfromClick(d, term, d.isHidden, self.bins[2])
 			}
 		}
 	})
