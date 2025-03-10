@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Fixes:
+- handle stderr from rust code in node js stream_rust() helper and route handler
+- improve gdc maf rendering of failed/empty files to inform user about aggregation result
+- cherry-pick fixes from master to handle stderr from rust code, node js stream_rust() helper and route handler
+
 
 ## 2.109.0
 
