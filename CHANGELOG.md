@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.110.0
 
 Features:
 - Allow sorting on barplot columns in tables.
