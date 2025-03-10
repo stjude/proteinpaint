@@ -280,8 +280,11 @@ function handleColorClick(d, self, color) {
 	}
 	let binColored = null
 	if (self.bins[2].length > 0) {
-		binColored = self.bins[2].find(bin => bin.label == d.dataId)
-		if (binColored) binColored.color = color
+		const binMatched = self.bins[2].find(bin => bin.label == d.dataId)
+		if (binMatched) {
+			binMatched.color = color
+			binColored = self.bins[2]
+		}
 	}
 	self.app.dispatch({
 		type: 'plot_edit',
@@ -292,7 +295,7 @@ function handleColorClick(d, self, color) {
 				id: term.id,
 				isAtomic: true,
 				term: term.term,
-				q: getUpdatedQfromClick(d, term, d.isHidden, self.bins[2])
+				q: getUpdatedQfromClick(d, term, d.isHidden, binColored)
 			}
 		}
 	})
