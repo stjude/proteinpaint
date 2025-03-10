@@ -78,12 +78,12 @@ export default function setViolinRenderer(self) {
 			//between the plot and the axis
 			if (isH) {
 				areaBuilder = line()
-					//asis)
+					.curve(curveBasis)
 					.x(d => xAxisScale(d.x0))
 					.y(d => wScale(d.density))
 			} else {
 				areaBuilder = line()
-					//.curve(curveBasis)
+					.curve(curveBasis)
 					.x(d => wScale(d.density))
 					.y(d => xAxisScale(d.x0))
 			}
