@@ -2598,7 +2598,7 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 		/// scenarios for testing groupsetting ///
 		/////////////////////////////////////////
 		//console.log('tw:', tw)
-		tw.q.type = 'custom-groupset'
+		//tw.q.type = 'custom-groupset'
 		/*// custom groupset for "CNV=gain vs. other"
 		tw.q.customset = {groups: [
 			{
@@ -2743,7 +2743,7 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 				}
 			]
 		}*/
-		// custom groupset for "SNV=F vs. Other vs. Not tested"
+		/*// custom groupset for "SNV=F vs. Other vs. Not tested"
 		// tested with ELP1 gene
 		tw.q.customset = {
 			groups: [
@@ -2779,7 +2779,7 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 					]
 				}
 			]
-		}
+		}*/
 		/////////////////////////////////////////
 		/////////////////////////////////////////
 
