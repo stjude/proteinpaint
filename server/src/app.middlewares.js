@@ -10,10 +10,12 @@ import { authApi } from './auth.js'
 import * as validator from './validator.js'
 import { decode as urlJsonDecode } from '#shared/urljson.js'
 import jsonwebtoken from 'jsonwebtoken'
+import fs from 'fs'
+import crypto from 'crypto'
 
 const basepath = serverconfig.basepath || ''
 
-export function setAppMiddlewares(app) {
+export function setAppMiddlewares(app, doneLoading) {
 	app.use(setHeaders)
 
 	if (serverconfig.users) {
@@ -21,11 +23,16 @@ export function setAppMiddlewares(app) {
 		app.use(basicAuth({ users: serverconfig.users, challenge: true }))
 	}
 
-	if (!serverconfig.backend_only) {
+	let testDataCacheDir 
+	if (serverconfig.publicDir) {
 		// NOTE: options = {setHeaders} is not needed here
 		// because it's already set at the beginning of this function
-		const staticDir = express.static(path.join(process.cwd(), './public'))
-		app.use(staticDir)
+		app.use(express.static(serverconfig.publicDir))
+		if (serverconfig.debugmode && doneLoading.includes('hg38-test/TermdbTest') && fs.existsSync(`${serverconfig.publicDir}/testrun.html`)) {
+			console.log(31, '---- mayCacheReqRes ----', doneLoading)
+			testDataCacheDir = path.join(serverconfig.binpath, '../public/testrunData')
+			if (!fs.existsSync(testDataCacheDir)) fs.mkdirSync(testDataCacheDir) 
+		}
 	}
 
 	app.use(compression())
@@ -39,9 +46,10 @@ export function setAppMiddlewares(app) {
 
 		// detect URL parameter values with matching JSON start-stop encoding characters
 		try {
+			if (testDataCacheDir) mayWrapResponseSend(testDataCacheDir, req, res)
 			const encoding = req.query.encoding
 			urlJsonDecode(req.query)
-		} catch (e) {
+		} catch (e) { console.trace(e)
 			res.send({ error: e })
 			return
 		}
@@ -52,6 +60,10 @@ export function setAppMiddlewares(app) {
 	app.use(bodyParser.json({ limit: '5mb' }))
 	app.use(bodyParser.text({ limit: '5mb' }))
 	app.use(bodyParser.urlencoded({ extended: true }))
+	if (testDataCacheDir) app.use((req, res, next)=>{
+		mayWrapResponseSend(testDataCacheDir, req, res)
+		next()
+	})
 
 	if (serverconfig.jwt) {
 		console.log('JWT is activated')
@@ -169,5 +181,29 @@ function setHeaders(req, res, next) {
 		res.send({ status: 'ok' })
 	} else {
 		next()
+	}
+}
+
+const cachedReqIds = new Set()
+function mayWrapResponseSend(cacheDir, req, res) {
+	if (!req.get('referer')?.startsWith(`http://localhost:3000/testrun.html`)) return
+	const obj = Object.assign({}, req.query || {}, req.body || {}); console.log(186, req.path, req.method, req.headers['body'])
+	if (req.path == '/termdb' && req.method == 'POST') console.log(187, structuredClone(req.body))
+	const jsonQuery = JSON.stringify(obj)
+	const send = res.send
+	res.send = function(body) {
+		//const jsonBody = JSON.stringify(body, null, '  ')
+		send.call(this, body)
+		const cacheSubdir = path.join(cacheDir, req.path.slice(1).replaceAll('/', '.'))
+		if (!fs.existsSync(cacheSubdir)) fs.mkdirSync(cacheSubdir, {recursive: true})
+		const id = crypto
+				.createHash('sha1')
+				.update(jsonQuery)
+				.digest('hex'); if (id.startsWith('bf21a9e8') && req.method == 'POST') console.log(197, obj, req.body)
+		const cacheFile = `${cacheSubdir}/${id}`
+		if (cachedReqIds.has(cacheFile)) return; console.log(190, cacheFile)
+		//console.log(197, req.path, cacheFile, body)
+		cachedReqIds.add(cacheFile)
+		fs.promises.writeFile(cacheFile, body).catch(console.log)
 	}
 }

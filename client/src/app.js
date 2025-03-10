@@ -221,7 +221,7 @@ export function runproteinpaint(arg) {
 
 			const subapp = await parseEmbedThenUrl(arg, app)
 			const appInstance = subapp || app
-			if (app.debugmode && data.features.sse) {
+			if (app.debugmode && data.features.sse && window.location.pathname != '/puppet.html') {
 				// this initial import runs within the initial runproteinpaint instance;
 				// subsequent refresh will use a different runproteinpaint runtime
 				import(`./notify`)
