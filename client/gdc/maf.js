@@ -475,12 +475,15 @@ async function getFilesAndShowTable(obj) {
 				const l = url.split('/')
 				const uuid = l[l.length - 1]
 				const fo = result.files.find(i => i.id == uuid)
-				if (!fo) throw 'file not found from result.files[]'
-				return [
-					{ html: `<a href=${url} target=_blank>${fo.case_submitter_id}</a>` },
-					{ value: fo.project_id },
-					{ value: fileSize(fo.file_size) }
-				]
+				if (fo) {
+					return [
+						{ html: `<a href=${url} target=_blank>${fo.case_submitter_id}</a>` },
+						{ value: fo.project_id },
+						{ value: fileSize(fo.file_size) }
+					]
+				}
+				// file is not found; could happen in testing when backend hardcodes a uuid not in result.files[]
+				return [{ value: uuid }, { value: '?' }, { value: '?' }]
 			}),
 			columns: [{ column: '' }, { column: '' }, { column: '' }],
 			showHeader: false,
