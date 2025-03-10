@@ -624,6 +624,7 @@ const defaultCommonCharts: isSupportedChartCallbacks = {
 	correlationVolcano: ({ ds }) => ds.cohort.correlationVolcano,
 	geneExpression: ({ ds }) => ds.queries?.geneExpression,
 	metaboliteIntensity: ({ ds }) => ds.queries?.metaboliteIntensity,
+	pathwayAnalysis: ({ ds }) => ds.queries?.metaboliteIntensity, // consider to show pathway analysis even the metabolite data is unavailable?
 	DEanalysis: ({ ds }) => ds.queries?.rnaseqGeneCount,
 	brainImaging: ({ ds }) => ds.queries?.NIdata,
 	DziViewer: ({ ds }) => ds.queries?.DZImages, // replaced by WSIViewer, but keep it here just in case
