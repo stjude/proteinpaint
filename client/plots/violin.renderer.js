@@ -217,16 +217,10 @@ export default function setViolinRenderer(self) {
 
 		const margin = createMargins(labelsize, settings, isH, self.opts.mode == 'minimal')
 		const plotThickness = self.getPlotThicknessWithPadding()
-		const plotsWViolin = self.data.plots.filter(p => p.plotValueCount > minSampleSize)
-		const plotsWOutViolin = self.data.plots.filter(p => p.plotValueCount <= minSampleSize)
 		const width =
-			margin.left +
-			margin.top +
-			(isH ? settings.svgw : plotThickness * plotsWViolin.length + plotsWOutViolin.length * 30 + t1.term.name.length)
+			margin.left + margin.top + (isH ? settings.svgw : plotThickness * self.data.plots.length + t1.term.name.length)
 		const height =
-			margin.bottom +
-			margin.top +
-			(isH ? plotThickness * plotsWViolin.length + plotsWOutViolin.length * 30 : settings.svgw + t1.term.name.length)
+			margin.bottom + margin.top + (isH ? plotThickness * self.data.plots.length : settings.svgw + t1.term.name.length)
 
 		violinSvg
 			.attr('width', width)
@@ -371,8 +365,6 @@ export default function setViolinRenderer(self) {
 
 	function renderArea(violinG, plot, areaBuilder) {
 		if (plot.density.densityMax == 0) return
-		//Do not render the violin if there are less than 5 values (only beans)
-		if (plot.plotValueCount <= minSampleSize) return
 		violinG
 			.append('path')
 			.attr('class', 'sjpp-vp-path')
