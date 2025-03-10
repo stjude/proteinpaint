@@ -321,9 +321,10 @@ async function getFilesAndShowTable(obj) {
 		columns: tableColumns,
 		resize: true,
 		div: obj.tableDiv.append('div'),
-		selectAll: true,
+		selectAll: true, // comment out for quicker testing
 		dataTestId: 'sja_mafFileTable',
 		header: { allowSort: true },
+		selectedRows: [], //[198], // uncomment out for quicker testing
 		buttons: [
 			{
 				text: 'Aggregate selected MAF files and download',
@@ -368,23 +369,45 @@ async function getFilesAndShowTable(obj) {
 
 		let data
 		try {
+			// expect multipart response, as preprocessed by dofetch into an array of response data entries
+			// [
+			// 	 {
+			//	   headers: {'content-type': '...', [key?]: string}, 
+			//     body: any
+		  //   }
+			// ] 
 			data = await dofetch3('gdc/mafBuild', { body: { fileIdLst, columns: outColumns } })
-			if (data.error) throw data.error
+			// console.log(380, 'gdc/mafBuild response', data)
+			const err = data.find(d => d.body?.error || d.body?.errors)
+			// if (err) throw err.body.error || JSON.stringify(err.body.errors, null, '  ') || err.body.message
 		} catch (e) {
 			sayerror(obj.errDiv, e)
 			button.innerHTML = oldText
 			button.disabled = false
-
 			return
 		}
 
 		button.innerHTML = oldText
 		button.disabled = false
 
+		const confirm = data.pop()
+		if (!confirm?.body?.ok) {
+			// console.log(394, confirm, data)
+			if (confirm.body?.error || confirm.body?.errors || confirm.body?.message) {
+				sayerror(obj.errDiv, JSON.stringify(confirm.body, null, '  '))
+				//return
+			}
+			//throw confirm?.body?.message || 'error in maf data processing'
+		} // else console.log(392, confirm.body)
+
 		// download the file to client
+		const octetData = data.find(d => d.headers['content-type'] == 'application/octet-stream')
+		if (!octetData) throw 'missing octet data' 
+		const href = URL.createObjectURL(octetData.body)
+		// console.log(394, [octetData?.body.size, href.length, href], octetData)
 		const a = document.createElement('a')
-		a.href = URL.createObjectURL(data)
-		a.download = `cohortMAF.${new Date().toISOString().split('T')[0]}.gz`
+		a.href = href
+		a.download = `cohortMAF.${new Date().toISOString().split('T')[0]}.maf.gz`
 		a.style.display = 'none'
 		document.body.appendChild(a)
 		a.click()
