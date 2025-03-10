@@ -1,5 +1,4 @@
-import { scaleLinear } from 'd3-scale'
-import { getBinsDensity } from '#shared/violin.bins.js'
+import { getDensity } from '../routes/termdb.violin.ts'
 
 /*
 ********************** EXPORTED
@@ -36,20 +35,20 @@ export async function get_densityplot(term, samples) {
 		}
 	}
 
-	const ticks = 20
-	const density = getBinsDensity({ values }, true, ticks)
-	if (!Array.isArray(density.bins)) throw 'getBinsDensity does not return []'
-	if (density.bins.length == 0) throw 'getBinsDensity returns an empty array'
+	const density = await getDensity(values)
+	if (!Array.isArray(density.bins)) throw 'getDensity does not return []'
+	if (density.bins.length == 0) throw 'getDensity returns an empty array'
 
 	const result = {
 		minvalue,
 		maxvalue,
+		xMin: density.xMin, //R xMin and xMax are not the same as minvalue and maxvalue
+		xMax: density.xMax,
 		densityMax: density.densityMax,
 		densityMin: density.densityMin,
 		density: density.bins,
 		samplecount: values.length,
-		unit: term.unit,
-		ticks
+		unit: term.unit
 	}
 
 	return result

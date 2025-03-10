@@ -67,6 +67,7 @@ export default function setViolinRenderer(self) {
 		let y = 0
 		const thickness = self.settings.plotThickness || self.getAutoThickness()
 		for (const [plotIdx, plot] of self.data.plots.entries()) {
+			const xAxisScale = scaleLinear().domain([plot.density.xMin, plot.density.xMax]).range([0, settings.svgw])
 			// The scale uses half of the plotThickness as the maximum value as the image is symmetrical
 			// Only one half of the image is computed and the other half is mirrored
 			const wScale = scaleLinear()
@@ -78,13 +79,13 @@ export default function setViolinRenderer(self) {
 			if (isH) {
 				areaBuilder = line()
 					.curve(curveBasis)
-					.x(d => svgData.axisScale(d.x0))
+					.x(d => xAxisScale(d.x0))
 					.y(d => wScale(d.density))
 			} else {
 				areaBuilder = line()
 					.curve(curveBasis)
 					.x(d => wScale(d.density))
-					.y(d => svgData.axisScale(d.x0))
+					.y(d => xAxisScale(d.x0))
 			}
 			//if only one plot pass area builder to calculate the exact height of the plot
 			const { violinG, height } = renderViolinPlot(svgData, plot, isH, wScale, areaBuilder, y, imageOffset)
@@ -216,16 +217,10 @@ export default function setViolinRenderer(self) {
 
 		const margin = createMargins(labelsize, settings, isH, self.opts.mode == 'minimal')
 		const plotThickness = self.getPlotThicknessWithPadding()
-		const plotsWViolin = self.data.plots.filter(p => p.plotValueCount > minSampleSize)
-		const plotsWOutViolin = self.data.plots.filter(p => p.plotValueCount <= minSampleSize)
 		const width =
-			margin.left +
-			margin.top +
-			(isH ? settings.svgw : plotThickness * plotsWViolin.length + plotsWOutViolin.length * 30 + t1.term.name.length)
+			margin.left + margin.top + (isH ? settings.svgw : plotThickness * self.data.plots.length + t1.term.name.length)
 		const height =
-			margin.bottom +
-			margin.top +
-			(isH ? plotThickness * plotsWViolin.length + plotsWOutViolin.length * 30 : settings.svgw + t1.term.name.length)
+			margin.bottom + margin.top + (isH ? plotThickness * self.data.plots.length : settings.svgw + t1.term.name.length)
 
 		violinSvg
 			.attr('width', width)
@@ -330,9 +325,7 @@ export default function setViolinRenderer(self) {
 				.attr('y1', isH ? -s.medianLength : value)
 				.attr('y2', isH ? s.medianLength : value)
 		}
-		const rect = violinG.node().getBBox()
-		let height = isH ? rect.height : rect.width
-		height += self.settings.rowSpace
+		let height = self.getPlotThicknessWithPadding()
 		const translate = isH ? `translate(0, ${y + height / 2}) ` : `translate(${y + height / 2}, 0)`
 		violinG.attr('transform', translate)
 
@@ -372,8 +365,6 @@ export default function setViolinRenderer(self) {
 
 	function renderArea(violinG, plot, areaBuilder) {
 		if (plot.density.densityMax == 0) return
-		//Do not render the violin if there are less than 5 values (only beans)
-		if (plot.plotValueCount <= minSampleSize) return
 		violinG
 			.append('path')
 			.attr('class', 'sjpp-vp-path')
