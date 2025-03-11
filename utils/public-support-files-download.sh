@@ -28,17 +28,10 @@ curl https://proteinpaint.stjude.org/ppSupport/refGene.hg19.gz -O
 curl https://proteinpaint.stjude.org/ppSupport/refGene.hg19.gz.tbi -O
 curl https://proteinpaint.stjude.org/ppSupport/refGene.hg38.gz -O
 curl https://proteinpaint.stjude.org/ppSupport/refGene.hg38.gz.tbi -O
-curl https://proteinpaint.stjude.org/ppSupport/refGene.hg38.test.gz -O
-curl https://proteinpaint.stjude.org/ppSupport/refGene.hg38.test.gz.tbi -O
-curl https://proteinpaint.stjude.org/ppSupport/gencode.v40.hg19.gz -O
-curl https://proteinpaint.stjude.org/ppSupport/gencode.v40.hg19.gz.tbi -O
-curl https://proteinpaint.stjude.org/ppSupport/gencode.v43.hg38.gz -O
-curl https://proteinpaint.stjude.org/ppSupport/gencode.v43.hg38.gz.tbi -O
-curl https://proteinpaint.stjude.org/ppSupport/gencode.v41.test.hg38.gz -O
-curl https://proteinpaint.stjude.org/ppSupport/gencode.v41.test.hg38.gz.tbi -O
+curl https://proteinpaint.stjude.org/ppSupport/gencode.v47.hg38.gz -O
+curl https://proteinpaint.stjude.org/ppSupport/gencode.v47.hg38.gz.tbi -O
 curl https://proteinpaint.stjude.org/ppSupport/genes.hg19.db -O
 curl https://proteinpaint.stjude.org/ppSupport/genes.hg38.db -O
-curl https://proteinpaint.stjude.org/ppSupport/genes.hg38.test.db -O
 
 # Please note that following two steps only download dbSNP slice files for testing your ProteinPaint server;
 # if you need genome-wide SNP information, you need to re-download files from 
@@ -69,7 +62,6 @@ curl https://proteinpaint.stjude.org/ppSupport/clinvar.hg19.bcf.gz.csi -O
 cd ../hg38/
 curl https://proteinpaint.stjude.org/ppSupport/clinvar.hg38.bcf.gz -O
 curl https://proteinpaint.stjude.org/ppSupport/clinvar.hg38.bcf.gz.csi -O
-curl https://proteinpaint.stjude.org/ppSupport/clinvar.hg38.bcf.gz.tbi -O
 
 
 cd ../utils/meme/motif_databases/HUMAN/
