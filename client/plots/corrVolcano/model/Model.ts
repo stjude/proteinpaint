@@ -29,12 +29,16 @@ export class Model {
 	}
 
 	async setRequestOpts() {
-		return {
+		const opts = {
 			featureTw: this.config.featureTw,
 			variableTwLst: this.variableTwLst,
 			filter: this.state.termfilter.filter,
 			filter0: this.state.termfilter.filter0,
 			correlationMethod: this.settings.method
-		}
+		} as any
+
+		if (this.config.divideTw) opts.divideTw = this.config.divideTw
+
+		return opts
 	}
 }

@@ -6,7 +6,8 @@ DO NOT ENABLE THIS FILE ON CI. ITS FOR PROTOTYPING ONLY
 
 Tests:
     - Default correlation volcano plot
-	- No featureTw
+	- No featureTw (skipped)
+	- Volcano with divide by term
  */
 
 /*************************
@@ -45,12 +46,7 @@ tape('Default correlation volcano', test => {
 			plots: [
 				{
 					chartType: 'correlationVolcano',
-					featureTw: {
-						term: {
-							type: 'geneExpression',
-							gene: 'KRAS'
-						}
-					}
+					featureTw: { term: { type: 'geneExpression', gene: 'KRAS' } }
 				}
 			]
 		},
@@ -103,6 +99,35 @@ tape.skip('No featureTw', test => {
 			plots: [
 				{
 					chartType: 'correlationVolcano'
+				}
+			]
+		},
+		correlationVolcano: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	async function runTests(correlationVolcano: any) {
+		correlationVolcano.on('postRender.test', null)
+		//TODO
+
+		// if (test['_ok']) correlationVolcano.Inner.app.destroy()
+		test.end()
+	}
+})
+
+tape.only('Volcano with divide by term', test => {
+	test.timeoutAfter(3000)
+
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'correlationVolcano',
+					featureTw: { term: { type: 'geneExpression', gene: 'KRAS' } },
+					divideTw: { q: { mode: 'continuous' }, term: { id: 'Age', name: 'Age at diagnosis', type: 'float' } }
 				}
 			]
 		},

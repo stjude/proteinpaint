@@ -6,6 +6,9 @@ import type { ScaleLinear } from 'd3'
 
 export type CorrVolcanoOpts = {
 	chartType: 'correlationVolcano'
+	/** Tw used to divide the featureTw (i.e. term0) */
+	divideTw: TermWrapper
+	/** Feature tw used to plot (i.e. term) */
 	featureTw: TermWrapper
 	/** No featureTw is passed from the tree in charts button.
 	 * Use .numeric{} to create a featureTw.*/
@@ -40,6 +43,7 @@ export type CorrVolcanoSettings = {
 export type CorrVolcanoPlotConfig = BasePlotConfig & {
 	/** Numeric term used to plot */
 	featureTw: TermWrapper
+	divideTw: TermWrapper
 }
 
 export type CorrVolcanoDom = {

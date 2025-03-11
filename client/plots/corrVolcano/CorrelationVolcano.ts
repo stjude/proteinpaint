@@ -83,6 +83,16 @@ class CorrelationVolcano extends RxComponentInner {
 				menuOptions: 'replace'
 			},
 			{
+				type: 'term',
+				configKey: 'divideTw',
+				chartType: 'correlationVolcano',
+				usecase: { target: 'correlationVolcano', detail: 'numeric' },
+				label: 'Divide by',
+				vocabApi: this.app.vocabApi,
+				numericEditMenuVersion: ['continuous'],
+				menuOptions: 'all'
+			},
+			{
 				label: 'Correlation method',
 				title: 'Change the correlation method',
 				type: 'radio',
@@ -252,6 +262,7 @@ export async function getPlotConfig(opts: CorrVolcanoOpts, app: MassAppApi) {
 	if (opts.featureTw) {
 		try {
 			await fillTermWrapper(opts.featureTw, app.vocabApi)
+			if (opts.divideTw) await fillTermWrapper(opts.divideTw, app.vocabApi)
 		} catch (e) {
 			console.error(new Error(`${e} [correlationVolcano getPlotConfig()]`))
 			throw `correlationVolcano getPlotConfig() failed`
