@@ -280,6 +280,7 @@ function handleColorClick(d, self, color) {
 	}
 	let binColored = null
 	if (self.bins[2].length > 0) {
+		//term index: term0: 0, term: 1, term2: 2
 		const binMatched = self.bins[2].find(bin => bin.label == d.dataId)
 		if (binMatched) {
 			binMatched.color = color
