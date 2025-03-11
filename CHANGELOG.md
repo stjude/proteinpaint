@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- Improved Violin by using R to calculate the density
+
 Fixes:
 - Fix barchart legend color bug: for numeric term2, after changing color of one bin, chaning another will revert the color of the first bin.
 
