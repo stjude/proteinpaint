@@ -306,7 +306,8 @@ function getCacheRef(ds) {
 		casesWithExpData: new Set(),
 		gdcOpenProjects: new Set(), // names of open-access projects
 		scrnaAnalysis2hdf5: new Map(), // for scrna, k: seurat.analysis.tsv uuid, v: hdf5/loom uuid. maps a analysis tvs file to loom file, latter is required for querying scrna gene exp data
-		doneCaching: false
+		doneCaching: false,
+		cacheTimes: {}
 	}
 
 	return ref
@@ -374,7 +375,7 @@ async function cacheMappingOnNewRelease(ds) {
 		ds.__pendingCacheVersion = version
 		ref.data_release_version = version
 		const date = new Date()
-		ds.__gdc.cacheTimes = {start: {unixTime: Date.now(), local: date.toLocaleDateString() + ' ' + date.toLocaleTimeString()}}
+		ds.__gdc.cacheTimes.start = {unixTime: Date.now(), local: date.toLocaleDateString() + ' ' + date.toLocaleTimeString()}
 		await getOpenProjects(ds, ref)
 		const size = 1000 // fetch 1000 ids at a time
 		const totalCases = await fetchIdsFromGdcApi(ds, 1, 0, ref)
