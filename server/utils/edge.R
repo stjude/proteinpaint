@@ -137,7 +137,10 @@ if (length(samples_indices) > 100) {
     count_cpm_cutoff <- 100000
 }
 
-y <- filter_using_cpm(y, gene_cpm_cutoff, sample_cpm_cutoff, count_cpm_cutoff) # Filtering counts matrix based on gene_cpm_cutoff, sample_cpm_cutoff and count_cpm_cutoff
+filter_using_cpm_time <- system.time({
+    y <- filter_using_cpm(y, gene_cpm_cutoff, sample_cpm_cutoff, count_cpm_cutoff) # Filtering counts matrix based on gene_cpm_cutoff, sample_cpm_cutoff and count_cpm_cutoff
+ })
+#cat("Filter using cpm time: ", filter_using_cpm_time[3], " seconds\n")
 
 # Saving MDS plot image
 set.seed(as.integer(Sys.time())) # Set the seed according to current time
