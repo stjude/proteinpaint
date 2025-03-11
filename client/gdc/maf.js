@@ -448,7 +448,7 @@ async function getFilesAndShowTable(obj) {
 			if (e.error.startsWith('Empty')) {
 				if (!e.url) throw 'url missing from an "Empty" entry'
 				emptyFiles.push(e.url)
-			} else if (e.error.startsWith('Server request failed')) {
+			} else if (e.error.startsWith('Server request failed') || e.error.includes('404 Not Found')) {
 				if (!e.url) throw 'url missing from a "failed" entry'
 				failedFiles.push(e.url)
 			} else {

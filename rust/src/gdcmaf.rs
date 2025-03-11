@@ -13,11 +13,10 @@
 use flate2::read::GzDecoder;
 use flate2::write::GzEncoder;
 use flate2::Compression;
-use serde_json::{Value,json};
+use serde_json::Value;
 use std::path::Path;
 use futures::StreamExt;
 use std::io::{self,Read,Write};
-use std::sync::Mutex;
 
 
 // Struct to hold error information
@@ -27,7 +26,7 @@ struct ErrorEntry {
     error: String,
 }
 
-fn select_maf_col(d:String,columns:&Vec<String>,url:&str,errors: &Mutex<Vec<ErrorEntry>>) -> (Vec<u8>,i32) {
+fn select_maf_col(d:String,columns:&Vec<String>,url:&str) -> Result<(Vec<u8>,i32), (String, String)> {
     let mut maf_str: String = String::new();
     let mut header_indices: Vec<usize> = Vec::new();
     let lines = d.trim_end().split("\n");
@@ -38,15 +37,14 @@ fn select_maf_col(d:String,columns:&Vec<String>,url:&str,errors: &Mutex<Vec<Erro
         } else if line.contains("Hugo_Symbol") {
             let header: Vec<String> = line.split("\t").map(|s| s.to_string()).collect();
             for col in columns {
-                if let Some(index) = header.iter().position(|x| x == col) {
-                    header_indices.push(index);
-                } else {
-                    let error_msg = format!("Column {} was not found", col);
-                    errors.lock().unwrap().push(ErrorEntry {
-                        url: url.to_string().clone(),
-                        error: error_msg.clone(),
-                    });
-                    panic!("{} was not found!",col);
+                match header.iter().position(|x| x == col) {
+                    Some(index) => {
+                        header_indices.push(index);
+                    }
+                    None => {
+                        let error_msg = format!("Column {} was not found", col);
+                        return Err((url.to_string(), error_msg));
+                    }
                 }
             }
         } else {
@@ -60,19 +58,20 @@ fn select_maf_col(d:String,columns:&Vec<String>,url:&str,errors: &Mutex<Vec<Erro
             mafrows += 1;
         }
     };
-    (maf_str.as_bytes().to_vec(),mafrows)
+    Ok((maf_str.as_bytes().to_vec(),mafrows))
 }
+
 
 
 #[tokio::main]
 async fn main() -> Result<(),Box<dyn std::error::Error>> {
-    // Create a thread-container for errors
-    let errors = Mutex::new(Vec::<ErrorEntry>::new());
     // Accepting the piped input json from jodejs and assign to the variable
     // host: GDC host
     // url: urls to download single maf files
     let mut buffer = String::new();
     io::stdin().read_line(&mut buffer)?;
+
+    // reading the input from PP
     let file_id_lst_js = serde_json::from_str::<Value>(&buffer).expect("Error reading input and serializing to JSON");
     let host = file_id_lst_js.get("host").expect("Host was not provided").as_str().expect("Host is not a string");
     let mut url: Vec<String> = Vec::new();
@@ -91,18 +90,28 @@ async fn main() -> Result<(),Box<dyn std::error::Error>> {
                 .map(|v| v.to_string().replace("\"",""))
                 .collect::<Vec<String>>();
         } else {
-            errors.lock().unwrap().push(ErrorEntry {
+            let column_error = ErrorEntry {
                 url: String::new(),
-                error: "The columns of arg is not an array".to_string(),
-            });
-            panic!("Columns is not an array");
+                error: "The columns in arg is not an array".to_string(),
+            };
+            let column_error_js = serde_json::to_string(&column_error).unwrap();
+            writeln!(io::stderr(), "{}", column_error_js).expect("Failed to output stderr!");
+            return Err(Box::new(std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                "The columns in arg is not an array",
+            )) as Box<dyn std::error::Error>);
         }
     } else {
-        errors.lock().unwrap().push(ErrorEntry {
+        let column_error = ErrorEntry {
             url: String::new(),
-            error: "The key columns is missed from arg".to_string(),
-        });
-        panic!("Columns was not selected");
+            error: "Columns was not selected".to_string(),
+        };
+        let column_error_js = serde_json::to_string(&column_error).unwrap();
+        writeln!(io::stderr(), "{}", column_error_js).expect("Failed to output stderr!");
+        return Err(Box::new(std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                "Columns was not selected",
+        )) as Box<dyn std::error::Error>);
     };
     
     //downloading maf files parallelly and merge them into single maf file
@@ -121,13 +130,13 @@ async fn main() -> Result<(),Box<dyn std::error::Error>> {
                                         return Ok((url.clone(),text))
                                     }
                                     Err(e) => {
-                                        let error_msg = format!("Decompression failed: {}", e);
+                                        let error_msg = format!("Failed to decompress downloaded maf file: {}", e);
                                         Err((url.clone(), error_msg))
                                     }
                                 }
                             }
                             Err(e) => {
-                                let error_msg = format!("Decompression failed: {}", e);
+                                let error_msg = format!("Failed to decompress downloaded maf file: {}", e);
                                 Err((url.clone(), error_msg))
                             }
                         }
@@ -150,48 +159,49 @@ async fn main() -> Result<(),Box<dyn std::error::Error>> {
     let _ = encoder.write_all(&maf_col.join("\t").as_bytes().to_vec()).expect("Failed to write header");
     let _ = encoder.write_all(b"\n").expect("Failed to write newline");
 
-    // Collect all results before processing
-    let results = download_futures.buffer_unordered(50).collect::<Vec<_>>().await;
-
-    // Process results after all downloads are complete
-    for result in results {
+    download_futures.buffer_unordered(20).for_each(|result| {
         match result {
             Ok((url, content)) => {
-                let (maf_bit,mafrows) = select_maf_col(content, &maf_col, &url, &errors);
-                if mafrows > 0 {
-                    let _  = encoder.write_all(&maf_bit).expect("Failed to write file");
-                } else {
-                    errors.lock().unwrap().push(ErrorEntry {
-                        url: url.clone(),
-                        error: "Empty maf file".to_string(),
-                    });
+                match select_maf_col(content, &maf_col, &url) {
+                    Ok((maf_bit,mafrows)) => {
+                        if mafrows > 0 {
+                            encoder.write_all(&maf_bit).expect("Failed to write file");
+                        } else {
+                            let error = ErrorEntry {
+                                url: url.clone(),
+                                error: "Empty maf file".to_string(),
+                            };
+                            let error_js = serde_json::to_string(&error).unwrap();
+                            writeln!(io::stderr(), "{}", error_js).expect("Failed to output stderr!");
+                        }
+                    }
+                    Err((url,error)) => {
+                        let error = ErrorEntry {
+                            url,
+                            error,
+                        };
+                        let error_js = serde_json::to_string(&error).unwrap();
+                        writeln!(io::stderr(), "{}", error_js).expect("Failed to output stderr!");
+                    }
                 }
             }
             Err((url, error)) => {
-                errors.lock().unwrap().push(ErrorEntry {
+                let error = ErrorEntry {
                     url,
                     error,
-                })
+                };
+                let error_js = serde_json::to_string(&error).unwrap();
+                writeln!(io::stderr(), "{}", error_js).expect("Failed to output stderr!");
             }
-        }
-    };
-
+        };
+        async {}
+    }).await;
+    
     // Finalize output and printing errors
     encoder.finish().expect("Maf file output error!");
-
-    // Manually flush stdout
+    // Manually flush stdout and stderr
     io::stdout().flush().expect("Failed to flush stdout");
-    
-    // After processing all downloads, output the errors as JSON to stderr
-    let errors = errors.lock().unwrap();
-    if !errors.is_empty() {
-        let error_json = json!({
-            "errors": errors.iter().collect::<Vec<&ErrorEntry>>()
-        });
-        let mut stderr = io::stderr();
-        writeln!(stderr, "{}", error_json).expect("Failed to output stderr!");
-        io::stderr().flush().expect("Failed to flush stderr");
-    };
+    io::stderr().flush().expect("Failed to flush stderr");
 
     Ok(())
 }

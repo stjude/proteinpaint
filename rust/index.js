@@ -72,17 +72,18 @@ exports.stream_rust = function (binfile, input_data, emitJson) {
 	ps.on('close', code => { //console.log(72, stderr.length)
 		if (stderr.length) {
 			// handle rust stderr
-			const err = stderr.join('').trim()
-			const errmsg = `!!! stream_rust('${binfile}') stderr: !!!\n${err}`
+			const errors = stderr.join('').trim().split('\n').map(JSON.parse); console.log(75, errors)
+			const errmsg = `!!! stream_rust('${binfile}') stderr: !!!\n${errors}`
 			console.log(errmsg)
-			emitJson(err)
+			emitJson({errors})
 		} else {
 			emitJson({ ok: true, status: 'ok', message: 'Processing complete' })
 		}
 	})
 	ps.on('error', err => {
 		console.log(74, `stream_rust().on('error')`, err)
-		emitJson(stderr.join('').trim())
+		const errors = stderr.join('').trim().split('\n').map(JSON.parse)
+		emitJson({errors})
 	})
 	// below will duplicate ps.on('close') event above
 	// childStream.on('end', () => console.log(`-- childStream done --`))
