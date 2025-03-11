@@ -242,7 +242,9 @@ async function createCanvasImg(q: ViolinRequest, result: { [index: string]: any 
 
 	const scaledRadius = q.radius / q.devicePixelRatio
 	const arcEndAngle = scaledRadius * Math.PI
-
+	const plot2Values = {}
+	for (const plot of result.plots) plot2Values[plot.label] = plot.values
+	const densities = await getDensities(plot2Values)
 	for (const plot of result.plots) {
 		// item: { label=str, values=[v1,v2,...] }
 
@@ -283,7 +285,7 @@ async function createCanvasImg(q: ViolinRequest, result: { [index: string]: any 
 
 		plot.src = canvas.toDataURL()
 		// create bins for violins
-		plot.density = await getDensity(plot.values)
+		plot.density = densities[plot.label]
 
 		//generate summary stat values
 		plot.summaryStats = summaryStats(plot.values).values
@@ -291,25 +293,33 @@ async function createCanvasImg(q: ViolinRequest, result: { [index: string]: any 
 	}
 }
 
-export async function getDensity(data) {
-	if (data.length <= minSampleSize) {
-		return { bins: [{ x0: data[0], density: 0 }], densityMin: 0, densityMax: 0, xMin: data[0], xMax: data[0] }
-	}
+export async function getDensity(values) {
+	const result = await getDensities({ plot: values })
+	return result.plot
+}
+
+export async function getDensities(plot2Values): Promise<{ [plot: string]: any }> {
 	const densityScript = path.join(serverconfig.binpath, 'utils', 'density.R')
-	const result: { x: number[]; y: number[] } = JSON.parse(await run_R(densityScript, JSON.stringify(data)))
-	const bins: any = []
-	let densityMin = Infinity
-	let densityMax = -Infinity
-	let xMin = Infinity
-	let xMax = -Infinity
-	for (const [i, x] of Object.entries(result.x)) {
-		const density = result.y[i]
-		xMin = Math.min(xMin, x)
-		xMax = Math.max(xMax, x)
-		densityMin = Math.min(densityMin, density)
-		densityMax = Math.max(densityMax, density)
-		bins.push({ x0: x, density })
+	const plot2Density: any = JSON.parse(await run_R(densityScript, JSON.stringify(plot2Values)))
+	const densities = {}
+	for (const plot in plot2Density) {
+		const result: { x: number[]; y: number[] } = plot2Density[plot]
+		const bins: any = []
+		let densityMin = Infinity
+		let densityMax = -Infinity
+		let xMin = Infinity
+		let xMax = -Infinity
+		for (const [i, x] of Object.entries(result.x)) {
+			const density = result.y[i]
+			xMin = Math.min(xMin, x)
+			xMax = Math.max(xMax, x)
+			densityMin = Math.min(densityMin, density)
+			densityMax = Math.max(densityMax, density)
+			bins.push({ x0: x, density })
+		}
+		bins.unshift({ x0: xMin, density: 0 }) //close the path
+		const density = { bins, densityMin, densityMax, xMin, xMax }
+		densities[plot] = density
 	}
-	bins.unshift({ x0: xMin, density: 0 }) //close the path
-	return { bins, densityMin, densityMax, xMin, xMax }
+	return densities
 }
