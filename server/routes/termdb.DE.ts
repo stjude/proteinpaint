@@ -61,7 +61,55 @@ function init({ genomes }) {
 			}
 
 			const results = await run_DE(req.query as DERequest, ds, term_results, term_results2)
-			res.send(results)
+			const boundary = 'DE_RESULT_MULTIPART_BOUNDARY'
+			res.setHeader('content-type', `multipart/mixed; boundary=${boundary}`)
+			res.write(`--${boundary}`)
+			//res.write('\ncontent-disposition: attachment; filename=cohort.maf.gz')
+			res.write('\ncontent-type: application/octet-stream\n\n')
+			res.flush() // header text should be sent as a separate chunk from the content that will be streamed next
+
+			res.write(`\n--${boundary}` + `:data`)
+			res.write('\ncontent-type: application/json')
+			res.write('\n\n' + results.data)
+			res.write(`\n--${boundary}--`)
+			res.flush()
+
+			res.write(`\n--${boundary}` + `:sample_size1`)
+			res.write('\ncontent-type: application/number')
+			res.write('\n\n' + results.sample_size1)
+			res.write(`\n--${boundary}--`)
+			res.flush()
+
+			res.write(`\n--${boundary}` + `:sample_size2`)
+			res.write('\ncontent-type: application/number')
+			res.write('\n\n' + results.sample_size2)
+			res.write(`\n--${boundary}--`)
+			res.flush()
+
+			res.write(`\n--${boundary}` + `:method`)
+			res.write('\ncontent-type: application/string')
+			res.write('\n\n' + results.method)
+			res.write(`\n--${boundary}--`)
+			res.flush()
+
+			if (results.ql_image) {
+				// Defined only when method = "edgeR"
+				res.write(`\n--${boundary}` + `ql_image`)
+				res.write('\ncontent-type: application/png')
+				res.write('\n\n' + results.ql_image)
+				res.write(`\n--${boundary}--`)
+				res.flush()
+			}
+
+			if (results.mds_image) {
+				// Defined only when method = "edgeR"
+				res.write(`\n--${boundary}` + `mds_image`)
+				res.write('\ncontent-type: application/png')
+				res.write('\n\n' + results.mds_image)
+				res.write(`\n--${boundary}--`)
+				res.flush()
+			}
+			res.end()
 		} catch (e: any) {
 			res.send({ status: 'error', error: e.message || e })
 			if (e instanceof Error && e.stack) console.log(e)
@@ -298,5 +346,5 @@ values[] // using integer sample id
 async function readFileAndDelete(file) {
 	const data = await fs.promises.readFile(file)
 	fs.unlink(file, () => {})
-	return Buffer.from(data).toString('base64')
+	return Buffer.from(data)
 }
