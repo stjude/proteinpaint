@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Fixes:
+- Fix barchart legend color bug: for numeric term2, after changing color of one bin, chaning another will revert the color of the first bin.
+
+
 ## 2.110.0
 
 Features:
