@@ -63,8 +63,13 @@ export async function runRemainingWithoutAwait(ds) {
 			delete ds.__pendingCacheVersion
 		} else {
 			// immediately crash when the initial try fails with non-recoverable error
-			console.log(e.stack || e)
-			throw 'cacheSampleIdMapping() failed: ' + (e.message || e)
+			console.trace(e)
+			// throw 'cacheSampleIdMapping() failed: ' + (e.message || e)
+			// forced retry of caching, may improve logic later
+			console.log('cacheSampleIdMapping() failed: ' + (e.message || e), ds.init.fatalError)
+			delete ds.init.fatalError
+			ds.init.recoverableError = 'fatal error forced to recoverable: cacheSampleIdMapping()'
+			delete ds.__pendingCacheVersion
 		}
 	}
 
@@ -84,15 +89,19 @@ export async function runRemainingWithoutAwait(ds) {
 				if (ds.init.recoverableError) {
 					console.log(`allow retries of cacheMappingOnNewRelease()`, e)
 				} else {
-					ds.init.fatalError = `cacheMappingOnNewRelease()`
-					// cancel retries/auto-recovery, but do not crash server
-					// TODO: send a Slack message
-					clearInterval(interval)
+					console.log(`force retries of cacheMappingOnNewRelease()`, e)
+					delete ds.__pendingCacheVersion
+					if (ds.__gdc) delete ds.__gdc.data_release_version
+					// TODO: may uncomment below and/or improve logic above
+					// ds.init.fatalError = `cacheMappingOnNewRelease()`
+					// // cancel retries/auto-recovery, but do not crash server
+					// // TODO: send a Slack message
+					// clearInterval(interval)
 					console.log(e.stack || e)
-					console.log(
-						`non-recoverable error during gdc map recaching: ` +
-							`cancel retries of cacheMappingOnNewRelease() to not crash server`
-					)
+					// console.log(
+					// 	`non-recoverable error during gdc map recaching: ` +
+					// 		`cancel retries of cacheMappingOnNewRelease() to not crash server`
+					// )
 				}
 			}
 		},
@@ -364,6 +373,8 @@ async function cacheMappingOnNewRelease(ds) {
 		ds.__gdc.doneCaching = false // equivalent to having a ds.__pendingCacheVersion object present
 		ds.__pendingCacheVersion = version
 		ref.data_release_version = version
+		const date = new Date()
+		ds.__gdc.cacheTimes = {start: {unixTime: Date.now(), local: date.toLocaleDateString() + ' ' + date.toLocaleTimeString()}}
 		await getOpenProjects(ds, ref)
 		const size = 1000 // fetch 1000 ids at a time
 		const totalCases = await fetchIdsFromGdcApi(ds, 1, 0, ref)
@@ -398,6 +409,8 @@ async function cacheMappingOnNewRelease(ds) {
 	console.log('\t', ds.__gdc.caseid2submitter.size, 'case uuid to submitter id,')
 	console.log('\t', ds.__gdc.map2caseid.cache.size, 'different ids to case uuid,')
 	console.log('\t', ds.__gdc.casesWithExpData.size, 'cases with gene expression data.')
+	const date = new Date()
+	ds.__gdc.cacheTimes.stop = {unixTime: Date.now(), local: date.toLocaleDateString() + ' ' + date.toLocaleTimeString()}
 }
 
 // may cancel an unfinished caching for an older data_release_version,
