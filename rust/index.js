@@ -72,16 +72,16 @@ exports.stream_rust = function (binfile, input_data, emitJson) {
 	ps.on('close', code => { //console.log(72, stderr.length)
 		if (stderr.length) {
 			// handle rust stderr
-			const errors = stderr.join('').trim().split('\n').map(JSON.parse); console.log(75, errors)
-			const errmsg = `!!! stream_rust('${binfile}') stderr: !!!\n${errors}`
-			console.log(errmsg)
+			const errors = stderr.join('').trim().split('\n').map(JSON.parse)
+			//const errmsg = `!!! stream_rust('${binfile}') stderr: !!!`
+			//console.log(errmsg, errors)
 			emitJson({errors})
 		} else {
 			emitJson({ ok: true, status: 'ok', message: 'Processing complete' })
 		}
 	})
 	ps.on('error', err => {
-		console.log(74, `stream_rust().on('error')`, err)
+		//console.log(74, `stream_rust().on('error')`, err)
 		const errors = stderr.join('').trim().split('\n').map(JSON.parse)
 		emitJson({errors})
 	})
