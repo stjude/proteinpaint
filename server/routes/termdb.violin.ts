@@ -292,7 +292,7 @@ async function createCanvasImg(q: ViolinRequest, result: { [index: string]: any 
 }
 
 export async function getDensity(data) {
-	if (data.length <= 5) {
+	if (data.length <= minSampleSize) {
 		return { bins: [{ x0: data[0], density: 0 }], densityMin: 0, densityMax: 0, xMin: data[0], xMax: data[0] }
 	}
 	const densityScript = path.join(serverconfig.binpath, 'utils', 'density.R')

@@ -1,11 +1,6 @@
 import { getDensity } from '../routes/termdb.violin.ts'
 
 /*
-********************** EXPORTED
-get_densityplot
-********************** INTERNAL
-get_histogram
-
 term: numeric term from termdb
 samples: samples for genearting densityplot for the numeric term
 */
