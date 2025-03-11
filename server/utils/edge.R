@@ -10,6 +10,13 @@ suppressWarnings({
     suppressPackageStartupMessages(library(dplyr))
 })
 
+# Filter based on CPM
+filter_using_cpm <- function(y, gene_cpm_cutoff, sample_cpm_cutoff, count_cpm_cutoff) {
+   selr <- rowSums(cpm(y$counts)>gene_cpm_cutoff)>=sample_cpm_cutoff
+   selc <- colSums(cpm(y$counts))>=count_cpm_cutoff
+   y <- y[selr, selc]
+}
+
 filter_genes_by_global_variance <- function(read_counts, gene_id_symbols, num_variable_genes) {
    # Calculate the standard deviation of each row
    row_sd <- apply(read_counts, 1, sd)
@@ -118,6 +125,19 @@ normalization_time <- system.time({
     y <- normLibSizes(y) # Using TMM method for normalization
 })
 #cat("Normalization time: ", normalization_time[3], " seconds\n")
+
+# Cutoffs for cpm, will add them as UI options later
+if (length(samples_indices) > 100) {
+    gene_cpm_cutoff <- 15
+    sample_cpm_cutoff <- 30
+    count_cpm_cutoff <- 100000
+} else {
+    gene_cpm_cutoff <- 5
+    sample_cpm_cutoff <- 15
+    count_cpm_cutoff <- 100000
+}
+
+y <- filter_using_cpm(y, gene_cpm_cutoff, sample_cpm_cutoff, count_cpm_cutoff) # Filtering counts matrix based on gene_cpm_cutoff, sample_cpm_cutoff and count_cpm_cutoff
 
 # Saving MDS plot image
 set.seed(as.integer(Sys.time())) # Set the seed according to current time
