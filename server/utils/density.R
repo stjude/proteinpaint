@@ -5,7 +5,7 @@ library(ggplot2)
 # The output json string will be a dictionary with two keys x and y that are number arrays
 # The x array will contain the x values of the density
 # The y array will contain the y values of the density
-# In order to test it you can try from the command line you can try: echo "[1.2, 2, 3]" | Rscript ./density.R
+# In order to test it you can run from the command line: echo "[1.2, 2, 3]" | Rscript ./density.R
 
 con <- file("stdin", "r")
 json <- readLines(con)
