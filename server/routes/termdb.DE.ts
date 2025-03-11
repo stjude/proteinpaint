@@ -61,6 +61,7 @@ function init({ genomes }) {
 			}
 
 			const results = await run_DE(req.query as DERequest, ds, term_results, term_results2)
+			if (!results || !results.data) throw 'No data [termdb.DE.ts init()]'
 			const boundary = 'DE_RESULT_MULTIPART_BOUNDARY'
 			res.setHeader('content-type', `multipart/mixed; boundary=${boundary}`)
 			res.write(`--${boundary}`)

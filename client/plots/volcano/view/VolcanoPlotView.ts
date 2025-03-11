@@ -1,5 +1,5 @@
 import { axisBottom, axisLeft } from 'd3-axis'
-import { axisstyle, Menu, table2col, renderTable } from '#dom'
+import { axisstyle, table2col, renderTable } from '#dom'
 import { select } from 'd3-selection'
 import { rgb } from 'd3-color'
 import type {
