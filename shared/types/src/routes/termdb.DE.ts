@@ -60,9 +60,9 @@ export type DEResponse = {
 	/** Method of DE used wilcoxon/edgeR */
 	method: string
 	/** Image name from edgeR describing the quality of the fitting from QL pipeline, this is only generated for edgeR not for wilcoxon method  */
-	ql_image?: string
+	ql_image?: Buffer
 	/** Image name from edgeR showing the MDS plot of samples from both groups, this is only generated for edgeR not for wilcoxon method */
-	mds_image?: string
+	mds_image?: Buffer
 }
 
 export const diffExpPayload: RoutePayload = {
