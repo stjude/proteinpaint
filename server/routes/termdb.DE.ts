@@ -93,6 +93,14 @@ function init({ genomes }) {
 			res.write(`\ncontent-Type: application/json`) //Do not use '\n\n' here.
 			res.write(`\n\n${arg}`)
 			res.write(`\n--${boundary}--`)
+
+			const DE_data = JSON.stringify(results.data)
+
+			res.write(`\n--${boundary}`)
+			res.write(`\ncontent-Type: application/json`) //Do not use '\n\n' here.
+			res.write(`\n\n${DE_data}`)
+			res.write(`\n--${boundary}--`)
+
 			res.end()
 		} catch (e: any) {
 			res.send({ status: 'error', error: e.message || e })
