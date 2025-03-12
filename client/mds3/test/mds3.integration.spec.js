@@ -524,7 +524,7 @@ tape('Incorrect dslabel', test => {
 })
 
 tape('Custom ssm only, no sample', test => {
-	test.timeoutAfter(3000)
+	test.timeoutAfter(2000)
 	const holder = getHolder()
 
 	const gene = 'TP53',
@@ -604,7 +604,7 @@ tape('Custom ssm only, no sample', test => {
 })
 
 tape('Custom variants, missing or invalid mclass', test => {
-	test.timeoutAfter(4000)
+	test.timeoutAfter(3000)
 	const holder = getHolder()
 
 	const custom_variants = [
