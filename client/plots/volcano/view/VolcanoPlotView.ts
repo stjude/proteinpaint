@@ -33,7 +33,8 @@ export class VolcanoPlotView {
 			yAxis: svg.append('g').attr('id', 'sjpp-volcano-yAxis'),
 			xAxisLabel: svg.append('text').attr('id', 'sjpp-volcano-xAxisLabel').attr('text-anchor', 'middle'),
 			yAxisLabel: svg.append('text').attr('id', 'sjpp-volcano-yAxisLabel').attr('text-anchor', 'middle'),
-			plot: svg.append('g').attr('id', 'sjpp-volcano-plot')
+			plot: svg.append('g').attr('id', 'sjpp-volcano-plot'),
+			images: this.dom.holder.append('div').attr('id', 'sjpp-volcano-images')
 		}
 
 		const plotDim = this.viewData.plotDim
@@ -43,6 +44,12 @@ export class VolcanoPlotView {
 		this.renderFoldChangeLine(plotDim)
 		this.renderStatsTable()
 		this.renderPValueTable()
+
+		if (this.viewData.images.length > 0) {
+			for (const v of this.viewData.images) {
+				this.volcanoDom.images.append('img').attr('src', v.src)
+			}
+		}
 	}
 
 	renderUserActions() {
