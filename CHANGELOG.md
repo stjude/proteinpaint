@@ -6,8 +6,6 @@ All notable changes to this project will be documented in this file.
 
 Features:
 - Improved Violin by using R to calculate the density
-
-Fixes:
 - Fix barchart legend color bug: for numeric term2, after changing color of one bin, chaning another will revert the color of the first bin.
 
 
@@ -41,6 +39,14 @@ Features:
 
 Fixes:
 - mds3 tk cnv legend will handle case when no cnv data is present due to server error and not to crash
+
+
+## 2.108.3-0
+
+Fixes:
+- handle stderr from rust code in node js stream_rust() helper and route handler
+- improve gdc maf rendering of failed/empty files to inform user about aggregation result
+- force gdc cache retries, assume that an initial caching fatal error is recoverable during startup
 
 
 ## 2.108.2-0
