@@ -8,6 +8,7 @@ import { get_ds_tdb } from '../src/termdb.js'
 import run_R from '../src/run_R.js'
 import { mayLog } from '#src/helpers.ts'
 import serverconfig from '../src/serverconfig.js'
+import imagesize from 'image-size'
 
 export const api: RouteApi = {
 	endpoint: 'DEanalysis',
@@ -62,46 +63,7 @@ function init({ genomes }) {
 
 			const results = await run_DE(req.query as DERequest, ds, term_results, term_results2)
 			if (!results || !results.data) throw 'No data [termdb.DE.ts init()]'
-
-			const boundary = 'DE_RESULT_MULTIPART_BOUNDARY'
-			res.setHeader('content-Type', `multipart/mixed; boundary=${boundary}`)
-
-			const sendFile = async function (filePath, fieldName, fileName) {
-				if (fs.existsSync(filePath)) {
-					res.write(`\n--${boundary}`)
-					res.write(`\ncontent-Type: image/png`)
-					res.write(`\ncontent-Disposition: attachment; name="${fieldName}"; filename="${fileName}"\n\n`)
-					res.write(await readFileAndDelete(filePath))
-					res.write(`\n`)
-				}
-			}
-			// Send `ql_image` if it exists
-			if (results.ql_image) {
-				await sendFile(results.ql_image, 'ql_image', path.basename(results.ql_image))
-			}
-			// Send `mds_image` if it exists
-			if (results.mds_image) {
-				await sendFile(results.mds_image, 'mds_image', path.basename(results.mds_image))
-			}
-			const arg = JSON.stringify({
-				// data: results.data,
-				sample_size1: results.sample_size1,
-				sample_size2: results.sample_size2,
-				method: results.method
-			})
-			res.write(`\n--${boundary}`)
-			res.write(`\ncontent-Type: application/json`) //Do not use '\n\n' here.
-			res.write(`\n\n${arg}`)
-			res.write(`\n--${boundary}--`)
-
-			const DE_data = JSON.stringify(results.data)
-
-			res.write(`\n--${boundary}`)
-			res.write(`\ncontent-Type: application/json`) //Do not use '\n\n' here.
-			res.write(`\n\n${DE_data}`)
-			res.write(`\n--${boundary}--`)
-
-			res.end()
+			res.send(results)
 		} catch (e: any) {
 			res.send({ status: 'error', error: e.message || e })
 			if (e instanceof Error && e.stack) console.log(e)
@@ -314,16 +276,16 @@ values[] // using integer sample id
 		const mds_imagePath: string = path.join(serverconfig.cachedir, result.edgeR_mds_image_name[0]) // Retrieve the edgeR quality image and send it to client side. Does not need to be an array, will address this later.
 		mayLog('mds_imagePath:', mds_imagePath)
 
-		// const mds_base64Image = await readFileAndDelete(mds_imagePath)
-		// const ql_base64Image = await readFileAndDelete(ql_imagePath)
+		await readFileAndDelete(mds_imagePath, 'mds_image', result)
+		await readFileAndDelete(ql_imagePath, 'ql_image', result)
 
 		return {
 			data: result.gene_data,
 			sample_size1: sample_size1,
 			sample_size2: sample_size2,
 			method: param.method,
-			ql_image: ql_imagePath, // QL fit image
-			mds_image: mds_imagePath // MDS image
+			ql_image: result.ql_image, // QL fit image
+			mds_image: result.mds_image // MDS image
 		} as DEResponse
 	}
 
@@ -335,8 +297,16 @@ values[] // using integer sample id
 	return { data: result, sample_size1: sample_size1, sample_size2: sample_size2, method: param.method } as DEResponse
 }
 
-async function readFileAndDelete(file) {
-	const data = await fs.promises.readFile(file)
-	fs.unlink(file, () => {})
-	return Buffer.from(data)
+async function readFileAndDelete(file, key, response) {
+	const plot = await fs.promises.readFile(file)
+	const plotBuffer = Buffer.from(plot).toString('base64')
+	const obj = {
+		src: `data:image/png;base64,${plotBuffer}`,
+		size: imagesize(file),
+		key
+	}
+	response[key] = obj
+	fs.unlink(file, err => {
+		if (err) throw err
+	})
 }
