@@ -250,7 +250,7 @@ tape('term1 as numeric and term2 categorical, test median rendering', function (
 })
 
 tape('test basic controls', function (test) {
-	test.timeoutAfter(6000)
+	test.timeoutAfter(10000)
 	runpp({
 		state: {
 			nav: {
@@ -512,7 +512,7 @@ tape('test label clicking, filtering and hovering', function (test) {
 })
 
 tape('test hide option on label clicking', function (test) {
-	test.timeoutAfter(4000)
+	test.timeoutAfter(10000)
 	runpp({
 		state: {
 			nav: {

@@ -278,10 +278,11 @@ class ViolinPlot {
 				this.config.term.term.name + ` <span style="opacity:.6;font-size:1em;margin-left:10px;">Violin Plot</span>`
 			)
 
-		await this.getDescrStats()
-
 		const args = this.validateArgs()
-		this.data = await this.app.vocabApi.getViolinPlotData(args)
+		await Promise.all([
+			this.getDescrStats(),
+			this.app.vocabApi.getViolinPlotData(args).then(data => {this.data = data}).catch(e => {throw e})
+		])
 
 		if (this.data.error) throw this.data.error
 		/*
