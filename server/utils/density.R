@@ -4,7 +4,7 @@ library(ggplot2)
 # The input json string is a dictionary where each field maps to an array of numbers
 # The output json string is a dictionary  with the density for each plot. The density is represented like {x: [x density values], y: [y density values]}
 # In order to test it you can run this from the command line replacing the arrays with your own: 
-# echo "{plotA: [1.2, 2, 3], plotB: [4.5, 5, 6]}" | Rscript ./density.R
+# echo '{"plotA": [1.2, 2, 3], "plotB": [4.5, 5, 6]}' | Rscript ./density.R
 
 con <- file("stdin", "r")
 json <- readLines(con)
