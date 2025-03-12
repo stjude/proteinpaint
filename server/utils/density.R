@@ -13,7 +13,8 @@ data <- fromJSON(json)
 densities <- list()
 for(plot in names(data)){
     values = data[[plot]]
-    if(length(values) <= 5){
+    # If the plot has less than 5 values or all the values are the same, we will return a flat line
+    if(length(values) <= 5 | length(unique(values)) == 1){
         y = rep(0, length(values))
         densities[[plot]] <- list(x=values, y=y)
         next
