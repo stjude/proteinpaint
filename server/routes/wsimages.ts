@@ -1,16 +1,13 @@
 import ky from 'ky'
 import qs from 'qs'
 import path from 'path'
-import serverconfig from '#src/serverconfig.js'
 import { CookieJar } from 'tough-cookie'
 import { promisify } from 'util'
-import type { WSImagesRequest, WSImagesResponse, RouteApi } from '#types'
+import type { RouteApi, WSImagesRequest, WSImagesResponse } from '#types'
 import { wsImagesPayload } from '#types/checkers'
 import SessionManager, { SessionData } from '../src/wsisessions/SessionManager.ts'
 import { ShardManager } from '#src/shardig/ShardManager.js'
 import { TileServerShardingAlgorithm } from '#src/shardig/TileServerShardingAlgorithm.js'
-import { RedisShardingAlgorithm } from '#src/shardig/RedisShardingAlgorithm.js'
-import { RedisShard } from '#src/shardig/RedisShard.js'
 import { TileServerShard } from '#src/shardig/TileServerShard.js'
 
 const routePath = 'wsimages'
@@ -109,6 +106,14 @@ async function getSessionId(cookieJar, getCookieString, setCookie, wsimage, ds, 
 	await sessionManager.setSession(wsimage, sessionId, tileServer)
 
 	return sessionId
+}
+
+async function fetchSessions(tileServerUrl): Promise<any> {
+	try {
+		return await ky.get(`${tileServerUrl}/tileserver/sessions`).json()
+	} catch (error) {
+		console.error('Error fetching sessions:', error)
+	}
 }
 
 async function invalidateSessions(invalidateResult: { success: boolean; deletedKeys: (SessionData | undefined)[] }) {
