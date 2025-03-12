@@ -8,6 +8,9 @@ Features:
 - Improved Violin by using R to calculate the density
 - Fix barchart legend color bug: for numeric term2, after changing color of one bin, chaning another will revert the color of the first bin.
 
+Fixes:
+- protect against missing error payload or empty data when handling the maf multipart response
+
 
 ## 2.110.0
 
