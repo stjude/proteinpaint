@@ -89,8 +89,6 @@ export type VolcanoSettings = {
 	rankBy: 'abs(foldChange)' | 'pValue'
 	/** Show a table of p values */
 	showPValueTable: boolean
-	/** Number of variable genes used in parametric DE analysis*/
-	varGenesCutoff: number
 	/** plot height */
 	height: number
 	/** plot width */

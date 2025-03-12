@@ -146,7 +146,6 @@ export function getDefaultVolcanoSettings(overrides = {}): VolcanoSettings {
 		pValueType: 'adjusted',
 		rankBy: 'abs(foldChange)',
 		showPValueTable: false,
-		varGenesCutoff: 3000,
 		width: 400
 	}
 	return Object.assign(defaults, overrides)
