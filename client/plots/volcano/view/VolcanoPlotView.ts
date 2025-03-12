@@ -24,7 +24,12 @@ export class VolcanoPlotView {
 		this.interactions = interactions
 		this.settings = settings
 		this.viewData = viewData
-		const actions = this.dom.holder.append('div').attr('id', 'sjpp-volcano-actions').style('display', 'block')
+		const actions = this.dom.holder
+			.append('div')
+			.attr('id', 'sjpp-volcano-actions')
+			.style('display', 'block')
+			.style('z-index', 1)
+			.style('position', 'relative')
 		const images = this.dom.holder
 			.append('div')
 			.style('display', 'inline-block')
@@ -153,11 +158,15 @@ export class VolcanoPlotView {
 
 	renderImages() {
 		if (!this.viewData.images.length) return
+		/**This accounts for the margins in the images. 
+		Remove this and '+50' if the margins are removed 
+		in the generated images. */
+		this.volcanoDom.images.style('margin-top', '-60px').style('z-index', -1)
 		for (const img of this.viewData.images) {
 			this.volcanoDom.images
 				.append('img')
-				.attr('width', this.viewData.plotDim.svg.width)
-				.attr('height', this.viewData.plotDim.svg.height)
+				.attr('width', this.viewData.plotDim.svg.width + 50)
+				.attr('height', this.viewData.plotDim.svg.height + 50)
 				.attr('src', img.src)
 		}
 	}
