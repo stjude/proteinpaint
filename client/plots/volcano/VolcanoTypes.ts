@@ -62,6 +62,7 @@ export type VolcanoPlotDom = {
 	yAxis: SvgG
 	/** Y axis label */
 	yAxisLabel: SvgText
+	images: any
 }
 
 /** Settings for the differential analysis volcano */
@@ -102,4 +103,5 @@ export type VolcanoViewData = {
 	plotDim: VolcanoPlotDimensions
 	pointData: DataPointEntry[]
 	pValueTableData: any
+	images: any
 }
