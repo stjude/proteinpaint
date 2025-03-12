@@ -175,14 +175,6 @@ export class VolcanoViewModel {
 				value: this.response.sample_size2
 			}
 		]
-
-		if (this.type == 'genes') {
-			tableRows.push({
-				label: 'Number of variable genes used in parametric differential analysis',
-				value: this.settings.varGenesCutoff
-			})
-		}
-
 		return tableRows
 	}
 

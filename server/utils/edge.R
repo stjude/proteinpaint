@@ -17,26 +17,6 @@ filter_using_cpm <- function(y, gene_cpm_cutoff, sample_cpm_cutoff, count_cpm_cu
    y <- y[selr, selc]
 }
 
-filter_genes_by_global_variance <- function(read_counts, gene_id_symbols, num_variable_genes) {
-   # Calculate the standard deviation of each row
-   row_sd <- apply(read_counts, 1, sd)
-   # Add the standard deviation as a new column to the dataframe
-   read_counts$Row_SD <- row_sd
-   # Add the gene_id_symbols as a new column to the dataframe
-   read_counts$gene_id_symbols <- gene_id_symbols
-   # Sort the dataframe based on the standard deviation column
-   read_counts <- read_counts[order(read_counts$Row_SD, decreasing = TRUE), ]
-   # Select top 3000 rows
-   read_counts <- head(read_counts,num_variable_genes) # Currently hardcoded 3000 genes
-   # Get gene id symbols corresponding to the reordered read count matrix
-   gene_id_symbols <- read_counts$gene_id_symbols
-   # Remove column Row_SD from read_counts dataframe
-   read_counts <- read_counts[, !names(read_counts) %in% "Row_SD"]
-   # Remove column gene_id_symbols from read_counts dataframe
-   read_counts <- read_counts[, !names(read_counts) %in% "gene_id_symbols"]
-   return(list(read_counts = read_counts, gene_id_symbols = gene_id_symbols))
-}
-
 # Read JSON input from stdin
 read_json_time <- system.time({
     con <- file("stdin", "r")
@@ -92,21 +72,6 @@ read_counts_time <- system.time({
 # Create conditions vector
 conditions <- c(rep("Diseased", length(cases)), rep("Control", length(controls)))
 gene_id_symbols <- paste0(geneIDs, "\t", geneSymbols)
-
-filter_genes_time <- system.time({
-if (length(input$VarGenes) != 0) { # Filter out variable genes for DE analysis
-   filtered_read_counts <- filter_genes_by_global_variance(read_counts, gene_id_symbols, input$VarGenes)
-   read_counts <- filtered_read_counts$read_counts
-   gene_id_symbols <- filtered_read_counts$gene_id_symbols
-
-   #### Will implement filtering by per group variance later
-   #filtered_read_counts <- filter_genes_by_group_variance(read_counts, gene_id_symbols, num_variable_genes, cases, controls)
-   #read_counts <- filtered_read_counts$read_counts
-   #gene_id_symbols <- filtered_read_counts$gene_id_symbols
-}
-})
-
-#cat("Time to filter genes: ", filter_genes_time[3], " seconds\n")
 
 # Create DGEList object
 dge_list_time <- system.time({

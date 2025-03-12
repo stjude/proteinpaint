@@ -130,15 +130,6 @@ export class VolcanoControlInputs {
 				min: -10,
 				max: 10
 			},
-			// {
-			// 	label: 'Variable genes cutoff',
-			// 	type: 'number',
-			// 	chartType: 'volcano',
-			// 	settingsKey: 'varGenesCutoff',
-			// 	title: 'Top number of genes with the highest variability to include in analysis',
-			// 	min: 1000,
-			// 	max: 7000
-			// },
 			{
 				label: 'Rank Genes by',
 				type: 'radio',

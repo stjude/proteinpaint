@@ -19,8 +19,6 @@ export type DERequest = {
 	tw?: any
 	/** Term for confounding variable2 (if present) */
 	tw2?: any
-	/** Number of variable genes (defined only for parametric DE methods) */
-	VarGenes?: number
 }
 
 export type ExpressionInput = {
