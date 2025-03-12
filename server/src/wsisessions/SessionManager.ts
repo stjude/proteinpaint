@@ -1,7 +1,6 @@
+import ky from 'ky'
 import RedisClientHolder from '../redis/RedisClientHolder.ts'
-import { RedisShard } from '#src/shardig/RedisShard.js'
 import { TileServerShard } from '#src/shardig/TileServerShard.js'
-import serverconfig from '#src/serverconfig.js'
 import { ShardManager } from '#src/shardig/ShardManager.js'
 import { TileServerShardingAlgorithm } from '#src/shardig/TileServerShardingAlgorithm.js'
 import { ShardingAlgorithm } from '#src/shardig/ShardingAlgorithm.js'
@@ -53,6 +52,20 @@ export default class SessionManager {
 	}
 
 	public async getSession(key: string): Promise<SessionData | undefined> {
+		const tileServer = this.getTileServerShard(key)
+		if (!tileServer) {
+			return undefined
+		}
+		const sessions = await this.fetchSessions(tileServer.url)
+
+		// Parse session identifiers from the fetched JSON
+		const keys = Object.values<string>(sessions).map(path => {
+			const parts = path.split('/')
+			return parts[parts.length - 1] // Gets the last segment of the path
+		})
+
+		await this.redisClients.update(key, keys, tileServer)
+
 		const sessionData = await this.redisClients.get(key)
 		if (!sessionData) {
 			return undefined
@@ -75,8 +88,6 @@ export default class SessionManager {
 		deletedKeys: (SessionData | undefined)[]
 	}> {
 		const keys = await this.redisClients.getAll(key)
-
-		console.log('keys', keys)
 
 		const keySessions: { key: string; sessionData: SessionData | undefined }[] = await Promise.all(
 			keys?.map(async key => ({
@@ -126,6 +137,14 @@ export default class SessionManager {
 		} else {
 			await Promise.all(allSessionsToDelete.map(({ key }) => this.deleteSession(key)))
 			return { success: true, deletedKeys }
+		}
+	}
+
+	private async fetchSessions(tileServerUrl: string): Promise<any> {
+		try {
+			return await ky.get(`${tileServerUrl}/tileserver/sessions`).json()
+		} catch (error) {
+			console.error('Error fetching sessions:', error)
 		}
 	}
 }

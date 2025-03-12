@@ -108,14 +108,6 @@ async function getSessionId(cookieJar, getCookieString, setCookie, wsimage, ds, 
 	return sessionId
 }
 
-async function fetchSessions(tileServerUrl): Promise<any> {
-	try {
-		return await ky.get(`${tileServerUrl}/tileserver/sessions`).json()
-	} catch (error) {
-		console.error('Error fetching sessions:', error)
-	}
-}
-
 async function invalidateSessions(invalidateResult: { success: boolean; deletedKeys: (SessionData | undefined)[] }) {
 	for (const sessionData of invalidateResult.deletedKeys) {
 		try {

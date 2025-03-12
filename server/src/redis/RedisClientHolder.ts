@@ -4,6 +4,9 @@ import { RedisShard } from '#src/shardig/RedisShard.js'
 import { ShardManager } from '#src/shardig/ShardManager.js'
 import { RedisShardingAlgorithm } from '#src/shardig/RedisShardingAlgorithm.js'
 import { ShardingAlgorithm } from '#src/shardig/ShardingAlgorithm.js'
+import { SessionData } from '#src/wsisessions/SessionManager.js'
+import { TileServerShard } from '#src/shardig/TileServerShard.js'
+import * as console from 'node:console'
 
 export default class RedisClientHolder {
 	private static instance: RedisClientHolder = new RedisClientHolder()
@@ -74,6 +77,34 @@ export default class RedisClientHolder {
 		const redisShard: RedisShard = this.redisShardingAlgorithm?.getShard(key)
 
 		return this.clients.get(redisShard.url)?.keys('*') || []
+	}
+
+	public async update(key: string, keys: Array<string>, tileServerShard: TileServerShard): Promise<void> {
+		const redisShard: RedisShard = this.redisShardingAlgorithm?.getShard(key)
+		const client = this.getClient(redisShard.url)
+
+		if (!client) {
+			throw new Error('Redis client not found for URL: ' + redisShard.url)
+		}
+
+		const existingKeys = await client.keys('*') // Fetches all keys in the shard
+
+		// Adding new keys that are not present in Redis
+		for (const key of keys) {
+			if (!existingKeys.includes(key)) {
+				const lastAccessTimestamp = new Date().toISOString() // Get current time in ISO 8601 format
+				const sessionData = new SessionData(key, lastAccessTimestamp, tileServerShard)
+				const serializedData = JSON.stringify(sessionData)
+				await client.set(key, serializedData)
+			}
+		}
+
+		// Deleting keys that should no longer be present
+		for (const existingKey of existingKeys) {
+			if (!keys.includes(existingKey)) {
+				await client.del(existingKey)
+			}
+		}
 	}
 
 	public async delete(key: string): Promise<number | undefined> {
