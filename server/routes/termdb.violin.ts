@@ -222,8 +222,11 @@ async function createCanvasImg(q: ViolinRequest, result: { [index: string]: any 
 
 	const refSize = q.radius * 4
 	//create scale object
-	let axisScale
+	const plot2Values = {}
+	for (const plot of result.plots) plot2Values[plot.label] = plot.values
+	const densities = await getDensities(plot2Values)
 
+	let axisScale
 	const useLog = q.unit == 'log'
 	if (useLog) {
 		axisScale = scaleLog()
@@ -242,9 +245,7 @@ async function createCanvasImg(q: ViolinRequest, result: { [index: string]: any 
 
 	const scaledRadius = q.radius / q.devicePixelRatio
 	const arcEndAngle = scaledRadius * Math.PI
-	const plot2Values = {}
-	for (const plot of result.plots) plot2Values[plot.label] = plot.values
-	const densities = await getDensities(plot2Values)
+
 	for (const plot of result.plots) {
 		// item: { label=str, values=[v1,v2,...] }
 		// set  the plot density
@@ -289,7 +290,7 @@ async function createCanvasImg(q: ViolinRequest, result: { [index: string]: any 
 
 		//generate summary stat values
 		plot.summaryStats = summaryStats(plot.values).values
-		delete plot.values
+		//delete plot.values
 	}
 }
 
@@ -317,8 +318,9 @@ export async function getDensities(plot2Values): Promise<{ [plot: string]: any }
 			densityMax = Math.max(densityMax, density)
 			bins.push({ x0: x, density })
 		}
-		bins.unshift({ x0: xMin, density: 0 }) //close the path
-		const density = { bins, densityMin, densityMax, xMin, xMax }
+		bins.unshift({ x0: xMin, density: densityMin }) //close the path
+		bins.push({ x0: xMax, density: densityMin }) //close the path
+		const density = { bins, densityMin, densityMax, minvalue: xMin, maxvalue: xMax }
 		densities[plot] = density
 	}
 	return densities

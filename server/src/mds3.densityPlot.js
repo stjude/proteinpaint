@@ -22,12 +22,6 @@ export async function get_densityplot(term, samples) {
 			continue
 		}
 		values.push(v)
-		if (minvalue === null) {
-			minvalue = maxvalue = v
-		} else {
-			minvalue = Math.min(minvalue, v)
-			maxvalue = Math.max(maxvalue, v)
-		}
 	}
 
 	const density = await getDensity(values)
@@ -35,10 +29,8 @@ export async function get_densityplot(term, samples) {
 	if (density.bins.length == 0) throw 'getDensity returns an empty array'
 
 	const result = {
-		minvalue,
-		maxvalue,
-		xMin: density.xMin, //R xMin and xMax are not the same as minvalue and maxvalue
-		xMax: density.xMax,
+		minvalue: density.minvalue,
+		maxvalue: density.maxvalue,
 		densityMax: density.densityMax,
 		densityMin: density.densityMin,
 		density: density.bins,

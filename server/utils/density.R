@@ -1,5 +1,4 @@
 library(jsonlite)
-library(ggplot2)
 # This script reads in a json string from stdin, calculates the densities of each plot and returns the densities as a json string
 # The input json string is a dictionary where each field maps to an array of numbers
 # The output json string is a dictionary  with the density for each plot. The density is represented like {x: [x density values], y: [y density values]}
@@ -19,7 +18,7 @@ for(plot in names(data)){
         densities[[plot]] <- list(x=values, y=y)
         next
     }
-    den = density(x = values)
+    den = density(x = values, from=min(values), to=max(values))
     x = den$x
     y = den$y
     result = list(x=x, y=y) #This is an object  with two keys x and y that are number arrays
