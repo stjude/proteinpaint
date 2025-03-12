@@ -25,16 +25,21 @@ export class VolcanoPlotView {
 		this.settings = settings
 		this.viewData = viewData
 		const actions = this.dom.holder.append('div').attr('id', 'sjpp-volcano-actions').style('display', 'block')
+		const images = this.dom.holder
+			.append('div')
+			.style('display', 'inline-block')
+			.style('vertical-align', 'top')
+			.attr('id', 'sjpp-volcano-images')
 		const svg = this.dom.holder.append('svg').style('display', 'inline-block').attr('id', 'sjpp-volcano-svg')
 		this.volcanoDom = {
 			actions,
+			images,
 			svg,
 			xAxis: svg.append('g').attr('id', 'sjpp-volcano-xAxis'),
 			yAxis: svg.append('g').attr('id', 'sjpp-volcano-yAxis'),
 			xAxisLabel: svg.append('text').attr('id', 'sjpp-volcano-xAxisLabel').attr('text-anchor', 'middle'),
 			yAxisLabel: svg.append('text').attr('id', 'sjpp-volcano-yAxisLabel').attr('text-anchor', 'middle'),
-			plot: svg.append('g').attr('id', 'sjpp-volcano-plot'),
-			images: this.dom.holder.append('div').attr('id', 'sjpp-volcano-images')
+			plot: svg.append('g').attr('id', 'sjpp-volcano-plot')
 		}
 
 		const plotDim = this.viewData.plotDim
@@ -44,12 +49,7 @@ export class VolcanoPlotView {
 		this.renderFoldChangeLine(plotDim)
 		this.renderStatsTable()
 		this.renderPValueTable()
-
-		if (this.viewData.images.length > 0) {
-			for (const v of this.viewData.images) {
-				this.volcanoDom.images.append('img').attr('src', v.src)
-			}
-		}
+		this.renderImages()
 	}
 
 	renderUserActions() {
@@ -149,6 +149,17 @@ export class VolcanoPlotView {
 			maxHeight: '150vh',
 			resize: true
 		})
+	}
+
+	renderImages() {
+		if (!this.viewData.images.length) return
+		for (const img of this.viewData.images) {
+			this.volcanoDom.images
+				.append('img')
+				.attr('width', this.viewData.plotDim.svg.width)
+				.attr('height', this.viewData.plotDim.svg.height)
+				.attr('src', img.src)
+		}
 	}
 }
 
