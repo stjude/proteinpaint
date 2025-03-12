@@ -25,8 +25,8 @@ export class VolcanoModel {
 			method: 'edgeR', //Eventually this can be removed from the backend code since wilcoxon is no longer needed.
 			min_count: this.settings.minCount,
 			min_total_count: this.settings.minTotalCount,
-			samplelst: this.config.samplelst,
-			VarGenes: this.settings.varGenesCutoff
+			samplelst: this.config.samplelst
+			// VarGenes: this.settings.varGenesCutoff
 		} as any
 		//This is a workaround until the server can accept an arr of confounder tws
 		const confounders = this.config.confounderTws
