@@ -310,10 +310,10 @@ export default function setViolinRenderer(self) {
 		renderArea(violinG, plot, isH ? areaBuilder.y(d => -wScale(d.density)) : areaBuilder.x(d => -wScale(d.density)))
 
 		renderSymbolImage(self, violinG, plot, isH, imageOffset)
-		if (self.opts.mode != 'minimal') renderMedian(violinG, isH, plot, xScale, self)
+		if (self.opts.mode != 'minimal') renderMedian(violinG, isH, plot, svgData, self)
 		renderLines(violinG, isH, self.config.settings.violin.lines, svgData)
-		if (self.state.config.value) {
-			const value = xScale(self.state.config.value)
+		if ('value' in self.state.config) {
+			const value = svgData.axisScale(self.state.config.value)
 			const s = self.config.settings.violin
 			violinG
 				.append('line')
@@ -394,7 +394,7 @@ export default function setViolinRenderer(self) {
 			.attr('transform', isH ? `translate(0, -${imageOffset})` : `translate(-${imageOffset}, 0)`)
 	}
 
-	function renderMedian(violinG, isH, plot, xAxisScale, self) {
+	function renderMedian(violinG, isH, plot, svgData, self) {
 		const s = self.config.settings.violin
 		//render median values on plots
 		const median = plot.summaryStats.find(x => x.id === 'median').value
@@ -411,8 +411,8 @@ export default function setViolinRenderer(self) {
 				.style('opacity', '1')
 				.attr('y1', isH ? -s.medianLength : median)
 				.attr('y2', isH ? s.medianLength : median)
-				.attr('x1', isH ? xAxisScale(median) : -s.medianLength)
-				.attr('x2', isH ? xAxisScale(median) : s.medianLength)
+				.attr('x1', isH ? svgData.axisScale(median) : -s.medianLength)
+				.attr('x2', isH ? svgData.axisScale(median) : s.medianLength)
 		} else return
 	}
 

@@ -247,13 +247,15 @@ async function createCanvasImg(q: ViolinRequest, result: { [index: string]: any 
 	const densities = await getDensities(plot2Values)
 	for (const plot of result.plots) {
 		// item: { label=str, values=[v1,v2,...] }
-
+		// set  the plot density
+		plot.density = densities[plot.label]
 		//backend rendering bean/rug plot on top of violin plot based on orientation of chart
 		const canvas = createCanvas(width, height)
 		const ctx = canvas.getContext('2d')
-		ctx.strokeStyle = 'rgba(0,0,0,0.8)'
+		const symbolOpacity = plot.density.densityMax == 0 ? 1 : 0.8
+		ctx.strokeStyle = `rgba(0,0,0,${symbolOpacity})`
 		ctx.lineWidth = q.strokeWidth / q.devicePixelRatio
-		ctx.globalAlpha = 0.5
+		ctx.globalAlpha = symbolOpacity
 		// No violin is rendered when the values is less than cutoff
 		//Render in black so the user can see the data
 		ctx.fillStyle = plot.values.length <= minSampleSize ? 'black' : '#ffe6e6'
@@ -284,8 +286,6 @@ async function createCanvasImg(q: ViolinRequest, result: { [index: string]: any 
 			})
 
 		plot.src = canvas.toDataURL()
-		// create bins for violins
-		plot.density = densities[plot.label]
 
 		//generate summary stat values
 		plot.summaryStats = summaryStats(plot.values).values
