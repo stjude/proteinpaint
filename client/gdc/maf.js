@@ -394,6 +394,8 @@ async function getFilesAndShowTable(obj) {
 			 ] 
 			*/
 			data = await dofetch3('gdc/mafBuild', { body: { fileIdLst, columns: outColumns } })
+			if(!Array.isArray(data)) throw `server didn't return multipart`
+			if(!data.length) throw 'server returned blank multipart'
 		} catch (e) {
 			sayerror(obj.errDiv, e)
 			button.innerHTML = oldText
