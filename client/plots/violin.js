@@ -313,17 +313,21 @@ class ViolinPlot {
 		const terms = [this.config.term]
 		if (this.config.term2) terms.push(this.config.term2)
 		if (this.config.term0) terms.push(this.config.term0)
+		const promises = []
 		for (const t of terms) {
-			if (isNumericTerm(t.term)) {
-				const data = await this.app.vocabApi.getDescrStats(
+			if (!isNumericTerm(t.term)) continue
+			promises.push(
+				this.app.vocabApi.getDescrStats(
 					t,
 					this.state.termfilter,
 					this.config.settings?.violin?.unit == 'log'
-				)
-				if (data.error) throw data.error
-				t.q.descrStats = data.values
-			}
+				).then( data => {
+					if (data.error) throw data.error
+					t.q.descrStats = data.values
+				})
+			)
 		}
+		if (promises.length) await Promise.all(promises)
 	}
 
 	validateArgs() {
