@@ -1,26 +1,32 @@
 import type { MassAppApi } from '#mass/types/mass'
 import { Tabs } from '#dom'
-import type { DiffAnalysisDom } from '../DiffAnalysisTypes'
+import type { RenderedTab } from '#dom'
+import type { DiffAnalysisDom, DiffAnalysisPlotConfig } from '../DiffAnalysisTypes'
 import type { DiffAnalysisInteractions } from '../interactions/DiffAnalysisInteractions'
 
 /** TODO: finish typing this file */
 export class DiffAnalysisView {
 	app: MassAppApi
-	config: any
+	config: DiffAnalysisPlotConfig
 	dom: DiffAnalysisDom
 	interactions: DiffAnalysisInteractions
 	renderers: any
-	tabs: any
-	tabsData: any
+	tabs: Tabs
+	tabsData: RenderedTab[]
 	getTabsOptions: any
-	constructor(app, config, dom: DiffAnalysisDom, interactions: DiffAnalysisInteractions) {
+	constructor(
+		app: MassAppApi,
+		config: DiffAnalysisPlotConfig,
+		dom: DiffAnalysisDom,
+		interactions: DiffAnalysisInteractions
+	) {
 		this.app = app
 		this.config = config
 		this.dom = dom
 		this.interactions = interactions
 		setRenderers(this)
 		this.tabsData = this.getTabsOptions(this)
-		this.tabs = new Tabs({ holder: this.dom.tabsDiv, content: this.dom.plots, tabs: this.tabsData })
+		this.tabs = new Tabs({ holder: this.dom.tabsDiv, tabs: this.tabsData })
 		this.tabs.main()
 	}
 

@@ -1,4 +1,4 @@
-import type { BasePlotConfig, MassAppApi, MassState } from '#mass/types/mass'
+import type { BasePlotConfig, MassState } from '#mass/types/mass'
 import type { Elem } from '../../types/d3'
 import { RxComponentInner } from '../../types/rx.d'
 import { getCompInit, copyMerge } from '#rx'
@@ -61,7 +61,6 @@ class DifferentialAnalysis extends RxComponentInner {
 			gsea: gseaDiv
 		}
 
-		//TODO: include type. move to main()
 		if (opts.header) {
 			this.dom.header = {
 				terms: opts.header.append('span'),
@@ -150,7 +149,7 @@ export const componentInit = DiffAnalysisInit
 //Use this as a sanity check.
 const enabledTermTypes = ['geneExpression']
 
-export function getPlotConfig(opts: DiffAnalysisOpts, app: MassAppApi) {
+export function getPlotConfig(opts: DiffAnalysisOpts) {
 	if (!opts.termType) throw '.termType is required [DifferentialAnalysis getPlotConfig()]'
 	if (!enabledTermTypes.includes(opts.termType))
 		throw `termType '${opts.termType}' not supported by DifferentialAnalysis`

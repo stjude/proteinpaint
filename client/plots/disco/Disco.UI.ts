@@ -117,9 +117,9 @@ function makeDataTypeTabs(dataTypeTabs_div: Selection<HTMLDivElement, any, any, 
 		{
 			label: 'SNV Indel',
 			active: true,
-			callback: async (event: MouseEvent, tab: Tab) => {
+			callback: async (event: MouseEvent, dataTypeTab: Tab) => {
 				/** Event though event is not required, stops type error??? */
-				tab.key = 'snv'
+				dataTypeTab.key = 'snv'
 				/**Leave the weird spacing for <pre>! Otherwise it doesn't display properly on the client
 				 * and the user can't copy and paste the example data.*/
 				const listHTML = `<ol>
@@ -133,7 +133,7 @@ function makeDataTypeTabs(dataTypeTabs_div: Selection<HTMLDivElement, any, any, 
 chr1	226252135	H3F3A	K28M	M
 chr2	98765432	TestGene	TestMutation	F
 </pre>`
-				mainTabCallback(tab, obj, listHTML)
+				mainTabCallback(dataTypeTab, obj, listHTML)
 			}
 		},
 		{
