@@ -1,18 +1,14 @@
 import type { Div, SvgG, SvgSvg, SvgText } from '../../types/d3'
 import type { PlotConfig } from '#mass/types/mass'
 import type { TermWrapper } from '@sjcrh/proteinpaint-types'
+import type { Cell, Column } from '#dom'
+import type { DataEntry } from '#types'
 
-export type DataPointEntry = {
-	adjusted_p_value: number
+export type DataPointEntry = DataEntry & {
 	/** color indicating significance */
 	color: string
-	fold_change: number
 	/** If true, the fill opacity increases to show the highlight color */
 	highlighted: boolean
-	gene_name: string
-	gene_symbol: string
-	log_fold_change: number
-	original_p_value: number
 	/** x coordinate */
 	x: number
 	/** y coordinate */
@@ -65,6 +61,11 @@ export type VolcanoPlotDom = {
 	images: any
 }
 
+export type VolcanoPValueTableData = {
+	columns: Column[]
+	rows: Cell[][]
+}
+
 /** Settings for the differential analysis volcano */
 export type VolcanoSettings = {
 	/** Default color for highlighted data points. Maybe overridden by assigned term color */
@@ -100,6 +101,6 @@ export type VolcanoViewData = {
 	statsData: { label: string; value: number }[]
 	plotDim: VolcanoPlotDimensions
 	pointData: DataPointEntry[]
-	pValueTableData: any
+	pValueTableData: VolcanoPValueTableData
 	images: any
 }
