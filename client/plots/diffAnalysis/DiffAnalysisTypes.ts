@@ -1,12 +1,11 @@
 import type { Elem } from '../../types/d3'
 import type { Menu } from '#dom'
 import type { PlotConfig } from '#mass/types/mass'
-import type { TermWrapper } from '@sjcrh/proteinpaint-types'
+import type { TermWrapper } from '#types'
 
 /** TODO
  * - add comments
  * - fix types
- * - move types dir and volcano types to separate file
  */
 
 export type DiffAnalysisDom = {
@@ -16,10 +15,12 @@ export type DiffAnalysisDom = {
 	div: Elem
 	/** Sandbox header, if provided */
 	header?: {
+		/** If tw.term.name is present, show in header */
+		terms: Elem
+		/** Updates plot titl per provided opts.termType */
 		title: Elem
-		fixed: Elem
 	}
-	/** Toggle volcano and gsea plots */
+	/** Toggle between plots */
 	tabsDiv: Elem
 	/** Container for the plots */
 	plots: Elem
