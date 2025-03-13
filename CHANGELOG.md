@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.111.0
 
 Features:
 - Improved Violin by using R to calculate the density
