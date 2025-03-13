@@ -222,8 +222,11 @@ async function createCanvasImg(q: ViolinRequest, result: { [index: string]: any 
 
 	const refSize = q.radius * 4
 	//create scale object
-	let axisScale
+	const plot2Values = {}
+	for (const plot of result.plots) plot2Values[plot.label] = plot.values
+	const densities = await getDensities(plot2Values)
 
+	let axisScale
 	const useLog = q.unit == 'log'
 	if (useLog) {
 		axisScale = scaleLog()
@@ -245,13 +248,15 @@ async function createCanvasImg(q: ViolinRequest, result: { [index: string]: any 
 
 	for (const plot of result.plots) {
 		// item: { label=str, values=[v1,v2,...] }
-
+		// set  the plot density
+		plot.density = densities[plot.label]
 		//backend rendering bean/rug plot on top of violin plot based on orientation of chart
 		const canvas = createCanvas(width, height)
 		const ctx = canvas.getContext('2d')
-		ctx.strokeStyle = 'rgba(0,0,0,0.8)'
+		const symbolOpacity = plot.density.densityMax == 0 ? 1 : 0.8
+		ctx.strokeStyle = `rgba(0,0,0,${symbolOpacity})`
 		ctx.lineWidth = q.strokeWidth / q.devicePixelRatio
-		ctx.globalAlpha = 0.5
+		ctx.globalAlpha = symbolOpacity
 		// No violin is rendered when the values is less than cutoff
 		//Render in black so the user can see the data
 		ctx.fillStyle = plot.values.length <= minSampleSize ? 'black' : '#ffe6e6'
@@ -282,34 +287,41 @@ async function createCanvasImg(q: ViolinRequest, result: { [index: string]: any 
 			})
 
 		plot.src = canvas.toDataURL()
-		// create bins for violins
-		plot.density = await getDensity(plot.values)
 
 		//generate summary stat values
 		plot.summaryStats = summaryStats(plot.values).values
-		delete plot.values
+		//delete plot.values
 	}
 }
 
-export async function getDensity(data) {
-	if (data.length <= minSampleSize) {
-		return { bins: [{ x0: data[0], density: 0 }], densityMin: 0, densityMax: 0, xMin: data[0], xMax: data[0] }
-	}
+export async function getDensity(values) {
+	const result = await getDensities({ plot: values })
+	return result.plot
+}
+
+export async function getDensities(plot2Values): Promise<{ [plot: string]: any }> {
 	const densityScript = path.join(serverconfig.binpath, 'utils', 'density.R')
-	const result: { x: number[]; y: number[] } = JSON.parse(await run_R(densityScript, JSON.stringify(data)))
-	const bins: any = []
-	let densityMin = Infinity
-	let densityMax = -Infinity
-	let xMin = Infinity
-	let xMax = -Infinity
-	for (const [i, x] of Object.entries(result.x)) {
-		const density = result.y[i]
-		xMin = Math.min(xMin, x)
-		xMax = Math.max(xMax, x)
-		densityMin = Math.min(densityMin, density)
-		densityMax = Math.max(densityMax, density)
-		bins.push({ x0: x, density })
+	const plot2Density: any = JSON.parse(await run_R(densityScript, JSON.stringify(plot2Values)))
+	const densities = {}
+	for (const plot in plot2Density) {
+		const result: { x: number[]; y: number[] } = plot2Density[plot]
+		const bins: any = []
+		let densityMin = Infinity
+		let densityMax = -Infinity
+		let xMin = Infinity
+		let xMax = -Infinity
+		for (const [i, x] of Object.entries(result.x)) {
+			const density = result.y[i]
+			xMin = Math.min(xMin, x)
+			xMax = Math.max(xMax, x)
+			densityMin = Math.min(densityMin, density)
+			densityMax = Math.max(densityMax, density)
+			bins.push({ x0: x, density })
+		}
+		bins.unshift({ x0: xMin, density: densityMin }) //close the path
+		bins.push({ x0: xMax, density: densityMin }) //close the path
+		const density = { bins, densityMin, densityMax, minvalue: xMin, maxvalue: xMax }
+		densities[plot] = density
 	}
-	bins.unshift({ x0: xMin, density: 0 }) //close the path
-	return { bins, densityMin, densityMax, xMin, xMax }
+	return densities
 }

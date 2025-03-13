@@ -15,7 +15,7 @@ export class violinRenderer {
 			.append('svg')
 			.attr('width', `${width + 50}px`)
 			.attr('height', `${height + 50}px`)
-		this.axisScale = scaleLinear().domain([plot.xMin, plot.xMax]).range([0, width])
+		this.axisScale = scaleLinear().domain([plot.minvalue, plot.maxvalue]).range([0, width])
 		this.axisScaleUI = scaleLinear()
 			.domain([plot.minvalue * scaleFactor, plot.maxvalue * scaleFactor])
 			.range([0, width])

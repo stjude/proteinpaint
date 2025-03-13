@@ -233,8 +233,6 @@ export function convertViolinData(vd) {
 		densityMax: p.density.densityMax,
 		densityMin: p.density.densityMin,
 		density: p.density.bins,
-		xMin: p.density.xMin, //R xMin and xMax are not the same as minvalue and maxvalue
-		xMax: p.density.xMax,
 		valuesImg: p.src
 	}
 	return dd
