@@ -29,7 +29,8 @@ class Volcano extends RxComponentInner {
 		}
 		this.termType = opts.termType
 		const holder = opts.holder.classed('sjpp-diff-analysis-main', true)
-		const controls = opts.controls || holder.append('div')
+		//Either allow a node to be passed or create a new div
+		const controls = typeof opts.controls == 'object' ? opts.controls : holder || holder.append('div')
 		const error = opts.holder.append('div').attr('id', 'sjpp-diff-analysis-error').style('opacity', 0.75)
 		this.dom = {
 			holder,
