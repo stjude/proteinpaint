@@ -151,8 +151,8 @@ class ViolinPlot {
 				chartType: 'violin',
 				settingsKey: 'radius',
 				step: 1,
-				max: 15,
-				min: 3
+				max: 10,
+				min: 4
 			},
 			{
 				label: 'Stroke width',
@@ -281,7 +281,14 @@ class ViolinPlot {
 		const args = this.validateArgs()
 		await Promise.all([
 			this.getDescrStats(),
-			this.app.vocabApi.getViolinPlotData(args).then(data => {this.data = data}).catch(e => {throw e})
+			this.app.vocabApi
+				.getViolinPlotData(args)
+				.then(data => {
+					this.data = data
+				})
+				.catch(e => {
+					throw e
+				})
 		])
 
 		if (this.data.error) throw this.data.error
@@ -317,14 +324,12 @@ class ViolinPlot {
 		for (const t of terms) {
 			if (!isNumericTerm(t.term)) continue
 			promises.push(
-				this.app.vocabApi.getDescrStats(
-					t,
-					this.state.termfilter,
-					this.config.settings?.violin?.unit == 'log'
-				).then( data => {
-					if (data.error) throw data.error
-					t.q.descrStats = data.values
-				})
+				this.app.vocabApi
+					.getDescrStats(t, this.state.termfilter, this.config.settings?.violin?.unit == 'log')
+					.then(data => {
+						if (data.error) throw data.error
+						t.q.descrStats = data.values
+					})
 			)
 		}
 		if (promises.length) await Promise.all(promises)
@@ -388,7 +393,7 @@ export function getDefaultViolinSettings(app, overrides = {}) {
 		brushRange: null, //object with start and end if there is a brush selection
 		svgw: 500, // span length of a plot/svg, not including margin
 		datasymbol: 'rug',
-		radius: 3,
+		radius: 4,
 		strokeWidth: 0.2,
 		axisHeight: 60,
 		rightMargin: 50,
