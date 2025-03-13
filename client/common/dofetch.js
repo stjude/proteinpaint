@@ -230,18 +230,19 @@ async function processMultiPart(res, _boundary) {
 	const decoder = new TextDecoder()
 	const bytes = []
 
-	let chunks=[], headerStr
+	let chunks = [],
+		headerStr
 	for await (const chunk of res.body) {
-    let text = (decoder.decode(chunk)).trimStart()
-    // console.log(chunk.byteLength, text.length, text.slice(0, 16), ' ... ', text.slice(0, 16))
-		
+		let text = decoder.decode(chunk).trimStart()
+		// console.log(chunk.byteLength, text.length, text.slice(0, 16), ' ... ', text.slice(0, 16))
+
 		if (!text.startsWith(boundary) && text.endsWith(boundary + '--')) {
-    	// find the previous (middle) boundary from the end
-    	const i = text.indexOf(boundary)
-			for(let j=i; j < text.length; j++) {
+			// find the previous (middle) boundary from the end
+			const i = text.indexOf(boundary)
+			for (let j = i; j < text.length; j++) {
 				const c = chunk.slice(0, j)
 				// convert sliced chunk to text, to see if it ends with boundary text
-				if (decoder.decode(c).endsWith(boundary)) { 
+				if (decoder.decode(c).endsWith(boundary)) {
 					// console.log(66, decoder.decode(chunk.slice(0, j - 1 - boundary.length)))
 					chunks.push(chunk.slice(0, j - 1 - boundary.length))
 					break
@@ -250,58 +251,60 @@ async function processMultiPart(res, _boundary) {
 			text = text.slice(i)
 		}
 
-    if (text.startsWith(boundary) && (text.endsWith('\n\n') || text.endsWith(boundary + '--'))) {
-    	if (headerStr && chunks.length) {
-    		parts.push(processPart(headerStr, chunks, text))
-    		chunks = []
-    	}
-    	headerStr = text.slice(boundary.length+1)
-    	// assume that multiple text-only parts might be read as one chunk,
-    	// detect and handle such cases; this also assumes that non-text chunk
-    	// will NOT be streamed/read in the same chunk as text-only header segments
-    	const segments = headerStr.split(boundary)
-    	if (segments.length > 1) {
-    		for(const s of segments) {
-	    		const j = s.indexOf('\n\n')
-	    		if (j == -1) break
-	    		const headers = s.slice(0, j)
-	    		const subchunk = s.slice(j)
-	    		if (!subchunk) {
-	    			headerStr = headers
-	    			break
-	    		}
-	    		parts.push(processPart(headers, [], subchunk.trim()))
-	    	}
-    	}
-    	continue
-    } else {
-    	chunks.push(chunk)
-    }
-  }
-  return parts
+		if (text.startsWith(boundary) && (text.endsWith('\n\n') || text.endsWith(boundary + '--'))) {
+			if (headerStr && chunks.length) {
+				parts.push(processPart(headerStr, chunks, text))
+				chunks = []
+			}
+			headerStr = text.slice(boundary.length + 1)
+			// assume that multiple text-only parts might be read as one chunk,
+			// detect and handle such cases; this also assumes that non-text chunk
+			// will NOT be streamed/read in the same chunk as text-only header segments
+			const segments = headerStr.split(boundary)
+			if (segments.length > 1) {
+				for (const s of segments) {
+					const j = s.indexOf('\n\n')
+					if (j == -1) break
+					const headers = s.slice(0, j)
+					const subchunk = s.slice(j)
+					if (!subchunk) {
+						headerStr = headers
+						break
+					}
+					parts.push(processPart(headers, [], subchunk.trim()))
+				}
+			}
+			continue
+		} else {
+			chunks.push(chunk)
+		}
+	}
+	return parts
 }
 
 function processPart(headerStr, chunks, text) {
 	const headerLines = headerStr.split('\n')
 	const headers = {}
-	for(const line of headerLines) {
+	for (const line of headerLines) {
 		if (line === '') continue
 		const [key, val] = line.split(':')
 		headers[key.trim().toLowerCase()] = val.trim().toLowerCase()
 	}
-	
-  const type = headers['content-type']
-  if (type === 'application/octet-stream') {
-    return {headers, body: new Blob(chunks, {type})}
-  } else if (type.includes('/json')) {
-    return {headers, body: JSON.parse(text)}
-  } else if (type.includes('/text')) {
-    return {headers, body: text}
-  } else {
-  	// call blob() as catch-all
-  	// https://developer.mozilla.org/en-US/docs/Web/API/Response
-    return {headers, body: new Blob(chunks, {type})}
-  }
+
+	const type = headers['content-type']
+	if (type === 'application/octet-stream') {
+		const body = new Blob(chunks, { type })
+		console.log(295, body)
+		return { headers, body }
+	} else if (type.includes('/json')) {
+		return { headers, body: JSON.parse(text) }
+	} else if (type.includes('/text')) {
+		return { headers, body: text }
+	} else {
+		// call blob() as catch-all
+		// https://developer.mozilla.org/en-US/docs/Web/API/Response
+		return { headers, body: new Blob(chunks, { type }) }
+	}
 }
 
 const defaultServerDataCache = {}
