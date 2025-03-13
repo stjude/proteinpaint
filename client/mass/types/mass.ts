@@ -122,7 +122,6 @@ type PlotSettings = {
 	common?: any
 	controls?: any
 	correlationVolcano?: CorrVolcanoSettings
-	DEanalysis?: any
 	geneORA?: any
 	gsea?: any
 	sampleScatter?: any
@@ -134,4 +133,25 @@ export type PlotConfig = BasePlotConfig & {
 	term: any
 	term0?: any
 	term2?: any
+}
+
+export type ControlInputEntry = {
+	label: string
+	type: 'number' | 'radio' | 'checkbox' | 'term' | 'color' | string
+	/** Either the chartType or childType */
+	chartType: string
+	/** Must correspond to an existing [chartType]settings key */
+	settingsKey: string
+	/** Aria label shown on hover */
+	title: string
+	/** Lower limit for user input in numeric fields */
+	min?: number
+	/** Upper limit for user input in numeric fields */
+	max?: number
+	/** Radio type only. Options for the radio buttons */
+	options?: { label: string; value: string; checked?: boolean }[]
+	/** Checkbox type only. Label shown next to the checkbox. */
+	boxLabel?: string
+	getDisplayStyle?(...args: any): any
+	processConfig?(...args: any): any
 }

@@ -1,3 +1,5 @@
+import type { ControlInputEntry } from '#mass/types/mass'
+
 /** Handles settings the controls in the menu based on the app
  * termType.
  *
@@ -17,8 +19,8 @@ export class VolcanoControlInputs {
 	/** term type used to determine which controls to show */
 	termType: string
 	/** control inputs for controls init */
-	inputs: any
-	constructor(termType) {
+	inputs: ControlInputEntry[]
+	constructor(termType: string) {
 		this.termType = termType
 		//Populated with the default controls for the volcano plot
 		this.inputs = [
@@ -96,6 +98,7 @@ export class VolcanoControlInputs {
 		this.setVolcanoControlInputs()
 	}
 
+	/** Add more term type specific controls here. */
 	setVolcanoControlInputs() {
 		this.addGeneExpressionControlInputs()
 	}
