@@ -406,7 +406,7 @@ async function getFilesAndShowTable(obj) {
 		button.innerHTML = oldText
 		button.disabled = false
 
-		const runStatus = data.find(d => d.headers['content-type'] == 'application/json' && (d.errors || d.error))
+		const runStatus = data.find(d => d.headers['content-type'] == 'application/json' && (d.body?.errors || d.body?.error))
 		if (runStatus && !runStatus?.body?.ok) {
 			// revise if run status is changed
 			if (Array.isArray(runStatus.body?.errors)) displayRunStatusErrors(runStatus.body.errors)
