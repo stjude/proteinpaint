@@ -15,7 +15,9 @@ class gsea {
 		this.components = {
 			controls: {}
 		}
-		const controlsDiv = opts.controls || opts.holder.append('div').style('display', 'inline-block')
+		//Either allow a node to be passed or create a new div
+		const controlsDiv =
+			typeof opts.controls == 'object' ? opts.controls : holder || holder.append('div').style('display', 'inline-block')
 		const mainDiv = opts.holder.append('div').style('display', 'inline-block').style('margin-left', '50px')
 		const holder = mainDiv.append('div').style('display', 'inline-block')
 		const detailsDiv = mainDiv
