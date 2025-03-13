@@ -46,6 +46,7 @@ export type DiffAnalysisOpts = {
 
 //TODO: Fix this
 export type DiffAnalysisPlotConfig = PlotConfig & {
+	childType: string
 	/** Data points highlighted in the volcano plot */
 	highlightedData: string[]
 	samplelst: {
