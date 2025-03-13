@@ -1,5 +1,5 @@
 import type { BasePlotConfig, MassState } from '#mass/types/mass'
-import type { Elem } from '../../types/d3'
+import type { Div } from '../../types/d3'
 import { RxComponentInner } from '../../types/rx.d'
 import { getCompInit, copyMerge } from '#rx'
 import { Menu } from '#dom'
@@ -21,8 +21,8 @@ class DifferentialAnalysis extends RxComponentInner {
 	dom: DiffAnalysisDom
 	interactions?: DiffAnalysisInteractions
 	plotTabs?: DiffAnalysisView
-	plotsDiv: { [key: string]: Elem }
-	plotControlsDiv: { [key: string]: Elem }
+	plotsDiv: { [key: string]: Div }
+	plotsControlsDiv: { [key: string]: Div }
 	termType: string
 
 	constructor(opts: any) {
@@ -47,19 +47,8 @@ class DifferentialAnalysis extends RxComponentInner {
 			plots: plots,
 			tip: new Menu({ padding: '' })
 		}
-		//TODO: Fix this. Move to init()
-		const volcanoControlsDiv = controls.append('div').style('display', 'none')
-		const gseaControlsDiv = controls.append('div').style('display', 'none')
-		this.plotControlsDiv = {
-			volcano: volcanoControlsDiv,
-			gsea: gseaControlsDiv
-		}
-		const volcanoDiv = plots.append('div').style('display', 'none')
-		const gseaDiv = plots.append('div').style('display', 'none')
-		this.plotsDiv = {
-			volcano: volcanoDiv,
-			gsea: gseaDiv
-		}
+		this.plotsControlsDiv = {}
+		this.plotsDiv = {}
 
 		if (opts.header) {
 			this.dom.header = {
@@ -95,43 +84,47 @@ class DifferentialAnalysis extends RxComponentInner {
 		const state = this.getState(appState)
 		const config = structuredClone(state.config) as DiffAnalysisPlotConfig
 
-		const volcano = await import(`../volcano/Volcano.ts`)
-		const gsea = await import(`#plots/gsea.js`)
-
-		this.components.plots = {
-			volcano: await volcano.componentInit({
-				app: this.app,
-				holder: this.plotsDiv.volcano,
-				id: this.id,
-				parent: this.api,
-				controls: this.plotControlsDiv.volcano,
-				diffAnalysisInteractions: this.interactions,
-				termType: config.termType
-			}),
-			gsea: await gsea.componentInit({
-				app: this.app,
-				holder: this.plotsDiv.gsea,
-				id: this.id,
-				parent: this.api,
-				controls: this.plotControlsDiv.gsea
-			})
-		}
 		this.plotTabs = new DiffAnalysisView(this.app, config, this.dom, this.interactions)
 	}
 
-	main() {
+	async setComponent(config: DiffAnalysisPlotConfig) {
+		let _
+		if (config.childType == 'volcano') _ = await import(`../volcano/Volcano.ts`)
+		if (config.childType == 'gsea') _ = await import(`#plots/gsea.js`)
+
+		this.plotsControlsDiv[config.childType] = this.dom.controls.append('div')
+		this.plotsDiv[config.childType] = this.dom.plots.append('div')
+
+		const opts = {
+			app: this.app,
+			holder: this.plotsDiv[config.childType],
+			id: this.id,
+			parent: this.api,
+			controls: this.plotsControlsDiv[config.childType],
+			termType: config.termType
+		}
+		//TODO: Fix this
+		if (config.childType == 'volcano') {
+			opts['diffAnalysisInteractions'] = this.interactions
+		}
+		this.components.plots[config.childType] = await _.componentInit(opts)
+	}
+
+	async main() {
 		const config = structuredClone(this.state.config)
 		if (config.chartType != this.type) return
+
+		if (!this.components.plots[config.childType]) await this.setComponent(config)
 
 		for (const childType in this.components.plots) {
 			const chart = this.components.plots[childType]
 			if (chart.type != config.childType) {
 				this.plotsDiv[chart.type].style('display', 'none')
-				this.plotControlsDiv[chart.type].style('display', 'none')
+				this.plotsControlsDiv[chart.type].style('display', 'none')
 			}
 		}
 		this.plotsDiv[config.childType].style('display', '')
-		this.plotControlsDiv[config.childType].style('display', '')
+		this.plotsControlsDiv[config.childType].style('display', '')
 
 		if (this.dom.header) {
 			this.dom.header.terms.text(config.tw.term.name)
@@ -153,18 +146,21 @@ export function getPlotConfig(opts: DiffAnalysisOpts) {
 	if (!opts.termType) throw '.termType is required [DifferentialAnalysis getPlotConfig()]'
 	if (!enabledTermTypes.includes(opts.termType))
 		throw `termType '${opts.termType}' not supported by DifferentialAnalysis`
+
 	const config = {
 		chartType: 'differentialAnalysis',
 		childType: 'volcano',
 		termType: opts.termType,
 		highlightedData: opts.highlightedData || [],
 		settings: {
-			controls: {
-				isOpen: false
-			},
-			volcano: getDefaultVolcanoSettings(opts.overrides),
-			gsea: getDefaultGseaSettings()
+			controls: { isOpen: false }
 		}
 	}
+
+	if (opts.termType == 'geneExpression') {
+		config.settings['volcano'] = getDefaultVolcanoSettings(opts.overrides)
+		config.settings['gsea'] = getDefaultGseaSettings()
+	}
+
 	return copyMerge(config, opts)
 }

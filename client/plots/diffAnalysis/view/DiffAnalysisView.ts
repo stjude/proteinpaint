@@ -10,7 +10,6 @@ export class DiffAnalysisView {
 	config: DiffAnalysisPlotConfig
 	dom: DiffAnalysisDom
 	interactions: DiffAnalysisInteractions
-	renderers: any
 	tabs: Tabs
 	tabsData: RenderedTab[]
 	getTabsOptions: any
@@ -43,6 +42,7 @@ function setRenderers(self) {
 				active: self.config.childType === 'volcano',
 				id: 'volcano',
 				label: 'Volcano',
+				isVisible: () => self.config.termType === 'geneExpression',
 				getPlotConfig: () => {
 					return {
 						childType: 'volcano'
@@ -54,6 +54,7 @@ function setRenderers(self) {
 				active: self.config.childType === 'gsea',
 				id: 'gsea',
 				label: 'Gene Set Enrichment Analysis',
+				isVisible: () => self.config.termType === 'geneExpression',
 				getPlotConfig: () => {
 					const gsea_params = self.interactions.getGseaParameters()
 					return {
