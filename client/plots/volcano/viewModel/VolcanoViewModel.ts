@@ -36,9 +36,9 @@ export class VolcanoViewModel {
 		this.pValueCutoff = -Math.log10(settings.pValue)
 		this.pValueTable = {
 			columns: [
-				{ label: 'log2 Fold change' },
-				{ label: 'Original p-value (linear scale)' },
-				{ label: 'Adjusted p-value (linear scale)' }
+				{ label: 'log2 Fold change', sortable: true },
+				{ label: 'Original p-value (linear scale)', sortable: true },
+				{ label: 'Adjusted p-value (linear scale)', sortable: true }
 			],
 			rows: []
 		}
@@ -194,7 +194,12 @@ export class VolcanoViewModel {
 
 	setPTableData() {
 		if (this.termType == 'geneExpression') {
-			this.pValueTable.columns.splice(0, 0, { label: 'Gene Name' }, { label: 'Gene Symbol' })
+			this.pValueTable.columns.splice(
+				0,
+				0,
+				{ label: 'Gene Name', sortable: true },
+				{ label: 'Gene Symbol', sortable: true }
+			)
 		}
 		const foldChangeIdx = this.pValueTable.columns.findIndex(c => c.label.includes('Fold change'))
 		this.pValueTable.rows.sort((a: any, b: any) => a[foldChangeIdx].value - b[foldChangeIdx].value).reverse()

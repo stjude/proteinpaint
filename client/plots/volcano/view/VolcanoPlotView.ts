@@ -160,7 +160,8 @@ export class VolcanoPlotView {
 			div: tableDiv.append('div'),
 			showLines: true,
 			maxHeight: '150vh',
-			resize: true
+			resize: true,
+			header: { allowSort: true }
 		})
 	}
 
