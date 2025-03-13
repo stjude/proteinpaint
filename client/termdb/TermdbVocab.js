@@ -682,13 +682,6 @@ export class TermdbVocab extends Vocab {
 		})
 	}
 
-	async get_geneVariantFilter() {
-		// used for geneVariant term
-		return await dofetch3('termdb', {
-			body: { getGeneVariantFilter: 1, genome: this.state.vocab.genome, dslabel: this.state.vocab.dslabel }
-		})
-	}
-
 	async getSamplesPerFilter(opts) {
 		return await dofetch3('termdb', {
 			body: {
