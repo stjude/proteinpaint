@@ -1,4 +1,12 @@
-import { mclass, dt2label, dtsnvindel, dtcnv, dtfusionrna, geneVariantTermGroupsetting } from '#shared/common.js'
+import {
+	mclass,
+	dt2label,
+	dtsnvindel,
+	dtcnv,
+	dtfusionrna,
+	geneVariantTermGroupsetting,
+	dtTerms
+} from '#shared/common.js'
 import { getPillNameDefault, set_hiddenvalues } from '../termsetting'
 import type {
 	GeneVariantBaseQ,
@@ -516,7 +524,11 @@ callback2
 */
 async function mayDisplayVariantFilter(self, filterInState: any, holder: any, callback2?: any) {
 	if (!self.variantFilter) {
-		self.variantFilter = await self.vocabApi.get_geneVariantFilter()
+		self.variantFilter = {
+			opts: { joinWith: ['and'] },
+			// will load dt terms as custom terms in frontend vocab
+			terms: dtTerms
+		}
 		// variantFilter should be {opts{}, filter{}, terms[]}
 		// can be empty object if this dataset does not have info filter
 	}
@@ -533,6 +545,7 @@ async function mayDisplayVariantFilter(self, filterInState: any, holder: any, ca
 		// use default filter from dataset
 		self.variantFilter.active = JSON.parse(JSON.stringify(self.variantFilter.filter))
 	} else {
+		// TODO: is this necessary?
 		self.variantFilter.active = { type: 'tvslst', join: '', in: true, lst: [], $id: 0, tag: 'filterUiRoot' }
 	}
 

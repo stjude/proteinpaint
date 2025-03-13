@@ -11,13 +11,14 @@ export const graphableTypes = new Set([
 	'geneVariant',
 	'samplelst',
 	'geneExpression',
+	'dtcnv',
+	'dtsnvindel',
 	TermTypes.METABOLITE_INTENSITY,
 	TermTypes.SINGLECELL_GENE_EXPRESSION,
 	TermTypes.SINGLECELL_CELLTYPE,
 	TermTypes.SNP
 ])
 
-const filterTypes = new Set(['dtcnv', 'dtsnvindel'])
 /*
 isUsableTerm() will
 
@@ -181,8 +182,6 @@ export function isUsableTerm(term, _usecase, termdbConfig, ds) {
 				if (graphableTypes.has(term.type) && !exlst.includes(term.type)) uses.add('plot')
 				if (child_types.find(t => !exlst.includes(t))) uses.add('branch') // there's a non-excluded child type, allow branch to show
 			}
-			if (filterTypes.has(term.type)) uses.add('plot')
-			return uses
 
 		case 'correlationVolcano':
 			if (usecase.detail == 'numeric') {
