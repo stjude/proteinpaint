@@ -209,7 +209,7 @@ async function processResponse(r) {
 }
 
 /*
-	manually tested to handle gdc.mafBuild multipart/mixed response
+	manually tested to handle 2-part gdc.mafBuild multipart/mixed response
 
 	expected chunk format
 	--boundary-text-from-HTTP-headers-content-type
@@ -221,6 +221,8 @@ async function processResponse(r) {
 	... same format as previous chunk ...
 
 	--boundary-text-from-HTTP-headers-content-type--
+
+	TODO: handle > 2 parts
 */
 async function processMultiPart(res, _boundary) {
 	const boundary = `--${_boundary}`
@@ -230,7 +232,24 @@ async function processMultiPart(res, _boundary) {
 
 	let chunks=[], headerStr
 	for await (const chunk of res.body) {
-    const text = (decoder.decode(chunk)).trimStart()
+    let text = (decoder.decode(chunk)).trimStart()
+    // console.log(chunk.byteLength, text.length, text.slice(0, 16), ' ... ', text.slice(0, 16))
+		
+		if (text.endsWith(boundary + '--')) {
+    	// find the previous (middle) boundary from the end
+    	const i = text.indexOf(boundary)
+			for(let j=i; j < text.length; j++) {
+				const c = chunk.slice(0, j)
+				// convert sliced chunk to text, to see if it ends with boundary text
+				if (decoder.decode(c).endsWith(boundary)) { 
+					// console.log(66, decoder.decode(chunk.slice(0, j - 1 - boundary.length)))
+					chunks.push(chunk.slice(0, j - 1 - boundary.length))
+					break
+				}
+			}
+			text = text.slice(i)
+		}
+
     if (text.startsWith(boundary) && (text.endsWith('\n\n') || text.endsWith(boundary + '--'))) {
     	if (headerStr && chunks.length) {
     		parts.push(processPart(headerStr, chunks, text))
