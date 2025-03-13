@@ -1,6 +1,7 @@
 import * as uiutils from '#dom/uiUtils'
 import { Tabs } from '../../dom/toggleButtons'
 import { appear } from '#dom/animation'
+import type { RenderedTab } from '#dom/types/toggleButtons'
 import { Selection } from 'd3-selection'
 import type { Genome } from '#types'
 import { sayerror } from '../../dom/sayerror'
@@ -19,13 +20,9 @@ type DiscoUIArgs = {
 	data: []
 }
 
-type Tab = {
-	label: string
+type Tab = RenderedTab & {
 	/**constructs the property name in obj.data, which is later passed as the dataType + inputType (e.g. snvText) to launch.adhoc */
 	key: string
-	/**From tabs class*/
-	contentHolder: Selection<HTMLDivElement, any, any, any>
-	callback?: () => void
 }
 /**
  * Launches the disco plot form.
@@ -120,9 +117,9 @@ function makeDataTypeTabs(dataTypeTabs_div: Selection<HTMLDivElement, any, any, 
 		{
 			label: 'SNV Indel',
 			active: true,
-			callback: async (event: MouseEvent, dataTypeTab: Tab) => {
+			callback: async (event: MouseEvent, tab: Tab) => {
 				/** Event though event is not required, stops type error??? */
-				dataTypeTab.key = 'snv'
+				tab.key = 'snv'
 				/**Leave the weird spacing for <pre>! Otherwise it doesn't display properly on the client
 				 * and the user can't copy and paste the example data.*/
 				const listHTML = `<ol>
@@ -136,7 +133,7 @@ function makeDataTypeTabs(dataTypeTabs_div: Selection<HTMLDivElement, any, any, 
 chr1	226252135	H3F3A	K28M	M
 chr2	98765432	TestGene	TestMutation	F
 </pre>`
-				mainTabCallback(dataTypeTab, obj, listHTML)
+				mainTabCallback(tab, obj, listHTML)
 			}
 		},
 		{
