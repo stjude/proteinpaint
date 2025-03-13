@@ -6,18 +6,17 @@ import type { VolcanoInteractions } from '../interactions/VolcanoInteractions'
 import type { DataPointEntry } from '../VolcanoTypes'
 
 export class DataPointMouseEvents {
-	constructor(d: DataPointEntry, circle: SvgCircle, tip: Menu, interactions: VolcanoInteractions) {
+	termType: string
+	constructor(d: DataPointEntry, circle: SvgCircle, tip: Menu, interactions: VolcanoInteractions, termType: string) {
+		this.termType = termType
 		circle.on('mouseover', () => {
 			//Show highlight and tooltip on hover
 			circle.attr('fill-opacity', 0.9)
 
 			tip.clear().showunder(circle.node())
 			const table = table2col({ holder: tip.d.append('table') })
-			this.addLine(table, 'Gene name', d.gene_name)
-			this.addLine(table, 'Gene symbol', d.gene_symbol)
-			this.addLine(table, 'Log2 fold change', d.fold_change)
-			this.addLine(table, 'Original p value (log)', roundValueAuto(d.original_p_value))
-			this.addLine(table, 'Adjusted p value(log)', roundValueAuto(d.adjusted_p_value))
+
+			this.mayAddGeneExpressionRows(d, table)
 		})
 
 		circle.on('mouseout', () => {
@@ -31,9 +30,18 @@ export class DataPointMouseEvents {
 		})
 	}
 
-	addLine(table: any, text: string, value: number | string) {
+	addTooltipRow(table: any, text: string, value: number | string) {
 		const [td1, td2] = table.addRow()
 		td1.html(text)
 		td2.text(value)
+	}
+
+	mayAddGeneExpressionRows(d, table) {
+		if (this.termType !== 'geneExpression') return
+		this.addTooltipRow(table, 'Gene name', d.gene_name)
+		this.addTooltipRow(table, 'Gene symbol', d.gene_symbol)
+		this.addTooltipRow(table, 'Log2 fold change', d.fold_change)
+		this.addTooltipRow(table, 'Original p value (log)', roundValueAuto(d.original_p_value))
+		this.addTooltipRow(table, 'Adjusted p value(log)', roundValueAuto(d.adjusted_p_value))
 	}
 }

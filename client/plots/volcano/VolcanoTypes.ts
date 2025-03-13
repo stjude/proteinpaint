@@ -1,7 +1,7 @@
-import type { Div, SvgG, SvgSvg, SvgText } from '../../types/d3'
+import type { Div, Elem, SvgG, SvgSvg, SvgText } from '../../types/d3'
 import type { PlotConfig } from '#mass/types/mass'
 import type { TermWrapper } from '@sjcrh/proteinpaint-types'
-import type { Cell, Column } from '#dom'
+import type { Cell, Column, Menu } from '#dom'
 import type { DataEntry } from '#types'
 
 export type DataPointEntry = DataEntry & {
@@ -42,6 +42,21 @@ export type VolcanoPlotDimensions = {
 	xScale: { x: number; y: number; scale: any }
 	yAxisLabel: { x: number; y: number; text: string }
 	yScale: { x: number; y: number; scale: any }
+}
+
+export type VolcanoDom = {
+	holder: Elem
+	/** Either the elem passed from parent component or created
+	 * div from the holder. */
+	controls: Elem
+	/** Div set aside for showing user error messages */
+	error: Elem
+	/** Loading message */
+	wait: Elem
+	/** Tooltip for data points */
+	tip: Menu
+	/** Menu for action buttons above the volcano plot */
+	actionsTip: Menu
 }
 
 export type VolcanoPlotDom = {

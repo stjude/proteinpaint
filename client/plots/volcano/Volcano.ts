@@ -1,11 +1,11 @@
 import type { MassState, BasePlotConfig, MassAppApi } from '#mass/types/mass'
-import type { VolcanoSettings } from './VolcanoTypes'
 import { getCompInit, copyMerge } from '#rx'
 import { fillTermWrapper } from '#termsetting'
 import { Menu, sayerror } from '#dom'
 import { RxComponentInner } from '../../types/rx.d'
 import { controlsInit } from '../controls'
 import type { DiffAnalysisInteractions } from '../diffAnalysis/interactions/DiffAnalysisInteractions'
+import type { VolcanoSettings, VolcanoDom } from './VolcanoTypes'
 import { VolcanoModel } from './model/VolcanoModel'
 import { VolcanoViewModel } from './viewModel/VolcanoViewModel'
 import { VolcanoInteractions } from './interactions/VolcanoInteractions'
@@ -17,7 +17,7 @@ import { VolcanoControlInputs } from './VolcanoControlInputs'
 class Volcano extends RxComponentInner {
 	readonly type = 'volcano'
 	components: { controls: any }
-	dom: { holder: any; controls: any; error: any; wait: any; tip: Menu; actionsTip: Menu }
+	dom: VolcanoDom
 	interactions?: VolcanoInteractions
 	termType: string //'geneExpresion', etc.
 	diffAnalysisInteractions?: DiffAnalysisInteractions
@@ -120,7 +120,7 @@ class Volcano extends RxComponentInner {
 			this.interactions.data = response.data
 			this.dom.wait.style('display', 'none')
 			/** Render formatted data */
-			new VolcanoPlotView(this.dom, settings, viewModel.viewData, this.interactions)
+			new VolcanoPlotView(this.dom, settings, viewModel.viewData, this.interactions, config.termType)
 		} catch (e: any) {
 			if (e instanceof Error) console.error(e.message || e)
 			else if (e.stack) console.log(e.stack)

@@ -4,6 +4,7 @@ import { select } from 'd3-selection'
 import { rgb } from 'd3-color'
 import type {
 	DataPointEntry,
+	VolcanoDom,
 	VolcanoPlotDimensions,
 	VolcanoPlotDom,
 	VolcanoSettings,
@@ -13,13 +14,19 @@ import type { VolcanoInteractions } from '../interactions/VolcanoInteractions'
 import { DataPointMouseEvents } from './DataPointMouseEvents'
 
 export class VolcanoPlotView {
-	type = 'volcano'
-	dom: any
+	dom: VolcanoDom
 	interactions: VolcanoInteractions
 	settings: VolcanoSettings
+	termType: string
 	volcanoDom: VolcanoPlotDom
 	viewData: VolcanoViewData
-	constructor(dom: any, settings: VolcanoSettings, viewData: VolcanoViewData, interactions: VolcanoInteractions) {
+	constructor(
+		dom: VolcanoDom,
+		settings: VolcanoSettings,
+		viewData: VolcanoViewData,
+		interactions: VolcanoInteractions,
+		termType: string
+	) {
 		this.dom = dom
 		this.interactions = interactions
 		this.settings = settings
@@ -46,6 +53,7 @@ export class VolcanoPlotView {
 			yAxisLabel: svg.append('text').attr('id', 'sjpp-volcano-yAxisLabel').attr('text-anchor', 'middle'),
 			plot: svg.append('g').attr('id', 'sjpp-volcano-plot')
 		}
+		this.termType = termType
 
 		const plotDim = this.viewData.plotDim
 		this.renderUserActions()
@@ -172,7 +180,7 @@ export class VolcanoPlotView {
 	}
 }
 
-function renderDataPoints(self) {
+function renderDataPoints(self: any) {
 	self.volcanoDom.plot
 		.selectAll('circle')
 		.data(self.viewData.pointData)
@@ -188,8 +196,8 @@ function renderDataPoints(self) {
 		.attr('cx', (d: DataPointEntry) => d.x)
 		.attr('cy', (d: DataPointEntry) => d.y)
 		.attr('r', (d: DataPointEntry) => d.radius)
-		.each(function (this, d: DataPointEntry) {
+		.each(function (this: any, d: DataPointEntry) {
 			const circle = select(this)
-			new DataPointMouseEvents(d, circle, self.dom.tip, self.interactions)
+			new DataPointMouseEvents(d, circle, self.dom.tip, self.interactions, this.termType)
 		})
 }
