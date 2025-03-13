@@ -1,1 +1,4 @@
-
+Features
+- New differential analysis app. The app is under development to analyze various data types 
+such as: gene expression, metabolites, etc. Only gene expression is enabled at this time. This app
+replaces the differential expression analysis app. 
