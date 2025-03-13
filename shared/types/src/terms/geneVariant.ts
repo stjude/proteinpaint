@@ -9,6 +9,7 @@ export type GeneVariantBaseQ = MinBaseQ & {
 	exclude: string[]
 	dt?: number
 	origin?: string
+	variant_filter: any
 }
 
 export type GeneVariantQ = GeneVariantBaseQ & (ValuesQ | GroupSettingQ)
@@ -48,4 +49,5 @@ export type GeneVariantTermSettingInstance = TermSettingInstance & {
 	term: GeneVariantTerm
 	category2samplecount: any
 	groupSettingInstance?: any
+	variantFilter?: any
 }
