@@ -21,7 +21,7 @@ import type { PillData } from '../types'
 import { make_radios } from '#dom'
 import { copyMerge } from '#rx'
 import { GroupSettingMethods } from './groupsetting.ts'
-import { filterInit, filterPromptInit } from '#filter/filter'
+import { filterInit, getNormalRoot } from '#filter/filter'
 
 /* 
 instance attributes
@@ -204,7 +204,7 @@ async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 			if (v == 'group') {
 				//await makeGroupUI()
 				groupsDiv.style('display', 'block')
-				mayDisplayVariantFilter(self, /*self.q?.variant_filter*/ null, groupsDiv)
+				mayDisplayVariantFilter(self, self.q?.variant_filter, groupsDiv)
 			} else {
 				clearGroupset(self)
 				delete self.q.dt
@@ -402,6 +402,7 @@ async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 		.on('click', () => {
 			if ((self.q.type == 'predefined-groupset' || self.q.type == 'custom-groupset') && self.groupSettingInstance)
 				self.groupSettingInstance.processDraggables()
+			self.q.variant_filter = getNormalRoot(self.variantFilter.active)
 			self.runCallback()
 		})
 
