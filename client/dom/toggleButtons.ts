@@ -1,53 +1,9 @@
 import { select } from 'd3-selection'
+import type { TabsInputEntry, TabsOpts } from './types/toggleButtons'
 
 /*
 ********************** EXPORTED
 Tabs(opts)
-
-opts: {
-	holder,
-	tabsHolder,
-		d3 DOM created by this script
-	contentHolder,
-		optional: if not provided, create new under opts.holder
-	noTopContentStyle: BOOL
-		optional: removes the padding-top and margin-top required for SVGs 
-		- intented to remove the excess white space that appears for non-SVG content
-		between the tabs and content div
-	tabs[ tab{} ]
-		.label:
-			required
-		.callback()
-			optional
-		.width
-			optional tab width
-			TODO do not hardcode width, use auto width e.g. grid-template-columns='auto auto'
-		.tab, .holder
-			d3 DOM elements created by this script
-		.disabled()
-			optional: disables tab
-			default = 'false'
-		.isVisible()
-			optional: displays tab
-			default = false
-		.active
-			optional: define which tab renders first
-			default: tabs[0].active = true
-	noContent,
-		optional: voids creating a content div
-	linePosition, 
-		optional: determines the blue border line position 
-		default = 'bottom'
-		values:  top, bottom, right, left
-	tabsPosition, 
-		optional: show tabs inline horizonally or vertical stack 
-		default = 'horizonal'
-		values:  vertical, horizontal
-	gap,
-		optional: only applies to vertical position
-		default = ''
-	
-}
 
 Note: 
 - newly created dom elements are attached to opts{} and tabs for external code to access
@@ -58,25 +14,17 @@ Note:
 	For easier debugging, in the console using inspect element > styles > properties > __data__	
 */
 
-type Tab = {
-	label: string
-	width?: number
-	callback?: (f: any) => void
-	disabled?: (f: any) => boolean
-	isVisible?: (f: any) => void
-	keydownCallback?: (event: any, tab: Tab) => void
-}
-
 export class Tabs {
-	opts: any
-	tabs: Tab[]
+	opts: TabsOpts
+	tabs: TabsInputEntry[]
 	dom: {
 		holder: HTMLDivElement
 	}
 	defaultTabWidth: number
 	render: any
+	update: any
 
-	constructor(opts) {
+	constructor(opts: TabsOpts) {
 		this.opts = this.validateOpts(opts)
 		this.tabs = opts.tabs
 		this.dom = {
@@ -86,7 +34,7 @@ export class Tabs {
 		setRenderers(this)
 	}
 
-	validateOpts(opts) {
+	validateOpts(opts: TabsOpts) {
 		if (!opts.holder) throw `missing opts.holder for Tabs()`
 		if (!Array.isArray(opts.tabs)) throw `invalid opts.tabs array for Tabs()`
 		if (!opts.linePosition) opts.linePosition = 'bottom'
