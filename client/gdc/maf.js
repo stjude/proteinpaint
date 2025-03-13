@@ -354,12 +354,12 @@ async function getFilesAndShowTable(obj) {
 				: `Download ${fileSize(result.maxTotalSizeCompressed)} compressed MAF data (${fileSize(sum)} selected)`
 	}
 
-	/* after table is created, on clicking download btn for first time, create two <span> after download btn,
-	in order to show server-sent download status
-	scope them for easy access by helpers,
-	detect if these placeholders are truthy so as to only create them once
+	/* after table is created, on clicking download btn for first time, create a <span> after download btn,
+	in order to show server-sent message on problematic files (emtpy, failed, invalid)
+	scope this <span> for easy access by helpers,
+	detect if it is truthy to only create it once
 	*/
-	let serverMessage1, serverMessage2
+	let serverMessage
 
 	async function submitSelectedFiles(lst, button) {
 		const outColumns = mafColumns.filter(i => i.selected).map(i => i.column)
@@ -379,8 +379,7 @@ async function getFilesAndShowTable(obj) {
 		const oldText = button.innerHTML
 		button.innerHTML = 'Loading... Please wait'
 		button.disabled = true
-		serverMessage1.style('display', 'none')
-		serverMessage2.style('display', 'none')
+		serverMessage.style('display', 'none')
 
 		// may disable the "Aggregate" button here and re-enable later
 
@@ -395,6 +394,8 @@ async function getFilesAndShowTable(obj) {
 			 ] 
 			*/
 			data = await dofetch3('gdc/mafBuild', { body: { fileIdLst, columns: outColumns } })
+			if(!Array.isArray(data)) throw `server didn't return multipart`
+			if(!data.length) throw 'server returned blank multipart'
 		} catch (e) {
 			sayerror(obj.errDiv, e)
 			button.innerHTML = oldText
@@ -405,8 +406,8 @@ async function getFilesAndShowTable(obj) {
 		button.innerHTML = oldText
 		button.disabled = false
 
-		const runStatus = data.pop()
-		if (!runStatus?.body?.ok) {
+		const runStatus = data.find(d => d.headers['content-type'] == 'application/json' && (d.errors || d.error))
+		if (runStatus && !runStatus?.body?.ok) {
 			// revise if run status is changed
 			if (Array.isArray(runStatus.body?.errors)) displayRunStatusErrors(runStatus.body.errors)
 			// other unstructured errors; display as plain text
@@ -429,65 +430,44 @@ async function getFilesAndShowTable(obj) {
 	}
 
 	function mayCreateServerMessageSpan(button) {
-		if (serverMessage1) return // message <span> are already created
+		if (serverMessage) return // message <span> are already created
 		const holder = select(button.parentElement)
-		serverMessage1 = holder.append('span').attr('class', 'sja_clbtext').style('display', 'none')
-		serverMessage2 = holder
-			.append('span')
-			.attr('class', 'sja_clbtext')
-			.style('margin-left', '10px')
-			.style('display', 'none')
+		serverMessage = holder.append('span').attr('class', 'sja_clbtext').style('display', 'none')
 	}
 
 	function displayRunStatusErrors(errors) {
 		// errors[] each ele: {error:str, url:str}
-		const emptyFiles = [],
-			failedFiles = []
+		const rows = [] // map errors[] to rows[] to show in table of menu
 		for (const e of errors) {
 			if (typeof e.error != 'string') throw '.error=string missing from an entry'
-			if (e.error.startsWith('Empty')) {
-				if (!e.url) throw 'url missing from an "Empty" entry'
-				emptyFiles.push(e.url)
-			} else if (e.error.startsWith('Server request failed')) {
-				if (!e.url) throw 'url missing from a "failed" entry'
-				failedFiles.push(e.url)
+			if (typeof e.url != 'string') throw '.url=string missing from an entry'
+			// url should end in file uuid, which can be used to match with original record of that file
+			const l = e.url.split('/')
+			const uuid = l[l.length - 1]
+			const fo = result.files.find(i => i.id == uuid)
+			if (fo) {
+				// record is found for this failed uuid
+				rows.push([
+					{ html: `<a href=${e.url} target=_blank>${fo.case_submitter_id}</a>` },
+					{ value: fo.project_id },
+					{ value: fileSize(fo.file_size) },
+					{ value: e.error }
+				])
 			} else {
-				throw 'unknown error msg from an entry'
+				// file is not found; could happen in testing when backend hardcodes a uuid not in result.files[], or even gdc backend changes..
+				rows.push([{ value: uuid }, { value: '?' }, { value: '?' }, { value: e.error }])
 			}
 		}
-		if (emptyFiles.length) {
-			serverMessage1
-				.text(`${emptyFiles.length} empty file${emptyFiles.length > 1 ? 's' : ''}`)
-				.style('display', '')
-				.on('click', event => listFilesInMenu(emptyFiles, event.target))
-		}
-		if (failedFiles.length) {
-			serverMessage2
-				.text(`${failedFiles.length} file${failedFiles.length > 1 ? 's' : ''} failed download`)
-				.style('display', '')
-				.on('click', event => listFilesInMenu(failedFiles, event.target))
-		}
-	}
-	function listFilesInMenu(lst, div) {
-		// lst[] is array of file url, ends with file uuid
-		renderTable({
-			rows: lst.map(url => {
-				const l = url.split('/')
-				const uuid = l[l.length - 1]
-				const fo = result.files.find(i => i.id == uuid)
-				if (fo) {
-					return [
-						{ html: `<a href=${url} target=_blank>${fo.case_submitter_id}</a>` },
-						{ value: fo.project_id },
-						{ value: fileSize(fo.file_size) }
-					]
-				}
-				// file is not found; could happen in testing when backend hardcodes a uuid not in result.files[]
-				return [{ value: uuid }, { value: '?' }, { value: '?' }]
-			}),
-			columns: [{ column: '' }, { column: '' }, { column: '' }],
-			showHeader: false,
-			div: tip.clear().showunder(div).d
-		})
+		serverMessage
+			.text(`${errors.length} empty/failed file${errors.length > 1 ? 's' : ''}`)
+			.style('display', '')
+			.on('click', event => {
+				renderTable({
+					rows,
+					columns: [{ column: '' }, { column: '' }, { column: '' }, { column: '' }],
+					showHeader: false,
+					div: tip.clear().showunder(event.target).d
+				})
+			})
 	}
 }
