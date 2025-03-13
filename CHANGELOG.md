@@ -8,6 +8,8 @@ Fixes:
 - handle stderr from rust code in node js stream_rust() helper and route handler
 - improve gdc maf rendering of failed/empty files to inform user about aggregation result
 - cherry-pick fixes from master to handle stderr from rust code, node js stream_rust() helper and route handler
+- protect against missing error payload or empty data when handling the maf multipart response
+- correctly detect the boundary text between binary and json text in the same octet chunk
 
 
 ## 2.109.0
