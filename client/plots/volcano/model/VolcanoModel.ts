@@ -13,12 +13,13 @@ export class VolcanoModel {
 	}
 
 	async getData() {
-		const body = this.getRequestBody()
+		const body = await this.getRequestBody()
 		const data = await dofetch3('DEanalysis', { body })
 		return data
 	}
 
-	getRequestBody() {
+	async getRequestBody() {
+		await this.getOtherSamples(this.config.samplelst)
 		const body = {
 			genome: this.app.vocabApi.vocab.genome,
 			dslabel: this.app.vocabApi.vocab.dslabel,
@@ -35,5 +36,23 @@ export class VolcanoModel {
 		}
 
 		return body
+	}
+
+	/** retrieve the sampleId/sampleName for samples in the "others" group instead of using {in: false} */
+	async getOtherSamples(samplelst) {
+		const othersSamplesGroup = samplelst.groups.find(g => !g.in)
+		if (!othersSamplesGroup) return
+
+		const state = this.app.getState()
+		const samplesGroup = samplelst.groups.find(g => g.in)
+		othersSamplesGroup.values = []
+		// retrieve full list of samples based on current filter. put samples not in samplesGroup in "others" group
+		for (const s of await this.app.vocabApi.getFilteredSampleList(state.termfilter.filter)) {
+			// s={id,name}, samplelst.groups[].values[]={sampleId,sample}
+			if (samplesGroup.values.indexOf(i => i.sampleId == s.id) == -1) {
+				othersSamplesGroup.values.push({ sampleId: s.id, sample: s.name })
+			}
+		}
+		othersSamplesGroup.in = true
 	}
 }
