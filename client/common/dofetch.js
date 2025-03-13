@@ -182,6 +182,9 @@ export function dofetch2(path, init = {}, opts = {}) {
 	})
 }
 
+// define regex in variable for efficiency on repeated tests
+const regex_multipart = /multipart/i
+const regex_boundary = /boundary\s*=\s*"?([^"\s;]+)"?/i
 /* 
 r: a native fetch response argument
 
@@ -199,8 +202,9 @@ async function processResponse(r) {
 	if (ct.includes('/text')) {
 		return r.text()
 	}
-	if (ct.includes('multipart')) {
-		const boundary = ct.split('boundary=')[1]
+	if (regex_multipart.test(ct)) {
+		const boundary = ct.match(regex_boundary)?.[1]?.trim()
+		if (!boundary) throw 'Invalid multipart response: Missing boundary'
 		return processMultiPart(r, boundary)
 	}
 	// call blob() as catch-all
