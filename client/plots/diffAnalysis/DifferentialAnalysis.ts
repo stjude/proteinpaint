@@ -16,11 +16,11 @@ import { DiffAnalysisInteractions } from './interactions/DiffAnalysisInteraction
 class DifferentialAnalysis extends RxComponentInner {
 	readonly type = 'differentialAnalysis'
 	components: {
-		plots: any
+		plots: { [key: string]: any }
 	}
 	dom: DiffAnalysisDom
 	interactions?: DiffAnalysisInteractions
-	plotTabs: any
+	plotTabs?: DiffAnalysisView
 	plotsDiv: { [key: string]: Elem }
 	plotControlsDiv: { [key: string]: Elem }
 	termType: string
@@ -63,14 +63,9 @@ class DifferentialAnalysis extends RxComponentInner {
 
 		//TODO: include type. move to main()
 		if (opts.header) {
-			const typeStr = termType2label(this.termType).toUpperCase()
 			this.dom.header = {
-				title: opts.header.append('span'),
-				fixed: opts.header
-					.append('span')
-					.style('font-size', '0.8em')
-					.style('opacity', 0.7)
-					.text(` DIFFERENTIAL ${typeStr} ANALYSIS`)
+				terms: opts.header.append('span'),
+				title: opts.header.append('span').style('font-size', '0.8em').style('opacity', 0.7)
 			}
 		}
 	}
@@ -138,19 +133,27 @@ class DifferentialAnalysis extends RxComponentInner {
 		}
 		this.plotsDiv[config.childType].style('display', '')
 		this.plotControlsDiv[config.childType].style('display', '')
+
 		if (this.dom.header) {
-			this.dom.header.title.text(config.tw.name)
+			this.dom.header.terms.text(config.tw.term.name)
+			const typeStr = termType2label(config.termType).toUpperCase()
+			this.dom.header.title.text(` DIFFERENTIAL ${typeStr} ANALYSIS`)
 		}
 
-		this.plotTabs.update(config)
+		if (this.plotTabs) this.plotTabs.update(config)
 	}
 }
 
 export const DiffAnalysisInit = getCompInit(DifferentialAnalysis)
 export const componentInit = DiffAnalysisInit
 
+//Use this as a sanity check.
+const enabledTermTypes = ['geneExpression']
+
 export function getPlotConfig(opts: DiffAnalysisOpts, app: MassAppApi) {
 	if (!opts.termType) throw '.termType is required [DifferentialAnalysis getPlotConfig()]'
+	if (!enabledTermTypes.includes(opts.termType))
+		throw `termType '${opts.termType}' not supported by DifferentialAnalysis`
 	const config = {
 		chartType: 'differentialAnalysis',
 		childType: 'volcano',
