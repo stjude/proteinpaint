@@ -77,7 +77,6 @@ export default class SessionManager {
 		await this.redisClients.delete(key)
 	}
 
-	// TODO don't delete all sessions, only the ones that are 50% of the limit
 	//  maxIdleTime - time in minutes
 	public async invalidateSessions(
 		key: string,
@@ -96,6 +95,11 @@ export default class SessionManager {
 			}))
 		)
 
+		// Early exit if the current number of sessions is below 50% of maxSessions
+		if (keySessions.length <= maxSessions * 0.5) {
+			return { success: true, deletedKeys: [] }
+		}
+
 		// Get current time for comparison
 		const now = new Date().getTime()
 
@@ -108,36 +112,31 @@ export default class SessionManager {
 			return false
 		})
 
-		// Initial sessions to delete includes idle sessions
-		let allSessionsToDelete = [...idleSessions]
-
-		// Check if total number of sessions exceeds the limit 'maxSessions'
-		if (keySessions.length > maxSessions) {
-			// Sort sessions by their last access time to identify the least recently used
-			const sortedByLRU = keySessions.sort((a, b) => {
-				if (a.sessionData && b.sessionData) {
-					return (
-						new Date(a.sessionData.lastAccessTimestamp).getTime() -
-						new Date(b.sessionData.lastAccessTimestamp).getTime()
-					)
-				}
-				return 0
-			})
-
-			// Determine which sessions to delete based on being beyond the 'maxSessions' limit
-			const sessionsToDelete = sortedByLRU.slice(0, sortedByLRU.length - maxSessions)
-			allSessionsToDelete = [...new Set([...allSessionsToDelete, ...sessionsToDelete])]
-		}
-
-		// Delete all sessions that are either idle or are the least recently used beyond the limit
-		const deletedKeys = allSessionsToDelete.map(session => session.sessionData)
-
-		if (keys.length >= maxSessions && allSessionsToDelete.length === 0) {
+		// Check if total keys length is greater than maxSessions and if idle sessions count is smaller than the difference
+		if (keys.length > maxSessions && idleSessions.length < keys.length - maxSessions) {
 			return { success: false, deletedKeys: [] }
-		} else {
-			await Promise.all(allSessionsToDelete.map(({ key }) => this.deleteSession(key)))
-			return { success: true, deletedKeys }
 		}
+
+		// Check if the count of idle sessions exceeds 50% of maxSessions
+		if (idleSessions.length > maxSessions * 0.5) {
+			const excessIdleCount = idleSessions.length - Math.ceil(maxSessions * 0.5)
+			// Sort idle sessions by last accessed time to identify the least recently used
+			idleSessions.sort((a, b) => {
+				const timeA = new Date(a.sessionData?.lastAccessTimestamp ?? 0).getTime()
+				const timeB = new Date(b.sessionData?.lastAccessTimestamp ?? 0).getTime()
+				return timeA - timeB
+			})
+			// Identify sessions to delete, focusing on the most idle ones
+			const sessionsToDelete = idleSessions.slice(0, excessIdleCount)
+
+			// Perform the deletion of the selected sessions
+			await Promise.all(sessionsToDelete.map(({ key }) => this.deleteSession(key)))
+			return { success: true, deletedKeys: sessionsToDelete.map(session => session.sessionData) }
+		}
+
+		await Promise.all(idleSessions.map(({ key }) => this.deleteSession(key)))
+
+		return { success: true, deletedKeys: idleSessions.map(session => session.sessionData) }
 	}
 
 	private async fetchSessions(tileServerUrl: string): Promise<any> {

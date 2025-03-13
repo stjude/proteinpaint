@@ -54,116 +54,130 @@ function init({ genomes }) {
 
 			res.status(200).json(payload)
 		} catch (e: any) {
-			console.error(e)
-			res.status(500).send({
-				status: 'error',
-				error: e.message || e
-			})
+			console.warn(e)
+			if (e instanceof SessionInvalidationFailedException) {
+				res.status(503).send({
+					status: 'error',
+					error: 'Service temporarily unavailable due to session overload. Please try again later.'
+				})
+			} else {
+				res.status(500).send({
+					status: 'error',
+					error: e.message || e
+				})
+			}
 		}
 	}
-}
 
-async function getSessionId(cookieJar, getCookieString, setCookie, wsimage, ds, sampleId) {
-	const sessionManager = SessionManager.getInstance()
+	async function getSessionId(cookieJar, getCookieString, setCookie, wsimage, ds, sampleId) {
+		const sessionManager = SessionManager.getInstance()
 
-	const sessionData = await sessionManager.getSession(wsimage)
+		const sessionData = await sessionManager.getSession(wsimage)
 
-	if (sessionData) return sessionData.imageSessionId
+		if (sessionData) return sessionData.imageSessionId
 
-	const invalidateResult = await sessionManager.invalidateSessions(wsimage, 20, 60)
+		const invalidateResult = await sessionManager.invalidateSessions(wsimage, 10, 120)
 
-	if (!invalidateResult.success) throw new Error('Session invalidation failed')
+		if (!invalidateResult.success) throw new SessionInvalidationFailedException('Session invalidation failed')
 
-	await invalidateSessions(invalidateResult)
+		await invalidateSessions(invalidateResult)
 
-	const tileServer = sessionManager.getTileServerShard(wsimage)
+		const tileServer = sessionManager.getTileServerShard(wsimage)
 
-	await ky.get(`${tileServer.url}/tileserver/session_id`, {
-		timeout: 50000,
-		hooks: getHooks(cookieJar, getCookieString, setCookie)
-	})
-
-	const cookieString = await getCookieString(`${tileServer.url}/tileserver/session_id`)
-	const sessionId = cookieString.match(/session_id=([^;]*)/)?.[1]
-	if (!sessionId) throw new Error('session_id not found')
-
-	const sampleWsiTileServer = path.join(
-		`${tileServer.mount}/${ds.queries.WSImages.imageBySampleFolder}/${sampleId}`,
-		wsimage
-	)
-	const data = qs.stringify({ slide_path: sampleWsiTileServer })
-
-	await ky.put(`${tileServer.url}/tileserver/slide`, {
-		body: data,
-		timeout: 50000,
-		headers: {
-			'Content-Type': 'application/x-www-form-urlencoded',
-			Cookie: `session_id=${sessionId}`
-		},
-		hooks: getHooks(cookieJar, getCookieString, setCookie)
-	})
-
-	await sessionManager.setSession(wsimage, sessionId, tileServer)
-
-	return sessionId
-}
-
-async function invalidateSessions(invalidateResult: { success: boolean; deletedKeys: (SessionData | undefined)[] }) {
-	for (const sessionData of invalidateResult.deletedKeys) {
-		try {
-			if (sessionData?.tileServerShard) {
-				await ky.put(`${sessionData.tileServerShard.url}/tileserver/reset/${sessionData.imageSessionId}`)
-			}
-		} catch (error) {
-			console.info(`Error resetting tile server for sessionId ${sessionData?.imageSessionId}}:`, error)
-		}
-	}
-}
-
-async function getWsiImageDimensions(sessionId, getCookieString, wsimage) {
-	const shardManager = ShardManager.getInstance()
-
-	const tileServer: TileServerShard = shardManager.shardingAlgorithmsMap
-		?.get(TileServerShardingAlgorithm.TILE_SERVER_SHARDING_KEY)
-		?.getShard(wsimage)
-
-	if (!tileServer) {
-		throw new Error('No tile server')
-	}
-
-	return await ky
-		.get(`${tileServer.url}/tileserver/slide`, {
-			timeout: 120000,
-			hooks: {
-				beforeRequest: [
-					async request => {
-						let cookie = await getCookieString(request.url)
-						if (!cookie) {
-							cookie = `session_id=${sessionId}`
-						}
-						request.headers.set('Cookie', cookie)
-					}
-				]
-			}
+		await ky.get(`${tileServer.url}/tileserver/session_id`, {
+			timeout: 50000,
+			hooks: getHooks(cookieJar, getCookieString, setCookie)
 		})
-		.json()
+
+		const cookieString = await getCookieString(`${tileServer.url}/tileserver/session_id`)
+		const sessionId = cookieString.match(/session_id=([^;]*)/)?.[1]
+		if (!sessionId) throw new Error('session_id not found')
+
+		const sampleWsiTileServer = path.join(
+			`${tileServer.mount}/${ds.queries.WSImages.imageBySampleFolder}/${sampleId}`,
+			wsimage
+		)
+		const data = qs.stringify({ slide_path: sampleWsiTileServer })
+
+		await ky.put(`${tileServer.url}/tileserver/slide`, {
+			body: data,
+			timeout: 50000,
+			headers: {
+				'Content-Type': 'application/x-www-form-urlencoded',
+				Cookie: `session_id=${sessionId}`
+			},
+			hooks: getHooks(cookieJar, getCookieString, setCookie)
+		})
+
+		await sessionManager.setSession(wsimage, sessionId, tileServer)
+
+		return sessionId
+	}
+
+	async function invalidateSessions(invalidateResult: { success: boolean; deletedKeys: (SessionData | undefined)[] }) {
+		for (const sessionData of invalidateResult.deletedKeys) {
+			try {
+				if (sessionData?.tileServerShard) {
+					await ky.put(`${sessionData.tileServerShard.url}/tileserver/reset/${sessionData.imageSessionId}`)
+				}
+			} catch (error) {
+				console.info(`Error resetting tile server for sessionId ${sessionData?.imageSessionId}}:`, error)
+			}
+		}
+	}
+
+	async function getWsiImageDimensions(sessionId, getCookieString, wsimage) {
+		const shardManager = ShardManager.getInstance()
+
+		const tileServer: TileServerShard = shardManager.shardingAlgorithmsMap
+			?.get(TileServerShardingAlgorithm.TILE_SERVER_SHARDING_KEY)
+			?.getShard(wsimage)
+
+		if (!tileServer) {
+			throw new Error('No tile server')
+		}
+
+		return await ky
+			.get(`${tileServer.url}/tileserver/slide`, {
+				timeout: 120000,
+				hooks: {
+					beforeRequest: [
+						async request => {
+							let cookie = await getCookieString(request.url)
+							if (!cookie) {
+								cookie = `session_id=${sessionId}`
+							}
+							request.headers.set('Cookie', cookie)
+						}
+					]
+				}
+			})
+			.json()
+	}
+
+	function getHooks(cookieJar: any, getCookieString, setCookie) {
+		return {
+			beforeRequest: [
+				async request => {
+					const cookie = await getCookieString(request.url)
+					request.headers.set('Cookie', cookie)
+				}
+			],
+			afterResponse: [
+				async (request, options, response) => {
+					const setCookieHeader = response.headers.get('set-cookie')
+					if (setCookieHeader) {
+						await setCookie(setCookieHeader, request.url)
+					}
+				}
+			]
+		}
+	}
 }
 
-function getHooks(cookieJar: any, getCookieString, setCookie) {
-	return {
-		beforeRequest: [
-			async request => {
-				const cookie = await getCookieString(request.url)
-				request.headers.set('Cookie', cookie)
-			}
-		],
-		afterResponse: [
-			async (request, options, response) => {
-				const setCookieHeader = response.headers.get('set-cookie')
-				if (setCookieHeader) {
-					await setCookie(setCookieHeader, request.url)
-				}
-			}
-		]
+class SessionInvalidationFailedException extends Error {
+	constructor(message) {
+		super(message)
+		this.name = 'SessionInvalidationFailedException'
 	}
 }

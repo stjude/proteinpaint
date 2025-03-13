@@ -46,13 +46,12 @@ export default class WSIViewer {
 			return
 		}
 
-		const layers = await this.getLayers(state, plotConfig.wsimages)
+		let layers: TileLayer<Zoomify>[] = []
 
-		if (layers.length === 0) {
-			holder
-				.append('div')
-				.style('margin-left', '10px')
-				.text('There was an error loading the WSI images. Please try again later.')
+		try {
+			layers = await this.getLayers(state, plotConfig.wsimages)
+		} catch (e: any) {
+			holder.append('div').style('margin-left', '10px').text(e.message)
 			return
 		}
 
@@ -100,8 +99,10 @@ export default class WSIViewer {
 
 			const data: WSImagesResponse = await dofetch3('wsimages', { body })
 
+			console.log('data', data)
+
 			if (data.status === 'error') {
-				return []
+				throw new Error(`${data.error}`)
 			}
 
 			const imgWidth = data.slide_dimensions[0]

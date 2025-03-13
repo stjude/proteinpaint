@@ -12,6 +12,7 @@ export type WSImagesResponse = {
 	wsiSessionId?: string
 	slide_dimensions: number[]
 	status: string
+	error?: string
 }
 
 export const wsImagesPayload: RoutePayload = {
