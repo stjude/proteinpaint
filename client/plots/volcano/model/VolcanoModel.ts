@@ -6,16 +6,21 @@ export class VolcanoModel {
 	app: MassAppApi
 	config: VolcanoPlotConfig
 	settings: VolcanoSettings
+	termType: string
 	constructor(app: MassAppApi, config: VolcanoPlotConfig, settings: VolcanoSettings) {
 		this.app = app
 		this.config = config
 		this.settings = settings
+		this.termType = config.termType
 	}
 
+	/** May use mapper instead as more termTypes are added */
 	async getData() {
-		const body = await this.getRequestBody()
-		const data = await dofetch3('DEanalysis', { body })
-		return data
+		if (this.termType === 'geneExpression') {
+			const body = await this.getRequestBody()
+			const data = await dofetch3('DEanalysis', { body })
+			return data
+		}
 	}
 
 	async getRequestBody() {

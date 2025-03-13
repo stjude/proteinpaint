@@ -50,7 +50,7 @@ export type ExpressionInput = {
 
 export type DEResponse = {
 	/** Array containing objects of each gene containing foldchange, gene name, gene symbol, original pvalue, adjusted pvalue */
-	data: string
+	data: DataEntry[]
 	/** Effective sample size for group 1 */
 	sample_size1: number
 	/** Effective sample size for group 2 */
@@ -58,9 +58,26 @@ export type DEResponse = {
 	/** Method of DE used wilcoxon/edgeR */
 	method: string
 	/** Image name from edgeR describing the quality of the fitting from QL pipeline, this is only generated for edgeR not for wilcoxon method  */
-	ql_image?: any
+	ql_image?: Image
 	/** Image name from edgeR showing the MDS plot of samples from both groups, this is only generated for edgeR not for wilcoxon method */
-	mds_image?: any
+	mds_image?: Image
+}
+
+export type DataEntry = {
+	adjusted_p_value: number
+	original_p_value: number
+	fold_change: number
+	gene_name: string
+	gene_symbol: string
+}
+
+type Image = {
+	/** Image source */
+	src: string
+	/** File size */
+	size: number
+	/** Image identifier */
+	key: string
 }
 
 export const diffExpPayload: RoutePayload = {

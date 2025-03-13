@@ -1,15 +1,24 @@
-import type { VolcanoViewData, VolcanoPlotConfig, VolcanoSettings } from '../VolcanoTypes'
+import type {
+	VolcanoPlotDimensions,
+	VolcanoPlotConfig,
+	VolcanoPValueTableData,
+	VolcanoSettings,
+	VolcanoViewData,
+	DataPointEntry
+} from '../VolcanoTypes'
+import type { DEResponse } from '#types'
 import { scaleLinear } from 'd3-scale'
 import { roundValueAuto } from '#shared/roundValue.js'
 
-//TODO: Add/fix types
+/** TODO: Images should be reusable. Remove hardcoding */
 export class VolcanoViewModel {
 	config: VolcanoPlotConfig
-	response: any
+	dataType: string
+	response: DEResponse
 	pValueCutoff: number
-	pValueTable: any
+	pValueTable: VolcanoPValueTableData
 	settings: VolcanoSettings
-	type: string
+	termType: string
 	viewData: VolcanoViewData
 	numSignificant = 0
 	numNonSignificant = 0
@@ -21,7 +30,7 @@ export class VolcanoViewModel {
 	readonly bottomPad = 60
 	readonly horizPad = 70
 	readonly topPad = 40
-	constructor(config: VolcanoPlotConfig, response: any, settings: VolcanoSettings) {
+	constructor(config: VolcanoPlotConfig, response: DEResponse, settings: VolcanoSettings) {
 		this.config = config
 		this.response = response
 		this.pValueCutoff = -Math.log10(settings.pValue)
@@ -34,8 +43,8 @@ export class VolcanoViewModel {
 			rows: []
 		}
 		this.settings = settings
-
-		this.type = 'genes' //Eventually this will be other types (e.g. 'mutations', 'proteins', etc.)
+		this.termType = config.termType
+		this.dataType = this.setDataType()
 
 		this.setMinMaxValues()
 
@@ -51,6 +60,11 @@ export class VolcanoViewModel {
 			pValueTableData: this.pValueTable,
 			images
 		}
+	}
+
+	setDataType() {
+		if (this.termType == 'geneExpression') return 'genes'
+		else throw `Unknown termType: ${this.termType} [VolcanoViewModel setDataType()]`
 	}
 
 	setMinMaxValues() {
@@ -105,9 +119,9 @@ export class VolcanoViewModel {
 		}
 	}
 
-	setPointData(plotDim) {
+	setPointData(plotDim: VolcanoPlotDimensions) {
 		const radius = Math.max(this.settings.width, this.settings.height) / 80
-		const dataCopy = structuredClone(this.response.data)
+		const dataCopy: any = structuredClone(this.response.data)
 		for (const d of dataCopy) {
 			const significant = this.isSignificant(d)
 			if (significant) {
@@ -118,7 +132,7 @@ export class VolcanoViewModel {
 					{ value: roundValueAuto(Math.pow(10, -d.original_p_value)) },
 					{ value: roundValueAuto(Math.pow(10, -d.adjusted_p_value)) }
 				]
-				if (this.type == 'genes') {
+				if (this.dataType == 'genes') {
 					row.splice(0, 0, { value: d.gene_name }, { value: d.gene_symbol })
 				}
 				this.pValueTable.rows.push(row)
@@ -133,7 +147,7 @@ export class VolcanoViewModel {
 		return dataCopy
 	}
 
-	isSignificant(d: any) {
+	isSignificant(d: DataPointEntry) {
 		return (
 			d[`${this.settings.pValueType}_p_value`] > this.pValueCutoff &&
 			Math.abs(d.fold_change) > this.settings.foldChangeCutoff
@@ -141,7 +155,7 @@ export class VolcanoViewModel {
 	}
 
 	//TODO: hightlight per term color
-	getGenesColor(d) {
+	getGenesColor(d: DataPointEntry) {
 		if (!d.gene_symbol) return this.settings.defaultSignColor
 
 		if (this.config.highlightedData.includes(d.gene_symbol)) {
@@ -155,15 +169,15 @@ export class VolcanoViewModel {
 	setStatsData() {
 		const tableRows = [
 			{
-				label: `Percentage of significant ${this.type}`,
+				label: `Percentage of significant ${this.dataType}`,
 				value: roundValueAuto((this.numSignificant * 100) / (this.numSignificant + this.numNonSignificant))
 			},
 			{
-				label: `Number of significant ${this.type}`,
+				label: `Number of significant ${this.dataType}`,
 				value: this.numSignificant
 			},
 			{
-				label: `Number of total ${this.type}`,
+				label: `Number of total ${this.dataType}`,
 				value: this.numSignificant + this.numNonSignificant
 			},
 			{
@@ -179,11 +193,10 @@ export class VolcanoViewModel {
 	}
 
 	setPTableData() {
-		if (this.type == 'genes') {
+		if (this.termType == 'geneExpression') {
 			this.pValueTable.columns.splice(0, 0, { label: 'Gene Name' }, { label: 'Gene Symbol' })
 		}
-
 		const foldChangeIdx = this.pValueTable.columns.findIndex(c => c.label.includes('Fold change'))
-		this.pValueTable.rows.sort((a, b) => a[foldChangeIdx].value - b[foldChangeIdx].value).reverse()
+		this.pValueTable.rows.sort((a: any, b: any) => a[foldChangeIdx].value - b[foldChangeIdx].value).reverse()
 	}
 }
