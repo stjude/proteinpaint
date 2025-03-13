@@ -235,7 +235,7 @@ async function processMultiPart(res, _boundary) {
     let text = (decoder.decode(chunk)).trimStart()
     // console.log(chunk.byteLength, text.length, text.slice(0, 16), ' ... ', text.slice(0, 16))
 		
-		if (text.endsWith(boundary + '--')) {
+		if (!text.startsWith(boundary) && text.endsWith(boundary + '--')) {
     	// find the previous (middle) boundary from the end
     	const i = text.indexOf(boundary)
 			for(let j=i; j < text.length; j++) {
