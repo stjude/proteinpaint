@@ -1153,6 +1153,30 @@ export const CNVClasses = Object.values(mclass)
 	.filter(m => m.dt == dtcnv)
 	.map(m => m.key)
 
+// custom dt terms used by geneVariant term
+// for each term, can specify default filtering settings
+// by adding a tvs object (see FilterTermEntry type)
+export const dtTerms = [
+	{
+		id: 'cnv',
+		name: 'CNV',
+		parent_id: null,
+		isleaf: true,
+		type: 'dtcnv',
+		min: -1.0,
+		max: 1.0
+	},
+	{
+		id: 'snvindel',
+		name: 'SNV/indel',
+		parent_id: null,
+		isleaf: true,
+		type: 'dtsnvindel',
+		dt: dtsnvindel,
+		values: Object.fromEntries(mutationClasses.map(key => [key, { label: mclass[key].label }]))
+	}
+]
+
 /*
 Term groupsetting used for geneVariant term
 NOTE: for each groupsetting, groups[] is ordered by priority
@@ -1161,7 +1185,6 @@ for example: in the 'Protein-changing vs. rest' groupsetting, the
 that have both missense and silent mutations are classified in the
 'Protein-changing' group
 */
-
 export const geneVariantTermGroupsetting = {
 	disabled: false, // as const, // TODO: may need to add is when converting common.js to .ts
 	type: 'custom',

@@ -58,7 +58,6 @@ export function handle_request_closure(genomes) {
 			if (q.getregression) return await trigger_getregression(q, res, ds, genome)
 			if (q.validateSnps) return res.send(await snpValidate(q, tdb, ds, genome))
 			if (q.getvariantfilter) return getvariantfilter(res, ds)
-			if (q.getGeneVariantFilter) return get_geneVariantFilter(res, ds)
 			if (q.getLDdata) return await LDoverlay(q, ds, res)
 			if (q.genesetByTermId) return trigger_genesetByTermId(q, res, tdb)
 			if (q.getSampleScatter) q.for = 'scatter'
@@ -303,10 +302,6 @@ function getvariantfilter(res, ds) {
 	}
 
 	res.send(ds?.queries?.snvindel?.variant_filter || {})
-}
-
-function get_geneVariantFilter(res, ds) {
-	res.send(ds?.queries?.geneVariantFilter || {})
 }
 
 function trigger_genesetByTermId(q, res, tdb) {
