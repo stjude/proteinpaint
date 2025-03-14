@@ -26,6 +26,8 @@ export class profileForms extends profilePlot {
 	filterG: any
 	keys: any
 	activePlot: any
+	activeTWs: any
+	tabs: any
 
 	constructor(opts) {
 		super()
@@ -38,11 +40,13 @@ export class profileForms extends profilePlot {
 		super.init(appState)
 		const rightDiv = this.dom.rightDiv
 		const config = structuredClone(appState.plots.find(p => p.id === this.id))
+		this.twLst = await this.app.vocabApi.getMultivalueTWs({ parent_id: config.tw.term.id })
 		const settings = config.settings.profileForms
 
-		const tabs: any[] = []
-		this.twLst = []
+		this.tabs = []
 		for (const plot of config.plots) {
+			const tws = this.twLst.filter(tw => tw.term.subtype == plot.subtype)
+			if (!tws.length) continue //no terms for this plot
 			const tab: any = {
 				label: plot.name,
 				callback: () => {
@@ -51,8 +55,8 @@ export class profileForms extends profilePlot {
 				active: false
 			}
 			if (plot.name == config.activeTab) tab.active = true
-			tabs.push(tab)
-			this.twLst.push(...plot.terms, ...plot.scTerms)
+			this.tabs.push(tab)
+			if (plot.scTerms) this.twLst.push(...plot.scTerms)
 		}
 
 		const topDiv = rightDiv.append('div')
@@ -60,11 +64,12 @@ export class profileForms extends profilePlot {
 		topDiv.append('div').style('padding-bottom', '10px').style('font-weight', 'bold').text(domain)
 
 		const headerDiv = rightDiv.append('div').style('padding-bottom', '10px')
-		await new Tabs({
-			holder: topDiv,
-			tabsPosition: 'horizontal',
-			tabs
-		}).main()
+		if (this.tabs.length > 1)
+			await new Tabs({
+				holder: topDiv,
+				tabsPosition: 'horizontal',
+				tabs: this.tabs
+			}).main()
 
 		const shift = 600
 		const shiftTop = 60
@@ -72,7 +77,6 @@ export class profileForms extends profilePlot {
 			.style('padding', '10px')
 			.append('svg')
 			.attr('width', settings.svgw + shift + 400)
-			.attr('height', settings.svgh + shiftTop * 2)
 		svg
 			.append('defs')
 			.append('pattern')
@@ -103,10 +107,12 @@ export class profileForms extends profilePlot {
 
 	async main() {
 		super.main()
+		const activeTab = this.state.config.activeTab || this.tabs[0].label
+		this.activePlot = this.state.config.plots.find(p => p.name == activeTab)
+		this.activeTWs = this.twLst.filter(tw => tw.term.subtype == this.activePlot.subtype)
+		const height = this.activeTWs.length * 30
+		this.dom.svg.attr('height', height + 120)
 
-		this.activePlot = this.state.config.activeTab
-			? this.state.config.plots.find(p => p.name == this.state.config.activeTab)
-			: this.state.config.plots[0]
 		await this.setControls()
 		this.renderPlot()
 		this.filterG.selectAll('*').remove()
@@ -114,6 +120,7 @@ export class profileForms extends profilePlot {
 	}
 
 	getDict(key, sample) {
+		if (!sample[key]) return null
 		const termData = sample[key].value
 		return JSON.parse(termData)
 	}
@@ -122,6 +129,7 @@ export class profileForms extends profilePlot {
 		const percentageDict = {}
 		for (const sample of samples) {
 			const percents: { [key: string]: number } = getDict(sample)
+			if (!percents) continue
 			for (const key in percents) {
 				const value = percents[key]
 				if (!percentageDict[key]) percentageDict[key] = 0
@@ -151,14 +159,15 @@ export class profileForms extends profilePlot {
 		this.dom.xAxisG.selectAll('*').remove()
 		this.dom.legendG.selectAll('*').remove()
 		const samples = this.sampleData ? [this.sampleData] : this.data.lst
-		switch (this.state.config.activeTab) {
+
+		switch (this.activePlot.name) {
 			case IMPRESSIONS_TAB:
 				this.renderImpressions(samples)
 				break
 			case LIKERT_TAB:
 				this.renderLikert(samples)
 				break
-			default:
+			case YES_NO_TAB:
 				this.renderYesNo(samples)
 		}
 	}
@@ -170,11 +179,11 @@ export class profileForms extends profilePlot {
 		this.dom.headerDiv.selectAll('*').remove()
 		let y = 0
 		const step = 30
-		for (const tw of this.activePlot.terms) {
+		for (const tw of this.activeTWs) {
+			if (tw.term.type != 'multivalue') continue
 			const getDict = sample => this.getDict(tw.$id, sample)
 			const dict = this.getPercentsDict(getDict, samples) //get the dict for each drug for the list of samples
-			console.log(dict)
-			this.renderRect(dict, y, 25, tw.term.name)
+			this.renderRect(dict, y, 25, tw)
 			y += step
 		}
 	}
@@ -186,7 +195,7 @@ export class profileForms extends profilePlot {
 		let y = 0
 		let showSCBar = false
 		const activePlot = this.activePlot
-		for (const tw of activePlot.terms) {
+		for (const tw of this.activeTWs) {
 			const getDict = sample => this.getDict(tw.$id, sample)
 			const percents: { [key: string]: number } = this.getPercentsDict(getDict, samples)
 			const scTerm = activePlot.scTerms.find(t => t.term.id.includes(tw.term.id))
@@ -260,7 +269,8 @@ export class profileForms extends profilePlot {
 		return key == 'Yes' ? this.state.config.color : key == 'No' ? '#aaa' : `url(#${this.id}_diagonalHatch)`
 	}
 
-	renderRect(dict: { [key: string]: number }, y: number, height: number, text) {
+	renderRect(dict: { [key: string]: number }, y: number, height: number, tw) {
+		const hasData = Object.values(dict).some(v => v > 0)
 		const categories = this.activePlot.categories
 		const itemG = this.dom.mainG.append('g').attr('transform', `translate(0, ${y})`)
 		const total = Object.values(dict).reduce((a, b) => a + b, 0)
@@ -275,7 +285,6 @@ export class profileForms extends profilePlot {
 			itemG
 				.append('rect')
 				.attr('x', x)
-				.attr('y', y)
 				.attr('width', width)
 				.attr('height', height)
 				.attr('stroke', 'gray')
@@ -285,11 +294,14 @@ export class profileForms extends profilePlot {
 
 			x += width
 		}
+		const text = getText(tw.term.name)
 		itemG
 			.append('text')
 			.text(text)
-			.attr('y', y + height)
+			.attr('x', -5)
+			.attr('y', (height * 2) / 3)
 			.attr('text-anchor', 'end')
+			.style('font-size', '0.8em')
 	}
 
 	renderRects(percents: { [key: string]: number }, y: number, height: number, scPercentKeys: string[]) {
@@ -367,15 +379,13 @@ export class profileForms extends profilePlot {
 export async function getPlotConfig(opts, app, _activeCohort) {
 	const activeCohort = _activeCohort === undefined ? app.getState().activeCohort : _activeCohort
 	const formsConfig = getProfilePlotConfig(activeCohort, app, opts)
-	const module = opts.tw.term.name
-	let config = formsConfig[module]
-	if (!config) throw 'No data available for the module ' + module
+	let config = formsConfig
 	config.settings = getDefaultProfileFormsSettings()
 	config.header = 'Templates: Visualization tools to provide insights and assist in leveraging data'
 	config = copyMerge(structuredClone(config), opts)
 	for (const plot of config.plots) {
-		await fillTwLst(plot.terms, app.vocabApi)
-		await fillTwLst(plot.scTerms, app.vocabApi)
+		if (plot.terms) await fillTwLst(plot.terms, app.vocabApi)
+		if (plot.scTerms) await fillTwLst(plot.scTerms, app.vocabApi)
 	}
 
 	await loadFilterTerms(config, activeCohort, app)
