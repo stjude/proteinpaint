@@ -26,6 +26,7 @@ export class profileForms extends profilePlot {
 	filterG: any
 	keys: any
 	activePlot: any
+	multivalueTerms: any
 
 	constructor(opts) {
 		super()
@@ -38,10 +39,11 @@ export class profileForms extends profilePlot {
 		super.init(appState)
 		const rightDiv = this.dom.rightDiv
 		const config = structuredClone(appState.plots.find(p => p.id === this.id))
+		this.twLst = await this.app.vocabApi.getMultivalueTWs({ parent_id: config.tw.term.id })
+		console.log(this.twLst)
 		const settings = config.settings.profileForms
 
 		const tabs: any[] = []
-		this.twLst = []
 		for (const plot of config.plots) {
 			const tab: any = {
 				label: plot.name,
@@ -52,7 +54,10 @@ export class profileForms extends profilePlot {
 			}
 			if (plot.name == config.activeTab) tab.active = true
 			tabs.push(tab)
-			this.twLst.push(...plot.terms, ...plot.scTerms)
+			if (plot.terms) {
+				this.twLst.push(...plot.terms)
+			}
+			if (plot.scTerms) this.twLst.push(...plot.scTerms)
 		}
 
 		const topDiv = rightDiv.append('div')
@@ -114,6 +119,7 @@ export class profileForms extends profilePlot {
 	}
 
 	getDict(key, sample) {
+		if (!sample[key]) return null
 		const termData = sample[key].value
 		return JSON.parse(termData)
 	}
@@ -122,6 +128,7 @@ export class profileForms extends profilePlot {
 		const percentageDict = {}
 		for (const sample of samples) {
 			const percents: { [key: string]: number } = getDict(sample)
+			if (!percents) continue
 			for (const key in percents) {
 				const value = percents[key]
 				if (!percentageDict[key]) percentageDict[key] = 0
@@ -170,11 +177,11 @@ export class profileForms extends profilePlot {
 		this.dom.headerDiv.selectAll('*').remove()
 		let y = 0
 		const step = 30
-		for (const tw of this.activePlot.terms) {
+		for (const tw of this.twLst) {
+			if (tw.term.type != 'multivalue') continue
 			const getDict = sample => this.getDict(tw.$id, sample)
 			const dict = this.getPercentsDict(getDict, samples) //get the dict for each drug for the list of samples
-			console.log(dict)
-			this.renderRect(dict, y, 25, tw.term.name)
+			this.renderRect(dict, y, 25, tw)
 			y += step
 		}
 	}
@@ -260,7 +267,7 @@ export class profileForms extends profilePlot {
 		return key == 'Yes' ? this.state.config.color : key == 'No' ? '#aaa' : `url(#${this.id}_diagonalHatch)`
 	}
 
-	renderRect(dict: { [key: string]: number }, y: number, height: number, text) {
+	renderRect(dict: { [key: string]: number }, y: number, height: number, tw) {
 		const categories = this.activePlot.categories
 		const itemG = this.dom.mainG.append('g').attr('transform', `translate(0, ${y})`)
 		const total = Object.values(dict).reduce((a, b) => a + b, 0)
@@ -275,7 +282,6 @@ export class profileForms extends profilePlot {
 			itemG
 				.append('rect')
 				.attr('x', x)
-				.attr('y', y)
 				.attr('width', width)
 				.attr('height', height)
 				.attr('stroke', 'gray')
@@ -285,11 +291,14 @@ export class profileForms extends profilePlot {
 
 			x += width
 		}
+		const text = getText(tw.term.name)
 		itemG
 			.append('text')
 			.text(text)
 			.attr('y', y + height)
+			.attr('x', -5)
 			.attr('text-anchor', 'end')
+			.style('font-size', '0.8em')
 	}
 
 	renderRects(percents: { [key: string]: number }, y: number, height: number, scPercentKeys: string[]) {
@@ -367,15 +376,13 @@ export class profileForms extends profilePlot {
 export async function getPlotConfig(opts, app, _activeCohort) {
 	const activeCohort = _activeCohort === undefined ? app.getState().activeCohort : _activeCohort
 	const formsConfig = getProfilePlotConfig(activeCohort, app, opts)
-	const module = opts.tw.term.name
-	let config = formsConfig[module]
-	if (!config) throw 'No data available for the module ' + module
+	let config = formsConfig
 	config.settings = getDefaultProfileFormsSettings()
 	config.header = 'Templates: Visualization tools to provide insights and assist in leveraging data'
 	config = copyMerge(structuredClone(config), opts)
 	for (const plot of config.plots) {
-		await fillTwLst(plot.terms, app.vocabApi)
-		await fillTwLst(plot.scTerms, app.vocabApi)
+		if (plot.terms) await fillTwLst(plot.terms, app.vocabApi)
+		if (plot.scTerms) await fillTwLst(plot.scTerms, app.vocabApi)
 	}
 
 	await loadFilterTerms(config, activeCohort, app)
