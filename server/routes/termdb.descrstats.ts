@@ -1,6 +1,6 @@
 import type { DescrStatsRequest, DescrStatsResponse, RouteApi } from '#types'
 import { descrStatsPayload } from '#types/checkers'
-import Summarystats from '#shared/descriptive.stats.js'
+import { summaryStats } from '#shared/descriptive.stats.js'
 import { getData } from '#src/termdb.matrix.js'
 
 export const api: RouteApi = {
@@ -51,7 +51,7 @@ function init({ genomes }) {
 			}
 
 			if (values.length) {
-				result = Summarystats(values)
+				result = summaryStats(values)
 			} else {
 				// no computable values. do not get stats as it breaks code. set result to blank obj to avoid "missing response.header['content-type']" err on client
 				result = {}
