@@ -2,7 +2,7 @@ import { roundValueAuto } from './roundValue.js'
 
 /* This file generates summary statistics on any given array of numbers*/
 
-export default function summaryStats(array) {
+export function summaryStats(array) {
 	//console.log("array:",array)
 	let arr = array
 	if (typeof array[0] == 'string') {
@@ -14,18 +14,12 @@ export default function summaryStats(array) {
 	const sorted_arr = arr.sort((a, b) => a - b)
 	const n = arr.length
 
-	//compute mean
-	function mean(arr) {
-		if (arr.length === 0) throw new Error('No data provided')
-		return arr.reduce((a, b) => a + b) / n
-	}
-
 	//compute median
 	const median = computePercentile(sorted_arr, 50)
-	const mean_arr = mean(sorted_arr)
-	const squareDiffs = arr.map(x => (x - mean_arr) ** 2).reduce((a, b) => a + b, 0)
+	//compute mean
+	const mean = getMean(arr)
 	// compute variance
-	const variance = squareDiffs / (n - 1)
+	const variance = getVariance(sorted_arr)
 	// compute standard deviation
 	const stdDev = Math.sqrt(variance)
 
@@ -45,7 +39,7 @@ export default function summaryStats(array) {
 			{ id: 'min', label: 'Minimum', value: roundValueAuto(min, true) },
 			{ id: 'p25', label: '1st quartile', value: roundValueAuto(p25, true) },
 			{ id: 'median', label: 'Median', value: roundValueAuto(median, true) },
-			{ id: 'mean', label: 'Mean', value: roundValueAuto(mean(arr), true) },
+			{ id: 'mean', label: 'Mean', value: roundValueAuto(mean, true) },
 			{ id: 'p75', label: '3rd quartile', value: roundValueAuto(p75, true) },
 			{ id: 'max', label: 'Maximum', value: roundValueAuto(max, true) },
 			{ id: 'SD', label: 'Standard deviation', value: roundValueAuto(stdDev, true) },
@@ -59,4 +53,19 @@ function computePercentile(values, percentile) {
 	const index = Math.abs((percentile / 100) * values.length - 1)
 	const value = Number.isInteger(index) ? (values[index] + values[index + 1]) / 2 : values[Math.ceil(index)]
 	return value
+}
+
+export function getMean(data) {
+	return data.reduce((sum, value) => sum + value, 0) / data.length
+}
+
+export function getVariance(data) {
+	const meanValue = getMean(data)
+	const squaredDifferences = data.map(value => Math.pow(value - meanValue, 2))
+	return squaredDifferences.reduce((sum, value) => sum + value, 0) / data.length
+}
+
+export function getStdDev(data) {
+	const variance = getVariance(data)
+	return Math.sqrt(variance)
 }

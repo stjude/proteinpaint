@@ -5,6 +5,7 @@ import run_R from '../src/run_R.js'
 import serverconfig from '../src/serverconfig.js'
 import { mayLog } from '#src/helpers.ts'
 import path from 'path'
+import { getStdDev } from '#shared/descriptive.stats.js'
 
 // to avoid crashing r, an array must meet below; otherwise the variable is skipped
 const minArrayLength = 3 // minimum number of values
@@ -79,7 +80,7 @@ async function compute(q: CorrelationVolcanoRequest, ds: any, genome: any) {
 			//Need enough values to calculate correlation
 			const grterThanOne = t.v1.length > minArrayLength && t.v2.length > minArrayLength
 			//Need enough to variance in data to calculate correlation
-			const significantSD = stdDev(t.v1) > minSD && stdDev(t.v2) > minSD
+			const significantSD = getStdDev(t.v1) > minSD && getStdDev(t.v2) > minSD
 			const v = grterThanOne && significantSD ? accepted : skipped
 			if (v === accepted) accepted.push(t)
 			if (v === skipped) skipped.push({ tw$id: t.id })
@@ -142,15 +143,4 @@ export function validate_correlationVolcano(ds: any) {
 	} else {
 		throw 'unknown cv.variables.type'
 	}
-}
-
-export function mean(data) {
-	return data.reduce((sum, value) => sum + value, 0) / data.length
-}
-
-export function stdDev(data) {
-	const meanValue = mean(data)
-	const squaredDifferences = data.map(value => Math.pow(value - meanValue, 2))
-	const variance = squaredDifferences.reduce((sum, value) => sum + value, 0) / data.length
-	return Math.sqrt(variance)
 }

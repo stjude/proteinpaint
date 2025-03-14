@@ -4,6 +4,7 @@ import { getData } from '../src/termdb.matrix.js'
 import { boxplot_getvalue } from '../src/utils.js'
 import { sortKey2values } from './termdb.violin.ts'
 import { roundValueAuto } from '#shared/roundValue.js'
+import { getMean, getVariance } from '#shared/descriptive.stats.js'
 
 const minSampleSize = 5 // a group below cutoff will not compute boxplot
 
@@ -136,14 +137,9 @@ function setDescrStats(boxplot: BoxPlotData, sortedValues: number[]) {
 	if (sortedValues.length < minSampleSize) return [{ id: 'total', label: 'Total', value: sortedValues.length }]
 	//boxplot_getvalue() already returns calculated stats
 	//Format data rather than recalculate
-	const mean = sortedValues.reduce((s, i) => s + i, 0) / sortedValues.length
-	let s = 0
-	for (const v of sortedValues) {
-		s += Math.pow(v - mean, 2)
-	}
-	const sd = Math.sqrt(s / (sortedValues.length - 1))
-	const squareDiffs = sortedValues.map(x => (x - mean) ** 2).reduce((a, b) => a + b, 0)
-	const variance = squareDiffs / (sortedValues.length - 1)
+	const mean = getMean(sortedValues)
+	const variance = getVariance(sortedValues)
+	const sd = Math.sqrt(variance)
 
 	return [
 		{ id: 'total', label: 'Total', value: sortedValues.length },
