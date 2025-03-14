@@ -47,6 +47,18 @@ Fixes:
 - mds3 tk cnv legend will handle case when no cnv data is present due to server error and not to crash
 
 
+## 2.108.5
+
+- protect against missing error payload or empty data when handling the maf multipart response
+- correctly detect the boundary text between binary and json text in the same octet chunk
+
+
+## 2.108.4-0
+
+- improve gdc maf rendering of failed/empty files to inform user about aggregation result
+- cherry-pick fixes from master to handle stderr from rust code, node js stream_rust() helper and route handler
+
+
 ## 2.108.3-0
 
 Fixes:
