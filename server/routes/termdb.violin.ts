@@ -295,8 +295,10 @@ async function createCanvasImg(q: ViolinRequest, result: { [index: string]: any 
 	}
 }
 
-export async function getDensity(values) {
-	const [min, max] = extent(values)
+export async function getDensity(
+	values: number[]
+): Promise<{ bins: any[]; densityMin: number; densityMax: number; minvalue: number; maxvalue: number }> {
+	const [min, max] = extent(values) as [number, number]
 	const result = await getDensities({ plot: values }, min, max)
 	return result.plot
 }
