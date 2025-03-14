@@ -57,10 +57,9 @@ export type DEResponse = {
 	sample_size2: number
 	/** Method of DE used wilcoxon/edgeR */
 	method: string
-	/** Image name from edgeR describing the quality of the fitting from QL pipeline, this is only generated for edgeR not for wilcoxon method  */
-	ql_image?: Image
-	/** Image name from edgeR showing the MDS plot of samples from both groups, this is only generated for edgeR not for wilcoxon method */
-	mds_image?: Image
+	/** QL: Image describing the quality of the fitting from QL pipeline, this is only generated for edgeR not for wilcoxon method  */
+	/** MDS: Image showing the MDS plot of samples from both groups, this is only generated for edgeR not for wilcoxon method */
+	images: Image[]
 }
 
 export type DataEntry = {
