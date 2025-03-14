@@ -15,8 +15,18 @@ import serverconfig from './serverconfig.js'
 import { spawn } from 'child_process'
 import { Readable } from 'stream'
 
-// hardcoded debug line marker, to identify which lines of Rscript stdout are debugging/diagnostic and to be separated from actual output e.g. stringified JSON
-// NOTE that a debugging line must ends with line break
+/*
+hardcoded debug line marker, to identify which lines of Rscript stdout are debugging/diagnostic,
+and to be separated from actual output e.g. stringified JSON or any text
+
+**********
+** NOTE **
+**********
+- a debugging line must ends with line break
+- a normal line MUST NOT begins with the marker, or it will be skipped!!
+
+TODO when R is moved into workspace, add these to README over there also!!
+*/
 const debugLineMarker = 'debug:'
 
 export default async function run_R(path, data, args) {
@@ -63,34 +73,18 @@ export default async function run_R(path, data, args) {
 				const errmsg = `R process emitted standard error\nR stderr: ${stderr}`
 				reject(errmsg)
 			}
-			// return standard out from R
-			if (serverconfig.debugmode) {
-				/* at dev environment, split stdout into lines, and check for debugging lines, and exclude them from actual output
-				********
-				* NOTE *
-				********
-				such debugging lines must not show up in prod environment
-				*/
-				const actualOutputLines = []
-				for (const line of stdout.split('\n')) {
-					if (line.startsWith(debugLineMarker)) {
-						// line begins with hardcoded marker and will be excluded
-						console.log('<R>', line)
-						continue
-					}
-					// line doesn't begin with marker and is kept
-					actualOutputLines.push(line)
+			// for standard output, screen out debugging lines, and return rest lines
+			const actualOutputLines = []
+			for (const line of stdout.split('\n')) {
+				if (line.startsWith(debugLineMarker)) {
+					// line begins with hardcoded marker and will be excluded
+					console.log('<R>', line)
+					continue
 				}
-				resolve(actualOutputLines.join('\n'))
-			} else {
-				// not dev environment; do this detection to guard against accidental introduction of debug lines
-				if (stdout.indexOf(debugLineMarker) != -1) {
-					reject(
-						'Debugging line found in R output and this is not allowd in prod environment; make sure to comment off such lines in R script'
-					)
-				}
-				resolve(stdout)
+				// line doesn't begin with marker and is an actual output
+				actualOutputLines.push(line)
 			}
+			resolve(actualOutputLines.join('\n'))
 		})
 	})
 }
