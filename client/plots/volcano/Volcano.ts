@@ -82,7 +82,7 @@ class Volcano extends RxComponentInner {
 			inputs: controls.inputs
 		})
 
-		this.components.controls.on('downloadClick.differentialAnalysis', () => this.interactions!.download())
+		this.components.controls.on('downloadClick.differentialAnalysis', () => this.interactions!.download(this.termType))
 		this.components.controls.on('helpClick.differentialAnalysis', () =>
 			window.open('https://github.com/stjude/proteinpaint/wiki/Differential-analysis')
 		)
