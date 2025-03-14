@@ -1,6 +1,6 @@
 import type { ViolinRequest, ViolinResponse, RouteApi, ValidGetDataResponse, TermWrapper } from '#types'
 import { violinPayload } from '#types/checkers'
-import { scaleLinear, scaleLog } from 'd3'
+import { scaleLinear, scaleLog, extent } from 'd3'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 import { getData } from '../src/termdb.matrix.js'
 import { createCanvas } from 'canvas'
@@ -224,7 +224,7 @@ async function createCanvasImg(q: ViolinRequest, result: { [index: string]: any 
 	//create scale object
 	const plot2Values = {}
 	for (const plot of result.plots) plot2Values[plot.label] = plot.values
-	const densities = await getDensities(plot2Values)
+	const densities = await getDensities(plot2Values, result.min, result.max)
 
 	let axisScale
 	const useLog = q.unit == 'log'
@@ -296,13 +296,14 @@ async function createCanvasImg(q: ViolinRequest, result: { [index: string]: any 
 }
 
 export async function getDensity(values) {
-	const result = await getDensities({ plot: values })
+	const [min, max] = extent(values)
+	const result = await getDensities({ plot: values }, min, max)
 	return result.plot
 }
 
-export async function getDensities(plot2Values): Promise<{ [plot: string]: any }> {
+export async function getDensities(plot2Values, min: number, max: number): Promise<{ [plot: string]: any }> {
 	const densityScript = path.join(serverconfig.binpath, 'utils', 'density.R')
-	const plot2Density: any = JSON.parse(await run_R(densityScript, JSON.stringify(plot2Values)))
+	const plot2Density: any = JSON.parse(await run_R(densityScript, JSON.stringify({ plot2Values, min, max })))
 	const densities = {}
 	for (const plot in plot2Density) {
 		const result: { x: number[]; y: number[] } = plot2Density[plot]
