@@ -8,13 +8,15 @@ export class TileServerShardingAlgorithm implements ShardingAlgorithm<TileServer
 	public static readonly TILE_SERVER_SHARDING_KEY = 'TILE_SERVER_SHARDING_KEY'
 
 	async getShard(key: string): Promise<TileServerShard> {
-		const tileServerNodes = serverconfig.features.tileserver_nodes || []
-
+		const tileServerNodes = serverconfig.features?.tileserver.nodes || []
+		const onlineCheck: boolean = serverconfig.features?.tileserver?.online_check || false
 		const nodes: Array<TileServerShard> = []
 
 		for (const node of tileServerNodes) {
 			try {
-				await ky.get(`${node.url}/tileserver/healthcheck`, { timeout: 600000 }).json()
+				if (onlineCheck) {
+					await ky.get(`${node.url}/tileserver/healthcheck`, { timeout: 600000 }).json()
+				}
 				nodes.push(new TileServerShard(node.url, node.mount))
 			} catch (error) {
 				console.error(`Failed to connect to ${node.url}`, error)
@@ -22,7 +24,7 @@ export class TileServerShardingAlgorithm implements ShardingAlgorithm<TileServer
 		}
 
 		if (nodes.length === 0) {
-			throw new Error('No available TileServer nodes')
+			throw new Error('No available TileServer nodes. Please try later.')
 		}
 
 		const shardIndex = getShardIndex(key, nodes.length)

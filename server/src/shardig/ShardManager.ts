@@ -15,13 +15,13 @@ export class ShardManager {
 		if (!ShardManager.instance) {
 			const map = new Map<string, ShardingAlgorithm<any>>()
 
-			if (serverconfig.features.tileserver_nodes) {
+			if (serverconfig.features?.tileserver?.nodes) {
 				const shardingAlgorithm = new TileServerShardingAlgorithm()
 
 				map.set(TileServerShardingAlgorithm.TILE_SERVER_SHARDING_KEY, shardingAlgorithm)
 			}
 
-			if (serverconfig.features.redis_nodes) {
+			if (serverconfig.features?.redis?.nodes) {
 				const shardingAlgorithm = new RedisShardingAlgorithm()
 
 				map.set(RedisShardingAlgorithm.REDIS_SHARDING_KEY, shardingAlgorithm)

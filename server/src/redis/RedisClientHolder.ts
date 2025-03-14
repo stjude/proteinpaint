@@ -10,14 +10,12 @@ import { TileServerShard } from '#src/shardig/TileServerShard.ts'
 export default class RedisClientHolder {
 	private static instance: RedisClientHolder = new RedisClientHolder()
 	private clients: Map<string, RedisClientType> = new Map()
-	private shardManager = ShardManager.getInstance()
-	private redisShardingAlgorithm: ShardingAlgorithm<any> | undefined = this.shardManager.shardingAlgorithmsMap.get(
-		RedisShardingAlgorithm.REDIS_SHARDING_KEY
-	)
+	private shardManager
+	private redisShardingAlgorithm: ShardingAlgorithm<any> | undefined
 	private errorLogTimers: Map<string, NodeJS.Timeout> = new Map()
 
 	private constructor() {
-		const redisNodes = serverconfig.features.redis_nodes || []
+		const redisNodes = serverconfig.features?.redis?.nodes || []
 
 		for (const redisNode of redisNodes) {
 			const redisUrl = redisNode.url
@@ -50,6 +48,9 @@ export default class RedisClientHolder {
 			client.connect()
 			this.clients.set(redisNode.url, client)
 		}
+
+		this.shardManager = ShardManager.getInstance()
+		this.redisShardingAlgorithm = this.shardManager.shardingAlgorithmsMap.get(RedisShardingAlgorithm.REDIS_SHARDING_KEY)
 	}
 
 	public static getInstance(): RedisClientHolder {
@@ -110,7 +111,6 @@ export default class RedisClientHolder {
 
 	public async update(key: string, sessions: any, tileServerShard: TileServerShard): Promise<void> {
 		const redisShard: RedisShard = await this.redisShardingAlgorithm?.getShard(key)
-
 		const client = this.getClient(redisShard.url)
 
 		if (!client) {

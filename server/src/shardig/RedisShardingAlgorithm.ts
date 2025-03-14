@@ -8,20 +8,32 @@ export class RedisShardingAlgorithm implements ShardingAlgorithm<RedisShard> {
 	public static readonly REDIS_SHARDING_KEY = 'REDIS_SHARDING_KEY'
 
 	async getShard(key: string): Promise<RedisShard> {
-		const redisNodes = serverconfig.features.redis_nodes || []
+		const redisNodes = serverconfig.features?.redis?.nodes || []
+		const onlineCheck: boolean = serverconfig.features?.tileserver?.online_check || false
+
+		if (redisNodes.length < 0) throw new Error('No available Redis nodes')
 
 		const nodes: Array<RedisShard> = []
 
 		for (const node of redisNodes) {
 			if (node.secret && node.url) {
-				const isOnline = await RedisClientHolder.getInstance().isNodeOnline(node.url) // Check if the node is online
-				if (isOnline) {
+				let addNode = true
+
+				if (onlineCheck) {
+					addNode = await RedisClientHolder.getInstance().isNodeOnline(node.url)
+				}
+
+				if (addNode) {
 					nodes.push(new RedisShard(node.url, node.secret))
 				}
 			}
 		}
 
-		if (nodes.length == 0) {
+		if (nodes.length === 0) {
+			throw new Error('No Redis nodes available, please try later.')
+		}
+
+		if (nodes.length == 1) {
 			return nodes[0]
 		}
 
