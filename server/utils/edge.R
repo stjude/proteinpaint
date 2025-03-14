@@ -10,6 +10,23 @@ suppressWarnings({
     suppressPackageStartupMessages(library(dplyr))
 })
 
+# Function for benachmarking a part of the code, this function will give incorrect results at the end of the month when the month changes but probably this is acceptable 
+benchmark_execution_time <- function(start_time, end_time) {
+    start_days <- as.numeric(format(start_time, "%d")) # Extracts date of month
+    start_hours <- as.numeric(format(start_time, "%H")) # Extracts hours
+    start_minutes <- as.numeric(format(start_time, "%M")) # Extract minutes
+    start_seconds <- as.numeric(format(start_time, "%S")) # Extract seconds
+    start_milliseconds <- as.numeric(format(start_time, "%OS3")) # Extracts milliseconds
+    
+    end_days <- as.numeric(format(end_time, "%d")) # Extracts date of month
+    end_hours <- as.numeric(format(end_time, "%H")) # Extracts hours
+    end_minutes <- as.numeric(format(end_time, "%M")) # Extract minutes
+    end_seconds <- as.numeric(format(end_time, "%S")) # Extract seconds
+    end_milliseconds <- as.numeric(format(end_time, "%OS3")) # Extracts milliseconds
+    return ((end_days*24*3600 + end_hours*3600 + end_minutes*60 + end_seconds + end_milliseconds/1000) - (start_days*24*3600 + start_hours*3600 + start_minutes*60 + start_seconds + start_milliseconds/1000)) 
+}
+    
+
 # Filter based on CPM
 filter_using_cpm <- function(y, gene_cpm_cutoff, sample_cpm_cutoff, count_cpm_cutoff) {
    selr <- rowSums(cpm(y$counts)>gene_cpm_cutoff)>=sample_cpm_cutoff
@@ -18,7 +35,7 @@ filter_using_cpm <- function(y, gene_cpm_cutoff, sample_cpm_cutoff, count_cpm_cu
 }
 
 # Read JSON input from stdin
-read_json_time <- system.time({
+read_json_time_start <- Sys.time()
     con <- file("stdin", "r")
     json <- readLines(con, warn=FALSE)
     close(con)
@@ -26,8 +43,8 @@ read_json_time <- system.time({
     cases <- unlist(strsplit(input$case, ","))
     controls <- unlist(strsplit(input$control, ","))
     combined <- c("geneID", "geneSymbol", cases, controls)
-})
-#cat("Time to read JSON: ", read_json_time[3], " seconds\n")
+read_json_time_end <- Sys.time()
+cat("Time to read JSON: ", benchmark_execution_time(read_json_time_start,read_json_time_end), " seconds\n")
 
 # Read counts data
 read_counts_time <- system.time({
@@ -122,14 +139,14 @@ plotMDS(y, labels = mds_conditions) # Plot the edgeR MDS plot
 # Differential expression analysis
 if (length(input$conf1) == 0) { # No adjustment of confounding factors
     design <- model.matrix(~conditions) # Based on the protocol defined in section 1.4 of edgeR manual https://bioconductor.org/packages/release/bioc/vignettes/edgeR/inst/doc/edgeRUsersGuide.pdf
-    fit_time <- system.time({
+    fit_ql_start <- Sys.time()
         suppressWarnings({
             suppressMessages({
                 fit <- glmQLFit(y,design) # The glmQLFit() replaces glmFit() which implements the quasi-likelihood function. This is better able to account for overdispersion as it employs a more lenient approach where variance is not a fixed function of the mean.
             })
         })
-    })
-    #cat("QL fit time: ", fit_time[3], " seconds\n")
+    fit_ql_end <- Sys.time()
+    cat("QL fit time: ", benchmark_execution_time(fit_ql_start, fit_ql_end), " seconds\n")
 
     test_time <- system.time({
         suppressWarnings({
@@ -219,11 +236,3 @@ final_output$edgeR_mds_image_name <- mds_image_name
 
 # Output results
 toJSON(final_output)
-
-#-----------------------------------#
-# Will implement this later
-filter_genes_by_group_variance <- function(read_counts, gene_id_symbols, num_variable_genes, cases, controls) {
-    # Divide the read counts into two groups
-    case_read_counts <- read_counts[, cases]
-    control_read_counts <- read_counts[, controls]
-}
