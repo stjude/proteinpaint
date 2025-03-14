@@ -1,9 +1,7 @@
 import ky from 'ky'
-import RedisClientHolder from '../redis/RedisClientHolder.ts'
-import { TileServerShard } from '#src/shardig/TileServerShard.js'
-import { ShardManager } from '#src/shardig/ShardManager.js'
-import { TileServerShardingAlgorithm } from '#src/shardig/TileServerShardingAlgorithm.js'
-import { ShardingAlgorithm } from '#src/shardig/ShardingAlgorithm.js'
+import { TileServerShard } from '#src/shardig/TileServerShard.ts'
+import { ShardingAlgorithm } from '#src/shardig/ShardingAlgorithm.ts'
+import { KeyValueStorage } from '#src/caching/KeyValueStorage.ts'
 
 export class SessionData {
 	public imageSessionId: string
@@ -18,25 +16,22 @@ export class SessionData {
 }
 
 export default class SessionManager {
-	private static instance: SessionManager
-	private redisClients: RedisClientHolder
+	private static instance: SessionManager | undefined
+	private keyValueStorages: KeyValueStorage
 	private tileShardingAlgorithm: ShardingAlgorithm<any | undefined> | undefined
 
-	private constructor() {
-		this.redisClients = RedisClientHolder.getInstance()
-
-		const shardManager = ShardManager.getInstance()
-
-		this.tileShardingAlgorithm = shardManager.shardingAlgorithmsMap?.get(
-			TileServerShardingAlgorithm.TILE_SERVER_SHARDING_KEY
-		)
+	private constructor(keyValueStorages: KeyValueStorage, shardingAlgorithm: ShardingAlgorithm<any>) {
+		this.keyValueStorages = keyValueStorages
+		this.tileShardingAlgorithm = shardingAlgorithm
 	}
 
-	public static getInstance(): SessionManager {
+	public static getInstance(
+		keyValueStorages: KeyValueStorage,
+		shardingAlgorithm: ShardingAlgorithm<any>
+	): SessionManager {
 		if (!SessionManager.instance) {
-			SessionManager.instance = new SessionManager()
+			SessionManager.instance = new SessionManager(keyValueStorages, shardingAlgorithm)
 		}
-
 		return SessionManager.instance
 	}
 
@@ -48,7 +43,7 @@ export default class SessionManager {
 		const lastAccessTimestamp = new Date().toISOString() // Get current time in ISO 8601 format
 		const sessionData = new SessionData(imageSessionId, lastAccessTimestamp, tileServerShard)
 		const serializedData = JSON.stringify(sessionData)
-		await this.redisClients.set(key, serializedData)
+		await this.keyValueStorages.set(key, serializedData)
 	}
 
 	public async getSession(key: string): Promise<SessionData | undefined> {
@@ -65,9 +60,9 @@ export default class SessionManager {
 			throw new Error('Error fetching sessions from ${tileServer.url}')
 		}
 
-		await this.redisClients.update(key, sessions, tileServer)
+		await this.keyValueStorages.update(key, sessions, tileServer)
 
-		const sessionData = await this.redisClients.get(key)
+		const sessionData = await this.keyValueStorages.get(key)
 		if (!sessionData) {
 			return undefined
 		}
@@ -75,7 +70,7 @@ export default class SessionManager {
 	}
 
 	public async deleteSession(key: string): Promise<void> {
-		await this.redisClients.delete(key)
+		await this.keyValueStorages.delete(key)
 	}
 
 	//  maxIdleTime - time in minutes
@@ -87,7 +82,7 @@ export default class SessionManager {
 		success: boolean
 		deletedKeys: (SessionData | undefined)[]
 	}> {
-		const keys = await this.redisClients.getAll(key)
+		const keys = await this.keyValueStorages.getAll(key)
 
 		const keySessions: { key: string; sessionData: SessionData | undefined }[] = await Promise.all(
 			keys?.map(async key => ({

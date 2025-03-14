@@ -6,13 +6,16 @@ import { RedisShardingAlgorithm } from '#src/shardig/RedisShardingAlgorithm.ts'
 import { ShardingAlgorithm } from '#src/shardig/ShardingAlgorithm.ts'
 import { SessionData } from '#src/wsisessions/SessionManager.ts'
 import { TileServerShard } from '#src/shardig/TileServerShard.ts'
+import { ClientHolder } from '#src/caching/ClientHolder.ts'
+import { KeyValueStorage } from '#src/caching/KeyValueStorage.ts'
 
-export default class RedisClientHolder {
-	private static instance: RedisClientHolder = new RedisClientHolder()
+export default class RedisClientHolder implements KeyValueStorage {
+	private static instance: RedisClientHolder
 	private clients: Map<string, RedisClientType> = new Map()
+	private errorLogTimers: Map<string, NodeJS.Timeout> = new Map()
+
 	private shardManager
 	private redisShardingAlgorithm: ShardingAlgorithm<any> | undefined
-	private errorLogTimers: Map<string, NodeJS.Timeout> = new Map()
 
 	private constructor() {
 		const redisNodes = serverconfig.features?.redis?.nodes || []
@@ -53,12 +56,11 @@ export default class RedisClientHolder {
 		this.redisShardingAlgorithm = this.shardManager.shardingAlgorithmsMap.get(RedisShardingAlgorithm.REDIS_SHARDING_KEY)
 	}
 
-	public static getInstance(): RedisClientHolder {
-		let instance = RedisClientHolder.instance
-		if (!instance) {
-			instance = new RedisClientHolder()
+	public static getInstance(): KeyValueStorage {
+		if (!RedisClientHolder.instance) {
+			RedisClientHolder.instance = new RedisClientHolder()
 		}
-		return instance
+		return RedisClientHolder.instance
 	}
 
 	public async isNodeOnline(url: string, timeout = 1000): Promise<boolean> {
@@ -86,7 +88,7 @@ export default class RedisClientHolder {
 	public async set(key: string, value: string): Promise<void> {
 		const redisShard: RedisShard = await this.redisShardingAlgorithm?.getShard(key)
 
-		const client = this.getClient(redisShard.url)
+		const client: RedisClientType = this.getClient(redisShard.url)?.client
 		if (client) {
 			await client.set(key, value)
 		} else {
@@ -94,8 +96,8 @@ export default class RedisClientHolder {
 		}
 	}
 
-	public getClient(url: string): RedisClientType | undefined {
-		return this.clients.get(url)
+	public getClient(url: string): ClientHolder<any> {
+		return new ClientHolder(this.clients.get(url))
 	}
 
 	public async get(key: string): Promise<string | null | undefined> {
@@ -111,7 +113,7 @@ export default class RedisClientHolder {
 
 	public async update(key: string, sessions: any, tileServerShard: TileServerShard): Promise<void> {
 		const redisShard: RedisShard = await this.redisShardingAlgorithm?.getShard(key)
-		const client = this.getClient(redisShard.url)
+		const client = this.getClient(redisShard.url)?.client
 
 		if (!client) {
 			throw new Error('Redis client not found for URL: ' + redisShard.url)

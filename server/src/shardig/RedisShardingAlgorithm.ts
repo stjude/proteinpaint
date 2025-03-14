@@ -20,7 +20,7 @@ export class RedisShardingAlgorithm implements ShardingAlgorithm<RedisShard> {
 				let addNode = true
 
 				if (onlineCheck) {
-					addNode = await RedisClientHolder.getInstance().isNodeOnline(node.url)
+					addNode = await RedisClientHolder.getInstance().isNodeOnline(node.url, 1000)
 				}
 
 				if (addNode) {

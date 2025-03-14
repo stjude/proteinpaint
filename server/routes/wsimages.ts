@@ -9,6 +9,7 @@ import SessionManager, { SessionData } from '../src/wsisessions/SessionManager.t
 import { ShardManager } from '#src/shardig/ShardManager.js'
 import { TileServerShardingAlgorithm } from '#src/shardig/TileServerShardingAlgorithm.js'
 import { TileServerShard } from '#src/shardig/TileServerShard.js'
+import RedisClientHolder from '#src/redis/RedisClientHolder.js'
 
 const routePath = 'wsimages'
 export const api: RouteApi = {
@@ -64,7 +65,16 @@ function init({ genomes }) {
 }
 
 async function getSessionId(cookieJar, getCookieString, setCookie, wsimage, ds, sampleId) {
-	const sessionManager = SessionManager.getInstance()
+	const keyValueStorages = RedisClientHolder.getInstance()
+	const shardManager = ShardManager.getInstance()
+
+	const tileShardingAlgorithm = shardManager.shardingAlgorithmsMap?.get(
+		TileServerShardingAlgorithm.TILE_SERVER_SHARDING_KEY
+	)
+
+	if (!tileShardingAlgorithm) throw new Error('Invalid tileShardingAlgorithm')
+
+	const sessionManager = SessionManager.getInstance(keyValueStorages, tileShardingAlgorithm)
 
 	const sessionData = await sessionManager.getSession(wsimage)
 
