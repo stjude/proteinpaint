@@ -50,15 +50,13 @@ export class VolcanoViewModel {
 
 		const plotDim = this.setPlotDimensions()
 		this.setPTableData()
-		//Hardcoded for development
-		const images = [response.mds_image, response.ql_image]
 
 		this.viewData = {
 			plotDim,
 			pointData: this.setPointData(plotDim),
 			statsData: this.setStatsData(),
 			pValueTableData: this.pValueTable,
-			images
+			images: response.images
 		}
 	}
 
