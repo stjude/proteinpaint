@@ -199,6 +199,6 @@ function renderDataPoints(self: any) {
 		.attr('r', (d: DataPointEntry) => d.radius)
 		.each(function (this: any, d: DataPointEntry) {
 			const circle = select(this)
-			new DataPointMouseEvents(d, circle, self.dom.tip, self.interactions, this.termType)
+			new DataPointMouseEvents(d, circle, self.dom.tip, self.interactions, self.termType)
 		})
 }
