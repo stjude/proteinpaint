@@ -2,6 +2,7 @@ import * as client from './client'
 import { bplen } from '#shared/common.js'
 import { legend_newrow } from './block.legend'
 import { make_one_checkbox } from '../dom/checkbox'
+import { rgb } from 'd3-color'
 
 /*
 bedj can only be loaded from POST but not GET
@@ -226,7 +227,7 @@ function configpanel(tk, block) {
 		row.append('span').html('Color&nbsp;')
 		row
 			.append('input')
-			.property('value', tk.color)
+			.property('value', rgb(tk.color).formatHex())
 			.attr('type', 'color')
 			.on('change', event => {
 				tk.color = event.target.value
