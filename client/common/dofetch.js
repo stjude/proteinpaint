@@ -206,7 +206,7 @@ async function processResponse(r) {
 		const boundary = ct.match(regex_boundary)?.[1]?.trim()
 		if (!boundary) throw 'Invalid multipart response: Missing boundary'
 		//return processMultiPart(r, boundary)
-		return fetch2parts(r, boundary)
+		return processMultiPart2(r, boundary)
 	}
 	// call blob() as catch-all
 	// https://developer.mozilla.org/en-US/docs/Web/API/Response
@@ -325,10 +325,88 @@ function processPart(headerStr, chunks, text) {
 	}
 }
 
-// hardcoded solution to process 2-part response: 1=binary, 2=json
-export async function fetch2parts(res, boundary) {
-	const reader = res.body.getReader()
+export async function processMultiPart2(res, boundary) {
+	const rawData = await getAllChunksIntoBinaryArray(res)
 	const decoder = new TextDecoder() // For decoding text parts
+
+	// Convert boundary to binary and use it to search in rawData
+	const boundaryBytes = new TextEncoder().encode(`--${boundary}`)
+	// during search after finding a boundary, try to detect and parse header etc, and record in following placeholders to be used when it's closing boundary is found, to form a "part"
+	let thisHeaders = null,
+		thisDataStart = null
+	const parts = [] // successfully parsed parts, each {headers:{<k>:<v>}, body:<data>}
+
+	// Find each boundary, and parse out data from each part
+	//const t=Date.now()
+	for (let i = 0; i < rawData.length - boundaryBytes.length; i++) {
+		if (!rawData.slice(i, i + boundaryBytes.length).every((b, j) => b === boundaryBytes[j])) continue // boundary doesn't begin at this byte; advance to next byte
+
+		// a boundary starts at i
+		if (thisDataStart != null) {
+			// there is a boundary before i; from thisDataStart to i is a new data part
+			if (typeof thisHeaders != 'object') throw 'unexpected missing header from current data part'
+			const thisData = rawData.slice(thisDataStart, i - 1) // must do i-1
+			let body
+			switch (thisHeaders['content-type']) {
+				case 'application/octet-stream':
+					body = new Blob([thisData], { type: 'application/gzip' })
+					break
+				case 'application/json':
+					const text = decoder.decode(thisData)
+					body = JSON.parse(text)
+					break
+				default:
+					throw 'please support new content-type here!'
+			}
+			parts.push({ headers: thisHeaders, body }) // push successfully parsed part into array
+		}
+
+		// advance i to the end of boundary to reach header
+		i += boundaryBytes.length
+
+		// seek \n\n that indicates end of headers and beginning of data
+		thisHeaders = null
+		thisDataStart = null
+		for (let j = i + 1; j < rawData.length - boundaryBytes.length; j++) {
+			if (rawData[j] === 10 && rawData[j + 1] === 10) {
+				// \n\n
+				thisDataStart = j + 2
+				break
+			} else if (rawData[i] === 13 && rawData[i + 1] === 10 && rawData[i + 2] === 13 && rawData[i + 3] === 10) {
+				// \r\n\r\n
+				thisDataStart = j + 4
+				break
+			}
+		}
+		if (thisDataStart != null) {
+			// found a valid data start. from i to thisDataStart is the header
+			const text = decoder.decode(rawData.slice(i + 1, thisDataStart))
+			thisHeaders = {}
+			for (const str of text.trim().split('\n')) {
+				if (str == '') continue // ?
+				const l = str.split(': ')
+				if (l.length == 2) {
+					if (l[0] == '') {
+						console.log('empty header key', str)
+						continue
+					}
+					if (l[1] == '') {
+						console.log('empty header value', str)
+						continue
+					}
+					thisHeaders[l[0]] = l[1] // good header
+				} else {
+					console.log('a header entry is not separated by ": "', str)
+				}
+			}
+		}
+	}
+	//console.log('parsing rawData:', Date.now()-t) // time spent searching binary data: 2.5 seconds for 50Mb
+	return parts
+}
+
+async function getAllChunksIntoBinaryArray(res) {
+	const reader = res.body.getReader()
 	let chunks = []
 
 	// Read all response body data
@@ -347,56 +425,7 @@ export async function fetch2parts(res, boundary) {
 		rawData.set(chunk, offset)
 		offset += chunk.length
 	}
-
-	// Convert boundary to binary for accurate detection
-	const boundaryBytes = new TextEncoder().encode(`--${boundary}`)
-	let boundaryPositions = []
-
-	// Find all boundary positions
-	//const t=Date.now()
-	for (let i = 0; i < rawData.length - boundaryBytes.length; i++) {
-		if (rawData.slice(i, i + boundaryBytes.length).every((b, j) => b === boundaryBytes[j])) {
-			boundaryPositions.push(i)
-		}
-	}
-	//console.log(boundaryPositions, Date.now()-t) // time spent searching binary data: 2.5 seconds for 50Mb
-
-	if (boundaryPositions.length !== 3) throw 'not 3 boundaries are found in response data'
-
-	// **Extract binary part (first part)**
-	let binaryStart = boundaryPositions[0] + boundaryBytes.length
-	let binaryEnd = boundaryPositions[1] - 1 // must minus one byte to be able to properly unzip the downloaded file
-
-	// Locate the first blank line (\n\n or \r\n\r\n) that separates headers from binary content
-	for (let i = binaryStart; i < binaryEnd - 1; i++) {
-		if (rawData[i] === 10 && rawData[i + 1] === 10) {
-			// \n\n
-			binaryStart = i + 2
-			break
-		} else if (rawData[i] === 13 && rawData[i + 1] === 10 && rawData[i + 2] === 13 && rawData[i + 3] === 10) {
-			// \r\n\r\n
-			binaryStart = i + 4
-			break
-		}
-	}
-
-	const binaryData = rawData.slice(binaryStart, binaryEnd)
-
-	// **Extract JSON part (second part)**
-	const textData = decoder.decode(rawData.slice(boundaryPositions[1] + boundaryBytes.length))
-	const jsonMatch = textData.match(/\n\n([\s\S]*)\n\S*$/) // dissect text to retrieve stringified json
-	const jsonData = jsonMatch ? JSON.parse(jsonMatch[1]) : null
-
-	return [
-		{
-			headers: { 'content-type': 'application/octet-stream' },
-			body: new Blob([binaryData], { type: 'application/gzip' }) // Correctly extracts gzipped binary
-		},
-		{
-			headers: { 'content-type': 'application/json' },
-			body: jsonData
-		}
-	]
+	return rawData
 }
 
 const defaultServerDataCache = {}

@@ -1,5 +1,5 @@
 import tape from 'tape'
-import { fetch2parts, processMultiPart } from '../dofetch.js'
+import { processMultiPart2, processMultiPart } from '../dofetch.js'
 
 /*************************
  reusable helper functions
@@ -7,7 +7,7 @@ import { fetch2parts, processMultiPart } from '../dofetch.js'
 
 const text2buf = new TextEncoder()
 const buf2text = new TextDecoder()
-const boundary = '--XyzxYzxyZ'
+const boundary = 'XyzxYzxyZ'
 
 async function getBinaryPart(numRepeats = 2) {
 	// TODO: use a small image binary??
@@ -25,7 +25,7 @@ async function getBinaryPart(numRepeats = 2) {
 	// When using text to create fake binary blob,
 	// blob.text() always results in readable text,
 	// which is not a good simulated payload
-	const part = boundary + `\n${getPartHeader(headers)}\n\n` + (await blob.text())
+	const part = `--${boundary}` + `\n${getPartHeader(headers)}\n\n` + (await blob.text())
 	return { part, uint8arr: text2buf.encode(part), orig: { headers, body: blob } }
 }
 
@@ -41,7 +41,7 @@ function getJsonPart(numErrors = 0) {
 		body = { errors }
 	}
 	const headers = { 'content-type': 'application/json' }
-	const part = boundary + `\n${getPartHeader(headers)}\n\n` + JSON.stringify(body)
+	const part = `--${boundary}` + `\n${getPartHeader(headers)}\n\n` + JSON.stringify(body)
 	const uint8arr = text2buf.encode(part)
 	return { part, uint8arr, orig: { headers, body } }
 }
@@ -128,12 +128,12 @@ tape('simulated stream helpers', async test => {
 	test.end()
 })
 
-tape('fetch2parts', async test => {
+tape('processMultiPart2', async test => {
 	try {
 		const bin0 = await getBinaryPart(12)
 		const json0 = getJsonPart()
 		const res = getResponse([bin0.uint8arr, json0.uint8arr], 24)
-		const parts = await fetch2parts(res, boundary.slice(2))
+		const parts = await processMultiPart2(res, boundary)
 		// console.log(115, parts, bin0.orig)
 		test.deepEqual(parts, [bin0.orig, json0.orig], 'should correctly encode and decode the original headers and body')
 		test.deepEqual(parts[0].body.text(), bin0.orig.body.text(), 'should correctly encode and decode original blobs')
