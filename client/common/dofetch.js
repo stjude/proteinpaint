@@ -182,6 +182,9 @@ export function dofetch2(path, init = {}, opts = {}) {
 	})
 }
 
+// define regex in variable for efficiency on repeated tests
+const regex_multipart = /multipart/i
+const regex_boundary = /boundary\s*=\s*"?([^"\s;]+)"?/i
 /* 
 r: a native fetch response argument
 
@@ -199,9 +202,11 @@ async function processResponse(r) {
 	if (ct.includes('/text')) {
 		return r.text()
 	}
-	if (ct.includes('multipart')) {
-		const boundary = ct.split('boundary=')[1]
-		return processMultiPart(r, boundary)
+	if (regex_multipart.test(ct)) {
+		const boundary = ct.match(regex_boundary)?.[1]?.trim()
+		if (!boundary) throw 'Invalid multipart response: Missing boundary'
+		//return processMultiPart(r, boundary)
+		return fetch2parts(r, boundary)
 	}
 	// call blob() as catch-all
 	// https://developer.mozilla.org/en-US/docs/Web/API/Response
@@ -209,7 +214,7 @@ async function processResponse(r) {
 }
 
 /*
-	manually tested to handle gdc.mafBuild multipart/mixed response
+	manually tested to handle 2-part gdc.mafBuild multipart/mixed response
 
 	expected chunk format
 	--boundary-text-from-HTTP-headers-content-type
@@ -221,68 +226,177 @@ async function processResponse(r) {
 	... same format as previous chunk ...
 
 	--boundary-text-from-HTTP-headers-content-type--
+
+	TODO: handle > 2 parts
 */
 async function processMultiPart(res, _boundary) {
-	const boundary = `--${_boundary}`
+	const boundary = `--GDC_MAF_MULTIPART_BOUNDARY`
+	//const boundary = `--GDC` // `--${_boundary}`
 	const parts = []
 	const decoder = new TextDecoder()
 	const bytes = []
 
-	let chunks=[], headerStr
+	let chunks = [],
+		text = '',
+		headerStr = '',
+		doneWithBinaryChunks = false
+
+	// assume only 2 parts, 1 boundary in middle
+
 	for await (const chunk of res.body) {
-    const text = (decoder.decode(chunk)).trimStart()
-    if (text.startsWith(boundary) && (text.endsWith('\n\n') || text.endsWith(boundary + '--'))) {
-    	if (headerStr && chunks.length) {
-    		parts.push(processPart(headerStr, chunks, text))
-    		chunks = []
-    	}
-    	headerStr = text.slice(boundary.length+1)
-    	// assume that multiple text-only parts might be read as one chunk,
-    	// detect and handle such cases; this also assumes that non-text chunk
-    	// will NOT be streamed/read in the same chunk as text-only header segments
-    	const segments = headerStr.split(boundary)
-    	if (segments.length > 1) {
-    		for(const s of segments) {
-	    		const j = s.indexOf('\n\n')
-	    		if (j == -1) break
-	    		const headers = s.slice(0, j)
-	    		const subchunk = s.slice(j)
-	    		if (!subchunk) {
-	    			headerStr = headers
-	    			break
-	    		}
-	    		parts.push(processPart(headers, [], subchunk.trim()))
-	    	}
-    	}
-    	continue
-    } else {
-    	chunks.push(chunk)
-    }
-  }
-  return parts
+		//console.log(54, chunk)
+		let text = decoder.decode(chunk).trimStart()
+		//; console.log(chunk.length, text.length, text.slice(0, 16), ' ... ', text.slice(-(boundary.length + 50)), decoder.decode(chunk.slice(-8)))
+
+		const i = text.indexOf(boundary)
+
+		if (i == -1 || doneWithBinaryChunks) {
+			headerStr += text
+			//console.log(99, headerStr.slice(0, 16), headerStr.slice(-16))
+			text = headerStr
+		} else if (i > 0 && !doneWithBinaryChunks) {
+			// console.log(100, '--- !!! will process binary chunk !!! ---')
+			// find the previous (middle) boundary from the end
+			for (let j = i; j < text.length; j++) {
+				const c = decoder.decode(chunk.slice(0, j))
+				// convert sliced chunk to text, to see if it ends with boundary text
+				if (c.endsWith(boundary)) {
+					// console.log(66, decoder.decode(chunk.slice(0, j - 1 - boundary.length)))
+					chunks.push(chunk.slice(0, j - 1 - boundary.length))
+					break
+				}
+			}
+			parts.push(processPart(headerStr, chunks, text))
+			chunks = []
+			doneWithBinaryChunks = true
+			headerStr = text.slice(i)
+			text = text.slice(i)
+		}
+
+		if (text.startsWith(boundary) && (text.endsWith('\n\n') || text.endsWith(boundary + '--'))) {
+			headerStr = text.slice(boundary.length + 1)
+			// assume that multiple text-only parts might be read as one chunk,
+			// detect and handle such cases; this also assumes that non-text chunk
+			// will NOT be streamed/read in the same chunk as text-only header segments
+			const segments = headerStr.split(boundary)
+			if (segments.length > 1) {
+				console.log(80)
+				for (const s of segments) {
+					const j = s.indexOf('\n\n')
+					if (j == -1) break
+					const headers = s.slice(0, j)
+					const subchunk = s.slice(j)
+					if (!subchunk) {
+						headerStr = headers
+						break
+					}
+					parts.push(processPart(headers, [], subchunk.trim()))
+					doneWithBinaryChunks = true
+				}
+			}
+			continue
+		} else if (!doneWithBinaryChunks) {
+			chunks.push(chunk)
+		}
+	}
+	return parts
 }
 
 function processPart(headerStr, chunks, text) {
-	const headerLines = headerStr.split('\n')
-	const headers = {}
-	for(const line of headerLines) {
-		if (line === '') continue
-		const [key, val] = line.split(':')
-		headers[key.trim().toLowerCase()] = val.trim().toLowerCase()
+	const headers = Object.fromEntries(
+		headerStr
+			.split('\n')
+			.map(line => line.split(':').map(s => s.trim().toLowerCase()))
+			.filter(arr => arr.length === 2)
+	)
+
+	const type = headers['content-type'] || ''
+
+	if (type === 'application/octet-stream') {
+		const body = new Blob(chunks, { type })
+		const href = URL.createObjectURL(body)
+		return { headers, body }
+	} else if (type.includes('/json')) {
+		return { headers, body: JSON.parse(text) }
+	} else if (type.includes('/text')) {
+		return { headers, body: text }
+	} else {
+		return { headers, body: new Blob(chunks, { type }) }
 	}
-	
-  const type = headers['content-type']
-  if (type === 'application/octet-stream') {
-    return {headers, body: new Blob(chunks, {type})}
-  } else if (type.includes('/json')) {
-    return {headers, body: JSON.parse(text)}
-  } else if (type.includes('/text')) {
-    return {headers, body: text}
-  } else {
-  	// call blob() as catch-all
-  	// https://developer.mozilla.org/en-US/docs/Web/API/Response
-    return {headers, body: new Blob(chunks, {type})}
-  }
+}
+
+// hardcoded solution to process 2-part response: 1=binary, 2=json
+async function fetch2parts(res, boundary) {
+	const reader = res.body.getReader()
+	const decoder = new TextDecoder() // For decoding text parts
+	let chunks = []
+
+	// Read all response body data
+	while (true) {
+		const { done, value } = await reader.read()
+		if (done) break
+		chunks.push(value)
+	}
+
+	// Combine all chunks into a single Uint8Array
+	const totalLength = chunks.reduce((sum, chunk) => sum + chunk.length, 0)
+	const rawData = new Uint8Array(totalLength)
+
+	let offset = 0
+	for (const chunk of chunks) {
+		rawData.set(chunk, offset)
+		offset += chunk.length
+	}
+
+	// Convert boundary to binary for accurate detection
+	const boundaryBytes = new TextEncoder().encode(`--${boundary}`)
+	let boundaryPositions = []
+
+	// Find all boundary positions
+	//const t=Date.now()
+	for (let i = 0; i < rawData.length - boundaryBytes.length; i++) {
+		if (rawData.slice(i, i + boundaryBytes.length).every((b, j) => b === boundaryBytes[j])) {
+			boundaryPositions.push(i)
+		}
+	}
+	//console.log(boundaryPositions, Date.now()-t) // time spent searching binary data: 2.5 seconds for 50Mb
+
+	if (boundaryPositions.length !== 3) throw 'not 3 boundaries are found in response data'
+
+	// **Extract binary part (first part)**
+	let binaryStart = boundaryPositions[0] + boundaryBytes.length
+	let binaryEnd = boundaryPositions[1] - 1 // must minus one byte to be able to properly unzip the downloaded file
+
+	// Locate the first blank line (\n\n or \r\n\r\n) that separates headers from binary content
+	for (let i = binaryStart; i < binaryEnd - 1; i++) {
+		if (rawData[i] === 10 && rawData[i + 1] === 10) {
+			// \n\n
+			binaryStart = i + 2
+			break
+		} else if (rawData[i] === 13 && rawData[i + 1] === 10 && rawData[i + 2] === 13 && rawData[i + 3] === 10) {
+			// \r\n\r\n
+			binaryStart = i + 4
+			break
+		}
+	}
+
+	const binaryData = rawData.slice(binaryStart, binaryEnd)
+
+	// **Extract JSON part (second part)**
+	const textData = decoder.decode(rawData.slice(boundaryPositions[1] + boundaryBytes.length))
+	const jsonMatch = textData.match(/\n\n([\s\S]*)\n\S*$/) // dissect text to retrieve stringified json
+	const jsonData = jsonMatch ? JSON.parse(jsonMatch[1]) : null
+
+	return [
+		{
+			headers: { 'content-type': 'application/octet-stream' },
+			body: new Blob([binaryData], { type: 'application/gzip' }) // Correctly extracts gzipped binary
+		},
+		{
+			headers: { 'content-type': 'application/json' },
+			body: jsonData
+		}
+	]
 }
 
 const defaultServerDataCache = {}

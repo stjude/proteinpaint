@@ -394,8 +394,8 @@ async function getFilesAndShowTable(obj) {
 			 ] 
 			*/
 			data = await dofetch3('gdc/mafBuild', { body: { fileIdLst, columns: outColumns } })
-			if(!Array.isArray(data)) throw `server didn't return multipart`
-			if(!data.length) throw 'server returned blank multipart'
+			if (!Array.isArray(data)) throw `server didn't return multipart`
+			if (!data.length) throw 'server returned blank multipart'
 		} catch (e) {
 			sayerror(obj.errDiv, e)
 			button.innerHTML = oldText
@@ -406,7 +406,9 @@ async function getFilesAndShowTable(obj) {
 		button.innerHTML = oldText
 		button.disabled = false
 
-		const runStatus = data.find(d => d.headers['content-type'] == 'application/json' && (d.errors || d.error))
+		const runStatus = data.find(
+			d => d.headers['content-type'] == 'application/json' && (d.body?.errors || d.body?.error)
+		)
 		if (runStatus && !runStatus?.body?.ok) {
 			// revise if run status is changed
 			if (Array.isArray(runStatus.body?.errors)) displayRunStatusErrors(runStatus.body.errors)
