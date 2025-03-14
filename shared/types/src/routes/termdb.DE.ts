@@ -59,7 +59,7 @@ export type DEResponse = {
 	method: string
 	/** QL: Image describing the quality of the fitting from QL pipeline, this is only generated for edgeR not for wilcoxon method  */
 	/** MDS: Image showing the MDS plot of samples from both groups, this is only generated for edgeR not for wilcoxon method */
-	images: Image[]
+	images?: DEImage[]
 }
 
 export type DataEntry = {
@@ -70,7 +70,7 @@ export type DataEntry = {
 	gene_symbol: string
 }
 
-export type Image = {
+export type DEImage = {
 	/** Image source */
 	src: string
 	/** File size */

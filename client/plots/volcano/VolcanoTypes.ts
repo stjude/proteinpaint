@@ -2,7 +2,7 @@ import type { Div, Elem, SvgG, SvgSvg, SvgText } from '../../types/d3'
 import type { PlotConfig } from '#mass/types/mass'
 import type { TermWrapper } from '@sjcrh/proteinpaint-types'
 import type { Cell, Column, Menu } from '#dom'
-import type { DataEntry, Image } from '#types'
+import type { DataEntry, DEImage } from '#types'
 
 /** Attributes are added in the view model
  * to the response data for rendering. */
@@ -128,5 +128,5 @@ export type VolcanoViewData = {
 	plotDim: VolcanoPlotDimensions
 	pointData: DataPointEntry[]
 	pValueTableData: VolcanoPValueTableData
-	images: Image[]
+	images: DEImage[]
 }

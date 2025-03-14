@@ -56,7 +56,7 @@ export class VolcanoViewModel {
 			pointData: this.setPointData(plotDim),
 			statsData: this.setStatsData(),
 			pValueTableData: this.pValueTable,
-			images: response.images
+			images: response.images || []
 		}
 	}
 
