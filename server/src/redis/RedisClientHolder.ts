@@ -1,12 +1,11 @@
 import { createClient, RedisClientType } from 'redis'
 import serverconfig from '#src/serverconfig.js'
-import { RedisShard } from '#src/shardig/RedisShard.js'
-import { ShardManager } from '#src/shardig/ShardManager.js'
-import { RedisShardingAlgorithm } from '#src/shardig/RedisShardingAlgorithm.js'
-import { ShardingAlgorithm } from '#src/shardig/ShardingAlgorithm.js'
-import { SessionData } from '#src/wsisessions/SessionManager.js'
-import { TileServerShard } from '#src/shardig/TileServerShard.js'
-import * as console from 'node:console'
+import { RedisShard } from '#src/shardig/RedisShard.ts'
+import { ShardManager } from '#src/shardig/ShardManager.ts'
+import { RedisShardingAlgorithm } from '#src/shardig/RedisShardingAlgorithm.ts'
+import { ShardingAlgorithm } from '#src/shardig/ShardingAlgorithm.ts'
+import { SessionData } from '#src/wsisessions/SessionManager.ts'
+import { TileServerShard } from '#src/shardig/TileServerShard.ts'
 
 export default class RedisClientHolder {
 	private static instance: RedisClientHolder = new RedisClientHolder()
@@ -15,6 +14,7 @@ export default class RedisClientHolder {
 	private redisShardingAlgorithm: ShardingAlgorithm<any> | undefined = this.shardManager.shardingAlgorithmsMap.get(
 		RedisShardingAlgorithm.REDIS_SHARDING_KEY
 	)
+	private errorLogTimers: Map<string, NodeJS.Timeout> = new Map()
 
 	private constructor() {
 		const redisNodes = serverconfig.features.redis_nodes || []
@@ -29,15 +29,22 @@ export default class RedisClientHolder {
 			})
 
 			client.on('error', (err: any) => {
-				console.error('Redis Client Error at', redisUrl, ':', err)
+				if (!this.errorLogTimers.get(redisUrl)) {
+					console.warn('Redis Client Error at', redisUrl, ':', err)
+					// Set a timer that prevents further logs for 30 seconds
+					const timer = setTimeout(() => {
+						this.errorLogTimers.delete(redisUrl)
+					}, 30000) // 30 seconds
+					this.errorLogTimers.set(redisUrl, timer)
+				}
 			})
 
 			client.on('connect', () => {
-				console.log('Redis client connected at', redisUrl)
+				console.info('Redis client connected at', redisUrl)
 			})
 
 			client.on('ready', () => {
-				console.log('Redis client ready at', redisUrl)
+				console.info('Redis client ready at', redisUrl)
 			})
 
 			client.connect()
@@ -53,8 +60,30 @@ export default class RedisClientHolder {
 		return instance
 	}
 
+	public async isNodeOnline(url: string, timeout = 1000): Promise<boolean> {
+		// Default timeout of 5000 milliseconds
+		console.info('Checking if Redis node is online at', url)
+		const client = this.clients.get(url)
+		if (!client) {
+			console.error('No client found for URL:', url)
+			return false
+		}
+
+		try {
+			await Promise.race([
+				client.ping(),
+				new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), timeout))
+			])
+			console.info('Redis node is online:', url)
+			return true
+		} catch (error) {
+			console.error('Error pinging Redis at', url, ':', error)
+			return false
+		}
+	}
+
 	public async set(key: string, value: string): Promise<void> {
-		const redisShard: RedisShard = this.redisShardingAlgorithm?.getShard(key)
+		const redisShard: RedisShard = await this.redisShardingAlgorithm?.getShard(key)
 
 		const client = this.getClient(redisShard.url)
 		if (client) {
@@ -69,18 +98,19 @@ export default class RedisClientHolder {
 	}
 
 	public async get(key: string): Promise<string | null | undefined> {
-		const redisShard: RedisShard = this.redisShardingAlgorithm?.getShard(key)
+		const redisShard: RedisShard = await this.redisShardingAlgorithm?.getShard(key)
 		return this.clients.get(redisShard.url)?.get(key)
 	}
 
 	public async getAll(key: string): Promise<string[]> {
-		const redisShard: RedisShard = this.redisShardingAlgorithm?.getShard(key)
+		const redisShard: RedisShard = await this.redisShardingAlgorithm?.getShard(key)
 
 		return this.clients.get(redisShard.url)?.keys('*') || []
 	}
 
-	public async update(key: string, keys: Array<string>, tileServerShard: TileServerShard): Promise<void> {
-		const redisShard: RedisShard = this.redisShardingAlgorithm?.getShard(key)
+	public async update(key: string, sessions: any, tileServerShard: TileServerShard): Promise<void> {
+		const redisShard: RedisShard = await this.redisShardingAlgorithm?.getShard(key)
+
 		const client = this.getClient(redisShard.url)
 
 		if (!client) {
@@ -89,15 +119,11 @@ export default class RedisClientHolder {
 
 		const existingKeys = await client.keys('*') // Fetches all keys in the shard
 
-		// Adding new keys that are not present in Redis
-		for (const key of keys) {
-			if (!existingKeys.includes(key)) {
-				const lastAccessTimestamp = new Date().toISOString() // Get current time in ISO 8601 format
-				const sessionData = new SessionData(key, lastAccessTimestamp, tileServerShard)
-				const serializedData = JSON.stringify(sessionData)
-				await client.set(key, serializedData)
-			}
-		}
+		// Parse session identifiers from the fetched JSON
+		const keys = Object.values<string>(sessions).map(path => {
+			const parts = path.split('/')
+			return parts[parts.length - 1] // Gets the last segment of the path
+		})
 
 		// Deleting keys that should no longer be present
 		for (const existingKey of existingKeys) {
@@ -105,15 +131,28 @@ export default class RedisClientHolder {
 				await client.del(existingKey)
 			}
 		}
+
+		const result = Object.entries<string>(sessions).filter(([sessionId, filePath]) => !existingKeys.includes(filePath))
+
+		for (const [sessionId, filePath] of result) {
+			const parts = filePath.split('/')
+			const key = parts[parts.length - 1] // Gets the last segment of the path
+			if (!existingKeys.includes(key)) {
+				const lastAccessTimestamp = new Date().toISOString() // Get current time in ISO 8601 format
+				const sessionData = new SessionData(sessionId, lastAccessTimestamp, tileServerShard)
+				const serializedData = JSON.stringify(sessionData)
+				await client.set(key, serializedData)
+			}
+		}
 	}
 
 	public async delete(key: string): Promise<number | undefined> {
-		const redisShard: RedisShard = this.redisShardingAlgorithm?.getShard(key)
+		const redisShard: RedisShard = await this.redisShardingAlgorithm?.getShard(key)
 		return this.clients.get(redisShard.url)?.del(key)
 	}
 
 	public async exists(key: string): Promise<boolean> {
-		const redisShard: RedisShard = this.redisShardingAlgorithm?.getShard(key)
+		const redisShard: RedisShard = await this.redisShardingAlgorithm?.getShard(key)
 		const result = await this.clients.get(redisShard.url)?.exists(key)
 		return result === 1
 	}

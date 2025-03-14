@@ -29,7 +29,7 @@ function init() {
 			if (!wsiImage) throw new Error('Invalid wsi_image')
 
 			const shardManager = ShardManager.getInstance()
-			const tileServer: TileServerShard = shardManager.shardingAlgorithmsMap
+			const tileServer: TileServerShard = await shardManager.shardingAlgorithmsMap
 				?.get(TileServerShardingAlgorithm.TILE_SERVER_SHARDING_KEY)
 				?.getShard(wsiImage)
 

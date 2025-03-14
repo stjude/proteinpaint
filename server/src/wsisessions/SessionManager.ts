@@ -40,7 +40,7 @@ export default class SessionManager {
 		return SessionManager.instance
 	}
 
-	public getTileServerShard(key: string): TileServerShard {
+	public getTileServerShard(key: string): Promise<any> | undefined {
 		return this.tileShardingAlgorithm?.getShard(key)
 	}
 
@@ -52,19 +52,20 @@ export default class SessionManager {
 	}
 
 	public async getSession(key: string): Promise<SessionData | undefined> {
-		const tileServer = this.getTileServerShard(key)
+		const tileServer = await this.getTileServerShard(key)
 		if (!tileServer) {
 			return undefined
 		}
-		const sessions = await this.fetchSessions(tileServer.url)
 
-		// Parse session identifiers from the fetched JSON
-		const keys = Object.values<string>(sessions).map(path => {
-			const parts = path.split('/')
-			return parts[parts.length - 1] // Gets the last segment of the path
-		})
+		let sessions = []
+		try {
+			sessions = await ky.get(`${tileServer.url}/tileserver/sessions`).json()
+		} catch (error) {
+			console.warn('Error fetching sessions:', error)
+			throw new Error('Error fetching sessions from ${tileServer.url}')
+		}
 
-		await this.redisClients.update(key, keys, tileServer)
+		await this.redisClients.update(key, sessions, tileServer)
 
 		const sessionData = await this.redisClients.get(key)
 		if (!sessionData) {
@@ -130,20 +131,17 @@ export default class SessionManager {
 			const sessionsToDelete = idleSessions.slice(0, excessIdleCount)
 
 			// Perform the deletion of the selected sessions
-			await Promise.all(sessionsToDelete.map(({ key }) => this.deleteSession(key)))
+			await Promise.all(
+				sessionsToDelete.map(({ key }) => {
+					this.deleteSession(key)
+				})
+			)
 			return { success: true, deletedKeys: sessionsToDelete.map(session => session.sessionData) }
 		}
 
+		// TODO fix this
 		await Promise.all(idleSessions.map(({ key }) => this.deleteSession(key)))
 
 		return { success: true, deletedKeys: idleSessions.map(session => session.sessionData) }
-	}
-
-	private async fetchSessions(tileServerUrl: string): Promise<any> {
-		try {
-			return await ky.get(`${tileServerUrl}/tileserver/sessions`).json()
-		} catch (error) {
-			console.error('Error fetching sessions:', error)
-		}
 	}
 }

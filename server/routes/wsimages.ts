@@ -74,7 +74,9 @@ function init({ genomes }) {
 
 		const sessionData = await sessionManager.getSession(wsimage)
 
-		if (sessionData) return sessionData.imageSessionId
+		if (sessionData) {
+			return sessionData.imageSessionId
+		}
 
 		const invalidateResult = await sessionManager.invalidateSessions(wsimage, 10, 120)
 
@@ -82,7 +84,7 @@ function init({ genomes }) {
 
 		await invalidateSessions(invalidateResult)
 
-		const tileServer = sessionManager.getTileServerShard(wsimage)
+		const tileServer = await sessionManager.getTileServerShard(wsimage)
 
 		await ky.get(`${tileServer.url}/tileserver/session_id`, {
 			timeout: 50000,
@@ -129,7 +131,7 @@ function init({ genomes }) {
 	async function getWsiImageDimensions(sessionId, getCookieString, wsimage) {
 		const shardManager = ShardManager.getInstance()
 
-		const tileServer: TileServerShard = shardManager.shardingAlgorithmsMap
+		const tileServer: TileServerShard = await shardManager.shardingAlgorithmsMap
 			?.get(TileServerShardingAlgorithm.TILE_SERVER_SHARDING_KEY)
 			?.getShard(wsimage)
 
