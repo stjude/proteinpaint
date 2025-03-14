@@ -50,15 +50,14 @@ export class VolcanoInteractions {
 		this.dom.error.selectAll('*').remove()
 	}
 
-	download() {
+	download(termType: string) {
 		this.dom.actionsTip.clear().showunder(this.dom.controls.select('div').node())
 		const opts = [
 			{
 				text: 'Download plot',
 				callback: () => {
 					const svg = this.dom.holder.select('svg').node() as Node
-					//TODO: add title to svg based on config
-					to_svg(svg, `Differential analysis volcano`, { apply_dom_styles: true })
+					to_svg(svg, `Differential ${termType} analysis volcano`, { apply_dom_styles: true })
 				}
 			},
 			{
@@ -73,7 +72,9 @@ export class VolcanoInteractions {
 		}
 	}
 
-	async launchBoxPlot(geneSymbol: string) {
+	/** When clicking on a data point, launches the box plot in a separate sandbox
+	 * For geneExpression, value == gene symbol */
+	async launchBoxPlot(value: string) {
 		const config = this.app.getState().plots.find((p: VolcanoPlotConfig) => p.id === this.id)
 		const values = {}
 		for (const group of config.samplelst.groups) {
@@ -83,19 +84,27 @@ export class VolcanoInteractions {
 				list: group.values
 			}
 		}
+		/** Gene variant and expression terms do not have an id
+		 * need to be handled separately.
+		 * TODO: In the future with more use cases, simplify this logic. */
+		const setTerm = () => {
+			if (config.termType == 'geneExpression') {
+				return {
+					q: { mode: 'continuous' },
+					term: {
+						gene: value,
+						name: value,
+						type: config.termType
+					}
+				}
+			} else return config.term
+		}
 		this.app.dispatch({
 			type: 'plot_create',
 			config: {
 				chartType: 'summary',
 				childType: 'boxplot',
-				term: {
-					q: { mode: 'continuous' },
-					term: {
-						gene: geneSymbol,
-						name: geneSymbol,
-						type: config.termType
-					}
-				},
+				term: setTerm(),
 				term2: {
 					q: { groups: config.tw.q.groups, type: 'custom-samplelst' },
 					term: config.tw.term
