@@ -70,7 +70,7 @@ export type DataEntry = {
 	gene_symbol: string
 }
 
-type Image = {
+export type Image = {
 	/** Image source */
 	src: string
 	/** File size */

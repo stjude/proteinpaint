@@ -1,18 +1,15 @@
 import type { MassAppApi } from '#mass/types/mass'
 import { downloadTable, GeneSetEditUI, MultiTermWrapperEditUI } from '#dom'
 import { to_svg } from '#src/client'
-import type { VolcanoPlotConfig } from '../VolcanoTypes'
+import type { VolcanoDom, VolcanoPlotConfig } from '../VolcanoTypes'
 
-/** TODO:
- * 	- fix/add types
- */
 export class VolcanoInteractions {
 	app: MassAppApi
-	dom: any
+	dom: VolcanoDom
 	id: string
 	pValueTableData: any
 	data: any
-	constructor(app: MassAppApi, id: string, dom: any) {
+	constructor(app: MassAppApi, id: string, dom: VolcanoDom) {
 		this.app = app
 		this.dom = dom
 		this.id = id
@@ -35,7 +32,7 @@ export class VolcanoInteractions {
 					config: { confounderTws: tws }
 				})
 			},
-			holder: this.dom.actionsTip.d,
+			holder: this.dom.actionsTip.d as any,
 			headerText: 'Select confounders',
 			maxNum: 2,
 			state,
@@ -107,7 +104,6 @@ export class VolcanoInteractions {
 		})
 	}
 
-	/** TODO: show unavailable genes greyed out with message to user. */
 	launchGeneSetEdit() {
 		const plotConfig = this.app.getState().plots.find((p: VolcanoPlotConfig) => p.id === this.id)
 		const holder = this.dom.actionsTip.d.append('div').style('padding', '5px') as any
@@ -129,6 +125,15 @@ export class VolcanoInteractions {
 				})
 				this.dom.actionsTip.hide()
 			}
+		})
+	}
+
+	showImages() {
+		const plotConfig = this.app.getState().plots.find((p: VolcanoPlotConfig) => p.id === this.id)
+		this.app.dispatch({
+			type: 'plot_edit',
+			id: this.id,
+			config: { settings: { volcano: { showImages: !plotConfig.settings.volcano.showImages } } }
 		})
 	}
 }

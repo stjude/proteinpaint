@@ -39,7 +39,7 @@ export class VolcanoPlotView {
 			.style('position', 'relative')
 		const images = this.dom.holder
 			.append('div')
-			.style('display', 'inline-block')
+			.style('display', settings.showImages ? 'block' : 'none')
 			.style('vertical-align', 'top')
 			.attr('id', 'sjpp-volcano-images')
 		const svg = this.dom.holder.append('svg').style('display', 'inline-block').attr('id', 'sjpp-volcano-svg')
@@ -67,8 +67,16 @@ export class VolcanoPlotView {
 
 	renderUserActions() {
 		this.volcanoDom.actions.style('margin-left', '20px').style('padding', '5px')
-		this.addActionButton('Confounding factors', () => this.interactions.confoundersMenu())
-		this.addActionButton('Genes', () => this.interactions.launchGeneSetEdit())
+		if (this.termType == 'geneExpression') {
+			this.addActionButton('Confounding factors', () => this.interactions.confoundersMenu())
+			this.addActionButton('Genes', () => this.interactions.launchGeneSetEdit())
+			if (this.viewData.images.length) {
+				const btnLabel = `Image${this.viewData.images.length > 1 ? `s (${this.viewData.images.length})` : ''}`
+				this.addActionButton(btnLabel, () => {
+					this.interactions.showImages()
+				})
+			}
+		}
 	}
 
 	addActionButton(text: string, callback: any) {
@@ -138,8 +146,9 @@ export class VolcanoPlotView {
 		const holder = this.dom.holder
 			.append('div')
 			.attr('id', 'sjpp-volcano-stats')
-			.style('display', 'block')
+			.style('display', 'inline-block')
 			.style('vertical-align', 'top')
+			.style('margin-top', '20px')
 		const table = table2col({ holder })
 		for (const d of statsData) {
 			const [td1, td2] = table.addRow()
