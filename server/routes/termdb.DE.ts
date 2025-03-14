@@ -282,8 +282,8 @@ values[] // using integer sample id
 			sample_size2: sample_size2,
 			method: param.method,
 			images: [
-				result.ql_image, // QL fit image
-				result.mds_image // MDS image
+				result.mds_image, // MDS image
+				result.ql_image // QL fit image
 			]
 		} as DEResponse
 	}
