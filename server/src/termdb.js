@@ -13,7 +13,7 @@ import { get_lines_bigfile, mayCopyFromCookie } from './utils.js'
 import { authApi } from './auth.js'
 import { getResult as geneSearch } from './gene.js'
 import { searchSNP } from '../routes/snp.ts'
-import { get_samples_ancestry, get_samples } from './termdb.sql.js'
+import { get_samples_ancestry, get_samples, get_multivalue_tws } from './termdb.sql.js'
 import { TermTypeGroups } from '#shared/terms.js'
 import { trigger_getDefaultBins } from './termdb.getDefaultBins.js'
 /*
@@ -63,6 +63,8 @@ export function handle_request_closure(genomes) {
 			if (q.getSampleScatter) q.for = 'scatter'
 			if (q.for == 'scatter') return await trigger_getSampleScatter(req, q, res, ds, genome)
 			if (q.getLowessCurve) return await trigger_getLowessCurve(req, q, res)
+			if (q.getMultivalueTWs) return await trigger_get_multivalue_tws(req, res, ds)
+
 			if (q.getCohortsData) return await trigger_getCohortsData(q, res, ds)
 			if (q.for == 'termTypes') return res.send(await ds.getTermTypes(q))
 			if (q.for == 'matrix') return await get_matrix(q, req, res, ds, genome)
@@ -401,6 +403,12 @@ async function get_AllSamplesByName(q, req, res, ds) {
 	}
 	res.send(Object.fromEntries(sampleName2Id))
 }
+
+async function trigger_get_multivalue_tws(req, res, ds) {
+	res.send(await get_multivalue_tws(req.query, ds))
+}
+
+
 
 async function LDoverlay(q, ds, res) {
 	if (!q.ldtkname) throw '.ldtkname missing'

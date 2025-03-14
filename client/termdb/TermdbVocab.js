@@ -1135,6 +1135,20 @@ export class TermdbVocab extends Vocab {
 		return await dofetch3('termdb', { headers, body })
 	}
 
+	async getMultivalueTWs(opts) {
+		const headers = this.mayGetAuthHeaders('termb')
+
+		// dofetch* mayAdjustRequest() will automatically
+		// convert to GET query params or POST body, as needed
+		const body = {
+			genome: this.state.vocab.genome,
+			dslabel: this.state.vocab.dslabel,
+			getMultivalueTWs: 1,
+			parent_id: opts.parent_id
+		}
+		return await dofetch3('termdb', { headers, body })
+	}
+
 	async getCohortsData(opts) {
 		const body = {
 			genome: this.state.vocab.genome,

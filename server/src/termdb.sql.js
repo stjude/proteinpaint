@@ -802,3 +802,14 @@ export function interpolateSqlValues(sql, values) {
 		})
 		.join('')
 }
+
+export function get_multivalue_tws(query, ds) {
+	console.log(query)
+	const sql = `select id, name, json_extract(jsondata, '$.plotType') as subtype from terms where type='multivalue' and parent_id=?`
+	const items = ds.cohort.db.connection.prepare(sql).all([query.parent_id])
+	const terms = []
+	for (const item of items) {
+		terms.push({ $id: item.id, term: { id: item.id, name: item.name, type: 'multivalue', subtype: item.subtype } })
+	}
+	return terms
+}
