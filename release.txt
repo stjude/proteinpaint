@@ -1,1 +1,2 @@
-
+Fixes:
+- detect debug lines from R output and output on dev, and throw on prod
