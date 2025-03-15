@@ -89,19 +89,7 @@ exports.stream_rust = function (binfile, input_data, emitJson) {
 		emitJson({ errors })
 	})
 
-	// displayRustProcesses(binpath, 1) // uncomment for manual testing, for fast process kill
-	const psKill = () => {
-		try {
-			// console.log('--- directly killing node-spawned rust process/streams ---')
-			if (process.kill(ps.pid, 0)) ps.kill()
-			childStream.end()
-		} catch (e) {
-			console.log(
-				'ignored ps.kill/childStream.end() errors, will be detected later as a long running process and killed'
-			)
-			//console.log(e)
-		}
-	}
+	// displayRustProcesses(binpath, 1) // use only for testing
 
 	// on('end') will duplicate ps.on('close') event above
 	// childStream.on('end', () => console.log(`-- childStream done --`))
@@ -110,12 +98,16 @@ exports.stream_rust = function (binfile, input_data, emitJson) {
 	return childStream
 }
 
+// we only want to run this interval loop inside a container, not in dev/test CI
+if (process.env.PP_MODE?.startsWith('container')) {
+	setInterval(detectAndKillLongRunningRustProcess, 60000) // in millseconds
+}
+
 // to test, run `sleep 5555` in 1 or more terminal windows,
 // which should be all killed when making a request to gdc/MafBuild
 // const srcpath = 'sleep 5555' // uncomment to test and comment out below
-const srcpath = path.join(__dirname, 'target')
+const srcpath = path.join(__dirname, 'target/gdcmaf')
 const PROCESS_TIMEOUT = 5 * 60 // in seconds
-setInterval(detectAndKillLongRunningRustProcess, 60000) // in millseconds
 
 async function detectAndKillLongRunningRustProcess() {
 	try {
