@@ -89,10 +89,10 @@ exports.stream_rust = function (binfile, input_data, emitJson) {
 		emitJson({ errors })
 	})
 
-	displayRustProcesses(binpath, 1) // for manual testing when kill is triggered fast
+	// displayRustProcesses(binpath, 1) // uncomment for manual testing, for fast process kill
 	const psKill = () => {
 		try {
-			console.log('--- directly killing node-spawned rust process/streams ---')
+			// console.log('--- directly killing node-spawned rust process/streams ---')
 			if (process.kill(ps.pid, 0)) ps.kill()
 			childStream.end()
 		} catch (e) {
@@ -119,7 +119,7 @@ setInterval(detectAndKillLongRunningRustProcess, 60000) // in millseconds
 
 async function detectAndKillLongRunningRustProcess() {
 	try {
-		console.log(`\n--- detecting and killing long running rust streams (>${PROCESS_TIMEOUT} seconds) using exec() ---`)
+		// console.log(`\n--- detecting and killing long running rust streams (>${PROCESS_TIMEOUT} seconds) using exec() ---`)
 		const ps = await execPromise(`ps -eo pid,etime,command | grep '${srcpath}'`, {
 			encoding: 'utf-8',
 			stdio: 'inherit'
@@ -143,9 +143,9 @@ async function detectAndKillLongRunningRustProcess() {
 				}
 			}
 		}
-		console.log('--- after detecting/killing long running process --')
+		// console.log('--- after detecting/killing long running process --')
 		// displayRustProcesses(srcpath)
-		console.log('--- done detecting/killing long running process --\n')
+		// console.log('--- done detecting/killing long running process --\n')
 	} catch (e) {
 		//console.log(140, e)
 		// okay to not have any process to kill
