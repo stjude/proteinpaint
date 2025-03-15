@@ -46,8 +46,15 @@ exports.run_rust = function (binfile, input_data) {
 	})
 }
 
+let detectInterval
+
 exports.stream_rust = function (binfile, input_data, emitJson) {
 	const binpath = path.join(__dirname, '/target/release/', binfile)
+	// we only want to run this interval loop inside a container, not in dev/test CI
+	if (!detectInterval && binfile == 'gdcmaf') {
+		detectInterval = setInterval(detectAndKillLongRunningRustProcess, 60000) // in millseconds
+	}
+
 	const ps = spawn(binpath)
 	const stderr = []
 	try {
@@ -98,15 +105,10 @@ exports.stream_rust = function (binfile, input_data, emitJson) {
 	return childStream
 }
 
-// we only want to run this interval loop inside a container, not in dev/test CI
-if (process.env.PP_MODE?.startsWith('container')) {
-	setInterval(detectAndKillLongRunningRustProcess, 60000) // in millseconds
-}
-
 // to test, run `sleep 5555` in 1 or more terminal windows,
 // which should be all killed when making a request to gdc/MafBuild
 // const srcpath = 'sleep 5555' // uncomment to test and comment out below
-const srcpath = path.join(__dirname, 'target/gdcmaf')
+const srcpath = path.join(__dirname, 'target/release/gdcmaf')
 const PROCESS_TIMEOUT = 5 * 60 // in seconds
 
 async function detectAndKillLongRunningRustProcess() {
