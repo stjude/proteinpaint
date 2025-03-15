@@ -7,6 +7,9 @@ All notable changes to this project will be documented in this file.
 Features:
 - New differential analysis app. The app is under development to analyze various data types
 
+Fixes:
+- Color shown in the track config menu is the correct
+
 
 ## 2.111.0
 

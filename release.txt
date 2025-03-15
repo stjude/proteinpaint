@@ -1,2 +1,1 @@
-Fixes:
-- Color shown in the track config menu is the correct
+
