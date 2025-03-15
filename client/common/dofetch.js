@@ -229,7 +229,7 @@ async function processResponse(r) {
 
 	TODO: handle > 2 parts
 */
-async function processMultiPart(res, _boundary) {
+export async function processMultiPart(res, _boundary) {
 	const boundary = `--GDC_MAF_MULTIPART_BOUNDARY`
 	//const boundary = `--GDC` // `--${_boundary}`
 	const parts = []
@@ -326,7 +326,7 @@ function processPart(headerStr, chunks, text) {
 }
 
 // hardcoded solution to process 2-part response: 1=binary, 2=json
-async function fetch2parts(res, boundary) {
+export async function fetch2parts(res, boundary) {
 	const reader = res.body.getReader()
 	const decoder = new TextDecoder() // For decoding text parts
 	let chunks = []
