@@ -79,6 +79,9 @@ export function dofetch2(path, init = {}, opts = {}) {
 
 	opts {}
 		.serverData{}              an object for caching fetch Promise 
+		.streamDataSizeCallback()=>{}
+			optional callback on streaming data (including multipart).
+			called on receiving each chunk; argument is number of total data size.
 	*/
 	// path should be "path" but not "/path"
 	if (path[0] == '/') {
@@ -142,7 +145,7 @@ export function dofetch2(path, init = {}, opts = {}) {
 				// to-do: support opt.freeze to enforce Object.freeze(data.json())
 				try {
 					const res = await fetch(url, init)
-					result = await processResponse(res.clone())
+					result = await processResponse(res.clone(), opts)
 					// in case this fetch was cancelled with AbortController.signal,
 					// then the result may be another Promise instead of a data object,
 					// as observed when rapidly changing the gdc cohort filter
@@ -177,7 +180,7 @@ export function dofetch2(path, init = {}, opts = {}) {
 			}
 			return result
 		} else {
-			return fetch(url, init).then(processResponse)
+			return fetch(url, init).then(r => processResponse(r, opts))
 		}
 	})
 }
@@ -187,13 +190,14 @@ const regex_multipart = /multipart/i
 const regex_boundary = /boundary\s*=\s*"?([^"\s;]+)"?/i
 /* 
 r: a native fetch response argument
+opts: dofetch2( 1st, 2nd, opts)
 
 potentially allow "application/octet-stream" as response type
 in such case it will not try to parse it as json
 also the caller should just call dofetch2() without a serverData{}
 rather than dofetch3
 */
-async function processResponse(r) {
+async function processResponse(r, opts) {
 	const ct = r.headers.get('content-type') // content type is always present
 	if (!ct) throw `missing response.header['content-type']`
 	if (ct.includes('/json')) {
@@ -206,7 +210,7 @@ async function processResponse(r) {
 		const boundary = ct.match(regex_boundary)?.[1]?.trim()
 		if (!boundary) throw 'Invalid multipart response: Missing boundary'
 		//return processMultiPart(r, boundary)
-		return fetch2parts(r, boundary)
+		return fetch2parts(r, boundary, opts)
 	}
 	// call blob() as catch-all
 	// https://developer.mozilla.org/en-US/docs/Web/API/Response
@@ -326,20 +330,23 @@ function processPart(headerStr, chunks, text) {
 }
 
 // hardcoded solution to process 2-part response: 1=binary, 2=json
-async function fetch2parts(res, boundary) {
+async function fetch2parts(res, boundary, opts) {
 	const reader = res.body.getReader()
 	const decoder = new TextDecoder() // For decoding text parts
 	let chunks = []
+
+	let totalLength = 0
 
 	// Read all response body data
 	while (true) {
 		const { done, value } = await reader.read()
 		if (done) break
 		chunks.push(value)
+		totalLength += value.length
+		if (opts?.streamDataSizeCallback) opts.streamDataSizeCallback(totalLength)
 	}
 
 	// Combine all chunks into a single Uint8Array
-	const totalLength = chunks.reduce((sum, chunk) => sum + chunk.length, 0)
 	const rawData = new Uint8Array(totalLength)
 
 	let offset = 0

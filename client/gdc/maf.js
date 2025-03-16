@@ -1,5 +1,5 @@
 import { dofetch3 } from '#common/dofetch'
-import { make_radios, renderTable, sayerror, Menu, table2col } from '#dom'
+import { make_radios, renderTable, sayerror, Menu, table2col, fillbar } from '#dom'
 import { fileSize } from '#shared/fileSize.js'
 import { select } from 'd3-selection'
 
@@ -317,6 +317,13 @@ async function getFilesAndShowTable(obj) {
 		]
 		rows.push(row)
 	}
+
+	/* total file size for those selected from table
+	it is printed in the `Aggregate` button, and also used in fillbar for real time download size compared to theoretical total
+	must declare it before rendering table otherwise will break
+	*/
+	let totalSelectedFileSize
+
 	renderTable({
 		rows,
 		columns: tableColumns,
@@ -336,9 +343,9 @@ async function getFilesAndShowTable(obj) {
 	})
 
 	function updateButtonBySelectionChange(lst, button) {
-		let sum = 0
-		for (const i of lst) sum += result.files[i].file_size
-		if (sum == 0) {
+		totalSelectedFileSize = 0
+		for (const i of lst) totalSelectedFileSize += result.files[i].file_size
+		if (totalSelectedFileSize == 0) {
 			button.innerHTML = 'No file selected'
 			button.disabled = true
 			return
@@ -349,17 +356,19 @@ async function getFilesAndShowTable(obj) {
 
 		button.disabled = false
 		button.innerHTML =
-			sum < result.maxTotalSizeCompressed
-				? `Download ${fileSize(sum)} compressed MAF data`
-				: `Download ${fileSize(result.maxTotalSizeCompressed)} compressed MAF data (${fileSize(sum)} selected)`
+			totalSelectedFileSize < result.maxTotalSizeCompressed
+				? `Download ${fileSize(totalSelectedFileSize)} compressed MAF data`
+				: `Download ${fileSize(result.maxTotalSizeCompressed)} compressed MAF data (${fileSize(
+						totalSelectedFileSize
+				  )} selected)`
 	}
 
 	/* after table is created, on clicking download btn for first time, create a <span> after download btn,
-	in order to show server-sent message on problematic files (emtpy, failed, invalid)
+	in order to show server-sent messages on run status (empty/failed files, and real time stream data size etc)
 	scope this <span> for easy access by helpers,
 	detect if it is truthy to only create it once
 	*/
-	let serverMessage
+	let serverMessage, streamSizeMessage
 
 	async function submitSelectedFiles(lst, button) {
 		const outColumns = mafColumns.filter(i => i.selected).map(i => i.column)
@@ -380,6 +389,7 @@ async function getFilesAndShowTable(obj) {
 		button.innerHTML = 'Loading... Please wait'
 		button.disabled = true
 		serverMessage.style('display', 'none')
+		streamSizeMessage.selectAll('*').remove()
 
 		// may disable the "Aggregate" button here and re-enable later
 
@@ -393,7 +403,16 @@ async function getFilesAndShowTable(obj) {
 		     	 }
 			 ] 
 			*/
-			data = await dofetch3('gdc/mafBuild', { body: { fileIdLst, columns: outColumns } })
+			data = await dofetch3(
+				'gdc/mafBuild',
+				{ body: { fileIdLst, columns: outColumns } },
+				{
+					streamDataSizeCallback: size => {
+						streamSizeMessage.selectAll('*').remove()
+						fillbar(streamSizeMessage, { f: size / totalSelectedFileSize })
+					}
+				}
+			)
 			if (!Array.isArray(data)) throw `server didn't return multipart`
 			if (!data.length) throw 'server returned blank multipart'
 		} catch (e) {
@@ -421,7 +440,6 @@ async function getFilesAndShowTable(obj) {
 		const octetData = data.find(d => d.headers['content-type'] == 'application/octet-stream')
 		if (!octetData) throw 'missing octet data'
 		const href = URL.createObjectURL(octetData.body)
-		// console.log(394, [octetData?.body.size, href.length, href], octetData)
 		const a = document.createElement('a')
 		a.href = href
 		a.download = `cohortMAF.${new Date().toISOString().split('T')[0]}.maf.gz`
@@ -434,6 +452,7 @@ async function getFilesAndShowTable(obj) {
 	function mayCreateServerMessageSpan(button) {
 		if (serverMessage) return // message <span> are already created
 		const holder = select(button.parentElement)
+		streamSizeMessage = holder.append('span').style('padding-right', '10px')
 		serverMessage = holder.append('span').attr('class', 'sja_clbtext').style('display', 'none')
 	}
 
