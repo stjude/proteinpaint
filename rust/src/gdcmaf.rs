@@ -17,6 +17,7 @@ use serde_json::{Value};
 use std::path::Path;
 use futures::StreamExt;
 use std::io::{self,Read,Write};
+use std::time::Duration;
 
 // Struct to hold error information
 #[derive(serde::Serialize)]
@@ -117,7 +118,14 @@ async fn main() -> Result<(),Box<dyn std::error::Error>> {
     let download_futures = futures::stream::iter(
         url.into_iter().map(|url|{
             async move {
-                match reqwest::get(&url).await {
+                let client = reqwest::Client::builder()
+                    .timeout(Duration::from_secs(30)) // 30-second timeout per request
+                    .connect_timeout(Duration::from_secs(10))
+                    .build()
+                    .unwrap_or_else(|e| {
+                        panic!("Failed to build reqwest client: {}", e);
+                    });
+                match client.get(&url).send().await {
                     Ok(resp) if resp.status().is_success() => {
                         match resp.bytes().await {
                             Ok(content) => {
