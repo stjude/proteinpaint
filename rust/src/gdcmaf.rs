@@ -176,7 +176,7 @@ async fn main() -> Result<(),Box<dyn std::error::Error>> {
         url.into_iter().map(|url|{
             async move {
                 let client = reqwest::Client::builder()
-                    .timeout(Duration::from_secs(50)) // 30-second timeout per request
+                    .timeout(Duration::from_secs(100)) // 30-second timeout per request
                     .connect_timeout(Duration::from_secs(10))
                     .build()
                     .unwrap_or_else(|e| {
