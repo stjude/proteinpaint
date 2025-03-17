@@ -96,6 +96,13 @@ async function buildMaf(q: GdcMafBuildRequest, res, ds) {
 		mayLog('rust gdcmaf', Date.now() - t0)
 		if (end) res.end()
 	}
+
+	// const rustStream = stream_rust('gdcmaf', JSON.stringify(arg))
+	// const form = new FormData({ maxDataSize: 120 * 1024 * 1024 }) // file size in in MB
+	// res.setHeader('content-type', `multipart/form-data; boundary=${form.getBoundary()}`)
+	// form.append('gzfile', rustStream.stdout, { filename: 'test.gz' })
+	// form.append('errors', rustStream.stderr, { contentType: 'application/x-jsonlines' })
+	// form.pipe(res)
 }
 
 /*

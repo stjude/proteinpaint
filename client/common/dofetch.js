@@ -201,7 +201,7 @@ async function processResponse(r) {
 	}
 	if (ct.includes('multipart')) {
 		if (ct.startsWith('multipart/form-data')) return processFormData(r)
-		else throw `cannot handle response['content-type']='${ct}'`
+		else throw `cannot handle response content-type: '${ct}'`
 	}
 	// call blob() as catch-all
 	// https://developer.mozilla.org/en-US/docs/Web/API/Response
