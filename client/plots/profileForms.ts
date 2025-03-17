@@ -5,6 +5,7 @@ import { axisTop } from 'd3-axis'
 import { scaleLinear as d3Linear } from 'd3-scale'
 import { loadFilterTerms } from './profilePlot.js'
 import { Tabs } from '../dom/toggleButtons.js'
+import { roundValueAuto } from '@sjcrh/proteinpaint-shared/roundValue.js'
 
 const YES_NO_TAB = 'Yes/No Barchart'
 const IMPRESSIONS_TAB = 'Impressions'
@@ -261,7 +262,8 @@ export class profileForms extends profilePlot {
 			const path = event.target
 			const d = path.__data__
 			const menu = this.tip.clear()
-			menu.d.text(`${d.key}: ${d.value}%`)
+			const percent = roundValueAuto(d.value, true, 1)
+			menu.d.text(`${d.key}: ${percent}%`)
 			menu.show(event.clientX, event.clientY, true, true)
 		} else this.onMouseOut(event)
 	}
@@ -277,7 +279,6 @@ export class profileForms extends profilePlot {
 		const validKeys = Object.keys(dict).filter(key => !noAnswerCategories.find(c => c.name == key))
 		let total = 0
 		for (const key of validKeys) total += dict[key]
-
 		let x = 0
 		for (const category of categories) {
 			const key = category.name
@@ -285,7 +286,8 @@ export class profileForms extends profilePlot {
 			this.keys.add(key)
 			const value = dict[key]
 			if (!value) continue
-			const width = (value / total) * this.settings.svgw
+			const percent = (value / total) * 100
+			const width = (percent / 100) * this.settings.svgw
 			itemG
 				.append('rect')
 				.attr('x', x)
@@ -293,7 +295,7 @@ export class profileForms extends profilePlot {
 				.attr('height', height)
 				.attr('stroke', 'gray')
 				.attr('fill', color)
-				.datum({ key, value })
+				.datum({ key, value: percent })
 				.on('mouseover', this.onMouseOver.bind(this))
 
 			x += width
