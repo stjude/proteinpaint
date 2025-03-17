@@ -18,6 +18,9 @@ use std::path::Path;
 use futures::StreamExt;
 use std::io::{self,Read,Write};
 use std::time::Duration;
+use tokio::io::{AsyncBufReadExt, BufReader};
+use tokio::time::timeout;
+use std::sync::{Arc, Mutex};
 
 // Struct to hold error information
 #[derive(serde::Serialize)]
@@ -68,11 +71,46 @@ async fn main() -> Result<(),Box<dyn std::error::Error>> {
     // Accepting the piped input json from jodejs and assign to the variable
     // host: GDC host
     // url: urls to download single maf files
-    let mut buffer = String::new();
-    io::stdin().read_line(&mut buffer)?;
+    let timeout_duration = Duration::from_secs(5); // Set a 5-second timeout
+
+    // Wrap the read operation in a timeout
+    let result = timeout(timeout_duration, async {
+        let mut buffer = String::new(); // Initialize an empty string to store input
+        let mut reader = BufReader::new(tokio::io::stdin()); // Create a buffered reader for stdin 
+        reader.read_line(&mut buffer).await?; // Read a line asynchronously
+        Ok::<String, io::Error>(buffer) // Return the input as a Result
+    })
+    .await;
+    // Handle the result of the timeout operation
+    let  file_id_lst_js: Value = match result {
+        Ok(Ok(buffer)) => serde_json::from_str(&buffer).expect("Error reading input and serializing to JSON"),
+        Ok(Err(_e)) => {
+            let stdin_error = ErrorEntry {
+                url: String::new(),
+                error: "Error reading from stdin.".to_string(),
+            };
+            let stdin_error_js = serde_json::to_string(&stdin_error).unwrap();
+            writeln!(io::stderr(), "{}", stdin_error_js).expect("Failed to output stderr!");
+            return Err(Box::new(std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                "Failed to output stderr!",
+            )) as Box<dyn std::error::Error>);
+        }
+        Err(_) => {
+            let stdin_error = ErrorEntry {
+                url: String::new(),
+                error: "Timeout while reading from stdin.".to_string(),
+            };
+            let stdin_error_js = serde_json::to_string(&stdin_error).unwrap();
+            writeln!(io::stderr(), "{}", stdin_error_js).expect("Failed to output stderr!");
+            return Err(Box::new(std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                "The columns in arg is not an array",
+            )) as Box<dyn std::error::Error>);
+        }
+    };
 
     // reading the input from PP
-    let file_id_lst_js = serde_json::from_str::<Value>(&buffer).expect("Error reading input and serializing to JSON");
     let host = file_id_lst_js.get("host").expect("Host was not provided").as_str().expect("Host is not a string");
     let mut url: Vec<String> = Vec::new();
     let file_id_lst = file_id_lst_js.get("fileIdLst").expect("File ID list is missed!").as_array().expect("File ID list is not an array");
@@ -162,50 +200,65 @@ async fn main() -> Result<(),Box<dyn std::error::Error>> {
     );
 
     // binary output
-    let mut encoder = GzEncoder::new(io::stdout(), Compression::default());
-    let _ = encoder.write_all(&maf_col.join("\t").as_bytes().to_vec()).expect("Failed to write header");
-    let _ = encoder.write_all(b"\n").expect("Failed to write newline");
+    let encoder = Arc::new(Mutex::new(GzEncoder::new(io::stdout(), Compression::default())));
 
-    download_futures.buffer_unordered(20).for_each(|result| {
-        match result {
-            Ok((url, content)) => {
-                match select_maf_col(content, &maf_col, &url) {
-                    Ok((maf_bit,mafrows)) => {
-                        if mafrows > 0 {
-                            encoder.write_all(&maf_bit).expect("Failed to write file");
-                        } else {
+    // Write the header
+    {
+        let mut encoder_guard = encoder.lock().unwrap(); // Lock the Mutex to get access to the inner GzEncoder
+        encoder_guard.write_all(&maf_col.join("\t").as_bytes().to_vec()).expect("Failed to write header");
+        encoder_guard.write_all(b"\n").expect("Failed to write newline");
+    }
+    
+    download_futures.buffer_unordered(10).for_each( |result| {
+        let encoder = Arc::clone(&encoder); // Clone the Arc for each task
+        let maf_col_cp = maf_col.clone();
+        async move {
+            match result {
+                Ok((url, content)) => {
+                    match select_maf_col(content, &maf_col_cp, &url) {
+                        Ok((maf_bit,mafrows)) => {
+                            if mafrows > 0 {
+                                let mut encoder_guard = encoder.lock().unwrap();
+                                encoder_guard.write_all(&maf_bit).expect("Failed to write file");
+                            } else {
+                                let error = ErrorEntry {
+                                    url: url.clone(),
+                                    error: "Empty maf file".to_string(),
+                                };
+                                let error_js = serde_json::to_string(&error).unwrap();
+                                writeln!(io::stderr(), "{}", error_js).expect("Failed to output stderr!");
+                            }
+                        }
+                        Err((url,error)) => {
                             let error = ErrorEntry {
-                                url: url.clone(),
-                                error: "Empty maf file".to_string(),
+                                url,
+                                error,
                             };
                             let error_js = serde_json::to_string(&error).unwrap();
                             writeln!(io::stderr(), "{}", error_js).expect("Failed to output stderr!");
                         }
                     }
-                    Err((url,error)) => {
-                        let error = ErrorEntry {
-                            url,
-                            error,
-                        };
-                        let error_js = serde_json::to_string(&error).unwrap();
-                        writeln!(io::stderr(), "{}", error_js).expect("Failed to output stderr!");
-                    }
                 }
-            }
-            Err((url, error)) => {
-                let error = ErrorEntry {
-                    url,
-                    error,
-                };
-                let error_js = serde_json::to_string(&error).unwrap();
-                writeln!(io::stderr(), "{}", error_js).expect("Failed to output stderr!");
-            }
-        };
-        async {}
+                Err((url, error)) => {
+                    let error = ErrorEntry {
+                        url,
+                        error,
+                    };
+                    let error_js = serde_json::to_string(&error).unwrap();
+                    writeln!(io::stderr(), "{}", error_js).expect("Failed to output stderr!");
+                }
+            };
+        }
     }).await;
     
-    // Finalize output and printing errors
+    // Finalize output
+
+    // Replace the value inside the Mutex with a dummy value (e.g., None)
+    let mut encoder_guard = encoder.lock().unwrap();
+    let encoder = std::mem::replace(&mut *encoder_guard, GzEncoder::new(io::stdout(), Compression::default()));
+    // Finalize the encoder
     encoder.finish().expect("Maf file output error!");
+
     // Manually flush stdout and stderr
     io::stdout().flush().expect("Failed to flush stdout");
     io::stderr().flush().expect("Failed to flush stderr");
