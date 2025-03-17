@@ -46,28 +46,19 @@ exports.run_rust = function (binfile, input_data) {
 	})
 }
 
-let detectInterval
-
 exports.stream_rust = function (binfile, input_data, emitJson) {
 	const binpath = path.join(__dirname, '/target/release/', binfile)
-	// we only want to run this interval loop inside a container, not in dev/test CI
-	if (!detectInterval && binfile == 'gdcmaf') {
-		detectInterval = setInterval(detectAndKillLongRunningRustProcess, 60000) // in millseconds
-	}
 
 	const ps = spawn(binpath)
+	// we only want to run this interval loop inside a container, not in dev/test CI
+	if (binfile == 'gdcmaf') trackByPid(ps.pid, binfile)
 	const stderr = []
 	try {
-		// from GDC API -> ps.stdin -> ps.stdout -> transformed stream
+		// from GDC API -> ps.stdin -> ps.stdout -> transformed stream -> express response.pipe()
 		Readable.from(input_data).pipe(ps.stdin)
-		//reader.on('data', ps.stdout.pipe)
-		//reader.on('error', ps.stderr.pipe)
-		//return reader
 	} catch (error) {
-		console.log(error)
-		//let errmsg = error
-		//if (stderr.length) errmsg += `killed run_rust('${binfile}'), stderr: ${stderr.join('').trim()}`
-		//console.log(errmsg)
+		console.log(`Error piping input_data into ${binfile}`, error)
+		return
 	}
 
 	const childStream = new Transform({
@@ -80,6 +71,7 @@ exports.stream_rust = function (binfile, input_data, emitJson) {
 	ps.stdout.pipe(childStream)
 	ps.stderr.on('data', data => stderr.push(data))
 	ps.on('close', code => {
+		trackedPids.delete(ps.pid)
 		if (stderr.length) {
 			// handle rust stderr
 			const errors = stderr.join('').trim().split('\n').map(JSON.parse)
@@ -91,12 +83,11 @@ exports.stream_rust = function (binfile, input_data, emitJson) {
 		}
 	})
 	ps.on('error', err => {
-		//console.log(74, `stream_rust().on('error')`, err)
+		trackedPids.delete(ps.pid)
+		// console.log(74, `stream_rust().on('error')`, err)
 		const errors = stderr.join('').trim().split('\n').map(JSON.parse)
 		emitJson({ errors })
 	})
-
-	// displayRustProcesses(binpath, 1) // use only for testing
 
 	// on('end') will duplicate ps.on('close') event above
 	// childStream.on('end', () => console.log(`-- childStream done --`))
@@ -105,49 +96,43 @@ exports.stream_rust = function (binfile, input_data, emitJson) {
 	return childStream
 }
 
-// to test, run `sleep 5555` in 1 or more terminal windows,
-// which should be all killed when making a request to gdc/MafBuild
-// const srcpath = 'sleep 5555' // uncomment to test and comment out below
-const srcpath = path.join(__dirname, 'target/release/gdcmaf')
-const PROCESS_TIMEOUT = 5 * 60 // in seconds
+const trackedPids = new Map()
+const PSKILL_INTERVAL_MS = 30000 // every 30 seconds
+let psKillInterval
 
-async function detectAndKillLongRunningRustProcess() {
-	try {
-		// console.log(`\n--- detecting and killing long running rust streams (>${PROCESS_TIMEOUT} seconds) using exec() ---`)
-		const ps = await execPromise(`ps -eo pid,etime,command | grep '${srcpath}'`, {
-			encoding: 'utf-8',
-			stdio: 'inherit'
-		})
-		if (!ps.stderr && typeof ps.stdout === 'string') {
-			const lines = ps.stdout.trim().split('\n')
-			for (const line of lines) {
-				if (!line || typeof line != 'string') continue
-				if (line.includes(srcpath)) {
-					const [pid, etime, ...rest] = line
-						.split(' ')
-						.filter(f => !!f)
-						.map(v => v.trim()) //; console.log(132, rest)
-					if (rest.includes('grep')) continue
-					const [sec, min, hour] = etime.split(':').reverse() //; console.log(134, etime.split(':').reverse(), line)
-					const elapsed = Number(sec) + 60 * Number(min) + 3600 * (Number(hour) || 0) //; console.log(127, {elapsed})
-					if (elapsed >= PROCESS_TIMEOUT) {
-						//console.log(136, 'killing process')
-						execPromise(`kill -9 ${pid}`, (_, out) => console.log(out))
-					}
-				}
-			}
-		}
-		// console.log('--- after detecting/killing long running process --')
-		// displayRustProcesses(srcpath)
-		// console.log('--- done detecting/killing long running process --\n')
-	} catch (e) {
-		//console.log(140, e)
-		// okay to not have any process to kill
-		//console.log(e)
-	}
+// default maxElapsed = 5 * 60 * 1000 millisecond = 300000
+// may allow configuration of maxElapsed by dataset/argument
+function trackByPid(pid, name, maxElapsed = 300000) {
+	if (!pid) return
+	trackedPids.set(pid, { name, expires: Date.now() + maxElapsed })
+	if (!psKillInterval) psKillInterval = setInterval(killExpiredProcess, PSKILL_INTERVAL_MS)
+	// uncomment below to test
+	// console.log([...trackedPids.entries()])
+	// setTimeout(killExpiredProcess, 5) // uncomment for testing only
 }
 
-function displayRustProcesses(binpath, killTimeout = 0) {
-	exec(`ps -eo comm,pid,etime | grep "${binpath}"`, { encoding: 'utf-8' }, (err, out) => console.log(out))
-	if (killTimeout) setTimeout(detectAndKillLongRunningRustProcess, killTimeout)
+//
+// Use one setInterval() to monitor >= 1 process,
+// instead of a separate setTimeout() for each process.
+// This is more reliable as setTimeout would use spawned ps.kill(),
+// which may not exist when the timeout callback is executed and
+// thus would require clearTimeout(closured_variable). Tracking by
+// pid does not rely on a usable 'ps' variable to kill itself.
+//
+async function killExpiredProcess() {
+	const time = Date.now()
+	for (const [pid, info] of trackedPids.entries()) {
+		if (info.expires > time) continue
+		const label = `rust process ${info.name} (pid=${pid})`
+		try {
+			process.kill(pid, 'SIGINT')
+			console.log(`killed ${label}`)
+			trackedPids.delete(pid)
+			// psKillInterval should not run when there are no tracked pids,
+			// and restarted in trackByPid() as needed
+			if (!trackedPids.size) clearInterval(psKillInterval)
+		} catch (err) {
+			console.log(`unable to kill ${label}`, err)
+		}
+	}
 }
