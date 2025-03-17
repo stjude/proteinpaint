@@ -176,13 +176,18 @@ async fn main() -> Result<(),Box<dyn std::error::Error>> {
         url.into_iter().map(|url|{
             async move {
                 let client = reqwest::Client::builder()
-                    .timeout(Duration::from_secs(100)) // 30-second timeout per request
+                    .timeout(Duration::from_secs(30)) // 30-second timeout per request
                     .connect_timeout(Duration::from_secs(10))
                     .build()
-                    .unwrap_or_else(|e| {
-                        panic!("Failed to build reqwest client: {}", e);
+                    .map_err(|_e| {
+                        let client_error = ErrorEntry{
+                            url: url.clone(),
+                            error: "Client build error".to_string(),
+                        };
+                        let client_error_js = serde_json::to_string(&client_error).unwrap();
+                        writeln!(io::stderr(), "{}", client_error_js).expect("Failed to output stderr!");
                     });
-                match client.get(&url).send().await {
+                match client.unwrap().get(&url).send().await {
                     Ok(resp) if resp.status().is_success() => {
                         match resp.bytes().await {
                             Ok(content) => {
