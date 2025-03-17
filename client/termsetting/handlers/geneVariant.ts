@@ -1,12 +1,4 @@
-import {
-	mclass,
-	dt2label,
-	dtsnvindel,
-	dtcnv,
-	dtfusionrna,
-	geneVariantTermGroupsetting,
-	dtTerms
-} from '#shared/common.js'
+import { mclass, dt2label, dtsnvindel, dtcnv, dtfusionrna, geneVariantTermGroupsetting } from '#shared/common.js'
 import { getPillNameDefault, set_hiddenvalues } from '../termsetting'
 import type {
 	GeneVariantBaseQ,
@@ -204,7 +196,7 @@ async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 			if (v == 'group') {
 				//await makeGroupUI()
 				groupsDiv.style('display', 'block')
-				mayDisplayVariantFilter(self, self.q?.variant_filter, groupsDiv)
+				await makeGroupsetDraggables()
 			} else {
 				clearGroupset(self)
 				delete self.q.dt
@@ -389,6 +381,7 @@ async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 	async function makeGroupsetDraggables() {
 		draggablesDiv.style('display', 'inline-block')
 		draggablesDiv.selectAll('*').remove()
+		self.q.type = 'filter'
 		self.groupSettingInstance = new GroupSettingMethods(self, { holder: draggablesDiv, hideApply: true })
 		await self.groupSettingInstance.main()
 	}
@@ -400,9 +393,11 @@ async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 		.style('display', 'block')
 		.text('Apply')
 		.on('click', () => {
-			if ((self.q.type == 'predefined-groupset' || self.q.type == 'custom-groupset') && self.groupSettingInstance)
+			if (
+				(self.q.type == 'predefined-groupset' || self.q.type == 'custom-groupset' || self.q.type == 'filter') &&
+				self.groupSettingInstance
+			)
 				self.groupSettingInstance.processDraggables()
-			self.q.variant_filter = getNormalRoot(self.variantFilter.active)
 			self.runCallback()
 		})
 
@@ -513,73 +508,4 @@ function clearGroupset(self) {
 	delete self.q.predefined_groupset_idx
 	delete self.q.customset
 	delete self.groupSettingInstance
-}
-
-/*
-self { vocabApi }
-	.variantFilter{} is attached to it
-filterInState{}
-	optional filter obj, tracked in state
-callback2
-	optional callback to run upon filter update, no parameter
-*/
-async function mayDisplayVariantFilter(self, filterInState: any, holder: any, callback2?: any) {
-	if (!self.variantFilter) {
-		self.variantFilter = {
-			opts: { joinWith: ['and'] },
-			// will load dt terms as custom terms in frontend vocab
-			terms: dtTerms
-		}
-		// variantFilter should be {opts{}, filter{}, terms[]}
-		// can be empty object if this dataset does not have info filter
-	}
-	if (!self.variantFilter.terms?.length) {
-		// dataset does not specify dt terms
-		return
-	}
-	if (!self.variantFilter.opts) throw 'variantFilter.opts{} missing'
-
-	if (filterInState) {
-		// use existing filter
-		self.variantFilter.active = JSON.parse(JSON.stringify(filterInState))
-	} else if (self.variantFilter.filter) {
-		// use default filter from dataset
-		self.variantFilter.active = JSON.parse(JSON.stringify(self.variantFilter.filter))
-	} else {
-		// TODO: is this necessary?
-		self.variantFilter.active = { type: 'tvslst', join: '', in: true, lst: [], $id: 0, tag: 'filterUiRoot' }
-	}
-
-	const div = holder.append('div').style('margin-top', '15px')
-
-	const filterBody = div.append('div')
-
-	filterInit({
-		joinWith: self.variantFilter.opts.joinWith,
-		emptyLabel: '+Variant Filter',
-		holder: filterBody,
-		vocab: { terms: self.variantFilter.terms },
-		callback: async filter => {
-			// once the filter is updated from UI, it's only updated here
-			// user must press submit button to attach current filter to self.q{}
-			self.variantFilter.active = filter
-			if (callback2) await callback2()
-		}
-	}).main(self.variantFilter.active)
-
-	/*if (!self.filterPrompt) {
-		self.filterPrompt = await filterPromptInit({
-			joinWith: self.variantFilter.opts.joinWith,
-			emptyLabel: '+Variant Filter',
-			holder: filterBody,
-			vocab: { terms: self.variantFilter.terms },
-			//termdbConfig: self.state.termdbConfig,
-			callback: f => {
-				//addNewGroup(self.app, f, self.state.groups)
-			}
-			//debug: self.opts.debug
-		})
-	}
-	// filterPrompt.main() always empties the filterUiRoot data
-	self.filterPrompt.main(self.getMassFilter()) // provide mass filter to limit the term tree*/
 }
