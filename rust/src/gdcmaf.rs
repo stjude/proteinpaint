@@ -85,7 +85,6 @@ async fn main() -> Result<(),Box<dyn std::error::Error>> {
     .await;
     // Handle the result of the timeout operation
     let  file_id_lst_js: Value = match result {
-        //Ok(Ok(buffer)) => serde_json::from_str(&buffer).expect("Error reading input and serializing to JSON"),
         Ok(Ok(buffer)) => {
             match serde_json::from_str(&buffer) {
                 Ok(js) => js,
@@ -97,7 +96,7 @@ async fn main() -> Result<(),Box<dyn std::error::Error>> {
                     writeln!(io::stderr(), "{}", serde_json::to_string(&stdin_error).unwrap()).unwrap();
                     return Err(Box::new(std::io::Error::new(
                         std::io::ErrorKind::InvalidInput,
-                        "Failed to output stderr!",
+                        "JSON parsing error!",
                     )) as Box<dyn std::error::Error>);
                 }
             }
