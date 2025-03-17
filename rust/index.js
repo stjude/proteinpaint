@@ -81,8 +81,8 @@ exports.stream_rust = function (binfile, input_data, emitJson) {
 
 	ps.on('close', code => {
 		if (trackedPids.has(ps.pid)) trackedPids.delete(ps.pid)
-		if (stderr.length || killedPids.has(ps.pid)) {
-			emitErrors(null, ps.pid)
+		if (stderr.length || killedPids.has(ps.pid) || code !== 0) {
+			emitErrors(null, ps.pid, code)
 		} else {
 			emitJson({ ok: true, status: 'ok', message: 'Processing complete' })
 		}
@@ -96,7 +96,7 @@ exports.stream_rust = function (binfile, input_data, emitJson) {
 		console.log(err)
 	})
 
-	function emitErrors(error, pid) {
+	function emitErrors(error, pid, code = 0) {
 		const errors = stderr
 			.join('')
 			.trim()
@@ -113,6 +113,9 @@ exports.stream_rust = function (binfile, input_data, emitJson) {
 		if (pid && killedPids.has(ps.pid) && !trackedPids.has(ps.pid)) {
 			errors.push({ error: `server error: MAF file processing terminated (expired process)` })
 			killedPids.delete(pid)
+		} else if (pid && code !== 0) {
+			// may result from errors in spawned process code, or external signal (like `kill -9` in terminal)
+			errors.push({ error: `server error: MAF file processing terminated (code=${code})` })
 		}
 		emitJson({ errors })
 	}
