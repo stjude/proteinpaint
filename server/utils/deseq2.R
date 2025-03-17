@@ -71,8 +71,9 @@ gene_id_symbols <- paste0(geneIDs, "\t", geneSymbols)
 if (length(input$conf1) == 0) { # No adjustment of confounding factors
       # Create a DESeq2 dataset object
       dds_time <- system.time({
-         dds_time <- system.time({
-              dds <- DESeqDataSetFromMatrix(countData = read_counts, design = ~ conditions)
+          dds_time <- system.time({
+              colData <- data.frame(conditions = conditions)
+              dds <- DESeqDataSetFromMatrix(countData = read_counts, colData = colData, design = ~ conditions)
          })
       })
       cat("Time for making DESeq2 dataset: ", as.difftime(dds_time, units = "secs")[3], " seconds\n")
