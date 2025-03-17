@@ -59,23 +59,20 @@ exports.stream_rust = function (binfile, input_data, emitJson) {
 	}
 
 	// collect errors into an array, no need to parse the JSON encoded errors
-	ps.stderr.on('errJson', data => stderr.push(jsonErr.trim()))
+	ps.stderr.on('data', data => stderr.push(JSON.parse(data.join(''))))
 
 	ps.on('close', code => {
-		if (stderr.length) {
-			// handle rust stderr
-			const errors = '[\n' + stderr.join(',').trim() + '\n]'
-			console.error(stderr)
-		}
+		if (stderr.length) logErrors()
 	})
 
-	ps.on('error', err => {
-		errors.push({ error: err, url: 'not file-related' })
-		// wrap the comma-concatenated stringified error objects with square brackets,
-		// as a very simple means of encoding into a JSON-array
-		const errors = '[\n' + stderr.join(',').trim() + '\n]'
-		console.error(errors)
+	ps.on('error', error => {
+		logErrors(error)
 	})
+
+	function logErrors(error) {
+		if (error) stderr.push({ error })
+		console.error(stderr)
+	}
 
 	return ps
 }
