@@ -56,6 +56,8 @@ export type BaseQ = {
 		| 'custom-groupset'
 		/** Applies to samplelst terms */
 		| 'custom-samplelst'
+		/** Applies to geneVariant term */
+		| 'filter'
 }
 
 export type ValuesQ = CategoricalBaseQ & {
@@ -72,7 +74,11 @@ export type CustomGroupSettingQ = CategoricalBaseQ & {
 	customset: BaseGroupSet
 }
 
-export type GroupSettingQ = ValuesQ | PredefinedGroupSettingQ | CustomGroupSettingQ
+export type FilterQ = BaseQ & {
+	type: 'filter'
+}
+
+export type GroupSettingQ = ValuesQ | FilterQ | PredefinedGroupSettingQ | CustomGroupSettingQ
 
 /*** types supporting termwrapper term ***/
 

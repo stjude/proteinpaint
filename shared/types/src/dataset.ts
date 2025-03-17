@@ -186,6 +186,7 @@ export type FilterTermEntry = BaseTvsFilter & {
 	tvs?: TvsFilter
 	min?: number
 	max?: number
+	dt?: number
 }
 
 type FilterLstTvs = BaseTvsFilter & {
