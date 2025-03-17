@@ -50,23 +50,22 @@ exports.stream_rust = function (binfile, input_data, emitJson) {
 	const binpath = path.join(__dirname, '/target/release/', binfile)
 
 	const ps = spawn(binpath)
-	// we only want to run this interval loop inside a container, not in dev/test CI
-	if (binfile == 'gdcmaf') trackByPid(ps.pid, binfile)
-	const stderr = []
-	try {
-		// from GDC API -> ps.stdin -> ps.stdout -> transformed stream -> express response.pipe()
-		Readable.from(input_data).pipe(ps.stdin)
-	} catch (error) {
-		console.log(`Error piping input_data into ${binfile}`, error)
-		return
-	}
-
 	const childStream = new Transform({
 		transform(chunk, encoding, callback) {
 			this.push(chunk)
 			callback()
 		}
 	})
+	// we only want to run this interval loop inside a container, not in dev/test CI
+	if (binfile == 'gdcmaf') trackByPid(ps.pid, binfile)
+	const stderr = []
+	try {
+		// from route handler -> input_data -> ps.stdin -> ps.stdout -> transformed stream -> express response.pipe()
+		Readable.from(input_data).pipe(ps.stdin)
+	} catch (error) {
+		console.log(`Error piping input_data into ${binfile}`, error)
+		return
+	}
 
 	ps.stdout.pipe(childStream)
 	ps.stderr.on('data', data => stderr.push(data))
@@ -91,8 +90,16 @@ exports.stream_rust = function (binfile, input_data, emitJson) {
 
 	// on('end') will duplicate ps.on('close') event above
 	// childStream.on('end', () => console.log(`-- childStream done --`))
-	// this may duplicate ps.on('error'), unless the error happened within the transformation
-	childStream.on('error', err => console.log('stream_rust childStream.on(error)', err))
+
+	// this may duplicate ps.on('error'), unless the error happened within the transform
+	childStream.on('error', err => {
+		console.log('stream_rust childStream.on(error)', err)
+		try {
+			childStream.destroy(err)
+		} catch (e) {
+			console.log(e)
+		}
+	})
 	return childStream
 }
 
@@ -100,10 +107,11 @@ const trackedPids = new Map()
 const PSKILL_INTERVAL_MS = 30000 // every 30 seconds
 let psKillInterval
 
-// default maxElapsed = 5 * 60 * 1000 millisecond = 300000
+// default maxElapsed = 5 * 60 * 1000 millisecond = 300000, change to 0 to test
 // may allow configuration of maxElapsed by dataset/argument
 function trackByPid(pid, name, maxElapsed = 300000) {
 	if (!pid) return
+	// only track by value (integer, string), not reference object
 	trackedPids.set(pid, { name, expires: Date.now() + maxElapsed })
 	if (!psKillInterval) psKillInterval = setInterval(killExpiredProcess, PSKILL_INTERVAL_MS)
 	// uncomment below to test
@@ -119,20 +127,25 @@ function trackByPid(pid, name, maxElapsed = 300000) {
 // thus would require clearTimeout(closured_variable). Tracking by
 // pid does not rely on a usable 'ps' variable to kill itself.
 //
-async function killExpiredProcess() {
+function killExpiredProcess() {
 	const time = Date.now()
 	for (const [pid, info] of trackedPids.entries()) {
 		if (info.expires > time) continue
 		const label = `rust process ${info.name} (pid=${pid})`
 		try {
 			process.kill(pid, 'SIGINT')
-			console.log(`killed ${label}`)
 			trackedPids.delete(pid)
-			// psKillInterval should not run when there are no tracked pids,
-			// and restarted in trackByPid() as needed
-			if (!trackedPids.size) clearInterval(psKillInterval)
+			console.log(`killed ${label}`)
 		} catch (err) {
 			console.log(`unable to kill ${label}`, err)
 		}
+	}
+
+	// psKillInterval should not run when there are no tracked pids,
+	// and restarted in trackByPid() as needed
+	try {
+		if (!trackedPids.size && psKillInterval) clearInterval(psKillInterval)
+	} catch (e) {
+		console.log(e)
 	}
 }
