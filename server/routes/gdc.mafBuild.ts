@@ -58,17 +58,17 @@ async function buildMaf(q: GdcMafBuildRequest, res, ds) {
 
 	mayLog(`${fileLst2.length} out of ${q.fileIdLst.length} input MAF files accepted by size limit`, Date.now() - t0)
 
-	// const arg = {
-	// 	fileIdLst: fileLst2,
-	// 	columns: q.columns,
-	// 	host: joinUrl(host.rest, 'data') // must use the /data/ endpoint from current host
-	// }
-	// uncomment for manual error testing
 	const arg = {
-		host: 'https://api.gdc.cancer.gov/data/',
-		columns: ['Hugo_Symbol', 'Entrez_Gene_Id', 'Center', 'NCBI_Build', 'Chromosome', 'Start_Position'],
-		fileIdLst: ['8b31d6d1-56f7-4aa8-b026-c64bafd531e7', '83ea587b-1e92-41b3-a8e3-12df30496724']
+		fileIdLst: fileLst2,
+		columns: q.columns,
+		host: joinUrl(host.rest, 'data') // must use the /data/ endpoint from current host
 	}
+	// uncomment for manual error testing
+	// const arg = {
+	// 	host: 'https://api.gdc.cancer.gov/data/',
+	// 	columns: ['Hugo_Symbol', 'Entrez_Gene_Id', 'Center', 'NCBI_Build', 'Chromosome', 'Start_Position'],
+	// 	fileIdLst: ['8b31d6d1-56f7-4aa8-b026-c64bafd531e7', '83ea587b-1e92-41b3-a8e3-12df30496724']
+	// }
 
 	const rustStream = stream_rust('gdcmaf', JSON.stringify(arg))
 	const form = new FormData()
