@@ -107,6 +107,7 @@ export class profileForms extends profilePlot {
 
 	async main() {
 		super.main()
+		if (this.tabs.length == 0) return // no plots to show
 		const activeTab = this.state.config.activeTab || this.tabs[0].label
 		this.activePlot = this.state.config.plots.find(p => p.name == activeTab)
 		this.activeTWs = this.twLst.filter(tw => tw.term.subtype == this.activePlot.subtype)
@@ -260,7 +261,7 @@ export class profileForms extends profilePlot {
 			const path = event.target
 			const d = path.__data__
 			const menu = this.tip.clear()
-			menu.d.text(`${d.key}: ${d.value}`)
+			menu.d.text(`${d.key}: ${d.value}%`)
 			menu.show(event.clientX, event.clientY, true, true)
 		} else this.onMouseOut(event)
 	}
@@ -270,10 +271,13 @@ export class profileForms extends profilePlot {
 	}
 
 	renderRect(dict: { [key: string]: number }, y: number, height: number, tw) {
-		const hasData = Object.values(dict).some(v => v > 0)
 		const categories = this.activePlot.categories
 		const itemG = this.dom.mainG.append('g').attr('transform', `translate(0, ${y})`)
-		const total = Object.values(dict).reduce((a, b) => a + b, 0)
+		const noAnswerCategories = this.activePlot.noAnswerCategories
+		const validKeys = Object.keys(dict).filter(key => !noAnswerCategories.find(c => c.name == key))
+		let total = 0
+		for (const key of validKeys) total += dict[key]
+
 		let x = 0
 		for (const category of categories) {
 			const key = category.name
