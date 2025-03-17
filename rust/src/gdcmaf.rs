@@ -185,7 +185,7 @@ async fn main() -> Result<(),Box<dyn std::error::Error>> {
                             error: "Client build error".to_string(),
                         };
                         let client_error_js = serde_json::to_string(&client_error).unwrap();
-                        writeln!(io::stderr(), "{}", client_error_js).expect("Failed to output stderr!");
+                        writeln!(io::stderr(), "{}", client_error_js).expect("Failed to build reqwest client!");
                     });
                 match client.unwrap().get(&url).send().await {
                     Ok(resp) if resp.status().is_success() => {
