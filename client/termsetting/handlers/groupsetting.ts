@@ -3,7 +3,7 @@ import { select, Selection } from 'd3-selection'
 //import { disappear } from '#src/client'
 import { throwMsgWithFilePathAndFnName } from '#dom/sayerror'
 import { debounce } from 'debounce'
-import { mclass } from '#shared/common.js'
+import { mclass, dtTerms } from '#shared/common.js'
 import type {
 	TermSettingInstance,
 	ValuesGroup,
@@ -12,8 +12,10 @@ import type {
 	GroupSettingQ,
 	GeneVariantBaseQ,
 	GeneVariantTerm,
-	MinBaseQ
+	MinBaseQ,
+	FilterTermEntry
 } from '#types'
+import { filterInit, getNormalRoot } from '#filter/filter'
 
 /*
 ---------Exported---------
@@ -49,11 +51,16 @@ type ItemEntry = {
 	samplecount: number | string | null //Sample count number or 'n/a'
 	uncomputable?: boolean
 }
+type FilterEntry = {
+	group: number // group index
+	opts: any
+	terms: FilterTermEntry[] // will load terms as custom terms in frontend vocab
+}
 type DataInput = { [index: string]: ItemEntry }
 type GrpEntry = {
 	//Scoped for file, maybe merge with GroupEntry type in future??
 	currentIdx: number //Current index of group
-	type: 'values' //always 'values'. Possible this key/val no longer needed
+	type: 'values' | 'filter'
 	name: string //Mutable group name, default .currentIdx
 }
 type GrpEntryWithDom = GrpEntry & {
@@ -79,7 +86,7 @@ export class GroupSettingMethods {
 	dom: Partial<GrpSetDom> //main menu dom elements before drag and drop divs are added
 	minGrpNum: number //minimum num of groups rendered (excluded categories + 2 groups)
 	defaultMaxGrpNum: number //default cutoff for num of groups. Used to calculate the actual max group num later
-	data: { groups: GrpEntry[]; values: ItemEntry[] }
+	data: { groups: GrpEntry[]; values: ItemEntry[]; filters: FilterEntry[] }
 	initGrpSetUI: any //func init for groupsetting UI
 
 	constructor(tsInstance, opts: Opts = {}) {
@@ -90,7 +97,7 @@ export class GroupSettingMethods {
 		}
 		this.minGrpNum = 3
 		this.defaultMaxGrpNum = 5
-		this.data = { groups: [], values: [] }
+		this.data = { groups: [], values: [], filters: [] }
 		setRenderers(this)
 	}
 
@@ -117,6 +124,31 @@ export class GroupSettingMethods {
 				}
 				this.data.values.push(value)
 				grpIdxes.add(value.group)
+			}
+		} else if (this.tsInstance.q.type == 'filter') {
+			const filters = [
+				{
+					group: 0,
+					opts: { joinWith: ['and'] },
+					// will load dt terms as custom terms in frontend vocab
+					terms: dtTerms
+				},
+				{
+					group: 1,
+					opts: { joinWith: ['and'] },
+					// will load dt terms as custom terms in frontend vocab
+					terms: dtTerms
+				},
+				{
+					group: 2,
+					opts: { joinWith: ['and'] },
+					// will load dt terms as custom terms in frontend vocab
+					terms: dtTerms
+				}
+			]
+			for (const filter of filters) {
+				this.data.filters.push(filter)
+				grpIdxes.add(filter.group)
 			}
 		} else if (this.tsInstance.q.type == 'custom-groupset') {
 			// q.type = 'custom-groupset'
@@ -160,7 +192,8 @@ export class GroupSettingMethods {
 			throw 'q.type not recognized'
 		}
 
-		if (this.data.values.length == 0) throwMsgWithFilePathAndFnName(`Missing values`)
+		if (this.tsInstance.q.type == 'values' && this.data.values.length == 0)
+			throwMsgWithFilePathAndFnName(`Missing values`)
 
 		// re-populate missing sample counts, which can occur
 		// for a custom groupset
@@ -185,7 +218,7 @@ export class GroupSettingMethods {
 			//add any required groups, specifically Excluded Categories and Group 2
 			this.data.groups.push({
 				currentIdx: g,
-				type: 'values',
+				type: this.tsInstance.q.type == 'filter' ? 'filter' : 'values',
 				name: g === 0 ? `Excluded categories` : `Group ${g.toString()}`
 			})
 		}
@@ -408,21 +441,27 @@ function setRenderers(self: any) {
 	}
 
 	self.processDraggables = () => {
-		if (!draggedItem && !editedName) return // no groupset changes, so return
+		if (!draggedItem && !addedFilter && !editedName) return // no groupset changes, so return
 		const customset: any = { groups: [] }
 		for (const group of self.data.groups) {
+			const customgroup: any = { name: group.name, type: group.type }
 			if (group.currentIdx === 0) continue
-			const groupValues = self.data.values
-				.filter((v: ItemEntry) => v.group == group.currentIdx)
-				.map((v: ItemEntry) => {
-					return { key: v.key, label: v.label }
-				})
-			if (groupValues.length == 0) continue
-			customset.groups.push({
-				name: group.name,
-				type: group.type,
-				values: groupValues
-			})
+			if (group.type == 'filter') {
+				const groupFilter = self.data.filters.find((d: FilterEntry) => d.group == group.currentIdx)
+				if (!groupFilter) throw 'filter missing'
+				customgroup.filter = getNormalRoot(groupFilter.active)
+			} else if (group.type == 'values') {
+				const groupValues = self.data.values
+					.filter((v: ItemEntry) => v.group == group.currentIdx)
+					.map((v: ItemEntry) => {
+						return { key: v.key, label: v.label }
+					})
+				if (groupValues.length == 0) continue
+				customgroup.values = groupValues
+			} else {
+				throw 'group.type is not recognized'
+			}
+			customset.groups.push(customgroup)
 		}
 		self.tsInstance.q.type = 'custom-groupset'
 		self.tsInstance.q.customset = customset
@@ -430,11 +469,12 @@ function setRenderers(self: any) {
 	}
 
 	let draggedItem: any
+	let addedFilter: boolean
 	let editedName: boolean
 	async function initGroupDiv(group: GrpEntryWithDom) {
 		//Create the parent group div on load and with user actions on the top
 		const wrapper = group.currentIdx === 0 ? self.dom.excludedWrapper : self.dom.includedWrapper
-		group.type = 'values'
+		if (!group.type) group.type = 'values'
 		if (!group.wrapper)
 			group.wrapper = wrapper
 				.append('div')
@@ -535,7 +575,57 @@ function setRenderers(self: any) {
 
 		group.draggables = group.wrapper.append('div').classed('sjpp-drag-list-div', true)
 
-		await self.addItems(group)
+		if (group.type == 'filter') {
+			// group is filter type, render tvs
+			const holder = group.draggables.append('div')
+			await mayDisplayFilter(group, /*group.variant_filter*/ null, holder)
+		} else {
+			// not filter type, render items in group
+			await self.addItems(group)
+		}
+	}
+
+	/*
+	self { vocabApi }
+		.variantFilter{} is attached to it
+	filterInState{}
+		optional filter obj, tracked in state
+	callback2
+		optional callback to run upon filter update, no parameter
+	*/
+	async function mayDisplayFilter(group, filterInState: any, holder: any, callback2?: any) {
+		const filter = self.data.filters.find((d: FilterEntry) => d.group == group.currentIdx)
+		if (!filter || !filter.terms?.length) return
+		if (!filter.opts) throw 'filter.opts{} missing'
+
+		if (filterInState) {
+			// use existing filter
+			filter.active = JSON.parse(JSON.stringify(filterInState))
+		} else if (filter.filter) {
+			// use default filter from dataset
+			filter.active = JSON.parse(JSON.stringify(filter.filter))
+		} else {
+			// TODO: is this necessary?
+			filter.active = { type: 'tvslst', join: '', in: true, lst: [], $id: 0, tag: 'filterUiRoot' }
+		}
+
+		const div = holder.append('div').style('margin-top', '15px')
+
+		const filterBody = div.append('div')
+
+		filterInit({
+			joinWith: filter.opts.joinWith,
+			emptyLabel: '+Variant Filter',
+			holder: filterBody,
+			vocab: { terms: filter.terms },
+			callback: async f => {
+				addedFilter = true
+				// once the filter is updated from UI, it's only updated here
+				// user must press submit button to attach current filter to self.q{}
+				filter.active = f
+				if (callback2) await callback2()
+			}
+		}).main(filter.active)
 	}
 
 	self.onKeyUp = async function (group: GrpEntryWithDom) {
