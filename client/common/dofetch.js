@@ -226,10 +226,9 @@ export async function processFormData(res) {
 	const data = {}
 	try {
 		const form = await res.formData()
-		// The key of each pair is a string, and the value is either a string or a Blob.
+		// The key of each form entry is a string, and the value is either a string or a Blob.
 		// see https://developer.mozilla.org/en-US/docs/Web/API/FormData/entries
 		for (const [key, value] of form.entries()) {
-			// console.log(231, key, value)
 			if (value.type) {
 				// value is a Blob
 				data[key] = { headers: { 'content-type': value.type }, body: value }

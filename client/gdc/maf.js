@@ -399,7 +399,6 @@ async function getFilesAndShowTable(obj) {
 			 }
 			*/
 			data = await dofetch3('gdc/mafBuild', { body: { fileIdLst, columns: outColumns } })
-			console.log(data)
 			if (!Object.keys(data).length) throw 'server returned blank multipart'
 		} catch (e) {
 			sayerror(obj.errDiv, e)
