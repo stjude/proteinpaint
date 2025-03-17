@@ -48,44 +48,34 @@ exports.stream_rust = function (binfile, input_data, emitJson) {
 	const ps = spawn(binpath)
 	const stderr = []
 	try {
-		// from GDC API -> ps.stdin -> ps.stdout -> transformed stream
+		// from GDC API -> ps.stdin -> ps.stdout -> form-data -> express response
 		Readable.from(input_data).pipe(ps.stdin)
-		//reader.on('data', ps.stdout.pipe)
-		//reader.on('error', ps.stderr.pipe)
-		//return reader
 	} catch (error) {
 		ps.kill()
-		let errmsg = error
-		//if (stderr.length) errmsg += `killed run_rust('${binfile}'), stderr: ${stderr.join('').trim()}`
-		//reject(errmsg)
-		console.log(59, error)
+		// let errmsg = error
+		// if (stderr.length) errmsg += `killed run_rust('${binfile}'), stderr: ${stderr.join('').trim()}`
+		// reject(errmsg)
+		console.log({ error })
 	}
 
-	const childStream = new Transform({
-		transform(chunk, encoding, callback) {
-			this.push(chunk)
-			callback()
-		}
-	})
-	ps.stdout.pipe(childStream)
-	ps.stderr.on('data', data => stderr.push(data))
-	ps.on('close', code => { //console.log(72, stderr.length)
+	// collect errors into an array, no need to parse the JSON encoded errors
+	ps.stderr.on('errJson', data => stderr.push(jsonErr.trim()))
+
+	ps.on('close', code => {
 		if (stderr.length) {
 			// handle rust stderr
-			const errors = stderr.join('').trim().split('\n').map(JSON.parse)
-			//const errmsg = `!!! stream_rust('${binfile}') stderr: !!!`
-			//console.log(errmsg, errors)
-			emitJson({errors})
-		} else {
-			emitJson({ ok: true, status: 'ok', message: 'Processing complete' })
+			const errors = '[\n' + stderr.join(',').trim() + '\n]'
+			console.error(stderr)
 		}
 	})
+
 	ps.on('error', err => {
-		//console.log(74, `stream_rust().on('error')`, err)
-		const errors = stderr.join('').trim().split('\n').map(JSON.parse)
-		emitJson({errors})
+		errors.push({ error: err, url: 'not file-related' })
+		// wrap the comma-concatenated stringified error objects with square brackets,
+		// as a very simple means of encoding into a JSON-array
+		const errors = '[\n' + stderr.join(',').trim() + '\n]'
+		console.error(errors)
 	})
-	// below will duplicate ps.on('close') event above
-	// childStream.on('end', () => console.log(`-- childStream done --`))
-	return childStream
+
+	return ps
 }

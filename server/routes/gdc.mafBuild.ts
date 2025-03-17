@@ -5,6 +5,7 @@ import type { GdcMafBuildRequest, RouteApi } from '#types'
 import { gdcMafPayload } from '#types/checkers'
 import { maxTotalSizeCompressed } from './gdc.maf.ts'
 import { mayLog } from '#src/helpers.ts'
+import FormData from 'form-data'
 
 export const api: RouteApi = {
 	endpoint: 'gdc/mafBuild',
@@ -36,13 +37,15 @@ function init({ genomes }) {
 	}
 }
 
-type EmitJsonDataArg = string | {
-	status?: 'string'
-	ok?: boolean
-	error?: string
-	errors?: any[] 
-	message?: string
-}
+type EmitJsonDataArg =
+	| string
+	| {
+			status?: 'string'
+			ok?: boolean
+			error?: string
+			errors?: any[]
+			message?: string
+	  }
 
 /*
 q{}
@@ -55,34 +58,24 @@ async function buildMaf(q: GdcMafBuildRequest, res, ds) {
 
 	mayLog(`${fileLst2.length} out of ${q.fileIdLst.length} input MAF files accepted by size limit`, Date.now() - t0)
 
-	const arg = {
-		fileIdLst: fileLst2,
-		columns: q.columns,
-		host: joinUrl(host.rest, 'data') // must use the /data/ endpoint from current host
-	}
+	// const arg = {
+	// 	fileIdLst: fileLst2,
+	// 	columns: q.columns,
+	// 	host: joinUrl(host.rest, 'data') // must use the /data/ endpoint from current host
+	// }
 	// uncomment for manual error testing
-	// const arg = {"host": "https://api.gdc.cancer.gov/data/","columns": ["Hugo_Symbol", "Entrez_Gene_Id", "Center", "NCBI_Build", "Chromosome", "Start_Position"], "fileIdLst": ["8b31d6d1-56f7-4aa8-b026-c64bafd531e7", "83ea587b-1e92-41b3-a8e3-12df30496724"]}; 
-
-	const boundary = 'GDC_MAF_MULTIPART_BOUNDARY'
-	res.setHeader('content-type', `multipart/mixed; boundary=${boundary}`)
-	res.write(`--${boundary}`)
-	res.write('\ncontent-disposition: attachment; filename=cohort.maf.gz')
-	res.write('\ncontent-type: application/octet-stream\n\n')
-	res.flush() // header text should be sent as a separate chunk from the content that will be streamed next
-
-	const rustStream = stream_rust('gdcmaf', JSON.stringify(arg), emitJson)
-	rustStream.pipe(res, { end: false })
-
-	function emitJson(data?: EmitJsonDataArg, end: boolean = true) {
-		res.write(`\n--${boundary}`)
-		res.write('\ncontent-type: application/json')
-		const json = typeof data === 'string' ? data : JSON.stringify(data || {ok: true, status: 'ok'})
-		res.write('\n\n' + json)
-		res.write(`\n--${boundary}--`)
-		// report amount of time taken to run rust
-		mayLog('rust gdcmaf', Date.now() - t0)
-		if (end) res.end()
+	const arg = {
+		host: 'https://api.gdc.cancer.gov/data/',
+		columns: ['Hugo_Symbol', 'Entrez_Gene_Id', 'Center', 'NCBI_Build', 'Chromosome', 'Start_Position'],
+		fileIdLst: ['8b31d6d1-56f7-4aa8-b026-c64bafd531e7', '83ea587b-1e92-41b3-a8e3-12df30496724']
 	}
+
+	const rustStream = stream_rust('gdcmaf', JSON.stringify(arg))
+	const form = new FormData()
+	res.setHeader('content-type', `multipart/form-data; boundary=${form.getBoundary()}`)
+	form.append('gzfile', rustStream.stdout, { filename: 'test.gz' })
+	form.append('errors', rustStream.stderr, { contentType: 'application/x-jsonlines' })
+	form.pipe(res)
 }
 
 /*
