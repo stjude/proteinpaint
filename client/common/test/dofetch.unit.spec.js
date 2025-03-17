@@ -22,7 +22,7 @@ tape('processFormData', async test => {
 				return form
 			}
 		})
-		// console.log(115, parts, bin0.orig)
+		// convert blobs to text to simplify comparison
 		test.deepEqual(parts.gzfile?.body.text(), blob.text(), 'should correctly encode and decode original blobs')
 		test.deepEqual(parts.errors?.body, [], 'should correctly encode and decode errors')
 	} catch (e) {
