@@ -394,8 +394,8 @@ async function getFilesAndShowTable(obj) {
 			 ] 
 			*/
 			data = await dofetch3('gdc/mafBuild', { body: { fileIdLst, columns: outColumns } })
-			if (!Array.isArray(data)) throw `server didn't return multipart`
-			if (!data.length) throw 'server returned blank multipart'
+			console.log(data)
+			if (!Object.keys(data).length) throw 'server returned blank multipart'
 		} catch (e) {
 			sayerror(obj.errDiv, e)
 			button.innerHTML = oldText
@@ -406,10 +406,11 @@ async function getFilesAndShowTable(obj) {
 		button.innerHTML = oldText
 		button.disabled = false
 
-		const runStatus = data.find(
-			d => d.headers['content-type'] == 'application/json' && (d.body?.errors || d.body?.error)
-		)
-		if (runStatus && !runStatus?.body?.ok) {
+		const errors = data.errors?.body
+		if (errors?.length) {
+			// expect multipart/form-data errors to be an array
+			if (!Array.isArray(errors)) throw `multipart/form-data errors should be one json-encoded value per line`
+			// expect gdc/mafBuild errors
 			// revise if run status is changed
 			const errors = runStatus.body?.errors || []
 			if (Array.isArray(errors)) {
@@ -419,14 +420,15 @@ async function getFilesAndShowTable(obj) {
 				for (const e of nonFileErrors) sayerror(obj.errDiv, e.error)
 			}
 			// other unstructured errors; display as plain text
-			if (runStatus.body?.error) sayerror(obj.errDiv, runStatus.body.error)
-			if (runStatus.body?.message) sayerror(obj.errDiv, runStatus.body.message)
+			for (const e of errors.filter(e => !e.url)) {
+				if (e.error) sayerror(obj.errDiv, e.error)
+				if (e.message) sayerror(obj.errDiv, e.message)
+			}
 		}
 
 		// download the file to client
-		const octetData = data.find(d => d.headers['content-type'] == 'application/octet-stream')
-		if (!octetData) throw 'missing octet data'
-		const href = URL.createObjectURL(octetData.body)
+		if (!data.gzfile) throw 'missing gzfile from response'
+		const href = URL.createObjectURL(data.gzfile.body)
 		// console.log(394, [octetData?.body.size, href.length, href], octetData)
 		const a = document.createElement('a')
 		a.href = href
