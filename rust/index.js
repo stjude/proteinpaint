@@ -111,7 +111,7 @@ exports.stream_rust = function (binfile, input_data, emitJson) {
 			.filter(d => d !== null)
 		if (error) errors.push(error)
 		if (pid && killedPids.has(ps.pid) && !trackedPids.has(ps.pid)) {
-			errors.push({ error: `server error: MAF file processing terminated (expired)` })
+			errors.push({ error: `server error: MAF file processing terminated (expired process)` })
 			killedPids.delete(pid)
 		}
 		emitJson({ errors })
@@ -165,8 +165,18 @@ function killExpiredProcesses() {
 	const time = Date.now()
 	for (const [pid, info] of trackedPids.entries()) {
 		if (info.expires > time) continue
+		try {
+			// true if process exists
+			process.kill(pid, 0)
+		} catch (_) {
+			// no need to kill, but remove from tracking
+			trackedPids.delete(pid)
+			// prevent misleading logs of 'unable to kill ...'
+			continue
+		}
 		const label = `rust process ${info.name} (pid=${pid})`
 		try {
+			// detect if process exists before killing it
 			process.kill(pid, 'SIGTERM')
 			trackedPids.delete(pid)
 			killedPids.add(pid)
