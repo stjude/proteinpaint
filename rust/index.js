@@ -115,8 +115,8 @@ function trackByPid(pid, name, maxElapsed = 300000) {
 	trackedPids.set(pid, { name, expires: Date.now() + maxElapsed })
 	if (!psKillInterval) psKillInterval = setInterval(killExpiredProcess, PSKILL_INTERVAL_MS)
 	// uncomment below to test
-	console.log([...trackedPids.entries()])
-	setTimeout(killExpiredProcess, 5) // uncomment for testing only
+	// console.log([...trackedPids.entries()])
+	// setTimeout(killExpiredProcess, 5) // uncomment for testing only
 }
 
 //
