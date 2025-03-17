@@ -74,7 +74,14 @@ async function buildMaf(q: GdcMafBuildRequest, res, ds) {
 
 	try {
 		const rustStream = stream_rust('gdcmaf', JSON.stringify(arg), emitJson)
-		if (rustStream) rustStream.pipe(res, { end: false })
+		if (rustStream) {
+			rustStream.pipe(res, { end: false }).on('error', e => {
+				if (!e) return
+				console.log(e)
+			})
+		} else {
+			emitJson({ error: 'server error: undefined rustStream' })
+		}
 	} catch (e) {
 		console.log(e)
 	}

@@ -411,7 +411,13 @@ async function getFilesAndShowTable(obj) {
 		)
 		if (runStatus && !runStatus?.body?.ok) {
 			// revise if run status is changed
-			if (Array.isArray(runStatus.body?.errors)) displayRunStatusErrors(runStatus.body.errors)
+			const errors = runStatus.body?.errors || []
+			if (Array.isArray(errors)) {
+				const fileErrors = errors.filter(d => d.url)
+				if (fileErrors.length) displayRunStatusErrors(fileErrors)
+				const nonFileErrors = errors.filter(d => !d.url)
+				for (const e of nonFileErrors) sayerror(obj.errDiv, e.error)
+			}
 			// other unstructured errors; display as plain text
 			if (runStatus.body?.error) sayerror(obj.errDiv, runStatus.body.error)
 			if (runStatus.body?.message) sayerror(obj.errDiv, runStatus.body.message)

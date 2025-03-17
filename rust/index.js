@@ -61,32 +61,61 @@ exports.stream_rust = function (binfile, input_data, emitJson) {
 	const stderr = []
 	try {
 		// from route handler -> input_data -> ps.stdin -> ps.stdout -> transformed stream -> express response.pipe()
-		Readable.from(input_data).pipe(ps.stdin)
+		Readable.from(input_data)
+			.pipe(ps.stdin)
+			.on('error', err => {
+				emitErrors({ error: `error piping input data to spawned ${binfile} process` })
+			})
 	} catch (error) {
 		console.log(`Error piping input_data into ${binfile}`, error)
 		return
 	}
 
-	ps.stdout.pipe(childStream)
+	// uncomment to trigger childStream.destroy()
+	// setTimeout(() => { console.log(74, 'childStream.destroy()'); childStream.destroy();}, 1000)
+	// childStream.destroy() does not seem to trigger ps.stdout.pipe('...').on('error') callback,
+	// which is okay as long as the server doesn't crash and ps get's killed eventually
+	ps.stdout.pipe(childStream).on('error', console.log)
+
 	ps.stderr.on('data', data => stderr.push(data))
+
 	ps.on('close', code => {
-		trackedPids.delete(ps.pid)
-		if (stderr.length) {
-			// handle rust stderr
-			const errors = stderr.join('').trim().split('\n').map(JSON.parse)
-			//const errmsg = `!!! stream_rust('${binfile}') stderr: !!!`
-			//console.log(errmsg, errors)
-			emitJson({ errors })
+		if (trackedPids.has(ps.pid)) trackedPids.delete(ps.pid)
+		if (stderr.length || killedPids.has(ps.pid)) {
+			emitErrors(null, ps.pid)
 		} else {
 			emitJson({ ok: true, status: 'ok', message: 'Processing complete' })
 		}
 	})
 	ps.on('error', err => {
-		trackedPids.delete(ps.pid)
+		if (trackedPids.has(ps.pid)) trackedPids.delete(ps.pid)
 		// console.log(74, `stream_rust().on('error')`, err)
-		const errors = stderr.join('').trim().split('\n').map(JSON.parse)
-		emitJson({ errors })
+		emitErrors(null, ps.pid)
 	})
+	ps.on('SIGTERM', err => {
+		console.log(err)
+	})
+
+	function emitErrors(error, pid) {
+		const errors = stderr
+			.join('')
+			.trim()
+			.split('\n')
+			.map(d => {
+				try {
+					return JSON.parse(d)
+				} catch (e) {
+					return null
+				}
+			})
+			.filter(d => d !== null)
+		if (error) errors.push(error)
+		if (pid && killedPids.has(ps.pid) && !trackedPids.has(ps.pid)) {
+			errors.push({ error: `server error: MAF file processing terminated (expired)` })
+			killedPids.delete(pid)
+		}
+		emitJson({ errors })
+	}
 
 	// on('end') will duplicate ps.on('close') event above
 	// childStream.on('end', () => console.log(`-- childStream done --`))
@@ -100,23 +129,26 @@ exports.stream_rust = function (binfile, input_data, emitJson) {
 			console.log(e)
 		}
 	})
+
 	return childStream
 }
 
-const trackedPids = new Map()
+const trackedPids = new Map() // will be used to monitor expired processes
+const killedPids = new Set() // will be used to detect killed processes, to help with error detection
 const PSKILL_INTERVAL_MS = 30000 // every 30 seconds
 let psKillInterval
 
-// default maxElapsed = 5 * 60 * 1000 millisecond = 300000, change to 0 to test
+// default maxElapsed = 5 * 60 * 1000 millisecond = 300000 or 5 minutes, change to 0 to test
 // may allow configuration of maxElapsed by dataset/argument
 function trackByPid(pid, name, maxElapsed = 300000) {
 	if (!pid) return
 	// only track by value (integer, string), not reference object
+	// NOTE: a reused/reassigned process.pid will be replaced by the most recent process
 	trackedPids.set(pid, { name, expires: Date.now() + maxElapsed })
-	if (!psKillInterval) psKillInterval = setInterval(killExpiredProcess, PSKILL_INTERVAL_MS)
+	if (!psKillInterval) psKillInterval = setInterval(killExpiredProcesses, PSKILL_INTERVAL_MS)
 	// uncomment below to test
 	// console.log([...trackedPids.entries()])
-	// setTimeout(killExpiredProcess, 5) // uncomment for testing only
+	// if (maxElapsed < 10000) setTimeout(killExpiredProcesses, 1000) // uncomment for testing only
 }
 
 //
@@ -127,14 +159,17 @@ function trackByPid(pid, name, maxElapsed = 300000) {
 // thus would require clearTimeout(closured_variable). Tracking by
 // pid does not rely on a usable 'ps' variable to kill itself.
 //
-function killExpiredProcess() {
+function killExpiredProcesses() {
+	//console.log(149, 'killExpiredProcesses()')
+	killedPids.clear()
 	const time = Date.now()
 	for (const [pid, info] of trackedPids.entries()) {
 		if (info.expires > time) continue
 		const label = `rust process ${info.name} (pid=${pid})`
 		try {
-			process.kill(pid, 'SIGINT')
+			process.kill(pid, 'SIGTERM')
 			trackedPids.delete(pid)
+			killedPids.add(pid)
 			console.log(`killed ${label}`)
 		} catch (err) {
 			console.log(`unable to kill ${label}`, err)
