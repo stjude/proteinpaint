@@ -14,11 +14,10 @@ use flate2::read::GzDecoder;
 use flate2::write::GzEncoder;
 use flate2::Compression;
 use serde_json::{Value};
-use std::path::Path;
 use futures::StreamExt;
 use std::io::{self,Read,Write};
 use std::time::Duration;
-use tokio::io::{AsyncBufReadExt, BufReader};
+use tokio::io::{AsyncReadExt, BufReader};
 use tokio::time::timeout;
 use std::sync::{Arc, Mutex};
 
@@ -49,6 +48,9 @@ fn select_maf_col(d:String,columns:&Vec<String>,url:&str) -> Result<(Vec<u8>,i32
                         return Err((url.to_string(), error_msg));
                     }
                 }
+            };
+            if header_indices.is_empty() {
+                return Err((url.to_string(), "No matching columns found".to_string()));
             }
         } else {
             let maf_cont_lst: Vec<String> = line.split("\t").map(|s| s.to_string()).collect();
@@ -71,19 +73,35 @@ async fn main() -> Result<(),Box<dyn std::error::Error>> {
     // Accepting the piped input json from jodejs and assign to the variable
     // host: GDC host
     // url: urls to download single maf files
-    let timeout_duration = Duration::from_secs(5); // Set a 5-second timeout
+    let timeout_duration = Duration::from_secs(5); // Set a 10-second timeout
 
     // Wrap the read operation in a timeout
     let result = timeout(timeout_duration, async {
         let mut buffer = String::new(); // Initialize an empty string to store input
         let mut reader = BufReader::new(tokio::io::stdin()); // Create a buffered reader for stdin 
-        reader.read_line(&mut buffer).await?; // Read a line asynchronously
+        reader.read_to_string(&mut buffer).await?; // Read a line asynchronously
         Ok::<String, io::Error>(buffer) // Return the input as a Result
     })
     .await;
     // Handle the result of the timeout operation
     let  file_id_lst_js: Value = match result {
-        Ok(Ok(buffer)) => serde_json::from_str(&buffer).expect("Error reading input and serializing to JSON"),
+        //Ok(Ok(buffer)) => serde_json::from_str(&buffer).expect("Error reading input and serializing to JSON"),
+        Ok(Ok(buffer)) => {
+            match serde_json::from_str(&buffer) {
+                Ok(js) => js,
+                Err(e) => {
+                    let stdin_error = ErrorEntry {
+                        url: String::new(),
+                        error: format!("JSON parsing error: {}", e),
+                    };
+                    writeln!(io::stderr(), "{}", serde_json::to_string(&stdin_error).unwrap()).unwrap();
+                    return Err(Box::new(std::io::Error::new(
+                        std::io::ErrorKind::InvalidInput,
+                        "Failed to output stderr!",
+                    )) as Box<dyn std::error::Error>);
+                }
+            }
+        }
         Ok(Err(_e)) => {
             let stdin_error = ErrorEntry {
                 url: String::new(),
@@ -115,7 +133,8 @@ async fn main() -> Result<(),Box<dyn std::error::Error>> {
     let mut url: Vec<String> = Vec::new();
     let file_id_lst = file_id_lst_js.get("fileIdLst").expect("File ID list is missed!").as_array().expect("File ID list is not an array");
     for v in file_id_lst {
-        url.push(Path::new(&host).join(&v.as_str().unwrap()).display().to_string());
+        //url.push(Path::new(&host).join(&v.as_str().unwrap()).display().to_string());
+        url.push(format!("{}/{}",host.trim_end_matches('/'), v.as_str().unwrap()));
     };
 
     // read columns as array from input json and convert data type from Vec<Value> to Vec<String>
@@ -157,7 +176,7 @@ async fn main() -> Result<(),Box<dyn std::error::Error>> {
         url.into_iter().map(|url|{
             async move {
                 let client = reqwest::Client::builder()
-                    .timeout(Duration::from_secs(30)) // 30-second timeout per request
+                    .timeout(Duration::from_secs(50)) // 30-second timeout per request
                     .connect_timeout(Duration::from_secs(10))
                     .build()
                     .unwrap_or_else(|e| {
