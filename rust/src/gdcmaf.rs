@@ -209,7 +209,7 @@ async fn main() -> Result<(),Box<dyn std::error::Error>> {
         encoder_guard.write_all(b"\n").expect("Failed to write newline");
     }
     
-    download_futures.buffer_unordered(10).for_each( |result| {
+    download_futures.buffer_unordered(20).for_each( |result| {
         let encoder = Arc::clone(&encoder); // Clone the Arc for each task
         let maf_col_cp = maf_col.clone();
         async move {
