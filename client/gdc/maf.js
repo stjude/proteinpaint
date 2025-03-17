@@ -385,13 +385,18 @@ async function getFilesAndShowTable(obj) {
 
 		let data
 		try {
-			/* expect multipart response, as preprocessed by dofetch into an array of response data entries
-			 [
-			 	 {
-					   headers: {'content-type': '...', [key?]: string}, 
-			    	  body: any
-		     	 }
-			 ] 
+			/* expect multipart response, as preprocessed by dofetch into the following object
+			 {
+			 	  gzfile: {
+					 	headers: {'content-type': '...', [key?]: string}, 
+			    	body: File/Blob
+		     	},
+		     	errors: [
+		     		// empty array, or any entries
+						{error: '...', url}
+						{error?: '...', message?: '...'}
+		   		]
+			 }
 			*/
 			data = await dofetch3('gdc/mafBuild', { body: { fileIdLst, columns: outColumns } })
 			console.log(data)
