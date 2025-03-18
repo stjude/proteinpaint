@@ -10,6 +10,7 @@ Fixes:
 - cherry-pick fixes from master to handle stderr from rust code, node js stream_rust() helper and route handler
 - protect against missing error payload or empty data when handling the maf multipart response
 - correctly detect the boundary text between binary and json text in the same octet chunk
+- make sure that server requests would timeout in rust code and optimize
 
 
 ## 2.109.0
