@@ -2563,12 +2563,13 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 		if (!tw.term.gene && !(tw.term.chr && Number.isInteger(tw.term.start) && Number.isInteger(tw.term.stop)))
 			throw 'no gene or position specified'
 		if (tw.q.type == 'predefined-groupset' || tw.q.type == 'custom-groupset') {
-			if (!Number.isInteger(tw.q.dt)) throw 'dt is not an integer value'
 			if (tw.q.type == 'predefined-groupset' && !Number.isInteger(tw.q.predefined_groupset_idx))
 				throw 'predefined_groupset_idx is not an integer value'
 			if (tw.q.type == 'custom-groupset' && !tw.q.customset) throw 'invalid customset'
 		}
+
 		// rehydrate term.groupsetting
+		// TODO: need to update term.groupsetting{}
 		if (!tw.term.groupsetting) tw.term.groupsetting = geneVariantTermGroupsetting
 
 		/////////////////////////////////////////
@@ -2871,33 +2872,19 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 				// NOTE: this depends on .groups[] being arranged in order
 				// of priority (see client/termsetting/handlers/geneVariant.ts)
 				const group = groupset.groups.find(group => {
-					// TODO: test group.lst elements that are type='dtlst'
-					if (group.type != 'dtlst') throw 'unexpected group.type value'
-					if (group.join != 'and' && group.join != 'or') throw 'unexpected group.join value'
-
-					// determine if sample mutations are in group mutations
-					const inGrplst =
-						group.join == 'and'
-							? // determine if all dts of group match the mlst of sample
-							  group.lst.every(dt => dtMatchesMlst(dt, mlst))
-							: // determine if any dts of group match the mlst of sample
-							  group.lst.some(dt => dtMatchesMlst(dt, mlst))
-
-					// for group.in=true, sample is in group if sample mutations are in group mutations
-					// for group.in=false, sample is in group if sample mutations are not in group mutations
-					return group.in ? inGrplst : !inGrplst
-
-					// function to determine if the dt of group matches the mlst of sample
-					function dtMatchesMlst(dt, mlst) {
-						// determine if any mclass in mlst matches an mclass in the dt object
-						const inMlst = mlst.some(m => {
-							const match = dt.dt == m.dt && dt.mclasses.includes(m.class)
-							return dt.origin ? match && dt.origin == m.origin : match
-						})
-						// for dt.isnot=false, dt and mlst match if their mclasses match
-						// for dt.isnot=true, dt and mlst match if their mclasses do not match
-						return dt.isnot ? !inMlst : inMlst
-					}
+					if (group.type != 'filter') throw 'unexpected group.type'
+					const filter = group.filter
+					if (filter.type != 'tvslst') throw 'unexpected filter.type'
+					// determine if the sample passes the list of filters
+					const samplePassesFilters =
+						filter.join == 'and'
+							? // determine if the sample passes all of the filters
+							  filter.lst.every(f => samplePassesFilter(f, mlst))
+							: // determine if the sample passes any of the filters
+							  filter.lst.some(f => samplePassesFilter(f, mlst))
+					// for filter.in=true, sample is in group if sample passes the filters
+					// for filter.in=false, sample is in group if sample does not pass the filters
+					return filter.in ? samplePassesFilters : !samplePassesFilters
 				})
 
 				if (!group || group.uncomputable) continue
@@ -2970,6 +2957,22 @@ function addDataAvailability(sid, sample2mlst, dtKey, mclass, origin, sampleFilt
 		}
 	}
 	sample2mlst.set(sid, mlst)
+}
+
+// function to determine if the mlst of a sample meets the criteria of the filter
+function samplePassesFilter(f, mlst) {
+	if (f.type != 'tvs') throw 'unexpected f.type' // TODO: also support f.type='tvslst'
+	const tvs = f.tvs
+	// determine if sample has a mutation specified in the filter
+	const sampleHasMutation = mlst.some(m => {
+		return (
+			tvs.term.dt == m.dt &&
+			tvs.values.some(v => (v.origin ? v.key == m.class && v.origin == m.origin : v.key == m.class))
+		)
+	})
+	// for tvs.isnot=false, sample passes filter if has mutation specified in the filter
+	// for tvs.isnot=true, sample passes filter if does not have mutation specified in the filter
+	return tvs.isnot ? !sampleHasMutation : sampleHasMutation
 }
 
 /*
