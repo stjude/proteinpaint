@@ -84,6 +84,7 @@ validate_query_metaboliteIntensity
 validate_query_rnaseqGeneCount
 validate_query_singleSampleGenomeQuantification
 validate_query_singleSampleGbtk
+validate_query_trackLst
 validate_variant2samples
 validate_ssm2canonicalisoform
 mayAdd_refseq2ensembl
@@ -149,6 +150,7 @@ export async function init(ds, genome) {
 		//await validate_query_probe2cnv(ds, genome)
 		await validate_query_singleCell(ds, genome)
 		await validate_query_TopVariablyExpressedGenes(ds, genome)
+		await validate_query_trackLst(ds, genome)
 
 		await validate_variant2samples(ds)
 		await validate_ssm2canonicalisoform(ds)
@@ -1995,6 +1997,38 @@ function plotSampleGenomeQuantification(file, genome, control, devicePixelRatio 
 			ctx.stroke()
 		}
 		ctx.closePath()
+	}
+}
+
+async function validate_query_trackLst(ds, genome) {
+	const q = ds.queries.trackLst
+	if (!q) return
+	q.facets = [] // one or more facet tables
+	if (q.jsonFile) {
+		const f = path.join(serverconfig.tpmasterdir, q.jsonFile)
+		await utils.file_is_readable(f)
+		try {
+			const json = JSON.parse(fs.readFileSync(f, { encoding: 'utf8' }))
+			/*
+			document legacy structure
+			*/
+			if (Array.isArray(json)) {
+				for (const i of json) {
+					if (i.isfacet) {
+						q.facets.push(i)
+					} else {
+						throw 'unknown element of trackLst json[]'
+					}
+				}
+			} else {
+				throw 'unknown structure of json trackLst file'
+			}
+		} catch (e) {
+			throw 'trackLst error: ' + e
+		}
+		delete q.jsonFile
+	} else {
+		throw 'unknown config for queries.trackLst{}'
 	}
 }
 
