@@ -483,13 +483,13 @@ type TklstEntry = {
 	onerow?: number | boolean
 }
 
-type TrackLstEntry = {
-	/** creates a facet table if true. */
-	isfacet: boolean
-	/** name shown for the facet table button from Tracks button*/
-	name: string
-	/** tk objs to show on click of the facet table */
-	tklst: TklstEntry[]
+/** setup for a set of genome browser tracks and/or facet tables, that can be selected for genomebrowser display
+ */
+type TrackLst = {
+	/** path to json file. TODO structure  */
+	jsonFile: string
+	/** list of track names to show by default, must be found in json file */
+	defaultTrackNames: string[]
 }
 
 type CnvSegment = {
@@ -793,7 +793,7 @@ type Mds3Queries = {
 		src: 'native' | 'gdc'
 		file: string
 	}
-	trackLst?: TrackLstEntry[]
+	trackLst?: TrackLst
 	singleCell?: SingleCellQuery
 	geneCnv?: {
 		bygene?: {

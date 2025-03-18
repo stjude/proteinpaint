@@ -146,8 +146,7 @@ class genomeBrowser {
 		}
 
 		if (this.state.config?.trackLst) {
-			// not fully developed
-			await this.launchBlockWithTracks(this.state.config.trackLst)
+			await this.launchBlockWithTracks(this.getDefaultTracksFromFacets())
 			return
 		}
 
@@ -411,6 +410,21 @@ class genomeBrowser {
 			id: this.id,
 			config
 		})
+	}
+
+	getDefaultTracksFromFacets() {
+		const q = this.state.config.trackLst
+		const lst = []
+		if (!q.defaultTrackNames) throw 'defaultTrackNames missing'
+		if (!q.facets) throw 'facets missing'
+		for (const facet of q.facets) {
+			if (!facet.tracks) throw 'facet.tracks[] missing'
+			for (const n of q.defaultTrackNames) {
+				const t = facet.tracks.find(i => i.name == n)
+				if (t) lst.push(t)
+			}
+		}
+		return lst
 	}
 }
 
