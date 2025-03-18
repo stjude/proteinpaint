@@ -138,26 +138,15 @@ class DEanalysis {
 				]
 			})
 			if (this.settings.method == 'edgeR') {
-				inputs.push(
-					{
-						type: 'term',
-						configKey: 'term',
-						chartType: 'DEanalysis',
-						usecase: { target: 'DEanalysis', detail: 'term' },
-						label: 'Confounding Factor 1',
-						title: 'Select confounding factors to adjust for in the analysis',
-						vocabApi: this.app.vocabApi
-					},
-					{
-						label: 'Variable Genes Cutoff',
-						type: 'number',
-						chartType: 'DEanalysis',
-						settingsKey: 'VarGenes',
-						title: 'Top number of genes with the highest variability to include in analysis',
-						min: 1000,
-						max: 4000
-					}
-				)
+				inputs.push({
+					type: 'term',
+					configKey: 'term',
+					chartType: 'DEanalysis',
+					usecase: { target: 'DEanalysis', detail: 'term' },
+					label: 'Confounding Factor 1',
+					title: 'Select confounding factors to adjust for in the analysis',
+					vocabApi: this.app.vocabApi
+				})
 				if (this.config.term) {
 					// Only when first confounding variable 1 has been selected, the option for a second confounding variable will be shown
 					inputs.push({
@@ -699,8 +688,7 @@ export async function getPlotConfig(opts, app) {
 					min_total_count: 15,
 					pvaluetable: false,
 					adjusted_original_pvalue: 'adjusted',
-					method: 'edgeR',
-					VarGenes: 3000,
+					method: 'wilcoxon',
 					gene_ora: undefined,
 					gsea: undefined
 				}
@@ -815,10 +803,6 @@ async function runDEanalysis(self) {
 
 	if (self.config.term2) {
 		input.tw2 = self.config.term2
-	}
-
-	if (input.method == 'edgeR') {
-		input.VarGenes = self.settings.VarGenes
 	}
 
 	const output = await dofetch3('DEanalysis', {
