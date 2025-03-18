@@ -33,7 +33,7 @@ export function getSeriesTip(line, rect, _tip = null) {
 	line.style('display', 'none')
 
 	const rectNode = rect.style('fill', 'transparent').node()
-
+	
 	function mouseOver(event) {
 		const m = pointer(event, rectNode)
 		const mx = m[0]
@@ -57,12 +57,34 @@ export function getSeriesTip(line, rect, _tip = null) {
 			}
 		}
 
+		// if (seriesHtmls.length) {
+		// 	tip
+		// 		.show(event.clientX, event.clientY)
+		// 		.d.html(`${opts.xTitleLabel}: ${xVal}<br>` + seriesHtmls.map(d => d).join(opts.separator))
+		// } else {
+		// 	tip.hide()
+		// }
+;
 		if (seriesHtmls.length) {
+			// Sort the seriesHtmls array by percentage
+			const sortedSeriesHtmls = seriesHtmls.sort((a, b) => {
+				// Extract the percentage from each HTML string
+				const percentageA = parseFloat(a.match(/(\d+\.\d+)%/)[1]);
+				const percentageB = parseFloat(b.match(/(\d+\.\d+)%/)[1]);
+				
+				// Sort in descending order (highest percentage first)
+				return percentageA - percentageB;
+			});
+		
+			// Render the tooltip with sorted seriesHtmls
 			tip
 				.show(event.clientX, event.clientY)
-				.d.html(`${opts.xTitleLabel}: ${xVal}<br>` + seriesHtmls.map(d => d).join(opts.separator))
+				.d.html(
+					`${opts.xTitleLabel}: ${xVal}<br>` +
+					sortedSeriesHtmls.map(d => d).join(opts.separator)
+				);
 		} else {
-			tip.hide()
+			tip.hide();
 		}
 	}
 
