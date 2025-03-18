@@ -452,37 +452,6 @@ type TopMutatedGenes = {
 	arguments?: GeneArgumentEntry[]
 }
 
-type TklstEntry = {
-	/** Determines the column to add the track via the assay names
-	 * shown at the top of the facet table.*/
-	assay?: string
-	/** track type (e.g. bigwig, bedj, etc.) */
-	type: string
-	/** Human readable name */
-	name: string
-	/** Corresponding sample id in the data file */
-	sampleID?: string
-	/** data file path */
-	file: string
-	/** The key for the second tier of the facet table*/
-	level1?: string
-	/** The key for the third tier of the facet table*/
-	level2?: string
-	/** Whether the track is shown by default */
-	defaultShown?: boolean
-	/** Track height */
-	stackheight?: number
-	/** Space added to the height of the track */
-	stackspace?: number
-	/** padding-top for the track */
-	toppad?: number
-	/** padding-bottom for the track */
-	bottompad?: number
-	/** Specifically for bedj tracks. if true, will render all items in a
-	 * single row and do not stack them */
-	onerow?: number | boolean
-}
-
 /** setup for a set of genome browser tracks and/or facet tables, that can be selected for genomebrowser display
  */
 type TrackLst = {
