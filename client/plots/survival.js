@@ -711,7 +711,7 @@ function setRenderers(self) {
 		}
 
 		if (!svg.seriesTip) {
-			svg.seriesTip = getSeriesTip(line, plotRect, self.app?.tip)
+			svg.seriesTip = getSeriesTip(line, plotRect, self.app?.tip, 'survival')
 		}
 
 		return [mainG, seriesesG, axisG, xAxis, yAxis, xTitle, yTitle, atRiskG, plotRect]
