@@ -1,1 +1,2 @@
-
+Fixes:
+- make sure that server requests would timeout in rust code and optimize
