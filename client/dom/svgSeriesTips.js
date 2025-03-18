@@ -65,11 +65,10 @@ export function getSeriesTip(line, rect, _tip = null, plotType) {
 					const percentageA = parseFloat(a.match(/(\d+\.\d+)%/)[1])
 					const percentageB = parseFloat(b.match(/(\d+\.\d+)%/)[1])
 
-					// Sort in descending order (highest percentage first)
+					// Sort in ascending order (to see the lowest survival rate for the group first)
 					return percentageA - percentageB
 				})
 
-				// Render the tooltip with sorted seriesHtmls
 				tip
 					.show(event.clientX, event.clientY)
 					.d.html(`${opts.xTitleLabel}: ${xVal}<br>` + sortedSeriesHtmls.map(d => d).join(opts.separator))
