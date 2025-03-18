@@ -194,9 +194,7 @@ async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 		],
 		callback: async v => {
 			if (v == 'group') {
-				//await makeGroupUI()
-				groupsDiv.style('display', 'block')
-				await makeGroupsetDraggables()
+				await makeGroupUI()
 			} else {
 				clearGroupset(self)
 				delete self.q.dt
@@ -218,7 +216,9 @@ async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 
 	// make radio buttons for grouping variants
 	async function makeGroupUI() {
-		groupsDiv.style('display', 'inline-block')
+		groupsDiv.style('display', 'block')
+		await makeGroupsetDraggables()
+		/*groupsDiv.style('display', 'inline-block')
 		makeDtRadios()
 		makeOriginRadios()
 		const groupset_idxs = getGroupsetIdxs(self.q.dt)
@@ -233,7 +233,7 @@ async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 			// groupsetting is fixed
 			// display as text
 			makeGroupsetText(groupset_idxs)
-		}
+		}*/
 	}
 
 	// radio buttons for data type
