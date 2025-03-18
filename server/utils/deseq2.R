@@ -127,17 +127,3 @@ de_time <- system.time({
    dds <- DESeq(dds, parallel = TRUE)
 })
 cat("Differential gene expression time: ", as.difftime(de_time, units = "secs")[3], " seconds\n")
-
-# Multiple testing correction
-multiple_testing_correction_time <- system.time({
-# Adjust p-values for multiple testing using FDR
-res$FDR <- p.adjust(res$pvalue, method = "fdr")
-
-# Sort results by FDR in ascending order
-res <- res[order(res$FDR), ]
-
-# Output results based on FDR threshold
-fdrThres <- 0.05
-significantResults <- res[res$FDR < fdrThres, ]
-})
-cat("Time for multiple testing correction: ", as.difftime(multiple_testing_correction_time, units = "secs")[3], " seconds\n")
