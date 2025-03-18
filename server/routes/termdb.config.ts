@@ -181,11 +181,25 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome) {
 	if (q.defaultBlock2GeneMode) q2.defaultBlock2GeneMode = q.defaultBlock2GeneMode
 	if (q.snvindel) {
 		q2.snvindel = {
-			allowSNPs: q.snvindel.allowSNPs
+			allowSNPs: q.snvindel.allowSNPs,
+			// details{} lists default method for computing variants, can be modified and is part of state
+			// some of the stuff here are to provide user-selectable choices
+			// e.g. computing methods, info fields, populations.
+			details: q.snvindel.details,
+			populations: q.snvindel.populations
 		}
+	}
+	if (q.trackLst) {
+		q2.trackLst = q.trackLst
 	}
 	if (q.svfusion) {
 		q2.svfusion = {}
+	}
+	if (q.ld) {
+		q2.ld = JSON.parse(JSON.stringify(q.ld))
+		for (const i of q2.ld.tracks) {
+			delete i.file
+		}
 	}
 	if (q.cnv) {
 		q2.cnv = {}

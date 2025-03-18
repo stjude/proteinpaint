@@ -64,7 +64,6 @@ export function handle_request_closure(genomes) {
 			if (q.for == 'scatter') return await trigger_getSampleScatter(req, q, res, ds, genome)
 			if (q.getLowessCurve) return await trigger_getLowessCurve(req, q, res)
 			if (q.getCohortsData) return await trigger_getCohortsData(q, res, ds)
-			if (q.for == 'mds3queryDetails') return get_mds3queryDetails(res, ds)
 			if (q.for == 'termTypes') return res.send(await ds.getTermTypes(q))
 			if (q.for == 'matrix') return await get_matrix(q, req, res, ds, genome)
 			if (q.for == 'numericDictTermCluster') return await get_numericDictTermCluster(q, req, res, ds, genome)
@@ -401,29 +400,6 @@ async function get_AllSamplesByName(q, req, res, ds) {
 		for (const [key, value] of ds.sampleName2Id) sampleName2Id.set(key, { id: value })
 	}
 	res.send(Object.fromEntries(sampleName2Id))
-}
-
-function get_mds3queryDetails(res, ds) {
-	const config = {}
-	const qs = ds.queries || {}
-	if (qs.snvindel) {
-		config.snvindel = {}
-		// details{} lists default method for computing variants, can be modified and is part of state
-		// some of the stuff here are to provide user-selectable choices
-		// e.g. computing methods, info fields, populations. TODO move them out of state, as they are read-only
-		if (qs.snvindel.details) config.snvindel.details = qs.snvindel.details
-		if (qs.snvindel.populations) config.snvindel.populations = qs.snvindel.populations
-	}
-	if (qs.trackLst) {
-		config.trackLst = qs.trackLst
-	}
-	if (qs.ld) {
-		config.ld = JSON.parse(JSON.stringify(qs.ld))
-		for (const i of config.ld.tracks) {
-			delete i.file
-		}
-	}
-	res.send(config)
 }
 
 async function LDoverlay(q, ds, res) {
