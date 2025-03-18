@@ -9,7 +9,7 @@ import run_R from '../src/run_R.js'
 import { mayLog } from '#src/helpers.ts'
 import serverconfig from '../src/serverconfig.js'
 import imagesize from 'image-size'
-import { spawn } from 'child_process'
+import { get_header_txt } from '#src/utils.js'
 
 export const api: RouteApi = {
 	endpoint: 'DEanalysis',
@@ -311,52 +311,6 @@ async function readFileAndDelete(file, key, response) {
 	})
 }
 
-
-function getFirstLine(file) {
-	// TODO now requires "head" command on the system
-	return new Promise<string>((resolve, reject) => {
-		const out1: string[] = [],
-			  out2: string[] = []
-
-		const ps = spawn('head', ['-1', file])
-		ps.stdout.on('data', data => out1.push(data.toString()))
-		ps.stderr.on('data', data => out2.push(data.toString()))
-		ps.on('error', err => {
-			if (out2.length) reject(out2.join(''))
-		})
-		ps.on('close', code => {
-			if (code != 0) reject('head command exited with non-zero status and this error: ' + out2.join(''))
-			resolve(out1.join(''))
-		})
-	})
-}
-
-
-/**
- * Validates and processes RNA-seq gene count query data.
- * 
- * This function prepares RNA-seq gene count matrices for differential expression (DE) analysis by:
- * 1. Verifies the query object and file exist
- * 2. Resolves the absolute file path using the server configuration
- * 3. Extracts sample information based on file storage type:
- *    - For text files: Reads first line of the matrix and extracts samples starting from 5th column
- *    - For HDF5 files: Uses Rust DEanalysis module to extract sample information (see DEanalysis.rs 
- *      at proteinpaint/rust/src for more details)
- * 4. Creates a set of all available samples (q.allSampleSet)
- * 5. Identifies any samples that can't be mapped to sample IDs in the cohort database
- * 6. Logs the number of samples extracted from the gene count matrix
- * 
- * @param {Object} ds - Dataset object containing query information, cohort data, and label
- * @param {Object} ds.queries - Contains the rnaseqGeneCount query configuration
- * @param {Object} ds.queries.rnaseqGeneCount - Gene count query parameters
- * @param {string} ds.queries.rnaseqGeneCount.file - Path to gene count file (relative to tpmasterdir)
- * @param {string} ds.queries.rnaseqGeneCount.storage_type - Storage format ("text" or "HDF5") 
- * @param {Object} ds.cohort - Dataset cohort information
- * @param {string} ds.label - Dataset label for logging
- * @param {Object} genome - Genome reference information (unused in current implementation)
- * @throws {string} Throws error strings for missing file or unknown storage type
- * @returns {Promise<void>} No return value, but updates the query object with sample information
- */
 export async function validate_query_rnaseqGeneCount(ds, genome) {
 	const q = ds.queries.rnaseqGeneCount
 	if (!q) return
@@ -372,7 +326,7 @@ export async function validate_query_rnaseqGeneCount(ds, genome) {
 	{
 		let samples: string[] = []
 		if (ds.queries.rnaseqGeneCount.storage_type == 'text') {
-			samples = (await getFirstLine(q.file)).trim().split('\t').slice(4)
+			samples = (await get_header_txt(q.file, null)).split('\t').slice(4)
 		} else if (ds.queries.rnaseqGeneCount.storage_type == 'HDF5') {
 			const get_samples_from_hdf5 = {
 				input_file: q.file,
