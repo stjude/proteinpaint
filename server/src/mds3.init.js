@@ -1,9 +1,8 @@
 import fs from 'fs'
 import readline from 'readline'
 import path from 'path'
-import { spawn, spawnSync } from 'child_process'
+import { spawnSync } from 'child_process'
 import { scaleLinear } from 'd3-scale'
-import { run_rust } from '@sjcrh/proteinpaint-rust'
 import { createCanvas } from 'canvas'
 import * as gdc from './mds3.gdc.js'
 import { initGDCdictionary } from './initGdc.js'
@@ -42,6 +41,7 @@ import { getResult } from '#src/gene.js'
 import { validate_query_getTopTermsByType } from '#routes/termdb.topTermsByType.ts'
 import { validate_query_getSampleImages } from '#routes/termdb.sampleImages.ts'
 import { validate_query_getSampleWSImages } from '#routes/samplewsimages.ts'
+import { validate_query_rnaseqGeneCount} from '#routes/termdb.DE.ts'
 
 /*
 init
@@ -1674,70 +1674,7 @@ async function validateMetaboliteIntensityNative(q, ds, genome) {
 	}
 }
 
-async function validate_query_rnaseqGeneCount(ds, genome) {
-	const q = ds.queries.rnaseqGeneCount
-	if (!q) return
-	if (!q.file) throw 'unknown data type for rnaseqGeneCount'
-	// the gene count matrix tabular text file
-	q.file = path.join(serverconfig.tpmasterdir, q.file)
-	/*
-	first line of matrix must be sample header, samples start from 5th column
-	read the first line to get all samples, and save at q.allSampleSet
-	so that samples from analysis request will be screened against q.allSampleSet
-	also require that there's no duplicate samples in header line, so rust/r won't break
-	*/
-	{
-		let samples = []
-		if (ds.queries.rnaseqGeneCount.storage_type == 'text') {
-			samples = (await getFirstLine(q.file)).trim().split('\t').slice(4)
-		} else if (ds.queries.rnaseqGeneCount.storage_type == 'HDF5') {
-			const get_samples_from_hdf5 = {
-				input_file: q.file,
-				data_type: 'get_samples'
-			}
-			//console.log("get_samples_from_hdf5:",get_samples_from_hdf5)
-			//fs.writeFile('test.txt', JSON.stringify(get_samples_from_hdf5), function (err) {
-			//	// For catching input to rust pipeline, in case of an error
-			//	if (err) return console.log(err)
-			//})
-			const time1 = new Date().valueOf()
-			const result = await run_rust('DEanalysis', JSON.stringify(get_samples_from_hdf5))
-			const time2 = new Date().valueOf()
-			//console.log('Time taken to query gene expression:', time2 - time1, 'ms')
-			samples = result.split(',')
-		} else throw 'unknown storage type:' + ds.queries.rnaseqGeneCount.storage_type
 
-		q.allSampleSet = new Set(samples)
-		//if(q.allSampleSet.size < samples.length) throw 'rnaseqGeneCount.file header contains duplicate samples'
-		const unknownSamples = []
-		for (const n of q.allSampleSet) {
-			if (!ds.cohort.termdb.q.sampleName2id(n)) unknownSamples.push(n)
-		}
-		//if (unknownSamples.length)
-		//	throw `${ds.label} rnaseqGeneCount: ${unknownSamples.length} out of ${
-		//		q.allSampleSet.size
-		//	} sample names are unknown: ${unknownSamples.join(',')}`
-		console.log(q.allSampleSet.size, `rnaseqGeneCount samples from ${ds.label}`)
-	}
-}
-
-function getFirstLine(file) {
-	// TODO now requires "head" command on the system
-	return new Promise((resolve, reject) => {
-		const out1 = [],
-			out2 = []
-		const ps = spawn('head', ['-1', file])
-		ps.stdout.on('data', data => out1.push(data.toString()))
-		ps.stderr.on('data', data => out2.push(data.toString()))
-		ps.on('error', err => {
-			if (out2.length) reject(out2.join(''))
-		})
-		ps.on('close', code => {
-			if (code != 0) reject('head command exited with non-zero status and this error: ' + out2.join(''))
-			resolve(out1.join(''))
-		})
-	})
-}
 
 // no longer used
 async function validate_query_probe2cnv(ds, genome) {
