@@ -43,6 +43,9 @@ this{}
 			ld {}
 				tracks[]
 			subMds3TkFilters[] // list of mds3 subtk filter objects created on mds3 tk sample summary ui
+			trackLst{}
+				facets[]
+				activeTracks[]
 	blockInstance // exists when block has been launched; one block in each plot
 
 
@@ -55,7 +58,6 @@ main
 			dofetch3
 		furbishViewModeWithSnvindelComputeDetails
 		launchBlockWithTracks
-			getTracks2show
 getPlotConfig
 	getDefaultConfig
 makeChartBtnMenu
@@ -134,9 +136,8 @@ class genomeBrowser {
 	//////////////////////////////////////////////////
 
 	async computeBlockAndMds3tk() {
-		/* 
-		handle multiple possibilities of generating mds3 tk
-		*/
+		// handle multiple possibilities of generating mds3 tk
+		// FIXME allow ds with multiple types (snvinde+tklst) to show both in one view
 
 		if (this.state.config?.snvindel?.details) {
 			// pre-compute variant data in the app here, e.g. fisher test etc, but not in mds3 backend as the official track does
@@ -145,8 +146,16 @@ class genomeBrowser {
 			return
 		}
 
-		if (this.state.config?.trackLst) {
-			await this.launchBlockWithTracks(this.getDefaultTracksFromFacets())
+		if (this.state.config?.trackLst?.activeTracks?.length) {
+			const lst = []
+			for (const n of this.state.config.trackLst.activeTracks) {
+				for (const f of this.state.config.trackLst.facets) {
+					for (const t of f.tracks) {
+						if (t.name == n) lst.push(t)
+					}
+				}
+			}
+			await this.launchBlockWithTracks(lst)
 			return
 		}
 
@@ -291,7 +300,7 @@ class genomeBrowser {
 			holder: this.dom.blockHolder,
 			genome: this.app.opts.genome, // genome obj
 			nobox: true,
-			tklst: await this.getTracks2show(tklst),
+			tklst,
 			debugmode: this.app.opts.debug,
 			onloadalltk_always: () => {
 				// TODO on any tk update, collect tk config and save to state so they are recoverable from session
@@ -326,34 +335,6 @@ class genomeBrowser {
 
 		const _ = await import('#src/block')
 		this.blockInstance = new _.Block(arg)
-	}
-
-	async getTracks2show(tklst) {
-		const showLst = []
-		for (const i of tklst) {
-			if (i.isfacet) {
-				// legacy method to insert facet table into genome.tkset[]
-
-				// must duplicate as i is frozen
-				const j = JSON.parse(JSON.stringify(i))
-
-				if (!this.app.opts.genome.tkset) this.app.opts.genome.tkset = []
-				if (!j.tklst) throw '.tklst[] missing from a facet table'
-				if (!Array.isArray(j.tklst)) throw '.tklst[] not an array from a facet table'
-				for (const t of j.tklst) {
-					if (!t.assay) throw '.assay missing from a facet track'
-					if (!t.sample) throw '.sample missing from a facet track'
-					// must assign tkid otherwise the tk buttons from facet table won't work
-					t.tkid = Math.random().toString()
-					if (t.defaultShown) showLst.push(t)
-				}
-				this.app.opts.genome.tkset.push(j)
-			} else {
-				// must be a track
-				showLst.push(i)
-			}
-		}
-		return showLst
 	}
 
 	updateLDtrack() {
@@ -410,21 +391,6 @@ class genomeBrowser {
 			id: this.id,
 			config
 		})
-	}
-
-	getDefaultTracksFromFacets() {
-		const q = this.state.config.trackLst
-		const lst = []
-		if (!q.defaultTrackNames) throw 'defaultTrackNames missing'
-		if (!q.facets) throw 'facets missing'
-		for (const facet of q.facets) {
-			if (!facet.tracks) throw 'facet.tracks[] missing'
-			for (const n of q.defaultTrackNames) {
-				const t = facet.tracks.find(i => i.name == n)
-				if (t) lst.push(t)
-			}
-		}
-		return lst
 	}
 }
 
@@ -502,13 +468,13 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 
 // get default config of the app from vocabApi
 async function getDefaultConfig(vocabApi, override, activeCohort) {
-	//await vocabApi.getMds3queryDetails()
 	const config = Object.assign(
-		{
+		// clone for modifying
+		structuredClone({
 			snvindel: vocabApi.termdbConfig.queries?.snvindel,
 			trackLst: vocabApi.termdbConfig.queries?.trackLst,
 			ld: vocabApi.termdbConfig.queries.ld
-		},
+		}),
 		override || {}
 	)
 	// request default variant filter (against vcf INFO)
@@ -528,6 +494,10 @@ async function getDefaultConfig(vocabApi, override, activeCohort) {
 			if (!gf.filter) throw 'unknown filter by current cohort name'
 			delete gf.filterByCohort
 		}
+	}
+	if (config.trackLst) {
+		if (!config.trackLst.facets) throw 'trackLst.facets[] missing'
+		if (!config.trackLst.activeTracks) config.trackLst.activeTracks = []
 	}
 	return config
 }

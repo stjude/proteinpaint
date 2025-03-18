@@ -455,10 +455,47 @@ type TopMutatedGenes = {
 /** setup for a set of genome browser tracks and/or facet tables, that can be selected for genomebrowser display
  */
 type TrackLst = {
-	/** path to json file. TODO structure  */
+	/** path to legacy json file containing a long array of 1 or more facets
+
+	[
+	  {
+         "isfacet": true,
+         "name": "PEDDEP Prepilot",
+         "tracks": [
+		   {
+		     name:str // required. used as *identifer* for a track
+			 sample:str // required. should match with a sample in db!
+			 assay:str // required. free string not controlled in dictionary yet. if missing the track won't appear in facet table
+			 type:str // properties inherent for each custom track
+			 file:str
+		   },
+		   ... more tk
+		 ]
+	  },
+	  { ... 2nd facet table }
+	]
+
+	*/
 	jsonFile: string
-	/** list of track names to show by default, must be found in json file */
-	defaultTrackNames: string[]
+
+	/*
+	alternative format that's easier to maintain than a giant json file
+	facetFiles:[
+		{
+			// name of this facet table
+			name: str
+			// a tabular file with columns "tkname/assay/sample/path/json"; last column json provides any customization for a track
+			// e.g. "Track 1 \t h3k4me3 \t sample1 \t path/to/file.bw \t {"scale":{..}}"
+			tabFile: string
+		}
+	]
+	*/
+
+	/** list of track names to show by default, should be found in json file
+	in json content above, allow a name to be shared by multiple tracks!
+	in such case, all tracks identified by given name will show/hide altogether
+	*/
+	activeTracks: string[]
 }
 
 type CnvSegment = {

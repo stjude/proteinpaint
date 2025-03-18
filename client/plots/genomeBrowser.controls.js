@@ -1,5 +1,5 @@
 import { getCompInit } from '#rx'
-import { Menu, Tabs, make_one_checkbox } from '#dom'
+import { Menu, Tabs, make_one_checkbox, renderTable } from '#dom'
 import { filterInit, getNormalRoot, getFilterItemByTag } from '#filter/filter'
 import { appInit } from '#termdb/app'
 
@@ -175,51 +175,65 @@ class GbControls {
 
 		this.dom = {}
 
-		// may display a horizontal tab for toggling between differen options
 		const tabs = []
-
+		/* based on ds configuration and data/query type availability, 
+		get list of tabs corresponding to different functionalities of the genome browser
+		due to constrain of how tab works, must generate tab array first, call `new Tabs` to initiate holder for each tab
+		then render contents into each holder for each tab
+		thus has to duplicate the logic for computing tabs
+		*/
 		if (state.config.snvindel?.details) {
-			tabs.push({ label: 'Variant values', active: true })
+			tabs.push({ label: 'Variant Values', active: true })
 		}
 		if (state.config.variantFilter) {
-			tabs.push({ label: 'Variant filter' })
+			tabs.push({ label: 'Variant Filter' })
 		}
 		if (state.config.ld) {
-			tabs.push({ label: 'LD map' })
+			tabs.push({ label: 'LD Map' })
 		}
-		// can add other tk set
+		if (state.config.trackLst?.facets) {
+			// one tab for each facet table
+			for (const facet of state.config.trackLst.facets) {
+				tabs.push({ label: facet.name || 'Facet Table' })
+			}
+		}
 
 		if (tabs.length == 0) {
 			// no content for config ui
 			return
 		}
 
+		// has some tabs! initiate the tab ui, then at <div> of each tab, render contents
 		const toggles = new Tabs({
 			holder: this.opts.holder.append('div').style('border-bottom', 'solid 1px #ccc').style('padding-bottom', '20px'),
 			tabs
 		})
 		toggles.main()
 
-		{
+		// tabs[] array index; on rendering contents for an optional tab, advance this index
+		let tabsIdx = 0
+
+		//////////////////////
+		// must repeat tab-computing logic in exact order above!! otherwise out of sync
+		//////////////////////
+		if (state.config.snvindel?.details) {
 			// first tab is for variant group setting
-			const div = tabs[0].contentHolder.append('div')
+			const div = tabs[tabsIdx++].contentHolder.append('div')
 			// hardcode to 2 groups used by state.config.snvindel.details.groups[]
 			this.dom.group1div = div.append('div')
 			this.dom.group2div = div.append('div')
 			this.dom.testMethodDiv = div.append('div').style('margin-top', '3px')
 		}
-
-		let tabsIdx = 1 // tabs[] array index, to handle optional tabs
-
 		if (state.config.variantFilter) {
 			// the whole holder has white-space=nowrap (likely from sjpp-output-sandbox-content)
 			// must set white-space=normal to let INFO filter wrap and not to extend beyond holder
 			this.dom.variantFilterHolder = tabs[tabsIdx++].contentHolder.append('div').style('white-space', 'normal')
 		}
 		if (state.config.ld) {
-			/* (ticky) must duplicate tracks[] and scope it here
+			/* ticky: must duplicate ld.tracks[] and scope it here
 			and use it to preserve the "shown" flag changes via checkboxes
 			when dispatching, commit the tracks[] to state, this ensures the syncing between scoped and state versions
+			TODO better way to track in state, as well as visibility of snvindel etc
 			*/
 			const tracks = structuredClone(state.config.ld.tracks)
 
@@ -239,6 +253,12 @@ class GbControls {
 						})
 					}
 				})
+			}
+		}
+		if (state.config.trackLst?.facets) {
+			for (const facet of state.config.trackLst.facets) {
+				const div = tabs[tabsIdx++].contentHolder.append('div')
+				renderFacetTable(this, facet, div)
 			}
 		}
 	}
@@ -634,4 +654,79 @@ export function mayUpdateGroupTestMethodsIdx(self, d) {
 	} else {
 		// otherwise, do not change existing method idx
 	}
+}
+
+function renderFacetTable(self, facet, div) {
+	/* facet.tracks[] each is {name/assay/sample}
+	layout a table with assay for columns, sample for rows, cells are tracks
+	*/
+	const assayset = new Set(),
+		sampleset = new Set()
+	for (const t of facet.tracks) {
+		if (t.assay) assayset.add(t.assay)
+		if (t.sample) sampleset.add(t.sample)
+	}
+
+	const sampleLst = [...sampleset]
+	const assayLst = [...assayset] // TODO facet hardcodes assay order
+
+	// TODO click on row/column header to batch operate
+
+	const columns = [{ label: 'Sample' }] // TODO use ds sample type
+	for (const assay of assayLst) {
+		columns.push({
+			label: assay,
+			fillCell: (td, si) => {
+				// "si" index of sample/rows[]; find tracks belonging to this assay+sample combo
+				const tklst = facet.tracks.filter(i => i.assay == assay && i.sample == sampleLst[si])
+				if (tklst.length == 0) return // no tracks for this combo
+				// has track(s) for this combo; render <div> in table cell; click to launch tracks
+				// TODO text color based on if track is already shown, but might be hard to update facet table on any change made in block
+				td.append('div')
+					.attr('class', 'sja_clbtext')
+					.style('text-align', 'center')
+					.text(tklst.length)
+					.on('click', () => {
+						// TODO click cell may show menu of track name and type, with add/remove button for each tk
+						// btn works like a toggle button; click once to show, click 2nd time to hide
+						let allTkShown = true // if all from tklst[] is in activeTracks[]
+						for (const t of tklst) {
+							if (!self.state.config.trackLst.activeTracks.includes(t.name)) allTkShown = false
+						}
+						let newLst
+						if (allTkShown) {
+							// all are shown. on clicking btn remove all
+							newLst = self.state.config.trackLst.activeTracks.filter(n => !tklst.find(i => i.name == n))
+						} else {
+							// not all shown. add all
+							newLst = structuredClone(self.state.config.trackLst.activeTracks)
+							for (const t of tklst) {
+								if (!newLst.includes(t.name)) newLst.push(t.name)
+							}
+						}
+						self.app.dispatch({
+							type: 'plot_edit',
+							id: self.id,
+							config: { trackLst: { activeTracks: newLst } }
+						})
+					})
+			}
+		})
+	}
+	const rows = []
+	for (const sample of sampleLst) {
+		// 1st column is sample name
+		// TODO may link sample to sampleview
+		const row = [{ value: sample }]
+		// one blank cell for each assay
+		for (let i = 0; i < assayLst.length; i++) {
+			row.push({})
+		}
+		rows.push(row)
+	}
+	renderTable({
+		columns,
+		rows,
+		div
+	})
 }
