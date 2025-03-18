@@ -1,13 +1,13 @@
 /*
-	This script download cohort maf files from GDC, concatenate them into a single file that includes user specified columns.
+  This script download cohort maf files from GDC, concatenate them into a single file that includes user specified columns.
 
-	Input JSON:
-		host: GDC host
-		fileIdLst: An array of uuid
-	Output gzip compressed maf file to stdout.
+  Input JSON:
+    host: GDC host
+    fileIdLst: An array of uuid
+  Output gzip compressed maf file to stdout.
 
-	Example of usage:
-		echo '{"host": "https://api.gdc.cancer.gov/data/","columns": ["Hugo_Symbol", "Entrez_Gene_Id", "Center", "NCBI_Build", "Chromosome", "Start_Position"], "fileIdLst": ["8b31d6d1-56f7-4aa8-b026-c64bafd531e7", "b429fcc1-2b59-4b4c-a472-fb27758f6249"]}'|./target/release/gdcmaf
+  Example of usage:
+    echo '{"host": "https://api.gdc.cancer.gov/data/","columns": ["Hugo_Symbol", "Entrez_Gene_Id", "Center", "NCBI_Build", "Chromosome", "Start_Position"], "fileIdLst": ["8b31d6d1-56f7-4aa8-b026-c64bafd531e7", "b429fcc1-2b59-4b4c-a472-fb27758f6249"]}'|./target/release/gdcmaf
 */
 
 use flate2::read::GzDecoder;
