@@ -76,7 +76,7 @@ jobs:
           
           echo "::set-output name=branch::$BRANCH"
           
-          if [[ "$BRANCH" != "master" ]]; then
+          if [[ "$BRANCH" != "master" && "$BRANCH" != "release"* ]]; then
             echo "::set-output name=draft::true"
             echo "::set-output name=prerelease::true"
           else
@@ -88,7 +88,7 @@ jobs:
           
           ./build/ci-npm-publish.sh "$UPDATED"
           
-          if [[ $UPDATED == *"rust"* ]]; then
+          if [[ "$UPDATED" == *"rust"* ]]; then
              echo "::set-output name=updated_rust::true"
           else
             echo "::set-output name=updated_rust::false"
