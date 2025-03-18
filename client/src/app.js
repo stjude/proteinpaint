@@ -20,7 +20,7 @@ import urlmap from '#common/urlmap'
 import { renderSandboxFormDiv } from '../dom/sandbox.ts'
 import { sayerror } from '../dom/sayerror'
 import { Menu } from '#dom/menu'
-
+// --- test only ---
 /*
 exports a global function runproteinpaint()
 will be called for launching anything from pp
