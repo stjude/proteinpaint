@@ -660,7 +660,7 @@ function setRenderers(self) {
 			xScale: chart.xScale,
 			xTitleLabel: s.xTitleLabel,
 			decimals: s.seriesTipDecimals,
-			serieses: chart.visibleSerieses.map(s => {
+			serieses: chart.visibleSerieses.map(s => { 
 				const seriesLabel = `${s.seriesLabel || 'Probability'}:`
 				const color = self.term2toColor[s.seriesId].adjusted || '#000'
 				return {
@@ -711,7 +711,7 @@ function setRenderers(self) {
 		}
 
 		if (!svg.seriesTip) {
-			svg.seriesTip = getSeriesTip(line, plotRect, self.app?.tip)
+			svg.seriesTip = getSeriesTip(line, plotRect, self.app?.tip, 'survival')
 		}
 
 		return [mainG, seriesesG, axisG, xAxis, yAxis, xTitle, yTitle, atRiskG, plotRect]
