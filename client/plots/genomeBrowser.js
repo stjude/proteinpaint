@@ -488,19 +488,26 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 
 // get default config of the app from vocabApi
 async function getDefaultConfig(vocabApi, override, activeCohort) {
-	const config = await vocabApi.getMds3queryDetails()
+	//await vocabApi.getMds3queryDetails()
+	const config = Object.assign(
+		{
+			snvindel: vocabApi.termdbConfig.queries?.snvindel,
+			trackLst: vocabApi.termdbConfig.queries?.trackLst,
+			ld: vocabApi.termdbConfig.queries.ld
+		},
+		override || {}
+	)
 	// request default variant filter (against vcf INFO)
 	const vf = await vocabApi.get_variantFilter()
 	if (vf?.filter) {
 		config.variantFilter = vf
 	}
-	const c2 = override ? copyMerge(config, override) : config
-	if (c2.snvindel?.details) {
+	if (config.snvindel?.details) {
 		// test method may be inconsistent with group configuration (e.g. no fisher for INFO fields), update test method here
 		// 1st arg is a fake "self"
-		mayUpdateGroupTestMethodsIdx({ state: { config: c2 } }, c2.snvindel.details)
+		mayUpdateGroupTestMethodsIdx({ state: { config } }, config.snvindel.details)
 		// a type=filter group may use filterByCohort. in such case, modify default state to assign proper filter based on current cohort
-		const gf = c2.snvindel.details.groups.find(i => i.type == 'filter')
+		const gf = config.snvindel.details.groups.find(i => i.type == 'filter')
 		if (gf && gf.filterByCohort) {
 			// modify and assign
 			gf.filter = gf.filterByCohort[vocabApi.termdbConfig.selectCohort.values[activeCohort].keys.join(',')]
@@ -508,7 +515,7 @@ async function getDefaultConfig(vocabApi, override, activeCohort) {
 			delete gf.filterByCohort
 		}
 	}
-	return c2
+	return config
 }
 
 //////////////////////////////////////////////////

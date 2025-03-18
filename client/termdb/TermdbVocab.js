@@ -1143,16 +1143,6 @@ export class TermdbVocab extends Vocab {
 		return await dofetch3('termdb/cohorts', { body })
 	}
 
-	async getMds3queryDetails() {
-		return await dofetch3('termdb', {
-			body: {
-				for: 'mds3queryDetails',
-				genome: this.state.vocab.genome,
-				dslabel: this.state.vocab.dslabel
-			}
-		})
-	}
-
 	async getMatrixByName(name) {
 		// find a pre-built matrix by name from this dataset
 		return await dofetch3('termdb', {
