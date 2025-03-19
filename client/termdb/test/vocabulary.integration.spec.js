@@ -41,7 +41,6 @@ Tests:
 			getTwMinCopy()
 			getLDdata()
 			getScatterData()
-			getMds3queryDetails()
 		** Comments
 			Tested in FrontendVocab
 				getDescrStats()
@@ -174,7 +173,6 @@ tape('vocabInit(), default', test => {
 	test.equal(typeof vocabApi.getLDdata, 'function', 'should have a vocab.getLDdata function')
 	test.equal(typeof vocabApi.getScatterData, 'function', 'should have a vocab.getScatterData function')
 	test.equal(typeof vocabApi.getCohortsData, 'function', 'should have a vocab.getCohortsData function')
-	test.equal(typeof vocabApi.getMds3queryDetails, 'function', 'should have a vocab.getMds3queryDetails function')
 
 	test.end()
 })
@@ -1156,17 +1154,6 @@ tape('getCohortsData()', async test => {
 	test.ok(result.error, `Should return error message in object`)
 
 	termdbVocabApi.vocab.dslabel = state.vocab.dslabel
-
-	test.end()
-})
-
-tape.skip('getMds3queryDetails()', async test => {
-	test.timeoutAfter(100)
-
-	//On hold - need GDC and other datasets for testing
-	const termdbVocabApi = await getTermdbVocabApi()
-	const result = await termdbVocabApi.getMds3queryDetails()
-	console.log(result)
 
 	test.end()
 })
