@@ -34,7 +34,9 @@ export async function openSandbox(element, pageArgs) {
 		.append('span')
 		.html(
 			element.type != 'nestedCard'
-				? `<a href="${sessionStorage.getItem('hostURL')}/?appcard=${element.name}">${element.name}</a>`
+				? `<a href="${sessionStorage.getItem('hostURL')}/?appcard=${element.sandboxJson || element.sandboxHtml}">${
+						element.name
+				  }</a>`
 				: element.name
 		)
 	sandboxDiv.body.style('overflow', 'hidden').style('background-color', 'white')
@@ -278,7 +280,9 @@ async function makeLeftsideTabMenu(card, contentHolder, examplesOnly, sandboxDiv
 		return {
 			active,
 			inTrail: active,
-			link: `${sessionStorage.getItem('hostURL')}/?appcard=${card.name}&example=${ppcalls.label}`,
+			link: `${sessionStorage.getItem('hostURL')}/?appcard=${card.sandboxJson || card.sandboxHtml}&example=${
+				ppcalls.label
+			}`,
 			label: ppcalls.label,
 			callback: async (event, tab) => {
 				const wait = tab_wait(tab.contentHolder)
