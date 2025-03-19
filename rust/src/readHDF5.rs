@@ -4,11 +4,13 @@
 use hdf5::types::FixedAscii;
 use hdf5::{File, Result};
 use json;
-use ndarray::Array1;
+use ndarray::{Array1, Array2};
 use ndarray::Dim;
 use std::io;
 use std::time::Instant;
 
+
+// Original function
 fn read_hdf5(hdf5_filename: String, gene_name: String) -> Result<()> {
     let file = File::open(&hdf5_filename)?; // open for reading
     let ds_dim = file.dataset("data/dim")?; // open the dataset
@@ -182,13 +184,162 @@ fn read_hdf5(hdf5_filename: String, gene_name: String) -> Result<()> {
     Ok(())
 }
 
+
+// Function to detect the format of the HDF5 file
+fn detect_hdf5_format(hdf5_filename: &str) -> Result<&'static str> {
+    let file = File::open(hdf5_filename)?;
+    
+    // Check for TPM format (has counts, gene_names, and samples datasets)
+    let has_counts = file.dataset("counts").is_ok();
+    let has_gene_names = file.dataset("gene_names").is_ok();
+    let has_samples = file.dataset("samples").is_ok();
+    
+    // Check for sparse matrix format (has data group and sample_names)
+    let has_data_group = file.group("data").is_ok();
+    let has_sample_names = file.dataset("sample_names").is_ok();
+    
+    if has_counts && has_gene_names && has_samples {
+        Ok("tpm")
+    } else if has_data_group && has_sample_names {
+        Ok("sparse")
+    } else {
+        Ok("unknown")
+    }
+}
+
+
+// Function to validate and load an HDF5 file
+fn validate_hdf5_file(hdf5_filename: String) -> Result<()> {
+    // Open the HDF5 file
+    let file = File::open(&hdf5_filename)?;
+    
+    // Detect file format
+    let file_format = detect_hdf5_format(&hdf5_filename)?;
+    
+    // Get basic information about the file depending on format
+    let output = match file_format {
+        "tpm" => {
+            // For TPM format, get dimensions from the counts dataset
+            let ds_counts = file.dataset("counts")?;
+            let data_shape = ds_counts.shape();
+            serde_json::json!({
+                "status": "success",
+                "message": "HDF5 file loaded successfully",
+                "file_path": hdf5_filename,
+                "format": "tpm",
+                "matrix_dimensions": {
+                    "num_genes": data_shape[0],
+                    "num_samples": data_shape[1]
+                }
+            })
+        },
+        "sparse" => {
+            // For sparse format, get dimensions from the data/dim dataset
+            let ds_dim = file.dataset("data/dim")?;
+            let data_dim: Array1<usize> = ds_dim.read::<usize, Dim<[usize; 1]>>()?;
+            let num_samples = data_dim[0];
+            let num_genes = data_dim[1];
+            
+            serde_json::json!({
+                "status": "success",
+                "message": "HDF5 file loaded successfully",
+                "file_path": hdf5_filename,
+                "format": "sparse",
+                "matrix_dimensions": {
+                    "num_genes": num_genes,
+                    "num_samples": num_samples
+                }
+            })
+        },
+        _ => {
+            // For unknown format, just return a basic success message
+            serde_json::json!({
+                "status": "success",
+                "message": "HDF5 file loaded successfully",
+                "file_path": hdf5_filename,
+                "format": "unknown"
+            })
+        }
+    };
+
+    // Print the output
+    println!("output_string:{}", output);
+    
+    Ok(())
+}
+
+
+
+// Main function
+// fn main() -> Result<()> {
+//     let mut input = String::new();
+//     match io::stdin().read_line(&mut input) {
+//         // Accepting the piped input from nodejs (or command line from testing)
+//         Ok(_bytes_read) => {
+//             let input_json = json::parse(&input);
+//             match input_json {
+//                 Ok(json_string) => {
+//                     let now = Instant::now();
+//                     let hdf5_filename_result = &json_string["hdf5_file"].to_owned();
+//                     let hdf5_filename;
+//                     match hdf5_filename_result.as_str() {
+//                         Some(x) => {
+//                             hdf5_filename = x.to_string();
+//                         }
+//                         None => {
+//                             panic!("HDF5 filename not provided");
+//                         }
+//                     }
+
+//                     // let gene_result = &json_string["gene"].to_owned();
+//                     let gene_name = "TP53".to_string();
+//                     // match gene_result.as_str() {
+//                     //     Some(x) => {
+//                     //         gene_name = x.to_string();
+//                     //     }
+//                     //     None => {
+//                     //         panic!("Gene name not provided");
+//                     //     }
+//                     // }
+
+//                     // Detect file format
+//                     let file_format = detect_hdf5_format(&hdf5_filename)?;
+                    
+//                     // Route to appropriate function based on format
+//                     match file_format {
+//                         "tpm" => {
+//                             //eprintln!("Detected TPM format HDF5 file");
+//                             read_hdf5_tpm(hdf5_filename)?;
+//                         },
+//                         "sparse" => {
+//                             //eprintln!("Detected sparse matrix format HDF5 file");
+//                             read_hdf5(hdf5_filename, gene_name)?;
+//                         },
+//                         "unknown" => {
+//                             //eprintln!("Unknown format, defaulting to sparse matrix format");
+//                             read_hdf5(hdf5_filename, gene_name)?;
+//                         },
+//                         _ => {
+//                             // This catch-all is required for Rust's exhaustiveness checking
+//                             //eprintln!("Unexpected format '{}', defaulting to sparse matrix format", file_format);
+//                             read_hdf5(hdf5_filename, gene_name)?;
+//                         }
+//                     }  
+                    
+//                     println!("Time for parsing genes from HDF5:{:?}", now.elapsed());
+//                 }  
+//                 Err(error) => println!("Incorrect json: {}", error),
+//             }  
+//         }  
+//         Err(error) => println!("Piping error: {}", error),
+//     }  
+//     Ok(())
+// }  
+
 fn main() -> Result<()> {
     let mut input = String::new();
     match io::stdin().read_line(&mut input) {
-        // Accepting the piped input from nodejs (or command line from testing)
         Ok(_bytes_read) => {
-            //println!("{} bytes read", bytes_read);
-            //println!("{}", input);
             let input_json = json::parse(&input);
             match input_json {
                 Ok(json_string) => {
@@ -204,24 +355,15 @@ fn main() -> Result<()> {
                         }
                     }
 
-                    let gene_result = &json_string["gene"].to_owned();
-                    let gene_name;
-                    match gene_result.as_str() {
-                        Some(x) => {
-                            gene_name = x.to_string();
-                        }
-                        None => {
-                            panic!("Gene name not provided");
-                        }
-                    }
-
-                    read_hdf5(hdf5_filename, gene_name)?;
-                    println!("Time for parsing genes from HDF5:{:?}", now.elapsed());
-                }
+                    // Just validate the file exists and can be loaded
+                    validate_hdf5_file(hdf5_filename)?;
+                    
+                    println!("Time for validating HDF5 file:{:?}", now.elapsed());
+                }  
                 Err(error) => println!("Incorrect json: {}", error),
-            }
-        }
+            }  
+        }  
         Err(error) => println!("Piping error: {}", error),
-    }
+    }  
     Ok(())
 }
