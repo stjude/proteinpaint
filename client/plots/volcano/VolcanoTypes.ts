@@ -1,7 +1,7 @@
 import type { Div, Elem, SvgG, SvgSvg, SvgText } from '../../types/d3'
 import type { PlotConfig } from '#mass/types/mass'
 import type { TermWrapper } from '@sjcrh/proteinpaint-types'
-import type { Cell, Column, Menu } from '#dom'
+import type { TableCell, TableColumn, Menu } from '#dom'
 import type { DataEntry, DEImage } from '#types'
 
 /** Attributes are added in the view model
@@ -86,8 +86,8 @@ export type VolcanoPlotDom = {
 }
 
 export type VolcanoPValueTableData = {
-	columns: Column[]
-	rows: Cell[][]
+	columns: TableColumn[]
+	rows: TableCell[][]
 }
 
 /** Settings for the differential analysis volcano */
