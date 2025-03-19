@@ -1154,16 +1154,6 @@ export const CNVClasses = Object.values(mclass)
 // by adding a tvs object (see FilterTermEntry type)
 export const dtTerms = [
 	{
-		id: 'cnv',
-		name: 'CNV',
-		parent_id: null,
-		isleaf: true,
-		type: 'dtcnv',
-		dt: dtcnv,
-		min: -1.0,
-		max: 1.0
-	},
-	{
 		id: 'snvindel',
 		name: 'SNV/indel',
 		parent_id: null,
@@ -1171,6 +1161,17 @@ export const dtTerms = [
 		type: 'dtsnvindel',
 		dt: dtsnvindel,
 		values: Object.fromEntries(mutationClasses.map(key => [key, { label: mclass[key].label }]))
+	},
+	{
+		id: 'cnv',
+		name: 'CNV',
+		parent_id: null,
+		isleaf: true,
+		type: 'dtcnv',
+		dt: dtcnv,
+		values: Object.fromEntries(
+			CNVClasses.map(key => [key, { label: mclass[key].label }]).concat([['WT', { label: 'Wildtype' }]])
+		)
 	}
 ]
 
