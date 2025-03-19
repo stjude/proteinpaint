@@ -9,7 +9,7 @@ handler:
 	setTvsDefaults()
 
 ********************** INTERNAL
-validateCategoricalTvs()
+validateTvs()
 
 */
 
@@ -25,6 +25,8 @@ export const handler = {
 async function fillMenu(self, div, tvs) {
 	const data = await self.opts.vocabApi.getCategories(tvs.term, self.filter, self.opts.getCategoriesArguments || {})
 	const sortedVals = data.lst.sort((a, b) => {
+		// samplecount currently not supported, but keep
+		// code for when it is supported
 		return b.samplecount - a.samplecount
 	})
 
@@ -36,7 +38,7 @@ async function fillMenu(self, div, tvs) {
 		delete new_tvs.groupset_label
 		new_tvs.values = sortedVals.filter((v, index, array) => indexes.includes(index))
 		try {
-			validateCategoricalTvs(new_tvs)
+			validateTvs(new_tvs)
 		} catch (e) {
 			window.alert(e)
 			return
@@ -79,7 +81,7 @@ function setTvsDefaults(tvs) {
 	if (!tvs.values) tvs.values = []
 }
 
-function validateCategoricalTvs(tvs) {
+function validateTvs(tvs) {
 	if (!tvs.term) throw 'tvs.term is not defined'
 	if (!tvs.values) throw `.values[] missing for a term ${tvs.term.name}`
 	if (!Array.isArray(tvs.values)) throw `.values[] is not an array for a term ${tvs.term.name}`

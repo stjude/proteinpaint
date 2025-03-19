@@ -1159,6 +1159,7 @@ export const dtTerms = [
 		parent_id: null,
 		isleaf: true,
 		type: 'dtcnv',
+		dt: dtcnv,
 		min: -1.0,
 		max: 1.0
 	},

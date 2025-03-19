@@ -1,4 +1,12 @@
-import { mclass, dt2label, dtsnvindel, dtcnv, dtfusionrna, geneVariantTermGroupsetting } from '#shared/common.js'
+import {
+	mclass,
+	dt2label,
+	dtsnvindel,
+	dtcnv,
+	dtfusionrna,
+	geneVariantTermGroupsetting,
+	dtTerms
+} from '#shared/common.js'
 import { getPillNameDefault, set_hiddenvalues } from '../termsetting'
 import type {
 	GeneVariantBaseQ,
@@ -7,13 +15,13 @@ import type {
 	GeneVariantTermSettingInstance,
 	PredefinedGroupSettingQ,
 	TermGroupSetting,
-	VocabApi
+	VocabApi,
+	DtTerm
 } from '#types'
 import type { PillData } from '../types'
 import { make_radios } from '#dom'
 import { copyMerge } from '#rx'
 import { GroupSettingMethods } from './groupsetting.ts'
-import { filterInit, getNormalRoot } from '#filter/filter'
 
 /* 
 instance attributes
@@ -217,6 +225,7 @@ async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 	// make radio buttons for grouping variants
 	async function makeGroupUI() {
 		groupsDiv.style('display', 'block')
+		makeVariantFilter()
 		await makeGroupsetDraggables()
 		/*groupsDiv.style('display', 'inline-block')
 		makeDtRadios()
@@ -377,11 +386,37 @@ async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 		self.q = { ...getBaseQ(self.q), type: 'custom-groupset', customset: { groups } }
 	}
 
+	// function to make a variant filter for the geneVariant term
+	// will be used for groupsetting
+	function makeVariantFilter() {
+		const dtTermsInDs: DtTerm[] = []
+		for (const t of dtTerms) {
+			if (!Object.keys(self.vocabApi.termdbConfig.queries).includes(t.id)) continue
+			const byOrigin = self.vocabApi.termdbConfig.assayAvailability?.byDt[t.dt]?.byOrigin
+			if (byOrigin) {
+				for (const k of Object.keys(byOrigin)) {
+					const tcopy = structuredClone(t)
+					tcopy.origin = k
+					tcopy.id = `${t.id}_${k}`
+					tcopy.name = `${t.name} (${byOrigin[k].label})`
+					dtTermsInDs.push(tcopy)
+				}
+			} else {
+				dtTermsInDs.push(t)
+			}
+		}
+		self.term.filter = {
+			opts: { joinWith: ['and', 'or'] },
+			// will load dt terms as custom terms in frontend vocab
+			terms: dtTermsInDs
+		}
+		self.q.type = 'filter'
+	}
+
 	// function for making groupset draggables
 	async function makeGroupsetDraggables() {
 		draggablesDiv.style('display', 'inline-block')
 		draggablesDiv.selectAll('*').remove()
-		self.q.type = 'filter'
 		self.groupSettingInstance = new GroupSettingMethods(self, { holder: draggablesDiv, hideApply: true })
 		await self.groupSettingInstance.main()
 	}
