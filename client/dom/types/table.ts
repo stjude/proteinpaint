@@ -115,7 +115,7 @@ export type TableArgs = {
 	maxWidth?: string
 	/** The max height of the table, 40vh by default */
 	maxHeight?: string
-	/** Preselect rows specified */
+	/** Preselect rows specified by index */
 	selectedRows?: number[]
 	/** Preselect all rows */
 	selectAll?: boolean
