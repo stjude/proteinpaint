@@ -499,25 +499,16 @@ export async function downloadTable(rows, cols, filename = 'table.tsv') {
 	link.remove()
 }
 
+/** Toggles between ascending and descending sort */
 function createSortButton(th: Th, callback, updateTable) {
+	let isAscending = false
 	const sortDiv = th.append('div').style('display', 'inline-block').attr('class', 'sjpp-table-sort-button')
 	icons['updown'](sortDiv, {
 		handler: () => {
-			const menu = new Menu({ padding: '' })
-			menu.showunder(sortDiv.node())
-			const options = ['ascending', 'descending']
-			for (const opt of options) {
-				menu.d
-					.append('div')
-					.attr('class', 'sja_menuoption')
-					.style('border-radius', '0px')
-					.text(`Sort ${opt}`)
-					.on('click', () => {
-						const newRows = callback(opt)
-						updateTable(newRows)
-						menu.destroy()
-					})
-			}
+			isAscending = !isAscending
+			const opt = isAscending ? 'ascending' : 'descending'
+			const newRows = callback(opt)
+			updateTable(newRows)
 		}
 	})
 }
