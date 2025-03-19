@@ -100,6 +100,7 @@ export type VolcanoSettings = {
 	defaultSignColor: string
 	/** largest absolute fold change to be considered in the analysis */
 	foldChangeCutoff: number
+	method: 'wilcoxon' | 'edgeR'
 	/** Not enabling this feature for now */
 	// geneORA: 'upregulated' | 'downregulated' | 'both' | undefined
 	/** smallest number of reads required for a gene to be considered in the analysis */

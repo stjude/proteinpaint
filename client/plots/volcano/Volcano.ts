@@ -141,6 +141,7 @@ export function getDefaultVolcanoSettings(overrides = {}): VolcanoSettings {
 		/** Not enabling this feature for now */
 		// geneORA: undefined,
 		height: 400,
+		method: 'edgeR',
 		minCount: 10,
 		minTotalCount: 15,
 		pValue: 0.05,
