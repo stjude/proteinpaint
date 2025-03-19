@@ -76,7 +76,6 @@
     "express": "^4.17.1",
     "express-basic-auth": "^1.1.5",
     "express-session": "^1.18.1",
-    "form-data": "^4.0.2",
     "got": "^14.2.0",
     "image-size": "^0.5.5",
     "jsonwebtoken": "^9.0.0",

@@ -84,7 +84,7 @@ exports.stream_rust = function (binfile, input_data, emitJson) {
 		if (stderr.length || killedPids.has(ps.pid) || code !== 0) {
 			emitErrors(null, ps.pid, code)
 		} else {
-			emitJson({ ok: true, status: 'ok', message: 'Processing complete' })
+			emitJson()
 		}
 	})
 	ps.on('error', err => {
@@ -97,27 +97,17 @@ exports.stream_rust = function (binfile, input_data, emitJson) {
 	})
 
 	function emitErrors(error, pid, code = 0) {
-		const errors = stderr
-			.join('')
-			.trim()
-			.split('\n')
-			.map(d => {
-				try {
-					return JSON.parse(d)
-				} catch (e) {
-					return null
-				}
-			})
-			.filter(d => d !== null)
-		if (error) errors.push(error)
+		// concatenate stderr uint8arr into a string
+		const errors = stderr.join('').trim()
+		if (error) errors += `\n` + error
 		if (pid && killedPids.has(ps.pid) && !trackedPids.has(ps.pid)) {
-			errors.push({ error: `server error: MAF file processing terminated (expired process)` })
+			errors += '\n' + JSON.stringify({ error: `server error: MAF file processing terminated (expired process)` })
 			killedPids.delete(pid)
 		} else if (pid && code !== 0) {
 			// may result from errors in spawned process code, or external signal (like `kill -9` in terminal)
-			errors.push({ error: `server error: MAF file processing terminated (code=${code})` })
+			errors += '\n' + JSON.stringify({ error: `server error: MAF file processing terminated (code=${code})` })
 		}
-		emitJson({ errors })
+		emitJson(errors)
 	}
 
 	// on('end') will duplicate ps.on('close') event above

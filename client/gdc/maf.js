@@ -410,23 +410,14 @@ async function getFilesAndShowTable(obj) {
 		button.innerHTML = oldText
 		button.disabled = false
 
-		const errors = data.errors?.body
-		if (errors?.length) {
-			// expect multipart/form-data errors to be an array
-			if (!Array.isArray(errors)) throw `multipart/form-data errors should be one json-encoded value per line`
-			// expect gdc/mafBuild errors
-			// revise if run status is changed
-			const errors = runStatus.body?.errors || []
+		if (data.errors?.body) {
+			// expect gdc/mafBuild errors to be an array
+			const errors = data.errors.body || []
 			if (Array.isArray(errors)) {
 				const fileErrors = errors.filter(d => d.url)
 				if (fileErrors.length) displayRunStatusErrors(fileErrors)
 				const nonFileErrors = errors.filter(d => !d.url)
-				for (const e of nonFileErrors) sayerror(obj.errDiv, e.error)
-			}
-			// other unstructured errors; display as plain text
-			for (const e of errors.filter(e => !e.url)) {
-				if (e.error) sayerror(obj.errDiv, e.error)
-				if (e.message) sayerror(obj.errDiv, e.message)
+				for (const e of nonFileErrors) sayerror(obj.errDiv, e.error || e.message)
 			}
 		}
 
