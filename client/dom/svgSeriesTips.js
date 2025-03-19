@@ -28,7 +28,7 @@ import { pointer } from 'd3-selection'
 	Returns
 	an API object (see the specs at the end of this function)
 */
-export function getSeriesTip(line, rect, _tip = null) {
+export function getSeriesTip(line, rect, _tip = null, plotType) {
 	const tip = _tip || new Menu({ padding: '5px' })
 	line.style('display', 'none')
 
@@ -58,9 +58,25 @@ export function getSeriesTip(line, rect, _tip = null) {
 		}
 
 		if (seriesHtmls.length) {
-			tip
-				.show(event.clientX, event.clientY)
-				.d.html(`${opts.xTitleLabel}: ${xVal}<br>` + seriesHtmls.map(d => d).join(opts.separator))
+			if (plotType === 'survival') {
+				// Sort the seriesHtmls array by percentage
+				const sortedSeriesHtmls = seriesHtmls.sort((a, b) => {
+					// Extract the percentage from each HTML string
+					const percentageA = parseFloat(a.match(/(\d+\.\d+)%/)[1])
+					const percentageB = parseFloat(b.match(/(\d+\.\d+)%/)[1])
+
+					// Sort in ascending order (to see the lowest survival rate for the group first)
+					return percentageA - percentageB
+				})
+
+				tip
+					.show(event.clientX, event.clientY)
+					.d.html(`${opts.xTitleLabel}: ${xVal}<br>` + sortedSeriesHtmls.map(d => d).join(opts.separator))
+			} else {
+				tip
+					.show(event.clientX, event.clientY)
+					.d.html(`${opts.xTitleLabel}: ${xVal}<br>` + seriesHtmls.map(d => d).join(opts.separator))
+			}
 		} else {
 			tip.hide()
 		}
