@@ -50,7 +50,6 @@ class GbControls {
 		return {
 			activeCohort: appState.activeCohort,
 			config,
-			termdbConfig: appState.termdbConfig,
 			filter: getNormalRoot(appState.termfilter.filter)
 		}
 	}
@@ -163,15 +162,7 @@ class GbControls {
 	}
 
 	initUI(state) {
-		/* everything rendered into this.opts.holder
-		state = {
-		  config: {}
-		  	ld{}
-			snvindel{}
-			variantFilter{}
-		  termdbConfig {}
-		}
-		*/
+		// everything rendered into this.opts.holder
 
 		this.dom = {}
 
@@ -419,7 +410,7 @@ async function render1group_filter(self, groupIdx, group, div) {
 			holder: div,
 			vocab: self.app.opts.state.vocab,
 			emptyLabel: 'Entire cohort',
-			termdbConfig: self.state.termdbConfig,
+			termdbConfig: self.app.vocabApi.termdbConfig,
 			callback: async f => {
 				const groups = JSON.parse(JSON.stringify(self.state.config.snvindel.details.groups))
 				groups[groupIdx].filter = f
