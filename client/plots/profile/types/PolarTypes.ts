@@ -7,8 +7,7 @@ import type { ProfilePlotDom } from './ProfilePlotTypes'
  * - Add opts type that extends profile plot opts
  */
 
-/** Already a 'Term' in types */
-type Term = {
+type ModuleScore = {
 	module: string
 	score: { term: { color: string } }
 	maxScore: any
@@ -16,7 +15,7 @@ type Term = {
 }
 
 export type ProfilePolarConfig = PlotConfig & {
-	terms: Term[]
+	terms: ModuleScore[]
 	title: string
 }
 
