@@ -52,14 +52,15 @@ type ItemEntry = {
 }
 type FilterEntry = {
 	group: number // group index
-	opts: any
-	terms: [] // will load terms as custom terms in frontend vocab //TODO: need to make a type definition for element of array
+	opts?: any
+	terms?: [] // will load terms as custom terms in frontend vocab //TODO: need to make a type definition for element of array
+	active?: any
 }
 type DataInput = { [index: string]: ItemEntry }
 type GrpEntry = {
 	//Scoped for file, maybe merge with GroupEntry type in future??
 	currentIdx: number //Current index of group
-	type: 'values' | 'filter'
+	type: string //'values' | 'filter'
 	name: string //Mutable group name, default .currentIdx
 }
 type GrpEntryWithDom = GrpEntry & {
@@ -172,27 +173,29 @@ export class GroupSettingMethods {
 			throw 'q.type not recognized'
 		}
 
-		if (this.tsInstance.q.type == 'values' && this.data.values.length == 0)
-			throwMsgWithFilePathAndFnName(`Missing values`)
+		if (!this.data.filters.length) {
+			// no filters, check values
+			if (!this.data.values.length) throwMsgWithFilePathAndFnName(`Missing values`)
 
-		// re-populate missing sample counts, which can occur
-		// for a custom groupset
-		this.data.values.forEach(v => {
-			if (!v.samplecount) {
-				if (this.tsInstance.term.type == 'geneVariant') {
-					const q = this.tsInstance.q as GeneVariantBaseQ
-					const dt = this.tsInstance.category2samplecount.find(i => i.dt == q.dt)
-					const classes = dt.classes.byOrigin && q.origin ? dt.classes.byOrigin[q.origin] : dt.classes
-					v.samplecount = classes[v.key]
-				} else {
-					v.samplecount = this.tsInstance.category2samplecount
-						? this.tsInstance.category2samplecount.find(
-								(d: { key: string; label?: string; samplecount: number }) => d.key == v.key
-						  )?.samplecount
-						: 'n/a'
+			// re-populate missing sample counts, which can occur
+			// for a custom groupset
+			this.data.values.forEach(v => {
+				if (!v.samplecount) {
+					if (this.tsInstance.term.type == 'geneVariant') {
+						const q = this.tsInstance.q as GeneVariantBaseQ
+						const dt = this.tsInstance.category2samplecount.find(i => i.dt == q.dt)
+						const classes = dt.classes.byOrigin && q.origin ? dt.classes.byOrigin[q.origin] : dt.classes
+						v.samplecount = classes[v.key]
+					} else {
+						v.samplecount = this.tsInstance.category2samplecount
+							? this.tsInstance.category2samplecount.find(
+									(d: { key: string; label?: string; samplecount: number }) => d.key == v.key
+							  )?.samplecount
+							: 'n/a'
+					}
 				}
-			}
-		})
+			})
+		}
 
 		for (const g of Array.from(grpIdxes)) {
 			//add any required groups, specifically Excluded Categories and Group 2
@@ -208,37 +211,44 @@ export class GroupSettingMethods {
 	formatCustomset(grpIdxes: Set<number>, input: DataInput) {
 		const q = this.tsInstance.q as CustomGroupSettingQ
 		for (const [i, g] of q.customset.groups.entries()) {
-			const group = g as ValuesGroup
+			const group = g as any // TODO: improve typing
 			if (group.uncomputable) return
 			this.data.groups.push({
 				currentIdx: Number(i) + 1,
-				type: 'values',
+				type: group.type,
 				name: group.name
 			})
 			grpIdxes.delete(i + 1)
-			for (const value of group.values) {
-				/** label may not be provided in groupsetting.customset.
-				 * If missing, find the label from category2samplecout or
-				 * use the last ditch effort to use the key.
-				 */
-				const label = value.label
-					? value.label
-					: this.tsInstance.category2samplecount
-					? this.tsInstance.category2samplecount.find(
-							(d: { key: string; label?: string; samplecount: number }) => d.key == value.key
-					  )?.label
-					: value.key
-				this.data.values.push({
-					key: value.key,
-					label: label,
-					group: i + 1,
-					samplecount: null
-				})
+			if (group.type == 'filter') {
+				const filter = group.filter
+				if (!filter) throw 'filter missing'
+				this.data.filters.push(filter)
+			} else if (group.type == 'values') {
+				for (const value of group.values) {
+					/** label may not be provided in groupsetting.customset.
+					 * If missing, find the label from category2samplecout or
+					 * use the last ditch effort to use the key.
+					 */
+					const label = value.label
+						? value.label
+						: this.tsInstance.category2samplecount
+						? this.tsInstance.category2samplecount.find(
+								(d: { key: string; label?: string; samplecount: number }) => d.key == value.key
+						  )?.label
+						: value.key
+					this.data.values.push({
+						key: value.key,
+						label: label,
+						group: i + 1,
+						samplecount: null
+					})
+				}
 			}
 		}
 
 		//Find excluded values not returned in customset
-		if (this.tsInstance.term.type == 'geneVariant') {
+		// TODO: update this to handle excluded values
+		/*if (this.tsInstance.term.type == 'geneVariant') {
 			const q = this.tsInstance.q as GeneVariantBaseQ
 			const dt = this.tsInstance.category2samplecount.find(i => i.dt == q.dt)
 			const classes = dt.classes.byOrigin && q.origin ? dt.classes.byOrigin[q.origin] : dt.classes
@@ -255,7 +265,7 @@ export class GroupSettingMethods {
 					}
 				}
 			}
-		} else if (
+		} else */ if (
 			this.data.values.length !== Object.keys(input).length &&
 			this.tsInstance.q.type != 'predefined-groupset' &&
 			this.tsInstance.q.type != 'custom-groupset'
@@ -429,7 +439,8 @@ function setRenderers(self: any) {
 			if (group.type == 'filter') {
 				const groupFilter = self.data.filters.find((d: FilterEntry) => d.group == group.currentIdx)
 				if (!groupFilter) throw 'filter missing'
-				customgroup.filter = getNormalRoot(groupFilter.active)
+				customgroup.filter = structuredClone(groupFilter)
+				customgroup.filter.active = getNormalRoot(groupFilter.active)
 			} else if (group.type == 'values') {
 				const groupValues = self.data.values
 					.filter((v: ItemEntry) => v.group == group.currentIdx)
@@ -558,7 +569,7 @@ function setRenderers(self: any) {
 		if (group.type == 'filter') {
 			// group is filter type, render tvs
 			const holder = group.draggables.append('div')
-			await mayDisplayFilter(group, /*group.variant_filter*/ null, holder)
+			await mayDisplayFilter(group, holder)
 		} else {
 			// not filter type, render items in group
 			await self.addItems(group)
@@ -566,25 +577,15 @@ function setRenderers(self: any) {
 	}
 
 	/*
-	self { vocabApi }
-		.variantFilter{} is attached to it
-	filterInState{}
-		optional filter obj, tracked in state
 	callback2
 		optional callback to run upon filter update, no parameter
 	*/
-	async function mayDisplayFilter(group, filterInState: any, holder: any, callback2?: any) {
+	async function mayDisplayFilter(group, holder: any, callback2?: any) {
 		const filter = self.data.filters.find((d: FilterEntry) => d.group == group.currentIdx)
 		if (!filter || !filter.terms?.length) return
 		if (!filter.opts) throw 'filter.opts{} missing'
 
-		if (filterInState) {
-			// use existing filter
-			filter.active = JSON.parse(JSON.stringify(filterInState))
-		} else if (filter.filter) {
-			// use default filter from dataset
-			filter.active = JSON.parse(JSON.stringify(filter.filter))
-		} else {
+		if (!filter.active) {
 			// TODO: is this necessary?
 			filter.active = { type: 'tvslst', join: '', in: true, lst: [], $id: 0, tag: 'filterUiRoot' }
 		}

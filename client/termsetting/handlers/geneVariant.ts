@@ -389,6 +389,7 @@ async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 	// function to make a variant filter for the geneVariant term
 	// will be used for groupsetting
 	function makeVariantFilter() {
+		if (self.term.filter) return
 		const dtTermsInDs: DtTerm[] = []
 		for (const t of dtTerms) {
 			if (!Object.keys(self.vocabApi.termdbConfig.queries).includes(t.id)) continue

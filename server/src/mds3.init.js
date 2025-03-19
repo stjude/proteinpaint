@@ -2873,18 +2873,8 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 				// of priority (see client/termsetting/handlers/geneVariant.ts)
 				const group = groupset.groups.find(group => {
 					if (group.type != 'filter') throw 'unexpected group.type'
-					const filter = group.filter
-					if (filter.type != 'tvslst') throw 'unexpected filter.type'
-					// determine if the sample passes the list of filters
-					const samplePassesFilters =
-						filter.join == 'and'
-							? // determine if the sample passes all of the filters
-							  filter.lst.every(f => samplePassesFilter(f, mlst))
-							: // determine if the sample passes any of the filters
-							  filter.lst.some(f => samplePassesFilter(f, mlst))
-					// for filter.in=true, sample is in group if sample passes the filters
-					// for filter.in=false, sample is in group if sample does not pass the filters
-					return filter.in ? samplePassesFilters : !samplePassesFilters
+					const filter = group.filter.active
+					return samplePassesTvsLst(filter, mlst)
 				})
 
 				if (!group || group.uncomputable) continue
@@ -2959,8 +2949,24 @@ function addDataAvailability(sid, sample2mlst, dtKey, mclass, origin, sampleFilt
 	sample2mlst.set(sid, mlst)
 }
 
+// function to determine if the mlst of a sample meets the criteria of tvslst
+function samplePassesTvsLst(filter, mlst) {
+	if (filter.type != 'tvslst') throw 'unexpected filter.type'
+	// determine if the sample passes the list of filters
+	const samplePassesFilters =
+		filter.join == 'and'
+			? // determine if the sample passes all of the filters
+			  filter.lst.every(f => samplePassesFilter(f, mlst))
+			: // determine if the sample passes any of the filters
+			  filter.lst.some(f => samplePassesFilter(f, mlst))
+	// for filter.in=true, sample passes tvslst if sample passes the filters
+	// for filter.in=false, sample passes tvslst if sample does not pass the filters
+	return filter.in ? samplePassesFilters : !samplePassesFilters
+}
+
 // function to determine if the mlst of a sample meets the criteria of the filter
 function samplePassesFilter(f, mlst) {
+	if (f.type == 'tvslst') return samplePassesTvsLst(f, mlst)
 	if (f.type != 'tvs') throw 'unexpected f.type' // TODO: also support f.type='tvslst'
 	const tvs = f.tvs
 	// determine if sample has a mutation specified in the filter
