@@ -2965,10 +2965,8 @@ function samplePassesFilter(f, mlst) {
 	const tvs = f.tvs
 	// determine if sample has a mutation specified in the filter
 	const sampleHasMutation = mlst.some(m => {
-		return (
-			tvs.term.dt == m.dt &&
-			tvs.values.some(v => (v.origin ? v.key == m.class && v.origin == m.origin : v.key == m.class))
-		)
+		const match = tvs.term.dt == m.dt && tvs.values.some(v => v.key == m.class)
+		return tvs.term.origin ? match && m.origin == tvs.term.origin : match
 	})
 	// for tvs.isnot=false, sample passes filter if has mutation specified in the filter
 	// for tvs.isnot=true, sample passes filter if does not have mutation specified in the filter

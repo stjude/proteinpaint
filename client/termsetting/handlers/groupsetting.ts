@@ -3,7 +3,7 @@ import { select, Selection } from 'd3-selection'
 //import { disappear } from '#src/client'
 import { throwMsgWithFilePathAndFnName } from '#dom/sayerror'
 import { debounce } from 'debounce'
-import { mclass, dtTerms } from '#shared/common.js'
+import { mclass } from '#shared/common.js'
 import type {
 	TermSettingInstance,
 	ValuesGroup,
@@ -12,8 +12,7 @@ import type {
 	GroupSettingQ,
 	GeneVariantBaseQ,
 	GeneVariantTerm,
-	MinBaseQ,
-	FilterTermEntry
+	MinBaseQ
 } from '#types'
 import { filterInit, getNormalRoot } from '#filter/filter'
 
@@ -54,7 +53,7 @@ type ItemEntry = {
 type FilterEntry = {
 	group: number // group index
 	opts: any
-	terms: FilterTermEntry[] // will load terms as custom terms in frontend vocab
+	terms: [] // will load terms as custom terms in frontend vocab //TODO: need to make a type definition for element of array
 }
 type DataInput = { [index: string]: ItemEntry }
 type GrpEntry = {
@@ -126,29 +125,10 @@ export class GroupSettingMethods {
 				grpIdxes.add(value.group)
 			}
 		} else if (this.tsInstance.q.type == 'filter') {
-			const filters = [
-				{
-					group: 0,
-					opts: { joinWith: ['and'] },
-					// will load dt terms as custom terms in frontend vocab
-					terms: dtTerms
-				},
-				{
-					group: 1,
-					opts: { joinWith: ['and'] },
-					// will load dt terms as custom terms in frontend vocab
-					terms: dtTerms
-				},
-				{
-					group: 2,
-					opts: { joinWith: ['and'] },
-					// will load dt terms as custom terms in frontend vocab
-					terms: dtTerms
-				}
-			]
-			for (const filter of filters) {
-				this.data.filters.push(filter)
-				grpIdxes.add(filter.group)
+			const filter = this.tsInstance.term.filter
+			if (!filter) throw 'filter missing'
+			for (const grpIdx of grpIdxes) {
+				this.data.filters.push(Object.assign({ group: grpIdx }, filter))
 			}
 		} else if (this.tsInstance.q.type == 'custom-groupset') {
 			// q.type = 'custom-groupset'

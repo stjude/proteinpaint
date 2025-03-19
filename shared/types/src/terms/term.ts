@@ -105,6 +105,7 @@ export type BaseTerm = {
 	included_types?: string[]
 	isleaf?: boolean
 	values?: TermValues
+	filter?: any
 }
 
 export type Term = BaseTerm &
