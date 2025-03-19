@@ -1,1 +1,2 @@
-
+Features
+- Toggling between wilcoxon and edgeR methods is enabled in the differential analysis volcano plot. 
