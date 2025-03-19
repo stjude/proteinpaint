@@ -123,6 +123,7 @@ export type FilterGroup = {
 	name: string
 	type: 'filter'
 	filter: Filter
+	uncomputable?: boolean // if true, do not include this group in computations
 }
 
 export type GroupEntry = ValuesGroup | FilterGroup

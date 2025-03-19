@@ -1,5 +1,13 @@
-import { MinBaseQ, BaseTerm, EnabledTermGroupSetting, BaseTW, GroupSettingQ, ValuesQ, TermValues } from '../index.ts'
-import { TermSettingInstance } from '../termsetting.ts'
+import type {
+	MinBaseQ,
+	BaseTerm,
+	EnabledTermGroupSetting,
+	BaseTW,
+	GroupSettingQ,
+	ValuesQ,
+	TermValues
+} from '../index.ts'
+import type { TermSettingInstance } from '../termsetting.ts'
 
 export type GeneVariantBaseQ = MinBaseQ & {
 	cnvGainCutoff?: number
