@@ -73,8 +73,9 @@ async function buildMaf(q: GdcMafBuildRequest, res, ds) {
 	res.flush() // header text should be sent as a separate chunk from the content that will be streamed next
 
 	try {
-		const { rustStream, endStream } = stream_rust('gdcmaf', JSON.stringify(arg), emitJson)
-		if (rustStream) {
+		const streams = stream_rust('gdcmaf', JSON.stringify(arg), emitJson)
+		if (streams) {
+			const { rustStream, endStream } = streams
 			// Important: rustStream.pipe(res, { end: false }) may cause a stalemate
 			// where the spawned rust process, stream transform, and res instance
 			// wait on each other to trigger a "stop", but does not happen automatically
