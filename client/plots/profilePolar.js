@@ -1,1 +1,1 @@
-export * from './Profile/polar'
+export * from './profile/polar'

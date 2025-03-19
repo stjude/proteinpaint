@@ -6,7 +6,7 @@ import type { TableCell } from '#dom'
 import { getCompInit, copyMerge } from '#rx'
 import { fillTwLst } from '#termsetting'
 import * as d3 from 'd3'
-import { profilePlot, loadFilterTerms, getDefaultProfilePlotSettings, getProfilePlotConfig } from '../profilePlot'
+import { profilePlot, loadFilterTerms, getDefaultProfilePlotSettings, getProfilePlotConfig } from '../profilePlot.js'
 import { renderTable } from '#dom'
 
 /** TODO: profilePlot must extend RxComponentInner but file not tsc.
