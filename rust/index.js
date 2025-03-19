@@ -98,7 +98,7 @@ exports.stream_rust = function (binfile, input_data, emitJson) {
 
 	function emitErrors(error, pid, code = 0) {
 		// concatenate stderr uint8arr into a string
-		const errors = stderr.join('').trim()
+		let errors = stderr.join('').trim()
 		if (error) errors += `\n` + error
 		if (pid && killedPids.has(ps.pid) && !trackedPids.has(ps.pid)) {
 			errors += '\n' + JSON.stringify({ error: `server error: MAF file processing terminated (expired process)` })
