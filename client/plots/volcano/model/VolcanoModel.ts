@@ -28,7 +28,7 @@ export class VolcanoModel {
 		const body = {
 			genome: this.app.vocabApi.vocab.genome,
 			dslabel: this.app.vocabApi.vocab.dslabel,
-			method: 'edgeR', //Eventually this can be removed from the backend code since wilcoxon is no longer needed.
+			method: this.settings.method,
 			min_count: this.settings.minCount,
 			min_total_count: this.settings.minTotalCount,
 			samplelst: this.config.samplelst

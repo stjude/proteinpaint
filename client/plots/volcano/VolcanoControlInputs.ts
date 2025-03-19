@@ -134,6 +134,17 @@ export class VolcanoControlInputs {
 				max: 10
 			},
 			{
+				label: 'Method',
+				type: 'radio',
+				chartType: 'volcano',
+				settingsKey: 'method',
+				title: 'Toggle between analysis methods',
+				options: [
+					{ label: 'edgeR', value: 'edgeR' },
+					{ label: 'Wilcoxon', value: 'wilcoxon' }
+				]
+			},
+			{
 				label: 'Rank Genes by',
 				type: 'radio',
 				chartType: 'volcano',
