@@ -9,6 +9,7 @@ Features:
 
 Fixes:
 - Color shown in the track config menu is the correct
+- Selected rows remain selected after table sort
 
 
 ## 2.111.0

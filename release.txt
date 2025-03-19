@@ -1,2 +1,1 @@
-Fixes
-- Selected rows remain selected after table sort
+
