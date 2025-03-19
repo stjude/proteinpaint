@@ -1,7 +1,5 @@
 import { getCompInit, copyMerge } from '#rx'
-import { addGeneSearchbox } from '../dom/genesearch.ts'
-import { Menu } from '#dom/menu'
-import { sayerror } from '../dom/sayerror.ts'
+import { addGeneSearchbox, Menu, sayerror } from '#dom'
 import { dofetch3 } from '#common/dofetch'
 import { getNormalRoot } from '#filter/filter'
 import { filterJoin } from '#shared/filter.js'
@@ -12,8 +10,9 @@ import { gbControlsInit, mayUpdateGroupTestMethodsIdx } from './genomeBrowser.co
 //////////////// instance structure
 
 this{}
-	vocabApi{}
 	app {}
+		vocabApi{}
+			termdbConfig{}
 		opts {}
 			genome{} // client-side genome obj
 			state {}
@@ -30,7 +29,6 @@ this{}
 		id
 	state {}
 		filter{} // mass filter
-		termdbConfig{}
 		config {}
 			variantFilter{}
 				filter{}
@@ -45,7 +43,7 @@ this{}
 			subMds3TkFilters[] // list of mds3 subtk filter objects created on mds3 tk sample summary ui
 			trackLst{}
 				facets[]
-				activeTracks[]
+				activeTracks[] // tracks list of active tracks from trackLst or facet
 	blockInstance // exists when block has been launched; one block in each plot
 
 
@@ -108,12 +106,10 @@ class genomeBrowser {
 	}
 
 	getState(appState) {
-		// {plots[], termdbConfig{}, termfilter{}}
 		const config = appState.plots.find(p => p.id === this.id)
 		if (!config) throw `No plot with id='${this.id}' found`
 		return {
 			config,
-			termdbConfig: appState.termdbConfig,
 			filter: getNormalRoot(appState.termfilter.filter)
 		}
 	}
@@ -307,7 +303,7 @@ class genomeBrowser {
 				this.maySaveMds3SubtkToState()
 			}
 		}
-		if (this.state.termdbConfig?.queries.defaultBlock2GeneMode && this.state.config.geneSearchResult.geneSymbol) {
+		if (this.app.vocabApi.termdbConfig.queries.defaultBlock2GeneMode && this.state.config.geneSearchResult.geneSymbol) {
 			// dataset config wants to default to gene view, and gene symbol is available
 			// call block.init to launch gene view
 			arg.query = this.state.config.geneSearchResult.geneSymbol
@@ -425,7 +421,7 @@ chartsInstance: MassCharts instance
 		}
 	}
 	state {
-		termdbConfig{}
+		termdbConfig{} // should no longer track it in plot state
 	}
 }
 */
