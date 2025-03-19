@@ -122,8 +122,8 @@ export class VolcanoViewModel {
 		const dataCopy: any = structuredClone(this.response.data)
 		for (const d of dataCopy) {
 			const significant = this.isSignificant(d)
+			this.getGenesColor(d, significant)
 			if (significant) {
-				this.getGenesColor(d)
 				this.numSignificant++
 				const row = [
 					{ value: roundValueAuto(d.fold_change) },
@@ -135,7 +135,6 @@ export class VolcanoViewModel {
 				}
 				this.pValueTable.rows.push(row)
 			} else {
-				d.color = this.settings.defaultNonSignColor
 				this.numNonSignificant++
 			}
 			d.x = plotDim.xScale.scale(d.fold_change) + this.horizPad + this.offset * 2
@@ -153,15 +152,13 @@ export class VolcanoViewModel {
 	}
 
 	//TODO: hightlight per term color
-	getGenesColor(d: DataPointEntry) {
+	getGenesColor(d: DataPointEntry, significant) {
 		if (!d.gene_symbol) return this.settings.defaultSignColor
-
 		if (this.config.highlightedData.includes(d.gene_symbol)) {
 			d.color = this.settings.defaultHighlightColor
 			d.highlighted = true
-		} else {
-			d.color = this.settings.defaultSignColor
-		}
+		} else if (significant) d.color = this.settings.defaultSignColor
+		else d.color = this.settings.defaultNonSignColor
 	}
 
 	setStatsData() {
