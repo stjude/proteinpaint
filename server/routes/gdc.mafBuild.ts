@@ -65,11 +65,11 @@ async function buildMaf(q: GdcMafBuildRequest, res, ds) {
 	// uncomment for manual error testing
 	// const arg = {"host": "https://api.gdc.cancer.gov/data/","columns": ["Hugo_Symbol", "Entrez_Gene_Id", "Center", "NCBI_Build", "Chromosome", "Start_Position"], "fileIdLst": ["8b31d6d1-56f7-4aa8-b026-c64bafd531e7", "83ea587b-1e92-41b3-a8e3-12df30496724"]};
 
-	const boundary = 'GDC_MAF_MULTIPART_BOUNDARY'
-	res.setHeader('content-type', `multipart/mixed; boundary=${boundary}`)
+	const boundary = '------------------------GDC-MAF-BUILD'
+	res.setHeader('Content-Type', `multipart/form-data; boundary=${boundary}`)
 	res.write(`--${boundary}`)
-	res.write('\ncontent-disposition: attachment; filename=cohort.maf.gz')
-	res.write('\ncontent-type: application/octet-stream\n\n')
+	res.write('\r\nContent-Disposition: form-data; name="gzfile"; filename="cohort.maf.gz"')
+	res.write('\r\nContent-Type: application/gzip\r\n\r\n')
 	res.flush() // header text should be sent as a separate chunk from the content that will be streamed next
 
 	try {
@@ -87,11 +87,14 @@ async function buildMaf(q: GdcMafBuildRequest, res, ds) {
 	}
 
 	function emitJson(data?: EmitJsonDataArg, end: boolean = true) {
-		res.write(`\n--${boundary}`)
-		res.write('\ncontent-type: application/json')
-		const json = typeof data === 'string' ? data : JSON.stringify(data || { ok: true, status: 'ok' })
-		res.write('\n\n' + json)
-		res.write(`\n--${boundary}--`)
+		if (data) {
+			res.write(`\r\n--${boundary}`)
+			res.write('\r\nContent-Disposition: form-data; name="errors"')
+			res.write('\r\nContent-Type: application/x-jsonlines')
+			const json = typeof data === 'string' ? data : JSON.stringify(data || { ok: true, status: 'ok' })
+			res.write('\r\n\r\n' + json)
+		}
+		res.write(`\r\n--${boundary}--\r\n`)
 		// report amount of time taken to run rust
 		mayLog('rust gdcmaf', Date.now() - t0)
 		if (end) res.end()
