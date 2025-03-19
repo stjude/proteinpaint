@@ -135,12 +135,18 @@ exports.stream_rust = function (binfile, input_data, emitJson) {
 
 	function endStream() {
 		try {
-			if (!childStream.writableEnded) childStream.destroy()
+			if (!childStream.writableEnded) {
+				console.log('trigger childStream.destroy() in endStream()')
+				childStream.destroy()
+			}
 		} catch (e) {
 			console.log('error triggering childStream.destroy()', e)
 		}
 		try {
-			if (!ps.killed) ps.kill()
+			if (!ps.killed) {
+				console.log('trigger ps.kill() in endStream()')
+				ps.kill()
+			}
 			if (trackedPids.has(ps.pid)) trackedPids.delete(ps.pid)
 		} catch (e) {
 			console.log('error triggering ps.kill()', e)

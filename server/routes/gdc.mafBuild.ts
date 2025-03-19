@@ -80,11 +80,10 @@ async function buildMaf(q: GdcMafBuildRequest, res, ds) {
 			// wait on each other to trigger a "stop", but does not happen automatically
 			// when a browser tab is refreshed during a file download
 			res.on('close', () => {
+				if (res.writableEnded) return
 				try {
-					if (!res.writableEnded) {
-						console.log('\n-- forced res.end() ---\n')
-						res.end()
-					}
+					console.log('\n-- forced res.end() ---\n')
+					res.end()
 				} catch (e) {
 					console.log('error with forced res.end()', e)
 				}
