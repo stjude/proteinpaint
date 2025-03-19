@@ -179,14 +179,6 @@ export function renderTable({
 			}
 		}
 	}
-	function addSort(th, i) {
-		const callback = (opt: string) => sortTableCallBack(i, rows, opt)
-		const updateTable = (newRows: any) => {
-			rows = newRows
-			updateRows()
-		}
-		createSortButton(th, callback, updateTable)
-	}
 
 	const tbody = table.append('tbody')
 	function updateRows() {
@@ -396,9 +388,11 @@ export function renderTable({
 		}
 	}
 
+	/** Returns the index from the original input array
+	 * (captured in rowsCopy) not the current array index. */
 	function getCheckedRowIndex() {
 		const checkboxes = tbody.selectAll('input:checked')
-		const idxlst: Array<number> = []
+		const idxlst: number[] = []
 		if (!checkboxes.empty()) {
 			checkboxes.each((d, i, nodes) => {
 				const node = nodes[i]
@@ -406,6 +400,22 @@ export function renderTable({
 			})
 		}
 		return idxlst
+	}
+
+	function addSort(th, i) {
+		const callback = (isAscending: boolean) => sortTableCallBack(i, rows, isAscending)
+		const updateTable = (newRows: any) => {
+			const checked = getCheckedRowIndex()
+			const idxMap = new Map(rowsCopy.map((val, idx) => [val, idx]))
+			selectedRows = checked.map(i => newRows.findIndex(v => idxMap.get(v) === i))
+
+			/** Must override caller setting once user selects row(s) */
+			if (selectedRows.length) selectAll = false
+
+			rows = newRows
+			updateRows()
+		}
+		createSortButton(th, callback, updateTable)
 	}
 
 	const api = {
@@ -506,23 +516,22 @@ function createSortButton(th: Th, callback, updateTable) {
 	icons['updown'](sortDiv, {
 		handler: () => {
 			isAscending = !isAscending
-			const opt = isAscending ? 'ascending' : 'descending'
-			const newRows = callback(opt)
+			const newRows = callback(isAscending)
 			updateTable(newRows)
 		}
 	})
 }
 
-function sortTableCallBack(i: number, rows: any, opt: string) {
+function sortTableCallBack(i: number, rows: any, isAscending: boolean) {
 	const newRows = rows.sort((a, b) => {
 		if (!a[i].value || !b[i].value) return
 		//numbers
 		if (typeof a[i].value === 'number' && typeof b[i].value === 'number') {
-			if (opt == 'descending') return b[i].value - a[i].value
+			if (!isAscending) return b[i].value - a[i].value
 			else return a[i].value - b[i].value
 			//strings
 		} else if (typeof a[i].value === 'string' && typeof b[i].value === 'string') {
-			if (opt == 'descending') return b[i].value.localeCompare(a[i].value)
+			if (!isAscending) return b[i].value.localeCompare(a[i].value)
 			else return a[i].value.localeCompare(b[i].value)
 		}
 	})
