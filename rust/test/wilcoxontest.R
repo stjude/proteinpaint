@@ -1,0 +1,34 @@
+# Syntax: time Rscript wilcoxontest.R | ../target/release/wilcoxon
+library(jsonlite)
+
+generate_data <- function(iter) {
+    group1_values <- rnorm(20)  # Generate 20 random numbers from a normal distribution
+    group2_values <- runif(10)  # Generate 10 random numbers from a uniform distribution
+    pvalue <- wilcox.test(group1_values,group2_values)$p.value
+    # Create a list to store the vectors
+    my_df <- list(group1_id = paste0("group1_id_iter",iter), group1_values = group1_values, group2_id = paste0("group2_id_iter",iter), group2_values = group2_values, R_pvalue = pvalue)
+    #print (my_df)
+    return (my_df)
+}
+
+
+num_tests <- 1000
+initial_df <- list()
+for (i in 1:num_tests) {
+    new_df <- generate_data(i)
+    initial_df <- rbind(initial_df, new_df)
+}
+
+initial_df <- as.data.frame(initial_df)
+final_df <- data.frame()
+for (i in 1:nrow(initial_df)) {
+    item <- initial_df[i,]
+    item$group1_id <- as.character(item$group1_id[1])
+    item$group2_id <- as.character(item$group2_id[1])
+    item$R_pvalue <- as.numeric(item$R_pvalue[1])
+    final_df <- rbind(final_df,item)
+}
+
+rownames(final_df) <- NULL
+toJSON(final_df)
+
