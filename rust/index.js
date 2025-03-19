@@ -75,7 +75,7 @@ exports.stream_rust = function (binfile, input_data, emitJson) {
 	// setTimeout(() => { console.log(74, 'childStream.destroy()'); childStream.destroy();}, 1000)
 	// childStream.destroy() does not seem to trigger ps.stdout.pipe('...').on('error') callback,
 	// which is okay as long as the server doesn't crash and ps get's killed eventually
-	ps.stdout.pipe(childStream).on('error', console.log)
+	ps.stdout.pipe(childStream).on('error', err => console.log('ps.stdout.pipe(childStream) error', err))
 
 	ps.stderr.on('data', data => stderr.push(data))
 
@@ -121,7 +121,7 @@ exports.stream_rust = function (binfile, input_data, emitJson) {
 	}
 
 	// on('end') will duplicate ps.on('close') event above
-	// childStream.on('end', () => console.log(`-- childStream done --`))
+	// childStream.on('end', () => console.log(`childStream.on(end)`))
 
 	// this may duplicate ps.on('error'), unless the error happened within the transform
 	childStream.on('error', err => {
@@ -133,7 +133,21 @@ exports.stream_rust = function (binfile, input_data, emitJson) {
 		}
 	})
 
-	return childStream
+	function endStream() {
+		try {
+			if (!childStream.writableEnded) childStream.destroy()
+		} catch (e) {
+			console.log('error triggering childStream.destroy()', e)
+		}
+		try {
+			if (!ps.killed) ps.kill()
+			if (trackedPids.has(ps.pid)) trackedPids.delete(ps.pid)
+		} catch (e) {
+			console.log('error triggering ps.kill()', e)
+		}
+	}
+
+	return { rustStream: childStream, endStream }
 }
 
 const trackedPids = new Map() // will be used to monitor expired processes
