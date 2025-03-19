@@ -5,7 +5,7 @@ import { format as d3format } from 'd3-format'
 import { scaleLinear } from 'd3-scale'
 import type { Th } from '../types/d3'
 import type { AxisDomain } from 'd3-axis'
-import type { TableColumn, TableArgs, TableBarplot } from './types/table'
+import type { TableArgs, TableBarplot, TableCell, TableColumn } from './types/table'
 
 /** incremented input ID will guarantee no collision from using getUniqueNameOrId()*/
 let idIncr = 0
@@ -402,12 +402,12 @@ export function renderTable({
 		return idxlst
 	}
 
-	function addSort(th, i) {
+	function addSort(th: Th, i: number) {
 		const callback = (isAscending: boolean) => sortTableCallBack(i, rows, isAscending)
-		const updateTable = (newRows: any) => {
+		const updateTable = (newRows: TableCell[][]) => {
 			const checked = getCheckedRowIndex()
 			const idxMap = new Map(rowsCopy.map((val, idx) => [val, idx]))
-			selectedRows = checked.map(i => newRows.findIndex(v => idxMap.get(v) === i))
+			selectedRows = checked.map(i => newRows.findIndex((v: TableCell[]) => idxMap.get(v) === i))
 
 			/** Must override caller setting once user selects row(s) */
 			if (selectedRows.length) selectAll = false
