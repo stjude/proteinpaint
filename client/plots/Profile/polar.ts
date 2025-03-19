@@ -2,7 +2,7 @@ import type { MassAppApi, MassState } from '#mass/types/mass'
 import type { SvgG } from '../../types/d3'
 import type { TermWrapper } from '#types'
 // import type { ProfilePolarConfig, ProfilePolarDom } from './types/PolarTypes'
-import type { Cell } from '#dom'
+import type { TableCell } from '#dom'
 import { getCompInit, copyMerge } from '#rx'
 import { fillTwLst } from '#termsetting'
 import * as d3 from 'd3'
@@ -99,7 +99,7 @@ class ProfilePolar extends profilePlot {
 			.attr('font-weight', 'bold')
 			.text(config.title)
 
-		const rows: Cell[][] = []
+		const rows: TableCell[][] = []
 		const columns = [{ label: 'Color' }, { label: 'Module' }, { label: 'Score', align: 'center' }]
 
 		// Create a polar grid.
