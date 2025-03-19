@@ -1,7 +1,7 @@
 import path from 'path'
 import run_R from '#src/run_R.js'
-import fs from 'fs'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
+import fs from 'fs'
 import type {
 	TermdbClusterRequestGeneExpression,
 	TermdbClusterRequest,
