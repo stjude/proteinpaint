@@ -1,4 +1,4 @@
-import { MinBaseQ, BaseTerm, EnabledTermGroupSetting, BaseTW, GroupSettingQ, ValuesQ } from '../index.ts'
+import { MinBaseQ, BaseTerm, EnabledTermGroupSetting, BaseTW, GroupSettingQ, ValuesQ, TermValues } from '../index.ts'
 import { TermSettingInstance } from '../termsetting.ts'
 
 export type GeneVariantBaseQ = MinBaseQ & {
@@ -50,4 +50,17 @@ export type GeneVariantTermSettingInstance = TermSettingInstance & {
 	category2samplecount: any
 	groupSettingInstance?: any
 	variantFilter?: any
+}
+
+export type DtTerm = {
+	id: string
+	name: string
+	parent_id: any
+	isleaf: boolean
+	type: string
+	dt: number
+	origin?: string
+	values?: TermValues
+	min?: number
+	max?: number
 }
