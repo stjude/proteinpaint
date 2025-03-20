@@ -96,10 +96,17 @@ async function buildMaf(q: GdcMafBuildRequest, res, ds) {
 				}
 			})
 
-			rustStream.pipe(res, { end: false }).on('error', e => {
-				// this is not triggered when a request is disconnected
-				console.log('rustStream.pipe().on(error)', e)
-			})
+			rustStream
+				.pipe(res, { end: false })
+				.on('error', e => {
+					// this is not triggered when a request is disconnected
+					console.log('rustStream.pipe().on(error)', e)
+				})
+				.on('end', () => {
+					if (res.writableEnded) return
+					console.log('rustStream.on(end), trigger res.end()')
+					res.end()
+				})
 		} else {
 			emitJson({ error: 'server error: undefined rustStream' })
 		}
