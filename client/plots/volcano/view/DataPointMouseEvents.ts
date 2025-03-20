@@ -36,7 +36,7 @@ export class DataPointMouseEvents {
 		td2.text(value)
 	}
 
-	mayAddGeneExpressionRows(d, table) {
+	mayAddGeneExpressionRows(d: DataPointEntry, table: any) {
 		if (this.termType !== 'geneExpression') return
 		this.addTooltipRow(table, 'Gene name', d.gene_name)
 		this.addTooltipRow(table, 'Gene symbol', d.gene_symbol)

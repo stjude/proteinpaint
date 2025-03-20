@@ -10,7 +10,6 @@ import type { DEResponse } from '#types'
 import { scaleLinear } from 'd3-scale'
 import { roundValueAuto } from '#shared/roundValue.js'
 
-/** TODO: Images should be reusable. Remove hardcoding */
 export class VolcanoViewModel {
 	config: VolcanoPlotConfig
 	dataType: string

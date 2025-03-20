@@ -8,7 +8,7 @@ import type { VolcanoPlotConfig } from './VolcanoTypes'
  * addGeneExpressionControlInputs(), called in
  * getVolcanoControlInputs()
  *
- * If a controls out to show for multiple but not all term types,
+ * If control should show for multiple but not all term types,
  * then use the getDisplayStyle arg in the control object.
  * //getDisplayStyle: () => {}
  *

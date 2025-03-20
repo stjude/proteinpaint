@@ -5,15 +5,13 @@ import { Menu, sayerror } from '#dom'
 import { RxComponentInner } from '../../types/rx.d'
 import { controlsInit } from '../controls'
 import type { DiffAnalysisInteractions } from '../diffAnalysis/interactions/DiffAnalysisInteractions'
-import type { VolcanoSettings, VolcanoDom } from './VolcanoTypes'
+import type { VolcanoOpts, VolcanoSettings, VolcanoDom } from './VolcanoTypes'
 import { VolcanoModel } from './model/VolcanoModel'
 import { VolcanoViewModel } from './viewModel/VolcanoViewModel'
 import { VolcanoInteractions } from './interactions/VolcanoInteractions'
 import { VolcanoPlotView } from './view/VolcanoPlotView'
 import { VolcanoControlInputs } from './VolcanoControlInputs'
 
-/** TODO:
- * - Fix all the types */
 class Volcano extends RxComponentInner {
 	readonly type = 'volcano'
 	components: { controls: any }
@@ -22,7 +20,7 @@ class Volcano extends RxComponentInner {
 	termType: string //'geneExpresion', etc.
 	diffAnalysisInteractions?: DiffAnalysisInteractions
 
-	constructor(opts: any) {
+	constructor(opts: VolcanoOpts) {
 		super()
 		this.components = {
 			controls: {}
@@ -30,8 +28,8 @@ class Volcano extends RxComponentInner {
 		this.termType = opts.termType
 		const holder = opts.holder.classed('sjpp-diff-analysis-main', true)
 		//Either allow a node to be passed or create a new div
-		const controls = typeof opts.controls == 'object' ? opts.controls : holder || holder.append('div')
-		const error = opts.holder.append('div').attr('id', 'sjpp-diff-analysis-error').style('opacity', 0.75)
+		const controls = typeof opts.controls == 'object' ? opts.controls : holder || (holder as any).append('div')
+		const error = opts.holder.append('div').attr('id', 'sjpp-diff-analysis-error').style('opacity', 0.75) as any
 		this.dom = {
 			holder,
 			controls,
@@ -41,14 +39,14 @@ class Volcano extends RxComponentInner {
 				.attr('id', 'sjpp-diff-analysis-wait')
 				.style('opacity', 0.75)
 				.style('padding', '20px')
-				.text('Loading...'),
+				.text('Loading...') as any,
 			tip: new Menu({ padding: '' }),
 			actionsTip: new Menu({ padding: '' })
 		}
 		if (opts.diffAnalysisInteractions) this.diffAnalysisInteractions = opts.diffAnalysisInteractions
 	}
 
-	reactsTo(action) {
+	reactsTo(action: { type: string; id: string }) {
 		if (action.type.includes('cache_termq')) return true
 		if (action.type.startsWith('plot_')) {
 			return action.id === this.id
@@ -155,7 +153,7 @@ export function getDefaultVolcanoSettings(overrides = {}): VolcanoSettings {
 	return Object.assign(defaults, overrides)
 }
 
-export async function getPlotConfig(opts: any, app: MassAppApi) {
+export async function getPlotConfig(opts: VolcanoOpts, app: MassAppApi) {
 	if (!opts.termType) throw '.termType is required [Volcano getPlotConfig()]'
 	if (opts.confounderTws) {
 		try {
