@@ -2,8 +2,8 @@
 library(jsonlite)
 
 generate_data <- function(iter) {
-    group1_values <- rnorm(20)  # Generate 20 random numbers from a normal distribution
-    group2_values <- runif(10)  # Generate 10 random numbers from a uniform distribution
+    group1_values <- rnorm(500)  # Generate 20 random numbers from a normal distribution
+    group2_values <- runif(500)  # Generate 10 random numbers from a uniform distribution
     pvalue <- wilcox.test(group1_values,group2_values)$p.value
     # Create a list to store the vectors
     my_df <- list(group1_id = paste0("group1_id_iter",iter), group1_values = group1_values, group2_id = paste0("group2_id_iter",iter), group2_values = group2_values, R_pvalue = pvalue)
@@ -12,7 +12,7 @@ generate_data <- function(iter) {
 }
 
 
-num_tests <- 1000
+num_tests <- 1
 initial_df <- list()
 for (i in 1:num_tests) {
     new_df <- generate_data(i)
