@@ -73,20 +73,49 @@ async function buildMaf(q: GdcMafBuildRequest, res, ds) {
 	res.flush() // header text should be sent as a separate chunk from the content that will be streamed next
 
 	try {
-		const rustStream = stream_rust('gdcmaf', JSON.stringify(arg), emitJson)
-		if (rustStream) {
-			rustStream.pipe(res, { end: false }).on('error', e => {
-				if (!e) return
-				console.log(e)
+		const streams = stream_rust('gdcmaf', JSON.stringify(arg), emitJson)
+		if (streams) {
+			const { rustStream, endStream } = streams
+			// Important: rustStream.pipe(res, { end: false }) may cause a stalemate
+			// where the spawned rust process, stream transform, and res instance
+			// wait on each other to trigger a "stop", but does not happen automatically
+			// when a browser tab is refreshed during a file download
+			res.on('close', () => {
+				if (res.writableEnded) return
+				try {
+					console.log('\n-- forced res.end() ---\n')
+					res.end()
+				} catch (e) {
+					console.log('error with forced res.end()', e)
+				}
+
+				try {
+					endStream()
+				} catch (e) {
+					console.log('error in calling endStream()', e)
+				}
 			})
+
+			rustStream
+				.pipe(res, { end: false })
+				.on('error', e => {
+					// this is not triggered when a request is disconnected
+					console.log('rustStream.pipe().on(error)', e)
+				})
+				.on('end', () => {
+					if (res.writableEnded) return
+					console.log('rustStream.on(end), trigger res.end()')
+					res.end()
+				})
 		} else {
 			emitJson({ error: 'server error: undefined rustStream' })
 		}
 	} catch (e) {
-		console.log(e)
+		console.log('error calling stream_rust(gdcmaf)', e)
 	}
 
 	function emitJson(data?: EmitJsonDataArg, end: boolean = true) {
+		if (res.writableEnded) return
 		if (data) {
 			res.write(`\r\n--${boundary}`)
 			res.write('\r\nContent-Disposition: form-data; name="errors"')
