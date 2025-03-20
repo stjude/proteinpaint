@@ -60,8 +60,7 @@ export class profileForms extends profilePlot {
 		}
 
 		const topDiv = rightDiv.append('div')
-		const domain = config.tw.term.id.split('__').slice(1).join(' / ')
-		topDiv.append('div').style('padding-bottom', '10px').style('font-weight', 'bold').text(domain)
+		const domainDiv = topDiv.append('div').style('padding-bottom', '10px').style('font-weight', 'bold')
 
 		const headerDiv = rightDiv.append('div').style('padding-bottom', '10px')
 		if (this.tabs.length > 1)
@@ -103,7 +102,8 @@ export class profileForms extends profilePlot {
 			mainG,
 			gridG,
 			legendG,
-			xAxisG
+			xAxisG,
+			domainDiv
 		})
 	}
 
@@ -113,6 +113,10 @@ export class profileForms extends profilePlot {
 		const activeTab = this.state.config.activeTab || this.tabs[0].label
 		this.activePlot = this.state.config.plots.find(p => p.name == activeTab)
 		this.activeTWs = this.twLst.filter(tw => tw.term.subtype == this.activePlot.subtype)
+		const domain = this.config.tw.term.id.split('__').slice(1).join(' / ')
+		this.dom.domainDiv.text(domain)
+
+		const domainDetails = this.activeTWs[0]?.term.details
 		const height = this.activeTWs.length * 30
 		this.dom.svg.attr('height', height + 120)
 
