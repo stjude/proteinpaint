@@ -10,7 +10,8 @@ module.exports = {
 			'warn',
 			{
 				caughtErrors: 'all',
-				caughtErrorsIgnorePattern: '^_'
+				caughtErrorsIgnorePattern: '^_',
+				argsIgnorePattern: '^_'
 			}
 		],
 		'@typescript-eslint/consistent-type-imports': 'warn'

@@ -10,11 +10,9 @@ export type WSImagesRequest = {
 export type WSImagesResponse = {
 	// TileServer image session id
 	wsiSessionId?: string
-	// Identifier for the image instance displayed in the browser
-	// In case the same image is displayed in multiple browser windows, a new id is generated
-	browserImageInstanceId?: string
 	slide_dimensions: number[]
 	status: string
+	error?: string
 }
 
 export const wsImagesPayload: RoutePayload = {
