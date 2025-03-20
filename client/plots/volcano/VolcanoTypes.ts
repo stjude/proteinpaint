@@ -49,6 +49,22 @@ export type VolcanoPlotDimensions = {
 	yScale: { x: number; y: number; scale: any }
 }
 
+export type VolcanoOpts = {
+	holder: Elem
+	controls: Elem
+	termType: string
+	diffAnalysisInteractions?: any
+	confounderTws?: TermWrapper[]
+	highlightedData?: string[]
+	samplelst: {
+		groups: {
+			name: string
+			samplelst: string[]
+		}[]
+	}
+	overrides?: Partial<VolcanoSettings>
+}
+
 /** Main dom elements created on init() */
 export type VolcanoDom = {
 	holder: Elem
