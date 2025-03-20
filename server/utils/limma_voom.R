@@ -1,0 +1,199 @@
+# Test syntax: cat ~/sjpp/test.txt | time Rscript limma_voom.R
+
+# Load required packages
+suppressWarnings({
+    library(jsonlite)
+    library(rhdf5)
+    library(stringr)
+    library(readr)
+    suppressPackageStartupMessages(library(edgeR))
+    suppressPackageStartupMessages(library(dplyr))
+})
+
+# Read JSON input from stdin
+read_json_time <- system.time({
+    con <- file("stdin", "r")
+    json <- readLines(con, warn=FALSE)
+    close(con)
+    input <- fromJSON(json)
+    cases <- unlist(strsplit(input$case, ","))
+    controls <- unlist(strsplit(input$control, ","))
+    combined <- c("geneID", "geneSymbol", cases, controls)
+})
+cat("Time to read JSON: ", as.difftime(read_json_time, units = "secs")[3], " seconds\n")
+
+# Read counts data
+read_counts_time <- system.time({
+    if (input$storage_type == "HDF5") {
+        geneIDs <- h5read(input$input_file, "gene_names")
+        geneSymbols <- h5read(input$input_file, "gene_symbols")
+        samples <- h5read(input$input_file, "samples")
+
+        # Find indices of case and control samples in the HDF5 file
+        case_indices <- match(cases, samples)
+        control_indices <- match(controls, samples)
+
+        # Check for missing samples
+        if (any(is.na(case_indices))) {
+            missing_cases <- cases[is.na(case_indices)]
+            stop(paste(missing_cases, "not found"))
+        }
+        if (any(is.na(control_indices))) {
+            missing_controls <- controls[is.na(control_indices)]
+            stop(paste(missing_controls, "not found"))
+        }
+
+        samples_indices <- c(case_indices, control_indices)
+        read_counts <- as.data.frame(t(h5read(input$input_file, "counts", index = list(samples_indices, 1:length(geneIDs)))))
+        colnames(read_counts) <- c(cases, controls)
+    } else if (input$storage_type == "text") {
+        suppressWarnings({
+            suppressMessages({
+                read_counts <- read_tsv(input$input_file, col_names = TRUE, col_select = combined)
+            })
+        })
+        geneIDs <- unlist(read_counts[1])
+        geneSymbols <- unlist(read_counts[2])
+        read_counts <- select(read_counts, -geneID)
+        read_counts <- select(read_counts, -geneSymbol)
+    } else {
+        stop("Unknown storage type")
+    }
+})
+cat("Time to read counts data: ", as.difftime(read_counts_time, units = "secs")[3], " seconds\n")
+
+# Create conditions vector
+conditions <- c(rep("Diseased", length(cases)), rep("Control", length(controls)))
+gene_id_symbols <- paste0(geneIDs, "\t", geneSymbols)
+
+# Create DGEList object
+dge_list_time <- system.time({
+    y <- DGEList(counts = read_counts, group = conditions, genes = gene_id_symbols)
+})
+cat("Time to generate DGEList: ", as.difftime(dge_list_time, units = "secs")[3], " seconds\n")
+
+# Filter read counts
+filter_time <- system.time({
+    keep <- filterByExpr(y, min.count = input$min_count, min.total.count = input$min_total_count)
+    y <- y[keep, keep.lib.sizes = FALSE]
+})
+cat("Time to filter by expression: ", as.difftime(filter_time, units = "secs")[3], " seconds\n")
+
+# Calculate normalization factors
+normalization_time <- system.time({
+    y <- normLibSizes(y) # Using TMM method for normalization
+})
+cat("Normalization time: ", as.difftime(normalization_time, units = "secs")[3], " seconds\n")
+
+# Saving MDS plot image
+#mds_time <- system.time({
+#    set.seed(as.integer(Sys.time())) # Set the seed according to current time
+#    cachedir <- input$cachedir # Importing serverconfig.cachedir
+#    random_number <- runif(1, min = 0, max = 1) # Generating random number
+#    mds_image_name <- paste0("limma_mds_temp_",random_number,".png") # Generating random image name so that simultaneous server side requests do NOT generate the same edgeR file name
+#    png(filename = paste0(cachedir,"/",mds_image_name), width = 1000, height = 1000, res = 200) # Opening a png device
+#    par(oma = c(0, 0, 0, 0)) # Creating a margin
+#    mds_conditions <- c(rep("T", length(cases)), rep("C", length(controls))) # Case samples are labelled "T" and control samples are labelled "C". Single-letter labelling added because otherwise labels get overwritten on each other.
+#    plotMDS(y, labels = mds_conditions) # Plot the edgeR MDS plot
+#    # dev.off() # Gives a null device message which breaks JSON. Commenting it out for now, will investigate it later
+#})
+#cat("mds plot time: ", as.difftime(mds_time, units = "secs")[3], " seconds\n")
+
+# Differential expression analysis using limma voom using this protocol: https://ucdavis-bioinformatics-training.github.io/2018-June-RNA-Seq-Workshop/thursday/DE.html
+# Making the design matrix
+if (length(input$conf1) == 0) { # No adjustment of confounding factors
+    model_gen_time <- system.time({
+        design <- model.matrix(~conditions) # Based on the protocol defined in section 1.4 of edgeR manual https://bioconductor.org/packages/release/bioc/vignettes/edgeR/inst/doc/edgeRUsersGuide.pdf
+    })
+    cat("Time for making design matrix: ", as.difftime(model_gen_time, units = "secs")[3], " seconds\n")
+} else {
+    # Check the type of confounding variable
+    if (input$conf1_mode == "continuous") { # If this is float, the input conf1 vector should be converted into a numeric vector
+      conf1 <- as.numeric(input$conf1)
+    } else { # When input$conf1_mode == "discrete" keep the vector as string.
+      conf1 <- as.factor(input$conf1)
+    }
+
+    if (length(input$conf2) == 0) { # No adjustment of confounding factor 2
+          y$samples <- data.frame(y$samples, conditions = conditions, conf1 = conf1)
+          model_gen_time <- system.time({
+                 design <- model.matrix(~ conditions + conf1, data = y$samples)
+          })
+          cat("Time for making design matrix: ", as.difftime(model_gen_time, units = "secs")[3], " seconds\n")
+    } else {
+          # Check the type of confounding variable 2
+          if (input$conf2_mode == "continuous") { # If this is float, the input conf2 vector should be converted into a numeric vector
+            conf2 <- as.numeric(input$conf2)
+          } else { # When input$conf2_mode == "discrete" keep the vector as string.
+            conf2 <- as.factor(input$conf2)
+          }
+          y$samples <- data.frame(y$samples, conditions = conditions, conf1 = conf1, conf2 = conf2)
+          model_gen_time <- system.time({
+                 design <- model.matrix(~ conditions + conf1 + conf2, data = y$samples)
+          })
+          cat("Time for making design matrix: ", as.difftime(model_gen_time, units = "secs")[3], " seconds\n")
+    }
+}
+
+# Do voom transformation
+voom_transformation_time <- system.time({
+    #suppressWarnings({
+    #    suppressMessages({
+            y <- voom(y, design, plot = T)
+    #    })
+    #})
+})
+cat("voom transformation time: ", as.difftime(voom_transformation_time, units = "secs")[3], " seconds\n")
+
+# Fit linear model
+fit_time <- system.time({
+    #suppressWarnings({
+    #    suppressMessages({
+            fit <- lmFit(y, design)
+    #    })
+    #})
+})
+cat("limma fit time: ", as.difftime(fit_time, units = "secs")[3], " seconds\n")
+
+# Saving mean-difference plot (aka MA plot)
+set.seed(as.integer(Sys.time())) # Set the seed according to current time
+cachedir <- input$cachedir # Importing serverconfig.cachedir
+random_number <- runif(1, min = 0, max = 1) # Generating random number
+md_image_name <- paste0("limma_md_temp_",random_number,".png") # Generating random image name so that simultaneous server side requests do NOT generate the same edgeR file name
+png(filename = paste0(cachedir,"/",md_image_name), width = 1000, height = 1000, res = 200) # Opening a png device
+par(oma = c(0, 0, 0, 0)) # Creating a margin
+plotMD(fit) # Plot the limma fit
+# dev.off() # Gives a null device message which breaks JSON. Commenting it out for now, will investigate it later
+
+# Make contrasts
+make_contrasts <- system.time({
+    #suppressWarnings({
+    #    suppressMessages({
+            contr <- makeContrasts(conditionsDiseased, levels = colnames(coef(fit))) # Need to crosscheck if the levels and "conditionsDiseased" is appropriate here
+    #    })
+    #})
+})
+cat("makeContrasts fit time: ", as.difftime(make_contrasts, units = "secs")[3], " seconds\n")
+
+# Fit the contrasts
+fit_contrasts_time <- system.time({
+    #suppressWarnings({
+    #    suppressMessages({
+            tmp <- contrasts.fit(fit, contr)
+    #    })
+    #})
+})
+cat("fit contrasts time: ", as.difftime(fit_contrasts_time, units = "secs")[3], " seconds\n")
+
+# Empirical Bayes smoothing
+empirical_smoothing_time <- system.time({
+    #suppressWarnings({
+    #    suppressMessages({
+            tmp <- eBayes(tmp)
+    #    })
+    #})
+})
+cat("Empirical smoothing time: ", as.difftime(empirical_smoothing_time, units = "secs")[3], " seconds\n")
+
+top.table <- topTable(tmp, sort.by = "P", n = Inf)
+#head(top.table, 20000)
