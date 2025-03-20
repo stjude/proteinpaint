@@ -24,12 +24,15 @@ export function getCodeText(namePattern = '*.spec.*') {
 	// prevent excessive imports
 	if (!namePattern.includes('.spec.')) throw `namePattern does not include '.spec'`
 	const ignore = ['dist/**', 'node_modules/**']
-	const specs = glob
-		.sync(`./**/test/${namePattern}`, { cwd: __dirname, ignore })
-		.map(file => ({ file, rel: `../${file}` }))
+	let pattern = namePattern
+	if (namePattern == '*.spec.*') {
+		ignore.push('**/_x_.*')
+		pattern = '*@(unit|integration).spec.*'
+	}
+	const specs = glob.sync(`./**/test/${pattern}`, { cwd: __dirname, ignore }).map(file => ({ file, rel: `../${file}` }))
 	const sharedUtils = path.join(__dirname, '../shared/utils')
 	const sharedSpecs = glob
-		.sync(`./**/test/${namePattern}`, { cwd: sharedUtils, ignore })
+		.sync(`./**/test/${pattern}`, { cwd: sharedUtils, ignore })
 		.map(file => ({ file: `shared/utils/${file}`, rel: `../../shared/utils/${file}` }))
 	specs.push(...sharedSpecs)
 	specs.sort()
