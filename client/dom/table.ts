@@ -250,10 +250,11 @@ export function renderTable({
 							tr.style(key, checked ? _selectedRowStyle[key] : '')
 						}
 					})
-
-				if (rowIdx === selectedRows[0] && tr.node()) {
-					// if there is at least one selected row, scroll to the  table row,
-					// so that it's visible and obvious to the user which rows are pre-selected
+				//Do not scroll when all rows are selected. Problem appears when sorting.
+				if (selectedRows.length != rows.length && rowIdx === selectedRows[0] && tr.node()) {
+					// if there is at least one selected row (but not all rows are selected),
+					// scroll to the  table row,so that it's visible and obvious to the user
+					// which rows are pre-selected
 					setTimeout(() => {
 						tr.node()?.scrollIntoView({ behavior: 'smooth', block: 'center' })
 					}, 500)
