@@ -59,6 +59,7 @@ export type CallbackArg = {
 type CustomInputs = {
 	/** button name */
 	label: string
+	/** Change button display based on caller logic */
 	getDisplayStyle?: () => void
 	/** callback to trigger upon clicking this button. should show some ui to collect
 	 * gene names and bring them into holding box */
