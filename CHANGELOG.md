@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.112.0
 
 Features:
 - New differential analysis app. The app is under development to analyze various data types
