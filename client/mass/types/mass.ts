@@ -148,6 +148,8 @@ export type ControlInputEntry = {
 	min?: number
 	/** Upper limit for user input in numeric fields */
 	max?: number
+	/** Step size for numeric fields */
+	step?: number
 	/** Radio type only. Options for the radio buttons */
 	options?: { label: string; value: string; checked?: boolean }[]
 	/** Checkbox type only. Label shown next to the checkbox. */

@@ -34,7 +34,8 @@ export class VolcanoControlInputs {
 				settingsKey: 'pValue',
 				title: 'The p-value threshold to determine statistical significance',
 				min: 0,
-				max: 1
+				max: 1,
+				step: 0.05
 			},
 			{
 				label: 'P value',
