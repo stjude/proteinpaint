@@ -28,6 +28,8 @@
     "client": "npm run dev -w @sjcrh/proteinpaint-client",
     "test:integration": "npm run test:integration --workspace=client",
     "posttest:integration": "./build/integration/exitZeroOnPKillNode.sh",
+    "pretest:coverage": "cd container && ./pack.sh && ./build2.sh -z server && ./run.sh ppserver:latest",
+    "test:coverage": "cd client && ./test.sh *.spec.* '' 3456",
     "local:integration": "cd client; npm run test:integration",
     "lint": "eslint . --ext .ts",
     "docker": "./build/dev/run.sh",

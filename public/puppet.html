@@ -3,7 +3,8 @@
 	<link rel="icon" href="data:image/png;base64,iVBORw0KGgo=">
 	<script>
 		// required for integration test, but not unit test
-		window.testHost='http://localhost:6789'
+		const params = new URLSearchParams(document.location.search)
+		window.testHost=`http://localhost:${params.get('port') || 6789}`
 	</script>
 	<script type="module" src='/bin/test/_.._/test/internals-test.js'></script>
 </head>

@@ -38,7 +38,7 @@ export function getRunPp(appname = '', defaultArgs = {}, _host = 'http://localho
 		})
 	*/
 	const arg = {
-		host,
+		host: window.testHost || _host,
 		noheader: 1,
 		nobox: true,
 		debug: 1,

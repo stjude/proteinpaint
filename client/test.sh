@@ -19,12 +19,16 @@ SPECPATTERN=$1 # will be used to emit imports
 # - or use the URL parameter after clicking on a card dir/file name in http://localhost:3000/testrun.html
 #
 PATTERNSLIST="" # 
-if (($# == 2)); then
+if (($# > 1)); then
 	PATTERNSLIST=$2
 fi
+TESTPORT=3000
+if (($# > 2)); then
+ TESTPORT=$3
+fi
 
-TESTHOST=http://localhost:3000
-if [[ "$SPECPATTERN" == *"integration"* || "$SPECPATTERN" == "*.spec.*" ]]; then
+TESTHOST=http://localhost:$TESTPORT
+if [[ "$SPECPATTERN" != *".unit."* ]]; then
 	./test/pretest.js $TESTHOST
 fi
 
@@ -55,5 +59,5 @@ if [[ "$PUPPETEER_SKIP_DOWNLOAD" != "" ]]; then
 fi
 set -u # reenable unbound variable check
 
-rm -rf .nyc_output 
-node test/puppet.js "$PATTERNSLIST"
+rm -rf .nyc_output
+node test/puppet.js "$PATTERNSLIST&port=$TESTPORT"
