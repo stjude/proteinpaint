@@ -25,16 +25,15 @@ export class profileForms extends profilePlot {
 	shift: any
 	twLst: any
 	filterG: any
-	keys: any
 	activePlot: any
 	activeTWs: any
 	tabs: any
+	shiftTop: any
 
 	constructor(opts) {
 		super()
 		this.opts = opts
 		this.type = 'profileForms'
-		this.keys = new Set()
 	}
 
 	async init(appState) {
@@ -72,7 +71,7 @@ export class profileForms extends profilePlot {
 				tabs: this.tabs
 			}).main()
 
-		const shift = 600
+		const shift = 650
 		const shiftTop = 60
 		const svg = rightDiv
 			.style('padding', '10px')
@@ -89,9 +88,11 @@ export class profileForms extends profilePlot {
 			.attr('d', 'M-1,1 l2,-2 M0,4 l4,-4 M3,5 l2,-2')
 			.attr('stroke-width', 1)
 			.attr('stroke', 'gray')
+		this.shiftTop = shiftTop
+		this.shift = shift
 		const mainG = svg.append('g').attr('transform', `translate(${shift}, ${shiftTop})`)
 		const gridG = svg.append('g').attr('transform', `translate(${shift}, ${shiftTop})`)
-		this.filterG = svg.append('g').attr('transform', `translate(${shift + settings.svgw + 100}, ${shiftTop})`)
+		this.filterG = svg.append('g').attr('transform', `translate(${shift + settings.svgw + 200}, ${shiftTop})`)
 		const legendG = svg.append('g').attr('transform', `translate(${shift}, ${20 + settings.svgh})`)
 
 		const xAxisG = svg.append('g').attr('transform', `translate(${shift}, ${shiftTop / 2})`)
@@ -239,7 +240,7 @@ export class profileForms extends profilePlot {
 		else this.dom.legendG.attr('transform', `translate(${750}, ${this.settings.svgh * 0.8})`)
 
 		let x = 0
-		for (const key of this.keys) {
+		for (const key of this.activePlot.categories) {
 			this.drawLegendRect(x, 0, key, this.getColor(key), this.dom.legendG)
 			x += 60
 		}
@@ -272,42 +273,54 @@ export class profileForms extends profilePlot {
 		return key == 'Yes' ? this.state.config.color : key == 'No' ? '#aaa' : `url(#${this.id}_diagonalHatch)`
 	}
 
-	renderRect(dict: { [key: string]: number }, y: number, height: number, tw) {
-		const categories = this.activePlot.categories
-		const itemG = this.dom.mainG.append('g').attr('transform', `translate(0, ${y})`)
+	renderRect(dict: { [key: string]: number }, y: number, height: number, tw: any) {
+		const itemG = this.dom.mainG.append('g')
 		const noAnswerCategories = this.activePlot.noAnswerCategories
 		const validKeys = Object.keys(dict).filter(key => !noAnswerCategories.find(c => c.name == key))
 		let total = 0
 		for (const key of validKeys) total += dict[key]
-		let x = 0
-		for (const category of categories) {
-			const key = category.name
-			const color = category.color
-			this.keys.add(key)
-			const value = dict[key]
-			if (!value) continue
-			const percent = (value / total) * 100
-			const width = (percent / 100) * this.settings.svgw
-			itemG
-				.append('rect')
-				.attr('x', x)
-				.attr('width', width)
-				.attr('height', height)
-				.attr('stroke', 'gray')
-				.attr('fill', color)
-				.datum({ key, value: percent })
-				.on('mouseover', this.onMouseOver.bind(this))
 
+		let x = 0
+		for (const category of this.activePlot.negativeCategories) {
+			const width = this.renderCategory(category, dict, itemG, x, height, total)
 			x += width
 		}
+		const middle = this.settings.svgw / 2
 		const text = getText(tw.term.name)
-		itemG
+		const textG = this.dom.svg
+			.append('g')
+			.attr('transform', `translate(0, ${y + this.shiftTop})`)
 			.append('text')
 			.text(text)
-			.attr('x', -5)
 			.attr('y', (height * 2) / 3)
-			.attr('text-anchor', 'end')
 			.style('font-size', '0.8em')
+		itemG.attr('transform', `translate(${middle - x}, ${y})`)
+
+		const itemG2 = this.dom.mainG.append('g').attr('transform', `translate(${middle}, ${y})`)
+		x = 0
+		for (const category of this.activePlot.positiveCategories) {
+			const width = this.renderCategory(category, dict, itemG2, x, height, total)
+			x += width
+		}
+	}
+
+	renderCategory(category, dict, itemG, x, height, total) {
+		const key = category.name
+		const color = category.color
+		const value = dict[key]
+		if (!value) return 0
+		const percent = (value / total) * 100
+		const width = (percent / 100) * this.settings.svgw
+		itemG
+			.append('rect')
+			.attr('x', x)
+			.attr('width', width)
+			.attr('height', height)
+			.attr('stroke', 'gray')
+			.attr('fill', color)
+			.datum({ key, value: percent })
+			.on('mouseover', this.onMouseOver.bind(this))
+		return width
 	}
 
 	renderRects(percents: { [key: string]: number }, y: number, height: number, scPercentKeys: string[]) {
@@ -315,7 +328,6 @@ export class profileForms extends profilePlot {
 		const total = Object.values(percents).reduce((a, b) => a + b, 0)
 		let x = 0
 		for (const key of percentsOrdered) {
-			this.keys.add(key)
 			const color = this.getColor(key)
 
 			const value = percents[key]
