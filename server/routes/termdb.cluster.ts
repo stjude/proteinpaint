@@ -364,7 +364,7 @@ async function validateNative(q: GeneExpressionQueryNative, ds: any, genome: any
 		  try {
 			// Call the Rust function to get expression data for this gene
 			const inputData = JSON.stringify({
-			  hdf5_file: q.h5Path,
+			  hdf5_file: q.file,
 			  gene: geneTerm.gene
 			});
 			
