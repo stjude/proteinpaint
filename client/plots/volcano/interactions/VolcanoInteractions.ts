@@ -128,6 +128,7 @@ export class VolcanoInteractions {
 			customInputs: [
 				{
 					label: 'Cancel highlight',
+					getDisplayStyle: () => (plotConfig.highlightedData.length > 0 ? '' : 'none'),
 					showInput: async () => {
 						await this.app.dispatch({
 							type: 'plot_edit',
