@@ -271,28 +271,28 @@ export async function validate_query_geneExpression(ds: any, genome: any) {
 
 async function validateNative(q: GeneExpressionQueryNative, ds: any, genome: any) {
 	// Determine whether we're handling an HDF5 file or a tabix file
-	if (q.hdf5File === true && q.h5Path) {
+	if (q.hdf5File === true) {
 	  // HDF5 file handling branch
-	  const h5FilePath = q.h5Path;
+	  const h5FilePath = q.file;
 	  
 	  // Join with master directory if needed
 	  if (!h5FilePath.startsWith(serverconfig.tpmasterdir)) {
-		q.h5Path = path.join(serverconfig.tpmasterdir, h5FilePath);
+		q.file = path.join(serverconfig.tpmasterdir, h5FilePath);
 	  }
 	  
 	  if (!q.samples) q.samples = [];
 	  
 	  // Validate that the HDF5 file exists
-	  if (!(await fs.promises.access(q.h5Path).then(() => true).catch(() => false))) {
-		throw `HDF5 file not found: ${q.h5Path}`;
+	  if (!(await fs.promises.access(q.file).then(() => true).catch(() => false))) {
+		throw `HDF5 file not found: ${q.file}`;
 	  }
 	  
 	  // Read the samples from the HDF5 file	  
 	  try {
 
-		console.log(`Reading  HDF5 file: ${q.h5Path}`);
+		console.log(`Reading  HDF5 file: ${q.file}`);
 		const inputData = JSON.stringify({
-		  hdf5_file: q.h5Path,
+		  hdf5_file: q.file,
 		});
 		const stdout = await run_rust("readHDF5", inputData);
 		
