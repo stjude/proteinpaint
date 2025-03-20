@@ -22,6 +22,7 @@ export const specsMatched = []
 export function matchSpecs(filepath) {
 	//if (window.testHost) return true
 	if (!params.dir && !params.name) return false
+	if (exclude && filepath.includes(exclude)) return false
 	for (const pattern of patterns) {
 		if (pattern && minimatch(filepath, pattern)) {
 			specsMatched.push(filepath)
