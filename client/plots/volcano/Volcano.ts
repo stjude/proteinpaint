@@ -73,7 +73,8 @@ class Volcano extends RxComponentInner {
 	}
 
 	async setControls() {
-		const controls = new VolcanoControlInputs(this.termType)
+		const plotConfig = this.app.getState().plots.find((p: any) => p.id === this.id)
+		const controls = new VolcanoControlInputs(plotConfig, this.termType)
 
 		this.components.controls = await controlsInit({
 			app: this.app,
