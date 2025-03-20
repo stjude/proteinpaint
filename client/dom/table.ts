@@ -1,5 +1,5 @@
 import { select } from 'd3-selection'
-import { icons, Menu, axisstyle } from '#dom'
+import { icons, axisstyle } from '#dom'
 import { axisTop } from 'd3-axis'
 import { format as d3format } from 'd3-format'
 import { scaleLinear } from 'd3-scale'
