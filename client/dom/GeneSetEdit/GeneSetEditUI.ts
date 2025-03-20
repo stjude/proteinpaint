@@ -59,6 +59,8 @@ export type CallbackArg = {
 type CustomInputs = {
 	/** button name */
 	label: string
+	/** Change button display based on caller logic */
+	getDisplayStyle?: () => void
 	/** callback to trigger upon clicking this button. should show some ui to collect
 	 * gene names and bring them into holding box */
 	showInput: (arg: any) => void
@@ -87,6 +89,16 @@ export type GeneSetEditArg = {
 	limitedGenesList?: string[]
 }
 
+type MenuListEntry = {
+	/** Label shown, either on the button or link */
+	label: string
+	/** For buttons, set display per condition(s) */
+	getDisplayStyle?: () => string
+	callback: (f?: any) => void
+	/** Element tagname. If button, uses addButton to create elem */
+	tagName?: string
+}
+
 export class GeneSetEditUI {
 	holder: Elem
 	genome: ClientCopyGenome
@@ -99,11 +111,7 @@ export class GeneSetEditUI {
 	api: API
 	geneSearch: any //cheating
 	/** Objects detailing the menus to create above the api.dom.geneHoldingDiv as clickable links  */
-	menuList: {
-		label: string
-		callback: (f?: any) => void
-		tagName?: string
-	}[]
+	menuList: MenuListEntry[]
 	mode?: 'geneVariant' | 'geneExpression'
 	minNumGenes: number
 	geneList: Gene[]
@@ -427,7 +435,7 @@ export class GeneSetEditUI {
 		}
 		if (this.customInputs) {
 			for (const btn of this.customInputs) {
-				this.menuList.push({
+				const opts = {
 					label: btn.label,
 					callback: () => {
 						btn.showInput({
@@ -438,7 +446,9 @@ export class GeneSetEditUI {
 						})
 					},
 					tagName: 'button'
-				})
+				} as any
+				if (btn.getDisplayStyle) opts.getDisplayStyle = btn.getDisplayStyle
+				this.menuList.push(opts)
 			}
 		}
 	}
@@ -449,6 +459,7 @@ export class GeneSetEditUI {
 				addButton({
 					div,
 					text: menu.label,
+					getDisplayStyle: menu.getDisplayStyle || (() => ''),
 					callback: menu.callback
 				})
 			else

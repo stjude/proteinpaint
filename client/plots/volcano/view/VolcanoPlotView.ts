@@ -199,9 +199,7 @@ function renderDataPoints(self: any) {
 		.attr('stroke', (d: DataPointEntry) => rgb(d.color).formatHex())
 		.attr('stroke-opacity', 0.2)
 		.attr('stroke-width', 1)
-		.attr('fill', (d: DataPointEntry) =>
-			d.highlighted ? rgb(d.color).formatHex() : self.settings.defaultHighlightColor
-		)
+		.attr('fill', self.settings.defaultHighlightColor)
 		.attr('fill-opacity', (d: DataPointEntry) => (d.highlighted ? 0.9 : 0))
 		.attr('cx', (d: DataPointEntry) => d.x)
 		.attr('cy', (d: DataPointEntry) => d.y)

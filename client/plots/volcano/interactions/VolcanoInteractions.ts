@@ -125,6 +125,20 @@ export class VolcanoInteractions {
 			geneList: plotConfig.highlightedData.map(d => {
 				return { gene: d } //Formatted to Gene type in GeneSetEditUI
 			}),
+			customInputs: [
+				{
+					label: 'Cancel highlight',
+					getDisplayStyle: () => (plotConfig.highlightedData.length > 0 ? '' : 'none'),
+					showInput: async () => {
+						await this.app.dispatch({
+							type: 'plot_edit',
+							id: this.id,
+							config: { highlightedData: [] }
+						})
+						this.dom.actionsTip.hide()
+					}
+				}
+			],
 			callback: async result => {
 				const highlightedData = result.geneList.map(d => d.gene)
 				await this.app.dispatch({

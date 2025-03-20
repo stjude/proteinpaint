@@ -121,9 +121,10 @@ export class VolcanoViewModel {
 		const radius = Math.max(this.settings.width, this.settings.height) / 80
 		const dataCopy: any = structuredClone(this.response.data)
 		for (const d of dataCopy) {
+			d.highlighted = this.config.highlightedData.includes(d.gene_symbol)
 			const significant = this.isSignificant(d)
+			this.getGenesColor(d, significant)
 			if (significant) {
-				this.getGenesColor(d)
 				this.numSignificant++
 				const row = [
 					{ value: roundValueAuto(d.fold_change) },
@@ -135,13 +136,14 @@ export class VolcanoViewModel {
 				}
 				this.pValueTable.rows.push(row)
 			} else {
-				d.color = this.settings.defaultNonSignColor
 				this.numNonSignificant++
 			}
 			d.x = plotDim.xScale.scale(d.fold_change) + this.horizPad + this.offset * 2
 			d.y = plotDim.yScale.scale(d[`${this.settings.pValueType}_p_value`]) + this.topPad - this.offset
 			d.radius = radius
 		}
+		//Sort so the highlighted points appear on top
+		dataCopy.sort((a: any, b: any) => a.highlighted - b.highlighted)
 		return dataCopy
 	}
 
@@ -153,15 +155,10 @@ export class VolcanoViewModel {
 	}
 
 	//TODO: hightlight per term color
-	getGenesColor(d: DataPointEntry) {
-		if (!d.gene_symbol) return this.settings.defaultSignColor
-
-		if (this.config.highlightedData.includes(d.gene_symbol)) {
-			d.color = this.settings.defaultHighlightColor
-			d.highlighted = true
-		} else {
-			d.color = this.settings.defaultSignColor
-		}
+	getGenesColor(d: DataPointEntry, significant: boolean) {
+		if (!d.gene_symbol) throw `Missing gene_symbol in data: ${JSON.stringify(d)} [VolcanoViewModel getGenesColor()]`
+		if (significant) d.color = this.settings.defaultSignColor
+		else d.color = this.settings.defaultNonSignColor
 	}
 
 	setStatsData() {
