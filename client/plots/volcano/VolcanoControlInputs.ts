@@ -1,4 +1,5 @@
 import type { ControlInputEntry } from '#mass/types/mass'
+import type { VolcanoPlotConfig } from './VolcanoTypes'
 
 /** Handles settings the controls in the menu based on the app
  * termType.
@@ -16,11 +17,13 @@ import type { ControlInputEntry } from '#mass/types/mass'
  */
 
 export class VolcanoControlInputs {
+	config: VolcanoPlotConfig
 	/** term type used to determine which controls to show */
 	termType: string
 	/** control inputs for controls init */
 	inputs: ControlInputEntry[]
-	constructor(termType: string) {
+	constructor(config, termType: string) {
+		this.config = config
 		this.termType = termType
 		//Populated with the default controls for the volcano plot
 		this.inputs = [
@@ -77,7 +80,13 @@ export class VolcanoControlInputs {
 				type: 'color',
 				chartType: 'volcano',
 				title: 'Default color for highlighted data points.',
-				settingsKey: 'defaultSignColor'
+				settingsKey: 'defaultSignColor',
+				getDisplayStyle: () => {
+					const controlColor = (this.config.tw?.term?.values as any)?.[this.config.samplelst.groups[0].name]?.color
+					const caseColor = (this.config.tw?.term?.values as any)?.[this.config.samplelst.groups[1].name].color
+					if (controlColor && caseColor) return 'none'
+					else return ''
+				}
 			},
 			{
 				label: 'Non-significant value color',

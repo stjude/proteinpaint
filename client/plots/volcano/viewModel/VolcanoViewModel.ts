@@ -112,7 +112,7 @@ export class VolcanoViewModel {
 			logFoldChangeLine: {
 				x: xScale(0) + this.horizPad + this.offset * 2,
 				y1: this.topPad - this.offset,
-				y2: this.settings.height + this.offset * 2
+				y2: this.settings.height + this.offset * 3
 			}
 		}
 	}
@@ -154,11 +154,15 @@ export class VolcanoViewModel {
 		)
 	}
 
-	//TODO: hightlight per term color
 	getGenesColor(d: DataPointEntry, significant: boolean) {
+		if (this.termType != 'geneExpression') return
 		if (!d.gene_symbol) throw `Missing gene_symbol in data: ${JSON.stringify(d)} [VolcanoViewModel getGenesColor()]`
-		if (significant) d.color = this.settings.defaultSignColor
-		else d.color = this.settings.defaultNonSignColor
+		if (significant) {
+			const controlColor = (this.config.tw?.term?.values as any)?.[this.config.samplelst.groups[0].name]?.color
+			const caseColor = (this.config.tw?.term?.values as any)?.[this.config.samplelst.groups[1].name].color
+			if (controlColor && caseColor) d.color = d.fold_change > 0 ? caseColor : controlColor
+			else d.color = this.settings.defaultSignColor
+		} else d.color = this.settings.defaultNonSignColor
 	}
 
 	setStatsData() {
