@@ -108,18 +108,21 @@ filter_using_cpm_time <- system.time({
 #cat("Filter using cpm time: ", as.difftime(filter_using_cpm_time, units = "secs")[3], " seconds\n")
 
 # Saving MDS plot image
-#mds_plot_time <- system.time({
-#    set.seed(as.integer(Sys.time())) # Set the seed according to current time
-#    cachedir <- input$cachedir # Importing serverconfig.cachedir
-#    random_number <- runif(1, min = 0, max = 1) # Generating random number
-#    mds_image_name <- paste0("edgeR_mds_temp_",random_number,".png") # Generating random image name so that simultaneous server side requests do NOT generate the same edgeR file name
-#    png(filename = paste0(cachedir,"/",mds_image_name), width = 1000, height = 1000, res = 200) # Opening a png device
-#    par(oma = c(0, 0, 0, 0)) # Creating a margin
-#    mds_conditions <- c(rep("T", length(cases)), rep("C", length(controls))) # Case samples are labelled "T" and control samples are labelled "C". Single-letter labelling added because otherwise labels get overwritten on each other.
-#    plotMDS(y, labels = mds_conditions) # Plot the edgeR MDS plot
-#    # dev.off() # Gives a null device message which breaks JSON. Commenting it out for now, will investigate it later
-#})
-#cat("mds plot time: ", as.difftime(mds_plot_time, units = "secs")[3], " seconds\n")
+
+if (dim(read_counts)[1] * dim(read_counts)[2] < as.numeric(input$mds_cutoff)) { # If the dimensions of the read counts matrix is below this threshold, only then the mds image will be generated as its very compute intensive
+   mds_plot_time <- system.time({
+       set.seed(as.integer(Sys.time())) # Set the seed according to current time
+       cachedir <- input$cachedir # Importing serverconfig.cachedir
+       random_number <- runif(1, min = 0, max = 1) # Generating random number
+       mds_image_name <- paste0("edgeR_mds_temp_",random_number,".png") # Generating random image name so that simultaneous server side requests do NOT generate the same edgeR file name
+       png(filename = paste0(cachedir,"/",mds_image_name), width = 1000, height = 1000, res = 200) # Opening a png device
+       par(oma = c(0, 0, 0, 0)) # Creating a margin
+       mds_conditions <- c(rep("T", length(cases)), rep("C", length(controls))) # Case samples are labelled "T" and control samples are labelled "C". Single-letter labelling added because otherwise labels get overwritten on each other.
+       plotMDS(y, labels = mds_conditions) # Plot the edgeR MDS plot
+       # dev.off() # Gives a null device message which breaks JSON. Commenting it out for now, will investigate it later
+   })
+   #cat("mds plot time: ", as.difftime(mds_plot_time, units = "secs")[3], " seconds\n")
+}
 
 # Differential expression analysis
 if (length(input$conf1) == 0) { # No adjustment of confounding factors
@@ -223,7 +226,9 @@ if (DE_method == "edgeR") {
        final_output <- c()
        final_output$gene_data <- output
        final_output$edgeR_ql_image_name <- ql_image_name
-       #final_output$edgeR_mds_image_name <- mds_image_name
+       if (dim(read_counts)[1] * dim(read_counts)[2] < as.numeric(input$mds_cutoff)) { # If the dimensions of the read counts matrix is below this threshold, only then the mds image will be generated as its very compute intensive
+           final_output$edgeR_mds_image_name <- mds_image_name
+       }
        #cat("Time for multiple testing correction: ", as.difftime(multiple_testing_correction_time, units = "secs")[3], " seconds\n")
 
        # Output results
@@ -303,7 +308,9 @@ if (DE_method == "edgeR") {
        final_output <- c()
        final_output$gene_data <- output
        final_output$edgeR_ql_image_name <- voom_image_name
-       #final_output$edgeR_mds_image_name <- mds_image_name
+       if (dim(read_counts)[1] * dim(read_counts)[2] < as.numeric(input$mds_cutoff)) { # If the dimensions of the read counts matrix is below this threshold, only then the mds image will be generated as its very compute intensive
+           final_output$edgeR_mds_image_name <- mds_image_name
+       }
        #cat("Time for multiple testing correction: ", as.difftime(multiple_testing_correction_time, unit = "secs")[3], " seconds\n")
 
        # Output results
