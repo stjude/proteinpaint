@@ -30,7 +30,12 @@ export class VolcanoInteractions {
 		const grpTerms: Set<string> = new Set(
 			(this.app?.vocabApi?.state.groups || [])
 				.filter(g => allowedGroupNames.has(g.name))
-				.flatMap(g => g.filter.lst.map(f => f.tvs.term.id))
+				.flatMap(g =>
+					g.filter.lst.flatMap(f => {
+						if (f.tvs?.term) return f.tvs.term.id || f.tvs.term.name
+						else return f.lst.map(l => l.tvs.term.id || l.tvs.term.name)
+					})
+				)
 		)
 		const disable_terms = grpTerms.size ? Array.from(grpTerms) : []
 
