@@ -19,24 +19,21 @@ if (!params) throw `missing puppet.js params argument`
 runTest(params).catch(console.error)
 
 async function runTest(paramsStr) {
-  const server = initServer()
-  const paramsArr = paramsStr.split(' '); console.log(21, paramsArr, port); return;
+	const server = initServer()
+	const paramsArr = paramsStr.split(' ') //; console.log(21, paramsArr, port); return;
 
-  const browser = await puppeteer.launch({
-    headless: true,
-    args: [
-      `--no-sandbox`,
-      `--disable-setuid-sandbox`,
-    ],
-  })
-  const page = await browser.newPage()
-  const lastLines = []
-  let reachedSummary = false
-  page
-    .on('console', m => {
-      const msg = m.text()
-      console.log(msg)
-      /*
+	const browser = await puppeteer.launch({
+		headless: true,
+		args: [`--no-sandbox`, `--disable-setuid-sandbox`]
+	})
+	const page = await browser.newPage()
+	const lastLines = []
+	let reachedSummary = false
+	page
+		.on('console', m => {
+			const msg = m.text()
+			console.log(msg)
+			/*
         detected last lines are expected to look like below, 
         with empty lines before and after "# ok" line,
         which may be "# fail" instead (not ok)
@@ -61,136 +58,135 @@ async function runTest(paramsStr) {
 			console.log('-- requestfailed --', `${request.failure().errorText} ${request.url()}`)
 		)
 
-  for(const params of paramsArr) {
-    // Enable both JavaScript and CSS coverage
-    await Promise.all([
-      page.coverage.startJSCoverage({
-        resetOnNavigation: false,
-        includeRawScriptCoverage: true
-      }),
-      //page.coverage.startCSSCoverage()
-    ])
+	for (const params of paramsArr) {
+		// Enable both JavaScript and CSS coverage
+		await Promise.all([
+			page.coverage.startJSCoverage({
+				resetOnNavigation: false,
+				includeRawScriptCoverage: true
+			})
+			//page.coverage.startCSSCoverage()
+		])
 
-    console.log(70, port, params, `http://localhost:${port}/puppet.html?${params}`)
-    // Navigate to test page
-    await page.goto(`http://localhost:${port}/puppet.html?${params}`, {timeout: 1000})
-      .then(r => {
-        if (!r.ok()) throw `Error loading page: ${r.status()}`
-      })
-      .catch(e => {
-        console.error('--- page.goto().catch ---', e)
-        process.exit(1)
-      })
+		console.log(70, port, params, `http://localhost:${port}/puppet.html?port=${port}&${params}`)
+		// Navigate to test page
+		await page
+			.goto(`http://localhost:${port}/puppet.html?port=${port}&${params}`, { timeout: 1000 })
+			.then(r => {
+				if (!r.ok()) throw `Error loading page: ${r.status()}`
+			})
+			.catch(e => {
+				console.error('--- page.goto().catch ---', e)
+				process.exit(1)
+			})
 
-    await new Promise((resolve, reject) => {
-      const i = setInterval(async ()=>{
-        // see page.on('console') above for the expected last lines texts that are being detected
-        if (lastLines.length < 4 || !lastLines.find(t => t.includes('# ok') || t.includes('# fail'))) return
-        clearInterval(i)
-        if (!lastLines.find(l => l.startsWith('# ok'))) {
-          console.error(`\n!!! test failed !!!\n`)
-          await browser.close()
-          process.exit(1)
-        }
-        // Disable both JavaScript and CSS coverage
-        const [jsCoverage /*, cssCoverage*/] = await Promise.all([
-          page.coverage.stopJSCoverage(),
-          //page.coverage.stopCSSCoverage(),
-        ])
-        const matched = jsCoverage.filter(({ rawScriptCoverage: c }) => {
-          //if (!c.url.includes('node_modules') && !c.url.includes('sjcrh/proteinpaint-')) console.log(c.url)
-          return (
-            c.url.includes('/bin/test') &&
-            !c.url.includes('_.._') &&
-            !c.url.includes('node_modules') &&
-            !c.url.includes('appdrawer') &&
-            !c.url.includes('sjcrh/proteinpaint-')
-          ) // appdrawer tests do not use TermdbTest
-        })
-        //fs.writeFileSync(`${process.cwd()}/results-${paramsArr.indexOf(params)}.json`, JSON.stringify(matched))
-        
-        const coverageList = matched.map((it,i) => {
-          return {
-              source: it.text,
-              ... it.rawScriptCoverage
-          };
-        });
+		await new Promise((resolve, reject) => {
+			const i = setInterval(async () => {
+				// see page.on('console') above for the expected last lines texts that are being detected
+				if (lastLines.length < 4 || !lastLines.find(t => t.includes('# ok') || t.includes('# fail'))) return
+				clearInterval(i)
+				if (!lastLines.find(l => l.startsWith('# ok'))) {
+					console.error(`\n!!! test failed !!!\n`)
+					await browser.close()
+					process.exit(1)
+				}
+				// Disable both JavaScript and CSS coverage
+				const [jsCoverage /*, cssCoverage*/] = await Promise.all([
+					page.coverage.stopJSCoverage()
+					//page.coverage.stopCSSCoverage(),
+				])
+				const matched = jsCoverage.filter(({ rawScriptCoverage: c }) => {
+					//if (!c.url.includes('node_modules') && !c.url.includes('sjcrh/proteinpaint-')) console.log(c.url)
+					return (
+						c.url.includes('/bin/test') &&
+						!c.url.includes('_.._') &&
+						!c.url.includes('node_modules') &&
+						!c.url.includes('appdrawer') &&
+						!c.url.includes('sjcrh/proteinpaint-')
+					) // appdrawer tests do not use TermdbTest
+				})
+				//fs.writeFileSync(`${process.cwd()}/results-${paramsArr.indexOf(params)}.json`, JSON.stringify(matched))
 
-        const mcr = MCR({
-          name: `Test Coverage for ${params}`,
-          sourceFilter: path => {
-            //if (!path.includes('node_modules')) console.log(path)
-            return (
-              (path.includes('client') || path.includes('shared')) &&
-              !path.includes('/bin/test') &&
-              !path.includes('_.._') &&
-              !path.includes('node_modules') &&
-              !path.includes('appdrawer') &&
-              !path.includes('sjcrh/proteinpaint-')
-            )
-          },
-          outputDir: './.nyc_output',
-          reports: ["v8", "console-summary", "html", "json", "markdown-details"],
-          cleanCache: true
-        })
+				const coverageList = matched.map((it, i) => {
+					return {
+						source: it.text,
+						...it.rawScriptCoverage
+					}
+				})
 
-        const report = await mcr.add(coverageList)
-        await mcr.generate()
-        // delete all entries
-        lastLines.splice(0, lastLines.length)
-        resolve()
-      }, 100)
-    })
-  }
+				const mcr = MCR({
+					name: `Test Coverage for ${params}`,
+					sourceFilter: path => {
+						//if (!path.includes('node_modules')) console.log(path)
+						return (
+							(path.includes('client') || path.includes('shared')) &&
+							!path.includes('/bin/test') &&
+							!path.includes('_.._') &&
+							!path.includes('node_modules') &&
+							!path.includes('appdrawer') &&
+							!path.includes('sjcrh/proteinpaint-')
+						)
+					},
+					outputDir: './.nyc_output',
+					reports: ['v8', 'console-summary', 'html', 'json', 'markdown-details'],
+					cleanCache: true
+				})
 
-  await browser.close()
-  if (server) server.close()
+				const report = await mcr.add(coverageList)
+				await mcr.generate()
+				// delete all entries
+				lastLines.splice(0, lastLines.length)
+				resolve()
+			}, 100)
+		})
+	}
+
+	await browser.close()
+	if (server) server.close()
 }
 
 function initServer() {
-  // NOTES:
-  // - integration and other non-unit tests must use an active PP server with test genome and dataset
-  // as runproteinpaint({host}); client unit tests do NOT need this active PP server instance
-  // 
-  // - the minimal expressjs instance below serves only static spec code files,
-  // so that dynamically-loaded code chunks can be imported at runtime, and also minimize loading
-  // irrelevant code chunks when more specific name= pattern is supplied in params
-  // 
-  const app = express()
-  
-  const publicDir = path.join(__dirname, '../../public')
-  const staticMiddleware = express.static(publicDir)
-  app.use(staticMiddleware)
-  app.use(bodyParser.json({ limit: '5mb' }))
-  app.use(bodyParser.text({ limit: '5mb' }))
-  app.use(bodyParser.urlencoded({ extended: true }))
-  app.get('*', routeHandler)
-  app.post('*', routeHandler)
+	if (port != 6789) return
+	// NOTES:
+	// - integration and other non-unit tests must use an active PP server with test genome and dataset
+	// as runproteinpaint({host}); client unit tests do NOT need this active PP server instance
+	//
+	// - the minimal expressjs instance below serves only static spec code files,
+	// so that dynamically-loaded code chunks can be imported at runtime, and also minimize loading
+	// irrelevant code chunks when more specific name= pattern is supplied in params
+	//
+	const app = express()
 
-  const cacheDir = `${publicDir}/testrunData`
-  function routeHandler(req, res) {
-    const cacheSubdir = path.join(cacheDir, req.path.slice(1).replaceAll('/', '.'))
-    if (!fs.existsSync(cacheSubdir)) {
-      res.status(404)
-      res.send({error: 'missing cacheSubdir'})
-      return
-    }
-    const obj = Object.assign({}, req.query || {}, req.body || {})
-    const jsonQuery = JSON.stringify(obj)
-    const id = crypto
-        .createHash('sha1')
-        .update(jsonQuery)
-        .digest('hex')
-    const cacheFile = `${cacheSubdir}/${id}`
-    if (!fs.existsSync(cacheFile)) {
-      res.status(404)
-      res.send({error: `missing cacheFile='${cacheFile}'`})
-      return
-    }
-    res.header('content-type', 'application/json')
-    const content = fs.readFileSync(cacheFile, {encoding: 'utf8'})
-    //console.log(197, req.path, cacheFile, body)
-    res.send(content)
-  }
-  return app.listen(port)
+	const publicDir = path.join(__dirname, '../../public')
+	const staticMiddleware = express.static(publicDir)
+	app.use(staticMiddleware)
+	app.use(bodyParser.json({ limit: '5mb' }))
+	app.use(bodyParser.text({ limit: '5mb' }))
+	app.use(bodyParser.urlencoded({ extended: true }))
+	app.get('*', routeHandler)
+	app.post('*', routeHandler)
+
+	const cacheDir = `${publicDir}/testrunData`
+	function routeHandler(req, res) {
+		const cacheSubdir = path.join(cacheDir, req.path.slice(1).replaceAll('/', '.'))
+		if (!fs.existsSync(cacheSubdir)) {
+			res.status(404)
+			res.send({ error: 'missing cacheSubdir' })
+			return
+		}
+		const obj = Object.assign({}, req.query || {}, req.body || {})
+		const jsonQuery = JSON.stringify(obj)
+		const id = crypto.createHash('sha1').update(jsonQuery).digest('hex')
+		const cacheFile = `${cacheSubdir}/${id}`
+		if (!fs.existsSync(cacheFile)) {
+			res.status(404)
+			res.send({ error: `missing cacheFile='${cacheFile}'` })
+			return
+		}
+		res.header('content-type', 'application/json')
+		const content = fs.readFileSync(cacheFile, { encoding: 'utf8' })
+		//console.log(197, req.path, cacheFile, body)
+		res.send(content)
+	}
+	return app.listen(port)
 }
