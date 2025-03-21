@@ -182,5 +182,28 @@ empirical_smoothing_time <- system.time({
 })
 cat("Empirical smoothing time: ", as.difftime(empirical_smoothing_time, units = "secs")[3], " seconds\n")
 
-top.table <- topTable(tmp, sort.by = "P", n = Inf)
+top_table <- topTable(tmp, sort.by = "P", n = Inf)
 #head(top.table, 20000)
+
+multiple_testing_correction_time <- system.time({
+    logfc <- top_table$logFC
+    pvalues <- top_table$P.Value
+    genes_matrix <- str_split_fixed(unlist(top_table$genes), "\t", 2)
+    geneids <- unlist(genes_matrix[, 1])
+    genesymbols <- unlist(genes_matrix[, 2])
+    adjust_p_values <- top_table$adj.P.Val
+    output <- data.frame(geneids, genesymbols, logfc, -log10(pvalues), -log10(adjust_p_values))
+    names(output)[1] <- "gene_name"
+    names(output)[2] <- "gene_symbol"
+    names(output)[3] <- "fold_change"
+    names(output)[4] <- "original_p_value"
+    names(output)[5] <- "adjusted_p_value"
+})
+final_output <- c()
+final_output$gene_data <- output
+final_output$edgeR_ql_image_name <- voom_image_name
+#final_output$edgeR_mds_image_name <- mds_image_name
+cat("Time for multiple testing correction: ", as.difftime(multiple_testing_correction_time, unit = "secs")[3], " seconds\n")
+
+# Output results
+toJSON(final_output)
