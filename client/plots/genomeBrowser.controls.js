@@ -6,6 +6,7 @@ import { appInit } from '#termdb/app'
 /*
 getState
 	_partialData
+initUI
 main
 	makeVariantValueComputingGroupControls
 		render1group
@@ -173,11 +174,25 @@ class GbControls {
 		then render contents into each holder for each tab
 		thus has to duplicate the logic for computing tabs
 		*/
-		if (state.config.snvindel?.details) {
-			tabs.push({ label: 'Variant Values', active: true })
-		}
-		if (state.config.variantFilter) {
-			tabs.push({ label: 'Variant Filter' })
+		if (state.config.snvindel) {
+			// has snvindel. some logic to decide if show tab for it
+			if (state.config.snvindel.details) {
+				// has details for data precomputing, must show tab in order to generate contents
+				tabs.push({ label: 'Variant Values', active: true })
+
+				if (state.config.variantFilter) {
+					// for now, this filter only works with snvindel.details
+					tabs.push({ label: 'Variant Filter' })
+				}
+			} else {
+				// no computing detail.
+				if (state.config.trackLst) {
+					// also there is trackLst. in order *not to show trackLst tab alone*, also show snvindel tab and allow to toggle mds3 tk on/off
+					tabs.push({ label: 'Variants', active: true })
+				} else {
+					// do not add tab, to avoid showing a lone snvindel tab
+				}
+			}
 		}
 		if (state.config.ld) {
 			tabs.push({ label: 'LD Map' })
@@ -205,20 +220,41 @@ class GbControls {
 		let tabsIdx = 0
 
 		//////////////////////
+		//
 		// must repeat tab-computing logic in exact order above!! otherwise out of sync
+		//
 		//////////////////////
-		if (state.config.snvindel?.details) {
-			// first tab is for variant group setting
-			const div = tabs[tabsIdx++].contentHolder.append('div')
-			// hardcode to 2 groups used by state.config.snvindel.details.groups[]
-			this.dom.group1div = div.append('div')
-			this.dom.group2div = div.append('div')
-			this.dom.testMethodDiv = div.append('div').style('margin-top', '3px')
-		}
-		if (state.config.variantFilter) {
-			// the whole holder has white-space=nowrap (likely from sjpp-output-sandbox-content)
-			// must set white-space=normal to let INFO filter wrap and not to extend beyond holder
-			this.dom.variantFilterHolder = tabs[tabsIdx++].contentHolder.append('div').style('white-space', 'normal')
+		if (state.config.snvindel) {
+			if (state.config.snvindel.details) {
+				const div = tabs[tabsIdx++].contentHolder.append('div')
+				// hardcode to 2 groups used by state.config.snvindel.details.groups[]
+				this.dom.group1div = div.append('div')
+				this.dom.group2div = div.append('div')
+				this.dom.testMethodDiv = div.append('div').style('margin-top', '3px')
+
+				if (state.config.variantFilter) {
+					// the whole holder has white-space=nowrap (likely from sjpp-output-sandbox-content)
+					// must set white-space=normal to let INFO filter wrap and not to extend beyond holder
+					this.dom.variantFilterHolder = tabs[tabsIdx++].contentHolder.append('div').style('white-space', 'normal')
+				}
+			} else {
+				if (state.config.trackLst) {
+					// snvindel show/hide toggling
+					const div = tabs[tabsIdx++].contentHolder.append('div')
+					make_one_checkbox({
+						labeltext: 'Show variant track',
+						checked: state.config.snvindel.shown,
+						holder: div,
+						callback: checked => {
+							this.app.dispatch({
+								type: 'plot_edit',
+								id: this.id,
+								config: { snvindel: { shown: checked } }
+							})
+						}
+					})
+				}
+			}
 		}
 		if (state.config.ld) {
 			/* ticky: must duplicate ld.tracks[] and scope it here
