@@ -95,3 +95,11 @@ path="src/computeTopTerms.rs"
 [[bin]]
 name="readHDF5"
 path="src/readHDF5.rs"
+
+[[bin]]
+name="validateHDF5"
+path="src/validateHDF5.rs"
+
+[[bin]]
+name="readDenseHDF5"
+path="src/readDenseHDF5.rs"
