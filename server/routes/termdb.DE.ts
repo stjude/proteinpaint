@@ -228,7 +228,8 @@ values[] // using integer sample id
 		min_count: param.min_count,
 		min_total_count: param.min_total_count,
 		storage_type: param.storage_type,
-		DE_method: param.method
+		DE_method: param.method,
+		mds_cutoff: 10000 // If the dimensions of the read counts matrix is below this threshold, only then the mds image will be generated as its very compute intensive. Number of genes * Number of samples < mds_cutoff for mds generation
 	} as ExpressionInput
 
 	if (param.tw) {
@@ -275,12 +276,14 @@ values[] // using integer sample id
 		param.method = 'edgeR'
 		const ql_imagePath: string = path.join(serverconfig.cachedir, result.edgeR_ql_image_name[0]) // Retrieve the edgeR quality image and send it to client side. Does not need to be an array, will address this later.
 		mayLog('ql_imagePath:', ql_imagePath)
-
-		//const mds_imagePath: string = path.join(serverconfig.cachedir, result.edgeR_mds_image_name[0]) // Retrieve the edgeR quality image and send it to client side. Does not need to be an array, will address this later.
-		//mayLog('mds_imagePath:', mds_imagePath)
-
-		//await readFileAndDelete(mds_imagePath, 'mds_image', result)
 		await readFileAndDelete(ql_imagePath, 'ql_image', result)
+
+		if (result.edgeR_mds_image_name) {
+			// The R code may not return an mds image file (depending upon mds_cutoff). Query mds image only if it has been generated
+			const mds_imagePath: string = path.join(serverconfig.cachedir, result.edgeR_mds_image_name[0]) // Retrieve the edgeR quality image and send it to client side. Does not need to be an array, will address this later.
+			mayLog('mds_imagePath:', mds_imagePath)
+			await readFileAndDelete(mds_imagePath, 'mds_image', result)
+		}
 
 		return {
 			data: result.gene_data,
