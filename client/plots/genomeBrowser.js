@@ -36,10 +36,12 @@ this{}
 				terms[]
 			geneSearchResult{}
 			snvindel {}
-				details {} // see type def
+				details {} // this needs to be copied from tdbcnf to track customizations
 				populations [{key,label}] // might not be part of state
+				shown=bool // set to true if snvindel mds3 tk is shown
 			ld {}
 				tracks[]
+					.shown=bool // set to true if a ld tk is shown TODO removed ld tk is not reflected on config ui
 			subMds3TkFilters[] // list of mds3 subtk filter objects created on mds3 tk sample summary ui
 			trackLst{}
 				facets[]
@@ -128,65 +130,65 @@ class genomeBrowser {
 		this.dom.loadingDiv.style('display', 'none')
 	}
 
-	//////////////////////////////////////////////////
-	//       rest of methods are app-specific       //
-	//////////////////////////////////////////////////
-
 	async computeBlockAndMds3tk() {
-		// handle multiple possibilities of generating mds3 tk
-		// FIXME allow ds with multiple types (snvinde+tklst) to show both in one view
+		// handle multiple possibilities of generating genome browser tracks
 
-		if (this.state.config?.snvindel?.details) {
-			// pre-compute variant data in the app here, e.g. fisher test etc, but not in mds3 backend as the official track does
-			// and launch custom mds3 tk to show the variants
-			await this.launchCustomMds3tk()
-			return
-		}
+		const tklst = [] // list of tracks to be shown in block
 
-		if (this.state.config?.trackLst?.activeTracks?.length) {
-			const lst = []
-			for (const n of this.state.config.trackLst.activeTracks) {
-				for (const f of this.state.config.trackLst.facets) {
-					for (const t of f.tracks) {
-						if (t.name == n) lst.push(t)
-					}
-				}
-			}
-			await this.launchBlockWithTracks(lst)
-			return
-		}
-
-		// launch official mds3 tk, same way as mds3/tk.js
-		const tk = {
-			type: 'mds3',
-			dslabel: this.app.opts.state.vocab.dslabel,
-			onClose: () => {
-				// on closing subtk, the filterObj corresponding to the subtk will be "removed" from subMds3TkFilters[], by regenerating the array
-				this.maySaveTrackUpdatesToState()
-			},
-			// for showing disco etc as ad-hoc sandbox, persistently in the mass plotDiv, rather than a menu
-			newChartHolder: this.opts.plotDiv
-		}
-		if (this.state.filter?.lst?.length > 0) {
-			// state has a non-empty filter, register at tk obj to pass to mds3 data queries
-			tk.filterObj = structuredClone(this.state.filter)
-			// TODO this will cause mds3 tk to show a leftlabel to indicate the filtering, which should be hidden
-		}
-		const tklst = [tk]
-
-		if (this.state.config?.subMds3TkFilters) {
-			for (const subFilter of this.state.config.subMds3TkFilters) {
-				// for every element, create a new subtk
-				const t2 = {
+		if (this.state.config.snvindel?.shown) {
+			// show snvindel-based mds3 tk
+			if (this.state.config.snvindel.details) {
+				// pre-compute variant data in the app here, e.g. fisher test etc, but not in mds3 backend as the official track does
+				// and launch custom mds3 tk to show the variants
+				// TODO generate tk in tklst[]
+				await this.launchCustomMds3tk()
+				return
+			} else {
+				// official mds3 tk without precomputing tk data
+				const tk = {
 					type: 'mds3',
 					dslabel: this.app.opts.state.vocab.dslabel,
+					onClose: () => {
+						// on closing subtk, the filterObj corresponding to the subtk will be "removed" from subMds3TkFilters[], by regenerating the array
+						this.maySaveTrackUpdatesToState()
+					},
 					// for showing disco etc as ad-hoc sandbox, persistently in the mass plotDiv, rather than a menu
 					newChartHolder: this.opts.plotDiv
 				}
-				t2.filterObj = tk.filterObj ? filterJoin([tk.filterObj, subFilter]) : structuredClone(subFilter)
-				tklst.push(t2)
+				if (this.state.filter?.lst?.length > 0) {
+					// state has a non-empty filter, register at tk obj to pass to mds3 data queries
+					tk.filterObj = structuredClone(this.state.filter)
+					// TODO this will cause mds3 tk to show a leftlabel to indicate the filtering, which should be hidden
+				}
+				tklst.push(tk)
+
+				if (this.state.config?.subMds3TkFilters) {
+					for (const subFilter of this.state.config.subMds3TkFilters) {
+						// for every element, create a new subtk
+						const t2 = {
+							type: 'mds3',
+							dslabel: this.app.opts.state.vocab.dslabel,
+							// for showing disco etc as ad-hoc sandbox, persistently in the mass plotDiv, rather than a menu
+							newChartHolder: this.opts.plotDiv
+						}
+						t2.filterObj = tk.filterObj ? filterJoin([tk.filterObj, subFilter]) : structuredClone(subFilter)
+						tklst.push(t2)
+					}
+				}
 			}
 		}
+
+		if (this.state.config?.trackLst?.activeTracks?.length) {
+			// include active facet tracks
+			for (const n of this.state.config.trackLst.activeTracks) {
+				for (const f of this.state.config.trackLst.facets) {
+					for (const t of f.tracks) {
+						if (t.name == n) tklst.push(t)
+					}
+				}
+			}
+		}
+
 		await this.launchBlockWithTracks(tklst)
 	}
 
@@ -285,7 +287,8 @@ class genomeBrowser {
 		return data
 	}
 
-	/*  */
+	/* tricky logic
+	 */
 	async launchBlockWithTracks(tklst) {
 		if (this.blockInstance) {
 			/* block instance is present
@@ -314,6 +317,20 @@ class genomeBrowser {
 				for (const n of this.state.config.trackLst.removeTracks) {
 					const i = this.blockInstance.tklst.findIndex(i => i.name == n)
 					if (i != -1) this.blockInstance.tk_remove(i)
+				}
+			}
+			// tricky! if snvindel.shown is false, means user has toggled it off. thus find all mds3 tk and remove them
+			if (this.state.config.snvindel && !this.state.config.snvindel.shown) {
+				while (true) {
+					let end = true
+					for (const [i, tk] of this.blockInstance.tklst.entries()) {
+						if (tk.type == 'mds3') {
+							this.blockInstance.tk_remove(i)
+							end = false
+							break
+						}
+					}
+					if (end) break
 				}
 			}
 			return
@@ -511,24 +528,39 @@ async function getDefaultConfig(vocabApi, override, activeCohort) {
 		}),
 		override || {}
 	)
-	// request default variant filter (against vcf INFO)
-	const vf = await vocabApi.get_variantFilter()
-	if (vf?.filter) {
-		config.variantFilter = vf
-	}
-	if (config.snvindel?.details) {
-		// test method may be inconsistent with group configuration (e.g. no fisher for INFO fields), update test method here
-		// 1st arg is a fake "self"
-		mayUpdateGroupTestMethodsIdx({ state: { config } }, config.snvindel.details)
-		// a type=filter group may use filterByCohort. in such case, modify default state to assign proper filter based on current cohort
-		const gf = config.snvindel.details.groups.find(i => i.type == 'filter')
-		if (gf && gf.filterByCohort) {
-			// modify and assign
-			gf.filter = gf.filterByCohort[vocabApi.termdbConfig.selectCohort.values[activeCohort].keys.join(',')]
-			if (!gf.filter) throw 'unknown filter by current cohort name'
-			delete gf.filterByCohort
+
+	if (config.snvindel) {
+		// presence of snvindel will generate the "mds3" tk, here setup associated config
+		// request default variant filter (vcf INFO), required for snvindel
+		const vf = await vocabApi.get_variantFilter()
+		if (vf?.filter) {
+			config.variantFilter = vf
+		}
+		if (config.snvindel.details) {
+			// test method may be inconsistent with group configuration (e.g. no fisher for INFO fields), update test method here
+			// 1st arg is a fake "self"
+			mayUpdateGroupTestMethodsIdx({ state: { config } }, config.snvindel.details)
+			// a type=filter group may use filterByCohort. in such case, modify default state to assign proper filter based on current cohort
+			const gf = config.snvindel.details.groups.find(i => i.type == 'filter')
+			if (gf?.filterByCohort) {
+				// modify and assign
+				gf.filter = gf.filterByCohort[vocabApi.termdbConfig.selectCohort.values[activeCohort].keys.join(',')]
+				if (!gf.filter) throw 'unknown filter by current cohort name'
+				delete gf.filterByCohort
+			}
+		}
+
+		// determine if snvindel mds3 tk will be shown by default or not
+		if (config.trackLst) {
+			// also has track lst/facet
+			// hardcoded! hide snvindel by default! definitely change it later!
+			config.snvindel.shown = false
+		} else {
+			// no tklst/facet
+			config.snvindel.shown = true
 		}
 	}
+
 	if (config.trackLst) {
 		if (!config.trackLst.facets) throw 'trackLst.facets[] missing'
 		if (!config.trackLst.activeTracks) config.trackLst.activeTracks = []
