@@ -60,4 +60,4 @@ fi
 set -u # reenable unbound variable check
 
 rm -rf .nyc_output
-node test/puppet.js "$PATTERNSLIST&port=$TESTPORT"
+node test/puppet.js "$PATTERNSLIST" "$TESTPORT"

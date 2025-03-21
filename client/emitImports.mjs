@@ -35,7 +35,12 @@ export function getCodeText(namePattern = '*.spec.*') {
 		.sync(`./**/test/${pattern}`, { cwd: sharedUtils, ignore })
 		.map(file => ({ file: `shared/utils/${file}`, rel: `../../shared/utils/${file}` }))
 	specs.push(...sharedSpecs)
-	specs.sort()
+	specs.sort((a, b) => {
+		if (a.file.includes('unit') && b.file.includes('unit')) return a < b ? -1 : 1
+		if (a.file.includes('unit')) return -1
+		if (b.file.includes('unit')) return 1
+		return a.file < b.file ? -1 : 1
+	})
 
 	const output = []
 	output.push(`import { matchSpecs, specsMatched } from './matchSpecs.js'`)
