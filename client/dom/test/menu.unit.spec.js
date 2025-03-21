@@ -34,10 +34,7 @@ const longText =
 
 function getTestMenu() {
 	const menu = new Menu()
-	menu.d
-		.append('div')
-		.text('Test')
-		.style('display', 'block')
+	menu.d.append('div').text('Test').style('display', 'block')
 
 	return menu
 }
@@ -97,10 +94,7 @@ tape.skip('clear() with arg', test => {
 	test.timeoutAfter(500)
 
 	const testMenu = new Menu({ clearSelector: '.sjpp-menu-test-div' })
-	testMenu.d
-		.append('div')
-		.text('Main div - should persist')
-		.style('display', 'block')
+	testMenu.d.append('div').text('Main div - should persist').style('display', 'block')
 
 	testMenu.d
 		.append('div')
@@ -120,43 +114,48 @@ tape('show() with args', async test => {
 	test.timeoutAfter(500)
 
 	const testMenu = getTestMenu()
-	testMenu.d
-		.style('max-width', '20vw')
-		.style('max-height', '10vh')
-		.style('overflow', 'hidden')
+	testMenu.d.style('max-width', '20vw').style('max-height', '10vh').style('overflow', 'hidden')
 
-	let posNum
+	{
+		//left (x) position
+		const posNum = 50
+		testMenu.show(posNum)
+		test.ok(
+			testMenu.dnode.style.left == `${posNum + testMenu.offsetX}px` && testMenu.dnode.style.top == '',
+			`Should show menu left, under header, shifted by .offsetX = ${testMenu.offsetX}px`
+		)
+	}
 
-	//left (x) position
-	posNum = 50
-	testMenu.show(posNum)
-	test.ok(
-		testMenu.dnode.style.left == `${posNum + testMenu.offsetX}px` && testMenu.dnode.style.top == '',
-		`Should show menu left, under header, shifted by .offsetX = ${testMenu.offsetX}px`
-	)
-
-	//top (y) position
-	testMenu.show('', posNum)
-	test.ok(
-		testMenu.dnode.style.left == '20px' && testMenu.dnode.style.top == `${posNum + testMenu.offsetY}px`,
-		`Should show menu at the top, above header, shifted by .offsetY = ${testMenu.offsety}px`
-	)
+	{
+		//top (y) position
+		const posNum = 50
+		testMenu.show('', posNum)
+		test.ok(
+			testMenu.dnode.style.left == '20px' && testMenu.dnode.style.top == `${posNum + testMenu.offsetY}px`,
+			`Should show menu at the top, above header, shifted by .offsetY = ${testMenu.offsety}px`
+		)
+	}
 
 	// left & top (x & y) position
-	posNum = 100
-	testMenu.show(posNum, posNum)
-	test.ok(
-		testMenu.dnode.style.left == `${posNum + testMenu.offsetX}px` &&
-			testMenu.dnode.style.top == `${posNum + testMenu.offsetY}px`,
-		`Should show menu top left corner, over header, shifted by .offsetX = ${testMenu.offsetX}px & .offsetY = ${testMenu.offsetY}px`
-	)
+	{
+		const posNum = 100
+		testMenu.show(posNum, posNum)
+		test.ok(
+			testMenu.dnode.style.left == `${posNum + testMenu.offsetX}px` &&
+				testMenu.dnode.style.top == `${posNum + testMenu.offsetY}px`,
+			`Should show menu top left corner, over header, shifted by .offsetX = ${testMenu.offsetX}px & .offsetY = ${testMenu.offsetY}px`
+		)
+	}
 
-	//No shift (i.e. additional 20px)
-	testMenu.show(posNum, posNum, false)
-	test.ok(
-		testMenu.dnode.style.left == `${posNum}px` && testMenu.dnode.style.top == `${posNum}px`,
-		`Should show menu top left corner without .offsetX or .offsetY added to left or top, respectively.`
-	)
+	{
+		const posNum = 100
+		//No shift (i.e. additional 20px)
+		testMenu.show(posNum, posNum, false)
+		test.ok(
+			testMenu.dnode.style.left == `${posNum}px` && testMenu.dnode.style.top == `${posNum}px`,
+			`Should show menu top left corner without .offsetX or .offsetY added to left or top, respectively.`
+		)
+	}
 
 	//False down appears to have no effect on show()(?)
 	// posNum = 200
@@ -164,14 +163,16 @@ tape('show() with args', async test => {
 	// console.log(testMenu.dnode.style)
 
 	//With scroll
-	posNum = 200
-	testMenu.d.append('div').text(longText)
-	testMenu.show(posNum, posNum, false)
-	test.ok(
-		testMenu.dnode.style.left == `${posNum + window.scrollX}px` &&
-			testMenu.dnode.style.top == `${posNum + window.scrollY}px`,
-		`Should show menu position with window.scrollX = ${window.scrollX} & window.scrollY = ${window.scrollY}`
-	)
+	{
+		const posNum = 200
+		testMenu.d.append('div').text(longText)
+		testMenu.show(posNum, posNum, false)
+		test.ok(
+			testMenu.dnode.style.left == `${posNum + window.scrollX}px` &&
+				testMenu.dnode.style.top == `${posNum + window.scrollY}px`,
+			`Should show menu position with window.scrollX = ${window.scrollX} & window.scrollY = ${window.scrollY}`
+		)
+	}
 
 	testMenu.destroy()
 	test.end()
