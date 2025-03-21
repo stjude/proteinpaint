@@ -227,7 +227,8 @@ values[] // using integer sample id
 		cachedir: serverconfig.cachedir,
 		min_count: param.min_count,
 		min_total_count: param.min_total_count,
-		storage_type: param.storage_type
+		storage_type: param.storage_type,
+		DE_method: param.method
 	} as ExpressionInput
 
 	if (param.tw) {
@@ -254,13 +255,17 @@ values[] // using integer sample id
 
 	//console.log('expression_input:', expression_input)
 	//console.log("param.method:",param.method)
-	fs.writeFile('test.txt', JSON.stringify(expression_input), function (err) {
-		// For catching input to rust pipeline, in case of an error
-		if (err) return console.log(err)
-	})
+	//fs.writeFile('test.txt', JSON.stringify(expression_input), function (err) {
+	//	// For catching input to rust pipeline, in case of an error
+	//	if (err) return console.log(err)
+	//})
 
 	const sample_size_limit = 8 // Cutoff to determine if parametric estimation using edgeR should be used or non-parametric estimation using wilcoxon test
-	if ((group1names.length <= sample_size_limit && group2names.length <= sample_size_limit) || param.method == 'edgeR') {
+	if (
+		(group1names.length <= sample_size_limit && group2names.length <= sample_size_limit) ||
+		param.method == 'edgeR' ||
+		param.method == 'limma'
+	) {
 		// edgeR will be used for DE analysis
 		const time1 = new Date().valueOf()
 		const result = JSON.parse(

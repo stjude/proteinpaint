@@ -239,7 +239,11 @@ if (DE_method == "edgeR") {
                     voom_image_name <- paste0("limma_voom_temp_",random_number,".png") # Generating random image name so that simultaneous server side requests do NOT generate the same edgeR file name
                     png(filename = paste0(cachedir,"/",voom_image_name), width = 1000, height = 1000, res = 200) # Opening a png device
                     par(oma = c(0, 0, 0, 0)) # Creating a margin
-                    y <- voom(y, design, plot = TRUE)
+                    suppressWarnings({
+                       suppressMessages({
+                           y <- voom(y, design, plot = TRUE)
+                       })
+                    })
                     dev.off() # Gives a null device message which breaks JSON. Commenting it out for now, will investigate it later
                })
            })
@@ -275,7 +279,12 @@ if (DE_method == "edgeR") {
            })
        })
        #cat("Empirical smoothing time: ", as.difftime(empirical_smoothing_time, units = "secs")[3], " seconds\n")
-       top_table <- topTable(tmp, sort.by = "P", n = Inf)
+
+       suppressWarnings({
+         suppressMessages({
+            top_table <- topTable(tmp, sort.by = "P", n = Inf)
+         })
+       })
 
        multiple_testing_correction_time <- system.time({
            logfc <- top_table$logFC
