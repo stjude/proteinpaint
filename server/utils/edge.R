@@ -188,40 +188,117 @@ if (length(input$conf1) == 0) { # No adjustment of confounding factors
     #cat("QL test time: ", as.difftime(test_time, units = "secs")[3], " seconds\n")
 }
 
-# Saving QL fit image
-ql_plot_time <- system.time({
-    set.seed(as.integer(Sys.time())) # Set the seed according to current time
-    cachedir <- input$cachedir # Importing serverconfig.cachedir
-    random_number <- runif(1, min = 0, max = 1) # Generating random number
-    ql_image_name <- paste0("edgeR_ql_temp_",random_number,".png") # Generating random image name so that simultaneous server side requests do NOT generate the same edgeR file name
-    png(filename = paste0(cachedir,"/",ql_image_name), width = 1000, height = 1000, res = 200) # Opening a png device
-    par(oma = c(0, 0, 0, 0)) # Creating a margin
-    plotQLDisp(fit) # Plot the edgeR fit
-    # dev.off() # Gives a null device message which breaks JSON. Commenting it out for now, will investigate it later
-})
-#cat("ql plot time: ", as.difftime(ql_plot_time, units = "secs")[3], " seconds\n")
+DE_method <- input$DE_method
 
-# Multiple testing correction
-multiple_testing_correction_time <- system.time({
-    logfc <- et$table$logFC
-    logcpm <- et$table$logCPM
-    pvalues <- et$table$PValue
-    genes_matrix <- str_split_fixed(unlist(et$genes), "\t", 2)
-    geneids <- unlist(genes_matrix[, 1])
-    genesymbols <- unlist(genes_matrix[, 2])
-    adjust_p_values <- p.adjust(pvalues, method = "fdr")
-    output <- data.frame(geneids, genesymbols, logfc, -log10(pvalues), -log10(adjust_p_values))
-    names(output)[1] <- "gene_name"
-    names(output)[2] <- "gene_symbol"
-    names(output)[3] <- "fold_change"
-    names(output)[4] <- "original_p_value"
-    names(output)[5] <- "adjusted_p_value"
-})
-final_output <- c()
-final_output$gene_data <- output
-final_output$edgeR_ql_image_name <- ql_image_name
-#final_output$edgeR_mds_image_name <- mds_image_name
-#cat("Time for multiple testing correction: ", as.difftime(multiple_testing_correction_time, units = "secs")[3], " seconds\n")
+if (DE_method == "edgeR") {
+       # Saving QL fit image
+       ql_plot_time <- system.time({
+           set.seed(as.integer(Sys.time())) # Set the seed according to current time
+           cachedir <- input$cachedir # Importing serverconfig.cachedir
+           random_number <- runif(1, min = 0, max = 1) # Generating random number
+           ql_image_name <- paste0("edgeR_ql_temp_",random_number,".png") # Generating random image name so that simultaneous server side requests do NOT generate the same edgeR file name
+           png(filename = paste0(cachedir,"/",ql_image_name), width = 1000, height = 1000, res = 200) # Opening a png device
+           par(oma = c(0, 0, 0, 0)) # Creating a margin
+           plotQLDisp(fit) # Plot the edgeR fit
+           # dev.off() # Gives a null device message which breaks JSON. Commenting it out for now, will investigate it later
+       })
+       #cat("ql plot time: ", as.difftime(ql_plot_time, units = "secs")[3], " seconds\n")
 
-# Output results
-toJSON(final_output)
+       # Multiple testing correction
+       multiple_testing_correction_time <- system.time({
+           logfc <- et$table$logFC
+           logcpm <- et$table$logCPM
+           pvalues <- et$table$PValue
+           genes_matrix <- str_split_fixed(unlist(et$genes), "\t", 2)
+           geneids <- unlist(genes_matrix[, 1])
+           genesymbols <- unlist(genes_matrix[, 2])
+           adjust_p_values <- p.adjust(pvalues, method = "fdr")
+           output <- data.frame(geneids, genesymbols, logfc, -log10(pvalues), -log10(adjust_p_values))
+           names(output)[1] <- "gene_name"
+           names(output)[2] <- "gene_symbol"
+           names(output)[3] <- "fold_change"
+           names(output)[4] <- "original_p_value"
+           names(output)[5] <- "adjusted_p_value"
+       })
+       final_output <- c()
+       final_output$gene_data <- output
+       final_output$edgeR_ql_image_name <- ql_image_name
+       #final_output$edgeR_mds_image_name <- mds_image_name
+       #cat("Time for multiple testing correction: ", as.difftime(multiple_testing_correction_time, units = "secs")[3], " seconds\n")
+
+       # Output results
+       toJSON(final_output)
+} else if (DE_method == "limma") {
+       # Do voom transformation
+       voom_transformation_time <- system.time({
+           suppressWarnings({
+               suppressMessages({
+                    set.seed(as.integer(Sys.time())) # Set the seed according to current time
+                    cachedir <- input$cachedir # Importing serverconfig.cachedir
+                    random_number <- runif(1, min = 0, max = 1) # Generating random number
+                    voom_image_name <- paste0("limma_voom_temp_",random_number,".png") # Generating random image name so that simultaneous server side requests do NOT generate the same edgeR file name
+                    png(filename = paste0(cachedir,"/",voom_image_name), width = 1000, height = 1000, res = 200) # Opening a png device
+                    par(oma = c(0, 0, 0, 0)) # Creating a margin
+                    y <- voom(y, design, plot = TRUE)
+                    dev.off() # Gives a null device message which breaks JSON. Commenting it out for now, will investigate it later
+               })
+           })
+       })
+       #cat("voom transformation time: ", as.difftime(voom_transformation_time, units = "secs")[3], " seconds\n")
+
+       # Fit linear model
+       fit_time <- system.time({
+           suppressWarnings({
+               suppressMessages({
+                   fit <- lmFit(y, design, plot = FALSE)
+               })
+           })
+       })
+       #cat("limma fit time: ", as.difftime(fit_time, units = "secs")[3], " seconds\n")
+
+       # Saving mean-difference plot (aka MA plot)
+       set.seed(as.integer(Sys.time())) # Set the seed according to current time
+       cachedir <- input$cachedir # Importing serverconfig.cachedir
+       random_number <- runif(1, min = 0, max = 1) # Generating random number
+       md_image_name <- paste0("limma_md_temp_",random_number,".png") # Generating random image name so that simultaneous server side requests do NOT generate the same edgeR file name
+       png(filename = paste0(cachedir,"/",md_image_name), width = 1000, height = 1000, res = 200) # Opening a png device
+       par(oma = c(0, 0, 0, 0)) # Creating a margin
+       plotMD(fit) # Plot the limma fit
+       # dev.off() # Gives a null device message which breaks JSON. Commenting it out for now, will investigate it later
+
+       # Empirical Bayes smoothing
+       empirical_smoothing_time <- system.time({
+           suppressWarnings({
+               suppressMessages({
+                   tmp <- eBayes(fit)
+               })
+           })
+       })
+       #cat("Empirical smoothing time: ", as.difftime(empirical_smoothing_time, units = "secs")[3], " seconds\n")
+       top_table <- topTable(tmp, sort.by = "P", n = Inf)
+
+       multiple_testing_correction_time <- system.time({
+           logfc <- top_table$logFC
+           pvalues <- top_table$P.Value
+           genes_matrix <- str_split_fixed(unlist(top_table$genes), "\t", 2)
+           geneids <- unlist(genes_matrix[, 1])
+           genesymbols <- unlist(genes_matrix[, 2])
+           adjust_p_values <- top_table$adj.P.Val
+           output <- data.frame(geneids, genesymbols, logfc, -log10(pvalues), -log10(adjust_p_values))
+           names(output)[1] <- "gene_name"
+           names(output)[2] <- "gene_symbol"
+           names(output)[3] <- "fold_change"
+           names(output)[4] <- "original_p_value"
+           names(output)[5] <- "adjusted_p_value"
+       })
+       final_output <- c()
+       final_output$gene_data <- output
+       final_output$edgeR_ql_image_name <- voom_image_name
+       #final_output$edgeR_mds_image_name <- mds_image_name
+       #cat("Time for multiple testing correction: ", as.difftime(multiple_testing_correction_time, unit = "secs")[3], " seconds\n")
+
+       # Output results
+       toJSON(final_output)
+} else {
+       stop(paste0("Unknown method:", DE_method))
+}
