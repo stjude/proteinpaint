@@ -16,7 +16,7 @@ const patterns = [
 	//`${CURRSPECDIR}/test/${SPECNAME}.spec.*s`,
 	`${NESTEDSPECDIR}/test/${SPECNAME}.spec.*s`
 ]
-console.log(19, params, SPECNAME, NESTEDSPECDIR, patterns, minimatch(`${NESTEDSPECDIR}/test/${SPECNAME}.spec.*s`, 'random'))
+//console.log(19, params, SPECNAME, NESTEDSPECDIR, patterns, minimatch(`${NESTEDSPECDIR}/test/${SPECNAME}.spec.*s`, 'random'))
 export const specsMatched = []
 
 export function matchSpecs(filepath) {
