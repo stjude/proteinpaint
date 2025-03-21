@@ -564,7 +564,7 @@ async function queryGeneFromHDF5(filePath: string, geneName: string): Promise<an
 			console.error('Failed to parse gene data JSON:', parseError);
 			return {
 			  status: "error",
-			  message: `Failed to parse gene data JSON: ${parseError.message}`
+			  message: `Failed to parse gene data JSON:`
 			};
 		  }
 		}
@@ -587,7 +587,7 @@ async function queryGeneFromHDF5(filePath: string, geneName: string): Promise<an
 	  // Handle any exceptions from the process execution
 	  return {
 		status: "error",
-		message: `Error querying gene: ${error.message || error}`
+		message: `Error querying gene`
 	  };
 	}
   }
@@ -655,7 +655,7 @@ async function queryGeneFromHDF5(filePath: string, geneName: string): Promise<an
 	  console.error('Error validating HDF5 file:', error);
 	  return {
 		status: 'error',
-		message: `Failed to validate HDF5 file: ${error.message || error}`
+		message: `Failed to validate HDF5 file`
 	  };
 	}
   }
@@ -689,7 +689,7 @@ async function queryGeneFromHDF5(filePath: string, geneName: string): Promise<an
 	  }
 	} catch (error) {
 	  console.error('Error getting sample names:', error);
-	  throw new Error(`Failed to get sample names: ${error.message || error}`);
+	  throw new Error(`Failed to get sample names`);
 	}
   }
   
