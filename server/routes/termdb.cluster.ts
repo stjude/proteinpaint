@@ -1,5 +1,7 @@
 import path from 'path'
 import run_R from '#src/run_R.js'
+import { run_rust } from '@sjcrh/proteinpaint-rust'
+import fs from 'fs'
 import type {
 	TermdbClusterRequestGeneExpression,
 	TermdbClusterRequest,
@@ -255,95 +257,259 @@ export async function validate_query_geneExpression(ds: any, genome: any) {
 	throw 'unknown queries.geneExpression.src'
 }
 
-async function validateNative(q: GeneExpressionQueryNative, ds: any, genome: any) {
-	if (!q.file.startsWith(serverconfig.tpmasterdir)) q.file = path.join(serverconfig.tpmasterdir, q.file)
-	if (!q.samples) q.samples = []
-	await utils.validate_tabixfile(q.file)
-	q.nochr = await utils.tabix_is_nochr(q.file, null, genome)
-	q.samples = [] as number[]
 
-	{
-		// is a gene-by-sample matrix file
-		const lines = await utils.get_header_tabix(q.file)
-		if (!lines[0]) throw 'header line missing from ' + q.file
-		const l = lines[0].split('\t')
-		if (l.slice(0, 4).join('\t') != '#chr\tstart\tstop\tgene') throw 'header line has wrong content for columns 1-4'
+/**
+ * Validates an HDF5 file using the Rust validator
+ * @param {string} filePath - Path to the HDF5 file
+ * @returns {Promise<Object>} - Validation results
+ */
+async function validateHDF5File(filePath) {
+	try {
+	  // Prepare JSON input for the Rust validator
+	  const jsonInput = JSON.stringify({
+		hdf5_file: filePath
+	  });
+	  
+	  console.log(`Validating HDF5 file: ${filePath}`);
+	  
+	  // Call the Rust validator
+	  const result = await run_rust('validateHDF5', jsonInput);
+	  
+	  // Parse the output
+	  const lines = result.split('\n');
+	  for (const line of lines) {
+		if (line.startsWith('output_string:')) {
+		  // Extract the JSON part
+		  const jsonStr = line.substring('output_string:'.length);
+		  const validationData = JSON.parse(jsonStr);
+		  
+		  console.log(`File format: ${validationData.format}, Genes: ${validationData.geneNames?.length || 0}, Samples: ${validationData.sampleNames?.length || 0}`);
+		  
+		  return validationData;
+		}
+	  }
+	  
+	  // If no output_string line was found
+	  return { 
+		status: "error", 
+		message: "No validation data found in output" 
+	  };
+	} catch (error) {
+	  console.error(`Error validating file: ${error}`);
+	  return { 
+		status: "error", 
+		message: `Validation error` 
+	  };
+	}
+  }
+
+  
+
+  /**
+   * Query expression values for a specific gene from a dense HDF5 file
+   * 
+   * @param {string} filePath - Path to the HDF5 file
+   * @param {string} geneName - Name of the gene to query
+   * @returns {Promise<Object>} Promise resolving to gene expression data
+   */
+  async function queryGeneExpression(filePath, geneName) {
+	console.log(`Querying gene expression for ${geneName} from ${filePath}`);
+	// Create the input params as a JSON object
+	const jsonInput = JSON.stringify({
+		file_path: filePath,
+		gene: geneName
+	  });
+	
+	try {
+	  // Call the Rust script with input parameters
+	  console.log('Calling Rust script...');
+	  console.log('Params:', JSON.stringify(jsonInput));
+	  const result = await run_rust('readDenseHDF5', jsonInput);
+	  
+	  // Debug output to understand what we're getting back
+	  console.log('Result type:', typeof result);
+	  console.log('Result structure:', JSON.stringify(result, null, 2).substring(0, 500) + '...');
+	  
+	  // Check if there was an error
+	  if (result.status === 'error') {
+		throw new Error(result.message);
+	  }
+	  
+	  return result.data;
+	} catch (error) {
+	  console.error(`Error querying gene expression for ${geneName}`);
+	  throw error;
+	}
+  }
+  
+ 
+  
+  /**
+   * Validate and prepare a gene expression query
+   * This function handles both HDF5 and tabix file formats
+   * 
+   * @param q - The gene expression query
+   * @param ds - Dataset information
+   * @param genome - Genome information
+   */
+  async function validateNative(q: GeneExpressionQueryNative, ds: any, genome: any) {
+	// Determine whether we're handling an HDF5 file or a tabix file
+	if (q.hdf5File === true) {
+	  // HDF5 file handling branch
+	  const h5FilePath = q.file;
+	  
+	  // Join with master directory if needed
+	  if (!h5FilePath.startsWith(serverconfig.tpmasterdir)) {
+		q.file = path.join(serverconfig.tpmasterdir, h5FilePath);
+	  }
+	  
+	  if (!q.samples) q.samples = [];
+	  
+	  // Validate that the HDF5 file exists
+	  if (!(await fs.promises.access(q.file).then(() => true).catch(() => false))) {
+		throw `HDF5 file not found: ${q.file}`;
+	  }
+	  
+	  // Validate the HDF5 file
+	  try {
+		const validationResult = await validateHDF5File(q.file);
+		
+		if (validationResult.status !== 'success') {
+		  throw validationResult.message;
+		}
+		
+		console.log(`HDF5 file validated: ${q.file} (Format: ${validationResult.format})`);
+		
+		
+		try {
+			// Query expression values for a specific gene
+			const geneQuery = await queryGeneExpression(q.file, "TP53");
+			console.log('Gene query result:', geneQuery);
+			
+			// Parse the JSON
+			const jsonMatch = geneQuery.match(/output_string:(.*)/);
+			if (!jsonMatch || !jsonMatch[1]) {
+				throw new Error("Failed to extract JSON from Rust output");
+			  }
+
+			const jsonString = jsonMatch[1];
+			console.log('Extracted JSON string:', jsonString);
+			const geneData = JSON.parse(jsonString);
+            console.log('Gene data:', geneData);
+
+			if (geneData.status !== 'success') {
+				throw geneQuery.message;
+			  }
+		} catch (sampleError) {
+		  throw `Failed to get samples from HDF5 file: ${sampleError}`;
+		}
+	  } catch (error) {
+		throw `Failed to validate HDF5 file: ${error}`;
+	  }
+	} else {
+	  // Existing tabix (.gz) file handling branch - LEFT UNCHANGED
+	  if (!q.file.startsWith(serverconfig.tpmasterdir)) {
+		q.file = path.join(serverconfig.tpmasterdir, q.file);
+	  }
+	  
+	  if (!q.samples) q.samples = [];
+	  await utils.validate_tabixfile(q.file);
+	  q.nochr = await utils.tabix_is_nochr(q.file, null, genome);
+	  q.samples = [] as number[];
+	  
+	  {
+		// Is a gene-by-sample matrix file
+		const lines = await utils.get_header_tabix(q.file);
+		if (!lines[0]) throw 'Header line missing from ' + q.file;
+		const l = lines[0].split('\t');
+		if (l.slice(0, 4).join('\t') != '#chr\tstart\tstop\tgene') {
+		  throw 'Header line has wrong content for columns 1-4';
+		}
+		
 		for (let i = 4; i < l.length; i++) {
-			const id = ds.cohort.termdb.q.sampleName2id(l[i])
-			if (id == undefined) throw 'queries.geneExpression: unknown sample from header: ' + l[i]
-			q.samples.push(id)
+		  const id = ds.cohort.termdb.q.sampleName2id(l[i]);
+		  if (id == undefined) {
+			throw 'queries.geneExpression: unknown sample from header: ' + l[i];
+		  }
+		  q.samples.push(id);
 		}
-	}
-
-	q.get = async (param: TermdbClusterRequestGeneExpression) => {
-		const limitSamples = await mayLimitSamples(param, q.samples, ds)
+	  }
+	  
+	  q.get = async (param: TermdbClusterRequestGeneExpression) => {
+		const limitSamples = await mayLimitSamples(param, q.samples, ds);
 		if (limitSamples?.size == 0) {
-			// got 0 sample after filtering, must still return expected structure with no data
-			return { term2sample2value: new Map(), byTermId: {}, bySampleId: {} }
+		  // Got 0 sample after filtering, must still return expected structure with no data
+		  return { term2sample2value: new Map(), byTermId: {}, bySampleId: {} };
 		}
-
-		// has at least 1 sample passing filter and with exp data
-		// TODO what if there's just 1 sample not enough for clustering?
-		const bySampleId = {}
-		const samples = q.samples || []
+		
+		// Has at least 1 sample passing filter and with exp data
+		const bySampleId = {};
+		const samples = q.samples || [];
 		if (limitSamples) {
-			for (const sid of limitSamples) {
-				bySampleId[sid] = { label: ds.cohort.termdb.q.id2sampleName(sid) }
-			}
+		  for (const sid of limitSamples) {
+			bySampleId[sid] = { label: ds.cohort.termdb.q.id2sampleName(sid) };
+		  }
 		} else {
-			// use all samples with exp data
-			for (const sid of samples) {
-				bySampleId[sid] = { label: ds.cohort.termdb.q.id2sampleName(sid) }
-			}
+		  // Use all samples with exp data
+		  for (const sid of samples) {
+			bySampleId[sid] = { label: ds.cohort.termdb.q.id2sampleName(sid) };
+		  }
 		}
-
-		// only valid genes with data are added. invalid genes or genes missing from data file is not added. backend returned genes is allowed to be fewer than supplied by client
-		const term2sample2value = new Map() // k: gene symbol, v: { sampleId : value }
-
+		
+		// Only valid genes with data are added
+		const term2sample2value = new Map();
+		
 		for (const geneTerm of param.terms) {
-			if (!geneTerm.gene) continue
-			if (!geneTerm.chr || !Number.isInteger(geneTerm.start) || !Number.isInteger(geneTerm.stop)) {
-				// need to supply chr/start/stop to query
-				// legacy fpkm files
-				// will not be necessary once these files are retired
-				const re = getResultGene(genome, { input: geneTerm.gene, deep: 1 })
-				if (!re.gmlst || re.gmlst.length == 0) {
-					console.warn('unknown gene:' + geneTerm.gene) // TODO unknown genes should be notified to client
-					continue
-				}
-				const i = re.gmlst.find(i => i.isdefault) || re.gmlst[0]
-				geneTerm.start = i.start
-				geneTerm.stop = i.stop
-				geneTerm.chr = i.chr
+		  if (!geneTerm.gene) continue;
+		  if (!geneTerm.chr || !Number.isInteger(geneTerm.start) || !Number.isInteger(geneTerm.stop)) {
+			const re = getResultGene(genome, { input: geneTerm.gene, deep: 1 });
+			if (!re.gmlst || re.gmlst.length == 0) {
+			  console.warn('Unknown gene:' + geneTerm.gene);
+			  continue;
 			}
-
-			const s2v = {}
-			if (!geneTerm.chr || !Number.isInteger(geneTerm.start) || !Number.isInteger(geneTerm.stop))
-				throw 'missing chr/start/stop'
-			await utils.get_lines_bigfile({
-				args: [
-					q.file,
-					(q.nochr ? geneTerm.chr.replace('chr', '') : geneTerm.chr) + ':' + geneTerm.start + '-' + geneTerm.stop
-				],
-				callback: line => {
-					const l = line.split('\t')
-					// case-insensitive match! FIXME if g.gene is alias won't work
-					if (l[3].toLowerCase() != geneTerm.gene.toLowerCase()) return
-					for (let i = 4; i < l.length; i++) {
-						const sampleId = samples[i - 4]
-						if (limitSamples && !limitSamples.has(sampleId)) continue // doing filtering and sample of current column is not used
-						if (!l[i]) continue // blank string
-						const v = Number(l[i])
-						if (Number.isNaN(v)) throw 'exp value not number'
-						s2v[sampleId] = v
-					}
-				}
-			})
-			if (Object.keys(s2v).length) term2sample2value.set(geneTerm.gene, s2v) // only add gene if has data
+			const i = re.gmlst.find(i => i.isdefault) || re.gmlst[0];
+			geneTerm.start = i.start;
+			geneTerm.stop = i.stop;
+			geneTerm.chr = i.chr;
+		  }
+		  
+		  const s2v = {};
+		  if (!geneTerm.chr || !Number.isInteger(geneTerm.start) || !Number.isInteger(geneTerm.stop)) {
+			throw 'Missing chr/start/stop';
+		  }
+		  
+		  await utils.get_lines_bigfile({
+			args: [
+			  q.file,
+			  (q.nochr ? geneTerm.chr.replace('chr', '') : geneTerm.chr) + ':' + geneTerm.start + '-' + geneTerm.stop
+			],
+			callback: line => {
+			  const l = line.split('\t');
+			  // Case-insensitive match
+			  if (l[3].toLowerCase() != geneTerm.gene.toLowerCase()) return;
+			  for (let i = 4; i < l.length; i++) {
+				const sampleId = samples[i - 4];
+				if (limitSamples && !limitSamples.has(sampleId)) continue;
+				if (!l[i]) continue; // Blank string
+				const v = Number(l[i]);
+				if (Number.isNaN(v)) throw 'Expression value not number';
+				s2v[sampleId] = v;
+			  }
+			}
+		  });
+		  
+		  if (Object.keys(s2v).length) {
+			term2sample2value.set(geneTerm.gene, s2v); // Only add gene if it has data
+		  }
 		}
-		// pass blank byTermId to match with expected output structure
-		const byTermId = {}
-		if (term2sample2value.size == 0) throw 'no data available for the input ' + param.terms?.map(g => g.gene).join(', ')
-		return { term2sample2value, byTermId, bySampleId }
+		
+		// Pass blank byTermId to match with expected output structure
+		const byTermId = {};
+		if (term2sample2value.size == 0) {
+		  throw 'No data available for the input ' + param.terms?.map(g => g.gene).join(', ');
+		}
+		
+		return { term2sample2value, byTermId, bySampleId };
+	  };
 	}
-}
+  }

@@ -575,6 +575,8 @@ export type GeneExpressionQueryNative = {
 	samples?: number[]
 	/** dynamically added flag during launch */
 	nochr?: boolean
+	/** if true, the file is in HDF5 format */
+	hdf5File?: boolean
 	/** dynamically added getter */
 	get?: (param: any) => void
 	/** This dictionary is used to store/cache the default bins calculated for a geneExpression term when initialized in the fillTermWrapper */
