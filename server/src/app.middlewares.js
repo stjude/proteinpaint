@@ -12,6 +12,7 @@ import { decode as urlJsonDecode } from '#shared/urljson.js'
 import jsonwebtoken from 'jsonwebtoken'
 import fs from 'fs'
 import crypto from 'crypto'
+import { ReqResCache } from '@sjcrh/augen'
 
 const basepath = serverconfig.basepath || ''
 
@@ -23,17 +24,12 @@ export function setAppMiddlewares(app, doneLoading) {
 		app.use(basicAuth({ users: serverconfig.users, challenge: true }))
 	}
 
-	let testDataCacheDir 
 	if (serverconfig.publicDir) {
 		// NOTE: options = {setHeaders} is not needed here
 		// because it's already set at the beginning of this function
 		app.use(express.static(serverconfig.publicDir))
-		if (serverconfig.debugmode && doneLoading.includes('hg38-test/TermdbTest') && fs.existsSync(`${serverconfig.publicDir}/testrun.html`)) {
-			console.log(31, '---- mayCacheReqRes ----', doneLoading)
-			testDataCacheDir = path.join(serverconfig.binpath, '../public/testrunData')
-			if (!fs.existsSync(testDataCacheDir)) fs.mkdirSync(testDataCacheDir) 
-		}
 	}
+	const testDataCacheDir = maySetTestDataCacheDir(doneLoading)
 
 	app.use(compression())
 
@@ -49,7 +45,8 @@ export function setAppMiddlewares(app, doneLoading) {
 			if (testDataCacheDir) mayWrapResponseSend(testDataCacheDir, req, res)
 			const encoding = req.query.encoding
 			urlJsonDecode(req.query)
-		} catch (e) { console.trace(e)
+		} catch (e) {
+			console.trace(e)
 			res.send({ error: e })
 			return
 		}
@@ -60,10 +57,11 @@ export function setAppMiddlewares(app, doneLoading) {
 	app.use(bodyParser.json({ limit: '5mb' }))
 	app.use(bodyParser.text({ limit: '5mb' }))
 	app.use(bodyParser.urlencoded({ extended: true }))
-	if (testDataCacheDir) app.use((req, res, next)=>{
-		mayWrapResponseSend(testDataCacheDir, req, res)
-		next()
-	})
+	if (testDataCacheDir)
+		app.use((req, res, next) => {
+			mayWrapResponseSend(testDataCacheDir, req, res)
+			next()
+		})
 
 	if (serverconfig.jwt) {
 		console.log('JWT is activated')
@@ -184,26 +182,29 @@ function setHeaders(req, res, next) {
 	}
 }
 
+function maySetTestDataCacheDir(doneLoading) {
+	if (!serverconfig.publicDir || !serverconfig.debugmode) return
+	if (!doneLoading.includes('hg38-test/TermdbTest') || !fs.existsSync(`${serverconfig.publicDir}/testrun.html`)) return
+
+	const testDataCacheDir = path.join(serverconfig.binpath, '../public/testrunData')
+	if (!fs.existsSync(testDataCacheDir)) fs.mkdirSync(testDataCacheDir)
+	console.log(`---- mayCacheReqRes at ${testDataCacheDir} ----`)
+	return testDataCacheDir
+}
+
 const cachedReqIds = new Set()
-function mayWrapResponseSend(cacheDir, req, res) {
+
+function mayWrapResponseSend(cachedir, req, res) {
 	if (!req.get('referer')?.startsWith(`http://localhost:3000/testrun.html`)) return
-	const obj = Object.assign({}, req.query || {}, req.body || {}); console.log(186, req.path, req.method, req.headers['body'])
-	if (req.path == '/termdb' && req.method == 'POST') console.log(187, structuredClone(req.body))
-	const jsonQuery = JSON.stringify(obj)
+	const query = Object.assign({}, req.query || {}, req.body || {})
+	delete query.embedder
+	delete query.__protected__
+	const cache = new ReqResCache({ path: req.path, query }, { cachedir, mode: 'mkdir' })
+	const loc = cache.getLoc(cachedir, '')
 	const send = res.send
-	res.send = function(body) {
-		//const jsonBody = JSON.stringify(body, null, '  ')
+	res.send = function (body) {
 		send.call(this, body)
-		const cacheSubdir = path.join(cacheDir, req.path.slice(1).replaceAll('/', '.'))
-		if (!fs.existsSync(cacheSubdir)) fs.mkdirSync(cacheSubdir, {recursive: true})
-		const id = crypto
-				.createHash('sha1')
-				.update(jsonQuery)
-				.digest('hex'); if (id.startsWith('bf21a9e8') && req.method == 'POST') console.log(197, obj, req.body)
-		const cacheFile = `${cacheSubdir}/${id}`
-		if (cachedReqIds.has(cacheFile)) return; console.log(190, cacheFile)
-		//console.log(197, req.path, cacheFile, body)
-		cachedReqIds.add(cacheFile)
-		fs.promises.writeFile(cacheFile, body).catch(console.log)
+		// TODO: will need to also set the actual status
+		cache.write({ header: { status: 200 }, body }) // no need to await
 	}
 }
