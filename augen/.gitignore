@@ -3,4 +3,5 @@ test/checkers-raw/*.ts
 test/types/*.js
 public/docs/*
 public/server-api.json
-# **/*.js
+**/*.js
+!**/ReqResCache*
