@@ -29,6 +29,7 @@ export class profileForms extends profilePlot {
 	activeTWs: any
 	tabs: any
 	shiftTop: any
+	categories: any
 
 	constructor(opts) {
 		super()
@@ -70,7 +71,7 @@ export class profileForms extends profilePlot {
 				tabs: this.tabs
 			}).main()
 
-		const shift = 650
+		const shift = 550
 		const shiftTop = 60
 		const svg = rightDiv
 			.style('padding', '10px')
@@ -115,8 +116,7 @@ export class profileForms extends profilePlot {
 		this.activeTWs = this.twLst.filter(tw => tw.term.subtype == this.activePlot.subtype)
 		const domain = this.config.tw.term.id.split('__').slice(1).join(' / ')
 		this.dom.domainDiv.text(domain)
-
-		const domainDetails = this.activeTWs[0]?.term.details
+		this.categories = new Set()
 		const height = this.activeTWs.length * 30
 		this.dom.svg.attr('height', height + 120)
 
@@ -190,8 +190,18 @@ export class profileForms extends profilePlot {
 			if (tw.term.type != 'multivalue') continue
 			const getDict = sample => this.getDict(tw.$id, sample)
 			const dict = this.getPercentsDict(getDict, samples) //get the dict for each drug for the list of samples
-			this.renderRect(dict, y, 25, tw)
+			this.renderLikertBar(dict, y, 25, tw)
 			y += step
+		}
+		const legendG = this.dom.svg.append('g').attr('transform', `translate(300, ${y + 90})`)
+		let x = 0
+		for (const category of this.categories) {
+			const color =
+				this.activePlot.positiveCategories.find(c => c.name == category)?.color ||
+				this.activePlot.negativeCategories.find(c => c.name == category)?.color ||
+				'#aaa'
+			this.drawLegendRect(x, 0, category, color, legendG)
+			x += 130
 		}
 	}
 
@@ -210,10 +220,10 @@ export class profileForms extends profilePlot {
 			const scPercentKeys = Object.keys(scPercents).sort((a, b) => a.localeCompare(b))
 			const scTotal = Object.values(scPercents).reduce((a, b) => a + b, 0)
 			showSCBar = scTotal > 1
-			this.renderRects(percents, y, height, scTotal == 1 ? scPercentKeys : [])
+			this.renderYesNoBar(percents, y, height, scTotal == 1 ? scPercentKeys : [])
 			if (showSCBar) {
 				y += height + 10
-				this.renderRects(scPercents, y, height, [])
+				this.renderYesNoBar(scPercents, y, height, [])
 				this.dom.mainG
 					.append('text')
 					.text('SC')
@@ -277,19 +287,17 @@ export class profileForms extends profilePlot {
 		return key == 'Yes' ? this.state.config.color : key == 'No' ? '#aaa' : `url(#${this.id}_diagonalHatch)`
 	}
 
-	renderRect(dict: { [key: string]: number }, y: number, height: number, tw: any) {
+	renderLikertBar(dict: { [key: string]: number }, y: number, height: number, tw: any) {
 		const itemG = this.dom.mainG.append('g')
-		const noAnswerCategories = this.activePlot.noAnswerCategories
-		const validKeys = Object.keys(dict).filter(key => !noAnswerCategories.find(c => c.name == key))
 		let total = 0
-		for (const key of validKeys) total += dict[key]
+		for (const key in dict) total += dict[key]
 
 		let x = 0
 		for (const category of this.activePlot.negativeCategories) {
 			const width = this.renderCategory(category, dict, itemG, x, height, total)
 			x += width
 		}
-		const middle = this.settings.svgw / 2
+		const middle = this.settings.svgw * 0.3 //the middle of the svg as we leave space for the not applicable category at the end
 		const text = getText(tw.term.name)
 		const textG = this.dom.svg
 			.append('g')
@@ -297,7 +305,7 @@ export class profileForms extends profilePlot {
 			.append('text')
 			.text(text)
 			.attr('y', (height * 2) / 3)
-			.style('font-size', '0.8em')
+			.style('font-size', '0.9em')
 		itemG.attr('transform', `translate(${middle - x}, ${y})`)
 
 		const itemG2 = this.dom.mainG.append('g').attr('transform', `translate(${middle}, ${y})`)
@@ -306,15 +314,21 @@ export class profileForms extends profilePlot {
 			const width = this.renderCategory(category, dict, itemG2, x, height, total)
 			x += width
 		}
+		const end = this.settings.svgw + 20
+		const itemG3 = this.dom.mainG.append('g').attr('transform', `translate(${end}, ${y})`)
+		for (const category of this.activePlot.noAnswerCategories)
+			this.renderCategory(category, dict, itemG3, 0, height, total, true) //it will be only one
 	}
 
-	renderCategory(category, dict, itemG, x, height, total) {
+	renderCategory(category, dict, itemG, x, height, total, showPercent = false) {
 		const key = category.name
-		const color = category.color
+		const color = category.color || '#aaa' //not available category
 		const value = dict[key]
 		if (!value) return 0
+		this.categories.add(category.name)
+
 		const percent = (value / total) * 100
-		const width = (percent / 100) * this.settings.svgw
+		const width = (percent / 100) * (this.settings.svgw - 150) //last 100 is for the not applicable category
 		itemG
 			.append('rect')
 			.attr('x', x)
@@ -324,10 +338,17 @@ export class profileForms extends profilePlot {
 			.attr('fill', color)
 			.datum({ key, value: percent })
 			.on('mouseover', this.onMouseOver.bind(this))
+		if (showPercent)
+			itemG
+				.append('text')
+				.text(`${roundValueAuto(percent, true, 1)}%`)
+				.style('font-size', '0.8em')
+				.attr('x', x + width + 10)
+				.attr('y', height * 0.6)
 		return width
 	}
 
-	renderRects(percents: { [key: string]: number }, y: number, height: number, scPercentKeys: string[]) {
+	renderYesNoBar(percents: { [key: string]: number }, y: number, height: number, scPercentKeys: string[]) {
 		const percentsOrdered = Object.keys(percents).sort((a, b) => -a.localeCompare(b))
 		const total = Object.values(percents).reduce((a, b) => a + b, 0)
 		let x = 0
@@ -394,6 +415,7 @@ export class profileForms extends profilePlot {
 		itemG
 			.append('text')
 			.attr('transform', `translate(${size + 10}, ${y + size})`)
+			.style('font-size', '0.9em')
 			.text(text)
 	}
 }
@@ -419,7 +441,7 @@ export function getDefaultProfileFormsSettings() {
 		controls: {
 			isOpen: false
 		},
-		profileForms: { svgw: 300, svgh: 480 }
+		profileForms: { svgw: 400, svgh: 480 }
 	}
 	const profilePlotSettings = getDefaultProfilePlotSettings()
 	settings.profileForms = copyMerge(settings.profileForms, profilePlotSettings)
