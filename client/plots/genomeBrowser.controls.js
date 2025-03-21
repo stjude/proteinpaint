@@ -672,7 +672,7 @@ function renderFacetTable(self, facet, div) {
 				const tklst = facet.tracks.filter(i => i.assay == assay && i.sample == sampleLst[si])
 				if (tklst.length == 0) return // no tracks for this combo
 				// has track(s) for this combo; render <div> in table cell; click to launch tracks
-				// TODO text color based on if track is already shown, but might be hard to update facet table on any change made in block
+				// TODO text color based on if track is already shown, but hard to update facet table when user remove a track from block
 				td.append('div')
 					.attr('class', 'sja_clbtext')
 					.style('text-align', 'center')
@@ -684,21 +684,27 @@ function renderFacetTable(self, facet, div) {
 						for (const t of tklst) {
 							if (!self.state.config.trackLst.activeTracks.includes(t.name)) allTkShown = false
 						}
-						let newLst
+						let newActiveTracks, newRemoveTracks // default undefined to not remove any track
 						if (allTkShown) {
 							// all are shown. on clicking btn remove all
-							newLst = self.state.config.trackLst.activeTracks.filter(n => !tklst.find(i => i.name == n))
+							newActiveTracks = self.state.config.trackLst.activeTracks.filter(n => !tklst.find(i => i.name == n))
+							newRemoveTracks = tklst.map(i => i.name) // all tracks will be removed
 						} else {
 							// not all shown. add all
-							newLst = structuredClone(self.state.config.trackLst.activeTracks)
+							newActiveTracks = structuredClone(self.state.config.trackLst.activeTracks)
 							for (const t of tklst) {
-								if (!newLst.includes(t.name)) newLst.push(t.name)
+								if (!newActiveTracks.includes(t.name)) newActiveTracks.push(t.name)
 							}
 						}
 						self.app.dispatch({
 							type: 'plot_edit',
 							id: self.id,
-							config: { trackLst: { activeTracks: newLst } }
+							config: {
+								trackLst: {
+									activeTracks: newActiveTracks,
+									removeTracks: newRemoveTracks
+								}
+							}
 						})
 					})
 			}

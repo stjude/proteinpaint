@@ -44,6 +44,7 @@ this{}
 			trackLst{}
 				facets[]
 				activeTracks[] // tracks list of active tracks from trackLst or facet
+				removeTracks[] // quick fix, list of names marked for removal from facet table
 	blockInstance // exists when block has been launched; one block in each plot
 
 
@@ -161,7 +162,7 @@ class genomeBrowser {
 			dslabel: this.app.opts.state.vocab.dslabel,
 			onClose: () => {
 				// on closing subtk, the filterObj corresponding to the subtk will be "removed" from subMds3TkFilters[], by regenerating the array
-				this.maySaveMds3SubtkToState()
+				this.maySaveTrackUpdatesToState()
 			},
 			// for showing disco etc as ad-hoc sandbox, persistently in the mass plotDiv, rather than a menu
 			newChartHolder: this.opts.plotDiv
@@ -284,13 +285,41 @@ class genomeBrowser {
 		return data
 	}
 
-	/* when state changes, delete existing block and relaunch new one
-	(inefficient method)
-	since block/tk is not state-controlled
-	attaches this.blockInstance
-	*/
+	/*  */
 	async launchBlockWithTracks(tklst) {
-		this.dom.blockHolder.selectAll('*').remove()
+		if (this.blockInstance) {
+			/* block instance is present
+			this should be updating tracks in this block, by adding new ones listed in tklst[],
+			and deleting old ones via a tricky method
+			*/
+			for (const tk of tklst) {
+				let tki // index of this tk in block
+				if (tk.dslabel) {
+					// tk has dslabel and must be identified by it
+					tki = this.blockInstance.tklst.findIndex(i => i.dslabel == tk.dslabel)
+				} else if (tk.name) {
+					// identify tk by name
+					tki = this.blockInstance.tklst.findIndex(i => i.name == tk.name)
+				} else {
+					throw 'tk missing dslabel & name'
+				}
+				if (tki == -1) {
+					// this tk is not in block, add to block
+					const t = this.blockInstance.block_addtk_template(tk)
+					this.blockInstance.tk_load(t)
+				}
+			}
+			if (this.state.config.trackLst?.removeTracks) {
+				// facet table marks these tracks for removal. they are all identified by tk.name
+				for (const n of this.state.config.trackLst.removeTracks) {
+					const i = this.blockInstance.tklst.findIndex(i => i.name == n)
+					if (i != -1) this.blockInstance.tk_remove(i)
+				}
+			}
+			return
+		}
+
+		// no block instance, create new block
 
 		const arg = {
 			holder: this.dom.blockHolder,
@@ -298,9 +327,12 @@ class genomeBrowser {
 			nobox: true,
 			tklst,
 			debugmode: this.app.opts.debug,
-			onloadalltk_always: () => {
+			// use onsetheight but not onloadalltk_always, so callback will be called on all tk updates, including removing tk
+			//onloadalltk_always:
+			onsetheight: () => {
 				// TODO on any tk update, collect tk config and save to state so they are recoverable from session
-				this.maySaveMds3SubtkToState()
+				// FIXME this is not called at protein mode
+				this.maySaveTrackUpdatesToState()
 			}
 		}
 		if (this.app.vocabApi.termdbConfig.queries.defaultBlock2GeneMode && this.state.config.geneSearchResult.geneSymbol) {
@@ -362,25 +394,31 @@ class genomeBrowser {
 		}
 	}
 
-	async maySaveMds3SubtkToState() {
-		/* arg is block instance
-		when a mds3 subtk is created/updated, its tk.filterObj should be saved to state so it can be recovered from session
+	async maySaveTrackUpdatesToState() {
+		/* following changes will be saved in state:
+		- when a mds3 subtk is created/updated, its tk.filterObj should be saved to state so it can be recovered from session
+		- a facet track is removed by user via block ui
 		*/
 		const config = structuredClone(this.state.config)
-		config.subMds3TkFilters = []
 		for (const t of this.blockInstance.tklst) {
-			if (t.type != 'mds3') continue
-			if (t.filterObj) {
+			if (t.type == 'mds3' && t.filterObj) {
 				if (this.state.filter) {
 					if (JSON.stringify(t.filterObj) == JSON.stringify(this.state.filter)) {
 						// this tk filter is identical as state (mass global filter). this means the tk is the "main" tk and the filter was auto-added via mass global filter.
 						// do not add such filter in subMds3TkFilters[], that will cause an issue of auto-creating unwanted subtk on global filter change
 						continue
 					}
+				} else {
+					if (!config.subMds3TkFilters) config.subMds3TkFilters = []
 					config.subMds3TkFilters.push(t.filterObj)
 					// filter0?
 				}
 			}
+		}
+		if (config.trackLst?.activeTracks) {
+			// active facet tracks are inuse; if user deletes such tracks from block ui, must update state
+			const newLst = config.trackLst.activeTracks.filter(n => this.blockInstance.tklst.find(i => i.name == n))
+			config.trackLst.activeTracks = newLst
 		}
 		await this.app.save({
 			type: 'plot_edit',
