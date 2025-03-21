@@ -131,9 +131,10 @@ class DEanalysis {
 				type: 'radio',
 				chartType: 'DEanalysis',
 				settingsKey: 'method',
-				title: 'Toggle between edgeR and Wilcoxon rank-sum test',
+				title: 'Toggle between edgeR, limma and Wilcoxon rank-sum test',
 				options: [
 					{ label: 'edgeR', value: 'edgeR' },
+					{ label: 'limma', value: 'limma' },
 					{ label: 'wilcoxon', value: 'wilcoxon' }
 				]
 			})
