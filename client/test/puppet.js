@@ -11,7 +11,7 @@ import bodyParser from 'body-parser'
 // user __dirname later to detect relative path to public dir,
 // since the unit test may be triggered from the pp dir with --workspace option
 const __dirname = import.meta.dirname
-const port = 6789
+const port = process.argv[3] || 6789
 
 const params = process.argv[2] || ''
 if (!params) throw `missing puppet.js params argument`
@@ -20,7 +20,7 @@ runTest(params).catch(console.error)
 
 async function runTest(paramsStr) {
   const server = initServer()
-  const paramsArr = paramsStr.split(' '); console.log(21, paramsArr); return;
+  const paramsArr = paramsStr.split(' '); console.log(21, paramsArr, port); return;
 
   const browser = await puppeteer.launch({
     headless: true,
@@ -48,18 +48,18 @@ async function runTest(paramsStr) {
         # ok
 
       */
-      if (msg.startsWith('1..') || lastLines.length) lastLines.push(msg)
-    })
-    // .on('response', response =>
-    //   console.log(`63 ${response.status()} ${response.url()}`)
-    // )
-    .on('pageerror', (e) => {
-      console.log('-- pageerror --', e.message)
-      console.trace(e)
-    })
-    .on('requestfailed', request =>
-      console.log('-- requestfailed --', `${request.failure().errorText} ${request.url()}`)
-    )
+			if (msg.startsWith('1..') || lastLines.length) lastLines.push(msg)
+		})
+		// .on('response', response =>
+		//   console.log(`63 ${response.status()} ${response.url()}`)
+		// )
+		.on('pageerror', e => {
+			console.log('-- pageerror --', e.message)
+			console.trace(e)
+		})
+		.on('requestfailed', request =>
+			console.log('-- requestfailed --', `${request.failure().errorText} ${request.url()}`)
+		)
 
   for(const params of paramsArr) {
     // Enable both JavaScript and CSS coverage
@@ -97,9 +97,16 @@ async function runTest(paramsStr) {
           page.coverage.stopJSCoverage(),
           //page.coverage.stopCSSCoverage(),
         ])
-        const matched = jsCoverage.filter(({rawScriptCoverage: c}) => 
-          c.url.includes('/bin/test') && !c.url.includes('_.._') && !c.url.includes('node_modules')
-        )
+        const matched = jsCoverage.filter(({ rawScriptCoverage: c }) => {
+          //if (!c.url.includes('node_modules') && !c.url.includes('sjcrh/proteinpaint-')) console.log(c.url)
+          return (
+            c.url.includes('/bin/test') &&
+            !c.url.includes('_.._') &&
+            !c.url.includes('node_modules') &&
+            !c.url.includes('appdrawer') &&
+            !c.url.includes('sjcrh/proteinpaint-')
+          ) // appdrawer tests do not use TermdbTest
+        })
         //fs.writeFileSync(`${process.cwd()}/results-${paramsArr.indexOf(params)}.json`, JSON.stringify(matched))
         
         const coverageList = matched.map((it,i) => {
@@ -111,7 +118,17 @@ async function runTest(paramsStr) {
 
         const mcr = MCR({
           name: `Test Coverage for ${params}`,
-          sourceFilter: (path) => !path.includes('/bin/test') && !path.includes('_.._') && !path.includes('node_modules'),
+          sourceFilter: path => {
+            //if (!path.includes('node_modules')) console.log(path)
+            return (
+              (path.includes('client') || path.includes('shared')) &&
+              !path.includes('/bin/test') &&
+              !path.includes('_.._') &&
+              !path.includes('node_modules') &&
+              !path.includes('appdrawer') &&
+              !path.includes('sjcrh/proteinpaint-')
+            )
+          },
           outputDir: './.nyc_output',
           reports: ["v8", "console-summary", "html", "json", "markdown-details"],
           cleanCache: true
