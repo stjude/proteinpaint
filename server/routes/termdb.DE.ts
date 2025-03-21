@@ -285,15 +285,15 @@ values[] // using integer sample id
 			await readFileAndDelete(mds_imagePath, 'mds_image', result)
 		}
 
+		const images = [result.ql_image]
+		if (result.mds_image) images.push(result.mds_image)
+
 		return {
 			data: result.gene_data,
 			sample_size1: sample_size1,
 			sample_size2: sample_size2,
 			method: param.method,
-			images: [
-				result.mds_image, // MDS image
-				result.ql_image // QL fit image
-			]
+			images
 		} as DEResponse
 	}
 
