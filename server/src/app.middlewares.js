@@ -195,16 +195,16 @@ function maySetTestDataCacheDir(doneLoading) {
 const cachedReqIds = new Set()
 
 function mayWrapResponseSend(cachedir, req, res) {
-	if (!req.get('referer')?.startsWith(`http://localhost:3000/testrun.html`)) return
+	if (!req.get('referer')?.includes(`/testrun.html`) && !req.get('referer')?.includes(`/puppet.html`)) return
 	const query = Object.assign({}, req.query || {}, req.body || {})
 	delete query.embedder
 	delete query.__protected__
 	const cache = new ReqResCache({ path: req.path, query }, { cachedir, mode: 'mkdir' })
 	const loc = cache.getLoc(cachedir, '')
 	const send = res.send
-	res.send = function (body) {
-		send.call(this, body)
+	res.send = async function (body) {
 		// TODO: will need to also set the actual status
-		cache.write({ header: { status: 200 }, body }) // no need to await
+		if (!fs.existsSync(loc.res)) await cache.write({ header: { status: 200 }, body }) // no need to await
+		send.call(this, body)
 	}
 }

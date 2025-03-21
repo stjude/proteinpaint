@@ -7,11 +7,12 @@ import path from 'path'
 import crypto from 'crypto'
 import { decode as urlJsonDecode } from '#shared/urljson.js'
 import bodyParser from 'body-parser'
+import { ReqResCache } from '@sjcrh/augen'
 
 // user __dirname later to detect relative path to public dir,
 // since the unit test may be triggered from the pp dir with --workspace option
 const __dirname = import.meta.dirname
-const port = process.argv[3] || 6789
+const port = Number(process.argv[3] || 0) || 6789
 
 const params = process.argv[2] || ''
 if (!params) throw `missing puppet.js params argument`
@@ -19,11 +20,12 @@ if (!params) throw `missing puppet.js params argument`
 runTest(params).catch(console.error)
 
 async function runTest(paramsStr) {
-	const server = initServer()
+	const startTime = Date.now()
+	const server = port === 6789 ? initServer() : null
 	const paramsArr = paramsStr.split(' ') //; console.log(21, paramsArr, port); return;
 
 	const browser = await puppeteer.launch({
-		headless: true,
+		// headless: false, // uncomment to see puppeteer chrome instance
 		args: [`--no-sandbox`, `--disable-setuid-sandbox`]
 	})
 	const page = await browser.newPage()
@@ -85,6 +87,8 @@ async function runTest(paramsStr) {
 				// see page.on('console') above for the expected last lines texts that are being detected
 				if (lastLines.length < 4 || !lastLines.find(t => t.includes('# ok') || t.includes('# fail'))) return
 				clearInterval(i)
+				console.log(`test run time=${(Date.now() - startTime) / 1000} ms`)
+
 				if (!lastLines.find(l => l.startsWith('# ok'))) {
 					console.error(`\n!!! test failed !!!\n`)
 					await browser.close()
@@ -146,7 +150,6 @@ async function runTest(paramsStr) {
 }
 
 function initServer() {
-	if (port != 6789) return
 	// NOTES:
 	// - integration and other non-unit tests must use an active PP server with test genome and dataset
 	// as runproteinpaint({host}); client unit tests do NOT need this active PP server instance
@@ -166,27 +169,24 @@ function initServer() {
 	app.get('*', routeHandler)
 	app.post('*', routeHandler)
 
-	const cacheDir = `${publicDir}/testrunData`
-	function routeHandler(req, res) {
-		const cacheSubdir = path.join(cacheDir, req.path.slice(1).replaceAll('/', '.'))
-		if (!fs.existsSync(cacheSubdir)) {
+	const cachedir = `${publicDir}/testrunData`
+
+	async function routeHandler(req, res) {
+		const query = Object.assign({}, req.query || {}, req.body || {})
+		// console.log(173, req.method, req.path, req.body, req.query)
+		delete query.embedder
+		delete query.__protected__ //if (req.path.includes('config')) console.log(175, query)
+		const cache = new ReqResCache({ path: req.path, query }, { cachedir })
+		const loc = cache.getLoc(cachedir, '') //; console.log(176, loc)
+		if (!fs.existsSync(loc.res)) {
 			res.status(404)
-			res.send({ error: 'missing cacheSubdir' })
+			res.send({ error: `missing cache dir or file='${loc.res}'` })
 			return
 		}
-		const obj = Object.assign({}, req.query || {}, req.body || {})
-		const jsonQuery = JSON.stringify(obj)
-		const id = crypto.createHash('sha1').update(jsonQuery).digest('hex')
-		const cacheFile = `${cacheSubdir}/${id}`
-		if (!fs.existsSync(cacheFile)) {
-			res.status(404)
-			res.send({ error: `missing cacheFile='${cacheFile}'` })
-			return
-		}
+
+		const data = await cache.read()
 		res.header('content-type', 'application/json')
-		const content = fs.readFileSync(cacheFile, { encoding: 'utf8' })
-		//console.log(197, req.path, cacheFile, body)
-		res.send(content)
+		res.send(data.res?.body)
 	}
 	return app.listen(port)
 }

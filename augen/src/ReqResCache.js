@@ -2,6 +2,8 @@ import crypto from 'crypto'
 import path from 'path'
 import fs from 'fs'
 
+const writeTriggered = new Set()
+
 export class ReqResCache {
 	opts = { mode: '' }
 	reqPath = ''
@@ -44,6 +46,8 @@ export class ReqResCache {
 	}
 
 	async write(resData = '') {
+		if (writeTriggered.has(this.loc.id)) return
+		writeTriggered.add(this.loc.id)
 		try {
 			if (this.reqJson) {
 				await fs.promises.writeFile(this.loc.req, this.reqJson)
@@ -73,6 +77,6 @@ export class ReqResCache {
 			const d = await fs.promises.readFile(this.loc.res, { encoding: 'utf8' })
 			this.data.res = JSON.parse(d)
 		}
-		return
+		return this.data
 	}
 }
