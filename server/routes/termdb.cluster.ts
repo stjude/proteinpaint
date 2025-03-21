@@ -729,8 +729,6 @@ async function queryGeneFromHDF5(filePath: string, geneName: string): Promise<an
 		
 		console.log(`HDF5 file validated: ${q.file} (Format: ${validationResult.format})`);
 		
-		// Get sample names from the HDF5 file
-		let retNames: string[] = [];
 		
 		try {
 		  // Try to get sample names from validation result first
