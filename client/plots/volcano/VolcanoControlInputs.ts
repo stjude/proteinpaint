@@ -151,7 +151,8 @@ export class VolcanoControlInputs {
 				title: 'Toggle between analysis methods',
 				options: [
 					{ label: 'edgeR', value: 'edgeR' },
-					{ label: 'Wilcoxon', value: 'wilcoxon' }
+					{ label: 'Wilcoxon', value: 'wilcoxon' },
+					{ label: 'Limma', value: 'limma' }
 				]
 			},
 			{
