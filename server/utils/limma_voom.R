@@ -139,7 +139,14 @@ if (length(input$conf1) == 0) { # No adjustment of confounding factors
 voom_transformation_time <- system.time({
     #suppressWarnings({
     #    suppressMessages({
-            y <- voom(y, design, plot = T)
+             set.seed(as.integer(Sys.time())) # Set the seed according to current time
+             cachedir <- input$cachedir # Importing serverconfig.cachedir
+             random_number <- runif(1, min = 0, max = 1) # Generating random number
+             voom_image_name <- paste0("limma_voom_temp_",random_number,".png") # Generating random image name so that simultaneous server side requests do NOT generate the same edgeR file name
+             png(filename = paste0(cachedir,"/",voom_image_name), width = 1000, height = 1000, res = 200) # Opening a png device
+             par(oma = c(0, 0, 0, 0)) # Creating a margin
+             y <- voom(y, design, plot = TRUE)
+             dev.off() # Gives a null device message which breaks JSON. Commenting it out for now, will investigate it later
     #    })
     #})
 })
@@ -149,7 +156,7 @@ cat("voom transformation time: ", as.difftime(voom_transformation_time, units = 
 fit_time <- system.time({
     #suppressWarnings({
     #    suppressMessages({
-            fit <- lmFit(y, design)
+            fit <- lmFit(y, design, plot = FALSE)
     #    })
     #})
 })
@@ -165,31 +172,11 @@ par(oma = c(0, 0, 0, 0)) # Creating a margin
 plotMD(fit) # Plot the limma fit
 # dev.off() # Gives a null device message which breaks JSON. Commenting it out for now, will investigate it later
 
-# Make contrasts
-make_contrasts <- system.time({
-    #suppressWarnings({
-    #    suppressMessages({
-            contr <- makeContrasts(conditionsDiseased, levels = colnames(coef(fit))) # Need to crosscheck if the levels and "conditionsDiseased" is appropriate here
-    #    })
-    #})
-})
-cat("makeContrasts fit time: ", as.difftime(make_contrasts, units = "secs")[3], " seconds\n")
-
-# Fit the contrasts
-fit_contrasts_time <- system.time({
-    #suppressWarnings({
-    #    suppressMessages({
-            tmp <- contrasts.fit(fit, contr)
-    #    })
-    #})
-})
-cat("fit contrasts time: ", as.difftime(fit_contrasts_time, units = "secs")[3], " seconds\n")
-
 # Empirical Bayes smoothing
 empirical_smoothing_time <- system.time({
     #suppressWarnings({
     #    suppressMessages({
-            tmp <- eBayes(tmp)
+            tmp <- eBayes(fit)
     #    })
     #})
 })
