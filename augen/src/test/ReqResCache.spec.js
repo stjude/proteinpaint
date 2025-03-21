@@ -25,10 +25,10 @@ tape('ReqResCache instance', test => {
 		test.deepEqual(
 			loc0, 
 			{ 
-				subdir: '/Users/esioson/dev/sjpp/proteinpaint/shared/utils/.ReqResCacheTest/termdb.abc',
+				subdir: `${cachedir}/termdb.abc`,
 				id: 'bede63aec750e1c0339584bb3ead740cd3a68ee5', // pragma: allowlist secret
-				req: '/Users/esioson/dev/sjpp/proteinpaint/shared/utils/.ReqResCacheTest/termdb.abc/bede63aec750-req.json', 
-				res: '/Users/esioson/dev/sjpp/proteinpaint/shared/utils/.ReqResCacheTest/termdb.abc/bede63aec750-res.json' 
+				req: `${cachedir}/termdb.abc/bede63aec750-req.json`, 
+				res: `${cachedir}/termdb.abc/bede63aec750-res.json`
 			}, 
 			'should set the correct loc'
 		)
