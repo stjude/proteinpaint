@@ -22,6 +22,18 @@ export class VolcanoInteractions {
 	async confoundersMenu() {
 		const state = this.app.getState()
 		const config = state.plots.find((p: VolcanoPlotConfig) => p.id === this.id)
+
+		/** Find terms used to create the groups and disable in the
+		 * termsetting UI. Prevents users from trying to control for
+		 * variables used to create the groups.*/
+		const allowedGroupNames = new Set([config.samplelst.groups[0].name, config.samplelst.groups[1].name])
+		const grpTerms: Set<string> = new Set(
+			(this.app?.vocabApi?.state.groups || [])
+				.filter(g => allowedGroupNames.has(g.name))
+				.flatMap(g => g.filter.lst.map(f => f.tvs.term.id))
+		)
+		const disable_terms = grpTerms.size ? Array.from(grpTerms) : []
+
 		const ui = new MultiTermWrapperEditUI({
 			app: this.app,
 			callback: async tws => {
@@ -36,7 +48,8 @@ export class VolcanoInteractions {
 			headerText: 'Select confounders',
 			maxNum: 2,
 			state,
-			twList: config.confounderTws
+			twList: config.confounderTws,
+			disable_terms
 		})
 		await ui.renderUI()
 	}

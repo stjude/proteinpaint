@@ -2,6 +2,7 @@ import type { Button, Elem, Div } from '../../types/d3'
 import type { TermWrapper } from '#types'
 import type { MassAppApi, MassState } from '#mass/types/mass'
 
+/** Elements created by the UI, save the holder */
 export type MultiTermWrapperDom = {
 	/** Div containing optional bottom text, next to the
 	 * submit button */
@@ -15,6 +16,8 @@ export type MultiTermWrapperDom = {
 	submitBtn: Button
 }
 
+/** Multiple opts match the opts for termsettingInit()
+ * See opts for termsettingInit() for more info */
 export type MultiTermWrapperUIOpts = {
 	app: MassAppApi
 	/** Customizable label for the 'submit' button.
@@ -37,4 +40,6 @@ export type MultiTermWrapperUIOpts = {
 	headerText?: string
 	/** Term wrappers already in use on init */
 	twList?: TermWrapper[]
+	/** Specific terms to disable. Will be combined with the running twlist.  */
+	disable_terms?: string[]
 }

@@ -17,6 +17,7 @@ export class MultiTermWrapperEditUI {
 	buttonLabel: string
 	callback: (terms: any) => void
 	customInputs?: object
+	disable_terms: string[]
 	dom: MultiTermWrapperDom
 	headerText: string
 	maxNum: number
@@ -55,6 +56,7 @@ export class MultiTermWrapperEditUI {
 		this.maxNum = opts.maxNum || Infinity
 		this.headerText = opts.headerText || ''
 		this.customInputs = opts.customInputs || {}
+		this.disable_terms = opts.disable_terms || []
 		if (opts.state) this.state = opts.state
 
 		setRenderers(this)
@@ -71,11 +73,13 @@ export class MultiTermWrapperEditUI {
 	}
 
 	async getNewPill(d, div) {
+		//Do not allow users to select the same term more than once
+		//Combine with specified disable_terms from the caller
+		const disable_terms = [...this.disable_terms, ...this.twList.map(tw => tw.term.id)]
 		const _opts = {
 			abbrCutoff: 50,
 			debug: this.app.opts?.debug,
-			//Do not allow users to select the same term more than once
-			disable_terms: this.twList.map(tw => tw.term.id),
+			disable_terms,
 			genomeObj: this.app.opts.genome,
 			holder: div,
 			menuOptions: '!replace',
