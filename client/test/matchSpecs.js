@@ -16,8 +16,9 @@ const patterns = [
 	//`${CURRSPECDIR}/test/${SPECNAME}.spec.*s`,
 	`${NESTEDSPECDIR}/test/${SPECNAME}.spec.*s`
 ]
-//console.log(19, params, SPECNAME, NESTEDSPECDIR, patterns, minimatch(`${NESTEDSPECDIR}/test/${SPECNAME}.spec.*s`, 'random'))
 export const specsMatched = []
+
+// console.log(19, SPECNAME, NESTEDSPECDIR, minimatch('mass/test/dataDownload.integration.spec.js', `${NESTEDSPECDIR}/test/${SPECNAME}.spec.*s`))
 
 export function matchSpecs(filepath) {
 	//if (window.testHost) return true

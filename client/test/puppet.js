@@ -177,14 +177,9 @@ function initServer() {
 		delete query.embedder
 		delete query.__protected__ //if (req.path.includes('config')) console.log(175, query)
 		const cache = new ReqResCache({ path: req.path, query }, { cachedir })
-		const loc = cache.getLoc(cachedir, '') //; console.log(176, loc)
-		if (!fs.existsSync(loc.res)) {
-			res.status(404)
-			res.send({ error: `missing cache dir or file='${loc.res}'` })
-			return
-		}
 
 		const data = await cache.read()
+		res.status(data.header?.status || 200)
 		res.header('content-type', 'application/json')
 		res.send(data.res?.body)
 	}
