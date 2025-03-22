@@ -12,6 +12,7 @@ export class ReqResCache {
 	// req.param key that triggers custom subrouting
 	customSubroute = ''
 	data = { req: null, res: null }
+	//loc = {}
 
 	constructor(req, opts = {}) {
 		Object.assign(this.opts, opts)
@@ -24,13 +25,13 @@ export class ReqResCache {
 				else if (k === 'for') this.customSubroute = k
 			}
 		}
-		if (this.opts.cacheDir) this.getLoc(this.opts.cacheDir)
+		if (this.opts.cachedir) this.getLoc(this.opts.cachedir)
 	}
 
-	getLoc(cacheDir) {
+	getLoc(cachedir) {
 		if (this.loc) return this.loc
 
-		let subdir = path.join(cacheDir, this.reqPath.slice(1).replaceAll('/', '.'))
+		let subdir = path.join(cachedir, this.reqPath.slice(1).replaceAll('/', '.'))
 		if (this.customSubroute) subdir += `~${this.customSubroute}`
 
 		if (this.opts.mode != 'test' && !fs.existsSync(subdir)) {
@@ -40,43 +41,35 @@ export class ReqResCache {
 
 		const id = crypto.createHash('sha1').update(this.reqJson).digest('hex')
 
-		const filepath = `${subdir}/${id.slice(0, 12)}`
-		this.loc = { subdir, id, req: `${filepath}-req.json`, res: `${filepath}-res.json` }
+		const filepath = `${subdir}/${id.slice(0, 20)}`
+		this.loc = { route: this.reqPath, subdir, id, file: `${filepath}.json` }
 		return this.loc
 	}
 
-	async write(resData = '') {
+	async write(resData = {}) {
 		if (writeTriggered.has(this.loc.id)) return
 		writeTriggered.add(this.loc.id)
 		try {
-			if (this.reqJson) {
-				await fs.promises.writeFile(this.loc.req, this.reqJson)
-				delete this.reqJson
-			}
-			if (resData) {
-				this.data.res = resData
-				const content = typeof resData === 'string' ? resData : JSON.stringify(resData, null, '  ')
-				await fs.promises.writeFile(this.loc.res, content)
-			}
+			this.data.res = typeof resData == 'string' ? JSON.parse(resData) : resData
+			await fs.promises.writeFile(this.loc.file, JSON.stringify(this.data, null, '  '))
+			delete this.reqJson
 		} catch (e) {
 			throw e
 		}
 	}
 
 	async read(opts = { verbose: false }) {
-		if (this.data.req) {
-			if (opts.verbose) console.log('not overwriting this.data.req')
+		if (this.data.req && this.data.res) {
+			if (opts.verbose) console.log('not overwriting this.data')
+		} else if (!fs.existsSync(this.loc.file)) {
+			return {
+				header: { status: 404 },
+				body: { error: `missing cache dir or file='${this.loc.file}'` }
+			}
 		} else {
-			const d = await fs.promises.readFile(this.loc.req, { encoding: 'utf8' })
-			this.data.req = JSON.parse(d)
+			const d = await fs.promises.readFile(this.loc.file, { encoding: 'utf8' })
+			this.data = JSON.parse(d)
+			return this.data
 		}
-
-		if (this.data.res) {
-			if (opts.verbose) console.log('not overwriting this.data.res')
-		} else {
-			const d = await fs.promises.readFile(this.loc.res, { encoding: 'utf8' })
-			this.data.res = JSON.parse(d)
-		}
-		return this.data
 	}
 }

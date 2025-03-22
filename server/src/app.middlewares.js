@@ -200,11 +200,10 @@ function mayWrapResponseSend(cachedir, req, res) {
 	delete query.embedder
 	delete query.__protected__
 	const cache = new ReqResCache({ path: req.path, query }, { cachedir, mode: 'mkdir' })
-	const loc = cache.getLoc(cachedir, '')
 	const send = res.send
 	res.send = async function (body) {
 		// TODO: will need to also set the actual status
-		if (!fs.existsSync(loc.res)) await cache.write({ header: { status: 200 }, body }) // no need to await
+		if (!fs.existsSync(cache.loc.file)) await cache.write({ header: { status: 200 }, body }) // no need to await
 		send.call(this, body)
 	}
 }
