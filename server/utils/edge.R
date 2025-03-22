@@ -124,29 +124,9 @@ if (dim(read_counts)[1] * dim(read_counts)[2] < as.numeric(input$mds_cutoff)) { 
    #cat("mds plot time: ", as.difftime(mds_plot_time, units = "secs")[3], " seconds\n")
 }
 
-DE_method <- input$DE_method
 # Differential expression analysis
 if (length(input$conf1) == 0) { # No adjustment of confounding factors
     design <- model.matrix(~conditions) # Based on the protocol defined in section 1.4 of edgeR manual https://bioconductor.org/packages/release/bioc/vignettes/edgeR/inst/doc/edgeRUsersGuide.pdf
-    if (DE_method == "edgeR") {
-         fit_time <- system.time({
-             suppressWarnings({
-                 suppressMessages({
-                     fit <- glmQLFit(y,design) # The glmQLFit() replaces glmFit() which implements the quasi-likelihood function. This is better able to account for overdispersion as it employs a more lenient approach where variance is not a fixed function of the mean.
-                 })
-             })
-         })
-         #cat("QL fit time: ", as.difftime(fit_time, units = "secs")[3], " seconds\n")
-
-         test_time <- system.time({
-             suppressWarnings({
-                 suppressMessages({
-                     et <- glmQLFTest(fit)
-                 })
-             })
-         })
-         #cat("QL test time: ", as.difftime(test_time, units = "secs")[3], " seconds\n")
-    }
 } else { # Adjusting for confounding factors
     # Check the type of confounding variable
     if (input$conf1_mode == "continuous") { # If this is float, the input conf1 vector should be converted into a numeric vector
@@ -175,28 +155,47 @@ if (length(input$conf1) == 0) { # No adjustment of confounding factors
           #cat("Time for making design matrix: ", as.difftime(model_gen_time, units = "secs")[3], " seconds\n")
 
     }
-
-    if (DE_method == "edgeR") {
-        fit_time <- system.time({
-            suppressWarnings({
-                suppressMessages({
-                    fit <- glmQLFit(y,design)
-                })
-            })
-        })
-        #cat("QL fit time: ", as.difftime(fit_time, units = "secs")[3], " seconds\n")
-        test_time <- system.time({
-            suppressWarnings({
-                suppressMessages({
-                    et <- glmQLFTest(fit, coef = "conditionsDiseased")
-                })
-            })
-        })
-        #cat("QL test time: ", as.difftime(test_time, units = "secs")[3], " seconds\n")
-    }
 }
 
+DE_method <- input$DE_method
 if (DE_method == "edgeR") {
+       if (length(input$conf1) == 0) {
+            fit_time <- system.time({
+                suppressWarnings({
+                    suppressMessages({
+                        fit <- glmQLFit(y,design) # The glmQLFit() replaces glmFit() which implements the quasi-likelihood function. This is better able to account for overdispersion as it employs a more lenient approach where variance is not a fixed function of the mean.
+                    })
+                })
+            })
+            #cat("QL fit time: ", as.difftime(fit_time, units = "secs")[3], " seconds\n")
+       
+            test_time <- system.time({
+                suppressWarnings({
+                    suppressMessages({
+                        et <- glmQLFTest(fit)
+                    })
+                })
+            })
+            #cat("QL test time: ", as.difftime(test_time, units = "secs")[3], " seconds\n")
+       } else { # Confounding factors are defined
+            fit_time <- system.time({
+                suppressWarnings({
+                    suppressMessages({
+                        fit <- glmQLFit(y,design)
+                    })
+                })
+            })
+            #cat("QL fit time: ", as.difftime(fit_time, units = "secs")[3], " seconds\n")
+            test_time <- system.time({
+                suppressWarnings({
+                    suppressMessages({
+                        et <- glmQLFTest(fit, coef = "conditionsDiseased")
+                    })
+                })
+            })
+            #cat("QL test time: ", as.difftime(test_time, units = "secs")[3], " seconds\n")
+       }    
+    
        # Saving QL fit image
        ql_plot_time <- system.time({
            set.seed(as.integer(Sys.time())) # Set the seed according to current time
