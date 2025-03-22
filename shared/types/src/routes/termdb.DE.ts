@@ -46,6 +46,10 @@ export type ExpressionInput = {
 	conf2_mode?: 'continuous' | 'discrete'
 	/** Number of variable genes to be included for DE analysis (optional) */
 	VarGenes?: number
+	/** The methodology used for differential gene expression: wilcoxon, edgeR and limma */
+	DE_method: 'wilcoxon' | 'limma' | 'edgeR'
+	/** Cutoff for when mds plot will be generated for edgeR and limma test */
+	mds_cutoff: number
 }
 
 export type DEResponse = {

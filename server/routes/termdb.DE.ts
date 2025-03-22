@@ -227,7 +227,9 @@ values[] // using integer sample id
 		cachedir: serverconfig.cachedir,
 		min_count: param.min_count,
 		min_total_count: param.min_total_count,
-		storage_type: param.storage_type
+		storage_type: param.storage_type,
+		DE_method: param.method,
+		mds_cutoff: 10000 // If the dimensions of the read counts matrix is below this threshold, only then the mds image will be generated as its very compute intensive. Number of genes * Number of samples < mds_cutoff for mds generation
 	} as ExpressionInput
 
 	if (param.tw) {
@@ -260,7 +262,11 @@ values[] // using integer sample id
 	//})
 
 	const sample_size_limit = 8 // Cutoff to determine if parametric estimation using edgeR should be used or non-parametric estimation using wilcoxon test
-	if ((group1names.length <= sample_size_limit && group2names.length <= sample_size_limit) || param.method == 'edgeR') {
+	if (
+		(group1names.length <= sample_size_limit && group2names.length <= sample_size_limit) ||
+		param.method == 'edgeR' ||
+		param.method == 'limma'
+	) {
 		// edgeR will be used for DE analysis
 		const time1 = new Date().valueOf()
 		const result = JSON.parse(
@@ -270,22 +276,24 @@ values[] // using integer sample id
 		param.method = 'edgeR'
 		const ql_imagePath: string = path.join(serverconfig.cachedir, result.edgeR_ql_image_name[0]) // Retrieve the edgeR quality image and send it to client side. Does not need to be an array, will address this later.
 		mayLog('ql_imagePath:', ql_imagePath)
-
-		const mds_imagePath: string = path.join(serverconfig.cachedir, result.edgeR_mds_image_name[0]) // Retrieve the edgeR quality image and send it to client side. Does not need to be an array, will address this later.
-		mayLog('mds_imagePath:', mds_imagePath)
-
-		await readFileAndDelete(mds_imagePath, 'mds_image', result)
 		await readFileAndDelete(ql_imagePath, 'ql_image', result)
+
+		if (result.edgeR_mds_image_name) {
+			// The R code may not return an mds image file (depending upon mds_cutoff). Query mds image only if it has been generated
+			const mds_imagePath: string = path.join(serverconfig.cachedir, result.edgeR_mds_image_name[0]) // Retrieve the edgeR quality image and send it to client side. Does not need to be an array, will address this later.
+			mayLog('mds_imagePath:', mds_imagePath)
+			await readFileAndDelete(mds_imagePath, 'mds_image', result)
+		}
+
+		const images = [result.ql_image]
+		if (result.mds_image) images.push(result.mds_image)
 
 		return {
 			data: result.gene_data,
 			sample_size1: sample_size1,
 			sample_size2: sample_size2,
 			method: param.method,
-			images: [
-				result.mds_image, // MDS image
-				result.ql_image // QL fit image
-			]
+			images
 		} as DEResponse
 	}
 
@@ -311,7 +319,7 @@ async function readFileAndDelete(file, key, response) {
 	})
 }
 
-export async function validate_query_rnaseqGeneCount(ds, genome) {
+export async function validate_query_rnaseqGeneCount(ds) {
 	const q = ds.queries.rnaseqGeneCount
 	if (!q) return
 	if (!q.file) throw 'unknown data type for rnaseqGeneCount'
@@ -340,13 +348,13 @@ export async function validate_query_rnaseqGeneCount(ds, genome) {
 			const time1 = new Date().valueOf()
 			const result = await run_rust('DEanalysis', JSON.stringify(get_samples_from_hdf5))
 			const time2 = new Date().valueOf()
-			//console.log('Time taken to query gene expression:', time2 - time1, 'ms')
+			mayLog('Time taken to query gene expression:', time2 - time1, 'ms')
 			samples = result.split(',')
 		} else throw 'unknown storage type:' + ds.queries.rnaseqGeneCount.storage_type
 
 		q.allSampleSet = new Set(samples)
 		//if(q.allSampleSet.size < samples.length) throw 'rnaseqGeneCount.file header contains duplicate samples'
-		const unknownSamples: string[] = [];
+		const unknownSamples: string[] = []
 		for (const n of q.allSampleSet) {
 			if (!ds.cohort.termdb.q.sampleName2id(n)) unknownSamples.push(n)
 		}

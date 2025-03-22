@@ -179,7 +179,7 @@ export class VolcanoPlotView {
 		/** images div styling accounts for the margins in the images. 
 		Remove these styles and '+50' if the margins are removed 
 		in the generated images. */
-		this.volcanoDom.images.style('margin-top', '-60px').style('z-index', -1)
+		this.volcanoDom.images.style('margin-top', '-30px').style('z-index', -1)
 		for (const img of this.viewData.images) {
 			this.volcanoDom.images
 				.append('img')
