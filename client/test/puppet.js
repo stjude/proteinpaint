@@ -12,7 +12,10 @@ import { ReqResCache } from '@sjcrh/augen'
 // user __dirname later to detect relative path to public dir,
 // since the unit test may be triggered from the pp dir with --workspace option
 const __dirname = import.meta.dirname
+// serves html, js, and css bundles
 const STATICPORT = 6789
+// serves live OR cached API responses,
+// may be the same as STATICPORT if serving cached resposes
 const DATAPORT = Number(process.argv[3] || 0) || 3000
 
 const params = process.argv[2] || ''
@@ -120,7 +123,7 @@ async function runTest(paramsStr) {
 				})
 
 				const mcr = MCR({
-					name: `Test Coverage for ${params}`,
+					name: `Client test coverage for pattern '${params}'`,
 					sourceFilter: path => {
 						//if (!path.includes('node_modules')) console.log(path)
 						return (

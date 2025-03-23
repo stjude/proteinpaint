@@ -34,7 +34,7 @@ export async function launch() {
 		setAppMiddlewares(app, doneLoading)
 
 		console.log('setting server routes ...')
-		await setOptionalRoutes(app)
+		const routeCallbacks = await setOptionalRoutes(app)
 		console.log('may set auth routes ...')
 		/*
 		 !!! the order of middlewares is critical, must be set before data routes !!!
@@ -45,7 +45,7 @@ export async function launch() {
 
 		const routes = await Promise.all(routeFiles)
 
-		const __dirname = import.meta.dirname || (new URL('.', import.meta.url)).pathname
+		const __dirname = import.meta.dirname || new URL('.', import.meta.url).pathname
 
 		augen.setRoutes(app, routes, {
 			app,
@@ -77,7 +77,7 @@ export async function launch() {
 			return
 		}
 
-		await startServer(app)
+		await startServer(app, routeCallbacks)
 		return app
 	} catch (err: any) {
 		let exitCode = 1
@@ -144,7 +144,7 @@ function handle_argv(argv) {
 	}
 }
 
-async function startServer(app) {
+async function startServer(app, routeCallbacks: OptionalRouteCallbacks = {}) {
 	if (serverconfig.preListenScript) {
 		const { cmd, args } = serverconfig.preListenScript
 		const ps = spawnSync(cmd, args, { encoding: 'utf-8' })
@@ -182,19 +182,39 @@ async function startServer(app) {
 			}
 			console.log(message)
 		})
+
+		if (routeCallbacks.setCloseServer) {
+			routeCallbacks.setCloseServer(() => {
+				console.log('187 closeServer() called')
+				server.close()
+				process.exit(0)
+			})
+		}
+
 		return server
 	}
+}
+
+type OptionalRouteCallbacks = {
+	setCloseServer?: (a: any) => void
 }
 
 async function setOptionalRoutes(app) {
 	// routeSetters is an array of "filepath/name.js"
 	if (!serverconfig.routeSetters) return
+	const routeCallbacks: OptionalRouteCallbacks = {}
 	for (const fname of serverconfig.routeSetters) {
 		if (fname.endsWith('.js')) {
 			const _ = await import(fname)
-			_.default(app, basepath)
+			const d = _.default(app, basepath)
+			console.log(d?.setCloseServer, fname.includes('closeCoverage'))
+			if (d?.setCloseServer && fname.includes('closeCoverage')) {
+				console.log(209)
+				routeCallbacks.setCloseServer = d.setCloseServer
+			}
 		}
 	}
+	return routeCallbacks
 }
 
 function processTrackedDs(trackedDatasets) {
