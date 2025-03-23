@@ -12,7 +12,8 @@ import { ReqResCache } from '@sjcrh/augen'
 // user __dirname later to detect relative path to public dir,
 // since the unit test may be triggered from the pp dir with --workspace option
 const __dirname = import.meta.dirname
-const port = Number(process.argv[3] || 0) || 6789
+const STATICPORT = 6789
+const DATAPORT = Number(process.argv[3] || 0) || 3000
 
 const params = process.argv[2] || ''
 if (!params) throw `missing puppet.js params argument`
@@ -21,8 +22,8 @@ runTest(params).catch(console.error)
 
 async function runTest(paramsStr) {
 	const startTime = Date.now()
-	const server = port === 6789 ? initServer() : null
-	const paramsArr = paramsStr.split(' ') //; console.log(21, paramsArr, port); return;
+	const server = initServer()
+	const paramsArr = paramsStr.split(' ') //; console.log(21, paramsArr, DATAPORT); return;
 
 	const browser = await puppeteer.launch({
 		// headless: false, // uncomment to see puppeteer chrome instance
@@ -70,10 +71,10 @@ async function runTest(paramsStr) {
 			//page.coverage.startCSSCoverage()
 		])
 
-		// console.log(70, port, params, `http://localhost:${port}/puppet.html?port=${port}&${params}`)
+		// console.log(70, DATAPORT, params, `http://localhost:${STATICPORT}/puppet.html?port=${DATAPORT}&${params}`)
 		// Navigate to test page
 		await page
-			.goto(`http://localhost:${port}/puppet.html?port=${port}&${params}`, { timeout: 1000 })
+			.goto(`http://localhost:${STATICPORT}/puppet.html?port=${DATAPORT}&${params}`, { timeout: 1000 })
 			.then(r => {
 				if (!r.ok()) throw `Error loading page: ${r.status()}`
 			})
@@ -131,7 +132,7 @@ async function runTest(paramsStr) {
 							!path.includes('sjcrh/proteinpaint-')
 						)
 					},
-					outputDir: './.nyc_output',
+					outputDir: path.join(__dirname, '../.nyc_output'),
 					reports: ['v8', 'console-summary', 'html', 'json', 'markdown-summary', 'markdown-details'],
 					cleanCache: true
 				})
@@ -183,5 +184,5 @@ function initServer() {
 		res.header('content-type', 'application/json')
 		res.send(data.res?.body)
 	}
-	return app.listen(port)
+	return app.listen(STATICPORT)
 }
