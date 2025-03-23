@@ -70,7 +70,7 @@ async function runTest(paramsStr) {
 			//page.coverage.startCSSCoverage()
 		])
 
-		console.log(70, port, params, `http://localhost:${port}/puppet.html?port=${port}&${params}`)
+		// console.log(70, port, params, `http://localhost:${port}/puppet.html?port=${port}&${params}`)
 		// Navigate to test page
 		await page
 			.goto(`http://localhost:${port}/puppet.html?port=${port}&${params}`, { timeout: 1000 })
@@ -132,7 +132,7 @@ async function runTest(paramsStr) {
 						)
 					},
 					outputDir: './.nyc_output',
-					reports: ['v8', 'console-summary', 'html', 'json', 'markdown-details'],
+					reports: ['v8', 'console-summary', 'html', 'json', 'markdown-summary', 'markdown-details'],
 					cleanCache: true
 				})
 
