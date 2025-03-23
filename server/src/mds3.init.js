@@ -41,7 +41,7 @@ import { getResult } from '#src/gene.js'
 import { validate_query_getTopTermsByType } from '#routes/termdb.topTermsByType.ts'
 import { validate_query_getSampleImages } from '#routes/termdb.sampleImages.ts'
 import { validate_query_getSampleWSImages } from '#routes/samplewsimages.ts'
-import { validate_query_rnaseqGeneCount} from '#routes/termdb.DE.ts'
+import { validate_query_rnaseqGeneCount } from '#routes/termdb.DE.ts'
 
 /*
 init
@@ -1555,10 +1555,10 @@ async function validate_query_ld(ds, genome) {
 	for (const k of q.tracks) {
 		if (!k.name) throw 'name missing from one of ld.tracks[]'
 		if (!k.file) throw '.file missing from one of ld.tracks[]'
-		k.file0 = k.file // keep relative path as its needed on client by the ld tk
-		k.file = path.join(serverconfig.tpmasterdir, k.file)
-		await utils.validate_tabixfile(k.file)
-		k.nochr = await utils.tabix_is_nochr(k.file, null, genome)
+		const f = path.join(serverconfig.tpmasterdir, k.file)
+		await utils.validate_tabixfile(f)
+		k.nochr = await utils.tabix_is_nochr(f, null, genome)
+		k.type = 'ld' // assign hardcoded type and pass to client to use in block
 	}
 	if (!q.overlay) throw 'ld.overlay{} missing'
 	if (!q.overlay.color_0) throw 'ld.overlay.color_0 missing'
@@ -1673,8 +1673,6 @@ async function validateMetaboliteIntensityNative(q, ds, genome) {
 		return { term2sample2value, byTermId, bySampleId }
 	}
 }
-
-
 
 // no longer used
 async function validate_query_probe2cnv(ds, genome) {

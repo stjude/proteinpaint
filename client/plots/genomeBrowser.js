@@ -36,7 +36,7 @@ this{}
 				terms[]
 			geneSearchResult{}
 			snvindel {}
-				details {} // this needs to be copied from tdbcnf to track customizations
+				details {} // this needs to be copied from tdbcnf in state to track customizations
 				populations [{key,label}] // might not be part of state
 				shown=bool // set to true if snvindel mds3 tk is shown
 			ld {}
@@ -120,9 +120,8 @@ class genomeBrowser {
 	async main() {
 		this.dom.loadingDiv.style('display', 'inline')
 		try {
-			await this.computeBlockAndMds3tk()
-			// this.blockInstance is added; add additional non-mds3 tk if needed
-			this.updateLDtrack()
+			const tklst = await this.generateTracks()
+			await this.launchBlockWithTracks(tklst)
 		} catch (e) {
 			sayerror(this.dom.errDiv, e.message || e)
 			if (e.stack) console.log(e.stack)
@@ -130,7 +129,7 @@ class genomeBrowser {
 		this.dom.loadingDiv.style('display', 'none')
 	}
 
-	async computeBlockAndMds3tk() {
+	async generateTracks() {
 		// handle multiple possibilities of generating genome browser tracks
 
 		const tklst = [] // list of tracks to be shown in block
@@ -138,11 +137,14 @@ class genomeBrowser {
 		if (this.state.config.snvindel?.shown) {
 			// show snvindel-based mds3 tk
 			if (this.state.config.snvindel.details) {
-				// pre-compute variant data in the app here, e.g. fisher test etc, but not in mds3 backend as the official track does
+				// pre-compute variant data in the app here
 				// and launch custom mds3 tk to show the variants
-				// TODO generate tk in tklst[]
-				await this.launchCustomMds3tk()
-				return
+				// TODO move computing logic to official mds3 tk and avoid tricky workaround using custom tk
+				const tk = await this.launchCustomMds3tk()
+				if (tk) {
+					// tricky! will not return obj when block is already shown, since it updates data for existing tk obj
+					tklst.push(tk)
+				}
 			} else {
 				// official mds3 tk without precomputing tk data
 				const tk = {
@@ -177,7 +179,6 @@ class genomeBrowser {
 				}
 			}
 		}
-
 		if (this.state.config?.trackLst?.activeTracks?.length) {
 			// include active facet tracks
 			for (const n of this.state.config.trackLst.activeTracks) {
@@ -188,8 +189,12 @@ class genomeBrowser {
 				}
 			}
 		}
-
-		await this.launchBlockWithTracks(tklst)
+		if (this.state.config.ld?.tracks) {
+			for (const t of this.state.config.ld.tracks) {
+				if (t.shown) tklst.push(t)
+			}
+		}
+		return tklst
 	}
 
 	async launchCustomMds3tk() {
@@ -226,7 +231,7 @@ class genomeBrowser {
 			custom_variants: data.mlst,
 			skewerModes: [nm]
 		}
-		await this.launchBlockWithTracks([tk])
+		return tk
 	}
 
 	mayDisplaySampleCountInControls(data) {
@@ -382,35 +387,6 @@ class genomeBrowser {
 		this.blockInstance = new _.Block(arg)
 	}
 
-	updateLDtrack() {
-		/* based on ld.tracks[] whether each track is shown, to add/remove ld tracks from blockInstance
-		 */
-		if (!this.state.config.ld) return // no ld tracks
-		if (!this.blockInstance) return // no block, cannot update ld
-		for (const tk of this.state.config.ld.tracks) {
-			const tkidx = this.blockInstance.tklst.findIndex(j => j.file == tk.file0)
-			if (tk.shown) {
-				// tk should be shown
-				if (tkidx == -1) {
-					// tk not in block, add
-					const arg = {
-						type: 'ld',
-						name: tk.name,
-						file: tk.file0
-					}
-					const t = this.blockInstance.block_addtk_template(arg)
-					this.blockInstance.tk_load(t)
-				}
-				// tk already in block
-				continue
-			}
-			// tk should be hidden
-			if (tkidx == -1) continue
-			// remove
-			this.blockInstance.tk_remove(tkidx)
-		}
-	}
-
 	async maySaveTrackUpdatesToState() {
 		/* following changes will be saved in state:
 		- when a mds3 subtk is created/updated, its tk.filterObj should be saved to state so it can be recovered from session
@@ -550,14 +526,16 @@ async function getDefaultConfig(vocabApi, override, activeCohort) {
 			}
 		}
 
-		// determine if snvindel mds3 tk will be shown by default or not
-		if (config.trackLst) {
-			// also has track lst/facet
-			// hardcoded! hide snvindel by default! definitely change it later!
-			config.snvindel.shown = false
-		} else {
-			// no tklst/facet
-			config.snvindel.shown = true
+		if (typeof config.snvindel.shown != 'boolean') {
+			// create missing tracker property with default value to determine if to show/hide snvindel mds3 tk
+			if (config.trackLst) {
+				// also has track lst/facet
+				// hardcoded! hide snvindel by default! definitely change it later!
+				config.snvindel.shown = false
+			} else {
+				// no tklst/facet
+				config.snvindel.shown = true
+			}
 		}
 	}
 
