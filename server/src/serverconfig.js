@@ -9,7 +9,7 @@ import { fileURLToPath } from 'url'
 
 // import.meta.dirname is undefined when using docker dev environment
 // use __dirname and __filename global variable convention from commonjs
-const __dirname = import.meta.dirname || (new URL('.', import.meta.url)).pathname
+const __dirname = import.meta.dirname || new URL('.', import.meta.url).pathname
 const __filename = import.meta.filename || fileURLToPath(import.meta.url)
 
 // do not assume that serverconfig.json is in the same dir as server.js
@@ -112,8 +112,7 @@ if (!serverconfig.binpath) {
 			} else {
 				if (fs.existsSync('./server')) serverconfig.binpath = fs.realpathSync('./server')
 				else if (fs.existsSync('./src')) serverconfig.binpath = fs.realpathSync('./src/..')
-				else if (__dirname.includes('/server/'))
-					serverconfig.binpath = __dirname.split('/server/')[0] + '/server'
+				else if (__dirname.includes('/server/')) serverconfig.binpath = __dirname.split('/server/')[0] + '/server'
 				else if (__dirname.includes('/proteinpaint')) serverconfig.binpath = __dirname
 				else throw 'unable to determine the serverconfig.binpath'
 			}
@@ -127,7 +126,7 @@ if (serverconfig.debugmode && !serverconfig.binpath.includes('sjcrh/')) {
 	const routeSetters = []
 	const defaultDir = path.join(serverconfig.binpath, 'src/test/routes')
 	// will add testing routes as needed and if found, such as in dev environment
-	const testRouteSetters = ['gdc.js', 'specs.js', 'readme.js']
+	const testRouteSetters = ['gdc.js', 'specs.js', 'readme.js', 'closeCoverage.js']
 	if (serverconfig.features.sse === undefined) serverconfig.features.sse = true
 	if (typeof serverconfig.features.sse !== 'boolean') {
 		throw `serverconfig.features.sse must be either undefined or boolean`
