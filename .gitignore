@@ -24,7 +24,8 @@ server/src/app.js
 server/src/health.js
 server/src/hicstat.js
 server/package*/*
-server/coverage/*
+server/coverage*/*
+server/.coverage*/*
 
 shared/types/docs.json
 shared/types/*.js
@@ -68,6 +69,8 @@ container/public/cards/*
 container/dataset/*
 container/**/pkg.json
 container/ci-run.sh
+container/coverage/server/*
+container/coverage/.coverage*/*
 
 **/rust/target/*
 

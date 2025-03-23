@@ -74,14 +74,14 @@ jobs:
       - name: Build ppserver image
         uses: docker/build-push-action@v5
         with:
-          load: true
+          # load: true
           context: ./container/
           file: ./container/server/Dockerfile
           tags: ppserver:latest
           platforms: linux/amd64
           outputs: type=docker
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          # cache-from: type=gha
+          # cache-to: type=gha,mode=max
 
       - name: Copy server files
         run: |
@@ -91,14 +91,15 @@ jobs:
       - name: Build ppcov image
         uses: docker/build-push-action@v5
         with:
-          load: true
+          build-contexts: |
+            ppserver:latest=docker-image://ppserver:latest
           context: ./container/coverage
           file: ./container/coverage/Dockerfile
           tags: ppcov:latest
           platforms: linux/amd64
           outputs: type=docker
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          # cache-from: type=gha
+          # cache-to: type=gha,mode=max
 
       - name: Generate coverate reports from combined unit and integration tests
         run: |
@@ -107,8 +108,32 @@ jobs:
 
       - name: Display coverage results
         run: |
-          cat client/.nyc_output/coverage-summary.md >> $GITHUB_STEP_SUMMARY
-          cat client/.nyc_output/coverage-details.md >> $GITHUB_STEP_SUMMARY
+          echo "Coverage report for combined runs of unit and integration tests" >> $GITHUB_STEP_SUMMARY
 
-          cat container/coverage/.coverage/coverage-summary.md >> $GITHUB_STEP_SUMMARY
-          cat container/coverage/.coverage/coverage-details.md >> $GITHUB_STEP_SUMMARY
+          if [[ -d client/.nyc_output ]]; then
+            if [[ -f client/.nyc_output/coverage-summary.md ]]; then
+              cat client/.nyc_output/coverage-summary.md >> $GITHUB_STEP_SUMMARY
+            fi
+
+            if [[ -f client/.nyc_output/coverage-details.md ]]; then
+              cat client/.nyc_output/coverage-details.md >> $GITHUB_STEP_SUMMARY
+            fi
+          else
+            echo -e "\nFailed to generate client coverage report\n" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          SDIR=container/coverage/.coverage
+          if [[ -d "$SDIR" ]]; then
+            if [[ -f $SDIR/coverage-details.md ]]; then
+              echo -e "\nServer coverage summary\n" >> $GITHUB_STEP_SUMMARY
+              cat $SDIR/coverage-summary.md >> $GITHUB_STEP_SUMMARY
+            fi
+            
+            if [[ -f $SDIR/coverage-details.md ]]; then
+              echo -e "\nServer coverage details\n" >> $GITHUB_STEP_SUMMARY
+              cat $SDIR/coverage-details.md >> $GITHUB_STEP_SUMMARY
+            fi
+          else
+            echo -e "\nFailed to generate server coverage report\n" >> $GITHUB_STEP_SUMMARY
+          fi
+          

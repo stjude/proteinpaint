@@ -99,7 +99,7 @@ if [[ "$CHANGEDWS" == *"augen"* ]]; then
 	mv $AUGENTGZ ../container/tmppack/
 
 	cd ../server
-	AUGENDEPNAME="@sjcrh/proteinpaint-augen"
+	AUGENDEPNAME="@sjcrh/augen"
 	# may reset the dep new version temporarily, for package testing 
 	npm pkg set "dependencies.$AUGENDEPNAME"=$PKGPATH/$AUGENTGZ
 	cd ../container
