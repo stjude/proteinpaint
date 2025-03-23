@@ -243,7 +243,6 @@ type Population = {
 }
 
 /** primarily for prebuilding germline genetic association for survivorship portal
-accessible to client via termdb.js?for=mds3queryDetails
 part of state of genomeBrowser plot
 allowing for user modification
 */
@@ -334,7 +333,12 @@ so that it can work for a termdb-less ds, e.g. clinvar, where termdbConfig canno
 	}
 	allowSNPs?: boolean
 	vcfid4skewerName?: boolean
+	/** config on computing variant data and show as a custom mds3 tk */
 	details?: SnvindelComputeDetails
+	/** set to true to show mds3 tk by default when the ds have other genome browser track types besides this snvindel tk
+	if ds has only snvindel tk, then the tk will always be shown and no need to set this
+	*/
+	shown?: boolean
 }
 
 type SvFusion = {
@@ -718,6 +722,7 @@ type SCImages = {
 	label: string
 }
 
+/** genome browser LD track */
 type LdQuery = {
 	/** each track obj defines a ld track */
 	tracks: {
@@ -725,8 +730,6 @@ type LdQuery = {
 		name: string
 		/** relative path of ld .gz file */
 		file: string
-		/** dynamically added full path */
-		file0?: string
 		/** dynamically added */
 		nochr?: boolean
 		/** if to show by default */
@@ -785,6 +788,9 @@ type Mds3Queries = {
 	snvindel?: SnvIndelQuery
 	svfusion?: SvFusion
 	cnv?: CnvSegment
+	trackLst?: TrackLst
+	ld?: LdQuery
+	defaultCoord?: string
 	singleSampleMutation?: SingleSampleMutationQuery
 	NIdata?: NIdataQuery
 	geneExpression?: GeneExpressionQuery
@@ -799,15 +805,12 @@ type Mds3Queries = {
 		src: 'native' | 'gdc'
 		file: string
 	}
-	trackLst?: TrackLst
 	singleCell?: SingleCellQuery
 	geneCnv?: {
 		bygene?: {
 			gdcapi: true
 		}
 	}
-	defaultCoord?: string
-	ld?: LdQuery
 	singleSampleGenomeQuantification?: SingleSampleGenomeQuantification
 	singleSampleGbtk?: SingleSampleGbtk
 	/** depreciated. replaced by WSImages */

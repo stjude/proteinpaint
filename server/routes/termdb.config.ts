@@ -197,9 +197,6 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome) {
 	}
 	if (q.ld) {
 		q2.ld = JSON.parse(JSON.stringify(q.ld))
-		for (const i of q2.ld.tracks) {
-			delete i.file
-		}
 	}
 	if (q.cnv) {
 		q2.cnv = {}

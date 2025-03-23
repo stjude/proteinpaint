@@ -257,10 +257,15 @@ class GbControls {
 			}
 		}
 		if (state.config.ld) {
-			/* ticky: must duplicate ld.tracks[] and scope it here
-			and use it to preserve the "shown" flag changes via checkboxes
-			when dispatching, commit the tracks[] to state, this ensures the syncing between scoped and state versions
-			TODO better way to track in state, as well as visibility of snvindel etc
+			/* tricky: duplicate ld.tracks[] and scope it here, to pass to dispatch
+			somehow, this doesn't work for dispatch
+			config: {
+				ld: {
+					tracks: {
+						[i]: {shown}
+					}
+				}
+			}
 			*/
 			const tracks = structuredClone(state.config.ld.tracks)
 
@@ -271,8 +276,8 @@ class GbControls {
 					labeltext: t.name,
 					checked: t.shown,
 					holder: div,
-					callback: () => {
-						tracks[i].shown = !tracks[i].shown
+					callback: checked => {
+						tracks[i].shown = checked
 						this.app.dispatch({
 							type: 'plot_edit',
 							id: this.id,

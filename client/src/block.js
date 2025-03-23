@@ -3063,9 +3063,6 @@ seekrange(chr,start,stop) {
 			case client.tkt.bam:
 				this.loadtk_bam(tk)
 				break
-			case client.tkt.vafs1:
-				this.loadtk_vafs1(tk)
-				break
 			case client.tkt.bedj:
 				bedjload(tk, this)
 				break
