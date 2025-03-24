@@ -201,40 +201,20 @@ if (DE_method == "edgeR") {
            set.seed(as.integer(Sys.time())) # Set the seed according to current time
            cachedir <- input$cachedir # Importing serverconfig.cachedir
            random_number <- runif(1, min = 0, max = 1) # Generating random number
-           ql_image_name <- paste0("edgeR_ql_temp_",random_number,".png") # Generating random image name so that simultaneous server side requests do NOT generate the same edgeR file name
-           png(filename = paste0(cachedir,"/",ql_image_name), width = 1000, height = 1000, res = 200) # Opening a png device
+           fit_image_name <- paste0("edgeR_ql_temp_",random_number,".png") # Generating random image name so that simultaneous server side requests do NOT generate the same edgeR file name
+           png(filename = paste0(cachedir,"/",fit_image_name), width = 1000, height = 1000, res = 200) # Opening a png device
            par(oma = c(0, 0, 0, 0)) # Creating a margin
            plotQLDisp(fit) # Plot the edgeR fit
            # dev.off() # Gives a null device message which breaks JSON. Commenting it out for now, will investigate it later
        })
        #cat("ql plot time: ", as.difftime(ql_plot_time, units = "secs")[3], " seconds\n")
-
-       # Multiple testing correction
-       multiple_testing_correction_time <- system.time({
-           logfc <- et$table$logFC
-           logcpm <- et$table$logCPM
-           pvalues <- et$table$PValue
-           genes_matrix <- str_split_fixed(unlist(et$genes), "\t", 2)
-           geneids <- unlist(genes_matrix[, 1])
-           genesymbols <- unlist(genes_matrix[, 2])
-           adjust_p_values <- p.adjust(pvalues, method = "fdr")
-           output <- data.frame(geneids, genesymbols, logfc, -log10(pvalues), -log10(adjust_p_values))
-           names(output)[1] <- "gene_name"
-           names(output)[2] <- "gene_symbol"
-           names(output)[3] <- "fold_change"
-           names(output)[4] <- "original_p_value"
-           names(output)[5] <- "adjusted_p_value"
-       })
-       final_output <- c()
-       final_output$gene_data <- output
-       final_output$edgeR_ql_image_name <- ql_image_name
-       if (dim(read_counts)[1] * dim(read_counts)[2] < as.numeric(input$mds_cutoff)) { # If the dimensions of the read counts matrix is below this threshold, only then the mds image will be generated as its very compute intensive
-           final_output$edgeR_mds_image_name <- mds_image_name
-       }
-       #cat("Time for multiple testing correction: ", as.difftime(multiple_testing_correction_time, units = "secs")[3], " seconds\n")
-
-       # Output results
-       toJSON(final_output)
+       logfc <- et$table$logFC
+       logcpm <- et$table$logCPM
+       pvalues <- et$table$PValue
+       genes_matrix <- str_split_fixed(unlist(et$genes), "\t", 2)
+       geneids <- unlist(genes_matrix[, 1])
+       genesymbols <- unlist(genes_matrix[, 2])
+       adjust_p_values <- p.adjust(pvalues, method = "fdr")
 } else if (DE_method == "limma") {
        # Do voom transformation
        voom_transformation_time <- system.time({
@@ -243,8 +223,8 @@ if (DE_method == "edgeR") {
                     set.seed(as.integer(Sys.time())) # Set the seed according to current time
                     cachedir <- input$cachedir # Importing serverconfig.cachedir
                     random_number <- runif(1, min = 0, max = 1) # Generating random number
-                    voom_image_name <- paste0("limma_voom_temp_",random_number,".png") # Generating random image name so that simultaneous server side requests do NOT generate the same edgeR file name
-                    png(filename = paste0(cachedir,"/",voom_image_name), width = 1000, height = 1000, res = 200) # Opening a png device
+                    fit_image_name <- paste0("limma_voom_temp_",random_number,".png") # Generating random image name so that simultaneous server side requests do NOT generate the same edgeR file name
+                    png(filename = paste0(cachedir,"/",fit_image_name), width = 1000, height = 1000, res = 200) # Opening a png device
                     par(oma = c(0, 0, 0, 0)) # Creating a margin
                     suppressWarnings({
                        suppressMessages({
@@ -287,36 +267,40 @@ if (DE_method == "edgeR") {
        })
        #cat("Empirical smoothing time: ", as.difftime(empirical_smoothing_time, units = "secs")[3], " seconds\n")
 
-       suppressWarnings({
-         suppressMessages({
-            top_table <- topTable(tmp, coef = "conditionsDiseased", n = Inf, adjust.method = "fdr") # The coeff needs to be specified in topTable() because it needs to know for which contrast the logFC needs to be calculated https://www.biostars.org/p/160465/
-         })
+       # Time for selecting top genes
+       top_genes_selection_time <- system.time({
+           suppressWarnings({
+             suppressMessages({
+                  top_table <- topTable(tmp, coef = "conditionsDiseased", number = Inf, adjust.method = "fdr") # The coeff needs to be specified in topTable() because it needs to know for which contrast the logFC needs to be calculated https://www.biostars.org/p/160465/
+                  logfc <- top_table$logFC
+                  pvalues <- top_table$P.Value
+                  genes_matrix <- str_split_fixed(unlist(top_table$genes), "\t", 2)
+                  geneids <- unlist(genes_matrix[, 1])
+                  genesymbols <- unlist(genes_matrix[, 2])
+                  adjust_p_values <- top_table$adj.P.Val
+             })
+           })
        })
-
-       multiple_testing_correction_time <- system.time({
-           logfc <- top_table$logFC
-           pvalues <- top_table$P.Value
-           genes_matrix <- str_split_fixed(unlist(top_table$genes), "\t", 2)
-           geneids <- unlist(genes_matrix[, 1])
-           genesymbols <- unlist(genes_matrix[, 2])
-           adjust_p_values <- top_table$adj.P.Val
-           output <- data.frame(geneids, genesymbols, logfc, -log10(pvalues), -log10(adjust_p_values))
-           names(output)[1] <- "gene_name"
-           names(output)[2] <- "gene_symbol"
-           names(output)[3] <- "fold_change"
-           names(output)[4] <- "original_p_value"
-           names(output)[5] <- "adjusted_p_value"
-       })
-       final_output <- c()
-       final_output$gene_data <- output
-       final_output$edgeR_ql_image_name <- voom_image_name
-       if (dim(read_counts)[1] * dim(read_counts)[2] < as.numeric(input$mds_cutoff)) { # If the dimensions of the read counts matrix is below this threshold, only then the mds image will be generated as its very compute intensive
-           final_output$edgeR_mds_image_name <- mds_image_name
-       }
-       #cat("Time for multiple testing correction: ", as.difftime(multiple_testing_correction_time, unit = "secs")[3], " seconds\n")
-
-       # Output results
-       toJSON(final_output)
+       #cat("Time for selecting top genes: ", as.difftime(top_genes_selection_time, units = "secs")[3], " seconds\n"))
 } else {
        stop(paste0("Unknown method:", DE_method))
 }
+
+final_data_generation_time <- system.time({
+    output <- data.frame(geneids, genesymbols, logfc, -log10(pvalues), -log10(adjust_p_values))
+    names(output)[1] <- "gene_name"
+    names(output)[2] <- "gene_symbol"
+    names(output)[3] <- "fold_change"
+    names(output)[4] <- "original_p_value"
+    names(output)[5] <- "adjusted_p_value"
+})
+final_output <- c()
+final_output$gene_data <- output
+final_output$edgeR_ql_image_name <- fit_image_name
+if (dim(read_counts)[1] * dim(read_counts)[2] < as.numeric(input$mds_cutoff)) { # If the dimensions of the read counts matrix is below this threshold, only then the mds image will be generated as its very compute intensive
+    final_output$edgeR_mds_image_name <- mds_image_name
+}
+#cat("Time for generating final dataframe: ", as.difftime(final_data_generation_time, unit = "secs")[3], " seconds\n")
+
+# Output results
+toJSON(final_output)
