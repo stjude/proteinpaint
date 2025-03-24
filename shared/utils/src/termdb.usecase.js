@@ -112,6 +112,7 @@ export function isUsableTerm(term, _usecase, termdbConfig, ds) {
 			if (!term.isleaf) {
 				const ancestors = term.id.split('__').length //depends on using the __ naming convension!
 				if (ancestors == 3) {
+					// 3rd level term is a domain, we show the templates associated to this domain
 					uses.add('plot')
 				} else if (ancestors < 3) uses.add('branch')
 			}
