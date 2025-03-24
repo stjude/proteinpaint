@@ -334,20 +334,19 @@ async function validateHDF5File(filePath) {
 	
 	try {
 	  // Call the Rust script with input parameters
-	  console.log('Calling Rust script...');
+	  console.log('Calling readDenseHDF5 Rust script...');
 	  console.log('Params:', JSON.stringify(jsonInput));
 	  const result = await run_rust('readDenseHDF5', jsonInput);
 	  
 	  // Debug output to understand what we're getting back
-	  console.log('Result type:', typeof result);
-	  console.log('Result structure:', JSON.stringify(result, null, 2).substring(0, 500) + '...');
+	  // console.log('Result structure:', JSON.stringify(result, null, 2).substring(0, 5000) + '...');
+
+	  // Check if the result exists and contains sample data
+	  if (!result || Object.keys(result).length === 0) {
+		throw new Error("Failed to retrieve expression data: Empty or missing response");
+	}
 	  
-	  // Check if there was an error
-	  if (result.status === 'error') {
-		throw new Error(result.message);
-	  }
-	  
-	  return result.data;
+	  return result;
 	} catch (error) {
 	  console.error(`Error querying gene expression for ${geneName}`);
 	  throw error;
@@ -396,7 +395,6 @@ async function validateHDF5File(filePath) {
 		try {
 			// Query expression values for a specific gene
 			const geneQuery = await queryGeneExpression(q.file, "TP53");
-			console.log('Gene query result:', geneQuery);
 			
 			// Parse the JSON
 			const jsonMatch = geneQuery.match(/output_string:(.*)/);
@@ -405,19 +403,104 @@ async function validateHDF5File(filePath) {
 			  }
 
 			const jsonString = jsonMatch[1];
-			console.log('Extracted JSON string:', jsonString);
+			// console.log('Extracted JSON string:', jsonString, "...");
+			// console.log('Extracted JSON string length:', jsonString.length);
+			// Extract just the JSON part by removing the prefix
+			// console.log('Original string length:', jsonString.length);
+            // console.log('First 30 characters (exact):', JSON.stringify(jsonString.substring(0, 30)));
+
+			console.log('Extracted JSON string start:', jsonString.substring(0, 100));
+			console.log('Extracted JSON string end:', jsonString.substring(jsonString.length - 100));
+			
+			// Write the JSON to a file for further analysis
+			const jsonFilePath = path.join(serverconfig.tpmasterdir, 'geneData2.json');
+			await fs.promises.writeFile(jsonFilePath, jsonString);
+			console.log('Wrote JSON to file:', jsonFilePath);
 			const geneData = JSON.parse(jsonString);
             console.log('Gene data:', geneData);
 
-			if (geneData.status !== 'success') {
-				throw geneQuery.message;
-			  }
 		} catch (sampleError) {
 		  throw `Failed to get samples from HDF5 file: ${sampleError}`;
 		}
 	  } catch (error) {
 		throw `Failed to validate HDF5 file: ${error}`;
 	  }
+
+	  // Add this inside the HDF5 file handling branch (before the closing brace)
+q.get = async (param: TermdbClusterRequestGeneExpression) => {
+	const limitSamples = await mayLimitSamples(param, q.samples, ds);
+	if (limitSamples?.size == 0) {
+	  // Got 0 sample after filtering, must still return expected structure with no data
+	  return { term2sample2value: new Map(), byTermId: {}, bySampleId: {} };
+	}
+	
+	// Set up sample IDs and labels
+	const bySampleId = {};
+	const samples = q.samples || [];
+	if (limitSamples) {
+	  for (const sid of limitSamples) {
+		bySampleId[sid] = { label: ds.cohort.termdb.q.id2sampleName(sid) };
+	  }
+	} else {
+	  // Use all samples with exp data
+	  for (const sid of samples) {
+		bySampleId[sid] = { label: ds.cohort.termdb.q.id2sampleName(sid) };
+	  }
+	}
+	
+	// Initialize data structure
+	const term2sample2value = new Map();
+	const byTermId = {};
+	
+	// Process each gene term
+	for (const geneTerm of param.terms) {
+	  if (!geneTerm.gene) continue;
+	  
+	  try {
+		// Query expression values for the specific gene
+		const geneQuery = await queryGeneExpression(q.file, geneTerm.gene);
+		
+		// Parse the JSON output
+		const jsonMatch = geneQuery.match(/output_string:(.*)/);
+		if (!jsonMatch || !jsonMatch[1]) {
+		  console.warn(`No data found for gene: ${geneTerm.gene}`);
+		  continue;
+		}
+		
+		const jsonString = jsonMatch[1];
+		const geneData = JSON.parse(jsonString);
+		
+		// Convert the gene data to the expected format
+		const s2v = {};
+		
+		// Assuming geneData contains sample-to-value mappings
+		// Adjust this part based on your actual data structure
+		for (const [sampleName, value] of Object.entries(geneData)) {
+		  console.log('Sample:', sampleName, 'Value:', value);
+		  const sampleId = ds.cohort.termdb.q.sampleName2id(sampleName);
+		  // console.log('Sample:', sampleName, 'ID:', sampleId, 'Value:', value);
+		  if (!sampleId) continue;
+		  if (limitSamples && !limitSamples.has(sampleId)) continue;
+		  
+		  s2v[sampleId] = Number(value);
+		}
+		
+		if (Object.keys(s2v).length) {
+		  term2sample2value.set(geneTerm.gene, s2v);
+		}
+	  } catch (error) {
+		console.warn(`Error processing gene ${geneTerm.gene}:`, error);
+		continue;
+	  }
+	}
+	
+	if (term2sample2value.size == 0) {
+	  throw 'No data available for the input ' + param.terms?.map(g => g.gene).join(', ');
+	}
+	
+	return { term2sample2value, byTermId, bySampleId };
+  };
+
 	} else {
 	  // Existing tabix (.gz) file handling branch - LEFT UNCHANGED
 	  if (!q.file.startsWith(serverconfig.tpmasterdir)) {
