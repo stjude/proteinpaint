@@ -9,7 +9,7 @@ on:
 
 jobs:
   check-user-permissions:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     steps:
       - id: set-build-secret
         run: |
@@ -28,7 +28,7 @@ jobs:
   build:
     needs: check-user-permissions
     if: github.event.pull_request.draft == false
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
         with:
