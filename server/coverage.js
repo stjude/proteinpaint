@@ -1,3 +1,4 @@
+import './dataset/termdb.test.ts'
 import { execSync } from 'child_process'
 import path from 'path'
 
