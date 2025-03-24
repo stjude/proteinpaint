@@ -43,24 +43,17 @@ export function getHandler(self: GeneVariantTermSettingInstance) {
 		},
 
 		getPillStatus() {
-			if (self.q.type == 'predefined-groupset' || self.q.type == 'custom-groupset') {
-				const labels: string[] = []
-				labels.push(dt2label[self.q.dt])
-				const byOrigin = self.vocabApi.termdbConfig.assayAvailability?.byDt[self.q.dt!]?.byOrigin
-				if (byOrigin) labels.push(byOrigin[self.q.origin!]?.label || self.q.origin)
-				if (self.q.type == 'predefined-groupset') {
-					const groupset = self.term.groupsetting.lst[self.q.predefined_groupset_idx]
-					labels.push(groupset.name)
-				} else if (self.q.type == 'custom-groupset') {
-					const n = self.q.customset.groups.length
-					labels.push(`Divided into ${n} groups`)
-				} else {
-					throw 'unknown setting for groupsetting'
-				}
-				return { text: labels.join(' - ') }
+			let text
+			if (self.q.type == 'predefined-groupset') {
+				const groupset = self.term.groupsetting.lst[self.q.predefined_groupset_idx]
+				text = groupset.name
+			} else if (self.q.type == 'custom-groupset') {
+				const n = self.q.customset.groups.filter(group => !group.uncomputable).length
+				text = `Divided into ${n} groups`
 			} else {
-				return { text: self.q.exclude?.length ? 'matching variants' : 'any variant class' }
+				text = self.q.exclude?.length ? 'matching variants' : 'any variant class'
 			}
+			return { text }
 		},
 
 		async showEditMenu(div: Element) {

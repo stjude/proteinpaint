@@ -41,6 +41,7 @@ export const groupset = {
 		const categories = []
 		const filters = []
 		for (const g of groupset.groups) {
+			if (g.uncomputable) continue
 			if (g.type == 'values') {
 				categories.push(`SELECT sample, ? as key, value
 					FROM anno_categorical a

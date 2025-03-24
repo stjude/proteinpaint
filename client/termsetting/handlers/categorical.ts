@@ -124,7 +124,7 @@ export function setCategoryMethods(self: CategoricalTermSettingInstance) {
 		}
 		if (self.q.type == 'custom-groupset') {
 			if (!self.q.customset) return { text: 'q.customset is missing', bgcolor: 'red' }
-			const n = self.q.customset.groups.length
+			const n = self.q.customset.groups.filter(group => !group.uncomputable).length
 			return { text: 'Divided into ' + n + ' groups' }
 		}
 		return { text: 'Unknown setting for groupsetting', bgcolor: 'red' }
