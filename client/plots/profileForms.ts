@@ -189,7 +189,7 @@ export class profileForms extends profilePlot {
 		for (const tw of this.activeTWs) {
 			if (tw.term.type != 'multivalue') continue
 			const getDict = sample => this.getDict(tw.$id, sample)
-			const dict = this.getPercentsDict(getDict, samples) //get the dict for each drug for the list of samples
+			const dict = this.getPercentsDict(getDict, samples) //get the dict with the counts for each category  for the list of samples
 			this.renderLikertBar(dict, y, 25, tw)
 			y += step
 		}
