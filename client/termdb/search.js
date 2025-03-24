@@ -231,7 +231,9 @@ function setRenderers(self) {
 		*/
 		if ((self.opts.click_term || self.app.opts?.tree?.click_term_wrapper) && uses.has('plot')) {
 			// to click a graphable term, show as blue button
-			if (term && self.opts.disable_terms?.find(term2 => equals(term, term2))) {
+			// equals() checks types. opts.disable_terms maybe an array of term ids without types.
+			// check ids first, then check types
+			if (term && self.opts.disable_terms?.find(term2 => term2 == term?.id || equals(term2, term))) {
 				// but it's disabled
 				button
 					.attr('class', 'sja_tree_click_term_disabled')

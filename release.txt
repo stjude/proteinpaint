@@ -1,1 +1,2 @@
-
+Fixes:
+- Show terms as disabled on tree term search
