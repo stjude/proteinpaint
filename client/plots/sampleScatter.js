@@ -240,8 +240,10 @@ class Scatter {
 			numericEditMenuVersion: ['discrete'],
 			processInput: async tw => {
 				//only discrete mode allowed so set discrete mode and fill term wrapper to add the bins
-				if (isNumericTerm(tw?.term)) tw.q = { mode: 'discrete' } //use discrete mode by default
-				await fillTermWrapper(tw, this.app.vocabApi)
+				if (isNumericTerm(tw?.term)) {
+					tw.q = { mode: 'discrete' } //use discrete mode by default
+					await fillTermWrapper(tw, this.app.vocabApi)
+				}
 			}
 		}
 		const shapeSizeOption = {
