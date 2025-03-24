@@ -29,6 +29,8 @@
     "test:integration": "npm run test:integration --workspace=client",
     "posttest:integration": "./build/integration/exitZeroOnPKillNode.sh",
     "client:coverage": "cd client && ./test.sh *.spec.* name=*",
+    "combined:coverage": "cd server && npm run combined:coverage && sleep 15 && cd .. && npm run client:coverage",
+    "postcombined:coverage": "curl --header 'Content-Type: application/json' --request POST --data '{\"key\":\"test\"}' http://localhost:3000/closeCoverage",
     "local:integration": "cd client; npm run test:integration",
     "lint": "eslint . --ext .ts",
     "docker": "./build/dev/run.sh",
