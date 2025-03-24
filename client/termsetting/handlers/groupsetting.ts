@@ -214,14 +214,13 @@ export class GroupSettingMethods {
 		const q = this.tsInstance.q as CustomGroupSettingQ
 		for (const [i, g] of q.customset.groups.entries()) {
 			const group = g as any // TODO: improve typing
-			//if (group.uncomputable) return
 			this.data.groups.push({
-				currentIdx: Number(i) + 1,
+				currentIdx: i,
 				type: group.type,
 				name: group.name,
 				uncomputable: group.uncomputable
 			})
-			grpIdxes.delete(i + 1)
+			grpIdxes.delete(i)
 			if (group.type == 'filter') {
 				const filter = group.filter
 				if (!filter) throw 'filter missing'
@@ -242,7 +241,7 @@ export class GroupSettingMethods {
 					this.data.values.push({
 						key: value.key,
 						label: label,
-						group: i + 1,
+						group: i,
 						samplecount: null
 					})
 				}
@@ -250,25 +249,7 @@ export class GroupSettingMethods {
 		}
 
 		//Find excluded values not returned in customset
-		// TODO: update this to handle excluded values
-		/*if (this.tsInstance.term.type == 'geneVariant') {
-			const q = this.tsInstance.q as GeneVariantBaseQ
-			const dt = this.tsInstance.category2samplecount.find(i => i.dt == q.dt)
-			const classes = dt.classes.byOrigin && q.origin ? dt.classes.byOrigin[q.origin] : dt.classes
-			if (this.data.values.length !== Object.keys(classes).length) {
-				for (const [key, samplecount] of Object.entries(classes)) {
-					if (!this.data.values.some(d => d.key == key)) {
-						this.data.values.push({
-							key,
-							label: mclass[key].label,
-							group: 0,
-							// @ts-expect-error, will resolve when input data structure is harmonized (see above)
-							samplecount
-						})
-					}
-				}
-			}
-		} else */ if (
+		if (
 			this.data.values.length !== Object.keys(input).length &&
 			this.tsInstance.q.type != 'predefined-groupset' &&
 			this.tsInstance.q.type != 'custom-groupset'
@@ -447,7 +428,6 @@ function setRenderers(self: any) {
 				customgroup.filter = structuredClone(groupFilter)
 				customgroup.filter.active = getNormalRoot(groupFilter.active)
 			} else if (group.type == 'values') {
-				if (group.currentIdx === 0) continue
 				const groupValues = self.data.values
 					.filter((v: ItemEntry) => v.group == group.currentIdx)
 					.map((v: ItemEntry) => {

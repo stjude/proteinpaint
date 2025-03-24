@@ -3,6 +3,7 @@ import { select } from 'd3-selection'
 import { Menu } from '../dom/menu'
 import { renderTable } from '../dom/table'
 import { isNumericTerm, isCategoricalTerm } from '#shared/terms.js'
+import { dtTerms } from '#shared/common.js'
 
 /*
 ********************** EXPORTED
@@ -206,7 +207,11 @@ function setRenderers(self) {
 			const bar_td = `<div style='margin:1px 10px;width:${barWidth}px;height:15px;background-color:#ddd'>`
 			rows.push([{ value: label }, { html: bar_td }])
 			let checked = false
-			if (tvs.term.type == 'categorical' || tvs.term.type == 'survival')
+			if (
+				tvs.term.type == 'categorical' ||
+				tvs.term.type == 'survival' ||
+				dtTerms.map(t => t.type).includes(tvs.term.type)
+			)
 				checked = tvs.values.find(a => a.key === value.key)
 			else if (tvs.term.type == 'float' || tvs.term.type == 'integer')
 				checked = tvs.ranges.find(a => String(a.value) === value.value.toString())
