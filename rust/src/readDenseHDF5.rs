@@ -135,6 +135,30 @@ fn read_dense_hdf5(hdf5_filename: &str, gene_name: &str) -> Result<()> {
                     // Extract just the row we need
                     let row = all_data.slice(s![gene_index, ..]).to_owned();
                     gene_expression = row;
+
+                    // Start building a flatter JSON structure
+                    // let mut output_string = String::from("{\"status\":\"success\",\"samples\":{");
+                    let mut output_string = String::from("{\"samples\":{");
+
+                    // Create direct key-value pairs where sample names are the keys
+                    for i in 0..gene_expression.len() {
+                        // Add each sample name as a key pointing directly to its expression value
+                        output_string += &format!(
+                            "\"{}\":{}",
+                            samples[i].to_string(),
+                            gene_expression[i].to_string()
+                        );
+
+                        // Add comma if not the last item
+                        if i < gene_expression.len() - 1 {
+                            output_string += ",";
+                        }
+                    }
+
+                    // Close the JSON object
+                    output_string += "}}";
+
+                    println!("output_string:{}", output_string);
                 }
                 Err(err2) => {
                     println!(
@@ -151,39 +175,39 @@ fn read_dense_hdf5(hdf5_filename: &str, gene_name: &str) -> Result<()> {
     let mut output = String::new();
 
     // Start with the status
-    output.push_str("{\"status\":\"success\",\"data\":{");
+    // output.push_str("{\"status\":\"success\",\"samples\":{");
+    // output.push_str("{\"samples\":{");
 
-    // Add gene name
-    output.push_str(&format!("\"gene_name\":\"{}\",", gene_name));
 
-    // Add expression values as array
-    output.push_str("\"expression_values\":[");
-    for (i, value) in gene_expression.iter().enumerate() {
-        output.push_str(&format!("{}", value));
-        if i < gene_expression.len() - 1 {
-            output.push_str(",");
-        }
-    }
-    output.push_str("],");
+    // Add metadata fields first
+    // output.push_str(&format!("\"status\":\"success\","));
+    output.push_str(&format!("{{\"gene\":\"{}\",", gene_name)); // Add the gene name
+    output.push_str(&format!("\"dataId\":\"{}\",", gene_name)); // Use gene name as dataId
 
-    // Add sample mappings
-    output.push_str("\"sample_mappings\":[");
+    // Add samples object
+    output.push_str("\"samples\":{");
+
+    // Add key-value pairs for samples
     for (i, sample) in samples.iter().enumerate() {
         if i < gene_expression.len() {
             output.push_str(&format!(
-                "{{\"sample\":\"{}\",\"value\":{}}}",
+                "\"{}\":{}",
                 sample.replace("\\", ""),
                 gene_expression[i]
             ));
+
             if i < gene_expression.len() - 1 && i < samples.len() - 1 {
                 output.push_str(",");
             }
         }
     }
-    output.push_str("]");
+
 
     // Close data and root objects
     output.push_str("}}");
+
+    // Remove any backslashes from the output
+    output = output.replace("\\", "");
 
     // Output the final result
     println!("output_string:{}", output);
@@ -191,6 +215,7 @@ fn read_dense_hdf5(hdf5_filename: &str, gene_name: &str) -> Result<()> {
     Ok(())
 }
 
+// Main function
 fn main() -> Result<()> {
     let mut input = String::new();
     match io::stdin().read_line(&mut input) {
@@ -238,3 +263,4 @@ fn main() -> Result<()> {
 
     Ok(())
 }
+
