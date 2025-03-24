@@ -223,7 +223,6 @@ class MassGroups {
 
 		//TODO: need to 'diffAnalysis' to `currentCohortChartTypes` in the future
 		if (this.state.currentCohortChartTypes.includes('DEanalysis') && samplelstTW.q.groups.length == 2) {
-			addDEPlotMenuItem(menuDiv, this, this.state, samplelstTW)
 			addDiffAnalysisPlotMenuItem(menuDiv, this, this.state, samplelstTW)
 		}
 
@@ -301,41 +300,6 @@ class MassGroups {
 
 export const groupsInit = getCompInit(MassGroups)
 
-function addDEPlotMenuItem(div, self, state, samplelstTW, tip) {
-	div
-		.append('div')
-		.attr('class', 'sja_menuoption sja_sharp_border')
-		.text('Differential gene expression analysis')
-		.on('click', e => {
-			const groups = []
-			for (const group of samplelstTW.q.groups) {
-				if (group.values && group.values.length > 0) {
-					groups.push(group)
-				} else {
-					throw 'group does not contain samples for DE analysis'
-				}
-			}
-			const config = {
-				chartType: 'DEanalysis',
-				state,
-				samplelst: { groups }
-			}
-			self.tip.hide()
-			self.app.dispatch({
-				type: 'plot_create',
-				config
-			})
-		})
-	// small text to explain which is case/control
-	div
-		.append('div')
-		.text(`Case: ${samplelstTW.q.groups[1].name}, control: ${samplelstTW.q.groups[0].name}`)
-		.style('font-size', '0.8em')
-		.style('text-align', 'right')
-		.style('opacity', 0.8)
-		.style('padding', '3px')
-}
-
 function addDiffAnalysisPlotMenuItem(div, self, state, samplelstTW) {
 	div
 		.append('div')
@@ -366,6 +330,13 @@ function addDiffAnalysisPlotMenuItem(div, self, state, samplelstTW) {
 				config
 			})
 		})
+	// small text to explain which is case/control
+	div
+		.append('div')
+		.text(`Case: ${samplelstTW.q.groups[1].name}, control: ${samplelstTW.q.groups[0].name}`)
+		.style('font-size', '0.8em')
+		.style('opacity', 0.8)
+		.style('padding', '3px')
 }
 
 function initUI(self) {
