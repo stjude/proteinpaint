@@ -21,7 +21,7 @@ on:
 
 jobs:
   check-user-permissions:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: Check user permission
         uses: stjude/proteinpaint/.github/actions/check-user-permissions@master
@@ -34,7 +34,7 @@ jobs:
     needs: check-user-permissions
     timeout-minutes: 100
     if: github.event.pull_request.draft == false
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v3
         with:

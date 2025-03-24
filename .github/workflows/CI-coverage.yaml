@@ -10,7 +10,7 @@ on:
 
 jobs:
   check-user-permissions:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - id: set-build-secret
         run: |
@@ -28,7 +28,7 @@ jobs:
 
   build:
     needs: check-user-permissions
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v3
