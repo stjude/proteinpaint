@@ -228,14 +228,14 @@ if (DE_method == "edgeR") {
        #cat("limma fit time: ", as.difftime(fit_time, units = "secs")[3], " seconds\n")
 
        # Saving mean-difference plot (aka MA plot)
-       set.seed(as.integer(Sys.time())) # Set the seed according to current time
-       cachedir <- input$cachedir # Importing serverconfig.cachedir
-       random_number <- runif(1, min = 0, max = 1) # Generating random number
-       md_image_name <- paste0("limma_md_temp_",random_number,".png") # Generating random image name so that simultaneous server side requests do NOT generate the same edgeR file name
-       png(filename = paste0(cachedir,"/",md_image_name), width = 1000, height = 1000, res = 200) # Opening a png device
-       par(oma = c(0, 0, 0, 0)) # Creating a margin
-       plotMD(fit) # Plot the limma fit
-       # dev.off() # Gives a null device message which breaks JSON. Commenting it out for now, will investigate it later
+       #set.seed(as.integer(Sys.time())) # Set the seed according to current time
+       #cachedir <- input$cachedir # Importing serverconfig.cachedir
+       #random_number <- runif(1, min = 0, max = 1) # Generating random number
+       #md_image_name <- paste0("limma_md_temp_",random_number,".png") # Generating random image name so that simultaneous server side requests do NOT generate the same edgeR file name
+       #png(filename = paste0(cachedir,"/",md_image_name), width = 1000, height = 1000, res = 200) # Opening a png device
+       #par(oma = c(0, 0, 0, 0)) # Creating a margin
+       #plotMD(fit) # Plot the limma fit
+       ## dev.off() # Gives a null device message which breaks JSON. Commenting it out for now, will investigate it later
 
        # Empirical Bayes smoothing
        empirical_smoothing_time <- system.time({
