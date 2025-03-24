@@ -1152,14 +1152,15 @@ export const mutationClasses = Object.values(mclass)
 export const CNVClasses = Object.values(mclass)
 	.filter(m => m.dt == dtcnv)
 	.map(m => m.key)
+const WTandBlankClasses = Object.values(mclass)
+	.filter(m => m.key == 'WT' || m.key == 'Blank')
+	.map(m => m.key)
 
 // custom dt terms used by geneVariant term
-// for each term, can specify default filtering settings
-// by adding a tvs object (see FilterTermEntry type)
 export const dtTerms = [
 	{
 		id: 'snvindel',
-		name: 'SNV/indel',
+		name: dt2label[dtsnvindel],
 		parent_id: null,
 		isleaf: true,
 		type: 'dtsnvindel',
@@ -1168,14 +1169,30 @@ export const dtTerms = [
 	},
 	{
 		id: 'cnv',
-		name: 'CNV',
+		name: dt2label[dtcnv],
 		parent_id: null,
 		isleaf: true,
 		type: 'dtcnv',
 		dt: dtcnv,
-		values: Object.fromEntries(
-			CNVClasses.map(key => [key, { label: mclass[key].label }]).concat([['WT', { label: 'Wildtype' }]])
-		)
+		values: Object.fromEntries([...CNVClasses, ...WTandBlankClasses].map(key => [key, { label: mclass[key].label }]))
+	},
+	{
+		id: 'fusion',
+		name: dt2label[dtfusionrna],
+		parent_id: null,
+		isleaf: true,
+		type: 'dtfusion',
+		dt: dtfusionrna,
+		values: Object.fromEntries([mclassfusionrna, ...WTandBlankClasses].map(key => [key, { label: mclass[key].label }]))
+	},
+	{
+		id: 'sv',
+		name: dt2label[dtsv],
+		parent_id: null,
+		isleaf: true,
+		type: 'dtsv',
+		dt: dtsv,
+		values: Object.fromEntries([mclasssv, ...WTandBlankClasses].map(key => [key, { label: mclass[key].label }]))
 	}
 ]
 

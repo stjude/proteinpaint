@@ -13,6 +13,8 @@ export const graphableTypes = new Set([
 	'geneExpression',
 	'dtcnv',
 	'dtsnvindel',
+	'dtfusion',
+	'dtsv',
 	TermTypes.METABOLITE_INTENSITY,
 	TermTypes.SINGLECELL_GENE_EXPRESSION,
 	TermTypes.SINGLECELL_CELLTYPE,

@@ -392,7 +392,8 @@ async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 		if (self.term.filter) return
 		const dtTermsInDs: DtTerm[] = []
 		for (const t of dtTerms) {
-			if (!Object.keys(self.vocabApi.termdbConfig.queries).includes(t.id)) continue
+			const query = t.id == 'fusion' || t.id == 'sv' ? 'svfusion' : t.id // TODO: distinguish between fusion and sv in dataset file
+			if (!Object.keys(self.vocabApi.termdbConfig.queries).includes(query)) continue
 			const byOrigin = self.vocabApi.termdbConfig.assayAvailability?.byDt[t.dt]?.byOrigin
 			if (byOrigin) {
 				for (const k of Object.keys(byOrigin)) {
