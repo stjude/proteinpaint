@@ -71,7 +71,7 @@ export class profileForms extends profilePlot {
 				tabs: this.tabs
 			}).main()
 
-		const shift = 550
+		const shift = 650
 		const shiftTop = 60
 		const svg = rightDiv
 			.style('padding', '10px')
@@ -284,7 +284,7 @@ export class profileForms extends profilePlot {
 	}
 
 	getColor(key: string) {
-		return key == 'Yes' ? this.state.config.color : key == 'No' ? '#aaa' : `url(#${this.id}_diagonalHatch)`
+		return key == 'Yes' ? this.activePlot.color : key == 'No' ? '#aaa' : `url(#${this.id}_diagonalHatch)`
 	}
 
 	renderLikertBar(dict: { [key: string]: number }, y: number, height: number, tw: any) {
@@ -305,7 +305,7 @@ export class profileForms extends profilePlot {
 			.append('text')
 			.text(text)
 			.attr('y', (height * 2) / 3)
-			.style('font-size', '0.9em')
+			.style('font-size', '0.85em')
 		itemG.attr('transform', `translate(${middle - x}, ${y})`)
 
 		const itemG2 = this.dom.mainG.append('g').attr('transform', `translate(${middle}, ${y})`)
@@ -357,6 +357,7 @@ export class profileForms extends profilePlot {
 
 			const value = percents[key]
 			const width = (value / total) * this.settings.svgw
+			const percent = (value / total) * 100
 			this.dom.mainG
 				.append('rect')
 				.attr('x', x)
@@ -365,7 +366,7 @@ export class profileForms extends profilePlot {
 				.attr('height', height)
 				.attr('stroke', 'gray')
 				.attr('fill', color)
-				.datum({ key, value })
+				.datum({ key, value: percent })
 
 			if (scPercentKeys.includes(key))
 				this.dom.mainG
