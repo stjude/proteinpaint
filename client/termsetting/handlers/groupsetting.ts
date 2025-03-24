@@ -14,7 +14,7 @@ import type {
 	GeneVariantTerm,
 	MinBaseQ
 } from '#types'
-import { filterInit, getNormalRoot } from '#filter/filter'
+import { filterInit, getNormalRoot, getWrappedTvslst } from '#filter/filter'
 
 /*
 ---------Exported---------
@@ -62,6 +62,7 @@ type GrpEntry = {
 	currentIdx: number //Current index of group
 	type: string //'values' | 'filter'
 	name: string //Mutable group name, default .currentIdx
+	uncomputable?: boolean
 }
 type GrpEntryWithDom = GrpEntry & {
 	wrapper: Selection<Element, any, any, any>
@@ -202,7 +203,8 @@ export class GroupSettingMethods {
 			this.data.groups.push({
 				currentIdx: g,
 				type: this.tsInstance.q.type == 'filter' ? 'filter' : 'values',
-				name: g === 0 ? `Excluded categories` : `Group ${g.toString()}`
+				name: g === 0 ? `Excluded categories` : `Group ${g.toString()}`,
+				uncomputable: g === 0
 			})
 		}
 		this.data.groups.sort((a: GrpEntry, b: GrpEntry) => a.currentIdx - b.currentIdx)
@@ -212,11 +214,12 @@ export class GroupSettingMethods {
 		const q = this.tsInstance.q as CustomGroupSettingQ
 		for (const [i, g] of q.customset.groups.entries()) {
 			const group = g as any // TODO: improve typing
-			if (group.uncomputable) return
+			//if (group.uncomputable) return
 			this.data.groups.push({
 				currentIdx: Number(i) + 1,
 				type: group.type,
-				name: group.name
+				name: group.name,
+				uncomputable: group.uncomputable
 			})
 			grpIdxes.delete(i + 1)
 			if (group.type == 'filter') {
@@ -348,6 +351,7 @@ function setRenderers(self: any) {
 		// }
 	}
 	self.showDraggables = async function () {
+		self.dom.menuWrapper.selectAll('*').remove()
 		self.dom.actionDiv = self.dom.menuWrapper.append('div').attr('class', 'sjpp-group-actions').style('padding', '10px')
 
 		/*A goal when refactoring groupsetting was to ~not~ attach any variable or 
@@ -412,7 +416,9 @@ function setRenderers(self: any) {
 			.classed('sjpp-group-edit-div', true)
 			.classed('sjpp-drag-drop-div', true)
 
-		await initGroupDiv(self.data.groups.find((d: GrpEntry) => d.currentIdx === 0))
+		const excludedGroup = self.data.groups.find((d: GrpEntry) => d.currentIdx === 0)
+		delete excludedGroup.wrapper // excludedGroup will not get displayed by initGroupDiv() if .wrapper present
+		await initGroupDiv(excludedGroup)
 
 		await self.dom.includedWrapper
 			.selectAll('div')
@@ -434,14 +440,14 @@ function setRenderers(self: any) {
 		if (!draggedItem && !addedFilter && !editedName) return // no groupset changes, so return
 		const customset: any = { groups: [] }
 		for (const group of self.data.groups) {
-			const customgroup: any = { name: group.name, type: group.type }
-			if (group.currentIdx === 0) continue
+			const customgroup: any = { name: group.name, type: group.type, uncomputable: group.uncomputable }
 			if (group.type == 'filter') {
 				const groupFilter = self.data.filters.find((d: FilterEntry) => d.group == group.currentIdx)
 				if (!groupFilter) throw 'filter missing'
 				customgroup.filter = structuredClone(groupFilter)
 				customgroup.filter.active = getNormalRoot(groupFilter.active)
 			} else if (group.type == 'values') {
+				if (group.currentIdx === 0) continue
 				const groupValues = self.data.values
 					.filter((v: ItemEntry) => v.group == group.currentIdx)
 					.map((v: ItemEntry) => {
@@ -585,10 +591,7 @@ function setRenderers(self: any) {
 		if (!filter || !filter.terms?.length) return
 		if (!filter.opts) throw 'filter.opts{} missing'
 
-		if (!filter.active) {
-			// TODO: is this necessary?
-			filter.active = { type: 'tvslst', join: '', in: true, lst: [], $id: 0, tag: 'filterUiRoot' }
-		}
+		if (!filter.active) filter.active = getWrappedTvslst()
 
 		const div = holder.append('div').style('margin-top', '15px')
 
@@ -600,10 +603,25 @@ function setRenderers(self: any) {
 			holder: filterBody,
 			vocab: { terms: filter.terms },
 			callback: async f => {
-				addedFilter = true
 				// once the filter is updated from UI, it's only updated here
 				// user must press submit button to attach current filter to self.q{}
+				addedFilter = true
 				filter.active = f
+				if (self.tsInstance.term.type == 'geneVariant') {
+					// geneVariant term, filters are dt filters
+					// extract each filter and set the filter
+					// value to be the "not tested" category
+					const notTestedFilters = f.lst.map(getNotTestedFilters)
+					// add the not tested filters to the excluded group
+					// to exclude samples who are not tested for the dts
+					const excludedFilter = self.data.filters.find(f => f.group === 0)
+					for (const item of notTestedFilters) {
+						if (excludedFilter.active.lst.some(x => x.tvs.term.id == item.tvs.term.id)) continue // dt filter already in excluded group
+						excludedFilter.active.lst.push(item)
+					}
+					if (excludedFilter.active.lst.length > 1) excludedFilter.active.join = 'and' // filters should be joined by 'and' to exclude samples who are not tested for multiple dts
+					self.initGrpSetUI()
+				}
 				if (callback2) await callback2()
 			}
 		}).main(filter.active)
@@ -749,4 +767,25 @@ function setRenderers(self: any) {
 				await self.addItems(group)
 			})
 	}
+}
+
+function getNotTestedFilters(_item) {
+	const item = structuredClone(_item)
+	const blank = mclass['Blank']
+	if (item.type == 'tvs') {
+		item.tvs.values = [
+			{
+				key: blank.key,
+				label: blank.label,
+				value: blank.key
+			}
+		]
+	} else if (item.type == 'tvslst') {
+		for (const subitem of item.lst) {
+			getNotTestedFilters(subitem)
+		}
+	} else {
+		throw 'item.type not recognized'
+	}
+	return item
 }

@@ -76,14 +76,9 @@ export class Menu {
 		// check if this.d isn't empty before assigning parent_menu
 		if (Object.values(this.d._groups[0]).length) this.dnode.parent_menu = arg.parent_menu //; console.log(74, this.dnode.parent_menu)
 
-		body.on('mousedown.menu' + this.typename, event => {
-			/*** 
-				Problem: A parent menu can close unexpectedly when clicking on a 
-				non-interactive submenu element, leaving its submenu still visible
-				but "floating" without context since its parent menu disappeared on 'body' click.
+		if (arg.ancestor_menus) this.dnode.ancestor_menus = arg.ancestor_menus // attach property to DOM node, since other code does not know about any menu instance directly, but can detect properties of other menus by DOM node
 
-				Solution: Do not hide a menu if it happens to be a parent of a clicked menu
-			***/
+		body.on('mousedown.menu' + this.typename, event => {
 			// when pressing the mouse cursor on the menu itself or any of its submenu, it should stay open
 			if (this.dnode.contains(event.target)) return
 			// this assumes that the mousedown occured on the menu holder itself (not any of its child elements)
@@ -91,7 +86,7 @@ export class Menu {
 			// detect in case the mousedown occurred on a menu's child element,
 			// in which case the menu's parent should still be not hidden
 			const menu = event.target.closest('.sja_menu_div')
-			if (menu && menu.parent_menu === this.dnode) return
+			if (menu && (menu.parent_menu === this.dnode || menu.ancestor_menus?.includes(this.dnode))) return // the menu div that was clicked, does it have parent or ancestor menus, and is my DOM div one of them? if yes, I shouldn't hide myself
 			// close a menu for all other mousedown events outside of its own div or submenu
 			this.hide()
 		})
