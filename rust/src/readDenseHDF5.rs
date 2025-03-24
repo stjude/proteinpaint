@@ -1,13 +1,13 @@
 use hdf5::types::VarLenAscii;
 use hdf5::{File, Result};
 use json;
-use ndarray::{Array1, Array2, Dim, s};
+use ndarray::{Array1, Dim, s};
 use std::io;
-use std::time::Instant;
+// use std::time::Instant;
 
 /// Read expression data for a specific gene from a dense HDF5 file
 fn read_dense_hdf5(hdf5_filename: &str, gene_name: &str) -> Result<()> {
-    let start_time = Instant::now();
+    // let start_time = Instant::now();
 
     // Open the HDF5 file
     let file = match File::open(hdf5_filename) {
@@ -127,7 +127,7 @@ fn read_dense_hdf5(hdf5_filename: &str, gene_name: &str) -> Result<()> {
                 return Ok(());
             }
 
-            let num_samples = dataset_shape[1];
+            // let num_samples = dataset_shape[1];
 
             // Try reading the entire dataset and then extracting the row
             match counts_dataset.read::<f64, Dim<[usize; 2]>>() {
@@ -233,7 +233,7 @@ fn main() -> Result<()> {
             };
 
             // Get the HDF5 filename
-            let hdf5_filename = match input_json["file_path"].as_str() {
+            let hdf5_filename = match input_json["hdf5_file"].as_str() {
                 Some(x) => x,
                 None => {
                     println!(

@@ -202,169 +202,12 @@ fn detect_hdf5_format(hdf5_filename: &str) -> Result<&'static str> {
         //eprintln!("Dense format detected");
         Ok("dense")
     } else if has_data_group && has_sample_names {
-        eprintln!("Sparse format detected");
+        //eprintln!("Sparse format detected");
         Ok("sparse")
     } else {
         eprintln!("Unknown format detected");
         Ok("unknown")
     }
-}
-
-
-// Function to validate and load an HDF5 file
-fn validate_hdf5_file(hdf5_filename: String) -> Result<()> {
-    // Open the HDF5 file
-    let file = File::open(&hdf5_filename)?;
-    
-    // Detect file format
-    let file_format = detect_hdf5_format(&hdf5_filename)?;
-    
-    // Get basic information about the file depending on format
-    let output = match file_format {
-        "dense" => {
-            // For dense format, get dimensions from the counts dataset
-            let ds_counts = file.dataset("counts")?;
-            let data_shape = ds_counts.shape();
-
-            // Read sample names using VarLenAscii
-            let mut sample_names: Vec<String> = Vec::new();
-            if let Ok(ds_samples) = file.dataset("samples") {
-                if let Ok(samples) = ds_samples.read_1d::<hdf5::types::VarLenAscii>() {
-                    for sample in samples.iter() {
-                        sample_names.push(sample.to_string());
-                    }
-                    // eprintln!("Successfully read {} sample names", sample_names.len());
-                } else {
-                    eprintln!("Error reading samples as VarLenAscii");
-                }
-            }
-
-            // Read gene names using VarLenAscii
-            let mut gene_names: Vec<String> = Vec::new();
-            if let Ok(ds_genes) = file.dataset("gene_ids") {
-                // eprintln!("Found 'gene_ids' dataset");
-                // eprintln!("Dataset shape: {:?}", ds_genes.shape());
-                
-                if let Ok(genes) = ds_genes.read_1d::<hdf5::types::VarLenAscii>() {
-                    for gene in genes.iter() {
-                        gene_names.push(gene.to_string());
-                    }
-                    // eprintln!("Successfully read {} gene names", gene_names.len());
-                    
-                    // Log a few gene names to verify
-                    for (i, gene) in genes.iter().enumerate().take(5) {
-                        // eprintln!("Gene {}: '{}'", i, gene);
-                    }
-                } else {
-                    eprintln!("Error reading gene_ids as VarLenAscii");
-                    
-                    // Try alternative names if the primary one fails
-                    let gene_dataset_names = ["gene_names", "genes", "features"];
-                    for name in gene_dataset_names {
-                        if let Ok(ds) = file.dataset(name) {
-                            // eprintln!("Found '{}' dataset, trying to read gene names", name);
-                            if let Ok(genes) = ds.read_1d::<hdf5::types::VarLenAscii>() {
-                                for gene in genes.iter() {
-                                    gene_names.push(gene.to_string());
-                                }
-                                // eprintln!("Successfully read {} gene names from '{}'", gene_names.len(), name);
-                                break;
-                            }
-                        }
-                    }
-                }
-            } else {
-                eprintln!("Could not find 'gene_ids' dataset, trying alternatives");
-                
-                // Try alternative names for the gene dataset
-                let gene_dataset_names = ["gene_names", "genes", "features"];
-                for name in gene_dataset_names {
-                    if let Ok(ds) = file.dataset(name) {
-                        // eprintln!("Found '{}' dataset, trying to read gene names", name);
-                        if let Ok(genes) = ds.read_1d::<hdf5::types::VarLenAscii>() {
-                            for gene in genes.iter() {
-                                gene_names.push(gene.to_string());
-                            }
-                            // eprintln!("Successfully read {} gene names from '{}'", gene_names.len(), name);
-                            break;
-                        }
-                    }
-                }
-            }
-
-            // Create JSON with both sample names and gene names
-            serde_json::json!({
-                "status": "success",
-                "message": "HDF5 file loaded successfully",
-                "file_path": hdf5_filename,
-                "format": "tpm",
-                "sampleNames": sample_names,
-                "geneNames": gene_names,  // Add gene names to output
-                "matrix_dimensions": {
-                    "num_genes": data_shape[0],
-                    "num_samples": data_shape[1]
-                }
-            })
-        },
-        "sparse" => {
-            // For sparse format
-            let ds_dim = file.dataset("data/dim")?;
-            let data_dim: Array1<usize> = ds_dim.read::<usize, Dim<[usize; 1]>>()?;
-            let num_samples = data_dim[0];
-            let num_genes = data_dim[1];
-            
-            // Read sample names for sparse format
-            let mut sample_names: Vec<String> = Vec::new();
-            if let Ok(ds_samples) = file.dataset("sample_names") {
-                if let Ok(samples) = ds_samples.read_1d::<hdf5::types::VarLenAscii>() {
-                    for sample in samples.iter() {
-                        sample_names.push(sample.to_string());
-                    }
-                    // eprintln!("Successfully read {} sample names", sample_names.len());
-                }
-            }
-            
-            // Read gene names for sparse format
-            let mut gene_names: Vec<String> = Vec::new();
-            if let Ok(ds_genes) = file.dataset("gene_names") {
-                if let Ok(genes) = ds_genes.read_1d::<hdf5::types::VarLenAscii>() {
-                    for gene in genes.iter() {
-                        gene_names.push(gene.to_string());
-                    }
-                    // eprintln!("Successfully read {} gene names", gene_names.len());
-                }
-            }
-            
-            serde_json::json!({
-                "status": "success",
-                "message": "HDF5 file loaded successfully",
-                "file_path": hdf5_filename,
-                "format": "sparse",
-                "sampleNames": sample_names,
-                "geneNames": gene_names,  // Add gene names to output
-                "matrix_dimensions": {
-                    "num_genes": num_genes,
-                    "num_samples": num_samples
-                }
-            })
-        },
-        _ => {
-            // For unknown format
-            serde_json::json!({
-                "status": "failure",
-                "message": "Unknown file format cannot be loaded successfully",
-                "file_path": hdf5_filename,
-                "format": "unknown",
-                "sampleNames": [],
-                "geneNames": []  // Empty array for unknown format
-            })
-        }
-    };
-
-    // Print the output
-    println!("output_string:{}", output);
-    
-    Ok(())
 }
 
 // Function to read a gene from an HDF5 file
@@ -395,7 +238,7 @@ fn query_gene_dense(hdf5_filename: String, gene_name: String) -> Result<()> {
     let file = File::open(&hdf5_filename)?;
 
     // Read gene names
-    let now_genes = Instant::now();
+    // let now_genes = Instant::now();
     let ds_genes = file.dataset("gene_names")?;
     let genes = ds_genes.read_1d::<FixedAscii<104>>()?;
     
@@ -570,16 +413,13 @@ fn main() -> Result<()> {
                     };
 
                     // First validate the file
-                    let now = Instant::now();
-                    validate_hdf5_file(hdf5_filename.clone())?;
-                    // println!("Time for validating HDF5 file: {:?}", now.elapsed());
-
-                    // // Then, check if we have a gene to query
-                    // if let Some(gene_name) = json_string["gene"].as_str() {
-                    //     let gene_query_time = Instant::now();
-                    //     query_gene(hdf5_filename, gene_name.to_string())?;
-                    //     println!("Time for querying gene: {:?}", gene_query_time.elapsed());
-                    // }
+                    // let now = Instant::now();
+                    // Then, check if we have a gene to query
+                    if let Some(gene_name) = json_string["gene"].as_str() {
+                        let gene_query_time = Instant::now();
+                        query_gene(hdf5_filename, gene_name.to_string())?;
+                        println!("Time for querying gene: {:?}", gene_query_time.elapsed());
+                    }
                 }  
                 Err(error) => println!("Incorrect json: {}", error),
             }  

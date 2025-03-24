@@ -320,15 +320,15 @@ async function validateHDF5File(filePath) {
   /**
    * Query expression values for a specific gene from a dense HDF5 file
    * 
-   * @param {string} filePath - Path to the HDF5 file
+   * @param {string} hdf5_file - Path to the HDF5 file
    * @param {string} geneName - Name of the gene to query
    * @returns {Promise<Object>} Promise resolving to gene expression data
    */
-  async function queryGeneExpression(filePath, geneName) {
-	console.log(`Querying gene expression for ${geneName} from ${filePath}`);
+  async function queryGeneExpression(hdf5_file, geneName) {
+	console.log(`Querying gene expression for ${geneName} from ${hdf5_file}`);
 	// Create the input params as a JSON object
 	const jsonInput = JSON.stringify({
-		file_path: filePath,
+		hdf5_file: hdf5_file,
 		gene: geneName
 	  });
 	
@@ -337,6 +337,7 @@ async function validateHDF5File(filePath) {
 	  console.log('Calling readDenseHDF5 Rust script...');
 	  console.log('Params:', JSON.stringify(jsonInput));
 	  const result = await run_rust('readDenseHDF5', jsonInput);
+	  // const result = await run_rust('readHDF5', jsonInput);
 	  
 	  // Debug output to understand what we're getting back
 	  // console.log('Result structure:', JSON.stringify(result, null, 2).substring(0, 5000) + '...');
