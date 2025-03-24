@@ -185,7 +185,6 @@ async function startServer(app, routeCallbacks: OptionalRouteCallbacks = {}) {
 
 		if (routeCallbacks.setCloseServer) {
 			routeCallbacks.setCloseServer(() => {
-				console.log('187 closeServer() called')
 				server.close()
 				process.exit(0)
 			})
@@ -207,9 +206,7 @@ async function setOptionalRoutes(app) {
 		if (fname.endsWith('.js')) {
 			const _ = await import(fname)
 			const d = _.default(app, basepath)
-			console.log(d?.setCloseServer, fname.includes('closeCoverage'))
 			if (d?.setCloseServer && fname.includes('closeCoverage')) {
-				console.log(209)
 				routeCallbacks.setCloseServer = d.setCloseServer
 			}
 		}

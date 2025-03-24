@@ -14,7 +14,7 @@ export default function setRoutes(app, basepath) {
 			if (numTries >= maxTries) throw `maximum tries=${maxTries} already reached`
 			if (req.query.key === key) {
 				if (!closeServer) throw `closeServer() callback has not been set`
-				console.log('--- Closing server app --- ')
+				// console.log('--- Closing server app --- ')
 				res.send({ ok: true, status: 'ok' })
 				closeServer()
 			} else {
@@ -26,10 +26,12 @@ export default function setRoutes(app, basepath) {
 			res.send({ error })
 		}
 	})
+
 	let closeServer
+
 	return {
 		setCloseServer(callback) {
-			console.log('---- setting closeServer() callback')
+			// console.log('---- setting closeServer() callback')
 			closeServer = callback
 		}
 	}
