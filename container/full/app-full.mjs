@@ -9,7 +9,8 @@ if (!fs.existsSync(serverconfigFile)) {
 	throw `missing serverconfig.json: did you forget to mount?`
 }
 
-const { default: serverconfig } = await import(serverconfigFile, { assert: { type: 'json' } })
+const serverconfigData = fs.readFileSync(serverconfigFile, 'utf8')
+const serverconfig = JSON.parse(serverconfigData)
 
 if (!serverconfig.genomes) {
 	serverconfig.genomes = [
