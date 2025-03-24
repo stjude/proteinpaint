@@ -53,11 +53,16 @@ export class VolcanoPlotView {
 			xAxisLabel: svg.append('text').attr('id', 'sjpp-volcano-xAxisLabel').attr('text-anchor', 'middle'),
 			yAxisLabel: svg.append('text').attr('id', 'sjpp-volcano-yAxisLabel').attr('text-anchor', 'middle'),
 			plot: svg.append('g').attr('id', 'sjpp-volcano-plot'),
-			pValueTable: this.dom.holder.append('div').attr('id', 'sjpp-volcano-pValueTable'),
-			stats: volcanoHolder.append('div').attr('id', 'sjpp-volcano-stats')
+			pValueTable: this.dom.holder
+				.append('div')
+				.attr('id', 'sjpp-volcano-pValueTable')
+				.style('display', settings.showPValueTable ? 'inline-block' : 'none'),
+			stats: volcanoHolder
+				.append('div')
+				.attr('id', 'sjpp-volcano-stats')
+				.style('display', settings.showStats ? 'block' : 'none')
 		}
 		this.termType = termType
-
 		const plotDim = this.viewData.plotDim
 		this.renderUserActions()
 		this.renderPlot(plotDim)
@@ -76,17 +81,14 @@ export class VolcanoPlotView {
 			if (this.viewData.images.length) {
 				const btnLabel = `Image${this.viewData.images.length > 1 ? `s (${this.viewData.images.length})` : ''}`
 				this.addActionButton(btnLabel, () => {
-					this.interactions.showImages()
+					this.interactions.showDom('showImages')
 				})
 			}
 			this.addActionButton('Statistics', () => {
-				this.volcanoDom.stats.style('display', this.volcanoDom.stats.style('display') == 'none' ? '' : 'none')
+				this.interactions.showDom('showStats')
 			})
 			this.addActionButton('P Value Table', () => {
-				this.volcanoDom.pValueTable.style(
-					'display',
-					this.volcanoDom.pValueTable.style('display') == 'none' ? 'inline-block' : 'none'
-				)
+				this.interactions.showDom('showPValueTable')
 			})
 		}
 	}
@@ -155,8 +157,7 @@ export class VolcanoPlotView {
 
 	renderStatsTable() {
 		const statsData = this.viewData.statsData
-		const holder = this.volcanoDom.stats.style('display', 'none').style('vertical-align', 'top')
-		const table = table2col({ holder })
+		const table = table2col({ holder: this.volcanoDom.stats })
 		for (const d of statsData) {
 			const [td1, td2] = table.addRow()
 			td1.text(d.label)
@@ -165,11 +166,10 @@ export class VolcanoPlotView {
 	}
 
 	renderPValueTable() {
-		const tableDiv = this.volcanoDom.pValueTable.style('display', 'none')
 		renderTable({
 			columns: this.viewData.pValueTableData.columns,
 			rows: this.viewData.pValueTableData.rows,
-			div: tableDiv.append('div'),
+			div: this.volcanoDom.pValueTable.append('div'),
 			showLines: true,
 			maxHeight: '150vh',
 			resize: true,

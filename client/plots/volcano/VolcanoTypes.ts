@@ -133,6 +133,8 @@ export type VolcanoSettings = {
 	rankBy: 'abs(foldChange)' | 'pValue'
 	/** If true, show server generated images. If false, hide div. */
 	showImages: boolean
+	showPValueTable: boolean
+	showStats: boolean
 	/** plot height */
 	height: number
 	/** plot width */
