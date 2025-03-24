@@ -305,6 +305,15 @@ class Scatter {
 			testid: 'showAxes'
 		}
 
+		const showRunChart = {
+			boxLabel: '',
+			label: 'Show run chart',
+			type: 'checkbox',
+			chartType: 'sampleScatter',
+			settingsKey: 'showRunChart',
+			title: `Option to show run chart`
+		}
+
 		const inputs = [
 			{
 				type: 'term',
@@ -464,7 +473,8 @@ class Scatter {
 						vocabApi: this.app.vocabApi,
 						menuOptions: '!remove',
 						numericEditMenuVersion: ['continuous']
-					}
+					},
+					showRunChart
 				]
 			)
 			if (!this.is3D) {
@@ -753,7 +763,8 @@ export function getDefaultScatterSettings() {
 		showContour: false,
 		colorContours: false,
 		contourBandwidth: 30,
-		contourThresholds: 10
+		contourThresholds: 10,
+		showRunChart: false
 	}
 }
 

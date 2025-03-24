@@ -15,6 +15,7 @@ import { addNewGroup } from '../mass/groups.js'
 import { setRenderersThree } from './sampleScatter.rendererThree.js'
 import { shapes } from './sampleScatter.js'
 import { roundValueAuto } from '#shared/roundValue.js'
+import { curveBasis } from 'd3-shape'
 
 export function setRenderers(self) {
 	setRenderersThree(self)
@@ -319,6 +320,22 @@ export function setRenderers(self) {
 			.duration(duration)
 		self.mayRenderRegression()
 		if (self.settings.showContour) self.renderContours(chart)
+
+		if (self.settings.showRunChart) self.showRunChart(chart, g)
+	}
+
+	self.showRunChart = function (chart, g) {
+		const coords = chart.data.samples.map(s => self.getCoordinates(chart, s)).sort((a, b) => a.x - b.x)
+		console.log(coords)
+		const areaBuilder = line()
+			.x(d => d.x)
+			.y(d => d.y)
+		g.append('path')
+			.attr('stroke', 'gray')
+			.attr('fill', 'none')
+			.attr('stroke-width', 1)
+			.attr('stroke-linejoin', 'round')
+			.attr('d', areaBuilder(coords))
 	}
 
 	self.renderContours = function (chart) {
@@ -456,7 +473,13 @@ export function setRenderers(self) {
 		return shapes[index]
 	}
 
-	self.transform = function (chart, c, factor = 1) {
+	self.getCoordinates = function (chart, c) {
+		const x = chart.xAxisScale(c.x)
+		const y = chart.yAxisScale(c.y)
+		return { x, y }
+	}
+
+	self.getScale = function (chart, c, factor = 1) {
 		const isRef = !('sampleId' in c)
 		let scale
 		if (!self.config.scaleDotTW || isRef) {
@@ -468,6 +491,11 @@ export function setRenderers(self) {
 			else scale = self.settings.maxShapeSize - ((c.scale - chart.scaleMin) / (chart.scaleMax - chart.scaleMin)) * range
 		}
 		scale = (self.zoom * scale * factor) / 3
+		return scale
+	}
+
+	self.transform = function (chart, c, factor = 1) {
+		const scale = self.getScale(chart, c, factor)
 		const particleSize = 16 * scale
 		const x = chart.xAxisScale(c.x) - particleSize / 2
 		const y = chart.yAxisScale(c.y) - particleSize / 2
