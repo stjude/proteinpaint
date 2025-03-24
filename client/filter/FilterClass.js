@@ -36,17 +36,24 @@ const defaults = {
 export class Filter {
 	constructor(opts) {
 		this.opts = this.validateOpts(opts)
+
+		const parent_menu = this.opts.holder.node()?.closest('.sja_menu_div')
+
+		const controlsTip = new Menu({
+			padding: '0px',
+			parent_menu
+		})
+
 		this.dom = {
 			holder: opts.holder,
-			controlsTip: new Menu({
-				padding: '0px',
-				parent_menu: this.opts.holder.node() && this.opts.holder.node().closest('.sja_menu_div')
-			}),
+			controlsTip,
 			treeTip: new Menu({
 				padding: '5px',
 				offsetX: 20,
 				offsetY: -34,
-				clearSelector: '.sja_term_src_body'
+				clearSelector: '.sja_term_src_body',
+				parent_menu: controlsTip.d.node(),
+				ancestor_menus: [parent_menu]
 			})
 		}
 		this.durations = { exit: 500 }
