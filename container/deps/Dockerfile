@@ -3,7 +3,7 @@
 ARG registry=docker.io/library
 
 # need to manually bump the base version periodically
-FROM ${registry}/node:20-bookworm-slim AS ppbase
+FROM ${registry}/node:22-bookworm-slim AS ppbase
 ARG ARCH='x86_64'
 ENV ARCH=$ARCH
 
