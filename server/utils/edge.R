@@ -289,7 +289,7 @@ if (DE_method == "edgeR") {
 
        suppressWarnings({
          suppressMessages({
-            top_table <- topTable(tmp, sort.by = "P", n = Inf)
+            top_table <- topTable(tmp, coef = "conditionsDiseased", n = Inf, adjust.method = "fdr") # The coeff needs to be specified in topTable() because it needs to know for which contrast the logFC needs to be calculated https://www.biostars.org/p/160465/
          })
        })
 
