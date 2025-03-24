@@ -89,6 +89,8 @@ export type VolcanoPlotDom = {
 	images: Div
 	/** Holder for data points, p value line, and fold change line */
 	plot: SvgG
+	pValueTable: Div
+	stats: Div
 	/** Holder for plot, axis labels, and title */
 	svg: SvgSvg
 	/** X axis */
@@ -131,8 +133,6 @@ export type VolcanoSettings = {
 	rankBy: 'abs(foldChange)' | 'pValue'
 	/** If true, show server generated images. If false, hide div. */
 	showImages: boolean
-	/** Show a table of p values */
-	showPValueTable: boolean
 	/** plot height */
 	height: number
 	/** plot width */

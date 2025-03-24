@@ -48,14 +48,6 @@ export class VolcanoControlInputs {
 					{ label: 'Original', value: 'original' }
 				]
 			},
-			{
-				label: 'Show P value table',
-				type: 'checkbox',
-				chartType: 'volcano',
-				settingsKey: 'showPValueTable',
-				title: 'Show table with both original and adjusted p values for all significant genes',
-				boxLabel: ''
-			},
 			//Preferably, keep all the display (e.g. colors, sizes, etc.) controls
 			//at the bottom of the list or at least together
 			{

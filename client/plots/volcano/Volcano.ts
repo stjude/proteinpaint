@@ -147,7 +147,6 @@ export function getDefaultVolcanoSettings(overrides = {}): VolcanoSettings {
 		pValueType: 'adjusted',
 		rankBy: 'abs(foldChange)',
 		showImages: false,
-		showPValueTable: false,
 		width: 400
 	}
 	return Object.assign(defaults, overrides)
