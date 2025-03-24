@@ -9,7 +9,7 @@ export default function setRoutes(app, basepath) {
 
 	let numTries = 0 //; console.log('---- setting /closeCoverage route ---')
 
-	app.post(basepath + '/closeCoverage', async (req, res) => {
+	app.get(basepath + '/closeCoverage', async (req, res) => {
 		try {
 			if (numTries >= maxTries) throw `maximum tries=${maxTries} already reached`
 			if (req.query.key === key) {
