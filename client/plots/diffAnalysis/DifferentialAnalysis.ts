@@ -152,9 +152,7 @@ export function getPlotConfig(opts: DiffAnalysisOpts) {
 		childType: 'volcano',
 		termType: opts.termType,
 		highlightedData: opts.highlightedData || [],
-		settings: {
-			controls: { isOpen: false }
-		}
+		settings: {}
 	}
 
 	if (opts.termType == 'geneExpression') {
