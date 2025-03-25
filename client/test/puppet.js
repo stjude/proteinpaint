@@ -18,7 +18,7 @@ const STATICPORT = 6789
 // may be the same as STATICPORT if serving cached resposes
 const DATAPORT = Number(process.argv[3] || 0) || 3000
 
-const params = process.argv[2] || ''
+const params = process.argv[2] || 'name=*' // default pattern to test all emitted spec imports
 if (!params) throw `missing puppet.js params argument`
 
 runTest(params).catch(console.error)
