@@ -17,7 +17,7 @@ class Volcano extends RxComponentInner {
 	components: { controls: any }
 	dom: VolcanoDom
 	interactions?: VolcanoInteractions
-	termType: string //'geneExpresion', etc.
+	termType: string
 	diffAnalysisInteractions?: DiffAnalysisInteractions
 
 	constructor(opts: VolcanoOpts) {
@@ -81,10 +81,13 @@ class Volcano extends RxComponentInner {
 			inputs: controls.inputs
 		})
 
-		this.components.controls.on('downloadClick.differentialAnalysis', () => this.interactions!.download(this.termType))
-		this.components.controls.on('helpClick.differentialAnalysis', () =>
-			window.open('https://github.com/stjude/proteinpaint/wiki/Differential-analysis')
-		)
+		this.components.controls.on('downloadClick.volcano', () => this.interactions!.download(this.termType))
+		if (plotConfig.chartType == 'differentialAnalysis')
+			this.components.controls.on('helpClick.differentialAnalysis', () =>
+				//Opens the page for the differential analysis wiki
+				//Can't put in parent as DA does not have a controls component
+				window.open('https://github.com/stjude/proteinpaint/wiki/Differential-analysis')
+			)
 	}
 
 	async init() {
