@@ -233,7 +233,9 @@ export function setInteractivity(self) {
 			tree: {
 				disable_terms:
 					self.activeData && self.activeData.filter && self.activeData.filter.lst && d == 'and'
-						? self.activeData.filter.lst.filter(d => d.type === 'tvs' && d.tvs.term.type !== 'condition')
+						? self.activeData.filter.lst
+								.filter(d => d.type === 'tvs' && d.tvs.term.type !== 'condition')
+								.map(d => d.tvs.term)
 						: [],
 
 				click_term2select_tvs(tvs) {
@@ -334,13 +336,13 @@ export function setInteractivity(self) {
 			tree: {
 				disable_terms:
 					filter && filter.lst && filter.join == 'and'
-						? filter.lst.filter(d => d.type === 'tvs' && d.tvs.term.type !== 'condition').map(d => d.tvs.term.id)
+						? filter.lst.filter(d => d.type === 'tvs' && d.tvs.term.type !== 'condition').map(d => d.tvs.term)
 						: !self.activeData.item
 						? []
 						: self.activeData.item.type == 'tvs'
-						? [self.activeData.item.tvs.term.id]
+						? [self.activeData.item.tvs.term]
 						: self.activeData.item.lst
-						? self.activeData.item.lst.filter(f => f.type == 'tvs').map(f => f.tvs.term.id)
+						? self.activeData.item.lst.filter(f => f.type == 'tvs').map(f => f.tvs.term)
 						: [],
 
 				click_term2select_tvs:
