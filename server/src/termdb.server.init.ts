@@ -431,13 +431,12 @@ export function server_init_db_queries(ds) {
 		q.get_multivalue_tws = parent_id => {
 			if (cache.has(parent_id)) return cache.get(parent_id)
 			const items = s.all(parent_id)
-			const terms = []
-			for (const item of items) {
-				terms.push({
+			const terms = items.map(item => {
+				return {
 					$id: item.id,
 					term: { id: item.id, name: item.name, type: 'multivalue', subtype: item.subtype, details: item.details }
-				})
-			}
+				}
+			})
 			cache.set(parent_id, terms)
 			return terms
 		}
