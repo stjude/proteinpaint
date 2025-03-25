@@ -146,7 +146,27 @@ export function gdc_validate_query_geneExpression(ds, genome) {
 			t2 = t
 		}
 
-		const [ensgLst, ensg2symbol] = await geneExpression_getGenes(q.terms, cases4clustering, genome, ds, q)
+		// 3/25/2025 gdc backend doesn't index gene exp for sex chr genes. thus prevent these genes from showing up in app
+		const skippedSexChrGenes = [],
+			acceptedGenes = []
+		for (const t of q.terms) {
+			if (!t.gene) throw '.gene missing'
+			const tmp = genome.genedb.getjsonbyname.all(t.gene)
+			let isSex = false
+			for (const i of tmp) {
+				const g = JSON.parse(i.genemodel)
+				if (g.chr == 'chrX' || g.chr == 'chrY') {
+					skippedSexChrGenes.push(t.gene)
+					isSex = true
+					break
+				}
+			}
+			if (!isSex) acceptedGenes.push(t)
+		}
+		//console.log(skippedSexChrGenes, new Date()-t2)
+		// db query and json parse for every gene seems to be fast, at 400ms for 1000 genes. if is performance concern, should add chr column to genes table
+
+		const [ensgLst, ensg2symbol] = await geneExpression_getGenes(acceptedGenes, cases4clustering, genome, ds, q)
 
 		if (ensgLst.length == 0) return { term2sample2value, byTermId: {} } // no valid genes
 
@@ -166,7 +186,7 @@ export function gdc_validate_query_geneExpression(ds, genome) {
 		const t4 = new Date()
 		mayLog('gene-case matrix built,', Object.keys(bySampleId).length, 'cases,', t4 - t3, 'ms')
 
-		return { term2sample2value, byTermId, bySampleId }
+		return { term2sample2value, byTermId, bySampleId, skippedSexChrGenes }
 	}
 }
 
