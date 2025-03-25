@@ -357,10 +357,10 @@ add:
 		const d_gsea = self.dom.tableDiv.append('div')
 		// table columns showing analysis results for each gene set
 		self.gsea_table_cols = [
-			{ label: 'Geneset' },
+			{ label: 'Gene Set' },
 			//{ label: 'Enrichment Score' },
 			{ label: 'Normalized Enrichment Score', barplot: { axisWidth: 200 } },
-			{ label: 'Geneset Size' },
+			{ label: 'Gene Set Size' },
 			{ label: 'P value' },
 			//{ label: 'Sidak' },
 			{ label: 'FDR' },
