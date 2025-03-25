@@ -233,9 +233,7 @@ export function setInteractivity(self) {
 			tree: {
 				disable_terms:
 					self.activeData && self.activeData.filter && self.activeData.filter.lst && d == 'and'
-						? self.activeData.filter.lst
-								.filter(d => d.type === 'tvs' && d.tvs.term.type !== 'condition')
-								.map(d => d.tvs.term.id)
+						? self.activeData.filter.lst.filter(d => d.type === 'tvs' && d.tvs.term.type !== 'condition')
 						: [],
 
 				click_term2select_tvs(tvs) {

@@ -1,4 +1,4 @@
-import type { TermWrapper } from '#types'
+import type { TermWrapper, Term } from '#types'
 import type { MassAppApi, MassState } from '#mass/types/mass'
 import { termsettingInit } from '#termsetting'
 import { select } from 'd3-selection'
@@ -17,7 +17,7 @@ export class MultiTermWrapperEditUI {
 	buttonLabel: string
 	callback: (terms: any) => void
 	customInputs?: object
-	disable_terms: string[]
+	disable_terms: Term[]
 	dom: MultiTermWrapperDom
 	headerText: string
 	maxNum: number
@@ -75,7 +75,7 @@ export class MultiTermWrapperEditUI {
 	async getNewPill(d, div) {
 		//Do not allow users to select the same term more than once
 		//Combine with specified disable_terms from the caller
-		const disable_terms = [...this.disable_terms, ...this.twList.map(tw => tw.term.id)]
+		const disable_terms = [...this.disable_terms, ...this.twList]
 		const _opts = {
 			abbrCutoff: 50,
 			debug: this.app.opts?.debug,

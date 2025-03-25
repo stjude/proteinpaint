@@ -32,12 +32,12 @@ export class VolcanoInteractions {
 				.filter(g => allowedGroupNames.has(g.name))
 				.flatMap(g =>
 					g.filter.lst.flatMap(f => {
-						if (f.tvs?.term) return f.tvs.term.id || f.tvs.term.name
-						else return f.lst.map(l => l.tvs.term.id || l.tvs.term.name)
+						if (f.tvs?.term) return f.tvs.term
+						else return f.lst.map(l => l.tvs.term)
 					})
 				)
 		)
-		const disable_terms = grpTerms.size ? Array.from(grpTerms) : []
+		const disable_terms: any[] = grpTerms.size ? Array.from(grpTerms) : []
 
 		const ui = new MultiTermWrapperEditUI({
 			app: this.app,

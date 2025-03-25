@@ -84,8 +84,8 @@ type BaseTermSettingOpts = {
 	 * before the pill name is truncated. */
 	abbrCutoff?: number
 	activeCohort?: number
-	/** tw.term.ids */
-	disable_terms?: string[]
+	/** array of term objects to show in the tree but not clickable */
+	disable_terms?: Term[]
 	// This is not used anywhere.
 	// Ok to remove?
 	handler: Handler
@@ -165,7 +165,7 @@ export type TermSettingInstance = {
 	clickNoPillDiv?: any
 	dom: InstanceDom
 	doNotHideTipInMain?: boolean
-	disable_terms?: string[]
+	disable_terms?: Term[]
 	durations: { exit: number }
 	filter?: Filter
 	handler?: Handler

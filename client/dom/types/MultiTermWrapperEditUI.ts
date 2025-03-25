@@ -1,5 +1,5 @@
 import type { Button, Elem, Div } from '../../types/d3'
-import type { TermWrapper } from '#types'
+import type { TermWrapper, Term } from '#types'
 import type { MassAppApi, MassState } from '#mass/types/mass'
 
 /** Elements created by the UI, save the holder */
@@ -41,5 +41,5 @@ export type MultiTermWrapperUIOpts = {
 	/** Term wrappers already in use on init */
 	twList?: TermWrapper[]
 	/** Specific terms to disable. Will be combined with the running twlist.  */
-	disable_terms?: string[]
+	disable_terms?: Term[]
 }
