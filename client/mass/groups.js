@@ -221,7 +221,7 @@ class MassGroups {
 
 		addMatrixMenuItems(this.tip, menuDiv, samplelstTW, this.app, id, this.state, () => this.newId)
 
-		//TODO: need to 'diffAnalysis' to `currentCohortChartTypes` in the future
+		//TODO: change DEanalysis to "DA", server also computes this type based on query type availability
 		if (this.state.currentCohortChartTypes.includes('DEanalysis') && samplelstTW.q.groups.length == 2) {
 			addDiffAnalysisPlotMenuItem(menuDiv, this, samplelstTW)
 		}
@@ -302,17 +302,12 @@ export const groupsInit = getCompInit(MassGroups)
 
 function addDiffAnalysisPlotMenuItem(div, self, samplelstTW) {
 	// DA app can be applied to multiple datatypes. show options based on availability for each datatype
-	const allowedTypes = [
-		TermTypes.GENE_EXPRESSION,
-		TermTypes.METABOLITE_INTENSITY // add this type so DA can show up for it as reminder for todo
-		// add more types as they are supported
-	]
-	for (const allowedTT of allowedTypes) {
-		if (!self.state.termdbConfig.allowedTermTypes.includes(allowedTT)) continue // ds doesn't have this term type
+	if (self.state.termdbConfig.queries?.rnaseqGeneCount) {
+		// hardcoded! rnaseq genecount will correspond to gene exp term type on DA ui
 		div
 			.append('div')
 			.attr('class', 'sja_menuoption sja_sharp_border')
-			.text(`Differential ${termType2label(allowedTT)} Analysis`)
+			.text(`Differential ${termType2label(TermTypes.GENE_EXPRESSION)} Analysis`)
 			.on('click', e => {
 				//Move this to diff analysis plot??
 				//Do the check but not add to the state??
@@ -328,7 +323,7 @@ function addDiffAnalysisPlotMenuItem(div, self, samplelstTW) {
 					chartType: 'differentialAnalysis',
 					state: self.state,
 					samplelst: { groups },
-					termType: allowedTT,
+					termType: TermTypes.GENE_EXPRESSION,
 					tw: samplelstTW
 				}
 				self.tip.hide()
@@ -337,6 +332,10 @@ function addDiffAnalysisPlotMenuItem(div, self, samplelstTW) {
 					config
 				})
 			})
+	}
+
+	if (self.state.termdbConfig.allowedTermTypes?.includes(TermTypes.METABOLITE_INTENSITY)) {
+		div.append('div').text('DA should support metabolite')
 	}
 
 	// small text to explain which is case/control. always show this for all DA
