@@ -157,7 +157,7 @@ const continuousAddons: MatrixTWObj = {
 
 					// show positive z-score as soft red and negative z-score as soft blue
 					cell.fill = renderV > 0 ? '#FF6666' : '#6666FF'
-					cell.zscoreLabel = ` (z-score: ${renderV.toFixed(2)})`
+					cell.zscoreLabel = ` (Z-score: ${renderV.toFixed(2)})`
 				}
 				cell.label =
 					'label' in anno

@@ -57,7 +57,7 @@ function setNumericCellProps(cell, tw, anno, value, s, t, self, width, height, d
 
 				// show positive z-score as soft red and negative z-score as soft blue
 				cell.fill = renderV > 0 ? '#FF6666' : '#6666FF'
-				cell.zscoreLabel = ` (z-score: ${renderV.toFixed(2)})`
+				cell.zscoreLabel = ` (Z-score: ${renderV.toFixed(2)})`
 			}
 			cell.label =
 				'label' in anno
@@ -116,7 +116,7 @@ function setSurvivalCellProps(cell, tw, anno, value, s, t, self, width, height, 
 			let renderV = vc ? cell.key * vc.scaleFactor : cell.key
 			if (tw.q.convert2ZScore) {
 				renderV = (renderV - t.mean) / t.std
-				cell.zscoreLabel = ` (z-score: ${renderV.toFixed(2)})`
+				cell.zscoreLabel = ` (Z-score: ${renderV.toFixed(2)})`
 			}
 			cell.label = tw.term.unit ? `${cell.key.toFixed(2)} ${tw.term.unit}` : cell.key.toFixed(2)
 			cell.height = renderV >= 0 ? t.scales.pos(renderV) : t.scales.neg(renderV)
