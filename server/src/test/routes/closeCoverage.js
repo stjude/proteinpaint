@@ -1,6 +1,10 @@
 import serverconfig from '../../serverconfig.js'
 import fs from 'fs'
 
+// The /closeCoverage route will only be initialized if
+// a closeCoverageKey value is detected. This is an extra security
+// measure to minimize issues and risks of having an external signal
+// close a server.
 const key = process.env.closeCoverageKey
 const maxTries = 5
 

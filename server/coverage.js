@@ -3,6 +3,12 @@ import { execSync } from 'child_process'
 import path from 'path'
 import './src/serverconfig.js'
 
+/*
+  This script is used in server/package.json combined:coverage script.
+  It loads server unit tests and starts a server instance
+  to handle requests and serve response data during client integration tests.
+*/
+
 const __dirname = import.meta.dirname
 const host = `http://localhost:3000`
 

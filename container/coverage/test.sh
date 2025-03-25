@@ -41,8 +41,8 @@ cd $COVDIR/../../client
 $XVFB npm run combined:coverage
 
 cd $COVDIR
-# close the server to trigger c8 to generate the coverage report 
-curl http://localhost:3000/closeCoverage?key=test 
+# close the server to trigger c8 to generate the coverage report for server tests
+curl -s http://localhost:3000/closeCoverage?key=test 
 # give enough time for c8 to generate report
 sleep 15
 docker cp ppcov:/home/root/pp/app/active/server/.coverage ./
