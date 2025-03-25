@@ -66,7 +66,7 @@ jobs:
         with:
           driver: docker
 
-      - name: Pack Tarballs
+      - name: Pack updated workspaces
         run: |
           cd ./container
           ./pack.sh
