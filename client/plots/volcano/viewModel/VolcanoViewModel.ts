@@ -72,9 +72,9 @@ export class VolcanoViewModel {
 		for (const d of this.response.data) {
 			this.minLogFoldChange = Math.min(this.minLogFoldChange, d.fold_change)
 			this.maxLogFoldChange = Math.max(this.maxLogFoldChange, d.fold_change)
-			if (d.adjusted_p_value != 0) {
-				this.minLogPValue = Math.min(this.minLogPValue, d.adjusted_p_value)
-				this.maxLogPValue = Math.max(this.maxLogPValue, d.adjusted_p_value)
+			if (d[`${this.settings.pValueType}_p_value`] != 0) {
+				this.minLogPValue = Math.min(this.minLogPValue, d[`${this.settings.pValueType}_p_value`])
+				this.maxLogPValue = Math.max(this.maxLogPValue, d[`${this.settings.pValueType}_p_value`])
 			}
 		}
 	}
