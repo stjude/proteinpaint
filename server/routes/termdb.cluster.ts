@@ -82,12 +82,12 @@ async function getResult(q: TermdbClusterRequest, ds: any, genome) {
 		_q.forClusteringAnalysis = true
 	}
 
-	let term2sample2value, byTermId, bySampleId
+	let term2sample2value, byTermId, bySampleId, skippedSexChrGenes
 
 	if (q.dataType == NUMERIC_DICTIONARY_TERM) {
 		;({ term2sample2value, byTermId, bySampleId } = await getNumericDictTermAnnotation(q, ds, genome))
 	} else {
-		;({ term2sample2value, byTermId, bySampleId } = await ds.queries[q.dataType].get(_q))
+		;({ term2sample2value, byTermId, bySampleId, skippedSexChrGenes } = await ds.queries[q.dataType].get(_q))
 	}
 
 	/* remove term with a sample2value map of size 0 from term2sample2value
@@ -96,13 +96,25 @@ async function getResult(q: TermdbClusterRequest, ds: any, genome) {
 	1. local testing with gdc using inconsistent gencode versions (gdc:36). for some genes local will use a geneid not found in gdc and cause issue for clustering
 	2. somehow in v36 genedb there can still be geneid not in gdc. this helps avoid app crashing in gdc environment
 	*/
-	const removedHierClusterTerms: string[] = []
+	const noValueTerms: string[] = []
 	for (const [term, obj] of term2sample2value) {
 		if (Object.keys(obj).length === 0) {
-			removedHierClusterTerms.push(term)
+			noValueTerms.push(term)
 			term2sample2value.delete(term)
 			delete byTermId[term]
 		}
+	}
+
+	const removedHierClusterTerms: object[] = [] // allow to collect multiple sets of skipped items, each based on different reasons
+	if (noValueTerms.length) {
+		removedHierClusterTerms.push({
+			text: `Skipped ${q.dataType == TermTypes.GENE_EXPRESSION ? 'genes' : 'items'} with no data`,
+			lst: noValueTerms
+		})
+	}
+	if (skippedSexChrGenes?.length) {
+		// this is gdc-specific
+		removedHierClusterTerms.push({ text: 'Skipped sex chromosome genes', lst: skippedSexChrGenes })
 	}
 
 	if (term2sample2value.size == 0) throw 'no data'

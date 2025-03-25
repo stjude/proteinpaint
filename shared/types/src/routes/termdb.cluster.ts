@@ -82,8 +82,13 @@ export type ValidResponse = {
 	byTermId: { [index: string]: any }
 	/**  */
 	bySampleId: { [index: string]: any }
-	/** list of term names that are excluded from analysis for lacking any numerical data */
-	removedHierClusterTerms?: string[]
+	/** list of term names that are excluded from analysis, one reason per set, for client display */
+	removedHierClusterTerms?: {
+		/** reason for skipping */
+		text: string
+		/** list of skipped item names */
+		lst: string[]
+	}[]
 }
 
 //response of just 1 gene, thus unable to do clustering
