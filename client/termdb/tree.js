@@ -327,7 +327,7 @@ function setRenderers(self) {
 			return
 		}
 
-		const termIsDisabled = self.opts.disable_terms?.includes(term.id)
+		const termIsDisabled = self.opts?.disable_terms?.some(t => t.id == term.id)
 		const uses = isUsableTerm(term, self.state.usecase, self.app.vocabApi.termdbConfig)
 
 		div.style('display', '')
@@ -349,7 +349,7 @@ function setRenderers(self) {
 	}
 
 	self.addTerm = async function (term) {
-		const termIsDisabled = self.opts.disable_terms?.includes(term.id)
+		const termIsDisabled = self.opts?.disable_terms?.some(t => t.id == term.id)
 		const uses = isUsableTerm(term, self.state.usecase, self.app.vocabApi.termdbConfig)
 
 		const div = select(this)

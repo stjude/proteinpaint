@@ -204,7 +204,7 @@ tape('click_term', test => {
 	runpp({
 		tree: {
 			click_term: modifier_callback,
-			disable_terms: termjson['agedx'],
+			disable_terms: [termjson['agedx']],
 			callbacks: {
 				'postRender.test': runTests
 			}
@@ -259,7 +259,7 @@ tape('click_term2select_tvs', test => {
 		},
 		tree: {
 			click_term2select_tvs: modifier_callback,
-			disable_terms: termjson['agedx']
+			disable_terms: [termjson['agedx']]
 		}
 	})
 
