@@ -28,7 +28,6 @@ IMGNAME="ppcov:latest"
 
 docker run -d \
   --name ppcov \
-  --network pp_network \
   --mount type=bind,source=$TPDIR,target=/home/root/pp/tp,readonly \
   --mount type=bind,source=$APPDIR/serverconfig.json,target=$CONTAPP/serverconfig.json \
   --mount type=bind,source=$APPDIR/dataset,target=$CONTAPP/dataset \
