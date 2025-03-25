@@ -159,6 +159,9 @@ export class VolcanoPlotView {
 			.append('div')
 			//Show the stats table underneath the images if > 1 image or to the right if only 1 image
 			.style('display', this.viewData.images.length > 1 ? 'block' : 'inline-block')
+			//Top margin is roughly inline with image however the margins are set by server
+			//Likewise the image margins are undetectable.
+			//This is a roughly satistifes the different image margin scenarios.
 			.style('margin', `${this.viewData.images.length > 1 ? `0px 0px` : `40px 10px`} 0px 5px`)
 			.style('vertical-align', 'top')
 		const table = table2col({ holder: tableHolder })
