@@ -85,7 +85,7 @@ jobs:
           cd container
 
           BRANCH=$(git rev-parse --abbrev-ref HEAD)
-          if [[ "$BRANCH" != "publish-image" && "$BRANCH" != "release-chain" && "$BRANCH" != "master" && "$BRANCH" =~ ^release-.* && ${{ github.event_name }} != "workflow_dispatch" ]]; then
+          if [[ "$BRANCH" != "publish-image" && "$BRANCH" != "release-upgrade-node-22" && "$BRANCH" != "master" && ${{ github.event_name }} != "workflow_dispatch" ]]; then
             echo "skipping build and publishing"
           else
             cd deps
