@@ -131,9 +131,11 @@ export type VolcanoSettings = {
 	pValueType: 'original' | 'adjusted'
 	/** Toggle between ranking the genes by variance or abs(foldChange) */
 	rankBy: 'abs(foldChange)' | 'pValue'
-	/** If true, show server generated images. If false, hide div. */
+	/** If true, show server generated images. If false, hide div. Default is false. */
 	showImages: boolean
+	/** If true, show p value table to the right of the volcano plot. Default is false. */
 	showPValueTable: boolean
+	/** If true, show stats/summary table underneath the volcano plot. Default is true.*/
 	showStats: boolean
 	/** plot height */
 	height: number
