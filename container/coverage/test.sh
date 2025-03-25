@@ -46,8 +46,5 @@ curl http://localhost:3000/closeCoverage?key=test
 # give enough time for c8 to generate report
 sleep 15
 docker cp ppcov:/home/root/pp/app/active/server/.coverage ./
-# give enough time for the subsequent server instance to listen
 sleep 10
-# close the subsequent non-test/non-coverage server,
-# so that the container process will stop
-curl -s http://localhost:3000/closeCoverage?key=test
+exit 0
