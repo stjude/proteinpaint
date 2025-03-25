@@ -35,6 +35,19 @@ class gsea {
 			detailsDiv,
 			tableDiv
 		}
+
+		this.pathwayOpts = [
+			{ label: 'BP: subset of GO', value: 'BP: subset of GO' },
+			{ label: 'MF: subset of GO', value: 'MF: subset of GO' },
+			{ label: 'CC: subset of GO', value: 'CC: subset of GO' },
+			{ label: 'WikiPathways subset of CP', value: 'WikiPathways subset of CP' },
+			{ label: 'REACTOME subset of CP', value: 'REACTOME subset of CP' },
+			/* QUICK FIX
+			geneset name ending in "--blitzgsea" signals to use built-in genesets but not msigdb
+			later a proper fix is to add a radio toggle of Blitzgsea versus MSigDB, and do not use such hardcode
+			*/
+			{ label: 'H: hallmark gene sets', value: 'H: hallmark gene sets' }
+		]
 	}
 
 	async init(opts) {
@@ -121,18 +134,7 @@ class gsea {
 			settingsKey: 'pathway',
 			title: 'Display table showing original and adjusted pvalues corresponding to each significant pathway',
 			boxLabel: '',
-			options: [
-				{ label: 'BP: subset of GO', value: 'BP: subset of GO' },
-				{ label: 'MF: subset of GO', value: 'MF: subset of GO' },
-				{ label: 'CC: subset of GO', value: 'CC: subset of GO' },
-				{ label: 'WikiPathways subset of CP', value: 'WikiPathways subset of CP' },
-				{ label: 'REACTOME subset of CP', value: 'REACTOME subset of CP' },
-				/* QUICK FIX
-				geneset name ending in "--blitzgsea" signals to use built-in genesets but not msigdb
-				later a proper fix is to add a radio toggle of Blitzgsea versus MSigDB, and do not use such hardcode
-				*/
-				{ label: 'H: hallmark gene sets', value: 'H: hallmark gene sets' }
-			]
+			options: this.pathwayOpts
 		}
 
 		// Now blitzgsea geneSets are inside serverconfig flag
@@ -144,10 +146,6 @@ class gsea {
 			)
 		}
 
-		if (!this.settings.pathway) {
-			geneSet.options.unshift({ label: '-', value: '-' })
-			this.settings.pathway = '-'
-		}
 		inputs.push(geneSet)
 
 		this.components.controls = await controlsInit({
@@ -189,6 +187,12 @@ class gsea {
 		this.config = structuredClone(this.state.config)
 		if (this.config.chartType != this.type && this.config.childType != this.type) return
 		this.settings = this.config.settings.gsea
+
+		if (this.settings.pathway == undefined) {
+			renderStartMenu(this)
+			return
+		}
+
 		this.imageUrl = null // Reset the image URL
 		await this.setControls()
 		if (this.dom.header)
@@ -196,7 +200,30 @@ class gsea {
 				this.config.gsea_params.genes.length +
 					' genes <span style="font-size:.8em;opacity:.7">GENE SET ENRICHMENT ANALYSIS</span>'
 			)
+
 		render_gsea(this)
+	}
+}
+
+async function renderStartMenu(self) {
+	self.dom.holder.append('span').style('margin-right', '10px').text('Select a gene set group:')
+	self.pathwayOpts.unshift({ label: '-', value: '-' })
+	const dropdown = self.dom.holder.append('select').on('change', event => {
+		const idx = event.target.selectedIndex
+		self.settings.pathway = self.pathwayOpts[idx].value
+		self.pathwayOpts.shift()
+		self.app.dispatch({
+			type: 'plot_edit',
+			id: self.id,
+			config: {
+				settings: {
+					gsea: self.settings
+				}
+			}
+		})
+	})
+	for (const opt of self.pathwayOpts) {
+		dropdown.append('option').text(opt.label).attr('value', opt.value)
 	}
 }
 
@@ -461,8 +488,7 @@ export async function getPlotConfig(opts, app) {
 			//idea for fixing nav button
 			//samplelst: { groups: app.opts.state.groups}
 			settings: {
-				gsea: getDefaultGseaSettings(),
-				controls: { isOpen: true }
+				gsea: getDefaultGseaSettings()
 			}
 		}
 		return copyMerge(config, opts)
