@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Fixes:
+- Data points in the differential analysis volcano plot appear inbounds when original p value is selected
+
 
 ## 2.112.0
 
