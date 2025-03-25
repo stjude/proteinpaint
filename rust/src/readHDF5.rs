@@ -1,6 +1,7 @@
 // Need to set HDF5_DIR and LD_LIBRARY_PATH in ~/.bash_profile
 // Syntax: HDF5_DIR=/usr/local/Homebrew/Cellar/hdf5/1.14.3_1 && echo $HDF5_DIR && cd .. && cargo build --release && json='{"gene":"TP53","hdf5_file":"matrix_with_na_comp_9.h5"}' && time echo $json | target/release/rust_hdf5
 
+// Imports
 use hdf5::types::{FixedAscii, VarLenAscii};
 use hdf5::{File, Result};
 use json;
@@ -10,7 +11,67 @@ use std::io;
 use std::time::Instant;
 
 
-// Function to detect the format of the HDF5 file
+/// Determines the format of an HDF5 gene expression file
+///
+/// This function examines the structure of an HDF5 file to determine its format.
+/// It detects whether the file uses a dense matrix representation, a sparse matrix
+/// representation, or an unknown format by checking for the presence of specific
+/// datasets and groups.
+///
+/// # HDF5 Format Specifications
+///
+/// The function identifies the following formats:
+///
+/// - **Dense format**: 
+///   - Contains a "counts" dataset (2D matrix of gene expression values)
+///   - Contains a "gene_names" dataset (gene identifiers)
+///   - Contains a "samples" dataset (sample identifiers)
+///
+/// - **Sparse format**: 
+///   - Contains a "data" group with sparse matrix components
+///   - Contains a "sample_names" dataset
+///
+/// - **Unknown format**:
+///   - Does not match either the dense or sparse format criteria
+///
+/// # Arguments
+///
+/// * `hdf5_filename` - Path to the HDF5 file to analyze
+///
+/// # Returns
+///
+/// A result containing one of the following static string values:
+/// - `"dense"` - If the file is in dense matrix format
+/// - `"sparse"` - If the file is in sparse matrix format
+/// - `"unknown"` - If the file format cannot be determined
+///
+/// # Errors
+///
+/// This function will return an error if:
+/// - The file cannot be opened
+/// - The file is not a valid HDF5 file
+///
+/// # Algorithm
+///
+/// The detection algorithm works by checking for the presence of specific datasets
+/// and groups that are characteristic of each format:
+///
+/// 1. Opens the HDF5 file
+/// 2. Checks for datasets/groups that indicate dense format
+/// 3. Checks for datasets/groups that indicate sparse format
+/// 4. Returns the detected format or "unknown"
+///
+/// # Examples
+///
+/// ```rust
+/// // Example usage (not runnable)
+/// match detect_hdf5_format("expression_data.h5") {
+///     Ok("dense") => println!("Dense format detected"),
+///     Ok("sparse") => println!("Sparse format detected"),
+///     Ok("unknown") => println!("Unknown format detected"),
+///     Err(e) => println!("Error: {}", e),
+/// }
+/// ```
 fn detect_hdf5_format(hdf5_filename: &str) -> Result<&'static str> {
     let file = File::open(hdf5_filename)?;
     
@@ -35,12 +96,66 @@ fn detect_hdf5_format(hdf5_filename: &str) -> Result<&'static str> {
     }
 }
 
-// Function to read a gene from an HDF5 file
+/// Unified function for querying gene expression data from any supported HDF5 file format
+///
+/// This function serves as the central entry point for extracting expression values for a specified gene
+/// from an HDF5 file. It automatically detects the format of the provided file (dense or sparse)
+/// and routes the query to the appropriate specialized handler function.
+///
+/// # Supported HDF5 Formats
+///
+/// - **Dense format**: Contains explicit "gene_ids", "samples", and "counts" datasets where
+///   the expression matrix is stored as a direct 2D array
+/// - **Sparse format**: Contains a "data" group with "p", "i", "x" datasets using the
+///   Compressed Sparse Column (CSC) representation for the expression matrix
+///
+/// # Arguments
+///
+/// * `hdf5_filename` - Path to the HDF5 file containing gene expression data
+/// * `gene_name` - Name of the gene whose expression values to extract
+///
+/// # Returns
+///
+/// A result indicating success or error. On success, the function prints the gene
+/// expression data in JSON format to stdout with "output_string:" prefix.
+///
+/// # Example Output Format
+///
+/// ```json
+/// {
+///   "gene": "TP53",
+///   "dataId": "TP53",
+///   "samples": {
+///     "sample1": 10.5,
+///     "sample2": 8.2,
+///     "sample3": 15.7
+///   }
+/// }
+/// ```
+///
+/// # Error Handling
+///
+/// The function handles several types of errors:
+/// - File format detection failures
+/// - Unsupported or unknown file formats
+/// - Errors from the format-specific query functions
+///
+/// When an error occurs, the function returns a structured JSON error message.
+///
+/// # Processing Flow
+///
+/// 1. Detects the format of the HDF5 file using `detect_hdf5_format`
+/// 2. Routes to the appropriate specialized function:
+///    - `query_gene_dense` for dense matrix files
+///    - `query_gene_sparse` for sparse matrix files
+/// 3. Returns an error for unsupported formats
+///
+/// This unified approach allows client code to work with either format without needing
+/// to know the specific structure of the underlying HDF5 file.
 fn query_gene(hdf5_filename: String, gene_name: String) -> Result<()> {
     // First, detect the file format
     let file_format = detect_hdf5_format(&hdf5_filename)?;
     
-    // eprintln!("File format: {}", file_format);
     // Query gene data based on format
     match file_format {
         "dense" => query_gene_dense(hdf5_filename, gene_name),
@@ -60,6 +175,60 @@ fn query_gene(hdf5_filename: String, gene_name: String) -> Result<()> {
 }
 
 
+/// Reads expression data for a specific gene from a dense format HDF5 file
+///
+/// This function extracts expression values for a specified gene from an HDF5 file
+/// that follows the dense matrix format. The dense format is characterized by:
+/// - A "gene_ids" dataset containing gene identifiers
+/// - A "samples" dataset containing sample identifiers
+/// - A "counts" dataset containing a gene × sample expression matrix
+///
+/// The function returns the expression values in a JSON format where sample names
+/// are keys and their corresponding expression values are the values.
+///
+/// # Arguments
+///
+/// * `hdf5_filename` - Path to the HDF5 file
+/// * `gene_name` - Name of the gene to query
+///
+/// # Returns
+///
+/// A result indicating success or error. On success, the function prints the gene
+/// expression data in JSON format to stdout with "output_string:" prefix.
+///
+/// # Output Format
+///
+/// ```json
+/// {
+///   "gene": "GENE_NAME",
+///   "dataId": "GENE_NAME",
+///   "samples": {
+///     "SAMPLE1": VALUE1,
+///     "SAMPLE2": VALUE2,
+///     ...
+///   }
+/// }
+/// ```
+///
+/// # Error Handling
+///
+/// The function handles several potential errors:
+/// - File opening errors
+/// - Missing or inaccessible datasets ("gene_ids", "samples", "counts")
+/// - Gene not found in the dataset
+/// - Out of bounds gene index
+/// - Expression data reading failures
+///
+/// If an error occurs, the function returns an explanatory error message in JSON format.
+///
+/// # Reading Strategy
+///
+/// The function tries two methods to read expression data:
+/// 1. First attempts to read a 1D slice directly from the counts dataset
+/// 2. If that fails, tries reading the entire dataset and extracting the row of interest
+///
+/// This dual approach ensures compatibility with different HDF5 library implementations
+/// and dataset configurations.
 fn query_gene_dense(hdf5_filename: String, gene_name: String) -> Result<()> {
     // let start_time = Instant::now();
 
@@ -181,7 +350,6 @@ fn query_gene_dense(hdf5_filename: String, gene_name: String) -> Result<()> {
                 return Ok(());
             }
 
-            // let num_samples = dataset_shape[1];
 
             // Try reading the entire dataset and then extracting the row
             match counts_dataset.read::<f64, Dim<[usize; 2]>>() {
@@ -265,7 +433,74 @@ fn query_gene_dense(hdf5_filename: String, gene_name: String) -> Result<()> {
 }
 
 
-// Function to query a gene in a sparse format HDF5 file (based on original read_hdf5)
+/// Reads expression data for a specific gene from a sparse format HDF5 file (from original readHD5.rs)
+///
+/// This function extracts expression values for a specified gene from an HDF5 file
+/// that uses a sparse matrix representation. Sparse matrices are efficient for storing
+/// genomic data where many genes have zero expression in many samples. The sparse
+/// format follows the Compressed Sparse Column (CSC) structure with:
+///
+/// - A "data/dim" dataset containing matrix dimensions
+/// - A "gene_names" dataset containing gene identifiers
+/// - A "sample_names" dataset containing sample identifiers
+/// - A "data/p" dataset containing pointers to where each gene's data starts and ends
+/// - A "data/i" dataset containing column indices for non-zero values
+/// - A "data/x" dataset containing the actual non-zero expression values
+///
+/// # Arguments
+///
+/// * `hdf5_filename` - Path to the HDF5 file
+/// * `gene_name` - Name of the gene to query
+///
+/// # Returns
+///
+/// A result indicating success or error. On success, the function prints the gene
+/// expression data in JSON format to stdout with "output_string:" prefix.
+///
+/// # Output Format
+///
+/// The function outputs a JSON object where sample names are keys and their
+/// corresponding expression values are the values:
+///
+/// ```json
+/// {
+///   "sample1": 0.0,
+///   "sample2": 4.5,
+///   "sample3": 0.0,
+///   "sample4": 7.2,
+///   ...
+/// }
+/// ```
+///
+/// # Algorithm
+///
+/// 1. Opens the HDF5 file and reads matrix dimensions
+/// 2. Reads gene and sample names
+/// 3. Finds the index of the requested gene
+/// 4. Reads the sparse representation:
+///    - Gets pointers from "data/p" to determine which values belong to the gene
+///    - Reads column indices from "data/i" to know which samples have non-zero values
+///    - Reads actual values from "data/x"
+/// 5. Reconstructs a dense vector from the sparse representation
+/// 6. Formats and outputs the result as JSON
+///
+/// # Performance Tracking
+///
+/// The function tracks performance at various stages using timestamps:
+/// - Time spent parsing genes
+/// - Time spent parsing samples
+/// - Time spent reading the p, i, and x datasets
+/// - Time spent generating the full array from sparse representation
+///
+/// # Error Handling
+///
+/// The function handles several potential errors:
+/// - File opening failures
+/// - Dataset access failures
+/// - Gene not found in the dataset
+/// - Sparse matrix reading failures
+///
+/// If an error occurs, the function returns a structured JSON error message.
 fn query_gene_sparse(hdf5_filename: String, gene_name: String) -> Result<()> {
     let file = File::open(&hdf5_filename)?;
     let ds_dim = file.dataset("data/dim")?;
@@ -381,8 +616,6 @@ fn main() -> Result<()> {
                         }
                     };
 
-                    // First validate the file
-                    // let now = Instant::now();
                     // Then, check if we have a gene to query
                     if let Some(gene_name) = json_string["gene"].as_str() {
                         let gene_query_time = Instant::now();
