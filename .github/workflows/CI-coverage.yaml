@@ -1,4 +1,4 @@
-name: Test Coverage (combined)
+name: Combined Test Coverage
 
 on:
   workflow_dispatch:
@@ -54,14 +54,6 @@ jobs:
       - name: Install xvfb
         run: sudo apt-get install xvfb
 
-      - name: TSC
-        run: |
-          cd shared/types
-          npm run build
-          cd ../../server
-          npx tsc
-          cd ..
-
       - name: Login to Github
         uses: docker/login-action@v3
         with:
@@ -71,15 +63,18 @@ jobs:
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+        with:
+          driver: docker
 
       - name: Pack Tarballs
         run: |
           cd ./container
           ./pack.sh
 
-      - name: Build Docker Image
+      - name: Build ppserver image
         uses: docker/build-push-action@v5
         with:
+          load: true
           context: ./container/
           file: ./container/server/Dockerfile
           tags: ppserver:latest
@@ -88,10 +83,32 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Run local server and integration tests
+      - name: Copy server files
         run: |
-          cd ./container
-          ./run.sh ppserver:latest
-          sleep 10
-          cd ..
-          xvfb-run --auto-servernum npm run test:integration
+          cd ./container/coverage
+          ./copy-server-files.sh
+
+      - name: Build ppcov image
+        uses: docker/build-push-action@v5
+        with:
+          load: true
+          context: ./container/coverage
+          file: ./container/coverage/Dockerfile
+          tags: ppcov:latest
+          platforms: linux/amd64
+          outputs: type=docker
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Generate coverate reports from combined unit and integration tests
+        run: |
+          cd ./container/coverage
+          xvfb-run --auto-servernum ./test.sh
+
+      - name: Display coverage results
+        run: |
+          cat client/.nyc_output/coverage-summary.md >> $GITHUB_STEP_SUMMARY
+          cat client/.nyc_output/coverage-details.md >> $GITHUB_STEP_SUMMARY
+
+          cat container/coverage/.coverage/coverage-summary.md >> $GITHUB_STEP_SUMMARY
+          cat container/coverage/.coverage/coverage-details.md >> $GITHUB_STEP_SUMMARY
