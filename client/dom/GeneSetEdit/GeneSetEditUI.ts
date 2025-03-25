@@ -87,6 +87,8 @@ export type GeneSetEditArg = {
 	/** Pass the genes available to be used by the caller. When not in the limited
 	 * list, genes will appear with a strikethrough */
 	limitedGenesList?: string[]
+	/** show the terms in the order of input*/
+	termsAsListed?: boolean
 }
 
 type MenuListEntry = {
@@ -118,12 +120,14 @@ export class GeneSetEditUI {
 	titleText?: string
 	customInputs?: CustomInputs
 	limitedGenesList?: string[]
+	termsAsListed?: boolean
 
 	constructor(opts: GeneSetEditArg) {
 		this.holder = opts.holder
 		this.genome = opts.genome
 		this.callback = opts.callback
 		this.vocabApi = opts.vocabApi
+		this.termsAsListed = opts.termsAsListed
 		this.customInputs = opts.customInputs
 		this.geneList = structuredClone(opts.geneList || [])
 		this.tip2 = new Menu({ padding: '0px', parent_menu: opts.holder.node(), test: 'test' })
@@ -533,7 +537,7 @@ export class GeneSetEditUI {
 
 	renderGenes() {
 		const hasStat = this.geneList.some(g => g.mutationStat)
-		if (!hasStat)
+		if (!hasStat && !this.termsAsListed)
 			this.geneList.sort((a, b) => {
 				if (a.gene < b.gene) return -1
 				if (a.gene > b.gene) return 1

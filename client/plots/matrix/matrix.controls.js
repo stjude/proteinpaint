@@ -1196,7 +1196,8 @@ export class MatrixControls {
 					callback: () => {
 						GenesBtn.click()
 					}
-				}
+				},
+				termsAsListed: !this.parent.config.settings.hierCluster.clusterRows
 			})
 		}
 
