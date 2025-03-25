@@ -692,7 +692,9 @@ async function validate_query_snvindel(ds, genome) {
 	}
 
 	if (q.byisoform) {
-		if (q.byisoform.gdcapi) {
+		if (typeof q.byisoform.get == 'function') {
+			// ds supplied getter, don't need anything else
+		} else if (q.byisoform.gdcapi) {
 			gdc.validate_query_snvindel_byisoform(ds)
 			// q.byisoform.get() added
 		} else {
@@ -765,22 +767,28 @@ function validateSampleHeader2(ds, samples, where) {
 	const sampleIds = []
 	// ds?.cohort?.termdb.q.sampleName2id must be present
 	const unknownSamples = [] // samples present in big file header but missing from db
-	for (const s of samples) {
-		const id = ds.cohort.termdb.q.sampleName2id(s.name)
-		if (!Number.isInteger(id)) {
-			unknownSamples.push(s.name)
-			// TODO if file with unknown sample should still be usable, slot a mock element in sampleIds[]. downstream query should be able to ignore it
-			continue
+	if (ds.cohort?.termdb?.q?.sampleName2id) {
+		// has id mapper and is official ds
+		for (const s of samples) {
+			const id = ds.cohort.termdb.q.sampleName2id(s.name)
+			if (!Number.isInteger(id)) {
+				unknownSamples.push(s.name)
+				// TODO if file with unknown sample should still be usable, slot a mock element in sampleIds[]. downstream query should be able to ignore it
+				continue
+			}
+			s.name = id
+			sampleIds.push(s)
 		}
-		s.name = id
-		sampleIds.push(s)
-	}
-	console.log(samples.length, 'samples from ' + where + ' of ' + ds.label)
-	if (unknownSamples.length) {
-		// unknown samples can be safely reported to server log
-		console.log('unknown samples: ' + unknownSamples.join(', '))
-		// later attach a sanitized err msg to ds to report to client
-		throw 'unknown samples in big file'
+		console.log(samples.length, 'samples from ' + where + ' of ' + ds.label)
+		if (unknownSamples.length) {
+			// unknown samples can be safely reported to server log
+			console.log('unknown samples: ' + unknownSamples.join(', '))
+			// later attach a sanitized err msg to ds to report to client
+			throw 'unknown samples in big file'
+		}
+	} else {
+		// no mapper, should be custom ds from custom bcf file
+		for (const s of samples) sampleIds.push(s)
 	}
 	return sampleIds
 }

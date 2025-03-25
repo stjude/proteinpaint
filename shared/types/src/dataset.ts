@@ -92,12 +92,17 @@ type bcfMafFile = {
 	maffile: string
 }
 
+type SnvindelByIsoform = {
+	/** if true, served from gdc. no other parameters */
+	gdcapi?: true
+	/** getter function to retrieve data. dynamically added or ds-supplied */
+	get?: (f: any) => void
+}
+
 type SnvindelByRange = {
-	/** if true, served from gdc. no other parameters TODO change to src='gdc/native' */
-	gdcapi?: boolean
-
+	/** if true, served from gdc. no other parameters */
+	gdcapi?: true
 	//local ds can have following different setup
-
 	/** one single bcf file */
 	bcffile?: string
 	/** one bcf file per chr */
@@ -106,8 +111,8 @@ type SnvindelByRange = {
 	bcfMafFile?: bcfMafFile
 	/** allow to apply special configurations to certain INFO fields of the bcf file */
 	infoFields?: InfoFieldEntry[]
-	/** if true, bcf or chr2bcf uses string sample name in header. to be used during this migrating so the code can deal with old files with integer sample ids and new ones; TODO once all datasets are migrated, delete the flag */
-	tempflag_sampleNameInVcfHeader?: boolean
+	/** getter function to retrieve data. dynamically added or ds-supplied */
+	get?: (f: any) => void
 }
 
 type URLEntry = {
@@ -310,12 +315,10 @@ type SnvindelComputeGroup_info = {
 /** a data type under ds.queries{} */
 type SnvIndelQuery = {
 	forTrack?: boolean
-	/** allow to query data by either isoform or range
-	 * isoform query is only used for gdc api
-	 */
-	byisoform?: GdcApi
+	/** allow to query data by either isoform or range; either or both can be used; cannot be both missing */
+	byisoform?: SnvindelByIsoform
 	/** query data by range */
-	byrange: SnvindelByRange
+	byrange?: SnvindelByRange
 
 	infoUrl?: URLEntry[]
 	skewerRim?: SkewerRim

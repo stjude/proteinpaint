@@ -229,6 +229,8 @@ export function mclasstester(s) {
 			return 'N'
 		case 'splice_site':
 			return 'L'
+		case 'splice_region':
+			return 'P'
 		case 'rna':
 			return mclassnoncoding
 		case 'frame_shift_del':
@@ -253,6 +255,8 @@ export function mclasstester(s) {
 			return mclassutr5
 		case "5'flank":
 			return mclassnoncoding
+		case 'silent':
+			return 'S'
 		case 'blank':
 			return 'Blank'
 		default:
