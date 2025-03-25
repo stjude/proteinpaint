@@ -2679,8 +2679,9 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 			if (groupset) {
 				// groupsetting is active
 				// get the first group of groupset that the sample can be assigned to
-				// NOTE: this depends on .groups[] being arranged in order
-				// of priority (see client/termsetting/handlers/geneVariant.ts)
+				// for example: if groups[0] is SNV=M and groups[1] is
+				// CNV=Loss and a sample has both SNV=M and CNV=Loss, then
+				// the sample will be assigned to groups[0]
 				const group = groupset.groups.find(group => {
 					if (group.type != 'filter') throw 'unexpected group.type'
 					const filter = group.filter.active

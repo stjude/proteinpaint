@@ -1156,7 +1156,7 @@ const WTandBlankClasses = Object.values(mclass)
 	.filter(m => m.key == 'WT' || m.key == 'Blank')
 	.map(m => m.key)
 
-// custom dt terms used by geneVariant term
+// custom dt terms used by variant filter of geneVariant term
 export const dtTerms = [
 	{
 		id: 'snvindel',

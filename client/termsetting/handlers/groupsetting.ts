@@ -182,18 +182,11 @@ export class GroupSettingMethods {
 			// for a custom groupset
 			this.data.values.forEach(v => {
 				if (!v.samplecount) {
-					if (this.tsInstance.term.type == 'geneVariant') {
-						const q = this.tsInstance.q as GeneVariantBaseQ
-						const dt = this.tsInstance.category2samplecount.find(i => i.dt == q.dt)
-						const classes = dt.classes.byOrigin && q.origin ? dt.classes.byOrigin[q.origin] : dt.classes
-						v.samplecount = classes[v.key]
-					} else {
-						v.samplecount = this.tsInstance.category2samplecount
-							? this.tsInstance.category2samplecount.find(
-									(d: { key: string; label?: string; samplecount: number }) => d.key == v.key
-							  )?.samplecount
-							: 'n/a'
-					}
+					v.samplecount = this.tsInstance.category2samplecount
+						? this.tsInstance.category2samplecount.find(
+								(d: { key: string; label?: string; samplecount: number }) => d.key == v.key
+						  )?.samplecount
+						: 'n/a'
 				}
 			})
 		}
@@ -202,7 +195,7 @@ export class GroupSettingMethods {
 			//add any required groups, specifically Excluded Categories and Group 2
 			this.data.groups.push({
 				currentIdx: g,
-				type: this.tsInstance.q.type == 'filter' ? 'filter' : 'values',
+				type: this.data.groups.length ? this.data.groups[0].type : this.tsInstance.q.type,
 				name: g === 0 ? `Excluded categories` : `Group ${g.toString()}`,
 				uncomputable: g === 0
 			})
@@ -433,7 +426,6 @@ function setRenderers(self: any) {
 					.map((v: ItemEntry) => {
 						return { key: v.key, label: v.label }
 					})
-				if (groupValues.length == 0) continue
 				customgroup.values = groupValues
 			} else {
 				throw 'group.type is not recognized'
@@ -553,19 +545,15 @@ function setRenderers(self: any) {
 		group.draggables = group.wrapper.append('div').classed('sjpp-drag-list-div', true)
 
 		if (group.type == 'filter') {
-			// group is filter type, render tvs
+			// group is filter type, render filter button
 			const holder = group.draggables.append('div')
 			await mayDisplayFilter(group, holder)
 		} else {
-			// not filter type, render items in group
+			// not filter type, render values in group
 			await self.addItems(group)
 		}
 	}
 
-	/*
-	callback2
-		optional callback to run upon filter update, no parameter
-	*/
 	async function mayDisplayFilter(group, holder: any, callback2?: any) {
 		const filter = self.data.filters.find((d: FilterEntry) => d.group == group.currentIdx)
 		if (!filter || !filter.terms?.length) return
