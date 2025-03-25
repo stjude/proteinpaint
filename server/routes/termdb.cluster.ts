@@ -325,7 +325,7 @@ async function validateHDF5File(filePath) {
    * @returns {Promise<Object>} Promise resolving to gene expression data
    */
   async function queryGeneExpression(hdf5_file, geneName) {
-	console.log(`Querying gene expression for ${geneName} from ${hdf5_file}`);
+	// console.log(`Querying gene expression for ${geneName} from ${hdf5_file}`);
 	// Create the input params as a JSON object
 	const jsonInput = JSON.stringify({
 		hdf5_file: hdf5_file,
@@ -334,10 +334,10 @@ async function validateHDF5File(filePath) {
 	
 	try {
 	  // Call the Rust script with input parameters
-	  console.log('Calling readDenseHDF5 Rust script...');
-	  console.log('Params:', JSON.stringify(jsonInput));
-	  const result = await run_rust('readDenseHDF5', jsonInput);
-	  // const result = await run_rust('readHDF5', jsonInput);
+	  console.log('Calling readHDF5 Rust script...');
+	  // console.log('Params:', JSON.stringify(jsonInput));
+	  // const result = await run_rust('readDenseHDF5', jsonInput);
+	  const result = await run_rust('readHDF5', jsonInput);
 	  
 	  // Debug output to understand what we're getting back
 	  // console.log('Result structure:', JSON.stringify(result, null, 2).substring(0, 5000) + '...');
@@ -410,7 +410,7 @@ async function validateHDF5File(filePath) {
 			// console.log('Extracted JSON string end:', jsonString.substring(jsonString.length - 100));
 			
 			const geneData = JSON.parse(jsonString);
-            console.log('Gene data:', geneData);
+            // console.log('Gene data:', geneData);
 
 		} catch (sampleError) {
 		  throw `Failed to get samples from HDF5 file: ${sampleError}`;
@@ -419,7 +419,7 @@ async function validateHDF5File(filePath) {
 		throw `Failed to validate HDF5 file: ${error}`;
 	  }
 
-		// Add this inside the HDF5 file handling branch
+		
 		q.get = async (param: TermdbClusterRequestGeneExpression) => {
 			const limitSamples = await mayLimitSamples(param, q.samples, ds);
 			if (limitSamples?.size == 0) {
@@ -483,7 +483,7 @@ async function validateHDF5File(filePath) {
 					}
 
 					console.log(`Gene ${geneTerm.gene} has ${Object.keys(s2v).length} samples with data`);
-					console.log('Sample data:', s2v);
+					// console.log('Sample data:', s2v);
 
 					if (Object.keys(s2v).length) {
 						term2sample2value.set(geneTerm.gene, s2v);
