@@ -379,16 +379,18 @@ async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 		self.q = { ...getBaseQ(self.q), type: 'custom-groupset', customset: { groups } }
 	}
 
-	// function to make a variant filter for the geneVariant term
-	// will be used for groupsetting
+	// function to make a variant filter based on dt terms
 	function makeVariantFilter() {
+		self.q.type = 'filter'
 		if (self.term.filter) return
-		const dtTermsInDs: DtTerm[] = []
+		const dtTermsInDs: DtTerm[] = [] // dt terms in dataset
 		for (const t of dtTerms) {
 			const query = t.id == 'fusion' || t.id == 'sv' ? 'svfusion' : t.id // TODO: distinguish between fusion and sv in dataset file
-			if (!Object.keys(self.vocabApi.termdbConfig.queries).includes(query)) continue
+			if (!Object.keys(self.vocabApi.termdbConfig.queries).includes(query)) continue // dt is not in dataset
 			const byOrigin = self.vocabApi.termdbConfig.assayAvailability?.byDt[t.dt]?.byOrigin
 			if (byOrigin) {
+				// dt has multiple origins
+				// add a dt term for each origin
 				for (const k of Object.keys(byOrigin)) {
 					const tcopy = structuredClone(t)
 					tcopy.origin = k
@@ -402,10 +404,8 @@ async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 		}
 		self.term.filter = {
 			opts: { joinWith: ['and', 'or'] },
-			// will load dt terms as custom terms in frontend vocab
-			terms: dtTermsInDs
+			terms: dtTermsInDs // will load dt terms as custom terms in frontend vocab
 		}
-		self.q.type = 'filter'
 	}
 
 	// function for making groupset draggables
@@ -423,11 +423,7 @@ async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 		.style('display', 'block')
 		.text('Apply')
 		.on('click', () => {
-			if (
-				(self.q.type == 'predefined-groupset' || self.q.type == 'custom-groupset' || self.q.type == 'filter') &&
-				self.groupSettingInstance
-			)
-				self.groupSettingInstance.processDraggables()
+			if (self.groupSettingInstance) self.groupSettingInstance.processDraggables()
 			self.runCallback()
 		})
 

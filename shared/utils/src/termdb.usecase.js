@@ -183,7 +183,9 @@ export function isUsableTerm(term, _usecase, termdbConfig, ds) {
 			if (exlst) {
 				if (graphableTypes.has(term.type) && !exlst.includes(term.type)) uses.add('plot')
 				if (child_types.find(t => !exlst.includes(t))) uses.add('branch') // there's a non-excluded child type, allow branch to show
+				return uses
 			}
+		// no specific rule for filter. pass and use default rules
 
 		case 'correlationVolcano':
 			if (usecase.detail == 'numeric') {
