@@ -168,13 +168,4 @@ export class VolcanoInteractions {
 			}
 		})
 	}
-
-	showDom(key) {
-		const plotConfig = this.app.getState().plots.find((p: VolcanoPlotConfig) => p.id === this.id)
-		this.app.dispatch({
-			type: 'plot_edit',
-			id: this.id,
-			config: { settings: { volcano: { [key]: !plotConfig.settings.volcano[key] } } }
-		})
-	}
 }

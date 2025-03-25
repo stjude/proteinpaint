@@ -85,12 +85,9 @@ export type VolcanoDom = {
 export type VolcanoPlotDom = {
 	/** Holder for action buttons above the images and plot */
 	actions: Div
-	/** Div for server generated images */
-	images: Div
 	/** Holder for data points, p value line, and fold change line */
 	plot: SvgG
 	pValueTable: Div
-	stats: Div
 	/** Holder for plot, axis labels, and title */
 	svg: SvgSvg
 	/** X axis */
@@ -131,12 +128,6 @@ export type VolcanoSettings = {
 	pValueType: 'original' | 'adjusted'
 	/** Toggle between ranking the genes by variance or abs(foldChange) */
 	rankBy: 'abs(foldChange)' | 'pValue'
-	/** If true, show server generated images. If false, hide div. Default is false. */
-	showImages: boolean
-	/** If true, show p value table to the right of the volcano plot. Default is false. */
-	showPValueTable: boolean
-	/** If true, show stats/summary table underneath the volcano plot. Default is true.*/
-	showStats: boolean
 	/** plot height */
 	height: number
 	/** plot width */
