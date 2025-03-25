@@ -105,7 +105,7 @@ async function getResult(q: TermdbClusterRequest, ds: any, genome) {
 		}
 	}
 
-	const removedHierClusterTerms: object[] = [] // allow to collect multiple sets of skipped items, each based on different reasons
+	const removedHierClusterTerms: { text: string; lst: string[] }[] = [] // allow to collect multiple sets of skipped items, each based on different reasons
 	if (noValueTerms.length) {
 		removedHierClusterTerms.push({
 			text: `Skipped ${q.dataType == TermTypes.GENE_EXPRESSION ? 'genes' : 'items'} with no data`,
