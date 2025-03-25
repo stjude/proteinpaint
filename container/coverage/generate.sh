@@ -3,17 +3,68 @@
 set -exo pipefail
 
 ##############################
-# COPY SOURCE CODE, ARTIFACTS
+# ARGUMENTS
 ##############################
 
+USAGE="Usage:
+  ./generate.sh [-x] [-z]
+
+  -x XVFB: use xvfb-run when running browser tests
+  -z USETGZ: use local tarballs for the server package
+"
+
+USETGZ=""
+XVFB=""
+
+# may skip if there are no updates to augen, shared, and rust workspaces,
+# or if those have already been packed and built into latest ppserver:image
+while getopts "zxh" opt; do
+  case "${opt}" in
+  x) 
+    XVFB="xvfb-run --auto-servernum"
+    ;;
+  z)
+    # install proteinpaint-* builds from tarballs, not published packages
+    USETGZ=true
+    ;;
+  h)
+    echo "$USAGE"
+    exit 1
+    ;;
+  *)
+    echo "Unrecognized parameter"
+    echo -e "\n\n$USAGE\n\n"
+    exit 1
+    ;;
+  esac
+done
+
+# run from container/coverage dir
 COVDIR=$PWD
+
+##################################
+# CREATE UP-TO-DATE ppserver image
+##################################
+
+if [[ "$USETGZ" == "true" ]]; then
+  cd ..
+  ./pack.sh
+  ./build2.sh -z server
+  cd $COVDIR
+fi
+
+##############################
+# COPY SOURCE CODE, ARTIFACTS
+##############################
 
 rm -rf server
 mkdir server
 
+# will use the ppserver:latest @sjcrh/proteinpaint-server/package.json,
+# which has the applicable abs path to packed tgz for updated workspaces 
+# cp -r ../../server/package.json server/
 cp -r ../../server/coverage.js server/
 cp -r ../ci/serverconfig.json server/
-cp -r ../../server/package.json server/
 cp -r ../../server/emitImports.js server/
 cp -r ../../server/routes server/
 cp -r ../../server/src server/
@@ -31,18 +82,6 @@ serverParentDir=/home/runner/work/proteinpaint/proteinpaint
 if [[ ! -d "$serverParentDir" ]]; then
   sed -i.bak "s|$serverParentDir\/|$PWD\/|g" server/serverconfig.json
 fi
-
-cd ../../augen
-rm sjcrh-augen*
-npm pack
-mv sjcrh-augen*.tgz sjcrh-augen.tgz
-cp sjcrh-augen* ../container/coverage/server/
-cd $COVDIR/server
-npm pkg set dependencies."@sjcrh/augen"=/home/root/pp/app/active/server/sjcrh-augen.tgz
-sed -i.bak "s|coverage.js & |coverage.js|g" package.json
-cd $COVDIR
-
-# TODO: copy rust code/build if applicable
 
 ##############################
 # BUILD IMAGE
@@ -97,7 +136,7 @@ docker run -d \
 
 sleep 12
 cd $COVDIR/../../client
-npm run combined:coverage
+$XVFB npm run combined:coverage
 
 cd $COVDIR
 # close the server to trigger c8 to generate the coverage report 

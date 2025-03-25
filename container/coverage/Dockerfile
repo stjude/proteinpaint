@@ -8,11 +8,10 @@
 
 FROM ppserver:latest
 
-RUN mkdir server
+# the local ppserver:latest has the correct packed tgz entries 
+# for updated workspace dependencies
+RUN mkdir server && cp node_modules/@sjcrh/proteinpaint-server/package.json server/
 WORKDIR /home/root/pp/app/active/server
-COPY ./server/package.json ./package.json
-COPY ./server/sjcrh-augen.tgz ./sjcrh-augen.tgz
-
 # run npm install as early as possible, to cache/reuse as image layer;
 # this install dev deps that are not in production image
 RUN npm install
@@ -20,6 +19,7 @@ RUN npm install
 # copy other artifacts that are more prone to changes 
 # and should not trigger unnecessary npm install
 COPY ./server ./
+RUN sed -i.bak "s|coverage.js & |coverage.js|g" package.json
 
 EXPOSE 3000
 # restart the server after the test run, so that the container
