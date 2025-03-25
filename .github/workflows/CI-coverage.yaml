@@ -74,7 +74,6 @@ jobs:
       - name: Build ppserver image
         uses: docker/build-push-action@v5
         with:
-          # load: true
           context: ./container/
           file: ./container/server/Dockerfile
           tags: ppserver:latest
