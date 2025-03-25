@@ -18,7 +18,7 @@ class gsea {
 		//Either allow a node to be passed or create a new div
 		const controlsDiv =
 			typeof opts.controls == 'object' ? opts.controls : holder || holder.append('div').style('display', 'inline-block')
-		const mainDiv = opts.holder.append('div').style('display', 'inline-block').style('margin-left', '50px')
+		const mainDiv = opts.holder.append('div').style('margin-left', '50px')
 		const holder = mainDiv.append('div').style('display', 'inline-block')
 		const detailsDiv = mainDiv
 			.append('div')
@@ -368,6 +368,13 @@ add:
 		]
 		let download = {}
 
+		const highlightGenesBtn = self.dom.detailsDiv
+			.append('button')
+			.style('margin-left', '10px')
+			.style('display', 'none')
+			.attr('aria-label', 'Highlight genes in the volcano plot')
+			.text('Highlight genes')
+
 		if (self.state.config.downloadFilename) download.fileName = self.state.config.downloadFilename
 		renderTable({
 			download,
@@ -379,6 +386,22 @@ add:
 			singleMode: true,
 			resize: true,
 			noButtonCallback: async index => {
+				if (self.config.chartType == 'differentialAnalysis') {
+					const genes = [...self.gsea_table_rows[index][5].value.split(',')]
+					if (!genes) return
+					highlightGenesBtn.style('display', '')
+					highlightGenesBtn.on('click', () => {
+						self.app.dispatch({
+							type: 'plot_edit',
+							id: self.id,
+							config: {
+								childType: 'volcano',
+								highlightedData: genes
+							}
+						})
+					})
+				}
+
 				//console.log("index:",self.gsea_table_rows[index][0].value)
 				const body = {
 					genome: self.config.gsea_params.genome,
