@@ -6,7 +6,7 @@ import { get$id } from '#termsetting'
 import { getCurrentCohortChartTypes } from './charts'
 import { getColors } from '#shared/common.js'
 import { rgb } from 'd3-color'
-import { TermTypes, isNumericTerm } from '#shared/terms.js'
+import { TermTypes, isNumericTerm, termType2label } from '#shared/terms.js'
 
 /*
 this
@@ -223,7 +223,7 @@ class MassGroups {
 
 		//TODO: need to 'diffAnalysis' to `currentCohortChartTypes` in the future
 		if (this.state.currentCohortChartTypes.includes('DEanalysis') && samplelstTW.q.groups.length == 2) {
-			addDiffAnalysisPlotMenuItem(menuDiv, this, this.state, samplelstTW)
+			addDiffAnalysisPlotMenuItem(menuDiv, this, samplelstTW)
 		}
 
 		if (this.state.currentCohortChartTypes.includes('survival'))
@@ -300,43 +300,56 @@ class MassGroups {
 
 export const groupsInit = getCompInit(MassGroups)
 
-function addDiffAnalysisPlotMenuItem(div, self, state, samplelstTW) {
-	div
-		.append('div')
-		.attr('class', 'sja_menuoption sja_sharp_border')
-		.text('Differential analysis')
-		.on('click', e => {
-			//Move this to diff analysis plot??
-			//Do the check but not add to the state??
-			const groups = []
-			for (const group of samplelstTW.q.groups) {
-				if (group.values && group.values.length > 0) {
-					groups.push(group)
-				} else {
-					throw 'group does not contain samples for differential analysis'
+function addDiffAnalysisPlotMenuItem(div, self, samplelstTW) {
+	// DA app can be applied to multiple datatypes. show options based on availability for each datatype
+	const allowedTypes = [
+		TermTypes.GENE_EXPRESSION,
+		TermTypes.METABOLITE_INTENSITY // add this type so DA can show up for it as reminder for todo
+		// add more types as they are supported
+	]
+	for (const allowedTT of allowedTypes) {
+		if (!self.state.termdbConfig.allowedTermTypes.includes(allowedTT)) continue // ds doesn't have this term type
+		div
+			.append('div')
+			.attr('class', 'sja_menuoption sja_sharp_border')
+			.text(`Differential ${termType2label(allowedTT)} Analysis`)
+			.on('click', e => {
+				//Move this to diff analysis plot??
+				//Do the check but not add to the state??
+				const groups = []
+				for (const group of samplelstTW.q.groups) {
+					if (group.values && group.values.length > 0) {
+						groups.push(group)
+					} else {
+						throw 'group does not contain samples for differential analysis'
+					}
 				}
-			}
-			const config = {
-				chartType: 'differentialAnalysis',
-				state,
-				samplelst: { groups },
-				//Eventually termType will be dynamic
-				termType: 'geneExpression',
-				tw: samplelstTW
-			}
-			self.tip.hide()
-			self.app.dispatch({
-				type: 'plot_create',
-				config
+				const config = {
+					chartType: 'differentialAnalysis',
+					state: self.state,
+					samplelst: { groups },
+					termType: allowedTT,
+					tw: samplelstTW
+				}
+				self.tip.hide()
+				self.app.dispatch({
+					type: 'plot_create',
+					config
+				})
 			})
-		})
-	// small text to explain which is case/control
+	}
+
+	// small text to explain which is case/control. always show this for all DA
 	div
 		.append('div')
-		.text(`Case: ${samplelstTW.q.groups[1].name}, control: ${samplelstTW.q.groups[0].name}`)
+		.html(
+			`<span style="font-size:.8em;font-weight:bold">CASE</span> ${samplelstTW.q.groups[1].name}
+		&nbsp;
+		<span style="font-size:.8em;font-weight:bold">CONTROL</span> ${samplelstTW.q.groups[0].name}`
+		)
 		.style('font-size', '0.8em')
 		.style('opacity', 0.8)
-		.style('padding', '3px')
+		.style('padding', '3px 3px 3px 10px')
 }
 
 function initUI(self) {
