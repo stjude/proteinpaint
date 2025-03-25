@@ -3,7 +3,7 @@ import { select, selectAll } from 'd3-selection'
 import { getNormalRoot } from '#filter'
 import { isUsableTerm } from '#shared/termdb.usecase.js'
 import { termInfoInit } from './termInfo'
-import { TermTypeGroups } from '#shared/terms.js'
+import { TermTypeGroups, equals } from '#shared/terms.js'
 
 const childterm_indent = '25px'
 export const root_ID = 'root'
@@ -327,7 +327,7 @@ function setRenderers(self) {
 			return
 		}
 
-		const termIsDisabled = self.opts?.disable_terms?.some(t => t.id == term.id)
+		const termIsDisabled = self.opts?.disable_terms?.some(t => equals(t, term))
 		const uses = isUsableTerm(term, self.state.usecase, self.app.vocabApi.termdbConfig)
 
 		div.style('display', '')
@@ -349,7 +349,7 @@ function setRenderers(self) {
 	}
 
 	self.addTerm = async function (term) {
-		const termIsDisabled = self.opts?.disable_terms?.some(t => t.id == term.id)
+		const termIsDisabled = self.opts?.disable_terms?.some(t => equals(t, term))
 		const uses = isUsableTerm(term, self.state.usecase, self.app.vocabApi.termdbConfig)
 
 		const div = select(this)
