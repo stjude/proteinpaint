@@ -42,7 +42,8 @@ export function renderTable({
 	selectedRowStyle = {},
 	inputName = null,
 	dataTestId = null,
-	download = undefined
+	download = undefined,
+	hoverEffects
 }: TableArgs) {
 	validateInput()
 	let _selectedRowStyle = selectedRowStyle
@@ -350,6 +351,10 @@ export function renderTable({
 					column.fillCell(td, rowIdx)
 				}
 			}
+			//Table code may update when the caller code does not (e.g. sorting)
+			//Added event listeners in caller code will be lost when the rows update.
+			//Allows for hover effects to remain consistent when the rows are updated.
+			if (hoverEffects) hoverEffects(tr, row)
 		}
 	}
 

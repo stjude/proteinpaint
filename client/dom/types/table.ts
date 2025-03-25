@@ -1,3 +1,4 @@
+import type { Tr } from '../../types/d3'
 /** Types for #dom/table */
 
 export type TableCell = {
@@ -37,8 +38,7 @@ export type TableColumn = {
 	/** Used for sorting function
 	 * Do not use this field for html columns */
 	sortable?: boolean
-	/** assume all values from this column are numbers; this renders the column into a barplot
-    note that this cannot be used together with `sortable:true` */
+	/** assume all values from this column are numbers; this renders the column into a barplot */
 	barplot?: TableBarplot
 }
 
@@ -137,4 +137,14 @@ export type TableArgs = {
 		/** optionally, provide download file name, if missing a default one is used */
 		fileName?: string
 	}
+	/** Add row eventlisteners here
+	 * eg.. () => {
+	 * //logic for event listener with row data
+	 * tr.on('mouseover', function() { //something })
+	 * tr.on('mouseleave', function() { //something })
+	 * }
+	 * *** Do not *** use this for a click event!
+	 * use noButtonCallback instead
+	 */
+	hoverEffects?: (tr: Tr, row: TableRow) => void
 }

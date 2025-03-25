@@ -50,7 +50,7 @@ export class VolcanoPlotView {
 			xAxisLabel: svg.append('text').attr('id', 'sjpp-volcano-xAxisLabel').attr('text-anchor', 'middle'),
 			yAxisLabel: svg.append('text').attr('id', 'sjpp-volcano-yAxisLabel').attr('text-anchor', 'middle'),
 			plot: svg.append('g').attr('id', 'sjpp-volcano-plot'),
-			pValueTable: this.dom.holder.append('div').attr('id', 'sjpp-volcano-pValueTable').style('display', 'none')
+			pValueTable: this.dom.holder.append('div').attr('id', 'sjpp-volcano-pValueTable').style('display', 'inline-block')
 		}
 		this.termType = termType
 		const plotDim = this.viewData.plotDim
@@ -176,11 +176,25 @@ export class VolcanoPlotView {
 		renderTable({
 			columns: this.viewData.pValueTableData.columns,
 			rows: this.viewData.pValueTableData.rows,
-			div: this.volcanoDom.pValueTable.append('div'),
+			div: this.volcanoDom.pValueTable,
 			showLines: true,
 			maxHeight: '150vh',
 			resize: true,
-			header: { allowSort: true }
+			header: { allowSort: true },
+			hoverEffects: (tr, row) => {
+				if (this.termType != 'geneExpression') return
+				const circle = this.volcanoDom.plot
+					.selectAll('circle')
+					.nodes()
+					.find((d: any) => d.__data__.gene_symbol == row[0].value)
+				if (!circle) return
+				tr.on('mouseover', () => {
+					select(circle).attr('fill-opacity', 0.9)
+				})
+				tr.on('mouseleave', () => {
+					select(circle).attr('fill-opacity', 0)
+				})
+			}
 		})
 	}
 }
