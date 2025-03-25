@@ -241,11 +241,9 @@ export class Matrix {
 			await this.adjustSvgDimensions(prevTranspose)
 			this.controlsRenderer.main()
 			if (this.data.removedHierClusterTerms) {
-				sayerror(
-					this.dom.errorDiv,
-					`Failed to get values for hierCluster ${this.data.removedHierClusterTerms.length > 1 ? 'terms' : 'term'}: ` +
-						this.data.removedHierClusterTerms.join(', ')
-				)
+				for (const r of this.data.removedHierClusterTerms) {
+					sayerror(this.dom.errorDiv, r.text + ': ' + r.lst.join(', '))
+				}
 			}
 		} catch (e) {
 			// a new token message error may have been triggered by the data request here,
