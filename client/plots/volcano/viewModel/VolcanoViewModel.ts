@@ -35,9 +35,9 @@ export class VolcanoViewModel {
 		this.pValueCutoff = -Math.log10(settings.pValue)
 		this.pValueTable = {
 			columns: [
-				{ label: 'log2 Fold change', sortable: true },
-				{ label: 'Original p-value (linear scale)', sortable: true },
-				{ label: 'Adjusted p-value (linear scale)', sortable: true }
+				{ label: 'log2(Fold change)', barplot: {}, sortable: true },
+				{ label: 'Original p-value (linear)', sortable: true },
+				{ label: 'Adjusted p-value (linear)', sortable: true }
 			],
 			rows: []
 		}
@@ -48,11 +48,15 @@ export class VolcanoViewModel {
 		this.setMinMaxValues()
 
 		const plotDim = this.setPlotDimensions()
-		this.setPTableData()
+		this.setPTableColumns()
+		const pointData = this.setPointData(plotDim)
+		//Get all rows data for the pValueTable in setPointsData, then sort by fold change
+		const foldChangeIdx = this.pValueTable.columns.findIndex(c => c.label.includes('log2(Fold change)'))
+		this.pValueTable.rows.sort((a: any, b: any) => b[foldChangeIdx].value - a[foldChangeIdx].value)
 
 		this.viewData = {
 			plotDim,
-			pointData: this.setPointData(plotDim),
+			pointData,
 			statsData: this.setStatsData(),
 			pValueTableData: this.pValueTable,
 			images: response.images || []
@@ -131,7 +135,7 @@ export class VolcanoViewModel {
 					{ value: roundValueAuto(Math.pow(10, -d.adjusted_p_value)) }
 				]
 				if (this.dataType == 'genes') {
-					row.splice(0, 0, { value: d.gene_name }, { value: d.gene_symbol })
+					row.splice(0, 0, { value: d.gene_symbol })
 				}
 				this.pValueTable.rows.push(row)
 			} else {
@@ -190,16 +194,9 @@ export class VolcanoViewModel {
 		return tableRows
 	}
 
-	setPTableData() {
+	setPTableColumns() {
 		if (this.termType == 'geneExpression') {
-			this.pValueTable.columns.splice(
-				0,
-				0,
-				{ label: 'Gene Name', sortable: true },
-				{ label: 'Gene Symbol', sortable: true }
-			)
+			this.pValueTable.columns.splice(0, 0, { label: 'Gene Symbol', sortable: true })
 		}
-		const foldChangeIdx = this.pValueTable.columns.findIndex(c => c.label.includes('Fold change'))
-		this.pValueTable.rows.sort((a: any, b: any) => a[foldChangeIdx].value - b[foldChangeIdx].value).reverse()
 	}
 }
