@@ -1,11 +1,18 @@
 name: Combined Test Coverage
 
 on:
+  schedule:
+    # since this combined coverage CI runs integration tests (in addition to unit tests),
+    # the integration CI should be done more frequently on every push to master, since 
+    # it is more straightforward to set up and is less brittle than the coverage container
+    - cron: '0 6 * * *'
+
   workflow_dispatch:
     inputs:
       build_secret:
         type: string
         description: Build secret
+
   workflow_call: {}
 
 jobs:
@@ -124,12 +131,12 @@ jobs:
           SDIR=container/coverage/.coverage
           if [[ -d "$SDIR" ]]; then
             if [[ -f $SDIR/coverage-details.md ]]; then
-              echo -e "\nServer coverage summary\n" >> $GITHUB_STEP_SUMMARY
+              echo -e "\n##Server coverage summary\n" >> $GITHUB_STEP_SUMMARY
               cat $SDIR/coverage-summary.md >> $GITHUB_STEP_SUMMARY
             fi
             
             if [[ -f $SDIR/coverage-details.md ]]; then
-              echo -e "\nServer coverage details\n" >> $GITHUB_STEP_SUMMARY
+              echo -e "\n##Server coverage details\n" >> $GITHUB_STEP_SUMMARY
               cat $SDIR/coverage-details.md >> $GITHUB_STEP_SUMMARY
             fi
           else
