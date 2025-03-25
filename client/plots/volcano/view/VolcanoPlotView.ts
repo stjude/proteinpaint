@@ -37,30 +37,20 @@ export class VolcanoPlotView {
 			.style('display', 'block')
 			.style('z-index', 1)
 			.style('position', 'relative')
-		const images = this.dom.holder
-			.append('div')
-			.style('display', settings.showImages ? 'block' : 'none')
+		const svg = this.dom.holder
+			.append('svg')
+			.style('display', 'inline-block')
+			.attr('id', 'sjpp-volcano-svg')
 			.style('vertical-align', 'top')
-			.attr('id', 'sjpp-volcano-images')
-		const volcanoHolder = this.dom.holder.append('div').style('display', 'inline-block').style('vertical-align', 'top')
-		const svg = volcanoHolder.append('svg').style('display', 'block').attr('id', 'sjpp-volcano-svg')
 		this.volcanoDom = {
 			actions,
-			images,
 			svg,
 			xAxis: svg.append('g').attr('id', 'sjpp-volcano-xAxis'),
 			yAxis: svg.append('g').attr('id', 'sjpp-volcano-yAxis'),
 			xAxisLabel: svg.append('text').attr('id', 'sjpp-volcano-xAxisLabel').attr('text-anchor', 'middle'),
 			yAxisLabel: svg.append('text').attr('id', 'sjpp-volcano-yAxisLabel').attr('text-anchor', 'middle'),
 			plot: svg.append('g').attr('id', 'sjpp-volcano-plot'),
-			pValueTable: this.dom.holder
-				.append('div')
-				.attr('id', 'sjpp-volcano-pValueTable')
-				.style('display', settings.showPValueTable ? 'inline-block' : 'none'),
-			stats: volcanoHolder
-				.append('div')
-				.attr('id', 'sjpp-volcano-stats')
-				.style('display', settings.showStats ? 'block' : 'none')
+			pValueTable: this.dom.holder.append('div').attr('id', 'sjpp-volcano-pValueTable').style('display', 'none')
 		}
 		this.termType = termType
 		const plotDim = this.viewData.plotDim
@@ -68,27 +58,25 @@ export class VolcanoPlotView {
 		this.renderPlot(plotDim)
 		renderDataPoints(this)
 		this.renderFoldChangeLine(plotDim)
-		this.renderStatsTable()
+		this.renderStatsMenu()
 		this.renderPValueTable()
-		this.renderImages()
 	}
 
 	renderUserActions() {
+		//Images may have a large margin. Hide the overflow.
+		this.dom.actionsTip.d.style('overflow', 'hidden')
 		this.volcanoDom.actions.style('margin-left', '20px').style('padding', '5px')
 		if (this.termType == 'geneExpression') {
 			this.addActionButton('Confounding factors', () => this.interactions.confoundersMenu())
 			this.addActionButton('Genes', () => this.interactions.launchGeneSetEdit())
-			if (this.viewData.images.length) {
-				const btnLabel = `Image${this.viewData.images.length > 1 ? `s (${this.viewData.images.length})` : ''}`
-				this.addActionButton(btnLabel, () => {
-					this.interactions.showDom('showImages')
-				})
-			}
 			this.addActionButton('Statistics', () => {
-				this.interactions.showDom('showStats')
+				this.renderStatsMenu()
 			})
 			this.addActionButton('P Value Table', () => {
-				this.interactions.showDom('showPValueTable')
+				this.volcanoDom.pValueTable.style(
+					'display',
+					this.volcanoDom.pValueTable.style('display') == 'none' ? 'inline-block' : 'none'
+				)
 			})
 		}
 	}
@@ -155,10 +143,26 @@ export class VolcanoPlotView {
 			.attr('y2', plotDim.logFoldChangeLine.y2)
 	}
 
-	renderStatsTable() {
-		const statsData = this.viewData.statsData
-		const table = table2col({ holder: this.volcanoDom.stats })
-		for (const d of statsData) {
+	renderStatsMenu() {
+		//Render any images. viewModel returns the response array of images or []
+		for (const img of this.viewData.images) {
+			this.dom.actionsTip.d
+				.append('img')
+				.style('display', 'inline-block')
+				.style('margin-left', '10px')
+				.style('margin-top', '-30px')
+				.attr('width', this.viewData.plotDim.svg.width + 50)
+				.attr('height', this.viewData.plotDim.svg.height + 50)
+				.attr('src', img.src)
+		}
+		const tableHolder = this.dom.actionsTip.d
+			.append('div')
+			//Show the stats table underneath the images if > 1 image or to the right if only 1 image
+			.style('display', this.viewData.images.length > 1 ? 'block' : 'inline-block')
+			.style('margin', `${this.viewData.images.length > 1 ? `0px 0px` : `40px 10px`} 0px 5px`)
+			.style('vertical-align', 'top')
+		const table = table2col({ holder: tableHolder })
+		for (const d of this.viewData.statsData) {
 			const [td1, td2] = table.addRow()
 			td1.text(d.label)
 			td2.style('text-align', 'end').text(d.value)
@@ -175,21 +179,6 @@ export class VolcanoPlotView {
 			resize: true,
 			header: { allowSort: true }
 		})
-	}
-
-	renderImages() {
-		if (!this.viewData.images.length) return
-		/** images div styling accounts for the margins in the images. 
-		Remove these styles and '+50' if the margins are removed 
-		in the generated images. */
-		this.volcanoDom.images.style('margin-top', '-30px').style('z-index', -1)
-		for (const img of this.viewData.images) {
-			this.volcanoDom.images
-				.append('img')
-				.attr('width', this.viewData.plotDim.svg.width + 50)
-				.attr('height', this.viewData.plotDim.svg.height + 50)
-				.attr('src', img.src)
-		}
 	}
 }
 
