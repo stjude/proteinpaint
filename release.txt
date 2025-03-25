@@ -1,1 +1,3 @@
-
+Features:
+- hierCluster: Under Clustering control panel, add checkbox to cluster/unCluster terms, when terms are not clustered,
+add sort option to sort terms in the hiercluster group.
