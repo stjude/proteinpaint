@@ -90,6 +90,18 @@ export class VolcanoInteractions {
 		}
 	}
 
+	async highlightDataPoint(value: string) {
+		const config = this.app.getState().plots.find((p: VolcanoPlotConfig) => p.id === this.id)
+		const highlightedData = config.highlightedData.includes(value)
+			? config.highlightedData.filter(d => d !== value)
+			: [...config.highlightedData, value]
+		await this.app.dispatch({
+			type: 'plot_edit',
+			id: this.id,
+			config: { highlightedData }
+		})
+	}
+
 	/** When clicking on a data point, launches the box plot in a separate sandbox
 	 * For geneExpression, value == gene symbol */
 	async launchBoxPlot(value: string) {
