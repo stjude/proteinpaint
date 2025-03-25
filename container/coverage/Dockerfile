@@ -1,7 +1,3 @@
-# from container dir, 
-# run `./build2.sh -z server` first,
-# then `./build2.sh coverage`
-
 #########################
 # Server-only app update
 #########################
