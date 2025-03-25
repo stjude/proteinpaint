@@ -135,3 +135,4 @@ jobs:
           else
             echo -e "\nFailed to generate server coverage report\n" >> $GITHUB_STEP_SUMMARY
           fi
+
