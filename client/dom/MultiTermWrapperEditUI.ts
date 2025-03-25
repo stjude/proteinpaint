@@ -75,7 +75,7 @@ export class MultiTermWrapperEditUI {
 	async getNewPill(d, div) {
 		//Do not allow users to select the same term more than once
 		//Combine with specified disable_terms from the caller
-		const disable_terms = [...this.disable_terms, ...this.twList]
+		const disable_terms = [...this.disable_terms, ...this.twList.map(tw => tw.term)]
 		const _opts = {
 			abbrCutoff: 50,
 			debug: this.app.opts?.debug,
