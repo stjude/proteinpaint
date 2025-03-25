@@ -357,13 +357,13 @@ add:
 		const d_gsea = self.dom.tableDiv.append('div')
 		// table columns showing analysis results for each gene set
 		self.gsea_table_cols = [
-			{ label: 'Gene Set' },
+			{ label: 'Gene Set', sortable: true },
 			//{ label: 'Enrichment Score' },
-			{ label: 'Normalized Enrichment Score', barplot: { axisWidth: 200 } },
-			{ label: 'Gene Set Size' },
-			{ label: 'P value' },
+			{ label: 'Normalized Enrichment Score', barplot: { axisWidth: 200 }, sortable: true },
+			{ label: 'Gene Set Size', sortable: true },
+			{ label: 'P value', sortable: true },
 			//{ label: 'Sidak' },
-			{ label: 'FDR' },
+			{ label: 'FDR', sortable: true },
 			{ label: 'Leading Edge' }
 		]
 		let download = {}
@@ -385,6 +385,7 @@ add:
 			maxHeight: '30vh',
 			singleMode: true,
 			resize: true,
+			header: { allowSort: true },
 			noButtonCallback: async index => {
 				if (self.config.chartType == 'differentialAnalysis') {
 					const genes = [...self.gsea_table_rows[index][5].value.split(',')]
