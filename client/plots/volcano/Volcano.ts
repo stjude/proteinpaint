@@ -102,7 +102,11 @@ class Volcano extends RxComponentInner {
 		try {
 			if (!this.interactions) throw 'Interactions not initialized [main() Volcano.ts]'
 
-			this.dom.wait.style('display', 'block')
+			//Only show Loading for data requests that take longer than 500ms
+			const showWait = setTimeout(() => {
+				this.dom.wait.style('display', 'block')
+			}, 500)
+
 			const settings = config.settings.volcano
 			/** Fetch data */
 			const model = new VolcanoModel(this.app, config, settings)
@@ -120,6 +124,8 @@ class Volcano extends RxComponentInner {
 			//Pass table data for downloading
 			this.interactions.pValueTableData = viewModel.viewData.pValueTableData
 			this.interactions.data = response.data
+
+			clearTimeout(showWait)
 			this.dom.wait.style('display', 'none')
 			/** Render formatted data */
 			new VolcanoPlotView(this.dom, settings, viewModel.viewData, this.interactions, config.termType)
