@@ -181,13 +181,23 @@ export class VolcanoPlotView {
 			maxHeight: '150vh',
 			resize: true,
 			header: { allowSort: true },
+			noRadioBtn: true,
+			noButtonCallback: (i: number) => {
+				//On click, persistently highlight the data point
+				if (this.termType != 'geneExpression') return
+				const gene = this.viewData.pValueTableData.rows[i][0].value as string
+				if (!gene) return
+				this.interactions.highlightDataPoint(gene)
+			},
 			hoverEffects: (tr, row) => {
 				if (this.termType != 'geneExpression') return
+				//Highlight the data point when hovering over the table row
+				//Previously highlighted data points are not affected
 				const circle = this.volcanoDom.plot
 					.selectAll('circle')
 					.nodes()
-					.find((d: any) => d.__data__.gene_symbol == row[0].value)
-				if (!circle) return
+					.find((d: any) => d.__data__.gene_symbol == row[0].value) as any
+				if (!circle || circle.__data__.highlighted) return
 				tr.on('mouseover', () => {
 					select(circle).attr('fill-opacity', 0.9)
 				})
