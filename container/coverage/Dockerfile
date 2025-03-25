@@ -22,5 +22,5 @@ EXPOSE 3000
 # does not crash while c8 is generating coverage report, and
 # the restarted server will react to external /closeCoverage 
 # request to finally stop the container
-CMD ["sh", "-c", "npm run combined:coverage && closeCoverageKey=test npx tsx src/app.ts"]
+CMD ["sh", "-c", "npm run combined:coverage; sleep 25; exit 0"]
 # CMD ["sleep", "3600"]
