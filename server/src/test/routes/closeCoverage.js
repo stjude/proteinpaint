@@ -2,7 +2,7 @@ import serverconfig from '../../serverconfig.js'
 import fs from 'fs'
 
 const key = process.env.closeCoverageKey
-const maxTries = 1
+const maxTries = 5
 
 export default function setRoutes(app, basepath) {
 	if (!serverconfig.debugmode || !key) return

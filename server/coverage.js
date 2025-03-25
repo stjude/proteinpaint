@@ -1,6 +1,7 @@
 import './dataset/termdb.test.ts'
 import { execSync } from 'child_process'
 import path from 'path'
+import './src/serverconfig.js'
 
 const __dirname = import.meta.dirname
 const host = `http://localhost:3000`
@@ -10,7 +11,7 @@ try {
 		.then(r => r.json())
 		.catch(e => {
 			const code = e.code || e.error?.code || e.cause?.code || ''
-			if (code !== 'ECONNREFUSED') throw e
+			if (code !== 'ECONNREFUSED' && code !== 'UND_ERR_SOCKET') throw e
 		})
 
 	if (health) throw 'there is a conflicting localhost:3000 server that is already running'
@@ -23,8 +24,12 @@ try {
 
 try {
 	await import('./serverTests.js')
-	await import('./server.js')
+	await sleep(5000)
+	const { launch } = await import('./src/app.ts')
+	await launch()
 } catch (e) {
+	fetch(`${host}/closeCoverage`) /*.then(r => r.json()).then(console.log)*/
+		.catch(console.log)
 	console.log(e)
 }
 

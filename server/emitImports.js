@@ -67,7 +67,7 @@ if (mode == 'dev') {
 	}
 
 	const specs = glob.sync('./**/test/*.unit.spec.*', { cwd: __dirname })
-	const imports = specs.map(f => `import '${f}'`)
+	const imports = specs.map(f => `import './${f}'`)
 	console.log(imports.join('\n'))
 }
 
