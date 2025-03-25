@@ -1,1 +1,2 @@
-
+Features
+- In the differential analysis volcano plot, hovering over any row in the p value table highlights the data point in the volcano plot. Clicking on the row adds a persistent highlight. 
