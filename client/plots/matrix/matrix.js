@@ -141,6 +141,7 @@ export class Matrix {
 			clusterMethod: config.settings.hierCluster?.clusterMethod,
 			distanceMethod: config.settings.hierCluster?.distanceMethod,
 			clusterSamples: config.settings.hierCluster?.clusterSamples,
+			clusterRows: config.settings.hierCluster?.clusterRows,
 			zScoreTransformation: config.settings.hierCluster?.zScoreTransformation,
 			nav: appState.nav
 		}

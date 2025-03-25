@@ -157,97 +157,100 @@ export function plotDendrogramHclust(plotOnly) {
 
 	// plot row dendrogram
 	if (plotOnly !== 'top') {
-		const height2px = getHclustHeightScalefactor(row.height, xDendrogramHeight)
+		if (!this.settings.hierCluster.clusterRows) {
+			this.dom.leftDendrogram.selectAll('*').remove()
+		} else {
+			const height2px = getHclustHeightScalefactor(row.height, xDendrogramHeight)
+			const width = xDendrogramHeight + 0.0000001
+			const height = rowHeight * row.inputOrder.length
+			const canvas = new OffscreenCanvas(width * pxr, height * pxr)
+			const ctx = canvas.getContext('2d')
+			ctx.scale(pxr, pxr)
+			ctx.imageSmoothingEnabled = false
+			ctx.imageSmoothingQuality = 'high'
+			ctx.strokeStyle = 'black'
 
-		const width = xDendrogramHeight + 0.0000001
-		const height = rowHeight * row.inputOrder.length
-		const canvas = new OffscreenCanvas(width * pxr, height * pxr)
-		const ctx = canvas.getContext('2d')
-		ctx.scale(pxr, pxr)
-		ctx.imageSmoothingEnabled = false
-		ctx.imageSmoothingQuality = 'high'
-		ctx.strokeStyle = 'black'
+			const mergedClusters = new Map()
+			for (const [clusterid0, pair] of row.merge.entries()) {
+				// pair is {n1,n2}, n1 and n2 form a new cluster; id of which is clusterid
 
-		const mergedClusters = new Map()
-		for (const [clusterid0, pair] of row.merge.entries()) {
-			// pair is {n1,n2}, n1 and n2 form a new cluster; id of which is clusterid
+				const clusterid = clusterid0 + 1 // id of this cluster formed by pair, as used in hclust$merge; positive integer
+				const children = [] // collect all children leaves for this cluster
+				const childrenClusters = []
 
-			const clusterid = clusterid0 + 1 // id of this cluster formed by pair, as used in hclust$merge; positive integer
-			const children = [] // collect all children leaves for this cluster
-			const childrenClusters = []
-
-			let x1, x2, y1, y2
-			if (pair.n1 < 0) {
-				// n1 is leaf
-				const [name, rowNumber] = getLeafNumber(pair.n1, row.inputOrder, row.order)
-				y1 = rowHeight * (rowNumber + 0.5)
-				x1 = xDendrogramHeight
-				children.push({ name })
-			} else {
-				// n1 is cluster
-				if (!mergedClusters.has(pair.n1)) throw 'pair.n1 is positive but not seen before'
-				const c = mergedClusters.get(pair.n1)
-				x1 = c.x
-				y1 = c.y
-				children.push(...c.children)
-				childrenClusters.push(pair.n1)
-			}
-			if (pair.n2 < 0) {
-				// n2 is leaf
-				const [name, rowNumber] = getLeafNumber(pair.n2, row.inputOrder, row.order)
-				y2 = rowHeight * (rowNumber + 0.5)
-				x2 = xDendrogramHeight
-				children.push({ name })
-			} else {
-				if (!mergedClusters.has(pair.n2)) throw 'pair.n1 is positive but not seen before'
-				const c = mergedClusters.get(pair.n2)
-				x2 = c.x
-				y2 = c.y
-				children.push(...c.children)
-				childrenClusters.push(pair.n2)
-			}
-			// cluster x position
-			const clusterX = xDendrogramHeight - row.height[clusterid0].height * height2px
-
-			const highlight = this.clickedLeftClusterIds?.includes(clusterid)
-			ctx.strokeStyle = highlight ? 'red' : 'black'
-
-			ctx.beginPath()
-			ctx.moveTo(x1, y1) // move to n1
-			ctx.lineTo(clusterX, y1) // h line right to cluster
-			ctx.lineTo(clusterX, y2) // v line down to n2
-			ctx.lineTo(x2, y2) // h line left to n2
-			ctx.stroke()
-			ctx.closePath()
-
-			mergedClusters.set(clusterid, {
-				x: clusterX,
-				y: (y1 + y2) / 2,
-				children,
-				childrenClusters,
-				clusterPosition: {
-					x1,
-					x2,
-					y1,
-					y2,
-					clusterX
+				let x1, x2, y1, y2
+				if (pair.n1 < 0) {
+					// n1 is leaf
+					const [name, rowNumber] = getLeafNumber(pair.n1, row.inputOrder, row.order)
+					y1 = rowHeight * (rowNumber + 0.5)
+					x1 = xDendrogramHeight
+					children.push({ name })
+				} else {
+					// n1 is cluster
+					if (!mergedClusters.has(pair.n1)) throw 'pair.n1 is positive but not seen before'
+					const c = mergedClusters.get(pair.n1)
+					x1 = c.x
+					y1 = c.y
+					children.push(...c.children)
+					childrenClusters.push(pair.n1)
 				}
-			})
+				if (pair.n2 < 0) {
+					// n2 is leaf
+					const [name, rowNumber] = getLeafNumber(pair.n2, row.inputOrder, row.order)
+					y2 = rowHeight * (rowNumber + 0.5)
+					x2 = xDendrogramHeight
+					children.push({ name })
+				} else {
+					if (!mergedClusters.has(pair.n2)) throw 'pair.n1 is positive but not seen before'
+					const c = mergedClusters.get(pair.n2)
+					x2 = c.x
+					y2 = c.y
+					children.push(...c.children)
+					childrenClusters.push(pair.n2)
+				}
+				// cluster x position
+				const clusterX = xDendrogramHeight - row.height[clusterid0].height * height2px
+
+				const highlight = this.clickedLeftClusterIds?.includes(clusterid)
+				ctx.strokeStyle = highlight ? 'red' : 'black'
+
+				ctx.beginPath()
+				ctx.moveTo(x1, y1) // move to n1
+				ctx.lineTo(clusterX, y1) // h line right to cluster
+				ctx.lineTo(clusterX, y2) // v line down to n2
+				ctx.lineTo(x2, y2) // h line left to n2
+				ctx.stroke()
+				ctx.closePath()
+
+				mergedClusters.set(clusterid, {
+					x: clusterX,
+					y: (y1 + y2) / 2,
+					children,
+					childrenClusters,
+					clusterPosition: {
+						x1,
+						x2,
+						y1,
+						y2,
+						clusterX
+					}
+				})
+			}
+
+			const t = this.termOrder.find(t => t.grp.type == 'hierCluster' || t.grp.name == this.hcTermGroup.name)
+			const y =
+				// t.labelOffset is commented out because it is already handled in adjustSvgDimensions
+				t.grpIndex * s.rowgspace +
+				t.prevGrpTotalIndex * s.rowh /* + (t.labelOffset || 0) */ +
+				t.totalHtAdjustments +
+				s.margin.top +
+				s.scrollHeight +
+				// left dendrogram image must be lower than the top dendrogram image height
+				yDendrogramHeight
+			this.renderImage(this.dom.leftDendrogram, canvas, width, height, 0, y)
+
+			row.mergedClusters = mergedClusters
 		}
-
-		const t = this.termOrder.find(t => t.grp.type == 'hierCluster' || t.grp.name == this.hcTermGroup.name)
-		const y =
-			// t.labelOffset is commented out because it is already handled in adjustSvgDimensions
-			t.grpIndex * s.rowgspace +
-			t.prevGrpTotalIndex * s.rowh /* + (t.labelOffset || 0) */ +
-			t.totalHtAdjustments +
-			s.margin.top +
-			s.scrollHeight +
-			// left dendrogram image must be lower than the top dendrogram image height
-			yDendrogramHeight
-		this.renderImage(this.dom.leftDendrogram, canvas, width, height, 0, y)
-
-		row.mergedClusters = mergedClusters
 	}
 }
 

@@ -304,7 +304,15 @@ export function getClusterFromLeftDendrogram(event) {
 
 export function setClusteringBtn(holder, callback) {
 	const cl = this.config.settings.matrix.controlLabels
-	const ClusterLabel = `Cluster ${cl.Samples}`
+	const dataType = this.config.dataType
+	const cluterRowLabel =
+		dataType == 'geneExpression'
+			? 'Genes'
+			: dataType == 'metaboliteIntensity'
+			? 'Metabolites'
+			: dataType == 'numericDictTerm'
+			? 'Terms'
+			: 'Rows'
 	holder
 		.append('button')
 		//.property('disabled', d => d.disabled)
@@ -312,12 +320,12 @@ export function setClusteringBtn(holder, callback) {
 			label: `Clustering`,
 			rows: [
 				{
-					label: ClusterLabel,
-					title: `Option to enable ${cl.samples} clustering, instead of enable ${cl.samples} sorting.`,
+					label: `Cluster ${cl.Samples}`,
+					title: `Option to enable ${cl.samples} clustering, instead of enabling ${cl.samples} sorting.`,
 					type: 'checkbox',
 					chartType: 'hierCluster',
 					settingsKey: 'clusterSamples',
-					boxLabel: `Cluster ${cl.samples} (Disable ${cl.samples} sorting)`,
+					boxLabel: `Cluster ${cl.Samples} (Disable ${cl.Samples} Sorting)`,
 					callback: checked => {
 						if (!checked) {
 							this.config.settings.hierCluster.yDendrogramHeight = 0
@@ -335,12 +343,49 @@ export function setClusteringBtn(holder, callback) {
 					}
 				},
 				{
-					label: 'ZScore Transformation',
-					title: `Option to do zScore transformation`,
+					label: `Cluster ${cluterRowLabel}`,
+					title: `Option to enable ${cluterRowLabel} clustering, instead of enabling ${cluterRowLabel} sorting.`,
+					type: 'checkbox',
+					chartType: 'hierCluster',
+					settingsKey: 'clusterRows',
+					boxLabel: `Cluster ${cluterRowLabel} (Disable ${cluterRowLabel} Sorting)`,
+					callback: checked => {
+						if (!checked) {
+							this.config.settings.hierCluster.clusterRows = false
+							this.config.settings.hierCluster.sortClusterRows = 'asListed'
+						} else {
+							this.config.settings.hierCluster.clusterRows = true
+							this.config.settings.hierCluster.sortClusterRows = undefined
+						}
+						this.app.dispatch({
+							type: 'plot_edit',
+							id: this.id,
+							config: this.config
+						})
+					}
+				},
+				{
+					label: `Sort ${cluterRowLabel}`,
+					title: `Set how to order the ${cluterRowLabel} as rows`,
+					type: 'radio',
+					chartType: 'hierCluster',
+					settingsKey: 'sortClusterRows',
+					options: [
+						{ label: `By input ${cluterRowLabel} order`, value: 'asListed' },
+						{ label: `By ${cluterRowLabel} name`, value: 'byName' }
+					],
+					styles: { padding: 0, 'padding-right': '10px', margin: 0, display: 'inline-block' },
+					getDisplayStyle(plot) {
+						return plot.settings.hierCluster.clusterRows ? 'none' : 'table-row'
+					}
+				},
+				{
+					label: 'Z-score Transformation',
+					title: `Option to do Z-score transformation`,
 					type: 'checkbox',
 					chartType: 'hierCluster',
 					settingsKey: 'zScoreTransformation',
-					boxLabel: `Perform zScore Transformation`,
+					boxLabel: `Perform Z-score Transformation`,
 					callback: checked => {
 						if (!checked) {
 							this.config.settings.hierCluster.zScoreTransformation = false
@@ -387,11 +432,14 @@ export function setClusteringBtn(holder, callback) {
 					title: `The maximum width to render the row dendrogram`,
 					type: 'number',
 					chartType: 'hierCluster',
-					settingsKey: 'xDendrogramHeight'
+					settingsKey: 'xDendrogramHeight',
+					getDisplayStyle(plot) {
+						return plot.settings.hierCluster.clusterRows ? 'table-row' : 'none'
+					}
 				},
 				{
-					label: `z-score Cap`,
-					title: `Cap the z-score scale to not exceed this absolute value`,
+					label: `Z-score Cap`,
+					title: `Cap the Z-score scale to not exceed this absolute value`,
 					type: 'number',
 					chartType: 'hierCluster',
 					settingsKey: 'zScoreCap'
@@ -444,7 +492,7 @@ function updateClusteringControls(self, app, parent, table) {
 			table
 				.selectAll('td')
 				.filter(function () {
-					return select(this).text() == 'z-score Cap'
+					return select(this).text() == 'Z-score Cap'
 				})
 				.node()
 				.closest('tr')

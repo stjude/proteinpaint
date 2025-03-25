@@ -148,7 +148,13 @@ export class HierCluster extends Matrix {
 			}
 		}
 
-		this.hcTermNameOrder = c.row.order.map(row => row.name)
+		this.hcTermNameOrder =
+			this.settings.hierCluster.sortClusterRows == 'asListed'
+				? twlst.map(t => t.term.name)
+				: this.settings.hierCluster.sortClusterRows == 'byName'
+				? twlst.map(t => t.term.name).sort()
+				: c.row.order.map(row => row.name)
+
 		this.hcTermSorter = (a, b) => {
 			const i = this.hcTermNameOrder.indexOf(a.tw.term.name)
 			const j = this.hcTermNameOrder.indexOf(b.tw.term.name)

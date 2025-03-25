@@ -22,6 +22,7 @@ export async function getPlotConfig(opts = {}, app) {
 		// Done in matrix.cells.js: setHierClusterCellProps
 		// termGroupName: 'Expression',
 		clusterSamples: true,
+		clusterRows: true,
 		clusterMethod: 'average', // complete
 		distanceMethod: 'euclidean',
 		zScoreCap: 5,
