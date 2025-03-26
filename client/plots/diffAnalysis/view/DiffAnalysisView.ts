@@ -59,12 +59,7 @@ function setRenderers(self) {
 					const gsea_params = self.interactions.getGseaParameters()
 					return {
 						childType: 'gsea',
-						gsea_params,
-						settings: {
-							controls: {
-								isOpen: true
-							}
-						}
+						gsea_params
 					}
 				},
 				callback: self.tabCallback
