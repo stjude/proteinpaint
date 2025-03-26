@@ -27,21 +27,7 @@ function init({ genomes }) {
 			const ds = g.datasets[query.dslabel]
 			if (!ds) throw 'invalid dataset name'
 			const sampleId = query.sample_id
-
-			// TODO replace with real logic for getting fsspec json files when available
-			if (ds.queries.WSImages.sources) {
-				const images: WSImage[] = []
-				if (ds.queries.WSImages.sources) {
-					images.push({
-						filename: sampleId + '_fsspec.json',
-						metadata: ''
-					})
-				}
-				res.send({ sampleWSImages: images } satisfies SampleWSImagesResponse)
-				return
-			}
-
-			const images: WSImage[] = await ds.queries.WSImages.getWSImages({ sampleId })
+			const images: WSImage[] = await ds.queries.WSImages.getWSImages(sampleId)
 			res.send({ sampleWSImages: images } satisfies SampleWSImagesResponse)
 		} catch (e: any) {
 			console.log(e)
@@ -50,34 +36,35 @@ function init({ genomes }) {
 	}
 }
 
-export function validate_query_getSampleWSImages(ds: Mds3) {
-	const q = ds.queries?.WSImages
-	if (!q) return
-	nativeValidateQuery(ds)
+export async function validate_query_getSampleWSImages(ds: Mds3) {
+	if (!ds.queries?.WSImages) return
+	validateQuery(ds)
 }
 
-function nativeValidateQuery(ds: any) {
-	ds.queries.WSImages.getWSImages = async (q: any) => {
-		return await getWSImages(ds, q.sampleId)
+function validateQuery(ds: any) {
+	if (typeof ds.queries.WSImages.getWSImages == 'function') {
+		// ds supplied getter
+		return
 	}
-}
+	// add getter with builtin logic
+	ds.queries.WSImages.getWSImages = async (sampleName: string) => {
+		// TODO move sql out so not to build it on every query
+		const sql = `SELECT wsimages.filename as filename, wsimages.metadata as metadata
+					 FROM wsimages
+							  INNER JOIN sampleidmap
+										 ON wsimages.sample = sampleidmap.id
+					 WHERE sampleidmap.name = ?`
 
-async function getWSImages(ds: any, sampleName: string) {
-	const sql = `SELECT wsimages.filename as filename, wsimages.metadata as metadata
-                 FROM wsimages
-                          INNER JOIN sampleidmap
-                                     ON wsimages.sample = sampleidmap.id
-                 WHERE sampleidmap.name = ?`
+		const rows = ds.cohort.db.connection.prepare(sql).all(sampleName)
+		const images: WSImage[] = []
 
-	const rows = ds.cohort.db.connection.prepare(sql).all(sampleName)
-	const images: WSImage[] = []
+		for (const row of rows) {
+			images.push({
+				filename: row.filename,
+				metadata: row.metadata
+			})
+		}
 
-	for (const row of rows) {
-		images.push({
-			filename: row.filename,
-			metadata: row.metadata
-		})
+		return images
 	}
-
-	return images
 }

@@ -5,16 +5,15 @@
             "runargs": {
                 "mass": {
                     "state": {
-                        "dslabel": "TermdbTest",
-                        "genome": "hg38-test",
+                        "dslabel": "GDC",
+                        "genome": "hg38",
                         "nav": {
                             "header_mode": "hidden"
                         },
-                        "sample_id": "TCGA-22-1017",
                         "plots": [
                             {
-                                "chartType": "WSIViewer",
-                                "subfolder": "wsiviewer",
+                                "chartType": "WSISamplesPlot",
+                                "subfolder": "wsisamples",
                                 "extension": "ts"
                             }
                         ]
