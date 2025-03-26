@@ -1,3 +1,1 @@
-Features
-- GSEA opens to a dropdown menu for selection instead of loading the entire controls menu
-- Once a row is selected from the GSEA geneset table, a button to highlight the genes in the volcano plot appears.
+
