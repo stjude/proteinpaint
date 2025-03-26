@@ -178,7 +178,7 @@ export class VolcanoPlotView {
 			rows: this.viewData.pValueTableData.rows,
 			div: this.volcanoDom.pValueTable,
 			showLines: true,
-			maxHeight: '150vh',
+			maxHeight: `${this.viewData.pValueTableData.height}px`,
 			resize: true,
 			header: { allowSort: true },
 			noRadioBtn: true,

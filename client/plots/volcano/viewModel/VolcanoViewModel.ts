@@ -39,7 +39,8 @@ export class VolcanoViewModel {
 				{ label: 'Original p-value (linear)', sortable: true },
 				{ label: 'Adjusted p-value (linear)', sortable: true }
 			],
-			rows: []
+			rows: [],
+			height: settings.height + this.topPad
 		}
 		this.settings = settings
 		this.termType = config.termType
