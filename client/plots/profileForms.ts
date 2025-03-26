@@ -193,7 +193,7 @@ export class profileForms extends profilePlot {
 			this.renderLikertBar(dict, y, 25, tw)
 			y += step
 		}
-		const legendG = this.dom.svg.append('g').attr('transform', `translate(300, ${y + 90})`)
+		const legendG = this.dom.svg.append('g').attr('transform', `translate(400, ${y + 90})`)
 		let x = 0
 		const categories = [
 			...this.activePlot.negativeCategories,
