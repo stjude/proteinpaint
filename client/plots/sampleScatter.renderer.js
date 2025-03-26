@@ -15,7 +15,7 @@ import { addNewGroup } from '../mass/groups.js'
 import { setRenderersThree } from './sampleScatter.rendererThree.js'
 import { shapes } from './sampleScatter.js'
 import { roundValueAuto } from '#shared/roundValue.js'
-import { curveBasis } from 'd3-shape'
+import { median as d3Median } from 'd3-array'
 
 export function setRenderers(self) {
 	setRenderersThree(self)
@@ -326,16 +326,32 @@ export function setRenderers(self) {
 
 	self.showRunChart = function (chart, g) {
 		const coords = chart.data.samples.map(s => self.getCoordinates(chart, s)).sort((a, b) => a.x - b.x)
-		console.log(coords)
+		const color = this.settings.defaultColor
 		const areaBuilder = line()
 			.x(d => d.x)
 			.y(d => d.y)
 		g.append('path')
-			.attr('stroke', 'gray')
+			.attr('stroke', color)
 			.attr('fill', 'none')
 			.attr('stroke-width', 1)
 			.attr('stroke-linejoin', 'round')
+			.attr('opacity', this.settings.opacity)
 			.attr('d', areaBuilder(coords))
+		const median = d3Median(chart.data.samples, d => d.y)
+		const y = chart.yAxisScale(median)
+		g.append('line')
+			.attr('x1', coords[0].x)
+			.attr('y1', y)
+			.attr('x2', coords[coords.length - 1].x)
+			.attr('y2', y)
+			.attr('stroke', 'red')
+			.attr('stroke-width', 1)
+		g.append('text')
+			.attr('x', coords[coords.length - 1].x)
+			.attr('y', y - 10)
+			.attr('text-anchor', 'end')
+			.text('Median = ' + roundValueAuto(median, true, 1))
+			.attr('font-size', '0.8em')
 	}
 
 	self.renderContours = function (chart) {

@@ -70,7 +70,7 @@ export function getStdDev(data) {
 	return Math.sqrt(variance)
 }
 
-export function getMedian(lst) {
-	lst.sort((a, b) => b - a)
-	return lst[Math.floor(lst.length / 2)]
+export function getMedian(data) {
+	data.sort((a, b) => b - a)
+	return data[Math.floor(data.length / 2)]
 }
