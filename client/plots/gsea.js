@@ -20,7 +20,11 @@ class gsea {
 			typeof opts.controls == 'object'
 				? opts.controls
 				: opts.holder || opts.holder.append('div').style('display', 'inline-block')
-		const actionsDiv = opts.holder.append('div').style('text-align', 'left').attr('data-testid', 'sjpp-gsea-actions')
+		const actionsDiv = opts.holder
+			.append('div')
+			.attr('data-testid', 'sjpp-gsea-actions')
+			.style('margin', '10px')
+			.style('text-align', 'left')
 		const loadingDiv = opts.holder
 			.append('div')
 			.attr('data-testid', 'sjpp-gsea-loading')
@@ -29,18 +33,19 @@ class gsea {
 			.style('margin', '10px')
 			.style('text-align', 'left')
 			.text('Loading...')
-		const holder = opts.holder.append('div').style('margin-left', '50px').attr('data-testid', 'sjpp-gsea-holder')
-		const detailsDiv = holder
+		const holder = opts.holder
+			.append('div')
+			.style('margin-left', '50px')
+			.style('display', 'inline-block')
+			.attr('data-testid', 'sjpp-gsea-holder')
+		const detailsDiv = opts.holder
 			.append('div')
 			.attr('data-testid', 'sjpp-gsea-details')
 			.style('display', 'inline-block')
 			.style('vertical-align', 'top')
 			.style('margin-top', '50px')
 
-		const tableDiv = opts.holder
-			.append('div')
-			.style('margin', '30px 0px')
-			.attr('data-testid', 'sjpp-gsea-results-table')
+		const tableDiv = opts.holder.append('div').style('margin', '10px').attr('data-testid', 'sjpp-gsea-results-table')
 
 		this.dom = {
 			holder,
@@ -255,7 +260,7 @@ add:
 	//console.log('self.config.gsea_params:', self.config.gsea_params)
 	let output
 	try {
-		output = await rungsea(self.config.gsea_params, self.dom.loadingDiv)
+		output = await rungsea(self.config.gsea_params, self.dom)
 		if (output.error) {
 			throw output.error
 		}
@@ -263,7 +268,8 @@ add:
 		alert('Error: ' + e)
 		return
 	}
-	const table_stats = table2col({ holder: self.dom.detailsDiv })
+
+	const table_stats = table2col({ holder: self.dom.detailsDiv.attr('data-testid', 'sjpp-gsea-stats') })
 	const [t1, t2] = table_stats.addRow()
 	t2.style('text-align', 'center').style('font-size', '0.8em').style('opacity', '0.8').text('COUNT')
 	const addStats = [
@@ -418,7 +424,7 @@ add:
 			}
 			const holder = self.dom.holder
 			holder.selectAll('*').remove()
-			const image = await rungsea(body, self.dom.loadingDiv)
+			const image = await rungsea(body, self.dom)
 			//render_gsea_plot(self, plot_data)
 			if (image.error) throw image.error
 			self.imageUrl = URL.createObjectURL(image)
@@ -541,9 +547,12 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 	})
 }
 
-async function rungsea(body, elem) {
-	elem.style('display', 'block')
+async function rungsea(body, dom) {
+	//Only show the loading div as the gsea is running
+	dom.actionsDiv.style('display', 'none')
+	dom.loadingDiv.style('display', 'block')
 	const data = await dofetch3('genesetEnrichment', { body })
-	elem.style('display', 'none')
+	dom.loadingDiv.style('display', 'none')
+	dom.actionsDiv.style('display', 'block')
 	return data
 }
