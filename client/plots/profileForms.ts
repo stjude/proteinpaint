@@ -195,13 +195,16 @@ export class profileForms extends profilePlot {
 		}
 		const legendG = this.dom.svg.append('g').attr('transform', `translate(300, ${y + 90})`)
 		let x = 0
-		for (const category of this.categories) {
-			const color =
-				this.activePlot.positiveCategories.find(c => c.name == category)?.color ||
-				this.activePlot.negativeCategories.find(c => c.name == category)?.color ||
-				'#aaa'
-			this.drawLegendRect(x, 0, category, color, legendG)
-			x += 130
+		const categories = [
+			...this.activePlot.negativeCategories,
+			...this.activePlot.positiveCategories,
+			...this.activePlot.noAnswerCategories
+		]
+		for (const category of categories) {
+			if (!this.categories.has(category.name)) continue
+			const color = category.color || '#aaa'
+			this.drawLegendRect(x, 0, category.name, color, legendG)
+			x += 150
 		}
 	}
 
