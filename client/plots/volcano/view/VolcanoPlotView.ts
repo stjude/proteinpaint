@@ -1,6 +1,6 @@
 import { axisBottom, axisLeft } from 'd3-axis'
 import { axisstyle, table2col, renderTable } from '#dom'
-import { select } from 'd3-selection'
+import { select, selectAll } from 'd3-selection'
 import { rgb } from 'd3-color'
 import type {
 	DataPointEntry,
@@ -193,16 +193,21 @@ export class VolcanoPlotView {
 				if (this.termType != 'geneExpression') return
 				//Highlight the data point when hovering over the table row
 				//Previously highlighted data points are not affected
-				const circle = this.volcanoDom.plot
-					.selectAll('circle')
-					.nodes()
-					.find((d: any) => d.__data__.gene_symbol == row[0].value) as any
+				const circles = this.volcanoDom.plot.selectAll('circle').nodes()
+				const circle = circles.find((d: any) => d.__data__.gene_symbol == row[0].value) as any
 				if (!circle || circle.__data__.highlighted) return
+
 				tr.on('mouseover', () => {
+					selectAll(circles).attr('stroke-opacity', d => (d != circle.d ? 0.1 : 0.35))
 					select(circle).attr('fill-opacity', 0.9)
 				})
 				tr.on('mouseleave', () => {
 					select(circle).attr('fill-opacity', 0)
+				})
+				this.volcanoDom.pValueTable.on('mouseleave', () => {
+					selectAll(circles).attr('stroke-opacity', (d: any) =>
+						d.color != this.settings.defaultNonSignColor ? 0.35 : 0.2
+					)
 				})
 			}
 		})
