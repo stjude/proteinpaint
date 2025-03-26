@@ -226,7 +226,13 @@ export default {
 		},
 		WSImages: {
 			type: 'H&E',
-			imageBySampleFolder: 'files/hg38/TermdbTest/wsimages'
+			imageBySampleFolder: 'files/hg38/TermdbTest/wsimages',
+			getSamples: () => {
+				return []
+			},
+			getWSImages: () => {
+				return []
+			}
 		}
 	},
 	assayAvailability: {

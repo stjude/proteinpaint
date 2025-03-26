@@ -1,4 +1,5 @@
 import type { Mclass } from './Mclass.ts'
+import type { WSImage } from './routes/samplewsimages.ts'
 
 /*** General usage types ***/
 type FileObj = {
@@ -847,6 +848,9 @@ export type WSImages = {
 	type: string
 	// path to the folder where sample images are stored
 	imageBySampleFolder?: string
+
+	getSamples: () => Array<string>
+	getWSImages: (ds: any, sampleName: string) => WSImage[]
 
 	sources?: string
 }

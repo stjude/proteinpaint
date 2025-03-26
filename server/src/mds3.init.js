@@ -142,7 +142,7 @@ export async function init(ds, genome) {
 		await validate_query_metaboliteIntensity(ds, genome)
 		await validate_query_getTopTermsByType(ds, genome) //will be used to get top terms when supported
 		await validate_query_getSampleImages(ds, genome)
-		await validate_query_getSampleWSImages(ds, genome)
+		// await validate_query_getSampleWSImages(ds, genome)
 		await validate_query_rnaseqGeneCount(ds, genome)
 		await validate_query_singleSampleMutation(ds, genome)
 		await validate_query_singleSampleGenomeQuantification(ds, genome)

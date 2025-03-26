@@ -41,7 +41,7 @@ function init({ genomes }) {
 				return
 			}
 
-			const images: WSImage[] = await ds.queries.WSImages.getWSImages({ sampleId })
+			const images: WSImage[] = await ds.queries.WSImages.getWSImages(ds, sampleId)
 			res.send({ sampleWSImages: images } satisfies SampleWSImagesResponse)
 		} catch (e: any) {
 			console.log(e)
