@@ -69,8 +69,3 @@ export function getStdDev(data) {
 	const variance = getVariance(data)
 	return Math.sqrt(variance)
 }
-
-export function getMedian(data) {
-	data.sort((a, b) => b - a)
-	return data[Math.floor(data.length / 2)]
-}
