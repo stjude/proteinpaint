@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 Features:
 - hierCluster: Under Clustering control panel, add checkbox to cluster/unCluster terms, when terms are not clustered,
+- In the differential analysis volcano plot, hovering over any row in the p value table highlights the data point in the volcano plot. Clicking on the row adds a persistent highlight.
 
 Fixes:
 - Data points in the differential analysis volcano plot appear inbounds when original p value is selected
