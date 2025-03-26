@@ -45,8 +45,11 @@ if [[ ! -f "./test/tape.bundle.js" ]]; then
 	npx webpack --config=./webpack.tape.config.mjs
 fi
 
-rm -rf ../public/bin/test
+# create soft links in public dir to client coverage report 
+ln -sfn $PWD/.nyc_output ../public/coverage/client
 
+# re-emit spec file imports
+rm -rf ../public/bin/test
 TESTFILE=test/internals-test.js
 node emitImports.mjs $SPECPATTERN > ./$TESTFILE
 
