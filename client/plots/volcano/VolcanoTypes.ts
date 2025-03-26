@@ -103,6 +103,7 @@ export type VolcanoPlotDom = {
 export type VolcanoPValueTableData = {
 	columns: TableColumn[]
 	rows: TableCell[][]
+	height: number
 }
 
 /** Settings for the differential analysis volcano */
