@@ -249,24 +249,43 @@ add:
 	//Otherwise will persist on load
 	const foundDropdown = self.dom.actionsDiv.select('span[data-testid="sjpp-gsea-pathway"]').node()
 	if (!foundDropdown) renderPathwayDropdown(self)
-
 	if (self.settings.pathway == '-' || self.settings.pathway == undefined) return
+
 	self.dom.detailsDiv.selectAll('*').remove()
 	self.dom.holder.selectAll('*').remove()
 	self.dom.tableDiv.selectAll('*').remove()
 	self.config.gsea_params.geneSetGroup = self.settings.pathway
 	self.config.gsea_params.filter_non_coding_genes = self.settings.filter_non_coding_genes
 	self.config.gsea_params.num_permutations = self.settings.num_permutations
-	//console.log('self.config.gsea_params:', self.config.gsea_params)
+
 	let output
 	try {
-		output = await rungsea(self.config.gsea_params, self.dom)
+		const body = {
+			genome: self.config.gsea_params.genome,
+			genes: self.config.gsea_params.genes,
+			fold_change: self.config.gsea_params.fold_change,
+			geneSetGroup: self.settings.pathway,
+			filter_non_coding_genes: self.settings.filter_non_coding_genes,
+			num_permutations: self.settings.num_permutations
+		}
+		output = await rungsea(body, self.dom)
 		if (output.error) {
 			throw output.error
 		}
 	} catch (e) {
 		alert('Error: ' + e)
 		return
+	}
+
+	//Ensure the image renders when toggling between tabs
+	if (self.config.gsea_params.geneset_name != null) {
+		const image = await rungsea(self.config.gsea_params, self.dom)
+		// //render_gsea_plot(self, plot_data)
+		if (image.error) throw image.error
+		self.imageUrl = URL.createObjectURL(image)
+		const png_width = 600
+		const png_height = 400
+		self.dom.holder.append('img').attr('width', png_width).attr('height', png_height).attr('src', self.imageUrl)
 	}
 
 	const table_stats = table2col({ holder: self.dom.detailsDiv.attr('data-testid', 'sjpp-gsea-stats') })
@@ -329,12 +348,26 @@ add:
 	]
 	let download = {}
 
-	const highlightGenesBtn = self.dom.detailsDiv
+	//Highlight genes button
+	self.dom.detailsDiv
 		.append('button')
 		.style('margin-left', '10px')
-		.style('display', 'none')
+		.style(
+			'display',
+			self.config.chartType == 'differentialAnalysis' && self.config.gsea_params.geneset_name == null ? 'none' : 'block'
+		)
 		.attr('aria-label', 'Highlight genes in the volcano plot')
 		.text('Highlight genes')
+		.on('click', () => {
+			self.app.dispatch({
+				type: 'plot_edit',
+				id: self.id,
+				config: {
+					childType: 'volcano',
+					highlightedData: self.config.highlightData
+				}
+			})
+		})
 
 	if (self.state.config.downloadFilename) download.fileName = self.state.config.downloadFilename
 
@@ -349,42 +382,22 @@ add:
 		resize: true,
 		header: { allowSort: true },
 		noButtonCallback: async index => {
+			const config = {
+				gsea_params: {
+					pickle_file: output.pickle_file,
+					geneset_name: self.gsea_table_rows[index][0].value
+				}
+			}
 			if (self.config.chartType == 'differentialAnalysis') {
+				//Saves the data to highlight in the volcano plot
 				const genes = [...self.gsea_table_rows[index][5].value.split(',')]
-				if (!genes) return
-				highlightGenesBtn.style('display', '')
-				highlightGenesBtn.on('click', () => {
-					self.app.dispatch({
-						type: 'plot_edit',
-						id: self.id,
-						config: {
-							childType: 'volcano',
-							highlightedData: genes
-						}
-					})
-				})
+				if (genes) config.highlightData = genes
 			}
-
-			//console.log("index:",self.gsea_table_rows[index][0].value)
-			const body = {
-				genome: self.config.gsea_params.genome,
-				geneset_name: self.gsea_table_rows[index][0].value,
-				genes: self.config.gsea_params.genes,
-				fold_change: self.config.gsea_params.fold_change,
-				geneSetGroup: self.settings.pathway,
-				pickle_file: output.pickle_file,
-				filter_non_coding_genes: self.settings.filter_non_coding_genes,
-				num_permutations: self.settings.num_permutations
-			}
-			const holder = self.dom.holder
-			holder.selectAll('*').remove()
-			const image = await rungsea(body, self.dom)
-			//render_gsea_plot(self, plot_data)
-			if (image.error) throw image.error
-			self.imageUrl = URL.createObjectURL(image)
-			const png_width = 600
-			const png_height = 400
-			holder.append('img').attr('width', png_width).attr('height', png_height).attr('src', self.imageUrl)
+			await self.app.dispatch({
+				type: 'plot_edit',
+				id: self.id,
+				config
+			})
 		}
 	})
 }
@@ -478,26 +491,29 @@ function setResultsRows(output_keys, iter, self) {
 // 	}
 // }
 
-export function getDefaultGseaSettings() {
-	return {
+export function getDefaultGseaSettings(overrides = {}) {
+	const defaults = {
 		fdr_cutoff: 0.05,
 		num_permutations: 1000,
 		top_genesets: 40,
 		pathway: undefined,
+		geneset_name: null,
 		min_gene_set_size_cutoff: 0,
 		max_gene_set_size_cutoff: 20000,
 		filter_non_coding_genes: true,
 		fdr_or_top: 'top'
 	}
+	return Object.assign(defaults, overrides)
 }
 
 export async function getPlotConfig(opts, app) {
+	if (!opts.gsea_params) throw 'No gsea_params provided [gsea getPlotConfig()]'
 	try {
 		const config = {
 			//idea for fixing nav button
 			//samplelst: { groups: app.opts.state.groups}
 			settings: {
-				gsea: getDefaultGseaSettings()
+				gsea: getDefaultGseaSettings(opts.overrides)
 			}
 		}
 		return copyMerge(config, opts)
