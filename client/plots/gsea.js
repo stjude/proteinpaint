@@ -295,67 +295,21 @@ add:
 		output_keys.sort((i, j) => Number(i.value.fdr) - Number(j.value.fdr))
 		const top_genesets = Math.min(self.settings.top_genesets, output_keys.length) // If the length of the table is less than the top cutoff, only iterate till the end of the table
 		for (let iter = 0; iter < top_genesets; iter++) {
-			const pathway_name = output_keys[iter].key
 			if (
 				self.settings.max_gene_set_size_cutoff >= output_keys[iter].value.geneset_size &&
 				self.settings.min_gene_set_size_cutoff <= output_keys[iter].value.geneset_size
 			) {
-				const es = output_keys[iter].value.es ? roundValueAuto(output_keys[iter].value.es) : output_keys[iter].value.es
-				const nes = output_keys[iter].value.nes
-					? roundValueAuto(output_keys[iter].value.nes)
-					: output_keys[iter].value.nes
-				const pval = output_keys[iter].value.pval
-					? roundValueAuto(output_keys[iter].value.pval)
-					: output_keys[iter].value.pval
-				const sidak = output_keys[iter].value.sidak
-					? roundValueAuto(output_keys[iter].value.sidak)
-					: output_keys[iter].value.sidak
-				const fdr = output_keys[iter].value.fdr
-					? roundValueAuto(output_keys[iter].value.fdr)
-					: output_keys[iter].value.fdr
-				self.gsea_table_rows.push([
-					{ value: pathway_name },
-					//{ value: es },
-					{ value: nes },
-					{ value: output_keys[iter].value.geneset_size },
-					{ value: pval },
-					//{ value: sidak },
-					{ value: fdr },
-					{ value: output_keys[iter].value.leading_edge }
-				])
+				setResultsRows(output_keys, iter, self)
 			}
 		}
 	} else if (self.settings.fdr_or_top == 'fdr') {
 		for (let iter = 0; iter < output_keys.length; iter++) {
-			const pathway_name = output_keys[iter].key
 			if (
 				self.settings.fdr_cutoff >= output_keys[iter].value.fdr &&
 				self.settings.max_gene_set_size_cutoff >= output_keys[iter].value.geneset_size &&
 				self.settings.min_gene_set_size_cutoff <= output_keys[iter].value.geneset_size
 			) {
-				const es = output_keys[iter].value.es ? roundValueAuto(output_keys[iter].value.es) : output_keys[iter].value.es
-				const nes = output_keys[iter].value.nes
-					? roundValueAuto(output_keys[iter].value.nes)
-					: output_keys[iter].value.nes
-				const pval = output_keys[iter].value.pval
-					? roundValueAuto(output_keys[iter].value.pval)
-					: output_keys[iter].value.pval
-				const sidak = output_keys[iter].value.sidak
-					? roundValueAuto(output_keys[iter].value.sidak)
-					: output_keys[iter].value.sidak
-				const fdr = output_keys[iter].value.fdr
-					? roundValueAuto(output_keys[iter].value.fdr)
-					: output_keys[iter].value.fdr
-				self.gsea_table_rows.push([
-					{ value: pathway_name },
-					//{ value: es },
-					{ value: nes },
-					{ value: output_keys[iter].value.geneset_size },
-					{ value: pval },
-					//{ value: sidak },
-					{ value: fdr },
-					{ value: output_keys[iter].value.leading_edge }
-				])
+				setResultsRows(output_keys, iter, self)
 			}
 		}
 	}
@@ -433,6 +387,32 @@ add:
 			holder.append('img').attr('width', png_width).attr('height', png_height).attr('src', self.imageUrl)
 		}
 	})
+}
+
+function setResultsRows(output_keys, iter, self) {
+	const pathway_name = output_keys[iter].key
+	// const es = output_keys[iter].value.es
+	// ? roundValueAuto(output_keys[iter].value.es)
+	// : output_keys[iter].value.es
+	const nes = output_keys[iter].value.nes ? roundValueAuto(output_keys[iter].value.nes) : output_keys[iter].value.nes
+	const pval = output_keys[iter].value.pval
+		? roundValueAuto(output_keys[iter].value.pval)
+		: output_keys[iter].value.pval
+	// const sidak = output_keys[iter].value.sidak
+	// 	? roundValueAuto(output_keys[iter].value.sidak)
+	// 	: output_keys[iter].value.sidak
+	const fdr = output_keys[iter].value.fdr ? roundValueAuto(output_keys[iter].value.fdr) : output_keys[iter].value.fdr
+
+	self.gsea_table_rows.push([
+		{ value: pathway_name },
+		//{ value: es },
+		{ value: nes },
+		{ value: output_keys[iter].value.geneset_size },
+		{ value: pval },
+		//{ value: sidak },
+		{ value: fdr },
+		{ value: output_keys[iter].value.leading_edge }
+	])
 }
 
 // function render_gsea_plot(self, plot_data) {
