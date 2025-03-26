@@ -200,7 +200,7 @@ async function renderPathwayDropdown(self) {
 
 	// Now blitzgsea geneSets are inside serverconfig flag
 	if (JSON.parse(sessionStorage.getItem('optionalFeatures')).gsea_test == true) {
-		pathwayOpts.options.push(
+		pathwayOpts.push(
 			{ label: 'REACTOME (blitzgsea)', value: 'REACTOME--blitzgsea' },
 			{ label: 'KEGG (blitzgsea)', value: 'KEGG--blitzgsea' },
 			{ label: 'WikiPathways (blitzgsea)', value: 'WikiPathways--blitzgsea' }
