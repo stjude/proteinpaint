@@ -98,7 +98,6 @@ class Volcano extends RxComponentInner {
 	async main() {
 		const config = structuredClone(this.state.config)
 		if (config.chartType != this.type && config.childType != this.type) return
-
 		try {
 			if (!this.interactions) throw 'Interactions not initialized [main() Volcano.ts]'
 

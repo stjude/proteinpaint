@@ -50,7 +50,7 @@ export class VolcanoPlotView {
 			xAxisLabel: svg.append('text').attr('id', 'sjpp-volcano-xAxisLabel').attr('text-anchor', 'middle'),
 			yAxisLabel: svg.append('text').attr('id', 'sjpp-volcano-yAxisLabel').attr('text-anchor', 'middle'),
 			plot: svg.append('g').attr('id', 'sjpp-volcano-plot'),
-			pValueTable: this.dom.holder.append('div').attr('id', 'sjpp-volcano-pValueTable').style('display', 'inline-block')
+			pValueTable: this.dom.holder.append('div').attr('id', 'sjpp-volcano-pValueTable').style('display', 'none')
 		}
 		this.termType = termType
 		const plotDim = this.viewData.plotDim
@@ -198,7 +198,7 @@ export class VolcanoPlotView {
 				if (!circle || circle.__data__.highlighted) return
 
 				tr.on('mouseover', () => {
-					selectAll(circles).attr('stroke-opacity', d => (d != circle.d ? 0.1 : 0.35))
+					selectAll(circles).attr('stroke-opacity', d => (d != circle.__data__ ? 0.075 : 0.5))
 					select(circle).attr('fill-opacity', 0.9)
 				})
 				tr.on('mouseleave', () => {
