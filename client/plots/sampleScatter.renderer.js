@@ -249,7 +249,7 @@ export function setRenderers(self) {
 					termName = `${termName}, n=${chart.cohortSamples.length}`
 
 				labelsG.selectAll('*').remove()
-				labelsG
+				let text = labelsG
 					.append('text')
 					.attr(
 						'transform',
@@ -257,6 +257,14 @@ export function setRenderers(self) {
 					)
 					.attr('text-anchor', 'middle')
 					.text(termName)
+
+				if (termName.length > 65) {
+					text
+						.on('mouseenter', event => {
+							self.showText(event, self.config.term.term.name)
+						})
+						.on('mouseleave', () => self.dom.tooltip.hide())
+				}
 				if (self.config.term0 && !self.config.colorTW && !self.config.shapeTW) {
 					const term0Name = `${chart.id}, n=${chart.cohortSamples.length}`
 
@@ -270,7 +278,7 @@ export function setRenderers(self) {
 						.text(term0Name)
 				}
 				const term2Name = getTitle(self.config.term2.term.name, 60)
-				labelsG
+				text = labelsG
 					.append('text')
 					.attr(
 						'transform',
@@ -278,6 +286,13 @@ export function setRenderers(self) {
 					)
 					.attr('text-anchor', 'middle')
 					.text(term2Name)
+				if (term2Name.length > 60) {
+					text
+						.on('mouseenter', event => {
+							self.showText(event, self.config.term2.term.name)
+						})
+						.on('mouseleave', () => self.dom.tooltip.hide())
+				}
 			}
 		} else {
 			axisG.style('opacity', 0)

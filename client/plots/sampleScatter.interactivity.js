@@ -308,6 +308,12 @@ export function setInteractivity(self) {
 		}
 	}
 
+	self.showText = function (event, text) {
+		self.dom.tooltip.clear()
+		self.dom.tooltip.d.style('padding', '5px').append('div').text(text)
+		self.dom.tooltip.show(event.clientX, event.clientY, true, false)
+	}
+
 	self.openSampleView = function (sample) {
 		self.dom.tooltip.hide()
 		self.onClick = false
