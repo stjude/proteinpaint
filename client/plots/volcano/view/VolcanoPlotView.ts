@@ -151,8 +151,8 @@ export class VolcanoPlotView {
 				.style('display', 'inline-block')
 				.style('margin-left', '10px')
 				.style('margin-top', '-30px')
-				.attr('width', this.viewData.plotDim.svg.width + 50)
-				.attr('height', this.viewData.plotDim.svg.height + 50)
+				.attr('width', 450)
+				.attr('height', 450)
 				.attr('src', img.src)
 		}
 		const tableHolder = this.dom.actionsTip.d
