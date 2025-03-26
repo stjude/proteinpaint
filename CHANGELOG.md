@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.113.0
 
 Features:
 - hierCluster: Under Clustering control panel, add checkbox to cluster/unCluster terms, when terms are not clustered,
