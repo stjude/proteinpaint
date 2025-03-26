@@ -18,6 +18,7 @@ import {
 	dtfusionrna,
 	dtsv,
 	dtcnv,
+	mclass,
 	mclassfusionrna,
 	mclasssv,
 	mclasscnvgain,
@@ -2685,7 +2686,8 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 				const group = groupset.groups.find(group => {
 					if (group.type != 'filter') throw 'unexpected group.type'
 					const filter = group.filter.active
-					return samplePassesTvsLst(filter, mlst)
+					const [pass, tested] = filterByTvsLst(filter, mlst)
+					return pass
 				})
 
 				if (!group || group.uncomputable) continue
@@ -2760,34 +2762,54 @@ function addDataAvailability(sid, sample2mlst, dtKey, mclass, origin, sampleFilt
 	sample2mlst.set(sid, mlst)
 }
 
-// function to determine if the mlst of a sample meets the criteria of tvslst
-function samplePassesTvsLst(filter, mlst) {
+// function to filter a sample based on its mlst and a tvslst
+function filterByTvsLst(filter, mlst) {
 	if (filter.type != 'tvslst') throw 'unexpected filter.type'
-	// determine if the sample passes the list of filters
-	const samplePassesFilters =
-		filter.join == 'and'
-			? // determine if the sample passes all of the filters
-			  filter.lst.every(f => samplePassesFilter(f, mlst))
-			: // determine if the sample passes any of the filters
-			  filter.lst.some(f => samplePassesFilter(f, mlst))
-	// for filter.in=true, sample passes tvslst if sample passes the filters
-	// for filter.in=false, sample passes tvslst if sample does not pass the filters
-	return filter.in ? samplePassesFilters : !samplePassesFilters
+	const passLst = []
+	const testedLst = []
+	for (const item of filter.lst) {
+		const [pass, tested] = filterByItem(item, mlst)
+		passLst.push(pass)
+		testedLst.push(tested)
+	}
+	const passFilterLst = filter.join == 'and' ? passLst.every(pass => pass) : passLst.some(pass => pass)
+	const allTested = testedLst.every(tested => tested)
+	if (!passFilterLst && !allTested) {
+		// sample does not pass the filter list and
+		// is not tested for all of the dts
+		// so sample cannot not pass the filter
+		return [false, false]
+	}
+	const passFilter = filter.in ? passFilterLst : !passFilterLst
+	return [passFilter, allTested]
 }
 
-// function to determine if the mlst of a sample meets the criteria of the filter
-function samplePassesFilter(f, mlst) {
-	if (f.type == 'tvslst') return samplePassesTvsLst(f, mlst)
-	if (f.type != 'tvs') throw 'unexpected f.type' // TODO: also support f.type='tvslst'
-	const tvs = f.tvs
-	// determine if sample has a mutation specified in the filter
-	const sampleHasMutation = mlst.some(m => {
-		const match = tvs.term.dt == m.dt && tvs.values.some(v => v.key == m.class)
-		return tvs.term.origin ? match && m.origin == tvs.term.origin : match
+// function to filter a sample based on its mlst and a filter item
+function filterByItem(filter, mlst) {
+	if (filter.type == 'tvslst') return filterByTvsLst(filter, mlst)
+	if (filter.type != 'tvs') throw 'unexpected filter.type'
+	const tvs = filter.tvs
+	// get all tested mutations for the dt (and origin) of the filter
+	const mlst_tested = mlst.filter(m => {
+		if (tvs.term.dt != m.dt) return false
+		if (tvs.term.origin && tvs.term.origin != m.origin) return false
+		if (m.class == mclass['Blank'].key) return false
+		return true
 	})
-	// for tvs.isnot=false, sample passes filter if has mutation specified in the filter
-	// for tvs.isnot=true, sample passes filter if does not have mutation specified in the filter
-	return tvs.isnot ? !sampleHasMutation : sampleHasMutation
+	let pass, tested
+	if (mlst_tested.length) {
+		// sample is tested for the dt of the filter
+		tested = true
+		// determine if sample has any mutations specified in the filter
+		const sampleHasMutation = mlst_tested.some(m => tvs.values.some(v => v.key == m.class))
+		pass = tvs.isnot ? !sampleHasMutation : sampleHasMutation
+	} else {
+		// sample does not have tested mutations for the dt
+		// so sample does not pass the filter
+		tested = false
+		pass = false
+	}
+	return [pass, tested]
 }
 
 /*

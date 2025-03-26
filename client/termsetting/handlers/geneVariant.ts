@@ -178,11 +178,7 @@ async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 	const dtDiv = groupsDiv.append('div')
 	const originDiv = groupsDiv.append('div').style('margin-top', '15px')
 	const groupsetDiv = groupsDiv.append('div').style('margin-top', '15px')
-	const draggablesDiv = div
-		.append('div')
-		.style('display', 'none')
-		.style('margin-left', '20px')
-		.style('vertical-align', 'top')
+	const draggablesDiv = div.append('div').style('display', 'none').style('margin-left', '15px')
 
 	// radio buttons for whether or not to group variants
 	optsDiv.append('div').style('font-weight', 'bold').text('Group variants')
@@ -202,6 +198,7 @@ async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 				delete self.q.origin
 				groupsDiv.style('display', 'none')
 				draggablesDiv.style('display', 'none')
+				applySpan.style('display', 'none')
 			}
 		}
 	})
@@ -217,9 +214,9 @@ async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 
 	// make radio buttons for grouping variants
 	async function makeGroupUI() {
-		groupsDiv.style('display', 'block')
 		makeVariantFilter()
 		await makeGroupsetDraggables()
+		applySpan.style('display', 'inline')
 		/*groupsDiv.style('display', 'inline-block')
 		makeDtRadios()
 		makeOriginRadios()
@@ -417,15 +414,23 @@ async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 	}
 
 	// Apply button
-	div
+	const applyRow = div.append('div').style('margin-top', '15px')
+	applyRow
 		.append('button')
-		.style('margin-top', '20px')
-		.style('display', 'block')
+		.style('display', 'inline-block')
 		.text('Apply')
 		.on('click', () => {
 			if (self.groupSettingInstance) self.groupSettingInstance.processDraggables()
 			self.runCallback()
 		})
+
+	const applySpan = applyRow
+		.append('span')
+		.style('display', 'none')
+		.style('padding-left', '15px')
+		.style('opacity', 0.8)
+		.style('font-size', '.8em')
+		.text('Only tested variants are considered')
 
 	/*
 	const applyBtn = div

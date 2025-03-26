@@ -294,8 +294,12 @@ function setRenderers(self: any) {
 	self.initGrpSetUI = async function () {
 		/*max num of groups rendered + excluded categories
 		Only allow adding the max feasible groups with cutoff of 5 + excluded categories*/
-		self.maxGrpNum =
-			self.data.values.length >= self.defaultMaxGrpNum ? self.defaultMaxGrpNum + 1 : self.data.values.length
+		if (self.data.filters.length) {
+			self.maxGrpNum = self.defaultMaxGrpNum + 1
+		} else {
+			self.maxGrpNum =
+				self.data.values.length >= self.defaultMaxGrpNum ? self.defaultMaxGrpNum + 1 : self.data.values.length
+		}
 		self.tsInstance.dom.tip.showunder(self.tsInstance.dom.holder.node())
 		// if (self.data.values.length > 10) {
 		// 	//Tabs functionality for later - leave it for layout testing
@@ -326,7 +330,11 @@ function setRenderers(self: any) {
 	}
 	self.showDraggables = async function () {
 		self.dom.menuWrapper.selectAll('*').remove()
-		self.dom.actionDiv = self.dom.menuWrapper.append('div').attr('class', 'sjpp-group-actions').style('padding', '10px')
+		self.dom.menuWrapper.style('padding', '10px')
+		self.dom.actionDiv = self.dom.menuWrapper
+			.append('div')
+			.attr('class', 'sjpp-group-actions')
+			.style('padding', '0px 10px 10px 0px')
 
 		/*A goal when refactoring groupsetting was to ~not~ attach any variable or 
 		function to the termsetting instance. Must find all previous `New Group #`s 
@@ -373,6 +381,7 @@ function setRenderers(self: any) {
 		//Top message
 		self.dom.menuWrapper
 			.append('div')
+			.style('display', self.data.filters.length ? 'none' : 'block')
 			.style('margin', '5px 2px')
 			.style('font-size', '.6em')
 			.style('color', '#999')
@@ -575,21 +584,6 @@ function setRenderers(self: any) {
 				// user must press submit button to attach current filter to self.q{}
 				addedFilter = true
 				filter.active = f
-				if (self.tsInstance.term.type == 'geneVariant') {
-					// geneVariant term, filters are dt filters
-					// extract each filter and set the filter
-					// value to be the "not tested" category
-					const notTestedFilters = f.lst.map(getNotTestedFilters)
-					// add the not tested filters to the excluded group
-					// to exclude samples who are not tested for the dts
-					const excludedFilter = self.data.filters.find(f => f.group === 0)
-					for (const item of notTestedFilters) {
-						if (excludedFilter.active.lst.some(x => x.tvs.term.id == item.tvs.term.id)) continue // dt filter already in excluded group
-						excludedFilter.active.lst.push(item)
-					}
-					if (excludedFilter.active.lst.length > 1) excludedFilter.active.join = 'and' // filters should be joined by 'and' to exclude samples who are not tested for multiple dts
-					self.initGrpSetUI()
-				}
 				if (callback2) await callback2()
 			}
 		}).main(filter.active)
@@ -735,25 +729,4 @@ function setRenderers(self: any) {
 				await self.addItems(group)
 			})
 	}
-}
-
-function getNotTestedFilters(_item) {
-	const item = structuredClone(_item)
-	const blank = mclass['Blank']
-	if (item.type == 'tvs') {
-		item.tvs.values = [
-			{
-				key: blank.key,
-				label: blank.label,
-				value: blank.key
-			}
-		]
-	} else if (item.type == 'tvslst') {
-		for (const subitem of item.lst) {
-			getNotTestedFilters(subitem)
-		}
-	} else {
-		throw 'item.type not recognized'
-	}
-	return item
 }

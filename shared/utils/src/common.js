@@ -1152,9 +1152,6 @@ export const mutationClasses = Object.values(mclass)
 export const CNVClasses = Object.values(mclass)
 	.filter(m => m.dt == dtcnv)
 	.map(m => m.key)
-const WTandBlankClasses = Object.values(mclass)
-	.filter(m => m.key == 'WT' || m.key == 'Blank')
-	.map(m => m.key)
 
 // custom dt terms used by variant filter of geneVariant term
 export const dtTerms = [
@@ -1165,7 +1162,9 @@ export const dtTerms = [
 		isleaf: true,
 		type: 'dtsnvindel',
 		dt: dtsnvindel,
-		values: Object.fromEntries(mutationClasses.map(key => [key, { label: mclass[key].label }]))
+		values: Object.fromEntries(
+			mutationClasses.filter(key => key != 'Blank').map(key => [key, { label: mclass[key].label }])
+		)
 	},
 	{
 		id: 'cnv',
@@ -1174,7 +1173,7 @@ export const dtTerms = [
 		isleaf: true,
 		type: 'dtcnv',
 		dt: dtcnv,
-		values: Object.fromEntries([...CNVClasses, ...WTandBlankClasses].map(key => [key, { label: mclass[key].label }]))
+		values: Object.fromEntries([...CNVClasses, 'WT'].map(key => [key, { label: mclass[key].label }]))
 	},
 	{
 		id: 'fusion',
@@ -1183,7 +1182,7 @@ export const dtTerms = [
 		isleaf: true,
 		type: 'dtfusion',
 		dt: dtfusionrna,
-		values: Object.fromEntries([mclassfusionrna, ...WTandBlankClasses].map(key => [key, { label: mclass[key].label }]))
+		values: Object.fromEntries([mclassfusionrna, 'WT'].map(key => [key, { label: mclass[key].label }]))
 	},
 	{
 		id: 'sv',
@@ -1192,7 +1191,7 @@ export const dtTerms = [
 		isleaf: true,
 		type: 'dtsv',
 		dt: dtsv,
-		values: Object.fromEntries([mclasssv, ...WTandBlankClasses].map(key => [key, { label: mclass[key].label }]))
+		values: Object.fromEntries([mclasssv, 'WT'].map(key => [key, { label: mclass[key].label }]))
 	}
 ]
 
