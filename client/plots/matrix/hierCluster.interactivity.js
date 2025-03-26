@@ -305,7 +305,7 @@ export function getClusterFromLeftDendrogram(event) {
 export function setClusteringBtn(holder, callback) {
 	const cl = this.config.settings.matrix.controlLabels
 	const dataType = this.config.dataType
-	const cluterRowLabel =
+	const clusterRowLabel =
 		dataType == 'geneExpression'
 			? 'Genes'
 			: dataType == 'metaboliteIntensity'
@@ -343,12 +343,12 @@ export function setClusteringBtn(holder, callback) {
 					}
 				},
 				{
-					label: `Cluster ${cluterRowLabel}`,
-					title: `Option to enable ${cluterRowLabel} clustering, instead of enabling ${cluterRowLabel} sorting.`,
+					label: `Cluster ${clusterRowLabel}`,
+					title: `Option to enable ${clusterRowLabel} clustering, instead of enabling ${clusterRowLabel} sorting.`,
 					type: 'checkbox',
 					chartType: 'hierCluster',
 					settingsKey: 'clusterRows',
-					boxLabel: `Cluster ${cluterRowLabel} (Disable ${cluterRowLabel} Sorting)`,
+					boxLabel: `Cluster ${clusterRowLabel} (Disable ${clusterRowLabel} Sorting)`,
 					callback: checked => {
 						if (!checked) {
 							this.config.settings.hierCluster.clusterRows = false
@@ -365,14 +365,14 @@ export function setClusteringBtn(holder, callback) {
 					}
 				},
 				{
-					label: `Sort ${cluterRowLabel}`,
-					title: `Set how to order the ${cluterRowLabel} as rows`,
+					label: `Sort ${clusterRowLabel}`,
+					title: `Set how to order the ${clusterRowLabel} as rows`,
 					type: 'radio',
 					chartType: 'hierCluster',
 					settingsKey: 'sortClusterRows',
 					options: [
-						{ label: `By input ${cluterRowLabel} order`, value: 'asListed' },
-						{ label: `By ${cluterRowLabel} name`, value: 'byName' }
+						{ label: `By input ${clusterRowLabel} order`, value: 'asListed' },
+						{ label: `By ${clusterRowLabel} name`, value: 'byName' }
 					],
 					styles: { padding: 0, 'padding-right': '10px', margin: 0, display: 'inline-block' },
 					getDisplayStyle(plot) {
