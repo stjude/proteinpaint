@@ -345,7 +345,7 @@ async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 	}
 
 	function getBaseQ(q: GeneVariantQ): GeneVariantBaseQ {
-		if (q.type == 'values') {
+		if (q.type == 'values' || q.type == 'filter') {
 			const { type, ...baseQ } = q
 			return baseQ
 		} else if (q.type == 'predefined-groupset') {
