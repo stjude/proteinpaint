@@ -139,7 +139,7 @@ tape('setPlotDimensions', function (test) {
 	test.deepEqual(plotDim.plot, { height: 400, width: 400, x: 90, y: 30 }, 'Should properly set plot')
 	test.deepEqual(
 		plotDim.logFoldChangeLine,
-		{ x: 158.5301591547412, y1: 30, y2: 430 },
+		{ x: 158.53015915474123, y1: 30, y2: 430 },
 		'Should properly set logFoldChangeLine'
 	)
 
