@@ -64,3 +64,14 @@ set -u # reenable unbound variable check
 
 rm -rf .nyc_output
 node test/puppet.js "$PATTERNSLIST" "$TESTPORT"
+
+if [[ -d .nyc_output && -f .nyc_output/coverage-summary.json ]]; then
+  cp .nyc_output/coverage-summary.json branch_coverage.json
+
+  # if [[ "$PATTERNSLIST" != "name=*" ]]; then
+  	
+  # fi 
+fi
+
+
+
