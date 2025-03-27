@@ -81,7 +81,6 @@ pub fn validate_hdf5_file(hdf5_filename: String) -> Result<()> {
                 "file_path": hdf5_filename,
                 "format": "dense",
                 "sampleNames": sample_names,
-                "geneNames": gene_names,
                 "matrix_dimensions": {
                     "num_genes": data_shape[0],
                     "num_samples": data_shape[1]
@@ -128,7 +127,6 @@ pub fn validate_hdf5_file(hdf5_filename: String) -> Result<()> {
                 "file_path": hdf5_filename,
                 "format": "sparse",
                 "sampleNames": sample_names,
-                "geneNames": gene_names,
                 "matrix_dimensions": {
                     "num_genes": num_genes,
                     "num_samples": num_samples
