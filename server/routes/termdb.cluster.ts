@@ -1,7 +1,6 @@
 import path from 'path'
 import run_R from '#src/run_R.js'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
-import fs from 'fs'
 import type {
 	TermdbClusterRequestGeneExpression,
 	TermdbClusterRequest,
@@ -294,11 +293,7 @@ async function validateHDF5File(filePath) {
 				const jsonStr = line.substring('output_string:'.length)
 				const validationData = JSON.parse(jsonStr)
 
-				console.log(
-					`File format: ${validationData.format}, Genes: ${validationData.geneNames?.length || 0}, Samples: ${
-						validationData.sampleNames?.length || 0
-					}`
-				)
+				console.log(`File format: ${validationData.format}, Samples: ${validationData.sampleNames?.length || 0}`)
 
 				return validationData
 			}
@@ -377,14 +372,9 @@ async function validateNative(q: GeneExpressionQueryNative, ds: any, genome: any
 		if (!q.samples) q.samples = []
 
 		// Validate that the HDF5 file exists
-		if (
-			!(await fs.promises
-				.access(q.file)
-				.then(() => true)
-				.catch(() => false))
-		) {
+		await utils.file_is_readable(q.file).catch(_error => {
 			throw `HDF5 file not found: ${q.file}`
-		}
+		})
 
 		// Validate the HDF5 file
 		try {
@@ -395,25 +385,6 @@ async function validateNative(q: GeneExpressionQueryNative, ds: any, genome: any
 			}
 
 			console.log(`HDF5 file validated: ${q.file} (Format: ${validationResult.format})`)
-
-			try {
-				// Query expression values for a specific gene
-				const geneQuery = await queryGeneExpression(q.file, 'TP53')
-
-				// Parse the JSON
-				const jsonMatch = geneQuery.match(/output_string:(.*)/)
-				if (!jsonMatch || !jsonMatch[1]) {
-					throw new Error('Failed to extract JSON from Rust output')
-				}
-
-				// const jsonString = jsonMatch[1];
-				// console.log('Extracted JSON string:', jsonString, "...");
-				// console.log('Extracted JSON string length:', jsonString.length);
-				// console.log('Extracted JSON string start:', jsonString.substring(0, 100));
-				// console.log('Extracted JSON string end:', jsonString.substring(jsonString.length - 100));
-			} catch (sampleError) {
-				throw `Failed to get samples from HDF5 file: ${sampleError}`
-			}
 		} catch (error) {
 			throw `Failed to validate HDF5 file: ${error}`
 		}
