@@ -206,7 +206,7 @@ async function setOptionalRoutes(app) {
 		if (fname.endsWith('.js')) {
 			const _ = await import(fname)
 			const d = _.default(app, basepath)
-			if (d?.setCloseServer && fname.includes('closeCoverage')) {
+			if (d?.setCloseServer && fname.includes('coverage')) {
 				routeCallbacks.setCloseServer = d.setCloseServer
 			}
 		}

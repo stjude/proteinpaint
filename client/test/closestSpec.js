@@ -13,7 +13,7 @@ const committedFiles = modifiedFiles
 	.map(l => l.split('\t').pop()) //; console.log(10, committedFiles)
 // detect staged files for local testing, should not have any in github CI
 const stagedFiles =
-	// ['tvs.js', 'tvs.categorical.js', 'tvs.numeric.js'/*, 'something.js'*/].map(f => `client/filter/${f}`) || // uncomment to test
+	['tvs.js', 'tvs.categorical.js', 'tvs.numeric.js', 'FilterPrompt.js'].map(f => `client/filter/${f}`) || // uncomment to test
 	execSync(`git diff --cached --name-only | sed 's| |\\ |g'`, { encoding: 'utf8' }) // comment to test
 const changedFiles = new Set([...committedFiles, ...stagedFiles]) //; console.log(12, changedFiles)
 
@@ -88,4 +88,4 @@ for (const [k, v] of patterns.entries()) {
 }
 
 //console.log(patterns)
-console.log(params.join(' '))
+console.log(!params.length ? 'NO_BRANCH_COVERAGE_UPDATE' : params.join(' '))

@@ -34,7 +34,7 @@ try {
 	const { launch } = await import('./src/app.ts')
 	await launch()
 } catch (e) {
-	fetch(`${host}/closeCoverage`) /*.then(r => r.json()).then(console.log)*/
+	fetch(`${host}/coverage/close`) /*.then(r => r.json()).then(console.log)*/
 		.catch(console.log)
 	console.log(e)
 }

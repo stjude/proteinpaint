@@ -1,19 +1,19 @@
 import serverconfig from '../../serverconfig.js'
 import fs from 'fs'
 
-// The /closeCoverage route will only be initialized if
-// a closeCoverageKey value is detected. This is an extra security
+// The /coverage route will only be initialized if
+// a coverageKey value is detected. This is an extra security
 // measure to minimize issues and risks of having an external signal
 // close a server.
-const key = process.env.closeCoverageKey
+const key = process.env.coverageKey
 const maxTries = 5
 
 export default function setRoutes(app, basepath) {
 	if (!serverconfig.debugmode || !key) return
 
-	let numTries = 0 //; console.log('---- setting /closeCoverage route ---')
+	let numTries = 0 //; console.log('---- setting /coverage routes ---')
 
-	app.get(basepath + '/closeCoverage', async (req, res) => {
+	app.get(basepath + '/coverage/close', async (req, res) => {
 		try {
 			if (numTries >= maxTries) throw `maximum tries=${maxTries} already reached`
 			if (req.query.key === key) {
@@ -23,10 +23,10 @@ export default function setRoutes(app, basepath) {
 				closeServer()
 			} else {
 				numTries++
-				throw `invalid closeCoverage key`
+				throw `invalid /coverage key`
 			}
 		} catch (error) {
-			console.log('\n!!! closeCoverage route error !!!\n', error)
+			console.log('\n!!! /coverage/close route error !!!\n', error)
 			res.send({ error })
 		}
 	})
