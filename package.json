@@ -30,7 +30,7 @@
     "posttest:integration": "./build/integration/exitZeroOnPKillNode.sh",
     "client:coverage": "cd client && npm run combined:coverage",
     "combined:coverage": "cd server && npm run combined:coverage && sleep 10 && cd .. && npm run client:coverage",
-    "postcombined:coverage": "curl http://localhost:3000/closeCoverage?key=test",
+    "postcombined:coverage": "curl http://localhost:3000/coverage/close?key=test",
     "local:integration": "cd client; npm run test:integration",
     "lint": "eslint . --ext .ts",
     "docker": "./build/dev/run.sh",

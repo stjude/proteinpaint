@@ -126,7 +126,7 @@ if (serverconfig.debugmode && !serverconfig.binpath.includes('sjcrh/')) {
 	const routeSetters = []
 	const defaultDir = path.join(serverconfig.binpath, 'src/test/routes')
 	// will add testing routes as needed and if found, such as in dev environment
-	const testRouteSetters = ['gdc.js', 'specs.js', 'readme.js', 'closeCoverage.js']
+	const testRouteSetters = ['gdc.js', 'specs.js', 'readme.js', 'coverage.js']
 	if (serverconfig.features.sse === undefined) serverconfig.features.sse = true
 	if (typeof serverconfig.features.sse !== 'boolean') {
 		throw `serverconfig.features.sse must be either undefined or boolean`

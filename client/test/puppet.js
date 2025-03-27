@@ -21,6 +21,11 @@ const DATAPORT = Number(process.argv[3] || 0) || 3000
 
 const patternsStr = process.argv[2] || 'name=*' // default pattern to test all emitted spec imports
 if (!patternsStr) throw `missing puppet.js patternsStr argument`
+if (patternsStr === 'NO_BRANCH_COVERAGE_UPDATE') {
+	// a coverage run is requested, but there are no relevant files that have been updated in the branch
+	console.log('\n--- No branch updates with applicable specs to test. ---\n')
+	process.exit(0)
+}
 
 runTest(patternsStr).catch(console.error)
 
@@ -194,8 +199,10 @@ async function runTest(patternsStr) {
 			// TODO: may require other, stricter criteria much later
 		}
 		fs.writeFileSync(path.join(__dirname, 'branch-coverage.json'), JSON.stringify(relevantCoverage, null, '  '))
-		if (failedCoverage.size) {
-			console.log(`\n!!! Failed coverage: lowest pct decreased !!!`)
+		if (!failedCoverage.size) {
+			console.log('\n 👏👏👏 Branch coverage test PASSED: lowest percent did not decrease! 🎉🎉🎉 \n')
+		} else {
+			console.log(`\n!!! Failed coverage: lowest percent decreased !!!`)
 			console.log(Object.fromEntries(failedCoverage.entries()))
 			console.log(`\n`)
 			process.exit(1)
