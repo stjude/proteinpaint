@@ -849,8 +849,8 @@ export type WSImages = {
 	// path to the folder where sample images are stored
 	imageBySampleFolder?: string
 
-	getSamples: () => Array<string>
-	getWSImages: (ds: any, sampleName: string) => WSImage[]
+	getSamples: (tpmaster?: string) => Array<string>
+	getWSImages: (ds: any, sampleName: string, tpmaster?: string) => WSImage[]
 
 	sources?: string
 }
