@@ -8,6 +8,7 @@ import crypto from 'crypto'
 import { decode as urlJsonDecode } from '#shared/urljson.js'
 import bodyParser from 'body-parser'
 import { ReqResCache } from '@sjcrh/augen'
+import { minimatch } from 'minimatch'
 
 // user __dirname later to detect relative path to public dir,
 // since the unit test may be triggered from the pp dir with --workspace option
@@ -18,15 +19,16 @@ const STATICPORT = 6789
 // may be the same as STATICPORT if serving cached resposes
 const DATAPORT = Number(process.argv[3] || 0) || 3000
 
-const params = process.argv[2] || 'name=*' // default pattern to test all emitted spec imports
-if (!params) throw `missing puppet.js params argument`
+const patternsStr = process.argv[2] || 'name=*' // default pattern to test all emitted spec imports
+if (!patternsStr) throw `missing puppet.js patternsStr argument`
 
-runTest(params).catch(console.error)
+runTest(patternsStr).catch(console.error)
 
-async function runTest(paramsStr) {
+async function runTest(patternsStr) {
 	const startTime = Date.now()
 	const server = initServer()
-	const paramsArr = paramsStr.split(' ') //; console.log(21, paramsArr, DATAPORT); return;
+	const isCombinedRun = patternsStr.includes('name=*')
+	const patternsArr = patternsStr.split(' ') //; console.log(21, paramsArr, DATAPORT); return;
 
 	const browser = await puppeteer.launch({
 		// headless: false, // uncomment to see puppeteer chrome instance
@@ -64,20 +66,23 @@ async function runTest(paramsStr) {
 			console.log('-- requestfailed --', `${request.failure().errorText} ${request.url()}`)
 		)
 
-	for (const params of paramsArr) {
+	const relevantCoverage = {},
+		errors = {}
+
+	for (const pattern of patternsArr) {
 		// Enable both JavaScript and CSS coverage
 		await Promise.all([
 			page.coverage.startJSCoverage({
-				resetOnNavigation: false,
+				resetOnNavigation: true,
 				includeRawScriptCoverage: true
 			})
 			//page.coverage.startCSSCoverage()
 		])
 
-		// console.log(70, DATAPORT, params, `http://localhost:${STATICPORT}/puppet.html?port=${DATAPORT}&${params}`)
+		// console.log(70, DATAPORT, pattern, `http://localhost:${STATICPORT}/puppet.html?port=${DATAPORT}&${pattern}`)
 		// Navigate to test page
 		await page
-			.goto(`http://localhost:${STATICPORT}/puppet.html?port=${DATAPORT}&${params}`, { timeout: 1000 })
+			.goto(`http://localhost:${STATICPORT}/puppet.html?port=${DATAPORT}&${pattern}`, { timeout: 1000 })
 			.then(r => {
 				if (!r.ok()) throw `Error loading page: ${r.status()}`
 			})
@@ -93,16 +98,18 @@ async function runTest(paramsStr) {
 				clearInterval(i)
 				console.log(`test run time=${(Date.now() - startTime) / 1000} ms`)
 
-				if (!lastLines.find(l => l.startsWith('# ok'))) {
-					console.error(`\n!!! test failed !!!\n`)
-					await browser.close()
-					process.exit(1)
-				}
 				// Disable both JavaScript and CSS coverage
 				const [jsCoverage /*, cssCoverage*/] = await Promise.all([
 					page.coverage.stopJSCoverage()
 					//page.coverage.stopCSSCoverage(),
 				])
+
+				if (!lastLines.find(l => l.startsWith('# ok'))) {
+					console.error(`\n!!! test failed !!!\n`)
+
+					reject(lastLines.join('\n'))
+				}
+
 				const matched = jsCoverage.filter(({ rawScriptCoverage: c }) => {
 					//if (!c.url.includes('node_modules') && !c.url.includes('sjcrh/proteinpaint-')) console.log(c.url)
 					return (
@@ -113,7 +120,7 @@ async function runTest(paramsStr) {
 						!c.url.includes('sjcrh/proteinpaint-')
 					) // appdrawer tests do not use TermdbTest
 				})
-				//fs.writeFileSync(`${process.cwd()}/results-${paramsArr.indexOf(params)}.json`, JSON.stringify(matched))
+				//fs.writeFileSync(`${process.cwd()}/results-${patternsArr.indexOf(pattern)}.json`, JSON.stringify(matched))
 
 				const coverageList = matched.map((it, i) => {
 					return {
@@ -122,8 +129,9 @@ async function runTest(paramsStr) {
 					}
 				})
 
+				const outputDir = path.join(__dirname, '../.nyc_output')
 				const mcr = MCR({
-					name: `Client test coverage for pattern '${params}'`,
+					name: `Client test coverage for pattern '${pattern}'`,
 					sourceFilter: path => {
 						//if (!path.includes('node_modules')) console.log(path)
 						return (
@@ -135,22 +143,38 @@ async function runTest(paramsStr) {
 							!path.includes('sjcrh/proteinpaint-')
 						)
 					},
-					outputDir: path.join(__dirname, '../.nyc_output'),
-					reports: ['v8', 'console-summary', 'html', 'json', 'markdown-summary', 'markdown-details'],
+					outputDir,
+					reports: ['v8', 'console-summary', 'html', 'json-summary', 'markdown-summary', 'markdown-details'],
 					cleanCache: true
 				})
 
 				const report = await mcr.add(coverageList)
 				await mcr.generate()
+
+				if (!isCombinedRun) {
+					const { default: summary } = await import(`${outputDir}/coverage-summary.json`, { with: { type: 'json' } })
+					setRelevantCoverage(pattern, summary, relevantCoverage)
+				}
+
 				// delete all entries
 				lastLines.splice(0, lastLines.length)
 				resolve()
 			}, 100)
+		}).catch(error => {
+			errors[pattern] = error
 		})
 	}
 
 	await browser.close()
 	if (server) server.close()
+	if (Object.keys(errors).length) {
+		console.log(`\n!!! Errors detected !!!`)
+		for (const [pattern, error] of Object.entries(errors)) {
+			console.log(`\nErrors testing spec pattern=${pattern}`)
+			console.log(error)
+		}
+		console.log(`\n`)
+	}
 }
 
 function initServer() {
@@ -188,4 +212,23 @@ function initServer() {
 		res.send(data.res?.body)
 	}
 	return app.listen(STATICPORT)
+}
+
+function setRelevantCoverage(pattern, summary, relevantCoverage = {}) {
+	const params = Object.fromEntries(pattern.split('&').map(s => s.split('=')))
+	const NESTEDSPECDIR = !params.dir
+		? '**'
+		: params.dir.startsWith('../shared/utils/')
+		? params.dir.replace('../shared/utils/', 'shared/utils/')
+		: `**/${params.dir}`
+	const SPECNAME = params.name || '*'
+	const globPattern = `${NESTEDSPECDIR}/${SPECNAME}.*s`
+	for (const [k, v] of Object.entries(summary)) {
+		if (!k.startsWith('client')) continue
+		if (minimatch(k, globPattern)) {
+			if (!relevantCoverage[k]) relevantCoverage[k] = {}
+			relevantCoverage[k][pattern] = v
+		}
+	} //console.log(218, relevantCoverage)
+	return relevantCoverage
 }
