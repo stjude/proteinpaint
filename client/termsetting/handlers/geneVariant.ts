@@ -190,8 +190,10 @@ async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 			{ label: 'Assign variants to groups', value: 'group', checked: isGroupset }
 		],
 		callback: async v => {
+			const applySpan = div.select('#applySpan')
 			if (v == 'group') {
 				await makeGroupUI()
+				applySpan.style('display', 'inline')
 			} else {
 				clearGroupset(self)
 				delete self.q.dt
@@ -216,7 +218,6 @@ async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 	async function makeGroupUI() {
 		makeVariantFilter()
 		await makeGroupsetDraggables()
-		applySpan.style('display', 'inline')
 		/*groupsDiv.style('display', 'inline-block')
 		makeDtRadios()
 		makeOriginRadios()
@@ -378,8 +379,8 @@ async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 
 	// function to make a variant filter based on dt terms
 	function makeVariantFilter() {
-		self.q.type = 'filter'
 		if (self.term.filter) return
+		self.q.type = 'filter'
 		const dtTermsInDs: DtTerm[] = [] // dt terms in dataset
 		for (const t of dtTerms) {
 			const query = t.id == 'fusion' || t.id == 'sv' ? 'svfusion' : t.id // TODO: distinguish between fusion and sv in dataset file
@@ -423,9 +424,9 @@ async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 			if (self.groupSettingInstance) self.groupSettingInstance.processDraggables()
 			self.runCallback()
 		})
-
-	const applySpan = applyRow
+	applyRow
 		.append('span')
+		.attr('id', 'applySpan')
 		.style('display', 'none')
 		.style('padding-left', '15px')
 		.style('opacity', 0.8)
@@ -535,7 +536,7 @@ function getGroupsetIdxs(dt) {
 }
 
 function clearGroupset(self) {
-	self.q.type = 'values'
+	self.q.type = 'filter'
 	delete self.q.predefined_groupset_idx
 	delete self.q.customset
 	delete self.groupSettingInstance
