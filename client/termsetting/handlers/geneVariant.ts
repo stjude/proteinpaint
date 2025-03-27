@@ -167,7 +167,7 @@ async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 	configurations (similar to numeric continuous/discrete switching)
 	const handler = self.handlerByType.geneVariant
 	*/
-	const div = _div.append('div').style('padding', '8px')
+	const div = _div.append('div').style('padding', '10px')
 	div.append('div').style('font-size', '1.2rem').text(self.term.name)
 	const optsDiv = div.append('div').style('margin-top', '10px')
 	const groupsDiv = div
