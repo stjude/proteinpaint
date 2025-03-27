@@ -3,8 +3,19 @@ import path from 'path'
 import * as glob from 'glob'
 import { minimatch } from 'minimatch'
 
-const stagedFiles = execSync(`git diff --cached --name-only | sed 's| |\\ |g'`, { encoding: 'utf8' })
-//const stagedFiles = ['tvs.js', 'tvs.categorical.js', 'tvs.numeric.js', 'something.js'].map(f => `client/filter/${f}`)
+const branch = execSync(`git rev-parse --abbrev-ref HEAD`, { encoding: 'utf8' })
+// TODO: may need to detect release branch instead of master
+const modifiedFiles = execSync(`git diff --name-status master..pr-coverage`, { encoding: 'utf8' })
+// only added and modified code files should be tested
+const committedFiles = modifiedFiles
+	.split('\n')
+	.filter(l => l[0] === 'A' || l[0] === 'M')
+	.map(l => l.split('\t').pop()) //; console.log(10, committedFiles)
+// detect staged files for local testing, should not have any in github CI
+const stagedFiles =
+	['tvs.js', 'tvs.categorical.js', 'tvs.numeric.js', 'something.js'].map(f => `client/filter/${f}`) || // uncomment to test
+	execSync(`git diff --cached --name-only | sed 's| |\\ |g'`, { encoding: 'utf8' }) // comment to test
+const changedFiles = new Set([...committedFiles, ...stagedFiles]) //; console.log(12, changedFiles)
 
 const relevantClientDirs = [
 	'common',
@@ -26,7 +37,7 @@ const ignore = ['dist/**', 'node_modules/**']
 const dirList = new Map()
 const patterns = new Map()
 
-for (const f of stagedFiles) {
+for (const f of changedFiles) {
 	if (!f.startsWith('client/')) continue
 	let matched = false
 	for (const dir of relevantClientDirs) {
