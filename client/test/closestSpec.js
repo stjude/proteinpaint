@@ -13,7 +13,7 @@ const committedFiles = modifiedFiles
 	.map(l => l.split('\t').pop()) //; console.log(10, committedFiles)
 // detect staged files for local testing, should not have any in github CI
 const stagedFiles =
-	['tvs.js', 'tvs.categorical.js', 'tvs.numeric.js', 'something.js'].map(f => `client/filter/${f}`) || // uncomment to test
+	// ['tvs.js', 'tvs.categorical.js', 'tvs.numeric.js'/*, 'something.js'*/].map(f => `client/filter/${f}`) || // uncomment to test
 	execSync(`git diff --cached --name-only | sed 's| |\\ |g'`, { encoding: 'utf8' }) // comment to test
 const changedFiles = new Set([...committedFiles, ...stagedFiles]) //; console.log(12, changedFiles)
 
@@ -34,7 +34,11 @@ const relevantClientDirs = [
 
 const clientParentDir = path.join(import.meta.dirname, '../..')
 const ignore = ['dist/**', 'node_modules/**']
-const dirList = new Map()
+// key: dir path
+// value: array of spec files under the dir path
+const dirSpecs = new Map()
+// key: spec dir,name pattern
+// value: array of filenames that the pattern applies for test coverage
 const patterns = new Map()
 
 for (const f of changedFiles) {
@@ -48,11 +52,11 @@ for (const f of changedFiles) {
 	}
 	if (!matched) continue
 	const dirname = path.join(clientParentDir, path.dirname(f))
-	if (!dirList.get(dirname)) {
+	if (!dirSpecs.get(dirname)) {
 		const specs = glob.sync(`./test/*.spec.*s`, { cwd: dirname, ignore })
-		dirList.set(dirname, specs)
+		dirSpecs.set(dirname, specs)
 	}
-	const specs = dirList.get(dirname)
+	const specs = dirSpecs.get(dirname)
 	const fileName = f.split('/').pop()
 	const fileNameSegments = fileName.split('.')
 	const filedir = dirname.split('/').pop()
@@ -73,9 +77,14 @@ for (const f of changedFiles) {
 	}
 }
 
+// convert the pattern entries into valid URL parameter strings
 const params = []
 for (const [k, v] of patterns.entries()) {
-	params.push(`${k}&staged=${v.join(',')}`)
+	// use a hash to separate the dir+name pattern
+	// from the list of files on which the patterm applies;
+	// this hash should not be misinterpreted as being used
+	// for browser navigation or to trigger a feature
+	params.push(`${k}#${v.join(',')}`)
 }
 
 //console.log(patterns)
