@@ -1,5 +1,6 @@
-import type { RouteApi, WSImagesResponse } from '#types'
-import { wsiSamplesPayload } from '@sjcrh/proteinpaint-types/routes/wsisamples.js'
+import type { RouteApi, WSImage, WSImagesRequest, WSImagesResponse } from '#types'
+import { WSISample, wsiSamplesPayload, WSISamplesResponse } from '@sjcrh/proteinpaint-types/routes/wsisamples.ts'
+import serverconfig from '#src/serverconfig.js'
 
 const routePath = 'wsisamples'
 export const api: RouteApi = {
@@ -19,10 +20,15 @@ export const api: RouteApi = {
 function init({ genomes }) {
 	return async (req, res): Promise<void> => {
 		try {
-			const payload: WSImagesResponse = {
-				status: 'ok',
-				wsiSessionId: 'sessionId',
-				slide_dimensions: [0, 0]
+			const query: WSImagesRequest = req.query
+			const g = genomes[query.genome]
+			if (!g) throw new Error('Invalid genome name')
+			const ds = g.datasets[query.dslabel]
+
+			const images: WSISample[] = await ds.queries.WSImages.getSamples(ds, serverconfig.tpmasterdir)
+
+			const payload: WSISamplesResponse = {
+				samples: images
 			}
 
 			res.status(200).json(payload)

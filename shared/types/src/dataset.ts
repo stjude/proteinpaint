@@ -1,5 +1,6 @@
 import type { Mclass } from './Mclass.ts'
 import type { WSImage } from './routes/samplewsimages.ts'
+import { WSISample } from './routes/wsisamples.ts'
 
 /*** General usage types ***/
 type FileObj = {
@@ -849,10 +850,8 @@ export type WSImages = {
 	// path to the folder where sample images are stored
 	imageBySampleFolder?: string
 
-	getSamples: (tpmaster?: string) => Array<string>
-	getWSImages: (ds: any, sampleName: string, tpmaster?: string) => WSImage[]
-
-	sources?: string
+	getSamples: (ds: any, tpmaster?: string) => Promise<Array<WSISample>>
+	getWSImages: (ds: any, sampleName: string, tpmaster?: string) => Promise<WSImage[]>
 }
 
 /*** types supporting Termdb ***/

@@ -37,35 +37,3 @@ function init({ genomes }) {
 		}
 	}
 }
-
-export function validate_query_getSampleWSImages(ds: Mds3) {
-	const q = ds.queries?.WSImages
-	if (!q) return
-	nativeValidateQuery(ds)
-}
-
-function nativeValidateQuery(ds: any) {
-	ds.queries.WSImages.getWSImages = async (q: any) => {
-		return await getWSImages(ds, q.sampleId)
-	}
-}
-
-async function getWSImages(ds: any, sampleName: string) {
-	const sql = `SELECT wsimages.filename as filename, wsimages.metadata as metadata
-                 FROM wsimages
-                          INNER JOIN sampleidmap
-                                     ON wsimages.sample = sampleidmap.id
-                 WHERE sampleidmap.name = ?`
-
-	const rows = ds.cohort.db.connection.prepare(sql).all(sampleName)
-	const images: WSImage[] = []
-
-	for (const row of rows) {
-		images.push({
-			filename: row.filename,
-			metadata: row.metadata
-		})
-	}
-
-	return images
-}

@@ -41,7 +41,6 @@ import { mayLimitSamples, tid2value2filter } from './mds3.filter.js'
 import { getResult } from '#src/gene.js'
 import { validate_query_getTopTermsByType } from '#routes/termdb.topTermsByType.ts'
 import { validate_query_getSampleImages } from '#routes/termdb.sampleImages.ts'
-import { validate_query_getSampleWSImages } from '#routes/samplewsimages.ts'
 import { validate_query_rnaseqGeneCount } from '#routes/termdb.DE.ts'
 
 /*

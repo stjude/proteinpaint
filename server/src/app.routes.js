@@ -54,5 +54,6 @@ export const routeFiles = [
 	import('../routes/termdb.violin.ts'),
 	import('../routes/tileserver.ts'),
 	import('../routes/wsimages.ts'),
+	import('../routes/wsisamples.ts'),
 	import('../routes/img.ts')
 ]
