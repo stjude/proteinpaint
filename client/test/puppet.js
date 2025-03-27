@@ -27,7 +27,6 @@ runTest(patternsStr).catch(console.error)
 async function runTest(patternsStr) {
 	const startTime = Date.now()
 	const server = initServer()
-	const isCombinedRun = patternsStr.includes('name=*')
 	const patternsArr = patternsStr.split(' ') //; console.log(21, paramsArr, DATAPORT); return;
 
 	const browser = await puppeteer.launch({
@@ -69,7 +68,7 @@ async function runTest(patternsStr) {
 	const relevantCoverage = {},
 		errors = {}
 
-	for (const pattern of patternsArr) {
+	for (const _pattern of patternsArr) {
 		// Enable both JavaScript and CSS coverage
 		await Promise.all([
 			page.coverage.startJSCoverage({
@@ -79,6 +78,7 @@ async function runTest(patternsStr) {
 			//page.coverage.startCSSCoverage()
 		])
 
+		const [pattern, testedFiles] = _pattern.split('#')
 		// console.log(70, DATAPORT, pattern, `http://localhost:${STATICPORT}/puppet.html?port=${DATAPORT}&${pattern}`)
 		// Navigate to test page
 		await page
@@ -151,9 +151,20 @@ async function runTest(patternsStr) {
 				const report = await mcr.add(coverageList)
 				await mcr.generate()
 
-				if (!isCombinedRun) {
+				if (testedFiles) {
 					const { default: summary } = await import(`${outputDir}/coverage-summary.json`, { with: { type: 'json' } })
-					setRelevantCoverage(pattern, summary, relevantCoverage)
+					const files = testedFiles.split(',')
+					// disinguish reports from different spec-pattern-coverage runs,
+					// so that a user may interactively view the applicable coverage html
+					// const publicDir = pattern.replaceAll('&', '`_').replaceAll('=', '~')
+					// fs.renameSync(outputDir, path.join(__dirname, '../.nyc_output'))
+					const summaryFiles = Object.keys(summary)
+					for (const f of files) {
+						for (const key of summaryFiles) {
+							if (key.endsWith(`/${f}`)) relevantCoverage[key.replace('client/', '')] = summary[key]
+							//relevantCoverage[f].link = `/coverage/client/${dirname}/`
+						}
+					}
 				}
 
 				// delete all entries
@@ -167,6 +178,7 @@ async function runTest(patternsStr) {
 
 	await browser.close()
 	if (server) server.close()
+	console.log(relevantCoverage)
 	if (Object.keys(errors).length) {
 		console.log(`\n!!! Errors detected !!!`)
 		for (const [pattern, error] of Object.entries(errors)) {
@@ -212,23 +224,4 @@ function initServer() {
 		res.send(data.res?.body)
 	}
 	return app.listen(STATICPORT)
-}
-
-function setRelevantCoverage(pattern, summary, relevantCoverage = {}) {
-	const params = Object.fromEntries(pattern.split('&').map(s => s.split('=')))
-	const NESTEDSPECDIR = !params.dir
-		? '**'
-		: params.dir.startsWith('../shared/utils/')
-		? params.dir.replace('../shared/utils/', 'shared/utils/')
-		: `**/${params.dir}`
-	const SPECNAME = params.name || '*'
-	const globPattern = `${NESTEDSPECDIR}/${SPECNAME}.*s`
-	for (const [k, v] of Object.entries(summary)) {
-		if (!k.startsWith('client')) continue
-		if (minimatch(k, globPattern)) {
-			if (!relevantCoverage[k]) relevantCoverage[k] = {}
-			relevantCoverage[k][pattern] = v
-		}
-	} //console.log(218, relevantCoverage)
-	return relevantCoverage
 }
