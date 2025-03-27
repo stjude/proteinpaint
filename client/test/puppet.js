@@ -178,7 +178,30 @@ async function runTest(patternsStr) {
 
 	await browser.close()
 	if (server) server.close()
-	console.log(relevantCoverage)
+
+	console.log('relevantCoverage', relevantCoverage)
+	const coveredFilenames = Object.keys(relevantCoverage)
+	if (coveredFilenames.length) {
+		const failedCoverage = new Map()
+		const { default: closestSpecCoverage } = await import('./closestSpec-coverage.json', { with: { type: 'json' } })
+		for (const f of coveredFilenames) {
+			if (!Object.hasOwn(closestSpecCoverage, f)) continue
+			const prev = Math.min(...Object.values(closestSpecCoverage[f]).map(v => v.pct))
+			const curr = Math.min(...Object.values(relevantCoverage[f]).map(v => v.pct))
+			const diff = curr - prev
+			relevantCoverage[f].lowestPct = { curr, prev, diff }
+			if (diff < 0) failedCoverage.set(f, relevantCoverage[f])
+			// TODO: may require other, stricter criteria much later
+		}
+		fs.writeFileSync(path.join(__dirname, 'branch-coverage.json'), JSON.stringify(relevantCoverage, null, '  '))
+		if (failedCoverage.size) {
+			console.log(`\n!!! Failed coverage: lowest pct decreased !!!`)
+			console.log(Object.fromEntries(failedCoverage.entries()))
+			console.log(`\n`)
+			process.exit(1)
+		}
+	}
+
 	if (Object.keys(errors).length) {
 		console.log(`\n!!! Errors detected !!!`)
 		for (const [pattern, error] of Object.entries(errors)) {
