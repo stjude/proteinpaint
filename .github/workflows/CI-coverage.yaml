@@ -115,6 +115,7 @@ jobs:
       - name: Display coverage results
         run: |
           echo "Coverage report for combined runs of unit and integration tests" >> $GITHUB_STEP_SUMMARY
+          echo "" > ./detailed_reports.md
 
           if [[ -d client/.nyc_output ]]; then
             if [[ -f client/.nyc_output/coverage-summary.md ]]; then
@@ -122,7 +123,7 @@ jobs:
             fi
 
             if [[ -f client/.nyc_output/coverage-details.md ]]; then
-              cat client/.nyc_output/coverage-details.md >> $GITHUB_STEP_SUMMARY
+              cat client/.nyc_output/coverage-details.md >> ./detailed_reports.md
             fi
           else
             echo -e "\nFailed to generate client coverage report\n" >> $GITHUB_STEP_SUMMARY
@@ -131,15 +132,17 @@ jobs:
           SDIR=container/coverage/.coverage
           if [[ -d "$SDIR" ]]; then
             if [[ -f $SDIR/coverage-details.md ]]; then
-              echo -e "\n##Server coverage summary\n" >> $GITHUB_STEP_SUMMARY
+              echo -e "\n## Server coverage summary\n" >> $GITHUB_STEP_SUMMARY
               cat $SDIR/coverage-summary.md >> $GITHUB_STEP_SUMMARY
             fi
             
             if [[ -f $SDIR/coverage-details.md ]]; then
-              echo -e "\n##Server coverage details\n" >> $GITHUB_STEP_SUMMARY
-              cat $SDIR/coverage-details.md >> $GITHUB_STEP_SUMMARY
+              echo -e "\n## Server coverage details\n" >> ./detailed_reports.md
+              cat $SDIR/coverage-details.md >> ./detailed_reports.md
             fi
           else
             echo -e "\nFailed to generate server coverage report\n" >> $GITHUB_STEP_SUMMARY
           fi
+
+          cat detailed_reports.md >> $GITHUB_STEP_SUMMARY
 
