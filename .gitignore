@@ -85,6 +85,7 @@ client/test/wpCompileTime.js
 client/test/*.bundle.js*
 client/test/init-esm.js
 client/test/bundle/*
+client/test/branch-coverage.json
 client/.nyc_output*/*
 client/.coverage*/*
 
