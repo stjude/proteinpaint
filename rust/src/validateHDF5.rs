@@ -1,3 +1,6 @@
+// syntax:
+// echo '{"hdf5_file":"/path/to/my/local/file.h5"}' | ./target/release/validateHDF5
+
 use hdf5::types::VarLenAscii;
 use hdf5::{File, Result};
 use ndarray::Array1;
