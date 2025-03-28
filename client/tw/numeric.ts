@@ -18,7 +18,7 @@ import type {
 	RegularNumericBinConfig,
 	CustomNumericBinConfig
 } from '#types'
-import { TwBase, TwOpts } from './TwBase.ts'
+import { TwBase, type TwOpts } from './TwBase.ts'
 import { copyMerge } from '#rx'
 import { isNumeric } from '#shared/helpers.js'
 import { roundValueAuto } from '#shared/roundValue.js'
