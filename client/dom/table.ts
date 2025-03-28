@@ -530,7 +530,7 @@ function createSortButton(th: Th, callback, updateTable) {
 
 function sortTableCallBack(i: number, rows: any, isAscending: boolean) {
 	const newRows = rows.sort((a, b) => {
-		if (!a[i].value || !b[i].value) return
+		if ((!a[i].value && a[i].value != 0) || (!b[i].value && b[i].value != 0)) return
 		//numbers
 		if (typeof a[i].value === 'number' && typeof b[i].value === 'number') {
 			if (!isAscending) return b[i].value - a[i].value
