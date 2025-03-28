@@ -175,9 +175,9 @@ async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 		.style('display', 'none')
 		.style('margin', '5px 0px 0px 30px')
 		.style('vertical-align', 'top')
-	const dtDiv = groupsDiv.append('div')
+	/*const dtDiv = groupsDiv.append('div')
 	const originDiv = groupsDiv.append('div').style('margin-top', '15px')
-	const groupsetDiv = groupsDiv.append('div').style('margin-top', '15px')
+	const groupsetDiv = groupsDiv.append('div').style('margin-top', '15px')*/
 	const draggablesDiv = div.append('div').style('display', 'none').style('margin-left', '15px')
 
 	// radio buttons for whether or not to group variants
@@ -216,6 +216,7 @@ async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 
 	// make radio buttons for grouping variants
 	async function makeGroupUI() {
+		if (!self.q.type || self.q.type != 'custom-groupset') self.q.type = 'filter'
 		makeVariantFilter()
 		await makeGroupsetDraggables()
 		/*groupsDiv.style('display', 'inline-block')
@@ -236,7 +237,7 @@ async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 		}*/
 	}
 
-	// radio buttons for data type
+	/*// radio buttons for data type
 	function makeDtRadios() {
 		dtDiv.selectAll('*').remove()
 		dtDiv.append('div').style('font-weight', 'bold').text('Variant type')
@@ -375,12 +376,11 @@ async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 			}
 		]
 		self.q = { ...getBaseQ(self.q), type: 'custom-groupset', customset: { groups } }
-	}
+	}*/
 
 	// function to make a variant filter based on dt terms
 	function makeVariantFilter() {
 		if (self.term.filter) return
-		self.q.type = 'filter'
 		const dtTermsInDs: DtTerm[] = [] // dt terms in dataset
 		for (const t of dtTerms) {
 			const query = t.id == 'fusion' || t.id == 'sv' ? 'svfusion' : t.id // TODO: distinguish between fusion and sv in dataset file
@@ -536,7 +536,7 @@ function getGroupsetIdxs(dt) {
 }
 
 function clearGroupset(self) {
-	self.q.type = 'filter'
+	self.q.type = 'values'
 	delete self.q.predefined_groupset_idx
 	delete self.q.customset
 	delete self.groupSettingInstance

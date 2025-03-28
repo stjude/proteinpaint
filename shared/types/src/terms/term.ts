@@ -1,10 +1,10 @@
-import { Filter } from '../filter.js'
-import { CategoricalTerm, CategoricalBaseQ } from './categorical.js'
-import { ConditionTerm } from './condition.js'
-import { NumericTerm } from './numeric.js'
-import { GeneVariantTerm } from './geneVariant.js'
-import { SampleLstTerm } from './samplelst.js'
-import { SnpsTerm } from './snps.js'
+import type { Filter } from '../filter.js'
+import type { CategoricalTerm, CategoricalBaseQ } from './categorical.js'
+import type { ConditionTerm } from './condition.js'
+import type { NumericTerm } from './numeric.js'
+import type { GeneVariantTerm } from './geneVariant.js'
+import type { SampleLstTerm } from './samplelst.js'
+import type { SnpsTerm } from './snps.js'
 
 /**
  * @param id      term.id for dictionary terms, undefined for non-dictionary terms
