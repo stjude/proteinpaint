@@ -1,0 +1,148 @@
+name: Branch Test Coverage
+
+on:
+  schedule:
+    # since this combined coverage CI runs integration tests (in addition to unit tests),
+    # the integration CI should be done more frequently on every push to master, since 
+    # it is more straightforward to set up and is less brittle than the coverage container
+    - cron: '0 6 * * *'
+
+  workflow_dispatch:
+    inputs:
+      build_secret:
+        type: string
+        description: Build secret
+
+  workflow_call: {}
+
+jobs:
+  check-user-permissions:
+    runs-on: ubuntu-22.04
+    steps:
+      - id: set-build-secret
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "::set-output name=BUILD_SECRET::${{ github.event.inputs.build_secret }}"
+          else
+            echo "::set-output name=BUILD_SECRET::${{ secrets.BUILD_SECRET }}"
+          fi
+      - name: Check user permission
+        uses: stjude/proteinpaint/.github/actions/check-user-permissions@master
+        with:
+          BUILD_SECRET: ${{ secrets.BUILD_SECRET }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          INPUT_BUILD_SECRET: ${{ steps.set-build-secret.outputs.BUILD_SECRET }}
+
+  build:
+    needs: check-user-permissions
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 10
+
+      - uses: actions/setup-node@v3
+        with:
+          cache: 'npm'
+          node-version: '20'
+
+      - name: Install PP packages
+        run: |
+          npm ci
+
+      - name: Copy serverconfig.json to root
+        run: |
+          cp container/ci/serverconfig.json container/
+
+      - name: Create cache folder
+        run: mkdir cache
+
+      - name: Install xvfb
+        run: sudo apt-get install xvfb
+
+      - name: Login to Github
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.PAT }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver: docker
+
+      - name: Pack updated workspaces
+        run: |
+          cd ./container
+          ./pack.sh
+
+      - name: Build ppserver image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./container/
+          file: ./container/server/Dockerfile
+          tags: ppserver:latest
+          platforms: linux/amd64
+          outputs: type=docker
+          # cache-from: type=gha
+          # cache-to: type=gha,mode=max
+
+      - name: Copy server files
+        run: |
+          cd ./container/coverage
+          ./copy-server-files.sh
+
+      - name: Build ppcov image
+        uses: docker/build-push-action@v5
+        with:
+          build-contexts: |
+            ppserver:latest=docker-image://ppserver:latest
+          context: ./container/coverage
+          file: ./container/coverage/Dockerfile
+          tags: ppcov:latest
+          platforms: linux/amd64
+          outputs: type=docker
+          # cache-from: type=gha
+          # cache-to: type=gha,mode=max
+
+      - name: Generate branch coverage report
+        run: |
+          cd ./container/coverage
+          xvfb-run --auto-servernum ./test.sh branch
+
+      - name: Display coverage results
+        run: |
+          echo "Coverage report for combined runs of unit and integration tests" >> $GITHUB_STEP_SUMMARY
+          echo "" > ./detailed_reports.md
+
+          if [[ -d client/.nyc_output ]]; then
+            if [[ -f client/.nyc_output/coverage-summary.md ]]; then
+              cat client/.nyc_output/coverage-summary.md >> $GITHUB_STEP_SUMMARY
+            fi
+
+            if [[ -f client/.nyc_output/coverage-details.md ]]; then
+              cat client/.nyc_output/coverage-details.md >> ./detailed_reports.md
+            fi
+          else
+            echo -e "\nFailed to generate client coverage report\n" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          SDIR=container/coverage/.coverage
+          if [[ -d "$SDIR" ]]; then
+            if [[ -f $SDIR/coverage-details.md ]]; then
+              echo -e "\n## Server coverage summary\n" >> $GITHUB_STEP_SUMMARY
+              cat $SDIR/coverage-summary.md >> $GITHUB_STEP_SUMMARY
+            fi
+            
+            if [[ -f $SDIR/coverage-details.md ]]; then
+              echo -e "\n## Server coverage details\n" >> ./detailed_reports.md
+              cat $SDIR/coverage-details.md >> ./detailed_reports.md
+            fi
+          else
+            echo -e "\nFailed to generate server coverage report\n" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          cat detailed_reports.md >> $GITHUB_STEP_SUMMARY
+
