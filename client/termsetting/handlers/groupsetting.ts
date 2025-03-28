@@ -1,4 +1,4 @@
-import { select, Selection } from 'd3-selection'
+import { select, type Selection } from 'd3-selection'
 //import { Tabs } from '#dom/toggleButtons'
 //import { disappear } from '#src/client'
 import { throwMsgWithFilePathAndFnName } from '#dom/sayerror'
