@@ -36,11 +36,18 @@ export class VolcanoViewModel {
 		this.config = config
 		this.response = response
 		this.pValueCutoff = -Math.log10(settings.pValue)
+
+		const controlColor = (this.config.tw?.term?.values as any)?.[this.config.samplelst.groups[0].name]?.color
+		const caseColor = (this.config.tw?.term?.values as any)?.[this.config.samplelst.groups[1].name].color
+
+		//Set colors equal to the groups colors if present
+		const barplot = caseColor && controlColor ? { colorNegative: controlColor, colorPositive: caseColor } : {}
+
 		this.pValueTable = {
 			columns: [
-				{ label: 'log2(Fold change)', barplot: {}, sortable: true },
-				{ label: 'Original p-value (linear)', sortable: true },
-				{ label: 'Adjusted p-value (linear)', sortable: true }
+				{ label: 'log2(Fold change)', barplot, sortable: true },
+				{ label: 'Original p-value', sortable: true },
+				{ label: 'Adjusted p-value', sortable: true }
 			],
 			rows: [],
 			height: settings.height + this.topPad
@@ -53,7 +60,7 @@ export class VolcanoViewModel {
 
 		const plotDim = this.setPlotDimensions()
 		this.setPTableColumns()
-		const pointData = this.setPointData(plotDim)
+		const pointData = this.setPointData(plotDim, controlColor, caseColor)
 		//Get all rows data for the pValueTable in setPointsData, then sort by fold change
 		const foldChangeIdx = this.pValueTable.columns.findIndex(c => c.label.includes('log2(Fold change)'))
 		this.pValueTable.rows.sort((a: any, b: any) => b[foldChangeIdx].value - a[foldChangeIdx].value)
@@ -128,13 +135,13 @@ export class VolcanoViewModel {
 		}
 	}
 
-	setPointData(plotDim: VolcanoPlotDimensions) {
+	setPointData(plotDim: VolcanoPlotDimensions, controlColor: string, caseColor: string) {
 		const radius = Math.max(this.settings.width, this.settings.height) / 80
 		const dataCopy: any = structuredClone(this.response.data)
 		for (const d of dataCopy) {
 			d.highlighted = this.config.highlightedData.includes(d.gene_symbol)
 			const significant = this.isSignificant(d)
-			this.getGenesColor(d, significant)
+			this.getGenesColor(d, significant, controlColor, caseColor)
 			if (significant) {
 				this.numSignificant++
 				const row = [
@@ -167,12 +174,10 @@ export class VolcanoViewModel {
 		)
 	}
 
-	getGenesColor(d: DataPointEntry, significant: boolean) {
+	getGenesColor(d: DataPointEntry, significant: boolean, controlColor: string, caseColor: string) {
 		if (this.termType != 'geneExpression') return
 		if (!d.gene_symbol) throw `Missing gene_symbol in data: ${JSON.stringify(d)} [VolcanoViewModel getGenesColor()]`
 		if (significant) {
-			const controlColor = (this.config.tw?.term?.values as any)?.[this.config.samplelst.groups[0].name]?.color
-			const caseColor = (this.config.tw?.term?.values as any)?.[this.config.samplelst.groups[1].name].color
 			if (controlColor && caseColor) d.color = d.fold_change > 0 ? caseColor : controlColor
 			else d.color = this.settings.defaultSignColor
 		} else d.color = this.settings.defaultNonSignColor
