@@ -1,2 +1,1 @@
-Fixes:
-- #dom/table accounts for zeros when sorting
+

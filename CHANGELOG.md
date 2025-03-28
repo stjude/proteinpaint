@@ -7,6 +7,9 @@ All notable changes to this project will be documented in this file.
 Features:
 - geneVariant groupsetting is now performed using stateless filters
 
+Fixes:
+- #dom/table accounts for zeros when sorting
+
 
 ## 2.113.0
 
