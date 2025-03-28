@@ -27,8 +27,7 @@ export class VolcanoViewModel {
 	minLogPValue = 0
 	maxLogPValue = 0
 	//Used in place of 0 p values that cannot be log transformed
-	//Start with the highest possible p value, not 0
-	minNonZeroPValue = 1
+	minNonZeroPValue = 10e-10
 	readonly offset = 10
 	readonly bottomPad = 60
 	readonly horizPad = 70
