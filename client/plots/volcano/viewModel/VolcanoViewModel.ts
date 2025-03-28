@@ -92,10 +92,7 @@ export class VolcanoViewModel {
 	}
 
 	setPlotDimensions() {
-		//Add 5% to the max and min values for padding
-		const xScale = scaleLinear()
-			.domain([this.minLogFoldChange * 1.05, this.maxLogFoldChange * 1.05])
-			.range([0, this.settings.width])
+		const xScale = scaleLinear().domain([this.minLogFoldChange, this.maxLogFoldChange]).range([0, this.settings.width])
 		const yScale = scaleLinear().domain([this.minLogPValue, this.maxLogPValue]).range([this.settings.height, 0])
 		return {
 			svg: {
