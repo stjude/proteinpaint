@@ -182,7 +182,7 @@ export class NumCustomBins extends NumericBase {
 
 		if (tw.q.mode == 'binary' && !tw.q.preferredBins) tw.q.preferredBins = 'median'
 
-		if (tw.q.preferredBins == 'median') {
+		if (tw.q.preferredBins == 'median' && !tw.q.lst?.length) {
 			const result = await opts.vocabApi.getPercentile(tw.term.id, [50])
 			if (!result.values) throw '.values[] missing from vocab.getPercentile()'
 			const median = roundValueAuto(result.values[0])
