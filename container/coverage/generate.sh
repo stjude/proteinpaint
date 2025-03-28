@@ -6,4 +6,4 @@ set -exo pipefail
 
 ./build.sh
 
-./test.sh
+./test.sh "$@"

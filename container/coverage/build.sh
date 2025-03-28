@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# This script is called by generate.sh from the container/coverage dir
+
 set -exo pipefail
 
 ##############################
