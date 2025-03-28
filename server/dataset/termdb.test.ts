@@ -227,14 +227,7 @@ export default {
 		},
 		WSImages: {
 			type: 'H&E',
-			imageBySampleFolder: 'files/hg38/TermdbTest/wsimages',
-			hasDb: true,
-			async getSamples(ds: any, tpmaster?: string | undefined): Promise<WSISample[]> {
-				throw new Error('Method should be implemented in the server code')
-			},
-			async getWSImages(ds: any, sampleName: string, tpmaster?: string | undefined): Promise<WSImage[]> {
-				throw new Error('Method should be implemented in the server code')
-			}
+			imageBySampleFolder: 'files/hg38/TermdbTest/wsimages'
 		}
 	},
 	assayAvailability: {

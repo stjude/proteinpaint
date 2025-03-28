@@ -5,8 +5,8 @@
             "runargs": {
                 "mass": {
                     "state": {
-                        "dslabel": "nintendoPublic",
-                        "genome": "mm10",
+                        "dslabel": "GDC",
+                        "genome": "hg38",
                         "nav": {
                             "header_mode": "hidden"
                         },

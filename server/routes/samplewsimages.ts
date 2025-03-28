@@ -46,7 +46,7 @@ export async function validate_query_getSampleWSImages(ds: Mds3) {
 }
 
 function nativeValidateQuery(ds: any) {
-	if (ds.queries.WSImages.hasDb) {
+	if (!ds.queries.WSImages.getWSImages) {
 		ds.queries.WSImages.getWSImages = async (dataset: any, sampleName: string) => {
 			return await getWSImages(dataset, sampleName)
 		}

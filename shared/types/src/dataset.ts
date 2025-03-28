@@ -850,10 +850,10 @@ export type WSImages = {
 	// path to the folder where sample images are stored
 	imageBySampleFolder?: string
 
-	hasDb?: boolean
-
-	getSamples: (ds: any, tpmaster?: string) => Promise<Array<WSISample>>
-	getWSImages: (ds: any, sampleName: string, tpmaster?: string) => Promise<WSImage[]>
+	// If getSamples is not defined, the sample list will be retrieved from the wsimages table
+	getSamples?: (ds: any) => Promise<Array<WSISample>>
+	// if getWSImages is not defined, the image list will be retrieved from the wsimages table
+	getWSImages?: (ds: any, sampleName: string) => Promise<WSImage[]>
 }
 
 /*** types supporting Termdb ***/
