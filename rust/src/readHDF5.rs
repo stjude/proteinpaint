@@ -4,12 +4,11 @@
 // Imports
 use hdf5::types::{FixedAscii, VarLenAscii};
 use hdf5::{File, Result};
-use json;
-use ndarray::{Array1, s};
 use ndarray::Dim;
+use ndarray::{Array1, s};
+use serde_json::{Map, Value, json};
 use std::io;
 use std::time::Instant;
-
 
 /// Determines the format of an HDF5 gene expression file
 ///
@@ -22,12 +21,12 @@ use std::time::Instant;
 ///
 /// The function identifies the following formats:
 ///
-/// - **Dense format**: 
+/// - **Dense format**:
 ///   - Contains a "counts" dataset (2D matrix of gene expression values)
 ///   - Contains a "gene_names" dataset (gene identifiers)
 ///   - Contains a "samples" dataset (sample identifiers)
 ///
-/// - **Sparse format**: 
+/// - **Sparse format**:
 ///   - Contains a "data" group with sparse matrix components
 ///   - Contains a "sample_names" dataset
 ///
@@ -74,16 +73,16 @@ use std::time::Instant;
 /// ```
 fn detect_hdf5_format(hdf5_filename: &str) -> Result<&'static str> {
     let file = File::open(hdf5_filename)?;
-    
+
     // Check for dense format (has counts, gene_names, and samples datasets)
     let has_counts = file.dataset("counts").is_ok();
     let has_gene_names = file.dataset("gene_names").is_ok();
     let has_samples = file.dataset("samples").is_ok();
-    
+
     // Check for sparse matrix format (has data group and sample_names)
     let has_data_group = file.group("data").is_ok();
     let has_sample_names = file.dataset("sample_names").is_ok();
-    
+
     if has_counts && has_gene_names && has_samples {
         // eprintln!("Dense format detected");
         Ok("dense")
@@ -117,7 +116,8 @@ fn detect_hdf5_format(hdf5_filename: &str) -> Result<&'static str> {
 /// # Returns
 ///
 /// A result indicating success or error. On success, the function prints the gene
-/// expression data in JSON format to stdout with "output_string:" prefix.
+/// expression data in JSON format to stdout for dense matrix HDF5 files. For spare matrix files it
+/// sends the expression data in JSON format with "output_string:" prefix to stdout.
 ///
 /// # Example Output Format
 ///
@@ -155,25 +155,27 @@ fn detect_hdf5_format(hdf5_filename: &str) -> Result<&'static str> {
 fn query_gene(hdf5_filename: String, gene_name: String) -> Result<()> {
     // First, detect the file format
     let file_format = detect_hdf5_format(&hdf5_filename)?;
-    
+
     // Query gene data based on format
     match file_format {
         "dense" => query_gene_dense(hdf5_filename, gene_name),
         "sparse" => query_gene_sparse(hdf5_filename, gene_name),
         _ => {
             // For unknown format, return an error
-            println!("output_string:{}", serde_json::json!({
-                "status": "failure",
-                "message": "Cannot query gene in unknown file format. Please use .h5 format in either sparse or dense format.",
-                "file_path": hdf5_filename,
-                "gene": gene_name,
-                "format": "unknown"
-            }));
+            println!(
+                "{}",
+                serde_json::json!({
+                    "status": "failure",
+                    "message": "Cannot query gene in unknown file format. Please use .h5 format in either sparse or dense format.",
+                    "file_path": hdf5_filename,
+                    "gene": gene_name,
+                    "format": "unknown"
+                })
+            );
             Ok(())
         }
     }
 }
-
 
 /// Reads expression data for a specific gene from a dense format HDF5 file
 ///
@@ -194,7 +196,7 @@ fn query_gene(hdf5_filename: String, gene_name: String) -> Result<()> {
 /// # Returns
 ///
 /// A result indicating success or error. On success, the function prints the gene
-/// expression data in JSON format to stdout with "output_string:" prefix.
+/// expression data in JSON format to stdout.
 ///
 /// # Output Format
 ///
@@ -237,8 +239,11 @@ fn query_gene_dense(hdf5_filename: String, gene_name: String) -> Result<()> {
         Ok(f) => f,
         Err(err) => {
             println!(
-                "output_string:{{\"status\":\"error\",\"message\":\"Failed to open HDF5 file: {}\"}}",
-                err
+                "{}",
+                serde_json::json!({
+                    "status": "error",
+                    "message": format!("Failed to open HDF5 file: {}", err)
+                })
             );
             return Ok(());
         }
@@ -249,8 +254,11 @@ fn query_gene_dense(hdf5_filename: String, gene_name: String) -> Result<()> {
         Ok(ds) => ds,
         Err(err) => {
             println!(
-                "output_string:{{\"status\":\"error\",\"message\":\"Failed to open gene_ids dataset: {}\"}}",
-                err
+                "{}",
+                serde_json::json!({
+                    "status": "error",
+                    "message": format!("Failed to open gene_ids dataset {}", err)
+                })
             );
             return Ok(());
         }
@@ -261,8 +269,11 @@ fn query_gene_dense(hdf5_filename: String, gene_name: String) -> Result<()> {
         Ok(g) => g,
         Err(err) => {
             println!(
-                "output_string:{{\"status\":\"error\",\"message\":\"Failed to read gene names as VarLenAscii: {}\"}}",
-                err
+                "{}",
+                serde_json::json!({
+                    "status": "error",
+                    "message": format!("Failed to read gene names as VarLenAscii: {}", err)
+                })
             );
             return Ok(());
         }
@@ -276,8 +287,11 @@ fn query_gene_dense(hdf5_filename: String, gene_name: String) -> Result<()> {
         Ok(ds) => ds,
         Err(err) => {
             println!(
-                "output_string:{{\"status\":\"error\",\"message\":\"Failed to open samples dataset: {}\"}}",
-                err
+                "{}",
+                serde_json::json!({
+                    "status": "error",
+                    "message": format!("Failed to open samples dataset{}", err)
+                })
             );
             return Ok(());
         }
@@ -288,8 +302,11 @@ fn query_gene_dense(hdf5_filename: String, gene_name: String) -> Result<()> {
         Ok(s) => s,
         Err(err) => {
             println!(
-                "output_string:{{\"status\":\"error\",\"message\":\"Failed to read samples as VarLenAscii: {}\"}}",
-                err
+                "{}",
+                serde_json::json!({
+                    "status": "error",
+                    "message": format!("Failed to read samples as VarLenAscii: {}", err)
+                })
             );
             return Ok(());
         }
@@ -303,8 +320,11 @@ fn query_gene_dense(hdf5_filename: String, gene_name: String) -> Result<()> {
         Some(index) => index,
         None => {
             println!(
-                "output_string:{{\"status\":\"error\",\"message\":\"Gene '{}' not found in the dataset\"}}",
-                gene_name
+                "{}",
+                serde_json::json!({
+                    "status": "error",
+                    "message": format!("Gene '{}' not found in the dataset", gene_name)
+                })
             );
             return Ok(());
         }
@@ -315,8 +335,11 @@ fn query_gene_dense(hdf5_filename: String, gene_name: String) -> Result<()> {
         Ok(ds) => ds,
         Err(err) => {
             println!(
-                "output_string:{{\"status\":\"error\",\"message\":\"Failed to open counts dataset: {}\"}}",
-                err
+                "{}",
+                serde_json::json!({
+                    "status": "error",
+                    "message": format!("Failed to open counts dataset: {}", err)
+                })
             );
             return Ok(());
         }
@@ -325,7 +348,11 @@ fn query_gene_dense(hdf5_filename: String, gene_name: String) -> Result<()> {
     // Make sure the gene index is valid for this dataset
     if gene_index >= counts_dataset.shape()[0] {
         println!(
-            "output_string:{{\"status\":\"error\",\"message\":\"Gene index is out of bounds for the dataset\"}}"
+            "{}",
+            serde_json::json!({
+                "status": "error",
+                "message": "Gene index is out of bounds for the dataset"
+            })
         );
         return Ok(());
     }
@@ -345,11 +372,14 @@ fn query_gene_dense(hdf5_filename: String, gene_name: String) -> Result<()> {
             let dataset_shape = counts_dataset.shape();
             if dataset_shape.len() != 2 {
                 println!(
-                    "output_string:{{\"status\":\"error\",\"message\":\"Expected a 2D dataset for counts\"}}"
+                    "{}",
+                    serde_json::json!({
+                        "status": "error",
+                        "message": "Expected a 2D dataset for counts"
+                    })
                 );
                 return Ok(());
             }
-
 
             // Try reading the entire dataset and then extracting the row
             match counts_dataset.read::<f64, Dim<[usize; 2]>>() {
@@ -359,7 +389,6 @@ fn query_gene_dense(hdf5_filename: String, gene_name: String) -> Result<()> {
                     gene_expression = row;
 
                     // Start building a flatter JSON structure
-                    // let mut output_string = String::from("{\"status\":\"success\",\"samples\":{");
                     let mut output_string = String::from("{\"samples\":{");
 
                     // Create direct key-value pairs where sample names are the keys
@@ -380,58 +409,52 @@ fn query_gene_dense(hdf5_filename: String, gene_name: String) -> Result<()> {
                     // Close the JSON object
                     output_string += "}}";
 
-                    // println!("output_string:{}", output_string);
+                    // println!("{}", output_string);
                 }
                 Err(err2) => {
                     println!(
-                        "output_string:{{\"status\":\"error\",\"message\":\"Failed to read expression values: {:?}, {:?}\"}}",
-                        err1, err2
+                        "{}",
+                        serde_json::json!({
+                            "status": "error",
+                            "message": format!("Failed to read expression values: {:?}, {:?}", err1, err2)
+                        })
                     );
                     return Ok(());
                 }
             }
         }
     }
-
-    // Create the output JSON
-    let mut output = String::new();
-
-
-    // Add metadata fields first
-    output.push_str(&format!("{{\"gene\":\"{}\",", gene_name)); // Add the gene name
-    output.push_str(&format!("\"dataId\":\"{}\",", gene_name)); // Use gene name as dataId
-
-    // Add samples object
-    output.push_str("\"samples\":{");
-
-    // Add key-value pairs for samples
+    // Create samples map
+    let mut samples_map = Map::new();
     for (i, sample) in samples.iter().enumerate() {
         if i < gene_expression.len() {
-            output.push_str(&format!(
-                "\"{}\":{}",
-                sample.replace("\\", ""),
-                gene_expression[i]
-            ));
+            // Add each sample to the map, clean the sample name and convert value to JSON Number
+            // Note: We need to handle potential NaN or infinity values that aren't valid in JSON
+            let value = if gene_expression[i].is_finite() {
+                Value::from(gene_expression[i])
+            } else {
+                Value::Null // Or choose a different representation for non-finite values
+            };
 
-            if i < gene_expression.len() - 1 && i < samples.len() - 1 {
-                output.push_str(",");
-            }
+            samples_map.insert(
+                sample.replace("\\", ""), // Clean the sample name
+                value,
+            );
         }
     }
 
+    // Build the complete JSON structure
+    let output_json = json!({
+        "gene": gene_name,
+        "dataId": gene_name,
+        "samples": samples_map
+    });
 
-    // Close data and root objects
-    output.push_str("}}");
-
-    // Remove any backslashes from the output
-    output = output.replace("\\", "");
-
-    // Output the final result
-    println!("output_string:{}", output);
+    // Output the JSON directly
+    println!("{}", output_json);
 
     Ok(())
 }
-
 
 /// Reads expression data for a specific gene from a sparse format HDF5 file (from original readHD5.rs)
 ///
@@ -531,12 +554,15 @@ fn query_gene_sparse(hdf5_filename: String, gene_name: String) -> Result<()> {
             index
         }
         None => {
-            println!("output_string:{}", serde_json::json!({
-                "status": "failure",
-                "message": format!("Gene '{}' not found in the HDF5 file '{}'", gene_name, &hdf5_filename),
-                "file_path": hdf5_filename,
-                "gene": gene_name
-            }));
+            println!(
+                "{}",
+                serde_json::json!({
+                    "status": "failure",
+                    "message": format!("Gene '{}' not found in the HDF5 file '{}'", gene_name, &hdf5_filename),
+                    "file_path": hdf5_filename,
+                    "gene": gene_name
+                })
+            );
             return Ok(());
         }
     };
@@ -570,7 +596,7 @@ fn query_gene_sparse(hdf5_filename: String, gene_name: String) -> Result<()> {
     // Generate the complete array from the sparse array
     let mut gene_array: Array1<f64> = Array1::zeros(num_samples);
     let time_generating_full_array = Instant::now();
-    
+
     // Fill in the values at the populated column indices
     for (idx, &col_id) in populated_column_ids.iter().enumerate() {
         gene_array[col_id] = populated_column_values[idx];
@@ -584,13 +610,13 @@ fn query_gene_sparse(hdf5_filename: String, gene_name: String) -> Result<()> {
             samples[i].to_string().replace("\\", ""),
             gene_array[i].to_string()
         );
-        
+
         if i != gene_array.len() - 1 {
             output_string += &",";
         }
     }
     output_string += &"}".to_string();
-    
+
     println!(
         "Time generating full array:{:?}",
         time_generating_full_array.elapsed()
@@ -618,15 +644,15 @@ fn main() -> Result<()> {
 
                     // Then, check if we have a gene to query
                     if let Some(gene_name) = json_string["gene"].as_str() {
-                        let gene_query_time = Instant::now();
+                        // let gene_query_time = Instant::now();
                         query_gene(hdf5_filename, gene_name.to_string())?;
-                        println!("Time for querying gene: {:?}", gene_query_time.elapsed());
+                        // println!("Time for querying gene: {:?}", gene_query_time.elapsed());
                     }
-                }  
+                }
                 Err(error) => println!("Incorrect json: {}", error),
-            }  
-        }  
+            }
+        }
         Err(error) => println!("Piping error: {}", error),
-    }  
+    }
     Ok(())
 }
