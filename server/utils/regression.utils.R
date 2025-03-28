@@ -24,7 +24,8 @@
 #######
 
 # prepare data table
-prepareDataTable <- function(dat, independent) {
+prepareDataTable <- function(tempdat, independent) {
+  dat <- tempdat[,colnames(tempdat) != "__sample"] # remove sample column
   for (r in 1:nrow(independent)) {
     variable <- independent[r,]
     id <- variable$id
