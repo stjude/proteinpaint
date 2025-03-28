@@ -17,6 +17,9 @@ RUN apt-get update && apt-get install -y \
   && rm -rf /tmp/downloaded_packages/ /tmp/*.rds
 
 
+# ADD R packages
+
+
 RUN apt-get update && apt-get install -y clang; \
     cargo install sccache \
     ## clean up

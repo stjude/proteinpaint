@@ -42,6 +42,8 @@ import { getResult } from '#src/gene.js'
 import { validate_query_getTopTermsByType } from '#routes/termdb.topTermsByType.ts'
 import { validate_query_getSampleImages } from '#routes/termdb.sampleImages.ts'
 import { validate_query_rnaseqGeneCount } from '#routes/termdb.DE.ts'
+import { validate_query_getSampleWSImages } from '#routes/samplewsimages.ts'
+import { validate_query_getWSISamples } from '#routes/wsisamples.ts'
 
 /*
 init
@@ -141,8 +143,8 @@ export async function init(ds, genome) {
 		await validate_query_metaboliteIntensity(ds, genome)
 		await validate_query_getTopTermsByType(ds, genome) //will be used to get top terms when supported
 		await validate_query_getSampleImages(ds, genome)
-		// TODO verify this?
-		// await validate_query_getSampleWSImages(ds, genome)
+		await validate_query_getSampleWSImages(ds, genome)
+		await validate_query_getWSISamples(ds, genome)
 		await validate_query_rnaseqGeneCount(ds, genome)
 		await validate_query_singleSampleMutation(ds, genome)
 		await validate_query_singleSampleGenomeQuantification(ds, genome)

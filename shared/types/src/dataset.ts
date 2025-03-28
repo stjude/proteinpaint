@@ -850,6 +850,8 @@ export type WSImages = {
 	// path to the folder where sample images are stored
 	imageBySampleFolder?: string
 
+	hasDb?: boolean
+
 	getSamples: (ds: any, tpmaster?: string) => Promise<Array<WSISample>>
 	getWSImages: (ds: any, sampleName: string, tpmaster?: string) => Promise<WSImage[]>
 }

@@ -16,6 +16,8 @@ jobs:
       - name: build rust
         run: |
           cd rust && cargo build --release
+          Rscript complile.R
+          
           ./extract_binaries.sh
 
       - name: Upload Artifact
