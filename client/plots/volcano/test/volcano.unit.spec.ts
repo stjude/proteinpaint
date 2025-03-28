@@ -153,7 +153,7 @@ tape('setPointData', function (test) {
 	const viewModel = new VolcanoViewModel(mockConfig as any, mockResponse, mockSettings as any)
 
 	const plotDim = viewModel.setPlotDimensions()
-	const pointData = viewModel.setPointData(plotDim)
+	const pointData = viewModel.setPointData(plotDim, 'red', 'blue')
 
 	test.equal(pointData.length, 10, 'Should properly set pointData length')
 	test.equal(
