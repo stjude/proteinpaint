@@ -95,8 +95,14 @@ type bcfMafFile = {
 type SnvindelByIsoform = {
 	/** if true, served from gdc. no other parameters */
 	gdcapi?: true
-	/** getter function to retrieve data. dynamically added or ds-supplied */
-	get?: (f: any) => void
+	/** getter function to retrieve data. dynamically added or ds-supplied
+	first argument is required and allow for 2 additional ones
+	*/
+	get?: (f: any, f2?: any, f3?: any) => void
+	/** if true, all tw from one client query must be processed via one call to snvindel.byisoform.get()
+	and no longer processes each tw by calling mayGetGeneVariantData()
+	*/
+	processTwsInOneQuery?: true
 }
 
 type SnvindelByRange = {
