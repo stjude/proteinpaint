@@ -303,13 +303,9 @@ function makeRinput(q, sampledata) {
 	const data = []
 	for (const tmp of sampledata) {
 		const { sample, id2value } = tmp
-		if (!id2value.has(q.outcome.$id)) {
-			tmp.noOutcome = true // to be able to skip this sample in snplocusPostprocess
-			continue
-		}
-		const out = id2value.get(q.outcome.$id)
-
 		let skipsample = false
+		const out = id2value.get(q.outcome.$id)
+		if (!out) continue
 		for (const tw of q.independent) {
 			// tw = termWrapper
 			if (tw.type == 'snplocus') {
@@ -337,7 +333,7 @@ function makeRinput(q, sampledata) {
 
 		// this sample has values for all variables and is eligible for regression analysis
 		// fill entry with data of sample for each variable
-		const entry = {} // { variable1: value, variable2: value, variable3: value, ...}
+		const entry = { __sample: sample } // sample id will be used in snplocusPostprocess()
 		// outcome variable
 		if (q.regressionType == 'linear') {
 			// linear regression, therefore continuous outcome
@@ -497,7 +493,7 @@ function validateRinput(Rinput) {
 		nvariables = nvariables + 1
 	}
 	// check if all data entries have same number of variables
-	if (Rinput.data.find(entry => Object.keys(entry).length != nvariables)) {
+	if (Rinput.data.find(entry => Object.keys(entry).length - 1 != nvariables)) {
 		throw 'unequal number of variables in data entries'
 	}
 
@@ -770,18 +766,15 @@ async function lowAFsnps_wilcoxon(tw, sampledata, Rinput, result) {
 	const wilcoxInput = []
 	const snpid2scale = new Map() // k: snpid, v: {minv,maxv} for making scale in boxplot
 	for (const [snpid, snpO] of tw.lowAFsnps) {
-		let RinputDataidx = 0
 		let minv = null,
 			maxv = null
 		const hasEffAlleleValues = [],
 			noEffAlleleValues = []
-		for (const { sample, noOutcome } of sampledata) {
-			if (noOutcome) continue
-			const outcomeValue = Rinput.data[RinputDataidx++].outcome
-			if (!Number.isFinite(outcomeValue)) {
-				// outcome value is not numeric
-				continue
-			}
+		for (const { sample } of sampledata) {
+			const d = Rinput.data.find(d => d.__sample == sample)
+			if (!d) continue
+			const outcomeValue = d.outcome
+			if (!Number.isFinite(outcomeValue)) throw 'outcome value is not numeric'
 			const gt = snpO.samples.get(sample)
 			if (!gt) {
 				// missing gt for this sample
@@ -874,12 +867,9 @@ async function lowAFsnps_fisher(tw, sampledata, Rinput, result) {
 			outcome1noale = 0, // outcome=yes, no allele
 			outcome1hasale = 0 // outcome=yes, has allele
 
-		// Rinput.data[] is a subset of sampledata[], though they're in same order
-		// see makeRinput()
-		let RinputDataidx = 0
-		for (const { sample, noOutcome } of sampledata) {
-			if (noOutcome) continue
-			const d = Rinput.data[RinputDataidx++]
+		for (const { sample } of sampledata) {
+			const d = Rinput.data.find(d => d.__sample == sample)
+			if (!d) continue
 			// outcome is the outcome term value in R input: either 0 or 1
 			const outcome = 'outcome' in d ? d.outcome : d.outcome_event
 			if (outcome != 0 && outcome != 1) throw 'outcome is not 0 or 1'
@@ -950,12 +940,9 @@ async function lowAFsnps_cuminc(tw, sampledata, Rinput, result) {
 	// because at least one allele is not found in any sample
 	for (const [snpid, snpO] of tw.lowAFsnps) {
 		const snpData = []
-		// Rinput.data[] is a subset of sampledata[], though they're in same order
-		// see makeRinput()
-		let RinputDataidx = 0
-		for (const { sample, noOutcome } of sampledata) {
-			if (noOutcome) continue
-			const d = Rinput.data[RinputDataidx++]
+		for (const { sample } of sampledata) {
+			const d = Rinput.data.find(d => d.__sample == sample)
+			if (!d) continue
 			if (d.outcome_event !== 0 && d.outcome_event !== 1) throw 'd.outcome_event is not 0/1'
 			if (!Number.isFinite(d.outcome_time)) throw 'd.outcome_time is not numeric'
 
@@ -1401,9 +1388,10 @@ function replaceTermId(Rinput) {
 
 	// replace IDs of variables in data
 	for (const entry of Rinput.data) {
-		for (const vid in entry) {
-			entry[originalId2id[vid]] = entry[vid]
-			delete entry[vid]
+		for (const id of Object.keys(entry)) {
+			if (id == '__sample') continue
+			entry[originalId2id[id]] = entry[id]
+			delete entry[id]
 		}
 	}
 
