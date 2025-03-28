@@ -372,9 +372,7 @@ async function validateNative(q: GeneExpressionQueryNative, ds: any, genome: any
 		if (!q.samples) q.samples = []
 
 		// Validate that the HDF5 file exists
-		await utils.file_is_readable(q.file).catch(_error => {
-			throw `HDF5 file not found: ${q.file}`
-		})
+		await utils.file_is_readable(q.file)
 
 		// Validate the HDF5 file
 		try {
@@ -422,15 +420,7 @@ async function validateNative(q: GeneExpressionQueryNative, ds: any, genome: any
 					// Query expression values for the specific gene
 					const geneQuery = await queryGeneExpression(q.file, geneTerm.gene)
 
-					// Parse the JSON output
-					const jsonMatch = geneQuery.match(/output_string:(.*)/)
-					if (!jsonMatch || !jsonMatch[1]) {
-						console.warn(`No data found for gene: ${geneTerm.gene}`)
-						continue
-					}
-
-					const jsonString = jsonMatch[1]
-					const geneData = JSON.parse(jsonString)
+					const geneData = JSON.parse(geneQuery)
 
 					// Extract just the samples data - this is the key change
 					const samplesData = geneData.samples || {}
