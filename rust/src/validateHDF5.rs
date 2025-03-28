@@ -147,7 +147,7 @@ pub fn validate_hdf5_file(hdf5_filename: String) -> Result<()> {
     };
 
     // Print the output
-    println!("output_string:{}", output);
+    println!("{}", output);
 
     Ok(())
 }
@@ -166,7 +166,7 @@ fn main() -> Result<()> {
                         None => {
                             eprintln!("HDF5 filename not provided");
                             println!(
-                                "output_string:{}",
+                                "{}",
                                 serde_json::json!({
                                     "status": "error",
                                     "message": "HDF5 filename not provided"
@@ -184,7 +184,7 @@ fn main() -> Result<()> {
                     if let Err(err) = validate_hdf5_file(hdf5_filename.clone()) {
                         eprintln!("Error validating HDF5 file: {:?}", err);
                         println!(
-                            "output_string:{}",
+                            "{}",
                             serde_json::json!({
                                 "status": "error",
                                 "message": format!("Error validating HDF5 file: {}", err)
@@ -198,7 +198,7 @@ fn main() -> Result<()> {
                 Err(error) => {
                     eprintln!("Incorrect JSON: {}", error);
                     println!(
-                        "output_string:{}",
+                        "{}",
                         serde_json::json!({
                             "status": "error",
                             "message": format!("Invalid JSON input: {}", error)
@@ -210,7 +210,7 @@ fn main() -> Result<()> {
         Err(error) => {
             eprintln!("Piping error: {}", error);
             println!(
-                "output_string:{}",
+                "{}",
                 serde_json::json!({
                     "status": "error",
                     "message": format!("Error reading input: {}", error)
