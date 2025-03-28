@@ -1,6 +1,7 @@
 import fs from 'fs'
 import path from 'path'
 export * from './ReqResCache.js'
+export * from './closestSpec.js'
 
 export function setRoutes(app, routes, _opts = {}) {
 	const opts = Object.assign({ basepath: '' }, _opts)

@@ -23,6 +23,11 @@
       "covered": 55,
       "skipped": 0,
       "pct": 70.51
+    },
+    "lowestPct": {
+      "prev": 0,
+      "curr": 70.51,
+      "diff": 70.51
     }
   },
   "filter/tvs.categorical.js": {
@@ -49,6 +54,11 @@
       "covered": 18,
       "skipped": 0,
       "pct": 69.23
+    },
+    "lowestPct": {
+      "prev": 0,
+      "curr": 69.23,
+      "diff": 69.23
     }
   },
   "filter/tvs.numeric.js": {
@@ -75,6 +85,11 @@
       "covered": 30,
       "skipped": 0,
       "pct": 18.07
+    },
+    "lowestPct": {
+      "prev": 0,
+      "curr": 18.07,
+      "diff": 18.07
     }
   }
 }
