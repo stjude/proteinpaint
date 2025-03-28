@@ -1,19 +1,9 @@
-import {
-	mclass,
-	dt2label,
-	dtsnvindel,
-	dtcnv,
-	dtfusionrna,
-	geneVariantTermGroupsetting,
-	dtTerms
-} from '#shared/common.js'
+import { dtsnvindel, dtcnv, dtfusionrna, geneVariantTermGroupsetting, dtTerms } from '#shared/common.js'
 import { getPillNameDefault, set_hiddenvalues } from '../termsetting'
 import type {
-	GeneVariantBaseQ,
 	GeneVariantQ,
 	GeneVariantTW,
 	GeneVariantTermSettingInstance,
-	PredefinedGroupSettingQ,
 	TermGroupSetting,
 	VocabApi,
 	DtTerm
