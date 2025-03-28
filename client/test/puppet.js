@@ -188,21 +188,34 @@ async function runTest(patternsStr) {
 	const coveredFilenames = Object.keys(relevantCoverage)
 	if (coveredFilenames.length) {
 		const failedCoverage = new Map()
-		const { default: closestSpecCoverage } = await import('./closestSpec-coverage.json', { with: { type: 'json' } })
+		const { default: previousCoverage } = await import('./closestSpec-coverage.json', { with: { type: 'json' } })
+		const getPct = v => (Object.hasOwn(v, 'pct') ? v.pct : 0)
 		for (const f of coveredFilenames) {
-			if (!Object.hasOwn(closestSpecCoverage, f)) continue
-			const prev = Math.min(...Object.values(closestSpecCoverage[f]).map(v => v.pct))
-			const curr = Math.min(...Object.values(relevantCoverage[f]).map(v => v.pct))
-			const diff = curr - prev
-			relevantCoverage[f].lowestPct = { curr, prev, diff }
-			if (diff < 0) failedCoverage.set(f, relevantCoverage[f])
-			// TODO: may require other, stricter criteria much later
+			if (!Object.hasOwn(previousCoverage, f)) continue
+			{
+				const prev = getLowestPct(previousCoverage[f])
+				const curr = getLowestPct(relevantCoverage[f])
+				const diff = curr - prev
+				relevantCoverage[f].lowestPct = { curr, prev, diff }
+				if (diff < 0) failedCoverage.set(f, relevantCoverage[f])
+			}
+			{
+				const prev = getAveragePct(previousCoverage[f])
+				const curr = getAveragePct(relevantCoverage[f])
+				const diff = curr - prev
+				relevantCoverage[f].averagePct = { curr, prev, diff }
+				if (diff < 0) failedCoverage.set(f, relevantCoverage[f])
+			}
+			// TODO: require other, stricter criteria later
 		}
 		fs.writeFileSync(path.join(__dirname, 'branch-coverage.json'), JSON.stringify(relevantCoverage, null, '  '))
 		if (!failedCoverage.size) {
-			console.log('\n 👏👏👏 Branch coverage test PASSED: lowest percent did not decrease! 🎉🎉🎉 \n')
+			console.log('\n👏 Branch coverage test PASSED! 🎉')
+			console.log('--- Percent coverage was maintained or improved across relevant files! ---\n')
 		} else {
-			console.log(`\n!!! Failed coverage: lowest percent decreased !!!`)
+			console.log(
+				`\n!!! Failed coverage: average and/or lowest percent coverage decreased for ${failedCoverage.size} relevant files !!!`
+			)
 			console.log(Object.fromEntries(failedCoverage.entries()))
 			console.log(`\n`)
 			process.exit(1)
@@ -217,6 +230,27 @@ async function runTest(patternsStr) {
 		}
 		console.log(`\n`)
 	}
+}
+
+function getLowestPct(result) {
+	if (Object.hasOwn(result, 'lowestPct')) return result.lowestPct.curr
+	const values = Object.values(result)
+	if (!values.length) return 0
+	let min
+	for (const v of values) {
+		if (!Object.hasOwn(v, 'pct')) continue
+		if (min === undefined || min > v.pct) min = v.pct
+	}
+	return min
+}
+
+function getAveragePct(result) {
+	if (Object.hasOwn(result, 'averagePct')) return result.averagePct.curr
+	const values = Object.values(result)
+	if (!values.length) return 0
+	let total = 0
+	for (const v of values) total += Object.hasOwn(v, 'pct') ? v.pct : 0
+	return total / values.length
 }
 
 function initServer() {

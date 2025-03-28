@@ -103,6 +103,7 @@ jobs:
 
       - name: Generate branch coverage report
         run: |
+          git fetch --depth=10 origin master:master
           cd ./container/coverage
           xvfb-run --auto-servernum ./test.sh branch
 
