@@ -280,18 +280,9 @@ async function validateHDF5File(filePath) {
 			hdf5_file: filePath
 		})
 
-		console.log(`Validating HDF5 file: ${filePath}`)
-
 		// Call the Rust validator
 		const result = await run_rust('validateHDF5', jsonInput)
-		const validationData = JSON.parse(result)
-		console.log(`File format: ${validationData.format}, Samples: ${validationData.sampleNames?.length || 0}`)
-		return validationData
-		// If no output was found
-		return {
-			status: 'error',
-			message: 'No validation data found in output'
-		}
+		return JSON.parse(result)
 	} catch (error) {
 		console.error(`Error validating file: ${error}`)
 		return {
@@ -318,7 +309,6 @@ async function queryGeneExpression(hdf5_file, geneName) {
 
 	try {
 		// Call the Rust script with input parameters
-		console.log('Calling readHDF5 Rust script...')
 		// console.log('Params:', JSON.stringify(jsonInput));
 		// const result = await run_rust('readDenseHDF5', jsonInput);
 		const result = await run_rust('readHDF5', jsonInput)
@@ -349,30 +339,28 @@ async function queryGeneExpression(hdf5_file, geneName) {
 async function validateNative(q: GeneExpressionQueryNative, ds: any, genome: any) {
 	// Determine whether we're handling an HDF5 file or a tabix file
 	if (q.hdf5File === true) {
-		// HDF5 file handling branch
-		const h5FilePath = q.file
+		// q.file is hdf5 file. TODO once all ds are migrated, delete this flag
+		q.file = path.join(serverconfig.tpmasterdir, q.file)
 
-		// Join with master directory if needed
-		if (!h5FilePath.startsWith(serverconfig.tpmasterdir)) {
-			q.file = path.join(serverconfig.tpmasterdir, h5FilePath)
-		}
-
-		if (!q.samples) q.samples = []
+		q.samples = []
 
 		// Validate that the HDF5 file exists
 		await utils.file_is_readable(q.file)
 
 		// Validate the HDF5 file
 		try {
-			const validationResult = await validateHDF5File(q.file)
-
-			if (validationResult.status !== 'success') {
-				throw validationResult.message
+			const vr = await validateHDF5File(q.file)
+			if (vr.status !== 'success') throw vr.message
+			if (!vr.sampleNames?.length) throw 'HDF5 file has no samples'
+			for (const sn of vr.sampleNames) {
+				const si = ds.cohort.termdb.q.sampleName2id(sn)
+				if (si == undefined) throw 'unknown sample from HDF5: ' + sn
+				q.samples.push(si)
 			}
 
-			console.log(`HDF5 file validated: ${q.file} (Format: ${validationResult.format})`)
+			console.log(`${ds.label}: HDF5 file validated. Format: ${vr.format}, Samples:`, vr.sampleNames.length)
 		} catch (error) {
-			throw `Failed to validate HDF5 file: ${error}`
+			throw `${ds.label}: Failed to validate HDF5 file: ${error}`
 		}
 
 		q.get = async (param: TermdbClusterRequestGeneExpression) => {
