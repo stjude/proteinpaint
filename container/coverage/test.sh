@@ -1,10 +1,20 @@
 #!/bin/bash
 
+# This script is called by generate.sh and CI-coverage.yml
+# from the container/coverage dir
+
 set -exo pipefail
 
 # run from container/coverage dir
 COVDIR=$PWD
 
+# option to change the package script to run,
+# from default combined:coverage to <COVTYPE>:coverage
+COVTYPE="combined"
+if (($# > 0)); then
+  COVTYPE=$1 # "branch"
+fi
+echo "COVTYPE=[$COVTYPE]"
 ##############################
 # RUN SERVER
 ##############################
@@ -38,7 +48,7 @@ docker run -d \
 
 sleep 12
 cd $COVDIR/../../client
-$XVFB npm run combined:coverage
+$XVFB npm run $COVTYPE:coverage
 
 cd $COVDIR
 # close the server to trigger c8 to generate the coverage report for server tests
