@@ -41,7 +41,7 @@ export class DataPointMouseEvents {
 		this.addTooltipRow(table, 'Gene name', d.gene_name)
 		this.addTooltipRow(table, 'Gene symbol', d.gene_symbol)
 		this.addTooltipRow(table, 'log2(fold change)', roundValueAuto(d.fold_change))
-		this.addTooltipRow(table, 'Original p value (linear)', roundValueAuto(d.original_p_value))
-		this.addTooltipRow(table, 'Adjusted p value (linear)', roundValueAuto(d.adjusted_p_value))
+		this.addTooltipRow(table, 'Original p value', roundValueAuto(d.original_p_value))
+		this.addTooltipRow(table, 'Adjusted p value', roundValueAuto(d.adjusted_p_value))
 	}
 }
