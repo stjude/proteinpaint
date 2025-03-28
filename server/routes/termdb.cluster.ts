@@ -284,22 +284,10 @@ async function validateHDF5File(filePath) {
 
 		// Call the Rust validator
 		const result = await run_rust('validateHDF5', jsonInput)
-
-		// Parse the output
-		const lines = result.split('\n')
-		for (const line of lines) {
-			if (line.startsWith('output_string:')) {
-				// Extract the JSON part
-				const jsonStr = line.substring('output_string:'.length)
-				const validationData = JSON.parse(jsonStr)
-
-				console.log(`File format: ${validationData.format}, Samples: ${validationData.sampleNames?.length || 0}`)
-
-				return validationData
-			}
-		}
-
-		// If no output_string line was found
+		const validationData = JSON.parse(result)
+		console.log(`File format: ${validationData.format}, Samples: ${validationData.sampleNames?.length || 0}`)
+		return validationData
+		// If no output was found
 		return {
 			status: 'error',
 			message: 'No validation data found in output'
