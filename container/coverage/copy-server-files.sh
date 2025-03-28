@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# This script is called by generate.sh and CI-coverage.yml
+# from the container/coverage dir
+
 set -exo pipefail
 
 ##############################

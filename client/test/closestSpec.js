@@ -5,7 +5,7 @@ import { minimatch } from 'minimatch'
 
 const branch = execSync(`git rev-parse --abbrev-ref HEAD`, { encoding: 'utf8' })
 // TODO: may need to detect release branch instead of master
-const modifiedFiles = execSync(`git diff --name-status master..pr-coverage`, { encoding: 'utf8' })
+const modifiedFiles = execSync(`git diff --name-status master..${branch}`, { encoding: 'utf8' })
 // only added and modified code files should be tested
 const committedFiles = modifiedFiles
 	.split('\n')
@@ -13,7 +13,7 @@ const committedFiles = modifiedFiles
 	.map(l => l.split('\t').pop()) //; console.log(10, committedFiles)
 // detect staged files for local testing, should not have any in github CI
 const stagedFiles =
-	['tvs.js', 'tvs.categorical.js', 'tvs.numeric.js', 'FilterPrompt.js'].map(f => `client/filter/${f}`) || // uncomment to test
+	// ['tvs.js', 'tvs.categorical.js', 'tvs.numeric.js', 'FilterPrompt.js'].map(f => `client/filter/${f}`) || // uncomment to test
 	execSync(`git diff --cached --name-only | sed 's| |\\ |g'`, { encoding: 'utf8' }) // comment to test
 const changedFiles = new Set([...committedFiles, ...stagedFiles]) //; console.log(12, changedFiles)
 
