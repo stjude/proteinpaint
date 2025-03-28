@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- geneVariant groupsetting is now performed using stateless filters
+
 
 ## 2.113.0
 

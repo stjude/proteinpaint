@@ -1,2 +1,1 @@
-Features
-- geneVariant groupsetting is now performed using stateless filters
+
