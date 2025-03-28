@@ -25,6 +25,7 @@ export class VolcanoViewModel {
 	maxLogFoldChange = 0
 	minLogPValue = 0
 	maxLogPValue = 0
+	minNonZeroPValue = 1
 	readonly offset = 10
 	readonly bottomPad = 60
 	readonly horizPad = 70
@@ -74,20 +75,19 @@ export class VolcanoViewModel {
 			this.minLogFoldChange = Math.min(this.minLogFoldChange, d.fold_change)
 			this.maxLogFoldChange = Math.max(this.maxLogFoldChange, d.fold_change)
 			if (d[`${this.settings.pValueType}_p_value`] != 0) {
-				this.minLogPValue = Math.min(this.minLogPValue, d[`${this.settings.pValueType}_p_value`])
-				this.maxLogPValue = Math.max(this.maxLogPValue, d[`${this.settings.pValueType}_p_value`])
+				this.minLogPValue = Math.min(this.minLogPValue, -Math.log10(d[`${this.settings.pValueType}_p_value`]))
+				this.maxLogPValue = Math.max(this.maxLogPValue, -Math.log10(d[`${this.settings.pValueType}_p_value`]))
+				this.minNonZeroPValue = Math.min(this.minNonZeroPValue, d[`${this.settings.pValueType}_p_value`])
 			}
 		}
 	}
 
 	setPlotDimensions() {
-		//Add 10% to the max and min values for padding
+		//Add 5% to the max and min values for padding
 		const xScale = scaleLinear()
-			.domain([this.minLogFoldChange * 1.1, this.maxLogFoldChange * 1.1])
+			.domain([this.minLogFoldChange * 1.05, this.maxLogFoldChange * 1.05])
 			.range([0, this.settings.width])
-		const yScale = scaleLinear()
-			.domain([this.minLogPValue * 1.1, this.maxLogPValue * 1.1])
-			.range([this.settings.height, 0])
+		const yScale = scaleLinear().domain([this.minLogPValue, this.maxLogPValue]).range([this.settings.height, 0])
 		return {
 			svg: {
 				height: this.settings.height + this.topPad + this.bottomPad * 2,
@@ -137,8 +137,8 @@ export class VolcanoViewModel {
 				this.numSignificant++
 				const row = [
 					{ value: roundValueAuto(d.fold_change) },
-					{ value: roundValueAuto(Math.pow(10, -d.original_p_value)) },
-					{ value: roundValueAuto(Math.pow(10, -d.adjusted_p_value)) }
+					{ value: roundValueAuto(d.original_p_value) },
+					{ value: roundValueAuto(d.adjusted_p_value) }
 				]
 				if (this.dataType == 'genes') {
 					row.splice(0, 0, { value: d.gene_symbol })
@@ -148,7 +148,9 @@ export class VolcanoViewModel {
 				this.numNonSignificant++
 			}
 			d.x = plotDim.xScale.scale(d.fold_change) + this.horizPad + this.offset * 2
-			d.y = plotDim.yScale.scale(d[`${this.settings.pValueType}_p_value`]) + this.topPad - this.offset
+			const y =
+				d[`${this.settings.pValueType}_p_value`] == 0 ? this.minNonZeroPValue : d[`${this.settings.pValueType}_p_value`]
+			d.y = plotDim.yScale.scale(-Math.log10(y)) + this.topPad - this.offset
 			d.radius = radius
 		}
 		//Sort so the highlighted points appear on top
@@ -158,7 +160,7 @@ export class VolcanoViewModel {
 
 	isSignificant(d: DataPointEntry) {
 		return (
-			d[`${this.settings.pValueType}_p_value`] > this.pValueCutoff &&
+			-Math.log10(d[`${this.settings.pValueType}_p_value`]) > this.pValueCutoff &&
 			Math.abs(d.fold_change) > this.settings.foldChangeCutoff
 		)
 	}
