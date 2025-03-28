@@ -19,14 +19,23 @@ export default class WSISamplesPlot {
 	async main(): Promise<void> {
 		const state = this.app.getState()
 
+		const holder = this.opts.holder
+
 		const plotConfig = state.plots.find(p => p.id === this.id)
 
 		const settings = plotConfig.settings as Settings
 
+		const contentDiv = holder.append('div')
+
 		const wsiImages: WSISample[] = plotConfig.wsimages
 
 		for (const wsiImage of wsiImages) {
-			console.log(wsiImage)
+			contentDiv
+				.append('a')
+				.attr('href', `http://localhost:3000/example.wsi.viewer.html?sample_id=${wsiImage.sampleId}`)
+				.attr('target', '_blank')
+				.text(`View Sample: ${wsiImage.sampleId}`)
+				.style('display', 'block')
 		}
 	}
 }
