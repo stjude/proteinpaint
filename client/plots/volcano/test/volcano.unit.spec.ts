@@ -117,7 +117,7 @@ tape('setMinMaxValues', function (test) {
 	test.equal(viewModel.maxLogFoldChange, 0.6196, 'Should properly set maxLogFoldChange')
 	test.equal(viewModel.minLogPValue, -0.192065410979292, 'Should properly set minLogPValue')
 	test.equal(viewModel.maxLogPValue, 2.677780705266081, 'Should properly set maxLogPValue')
-	test.equal(viewModel.minNonZeroPValue, 0.0021, 'Should properly set minNonZeroPValue')
+	test.equal(viewModel.minNonZeroPValue, 1e-9, 'Should properly set minNonZeroPValue')
 
 	test.end()
 })
