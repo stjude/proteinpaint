@@ -27,7 +27,9 @@ export function getCodeText(namePattern = '*.spec.*') {
 	let pattern = namePattern
 	if (namePattern == '*.spec.*') {
 		ignore.push('**/_x_.*')
-		pattern = '*@(unit|integration).spec.*'
+		// use a more restrictive pattern in command-line or CI where process.argv[2] is always supplied,
+		// in dev getCodeText() is called without an argument in client/esbuild.config.mjs and can be more loose
+		if (arguments.length) pattern = '*@(unit|integration).spec.*'
 	}
 	const specs = glob.sync(`./**/test/${pattern}`, { cwd: __dirname, ignore }).map(file => ({ file, rel: `../${file}` }))
 	const sharedUtils = path.join(__dirname, '../shared/utils')
