@@ -921,8 +921,8 @@ fn adjust_p_values(mut original_p_values: Vec<PValueIndexes>) -> String {
             fold_change: original_p_values[i].fold_change,
             gene_name: original_p_values[i].gene_name.to_owned(),
             gene_symbol: original_p_values[i].gene_symbol.to_owned(),
-            original_p_value: (-1.0) * original_p_values[i].p_value.log10(),
-            adjusted_p_value: (-1.0) * adjusted_p_val.log10(),
+            original_p_value: original_p_values[i].p_value,
+            adjusted_p_value: adjusted_p_val,
         });
     }
     adjusted_p_values.sort_by(|a, b| a.index.cmp(&b.index));
@@ -954,8 +954,8 @@ fn adjust_p_values_bonferroni(original_p_values: Vec<PValueIndexes>) -> Vec<Adju
             gene_name: original_p_values[i].gene_name.to_owned(),
             gene_symbol: original_p_values[i].gene_symbol.to_owned(),
             fold_change: original_p_values[i].fold_change,
-            original_p_value: (-1.0) * original_p_values[i].p_value.log10(),
-            adjusted_p_value: (-1.0) * adjusted_p_value.log10(),
+            original_p_value: original_p_values[i].p_value,
+            adjusted_p_value: adjusted_p_value,
         });
     }
     adjusted_p_values

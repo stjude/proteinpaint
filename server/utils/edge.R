@@ -267,18 +267,12 @@ if (DE_method == "edgeR") {
 }
 
 final_data_generation_time <- system.time({
-  output <- data.frame(geneids, genesymbols, logfc, -log10(pvalues), -log10(adjust_p_values))
+  output <- data.frame(geneids, genesymbols, logfc, pvalues, adjust_p_values)
   names(output)[1] <- "gene_name"
   names(output)[2] <- "gene_symbol"
   names(output)[3] <- "fold_change"
   names(output)[4] <- "original_p_value"
   names(output)[5] <- "adjusted_p_value"
-  # Specify the columns to check for infinite values
-  cols_to_check_for_infinite_values <- c("fold_change", "original_p_value","adjusted_p_value")
-  # Identify rows with infinite values in the specified columns
-  rows_to_remove <- apply(output[, cols_to_check_for_infinite_values], 1, function(row) any(is.infinite(row)))
-  # Remove rows with infinite values
-  output <- output[!rows_to_remove, ]  
 })
 final_output <- c()
 final_output$gene_data <- output
