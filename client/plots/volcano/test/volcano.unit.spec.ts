@@ -115,8 +115,9 @@ tape('setMinMaxValues', function (test) {
 	viewModel.setMinMaxValues()
 	test.equal(viewModel.minLogFoldChange, -0.1281, 'Should properly set minLogFoldChange')
 	test.equal(viewModel.maxLogFoldChange, 0.6196, 'Should properly set maxLogFoldChange')
-	test.equal(viewModel.minLogPValue, 0, 'Should properly set minLogPValue')
-	test.equal(viewModel.maxLogPValue, 1.5562, 'Should properly set maxLogPValue')
+	test.equal(viewModel.minLogPValue, -0.192065410979292, 'Should properly set minLogPValue')
+	test.equal(viewModel.maxLogPValue, 2.677780705266081, 'Should properly set maxLogPValue')
+	test.equal(viewModel.minNonZeroPValue, 0.0021, 'Should properly set minNonZeroPValue')
 
 	test.end()
 })
@@ -139,7 +140,7 @@ tape('setPlotDimensions', function (test) {
 	test.deepEqual(plotDim.plot, { height: 400, width: 400, x: 90, y: 30 }, 'Should properly set plot')
 	test.deepEqual(
 		plotDim.logFoldChangeLine,
-		{ x: 158.53015915474123, y1: 30, y2: 430 },
+		{ x: 158.5301591547412, y1: 30, y2: 430 },
 		'Should properly set logFoldChangeLine'
 	)
 
