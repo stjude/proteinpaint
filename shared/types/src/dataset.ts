@@ -184,6 +184,8 @@ export type FilterTermEntry = BaseTvsFilter & {
 	isleaf: boolean
 	values?: FilterValues
 	tvs?: TvsFilter
+	min?: number
+	max?: number
 }
 
 type FilterLstTvs = BaseTvsFilter & {
