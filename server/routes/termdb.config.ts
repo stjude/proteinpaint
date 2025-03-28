@@ -163,13 +163,9 @@ function addMatrixplots(c, ds) {
 	})
 }
 
-/* ds.queries{} contains query methods for non-dictionary data types
-including genomic, molecular, imaging etc
-*/
+/* ds.queries{} contains diverse query types covering genomic, molecular, imaging etc
+ */
 function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome) {
-	// TODO: delete the following line, it's just an example to trigger a previous uncaught type error
-	// `cd proteinpaint/server; npx tsc` should emit an error for the following line, like
-	// routes/termdb.config.ts:156:6 - error TS18048: 'ds.queries' is possibly 'undefined'.
 	const q = ds.queries
 	if (!q) return
 	// this ds supports genomic query methods
@@ -188,6 +184,7 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome) {
 			details: q.snvindel.details,
 			populations: q.snvindel.populations
 		}
+		if (q.snvindel.byisoform?.processTwsInOneQuery) q2.snvindel.byisoform = { processTwsInOneQuery: true } // quick fix; may revise later
 	}
 	if (q.trackLst) {
 		q2.trackLst = q.trackLst

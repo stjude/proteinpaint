@@ -78,7 +78,7 @@ function validateArg(q, ds, genome) {
 
 async function getSampleData(q, ds, onlyChildren = false) {
 	// dictionary and non-dictionary terms require different methods for data query
-	const [dictTerms, nonDictTerms] = divideTerms(q.terms)
+	const [dictTerms, geneVariantTws, nonDictTerms] = divideTerms(q.terms)
 	const [samples, byTermId] = await getSampleData_dictionaryTerms(q, dictTerms, onlyChildren)
 	/* samples={}
 	this object collects term annotation data on all samples; even if there's no dict term it still return blank {}
@@ -92,24 +92,33 @@ async function getSampleData(q, ds, onlyChildren = false) {
 		return { samples, refs: { byTermId, bySampleId: {} } }
 	}
 
-	for (const tw of nonDictTerms) {
-		if (!tw.$id || tw.$id == 'undefined') tw.$id = tw.term.id || tw.term.name //for tests and backwards compatibility
-
-		// for each non dictionary term type
-		// query sample data with its own method and append results to "samples"
-		if (tw.term.type == 'geneVariant') {
+	if (geneVariantTws.length) {
+		// special handling of these tws
+		if (q.ds.queries?.snvindel?.byisoform?.processTwsInOneQuery) {
+			// special ds handling, must make one query with all tws, but not to process one tw a time
+			await q.ds.queries.snvindel.byisoform.get(q, geneVariantTws, samples)
+		} else {
+			// common ds handling, one query per tw
 			if (!q.ds.mayGetGeneVariantData) throw 'not supported by dataset: geneVariant'
-			if (tw.term.gene && q.ds.cohort?.termdb?.getGeneAlias) {
-				byTermId[tw.$id] = q.ds.cohort?.termdb?.getGeneAlias(q, tw)
-			}
+			for (const tw of geneVariantTws) {
+				if (tw.term.gene && q.ds.cohort?.termdb?.getGeneAlias) {
+					byTermId[tw.$id] = q.ds.cohort?.termdb?.getGeneAlias(q, tw)
+				}
 
-			const data = await q.ds.mayGetGeneVariantData(tw, q)
+				const data = await q.ds.mayGetGeneVariantData(tw, q)
 
-			for (const [sampleId, value] of data.entries()) {
-				if (!(sampleId in samples)) samples[sampleId] = { sample: sampleId }
-				samples[sampleId][tw.$id] = value[tw.$id]
+				for (const [sampleId, value] of data.entries()) {
+					if (!(sampleId in samples)) samples[sampleId] = { sample: sampleId }
+					samples[sampleId][tw.$id] = value[tw.$id]
+				}
 			}
-		} else if (tw.term.type == 'snp') {
+		}
+	}
+
+	// for each non dictionary term type
+	// query sample data with its own method and append results to "samples"
+	for (const tw of nonDictTerms) {
+		if (tw.term.type == 'snp') {
 			const sampleGTs = await getSnpData(tw, q)
 			const groupset = get_active_groupset(tw.term, tw.q)
 			for (const s of sampleGTs) {
@@ -335,20 +344,30 @@ export async function getSamplesPerFilter(q, ds, res) {
 }
 
 function divideTerms(lst) {
-	// quick fix to divide list of term to two lists
-	// TODO ways to generalize; may use `shared/usecase2termtypes.js` with "regression":{nonDictTypes:['snplst','prs']}
-	// shared between server and client
+	// divide query list of tw into following lists based on term type
 	const dict = [],
+		geneVariantTws = [],
 		nonDict = []
 	for (const tw of lst) {
 		const type = tw.term?.type
+		// TODO FIXME should require valid term type, reject if not and remove assumptions and guesses
 		if (type) {
-			if (isNonDictionaryType(type)) nonDict.push(tw)
-			else dict.push(tw)
-		} else if (tw.term?.id) dict.push(tw) // TODO: detect using term.type as part of request payload
-		else nonDict.push(tw) // TODO: detect using term.type as part of request payload
+			if (!tw.$id || tw.$id == 'undefined') tw.$id = tw.term.id || tw.term.name //for tests and backwards compatibility
+			if (type == TermTypes.GENE_VARIANT) {
+				geneVariantTws.push(tw) // collect into own list to process separately later
+			} else if (isNonDictionaryType(type)) {
+				nonDict.push(tw)
+			} else {
+				dict.push(tw)
+			}
+		} else if (tw.term?.id) {
+			// term.type missing and has term.id, assume it is shorthand for coding up dict term on client
+			dict.push(tw)
+		} else {
+			nonDict.push(tw)
+		}
 	}
-	return [dict, nonDict]
+	return [dict, geneVariantTws, nonDict]
 }
 
 /*
