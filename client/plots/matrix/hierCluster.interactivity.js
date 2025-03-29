@@ -1,6 +1,7 @@
 import { renderTable } from '#dom'
 import { clusterMethodLst, distanceMethodLst } from '#shared/clustering.js'
 import { select } from 'd3-selection'
+import { TermTypes } from '#shared/terms.js'
 
 // Given a clusterId, return all its children clusterIds
 export function getAllChildrenClusterIds(clickedClusterId, left) {
@@ -508,5 +509,8 @@ function updateClusteringControls(self, app, parent, table) {
 				.closest('tr')
 		)
 		colorSchemeControl.style('display', 'none')
+	}
+	if (parent.chartType == 'hierCluster' && parent.config.dataType == TermTypes.GENE_EXPRESSION) {
+		self.appendGeneInputs(self, app, parent, table, 'hierCluster')
 	}
 }
