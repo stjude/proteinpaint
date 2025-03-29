@@ -1,37 +1,38 @@
 import { execSync } from 'child_process'
 import path from 'path'
 import * as glob from 'glob'
-//import { minimatch } from 'minimatch'
+
+export const gitProjectRoot = execSync(`git rev-parse --show-toplevel`, { encoding: 'utf8' }).trim()
+const ignore = ['dist/**', 'node_modules/**']
 
 /*
 	dirname: the directory name of the 
 	relevantSubdir: string[] // array of subdirectory names under the workspace dir that have relevant code for test coverage
 */
 
-const gitProjectRoot = execSync(`git rev-parse --show-toplevel`, { encoding: 'utf8' }).trim()
-// this cache will persist in the same node call
-// const matchedByDirFile = new Map()
-
 export function getClosestSpec(dirname, relevantSubdirs = [], opts = {}) {
 	const workspace = dirname.replace(gitProjectRoot + '/', '')
 	const workspace_ = workspace + '/'
-	// if (opts.cache && matchedByDirFile.has(workspace)) return matchedByDirFile.get(workspace)
 
 	const branch = execSync(`git rev-parse --abbrev-ref HEAD`, { encoding: 'utf8' })
-	// TODO: may need to detect release branch instead of master
-	const modifiedFiles = execSync(`git diff --name-status master..${branch}`, { encoding: 'utf8' })
-	// only added and modified code files should be tested
-	const committedFiles = modifiedFiles
-		.split('\n')
-		.filter(l => l[0] === 'A' || l[0] === 'M')
-		.map(l => l.split('\t').pop()) //; console.log(10, committedFiles)
-	// detect staged files for local testing, should not have any in github CI
-	const stagedFiles =
-		opts.stagedFiles || execSync(`git diff --cached --name-only | sed 's| |\\ |g'`, { encoding: 'utf8' })
-	const changedFiles = new Set([...committedFiles, ...stagedFiles]) //; console.log({changedFiles})
 
-	const ignore = ['dist/**', 'node_modules/**']
-	const specs = glob.sync(`**/test/*.spec.*s`, { cwd: dirname, ignore })
+	let changedFiles
+	if (opts.changedFiles) changedFiles = opts.changedFiles
+	else {
+		// TODO: may need to detect release branch instead of master
+		const modifiedFiles = execSync(`git diff --name-status master..${branch}`, { encoding: 'utf8' })
+		// only added and modified code files should be tested
+		const committedFiles = modifiedFiles
+			.split('\n')
+			.filter(l => l[0] === 'A' || l[0] === 'M')
+			.map(l => l.split('\t').pop()) //; console.log(10, committedFiles)
+
+		// detect staged files for local testing, should not have any in github CI
+		const stagedFiles = execSync(`git diff --cached --name-only | sed 's| |\\ |g'`, { encoding: 'utf8' })
+		changedFiles = new Set([...committedFiles, ...stagedFiles])
+	} //; console.log({changedFiles})
+
+	const specs = opts.specs || glob.sync(`**/test/*.spec.*s`, { cwd: dirname, ignore })
 
 	// key: spec dir,name pattern
 	// value: array of filenames that the pattern applies for test coverage
@@ -57,13 +58,18 @@ export function getClosestSpec(dirname, relevantSubdirs = [], opts = {}) {
 
 		const fileName = path.basename(f)
 		const fileNameSegments = fileName.split('.')
+		// try to find the closest matching spec name based on the filename
 		while (fileNameSegments.length > 1) {
 			fileNameSegments.pop()
 			const truncatedFilename = fileNameSegments.join('.')
 			// console.log(50, {truncatedFilename}, `${truncatedFilename}.unit.spec`)
 			const unitName = `${truncatedFilename}.unit.spec.`
-			const integrationName = `/${truncatedFilename}.integration.spec.`
-			const matchedSpecs = specs.filter(f => f.includes(unitName) || f.includes(integrationName))
+			const integrationName = `${truncatedFilename}.integration.spec.`
+			const matchedSpecs = specs.filter(s => {
+				if (!s.includes(unitName) && !s.includes(integrationName)) return false
+				const spath = s.slice(0, s.indexOf(`/test/`))
+				return f.startsWith(spath)
+			})
 			if (matchedSpecs.length) {
 				matchedByFile[f] = matchedSpecs
 				matched.push(...matchedSpecs)
@@ -72,6 +78,7 @@ export function getClosestSpec(dirname, relevantSubdirs = [], opts = {}) {
 		}
 
 		if (!matched.length) {
+			// try to find the closest matching spec name based on directory name
 			const dirPath = path.dirname(f)
 			const dirPathSegments = dirPath.split('/')
 			while (dirPathSegments.length) {
@@ -88,7 +95,6 @@ export function getClosestSpec(dirname, relevantSubdirs = [], opts = {}) {
 		}
 	}
 
-	// if (opts.cache) matchedByDirFile.set(workspace, matchedByFile)
 	const dedupedMatched = [...new Set(matched)]
 	return {
 		matchedByFile,

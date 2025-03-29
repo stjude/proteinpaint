@@ -11,7 +11,7 @@ const serverDir = path.join(import.meta.dirname, '..')
 const relevantServerDirs = ['routes', 'src', 'utils']
 //const EMPTY = 'NO_BRANCH_COVERAGE_UPDATE'
 const opts = {
-	stagedFiles: ['auth.js'].map(f => `server/src/${f}`)
+	changedFiles: ['auth.js'].map(f => `server/src/${f}`)
 }
 
 //console.log(getBranchServerSpecs())

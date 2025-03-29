@@ -23,8 +23,8 @@ const relevantClientDirs = [
 	'tw'
 ]
 const opts = {
-	//stagedFiles: ['tvs.js', 'tvs.categorical.js', 'tvs.numeric.js', 'FilterPrompt.js'].map(f => `client/filter/${f}`),
-	stagedFiles: ['handlers/snp.ts'].map(f => `client/termsetting/${f}`)
+	//changedFiles: ['tvs.js', 'tvs.categorical.js', 'tvs.numeric.js', 'FilterPrompt.js'].map(f => `client/filter/${f}`),
+	changedFiles: ['handlers/snp.ts'].map(f => `client/termsetting/${f}`)
 }
 
 const EMPTY = 'NO_BRANCH_COVERAGE_UPDATE'
