@@ -1,12 +1,6 @@
 name: Branch Test Coverage
 
 on:
-  schedule:
-    # since this combined coverage CI runs integration tests (in addition to unit tests),
-    # the integration CI should be done more frequently on every push to master, since 
-    # it is more straightforward to set up and is less brittle than the coverage container
-    - cron: '0 6 * * *'
-
   workflow_dispatch:
     inputs:
       build_secret:
