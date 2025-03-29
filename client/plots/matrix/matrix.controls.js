@@ -350,7 +350,7 @@ export class MatrixControls {
 			.append('button')
 			//.property('disabled', d => d.disabled)
 			.datum({
-				label: 'Genes',
+				label: this.parent.chartType == 'hierCluster' ? 'Unclustered Genes' : 'Genes',
 				getCount: () => this.parent.termOrder?.filter(t => t.tw.term.type == 'geneVariant').length || 0,
 				customInputs: this.appendGeneInputs,
 				rows: [
