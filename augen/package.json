@@ -5,11 +5,15 @@
   "type": "module",
   "main": "src/augen.js",
   "bin": "cli.js",
+  "imports": {
+    "#src/*": "./src/*",
+    "#public/*": "./public/*"
+  },
   "scripts": {
     "predev": "tsx test/prep.js",
     "dev": "npm run doc && tsx watch test/app.js",
-    "pretest": "tsx test/prep.js && typia generate --input test/checkers-raw --output test/checkers",
-    "test": "tsx test/unit.spec.js",
+    "pretest": "tsx src/test/toyApp/prep.js && typia generate --input src/test/toyApp/checkers-raw --output src/test/toyApp/checkers",
+    "test": "tsx src/test/runSpecs.js",
     "doc": "./build.sh test/routes test/types test/checkers public/docs"
   },
   "author": "",
