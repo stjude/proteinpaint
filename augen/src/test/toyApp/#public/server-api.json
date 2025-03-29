@@ -1,0 +1,1 @@
+[{"endpoint":"abc","methods":{"get":{"request":{"typeId":"AbcRequest"},"response":{"typeId":"AbcResponse"},"examples":[{"request":null,"response":{"header":{"status":200}}}]},"post":{"alternativeFor":"get"}},"file":"abc.js"}]

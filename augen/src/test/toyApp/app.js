@@ -1,5 +1,5 @@
 import express from 'express'
-import { setRoutes } from '../src/augen.js'
+import { setRoutes } from '#src/augen.js'
 import { readdirSync } from 'fs'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
@@ -21,11 +21,11 @@ async function init(opts = {}) {
 	)
 
 	const app = express()
-	const staticService = express.static(join(__dirname, '../public'))
+	const staticService = express.static(join(__dirname, '../../public'))
 	app.use(staticService)
 	setRoutes(app, routes, {
 		basepath,
-		apiJson: join(__dirname, '../public/docs/server-api.json'),
+		apiJson: join(__dirname, '../../public/docs/server-api.json'),
 		types: {
 			importDir: '../types',
 			outputFile: join(__dirname, 'checkers-raw/index.ts')

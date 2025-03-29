@@ -1,4 +1,4 @@
-import { emitFiles } from '../src/augen.js'
+import { emitFiles } from '#src/augen.js'
 import { readdirSync } from 'fs'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
@@ -18,7 +18,7 @@ async function prep() {
 	)
 
 	emitFiles(routes, {
-		apiJson: join(__dirname, '../public/server-api.json'),
+		apiJson: join(__dirname, '../../../public/server-api.json'),
 		types: {
 			importDir: '../types',
 			outputFile: join(__dirname, './checkers-raw/index.ts')
