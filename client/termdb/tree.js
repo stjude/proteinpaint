@@ -185,7 +185,11 @@ class TdbTree {
 			return []
 		}
 		const terms = []
+		const auth = this.app.vocabApi.getClientAuthResult()
+		const hiddenTermIds = this.app.vocabApi.termdbConfig.hiddenTermIds
 		for (const t of data.lst) {
+			const isVisible = isVisibleTerm(hiddenTermIds, auth, t.id)
+			if (!isVisible) continue
 			const copy = Object.assign({}, t)
 			terms.push(copy)
 			// rehydrate expanded terms as needed
@@ -210,6 +214,13 @@ class TdbTree {
 	bindKey(term) {
 		return term.id
 	}
+}
+
+export function isVisibleTerm(hiddenTermIds, auth, id) {
+	if (hiddenTermIds && hiddenTermIds.includes(id)) {
+		if (auth && auth.role == 'admin') return true
+		return false
+	} else return true
 }
 
 export const treeInit = getCompInit(TdbTree)

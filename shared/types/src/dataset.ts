@@ -1376,6 +1376,7 @@ export type Cohort = {
 	/** if present, supplies premade scatter plots */
 	scatterplots?: Scatterplots
 	termdb: Termdb
+	hiddenTermIds?: string[]
 }
 
 /** Customizations specific to the mass nav component */
