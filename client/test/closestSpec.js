@@ -24,7 +24,10 @@ const relevantClientDirs = [
 ]
 const opts = {
 	//stagedFiles: ['tvs.js', 'tvs.categorical.js', 'tvs.numeric.js', 'FilterPrompt.js'].map(f => `client/filter/${f}`),
+	stagedFiles: ['handlers/snp.ts'].map(f => `client/termsetting/${f}`)
 }
+
+const EMPTY = 'NO_BRANCH_COVERAGE_UPDATE'
 
 if (process.argv.includes('-p')) emitUrlParams()
 
@@ -32,16 +35,15 @@ export function getBranchClientSpecs() {
 	return getClosestSpec(clientDir, relevantClientDirs, opts)
 }
 
-const EMPTY = 'NO_BRANCH_COVERAGE_UPDATE'
-
 function emitUrlParams() {
-	const specs = getClientSpecs()
+	const specs = getBranchClientSpecs()
 	const filesWithSpec = Object.entries(specs.matchedByFile)
 	if (!filesWithSpec.length) {
 		console.log(EMPTY)
 	} else {
 		const patterns = new Map()
 		for (const [fileName, specs] of filesWithSpec) {
+			if (!specs.length) continue
 			// the first matched spec filename should have the same truncated filename as other matched specs entries
 			const [specPath, specName] = specs[0].split('/test/')
 			const specDir = specPath.split('/').pop()

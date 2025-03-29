@@ -54,13 +54,12 @@ export function getClosestSpec(dirname, relevantSubdirs = [], opts = {}) {
 		if (!isRelevant) continue
 
 		matchedByFile[f] = [] // default no matched spec, may be replaced below
-		const fileName = f.split('/').pop()
-		const fileNameSegments = fileName.split('.')
-		const filedir = f.split('/').slice(-2, 1)[0]
 
-		while (fileNameSegments.length) {
+		const fileName = path.basename(f)
+		const fileNameSegments = fileName.split('.')
+		while (fileNameSegments.length > 1) {
 			fileNameSegments.pop()
-			const truncatedFilename = fileNameSegments.length ? fileNameSegments.join('.') : filedir
+			const truncatedFilename = fileNameSegments.join('.')
 			// console.log(50, {truncatedFilename}, `${truncatedFilename}.unit.spec`)
 			const unitName = `${truncatedFilename}.unit.spec.`
 			const integrationName = `/${truncatedFilename}.integration.spec.`
@@ -69,6 +68,22 @@ export function getClosestSpec(dirname, relevantSubdirs = [], opts = {}) {
 				matchedByFile[f] = matchedSpecs
 				matched.push(...matchedSpecs)
 				break
+			}
+		}
+
+		if (!matched.length) {
+			const dirPath = path.dirname(f)
+			const dirPathSegments = dirPath.split('/')
+			while (dirPathSegments.length) {
+				const dir = dirPathSegments.pop()
+				const unitName = `${dir}.unit.spec.`
+				const integrationName = `${dir}.integration.spec.`
+				const matchedSpecs = specs.filter(f => f.includes(unitName) || f.includes(integrationName))
+				if (matchedSpecs.length) {
+					matchedByFile[f] = matchedSpecs
+					matched.push(...matchedSpecs)
+					break
+				}
 			}
 		}
 	}
