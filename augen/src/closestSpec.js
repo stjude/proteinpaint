@@ -8,8 +8,15 @@ import * as glob from 'glob'
 	relevantSubdir: string[] // array of subdirectory names under the workspace dir that have relevant code for test coverage
 */
 
-export function getClosestSpec(dirname, relevantSubdirs = []) {
-	const workspace_ = dirname.split('/').pop() + '/'
+const gitProjectRoot = execSync(`git rev-parse --show-toplevel`, { encoding: 'utf8' }).trim()
+// this cache will persist in the same node call
+// const matchedByDirFile = new Map()
+
+export function getClosestSpec(dirname, relevantSubdirs = [], opts = {}) {
+	const workspace = dirname.replace(gitProjectRoot + '/', '')
+	const workspace_ = workspace + '/'
+	// if (opts.cache && matchedByDirFile.has(workspace)) return matchedByDirFile.get(workspace)
+
 	const branch = execSync(`git rev-parse --abbrev-ref HEAD`, { encoding: 'utf8' })
 	// TODO: may need to detect release branch instead of master
 	const modifiedFiles = execSync(`git diff --name-status master..${branch}`, { encoding: 'utf8' })
@@ -20,33 +27,33 @@ export function getClosestSpec(dirname, relevantSubdirs = []) {
 		.map(l => l.split('\t').pop()) //; console.log(10, committedFiles)
 	// detect staged files for local testing, should not have any in github CI
 	const stagedFiles =
-		// ['tvs.js', 'tvs.categorical.js', 'tvs.numeric.js', 'FilterPrompt.js'].map(f => `client/filter/${f}`) || // uncomment to test
-		execSync(`git diff --cached --name-only | sed 's| |\\ |g'`, { encoding: 'utf8' }) // comment to test
-	const changedFiles = new Set([...committedFiles, ...stagedFiles]) //; console.log(12, changedFiles)
+		opts.stagedFiles || execSync(`git diff --cached --name-only | sed 's| |\\ |g'`, { encoding: 'utf8' })
+	const changedFiles = new Set([...committedFiles, ...stagedFiles]) //; console.log({changedFiles})
 
 	const ignore = ['dist/**', 'node_modules/**']
 	const specs = glob.sync(`**/test/*.spec.*s`, { cwd: dirname, ignore })
 
 	// key: spec dir,name pattern
 	// value: array of filenames that the pattern applies for test coverage
-	const matchedSpecsByFile = {}
+	const matchedByFile = {}
+	const matched = []
 
 	for (const wf of changedFiles) {
 		if (!wf.startsWith(workspace_)) continue
 		const f = wf.replace(workspace_, '')
 		// assume that an empty relevantSubDirs array means all subdirs are relevant
-		let matched = !relevantSubdirs.length // || false
-		if (!matched) {
+		let isRelevant = !relevantSubdirs.length // || false
+		if (!isRelevant) {
 			for (const dir of relevantSubdirs) {
 				if (f.startsWith(`${dir}/`)) {
-					matched = true
+					isRelevant = true
 					break
 				}
 			}
 		}
-		if (!matched) continue
+		if (!isRelevant) continue
 
-		matchedSpecsByFile[f] = [] // default no matched spec, may be replaced below
+		matchedByFile[f] = [] // default no matched spec, may be replaced below
 		const fileName = f.split('/').pop()
 		const fileNameSegments = fileName.split('.')
 		const filedir = f.split('/').slice(-2, 1)[0]
@@ -57,13 +64,21 @@ export function getClosestSpec(dirname, relevantSubdirs = []) {
 			// console.log(50, {truncatedFilename}, `${truncatedFilename}.unit.spec`)
 			const unitName = `${truncatedFilename}.unit.spec.`
 			const integrationName = `/${truncatedFilename}.integration.spec.`
-			const matched = specs.filter(f => f.includes(unitName) || f.includes(integrationName))
-			if (matched.length) {
-				matchedSpecsByFile[f] = matched
+			const matchedSpecs = specs.filter(f => f.includes(unitName) || f.includes(integrationName))
+			if (matchedSpecs.length) {
+				matchedByFile[f] = matchedSpecs
+				matched.push(...matchedSpecs)
 				break
 			}
 		}
 	}
 
-	return matchedSpecsByFile
+	// if (opts.cache) matchedByDirFile.set(workspace, matchedByFile)
+	const dedupedMatched = [...new Set(matched)]
+	return {
+		matchedByFile,
+		matched: dedupedMatched,
+		numUnit: dedupedMatched.filter(s => s.includes('.unit.spec.')).length,
+		numIntegration: dedupedMatched.filter(s => s.includes('.integration.spec.')).length
+	}
 }
