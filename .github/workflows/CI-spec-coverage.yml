@@ -62,17 +62,24 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.PAT }}
 
+      - name: Detect if integration tests are required
+        run: |
+          echo "HAS_INTEGRATION_TESTS=$(./test/hasIntegrationSpecs.js)" >> $GITHUB_ENV
+
       - name: Set up Docker Buildx
+        if: contains(env.HAS_INTEGRATION_TESTS, 'true')
         uses: docker/setup-buildx-action@v3
         with:
           driver: docker
 
       - name: Pack updated workspaces
+        if: contains(env.HAS_INTEGRATION_TESTS, 'true')
         run: |
           cd ./container
           ./pack.sh
 
       - name: Build ppserver image
+        if: contains(env.HAS_INTEGRATION_TESTS, 'true')
         uses: docker/build-push-action@v5
         with:
           context: ./container/
@@ -84,11 +91,13 @@ jobs:
           # cache-to: type=gha,mode=max
 
       - name: Copy server files
+        if: contains(env.HAS_INTEGRATION_TESTS, 'true')
         run: |
           cd ./container/coverage
           ./copy-server-files.sh
 
       - name: Build ppcov image
+        if: contains(env.HAS_INTEGRATION_TESTS, 'true')
         uses: docker/build-push-action@v5
         with:
           build-contexts: |
