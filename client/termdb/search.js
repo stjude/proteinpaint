@@ -2,7 +2,7 @@ import { getCompInit } from '#rx'
 import { select, selectAll } from 'd3-selection'
 import { sayerror } from '../dom/sayerror.ts'
 import { debounce } from 'debounce'
-import { root_ID } from './tree'
+import { isVisibleTerm, root_ID } from './tree'
 import { isUsableTerm } from '#shared/termdb.usecase.js'
 import { keyupEnter } from '#src/client'
 import { TermTypeGroups, isNonDictionaryType, equals } from '#shared/terms.js'
@@ -189,6 +189,8 @@ function setRenderers(self) {
 	}
 	self.showTerms = data => {
 		// add disabled terms to opts.disable_terms
+		const auth = self.app.vocabApi.getClientAuthResult()
+		const hiddenTermIds = self.app.vocabApi.termdbConfig.hiddenTermIds
 
 		if (self.opts.disable_terms) {
 			data.lst.forEach(t => {
@@ -201,6 +203,10 @@ function setRenderers(self) {
 		const geneTerms = [],
 			dictTerms = []
 		for (const t of data.lst) {
+			const isVisible = isVisibleTerm(this.app, auth, t)
+
+			if (!isVisible) continue // skip if not visible
+
 			if (t.type == 'geneVariant') {
 				geneTerms.push(t)
 			} else {
