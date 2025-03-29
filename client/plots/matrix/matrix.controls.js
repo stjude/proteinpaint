@@ -351,10 +351,7 @@ export class MatrixControls {
 			//.property('disabled', d => d.disabled)
 			.datum({
 				label: 'Genes',
-				getCount: () =>
-					this.parent.termOrder?.filter(
-						t => t.tw.term.type == 'geneVariant' || t.tw.term.type == TermTypes.GENE_EXPRESSION
-					).length || 0,
+				getCount: () => this.parent.termOrder?.filter(t => t.tw.term.type == 'geneVariant').length || 0,
 				customInputs: this.appendGeneInputs,
 				rows: [
 					{
@@ -1102,7 +1099,7 @@ export class MatrixControls {
 		tr.append('td').text(value)
 	}
 
-	async appendGeneInputs(self, app, parent, table) {
+	async appendGeneInputs(self, app, parent, table, geneInputType) {
 		tip.clear()
 		if (!parent.selectedGroup) parent.selectedGroup = 0
 
@@ -1128,11 +1125,14 @@ export class MatrixControls {
 			}
 		}
 
-		self.addGenesetInput(event, app, parent, table.append('tr'))
+		self.addGenesetInput(event, app, parent, table.append('tr'), geneInputType)
 	}
 
-	addGenesetInput(event, app, parent, tr) {
-		const GenesBtn = this.btns.filter(d => d.label == 'Genes')?.node()
+	addGenesetInput(event, app, parent, tr, geneInputType) {
+		const controlPanelBtn =
+			geneInputType == 'hierCluster'
+				? this.btns.filter(d => d.label == 'Clustering')?.node()
+				: this.btns.filter(d => d.label == 'Genes')?.node()
 		const tip = app.tip //new Menu({ padding: '5px' })
 		const tg = parent.config.termgroups
 
@@ -1194,51 +1194,55 @@ export class MatrixControls {
 				backBtn: {
 					target: 'Genes Menu',
 					callback: () => {
-						GenesBtn.click()
+						controlPanelBtn.click()
 					}
 				},
-				termsAsListed: !this.parent.config.settings.hierCluster.clusterRows
+				termsAsListed: geneInputType == 'hierCluster' && !this.parent.config.settings.hierCluster.clusterRows
 			})
 		}
 
-		//the number of groups in the current matrix that is editable: non-gene-expression hiercluster
-		// groups are not editable
-		const numOfEditableGrps = tg.filter(
-			g => g.type != 'hierCluster' || g.lst.find(tw => tw.term.type == 'geneExpression')
-		).length
+		//the number of groups in the current matrix that is editable: hiercluster group should not be edited from "Genes" control panel.
+		const numOfEditableGrps = tg.filter(g => g.type != 'hierCluster').length
 
 		tr.append('td').attr('class', 'sja-termdb-config-row-label').html('Gene Set')
 
-		if (numOfEditableGrps > 0) {
+		if (numOfEditableGrps > 0 || geneInputType == 'hierCluster') {
 			const td1 = tr.append('td').style('display', 'block').style('padding', '5px 0px')
 			const editGrpDiv = td1.append('div').append('label')
 
 			const editBtn = editGrpDiv
 				.append('button')
-				.html(numOfEditableGrps > 1 ? 'Edit Selected Group' : 'Edit Current Group')
+				.html(numOfEditableGrps > 1 && geneInputType !== 'hierCluster' ? 'Edit Selected Group' : 'Edit Current Group')
 				.on('click', () => {
 					tip.clear()
-					this.setMenuBackBtn(tip.d.append('div').style('padding', '5px'), () => GenesBtn.click())
+					this.setMenuBackBtn(
+						tip.d.append('div').style('padding', '5px'),
+						() => controlPanelBtn.click(),
+						`Back to ${geneInputType !== 'hierCluster' ? 'Genes' : 'Clustering'}`
+					)
 					const genesetEdiUiHolder = tip.d.append('div')
 					triggerGenesetEdit(genesetEdiUiHolder)
 				})
 
-			if (numOfEditableGrps > 1) {
-				const { groups, groupSelect } = this.setTermGroupSelector(editGrpDiv, tg)
-				selectedGroup = groups.find(g => g.selected)
+			if (numOfEditableGrps > 1 && geneInputType !== 'hierCluster') {
+				const { nonHierClusterGroups, groupSelect } = this.setTermGroupSelector(editGrpDiv, tg)
+				selectedGroup = nonHierClusterGroups.find(g => g.selected)
 				groupSelect.on('change', () => {
-					selectedGroup = groups[groupSelect.property('value')]
+					selectedGroup = nonHierClusterGroups[groupSelect.property('value')]
 				})
 			} else {
 				const s = parent.config.settings.hierCluster
-				const g = tg.find(g => g.type != 'hierCluster' || g.lst.find(tw => tw.term.type == 'geneExpression'))
+				const g =
+					geneInputType == 'hierCluster' ? tg.find(g => g.type == 'hierCluster') : tg.find(g => g.type != 'hierCluster')
+
 				selectedGroup = {
-					index: 0,
+					index:
+						geneInputType == 'hierCluster' ? tg.findIndex(g => g.type == 'hierCluster') : tg[0].type == g.type ? 0 : 1,
 					name: g.name,
 					type: g.type,
 					lst: g.lst.filter(tw => tw.term.type.startsWith('gene')).map(tw => ({ name: tw.term.name })),
 					mode:
-						this.parent.chartType == 'hierCluster' && (g.type == 'hierCluster' || g.name == s?.termGroupName)
+						g.type == 'hierCluster'
 							? s.dataType // is clustering group, pass dataType
 							: // !!subject to change!! when group is not clustering, and ds has mutation, defaults to MUTATION_CNV_FUSION
 							this.parent.state.termdbConfig.queries?.snvindel
@@ -1249,6 +1253,10 @@ export class MatrixControls {
 			}
 		}
 
+		if (geneInputType == 'hierCluster') {
+			// Gene set edit UI under "Clustering" control panel doen't need "create New Group"
+			return
+		}
 		const td2 = tr.append('td').style('display', 'block').style('padding', '5px 0px')
 		const createNewGrpDiv = td2.append('div').append('label')
 
@@ -1258,7 +1266,7 @@ export class MatrixControls {
 			.property('disabled', true)
 			.on('click', () => {
 				tip.clear()
-				this.setMenuBackBtn(tip.d.append('div'), () => GenesBtn.click())
+				this.setMenuBackBtn(tip.d.append('div'), () => controlPanelBtn.click())
 				const name = nameInput.property('value')
 				const s = parent.config.settings.hierCluster
 				selectedGroup = {
@@ -1329,14 +1337,14 @@ export class MatrixControls {
 		// }
 	}
 
-	setMenuBackBtn(holder, callback) {
+	setMenuBackBtn(holder, callback, label) {
 		holder
 			.attr('tabindex', 0)
 			.style('padding', '5px')
 			.style('text-decoration', 'underline')
 			.style('cursor', 'pointer')
 			.style('margin-bottom', '12px')
-			.html(`&#171; Back to Genes`)
+			.html(`&#171; ${label}`)
 			.on('click', callback)
 			.on('keyup', event => {
 				if (event.key == 'Enter') event.target.click()
@@ -1346,30 +1354,23 @@ export class MatrixControls {
 	setTermGroupSelector(holder, tg) {
 		//const label = grpDiv.append('label')
 		//label.append('span').html('')
-		const firstGrpWithGeneTw = tg.find(g => g.lst.find(tw => tw.term.type.startsWith('gene')))
-		const s = this.parent.config.settings.hierCluster
+		const firstGrpWithGeneTw = tg.find(g =>
+			g.lst.find(tw => tw.term.type.startsWith('gene') && g.type !== 'hierCluster')
+		)
 		const groups = tg.map((g, index) => {
 			return {
 				index,
 				name: g.name,
 				type: g.type,
 				lst: g.lst.filter(tw => tw.term.type.startsWith('gene')).map(tw => ({ name: tw.term.name })),
-				mode:
-					this.parent.chartType == 'hierCluster' && (g.type == 'hierCluster' || g.name == s?.termGroupName)
-						? s.dataType // is clustering group, pass dataType
-						: // !!subject to change!! when group is not clustering, and ds has mutation, defaults to MUTATION_CNV_FUSION
-						this.parent.state.termdbConfig.queries?.snvindel
-						? TermTypes.GENE_VARIANT
-						: '',
-				selected:
-					(this.parent.chartType == 'hierCluster' &&
-						(g.type == 'hierCluster' || (g.name && g.name == s?.termGroupName))) ||
-					g === firstGrpWithGeneTw
+				mode: this.parent.state.termdbConfig.queries?.snvindel ? TermTypes.GENE_VARIANT : '',
+				selected: g === firstGrpWithGeneTw
 			}
 		})
+		const nonHierClusterGroups = groups.filter(g => g.type != 'hierCluster')
 
 		const groupSelect = holder.append('select').style('width', '218px').style('margin', '2px 5px')
-		for (const [i, group] of groups.entries()) {
+		for (const [i, group] of nonHierClusterGroups.entries()) {
 			if (group.label) continue
 			if (group.name) group.label = group.name
 			else group.label = `Unlabeled group #${i + 1}` // cannot assume "gene" group
@@ -1377,14 +1378,14 @@ export class MatrixControls {
 
 		groupSelect
 			.selectAll('option')
-			.data(groups)
+			.data(nonHierClusterGroups)
 			.enter()
 			.append('option')
 			.property('selected', grp => grp.selected)
 			.attr('value', (d, i) => i)
 			.html(grp => grp.label)
 
-		return { groups, groupSelect }
+		return { nonHierClusterGroups, groupSelect }
 	}
 
 	appendDictInputs(self, app, parent, table) {
