@@ -37,7 +37,7 @@
     "test:integration": "./test.sh *.integration.spec.*",
     "test:puppet": "rm -rf .nyc_output && node test/puppet.js",
     "combined:coverage": "./test.sh *.spec.* name=*",
-    "branch:coverage": "./test.sh *.spec.* \"$(node test/closestSpec.js)\"",
+    "spec:coverage": "./test.sh *.spec.* \"$(node test/closestSpec.js)\"",
     "tsc": "tsc -p tsconfig-x.json",
     "examples": "node ./test/import-specs.js name=_x_.examples && npm run tape",
     "build": "rm -rf dist && node esbuild.config.mjs",

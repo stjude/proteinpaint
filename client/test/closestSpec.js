@@ -3,7 +3,7 @@ import { getClosestSpec } from '@sjcrh/augen'
 
 /*
 	This script can be
-	- imported by another script to use getBranchClientSpecs()
+	- imported by another script to use getRelevantClientSpecs()
 	- or called from command-line with the '-p' parameter to emit URL params or EMPTY flag
 */
 
@@ -31,12 +31,12 @@ const EMPTY = 'NO_BRANCH_COVERAGE_UPDATE'
 
 if (process.argv.includes('-p')) emitUrlParams()
 
-export function getBranchClientSpecs() {
+export function getRelevantClientSpecs() {
 	return getClosestSpec(clientDir, relevantClientDirs, opts)
 }
 
 function emitUrlParams() {
-	const specs = getBranchClientSpecs()
+	const specs = getRelevantClientSpecs()
 	const filesWithSpec = Object.entries(specs.matchedByFile)
 	if (!filesWithSpec.length) {
 		console.log(EMPTY)

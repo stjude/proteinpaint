@@ -48,6 +48,9 @@ export function getCodeText(namePattern = '*.spec.*') {
 	output.push(`import { matchSpecs, specsMatched } from './matchSpecs.js'`)
 	output.push(`import tape from 'tape'`)
 
+	// TODO: instead of using timeout and assertAllTested(), may be better to
+	// just return await Promise.all() of all spec imports in a wrapper tape('')
+	// callback, see code pattern in augen/src/test/relevant.js
 	const initialTest = `
 	// keep an initial test open until all spec modules have been loaded,
 	// to prevent an early-loaded and very fast test from closing the

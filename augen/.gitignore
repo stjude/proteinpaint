@@ -9,3 +9,4 @@ public/server-api.json
 !src/test/*.js
 !src/test/toyApp/*.js
 src/test/toyApp/checkers*/*
+.coverage/*
