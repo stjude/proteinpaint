@@ -3,7 +3,7 @@ import { getClosestSpec } from '@sjcrh/augen'
 
 /*
 	This script can be
-	- imported by another script to use getBranchClientSpecs()
+	- imported by another script to use getRelevantClientSpecs()
 	- or called from command-line with the '-p' parameter to emit URL params or EMPTY flag
 */
 
@@ -14,8 +14,8 @@ const opts = {
 	changedFiles: ['auth.js'].map(f => `server/src/${f}`)
 }
 
-//console.log(getBranchServerSpecs())
+//console.log(getRelevantServerSpecs())
 
-export function getBranchServerSpecs() {
+export function getRelevantServerSpecs() {
 	return getClosestSpec(serverDir, relevantServerDirs, opts)
 }

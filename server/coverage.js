@@ -28,6 +28,7 @@ try {
 	}
 }
 
+// TODO: handler spec:coverage package script to only test relevant specs
 try {
 	await import('./serverTests.js')
 	await sleep(5000)

@@ -29,8 +29,13 @@ export function getClosestSpec(dirname, relevantSubdirs = [], opts = {}) {
 
 		// detect staged files for local testing, should not have any in github CI
 		const stagedFiles = execSync(`git diff --cached --name-only | sed 's| |\\ |g'`, { encoding: 'utf8' })
-		changedFiles = new Set([...committedFiles, ...stagedFiles])
+		changedFiles = [...committedFiles, ...stagedFiles]
 	} //; console.log({changedFiles})
+
+	changedFiles = changedFiles.filter(
+		f => f.endsWith('.js') || f.endsWith('.mjs') || f.endsWith('.cjs') || f.endsWith('.ts')
+	)
+	changedFiles = new Set(changedFiles)
 
 	const specs = opts.specs || glob.sync(`**/test/*.spec.*s`, { cwd: dirname, ignore })
 

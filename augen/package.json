@@ -13,7 +13,9 @@
     "predev": "tsx test/prep.js",
     "dev": "npm run doc && tsx watch test/app.js",
     "pretest": "tsx src/test/toyApp/prep.js && typia generate --input src/test/toyApp/checkers-raw --output src/test/toyApp/checkers",
-    "test": "tsx src/test/runSpecs.js",
+    "test": "c8 tsx src/test/runSpecs.js",
+    "prespec:coverage": "npm run pretest",
+    "spec:coverage": "c8 --all --src=src --experimental-monocart -r=v8 -r=html -r=json -r=markdown-summary -r=markdown-details -o=./.coverage tsx src/test/relevant.js -p",
     "doc": "./build.sh test/routes test/types test/checkers public/docs"
   },
   "author": "",
