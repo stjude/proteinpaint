@@ -1,14 +1,29 @@
 import { testApi } from '#src/tester.ts'
-import { readdirSync } from 'fs'
+import { existsSync, rmSync, readdirSync } from 'fs'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
-import * as checkers from './toyApp/checkers/index.ts'
+import { execSync } from 'child_process'
 
-const __dirname = dirname(fileURLToPath(import.meta.url))
+const __dirname = import.meta.dirname.trim()
 
-runTests()
+await runTests()
 
 async function runTests() {
+	try {
+		// genereate typia checkers at runtime, so that the generated code
+		// that import augen.setRoutes() will be instrumented to detect code coverage
+		const checkersDir = join(__dirname, './toyApp/checkers')
+		if (!existsSync(checkersDir)) {
+			rmSync(checkersDir, { recursive: true, force: true })
+			rmSync(`${checkersDir}-raw`, { recursive: true, force: true })
+		}
+		const log = execSync(`npm run pretest`, { encoding: 'utf8' })
+		console.log(log)
+	} catch (e) {
+		throw e
+	}
+
+	const { default: checkers } = await import('./toyApp/checkers/index.ts')
 	const files = readdirSync(join(__dirname, './toyApp/routes'))
 	const endpoints = files.filter(f => f.endsWith('.ts'))
 	for (const f of endpoints) {
