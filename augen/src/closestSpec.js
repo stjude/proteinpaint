@@ -1,6 +1,7 @@
 import { execSync } from 'child_process'
 import path from 'path'
 import * as glob from 'glob'
+import fs from 'fs'
 
 export const gitProjectRoot = execSync(`git rev-parse --show-toplevel`, { encoding: 'utf8' }).trim()
 const ignore = ['dist/**', 'node_modules/**']
@@ -104,5 +105,51 @@ export function getClosestSpec(dirname, relevantSubdirs = [], opts = {}) {
 		matched: dedupedMatched,
 		numUnit: dedupedMatched.filter(s => s.includes('.unit.spec.')).length,
 		numIntegration: dedupedMatched.filter(s => s.includes('.integration.spec.')).length
+	}
+}
+
+export function emitRelevantSpecCovDetails({ workspace, relevantSpecs, reportDir, testedSpecs }) {
+	const specsExtractsDir = path.join(gitProjectRoot, `public/coverage/specs`)
+	const wsSpecsExtractsDir = `${specsExtractsDir}/${workspace}`
+	//fs.rmSync(wsSpecsExtractsDir, {force: true, recursive: true})
+	if (!fs.existsSync(wsSpecsExtractsDir)) fs.mkdirSync(wsSpecsExtractsDir, { force: true, recursive: true })
+
+	if (!relevantSpecs.matched.length) return
+	fs.cpSync(reportDir, wsSpecsExtractsDir, { recursive: true })
+
+	const detailedMd = fs.readFileSync(path.join(reportDir, 'coverage-details.md'), { encoding: 'utf8' })
+	const detailedLines = detailedMd.split('\n') //; console.log(20, detailedLines)
+	// key: comma-separated spec names used for testing
+	// value: string filenames that were tested by the specs in key
+	const relevantLines = new Map()
+	for (const [file, specs] of Object.entries(relevantSpecs.matchedByFile)) {
+		if (!specs.length) continue
+		const line = detailedLines.find(l => l.includes(file) && (!testedSpecs || specs.find(s => testedSpecs.includes(s))))
+		if (line) {
+			const key = specs.join(', ')
+			if (!relevantLines.has(key)) relevantLines.set(key, new Set())
+			relevantLines.get(key).add(line)
+		}
+		// const coverageHtml = `${reportDir}/${file}.html`
+		// if (fs.existsSync(coverageHtml)) {
+		// 	const extractsDirname = path.dirname(file)
+		// 	const destExtractsDir = path.join(wsSpecsExtractsDir, extractsDirname)
+		// 	const filename = path.basename(coverageHtml)
+		// 	fs.mkdirSync(destExtractsDir, {force: true, recursive: true}); console.log(132, fs.existsSync(coverageHtml), fs.existsSync(destExtractsDir), `${destExtractsDir}/${file}.html`, fs.existsSync(`${destExtractsDir}/${file}.html`))
+		// 	fs.copyFileSync(coverageHtml, `${destExtractsDir}/${filename}`)
+		// }
+	}
+
+	if (relevantLines.size) {
+		console.log(`## Relevant ${workspace} spec coverage`)
+		for (const [key, files] of relevantLines) {
+			console.log('\n### Tested by: ', key)
+			console.log(detailedLines[0])
+			console.log(detailedLines[1])
+			for (const f of files) {
+				console.log(detailedLines.find(l => l.includes(f)))
+			}
+		}
+		console.log('\n')
 	}
 }

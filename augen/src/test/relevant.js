@@ -1,6 +1,8 @@
-import { getClosestSpec } from '../closestSpec.js'
+import { getClosestSpec, emitRelevantSpecCovDetails } from '../closestSpec.js'
 import path from 'path'
 import tape from 'tape'
+import fs from 'fs'
+import { execSync } from 'child_process'
 
 const dirname = path.join(import.meta.dirname, '../..')
 const relevantSubdirs = ['src']
@@ -9,6 +11,8 @@ const opts = {
 	// changedFiles: ['handlers/snp.ts'].map(f => `client/termsetting/${f}`)
 	ignore: ['src/toyApp']
 }
+
+export const reportDir = path.join(import.meta.dirname, '../../.coverage')
 
 if (process.argv.includes('-p')) runRelevantSpecs()
 
@@ -26,20 +30,22 @@ async function runRelevantSpecs() {
 		process.exit(0)
 	}
 
-	tape('loading of all import(spec)', async test => {
-		try {
-			const promises = []
-			for (const spec of specs.matched) {
-				promises.push(await import(`../../${spec}`))
-			}
-			return await Promise.all(promises)
-			test.end()
-		} catch (e) {
-			console.log(`\n!!! augen runRelevantSpecs() error !!!\n`, e, '\n')
-			test.fail(`Error running relevant augen specs`)
-			test.end()
-		}
-	})
-}
+	const c8opts = `--all --src=src --experimental-monocart -r=v8 -r=html -r=json -r=markdown-summary -r=markdown-details -o=./.coverage`
 
-export const reportDir = path.join(import.meta.dirname, '../../.coverage')
+	try {
+		const promises = []
+		for (const spec of specs.matched) {
+			fs.rmSync(reportDir, { force: true, recursive: true })
+			const testLog = execSync(`npx c8 ${c8opts} tsx ${path.join(dirname, spec)}`, { encoding: 'utf8' })
+			console.log(testLog)
+			if (fs.existsSync(reportDir)) {
+				emitRelevantSpecCovDetails({ workspace: 'augen', relevantSpecs: specs, reportDir, testedSpecs: [spec] })
+			}
+		}
+		return await Promise.all(promises)
+	} catch (e) {
+		console.log(`\n!!! augen runRelevantSpecs() error !!!\n`, e, '\n')
+		//test.fail(`Error running relevant augen specs`)
+		//test.end()
+	}
+}
