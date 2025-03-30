@@ -1132,7 +1132,9 @@ export class MatrixControls {
 		const controlPanelBtn =
 			geneInputType == 'hierCluster'
 				? this.btns.filter(d => d.label == 'Clustering')?.node()
-				: this.btns.filter(d => d.label == 'Genes')?.node()
+				: this.btns
+						.filter(d => d.label == (parent.config.chartType == 'hierCluster' ? 'Unclustered Genes' : 'Genes'))
+						?.node()
 		const tip = app.tip //new Menu({ padding: '5px' })
 		const tg = parent.config.termgroups
 
