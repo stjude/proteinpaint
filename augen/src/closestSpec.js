@@ -108,8 +108,9 @@ export function getClosestSpec(dirname, relevantSubdirs = [], opts = {}) {
 	}
 }
 
+export const specsExtractsDir = path.join(gitProjectRoot, `public/coverage/specs`)
+
 export function emitRelevantSpecCovDetails({ workspace, relevantSpecs, reportDir, testedSpecs }) {
-	const specsExtractsDir = path.join(gitProjectRoot, `public/coverage/specs`)
 	const wsSpecsExtractsDir = `${specsExtractsDir}/${workspace}`
 	//fs.rmSync(wsSpecsExtractsDir, {force: true, recursive: true})
 	if (!fs.existsSync(wsSpecsExtractsDir)) fs.mkdirSync(wsSpecsExtractsDir, { force: true, recursive: true })
@@ -141,15 +142,44 @@ export function emitRelevantSpecCovDetails({ workspace, relevantSpecs, reportDir
 	}
 
 	if (relevantLines.size) {
-		console.log(`## Relevant ${workspace} spec coverage`)
-		for (const [key, files] of relevantLines) {
-			console.log('\n### Tested by: ', key)
-			console.log(detailedLines[0])
-			console.log(detailedLines[1])
-			for (const f of files) {
-				console.log(detailedLines.find(l => l.includes(f)))
+		const title = `Coverage for updated augen code`
+		console.log(`## ${title}`)
+		const markdown = []
+		const html = []
+		for (const [key, lines] of relevantLines) {
+			const testedBy = 'Tested by: ' + key
+			markdown.push(`### ${testedBy}`)
+			html.push(`<h3>${testedBy}</h3>`, `<table>`)
+			markdown.push(detailedLines[0], detailedLines[1])
+			html.push(
+				`<thead>`,
+				`<tr>`,
+				...detailedLines[0]
+					.split('|')
+					.slice(1, -1)
+					.map(colname => `<th>${colname.trim()}</th>`),
+				`</tr>`,
+				`</thead>`
+			)
+			const rows = []
+			for (const line of lines) {
+				markdown.push(line)
+				const cells = line.split('|').slice(1, -1)
+				const file = cells[0].trim().split(' ').pop().trim()
+				cells[0] = cells[0].replace(
+					file,
+					`<a href='https://localhost:3000/coverage/specs/${workspace}/${file}.html'></a>`
+				)
+				rows.push(`<tr>`, ...cells.map(val => `<td>${val.trim()}</td>`), `</tr>`)
 			}
+			html.push(`<tbody>`, ...rows, `</tbody>`, `</table>`)
 		}
-		console.log('\n')
+		const fullMarkdown = markdown.join('\n')
+		console.log(fullMarkdown, '\n')
+		return {
+			title,
+			markdown: fullMarkdown,
+			html: html.join('\n')
+		}
 	}
 }
