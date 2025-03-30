@@ -1,2 +1,1 @@
-Features:
-- hierCluster: add geneset edit ui in Clustering btn menu for geneExpression hierCluster. the geneset edit ui in "Genes" btn menu is only applicable to non-clustering row groups and could not edit clustering row group.
+

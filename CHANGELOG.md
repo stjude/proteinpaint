@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 Features:
 - geneVariant groupsetting is now performed using stateless filters
+- hierCluster: add geneset edit ui in Clustering btn menu for geneExpression hierCluster. the geneset edit ui in "Genes" btn menu is only applicable to non-clustering row groups and could not edit clustering row group.
 
 Fixes:
 - #dom/table accounts for zeros when sorting
