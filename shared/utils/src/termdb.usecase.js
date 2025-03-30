@@ -15,6 +15,7 @@ export const graphableTypes = new Set([
 	'dtsnvindel',
 	'dtfusion',
 	'dtsv',
+	'date',
 	TermTypes.METABOLITE_INTENSITY,
 	TermTypes.SINGLECELL_GENE_EXPRESSION,
 	TermTypes.SINGLECELL_CELLTYPE,

@@ -37,7 +37,8 @@ export const TermTypes = {
 	METABOLITE_INTENSITY: 'metaboliteIntensity',
 	SINGLECELL_GENE_EXPRESSION: 'singleCellGeneExpression',
 	SINGLECELL_CELLTYPE: 'singleCellCellType',
-	MULTIVALUE: 'multivalue'
+	MULTIVALUE: 'multivalue',
+	DATE: 'date'
 }
 
 export const NUMERIC_DICTIONARY_TERM = 'numericDictTerm'

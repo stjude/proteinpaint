@@ -462,6 +462,11 @@ export function server_init_db_queries(ds) {
 			integer: cn.prepare('SELECT value FROM anno_integer a,sampleidmap s WHERE term_id=? AND s.name=?'),
 			float: cn.prepare('SELECT value FROM anno_float a, sampleidmap s WHERE term_id=? AND s.name=?')
 		}
+		if (tables.has('anno_date')) {
+			s_sampleInt['date'] = cn.prepare('SELECT value FROM anno_date a, sampleidmap s WHERE term_id=? AND s.name=?')
+			s_sampleStr['date'] = cn.prepare('SELECT value FROM anno_date a, sampleidmap s WHERE term_id=? AND s.name=?')
+		}
+
 		q.getSample2value = (id, sample = null) => {
 			const term = q.termjsonByOneid(id)
 			if (!sample) return s[term.type].all(id)
@@ -537,6 +542,10 @@ export function server_init_db_queries(ds) {
 		select term_id, value 
 		from anno_integer 
 		where sample=? ${termClause}
+		union all
+		select term_id, value 
+		from anno_date 
+		where sample=? ${termClause}
 		union all 
 		select term_id, (min_years_to_event || ' ' || value) as value 
 		from precomputed_chc_grade 
@@ -547,6 +556,8 @@ export function server_init_db_queries(ds) {
 		where sample=? ${termClause}) join terms on terms.id = term_id`
 		const sql = cn.prepare(query)
 		const rows = sql.all([
+			sampleId,
+			...term_ids,
 			sampleId,
 			...term_ids,
 			sampleId,

@@ -5,6 +5,7 @@ import * as categoricalSql from './termdb.sql.categorical.js'
 import * as conditionSql from './termdb.sql.condition.js'
 import { sampleLstSql } from './termdb.sql.samplelst.js'
 import { multivalueCTE } from './termdb.sql.multivalue.js'
+import { dateCTE } from './termdb.sql.date.js'
 import { boxplot_getvalue } from './utils.js'
 import { DEFAULT_SAMPLE_TYPE, isNumericTerm } from '#shared/terms.js'
 /*
@@ -454,6 +455,8 @@ export async function get_term_cte(q, values, index, filter, termWrapper = null)
 		CTE = await sampleLstSql.getCTE(q.ds, tablename, termWrapper || { term, q: termq }, values)
 	} else if (term.type == 'multivalue') {
 		CTE = await multivalueCTE.getCTE(tablename, termWrapper || { term, q: termq }, values)
+	} else if (term.type == 'date') {
+		CTE = await dateCTE.getCTE(tablename, termWrapper || { term, q: termq }, values)
 	} else {
 		throw 'unknown term type [get_term_cte() server/src/termdb.sql.js]'
 	}

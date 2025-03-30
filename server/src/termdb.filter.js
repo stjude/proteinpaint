@@ -85,6 +85,8 @@ export async function getFilterCTEs(filter, ds, sampleTypes = new Set(), CTEname
 			f = await get_snp(item.tvs, CTEname_i, ds)
 		} else if (item.tvs.term.type == 'multivalue') {
 			f = await get_multivalue(item.tvs, CTEname_i, ds)
+		} else if (item.tvs.term.type == 'date') {
+			f = await get_date(item.tvs, CTEname_i, ds)
 		} else {
 			throw 'unknown term type'
 		}
@@ -128,6 +130,19 @@ export async function getFilterCTEs(filter, ds, sampleTypes = new Set(), CTEname
 function get_categorical(tvs, CTEname, ds, onlyChildren) {
 	let query = `SELECT sample
 	FROM anno_categorical 
+	WHERE term_id = ?
+	AND value ${tvs.isnot ? 'NOT' : ''} IN (${tvs.values.map(i => '?').join(', ')})`
+	if (onlyChildren && ds.cohort.termdb.hasSampleAncestry) query = getChildren(query)
+	return {
+		CTEs: [` ${CTEname} AS (${query})`],
+		values: [tvs.term.id, ...tvs.values.map(i => i.key)],
+		CTEname
+	}
+}
+
+function get_date(tvs, CTEname, ds, onlyChildren) {
+	let query = `SELECT sample
+	FROM anno_date 
 	WHERE term_id = ?
 	AND value ${tvs.isnot ? 'NOT' : ''} IN (${tvs.values.map(i => '?').join(', ')})`
 	if (onlyChildren && ds.cohort.termdb.hasSampleAncestry) query = getChildren(query)

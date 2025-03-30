@@ -686,6 +686,7 @@ export function getTermValue(term, data) {
 	}
 
 	if (term.type == 'categorical') return term.values[value]?.label || term.values[value]?.key
+	if (term.type == 'date') return value
 	if (term.type == 'condition') {
 		const values = value.toString().split(' ')
 		let [years, status] = values
