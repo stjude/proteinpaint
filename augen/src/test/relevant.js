@@ -33,16 +33,29 @@ async function runRelevantSpecs() {
 	const c8opts = `--all --src=src --experimental-monocart -r=v8 -r=html -r=json -r=markdown-summary -r=markdown-details -o=./.coverage`
 
 	try {
+		const html = []
 		const promises = []
+		let title
 		for (const spec of specs.matched) {
 			fs.rmSync(reportDir, { force: true, recursive: true })
 			const testLog = execSync(`npx c8 ${c8opts} tsx ${path.join(dirname, spec)}`, { encoding: 'utf8' })
 			console.log(testLog)
 			if (fs.existsSync(reportDir)) {
-				emitRelevantSpecCovDetails({ workspace: 'augen', relevantSpecs: specs, reportDir, testedSpecs: [spec] })
+				const extracts = emitRelevantSpecCovDetails({
+					workspace: 'augen',
+					relevantSpecs: specs,
+					reportDir,
+					testedSpecs: [spec]
+				})
+				if (!title) title = extracts.title
+				html.push(extracts.html)
 			}
 		}
-		return await Promise.all(promises)
+		await Promise.all(promises)
+		if (html.length) {
+			console.log(`<h3>${title}</h3>`)
+			console.log(html.join('\n'))
+		}
 	} catch (e) {
 		console.log(`\n!!! augen runRelevantSpecs() error !!!\n`, e, '\n')
 		//test.fail(`Error running relevant augen specs`)
