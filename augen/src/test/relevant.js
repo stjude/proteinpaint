@@ -10,11 +10,11 @@ const opts = {
 	ignore: ['src/toyApp']
 }
 
+if (process.argv.includes('-p')) runRelevantSpecs()
+
 export function getRelevantAugenSpecs() {
 	return getClosestSpec(dirname, relevantSubdirs, opts)
 }
-
-if (process.argv.includes('-p')) runRelevantSpecs()
 
 async function runRelevantSpecs() {
 	const specs = getRelevantAugenSpecs()
@@ -41,3 +41,5 @@ async function runRelevantSpecs() {
 		}
 	})
 }
+
+export const reportDir = path.join(import.meta.dirname, '../../.coverage')

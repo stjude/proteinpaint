@@ -4,6 +4,7 @@ import * as glob from 'glob'
 
 export const gitProjectRoot = execSync(`git rev-parse --show-toplevel`, { encoding: 'utf8' }).trim()
 const ignore = ['dist/**', 'node_modules/**']
+const codeFileExt = new Set(['.js', '.mjs', '.cjs', '.ts'])
 
 /*
 	dirname: the directory name of the 
@@ -25,16 +26,13 @@ export function getClosestSpec(dirname, relevantSubdirs = [], opts = {}) {
 		const committedFiles = modifiedFiles
 			.split('\n')
 			.filter(l => l[0] === 'A' || l[0] === 'M')
-			.map(l => l.split('\t').pop()) //; console.log(10, committedFiles)
+			.map(l => l.split('\t').pop())
 
 		// detect staged files for local testing, should not have any in github CI
 		const stagedFiles = execSync(`git diff --cached --name-only | sed 's| |\\ |g'`, { encoding: 'utf8' })
-		changedFiles = [...committedFiles, ...stagedFiles]
-	} //; console.log({changedFiles})
-
-	changedFiles = changedFiles.filter(
-		f => f.endsWith('.js') || f.endsWith('.mjs') || f.endsWith('.cjs') || f.endsWith('.ts')
-	)
+		changedFiles = [...committedFiles, ...stagedFiles.trim().split('\n')]
+	}
+	changedFiles = changedFiles.filter(f => codeFileExt.has(path.extname(f)))
 	changedFiles = new Set(changedFiles)
 
 	const specs = opts.specs || glob.sync(`**/test/*.spec.*s`, { cwd: dirname, ignore })
