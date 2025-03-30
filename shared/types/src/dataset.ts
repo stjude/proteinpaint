@@ -1226,9 +1226,14 @@ keep this setting here for reason of:
 		ssm?: UrlTemplateSsm | UrlTemplateSsm[]
 	}
 
-	q?: {
+	/** ds-defined or dynamically created */
+	termtypeByCohort?: any
+	/** ds-defined or dynamically created callbacks 
+	{
 		getSupportedChartTypes: (a: any) => any
 	}
+	*/
+	q?: any
 	termMatch2geneSet?: any
 	mclass?: Mclass
 	lollipop?: any
@@ -1365,7 +1370,7 @@ export type Cohort = {
 	/** if present, means correlation volcano plot analysis is enabled */
 	correlationVolcano?: CorrelationVolcano
 	cumburden?: CumBurdenData
-	db: FileObj
+	db?: FileObj
 	/** customize the default chart to open on mass ui when there's no charts. if
 	 * missing it opens dictionary ui */
 	defaultChartType?: string
@@ -1794,7 +1799,7 @@ export type Mds3 = BaseMds & {
 	queries?: Mds3Queries
 	cohort?: Cohort
 	isSupportedChartOverride?: isSupportedChartCallbacks
-	// TODO: termdb should be nested under cohort
+	// TODO FIXME nest termdb under cohort
 	termdb?: Termdb
 	validate_filter0?: (f: any) => void
 	ssm2canonicalisoform?: GdcApi
