@@ -225,21 +225,23 @@ export async function validate_termdb(ds) {
 		if (!ds.cohort) ds.cohort = {}
 		ds.cohort.termdb = ds.termdb
 		delete ds.termdb
-		// ds.cohort.termdb is required to be compatible with termdb.js
 	}
 
-	if (ds.cohort) {
-		if (!ds.cohort.termdb) throw 'ds.cohort is set but cohort.termdb{} missing'
+	if (!ds.cohort) return // this dataset is not equipped with termdb
+
+	const tdb = ds.cohort.termdb
+	if (!tdb) throw 'ds.cohort is set but cohort.termdb{} missing'
+
+	///////// TODO FIXME mess!! ds file should use ds.cohort.termdb.dbFile /////////////
+
+	if (tdb.q) {
+		// equipped with ds-supplied methods
+	} else {
 		if (!ds.cohort.termdb.dictionary) {
 			if (!ds.cohort.db) throw 'ds.cohort is set but cohort.db{} missing'
 			if (!ds.cohort.db.file && !ds.cohort.db.file_fullpath) throw 'ds.cohort.db.file missing'
 		}
-	} else {
-		// this dataset is not equipped with termdb
-		return
 	}
-
-	const tdb = ds.cohort.termdb // points to ds.cohort.termdb{}
 
 	/***********************************************************
 	 ** new properties created on tdb{} must be duplicated at  **
@@ -252,14 +254,10 @@ export async function validate_termdb(ds) {
 	*/
 	tdb.sampleTypes = {}
 
-	if (tdb?.dictionary?.gdcapi) {
+	if (tdb.q) {
+	} else if (tdb?.dictionary?.gdcapi) {
 		await initGDCdictionary(ds)
-		/*
-		creates ds.cohort.termdb.q={}
-		*****************************
-		*   clandestine gdc stuff   *
-		*****************************
-		*/
+		// ds.cohort.termdb.q={} created
 	} else if (tdb?.dictionary?.dbFile) {
 		ds.cohort.db = { file: tdb.dictionary.dbFile }
 		delete tdb.dictionary.dbFile

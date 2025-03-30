@@ -41,8 +41,13 @@ export function getMatrixRequestOpts(state) {
 		terms,
 		filter: state.filter,
 		filter0: state.filter0,
-		maxGenes: state.config.settings.matrix.maxGenes
-		//termsPerRequest: 100 // this is just for testing
+		maxGenes: state.config.settings.matrix.maxGenes,
+		/*********** quick fix
+		when the flag is true, set artificially large number to ensure all genes are sent in one query
+		this avoids changing getAnnotatedSampleData()
+		additional non-matrix app that calls getAnnotatedSampleData will NEED THE SAME FIX
+		*/
+		termsPerRequest: this.app.vocabApi.termdbConfig.queries?.snvindel?.byisoform?.processTwsInOneQuery ? 1000 : 1
 	}
 
 	if (this.chartType == 'hierCluster') {
