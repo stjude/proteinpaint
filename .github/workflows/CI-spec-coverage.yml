@@ -1,4 +1,4 @@
-name: Branch Test Coverage
+name: Spec Coverage
 
 on:
   workflow_dispatch:
