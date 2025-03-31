@@ -1,1 +1,2 @@
-
+Features:
+- Added unit to the time reported by correlation analysis. Made little helper function to format the time.

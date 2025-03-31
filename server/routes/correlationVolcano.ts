@@ -42,6 +42,24 @@ function init({ genomes }) {
 	}
 }
 
+/**
+ * Formats elapsed time in milliseconds to a human-readable string with appropriate units
+ * @param ms - Elapsed time in milliseconds
+ * @returns Formatted time string with appropriate unit
+ */
+function formatElapsedTime(ms: number): string {
+	if (ms < 1000) {
+		return `${ms}ms`
+	} else if (ms < 60000) {
+		const seconds = (ms / 1000).toFixed(2)
+		return `${seconds}s`
+	} else {
+		const minutes = Math.floor(ms / 60000)
+		const seconds = ((ms % 60000) / 1000).toFixed(2)
+		return `${minutes}m ${seconds}s`
+	}
+}
+
 async function compute(q: CorrelationVolcanoRequest, ds: any, genome: any) {
 	const terms = [q.featureTw, ...q.variableTwLst]
 	const data = await getData(
@@ -108,7 +126,11 @@ async function compute(q: CorrelationVolcanoRequest, ds: any, genome: any) {
 	const output = {
 		terms: JSON.parse(await run_R(path.join(serverconfig.binpath, 'utils', 'corr.R'), JSON.stringify(input)))
 	}
-	mayLog('Time taken to run correlation analysis:', Date.now() - time1)
+	// Format the elapsed time with appropriate units
+	const elapsedMs = Date.now() - time1
+	const formattedTime = formatElapsedTime(elapsedMs)
+
+	mayLog('Time taken to run correlation analysis:', formattedTime)
 	for (const t of output.terms) {
 		const t2 = {
 			tw$id: t.id,
