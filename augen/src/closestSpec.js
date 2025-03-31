@@ -118,7 +118,8 @@ export function emitRelevantSpecCovDetails({ workspace, relevantSpecs, reportDir
 	if (!fs.existsSync(wsSpecsExtractsDir)) fs.mkdirSync(wsSpecsExtractsDir, { force: true, recursive: true })
 
 	if (!relevantSpecs.matched.length) return
-	const srcDir = path.join(wsSpecsExtractsDir, '/src')
+	const reportSrc = fs.existsSync(`${reportDir}/${workspace}`) ? workspace : 'root'
+	const srcDir = path.join(wsSpecsExtractsDir, reportSrc)
 	if (!fs.existsSync(srcDir)) {
 		fs.cpSync(reportDir, wsSpecsExtractsDir, { recursive: true })
 		// the copied src dir applies only to a specific spec run,
@@ -128,7 +129,7 @@ export function emitRelevantSpecCovDetails({ workspace, relevantSpecs, reportDir
 	}
 
 	const detailedMd = fs.readFileSync(path.join(reportDir, 'coverage-details.md'), { encoding: 'utf8' })
-	const detailedLines = detailedMd.split('\n') //; console.log(20, detailedLines)
+	const detailedLines = detailedMd.split('\n')
 	// key: comma-separated spec names used for testing
 	// value: string filenames that were tested by the specs in key
 	const relevantLines = new Map()
@@ -139,9 +140,9 @@ export function emitRelevantSpecCovDetails({ workspace, relevantSpecs, reportDir
 			const key = specs.join(', ')
 			if (!relevantLines.has(key)) relevantLines.set(key, new Set())
 			relevantLines.get(key).add(line)
-			const srcFile = `${reportDir}/${file}.html`
+			const srcFile = `${reportDir}/${reportSrc}/${file}.html`
 			if (fs.existsSync(srcFile)) {
-				const targetFile = `${wsSpecsExtractsDir}/${file}.html`
+				const targetFile = `${wsSpecsExtractsDir}/${reportSrc}/${file}.html`
 				const targetDir = path.dirname(targetFile)
 				if (!fs.existsSync(targetDir)) fs.mkdirSync(targetDir)
 				fs.copyFileSync(srcFile, targetFile)
@@ -176,9 +177,13 @@ export function emitRelevantSpecCovDetails({ workspace, relevantSpecs, reportDir
 				markdown.push(line)
 				const cells = line.split('|').slice(1, -1)
 				const file = cells[0].trim().split(' ').pop().trim()
+				const filePathSegments = file.split('/')
+				if (filePathSegments[0] == workspace) filePathSegments.splice(0, 1)
+				const filepath = filePathSegments.join('/')
+
 				cells[0] = cells[0].replace(
 					file,
-					`<a href='http://localhost:3000/coverage/specs/${workspace}/${file}.html'>${file}</a>`
+					`<a href='http://localhost:3000/coverage/specs/${workspace}/${reportSrc}/${filepath}.html'>${file}</a>`
 				)
 				rows.push(`<tr>`, ...cells.map(val => `<td>${val.trim()}</td>`), `</tr>`)
 			}

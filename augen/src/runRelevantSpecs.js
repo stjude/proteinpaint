@@ -7,13 +7,13 @@ const publicSpecsDir = path.join(gitProjectRoot, 'public/coverage/specs')
 
 export async function runRelevantSpecs({ workspace, specs, dirname }) {
 	const reportDir = path.join(dirname, '/.coverage')
-	const publicSpecsAugenDir = `${publicSpecsDir}/${workspace}`
+	const publicSpecsWsDir = `${publicSpecsDir}/${workspace}`
 	const extractFiles = {
 		html: `${publicSpecsDir}/${workspace}-relevant.html`,
 		markdown: `${publicSpecsDir}/${workspace}-relevant.md`
 	}
 
-	if (fs.existsSync(publicSpecsAugenDir)) fs.rmSync(publicSpecsAugenDir, { force: true, recursive: true })
+	if (fs.existsSync(publicSpecsWsDir)) fs.rmSync(publicSpecsWsDir, { force: true, recursive: true })
 
 	if (!specs.matched.length) {
 		if (Object.keys(specs.matchedByFile).length) {
@@ -23,7 +23,7 @@ export async function runRelevantSpecs({ workspace, specs, dirname }) {
 		process.exit(0)
 	}
 
-	const c8opts = `--all --src=src --experimental-monocart -r=v8 -r=html -r=json -r=markdown-summary -r=markdown-details -o=./.coverage`
+	const c8opts = `--all --experimental-monocart -r=v8 -r=html -r=json -r=markdown-summary -r=markdown-details -o=./.coverage`
 
 	try {
 		const html = []

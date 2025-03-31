@@ -6,7 +6,7 @@ md=$(find . -type f -name "*.md" -not -path "**/tmp*/*" -not -path '**/node_modu
 parentModule=''
 
 if [[ -d '../.git/modules/proteinpaint' ]];then
-	extra=$(find .. -type f -name '*.md' -not -path '**/proteinpaint/*' -not -path '**/tmp*/*' -not -path '**/node_modules*/*')
+	extra=$(find .. -type f -name '*.md' -not -path '**/proteinpaint/*' -not -path '**/tmp*/*' -not -path '**/node_modules*/*' -not -path '**/.*/*')
 	md="$md\n$extra"''
 	parentModule=$(node -p "('$PWD').split('/').slice(-2,-1)[0]")
 fi

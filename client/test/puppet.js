@@ -7,7 +7,8 @@ import path from 'path'
 import crypto from 'crypto'
 import { decode as urlJsonDecode } from '#shared/urljson.js'
 import bodyParser from 'body-parser'
-import { ReqResCache } from '@sjcrh/augen'
+import { ReqResCache, emitRelevantSpecCovDetails, publicSpecsDir } from '@sjcrh/augen'
+import { getRelevantClientSpecs, getUrlParams } from './closestSpec.js'
 import { minimatch } from 'minimatch'
 
 // user __dirname later to detect relative path to public dir,
@@ -18,13 +19,22 @@ const STATICPORT = 6789
 // serves live OR cached API responses,
 // may be the same as STATICPORT if serving cached resposes
 const DATAPORT = Number(process.argv[3] || 0) || 3000
+const reportDir = path.join(__dirname, '../.coverage')
+const publicSpecsClientDir = `${publicSpecsDir}/client`
 
-const patternsStr = process.argv[2] || 'name=*' // default pattern to test all emitted spec imports
+let relevantSpecs, patternToSpecs
+let patternsStr = process.argv[2] || 'name=*' // default pattern to test all emitted spec imports
 if (!patternsStr) throw `missing puppet.js patternsStr argument`
 if (patternsStr === 'NO_BRANCH_COVERAGE_UPDATE') {
 	// a coverage run is requested, but there are no relevant files that have been updated in the branch
 	console.log('\n--- No branch updates with applicable specs to test. ---\n')
 	process.exit(0)
+} else if (patternsStr === 'RELEVANT_SPECS_ONLY') {
+	relevantSpecs = getRelevantClientSpecs()
+	const urlParams = getUrlParams(relevantSpecs)
+	patternToSpecs = urlParams.patternToSpecs
+	patternsStr = urlParams.paramsStr
+	if (fs.existsSync(publicSpecsClientDir)) fs.rmSync(publicSpecsClientDir, { force: true, recursive: true })
 }
 
 runTest(patternsStr).catch(console.error)
@@ -70,8 +80,12 @@ async function runTest(patternsStr) {
 			console.log('-- requestfailed --', `${request.failure().errorText} ${request.url()}`)
 		)
 
-	const relevantCoverage = {},
-		errors = {}
+	const html = []
+	const markdowns = []
+	let title
+
+	const relevantCoverage = {}
+	const errors = {}
 
 	for (const _pattern of patternsArr) {
 		// Enable both JavaScript and CSS coverage
@@ -134,7 +148,7 @@ async function runTest(patternsStr) {
 					}
 				})
 
-				const outputDir = path.join(__dirname, '../.nyc_output')
+				const outputDir = path.join(__dirname, '../.coverage')
 				const mcr = MCR({
 					name: `Client test coverage for pattern '${pattern}'`,
 					sourceFilter: path => {
@@ -157,6 +171,18 @@ async function runTest(patternsStr) {
 				await mcr.generate()
 
 				if (testedFiles) {
+					if (relevantSpecs) {
+						const extracts = emitRelevantSpecCovDetails({
+							workspace: 'client',
+							relevantSpecs,
+							reportDir,
+							testedSpecs: patternToSpecs.get(pattern)
+						})
+						if (!title) title = extracts.title
+						html.push(extracts.html)
+						markdowns.push(extracts.markdown)
+					}
+
 					const { default: summary } = await import(`${outputDir}/coverage-summary.json`, { with: { type: 'json' } })
 					const files = testedFiles.split(',')
 					// disinguish reports from different spec-pattern-coverage runs,
@@ -183,6 +209,13 @@ async function runTest(patternsStr) {
 
 	await browser.close()
 	if (server) server.close()
+
+	if (html.length) {
+		const combinedHtml = `<h3>${title}</h3>\n` + html.join('\n')
+		fs.writeFileSync(`${publicSpecsDir}/client-relevant.html`, combinedHtml, { encoding: 'utf8' })
+		const combinedMarkdown = markdowns.join('\n')
+		fs.writeFileSync(`${publicSpecsDir}/client-relevant.md`, combinedMarkdown, { encoding: 'utf8' })
+	}
 
 	console.log('relevantCoverage', relevantCoverage)
 	const coveredFilenames = Object.keys(relevantCoverage)
