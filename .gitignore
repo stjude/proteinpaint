@@ -56,6 +56,7 @@ public/docs/readme.json
 public/docs/server-api.json
 public/testrunData/*
 public/coverage/**/*
+!public/coverage/*.*
 
 /utils/vcf2genesamplematrix/bin.js
 /utils/vcf2genesamplematrix/output.html

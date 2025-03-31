@@ -1,5 +1,6 @@
 [
 	{ "label": "Frontend Tests", "href": "/testrun.html"},
+	{ "label": "Relevant Coverage", "href": "/coverage/relevant.html"},
 	{ "label": "Server API", "href": "/server.html"},
 	{ "label": "READMEs", "href": "/readme.html"}
 ]

@@ -155,7 +155,9 @@ export function emitRelevantSpecCovDetails({ workspace, relevantSpecs, reportDir
 		const markdown = []
 		const html = []
 		for (const [key, lines] of relevantLines) {
-			const testedBy = 'Tested by: ' + key
+			const namePattern = workspace != 'client' ? '' : path.basename(key).split('.').slice(0, -2).join('.')
+			const runCode = !namePattern ? key : `<a href='http://localhost:3000/testrun.html?name=${namePattern}'>${key}</a>`
+			const testedBy = `Tested by: ${runCode}`
 			markdown.push(`### ${testedBy}`)
 			html.push(`<h3>${testedBy}</h3>`, `<table>`)
 			markdown.push(detailedLines[0], detailedLines[1])
