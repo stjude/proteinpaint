@@ -116,7 +116,14 @@ export function emitRelevantSpecCovDetails({ workspace, relevantSpecs, reportDir
 	if (!fs.existsSync(wsSpecsExtractsDir)) fs.mkdirSync(wsSpecsExtractsDir, { force: true, recursive: true })
 
 	if (!relevantSpecs.matched.length) return
-	fs.cpSync(reportDir, wsSpecsExtractsDir, { recursive: true })
+	const srcDir = path.join(wsSpecsExtractsDir, '/src')
+	if (!fs.existsSync(srcDir)) {
+		fs.cpSync(reportDir, wsSpecsExtractsDir, { recursive: true })
+		// the copied src dir applies only to a specific spec run,
+		// must replace with only relevant html
+		fs.rmSync(srcDir, { force: true, recursive: true })
+		fs.mkdirSync(srcDir, { force: true, recursive: true })
+	}
 
 	const detailedMd = fs.readFileSync(path.join(reportDir, 'coverage-details.md'), { encoding: 'utf8' })
 	const detailedLines = detailedMd.split('\n') //; console.log(20, detailedLines)
@@ -130,6 +137,14 @@ export function emitRelevantSpecCovDetails({ workspace, relevantSpecs, reportDir
 			const key = specs.join(', ')
 			if (!relevantLines.has(key)) relevantLines.set(key, new Set())
 			relevantLines.get(key).add(line)
+			const srcFile = `${reportDir}/${file}.html`
+			if (fs.existsSync(srcFile)) {
+				const targetFile = `${wsSpecsExtractsDir}/${file}.html`
+				const targetDir = path.dirname(targetFile)
+				if (!fs.existsSync(targetDir)) fs.mkdirSync(targetDir)
+				console.log(144, fs.existsSync(targetDir))
+				fs.copyFileSync(srcFile, targetFile)
+			}
 		}
 		// const coverageHtml = `${reportDir}/${file}.html`
 		// if (fs.existsSync(coverageHtml)) {
@@ -168,7 +183,7 @@ export function emitRelevantSpecCovDetails({ workspace, relevantSpecs, reportDir
 				const file = cells[0].trim().split(' ').pop().trim()
 				cells[0] = cells[0].replace(
 					file,
-					`<a href='https://localhost:3000/coverage/specs/${workspace}/${file}.html'></a>`
+					`<a href='http://localhost:3000/coverage/specs/${workspace}/${file}.html'>${file}</a>`
 				)
 				rows.push(`<tr>`, ...cells.map(val => `<td>${val.trim()}</td>`), `</tr>`)
 			}

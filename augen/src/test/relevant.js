@@ -1,4 +1,4 @@
-import { getClosestSpec, emitRelevantSpecCovDetails } from '../closestSpec.js'
+import { getClosestSpec, emitRelevantSpecCovDetails, gitProjectRoot } from '../closestSpec.js'
 import path from 'path'
 import tape from 'tape'
 import fs from 'fs'
@@ -14,6 +14,12 @@ const opts = {
 
 export const reportDir = path.join(import.meta.dirname, '../../.coverage')
 
+const publicSpecsDir = path.join(gitProjectRoot, 'public/coverage/specs')
+export const extractFiles = {
+	html: `${publicSpecsDir}/augen-relevant.html`,
+	markdown: `${publicSpecsDir}/augen-relevant.md`
+}
+
 if (process.argv.includes('-p')) runRelevantSpecs()
 
 export function getRelevantAugenSpecs() {
@@ -21,6 +27,9 @@ export function getRelevantAugenSpecs() {
 }
 
 async function runRelevantSpecs() {
+	const publicSpecsAugenDir = `${publicSpecsDir}/augen`
+	if (fs.existsSync(publicSpecsAugenDir)) fs.rmSync(publicSpecsAugenDir, { force: true, recursive: true })
+
 	const specs = getRelevantAugenSpecs()
 	if (!specs.matched.length) {
 		if (Object.keys(specs.matchedByFile).length) {
@@ -34,6 +43,7 @@ async function runRelevantSpecs() {
 
 	try {
 		const html = []
+		const markdowns = []
 		const promises = []
 		let title
 		for (const spec of specs.matched) {
@@ -49,12 +59,15 @@ async function runRelevantSpecs() {
 				})
 				if (!title) title = extracts.title
 				html.push(extracts.html)
+				markdowns.push(extracts.markdown)
 			}
 		}
 		await Promise.all(promises)
 		if (html.length) {
-			console.log(`<h3>${title}</h3>`)
-			console.log(html.join('\n'))
+			const combinedHtml = `<h3>${title}</h3>\n` + html.join('\n')
+			fs.writeFileSync(extractFiles.html, combinedHtml, { encoding: 'utf8' })
+			const combinedMarkdown = markdowns.join('\n')
+			fs.writeFileSync(extractFiles.markdown, combinedMarkdown, { encoding: 'utf8' })
 		}
 	} catch (e) {
 		console.log(`\n!!! augen runRelevantSpecs() error !!!\n`, e, '\n')

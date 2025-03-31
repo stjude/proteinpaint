@@ -6,6 +6,7 @@ import { execSync } from 'child_process'
 
 const __dirname = import.meta.dirname.trim()
 const wasCalledDirectly = process.argv[1]?.includes('augen.unit.spec')
+console.log(8, { wasCalledDirectly })
 
 await runTests()
 
@@ -16,10 +17,15 @@ async function runTests() {
 		const files = readdirSync(routesDir)
 		endpoints = files.filter(f => f.endsWith('.ts'))
 		const checkersDir = join(__dirname, './toyApp/checkers')
-		const checkersMtime = statSync(`${checkersDir}-raw/index.ts`).mtimeMs
-		const routesMtime = Math.max(endpoints.map(f => statSync(`${routesDir}/${f}`).mtimeMs))
-		if (wasCalledDirectly || checkersMtime < routesMtime) {
-			if (existsSync(checkersDir)) {
+		const checkersExists = existsSync(checkersDir)
+		let mtimeDiff = -1
+		if (checkersExists) {
+			const checkersMtime = statSync(`${checkersDir}-raw/index.ts`).mtimeMs
+			const routesMtime = Math.max(endpoints.map(f => statSync(`${routesDir}/${f}`).mtimeMs))
+			mtimeDiff = checkersMtime - routesMtime
+		}
+		if (wasCalledDirectly || mtimeDiff < 0 || !checkersExists) {
+			if (checkersExists) {
 				rmSync(checkersDir, { recursive: true, force: true })
 				rmSync(`${checkersDir}-raw`, { recursive: true, force: true })
 			}
