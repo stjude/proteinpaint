@@ -39,6 +39,8 @@ this{}
 				details {} // this needs to be copied from tdbcnf in state to track customizations
 				populations [{key,label}] // might not be part of state
 				shown=bool // set to true if snvindel mds3 tk is shown
+				filter{} // applies default cohort filter. quick fix to generate two-tk cohort comparison
+				            should not be used together with "details{}"
 			ld {}
 				tracks[]
 					.shown=bool // set to true if a ld tk is shown TODO removed ld tk is not reflected on config ui
@@ -157,9 +159,17 @@ class genomeBrowser {
 					// for showing disco etc as ad-hoc sandbox, persistently in the mass plotDiv, rather than a menu
 					newChartHolder: this.opts.plotDiv
 				}
-				if (this.state.filter?.lst?.length > 0) {
-					// state has a non-empty filter, register at tk obj to pass to mds3 data queries
-					tk.filterObj = structuredClone(this.state.filter)
+				// any cohort filter for this tk
+				{
+					const lst = []
+					// register both global filter and local filter to pass to mds3 data queries
+					if (this.state.filter?.lst?.length) lst.push(this.state.filter)
+					if (this.state.config.snvindel.filter) lst.push(this.state.config.snvindel.filter)
+					if (lst.length == 1) {
+						tk.filterObj = structuredClone(lst[0])
+					} else if (lst.length > 1) {
+						tk.filterObj = filterJoin(lst)
+					}
 					// TODO this will cause mds3 tk to show a leftlabel to indicate the filtering, which should be hidden
 				}
 				tklst.push(tk)
@@ -173,7 +183,13 @@ class genomeBrowser {
 							// for showing disco etc as ad-hoc sandbox, persistently in the mass plotDiv, rather than a menu
 							newChartHolder: this.opts.plotDiv
 						}
-						t2.filterObj = tk.filterObj ? filterJoin([tk.filterObj, subFilter]) : structuredClone(subFilter)
+						if (this.state.filter?.lst?.length) {
+							// join sub filter with global
+							t2.filterObj = filterJoin([this.state.filter, subFilter])
+						} else {
+							// no global. only sub
+							t2.filterObj = structuredClone(subFilter)
+						}
 						tklst.push(t2)
 					}
 				}

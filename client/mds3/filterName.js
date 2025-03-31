@@ -19,36 +19,41 @@ export function getFilterName(f) {
 		// has only one tvs
 		const tvs = lst[0].tvs
 		if (!tvs) throw 'f.lst[0].tvs{} missing'
-		const ttype = tvs?.term?.type
-		if (ttype == 'categorical') {
-			// tvs is categorical
-			if (!Array.isArray(tvs.values)) throw 'f.lst[0].tvs.values not array'
 
-			// only assess 1st category name; only use for display, not computing
-			const catKey = tvs.values[0]?.key
-			if (catKey == undefined) throw 'f.lst[0].tvs.values[0].key missing'
-			const catValue = tvs.term.values?.[catKey]?.label || catKey
+		switch (tvs?.term?.type) {
+			case 'categorical':
+				if (!Array.isArray(tvs.values)) throw 'f.lst[0].tvs.values not array'
 
-			if (tvs.values.length == 1) {
-				// tvs uses only 1 category
-				if ((tvs.term.name + catValue).length < 20) {
-					// term name plus category value has short length, show both
-					return tvs.term.name + (tvs.isnot ? '!=' : ': ') + catValue
+				// only assess 1st category name; only use for display, not computing
+				const catKey = tvs.values[0]?.key
+				if (catKey == undefined) throw 'f.lst[0].tvs.values[0].key missing'
+				const catValue = tvs.term.values?.[catKey]?.label || catKey
+
+				if (tvs.values.length == 1) {
+					// tvs uses only 1 category
+					if ((tvs.term.name + catValue).length < 20) {
+						// term name plus category value has short length, show both
+						return tvs.term.name + (tvs.isnot ? '!=' : ': ') + catValue
+					}
+					// only show cat value
+					return (tvs.isnot ? '!' : '') + (catValue.length < 15 ? catValue : catValue.substring(0, 13) + '...')
 				}
-				// only show cat value
-				return (tvs.isnot ? '!' : '') + (catValue.length < 15 ? catValue : catValue.substring(0, 13) + '...')
-			}
-			// tvs uses more than 1 category, set label as "catValue (3)"
-			return `${tvs.isnot ? '!' : ''}${catValue.length < 12 ? catValue : catValue.substring(0, 10) + '...'} (${
-				tvs.values.length
-			})`
+				// tvs uses more than 1 category, set label as "catValue (3)"
+				return `${tvs.isnot ? '!' : ''}${catValue.length < 12 ? catValue : catValue.substring(0, 10) + '...'} (${
+					tvs.values.length
+				})`
+			case 'integer':
+			case 'float':
+			case 'geneExpression':
+			case 'metaboliteIntensity':
+				// tvs is numeric, show numeric range
+				return getNumericRangeLabel(tvs)
+			case 'samplelst':
+				// XXX quick fix! only uses first key in tvs.term.values{}
+				return Object.keys(tvs.term.values)[0]
+			default:
+				throw 'unknown tvs term type'
 		}
-		if (ttype == 'integer' || ttype == 'float' || ttype == 'geneExpression' || ttype == 'metaboliteIntensity') {
-			// tvs is numeric, show numeric range
-			return getNumericRangeLabel(tvs)
-		}
-
-		throw 'unknown tvs term type'
 	}
 	// more than 1 tvs, not able to generate a short name
 	// TODO count total tvs from nested list

@@ -67,6 +67,16 @@ const fFloat = {
 		}
 	]
 }
+const fSamplelst = {
+	lst: [
+		{
+			type: 'tvs',
+			tvs: {
+				term: { type: 'samplelst', values: { testsamplegroup: { key: 'x', label: 'x', list: [] } } }
+			}
+		}
+	]
+}
 
 tape('getFilterName', test => {
 	test.timeoutAfter(100)
@@ -94,6 +104,8 @@ tape('getFilterName', test => {
 
 	fFloat.lst[0].tvs.term.type = 'metaboliteIntensity'
 	test.equal(getFilterName(fFloat), '1.1<x<2.6', 'metaboliteIntensity tvs')
+
+	test.equal(getFilterName(fSamplelst), 'testsamplegroup', 'samplelst tvs')
 
 	test.end()
 })

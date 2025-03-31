@@ -1,5 +1,5 @@
 import { copyMerge, getCompInit } from '#rx'
-import { Menu, GeneSetEditUI, renderTable, table2col } from '#dom'
+import { Menu, addGeneSearchbox, GeneSetEditUI, renderTable, table2col } from '#dom'
 import { filterInit, getNormalRoot, filterPromptInit, getFilterItemByTag } from '#filter/filter'
 import { appInit } from '#termdb/app'
 import { get$id } from '#termsetting'
@@ -22,9 +22,20 @@ this
 			group.filter={}
 		termfilter{}
 			filter{}
-		termdbConfig{}
 */
+
 const colorScale = getColors(5)
+
+// tip2 is used for showing the terms tree, which works as a submenu of this.tip, created here for reuse
+let tip2
+function addTip2(tip) {
+	// FIXME hardcoded x pos is not generally applicable
+	if (!tip2) tip2 = new Menu({ padding: 0, offsetX: 250, offsetY: -34, parent_menu: tip.d.node() })
+	tip2.clear()
+}
+
+const geneTip = new Menu({ padding: '0px' })
+
 class MassGroups {
 	constructor(opts = {}) {
 		this.type = 'groups'
@@ -43,7 +54,7 @@ class MassGroups {
 		const state = {
 			termfilter: appState.termfilter,
 			groups: rebaseGroupFilter(appState),
-			termdbConfig: appState.termdbConfig,
+			termdbConfig: appState.termdbConfig, // FIXME do not track in state
 			customTerms: appState.customTerms,
 			currentCohortChartTypes: getCurrentCohortChartTypes(appState),
 			matrixplots: appState.termdbConfig.matrixplots
@@ -256,7 +267,7 @@ function addSummarizeOption(menuDiv, self, samplelstTW, id) {
 	const summarizeDiv = menuDiv.append('div').attr('class', 'sja_menuoption sja_sharp_border').html('Summarize')
 	summarizeDiv.insert('div').html('›').style('float', 'right')
 
-	summarizeDiv.on('click', async e => {
+	summarizeDiv.on('click', async () => {
 		showTermsTree(
 			summarizeDiv,
 			term => {
@@ -272,13 +283,94 @@ function addSummarizeOption(menuDiv, self, samplelstTW, id) {
 
 function mayAddGenomebrowserOption(menuDiv, self, samplelstTW) {
 	if (!self.state.currentCohortChartTypes.includes('genomeBrowser')) return
-	menuDiv.append('div').attr('class', 'sja_menuoption sja_sharp_border').text('Genome browser')
+	if (!self.app.vocabApi.termdbConfig.queries?.snvindel) return // for now only allow for snvindel
+	if (samplelstTW.q.groups.length != 2) return // hardcoded to only support 2 groups
+	const itemdiv = menuDiv
+		.append('div')
+		.attr('class', 'sja_menuoption sja_sharp_border')
+		.text('Compare mutations')
+		.on('click', () => {
+			addTip2(self.tip)
+			tip2.showunderoffset(itemdiv.node())
+			const arg = {
+				tip: geneTip,
+				genome: self.app.opts.genome,
+				row: tip2.d.append('div').style('margin', '10px'),
+				callback: () => {
+					const [f1, f2] = makeFiltersFromTwoSampleGroups(samplelstTW)
+					const config = {
+						chartType: 'genomeBrowser',
+						geneSearchResult: result,
+						snvindel: { filter: f1 }, // code filter in 1st tk
+						subMds3TkFilters: [f2] // code filter in 2nd tk
+					}
+					self.app.dispatch({
+						type: 'plot_create',
+						config
+					})
+				}
+			}
+			const result = addGeneSearchbox(arg)
+		})
+}
+
+function makeFiltersFromTwoSampleGroups(tw) {
+	const [g1, g2] = tw.q.groups
+	if (!g1 || !g2) throw 'not 2 groups in tw.q.groups[]'
+	return [
+		{
+			in: g1.in,
+			join: '',
+			type: 'tvslst',
+			lst: [
+				{
+					type: 'tvs',
+					tvs: {
+						term: {
+							name: g1.name,
+							type: 'samplelst',
+							values: {
+								[g1.name]: {
+									key: g1.name,
+									label: g1.name,
+									list: g1.values
+								}
+							}
+						}
+					}
+				}
+			]
+		},
+		{
+			in: g2.in,
+			join: '',
+			type: 'tvslst',
+			lst: [
+				{
+					type: 'tvs',
+					tvs: {
+						term: {
+							name: g2.name,
+							type: 'samplelst',
+							values: {
+								[g2.name]: {
+									key: g2.name,
+									label: g2.name,
+									list: g2.values
+								}
+							}
+						}
+					}
+				}
+			]
+		}
+	]
 }
 
 function mayAddSamplescatterOption(menuDiv, self, samplelstTW) {
 	// this is only for pre-made scatterplots
-	if (!self.state.termdbConfig.scatterplots) return
-	for (const plot of self.state.termdbConfig.scatterplots) {
+	if (!self.app.vocabApi.termdbConfig.scatterplots) return
+	for (const plot of self.app.vocabApi.termdbConfig.scatterplots) {
 		if (plot.colorTW)
 			//the plot supports overlay by a color term
 			menuDiv
@@ -612,7 +704,6 @@ export async function openSummaryPlot(tw, samplelstTW, app, id, newId) {
 		config
 	})
 }
-let tip2 // tip 2 is used for showing the terms tree, which is a submenu of the main tip, created here for reuse
 export async function showTermsTree(
 	div,
 	callback,
@@ -626,8 +717,7 @@ export async function showTermsTree(
 	const activeCohort = app.getState().activeCohort
 	//we need to pass the active cohort to build the tree with the correct terms
 	const state = { activeCohort, ...treeState }
-	if (!tip2) tip2 = new Menu({ padding: 0, offsetX: 162, offsetY: -34, parent_menu: tip.d.node() })
-	tip2.clear()
+	addTip2(tip) // tip2 is added if missing and ready to use
 	if (shift) tip2.showunderoffset(div.node())
 	else tip2.showunder(div.node())
 	appInit({
@@ -671,8 +761,7 @@ export function addHierClusterPlotMenuItem(chartType, div, text, tip, samplelstT
 		.attr('class', 'sja_menuoption sja_sharp_border')
 		.html(`${text}&nbsp;&nbsp;›`)
 		.on('click', () => {
-			if (!tip2) tip2 = new Menu({ padding: 0, offsetX: 162, offsetY: -34, parent_menu: tip.d.node() })
-			tip2.clear()
+			addTip2(tip) // tip2 is added if missing and ready to use
 			tip2.showunderoffset(itemDiv.node())
 
 			new GeneSetEditUI({
