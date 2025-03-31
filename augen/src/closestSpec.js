@@ -4,6 +4,8 @@ import * as glob from 'glob'
 import fs from 'fs'
 
 export const gitProjectRoot = execSync(`git rev-parse --show-toplevel`, { encoding: 'utf8' }).trim()
+export const publicSpecsDir = path.join(gitProjectRoot, 'public/coverage/specs')
+
 const ignore = ['dist/**', 'node_modules/**']
 const codeFileExt = new Set(['.js', '.mjs', '.cjs', '.ts'])
 
@@ -142,18 +144,9 @@ export function emitRelevantSpecCovDetails({ workspace, relevantSpecs, reportDir
 				const targetFile = `${wsSpecsExtractsDir}/${file}.html`
 				const targetDir = path.dirname(targetFile)
 				if (!fs.existsSync(targetDir)) fs.mkdirSync(targetDir)
-				console.log(144, fs.existsSync(targetDir))
 				fs.copyFileSync(srcFile, targetFile)
 			}
 		}
-		// const coverageHtml = `${reportDir}/${file}.html`
-		// if (fs.existsSync(coverageHtml)) {
-		// 	const extractsDirname = path.dirname(file)
-		// 	const destExtractsDir = path.join(wsSpecsExtractsDir, extractsDirname)
-		// 	const filename = path.basename(coverageHtml)
-		// 	fs.mkdirSync(destExtractsDir, {force: true, recursive: true}); console.log(132, fs.existsSync(coverageHtml), fs.existsSync(destExtractsDir), `${destExtractsDir}/${file}.html`, fs.existsSync(`${destExtractsDir}/${file}.html`))
-		// 	fs.copyFileSync(coverageHtml, `${destExtractsDir}/${filename}`)
-		// }
 	}
 
 	if (relevantLines.size) {

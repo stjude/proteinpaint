@@ -21,7 +21,7 @@
     "precombined:coverage": "tsx emitImports.js unit > serverTests.js",
     "combined:coverage": "coverageKey=test c8 --all --src=proteinpaint/server --experimental-monocart -r=v8 -r=html -r=json -r=markdown-summary -r=markdown-details -o=./.coverage tsx ./coverage.js & ",
     "postcombined:coverage": "rm -rf ./cache",
-    "spec:coverage": "c8 --all --src=proteinpaint/server --experimental-monocart -r=v8 -r=html -r=json -r=markdown-summary -r=markdown-details -o=./.coverage tsx ./coverage.js",
+    "spec:coverage": "tsx test/relevant.js",
     "getconf": "../build/getConfigProp.js",
     "doc": "../augen/build.sh routes shared/types/routes shared/checkers ../public/docs/server",
     "mjs": "esbuild \"$DIR/*.ts\" --platform=node --outdir=\"$DIR\" --format=esm",

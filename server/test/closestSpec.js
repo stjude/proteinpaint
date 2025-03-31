@@ -11,10 +11,12 @@ const serverDir = path.join(import.meta.dirname, '..')
 const relevantServerDirs = ['routes', 'src', 'utils']
 //const EMPTY = 'NO_BRANCH_COVERAGE_UPDATE'
 const opts = {
-	changedFiles: ['auth.js'].map(f => `server/src/${f}`)
+	//changedFiles: ['auth.js'].map(f => `server/src/${f}`)
 }
 
-//console.log(getRelevantServerSpecs())
+if (process.argv[1] == import.meta.dirname + '/closestSpec.js' && process.argv.includes('-p')) {
+	console.log(getRelevantServerSpecs())
+}
 
 export function getRelevantServerSpecs() {
 	return getClosestSpec(serverDir, relevantServerDirs, opts)
