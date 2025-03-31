@@ -122,7 +122,7 @@ export type ValuesGroup = {
 export type FilterGroup = {
 	name: string
 	type: 'filter'
-	filter: Filter
+	filter: any
 	uncomputable?: boolean // if true, do not include this group in computations
 }
 

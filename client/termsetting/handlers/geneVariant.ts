@@ -1,6 +1,7 @@
 import { dtsnvindel, dtcnv, dtfusionrna, geneVariantTermGroupsetting, dtTerms } from '#shared/common.js'
 import { getPillNameDefault, set_hiddenvalues } from '../termsetting'
 import type {
+	FilterGroup,
 	GeneVariantQ,
 	GeneVariantTW,
 	GeneVariantTermSettingInstance,
@@ -12,6 +13,7 @@ import type { PillData } from '../types'
 import { make_radios } from '#dom'
 import { copyMerge } from '#rx'
 import { GroupSettingMethods } from './groupsetting.ts'
+import { getWrappedTvslst } from '#filter/filter'
 
 /* 
 instance attributes
@@ -92,18 +94,51 @@ export function fillTW(tw: GeneVariantTW, vocabApi: VocabApi, defaultQ: GeneVari
 		copyMerge(tw.q, defaultQ)
 	}
 
+	makeVariantFilter(tw, vocabApi)
+
 	// groupsetting
 	// fill term.groupsetting
-	if (!tw.term.groupsetting) tw.term.groupsetting = geneVariantTermGroupsetting satisfies TermGroupSetting
+	//if (!tw.term.groupsetting) tw.term.groupsetting = geneVariantTermGroupsetting satisfies TermGroupSetting
 	// if applicable, fill q groupsetting properties
-	if (tw.q.type == 'predefined-groupset' || tw.q.type == 'custom-groupset') {
+	if (/*tw.q.type == 'predefined-groupset' || */ tw.q.type == 'custom-groupset') {
 		// groupsetting in use
 		// must specify a single data type
-		if (!tw.q.dt) {
-			const ds_dts = getDsDts(vocabApi.termdbConfig.queries)
-			tw.q.dt = ds_dts[0]
+		//const ds_dts = getDsDts(vocabApi.termdbConfig.queries)
+
+		const filter = structuredClone(tw.term.filter)
+
+		const group0: FilterGroup = {
+			name: 'Excluded categories',
+			type: 'filter',
+			uncomputable: true,
+			filter: Object.assign({ group: 0 }, filter)
 		}
-		// must specify a single orign (if dt has annotated origins)
+		const group1: FilterGroup = {
+			name: 'Group 1',
+			type: 'filter',
+			uncomputable: false,
+			filter: Object.assign({ group: 1 }, filter)
+		}
+		const group2: FilterGroup = {
+			name: 'Group 2',
+			type: 'filter',
+			uncomputable: false,
+			filter: Object.assign({ group: 2 }, filter)
+		}
+		const term = filter.terms[0]
+		const key = Object.keys(term.values)[0]
+		const value = { key, label: term.values[key].label, value: key }
+		const tvs1: any = { type: 'tvs', tvs: { term, values: [value] } }
+		const tvs2 = structuredClone(tvs1)
+		tvs2.tvs.isnot = true
+		group0.filter.active = getWrappedTvslst()
+		group1.filter.active = getWrappedTvslst([tvs1])
+		group2.filter.active = getWrappedTvslst([tvs2])
+		group1.name = `${term.name} IS ${value.label.toLowerCase()}`
+		group2.name = `${term.name} NOT ${value.label.toLowerCase()}`
+		tw.q.customset = { groups: [group0, group1, group2] }
+
+		/*// must specify a single orign (if dt has annotated origins)
 		const byOrigin = vocabApi.termdbConfig.assayAvailability?.byDt[tw.q.dt]?.byOrigin
 		if (byOrigin && !tw.q.origin) tw.q.origin = 'somatic'
 		// fill groupsetting
@@ -112,7 +147,7 @@ export function fillTW(tw: GeneVariantTW, vocabApi: VocabApi, defaultQ: GeneVari
 				const groupset_idxs = getGroupsetIdxs(tw.q.dt)
 				tw.q.predefined_groupset_idx = groupset_idxs[0]
 			}
-		}
+		}*/
 	}
 
 	{
@@ -150,6 +185,39 @@ export function fillTW(tw: GeneVariantTW, vocabApi: VocabApi, defaultQ: GeneVari
 	}
 
 	set_hiddenvalues(tw.q, tw.term)
+}
+
+// function to make a variant filter based on dt terms
+function makeVariantFilter(tw: GeneVariantTW, vocabApi: VocabApi) {
+	if (tw.term.filter) return
+	const dtTermsInDs: DtTerm[] = [] // dt terms in dataset
+	for (const t of dtTerms) {
+		const query = t.id == 'fusion' || t.id == 'sv' ? 'svfusion' : t.id // TODO: distinguish between fusion and sv in dataset file
+		if (!Object.keys(vocabApi.termdbConfig.queries).includes(query)) continue // dt is not in dataset
+		const byOrigin = vocabApi.termdbConfig.assayAvailability?.byDt[t.dt]?.byOrigin
+		if (byOrigin) {
+			// dt has multiple origins
+			// add a dt term for each origin
+			const origins = Object.keys(byOrigin)
+			if (!(origins.length == 2 && origins.includes('germline') && origins.includes('somatic')))
+				throw 'unexpected origins[]'
+			// order somatic origin first so that it is used by default
+			// when filling in custom groups
+			for (const k of ['somatic', 'germline']) {
+				const tcopy = structuredClone(t)
+				tcopy.origin = k
+				tcopy.id = `${t.id}_${k}`
+				tcopy.name = `${t.name} (${k})`
+				dtTermsInDs.push(tcopy)
+			}
+		} else {
+			dtTermsInDs.push(t)
+		}
+	}
+	tw.term.filter = {
+		opts: { joinWith: ['and', 'or'] },
+		terms: dtTermsInDs // will load dt terms as custom terms in frontend vocab
+	}
 }
 
 async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
@@ -207,7 +275,6 @@ async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 	// make radio buttons for grouping variants
 	async function makeGroupUI() {
 		if (!self.q.type || self.q.type != 'custom-groupset') self.q.type = 'filter'
-		makeVariantFilter()
 		await makeGroupsetDraggables()
 		/*groupsDiv.style('display', 'inline-block')
 		makeDtRadios()
@@ -367,34 +434,6 @@ async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 		]
 		self.q = { ...getBaseQ(self.q), type: 'custom-groupset', customset: { groups } }
 	}*/
-
-	// function to make a variant filter based on dt terms
-	function makeVariantFilter() {
-		if (self.term.filter) return
-		const dtTermsInDs: DtTerm[] = [] // dt terms in dataset
-		for (const t of dtTerms) {
-			const query = t.id == 'fusion' || t.id == 'sv' ? 'svfusion' : t.id // TODO: distinguish between fusion and sv in dataset file
-			if (!Object.keys(self.vocabApi.termdbConfig.queries).includes(query)) continue // dt is not in dataset
-			const byOrigin = self.vocabApi.termdbConfig.assayAvailability?.byDt[t.dt]?.byOrigin
-			if (byOrigin) {
-				// dt has multiple origins
-				// add a dt term for each origin
-				for (const k of Object.keys(byOrigin)) {
-					const tcopy = structuredClone(t)
-					tcopy.origin = k
-					tcopy.id = `${t.id}_${k}`
-					tcopy.name = `${t.name} (${byOrigin[k].label})`
-					dtTermsInDs.push(tcopy)
-				}
-			} else {
-				dtTermsInDs.push(t)
-			}
-		}
-		self.term.filter = {
-			opts: { joinWith: ['and', 'or'] },
-			terms: dtTermsInDs // will load dt terms as custom terms in frontend vocab
-		}
-	}
 
 	// function for making groupset draggables
 	async function makeGroupsetDraggables() {
