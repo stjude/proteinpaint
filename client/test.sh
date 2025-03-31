@@ -28,9 +28,9 @@ if (($# > 2)); then
 fi
 
 TESTHOST=http://localhost:$TESTPORT
-if [[ "$SPECPATTERN" != *".unit."* && "$TESTPORT" != "6789" ]]; then
-	./test/pretest.js $TESTHOST
-fi
+# if [[ "$SPECPATTERN" != *".unit."* && "$TESTPORT" != "6789" ]]; then
+# 	./test/pretest.js $TESTHOST
+# fi
 
 if [[ ! -f "./test/tape.bundle.js" ]]; then
 	# NOTES:
