@@ -310,7 +310,6 @@ async function queryGeneExpression(hdf5_file, geneName) {
 	try {
 		// Call the Rust script with input parameters
 		// console.log('Params:', JSON.stringify(jsonInput));
-		// const result = await run_rust('readDenseHDF5', jsonInput);
 		const result = await run_rust('readHDF5', jsonInput)
 
 		// Debug output to understand what we're getting back
