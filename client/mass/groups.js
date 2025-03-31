@@ -217,14 +217,10 @@ class MassGroups {
 			c2.html(`${grp.othersGroupSampleNum || grp.list.length} samples`)
 		}
 
-		let row = menuDiv.append('div')
-
 		addMatrixMenuItems(this.tip, menuDiv, samplelstTW, this.app, id, this.state, () => this.newId)
 
-		//TODO: change DEanalysis to "DA", server also computes this type based on query type availability
-		if (this.state.currentCohortChartTypes.includes('DEanalysis') && samplelstTW.q.groups.length == 2) {
+		if (this.state.currentCohortChartTypes.includes('DA') && samplelstTW.q.groups.length == 2)
 			addDiffAnalysisPlotMenuItem(menuDiv, this, samplelstTW)
-		}
 
 		if (this.state.currentCohortChartTypes.includes('survival'))
 			addPlotMenuItem('survival', menuDiv, 'Compare survival', this.tip, samplelstTW, id, this, true)
@@ -235,57 +231,13 @@ class MassGroups {
 		if (this.state.currentCohortChartTypes.includes('cuminc'))
 			addPlotMenuItem('cuminc', menuDiv, 'Compare cumulative incidence', this.tip, samplelstTW, id, this, true)
 
-		const summarizeDiv = menuDiv.append('div').attr('class', 'sja_menuoption sja_sharp_border').html('Summarize')
-		summarizeDiv.insert('div').html('›').style('float', 'right')
+		addSummarizeOption(menuDiv, this, samplelstTW, id)
 
-		summarizeDiv.on('click', async e => {
-			showTermsTree(
-				summarizeDiv,
-				term => {
-					const tw = { term }
-					if (isNumericTerm(term)) tw.q = { mode: 'continuous' }
-					openSummaryPlot(tw, samplelstTW, this.app, id, () => this.newId)
-				},
-				this.app,
-				this.tip
-			)
-		})
-
-		//show scatterplots for custom variable options
-		if (this.state.termdbConfig.scatterplots)
-			for (const plot of this.state.termdbConfig.scatterplots) {
-				if (plot.colorTW)
-					//the plot supports overlay by a color term
-					menuDiv
-						.append('div')
-						.attr('class', 'sja_menuoption sja_sharp_border')
-						.text(`Open ${plot.name}`)
-						.on('click', () => {
-							let config = {
-								chartType: 'sampleScatter',
-								name: plot.name
-							}
-							if (plot.sampleCategory)
-								//if the plot filters by a sample category, like D1, R1
-								config.sampleCategory = {
-									tw: structuredClone(plot.sampleCategory.tw),
-									order: plot.sampleCategory.order,
-									defaultValue: plot.sampleCategory.defaultValue
-								}
-							if (plot.sampleType) config.sampleType = plot.sampleType //if the plot specifies the sample type to customize the legend
-							config.colorTW = structuredClone(samplelstTW)
-
-							if (plot.settings) config.settings = structuredClone(plot.settings) //if the plot specifies settings
-							this.app.dispatch({
-								type: 'plot_create',
-								config: config
-							})
-							this.tip.hide()
-						})
-			}
+		mayAddSamplescatterOption(menuDiv, this, samplelstTW)
+		mayAddGenomebrowserOption(menuDiv, this, samplelstTW)
 
 		//show option to delete custom variable
-		row = menuDiv
+		menuDiv
 			.append('div')
 			.attr('class', 'sja_menuoption sja_sharp_border')
 			.text('Delete variable')
@@ -299,6 +251,64 @@ class MassGroups {
 }
 
 export const groupsInit = getCompInit(MassGroups)
+
+function addSummarizeOption(menuDiv, self, samplelstTW, id) {
+	const summarizeDiv = menuDiv.append('div').attr('class', 'sja_menuoption sja_sharp_border').html('Summarize')
+	summarizeDiv.insert('div').html('›').style('float', 'right')
+
+	summarizeDiv.on('click', async e => {
+		showTermsTree(
+			summarizeDiv,
+			term => {
+				const tw = { term }
+				if (isNumericTerm(term)) tw.q = { mode: 'continuous' }
+				openSummaryPlot(tw, samplelstTW, self.app, id, () => self.newId)
+			},
+			self.app,
+			self.tip
+		)
+	})
+}
+
+function mayAddGenomebrowserOption(menuDiv, self, samplelstTW) {
+	if (!self.state.currentCohortChartTypes.includes('genomeBrowser')) return
+	menuDiv.append('div').attr('class', 'sja_menuoption sja_sharp_border').text('Genome browser')
+}
+
+function mayAddSamplescatterOption(menuDiv, self, samplelstTW) {
+	// this is only for pre-made scatterplots
+	if (!self.state.termdbConfig.scatterplots) return
+	for (const plot of self.state.termdbConfig.scatterplots) {
+		if (plot.colorTW)
+			//the plot supports overlay by a color term
+			menuDiv
+				.append('div')
+				.attr('class', 'sja_menuoption sja_sharp_border')
+				.text(`Overlay on ${plot.name}`)
+				.on('click', () => {
+					let config = {
+						chartType: 'sampleScatter',
+						name: plot.name
+					}
+					if (plot.sampleCategory)
+						//if the plot filters by a sample category, like D1, R1
+						config.sampleCategory = {
+							tw: structuredClone(plot.sampleCategory.tw),
+							order: plot.sampleCategory.order,
+							defaultValue: plot.sampleCategory.defaultValue
+						}
+					if (plot.sampleType) config.sampleType = plot.sampleType //if the plot specifies the sample type to customize the legend
+					config.colorTW = structuredClone(samplelstTW)
+
+					if (plot.settings) config.settings = structuredClone(plot.settings) //if the plot specifies settings
+					self.app.dispatch({
+						type: 'plot_create',
+						config: config
+					})
+					self.tip.hide()
+				})
+	}
+}
 
 function addDiffAnalysisPlotMenuItem(div, self, samplelstTW) {
 	// DA app can be applied to multiple datatypes. show options based on availability for each datatype
