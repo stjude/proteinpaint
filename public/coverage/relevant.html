@@ -1,0 +1,53 @@
+<html>
+<head>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css" integrity="sha512-NhSC1YmyruXifcj/KFRWoC561YpHpc5Jtzgvbuzx5VozKpWvQ+4nXhPdFgmx8xqexRcpAglTj9sIBWINXa8x5w==" crossorigin="anonymous" referrerpolicy="no-referrer"/><!-- pragma: allowlist secret -->
+  <style>
+  a {
+    text-decoration: none;
+    /*color: #333;*/
+  }
+
+  a:hover {
+    text-decoration: underline;
+  }
+
+  #main-div {
+    margin: 10px;
+    padding: 10px;
+    font-family: Menlo, Monospace, Consolas, Arial, sans-serif;
+    font-size: 12px;
+  }
+
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/4.13.0/d3.min.js" integrity="sha512-RJJ1NNC88QhN7dwpCY8rm/6OxI+YdQP48DrLGe/eSAd+n+s1PXwQkkpzzAgoJe4cZFW2GALQoxox61gSY2yQfg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script><!-- pragma: allowlist secret -->
+  <script src='/docs/nav.js'></script>
+</head>
+<body>
+
+<div class='docs-subheader'>
+  <span id='pp-test-runner-banner' class='code-snippet'>npm run spec:coverage</span> to refresh report
+</div>
+
+<h1>Relevant coverage reports for updated code</h1>
+<div id='main-div'></div>
+
+<script type='module'>
+const workspaces = ['server', 'client', 'augen']
+const htmlSections = await Promise.all(workspaces.map(fetchHtml))
+d3.select('#main-div').html(htmlSections.join('\n<br>\n'))
+
+async function fetchHtml(ws) {
+  try {
+    const html = await fetch(`/coverage/specs/${ws}-relevant.html`)
+      .then(r => {
+        if (r.status != 200) return ''
+        return r.text()
+      })
+    return html ? `\n<h2 style='text-decoration: underline'>${ws}</h2>\n${html}\n` : ''
+  } catch(_) {
+    return ''
+  }
+}
+</script>
+</body>
+</html>
