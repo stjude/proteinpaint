@@ -19,7 +19,7 @@ class Volcano extends RxComponentInner {
 	interactions?: VolcanoInteractions
 	termType: string
 	diffAnalysisInteractions?: DiffAnalysisInteractions
-
+	geSampleNumCuttoff?: number
 	constructor(opts: VolcanoOpts) {
 		super()
 		this.components = {
@@ -44,6 +44,7 @@ class Volcano extends RxComponentInner {
 			actionsTip: new Menu({ padding: '' })
 		}
 		if (opts.diffAnalysisInteractions) this.diffAnalysisInteractions = opts.diffAnalysisInteractions
+		if (opts.termType == 'geneExpression') this.geSampleNumCuttoff = 3000
 	}
 
 	reactsTo(action: { type: string; id: string }) {
@@ -72,7 +73,8 @@ class Volcano extends RxComponentInner {
 
 	async setControls() {
 		const plotConfig = this.app.getState().plots.find((p: any) => p.id === this.id)
-		const controls = new VolcanoControlInputs(plotConfig, this.termType)
+		const sampleNum = this.interactions!.getSampleNum(plotConfig)
+		const controls = new VolcanoControlInputs(plotConfig, this.termType, sampleNum)
 
 		this.components.controls = await controlsInit({
 			app: this.app,
@@ -101,6 +103,16 @@ class Volcano extends RxComponentInner {
 		try {
 			if (!this.interactions) throw 'Interactions not initialized [main() Volcano.ts]'
 
+			const sampleNum = this.interactions.getSampleNum(config)
+			if (this.geSampleNumCuttoff && sampleNum > this.geSampleNumCuttoff) {
+				config.settings.volcano.method = 'wilcoxon'
+				await this.app.save({
+					type: 'plot_edit',
+					id: this.id,
+					config
+				})
+			}
+
 			//Only show Loading for data requests that take longer than 500ms
 			const showWait = setTimeout(() => {
 				this.dom.wait.style('display', 'block')
@@ -112,9 +124,11 @@ class Volcano extends RxComponentInner {
 			const response = await model.getData()
 			if (!response || response.error || !response.data.length) {
 				sayerror(this.dom.error, response.error || 'No data returned from server')
+				clearTimeout(showWait)
 				this.dom.wait.style('display', 'none')
 				return
 			}
+
 			this.interactions.clearDom()
 			if (this.diffAnalysisInteractions) this.diffAnalysisInteractions.setVar('volcanoResponse', response)
 

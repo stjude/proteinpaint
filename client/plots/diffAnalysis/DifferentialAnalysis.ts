@@ -156,8 +156,8 @@ export function getPlotConfig(opts: DiffAnalysisOpts) {
 	}
 
 	if (opts.termType == 'geneExpression') {
-		config.settings['volcano'] = getDefaultVolcanoSettings(opts.overrides)
-		config.settings['gsea'] = getDefaultGseaSettings(opts.overrides)
+		config.settings['volcano'] = getDefaultVolcanoSettings(opts.overrides || {})
+		config.settings['gsea'] = getDefaultGseaSettings(opts.overrides || {})
 	}
 
 	return copyMerge(config, opts)
