@@ -81,7 +81,8 @@ export const numericTypes = new Set([
 	TermTypes.FLOAT,
 	TermTypes.GENE_EXPRESSION,
 	TermTypes.METABOLITE_INTENSITY,
-	TermTypes.SINGLECELL_GENE_EXPRESSION
+	TermTypes.SINGLECELL_GENE_EXPRESSION,
+	TermTypes.DATE
 ])
 
 const categoricalTypes = new Set([TermTypes.CATEGORICAL, TermTypes.SNP])
@@ -206,4 +207,16 @@ const typeMap = {
 
 export function termType2label(type) {
 	return typeMap[type] || 'Unknown term type'
+}
+
+//value is a decimal where year is the integer part and month is the decimal part
+export function getDate(value) {
+	const year = Math.floor(value)
+	const month = Math.floor((value - year) * 12)
+	const str = `${year}-${month}-01`
+	const date = new Date(str)
+	return date.toLocaleDateString('en-US', {
+		year: 'numeric',
+		month: 'long'
+	})
 }

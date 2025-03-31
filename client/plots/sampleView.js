@@ -3,7 +3,7 @@ import { select } from 'd3-selection'
 import { controlsInit } from './controls'
 import { getNormalRoot } from '#filter/filter'
 import { dofetch3 } from '#common/dofetch'
-import { DEFAULT_SAMPLE_TYPE, isNumericTerm, ROOT_SAMPLE_TYPE } from '#shared/terms.js'
+import { DEFAULT_SAMPLE_TYPE, isNumericTerm, ROOT_SAMPLE_TYPE, getDate } from '#shared/terms.js'
 import { sayerror } from '../dom/sayerror.ts'
 
 const root_ID = 'root'
@@ -679,6 +679,7 @@ class SampleView {
 export function getTermValue(term, data) {
 	let value = data[term.id]?.value
 	if (value == null || value == undefined || value == 'undefined') return null
+	if (term.type == 'date') return getDate(value)
 	if (isNumericTerm(term)) {
 		value = term.values?.[value]?.label || term.values?.[value]?.key || value
 		if (isNaN(value)) return value
@@ -686,7 +687,7 @@ export function getTermValue(term, data) {
 	}
 
 	if (term.type == 'categorical') return term.values[value]?.label || term.values[value]?.key
-	if (term.type == 'date') return value
+
 	if (term.type == 'condition') {
 		const values = value.toString().split(' ')
 		let [years, status] = values

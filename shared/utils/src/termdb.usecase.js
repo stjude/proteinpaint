@@ -94,7 +94,7 @@ export function isUsableTerm(term, _usecase, termdbConfig, ds) {
 
 		case 'sampleScatter':
 			if (usecase.detail == 'numeric') {
-				if (isNumericTerm(term)) {
+				if (isNumericTerm(term) || term.type == 'date') {
 					uses.add('plot')
 				}
 				if (hasNumericChild(child_types)) uses.add('branch')

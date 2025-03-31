@@ -403,6 +403,7 @@ function order(map, tw, refs) {
 async function getSampleCoordinatesByTerms(req, q, ds, data) {
 	const canDisplay = authApi.canDisplaySampleIds(req, ds)
 	const samples = []
+
 	for (const sampleId in data.samples) {
 		const values = data.samples[sampleId]
 		const x = values[q.coordTWs[0].$id]?.value
