@@ -10,6 +10,7 @@ Features:
 
 Fixes:
 - #dom/table accounts for zeros when sorting
+- Removed commented out code that called a rust function that we no longer use.
 
 
 ## 2.113.0
