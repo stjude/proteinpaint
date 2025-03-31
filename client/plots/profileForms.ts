@@ -117,8 +117,6 @@ export class profileForms extends profilePlot {
 		const domain = this.config.tw.term.id.split('__').slice(1).join(' / ')
 		this.dom.domainDiv.text(domain)
 		this.categories = new Set()
-		const height = this.activeTWs.length * 30
-		this.dom.svg.attr('height', height + 120)
 
 		await this.setControls()
 		this.renderPlot()
@@ -186,6 +184,10 @@ export class profileForms extends profilePlot {
 		this.dom.headerDiv.selectAll('*').remove()
 		let y = 0
 		const step = 30
+		const height = this.activeTWs.length * step
+		this.dom.svg.attr('height', height + 120)
+
+		this.dom.svg.attr('height', height + 120)
 		for (const tw of this.activeTWs) {
 			if (tw.term.type != 'multivalue') continue
 			const getDict = sample => this.getDict(tw.$id, sample)
@@ -211,28 +213,33 @@ export class profileForms extends profilePlot {
 	renderYesNo(samples) {
 		this.xAxisScale = d3Linear().domain([0, 100]).range([0, this.settings.svgw])
 		this.dom.xAxisG.call(axisTop(this.xAxisScale))
-		const height = 30
+		const step = 30
+		const height = this.activeTWs.length * step
+		this.dom.svg.attr('height', height * 3 + 200)
+
 		let y = 0
 		let showSCBar = false
 		const activePlot = this.activePlot
 		for (const tw of this.activeTWs) {
 			const getDict = sample => this.getDict(tw.$id, sample)
 			const percents: { [key: string]: number } = this.getPercentsDict(getDict, samples)
+
 			const scTerm = activePlot.scTerms.find(t => t.term.id.includes(tw.term.id))
 			const scPercents: { [key: string]: number } = this.getSCPercentsDict(scTerm, samples)
+
 			const scPercentKeys = Object.keys(scPercents).sort((a, b) => a.localeCompare(b))
 			const scTotal = Object.values(scPercents).reduce((a, b) => a + b, 0)
 			showSCBar = scTotal > 1
-			this.renderYesNoBar(percents, y, height, scTotal == 1 ? scPercentKeys : [])
+			this.renderYesNoBar(percents, y, step, scTotal == 1 ? scPercentKeys : [])
 			if (showSCBar) {
-				y += height + 10
-				this.renderYesNoBar(scPercents, y, height, [])
+				y += step + 10
+				this.renderYesNoBar(scPercents, y, step, [])
 				this.dom.mainG
 					.append('text')
 					.text('SC')
 					.style('font-size', '0.7em')
 					.attr('x', this.settings.svgw + 8)
-					.attr('y', y + height * 0.6)
+					.attr('y', y + step * 0.6)
 			}
 
 			this.dom.mainG
@@ -240,26 +247,26 @@ export class profileForms extends profilePlot {
 				.text('POC')
 				.style('font-size', '0.7em')
 				.attr('x', this.settings.svgw + 8)
-				.attr('y', showSCBar ? y - height + 0.35 * height : y + height * 0.6)
+				.attr('y', showSCBar ? y - step + 0.35 * step : y + step * 0.6)
 			this.dom.mainG
 				.append('text')
 				.attr('x', -15)
-				.attr('y', showSCBar ? y : y + height / 2)
+				.attr('y', showSCBar ? y : y + step / 2)
 				.text(getText(tw.term.name))
 				.attr('text-anchor', 'end')
 				.attr('font-size', '0.8em')
 
-			y += height + 40
+			y += step + 40
 		}
 		this.renderLines(y - 20) //last padding not needed
 
-		if (showSCBar) this.dom.legendG.attr('transform', `translate(${750}, ${30 + this.settings.svgh})`)
+		if (showSCBar) this.dom.legendG.attr('transform', `translate(${550}, ${30 + this.settings.svgh})`)
 		else this.dom.legendG.attr('transform', `translate(${750}, ${this.settings.svgh * 0.8})`)
 
 		let x = 0
-		for (const key of this.activePlot.categories) {
-			this.drawLegendRect(x, 0, key, this.getColor(key), this.dom.legendG)
-			x += 60
+		for (const category of this.activePlot.categories) {
+			this.drawLegendRect(x, 0, category.name, this.getColor(category.name), this.dom.legendG)
+			x += 80
 		}
 		let text = this.dom.legendG
 			.append('text')
