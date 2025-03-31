@@ -27,7 +27,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           INPUT_BUILD_SECRET: ${{ steps.set-build-secret.outputs.BUILD_SECRET }}
 
-  build:
+  test:
     needs: check-user-permissions
     runs-on: ubuntu-22.04
     timeout-minutes: 15
@@ -68,6 +68,14 @@ jobs:
       - name: Detect if integration tests are required
         run: |
           echo "HAS_INTEGRATION_TESTS=$(./test/hasIntegrationSpecs.js)" >> $GITHUB_ENV
+
+      - name: Run server unit tests only, outside of container
+        if: ${{ !contains(env.HAS_INTEGRATION_TESTS, 'true') }}
+        run: |
+          cd server
+          cp ../container/ci/serverconfig.json .
+          npm run spec:coverage
+          rm -f serverconfig.json
 
       - name: Set up Docker Buildx
         if: contains(env.HAS_INTEGRATION_TESTS, 'true')

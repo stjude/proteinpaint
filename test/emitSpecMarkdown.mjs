@@ -1,20 +1,20 @@
 import fs from 'fs'
 import path from 'path'
-import { getRelevantAugenSpecs, reportDir as augenReportDir, extractFiles } from '../augen/src/test/relevant.js'
-// import { getRelevantClientSpecs } from '../client/test/closestSpec.js'
-// import { getRelevantServerSpecs } from '../server/test/closestSpec.js'
+import { publicSpecsDir } from '@sjcrh/augen'
+// import { getRelevantServerSpecs, extractFiles as serverExtractFiles } from '../server/test/relevant.js'
 
-// const clientSpecs = getRelevantClientSpecs()
-// if (clientSpecs.numIntegration) console.log(true)
-// else {
-// 	const serverSpecs = getRelevantServerSpecs()
-// 	// server named as '*integration.spec.*' will indicate backend test that require R, Rust, Python,
-// 	// so the test environment must have system dependencies for those, such as in a container or dev environment
-// 	if (serverSpecs.numIntegration) console.log(true)
-// }
+const workspaces = ['augen', 'server']
 
-const augenSpecs = getRelevantAugenSpecs()
-if (augenSpecs.matched.length) {
-	const augenMarkdown = fs.readFileSync(extractFiles.markdown, { encoding: 'utf8' })
-	console.log(augenMarkdown)
+let hasDisplayedMarkdown = false
+
+for (const ws of workspaces) {
+	const markdownExtract = `${publicSpecsDir}/${ws}-relevant.md`
+	if (fs.existsSync(markdownExtract)) {
+		const markdown = fs.readFileSync(markdownExtract, { encoding: 'utf8' })
+		console.log(`## ${ws}`)
+		console.log(markdown, '\n')
+		hasDisplayedMarkdown = true
+	}
 }
+
+if (!hasDisplayedMarkdown) console.log(`\nThere were no detected relevant specs to run.\n`)
