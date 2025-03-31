@@ -18,12 +18,15 @@ import type { VolcanoPlotConfig } from './VolcanoTypes'
 
 export class VolcanoControlInputs {
 	config: VolcanoPlotConfig
+	sampleNum: number
 	/** term type used to determine which controls to show */
 	termType: string
 	/** control inputs for controls init */
 	inputs: ControlInputEntry[]
-	constructor(config, termType: string) {
+	readonly geSampleNumCuttoff = 3000
+	constructor(config: VolcanoPlotConfig, termType: string, sampleNum: number) {
 		this.config = config
+		this.sampleNum = sampleNum
 		this.termType = termType
 		//Populated with the default controls for the volcano plot
 		this.inputs = [
@@ -141,11 +144,7 @@ export class VolcanoControlInputs {
 				chartType: 'volcano',
 				settingsKey: 'method',
 				title: 'Toggle between analysis methods',
-				options: [
-					{ label: 'edgeR', value: 'edgeR' },
-					{ label: 'Wilcoxon', value: 'wilcoxon' },
-					{ label: 'Limma', value: 'limma' }
-				]
+				options: this.getMethodOptions()
 			},
 			{
 				label: 'Rank Genes by',
@@ -180,5 +179,16 @@ export class VolcanoControlInputs {
 		]
 
 		this.inputs.splice(0, 0, ...geInputs)
+	}
+
+	getMethodOptions() {
+		if (this.termType !== 'geneExpression') return
+		if (this.sampleNum < this.geSampleNumCuttoff) {
+			return [
+				{ label: 'edgeR', value: 'edgeR' },
+				{ label: 'Wilcoxon', value: 'wilcoxon' },
+				{ label: 'Limma', value: 'limma' }
+			]
+		} else return [{ label: 'Wilcoxon', value: 'wilcoxon' }]
 	}
 }
