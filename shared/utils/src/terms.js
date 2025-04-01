@@ -212,9 +212,11 @@ export function termType2label(type) {
 //value is a decimal where year is the integer part and month is the decimal part
 export function getDate(value) {
 	const year = Math.floor(value)
-	const month = Math.floor((value - year) * 12)
-	const str = `${year}-${month}-01`
-	const date = new Date(str)
+	const time = (value - year) * 365 * 24 * 60 * 60 * 1000 // convert to milliseconds
+	const january1st = new Date(year, 0, 0)
+	const date = new Date(january1st.getTime() + time)
+
+	//Omit day to  deidentify the patients
 	return date.toLocaleDateString('en-US', {
 		year: 'numeric',
 		month: 'long'
