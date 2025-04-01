@@ -136,7 +136,7 @@ export async function get_summary_numericcategories(q) {
 	.filter
 	*/
 	const term = q.ds.cohort.termdb.q.termjsonByOneid(q.term_id)
-	if (term.type != 'integer' && term.type != 'float') throw 'term is not numeric'
+	if (!isNumericTerm(term)) throw 'term is not numeric'
 	if (!term.values) {
 		// term does not have special categories
 		return []

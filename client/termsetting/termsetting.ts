@@ -45,10 +45,10 @@ let $id = 0
 export async function get$id(minTwCopy) {
 	if (!minTwCopy) return <string>`${$id++}${idSuffix}`
 	delete minTwCopy.$id
-	const i = window.location.pathname == '/testrun.html' || window.location.pathname == '/puppet.html' ? '' : $id++ 
+	const i = window.location.pathname == '/testrun.html' || window.location.pathname == '/puppet.html' ? '' : $id++
 	// TODO: may need to distinguish between unique tw $id and id for caching server response
 	// for now, just append unique $id++ to ensure unique $id
-	return await digestMessage(JSON.stringify(minTwCopy)+ i)
+	return await digestMessage(JSON.stringify(minTwCopy) + i)
 }
 
 const encoder = new TextEncoder()
@@ -319,7 +319,7 @@ export class TermSetting {
 			this.handler = this.handlerByType.default as Handler
 			return
 		}
-		const type = termtype == 'integer' || termtype == 'float' ? 'numeric' : termtype // 'categorical', 'condition', 'survival', etc
+		const type = termtype == 'integer' || termtype == 'float' || termtype == 'date' ? 'numeric' : termtype // 'categorical', 'condition', 'survival', etc
 		if (!this.handlerByType[type]) {
 			try {
 				const _ = await import(`./handlers/${type}.ts`)
@@ -1028,7 +1028,7 @@ async function call_fillTW(tw: TermWrapper, vocabApi: VocabApi, defaultQByTsHand
 
 	if (!tw.$id) tw.$id = await get$id(vocabApi.getTwMinCopy(tw))
 	const t = tw.term.type
-	const type = t == 'float' || t == 'integer' ? 'numeric' : (t as string)
+	const type = t == 'float' || t == 'integer' || t == 'date' ? 'numeric' : (t as string)
 	let _
 	if (tw.term.type) {
 		try {
