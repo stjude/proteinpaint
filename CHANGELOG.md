@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- Added unit to the time reported by correlation analysis. Made little helper function to format the time.
+
 
 ## 2.114.0
 
