@@ -1,4 +1,4 @@
-import { dtsnvindel, dtcnv, dtfusionrna, geneVariantTermGroupsetting, dtTerms } from '#shared/common.js'
+import { geneVariantTermGroupsetting, dtTerms } from '#shared/common.js'
 import { getPillNameDefault, set_hiddenvalues } from '../termsetting'
 import type { GeneVariantQ, GeneVariantTW, GeneVariantTermSettingInstance, VocabApi, DtTerm } from '#types'
 import type { PillData } from '../types'
