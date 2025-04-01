@@ -1,5 +1,9 @@
 import serverconfig from '../../serverconfig.js'
 import fs from 'fs'
+// import { promisify } from 'util'
+// import { exec } from 'child_process'
+
+// const execProm = promisify(exec)
 
 // The /coverage route will only be initialized if
 // a coverageKey value is detected. This is an extra security
@@ -12,6 +16,15 @@ export default function setRoutes(app, basepath) {
 	if (!serverconfig.debugmode || !key) return
 
 	let numTries = 0 //; console.log('---- setting /coverage routes ---')
+
+	// app.get(basepath + '/coverage/spec', async (req, res) => {
+	// 	try {
+
+	// 	} catch(e) {
+	// 		console.log('\n!!! /coverage/spec route error !!!\n', error)
+	// 		res.send({ error })
+	// 	}
+	// })
 
 	app.get(basepath + '/coverage/close', async (req, res) => {
 		try {

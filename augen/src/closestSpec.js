@@ -139,7 +139,7 @@ export function emitRelevantSpecCovDetails({ workspace, relevantSpecs, reportDir
 		if (!specs.length) continue
 		const line = detailedLines.find(l => l.includes(file) && (!testedSpecs || specs.find(s => testedSpecs.includes(s))))
 		if (line) {
-			const key = specs.join(', ')
+			const key = specs.join(', ').trim()
 			if (!relevantLines.has(key)) relevantLines.set(key, new Set())
 			relevantLines.get(key).add(line)
 			let srcFile = `${reportDir}/${reportSrc}/${file}.html`
@@ -177,6 +177,7 @@ export function emitRelevantSpecCovDetails({ workspace, relevantSpecs, reportDir
 	}
 
 	if (relevantLines.size) {
+		const branch = execSync(`git rev-parse --abbrev-ref HEAD`, { encoding: 'utf8' }).trim()
 		const title = `Relevant coverage for updated ${workspace} code`
 		console.log(`## ${title}`)
 		const markdown = []
@@ -186,9 +187,10 @@ export function emitRelevantSpecCovDetails({ workspace, relevantSpecs, reportDir
 
 		for (const [key, lines] of relevantLines) {
 			const runCode = !specPattern ? key : `<a href='http://localhost:3000/testrun.html?${specPattern}'>${key}</a>`
-			const testedBy = `Tested by: ${runCode}`
+			const testedBy = `Tested by: ${runCode.trim()}`
 			markdown.push(`\n### ${testedBy}`)
-			html.push(`<h3>${testedBy}</h3>`, `\n<table>`)
+			const info = `<span style='color: #aaa; font-weight: 300'>, branch='${branch}' ${getMonthDayTime()}</span>`
+			html.push(`<h3>${testedBy}${info}</h3>`, `\n<table>`)
 			markdown.push(colNames, hline)
 			html.push(
 				`<thead>`,
@@ -223,4 +225,13 @@ export function emitRelevantSpecCovDetails({ workspace, relevantSpecs, reportDir
 			html: html.join('\n')
 		}
 	}
+}
+
+function getMonthDayTime() {
+	const d = new Date()
+	const [month, day, hh, mm, ss] = [d.getMonth(), d.getDay(), d.getHours(), d.getMinutes(), d.getSeconds()].map(t =>
+		t.toString().padStart(2, '0')
+	)
+
+	return `${month}/${day} ${hh}:${mm}:${ss}`
 }
