@@ -6,8 +6,7 @@ import serverconfig from '../src/serverconfig.js'
 import { mayLog } from '#src/helpers.ts'
 import path from 'path'
 import { getStdDev } from '#shared/descriptive.stats.js'
-import { formatElapsedTime } from '#shared/time'
-
+import { formatElapsedTime } from '#shared/time.js'
 // to avoid crashing r, an array must meet below; otherwise the variable is skipped
 const minArrayLength = 3 // minimum number of values
 const minSD = 0.05 // minimum standard deviation
