@@ -1,4 +1,6 @@
 import type { Mclass } from './Mclass.ts'
+import type { WSImage } from './routes/samplewsimages.ts'
+import type { WSISample } from './routes/wsisamples.ts'
 
 /*** General usage types ***/
 type FileObj = {
@@ -853,10 +855,16 @@ image file to sample mapping is stored in wsimages table
 export type WSImages = {
 	// type of the image, e.g. H&E
 	type: string
-	// path to the folder where sample images are stored
-	imageBySampleFolder?: string
 
-	sources?: string
+	/* path to the folder where sample images are stored
+	required; for both cases where image files are hosted locally, or loaded from remote via ds-supplied getter
+	*/
+	imageBySampleFolder: string
+
+	/** either ds supplied or dynamically added on launch with built in logic (retrieve the sample list from the wsimages table) */
+	getSamples?: () => Promise<Array<WSISample>>
+	/** either ds supplied or dynamically added on launch with built in logic */
+	getWSImages?: (sampleName: string) => Promise<WSImage[]>
 }
 
 /*** types supporting Termdb ***/
