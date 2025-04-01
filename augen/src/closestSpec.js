@@ -68,7 +68,6 @@ export function getClosestSpec(dirname, relevantSubdirs = [], opts = {}) {
 		while (fileNameSegments.length > 1) {
 			fileNameSegments.pop()
 			const truncatedFilename = fileNameSegments.join('.')
-			// console.log(50, {truncatedFilename}, `${truncatedFilename}.unit.spec`)
 			const unitName = `${truncatedFilename}.unit.spec.`
 			const integrationName = `${truncatedFilename}.integration.spec.`
 			const matchedSpecs = specs.filter(s => {
@@ -133,6 +132,9 @@ export function emitRelevantSpecCovDetails({ workspace, relevantSpecs, reportDir
 	// key: comma-separated spec names used for testing
 	// value: string filenames that were tested by the specs in key
 	const relevantLines = new Map()
+	// key: filename of source-code or file name
+	// value: the public URL filepath to the file's line-by-line coverage html
+	const targetFiles = new Map()
 	for (const [file, specs] of Object.entries(relevantSpecs.matchedByFile)) {
 		if (!specs.length) continue
 		const line = detailedLines.find(l => l.includes(file) && (!testedSpecs || specs.find(s => testedSpecs.includes(s))))
@@ -140,13 +142,37 @@ export function emitRelevantSpecCovDetails({ workspace, relevantSpecs, reportDir
 			const key = specs.join(', ')
 			if (!relevantLines.has(key)) relevantLines.set(key, new Set())
 			relevantLines.get(key).add(line)
-			const srcFile = `${reportDir}/${reportSrc}/${file}.html`
+			let srcFile = `${reportDir}/${reportSrc}/${file}.html`
+			let targetFile
 			if (fs.existsSync(srcFile)) {
-				const targetFile = `${wsSpecsExtractsDir}/${reportSrc}/${file}.html`
-				const targetDir = path.dirname(targetFile)
-				if (!fs.existsSync(targetDir)) fs.mkdirSync(targetDir, { recursive: true })
-				fs.copyFileSync(srcFile, targetFile)
+				targetFile = `${wsSpecsExtractsDir}/${reportSrc}/${file}.html`
+			} else {
+				srcFile = `${reportDir}/${file}.html`
+				if (fs.existsSync(srcFile)) {
+					targetFile = `${wsSpecsExtractsDir}/${file}.html`
+				} else {
+					targetFile = ''
+					const fname = path.basename(file)
+					const filePathSegments = file.split('/').slice(0, -1)
+					let subpath = ''
+					while (filePathSegments.length) {
+						subpath += filePathSegments.pop()
+						srcFile = `${reportDir}/${subpath}/${fname}.html`
+						if (fs.existsSync(srcFile)) {
+							targetFile = `${wsSpecsExtractsDir}/${subpath}/${fname}.html`
+							break
+						} else {
+							subpath += '/'
+						}
+					}
+					if (!targetFile) continue
+				}
 			}
+
+			const targetDir = path.dirname(targetFile)
+			if (!fs.existsSync(targetDir)) fs.mkdirSync(targetDir, { recursive: true })
+			fs.copyFileSync(srcFile, targetFile)
+			targetFiles.set(file, targetFile.replace(publicSpecsDir + '/', ''))
 		}
 	}
 
@@ -177,13 +203,11 @@ export function emitRelevantSpecCovDetails({ workspace, relevantSpecs, reportDir
 				markdown.push(line)
 				const cells = line.split('|').slice(1, -1)
 				const file = cells[0].trim().split(' ').pop().trim()
-				const filePathSegments = file.split('/')
-				if (filePathSegments[0] == workspace) filePathSegments.splice(0, 1)
-				const filepath = filePathSegments.join('/')
+				const targetKey = file.replace(workspace + '/', '')
 
 				cells[0] = cells[0].replace(
 					file,
-					`<a href='http://localhost:3000/coverage/specs/${workspace}/${reportSrc}/${filepath}.html'>${file}</a>`
+					`<a href='http://localhost:3000/coverage/specs/${targetFiles.get(targetKey)}'>${file}</a>`
 				)
 				rows.push(`<tr>`, ...cells.map(val => `<td>${val.trim()}</td>`), `</tr>`)
 			}
