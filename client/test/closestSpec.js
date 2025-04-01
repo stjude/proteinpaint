@@ -24,7 +24,7 @@ const relevantClientDirs = [
 ]
 const opts = {
 	//changedFiles: ['tvs.js', 'tvs.categorical.js', 'tvs.numeric.js', 'FilterPrompt.js'].map(f => `client/filter/${f}`),
-	changedFiles: ['tvs.density.js', 'test/tvs.density.unit.spec.ts'].map(f => `client/filter/${f}`)
+	//changedFiles: ['tvs.density.js', 'test/tvs.density.unit.spec.ts'].map(f => `client/filter/${f}`)
 	//changedFiles: ['handlers/snp.ts'].map(f => `client/termsetting/${f}`)
 }
 
