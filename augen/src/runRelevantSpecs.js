@@ -28,7 +28,7 @@ export async function runRelevantSpecs({ workspace, specs, dirname }) {
 	try {
 		const html = []
 		const markdowns = []
-		let title
+		//let title
 		for (const spec of specs.matched) {
 			fs.rmSync(reportDir, { force: true, recursive: true })
 			const testLog = execSync(`npx c8 ${c8opts} tsx ${path.join(dirname, spec)}`, { encoding: 'utf8' })
@@ -40,13 +40,13 @@ export async function runRelevantSpecs({ workspace, specs, dirname }) {
 					reportDir,
 					testedSpecs: [spec]
 				})
-				if (!title) title = extracts.title
+				//if (!title) title = extracts.title
 				html.push(extracts.html)
 				markdowns.push(extracts.markdown)
 			}
 		}
 		if (html.length) {
-			const combinedHtml = `<h3>${title}</h3>\n` + html.join('\n')
+			const combinedHtml = html.join('\n')
 			fs.writeFileSync(extractFiles.html, combinedHtml, { encoding: 'utf8' })
 			const combinedMarkdown = markdowns.join('\n')
 			fs.writeFileSync(extractFiles.markdown, combinedMarkdown, { encoding: 'utf8' })

@@ -82,7 +82,7 @@ async function runTest(patternsStr) {
 
 	const html = []
 	const markdowns = []
-	let title
+	//let title
 
 	const relevantCoverage = {}
 	const errors = {}
@@ -177,9 +177,10 @@ async function runTest(patternsStr) {
 							workspace: 'client',
 							relevantSpecs,
 							reportDir,
-							testedSpecs: patternToSpecs.get(pattern)
+							testedSpecs: patternToSpecs.get(pattern),
+							specPattern: pattern
 						})
-						if (!title) title = extracts.title
+						//if (!title) title = extracts.title
 						html.push(extracts.html)
 						markdowns.push(extracts.markdown)
 					}
@@ -212,7 +213,7 @@ async function runTest(patternsStr) {
 	if (server) server.close()
 
 	if (html.length) {
-		const combinedHtml = `<h3>${title}</h3>\n` + html.join('\n')
+		const combinedHtml = html.join('\n')
 		fs.writeFileSync(`${publicSpecsDir}/client-relevant.html`, combinedHtml, { encoding: 'utf8' })
 		const combinedMarkdown = markdowns.join('\n')
 		fs.writeFileSync(`${publicSpecsDir}/client-relevant.md`, combinedMarkdown, { encoding: 'utf8' })

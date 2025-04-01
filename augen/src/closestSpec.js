@@ -3,7 +3,7 @@ import path from 'path'
 import * as glob from 'glob'
 import fs from 'fs'
 
-export const gitProjectRoot = execSync(`git rev-parse --show-toplevel`, { encoding: 'utf8' }).trim()
+export const gitProjectRoot = path.join(import.meta.dirname, '../..') // execSync(`git rev-parse --show-toplevel`, { encoding: 'utf8' }).trim()
 export const publicSpecsDir = path.join(gitProjectRoot, 'public/coverage/specs')
 
 const ignore = ['dist/**', 'node_modules/**']
@@ -111,7 +111,7 @@ export function getClosestSpec(dirname, relevantSubdirs = [], opts = {}) {
 
 export const specsExtractsDir = path.join(gitProjectRoot, `public/coverage/specs`)
 
-export function emitRelevantSpecCovDetails({ workspace, relevantSpecs, reportDir, testedSpecs }) {
+export function emitRelevantSpecCovDetails({ workspace, relevantSpecs, reportDir, testedSpecs, specPattern }) {
 	const wsSpecsExtractsDir = `${specsExtractsDir}/${workspace}`
 	//fs.rmSync(wsSpecsExtractsDir, {force: true, recursive: true})
 	if (!fs.existsSync(wsSpecsExtractsDir)) fs.mkdirSync(wsSpecsExtractsDir, { force: true, recursive: true })
@@ -177,21 +177,23 @@ export function emitRelevantSpecCovDetails({ workspace, relevantSpecs, reportDir
 	}
 
 	if (relevantLines.size) {
-		const title = `Coverage for updated augen code`
+		const title = `Relevant coverage for updated ${workspace} code`
 		console.log(`## ${title}`)
 		const markdown = []
 		const html = []
+		const colNames = detailedLines[0][0] === '|' ? detailedLines[0] : detailedLines[1]
+		const hline = detailedLines[0][0] === '|' ? detailedLines[1] : detailedLines[2]
+
 		for (const [key, lines] of relevantLines) {
-			const namePattern = workspace != 'client' ? '' : path.basename(key).split('.').slice(0, -2).join('.')
-			const runCode = !namePattern ? key : `<a href='http://localhost:3000/testrun.html?name=${namePattern}'>${key}</a>`
+			const runCode = !specPattern ? key : `<a href='http://localhost:3000/testrun.html?${specPattern}'>${key}</a>`
 			const testedBy = `Tested by: ${runCode}`
-			markdown.push(`### ${testedBy}`)
-			html.push(`<h3>${testedBy}</h3>`, `<table>`)
-			markdown.push(detailedLines[0], detailedLines[1])
+			markdown.push(`\n### ${testedBy}`)
+			html.push(`<h3>${testedBy}</h3>`, `\n<table>`)
+			markdown.push(colNames, hline)
 			html.push(
 				`<thead>`,
 				`<tr>`,
-				...detailedLines[0]
+				...colNames
 					.split('|')
 					.slice(1, -1)
 					.map(colname => `<th>${colname.trim()}</th>`),
@@ -211,7 +213,7 @@ export function emitRelevantSpecCovDetails({ workspace, relevantSpecs, reportDir
 				)
 				rows.push(`<tr>`, ...cells.map(val => `<td>${val.trim()}</td>`), `</tr>`)
 			}
-			html.push(`<tbody>`, ...rows, `</tbody>`, `</table>`)
+			html.push(`<tbody>`, ...rows, `</tbody>`, `</table>\n`)
 		}
 		const fullMarkdown = markdown.join('\n')
 		console.log(fullMarkdown, '\n')

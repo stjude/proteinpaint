@@ -3,7 +3,7 @@ import path from 'path'
 import { publicSpecsDir } from '@sjcrh/augen'
 // import { getRelevantServerSpecs, extractFiles as serverExtractFiles } from '../server/test/relevant.js'
 
-const workspaces = ['server', 'augen']
+const workspaces = ['server', 'client', 'augen']
 
 let hasDisplayedMarkdown = false
 
