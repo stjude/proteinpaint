@@ -10,7 +10,6 @@ import {
 	addMatrixMenuItems,
 	openSummaryPlot,
 	addNewGroup,
-	getSamplelstTWFromIds,
 	getSamplelstTW
 } from '../mass/groups'
 import { newSandboxDiv } from '../dom/sandbox.ts'
@@ -18,6 +17,7 @@ import { getId } from '#mass/nav'
 import { searchSampleInput } from './sampleView.js'
 import { shapesArray, shapeSelector } from '../dom/shapes.js'
 import { roundValueAuto } from '#shared/roundValue.js'
+import { getDate } from '#shared/terms.js'
 
 export function setInteractivity(self) {
 	self.showTooltip = function (event, chart) {
@@ -80,7 +80,7 @@ export function setInteractivity(self) {
 				node = { id, parentId: null, samples: [sample], level: 1, category: null, children: [] }
 				tree.push(node)
 				if (showCoords) {
-					const xvalue = getCategoryValue('x', sample)
+					const xvalue = getCategoryValue('x', sample, self.config.term)
 					const xnode = {
 						id: xvalue,
 						parentId: id,
@@ -92,7 +92,7 @@ export function setInteractivity(self) {
 					}
 					tree.push(xnode)
 					node.children.push(xnode)
-					const yvalue = getCategoryValue('y', sample)
+					const yvalue = getCategoryValue('y', sample, self.config.term2)
 					const ynode = {
 						id: `${yvalue}${xvalue}`,
 						parent: xnode,
@@ -303,7 +303,8 @@ export function setInteractivity(self) {
 					}
 				}
 			}
-			if (typeof value == 'number' && value % 1 != 0) value = roundValueAuto(value)
+			if (tw?.term.type == 'date') value = getDate(value)
+			else if (typeof value == 'number' && value % 1 != 0) value = roundValueAuto(value)
 			return value
 		}
 	}
