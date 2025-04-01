@@ -67,10 +67,9 @@ jobs:
 
       - name: Detect if integration tests are required
         run: |
-          echo "HAS_INTEGRATION_TESTS=$(./test/hasIntegrationSpecs.js)" >> $GITHUB_ENV
+          echo "HAS_INTEGRATION_TESTS=$(node ./test/hasIntegrationSpecs.mjs)" >> $GITHUB_ENV
 
-      - name: Run server unit tests only, outside of container
-        if: ${{ !contains(env.HAS_INTEGRATION_TESTS, 'true') }}
+      - name: Run server unit tests outside of container
         run: |
           cd server
           cp ../container/ci/serverconfig.json .
@@ -80,21 +79,19 @@ jobs:
       - name: Set up Docker Buildx
         if: contains(env.HAS_INTEGRATION_TESTS, 'true')
         uses: docker/setup-buildx-action@v3
-        with:
-          driver: docker
 
       - name: Prepare serverconfig.json and cachedir
         run: |
           cp container/ci/serverconfig.json container/
           mkdir cache
 
-      - name: Pack updated workspaces
+      - name: Pack tarballs for updated workspaces
         if: contains(env.HAS_INTEGRATION_TESTS, 'true')
         run: |
           cd ./container
           ./pack.sh
 
-      - name: Build ppserver image
+      - name: Build Docker Image
         if: contains(env.HAS_INTEGRATION_TESTS, 'true')
         uses: docker/build-push-action@v5
         with:
@@ -103,42 +100,27 @@ jobs:
           tags: ppserver:latest
           platforms: linux/amd64
           outputs: type=docker
-          # cache-from: type=gha
-          # cache-to: type=gha,mode=max
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
-      - name: Copy server files
+      - name: Generate client unit/integration spec coverage report
+        # TODO: inside the ppcov container (see CI-coverage.yml), 
+        # limit server spec:coverage runs to integration specs;
+        # doesn't need ppcov here since there are no server *.integration.spec.js
+        # that needs to run separately, only client has integration tests right now
         if: contains(env.HAS_INTEGRATION_TESTS, 'true')
         run: |
-          cd ./container/coverage
-          ./copy-server-files.sh
+          cd ./container
+          ./run.sh ppserver:latest
+          sleep 10
+          cd ../client
+          xvfb-run --auto-servernum npm run spec:coverage
 
-      - name: Build ppcov image
-        if: contains(env.HAS_INTEGRATION_TESTS, 'true')
-        uses: docker/build-push-action@v5
-        with:
-          build-contexts: |
-            ppserver:latest=docker-image://ppserver:latest
-          context: ./container/coverage
-          file: ./container/coverage/Dockerfile
-          tags: ppcov:latest
-          platforms: linux/amd64
-          outputs: type=docker
-          # cache-from: type=gha
-          # cache-to: type=gha,mode=max
-
-      - name: Generate spec coverage report
-        # if there are integrations tests, then server unit test will run inside the container
-        if: contains(env.HAS_INTEGRATION_TESTS, 'true')
+      - name: Generate client unit-spec-only coverage report
+        if: ${{ !contains(env.HAS_INTEGRATION_TESTS, 'true') }}
         run: |
-          cd ./container/coverage
-          xvfb-run --auto-servernum ./test.sh branch
-
-      # - name: Run unit server tests without container
-      #   # if there are no integrations tests, then server unit test will run in host OS
-      #   if: contains(env.HAS_INTEGRATION_TESTS, 'true')
-      #   run: |
-      #     cd server
-      #     npm run spec:coverage
+          cd client
+          xvfb-run --auto-servernum npm run spec:coverage
 
       - name: Display coverage results
         run: |
