@@ -1181,10 +1181,6 @@ export class TermdbVocab extends Vocab {
 		})
 	}
 
-	// following two methods are hardcoded at /gdc/*. TODO change to generic method to work for all datasets
-	async getTopMutatedGenes(arg) {
-		return await dofetch3('gdc/topMutatedGenes', { method: 'GET', body: arg })
-	}
 	async getTopVariablyExpressedGenes(arg) {
 		return await dofetch3('termdb/topVariablyExpressedGenes', { method: 'GET', body: arg })
 	}
