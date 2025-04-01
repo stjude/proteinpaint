@@ -9,6 +9,7 @@ import { detectGte } from '../../test/test.helpers.js'
  * Tests
  * 	- Default Multi term edit UI
  *  - Render with terms
+ *	- All terms cleared
  */
 
 /*************************
@@ -111,6 +112,30 @@ tape('Render with terms and .maxNum', async test => {
 	test.equal(submitBtn?.disabled, false, 'Should enable submit button when terms are selected')
 
 	test.equal(ui.dom.footer.node()?.innerHTML, '3 terms selected', 'Should render footer with term count')
+
+	if (test['_ok']) holder.remove()
+	test.end()
+})
+
+tape('All terms cleared', async test => {
+	test.timeoutAfter(1000)
+
+	const holder = getHolder() as any
+	const testOpts = getTestOpts({
+		holder,
+		maxNum: 3,
+		twList: [{ term: termjson['agedx'] }, { term: termjson['os'] }, { term: termjson['Arrhythmias'] }]
+	})
+	const ui = new MultiTermWrapperEditUI(testOpts)
+	await ui.renderUI()
+
+	ui.twList = []
+	ui.update(ui)
+
+	const submitBtn = ui.dom.submitBtn.node()
+	test.equal(submitBtn?.disabled, false, 'Should enable submit button when all input terms are removed')
+
+	test.equal(ui.dom.footer.node()?.innerHTML, 'Terms removed', 'Should show user message when terms are removed')
 
 	if (test['_ok']) holder.remove()
 	test.end()
