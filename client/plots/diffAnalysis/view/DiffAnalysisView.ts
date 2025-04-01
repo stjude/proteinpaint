@@ -4,7 +4,6 @@ import type { RenderedTab } from '#dom'
 import type { DiffAnalysisDom, DiffAnalysisPlotConfig } from '../DiffAnalysisTypes'
 import type { DiffAnalysisInteractions } from '../interactions/DiffAnalysisInteractions'
 
-/** TODO: finish typing this file */
 export class DiffAnalysisView {
 	app: MassAppApi
 	config: DiffAnalysisPlotConfig

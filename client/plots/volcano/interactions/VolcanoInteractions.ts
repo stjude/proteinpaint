@@ -1,7 +1,6 @@
 import type { MassAppApi } from '#mass/types/mass'
-import { downloadTable, GeneSetEditUI, MultiTermWrapperEditUI, sayerror } from '#dom'
+import { downloadTable, GeneSetEditUI, MultiTermWrapperEditUI } from '#dom'
 import { to_svg } from '#src/client'
-import { isDictionaryType } from '#shared/terms.js'
 import type { VolcanoDom, VolcanoPlotConfig } from '../VolcanoTypes'
 
 export class VolcanoInteractions {
@@ -39,24 +38,12 @@ export class VolcanoInteractions {
 				)
 		)
 		const disable_terms: any[] = grpTerms.size ? Array.from(grpTerms) : []
-		const maxNum = 2
+		const maxNum = config.settings.volcano.method == 'edgeR' ? 1 : 2
 
 		const ui = new MultiTermWrapperEditUI({
 			app: this.app,
-			allowFilter: true,
 			callback: async (tws: any) => {
 				this.dom.actionsTip.hide()
-
-				// let categoryNum = 0
-				// for (const tw of tws) {
-				// 	if (!isDictionaryType(tw.term)) continue
-				// 	const x = await this.app.vocabApi.getCategories(tw.term, state.termfilter.filter)
-				// 	if (x.length) categoryNum += x.length
-				// }
-				// if ((categoryNum * this.getSampleNum(config) > 3000)) {
-				// 	sayerror(this.dom.error, 'Too many term categories. Please select fewer categories.')
-				// }
-
 				await this.app.dispatch({
 					type: 'plot_edit',
 					id: this.id,
@@ -102,10 +89,6 @@ export class VolcanoInteractions {
 		for (const opt of opts) {
 			this.dom.actionsTip.d.append('div').attr('class', 'sja_menuoption').text(opt.text).on('click', opt.callback)
 		}
-	}
-
-	getSampleNum(config: VolcanoPlotConfig) {
-		return config.samplelst.groups.reduce((sum: number, g: any) => sum + g.values.length, 0)
 	}
 
 	async highlightDataPoint(value: string) {

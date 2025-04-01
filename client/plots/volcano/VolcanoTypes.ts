@@ -116,7 +116,7 @@ export type VolcanoSettings = {
 	defaultSignColor: string
 	/** largest absolute fold change to be considered in the analysis */
 	foldChangeCutoff: number
-	method: 'wilcoxon' | 'edgeR'
+	method: 'wilcoxon' | 'edgeR' | 'limma'
 	/** Not enabling this feature for now */
 	// geneORA: 'upregulated' | 'downregulated' | 'both' | undefined
 	/** smallest number of reads required for a gene to be considered in the analysis */
@@ -129,6 +129,8 @@ export type VolcanoSettings = {
 	pValueType: 'original' | 'adjusted'
 	/** Toggle between ranking the genes by variance or abs(foldChange) */
 	rankBy: 'abs(foldChange)' | 'pValue'
+	/** Cutoff for running the analysis */
+	sampleNumCutoff: number
 	/** plot height */
 	height: number
 	/** plot width */
