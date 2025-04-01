@@ -54,10 +54,9 @@ class MassGroups {
 		const state = {
 			termfilter: appState.termfilter,
 			groups: rebaseGroupFilter(appState),
-			termdbConfig: appState.termdbConfig, // FIXME do not track in state
 			customTerms: appState.customTerms,
 			currentCohortChartTypes: getCurrentCohortChartTypes(appState),
-			matrixplots: appState.termdbConfig.matrixplots
+			matrixplots: this.app.vocabApi.termdbConfig.matrixplots
 		}
 		return state
 	}
@@ -404,7 +403,7 @@ function mayAddSamplescatterOption(menuDiv, self, samplelstTW) {
 
 function addDiffAnalysisPlotMenuItem(div, self, samplelstTW) {
 	// DA app can be applied to multiple datatypes. show options based on availability for each datatype
-	if (self.state.termdbConfig.queries?.rnaseqGeneCount) {
+	if (self.app.vocabApi.termdbConfig.queries?.rnaseqGeneCount) {
 		// hardcoded! rnaseq genecount will correspond to gene exp term type on DA ui
 		div
 			.append('div')
@@ -436,7 +435,7 @@ function addDiffAnalysisPlotMenuItem(div, self, samplelstTW) {
 			})
 	}
 
-	if (self.state.termdbConfig.allowedTermTypes?.includes(TermTypes.METABOLITE_INTENSITY)) {
+	if (self.app.vocabApi.termdbConfig.allowedTermTypes?.includes(TermTypes.METABOLITE_INTENSITY)) {
 		div.append('div').text('DA should support metabolite')
 	}
 
@@ -492,17 +491,19 @@ async function updateUI(self) {
 	// but not in instance.init()
 
 	// create "Add new group" button as needed
-	if (!self.filterPrompt)
+	if (!self.filterPrompt) {
 		self.filterPrompt = await filterPromptInit({
 			holder: self.dom.addNewGroupBtnHolder,
 			vocabApi: self.app.vocabApi,
 			emptyLabel: 'Add group',
-			termdbConfig: self.state.termdbConfig,
+			termdbConfig: self.app.vocabApi.termdbConfig,
 			callback: f => {
 				addNewGroup(self.app, f, self.state.groups)
 			},
 			debug: self.opts.debug
 		})
+	}
+
 	// filterPrompt.main() always empties the filterUiRoot data
 	self.filterPrompt.main(self.getMassFilter()) // provide mass filter to limit the term tree
 
@@ -599,7 +600,7 @@ async function updateUI(self) {
 		filterInit({
 			holder: row[3].__td,
 			vocabApi: self.app.vocabApi,
-			termdbConfig: self.state.termdbConfig,
+			termdbConfig: self.app.vocabApi.termdbConfig,
 			callback: f => {
 				if (!f || f.lst.length == 0) {
 					// blank filter (user removed last tvs from this filter), delete this element from groups[]
