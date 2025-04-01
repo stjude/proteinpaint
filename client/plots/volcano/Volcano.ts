@@ -160,7 +160,7 @@ export function getDefaultVolcanoSettings(overrides = {}, opts: any): VolcanoSet
 		pValueType: 'adjusted',
 		rankBy: 'abs(foldChange)',
 		//Only declare this value in one place
-		sampleNumCutoff: opts.termType == 'geneExpression' ? 3000 : 4000,
+		sampleNumCutoff: opts.termType == 'geneExpression' ? 3000 : maxSampleCutoff,
 		width: 400
 	}
 
