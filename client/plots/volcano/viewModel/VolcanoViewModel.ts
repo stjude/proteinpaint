@@ -9,6 +9,7 @@ import type {
 import type { DEResponse } from '#types'
 import { scaleLinear } from 'd3-scale'
 import { roundValueAuto } from '#shared/roundValue.js'
+import { getSampleNum } from '../Volcano'
 
 export class VolcanoViewModel {
 	config: VolcanoPlotConfig
@@ -70,7 +71,8 @@ export class VolcanoViewModel {
 			pointData,
 			statsData: this.setStatsData(),
 			pValueTableData: this.pValueTable,
-			images: response.images || []
+			images: response.images || [],
+			userActions: this.setUserActions()
 		}
 	}
 
@@ -210,5 +212,17 @@ export class VolcanoViewModel {
 		if (this.termType == 'geneExpression') {
 			this.pValueTable.columns.splice(0, 0, { label: 'Gene Symbol', sortable: true })
 		}
+	}
+
+	setUserActions() {
+		const userActions = {
+			noShow: [] as string[]
+		}
+		if (this.termType == 'geneExpression') {
+			if (this.settings.method == 'edgeR' && getSampleNum(this.config) > 100) {
+				userActions.noShow.push('Confounding factors')
+			}
+		}
+		return userActions
 	}
 }

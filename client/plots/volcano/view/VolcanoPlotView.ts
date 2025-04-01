@@ -82,6 +82,7 @@ export class VolcanoPlotView {
 	}
 
 	addActionButton(text: string, callback: any) {
+		if (this.viewData.userActions.noShow.includes(text)) return
 		const button = this.volcanoDom.actions
 			.append('button')
 			.attr('class', 'sja_menuoption')

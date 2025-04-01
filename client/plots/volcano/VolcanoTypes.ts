@@ -144,4 +144,8 @@ export type VolcanoViewData = {
 	pointData: DataPointEntry[]
 	pValueTableData: VolcanoPValueTableData
 	images: DEImage[]
+	/** special logic per termtype for userActions */
+	userActions: {
+		noShow: string[]
+	}
 }
