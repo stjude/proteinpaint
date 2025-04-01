@@ -1,4 +1,5 @@
 import { dtgeneexpression, dtmetaboliteintensity, TermTypeGroups } from './common.js'
+import { roundValueAuto } from './roundValue.js'
 
 // moved TermTypeGroups to `server/src/common.js`, so now has to re-export
 export { TermTypeGroups } from './common.js'
@@ -221,4 +222,15 @@ export function getDateStrFromNumber(value) {
 		year: 'numeric',
 		month: 'long'
 	})
+}
+
+//number is a float where the year is the integer part and days/365 is the decimal part
+export function getNumberFromDateStr(str) {
+	const date = new Date(str)
+	const year = date.getFullYear()
+	const january1st = new Date(year, 0, 0)
+	const diffTime = date - january1st
+	const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
+	const decimal = roundValueAuto(diffDays / 365)
+	return year + decimal
 }
