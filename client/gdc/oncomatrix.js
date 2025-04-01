@@ -349,7 +349,7 @@ async function getGenes(arg, settings, vocabApi) {
 
 	if (arg.filter0) body.filter0 = arg.filter0 // to avoid causing a "null" parameter value for backend
 
-	const data = await dofetch3('gdc/topMutatedGenes', { body })
+	const data = await dofetch3('termdb/topMutatedGenes', { body })
 	if (data.error) throw data.error
 	if (!data.genes) return // do not throw and halt. downstream will detect no genes and handle it by showing edit ui
 	return await Promise.all(

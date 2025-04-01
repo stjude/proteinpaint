@@ -125,9 +125,8 @@ class GenesetComp {
 			if (settings.maxGenes) body.maxGenes = settings.maxGenes
 			if (settings.geneFilter) body.geneFilter = settings.geneFilter
 			if (this.state.filter0) body.filter0 = this.state.filter0
-			// TODO change to /termdb/topMutatedGenes
 			// XXX this is optional query!! if ds is missing then should show input ui instead
-			data = await dofetch3('gdc/topMutatedGenes', { body, signal }, { cacheAs: 'decoded' })
+			data = await dofetch3('termdb/topMutatedGenes', { body, signal }, { cacheAs: 'decoded' })
 		} else if (this.opts.mode == 'geneExpression') {
 			const body = {
 				genome: this.state.vocab.genome,

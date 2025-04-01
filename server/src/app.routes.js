@@ -15,7 +15,7 @@ export const routeFiles = [
 	import('../routes/dzimages.ts'),
 	import('../routes/gdc.maf.ts'),
 	import('../routes/gdc.mafBuild.ts'),
-	import('../routes/gdc.topMutatedGenes.ts'),
+	import('../routes/termdb.topMutatedGenes.ts'),
 	import('../routes/gene2canonicalisoform.ts'),
 	import('../routes/genelookup.ts'),
 	import('../routes/genesetEnrichment.ts'),

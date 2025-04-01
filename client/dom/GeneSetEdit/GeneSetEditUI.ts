@@ -1,5 +1,5 @@
 import { addGeneSearchbox } from '../genesearch.ts'
-import { Menu } from '../menu'
+import { Menu } from '#dom'
 import { select } from 'd3-selection'
 import { mclass, dt2color, dt2label } from '#shared/common.js'
 import { TermTypes } from '#shared/terms.js'
@@ -9,6 +9,7 @@ import type { GeneArgumentEntry } from '#types'
 import { GenesMenu } from './GenesMenu'
 import { addButton } from './addButton.ts'
 import { debounce } from 'debounce'
+import { dofetch3 } from '#common/dofetch'
 
 type API = {
 	dom: {
@@ -350,7 +351,7 @@ export class GeneSetEditUI {
 							const id = input.attr('id')
 							args[id] = this.getInputValue({ param, input })
 						}
-						const result = await this.vocabApi.getTopMutatedGenes(args)
+						const result = await dofetch3('termdb/topMutatedGenes', { method: 'GET', body: args })
 
 						this.geneList = []
 						this.geneList.push(...result.genes)

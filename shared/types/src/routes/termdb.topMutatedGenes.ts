@@ -1,6 +1,6 @@
 import type { RoutePayload } from './routeApi.js'
 
-export type GdcTopMutatedGeneRequest = {
+export type topMutatedGeneRequest = {
 	/** to restrict to CGC genes */
 	geneFilter?: 'CGC'
 	/** max number of genes to return */
@@ -9,7 +9,7 @@ export type GdcTopMutatedGeneRequest = {
 	filter0?: object
 }
 
-export type GdcGene = {
+export type MutatedGene = {
 	/** gene symbol */
 	gene: string
 	/** optional attributes on number of mutated cases per dt */
@@ -22,16 +22,16 @@ export type GdcGene = {
 	}[]
 }
 
-export type GdcTopMutatedGeneResponse = {
-	genes: GdcGene[]
+export type topMutatedGeneResponse = {
+	genes: MutatedGene[]
 }
 
-export const gdcTopMutatedGenePayload: RoutePayload = {
+export const topMutatedGenePayload: RoutePayload = {
 	request: {
-		typeId: 'GdcTopMutatedGeneRequest'
+		typeId: 'topMutatedGeneRequest'
 	},
 	response: {
-		typeId: 'GdcTopMutatedGeneResponse'
+		typeId: 'topMutatedGeneResponse'
 	}
 	//examples: []
 }

@@ -1,20 +1,18 @@
-import type { GdcTopMutatedGeneRequest, GdcTopMutatedGeneResponse, GdcGene, RouteApi } from '#types'
-import { gdcTopMutatedGenePayload } from '#types/checkers'
+import type { topMutatedGeneRequest, topMutatedGeneResponse, MutatedGene, RouteApi } from '#types'
+import { topMutatedGenePayload } from '#types/checkers'
 import { mclasscnvgain, mclasscnvloss, dtsnvindel } from '#shared/common.js'
 import ky from 'ky'
 
-// TODO change to /termdb/topMutatedGenes
-
 export const api: RouteApi = {
-	endpoint: 'gdc/topMutatedGenes',
+	endpoint: 'termdb/topMutatedGenes',
 	methods: {
 		get: {
 			init,
-			...gdcTopMutatedGenePayload
+			...topMutatedGenePayload
 		},
 		post: {
 			init,
-			...gdcTopMutatedGenePayload
+			...topMutatedGenePayload
 		}
 	}
 }
@@ -259,7 +257,7 @@ async function getGenesGraphql(q: GdcTopMutatedGeneRequest, ds) {
 		})
 		.json()
 
-	const genes: GdcGene[] = []
+	const genes: MutatedGene[] = []
 	for (const g of re.data.genesTableViewer.explore.genes.hits.edges) {
 		/* g.node is:
 		{
