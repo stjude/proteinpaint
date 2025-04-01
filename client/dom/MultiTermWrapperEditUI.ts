@@ -54,7 +54,7 @@ export class MultiTermWrapperEditUI {
 				.style('margin-left', '10px')
 		}
 		this.twList = opts.twList || []
-		//Used to determine if the use can submit or not
+		//Determines if the user can submit or not
 		//If >0, can submit to remove terms
 		//If == 0, user must select a term to submit
 		this.inputListLength = this.twList.length
