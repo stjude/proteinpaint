@@ -94,11 +94,20 @@ export function fillTW(tw: GeneVariantTW, vocabApi: VocabApi, defaultQ: GeneVari
 		copyMerge(tw.q, defaultQ)
 	}
 
-	// may make variant filter
+	// fill term.groupsetting
+	if (!tw.term.groupsetting) tw.term.groupsetting = geneVariantTermGroupsetting as any // TODO: fix typing
+
+	// make variant filter
 	mayMakeVariantFilter(tw, vocabApi)
 
-	// may fill custom groups
-	mayFillGroups(tw)
+	// fill predefined groupset index
+	if (tw.q.type == 'predefined-groupset' && !Number.isInteger(tw.q.predefined_groupset_idx)) {
+		// get the first dt term in dataset
+		const term = tw.term.filter.terms[0]
+		// determine the index of the predefined groupset that
+		// corresponds with this term
+		tw.q.predefined_groupset_idx = tw.term.groupsetting.lst.findIndex(groupset => groupset.id == term.id)
+	}
 
 	{
 		// apply optional ds-level configs for this specific term
@@ -137,71 +146,23 @@ export function fillTW(tw: GeneVariantTW, vocabApi: VocabApi, defaultQ: GeneVari
 	set_hiddenvalues(tw.q, tw.term)
 }
 
-function mayFillGroups(tw) {
-	if (!(tw.q.type == 'custom-groupset' && !tw.q.customset?.groups.length)) return
-	// custom groupset, but customset.groups[] is empty
-	// fill with mutated group vs. wildtype group
-	// for the first dt specified in dataset
-	const filter = structuredClone(tw.term.filter)
-	// get first dt term in dataset
-	const term = filter.terms[0]
-	const WTvalue = { key: 'WT', label: term.values['WT'].label, value: 'WT' }
-	// mutated filter
-	const MUTtvs = { type: 'tvs', tvs: { term, values: [WTvalue], isnot: true } }
-	const MUTfilter = Object.assign({}, filter, { group: 1, active: getWrappedTvslst([MUTtvs]) })
-	// wildtype filter
-	const WTtvs = structuredClone(MUTtvs)
-	WTtvs.tvs.isnot = false
-	const WTfilter = Object.assign({}, filter, { group: 2, active: getWrappedTvslst([WTtvs]) })
-	// assign filters to groups
-	const MUTgroup: FilterGroup = {
-		name: `${term.name} Mutated`,
-		type: 'filter',
-		uncomputable: false,
-		filter: MUTfilter
-	}
-	const WTgroup: FilterGroup = {
-		name: `${term.name} Wildtype`,
-		type: 'filter',
-		uncomputable: false,
-		filter: WTfilter
-	}
-	const EXCLUDEgroup: FilterGroup = {
-		name: 'Excluded categories',
-		type: 'filter',
-		uncomputable: true,
-		filter: Object.assign({}, filter, { group: 0, active: getWrappedTvslst() })
-	}
-	// load groups into q.customset
-	tw.q.customset = { groups: [EXCLUDEgroup, MUTgroup, WTgroup] }
-}
-
-// function to make a variant filter based on dt terms
+// function to make a variant filter based on
+// dt terms specified in dataset
 function mayMakeVariantFilter(tw: GeneVariantTW, vocabApi: VocabApi) {
 	if (tw.term.filter) return
 	const dtTermsInDs: DtTerm[] = [] // dt terms in dataset
 	for (const t of dtTerms) {
-		const query = t.id == 'fusion' || t.id == 'sv' ? 'svfusion' : t.id // TODO: distinguish between fusion and sv in dataset file
-		if (!Object.keys(vocabApi.termdbConfig.queries).includes(query)) continue // dt is not in dataset
+		if (!Object.keys(vocabApi.termdbConfig.queries).includes(t.query)) continue // dt is not in dataset
 		const byOrigin = vocabApi.termdbConfig.assayAvailability?.byDt[t.dt]?.byOrigin
 		if (byOrigin) {
-			// dt has multiple origins
-			// add a dt term for each origin
-			const origins = Object.keys(byOrigin)
-			if (!(origins.length == 2 && origins.includes('germline') && origins.includes('somatic')))
-				throw 'unexpected origins[]'
-			// order somatic origin first so that it is used by default
-			// when filling in custom groups
-			for (const k of ['somatic', 'germline']) {
-				const tcopy = structuredClone(t)
-				tcopy.origin = k
-				tcopy.id = `${t.id}_${k}`
-				tcopy.name = `${t.name} (${k})`
-				dtTermsInDs.push(tcopy)
-			}
+			// dt has origins in dataset
+			if (!t.origin) continue // dt term does not have origin, so skip
+			if (!Object.keys(byOrigin).includes(t.origin)) throw 'unexpected origin of dt term'
 		} else {
-			dtTermsInDs.push(t)
+			// dt does not have origins in dataset
+			if (t.origin) continue // dt term has origin, so skip
 		}
+		dtTermsInDs.push(t)
 	}
 	tw.term.filter = {
 		opts: { joinWith: ['and', 'or'] },
@@ -263,7 +224,7 @@ async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 
 	// make radio buttons for grouping variants
 	async function makeGroupUI() {
-		if (!self.q.type || self.q.type != 'custom-groupset') self.q.type = 'filter'
+		if (self.q.type != 'predefined-groupset' && self.q.type != 'custom-groupset') self.q.type = 'filter'
 		await makeGroupsetDraggables()
 		/*groupsDiv.style('display', 'inline-block')
 		makeDtRadios()

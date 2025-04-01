@@ -11,6 +11,7 @@ exported functions
 import { rgb } from 'd3-color'
 import * as d3scale from 'd3-scale'
 import * as d3 from 'd3'
+import { getWrappedTvslst } from '../../../client/filter/filter.utils.js'
 
 // moved from `#shared/terms` to here, so that this can be passed as
 // part of 'common' argument to exported dataset js function, at server runtime
@@ -1153,10 +1154,11 @@ export const CNVClasses = Object.values(mclass)
 	.filter(m => m.dt == dtcnv)
 	.map(m => m.key)
 
-// custom dt terms used by variant filter of geneVariant term
-export const dtTerms = [
+// dt terms used for filtering variants for geneVariant term
+const _dtTerms = [
 	{
 		id: 'snvindel',
+		query: 'snvindel',
 		name: dt2label[dtsnvindel],
 		parent_id: null,
 		isleaf: true,
@@ -1168,6 +1170,7 @@ export const dtTerms = [
 	},
 	{
 		id: 'cnv',
+		query: 'cnv',
 		name: dt2label[dtcnv],
 		parent_id: null,
 		isleaf: true,
@@ -1177,6 +1180,7 @@ export const dtTerms = [
 	},
 	{
 		id: 'fusion',
+		query: 'svfusion',
 		name: dt2label[dtfusionrna],
 		parent_id: null,
 		isleaf: true,
@@ -1186,6 +1190,7 @@ export const dtTerms = [
 	},
 	{
 		id: 'sv',
+		query: 'svfusion',
 		name: dt2label[dtsv],
 		parent_id: null,
 		isleaf: true,
@@ -1194,156 +1199,96 @@ export const dtTerms = [
 		values: Object.fromEntries([mclasssv, 'WT'].map(key => [key, { label: mclass[key].label }]))
 	}
 ]
+// add origin annotations to dt terms
+export const dtTerms = []
+for (const _dtTerm of _dtTerms) {
+	const dtTerm = structuredClone(_dtTerm)
+	dtTerm.name_noOrigin = dtTerm.name // for labeling groups in groupsetting
+	dtTerms.push(dtTerm) // no origin
+	for (const origin of ['somatic', 'germline']) {
+		// add origins
+		const addOrigin = {
+			id: `${dtTerm.id}_${origin}`,
+			name: `${dtTerm.name} (${origin})`,
+			origin
+		}
+		dtTerms.push(Object.assign({}, dtTerm, addOrigin))
+	}
+}
 
-/*
-Term groupsetting used for geneVariant term
-NOTE: for each groupsetting, groups[] is ordered by priority
-for example: in the 'Protein-changing vs. rest' groupsetting, the
-'Protein-changing' group is listed first in groups[] so that samples
-that have both missense and silent mutations are classified in the
-'Protein-changing' group
-*/
+const dtFilter = {
+	opts: { joinWith: ['and', 'or'] },
+	terms: dtTerms
+}
+
+const groupsetLst = []
+for (const term of dtTerms) {
+	// wildtype filter
+	const WTfilter = structuredClone(dtFilter)
+	WTfilter.group = 2
+	const WT = 'WT'
+	const WTvalue = { key: WT, label: term.values[WT].label, value: WT }
+	const WTtvs = { type: 'tvs', tvs: { term, values: [WTvalue] } }
+	WTfilter.active = getWrappedTvslst([WTtvs])
+	let WTname = 'Wildtype'
+	// mutated filter
+	const MUTfilter = structuredClone(dtFilter)
+	MUTfilter.group = 1
+	const classes = Object.keys(term.values)
+	if (classes.length < 2) throw 'should have at least 2 classes'
+	let MUTtvs, MUTname
+	if (classes.length == 2) {
+		// only 2 classes
+		// mutant filter will filter for the mutant class
+		const MUT = classes.find(c => c != WT)
+		const MUTvalue = { key: MUT, label: term.values[MUT].label, value: MUT }
+		MUTtvs = { type: 'tvs', tvs: { term, values: [MUTvalue] } }
+		MUTname = term.values[MUT].label
+	} else {
+		// more than 2 classes
+		// mutant filter will filter for all non-wildtype classes
+		MUTtvs = { type: 'tvs', tvs: { term, values: [WTvalue], isnot: true } }
+		MUTname = term.name_noOrigin
+	}
+	MUTfilter.active = getWrappedTvslst([MUTtvs])
+	// excluded filter
+	const EXCLUDEfilter = structuredClone(dtFilter)
+	EXCLUDEfilter.group = 0
+	EXCLUDEfilter.active = getWrappedTvslst()
+	// assign filters to groups
+	let GRPSETname = `${MUTname} vs. Wildtype`
+	if (term.origin) GRPSETname += ` (${term.origin})`
+	const WTgroup = {
+		name: WTname,
+		type: 'filter',
+		uncomputable: false,
+		filter: WTfilter
+	}
+	const MUTgroup = {
+		name: MUTname,
+		type: 'filter',
+		uncomputable: false,
+		filter: MUTfilter
+	}
+	const EXCLUDEgroup = {
+		name: 'Excluded categories',
+		type: 'filter',
+		uncomputable: true,
+		filter: EXCLUDEfilter
+	}
+	// assign groups to groupset
+	const groupset = {
+		name: GRPSETname,
+		groups: [EXCLUDEgroup, MUTgroup, WTgroup],
+		id: term.id
+	}
+	groupsetLst.push(groupset)
+}
+
 export const geneVariantTermGroupsetting = {
 	disabled: false, // as const, // TODO: may need to add is when converting common.js to .ts
 	type: 'custom',
-	lst: [
-		{
-			// SNV/indel groupsetting
-			name: 'Mutated vs. wildtype',
-			groups: [
-				{
-					type: 'values', // as const, // TODO: may need to add is when converting common.js to .ts
-					name: 'Mutated',
-					values: mutationClasses
-						.filter(key => key != 'WT' && key != 'Blank')
-						.map(key => {
-							return { key, label: mclass[key].label }
-						})
-				},
-				{
-					type: 'values',
-					name: 'Wildtype',
-					values: [{ key: 'WT', label: 'Wildtype' }]
-				},
-				{
-					type: 'values',
-					name: 'Not tested',
-					values: [{ key: 'Blank', label: 'Not tested' }],
-					uncomputable: true
-				}
-			]
-		},
-		// SNV/indel groupsetting
-		{
-			name: 'Protein-changing vs. rest',
-			groups: [
-				{
-					type: 'values',
-					name: 'Protein-changing',
-					values: proteinChangingMutations.map(key => {
-						return { key, label: mclass[key].label }
-					})
-				},
-				{
-					type: 'values',
-					name: 'Rest',
-					values: Object.keys(mclass)
-						.filter(key => !proteinChangingMutations.includes(key) && key != 'Blank')
-						.map(key => {
-							return { key, label: mclass[key].label }
-						})
-				},
-				{
-					type: 'values',
-					name: 'Not tested',
-					values: [{ key: 'Blank', label: 'Not tested' }],
-					uncomputable: true
-				}
-			]
-		},
-		// SNV/indel groupsetting
-		{
-			name: 'Truncating vs. rest',
-			groups: [
-				{
-					type: 'values',
-					name: 'Truncating',
-					values: truncatingMutations.map(key => {
-						return { key, label: mclass[key].label }
-					})
-				},
-				{
-					type: 'values',
-					name: 'Rest',
-					values: Object.keys(mclass)
-						.filter(key => !truncatingMutations.includes(key) && key != 'Blank')
-						.map(key => {
-							return { key, label: mclass[key].label }
-						})
-				},
-				{
-					type: 'values',
-					name: 'Not tested',
-					values: [{ key: 'Blank', label: 'Not tested' }],
-					uncomputable: true
-				}
-			]
-		},
-		// CNV groupsetting
-		{
-			name: 'Gain vs. Loss vs. LOH vs. Wildtype',
-			groups: [
-				{
-					type: 'values',
-					name: 'Copy number gain',
-					values: [{ key: 'CNV_amp', label: mclass['CNV_amp'].label }]
-				},
-				{
-					type: 'values',
-					name: 'Copy number loss',
-					values: [{ key: 'CNV_loss', label: mclass['CNV_loss'].label }]
-				},
-				{
-					type: 'values',
-					name: 'LOH',
-					values: [{ key: 'CNV_loh', label: mclass['CNV_loh'].label }]
-				},
-				{
-					type: 'values',
-					name: 'Wildtype',
-					values: [{ key: 'WT', label: 'Wildtype' }]
-				},
-				{
-					type: 'values',
-					name: 'Not tested',
-					values: [{ key: 'Blank', label: 'Not tested' }],
-					uncomputable: true
-				}
-			]
-		},
-		// SV fusion groupsetting
-		{
-			name: 'Fusion vs. Wildtype',
-			groups: [
-				{
-					type: 'values',
-					name: 'Fusion transcript',
-					values: [{ key: 'Fuserna', label: mclass['Fuserna'].label }]
-				},
-				{
-					type: 'values',
-					name: 'Wildtype',
-					values: [{ key: 'WT', label: 'Wildtype' }]
-				},
-				{
-					type: 'values',
-					name: 'Not tested',
-					values: [{ key: 'Blank', label: 'Not tested' }],
-					uncomputable: true
-				}
-			]
-		}
-	]
+	lst: groupsetLst
 }
 
 export const colorScaleMap = {

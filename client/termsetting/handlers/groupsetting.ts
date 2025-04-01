@@ -143,31 +143,20 @@ export class GroupSettingMethods {
 			if (this.tsInstance.term.type == 'geneVariant') {
 				const q = this.tsInstance.q as GeneVariantBaseQ & PredefinedGroupSettingQ
 				const term = this.tsInstance.term as GeneVariantTerm
-				// @ts-expect-error, need to harmonize input data structure between dictionary and geneVariant terms
-				const dt = input.find(i => i.dt == q.dt)
-				const classes = dt.classes.byOrigin ? dt.classes.byOrigin[q.origin] : dt.classes
 				const groupset = term.groupsetting.lst[q.predefined_groupset_idx]
 				let computableGrpIdx = 0
 				for (const g of groupset.groups) {
-					const group = g as ValuesGroup
+					const group = g as any // TODO: improve typing
 					const grpIdx = group.uncomputable ? 0 : ++computableGrpIdx
 					this.data.groups.push({
 						currentIdx: grpIdx,
-						type: 'values',
+						type: 'filter',
 						name: grpIdx === 0 ? 'Excluded categories' : group.name
 					})
 					grpIdxes.delete(grpIdx)
-					for (const [key, samplecount] of Object.entries(classes)) {
-						if (group.values.some(v => v.key == key)) {
-							this.data.values.push({
-								key,
-								label: mclass[key].label,
-								group: grpIdx,
-								// @ts-expect-error, will resolve when input data structure is harmonized (see above)
-								samplecount
-							})
-						}
-					}
+					const filter = group.filter
+					if (!filter) throw 'filter missing'
+					this.data.filters.push(filter)
 				}
 			}
 		} else {
