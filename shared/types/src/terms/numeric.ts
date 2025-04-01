@@ -34,7 +34,7 @@ export type NumericTerm = BaseTerm & {
 	id?: string
 	// these concrete term.type values make it clear that only these are numeric,
 	// "categorical", "condition", and other term.types are not included in this union
-	type: 'integer' | 'float' | 'geneExpression' | 'metaboliteIntensity'
+	type: 'integer' | 'float' | 'geneExpression' | 'metaboliteIntensity' | 'date' | 'numeric'
 	bins: PresetNumericBins
 	values?: TermValues
 	unit?: string
@@ -50,7 +50,7 @@ export type NumericTerm = BaseTerm & {
 
 export type NumericDictTerm = BaseTerm & {
 	id?: string
-	type: 'integer' | 'float'
+	type: 'integer' | 'float' | 'date'
 	bins: PresetNumericBins
 	values?: TermValues
 	unit?: string

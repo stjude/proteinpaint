@@ -26,7 +26,7 @@ export async function fillTW(tw: NumericTW, vocabApi: VocabApi, defaultQ: Numeri
 	if (!tw.q.mode) {
 		if (!(defaultQ as null) || (defaultQ as NumericQ).mode) (tw.q as NumericQ).mode = 'discrete'
 	}
-	const subtype = tw.term.type == 'float' || tw.term.type == 'integer' ? 'toggle' : tw.q.mode
+	const subtype = tw.term.type == 'float' || tw.term.type == 'integer' || tw.term.type == 'date' ? 'toggle' : tw.q.mode
 	const _ = await importSubtype(subtype)
 	return await _.fillTW(tw, vocabApi, defaultQ)
 }

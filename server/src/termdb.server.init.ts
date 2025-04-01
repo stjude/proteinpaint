@@ -542,10 +542,7 @@ export function server_init_db_queries(ds) {
 		select term_id, value 
 		from anno_integer 
 		where sample=? ${termClause}
-		union all
-		select term_id, value 
-		from anno_date 
-		where sample=? ${termClause}
+		${tables.has('anno_date') ? 'union all select term_id, value from anno_date where sample=? ' + termClause : ''}
 		union all 
 		select term_id, (min_years_to_event || ' ' || value) as value 
 		from precomputed_chc_grade 
@@ -555,9 +552,7 @@ export function server_init_db_queries(ds) {
 		from survival 
 		where sample=? ${termClause}) join terms on terms.id = term_id`
 		const sql = cn.prepare(query)
-		const rows = sql.all([
-			sampleId,
-			...term_ids,
+		const params = [
 			sampleId,
 			...term_ids,
 			sampleId,
@@ -568,7 +563,9 @@ export function server_init_db_queries(ds) {
 			...term_ids,
 			sampleId,
 			...term_ids
-		])
+		]
+		if (tables.has('anno_date')) params.push(sampleId, ...term_ids)
+		const rows = sql.all(params)
 		return rows
 	}
 
