@@ -144,7 +144,7 @@ export function emitRelevantSpecCovDetails({ workspace, relevantSpecs, reportDir
 			if (fs.existsSync(srcFile)) {
 				const targetFile = `${wsSpecsExtractsDir}/${reportSrc}/${file}.html`
 				const targetDir = path.dirname(targetFile)
-				if (!fs.existsSync(targetDir)) fs.mkdirSync(targetDir)
+				if (!fs.existsSync(targetDir)) fs.mkdirSync(targetDir, { recursive: true })
 				fs.copyFileSync(srcFile, targetFile)
 			}
 		}
