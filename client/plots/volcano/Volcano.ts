@@ -44,7 +44,6 @@ class Volcano extends RxComponentInner {
 			actionsTip: new Menu({ padding: '' })
 		}
 		if (opts.diffAnalysisInteractions) this.diffAnalysisInteractions = opts.diffAnalysisInteractions
-		if (opts.termType == 'geneExpression') this.geSampleNumCuttoff = 3000
 	}
 
 	reactsTo(action: { type: string; id: string }) {
@@ -73,8 +72,7 @@ class Volcano extends RxComponentInner {
 
 	async setControls() {
 		const plotConfig = this.app.getState().plots.find((p: any) => p.id === this.id)
-		const sampleNum = this.interactions!.getSampleNum(plotConfig)
-		const controls = new VolcanoControlInputs(plotConfig, this.termType, sampleNum)
+		const controls = new VolcanoControlInputs(plotConfig, this.termType)
 
 		this.components.controls = await controlsInit({
 			app: this.app,
@@ -100,25 +98,16 @@ class Volcano extends RxComponentInner {
 	async main() {
 		const config = structuredClone(this.state.config)
 		if (config.chartType != this.type && config.childType != this.type) return
+
+		const settings = config.settings.volcano
 		try {
 			if (!this.interactions) throw 'Interactions not initialized [main() Volcano.ts]'
-
-			const sampleNum = this.interactions.getSampleNum(config)
-			if (this.geSampleNumCuttoff && sampleNum > this.geSampleNumCuttoff) {
-				config.settings.volcano.method = 'wilcoxon'
-				await this.app.save({
-					type: 'plot_edit',
-					id: this.id,
-					config
-				})
-			}
 
 			//Only show Loading for data requests that take longer than 500ms
 			const showWait = setTimeout(() => {
 				this.dom.wait.style('display', 'block')
 			}, 500)
 
-			const settings = config.settings.volcano
 			/** Fetch data */
 			const model = new VolcanoModel(this.app, config, settings)
 			const response = await model.getData()
@@ -153,7 +142,7 @@ class Volcano extends RxComponentInner {
 export const volcanoInit = getCompInit(Volcano)
 export const componentInit = volcanoInit
 
-export function getDefaultVolcanoSettings(overrides = {}): VolcanoSettings {
+export function getDefaultVolcanoSettings(overrides = {}, opts: any): VolcanoSettings {
 	const defaults: VolcanoSettings = {
 		defaultSignColor: 'red',
 		defaultNonSignColor: 'black',
@@ -168,9 +157,32 @@ export function getDefaultVolcanoSettings(overrides = {}): VolcanoSettings {
 		pValue: 0.05,
 		pValueType: 'adjusted',
 		rankBy: 'abs(foldChange)',
+		//Only declare this value in one place
+		sampleNumCutoff: opts.termType == 'geneExpression' ? 3000 : 4000,
 		width: 400
 	}
+
 	return Object.assign(defaults, overrides)
+}
+
+export function getSampleNum(config: any) {
+	return config.samplelst.groups.reduce((sum: number, g: any) => sum + g.values.length, 0)
+}
+
+export function validateVolcanoSettings(config: any, opts: any) {
+	if (!config.settings.volcano) return
+	const settings = config.settings.volcano
+
+	if (config.termType == 'geneExpression') {
+		const sampleNum = getSampleNum(opts)
+		const largeNum = sampleNum > settings.sampleNumCutoff
+
+		if (!opts.overrides && largeNum) {
+			settings.method = 'wilcoxon'
+		} else if (largeNum && settings.method != 'wilcoxon') {
+			throw `${settings.method} is not supported for ${sampleNum} samples when termtype = ${config.termType}. Please use Wilcoxon.`
+		}
+	}
 }
 
 export async function getPlotConfig(opts: VolcanoOpts, app: MassAppApi) {
@@ -191,10 +203,13 @@ export async function getPlotConfig(opts: VolcanoOpts, app: MassAppApi) {
 		highlightedData: opts.highlightedData || [],
 		samplelst: opts.samplelst,
 		settings: {
-			volcano: getDefaultVolcanoSettings(opts.overrides || {})
+			volcano: getDefaultVolcanoSettings(opts.overrides || {}, opts)
 		},
 		termType: opts.termType
 	}
+
+	//Validate user submitted unavailable/inappropriate settings
+	validateVolcanoSettings(config, opts)
 
 	return copyMerge(config, opts)
 }

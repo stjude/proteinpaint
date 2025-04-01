@@ -1,5 +1,6 @@
 import type { ControlInputEntry } from '#mass/types/mass'
 import type { VolcanoPlotConfig } from './VolcanoTypes'
+import { getSampleNum } from './Volcano'
 
 /** Handles settings the controls in the menu based on the app
  * termType.
@@ -23,10 +24,9 @@ export class VolcanoControlInputs {
 	termType: string
 	/** control inputs for controls init */
 	inputs: ControlInputEntry[]
-	readonly geSampleNumCuttoff = 3000
-	constructor(config: VolcanoPlotConfig, termType: string, sampleNum: number) {
+	constructor(config: VolcanoPlotConfig, termType: string) {
 		this.config = config
-		this.sampleNum = sampleNum
+		this.sampleNum = getSampleNum(config)
 		this.termType = termType
 		//Populated with the default controls for the volcano plot
 		this.inputs = [
@@ -183,7 +183,8 @@ export class VolcanoControlInputs {
 
 	getMethodOptions() {
 		if (this.termType !== 'geneExpression') return
-		if (this.sampleNum < this.geSampleNumCuttoff) {
+		const settings = this.config.settings.volcano
+		if (this.sampleNum < settings!.sampleNumCutoff) {
 			return [
 				{ label: 'edgeR', value: 'edgeR' },
 				{ label: 'Wilcoxon', value: 'wilcoxon' },

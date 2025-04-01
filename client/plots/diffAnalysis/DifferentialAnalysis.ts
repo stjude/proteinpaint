@@ -6,7 +6,7 @@ import { Menu } from '#dom'
 import { termType2label } from '#shared/terms.js'
 import type { DiffAnalysisDom, DiffAnalysisOpts, DiffAnalysisPlotConfig } from './DiffAnalysisTypes'
 import { DiffAnalysisView } from './view/DiffAnalysisView'
-import { getDefaultVolcanoSettings } from '../volcano/Volcano.ts'
+import { getDefaultVolcanoSettings, validateVolcanoSettings } from '../volcano/Volcano.ts'
 import { getDefaultGseaSettings } from '#plots/gsea.js'
 import { DiffAnalysisInteractions } from './interactions/DiffAnalysisInteractions.ts'
 
@@ -153,11 +153,13 @@ export function getPlotConfig(opts: DiffAnalysisOpts) {
 		termType: opts.termType,
 		highlightedData: opts.highlightedData || [],
 		settings: {}
-	}
+	} as any
 
 	if (opts.termType == 'geneExpression') {
-		config.settings['volcano'] = getDefaultVolcanoSettings(opts.overrides || {})
-		config.settings['gsea'] = getDefaultGseaSettings(opts.overrides || {})
+		config.settings.volcano = getDefaultVolcanoSettings(opts.overrides || {}, opts)
+		config.settings.gsea = getDefaultGseaSettings(opts.overrides || {})
+
+		validateVolcanoSettings(config, opts)
 	}
 
 	return copyMerge(config, opts)
