@@ -18,6 +18,6 @@ if (process.argv[1] == import.meta.dirname + '/closestSpec.js' && process.argv.i
 	console.log(getRelevantServerSpecs())
 }
 
-export function getRelevantServerSpecs() {
-	return getClosestSpec(serverDir, relevantServerDirs, opts)
+export function getRelevantServerSpecs(_opts = {}) {
+	return getClosestSpec(serverDir, relevantServerDirs, Object.assign(opts, _opts))
 }
