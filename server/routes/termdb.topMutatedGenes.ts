@@ -25,14 +25,14 @@ function init({ genomes }) {
 	- perform conversion on gene name/id for future on needs
 	*/
 	return async (req: any, res: any): Promise<void> => {
-		const q: GdcTopMutatedGeneRequest = req.query
+		const q: topMutatedGeneRequest = req.query
 		const g = genomes.hg38
 		if (!g) throw 'hg38 missing'
 		const ds = g.datasets.GDC
 		if (!ds) throw 'hg38 GDC missing'
 		try {
 			const genes = await getGenesGraphql(q, ds)
-			const payload: GdcTopMutatedGeneResponse = { genes }
+			const payload: topMutatedGeneResponse = { genes }
 			res.send(payload)
 		} catch (e: any) {
 			res.send({ status: 'error', error: e.message || e })
@@ -243,7 +243,7 @@ const queryV2: any = {
 	}
 }
 
-async function getGenesGraphql(q: GdcTopMutatedGeneRequest, ds) {
+async function getGenesGraphql(q: topMutatedGeneRequest, ds) {
 	const { host, headers } = ds.getHostHeaders(q)
 
 	const query: string = queryV2.query
