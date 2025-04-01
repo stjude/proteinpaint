@@ -94,61 +94,11 @@ export function fillTW(tw: GeneVariantTW, vocabApi: VocabApi, defaultQ: GeneVari
 		copyMerge(tw.q, defaultQ)
 	}
 
-	makeVariantFilter(tw, vocabApi)
+	// may make variant filter
+	mayMakeVariantFilter(tw, vocabApi)
 
-	// groupsetting
-	// fill term.groupsetting
-	//if (!tw.term.groupsetting) tw.term.groupsetting = geneVariantTermGroupsetting satisfies TermGroupSetting
-	// if applicable, fill q groupsetting properties
-	if (/*tw.q.type == 'predefined-groupset' || */ tw.q.type == 'custom-groupset') {
-		// groupsetting in use
-		// must specify a single data type
-		//const ds_dts = getDsDts(vocabApi.termdbConfig.queries)
-
-		const filter = structuredClone(tw.term.filter)
-
-		const group0: FilterGroup = {
-			name: 'Excluded categories',
-			type: 'filter',
-			uncomputable: true,
-			filter: Object.assign({ group: 0 }, filter)
-		}
-		const group1: FilterGroup = {
-			name: 'Group 1',
-			type: 'filter',
-			uncomputable: false,
-			filter: Object.assign({ group: 1 }, filter)
-		}
-		const group2: FilterGroup = {
-			name: 'Group 2',
-			type: 'filter',
-			uncomputable: false,
-			filter: Object.assign({ group: 2 }, filter)
-		}
-		const term = filter.terms[0]
-		const key = Object.keys(term.values)[0]
-		const value = { key, label: term.values[key].label, value: key }
-		const tvs1: any = { type: 'tvs', tvs: { term, values: [value] } }
-		const tvs2 = structuredClone(tvs1)
-		tvs2.tvs.isnot = true
-		group0.filter.active = getWrappedTvslst()
-		group1.filter.active = getWrappedTvslst([tvs1])
-		group2.filter.active = getWrappedTvslst([tvs2])
-		group1.name = `${term.name} IS ${value.label.toLowerCase()}`
-		group2.name = `${term.name} NOT ${value.label.toLowerCase()}`
-		tw.q.customset = { groups: [group0, group1, group2] }
-
-		/*// must specify a single orign (if dt has annotated origins)
-		const byOrigin = vocabApi.termdbConfig.assayAvailability?.byDt[tw.q.dt]?.byOrigin
-		if (byOrigin && !tw.q.origin) tw.q.origin = 'somatic'
-		// fill groupsetting
-		if (tw.q.type == 'predefined-groupset') {
-			if (!Number.isInteger(tw.q.predefined_groupset_idx)) {
-				const groupset_idxs = getGroupsetIdxs(tw.q.dt)
-				tw.q.predefined_groupset_idx = groupset_idxs[0]
-			}
-		}*/
-	}
+	// may fill custom groups
+	mayFillGroups(tw)
 
 	{
 		// apply optional ds-level configs for this specific term
@@ -187,8 +137,47 @@ export function fillTW(tw: GeneVariantTW, vocabApi: VocabApi, defaultQ: GeneVari
 	set_hiddenvalues(tw.q, tw.term)
 }
 
+function mayFillGroups(tw) {
+	if (!(tw.q.type == 'custom-groupset' && !tw.q.customset?.groups.length)) return
+	// custom groupset, but customset.groups[] is empty
+	// fill with mutated group vs. wildtype group
+	// for the first dt specified in dataset
+	const filter = structuredClone(tw.term.filter)
+	// get first dt term in dataset
+	const term = filter.terms[0]
+	const WTvalue = { key: 'WT', label: term.values['WT'].label, value: 'WT' }
+	// mutated filter
+	const MUTtvs = { type: 'tvs', tvs: { term, values: [WTvalue], isnot: true } }
+	const MUTfilter = Object.assign({}, filter, { group: 1, active: getWrappedTvslst([MUTtvs]) })
+	// wildtype filter
+	const WTtvs = structuredClone(MUTtvs)
+	WTtvs.tvs.isnot = false
+	const WTfilter = Object.assign({}, filter, { group: 2, active: getWrappedTvslst([WTtvs]) })
+	// assign filters to groups
+	const MUTgroup: FilterGroup = {
+		name: `${term.name} Mutated`,
+		type: 'filter',
+		uncomputable: false,
+		filter: MUTfilter
+	}
+	const WTgroup: FilterGroup = {
+		name: `${term.name} Wildtype`,
+		type: 'filter',
+		uncomputable: false,
+		filter: WTfilter
+	}
+	const EXCLUDEgroup: FilterGroup = {
+		name: 'Excluded categories',
+		type: 'filter',
+		uncomputable: true,
+		filter: Object.assign({}, filter, { group: 0, active: getWrappedTvslst() })
+	}
+	// load groups into q.customset
+	tw.q.customset = { groups: [EXCLUDEgroup, MUTgroup, WTgroup] }
+}
+
 // function to make a variant filter based on dt terms
-function makeVariantFilter(tw: GeneVariantTW, vocabApi: VocabApi) {
+function mayMakeVariantFilter(tw: GeneVariantTW, vocabApi: VocabApi) {
 	if (tw.term.filter) return
 	const dtTermsInDs: DtTerm[] = [] // dt terms in dataset
 	for (const t of dtTerms) {
