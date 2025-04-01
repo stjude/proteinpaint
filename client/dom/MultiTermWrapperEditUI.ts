@@ -20,10 +20,12 @@ export class MultiTermWrapperEditUI {
 	disable_terms: Term[]
 	dom: MultiTermWrapperDom
 	headerText: string
+	inputListLength: number
 	maxNum: number
 	state?: MassState
 	twList: TermWrapper[]
 	update: any
+
 	constructor(opts: MultiTermWrapperUIOpts) {
 		this.app = opts.app
 		this.callback = opts.callback
@@ -52,6 +54,10 @@ export class MultiTermWrapperEditUI {
 				.style('margin-left', '10px')
 		}
 		this.twList = opts.twList || []
+		//Used to determine if the use can submit or not
+		//If >0, can submit to remove terms
+		//If == 0, user must select a term to submit
+		this.inputListLength = this.twList.length
 		this.buttonLabel = opts.buttonLabel || 'Submit'
 		this.maxNum = opts.maxNum || Infinity
 		this.headerText = opts.headerText || ''
@@ -154,8 +160,14 @@ function setRenderers(self) {
 		tws.each(self.renderTerm)
 		tws.enter().append('div').attr('class', 'sjpp-edit-ui-pill').each(self.addTerm)
 
-		self.dom.submitBtn.property('disabled', self.twList.length == 0)
-		self.dom.footer.text(`${self.twList.length} terms selected`)
+		//Disable submit if user did not remove terms from input list and did not select any terms
+		self.dom.submitBtn.property('disabled', self.twList.length === 0 && self.inputListLength == 0)
+		//Show message if terms are removed or if list is empty
+		self.dom.footer.text(
+			`${
+				self.twList.length === 0 && self.inputListLength > 0 ? `Terms removed` : `${self.twList.length} terms selected`
+			}`
+		)
 	}
 
 	self.addTerm = async function (d) {
