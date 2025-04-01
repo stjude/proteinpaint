@@ -26,6 +26,10 @@ tape('conver date to number', function (test) {
 tape('convert number to date', function (test) {
 	const num = 2023.5
 	const str = getDateStrFromNumber(num)
-	test.equal(str, 'July 2023', `The date for number ${num} should be July 2023, the day is omitted`)
+	test.equal(
+		str,
+		'July 2023',
+		`The date for number ${num} should be July 2023, the day is omitted to deidentify the patient`
+	)
 	test.end()
 })
