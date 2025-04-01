@@ -7,6 +7,9 @@ All notable changes to this project will be documented in this file.
 Features:
 - Added unit to the time reported by correlation analysis. Made little helper function to format the time.
 
+Fixes:
+- fixed error when geneVariant term is added as either overlay or divideBy term
+
 
 ## 2.114.0
 

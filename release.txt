@@ -1,2 +1,1 @@
-Fixes
-- fixed error when geneVariant term is added as either overlay or divideBy term
+
