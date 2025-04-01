@@ -209,8 +209,8 @@ export function termType2label(type) {
 	return typeMap[type] || 'Unknown term type'
 }
 
-//value is a decimal where year is the integer part and month is the decimal part
-export function getDate(value) {
+//value is a float where the year is the integer part and days/365 is the decimal part
+export function getDateStrFromNumber(value) {
 	const year = Math.floor(value)
 	const time = (value - year) * 365 * 24 * 60 * 60 * 1000 // convert to milliseconds
 	const january1st = new Date(year, 0, 0)
