@@ -12,6 +12,9 @@ import { VolcanoInteractions } from './interactions/VolcanoInteractions'
 import { VolcanoPlotView } from './view/VolcanoPlotView'
 import { VolcanoControlInputs } from './VolcanoControlInputs'
 
+// The max sample cutoff for volcano rendering
+const maxSampleCutoff = 4000
+
 class Volcano extends RxComponentInner {
 	readonly type = 'volcano'
 	components: { controls: any }
@@ -19,7 +22,6 @@ class Volcano extends RxComponentInner {
 	interactions?: VolcanoInteractions
 	termType: string
 	diffAnalysisInteractions?: DiffAnalysisInteractions
-	geSampleNumCuttoff?: number
 	constructor(opts: VolcanoOpts) {
 		super()
 		this.components = {
@@ -172,9 +174,12 @@ export function getSampleNum(config: any) {
 export function validateVolcanoSettings(config: any, opts: any) {
 	if (!config.settings.volcano) return
 	const settings = config.settings.volcano
+	const sampleNum = getSampleNum(opts)
+	if (sampleNum > maxSampleCutoff) {
+		throw `Sample size ${sampleNum} exceeds max sample size of ${maxSampleCutoff}. Please reduce sample size.`
+	}
 
 	if (config.termType == 'geneExpression') {
-		const sampleNum = getSampleNum(opts)
 		const largeNum = sampleNum > settings.sampleNumCutoff
 
 		if (!opts.overrides && largeNum) {
