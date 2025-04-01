@@ -6,6 +6,7 @@ import serverconfig from '../src/serverconfig.js'
 import { mayLog } from '#src/helpers.ts'
 import path from 'path'
 import { getStdDev } from '#shared/descriptive.stats.js'
+import { formatElapsedTime } from '#shared/time'
 
 // to avoid crashing r, an array must meet below; otherwise the variable is skipped
 const minArrayLength = 3 // minimum number of values
@@ -39,24 +40,6 @@ function init({ genomes }) {
 			res.send({ error: e?.message || e })
 			if (e instanceof Error && e.stack) console.error(e)
 		}
-	}
-}
-
-/**
- * Formats elapsed time in milliseconds to a human-readable string with appropriate units
- * @param ms - Elapsed time in milliseconds
- * @returns Formatted time string with appropriate unit
- */
-function formatElapsedTime(ms: number): string {
-	if (ms < 1000) {
-		return `${ms}ms`
-	} else if (ms < 60000) {
-		const seconds = (ms / 1000).toFixed(2)
-		return `${seconds}s`
-	} else {
-		const minutes = Math.floor(ms / 60000)
-		const seconds = ((ms % 60000) / 1000).toFixed(2)
-		return `${minutes}m ${seconds}s`
 	}
 }
 
