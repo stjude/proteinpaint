@@ -17,7 +17,7 @@ import { getId } from '#mass/nav'
 import { searchSampleInput } from './sampleView.js'
 import { shapesArray, shapeSelector } from '../dom/shapes.js'
 import { roundValueAuto } from '#shared/roundValue.js'
-import { getDate } from '#shared/terms.js'
+import { getDateStrFromNumber } from '#shared/terms.js'
 
 export function setInteractivity(self) {
 	self.showTooltip = function (event, chart) {
@@ -303,7 +303,7 @@ export function setInteractivity(self) {
 					}
 				}
 			}
-			if (tw?.term.type == 'date') value = getDate(value)
+			if (tw?.term.type == 'date') value = getDateStrFromNumber(value)
 			else if (typeof value == 'number' && value % 1 != 0) value = roundValueAuto(value)
 			return value
 		}
