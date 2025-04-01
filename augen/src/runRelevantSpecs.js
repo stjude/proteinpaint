@@ -23,7 +23,7 @@ export async function runRelevantSpecs({ workspace, specs, dirname }) {
 		process.exit(0)
 	}
 
-	const c8opts = `--all --experimental-monocart -r=v8 -r=html -r=json -r=markdown-summary -r=markdown-details -o=./.coverage`
+	const c8opts = `--experimental-monocart -r=v8 -r=html -r=json -r=markdown-summary -r=markdown-details -o=./.coverage`
 
 	try {
 		const html = []
