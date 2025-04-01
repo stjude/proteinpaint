@@ -1,5 +1,5 @@
 import tape from 'tape'
-import { violinRenderer } from '../../dom/violinRenderer'
+import { violinRenderer } from '../violinRenderer'
 import { select, brushX } from 'd3'
 
 tape('violin brush', test => {

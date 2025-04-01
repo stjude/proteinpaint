@@ -98,7 +98,8 @@ async function runTest(patternsStr) {
 		])
 
 		const [pattern, testedFiles] = _pattern.split('#')
-		// console.log(70, DATAPORT, pattern, `http://localhost:${STATICPORT}/puppet.html?port=${DATAPORT}&${pattern}`)
+		//console.log(101, DATAPORT, pattern)
+		console.log(`\n--- testing http://localhost:${STATICPORT}/puppet.html?port=${DATAPORT}&${pattern} ---\n`)
 		// Navigate to test page
 		await page
 			.goto(`http://localhost:${STATICPORT}/puppet.html?port=${DATAPORT}&${pattern}`, { timeout: 1000 })
