@@ -1,19 +1,10 @@
 import { dtsnvindel, dtcnv, dtfusionrna, geneVariantTermGroupsetting, dtTerms } from '#shared/common.js'
 import { getPillNameDefault, set_hiddenvalues } from '../termsetting'
-import type {
-	FilterGroup,
-	GeneVariantQ,
-	GeneVariantTW,
-	GeneVariantTermSettingInstance,
-	TermGroupSetting,
-	VocabApi,
-	DtTerm
-} from '#types'
+import type { GeneVariantQ, GeneVariantTW, GeneVariantTermSettingInstance, VocabApi, DtTerm } from '#types'
 import type { PillData } from '../types'
 import { make_radios } from '#dom'
 import { copyMerge } from '#rx'
 import { GroupSettingMethods } from './groupsetting.ts'
-import { getWrappedTvslst } from '#filter/filter'
 
 /* 
 instance attributes
@@ -494,7 +485,7 @@ async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 		})*/
 }
 
-// get dts specified in dataset
+/*// get dts specified in dataset
 function getDsDts(ds_queries) {
 	const ds_dts: number[] = []
 	for (const query of Object.keys(ds_queries)) {
@@ -512,7 +503,7 @@ function getGroupsetIdxs(dt) {
 	const groupset_idxs = dt == dtsnvindel ? [0, 1, 2] : dt == dtcnv ? [3] : dt == dtfusionrna ? [4] : []
 	if (!groupset_idxs.length) throw 'groupset_idxs is empty'
 	return groupset_idxs
-}
+}*/
 
 function clearGroupset(self) {
 	self.q.type = 'values'
