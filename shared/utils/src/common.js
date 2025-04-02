@@ -11,7 +11,6 @@ exported functions
 import { rgb } from 'd3-color'
 import * as d3scale from 'd3-scale'
 import * as d3 from 'd3'
-import { getWrappedTvslst } from '../../../client/filter/filter.utils.js'
 
 // moved from `#shared/terms` to here, so that this can be passed as
 // part of 'common' argument to exported dataset js function, at server runtime
@@ -1289,6 +1288,18 @@ export const geneVariantTermGroupsetting = {
 	disabled: false, // as const, // TODO: may need to add is when converting common.js to .ts
 	type: 'custom',
 	lst: groupsetLst
+}
+
+// duplicate of getWrappedTvslst() in /client/filter/filter.utils.js
+// because cannot import from client-side code
+function getWrappedTvslst(lst = [], join = '') {
+	const filter = {
+		type: 'tvslst',
+		in: true,
+		join,
+		lst
+	}
+	return filter
 }
 
 export const colorScaleMap = {
