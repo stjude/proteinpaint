@@ -575,6 +575,7 @@ function setInteractivity(self) {
 						if (isNumericTerm(self.term) && !self.term.bins && self.term.type != 'survival') {
 							await self.vocabApi.setTermBins({ term: self.term, q: self.q })
 						}
+						if (!self.$id) self.$id = await get$id(self.vocabApi.getTwMinCopy({ term: self.term, q: self.q }))
 						self.handler!.showEditMenu(self.dom.tip.d)
 					} else {
 						throw 'termtype missing'
