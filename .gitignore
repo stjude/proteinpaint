@@ -33,6 +33,7 @@ shared/types/**/*.js
 !shared/types/checkers/index.js
 shared/types/terms/*.js
 shared/types/routes/checkers/*
+shared/**/test/internals*.*
 
 **/public/bin/*
 public/tmp/*
