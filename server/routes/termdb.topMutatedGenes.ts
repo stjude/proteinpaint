@@ -1,4 +1,4 @@
-import type { topMutatedGeneRequest, topMutatedGeneResponse, MutatedGene, RouteApi } from '#types'
+import type { topMutatedGeneRequest, topMutatedGeneResponse, RouteApi } from '#types'
 import { topMutatedGenePayload } from '#types/checkers'
 //import { mclasscnvgain, mclasscnvloss, dtsnvindel } from '#shared/common.js'
 
