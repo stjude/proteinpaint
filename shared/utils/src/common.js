@@ -11,7 +11,7 @@ exported functions
 import { rgb } from 'd3-color'
 import * as d3scale from 'd3-scale'
 import * as d3 from 'd3'
-import { getWrappedTvslst } from './filter'
+import { getWrappedTvslst } from './filter.js'
 
 // moved from `#shared/terms` to here, so that this can be passed as
 // part of 'common' argument to exported dataset js function, at server runtime
