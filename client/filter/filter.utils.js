@@ -2,6 +2,9 @@
  Utilities
 *************************/
 
+import { getWrappedTvslst } from '#shared/filter.js'
+export { getWrappedTvslst } from '#shared/filter.js'
+
 // find the first filter item that has a matching term.id
 export function findItemByTermId(item, id) {
 	if (item.type === 'tvs' && item.tvs.term.id === id) return item
@@ -43,9 +46,6 @@ export function getFilterItemByTag(item, tag) {
 		if (matchingItem) return matchingItem
 	}
 }
-
-import { getWrappedTvslst } from '#shared/filter.js'
-export { getWrappedTvslst } from '#shared/filter.js'
 
 /*
 	get valid filter data to be used for server requests
