@@ -186,6 +186,7 @@ class gsea {
 
 async function renderPathwayDropdown(self) {
 	const pathwayOpts = [
+		{ label: '-', value: '-' },
 		{ label: 'BP: subset of GO', value: 'BP: subset of GO' },
 		{ label: 'MF: subset of GO', value: 'MF: subset of GO' },
 		{ label: 'CC: subset of GO', value: 'CC: subset of GO' },
@@ -213,11 +214,16 @@ async function renderPathwayDropdown(self) {
 		.style('margin-right', '10px')
 		.text('Select a gene set group:')
 
-	pathwayOpts.unshift({ label: '-', value: '-' })
 	const dropdown = self.dom.actionsDiv.append('select').on('change', event => {
+		if (!self.settings.pathway) {
+			//Remove placeholder from dropdown on first change
+			const placeholder = dropdown.select('option[value="-"]')
+			placeholder.remove()
+			pathwayOpts.shift()
+		}
+
 		const idx = event.target.selectedIndex
 		self.settings.pathway = pathwayOpts[idx].value
-		pathwayOpts.shift()
 		self.app.dispatch({
 			type: 'plot_edit',
 			id: self.id,
