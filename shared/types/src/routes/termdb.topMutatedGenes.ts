@@ -1,6 +1,8 @@
 import type { RoutePayload } from './routeApi.js'
 
 export type topMutatedGeneRequest = {
+	genome: string
+	dslabel: string
 	/** to restrict to CGC genes */
 	geneFilter?: 'CGC'
 	/** max number of genes to return */

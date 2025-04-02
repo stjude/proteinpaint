@@ -121,11 +121,16 @@ class GenesetComp {
 		// genes are not predefined. query to get top genes using the current cohort
 		let data
 		if (this.opts.mode == 'geneVariant') {
-			const body = {}
+			const body = {
+				genome: this.state.vocab.genome,
+				dslabel: this.state.vocab.dslabel
+			}
 			if (settings.maxGenes) body.maxGenes = settings.maxGenes
 			if (settings.geneFilter) body.geneFilter = settings.geneFilter
 			if (this.state.filter0) body.filter0 = this.state.filter0
 			// XXX this is optional query!! if ds is missing then should show input ui instead
+			// TODO why cannot use vocab method?
+			// TODO purpose of 2nd and 3rd arguments?
 			data = await dofetch3('termdb/topMutatedGenes', { body, signal }, { cacheAs: 'decoded' })
 		} else if (this.opts.mode == 'geneExpression') {
 			const body = {

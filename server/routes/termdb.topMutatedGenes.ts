@@ -18,20 +18,16 @@ export const api: RouteApi = {
 }
 
 function init({ genomes }) {
-	/*
-	genomes parameter is currently not used
-	could be used later to:
-	- verify hg38/GDC is on this instance and otherwise disable this route..
-	- perform conversion on gene name/id for future on needs
-	*/
 	return async (req: any, res: any): Promise<void> => {
-		const q: topMutatedGeneRequest = req.query
-		const g = genomes.hg38
-		if (!g) throw 'hg38 missing'
-		const ds = g.datasets.GDC
-		if (!ds) throw 'hg38 GDC missing'
 		try {
+			const q: topMutatedGeneRequest = req.query
+			const g = genomes[q.genome]
+			if (!g) throw 'genome missing'
+			const ds = g.datasets?.[q.dslabel]
+			if (!ds) throw 'ds missing'
+			if (!ds.queries?.topMutatedGenes) throw 'not supported by ds'
 			const genes = await getGenesGraphql(q, ds)
+			//const genes = await ds.queries.topMutatedGenes.get(q)
 			const payload: topMutatedGeneResponse = { genes }
 			res.send(payload)
 		} catch (e: any) {
