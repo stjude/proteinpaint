@@ -1,6 +1,6 @@
 {
   "name": "@sjcrh/augen",
-  "version": "2.113.0",
+  "version": "2.115.0",
   "description": "Automatic generator of server routes, unit tests, and API documentation",
   "type": "module",
   "main": "src/augen.js",
