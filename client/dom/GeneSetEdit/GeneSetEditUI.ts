@@ -345,6 +345,8 @@ export class GeneSetEditUI {
 					this.tip2.clear().showunder(event.target)
 					const callback = async () => {
 						const args = {
+							genome: this.vocabApi.vocab.genome,
+							dslabel: this.vocabApi.vocab.dslabel,
 							filter0: this.vocabApi.state.termfilter.filter0
 						}
 						for (const { param, input } of this.api.topMutatedGenesParams) {
