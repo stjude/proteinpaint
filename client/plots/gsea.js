@@ -141,7 +141,7 @@ class gsea {
 		this.components.controls.on('downloadClick.gsea', () => {
 			if (!this.imageUrl) return alert('No image to download')
 			const dataUrl = this.imageUrl
-			const downloadImgName = this.state.config.downloadFilename + '_GSEA_IMG' || 'GSEA_IMG'
+			const downloadImgName = `${this.state.config.gsea_params.geneset_name || ''}_GSEA_IMG`
 			const a = document.createElement('a')
 			document.body.appendChild(a)
 
