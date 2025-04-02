@@ -10,15 +10,13 @@ import { getSamplelstTW, getFilter } from '../mass/groups.js'
 import { regressionPoly } from 'd3-regression'
 import { line, extent, contourDensity, geoPath, scaleSequential, max, interpolateGreys, interpolateOranges } from 'd3'
 import { getId } from '#mass/nav'
-import { minShapeSize, maxShapeSize } from './sampleScatter.js'
+import { minShapeSize, maxShapeSize } from './runChart.js'
 import { addNewGroup } from '../mass/groups.js'
-import { setRenderersThree } from './sampleScatter.rendererThree.js'
-import { shapes } from './sampleScatter.js'
+import { shapes } from './runChart.js'
 import { roundValueAuto } from '#shared/roundValue.js'
 import { median as d3Median } from 'd3-array'
 
 export function setRenderers(self) {
-	setRenderersThree(self)
 	self.render = function () {
 		const chartDivs = self.mainDiv.selectAll(':scope > div').data(self.charts, chart => chart?.id)
 		chartDivs.exit().remove()
@@ -65,7 +63,7 @@ export function setRenderers(self) {
 
 		chart.axisLeft = axisLeft(chart.yAxisScale)
 
-		const gradientColor = rgb(self.config.settings.sampleScatter.defaultColor)
+		const gradientColor = rgb(self.config.settings.runChart.defaultColor)
 		if (!self.config.startColor) {
 			self.config.startColor = {}
 			self.config.stopColor = {}
@@ -93,7 +91,7 @@ export function setRenderers(self) {
 			chart.colorValues = colorValues // to use it in renderLegend
 			// Determine min/max based on current mode
 			let min, max
-			const settings = self.config.settings.sampleScatter
+			const settings = self.config.settings.runChart
 
 			switch (settings.colorScaleMode) {
 				// Fixed mode: Use user-defined min/max values
@@ -192,14 +190,14 @@ export function setRenderers(self) {
 	function fillSvgSubElems(chart) {
 		const svg = chart.svg
 		let axisG, labelsG
-		if (svg.select('.sjpcb-scatter-mainG').size() == 0) {
-			chart.mainG = svg.append('g').attr('class', 'sjpcb-scatter-mainG')
-			axisG = svg.append('g').attr('class', 'sjpcb-scatter-axis')
-			labelsG = svg.append('g').attr('class', 'sjpcb-scatter-labelsG')
-			chart.xAxis = axisG.append('g').attr('class', 'sjpcb-scatter-x-axis')
+		if (svg.select('.sjpcb-runchart-mainG').size() == 0) {
+			chart.mainG = svg.append('g').attr('class', 'sjpcb-runchart-mainG')
+			axisG = svg.append('g').attr('class', 'sjpcb-runchart-axis')
+			labelsG = svg.append('g').attr('class', 'sjpcb-runchart-labelsG')
+			chart.xAxis = axisG.append('g').attr('class', 'sjpcb-runchart-x-axis')
 			chart.yAxis = axisG
 				.append('g')
-				.attr('class', 'sjpcb-scatter-y-axis')
+				.attr('class', 'sjpcb-runchart-y-axis')
 				.attr('transform', `translate(${self.axisOffset.x}, 0)`)
 			chart.mainG
 				.append('rect')
@@ -221,18 +219,18 @@ export function setRenderers(self) {
 				.attr('height', self.settings.svgh)
 			chart.mainG.attr('clip-path', `url(#${id})`)
 
-			chart.serie = chart.mainG.append('g').attr('class', 'sjpcb-scatter-series')
-			chart.regressionG = chart.mainG.append('g').attr('class', 'sjpcb-scatter-lowess')
-			chart.legendG = svg.append('g').attr('class', 'sjpcb-scatter-legend')
+			chart.serie = chart.mainG.append('g').attr('class', 'sjpcb-runchart-series')
+			chart.regressionG = chart.mainG.append('g').attr('class', 'sjpcb-runchart-lowess')
+			chart.legendG = svg.append('g').attr('class', 'sjpcb-runchart-legend')
 		} else {
-			chart.mainG = svg.select('.sjpcb-scatter-mainG')
-			chart.serie = chart.mainG.select('.sjpcb-scatter-series')
-			chart.regressionG = chart.mainG.select('.sjpcb-scatter-lowess')
-			axisG = svg.select('.sjpcb-scatter-axis')
-			labelsG = svg.select('.sjpcb-scatter-labelsG')
-			chart.xAxis = axisG.select('.sjpcb-scatter-x-axis')
-			chart.yAxis = axisG.select('.sjpcb-scatter-y-axis')
-			chart.legendG = svg.select('.sjpcb-scatter-legend')
+			chart.mainG = svg.select('.sjpcb-runchart-mainG')
+			chart.serie = chart.mainG.select('.sjpcb-runchart-series')
+			chart.regressionG = chart.mainG.select('.sjpcb-runchart-lowess')
+			axisG = svg.select('.sjpcb-runchart-axis')
+			labelsG = svg.select('.sjpcb-runchart-labelsG')
+			chart.xAxis = axisG.select('.sjpcb-runchart-x-axis')
+			chart.yAxis = axisG.select('.sjpcb-runchart-y-axis')
+			chart.legendG = svg.select('.sjpcb-runchart-legend')
 		}
 		chart.xAxis.attr('transform', `translate(0, ${self.settings.svgh + self.axisOffset.y})`)
 
@@ -334,7 +332,38 @@ export function setRenderers(self) {
 			.transition()
 			.duration(duration)
 		self.mayRenderRegression()
-		if (self.settings.showContour) self.renderContours(chart)
+
+		self.showRunChart(chart, g)
+	}
+
+	self.showRunChart = function (chart, g) {
+		const coords = chart.data.samples.map(s => self.getCoordinates(chart, s)).sort((a, b) => a.x - b.x)
+		const color = this.settings.defaultColor
+		const areaBuilder = line()
+			.x(d => d.x)
+			.y(d => d.y)
+		g.append('path')
+			.attr('stroke', color)
+			.attr('fill', 'none')
+			.attr('stroke-width', 1)
+			.attr('stroke-linejoin', 'round')
+			.attr('opacity', this.settings.opacity)
+			.attr('d', areaBuilder(coords))
+		const median = d3Median(chart.data.samples, d => d.y)
+		const y = chart.yAxisScale(median)
+		g.append('line')
+			.attr('x1', coords[0].x)
+			.attr('y1', y)
+			.attr('x2', coords[coords.length - 1].x)
+			.attr('y2', y)
+			.attr('stroke', 'red')
+			.attr('stroke-width', 1)
+		g.append('text')
+			.attr('x', coords[coords.length - 1].x)
+			.attr('y', y - 10)
+			.attr('text-anchor', 'end')
+			.text('Median = ' + roundValueAuto(median, true, 1))
+			.attr('font-size', '0.8em')
 	}
 
 	self.renderContours = function (chart) {
@@ -385,7 +414,7 @@ export function setRenderers(self) {
 		}
 		for (const chart of self.charts) {
 			self.initAxes(chart)
-			const regressionType = self.config.settings.sampleScatter.regression
+			const regressionType = self.config.settings.runChart.regression
 
 			if (!regressionType || regressionType == 'None') continue
 			let regression
@@ -449,7 +478,7 @@ export function setRenderers(self) {
 			const color = chart.colorGenerator(c.category)
 			return color
 		}
-		if (c.category == 'Default') return self.config.settings.sampleScatter.defaultColor
+		if (c.category == 'Default') return self.config.settings.runChart.defaultColor
 		const category = chart.colorLegend.get(c.category)
 		return category.color
 	}
@@ -503,11 +532,11 @@ export function setRenderers(self) {
 	}
 
 	self.lassoReset = chart => {
-		const mainG = chart.chartDiv.select('.sjpcb-scatter-mainG')
+		const mainG = chart.chartDiv.select('.sjpcb-runchart-mainG')
 
 		if (chart.lasso)
 			chart.lasso
-				.items(mainG.select('.sjpcb-scatter-series').selectAll('path[name="serie"]'))
+				.items(mainG.select('.sjpcb-runchart-series').selectAll('path[name="serie"]'))
 				.targetArea(mainG)
 				.on('start', lasso_start)
 				.on('draw', lasso_draw)
@@ -665,7 +694,7 @@ export function setRenderers(self) {
 		// 	.style('margin', '15px 10px')
 		// 	.attr('name', 'sjpp-help-btn') //For unit tests
 		// icon_functions['help'](helpDiv, {
-		// 	handler: () => window.open('https://github.com/stjude/proteinpaint/wiki/Scatter-plot', '_blank')
+		// 	handler: () => window.open('https://github.com/stjude/proteinpaint/wiki/runchart-plot', '_blank')
 		// })
 
 		const homeDiv = toolsDiv
@@ -919,7 +948,7 @@ export function setRenderers(self) {
 									id: self.id,
 									config: {
 										settings: {
-											sampleScatter: {
+											runChart: {
 												colorScaleMode: obj.cutoffMode,
 												colorScaleMinFixed: obj.cutoffMode === 'fixed' ? min : null,
 												colorScaleMaxFixed: obj.cutoffMode === 'fixed' ? max : null,
@@ -1040,7 +1069,7 @@ export function setRenderers(self) {
 			const itemG = g.append('g')
 			itemG
 				.append('text')
-				.attr('name', 'sjpp-scatter-legend-label')
+				.attr('name', 'sjpp-runchart-legend-label')
 				.attr('font-size', '1.1em')
 				.attr('x', x + 20)
 				.attr('y', y + 4)
@@ -1160,7 +1189,7 @@ export function setRenderers(self) {
 							value = minShapeSize
 							minInput.node().value = minShapeSize
 						}
-						self.config.settings.sampleScatter.minShapeSize = value
+						self.config.settings.runChart.minShapeSize = value
 						self.app.dispatch({
 							type: 'plot_edit',
 							id: self.id,
@@ -1181,7 +1210,7 @@ export function setRenderers(self) {
 							value = maxShapeSize
 							maxInput.node().value = maxShapeSize
 						}
-						self.config.settings.sampleScatter.maxShapeSize = value
+						self.config.settings.runChart.maxShapeSize = value
 						self.app.dispatch({
 							type: 'plot_edit',
 							id: self.id,
@@ -1203,7 +1232,7 @@ export function setRenderers(self) {
 
 					div.append('label').text(text).attr('for', text)
 					input.on('change', e => {
-						self.config.settings.sampleScatter.scaleDotOrder = e.target.value
+						self.config.settings.runChart.scaleDotOrder = e.target.value
 						self.app.dispatch({
 							type: 'plot_edit',
 							id: self.id,
@@ -1302,7 +1331,7 @@ export function setRenderers(self) {
 					.append('text')
 					.attr('x', offsetX - step + 24)
 					.attr('y', offsetY + 4)
-					.attr('name', 'sjpp-scatter-legend-label')
+					.attr('name', 'sjpp-runchart-legend-label')
 					.style('text-decoration', hidden ? 'line-through' : 'none')
 					.text(mkey.toUpperCase() + (key.includes(dtlabel) ? `, n=${category.sampleCount}` : ''))
 					.on('click', event =>

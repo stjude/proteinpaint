@@ -1,13 +1,13 @@
-import { getCompInit, copyMerge } from '../rx'
+import { getCompInit, copyMerge } from '../rx/index.js'
 import { fillTermWrapper } from '#termsetting'
 import { Menu, shapesArray, select2Terms } from '#dom'
-import { controlsInit } from './controls'
-import { setRenderers } from './sampleScatter.renderer'
-import { setInteractivity } from './sampleScatter.interactivity'
-import { getCurrentCohortChartTypes } from '../mass/charts'
+import { controlsInit } from './controls.js'
+import { setRenderers } from './runChart.renderer.js'
+import { setInteractivity } from './runChart.interactivity.js'
+import { getCurrentCohortChartTypes } from '../mass/charts.js'
 import { downloadSingleSVG } from '../common/svg.download.js'
 import { select } from 'd3-selection'
-import { rebaseGroupFilter, getFilter } from '../mass/groups'
+import { rebaseGroupFilter, getFilter } from '../mass/groups.js'
 import { plotColor } from '#shared/common.js'
 import { filterJoin } from '#filter'
 import { isNumericTerm } from '@sjcrh/proteinpaint-shared/terms.js'
@@ -32,9 +32,9 @@ export const shapes = shapesArray
 
 const numberOfSamplesCutoff = 20000 // if map is greater than cutoff, switch from svg to canvas rendering
 
-class Scatter {
+class RunChart {
 	constructor() {
-		this.type = 'sampleScatter'
+		this.type = 'runChart'
 		this.lassoOn = false
 		this.zoom = 1
 		this.startGradient = {}
@@ -61,9 +61,8 @@ class Scatter {
 			controlsHolder,
 			toolsDiv: leftDiv.insert('div')
 		}
-
+		this.dom.header.html('Run Chart')
 		this.settings = {}
-		if (this.dom.header) this.dom.header.html('Scatter Plot')
 		setInteractivity(this)
 		setRenderers(this)
 		document.addEventListener('scroll', event => this?.dom?.tooltip?.hide())
@@ -118,16 +117,12 @@ class Scatter {
 	// or current.state != replcament.state
 	async main() {
 		this.config = structuredClone(this.state.config)
-		if (this.config.settings.sampleScatter.regression !== 'None' && this.config.term0) {
+		if (this.config.settings.runChart.regression !== 'None' && this.config.term0) {
 			if (this.charts) for (const chart of this.charts) chart.chartDiv.selectAll('*').remove()
 			this.dom.loadingDiv.style('display', 'block').html('Processing data...')
 		}
 
-		if (this.dom.header)
-			this.dom.header.html(
-				this.config.name + ` <span style="opacity:.6;font-size:.7em;margin-left:10px;">SCATTER PLOT</span>`
-			)
-		copyMerge(this.settings, this.config.settings.sampleScatter)
+		copyMerge(this.settings, this.config.settings.runChart)
 		const reqOpts = this.getDataRequestOpts()
 		if (reqOpts.coordTWs.length == 1) return //To allow removing a term in the controls, though nothing is rendered (summary tab with violin active)
 
@@ -161,6 +156,8 @@ class Scatter {
 	}
 
 	initRanges() {
+		this.xMin = Number.POSITIVE_INFINITY
+		this.xMax = Number.NEGATIVE_INFINITY
 		const samples = []
 		for (const chart of this.charts) samples.push(...chart.data.samples)
 		const s0 = samples[0] //First sample to start reduce comparisons
@@ -186,27 +183,19 @@ class Scatter {
 			chart.zMax = zMax
 			chart.scaleMin = scaleMin
 			chart.scaleMax = scaleMax
+			if (this.xMin > xMin) this.xMin = xMin
+			if (this.xMax < xMax) this.xMax = xMax
 		}
 	}
 
 	async setControls() {
 		this.dom.controlsHolder.selectAll('*').remove()
 		const hasRef = this.charts[0]?.data.samples.find(s => !('sampleId' in s)) || false
-		const scaleDotOption = {
-			type: 'term',
-			configKey: 'scaleDotTW',
-			chartType: 'sampleScatter',
-			usecase: { target: 'sampleScatter', detail: 'numeric' },
-			title: 'Scale sample by term value',
-			label: 'Scale by',
-			vocabApi: this.app.vocabApi,
-			numericEditMenuVersion: ['continuous']
-		}
 		const shapeOption = {
 			type: 'term',
 			configKey: 'shapeTW',
-			chartType: 'sampleScatter',
-			usecase: { target: 'sampleScatter', detail: 'shapeTW' },
+			chartType: 'runChart',
+			usecase: { target: 'runChart', detail: 'shapeTW' },
 			title: 'Categories to assign a shape',
 			label: 'Shape',
 			vocabApi: this.app.vocabApi,
@@ -222,7 +211,7 @@ class Scatter {
 		const shapeSizeOption = {
 			label: 'Sample size',
 			type: 'number',
-			chartType: 'sampleScatter',
+			chartType: 'runChart',
 			settingsKey: 'size',
 			title: 'Sample size, represents the factor used to scale the sample',
 			min: 0,
@@ -232,7 +221,7 @@ class Scatter {
 		const minShapeSizeOption = {
 			label: 'Min size',
 			type: 'number',
-			chartType: 'sampleScatter',
+			chartType: 'runChart',
 			settingsKey: 'minShapeSize',
 			title: 'Minimum sample size',
 			min: minShapeSize,
@@ -242,58 +231,97 @@ class Scatter {
 		const maxShapeSizeOption = {
 			label: 'Max size',
 			type: 'number',
-			chartType: 'sampleScatter',
+			chartType: 'runChart',
 			settingsKey: 'maxShapeSize',
 			title: 'Maximum sample size',
 			min: minShapeSize,
 			max: maxShapeSize * 2,
 			step
 		}
-		const orientation = {
-			label: 'Scale order',
-			type: 'radio',
-			chartType: 'sampleScatter',
-			settingsKey: 'scaleDotOrder',
-			options: [
-				{ label: 'Ascending', value: 'Ascending' },
-				{ label: 'Descending', value: 'Descending' }
-			]
-		}
-		const refSizeOption = {
-			label: 'Reference size',
-			type: 'number',
-			chartType: 'sampleScatter',
-			settingsKey: 'refSize',
-			title: 'It represents the area of the reference symbol in square pixels',
-			min: 0,
-			step: 0.1
-		}
-		const showAxes = {
-			boxLabel: '',
-			label: 'Show axes',
-			type: 'checkbox',
-			chartType: 'sampleScatter',
-			settingsKey: 'showAxes',
-			title: `Option to show/hide plot axes`,
-			testid: 'showAxes'
-		}
 
 		const inputs = [
 			{
 				type: 'term',
+				configKey: 'term',
+				chartType: 'runChart',
+				usecase: { target: 'runChart', detail: 'numeric' },
+				title: 'X coordinate to plot the samples',
+				label: 'X',
+				vocabApi: this.app.vocabApi,
+				menuOptions: '!remove',
+				numericEditMenuVersion: ['continuous']
+			},
+			{
+				type: 'term',
+				configKey: 'term2',
+				chartType: 'runChart',
+				usecase: { target: 'runChart', detail: 'numeric' },
+				title: 'Y coordinate to plot the samples',
+				label: 'Y',
+				vocabApi: this.app.vocabApi,
+				menuOptions: '!remove',
+				numericEditMenuVersion: ['continuous']
+			},
+			{
+				type: 'term',
+				configKey: 'term0',
+				chartType: 'runChart',
+				usecase: { target: 'runChart', detail: 'term0' },
+				title: 'Term to to divide by categories',
+				label: 'Divide by',
+				vocabApi: this.app.vocabApi,
+				numericEditMenuVersion: ['discrete']
+			},
+			{
+				type: 'term',
 				configKey: 'colorTW',
-				chartType: 'sampleScatter',
-				usecase: { target: 'sampleScatter', detail: 'colorTW' },
+				chartType: 'runChart',
+				usecase: { target: 'runChart', detail: 'colorTW' },
 				title: 'Categories to color the samples',
 				label: 'Color',
 				vocabApi: this.app.vocabApi,
 				numericEditMenuVersion: ['continuous', 'discrete']
 			},
-
+			shapeOption,
+			shapeSizeOption,
+			minShapeSizeOption,
+			maxShapeSizeOption,
+			{
+				type: 'term',
+				configKey: 'scaleDotTW',
+				chartType: 'runChart',
+				usecase: { target: 'runChart', detail: 'numeric' },
+				title: 'Scale sample by term value',
+				label: 'Scale by',
+				vocabApi: this.app.vocabApi,
+				numericEditMenuVersion: ['continuous']
+			},
+			{
+				label: 'Scale order',
+				type: 'radio',
+				chartType: 'runChart',
+				settingsKey: 'scaleDotOrder',
+				options: [
+					{ label: 'Ascending', value: 'Ascending' },
+					{ label: 'Descending', value: 'Descending' }
+				]
+			},
+			{
+				label: 'Show regression',
+				type: 'dropdown',
+				chartType: 'runChart',
+				settingsKey: 'regression',
+				options: [
+					{ label: 'None', value: 'None' },
+					//{ label: 'Loess', value: 'Loess' },
+					{ label: 'Lowess', value: 'Lowess' },
+					{ label: 'Polynomial', value: 'Polynomial' }
+				]
+			},
 			{
 				label: 'Opacity',
 				type: 'number',
-				chartType: 'sampleScatter',
+				chartType: 'runChart',
 				settingsKey: 'opacity',
 				title: 'It represents the opacity of the elements',
 				min: 0,
@@ -303,205 +331,22 @@ class Scatter {
 			{
 				label: 'Chart width',
 				type: 'number',
-				chartType: 'sampleScatter',
+				chartType: 'runChart',
 				settingsKey: 'svgw'
 			},
 			{
 				label: 'Chart height',
 				type: 'number',
-				chartType: 'sampleScatter',
+				chartType: 'runChart',
 				settingsKey: 'svgh'
 			},
 			{
-				label: 'Show contour map',
-				boxLabel: '',
-				type: 'checkbox',
-				chartType: 'sampleScatter',
-				settingsKey: 'showContour',
-				title:
-					"Shows the density of point clouds. If 'Color' is used in continous mode, it uses it to weight the points when calculating the density contours. If 'Z/Divide by' is added in continous mode, it used it instead."
-			}
-		]
-		if (this.settings.showContour)
-			inputs.push(
-				{
-					label: 'Color contours',
-					boxLabel: '',
-					type: 'checkbox',
-					chartType: 'sampleScatter',
-					settingsKey: 'colorContours'
-				},
-				{
-					label: 'Contour bandwidth',
-					type: 'number',
-					chartType: 'sampleScatter',
-					settingsKey: 'contourBandwidth',
-					title: 'Reduce to increase resolution. ',
-					min: 5,
-					max: 50,
-					step: 5
-				},
-				{
-					label: 'Contour thresholds',
-					type: 'number',
-					chartType: 'sampleScatter',
-					settingsKey: 'contourThresholds',
-					title: 'Dot size',
-					min: 5,
-					max: 30,
-					step: 5
-				}
-			)
-		if (this.config.sampleCategory) {
-			const options = Object.values(this.config.sampleCategory.tw.term.values).map(v => ({
-				label: v.label || v.key,
-				value: v.key
-			}))
-			if (this.config.sampleCategory.order)
-				options.sort((elem1, elem2) => {
-					const i1 = this.config.sampleCategory.order.indexOf(elem1.value)
-					const i2 = this.config.sampleCategory.order.indexOf(elem2.value)
-					if (i1 < i2) return -1
-					return 1
-				})
-			if (!this.settings.sampleCategory) this.settings.sampleCategory = this.config.sampleCategory.defaultValue || ''
-			options.push({ label: 'All', value: '' })
-			const sampleCategory = {
-				label: 'Sample type',
-				type: 'dropdown',
-				chartType: 'sampleScatter',
-				settingsKey: 'sampleCategory',
-				options
-			}
-			inputs.push(sampleCategory)
-		}
-
-		if (!this.is2DLarge) {
-			const isPremade = this.config.name !== undefined && !this.config.term
-			inputs.unshift({
-				type: 'term',
-				configKey: 'term0',
-				chartType: 'sampleScatter',
-				usecase: { target: 'sampleScatter', detail: 'term0' },
-				title: 'Term to to divide by categories or to use as Z coordinate',
-				label: 'Z / Divide by',
-				vocabApi: this.app.vocabApi,
-				numericEditMenuVersion: ['discrete', 'continuous'],
-				processInput: tw => {
-					if (!isPremade && isNumericTerm(tw?.term)) tw.q = { mode: 'continuous' } //use continuous mode by default if not premade plot
-				}
-			})
-		} else {
-			inputs.push({
-				label: 'Sample size',
-				type: 'number',
-				chartType: 'sampleScatter',
-				settingsKey: 'threeSize',
-				title: 'Sample size',
-				min: 0,
-				max: 1,
-				step: 0.001
-			}),
-				inputs.push({
-					label: 'Field of Vision',
-					type: 'number',
-					chartType: 'sampleScatter',
-					settingsKey: 'threeFOV',
-					title: 'Field of Vision',
-					min: 50,
-					max: 90,
-					step: 1
-				})
-		}
-		if (this.config.term) {
-			inputs.unshift(
-				...[
-					{
-						type: 'term',
-						configKey: 'term',
-						chartType: 'sampleScatter',
-						usecase: { target: 'sampleScatter', detail: 'numeric' },
-						title: 'X coordinate to plot the samples',
-						label: 'X',
-						vocabApi: this.app.vocabApi,
-						menuOptions: '!remove',
-						numericEditMenuVersion: ['continuous']
-					},
-					{
-						type: 'term',
-						configKey: 'term2',
-						chartType: 'sampleScatter',
-						usecase: { target: 'sampleScatter', detail: 'numeric' },
-						title: 'Y coordinate to plot the samples',
-						label: 'Y',
-						vocabApi: this.app.vocabApi,
-						menuOptions: '!remove',
-						numericEditMenuVersion: ['continuous']
-					}
-				]
-			)
-			if (!this.is3D) {
-				inputs.splice(4, 0, shapeOption)
-				inputs.splice(5, 0, scaleDotOption)
-				if (this.config.scaleDotTW) {
-					inputs.splice(6, 0, minShapeSizeOption)
-					inputs.splice(7, 0, maxShapeSizeOption)
-					inputs.splice(8, 0, orientation)
-					if (hasRef) inputs.splice(9, 0, refSizeOption)
-				} else {
-					inputs.splice(6, 0, shapeSizeOption)
-					if (hasRef) inputs.splice(7, 0, refSizeOption)
-				}
-
-				inputs.push({
-					label: 'Show regression',
-					type: 'dropdown',
-					chartType: 'sampleScatter',
-					settingsKey: 'regression',
-					options: [
-						{ label: 'None', value: 'None' },
-						//{ label: 'Loess', value: 'Loess' },
-						{ label: 'Lowess', value: 'Lowess' },
-						{ label: 'Polynomial', value: 'Polynomial' }
-					]
-				})
-			} else {
-				inputs.push({
-					label: 'Chart depth',
-					type: 'number',
-					chartType: 'sampleScatter',
-					settingsKey: 'svgd'
-				})
-				inputs.push({
-					label: 'Field of vision',
-					title: 'Camera field of view, in degrees',
-					type: 'number',
-					chartType: 'sampleScatter',
-					settingsKey: 'fov'
-				})
-			}
-			inputs.push(showAxes)
-
-			inputs.push({
 				label: 'Default color',
 				type: 'color',
-				chartType: 'sampleScatter',
+				chartType: 'runChart',
 				settingsKey: 'defaultColor'
-			})
-		} else if (!this.is2DLarge) {
-			inputs.splice(2, 0, shapeOption)
-			inputs.splice(3, 0, scaleDotOption)
-			if (this.config.scaleDotTW) {
-				inputs.splice(4, 0, minShapeSizeOption)
-				inputs.splice(5, 0, maxShapeSizeOption)
-				inputs.splice(6, 0, orientation)
-				if (hasRef) inputs.splice(7, 0, refSizeOption)
-			} else {
-				inputs.splice(4, 0, shapeSizeOption)
-				if (hasRef) inputs.splice(5, 0, refSizeOption)
 			}
-			inputs.push(showAxes)
-		}
+		]
 
 		this.components = {
 			controls: await controlsInit({
@@ -546,9 +391,9 @@ class Scatter {
 		return filter
 	}
 }
-export function openScatterPlot(app, plot, filter = null) {
+export function openRunChartPlot(app, plot, filter = null) {
 	let config = {
-		chartType: 'sampleScatter',
+		chartType: 'runChart',
 		name: plot.name,
 		filter
 	}
@@ -584,8 +429,8 @@ export function downloadImage(imageURL) {
 }
 
 export async function getPlotConfig(opts, app) {
-	//if (!opts.colorTW) throw 'sampleScatter getPlotConfig: opts.colorTW{} missing'
-	//if (!opts.name && !(opts.term && opts.term2)) throw 'sampleScatter getPlotConfig: missing coordinates input'
+	//if (!opts.colorTW) throw 'runChart getPlotConfig: opts.colorTW{} missing'
+	//if (!opts.name && !(opts.term && opts.term2)) throw 'runChart getPlotConfig: missing coordinates input'
 
 	const plot = {
 		groups: [],
@@ -593,7 +438,7 @@ export async function getPlotConfig(opts, app) {
 			controls: {
 				isOpen: false // control panel is hidden by default
 			},
-			sampleScatter: getDefaultScatterSettings(),
+			runChart: getDefaultRunChartSettings(),
 			startColor: {}, //dict to store the start color of the gradient for each chart when using continuous color
 			stopColor: {} //dict to store the stop color of the gradient for each chart when using continuous color
 		}
@@ -617,7 +462,7 @@ export async function getPlotConfig(opts, app) {
 		if (plot.sampleCategory) await fillTermWrapper(plot.sampleCategory.tw, app.vocabApi)
 
 		// apply term-specific changes to the default object
-		if (!plot.term && !plot.term2) plot.settings.sampleScatter.showAxes = false
+		if (!plot.term && !plot.term2) plot.settings.runChart.showAxes = false
 
 		if (plot.term0?.q?.mode == 'continuous' && !app.hasWebGL())
 			throw 'Can not load Z/Divide by term in continuous mode as WebGL is not supported'
@@ -625,13 +470,13 @@ export async function getPlotConfig(opts, app) {
 		return plot
 	} catch (e) {
 		console.log(e)
-		throw `${e} [sampleScatter getPlotConfig()]`
+		throw `${e} [runChart getPlotConfig()]`
 	}
 }
 
-export const scatterInit = getCompInit(Scatter)
+export const runChartInit = getCompInit(RunChart)
 // this alias will allow abstracted dynamic imports
-export const componentInit = scatterInit
+export const componentInit = runChartInit
 
 export function makeChartBtnMenu(holder, chartsInstance) {
 	/*
@@ -641,56 +486,21 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 		mass option is accessible at chartsInstance.app.opts{}
 	*/
 	const menuDiv = holder.append('div')
-	if (chartsInstance.state.termdbConfig.scatterplots)
-		if (
-			chartsInstance.state.termdbConfig.scatterplots.length == 1 &&
-			!chartsInstance.state.currentCohortChartTypes.includes('dynamicScatter')
-		)
-			openScatterPlot(chartsInstance.app, chartsInstance.state.termdbConfig.scatterplots[0])
-		else {
-			for (const plot of chartsInstance.state.termdbConfig.scatterplots) {
-				/* plot: 
-			{
-				name=str,
-				dimensions=int,
-				term={ id, ... }
+	const callback = (xterm, yterm) => {
+		chartsInstance.app.dispatch({
+			type: 'plot_create',
+			config: {
+				chartType: 'runChart',
+				term: { term: xterm, q: { mode: 'continuous' } },
+				term2: { term: yterm, q: { mode: 'continuous' } },
+				name: `${xterm.name} vs ${yterm.name}`
 			}
-			*/
-				menuDiv
-					.append('button')
-					.style('margin', '5px')
-					.style('padding', '10px 15px')
-					.style('border-radius', '20px')
-					.style('border-color', '#ededed')
-					.style('display', 'block')
-					.text(plot.name)
-					.on('click', () => {
-						openScatterPlot(chartsInstance.app, plot)
-						chartsInstance.dom.tip.hide()
-					})
-			}
-		}
-	const formDiv = menuDiv.append('div')
-
-	// if "dynamicScatter" child type is present in currentCohortChartTypes, render the numeric term selection ui for dynamicScatter. if not, do not render ui
-	if (chartsInstance.state.currentCohortChartTypes.includes('dynamicScatter')) {
-		// dynamicScatter is enabled for this cohort. render ui and break loop
-		const callback = (xterm, yterm) => {
-			chartsInstance.app.dispatch({
-				type: 'plot_create',
-				config: {
-					chartType: 'sampleScatter',
-					term: { term: xterm, q: { mode: 'continuous' } },
-					term2: { term: yterm, q: { mode: 'continuous' } },
-					name: `${xterm.name} vs ${yterm.name}`
-				}
-			})
-		}
-		select2Terms(chartsInstance.dom.tip, chartsInstance.app, 'sampleScatter', 'numeric', callback)
+		})
 	}
+	select2Terms(chartsInstance.dom.tip, chartsInstance.app, 'runChart', 'date', callback, 'numeric')
 }
 
-export function getDefaultScatterSettings() {
+export function getDefaultRunChartSettings() {
 	return {
 		size: 0.8,
 		minShapeSize: 0.5,
@@ -706,9 +516,6 @@ export function getDefaultScatterSettings() {
 		opacity: 0.6,
 		defaultColor: plotColor,
 		regression: 'None',
-		fov: 50,
-		threeSize: 0.005,
-		threeFOV: 70,
 		// Color scale configuration settings
 		// These settings control how numerical values are mapped to colors
 		colorScaleMode: 'auto', // Default to automatic scaling based on data range
@@ -720,37 +527,8 @@ export function getDefaultScatterSettings() {
 		// up to the 95th percentile by default
 		colorScaleMinFixed: null, // User-defined minimum value for fixed mode
 		// Null indicates this hasn't been set yet
-		colorScaleMaxFixed: null, // User-defined maximum value for fixed mode
+		colorScaleMaxFixed: null // User-defined maximum value for fixed mode
 		// Null indicates this hasn't been set yet
 		//3D Plot settings
-		showContour: false,
-		colorContours: false,
-		contourBandwidth: 30,
-		contourThresholds: 10
 	}
-}
-
-export async function renderScatter(holder, state, plot) {
-	const opts = {
-		holder,
-		state: {
-			vocab: state.vocab,
-			plots: [
-				{
-					chartType: 'sampleScatter',
-					subfolder: 'plots',
-					name: plot.name,
-					colorTW: plot.colorTW,
-					sampleType: plot.sampleType,
-					sampleCategory: {
-						tw: structuredClone(plot.sampleCategory.tw),
-						order: plot.sampleCategory.order,
-						defaultValue: plot.sampleCategory.defaultValue
-					}
-				}
-			]
-		}
-	}
-	const plotImport = await import('#plots/plot.app.js')
-	const plotAppApi = await plotImport.appInit(opts)
 }

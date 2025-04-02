@@ -103,6 +103,22 @@ export function isUsableTerm(term, _usecase, termdbConfig, ds) {
 				if (!term.isleaf) uses.add('branch')
 			}
 			return uses
+		case 'runChart':
+			if (usecase.detail == 'date') {
+				if (term.type == 'date') {
+					uses.add('plot')
+				}
+				if (child_types.includes('date')) uses.add('branch')
+			} else if (usecase.detail == 'numeric') {
+				if (isNumericTerm(term) && term.type != 'date') {
+					uses.add('plot')
+				}
+				if (hasNumericChild(child_types)) uses.add('branch')
+			} else {
+				if (graphableTypes.has(term.type)) uses.add('plot')
+				if (!term.isleaf) uses.add('branch')
+			}
+			return uses
 		case 'numericDictTermCluster':
 			if (!usecase.detail?.exclude?.includes(term.id)) {
 				if (isNumericTerm(term)) {
