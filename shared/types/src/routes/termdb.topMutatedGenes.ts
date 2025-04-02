@@ -7,6 +7,8 @@ export type topMutatedGeneRequest = {
 	geneFilter?: 'CGC'
 	/** max number of genes to return */
 	maxGenes?: number
+	/** pp filter */
+	filter?: object
 	/** gdc cohort filter */
 	filter0?: object
 }
