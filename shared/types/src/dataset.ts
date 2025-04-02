@@ -1209,6 +1209,13 @@ type Termdb = {
 	restrictAncestries?: RestrictAncestriesEntry[]
 	/** Cohort specific */
 	selectCohort?: SelectCohortEntry
+	/* When a dataset uses login this property allows to configure the login logic */
+	invalidTokenErrorHandling?: {
+		//Affected charts contains the list of charts that require a login, if * is present, all charts require a login
+		affectedCharts: string[]
+		//Error message that will be displayed in the UI when the login fails or the token is invalid
+		errorMessage: string
+	}
 
 	/** quick fix to convert category values from a term to lower cases for comparison (case insensitive comparison)
 for gdc, graphql and rest apis return case-mismatching strings for the same category e.g. "Breast/breast"
