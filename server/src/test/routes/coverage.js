@@ -1,30 +1,33 @@
 import serverconfig from '../../serverconfig.js'
 import fs from 'fs'
-// import { promisify } from 'util'
-// import { exec } from 'child_process'
+import { promisify } from 'util'
+import { exec } from 'child_process'
+import { gitProjectRoot } from '@sjcrh/augen'
 
-// const execProm = promisify(exec)
+const execProm = promisify(exec)
 
 // The /coverage route will only be initialized if
 // a coverageKey value is detected. This is an extra security
 // measure to minimize issues and risks of having an external signal
 // close a server.
-const key = process.env.coverageKey
+const key = process.env.coverageKey || serverconfig.features?.coverageKey
 const maxTries = 5
 
 export default function setRoutes(app, basepath) {
 	if (!serverconfig.debugmode || !key) return
+	console.log('---- setting /coverage routes ---')
 
-	let numTries = 0 //; console.log('---- setting /coverage routes ---')
+	let numTries = 0
 
-	// app.get(basepath + '/coverage/spec', async (req, res) => {
-	// 	try {
-
-	// 	} catch(e) {
-	// 		console.log('\n!!! /coverage/spec route error !!!\n', error)
-	// 		res.send({ error })
-	// 	}
-	// })
+	app.get(basepath + '/specCoverage', async (req, res) => {
+		try {
+			const out = await execProm(`cd ${gitProjectRoot} && npm run spec:coverage`, { encoding: 'utf8' })
+			res.send({ ok: true, out })
+		} catch (e) {
+			console.log('\n!!! /specCoverage route error !!!\n', error)
+			res.send({ error })
+		}
+	})
 
 	app.get(basepath + '/coverage/close', async (req, res) => {
 		try {

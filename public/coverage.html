@@ -21,6 +21,44 @@
   </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/4.13.0/d3.min.js" integrity="sha512-RJJ1NNC88QhN7dwpCY8rm/6OxI+YdQP48DrLGe/eSAd+n+s1PXwQkkpzzAgoJe4cZFW2GALQoxox61gSY2yQfg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script><!-- pragma: allowlist secret -->
   <script src='/docs/nav.js'></script>
+  <script>
+    async function getLatestCoverageReports(title='') {
+      const workspaces = ['server', 'client', 'shared/utils', 'augen']
+      const htmlSections = await Promise.all(workspaces.map(fetchHtml))
+      d3.select('#main-div').html(title + htmlSections.join('\n<br>\n'))
+    }
+
+    async function fetchHtml(ws) {
+      try {
+        const html = await fetch(`/coverage/specs/${ws}-relevant.html`)
+          .then(r => {
+            if (r.status != 200) return ''
+            return r.text()
+          })
+        return html ? `\n<h2 style='text-decoration: underline'>${ws}</h2>\n${html}\n` : ''
+      } catch(_) {
+        return ''
+      }
+    }
+
+    async function getSpecCoverage() {
+      try {
+        d3.select('#main-div').html('Requesting coverage report ...')
+        const res = await fetch('/specCoverage').then(r => r.json())
+        if (res.error) console.log(res.error)
+        else if (res.out) {
+          getLatestCoverageReports(`<h2>See the browser console for server logs.<h2>`)
+          console.log(`--- Displaying server-side logs for spec coverage run ---`)
+          console.log(res.out.stdout) 
+          console.log(`--- Displaying server-side errors for spec coverage run ---`)
+          console.log(res.out.stderr)
+          console.log(`--- end ---`)
+        } 
+      } catch(e) {
+        alert(e)
+      }
+    }
+  </script>
 </head>
 <body>
 
@@ -29,7 +67,7 @@
 </div>
 
 <div style='position: absolute; right: 20px; margin: 20px; font-family: Menlo, Courier;'>
-  <button disabled=disabled>(TODO: trigger refresh from browser)</button>
+  <button onclick="getSpecCoverage()">Refresh report</button>
 </div>
 
 <h1>Relevant coverage reports for updated code</h1>
@@ -37,22 +75,7 @@
 <div id='main-div'></div>
 
 <script type='module'>
-const workspaces = ['server', 'client', 'shared/utils', 'augen']
-const htmlSections = await Promise.all(workspaces.map(fetchHtml))
-d3.select('#main-div').html(htmlSections.join('\n<br>\n'))
-
-async function fetchHtml(ws) {
-  try {
-    const html = await fetch(`/coverage/specs/${ws}-relevant.html`)
-      .then(r => {
-        if (r.status != 200) return ''
-        return r.text()
-      })
-    return html ? `\n<h2 style='text-decoration: underline'>${ws}</h2>\n${html}\n` : ''
-  } catch(_) {
-    return ''
-  }
-}
+getLatestCoverageReports()
 </script>
 </body>
 </html>
