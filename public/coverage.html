@@ -37,7 +37,7 @@
 <div id='main-div'></div>
 
 <script type='module'>
-const workspaces = ['server', 'client', 'augen']
+const workspaces = ['server', 'client', 'shared/utils', 'augen']
 const htmlSections = await Promise.all(workspaces.map(fetchHtml))
 d3.select('#main-div').html(htmlSections.join('\n<br>\n'))
 

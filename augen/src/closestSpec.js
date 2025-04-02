@@ -229,8 +229,8 @@ export function emitRelevantSpecCovDetails({ workspace, relevantSpecs, reportDir
 
 function getMonthDayTime() {
 	const d = new Date()
-	const [month, day, hh, mm, ss] = [d.getMonth(), d.getDay(), d.getHours(), d.getMinutes(), d.getSeconds()].map(t =>
-		t.toString().padStart(2, '0')
+	const [month, day, hh, mm, ss] = [d.getMonth() + 1, d.getDate(), d.getHours(), d.getMinutes(), d.getSeconds()].map(
+		t => t.toString().padStart(2, '0')
 	)
 
 	return `${month}/${day} ${hh}:${mm}:${ss}`

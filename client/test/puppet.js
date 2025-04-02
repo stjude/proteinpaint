@@ -21,6 +21,10 @@ const STATICPORT = 6789
 const DATAPORT = Number(process.argv[3] || 0) || 3000
 const reportDir = path.join(__dirname, '../.coverage')
 const publicSpecsClientDir = `${publicSpecsDir}/client`
+const extractFiles = {
+	html: `${publicSpecsDir}/client-relevant.html`,
+	markdown: `${publicSpecsDir}/client-relevant.md`
+}
 
 let relevantSpecs, patternToSpecs
 let patternsStr = process.argv[2] || 'name=*' // default pattern to test all emitted spec imports
@@ -28,16 +32,22 @@ if (!patternsStr) throw `missing puppet.js patternsStr argument`
 if (patternsStr === 'NO_BRANCH_COVERAGE_UPDATE') {
 	// a coverage run is requested, but there are no relevant files that have been updated in the branch
 	console.log('\n--- No branch updates with applicable specs to test. ---\n')
-	process.exit(0)
+	patternsStr = ''
 } else if (patternsStr === 'RELEVANT_SPECS_ONLY') {
 	relevantSpecs = getRelevantClientSpecs()
+	if (!relevantSpecs.matched?.length) {
+		console.log('\n--- No branch updates with applicable specs to test. ---\n')
+		patternsStr = ''
+	}
 	const urlParams = getUrlParams(relevantSpecs)
 	patternToSpecs = urlParams.patternToSpecs
 	patternsStr = urlParams.paramsStr
 	if (fs.existsSync(publicSpecsClientDir)) fs.rmSync(publicSpecsClientDir, { force: true, recursive: true })
+	if (fs.existsSync(extractFiles.html)) fs.rmSync(extractFiles.html, { force: true, recursive: true })
+	if (fs.existsSync(extractFiles.markdown)) fs.rmSync(extractFiles.markdown, { force: true, recursive: true })
 }
 
-runTest(patternsStr).catch(console.error)
+if (patternsStr) runTest(patternsStr).catch(console.error)
 
 async function runTest(patternsStr) {
 	const startTime = Date.now()
@@ -214,9 +224,9 @@ async function runTest(patternsStr) {
 
 	if (html.length) {
 		const combinedHtml = html.join('\n')
-		fs.writeFileSync(`${publicSpecsDir}/client-relevant.html`, combinedHtml, { encoding: 'utf8' })
+		fs.writeFileSync(extractFiles.html, combinedHtml, { encoding: 'utf8' })
 		const combinedMarkdown = markdowns.join('\n')
-		fs.writeFileSync(`${publicSpecsDir}/client-relevant.md`, combinedMarkdown, { encoding: 'utf8' })
+		fs.writeFileSync(extractFiles.markdown, combinedMarkdown, { encoding: 'utf8' })
 	}
 
 	console.log('relevantCoverage', relevantCoverage)

@@ -34,6 +34,7 @@ shared/types/**/*.js
 shared/types/terms/*.js
 shared/types/routes/checkers/*
 shared/**/test/internals*.*
+**/.coverage*/*
 
 **/public/bin/*
 public/tmp/*
