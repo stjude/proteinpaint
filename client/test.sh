@@ -46,7 +46,7 @@ if [[ ! -f "./test/tape.bundle.js" ]]; then
 fi
 
 # create soft links in public dir to client coverage report 
-ln -sfn $PWD/.nyc_output ../public/coverage/client
+# ln -sfn $PWD/.coverage ../public/coverage/client
 
 # re-emit spec file imports
 rm -rf ../public/bin/test
@@ -62,16 +62,9 @@ if [[ "$PUPPETEER_SKIP_DOWNLOAD" != "" ]]; then
 fi
 set -u # reenable unbound variable check
 
-rm -rf .nyc_output
+# rm -rf .coverage
 node test/puppet.js "$PATTERNSLIST" "$TESTPORT"
 
-if [[ -d .nyc_output && -f .nyc_output/coverage-summary.json ]]; then
-  cp .nyc_output/coverage-summary.json branch_coverage.json
-
-  # if [[ "$PATTERNSLIST" != "name=*" ]]; then
-  	
-  # fi 
-fi
-
-
-
+# if [[ -d .coverage && -f .coverage/coverage-summary.json ]]; then
+#   cp .coverage/coverage-summary.json branch_coverage.json
+# fi
