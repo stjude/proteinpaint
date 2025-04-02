@@ -203,6 +203,11 @@ function getChartTypeList(self, state) {
 			clickTo: self.loadChartSpecificMenu
 		},
 		{
+			label: 'Run Chart',
+			chartType: 'runChart',
+			clickTo: self.loadChartSpecificMenu
+		},
+		{
 			label: 'Cumulative Incidence',
 			chartType: 'cuminc',
 			clickTo: self.showTree_select1term,

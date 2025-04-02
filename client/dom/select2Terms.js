@@ -5,7 +5,7 @@ import { Menu } from '#dom/menu'
 //It receives a callback that will be called with the two terms selected.
 //it is used, for example, to create a scatter plot using the two numeric terms selected as coordinates,
 // and to create a facet table where the rows and columns are filled with the categories from the two terms selected.
-export function select2Terms(tip, app, chartType, detail, callback) {
+export function select2Terms(tip, app, chartType, detail, callback, detail2 = null) {
 	const tip2 = new Menu({ padding: '5px' })
 	const coordsDiv = tip.d.append('div').style('padding', '5px') //.attr('class', 'sja_menuoption sja_sharp_border')
 	coordsDiv.append('div').html('Select variables to plot').style('font-size', '0.9rem')
@@ -25,7 +25,7 @@ export function select2Terms(tip, app, chartType, detail, callback) {
 		.attr('class', 'sja_filter_tag_btn add_term_btn')
 		.text('+')
 		.on('click', e => {
-			getTreeTerm(ytermDiv, term => (yterm = term), detail)
+			getTreeTerm(ytermDiv, term => (yterm = term), detail2 || detail)
 		})
 
 	const submitbt = coordsDiv
