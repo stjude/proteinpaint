@@ -473,6 +473,7 @@ function setRenderers(self) {
 function setInteractivity(self) {
 	self.setTab = async (event, d) => {
 		if (d.colNum === self.activeTab && !self.searching) {
+			if (self.state.plots.length == 0) return // zero plots. do not hide an already open tab, to avoid a confusing look for users
 			//clicking on an active tab. turn it to hidden
 			// FIXME in such case self.activeTab may not keep original value; may set activeTab=-1 to indicate all tabs are inactive
 			//self.activeTab=-1
