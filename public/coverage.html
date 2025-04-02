@@ -25,6 +25,9 @@
     async function getLatestCoverageReports(title='') {
       const workspaces = ['server', 'client', 'shared/utils', 'augen']
       const htmlSections = await Promise.all(workspaces.map(fetchHtml))
+      if (!htmlSections.filter(h => h != '').length) {
+        htmlSections.splice(0, htmlSections.length, '<h3>There are no relevant spec coverage results to display.</h3>')
+      }
       d3.select('#main-div').html(title + htmlSections.join('\n<br>\n'))
     }
 
