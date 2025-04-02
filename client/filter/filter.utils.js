@@ -44,16 +44,7 @@ export function getFilterItemByTag(item, tag) {
 	}
 }
 
-export function getWrappedTvslst(lst = [], join = '', $id = null) {
-	const filter = {
-		type: 'tvslst',
-		in: true,
-		join,
-		lst
-	}
-	if ($id !== null && filter.$id !== undefined) filter.$id = $id
-	return filter
-}
+export { getWrappedTvslst } from '#shared/filter.js'
 
 /*
 	get valid filter data to be used for server requests
