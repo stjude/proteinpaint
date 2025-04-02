@@ -198,12 +198,23 @@ export class VolcanoPlotView {
 				const circle = circles.find((d: any) => d.__data__.gene_symbol == row[0].value) as any
 				if (!circle || circle.__data__.highlighted) return
 
+				/** Circles may render behind several other circles, making it hard
+				 * to see the highlight. Clone the circle to appear on top of the
+				 * elements, then destroy. */
+				let clone
 				tr.on('mouseover', () => {
-					selectAll(circles).attr('stroke-opacity', d => (d != circle.__data__ ? 0.075 : 0.5))
-					select(circle).attr('fill-opacity', 0.9)
+					if (circle.__data__.highlighted || clone) return
+					clone = this.volcanoDom.plot.node()?.appendChild(circle.cloneNode(true))
+					clone.setAttribute('fill-opacity', 0.9)
 				})
 				tr.on('mouseleave', () => {
-					select(circle).attr('fill-opacity', 0)
+					if (!clone) return
+					clone.remove()
+					clone = null
+				})
+				//All other circles appear dimmed on hover
+				this.volcanoDom.pValueTable.on('mouseover', () => {
+					selectAll(circles).attr('stroke-opacity', 0.075)
 				})
 				this.volcanoDom.pValueTable.on('mouseleave', () => {
 					selectAll(circles).attr('stroke-opacity', (d: any) =>
