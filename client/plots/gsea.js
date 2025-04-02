@@ -377,6 +377,11 @@ add:
 
 	if (self.state.config.downloadFilename) download.fileName = self.state.config.downloadFilename
 
+	//Table rerenders when main is called
+	//Fix to show which gene set is selected after rerender
+	const geneSetIdx = self.gsea_table_rows.findIndex(row => row[0].value == self.config.gsea_params.geneset_name)
+	const selectedRows = geneSetIdx > -1 ? [geneSetIdx] : []
+
 	renderTable({
 		download,
 		columns: self.gsea_table_cols,
@@ -387,6 +392,7 @@ add:
 		singleMode: true,
 		resize: true,
 		header: { allowSort: true },
+		selectedRows: selectedRows,
 		noButtonCallback: async index => {
 			const config = {
 				gsea_params: {
