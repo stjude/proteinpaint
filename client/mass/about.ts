@@ -207,7 +207,7 @@ export class MassAbout {
 								const confirm = window.confirm(
 									`Changing the cohort will clear all ${joinByComma(
 										toBeCleared
-									)}. To save the session, click "Cancel" and then click the "Session" button.`
+									)}. To proceed, click "OK". To save the session, click "Cancel" and then click the "Session" button at the top of the page.`
 								)
 								if (!confirm) {
 									event.preventDefault()
