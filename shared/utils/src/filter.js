@@ -242,3 +242,14 @@ export function filterJoin(lst) {
 	}
 	return f
 }
+
+export function getWrappedTvslst(lst = [], join = '', $id = null) {
+	const filter = {
+		type: 'tvslst',
+		in: true,
+		join,
+		lst
+	}
+	if ($id !== null && filter.$id !== undefined) filter.$id = $id
+	return filter
+}
