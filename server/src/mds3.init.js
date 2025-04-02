@@ -40,6 +40,7 @@ import { validate_query_geneExpression } from '#routes/termdb.cluster.ts'
 import { mayLimitSamples, tid2value2filter } from './mds3.filter.js'
 import { getResult } from '#src/gene.js'
 import { validate_query_getTopTermsByType } from '#routes/termdb.topTermsByType.ts'
+import { validate_query_getTopMutatedGenes } from '#routes/termdb.topMutatedGenes.ts'
 import { validate_query_getSampleImages } from '#routes/termdb.sampleImages.ts'
 import { validate_query_rnaseqGeneCount } from '#routes/termdb.DE.ts'
 import { validate_query_getSampleWSImages } from '#routes/samplewsimages.ts'
@@ -141,7 +142,8 @@ export async function init(ds, genome) {
 		await validate_query_ld(ds, genome)
 		await validate_query_geneExpression(ds, genome)
 		await validate_query_metaboliteIntensity(ds, genome)
-		await validate_query_getTopTermsByType(ds, genome) //will be used to get top terms when supported
+		await validate_query_getTopTermsByType(ds, genome)
+		await validate_query_getTopMutatedGenes(ds, genome)
 		await validate_query_getSampleImages(ds, genome)
 		await validate_query_getSampleWSImages(ds, genome)
 		await validate_query_getWSISamples(ds, genome)
