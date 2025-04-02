@@ -13,7 +13,14 @@ export class TermdbVocab extends Vocab {
 		if (this.opts.getDatasetAccessToken) {
 			// mass app init may need clientAuthResult, so need to trigger
 			// login so termdb/config response would match the user log-in status
-			await this.maySetVerifiedToken(this.state.vocab.dslabel)
+
+			try {
+				// sets this.app.vocabApi.verifiedToken to false if the token was not valid. nav.js checks this value and throws an error
+				// when the token is not valid no error is thrown but a response with an error message is sent
+				await this.maySetVerifiedToken(this.state.vocab.dslabel)
+			} catch (e) {
+				console.log(e)
+			}
 		}
 
 		const headers = this.mayGetAuthHeaders('termdb')

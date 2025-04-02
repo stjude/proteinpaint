@@ -194,6 +194,8 @@ export const navInit = getCompInit(TdbNav)
 
 function setRenderers(self) {
 	self.initUI = appState => {
+		const verifiedToken = self.app.vocabApi.verifiedToken
+		if (!verifiedToken) throw new Error('No verified token found. Please check your authentication.')
 		const header = self.opts.holder.append('div').style('white-space', 'nowrap')
 		const massNav = appState.termdbConfig?.massNav || {}
 		let titleDiv = header
