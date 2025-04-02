@@ -1,3 +1,4 @@
+import path from 'path'
 import * as termdbsql from './termdb.sql.js'
 import * as phewas from './termdb.phewas.js'
 import { get_incidence } from './termdb.cuminc.js'
@@ -16,6 +17,7 @@ import { searchSNP } from '../routes/snp.ts'
 import { get_samples_ancestry, get_samples } from './termdb.sql.js'
 import { TermTypeGroups } from '#shared/terms.js'
 import { trigger_getDefaultBins } from './termdb.getDefaultBins.js'
+import serverconfig from './serverconfig.js'
 /*
 ********************** EXPORTED
 handle_request_closure
@@ -417,8 +419,7 @@ async function LDoverlay(q, ds, res) {
 	const coord = (tk.nochr ? q.m.chr.replace('chr', '') : q.m.chr) + ':' + q.m.pos + '-' + (q.m.pos + 1)
 	const lst = []
 	await get_lines_bigfile({
-		args: [tk.file, coord],
-		dir: tk.dir,
+		args: [path.join(serverconfig.tpmasterdir, tk.file), coord],
 		callback: line => {
 			const l = line.split('\t')
 			const start = Number.parseInt(l[1])
