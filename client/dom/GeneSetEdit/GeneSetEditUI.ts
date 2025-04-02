@@ -347,6 +347,7 @@ export class GeneSetEditUI {
 						const args = {
 							genome: this.vocabApi.vocab.genome,
 							dslabel: this.vocabApi.vocab.dslabel,
+							filter: this.vocabApi.state.termfilter.filter,
 							filter0: this.vocabApi.state.termfilter.filter0
 						}
 						for (const { param, input } of this.api.topMutatedGenesParams) {
