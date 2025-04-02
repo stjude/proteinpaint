@@ -1,6 +1,6 @@
 import { getInitFxn, copyMerge, deepEqual } from '#rx'
 import { Menu } from '#dom'
-import { select, BaseType } from 'd3-selection'
+import { select, type BaseType } from 'd3-selection'
 import { minimatch } from 'minimatch'
 import type {
 	CategoricalQ,
