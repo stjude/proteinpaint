@@ -44,6 +44,7 @@ export function getFilterItemByTag(item, tag) {
 	}
 }
 
+import { getWrappedTvslst } from '#shared/filter.js'
 export { getWrappedTvslst } from '#shared/filter.js'
 
 /*
