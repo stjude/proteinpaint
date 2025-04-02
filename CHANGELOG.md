@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.116.0
 
 Features:
 - Added HDF5 support to topGeneByExpressionVariance.rs
