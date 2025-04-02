@@ -195,7 +195,9 @@ export const navInit = getCompInit(TdbNav)
 function setRenderers(self) {
 	self.initUI = appState => {
 		const verifiedToken = self.app.vocabApi.verifiedToken
-		if (!verifiedToken) throw new Error('Please check your authentication. The token provided is invalid')
+		const invalidTokenErrorHandling = appState.termdbConfig.invalidTokenErrorHandling
+		if (!verifiedToken && invalidTokenErrorHandling.affectedCharts.includes('*'))
+			throw new Error(appState.termdbConfig.invalidTokenErrorHandling.errorMessage)
 		const header = self.opts.holder.append('div').style('white-space', 'nowrap')
 		const massNav = appState.termdbConfig?.massNav || {}
 		let titleDiv = header
