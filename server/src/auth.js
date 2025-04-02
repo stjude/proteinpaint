@@ -396,6 +396,11 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 
 	app.post(basepath + '/jwt-status', async (req, res) => {
 		let code = 401 // assume unauthorized by default
+
+		// To simulate a failed JWT signature verification uncomment the following lines
+		// res.status(code)
+		// res.send({"error":{"name":"JsonWebTokenError","message":"invalid signature"}})
+		// return
 		const q = req.query
 		const cred = getRequiredCred(q, req.path)
 		try {
