@@ -24,6 +24,7 @@ import { TermTypes, NUMERIC_DICTIONARY_TERM } from '#shared/terms.js'
 import { getData } from '#src/termdb.matrix.js'
 import { termType2label } from '#shared/terms.js'
 import { mayLog } from '#src/helpers.ts'
+import { formatElapsedTime } from '#shared/time.js'
 
 export const api: RouteApi = {
 	endpoint: 'termdb/cluster',
@@ -310,9 +311,8 @@ async function queryGeneExpression(hdf5_file, geneName) {
 	try {
 		// Call the Rust script with input parameters
 		// console.log('Params:', JSON.stringify(jsonInput));
-		console.log('Calling Rust script with params:', jsonInput)
+		// console.log('Calling Rust script with params:', jsonInput)
 		const result = await run_rust('readHDF5', jsonInput)
-		console.log('Result:', result)
 		// Debug output to understand what we're getting back
 		// console.log('Result structure:', JSON.stringify(result, null, 2).substring(0, 5000) + '...');
 
@@ -402,17 +402,21 @@ async function validateNative(q: GeneExpressionQueryNative, ds: any, genome: any
 			}
 
 			console.log(`Querying ${geneNames.length} genes in batch mode`)
-
+			const time1 = Date.now()
 			try {
 				// Query expression values for all genes at once
 				const geneQueryResult = await queryGeneExpression(q.file, geneNames)
+
+				const elapsedMs1 = Date.now() - time1
+				const formattedTime1 = formatElapsedTime(elapsedMs1)
+				console.log('Time taken to run batch gene query:', formattedTime1)
 
 				// Parse the result (should be already parsed if queryGeneExpression returns an object)
 				const geneData = typeof geneQueryResult === 'string' ? JSON.parse(geneQueryResult) : geneQueryResult
 
 				// Check if we have a multi-gene response (genes field) or single gene response
 				const genesData = geneData.genes || { [geneNames[0]]: geneData }
-
+				const time2 = Date.now()
 				// Process each gene's data
 				for (const geneTerm of param.terms) {
 					if (!geneTerm.gene) continue
@@ -439,12 +443,18 @@ async function validateNative(q: GeneExpressionQueryNative, ds: any, genome: any
 						s2v[sampleId] = Number(value)
 					}
 
-					console.log(`Gene ${geneTerm.gene} has ${Object.keys(s2v).length} samples with data`)
+					// console.log(`Gene ${geneTerm.gene} has ${Object.keys(s2v).length} samples with data`)
 
 					if (Object.keys(s2v).length) {
 						term2sample2value.set(geneTerm.gene, s2v)
 					}
 				}
+				const elapsedMs2 = Date.now() - time2
+				const formattedTime2 = formatElapsedTime(elapsedMs2)
+				console.log('Time taken to process for loop after batch query:', formattedTime2)
+				// const elapsedMs = Date.now() - time1
+				// const formattedTime = formatElapsedTime(elapsedMs)
+				// console.log('Time taken to run batch gene query:', formattedTime)
 			} catch (error) {
 				console.error(`Error processing batch gene query:`, error)
 			}

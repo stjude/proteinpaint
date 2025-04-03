@@ -643,6 +643,22 @@ fn query_gene_sparse(hdf5_filename: String, gene_name: String) -> Result<()> {
 /// A result indicating success or error. On success, the function prints a JSON object
 /// containing expression data for all requested genes to stdout.
 
+/// Queries expression data for multiple genes from a dense format HDF5 file
+///
+/// This function extracts expression values for multiple specified genes from an HDF5 file
+/// that follows the dense matrix format. It optimizes the query by using a HashMap for O(1) lookups
+/// when querying multiple genes, but maintains the original O(n) lookup for single gene queries
+/// to avoid unnecessary overhead.
+///
+/// # Arguments
+///
+/// * `hdf5_filename` - Path to the HDF5 file
+/// * `gene_names` - Vector of gene names to query
+///
+/// # Returns
+///
+/// A result indicating success or error. On success, the function prints a JSON object
+/// containing expression data for all requested genes to stdout.
 fn query_multiple_genes_dense(hdf5_filename: String, gene_names: Vec<String>) -> Result<()> {
     let overall_start_time = Instant::now();
 
@@ -651,7 +667,7 @@ fn query_multiple_genes_dense(hdf5_filename: String, gene_names: Vec<String>) ->
     timings.insert("gene_count".to_string(), Value::from(gene_names.len()));
     timings.insert("format".to_string(), Value::String("dense".to_string()));
 
-    // Open the HDF5 file and read metadata (unchanged)
+    // Open the HDF5 file and read metadata
     let file_open_start = Instant::now();
     let file = match File::open(&hdf5_filename) {
         Ok(f) => f,
@@ -702,6 +718,24 @@ fn query_multiple_genes_dense(hdf5_filename: String, gene_names: Vec<String>) ->
     };
 
     let genes: Vec<String> = genes_varlen.iter().map(|g| g.to_string()).collect();
+    
+    // Only create HashMap for multiple gene queries
+    let gene_to_index: Option<std::collections::HashMap<String, usize>> = if gene_names.len() > 1 {
+        let hashmap_start_time = Instant::now();
+        let mut map = std::collections::HashMap::with_capacity(genes.len());
+        for (idx, gene) in genes.iter().enumerate() {
+            map.insert(gene.clone(), idx);
+        }
+        timings.insert(
+            "build_hashmap_ms".to_string(), 
+            Value::from(hashmap_start_time.elapsed().as_millis() as u64)
+        );
+        Some(map)
+    } else {
+        // Skip HashMap creation for single gene queries
+        None
+    };
+    
     timings.insert(
         "read_genes_ms".to_string(),
         Value::from(genes_start_time.elapsed().as_millis() as u64),
@@ -763,43 +797,332 @@ fn query_multiple_genes_dense(hdf5_filename: String, gene_names: Vec<String>) ->
         Value::from(counts_dataset_start_time.elapsed().as_millis() as u64),
     );
 
-    // NEW: Load all gene data upfront to reduce file contention
-    let all_data_start_time = Instant::now();
-    let all_gene_data = match counts_dataset.read::<f64, Dim<[usize; 2]>>() {
-        Ok(data) => {
-            timings.insert(
-                "read_all_gene_data_ms".to_string(),
-                Value::from(all_data_start_time.elapsed().as_millis() as u64),
-            );
-            Some(data)
-        }
-        Err(err) => {
-            // Failed to read all data at once, will fallback to per-gene reading
-            timings.insert(
-                "read_all_gene_data_error".to_string(),
-                Value::String(format!("{:?}", err)),
-            );
-            None
-        }
-    };
-
-    // Determine number of threads to use
-    let num_threads = num_cpus::get();
-    timings.insert("num_threads".to_string(), Value::from(num_threads as u64));
-
-    // Process genes in parallel
-    let genes_process_start = Instant::now();
-
-    // Create thread-local storage for each gene's result
+    // Create thread-local storage for results
     let genes_map = Arc::new(std::sync::Mutex::new(Map::new()));
     let gene_timings = Arc::new(std::sync::Mutex::new(Map::new()));
 
-    // Use rayon to process genes in parallel
-    gene_names.par_iter().for_each(|gene_name| {
+    // Process genes based on count
+    let genes_process_start = Instant::now();
+
+    if gene_names.len() > 1 {
+        // For multiple genes: preload all data and use parallel processing
+        timings.insert("parallel_processing".to_string(), Value::from(true));
+
+        // Load all gene data upfront only when processing multiple genes
+        let all_data_start_time = Instant::now();
+        let all_gene_data = match counts_dataset.read::<f64, Dim<[usize; 2]>>() {
+            Ok(data) => {
+                timings.insert(
+                    "read_all_gene_data_ms".to_string(),
+                    Value::from(all_data_start_time.elapsed().as_millis() as u64),
+                );
+                Some(data)
+            }
+            Err(err) => {
+                // Failed to read all data at once, will fallback to per-gene reading
+                timings.insert(
+                    "read_all_gene_data_error".to_string(),
+                    Value::String(format!("{:?}", err)),
+                );
+                None
+            }
+        };
+
+        // Configurable thread count for testing
+        let thread_count = 2; // Adjust this number for testing
+        timings.insert("thread_count".to_string(), Value::from(thread_count));
+
+        // Create a scoped thread pool with specified number of threads
+        match rayon::ThreadPoolBuilder::new()
+            .num_threads(thread_count)
+            .build()
+        {
+            Ok(pool) => {
+                // Use the pool for this specific work
+                pool.install(|| {
+                    gene_names.par_iter().for_each(|gene_name| {
+                        let gene_start_time = Instant::now();
+
+                        // Use HashMap for O(1) lookup for multiple genes
+                        let gene_index = match &gene_to_index {
+                            Some(map) => map.get(gene_name).cloned(),
+                            None => genes.iter().position(|x| *x == *gene_name),
+                        };
+
+                        match gene_index {
+                            Some(gene_index) => {
+                                // Make sure the gene index is valid for this dataset
+                                if gene_index >= counts_dataset.shape()[0] {
+                                    let mut error_map = Map::new();
+                                    error_map.insert(
+                                        "error".to_string(),
+                                        Value::String("Gene index out of bounds".to_string()),
+                                    );
+
+                                    // Store the error result
+                                    let mut genes_map = genes_map.lock().unwrap();
+                                    genes_map.insert(gene_name.clone(), Value::Object(error_map));
+                                } else {
+                                    // Use pre-loaded data if available
+                                    if let Some(ref all_data) = all_gene_data {
+                                        // Extract the row directly from pre-loaded data
+                                        let gene_expression = all_data.slice(s![gene_index, ..]);
+
+                                        // Create samples map for this gene
+                                        let mut samples_map = Map::new();
+                                        for (i, sample) in samples.iter().enumerate() {
+                                            if i < gene_expression.len() {
+                                                // Handle potential NaN or infinity values
+                                                let value = if gene_expression[i].is_finite() {
+                                                    Value::from(gene_expression[i])
+                                                } else {
+                                                    Value::Null
+                                                };
+
+                                                samples_map.insert(sample.replace("\\", ""), value);
+                                            }
+                                        }
+
+                                        // Create gene data and store it
+                                        let gene_data = json!({
+                                            "dataId": gene_name,
+                                            "samples": samples_map
+                                        });
+
+                                        let mut genes_map = genes_map.lock().unwrap();
+                                        genes_map.insert(gene_name.clone(), gene_data);
+                                    } else {
+                                        // Fallback to per-gene reading if bulk load failed
+                                        match counts_dataset
+                                            .read_slice_1d::<f64, _>(s![gene_index, ..])
+                                        {
+                                            Ok(gene_expression) => {
+                                                // Create samples map for this gene
+                                                let mut samples_map = Map::new();
+                                                for (i, sample) in samples.iter().enumerate() {
+                                                    if i < gene_expression.len() {
+                                                        // Handle potential NaN or infinity values
+                                                        let value =
+                                                            if gene_expression[i].is_finite() {
+                                                                Value::from(gene_expression[i])
+                                                            } else {
+                                                                Value::Null
+                                                            };
+
+                                                        samples_map.insert(
+                                                            sample.replace("\\", ""),
+                                                            value,
+                                                        );
+                                                    }
+                                                }
+
+                                                // Create gene data and store it
+                                                let gene_data = json!({
+                                                    "dataId": gene_name,
+                                                    "samples": samples_map
+                                                });
+
+                                                let mut genes_map = genes_map.lock().unwrap();
+                                                genes_map.insert(gene_name.clone(), gene_data);
+                                            }
+                                            Err(err1) => {
+                                                let mut error_map = Map::new();
+                                                error_map.insert(
+                                                    "error".to_string(),
+                                                    Value::String(format!(
+                                                        "Failed to read expression values: {:?}",
+                                                        err1
+                                                    )),
+                                                );
+
+                                                let mut genes_map = genes_map.lock().unwrap();
+                                                genes_map.insert(
+                                                    gene_name.clone(),
+                                                    Value::Object(error_map),
+                                                );
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            None => {
+                                // Gene not found
+                                let mut error_map = Map::new();
+                                error_map.insert(
+                                    "error".to_string(),
+                                    Value::String("Gene not found in dataset".to_string()),
+                                );
+
+                                let mut genes_map = genes_map.lock().unwrap();
+                                genes_map.insert(gene_name.clone(), Value::Object(error_map));
+                            }
+                        }
+
+                        // Record timing
+                        let elapsed_time = gene_start_time.elapsed().as_millis() as u64;
+                        let mut gene_timings = gene_timings.lock().unwrap();
+                        gene_timings.insert(gene_name.clone(), Value::from(elapsed_time));
+                    });
+                });
+            }
+            Err(err) => {
+                // If thread pool creation fails, fall back to sequential processing
+                timings.insert(
+                    "thread_pool_error".to_string(),
+                    Value::String(format!("Failed to create thread pool: {:?}", err)),
+                );
+
+                // Process genes sequentially with preloaded data
+                process_genes_sequentially(
+                    &gene_names,
+                    &genes,
+                    &gene_to_index,
+                    &counts_dataset,
+                    &all_gene_data,
+                    &samples,
+                    &genes_map,
+                    &gene_timings,
+                );
+            }
+        }
+    } else if gene_names.len() == 1 {
+        // Single gene case - process directly without preloading the entire dataset
+        // and use original linear search for simplicity
+        timings.insert("parallel_processing".to_string(), Value::from(false));
+        timings.insert("preloaded_data".to_string(), Value::from(false));
+
+        // Extract the single gene name
+        let gene_name = &gene_names[0];
         let gene_start_time = Instant::now();
 
-        // Find the index of the requested gene
+        // Use original linear search for single gene case
         match genes.iter().position(|x| *x == *gene_name) {
+            Some(gene_index) => {
+                // Make sure the gene index is valid for this dataset
+                if gene_index >= counts_dataset.shape()[0] {
+                    let mut error_map = Map::new();
+                    error_map.insert(
+                        "error".to_string(),
+                        Value::String("Gene index out of bounds".to_string()),
+                    );
+
+                    // Store the error result
+                    let mut genes_map = genes_map.lock().unwrap();
+                    genes_map.insert(gene_name.clone(), Value::Object(error_map));
+                } else {
+                    // Read just this single gene's data directly
+                    let direct_read_start = Instant::now();
+                    match counts_dataset.read_slice_1d::<f64, _>(s![gene_index, ..]) {
+                        Ok(gene_expression) => {
+                            timings.insert(
+                                "direct_gene_read_ms".to_string(),
+                                Value::from(direct_read_start.elapsed().as_millis() as u64),
+                            );
+
+                            // Create samples map for this gene
+                            let mut samples_map = Map::new();
+                            for (i, sample) in samples.iter().enumerate() {
+                                if i < gene_expression.len() {
+                                    // Handle potential NaN or infinity values
+                                    let value = if gene_expression[i].is_finite() {
+                                        Value::from(gene_expression[i])
+                                    } else {
+                                        Value::Null
+                                    };
+
+                                    samples_map.insert(sample.replace("\\", ""), value);
+                                }
+                            }
+
+                            // Create gene data and store it
+                            let gene_data = json!({
+                                "dataId": gene_name,
+                                "samples": samples_map
+                            });
+
+                            let mut genes_map = genes_map.lock().unwrap();
+                            genes_map.insert(gene_name.clone(), gene_data);
+                        }
+                        Err(err) => {
+                            let mut error_map = Map::new();
+                            error_map.insert(
+                                "error".to_string(),
+                                Value::String(format!(
+                                    "Failed to read expression values: {:?}",
+                                    err
+                                )),
+                            );
+
+                            let mut genes_map = genes_map.lock().unwrap();
+                            genes_map.insert(gene_name.clone(), Value::Object(error_map));
+                        }
+                    }
+                }
+            }
+            None => {
+                // Gene not found
+                let mut error_map = Map::new();
+                error_map.insert(
+                    "error".to_string(),
+                    Value::String("Gene not found in dataset".to_string()),
+                );
+
+                let mut genes_map = genes_map.lock().unwrap();
+                genes_map.insert(gene_name.clone(), Value::Object(error_map));
+            }
+        }
+
+        // Record timing
+        let elapsed_time = gene_start_time.elapsed().as_millis() as u64;
+        let mut gene_timings = gene_timings.lock().unwrap();
+        gene_timings.insert(gene_name.clone(), Value::from(elapsed_time));
+    }
+    // No genes case - nothing to do
+
+    // Get the final maps from the Arc<Mutex<>>
+    let genes_map = Arc::try_unwrap(genes_map).unwrap().into_inner().unwrap();
+    let gene_timings = Arc::try_unwrap(gene_timings).unwrap().into_inner().unwrap();
+
+    timings.insert(
+        "gene_processing_ms".to_string(),
+        Value::from(genes_process_start.elapsed().as_millis() as u64),
+    );
+    timings.insert("per_gene_ms".to_string(), Value::Object(gene_timings));
+
+    // Build the complete JSON structure with timing information
+    let output_json = json!({
+        "genes": genes_map,
+        "timings": timings,
+        "total_time_ms": overall_start_time.elapsed().as_millis() as u64
+    });
+
+    // Output the JSON directly
+    println!("{}", output_json);
+
+    Ok(())
+}
+
+// Helper function to process genes sequentially with optional HashMap lookup
+fn process_genes_sequentially(
+    gene_names: &Vec<String>,
+    genes: &Vec<String>,
+    gene_to_index: &Option<std::collections::HashMap<String, usize>>,
+    counts_dataset: &hdf5::Dataset,
+    all_gene_data: &Option<ndarray::ArrayBase<ndarray::OwnedRepr<f64>, ndarray::Dim<[usize; 2]>>>,
+    samples: &Vec<String>,
+    genes_map: &Arc<std::sync::Mutex<Map<String, Value>>>,
+    gene_timings: &Arc<std::sync::Mutex<Map<String, Value>>>,
+) {
+    for gene_name in gene_names {
+        let gene_start_time = Instant::now();
+
+        // Find the index of the requested gene, using HashMap if available
+        let gene_index = match gene_to_index {
+            Some(map) => map.get(gene_name).cloned(),
+            None => genes.iter().position(|x| *x == *gene_name),
+        };
+
+        match gene_index {
             Some(gene_index) => {
                 // Make sure the gene index is valid for this dataset
                 if gene_index >= counts_dataset.shape()[0] {
@@ -903,31 +1226,7 @@ fn query_multiple_genes_dense(hdf5_filename: String, gene_names: Vec<String>) ->
         let elapsed_time = gene_start_time.elapsed().as_millis() as u64;
         let mut gene_timings = gene_timings.lock().unwrap();
         gene_timings.insert(gene_name.clone(), Value::from(elapsed_time));
-    });
-
-    // Get the final maps from the Arc<Mutex<>>
-    let genes_map = Arc::try_unwrap(genes_map).unwrap().into_inner().unwrap();
-    let gene_timings = Arc::try_unwrap(gene_timings).unwrap().into_inner().unwrap();
-
-    timings.insert(
-        "gene_processing_ms".to_string(),
-        Value::from(genes_process_start.elapsed().as_millis() as u64),
-    );
-    timings.insert("per_gene_ms".to_string(), Value::Object(gene_timings));
-
-    // Build the complete JSON structure with timing information
-    let output_json = json!({
-        "genes": genes_map,
-        "timings": timings,
-        "parallel": true,
-        "preloaded_data": all_gene_data.is_some(),
-        "total_time_ms": overall_start_time.elapsed().as_millis() as u64
-    });
-
-    // Output the JSON directly
-    println!("{}", output_json);
-
-    Ok(())
+    }
 }
 /// Queries expression data for multiple genes from a sparse format HDF5 file
 ///
