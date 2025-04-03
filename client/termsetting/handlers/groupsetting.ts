@@ -152,8 +152,11 @@ export class GroupSettingMethods {
 						name: grpIdx === 0 ? 'Excluded categories' : group.name
 					})
 					grpIdxes.delete(grpIdx)
-					const filter = group.filter
+					const filter = structuredClone(group.filter)
 					if (!filter) throw 'filter missing'
+					// use only those filter terms that are in the dataset
+					const termsInDs = filter.terms.filter(t => term.filter.terms.some(t2 => t2.id == t.id))
+					filter.terms = termsInDs
 					this.data.filters.push(filter)
 				}
 			}
