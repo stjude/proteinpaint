@@ -63,16 +63,44 @@ export function validate_query_getTopMutatedGenes(ds: any, genome: any) {
 			Min absolute log(ratio) radio select
 		*/
 		if (ds.queries.cnv) {
-			// TODO should be radio btns
-			q.arguments.push({ id: 'cnv_1mb_01', label: 'CNV <1Mb abs(logratio)>0.1', type: 'boolean', value: false })
-			q.arguments.push({ id: 'cnv_1mb_02', label: 'CNV <1Mb abs(logratio)>0.2', type: 'boolean', value: false })
-			q.arguments.push({ id: 'cnv_1mb_03', label: 'CNV <1Mb abs(logratio)>0.3', type: 'boolean', value: false })
-			q.arguments.push({ id: 'cnv_2mb_01', label: 'CNV <2Mb abs(logratio)>0.1', type: 'boolean', value: false })
-			q.arguments.push({ id: 'cnv_2mb_02', label: 'CNV <2Mb abs(logratio)>0.2', type: 'boolean', value: false })
-			q.arguments.push({ id: 'cnv_2mb_03', label: 'CNV <2Mb abs(logratio)>0.3', type: 'boolean', value: false })
-			q.arguments.push({ id: 'cnv_4mb_01', label: 'CNV <4Mb abs(logratio)>0.1', type: 'boolean', value: true })
-			q.arguments.push({ id: 'cnv_4mb_02', label: 'CNV <4Mb abs(logratio)>0.2', type: 'boolean', value: false })
-			q.arguments.push({ id: 'cnv_4mb_03', label: 'CNV <4Mb abs(logratio)>0.3', type: 'boolean', value: false })
+			q.arguments.push({
+				id: 'cnv',
+				type: 'submenu',
+				label: 'CNV',
+				checked: false,
+				sections: [
+					{
+						id: 'cnv_mb',
+						label: 'Length',
+						type: 'radio',
+						options: [
+							{ id: 'cnv_1mb', label: '<1Mb', value: 1, checked: false },
+							{ id: 'cnv_2mb', label: '<2Mb', value: 2, checked: false },
+							{ id: 'cnv_4mb', label: '<4Mb', value: 4, checked: false }
+						]
+					},
+					{
+						id: 'cnv_logratio',
+						label: 'Absolute log ratio',
+						type: 'radio',
+						options: [
+							{ id: 'cnv_01', label: '>0.1', value: 0.1, checked: false },
+							{ id: 'cnv_02', label: '>0.2', value: 0.2, checked: false },
+							{ id: 'cnv_03', label: '>0.3', value: 0.3, checked: false }
+						]
+					}
+				]
+			})
+			// // TODO should be radio btns
+			// q.arguments.push({ id: 'cnv_1mb_01', label: 'CNV <1Mb abs(logratio)>0.1', type: 'boolean', value: false })
+			// q.arguments.push({ id: 'cnv_1mb_02', label: 'CNV <1Mb abs(logratio)>0.2', type: 'boolean', value: false })
+			// q.arguments.push({ id: 'cnv_1mb_03', label: 'CNV <1Mb abs(logratio)>0.3', type: 'boolean', value: false })
+			// q.arguments.push({ id: 'cnv_2mb_01', label: 'CNV <2Mb abs(logratio)>0.1', type: 'boolean', value: false })
+			// q.arguments.push({ id: 'cnv_2mb_02', label: 'CNV <2Mb abs(logratio)>0.2', type: 'boolean', value: false })
+			// q.arguments.push({ id: 'cnv_2mb_03', label: 'CNV <2Mb abs(logratio)>0.3', type: 'boolean', value: false })
+			// q.arguments.push({ id: 'cnv_4mb_01', label: 'CNV <4Mb abs(logratio)>0.1', type: 'boolean', value: true })
+			// q.arguments.push({ id: 'cnv_4mb_02', label: 'CNV <4Mb abs(logratio)>0.2', type: 'boolean', value: false })
+			// q.arguments.push({ id: 'cnv_4mb_03', label: 'CNV <4Mb abs(logratio)>0.3', type: 'boolean', value: false })
 		}
 	}
 	q.get = async (param: topMutatedGeneRequest) => {
