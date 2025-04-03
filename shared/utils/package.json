@@ -9,7 +9,7 @@
     "./*": "./src/*"
   },
   "scripts": {
-    "build": "esbuild src/*.ts --platform=node --outdir=src/ --format=esm && prettier --no-semi --use-tabs --write src/urljson.js src/joinUrl.js src/doc.js",
+    "build": "esbuild src/*.ts --platform=node --outdir=src/ --format=esm && prettier --no-semi --use-tabs --write src/urljson.js src/joinUrl.js src/time.js src/doc.js",
     "prepack": "npm run build",
     "pretest": "mkdir -p test && node emitImports > test/internals-test.ts",
     "spec:coverage": "node test/relevant.js",
