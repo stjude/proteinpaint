@@ -1,4 +1,4 @@
-import { Menu } from '../menu'
+import type { Menu } from '#dom'
 import type { Div, Elem } from '../../types/d3'
 import type { GeneArgumentEntry } from '#types'
 import { addButton } from './addButton.ts'
