@@ -199,7 +199,7 @@ function setRenderers(self) {
 		//Show error message if login failed and all charts require login. If the dataset does not require login verifiedToken is true
 		//Currently only the profile and sjcares always require a token.
 		// Note that if the user did not login the public token was used. So only if the user did login and the token passed was invalid this error is shown
-		if (!verifiedToken && invalidTokenErrorHandling.affectedCharts.includes('*'))
+		if (!verifiedToken && invalidTokenErrorHandling?.affectedCharts?.includes('*'))
 			throw new Error(appState.termdbConfig.invalidTokenErrorHandling.errorMessage)
 		const header = self.opts.holder.append('div').style('white-space', 'nowrap')
 		const massNav = appState.termdbConfig?.massNav || {}
