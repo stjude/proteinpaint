@@ -26,6 +26,7 @@ function init({ genomes }) {
 			const ds = g.datasets?.[q.dslabel]
 			if (!ds) throw 'ds missing'
 			if (!ds.queries?.topMutatedGenes) throw 'not supported by ds'
+			consolidateCNVparams(q)
 			const genes = await ds.queries.topMutatedGenes.get(q)
 			const payload: topMutatedGeneResponse = { genes }
 			res.send(payload)
@@ -34,6 +35,18 @@ function init({ genomes }) {
 			if (e.stack) console.log(e.stack)
 			else console.trace(e)
 		}
+	}
+}
+
+/** This is a hack
+The user is presented with two radio buttons to reference
+one data column. Eventually the db will not store the data
+this way. */
+
+function consolidateCNVparams(q) {
+	if (q.cnv_ms && q.cnv_logratio) {
+		const key = q.cnv_ms.type + q.cnv_logratio.type.replace('cnv', '')
+		q[key] = 1
 	}
 }
 
@@ -65,42 +78,35 @@ export function validate_query_getTopMutatedGenes(ds: any, genome: any) {
 		if (ds.queries.cnv) {
 			q.arguments.push({
 				id: 'cnv',
-				type: 'submenu',
+				type: 'boolean',
 				label: 'CNV',
 				checked: false,
-				sections: [
+				noStyle: true, //This is a hack
+				options: [
 					{
-						id: 'cnv_mb',
-						label: 'Length',
+						id: 'cnv_ms',
+						label: 'Max size',
 						type: 'radio',
+						value: { type: 'cnv_1mb', geneList: null }, //This is a quick fix
 						options: [
-							{ id: 'cnv_1mb', label: '<1Mb', value: 1, checked: false },
-							{ id: 'cnv_2mb', label: '<2Mb', value: 2, checked: false },
-							{ id: 'cnv_4mb', label: '<4Mb', value: 4, checked: false }
+							{ id: 'cnv_1mb', label: '<1Mb', value: 'cnv_1mb', checked: true },
+							{ id: 'cnv_2mb', label: '<2Mb', value: 'cnv_2mb' },
+							{ id: 'cnv_4mb', label: '<4Mb', value: 'cnv_4mb' }
 						]
 					},
 					{
 						id: 'cnv_logratio',
-						label: 'Absolute log ratio',
+						label: 'Min absolute log(ratio)',
 						type: 'radio',
+						value: { type: 'cnv_01', geneList: null }, //This is a quick fix
 						options: [
-							{ id: 'cnv_01', label: '>0.1', value: 0.1, checked: false },
-							{ id: 'cnv_02', label: '>0.2', value: 0.2, checked: false },
-							{ id: 'cnv_03', label: '>0.3', value: 0.3, checked: false }
+							{ id: 'cnv_01', label: '>0.1', value: 'cnv_01', checked: true },
+							{ id: 'cnv_02', label: '>0.2', value: 'cnv_02' },
+							{ id: 'cnv_03', label: '>0.3', value: 'cnv_03' }
 						]
 					}
 				]
 			})
-			// // TODO should be radio btns
-			// q.arguments.push({ id: 'cnv_1mb_01', label: 'CNV <1Mb abs(logratio)>0.1', type: 'boolean', value: false })
-			// q.arguments.push({ id: 'cnv_1mb_02', label: 'CNV <1Mb abs(logratio)>0.2', type: 'boolean', value: false })
-			// q.arguments.push({ id: 'cnv_1mb_03', label: 'CNV <1Mb abs(logratio)>0.3', type: 'boolean', value: false })
-			// q.arguments.push({ id: 'cnv_2mb_01', label: 'CNV <2Mb abs(logratio)>0.1', type: 'boolean', value: false })
-			// q.arguments.push({ id: 'cnv_2mb_02', label: 'CNV <2Mb abs(logratio)>0.2', type: 'boolean', value: false })
-			// q.arguments.push({ id: 'cnv_2mb_03', label: 'CNV <2Mb abs(logratio)>0.3', type: 'boolean', value: false })
-			// q.arguments.push({ id: 'cnv_4mb_01', label: 'CNV <4Mb abs(logratio)>0.1', type: 'boolean', value: true })
-			// q.arguments.push({ id: 'cnv_4mb_02', label: 'CNV <4Mb abs(logratio)>0.2', type: 'boolean', value: false })
-			// q.arguments.push({ id: 'cnv_4mb_03', label: 'CNV <4Mb abs(logratio)>0.3', type: 'boolean', value: false })
 		}
 	}
 	q.get = async (param: topMutatedGeneRequest) => {
@@ -128,7 +134,6 @@ export function validate_query_getTopMutatedGenes(ds: any, genome: any) {
 		if (param.cnv_4mb_02) fields.push('cnv_4mb_02')
 		if (param.cnv_4mb_03) fields.push('cnv_4mb_03')
 		if (!fields.length) throw 'no fields'
-
 		// TODO preserve count per data type to return as mutation stat
 		const query = `WITH
 		filtered AS (
