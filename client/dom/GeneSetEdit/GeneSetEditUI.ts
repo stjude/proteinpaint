@@ -8,7 +8,6 @@ import type { ClientCopyGenome } from '../../types/global'
 import type { GeneArgumentEntry } from '#types'
 import { GenesMenu } from './GenesMenu'
 import { addButton } from './addButton.ts'
-import { debounce } from 'debounce'
 import { dofetch3 } from '#common/dofetch'
 
 type API = {
@@ -237,76 +236,8 @@ export class GeneSetEditUI {
 		if (this.mode == TermTypes.GENE_EXPRESSION && this.vocabApi.termdbConfig?.queries?.topVariablyExpressedGenes) {
 			if (this.vocabApi.termdbConfig.queries.topVariablyExpressedGenes.arguments) {
 				for (const param of this.vocabApi.termdbConfig.queries.topVariablyExpressedGenes.arguments) {
-					if (param.type == 'radio') {
-						if (!param.options || param.options.length == 0) throw 'Radio button must have options'
-						for (const opt of param.options) {
-							if (opt.type == 'tree') {
-								opt.callback = async (holder: Elem) => {
-									const termdb = await import('../../termdb/app.js')
-									const treeDiv = holder.append('div')
-									await termdb.appInit({
-										holder: treeDiv,
-										state: {
-											dslabel: opt.value,
-											genome: this.genome.name,
-											nav: {
-												header_mode: 'search_only'
-											}
-										},
-										tree: {
-											click_term: (term: any) => {
-												holder
-													.append('div')
-													.classed('ts_pill sja_filter_tag_btn sja_tree_click_term termlabel', true)
-													.style('margin', '5px')
-													.text(`${term.id}`)
-												param.value = {
-													type: opt.value,
-													geneList: term._geneset.map((t: any) => t.symbol)
-												}
-												treeDiv.selectAll('*').remove()
-											}
-										}
-									})
-								}
-							}
-							if (opt.type == 'text') {
-								opt.callback = async (holder: Elem) => {
-									holder
-										.append('span')
-										.style('display', 'block')
-										.style('font-size', '0.8em')
-										.style('opacity', 0.75)
-										.text('Enter genes separated by spaces or commas')
-									holder
-										.append('textarea')
-										.style('display', 'block')
-										.on(
-											'keyup',
-											debounce(function (this: any) {
-												const geneList = this.value
-													.split(/[\s,]+/)
-													.map((t: string) => t.trim())
-													.filter((t: string) => t !== '')
-												param.value = {
-													type: opt.value,
-													geneList
-												}
-											}),
-											500
-										)
-								}
-							}
-							if (opt.type == 'boolean') {
-								opt.callback = () => {
-									param.value = {
-										type: opt.value,
-										geneList: null
-									}
-								}
-							}
-						}
-					}
+					if (param.type == 'radio' && (!param.options || param.options.length == 0))
+						throw 'Radio button must have options'
 					this.api.topVariablyExpressedGenesParams.push({ param })
 				}
 			}
@@ -317,6 +248,7 @@ export class GeneSetEditUI {
 		arr = this.removeDuplicates(arr)
 		return {
 			tip: this.tip2,
+			genome: this.genome,
 			params: arr,
 			addOptionalParams: ({ param, input }) => {
 				arr.push({ param, input })

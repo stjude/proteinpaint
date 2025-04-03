@@ -4,10 +4,13 @@ import type { GeneArgumentEntry } from '#types'
 import { addButton } from './addButton.ts'
 import { make_one_checkbox } from '../checkbox.js'
 import { makeRadiosWithContentDivs } from './radioWithContent.ts'
+import { debounce } from 'debounce'
+import type { ClientCopyGenome } from '../../types/global.ts'
 
 type GenesMenuArgs = {
 	/** tip holder for displaying the Menu */
 	tip: Menu
+	genome: ClientCopyGenome
 	/** object sent from the view model
 	 * .param is the defined arg from the dataset
 	 * .input is the element created in addParameter and returned
@@ -24,6 +27,7 @@ type GenesMenuArgs = {
 
 export class GenesMenu {
 	tip: Menu
+	genome: ClientCopyGenome
 	params: { param: GeneArgumentEntry; input?: Elem }[]
 	callback: (f?: number) => void
 	addOptionalParams: ({ param, input }) => void
@@ -32,6 +36,7 @@ export class GenesMenu {
 
 	constructor(opts: GenesMenuArgs) {
 		this.tip = opts.tip
+		this.genome = opts.genome
 		this.params = opts.params
 		this.callback = opts.callback
 		this.addOptionalParams = opts.addOptionalParams
@@ -64,10 +69,11 @@ export class GenesMenu {
 		let input
 		if (param.type == 'boolean') {
 			if (param?.options?.length) {
-				/* Use for checkboxes that expand to show additional options when checked. */
+				/* ** Submenu ** 
+				Use for checkboxes that expand to show additional options when checked. */
 				const holder = div
 					.append('div')
-					.style('margin', '10px 0px')
+					.style('margin', `${param.noStyle ? '0px' : '10px'} 0px`)
 					.on('mousedown', (event: Event) => {
 						event.stopPropagation()
 					})
@@ -118,23 +124,8 @@ export class GenesMenu {
 			if (!hasChecked) param.options[0].checked = true
 			input = div.append('div').attr('id', param.id)
 			input.append('p').style('font-size', '0.8em').style('opacity', 0.75).text(param.label)
+			this.addRadioCallbacks(param, this.genome)
 			makeRadiosWithContentDivs(param.options, input as any)
-		} else if (param.type == 'submenu') {
-			const checkboxDiv = div.append('div')
-			const submenuDiv = div.append('div').style('display', 'none')
-			input = make_one_checkbox({
-				holder: checkboxDiv,
-				id: param.id,
-				checked: param.checked,
-				labeltext: param.label,
-				callback: () => {
-					submenuDiv.style('display', checkboxDiv.select('input').property('checked') ? 'block' : 'none')
-				}
-			})
-			for (const option of param.sections) {
-				const optionInput = this.addParameter(option, submenuDiv)
-				this.params2Add.push({ param: option, input: optionInput })
-			}
 		}
 		return input
 	}
@@ -150,6 +141,77 @@ export class GenesMenu {
 				.html(param.label!)
 				.attr('for', param.id)
 			labelDiv.append('span').style('display', 'block').style('font-size', '0.75em').html(param.sublabel)
+		}
+	}
+
+	addRadioCallbacks(param, genome) {
+		for (const opt of param.options) {
+			if (!opt.type) opt.type = 'boolean'
+			if (opt.type == 'tree') {
+				opt.callback = async (holder: Elem) => {
+					const termdb = await import('../../termdb/app.js')
+					const treeDiv = holder.append('div')
+					await termdb.appInit({
+						holder: treeDiv,
+						state: {
+							dslabel: opt.value,
+							genome: genome.name,
+							nav: {
+								header_mode: 'search_only'
+							}
+						},
+						tree: {
+							click_term: (term: any) => {
+								holder
+									.append('div')
+									.classed('ts_pill sja_filter_tag_btn sja_tree_click_term termlabel', true)
+									.style('margin', '5px')
+									.text(`${term.id}`)
+								param.value = {
+									type: opt.value,
+									geneList: term._geneset.map((t: any) => t.symbol)
+								}
+								treeDiv.selectAll('*').remove()
+							}
+						}
+					})
+				}
+			}
+			if (opt.type == 'text') {
+				opt.callback = async (holder: Elem) => {
+					holder
+						.append('span')
+						.style('display', 'block')
+						.style('font-size', '0.8em')
+						.style('opacity', 0.75)
+						.text('Enter genes separated by spaces or commas')
+					holder
+						.append('textarea')
+						.style('display', 'block')
+						.on(
+							'keyup',
+							debounce(function (this: any) {
+								const geneList = this.value
+									.split(/[\s,]+/)
+									.map((t: string) => t.trim())
+									.filter((t: string) => t !== '')
+								param.value = {
+									type: opt.value,
+									geneList
+								}
+							}),
+							500
+						)
+				}
+			}
+			if (opt.type == 'boolean') {
+				opt.callback = () => {
+					param.value = {
+						type: opt.value,
+						geneList: null
+					}
+				}
+			}
 		}
 	}
 }
