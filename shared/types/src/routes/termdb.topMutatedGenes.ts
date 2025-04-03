@@ -11,12 +11,22 @@ export type topMutatedGeneRequest = {
 	filter?: object
 	/** gdc cohort filter */
 	filter0?: object
-	snv_mfndi?: string
-	snv_splice?: string
-	snv_utr?: string
-	snv_s?: string
-	sv?: string
-	fusion?: string
+	/** rest are arguments for built in query */
+	snv_mfndi?: number
+	snv_splice?: number
+	snv_utr?: number
+	snv_s?: number
+	sv?: number
+	fusion?: number
+	cnv_1mb_01?: number
+	cnv_1mb_02?: number
+	cnv_1mb_03?: number
+	cnv_2mb_01?: number
+	cnv_2mb_02?: number
+	cnv_2mb_03?: number
+	cnv_4mb_01?: number
+	cnv_4mb_02?: number
+	cnv_4mb_03?: number
 }
 
 export type MutatedGene = {
