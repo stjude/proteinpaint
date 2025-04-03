@@ -31,7 +31,8 @@ export function makeRadiosWithContentDivs(options: any, div: Elem) {
 				.style('padding-left', '25px')
 				.style('display', 'block')
 
-			await d.callback(contentDiv)
+			//If no content (i.e. callback), continue
+			if (d.callback) await d.callback(contentDiv)
 			d3select(this).property('checked', true)
 			inputs.property('disabled', false)
 		})

@@ -119,6 +119,22 @@ export class GenesMenu {
 			input = div.append('div').attr('id', param.id)
 			input.append('p').style('font-size', '0.8em').style('opacity', 0.75).text(param.label)
 			makeRadiosWithContentDivs(param.options, input as any)
+		} else if (param.type == 'submenu') {
+			const checkboxDiv = div.append('div')
+			const submenuDiv = div.append('div').style('display', 'none')
+			input = make_one_checkbox({
+				holder: checkboxDiv,
+				id: param.id,
+				checked: param.checked,
+				labeltext: param.label,
+				callback: () => {
+					submenuDiv.style('display', checkboxDiv.select('input').property('checked') ? 'block' : 'none')
+				}
+			})
+			for (const option of param.sections) {
+				const optionInput = this.addParameter(option, submenuDiv)
+				this.params2Add.push({ param: option, input: optionInput })
+			}
 		}
 		return input
 	}
