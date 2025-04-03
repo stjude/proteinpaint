@@ -40,7 +40,7 @@ export function setInteractivity(self) {
 		const displaySample = 'sample' in s2
 		let threshold = 10 //min distance in pixels to be in the neighborhood
 		threshold = threshold / self.zoom //Threshold should consider the zoom
-		const samples = chart.data.samples.filter(s => {
+		const samples = chart.samples.filter(s => {
 			const dist = distance(s.x, s.y, s2.x, s2.y, chart)
 			if (!('sampleId' in s) && (!self.settings.showRef || self.settings.refSize == 0)) return false
 			return self.getOpacity(s) > 0 && dist < threshold
@@ -531,4 +531,11 @@ export function setInteractivity(self) {
 		if (!(category in d)) return ''
 		return d[category]
 	}
+}
+
+function distance(x1, y1, x2, y2, chart) {
+	const x = chart.xAxisScale(x2) - chart.xAxisScale(x1)
+	const y = chart.yAxisScale(y2) - chart.yAxisScale(y1)
+	const distance = Math.sqrt(Math.pow(x, 2) + Math.pow(y, 2))
+	return distance
 }

@@ -42,6 +42,7 @@ class RunChart {
 	}
 
 	async init(appState) {
+		this.initYears()
 		const leftDiv = this.opts.holder.insert('div').style('display', 'inline-block')
 		const controlsHolder = leftDiv
 			.insert('div')
@@ -94,10 +95,11 @@ class RunChart {
 		const coordTWs = []
 		if (c.term) coordTWs.push(c.term)
 		if (c.term2) coordTWs.push(c.term2)
+		const filter = this.getFilter()
 		const opts = {
 			name: c.name, // the actual identifier of the plot, for retrieving data from server
 			colorTW: c.colorTW,
-			filter: this.getFilter(),
+			filter,
 			coordTWs
 		}
 		if (this.state.termfilter.filter0) opts.filter0 = this.state.termfilter.filter0
@@ -130,36 +132,33 @@ class RunChart {
 		if (data.error) throw data.error
 		this.range = data.range
 		this.charts = []
-		let i = 0
 		for (const [key, chartData] of Object.entries(data.result)) {
-			if (!Array.isArray(chartData.samples)) throw 'data.samples[] not array'
-			if (data.isLast) this.createChart(key, data, i)
-			else this.createChart(key, chartData, 0)
+			this.createChart(key, chartData)
 		}
+		await this.setControls()
 		this.initRanges()
-		this.is3D = this.config.term0?.q.mode == 'continuous'
-		if (!this.config.colorColumn) await this.setControls()
 		await this.processData()
 		this.render()
 		this.dom.loadingDiv.style('display', 'none')
 
-		if (!this.is3D) this.setTools()
+		this.setTools()
 		this.dom.tip.hide()
 	}
 
-	createChart(id, data, i) {
-		const cohortSamples = data.samples.filter(sample => 'sampleId' in sample)
-		if (cohortSamples.length > numberOfSamplesCutoff) this.is2DLarge = true
+	createChart(id, data) {
+		const samples = data.samples
 		const colorLegend = new Map(data.colorLegend)
 		const shapeLegend = new Map(data.shapeLegend)
-		this.charts.splice(i, 0, { id, data, cohortSamples, colorLegend, shapeLegend })
+		this.charts.push({ id, samples, colorLegend, shapeLegend })
 	}
 
 	initRanges() {
 		this.xMin = Number.POSITIVE_INFINITY
 		this.xMax = Number.NEGATIVE_INFINITY
 		const samples = []
-		for (const chart of this.charts) samples.push(...chart.data.samples)
+		for (const chart of this.charts) samples.push(...chart.samples)
+		if (samples.length == 0) return
+
 		const s0 = samples[0] //First sample to start reduce comparisons
 		const [xMin, xMax, yMin, yMax, zMin, zMax, scaleMin, scaleMax] = samples.reduce(
 			(s, d) => [
@@ -188,9 +187,29 @@ class RunChart {
 		}
 	}
 
+	getFilter() {
+		const year = Number(this.settings.year) || this.years[0]
+		const tvslst = {
+			type: 'tvslst',
+			in: true,
+			join: 'and',
+			lst: [
+				{
+					type: 'tvs',
+					tvs: {
+						ranges: [{ start: year, startinclusive: true, stopunbounded: true }],
+						term: { id: this.config.term.term.id, type: 'date' }
+					}
+				}
+			]
+		}
+
+		const filters = [this.state.termfilter.filter, tvslst]
+		const filter = filterJoin(filters)
+		return filter
+	}
 	async setControls() {
 		this.dom.controlsHolder.selectAll('*').remove()
-		const hasRef = this.charts[0]?.data.samples.find(s => !('sampleId' in s)) || false
 		const shapeOption = {
 			type: 'term',
 			configKey: 'shapeTW',
@@ -261,6 +280,23 @@ class RunChart {
 				vocabApi: this.app.vocabApi,
 				menuOptions: '!remove',
 				numericEditMenuVersion: ['continuous']
+			},
+			{
+				label: 'Site',
+				type: 'dropdown',
+				chartType: 'runChart',
+				settingsKey: 'site',
+				options: this.getSites()
+			},
+			{
+				label: 'Year',
+				type: 'dropdown',
+				chartType: 'runChart',
+				settingsKey: 'year',
+				options: this.years.map(year => ({
+					key: year,
+					label: year
+				}))
 			},
 			{
 				type: 'term',
@@ -365,30 +401,17 @@ class RunChart {
 		})
 	}
 
-	getFilter() {
-		const tvslst = {
-			type: 'tvslst',
-			in: true,
-			join: 'and',
-			lst: []
-		}
-		const sampleCategory =
-			'sampleCategory' in this.settings ? this.settings.sampleCategory : this.config.sampleCategory?.defaultValue
+	getSites() {
+		return []
+	}
 
-		if (sampleCategory) {
-			const tw = this.config.sampleCategory.tw
-			tvslst.lst.push({
-				type: 'tvs',
-				tvs: {
-					term: tw.term,
-					values: [{ key: sampleCategory }]
-				}
-			})
+	initYears() {
+		const now = new Date()
+		const currentYear = now.getFullYear() - 1
+		this.years = []
+		for (let i = 0; i < 20; i++) {
+			this.years.push(currentYear - i)
 		}
-		const filters = [this.state.termfilter.filter, tvslst]
-		if (this.config.filter) filters.push(this.config.filter)
-		const filter = filterJoin(filters)
-		return filter
 	}
 }
 export function openRunChartPlot(app, plot, filter = null) {
@@ -509,10 +532,7 @@ export function getDefaultRunChartSettings() {
 		refSize: 0.8,
 		svgw: 600,
 		svgh: 600,
-		svgd: 600,
 		axisTitleFontSize: 16,
-		showAxes: true,
-		showRef: true,
 		opacity: 0.6,
 		defaultColor: plotColor,
 		regression: 'None',
