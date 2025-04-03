@@ -28,9 +28,12 @@ This package will be bundled as part of the client dependencies.
 For server builds, run `npm run build` to generate `src/*.js` from `src/*.ts` files.
 This is also automatically done as part of the `prepack` package script. 
 
-NOTE: For now, only code in `.js` files. OR, if using `.ts` files, 
-then commit the generated `.js` files, until a dev script or another approach
-can take care of the `.js` file requirement.
+NOTE: For now, only code in `.js` files. 
+
+### If using `.ts` files:
+1. commit the generated `.js` files
+2. add the js file to package.json prettier command
+keep doing this until a dev script or another approach can take care of the `.js` file requirement.
 
 ## Test
 
