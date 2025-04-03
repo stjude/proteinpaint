@@ -47,26 +47,33 @@ export function validate_query_getTopMutatedGenes(ds: any, genome: any) {
 		// auto fill arguments for topMG query based on datatype availability
 		q.arguments.push({ id: 'maxGenes', label: 'Gene Count', type: 'number', value: 50 })
 		if (ds.queries.snvindel) {
-			q.arguments.push({ id: 'snv_mfndi', label: 'Protein-changing mutation', type: 'string', value: '1' })
-			q.arguments.push({ id: 'snv_splice', label: 'Splice mutation', type: 'string', value: '1' })
-			q.arguments.push({ id: 'snv_utr', label: 'UTR mutation', type: 'string', value: '1' })
-			q.arguments.push({ id: 'snv_s', label: 'Silent mutation', type: 'string', value: '1' })
+			q.arguments.push({ id: 'snv_mfndi', label: 'Protein-changing mutation', type: 'boolean', value: true })
+			q.arguments.push({ id: 'snv_splice', label: 'Splice mutation', type: 'boolean', value: true })
+			q.arguments.push({ id: 'snv_utr', label: 'UTR mutation', type: 'boolean', value: true })
+			q.arguments.push({ id: 'snv_s', label: 'Silent mutation', type: 'boolean', value: true })
 		}
 		if (ds.queries.svfusion) {
-			q.arguments.push({ id: 'sv', label: 'Structural variation', type: 'string', value: '1' })
-			q.arguments.push({ id: 'fusion', label: 'RNA fusion', type: 'string', value: '1' })
+			q.arguments.push({ id: 'sv', label: 'Structural variation', type: 'boolean', value: true })
+			q.arguments.push({ id: 'fusion', label: 'RNA fusion', type: 'boolean', value: true })
 		}
 		/*
 		cnv should only allow to check one option.
 		[ ] cnv
 		    Max size radio select
 			Min absolute log(ratio) radio select
-		if(ds.queries.cnv) {
-			q.arguments.push({ id: 'cnv_1mb_01', label: 'CNV <1Mb abs(logratio)<0.1', type: 'string', value: '1' })
-			q.arguments.push({ id: 'cnv_1mb_02', label: 'CNV <1Mb abs(logratio)<0.2', type: 'string', value: '1' })
-			q.arguments.push({ id: 'cnv_1mb_03', label: 'CNV <1Mb abs(logratio)<0.3', type: 'string', value: '1' })
-		}
 		*/
+		if (ds.queries.cnv) {
+			// TODO should be radio btns
+			q.arguments.push({ id: 'cnv_1mb_01', label: 'CNV <1Mb abs(logratio)<0.1', type: 'boolean', value: false })
+			q.arguments.push({ id: 'cnv_1mb_02', label: 'CNV <1Mb abs(logratio)<0.2', type: 'boolean', value: false })
+			q.arguments.push({ id: 'cnv_1mb_03', label: 'CNV <1Mb abs(logratio)<0.3', type: 'boolean', value: false })
+			q.arguments.push({ id: 'cnv_2mb_01', label: 'CNV <2Mb abs(logratio)<0.1', type: 'boolean', value: false })
+			q.arguments.push({ id: 'cnv_2mb_02', label: 'CNV <2Mb abs(logratio)<0.2', type: 'boolean', value: false })
+			q.arguments.push({ id: 'cnv_2mb_03', label: 'CNV <2Mb abs(logratio)<0.3', type: 'boolean', value: false })
+			q.arguments.push({ id: 'cnv_4mb_01', label: 'CNV <4Mb abs(logratio)<0.1', type: 'boolean', value: true })
+			q.arguments.push({ id: 'cnv_4mb_02', label: 'CNV <4Mb abs(logratio)<0.2', type: 'boolean', value: false })
+			q.arguments.push({ id: 'cnv_4mb_03', label: 'CNV <4Mb abs(logratio)<0.3', type: 'boolean', value: false })
+		}
 	}
 	q.get = async (param: topMutatedGeneRequest) => {
 		let sampleStatement = ''
@@ -77,23 +84,22 @@ export function validate_query_getTopMutatedGenes(ds: any, genome: any) {
 		}
 
 		const fields: string[] = []
-		if (param.snv_mfndi == '1') fields.push('snv_mfndi')
-		if (param.snv_splice == '1') fields.push('snv_splice')
-		if (param.snv_utr == '1') fields.push('snv_utr')
-		if (param.snv_s == '1') fields.push('snv_s')
-		if (param.sv == '1') fields.push('sv')
-		if (param.fusion == '1') fields.push('fusion')
-		/*
-			'cnv_1mb_01',
-			'cnv_1mb_02',
-			'cnv_1mb_03',
-			'cnv_2mb_01',
-			'cnv_2mb_02',
-			'cnv_2mb_03',
-			'cnv_4mb_01',
-			'cnv_4mb_02',
-			'cnv_4mb_03'
-			*/
+		if (param.snv_mfndi) fields.push('snv_mfndi')
+		if (param.snv_splice) fields.push('snv_splice')
+		if (param.snv_utr) fields.push('snv_utr')
+		if (param.snv_s) fields.push('snv_s')
+		if (param.sv) fields.push('sv')
+		if (param.fusion) fields.push('fusion')
+		if (param.cnv_1mb_01) fields.push('cnv_1mb_01')
+		if (param.cnv_1mb_02) fields.push('cnv_1mb_02')
+		if (param.cnv_1mb_03) fields.push('cnv_1mb_03')
+		if (param.cnv_2mb_01) fields.push('cnv_2mb_01')
+		if (param.cnv_2mb_02) fields.push('cnv_2mb_02')
+		if (param.cnv_2mb_03) fields.push('cnv_2mb_03')
+		if (param.cnv_4mb_01) fields.push('cnv_4mb_01')
+		if (param.cnv_4mb_02) fields.push('cnv_4mb_02')
+		if (param.cnv_4mb_03) fields.push('cnv_4mb_03')
+		if (!fields.length) throw 'no fields'
 
 		// TODO preserve count per data type to return as mutation stat
 		const query = `WITH
