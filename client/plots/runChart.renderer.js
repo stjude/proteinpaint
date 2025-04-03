@@ -40,7 +40,7 @@ export function setRenderers(self) {
 	}
 
 	self.initAxes = function (chart) {
-		if (chart.data.samples.length == 0) return
+		if (chart.samples.length == 0) return
 		const offsetX = self.axisOffset.x
 		const offsetY = self.axisOffset.y
 		const xMin = this.range.xMin
@@ -84,7 +84,7 @@ export function setRenderers(self) {
 			// Extract and sort all sample values for our calculations
 			// We filter out any values that are explicitly defined in the term values
 			// This gives us the raw numerical data we need for scaling
-			const colorValues = chart.cohortSamples
+			const colorValues = chart.samples
 				.filter(s => !self.config.colorTW.term.values || !(s.category in self.config.colorTW.term.values))
 				.map(s => s.category)
 				.sort((a, b) => a - b)
@@ -239,61 +239,58 @@ export function setRenderers(self) {
 			chart.xAxis.call(chart.axisBottom)
 			chart.yAxis.call(chart.axisLeft)
 		}
-		if (self.settings.showAxes && !(self.is2DLarge || self.is3D)) {
-			axisG.style('opacity', 1)
-			if (self.config.term) {
-				let termName = getTitle(self.config.term.term.name, 60)
-				if (!self.config.colorTW && !self.config.shapeTW && !self.config.term0)
-					termName = `${termName}, n=${chart.cohortSamples.length}`
 
-				labelsG.selectAll('*').remove()
-				let text = labelsG
-					.append('text')
-					.attr(
-						'transform',
-						`translate(${self.axisOffset.x + self.settings.svgw / 2}, ${self.settings.svgh + self.axisOffset.y + 40})`
-					)
-					.attr('text-anchor', 'middle')
-					.text(termName)
+		axisG.style('opacity', 1)
+		if (self.config.term) {
+			let termName = getTitle(self.config.term.term.name, 60)
+			if (!self.config.colorTW && !self.config.shapeTW && !self.config.term0)
+				termName = `${termName}, n=${chart.samples.length}`
 
-				if (termName.length > 65) {
-					text
-						.on('mouseenter', event => {
-							self.showText(event, self.config.term.term.name)
-						})
-						.on('mouseleave', () => self.dom.tooltip.hide())
-				}
-				if (self.config.term0 && !self.config.colorTW && !self.config.shapeTW) {
-					const term0Name = `${chart.id}, n=${chart.cohortSamples.length}`
+			labelsG.selectAll('*').remove()
+			let text = labelsG
+				.append('text')
+				.attr(
+					'transform',
+					`translate(${self.axisOffset.x + self.settings.svgw / 2}, ${self.settings.svgh + self.axisOffset.y + 40})`
+				)
+				.attr('text-anchor', 'middle')
+				.text(termName)
 
-					labelsG
-						.append('text')
-						.attr(
-							'transform',
-							`translate(${self.axisOffset.x + self.settings.svgw / 2}, ${self.settings.svgh + self.axisOffset.y + 65})`
-						)
-						.attr('text-anchor', 'middle')
-						.text(term0Name)
-				}
-				const term2Name = getTitle(self.config.term2.term.name, 60)
-				text = labelsG
-					.append('text')
-					.attr(
-						'transform',
-						`translate(${self.axisOffset.x - 50}, ${self.settings.svgh / 2 + self.axisOffset.y}) rotate(-90)`
-					)
-					.attr('text-anchor', 'middle')
-					.text(term2Name)
-				if (term2Name.length > 60) {
-					text
-						.on('mouseenter', event => {
-							self.showText(event, self.config.term2.term.name)
-						})
-						.on('mouseleave', () => self.dom.tooltip.hide())
-				}
+			if (termName.length > 65) {
+				text
+					.on('mouseenter', event => {
+						self.showText(event, self.config.term.term.name)
+					})
+					.on('mouseleave', () => self.dom.tooltip.hide())
 			}
-		} else {
-			axisG.style('opacity', 0)
+			if (self.config.term0 && !self.config.colorTW && !self.config.shapeTW) {
+				const term0Name = `${chart.id}, n=${chart.samples.length}`
+
+				labelsG
+					.append('text')
+					.attr(
+						'transform',
+						`translate(${self.axisOffset.x + self.settings.svgw / 2}, ${self.settings.svgh + self.axisOffset.y + 65})`
+					)
+					.attr('text-anchor', 'middle')
+					.text(term0Name)
+			}
+			const term2Name = getTitle(self.config.term2.term.name, 60)
+			text = labelsG
+				.append('text')
+				.attr(
+					'transform',
+					`translate(${self.axisOffset.x - 50}, ${self.settings.svgh / 2 + self.axisOffset.y}) rotate(-90)`
+				)
+				.attr('text-anchor', 'middle')
+				.text(term2Name)
+			if (term2Name.length > 60) {
+				text
+					.on('mouseenter', event => {
+						self.showText(event, self.config.term2.term.name)
+					})
+					.on('mouseleave', () => self.dom.tooltip.hide())
+			}
 		}
 	}
 
@@ -301,13 +298,13 @@ export function setRenderers(self) {
 		if (self.canvas) self.canvas.remove()
 
 		const g = chart.serie
-		const data = chart.data
+		const samples = chart.samples
 		chart.serie.selectAll('*').remove()
 
 		// remove all symbols as there is no data id for privacy
 		//g.selectAll('path').remove()
 
-		const symbols = g.selectAll('path[name="serie"]').data(data.samples)
+		const symbols = g.selectAll('path[name="serie"]').data(samples)
 		symbols
 			.transition()
 			.duration(duration)
@@ -337,7 +334,7 @@ export function setRenderers(self) {
 	}
 
 	self.showRunChart = function (chart, g) {
-		const coords = chart.data.samples.map(s => self.getCoordinates(chart, s)).sort((a, b) => a.x - b.x)
+		const coords = chart.samples.map(s => self.getCoordinates(chart, s)).sort((a, b) => a.x - b.x)
 		const color = this.settings.defaultColor
 		const areaBuilder = line()
 			.x(d => d.x)
@@ -349,7 +346,7 @@ export function setRenderers(self) {
 			.attr('stroke-linejoin', 'round')
 			.attr('opacity', this.settings.opacity)
 			.attr('d', areaBuilder(coords))
-		const median = d3Median(chart.data.samples, d => d.y)
+		const median = d3Median(chart.samples, d => d.y)
 		const y = chart.yAxisScale(median)
 		g.append('line')
 			.attr('x1', coords[0].x)
@@ -364,30 +361,6 @@ export function setRenderers(self) {
 			.attr('text-anchor', 'end')
 			.text('Median = ' + roundValueAuto(median, true, 1))
 			.attr('font-size', '0.8em')
-	}
-
-	self.renderContours = function (chart) {
-		const contourG = chart.serie
-		let zAxisScale
-		if (self.config.colorTW?.q.mode == 'continuous') {
-			const [zMin, zMax] = extent(chart.data.samples, d => d.category)
-			zAxisScale = d3Linear().domain([zMin, zMax]).range([0, 1])
-		}
-
-		const data = chart.data.samples
-			.filter(s => self.getOpacity(s) > 0)
-			.map(s => {
-				return { x: chart.xAxisScale(s.x), y: chart.yAxisScale(s.y), z: zAxisScale ? zAxisScale(s.category) : 1 }
-			})
-		renderContours(
-			contourG,
-			data,
-			self.settings.svgw,
-			self.settings.svgh,
-			self.settings.colorContours,
-			self.settings.contourBandwidth,
-			self.settings.contourThresholds
-		)
 	}
 
 	self.getStrokeWidth = function (c) {
@@ -419,7 +392,7 @@ export function setRenderers(self) {
 			if (!regressionType || regressionType == 'None') continue
 			let regression
 			const data = []
-			await chart.cohortSamples.forEach(c => {
+			await chart.samples.forEach(c => {
 				const x = chart.xAxisScale(c.x)
 				const y = chart.yAxisScale(c.y)
 				data.push({ x, y })
@@ -531,158 +504,6 @@ export function setRenderers(self) {
 		return transform
 	}
 
-	self.lassoReset = chart => {
-		const mainG = chart.chartDiv.select('.sjpcb-runchart-mainG')
-
-		if (chart.lasso)
-			chart.lasso
-				.items(mainG.select('.sjpcb-runchart-series').selectAll('path[name="serie"]'))
-				.targetArea(mainG)
-				.on('start', lasso_start)
-				.on('draw', lasso_draw)
-				.on('end', lasso_end)
-
-		function lasso_start() {
-			if (self.lassoOn) {
-				chart.lasso
-					.items()
-					.attr('transform', c => self.transform(chart, c, 1 / 2))
-					.style('fill-opacity', c => (self.getOpacity(c) != 0 ? 0.5 : 0))
-					.classed('not_possible', true)
-					.classed('selected', false)
-			}
-		}
-
-		function lasso_draw() {
-			if (self.lassoOn) {
-				// Style the possible dots
-
-				chart.lasso
-					.possibleItems()
-					.attr('transform', c => self.transform(chart, c, 1.2))
-					.style('fill-opacity', c => self.getOpacity(c))
-					.classed('not_possible', false)
-					.classed('possible', true)
-
-				//Style the not possible dot
-				chart.lasso
-					.notPossibleItems()
-					.attr('transform', c => self.transform(chart, c, 1 / 2))
-					.style('fill-opacity', c => (self.getOpacity(c) != 0 ? 0.5 : 0))
-					.classed('not_possible', true)
-					.classed('possible', false)
-			}
-		}
-
-		function lasso_end(dragEnd) {
-			if (self.lassoOn) {
-				// Reset classes of all items (.possible and .not_possible are useful
-				// only while drawing lasso. At end of drawing, only selectedItems()
-				// should be used)
-				chart.lasso.items().classed('not_possible', false).classed('possible', false)
-
-				// Style the selected dots
-				chart.lasso.selectedItems().attr('transform', c => self.transform(chart, c, 1.3))
-				chart.lasso.items().style('fill-opacity', c => self.getOpacity(c))
-				self.selectedItems = []
-				for (const item of chart.lasso.selectedItems()) {
-					const data = item.__data__
-					if ('sampleId' in data && !(data.hidden['category'] || data.hidden['shape'])) self.selectedItems.push(item)
-				}
-				chart.lasso.notSelectedItems().attr('transform', c => self.transform(chart, c))
-
-				showLassoMenu(dragEnd.sourceEvent)
-			}
-		}
-
-		function showLassoMenu(event) {
-			const samples = self.selectedItems.map(item => item.__data__)
-			self.dom.tip.clear().hide()
-			if (self.selectedItems.length == 0) return
-			self.dom.tip.show(event.clientX, event.clientY)
-
-			const menuDiv = self.dom.tip.d.append('div')
-			menuDiv
-				.append('div')
-				.attr('class', 'sja_menuoption sja_sharp_border')
-				.text(`List ${self.selectedItems.length} samples`)
-				.on('click', event => {
-					self.dom.tip.hide()
-					self.showTable(
-						{
-							name: 'Group ' + (self.config.groups.length + 1),
-							items: samples
-						},
-						event.clientX,
-						event.clientY,
-						true
-					)
-				})
-
-			menuDiv
-				.append('div')
-				.attr('class', 'sja_menuoption sja_sharp_border')
-				.text('Add to a group')
-				.on('click', async () => {
-					const group = {
-						name: 'Group',
-						items: samples
-					}
-					const tw = getSamplelstTW([group])
-					const filter = getFilter(tw)
-					addNewGroup(self.app, filter, self.state.groups)
-				})
-			menuDiv
-				.append('div')
-				.attr('class', 'sja_menuoption sja_sharp_border')
-				.text('Add to a group and filter')
-				.on('click', () => {
-					const group = {
-						name: 'Group',
-						items: samples
-					}
-					const tw = getSamplelstTW([group])
-					const filter = getFilter(tw)
-					addNewGroup(self.app, filter, self.state.groups)
-					self.addToFilter(tw)
-				})
-			if ('sample' in samples[0])
-				menuDiv
-					.append('div')
-					.attr('class', 'sja_menuoption sja_sharp_border')
-					.text('Show samples')
-					.on('click', async () => {
-						const groupSamples = []
-						for (const sample of samples) groupSamples.push({ sampleId: sample.sampleId, sampleName: sample.sample })
-						self.app.dispatch({
-							type: 'plot_create',
-							id: getId(),
-							config: {
-								chartType: 'sampleView',
-								samples: groupSamples
-							}
-						})
-						self.dom.tip.hide()
-					})
-		}
-
-		if (self.lassoOn) {
-			// this seems to clear stale lasso data as sometimes seen
-			// when the global filter is changed between lassoing
-			// uncertain explanation: the svg and mainG is potentially different between rerenders,
-			// so the previous mainG.call(chart.lasso) inside toggle_lasso is on a removed mainG????
-			mainG.on('.zoom', null)
-			mainG.on('mousedown.drag', null)
-			mainG.call(chart.lasso)
-		}
-	}
-
-	self.addGroup = async function (group) {
-		group.plotId = self.id
-		await self.app.vocabApi.addGroup(group)
-		self.dom.tip.hide()
-	}
-
 	self.setTools = function () {
 		if (!self.charts[0]) return
 		const toolsDiv = self.dom.toolsDiv.style('background-color', 'white')
@@ -721,17 +542,6 @@ export function setRenderers(self) {
 			handler: zoomOut,
 			title: 'Zoom out. You can also zoom out pressing the Ctrl key and using the mouse wheel'
 		})
-		const searchDiv = toolsDiv.insert('div').style('display', display).style('margin', '15px 10px')
-		const lassoDiv = toolsDiv.insert('div').style('display', display).style('margin', '15px 10px')
-		if (!(self.is2DLarge || self.is3D)) {
-			icon_functions['search'](searchDiv, { handler: e => self.searchSample(e), title: 'Search samples' })
-			icon_functions['lasso'](lassoDiv, {
-				handler: toggle_lasso,
-				enabled: self.lassoOn,
-				title: 'Select a group of samples'
-			})
-		}
-		self.dom.groupDiv = toolsDiv.insert('div').style('display', display).style('margin', '15px 10px')
 
 		const mainG = self.charts[0].mainG
 		const zoom = d3zoom()
@@ -743,11 +553,6 @@ export function setRenderers(self) {
 			})
 		if (self.config.scaleDotTW && self.zoom > 4) resetToIdentity()
 		mainG.call(zoom)
-		for (const chart of self.charts) {
-			chart.lasso = d3lasso()
-			self.lassoReset(chart)
-		}
-		self.updateGroupsButton()
 
 		function handleZoom(event) {
 			for (const chart of self.charts) {
@@ -809,24 +614,6 @@ export function setRenderers(self) {
 		}
 	}
 
-	self.updateGroupsButton = function () {
-		self.dom.groupDiv.selectAll('*').remove()
-		self.dom.tip.hide()
-		if (self.config.groups.length == 0) return
-		self.dom.groupDiv
-			.append('button')
-			.style('border', 'none')
-			.style('background', 'transparent')
-			.style('padding', 0)
-			.append('div')
-			.style('font-size', '1.1em')
-			.html(`&#931${self.config.groups.length + 1};`)
-			.on('click', event => {
-				if (self.config.groups.length == 1) self.showGroupMenu(event, self.config.groups[0])
-				else self.showGroupsMenu(event)
-			})
-	}
-
 	self.getFontSize = function (legend) {
 		let fontSize = 0.9
 		const top = 20
@@ -853,8 +640,8 @@ export function setRenderers(self) {
 
 		let title
 		let title0 = self.config.term0
-			? `${self.config.term0.term.name + ' ' + chart.id}, n=${chart.cohortSamples.length}`
-			: `${chart.cohortSamples.length} ${self.config.sampleType ? self.config.sampleType + 's' : 'samples'}`
+			? `${self.config.term0.term.name + ' ' + chart.id}, n=${chart.samples.length}`
+			: `${chart.samples.length} ${self.config.sampleType ? self.config.sampleType + 's' : 'samples'}`
 		if (self.filterSampleStr) title0 += `, search = ${self.filterSampleStr}`
 		legendG.append('text').attr('x', 0).attr('y', offsetY).text(title0).style('font-weight', 'bold')
 
