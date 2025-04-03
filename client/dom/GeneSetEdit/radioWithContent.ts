@@ -1,5 +1,5 @@
 import { select as d3select } from 'd3-selection'
-import { Elem } from '../../types/d3'
+import type { Elem } from '../../types/d3'
 
 export function makeRadiosWithContentDivs(options: any, div: Elem) {
 	const divs = div
