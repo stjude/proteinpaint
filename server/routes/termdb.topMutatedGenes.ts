@@ -64,15 +64,15 @@ export function validate_query_getTopMutatedGenes(ds: any, genome: any) {
 		*/
 		if (ds.queries.cnv) {
 			// TODO should be radio btns
-			q.arguments.push({ id: 'cnv_1mb_01', label: 'CNV <1Mb abs(logratio)<0.1', type: 'boolean', value: false })
-			q.arguments.push({ id: 'cnv_1mb_02', label: 'CNV <1Mb abs(logratio)<0.2', type: 'boolean', value: false })
-			q.arguments.push({ id: 'cnv_1mb_03', label: 'CNV <1Mb abs(logratio)<0.3', type: 'boolean', value: false })
-			q.arguments.push({ id: 'cnv_2mb_01', label: 'CNV <2Mb abs(logratio)<0.1', type: 'boolean', value: false })
-			q.arguments.push({ id: 'cnv_2mb_02', label: 'CNV <2Mb abs(logratio)<0.2', type: 'boolean', value: false })
-			q.arguments.push({ id: 'cnv_2mb_03', label: 'CNV <2Mb abs(logratio)<0.3', type: 'boolean', value: false })
-			q.arguments.push({ id: 'cnv_4mb_01', label: 'CNV <4Mb abs(logratio)<0.1', type: 'boolean', value: true })
-			q.arguments.push({ id: 'cnv_4mb_02', label: 'CNV <4Mb abs(logratio)<0.2', type: 'boolean', value: false })
-			q.arguments.push({ id: 'cnv_4mb_03', label: 'CNV <4Mb abs(logratio)<0.3', type: 'boolean', value: false })
+			q.arguments.push({ id: 'cnv_1mb_01', label: 'CNV <1Mb abs(logratio)>0.1', type: 'boolean', value: false })
+			q.arguments.push({ id: 'cnv_1mb_02', label: 'CNV <1Mb abs(logratio)>0.2', type: 'boolean', value: false })
+			q.arguments.push({ id: 'cnv_1mb_03', label: 'CNV <1Mb abs(logratio)>0.3', type: 'boolean', value: false })
+			q.arguments.push({ id: 'cnv_2mb_01', label: 'CNV <2Mb abs(logratio)>0.1', type: 'boolean', value: false })
+			q.arguments.push({ id: 'cnv_2mb_02', label: 'CNV <2Mb abs(logratio)>0.2', type: 'boolean', value: false })
+			q.arguments.push({ id: 'cnv_2mb_03', label: 'CNV <2Mb abs(logratio)>0.3', type: 'boolean', value: false })
+			q.arguments.push({ id: 'cnv_4mb_01', label: 'CNV <4Mb abs(logratio)>0.1', type: 'boolean', value: true })
+			q.arguments.push({ id: 'cnv_4mb_02', label: 'CNV <4Mb abs(logratio)>0.2', type: 'boolean', value: false })
+			q.arguments.push({ id: 'cnv_4mb_03', label: 'CNV <4Mb abs(logratio)>0.3', type: 'boolean', value: false })
 		}
 	}
 	q.get = async (param: topMutatedGeneRequest) => {
