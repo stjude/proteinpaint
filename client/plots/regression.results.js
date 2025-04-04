@@ -263,6 +263,7 @@ function setRenderers(self) {
 		self.mayshow_splinePlots(result)
 		self.mayshow_residuals(result)
 		self.mayshow_coefficients(result)
+		self.mayshow_coxDisclaimer()
 		self.mayshow_totalSnpEffect(result)
 		self.mayshow_type3(result)
 		self.mayshow_tests(result)
@@ -1190,6 +1191,21 @@ function setRenderers(self) {
 			else if (variables.length == 1) return variables[0]
 			else if (variables.length == 2) return variables.join(' and ')
 			else return `${variables.slice(0, -1).join(', ')}, and ${variables.slice(-1)}`
+		}
+	}
+
+	// show disclaimer message under the coefficient tables when
+	// regressionType == 'cox
+	self.mayshow_coxDisclaimer = () => {
+		const disclaimer = self.app.vocabApi.termdbConfig.regression?.settings?.coxDisclaimer
+		if (disclaimer && self.config.regressionType == 'cox') {
+			self.dom.oneSetResultDiv
+				.append('div')
+				.attr('data-testid', 'sjpp-regression-result-coxDisclaimer')
+				.style('margin', '20px 0px 20px 10px')
+				.style('font-size', '.8em')
+				.style('text-align', 'left')
+				.text(disclaimer)
 		}
 	}
 
