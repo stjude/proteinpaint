@@ -218,14 +218,6 @@ async function colorAndShapeSamples(refSamples, cohortSamples, data, q) {
 		if (q.shapeTW) processSample(dbSample, sample, q.shapeTW, results[divideBy].shapeMap, 'shape')
 		else sample.shape = 'Ref'
 		results[divideBy].samples.push(sample)
-		for (const key in sample.hidden)
-			if (sample.hidden[key]) {
-				//hidden samples should not be counted
-				const colorMap = results[divideBy].colorMap
-				const shapeMap = results[divideBy].shapeMap
-				if (colorMap[sample.category]) colorMap[sample.category].sampleCount--
-				if (shapeMap[sample.shape]) shapeMap[sample.shape].sampleCount--
-			}
 	}
 	if (fCount) console.log(fCount + ' samples not in the database or filtered')
 	//To choose a color scheme we pass the max number of categories
