@@ -33,9 +33,30 @@ export const shapes = shapesArray
 const numberOfSamplesCutoff = 20000 // if map is greater than cutoff, switch from svg to canvas rendering
 
 class RunChart {
+	type: string
+	zoom: number
+	startGradient: object
+	stopGradient: object
+	opts!: { header: any, holder: any, name?: string, term?: any, term2?: any, term0?: any, colorTW?: any, shapeTW?: any, scaleDotTW?: any, divideByTW?: any}
+	dom: any
+	app: any
+	id!: any
+	settings: any
+	config!: { name?: string, term: any, term2: any, term0?: any, colorTW?: any, shapeTW?: any, scaleDotTW?: any, divideByTW?: any, settings: any}
+	charts: any
+	axisOffset: any
+	coordsTW!: object[]
+	range: any
+	years!: number[]
+	state: any
+	components: any
+	processData!: () => Promise<void>
+	render!: () => Promise<void>
+	setTools!: () => Promise<void>
+
+
 	constructor() {
 		this.type = 'runChart'
-		this.lassoOn = false
 		this.zoom = 1
 		this.startGradient = {}
 		this.stopGradient = {}
@@ -48,13 +69,14 @@ class RunChart {
 			.insert('div')
 			.style('display', 'inline-block')
 			.attr('class', 'pp-termdb-plot-controls')
-		this.mainDiv = this.opts.holder.insert('div').style('display', 'inline-block').style('vertical-align', 'top')
+		const mainDiv = this.opts.holder.insert('div').style('display', 'inline-block').style('vertical-align', 'top')
 
 		const offsetX = 80
 		this.axisOffset = { x: offsetX, y: 30 }
 
 		this.dom = {
 			header: this.opts.header,
+			mainDiv,
 			//holder,
 			loadingDiv: this.opts.holder.append('div').style('position', 'absolute').style('left', '45%').style('top', '60%'),
 			tip: new Menu({ padding: '0px' }),
@@ -92,18 +114,16 @@ class RunChart {
 	// later on, add methods with same name to FrontendVocab
 	getDataRequestOpts() {
 		const c = this.config
-		const coordTWs = []
+		const coordTWs: object[] = []
 		if (c.term) coordTWs.push(c.term)
 		if (c.term2) coordTWs.push(c.term2)
 		const filter = this.getFilter()
-		const opts = {
+		const opts: any = {
 			name: c.name, // the actual identifier of the plot, for retrieving data from server
 			colorTW: c.colorTW,
 			filter,
 			coordTWs
 		}
-		if (this.state.termfilter.filter0) opts.filter0 = this.state.termfilter.filter0
-		if (c.colorColumn) opts.colorColumn = c.colorColumn
 		if (c.shapeTW) opts.shapeTW = c.shapeTW
 		if (c.scaleDotTW) {
 			if (!c.scaleDotTW.q) c.scaleDotTW.q = {}
@@ -153,13 +173,11 @@ class RunChart {
 	}
 
 	initRanges() {
-		this.xMin = Number.POSITIVE_INFINITY
-		this.xMax = Number.NEGATIVE_INFINITY
-		const samples = []
+		const samples: any = []
 		for (const chart of this.charts) samples.push(...chart.samples)
 		if (samples.length == 0) return
 
-		const s0 = samples[0] //First sample to start reduce comparisons
+		const s0: any = samples[0] //First sample to start reduce comparisons
 		const [xMin, xMax, yMin, yMax, zMin, zMax, scaleMin, scaleMax] = samples.reduce(
 			(s, d) => [
 				d.x < s[0] ? d.x : s[0],
@@ -182,8 +200,6 @@ class RunChart {
 			chart.zMax = zMax
 			chart.scaleMin = scaleMin
 			chart.scaleMax = scaleMax
-			if (this.xMin > xMin) this.xMin = xMin
-			if (this.xMax < xMax) this.xMax = xMax
 		}
 	}
 
@@ -393,12 +409,7 @@ class RunChart {
 			})
 		}
 		// TODO: handle multiple chart download when there is a divide by term
-		this.components.controls.on('downloadClick.scatter', () => {
-			if (this.is2DLarge || this.is3D) {
-				const url = this.canvas.toDataURL('image/png')
-				downloadImage(url)
-			} else for (const chart of this.charts) downloadSingleSVG(chart.svg, 'scatter.svg', this.opts.holder.node())
-		})
+		for (const chart of this.charts) downloadSingleSVG(chart.svg, 'scatter.svg', this.opts.holder.node())
 	}
 
 	getSites() {
@@ -415,18 +426,12 @@ class RunChart {
 	}
 }
 export function openRunChartPlot(app, plot, filter = null) {
-	let config = {
+	let config: any = {
 		chartType: 'runChart',
 		name: plot.name,
 		filter
 	}
-	if (plot.sampleCategory)
-		config.sampleCategory = {
-			tw: structuredClone(plot.sampleCategory.tw),
-			order: plot.sampleCategory.order,
-			defaultValue: plot.sampleCategory.defaultValue
-		}
-	if (plot.sampleType) config.sampleType = plot.sampleType
+	
 	if (plot.colorTW) config.colorTW = structuredClone(plot.colorTW)
 	else if (plot.colorColumn) config.colorColumn = structuredClone(plot.colorColumn)
 
@@ -455,7 +460,7 @@ export async function getPlotConfig(opts, app) {
 	//if (!opts.colorTW) throw 'runChart getPlotConfig: opts.colorTW{} missing'
 	//if (!opts.name && !(opts.term && opts.term2)) throw 'runChart getPlotConfig: missing coordinates input'
 
-	const plot = {
+	const plot: any = {
 		groups: [],
 		settings: {
 			controls: {

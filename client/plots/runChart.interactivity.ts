@@ -1,23 +1,13 @@
-import { filterJoin, getFilterItemByTag } from '#filter'
-import { renderTable } from '../dom/table.ts'
 import { mclass } from '#shared/common.js'
 import { Menu } from '#dom/menu'
 import { rgb } from 'd3-color'
-import { getFilter } from '../mass/groups.js'
-import {
-	addPlotMenuItem,
-	showTermsTree,
-	addMatrixMenuItems,
-	openSummaryPlot,
-	addNewGroup,
-	getSamplelstTW
-} from '../mass/groups.js'
 import { newSandboxDiv } from '../dom/sandbox.ts'
 import { getId } from '#mass/nav'
-import { searchSampleInput } from './sampleView.js'
 import { shapesArray, shapeSelector } from '../dom/shapes.js'
 import { roundValueAuto } from '#shared/roundValue.js'
 import { getDateStrFromNumber } from '#shared/terms.js'
+import { select } from 'd3-selection'
+
 
 export function setInteractivity(self) {
 	self.showTooltip = function (event, chart) {
@@ -69,19 +59,19 @@ export function setInteractivity(self) {
 			return -1
 		})
 		if (samples.length == 0) return
-		const tree = []
+		const tree: any = []
 		const showCoords = self.config.term ? true : false
 		const getCoords = sample => `${roundValueAuto(sample.x)},${roundValueAuto(sample.y)}`
 		//Building tree
 		for (const sample of samples) {
 			const id = getCoords(sample)
-			let node = tree.find(item => item.id == id)
+			let node: any = tree.find(item => item.id == id)
 			if (!node) {
 				node = { id, parentId: null, samples: [sample], level: 1, category: null, children: [] }
 				tree.push(node)
 				if (showCoords) {
 					const xvalue = getCategoryValue('x', sample, self.config.term)
-					const xnode = {
+					const xnode: any = {
 						id: xvalue,
 						parentId: id,
 						samples: [sample],
@@ -93,7 +83,7 @@ export function setInteractivity(self) {
 					tree.push(xnode)
 					node.children.push(xnode)
 					const yvalue = getCategoryValue('y', sample, self.config.term2)
-					const ynode = {
+					const ynode: any = {
 						id: `${yvalue}${xvalue}`,
 						parent: xnode,
 						parentId: xvalue,
@@ -118,7 +108,7 @@ export function setInteractivity(self) {
 		}
 		let level = showCoords ? 4 : 2
 		let parentCategories = showCoords ? ['y', 'x', ''] : ['']
-		if (self.config.colorTW) addNodes('category', self.config.colorTW)
+		if (self.config.colorTW) addNodes('category', self.config.colorTW, null)
 		if (self.config.shapeTW) addNodes('shape', self.config.shapeTW, self.config.colorTW)
 		if (self.config.scaleDotTW) addNodes('scale', self.config.scaleDotTW, self.config.shapeTW)
 		self.dom.tooltip.clear()
@@ -277,8 +267,8 @@ export function setInteractivity(self) {
 				let parentId = ''
 				for (const pc of parentCategories) parentId += getCategoryValue(pc, sample, parentTW)
 				const id = value + parentId
-				let node = tree.find(item => item.id == id && item.parentId == parentId)
-				let parent = tree.find(item => item.id == parentId)
+				let node: any = tree.find((item: any) => item.id == id && item.parentId == parentId)
+				let parent = tree.find((item: any) => item.id == parentId)
 				if (!node) {
 					node = { id, parentId, samples: [], level, category, children: [], value }
 					tree.push(node)
@@ -442,7 +432,7 @@ export function setInteractivity(self) {
 				})
 		if (isColorTW) {
 			const color = rgb(category.color).formatHex()
-			const input = div
+			const input: any = div
 				.append('div')
 				.attr('class', 'sja_sharp_border')
 				.style('padding', '0px 10px')

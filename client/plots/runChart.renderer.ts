@@ -1,24 +1,20 @@
 import { zoom as d3zoom, zoomIdentity } from 'd3-zoom'
 import { icons as icon_functions, ColorScale, Menu, getMaxLabelWidth } from '#dom'
-import { d3lasso } from '#common/lasso'
 import { dt2label, morigin } from '#shared/common.js'
 import { rgb } from 'd3-color'
 import { scaleLinear as d3Linear } from 'd3-scale'
 import { axisLeft, axisBottom } from 'd3-axis'
 import { select } from 'd3-selection'
-import { getSamplelstTW, getFilter } from '../mass/groups.js'
 import { regressionPoly } from 'd3-regression'
-import { line, extent, contourDensity, geoPath, scaleSequential, max, interpolateGreys, interpolateOranges } from 'd3'
-import { getId } from '#mass/nav'
+import { line } from 'd3'
 import { minShapeSize, maxShapeSize } from './runChart.js'
-import { addNewGroup } from '../mass/groups.js'
 import { shapes } from './runChart.js'
 import { roundValueAuto } from '#shared/roundValue.js'
 import { median as d3Median } from 'd3-array'
 
 export function setRenderers(self) {
 	self.render = function () {
-		const chartDivs = self.mainDiv.selectAll(':scope > div').data(self.charts, chart => chart?.id)
+		const chartDivs = self.dom.mainDiv.selectAll(':scope > div').data(self.charts, chart => chart?.id)
 		chartDivs.exit().remove()
 		chartDivs.each(self.renderChart)
 		chartDivs.enter().append('div').style('vertical-align', 'top').each(self.renderChart)
@@ -34,7 +30,7 @@ export function setRenderers(self) {
 		chart.chartDiv.on('click', event => self.showTooltip(event, chart))
 
 		chart.svg = chart.chartDiv.select('svg').empty() ? chart.chartDiv.append('svg') : chart.chartDiv.select('svg')
-		renderSVG(chart, s, 0)
+		renderSVG(chart, s)
 
 		chart.chartDiv.transition().duration(s.duration).style('opacity', 1)
 	}
@@ -149,7 +145,7 @@ export function setRenderers(self) {
 		const getLegendLabelWidth = (key, svg) => {
 			const legend = chart[`${key}Legend`]
 			if (!legend) return 0
-			const labels = []
+			const labels: any = []
 			for (const [k, v] of legend.entries()) {
 				if (k != 'Ref') labels.push(`${k}, n=(${v.sampleCount})`)
 			}
@@ -337,8 +333,8 @@ export function setRenderers(self) {
 		const coords = chart.samples.map(s => self.getCoordinates(chart, s)).sort((a, b) => a.x - b.x)
 		const color = this.settings.defaultColor
 		const areaBuilder = line()
-			.x(d => d.x)
-			.y(d => d.y)
+			.x((d: any) => d.x)
+			.y((d: any) => d.y)
 		g.append('path')
 			.attr('stroke', color)
 			.attr('fill', 'none')
@@ -346,7 +342,7 @@ export function setRenderers(self) {
 			.attr('stroke-linejoin', 'round')
 			.attr('opacity', this.settings.opacity)
 			.attr('d', areaBuilder(coords))
-		const median = d3Median(chart.samples, d => d.y)
+		const median = d3Median(chart.samples, (d: any) => d.y)
 		const y = chart.yAxisScale(median)
 		g.append('line')
 			.attr('x1', coords[0].x)
@@ -378,11 +374,11 @@ export function setRenderers(self) {
 		const term0Values = self.config.term0?.term.values
 		if (term0Values) {
 			// sort the divideBy subCharts based on pre-defined term0 order in db
-			const orderedLabels = Object.values(term0Values).sort((a, b) =>
+			const orderedLabels = Object.values(term0Values).sort((a: any, b: any) =>
 				'order' in a && 'order' in b ? a.order - b.order : 0
 			)
 			self.charts.sort(
-				(a, b) => orderedLabels.findIndex(v => v.label == a.id) - orderedLabels.findIndex(v => v.label == b.id)
+				(a, b) => orderedLabels.findIndex((v: any) => v.label == a.id) - orderedLabels.findIndex((v: any) => v.label == b.id)
 			)
 		}
 		for (const chart of self.charts) {
@@ -391,7 +387,7 @@ export function setRenderers(self) {
 
 			if (!regressionType || regressionType == 'None') continue
 			let regression
-			const data = []
+			const data: any = []
 			await chart.samples.forEach(c => {
 				const x = chart.xAxisScale(c.x)
 				const y = chart.yAxisScale(c.y)
@@ -412,8 +408,8 @@ export function setRenderers(self) {
 					.order(3)
 				regressionCurve = regression(data)
 			} else if (regressionType == 'Lowess') {
-				const X = [],
-					Y = []
+				const X: any = [],
+					Y: any = []
 				for (const sample of data) {
 					X.push(sample.x)
 					Y.push(sample.y)
@@ -509,14 +505,7 @@ export function setRenderers(self) {
 		const toolsDiv = self.dom.toolsDiv.style('background-color', 'white')
 		toolsDiv.selectAll('*').remove()
 		let display = 'block'
-		// const helpDiv = toolsDiv
-		// 	.insert('div')
-		// 	.style('display', display)
-		// 	.style('margin', '15px 10px')
-		// 	.attr('name', 'sjpp-help-btn') //For unit tests
-		// icon_functions['help'](helpDiv, {
-		// 	handler: () => window.open('https://github.com/stjude/proteinpaint/wiki/runchart-plot', '_blank')
-		// })
+
 
 		const homeDiv = toolsDiv
 			.insert('div')
@@ -591,27 +580,7 @@ export function setRenderers(self) {
 			self.render()
 		}
 
-		function toggle_lasso() {
-			self.lassoOn = !self.lassoOn
-			for (const chart of self.charts) {
-				if (self.lassoOn) {
-					chart.mainG.on('.zoom', null)
-					chart.mainG.call(chart.lasso)
-				} else {
-					chart.mainG.on('mousedown.drag', null)
-					chart.lasso.items().classed('not_possible', false)
-					chart.lasso.items().classed('possible', false)
-					chart.lasso
-						.items()
-						.attr('r', self.settings.size)
-						.style('fill-opacity', c => self.getOpacity(c))
-					chart.mainG.call(zoom)
-					self.selectedItems = null
-				}
-			}
-			lassoDiv.select('*').remove()
-			icon_functions['lasso'](lassoDiv, { handler: toggle_lasso, enabled: self.lassoOn })
-		}
+		
 	}
 
 	self.getFontSize = function (legend) {
@@ -715,7 +684,7 @@ export function setRenderers(self) {
 							defaultPercentile: this.settings.colorScalePercentile,
 
 							// This callback handles all mode changes and updates
-							callback: obj => {
+							callback: (obj: any) => {
 								// Handle different modes for color scaling
 								if (obj.cutoffMode === 'auto') {
 									min = colorValues[0]
@@ -963,7 +932,7 @@ export function setRenderers(self) {
 				const menu = new Menu({ padding: '3px' })
 				const div = menu.d
 				div.append('label').text('Min:')
-				const minInput = div
+				const minInput: any = div
 					.append('input')
 					.attr('type', 'number')
 					.attr('min', '1')
@@ -984,7 +953,7 @@ export function setRenderers(self) {
 						})
 					})
 				div.append('label').text('Max:')
-				const maxInput = div
+				const maxInput: any = div
 					.append('input')
 					.attr('type', 'number')
 					.attr('min', '1')
@@ -1007,8 +976,7 @@ export function setRenderers(self) {
 				const divRadios = menu.d.append('div')
 				divRadios.append('label').text('Order: ')
 				const data = ['Ascending', 'Descending']
-				divRadios.selectAll('input').data(data).enter().append('div').style('display', 'inline-block').each(addRadio)
-				function addRadio(text) {
+				const addRadio = (text) => {
 					const div = select(this)
 					const input = div
 						.append('input')
@@ -1027,6 +995,8 @@ export function setRenderers(self) {
 						})
 					})
 				}
+				divRadios.selectAll('input').data(data).enter().append('div').style('display', 'inline-block').each(addRadio)
+				
 				menu.showunder(e.target)
 			})
 	}
@@ -1064,7 +1034,7 @@ export function setRenderers(self) {
 			.style('font-weight', 'bold')
 
 		offsetX += step
-		const mutations = []
+		const mutations: any = []
 		for (const [key, value] of map)
 			if (value.mutation)
 				//if no mutation is Ref
@@ -1133,41 +1103,4 @@ export function setRenderers(self) {
 	}
 }
 
-export function renderContours(contourG, data, width, height, colorContours, bandwidth, thresholds) {
-	// Create the horizontal and vertical scales.
-	const x = d3Linear()
-		.domain(extent(data, s => s.x))
-		.nice()
-		.rangeRound([0, width])
-	const y = d3Linear()
-		.domain(extent(data, s => s.y))
-		.nice()
-		.rangeRound([height, 0])
-	const contours = contourDensity()
-		.x(s => s.x)
-		.y(s => s.y)
-		.weight(s => s.z)
-		.size([width, height])
-		.cellSize(2)
 
-		.bandwidth(bandwidth)
-		.thresholds(thresholds)(data)
-
-	const colorScale = scaleSequential()
-		.domain([0, max(contours, d => d.value)])
-		.interpolator(interpolateGreys)
-
-	// Compute the density contours.
-	// Append the contours.
-	contourG
-		.attr('fill', 'none')
-		.attr('stroke', 'gray') // gray to make the contours visible
-		.attr('stroke-linejoin', 'round')
-		.selectAll()
-		.data(contours)
-		.join('path')
-		.attr('stroke-width', (d, i) => (i % 5 ? 0.25 : 1))
-		.attr('d', geoPath())
-		.attr('fill', colorContours ? d => colorScale(d.value) : 'none')
-		.attr('fill-opacity', 0.05) //this is the opacity of the contour, reduce it to 0.05 to avoid hiding the points
-}
