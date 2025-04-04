@@ -380,7 +380,11 @@ async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 	async function makeGroupsetDraggables() {
 		draggablesDiv.style('display', 'inline-block')
 		draggablesDiv.selectAll('*').remove()
-		self.groupSettingInstance = new GroupSettingMethods(self, { holder: draggablesDiv, hideApply: true })
+		self.groupSettingInstance = new GroupSettingMethods(self, {
+			type: 'filter',
+			holder: draggablesDiv,
+			hideApply: true
+		})
 		await self.groupSettingInstance.main()
 	}
 
