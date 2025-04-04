@@ -8,7 +8,6 @@ import { roundValueAuto } from '#shared/roundValue.js'
 import { getDateStrFromNumber } from '#shared/terms.js'
 import { select } from 'd3-selection'
 
-
 export function setInteractivity(self) {
 	self.showTooltip = function (event, chart) {
 		const onClick = event.type == 'click'
@@ -107,7 +106,7 @@ export function setInteractivity(self) {
 			}
 		}
 		let level = showCoords ? 4 : 2
-		let parentCategories = showCoords ? ['y', 'x', ''] : ['']
+		const parentCategories = showCoords ? ['y', 'x', ''] : ['']
 		if (self.config.colorTW) addNodes('category', self.config.colorTW, null)
 		if (self.config.shapeTW) addNodes('shape', self.config.shapeTW, self.config.colorTW)
 		if (self.config.scaleDotTW) addNodes('scale', self.config.scaleDotTW, self.config.shapeTW)
@@ -167,7 +166,7 @@ export function setInteractivity(self) {
 			const sample = node.samples[0]
 
 			if (sample.category != 'Ref') {
-				let row = table.append('tr')
+				const row = table.append('tr')
 
 				const showIcon = tw != null && (tw == self.config.colorTW || tw == self.config.shapeTW)
 				let label = tw ? tw.term.name : node.category
@@ -210,7 +209,7 @@ export function setInteractivity(self) {
 						}
 					}
 
-					let chars = node.value.toString().length
+					const chars = node.value.toString().length
 					const width = chars * 9 + 60
 					const svg = td.append('svg').attr('width', width).attr('height', '25px')
 					const g = svg.append('g').attr('transform', 'translate(10, 14)')
@@ -268,7 +267,7 @@ export function setInteractivity(self) {
 				for (const pc of parentCategories) parentId += getCategoryValue(pc, sample, parentTW)
 				const id = value + parentId
 				let node: any = tree.find((item: any) => item.id == id && item.parentId == parentId)
-				let parent = tree.find((item: any) => item.id == parentId)
+				const parent = tree.find((item: any) => item.id == parentId)
 				if (!node) {
 					node = { id, parentId, samples: [], level, category, children: [], value }
 					tree.push(node)

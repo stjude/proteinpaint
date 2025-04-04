@@ -86,7 +86,7 @@ export function setRenderers(self) {
 				.sort((a, b) => a - b)
 			chart.colorValues = colorValues // to use it in renderLegend
 			// Determine min/max based on current mode
-			let min, max
+			let min, max, index
 			const settings = self.config.settings.runChart
 
 			switch (settings.colorScaleMode) {
@@ -102,7 +102,7 @@ export function setRenderers(self) {
 					min = colorValues[0] // Start at the first value of the array for percentile mode
 					// Calculate the value at the specified percentile
 					// This helps handle outliers by focusing on the main distribution
-					const index = Math.floor((colorValues.length * settings.colorScalePercentile) / 100)
+					index = Math.floor((colorValues.length * settings.colorScalePercentile) / 100)
 					max = colorValues[index]
 					break
 
@@ -140,7 +140,7 @@ export function setRenderers(self) {
 		const scaleHeight = self.config.scaleDotTW ? 200 : 100
 		self.legendHeight = Math.max(colorLegendSize, chart.shapeLegend.size * 30) + scaleHeight //legend step and header
 
-		let size = self.getFontSize(chart)
+		const size = self.getFontSize(chart)
 		//Dynamically calculate the length of the legend labels
 		const getLegendLabelWidth = (key, svg) => {
 			const legend = chart[`${key}Legend`]
@@ -378,7 +378,8 @@ export function setRenderers(self) {
 				'order' in a && 'order' in b ? a.order - b.order : 0
 			)
 			self.charts.sort(
-				(a, b) => orderedLabels.findIndex((v: any) => v.label == a.id) - orderedLabels.findIndex((v: any) => v.label == b.id)
+				(a, b) =>
+					orderedLabels.findIndex((v: any) => v.label == a.id) - orderedLabels.findIndex((v: any) => v.label == b.id)
 			)
 		}
 		for (const chart of self.charts) {
@@ -504,8 +505,7 @@ export function setRenderers(self) {
 		if (!self.charts[0]) return
 		const toolsDiv = self.dom.toolsDiv.style('background-color', 'white')
 		toolsDiv.selectAll('*').remove()
-		let display = 'block'
-
+		const display = 'block'
 
 		const homeDiv = toolsDiv
 			.insert('div')
@@ -579,8 +579,6 @@ export function setRenderers(self) {
 				else chart.mainG.transition().duration(750).call(zoom.transform, zoomIdentity)
 			self.render()
 		}
-
-		
 	}
 
 	self.getFontSize = function (legend) {
@@ -976,7 +974,7 @@ export function setRenderers(self) {
 				const divRadios = menu.d.append('div')
 				divRadios.append('label').text('Order: ')
 				const data = ['Ascending', 'Descending']
-				const addRadio = (text) => {
+				const addRadio = text => {
 					const div = select(this)
 					const input = div
 						.append('input')
@@ -996,7 +994,7 @@ export function setRenderers(self) {
 					})
 				}
 				divRadios.selectAll('input').data(data).enter().append('div').style('display', 'inline-block').each(addRadio)
-				
+
 				menu.showunder(e.target)
 			})
 	}
@@ -1023,7 +1021,7 @@ export function setRenderers(self) {
 	self.renderGeneVariantLegend = function (chart, offsetX, offsetY, legendG, tw, cname, map) {
 		const step = 125
 		const name = tw.term.name.length > 25 ? tw.term.name.slice(0, 25) + '...' : tw.term.name
-		let title = name
+		const title = name
 		const G = legendG.append('g')
 
 		G.append('text')
@@ -1102,5 +1100,3 @@ export function setRenderers(self) {
 		return offsetY
 	}
 }
-
-
