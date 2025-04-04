@@ -744,15 +744,20 @@ function setTermActions(self) {
 			})
 
 		if (vartype == 'gene') {
-			self.dom.gbButton = labelEditDiv
-				.append('button')
-				.style('text-align', 'center')
-				.html('Lollipop')
-				.attr('data-testid', 'oncoMatrix_cell_lollipop_button')
-				.on('click', async () => {
-					await self.launchGB(t)
-					self.dom.tip.hide()
-				})
+			// is gene, may show extra button for quick data access
+			if (t.tw.term.type == 'geneVariant') {
+				// lollipop btn for plotting gene-level mut data
+				self.dom.gbButton = labelEditDiv
+					.append('button')
+					.style('text-align', 'center')
+					.html('Lollipop')
+					.attr('data-testid', 'oncoMatrix_cell_lollipop_button')
+					.on('click', async () => {
+						await self.launchGB(t)
+						self.dom.tip.hide()
+					})
+			}
+			// might add new btn to support other type, e.g. boxplot for geneexp
 		}
 
 		// Add gene summary button
