@@ -199,21 +199,19 @@ export class Matrix {
 			this.sampleGroups = this.getSampleGroups(this.hierClusterSamples || this.data)
 			this.sampleOrder = this.getSampleOrder(this.data)
 
-			if (
-				!this.sampleOrder?.length &&
-				// TODO: should show empty data message when there is nothing to render
-				//       because of cohort, legend filter, and/or geneset
-				// this.config.settings.matrix.addMutationCNVButtons ||
-				!this.config.legendGrpFilter?.lst.length &&
-				!this.config.legendValueFilter?.lst.length
-			) {
+			if (!this.sampleOrder?.length) {
 				this.showNoMatchingDataMessage()
 				this.controlsRenderer.main() // to update button count or cross out button labels
-				return
+				// do not return early yet
 			}
+			// even though there may not be sampleOrder (matrix columns) to render,
+			// should still compute empty series data, legendData, etc to not break
+			// controls/interactions handlers that use those data
 			this.setLayout()
 			if (this.setHierColorScale) this.setHierColorScale(this.hierClusterData.clustering)
 			this.serieses = this.getSerieses(this.data)
+			// can now return early before rendering computed data
+			if (!this.sampleOrder?.length) return
 
 			// render the data
 			this.dom.loadingDiv.html('Rendering ...')
@@ -281,32 +279,35 @@ export class Matrix {
 			div1.append('span').html('You may change the selected cohort,')
 
 			if (this.config.legendGrpFilter?.lst.length || this.config.legendValueFilter?.lst.length) {
-				div1.append('br')
-				div1.append('span').html('show hidden ')
-				div1
-					.append('span')
-					.html('CNV')
-					.style('cursor', 'pointer')
-					.style('text-decoration', 'underline')
-					.on('click', () => {
-						this.controlsRenderer.btns
-							.filter(d => d.label == 'CNV')
-							?.node()
-							.click()
-					})
-				div1.append('span').html(' or ')
-				div1
-					.append('span')
-					.style('cursor', 'pointer')
-					.style('text-decoration', 'underline')
-					.html('Mutation')
-					.on('click', () => {
-						this.controlsRenderer.btns
-							.filter(d => d.label == 'Mutation')
-							?.node()
-							.click()
-					})
-				div1.append('span').html(' data,')
+				const cnvBtn = this.controlsRenderer.btns.filter(d => d.label == 'CNV')?.node()
+				if (cnvBtn) {
+					div1.append('br')
+					div1.append('span').html('show hidden ')
+					div1
+						.append('span')
+						.html('CNV')
+						.style('cursor', 'pointer')
+						.style('text-decoration', 'underline')
+						.on('click', () => {
+							cnvBtn.click()
+						})
+				}
+
+				const mutationBtn = this.controlsRenderer.btns.filter(d => d.label == 'Mutation')?.node()
+
+				if (cnvBtn && mutationBtn) div1.append('span').html(' or ')
+				if (mutationBtn) {
+					div1
+						.append('span')
+						.style('cursor', 'pointer')
+						.style('text-decoration', 'underline')
+						.html('Mutation')
+						.on('click', () => {
+							mutationBtn.click()
+						})
+				}
+
+				if (cnvBtn || mutationBtn) div1.append('span').html(' data,')
 			}
 
 			div1.append('br')
