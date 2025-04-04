@@ -401,7 +401,6 @@ async function validateNative(q: GeneExpressionQueryNative, ds: any, genome: any
 				return { term2sample2value, byTermId }
 			}
 
-			console.log(`Querying ${geneNames.length} genes in batch mode`)
 			const time1 = Date.now()
 			try {
 				// Query expression values for all genes at once
@@ -409,14 +408,13 @@ async function validateNative(q: GeneExpressionQueryNative, ds: any, genome: any
 
 				const elapsedMs1 = Date.now() - time1
 				const formattedTime1 = formatElapsedTime(elapsedMs1)
-				console.log('Time taken to run batch gene query:', formattedTime1)
+				console.log('Time taken to run gene query:', formattedTime1)
 
 				// Parse the result (should be already parsed if queryGeneExpression returns an object)
 				const geneData = typeof geneQueryResult === 'string' ? JSON.parse(geneQueryResult) : geneQueryResult
 
 				// Check if we have a multi-gene response (genes field) or single gene response
 				const genesData = geneData.genes || { [geneNames[0]]: geneData }
-				const time2 = Date.now()
 				// Process each gene's data
 				for (const geneTerm of param.terms) {
 					if (!geneTerm.gene) continue
@@ -449,12 +447,6 @@ async function validateNative(q: GeneExpressionQueryNative, ds: any, genome: any
 						term2sample2value.set(geneTerm.gene, s2v)
 					}
 				}
-				const elapsedMs2 = Date.now() - time2
-				const formattedTime2 = formatElapsedTime(elapsedMs2)
-				console.log('Time taken to process for loop after batch query:', formattedTime2)
-				// const elapsedMs = Date.now() - time1
-				// const formattedTime = formatElapsedTime(elapsedMs)
-				// console.log('Time taken to run batch gene query:', formattedTime)
 			} catch (error) {
 				console.error(`Error processing batch gene query:`, error)
 			}
