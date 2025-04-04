@@ -7,7 +7,6 @@ import { setInteractivity } from './runChart.interactivity.js'
 import { getCurrentCohortChartTypes } from '../mass/charts.js'
 import { downloadSingleSVG } from '../common/svg.download.js'
 import { select } from 'd3-selection'
-import { rebaseGroupFilter, getFilter } from '../mass/groups.js'
 import { plotColor } from '#shared/common.js'
 import { filterJoin } from '#filter'
 import { isNumericTerm } from '@sjcrh/proteinpaint-shared/terms.js'
@@ -37,12 +36,36 @@ class RunChart {
 	zoom: number
 	startGradient: object
 	stopGradient: object
-	opts!: { header: any, holder: any, name?: string, term?: any, term2?: any, term0?: any, colorTW?: any, shapeTW?: any, scaleDotTW?: any, divideByTW?: any}
+	opts!: {
+		header: any
+		holder: any
+		name?: string
+		term?: any
+		term2?: any
+		term0?: any
+		colorTW?: any
+		shapeTW?: any
+		scaleDotTW?: any
+		divideByTW?: any
+	}
 	dom: any
 	app: any
 	id!: any
 	settings: any
-	config!: { name?: string, term: any, term2: any, term0?: any, colorTW?: any, shapeTW?: any, scaleDotTW?: any, divideByTW?: any, settings: any}
+	config!: {
+		name?: string
+		term: any
+		term2: any
+		term0?: any
+		colorTW?: any
+		shapeTW?: any
+		scaleDotTW?: any
+		divideByTW?: any
+		countryTW?: any
+		siteTW?: any
+		settings: any
+	}
+	filtersData: any
 	charts: any
 	axisOffset: any
 	coordsTW!: object[]
@@ -50,10 +73,10 @@ class RunChart {
 	years!: number[]
 	state: any
 	components: any
+	filterTWs: any
 	processData!: () => Promise<void>
 	render!: () => Promise<void>
 	setTools!: () => Promise<void>
-
 
 	constructor() {
 		this.type = 'runChart'
@@ -63,7 +86,12 @@ class RunChart {
 	}
 
 	async init(appState) {
-		this.initYears()
+		const state = this.getState(appState)
+		this.filterTWs = [state.config.countryTW, state.config.siteTW]
+		this.filtersData = await this.app.vocabApi.getAnnotatedSampleData({
+			terms: structuredClone(this.filterTWs),
+			termsPerRequest: 10
+		})
 		const leftDiv = this.opts.holder.insert('div').style('display', 'inline-block')
 		const controlsHolder = leftDiv
 			.insert('div')
@@ -103,8 +131,7 @@ class RunChart {
 			matrixplots: appState.termdbConfig.matrixplots,
 			vocab: appState.vocab,
 			termdbConfig: appState.termdbConfig,
-			currentCohortChartTypes: getCurrentCohortChartTypes(appState),
-			groups: rebaseGroupFilter(appState)
+			currentCohortChartTypes: getCurrentCohortChartTypes(appState)
 		}
 	}
 
@@ -139,6 +166,7 @@ class RunChart {
 	// or current.state != replcament.state
 	async main() {
 		this.config = structuredClone(this.state.config)
+		this.settings = this.config.settings.runChart
 		if (this.config.settings.runChart.regression !== 'None' && this.config.term0) {
 			if (this.charts) for (const chart of this.charts) chart.chartDiv.selectAll('*').remove()
 			this.dom.loadingDiv.style('display', 'block').html('Processing data...')
@@ -203,29 +231,66 @@ class RunChart {
 		}
 	}
 
-	getFilter() {
-		const year = Number(this.settings.year) || this.years[0]
+	getFilter(tw: any = null) {
+		const excluded: any = []
+		if (tw) excluded.push(tw.$id)
+		const lst = []
+		for (const tw of this.filterTWs) this.processTW(tw, this.settings[tw.term.id], excluded, lst)
+
 		const tvslst = {
 			type: 'tvslst',
 			in: true,
 			join: 'and',
-			lst: [
-				{
-					type: 'tvs',
-					tvs: {
-						ranges: [{ start: year, startinclusive: true, stopunbounded: true }],
-						term: { id: this.config.term.term.id, type: 'date' }
-					}
-				}
-			]
+			lst
 		}
-
-		const filters = [this.state.termfilter.filter, tvslst]
-		const filter = filterJoin(filters)
+		const filter = filterJoin([this.state.termfilter.filter, tvslst])
 		return filter
 	}
+
+	processTW(tw, value, excluded, lst) {
+		if (value && !excluded.includes(tw.$id))
+			lst.push({
+				type: 'tvs',
+				tvs: {
+					term: tw.term,
+					values: [{ key: value }]
+				}
+			})
+	}
+
+	getList(tw, samplesPerFilter: any) {
+		const values: any = Object.values(tw.term.values)
+		values.sort((v1: any, v2: any) => v1.label.localeCompare(v2.label))
+		const twSamples = samplesPerFilter[tw.term.id]
+		const data: any = []
+		for (const sample of twSamples) {
+			data.push(this.filtersData.samples[sample])
+		}
+		//select samples with data for that term
+		const sampleValues = Array.from(new Set(data.map(sample => sample[tw.$id]?.value)))
+		for (const value of values) {
+			value.value = value.label
+			value.disabled = tw.term.id != this.config.countryTW.term.id ? !sampleValues.includes(value.label) : false
+		}
+		values.unshift({ label: '', value: '' })
+		if (!(tw.term.id in this.settings)) this.settings[tw.term.id] = values[0].label
+		return values
+	}
+
 	async setControls() {
 		this.dom.controlsHolder.selectAll('*').remove()
+		const filters = {}
+		for (const tw of this.filterTWs) {
+			const filter = this.getFilter(tw)
+			if (filter) filters[tw.term.id] = filter
+		}
+		//Dictionary with samples applying all the filters but not the one from the current term id
+		const samplesPerFilter = await this.app.vocabApi.getSamplesPerFilter({
+			filters
+		})
+
+		const countries = this.getList(this.config.countryTW, samplesPerFilter)
+		const sites = this.getList(this.config.siteTW, samplesPerFilter)
 		const shapeOption = {
 			type: 'term',
 			configKey: 'shapeTW',
@@ -298,22 +363,22 @@ class RunChart {
 				numericEditMenuVersion: ['continuous']
 			},
 			{
+				label: 'Country',
+				type: 'dropdown',
+				chartType: 'runChart',
+				settingsKey: this.config.countryTW.term.id,
+				options: countries,
+				callback: value => this.setCountry(value)
+			},
+			{
 				label: 'Site',
 				type: 'dropdown',
 				chartType: 'runChart',
-				settingsKey: 'site',
-				options: this.getSites()
+				settingsKey: this.config.siteTW.term.id,
+				options: sites,
+				callback: value => this.setFilterValue(this.config.siteTW.term.id, value)
 			},
-			{
-				label: 'Year',
-				type: 'dropdown',
-				chartType: 'runChart',
-				settingsKey: 'year',
-				options: this.years.map(year => ({
-					key: year,
-					label: year
-				}))
-			},
+
 			{
 				type: 'term',
 				configKey: 'term0',
@@ -409,51 +474,29 @@ class RunChart {
 			})
 		}
 		// TODO: handle multiple chart download when there is a divide by term
-		for (const chart of this.charts) downloadSingleSVG(chart.svg, 'scatter.svg', this.opts.holder.node())
+		this.components.controls.on('downloadClick.scatter', () => {
+			for (const chart of this.charts) downloadSingleSVG(chart.svg, 'scatter.svg', this.opts.holder.node())
+		})
+	}
+
+	setCountry(country) {
+		const config: any = this.config
+		this.settings[config.countryTW.term.id] = country
+		this.settings[config.siteTW.term.id] = '' //clear site if country is changed
+		config.filter = this.getFilter()
+		this.app.dispatch({ type: 'plot_edit', id: this.id, config })
 	}
 
 	getSites() {
 		return []
 	}
 
-	initYears() {
-		const now = new Date()
-		const currentYear = now.getFullYear() - 1
-		this.years = []
-		for (let i = 0; i < 20; i++) {
-			this.years.push(currentYear - i)
-		}
+	setFilterValue(key, value) {
+		const config: any = this.config
+		this.settings[key] = value
+		config.filter = this.getFilter()
+		this.app.dispatch({ type: 'plot_edit', id: this.id, config: this.config })
 	}
-}
-export function openRunChartPlot(app, plot, filter = null) {
-	let config: any = {
-		chartType: 'runChart',
-		name: plot.name,
-		filter
-	}
-	
-	if (plot.colorTW) config.colorTW = structuredClone(plot.colorTW)
-	else if (plot.colorColumn) config.colorColumn = structuredClone(plot.colorColumn)
-
-	if ('shapeTW' in plot) config.shapeTW = structuredClone(plot.shapeTW)
-	if (plot.settings) config.settings = structuredClone(plot.settings)
-	app.dispatch({
-		type: 'plot_create',
-		config: config
-	})
-}
-
-export function downloadImage(imageURL) {
-	const link = document.createElement('a')
-	// If you don't know the name or want to use
-	// the webserver default set name = ''
-	link.setAttribute('download', 'image')
-	document.body.appendChild(link)
-	link.click()
-	link.remove()
-	link.href = imageURL
-	link.click()
-	link.remove()
 }
 
 export async function getPlotConfig(opts, app) {
@@ -461,7 +504,6 @@ export async function getPlotConfig(opts, app) {
 	//if (!opts.name && !(opts.term && opts.term2)) throw 'runChart getPlotConfig: missing coordinates input'
 
 	const plot: any = {
-		groups: [],
 		settings: {
 			controls: {
 				isOpen: false // control panel is hidden by default
@@ -473,27 +515,17 @@ export async function getPlotConfig(opts, app) {
 	}
 
 	try {
-		let defaultConfig = {}
-		// observe default config specified in ds, if available
-		if (opts.name) {
-			const p = app.vocabApi?.termdbConfig?.scatterplots?.find(i => i.name == opts.name)
-			if (p) defaultConfig = p
-		}
+		const defaultConfig = app.vocabApi.termdbConfig?.plotConfigByCohort.default[opts.chartType]
 		copyMerge(plot, defaultConfig, opts)
 
 		if (plot.colorTW) await fillTermWrapper(plot.colorTW, app.vocabApi)
 		if (plot.shapeTW) await fillTermWrapper(plot.shapeTW, app.vocabApi)
-		if (plot.term) await fillTermWrapper(plot.term, app.vocabApi)
-		if (plot.term2) await fillTermWrapper(plot.term2, app.vocabApi)
+		await fillTermWrapper(plot.term, app.vocabApi)
+		await fillTermWrapper(plot.term2, app.vocabApi)
 		if (plot.term0) await fillTermWrapper(plot.term0, app.vocabApi)
 		if (plot.scaleDotTW) await fillTermWrapper(plot.scaleDotTW, app.vocabApi)
-		if (plot.sampleCategory) await fillTermWrapper(plot.sampleCategory.tw, app.vocabApi)
-
-		// apply term-specific changes to the default object
-		if (!plot.term && !plot.term2) plot.settings.runChart.showAxes = false
-
-		if (plot.term0?.q?.mode == 'continuous' && !app.hasWebGL())
-			throw 'Can not load Z/Divide by term in continuous mode as WebGL is not supported'
+		await fillTermWrapper(plot.countryTW, app.vocabApi)
+		await fillTermWrapper(plot.siteTW, app.vocabApi)
 
 		return plot
 	} catch (e) {
