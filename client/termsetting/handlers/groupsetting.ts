@@ -34,6 +34,7 @@ Future plans:
 */
 
 type Opts = {
+	type?: 'values' | 'filter' // type of groupsetting
 	holder?: HTMLElement // div holder for drag-and-drop
 	hideApply?: boolean // whether to hide apply button
 }
@@ -85,6 +86,7 @@ export class GroupSettingMethods {
 	dom: Partial<GrpSetDom> //main menu dom elements before drag and drop divs are added
 	minGrpNum: number //minimum num of groups rendered (excluded categories + 2 groups)
 	defaultMaxGrpNum: number //default cutoff for num of groups. Used to calculate the actual max group num later
+	type: 'values' | 'filter' // type of groupsetting
 	data: { groups: GrpEntry[]; values: ItemEntry[]; filters: FilterEntry[] }
 	initGrpSetUI: any //func init for groupsetting UI
 
@@ -96,6 +98,7 @@ export class GroupSettingMethods {
 		}
 		this.minGrpNum = 3
 		this.defaultMaxGrpNum = 5
+		this.type = opts.type || 'values'
 		this.data = { groups: [], values: [], filters: [] }
 		setRenderers(this)
 	}
@@ -128,7 +131,7 @@ export class GroupSettingMethods {
 			const filter = this.tsInstance.term.filter
 			if (!filter) throw 'filter missing'
 			for (const grpIdx of grpIdxes) {
-				this.data.filters.push(Object.assign({ group: grpIdx }, filter))
+				this.data.filters.push(Object.assign({}, filter, { group: grpIdx }))
 			}
 		} else if (this.tsInstance.q.type == 'custom-groupset') {
 			// q.type = 'custom-groupset'
@@ -163,8 +166,7 @@ export class GroupSettingMethods {
 			throw 'q.type not recognized'
 		}
 
-		if (!this.data.filters.length) {
-			// no filters, check values
+		if (this.type == 'values') {
 			if (!this.data.values.length) throwMsgWithFilePathAndFnName(`Missing values`)
 
 			// re-populate missing sample counts, which can occur
@@ -184,7 +186,7 @@ export class GroupSettingMethods {
 			//add any required groups, specifically Excluded Categories and Group 2
 			this.data.groups.push({
 				currentIdx: g,
-				type: this.data.groups.length ? this.data.groups[0].type : this.tsInstance.q.type,
+				type: this.type,
 				name: g === 0 ? `Excluded categories` : `Group ${g.toString()}`,
 				uncomputable: g === 0
 			})
@@ -283,7 +285,7 @@ function setRenderers(self: any) {
 	self.initGrpSetUI = async function () {
 		/*max num of groups rendered + excluded categories
 		Only allow adding the max feasible groups with cutoff of 5 + excluded categories*/
-		if (self.data.filters.length) {
+		if (self.type == 'filter') {
 			self.maxGrpNum = self.defaultMaxGrpNum + 1
 		} else {
 			self.maxGrpNum =
@@ -344,10 +346,17 @@ function setRenderers(self: any) {
 				newGrpNum++
 				self.data.groups.push({
 					currentIdx: self.data.groups.length,
-					type: 'values',
+					type: self.type,
 					name: `New Group${newGrpNum != 1 ? ` ${newGrpNum}` : ''}`
 				})
 				const group = self.data.groups[self.data.groups.length - 1]
+				if (self.type == 'filter') {
+					// add empty filter for this group
+					// will display filter button in UI
+					const filter = self.tsInstance.term.filter
+					if (!filter) throw 'filter missing'
+					self.data.filters.push(Object.assign({}, filter, { group: group.currentIdx }))
+				}
 				await initGroupDiv(group)
 				await self.update()
 			})
@@ -370,7 +379,7 @@ function setRenderers(self: any) {
 		//Top message
 		self.dom.menuWrapper
 			.append('div')
-			.style('display', self.data.filters.length ? 'none' : 'block')
+			.style('display', self.type == 'filter' ? 'none' : 'block')
 			.style('margin', '5px 2px')
 			.style('font-size', '.6em')
 			.style('color', '#999')
