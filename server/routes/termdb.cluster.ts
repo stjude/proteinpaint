@@ -404,14 +404,9 @@ async function validateNative(q: GeneExpressionQueryNative, ds: any, genome: any
 			const time1 = Date.now()
 			try {
 				// Query expression values for all genes at once
-				const geneQueryResult = await queryGeneExpression(q.file, geneNames)
+				const geneData = JSON.parse(await queryGeneExpression(q.file, geneNames))
 
-				const elapsedMs1 = Date.now() - time1
-				const formattedTime1 = formatElapsedTime(elapsedMs1)
-				console.log('Time taken to run gene query:', formattedTime1)
-
-				// Parse the result (should be already parsed if queryGeneExpression returns an object)
-				const geneData = JSON.parse(geneQueryResult)
+				mayLog('Time taken to run gene query:', formatElapsedTime(Date.now() - time1))
 
 				// Check if we have a multi-gene response (genes field) or single gene response
 				const genesData = geneData.genes || { [geneNames[0]]: geneData }
@@ -437,11 +432,8 @@ async function validateNative(q: GeneExpressionQueryNative, ds: any, genome: any
 						const sampleId = ds.cohort.termdb.q.sampleName2id(sampleName)
 						if (!sampleId) continue
 						if (limitSamples && !limitSamples.has(sampleId)) continue
-
-						s2v[sampleId] = Number(value)
+						s2v[sampleId] = value
 					}
-
-					// console.log(`Gene ${geneTerm.gene} has ${Object.keys(s2v).length} samples with data`)
 
 					if (Object.keys(s2v).length) {
 						term2sample2value.set(geneTerm.gene, s2v)
