@@ -157,12 +157,16 @@ export function setRenderers(self) {
 		/** Becomes the x offset for the shape legend.
 		 * When in continuous mode, color scale renders with a
 		 * default width of 150. */
-		if (self.config.colorTW)
+		const labels: any = []
+		if (self.config.colorTW) labels.push(self.config.colorTW.term.name)
+		if (self.config.scaleDotTW) labels.push(self.config.scaleDotTW.term.name)
+		if (labels.length > 0) {
+			const labelsWidth = getMaxLabelWidth(svg, labels, size) + 40
 			chart.colorLegendWidth =
 				self.config?.colorTW?.q.mode == 'continuous'
-					? Math.max(175, getMaxLabelWidth(svg, [self.config.colorTW.term.name]) + 40)
-					: getLegendLabelWidth('color', svg)
-		else chart.colorLegendWidth = 0
+					? Math.max(175, labelsWidth)
+					: Math.max(getLegendLabelWidth('color', svg), labelsWidth)
+		} else chart.colorLegendWidth = 0
 		const shapeWidth = getLegendLabelWidth('shape', svg)
 		const width = s.svgw + chart.colorLegendWidth + shapeWidth + 125
 		svg
