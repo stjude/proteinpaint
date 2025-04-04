@@ -1201,6 +1201,7 @@ function setRenderers(self) {
 		if (disclaimer && self.config.regressionType == 'cox') {
 			self.dom.oneSetResultDiv
 				.append('div')
+				.style('white-space', 'wrap') // somewhere in the parent dom there must be a nowrap setting that causes overly long text to look bad. must apply this so it will auto wrap
 				.attr('data-testid', 'sjpp-regression-result-coxDisclaimer')
 				.style('margin', '20px 0px 20px 10px')
 				.style('font-size', '.8em')
