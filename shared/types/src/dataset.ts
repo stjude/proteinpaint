@@ -421,9 +421,14 @@ export type GeneArgumentEntry = {
 	label: string
 	/** Optional: Creates subtext below the main label */
 	sublabel?: string
-	/** boolean and string creates a checkbox
-	 * number creates a text input
-	 */
+	/** 'boolean' has two options.
+	 * 	- If .options[] is provided, it creates a 'submenu', a checkbox
+	 * 		that expands to show additional inputs when checked. .options[]
+	 * 		in this case is GeneArgumentEntry[]
+	 *  - If !.options[] is provided, it creates a checkbox
+	 * 'string' creates a checked checkbox if a .value is provided
+	 * 'number' creates a text number input
+	 * 'radio' creates a radio buttons, see options[] */
 	type: 'boolean' | 'string' | 'number' | 'radio'
 	/** value of the input or checkbox
 	 * required if type is string. Otherwise, optional
@@ -441,6 +446,8 @@ export type GeneArgumentEntry = {
 		 * 'text': creates a text area input
 		 * 'tree': launches termdb app and the tree
 		 * 'boolean': No element is created
+		 *
+		 * boolean is the default type
 		 */
 		type: 'text' | 'tree' | 'boolean' | string
 		/** value used to construct the server argument

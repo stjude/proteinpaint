@@ -31,7 +31,7 @@ export class GenesMenu {
 	params: { param: GeneArgumentEntry; input?: Elem }[]
 	callback: (f?: number) => void
 	addOptionalParams: ({ param, input }) => void
-	/** Collects nested param .options:[]. */
+	/** Collects nested param .options:[] for submenus. See 'boolean' type. */
 	readonly params2Add: { param: GeneArgumentEntry; input: Elem }[] = []
 
 	constructor(opts: GenesMenuArgs) {
@@ -83,8 +83,10 @@ export class GenesMenu {
 				const contentDiv = div.append('div').style('padding-left', '20px')
 				for (const option of param.options) {
 					const optionInput = this.addParameter(option, contentDiv.append('div'))
+					option.parentId = param.id
 					this.params2Add.push({ param: option, input: optionInput })
 				}
+
 				if (param.value) {
 					input.property('checked', param.value)
 					contentDiv.style('display', 'block')
@@ -124,6 +126,7 @@ export class GenesMenu {
 			if (!hasChecked) param.options[0].checked = true
 			input = div.append('div').attr('id', param.id)
 			input.append('p').style('font-size', '0.8em').style('opacity', 0.75).text(param.label)
+			this.addRadioValue(param)
 			this.addRadioCallbacks(param, this.genome)
 			makeRadiosWithContentDivs(param.options, input as any)
 		}
@@ -141,6 +144,17 @@ export class GenesMenu {
 				.html(param.label!)
 				.attr('for', param.id)
 			labelDiv.append('span').style('display', 'block').style('font-size', '0.75em').html(param.sublabel)
+		}
+	}
+
+	addRadioValue(param) {
+		if (param.value) return
+		const checked = param.options.find((d: any) => d.checked)
+		if (checked) {
+			param.value = {
+				type: checked.value,
+				geneList: null
+			}
 		}
 	}
 

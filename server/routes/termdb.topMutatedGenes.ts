@@ -40,11 +40,10 @@ function init({ genomes }) {
 
 /** This is a hack
 The user is presented with two radio buttons to reference
-one data column. Eventually the db will not store the data
+one data column. Eventually the db will not store data
 this way. */
-
 function consolidateCNVparams(q) {
-	if (q.cnv_ms && q.cnv_logratio) {
+	if (q.cnv == 1 && q.cnv_ms && q.cnv_logratio) {
 		const key = q.cnv_ms.type + q.cnv_logratio.type.replace('cnv', '')
 		q[key] = 1
 	}
@@ -87,9 +86,8 @@ export function validate_query_getTopMutatedGenes(ds: any, genome: any) {
 						id: 'cnv_ms',
 						label: 'Max size',
 						type: 'radio',
-						value: { type: 'cnv_1mb', geneList: null }, //This is a quick fix
 						options: [
-							{ id: 'cnv_1mb', label: '<1Mb', value: 'cnv_1mb', checked: true },
+							{ id: 'cnv_1mb', label: '<1Mb', value: 'cnv_1mb' },
 							{ id: 'cnv_2mb', label: '<2Mb', value: 'cnv_2mb' },
 							{ id: 'cnv_4mb', label: '<4Mb', value: 'cnv_4mb' }
 						]
@@ -98,9 +96,8 @@ export function validate_query_getTopMutatedGenes(ds: any, genome: any) {
 						id: 'cnv_logratio',
 						label: 'Min absolute log(ratio)',
 						type: 'radio',
-						value: { type: 'cnv_01', geneList: null }, //This is a quick fix
 						options: [
-							{ id: 'cnv_01', label: '>0.1', value: 'cnv_01', checked: true },
+							{ id: 'cnv_01', label: '>0.1', value: 'cnv_01' },
 							{ id: 'cnv_02', label: '>0.2', value: 'cnv_02' },
 							{ id: 'cnv_03', label: '>0.3', value: 'cnv_03' }
 						]

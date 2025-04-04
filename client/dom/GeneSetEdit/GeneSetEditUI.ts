@@ -282,10 +282,8 @@ export class GeneSetEditUI {
 							filter: this.vocabApi.state.termfilter.filter,
 							filter0: this.vocabApi.state.termfilter.filter0
 						}
-						for (const { param, input } of this.api.topMutatedGenesParams) {
-							const id = input.attr('id')
-							args[id] = this.getInputValue({ param, input })
-						}
+
+						this.getInputs(this.api.topMutatedGenesParams, args)
 						const result = await dofetch3('termdb/topMutatedGenes', { method: 'GET', body: args })
 
 						this.geneList = []
@@ -304,6 +302,8 @@ export class GeneSetEditUI {
 					this.api.topVariablyExpressedGenesParams
 						.filter(p => p.param.type == 'radio' && p.param?.options)
 						.forEach(p => {
+							//Sets the default value of the radio button to the first option
+							//for top VE args, it will always be a string
 							if (typeof p.param.options![0].value === 'string') {
 								p.param.value = { type: p.param.options![0].value, value: null }
 							} else {
@@ -321,10 +321,8 @@ export class GeneSetEditUI {
 							if (this.vocabApi.state.termfilter.filter) args.filter = this.vocabApi.state.termfilter.filter // pp filter
 							if (this.vocabApi.state.termfilter.filter0) args.filter0 = this.vocabApi.state.termfilter.filter0 // gdc filter
 						}
-						for (const { param, input } of this.api.topVariablyExpressedGenesParams) {
-							const id = input.attr('id')
-							args[id] = this.getInputValue({ param, input })
-						}
+
+						this.getInputs(this.api.topVariablyExpressedGenesParams, args)
 						const result = await this.vocabApi.getTopVariablyExpressedGenes(args)
 
 						this.geneList = []
@@ -412,6 +410,19 @@ export class GeneSetEditUI {
 					.on('click', async (event: Event) => {
 						await menu.callback(event)
 					})
+		}
+	}
+
+	getInputs(arr, args) {
+		for (const { param, input } of arr) {
+			if (param.parentId) {
+				const parent = arr.find(i => i.param.id == param.parentId)
+				//Parents are always checkboxes/boolean
+				//Do not include submenu inputs in the request if not checked
+				if (!parent || !parent.input.node().checked) return
+			}
+			const id = input.attr('id')
+			args[id] = this.getInputValue({ param, input })
 		}
 	}
 
