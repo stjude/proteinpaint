@@ -175,12 +175,8 @@ export function setRenderers(self) {
 		fillSvgSubElems(chart)
 		/* eslint-enable */
 
-		if (self.is3D) self.render3DSerie(chart)
-		else if (self.is2DLarge) self.render2DSerieLarge(chart)
-		else {
-			renderSerie(chart, s.duration)
-			self.renderLegend(chart, step)
-		}
+		renderSerie(chart, s.duration)
+		self.renderLegend(chart, step)
 	}
 
 	function fillSvgSubElems(chart) {
@@ -733,33 +729,7 @@ export function setRenderers(self) {
 					}
 				}
 			}
-			if (colorRefCategory?.sampleCount > 0) {
-				offsetY = offsetY + step
-				const titleG = legendG.append('g')
-				titleG.append('text').attr('x', offsetX).attr('y', offsetY).text('Reference').style('font-weight', 'bold')
 
-				offsetY = offsetY + step
-
-				const refColorG = legendG.append('g')
-				refColorG
-					.append('path')
-					.attr('transform', () => `translate(${offsetX - 2}, ${offsetY - 5}) scale(1)`)
-					.style('fill', colorRefCategory.color)
-					.attr('d', shapes[0])
-					.style('stroke', rgb(colorRefCategory.color).darker())
-
-				refColorG.on('click', e => self.onLegendClick(chart, 'colorTW', 'Ref', e, colorRefCategory))
-				const refText = legendG
-					.append('g')
-					.append('text')
-					.attr('x', offsetX + 20)
-					.attr('y', offsetY + 4)
-					.text(`n=${colorRefCategory.sampleCount}`)
-					.style('text-decoration', !self.settings.showRef ? 'line-through' : 'none')
-					.attr('alignment-baseline', 'middle')
-
-				refText.on('click', e => self.onLegendClick(chart, 'colorTW', 'Ref', e, colorRefCategory))
-			}
 			legendHeight = offsetY
 		}
 
