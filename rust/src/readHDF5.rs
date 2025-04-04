@@ -1,5 +1,35 @@
-// Need to set HDF5_DIR and LD_LIBRARY_PATH in ~/.bash_profile
-// Syntax: HDF5_DIR=/usr/local/Homebrew/Cellar/hdf5/1.14.3_1 && echo $HDF5_DIR && cd .. && cargo build --release && json='{"gene":"TP53","hdf5_file":"matrix_with_na_comp_9.h5"}' && time echo $json | target/release/rust_hdf5
+//------------------------------------------------------------------------------
+// readHDF5.rs - HDF5 Gene Expression Data Reader
+//------------------------------------------------------------------------------
+// 
+// This utility processes HDF5 files containing gene expression data and extracts 
+// values for requested genes. It supports both dense matrix and sparse matrix formats,
+// with optimized access patterns for single and multi-gene queries.
+//
+// Key Features:
+// - Automatic format detection (dense/sparse)
+// - Single gene queries with optimized memory usage
+// - Multi-gene batch processing with parallel execution
+// - JSON output with timing and performance metrics
+//
+// Processing flow:
+// 1. Parse input JSON to get gene name(s) and HDF5 file path
+// 2. Detect HDF5 file format (dense/sparse)
+// 3. For single gene:
+//    - Read only necessary data for the requested gene
+//    - Process and return JSON with gene expression values
+// 4. For multiple genes:
+//    - Preload required datasets when appropriate
+//    - Process genes in parallel (when possible)
+//    - Consolidate results into a unified JSON structure
+//
+// Usage: 
+//   Requires HDF5_DIR and LD_LIBRARY_PATH to be set in ~/.bash_profile
+//   Example: HDF5_DIR=/usr/local/Homebrew/Cellar/hdf5/1.14.3_1 && echo $HDF5_DIR && 
+//            cd .. && cargo build --release && 
+//            json='{"gene":"TP53","hdf5_file":"matrix.h5"}' && 
+//            time echo $json | target/release/readHDF5
+//------------------------------------------------------------------------------
 
 // Imports
 use hdf5::types::{FixedAscii, VarLenAscii};
