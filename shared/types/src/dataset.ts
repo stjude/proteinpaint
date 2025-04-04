@@ -1033,6 +1033,9 @@ type SurvivalSettings = {
 }
 
 type RegressionSettings = {
+	/** Disclaimer message shown under the cofficient table when
+	 * regression type is cox. */
+	coxDisclaimer?: string
 	/** disable interactions */
 	disableInteractions?: boolean
 	/** hide type III statistics table in results */
