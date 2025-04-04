@@ -2,6 +2,10 @@
 
 ## Background
 
+IMPORTANT: A route must be imported in `src/app.routes.ts` in order
+for it to be included in the `augen.setRoutes(..., routes, ...)` argument 
+as called in `app.ts`.  
+
 The files in `server/routes` code exports route API expectations
 and initialization methods in a standard 'shape'. In this way,
 tools such as `augen` may easily auto-initialize server route handlers,

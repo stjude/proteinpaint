@@ -1,3 +1,8 @@
+/*
+	IMPORTANT: See routes/README.md for instructions on
+	importing route files in `src/app.routes.ts`.
+*/
+
 // using snp types only as an example
 import type { SnpRequest, SnpResponse, RouteApi } from '#types'
 // imported payload is typed as RoutePayload
