@@ -26,7 +26,6 @@ function init({ genomes }) {
 			const ds = g.datasets?.[q.dslabel]
 			if (!ds) throw 'ds missing'
 			if (!ds.queries?.topMutatedGenes) throw 'not supported by ds'
-			consolidateCNVparams(q)
 			const genes = await ds.queries.topMutatedGenes.get(q)
 			const payload: topMutatedGeneResponse = { genes }
 			res.send(payload)
@@ -35,17 +34,6 @@ function init({ genomes }) {
 			if (e.stack) console.log(e.stack)
 			else console.trace(e)
 		}
-	}
-}
-
-/** This is a hack
-The user is presented with two radio buttons to reference
-one data column. Eventually the db will not store data
-this way. */
-function consolidateCNVparams(q) {
-	if (q.cnv == 1 && q.cnv_ms && q.cnv_logratio) {
-		const key = q.cnv_ms.type + q.cnv_logratio.type.replace('cnv', '')
-		q[key] = 1
 	}
 }
 
@@ -97,9 +85,9 @@ export function validate_query_getTopMutatedGenes(ds: any, genome: any) {
 						label: 'Min absolute log(ratio)',
 						type: 'radio',
 						options: [
-							{ id: 'cnv_01', label: '>0.1', value: 'cnv_01' },
-							{ id: 'cnv_02', label: '>0.2', value: 'cnv_02' },
-							{ id: 'cnv_03', label: '>0.3', value: 'cnv_03' }
+							{ id: '_01', label: '>0.1', value: '_01' },
+							{ id: '_02', label: '>0.2', value: '_02' },
+							{ id: '_03', label: '>0.3', value: '_03' }
 						]
 					}
 				]
@@ -121,16 +109,13 @@ export function validate_query_getTopMutatedGenes(ds: any, genome: any) {
 		if (param.snv_s) fields.push('snv_s')
 		if (param.sv) fields.push('sv')
 		if (param.fusion) fields.push('fusion')
-		if (param.cnv_1mb_01) fields.push('cnv_1mb_01')
-		if (param.cnv_1mb_02) fields.push('cnv_1mb_02')
-		if (param.cnv_1mb_03) fields.push('cnv_1mb_03')
-		if (param.cnv_2mb_01) fields.push('cnv_2mb_01')
-		if (param.cnv_2mb_02) fields.push('cnv_2mb_02')
-		if (param.cnv_2mb_03) fields.push('cnv_2mb_03')
-		if (param.cnv_4mb_01) fields.push('cnv_4mb_01')
-		if (param.cnv_4mb_02) fields.push('cnv_4mb_02')
-		if (param.cnv_4mb_03) fields.push('cnv_4mb_03')
+		if (param.cnv == 1 && param.cnv_ms?.type && param.cnv_logratio?.type) {
+			//"cnv_ms":{"type":"cnv_1mb","geneList":null}
+			// "cnv_logratio":{"type":"_01","geneList":null}
+			fields.push(param.cnv_ms.type + param.cnv_logratio.type)
+		}
 		if (!fields.length) throw 'no fields'
+
 		// TODO preserve count per data type to return as mutation stat
 		const query = `WITH
 		filtered AS (

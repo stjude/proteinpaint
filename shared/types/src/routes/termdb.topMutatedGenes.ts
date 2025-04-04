@@ -18,15 +18,9 @@ export type topMutatedGeneRequest = {
 	snv_s?: number
 	sv?: number
 	fusion?: number
-	cnv_1mb_01?: number
-	cnv_1mb_02?: number
-	cnv_1mb_03?: number
-	cnv_2mb_01?: number
-	cnv_2mb_02?: number
-	cnv_2mb_03?: number
-	cnv_4mb_01?: number
-	cnv_4mb_02?: number
-	cnv_4mb_03?: number
+	cnv?: number
+	cnv_ms?: { type: string; geneLst: null }
+	cnv_logratio?: { type: string; geneLst: null }
 }
 
 export type MutatedGene = {
