@@ -602,10 +602,9 @@ export function setRenderers(self) {
 		}
 
 		let title
-		let title0 = self.config.term0
+		const title0 = self.config.term0
 			? `${self.config.term0.term.name + ' ' + chart.id}, n=${chart.samples.length}`
-			: `${chart.samples.length} ${self.config.sampleType ? self.config.sampleType + 's' : 'samples'}`
-		if (self.filterSampleStr) title0 += `, search = ${self.filterSampleStr}`
+			: `${chart.samples.length} samples`
 		legendG.append('text').attr('x', 0).attr('y', offsetY).text(title0).style('font-weight', 'bold')
 
 		const colorG = legendG.append('g').style('font-size', `${self.getFontSize(chart.colorLegend)}em`)

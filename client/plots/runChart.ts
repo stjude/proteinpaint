@@ -36,35 +36,12 @@ class RunChart {
 	zoom: number
 	startGradient: object
 	stopGradient: object
-	opts!: {
-		header: any
-		holder: any
-		name?: string
-		term?: any
-		term2?: any
-		term0?: any
-		colorTW?: any
-		shapeTW?: any
-		scaleDotTW?: any
-		divideByTW?: any
-	}
+	opts!: any
 	dom: any
 	app: any
 	id!: any
 	settings: any
-	config!: {
-		name?: string
-		term: any
-		term2: any
-		term0?: any
-		colorTW?: any
-		shapeTW?: any
-		scaleDotTW?: any
-		divideByTW?: any
-		countryTW?: any
-		siteTW?: any
-		settings: any
-	}
+	config!: any
 	filtersData: any
 	charts: any
 	axisOffset: any
@@ -401,8 +378,7 @@ class RunChart {
 			},
 			shapeOption,
 			shapeSizeOption,
-			minShapeSizeOption,
-			maxShapeSizeOption,
+
 			{
 				type: 'term',
 				configKey: 'scaleDotTW',
@@ -413,16 +389,7 @@ class RunChart {
 				vocabApi: this.app.vocabApi,
 				numericEditMenuVersion: ['continuous']
 			},
-			{
-				label: 'Scale order',
-				type: 'radio',
-				chartType: 'runChart',
-				settingsKey: 'scaleDotOrder',
-				options: [
-					{ label: 'Ascending', value: 'Ascending' },
-					{ label: 'Descending', value: 'Descending' }
-				]
-			},
+
 			{
 				label: 'Show regression',
 				type: 'dropdown',
@@ -464,6 +431,17 @@ class RunChart {
 				settingsKey: 'defaultColor'
 			}
 		]
+		if (this.config.scaleDotTW)
+			inputs.splice(inputs.length - 5, 0, minShapeSizeOption, maxShapeSizeOption, {
+				label: 'Scale order',
+				type: 'radio',
+				chartType: 'runChart',
+				settingsKey: 'scaleDotOrder',
+				options: [
+					{ label: 'Ascending', value: 'Ascending' },
+					{ label: 'Descending', value: 'Descending' }
+				]
+			})
 
 		this.components = {
 			controls: await controlsInit({
@@ -557,6 +535,7 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 			}
 		})
 	}
+	//the first time should be a date and the second one a numeric non date term
 	select2Terms(chartsInstance.dom.tip, chartsInstance.app, 'runChart', 'date', callback, 'numeric')
 }
 
