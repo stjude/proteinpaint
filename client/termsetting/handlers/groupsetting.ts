@@ -136,8 +136,6 @@ export class GroupSettingMethods {
 			// returns found groups to data.groups and values for groups and excluded groups
 			this.formatCustomset(grpIdxes, input)
 		} else if (this.tsInstance.q.type == 'predefined-groupset') {
-			// q.type = 'predefined-groupset'
-			// use the predefined groupset specified by user
 			if (this.tsInstance.term.type == 'geneVariant') {
 				const q = this.tsInstance.q as GeneVariantBaseQ & PredefinedGroupSettingQ
 				const term = this.tsInstance.term as GeneVariantTerm
@@ -149,7 +147,8 @@ export class GroupSettingMethods {
 					this.data.groups.push({
 						currentIdx: grpIdx,
 						type: 'filter',
-						name: grpIdx === 0 ? 'Excluded categories' : group.name
+						name: grpIdx === 0 ? 'Excluded categories' : group.name,
+						uncomputable: group.uncomputable
 					})
 					grpIdxes.delete(grpIdx)
 					const filter = structuredClone(group.filter)
