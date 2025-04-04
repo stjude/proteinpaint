@@ -294,18 +294,18 @@ async function validateHDF5File(filePath) {
 }
 
 /**
- * Query expression values for a specific gene from a dense HDF5 file
+ * Query expression values for a specific gene or set of genes from a dense HDF5 file
  *
  * @param {string} hdf5_file - Path to the HDF5 file
- * @param {string} geneName - Name of the gene to query
+ * @param {string[]} geneNames - Array of gene names to query
  * @returns {Promise<Object>} Promise resolving to gene expression data
  */
-async function queryGeneExpression(hdf5_file, geneName) {
+async function queryGeneExpression(hdf5_file, geneNames) {
 	// console.log(`Querying gene expression for ${geneName} from ${hdf5_file}`);
 	// Create the input params as a JSON object
 	const jsonInput = JSON.stringify({
 		hdf5_file: hdf5_file,
-		gene: geneName
+		gene: geneNames
 	})
 
 	try {
@@ -317,13 +317,13 @@ async function queryGeneExpression(hdf5_file, geneName) {
 		// console.log('Result structure:', JSON.stringify(result, null, 2).substring(0, 5000) + '...');
 
 		// Check if the result exists and contains sample data
-		if (!result || Object.keys(result).length === 0) {
+		if (!result || result.length === 0) {
 			throw new Error('Failed to retrieve expression data: Empty or missing response')
 		}
 
 		return result
 	} catch (error) {
-		console.error(`Error querying gene expression for ${geneName}`)
+		console.error(`Error querying gene expression for ${geneNames}`)
 		throw error
 	}
 }
@@ -411,7 +411,7 @@ async function validateNative(q: GeneExpressionQueryNative, ds: any, genome: any
 				console.log('Time taken to run gene query:', formattedTime1)
 
 				// Parse the result (should be already parsed if queryGeneExpression returns an object)
-				const geneData = typeof geneQueryResult === 'string' ? JSON.parse(geneQueryResult) : geneQueryResult
+				const geneData = JSON.parse(geneQueryResult)
 
 				// Check if we have a multi-gene response (genes field) or single gene response
 				const genesData = geneData.genes || { [geneNames[0]]: geneData }
