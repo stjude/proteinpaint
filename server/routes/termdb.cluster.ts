@@ -389,7 +389,7 @@ async function validateNative(q: GeneExpressionQueryNative, ds: any, genome: any
 			const byTermId = {}
 
 			// First, collect all gene names
-			const geneNames = []
+			const geneNames: string[] = []
 			for (const geneTerm of param.terms) {
 				if (geneTerm.gene) {
 					geneNames.push(geneTerm.gene)
