@@ -24,6 +24,7 @@ import { TermTypes, NUMERIC_DICTIONARY_TERM } from '#shared/terms.js'
 import { getData } from '#src/termdb.matrix.js'
 import { termType2label } from '#shared/terms.js'
 import { mayLog } from '#src/helpers.ts'
+import { formatElapsedTime } from '#shared/time.js'
 
 export const api: RouteApi = {
 	endpoint: 'termdb/cluster',
@@ -293,36 +294,36 @@ async function validateHDF5File(filePath) {
 }
 
 /**
- * Query expression values for a specific gene from a dense HDF5 file
+ * Query expression values for a specific gene or set of genes from a dense HDF5 file
  *
  * @param {string} hdf5_file - Path to the HDF5 file
- * @param {string} geneName - Name of the gene to query
+ * @param {string[]} geneNames - Array of gene names to query
  * @returns {Promise<Object>} Promise resolving to gene expression data
  */
-async function queryGeneExpression(hdf5_file, geneName) {
+async function queryGeneExpression(hdf5_file, geneNames) {
 	// console.log(`Querying gene expression for ${geneName} from ${hdf5_file}`);
 	// Create the input params as a JSON object
 	const jsonInput = JSON.stringify({
 		hdf5_file: hdf5_file,
-		gene: geneName
+		gene: geneNames
 	})
 
 	try {
 		// Call the Rust script with input parameters
 		// console.log('Params:', JSON.stringify(jsonInput));
+		// console.log('Calling Rust script with params:', jsonInput)
 		const result = await run_rust('readHDF5', jsonInput)
-
 		// Debug output to understand what we're getting back
 		// console.log('Result structure:', JSON.stringify(result, null, 2).substring(0, 5000) + '...');
 
 		// Check if the result exists and contains sample data
-		if (!result || Object.keys(result).length === 0) {
+		if (!result || result.length === 0) {
 			throw new Error('Failed to retrieve expression data: Empty or missing response')
 		}
 
 		return result
 	} catch (error) {
-		console.error(`Error querying gene expression for ${geneName}`)
+		console.error(`Error querying gene expression for ${geneNames}`)
 		throw error
 	}
 }
@@ -387,47 +388,60 @@ async function validateNative(q: GeneExpressionQueryNative, ds: any, genome: any
 			const term2sample2value = new Map()
 			const byTermId = {}
 
-			// Process each gene term
+			// First, collect all gene names
+			const geneNames: string[] = []
 			for (const geneTerm of param.terms) {
-				if (!geneTerm.gene) continue
+				if (geneTerm.gene) {
+					geneNames.push(geneTerm.gene)
+				}
+			}
 
-				try {
-					// Query expression values for the specific gene
-					const geneQuery = await queryGeneExpression(q.file, geneTerm.gene)
+			if (geneNames.length === 0) {
+				console.log('No genes to query')
+				return { term2sample2value, byTermId }
+			}
 
-					const geneData = JSON.parse(geneQuery)
+			const time1 = Date.now()
+			try {
+				// Query expression values for all genes at once
+				const geneData = JSON.parse(await queryGeneExpression(q.file, geneNames))
 
-					// Extract just the samples data - this is the key change
-					const samplesData = geneData.samples || {}
+				mayLog('Time taken to run gene query:', formatElapsedTime(Date.now() - time1))
+
+				// Check if we have a multi-gene response (genes field) or single gene response
+				const genesData = geneData.genes || { [geneNames[0]]: geneData }
+				// Process each gene's data
+				for (const geneTerm of param.terms) {
+					if (!geneTerm.gene) continue
+
+					// Get this gene's data from the batch response
+					const geneResult = genesData[geneTerm.gene]
+					if (!geneResult) {
+						console.warn(`No data found for gene ${geneTerm.gene} in the response`)
+						continue
+					}
+
+					// Extract just the samples data
+					const samplesData = geneResult.samples || {}
 
 					// Convert the gene data to the expected format
 					const s2v = {}
 
-					// Assuming geneData contains sample-to-value mappings
-					// Adjust this part based on your actual data structure
+					// Process sample data the same way as before
 					for (const [sampleName, value] of Object.entries(samplesData)) {
-						// console.log('Sample:', sampleName, 'Value:', value);
 						const sampleId = ds.cohort.termdb.q.sampleName2id(sampleName)
-						// console.log(sampleName, 'ID:', sampleId, 'Value:', value);
 						if (!sampleId) continue
 						if (limitSamples && !limitSamples.has(sampleId)) continue
-
-						// console.log('SampleID' + sampleId, 'label:', ds.cohort.termdb.q.id2sampleName(sampleId), 'value:', value);
-						s2v[sampleId] = Number(value)
+						s2v[sampleId] = value
 					}
-
-					console.log(`Gene ${geneTerm.gene} has ${Object.keys(s2v).length} samples with data`)
-					// console.log('Sample data:', s2v);
 
 					if (Object.keys(s2v).length) {
 						term2sample2value.set(geneTerm.gene, s2v)
 					}
-				} catch (error) {
-					console.warn(`Error processing gene ${geneTerm.gene}:`, error)
-					continue
 				}
+			} catch (error) {
+				console.error(`Error processing batch gene query:`, error)
 			}
-
 			if (term2sample2value.size == 0) {
 				throw 'No data available for the input ' + param.terms?.map(g => g.gene).join(', ')
 			}
