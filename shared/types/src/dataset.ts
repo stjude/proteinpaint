@@ -806,7 +806,24 @@ type SingleSampleGbtk = {
 }
 
 type Mds3Queries = {
-	defaultBlock2GeneMode?: boolean
+	defaultBlock2GeneMode?: true // TODO to be deleted
+	/** (gb=genomebrowser) affects gb chart button menu genesearchbox behavior, 
+	add some additional options after a gene is found, and mode of gb launched from the button menu
+
+	- "protein":
+		genesearchbox only allow searching gene and not coord
+		launched gb goes into protein-mode
+		this is used for ds with only coding mutations over some protein-coding genes, and only want to show protein view for such
+	- "genomic":
+		searching either gene/coord will result in coord
+		gb will always be in genomic mode
+		this is used for ds with genome-wide variants only shown in genomic views, but not protein view
+	- none:
+		meaning gb can be shown in either protein or genomic mode
+		when searching coord, gb goes into genomic mode
+		when searching gene, show an option in chart btn menu to select protein or genomic view
+	*/
+	gbRestrictMode?: 'protein' | 'genomic'
 	snvindel?: SnvIndelQuery
 	svfusion?: SvFusion
 	cnv?: CnvSegment
@@ -1208,7 +1225,6 @@ type Termdb = {
 	/** if true, backend is allowed to send sample names to client in charts */
 	displaySampleIds?: boolean
 	converSampleIds?: boolean
-	allowedTermTypes?: string[]
 	alwaysShowBranchTerms?: boolean
 	minimumSampleAllowed4filter?: number
 	minTimeSinceDx?: number
@@ -1253,8 +1269,36 @@ keep this setting here for reason of:
 		ssm?: UrlTemplateSsm | UrlTemplateSsm[]
 	}
 
-	/** ds-defined or dynamically created */
-	termtypeByCohort?: any
+	/** ds-defined or dynamically created. the array has an extra "nested" property
+	only describes dictionary terms,
+	non-dict terms are dynamically generated in getAllowedTermTypes() of termdb.config.ts based on query types
+	*/
+	termtypeByCohort?: {
+		/** '' if ds doesn't use cohort */
+		cohort: string
+		termType: string
+		termCount: number
+	}[] & {
+		nested: {
+			[cohort: string]: {
+				[termType: string]: number
+			}
+		}
+	}
+	/** ds defined add on to termtypeByCohort; note that this is not cohort-specific!
+	this is combined with termtypeByCohort in getAllowedTermTypes()
+	for now is used to support following types which lacks good way to auto generate them:
+
+	- geneVariant
+		for somatic events. works for snvindel/svfusion/cnv.
+		since all these datatypes are optional, cannot define it in snvindel.termTypes which could be missing
+		** must be defined via allowedTermTypes[] **
+
+	- snp, snplst, snplocus
+		for germline markers
+	*/
+	allowedTermTypes?: string[]
+
 	/** ds-defined or dynamically created callbacks 
 	{
 		getSupportedChartTypes: (a: any) => any

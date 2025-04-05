@@ -2,7 +2,7 @@ import serverconfig from '#src/serverconfig.js'
 import { authApi } from '#src/auth.js'
 import { get_ds_tdb } from '#src/termdb.js'
 import { mayCopyFromCookie } from '#src/utils.js'
-import { mayComputeTermtypeByCohort } from '#src/termdb.server.init.ts'
+//import { mayComputeTermtypeByCohort } from '#src/termdb.server.init.ts'
 import { TermTypes } from '#shared/terms.js'
 import type { Mds3WithCohort } from '#types'
 
@@ -174,8 +174,8 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome) {
 		defaultCoord: q.defaultCoord || genome.defaultcoord
 	}
 	const q2 = c.queries
-	// copy from q{} to q2{}
 	if (q.defaultBlock2GeneMode) q2.defaultBlock2GeneMode = q.defaultBlock2GeneMode
+	// copy from q{} to q2{}
 	if (q.snvindel) {
 		q2.snvindel = {
 			allowSNPs: q.snvindel.allowSNPs,
@@ -292,15 +292,8 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome) {
 	}
 }
 
-// allowedTermTypes[] is an unique list of term types from this dataset
-// crucial for determining if a plot can function
-// e.g. survival plot can only work if allowedTermTypes.includes('survival')
+// allowedTermTypes[] is an unique list of term types from this dataset. allows plot to determine if term type specific feature is applicable for a ds
 function getAllowedTermTypes(ds) {
-	mayComputeTermtypeByCohort(ds)
-	// ds.cohort.termdb.termtypeByCohort[] is set
-
-	// for now return list of term types irrespective of subcohorts
-
 	const typeSet = new Set()
 	for (const r of ds.cohort.termdb.termtypeByCohort) {
 		if (r.termType) typeSet.add(r.termType)
@@ -311,12 +304,19 @@ function getAllowedTermTypes(ds) {
 		for (const t of ds.cohort.termdb.allowedTermTypes) typeSet.add(t)
 	}
 
+	/*
+	mayComputeTermtypeByCohort(ds)
+	// ds.cohort.termdb.termtypeByCohort[] is set
+
+	// for now return list of term types irrespective of subcohorts
+
 	if (ds?.queries?.defaultBlock2GeneMode) {
 		// an mds3 dataset showing data in protein mode, add in "geneVariant"
 		// this disables gene from searchable for dataset e.g. sjlife
 		// same logic in trigger_findterm()
 		typeSet.add('geneVariant')
 	}
+	*/
 	if (ds?.queries?.geneExpression) typeSet.add(TermTypes.GENE_EXPRESSION)
 	if (ds?.queries?.metaboliteIntensity) typeSet.add(TermTypes.METABOLITE_INTENSITY)
 

@@ -676,7 +676,7 @@ export function listTableColumns(cn, table) {
 	return rows.map(i => i.name)
 }
 
-export function mayComputeTermtypeByCohort(ds) {
+function mayComputeTermtypeByCohort(ds) {
 	if (ds.cohort.termdb.termtypeByCohort) {
 		if (!Array.isArray(ds.cohort.termdb.termtypeByCohort)) throw 'termtypeByCohort is not array'
 		// already set, by one of two methods:
