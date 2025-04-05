@@ -45,6 +45,7 @@ export default {
 		},
 
 		termdb: {
+			allowedTermTypes: ['geneVariant'],
 			displaySampleIds: true, // allow to display sample-level data
 
 			timeUnit: 'years',
