@@ -1269,12 +1269,12 @@ keep this setting here for reason of:
 		ssm?: UrlTemplateSsm | UrlTemplateSsm[]
 	}
 
-	/** ds-defined or dynamically created. the array has an extra "nested" property
+	termtypeByCohort?: any // FIXME see below
+	/** TODO not declared due to tsc err
+	ds-defined or dynamically created. the array has an extra "nested" property
 	only describes dictionary terms,
 	non-dict terms are dynamically generated in getAllowedTermTypes() of termdb.config.ts based on query types
-	*/
 	termtypeByCohort?: {
-		/** '' if ds doesn't use cohort */
 		cohort: string
 		termType: string
 		termCount: number
@@ -1285,6 +1285,8 @@ keep this setting here for reason of:
 			}
 		}
 	}
+	*/
+
 	/** ds defined add on to termtypeByCohort; note that this is not cohort-specific!
 	this is combined with termtypeByCohort in getAllowedTermTypes()
 	for now is used to support following types which lacks good way to auto generate them:
