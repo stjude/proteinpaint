@@ -164,7 +164,7 @@ export default {
 	},
 	queries: {
 		// temporary fix for genomeBrowser app to show gene model
-		defaultBlock2GeneMode: true,
+		//defaultBlock2GeneMode: true,
 
 		snvindel: {
 			forTrack: true,

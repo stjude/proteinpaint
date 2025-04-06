@@ -806,9 +806,8 @@ type SingleSampleGbtk = {
 }
 
 type Mds3Queries = {
-	defaultBlock2GeneMode?: true // TODO to be deleted
-	/** (gb=genomebrowser) affects gb chart button menu genesearchbox behavior, 
-	add some additional options after a gene is found, and mode of gb launched from the button menu
+	/** (gb=genomebrowser) controls gb chart button menu genesearchbox behavior, 
+	add some additional options after a gene is found, and mode of gb launched from the menu
 
 	- "protein":
 		genesearchbox only allow searching gene and not coord

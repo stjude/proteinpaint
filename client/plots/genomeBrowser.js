@@ -30,6 +30,7 @@ this{}
 	state {}
 		filter{} // mass filter
 		config {}
+			blockIsProteinMode:bool // if true show as protein mode, otherwise in genomic mode
 			variantFilter{}
 				filter{}
 				opts{ joinWith }
@@ -373,7 +374,8 @@ class genomeBrowser {
 				this.maySaveTrackUpdatesToState()
 			}
 		}
-		if (this.app.vocabApi.termdbConfig.queries.defaultBlock2GeneMode && this.state.config.geneSearchResult.geneSymbol) {
+		//if (this.app.vocabApi.termdbConfig.queries.defaultBlock2GeneMode && this.state.config.geneSearchResult.geneSymbol)
+		if (this.state.config.blockIsProteinMode && this.state.config.geneSearchResult.geneSymbol) {
 			// dataset config wants to default to gene view, and gene symbol is available
 			// call block.init to launch gene view
 			arg.query = this.state.config.geneSearchResult.geneSymbol
@@ -449,7 +451,9 @@ export async function getPlotConfig(opts, app, activeCohort) {
 	// 3rd arg is initial active cohort
 	try {
 		// request default queries config from dataset, and allows opts to override
-		return await getDefaultConfig(app.vocabApi, opts, activeCohort)
+		const c = await getDefaultConfig(app.vocabApi, opts, activeCohort)
+		//console.log(c)
+		return c
 	} catch (e) {
 		throw `${e} [genomeBrowser getPlotConfig()]`
 	}
@@ -475,24 +479,15 @@ chartsInstance: MassCharts instance
 export function makeChartBtnMenu(holder, chartsInstance) {
 	const genomeObj = chartsInstance.app.opts.genome
 	if (typeof genomeObj != 'object') throw 'chartsInstance.app.opts.genome not an object and needed for gene search box'
+
 	const arg = {
 		tip: geneTip,
 		genome: genomeObj,
 		row: holder.append('div').style('margin', '10px'),
 		callback: async () => {
-			// found a gene {chr,start,stop,geneSymbol}
-			// dispatch to create new plot
-
+			// found a hit {chr,start,stop,geneSymbol}; dispatch to create new plot
 			try {
-				// must do this as 'plot_prep' does not call getPlotConfig()
-				// request default queries config from dataset, and allows opts to override
-				// this config{} will become this.state.config{}
-				const config = await getDefaultConfig(chartsInstance.app.vocabApi, null, chartsInstance.state.activeCohort)
-
-				config.chartType = 'genomeBrowser'
-				config.geneSearchResult = result
-				const chart = { config }
-				chartsInstance.prepPlot(chart)
+				await launchPlotAfterGeneSearch(result, chartsInstance, holder)
 			} catch (e) {
 				// upon err, create div in chart button menu to display err
 				holder.append('div').text('Error: ' + (e.message || e))
@@ -500,26 +495,92 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 			}
 		}
 	}
-	if (!chartsInstance.state.termdbConfig.queries.defaultBlock2GeneMode) {
-		// block is not shown in gene mode, add default coord to arg
-		arg.defaultCoord = chartsInstance.state.termdbConfig.queries.defaultCoord
-	} else {
-		arg.searchOnly = 'gene'
+	switch (chartsInstance.state.termdbConfig.queries.gbRestrictMode) {
+		case undefined:
+			// not set. allowed
+			break
+		case 'block':
+			// gb can only be block mode, add default coord to arg
+			arg.defaultCoord = chartsInstance.state.termdbConfig.queries.defaultCoord
+			break
+		case 'protein':
+			// gb can only be protein mode, only allow searching gene
+			arg.searchOnly = 'gene'
+			break
+		default:
+			throw 'unknown gbRestrictMode'
 	}
 	const result = addGeneSearchbox(arg)
 }
 
+async function launchPlotAfterGeneSearch(result, chartsInstance, holder) {
+	if (result.geneSymbol && !chartsInstance.state.termdbConfig.queries.gbRestrictMode) {
+		// user found a gene and no restricted mode from ds, ask user if to use either protein/genomic mode
+		const btndiv = holder.append('div')
+		btndiv
+			.append('button')
+			.style('margin', '15px')
+			.text('Protein view')
+			.on('click', () => launch(true)) // true for going to protein mode
+		btndiv
+			.append('button')
+			.style('margin', '15px')
+			.text('Genomic view')
+			.on('click', () => launch(false)) // explicitely set false for genomic mode so downstream won't auto set
+		return
+	}
+	// only one possibility of gb mode and it can be auto determined
+	await launch(chartsInstance.state.termdbConfig.queries.gbRestrictMode == 'protein')
+
+	async function launch(blockIsProteinMode) {
+		// must do this as 'plot_prep' does not call getPlotConfig()
+		// request default queries config from dataset, and allows opts to override
+		// this config{} will become this.state.config{}
+		const config = await getDefaultConfig(
+			chartsInstance.app.vocabApi,
+			null,
+			chartsInstance.state.activeCohort,
+			blockIsProteinMode
+		)
+		config.chartType = 'genomeBrowser'
+		config.geneSearchResult = result
+		const chart = { config }
+		chartsInstance.prepPlot(chart)
+	}
+}
+
 // get default config of the app from vocabApi
-async function getDefaultConfig(vocabApi, override, activeCohort) {
+async function getDefaultConfig(vocabApi, override, activeCohort, blockIsProteinMode) {
 	const config = Object.assign(
 		// clone for modifying
 		structuredClone({
-			snvindel: vocabApi.termdbConfig.queries?.snvindel,
-			trackLst: vocabApi.termdbConfig.queries?.trackLst,
+			snvindel: vocabApi.termdbConfig.queries.snvindel,
+			trackLst: vocabApi.termdbConfig.queries.trackLst,
 			ld: vocabApi.termdbConfig.queries.ld
 		}),
 		override || {}
 	)
+
+	if (typeof blockIsProteinMode == 'boolean') {
+		// this setting is set by chart button menu
+		config.blockIsProteinMode = blockIsProteinMode
+	} else if (!('blockIsProteinMode' in config)) {
+		// plot state doesn't define this (e.g. from urlparam shorthand state). compute value based on ds
+		if (vocabApi.termdbConfig.queries.gbRestrictMode == 'protein') {
+			// ds only allow protein mode
+			config.blockIsProteinMode = true
+		} else if (vocabApi.termdbConfig.queries.gbRestrictMode == 'genomic') {
+			// ds only allow genomic mode
+			config.blockIsProteinMode = false
+		} else {
+			// not specified on ds.
+			if (config.geneSearchResult?.geneSymbol) {
+				config.blockIsProteinMode = true
+			} else {
+				config.blockIsProteinMode = false
+			}
+		}
+	}
 
 	if (config.snvindel) {
 		// presence of snvindel will generate the "mds3" tk, here setup associated config

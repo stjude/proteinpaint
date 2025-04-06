@@ -66,7 +66,7 @@ const groupFilterAML = {
 			{
 				type: 'tvs',
 				tvs: {
-					term: { id: 'diaggrp', name: 'Diagnosis Group', type: 'categorical' },
+					term: { id: 'diaggrp_s', name: 'Diagnosis Group', type: 'categorical' },
 					values: [{ key: 'Acute myeloid leukemia', label: 'Acute myeloid leukemia' }]
 				}
 			}
@@ -83,13 +83,13 @@ const groupFilterALLmale = {
 			{
 				type: 'tvs',
 				tvs: {
-					term: { id: 'diaggrp', name: 'Diagnosis Group', type: 'categorical' },
+					term: { id: 'diaggrp_s', name: 'Diagnosis Group', type: 'categorical' },
 					values: [{ key: 'Acute lymphoblastic leukemia', label: 'Acute lymphoblastic leukemia' }]
 				}
 			},
 			{
 				type: 'tvs',
-				tvs: { term: { id: 'sex', name: 'Sex', type: 'categorical' }, values: [{ key: '1', label: 'Male' }] }
+				tvs: { term: { id: 'sex_s', name: 'Sex', type: 'categorical' }, values: [{ key: '1', label: 'Male' }] }
 			}
 		]
 	}
@@ -159,14 +159,14 @@ tape('Sjlife default, with global mass filter', test => {
 						{
 							type: 'tvs',
 							tvs: {
-								term: { id: 'diaggrp' },
+								term: { id: 'diaggrp_s' },
 								values: [{ key: 'Acute lymphoblastic leukemia', label: 'Acute lymphoblastic leukemia' }]
 							}
 						},
 						{
 							type: 'tvs',
 							tvs: {
-								term: { id: 'agedx', name: 'agedx', type: 'float' },
+								term: { id: 'agedx_s', name: 'agedx', type: 'float' },
 								ranges: [{ startunbounded: true, stop: 10, stopinclusive: true }]
 							}
 						}
