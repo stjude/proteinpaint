@@ -2,7 +2,6 @@ import serverconfig from '#src/serverconfig.js'
 import { authApi } from '#src/auth.js'
 import { get_ds_tdb } from '#src/termdb.js'
 import { mayCopyFromCookie } from '#src/utils.js'
-//import { mayComputeTermtypeByCohort } from '#src/termdb.server.init.ts'
 import { TermTypes } from '#shared/terms.js'
 import type { Mds3WithCohort } from '#types'
 
@@ -171,10 +170,10 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome) {
 	if (!q) return
 	// this ds supports genomic query methods
 	c.queries = {
-		defaultCoord: q.defaultCoord || genome.defaultcoord
+		defaultCoord: q.defaultCoord || genome.defaultcoord,
+		gbRestrictMode: q.gbRestrictMode
 	}
 	const q2 = c.queries
-	if (q.defaultBlock2GeneMode) q2.defaultBlock2GeneMode = q.defaultBlock2GeneMode
 	// copy from q{} to q2{}
 	if (q.snvindel) {
 		q2.snvindel = {
@@ -298,28 +297,13 @@ function getAllowedTermTypes(ds) {
 	for (const r of ds.cohort.termdb.termtypeByCohort) {
 		if (r.termType) typeSet.add(r.termType)
 	}
-
 	if (ds.cohort.termdb.allowedTermTypes) {
 		// optional predefined term types, append to set
 		for (const t of ds.cohort.termdb.allowedTermTypes) typeSet.add(t)
 	}
-
-	/*
-	mayComputeTermtypeByCohort(ds)
-	// ds.cohort.termdb.termtypeByCohort[] is set
-
-	// for now return list of term types irrespective of subcohorts
-
-	if (ds?.queries?.defaultBlock2GeneMode) {
-		// an mds3 dataset showing data in protein mode, add in "geneVariant"
-		// this disables gene from searchable for dataset e.g. sjlife
-		// same logic in trigger_findterm()
-		typeSet.add('geneVariant')
-	}
-	*/
+	// assess other data types and add corresponding term types
 	if (ds?.queries?.geneExpression) typeSet.add(TermTypes.GENE_EXPRESSION)
 	if (ds?.queries?.metaboliteIntensity) typeSet.add(TermTypes.METABOLITE_INTENSITY)
-
 	return [...typeSet]
 }
 
