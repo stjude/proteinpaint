@@ -163,9 +163,6 @@ export default {
 		sunburst_twLst: [{ id: 'sex', q: {} }]
 	},
 	queries: {
-		// temporary fix for genomeBrowser app to show gene model
-		//defaultBlock2GeneMode: true,
-
 		snvindel: {
 			forTrack: true,
 			byrange: {

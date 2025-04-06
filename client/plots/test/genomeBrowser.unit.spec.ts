@@ -16,11 +16,11 @@ tape('\n', test => {
 	test.end()
 })
 
-const config = {
+const config: any = {
 	geneSearchResult: {}
 }
 
-const vocabApi = {
+const vocabApi: any = {
 	termdbConfig: {
 		queries: {
 			//gbRestrictMode
