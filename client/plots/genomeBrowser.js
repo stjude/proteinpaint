@@ -30,23 +30,25 @@ this{}
 	state {}
 		filter{} // mass filter
 		config {}
-			blockIsProteinMode:bool // if true show as protein mode, otherwise in genomic mode
-			variantFilter{}
+			blockIsProteinMode:bool
+				required; if true show as protein mode and requires geneSearchResult.geneSymbol
+				if false show in genomic mode and requires chr/start/stop
+			variantFilter?{}
 				filter{}
 				opts{ joinWith }
 				terms[]
-			geneSearchResult{}
-			snvindel {}
+			geneSearchResult{ chr/start/stop/geneSymbol}
+			snvindel? {}
 				details {} // this needs to be copied from tdbcnf in state to track customizations
 				populations [{key,label}] // might not be part of state
 				shown=bool // set to true if snvindel mds3 tk is shown
 				filter{} // applies default cohort filter. quick fix to generate two-tk cohort comparison
 				            should not be used together with "details{}"
-			ld {}
+			ld? {}
 				tracks[]
 					.shown=bool // set to true if a ld tk is shown TODO removed ld tk is not reflected on config ui
-			subMds3TkFilters[] // list of mds3 subtk filter objects created on mds3 tk sample summary ui
-			trackLst{}
+			subMds3TkFilters?[] // list of mds3 subtk filter objects created on mds3 tk sample summary ui
+			trackLst?{}
 				facets[]
 				activeTracks[] // tracks list of active tracks from trackLst or facet
 				removeTracks[] // quick fix, list of names marked for removal from facet table
@@ -374,8 +376,9 @@ class genomeBrowser {
 				this.maySaveTrackUpdatesToState()
 			}
 		}
-		//if (this.app.vocabApi.termdbConfig.queries.defaultBlock2GeneMode && this.state.config.geneSearchResult.geneSymbol)
-		if (this.state.config.blockIsProteinMode && this.state.config.geneSearchResult.geneSymbol) {
+		if (this.state.config.blockIsProteinMode) {
+			// must be in protein mode and requires gene symbol
+			if (!this.state.config.geneSearchResult.geneSymbol) throw 'blockIsProteinMode=true but geneSymbol missing'
 			// dataset config wants to default to gene view, and gene symbol is available
 			// call block.init to launch gene view
 			arg.query = this.state.config.geneSearchResult.geneSymbol
@@ -387,7 +390,8 @@ class genomeBrowser {
 			this.opts.header.text(arg.query)
 			return
 		}
-		// launch locus
+		// must be in genomic mode and requires coord
+		if (!this.state.config.geneSearchResult.chr) throw 'blockIsProteinMode=false but chr missing'
 		arg.chr = this.state.config.geneSearchResult.chr
 		arg.start = this.state.config.geneSearchResult.start
 		arg.stop = this.state.config.geneSearchResult.stop
@@ -499,7 +503,7 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 		case undefined:
 			// not set. allowed
 			break
-		case 'block':
+		case 'genomic':
 			// gb can only be block mode, add default coord to arg
 			arg.defaultCoord = chartsInstance.state.termdbConfig.queries.defaultCoord
 			break
@@ -516,16 +520,19 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 async function launchPlotAfterGeneSearch(result, chartsInstance, holder) {
 	if (result.geneSymbol && !chartsInstance.state.termdbConfig.queries.gbRestrictMode) {
 		// user found a gene and no restricted mode from ds, ask user if to use either protein/genomic mode
-		const btndiv = holder.append('div')
+
+		// on repeated gene search, detect if btndiv is present, and remove, avoiding showing duplicate buttons
+		holder.select('.sjpp_gbmodebtndiv').remove()
+		// create new div and buttons
+		const btndiv = holder.append('div').attr('class', 'sjpp_gbmodebtndiv').style('margin', '15px')
 		btndiv
 			.append('button')
-			.style('margin', '15px')
-			.text('Protein view')
+			.style('margin-right', '10px')
+			.text('Protein view of ' + result.geneSymbol)
 			.on('click', () => launch(true)) // true for going to protein mode
 		btndiv
 			.append('button')
-			.style('margin', '15px')
-			.text('Genomic view')
+			.text('Genomic view of ' + result.geneSymbol)
 			.on('click', () => launch(false)) // explicitely set false for genomic mode so downstream won't auto set
 		return
 	}
@@ -549,7 +556,15 @@ async function launchPlotAfterGeneSearch(result, chartsInstance, holder) {
 	}
 }
 
-// get default config of the app from vocabApi
+/* compute default config
+vocabApi
+override? {}
+	optional custom state to override default
+activeCohort int -1/0/1..
+	-1 if ds is not using cohort, 0/1 etc if true
+blockIsProteinMode? bool
+	optional. if missing auto compute
+*/
 async function getDefaultConfig(vocabApi, override, activeCohort, blockIsProteinMode) {
 	const config = Object.assign(
 		// clone for modifying
@@ -560,27 +575,7 @@ async function getDefaultConfig(vocabApi, override, activeCohort, blockIsProtein
 		}),
 		override || {}
 	)
-
-	if (typeof blockIsProteinMode == 'boolean') {
-		// this setting is set by chart button menu
-		config.blockIsProteinMode = blockIsProteinMode
-	} else if (!('blockIsProteinMode' in config)) {
-		// plot state doesn't define this (e.g. from urlparam shorthand state). compute value based on ds
-		if (vocabApi.termdbConfig.queries.gbRestrictMode == 'protein') {
-			// ds only allow protein mode
-			config.blockIsProteinMode = true
-		} else if (vocabApi.termdbConfig.queries.gbRestrictMode == 'genomic') {
-			// ds only allow genomic mode
-			config.blockIsProteinMode = false
-		} else {
-			// not specified on ds.
-			if (config.geneSearchResult?.geneSymbol) {
-				config.blockIsProteinMode = true
-			} else {
-				config.blockIsProteinMode = false
-			}
-		}
-	}
+	computeBlockModeFlag(config, blockIsProteinMode, vocabApi)
 
 	if (config.snvindel) {
 		// presence of snvindel will generate the "mds3" tk, here setup associated config
@@ -596,6 +591,7 @@ async function getDefaultConfig(vocabApi, override, activeCohort, blockIsProtein
 			// a type=filter group may use filterByCohort. in such case, modify default state to assign proper filter based on current cohort
 			const gf = config.snvindel.details.groups.find(i => i.type == 'filter')
 			if (gf?.filterByCohort) {
+				if (!Number.isInteger(activeCohort)) throw 'filterByCohort but activeCohort not integer'
 				// modify and assign
 				gf.filter = gf.filterByCohort[vocabApi.termdbConfig.selectCohort.values[activeCohort].keys.join(',')]
 				if (!gf.filter) throw 'unknown filter by current cohort name'
@@ -623,9 +619,39 @@ async function getDefaultConfig(vocabApi, override, activeCohort, blockIsProtein
 	return config
 }
 
-//////////////////////////////////////////////////
-//                  helpers                     //
-//////////////////////////////////////////////////
+export function computeBlockModeFlag(config, blockIsProteinMode, vocabApi) {
+	// steps follow the order of priority
+	if (typeof blockIsProteinMode == 'boolean') {
+		// this setting is set by chart button menu by user choice or saved state
+		config.blockIsProteinMode = blockIsProteinMode
+		return
+	}
+	if (typeof config.blockIsProteinMode == 'boolean') {
+		// state has predefined mode, do not modify
+		return
+	}
+	// lack of mode e.g. from urlparam shorthand state. compute default value
+	switch (vocabApi.termdbConfig.queries.gbRestrictMode) {
+		case undefined:
+			// ds doesn't restrict mode; when user searched gene, assume it should be in genomic mode
+			if (config.geneSearchResult?.geneSymbol) {
+				config.blockIsProteinMode = true
+			} else {
+				config.blockIsProteinMode = false
+			}
+			break
+		case 'protein':
+			// ds only allow protein mode
+			config.blockIsProteinMode = true
+			break
+		case 'genomic':
+			// ds only allow genomic mode
+			config.blockIsProteinMode = false
+			break
+		default:
+			throw 'unknown gbRestrictMode'
+	}
+}
 
 /* given group configuration, determine: numeric track axis label
 - viewmode.label as axis label of numeric mode
