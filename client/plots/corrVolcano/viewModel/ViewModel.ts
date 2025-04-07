@@ -1,7 +1,7 @@
 import type { TermWrapper } from '#types'
 import { scaleLinear } from 'd3-scale'
 import { termType2label } from '#shared/terms.js'
-import type { CorrelationVolcanoResponse, VariableItemEntry } from '#types'
+import type { CorrelationVolcanoResponse } from '#types'
 import type {
 	CorrVolcanoDom,
 	CorrVolcanoPlotConfig,
