@@ -33,6 +33,7 @@ export class profilePlot {
 			config,
 			termfilter: appState.termfilter,
 			dslabel: appState.vocab.dslabel,
+			termdbConfig: appState.termdbConfig,
 			vocab: appState.vocab,
 			logged, //later change to read login info
 			site,

@@ -1346,6 +1346,10 @@ keep this setting here for reason of:
 		/** allow color or shape changes in the lollipop */
 		allowSkewerChanges: boolean
 	}
+	colorMap?: {
+		/** colors for a category multivalues */
+		[index: string]: { [index: string]: string }
+	}
 }
 
 type SampleType = {

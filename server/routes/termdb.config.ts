@@ -96,7 +96,8 @@ function make(q, req, res, ds: Mds3WithCohort, genome) {
 		sampleTypes: ds.cohort.termdb.sampleTypes,
 		hasSampleAncestry: ds.cohort.termdb.hasSampleAncestry,
 		defaultChartType: ds.cohort.defaultChartType,
-		invalidTokenErrorHandling: tdb.invalidTokenErrorHandling
+		invalidTokenErrorHandling: tdb.invalidTokenErrorHandling,
+		colorMap: tdb.colorMap
 	}
 	// optional attributes
 	// when missing, the attribute will not be present as "key:undefined"
