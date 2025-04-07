@@ -125,6 +125,7 @@ export class View {
 			g.attr('transform', transformStr)
 
 			if (settings.isVertical) {
+				//Rotate the text slightly in veritcal orientation
 				g.select('text').attr('transform', 'rotate(45)')
 			}
 
@@ -142,10 +143,6 @@ export class View {
 					labelMenuTip,
 					settings.isVertical
 				)
-			}
-			if (settings.displayMode !== 'default') {
-				const fillColor = settings.displayMode == 'filled' ? plot.color : data.plotDim.backgroundColor
-				g.selectAll('g[id^="sjpp-boxplot-"] > rect').style('fill', fillColor!)
 			}
 		}
 	}

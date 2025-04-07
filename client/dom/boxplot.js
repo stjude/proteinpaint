@@ -21,6 +21,8 @@ labpad:
 	int, horizontal space between label <text> and boxplot <g>
 labColor: 
 	str, label text color. Default is color arg
+rectFill:
+	str, fill color of the box. Default is white
 */
 export function drawBoxplot({ bp, g, color, scale, rowheight, labpad, labColor = color }) {
 	if (bp.label) {
@@ -70,7 +72,7 @@ export function drawBoxplot({ bp, g, color, scale, rowheight, labpad, labColor =
 			.attr('y2', rowheight)
 		bp.box = g
 			.append('rect')
-			.attr('fill', 'white')
+			.attr('fill', bp?.rectFill || 'white')
 			.attr('stroke', color)
 			.attr('shape-rendering', 'crispEdges')
 			.attr('x', p25)
