@@ -15,13 +15,6 @@ export class BoxPlotInteractions {
 		this.id = id
 	}
 
-	setVarAfterInit(app: MassAppApi, id: string) {
-		// app and id created after init
-		// Avoid ts from complaining, reset here
-		if (this.app == undefined) this.app = app
-		if (this.id == undefined) this.id = id
-	}
-
 	download() {
 		//May add more options in the future
 		const svg = this.dom.svg.node() as Node
