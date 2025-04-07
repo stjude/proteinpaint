@@ -210,8 +210,9 @@ export class Matrix {
 			this.setLayout()
 			if (this.setHierColorScale) this.setHierColorScale(this.hierClusterData.clustering)
 			this.serieses = this.getSerieses(this.data)
+			// TODO: may re-enable below if showing no-data message/suggestions is preferred over rendering empty matrix
 			// can now return early before rendering computed data
-			if (!this.sampleOrder?.length) return
+			// if (!this.sampleOrder?.length) return
 
 			// render the data
 			this.dom.loadingDiv.html('Rendering ...')

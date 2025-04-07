@@ -529,7 +529,7 @@ export function setLayout() {
 	// zoomCenter relative to mainw
 	const zoomCenter = s.zoomCenterPct * mainw
 	const centerCellX = s.zoomIndex * dx + s.zoomGrpIndex * s.colgspace
-	const zoomedMainW = nx * dx + (this[`${col}Grps`].length - 1) * s.colgspace
+	const zoomedMainW = Math.max(0, nx * dx + (this[`${col}Grps`].length - 1) * s.colgspace)
 	const seriesXoffset =
 		s.zoomLevel <= 1 && mainw >= zoomedMainW ? 0 : Math.max(zoomCenter - centerCellX, mainw - zoomedMainW)
 
