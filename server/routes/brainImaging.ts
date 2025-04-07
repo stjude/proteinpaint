@@ -6,6 +6,7 @@ import { spawn } from 'child_process'
 import { getData } from '../src/termdb.matrix.js'
 import { isNumericTerm } from '@sjcrh/proteinpaint-shared/terms.js'
 import { getColors } from '#shared/common.js'
+import { run_python } from '@sjcrh/proteinpaint-python'
 
 /*
 given one or more samples, map the sample(s) to brain template and return the image
@@ -165,7 +166,20 @@ async function getBrainImage(query: BrainImagingRequest, genomes: any, plane: st
 				catNum += filesByCat[category].samples.length
 				if (!legend[category]) legend[category] = { color: filesByCat[category].color, maxLength }
 			}
-			const url = await generateBrainImage(refFile, plane, index, maxLength, JSON.stringify(filesByCat))
+			const arg = {
+				refFile,
+				plane,
+				index,
+				maxLength,
+				filesByCat: JSON.stringify(filesByCat)
+			}
+			let url: string | undefined
+			try {
+				url = await run_python('plotBrainImaging.py', JSON.stringify(arg))
+			} catch (error) {
+				const errmsg = 'Error running Python script:' + error
+				throw new Error(errmsg)
+			}
 			brainImageDict[dcategory] = { url, catNum }
 		}
 
@@ -182,33 +196,4 @@ async function getBrainImage(query: BrainImagingRequest, genomes: any, plane: st
 	} else {
 		throw 'no reference or sample files'
 	}
-}
-
-async function generateBrainImage(refFile, plane, index, maxLength, filesJson) {
-	return new Promise((resolve, reject) => {
-		const cmd = [`${serverconfig.binpath}/utils/plotBrainImaging.py`, refFile, plane, index, maxLength, filesJson]
-		//Use this log if you need to debug the python script, to run the python script manually
-		//You will need to add simple quotes to filesJson
-		//console.log(cmd.join(' '))
-
-		const ps = spawn(serverconfig.python, cmd)
-		const imgData: Buffer[] = []
-		ps.stdout.on('data', data => {
-			imgData.push(data)
-		})
-		ps.stderr.on('data', data => {
-			console.error(`stderr: ${data}`)
-			reject(new Error(`Python script filed: ${data}`))
-		})
-		ps.on('close', code => {
-			if (code === 0) {
-				const imageBuffer = Buffer.concat(imgData)
-				const base64Data = imageBuffer.toString('base64')
-				const imgUrl = `data:image/png;base64,${base64Data}`
-				resolve(imgUrl)
-			} else {
-				reject(new Error(`Python script exited with code ${code}`))
-			}
-		})
-	})
 }

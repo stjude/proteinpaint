@@ -1,0 +1,6 @@
+    vips
+    blitzgsea
+    matplotlib
+    nibabel
+    numpy
+    pyvips
