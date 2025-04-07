@@ -1,18 +1,19 @@
 import { to_svg } from '#src/client'
 import { termType2label } from '#shared/terms.js'
 import { appInit } from '#termdb/app'
+import type { MassAppApi } from '#mass/types/mass'
+import type { CorrVolcanoDom } from '../CorrelationVolcanoTypes'
+import type { TermWrapper } from '#types'
 
-//TODO - finish typing this file
 export class CorrVolcanoInteractions {
-	app: any
-	dom: any
+	app: MassAppApi
+	dom: CorrVolcanoDom
 	id: string
-	variableTwLst: any
-	constructor(app, dom, id) {
+	variableTwLst: TermWrapper[]
+	constructor(app: MassAppApi, dom: CorrVolcanoDom, id: string) {
 		this.app = app
 		this.dom = dom
 		this.id = id
-		//TODO: should be in the state somehow
 		this.variableTwLst = []
 	}
 
@@ -52,7 +53,8 @@ export class CorrVolcanoInteractions {
 	launchSampleScatter(item: any) {
 		const config = this.app.getState()
 		const plot = config.plots.find(p => p.id === this.id)
-		const term2 = this.variableTwLst.find((t: any) => t.$id === item.tw$id).term
+		const term2 = this.variableTwLst?.find((t: any) => t.$id === item.tw$id)?.term
+		if (!term2) throw `No term found for ${item.tw$id}`
 		const scatterConfig = {
 			chartType: 'sampleScatter',
 			name: `${plot.featureTw.term.name} ${termType2label(plot.featureTw.term.type)} v ${term2.name}`,

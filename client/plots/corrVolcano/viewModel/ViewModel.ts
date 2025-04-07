@@ -1,12 +1,18 @@
 import type { TermWrapper } from '#types'
 import { scaleLinear } from 'd3-scale'
 import { termType2label } from '#shared/terms.js'
-import type { CorrelationVolcanoResponse } from '#types'
-import type { CorrVolcanoDom, CorrVolcanoPlotConfig, CorrVolcanoSettings, ViewData } from '../CorrelationVolcanoTypes'
+import type { CorrelationVolcanoResponse, VariableItemEntry } from '#types'
+import type {
+	CorrVolcanoDom,
+	CorrVolcanoPlotConfig,
+	CorrVolcanoSettings,
+	CorrVolcanoViewData,
+	CorrVolcanoPlotDimensions
+} from '../CorrelationVolcanoTypes'
 
 export class ViewModel {
 	variableTwLst: TermWrapper[]
-	viewData: ViewData
+	viewData: CorrVolcanoViewData
 	readonly bottomPad = 60
 	/** Only one side, left or right */
 	readonly horizPad = 70
@@ -20,7 +26,7 @@ export class ViewModel {
 	) {
 		this.variableTwLst = variableTwLst
 		const pValueKey = settings.isAdjustedPValue ? 'adjusted_pvalue' : 'original_pvalue'
-		const d = this.transformPValues(data, pValueKey)
+		const d = this.transformPValues(data, pValueKey) as any
 		const [absYMax, absYMin] = this.setMinMax(d, `transformed_${pValueKey}`)
 		const [absXMax, absXMin] = this.setMinMax(d, 'correlation')
 		const [absSampleMax, absSampleMin] = this.setMinMax(d, 'sampleSize')
@@ -118,10 +124,10 @@ export class ViewModel {
 	setVariablesData(
 		absSampleMax: number,
 		absSampleMin: number,
-		data: any,
+		data: CorrVolcanoViewData,
 		dom: CorrVolcanoDom,
 		key: string,
-		plotDim: any,
+		plotDim: CorrVolcanoPlotDimensions,
 		settings: CorrVolcanoSettings
 	) {
 		const radiusScale = scaleLinear()

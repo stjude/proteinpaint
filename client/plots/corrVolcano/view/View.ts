@@ -5,9 +5,9 @@ import { LegendCircleReference } from '#dom'
 import type {
 	CorrVolcanoDom,
 	CorrVolcanoSettings,
-	LegendData,
-	PlotDimensions,
-	ViewData
+	CorrVolcanoLegendData,
+	CorrVolcanoPlotDimensions,
+	CorrVolcanoViewData
 } from '../CorrelationVolcanoTypes'
 import type { CorrVolcanoInteractions } from '../interactions/CorrVolcanoInteractions'
 import { ItemToolTip } from './ItemToolTip'
@@ -20,10 +20,10 @@ import { ItemToolTip } from './ItemToolTip'
 export class View {
 	dom: CorrVolcanoDom
 	readonly duration = 500
-	viewData: ViewData
+	viewData: CorrVolcanoViewData
 	constructor(
 		dom: CorrVolcanoDom,
-		viewData: ViewData,
+		viewData: CorrVolcanoViewData,
 		interactions: CorrVolcanoInteractions,
 		settings: CorrVolcanoSettings,
 		defaultMaxRadius: number,
@@ -41,7 +41,7 @@ export class View {
 		this.renderLegend(viewData.legendData, settings, interactions, defaultMaxRadius, defaultMinRadius)
 	}
 
-	renderDom(plotDim: PlotDimensions) {
+	renderDom(plotDim: CorrVolcanoPlotDimensions) {
 		this.dom.svg.attr('width', plotDim.svg.width).attr('height', plotDim.svg.height)
 
 		this.dom.title
@@ -112,7 +112,7 @@ export class View {
 	}
 
 	renderLegend(
-		legendData: LegendData,
+		legendData: CorrVolcanoLegendData,
 		settings: CorrVolcanoSettings,
 		interactions: CorrVolcanoInteractions,
 		defaultMaxRadius: number,
