@@ -1,4 +1,3 @@
-import type { TermWrapper } from '#types'
 import { to_svg } from '#src/client'
 import { termType2label } from '#shared/terms.js'
 import { appInit } from '#termdb/app'
@@ -15,15 +14,6 @@ export class CorrVolcanoInteractions {
 		this.id = id
 		//TODO: should be in the state somehow
 		this.variableTwLst = []
-	}
-
-	setVars(app: any, id: string, variableTwLst: TermWrapper[]) {
-		/** This is a hack
-		 * app and id are set after init and therefore not available
-		 * until plot init completes. Need to fix. */
-		this.app = app
-		this.id = id
-		this.variableTwLst = variableTwLst
 	}
 
 	download() {
