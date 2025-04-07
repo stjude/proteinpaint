@@ -1,4 +1,4 @@
-import type { TermWrapper } from '#types'
+import type { TermWrapper, VariableItemEntry } from '#types'
 import type { Elem, SvgG, SvgSvg, SvgText } from '../../types/d3.js'
 import type { Menu } from '#dom'
 import type { BasePlotConfig } from '#mass/types/mass'
@@ -67,7 +67,7 @@ export type CorrVolcanoDom = {
 	yAxisLabel: SvgText
 }
 
-export type PlotDimensions = {
+export type CorrVolcanoPlotDimensions = {
 	/** Height and width of the svg */
 	svg: {
 		height: number
@@ -114,7 +114,7 @@ export type PlotDimensions = {
 }
 
 /** Attributes added to the response data */
-export type VariableItem = {
+export type VariableItem = VariableItemEntry & {
 	color: string
 	label: string
 	/** x coordinate */
@@ -123,10 +123,14 @@ export type VariableItem = {
 	y: number
 	/** radius of the circle */
 	radius: number
+	/** last x coordinate */
+	previousX: number
+	/** last y coordinate */
+	previousY: number
 }
 
 /** Dimensions of sample size circles */
-export type LegendData = {
+export type CorrVolcanoLegendData = {
 	absMin: number
 	absMax: number
 	skippedVariables: { label: string }[]
@@ -134,10 +138,10 @@ export type LegendData = {
 
 /** Formated response data passed from the view model
  * to the view for rendering */
-export type ViewData = {
+export type CorrVolcanoViewData = {
 	/** Dimensions of all the plot elements except the data points */
-	plotDim: PlotDimensions
+	plotDim: CorrVolcanoPlotDimensions
 	/** Rendering specifics for each data point */
 	variableItems: VariableItem[]
-	legendData: LegendData
+	legendData: CorrVolcanoLegendData
 }

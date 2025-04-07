@@ -2,10 +2,10 @@ import { table2col } from '#dom'
 import { roundValue } from '#shared/roundValue.js'
 import type { Menu } from '#dom'
 import type { SvgCircle } from '../../../types/d3'
-import type { CorrVolcanoSettings } from '../CorrelationVolcanoTypes'
+import type { CorrVolcanoSettings, VariableItem } from '../CorrelationVolcanoTypes'
 
 export class ItemToolTip {
-	constructor(item: any, circle: SvgCircle, tip: Menu, settings: CorrVolcanoSettings) {
+	constructor(item: VariableItem, circle: SvgCircle, tip: Menu, settings: CorrVolcanoSettings) {
 		circle.on('mouseover', () => {
 			tip.clear().showunder(circle.node())
 			const table = table2col({ holder: tip.d.append('table') })
