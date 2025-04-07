@@ -124,6 +124,10 @@ export class View {
 			const transformStr = `translate(${plot.x}, ${plot.y})${settings.isVertical ? `, rotate(-90)` : ''}`
 			g.attr('transform', transformStr)
 
+			if (settings.isVertical) {
+				g.select('text').attr('transform', 'rotate(45)')
+			}
+
 			new BoxPlotToolTips(plot, g, this.dom.tip, settings.isVertical)
 			if (data.plots.length > 1) {
 				//Do not try to use the same tip for the menu as the tooltips.
