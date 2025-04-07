@@ -174,6 +174,9 @@ class CorrelationVolcano extends RxComponentInner {
 		this.components.controls.on('downloadClick.correlationVolcano', () => {
 			this.interactions!.download()
 		})
+		this.components.controls.on('helpClick.correlationVolcano', () => {
+			window.open('https://github.com/stjude/proteinpaint/wiki/Correlation-volcano', '_blank')
+		})
 	}
 
 	async init(appState: MassState) {

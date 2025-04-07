@@ -96,6 +96,7 @@ function helpBtnInit(opts) {
 			'profileRadar',
 			'profileRadarFacility',
 			'boxplot',
+			'correlationVolcano',
 			'differentialAnalysis'
 		],
 		dom: {
