@@ -2,7 +2,7 @@
 
 # Load required packages
 suppressWarnings({
-    library(jsonlite)
+  library(jsonlite)
 })
 
 # Read JSON input from stdin
@@ -19,12 +19,12 @@ coeffs <- c()
 pvalues <- c()
 sample_sizes <- c()
 for (i in 1:length(v1)) {
-    suppressWarnings({
-        cor <- cor.test(as.numeric(unlist(v1[i])), as.numeric(unlist(v2[i])), method = input$method)
-    })    
-    coeffs <- c(coeffs, cor$estimate)
-    pvalues <- c(pvalues, cor$p.value)
-    sample_sizes <- c(sample_sizes, length(as.numeric(unlist(v1[i]))))
+  suppressWarnings({
+    cor <- cor.test(as.numeric(unlist(v1[i])), as.numeric(unlist(v2[i])), method = input$method)
+  })    
+  coeffs <- c(coeffs, cor$estimate)
+  pvalues <- c(pvalues, cor$p.value)
+  sample_sizes <- c(sample_sizes, length(as.numeric(unlist(v1[i]))))
 }
 
 # Adjusting for multiple testing correction
@@ -35,4 +35,4 @@ names(output)[2] <- "correlation"
 names(output)[3] <- "original_p_value"
 names(output)[4] <- "adjusted_p_value"
 names(output)[5] <- "sample_size"
-toJSON(output)
+toJSON(output, digits = NA, na = "string") # Setting digits = NA makes toJSON() use the max precision. na='string' causes any "not a number" to be reported as string. This from ?toJSON() documentation

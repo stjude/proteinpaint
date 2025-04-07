@@ -283,4 +283,4 @@ if (dim(read_counts)[1] * dim(read_counts)[2] < as.numeric(input$mds_cutoff)) { 
 #cat("Time for generating final dataframe: ", as.difftime(final_data_generation_time, unit = "secs")[3], " seconds\n")
 
 # Output results
-toJSON(final_output, digits = NA) # Setting digits = NA makes toJSON() use the max precision. This from ?toJSON() documentation
+toJSON(final_output, digits = NA, na = "string") # Setting digits = NA makes toJSON() use the max precision. na='string' causes any "not a number" to be reported as string. This from ?toJSON() documentation
