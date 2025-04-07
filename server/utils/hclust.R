@@ -17,7 +17,7 @@
 # To plot the heatmap uncomment line `library(ggplot2) and lines after "Visualization" comment
 
 suppressWarnings({
-    suppressPackageStartupMessages(library(jsonlite))
+  suppressPackageStartupMessages(library(jsonlite))
 })
 #library(flashClust)
 #library(ggplot2) # Uncomment this line to plot heatmap in R
@@ -93,8 +93,7 @@ colnames(sorted_col_names_df2) <- c("name")
 output_df$ColOrder <- sorted_col_names_df2
 
 
-
-toJSON(output_df)
+toJSON(output_df, digits = NA, na = "string") # Setting digits = NA makes toJSON() use the max precision. na='string' causes any "not a number" to be reported as string. This from ?toJSON() documentation
 
 
 # Visualization of heatmap, uncomment code below to get ggplot2 image of heatmap
