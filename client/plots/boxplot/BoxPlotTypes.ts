@@ -1,5 +1,6 @@
 import type { Menu } from '#dom'
-import type { BoxPlotEntry, BoxPlotData } from '#types'
+import type { PlotConfig } from '#mass/types/mass'
+import type { BoxPlotEntry, BoxPlotData, TermWrapper } from '#types'
 import type { Div, Elem, SvgG, SvgSvg, SvgText } from '../../types/d3'
 
 /** Opts sent from mass */
@@ -9,6 +10,15 @@ export type TdbBoxPlotOpts = {
 	header?: Elem
 	numericEditMenuVersion?: string[]
 }
+
+export type BoxPlotConfigOpts = {
+	term: TermWrapper
+	term2?: TermWrapper
+	term0?: TermWrapper
+	overrides?: any
+}
+
+export type BoxPlotConfig = PlotConfig
 
 /** User controlled settings. Some settings are calculated based on
  * the number of boxplots */
