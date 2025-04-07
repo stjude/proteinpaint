@@ -132,7 +132,8 @@ export class ViewModel {
 			/** Set rendering properties for the plot */
 
 			//Set the color for all plots
-			if (!plot.color) plot.color = config?.term2?.term?.values?.[plot.seriesId]?.color || settings.color
+			const color = config?.term2?.term?.values?.[plot.seriesId]?.color || settings.color
+			if (!plot.color) plot.color = color
 			//Brighten the colors in dark mode for better visibility
 			if (settings.displayMode == 'dark') plot.color = rgb(plot.color).brighter(0.75)
 			//Ignore if hidden after the color is set
@@ -145,6 +146,8 @@ export class ViewModel {
 				plot.boxplot.radius = this.outRadius
 			}
 			plot.labColor = settings.displayMode == 'dark' ? 'white' : 'black'
+			plot.boxplot.rectFill =
+				settings.displayMode == 'dark' ? 'black' : settings.displayMode == 'filled' ? color : 'white'
 			plot.x = settings.isVertical ? this.horizPad / 2 + this.incrPad : this.totalLabelSize
 			plot.y = this.topPad + (settings.isVertical ? settings.boxplotWidth + settings.labelPad : this.incrPad)
 			this.incrPad += this.totalRowSize
