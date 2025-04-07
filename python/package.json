@@ -1,0 +1,31 @@
+{
+  "version": "2.113.1",
+  "name": "@sjcrh/proteinpaint-python",
+  "description": "Python-based utilities for proteinpaint",
+  "main": "index.js",
+  "bin": {
+    "proteinpaint-python": "index.js"
+  },
+  "author": "Jian Wang",
+  "license": "SEE LICENSE IN ./LICENSE",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/stjude/proteinpaint.git",
+    "directory": "rust"
+  },
+  "files": [
+    "index.js",
+    "src",
+    "requirements.txt",
+    "LICENSE/*"
+  ],
+  "bugs": {
+    "url": "https://github.com/stjude/proteinpaint"
+  },
+  "homepage": "https://github.com/stjude/proteinpaint#readme",
+  "pp_release_tag": "v2.113.1",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": []
+}
