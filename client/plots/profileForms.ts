@@ -30,6 +30,7 @@ export class profileForms extends profilePlot {
 	tabs: any
 	shiftTop: any
 	categories: any
+	module: any
 
 	constructor(opts) {
 		super()
@@ -114,7 +115,9 @@ export class profileForms extends profilePlot {
 		const activeTab = this.state.config.activeTab || this.tabs[0].label
 		this.activePlot = this.state.config.plots.find(p => p.name == activeTab)
 		this.activeTWs = this.twLst.filter(tw => tw.term.subtype == this.activePlot.subtype)
-		const domain = this.config.tw.term.id.split('__').slice(1).join(' / ')
+		const parents = this.config.tw.term.id.split('__')
+		this.module = parents[1]
+		const domain = parents.slice(1).join(' / ')
 		this.dom.domainDiv.text(domain)
 		this.categories = new Set()
 
@@ -204,8 +207,7 @@ export class profileForms extends profilePlot {
 		]
 		for (const category of categories) {
 			if (!this.categories.has(category.name)) continue
-			const color = category.color || '#aaa'
-			this.drawLegendRect(x, 0, category.name, color, legendG)
+			this.drawLegendRect(x, 0, category.name, legendG)
 			x += 150
 		}
 	}
@@ -265,7 +267,7 @@ export class profileForms extends profilePlot {
 
 		let x = 0
 		for (const category of this.activePlot.categories) {
-			this.drawLegendRect(x, 0, category.name, this.getColor(category.name), this.dom.legendG)
+			this.drawLegendRect(x, 0, category.name, this.dom.legendG, true)
 			x += 80
 		}
 		let text = this.dom.legendG
@@ -332,7 +334,9 @@ export class profileForms extends profilePlot {
 
 	renderCategory(category, dict, itemG, x, height, total, showPercent = false) {
 		const key = category.name
-		const color = category.color || '#aaa' //not available category
+		const module = this.module
+		const colorMap = this.state.termdbConfig.colorMap
+		const color = this.state.termdbConfig.colorMap[module][key] || colorMap['*'][key]
 		const value = dict[key]
 		if (!value) return 0
 		this.categories.add(category.name)
@@ -345,6 +349,8 @@ export class profileForms extends profilePlot {
 			.attr('width', width)
 			.attr('height', height)
 			.attr('stroke', 'gray')
+			.attr('stroke-width', 0.5)
+			.attr('stroke-opacity', 0.5)
 			.attr('fill', color)
 			.datum({ key, value: percent })
 			.on('mouseover', this.onMouseOver.bind(this))
@@ -412,7 +418,10 @@ export class profileForms extends profilePlot {
 		}
 	}
 
-	drawLegendRect(x, y, text, color, legendG) {
+	drawLegendRect(x, y, text, legendG, isYesNo = false) {
+		const colorMap = this.state.termdbConfig.colorMap
+		const noAnswerColor = isYesNo ? 'url(#' + this.id + '_diagonalHatch)' : colorMap['*'][text]
+		const color = this.state.termdbConfig.colorMap[this.module][text] || noAnswerColor
 		const size = 20
 		const itemG = legendG.append('g').attr('transform', `translate(${x}, ${y})`)
 		itemG
@@ -423,6 +432,8 @@ export class profileForms extends profilePlot {
 			.attr('height', size)
 			.attr('fill', color)
 			.attr('stroke', 'gray')
+			.attr('stroke-width', 0.5)
+			.attr('stroke-opacity', 0.5)
 		itemG
 			.append('text')
 			.attr('transform', `translate(${size + 10}, ${y + size})`)
