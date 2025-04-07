@@ -1,10 +1,9 @@
-import type { FormattedPlotEntry, LegendData, LegendItemEntry } from '../BoxPlotTypes'
+import type { FormattedPlotEntry, LegendData, LegendItemEntry, BoxPlotConfig } from '../BoxPlotTypes'
 import type { BoxPlotResponse } from '#types'
-import type { PlotConfig } from '#mass/types/mass'
 
 export class LegendDataMapper {
 	legendData: LegendData = []
-	constructor(config: PlotConfig, data: BoxPlotResponse, plots: FormattedPlotEntry[]) {
+	constructor(config: BoxPlotConfig, data: BoxPlotResponse, plots: FormattedPlotEntry[]) {
 		const isTerm2 = config?.term2
 		if (config.term.q?.descrStats) {
 			this.legendData.push({

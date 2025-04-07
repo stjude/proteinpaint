@@ -5,8 +5,8 @@ import { RxComponentInner } from '../../types/rx.d'
 import { plotColor } from '#shared/common.js'
 import { Menu, getMaxLabelWidth } from '#dom'
 import type { Elem } from '../../types/d3'
-import type { BasePlotConfig, MassAppApi, MassState, PlotConfig } from '#mass/types/mass'
-import type { TdbBoxPlotOpts, BoxPlotSettings, BoxPlotDom } from './BoxPlotTypes'
+import type { MassAppApi, MassState } from '#mass/types/mass'
+import type { TdbBoxPlotOpts, BoxPlotSettings, BoxPlotDom, BoxPlotConfig, BoxPlotConfigOpts } from './BoxPlotTypes'
 import { Model } from './model/Model'
 import { ViewModel } from './viewModel/ViewModel'
 import { View } from './view/View'
@@ -75,7 +75,7 @@ class TdbBoxplot extends RxComponentInner {
 					{ label: 'Default', value: false },
 					{ label: 'Median values', value: true }
 				],
-				getDisplayStyle: (plot: PlotConfig) => (plot.term2 ? '' : 'none')
+				getDisplayStyle: (plot: BoxPlotConfig) => (plot.term2 ? '' : 'none')
 			},
 			{
 				label: 'Scale',
@@ -144,7 +144,7 @@ class TdbBoxplot extends RxComponentInner {
 				type: 'color',
 				chartType: 'boxplot',
 				settingsKey: 'color',
-				getDisplayStyle: (plot: PlotConfig) => (plot.term2 ? 'none' : '')
+				getDisplayStyle: (plot: BoxPlotConfig) => (plot.term2 ? 'none' : '')
 			},
 			{
 				label: 'Display mode',
@@ -175,7 +175,7 @@ class TdbBoxplot extends RxComponentInner {
 	}
 
 	getState(appState: MassState) {
-		const config = appState.plots.find((p: BasePlotConfig) => p.id === this.id)
+		const config = appState.plots.find((p: any) => p.id === this.id)
 		if (!config) {
 			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
 		}
@@ -270,7 +270,7 @@ export function getDefaultBoxplotSettings(app, overrides = {}) {
 	return Object.assign(defaults, overrides)
 }
 
-export async function getPlotConfig(opts, app: MassAppApi) {
+export async function getPlotConfig(opts: BoxPlotConfigOpts, app: MassAppApi) {
 	if (!opts.term) throw 'opts.term{} missing [boxplot getPlotConfig()]'
 	try {
 		await fillTermWrapper(opts.term, app.vocabApi)

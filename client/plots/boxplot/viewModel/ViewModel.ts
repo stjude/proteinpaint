@@ -2,8 +2,7 @@ import { format } from 'd3-format'
 import { decimalPlacesUntilFirstNonZero } from '#shared/roundValue.js'
 import { rgb } from 'd3-color'
 import type { BoxPlotResponse } from '#types'
-import type { PlotConfig } from '#mass/types/mass'
-import type { BoxPlotSettings, PlotDimensions, ViewData } from '../BoxPlotTypes'
+import type { BoxPlotSettings, PlotDimensions, ViewData, BoxPlotConfig } from '../BoxPlotTypes'
 import { LegendDataMapper } from './LegendDataMapper'
 
 export class ViewModel {
@@ -27,7 +26,7 @@ export class ViewModel {
 	private totalRowSize: number
 	viewData: ViewData
 	constructor(
-		config: PlotConfig,
+		config: BoxPlotConfig,
 		data: BoxPlotResponse,
 		settings: BoxPlotSettings,
 		maxLabelLgth: number,
