@@ -129,7 +129,7 @@ async function getResult(q: TermdbClusterRequest, ds: any, genome) {
 	// have data for multiple genes, run clustering
 	const t = Date.now() // use "t=new Date()" will lead to tsc error
 	const clustering: Clustering = await doClustering(term2sample2value, q, Object.keys(bySampleId).length)
-	mayLog('clustering done:', Date.now() - t, 'ms')
+	mayLog('clustering done:', formatElapsedTime(Date.now() - t))
 	const result = { clustering, byTermId, bySampleId } as ValidResponse
 	if (removedHierClusterTerms.length) result.removedHierClusterTerms = removedHierClusterTerms
 	return result

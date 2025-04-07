@@ -2,36 +2,20 @@
 // readHDF5.rs - HDF5 Gene Expression Data Reader
 //------------------------------------------------------------------------------
 // 
-// This utility processes HDF5 files containing gene expression data and extracts 
-// values for requested genes. It supports both dense matrix and sparse matrix formats,
-// with optimized access patterns for single and multi-gene queries.
+// Extracts gene expression values from HDF5 files in dense or sparse formats.
+// Supports single genes with memory optimization and multiple genes with 
+// parallel processing.
 //
-// Key Features:
-// - Automatic format detection (dense/sparse)
-// - Single gene queries with optimized memory usage
-// - Multi-gene batch processing with parallel execution
-// - JSON output with timing and performance metrics
-//
-// Processing flow:
-// 1. Parse input JSON to get gene name(s) and HDF5 file path
-// 2. Detect HDF5 file format (dense/sparse)
-// 3. For single gene:
-//    - Read only necessary data for the requested gene
-//    - Process and return JSON with gene expression values
-// 4. For multiple genes:
-//    - Preload required datasets when appropriate
-//    - Process genes in parallel (when possible)
-//    - Consolidate results into a unified JSON structure
+// Features:
+// - Auto format detection (dense/sparse)
+// - Optimized single and multi-gene queries
+// - Parallel processing for multiple genes
+// - JSON output with timing metrics
 //
 // Usage: 
-//   Requires HDF5_DIR and LD_LIBRARY_PATH to be set in ~/.bash_profile
-//   Example: HDF5_DIR=/usr/local/Homebrew/Cellar/hdf5/1.14.3_1 && echo $HDF5_DIR && 
-//            cd .. && cargo build --release && 
-//            json='{"gene":"TP53","hdf5_file":"matrix.h5"}' && 
-//            time echo $json | target/release/readHDF5
+//   HDF5_DIR=/usr/local/Homebrew/Cellar/hdf5/1.14.3_1 && 
+//   echo $json='{"gene":"TP53","hdf5_file":"matrix.h5"}' | target/release/readHDF5
 //------------------------------------------------------------------------------
-
-// Imports
 use hdf5::types::{FixedAscii, VarLenAscii};
 use hdf5::{File, Result};
 use ndarray::Dim;
@@ -44,65 +28,16 @@ use std::time::Instant;
 
 /// Determines the format of an HDF5 gene expression file
 ///
-/// This function examines the structure of an HDF5 file to determine its format.
-/// It detects whether the file uses a dense matrix representation, a sparse matrix
-/// representation, or an unknown format by checking for the presence of specific
-/// datasets and groups.
-///
-/// # HDF5 Format Specifications
-///
-/// The function identifies the following formats:
-///
-/// - **Dense format**:
-///   - Contains a "counts" dataset (2D matrix of gene expression values)
-///   - Contains a "gene_names" dataset (gene identifiers)
-///   - Contains a "samples" dataset (sample identifiers)
-///
-/// - **Sparse format**:
-///   - Contains a "data" group with sparse matrix components
-///   - Contains a "sample_names" dataset
-///
-/// - **Unknown format**:
-///   - Does not match either the dense or sparse format criteria
+/// Examines the structure of an HDF5 file to detect its format:
+/// - "dense": Contains "counts", "gene_names", and "samples" datasets
+/// - "sparse": Contains "data" group and "sample_names" dataset
+/// - "unknown": Does not match either format
 ///
 /// # Arguments
-///
 /// * `hdf5_filename` - Path to the HDF5 file to analyze
 ///
 /// # Returns
-///
-/// A result containing one of the following static string values:
-/// - `"dense"` - If the file is in dense matrix format
-/// - `"sparse"` - If the file is in sparse matrix format
-/// - `"unknown"` - If the file format cannot be determined
-///
-/// # Errors
-///
-/// This function will return an error if:
-/// - The file cannot be opened
-/// - The file is not a valid HDF5 file
-///
-/// # Algorithm
-///
-/// The detection algorithm works by checking for the presence of specific datasets
-/// and groups that are characteristic of each format:
-///
-/// 1. Opens the HDF5 file
-/// 2. Checks for datasets/groups that indicate dense format
-/// 3. Checks for datasets/groups that indicate sparse format
-/// 4. Returns the detected format or "unknown"
-///
-/// # Examples
-///
-/// ```rust
-/// // Example usage (not runnable)
-/// match detect_hdf5_format("expression_data.h5") {
-///     Ok("dense") => println!("Dense format detected"),
-///     Ok("sparse") => println!("Sparse format detected"),
-///     Ok("unknown") => println!("Unknown format detected"),
-///     Err(e) => println!("Error: {}", e),
-/// }
-/// ```
+/// The detected format as a static string: "dense", "sparse", or "unknown"
 fn detect_hdf5_format(hdf5_filename: &str) -> Result<&'static str> {
     let file = File::open(hdf5_filename)?;
 
@@ -127,63 +62,16 @@ fn detect_hdf5_format(hdf5_filename: &str) -> Result<&'static str> {
     }
 }
 
-/// Unified function for querying gene expression data from any supported HDF5 file format
+/// Unified function for querying gene expression data from an HDF5 file
 ///
-/// This function serves as the central entry point for extracting expression values for a specified gene
-/// from an HDF5 file. It automatically detects the format of the provided file (dense or sparse)
-/// and routes the query to the appropriate specialized handler function.
-///
-/// # Supported HDF5 Formats
-///
-/// - **Dense format**: Contains explicit "gene_ids", "samples", and "counts" datasets where
-///   the expression matrix is stored as a direct 2D array
-/// - **Sparse format**: Contains a "data" group with "p", "i", "x" datasets using the
-///   Compressed Sparse Column (CSC) representation for the expression matrix
+/// Automatically detects file format (dense or sparse) and routes to the appropriate handler.
 ///
 /// # Arguments
-///
 /// * `hdf5_filename` - Path to the HDF5 file containing gene expression data
 /// * `gene_name` - Name of the gene whose expression values to extract
 ///
 /// # Returns
-///
-/// A result indicating success or error. On success, the function prints the gene
-/// expression data in JSON format to stdout for dense matrix HDF5 files. For spare matrix files it
-/// sends the expression data in JSON format with "output_string:" prefix to stdout.
-///
-/// # Example Output Format
-///
-/// ```json
-/// {
-///   "gene": "TP53",
-///   "dataId": "TP53",
-///   "samples": {
-///     "sample1": 10.5,
-///     "sample2": 8.2,
-///     "sample3": 15.7
-///   }
-/// }
-/// ```
-///
-/// # Error Handling
-///
-/// The function handles several types of errors:
-/// - File format detection failures
-/// - Unsupported or unknown file formats
-/// - Errors from the format-specific query functions
-///
-/// When an error occurs, the function returns a structured JSON error message.
-///
-/// # Processing Flow
-///
-/// 1. Detects the format of the HDF5 file using `detect_hdf5_format`
-/// 2. Routes to the appropriate specialized function:
-///    - `query_gene_dense` for dense matrix files
-///    - `query_gene_sparse` for sparse matrix files
-/// 3. Returns an error for unsupported formats
-///
-/// This unified approach allows client code to work with either format without needing
-/// to know the specific structure of the underlying HDF5 file.
+/// Outputs gene expression data in JSON format to stdout
 fn query_gene(hdf5_filename: String, gene_name: String) -> Result<()> {
     // First, detect the file format
     let file_format = detect_hdf5_format(&hdf5_filename)?;
@@ -193,7 +81,6 @@ fn query_gene(hdf5_filename: String, gene_name: String) -> Result<()> {
         "dense" => query_gene_dense(hdf5_filename, gene_name),
         "sparse" => query_gene_sparse(hdf5_filename, gene_name),
         _ => {
-            // For unknown format, return an error
             println!(
                 "{}",
                 serde_json::json!({
@@ -211,62 +98,18 @@ fn query_gene(hdf5_filename: String, gene_name: String) -> Result<()> {
 
 /// Reads expression data for a specific gene from a dense format HDF5 file
 ///
-/// This function extracts expression values for a specified gene from an HDF5 file
-/// that follows the dense matrix format. The dense format is characterized by:
-/// - A "gene_ids" dataset containing gene identifiers
-/// - A "samples" dataset containing sample identifiers
-/// - A "counts" dataset containing a gene × sample expression matrix
-///
-/// The function returns the expression values in a JSON format where sample names
-/// are keys and their corresponding expression values are the values.
+/// Dense format contains "gene_ids", "samples", and "counts" datasets.
 ///
 /// # Arguments
-///
 /// * `hdf5_filename` - Path to the HDF5 file
 /// * `gene_name` - Name of the gene to query
 ///
 /// # Returns
-///
-/// A result indicating success or error. On success, the function prints the gene
-/// expression data in JSON format to stdout.
-///
-/// # Output Format
-///
-/// ```json
-/// {
-///   "gene": "GENE_NAME",
-///   "dataId": "GENE_NAME",
-///   "samples": {
-///     "SAMPLE1": VALUE1,
-///     "SAMPLE2": VALUE2,
-///     ...
-///   }
-/// }
-/// ```
+/// Prints gene expression data in JSON format to stdout
 ///
 /// # Error Handling
-///
-/// The function handles several potential errors:
-/// - File opening errors
-/// - Missing or inaccessible datasets ("gene_ids", "samples", "counts")
-/// - Gene not found in the dataset
-/// - Out of bounds gene index
-/// - Expression data reading failures
-///
-/// If an error occurs, the function returns an explanatory error message in JSON format.
-///
-/// # Reading Strategy
-///
-/// The function tries two methods to read expression data:
-/// 1. First attempts to read a 1D slice directly from the counts dataset
-/// 2. If that fails, tries reading the entire dataset and extracting the row of interest
-///
-/// This dual approach ensures compatibility with different HDF5 library implementations
-/// and dataset configurations.
+/// Handles file access issues, missing datasets, and gene not found scenarios
 fn query_gene_dense(hdf5_filename: String, gene_name: String) -> Result<()> {
-    // let start_time = Instant::now();
-
-    // Open the HDF5 file
     let file = match File::open(hdf5_filename) {
         Ok(f) => f,
         Err(err) => {
@@ -281,7 +124,6 @@ fn query_gene_dense(hdf5_filename: String, gene_name: String) -> Result<()> {
         }
     };
 
-    // Read gene ids using VarLenAscii
     let genes_dataset = match file.dataset("gene_ids") {
         Ok(ds) => ds,
         Err(err) => {
@@ -296,7 +138,6 @@ fn query_gene_dense(hdf5_filename: String, gene_name: String) -> Result<()> {
         }
     };
 
-    // Read genes as VarLenAscii
     let genes_varlen = match genes_dataset.read_1d::<VarLenAscii>() {
         Ok(g) => g,
         Err(err) => {
@@ -314,7 +155,6 @@ fn query_gene_dense(hdf5_filename: String, gene_name: String) -> Result<()> {
     // Convert to Vec<String> for easier handling
     let genes: Vec<String> = genes_varlen.iter().map(|g| g.to_string()).collect();
 
-    // Read sample names using VarLenAscii
     let samples_dataset = match file.dataset("samples") {
         Ok(ds) => ds,
         Err(err) => {
@@ -329,7 +169,6 @@ fn query_gene_dense(hdf5_filename: String, gene_name: String) -> Result<()> {
         }
     };
 
-    // Read samples as VarLenAscii
     let samples_varlen = match samples_dataset.read_1d::<VarLenAscii>() {
         Ok(s) => s,
         Err(err) => {
@@ -362,7 +201,6 @@ fn query_gene_dense(hdf5_filename: String, gene_name: String) -> Result<()> {
         }
     };
 
-    // Read the expression data for the gene
     let counts_dataset = match file.dataset("counts") {
         Ok(ds) => ds,
         Err(err) => {
@@ -377,7 +215,6 @@ fn query_gene_dense(hdf5_filename: String, gene_name: String) -> Result<()> {
         }
     };
 
-    // Make sure the gene index is valid for this dataset
     if gene_index >= counts_dataset.shape()[0] {
         println!(
             "{}",
@@ -389,7 +226,6 @@ fn query_gene_dense(hdf5_filename: String, gene_name: String) -> Result<()> {
         return Ok(());
     }
 
-    // Try to read the expression data
     let gene_expression: Array1<f64>;
 
     // Method 1: Try to read a 1D slice directly (for 2D datasets)
@@ -399,8 +235,6 @@ fn query_gene_dense(hdf5_filename: String, gene_name: String) -> Result<()> {
         }
         Err(err1) => {
             // Method 2: Try a different approach
-
-            // First get the dimensions
             let dataset_shape = counts_dataset.shape();
             if dataset_shape.len() != 2 {
                 println!(
@@ -420,7 +254,6 @@ fn query_gene_dense(hdf5_filename: String, gene_name: String) -> Result<()> {
                     let row = all_data.slice(s![gene_index, ..]).to_owned();
                     gene_expression = row;
 
-                    // Start building a flatter JSON structure
                     let mut output_string = String::from("{\"samples\":{");
 
                     // Create direct key-value pairs where sample names are the keys
@@ -440,8 +273,6 @@ fn query_gene_dense(hdf5_filename: String, gene_name: String) -> Result<()> {
 
                     // Close the JSON object
                     output_string += "}}";
-
-                    // println!("{}", output_string);
                 }
                 Err(err2) => {
                     println!(
@@ -456,26 +287,22 @@ fn query_gene_dense(hdf5_filename: String, gene_name: String) -> Result<()> {
             }
         }
     }
-    // Create samples map
     let mut samples_map = Map::new();
     for (i, sample) in samples.iter().enumerate() {
         if i < gene_expression.len() {
-            // Add each sample to the map, clean the sample name and convert value to JSON Number
-            // Note: We need to handle potential NaN or infinity values that aren't valid in JSON
             let value = if gene_expression[i].is_finite() {
                 Value::from(gene_expression[i])
             } else {
-                Value::Null // Or choose a different representation for non-finite values
+                Value::Null
             };
 
             samples_map.insert(
-                sample.replace("\\", ""), // Clean the sample name
+                sample.replace("\\", ""), 
                 value,
             );
         }
     }
 
-    // Build the complete JSON structure
     let output_json = json!({
         "gene": gene_name,
         "dataId": gene_name,
@@ -488,74 +315,24 @@ fn query_gene_dense(hdf5_filename: String, gene_name: String) -> Result<()> {
     Ok(())
 }
 
-/// Reads expression data for a specific gene from a sparse format HDF5 file (from original readHD5.rs)
+/// Reads expression data for a specific gene from a sparse format HDF5 file
 ///
-/// This function extracts expression values for a specified gene from an HDF5 file
-/// that uses a sparse matrix representation. Sparse matrices are efficient for storing
-/// genomic data where many genes have zero expression in many samples. The sparse
-/// format follows the Compressed Sparse Column (CSC) structure with:
-///
-/// - A "data/dim" dataset containing matrix dimensions
-/// - A "gene_names" dataset containing gene identifiers
-/// - A "sample_names" dataset containing sample identifiers
-/// - A "data/p" dataset containing pointers to where each gene's data starts and ends
-/// - A "data/i" dataset containing column indices for non-zero values
-/// - A "data/x" dataset containing the actual non-zero expression values
+/// Extracts expression values from sparse matrix HDF5 files using Compressed 
+/// Sparse Column (CSC) structure.
 ///
 /// # Arguments
-///
 /// * `hdf5_filename` - Path to the HDF5 file
 /// * `gene_name` - Name of the gene to query
 ///
 /// # Returns
+/// Prints gene expression data as JSON to stdout with "output_string:" prefix.
+/// Sample names are keys, expression values are values.
 ///
-/// A result indicating success or error. On success, the function prints the gene
-/// expression data in JSON format to stdout with "output_string:" prefix.
-///
-/// # Output Format
-///
-/// The function outputs a JSON object where sample names are keys and their
-/// corresponding expression values are the values:
-///
-/// ```json
-/// {
-///   "sample1": 0.0,
-///   "sample2": 4.5,
-///   "sample3": 0.0,
-///   "sample4": 7.2,
-///   ...
-/// }
-/// ```
-///
-/// # Algorithm
-///
-/// 1. Opens the HDF5 file and reads matrix dimensions
-/// 2. Reads gene and sample names
-/// 3. Finds the index of the requested gene
-/// 4. Reads the sparse representation:
-///    - Gets pointers from "data/p" to determine which values belong to the gene
-///    - Reads column indices from "data/i" to know which samples have non-zero values
-///    - Reads actual values from "data/x"
-/// 5. Reconstructs a dense vector from the sparse representation
-/// 6. Formats and outputs the result as JSON
-///
-/// # Performance Tracking
-///
-/// The function tracks performance at various stages using timestamps:
-/// - Time spent parsing genes
-/// - Time spent parsing samples
-/// - Time spent reading the p, i, and x datasets
-/// - Time spent generating the full array from sparse representation
-///
-/// # Error Handling
-///
-/// The function handles several potential errors:
-/// - File opening failures
-/// - Dataset access failures
-/// - Gene not found in the dataset
-/// - Sparse matrix reading failures
-///
-/// If an error occurs, the function returns a structured JSON error message.
+/// The sparse format includes:
+/// - "data/dim" - Matrix dimensions
+/// - "gene_names" - Gene identifiers
+/// - "sample_names" - Sample identifiers
+/// - "data/p", "data/i", "data/x" - CSC matrix components
 fn query_gene_sparse(hdf5_filename: String, gene_name: String) -> Result<()> {
     let file = File::open(&hdf5_filename)?;
     let ds_dim = file.dataset("data/dim")?;
@@ -634,7 +411,6 @@ fn query_gene_sparse(hdf5_filename: String, gene_name: String) -> Result<()> {
         gene_array[col_id] = populated_column_values[idx];
     }
 
-    // Format output as JSON
     let mut output_string = "{".to_string();
     for i in 0..gene_array.len() {
         output_string += &format!(
@@ -660,45 +436,21 @@ fn query_gene_sparse(hdf5_filename: String, gene_name: String) -> Result<()> {
 
 /// Queries expression data for multiple genes from a dense format HDF5 file
 ///
-/// This function extracts expression values for multiple specified genes from an HDF5 file
-/// that follows the dense matrix format. It optimizes the query by reading relevant data only once.
+/// Extracts expression values for multiple genes from a dense matrix HDF5 file,
+/// optimizing for both single gene (linear search) and multi-gene (hashmap) queries.
 ///
 /// # Arguments
-///
 /// * `hdf5_filename` - Path to the HDF5 file
 /// * `gene_names` - Vector of gene names to query
 ///
 /// # Returns
-///
-/// A result indicating success or error. On success, the function prints a JSON object
-/// containing expression data for all requested genes to stdout.
-
-/// Queries expression data for multiple genes from a dense format HDF5 file
-///
-/// This function extracts expression values for multiple specified genes from an HDF5 file
-/// that follows the dense matrix format. It optimizes the query by using a HashMap for O(1) lookups
-/// when querying multiple genes, but maintains the original O(n) lookup for single gene queries
-/// to avoid unnecessary overhead.
-///
-/// # Arguments
-///
-/// * `hdf5_filename` - Path to the HDF5 file
-/// * `gene_names` - Vector of gene names to query
-///
-/// # Returns
-///
-/// A result indicating success or error. On success, the function prints a JSON object
-/// containing expression data for all requested genes to stdout.
+/// Prints a JSON object with expression data for all requested genes to stdout.
 fn query_multiple_genes_dense(hdf5_filename: String, gene_names: Vec<String>) -> Result<()> {
     let overall_start_time = Instant::now();
 
     // Create timing map to store all timing data
     let mut timings = Map::new();
-    timings.insert("gene_count".to_string(), Value::from(gene_names.len()));
-    timings.insert("format".to_string(), Value::String("dense".to_string()));
 
-    // Open the HDF5 file and read metadata
-    let file_open_start = Instant::now();
     let file = match File::open(&hdf5_filename) {
         Ok(f) => f,
         Err(err) => {
@@ -712,13 +464,8 @@ fn query_multiple_genes_dense(hdf5_filename: String, gene_names: Vec<String>) ->
             return Ok(());
         }
     };
-    timings.insert(
-        "file_open_ms".to_string(),
-        Value::from(file_open_start.elapsed().as_millis() as u64),
-    );
 
-    // Read gene ids
-    let genes_start_time = Instant::now();
+
     let genes_dataset = match file.dataset("gene_ids") {
         Ok(ds) => ds,
         Err(err) => {
@@ -765,14 +512,7 @@ fn query_multiple_genes_dense(hdf5_filename: String, gene_names: Vec<String>) ->
         // Skip HashMap creation for single gene queries
         None
     };
-    
-    timings.insert(
-        "read_genes_ms".to_string(),
-        Value::from(genes_start_time.elapsed().as_millis() as u64),
-    );
 
-    // Read sample names
-    let samples_start_time = Instant::now();
     let samples_dataset = match file.dataset("samples") {
         Ok(ds) => ds,
         Err(err) => {
@@ -802,13 +542,7 @@ fn query_multiple_genes_dense(hdf5_filename: String, gene_names: Vec<String>) ->
     };
 
     let samples: Vec<String> = samples_varlen.iter().map(|s| s.to_string()).collect();
-    timings.insert(
-        "read_samples_ms".to_string(),
-        Value::from(samples_start_time.elapsed().as_millis() as u64),
-    );
 
-    // Get counts dataset
-    let counts_dataset_start_time = Instant::now();
     let counts_dataset = match file.dataset("counts") {
         Ok(ds) => ds,
         Err(err) => {
@@ -822,17 +556,10 @@ fn query_multiple_genes_dense(hdf5_filename: String, gene_names: Vec<String>) ->
             return Ok(());
         }
     };
-    timings.insert(
-        "open_counts_dataset_ms".to_string(),
-        Value::from(counts_dataset_start_time.elapsed().as_millis() as u64),
-    );
 
     // Create thread-local storage for results
     let genes_map = Arc::new(std::sync::Mutex::new(Map::new()));
     let gene_timings = Arc::new(std::sync::Mutex::new(Map::new()));
-
-    // Process genes based on count
-    let genes_process_start = Instant::now();
 
     if gene_names.len() > 1 {
         // For multiple genes: preload all data and use parallel processing
@@ -859,7 +586,7 @@ fn query_multiple_genes_dense(hdf5_filename: String, gene_names: Vec<String>) ->
         };
 
         // Configurable thread count for testing
-        let thread_count = 2; // Adjust this number for testing
+        let thread_count = 2; 
         timings.insert("thread_count".to_string(), Value::from(thread_count));
 
         // Create a scoped thread pool with specified number of threads
@@ -1002,7 +729,6 @@ fn query_multiple_genes_dense(hdf5_filename: String, gene_names: Vec<String>) ->
                     Value::String(format!("Failed to create thread pool: {:?}", err)),
                 );
 
-                // Process genes sequentially with preloaded data
                 process_genes_sequentially(
                     &gene_names,
                     &genes,
@@ -1010,25 +736,15 @@ fn query_multiple_genes_dense(hdf5_filename: String, gene_names: Vec<String>) ->
                     &counts_dataset,
                     &all_gene_data,
                     &samples,
-                    &genes_map,
-                    &gene_timings,
+                    &genes_map
                 );
             }
         }
     } else if gene_names.len() == 1 {
-        // Single gene case - process directly without preloading the entire dataset
-        // and use original linear search for simplicity
-        timings.insert("parallel_processing".to_string(), Value::from(false));
-        timings.insert("preloaded_data".to_string(), Value::from(false));
-
-        // Extract the single gene name
         let gene_name = &gene_names[0];
-        let gene_start_time = Instant::now();
 
-        // Use original linear search for single gene case
         match genes.iter().position(|x| *x == *gene_name) {
             Some(gene_index) => {
-                // Make sure the gene index is valid for this dataset
                 if gene_index >= counts_dataset.shape()[0] {
                     let mut error_map = Map::new();
                     error_map.insert(
@@ -1036,18 +752,12 @@ fn query_multiple_genes_dense(hdf5_filename: String, gene_names: Vec<String>) ->
                         Value::String("Gene index out of bounds".to_string()),
                     );
 
-                    // Store the error result
                     let mut genes_map = genes_map.lock().unwrap();
                     genes_map.insert(gene_name.clone(), Value::Object(error_map));
                 } else {
                     // Read just this single gene's data directly
-                    let direct_read_start = Instant::now();
                     match counts_dataset.read_slice_1d::<f64, _>(s![gene_index, ..]) {
                         Ok(gene_expression) => {
-                            timings.insert(
-                                "direct_gene_read_ms".to_string(),
-                                Value::from(direct_read_start.elapsed().as_millis() as u64),
-                            );
 
                             // Create samples map for this gene
                             let mut samples_map = Map::new();
@@ -1064,7 +774,6 @@ fn query_multiple_genes_dense(hdf5_filename: String, gene_names: Vec<String>) ->
                                 }
                             }
 
-                            // Create gene data and store it
                             let gene_data = json!({
                                 "dataId": gene_name,
                                 "samples": samples_map
@@ -1090,7 +799,6 @@ fn query_multiple_genes_dense(hdf5_filename: String, gene_names: Vec<String>) ->
                 }
             }
             None => {
-                // Gene not found
                 let mut error_map = Map::new();
                 error_map.insert(
                     "error".to_string(),
@@ -1101,32 +809,17 @@ fn query_multiple_genes_dense(hdf5_filename: String, gene_names: Vec<String>) ->
                 genes_map.insert(gene_name.clone(), Value::Object(error_map));
             }
         }
-
-        // Record timing
-        let elapsed_time = gene_start_time.elapsed().as_millis() as u64;
-        let mut gene_timings = gene_timings.lock().unwrap();
-        gene_timings.insert(gene_name.clone(), Value::from(elapsed_time));
     }
-    // No genes case - nothing to do
 
     // Get the final maps from the Arc<Mutex<>>
     let genes_map = Arc::try_unwrap(genes_map).unwrap().into_inner().unwrap();
-    let gene_timings = Arc::try_unwrap(gene_timings).unwrap().into_inner().unwrap();
 
-    timings.insert(
-        "gene_processing_ms".to_string(),
-        Value::from(genes_process_start.elapsed().as_millis() as u64),
-    );
-    timings.insert("per_gene_ms".to_string(), Value::Object(gene_timings));
-
-    // Build the complete JSON structure with timing information
     let output_json = json!({
         "genes": genes_map,
         "timings": timings,
         "total_time_ms": overall_start_time.elapsed().as_millis() as u64
     });
 
-    // Output the JSON directly
     println!("{}", output_json);
 
     Ok(())
@@ -1140,12 +833,9 @@ fn process_genes_sequentially(
     counts_dataset: &hdf5::Dataset,
     all_gene_data: &Option<ndarray::ArrayBase<ndarray::OwnedRepr<f64>, ndarray::Dim<[usize; 2]>>>,
     samples: &Vec<String>,
-    genes_map: &Arc<std::sync::Mutex<Map<String, Value>>>,
-    gene_timings: &Arc<std::sync::Mutex<Map<String, Value>>>,
+    genes_map: &Arc<std::sync::Mutex<Map<String, Value>>>
 ) {
     for gene_name in gene_names {
-        let gene_start_time = Instant::now();
-
         // Find the index of the requested gene, using HashMap if available
         let gene_index = match gene_to_index {
             Some(map) => map.get(gene_name).cloned(),
@@ -1168,14 +858,12 @@ fn process_genes_sequentially(
                 } else {
                     // Use pre-loaded data if available
                     if let Some(ref all_data) = all_gene_data {
-                        // Extract the row directly from pre-loaded data
                         let gene_expression = all_data.slice(s![gene_index, ..]);
 
                         // Create samples map for this gene
                         let mut samples_map = Map::new();
                         for (i, sample) in samples.iter().enumerate() {
                             if i < gene_expression.len() {
-                                // Handle potential NaN or infinity values
                                 let value = if gene_expression[i].is_finite() {
                                     Value::from(gene_expression[i])
                                 } else {
@@ -1186,7 +874,6 @@ fn process_genes_sequentially(
                             }
                         }
 
-                        // Create gene data and store it
                         let gene_data = json!({
                             "dataId": gene_name,
                             "samples": samples_map
@@ -1202,7 +889,6 @@ fn process_genes_sequentially(
                                 let mut samples_map = Map::new();
                                 for (i, sample) in samples.iter().enumerate() {
                                     if i < gene_expression.len() {
-                                        // Handle potential NaN or infinity values
                                         let value = if gene_expression[i].is_finite() {
                                             Value::from(gene_expression[i])
                                         } else {
@@ -1213,7 +899,6 @@ fn process_genes_sequentially(
                                     }
                                 }
 
-                                // Create gene data and store it
                                 let gene_data = json!({
                                     "dataId": gene_name,
                                     "samples": samples_map
@@ -1240,7 +925,6 @@ fn process_genes_sequentially(
                 }
             }
             None => {
-                // Gene not found
                 let mut error_map = Map::new();
                 error_map.insert(
                     "error".to_string(),
@@ -1252,10 +936,6 @@ fn process_genes_sequentially(
             }
         }
 
-        // Record timing
-        let elapsed_time = gene_start_time.elapsed().as_millis() as u64;
-        let mut gene_timings = gene_timings.lock().unwrap();
-        gene_timings.insert(gene_name.clone(), Value::from(elapsed_time));
     }
 }
 /// Queries expression data for multiple genes from a sparse format HDF5 file
@@ -1288,7 +968,6 @@ fn query_multiple_genes_sparse(hdf5_filename: String, gene_names: Vec<String>) -
         Value::from(file_open_start.elapsed().as_millis() as u64),
     );
 
-    // Read dimensions
     let dim_start = Instant::now();
     let ds_dim = file.dataset("data/dim")?;
     let data_dim: Array1<_> = ds_dim.read::<usize, Dim<[usize; 1]>>()?;
@@ -1299,23 +978,11 @@ fn query_multiple_genes_sparse(hdf5_filename: String, gene_names: Vec<String>) -
         Value::from(dim_start.elapsed().as_millis() as u64),
     );
 
-    // Read gene names
-    let genes_start_time = Instant::now();
     let ds_genes = file.dataset("gene_names")?;
     let genes = ds_genes.read_1d::<FixedAscii<104>>()?;
-    timings.insert(
-        "read_genes_ms".to_string(),
-        Value::from(genes_start_time.elapsed().as_millis() as u64),
-    );
 
-    // Read sample names
-    let samples_start_time = Instant::now();
     let ds_samples = file.dataset("sample_names")?;
     let samples = ds_samples.read_1d::<FixedAscii<104>>()?;
-    timings.insert(
-        "read_samples_ms".to_string(),
-        Value::from(samples_start_time.elapsed().as_millis() as u64),
-    );
 
     // Read p dataset (contains pointers for all genes)
     let p_start_time = Instant::now();
@@ -1339,8 +1006,6 @@ fn query_multiple_genes_sparse(hdf5_filename: String, gene_names: Vec<String>) -
     let num_threads = num_cpus::get();
     timings.insert("num_threads".to_string(), Value::from(num_threads as u64));
 
-    // Process genes in parallel
-    let genes_process_start = Instant::now();
 
     // Thread-safe maps for results
     let genes_map = Arc::new(std::sync::Mutex::new(Map::new()));
@@ -1437,7 +1102,6 @@ fn query_multiple_genes_sparse(hdf5_filename: String, gene_names: Vec<String>) -
                 }
             }
             None => {
-                // Gene not found
                 let mut error_map = Map::new();
                 error_map.insert(
                     "error".to_string(),
@@ -1457,15 +1121,7 @@ fn query_multiple_genes_sparse(hdf5_filename: String, gene_names: Vec<String>) -
 
     // Get the final maps from the Arc<Mutex<>>
     let genes_map = Arc::try_unwrap(genes_map).unwrap().into_inner().unwrap();
-    let gene_timings = Arc::try_unwrap(gene_timings).unwrap().into_inner().unwrap();
 
-    timings.insert(
-        "gene_processing_ms".to_string(),
-        Value::from(genes_process_start.elapsed().as_millis() as u64),
-    );
-    timings.insert("per_gene_ms".to_string(), Value::Object(gene_timings));
-
-    // Build the complete JSON
     let output_json = json!({
         "genes": genes_map,
         "timings": timings,
@@ -1473,12 +1129,10 @@ fn query_multiple_genes_sparse(hdf5_filename: String, gene_names: Vec<String>) -
         "total_time_ms": overall_start_time.elapsed().as_millis() as u64
     });
 
-    // Output the JSON
     println!("{}", output_json);
 
     Ok(())
 }
-// Main function
 fn main() -> Result<()> {
     let mut input = String::new();
     match io::stdin().read_line(&mut input) {
@@ -1505,7 +1159,6 @@ fn main() -> Result<()> {
                         }
 
                         if !gene_names.is_empty() {
-                            // Process multiple genes
                             match detect_hdf5_format(&hdf5_filename)? {
                                 "dense" => query_multiple_genes_dense(hdf5_filename, gene_names)?,
                                 "sparse" => query_multiple_genes_sparse(hdf5_filename, gene_names)?,
@@ -1557,8 +1210,6 @@ fn main() -> Result<()> {
                         query_gene(hdf5_filename, gene_name.to_string())?;
                         return Ok(());
                     }
-
-                    // No valid gene specification found
                     println!(
                         "{}",
                         serde_json::json!({
