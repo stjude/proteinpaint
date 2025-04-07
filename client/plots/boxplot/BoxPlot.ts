@@ -16,7 +16,7 @@ class TdbBoxplot extends RxComponentInner {
 	readonly type = 'boxplot'
 	components: { controls: any }
 	dom: BoxPlotDom
-	interactions: BoxPlotInteractions
+	interactions?: BoxPlotInteractions
 	private useDefaultSettings = true
 	constructor(opts: TdbBoxPlotOpts) {
 		super()
@@ -40,7 +40,6 @@ class TdbBoxplot extends RxComponentInner {
 			legend: div.append('div').attr('id', 'sjpp-boxplot-legend'),
 			tip: new Menu()
 		}
-		this.interactions = new BoxPlotInteractions(this.app, this.dom, this.id)
 		if (opts.header) this.dom.header = opts.header.html('Box plot')
 	}
 
@@ -168,10 +167,10 @@ class TdbBoxplot extends RxComponentInner {
 		})
 
 		this.components.controls.on('downloadClick.boxplot', () => {
-			this.interactions.download()
+			this.interactions!.download()
 		})
 		this.components.controls.on('helpClick.boxplot', () => {
-			this.interactions.help()
+			this.interactions!.help()
 		})
 	}
 
@@ -192,13 +191,12 @@ class TdbBoxplot extends RxComponentInner {
 
 	async init() {
 		this.dom.div.style('display', 'inline-block').style('margin', '10px')
+		this.interactions = new BoxPlotInteractions(this.app, this.dom, this.id)
 		try {
 			await this.setControls()
 		} catch (e: any) {
 			console.error(new Error(e.message || e))
 		}
-		//Not the best approach. Come up with a better way.
-		this.interactions.setVarAfterInit(this.app, this.id)
 	}
 
 	async main() {
@@ -206,11 +204,13 @@ class TdbBoxplot extends RxComponentInner {
 			const config = structuredClone(this.state.config)
 			if (config.childType != this.type && config.chartType != this.type) return
 
+			if (!this.interactions) throw 'Interactions not initialized [box plot main()]'
+
 			const settings = config.settings.boxplot
 			const model = new Model(config, this.state, this.app, settings)
 			const data = await model.getData()
 			if (!data?.plots?.length || data['error']) {
-				this.interactions.clearDom()
+				this.interactions!.clearDom()
 				this.dom.error.style('padding', '20px 20px 20px 60px').text('No visible box plot data to render')
 				return
 			}
