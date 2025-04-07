@@ -7,6 +7,7 @@ import { drawBoxplot } from '#dom'
     Default drawBoxplot()
     With plot label and label color
     With out values and radius
+	With filled in rect with black lines
 */
 
 /**************
@@ -48,6 +49,8 @@ function mockBoxplotData(opts) {
 	}
 	if (opts.labColor) _opts.labColor = opts.labColor
 	if (opts.radius) _opts.bp.radius = opts.radius
+	if (opts.color) _opts.color = opts.color
+	if (opts.bp) Object.assign(_opts.bp, opts.bp)
 	return _opts
 }
 
@@ -118,6 +121,28 @@ tape('With out values and radius', test => {
 		circle && circle.attr('r') == opts.radius,
 		`Should render circle for out value with a radius = ${opts.radius}`
 	)
+
+	if (test['_ok']) holder.remove()
+	test.end()
+})
+
+tape('With filled in rect with black lines', test => {
+	test.timeoutAfter(100)
+
+	const holder = getHolder()
+	const g = appendGHolder(holder)
+	const opts = {
+		g,
+		bp: {
+			rectFill: 'pink'
+		},
+		color: 'black'
+	}
+	const boxplotData = mockBoxplotData(opts)
+	drawBoxplot(boxplotData)
+
+	test.equal(holder.select('rect').attr('fill'), opts.bp.rectFill, `Should render rect with fill ${opts.bp.rectFill}`)
+	test.equal(holder.selectAll('line').attr('stroke'), opts.color, `Should render lines with stroke ${opts.color}`)
 
 	if (test['_ok']) holder.remove()
 	test.end()
