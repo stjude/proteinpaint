@@ -163,8 +163,6 @@ q.targetType
 	"category" TODO
 */
 async function trigger_findterm(q, res, termdb, ds, genome) {
-	// TODO improve logic
-
 	const matches = { equals: [], startsWith: [], startsWord: [], includes: [] }
 
 	// to allow search to work, must unescape special char, e.g. %20 to space
@@ -173,52 +171,7 @@ async function trigger_findterm(q, res, termdb, ds, genome) {
 	const terms = []
 
 	try {
-		//Snp list and Snp locus will have their own UI
-		if (q.targetType == TermTypeGroups.MUTATION_CNV_FUSION) {
-			const mayUseGeneVariant = isUsableTerm({ type: 'geneVariant' }, q.usecase).has('plot')
-
-			if (ds.mayGetMatchingGeneNames && mayUseGeneVariant) {
-				////////////////////////////
-				// TODO
-				// if to remove bulk support on backend and use client vocab, then this should be deleted
-				//
-				// still, may keep this method to support dataset with data on limit gene set
-				// so that term search only return genes from this set, rather than any gene in genome, allow it to be user friendly
-				//
-				////////////////////////////
-
-				// presence of this getter indicates dataset uses text file to supply mutation data
-				// only allow searching for gene names present in the text files
-				// check this first before dict terms is convenient as to showing matching genes for a text-file based dataset that's usually small
-
-				// harcoded gene name length limit to exclude fusion/comma-separated gene names
-				await ds.mayGetMatchingGeneNames(matches, str, q)
-			}
-
-			if (ds.queries?.defaultBlock2GeneMode && mayUseGeneVariant) {
-				/*
-				has queries for genomic data types, search gene from whole genome
-				not checking on presence of queries.snvindel{} as it's used for both wgs/germline and somatic data,
-				for now do not show gene search for wgs data
-				checking on this flag as it's enabled for ds with somatic data
-				same logic applied in termdb.config.js
-
-				must enclose in try/catch as term match allows characters including space, that are prohibited in gene search
-				when exception is thrown because of that, ignore and continue term match
-				*/
-				try {
-					const re = geneSearch(genome, { input: str })
-					if (Array.isArray(re.hits)) {
-						for (let i = 0; i < 7; i++) {
-							if (!re.hits[i]) break
-							terms.push({ name: re.hits[i], type: 'geneVariant' })
-						}
-					}
-				} catch (e) {
-					// err is likely "invalid character in gene name". ignore and continue
-				}
-			}
-		} else if (q.targetType == TermTypeGroups.DICTIONARY_VARIABLES) {
+		if (q.targetType == TermTypeGroups.DICTIONARY_VARIABLES) {
 			const _terms = await termdb.q.findTermByName(str, q.cohortStr, q.usecase, q.treeFilter)
 
 			terms.push(..._terms.map(copy_term))
@@ -232,7 +185,6 @@ async function trigger_findterm(q, res, termdb, ds, genome) {
 		}
 		const id2ancestors = {}
 		terms.forEach(term => {
-			if (term.type == 'geneVariant') return
 			term.__ancestors = termdb.q.getAncestorIDs(term.id)
 			term.__ancestorNames = termdb.q.getAncestorNames(term.id)
 		})
