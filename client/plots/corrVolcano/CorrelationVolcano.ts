@@ -24,7 +24,7 @@ class CorrelationVolcano extends RxComponentInner {
 	readonly defaultInputMinRadius = 1
 	dom: CorrVolcanoDom
 	variableTwLst: any
-	interactions: CorrVolcanoInteractions
+	interactions?: CorrVolcanoInteractions
 	constructor(opts: any) {
 		super()
 		this.opts = opts
@@ -51,7 +51,6 @@ class CorrelationVolcano extends RxComponentInner {
 		if (opts.header)
 			this.dom.header = opts.header.text('CORRELATION VOLCANO').style('font-size', '0.7em').style('opacity', 0.6)
 		this.variableTwLst = []
-		this.interactions = new CorrVolcanoInteractions(this.app, this.dom, this.id)
 	}
 
 	getState(appState: MassState) {
@@ -60,6 +59,7 @@ class CorrelationVolcano extends RxComponentInner {
 			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
 		}
 		return {
+			termdbConfig: appState.termdbConfig,
 			termfilter: appState.termfilter,
 			correlationVolcano: appState.termdbConfig.correlationVolcano,
 			config: Object.assign({}, config, {
@@ -172,27 +172,31 @@ class CorrelationVolcano extends RxComponentInner {
 		})
 
 		this.components.controls.on('downloadClick.correlationVolcano', () => {
-			this.interactions.download()
+			this.interactions!.download()
 		})
 	}
 
 	async init(appState: MassState) {
-		if (this.getState(appState).config['featureTw']) await this.setControls()
+		this.interactions = new CorrVolcanoInteractions(this.app, this.dom, this.id)
+		const state = this.getState(appState)
+		if (state.config['featureTw']) await this.setControls()
 		//Hack because obj not returning in getState(). Will fix later.
-		const dsCorrVolcano = appState.termdbConfig.correlationVolcano
+		const dsCorrVolcano = state.termdbConfig.correlationVolcano
 
 		//Fill the term wrapper for the drug list from the ds
 		this.variableTwLst = dsCorrVolcano.variables.termIds.map((id: string) => {
 			return { id }
 		})
+		this.interactions.variableTwLst = this.variableTwLst
 
 		await fillTwLst(this.variableTwLst, this.app.vocabApi)
-		this.interactions.setVars(this.app, this.id, this.variableTwLst)
 	}
 
 	async main() {
 		const config = structuredClone(this.state.config)
 		if (config.childType != this.type && config.chartType != this.type) return
+
+		if (!this.interactions) throw 'Interactions not initialized [correlationVolcano main()]'
 
 		if (config.featureTw == null) {
 			this.interactions.showTree()
