@@ -22,8 +22,7 @@ import {
 	mclassfusionrna,
 	mclasssv,
 	mclasscnvgain,
-	mclasscnvloss,
-	geneVariantTermGroupsetting
+	mclasscnvloss
 } from '#shared/common.js'
 import { get_samples, get_active_groupset } from './termdb.sql.js'
 import { server_init_db_queries } from './termdb.server.init.ts'
@@ -2570,9 +2569,6 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 				throw 'predefined_groupset_idx is not an integer value'
 			if (tw.q.type == 'custom-groupset' && !tw.q.customset) throw 'invalid customset'
 		}
-
-		// rehydrate term.groupsetting
-		if (!tw.term.groupsetting) tw.term.groupsetting = geneVariantTermGroupsetting
 
 		// NOTE: the following has some code duplication with
 		// mds3.load.js query_snvindel() etc

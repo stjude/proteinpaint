@@ -8,8 +8,7 @@ import {
 	truncatingMutations,
 	synonymousMutations,
 	mutationClasses,
-	CNVClasses,
-	geneVariantTermGroupsetting
+	CNVClasses
 } from '#shared/common.js'
 
 /*************************
@@ -1307,7 +1306,7 @@ tape('avoid race condition', function (test) {
 											name: 'KRAS',
 											type: 'geneVariant',
 											isleaf: true,
-											groupsetting: geneVariantTermGroupsetting
+											groupsetting: { disabled: false }
 										},
 										q: { type: 'values' }
 									},
@@ -1318,7 +1317,7 @@ tape('avoid race condition', function (test) {
 											name: 'AKT1',
 											type: 'geneVariant',
 											isleaf: true,
-											groupsetting: geneVariantTermGroupsetting
+											groupsetting: { disabled: false }
 										},
 										q: { type: 'values' }
 									}
@@ -1346,7 +1345,7 @@ tape('avoid race condition', function (test) {
 												name: 'BCR',
 												type: 'geneVariant',
 												isleaf: true,
-												groupsetting: geneVariantTermGroupsetting
+												groupsetting: { disabled: false }
 											},
 											q: { type: 'values' }
 										}
