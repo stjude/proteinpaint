@@ -1,6 +1,7 @@
 import type { Elem } from '../../types/d3'
+import type { PlotConfig } from '#mass/types/mass'
 
-export type SCConfig = {
+export type SCConfig = PlotConfig & {
 	chartType: 'sc'
 	/** Should match a tab in the sc app */
 	childType: string
@@ -16,4 +17,5 @@ export type SCConfigOpts = {
 export type SCViewerOpts = {
 	holder: Elem
 	controls: Elem
+	header: Elem
 }
