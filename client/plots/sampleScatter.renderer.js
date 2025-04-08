@@ -461,11 +461,14 @@ export function setRenderers(self) {
 
 	self.getOpacity = function (c) {
 		if ('sampleId' in c) {
+			const hidden = c.hidden?.['category'] || c.hidden?.['shape']
 			if (self.filterSampleStr) {
-				if (!c.sample?.toLowerCase().includes(self.filterSampleStr.toLowerCase())) return 0.1
-				else return 1.2
+				if (!c.sample?.toLowerCase().includes(self.filterSampleStr.toLowerCase())) {
+					if (hidden) return 0
+					else return 0.1
+				} else return 1.2
 			}
-			const opacity = c.hidden?.['category'] || c.hidden?.['shape'] ? 0 : self.settings.opacity
+			const opacity = hidden ? 0 : self.settings.opacity
 			return opacity
 		}
 		const refOpacity = self.settings.showRef ? self.settings.opacity : 0
@@ -497,7 +500,7 @@ export function setRenderers(self) {
 		scale = (self.zoom * scale * factor) / 3
 		if (self.filterSampleStr) {
 			if (c.sample?.toLowerCase().includes(self.filterSampleStr.toLowerCase())) scale = scale * 2
-			else scale = scale * 0.5
+			else scale = scale * 0.8
 		}
 		return scale
 	}
