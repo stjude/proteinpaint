@@ -41,7 +41,15 @@ tape('Default SC app', test => {
 		state: {
 			plots: [
 				{
-					chartType: 'sc'
+					chartType: 'sc',
+					childType: 'scSampleTable',
+					settings: {
+						scSampleTable: {
+							columns: {
+								sample: 'Case'
+							}
+						}
+					}
 				}
 			]
 		},
