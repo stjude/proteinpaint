@@ -1279,8 +1279,12 @@ export async function getPlotConfig(opts, app) {
 		await fillTermWrapper(opts.term, app.vocabApi, {
 			condition: { mode: 'cuminc' }
 		})
-		if (opts.term2) await fillTermWrapper(opts.term2, app.vocabApi, t0_t2_defaultQ)
-		if (opts.term0) await fillTermWrapper(opts.term0, app.vocabApi, t0_t2_defaultQ)
+		// supply t0_t2_defaultQ if opts.term0/2.bins/q is undefined
+		// so that t0_t2_defaultQ does not override bins or q from user
+		if (opts.term2)
+			await fillTermWrapper(opts.term2, app.vocabApi, opts.term2.bins || opts.term2.q ? null : t0_t2_defaultQ)
+		if (opts.term0)
+			await fillTermWrapper(opts.term0, app.vocabApi, opts.term0.bins || opts.term0.q ? null : t0_t2_defaultQ)
 	} catch (e) {
 		throw `${e} [cuminc getPlotConfig()]`
 	}
