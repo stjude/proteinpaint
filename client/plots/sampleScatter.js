@@ -163,6 +163,7 @@ class Scatter {
 	initRanges() {
 		const samples = []
 		for (const chart of this.charts) samples.push(...chart.data.samples)
+		if (samples.length == 0) return
 		const s0 = samples[0] //First sample to start reduce comparisons
 		const [xMin, xMax, yMin, yMax, zMin, zMax, scaleMin, scaleMax] = samples.reduce(
 			(s, d) => [
