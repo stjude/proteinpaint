@@ -138,7 +138,7 @@ async function mayMakeVariantFilter(tw: GeneVariantTW, vocabApi: VocabApi) {
 		const t = structuredClone(_t)
 		if (!Object.keys(vocabApi.termdbConfig.queries).includes(t.query)) continue // dt is not in dataset
 		const data = categories.lst.find(x => x.dt == t.dt)
-		if (!data) throw 'dt data not found'
+		if (!data) continue
 		const byOrigin = vocabApi.termdbConfig.assayAvailability?.byDt[t.dt]?.byOrigin
 		let classes
 		if (byOrigin) {
