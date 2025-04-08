@@ -196,8 +196,8 @@ if (DE_method == "edgeR") {
   genesymbols <- unlist(genes_matrix[, 2])
   adjust_p_values <- p.adjust(pvalues, method = "fdr")
 } else if (DE_method == "limma") {
-  # Do voom transformation
-  voom_transformation_time <- system.time({
+  # Do voom transformation and fit linear model
+  voom_transformation_lmfit_time <- system.time({
     suppressWarnings({
       suppressMessages({
         set.seed(as.integer(Sys.time())) # Set the seed according to current time
@@ -208,24 +208,14 @@ if (DE_method == "edgeR") {
         par(oma = c(0, 0, 0, 0)) # Creating a margin
         suppressWarnings({
           suppressMessages({
-            y <- voom(y, design, plot = TRUE)
+            fit <- voomLmFit(y, design, plot = TRUE) # This is base don the recommendation of the edgeR limma/voom authors https://support.bioconductor.org/p/9161585/
           })
         })
         dev.off() # Gives a null device message which breaks JSON. Commenting it out for now, will investigate it later
       })
     })
   })
-  #cat("voom transformation time: ", as.difftime(voom_transformation_time, units = "secs")[3], " seconds\n")
-
-  # Fit linear model
-  fit_time <- system.time({
-    suppressWarnings({
-      suppressMessages({
-        fit <- lmFit(y, design, plot = FALSE)
-      })
-    })
-  })
-  #cat("limma fit time: ", as.difftime(fit_time, units = "secs")[3], " seconds\n")
+  #cat("voom transformation + limma fit time: ", as.difftime(voom_transformation_lmfit_time, units = "secs")[3], " seconds\n")
 
   # Saving mean-difference plot (aka MA plot)
   #set.seed(as.integer(Sys.time())) # Set the seed according to current time
