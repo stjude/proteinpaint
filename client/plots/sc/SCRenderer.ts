@@ -29,7 +29,7 @@ export class SCRenderer {
 				active: this.config.childType === 'scSampleTable',
 				id: 'scSampleTable',
 				label: 'Samples',
-				isVisible: () => true,
+				isVisible: () => this.#showDependentTabs,
 				getPlotConfig: () => {
 					return {
 						childType: 'scSampleTable'

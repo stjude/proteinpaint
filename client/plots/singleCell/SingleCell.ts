@@ -1,11 +1,19 @@
 import { RxComponentInner } from '../../types/rx.d'
 import { getCompInit, copyMerge } from '#rx'
-import { BasePlotConfig, MassAppActions, MassState } from '#mass/types/mass'
+import type { BasePlotConfig, MassState } from '#mass/types/mass'
 
 class SingleCell extends RxComponentInner {
 	readonly type = 'singleCell'
+
 	constructor(opts) {
 		super()
+		const holder = opts.holder.append('div').classed('sjpp-single-cell-main', true)
+		this.dom = {
+			holder,
+			errorDiv: holder.append('div').attr('data-testid', 'sjpp-single-cell-error'),
+			actionsDiv: holder.append('div').attr('data-testid', 'sjpp-single-cell-actions'),
+			plotDiv: holder.append('div').attr('data-testid', 'sjpp-single-cell-plot')
+		}
 	}
 
 	getState(appState: MassState) {
@@ -19,14 +27,6 @@ class SingleCell extends RxComponentInner {
 			termdbConfig: appState.termdbConfig
 		}
 	}
-	reactsTo(action: MassAppActions) {
-		if (action.type.includes('cache_termq')) return true
-		if (action.type.startsWith('plot_')) {
-			return action.id === this.id
-		}
-		if (action.type.startsWith('filter')) return true
-		return false
-	}
 
 	async main() {
 		const config = structuredClone(this.state.config)
@@ -38,9 +38,14 @@ export const singleCellInit = getCompInit(SingleCell)
 export const componentInit = singleCellInit
 
 export function getDefaultSingleCellSettings(overrides = {}) {
-	return {
-		// Add default settings for SingleCell here
+	const defaults = {
+		dotSize: 0.04,
+		dotOpacity: 0.8,
+		height: 600,
+		showGrid: true,
+		width: 600
 	}
+	return Object.assign(defaults, overrides)
 }
 
 export function getPlotConfig(opts) {
