@@ -462,7 +462,7 @@ export function setRenderers(self) {
 	self.getOpacity = function (c) {
 		if ('sampleId' in c) {
 			if (self.filterSampleStr) {
-				if (!c.sample?.toLowerCase().includes(self.filterSampleStr.toLowerCase())) return 0.2
+				if (!c.sample?.toLowerCase().includes(self.filterSampleStr.toLowerCase())) return 0.1
 				else return 1.2
 			}
 			const opacity = c.hidden?.['category'] || c.hidden?.['shape'] ? 0 : self.settings.opacity
@@ -495,6 +495,10 @@ export function setRenderers(self) {
 			else scale = self.settings.maxShapeSize - ((c.scale - chart.scaleMin) / (chart.scaleMax - chart.scaleMin)) * range
 		}
 		scale = (self.zoom * scale * factor) / 3
+		if (self.filterSampleStr) {
+			if (c.sample?.includes(self.filterSampleStr)) scale = scale * 2
+			else scale = scale * 0.5
+		}
 		return scale
 	}
 
