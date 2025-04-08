@@ -496,7 +496,7 @@ export function setRenderers(self) {
 		}
 		scale = (self.zoom * scale * factor) / 3
 		if (self.filterSampleStr) {
-			if (c.sample?.includes(self.filterSampleStr)) scale = scale * 2
+			if (c.sample?.toLowerCase().includes(self.filterSampleStr.toLowerCase())) scale = scale * 2
 			else scale = scale * 0.5
 		}
 		return scale
