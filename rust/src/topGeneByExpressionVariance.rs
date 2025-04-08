@@ -64,15 +64,15 @@ fn input_data_hdf5(
     let file = match File::open(filename) {
         Ok(f) => f,
         Err(err) => {
-            eprintln!("Failed to open HDF5 file: {}", err);
-            println!(
-                "{}",
-                serde_json::json!({
-                    "status": "error",
-                    "message": format!("Failed to open HDF5 file: {}", err),
-                    "file_path": filename
-                })
-            );
+            // eprintln!("Failed to open HDF5 file: {}", err);
+            // println!(
+            //     "{}",
+            //     serde_json::json!({
+            //         "status": "error",
+            //         "message": format!("Failed to open HDF5 file: {}", err),
+            //         "file_path": filename
+            //     })
+            // );
             return Err(hdf5::Error::Internal(format!(
                 "Failed to open HDF5 file: {}",
                 err
@@ -84,15 +84,15 @@ fn input_data_hdf5(
     let genes_dataset = match file.dataset("gene_symbols") {
         Ok(ds) => ds,
         Err(err) => {
-            eprintln!("Failed to open gene_symbols dataset: {}", err);
-            println!(
-                "{}",
-                serde_json::json!({
-                    "status": "error",
-                    "message": format!("Failed to open gene_symbols dataset: {}", err),
-                    "file_path": filename
-                })
-            );
+            // eprintln!("Failed to open gene_symbols dataset: {}", err);
+            // println!(
+            //     "{}",
+            //     serde_json::json!({
+            //         "status": "error",
+            //         "message": format!("Failed to open gene_symbols dataset: {}", err),
+            //         "file_path": filename
+            //     })
+            // );
             return Err(hdf5::Error::Internal(format!(
                 "Failed to open gene_symbols dataset: {}",
                 err
@@ -104,15 +104,15 @@ fn input_data_hdf5(
     let genes_varlen = match genes_dataset.read_1d::<VarLenAscii>() {
         Ok(g) => g,
         Err(err) => {
-            eprintln!("Failed to read gene symbols: {}", err);
-            println!(
-                "{}",
-                serde_json::json!({
-                    "status": "error",
-                    "message": format!("Failed to read gene symbols: {}", err),
-                    "file_path": filename
-                })
-            );
+            // eprintln!("Failed to read gene symbols: {}", err);
+            // println!(
+            //     "{}",
+            //     serde_json::json!({
+            //         "status": "error",
+            //         "message": format!("Failed to read gene symbols: {}", err),
+            //         "file_path": filename
+            //     })
+            // );
             return Err(hdf5::Error::Internal(format!(
                 "Failed to read gene symbols: {}",
                 err
@@ -129,7 +129,7 @@ fn input_data_hdf5(
     let samples_dataset = match file.dataset("samples") {
         Ok(ds) => ds,
         Err(err) => {
-            eprintln!("Failed to open samples dataset: {}", err);
+            // eprintln!("Failed to open samples dataset: {}", err);
             println!(
                 "{}",
                 serde_json::json!({
@@ -149,7 +149,7 @@ fn input_data_hdf5(
     let samples_varlen = match samples_dataset.read_1d::<VarLenAscii>() {
         Ok(s) => s,
         Err(err) => {
-            eprintln!("Failed to read sample names: {}", err);
+            // eprintln!("Failed to read sample names: {}", err);
             println!(
                 "{}",
                 serde_json::json!({
@@ -175,16 +175,16 @@ fn input_data_hdf5(
         if let Some(index) = all_samples.iter().position(|s| s == sample) {
             column_indices.push(index);
         } else {
-            eprintln!("Sample {} not found in the dataset", sample);
-            println!(
-                "{}",
-                serde_json::json!({
-                    "status": "error",
-                    "message": format!("Sample '{}' not found in the dataset", sample),
-                    "file_path": filename,
-                    "available_samples": all_samples
-                })
-            );
+            // eprintln!("Sample {} not found in the dataset", sample);
+            // println!(
+            //     "{}",
+            //     serde_json::json!({
+            //         "status": "error",
+            //         "message": format!("Sample '{}' not found in the dataset", sample),
+            //         "file_path": filename,
+            //         "available_samples": all_samples
+            //     })
+            // );
             return Err(hdf5::Error::Internal(format!(
                 "Sample '{}' not found in the dataset",
                 sample
@@ -196,15 +196,15 @@ fn input_data_hdf5(
     let counts_dataset = match file.dataset("counts") {
         Ok(ds) => ds,
         Err(err) => {
-            eprintln!("Failed to open counts dataset: {}", err);
-            println!(
-                "{}",
-                serde_json::json!({
-                    "status": "error",
-                    "message": format!("Failed to open counts dataset: {}", err),
-                    "file_path": filename
-                })
-            );
+            // eprintln!("Failed to open counts dataset: {}", err);
+            // println!(
+            //     "{}",
+            //     serde_json::json!({
+            //         "status": "error",
+            //         "message": format!("Failed to open counts dataset: {}", err),
+            //         "file_path": filename
+            //     })
+            // );
             return Err(hdf5::Error::Internal(format!(
                 "Failed to open counts dataset: {}",
                 err
@@ -215,16 +215,16 @@ fn input_data_hdf5(
     // Get dataset dimensions for validation
     let dataset_shape = counts_dataset.shape();
     if dataset_shape.len() != 2 {
-        eprintln!("Counts dataset does not have the expected 2D shape");
-        println!(
-            "{}",
-            serde_json::json!({
-                "status": "error",
-                "message": "Expected a 2D dataset for counts",
-                "file_path": filename,
-                "actual_shape": dataset_shape
-            })
-        );
+        // eprintln!("Counts dataset does not have the expected 2D shape");
+        // println!(
+        //     "{}",
+        //     serde_json::json!({
+        //         "status": "error",
+        //         "message": "Expected a 2D dataset for counts",
+        //         "file_path": filename,
+        //         "actual_shape": dataset_shape
+        //     })
+        // );
         return Err(hdf5::Error::Internal(
             "Expected a 2D dataset for counts".to_string(),
         ));
@@ -232,19 +232,19 @@ fn input_data_hdf5(
 
     // Check dimensions match expected values
     if dataset_shape[0] != num_genes {
-        eprintln!(
-            "Counts dataset first dimension ({}) doesn't match number of genes ({})",
-            dataset_shape[0], num_genes
-        );
-        println!(
-            "{}",
-            serde_json::json!({
-                "status": "error",
-                "message": format!("Counts dataset first dimension ({}) doesn't match number of genes ({})",
-                                dataset_shape[0], num_genes),
-                "file_path": filename
-            })
-        );
+        // eprintln!(
+        //     "Counts dataset first dimension ({}) doesn't match number of genes ({})",
+        //     dataset_shape[0], num_genes
+        // );
+        // println!(
+        //     "{}",
+        //     serde_json::json!({
+        //         "status": "error",
+        //         "message": format!("Counts dataset first dimension ({}) doesn't match number of genes ({})",
+        //                         dataset_shape[0], num_genes),
+        //         "file_path": filename
+        //     })
+        // );
         return Err(hdf5::Error::Internal(format!(
             "Counts dataset first dimension ({}) doesn't match number of genes ({})",
             dataset_shape[0], num_genes
@@ -252,20 +252,20 @@ fn input_data_hdf5(
     }
 
     if dataset_shape[1] != all_samples.len() {
-        eprintln!(
-            "Counts dataset second dimension ({}) doesn't match number of samples ({})",
-            dataset_shape[1],
-            all_samples.len()
-        );
-        println!(
-            "{}",
-            serde_json::json!({
-                "status": "error",
-                "message": format!("Counts dataset second dimension ({}) doesn't match number of samples ({})",
-                                dataset_shape[1], all_samples.len()),
-                "file_path": filename
-            })
-        );
+        // eprintln!(
+        //     "Counts dataset second dimension ({}) doesn't match number of samples ({})",
+        //     dataset_shape[1],
+        //     all_samples.len()
+        // );
+        // println!(
+        //     "{}",
+        //     serde_json::json!({
+        //         "status": "error",
+        //         "message": format!("Counts dataset second dimension ({}) doesn't match number of samples ({})",
+        //                         dataset_shape[1], all_samples.len()),
+        //         "file_path": filename
+        //     })
+        // );
         return Err(hdf5::Error::Internal(format!(
             "Counts dataset second dimension ({}) doesn't match number of samples ({})",
             dataset_shape[1],
@@ -277,15 +277,15 @@ fn input_data_hdf5(
     let all_counts = match counts_dataset.read::<f64, Dim<[usize; 2]>>() {
         Ok(data) => data,
         Err(err) => {
-            eprintln!("Failed to read expression data: {}", err);
-            println!(
-                "{}",
-                serde_json::json!({
-                    "status": "error",
-                    "message": format!("Failed to read expression data: {}", err),
-                    "file_path": filename
-                })
-            );
+            // eprintln!("Failed to read expression data: {}", err);
+            // println!(
+            //     "{}",
+            //     serde_json::json!({
+            //         "status": "error",
+            //         "message": format!("Failed to read expression data: {}", err),
+            //         "file_path": filename
+            //     })
+            // );
             return Err(hdf5::Error::Internal(format!(
                 "Failed to read expression data: {}",
                 err
@@ -536,28 +536,28 @@ fn cpm(
 }
 
 fn main() {
-    // eprintln!("Starting gene variance calculation...");
+    // println!("Starting gene variance calculation...");
     let mut input = String::new();
     match io::stdin().read_line(&mut input) {
         // Accepting the piped input from nodejs (or command line from testing)
         Ok(_bytes_read) => {
-            // eprintln!("Read {} bytes from stdin", _bytes_read);
-            //println!("{} bytes read", bytes_read);
-            //println!("{}", input);
+            // eprintln!("Read {} bytes from stdin", bytes_read);
+            // println!("{} bytes read", bytes_read);
+            // println!("{}", input);
             let input_json = json::parse(&input);
             match input_json {
                 Ok(json_string) => {
-                    // eprintln!("Successfully parsed JSON input");
+                    // println!("Successfully parsed JSON input");
                     // let now = Instant::now();
                     let samples_string_result = &json_string["samples"].to_owned();
                     let samples_string;
                     match samples_string_result.as_str() {
                         Some(x) => {
                             samples_string = x.to_string();
-                            // eprintln!("Samples: {}", samples_string);
+                            println!("Samples: {}", samples_string);
                         }
                         None => {
-                            eprintln!("ERROR: Samples not provided in JSON");
+                            // eprintln!("ERROR: Samples not provided in JSON");
                             println!(
                                 "{}",
                                 serde_json::json!({
@@ -583,14 +583,14 @@ fn main() {
                             // );
                         }
                         None => {
-                            eprintln!("ERROR: File name missing in JSON");
-                            println!(
-                                "{}",
-                                serde_json::json!({
-                                    "status": "error",
-                                    "message": "File name is missing"
-                                })
-                            );
+                            // eprintln!("ERROR: File name missing in JSON");
+                            // println!(
+                            //     "{}",
+                            //     serde_json::json!({
+                            //         "status": "error",
+                            //         "message": "File name is missing"
+                            //     })
+                            // );
                             return;
                         }
                     }
@@ -613,14 +613,14 @@ fn main() {
                     // eprintln!("Rank type: {}", rank_type);
                     if rank_type != "var" && rank_type != "iqr" {
                         // Check if any unknown method has been provided
-                        eprintln!("ERROR: Unknown rank method: {}", rank_type);
-                        println!(
-                            "{}",
-                            serde_json::json!({
-                                "status": "error",
-                                "message": format!("Unknown rank method: {}. Must be 'var' or 'iqr'", rank_type)
-                            })
-                        );
+                        // eprintln!("ERROR: Unknown rank method: {}", rank_type);
+                        // println!(
+                        //     "{}",
+                        //     serde_json::json!({
+                        //         "status": "error",
+                        //         "message": format!("Unknown rank method: {}. Must be 'var' or 'iqr'", rank_type)
+                        //     })
+                        // );
                         return;
                     }
                     let filter_extreme_values_result = &json_string["filter_extreme_values"];
@@ -629,7 +629,7 @@ fn main() {
                     match filter_extreme_values_result.as_bool() {
                         Some(x) => {
                             filter_extreme_values = x;
-                            eprintln!("Filter extreme values: {}", filter_extreme_values);
+                            // eprintln!("Filter extreme values: {}", filter_extreme_values);
                         }
                         None => {
                             filter_extreme_values = true; // If filter_extreme_values field is missing, set it to true by default
@@ -648,7 +648,7 @@ fn main() {
                             // eprintln!("Number of genes requested: {}", num_genes);
                         }
                         None => {
-                            eprintln!("ERROR: Number of genes to be given is missing");
+                            // eprintln!("ERROR: Number of genes to be given is missing");
                             println!(
                                 "{}",
                                 serde_json::json!({
@@ -668,7 +668,7 @@ fn main() {
                             // eprintln!("Min count: {}", x);
                         }
                         None => {
-                            eprintln!("Min count not specified, will use default");
+                            // eprintln!("Min count not specified, will use default");
                         }
                     }
 
@@ -680,7 +680,7 @@ fn main() {
                             // eprintln!("Min total count: {}", x);
                         }
                         None => {
-                            eprintln!("Min total count not specified, will use default");
+                            // eprintln!("Min total count not specified, will use default");
                         }
                     }
 
@@ -780,11 +780,11 @@ fn main() {
 
                     // Check if we have enough genes for the requested output
                     if gene_infos.len() < num_genes {
-                        eprintln!(
-                            "WARNING: Only {} genes found, but {} were requested",
-                            gene_infos.len(),
-                            num_genes
-                        );
+                        // eprintln!(
+                        //     "WARNING: Only {} genes found, but {} were requested",
+                        //     gene_infos.len(),
+                        //     num_genes
+                        // );
                     }
 
                     let actual_num_genes = std::cmp::min(num_genes, gene_infos.len());
