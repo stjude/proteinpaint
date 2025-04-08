@@ -1346,6 +1346,26 @@ keep this setting here for reason of:
 		/** allow color or shape changes in the lollipop */
 		allowSkewerChanges: boolean
 	}
+	//* specify color map per module/group of terms. Used in the profile dataset.
+	/** For example "National Context" is a profile module, that groups some multivalue terms for wich the category colors are the ones shown below: 
+	 colorMap: {
+				['*']: {
+					['Not applicable for my role']: '#aaa',
+					['Not Available/Do Not Know']: '#aaa',
+					["I don't know"]: '#aaa',
+					['Almost Never']: '#595959',
+					['Infrequently']: '#747474',
+					['No']: '#aaa'
+				},
+				['National Context']: {
+					['Almost Always']: '#15557C',
+					['Frequently']: '#1E77BB',
+					['Sometimes']: '#2FA9F4',
+					['Yes']: '#1E77BB'
+				},
+	}
+	If the colors are the same for all the categories, use the wildcard '*' to define the color for all the modules.
+	**/
 	colorMap?: {
 		/** colors for a category multivalues */
 		[index: string]: { [index: string]: string }
