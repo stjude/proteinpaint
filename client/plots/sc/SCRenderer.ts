@@ -1,6 +1,6 @@
 import { Tabs } from '#dom'
 import type { MassAppApi, MassState } from '#mass/types/mass'
-import { SCConfig } from './SCTypes'
+import type { SCConfig } from './SCTypes'
 
 export class SCRenderer {
 	app: MassAppApi
@@ -9,6 +9,8 @@ export class SCRenderer {
 	state: MassState
 	tabs: Tabs
 	tabsData: any
+	/** Only show certain tabs when a sample is selected */
+	#showDependentTabs = false
 
 	constructor(app, dom, state) {
 		this.app = app
@@ -34,6 +36,18 @@ export class SCRenderer {
 					}
 				},
 				callback: this.tabCallback
+			},
+			{
+				active: this.config.childType === 'singleCell',
+				id: 'singleCell',
+				label: 'Plots',
+				isVisible: () => this.#showDependentTabs,
+				getPlotConfig: () => {
+					return {
+						childType: 'singleCell'
+					}
+				},
+				callback: this.tabCallback
 			}
 			// {
 			//     active: this.config.childType === 'differentialAnalysis',
@@ -53,10 +67,11 @@ export class SCRenderer {
 			//     active: this.config.childType === 'violin',
 			//     id: 'violin',
 			//     label: 'Summary',
-			//     isVisible: () => true,
+			//     isVisible: () => this.#showDependentTabs,
 			//     getPlotConfig: () => {
 			//         return {
 			//             childType: 'violin'
+			//             //TODO: finish this config
 			//         }
 			//     },
 			//     callback: this.tabCallback
@@ -81,6 +96,7 @@ export class SCRenderer {
 	tabCallback = async (event, tab) => {
 		if (!tab || !tab.id) return
 		const plotConfig = tab.getPlotConfig()
+		tab.isVisible()
 		await this.app.dispatch({
 			type: 'plot_edit',
 			id: this.config.id,
@@ -88,8 +104,28 @@ export class SCRenderer {
 		})
 	}
 
+	samplePresent() {
+		//determine whether or not to show certain tabs
+		const config = this.app.getState().plots.find((p: SCConfig) => p.id === this.config.id)
+		return config?.sample ? true : false
+	}
+
 	update(config) {
 		const activeTabIndex = this.tabsData.findIndex(tab => tab.id == config.childType)
+		/** Determine once if plots dependent on a sample present in
+		 * this config should be shown.*/
+		const samplePresent = this.samplePresent()
+		if (this.#showDependentTabs == false) this.#showDependentTabs = samplePresent
 		this.tabs.update(activeTabIndex)
+
+		//Show the sample details above the plots tabs
+		if (samplePresent) {
+			this.dom.infoDiv.selectAll('*').remove()
+			for (const [key, value] of Object.entries(config.sample)) {
+				const div = this.dom.infoDiv.append('div').style('display', 'inline-block').style('margin', '10px')
+				div.append('span').style('opacity', 0.65).style('font-size', '0.8em').text(`${key.toUpperCase()}: `)
+				div.append('span').text(value)
+			}
+		}
 	}
 }

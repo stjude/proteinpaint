@@ -127,7 +127,25 @@ class SCSampleTable extends RxComponentInner {
 				style: { 'text-transform': 'capitalize' }
 			},
 			striped: true,
-			selectedRows
+			selectedRows,
+			noButtonCallback: index => {
+				// NOTE that "index" is not array index of this.samples[]
+				const sample = {
+					[`${columns[0].label}`]: rows[index][0].value,
+					[`${columns[1].label}`]: rows[index][1].value,
+					[`${columns[2].label}`]: rows[index][2].value
+				}
+				const hiddenClusters = {}
+				// reset hidden clusters when changing sample
+				for (const cluster in this.state.config.hiddenClusters) hiddenClusters[cluster] = false
+				const config = {
+					chartType: 'sc',
+					childType: 'singleCell',
+					sample,
+					hiddenClusters
+				}
+				this.app.dispatch({ type: 'plot_edit', id: this.id, config })
+			}
 		})
 	}
 }

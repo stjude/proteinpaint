@@ -5,6 +5,7 @@ import { getCompInit, copyMerge } from '#rx'
 import type { SCConfig, SCConfigOpts, SCViewerOpts } from './SCTypes'
 import { SCRenderer } from './SCRenderer'
 import { getDefaultSCSampleTableSettings } from '../scSampleTable'
+import { getDefaultSingleCellSettings } from '../singleCell/SingleCell'
 
 class SCViewer extends RxComponentInner {
 	readonly type = 'sc'
@@ -23,13 +24,14 @@ class SCViewer extends RxComponentInner {
 		const div = opts.holder
 			.classed('sjpp-sc-main', true)
 			.append('div')
-			.style('padding', '5px')
-			.style('display', 'inline-block')
+			.style('padding', '10px')
 			.style('vertical-align', 'top')
-		const tabsDiv = div.append('div').attr('id', 'sjpp-sc-tabs').style('display', 'inline-block')
+		const infoDiv = div.append('div').attr('id', 'sjpp-sc-info')
+		const tabsDiv = div.append('div').attr('id', 'sjpp-sc-tabs')
 		const plots = div.append('div').attr('id', 'sjpp-sc-tabs-content')
 		this.dom = {
 			div,
+			infoDiv,
 			tabsDiv,
 			plots
 		}
@@ -69,6 +71,7 @@ class SCViewer extends RxComponentInner {
 	async setComponent(config: SCConfig) {
 		let _
 		if (config.childType == 'scSampleTable') _ = await import(`#plots/scSampleTable.ts`)
+		if (config.childType == 'singleCell') _ = await import(`#plots/singleCell/SingleCell.ts`)
 		if (config.childType == 'differentialAnalysis') _ = await import(`#plots/diffAnalysis/DifferentialAnalysis.ts`)
 		if (config.childType == 'violin') _ = await import(`#plots/violin.js`)
 
@@ -102,7 +105,6 @@ class SCViewer extends RxComponentInner {
 		}
 		this.plotsDiv[config.childType].style('display', '')
 		// this.plotsControlsDiv[config.childType].style('display', '')
-
 		this.renderer.update(config)
 	}
 }
@@ -116,7 +118,8 @@ export function getPlotConfig(opts: SCConfigOpts) {
 		childType: 'scSampleTable',
 		settings: {
 			controls: { isOpen: false },
-			scSampleTable: getDefaultSCSampleTableSettings(opts.overrides || {})
+			scSampleTable: getDefaultSCSampleTableSettings(opts.overrides || {}),
+			singleCell: getDefaultSingleCellSettings(opts.overrides || {})
 		}
 	} as any
 

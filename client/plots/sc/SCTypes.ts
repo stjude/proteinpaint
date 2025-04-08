@@ -7,6 +7,7 @@ export type SCConfig = PlotConfig & {
 	childType: string
 	/** Common settings and settings for each child component/plot */
 	settings: object
+	sample?: string
 }
 
 export type SCConfigOpts = {
