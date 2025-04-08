@@ -223,7 +223,8 @@ export default {
 		},
 		geneExpression: {
 			src: 'native',
-			file: 'files/hg38/TermdbTest/TermdbTest.fpkm.matrix.gz'
+			hdf5File: true,
+			file: 'files/hg38/TermdbTest/TermdbTest.fpkm.matrix.h5'
 		},
 		topVariablyExpressedGenes: {
 			src: 'native'
