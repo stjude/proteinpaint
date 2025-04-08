@@ -13,7 +13,6 @@ import {
 } from '#shared/terms.js'
 import { get_bin_label, compute_bins } from '#shared/termdb.bins.js'
 import { trigger_getDefaultBins } from './termdb.getDefaultBins.js'
-import { geneVariantTermGroupsetting } from '#shared/common.js'
 
 /*
 
@@ -531,7 +530,7 @@ async function mayQueryMutatedSamples(q) {
 				gene: geneName,
 				name: geneName,
 				type: 'geneVariant',
-				groupsetting: geneVariantTermGroupsetting
+				groupsetting: { disabled: false }
 			},
 			q: { type: 'values' }
 		}

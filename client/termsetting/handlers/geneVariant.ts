@@ -1,10 +1,11 @@
-import { geneVariantTermGroupsetting, dtTerms } from '#shared/common.js'
+import { dtTerms } from '#shared/common.js'
 import { getPillNameDefault, set_hiddenvalues } from '../termsetting'
 import type { GeneVariantQ, GeneVariantTW, GeneVariantTermSettingInstance, VocabApi, DtTerm } from '#types'
 import type { PillData } from '../types'
 import { make_radios } from '#dom'
 import { copyMerge } from '#rx'
 import { GroupSettingMethods } from './groupsetting.ts'
+import { getWrappedTvslst } from '#filter/filter'
 
 /* 
 instance attributes
@@ -27,10 +28,7 @@ export function getHandler(self: GeneVariantTermSettingInstance) {
 
 		getPillStatus() {
 			let text
-			if (self.q.type == 'predefined-groupset') {
-				const groupset = self.term.groupsetting.lst[self.q.predefined_groupset_idx]
-				text = groupset.name
-			} else if (self.q.type == 'custom-groupset') {
+			if (self.q.type == 'custom-groupset') {
 				const n = self.q.customset.groups.filter(group => !group.uncomputable).length
 				text = `Divided into ${n} groups`
 			} else {
@@ -52,7 +50,7 @@ export function getHandler(self: GeneVariantTermSettingInstance) {
 	}
 }
 
-export function fillTW(tw: GeneVariantTW, vocabApi: VocabApi, defaultQ: GeneVariantQ | null = null) {
+export async function fillTW(tw: GeneVariantTW, vocabApi: VocabApi, defaultQ: GeneVariantQ | null = null) {
 	if (!tw.term.id) tw.term.id = tw.term.name
 
 	if (!tw.term.kind) {
@@ -86,19 +84,13 @@ export function fillTW(tw: GeneVariantTW, vocabApi: VocabApi, defaultQ: GeneVari
 	}
 
 	// fill term.groupsetting
-	if (!tw.term.groupsetting) tw.term.groupsetting = geneVariantTermGroupsetting as any // TODO: fix typing
+	if (!tw.term.groupsetting) tw.term.groupsetting = { disabled: false }
 
-	// make variant filter
-	mayMakeVariantFilter(tw, vocabApi)
+	// may fill variant filter
+	await mayMakeVariantFilter(tw, vocabApi)
 
-	// fill predefined groupset index
-	if (tw.q.type == 'predefined-groupset' && !Number.isInteger(tw.q.predefined_groupset_idx)) {
-		// get the first dt term in dataset
-		const term = tw.term.filter.terms[0]
-		// determine the index of the predefined groupset that
-		// corresponds with this term
-		tw.q.predefined_groupset_idx = tw.term.groupsetting.lst.findIndex(groupset => groupset.id == term.id)
-	}
+	// may fill groups
+	mayMakeGroups(tw)
 
 	{
 		// apply optional ds-level configs for this specific term
@@ -137,28 +129,102 @@ export function fillTW(tw: GeneVariantTW, vocabApi: VocabApi, defaultQ: GeneVari
 	set_hiddenvalues(tw.q, tw.term)
 }
 
-// function to make a variant filter based on
-// dt terms specified in dataset
-function mayMakeVariantFilter(tw: GeneVariantTW, vocabApi: VocabApi) {
+// function to make a variant filter based on dts specified in dataset
+async function mayMakeVariantFilter(tw: GeneVariantTW, vocabApi: VocabApi) {
 	if (tw.term.filter) return
 	const dtTermsInDs: DtTerm[] = [] // dt terms in dataset
-	for (const t of dtTerms) {
+	const categories = await vocabApi.getCategories(tw.term)
+	for (const _t of dtTerms) {
+		const t = structuredClone(_t)
 		if (!Object.keys(vocabApi.termdbConfig.queries).includes(t.query)) continue // dt is not in dataset
+		const data = categories.lst.find(x => x.dt == t.dt)
+		if (!data) throw 'dt data not found'
 		const byOrigin = vocabApi.termdbConfig.assayAvailability?.byDt[t.dt]?.byOrigin
+		let classes
 		if (byOrigin) {
 			// dt has origins in dataset
 			if (!t.origin) continue // dt term does not have origin, so skip
 			if (!Object.keys(byOrigin).includes(t.origin)) throw 'unexpected origin of dt term'
+			classes = data.classes.byOrigin[t.origin]
 		} else {
 			// dt does not have origins in dataset
 			if (t.origin) continue // dt term has origin, so skip
+			classes = data.classes
 		}
+		// filter for only those mutation classes that are in the dataset
+		const values = Object.fromEntries(Object.entries(t.values).filter(([k, v]) => Object.keys(classes).includes(k)))
+		t.values = values
 		dtTermsInDs.push(t)
 	}
 	tw.term.filter = {
 		opts: { joinWith: ['and', 'or'] },
 		terms: dtTermsInDs // will load dt terms as custom terms in frontend vocab
 	}
+}
+
+function mayMakeGroups(tw) {
+	if (tw.q.type != 'custom-groupset' || tw.q.customset?.groups.length) return
+	// custom groupset, but customset.groups[] is empty
+	// fill with mutated group vs. wildtype group
+	// for the first dt specified in dataset
+	const dtFilter = tw.term.filter
+	const dtTerm = dtFilter.terms[0]
+	// wildtype filter
+	const WTfilter = structuredClone(dtFilter)
+	WTfilter.group = 2
+	const WT = 'WT'
+	const WTvalue = { key: WT, label: dtTerm.values[WT].label, value: WT }
+	const WTtvs = { type: 'tvs', tvs: { term: dtTerm, values: [WTvalue] } }
+	WTfilter.active = getWrappedTvslst([WTtvs])
+	let WTname = 'Wildtype'
+	if (dtTerm.origin) WTname += ` (${dtTerm.origin})`
+	// mutated filter
+	const MUTfilter = structuredClone(dtFilter)
+	MUTfilter.group = 1
+	const classes = Object.keys(dtTerm.values)
+	if (classes.length < 2) throw 'should have at least 2 classes'
+	let MUTtvs, MUTname
+	if (classes.length == 2) {
+		// only 2 classes
+		// mutant filter will filter for the mutant class
+		const MUT = classes.find(c => c != WT)
+		if (!MUT) throw 'mutant class cannot be found'
+		const MUTvalue = { key: MUT, label: dtTerm.values[MUT].label, value: MUT }
+		MUTtvs = { type: 'tvs', tvs: { term: dtTerm, values: [MUTvalue] } }
+		MUTname = dtTerm.values[MUT].label
+		if (dtTerm.origin) MUTname += ` (${dtTerm.origin})`
+	} else {
+		// more than 2 classes
+		// mutant filter will filter for all non-wildtype classes
+		MUTtvs = { type: 'tvs', tvs: { term: dtTerm, values: [WTvalue], isnot: true } }
+		MUTname = dtTerm.name
+	}
+	MUTfilter.active = getWrappedTvslst([MUTtvs])
+	// excluded filter
+	const EXCLUDEfilter = structuredClone(dtFilter)
+	EXCLUDEfilter.group = 0
+	EXCLUDEfilter.active = getWrappedTvslst()
+	// assign filters to groups
+	const WTgroup = {
+		name: WTname,
+		type: 'filter',
+		uncomputable: false,
+		filter: WTfilter
+	}
+	const MUTgroup = {
+		name: MUTname,
+		type: 'filter',
+		uncomputable: false,
+		filter: MUTfilter
+	}
+	const EXCLUDEgroup = {
+		name: 'Excluded categories',
+		type: 'filter',
+		uncomputable: true,
+		filter: EXCLUDEfilter
+	}
+	// assign groups to custom groupset
+	tw.q.customset = { groups: [EXCLUDEgroup, MUTgroup, WTgroup] }
 }
 
 async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {

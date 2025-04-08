@@ -180,12 +180,6 @@ export class Vocab {
 				// pass entire tw.term because non-dictionary terms
 				// cannot get rehydrated on server-side
 				copy.term = structuredClone(tw.term)
-				if (tw.term.type == 'geneVariant') {
-					// geneVariant has large term.groupsetting
-					// so remove it here and rehydrate it on server-side
-					// from shared/common.js
-					delete copy.term.groupsetting
-				}
 			}
 		}
 		return copy
