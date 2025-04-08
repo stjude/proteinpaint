@@ -32,4 +32,4 @@ genomic_df$gene <- known_genes$gene
 head(genomic_df)
 
 # Write to a file if needed
-write.table(genomic_df, "readHDF5_test_data.txt", sep="\t", quote=FALSE, row.names=FALSE)
+write.table(genomic_df, "readHDF5_test_data.txt", sep = "\t", quote = FALSE, row.names = FALSE)
