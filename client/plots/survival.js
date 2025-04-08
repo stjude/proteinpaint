@@ -1196,8 +1196,8 @@ export async function getPlotConfig(opts, app) {
 	if (!opts.term) throw 'survival getPlotConfig: opts.term{} missing'
 	try {
 		await fillTermWrapper(opts.term, app.vocabApi)
-		if (opts.term2) await fillTermWrapper(opts.term2, app.vocabApi)
-		if (opts.term0) await fillTermWrapper(opts.term0, app.vocabApi)
+		if (opts.term2) await fillTermWrapper(opts.term2, app.vocabApi, term0_term2_defaultQ)
+		if (opts.term0) await fillTermWrapper(opts.term0, app.vocabApi, term0_term2_defaultQ)
 	} catch (e) {
 		throw `${e} [survival getPlotConfig()]`
 	}

@@ -15,6 +15,15 @@ import { renderAtRiskG } from '#dom/renderAtRisk'
 import { renderPvalues } from '#dom/renderPvalueTable'
 import { Menu } from '#dom/menu'
 
+const t0_t2_defaultQ = structuredClone(term0_term2_defaultQ)
+Object.assign(t0_t2_defaultQ, {
+	numeric: {
+		mode: 'discrete',
+		type: 'custom-bin',
+		preferredBins: 'median'
+	}
+})
+
 /*
 class Cuminc
 - for cox regression cumulative incidence test
@@ -260,15 +269,6 @@ class MassCumInc {
 					value: grade
 				})
 			}
-
-			const t0_t2_defaultQ = structuredClone(term0_term2_defaultQ)
-			Object.assign(t0_t2_defaultQ, {
-				numeric: {
-					mode: 'discrete',
-					type: 'custom-bin',
-					preferredBins: 'median'
-				}
-			})
 
 			this.components = {
 				controls: await controlsInit({
@@ -1279,8 +1279,8 @@ export async function getPlotConfig(opts, app) {
 		await fillTermWrapper(opts.term, app.vocabApi, {
 			condition: { mode: 'cuminc' }
 		})
-		if (opts.term2) await fillTermWrapper(opts.term2, app.vocabApi)
-		if (opts.term0) await fillTermWrapper(opts.term0, app.vocabApi)
+		if (opts.term2) await fillTermWrapper(opts.term2, app.vocabApi, t0_t2_defaultQ)
+		if (opts.term0) await fillTermWrapper(opts.term0, app.vocabApi, t0_t2_defaultQ)
 	} catch (e) {
 		throw `${e} [cuminc getPlotConfig()]`
 	}

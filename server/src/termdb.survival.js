@@ -171,6 +171,7 @@ function getSampleArray(data, st) {
 function getSeriesKey(ot, d) {
 	const n = ot.name
 	if (ot.type == 'geneVariant') {
+		// TODO: may no longer need this code as geneVariant groupsetting is now performed on client-side
 		if (!d[n] || !d[n].values) return 'Wildtype' // TODO: should require definitive not-tested vs WT data
 		const tested = d[n].values.filter(v => v.class != 'Blank')
 

@@ -1,7 +1,7 @@
-import { TermWrapper } from './terms/tw.ts'
-import { Term } from './terms/term.ts'
-import { Filter } from './filter.ts'
-import { UseCase } from './termsetting.ts'
+import type { TermWrapper } from './terms/tw.ts'
+import type { Term } from './terms/term.ts'
+import type { Filter } from './filter.ts'
+import type { UseCase } from './termsetting.ts'
 
 /*
 --------EXPORTED--------

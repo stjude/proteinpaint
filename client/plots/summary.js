@@ -9,6 +9,7 @@ import { getDefaultBoxplotSettings } from './boxplot.js'
 import { getDefaultScatterSettings } from './sampleScatter.js'
 import { Tabs } from '../dom/toggleButtons'
 import { isNumericTerm } from '#shared/terms.js'
+import { term0_term2_defaultQ } from './controls'
 
 //import {  } from ''
 
@@ -355,8 +356,11 @@ export async function getPlotConfig(opts, app) {
 	if (!opts.term) throw 'summary getPlotConfig: opts.term{} missing'
 	try {
 		await fillTermWrapper(opts.term, app.vocabApi)
-		if (opts.term2) await fillTermWrapper(opts.term2, app.vocabApi)
-		if (opts.term0) await fillTermWrapper(opts.term0, app.vocabApi)
+		// supply term0_term2_defaultQ if opts.term0/2.q is undefined
+		// e.g. for scatterplot, opts.term2.q.mode='continuous' so will not
+		// want to override with q.mode from term0_term2_defaultQ
+		if (opts.term2) await fillTermWrapper(opts.term2, app.vocabApi, opts.term2.q ? null : term0_term2_defaultQ)
+		if (opts.term0) await fillTermWrapper(opts.term0, app.vocabApi, opts.term0.q ? null : term0_term2_defaultQ)
 		// dynamic scatterplot is a child type of summary and following args are possible; if present, initialize them
 		if (opts.colorTW) await fillTermWrapper(opts.colorTW, app.vocabApi)
 		if (opts.shapeTW) await fillTermWrapper(opts.shapeTW, app.vocabApi)

@@ -51,8 +51,6 @@ export function getHandler(self: GeneVariantTermSettingInstance) {
 }
 
 export async function fillTW(tw: GeneVariantTW, vocabApi: VocabApi, defaultQ: GeneVariantQ | null = null) {
-	if (!tw.term.id) tw.term.id = tw.term.name
-
 	if (!tw.term.kind) {
 		// support saved states that don't have term.kind, applied when rehydrating at runtime
 		const term: any = tw.term
@@ -74,6 +72,8 @@ export async function fillTW(tw: GeneVariantTW, vocabApi: VocabApi, defaultQ: Ge
 	} else {
 		throw 'cannot recognize tw.term.kind'
 	}
+
+	if (!tw.term.id) tw.term.id = tw.term.name
 
 	if (!Object.keys(tw.q).includes('type')) tw.q.type = 'values'
 
@@ -152,7 +152,7 @@ async function mayMakeVariantFilter(tw: GeneVariantTW, vocabApi: VocabApi) {
 			classes = data.classes
 		}
 		// filter for only those mutation classes that are in the dataset
-		const values = Object.fromEntries(Object.entries(t.values).filter(([k, v]) => Object.keys(classes).includes(k)))
+		const values = Object.fromEntries(Object.entries(t.values).filter(([k, _v]) => Object.keys(classes).includes(k)))
 		t.values = values
 		dtTermsInDs.push(t)
 	}
