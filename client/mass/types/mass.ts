@@ -44,10 +44,8 @@ type MassApp = {
 	dom: {
 		holder: Elem
 		topbar: Elem
-		/** printError() message appear above the plots */
+		/** printError() message appear above the plot sandboxes */
 		errdiv: Elem
-		/** plots appear below the tabs and button controls */
-		plotDiv: Elem
 	}
 	/** TODO */
 	opts: any
@@ -156,4 +154,13 @@ export type ControlInputEntry = {
 	boxLabel?: string
 	getDisplayStyle?(...args: any): any
 	processConfig?(...args: any): any
+}
+
+export type MassAppActions = {
+	/** Actions defined in the mass store (i.e. 'plot_edit'). See TdbStore.prototype.actions  */
+	type: string
+	/** The plot's this.id */
+	id: string
+	/** Matching config for the plot */
+	config: any
 }
