@@ -27,11 +27,7 @@ export class CnvHeatmapRenderer {
 			.enter()
 			.append('path')
 			.attr('d', (d: CnvArc) => arcGenerator(d))
-			.attr('fill', (d: CnvArc) =>
-				scaleLinear([this.negativePercentile80, 0, this.positivePercentile80], [d.color, 'white', d.color]).clamp(true)(
-					d.value
-				)
-			)
+			.attr('fill', (d: CnvArc) => this.getColor(d.color, d.value))
 			.on('mouseover', (mouseEvent: MouseEvent, arc: CnvArc) => {
 				const table = table2col({ holder: menu.d })
 				const cnv: any = structuredClone(arc)
@@ -42,7 +38,13 @@ export class CnvHeatmapRenderer {
 				{
 					const [c1, c2] = table.addRow()
 					c1.text('Copy number change')
-					c2.html(`<span style="background:${cnv.color}">&nbsp;&nbsp;</span> ${cnv.value}`)
+					//Match the color shown in the tooltip to the heatmap
+					c2.html(
+						`<span style="background:${this.getColor(
+							cnv.color,
+							cnv.value
+						)}; border:solid lightgrey 0.1px;">&nbsp;&nbsp;</span> ${cnv.value}`
+					)
 				}
 				{
 					const [c1, c2] = table.addRow()
@@ -56,5 +58,11 @@ export class CnvHeatmapRenderer {
 				menu.clear()
 				menu.hide()
 			})
+	}
+
+	getColor(color: string, value: number) {
+		return scaleLinear([this.negativePercentile80, 0, this.positivePercentile80], [color, 'white', color]).clamp(true)(
+			value
+		)
 	}
 }
