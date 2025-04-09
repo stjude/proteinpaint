@@ -8,6 +8,9 @@ Features:
 - Converted TermdbTest .gz file to HDF5 format
 - Added multi-gene query support to dense HDF5 matrices. Used time.ts to format time taken to query HDF5 genes under various scenarios
 - Used formatElapsedTime to handle formatting of time taken by top variably expressed genes code
+- Support of date terms
+- Added new plot runChart
+- Allowed to show/hide terms data based on the user role and the dataset config
 
 Fixes:
 - bug fix for mds3 custom tk to work with bcf file with samples
