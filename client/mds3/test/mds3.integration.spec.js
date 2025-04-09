@@ -1104,6 +1104,43 @@ tape('Numeric mode custom dataset, with mode change', test => {
 	}
 })
 
+tape('Custom bcf with sample', test => {
+	test.timeoutAfter(3000)
+	const holder = getHolder()
+	runproteinpaint({
+		holder,
+		noheader: true,
+		genome: 'hg38-test',
+		gene: 'NM_000546',
+		tracks: [
+			{
+				type: 'mds3',
+				name: 'custom bcf',
+				bcf: { file: 'files/hg38/TermdbTest/TermdbTest.bcf.gz' },
+				callbackOnRender
+			}
+		]
+	})
+
+	async function callbackOnRender(tk, bb) {
+		await testVariantLeftLabel(test, tk, bb)
+
+		// todo click a skewer to show samples
+
+		tk.leftlabels.doms.samples.node().dispatchEvent(new Event('click'))
+		await whenVisible(tk.menutip.d, 10000)
+		const div = await detectOne({ elem: tk.menutip.dnode, selector: '.sja_mds3_slb_sampletablebtn' })
+		test.ok(div, '"List 5 sample" option found')
+		div.dispatchEvent(new Event('click'))
+		const table = await detectOne({ elem: tk.menutip.dnode, selector: '[data-testid="sjpp_mds3tk_sampletable"]' })
+		test.ok(table, 'sample table shown')
+		tk.menutip.d.remove()
+
+		if (test._ok) holder.remove()
+		test.end()
+	}
+})
+
 /*************************
  reusable helper functions
 **************************/
