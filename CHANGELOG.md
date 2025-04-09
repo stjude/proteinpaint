@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.117.0
 
 Features:
 - Converted TermdbTest .gz file to HDF5 format
