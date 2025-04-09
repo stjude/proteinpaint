@@ -30,7 +30,6 @@ import { barchart_data } from './termdb.barchart.js'
 import { mayInitiateScatterplots } from './termdb.scatter.js'
 import { mayInitiateMatrixplots, mayInitiateNumericDictionaryTermplots } from './termdb.matrix.js'
 import { add_bcf_variant_filter } from './termdb.snp.js'
-import { validate_query_NIdata } from '#routes/brainImagingSamples.ts'
 import { validate_correlationVolcano } from '#routes/correlationVolcano.ts'
 import { validate_query_singleCell } from '#routes/termdb.singlecellSamples.ts'
 import { validate_query_TopVariablyExpressedGenes } from '#routes/termdb.topVariablyExpressedGenes.ts'
@@ -149,7 +148,6 @@ export async function init(ds, genome) {
 		await validate_query_rnaseqGeneCount(ds, genome)
 		await validate_query_singleSampleMutation(ds, genome)
 		await validate_query_singleSampleGenomeQuantification(ds, genome)
-		await validate_query_NIdata(ds, genome)
 		await validate_query_singleSampleGbtk(ds, genome)
 		//await validate_query_probe2cnv(ds, genome)
 		await validate_query_singleCell(ds, genome)
