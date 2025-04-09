@@ -30,11 +30,11 @@ export function setAutoDimensions(xOffset) {
 		const padding = Math.max(65, maxGrpLabelWidth)
 
 		// should be estimated based on label-fontsize and longest label
-		// const labelOffset = !s.transpose
-		// 	? s.termLabelOffset + s.termGrpLabelOffset
-		// 	: s.sampleLabelOffset + s.sampleGrpLabelOffset
+		const labelOffset = !s.transpose
+			? s.termLabelOffset + s.termGrpLabelOffset
+			: s.sampleLabelOffset + s.sampleGrpLabelOffset
 		const hcw = this.state.config.settings.hierCluster?.xDendrogramHeight || 0
-		this.availContentWidth = boundingWidth - padding - s.margin.right - xOffset - hcw //- 0.5*labelOffset
+		this.availContentWidth = boundingWidth - padding - s.margin.right - xOffset - hcw - 0.5 * labelOffset
 	}
 
 	if (this.autoDimensions.has('colw')) {
