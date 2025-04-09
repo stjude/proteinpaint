@@ -147,11 +147,16 @@ class SCSampleTable extends RxComponentInner {
 				const hiddenClusters = {}
 				// reset hidden clusters when changing sample
 				for (const cluster in plotConfig.config?.hiddenClusters) hiddenClusters[cluster] = false
+				const plots = plotConfig.plots || this.app.vocabApi.termdbConfig?.queries?.singleCell?.data?.plots || []
 				const config = {
 					chartType: 'sc',
 					childType: 'singleCell',
 					sample,
-					hiddenClusters
+					hiddenClusters,
+					plots
+				} as any
+				if (rows[index][0].__experimentID) {
+					config.experimentID = rows[index][0].__experimentID
 				}
 				this.app.dispatch({ type: 'plot_edit', id: this.id, config })
 			}

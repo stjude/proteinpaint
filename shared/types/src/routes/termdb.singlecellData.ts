@@ -41,6 +41,9 @@ export type TermdbSingleCellDataRequest = {
 	plots: string[]
 	/** Gene name to retrieve expression data for all cells of the given sample, and to overlay on maps */
 	gene?: string
+	//Not even used??
+	// filter0?: any
+	colorBy?: any
 }
 
 export type HasdataResponse = {
@@ -49,6 +52,7 @@ export type HasdataResponse = {
 
 	/** Terms used to annotate cells */
 	//terms: Term[]
+	refName: string
 }
 
 export type NodataResponse = {

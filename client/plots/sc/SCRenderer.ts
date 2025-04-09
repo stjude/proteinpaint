@@ -43,6 +43,8 @@ export class SCRenderer {
 				label: 'Plots',
 				isVisible: () => this.#showDependentTabs,
 				getPlotConfig: () => {
+					/** TODO: will need to see if additional needs
+					 * for this config. plots, hiddenClusters, etc. */
 					return {
 						childType: 'singleCell'
 					}
