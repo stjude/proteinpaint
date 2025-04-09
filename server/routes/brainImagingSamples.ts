@@ -2,7 +2,6 @@ import fs from 'fs'
 import path from 'path'
 import serverconfig from '#src/serverconfig.js'
 import type { BrainSample, BrainImagingSamplesRequest, BrainImagingSamplesResponse, RouteApi } from '#types'
-import { spawn } from 'child_process'
 
 /*
 given one or more samples, map the sample(s) to brain template and return the image
