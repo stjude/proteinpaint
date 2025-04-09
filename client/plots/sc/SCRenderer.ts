@@ -1,6 +1,6 @@
 import { Tabs } from '#dom'
 import type { MassAppApi, MassState } from '#mass/types/mass'
-import { SCConfig } from './SCTypes'
+import type { SCConfig } from './SCTypes'
 
 export class SCRenderer {
 	app: MassAppApi
