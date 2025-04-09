@@ -198,17 +198,18 @@ export class Matrix {
 			this.termOrder = this.getTermOrder(this.data)
 			this.sampleGroups = this.getSampleGroups(this.hierClusterSamples || this.data)
 			this.sampleOrder = this.getSampleOrder(this.data)
-
-			if (!this.sampleOrder?.length) {
-				this.showNoMatchingDataMessage()
-				this.controlsRenderer.main() // to update button count or cross out button labels
-				// do not return early yet
-			}
 			// even though there may not be sampleOrder (matrix columns) to render,
 			// should still compute empty series data, legendData, etc to not break
 			// controls/interactions handlers that use those data
 			this.setLayout()
 			if (this.setHierColorScale) this.setHierColorScale(this.hierClusterData.clustering)
+			if (!this.sampleOrder?.length) {
+				this.showNoMatchingDataMessage()
+				// do not return early yet
+			}
+			// make sure computed dimensions are available from preceding steps, to use as control input values
+			this.controlsRenderer.main() // to update button count or cross out button labels
+
 			this.serieses = this.getSerieses(this.data)
 			// TODO: may re-enable below if showing no-data message/suggestions is preferred over rendering empty matrix
 			// can now return early before rendering computed data

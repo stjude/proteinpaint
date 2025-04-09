@@ -1013,14 +1013,18 @@ export class MatrixControls {
 				if (d.updateBtn) d.updateBtn(select(this))
 			})
 
-		const s = this.parent.config.settings.matrix
+		const s = this.parent.settings.matrix || this.parent.config.settings.matrix
+		const min = s.colwMin / s.colw
+		const max = s.colwMax / s.colw
+		const increment = Number((min / max).toFixed(2))
+
 		const d = this.parent.dimensions
 		if (this.zoomApi)
 			this.zoomApi.update({
 				value: s.zoomLevel.toFixed(1),
-				min: s.colwMin / s.colw,
-				max: s.colwMax / s.colw,
-				increment: s.zoomIncrement,
+				min,
+				max,
+				increment,
 				step: s.zoomStep || 1
 			})
 
@@ -1521,7 +1525,7 @@ export class MatrixControls {
 
 	setZoomInput() {
 		const holder = this.opts.holder.append('div').style('display', 'inline-block').style('margin-left', '50px')
-		const s = this.parent.config.settings.matrix
+		const s = this.parent.settings.matrix || this.parent.config.settings.matrix
 		this.zoomApi = zoom({
 			holder,
 			title:
