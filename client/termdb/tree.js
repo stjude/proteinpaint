@@ -216,7 +216,7 @@ class TdbTree {
 }
 
 export function isVisibleTerm(app, auth, term) {
-	const hiddenTermIds = app.vocabApi.termdbConfig.hiddenTermIds
+	const hiddenTermIds = app.vocabApi.termdbConfig?.hiddenTermIds
 	if (hiddenTermIds && hiddenTermIds.includes(term.id)) {
 		if (auth) {
 			let isAdmin = false
