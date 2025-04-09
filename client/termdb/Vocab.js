@@ -140,7 +140,7 @@ export class Vocab {
 	}
 
 	getClientAuthResult() {
-		return this.state.termdbConfig.clientAuthResult
+		return this.state.termdbConfig?.clientAuthResult
 	}
 
 	async trackDsAction({ action, details }) {
