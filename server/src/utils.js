@@ -752,10 +752,9 @@ export async function testIfFileIsBigbed(file) {
 			// TODO also test extraIndexCount. return object but not true/false
 		})
 		ps.on('error', e => {
-			// NOTE: This error handling is required in M4 mb pro to not crash the pp server,
-			// other Apple Silicon and Intel machines does not seem to need below
+			if (e.code === 'ENOENT') throw `cannot find bigBedInfo binary='${bigBedInfo}'`
 			// reject('Error detecting if file is bigbed')
-			console.log('\n--- testIfFileIsBigbed() error ---\n', e, [err.join(''), out.join('')], '\n')
+			console.log('\n--- testIfFileIsBigbed() error ---\n', e, '\n')
 			resolve(false)
 		})
 	})
