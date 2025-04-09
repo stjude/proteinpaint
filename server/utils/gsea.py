@@ -4,7 +4,8 @@ import blitzgsea as blitz
 import json 
 import time  
 import sys  
-import sqlite3  
+import sqlite3
+import random
 import os  
 import numpy as np  
 import pandas as pd  
@@ -101,7 +102,7 @@ try:
                 start_gsea_time = time.time()  # Record the start time of GSEA
                 if __name__ == "__main__":
                     result = blitz.gsea(signature, msigdb_library, permutations=num_permutations).T  # Perform GSEA computation and transpose the result
-                    random_num = np.random.rand()  # Generate a random number for unique pickle filename
+                    random_num = random.random() + time.time()  # Generate a random number for unique pickle filename
                     pickle_filename = f"gsea_result_{random_num}.pkl"  # Create a filename for the pickle file
                     result.to_pickle(os.path.join(cachedir, pickle_filename))  # Save the result to the pickle file
                     gsea_str = f'{{"data": {result.to_json()}}}'  # Convert the result to JSON format
