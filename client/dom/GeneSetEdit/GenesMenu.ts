@@ -52,7 +52,12 @@ export class GenesMenu {
 			const input = this.addParameter(param.param, this.tip.d.append('div'))
 			param.input = input
 		}
-
+		/** Prevents the gene set edit ui disappearing when clicking 
+		within this menu. User can still click the gene set edit ui
+		to close this menu. */
+		this.tip.d.on('mousedown', (event: Event) => {
+			event.stopPropagation()
+		})
 		//Submits all the inputs from the menu to the callback
 		const calGenesBtn = addButton({
 			div: this.tip.d.append('div').style('padding', '20px').style('display', 'inline-block'),
@@ -70,31 +75,27 @@ export class GenesMenu {
 		if (param.type == 'boolean') {
 			if (param?.options?.length) {
 				/* ** Submenu ** 
-				Use for checkboxes that expand to show additional options when checked. */
-				const holder = div
-					.append('div')
-					.style('margin', `${param.noStyle ? '0px' : '10px'} 0px`)
-					.on('mousedown', (event: Event) => {
-						event.stopPropagation()
-					})
-				input = holder.append('input').attr('type', 'checkbox').attr('id', param.id)
-				this.addLabels(holder, 'label', param)
-
+				Use checkbox to expand div for additional options when checked. */
+				const holder = div.append('div').attr('data-testid', 'sjpp-submenu-checkbox')
 				const contentDiv = div.append('div').style('padding-left', '20px')
+				input = make_one_checkbox({
+					holder: holder,
+					id: param.id,
+					checked: param.checked,
+					labeltext: param.label,
+					callback: () => {
+						contentDiv.style('display', input.property('checked') ? 'block' : 'none')
+					}
+				})
+				input.on('mousedown', (event: Event) => {
+					event.stopPropagation()
+				})
 				for (const option of param.options) {
 					const optionInput = this.addParameter(option, contentDiv.append('div'))
 					option.parentId = param.id
 					this.params2Add.push({ param: option, input: optionInput })
 				}
-
-				if (param.value) {
-					input.property('checked', param.value)
-					contentDiv.style('display', 'block')
-				} else contentDiv.style('display', 'none')
-
-				input.on('change', () => {
-					contentDiv.style('display', input.property('checked') ? 'block' : 'none')
-				})
+				contentDiv.style('display', param.value ? 'block' : 'none')
 			} else {
 				input = div.append('input').style('padding', '2px').attr('type', 'checkbox').attr('id', param.id)
 				if (param.value) input.property('checked', param.value)
@@ -108,8 +109,8 @@ export class GenesMenu {
 				id: param.id,
 				checked: true,
 				labeltext: param.label,
-				callback: () => {
-					//Not used but required for func
+				callback: event => {
+					event.stopPropagation()
 				}
 			})
 		} else if (param.type == 'number') {
