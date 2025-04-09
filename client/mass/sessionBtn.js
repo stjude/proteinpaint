@@ -1,6 +1,7 @@
 import { getCompInit } from '#rx'
 import { Menu } from '#dom/menu'
 import { to_textfile } from '#dom/downloadTextfile'
+import copyButton from '#dom/copyButton'
 import { dofetch3 } from '#common/dofetch'
 import { corsMessage } from '#common/embedder-helpers'
 import { select } from 'd3-selection'
@@ -370,7 +371,10 @@ class MassSessionBtn {
 				.style('margin-bottom', '12px')
 				.html(`Click the link to recover this session. Bookmark or share this link.`)
 
-			const a = linkDiv.append('a').attr('href', url).attr('target', '_blank').html(res.id)
+			const a = linkDiv.append('a').attr('id', 'sessionLink').attr('href', url).attr('target', '_blank').html(res.id)
+
+			// add copy button
+			copyButton(linkDiv, '#sessionLink', 'href')
 
 			if (this.hostURL != window.location.origin) {
 				// Avoid the multi-window/tab sequence to recover the session:
