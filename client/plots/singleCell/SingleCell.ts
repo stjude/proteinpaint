@@ -1,8 +1,10 @@
 import { RxComponentInner } from '../../types/rx.d'
 import { getCompInit, copyMerge } from '#rx'
 import type { BasePlotConfig, MassState } from '#mass/types/mass'
-import { Model } from './model/Model'
 import { sayerror } from '#dom'
+import { Model } from './model/Model'
+import { ViewModel } from './viewModel/ViewModel'
+import { View } from './view/View'
 
 class SingleCell extends RxComponentInner {
 	readonly type = 'singleCell'
@@ -10,15 +12,14 @@ class SingleCell extends RxComponentInner {
 	refName?: string
 	samples?: []
 	model?: Model
+	view?: View
 
 	constructor(opts) {
 		super()
 		const holder = opts.holder.append('div').classed('sjpp-single-cell-main', true)
 		this.dom = {
 			holder,
-			errorDiv: holder.append('div').attr('data-testid', 'sjpp-single-cell-error'),
-			actionsDiv: holder.append('div').attr('data-testid', 'sjpp-single-cell-actions'),
-			plotDiv: holder.append('div').attr('data-testid', 'sjpp-single-cell-plot')
+			errorDiv: holder.append('div').attr('data-testid', 'sjpp-single-cell-error')
 		}
 		this.data = {}
 	}
@@ -40,6 +41,7 @@ class SingleCell extends RxComponentInner {
 	init(appState) {
 		const state = this.getState(appState)
 		this.model = new Model(state)
+		this.view = new View(this.dom)
 	}
 
 	async main() {
@@ -71,6 +73,12 @@ class SingleCell extends RxComponentInner {
 			else if (e.stack) console.log(e.stack)
 			throw `${e} [SingleCell.main()]`
 		}
+
+		/** Create the view model
+		 * TODO: move to init()?? */
+		const viewModel = new ViewModel(config)
+
+		this.view?.render(viewModel.viewData)
 	}
 }
 
