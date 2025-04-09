@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 Features:
 - Converted TermdbTest .gz file to HDF5 format
+- Added multi-gene query support to dense HDF5 matrices. Used time.ts to format time taken to query HDF5 genes under various scenarios
 
 Fixes:
 - bug fix for mds3 custom tk to work with bcf file with samples

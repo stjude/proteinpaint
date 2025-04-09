@@ -1,2 +1,1 @@
-Features:
-- Added multi-gene query support to dense HDF5 matrices. Used time.ts to format time taken to query HDF5 genes under various scenarios
+
