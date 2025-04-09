@@ -75,7 +75,7 @@ RUN apt-get update && apt-get install -y \
     && add-apt-repository 'deb https://cloud.r-project.org/bin/linux/debian bookworm-cran40/' \
     && apt-get update
 
-RUN apt-get update && apt-get install -y r-base -y r-base-dev -y libargtable2-dev \
+RUN apt-get update && apt-get install -y r-base=4.4.3-1 -y r-base-dev -y libargtable2-dev \
 	## install R packages
  	&& R -e "install.packages(c('cmprsk', 'hwde', 'jsonlite', 'survival', 'lmtest', 'dplyr', 'tidyr', 'BiocManager', 'readr', 'doParallel', 'ggplot2'), dependencies=TRUE, repos='http://cran.rstudio.com/')" \
 	&& R -e "BiocManager::install(c('edgeR','rhdf5'))" \
