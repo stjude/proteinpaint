@@ -58,7 +58,7 @@ export function setRenderers(self) {
 
 		if (self.config.term && self.config.term.term.type == 'date') {
 			const xMinDate = new Date(getDateStrFromNumber(xMin - extraSpaceX))
-			const xMaxDate = new Date(getDateStrFromNumber(this.range.xMax + extraSpaceX))
+			const xMaxDate = new Date(getDateStrFromNumber(xMax + extraSpaceX))
 
 			chart.xAxisScaleTime = scaleTime()
 				.domain([xMinDate, xMaxDate])
@@ -70,10 +70,18 @@ export function setRenderers(self) {
 		chart.yAxisScale = d3Linear()
 			.domain([yMax + extraSpaceY, yMin - extraSpaceY])
 			.range([offsetY, self.settings.svgh + offsetY])
+		if (self.config.term2 && self.config.term2.term.type == 'date') {
+			const yMinDate = new Date(getDateStrFromNumber(yMin - extraSpaceY))
+			const yMaxDate = new Date(getDateStrFromNumber(yMax + extraSpaceY))
+
+			chart.yAxisScaleTime = scaleTime()
+				.domain([yMinDate, yMaxDate])
+				.range([offsetY, self.settings.svgh + offsetY])
+
+			chart.axisLeft = axisLeft(chart.yAxisScaleTime)
+		} else chart.axisLeft = axisLeft(chart.yAxisScale)
 
 		chart.zAxisScale = d3Linear().domain([chart.zMin, chart.zMax]).range([0, self.settings.svgd])
-
-		chart.axisLeft = axisLeft(chart.yAxisScale)
 
 		const gradientColor = rgb(self.config.settings.sampleScatter.defaultColor)
 		if (!self.config.startColor) {

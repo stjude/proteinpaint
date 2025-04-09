@@ -3,8 +3,7 @@ import { fillTwLst } from '#termsetting'
 import * as d3 from 'd3'
 import { renderTable } from '../dom/table'
 import { profilePlot } from './profilePlot.js'
-import { loadFilterTerms } from './profilePlot.js'
-import { getDefaultProfilePlotSettings, makeChartBtnMenu } from './profilePlot.js'
+import { getDefaultProfilePlotSettings, makeChartBtnMenu, getProfilePlotConfig } from './profilePlot.js'
 export { makeChartBtnMenu }
 
 class profileRadarFacility extends profilePlot {
@@ -18,7 +17,7 @@ class profileRadarFacility extends profilePlot {
 		await super.init(appState)
 		const config = appState.plots.find(p => p.id === this.id)
 		this.plotConfig = config
-		this.twLst = []
+		this.twLst = [this.config.facilityTW]
 		this.terms = config.terms
 		for (const row of this.terms) {
 			this.rowCount++
@@ -94,7 +93,7 @@ class profileRadarFacility extends profilePlot {
 			.append('div')
 			.style('display', 'inline-block')
 			.style('vertical-align', 'top')
-			.style('margin-top', '140px')
+			.style('margin-top', '80px')
 			.style('margin-right', '20px')
 		this.dom.tableDiv = rightDiv.append('div')
 
@@ -111,8 +110,8 @@ class profileRadarFacility extends profilePlot {
 		const radarG = this.dom.svg.append('g').attr('transform', `translate(${x},${y})`)
 		this.radarG = radarG
 
-		this.legendG = this.dom.svg.append('g').attr('transform', `translate(${x + 360},${y + 50})`)
-		this.filterG = this.dom.svg.append('g').attr('transform', `translate(${x + 360},${y + 150})`)
+		this.legendG = this.dom.svg.append('g').attr('transform', `translate(${x + 380},${y + 100})`)
+		this.filterG = this.dom.svg.append('g').attr('transform', `translate(${x + 380},${y + 200})`)
 
 		const rows = []
 		const columns = [
@@ -230,8 +229,9 @@ class profileRadarFacility extends profilePlot {
 		this.addFilterLegend()
 		this.legendG.append('text').attr('text-anchor', 'left').style('font-weight', 'bold').text('Legend')
 		const site = this.settings.site || this.sites[0].value
+		const hospital = this.sampleData[this.config.facilityTW.$id].value
 		const siteLabel = this.sites.find(s => s.value == site).label
-		this.addLegendItem(siteLabel, color1, 0, 'none')
+		this.addLegendItem(`${siteLabel} / ${hospital}`, color1, 0, 'none')
 		this.addLegendItem(this.config.score, color2, 1, '5, 5')
 	}
 
@@ -325,7 +325,8 @@ class profileRadarFacility extends profilePlot {
 
 export async function getPlotConfig(opts, app, _activeCohort) {
 	try {
-		const defaults = opts
+		const activeCohort = _activeCohort === undefined ? app.getState().activeCohort : _activeCohort
+		const defaults = await getProfilePlotConfig(activeCohort, app, opts)
 		if (!defaults) throw 'default config not found in termdbConfig.plotConfigByCohort.profileRadarFacility'
 		let config = copyMerge(structuredClone(defaults), opts)
 		const settings = getDefaultProfilePlotSettings()
@@ -342,8 +343,6 @@ export async function getPlotConfig(opts, app, _activeCohort) {
 			twlst.push(row.maxScore)
 		}
 		await fillTwLst(twlst, app.vocabApi)
-		const activeCohort = _activeCohort === undefined ? app.getState().activeCohort : _activeCohort
-		await loadFilterTerms(config, activeCohort, app)
 		return config
 	} catch (e) {
 		throw `${e} [profileRadarFacility getPlotConfig()]`

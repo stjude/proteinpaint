@@ -6,7 +6,7 @@ import type { TableCell } from '#dom'
 import { getCompInit, copyMerge } from '#rx'
 import { fillTwLst } from '#termsetting'
 import * as d3 from 'd3'
-import { profilePlot, loadFilterTerms, getDefaultProfilePlotSettings, getProfilePlotConfig } from '../profilePlot.js'
+import { profilePlot, getDefaultProfilePlotSettings, getProfilePlotConfig } from '../profilePlot.js'
 import { renderTable } from '#dom'
 
 /** TODO: profilePlot must extend RxComponentInner but file not tsc.
@@ -204,21 +204,20 @@ class ProfilePolar extends profilePlot {
 export async function getPlotConfig(opts: any, app: MassAppApi, _activeCohort: number) {
 	try {
 		const activeCohort = _activeCohort === undefined ? app.getState().activeCohort : _activeCohort
-		const defaults = getProfilePlotConfig(activeCohort, app, opts)
+		const defaults = await getProfilePlotConfig(activeCohort, app, opts)
 		if (!defaults) throw 'default config not found in termdbConfig.plotConfigByCohort.profilePolar'
 		const settings = getDefaultProfilePlotSettings()
 		defaults.settings = { profilePolar: settings }
 
 		const config = copyMerge(structuredClone(defaults), opts)
 		config.settings.controls = { isOpen: false }
-		const twlst: TermWrapper[] = []
+		const twlst: any[] = []
 		for (const data of config.terms) {
 			data.score.q = { mode: 'continuous' }
 			data.maxScore.q = { mode: 'continuous' }
 			twlst.push(data.score, data.maxScore)
 		}
 		await fillTwLst(twlst, app.vocabApi)
-		await loadFilterTerms(config, activeCohort, app)
 
 		return config
 	} catch (e) {

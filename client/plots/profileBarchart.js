@@ -302,7 +302,7 @@ class profileBarchart extends profilePlot {
 export async function getPlotConfig(opts, app, _activeCohort) {
 	try {
 		const activeCohort = _activeCohort === undefined ? app.getState().activeCohort : _activeCohort
-		const defaults = getProfilePlotConfig(activeCohort, app, opts)
+		const defaults = await getProfilePlotConfig(activeCohort, app, opts)
 		defaults.settings = { profileBarchart: getDefaultProfilePlotSettings() }
 		let config = structuredClone(defaults)
 		config = copyMerge(config, opts)
@@ -326,7 +326,6 @@ export async function getPlotConfig(opts, app, _activeCohort) {
 				}
 		}
 		await fillTwLst(twlst, app.vocabApi)
-		await loadFilterTerms(config, activeCohort, app)
 
 		return config
 	} catch (e) {

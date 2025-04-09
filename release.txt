@@ -1,1 +1,4 @@
-
+Features
+- Support of date terms
+- Added new plot runChart
+- Allowed to show/hide terms data based on the user role and the dataset config

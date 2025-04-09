@@ -444,7 +444,7 @@ export class profileForms extends profilePlot {
 
 export async function getPlotConfig(opts, app, _activeCohort) {
 	const activeCohort = _activeCohort === undefined ? app.getState().activeCohort : _activeCohort
-	const formsConfig = getProfilePlotConfig(activeCohort, app, opts)
+	const formsConfig = await getProfilePlotConfig(activeCohort, app, opts)
 	let config = formsConfig
 	config.settings = getDefaultProfileFormsSettings()
 	config.header = 'Templates: Visualization tools to provide insights and assist in leveraging data'
@@ -454,7 +454,6 @@ export async function getPlotConfig(opts, app, _activeCohort) {
 		if (plot.scTerms) await fillTwLst(plot.scTerms, app.vocabApi)
 	}
 
-	await loadFilterTerms(config, activeCohort, app)
 	return config
 }
 

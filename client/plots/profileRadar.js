@@ -4,7 +4,7 @@ import * as d3 from 'd3'
 import { profilePlot } from './profilePlot.js'
 import { renderTable } from '../dom/table'
 import { loadFilterTerms } from './profilePlot.js'
-import { getDefaultProfilePlotSettings, ABBREV_COHORT, makeChartBtnMenu } from './profilePlot.js'
+import { getDefaultProfilePlotSettings, ABBREV_COHORT, makeChartBtnMenu, getProfilePlotConfig } from './profilePlot.js'
 
 class profileRadar extends profilePlot {
 	constructor() {
@@ -278,7 +278,9 @@ class profileRadar extends profilePlot {
 
 export async function getPlotConfig(opts, app, _activeCohort) {
 	try {
-		const defaults = opts
+		const activeCohort = _activeCohort === undefined ? app.getState().activeCohort : _activeCohort
+		const defaults = await getProfilePlotConfig(activeCohort, app, opts)
+
 		defaults.settings = { profileRadar: getDefaultProfilePlotSettings() }
 
 		if (!defaults) throw 'default config not found in termdbConfig.plotConfigByCohort.profileRadar'
@@ -301,8 +303,6 @@ export async function getPlotConfig(opts, app, _activeCohort) {
 			}
 		}
 		await fillTwLst(twlst, app.vocabApi)
-		const activeCohort = _activeCohort === undefined ? app.getState().activeCohort : _activeCohort
-		await loadFilterTerms(config, activeCohort, app)
 		return config
 	} catch (e) {
 		throw `${e} [profileRadar getPlotConfig()]`
