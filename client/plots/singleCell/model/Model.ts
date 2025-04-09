@@ -10,12 +10,20 @@ export class Model {
 		this.config = state.config
 	}
 
+	async getSamples() {
+		const body = {
+			genome: this.state.genome,
+			dslabel: this.state.dslabel,
+			filter0: this.state.termfilter.filter0 || null
+		}
+		return await dofetch3('termdb/singlecellSamples', { body })
+	}
+
 	async getData() {
 		const body = this.getRequestBody()
 		//TODO: can't use TermdbSingleCellDataResponse type
 		// response is a union type that isn't up to date
-		const data = await dofetch3('termdb/singlecellData', { body })
-		return data
+		return await dofetch3('termdb/singlecellData', { body })
 	}
 
 	getRequestBody() {

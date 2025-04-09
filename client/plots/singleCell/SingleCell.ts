@@ -8,6 +8,8 @@ class SingleCell extends RxComponentInner {
 	readonly type = 'singleCell'
 	data: object
 	refName?: string
+	samples?: []
+	model?: Model
 
 	constructor(opts) {
 		super()
@@ -35,20 +37,35 @@ class SingleCell extends RxComponentInner {
 		}
 	}
 
+	init(appState) {
+		const state = this.getState(appState)
+		this.model = new Model(state)
+	}
+
 	async main() {
 		const config = structuredClone(this.state.config)
 		if (config.childType != this.type && config.chartType != this.type) return
 		if (!config.sample) throw new Error('No sample provided for single cell plot')
+
+		if (!this.model) throw `Model not initialized [SingleCell.main()]`
+
+		/** Fetch data from the model */
 		try {
-			const model = new Model(this.state)
-			const result = await model.getData()
-			if (result.error) {
+			const sampleData = await this.model.getSamples()
+			if (sampleData.error || !sampleData.samples || !sampleData.samples.length) {
 				sayerror(this.dom.errorDiv, 'No samples found for this dataset')
+				return
+			}
+			this.samples = sampleData.samples
+			const data = await this.model.getData()
+			if (data.error) {
+				sayerror(this.dom.errorDiv, 'No samples found for this dataset')
+				return
 			}
 			//Not returned and not used????
 			// this.refName = result.refName
-			this.refName = result.refName || this.state.termdbConfig?.queries?.singleCell?.data?.refName
-			this.data = result
+			this.refName = data.refName || this.state.termdbConfig?.queries?.singleCell?.data?.refName
+			this.data = data
 		} catch (e: any) {
 			if (e instanceof Error) console.error(`${e.message || e} [SingleCell.main()]`)
 			else if (e.stack) console.log(e.stack)
