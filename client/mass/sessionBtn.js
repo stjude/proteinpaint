@@ -1,7 +1,6 @@
 import { getCompInit } from '#rx'
 import { Menu } from '#dom/menu'
 import { to_textfile } from '#dom/downloadTextfile'
-import copyButton from '#dom/copyButton'
 import { dofetch3 } from '#common/dofetch'
 import { corsMessage } from '#common/embedder-helpers'
 import { select } from 'd3-selection'
@@ -16,9 +15,11 @@ class MassSessionBtn {
 
 	async init(appState) {
 		const tip = new Menu({ padding: '0px' })
+		const copytip = new Menu({ padding: '5px' })
 		this.dom = {
 			button: this.opts.button,
-			tip
+			tip,
+			copytip
 		}
 
 		this.dom.button.on('click', () => {
@@ -37,7 +38,7 @@ class MassSessionBtn {
 		const options = [
 			{ label: `Open`, title: 'Recover a saved session', callback: this.open },
 			{ label: `Save`, title: 'Save the current view', callback: this.save },
-			{ label: `Share`, title: 'Create a URL link to share this view', callback: this.getSessionUrl }
+			{ label: `Share`, title: 'Share the current view', callback: this.getSessionUrl }
 		]
 
 		if (!this.serverCachedSessions) await this.setServerCachedSessions()
@@ -368,13 +369,35 @@ class MassSessionBtn {
 			const linkDiv = this.dom.tip.d.append('div').style('margin', '10px')
 			linkDiv
 				.append('div')
+				.style('display', 'flex')
 				.style('margin-bottom', '12px')
-				.html(`Click the link to recover this session. Bookmark or share this link.`)
+				.html(`Open or copy the session link.`)
 
-			const a = linkDiv.append('a').attr('id', 'sessionLink').attr('href', url).attr('target', '_blank').html(res.id)
+			const a = linkDiv.append('a').style('display', 'none').attr('href', url).attr('target', '_blank').html(res.id)
 
-			// add copy button
-			copyButton(linkDiv, '#sessionLink', 'href')
+			// open button
+			linkDiv
+				.append('button')
+				.style('cursor', 'pointer')
+				.text('Open link')
+				.on('click', () => {
+					a.node().click()
+				})
+
+			// copy button
+			linkDiv
+				.append('button')
+				.style('cursor', 'pointer')
+				.style('margin-left', '10px')
+				.text('Copy link')
+				.on('click', async event => {
+					await navigator.clipboard.writeText(url)
+					this.dom.copytip.clear().showunder(event.target)
+					this.dom.copytip.d.append('div').html('&#10003;')
+					setTimeout(() => {
+						tip.hide()
+					}, 1000)
+				})
 
 			if (this.hostURL != window.location.origin) {
 				// Avoid the multi-window/tab sequence to recover the session:
