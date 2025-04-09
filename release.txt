@@ -1,1 +1,2 @@
-
+Features:
+- Used formatElapsedTime to format the times taken for clustering and top variable genes in termdbtest. Used mayLog for both
