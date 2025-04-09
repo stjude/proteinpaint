@@ -395,7 +395,7 @@ class MassSessionBtn {
 					this.dom.copytip.clear().showunder(event.target)
 					this.dom.copytip.d.append('div').html('&#10003;')
 					setTimeout(() => {
-						tip.hide()
+						this.dom.copytip.hide()
 					}, 1000)
 				})
 
