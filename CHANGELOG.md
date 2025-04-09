@@ -7,6 +7,9 @@ All notable changes to this project will be documented in this file.
 Features:
 - Converted TermdbTest .gz file to HDF5 format
 
+Fixes:
+- bug fix for mds3 custom tk to work with bcf file with samples
+
 
 ## 2.116.0
 
