@@ -554,7 +554,7 @@ fn main() {
                     match samples_string_result.as_str() {
                         Some(x) => {
                             samples_string = x.to_string();
-                            println!("Samples: {}", samples_string);
+                            // println!("Samples: {}", samples_string);
                         }
                         None => {
                             // eprintln!("ERROR: Samples not provided in JSON");
