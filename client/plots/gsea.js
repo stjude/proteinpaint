@@ -19,7 +19,7 @@ class gsea {
 		const controlsDiv =
 			typeof opts.controls == 'object'
 				? opts.controls
-				: opts.holder || opts.holder.append('div').style('display', 'inline-block')
+				: opts.holder.style('display', 'inline-block') || opts.holder.append('div').style('display', 'inline-block')
 		const actionsDiv = opts.holder
 			.append('div')
 			.attr('data-testid', 'sjpp-gsea-actions')
@@ -223,11 +223,17 @@ async function renderPathwayDropdown(self) {
 		}
 
 		const idx = event.target.selectedIndex
-		self.settings.pathway = pathwayOpts[idx].value
 		self.app.dispatch({
 			type: 'plot_edit',
 			id: self.id,
 			config: {
+				//Need to clear the gsea_params completely
+				gsea_params: {
+					geneset_name: null,
+					pickle_file: null,
+					pathway: pathwayOpts[idx].value
+				},
+				highlightGenes: [],
 				settings: {
 					gsea: self.settings
 				}
@@ -354,32 +360,37 @@ add:
 	]
 	let download = {}
 
-	//Highlight genes button
-	self.dom.detailsDiv
-		.append('button')
-		.style('margin-left', '10px')
-		.style(
-			'display',
-			self.config.chartType == 'differentialAnalysis' && self.config.gsea_params.geneset_name == null ? 'none' : 'block'
-		)
-		.attr('aria-label', 'Highlight genes in the volcano plot')
-		.text('Highlight genes')
-		.on('click', () => {
-			self.app.dispatch({
-				type: 'plot_edit',
-				id: self.id,
-				config: {
-					childType: 'volcano',
-					highlightedData: self.config.highlightData
-				}
+	if (self.config.chartType == 'differentialAnalysis') {
+		//Highlight genes button
+		self.dom.detailsDiv
+			.append('button')
+			.style('margin-left', '10px')
+			.style(
+				'display',
+				self.config.chartType == 'differentialAnalysis' && self.config.gsea_params.geneset_name == null
+					? 'none'
+					: 'block'
+			)
+			.attr('aria-label', 'Highlight genes in the volcano plot')
+			.text('Highlight genes')
+			.on('click', () => {
+				self.app.dispatch({
+					type: 'plot_edit',
+					id: self.id,
+					config: {
+						childType: 'volcano',
+						highlightedData: self.config.highlightGenes
+					}
+				})
 			})
-		})
+	}
 
 	if (self.state.config.downloadFilename) download.fileName = self.state.config.downloadFilename
 
 	//Table rerenders when main is called
 	//Fix to show which gene set is selected after rerender
 	const geneSetIdx = self.gsea_table_rows.findIndex(row => row[0].value == self.config.gsea_params.geneset_name)
+	console.log(geneSetIdx)
 	const selectedRows = geneSetIdx > -1 ? [geneSetIdx] : []
 
 	renderTable({
@@ -403,7 +414,7 @@ add:
 			if (self.config.chartType == 'differentialAnalysis') {
 				//Saves the data to highlight in the volcano plot
 				const genes = [...self.gsea_table_rows[index][5].value.split(',')]
-				if (genes) config.highlightData = genes
+				if (genes) config.highlightGenes = genes
 			}
 			await self.app.dispatch({
 				type: 'plot_edit',
@@ -557,10 +568,10 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 
 async function rungsea(body, dom) {
 	//Only show the loading div as the gsea is running
-	dom.actionsDiv.style('display', 'none')
-	dom.loadingDiv.style('display', 'block')
+	// dom.actionsDiv.style('display', 'none')
+	// dom.loadingDiv.style('display', 'block')
 	const data = await dofetch3('genesetEnrichment', { body })
-	dom.loadingDiv.style('display', 'none')
-	dom.actionsDiv.style('display', 'block')
+	// dom.loadingDiv.style('display', 'none')
+	// dom.actionsDiv.style('display', 'block')
 	return data
 }

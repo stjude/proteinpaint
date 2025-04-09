@@ -1,1 +1,2 @@
-
+Fixes:
+- gsea table renders with new genesets on dropdown change
