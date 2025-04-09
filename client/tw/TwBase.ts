@@ -22,6 +22,10 @@ export class TwBase {
 	$id?: string
 	isAtomic = true
 
+	#tw: TermWrapper
+	#opts: TwOpts
+	#groupsConfig: any
+
 	// define addons below, to be set using Object.defineProperties(this)
 	// by defining allowed method names here, subclasses that inherit from
 	// TwBase will be type checked
@@ -32,13 +36,25 @@ export class TwBase {
 	minNumSamples?: number
 	valueFilter?: any
 
-	constructor(tw: TermWrapper, opts: TwOpts) {
+	constructor(tw: TermWrapper, opts: TwOpts = {}) {
 		this.type = tw.type
 		this.isAtomic = true
 		if (tw.$id) this.$id = tw.$id
+		// instance methods and private props will not be JSON.stringified(),
+		// important to ignore when saving state
+		this.#tw = tw
+		this.#opts = opts
 		if (tw.sortSamples) this.sortSamples = tw.sortSamples
 		if (tw.minNumSamples) this.minNumSamples = tw.minNumSamples
 		if (tw.valueFilter) this.valueFilter = tw.valueFilter
+
+		this.#groupsConfig = {
+			minGrpNum: 3,
+			maxGrpNum: 5,
+			groups: [],
+			values: [],
+			filters: []
+		}
 
 		// By using Object.defineProperties(), addon methods are not enumerable
 		// and makes the xtw instance compatible with structuredClone(),
@@ -62,5 +78,21 @@ export class TwBase {
 	render(a: any): any {
 		console.log(a)
 		throw `should implement this method in subclass code, as needed`
+	}
+
+	showEditMenu() {
+		//ignore
+	}
+
+	getPillStatus() {
+		//ignore
+	}
+
+	getPillName() {
+		const name = this.#tw.term.name
+		if (!this.#opts.abbrCutoff) return name
+		return name.length <= this.#opts.abbrCutoff + 2
+			? name
+			: '<label title="' + name + '">' + name.substring(0, this.#opts.abbrCutoff) + '...' + '</label>'
 	}
 }

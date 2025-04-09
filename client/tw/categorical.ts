@@ -13,9 +13,10 @@ import {
 	RawCatTWPredefinedGS,
 	RawCatTWCustomGS
 } from '#types'
-import { TwBase, TwOpts } from './TwBase.ts'
+import { TwBase, type TwOpts } from './TwBase.ts'
 import { copyMerge } from '#rx'
 import { set_hiddenvalues } from '#termsetting'
+import { throwMsgWithFilePathAndFnName } from '#dom/sayerror'
 
 export type CatInstance = CatValues | CatPredefinedGS | CatCustomGS
 export type CatTypes = typeof CatValues | typeof CatPredefinedGS | typeof CatCustomGS
@@ -135,6 +136,40 @@ export class CatValues extends CategoricalBase {
 		}
 		set_hiddenvalues(q, term)
 		return tw as CatTWValues
+	}
+
+	showMenu() {
+		const grpIdxes: Set<number> = new Set([0, 1, 2])
+		const c = this.#groupsConfig
+		c.groups = []
+		for (const v of Object.values(this.#tw.term.values)) {
+			if (v.uncomputable) return //Still necessary? Possibly taken care of termdb route... somewhere
+			if (v?.group > c.maxGrpNum)
+				throwMsgWithFilePathAndFnName(
+					`The maximum number of groups is ${tc.maxGrpNum}. The group index for value = ${v.label} is ${v.group}`
+				)
+			const value = {
+				key: v.key,
+				label: v.label,
+				group: v.group || 1,
+				samplecount: v.samplecount
+			}
+			c.values.push(value)
+			grpIdxes.add(value.group)
+		}
+
+		if (!c.values.length) throwMsgWithFilePathAndFnName(`Missing values`)
+		// re-populate missing sample counts, which can occur
+		// for a custom groupset
+		c.values.forEach(v => {
+			if (!v.samplecount) {
+				v.samplecount = this.tsInstance.category2samplecount
+					? this.tsInstance.category2samplecount.find(
+							(d: { key: string; label?: string; samplecount: number }) => d.key == v.key
+					  )?.samplecount
+					: 'n/a'
+			}
+		})
 	}
 }
 
