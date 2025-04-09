@@ -186,10 +186,8 @@ class TdbTree {
 		}
 		const terms = []
 		const auth = this.app.vocabApi.getClientAuthResult()
-		const hiddenTermIds = this.app.vocabApi.termdbConfig.hiddenTermIds
 		for (const t of data.lst) {
 			const isVisible = isVisibleTerm(this.app, auth, t)
-			console.log('isVisible', t.id, isVisible)
 			if (!isVisible) continue
 			const copy = Object.assign({}, t)
 			terms.push(copy)

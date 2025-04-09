@@ -8,14 +8,14 @@ import { axisLeft, axisBottom } from 'd3-axis'
 import { select } from 'd3-selection'
 import { getSamplelstTW, getFilter } from '../mass/groups.js'
 import { regressionPoly } from 'd3-regression'
-import { line, extent, contourDensity, geoPath, scaleSequential, max, interpolateGreys, interpolateOranges } from 'd3'
+import { line, extent, contourDensity, geoPath, scaleSequential, max, interpolateGreys, scaleTime } from 'd3'
 import { getId } from '#mass/nav'
 import { minShapeSize, maxShapeSize } from './sampleScatter.js'
 import { addNewGroup } from '../mass/groups.js'
 import { setRenderersThree } from './sampleScatter.rendererThree.js'
 import { shapes } from './sampleScatter.js'
 import { roundValueAuto } from '#shared/roundValue.js'
-import { median as d3Median } from 'd3-array'
+import { getDateStrFromNumber } from '#shared/terms.js'
 
 export function setRenderers(self) {
 	setRenderersThree(self)
@@ -56,7 +56,17 @@ export function setRenderers(self) {
 			.domain([xMin - extraSpaceX, xMax + extraSpaceX])
 			.range([offsetX, self.settings.svgw + offsetX])
 
-		chart.axisBottom = axisBottom(chart.xAxisScale)
+		if (self.config.term && self.config.term.term.type == 'date') {
+			const xMinDate = new Date(getDateStrFromNumber(xMin - extraSpaceX))
+			const xMaxDate = new Date(getDateStrFromNumber(this.range.xMax + extraSpaceX))
+
+			chart.xAxisScaleTime = scaleTime()
+				.domain([xMinDate, xMaxDate])
+				.range([offsetX, self.settings.svgw + offsetX])
+
+			chart.axisBottom = axisBottom(chart.xAxisScaleTime)
+		} else chart.axisBottom = axisBottom(chart.xAxisScale)
+
 		chart.yAxisScale = d3Linear()
 			.domain([yMax + extraSpaceY, yMin - extraSpaceY])
 			.range([offsetY, self.settings.svgh + offsetY])

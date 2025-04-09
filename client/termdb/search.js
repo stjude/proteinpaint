@@ -203,7 +203,7 @@ function setRenderers(self) {
 		const geneTerms = [],
 			dictTerms = []
 		for (const t of data.lst) {
-			const isVisible = isVisibleTerm(this.app, auth, t)
+			const isVisible = isVisibleTerm(self.app, auth, t)
 
 			if (!isVisible) continue // skip if not visible
 

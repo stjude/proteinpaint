@@ -2,15 +2,16 @@ import { zoom as d3zoom, zoomIdentity } from 'd3-zoom'
 import { icons as icon_functions, ColorScale, Menu, getMaxLabelWidth } from '#dom'
 import { dt2label, morigin } from '#shared/common.js'
 import { rgb } from 'd3-color'
-import { scaleLinear as d3Linear } from 'd3-scale'
+import { scaleLinear as d3Linear, scaleLinear } from 'd3-scale'
 import { axisLeft, axisBottom } from 'd3-axis'
 import { select } from 'd3-selection'
 import { regressionPoly } from 'd3-regression'
-import { line } from 'd3'
+import { line, scaleTime } from 'd3'
 import { minShapeSize, maxShapeSize } from './runChart.js'
 import { shapes } from './runChart.js'
 import { roundValueAuto } from '#shared/roundValue.js'
 import { median as d3Median } from 'd3-array'
+import { getDateStrFromNumber } from '#shared/terms.js'
 
 export function setRenderers(self) {
 	self.render = function () {
@@ -45,12 +46,18 @@ export function setRenderers(self) {
 		const yMax = this.range.yMax
 		const extraSpaceX = (xMax - xMin) * 0.01 //extra space added to avoid clipping the particles on the X axis
 		const extraSpaceY = (yMax - yMin) * 0.01 //extra space added to avoid clipping the particles on the Y axis
+		const xMinDate = new Date(getDateStrFromNumber(xMin - extraSpaceX))
+		const xMaxDate = new Date(getDateStrFromNumber(this.range.xMax + extraSpaceX))
 
 		chart.xAxisScale = d3Linear()
 			.domain([xMin - extraSpaceX, xMax + extraSpaceX])
 			.range([offsetX, self.settings.svgw + offsetX])
 
-		chart.axisBottom = axisBottom(chart.xAxisScale)
+		chart.xAxisScaleTime = scaleTime()
+			.domain([xMinDate, xMaxDate])
+			.range([offsetX, self.settings.svgw + offsetX])
+
+		chart.axisBottom = axisBottom(chart.xAxisScaleTime)
 		chart.yAxisScale = d3Linear()
 			.domain([yMax + extraSpaceY, yMin - extraSpaceY])
 			.range([offsetY, self.settings.svgh + offsetY])
