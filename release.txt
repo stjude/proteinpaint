@@ -1,3 +1,1 @@
-Fixes:
-- gsea table renders with new genesets on dropdown change
-- Changing the gsea dropdown in GDC single cell loads the appropriate table
+

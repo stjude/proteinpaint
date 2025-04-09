@@ -14,6 +14,8 @@ Features:
 
 Fixes:
 - bug fix for mds3 custom tk to work with bcf file with samples
+- gsea table renders with new genesets on dropdown change
+- Changing the gsea dropdown in GDC single cell loads the appropriate table
 
 
 ## 2.116.0
