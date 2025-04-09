@@ -35,14 +35,13 @@ class SCSampleTable extends RxComponentInner {
 		}
 	}
 
-	async main() {
-		const config = structuredClone(this.state.config)
-		if (config.childType != this.type && config.chartType != this.type) return
+	async init(appState) {
 		try {
+			//try block calls fetches data (i.e. model)
 			const body = {
-				genome: this.state.genome,
-				dslabel: this.state.dslabel,
-				filter0: this.state.termfilter.filter0 || null
+				genome: appState.vocab.genome,
+				dslabel: appState.vocab.dslabel,
+				filter0: appState.termfilter.filter0 || null
 			}
 			const result = await dofetch3('termdb/singlecellSamples', { body })
 			if (result.error || !result.samples || !result.samples.length) {
@@ -54,17 +53,25 @@ class SCSampleTable extends RxComponentInner {
 			else if (e.stack) console.log(e.stack)
 			throw `${e} [scSampleTable main()]`
 		}
-
-		const [rows, columns] = await this.getTabelData(this.state)
-		this.renderSamplesTable(rows, columns as any) //tsc incorrectly inferring row, not column, type
+		const plotConfig = this.app.getState().plots.find((p: BasePlotConfig) => p.id === this.id)
+		//Formats the data for the table (i.e. viewModel)
+		const [rows, columns] = await this.getTabelData(appState, plotConfig)
+		//Renders a sortable table (i.e. view)
+		this.renderSamplesTable(rows, columns as any, plotConfig)
 	}
 
-	async getTabelData(state: any) {
+	/** The table renders only once. There is no update
+	 * after rendering. The parent sc app handles showing and
+	 * hiding the table. main() is not necessary in this case.*/
+	// main(){}
+
+	async getTabelData(state: any, plotConfig) {
 		const dsSamples = state.termdbConfig.queries?.singleCell?.samples || {}
 		const rows: TableRow[] = []
 		const hasExperiments = this.samples.some(i => i.experiments)
+
 		// first column is sample and is hardcoded
-		const columns: TableColumn[] = [{ label: state.config.settings.scSampleTable.columns.sample, sortable: true }]
+		const columns: TableColumn[] = [{ label: plotConfig.settings.scSampleTable.columns.sample, sortable: true }]
 		if (hasExperiments) columns.push({ label: 'Sample', sortable: true }) //add after the case column
 
 		// add in optional sample columns
@@ -110,9 +117,9 @@ class SCSampleTable extends RxComponentInner {
 		return [rows, columns]
 	}
 
-	renderSamplesTable(rows, columns: TableColumn[]) {
+	renderSamplesTable(rows, columns: TableColumn[], plotConfig) {
 		const selectedRows: number[] = []
-		const i = this.samples.findIndex(i => i.sample == this.state.config.sample)
+		const i = this.samples.findIndex(i => i.sample == plotConfig.sample)
 		if (i != -1) selectedRows.push(i)
 
 		renderTable({
