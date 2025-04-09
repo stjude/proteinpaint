@@ -1,9 +1,9 @@
-import * as d3axis from 'd3-axis'
-import { axisstyle, Menu, renderTable, table2col } from '#dom'
+// import * as d3axis from 'd3-axis'
+import { Menu, renderTable, table2col } from '#dom'
 import { dofetch3 } from '#common/dofetch'
 import { controlsInit } from './controls'
 import { getCompInit, copyMerge } from '#rx'
-import { scaleLinear } from 'd3-scale'
+// import { scaleLinear } from 'd3-scale'
 import { roundValueAuto } from '#shared/roundValue.js'
 
 const tip = new Menu()
@@ -19,7 +19,8 @@ class gsea {
 		const controlsDiv =
 			typeof opts.controls == 'object'
 				? opts.controls
-				: opts.holder.style('display', 'inline-block') || opts.holder.append('div').style('display', 'inline-block')
+				: opts.holder || opts.holder.append('div').style('display', 'inline-block')
+		opts.holder.style('display', 'inline-block')
 		const actionsDiv = opts.holder
 			.append('div')
 			.attr('data-testid', 'sjpp-gsea-actions')
@@ -223,6 +224,7 @@ async function renderPathwayDropdown(self) {
 		}
 
 		const idx = event.target.selectedIndex
+		self.settings.pathway = pathwayOpts[idx].value
 		self.app.dispatch({
 			type: 'plot_edit',
 			id: self.id,
@@ -390,7 +392,6 @@ add:
 	//Table rerenders when main is called
 	//Fix to show which gene set is selected after rerender
 	const geneSetIdx = self.gsea_table_rows.findIndex(row => row[0].value == self.config.gsea_params.geneset_name)
-	console.log(geneSetIdx)
 	const selectedRows = geneSetIdx > -1 ? [geneSetIdx] : []
 
 	renderTable({
@@ -568,10 +569,10 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 
 async function rungsea(body, dom) {
 	//Only show the loading div as the gsea is running
-	// dom.actionsDiv.style('display', 'none')
-	// dom.loadingDiv.style('display', 'block')
+	dom.actionsDiv.style('display', 'none')
+	dom.loadingDiv.style('display', 'block')
 	const data = await dofetch3('genesetEnrichment', { body })
-	// dom.loadingDiv.style('display', 'none')
-	// dom.actionsDiv.style('display', 'block')
+	dom.loadingDiv.style('display', 'none')
+	dom.actionsDiv.style('display', 'block')
 	return data
 }
