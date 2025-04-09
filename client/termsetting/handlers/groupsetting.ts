@@ -142,6 +142,7 @@ export class GroupSettingMethods {
 			if (this.tsInstance.term.type == 'geneVariant') {
 				const q = this.tsInstance.q as GeneVariantBaseQ & PredefinedGroupSettingQ
 				const term = this.tsInstance.term as GeneVariantTerm
+				if (!term.groupsetting.lst) throw 'term.groupsetting.lst is missing'
 				const groupset = term.groupsetting.lst[q.predefined_groupset_idx]
 				let computableGrpIdx = 0
 				for (const g of groupset.groups) {
