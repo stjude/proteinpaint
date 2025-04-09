@@ -1,7 +1,7 @@
 import { downloadSingleSVG } from '../common/svg.download.js'
 import { filterJoin } from '#filter'
 import { controlsInit } from './controls.js'
-import { fillTwLst } from '#termsetting'
+import { fillTermWrapper, fillTwLst } from '#termsetting'
 import { select } from 'd3-selection'
 import { getSampleFilter } from '../mass/groups.js'
 import { Menu } from '#dom/menu'
@@ -214,7 +214,7 @@ export class profilePlot {
 
 		const filter = this.config.filter || this.getFilter()
 		this.data = await this.app.vocabApi.getAnnotatedSampleData({
-			terms: this.twLst,
+			terms: [...this.twLst, this.config.facilityTW], //added facility term to all the plots to get the hospital name
 			filter,
 			termsPerRequest: 30
 		})
@@ -486,7 +486,9 @@ export class profilePlot {
 		}
 		if (this.settings.site && !this.isRadarFacility) {
 			const label = this.sites.find(s => s.value == this.settings.site).label
-			this.addFilterLegendItem('Facility', label)
+			this.addFilterLegendItem('Facility ID', label)
+			const hospital = this.sampleData?.[this.config.facilityTW.$id]?.value
+			this.addFilterLegendItem('Facility', hospital)
 		}
 	}
 
@@ -609,16 +611,19 @@ export function makeChartBtnMenu(holder, chartsInstance, chartType) {
 	}
 }
 
-export function getProfilePlotConfig(activeCohort, app, opts) {
+export async function getProfilePlotConfig(activeCohort, app, opts) {
 	const key = activeCohort == FULL_COHORT ? 'full' : 'abbrev'
 	const config = app.vocabApi.termdbConfig?.plotConfigByCohort[key]?.[opts.chartType]
+	const cohortPreffix = activeCohort == FULL_COHORT ? 'F' : 'A'
+	config.facilityTW = { id: cohortPreffix + 'facility' } //All the plots want the facility term to show the hospital name if a site is selected
+	await fillTermWrapper(config.facilityTW, app.vocabApi)
 	if (!config) throw `No data available for the plot ${opts.chartType} in this dataset`
+	await loadFilterTerms(config, activeCohort, app)
 	return structuredClone(config)
 }
 
 export async function loadFilterTerms(config, activeCohort, app) {
 	const cohortPreffix = activeCohort == FULL_COHORT ? 'F' : 'A'
-	const twlst = []
 	config.countryTW = { id: cohortPreffix + 'country' }
 	config.regionTW = { id: cohortPreffix + 'WHO_region' }
 	config.incomeTW = { id: cohortPreffix + 'Income_group' }
@@ -630,7 +635,7 @@ export async function loadFilterTerms(config, activeCohort, app) {
 	config.hospitalVolumeTW = { id: cohortPreffix + 'PO_HospitalVolume' }
 	config.yearOfImplementationTW = { id: cohortPreffix + 'Year_implementation' }
 
-	twlst.push(
+	const filterTWs = [
 		config.countryTW,
 		config.regionTW,
 		config.incomeTW,
@@ -640,9 +645,9 @@ export async function loadFilterTerms(config, activeCohort, app) {
 		config.fundingSourceTW,
 		config.hospitalVolumeTW,
 		config.yearOfImplementationTW
-	)
-	await fillTwLst(twlst, app.vocabApi)
-	config.filterTWs = twlst
+	]
+	await fillTwLst(filterTWs, app.vocabApi)
+	config.filterTWs = filterTWs
 }
 
 export function clearLocalFilters(plot) {
