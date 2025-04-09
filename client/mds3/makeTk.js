@@ -4,7 +4,6 @@ import { initLegend, updateLegend } from './legend'
 import { loadTk, rangequery_rglst } from './tk'
 import urlmap from '#common/urlmap'
 import { mclass, dtsnvindel, dtsv, dtfusionrna, dtcnv } from '#shared/common.js'
-import { vcfparsemeta } from '#shared/vcf.js'
 import { ssmIdFieldsSeparator } from '#shared/mds3tk.js'
 import { getFilterName } from './filterName'
 import { fillTermWrapper } from '#termsetting'
@@ -1014,10 +1013,9 @@ async function getbcfheader_customtk(tk, genome) {
 		arg.url = tk.bcf.url
 		if (tk.bcf.indexURL) arg.indexURL = tk.bcf.indexURL
 	}
-	// FIXME if vcf and bcf files can both be used?
-	const data = await dofetch3('vcfheader', { body: arg })
+	const data = await dofetch3('bcfheader', { body: arg })
 	if (data.error) throw data.error
-	const [info, format, samples, errs] = vcfparsemeta(data.metastr.split('\n'))
+	const [info, format, samples, errs] = data.header
 	if (errs) throw 'Error parsing VCF meta lines: ' + errs.join('; ')
 	tk.mds.bcf = {
 		info,

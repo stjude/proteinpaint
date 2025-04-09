@@ -138,6 +138,7 @@ export function setRoutes(app, _genomes, serverconfig) {
 	app.post(basepath + '/vcf', handle_vcf) // for old ds/vcf and old junction
 
 	app.get(basepath + '/vcfheader', handle_vcfheader)
+	app.get(basepath + '/bcfheader', handle_bcfheader)
 
 	app.post(basepath + '/translategm', handle_translategm)
 
@@ -5396,6 +5397,24 @@ async function handle_vcfheader(req, res) {
 		const dir = isurl ? await utils.cache_index(file, req.query.indexURL) : null
 		res.send({
 			metastr: (await utils.get_header_tabix(file, dir)).join('\n'),
+			nochr: await utils.tabix_is_nochr(file, dir, g)
+		})
+	} catch (e) {
+		if (e.stack) console.error(e.stack)
+		res.send({ error: e.message || e })
+	}
+}
+async function handle_bcfheader(req, res) {
+	// get header for a single custom bcf track
+	try {
+		if (!req.query.genome) throw 'genome missing'
+		const g = genomes[req.query.genome]
+		if (!g) throw 'invalid genome'
+		const [e, file, isurl] = utils.fileurl(req)
+		if (e) throw e
+		const dir = isurl ? await utils.cache_index(file, req.query.indexURL) : null
+		res.send({
+			header: await utils.get_header_bcf(file, dir),
 			nochr: await utils.tabix_is_nochr(file, dir, g)
 		})
 	} catch (e) {
