@@ -546,7 +546,7 @@ export function getDefaultRunChartSettings() {
 		maxShapeSize: 4,
 		scaleDotOrder: 'Ascending',
 		refSize: 0.8,
-		svgw: 800,
+		svgw: 1000,
 		svgh: 500,
 		axisTitleFontSize: 16,
 		opacity: 0.6,
