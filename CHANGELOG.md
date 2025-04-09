@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- Converted TermdbTest .gz file to HDF5 format
+
 
 ## 2.116.0
 
