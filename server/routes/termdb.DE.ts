@@ -270,7 +270,7 @@ values[] // using integer sample id
 		// edgeR will be used for DE analysis
 		const time1 = new Date().valueOf()
 		const result = JSON.parse(
-			await run_R(path.join(serverconfig.binpath, 'utils', 'edge.R'), JSON.stringify(expression_input))
+			await run_R(path.join(serverconfig.binpath, 'utils', 'edge_old.R'), JSON.stringify(expression_input))
 		)
 		mayLog('Time taken to run edgeR:', Date.now() - time1, 'ms')
 		param.method = 'edgeR'
@@ -326,11 +326,11 @@ export async function validate_query_rnaseqGeneCount(ds) {
 	// the gene count matrix tabular text file
 	q.file = path.join(serverconfig.tpmasterdir, q.file)
 	/*
-	first line of matrix must be sample header, samples start from 5th column for text based files
-	read the first line to get all samples, and save at q.allSampleSet
-	so that samples from analysis request will be screened against q.allSampleSet
-	also require that there's no duplicate samples in header line, so rust/r won't break
-	*/
+    first line of matrix must be sample header, samples start from 5th column for text based files
+    read the first line to get all samples, and save at q.allSampleSet
+    so that samples from analysis request will be screened against q.allSampleSet
+    also require that there's no duplicate samples in header line, so rust/r won't break
+    */
 	{
 		let samples: string[] = []
 		if (ds.queries.rnaseqGeneCount.storage_type == 'text') {
