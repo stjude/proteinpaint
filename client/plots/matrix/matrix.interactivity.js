@@ -586,7 +586,7 @@ export function setInteractivity(self) {
 	self.getVisibleCenterCell = function (dx) {
 		//const s = self.settings.matrix
 		const d = self.dimensions
-		if (!d.seriesXoffset && d.mainw < d.maxMainW) {
+		if (d.seriesXoffset <= 0 && d.mainw >= d.zoomedMainW) {
 			return self.sampleOrder[Math.floor(self.sampleOrder.length / 2)]
 		}
 		const w = 0.5 * d.mainw - d.seriesXoffset - dx
