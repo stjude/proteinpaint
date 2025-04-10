@@ -43,10 +43,16 @@ exports.run_python = function (pyfile, input_data) {
 				const errmsg = `run_python('${pyfile}') emitted standard error\n stderr: ${err}`
 				reject(err)
 			} else {
-				const imageBuffer = Buffer.concat(stdout)
-				const base64Data = imageBuffer.toString('base64')
-				const imgUrl = `data:image/png;base64,${base64Data}`
-				resolve(imgUrl)
+				if (pyfile === 'plotBrainImaging.py') {
+					// Handle binary data
+					const imageBuffer = Buffer.concat(stdout)
+					const base64Data = imageBuffer.toString('base64')
+					const imgUrl = `data:image/png;base64,${base64Data}`
+					resolve(imgUrl)
+				} else {
+					// Handle text data
+					resolve(stdout.join(''))
+				}
 			}
 		})
 	})
