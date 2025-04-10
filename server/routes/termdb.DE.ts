@@ -216,6 +216,11 @@ values[] // using integer sample id
 	if (sample_size2 < 1) throw 'sample size of group2 < 1'
 	// pass group names and txt file to rust
 
+	const commonnames = group1names.filter(element => group2names.includes(element))
+	if (commonnames.length > 0) {
+		throw 'Common elements found between both groups:' + commonnames.map(i => i).join(',')
+	}
+
 	const cases_string = group1names.map(i => i).join(',')
 	const controls_string = group2names.map(i => i).join(',')
 	//group 1 by default is selected as the control group. Later on we can allow user to select which group is control and which is treatment. Reason to do this is to first select the group against which the comparison is to be made in the DE analysis. This is important for the interpretation of the results as analyses is context dependent based on the biological question. If the user wants to compare the expression of a specific gene between 2 groups, then the user should select the group that is not of interest as the control group.
@@ -326,11 +331,11 @@ export async function validate_query_rnaseqGeneCount(ds) {
 	// the gene count matrix tabular text file
 	q.file = path.join(serverconfig.tpmasterdir, q.file)
 	/*
-	first line of matrix must be sample header, samples start from 5th column for text based files
-	read the first line to get all samples, and save at q.allSampleSet
-	so that samples from analysis request will be screened against q.allSampleSet
-	also require that there's no duplicate samples in header line, so rust/r won't break
-	*/
+    first line of matrix must be sample header, samples start from 5th column for text based files
+    read the first line to get all samples, and save at q.allSampleSet
+    so that samples from analysis request will be screened against q.allSampleSet
+    also require that there's no duplicate samples in header line, so rust/r won't break
+    */
 	{
 		let samples: string[] = []
 		if (ds.queries.rnaseqGeneCount.storage_type == 'text') {
