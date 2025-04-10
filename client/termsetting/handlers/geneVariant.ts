@@ -132,7 +132,7 @@ export async function fillTW(tw: GeneVariantTW, vocabApi: VocabApi, defaultQ: Ge
 }
 
 // function to make a variant filter based on dts specified in dataset
-async function mayMakeVariantFilter(tw: GeneVariantTW, vocabApi: VocabApi) {
+export async function mayMakeVariantFilter(tw: GeneVariantTW, vocabApi: VocabApi) {
 	if (tw.term.filter) return
 	const dtTermsInDs: DtTerm[] = [] // dt terms in dataset
 	const categories = await vocabApi.getCategories(tw.term)
