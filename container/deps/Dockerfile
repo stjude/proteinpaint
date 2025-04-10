@@ -75,9 +75,9 @@ RUN apt-get update && apt-get install -y \
     && add-apt-repository 'deb https://cloud.r-project.org/bin/linux/debian bookworm-cran40/' \
     && apt-get update
 
-RUN apt-get update && apt-get install -y libx11-dev libxext-dev libxrender-dev libxt-dev libreadline-dev gfortran libargtable2-dev && cd /usr/bin && wget https://cran.r-project.org/src/base/R-4/R-4.4.3.tar.xz && tar -xf R-4.4.3.tar.xz && cd R-4.4.3 &&./configure --prefix=$PWD --enable-R-shlib --with-blas --with-lapack && make && make install  \
+RUN apt-get update && apt-get install -y libx11-dev libxext-dev libxrender-dev libxt-dev libreadline-dev gfortran libargtable2-dev && cd /usr/bin && wget https://cran.r-project.org/src/base/R-4/R-4.4.3.tar.xz && tar -xf R-4.4.3.tar.xz && cd R-4.4.3 && ./configure --prefix=$PWD --enable-R-shlib --with-blas --with-lapack && make && make install && echo "alias R=/usr/bin/R-4.4.3/R" \
 	## install R packages
- 	&& R -e "install.packages(c('cmprsk', 'hwde', 'jsonlite', 'survival', 'lmtest', 'dplyr', 'tidyr', 'BiocManager', 'readr', 'doParallel', 'ggplot2'), dependencies=TRUE, repos='http://cran.rstudio.com/')" \
+ 	&& R -e "install.packages(c('cmprsk', 'hwde', 'jsonlite', 'survival', 'lmtest', 'dplyr', 'tidyr', 'BiocManager', 'readr', 'doParallel', 'ggplot2'), dependencies=TRUE, repos='https://cran.wustl.edu/')" \
 	&& R -e "BiocManager::install(c('edgeR','rhdf5'))" \
     ## set locale encoding in R
     ## must match encoding configuration in docker
