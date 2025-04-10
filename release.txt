@@ -1,1 +1,2 @@
-
+Features:
+- Added ensembl id checker to readHDF5.rs

@@ -1,9 +1,9 @@
 //------------------------------------------------------------------------------
 // readHDF5.rs - HDF5 Gene Expression Data Reader
 //------------------------------------------------------------------------------
-// 
+//
 // Extracts gene expression values from HDF5 files in dense or sparse formats.
-// Supports single genes with memory optimization and multiple genes with 
+// Supports single genes with memory optimization and multiple genes with
 // parallel processing.
 //
 // Features:
@@ -12,8 +12,8 @@
 // - Parallel processing for multiple genes
 // - JSON output with timing metrics
 //
-// Usage: 
-//   HDF5_DIR=/usr/local/Homebrew/Cellar/hdf5/1.14.3_1 && 
+// Usage:
+//   HDF5_DIR=/usr/local/Homebrew/Cellar/hdf5/1.14.3_1 &&
 //   echo $json='{"gene":"TP53","hdf5_file":"matrix.h5"}' | target/release/readHDF5
 //------------------------------------------------------------------------------
 use hdf5::types::{FixedAscii, VarLenAscii};
@@ -296,10 +296,7 @@ fn query_gene_dense(hdf5_filename: String, gene_name: String) -> Result<()> {
                 Value::Null
             };
 
-            samples_map.insert(
-                sample.replace("\\", ""), 
-                value,
-            );
+            samples_map.insert(sample.replace("\\", ""), value);
         }
     }
 
@@ -317,7 +314,7 @@ fn query_gene_dense(hdf5_filename: String, gene_name: String) -> Result<()> {
 
 /// Reads expression data for a specific gene from a sparse format HDF5 file
 ///
-/// Extracts expression values from sparse matrix HDF5 files using Compressed 
+/// Extracts expression values from sparse matrix HDF5 files using Compressed
 /// Sparse Column (CSC) structure.
 ///
 /// # Arguments
@@ -445,6 +442,19 @@ fn query_gene_sparse(hdf5_filename: String, gene_name: String) -> Result<()> {
 ///
 /// # Returns
 /// Prints a JSON object with expression data for all requested genes to stdout.
+/// Queries expression data for multiple genes from a dense format HDF5 file
+///
+/// Extracts expression values for multiple genes from a dense matrix HDF5 file,
+/// optimizing for both single gene (linear search) and multi-gene (hashmap) queries.
+/// Also adds support for datasets that use Ensembl IDs in gene_ids with a separate
+/// gene_names field for gene symbols.
+///
+/// # Arguments
+/// * `hdf5_filename` - Path to the HDF5 file
+/// * `gene_names` - Vector of gene names to query
+///
+/// # Returns
+/// Prints a JSON object with expression data for all requested genes to stdout.
 fn query_multiple_genes_dense(hdf5_filename: String, gene_names: Vec<String>) -> Result<()> {
     let overall_start_time = Instant::now();
 
@@ -464,7 +474,6 @@ fn query_multiple_genes_dense(hdf5_filename: String, gene_names: Vec<String>) ->
             return Ok(());
         }
     };
-
 
     let genes_dataset = match file.dataset("gene_ids") {
         Ok(ds) => ds,
@@ -494,8 +503,107 @@ fn query_multiple_genes_dense(hdf5_filename: String, gene_names: Vec<String>) ->
         }
     };
 
+    // Convert to Vec<String> for easier handling
     let genes: Vec<String> = genes_varlen.iter().map(|g| g.to_string()).collect();
-    
+
+    // Helper function to check if an ID is in Ensembl format
+    fn is_ensembl_id_format(id: &str) -> bool {
+        id.starts_with("ENSG")
+            && id.len() > 5
+            && id[4..].chars().all(|c| c.is_ascii_digit() || c == '.')
+    }
+
+    // Check if we're dealing with Ensembl IDs
+    let using_ensembl_ids = if !genes.is_empty() {
+        // Check first few genes to determine if they are Ensembl IDs
+        let sample_size = std::cmp::min(genes.len(), 100);
+        let ensembl_count = genes
+            .iter()
+            .take(sample_size)
+            .filter(|id| is_ensembl_id_format(id))
+            .count();
+
+        // If most sampled genes are in Ensembl format, we're using Ensembl IDs
+        ensembl_count > (sample_size / 2)
+    } else {
+        false
+    };
+
+    timings.insert(
+        "using_ensembl_ids".to_string(),
+        Value::Bool(using_ensembl_ids),
+    );
+
+    // Create a mapping from gene symbols to indices if using Ensembl IDs
+    let symbol_to_index_opt: Option<std::collections::HashMap<String, usize>> = if using_ensembl_ids
+    {
+        let symbol_map_start_time = Instant::now();
+
+        // Try to find gene_names dataset (may be called gene_symbols in some files)
+        let gene_symbols_dataset = file
+            .dataset("gene_names")
+            .or_else(|_| file.dataset("gene_symbols"));
+
+        match gene_symbols_dataset {
+            Ok(symbols_dataset) => {
+                // Try to read gene symbols
+                match symbols_dataset.read_1d::<VarLenAscii>() {
+                    Ok(symbols_varlen) => {
+                        let gene_symbols: Vec<String> =
+                            symbols_varlen.iter().map(|s| s.to_string()).collect();
+
+                        // Create mapping from symbol to index
+                        if gene_symbols.len() == genes.len() {
+                            let mut map =
+                                std::collections::HashMap::with_capacity(gene_symbols.len());
+                            for (idx, symbol) in gene_symbols.iter().enumerate() {
+                                if !symbol.is_empty() {
+                                    map.insert(symbol.clone(), idx);
+                                }
+                            }
+
+                            timings.insert(
+                                "build_symbol_map_ms".to_string(),
+                                Value::from(symbol_map_start_time.elapsed().as_millis() as u64),
+                            );
+
+                            timings.insert(
+                                "symbol_map_size".to_string(),
+                                Value::from(map.len() as u64),
+                            );
+
+                            Some(map)
+                        } else {
+                            timings.insert(
+                                "symbol_map_error".to_string(),
+                                Value::String(
+                                    "Gene symbols length doesn't match gene IDs length".to_string(),
+                                ),
+                            );
+                            None
+                        }
+                    }
+                    Err(err) => {
+                        timings.insert(
+                            "symbol_map_error".to_string(),
+                            Value::String(format!("Failed to read gene symbols: {:?}", err)),
+                        );
+                        None
+                    }
+                }
+            }
+            Err(_) => {
+                timings.insert(
+                    "symbol_map_error".to_string(),
+                    Value::String("No gene_names or gene_symbols dataset found".to_string()),
+                );
+                None
+            }
+        }
+    } else {
+        None
+    };
+
     // Only create HashMap for multiple gene queries
     let gene_to_index: Option<std::collections::HashMap<String, usize>> = if gene_names.len() > 1 {
         let hashmap_start_time = Instant::now();
@@ -504,8 +612,8 @@ fn query_multiple_genes_dense(hdf5_filename: String, gene_names: Vec<String>) ->
             map.insert(gene.clone(), idx);
         }
         timings.insert(
-            "build_hashmap_ms".to_string(), 
-            Value::from(hashmap_start_time.elapsed().as_millis() as u64)
+            "build_hashmap_ms".to_string(),
+            Value::from(hashmap_start_time.elapsed().as_millis() as u64),
         );
         Some(map)
     } else {
@@ -586,7 +694,7 @@ fn query_multiple_genes_dense(hdf5_filename: String, gene_names: Vec<String>) ->
         };
 
         // Configurable thread count for testing
-        let thread_count = 2; 
+        let thread_count = 2;
         timings.insert("thread_count".to_string(), Value::from(thread_count));
 
         // Create a scoped thread pool with specified number of threads
@@ -600,10 +708,33 @@ fn query_multiple_genes_dense(hdf5_filename: String, gene_names: Vec<String>) ->
                     gene_names.par_iter().for_each(|gene_name| {
                         let gene_start_time = Instant::now();
 
-                        // Use HashMap for O(1) lookup for multiple genes
-                        let gene_index = match &gene_to_index {
-                            Some(map) => map.get(gene_name).cloned(),
-                            None => genes.iter().position(|x| *x == *gene_name),
+                        // First try to look up using gene symbols if available
+                        let gene_index = if using_ensembl_ids && symbol_to_index_opt.is_some() {
+                            // Try symbol lookup first, then direct ID lookup
+                            match &symbol_to_index_opt {
+                                Some(symbol_map) => {
+                                    symbol_map.get(gene_name).cloned().or_else(|| {
+                                        // If not found in symbol map, try direct lookup in gene_to_index
+                                        match &gene_to_index {
+                                            Some(map) => map.get(gene_name).cloned(),
+                                            None => genes.iter().position(|x| *x == *gene_name),
+                                        }
+                                    })
+                                }
+                                None => {
+                                    // Fallback to standard lookup
+                                    match &gene_to_index {
+                                        Some(map) => map.get(gene_name).cloned(),
+                                        None => genes.iter().position(|x| *x == *gene_name),
+                                    }
+                                }
+                            }
+                        } else {
+                            // Standard lookup without symbol mapping
+                            match &gene_to_index {
+                                Some(map) => map.get(gene_name).cloned(),
+                                None => genes.iter().position(|x| *x == *gene_name),
+                            }
                         };
 
                         match gene_index {
@@ -613,7 +744,11 @@ fn query_multiple_genes_dense(hdf5_filename: String, gene_names: Vec<String>) ->
                                     let mut error_map = Map::new();
                                     error_map.insert(
                                         "error".to_string(),
-                                        Value::String("Gene index out of bounds".to_string()),
+                                        Value::String(format!(
+                                            "Gene index out of bounds. Index: {}, Dataset rows: {}",
+                                            gene_index,
+                                            counts_dataset.shape()[0]
+                                        )),
                                     );
 
                                     // Store the error result
@@ -705,10 +840,81 @@ fn query_multiple_genes_dense(hdf5_filename: String, gene_names: Vec<String>) ->
                             None => {
                                 // Gene not found
                                 let mut error_map = Map::new();
+
+                                // Insert the main error message
                                 error_map.insert(
                                     "error".to_string(),
-                                    Value::String("Gene not found in dataset".to_string()),
+                                    Value::String(format!(
+                                        "Gene '{}' not found in dataset of {} genes",
+                                        gene_name,
+                                        genes.len()
+                                    )),
                                 );
+
+                                // Add debugging info directly to the error map
+                                error_map.insert(
+                                    "requested_gene".to_string(),
+                                    Value::String(gene_name.clone()),
+                                );
+                                error_map.insert(
+                                    "total_genes_in_dataset".to_string(),
+                                    Value::Number(genes.len().into()),
+                                );
+
+                                if using_ensembl_ids {
+                                    error_map.insert(
+                                        "dataset_uses_ensembl_ids".to_string(),
+                                        Value::Bool(true),
+                                    );
+
+                                    // Show sample of Ensembl IDs
+                                    let preview_count = 3.min(genes.len());
+                                    if genes.len() > 0 {
+                                        let first_ids: Vec<String> =
+                                            genes.iter().take(preview_count).cloned().collect();
+                                        error_map.insert(
+                                            "sample_ensembl_ids".to_string(),
+                                            json!(first_ids),
+                                        );
+                                    }
+
+                                    // If we have symbol mapping, show if there were any similar symbols
+                                    if let Some(ref symbol_mapping) = symbol_to_index_opt {
+                                        let similar_symbols: Vec<String> = symbol_mapping
+                                            .keys()
+                                            .filter(|s| {
+                                                s.to_lowercase().contains(&gene_name.to_lowercase())
+                                            })
+                                            .take(5)
+                                            .cloned()
+                                            .collect();
+
+                                        if !similar_symbols.is_empty() {
+                                            error_map.insert(
+                                                "similar_gene_symbols".to_string(),
+                                                json!(similar_symbols),
+                                            );
+                                        }
+                                    }
+                                }
+
+                                // Check for case sensitivity issues
+                                let possible_case_match = genes
+                                    .iter()
+                                    .find(|g| g.to_lowercase() == gene_name.to_lowercase())
+                                    .cloned();
+
+                                if let Some(case_match) = possible_case_match {
+                                    if &case_match != gene_name {
+                                        error_map.insert(
+                                            "case_mismatch".to_string(),
+                                            Value::String(format!(
+                                                "Requested '{}' but found '{}'",
+                                                gene_name, case_match
+                                            )),
+                                        );
+                                    }
+                                }
 
                                 let mut genes_map = genes_map.lock().unwrap();
                                 genes_map.insert(gene_name.clone(), Value::Object(error_map));
@@ -736,20 +942,39 @@ fn query_multiple_genes_dense(hdf5_filename: String, gene_names: Vec<String>) ->
                     &counts_dataset,
                     &all_gene_data,
                     &samples,
-                    &genes_map
+                    &genes_map,
+                    using_ensembl_ids,
+                    &symbol_to_index_opt,
                 );
             }
         }
     } else if gene_names.len() == 1 {
         let gene_name = &gene_names[0];
 
-        match genes.iter().position(|x| *x == *gene_name) {
+        // For single gene, try symbol lookup first if using Ensembl IDs
+        let gene_index = if using_ensembl_ids && symbol_to_index_opt.is_some() {
+            match &symbol_to_index_opt {
+                Some(symbol_map) => symbol_map
+                    .get(gene_name)
+                    .cloned()
+                    .or_else(|| genes.iter().position(|x| *x == *gene_name)),
+                None => genes.iter().position(|x| *x == *gene_name),
+            }
+        } else {
+            genes.iter().position(|x| *x == *gene_name)
+        };
+
+        match gene_index {
             Some(gene_index) => {
                 if gene_index >= counts_dataset.shape()[0] {
                     let mut error_map = Map::new();
                     error_map.insert(
                         "error".to_string(),
-                        Value::String("Gene index out of bounds".to_string()),
+                        Value::String(format!(
+                            "Gene index out of bounds. Index: {}, Dataset rows: {}",
+                            gene_index,
+                            counts_dataset.shape()[0]
+                        )),
                     );
 
                     let mut genes_map = genes_map.lock().unwrap();
@@ -758,7 +983,6 @@ fn query_multiple_genes_dense(hdf5_filename: String, gene_names: Vec<String>) ->
                     // Read just this single gene's data directly
                     match counts_dataset.read_slice_1d::<f64, _>(s![gene_index, ..]) {
                         Ok(gene_expression) => {
-
                             // Create samples map for this gene
                             let mut samples_map = Map::new();
                             for (i, sample) in samples.iter().enumerate() {
@@ -800,64 +1024,93 @@ fn query_multiple_genes_dense(hdf5_filename: String, gene_names: Vec<String>) ->
             }
             None => {
                 let mut error_map = Map::new();
-                
+
                 // Insert the main error message
                 error_map.insert(
                     "error".to_string(),
-                    Value::String(format!("Gene '{}' not found in dataset of {} genes", 
-                                        gene_name, genes.len()))
+                    Value::String(format!(
+                        "Gene '{}' not found in dataset of {} genes",
+                        gene_name,
+                        genes.len()
+                    )),
                 );
-                
+
                 // Add debugging info directly to the error map
-                error_map.insert("requested_gene".to_string(), Value::String(gene_name.clone()));
-                error_map.insert("total_genes_in_dataset".to_string(), Value::Number(genes.len().into()));
-                
+                error_map.insert(
+                    "requested_gene".to_string(),
+                    Value::String(gene_name.clone()),
+                );
+                error_map.insert(
+                    "total_genes_in_dataset".to_string(),
+                    Value::Number(genes.len().into()),
+                );
+
+                if using_ensembl_ids {
+                    error_map.insert("dataset_uses_ensembl_ids".to_string(), Value::Bool(true));
+
+                    // Show sample of Ensembl IDs
+                    let preview_count = 3.min(genes.len());
+                    if genes.len() > 0 {
+                        let first_ids: Vec<String> =
+                            genes.iter().take(preview_count).cloned().collect();
+                        error_map.insert("sample_ensembl_ids".to_string(), json!(first_ids));
+                    }
+
+                    // If we have symbol mapping, show if there were any similar symbols
+                    if let Some(ref symbol_mapping) = symbol_to_index_opt {
+                        let similar_symbols: Vec<String> = symbol_mapping
+                            .keys()
+                            .filter(|s| s.to_lowercase().contains(&gene_name.to_lowercase()))
+                            .take(5)
+                            .cloned()
+                            .collect();
+
+                        if !similar_symbols.is_empty() {
+                            error_map
+                                .insert("similar_gene_symbols".to_string(), json!(similar_symbols));
+                        }
+                    }
+                }
+
                 // Check for case sensitivity issues
-                let possible_case_match = genes.iter()
+                let possible_case_match = genes
+                    .iter()
                     .find(|g| g.to_lowercase() == gene_name.to_lowercase())
                     .cloned();
-                
+
                 if let Some(case_match) = possible_case_match {
                     if &case_match != gene_name {
                         error_map.insert(
-                            "case_mismatch".to_string(), 
-                            Value::String(format!("Requested '{}' but found '{}'", gene_name, case_match))
+                            "case_mismatch".to_string(),
+                            Value::String(format!(
+                                "Requested '{}' but found '{}'",
+                                gene_name, case_match
+                            )),
                         );
                     }
                 }
-                
+
                 // Add sample of genes for reference
                 let preview_count = 3.min(genes.len());
                 if genes.len() > 0 {
-                    let first_genes: Vec<String> = genes.iter()
-                        .take(preview_count)
-                        .cloned()
-                        .collect();
+                    let first_genes: Vec<String> =
+                        genes.iter().take(preview_count).cloned().collect();
                     error_map.insert("first_genes".to_string(), json!(first_genes));
-                    
+
                     if genes.len() > preview_count {
-                        let last_genes: Vec<String> = genes.iter()
+                        let last_genes: Vec<String> = genes
+                            .iter()
                             .skip(genes.len() - preview_count)
                             .cloned()
                             .collect();
                         error_map.insert("last_genes".to_string(), json!(last_genes));
                     }
                 }
-                
+
                 // Add the error map to the genes map
                 let mut genes_map = genes_map.lock().unwrap();
                 genes_map.insert(gene_name.clone(), Value::Object(error_map));
             }
-            // None => {
-            //     let mut error_map = Map::new();
-            //     error_map.insert(
-            //         "error".to_string(),
-            //         Value::String("Gene not found in dataset".to_string()),
-            //     );
-
-            //     let mut genes_map = genes_map.lock().unwrap();
-            //     genes_map.insert(gene_name.clone(), Value::Object(error_map));
-            // }
         }
     }
 
@@ -883,13 +1136,35 @@ fn process_genes_sequentially(
     counts_dataset: &hdf5::Dataset,
     all_gene_data: &Option<ndarray::ArrayBase<ndarray::OwnedRepr<f64>, ndarray::Dim<[usize; 2]>>>,
     samples: &Vec<String>,
-    genes_map: &Arc<std::sync::Mutex<Map<String, Value>>>
+    genes_map: &Arc<std::sync::Mutex<Map<String, Value>>>,
+    using_ensembl_ids: bool,
+    symbol_to_index_opt: &Option<std::collections::HashMap<String, usize>>,
 ) {
     for gene_name in gene_names {
-        // Find the index of the requested gene, using HashMap if available
-        let gene_index = match gene_to_index {
-            Some(map) => map.get(gene_name).cloned(),
-            None => genes.iter().position(|x| *x == *gene_name),
+        // Find the index of the requested gene - try symbol lookup first if applicable
+        let gene_index = if using_ensembl_ids && symbol_to_index_opt.is_some() {
+            match symbol_to_index_opt {
+                Some(symbol_map) => symbol_map.get(gene_name).cloned().or_else(|| {
+                    // If not found in symbol map, try direct lookup
+                    match gene_to_index {
+                        Some(map) => map.get(gene_name).cloned(),
+                        None => genes.iter().position(|x| *x == *gene_name),
+                    }
+                }),
+                None => {
+                    // Fall back to standard lookup
+                    match gene_to_index {
+                        Some(map) => map.get(gene_name).cloned(),
+                        None => genes.iter().position(|x| *x == *gene_name),
+                    }
+                }
+            }
+        } else {
+            // Standard lookup without symbol mapping
+            match gene_to_index {
+                Some(map) => map.get(gene_name).cloned(),
+                None => genes.iter().position(|x| *x == *gene_name),
+            }
         };
 
         match gene_index {
@@ -899,7 +1174,11 @@ fn process_genes_sequentially(
                     let mut error_map = Map::new();
                     error_map.insert(
                         "error".to_string(),
-                        Value::String("Gene index out of bounds".to_string()),
+                        Value::String(format!(
+                            "Gene index out of bounds. Index: {}, Dataset rows: {}",
+                            gene_index,
+                            counts_dataset.shape()[0]
+                        )),
                     );
 
                     // Store the error result
@@ -976,16 +1255,93 @@ fn process_genes_sequentially(
             }
             None => {
                 let mut error_map = Map::new();
+
+                // Insert the main error message
                 error_map.insert(
                     "error".to_string(),
-                    Value::String("Gene not found in dataset".to_string()),
+                    Value::String(format!(
+                        "Gene '{}' not found in dataset of {} genes",
+                        gene_name,
+                        genes.len()
+                    )),
                 );
+
+                // Add debugging info directly to the error map
+                error_map.insert(
+                    "requested_gene".to_string(),
+                    Value::String(gene_name.clone()),
+                );
+                error_map.insert(
+                    "total_genes_in_dataset".to_string(),
+                    Value::Number(genes.len().into()),
+                );
+
+                if using_ensembl_ids {
+                    error_map.insert("dataset_uses_ensembl_ids".to_string(), Value::Bool(true));
+
+                    // Show sample of Ensembl IDs
+                    let preview_count = 3.min(genes.len());
+                    if genes.len() > 0 {
+                        let first_ids: Vec<String> =
+                            genes.iter().take(preview_count).cloned().collect();
+                        error_map.insert("sample_ensembl_ids".to_string(), json!(first_ids));
+                    }
+
+                    // If we have symbol mapping, show if there were any similar symbols
+                    if let Some(ref symbol_mapping) = symbol_to_index_opt {
+                        let similar_symbols: Vec<String> = symbol_mapping
+                            .keys()
+                            .filter(|s| s.to_lowercase().contains(&gene_name.to_lowercase()))
+                            .take(5)
+                            .cloned()
+                            .collect();
+
+                        if !similar_symbols.is_empty() {
+                            error_map
+                                .insert("similar_gene_symbols".to_string(), json!(similar_symbols));
+                        }
+                    }
+                }
+
+                // Check for case sensitivity issues
+                let possible_case_match = genes
+                    .iter()
+                    .find(|g| g.to_lowercase() == gene_name.to_lowercase())
+                    .cloned();
+
+                if let Some(case_match) = possible_case_match {
+                    if &case_match != gene_name {
+                        error_map.insert(
+                            "case_mismatch".to_string(),
+                            Value::String(format!(
+                                "Requested '{}' but found '{}'",
+                                gene_name, case_match
+                            )),
+                        );
+                    }
+                }
+
+                // Add sample of genes for reference
+                let preview_count = 3.min(genes.len());
+                if genes.len() > 0 {
+                    let first_genes: Vec<String> =
+                        genes.iter().take(preview_count).cloned().collect();
+                    error_map.insert("first_genes".to_string(), json!(first_genes));
+
+                    if genes.len() > preview_count {
+                        let last_genes: Vec<String> = genes
+                            .iter()
+                            .skip(genes.len() - preview_count)
+                            .cloned()
+                            .collect();
+                        error_map.insert("last_genes".to_string(), json!(last_genes));
+                    }
+                }
 
                 let mut genes_map = genes_map.lock().unwrap();
                 genes_map.insert(gene_name.clone(), Value::Object(error_map));
             }
         }
-
     }
 }
 /// Queries expression data for multiple genes from a sparse format HDF5 file
@@ -1055,7 +1411,6 @@ fn query_multiple_genes_sparse(hdf5_filename: String, gene_names: Vec<String>) -
     // Determine number of threads to use
     let num_threads = num_cpus::get();
     timings.insert("num_threads".to_string(), Value::from(num_threads as u64));
-
 
     // Thread-safe maps for results
     let genes_map = Arc::new(std::sync::Mutex::new(Map::new()));
