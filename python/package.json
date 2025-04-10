@@ -3,6 +3,7 @@
   "name": "@sjcrh/proteinpaint-python",
   "description": "Python-based utilities for proteinpaint",
   "main": "index.js",
+  "type": "module",
   "bin": {
     "proteinpaint-python": "index.js"
   },

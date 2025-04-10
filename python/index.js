@@ -1,17 +1,23 @@
-const path = require('path'),
-	{ spawn, exec } = require('child_process'),
-	Readable = require('stream').Readable,
-	{ promisify } = require('util'),
-	serverconfig = require('../server/src/serverconfig.js')
+import path from 'path'
+import fs from 'fs'
+import { spawn, exec } from 'child_process'
+import { Readable } from 'stream'
 
-const execPromise = promisify(exec)
-const pythonExec = serverconfig.python || 'python3'
+let python = 'python3'
 
-exports.run_python = function (pyfile, input_data) {
+// this should be called at the beginning of the server runtime code,
+// so that the same binpath will be reused throughoutt the server lifetime
+// TODO: may limit the reset to once?
+export function setPythonBinPath(binpath) {
+	if (!fs.existsSync(binpath)) throw `invalid python binpath='${binpath}'`
+	python = binpath
+}
+
+export function run_python(pyfile, input_data) {
 	return new Promise((resolve, reject) => {
 		const pypath = path.join(__dirname, '/src/', pyfile)
 
-		const ps = spawn(pythonExec, [pypath])
+		const ps = spawn(python, [pypath])
 		const stdout = []
 		const stderr = []
 
