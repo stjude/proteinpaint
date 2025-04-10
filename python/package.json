@@ -1,5 +1,5 @@
 {
-  "version": "2.113.1",
+  "version": "2.117.0",
   "name": "@sjcrh/proteinpaint-python",
   "description": "Python-based utilities for proteinpaint",
   "main": "index.js",
@@ -11,7 +11,7 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/stjude/proteinpaint.git",
-    "directory": "rust"
+    "directory": "python"
   },
   "files": [
     "index.js",
@@ -23,7 +23,6 @@
     "url": "https://github.com/stjude/proteinpaint"
   },
   "homepage": "https://github.com/stjude/proteinpaint#readme",
-  "pp_release_tag": "v2.113.1",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
