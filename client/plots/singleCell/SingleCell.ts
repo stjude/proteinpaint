@@ -5,7 +5,11 @@ import { sayerror } from '#dom'
 import { Model } from './model/Model'
 import { ViewModel } from './viewModel/ViewModel'
 import { View } from './view/View'
-
+/**
+ * TODOs:
+ * - add types
+ * - add comments
+ */
 class SingleCell extends RxComponentInner {
 	readonly type = 'singleCell'
 	data: object
@@ -16,8 +20,12 @@ class SingleCell extends RxComponentInner {
 
 	constructor(opts) {
 		super()
+		const controlsDiv = opts.controls
+			? opts.holder
+			: opts.holder.append('div').classed('sjpp-single-cell-controls', true)
 		const holder = opts.holder.append('div').classed('sjpp-single-cell-main', true)
 		this.dom = {
+			controlsDiv,
 			holder,
 			errorDiv: holder.append('div').attr('data-testid', 'sjpp-single-cell-error')
 		}
@@ -76,7 +84,9 @@ class SingleCell extends RxComponentInner {
 
 		/** Create the view model
 		 * TODO: move to init()?? */
-		const viewModel = new ViewModel(config)
+		const viewModel = new ViewModel(config, this.data)
+
+		console.log(viewModel.viewData.plotsData)
 
 		this.view?.render(viewModel.viewData)
 	}

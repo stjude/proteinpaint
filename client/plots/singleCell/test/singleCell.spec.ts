@@ -6,7 +6,7 @@ DO NOT ENABLE THIS FILE ON CI. ITS FOR PROTOTYPING
 AND MANUAL CHECKS ONLY
 
 Tests:
-    - Default SC app
+    - Default single cell plot
  */
 
 /*************************
@@ -31,41 +31,40 @@ const runpp = helpers.getRunPp('mass', {
 ***************/
 
 tape('\n', function (test) {
-	test.pass('-***- plots/sc/SC -***-')
+	test.pass('-***- plots/singleCell/SingleCell -***-')
 	test.end()
 })
 
-tape('Default SC app', test => {
+tape('Default single cell plot', test => {
 	test.timeoutAfter(3000)
 	runpp({
 		state: {
 			plots: [
 				{
-					chartType: 'sc',
-					childType: 'scSampleTable',
-					settings: {
-						scSampleTable: {
-							columns: {
-								sample: 'Case'
-							}
-						}
-					}
+					chartType: 'singleCell',
+					sample: {
+						Case: 'C3N-02784',
+						Sample: 'C3N-02784-01',
+						Project: 'CPTAC-3'
+					},
+					experimentID: 'c3afe982-7fff-4e6b-91f0-116d8e17d627',
+					hiddenClusters: {}
 				}
 			]
 		},
-		sc: {
+		singleCell: {
 			callbacks: {
 				'postRender.test': runTests
 			}
 		}
 	})
 
-	async function runTests(sc) {
-		sc.on('postRender.test', null)
+	async function runTests(singleCell) {
+		singleCell.on('postRender.test', null)
 
-		// test.true(true, 'sc rendered')
+		// test.true(true, 'singleCell rendered')
 
-		// if (test['_ok']) sc.Inner.app.destroy()
+		// if (test['_ok']) singleCell.Inner.app.destroy()
 		test.end()
 	}
 })

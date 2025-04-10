@@ -1,7 +1,11 @@
 import { Tabs } from '#dom'
 import type { MassAppApi, MassState } from '#mass/types/mass'
 import type { SCConfig } from './SCTypes'
-
+/**
+ * TODOs:
+ * - add types
+ * - add comments
+ */
 export class SCRenderer {
 	app: MassAppApi
 	config: SCConfig
