@@ -1,2 +1,1 @@
-Fixes:
-- fix error from incorrectly computed zoom center cell
+

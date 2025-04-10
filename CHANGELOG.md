@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Fixes:
+- fix error from incorrectly computed zoom center cell
+
 
 ## 2.117.0
 
