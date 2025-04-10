@@ -5,7 +5,7 @@ const path = require('path'),
 	serverconfig = require('../server/src/serverconfig.js')
 
 const execPromise = promisify(exec)
-const pythonExec = serverconfig.pythonExec || 'python3'
+const pythonExec = serverconfig.python || 'python3'
 
 exports.run_python = function (pyfile, input_data) {
 	return new Promise((resolve, reject) => {
