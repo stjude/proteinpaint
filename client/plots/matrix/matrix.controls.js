@@ -1016,12 +1016,12 @@ export class MatrixControls {
 		const s = this.parent.settings.matrix || this.parent.config.settings.matrix
 		const min = s.colwMin / s.colw
 		const max = s.colwMax / s.colw
-		const increment = Number((min / max).toFixed(2))
+		const increment = Math.max(0.01, Number((min / max).toFixed(2)))
 
 		const d = this.parent.dimensions
 		if (this.zoomApi)
 			this.zoomApi.update({
-				value: s.zoomLevel.toFixed(1),
+				value: s.zoomLevel.toFixed(2),
 				min,
 				max,
 				increment,

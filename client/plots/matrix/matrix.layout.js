@@ -30,17 +30,17 @@ export function setAutoDimensions(xOffset) {
 		const padding = Math.max(65, maxGrpLabelWidth)
 
 		// should be estimated based on label-fontsize and longest label
-		const labelOffset = !s.transpose
-			? s.termLabelOffset + s.termGrpLabelOffset
-			: s.sampleLabelOffset + s.sampleGrpLabelOffset
+		// const labelOffset = !s.transpose
+		// 	? s.termLabelOffset + s.termGrpLabelOffset
+		// 	: s.sampleLabelOffset + s.sampleGrpLabelOffset
 		const hcw = this.state.config.settings.hierCluster?.xDendrogramHeight || 0
-		this.availContentWidth = boundingWidth - padding - s.margin.right - xOffset - hcw - 0.5 * labelOffset
+		this.availContentWidth = boundingWidth - padding - s.margin.right - xOffset - hcw // - 0.5 * labelOffset
 	}
 
 	if (this.autoDimensions.has('colw')) {
 		const totalColgspace = s.colgspace * Math.max(0, this.visibleSampleGrps.size - 1)
 		const tentativeGaps = this.sampleOrder.length * s.colspace + totalColgspace
-		const spacedColw = (this.availContentWidth - tentativeGaps) / this.sampleOrder.length
+		const spacedColw = (this.availContentWidth - tentativeGaps) /*- this.sampleOrder.length*/ / this.sampleOrder.length
 		// tentativeColw is the colw after removing the colspace
 		const tentativeColw = Math.max(s.colwMin, Math.min(spacedColw, s.colwMax))
 		// detect if using colspace will cause the tentative computed widths to be exceeded
@@ -438,7 +438,7 @@ export function setLayout() {
 
 	// When the cell is very small, colspace is 0, once zoom in, colspace will be shown, so need to consider it when zooming in
 	// At this point, computed matrix settings has been merged to settings.matrix by setAutoDimensions.
-	const colw = Math.max(s.colwMin, Math.min(s.colwMax, (s.colw + s.colspace) * s.zoomLevel))
+	const colw = Math.max(s.colwMin, Math.min(s.colwMax, s.colw * s.zoomLevel))
 	const dx = colw + s.colspace
 	const nx = this[`${col}s`].length
 	const dy = s.rowh + s.rowspace
