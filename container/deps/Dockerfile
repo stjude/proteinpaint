@@ -14,6 +14,7 @@ LABEL org.opencontainers.image.source="https://github.com/stjude/proteinpaint" \
     org.opencontainers.image.revision="$IMGREV" \
     org.opencontainers.image.version="$IMGVER"
 
+
 RUN apt-get update && apt-get install -y \
     curl \
     wget \
@@ -75,9 +76,11 @@ RUN apt-get update && apt-get install -y \
     && add-apt-repository 'deb https://cloud.r-project.org/bin/linux/debian bookworm-cran40/' \
     && apt-get update
 
-RUN apt-get update && apt-get install -y libx11-dev libxext-dev libxrender-dev libxt-dev libreadline-dev gfortran libargtable2-dev && cd /usr/bin && wget https://cran.r-project.org/src/base/R-4/R-4.4.3.tar.xz && tar -xf R-4.4.3.tar.xz && cd R-4.4.3 && ./configure --prefix=$PWD --enable-R-shlib --with-blas --with-lapack && make && make install && echo "alias R=/usr/bin/R-4.4.3/R" \
+RUN echo "deb http://deb.debian.org/debian testing main contrib non-free" >> /etc/apt/sources.list && echo "deb-src http://deb.debian.org/debian/ testing main contrib non-free" >> /etc/apt/sources.list
+
+RUN apt-get update && apt-get install -y r-base=4.4.3-1 -y r-base-dev -y libargtable2-dev \
 	## install R packages
- 	&& R -e "install.packages(c('cmprsk', 'hwde', 'jsonlite', 'survival', 'lmtest', 'dplyr', 'tidyr', 'BiocManager', 'readr', 'doParallel', 'ggplot2'), dependencies=TRUE, repos='https://cran.wustl.edu/')" \
+ 	&& R -e "install.packages(c('cmprsk', 'hwde', 'jsonlite', 'survival', 'lmtest', 'dplyr', 'tidyr', 'BiocManager', 'readr', 'doParallel', 'ggplot2'), dependencies=TRUE, repos='http://cran.rstudio.com/')" \
 	&& R -e "BiocManager::install(c('edgeR','rhdf5'))" \
     ## set locale encoding in R
     ## must match encoding configuration in docker
