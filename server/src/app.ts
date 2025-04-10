@@ -16,9 +16,12 @@ import { authApi } from './auth.js'
 import * as phewas from './termdb.phewas.js'
 import { sendMessageToSlack } from './postOnSlack.js'
 import { routeFiles } from './app.routes.js'
+import { setPythonBinPath } from '@sjcrh/proteinpaint-python'
 
 const basepath = serverconfig.basepath || ''
 Object.freeze(process.argv)
+
+if (serverconfig.python) setPythonBinPath(serverconfig.python)
 
 export async function launch() {
 	try {
