@@ -5,6 +5,7 @@ import type { ClientCopyGenome } from 'types/global'
 import type { BoxPlotSettings } from '../../plots/boxplot/BoxPlotTypes'
 import type { CorrVolcanoSettings } from '#plots/corrVolcano/CorrelationVolcanoTypes.ts'
 import type { VolcanoSettings } from '../../plots/volcano/VolcanoTypes.ts'
+import type { SingleCellSettings } from '#plots/singleCell/SingleCellTypes.ts'
 //import { TermWrapper } from '#types'
 
 export type MassAppApi = RxAppApi & {
@@ -65,7 +66,7 @@ export type MassState = {
 	activeCohort: number
 	customTerms?: any[]
 	groups: any[]
-	plots: BasePlotConfig[]
+	plots: PlotConfig[]
 	termfilter: any
 	termdbConfig: {
 		allowedChartTypes: string[]
@@ -109,8 +110,6 @@ export type BasePlotConfig = {
 	chartType: string
 	groups?: any[]
 	id: string
-	term?: any //TermWrapper
-	term2?: any //
 	settings: PlotSettings
 }
 
@@ -123,6 +122,7 @@ type PlotSettings = {
 	geneORA?: any
 	gsea?: any
 	sampleScatter?: any
+	sc?: SingleCellSettings
 	violin?: any
 	volcano?: VolcanoSettings
 }
@@ -163,4 +163,9 @@ export type MassAppActions = {
 	id: string
 	/** Matching config for the plot */
 	config: any
+}
+
+export type BasePlotOpts = {
+	/** this is any Partial<chartTypeSettings> defined PlotSettings above */
+	overrides: any
 }

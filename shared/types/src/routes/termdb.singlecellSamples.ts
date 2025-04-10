@@ -1,7 +1,7 @@
 import type { RoutePayload } from './routeApi.js'
 import type { ErrorResponse } from './errorResponse.ts'
 
-export type Sample = {
+export type SingleCellSample = {
 	/** Sample name, required */
 	sample: string
 	/** optional list of sc data files available for this sample, gdc-specific
@@ -23,17 +23,19 @@ export type TermdbSingleCellSamplesRequest = {
 	genome: string
 	/** Dataset label */
 	dslabel: string
-	//filter0?: Filter0 // for gdc
+	filter0?: any
+	//Why is this commented out?
+	// filter0?: Filter0 // for gdc
 }
-type ValidResponse = {
+export type ValidSingleCellSamplesResponse = {
 	/** List of sample names with singlecell data */
-	samples: Sample[]
+	samples: SingleCellSample[]
 	fields: string[]
 	columnNames: string[]
 	sameLegend?: boolean
 }
 
-export type TermdbSingleCellSamplesResponse = ErrorResponse | ValidResponse
+export type TermdbSingleCellSamplesResponse = ErrorResponse | ValidSingleCellSamplesResponse
 
 export const termdbSingleCellSamplesPayload: RoutePayload = {
 	request: {

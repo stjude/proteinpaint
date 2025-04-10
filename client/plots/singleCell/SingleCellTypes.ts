@@ -1,3 +1,16 @@
+import type { BasePlotConfig, BasePlotOpts } from '../../mass/types/mass'
+import type { SingleCellPlotResponse } from '#types'
+
+export type SingleCellConfig = BasePlotConfig & {
+	chartType?: 'singleCell'
+	childType?: 'singleCell'
+	plots: SingleCellPlotResponse[]
+	hiddenClusters?: any
+	settings: {
+		singleCell: SingleCellSettings
+	}
+}
+
 export type SingleCellSettings = {
 	/** Defines the radius of the dots. Default is 0.04 */
 	dotSize: number
@@ -17,4 +30,23 @@ export type SingleCellSettings = {
 type SettingColor = {
 	/** index corresponds to a plot name. The value is the color */
 	[index: string]: string
+}
+
+export type SingleCellPlotOpts = BasePlotOpts & {
+	sample: {
+		[index: string]: any
+	}
+}
+
+export type SingleCellViewData = {
+	actions: SingleCellActionsData
+	plotsData: SingleCellFormattedPlotData[]
+}
+
+type SingleCellActionsData = {
+	plots: { name: string; selected: boolean }[]
+}
+
+export type SingleCellFormattedPlotData = SingleCellPlotResponse & {
+	//TODO finish typing this
 }

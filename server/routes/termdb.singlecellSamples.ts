@@ -10,11 +10,11 @@ import type {
 	SingleCellSamples,
 	SingleCellDataNative,
 	SingleCellGeneExpressionNative,
-	Sample,
+	SingleCellSample,
 	TermdbSingleCellSamplesRequest,
 	TermdbSingleCellSamplesResponse,
 	Cell,
-	Plot,
+	SingleCellPlotResponse,
 	TermdbSingleCellDataRequest,
 	RouteApi
 } from '#types'
@@ -148,7 +148,7 @@ async function validateSamplesNative(S: SingleCellSamples, D: SingleCellDataNati
 		}
 	}
 	S.get = () => {
-		return { samples: [...samples.values()] as Sample[] }
+		return { samples: [...samples.values()] as SingleCellSample[] }
 	}
 }
 
@@ -162,7 +162,7 @@ function validateDataNative(D: SingleCellDataNative, ds: any) {
 	D.get = async q => {
 		// if sample is int, may convert to string
 		try {
-			const plots = [] as Plot[] // given a sample name, collect every plot data for this sample and return
+			const plots = [] as SingleCellPlotResponse[] // given a sample name, collect every plot data for this sample and return
 			let geneExpMap
 			if (ds.queries.singleCell.geneExpression && q.gene) {
 				geneExpMap = await ds.queries.singleCell.geneExpression.get({ sample: q.sample, gene: q.gene })

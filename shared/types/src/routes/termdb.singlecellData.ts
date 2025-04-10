@@ -1,5 +1,5 @@
 import type { RoutePayload } from './routeApi.js'
-import { ErrorResponse } from './errorResponse.ts'
+import type { ErrorResponse } from './errorResponse.ts'
 
 export type Cell = {
 	/** Cell id or barcode */
@@ -16,7 +16,7 @@ export type Cell = {
 	geneExp?: number
 }
 
-export type Plot = {
+export type SingleCellPlotResponse = {
 	/** name of the plot */
 	name: string
 	/** List of cells with gene expression */
@@ -41,18 +41,15 @@ export type TermdbSingleCellDataRequest = {
 	plots: string[]
 	/** Gene name to retrieve expression data for all cells of the given sample, and to overlay on maps */
 	gene?: string
-	//Not even used??
-	// filter0?: any
-	colorBy?: any
+	colorBy?: string
 }
 
-export type HasdataResponse = {
+export type SingleCellDataPlotsResponse = {
 	/** List of plots from singlecell experiment of this sample */
-	plots: Plot[]
+	plots: SingleCellPlotResponse[]
 
 	/** Terms used to annotate cells */
 	//terms: Term[]
-	refName: string
 }
 
 export type NodataResponse = {
@@ -60,7 +57,7 @@ export type NodataResponse = {
 	nodata: boolean
 }
 
-export type TermdbSingleCellDataResponse = NodataResponse | ErrorResponse | HasdataResponse
+export type TermdbSingleCellDataResponse = NodataResponse | ErrorResponse | SingleCellDataPlotsResponse
 
 export const termdbSingleCellDataPayload: RoutePayload = {
 	request: {

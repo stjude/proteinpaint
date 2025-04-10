@@ -1,8 +1,9 @@
+import type { TermdbSingleCellDataRequest, TermdbSingleCellSamplesRequest } from '#types'
 import { dofetch3 } from '#common/dofetch'
-import type { TermdbSingleCellDataRequest } from '#types'
+import type { SingleCellConfig } from '../SingleCellTypes'
 
 export class Model {
-	config: any
+	config: SingleCellConfig
 	state: any
 
 	constructor(state: any) {
@@ -15,7 +16,7 @@ export class Model {
 			genome: this.state.genome,
 			dslabel: this.state.dslabel,
 			filter0: this.state.termfilter.filter0 || null
-		}
+		} as TermdbSingleCellSamplesRequest
 		return await dofetch3('termdb/singlecellSamples', { body })
 	}
 

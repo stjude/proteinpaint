@@ -1,4 +1,6 @@
 import { getColors } from '#shared/common.js'
+import { scaleLinear } from 'd3-scale'
+import type { SingleCellSettings, SingleCellViewData } from '../SingleCellTypes'
 
 /**
  * TODOs:
@@ -9,11 +11,13 @@ import { getColors } from '#shared/common.js'
 export class ViewModel {
 	config: any
 	data: any
-	viewData: any
+	settings: SingleCellSettings
+	viewData: SingleCellViewData
 
-	constructor(config: any, data: any) {
+	constructor(config: any, settings: SingleCellSettings, data: any) {
 		this.config = config
 		this.data = data
+		this.settings = settings
 
 		this.viewData = {
 			plotsData: this.setPlotsData(),
@@ -28,6 +32,9 @@ export class ViewModel {
 			const plotData = plotRes
 			const expCells = plotRes.expCells.sort((a, b) => a.geneExp - b.geneExp)
 			plotData.cells = [...plotRes.noExpCells, ...expCells]
+			//Do not include plots with no data
+			if (!plotData.cells.length) return
+
 			plotData.id = plotRes.name.replace(/\s+/g, '')
 			const clusters: Set<string> = new Set(plotRes.cells.map(c => c.category))
 			plotData.clusters = Array.from(clusters).sort((a: string, b: string) => {
@@ -41,6 +48,15 @@ export class ViewModel {
 			for (const cluster of plotData.clusters)
 				plotData.colorMap[cluster] = plotData.colorMap?.[cluster] ? plotData.colorMap[cluster] : cat2Color(cluster)
 
+			//Plot dimensions
+			const s0 = plotData.cells[0]
+			const [xMin, xMax, yMin, yMax] = plotData.cells.reduce(
+				(s, d) => [d.x < s[0] ? d.x : s[0], d.x > s[1] ? d.x : s[1], d.y < s[2] ? d.y : s[2], d.y > s[3] ? d.y : s[3]],
+				[s0.x, s0.x, s0.y, s0.y]
+			)
+			plotData.xScale = scaleLinear().domain([xMin, xMax]).range([-1, 1])
+			plotData.yScale = scaleLinear().domain([yMin, yMax]).range([-1, 1])
+
 			data.push(plotData)
 		}
 		return data
@@ -48,12 +64,10 @@ export class ViewModel {
 
 	setActionData() {
 		const opts: any = {}
-		if (this.config.plots.length) {
-			opts.plots = this.config.plots.map(p => {
-				return { name: p.name, selected: p.selected }
-			})
-		}
-
+		if (!this.config.plots.length) return opts
+		opts.plots = this.config.plots.map(p => {
+			return { name: p.name, selected: p.selected }
+		})
 		return opts
 	}
 }

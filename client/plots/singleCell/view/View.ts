@@ -1,4 +1,6 @@
+import type { Elem } from '../../../types/d3'
 import { make_one_checkbox } from '#dom'
+import type { SingleCellViewData } from '../SingleCellTypes'
 import { Plot } from './Plot'
 /**
  * TODOs:
@@ -6,8 +8,11 @@ import { Plot } from './Plot'
  * - add comments
  */
 export class View {
-	viewData?: any
-	plotsDom: any
+	viewData?: SingleCellViewData
+	plotsDom: {
+		actionsDiv: Elem
+		plotsDiv: Elem
+	}
 
 	constructor(dom) {
 		const holder = dom.holder.append('div').style('display', 'inline-block')
@@ -25,13 +30,12 @@ export class View {
 		this.viewData = viewData
 		//TODO: move into init based on config instead of viewModel
 		this.renderActions()
-
 		//TODO: Move to update()
 		this.renderPlots()
 	}
 
 	renderActions() {
-		if (!this.viewData.actions) return
+		if (!this.viewData || !this.viewData.actions) return
 		if (this.viewData.actions.plots) {
 			this.plotsDom.actionsDiv
 				.append('span')
@@ -56,9 +60,9 @@ export class View {
 	}
 
 	renderPlots() {
-		if (!this.viewData.plots) return
+		if (!this.viewData || !this.viewData.plotsData) return
 		this.plotsDom.plotsDiv.selectAll('*').remove()
-		for (const plotData of this.viewData.plots) {
+		for (const plotData of this.viewData.plotsData) {
 			new Plot(plotData, this.plotsDom.plotsDiv)
 		}
 	}

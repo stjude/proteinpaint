@@ -1,11 +1,12 @@
+import type { SingleCellDataPlotsResponse, ValidSingleCellSamplesResponse } from '#types'
+import type { BasePlotConfig, MassAppApi, MassState } from '#mass/types/mass'
 import { RxComponentInner } from '../../types/rx.d'
 import { getCompInit, copyMerge } from '#rx'
-import type { BasePlotConfig, MassState } from '#mass/types/mass'
 import { sayerror } from '#dom'
 import { Model } from './model/Model'
 import { ViewModel } from './viewModel/ViewModel'
 import { View } from './view/View'
-import type { SingleCellSettings } from './SingleCellTypes'
+import type { SingleCellPlotOpts, SingleCellSettings } from './SingleCellTypes'
 /**
  * TODOs:
  * - add types
@@ -13,9 +14,9 @@ import type { SingleCellSettings } from './SingleCellTypes'
  */
 class SingleCell extends RxComponentInner {
 	readonly type = 'singleCell'
-	data: object
+	data?: SingleCellDataPlotsResponse
 	refName?: string
-	samples?: []
+	samples?: ValidSingleCellSamplesResponse
 	model?: Model
 	view?: View
 
@@ -30,7 +31,6 @@ class SingleCell extends RxComponentInner {
 			holder,
 			errorDiv: holder.append('div').attr('data-testid', 'sjpp-single-cell-error')
 		}
-		this.data = {}
 	}
 
 	getState(appState: MassState) {
@@ -47,7 +47,7 @@ class SingleCell extends RxComponentInner {
 		}
 	}
 
-	init(appState) {
+	init(appState: MassState) {
 		const state = this.getState(appState)
 		this.model = new Model(state)
 		this.view = new View(this.dom)
@@ -59,6 +59,8 @@ class SingleCell extends RxComponentInner {
 		if (!config.sample) throw new Error('No sample provided for single cell plot')
 
 		if (!this.model) throw `Model not initialized [SingleCell.main()]`
+
+		const settings = config.settings.singleCell
 
 		/** Fetch data from the model */
 		try {
@@ -85,7 +87,7 @@ class SingleCell extends RxComponentInner {
 
 		/** Create the view model
 		 * TODO: move to init()?? */
-		const viewModel = new ViewModel(config, this.data)
+		const viewModel = new ViewModel(config, settings, this.data)
 
 		console.log(viewModel.viewData.plotsData)
 
@@ -109,7 +111,7 @@ export function getDefaultSingleCellSettings(overrides: Partial<SingleCellSettin
 	return Object.assign(defaults, overrides)
 }
 
-export function getPlotConfig(opts, app) {
+export function getPlotConfig(opts: SingleCellPlotOpts, app: MassAppApi) {
 	if (!opts.sample) throw new Error('No .sample{} provided for single cell plot [SingleCell.getPlotConfig()]')
 
 	const config = {
