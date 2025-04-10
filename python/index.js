@@ -3,8 +3,9 @@ import fs from 'fs'
 import { spawn, exec } from 'child_process'
 import { Readable } from 'stream'
 
-let python = 'python3'
+const __dirname = import.meta.dirname
 
+let python = 'python3'
 // this should be called at the beginning of the server runtime code,
 // so that the same binpath will be reused throughoutt the server lifetime
 // TODO: may limit the reset to once?
