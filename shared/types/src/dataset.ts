@@ -681,7 +681,7 @@ type ColorColumn = {
 }
 
 /** defines a tsne type of plot for cells from one sample */
-type SingleCellPlot = {
+export type SingleCellPlot = {
 	/** type of the plot, e.g. tsne or umap, also display as plot name on ui */
 	name: string
 	/** folder in which per-sample files are stored.

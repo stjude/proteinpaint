@@ -1,20 +1,25 @@
+import type { SingleCellDataPlotsResponse } from '#types'
 import { getColors } from '#shared/common.js'
 import { scaleLinear } from 'd3-scale'
-import type { SingleCellSettings, SingleCellViewData } from '../SingleCellTypes'
+import type {
+	SingleCellConfig,
+	SingleCellSettings,
+	SingleCellViewData,
+	SingleCellFormattedPlotData
+} from '../SingleCellTypes'
 
 /**
  * TODOs:
- * - add types (import from #types??)
  * - add comments
  * - add unit tests
  */
 export class ViewModel {
-	config: any
-	data: any
+	config: SingleCellConfig
+	data: SingleCellDataPlotsResponse
 	settings: SingleCellSettings
 	viewData: SingleCellViewData
 
-	constructor(config: any, settings: SingleCellSettings, data: any) {
+	constructor(config: SingleCellConfig, settings: SingleCellSettings, data: SingleCellDataPlotsResponse) {
 		this.config = config
 		this.data = data
 		this.settings = settings
@@ -27,23 +32,23 @@ export class ViewModel {
 	}
 
 	setPlotsData() {
-		const data: any = []
+		const data: SingleCellFormattedPlotData[] = []
 		for (const plotRes of this.data.plots) {
-			const plotData = plotRes
-			const expCells = plotRes.expCells.sort((a, b) => a.geneExp - b.geneExp)
-			plotData.cells = [...plotRes.noExpCells, ...expCells]
+			const plotData = plotRes as SingleCellFormattedPlotData
+			const expCells = (plotRes.expCells || []).sort((a: any, b: any) => a.geneExp - b.geneExp)
+			plotData.cells = [...(plotRes.noExpCells || []), ...expCells]
 			//Do not include plots with no data
-			if (!plotData.cells.length) return
+			if (!plotData.cells.length) return []
 
 			plotData.id = plotRes.name.replace(/\s+/g, '')
-			const clusters: Set<string> = new Set(plotRes.cells.map(c => c.category))
+			const clusters: Set<string> = new Set(plotData.cells.map(c => c.category))
 			plotData.clusters = Array.from(clusters).sort((a: string, b: string) => {
 				const num1 = parseInt(a.split(' ')[1])
 				const num2 = parseInt(b.split(' ')[1])
 				return num1 - num2
 			})
 
-			const cat2Color = getColors(plotRes.clusters.length + 2) //Helps to use the same color scheme in different samples
+			const cat2Color = getColors(plotData.clusters.length + 2) //Helps to use the same color scheme in different samples
 			plotData.colorMap = {}
 			for (const cluster of plotData.clusters)
 				plotData.colorMap[cluster] = plotData.colorMap?.[cluster] ? plotData.colorMap[cluster] : cat2Color(cluster)

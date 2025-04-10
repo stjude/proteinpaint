@@ -1,7 +1,7 @@
 import type { RoutePayload } from './routeApi.js'
 import type { ErrorResponse } from './errorResponse.ts'
 
-export type Cell = {
+export type SingleCellCellData = {
 	/** Cell id or barcode */
 	cellId: string
 	/** X coord of the cell */
@@ -20,9 +20,9 @@ export type SingleCellPlotResponse = {
 	/** name of the plot */
 	name: string
 	/** List of cells with gene expression */
-	expCells?: Cell[]
+	expCells?: SingleCellCellData[]
 	/** List of cells with no gene expression, if no gene provided all cells will be here */
-	noExpCells?: Cell[]
+	noExpCells?: SingleCellCellData[]
 	/** Column name to color by, e.g Cell type, CNV, Fusion */
 	colorBy: string
 	colorColumns: string[]

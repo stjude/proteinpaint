@@ -1,10 +1,11 @@
 import type { BasePlotConfig, BasePlotOpts } from '../../mass/types/mass'
-import type { SingleCellPlotResponse } from '#types'
+import type { SingleCellPlotResponse, SingleCellPlot, SingleCellSample } from '#types'
+import type { ScaleLinear } from 'd3'
 
 export type SingleCellConfig = BasePlotConfig & {
 	chartType?: 'singleCell'
 	childType?: 'singleCell'
-	plots: SingleCellPlotResponse[]
+	plots: SingleCellPlot[]
 	hiddenClusters?: any
 	settings: {
 		singleCell: SingleCellSettings
@@ -33,9 +34,7 @@ type SettingColor = {
 }
 
 export type SingleCellPlotOpts = BasePlotOpts & {
-	sample: {
-		[index: string]: any
-	}
+	sample: SingleCellSample
 }
 
 export type SingleCellViewData = {
@@ -48,5 +47,9 @@ type SingleCellActionsData = {
 }
 
 export type SingleCellFormattedPlotData = SingleCellPlotResponse & {
-	//TODO finish typing this
+	cells: any
+	clusters: any
+	id: string
+	xScale: ScaleLinear<number, number>
+	yScale: ScaleLinear<number, number>
 }

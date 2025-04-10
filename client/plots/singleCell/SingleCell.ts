@@ -84,12 +84,11 @@ class SingleCell extends RxComponentInner {
 			else if (e.stack) console.log(e.stack)
 			throw `${e} [SingleCell.main()]`
 		}
+		if (!this.data) throw `No data found [SingleCell.main()]`
 
 		/** Create the view model
 		 * TODO: move to init()?? */
 		const viewModel = new ViewModel(config, settings, this.data)
-
-		console.log(viewModel.viewData.plotsData)
 
 		this.view?.render(viewModel.viewData)
 	}
