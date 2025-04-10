@@ -145,6 +145,8 @@ export const volcanoInit = getCompInit(Volcano)
 export const componentInit = volcanoInit
 
 export function getDefaultVolcanoSettings(overrides = {}, opts: any): VolcanoSettings {
+	const features = JSON.parse(sessionStorage.getItem('optionalFeatures') as string)
+	const method = features?.runDE_methods?.includes('Wilcoxon') ? 'wilcoxon' : 'edgeR'
 	const defaults: VolcanoSettings = {
 		defaultSignColor: 'red',
 		defaultNonSignColor: 'black',
@@ -153,7 +155,7 @@ export function getDefaultVolcanoSettings(overrides = {}, opts: any): VolcanoSet
 		/** Not enabling this feature for now */
 		// geneORA: undefined,
 		height: 400,
-		method: 'edgeR',
+		method,
 		minCount: 10,
 		minTotalCount: 15,
 		pValue: 0.05,

@@ -184,6 +184,14 @@ export class VolcanoControlInputs {
 	getMethodOptions() {
 		if (this.termType !== 'geneExpression') return
 		const settings = this.config.settings.volcano
+		const features = JSON.parse(sessionStorage.getItem('optionalFeatures') as string)
+		if (features?.runDE_methods?.length) {
+			const opts: { label: string; value: string }[] = []
+			for (const m of features.runDE_methods) {
+				opts.push({ label: m, value: m.toLowerCase() })
+			}
+			return opts
+		}
 		if (this.sampleNum < settings!.sampleNumCutoff) {
 			return [
 				{ label: 'edgeR', value: 'edgeR' },
