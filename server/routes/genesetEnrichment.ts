@@ -2,7 +2,6 @@ import type { GenesetEnrichmentRequest, GenesetEnrichmentResponse, RouteApi } fr
 import { genesetEnrichmentPayload } from '#types/checkers'
 import fs from 'fs'
 import path from 'path'
-import { Readable } from 'stream'
 import serverconfig from '#src/serverconfig.js'
 import { run_python } from '@sjcrh/proteinpaint-python'
 
