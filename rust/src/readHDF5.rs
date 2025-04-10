@@ -800,14 +800,64 @@ fn query_multiple_genes_dense(hdf5_filename: String, gene_names: Vec<String>) ->
             }
             None => {
                 let mut error_map = Map::new();
+                
+                // Insert the main error message
                 error_map.insert(
                     "error".to_string(),
-                    Value::String("Gene not found in dataset".to_string()),
+                    Value::String(format!("Gene '{}' not found in dataset of {} genes", 
+                                        gene_name, genes.len()))
                 );
-
+                
+                // Add debugging info directly to the error map
+                error_map.insert("requested_gene".to_string(), Value::String(gene_name.clone()));
+                error_map.insert("total_genes_in_dataset".to_string(), Value::Number(genes.len().into()));
+                
+                // Check for case sensitivity issues
+                let possible_case_match = genes.iter()
+                    .find(|g| g.to_lowercase() == gene_name.to_lowercase())
+                    .cloned();
+                
+                if let Some(case_match) = possible_case_match {
+                    if &case_match != gene_name {
+                        error_map.insert(
+                            "case_mismatch".to_string(), 
+                            Value::String(format!("Requested '{}' but found '{}'", gene_name, case_match))
+                        );
+                    }
+                }
+                
+                // Add sample of genes for reference
+                let preview_count = 3.min(genes.len());
+                if genes.len() > 0 {
+                    let first_genes: Vec<String> = genes.iter()
+                        .take(preview_count)
+                        .cloned()
+                        .collect();
+                    error_map.insert("first_genes".to_string(), json!(first_genes));
+                    
+                    if genes.len() > preview_count {
+                        let last_genes: Vec<String> = genes.iter()
+                            .skip(genes.len() - preview_count)
+                            .cloned()
+                            .collect();
+                        error_map.insert("last_genes".to_string(), json!(last_genes));
+                    }
+                }
+                
+                // Add the error map to the genes map
                 let mut genes_map = genes_map.lock().unwrap();
                 genes_map.insert(gene_name.clone(), Value::Object(error_map));
             }
+            // None => {
+            //     let mut error_map = Map::new();
+            //     error_map.insert(
+            //         "error".to_string(),
+            //         Value::String("Gene not found in dataset".to_string()),
+            //     );
+
+            //     let mut genes_map = genes_map.lock().unwrap();
+            //     genes_map.insert(gene_name.clone(), Value::Object(error_map));
+            // }
         }
     }
 

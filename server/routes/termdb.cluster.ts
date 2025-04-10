@@ -301,7 +301,7 @@ async function validateHDF5File(filePath) {
  * @returns {Promise<Object>} Promise resolving to gene expression data
  */
 async function queryGeneExpression(hdf5_file, geneNames) {
-	// console.log(`Querying gene expression for ${geneName} from ${hdf5_file}`);
+	console.log(`Querying gene expression for ${geneNames} from ${hdf5_file}`)
 	// Create the input params as a JSON object
 	const jsonInput = JSON.stringify({
 		hdf5_file: hdf5_file,
@@ -310,11 +310,11 @@ async function queryGeneExpression(hdf5_file, geneNames) {
 
 	try {
 		// Call the Rust script with input parameters
-		// console.log('Params:', JSON.stringify(jsonInput));
-		// console.log('Calling Rust script with params:', jsonInput)
+		console.log('Params:', JSON.stringify(jsonInput))
+		console.log('Calling Rust script with params:', jsonInput)
 		const result = await run_rust('readHDF5', jsonInput)
 		// Debug output to understand what we're getting back
-		// console.log('Result structure:', JSON.stringify(result, null, 2).substring(0, 5000) + '...');
+		console.log('Result structure:', JSON.stringify(result, null, 2).substring(0, 5000) + '...')
 
 		// Check if the result exists and contains sample data
 		if (!result || result.length === 0) {
