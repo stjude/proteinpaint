@@ -120,6 +120,21 @@ if [[ "$CHANGEDWS" == *"rust"* ]]; then
 	cd ../container
 fi
 
+if [[ "$CHANGEDWS" == *"python"* ]]; then
+	cd ../python
+	echo "packing python ..."
+	npm pack
+	PYPKGVER=$(node -p "require('./package.json').version")
+	PYTGZ=sjcrh-proteinpaint-python-$PYPKGVER.tgz
+	mv $PYTGZ ../container/tmppack/
+
+	cd ../server
+	PYDEPNAME="@sjcrh/proteinpaint-python"
+	# may reset the dep new version temporarily, for package testing 
+	npm pkg set "dependencies.$PYDEPNAME"=$PKGPATH/$PYTGZ
+	cd ../container
+fi
+
 if [[ "$CHANGEDWS" == *"server"* ]]; then
 	cd ../server
 	echo "packing server ..."
