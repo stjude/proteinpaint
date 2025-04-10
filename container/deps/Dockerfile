@@ -76,7 +76,8 @@ RUN apt-get update && apt-get install -y \
     && add-apt-repository 'deb https://cloud.r-project.org/bin/linux/debian bookworm-cran40/' \
     && apt-get update
 
-RUN echo "deb http://deb.debian.org/debian testing main contrib non-free" >> /etc/apt/sources.list && echo "deb-src http://deb.debian.org/debian/ testing main contrib non-free" >> /etc/apt/sources.list
+RUN echo "deb http://deb.debian.org/debian testing main" >> /etc/apt/sources.list && \
+    echo "deb-src http://deb.debian.org/debian/ testing main" >> /etc/apt/sources.list
 
 RUN apt-get update && apt-get install -y r-base=4.4.3-1 -y r-base-dev -y libargtable2-dev \
 	## install R packages
