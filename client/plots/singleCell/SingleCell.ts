@@ -5,6 +5,7 @@ import { sayerror } from '#dom'
 import { Model } from './model/Model'
 import { ViewModel } from './viewModel/ViewModel'
 import { View } from './view/View'
+import type { SingleCellSettings } from './SingleCellTypes'
 /**
  * TODOs:
  * - add types
@@ -95,12 +96,14 @@ class SingleCell extends RxComponentInner {
 export const singleCellInit = getCompInit(SingleCell)
 export const componentInit = singleCellInit
 
-export function getDefaultSingleCellSettings(overrides = {}) {
+export function getDefaultSingleCellSettings(overrides: Partial<SingleCellSettings> = {}) {
 	const defaults = {
 		dotSize: 0.04,
 		dotOpacity: 0.8,
 		height: 600,
 		showGrid: true,
+		startColor: {},
+		stopColor: {},
 		width: 600
 	}
 	return Object.assign(defaults, overrides)
