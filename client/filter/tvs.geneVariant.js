@@ -1,5 +1,8 @@
 import { select } from 'd3-selection'
 import { mclass, dt2label } from '#shared/common.js'
+import { mayMakeVariantFilter } from '../termsetting/handlers/geneVariant'
+import { getNormalRoot, filterInit, getWrappedTvslst } from './filter'
+
 /*
 ********************** EXPORTED
 handler:
@@ -20,7 +23,47 @@ export const handler = {
 	setTvsDefaults
 }
 
+async function mayDisplayFilter(filter, holder, callback2) {
+	if (!filter || !filter.terms?.length) return
+	if (!filter.opts) throw 'filter.opts{} missing'
+
+	if (!filter.active) filter.active = getWrappedTvslst()
+
+	const div = holder.append('div').style('margin-top', '15px')
+
+	const filterBody = div.append('div')
+
+	filterInit({
+		joinWith: filter.opts.joinWith,
+		emptyLabel: '+Variant Filter',
+		holder: filterBody,
+		vocab: { terms: filter.terms },
+		callback: async f => {
+			// once the filter is updated from UI, it's only updated here
+			// user must press submit button to attach current filter to self.q{}
+			filter.active = f
+			if (callback2) await callback2()
+		}
+	}).main(filter.active)
+}
+
 async function fillMenu(self, _div, tvs) {
+	const term = structuredClone(tvs.term)
+	await mayMakeVariantFilter({ q: {}, term }, self.opts.vocabApi)
+	await mayDisplayFilter(term.filter, _div)
+
+	const applyBtn2 = _div
+		.append('button')
+		.style('margin-top', '3px')
+		.text('Apply')
+		.on('click', () => {
+			const newFilter = structuredClone(term.filter)
+			newFilter.active = getNormalRoot(term.filter.active)
+			self.opts.callback(newFilter.active)
+		})
+
+	return
+
 	const data = await self.opts.vocabApi.getCategories(tvs.term, self.filter, {})
 	const dtClassMap = new Map()
 	for (const l of data.lst) {
