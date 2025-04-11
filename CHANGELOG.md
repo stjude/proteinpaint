@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- New unit tests for mass groups.
+
 Fixes:
 - fix error from incorrectly computed zoom center cell
 
