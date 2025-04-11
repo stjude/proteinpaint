@@ -19,8 +19,8 @@ import {
 	downloadTable
 } from '#dom'
 import * as THREE from 'three'
-import { getThreeCircle } from './sampleScatter.rendererThree.js'
-import { renderContours } from './sampleScatter.renderer.js'
+import { getThreeCircle } from './scatter/viewmodel/scatterViewModel2DLarge.js'
+import { renderContours } from './scatter/viewmodel/scatterViewModel.js'
 import { digestMessage } from '#termsetting'
 
 /*
