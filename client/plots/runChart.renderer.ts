@@ -11,7 +11,7 @@ import { minShapeSize, maxShapeSize } from './runChart.js'
 import { shapes } from './runChart.js'
 import { roundValueAuto } from '#shared/roundValue.js'
 import { median as d3Median } from 'd3-array'
-import { getDateStrFromNumber } from '#shared/terms.js'
+import { getDateFromNumber } from '#shared/terms.js'
 
 export function setRenderers(self) {
 	self.render = function () {
@@ -46,8 +46,8 @@ export function setRenderers(self) {
 		const yMax = this.range.yMax
 		const extraSpaceX = (xMax - xMin) * 0.01 //extra space added to avoid clipping the particles on the X axis
 		const extraSpaceY = (yMax - yMin) * 0.01 //extra space added to avoid clipping the particles on the Y axis
-		const xMinDate = new Date(getDateStrFromNumber(xMin - extraSpaceX))
-		const xMaxDate = new Date(getDateStrFromNumber(this.range.xMax + extraSpaceX))
+		const xMinDate = new Date(getDateFromNumber(xMin - extraSpaceX))
+		const xMaxDate = new Date(getDateFromNumber(this.range.xMax + extraSpaceX))
 
 		chart.xAxisScale = d3Linear()
 			.domain([xMin - extraSpaceX, xMax + extraSpaceX])

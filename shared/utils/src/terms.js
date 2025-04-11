@@ -210,6 +210,13 @@ export function termType2label(type) {
 	return typeMap[type] || 'Unknown term type'
 }
 
+export function getDateFromNumber(value) {
+	const year = Math.floor(value)
+	const time = (value - year) * 365 * 24 * 60 * 60 * 1000 // convert to milliseconds
+	const january1st = new Date(year, 0, 0)
+	const date = new Date(january1st.getTime() + time)
+	return date
+}
 /*
 Value is a decimal year.
 A decimal year is a way of expressing a date or time period as a year with a decimal part, where the decimal portion 
