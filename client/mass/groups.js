@@ -886,6 +886,8 @@ export function addNewGroup(app, filter, groups) {
 }
 
 export function getSamplelstTWFromIds(ids) {
+	if (!ids) throw 'getSamplelstTWFromIds: ids is empty'
+	if (!Array.isArray(ids)) throw 'getSamplelstTWFromIds: ids must be an array'
 	const name = 'group'
 	const values = ids.map(id => {
 		return { sampleId: id }
@@ -931,6 +933,8 @@ export function getFilter(samplelstTW) {
 }
 
 export function getSampleFilter(sampleId) {
+	if (!sampleId) throw 'getSampleFilter: sampleId is empty'
+	if (Array.isArray(sampleId)) throw 'getSampleFilter: sampleId arg cannot be an array'
 	const group = { name: '', index: 0, items: [{ sampleId }] }
 	const samplelst = getSamplelstTW([group], '', false)
 	const filter = getFilter(samplelst)
