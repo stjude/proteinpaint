@@ -250,3 +250,12 @@ export function getNumberFromDateStr(str) {
 	const decimal = roundValueAuto(diffDays / 365)
 	return year + decimal
 }
+
+export function getNumberFromDate(date) {
+	const year = date.getFullYear()
+	const january1st = new Date(year, 0, 0)
+	const diffTime = date - january1st
+	const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
+	const decimal = roundValueAuto(diffDays / 365)
+	return year + decimal
+}
