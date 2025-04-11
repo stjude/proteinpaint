@@ -18,7 +18,7 @@ export class ListSamples {
 		this.plot = plot
 
 		const plotConfig = state.plots.find((p: { id: string }) => p.id === id)
-		if (!plotConfig) throw 'Box plot not found [ListSamples]'
+		if (!plotConfig) throw 'Plot not found [ListSamples]'
 
 		try {
 			//ids 'min' and 'max' are always present in the descrStats{}

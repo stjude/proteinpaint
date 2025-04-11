@@ -4,6 +4,7 @@ import { to_svg } from '#src/client'
 import { roundValueAuto } from '#shared/roundValue.js'
 import { rgb } from 'd3'
 import { TermTypes } from '#shared/terms.js'
+import { ListSamples } from './boxplot/interactions/ListSamples'
 
 export function setInteractivity(self) {
 	self.download = () => {
@@ -160,20 +161,11 @@ export function setInteractivity(self) {
 	}
 
 	self.listSamples = async function (event, t1, t2, plot, start, end) {
-		const tvslst = self.getTvsLst(t1, t2, plot, start, end)
-		const term = t1.q?.mode === 'continuous' ? t1 : t2
-		const filter = {
-			type: 'tvslst',
-			join: 'and',
-			lst: [self.state.termfilter.filter, tvslst],
-			in: true
-		}
-		const opts = {
-			terms: [term],
-			filter
-		}
-		//getAnnotatedSampleData is used to retrieve sample id's and values (see matrix.js).
-		const data = await self.app.vocabApi.getAnnotatedSampleData(opts)
+		//this is workaround
+		//The box plot (where the list sample code is copied from) has a plot.id
+		plot.id = self.id
+		const sampleList = new ListSamples(self.app, self.state, self.id, plot, false)
+		const data = await sampleList.getData()
 		self.displaySampleIds(event, term, data)
 	}
 
@@ -247,109 +239,21 @@ export function setInteractivity(self) {
 				self.dom.tip.hide()
 			})
 	}
-
-	self.createTvsLstRanges = function (term, tvslst, rangeStart, rangeStop, lstIdx) {
-		createTvsTerm(term, tvslst)
-
-		tvslst.lst[lstIdx].tvs.ranges = [
-			{
-				//Only show integers for integer terms
-				start: term.term.type == 'integer' ? Math.round(rangeStart) : rangeStart,
-				stop: term.term.type == 'integer' ? Math.round(rangeStop) : rangeStop,
-				startinclusive: true,
-				stopinclusive: true,
-				startunbounded: false,
-				stopunbounded: false
-			}
-		]
-	}
-
-	self.getTvsLst = function (t1, t2, plot, rangeStart, rangeStop) {
-		const tvslst = {
-			type: 'tvslst',
-			in: true,
-			join: 'and',
-			lst: []
-		}
-
-		if (t2) {
-			if (t1.term.type === 'categorical' || t1.term.type === 'condition') {
-				createTvsLstValues(t1, plot, tvslst, 0)
-				self.createTvsLstRanges(t2, tvslst, rangeStart, rangeStop, 1)
-			} else if (
-				t2.q?.mode === 'continuous' ||
-				((t2.term?.type === 'float' || t2.term?.type === 'integer') && plot.divideTwBins != null)
-			) {
-				createTvsTerm(t2, tvslst)
-				tvslst.lst[0].tvs.ranges = [
-					{
-						start: plot.divideTwBins?.start || null,
-						stop: plot.divideTwBins?.stop || null,
-						startinclusive: plot.divideTwBins?.startinclusive || true,
-						stopinclusive: plot.divideTwBins?.stopinclusive || false,
-						startunbounded: plot.divideTwBins?.startunbounded ? plot.divideTwBins?.startunbounded : null,
-						stopunbounded: plot.divideTwBins?.stopunbounded ? plot.divideTwBins?.stopunbounded : null
-					}
-				]
-				self.createTvsLstRanges(t1, tvslst, rangeStart, rangeStop, 1)
-			} else {
-				createTvsLstValues(t2, plot, tvslst, 0)
-				self.createTvsLstRanges(t1, tvslst, rangeStart, rangeStop, 1)
-			}
-		} else self.createTvsLstRanges(t1, tvslst, rangeStart, rangeStop, 0)
-		return tvslst
-	}
 }
 
 function getAddFilterCallback(t1, t2, self, plot, rangeStart, rangeStop, isBrush) {
-	const tvslst = {
-		type: 'tvslst',
-		in: true,
-		join: 'and',
-		lst: []
-	}
-
-	if (t2) {
-		if (t1.term.type === 'categorical' || t1.term.type === 'condition') {
-			createTvsLstValues(t1, plot, tvslst, 0)
-
-			if (isBrush) {
-				self.createTvsLstRanges(t2, tvslst, rangeStart, rangeStop, 1)
-			}
-		} else if (
-			t2.q?.mode === 'continuous' ||
-			((t2.term?.type === 'float' || t2.term?.type === 'integer') && plot.divideTwBins != null)
-		) {
-			createTvsTerm(t2, tvslst)
-			tvslst.lst[0].tvs.ranges = [
-				{
-					start: plot.divideTwBins?.start || null,
-					stop: plot.divideTwBins?.stop || null,
-					startinclusive: plot.divideTwBins?.startinclusive || true,
-					stopinclusive: plot.divideTwBins?.stopinclusive || false,
-					startunbounded: plot.divideTwBins?.startunbounded ? plot.divideTwBins?.startunbounded : null,
-					stopunbounded: plot.divideTwBins?.stopunbounded ? plot.divideTwBins?.stopunbounded : null
-				}
-			]
-			if (isBrush) {
-				self.createTvsLstRanges(t1, tvslst, rangeStart, rangeStop, 1)
-			}
-		} else {
-			createTvsLstValues(t2, plot, tvslst, 0)
-			if (isBrush) {
-				self.createTvsLstRanges(t1, tvslst, rangeStart, rangeStop, 1)
-			}
-		}
-	} else {
-		if (isBrush) {
-			self.createTvsLstRanges(t1, tvslst, rangeStart, rangeStop, 0)
-		}
-	}
+	//This is workaround
+	//The box plot (where the list sample code is copied from) has a plot.id
+	plot.id = self.id
+	//get latest state
+	const state = self.app.getState()
+	const sampleList = new ListSamples(self.app, state, self.id, plot, isBrush)
 
 	return () => {
 		const filterUiRoot = getFilterItemByTag(self.state.termfilter.filter, 'filterUiRoot')
-		const filter = filterJoin([filterUiRoot, tvslst])
+		const filter = filterJoin([filterUiRoot, sampleList.tvslst])
 		filter.tag = 'filterUiRoot'
+		if (!sampleList.tvslst.in) filter.in = sampleList.tvslst.in
 		self.app.dispatch({
 			type: 'filter_replace',
 			filter
@@ -366,30 +270,4 @@ function getUpdatedQfromClick(plot, term, isHidden = false) {
 	if (isHidden) q.hiddenValues[id] = 1
 	else delete q.hiddenValues[id]
 	return q
-}
-
-function createTvsLstValues(term, plot, tvslst, lstIdx) {
-	createTvsTerm(term, tvslst)
-	tvslst.lst[lstIdx].tvs.values = [
-		{
-			key: plot.seriesId,
-			label: plot.label
-		}
-	]
-	if (term.term.type === 'condition') {
-		tvslst.lst[lstIdx].tvs.bar_by_grade = term.q.bar_by_grade
-		tvslst.lst[lstIdx].tvs.value_by_max_grade = term.q.value_by_max_grade
-	}
-	if (term.term.type === 'samplelst') {
-		tvslst.lst[lstIdx].tvs.values = term.term.values[plot.label].list
-	}
-}
-
-function createTvsTerm(term, tvslst) {
-	tvslst.lst.push({
-		type: 'tvs',
-		tvs: {
-			term: term.term
-		}
-	})
 }
