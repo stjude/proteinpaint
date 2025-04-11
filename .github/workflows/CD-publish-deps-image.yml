@@ -32,7 +32,7 @@ jobs:
 
   build:
     needs: check-user-permissions
-    timeout-minutes: 100
+    timeout-minutes: 150
     if: github.event.pull_request.draft == false
     runs-on: ubuntu-22.04
     steps:
