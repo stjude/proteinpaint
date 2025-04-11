@@ -15,7 +15,7 @@ import { addNewGroup } from '../mass/groups.js'
 import { setRenderersThree } from './sampleScatter.rendererThree.js'
 import { shapes } from './sampleScatter.js'
 import { roundValueAuto } from '#shared/roundValue.js'
-import { getDateStrFromNumber } from '#shared/terms.js'
+import { getDateFromNumber } from '#shared/terms.js'
 
 export function setRenderers(self) {
 	setRenderersThree(self)
@@ -57,8 +57,8 @@ export function setRenderers(self) {
 			.range([offsetX, self.settings.svgw + offsetX])
 
 		if (self.config.term && self.config.term.term.type == 'date') {
-			const xMinDate = new Date(getDateStrFromNumber(xMin - extraSpaceX))
-			const xMaxDate = new Date(getDateStrFromNumber(xMax + extraSpaceX))
+			const xMinDate = getDateFromNumber(xMin - extraSpaceX)
+			const xMaxDate = getDateFromNumber(xMax + extraSpaceX)
 
 			chart.xAxisScaleTime = scaleTime()
 				.domain([xMinDate, xMaxDate])
@@ -71,8 +71,8 @@ export function setRenderers(self) {
 			.domain([yMax + extraSpaceY, yMin - extraSpaceY])
 			.range([offsetY, self.settings.svgh + offsetY])
 		if (self.config.term2 && self.config.term2.term.type == 'date') {
-			const yMinDate = new Date(getDateStrFromNumber(yMin - extraSpaceY))
-			const yMaxDate = new Date(getDateStrFromNumber(yMax + extraSpaceY))
+			const yMinDate = new Date(getDateFromNumber(yMin - extraSpaceY))
+			const yMaxDate = new Date(getDateFromNumber(yMax + extraSpaceY))
 
 			chart.yAxisScaleTime = scaleTime()
 				.domain([yMinDate, yMaxDate])

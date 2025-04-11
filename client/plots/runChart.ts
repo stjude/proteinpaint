@@ -9,7 +9,7 @@ import { downloadSingleSVG } from '../common/svg.download.js'
 import { select } from 'd3-selection'
 import { plotColor } from '#shared/common.js'
 import { filterJoin } from '#filter'
-import { isNumericTerm } from '@sjcrh/proteinpaint-shared/terms.js'
+import { getDateFromNumber, isNumericTerm } from '#shared/terms.js'
 
 /*
 sample object returned by server:
@@ -171,7 +171,34 @@ class RunChart {
 	}
 
 	createChart(id, data) {
+		const aggregate = this.settings.aggregateData
 		const samples = data.samples
+		if (aggregate) {
+			const groupedSamples = new Map()
+			for (const sample of samples) {
+				const date = new Date(getDateFromNumber(sample.x))
+				const year = date.getFullYear()
+				const month = date.getMonth() + 1
+				const key = `${year}-${month}`
+				if (!groupedSamples.has(key)) groupedSamples.set(key, { ysum: sample.y, xsum: sample.x, samples: [sample] })
+				else {
+					const value = groupedSamples.get(key)
+					groupedSamples.set(key, {
+						ysum: value.ysum + sample.y,
+						xsum: value.xsum + sample.x,
+						samples: [...value.samples, sample]
+					})
+				}
+			}
+			for (const [key, value] of groupedSamples.entries()) {
+				const y = value.ysum / value.samples.length
+				const x = value.xsum / value.samples.length
+				for (const sample of value.samples) {
+					sample.x = x //grouped samples by month and year
+					sample.y = y //grouped samples by month and year
+				}
+			}
+		}
 		const colorLegend = new Map(data.colorLegend)
 		const shapeLegend = new Map(data.shapeLegend)
 		this.charts.push({ id, samples, colorLegend, shapeLegend })
@@ -355,7 +382,14 @@ class RunChart {
 				options: sites,
 				callback: value => this.setFilterValue(this.config.siteTW.term.id, value)
 			},
-
+			{
+				boxLabel: '',
+				label: 'Aggregate data',
+				type: 'checkbox',
+				chartType: 'runChart',
+				settingsKey: 'aggregateData',
+				title: `Group samples from the same month and year`
+			},
 			{
 				type: 'term',
 				configKey: 'term0',
@@ -465,10 +499,6 @@ class RunChart {
 		this.app.dispatch({ type: 'plot_edit', id: this.id, config })
 	}
 
-	getSites() {
-		return []
-	}
-
 	setFilterValue(key, value) {
 		const config: any = this.config
 		this.settings[key] = value
@@ -541,6 +571,7 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 
 export function getDefaultRunChartSettings() {
 	return {
+		aggregateData: true,
 		size: 0.8,
 		minShapeSize: 0.5,
 		maxShapeSize: 4,
