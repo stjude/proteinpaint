@@ -4,138 +4,46 @@ import { FontLoader } from 'three/addons/loaders/FontLoader.js'
 import HelvetikerFont from 'three/examples/fonts/helvetiker_regular.typeface.json'
 import * as THREE from 'three'
 import { scaleLinear as d3Linear } from 'd3-scale'
-import { getContourImage } from './singleCellPlot.js'
+import { getContourImage } from '../../singleCellPlot.js'
+import { ScatterViewModel } from './scatterViewModel.js'
+import { getThreeCircle } from './scatterViewModel2DLarge.js'
 
-export function setRenderersThree(self) {
-	self.render2DSerieLarge = async function (chart) {
-		const DragControls = await import('three/examples/jsm/controls/DragControls.js')
-
-		self.mainDiv.selectAll('*').remove()
-
-		self.canvas = self.mainDiv.insert('div').style('display', 'inline-block').append('canvas').node()
-		self.canvas.width = self.settings.svgw
-		self.canvas.height = self.settings.svgh
-		chart.chartDiv.style('margin', '20px 20px')
-		chart.legendDiv = self.mainDiv.insert('div').style('display', 'inline-block').style('vertical-align', 'top')
-		let step = Math.min((20 * 40) / chart.colorLegend.size, 25)
-		if (step < 15) step = 15
-		const height = (chart.colorLegend.size + 6) * step
-		chart.legendG = chart.legendDiv
-			.append('svg')
-			.attr('width', self.settings.svgw / 2)
-			.attr('height', height)
-			.append('g')
-			.attr('transform', 'translate(20, 0)')
-		self.renderLegend(chart, step)
-
-		const fov = self.settings.threeFOV
-		const near = 0.1
-		const far = 1000
-		const camera = new THREE.PerspectiveCamera(fov, 1, near, far)
-		const scene = new THREE.Scene()
-		camera.position.set(0, 0, 1.5)
-		camera.lookAt(scene.position)
-		camera.updateMatrix()
-		const whiteColor = new THREE.Color('rgb(255,255,255)')
-		scene.background = whiteColor
-
-		const geometry = new THREE.BufferGeometry()
-		const { vertices, colors } = getVertices()
-
-		geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3))
-		geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3))
-		const tex = getThreeCircle(128)
-		const material = new THREE.PointsMaterial({
-			size: self.settings.threeSize,
-			sizeAttenuation: true,
-			transparent: true,
-			opacity: self.settings.opacity,
-			map: tex,
-			vertexColors: true
-		})
-
-		const particles = new THREE.Points(geometry, material)
-
-		scene.add(particles)
-		const renderer = new THREE.WebGLRenderer({ antialias: true, canvas: self.canvas, preserveDrawingBuffer: true })
-		renderer.setSize(self.settings.svgw, self.settings.svgh)
-		renderer.setPixelRatio(window.devicePixelRatio)
-
-		const controls = new DragControls.DragControls([particles], camera, renderer.domElement)
-
-		document.addEventListener('mousewheel', event => {
-			if (event.ctrlKey) camera.position.z += event.deltaY / 500
-		})
-
-		function getVertices() {
-			const xAxisScale = chart.xAxisScale.range([-1, 1])
-			const yAxisScale = chart.yAxisScale.range([-1, 1])
-			const vertices = []
-			const colors = []
-			for (const sample of chart.data.samples) {
-				const opacity = self.getOpacity(sample)
-				if (opacity == 0) continue
-				let x = xAxisScale(sample.x)
-				let y = yAxisScale(sample.y)
-				let z = 0
-				vertices.push(x, y, z)
-				const color = new THREE.Color(rgb(self.getColor(sample, chart)).toString())
-				colors.push(color.r, color.g, color.b)
-			}
-			return { vertices, colors }
-		}
-
-		function animate() {
-			requestAnimationFrame(animate)
-			camera.zoom = self.zoom
-			camera.updateProjectionMatrix()
-			renderer.render(scene, camera)
-		}
-		animate()
+export class ScatterViewModel3D extends ScatterViewModel {
+	constructor(scatter) {
+		super(scatter)
 	}
 
-	self.render3DSerie = async function (chart) {
+	async renderSerie(chart) {
 		const xAxisScale = d3Linear()
-			.domain([self.range.xMin, self.range.xMax])
-			.range([self.settings.showContour ? -1 : 0, 1])
+			.domain([this.model.range.xMin, this.model.range.xMax])
+			.range([this.scatter.settings.showContour ? -1 : 0, 1])
 		const yAxisScale = d3Linear()
-			.domain([self.range.yMin, self.range.yMax])
-			.range([self.settings.showContour ? -1 : 0, 1])
+			.domain([this.model.range.yMin, this.model.range.yMax])
+			.range([this.scatter.settings.showContour ? -1 : 0, 1])
 		const zAxisScale = chart.zAxisScale.range([0, 1])
 
 		const vertices = []
 		const colors = []
 
 		for (const sample of chart.data.samples) {
-			const opacity = self.getOpacity(sample)
+			const opacity = this.model.getOpacity(sample)
 			if (opacity == 0) continue
 			let x = xAxisScale(sample.x)
 			let y = yAxisScale(sample.y)
 			let z = zAxisScale(sample.z)
-			if (self.settings.showContour) z = 0
-			const color = new THREE.Color(rgb(self.getColor(sample, chart)).toString())
+			if (this.scatter.settings.showContour) z = 0
+			const color = new THREE.Color(rgb(this.model.getColor(sample, chart)).toString())
 			vertices.push(x, y, z)
 			colors.push(color.r, color.g, color.b)
 		}
 
 		const OrbitControls = await import('three/addons/controls/OrbitControls.js')
 		chart.chartDiv.selectAll('*').remove()
-		self.canvas = self.mainDiv.insert('div').style('display', 'inline-block').append('canvas').node()
-		self.canvas.width = self.settings.svgw
-		self.canvas.height = self.settings.svgh
+		this.canvas = this.view.dom.mainDiv.insert('div').style('display', 'inline-block').append('canvas').node()
+		this.canvas.width = this.scatter.settings.svgw
+		this.canvas.height = this.scatter.settings.svgh
 
-		chart.chartDiv.style('margin', '20px 20px')
-		chart.legendDiv = self.mainDiv.insert('div').style('display', 'inline-block').style('vertical-align', 'top')
-		chart.legendG = chart.legendDiv
-			.append('svg')
-			.attr('width', self.settings.svgw / 2)
-			.attr('height', self.settings.svgh)
-			.append('g')
-			.attr('transform', 'translate(20, 20)')
-		let step = Math.min((20 * 40) / chart.colorLegend.size, 20)
-
-		self.renderLegend(chart, step)
-		const fov = self.settings.fov
+		const fov = this.scatter.settings.fov
 		const near = 0.1
 		const far = 1000
 		const camera = new THREE.PerspectiveCamera(fov, 1, near, far)
@@ -145,15 +53,15 @@ export function setRenderersThree(self) {
 		scene.background = whiteColor
 		const tex = getThreeCircle(256)
 		const material = new THREE.PointsMaterial({
-			size: self.settings.threeSize * 8,
+			size: this.scatter.settings.threeSize * 8,
 			sizeAttenuation: true,
 			transparent: true,
-			opacity: self.settings.opacity,
+			opacity: this.scatter.settings.opacity,
 			map: tex,
 			vertexColors: true
 		})
-		const controls = new OrbitControls.OrbitControls(camera, self.canvas)
-		if (self.settings.showContour) self.renderContourMap(scene, camera, material, vertices, zAxisScale, chart)
+		const controls = new OrbitControls.OrbitControls(camera, this.canvas)
+		if (this.scatter.settings.showContour) this.renderContourMap(scene, camera, material, vertices, zAxisScale, chart)
 		else {
 			camera.position.set(1.5, 1.2, 1.8)
 			camera.lookAt(scene.position)
@@ -161,8 +69,8 @@ export function setRenderersThree(self) {
 			controls.update()
 			const axesHelper = new THREE.AxesHelper(1)
 			scene.add(axesHelper)
-			if (self.settings.showAxes) {
-				self.addLabels(scene, chart)
+			if (this.scatter.settings.showAxes) {
+				this.addLabels(scene, chart)
 			}
 
 			document.addEventListener(
@@ -181,8 +89,8 @@ export function setRenderersThree(self) {
 			scene.add(particles)
 		}
 
-		const renderer = new THREE.WebGLRenderer({ antialias: true, canvas: self.canvas, preserveDrawingBuffer: true })
-		renderer.setSize(self.settings.svgw, self.settings.svgh)
+		const renderer = new THREE.WebGLRenderer({ antialias: true, canvas: this.canvas, preserveDrawingBuffer: true })
+		renderer.setSize(this.scatter.settings.svgw, this.scatter.settings.svgh)
 		renderer.setPixelRatio(window.devicePixelRatio)
 		renderer.outputColorSpace = THREE.LinearSRGBColorSpace
 
@@ -195,9 +103,10 @@ export function setRenderersThree(self) {
 			renderer.render(scene, camera)
 		}
 		animate()
+		this.addLegendSVG(chart)
 	}
 
-	self.renderContourMap = async function (scene, camera, material, vertices, zAxisScale, chart) {
+	async renderContourMap(scene, camera, material, vertices, zAxisScale, chart) {
 		const xAxisScale = d3Linear().domain([chart.xMin, chart.xMax]).range([0, this.settings.svgw])
 		const yAxisScale = d3Linear().domain([chart.yMax, chart.yMin]).range([0, this.settings.svgh])
 		const zCoords = chart.data.samples.map(s => zAxisScale(s.z))
@@ -247,9 +156,9 @@ export function setRenderersThree(self) {
 		})
 	}
 
-	self.addLabels = async function (scene) {
+	async addLabels(scene) {
 		const intensity = 0.7
-		let textGeo = getTextGeo(self.config.term?.term?.name || 'X')
+		let textGeo = getTextGeo(this.scatter.config.term?.term?.name || 'X')
 		let textMesh = new THREE.Mesh(
 			textGeo,
 			new THREE.MeshBasicMaterial({ color: new THREE.Color(intensity, intensity / 4, intensity / 4) })
@@ -257,7 +166,7 @@ export function setRenderersThree(self) {
 		textMesh.position.x = 0.01
 		textMesh.position.y = -0.03
 		scene.add(textMesh)
-		const ytext = self.config.term2?.term?.name || 'Y'
+		const ytext = this.scatter.config.term2?.term?.name || 'Y'
 		textGeo = getTextGeo(ytext)
 		textGeo.rotateZ(Math.PI / 2)
 		textMesh = new THREE.Mesh(
@@ -267,7 +176,7 @@ export function setRenderersThree(self) {
 		textMesh.position.x = -0.03
 		textMesh.position.y = 0.01
 		scene.add(textMesh)
-		const ztext = self.config.term0?.term?.name
+		const ztext = this.scatter.config.term0?.term?.name
 		textGeo = getTextGeo(ztext)
 		textGeo.rotateY(Math.PI / 2)
 		textMesh = new THREE.Mesh(
@@ -292,18 +201,4 @@ export function setRenderersThree(self) {
 			return textGeo
 		}
 	}
-}
-
-export function getThreeCircle(size) {
-	const c = document.createElement('canvas')
-	c.width = size
-	c.height = size
-	const ctx = c.getContext('2d')
-	ctx.clearRect(0, 0, size, size)
-	ctx.fillStyle = 'white'
-	ctx.beginPath()
-	ctx.arc(size / 2, size / 2, size / 2, 0, 2 * Math.PI)
-	ctx.fill()
-	const tex = new THREE.CanvasTexture(c)
-	return tex
 }
