@@ -1027,6 +1027,7 @@ this is limited to only one term and doesn't allow switching between multiple te
 		/** order of categories */
 		order: string[]
 	}
+	isLarge?: boolean
 }
 
 type Scatterplots = {

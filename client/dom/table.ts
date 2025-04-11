@@ -200,7 +200,7 @@ export function renderTable({
 			if (buttons || noButtonCallback) {
 				const clickHandler = (e: any) => {
 					// fix for clicking on <a> check/unchecking box to the left
-					if (e.target.tagName == 'A') {
+					if (e.target.tagName == 'A' || e.target.tagName == 'BUTTON') {
 						e.stopPropagation()
 						return
 					}

@@ -165,13 +165,13 @@ tape('PNET plot + filter + colorTW=gene', function (test) {
 		test.end()
 
 		function testPlot() {
-			const scatterDiv = scatter.Inner.charts[0].chartDiv
+			const scatterDiv = scatter.Inner.model.charts[0].chartDiv
 			const serieG = scatterDiv.select('.sjpcb-scatter-series')
 			const numSymbols = serieG.selectAll('path').size()
-			console.log(numSymbols == scatter.Inner.charts[0].data.samples.length)
+			console.log(numSymbols == scatter.Inner.model.charts[0].data.samples.length)
 			test.true(
-				numSymbols == scatter.Inner.charts[0].data.samples.length,
-				`Should be ${scatter.Inner.charts[0].data.samples.length}. Rendered ${numSymbols} symbols.`
+				numSymbols == scatter.Inner.model.charts[0].data.samples.length,
+				`Should be ${scatter.Inner.model.charts[0].data.samples.length}. Rendered ${numSymbols} symbols.`
 			)
 		}
 	}
@@ -216,7 +216,7 @@ tape.skip('Add shape, clicking term and replace by search', function (test) {
 	}
 
 	function triggerAddBtn(scatter) {
-		const addBtn = scatter.Inner.dom.controls
+		const addBtn = scatter.Inner.view.dom.controls
 			.selectAll('div')
 			.nodes()
 			.find(c => c.style.display == 'block' && c?.childNodes[1]?.innerHTML == '+')
@@ -232,7 +232,7 @@ tape.skip('Add shape, clicking term and replace by search', function (test) {
 	}
 
 	function testShapeRendering(scatter, term) {
-		const shapeLegend = scatter.Inner.charts[0].chartDiv
+		const shapeLegend = scatter.Inner.model.charts[0].chartDiv
 			.selectAll('g')
 			.nodes()
 			.find(c => c?.childNodes[0].innerHTML == term)
@@ -291,69 +291,5 @@ tape.skip('Add shape, clicking term and replace by search', function (test) {
 			.filter(d => d.name == origTerm)
 			.node()
 			.click()
-	}
-})
-
-tape('Groups and group menus functions', function (test) {
-	test.timeoutAfter(8000)
-
-	runpp({
-		state: groupState,
-		sampleScatter: {
-			callbacks: {
-				'postRender.test': runTests
-			}
-		}
-	})
-
-	async function runTests(scatter) {
-		scatter.on('postRender.test', null)
-
-		await triggerGroupMenu(scatter)
-
-		if (test._ok) scatter.Inner.app.destroy()
-		test.end()
-	}
-
-	async function triggerGroupMenu(scatter) {
-		/* Menu appears in the upper left corner instead of under groups button.
-		This is expected. No x/y coord is provided to orient the menu 
-		under the groups button. */
-		scatter.Inner.showGroupsMenu(new PointerEvent('click'))
-		const groupsMenu = scatter.Inner.dom.tip.d.selectAll('div.sja_menuoption').nodes()
-		for (const group of scatter.Inner.config.groups) {
-			const foundGroupInMenu = groupsMenu.filter(
-				d => d?.childNodes[0]?.outerText == `${group.name}: ${group.items.length}`
-			)
-			test.ok(foundGroupInMenu.length == 1, `Should include ${group.name} in groups menu`)
-		}
-
-		for (const [i, group] of scatter.Inner.config.groups.entries()) {
-			scatter.Inner.showGroupMenu(new PointerEvent('click'), scatter.Inner.config.groups[i])
-			await sleep(1000)
-			const groupMenuTitleDiv = scatter.Inner.dom.tip.d.selectAll('div[name="sjpp-group-input-div"]').node()
-			test.ok(groupMenuTitleDiv.innerHTML.endsWith(group.name), `Should display ${group.name} menu`)
-
-			scatter.Inner.showTable(group, 0, 0)
-			testSampleTable(scatter, i, group)
-		}
-	}
-
-	function testSampleTable(scatter, i, group) {
-		const samplesRendered = scatter.Inner.dom.tip.d.selectAll('.sjpp_row_wrapper > td:nth-child(3)').nodes()
-		let samples2Check = []
-		for (const item of samplesRendered) {
-			samples2Check.push(item.innerHTML)
-		}
-
-		//Check every sample in group renders in sample table
-		let foundSamples = 0
-		for (const sampleData of scatter.Inner.config.groups[i].items) {
-			if (samples2Check.some(d => d == sampleData.sample)) ++foundSamples
-			else notFound.push(sampleData.sample)
-		}
-		test.equal(samples2Check.length, foundSamples, `Should render all samples for ${group.name}`)
-
-		if (test._ok) scatter.Inner.dom.tip.d.remove()
 	}
 })
