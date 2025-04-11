@@ -41,6 +41,16 @@ RUN apt-get update && apt-get install -y \
     cmake \
     python3-pip \
     python3-venv \
+    x11-common \
+    libx11-dev \
+    libx11-data \
+    libxext-dev \
+    libxmu-dev \
+    libxt-dev \
+    libreadline-dev \
+    gfortran \
+    software-properties-common \
+    libargtable2-dev \
 	## clean up
   && apt-get clean \
   && rm -rf /var/lib/apt/lists/ \
@@ -68,24 +78,23 @@ RUN curl -L https://github.com/samtools/samtools/releases/download/${htsversion}
 RUN curl -L https://github.com/samtools/bcftools/releases/download/${htsversion}/bcftools-${htsversion}.tar.bz2 | tar xj && \
     (cd bcftools-${htsversion} && ./configure --enable-libgsl --with-htslib=system && make install)
 
-# Add CRAN repository and GPG key for R
-RUN apt-get update && apt-get install -y \
-    software-properties-common \
-    && apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 'B8F25A8A73EACF41' && `#pragma: allowlist secret` \
-    && add-apt-repository 'deb https://cloud.r-project.org/bin/linux/debian bookworm-cran40/' \
-    && apt-get update
-
-RUN apt-get update && apt-get install -y r-base -y r-base-dev -y libargtable2-dev \
-	## install R packages
- 	&& R -e "install.packages(c('cmprsk', 'hwde', 'jsonlite', 'survival', 'lmtest', 'dplyr', 'tidyr', 'BiocManager', 'readr', 'doParallel', 'ggplot2'), dependencies=TRUE, repos='http://cran.rstudio.com/')" \
-	&& R -e "BiocManager::install(c('edgeR','rhdf5'))" \
+RUN curl -O https://cran.r-project.org/src/base/R-4/R-4.4.3.tar.gz && \
+    tar -xzf R-4.4.3.tar.gz && \
+    cd R-4.4.3 && \
+    ./configure && \
+    make && \
+    make install && \
+    R -e "install.packages(c('cmprsk', 'hwde', 'jsonlite', 'survival', 'lmtest', 'dplyr', 'tidyr', 'BiocManager', 'readr', 'doParallel', 'ggplot2'), dependencies=TRUE, repos='http://cran.rstudio.com/')" \
+    && R -e "BiocManager::install(c('edgeR','rhdf5'))" \
     ## set locale encoding in R
     ## must match encoding configuration in docker
     && echo "LC_ALL=C.UTF-8" > /root/.Renviron \
     ## clean up
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/ \
-    && rm -rf /tmp/downloaded_packages/ /tmp/*.rds
+    && rm -rf /tmp/downloaded_packages/ /tmp/*.rds \
+    && cd .. \
+    && rm R-4.4.3.tar.gz
 
 RUN mkdir -p /home/root/pp && cd /home/root/pp && mkdir app && mkdir tp && mkdir cache && mkdir tools
 
