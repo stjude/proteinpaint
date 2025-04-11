@@ -126,7 +126,8 @@ export class ListSamples {
 			lst: any[]
 		} = {
 			type: 'tvslst',
-			in: true,
+			/** The samplelst term should always be term2 */
+			in: tw2.term.type == 'samplelst' ? this.getInValue(tw2) : true,
 			join: 'and',
 			lst: []
 		}
@@ -148,5 +149,11 @@ export class ListSamples {
 		}
 
 		return tvslst
+	}
+
+	//Should filter out other group samples
+	getInValue(tw2) {
+		if (!tw2.q.groups.some((g: any) => !g.in)) return true
+		return !this.plot.key.includes('Not in')
 	}
 }
