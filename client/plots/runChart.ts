@@ -10,6 +10,7 @@ import { select } from 'd3-selection'
 import { plotColor } from '#shared/common.js'
 import { filterJoin } from '#filter'
 import { getDateFromNumber, isNumericTerm } from '#shared/terms.js'
+import { median } from 'd3-array'
 
 /*
 sample object returned by server:
@@ -191,8 +192,14 @@ class RunChart {
 				}
 			}
 			for (const [key, value] of groupedSamples.entries()) {
-				const y = value.ysum / value.samples.length
-				const x = value.xsum / value.samples.length
+				let x, y
+				if (this.settings.useMedian) {
+					x = median(value.samples.map(d => d.x))
+					y = median(value.samples.map(d => d.y))
+				} else {
+					y = value.ysum / value.samples.length
+					x = value.xsum / value.samples.length
+				}
 				for (const sample of value.samples) {
 					sample.x = x //grouped samples by month and year
 					sample.y = y //grouped samples by month and year
@@ -343,7 +350,7 @@ class RunChart {
 			step
 		}
 
-		const inputs = [
+		const inputs: any = [
 			{
 				type: 'term',
 				configKey: 'term',
@@ -477,6 +484,17 @@ class RunChart {
 				]
 			})
 
+		if (this.settings.aggregateData) {
+			inputs.splice(5, 0, {
+				boxLabel: '',
+				label: 'Use median to aggregate',
+				type: 'checkbox',
+				chartType: 'runChart',
+				settingsKey: 'useMedian',
+				title: `Use median instead of average to aggregate the data`
+			})
+		}
+
 		this.components = {
 			controls: await controlsInit({
 				app: this.app,
@@ -572,6 +590,7 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 export function getDefaultRunChartSettings() {
 	return {
 		aggregateData: true,
+		useMedian: true,
 		size: 0.8,
 		minShapeSize: 0.5,
 		maxShapeSize: 4,
