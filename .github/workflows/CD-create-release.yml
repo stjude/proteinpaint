@@ -54,6 +54,17 @@ jobs:
       - name: Fetch All Tags
         run: git fetch --all --tags
 
+      - name: Install dependencies for canvas
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            libcairo2-dev \
+            libpango1.0-dev \
+            libjpeg-dev \
+            libgif-dev \
+            librsvg2-dev     
+
       # Setup .npmrc file to publish to GitHub Packages
       - uses: actions/setup-node@v3
         with:
