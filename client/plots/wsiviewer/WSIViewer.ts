@@ -12,21 +12,23 @@ import type TileSource from 'ol/source/Tile'
 import { WSIViewerInteractions } from '#plots/wsiviewer/interactions/WSIViewerInteractions.ts'
 import type Settings from '#plots/wsiviewer/Settings.ts'
 import wsiViewerDefaults from '#plots/wsiviewer/defaults.ts'
-import type { WSImagesRequest, WSImagesResponse, WSImage } from '#types'
-import wsiViewerImageFiles from './wsimagesloaded.ts'
+import { SampleWSImagesResponse, WSImage, WSImagesRequest, WSImagesResponse } from '#types'
 import { table2col } from '#dom/table2col'
-export default class WSIViewer {
+import { Projection } from 'ol/proj'
+import { RxComponentInner } from '../../types/rx.d'
+import 'ol-ext/dist/ol-ext.css'
+import LayerSwitcher from 'ol-ext/control/LayerSwitcher'
+
+export default class WSIViewer extends RxComponentInner {
 	// following attributes are required by rx
 	private type: string
-	private id: any
-	private opts: any
-	private app: any
 
 	private wsiViewerInteractions: WSIViewerInteractions
 
 	private thumbnailsContainer: any
 
 	constructor(opts: any) {
+		super()
 		this.type = 'WSIViewer'
 		this.opts = opts
 		this.wsiViewerInteractions = new WSIViewerInteractions(this, opts)
@@ -34,28 +36,37 @@ export default class WSIViewer {
 
 	async main(): Promise<void> {
 		const state = this.app.getState()
-
-		const plotConfig = state.plots.find(p => p.id === this.id)
-
-		const settings = plotConfig.settings as Settings
-
+		const settings = state.plots.find(p => p.id === this.id).settings as Settings
 		const holder = this.opts.holder
 
-		if (plotConfig.wsimages.length === 0) {
+		const data: SampleWSImagesResponse = await dofetch3('samplewsimages', {
+			body: {
+				genome: state.genome || state.vocab.genome,
+				dslabel: state.dslabel || state.vocab.dslabel,
+				sample_id: state.sample_id
+			}
+		})
+
+		const wsimages: WSImage[] = data.sampleWSImages
+
+		if (wsimages.length === 0) {
 			holder.append('div').style('margin-left', '10px').text('No WSI images.')
 			return
 		}
 
-		let layers: TileLayer<Zoomify>[] = []
+		let wsimageLayers: Array<WSImageLayers> = []
 
 		try {
-			layers = await this.getLayers(state, plotConfig.wsimages)
+			wsimageLayers = await this.getWSImageLayers(state, wsimages)
 		} catch (e: any) {
 			holder.append('div').style('margin-left', '10px').text(e.message)
 			return
 		}
 
-		this.generateThumbnails(layers, settings)
+		this.generateThumbnails(
+			wsimageLayers.map(wsimageLayers => wsimageLayers.wsimage),
+			settings
+		)
 
 		holder.select('div[id="wsi-viewer"]').remove()
 
@@ -65,12 +76,13 @@ export default class WSIViewer {
 			.style('width', settings.imageWidth)
 			.style('height', settings.imageHeight)
 
-		const activeImage: TileLayer = layers[settings.displayedImageIndex]
+		const activeImage: TileLayer = wsimageLayers[settings.displayedImageIndex].wsimage
 		const activeImageExtent = activeImage?.getSource()?.getTileGrid()?.getExtent()
 
-		const map = this.getMap(activeImage)
+		const map = this.getMap(wsimageLayers[settings.displayedImageIndex])
+		const hasOverlay = wsimageLayers[settings.displayedImageIndex].overlay != null
 
-		this.addControls(map, activeImage)
+		this.addControls(map, activeImage, hasOverlay)
 
 		if (activeImageExtent) {
 			map.getView().fit(activeImageExtent)
@@ -83,11 +95,11 @@ export default class WSIViewer {
 			)
 		}
 
-		this.renderMetadata(holder, layers, settings)
+		this.renderMetadata(holder, wsimageLayers, settings)
 	}
 
-	private async getLayers(state: any, wsimages: WSImage[]): Promise<Array<TileLayer<Zoomify>>> {
-		const layers: Array<TileLayer<Zoomify>> = []
+	private async getWSImageLayers(state: any, wsimages: WSImage[]): Promise<WSImageLayers[]> {
+		const layers: Array<WSImageLayers> = []
 
 		const genome = state.genome || state.vocab.genome
 		const dslabel = state.dslabel || state.vocab.dslabel
@@ -127,12 +139,42 @@ export default class WSIViewer {
 				preview: `/tileserver/layer/slide/${data.wsiSessionId}/zoomify/TileGroup0/0-0-0@1x.jpg?${queryParams}`,
 				metadata: wsimages[i].metadata,
 				source: source,
-				baseLayer: true
+				baseLayer: true,
+				title: 'Slide'
 			}
-
 			const layer = new TileLayer(options)
 
-			layers.push(layer)
+			const wsiImageLayers: WSImageLayers = {
+				wsimage: layer
+			}
+
+			const overlays = wsimages[i].overlays
+
+			if (overlays) {
+				for (const overlay of overlays) {
+					const overlayQueryParams = `wsi_image=${overlay}&dslabel=${dslabel}&genome=${genome}&sample_id=${sampleId}`
+
+					const zoomifyOverlayLatUrl = `/tileserver/layer/overlay/${data.wsiSessionId}/zoomify/{TileGroup}/{z}-{x}-{y}@1x.jpg?${overlayQueryParams}`
+
+					const sourceOverlay = new Zoomify({
+						url: zoomifyOverlayLatUrl,
+						size: [imgWidth, imgHeight],
+						crossOrigin: 'anonymous',
+						zDirection: -1 // Ensure we get a tile with the screen resolution or higher
+					})
+
+					const optionsOverlay = {
+						preview: `/tileserver/layer/overlay/${data.wsiSessionId}/zoomify/TileGroup0/0-0-0@1x.jpg?${overlayQueryParams}`,
+						metadata: wsimages[i].metadata,
+						source: sourceOverlay,
+						title: 'Overlay'
+					}
+
+					wsiImageLayers.overlay = new TileLayer(optionsOverlay)
+				}
+			}
+
+			layers.push(wsiImageLayers)
 		}
 		return layers
 	}
@@ -164,6 +206,7 @@ export default class WSIViewer {
 					.style('align-items', 'center')
 					.style('justify-content', 'center')
 					.style('border', isActive ? setting.activeThumbnailBorderStyle : setting.nonActiveThumbnailBorderStyle)
+					.style('cursor', 'pointer')
 					.on('click', () => {
 						this.wsiViewerInteractions.thumbnailClickListener(i)
 					})
@@ -187,17 +230,46 @@ export default class WSIViewer {
 		}
 	}
 
-	private getMap(displayedImage: TileLayer): OLMap {
+	private getMap(wSImageLayers: WSImageLayers): OLMap {
+		const activeImage: TileLayer = wSImageLayers.wsimage
+		const extent = activeImage?.getSource()?.getTileGrid()?.getExtent()
+
+		// TODO Add metersPerUnit?
+		const projection = new Projection({
+			code: 'ZoomifyProjection',
+			units: 'pixels',
+			extent: extent,
+			getPointResolution: function (resolution) {
+				return resolution
+			}
+		})
+
+		const layers = [activeImage]
+		if (wSImageLayers.overlay) {
+			layers.push(wSImageLayers.overlay)
+		}
+
 		return new OLMap({
-			layers: [displayedImage],
+			layers: layers,
 			target: 'wsi-viewer',
 			view: new View({
-				resolutions: displayedImage.getSource()?.getTileGrid()?.getResolutions()
+				projection: projection,
+				resolutions: activeImage.getSource()?.getTileGrid()?.getResolutions(),
+				constrainOnlyCenter: true
 			})
 		})
 	}
 
-	private addControls(map: OLMap, firstLayer: TileLayer) {
+	private addControls(map: OLMap, firstLayer: TileLayer, hasOverlay: boolean) {
+		if (hasOverlay) {
+			map.addControl(
+				new LayerSwitcher({
+					collapsed: true,
+					mouseover: true
+				})
+			)
+		}
+
 		const fullscreen = new FullScreen()
 		map.addControl(fullscreen)
 
@@ -213,12 +285,12 @@ export default class WSIViewer {
 		map.addControl(overviewMapControl)
 	}
 
-	private renderMetadata(holder: any, layers: Array<TileLayer<Zoomify>>, settings: Settings) {
+	private renderMetadata(holder: any, layers: Array<WSImageLayers>, settings: Settings) {
 		holder.select('div[id="metadata"]').remove()
 		const holderDiv = holder.append('div').attr('id', 'metadata')
 
 		const table = table2col({ holder: holderDiv })
-		const metadata = layers[settings.displayedImageIndex].get('metadata')
+		const metadata = layers[settings.displayedImageIndex].wsimage.get('metadata')
 
 		if (metadata) {
 			// Create table rows for each key-value pair
@@ -231,6 +303,11 @@ export default class WSIViewer {
 	}
 }
 
+type WSImageLayers = {
+	wsimage: TileLayer<Zoomify>
+	overlay?: TileLayer<Zoomify>
+}
+
 export const wsiViewer = getCompInit(WSIViewer)
 
 export const componentInit = wsiViewer
@@ -240,7 +317,6 @@ export async function getPlotConfig(opts: any, app: any) {
 		chartType: 'WSIViewer',
 		subfolder: 'wsiviewer',
 		extension: 'ts',
-		wsimages: await wsiViewerImageFiles({ app }),
 		settings: wsiViewerDefaults(opts.overrides)
 	}
 }
