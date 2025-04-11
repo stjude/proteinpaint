@@ -914,6 +914,8 @@ export type WSImages = {
 	getSamples?: () => Promise<Array<WSISample>>
 	/** either ds supplied or dynamically added on launch with built in logic */
 	getWSImages?: (sampleName: string) => Promise<WSImage[]>
+
+	getWSIAnnotations?: (sampleName: string) => Promise<string[]>
 }
 
 /*** types supporting Termdb ***/

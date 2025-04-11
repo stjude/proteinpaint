@@ -9,7 +9,7 @@ import serverconfig from '#src/serverconfig.js'
 import path from 'path'
 
 export const api: RouteApi = {
-	endpoint: `tileserver/layer/slide/:sessionId/zoomify/:TileGroup/:z-:x-:y@1x.jpg`,
+	endpoint: `tileserver/layer/:type/:sessionId/zoomify/:TileGroup/:z-:x-:y@1x.jpg`,
 	methods: {
 		get: {
 			...tilePayload,
@@ -25,7 +25,7 @@ export const api: RouteApi = {
 function init({ genomes }) {
 	return async (req: any, res: any): Promise<void> => {
 		try {
-			const { sessionId, TileGroup, z, x, y } = req.params satisfies TileRequest
+			const { type, sessionId, TileGroup, z, x, y } = req.params satisfies TileRequest
 			const query = req.query
 			const wsiImage = query.wsi_image
 			if (!wsiImage) throw new Error('No wsi_image param provided')
@@ -54,7 +54,7 @@ function init({ genomes }) {
 				throw new Error('No tile server')
 			}
 
-			const url = `${tileServer.url}/tileserver/layer/slide/${sessionId}/zoomify/${TileGroup}/${z}-${x}-${y}@1x.jpg`
+			const url = `${tileServer.url}/tileserver/layer/${type}/${sessionId}/zoomify/${TileGroup}/${z}-${x}-${y}@1x.jpg`
 
 			const response = await ky.get(url, { timeout: 120000 })
 

@@ -15,6 +15,13 @@ import wsiViewerDefaults from '#plots/wsiviewer/defaults.ts'
 import type { WSImagesRequest, WSImagesResponse, WSImage } from '#types'
 import wsiViewerImageFiles from './wsimagesloaded.ts'
 import { table2col } from '#dom/table2col'
+import VectorLayer from 'ol/layer/Vector'
+import VectorSource from 'ol/source/Vector'
+import { Icon, Style } from 'ol/style'
+import { Point } from 'ol/geom'
+import { Feature } from 'ol'
+import { fromLonLat, Projection } from 'ol/proj'
+import { Extent } from 'ol/extent'
 export default class WSIViewer {
 	// following attributes are required by rx
 	private type: string
@@ -55,7 +62,7 @@ export default class WSIViewer {
 			return
 		}
 
-		this.generateThumbnails(layers, settings)
+		// this.generateThumbnails(layers, settings)
 
 		holder.select('div[id="wsi-viewer"]').remove()
 
@@ -65,10 +72,10 @@ export default class WSIViewer {
 			.style('width', settings.imageWidth)
 			.style('height', settings.imageHeight)
 
-		const activeImage: TileLayer = layers[settings.displayedImageIndex]
+		const activeImage: TileLayer = layers[0]
 		const activeImageExtent = activeImage?.getSource()?.getTileGrid()?.getExtent()
 
-		const map = this.getMap(activeImage)
+		const map = this.getMap(activeImage, layers[1], activeImageExtent)
 
 		this.addControls(map, activeImage)
 
@@ -132,7 +139,29 @@ export default class WSIViewer {
 
 			const layer = new TileLayer(options)
 
+			const overlayFile = 'CMU-1.geojson'
+
+			const overlayQueryParams = `wsi_image=${overlayFile}&dslabel=${dslabel}&genome=${genome}&sample_id=${sampleId}`
+
+			const zoomifyOverlayLatUrl = `/tileserver/layer/overlay/${data.wsiSessionId}/zoomify/{TileGroup}/{z}-{x}-{y}@1x.jpg?${overlayQueryParams}`
+
+			const sourceOverlay = new Zoomify({
+				url: zoomifyOverlayLatUrl,
+				size: [imgWidth, imgHeight],
+				crossOrigin: 'anonymous',
+				zDirection: -1 // Ensure we get a tile with the screen resolution or higher
+			})
+
+			const optionsOverlay = {
+				preview: `/tileserver/layer/slide/${data.wsiSessionId}/zoomify/TileGroup0/0-0-0@1x.jpg?${queryParams}`,
+				metadata: wsimages[i].metadata,
+				source: sourceOverlay
+			}
+
+			const overlayLayer = new TileLayer(optionsOverlay)
+
 			layers.push(layer)
+			layers.push(overlayLayer)
 		}
 		return layers
 	}
@@ -187,12 +216,25 @@ export default class WSIViewer {
 		}
 	}
 
-	private getMap(displayedImage: TileLayer): OLMap {
+	private getMap(displayedImage: TileLayer, overlay: TileLayer, extent: Extent | undefined): OLMap {
+		// MMP is hardcoded to 0.4557375840456018
+		const projection = new Projection({
+			code: 'ZoomifyProjection',
+			units: 'pixels',
+			extent: extent,
+			metersPerUnit: 0.4557375840456018 * 1e-6,
+			getPointResolution: function (resolution) {
+				return resolution
+			}
+		})
+
 		return new OLMap({
-			layers: [displayedImage],
+			layers: [displayedImage, overlay],
 			target: 'wsi-viewer',
 			view: new View({
-				resolutions: displayedImage.getSource()?.getTileGrid()?.getResolutions()
+				projection: projection,
+				resolutions: displayedImage.getSource()?.getTileGrid()?.getResolutions(),
+				constrainOnlyCenter: true
 			})
 		})
 	}

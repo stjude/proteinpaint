@@ -110,6 +110,20 @@ async function getSessionId(cookieJar: any, getCookieString: any, setCookie: any
 
 	await sessionManager.setSession(wsimage, sessionId, tileServer)
 
+	const annotationsData = qs.stringify({
+		overlay_path: '/Users/aacic/data/tp/files/hg38/pathologytool/wsimages/SAMPLE-1/CMU-1.geojson'
+	})
+
+	await ky.put(`${tileServer.url}/tileserver/overlay`, {
+		body: annotationsData,
+		timeout: 50000,
+		headers: {
+			'Content-Type': 'application/x-www-form-urlencoded',
+			Cookie: `session_id=${sessionId}`
+		},
+		hooks: getHooks(cookieJar, getCookieString, setCookie)
+	})
+
 	return sessionId
 }
 
