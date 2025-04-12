@@ -11,11 +11,13 @@ const __dirname = import.meta.dirname
 notifier.notify({ title: 'PP server', message: 'restarted' })
 
 const sse = serverconfig.features.sse && path.join(serverconfig.binpath, '.sse')
+const serverEntry = path.join(process.cwd(), 'server.ts')
 
 export default function setRoutes(app, basepath) {
 	// when validating server ds and routes init, no need to watch file
 	// that would cause the validation to hang, should exit with no error
 	if (process.argv.includes('validate') || !serverconfig.debugmode) return
+	if (!fs.existsSync(serverEntry)) return
 
 	// dev or test script will create .sse/messages as needed in non-prod environments,
 	// sse routes, notification is disabled if this msgDir is not present
@@ -75,7 +77,7 @@ export default function setRoutes(app, basepath) {
 		})
 
 		// detect server bundle file stat, to use for filtering message files by time
-		const bundleStat = await fs.promises.stat(path.join(process.cwd(), 'server.ts'))
+		const bundleStat = await fs.promises.stat(serverEntry)
 
 		// scan msgDir once to initialize filename keys in messages,
 		// additional file event sources will be added via fs.watch() callback
