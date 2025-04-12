@@ -15,9 +15,9 @@ class profileRadarFacility extends profilePlot {
 
 	async init(appState) {
 		await super.init(appState)
-		const config = appState.plots.find(p => p.id === this.id)
+		const config = structuredClone(appState.plots.find(p => p.id === this.id))
 		this.plotConfig = config
-		this.twLst = [this.config.facilityTW]
+		this.twLst = [config.facilityTW]
 		this.terms = config.terms
 		for (const row of this.terms) {
 			this.rowCount++
@@ -328,7 +328,7 @@ export async function getPlotConfig(opts, app, _activeCohort) {
 		const activeCohort = _activeCohort === undefined ? app.getState().activeCohort : _activeCohort
 		const defaults = await getProfilePlotConfig(activeCohort, app, opts)
 		if (!defaults) throw 'default config not found in termdbConfig.plotConfigByCohort.profileRadarFacility'
-		let config = copyMerge(structuredClone(defaults), opts)
+		const config = copyMerge(structuredClone(defaults), opts)
 		const settings = getDefaultProfilePlotSettings()
 
 		config.settings = {
