@@ -23,7 +23,7 @@ try {
 	if (health) throw 'there is a conflicting localhost:3000 server that is already running'
 } catch (e) {
 	// expect to not have conflicting server instance
-	if (typeof e != 'string' || !e.includes('coflicting localhost')) {
+	if (typeof e != 'string' && !e.includes('conflicting localhost')) {
 		throw e
 	}
 }
