@@ -4,6 +4,12 @@
 
 FROM ppserver:latest
 
+WORKDIR /home/root/pp/app/
+COPY ./python ./
+RUN cd python && npm link
+
+WORKDIR /home/root/pp/app/active
+
 # the local ppserver:latest has the correct packed tgz entries 
 # for updated workspace dependencies
 RUN mkdir server && cp node_modules/@sjcrh/proteinpaint-server/package.json server/
@@ -15,7 +21,7 @@ RUN npm install
 # copy other artifacts that are more prone to changes 
 # and should not trigger unnecessary npm install
 COPY ./server ./
-RUN sed -i.bak "s|coverage.js & |coverage.js|g" package.json
+RUN sed -i.bak "s|coverage.js & |coverage.js|g" package.json && npm link "@sjcrh/proteinpaint-python"
 
 EXPOSE 3000
 # sleep after the test run, so that the container

@@ -74,6 +74,7 @@ container/dataset/*
 container/**/pkg.json
 container/ci-run.sh
 container/coverage/server/*
+container/coverage/python/*
 container/coverage/.coverage*/*
 
 **/rust/target/*
