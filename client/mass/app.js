@@ -133,8 +133,11 @@ class MassApp {
 
 	async main() {
 		await this.api.vocabApi.main()
-		//Do not show the plots if the active tab is the about tab
-		this.dom.plotDiv.style('display', this.state.nav?.activeTab == 0 ? 'none' : 'block')
+		//Do not show the plots if about tab is active (activeTab=0 and displaySubheader=true)
+		this.dom.plotDiv.style(
+			'display',
+			this.state.nav?.activeTab == 0 && this.state.nav?.displaySubheader ? 'none' : 'block'
+		)
 		const newPlots = {}
 		let sandbox
 		for (const plot of this.state.plots) {
