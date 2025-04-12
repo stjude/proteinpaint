@@ -46,7 +46,9 @@ docker run -d \
   -e PP_PORT=$EXPOSED_PORT \
   $IMGNAME
 
+# ../verify.sh ppcov $HOSTPORT $EXPOSED_PORT
 sleep 12
+
 cd $COVDIR/../../client
 $XVFB npm run $COVTYPE:coverage
 

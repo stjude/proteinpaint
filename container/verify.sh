@@ -11,7 +11,7 @@ fi
 CONTAINER_NAME=$1
 HOSTPORT=$2
 EXPOSED_PORT=$3
-
+echo "[$CONTAINER_NAME][$HOSTPORT][$EXPOSED_PORT]"
 ##########################
 # Monitor server startup
 ##########################
@@ -26,7 +26,7 @@ while true; do
     break
   fi
   if docker logs $CONTAINER_NAME 2>&1 | grep -q "Error"; then
-  	docker logs pp
+  	docker logs $CONTAINER_NAME
     exit 1
   fi
   sleep 1
@@ -44,7 +44,7 @@ while true; do
       break
   fi
   if docker logs $CONTAINER_NAME 2>&1 | grep -q "Error"; then
-  	docker logs pp
+  	docker logs $CONTAINER_NAME
     exit 1
   fi
   sleep 1

@@ -65,8 +65,8 @@ if (mode == 'dev') {
 		config.cachedir = path.join(__dirname, 'test/cache')
 		fs.writeFileSync(path.join(__dirname, './serverconfig.json'), JSON.stringify(config, null, '    '))
 	}
-
-	const specs = glob.sync('./**/test/*.unit.spec.*', { cwd: __dirname })
+	const ignore = ['node_modules/**']
+	const specs = glob.sync('./**/test/*.unit.spec.*', { cwd: __dirname, ignore })
 	const imports = specs.map(f => `import './${f}'`)
 	console.log(imports.join('\n'))
 }

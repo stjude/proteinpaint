@@ -128,13 +128,13 @@ jobs:
           echo "Coverage report for combined runs of unit and integration tests" >> $GITHUB_STEP_SUMMARY
           echo "" > ./detailed_reports.md
 
-          if [[ -d client/.nyc_output ]]; then
-            if [[ -f client/.nyc_output/coverage-summary.md ]]; then
-              cat client/.nyc_output/coverage-summary.md >> $GITHUB_STEP_SUMMARY
+          if [[ -d client/.coverage ]]; then
+            if [[ -f client/.coverage/coverage-summary.md ]]; then
+              cat client/.coverage/coverage-summary.md >> $GITHUB_STEP_SUMMARY
             fi
 
-            if [[ -f client/.nyc_output/coverage-details.md ]]; then
-              cat client/.nyc_output/coverage-details.md >> ./detailed_reports.md
+            if [[ -f client/.coverage/coverage-details.md ]]; then
+              cat client/.coverage/coverage-details.md >> ./detailed_reports.md
             fi
           else
             echo -e "\nFailed to generate client coverage report\n" >> $GITHUB_STEP_SUMMARY

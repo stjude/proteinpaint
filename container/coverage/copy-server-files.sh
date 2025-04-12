@@ -9,6 +9,10 @@ set -exo pipefail
 # COPY SOURCE CODE, ARTIFACTS
 ##############################
 
+rm -rf python
+mkdir python
+cp -r ../../python python/
+
 rm -rf server
 mkdir server
 
