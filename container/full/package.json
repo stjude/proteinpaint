@@ -1,7 +1,7 @@
 {
 	"private": true,
 	"name": "@sjcrh/ppfull",
-	"version": "2.118.0",
+	"version": "2.118.1-0",
 	"bin": "app-full.js",
 	"scripts": {
 		"release": ""
