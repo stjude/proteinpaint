@@ -1,13 +1,14 @@
 import tape from 'tape'
-import { authApi } from '../auth'
+import { authApi } from '../auth.js'
 import jsonwebtoken from 'jsonwebtoken'
-import serverconfig from '../serverconfig'
+import serverconfig from '../serverconfig.js'
 
 /*************************
  reusable constants and helper functions
 **************************/
 
 const cachedir = serverconfig.cachedir
+const debugmode = true
 const headerKey = 'x-ds-token'
 const secret = 'abc123' // pragma: allowlist secret
 const time = Math.floor(Date.now() / 1000)
@@ -69,7 +70,7 @@ tape('\n', function (test) {
 tape(`initialization`, async test => {
 	{
 		const app = appInit()
-		await authApi.maySetAuthRoutes(app, '', { cachedir })
+		await authApi.maySetAuthRoutes(app, '', { debugmode, cachedir })
 		const middlewares = Object.keys(app.middlewares)
 		test.deepEqual(
 			[],
@@ -83,7 +84,7 @@ tape(`initialization`, async test => {
 
 	{
 		const app = appInit()
-		await authApi.maySetAuthRoutes(app, '', { cachedir, dsCredentials: {}, secrets })
+		await authApi.maySetAuthRoutes(app, '', { debugmode, cachedir, dsCredentials: {}, secrets })
 		const middlewares = Object.keys(app.middlewares)
 		test.deepEqual([], middlewares, 'should NOT set a global middleware when dsCredentials is empty')
 		const routes = Object.keys(app.routes)
@@ -103,7 +104,7 @@ tape(`initialization`, async test => {
 				}
 			}
 		}
-		await authApi.maySetAuthRoutes(app, '', { cachedir, dsCredentials, secrets })
+		await authApi.maySetAuthRoutes(app, '', { debugmode, cachedir, dsCredentials, secrets })
 		const middlewares = Object.keys(app.middlewares)
 		test.deepEqual(
 			['*'],
@@ -121,7 +122,17 @@ tape(`initialization`, async test => {
 
 	{
 		const app = appInit()
-		await authApi.maySetAuthRoutes(app, '', { cachedir })
+		const dsCredentials = {
+			testds: {
+				'*': {
+					'*': {
+						type: 'basic',
+						password: '...'
+					}
+				}
+			}
+		}
+		await authApi.maySetAuthRoutes(app, '', { debugmode, dsCredentials, cachedir })
 		test.deepEqual(
 			Object.keys(authApi).sort(),
 			[
@@ -186,6 +197,7 @@ tape('legacy reshape', async test => {
 		}
 	}
 	const serverconfig = {
+		debugmode,
 		dsCredentials,
 		cachedir
 	}
@@ -232,6 +244,7 @@ tape(`auth methods`, async test => {
 
 	const app = appInit()
 	const serverconfig = {
+		debugmode,
 		dsCredentials: {
 			ds100: {
 				termdb: {
@@ -297,6 +310,7 @@ tape(`a valid request`, async test => {
 
 	const app = appInit()
 	const serverconfig = {
+		debugmode,
 		dsCredentials: {
 			ds0: {
 				'*': {
@@ -343,6 +357,7 @@ tape(`mismatched ip address in /jwt-status`, async test => {
 
 	const app = appInit()
 	const serverconfig = {
+		debugmode,
 		dsCredentials: {
 			ds0: {
 				'*': {
@@ -397,6 +412,7 @@ tape(`invalid embedder`, async test => {
 
 	const app = appInit()
 	const serverconfig = {
+		debugmode,
 		dsCredentials: {
 			ds0: {
 				'*': {
@@ -455,6 +471,7 @@ tape(`invalid dataset access`, async test => {
 
 	const app = appInit()
 	const serverconfig = {
+		debugmode,
 		dsCredentials: {
 			ds0: {
 				'*': {
@@ -509,6 +526,7 @@ tape(`invalid jwt`, async test => {
 
 	const app = appInit()
 	const serverconfig = {
+		debugmode,
 		dsCredentials: {
 			ds0: {
 				'*': {
@@ -620,6 +638,7 @@ tape(`session-handling by the middleware`, async test => {
 	test.plan(5)
 
 	const serverconfig = {
+		debugmode,
 		dsCredentials: {
 			ds0: {
 				termdb: {
@@ -788,6 +807,7 @@ tape(`/dslogin`, async test => {
 
 	const password = '...' /* pragma: allowlist secret */
 	const serverconfig = {
+		debugmode,
 		dsCredentials: {
 			ds0: {
 				'*': {

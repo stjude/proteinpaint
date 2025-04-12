@@ -200,7 +200,7 @@ const authRouteByCredType = {
 	- will setup a middleware for most requests and the /dslogin route
 */
 async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
-	const serverconfig = _serverconfig || require('./serverconfig')
+	const serverconfig = _serverconfig || (await import('./serverconfig.js')).default
 	const sessionTracking = serverconfig.features?.sessionTracking || ''
 	const actionsFile = path.join(serverconfig.cachedir, 'authorizedActions')
 	// the required security checks for each applicable dslabel, to be processed from serverconfig.dsCredentials
@@ -213,13 +213,15 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 	// always start with an empty sessions tracking object,
 	// will fill-in as requests with auth or x-ds-*-token are received
 	let sessions = {}
-
 	// no need to setup additional middlewares and routes
 	// if there are no protected datasets
 	if (!creds || !Object.keys(creds).length) {
+		// in case maySetAuthRoutes() is called more than once in the same runtime,
+		// such as during combined coverage tests, reset to default methods if there are no credentials
+		Object.assign(authApi, defaultApiMethods)
 		// no checks for ds, is open access
 		// custom auth for testing
-		if (serverconfig.debugmode && !app.doNotFreezeAuth) Object.freeze(authApi)
+		if (!serverconfig.debugmode || !app.doNotFreezeAuthApi) Object.freeze(authApi)
 		return
 	}
 	try {
@@ -567,9 +569,17 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 		return payload || {}
 	}
 
+	const authHealth = new Map()
+
 	authApi.getHealth = async function () {
+		// may track different health for actual or mock apps during tests
+		if (authHealth.has(app)) return authHealth.get(app)
+
 		const errors = []
-		for (const dslabelPattern in creds) {
+		const dslabelPatterns = Object.keys(creds)
+		if (!dslabelPatterns.length) return { errors }
+
+		for (const dslabelPattern of dslabelPatterns) {
 			if (dslabelPattern.startsWith('#')) continue
 			for (const routePattern in creds[dslabelPattern]) {
 				if (dslabelPattern.startsWith('#')) continue
@@ -608,11 +618,12 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 				}
 			}
 		}
-		return { errors }
+		authHealth.set(app, { errors })
+		return authHealth.get(app)
 	}
 
-	// custom auth for testing
-	if (serverconfig.debugmode && !app.doNotFreezeAuth) Object.freeze(authApi)
+	// may handle custom auth for testing
+	if (!serverconfig.debugmode || !app.doNotFreezeAuthApi) Object.freeze(authApi)
 }
 
 function getSessionId(req, cred, sessions) {
@@ -799,7 +810,7 @@ function checkIPaddress(req, ip, cred) {
 		throw `Your connection has changed, please refresh your page or sign in again.`
 }
 
-export const authApi = {
+const defaultApiMethods = {
 	maySetAuthRoutes,
 	getJwtPayload,
 	canDisplaySampleIds: (req, ds) => {
@@ -816,3 +827,5 @@ export const authApi = {
 	getPayloadFromHeaderAuth: () => ({}),
 	getHealth: () => undefined
 }
+
+export const authApi = Object.assign({}, defaultApiMethods)

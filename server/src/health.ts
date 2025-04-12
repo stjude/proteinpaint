@@ -5,19 +5,15 @@ import pkg from '../package.json'
 import type { VersionInfo, GenomeBuildInfo, HealthCheckResponse } from '#types'
 import { authApi } from './auth.js'
 
-let auth
-
 export async function getStat(genomes) {
 	if (!versionInfo.deps) setVersionInfoDeps() // set only once
-	if (!auth) auth = await authApi.getHealth() // set only once
-	if (Array.isArray(auth?.errors) && !auth.errors.length) delete auth.errors
-
+	const auth = (await authApi.getHealth()) as undefined | { errors?: string[] }
 	const health = {
 		status: auth?.errors?.length ? 'error' : 'ok',
 		genomes: {},
 		versionInfo,
 		auth
-	} as HealthCheckResponse
+	} satisfies HealthCheckResponse
 
 	setGenomeDbInfo(genomes, health)
 	return health
