@@ -40,7 +40,7 @@ export async function runRelevantSpecs({ workspace, specs, dirname }) {
 			const testLog = execSync(`npx c8 ${c8opts} tsx ${path.join(dirname, spec)}`, { encoding: 'utf8' })
 			console.log(testLog)
 			if (fs.existsSync(reportDir)) {
-				const extracts = emitRelevantSpecCovDetails({
+				const extracts = await emitRelevantSpecCovDetails({
 					workspace,
 					relevantSpecs: specs,
 					reportDir,

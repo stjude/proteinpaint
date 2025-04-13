@@ -9,7 +9,7 @@ export async function evalAllSpecCovResults(errorCode = 0) {
 	const relevantWs = []
 	for (const workspace of workspaces) {
 		const result = await evalSpecCovResults({ workspace })
-		relevantWs.push(result.workspace)
+		if (result.workspace) relevantWs.push(result.workspace)
 		if (!result.ok) {
 			console.log(`\n!!! ${workspace} failed spec coverage !!!`)
 			console.log(result.failedCoverage, '\n')

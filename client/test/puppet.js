@@ -186,7 +186,7 @@ async function runTest(patternsStr) {
 
 				if (testedFiles) {
 					if (relevantSpecs) {
-						const extracts = emitRelevantSpecCovDetails({
+						const extracts = await emitRelevantSpecCovDetails({
 							workspace: 'client',
 							relevantSpecs,
 							reportDir,
