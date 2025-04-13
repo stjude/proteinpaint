@@ -23,7 +23,8 @@ const reportDir = path.join(__dirname, '../.coverage')
 const publicSpecsClientDir = `${publicSpecsDir}/client`
 const extractFiles = {
 	html: `${publicSpecsDir}/client-relevant.html`,
-	markdown: `${publicSpecsDir}/client-relevant.md`
+	markdown: `${publicSpecsDir}/client-relevant.md`,
+	json: `${publicSpecsDir}/client-relevant.json`
 }
 
 let relevantSpecs, patternToSpecs
@@ -92,6 +93,7 @@ async function runTest(patternsStr) {
 
 	const html = []
 	const markdowns = []
+	const json = {}
 	//let title
 
 	const relevantCoverage = {}
@@ -204,8 +206,13 @@ async function runTest(patternsStr) {
 					const summaryFiles = Object.keys(summary)
 					for (const f of files) {
 						for (const key of summaryFiles) {
-							if (key.endsWith(`/${f}`)) relevantCoverage[key.replace('client/', '')] = summary[key]
-							//relevantCoverage[f].link = `/coverage/client/${dirname}/`
+							if (key.endsWith(`/${f}`)) {
+								relevantCoverage[key.replace('client/', '')] = summary[key]
+								//relevantCoverage[f].link = `/coverage/client/${dirname}/`
+
+								if (Object.hasOwn(json, f)) console.log(51, `non-unique coverage result for client file='${f}'`)
+								else json[f] = summary[key]
+							}
 						}
 					}
 				}
@@ -228,44 +235,7 @@ async function runTest(patternsStr) {
 		const combinedMarkdown = markdowns.join('\n')
 		fs.writeFileSync(extractFiles.markdown, combinedMarkdown, { encoding: 'utf8' })
 	}
-
-	console.log('relevantCoverage', relevantCoverage)
-	const coveredFilenames = Object.keys(relevantCoverage)
-	if (coveredFilenames.length) {
-		const failedCoverage = new Map()
-		const { default: previousCoverage } = await import('./closestSpec-coverage.json', { with: { type: 'json' } })
-		const getPct = v => (Object.hasOwn(v, 'pct') ? v.pct : 0)
-		for (const f of coveredFilenames) {
-			if (!Object.hasOwn(previousCoverage, f)) continue
-			{
-				const prev = getLowestPct(previousCoverage[f])
-				const curr = getLowestPct(relevantCoverage[f])
-				const diff = curr - prev
-				relevantCoverage[f].lowestPct = { curr, prev, diff }
-				if (diff < 0) failedCoverage.set(f, relevantCoverage[f])
-			}
-			{
-				const prev = getAveragePct(previousCoverage[f])
-				const curr = getAveragePct(relevantCoverage[f])
-				const diff = curr - prev
-				relevantCoverage[f].averagePct = { curr, prev, diff }
-				if (diff < 0) failedCoverage.set(f, relevantCoverage[f])
-			}
-			// TODO: require other, stricter criteria later
-		}
-		fs.writeFileSync(path.join(__dirname, 'branch-coverage.json'), JSON.stringify(relevantCoverage, null, '  '))
-		if (!failedCoverage.size) {
-			console.log('\n👏 Branch coverage test PASSED! 🎉')
-			console.log('--- Percent coverage was maintained or improved across relevant files! ---\n')
-		} else {
-			console.log(
-				`\n!!! Failed coverage: average and/or lowest percent coverage decreased for ${failedCoverage.size} relevant files !!!`
-			)
-			console.log(Object.fromEntries(failedCoverage.entries()))
-			console.log(`\n`)
-			process.exit(1)
-		}
-	}
+	fs.writeFileSync(extractFiles.json, JSON.stringify(json, null, '  '), { encoding: 'utf8' })
 
 	if (Object.keys(errors).length) {
 		console.log(`\n!!! Errors detected !!!`)

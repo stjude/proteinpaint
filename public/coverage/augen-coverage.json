@@ -1,0 +1,74 @@
+{
+  "src/augen.js": {
+    "lines": {
+      "total": 65,
+      "covered": 53,
+      "skipped": 0,
+      "pct": 81.53
+    },
+    "functions": {
+      "total": 8,
+      "covered": 5,
+      "skipped": 0,
+      "pct": 62.5
+    },
+    "statements": {
+      "total": 78,
+      "covered": 61,
+      "skipped": 0,
+      "pct": 78.2
+    },
+    "branches": {
+      "total": 29,
+      "covered": 17,
+      "skipped": 0,
+      "pct": 58.62
+    },
+    "lowestPct": {
+      "curr": 58.62,
+      "prev": 58.62,
+      "diff": 0
+    },
+    "averagePct": {
+      "curr": 70.2125,
+      "prev": 70.2125,
+      "diff": 0
+    }
+  },
+  "src/closestSpec.js": {
+    "lines": {
+      "total": 63,
+      "covered": 48,
+      "skipped": 0,
+      "pct": 76.19
+    },
+    "functions": {
+      "total": 8,
+      "covered": 5,
+      "skipped": 0,
+      "pct": 62.5
+    },
+    "statements": {
+      "total": 70,
+      "covered": 54,
+      "skipped": 0,
+      "pct": 77.14
+    },
+    "branches": {
+      "total": 28,
+      "covered": 16,
+      "skipped": 0,
+      "pct": 57.14
+    },
+    "lowestPct": {
+      "curr": 57.14,
+      "prev": 57.14,
+      "diff": 0
+    },
+    "averagePct": {
+      "curr": 68.24249999999999,
+      "prev": 68.24249999999999,
+      "diff": 0
+    }
+  }
+}

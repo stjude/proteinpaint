@@ -21,6 +21,11 @@ export function emitRelevantSpecCovDetails({ workspace, relevantSpecs, reportDir
 		fs.mkdirSync(srcDir, { force: true, recursive: true })
 	}
 
+	const jsonFile = `${reportDir}/coverage-summary.json`
+	const resultsJson = fs.readFileSync(jsonFile, { encoding: 'utf8' })
+	const results = JSON.parse(resultsJson)
+	const jsonExtract = {}
+
 	const detailedMd = fs.readFileSync(path.join(reportDir, 'coverage-details.md'), { encoding: 'utf8' })
 	const detailedLines = detailedMd.split('\n')
 	// key: comma-separated spec names used for testing
@@ -31,6 +36,7 @@ export function emitRelevantSpecCovDetails({ workspace, relevantSpecs, reportDir
 	const targetFiles = new Map()
 	for (const [file, specs] of Object.entries(relevantSpecs.matchedByFile)) {
 		if (!specs.length) continue
+		// TODO: simplify finding matching html files for relevant specs
 		const line = detailedLines.find(l => l.includes(file) && (!testedSpecs || specs.find(s => testedSpecs.includes(s))))
 		if (line) {
 			const key = specs.join(', ').trim()
@@ -67,6 +73,7 @@ export function emitRelevantSpecCovDetails({ workspace, relevantSpecs, reportDir
 			if (!fs.existsSync(targetDir)) fs.mkdirSync(targetDir, { recursive: true })
 			fs.copyFileSync(srcFile, targetFile)
 			targetFiles.set(file, targetFile.replace(publicSpecsDir + '/', ''))
+			jsonExtract[file] = results[file]
 		}
 	}
 
@@ -116,7 +123,8 @@ export function emitRelevantSpecCovDetails({ workspace, relevantSpecs, reportDir
 		return {
 			title,
 			markdown: fullMarkdown,
-			html: html.join('\n')
+			html: html.join('\n'),
+			json: jsonExtract
 		}
 	}
 }

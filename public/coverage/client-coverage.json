@@ -7,10 +7,10 @@
       "pct": 90.56
     },
     "functions": {
-      "total": 29,
-      "covered": 26,
+      "total": 30,
+      "covered": 27,
       "skipped": 0,
-      "pct": 89.65
+      "pct": 90
     },
     "statements": {
       "total": 118,
@@ -19,19 +19,19 @@
       "pct": 86.44
     },
     "branches": {
-      "total": 78,
-      "covered": 55,
+      "total": 79,
+      "covered": 56,
       "skipped": 0,
-      "pct": 70.51
+      "pct": 70.88
     },
     "lowestPct": {
-      "curr": 70.51,
-      "prev": 70.51,
-      "diff": 10
+      "curr": 70.88,
+      "prev": 70.88,
+      "diff": 0
     },
     "averagePct": {
-      "curr": 67.43199999999999,
-      "prev": 67.43199999999999,
+      "curr": 84.47,
+      "prev": 84.47,
       "diff": 0
     }
   }
