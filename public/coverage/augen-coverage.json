@@ -23,16 +23,6 @@
       "covered": 17,
       "skipped": 0,
       "pct": 58.62
-    },
-    "lowestPct": {
-      "curr": 58.62,
-      "prev": 0,
-      "diff": 58.62
-    },
-    "averagePct": {
-      "curr": 70.2125,
-      "prev": 0,
-      "diff": 70.2125
     }
   },
   "src/closestSpec.js": {
@@ -66,7 +56,7 @@
       "diff": 0
     },
     "averagePct": {
-      "curr": 68.24249999999999,
+      "curr": 98.24249999999999,
       "prev": 68.24249999999999,
       "diff": 0
     }
