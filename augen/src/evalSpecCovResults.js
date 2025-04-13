@@ -9,7 +9,9 @@ if (process.argv[2]) evalSpecCovResults({ workspace: process.argv[2] })
 export async function evalSpecCovResults({ workspace }) {
 	const jsonFile = path.join(publicSpecsDir, `${workspace}-relevant.json`)
 	if (!fs.existsSync(jsonFile)) return { ok: true }
-	const { default: relevantCoverage } = await import(jsonFile, { with: { type: 'json' } })
+	// not using await import(jsonFile) since it triggers server restart when the json file is regenerated
+	const json = fs.readFileSync(jsonFile, { encoding: 'utf8' })
+	const relevantCoverage = JSON.parse(json)
 	const coveredFilenames = Object.keys(relevantCoverage)
 	if (!coveredFilenames.length) return { ok: true }
 	const covFile = path.join(publicCovDir, `${workspace}-coverage.json`)
@@ -18,9 +20,10 @@ export async function evalSpecCovResults({ workspace }) {
 	try {
 		if (!fs.existsSync(covFile)) previousCoverage = {}
 		else {
-			const c = await import(covFile, { with: { type: 'json' } })
-			if (!c) throw `unable to read spec coverage file='${covFile}'`
-			else previousCoverage = c.default
+			// not using await import(jsonFile) since it triggers server restart when the json file is regenerated
+			const json = fs.readFileSync(covFile, { encoding: 'utf8' })
+			previousCoverage = JSON.parse(json)
+			if (!previousCoverage) throw `unable to read spec coverage file='${covFile}'`
 		}
 	} catch (e) {
 		console.log(e)
@@ -62,7 +65,7 @@ export async function evalSpecCovResults({ workspace }) {
 		//process.exit(1)
 	}
 
-	return { ok: !failedCoverage.size, failedCoverage }
+	return { ok: !failedCoverage.size, failedCoverage: Object.fromEntries(failedCoverage.entries()), workspace }
 }
 
 const relevantKeys = new Set(['lines', 'functions', 'statements', 'branches'])
