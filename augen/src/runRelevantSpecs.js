@@ -1,4 +1,5 @@
-import { gitProjectRoot, emitRelevantSpecCovDetails } from './closestSpec.js'
+import { gitProjectRoot } from './closestSpec.js'
+import { emitRelevantSpecCovDetails } from './emitRelevantSpecCovDetails.js'
 import path from 'path'
 import fs from 'fs'
 import { execSync } from 'child_process'
