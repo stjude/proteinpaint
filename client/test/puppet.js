@@ -46,6 +46,7 @@ if (patternsStr === 'NO_BRANCH_COVERAGE_UPDATE') {
 	if (fs.existsSync(publicSpecsClientDir)) fs.rmSync(publicSpecsClientDir, { force: true, recursive: true })
 	if (fs.existsSync(extractFiles.html)) fs.rmSync(extractFiles.html, { force: true, recursive: true })
 	if (fs.existsSync(extractFiles.markdown)) fs.rmSync(extractFiles.markdown, { force: true, recursive: true })
+	if (fs.existsSync(extractFiles.json)) fs.rmSync(extractFiles.json, { force: true, recursive: true })
 }
 
 if (patternsStr) runTest(patternsStr).catch(console.error)

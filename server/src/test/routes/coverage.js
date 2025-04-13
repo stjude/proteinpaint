@@ -3,6 +3,7 @@ import fs from 'fs'
 import { promisify } from 'util'
 import { exec } from 'child_process'
 import { gitProjectRoot } from '@sjcrh/augen'
+import { evalAllSpecCovResults } from '../../../../test/evalAllSpecCovResults.mjs'
 
 const execProm = promisify(exec)
 
@@ -15,15 +16,28 @@ const maxTries = 5
 
 export default function setRoutes(app, basepath) {
 	if (!serverconfig.debugmode || !key) return
-	console.log('---- setting /coverage routes ---')
+	console.log('setting /coverage routes')
 
 	let numTries = 0
 
 	app.get(basepath + '/specCoverage', async (req, res) => {
 		try {
-			const out = await execProm(`cd ${gitProjectRoot} && npm run spec:coverage`, { encoding: 'utf8' })
-			res.send({ ok: true, out })
-		} catch (e) {
+			const out = await execProm(`cd ${gitProjectRoot} && npm run spec:coverage --workspaces --if-present`, {
+				encoding: 'utf8'
+			})
+			const { failures, workspaces } = await evalAllSpecCovResults()
+			res.send({ ok: true, out, failures, workspaces })
+		} catch (error) {
+			console.log('\n!!! /specCoverage route error !!!\n', error)
+			res.send({ error })
+		}
+	})
+
+	app.get(basepath + '/evalCoverage', async (req, res) => {
+		try {
+			const { failures, workspaces } = await evalAllSpecCovResults()
+			res.send({ ok: true, failures, workspaces })
+		} catch (error) {
 			console.log('\n!!! /specCoverage route error !!!\n', error)
 			res.send({ error })
 		}

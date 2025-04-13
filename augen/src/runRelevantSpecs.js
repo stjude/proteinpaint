@@ -18,6 +18,7 @@ export async function runRelevantSpecs({ workspace, specs, dirname }) {
 	if (fs.existsSync(publicSpecsWsDir)) fs.rmSync(publicSpecsWsDir, { force: true, recursive: true })
 	if (fs.existsSync(extractFiles.html)) fs.rmSync(extractFiles.html, { force: true, recursive: true })
 	if (fs.existsSync(extractFiles.markdown)) fs.rmSync(extractFiles.markdown, { force: true, recursive: true })
+	if (fs.existsSync(extractFiles.json)) fs.rmSync(extractFiles.json, { force: true, recursive: true })
 
 	if (!specs.matched.length) {
 		if (Object.keys(specs.matchedByFile).length) {

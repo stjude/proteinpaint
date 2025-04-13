@@ -22,13 +22,20 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/4.13.0/d3.min.js" integrity="sha512-RJJ1NNC88QhN7dwpCY8rm/6OxI+YdQP48DrLGe/eSAd+n+s1PXwQkkpzzAgoJe4cZFW2GALQoxox61gSY2yQfg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script><!-- pragma: allowlist secret -->
   <script src='/docs/nav.js'></script>
   <script>
-    async function getLatestCoverageReports(title='') {
-      const workspaces = ['server', 'client', 'shared/utils', 'augen']
+    async function getLatestCoverageReports(title='', _workspaces, failures) {
+      const workspaces = _workspaces || ['server', 'client', 'shared/utils', 'augen']
       const htmlSections = await Promise.all(workspaces.map(fetchHtml))
       if (!htmlSections.filter(h => h != '').length) {
         htmlSections.splice(0, htmlSections.length, '<h3>There are no relevant spec coverage results to display.</h3>')
       }
-      d3.select('#main-div').html(title + htmlSections.join('\n<br>\n'))
+      const failedNotes = [] 
+      if (failures?.length) {
+        failedNotes.push(`<h3 style='color: red'>Failed coverage</h3>`)
+        for(const f of failures) {
+          failedNotes.push(`<p><span>`, f.workspace, '<span><pre>', JSON.stringify(f.failedCoverage, null, ' ') ,'</pre></p>')
+        }
+      }
+      d3.select('#main-div').html(failedNotes.join('\n') + title + htmlSections.join('\n<br>\n'))
     }
 
     async function fetchHtml(ws) {
@@ -46,17 +53,18 @@
 
     async function getSpecCoverage() {
       try {
+        console.clear()
         d3.select('#main-div').html('Requesting coverage report ...')
         const res = await fetch('/specCoverage').then(r => r.json())
         if (res.error) console.log(res.error)
-        else if (res.out) {
-          getLatestCoverageReports(`<h2>See the browser console for server logs.<h2>`)
+        if (res.out) {
+          getLatestCoverageReports(`<h2>See the browser console for test coverage logs.<h2>`, res.workspaces, res.failures)
           console.log(`--- Displaying server-side logs for spec coverage run ---`)
           console.log(res.out.stdout) 
           console.log(`--- Displaying server-side errors for spec coverage run ---`)
           console.log(res.out.stderr)
           console.log(`--- end ---`)
-        } 
+        }
       } catch(e) {
         alert(e)
       }
@@ -74,11 +82,12 @@
 </div>
 
 <h1>Relevant coverage reports for updated code</h1>
-<p>NOTE: Correct detection of changes may require <span class='code-snippet'>git rebase origin/master</span> of your local branch before refreshing.</p>
+<p>NOTE: Correct detection of changes will require staging relevant code changes and may require <span class='code-snippet'>git rebase origin/master</span> of your local branch before refreshing.</p>
 <div id='main-div'></div>
 
 <script type='module'>
-getLatestCoverageReports()
+const res = await fetch('/evalCoverage').then(r => r.json()); console.log(83, res)
+getLatestCoverageReports(`<h2>Results from previous coverage run</h2>`, res.workspaces, res.failures)
 </script>
 </body>
 </html>
