@@ -113,10 +113,12 @@ export async function emitRelevantSpecCovDetails({ workspace, relevantSpecs, rep
 				const file = cells[0].trim().split(' ').pop().trim()
 				const targetKey = file.replace(workspace + '/', '')
 				const result = await evalSpecCovResults({ workspace, jsonExtract: { [file]: jsonExtract[file] } })
-				const { lowestPct, averagePct, failedCoverage } = result.relevantCoverage?.[file] || {
-					lowestPct: { curr: 0, prev: 0, diff: 0 },
-					averagePct: { curr: 0, prev: 0, diff: 0 }
-				}
+				const { lowestPct, averagePct, failedCoverage } = result.relevantCoverage?.[file]?.lowestPct
+					? result.relevantCoverage[file]
+					: {
+							lowestPct: { curr: 0, prev: 0, diff: 0 },
+							averagePct: { curr: 0, prev: 0, diff: 0 }
+					  }
 				const failColor = `color: #f00`
 				const failBg = `background-color: rgba(200, 100, 100, 0.1)`
 				const cell0bgStyle = !result.failedCoverage?.[file] ? '' : `style='${failColor}; ${failBg}'`
@@ -132,10 +134,10 @@ export async function emitRelevantSpecCovDetails({ workspace, relevantSpecs, rep
 				rows.push(
 					`<tr>`,
 					...cells.map((val, i) => `<td ${i === 0 ? cell0bgStyle : ''}'>${val.trim().replace(' %', '%')}</td>`),
-					`<td ${lowestPctBg}>${lowestPct.curr} - ${lowestPct.curr} = <span ${lowestPctColor}'>${lowestPct.diff.toFixed(
+					`<td ${lowestPctBg}>${lowestPct.curr} - ${lowestPct.prev} = <span ${lowestPctColor}'>${lowestPct.diff.toFixed(
 						1
 					)}%</span></td>`,
-					`<td ${averagePctBg}>${averagePct.curr.toFixed(1)} - ${averagePct.curr.toFixed(
+					`<td ${averagePctBg}>${averagePct.curr.toFixed(1)} - ${averagePct.prev.toFixed(
 						1
 					)} = <span ${averagePctColor}'>${averagePct.diff.toFixed(1)}%</span></td>`,
 					`</tr>`

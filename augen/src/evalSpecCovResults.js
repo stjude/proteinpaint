@@ -4,7 +4,9 @@ import fs from 'fs'
 
 const publicCovDir = path.dirname(publicSpecsDir)
 
-if (process.argv[2]) evalSpecCovResults({ workspace: process.argv[2] })
+if (process.argv[2] && fs.existsSync(path.join(publicSpecsDir, `${process.argv[2]}-relevant.json`))) {
+	evalSpecCovResults({ workspace: process.argv[2] })
+}
 
 export async function evalSpecCovResults({ workspace, jsonExtract }) {
 	let relevantCoverage
@@ -35,17 +37,11 @@ export async function evalSpecCovResults({ workspace, jsonExtract }) {
 		previousCoverage = {}
 	}
 
-	//console.log(11, previousCoverage)
+	// console.log(40, previousCoverage)
 	const failedCoverage = new Map()
 	const getPct = v => (Object.hasOwn(v, 'pct') ? v.pct : 0)
 	for (const f of coveredFilenames) {
-		if (!Object.hasOwn(previousCoverage, f)) {
-			const lowest = getLowestPct(relevantCoverage[f])
-			relevantCoverage[f].lowestPct = { curr: lowest, prev: 0, diff: lowest }
-			const average = getAveragePct(relevantCoverage[f])
-			relevantCoverage[f].averagePct = { curr: average, prev: 0, diff: average }
-			continue
-		}
+		if (!Object.hasOwn(previousCoverage, f)) continue
 		{
 			const prev = getLowestPct(previousCoverage[f])
 			const curr = getLowestPct(relevantCoverage[f])
@@ -63,17 +59,22 @@ export async function evalSpecCovResults({ workspace, jsonExtract }) {
 		// TODO: require other, stricter criteria later
 	}
 
-	if (!failedCoverage.size) {
-		console.log(`\n👏 ${workspace} branch coverage test PASSED! 🎉`)
-		console.log('--- Percent coverage was maintained or improved across relevant files! ---\n')
-		fs.writeFileSync(covFile, JSON.stringify(relevantCoverage, null, '  '))
-	} else {
-		console.log(
-			`\n!!! Failed coverage: average and/or lowest percent coverage decreased for ${failedCoverage.size} relevant files !!!`
-		)
-		console.log(Object.fromEntries(failedCoverage.entries()))
-		console.log(`\n`)
-		//process.exit(1)
+	// if there is a jsonExtract in the argument, it is only a partial extract
+	// as supplied by emitRelevantSpecCovDetails(), which use the results from here to update the html extract,
+	// and this partial content should not overwrite the fuller covFile content;
+	if (!jsonExtract) {
+		if (!failedCoverage.size) {
+			console.log(`\n👏 ${workspace} branch coverage test PASSED! 🎉`)
+			console.log('--- Percent coverage was maintained or improved across relevant files! ---\n')
+			fs.writeFileSync(covFile, JSON.stringify(relevantCoverage, null, '  '))
+		} else {
+			console.log(
+				`\n!!! Failed coverage: average and/or lowest percent coverage decreased for ${failedCoverage.size} relevant files !!!`
+			)
+			console.log(Object.fromEntries(failedCoverage.entries()))
+			console.log(`\n`)
+			//process.exit(1)
+		}
 	}
 
 	return {
