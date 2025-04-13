@@ -4,41 +4,14 @@ import fs from 'fs'
 
 const publicCovDir = path.dirname(publicSpecsDir)
 
-const relevantCoverage = {
-	'filter/tvs.js': {
-		lines: {
-			total: 106,
-			covered: 96,
-			skipped: 0,
-			pct: 90.56
-		},
-		functions: {
-			total: 29,
-			covered: 26,
-			skipped: 0,
-			pct: 89.65
-		},
-		statements: {
-			total: 118,
-			covered: 102,
-			skipped: 0,
-			pct: 86.44
-		},
-		branches: {
-			total: 78,
-			covered: 55,
-			skipped: 0,
-			pct: 60.51
-		}
-	}
-}
+if (process.argv[2]) evalSpecCovResults({ workspace: process.argv[2] })
 
-evalSpecCovResults({ workspace: 'client', relevantCoverage })
-
-export async function evalSpecCovResults({ workspace, relevantCoverage }) {
+export async function evalSpecCovResults({ workspace }) {
+	const jsonFile = path.join(publicSpecsDir, `${workspace}-relevant.json`)
+	if (!fs.existsSync(jsonFile)) return { ok: true }
+	const { default: relevantCoverage } = await import(jsonFile, { with: { type: 'json' } })
 	const coveredFilenames = Object.keys(relevantCoverage)
-	if (!coveredFilenames.length) return
-
+	if (!coveredFilenames.length) return { ok: true }
 	const covFile = path.join(publicCovDir, `${workspace}-coverage.json`)
 
 	let previousCoverage
@@ -54,7 +27,7 @@ export async function evalSpecCovResults({ workspace, relevantCoverage }) {
 		previousCoverage = {}
 	}
 
-	console.log(11, previousCoverage)
+	//console.log(11, previousCoverage)
 	const failedCoverage = new Map()
 	const getPct = v => (Object.hasOwn(v, 'pct') ? v.pct : 0)
 	for (const f of coveredFilenames) {
@@ -77,7 +50,7 @@ export async function evalSpecCovResults({ workspace, relevantCoverage }) {
 	}
 
 	if (!failedCoverage.size) {
-		console.log('\n👏 Branch coverage test PASSED! 🎉')
+		console.log(`\n👏 ${workspace} branch coverage test PASSED! 🎉`)
 		console.log('--- Percent coverage was maintained or improved across relevant files! ---\n')
 		fs.writeFileSync(covFile, JSON.stringify(relevantCoverage, null, '  '))
 	} else {
@@ -92,12 +65,14 @@ export async function evalSpecCovResults({ workspace, relevantCoverage }) {
 	return { ok: !failedCoverage.size, failedCoverage }
 }
 
+const relevantKeys = new Set(['lines', 'functions', 'statements', 'branches'])
+
 function getLowestPct(result) {
 	if (Object.hasOwn(result, 'lowestPct')) return result.lowestPct.curr
-	const values = Object.values(result)
-	if (!values.length) return 0
+	const entries = Object.entries(result).filter(kv => relevantKeys.has(kv[0]))
+	if (!entries.length) return 0
 	let min
-	for (const v of values) {
+	for (const [k, v] of entries) {
 		if (!Object.hasOwn(v, 'pct')) continue
 		if (min === undefined || min > v.pct) min = v.pct
 	}
@@ -106,9 +81,11 @@ function getLowestPct(result) {
 
 function getAveragePct(result) {
 	if (Object.hasOwn(result, 'averagePct')) return result.averagePct.curr
-	const values = Object.values(result)
-	if (!values.length) return 0
+	const entries = Object.entries(result).filter(kv => relevantKeys.has(kv[0]))
+	if (!entries.length) return 0
 	let total = 0
-	for (const v of values) total += Object.hasOwn(v, 'pct') ? v.pct : 0
-	return total / values.length
+	for (const [k, v] of entries) {
+		total += Object.hasOwn(v, 'pct') ? v.pct : 0
+	}
+	return total / entries.length
 }

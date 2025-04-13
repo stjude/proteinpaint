@@ -11,7 +11,8 @@ export async function runRelevantSpecs({ workspace, specs, dirname }) {
 	const publicSpecsWsDir = `${publicSpecsDir}/${workspace}`
 	const extractFiles = {
 		html: `${publicSpecsDir}/${workspace}-relevant.html`,
-		markdown: `${publicSpecsDir}/${workspace}-relevant.md`
+		markdown: `${publicSpecsDir}/${workspace}-relevant.md`,
+		json: `${publicSpecsDir}/${workspace}-relevant.json`
 	}
 
 	if (fs.existsSync(publicSpecsWsDir)) fs.rmSync(publicSpecsWsDir, { force: true, recursive: true })
@@ -26,11 +27,12 @@ export async function runRelevantSpecs({ workspace, specs, dirname }) {
 		process.exit(0)
 	}
 
-	const c8opts = `--experimental-monocart -r=v8 -r=html -r=json -r=markdown-summary -r=markdown-details -o=./.coverage`
+	const c8opts = `--experimental-monocart -r=v8 -r=html -r=json-summary -r=markdown-summary -r=markdown-details -o=./.coverage`
 
 	try {
 		const html = []
 		const markdowns = []
+		const json = {}
 		//let title
 		for (const spec of specs.matched) {
 			fs.rmSync(reportDir, { force: true, recursive: true })
@@ -46,6 +48,10 @@ export async function runRelevantSpecs({ workspace, specs, dirname }) {
 				//if (!title) title = extracts.title
 				html.push(extracts.html)
 				markdowns.push(extracts.markdown)
+				for (const [file, result] of Object.entries(extracts.json)) {
+					if (Object.hasOwn(json, file)) console.log(51, `non-unique coverage result for ${workspace} file='${file}'`)
+					else json[file] = result
+				}
 			}
 		}
 		if (html.length) {
@@ -54,6 +60,7 @@ export async function runRelevantSpecs({ workspace, specs, dirname }) {
 			const combinedMarkdown = markdowns.join('\n')
 			fs.writeFileSync(extractFiles.markdown, combinedMarkdown, { encoding: 'utf8' })
 		}
+		fs.writeFileSync(extractFiles.json, JSON.stringify(json, null, '  '), { encoding: 'utf8' })
 	} catch (e) {
 		console.log(`\n!!! ${workspace} runRelevantSpecs() error !!!\n`, e, '\n')
 	}
