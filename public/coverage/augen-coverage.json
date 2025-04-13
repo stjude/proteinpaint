@@ -26,13 +26,13 @@
     },
     "lowestPct": {
       "curr": 58.62,
-      "prev": 58.62,
-      "diff": 0
+      "prev": 0,
+      "diff": 58.62
     },
     "averagePct": {
       "curr": 70.2125,
-      "prev": 70.2125,
-      "diff": 0
+      "prev": 0,
+      "diff": 70.2125
     }
   },
   "src/closestSpec.js": {

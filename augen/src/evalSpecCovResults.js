@@ -6,12 +6,17 @@ const publicCovDir = path.dirname(publicSpecsDir)
 
 if (process.argv[2]) evalSpecCovResults({ workspace: process.argv[2] })
 
-export async function evalSpecCovResults({ workspace }) {
-	const jsonFile = path.join(publicSpecsDir, `${workspace}-relevant.json`)
-	if (!fs.existsSync(jsonFile)) return { ok: true }
-	// not using await import(jsonFile) since it triggers server restart when the json file is regenerated
-	const json = fs.readFileSync(jsonFile, { encoding: 'utf8' })
-	const relevantCoverage = JSON.parse(json)
+export async function evalSpecCovResults({ workspace, jsonExtract }) {
+	let relevantCoverage
+	if (jsonExtract) relevantCoverage = jsonExtract
+	else {
+		const jsonFile = path.join(publicSpecsDir, `${workspace}-relevant.json`)
+		if (!fs.existsSync(jsonFile)) return { ok: true }
+		// not using await import(jsonFile) since it triggers server restart when the json file is regenerated
+		const json = fs.readFileSync(jsonFile, { encoding: 'utf8' })
+		relevantCoverage = JSON.parse(json)
+	}
+
 	const coveredFilenames = Object.keys(relevantCoverage)
 	if (!coveredFilenames.length) return { ok: true }
 	const covFile = path.join(publicCovDir, `${workspace}-coverage.json`)
@@ -34,7 +39,13 @@ export async function evalSpecCovResults({ workspace }) {
 	const failedCoverage = new Map()
 	const getPct = v => (Object.hasOwn(v, 'pct') ? v.pct : 0)
 	for (const f of coveredFilenames) {
-		if (!Object.hasOwn(previousCoverage, f)) continue
+		if (!Object.hasOwn(previousCoverage, f)) {
+			const lowest = getLowestPct(relevantCoverage[f])
+			relevantCoverage[f].lowestPct = { curr: lowest, prev: 0, diff: lowest }
+			const average = getAveragePct(relevantCoverage[f])
+			relevantCoverage[f].averagePct = { curr: average, prev: 0, diff: average }
+			continue
+		}
 		{
 			const prev = getLowestPct(previousCoverage[f])
 			const curr = getLowestPct(relevantCoverage[f])
@@ -65,7 +76,12 @@ export async function evalSpecCovResults({ workspace }) {
 		//process.exit(1)
 	}
 
-	return { ok: !failedCoverage.size, failedCoverage: Object.fromEntries(failedCoverage.entries()), workspace }
+	return {
+		ok: !failedCoverage.size,
+		failedCoverage: Object.fromEntries(failedCoverage.entries()),
+		workspace,
+		relevantCoverage
+	}
 }
 
 const relevantKeys = new Set(['lines', 'functions', 'statements', 'branches'])

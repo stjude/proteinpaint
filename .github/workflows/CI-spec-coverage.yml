@@ -1,6 +1,17 @@
 name: Spec Coverage
 
 on:
+  push:
+    branches:
+      - master
+      - release-*
+      - fake-master
+    paths-ignore:
+      - '**.md'
+      - '**.txt'
+      - '.**ignore'
+      - 'docs/**'
+
   workflow_dispatch:
     inputs:
       build_secret:
@@ -94,7 +105,9 @@ jobs:
       - name: Prepare serverconfig.json and cachedir
         run: |
           cp container/ci/serverconfig.json container/
-          mkdir cache
+          if [[ ! -d cache ]]; then
+            mkdir cache
+          fi
 
       - name: Pack tarballs for updated workspaces
         if: contains(env.HAS_INTEGRATION_TESTS, 'true')

@@ -2,10 +2,11 @@ import { execSync } from 'child_process'
 import path from 'path'
 import fs from 'fs'
 import { gitProjectRoot, publicSpecsDir } from './closestSpec.js'
+import { evalSpecCovResults } from './evalSpecCovResults.js'
 
 export const specsExtractsDir = path.join(gitProjectRoot, `public/coverage/specs`)
 
-export function emitRelevantSpecCovDetails({ workspace, relevantSpecs, reportDir, testedSpecs, specPattern }) {
+export async function emitRelevantSpecCovDetails({ workspace, relevantSpecs, reportDir, testedSpecs, specPattern }) {
 	const wsSpecsExtractsDir = `${specsExtractsDir}/${workspace}`
 	//fs.rmSync(wsSpecsExtractsDir, {force: true, recursive: true})
 	if (!fs.existsSync(wsSpecsExtractsDir)) fs.mkdirSync(wsSpecsExtractsDir, { force: true, recursive: true })
@@ -100,6 +101,8 @@ export function emitRelevantSpecCovDetails({ workspace, relevantSpecs, reportDir
 					.split('|')
 					.slice(1, -1)
 					.map(colname => `<th>${colname.trim()}</th>`),
+				`<th>Lowest Pct</th>`,
+				`<th>Average Pct</th>`,
 				`</tr>`,
 				`</thead>`
 			)
@@ -109,12 +112,34 @@ export function emitRelevantSpecCovDetails({ workspace, relevantSpecs, reportDir
 				const cells = line.split('|').slice(1, -1)
 				const file = cells[0].trim().split(' ').pop().trim()
 				const targetKey = file.replace(workspace + '/', '')
+				const result = await evalSpecCovResults({ workspace, jsonExtract: { [file]: jsonExtract[file] } })
+				const { lowestPct, averagePct, failedCoverage } = result.relevantCoverage?.[file] || {
+					lowestPct: { curr: 0, prev: 0, diff: 0 },
+					averagePct: { curr: 0, prev: 0, diff: 0 }
+				}
+				const failColor = `color: #f00`
+				const failBg = `background-color: rgba(200, 100, 100, 0.1)`
+				const cell0bgStyle = !result.failedCoverage?.[file] ? '' : `style='${failColor}; ${failBg}'`
+				const lowestPctColor = lowestPct?.diff >= 0 ? '' : `style='${failColor}'`
+				const lowestPctBg = lowestPct?.diff >= 0 ? '' : `style='${failBg}'`
+				const averagePctColor = averagePct?.diff >= 0 ? '' : `style='${failColor}'`
+				const averagePctBg = averagePct?.diff >= 0 ? '' : `style='${failBg}'`
 
 				cells[0] = cells[0].replace(
 					file,
 					`<a href='http://localhost:3000/coverage/specs/${targetFiles.get(targetKey)}'>${file}</a>`
 				)
-				rows.push(`<tr>`, ...cells.map(val => `<td>${val.trim()}</td>`), `</tr>`)
+				rows.push(
+					`<tr>`,
+					...cells.map((val, i) => `<td ${i === 0 ? cell0bgStyle : ''}'>${val.trim().replace(' %', '%')}</td>`),
+					`<td ${lowestPctBg}>${lowestPct.curr} - ${lowestPct.curr} = <span ${lowestPctColor}'>${lowestPct.diff.toFixed(
+						1
+					)}%</span></td>`,
+					`<td ${averagePctBg}>${averagePct.curr.toFixed(1)} - ${averagePct.curr.toFixed(
+						1
+					)} = <span ${averagePctColor}'>${averagePct.diff.toFixed(1)}%</span></td>`,
+					`</tr>`
+				)
 			}
 			html.push(`<tbody>`, ...rows, `</tbody>`, `</table>\n`)
 		}
