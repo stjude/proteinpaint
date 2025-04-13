@@ -3,6 +3,7 @@ import path from 'path'
 export * from './ReqResCache.js'
 export * from './closestSpec.js'
 export * from './runRelevantSpecs.js'
+export * from './emitRelevantSpecCovDetails.js'
 
 export function setRoutes(app, routes, _opts = {}) {
 	const opts = Object.assign({ basepath: '' }, _opts)

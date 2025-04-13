@@ -1,0 +1,38 @@
+{
+  "filter/tvs.js": {
+    "lines": {
+      "total": 106,
+      "covered": 96,
+      "skipped": 0,
+      "pct": 90.56
+    },
+    "functions": {
+      "total": 29,
+      "covered": 26,
+      "skipped": 0,
+      "pct": 89.65
+    },
+    "statements": {
+      "total": 118,
+      "covered": 102,
+      "skipped": 0,
+      "pct": 86.44
+    },
+    "branches": {
+      "total": 78,
+      "covered": 55,
+      "skipped": 0,
+      "pct": 70.51
+    },
+    "lowestPct": {
+      "curr": 70.51,
+      "prev": 70.51,
+      "diff": 10
+    },
+    "averagePct": {
+      "curr": 67.43199999999999,
+      "prev": 67.43199999999999,
+      "diff": 0
+    }
+  }
+}
