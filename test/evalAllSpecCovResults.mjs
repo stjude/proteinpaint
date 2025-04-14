@@ -11,8 +11,9 @@ export async function evalAllSpecCovResults(errorCode = 0) {
 		const result = await evalSpecCovResults({ workspace })
 		if (result.workspace) relevantWs.push(result.workspace)
 		if (!result.ok) {
-			console.log(`\n!!! ${workspace} failed spec coverage !!!`)
-			console.log(result.failedCoverage, '\n')
+			// evalSpecCovResults uses console.log() to display errors
+			// console.log(`\n!!! ${workspace} failed spec coverage !!!`)
+			// console.log(result.failedCoverage, '\n')
 			failures.push(result)
 		}
 	}

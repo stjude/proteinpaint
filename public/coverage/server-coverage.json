@@ -1,37 +1,37 @@
 {
-  "src/test/serverconfig.unit.spec.js": {
+  "src/serverconfig.js": {
     "lines": {
-      "total": 10,
-      "covered": 10,
+      "total": 113,
+      "covered": 65,
       "skipped": 0,
-      "pct": 100
+      "pct": 57.52
     },
     "functions": {
-      "total": 1,
-      "covered": 1,
+      "total": 4,
+      "covered": 3,
       "skipped": 0,
-      "pct": 100
+      "pct": 75
     },
     "statements": {
-      "total": 10,
-      "covered": 10,
+      "total": 141,
+      "covered": 80,
       "skipped": 0,
-      "pct": 100
+      "pct": 56.73
     },
     "branches": {
-      "total": 0,
-      "covered": 0,
+      "total": 141,
+      "covered": 52,
       "skipped": 0,
-      "pct": 100
+      "pct": 36.87
     },
     "lowestPct": {
-      "curr": 100,
-      "prev": 100,
+      "curr": 96.87,
+      "prev": 36.87,
       "diff": 0
     },
     "averagePct": {
-      "curr": 100,
-      "prev": 100,
+      "curr": 56.53,
+      "prev": 56.53,
       "diff": 0
     }
   }
