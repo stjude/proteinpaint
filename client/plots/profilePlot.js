@@ -614,10 +614,10 @@ export function makeChartBtnMenu(holder, chartsInstance, chartType) {
 export async function getProfilePlotConfig(activeCohort, app, opts) {
 	const key = activeCohort == FULL_COHORT ? 'full' : 'abbrev'
 	const config = app.vocabApi.termdbConfig?.plotConfigByCohort[key]?.[opts.chartType]
+	if (!config) throw `No data available for the plot ${opts.chartType} in this dataset`
 	const cohortPreffix = activeCohort == FULL_COHORT ? 'F' : 'A'
 	config.facilityTW = { id: cohortPreffix + 'facility' } //All the plots want the facility term to show the hospital name if a site is selected
 	await fillTermWrapper(config.facilityTW, app.vocabApi)
-	if (!config) throw `No data available for the plot ${opts.chartType} in this dataset`
 	await loadFilterTerms(config, activeCohort, app)
 	return structuredClone(config)
 }
