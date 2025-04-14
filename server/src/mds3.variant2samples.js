@@ -435,7 +435,7 @@ async function queryServerFileByRglst(q, twLst, ds) {
 		}
 	}
 	if (ds.queries.cnv) {
-		const mlst = await ds.queries.cnv.byrange.get(q)
+		const mlst = await ds.queries.cnv.get(q)
 		for (const m of mlst) {
 			combineSamplesById(m.samples, samples, m.ssm_id)
 		}

@@ -277,7 +277,7 @@ async function load_driver(q, ds) {
 				if (q.hiddenmclass?.has(dtcnv)) {
 					// cnv is hidden, do not load
 				} else {
-					result.cnv = await query_cnv(q, ds)
+					result.cnv = await ds.queries.cnv.get(q)
 				}
 			}
 
@@ -329,13 +329,6 @@ async function query_svfusion(q, ds) {
 		return
 	}
 	throw 'insufficient query parameters for svfusion'
-}
-async function query_cnv(q, ds) {
-	if (q.rglst) {
-		if (!ds.queries.cnv.byrange) throw 'q.rglst provided but cnv.byrange missing'
-		return await ds.queries.cnv.byrange.get(q)
-	}
-	throw 'insufficient query parameters for cnv'
 }
 async function query_geneCnv(q, ds) {
 	if (q.gene) {
