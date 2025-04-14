@@ -119,17 +119,19 @@ class MassGroups {
 
 		//when there is only one group and need to create a others group
 		if (groups.length == 1) {
-			// find the sample count in current cohort
-			let countSampleCount
-			if (this.state.termfilter.filter.lst.length)
-				countSampleCount = await this.app.vocabApi.getFilteredSampleCount(this.state.termfilter.filter)
-			else countSampleCount = await this.app.vocabApi.getCohortSampleCount(this.activeCohortName)
+			// // find the sample count in current cohort
+			// let countSampleCount
+			// if (this.state.termfilter.filter.lst.length)
+			// 	countSampleCount = await this.app.vocabApi.getFilteredSampleCount(this.state.termfilter.filter)
+			// else countSampleCount = await this.app.vocabApi.getCohortSampleCount(this.activeCohortName)
 
-			const countSampleCountInt = parseInt(countSampleCount, 10)
+			// const countSampleCountInt = parseInt(countSampleCount, 10)
 
-			// get the sample count in "others" group
-			const othersGroup = Object.values(tw.term.values).find(v => v.key.startsWith('Not in'))
-			othersGroup.othersGroupSampleNum = countSampleCountInt - othersGroup.list.length
+			// // get the sample count in "others" group
+			// const othersGroup = Object.values(tw.term.values).find(v => v.key.startsWith('Not in'))
+			// othersGroup.othersGroupSampleNum = countSampleCountInt - othersGroup.list.length
+			await getOtherSamples(tw, this.app)
+			groups[1] = tw.q.groups[1]
 		}
 
 		// TEMP change, to be done elsewhere e.g. in getSamplelstTW()
@@ -137,7 +139,6 @@ class MassGroups {
 			tw.term.values[g.name].list = g.values
 			tw.term.values[g.name].inuse = g.inuse
 		}
-
 		return tw
 	}
 
@@ -705,6 +706,7 @@ export async function openSummaryPlot(tw, samplelstTW, app, id, newId) {
 		config
 	})
 }
+
 export async function showTermsTree(
 	div,
 	callback,
@@ -735,6 +737,7 @@ export async function showTermsTree(
 		}
 	})
 }
+
 export function addPlotMenuItem(chartType, div, text, tip, samplelstTW, id, parent, openOnTop = false) {
 	const itemDiv = div
 		.append('div')
@@ -960,8 +963,8 @@ export function getSamplelstTW(groups, name = 'groups', notIn = true) {
 		values[name2] = { key: name2, label: name2, color: '#aaa', list: samples }
 		qgroups.push({
 			name: name2,
-			in: false,
-			values: samples
+			in: true,
+			values: []
 		})
 	}
 	const tw = {
@@ -982,4 +985,26 @@ export function getSamplelstTW(groups, name = 'groups', notIn = true) {
 		}
 		return values
 	}
+}
+
+/** Stop gap solution until samplelst term is redesigned
+ * retrieve the sampleId/sampleName for samples in the "others" group instead of using {in: false} */
+async function getOtherSamples(tw, app) {
+	if (tw.term.type != 'samplelst') return
+	//Others group should have no values, see getSamplelstTW()
+	const othersSamplesGroup = tw.q.groups.find(g => !g.values.length && g.name.startsWith('Not in'))
+	if (!othersSamplesGroup) return
+	othersSamplesGroup.in = true
+
+	const state = app.getState()
+	const samplesGroup = tw.q.groups.find(g => g.in).values.map(i => i.sampleId)
+	othersSamplesGroup.values = []
+	// retrieve full list of samples based on current filter. put samples not in samplesGroup in "others" group
+	for (const s of await app.vocabApi.getFilteredSampleList(state.termfilter.filter)) {
+		// s={id,name}, samplelst.groups[].values[]={sampleId,sample}
+		if (!samplesGroup.includes(s.id)) {
+			othersSamplesGroup.values.push({ sampleId: s.id, sample: s.name })
+		}
+	}
+	tw.term.values[othersSamplesGroup.name].list = othersSamplesGroup.values
 }
