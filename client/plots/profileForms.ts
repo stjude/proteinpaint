@@ -264,11 +264,12 @@ export class profileForms extends profilePlot {
 				.attr('y', showSCBar ? y - step + 0.35 * step : y + step * 0.6)
 			this.dom.mainG
 				.append('text')
-				.attr('x', -15)
+				.attr('x', -this.shift)
 				.attr('y', showSCBar ? y : y + step / 2)
-				.text(getText(tw.term.name))
-				.attr('text-anchor', 'end')
+				.text(getText(tw.term.name, 100))
 				.attr('font-size', '0.8em')
+				.on('mouseenter', event => this.showText(event, tw.term.name, 100))
+				.on('mouseleave', () => this.tip.hide())
 
 			y += step + 40
 		}
@@ -328,7 +329,7 @@ export class profileForms extends profilePlot {
 			.text(text)
 			.attr('y', (height * 2) / 3)
 			.style('font-size', '0.85em')
-			.on('mouseenter', event => this.showText(event, tw.term.name))
+			.on('mouseenter', event => this.showText(event, tw.term.name, 80))
 			.on('mouseleave', () => this.tip.hide())
 
 		itemG.attr('transform', `translate(${middle - x}, ${y})`)
@@ -454,8 +455,8 @@ export class profileForms extends profilePlot {
 			.text(text)
 	}
 
-	showText(event, text) {
-		if (text.length <= 80) return
+	showText(event, text, size) {
+		if (text.length <= size) return
 		const menu = this.tip.clear()
 		menu.d.style('padding', '5px').text(text)
 		menu.showunder(event.target)
