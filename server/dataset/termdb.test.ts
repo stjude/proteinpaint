@@ -184,10 +184,7 @@ export default function (): Mds3 {
 				}
 			},
 			cnv: {
-				byrange: {
-					src: 'native',
-					file: 'files/hg38/TermdbTest/TermdbTest_CNV_gene.gz'
-				}
+				file: 'files/hg38/TermdbTest/TermdbTest_CNV_gene.gz'
 			},
 			/*
 			on the fly cnv calls from gene body probe signals are no longer used

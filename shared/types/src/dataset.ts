@@ -522,33 +522,57 @@ type TrackLst = {
 	activeTracks: string[]
 }
 
-type CnvSegment = {
-	byrange: CnvSegmentByRange
-	/****** rendering parameters ****
-not used as query parameter to filter segments
-value range for color scaling. default to 5. cnv segment value>this will use solid color
+/** cnv segments are queried by coordinates, and can be filtered by segment length and/or value
+configs for types of cnv data
+- log(ratio)
+	{
+		cnvMaxLength:10000000
+		cnvGainCutoff:5
+		cnvLossCutoff:-5
+	}
+- copy number
+	{
+		cnvMaxLength:1000000
+		cnvMaxCopynumber:10
+		cnvMinCopynumber:1
+	}
+important: presence of filtering properties indiate the type of cnv quantification
+and will trigger rendering of ui controls
 */
+type CnvSegment = {
+	/** ds supplied ordynamically added getter */
+	get?: (q: any) => any
+	/** either file or get is required. file is bgzipped with columns:
+	1. chr
+	2. start, 0-based
+	3. stop
+	4. {"dt": 4, "mattr": {"origin": "somatic"}, "sample": "3332", "value": -1.0}
+	*/
+	file?: string
+
+	/****** rendering parameters ****
+	not used as query parameter to filter segments
+	value range for color scaling. default to 5. cnv segment value>this will use solid color
+	*/
 	absoluteValueRenderMax?: number
 	gainColor?: string
 	lossColor?: string
 
-	/*** filtering parameters ***
-default max length setting to restrict to focal events; if missing show all */
+	/** filter segments by max length to restrict to focal events; set to -1 to show all
+	allow to be missing, in such case will always show all */
 	cnvMaxLength?: number
 
-	/** TODO define value type, if logratio, or copy number */
-
-	/** following two cutoffs only apply to log ratio, cnv gain value is positive, cnv loss value is negative
-if cnv is gain, skip if value<this cutoff */
+	/** if cnv is quantified as log(ratio) or similar, must set these two properties
+	filter segments by following two cutoffs only apply to log ratio, cnv gain value is positive, cnv loss value is negative
+	*/
+	/** if value>0, skip if value<this cutoff, set to a large value e.g. 100 for not filtering */
 	cnvGainCutoff?: number
-	/** if cnv is loss, skip if value>this cutoff */
+	/** if value<0, skip if value>this cutoff, set to a large negative value e.g. -100 for not filtering */
 	cnvLossCutoff?: number
-}
-
-type CnvSegmentByRange = {
-	src: 'native' | 'gdcapi' | string
-	/** only for src=native */
-	file?: string
+	/** TODO if cnv is quantified as integer copy number, must set these properties; do not use for log(ratio)
+	 */
+	cnvMinCopynumber?: number
+	cnvMaxCopynumber?: number
 }
 
 /*

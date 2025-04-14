@@ -75,7 +75,7 @@ validate_query_svfusion
 		validateSampleHeader2
 validate_query_geneCnv
 validate_query_cnv
-	cnvByRangeGetter_file
+	addCnvGetter
 		validateSampleHeader2
 validate_query_probe2cnv
 validate_query_ld
@@ -1538,22 +1538,13 @@ async function validate_query_cnv(ds, genome) {
 	// cnv segments, compared to geneCnv
 	const q = ds.queries.cnv
 	if (!q) return
-	if (!q.byrange) throw 'queries.cnv.byrange{} missing'
-	/*
-	if(q.byrange.src=='gdcapi') {
-	}
-	*/
-	if (q.byrange.src == 'native') {
-		if (!q.byrange.file) throw 'cnv.byrange.file missing when src=native'
-		// incase the same ds js file is included twice on this pp, the file will already become absolute path
-		q.byrange.file = q.byrange.file.startsWith(serverconfig.tpmasterdir)
-			? q.byrange.file
-			: path.join(serverconfig.tpmasterdir, q.byrange.file)
-		q.byrange.get = await cnvByRangeGetter_file(ds, genome)
-		mayValidateSampleHeader(ds, q.byrange.samples, 'cnv.byrange')
-		return
-	}
-	throw 'unknown cnv.byrange.src'
+	if (typeof q.get == 'function') return // ds-supplied
+	// add built in getter
+	if (!q.file) throw 'cnv.file missing'
+	// incase the same ds js file is included twice on this pp, the file will already become absolute path
+	q.file = q.file.startsWith(serverconfig.tpmasterdir) ? q.file : path.join(serverconfig.tpmasterdir, q.file)
+	q.get = await addCnvGetter(ds, genome)
+	mayValidateSampleHeader(ds, q.samples, 'cnv')
 }
 
 async function validate_query_ld(ds, genome) {
@@ -2386,14 +2377,14 @@ list of cnv events,
 events are partially grouped
 represented as { dt, chr, start,stop,value,samples:[],mattr:{} }
 */
-export async function cnvByRangeGetter_file(ds, genome) {
-	const q = ds.queries.cnv.byrange
+async function addCnvGetter(ds, genome) {
+	const q = ds.queries.cnv
 	if (q.file) {
 		await utils.validate_tabixfile(q.file)
 	} else if (q.url) {
 		q.dir = await utils.cache_index(q.url, q.indexURL)
 	} else {
-		throw 'file and url both missing on cnv.byrange{}'
+		throw 'file and url both missing on cnv{}'
 	}
 	q.nochr = await utils.tabix_is_nochr(q.file || q.url, null, genome)
 
@@ -2405,10 +2396,10 @@ export async function cnvByRangeGetter_file(ds, genome) {
 		q.samples = l.slice(1).map(i => {
 			return { name: i }
 		})
-		q.samples = validateSampleHeader2(ds, q.samples, 'cnv.byrange') // cnv is using string sample names
+		q.samples = validateSampleHeader2(ds, q.samples, 'cnv') // cnv is using string sample names
 	}
 
-	/* extra parameters from snvindel.byrange.get():
+	/* extra parameters from snvindel.get():
 	cnvMaxLength: int
 	cnvGainCutoff: float
 	cnvLossCutoff: float
@@ -2519,7 +2510,7 @@ export async function cnvByRangeGetter_file(ds, genome) {
 }
 
 function mayAdd_mayGetGeneVariantData(ds, genome) {
-	if (!ds.queries.snvindel && !ds.queries.svfusion && !ds.queries.geneCnv) {
+	if (!ds.queries.snvindel && !ds.queries.svfusion && !ds.queries.geneCnv && !ds.queries.cnv) {
 		// no eligible data types
 		return
 	}
@@ -2528,8 +2519,6 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 	input:
 	tw{}
 		a termwrapper on a geneVariant term
-		for now requires tw.term.name to be gene symbol
-		the requirement is reasonable as symbol is essential for matrix display
 		isoform and coord are optional; if missing is derived from gene symbol on the fly
 	q{}
 		.filter
@@ -2916,13 +2905,10 @@ async function getCnvByTw(ds, tw, genome, q) {
 		cnvLossCutoff: tw?.q?.cnvLossCutoff,
 		sessionid: q.sessionid
 	}
-	if (ds.queries.cnv.byrange) {
-		await mayMapGeneName2coord(tw.term, genome)
-		// tw.term.chr/start/stop are set
-		arg.rglst = [tw.term]
-		return await ds.queries.cnv.byrange.get(arg)
-	}
-	throw 'unknown queries.cnv method'
+	await mayMapGeneName2coord(tw.term, genome)
+	// tw.term.chr/start/stop are set
+	arg.rglst = [tw.term]
+	return await ds.queries.cnv.get(arg)
 }
 async function getProbe2cnvByTw(ds, tw, genome, q) {
 	/* tw.term.type is "geneVariant"
