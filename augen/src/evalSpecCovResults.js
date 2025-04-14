@@ -69,11 +69,9 @@ export async function evalSpecCovResults({ workspace, jsonExtract }) {
 			console.log(`\n👏 ${workspace} branch coverage test PASSED! 🎉`)
 			console.log('--- Percent coverage was maintained or improved across relevant files! ---\n')
 			const branch = execSync(`git rev-parse --abbrev-ref HEAD`, { encoding: 'utf8' }).trim()
-			console.log(71, 'branch=', [branch])
-			if (branch == 'master' || branch == 'spec-coverage-ci') {
+			if (branch == 'master') {
 				try {
 					fs.writeFileSync(covFile, JSON.stringify(relevantCoverage, null, '  '))
-					console.log(74, covFile)
 					execSync(`git add ${covFile}`)
 				} catch (e) {
 					console.log(`error updating '${covFile}'`, e)
