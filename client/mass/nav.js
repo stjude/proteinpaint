@@ -480,6 +480,8 @@ function setRenderers(self) {
 function setInteractivity(self) {
 	self.setTab = async (event, d) => {
 		if (d.colNum === self.activeTab && !self.searching) {
+			// The about tab should not be hidden  on double click with or without plots
+			if (self.activeTab == 0) return
 			self.prevCohort = self.activeCohort
 			/** Fix to ensure the subheader is displayed/not displayed when
 			 * sharing or saving the session.
