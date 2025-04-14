@@ -75,8 +75,8 @@ export class profileForms extends profilePlot {
 
 		const shift = 650
 		const shiftTop = 0
-		this.width = settings.svgw + shift + 550
-		const svg = rightDiv.style('padding', '10px').append('svg').attr('width', this.width)
+		const width = settings.svgw + shift + 600
+		const svg = rightDiv.style('padding', '10px').append('svg').attr('width', width)
 		svg
 			.append('defs')
 			.append('pattern')
@@ -210,7 +210,7 @@ export class profileForms extends profilePlot {
 		const scaleGNeg = this.dom.svg.append('g').attr('transform', `translate(${middle}, ${y})`)
 		negAxisBottom(scaleGNeg)
 
-		const legendG = this.dom.svg.append('g').attr('transform', `translate(400, ${y + 90})`)
+		const legendG = this.dom.legendG.attr('transform', `translate(400, ${y + 50})`)
 		let x = 0
 		const categories = [
 			...this.activePlot.negativeCategories,
