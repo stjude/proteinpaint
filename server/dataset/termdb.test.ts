@@ -223,7 +223,6 @@ export default function (): Mds3 {
 			},
 			geneExpression: {
 				src: 'native',
-				hdf5File: true,
 				file: 'files/hg38/TermdbTest/TermdbTest.fpkm.matrix.h5'
 			},
 			topVariablyExpressedGenes: {
