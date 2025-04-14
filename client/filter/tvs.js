@@ -5,7 +5,7 @@ import { renderTable } from '../dom/table'
 import { isNumericTerm, isCategoricalTerm } from '#shared/terms.js'
 import { dtTerms } from '#shared/common.js'
 
-/*
+/* //
 ********************** EXPORTED
 TVSInit()
 showTvsMenu()

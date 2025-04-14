@@ -69,7 +69,7 @@ export async function evalSpecCovResults({ workspace, jsonExtract }) {
 			fs.writeFileSync(covFile, JSON.stringify(relevantCoverage, null, '  '))
 		} else {
 			console.log(
-				`\n!!! Failed coverage: average and/or lowest percent coverage decreased for ${failedCoverage.size} relevant files !!!`
+				`\n!!! Failed ${workspace} coverage: average and/or lowest percent coverage decreased for ${failedCoverage.size} relevant files !!!`
 			)
 			console.log(Object.fromEntries(failedCoverage.entries()))
 			console.log(`\n`)

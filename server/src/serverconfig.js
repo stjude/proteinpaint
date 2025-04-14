@@ -1,6 +1,6 @@
 /*
 	Detect and process the server configuration file,
-	including generating and applying overrides as needed //
+	including generating and applying overrides as needed
 */
 
 import fs from 'fs'
