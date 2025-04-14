@@ -128,11 +128,12 @@ export async function emitRelevantSpecCovDetails({ workspace, relevantSpecs, rep
 					  }
 				const failColor = `color: #f00`
 				const failBg = `background-color: rgba(200, 100, 100, 0.1)`
+				const passBg = `background-color: rgba(100, 200, 100, 0.2)`
 				const cell0bgStyle = !result.failedCoverage?.[file] ? '' : `style='${failColor}; ${failBg}'`
 				const lowestPctColor = lowestPct?.diff >= 0 ? '' : `style='${failColor}'`
-				const lowestPctBg = lowestPct?.diff >= 0 ? '' : `style='${failBg}'`
+				const lowestPctBg = lowestPct?.diff >= 0 ? `style='${passBg}'` : `style='${failBg}'`
 				const averagePctColor = averagePct?.diff >= 0 ? '' : `style='${failColor}'`
-				const averagePctBg = averagePct?.diff >= 0 ? '' : `style='${failBg}'`
+				const averagePctBg = averagePct?.diff >= 0 ? `style='${passBg}'` : `style='${failBg}'`
 
 				cells[0] = cells[0].replace(
 					file,

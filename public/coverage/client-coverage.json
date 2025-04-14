@@ -26,13 +26,13 @@
     },
     "lowestPct": {
       "curr": 70.88,
-      "prev": 70.88,
-      "diff": 0
+      "prev": 0,
+      "diff": 70.88
     },
     "averagePct": {
-      "curr": 94.47,
-      "prev": 84.47,
-      "diff": 0
+      "curr": 84.47,
+      "prev": 0,
+      "diff": 84.47
     }
   }
 }
