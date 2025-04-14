@@ -66,6 +66,18 @@
           console.log(res.out.stderr)
           console.log(`--- end ---`)
         }
+        if (res.failures?.length) {
+          for(const f of res.failures) {
+            console.log(`--- !!! Failed coverage for ${f.workspace} !!! ---`)
+            for(const [file, v] of Object.entries(f.failedCoverage)) {
+              console.log(file)
+              if (v.lowestPct?.diff < 0) console.log('lowestPct:', v.lowestPct)
+              if (v.averagePct?.diff < 0) console.log('averagePct:', v.averagePct)
+              console.log(v)
+            }
+          }
+          console.log(`--- end ---`)
+        }
       } catch(e) {
         alert(e)
       }
