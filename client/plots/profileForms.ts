@@ -1,7 +1,7 @@
 import { getCompInit, copyMerge } from '../rx/index.js'
 import { getProfilePlotConfig, profilePlot, getDefaultProfilePlotSettings } from './profilePlot.js'
 import { fillTwLst } from '#termsetting'
-import { axisTop } from 'd3-axis'
+import { axisBottom, axisTop } from 'd3-axis'
 import { scaleLinear as d3Linear } from 'd3-scale'
 import { loadFilterTerms } from './profilePlot.js'
 import { Tabs } from '../dom/toggleButtons.js'
@@ -31,6 +31,7 @@ export class profileForms extends profilePlot {
 	shiftTop: any
 	categories: any
 	module: any
+	width: any
 
 	constructor(opts) {
 		super()
@@ -73,11 +74,9 @@ export class profileForms extends profilePlot {
 			}).main()
 
 		const shift = 650
-		const shiftTop = 60
-		const svg = rightDiv
-			.style('padding', '10px')
-			.append('svg')
-			.attr('width', settings.svgw + shift + 400)
+		const shiftTop = 0
+		this.width = settings.svgw + shift + 400
+		const svg = rightDiv.style('padding', '10px').append('svg').attr('width', this.width)
 		svg
 			.append('defs')
 			.append('pattern')
@@ -189,15 +188,28 @@ export class profileForms extends profilePlot {
 		const step = 30
 		const height = this.activeTWs.length * step
 		this.dom.svg.attr('height', height + 120)
-
-		this.dom.svg.attr('height', height + 120)
+		const middle = this.settings.svgw * 0.3 //the middle of the svg as we leave space for the not applicable category at the end
 		for (const tw of this.activeTWs) {
 			if (tw.term.type != 'multivalue') continue
 			const getDict = sample => this.getDict(tw.$id, sample)
 			const dict = this.getPercentsDict(getDict, samples) //get the dict with the counts for each category  for the list of samples
-			this.renderLikertBar(dict, y, 25, tw)
+			this.renderLikertBar(dict, y, 25, tw, middle)
 			y += step
 		}
+		const width = this.settings.svgw - 150
+		const posScale = d3Linear()
+			.domain([0, 100])
+			.range([this.shift, this.shift + width])
+		const posAxisBottom = axisBottom(posScale)
+		const scaleG = this.dom.svg.append('g').attr('transform', `translate(${middle}, ${y})`)
+		posAxisBottom(scaleG)
+		const negScale = d3Linear()
+			.domain([0, 100])
+			.range([this.shift, this.shift - width])
+		const negAxisBottom = axisBottom(negScale)
+		const scaleGNeg = this.dom.svg.append('g').attr('transform', `translate(${middle}, ${y})`)
+		negAxisBottom(scaleGNeg)
+
 		const legendG = this.dom.svg.append('g').attr('transform', `translate(400, ${y + 90})`)
 		let x = 0
 		const categories = [
@@ -299,7 +311,7 @@ export class profileForms extends profilePlot {
 		return key == 'Yes' ? this.activePlot.color : key == 'No' ? '#aaa' : `url(#${this.id}_diagonalHatch)`
 	}
 
-	renderLikertBar(dict: { [key: string]: number }, y: number, height: number, tw: any) {
+	renderLikertBar(dict: { [key: string]: number }, y: number, height: number, tw: any, middle: number) {
 		const itemG = this.dom.mainG.append('g')
 		let total = 0
 		for (const key in dict) total += dict[key]
@@ -309,7 +321,6 @@ export class profileForms extends profilePlot {
 			const width = this.renderCategory(category, dict, itemG, x, height, total)
 			x += width
 		}
-		const middle = this.settings.svgw * 0.3 //the middle of the svg as we leave space for the not applicable category at the end
 		const text = getText(tw.term.name)
 		const textG = this.dom.svg
 			.append('g')
