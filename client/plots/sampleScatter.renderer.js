@@ -71,8 +71,8 @@ export function setRenderers(self) {
 			.domain([yMax + extraSpaceY, yMin - extraSpaceY])
 			.range([offsetY, self.settings.svgh + offsetY])
 		if (self.config.term2 && self.config.term2.term.type == 'date') {
-			const yMinDate = new Date(getDateFromNumber(yMin - extraSpaceY))
-			const yMaxDate = new Date(getDateFromNumber(yMax + extraSpaceY))
+			const yMinDate = getDateFromNumber(yMin - extraSpaceY)
+			const yMaxDate = getDateFromNumber(yMax + extraSpaceY)
 
 			chart.yAxisScaleTime = scaleTime()
 				.domain([yMinDate, yMaxDate])
