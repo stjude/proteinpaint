@@ -1,6 +1,7 @@
 import { publicSpecsDir } from './closestSpec.js'
 import path from 'path'
 import fs from 'fs'
+import { execSync } from 'child_process'
 
 const publicCovDir = path.dirname(publicSpecsDir)
 
@@ -60,13 +61,18 @@ export async function evalSpecCovResults({ workspace, jsonExtract }) {
 	}
 
 	// if there is a jsonExtract in the argument, it is only a partial extract
-	// as supplied by emitRelevantSpecCovDetails(), which use the results from here to update the html extract,
-	// and this partial content should not overwrite the fuller covFile content;
+	// as supplied by emitRelevantSpecCovDetails(), which use the results from
+	// here to update the html extract, and this partial content should not overwrite
+	// the fuller covFile content, which should be done only in master
 	if (!jsonExtract) {
 		if (!failedCoverage.size) {
 			console.log(`\n👏 ${workspace} branch coverage test PASSED! 🎉`)
 			console.log('--- Percent coverage was maintained or improved across relevant files! ---\n')
-			fs.writeFileSync(covFile, JSON.stringify(relevantCoverage, null, '  '))
+			const branch = execSync(`git rev-parse --abbrev-ref HEAD`)
+			if (branch == 'master') {
+				fs.writeFileSync(covFile, JSON.stringify(relevantCoverage, null, '  '))
+				execSync(`git add ${covFile}`)
+			}
 		} else {
 			console.log(
 				`\n!!! Failed ${workspace} coverage: average and/or lowest percent coverage decreased for ${failedCoverage.size} relevant files !!!`
