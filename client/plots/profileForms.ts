@@ -322,13 +322,15 @@ export class profileForms extends profilePlot {
 			x += width
 		}
 		const text = getText(tw.term.name)
-		const textG = this.dom.svg
-			.append('g')
-			.attr('transform', `translate(0, ${y + this.shiftTop})`)
+		const textG = this.dom.svg.append('g').attr('transform', `translate(0, ${y + this.shiftTop})`)
+		const textElem = textG
 			.append('text')
 			.text(text)
 			.attr('y', (height * 2) / 3)
 			.style('font-size', '0.85em')
+			.on('mouseenter', event => this.showText(event, tw.term.name))
+			.on('mouseleave', () => this.tip.hide())
+
 		itemG.attr('transform', `translate(${middle - x}, ${y})`)
 
 		const itemG2 = this.dom.mainG.append('g').attr('transform', `translate(${middle}, ${y})`)
@@ -364,7 +366,7 @@ export class profileForms extends profilePlot {
 			.attr('stroke-opacity', 0.5)
 			.attr('fill', color)
 			.datum({ key, value: percent })
-			.on('mouseover', this.onMouseOver.bind(this))
+			.on('mouseover', event => this.onMouseOver(event))
 		if (showPercent)
 			itemG
 				.append('text')
@@ -450,6 +452,13 @@ export class profileForms extends profilePlot {
 			.attr('transform', `translate(${size + 10}, ${y + size})`)
 			.style('font-size', '0.9em')
 			.text(text)
+	}
+
+	showText(event, text) {
+		if (text.length <= 80) return
+		const menu = this.tip.clear()
+		menu.d.style('padding', '5px').text(text)
+		menu.showunder(event.target)
 	}
 }
 
