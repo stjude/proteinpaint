@@ -169,7 +169,7 @@ jobs:
         run: |
           BRANCH=$(git rev-parse --abbrev-ref HEAD)
           STAGEDFILES=$(git diff --cached --name-only | sed 's| |\\ |g')
-          if [[ "$BRANCH" == "spec-coverage-ci" && "$STAGEDFILES" != "" ]]; then
+          if [[ "$BRANCH" == "master" && "$STAGEDFILES" != "" ]]; then
             git config --global user.email "PPTeam@STJUDE.ORG"
             git config --global user.name "PPTeam CI"
             git commit -m "update relevant workspace coverage json"
