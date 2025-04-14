@@ -485,7 +485,7 @@ export const profileFormsInit = getCompInit(profileForms)
 // this alias will allow abstracted dynamic imports
 export const componentInit = profileFormsInit
 
-function getText(name, size = 90) {
+function getText(name, size = 80) {
 	if (name.length > size) name = name.slice(0, size) + '...'
 	return name
 }
