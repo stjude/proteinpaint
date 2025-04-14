@@ -142,26 +142,20 @@ jobs:
     if: needs.publish-npm.outputs.updated_rust == 'false' && github.event.inputs.include == 'npm packages + Docker image'
     needs: publish-npm
     runs-on: ubuntu-22.04
-    permissions:
-      contents: read
-      packages: write
     steps:
       - name: Publish docker image
         uses: stjude/proteinpaint/.github/actions/publish-docker@master
         with:
-          PAT: ${{ secrets.GITHUB_TOKEN }}
+          PAT: ${{ secrets.PAT }}
           GITHUB_ACTOR: ${{ github.actor }}
 
   publish-docker-with-new-rust-module:
     if: github.event.inputs.include == 'npm packages + Docker image'
     needs: upload-rust-assets
     runs-on: ubuntu-22.04
-    permissions:
-      contents: read
-      packages: write
     steps:
       - name: Publish docker image
         uses: stjude/proteinpaint/.github/actions/publish-docker@master
         with:
-          PAT: ${{ secrets.GITHUB_TOKEN  }}
+          PAT: ${{ secrets.PAT  }}
           GITHUB_ACTOR: ${{ github.actor }}
