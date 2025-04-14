@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.118.1
 
 Fixes:
 - Upgraded canvas to v3.1.0
