@@ -40,11 +40,12 @@ jobs:
         with:
           token: ${{ secrets.PAT }}
 
-      - name: Login to GitHub Container Registry
-        run: |
-          echo $CR_PAT | docker login ghcr.io -u stjude --password-stdin
-        env:
-          CR_PAT: ${{ secrets.PAT }}
+      - name: Login to Github
+        uses: docker/login-action@v3.4.0
+        with:
+          registry: ghcr.io
+          username: ${{ inputs.GITHUB_ACTOR }}
+          password: ${{ inputs.PAT }}
 
       - name: Install dependencies for canvas
         run: |

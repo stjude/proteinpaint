@@ -13,19 +13,11 @@ runs:
     - uses: actions/checkout@v4
 
     - name: Login to Github
-      uses: docker/login-action@v3
+      uses: docker/login-action@v3.4.0
       with:
         registry: ghcr.io
         username: ${{ inputs.GITHUB_ACTOR }}
         password: ${{ inputs.PAT }}
-
-
-    - name: Login to GitHub Container Registry
-      shell: bash
-      run: |
-        echo $CR_PAT | docker login ghcr.io -u stjude --password-stdin
-      env:
-        CR_PAT: ${{ inputs.PAT }}
 
     - name: Build and Publish Docker Images
       id: docker-publish
