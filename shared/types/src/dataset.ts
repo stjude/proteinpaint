@@ -587,11 +587,11 @@ type Probe2Cnv = {
 */
 
 type RnaseqGeneCount = {
-	/** Name of the HDF5 or text file */
+	/** Name of the HDF5 file */
 	file: string
 	samplesFile?: string
-	/** Storage_type for storing data (HDF5 or text). Will deprecate text files in the future */
-	storage_type: 'text' | 'HDF5'
+	/** Storage_type for storing data (HDF5) */
+	storage_type: 'HDF5'
 }
 
 /** the metabolite query */
@@ -623,8 +623,6 @@ export type GeneExpressionQueryNative = {
 	samples?: number[]
 	/** dynamically added flag during launch */
 	nochr?: boolean
-	/** if true, the file is in HDF5 format */
-	hdf5File?: boolean
 	/** dynamically added getter */
 	get?: (param: any) => void
 	/** This dictionary is used to store/cache the default bins calculated for a geneExpression term when initialized in the fillTermWrapper */
@@ -635,7 +633,7 @@ export type GeneExpressionQuery = GeneExpressionQueryGdc | GeneExpressionQueryNa
 
 export type SingleCellGeneExpressionNative = {
 	src: 'native'
-	/** path to HDF5 files. for now only hdf5 is supported.
+	/** path to HDF5 files. for now only HDF5 is supported.
 	each is a gene-by-cell matrix for a sample, with ".h5" suffix. missing files are detected and handled */
 	folder: string
 	/** dynamically added getter */
