@@ -5,6 +5,7 @@ All notable changes to this project will be documented in this file.
 ## Unreleased
 
 Fixes:
+- Upgraded canvas to v3.1.0
 - Github Workflows maintenance
 
 
