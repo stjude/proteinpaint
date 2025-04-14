@@ -133,10 +133,13 @@ class MassApp {
 
 	async main() {
 		await this.api.vocabApi.main()
-		//Do not show the plots if about tab is active (activeTab=0 and displaySubheader=true)
+		//if nav header is hidden, show plotdiv;
+		// otherwise if nav header is shown, when About tab is active (activeTab=0 and displaySubheader=true), hide plot div
 		this.dom.plotDiv.style(
 			'display',
-			this.state.nav?.activeTab == 0 && this.state.nav?.displaySubheader ? 'none' : 'block'
+			this.state.nav?.header_mode != 'hidden' && this.state.nav?.activeTab == 0 && this.state.nav?.displaySubheader
+				? 'none'
+				: 'block'
 		)
 		const newPlots = {}
 		let sandbox
