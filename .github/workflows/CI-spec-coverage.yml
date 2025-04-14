@@ -152,7 +152,9 @@ jobs:
           FAILEDTEXTFILE=./public/coverage/specs/failedTexts.txt
           FAILED=''
           if [[ -f $FAILEDTEXTFILE ]]; then
+            echo "# !!! Failed spec coverage !!! " >> $GITHUB_STEP_SUMMARY
             cat $FAILEDTEXTFILE >> $GITHUB_STEP_SUMMARY
+            echo -e "\n" >> $GITHUB_STEP_SUMMARY
             FAILED=true
           fi
           
@@ -168,10 +170,9 @@ jobs:
           BRANCH=$(git rev-parse --abbrev-ref HEAD)
           STAGEDFILES=$(git diff --cached --name-only | sed 's| |\\ |g')
           if [[ "$BRANCH" == "spec-coverage-ci" && "$STAGEDFILES" != "" ]]; then
-            git commit -m "update relevant workspace coverage json"
             git config --global user.email "PPTeam@STJUDE.ORG"
             git config --global user.name "PPTeam CI"
-            git commit -m "append release notes to change log"
+            git commit -m "update relevant workspace coverage json"
             git pull --rebase
             git push origin $BRANCH
           fi
