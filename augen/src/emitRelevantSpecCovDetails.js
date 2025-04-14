@@ -24,10 +24,11 @@ export async function emitRelevantSpecCovDetails({ workspace, relevantSpecs, rep
 
 	const jsonFile = `${reportDir}/coverage-summary.json`
 	const resultsJson = fs.readFileSync(jsonFile, { encoding: 'utf8' })
-	const results = JSON.parse(resultsJson)
+	const results = JSON.parse(resultsJson.replaceAll(`"${workspace}/`, `"`))
 	const jsonExtract = {}
 
-	const detailedMd = fs.readFileSync(path.join(reportDir, 'coverage-details.md'), { encoding: 'utf8' })
+	let detailedMd = fs.readFileSync(path.join(reportDir, 'coverage-details.md'), { encoding: 'utf8' })
+	detailedMd = detailedMd.replaceAll(`"${workspace}/`, `"`)
 	const detailedLines = detailedMd.split('\n')
 	// key: comma-separated spec names used for testing
 	// value: string filenames that were tested by the specs in key
@@ -107,10 +108,16 @@ export async function emitRelevantSpecCovDetails({ workspace, relevantSpecs, rep
 				`</thead>`
 			)
 			const rows = []
-			for (const line of lines) {
+			for (const _line of lines) {
+				const line = _line.replaceAll(workspace + '/', '')
 				markdown.push(line)
 				const cells = line.split('|').slice(1, -1)
-				const file = cells[0].trim().split(' ').pop().trim()
+				const file = cells[0]
+					.trim()
+					.split(' ')
+					.pop()
+					.trim()
+					.replaceAll(workspace + '/', '')
 				const targetKey = file.replace(workspace + '/', '')
 				const result = await evalSpecCovResults({ workspace, jsonExtract: { [file]: jsonExtract[file] } })
 				const { lowestPct, averagePct, failedCoverage } = result.relevantCoverage?.[file]?.lowestPct
