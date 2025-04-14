@@ -31,7 +31,6 @@ export class profileForms extends profilePlot {
 	shiftTop: any
 	categories: any
 	module: any
-	width: any
 
 	constructor(opts) {
 		super()
@@ -74,7 +73,7 @@ export class profileForms extends profilePlot {
 			}).main()
 
 		const shift = 650
-		const shiftTop = 0
+		const shiftTop = 50
 		const width = settings.svgw + shift + 600
 		const svg = rightDiv.style('padding', '10px').append('svg').attr('width', width)
 		svg
@@ -93,7 +92,7 @@ export class profileForms extends profilePlot {
 		const mainG = svg.append('g').attr('transform', `translate(${shift}, ${shiftTop})`)
 		const gridG = svg.append('g').attr('transform', `translate(${shift}, ${shiftTop})`)
 		this.filterG = svg.append('g').attr('transform', `translate(${shift + settings.svgw + 200}, ${shiftTop})`)
-		const legendG = svg.append('g').attr('transform', `translate(${shift}, ${20 + settings.svgh})`)
+		const legendG = svg.append('g') //each plot will translate it to the right position
 
 		const xAxisG = svg.append('g').attr('transform', `translate(${shift}, ${shiftTop / 2})`)
 
@@ -186,7 +185,7 @@ export class profileForms extends profilePlot {
 		this.dom.headerDiv.selectAll('*').remove()
 		let y = 0
 		const step = 30
-		const height = this.activeTWs.length * step
+		const height = (this.activeTWs.length + 2) * step
 		this.dom.svg.attr('height', height + 120)
 		const middle = this.settings.svgw * 0.3 //the middle of the svg as we leave space for the not applicable category at the end
 		for (const tw of this.activeTWs) {
@@ -196,6 +195,7 @@ export class profileForms extends profilePlot {
 			this.renderLikertBar(dict, y, 25, tw, middle)
 			y += step
 		}
+		y += step * 2
 		const width = this.settings.svgw - 150
 		const posScale = d3Linear()
 			.domain([0, 100])
@@ -204,7 +204,7 @@ export class profileForms extends profilePlot {
 		const scaleG = this.dom.svg.append('g').attr('transform', `translate(${middle}, ${y})`)
 		posAxisBottom(scaleG)
 		const negScale = d3Linear()
-			.domain([0, 100])
+			.domain([0, -100])
 			.range([this.shift, this.shift - width])
 		const negAxisBottom = axisBottom(negScale)
 		const scaleGNeg = this.dom.svg.append('g').attr('transform', `translate(${middle}, ${y})`)
@@ -229,7 +229,7 @@ export class profileForms extends profilePlot {
 		this.dom.xAxisG.call(axisTop(this.xAxisScale))
 		const step = 30
 		const height = this.activeTWs.length * step
-		this.dom.svg.attr('height', height * 3 + 200)
+		this.dom.svg.attr('height', height * 3 + 200) //space for the sc, for the poc and between items
 
 		let y = 0
 		let showSCBar = false
@@ -275,7 +275,7 @@ export class profileForms extends profilePlot {
 		this.renderLines(y - 20) //last padding not needed
 
 		if (showSCBar) this.dom.legendG.attr('transform', `translate(${550}, ${30 + this.settings.svgh})`)
-		else this.dom.legendG.attr('transform', `translate(${750}, ${this.settings.svgh * 0.8})`)
+		else this.dom.legendG.attr('transform', `translate(${550}, ${this.settings.svgh * 0.8})`)
 
 		let x = 0
 		for (const category of this.activePlot.categories) {
