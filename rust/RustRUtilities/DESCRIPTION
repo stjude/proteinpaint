@@ -1,0 +1,12 @@
+Package: RustRUtilities
+Title: Rust R utilities
+Version: 0.0.0.9000
+Authors@R: 
+    person("Xin", "Zhou", , "xin.zhou@stjude.org", role = c("aut", "cre"))
+Description: This package provides compiled rust code to be invoked from R.
+License: `use_mit_license()`, `use_gpl3_license()` or friends to pick a
+    license
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.2
+Config/rextendr/version: 0.3.1
