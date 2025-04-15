@@ -524,6 +524,7 @@ type TrackLst = {
 
 /** cnv segments are queried by coordinates, and can be filtered by segment length and/or value
 configs for types of cnv data
+
 - log(ratio)
 	{
 		cnvMaxLength:10000000
@@ -536,6 +537,15 @@ configs for types of cnv data
 		cnvMaxCopynumber:10
 		cnvMinCopynumber:1
 	}
+- qualitative categories
+	{
+		cnvMaxLength?:? // abscent if ds doesn't allow filtering by max length (e.g. segments are actually gene bodies)
+		//cnvCategories:['CNV_amp', 'CNV_loss'] // "CNV_amplification" and "CNV_homozygous_deletion" are optional depending on ds
+	}
+	may not need to declare cnvCategories[];
+	cnv edit ui rendering can be entirely based on actual server-returned gene cnv data
+	e.g. if CNV_amplification is present from getCategories() or cnv data, show its checkbox, otherwise do not show checkbox
+
 important: presence of filtering properties indiate the type of cnv quantification
 and will trigger rendering of ui controls
 */
@@ -547,6 +557,7 @@ type CnvSegment = {
 	2. start, 0-based
 	3. stop
 	4. {"dt": 4, "mattr": {"origin": "somatic"}, "sample": "3332", "value": -1.0}
+	   "value" can be logratio (minus/positive number), copy number (non-negative integer), or qualitative call (gain/loss)
 	*/
 	file?: string
 
@@ -558,21 +569,32 @@ type CnvSegment = {
 	gainColor?: string
 	lossColor?: string
 
-	/** filter segments by max length to restrict to focal events; set to -1 to show all
+	/** filter segments by max length to restrict to focal events;
+	samples with all events filtered out should be treated as wildtype
+	set to -1 to show all as a convenient solution, thus no need for UI to show a checkbox for filterbylength or not
 	allow to be missing, in such case will always show all */
 	cnvMaxLength?: number
 
-	/** if cnv is quantified as log(ratio) or similar, must set these two properties
+	/// quick fix: following sets of properties are mutually exclusive. TODO may improve with "type" property
+
+	/** presence of these properties indicate cnv is quantified as log(ratio) or similar
 	filter segments by following two cutoffs only apply to log ratio, cnv gain value is positive, cnv loss value is negative
+	samples with all events filtered out should be treated as wildtype
 	*/
 	/** if value>0, skip if value<this cutoff, set to a large value e.g. 100 for not filtering */
 	cnvGainCutoff?: number
 	/** if value<0, skip if value>this cutoff, set to a large negative value e.g. -100 for not filtering */
 	cnvLossCutoff?: number
-	/** TODO if cnv is quantified as integer copy number, must set these properties; do not use for log(ratio)
-	 */
+
+	/** presence of these properties indicate cnv is quantified as integer copy number
+	* not in use yet *
 	cnvMinCopynumber?: number
 	cnvMaxCopynumber?: number
+	 */
+
+	/** if cnv is using qualitative categories. ui will show checkboxes for each category that's present
+	cnvCategories?:string[]
+	*/
 }
 
 /*
