@@ -33,7 +33,11 @@ export function setInteractivity(self) {
 		const options = [
 			{
 				label: `Add filter: ${plot.label.split(',')[0]}`,
-				callback: getAddFilterCallback(t1, t2, self, plot, label, false)
+				callback: () => {
+					const start = plot.summaryStats.find(d => d.id === 'min').value
+					const end = plot.summaryStats.find(d => d.id === 'max').value
+					getAddFilterCallback(self, plot, start, end, false)
+				}
 			},
 			{
 				label: `Hide: ${plot.label}`,
@@ -61,7 +65,7 @@ export function setInteractivity(self) {
 				label: `List samples`,
 				callback: async () => {
 					const [start, end] = [self.data.min, self.data.max * 2]
-					await self.listSamples(event, t1, t2, plot, start, end)
+					await self.listSamples(event, plot, start, end, false)
 				}
 			})
 		}
@@ -76,14 +80,14 @@ export function setInteractivity(self) {
 		const options = [
 			{
 				label: `Add filter`,
-				callback: getAddFilterCallback(t1, t2, self, plot, start, end, true)
+				callback: getAddFilterCallback(self, plot, start, end, true)
 			}
 		]
 
 		if (self.state.displaySampleIds && self.state.hasVerifiedToken) {
 			options.push({
 				label: `List samples`,
-				callback: async () => self.listSamples(event, t1, t2, plot, start, end)
+				callback: async () => await self.listSamples(event, plot, start, end, true)
 			})
 		}
 		self.displayMenu(event, options, plot, start, end)
@@ -160,13 +164,14 @@ export function setInteractivity(self) {
 			})
 	}
 
-	self.listSamples = async function (event, t1, t2, plot, start, end) {
+	self.listSamples = async function (event, plot, start, end, isBrush) {
 		//this is workaround
 		//The box plot (where the list sample code is copied from) has a plot.id
-		plot.id = self.id
-		const sampleList = new ListSamples(self.app, self.state, self.id, plot, false)
+		const plotCopy = { ...plot }
+		plotCopy.id = self.id
+		const sampleList = new ListSamples(self.app, self.app.getState(), self.id, plotCopy, isBrush, start, end)
 		const data = await sampleList.getData()
-		self.displaySampleIds(event, term, data)
+		self.displaySampleIds(event, sampleList.term, data)
 	}
 
 	self.displaySampleIds = function (event, term, data) {
@@ -241,19 +246,20 @@ export function setInteractivity(self) {
 	}
 }
 
-function getAddFilterCallback(t1, t2, self, plot, rangeStart, rangeStop, isBrush) {
+function getAddFilterCallback(self, plot, start, end, isBrush) {
 	//This is workaround
 	//The box plot (where the list sample code is copied from) has a plot.id
 	plot.id = self.id
 	//get latest state
 	const state = self.app.getState()
-	const sampleList = new ListSamples(self.app, state, self.id, plot, isBrush)
+	const sampleList = new ListSamples(self.app, state, self.id, plot, isBrush, start, end)
 
 	return () => {
-		const filterUiRoot = getFilterItemByTag(self.state.termfilter.filter, 'filterUiRoot')
+		const filterUiRoot = getFilterItemByTag(state.termfilter.filter, 'filterUiRoot')
 		const filter = filterJoin([filterUiRoot, sampleList.tvslst])
 		filter.tag = 'filterUiRoot'
-		if (!sampleList.tvslst.in) filter.in = sampleList.tvslst.in
+		//Account for other group
+		if (!sampleList.tvslst.in) filter.in = false
 		self.app.dispatch({
 			type: 'filter_replace',
 			filter

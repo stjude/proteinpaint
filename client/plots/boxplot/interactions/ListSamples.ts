@@ -13,21 +13,26 @@ export class ListSamples {
 	plot: RenderedPlot
 	term: any
 	tvslst: any
-	constructor(app: MassAppApi, state: MassState, id: string, plot: RenderedPlot, getRange = true) {
+	constructor(
+		app: MassAppApi,
+		state: MassState,
+		id: string,
+		plot: RenderedPlot,
+		getRange = true,
+		start?: number,
+		end?: number
+	) {
 		this.app = app
 		this.plot = plot
 
 		const plotConfig = state.plots.find((p: { id: string }) => p.id === id)
 		if (!plotConfig) throw 'Plot not found [ListSamples]'
 
-		try {
-			//ids 'min' and 'max' are always present in the descrStats{}
-			const min = plot.descrStats.find(d => d.id === 'min')!.value
-			const max = plot.descrStats.find(d => d.id === 'max')!.value
-			this.tvslst = this.getTvsLst(min, max, getRange, plotConfig.term, plotConfig.term2)
-		} catch (e: any) {
-			console.error(e.message || e)
-		}
+		//ids 'min' and 'max' are always present in the descrStats{} for boxplot
+		//min and max are possibly defined by the brush in violin plots
+		const min = start || plot?.descrStats?.find(d => d.id === 'min')!.value
+		const max = end || plot?.descrStats?.find(d => d.id === 'max')!.value
+		this.tvslst = this.getTvsLst(min, max, getRange, plotConfig.term, plotConfig.term2)
 
 		this.term = plotConfig.term.q?.mode === 'continuous' ? plotConfig.term : plotConfig.term2
 
@@ -68,10 +73,8 @@ export class ListSamples {
 
 	createTvsLstValues(tw: any, tvslst: any, lstIdx: number) {
 		this.createTvsTerm(tw, tvslst)
-		const values =
-			tw.term.type === 'samplelst'
-				? tw.term.values[this.plot.key].list
-				: [{ key: this.plot.seriesId, label: this.plot.key }]
+		const key = this.plot.seriesId || this.plot.key
+		const values = tw.term.type === 'samplelst' ? tw.term.values[key].list : [{ key: this.plot.seriesId, label: key }]
 		tvslst.lst[lstIdx].tvs.values = values
 
 		if (tw.term.type === 'condition') {
@@ -152,8 +155,8 @@ export class ListSamples {
 	}
 
 	//Should filter out other group samples
-	getInValue(tw2) {
+	getInValue(tw2: any) {
 		if (!tw2.q.groups.some((g: any) => !g.in)) return true
-		return !this.plot.key.includes('Not in')
+		return this.plot?.seriesId ? !this.plot.seriesId.includes('Not in') : !this.plot.key.includes('Not in')
 	}
 }
