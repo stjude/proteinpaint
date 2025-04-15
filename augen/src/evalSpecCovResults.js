@@ -1,4 +1,4 @@
-import { publicSpecsDir } from './closestSpec.js'
+import { publicSpecsDir, gitProjectRoot } from './closestSpec.js'
 import path from 'path'
 import fs from 'fs'
 import { execSync } from 'child_process'
@@ -68,13 +68,15 @@ export async function evalSpecCovResults({ workspace, jsonExtract }) {
 		if (!failedCoverage.size) {
 			console.log(`\n👏 ${workspace} branch coverage test PASSED! 🎉`)
 			console.log('--- Percent coverage was maintained or improved across relevant files! ---\n')
-			const branch = execSync(`git rev-parse --abbrev-ref HEAD`, { encoding: 'utf8' }).trim()
-			if (branch == 'master') {
-				try {
-					fs.writeFileSync(covFile, JSON.stringify(relevantCoverage, null, '  '))
-					execSync(`git add ${covFile}`)
-				} catch (e) {
-					console.log(`error updating '${covFile}'`, e)
+			if (gitProjectRoot.endsWith('proteinpaint')) {
+				const branch = execSync(`cd ${gitProjectRoot} && git rev-parse --abbrev-ref HEAD`, { encoding: 'utf8' }).trim()
+				if (branch == 'master') {
+					try {
+						fs.writeFileSync(covFile, JSON.stringify(relevantCoverage, null, '  '))
+						execSync(`cd ${gitProjectRoot} && git add ${covFile}`)
+					} catch (e) {
+						console.log(`error updating '${covFile}'`, e)
+					}
 				}
 			}
 		} else {
