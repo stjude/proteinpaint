@@ -57,7 +57,7 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ inputs.GITHUB_ACTOR }}
-          password: ${{ inputs.PAT }}
+          password: ${{ secrets.PAT }}
 
       - name: Build and Publish Docker Images
         run: |
