@@ -30,26 +30,31 @@ const extractFiles = {
 let relevantSpecs, patternToSpecs
 let patternsStr = process.argv[2] || 'name=*' // default pattern to test all emitted spec imports
 if (!patternsStr) throw `missing puppet.js patternsStr argument`
-if (patternsStr === 'NO_BRANCH_COVERAGE_UPDATE') {
-	// a coverage run is requested, but there are no relevant files that have been updated in the branch
-	console.log('\n--- No branch updates with applicable specs to test. ---\n')
-	patternsStr = ''
-} else if (patternsStr === 'RELEVANT_SPECS_ONLY') {
+if (patternsStr === 'RELEVANT_SPECS_ONLY') {
 	relevantSpecs = getRelevantClientSpecs()
 	if (!relevantSpecs.matched?.length) {
-		console.log('\n--- No branch updates with applicable specs to test. ---\n')
+		console.log('\n--- No applicable client specs to test in this branch. ---\n')
 		patternsStr = ''
+	} else {
+		const urlParams = getUrlParams(relevantSpecs)
+		patternToSpecs = urlParams.patternToSpecs
+		patternsStr = urlParams.paramsStr
 	}
-	const urlParams = getUrlParams(relevantSpecs)
-	patternToSpecs = urlParams.patternToSpecs
-	patternsStr = urlParams.paramsStr
 	if (fs.existsSync(publicSpecsClientDir)) fs.rmSync(publicSpecsClientDir, { force: true, recursive: true })
 	if (fs.existsSync(extractFiles.html)) fs.rmSync(extractFiles.html, { force: true, recursive: true })
 	if (fs.existsSync(extractFiles.markdown)) fs.rmSync(extractFiles.markdown, { force: true, recursive: true })
 	if (fs.existsSync(extractFiles.json)) fs.rmSync(extractFiles.json, { force: true, recursive: true })
 }
 
-if (patternsStr) runTest(patternsStr).catch(console.error)
+if (patternsStr) {
+	if (patternsStr === 'NO_BRANCH_COVERAGE_UPDATE') {
+		// a coverage run is requested, but there are no relevant files that have been updated in the branch
+		console.log('\n--- No applicable client specs to test in this branch. ---\n')
+		patternsStr = ''
+	} else {
+		runTest(patternsStr).catch(console.error)
+	}
+}
 
 async function runTest(patternsStr) {
 	const startTime = Date.now()
