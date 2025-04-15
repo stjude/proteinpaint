@@ -1,6 +1,5 @@
 import { execSync } from 'child_process'
 import path from 'path'
-import * as glob from 'glob'
 import fs from 'fs'
 
 export const gitProjectRoot = path.join(import.meta.dirname, '../..') // execSync(`git rev-parse --show-toplevel`, { encoding: 'utf8' }).trim()
@@ -38,7 +37,7 @@ export function getClosestSpec(dirname, relevantSubdirs = [], opts = {}) {
 	changedFiles = changedFiles.filter(f => codeFileExt.has(path.extname(f)))
 	changedFiles = new Set(changedFiles)
 
-	const specs = opts.specs || glob.sync(`**/test/*.spec.*s`, { cwd: dirname, ignore })
+	const specs = opts.specs || fs.globSync(`**/test/*.spec.*s`, { cwd: dirname, ignore })
 
 	// key: spec dir,name pattern
 	// value: array of filenames that the pattern applies for test coverage
