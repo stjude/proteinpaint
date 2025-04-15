@@ -177,13 +177,36 @@ export function setInteractivity(self) {
 		self.displaySampleIds(event, term, data)
 	}
 
+	self.openSampleView = function (sampleId, sampleName) {
+		self.app.dispatch({
+			type: 'plot_create',
+			config: {
+				chartType: 'sampleView',
+				sample: { sampleId, sampleName }
+			}
+		})
+		self.app.tip.hide()
+	}
+
 	self.displaySampleIds = function (event, term, data) {
 		self.app.tip.clear()
 		if (!data?.samples) return
 		const sampleIdArr = []
-		for (const [c, k] of Object.entries(data.samples))
-			sampleIdArr.push([{ value: data.refs.bySampleId[c].label }, { value: roundValueAuto(k[term.$id].value) }])
+		for (const [c, k] of Object.entries(data.samples)) {
+			const sampleName = data.refs.bySampleId[c].label
+			sampleIdArr.push([{ value: sampleName }, { value: roundValueAuto(k[term.$id].value) }])
+		}
 
+		const columnButton = {
+			text: 'View',
+			callback: async (event, i) => {
+				const sample = data.lst[i]
+
+				const sampleId = sample.sample
+				const sampleName = sample._ref_.label
+				self.openSampleView(sampleId, sampleName)
+			}
+		}
 		const tableDiv = self.app.tip.d.append('div')
 		const columns = [{ label: 'Sample' }, { label: 'Value' }]
 		const rows = sampleIdArr
@@ -191,6 +214,7 @@ export function setInteractivity(self) {
 		renderTable({
 			rows,
 			columns,
+			columnButtons: [columnButton],
 			div: tableDiv,
 			maxWidth: '30vw',
 			maxHeight: '25vh',
