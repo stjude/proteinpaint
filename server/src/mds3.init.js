@@ -2546,6 +2546,8 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 	2. this query hardcodes to load geneCnv for showing in gdc matrix, the other does not need it (gdc tk)
 	*/
 	ds.mayGetGeneVariantData = async (tw, q) => {
+		console.log('tw.q.customset:', tw.q.customset?.groups[1].filter.active.lst)
+
 		// validate tw
 		if (typeof tw.term != 'object') throw 'tw.term{} is not object'
 		if (tw.term.type != 'geneVariant') throw 'tw.term.type is not geneVariant'

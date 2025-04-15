@@ -577,7 +577,10 @@ function setRenderers(self: any) {
 			joinWith: filter.opts.joinWith,
 			emptyLabel: '+Variant Filter',
 			holder: filterBody,
-			vocab: { terms: filter.terms },
+			vocab: {
+				terms: filter.terms,
+				parent_termdbConfig: self.tsInstance.vocabApi.termdbConfig
+			},
 			callback: async f => {
 				// once the filter is updated from UI, it's only updated here
 				// user must press submit button to attach current filter to self.q{}

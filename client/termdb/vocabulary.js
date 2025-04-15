@@ -29,7 +29,9 @@ export function vocabInit(opts) {
 		return new TermdbVocab(opts)
 	} else if (vocab.terms) {
 		//const { FrontendVocab } = await import('./FrontendVocab')
-		return new FrontendVocab(opts)
+		const vocabApi = new FrontendVocab(opts)
+		if (vocab.parent_termdbConfig) vocabApi.parent_termdbConfig = vocab.parent_termdbConfig
+		return vocabApi
 	}
 }
 
