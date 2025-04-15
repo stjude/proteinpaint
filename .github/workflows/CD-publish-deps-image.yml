@@ -44,8 +44,8 @@ jobs:
         uses: docker/login-action@v3.4.0
         with:
           registry: ghcr.io
-          username: ${{ inputs.GITHUB_ACTOR }}
-          password: ${{ inputs.PAT }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.PAT }}
 
       - name: Install dependencies for canvas
         run: |
