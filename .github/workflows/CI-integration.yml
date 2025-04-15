@@ -110,12 +110,10 @@ jobs:
           xvfb-run --auto-servernum npm run test:integration
 
       - name: Get current time
-        uses: josStorer/get-current-time@v2.0.2
         id: current-time
         if: always()
-        with:
-          format: MMM DD, yyyy HH:mm:ss
-          utcOffset: "-06:00"
+        run: |
+          echo "formattedTime=$(TZ=America/Chicago date '+%b %d, %Y %H:%M:%S')" >> "$GITHUB_OUTPUT"
 
       - name: Set short git commit SHA
         id: vars
