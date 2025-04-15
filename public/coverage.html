@@ -99,8 +99,7 @@
 <div id='main-div'></div>
 
 <script type='module'>
-const res = await fetch('/evalCoverage').then(r => r.json())
-getLatestCoverageReports(`<h2>Results from previous coverage run</h2>`, res.workspaces, res.failures)
+getSpecCoverage()
 </script>
 </body>
 </html>
