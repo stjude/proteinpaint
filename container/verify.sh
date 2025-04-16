@@ -20,15 +20,28 @@ end_time=$((SECONDS+480))
 
 ENDSTR="Validation succeeded"
 echo "Waiting for server validation ..."
+NUMLINES=0
 while true; do
-  if docker logs $CONTAINER_NAME 2>&1 | grep -q "$ENDSTR"; then
-  	echo "$ENDSTR"
+  LOGS="$(docker logs $CONTAINER_NAME 2>&1)"
+  if [[ "$LOGS" == "" ]]; then
+    continue
+  fi
+  
+  LINECOUNT=$(echo -n "$LOGS" | grep -c "^")
+  if (( $LINECOUNT == $NUMLINES )); then
+    continue
+  fi
+
+  NEWLOGS=$(echo -e "$LOGS" | tail -n$(( $LINECOUNT - $NUMLINES )))
+  echo -e "$NEWLOGS"
+  NUMLINES=$LINECOUNT
+  
+  if echo -e "$NEWLOGS" | grep -q "$ENDSTR"; then
     break
   fi
-  if docker logs $CONTAINER_NAME 2>&1 | grep -q "Error"; then
+  if echo -e "$NEWLOGS" | grep -q "Error"; then
   	# ppcov runs tests where Error messages may be displayed and should not stop the container
     if [[ "$CONTAINER_NAME" != "ppcov" ]]; then
-      docker logs $CONTAINER_NAME
       exit 1
     fi
   fi

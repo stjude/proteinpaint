@@ -3,7 +3,6 @@ import fs from 'fs'
 import { promisify } from 'util'
 import { exec } from 'child_process'
 import { gitProjectRoot } from '@sjcrh/augen'
-import { evalAllSpecCovResults } from '../../../../test/evalAllSpecCovResults.mjs'
 
 const execProm = promisify(exec)
 
@@ -25,7 +24,9 @@ export default function setRoutes(app, basepath) {
 			const out = await execProm(`cd ${gitProjectRoot} && npm run spec:coverage --workspaces --if-present`, {
 				encoding: 'utf8'
 			})
-			const { failures, workspaces } = await evalAllSpecCovResults()
+			// since this server route is only set up in dev, okay to use relative paths in import
+			const testHelper = await import('../../../../test/evalAllSpecCovResults.mjs')
+			const { failures, workspaces } = await testHelper.evalAllSpecCovResults()
 			res.send({ ok: true, out, failures, workspaces })
 		} catch (error) {
 			console.log('\n!!! /specCoverage route error !!!\n', error)
