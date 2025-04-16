@@ -2,7 +2,7 @@ import { RxComponentInner } from '../../types/rx.d'
 import type { BasePlotConfig, MassAppActions, MassState } from '#mass/types/mass'
 import { getCompInit, copyMerge } from '#rx'
 import type { SCConfigOpts, SCDom, SCState, SCViewerOpts } from './SCTypes'
-import { getDefaultSCSampleTableSettings } from '../scSampleTable'
+import type { Sample } from '#types'
 import { SCModel } from './model/SCModel'
 import { SCViewModel } from './viewModel/SCViewModel'
 import { SCView } from './view/SCView'
@@ -16,10 +16,11 @@ class SCViewer extends RxComponentInner {
 	components: {
 		plots: { [key: string]: any }
 	}
-	samples: any
-	sampleColumns: any
 	dom: SCDom
+	samples?: Sample[]
+	sampleColumns?: { termid: string; label: string }[]
 	view?: SCView
+	viewModel?: SCViewModel
 
 	constructor(opts: SCViewerOpts) {
 		super()
@@ -37,7 +38,7 @@ class SCViewer extends RxComponentInner {
 			div,
 			selectBtnDiv: div.append('div').attr('id', 'sjpp-sc-select-btn'),
 			tableDiv: div.append('div').attr('id', 'sjpp-sc-sample-table'),
-			chartBtnsDiv: div.append('div').attr('id', 'sjpp-sc-chart-buttons'),
+			plotBtnsDiv: div.append('div').attr('id', 'sjpp-sc-chart-buttons').style('display', 'none'),
 			plotsDiv: div.append('div').attr('id', 'sjpp-sc-plots')
 		}
 
@@ -84,9 +85,10 @@ class SCViewer extends RxComponentInner {
 			else if (e.stack) console.log(e.stack)
 			throw `${e} [SC init()]`
 		}
-		//Init view
-		const viewModel = new SCViewModel(this.app, state.config, this.samples, this.sampleColumns)
-		this.view = new SCView(this.app, state, this.dom, viewModel.tableData)
+		//Init view model and view
+		this.viewModel = new SCViewModel(this.app, state.config, this.samples, this.sampleColumns)
+		//Renders the static select btn and table
+		this.view = new SCView(this.app, state, this.dom, this.viewModel.tableData)
 	}
 
 	// async setComponent(config: SCConfig) {
@@ -131,12 +133,21 @@ class SCViewer extends RxComponentInner {
 export const SCInit = getCompInit(SCViewer)
 export const componentInit = SCInit
 
+export function getDefaultSCSettings(overrides = {}) {
+	const defaults = {
+		columns: {
+			sample: 'Sample'
+		}
+	}
+	return Object.assign(defaults, overrides)
+}
+
 export function getPlotConfig(opts: SCConfigOpts) {
 	const config = {
 		chartType: 'sc',
 		subplots: [],
 		settings: {
-			scSampleTable: getDefaultSCSampleTableSettings(opts.overrides || {})
+			sc: getDefaultSCSettings(opts.overrides || {})
 		}
 	} as any
 

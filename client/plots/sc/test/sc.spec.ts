@@ -51,7 +51,7 @@ tape('Default SC app', test => {
 						}
 					],
 					settings: {
-						scSampleTable: {
+						sc: {
 							columns: {
 								sample: 'Case'
 							}
