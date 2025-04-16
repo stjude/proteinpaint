@@ -26,8 +26,11 @@ while true; do
     break
   fi
   if docker logs $CONTAINER_NAME 2>&1 | grep -q "Error"; then
-  	docker logs $CONTAINER_NAME
-    exit 1
+  	# ppcov runs tests where Error messages may be displayed and should not stop the container
+    if [[ "$CONTAINER_NAME" != "ppcov" ]]; then
+      docker logs $CONTAINER_NAME
+      exit 1
+    fi
   fi
   sleep 1
   if (( SECONDS >= end_time )); then
