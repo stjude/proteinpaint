@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 Fixes:
 - Removing hdf5file flag now that ds have been migrated. Removed the tabix handling code also. Removed some extraneous unused variables noticed by the liner
 - putting back storage_type in dataset.ts to fix broken ds
+- Do not show gene menu submenu content on load if input is not checked
 
 
 ## 2.118.1
