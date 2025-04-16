@@ -1,6 +1,8 @@
 import type { MassAppApi } from '#mass/types/mass'
 import type { SCDom, SCState } from '../SCTypes'
+import type { TableCell } from '#dom'
 import { renderTable } from '#dom'
+import { PlotButtons } from './PlotButtons'
 
 /** TODO:
  * - Type file
@@ -15,6 +17,7 @@ export class SCView {
 	tableData: any
 	//On load, show table
 	inUse = true
+	plotButtons: PlotButtons
 
 	constructor(app: MassAppApi, state: SCState, dom: SCDom, tableData: any) {
 		this.app = app
@@ -23,6 +26,8 @@ export class SCView {
 		this.dom = dom
 		this.renderSelectBtn()
 		this.renderSamplesTable(tableData)
+
+		this.plotButtons = new PlotButtons(this.dom.plotBtnsDiv)
 	}
 
 	renderSelectBtn() {
@@ -40,7 +45,8 @@ export class SCView {
 			this.inUse = !this.inUse
 			arrowSpan.text(this.inUse ? '▼' : '▲')
 			this.dom.tableDiv.style('display', this.inUse ? 'block' : 'none')
-			this.dom.chartBtnsDiv.style('display', this.inUse ? 'block' : 'none')
+			//Only toggle if a sample is selected
+			if (this.plotButtons.sample) this.dom.plotBtnsDiv.style('display', this.inUse ? 'block' : 'none')
 		})
 	}
 
@@ -59,12 +65,19 @@ export class SCView {
 			striped: true,
 			selectedRows: tableData.selectedRows,
 			noButtonCallback: index => {
-				//TODO: launch charts per sample
+				const sample = {}
+				tableData.rows[index].forEach((r: TableCell, idx: number) => {
+					if (!r.value) return
+					sample[tableData.columns[idx].label.toLowerCase()] = r.value
+				})
+
+				this.plotButtons.update(sample)
+				this.dom.plotBtnsDiv.style('display', 'block')
 			}
 		})
 	}
 
 	update() {
-		//TODO
+		//TODO - will update the plots in the dashboard
 	}
 }

@@ -20,7 +20,7 @@ export type SCDom = {
 	div: Div
 	selectBtnDiv: Div
 	tableDiv: Div
-	chartBtnsDiv: Div
+	plotBtnsDiv: Div
 	plotsDiv: Div
 	header?: Elem
 }

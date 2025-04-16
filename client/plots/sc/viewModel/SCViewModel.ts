@@ -34,7 +34,7 @@ export class SCViewModel {
 		const hasExperiments = samples.some(i => i.experiments)
 
 		// first column is sample and is hardcoded
-		const columns: TableColumn[] = [{ label: plotConfig.settings.scSampleTable.columns.sample, sortable: true }]
+		const columns: TableColumn[] = [{ label: plotConfig.settings.sc.columns.sample, sortable: true }]
 		if (hasExperiments) columns.push({ label: 'Sample', sortable: true }) //add after the case column
 
 		// add in optional sample columns
@@ -54,6 +54,7 @@ export class SCViewModel {
 				//GDC
 				for (const exp of sample.experiments) {
 					// first cell is always sample name. sneak in experiment object to be accessed in click callback
+					//TODO: Consider removing the experimentID as it is no longer needed.
 					const row: { [index: string]: any }[] = [{ value: sample.sample, __experimentID: exp.experimentID }]
 					// hardcode to expect exp.sampleName and add this as a column
 					row.push({ value: exp.sampleName })
