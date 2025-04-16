@@ -915,7 +915,7 @@ export type WSImages = {
 	/** either ds supplied or dynamically added on launch with built in logic */
 	getWSImages?: (sampleName: string) => Promise<WSImage[]>
 
-	getWSIAnnotations?: (sampleName: string) => Promise<string[]>
+	getWSIAnnotations?: (sampleName: string, wsiImage: string) => Promise<string[]>
 }
 
 /*** types supporting Termdb ***/
