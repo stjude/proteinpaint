@@ -102,8 +102,10 @@ export async function fillTW(tw: GeneVariantTW, vocabApi: VocabApi, defaultQ: Ge
 		}
 	}
 
-	// cnv cutoffs; if the attributes are missing from q{}, add
-	if ('cnvMaxLength' in tw.q) {
+	// do not fill default cnv cutoffs here
+	// will set custom cnv cutoffs when creating
+	// variant filters in groupsetting UI
+	/*if ('cnvMaxLength' in tw.q) {
 		// has cutoff
 		if (!Number.isInteger(tw.q.cnvMaxLength)) throw 'cnvMaxLength is not integer'
 		// cnvMaxLength value<=0 will not filter by length
@@ -124,7 +126,7 @@ export async function fillTW(tw: GeneVariantTW, vocabApi: VocabApi, defaultQ: Ge
 		// =0 for not filtering losses
 	} else {
 		tw.q.cnvLossCutoff = -0.2
-	}
+	}*/
 
 	set_hiddenvalues(tw.q, tw.term)
 }

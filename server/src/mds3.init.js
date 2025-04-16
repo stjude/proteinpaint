@@ -2546,8 +2546,6 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 	2. this query hardcodes to load geneCnv for showing in gdc matrix, the other does not need it (gdc tk)
 	*/
 	ds.mayGetGeneVariantData = async (tw, q) => {
-		console.log('tw.q.customset:', tw.q.customset?.groups[1].filter.active.lst)
-
 		// validate tw
 		if (typeof tw.term != 'object') throw 'tw.term{} is not object'
 		if (tw.term.type != 'geneVariant') throw 'tw.term.type is not geneVariant'
@@ -2613,9 +2611,11 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 						dt: m.dt,
 						chr: tw.term.chr,
 						class: m.class,
-						pos: m.pos || (m.start ? m.start + '-' + m.stop : ''),
 						mname: m.mname
 					}
+					if (m.start) m2.start = m.start
+					if (m.stop) m2.stop = m.stop
+					if (m.pos) m2.pos = m.pos
 
 					if ('value' in m) {
 						// for what?
@@ -2788,8 +2788,22 @@ function filterByItem(filter, mlst) {
 		// sample is tested for the dt of the filter
 		tested = true
 		// determine if sample has any mutations specified in the filter
-		const sampleHasMutation = mlst_tested.some(m => tvs.values.some(v => v.key == m.class))
-		pass = tvs.isnot ? !sampleHasMutation : sampleHasMutation
+		const sampleHasMutation =
+			tvs.cnvMode == 'continuous'
+				? // continuous cnv data
+				  mlst_tested.some(m => {
+						if (!m.value && m.value !== 0) return false
+						if (m.value > 0 && tvs.cnvGainCutoff && m.value < tvs.cnvGainCutoff) return false
+						if (m.value < 0 && tvs.cnvLossCutoff && m.value > tvs.cnvLossCutoff) return false
+						if (tvs.cnvMaxLength && m.stop - m.start > tvs.cnvMaxLength) return false
+						return true
+				  })
+				: // categorical mutation data
+				  mlst_tested.some(m => tvs.values.some(v => v.key == m.class))
+		// for wildtype cnv genotype, negate the sampleHasMutation boolean
+		const sampleHasGenotype = tvs.cnvWT ? !sampleHasMutation : sampleHasMutation
+		// for tvs.isnot=true, negate the sampleHasGenotype boolean
+		pass = tvs.isnot ? !sampleHasGenotype : sampleHasGenotype
 	} else {
 		// sample does not have tested mutations for the dt
 		// so sample does not pass the filter

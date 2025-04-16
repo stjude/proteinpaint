@@ -65,7 +65,9 @@ class TVS {
 		if (!this.handlerByType[type]) {
 			try {
 				const _ = await import(`./tvs.${type}.js`)
-				this.handlerByType[type] = _.handler
+				const handler = _.handler
+				if (handler.setMethods) handler.setMethods(this)
+				this.handlerByType[type] = handler
 			} catch (e) {
 				throw `error with handler='./tvs.${type}.js': ${e}`
 			}
@@ -144,7 +146,8 @@ function setRenderers(self) {
 		const lstlen =
 			(self.tvs.values && self.tvs.values.length) ||
 			(self.tvs.ranges && self.tvs.ranges.length) ||
-			self.tvs.term.type == 'samplelst'
+			self.tvs.term.type == 'samplelst' ||
+			dtTerms.map(t => t.type).includes(self.tvs.term.type)
 
 		// update the main label
 		one_term_div.select('.term_name_btn').html(self.handler.term_name_gen)
