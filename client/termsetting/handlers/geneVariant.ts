@@ -263,8 +263,6 @@ async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 				applySpan.style('display', 'inline')
 			} else {
 				clearGroupset(self)
-				delete self.q.dt
-				delete self.q.origin
 				groupsDiv.style('display', 'none')
 				draggablesDiv.style('display', 'none')
 				applySpan.style('display', 'none')
