@@ -1,1 +1,2 @@
-
+Fixes:
+- Do not show gene menu submenu content on load if input is not checked
