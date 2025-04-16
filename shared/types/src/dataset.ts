@@ -590,6 +590,8 @@ type RnaseqGeneCount = {
 	/** Name of the HDF5 file */
 	file: string
 	samplesFile?: string
+	/** Storage_type for storing data (HDF5) */
+	storage_type: 'HDF5'
 }
 
 /** the metabolite query */
