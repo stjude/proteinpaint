@@ -35,26 +35,26 @@ async function fillMenu_cont(self, div, tvs) {
 
 	let cnvGainCutoff
 	if (cnv.cnvGainCutoff) {
-		cnvGainCutoff = cnv.cnvGainCutoff
+		cnvGainCutoff = tvs.cnvGainCutoff || cnv.cnvGainCutoff
 		const cnvGainDiv = settingsDiv.append('div').style('margin-bottom', '5px')
 		cnvGainDiv.append('span').style('opacity', 0.7).text('Minimum CNV Gain (log2 ratio)') // TODO: verify that this will always be log2 ratio
 		cnvGainDiv
 			.append('input')
 			.attr('type', 'number')
-			.property('value', cnv.cnvGainCutoff)
+			.property('value', cnvGainCutoff)
 			.style('width', '100px')
 			.style('margin-left', '15px')
 			.on('change', event => {
 				const value = event.target.value
 				if (value === '' || !Number.isFinite(Number(value))) {
 					window.alert('Please enter a numeric value.')
-					event.target.value = cnv.cnvGainCutoff
+					event.target.value = cnvGainCutoff
 					return
 				}
 				const newValue = Number(value)
 				if (newValue < 0) {
 					window.alert('Value must be a positive value.')
-					event.target.value = cnv.cnvGainCutoff
+					event.target.value = cnvGainCutoff
 					return
 				}
 				cnvGainCutoff = newValue
@@ -63,26 +63,26 @@ async function fillMenu_cont(self, div, tvs) {
 
 	let cnvLossCutoff
 	if (cnv.cnvLossCutoff) {
-		cnvLossCutoff = cnv.cnvLossCutoff
+		cnvLossCutoff = tvs.cnvLossCutoff || cnv.cnvLossCutoff
 		const cnvLossDiv = settingsDiv.append('div').style('margin-bottom', '5px')
 		cnvLossDiv.append('span').style('opacity', 0.7).text('Maximum CNV Loss (log2 ratio)') // TODO: verify that this will always be log2 ratio
 		cnvLossDiv
 			.append('input')
 			.attr('type', 'number')
-			.property('value', cnv.cnvLossCutoff)
+			.property('value', cnvLossCutoff)
 			.style('width', '100px')
 			.style('margin-left', '15px')
 			.on('change', event => {
 				const value = event.target.value
 				if (value === '' || !Number.isFinite(Number(value))) {
 					window.alert('Please enter a numeric value.')
-					event.target.value = cnv.cnvLossCutoff
+					event.target.value = cnvLossCutoff
 					return
 				}
 				const newValue = Number(value)
 				if (newValue > 0) {
 					window.alert('Value must be a negative value.')
-					event.target.value = cnv.cnvLossCutoff
+					event.target.value = cnvLossCutoff
 					return
 				}
 				cnvLossCutoff = newValue
@@ -91,20 +91,20 @@ async function fillMenu_cont(self, div, tvs) {
 
 	let cnvMaxLength
 	if (cnv.cnvMaxLength) {
-		cnvMaxLength = cnv.cnvMaxLength
+		cnvMaxLength = tvs.cnvMaxLength || cnv.cnvMaxLength
 		const cnvLengthDiv = settingsDiv.append('div').style('margin-bottom', '5px')
 		cnvLengthDiv.append('span').style('opacity', 0.7).text('CNV Max Length')
 		cnvLengthDiv
 			.append('input')
 			.attr('type', 'number')
-			.property('value', cnv.cnvMaxLength)
+			.property('value', cnvMaxLength)
 			.style('width', '100px')
 			.style('margin-left', '15px')
 			.on('change', event => {
 				const value = event.target.value
 				if (value === '' || !Number.isFinite(Number(value))) {
 					window.alert('Please enter a numeric value.')
-					event.target.value = cnv.cnvMaxLength
+					event.target.value = cnvMaxLength
 					return
 				}
 				const newValue = Number(value)
@@ -121,7 +121,7 @@ async function fillMenu_cont(self, div, tvs) {
 			})
 	}
 
-	let cnvWT = false
+	let cnvWT = tvs.cnvWT || false
 	const wtDiv = settingsDiv.append('div').style('margin-bottom', '5px')
 	wtDiv.append('span').style('margin-right', '3px').style('opacity', 0.7).text('Wildtype')
 	const wtCheckbox = wtDiv
