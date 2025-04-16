@@ -1,10 +1,12 @@
-import type { Elem } from '../../types/d3'
+import type { Elem, Div } from '../../types/d3'
 import type { PlotConfig } from '#mass/types/mass'
 
+/** TODO:
+ * - Add comments/documentation
+ */
 export type SCConfig = PlotConfig & {
 	chartType: 'sc'
-	/** Should match a tab in the sc app */
-	childType: string
+	subplots: PlotConfig[]
 	/** Common settings and settings for each child component/plot */
 	settings: object
 }
@@ -12,6 +14,27 @@ export type SCConfig = PlotConfig & {
 export type SCConfigOpts = {
 	/** Settings overrides */
 	overrides?: any
+}
+
+export type SCDom = {
+	div: Div
+	selectBtnDiv: Div
+	tableDiv: Div
+	chartBtnsDiv: Div
+	plotsDiv: Div
+	header?: Elem
+}
+
+/** State retrieved from this.app.getState()
+ * specific to SC chartType. */
+export type SCState = {
+	config: SCConfig
+	termfilter: any
+	termdbConfig: any
+	vocab: {
+		dslabel: string
+		genome: string
+	}
 }
 
 export type SCViewerOpts = {

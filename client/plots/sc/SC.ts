@@ -1,19 +1,25 @@
 import { RxComponentInner } from '../../types/rx.d'
 import type { BasePlotConfig, MassAppActions, MassState } from '#mass/types/mass'
-import type { Div } from '../../types/d3'
 import { getCompInit, copyMerge } from '#rx'
-import type { SCConfig, SCConfigOpts, SCViewerOpts } from './SCTypes'
+import type { SCConfigOpts, SCDom, SCState, SCViewerOpts } from './SCTypes'
 import { SCRenderer } from './SCRenderer'
 import { getDefaultSCSampleTableSettings } from '../scSampleTable'
+import { SCModel } from './model/SCModel'
+import { SCViewModel } from './viewModel/SCViewModel'
 
+/** TODO
+ * - Type file
+ * - Add comments/documentation
+ */
 class SCViewer extends RxComponentInner {
 	readonly type = 'sc'
 	components: {
 		plots: { [key: string]: any }
 	}
-	plotsDiv: { [key: string]: Div }
-	// plotsControlsDiv: { [key: string]: Div }
-	renderer?: SCRenderer
+	samples: any
+	sampleColumns: any
+	dom: SCDom
+	view?: SCRenderer
 
 	constructor(opts: SCViewerOpts) {
 		super()
@@ -26,17 +32,17 @@ class SCViewer extends RxComponentInner {
 			.style('padding', '5px')
 			.style('display', 'inline-block')
 			.style('vertical-align', 'top')
-		const tabsDiv = div.append('div').attr('id', 'sjpp-sc-tabs').style('display', 'inline-block')
-		const plots = div.append('div').attr('id', 'sjpp-sc-tabs-content')
+
 		this.dom = {
 			div,
-			tabsDiv,
-			plots
+			selectBtnDiv: div.append('div').attr('id', 'sjpp-sc-select-btn'),
+			tableDiv: div.append('div').attr('id', 'sjpp-sc-sample-table'),
+			chartBtnsDiv: div.append('div').attr('id', 'sjpp-sc-chart-buttons'),
+			plotsDiv: div.append('div').attr('id', 'sjpp-sc-plots')
 		}
-		// this.plotsControlsDiv = {}
-		this.plotsDiv = {}
 
-		if (opts.header) this.dom.header = opts.header.html(`SINGLE CELL`).style('font-size', '0.9em')
+		//opts.header is the sandbox header
+		if (opts.header) opts.header.html(`SINGLE CELL`).style('font-size', '0.9em')
 	}
 
 	getState(appState: MassState) {
@@ -47,7 +53,8 @@ class SCViewer extends RxComponentInner {
 		return {
 			config,
 			termfilter: appState.termfilter,
-			termdbConfig: appState.termdbConfig
+			termdbConfig: appState.termdbConfig,
+			vocab: appState.vocab
 		}
 	}
 
@@ -62,48 +69,62 @@ class SCViewer extends RxComponentInner {
 	}
 
 	async init(appState: MassState) {
-		const state = this.getState(appState)
-		this.renderer = new SCRenderer(this.app, this.dom, state)
-	}
-
-	async setComponent(config: SCConfig) {
-		let _
-		if (config.childType == 'scSampleTable') _ = await import(`#plots/scSampleTable.ts`)
-		if (config.childType == 'differentialAnalysis') _ = await import(`#plots/diffAnalysis/DifferentialAnalysis.ts`)
-		if (config.childType == 'violin') _ = await import(`#plots/violin.js`)
-
-		// this.plotsControlsDiv[config.childType] = this.dom.controls.append('div')
-		this.plotsDiv[config.childType] = this.dom.plots.append('div')
-
-		const opts = {
-			app: this.app,
-			holder: this.plotsDiv[config.childType],
-			id: this.id,
-			parent: this.api
-			// controls: this.plotsControlsDiv[config.childType]
+		const state = this.getState(appState) as SCState
+		const dsScSamples = state.termdbConfig.queries?.singleCell?.samples
+		const model = new SCModel(this.app)
+		try {
+			const response = await model.getSampleData()
+			if (response.error || !response.samples || !response.samples.length) {
+				this.app.printError('No samples found for this dataset')
+			}
+			this.samples = response.samples
+			this.sampleColumns = await model.getColumnLabels(dsScSamples)
+		} catch (e: any) {
+			if (e instanceof Error) console.error(`${e.message || e} [SC init()]`)
+			else if (e.stack) console.log(e.stack)
+			throw `${e} [SC init()]`
 		}
-		this.components.plots[config.childType] = await _.componentInit(opts)
+		//Init view
+		const viewModel = new SCViewModel(this.app, state.config, this.samples, this.sampleColumns)
+		this.view = new SCRenderer(this.app, state, this.dom, viewModel.tableData)
 	}
+
+	// async setComponent(config: SCConfig) {
+	// 	/** Will manage all the subplots */
+
+	// 	// let _
+	// 	// if (config.childType == 'scSampleTable') _ = await import(`#plots/scSampleTable.ts`)
+
+	// 	// this.plotsDiv[config.childType] = this.dom.plots.append('div')
+
+	// 	// const opts = {
+	// 	// 	app: this.app,
+	// 	// 	holder: this.plotsDiv[config.childType],
+	// 	// 	id: this.id,
+	// 	// 	parent: this.api
+	// 	// }
+	// 	// this.components.plots[config.childType] = await _.componentInit(opts)
+	// }
 
 	async main() {
 		const config = structuredClone(this.state.config)
 		if (config.chartType != this.type) return
 
-		if (!this.renderer) throw `Renderer not initialized [SC main()]`
+		if (!this.view) throw `View not initialized [SC main()]`
 
-		if (!this.components.plots[config.childType]) await this.setComponent(config)
+		/**Will manage the subplots in the dashboard */
 
-		for (const childType in this.components.plots) {
-			const chart = this.components.plots[childType]
-			if (chart.type != config.childType) {
-				this.plotsDiv[chart.type].style('display', 'none')
-				// this.plotsControlsDiv[chart.type].style('display', 'none')
-			}
-		}
-		this.plotsDiv[config.childType].style('display', '')
-		// this.plotsControlsDiv[config.childType].style('display', '')
+		// if (!this.components.plots[config.childType]) await this.setComponent(config)
 
-		this.renderer.update(config)
+		// for (const childType in this.components.plots) {
+		// 	const chart = this.components.plots[childType]
+		// 	if (chart.type != config.childType) {
+		// 		this.plotsDiv[chart.type].style('display', 'none')
+		// 	}
+		// }
+		// this.plotsDiv[config.childType].style('display', '')
+
+		// this.renderer.update(config)
 	}
 }
 
@@ -113,9 +134,8 @@ export const componentInit = SCInit
 export function getPlotConfig(opts: SCConfigOpts) {
 	const config = {
 		chartType: 'sc',
-		childType: 'scSampleTable',
+		subplots: [],
 		settings: {
-			controls: { isOpen: false },
 			scSampleTable: getDefaultSCSampleTableSettings(opts.overrides || {})
 		}
 	} as any

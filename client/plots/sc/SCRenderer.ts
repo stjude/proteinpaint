@@ -1,95 +1,70 @@
-import { Tabs } from '#dom'
-import type { MassAppApi, MassState } from '#mass/types/mass'
-import type { SCConfig } from './SCTypes'
+import type { MassAppApi } from '#mass/types/mass'
+import type { SCDom, SCState } from './SCTypes'
+import { renderTable } from '#dom'
+
+/** TODO:
+ * - Type file
+ * - Add comments/documentation
+ */
 
 export class SCRenderer {
 	app: MassAppApi
-	config: SCConfig
-	dom: any
-	state: MassState
-	tabs: Tabs
-	tabsData: any
+	// config: SCConfig
+	dom: SCDom
+	state: SCState
+	tableData: any
+	//On load, show table
+	inUse = true
 
-	constructor(app, dom, state) {
+	constructor(app: MassAppApi, state: SCState, dom: SCDom, tableData: any) {
 		this.app = app
-		this.state = state
-		this.config = structuredClone(state.config)
+		this.state = this.app.getState()
+		// this.config = structuredClone(state.config)
 		this.dom = dom
-		this.tabsData = this.getTabsOptions()
-		this.tabs = new Tabs({ holder: this.dom.tabsDiv, tabs: this.tabsData })
-		this.tabs.main()
+		this.renderSelectBtn()
+		this.renderSamplesTable(tableData)
 	}
 
-	getTabsOptions() {
-		// const scQueries = this.state.termdbConfig.queries.singleCell
-		const tabs = [
-			{
-				active: this.config.childType === 'scSampleTable',
-				id: 'scSampleTable',
-				label: 'Samples',
-				isVisible: () => true,
-				getPlotConfig: () => {
-					return {
-						childType: 'scSampleTable'
-					}
-				},
-				callback: this.tabCallback
-			}
-			// {
-			//     active: this.config.childType === 'differentialAnalysis',
-			//     id: 'differentialAnalysis',
-			//     label: 'Differential Expression',
-			//     isVisible: () => scQueries?.DEgenes,
-			//     getPlotConfig: () => {
-			//         return {
-			//             //Need to figure out how to launch a child plot
-			//             //that is also a parent component
-			//             childType: 'differentialAnalysis'
-			//         }
-			//     },
-			//     callback: this.tabCallback
-			// },
-			// {
-			//     active: this.config.childType === 'violin',
-			//     id: 'violin',
-			//     label: 'Summary',
-			//     isVisible: () => true,
-			//     getPlotConfig: () => {
-			//         return {
-			//             childType: 'violin'
-			//         }
-			//     },
-			//     callback: this.tabCallback
-			// },
-			//This might be a reusable holder just for images.
-			// {
-			//     active: this.config.childType === 'scImages',
-			//     id: 'scImages',
-			//     label: scQueries?.images?.label || 'Images',
-			//     isVisible: () => scQueries?.images,
-			//     getPlotConfig: () => {
-			//         return {
-			//             childType: 'scImages'
-			//         }
-			//     },
-			//     callback: this.tabCallback
-			// },
-		]
-		return tabs
-	}
+	renderSelectBtn() {
+		const btn = this.dom.selectBtnDiv
+			.append('button')
+			.attr('data-testid', 'sjpp-sc-sample-table-select-btn')
+			.style('border-radius', '20px')
+			.style('padding', '5px 10px')
+			.style('background-color', 'transparent')
+			.text('Select sample and plots')
 
-	tabCallback = async (event, tab) => {
-		if (!tab || !tab.id) return
-		const plotConfig = tab.getPlotConfig()
-		await this.app.dispatch({
-			type: 'plot_edit',
-			id: this.config.id,
-			config: plotConfig
+		const arrowSpan = btn.append('span').style('font-size', '0.8em').style('padding-left', '3px').text('▼')
+
+		btn.on('click', () => {
+			this.inUse = !this.inUse
+			arrowSpan.text(this.inUse ? '▼' : '▲')
+			this.dom.tableDiv.style('display', this.inUse ? 'block' : 'none')
+			this.dom.chartBtnsDiv.style('display', this.inUse ? 'block' : 'none')
 		})
 	}
 
-	update(config) {
-		const activeTabIndex = this.tabsData.findIndex(tab => tab.id == config.childType)
-		this.tabs.update(activeTabIndex)
+	renderSamplesTable(tableData) {
+		renderTable({
+			rows: tableData.rows,
+			columns: tableData.columns,
+			div: this.dom.tableDiv,
+			singleMode: true,
+			maxWidth: tableData.columns.length > 3 ? '98vw' : '40vw',
+			maxHeight: '30vh',
+			header: {
+				allowSort: true,
+				style: { 'text-transform': 'capitalize' }
+			},
+			striped: true,
+			selectedRows: tableData.selectedRows,
+			noButtonCallback: index => {
+				//TODO: launch charts per sample
+			}
+		})
+	}
+
+	update() {
+		//TODO
 	}
 }
