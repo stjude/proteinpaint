@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Fixes:
+- Removing hdf5file flag now that ds have been migrated. Removed the tabix handling code also. Removed some extraneous unused variables noticed by the liner
+- putting back storage_type in dataset.ts to fix broken ds
+
 
 ## 2.118.1
 
