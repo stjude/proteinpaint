@@ -59,4 +59,5 @@ curl -s http://localhost:3000/coverage/close?key=test
 sleep 15
 docker cp ppcov:/home/root/pp/app/active/server/.coverage ./
 sleep 10
+docker stop ppcov
 exit 0

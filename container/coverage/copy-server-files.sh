@@ -26,6 +26,7 @@ cp -r ../../server/routes server/
 cp -r ../../server/src server/
 cp -r ../../server/test server/
 cp -r ../../server/utils server/
+cp ../../test/evalAllSpecCovResults.mjs server/test/
 
 mkdir server/genome
 cp -r ../../server/genome/*.ts server/genome
