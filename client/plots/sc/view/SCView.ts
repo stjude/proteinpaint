@@ -1,6 +1,6 @@
-import type { MassAppApi } from '#mass/types/mass'
-import type { SCDom, SCState } from '../SCTypes'
+import type { SCDom } from '../SCTypes'
 import type { TableCell } from '#dom'
+import type { SCInteractions } from '../interactions/SCInteractions'
 import { renderTable } from '#dom'
 import { PlotButtons } from './PlotButtons'
 
@@ -10,24 +10,18 @@ import { PlotButtons } from './PlotButtons'
  */
 
 export class SCView {
-	app: MassAppApi
-	// config: SCConfig
 	dom: SCDom
-	state: SCState
 	tableData: any
 	//On load, show table
 	inUse = true
 	plotButtons: PlotButtons
 
-	constructor(app: MassAppApi, state: SCState, dom: SCDom, tableData: any) {
-		this.app = app
-		this.state = this.app.getState()
-		// this.config = structuredClone(state.config)
+	constructor(interactions: SCInteractions, dom: SCDom, tableData: any) {
 		this.dom = dom
 		this.renderSelectBtn()
 		this.renderSamplesTable(tableData)
 
-		this.plotButtons = new PlotButtons(this.dom.plotBtnsDiv)
+		this.plotButtons = new PlotButtons(interactions, this.dom.plotBtnsDiv)
 	}
 
 	renderSelectBtn() {

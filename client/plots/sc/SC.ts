@@ -6,6 +6,7 @@ import type { Sample } from '#types'
 import { SCModel } from './model/SCModel'
 import { SCViewModel } from './viewModel/SCViewModel'
 import { SCView } from './view/SCView'
+import { SCInteractions } from './interactions/SCInteractions'
 
 /** TODO
  * - Type file
@@ -17,7 +18,9 @@ class SCViewer extends RxComponentInner {
 		plots: { [key: string]: any }
 	}
 	dom: SCDom
+	interactions?: SCInteractions
 	samples?: Sample[]
+	/** Slightly modified from termdbConfig.queries.singleCell.samples.sampleColumns */
 	sampleColumns?: { termid: string; label: string }[]
 	view?: SCView
 	viewModel?: SCViewModel
@@ -85,10 +88,11 @@ class SCViewer extends RxComponentInner {
 			else if (e.stack) console.log(e.stack)
 			throw `${e} [SC init()]`
 		}
+		this.interactions = new SCInteractions(this.app, this.id)
 		//Init view model and view
 		this.viewModel = new SCViewModel(this.app, state.config, this.samples, this.sampleColumns)
 		//Renders the static select btn and table
-		this.view = new SCView(this.app, state, this.dom, this.viewModel.tableData)
+		this.view = new SCView(this.interactions, this.dom, this.viewModel.tableData)
 	}
 
 	// async setComponent(config: SCConfig) {

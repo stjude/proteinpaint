@@ -22,6 +22,7 @@ export class SCViewModel {
 		const selectedRows: number[] = []
 		const i = samples.findIndex(i => i.sample == config.sample)
 		if (i != -1) selectedRows.push(i)
+
 		this.tableData = {
 			rows: rows as any,
 			columns: columns as any,
