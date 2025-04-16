@@ -2792,7 +2792,7 @@ function filterByItem(filter, mlst) {
 			tvs.cnvMode == 'continuous'
 				? // continuous cnv data
 				  mlst_tested.some(m => {
-						if (!m.value && m.value !== 0) return false
+						if (!m.value) return false // will also consider value=0 as not mutated
 						if (m.value > 0 && tvs.cnvGainCutoff && m.value < tvs.cnvGainCutoff) return false
 						if (m.value < 0 && tvs.cnvLossCutoff && m.value > tvs.cnvLossCutoff) return false
 						if (tvs.cnvMaxLength && m.stop - m.start > tvs.cnvMaxLength) return false
