@@ -1,5 +1,5 @@
 import type { MassAppApi } from '#mass/types/mass'
-import type { SCDom, SCState } from './SCTypes'
+import type { SCDom, SCState } from '../SCTypes'
 import { renderTable } from '#dom'
 
 /** TODO:
@@ -7,7 +7,7 @@ import { renderTable } from '#dom'
  * - Add comments/documentation
  */
 
-export class SCRenderer {
+export class SCView {
 	app: MassAppApi
 	// config: SCConfig
 	dom: SCDom
