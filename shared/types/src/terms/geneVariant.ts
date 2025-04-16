@@ -2,13 +2,13 @@ import type { MinBaseQ, BaseTerm, TermGroupSetting, BaseTW, GroupSettingQ, Value
 import type { TermSettingInstance } from '../termsetting.ts'
 
 export type GeneVariantBaseQ = MinBaseQ & {
+	// cnv cutoffs may no longer be necessary, but keeping for now
+	// see fillTW() in termsetting/handlers/geneVariant.ts
 	cnvGainCutoff?: number
 	cnvMaxLength?: number
 	cnvMinAbsValue?: number
 	cnvLossCutoff?: number
 	exclude: string[]
-	dt?: number
-	origin?: string
 }
 
 export type GeneVariantQ = GeneVariantBaseQ & (ValuesQ | GroupSettingQ)
