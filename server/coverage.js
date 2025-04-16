@@ -37,7 +37,7 @@ try {
 } catch (e) {
 	fetch(`${host}/coverage/close`) /*.then(r => r.json()).then(console.log)*/
 		.catch(console.log)
-	console.log(e)
+	throw e
 }
 
 function sleep(ms) {
