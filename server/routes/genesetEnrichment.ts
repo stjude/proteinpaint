@@ -4,6 +4,7 @@ import fs from 'fs'
 import path from 'path'
 import serverconfig from '#src/serverconfig.js'
 import { run_python } from '@sjcrh/proteinpaint-python'
+import { mayLog } from '#src/helpers.ts'
 
 export const api: RouteApi = {
 	endpoint: 'genesetEnrichment',
@@ -29,26 +30,21 @@ function init({ genomes }) {
 			const results = await run_genesetEnrichment_analysis(q, genomes)
 			if (!q.geneset_name) {
 				// req.query.geneset_name contains the geneset name which is defined only when a request for plotting the details of a particular geneset_name is made. During the initial computation this is not defined as this will be selected by the user from the client side. When this is not defined, it will send the table output. The python code saves the table in serverconfig.cachedir in a pickle file (gsea_result_{random_number}.pkl) which will later be retrieved by a subsequent server request asking to plot the details of that geneset.
-				if (typeof results != 'string') res.send(results satisfies GenesetEnrichmentResponse)
-				else throw `invalid results type when !req.query.geneset_name`
-			} else if (typeof results == 'string') {
-				// req.query.geneset_name is present, this will cause the geneset image to be generated. The python code will retrieve gsea_result_{random_number}.pkl from serverconfig.cachedir to generate the image (gsea_plot_{random_num}.png). This prevents having to rerun the entire gsea computation again.
-				res.sendFile(results, (err: any) => {
-					fs.unlink(results, del_err => {
-						if (del_err) {
-							console.error('Error deleting file ' + results + ':', del_err)
-						}
-						//else {
-						//	console.log('File ' + results + ' deleted successfully')
-						//}
-					})
-					if (err) {
-						res.status(404).send('Image not found')
-					}
-				})
+				if (typeof results != 'object') throw 'gsea result is not object'
+				res.send(results satisfies GenesetEnrichmentResponse)
+				return
 			}
+			// req.query.geneset_name is present, this will cause the geneset image to be generated. The python code will retrieve gsea_result_{random_number}.pkl from serverconfig.cachedir to generate the image (gsea_plot_{random_num}.png). This prevents having to rerun the entire gsea computation again.
+			if (typeof results != 'string') throw 'gsea result is not string'
+			res.sendFile(results, (err: any) => {
+				fs.unlink(results, () => {})
+				if (err) {
+					res.status(404).send('Image not found')
+				}
+			})
 		} catch (e: any) {
 			res.send({ status: 'error', error: e.message || e })
+			if (e.stack) console.log(e.stack)
 		}
 	}
 }
@@ -80,6 +76,8 @@ async function run_genesetEnrichment_analysis(
 	//})
 	const gsea_output: any = await run_python('gsea.py', '/' + JSON.stringify(genesetenrichment_input))
 
+	// script output is line-based, each line can be 1) gsea result for genesets 2) an gsea plot image for a geneset 3) status logs that's very helpful to log out, thus process as below
+
 	let result
 	let data_found = false
 	let image_found = false
@@ -89,24 +87,17 @@ async function run_genesetEnrichment_analysis(
 		if (line.startsWith('result: ')) {
 			result = JSON.parse(line.replace('result: ', ''))
 			data_found = true
-			// should break here ???
 		} else if (line.startsWith('image: ')) {
 			// Getting image to be sent to client
 			result = JSON.parse(line.replace('image: ', ''))
 			image_found = true
-			// should break here ???
 		} else {
-			console.log(line)
+			// is a status line reporting time spent etc
+			mayLog(line)
 		}
 	}
 
-	//
-	if (data_found) {
-		return result as GenesetEnrichmentResponse
-	} else if (image_found) {
-		const imagePath: string = path.join(serverconfig.cachedir, result.image_file)
-		return imagePath
-	} else {
-		throw ``
-	}
+	if (data_found) return result as GenesetEnrichmentResponse
+	if (image_found) return path.join(serverconfig.cachedir, result.image_file)
+	throw 'data or image not found in gsea output; this should not happen'
 }
