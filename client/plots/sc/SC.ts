@@ -2,10 +2,10 @@ import { RxComponentInner } from '../../types/rx.d'
 import type { BasePlotConfig, MassAppActions, MassState } from '#mass/types/mass'
 import { getCompInit, copyMerge } from '#rx'
 import type { SCConfigOpts, SCDom, SCState, SCViewerOpts } from './SCTypes'
-import { SCRenderer } from './SCRenderer'
 import { getDefaultSCSampleTableSettings } from '../scSampleTable'
 import { SCModel } from './model/SCModel'
 import { SCViewModel } from './viewModel/SCViewModel'
+import { SCView } from './view/SCView'
 
 /** TODO
  * - Type file
@@ -19,7 +19,7 @@ class SCViewer extends RxComponentInner {
 	samples: any
 	sampleColumns: any
 	dom: SCDom
-	view?: SCRenderer
+	view?: SCView
 
 	constructor(opts: SCViewerOpts) {
 		super()
@@ -86,7 +86,7 @@ class SCViewer extends RxComponentInner {
 		}
 		//Init view
 		const viewModel = new SCViewModel(this.app, state.config, this.samples, this.sampleColumns)
-		this.view = new SCRenderer(this.app, state, this.dom, viewModel.tableData)
+		this.view = new SCView(this.app, state, this.dom, viewModel.tableData)
 	}
 
 	// async setComponent(config: SCConfig) {
