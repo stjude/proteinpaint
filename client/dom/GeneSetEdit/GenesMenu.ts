@@ -76,7 +76,7 @@ export class GenesMenu {
 			if (param?.options?.length) {
 				/* ** Submenu ** 
 				Use checkbox to expand div for additional options when checked. */
-				const holder = div.append('div').attr('data-testid', 'sjpp-submenu-checkbox')
+				const holder = div.append('div').attr('data-testid', 'sjpp-submenu-checkbox').style('padding', '2px')
 				const contentDiv = div.append('div').style('padding-left', '20px')
 				input = make_one_checkbox({
 					holder: holder,
@@ -95,7 +95,7 @@ export class GenesMenu {
 					option.parentId = param.id
 					this.params2Add.push({ param: option, input: optionInput })
 				}
-				contentDiv.style('display', param.value ? 'block' : 'none')
+				contentDiv.style('display', input.property('checked') ? 'block' : 'none')
 			} else {
 				input = div.append('input').style('padding', '2px').attr('type', 'checkbox').attr('id', param.id)
 				if (param.value) input.property('checked', param.value)
