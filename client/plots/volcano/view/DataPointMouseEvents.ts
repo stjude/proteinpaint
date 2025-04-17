@@ -26,7 +26,7 @@ export class DataPointMouseEvents {
 			circle.attr('fill-opacity', 0)
 		})
 		circle.on('click', async () => {
-			await interactions.launchBoxPlot(d.gene_symbol)
+			await interactions.launchBoxPlot(d.gene_name)
 		})
 	}
 
