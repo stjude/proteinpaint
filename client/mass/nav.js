@@ -184,7 +184,6 @@ class TdbNav {
 					this.samplecounts[this.filterJSON] = n
 				}
 			}
-			this.displaySubheader = this.state.nav.displaySubheader
 		}
 		this.updateUI()
 	}
@@ -403,7 +402,7 @@ function setRenderers(self) {
 			self.dom.messageDiv.selectAll('text').remove()
 			self.dom.messageDiv.style('display', '').text('No cohort selected. Please select a cohort in the "COHORT" tab.')
 		} else {
-			if (self.dom.subheaderDiv) self.dom.subheaderDiv.style('display', self.displaySubheader ? 'block' : 'none')
+			if (self.dom.subheaderDiv) self.dom.subheaderDiv.style('display', self.activeTab != -1 ? 'block' : 'none')
 			if (self.dom.messageDiv) self.dom.messageDiv.style('display', 'none')
 		}
 		const selectCohort = self.state.termdbConfig.selectCohort
@@ -414,9 +413,7 @@ function setRenderers(self) {
 		self.dom.tds
 			.style('display', '')
 			//Only show black text when the tab is active and the subheader is displayed
-			.style('color', d =>
-				d.colNum == self.activeTab && self.displaySubheader == true ? activeTabTextColor : inactiveTabTextColor
-			)
+			.style('color', d => (d.colNum == self.activeTab ? activeTabTextColor : inactiveTabTextColor))
 			.style('background-color', d =>
 				d.colNum == self.activeTab && self.dom.subheaderDiv.style('display') != 'none'
 					? self.state.termdbConfig.massNav?.activeColor || activeTabBgColor
@@ -468,7 +465,10 @@ function setRenderers(self) {
 
 		// const visibleSubheaders = []
 		for (const key in self.dom.subheader) {
-			self.dom.subheader[key].style('display', self.tabs[self.activeTab].subheader === key ? 'block' : 'none')
+			self.dom.subheader[key].style(
+				'display',
+				self.activeTab == -1 ? 'none' : self.tabs[self.activeTab].subheader === key ? 'block' : 'none'
+			)
 		}
 
 		if (self.opts.header_mode === 'with_cohortHtmlSelect') {
@@ -479,24 +479,21 @@ function setRenderers(self) {
 
 function setInteractivity(self) {
 	self.setTab = async (event, d) => {
+		//Reset the activeTab to the current tab if no tab is selected
+		if (self.activeTab == -1) self.activeTab == d.colNum
 		if (d.colNum === self.activeTab && !self.searching) {
-			// The about tab should not be hidden  on double click with or without plots
+			// The about tab should not be hidden on double click with or without plots
 			if (self.activeTab == 0) return
 			self.prevCohort = self.activeCohort
-			/** Fix to ensure the subheader is displayed/not displayed when
-			 * sharing or saving the session.
-			 */
-			self.displaySubheader = !self.displaySubheader
 			await self.updateUI()
 
-			/** Must trigger app dispatch to save the display in the state */
-			self.app.dispatch({ type: 'tab_set', activeTab: self.activeTab, displaySubheader: self.displaySubheader })
+			// if the user double-clicks on the same tab, hide the subheader
+			self.app.dispatch({ type: 'tab_set', activeTab: -1 })
 			return
 		}
 		self.activeTab = d.colNum
 		self.searching = false
-		self.displaySubheader = true
-		self.app.dispatch({ type: 'tab_set', activeTab: self.activeTab, displaySubheader: self.displaySubheader })
+		self.app.dispatch({ type: 'tab_set', activeTab: self.activeTab })
 		const chartsIdx = self.subheaderKeys.indexOf('charts')
 		if (self.activeTab == chartsIdx && self.activeCohort != -1 && !self.state.plots.length) {
 			// show dictionary or default plot in charts tab if no other
@@ -515,18 +512,16 @@ function setInteractivity(self) {
 		self.dom.tds.style('background-color', t => {
 			//light yellow for inactive tabs and grey-yellow for this active tab
 			if (t.colNum === d.colNum)
-				return self.activeTab == t.colNum && self.displaySubheader == true
+				return self.activeTab == t.colNum
 					? self.state.termdbConfig.massNav?.activeColorHover || activeTabBgColorHover
 					: inactiveTabBgColorHover
-			return self.activeTab == t.colNum && self.displaySubheader == true ? defaultActiveColor : 'transparent'
+			return self.activeTab == t.colNum ? defaultActiveColor : 'transparent'
 		})
 	}
 
 	self.mouseout = () => {
 		const defaultActiveColor = self.state.termdbConfig.massNav?.activeColor || activeTabBgColor
-		self.dom.tds.style('background-color', t =>
-			self.activeTab == t.colNum && self.displaySubheader == true ? defaultActiveColor : 'transparent'
-		)
+		self.dom.tds.style('background-color', t => (self.activeTab == t.colNum ? defaultActiveColor : 'transparent'))
 	}
 
 	self.getSessionFile = async event => {
