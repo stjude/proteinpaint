@@ -64,19 +64,21 @@ export async function evalSpecCovResults({ workspace, jsonExtract }) {
 	// as supplied by emitRelevantSpecCovDetails(), which use the results from
 	// here to update the html extract, and this partial content should not overwrite
 	// the fuller covFile content, which should be done only in master
+	//
+	// NOTE: running `npm run spec:coverage` from the pp dir should trigger tracking of coverage report changes
+	//
 	if (!jsonExtract) {
 		if (!failedCoverage.size) {
 			console.log(`\n👏 ${workspace} branch coverage test PASSED! 🎉`)
 			console.log('--- Percent coverage was maintained or improved across relevant files! ---\n')
-			if (gitProjectRoot.endsWith('proteinpaint')) {
-				const branch = execSync(`cd ${gitProjectRoot} && git rev-parse --abbrev-ref HEAD`, { encoding: 'utf8' }).trim()
-				if (branch == 'master') {
-					try {
-						fs.writeFileSync(covFile, JSON.stringify(relevantCoverage, null, '  '))
-						execSync(`cd ${gitProjectRoot} && git add ${covFile}`)
-					} catch (e) {
-						console.log(`error updating '${covFile}'`, e)
-					}
+			// only commit updated coverage json when running in github CI as indicated by repeated 'proteinpaint' path,
+			// or add TRACK_SPEC_COVERAGE=1 when running a script that calls this function
+			if (gitProjectRoot.endsWith('proteinpaint/proteinpaint') || process.env.TRACK_SPEC_COVERAGE) {
+				try {
+					fs.writeFileSync(covFile, JSON.stringify(relevantCoverage, null, '  '))
+					execSync(`cd ${gitProjectRoot} && git add ${covFile}`)
+				} catch (e) {
+					console.log(`error updating '${covFile}'`, e)
 				}
 			}
 		} else {
