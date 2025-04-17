@@ -443,18 +443,6 @@ class RunChart {
 			},
 
 			{
-				label: 'Show regression',
-				type: 'dropdown',
-				chartType: 'runChart',
-				settingsKey: 'regression',
-				options: [
-					{ label: 'None', value: 'None' },
-					//{ label: 'Loess', value: 'Loess' },
-					{ label: 'Lowess', value: 'Lowess' },
-					{ label: 'Polynomial', value: 'Polynomial' }
-				]
-			},
-			{
 				label: 'Opacity',
 				type: 'number',
 				chartType: 'runChart',
@@ -505,6 +493,19 @@ class RunChart {
 				title: `Use median instead of mean to aggregate the data`
 			})
 		}
+		if (!this.config.term0)
+			inputs.push({
+				label: 'Show regression',
+				type: 'dropdown',
+				chartType: 'runChart',
+				settingsKey: 'regression',
+				options: [
+					{ label: 'None', value: 'None' },
+					//{ label: 'Loess', value: 'Loess' },
+					{ label: 'Lowess', value: 'Lowess' },
+					{ label: 'Polynomial', value: 'Polynomial' }
+				]
+			})
 
 		this.components = {
 			controls: await controlsInit({
