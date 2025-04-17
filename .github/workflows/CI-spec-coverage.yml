@@ -173,7 +173,7 @@ jobs:
             
             echo "$(git rev-parse --short HEAD)" > public/coverage/commitRef
             git add public/coverage/commitRef
-            git commit --amend
+            git commit --amend -m "update relevant workspace coverage json"
 
             git push origin $BRANCH
           fi
