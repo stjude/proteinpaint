@@ -70,8 +70,8 @@ export type DataEntry = {
 	adjusted_p_value: number
 	original_p_value: number
 	fold_change: number
+	gene_id: string
 	gene_name: string
-	gene_symbol: string
 }
 
 export type DEImage = {
