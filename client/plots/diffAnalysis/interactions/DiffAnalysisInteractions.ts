@@ -11,7 +11,7 @@ export class DiffAnalysisInteractions {
 	}
 
 	getGseaParameters() {
-		const inputGenes = this.volcanoResponse.data.map(i => i.gene_symbol)
+		const inputGenes = this.volcanoResponse.data.map(i => i.gene_name)
 		const gsea_params = {
 			genes: inputGenes,
 			fold_change: this.volcanoResponse.data.map(i => i.fold_change),
