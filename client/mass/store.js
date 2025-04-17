@@ -24,7 +24,7 @@ const navHeaderModes = new Set([
 const defaultState = {
 	nav: {
 		header_mode: 'with_tabs',
-		activeTab: 0
+		activeTab: 0 // -1 for no active tab and all closed
 	},
 	// will be ignored if there is no dataset termdb.selectCohort
 	// or value will be set to match a filter node that has been tagged
