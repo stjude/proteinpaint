@@ -1310,6 +1310,7 @@ keep this setting here for reason of:
 		sample?: UrlTemplateBase
 		/** ssm link definition */
 		ssm?: UrlTemplateSsm | UrlTemplateSsm[]
+		/** allow to add link to "Experiment" field of singlecell app sample table */
 		scrnaExperimentId?: UrlTemplateBase
 	}
 
