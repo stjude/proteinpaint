@@ -1,19 +1,19 @@
 import type { MassAppApi } from '#mass/types/mass'
 import type { TableColumn, TableRow } from '#dom'
-import type { SCState } from '../SCTypes'
+import type { SCConfig, SCState, SampleColumn } from '../SCTypes'
+import type { SingleCellSample } from '#types'
 
-/** TODO:
- * - Type file
- * - Add comments/documentation
- * - Fn for chart btns
- * */
+/** TODOs when app resumes development
+ *  - ?Implement data mapper for buttons?
+ *  - Implement data mapper for plots in the dashboard
+ */
 
 export class SCViewModel {
 	app: MassAppApi
 	state: SCState
 	tableData: { rows: TableRow[]; columns: TableColumn[]; selectedRows: number[] }
 
-	constructor(app, config, samples, sampleColumns) {
+	constructor(app: MassAppApi, config: SCConfig, samples: SingleCellSample[], sampleColumns?: SampleColumn[]) {
 		this.app = app
 		this.state = this.app.getState()
 
@@ -23,6 +23,8 @@ export class SCViewModel {
 		const i = samples.findIndex(i => i.sample == config.sample)
 		if (i != -1) selectedRows.push(i)
 
+		/** Returning this data separately from the eventual
+		 * viewData because it's static. */
 		this.tableData = {
 			rows: rows as any,
 			columns: columns as any,
@@ -30,7 +32,7 @@ export class SCViewModel {
 		}
 	}
 
-	getTabelData(plotConfig, samples, sampleColumns) {
+	getTabelData(plotConfig: SCConfig, samples: SingleCellSample[], sampleColumns?: SampleColumn[]) {
 		const rows: TableRow[] = []
 		const hasExperiments = samples.some(i => i.experiments)
 
@@ -53,7 +55,7 @@ export class SCViewModel {
 		for (const sample of samples) {
 			if (hasExperiments)
 				//GDC
-				for (const exp of sample.experiments) {
+				for (const exp of sample.experiments!) {
 					// first cell is always sample name. sneak in experiment object to be accessed in click callback
 					//TODO: Consider removing the experimentID as it is no longer needed.
 					const row: { [index: string]: any }[] = [{ value: sample.sample, __experimentID: exp.experimentID }]

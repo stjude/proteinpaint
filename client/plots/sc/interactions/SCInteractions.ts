@@ -1,6 +1,7 @@
 import type { MassAppApi } from '#mass/types/mass'
 import type { ClientCopyGenome } from '../../../types/global'
 
+/** Handles the interactivity from the view */
 export class SCInteractions {
 	app: MassAppApi
 	id: string
@@ -12,7 +13,8 @@ export class SCInteractions {
 		this.genome = this.app.opts.genome
 	}
 
-	async geneSearchboxCallback(gene, plot) {
+	/** Used in the gene search menu shown on click from a plot btn */
+	async geneSearchboxCallback(gene: string, plot: any) {
 		const parentConfig = this.app.getState().plots.find(p => p.id === this.id)
 		const plotConfig = plot.getPlotConfig(gene)
 		const config = Object.assign({ subplots: [plotConfig] }, parentConfig)

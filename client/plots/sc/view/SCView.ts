@@ -1,22 +1,18 @@
-import type { SCDom } from '../SCTypes'
+import type { SCDom, SCTableData } from '../SCTypes'
 import type { TableCell } from '#dom'
 import type { SCInteractions } from '../interactions/SCInteractions'
 import { renderTable } from '#dom'
 import { PlotButtons } from './PlotButtons'
 
-/** TODO:
- * - Type file
- * - Add comments/documentation
- */
-
+/** Renders the sc app */
 export class SCView {
 	dom: SCDom
-	tableData: any
-	//On load, show table
-	inUse = true
 	plotButtons: PlotButtons
+	//On load, show table
+	//Eventually maybe an app dispatch and not a flag
+	inUse = true
 
-	constructor(interactions: SCInteractions, dom: SCDom, tableData: any) {
+	constructor(interactions: SCInteractions, dom: SCDom, tableData: SCTableData) {
 		this.dom = dom
 		this.renderSelectBtn()
 		this.renderSamplesTable(tableData)
@@ -24,6 +20,8 @@ export class SCView {
 		this.plotButtons = new PlotButtons(interactions, this.dom.plotBtnsDiv)
 	}
 
+	/** Renders the select btn at the top of the page that
+	 * show/hides the sample table and plot buttons */
 	renderSelectBtn() {
 		const btn = this.dom.selectBtnDiv
 			.append('button')
@@ -39,12 +37,14 @@ export class SCView {
 			this.inUse = !this.inUse
 			arrowSpan.text(this.inUse ? '▼' : '▲')
 			this.dom.tableDiv.style('display', this.inUse ? 'block' : 'none')
-			//Only toggle if a sample is selected
+			//Only toggle if a sample is selected (i.e. don't show on load)
 			if (this.plotButtons.sample) this.dom.plotBtnsDiv.style('display', this.inUse ? 'block' : 'none')
 		})
 	}
 
-	renderSamplesTable(tableData) {
+	/** Users select one sample at a time to render the plot buttons
+	 * to init() plots in the dashboard.*/
+	renderSamplesTable(tableData: SCTableData) {
 		renderTable({
 			rows: tableData.rows,
 			columns: tableData.columns,
@@ -64,7 +64,7 @@ export class SCView {
 					if (!r.value) return
 					sample[tableData.columns[idx].label.toLowerCase()] = r.value
 				})
-
+				//Update() renders the plot buttons
 				this.plotButtons.update(sample)
 				this.dom.plotBtnsDiv.style('display', 'block')
 			}

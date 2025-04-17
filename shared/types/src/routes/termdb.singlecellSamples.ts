@@ -1,7 +1,7 @@
 import type { RoutePayload } from './routeApi.js'
 import type { ErrorResponse } from './errorResponse.ts'
 
-export type Sample = {
+export type SingleCellSample = {
 	/** Sample name, required */
 	sample: string
 	/** optional list of sc data files available for this sample, gdc-specific
@@ -13,7 +13,10 @@ export type Sample = {
 	if no exp, then each sample will just have one experiment identifiable by its sample name, and this name is used in request
 	*/
 	[key: string]: any //sample column/term value
-	experiments?: { experimentID: string }[]
+	experiments?: {
+		sampleName: any
+		experimentID?: string
+	}[]
 
 	// a sample may have additional fields that will be displayed in table, see singleCell.samples.sampleColumns[]
 }
@@ -27,7 +30,7 @@ export type TermdbSingleCellSamplesRequest = {
 }
 type ValidResponse = {
 	/** List of sample names with singlecell data */
-	samples: Sample[]
+	samples: SingleCellSample[]
 	fields: string[]
 	columnNames: string[]
 	sameLegend?: boolean
