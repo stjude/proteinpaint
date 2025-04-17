@@ -48,7 +48,7 @@ class TdbNav {
 		this.type = 'nav'
 		this.instanceNum = instanceNum++
 		this.tabs = [] // array of tab objects corresponding to what's shown on header, based on ds customization. hidden tabs are not in this array. filled in initUI()
-		this.activeTab = 0 // array index for .tabs[]
+		this.activeTab = 0 // array index for .tabs[]; -1 for no active tabs and all closed
 		this.activeCohort = 0 // -1 = unselected, 0,1,2... = selected
 		this.samplecounts = {} // tracks sample count by .activeCohort value and stringified filter json
 		this.searching = false
