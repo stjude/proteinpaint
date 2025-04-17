@@ -156,9 +156,7 @@ jobs:
           echo -e "$(node test/emitSpecMarkdown.mjs)" >> $GITHUB_STEP_SUMMARY
 
           if [[ "$FAILED" != "" ]]; then
-            echo "----"
-            # TODO: activate error once this CI is tested more thoroughly in actual usage
-            # exit 1
+            exit 1
           fi
 
       - name: Commit updated coverage file
@@ -168,7 +166,7 @@ jobs:
           
           # this CI is intended to run on approving and closing a PR,
           # should not automatically push to master since its protected
-          if [[ "$BRANCH" != "master" && "$STAGEDFILES" != "" ]]; then
+          if [[ "$BRANCH" == "master" && "$STAGEDFILES" != "" ]]; then
             echo "$(git rev-parse --short HEAD)" > public/coverage/commitRef
             git add public/coverage/commitRef
 
