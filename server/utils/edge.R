@@ -33,7 +33,7 @@ read_json_time <- system.time({
 read_counts_time <- system.time({
   if (input$storage_type == "HDF5") {
     geneIDs <- h5read(input$input_file, "gene_ids")
-    geneSymbols <- h5read(input$input_file, "gene_names")
+    geneNames <- h5read(input$input_file, "gene_names")
     samples <- h5read(input$input_file, "samples")
 
     # Find indices of case and control samples in the HDF5 file
@@ -60,7 +60,7 @@ read_counts_time <- system.time({
       })
     })
     geneIDs <- unlist(read_counts[1])
-    geneSymbols <- unlist(read_counts[2])
+    geneNames <- unlist(read_counts[2])
     read_counts <- select(read_counts, -geneID)
     read_counts <- select(read_counts, -geneSymbol)
   } else {
@@ -71,7 +71,7 @@ read_counts_time <- system.time({
 
 # Create conditions vector
 conditions <- c(rep("Diseased", length(cases)), rep("Control", length(controls)))
-gene_id_symbols <- paste0(geneIDs, "\t", geneSymbols)
+gene_id_symbols <- paste0(geneIDs, "\t", geneNames)
 
 # Create DGEList object
 dge_list_time <- system.time({
@@ -193,7 +193,7 @@ if (DE_method == "edgeR") {
   pvalues <- et$table$PValue
   genes_matrix <- str_split_fixed(unlist(et$genes), "\t", 2)
   geneids <- unlist(genes_matrix[, 1])
-  genesymbols <- unlist(genes_matrix[, 2])
+  geneNames <- unlist(genes_matrix[, 2])
   adjust_p_values <- p.adjust(pvalues, method = "fdr")
 } else if (DE_method == "limma") {
   # Do voom transformation and fit linear model
@@ -246,7 +246,7 @@ if (DE_method == "edgeR") {
         pvalues <- top_table$P.Value
         genes_matrix <- str_split_fixed(unlist(top_table$genes), "\t", 2)
         geneids <- unlist(genes_matrix[, 1])
-        genesymbols <- unlist(genes_matrix[, 2])
+        geneNames <- unlist(genes_matrix[, 2])
         adjust_p_values <- top_table$adj.P.Val
       })
     })
@@ -257,9 +257,9 @@ if (DE_method == "edgeR") {
 }
 
 final_data_generation_time <- system.time({
-  output <- data.frame(geneids, genesymbols, logfc, pvalues, adjust_p_values)
-  names(output)[1] <- "gene_name"
-  names(output)[2] <- "gene_symbol"
+  output <- data.frame(geneids, geneNames, logfc, pvalues, adjust_p_values)
+  names(output)[1] <- "gene_id"
+  names(output)[2] <- "gene_name"
   names(output)[3] <- "fold_change"
   names(output)[4] <- "original_p_value"
   names(output)[5] <- "adjusted_p_value"

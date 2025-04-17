@@ -81,20 +81,20 @@ fn input_data_hdf5(
     };
 
     // Read gene symbols dataset
-    let genes_dataset = match file.dataset("gene_symbols") {
+    let genes_dataset = match file.dataset("gene_names") {
         Ok(ds) => ds,
         Err(err) => {
-            // eprintln!("Failed to open gene_symbols dataset: {}", err);
+            // eprintln!("Failed to open gene_names dataset: {}", err);
             // println!(
             //     "{}",
             //     serde_json::json!({
             //         "status": "error",
-            //         "message": format!("Failed to open gene_symbols dataset: {}", err),
+            //         "message": format!("Failed to open gene_names dataset: {}", err),
             //         "file_path": filename
             //     })
             // );
             return Err(hdf5::Error::Internal(format!(
-                "Failed to open gene_symbols dataset: {}",
+                "Failed to open gene_names dataset: {}",
                 err
             )));
         }
@@ -121,8 +121,8 @@ fn input_data_hdf5(
     };
 
     // Convert to Vec<String> for easier handling
-    let gene_symbols: Vec<String> = genes_varlen.iter().map(|g| g.to_string()).collect();
-    let num_genes = gene_symbols.len();
+    let gene_names: Vec<String> = genes_varlen.iter().map(|g| g.to_string()).collect();
+    let num_genes = gene_names.len();
     // eprintln!("Found {} gene symbols", num_genes);
 
     // Read sample names
@@ -316,7 +316,7 @@ fn input_data_hdf5(
     //     dm.ncols()
     // );
 
-    Ok((dm, gene_symbols))
+    Ok((dm, gene_names))
 }
 
 // The original input_data function for text files is kept as is
@@ -330,7 +330,7 @@ fn input_data(
     // Build the CSV reader and iterate over each record.
     let mut reader = BGZFReader::new(fs::File::open(filename).unwrap()).unwrap();
     let mut num_lines: usize = 0;
-    let mut gene_symbols: Vec<String> = Vec::with_capacity(500);
+    let mut gene_names: Vec<String> = Vec::with_capacity(500);
 
     let mut buffer = String::new();
     reader.read_to_string(&mut buffer).unwrap();
@@ -358,7 +358,7 @@ fn input_data(
             } else {
                 num_lines += 1;
                 //println!("line2:{:?}", line2);
-                gene_symbols.push(line2[3].to_string());
+                gene_names.push(line2[3].to_string());
                 for i in &column_numbers {
                     let field = line2[*i];
                     let num = FromStr::from_str(field);
@@ -386,7 +386,7 @@ fn input_data(
 
     let dm = DMatrix::from_row_slice(num_lines, sample_list.len(), &input_vector);
     //println!("dm:{:?}", dm);
-    (dm, gene_symbols)
+    (dm, gene_names)
 }
 
 #[allow(dead_code)]
@@ -398,7 +398,7 @@ struct GeneInfo {
 
 fn calculate_variance(
     input_matrix: Matrix<f64, Dyn, Dyn, VecStorage<f64, Dyn, Dyn>>,
-    gene_symbols: Vec<String>,
+    gene_names: Vec<String>,
     mut min_sample_size: f64,
     filter_extreme_values: bool,
     rank_type: String,
@@ -478,12 +478,12 @@ fn calculate_variance(
             {
                 gene_infos.push(GeneInfo {
                     rank_type: gene_counts.variance(),
-                    gene_symbol: gene_symbols[row].clone(),
+                    gene_symbol: gene_names[row].clone(),
                 });
             } else if filter_extreme_values == false {
                 gene_infos.push(GeneInfo {
                     rank_type: gene_counts.variance(),
-                    gene_symbol: gene_symbols[row].clone(),
+                    gene_symbol: gene_names[row].clone(),
                 });
             }
         } else {
@@ -496,12 +496,12 @@ fn calculate_variance(
             {
                 gene_infos.push(GeneInfo {
                     rank_type: gene_counts_data.interquartile_range(),
-                    gene_symbol: gene_symbols[row].clone(),
+                    gene_symbol: gene_names[row].clone(),
                 });
             } else if filter_extreme_values == false {
                 gene_infos.push(GeneInfo {
                     rank_type: gene_counts_data.interquartile_range(),
-                    gene_symbol: gene_symbols[row].clone(),
+                    gene_symbol: gene_names[row].clone(),
                 });
             }
         }
@@ -689,7 +689,7 @@ fn main() {
 
                     // Choose the appropriate input function based on file type
                     // eprintln!("Reading data from {} file: {}", file_type, file_name);
-                    let (input_matrix, gene_symbols) = if file_type == "hdf5" {
+                    let (input_matrix, gene_names) = if file_type == "hdf5" {
                         // eprintln!("Using HDF5 reader function...");
                         match input_data_hdf5(&file_name, &samples_list) {
                             Ok(result) => {
@@ -731,11 +731,11 @@ fn main() {
                     //     input_matrix.nrows(),
                     //     input_matrix.ncols()
                     // );
-                    // eprintln!("Number of gene symbols: {}", gene_symbols.len());
-                    if !gene_symbols.is_empty() {
+                    // eprintln!("Number of gene symbols: {}", gene_names.len());
+                    if !gene_names.is_empty() {
                         // eprintln!(
                         //     "First few gene symbols: {:?}",
-                        //     &gene_symbols.iter().take(5).collect::<Vec<_>>()
+                        //     &gene_names.iter().take(5).collect::<Vec<_>>()
                         // );
                     }
 
@@ -749,7 +749,7 @@ fn main() {
                     let gene_infos = match std::panic::catch_unwind(|| {
                         calculate_variance(
                             input_matrix,
-                            gene_symbols,
+                            gene_names,
                             samples_list.len() as f64,
                             filter_extreme_values,
                             rank_type.to_string(),
