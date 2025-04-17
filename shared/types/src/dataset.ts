@@ -1310,6 +1310,7 @@ keep this setting here for reason of:
 		sample?: UrlTemplateBase
 		/** ssm link definition */
 		ssm?: UrlTemplateSsm | UrlTemplateSsm[]
+		scrnaExperimentId?: UrlTemplateBase
 	}
 
 	termtypeByCohort?: any // FIXME see below
