@@ -224,12 +224,10 @@ export function setRenderers(self) {
 				.attr('height', self.settings.svgh)
 			chart.mainG.attr('clip-path', `url(#${id})`)
 
-			chart.serie = chart.mainG.append('g').attr('class', 'sjpcb-runchart-series')
 			chart.regressionG = chart.mainG.append('g').attr('class', 'sjpcb-runchart-lowess')
 			chart.legendG = svg.append('g').attr('class', 'sjpcb-runchart-legend')
 		} else {
 			chart.mainG = svg.select('.sjpcb-runchart-mainG')
-			chart.serie = chart.mainG.select('.sjpcb-runchart-series')
 			chart.regressionG = chart.mainG.select('.sjpcb-runchart-lowess')
 			axisG = svg.select('.sjpcb-runchart-axis')
 			labelsG = svg.select('.sjpcb-runchart-labelsG')
@@ -289,8 +287,7 @@ export function setRenderers(self) {
 	}
 
 	function renderSerie(chart, duration) {
-		if (self.canvas) self.canvas.remove()
-		const g = chart.serie
+		const g = chart.mainG.append('g')
 
 		const samples = chart.samples
 
