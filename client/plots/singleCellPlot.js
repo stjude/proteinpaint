@@ -1479,7 +1479,9 @@ class singleCellPlot {
 					}
 
 					// hardcode to always add in experiment id column
-					row.push({ value: exp.experimentID })
+					if (this.state.vocab.dslabel == 'GDC')
+						row.push({ value: exp.experimentID, url: `https://portal.gdc.cancer.gov/files/${exp.experimentID}` })
+					else row.push({ value: exp.experimentID })
 					rows.push(row)
 				}
 			else {
