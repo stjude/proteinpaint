@@ -31,6 +31,12 @@ function init({ genomes }) {
 			if (!ds) throw 'invalid dataset name'
 			if (!ds.queries?.singleCell?.DEgenes) throw 'not supported on this dataset'
 			result = await ds.queries.singleCell.DEgenes.get(q)
+			if (!result || !result.genes || !result?.genes?.length) {
+				result = {
+					status: 404,
+					error: !result ? 'No data found.' : 'No differentially expressed genes found.'
+				}
+			}
 		} catch (e: any) {
 			if (e.stack) console.log(e.stack)
 			result = {

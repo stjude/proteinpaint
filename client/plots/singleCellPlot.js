@@ -695,21 +695,31 @@ class singleCellPlot {
 		const columnName = this.state.termdbConfig.queries.singleCell.DEgenes.columnName
 		const sample =
 			this.state.config.experimentID || this.state.config.sample || this.samples?.[0]?.experiments[0]?.experimentID
-		const args = { genome: this.state.genome, dslabel: this.state.dslabel, categoryName, sample, columnName }
-		const result = await dofetch3('termdb/singlecellDEgenes', { body: args })
-		if (result.error) {
-			tableDiv.text(result.error)
-			return
-		}
-		if (!Array.isArray(result.genes)) {
-			tableDiv.text('.genes[] missing')
-			return
-		}
+
 		const DEContentDiv = this.dom.plotsDiv.append('div').style('width', '100%')
 
 		const tabsDiv = DEContentDiv.append('div')
 		const tableDiv = DEContentDiv.append('div')
 		const GSEADiv = DEContentDiv.append('div').style('display', 'none')
+
+		let result
+		try {
+			const args = { genome: this.state.genome, dslabel: this.state.dslabel, categoryName, sample, columnName }
+			result = await dofetch3('termdb/singlecellDEgenes', { body: args })
+			if (result.error) {
+				tableDiv.text(result.error)
+				return
+			}
+			if (!result.genes || !result?.genes?.length) {
+				tableDiv.text('No differentially expressed genes found.')
+				return
+			}
+		} catch (e) {
+			if (e.stack) console.error(e.stack)
+			else throw `Error fetching DE genes: ${e.message || e} [singleCellPlot.renderDETable()]`
+			return
+		}
+
 		const tabs = [
 			{
 				label: 'Differentially Expressed Genes',
