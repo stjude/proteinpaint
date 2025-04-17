@@ -603,7 +603,7 @@ export function getDefaultRunChartSettings() {
 	return {
 		aggregateData: true,
 		useMedian: true,
-		size: 0.8,
+		size: 0.5,
 		minShapeSize: 0.5,
 		maxShapeSize: 4,
 		scaleDotOrder: 'Ascending',
