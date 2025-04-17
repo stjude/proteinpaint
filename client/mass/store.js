@@ -24,8 +24,7 @@ const navHeaderModes = new Set([
 const defaultState = {
 	nav: {
 		header_mode: 'with_tabs',
-		activeTab: 0,
-		displaySubheader: true
+		activeTab: 0
 	},
 	// will be ignored if there is no dataset termdb.selectCohort
 	// or value will be set to match a filter node that has been tagged
@@ -239,7 +238,6 @@ TdbStore.prototype.actions = {
 	},
 	tab_set(action) {
 		this.state.nav.activeTab = action.activeTab
-		this.state.nav.displaySubheader = action.displaySubheader
 	},
 	cohort_set(action) {
 		this.state.activeCohort = action.activeCohort
