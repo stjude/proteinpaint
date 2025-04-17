@@ -13,7 +13,11 @@ Tests:
 	term1=categorical
 	term1=categorical, term2=defaultbins
 	term0=defaultbins, term1=categorical
-	term1=geneVariant
+	term1=geneVariant no group
+	term1=geneVariant with groups
+	term1=categorical, term2=geneVariant
+	term1=geneExp, term2=geneVariant SKIPPED
+	term2=geneExp, term1=geneVariant
 	term1=geneExp
 	term1=numeric term2=geneExp with default bins
 	term1=geneExp, term2=categorical
@@ -256,14 +260,14 @@ tape('term0=defaultbins, term1=categorical', function (test) {
 	}
 })
 
-tape('term1=geneVariant', function (test) {
+tape('term1=geneVariant no group', function (test) {
 	test.timeoutAfter(3000)
 	runpp({
 		state: {
 			plots: [
 				{
 					chartType: 'summary', // cannot use 'barchart', breaks
-					term: { term: { type: 'geneVariant', gene: 'TP53', name: 'TP53' } }
+					term: { term: { type: 'geneVariant', gene: 'TP53' } }
 				}
 			]
 		},
@@ -278,6 +282,118 @@ tape('term1=geneVariant', function (test) {
 		const barDiv = barchart.Inner.dom.barDiv
 		const numCharts = barDiv.selectAll('.pp-sbar-div').size()
 		test.true(numCharts > 2, 'Should have more than 2 charts by TP53 as a gene variant term')
+		if (test._ok) barchart.Inner.app.destroy()
+		test.end()
+	}
+})
+
+tape('term1=geneVariant with groups', function (test) {
+	test.timeoutAfter(3000)
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'summary', // cannot use 'barchart', breaks
+					term: geneVariantTw
+				}
+			]
+		},
+		barchart: {
+			callbacks: {
+				'postRender.test': testNumCharts
+			}
+		}
+	})
+
+	function testNumCharts(barchart) {
+		const barDiv = barchart.Inner.dom.barDiv
+		const numCharts = barDiv.selectAll('.pp-sbar-div').size()
+		test.true(numCharts == 1, 'Should have 1 chart from gene variant term')
+		if (test._ok) barchart.Inner.app.destroy()
+		test.end()
+	}
+})
+
+tape('term1=categorical, term2=geneVariant', function (test) {
+	test.timeoutAfter(3000)
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'summary', // cannot use 'barchart', breaks
+					term: { id: 'diaggrp' },
+					term2: geneVariantTw
+				}
+			]
+		},
+		barchart: {
+			callbacks: {
+				'postRender.test': testNumCharts
+			}
+		}
+	})
+
+	function testNumCharts(barchart) {
+		const barDiv = barchart.Inner.dom.barDiv
+		const numCharts = barDiv.selectAll('.pp-sbar-div').size()
+		test.true(numCharts == 1, 'Should have 1 chart from gene variant term')
+		if (test._ok) barchart.Inner.app.destroy()
+		test.end()
+	}
+})
+
+// FIXME this test times out, seems like postRender is never called
+tape.skip('term1=geneExp, term2=geneVariant SKIPPED', function (test) {
+	test.timeoutAfter(10000)
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'summary', // cannot use 'barchart', breaks
+					term2: geneVariantTw,
+					term: { term: { type: 'geneExpression', gene: 'TP53' } }
+				}
+			]
+		},
+		barchart: {
+			callbacks: {
+				'postRender.test': testNumCharts
+			}
+		}
+	})
+
+	function testNumCharts(barchart) {
+		const barDiv = barchart.Inner.dom.barDiv
+		const numCharts = barDiv.selectAll('.pp-sbar-div').size()
+		test.true(numCharts == 1, 'Should have 1 chart from gene variant term')
+		//if (test._ok) barchart.Inner.app.destroy()
+		test.end()
+	}
+})
+
+tape('term2=geneExp, term1=geneVariant', function (test) {
+	test.timeoutAfter(10000)
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'summary', // cannot use 'barchart', breaks
+					term: geneVariantTw,
+					term2: { term: { type: 'geneExpression', gene: 'TP53' } }
+				}
+			]
+		},
+		barchart: {
+			callbacks: {
+				'postRender.test': testNumCharts
+			}
+		}
+	})
+
+	function testNumCharts(barchart) {
+		const barDiv = barchart.Inner.dom.barDiv
+		const numCharts = barDiv.selectAll('.pp-sbar-div').size()
+		test.true(numCharts == 1, 'Should have 1 chart from gene variant term')
 		if (test._ok) barchart.Inner.app.destroy()
 		test.end()
 	}
@@ -1844,3 +1960,293 @@ tape.skip('customized bins', test => {
 		test.deepEqual(barchart.Inner.config.term.q, q1, 'should not be reverted when using a searched term')
 	}
 })
+
+// to make or update this config, on the browser build/modify the tw, apply to chart, at Session > Share > Open link, open the session file and locate the gV tw entry and copy it out here
+const geneVariantTw = {
+	term: {
+		type: 'geneVariant',
+		gene: 'TP53',
+		groupsetting: { disabled: false },
+		filter: {
+			opts: { joinWith: ['and', 'or'] },
+			terms: [
+				{
+					id: 'snvindel_somatic',
+					query: 'snvindel',
+					name: 'SNV/indel (somatic)',
+					parent_id: null,
+					isleaf: true,
+					type: 'dtsnvindel',
+					dt: 1,
+					values: { M: { label: 'MISSENSE' }, F: { label: 'FRAMESHIFT' }, WT: { label: 'Wildtype' } },
+					name_noOrigin: 'SNV/indel',
+					origin: 'somatic'
+				},
+				{
+					id: 'snvindel_germline',
+					query: 'snvindel',
+					name: 'SNV/indel (germline)',
+					parent_id: null,
+					isleaf: true,
+					type: 'dtsnvindel',
+					dt: 1,
+					values: { M: { label: 'MISSENSE' }, F: { label: 'FRAMESHIFT' }, WT: { label: 'Wildtype' } },
+					name_noOrigin: 'SNV/indel',
+					origin: 'germline'
+				},
+				{
+					id: 'cnv',
+					query: 'cnv',
+					name: 'CNV',
+					parent_id: null,
+					isleaf: true,
+					type: 'dtcnv',
+					dt: 4,
+					values: { CNV_amp: { label: 'Copy number gain' }, WT: { label: 'Wildtype' } },
+					name_noOrigin: 'CNV'
+				},
+				{
+					id: 'fusion',
+					query: 'svfusion',
+					name: 'Fusion RNA',
+					parent_id: null,
+					isleaf: true,
+					type: 'dtfusion',
+					dt: 2,
+					values: { Fuserna: { label: 'Fusion transcript' }, WT: { label: 'Wildtype' } },
+					name_noOrigin: 'Fusion RNA'
+				}
+			]
+		}
+	},
+	q: {
+		type: 'custom-groupset',
+		customset: {
+			groups: [
+				{
+					name: 'Excluded categories',
+					type: 'filter',
+					uncomputable: true,
+					filter: {
+						opts: { joinWith: ['and', 'or'] },
+						terms: [
+							{
+								id: 'snvindel_somatic',
+								query: 'snvindel',
+								name: 'SNV/indel (somatic)',
+								parent_id: null,
+								isleaf: true,
+								type: 'dtsnvindel',
+								dt: 1,
+								values: { M: { label: 'MISSENSE' }, F: { label: 'FRAMESHIFT' }, WT: { label: 'Wildtype' } },
+								name_noOrigin: 'SNV/indel',
+								origin: 'somatic'
+							},
+							{
+								id: 'snvindel_germline',
+								query: 'snvindel',
+								name: 'SNV/indel (germline)',
+								parent_id: null,
+								isleaf: true,
+								type: 'dtsnvindel',
+								dt: 1,
+								values: { M: { label: 'MISSENSE' }, F: { label: 'FRAMESHIFT' }, WT: { label: 'Wildtype' } },
+								name_noOrigin: 'SNV/indel',
+								origin: 'germline'
+							},
+							{
+								id: 'cnv',
+								query: 'cnv',
+								name: 'CNV',
+								parent_id: null,
+								isleaf: true,
+								type: 'dtcnv',
+								dt: 4,
+								values: { CNV_amp: { label: 'Copy number gain' }, WT: { label: 'Wildtype' } },
+								name_noOrigin: 'CNV'
+							},
+							{
+								id: 'fusion',
+								query: 'svfusion',
+								name: 'Fusion RNA',
+								parent_id: null,
+								isleaf: true,
+								type: 'dtfusion',
+								dt: 2,
+								values: { Fuserna: { label: 'Fusion transcript' }, WT: { label: 'Wildtype' } },
+								name_noOrigin: 'Fusion RNA'
+							}
+						],
+						group: 0,
+						active: { type: 'tvslst', in: true, join: '', lst: [] }
+					}
+				},
+				{
+					name: 'WTSnvindel',
+					type: 'filter',
+					uncomputable: false,
+					filter: {
+						opts: { joinWith: ['and', 'or'] },
+						terms: [
+							{
+								id: 'snvindel_somatic',
+								query: 'snvindel',
+								name: 'SNV/indel (somatic)',
+								parent_id: null,
+								isleaf: true,
+								type: 'dtsnvindel',
+								dt: 1,
+								values: { M: { label: 'MISSENSE' }, F: { label: 'FRAMESHIFT' }, WT: { label: 'Wildtype' } },
+								name_noOrigin: 'SNV/indel',
+								origin: 'somatic'
+							},
+							{
+								id: 'snvindel_germline',
+								query: 'snvindel',
+								name: 'SNV/indel (germline)',
+								parent_id: null,
+								isleaf: true,
+								type: 'dtsnvindel',
+								dt: 1,
+								values: { M: { label: 'MISSENSE' }, F: { label: 'FRAMESHIFT' }, WT: { label: 'Wildtype' } },
+								name_noOrigin: 'SNV/indel',
+								origin: 'germline'
+							},
+							{
+								id: 'cnv',
+								query: 'cnv',
+								name: 'CNV',
+								parent_id: null,
+								isleaf: true,
+								type: 'dtcnv',
+								dt: 4,
+								values: { CNV_amp: { label: 'Copy number gain' }, WT: { label: 'Wildtype' } },
+								name_noOrigin: 'CNV'
+							},
+							{
+								id: 'fusion',
+								query: 'svfusion',
+								name: 'Fusion RNA',
+								parent_id: null,
+								isleaf: true,
+								type: 'dtfusion',
+								dt: 2,
+								values: { Fuserna: { label: 'Fusion transcript' }, WT: { label: 'Wildtype' } },
+								name_noOrigin: 'Fusion RNA'
+							}
+						],
+						group: 1,
+						active: {
+							type: 'tvslst',
+							in: true,
+							join: '',
+							lst: [
+								{
+									type: 'tvs',
+									tvs: {
+										term: {
+											id: 'snvindel_somatic',
+											query: 'snvindel',
+											name: 'SNV/indel (somatic)',
+											parent_id: null,
+											isleaf: true,
+											type: 'dtsnvindel',
+											dt: 1,
+											values: { M: { label: 'MISSENSE' }, F: { label: 'FRAMESHIFT' }, WT: { label: 'Wildtype' } },
+											name_noOrigin: 'SNV/indel',
+											origin: 'somatic'
+										},
+										values: [{ key: 'WT', label: 'Wildtype', value: 'WT', bar_width_frac: null }]
+									}
+								}
+							]
+						}
+					}
+				},
+				{
+					name: 'ANYSnvindel',
+					type: 'filter',
+					uncomputable: false,
+					filter: {
+						opts: { joinWith: ['and', 'or'] },
+						terms: [
+							{
+								id: 'snvindel_somatic',
+								query: 'snvindel',
+								name: 'SNV/indel (somatic)',
+								parent_id: null,
+								isleaf: true,
+								type: 'dtsnvindel',
+								dt: 1,
+								values: { M: { label: 'MISSENSE' }, F: { label: 'FRAMESHIFT' }, WT: { label: 'Wildtype' } },
+								name_noOrigin: 'SNV/indel',
+								origin: 'somatic'
+							},
+							{
+								id: 'snvindel_germline',
+								query: 'snvindel',
+								name: 'SNV/indel (germline)',
+								parent_id: null,
+								isleaf: true,
+								type: 'dtsnvindel',
+								dt: 1,
+								values: { M: { label: 'MISSENSE' }, F: { label: 'FRAMESHIFT' }, WT: { label: 'Wildtype' } },
+								name_noOrigin: 'SNV/indel',
+								origin: 'germline'
+							},
+							{
+								id: 'cnv',
+								query: 'cnv',
+								name: 'CNV',
+								parent_id: null,
+								isleaf: true,
+								type: 'dtcnv',
+								dt: 4,
+								values: { CNV_amp: { label: 'Copy number gain' }, WT: { label: 'Wildtype' } },
+								name_noOrigin: 'CNV'
+							},
+							{
+								id: 'fusion',
+								query: 'svfusion',
+								name: 'Fusion RNA',
+								parent_id: null,
+								isleaf: true,
+								type: 'dtfusion',
+								dt: 2,
+								values: { Fuserna: { label: 'Fusion transcript' }, WT: { label: 'Wildtype' } },
+								name_noOrigin: 'Fusion RNA'
+							}
+						],
+						group: 2,
+						active: {
+							type: 'tvslst',
+							in: true,
+							join: '',
+							lst: [
+								{
+									type: 'tvs',
+									tvs: {
+										term: {
+											id: 'snvindel_somatic',
+											query: 'snvindel',
+											name: 'SNV/indel (somatic)',
+											parent_id: null,
+											isleaf: true,
+											type: 'dtsnvindel',
+											dt: 1,
+											values: { M: { label: 'MISSENSE' }, F: { label: 'FRAMESHIFT' }, WT: { label: 'Wildtype' } },
+											name_noOrigin: 'SNV/indel',
+											origin: 'somatic'
+										},
+										values: [{ key: 'WT', label: 'Wildtype', value: 'WT', bar_width_frac: null }],
+										isnot: true
+									}
+								}
+							]
+						}
+					}
+				}
+			]
+		}
+	}
+}
