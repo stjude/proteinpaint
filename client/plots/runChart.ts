@@ -11,6 +11,7 @@ import { plotColor } from '#shared/common.js'
 import { filterJoin } from '#filter'
 import { getDateFromNumber, isNumericTerm } from '#shared/terms.js'
 import { median } from 'd3-array'
+import { getColors } from '#shared/common.js'
 
 /*
 sample object returned by server:
@@ -55,6 +56,7 @@ class RunChart {
 	processData!: () => Promise<void>
 	render!: () => Promise<void>
 	setTools!: () => Promise<void>
+	cat2Color!: any
 
 	constructor() {
 		this.type = 'runChart'
@@ -161,8 +163,10 @@ class RunChart {
 		for (const [key, chartData] of Object.entries(data.result)) {
 			this.createChart(key, chartData)
 		}
+		this.cat2Color = getColors(this.charts.length)
+
 		await this.setControls()
-		this.initRanges()
+		await this.initRanges()
 		await this.processData()
 		this.render()
 		this.dom.loadingDiv.style('display', 'none')
@@ -212,12 +216,27 @@ class RunChart {
 	}
 
 	initRanges() {
-		const samples: any = []
-		for (const chart of this.charts) samples.push(...chart.samples)
+		let samples: any = []
+		for (const chart of this.charts) samples = samples.concat(chart.samples)
 		if (samples.length == 0) return
 
+		const [xMin, xMax, yMin, yMax, zMin, zMax, scaleMin, scaleMax] = this.getMinMaxRanges(samples)
+
+		for (const chart of this.charts) {
+			chart.xMin = xMin
+			chart.xMax = xMax
+			chart.yMin = yMin
+			chart.yMax = yMax
+			chart.zMin = zMin
+			chart.zMax = zMax
+			chart.scaleMin = scaleMin
+			chart.scaleMax = scaleMax
+		}
+	}
+
+	getMinMaxRanges(samples) {
 		const s0: any = samples[0] //First sample to start reduce comparisons
-		const [xMin, xMax, yMin, yMax, zMin, zMax, scaleMin, scaleMax] = samples.reduce(
+		const minMaxValues = samples.reduce(
 			(s, d) => [
 				d.x < s[0] ? d.x : s[0],
 				d.x > s[1] ? d.x : s[1],
@@ -230,16 +249,7 @@ class RunChart {
 			],
 			[s0.x, s0.x, s0.y, s0.y, s0.z, s0.z, s0.scale, s0.scale]
 		)
-		for (const chart of this.charts) {
-			chart.xMin = xMin
-			chart.xMax = xMax
-			chart.yMin = yMin
-			chart.yMax = yMax
-			chart.zMin = zMin
-			chart.zMax = zMax
-			chart.scaleMin = scaleMin
-			chart.scaleMax = scaleMax
-		}
+		return minMaxValues
 	}
 
 	getFilter(tw: any = null) {
@@ -397,6 +407,7 @@ class RunChart {
 				settingsKey: 'aggregateData',
 				title: `Group samples from the same month and year`
 			},
+
 			{
 				type: 'term',
 				configKey: 'term0',
@@ -491,7 +502,7 @@ class RunChart {
 				type: 'checkbox',
 				chartType: 'runChart',
 				settingsKey: 'useMedian',
-				title: `Use median instead of average to aggregate the data`
+				title: `Use median instead of mean to aggregate the data`
 			})
 		}
 
@@ -596,8 +607,8 @@ export function getDefaultRunChartSettings() {
 		maxShapeSize: 4,
 		scaleDotOrder: 'Ascending',
 		refSize: 0.8,
-		svgw: 1000,
-		svgh: 500,
+		svgw: 1200,
+		svgh: 700,
 		axisTitleFontSize: 16,
 		opacity: 0.6,
 		defaultColor: plotColor,
@@ -615,6 +626,6 @@ export function getDefaultRunChartSettings() {
 		// Null indicates this hasn't been set yet
 		colorScaleMaxFixed: null // User-defined maximum value for fixed mode
 		// Null indicates this hasn't been set yet
-		//3D Plot settings
+		//3D Plot settings,
 	}
 }

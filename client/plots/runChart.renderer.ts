@@ -10,11 +10,13 @@ import { line, scaleTime } from 'd3'
 import { minShapeSize, maxShapeSize } from './runChart.js'
 import { shapes } from './runChart.js'
 import { roundValueAuto } from '#shared/roundValue.js'
-import { median as d3Median } from 'd3-array'
+import { median as d3Median, mean } from 'd3-array'
 import { getDateFromNumber } from '#shared/terms.js'
 
 export function setRenderers(self) {
 	self.render = function () {
+		if (!self.svg) self.svg = self.dom.mainDiv.append('svg')
+		else self.svg.selectAll('*').remove()
 		const chartDivs = self.dom.mainDiv.selectAll(':scope > div').data(self.charts, chart => chart?.id)
 		chartDivs.exit().remove()
 		chartDivs.each(self.renderChart)
@@ -30,7 +32,7 @@ export function setRenderers(self) {
 		})
 		chart.chartDiv.on('click', event => self.showTooltip(event, chart))
 
-		chart.svg = chart.chartDiv.select('svg').empty() ? chart.chartDiv.append('svg') : chart.chartDiv.select('svg')
+		chart.svg = self.svg
 		renderSVG(chart, s)
 
 		chart.chartDiv.transition().duration(s.duration).style('opacity', 1)
@@ -40,14 +42,14 @@ export function setRenderers(self) {
 		if (chart.samples.length == 0) return
 		const offsetX = self.axisOffset.x
 		const offsetY = self.axisOffset.y
-		const xMin = this.range.xMin
-		const xMax = this.range.xMax
-		const yMin = this.range.yMin
-		const yMax = this.range.yMax
+		const xMin = chart.xMin
+		const xMax = chart.xMax
+		const yMin = chart.yMin
+		const yMax = chart.yMax
 		const extraSpaceX = (xMax - xMin) * 0.01 //extra space added to avoid clipping the particles on the X axis
 		const extraSpaceY = (yMax - yMin) * 0.01 //extra space added to avoid clipping the particles on the Y axis
-		const xMinDate = new Date(getDateFromNumber(xMin - extraSpaceX))
-		const xMaxDate = new Date(getDateFromNumber(this.range.xMax + extraSpaceX))
+		const xMinDate = getDateFromNumber(xMin - extraSpaceX)
+		const xMaxDate = getDateFromNumber(this.range.xMax + extraSpaceX)
 
 		chart.xAxisScale = d3Linear()
 			.domain([xMin - extraSpaceX, xMax + extraSpaceX])
@@ -266,18 +268,7 @@ export function setRenderers(self) {
 					})
 					.on('mouseleave', () => self.dom.tooltip.hide())
 			}
-			if (self.config.term0 && !self.config.colorTW && !self.config.shapeTW) {
-				const term0Name = `${chart.id}, n=${chart.samples.length}`
 
-				labelsG
-					.append('text')
-					.attr(
-						'transform',
-						`translate(${self.axisOffset.x + self.settings.svgw / 2}, ${self.settings.svgh + self.axisOffset.y + 65})`
-					)
-					.attr('text-anchor', 'middle')
-					.text(term0Name)
-			}
 			const term2Name = getTitle(self.config.term2.term.name, 60)
 			text = labelsG
 				.append('text')
@@ -299,10 +290,9 @@ export function setRenderers(self) {
 
 	function renderSerie(chart, duration) {
 		if (self.canvas) self.canvas.remove()
-
 		const g = chart.serie
+
 		const samples = chart.samples
-		chart.serie.selectAll('*').remove()
 
 		// remove all symbols as there is no data id for privacy
 		//g.selectAll('path').remove()
@@ -337,8 +327,10 @@ export function setRenderers(self) {
 	}
 
 	self.showRunChart = function (chart, g) {
+		const color = self.config.term0 ? self.cat2Color(chart.id) : self.settings.defaultColor
 		const coords = chart.samples.map(s => self.getCoordinates(chart, s)).sort((a, b) => a.x - b.x)
-		const color = this.settings.defaultColor
+
+		const xtext = coords[coords.length - 1].x - 20
 		const areaBuilder = line()
 			.x((d: any) => d.x)
 			.y((d: any) => d.y)
@@ -356,14 +348,18 @@ export function setRenderers(self) {
 			.attr('y1', y)
 			.attr('x2', coords[coords.length - 1].x)
 			.attr('y2', y)
-			.attr('stroke', 'red')
+			.attr('stroke', color)
 			.attr('stroke-width', 1)
-		g.append('text')
-			.attr('x', coords[coords.length - 1].x)
-			.attr('y', y - 10)
-			.attr('text-anchor', 'end')
-			.text('Median = ' + roundValueAuto(median, true, 1))
+			.attr('opacity', 0.5)
+		chart.mainG
+			.append('text')
+			.attr('x', xtext)
+			.attr('y', y - 5)
+			.attr('text-anchor', 'start')
+			.text('M=' + roundValueAuto(median, true, 1))
+			.attr('opacity', 0.8)
 			.attr('font-size', '0.8em')
+			.attr('fill', color)
 	}
 
 	self.getStrokeWidth = function (c) {
@@ -455,9 +451,10 @@ export function setRenderers(self) {
 			const color = chart.colorGenerator(c.category)
 			return color
 		}
-		if (c.category == 'Default') return self.config.settings.runChart.defaultColor
-		const category = chart.colorLegend.get(c.category)
-		return category.color
+		if (self.config.colorTW) return chart.colorLegend.get(c.category).color
+		if (self.config.term0) return self.cat2Color(chart.id)
+
+		return self.config.settings.runChart.defaultColor
 	}
 
 	self.getOpacity = function (c) {
