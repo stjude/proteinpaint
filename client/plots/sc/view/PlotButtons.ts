@@ -1,7 +1,9 @@
 import type { Div, Elem } from '../../../types/d3'
-import { Menu, addGeneSearchbox } from '#dom'
 import type { SCInteractions } from '../interactions/SCInteractions'
+import { Menu, addGeneSearchbox } from '#dom'
 
+/** Rendering for the plot buttons that appear below the sample
+ * table. */
 export class PlotButtons {
 	plotBtnDom: {
 		promptDiv: Div
@@ -59,20 +61,25 @@ export class PlotButtons {
 			{
 				label: 'Violin',
 				id: 'violin',
-				isVisible: () => true, //TODO: implement data specific logic for this
+				/** TODO: btns will be visible based on available data
+				 * Need to build a route or change existing route to support
+				 */
+				isVisible: () => true,
 				getPlotConfig: gene => {
 					return {
 						chartType: 'violin'
+						//TODO: Finish config
 					}
 				},
-				open: this.showGeneSearch
+				open: this.geneSearchMenu
 			}
+			//More plot buttons here: single cell, etc.
 		]
 	}
 
 	//********** Btn Menus **********/
 	//Use 'self' and not 'this' to avoid binding issues
-	showGeneSearch(plot, self) {
+	geneSearchMenu(plot: any, self: PlotButtons) {
 		const row = self.plotBtnDom.tip.d.append('div')
 		const geneSearch = addGeneSearchbox({
 			row,
@@ -81,6 +88,7 @@ export class PlotButtons {
 			genome: self.interactions.genome,
 			callback: async () => {
 				const gene = geneSearch.geneSymbol
+				if (!gene) return
 				self.plotBtnDom.tip.hide()
 				await self.interactions.geneSearchboxCallback(gene, plot)
 			}

@@ -1,17 +1,25 @@
-import { RxComponentInner } from '../../types/rx.d'
 import type { BasePlotConfig, MassAppActions, MassState } from '#mass/types/mass'
+import type { SCConfigOpts, SCDom, SCState, SCViewerOpts, SampleColumn } from './SCTypes'
+import type { SingleCellSample } from '#types'
+import { RxComponentInner } from '../../types/rx.d'
 import { getCompInit, copyMerge } from '#rx'
-import type { SCConfigOpts, SCDom, SCState, SCViewerOpts } from './SCTypes'
-import type { Sample } from '#types'
 import { SCModel } from './model/SCModel'
 import { SCViewModel } from './viewModel/SCViewModel'
 import { SCView } from './view/SCView'
 import { SCInteractions } from './interactions/SCInteractions'
 
-/** TODO
- * - Type file
- * - Add comments/documentation
+/** App in development. Project being set aside for awhile
+ *
+ * App TODOs:
+ *  - Implement plot buttons
+ *  	- Either return list of available data or create a route
+ *  	- Implement additional menus to appear on click
+ *  - Implement multi plot rendering
+ *  	- Create sections by sample and render plots in each section
+ * 		- Develop containers to hold plots with destroy methods and
+ * 			possibly other animation methods
  */
+
 class SCViewer extends RxComponentInner {
 	readonly type = 'sc'
 	components: {
@@ -19,9 +27,8 @@ class SCViewer extends RxComponentInner {
 	}
 	dom: SCDom
 	interactions?: SCInteractions
-	samples?: Sample[]
-	/** Slightly modified from termdbConfig.queries.singleCell.samples.sampleColumns */
-	sampleColumns?: { termid: string; label: string }[]
+	samples?: SingleCellSample[]
+	sampleColumns?: SampleColumn[]
 	view?: SCView
 	viewModel?: SCViewModel
 
@@ -72,14 +79,19 @@ class SCViewer extends RxComponentInner {
 		if (action.type == 'app_refresh') return true
 	}
 
+	/** The sample data and table rendering should only occur once */
 	async init(appState: MassState) {
 		const state = this.getState(appState) as SCState
+		/** ds defines defaults in termdbConfig.queries.singleCell
+		 * see Dataset type when resuming development*/
 		const dsScSamples = state.termdbConfig.queries?.singleCell?.samples
 		const model = new SCModel(this.app)
 		try {
+			/** Fetches the single cell sample data */
 			const response = await model.getSampleData()
 			if (response.error || !response.samples || !response.samples.length) {
 				this.app.printError('No samples found for this dataset')
+				return
 			}
 			this.samples = response.samples
 			this.sampleColumns = await model.getColumnLabels(dsScSamples)
@@ -90,26 +102,24 @@ class SCViewer extends RxComponentInner {
 		}
 		this.interactions = new SCInteractions(this.app, this.id)
 		//Init view model and view
-		this.viewModel = new SCViewModel(this.app, state.config, this.samples, this.sampleColumns)
+		this.viewModel = new SCViewModel(this.app, state.config, this.samples!, this.sampleColumns)
 		//Renders the static select btn and table
 		this.view = new SCView(this.interactions, this.dom, this.viewModel.tableData)
 	}
 
+	/******* Code is a hold over from original design. *******
+	 * Eventual refactor will manage subplots in the dashboard. */
+
 	// async setComponent(config: SCConfig) {
-	// 	/** Will manage all the subplots */
+	// 	this.plotsDiv[config.childType] = this.dom.plots.append('div')
 
-	// 	// let _
-	// 	// if (config.childType == 'scSampleTable') _ = await import(`#plots/scSampleTable.ts`)
-
-	// 	// this.plotsDiv[config.childType] = this.dom.plots.append('div')
-
-	// 	// const opts = {
-	// 	// 	app: this.app,
-	// 	// 	holder: this.plotsDiv[config.childType],
-	// 	// 	id: this.id,
-	// 	// 	parent: this.api
-	// 	// }
-	// 	// this.components.plots[config.childType] = await _.componentInit(opts)
+	// 	const opts = {
+	// 		app: this.app,
+	// 		holder: this.plotsDiv[config.childType],
+	// 		id: this.id,
+	// 		parent: this.api
+	// 	}
+	// 	this.components.plots[config.childType] = await _.componentInit(opts)
 	// }
 
 	async main() {
@@ -118,7 +128,9 @@ class SCViewer extends RxComponentInner {
 
 		if (!this.view) throw `View not initialized [SC main()]`
 
-		/**Will manage the subplots in the dashboard */
+		/******* Code below is a hold over from original design.*******
+		 * Will need to implement something similar for the subplots
+		 * when development resumes.*/
 
 		// if (!this.components.plots[config.childType]) await this.setComponent(config)
 
@@ -130,7 +142,7 @@ class SCViewer extends RxComponentInner {
 		// }
 		// this.plotsDiv[config.childType].style('display', '')
 
-		// this.renderer.update(config)
+		// this.view.update(config)
 	}
 }
 

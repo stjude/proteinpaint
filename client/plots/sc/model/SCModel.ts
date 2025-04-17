@@ -2,12 +2,12 @@ import type { MassAppApi } from '#mass/types/mass'
 import type { SCState } from '../SCTypes'
 import { dofetch3 } from '#common/dofetch'
 
-/** Fetches data for table */
+/** Fetches data for sc app */
 export class SCModel {
 	app: MassAppApi
 	state: SCState
 
-	constructor(app) {
+	constructor(app: MassAppApi) {
 		this.app = app
 		this.state = this.app.getState()
 	}
@@ -29,7 +29,7 @@ export class SCModel {
 	}
 
 	//Fetches optional name for ds defined columns
-	async getColumnLabels(dsScSamples) {
+	async getColumnLabels(dsScSamples: { [key: string]: any }) {
 		if (!dsScSamples || !dsScSamples.sampleColumns) return
 		const colsCopy = structuredClone(dsScSamples.sampleColumns)
 		for (const col of colsCopy) {
