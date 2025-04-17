@@ -2,16 +2,12 @@ import { execSync } from 'child_process'
 import path from 'path'
 import fs from 'fs'
 
-// to suppress warning related to experimental fs.globSync(),
-// only applies to the runtime where this script is called
-process.removeAllListeners('warning')
-
 export const gitProjectRoot = path.join(import.meta.dirname, '../..') // execSync(`git rev-parse --show-toplevel`, { encoding: 'utf8' }).trim()
 export const publicSpecsDir = path.join(gitProjectRoot, 'public/coverage/specs')
 
 const ignore = ['dist/**', 'node_modules/**']
 const codeFileExt = new Set(['.js', '.mjs', '.cjs', '.ts'])
-const commitRef = fs.readFileSync(path.join(gitProjectRoot, 'public/coverage/commitRef'), { encoding: 'utf8' }).trim()
+let commitRef
 
 /*
 	dirname: the directory name of the 
@@ -19,6 +15,23 @@ const commitRef = fs.readFileSync(path.join(gitProjectRoot, 'public/coverage/com
 */
 
 export function getClosestSpec(dirname, relevantSubdirs = [], opts = {}) {
+	if (!commitRef) {
+		const commitRefFile = path.join(gitProjectRoot, 'public/coverage/commitRef')
+		if (!fs.existsSync(commitRefFile)) {
+			console.log(`!!! missing '${commitRefFile}' !!!`)
+			return {
+				matchedByFile: {},
+				matched: [],
+				numUnit: 0,
+				numIntegration: 0
+			}
+		}
+		commitRef = fs.readFileSync(commitRefFile, { encoding: 'utf8' }).trim()
+		// to suppress warning related to experimental fs.globSync(),
+		// only applies to the runtime where this script is called
+		process.removeAllListeners('warning')
+	}
+
 	const workspace = dirname.replace(gitProjectRoot + '/', '')
 	const workspace_ = workspace + '/'
 	const branch = execSync(`git rev-parse --abbrev-ref HEAD`, { encoding: 'utf8' })
