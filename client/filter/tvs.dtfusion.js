@@ -1,3 +1,3 @@
-import { handler as catHandler } from './tvs.categorical.js'
+import { handler as snvHandler } from './tvs.dtsnvindel.js'
 
-export const handler = Object.assign({}, catHandler, { type: 'dtfusion' })
+export const handler = Object.assign({}, snvHandler, { type: 'dtfusion' })

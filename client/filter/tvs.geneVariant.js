@@ -45,6 +45,8 @@ async function fillMenu(self, _div, tvs) {
 		},
 		tree: {
 			click_term2select_tvs(tvs) {
+				tvs.term.geneVariantTerm = structuredClone(term)
+				delete tvs.term.geneVariantTerm.filter
 				self.opts.callback(tvs)
 			}
 		}

@@ -1,7 +1,7 @@
-import { handler as catHandler } from './tvs.categorical.js'
+import { handler as snvHandler } from './tvs.dtsnvindel.js'
 import { Menu } from '../dom/menu'
 
-export const handler = Object.assign({}, catHandler, { type: 'dtcnv', setMethods })
+export const handler = Object.assign({}, snvHandler, { type: 'dtcnv', setMethods })
 
 function setMethods(self) {
 	const cnv = self.opts.vocabApi.parent_termdbConfig?.queries?.cnv
