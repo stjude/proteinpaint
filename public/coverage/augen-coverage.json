@@ -1,4 +1,40 @@
 {
+   "src/augen.js": {
+     "lines": {
+       "total": 65,
+       "covered": 53,
+       "skipped": 0,
+       "pct": 81.53
+     },
+     "functions": {
+       "total": 8,
+       "covered": 5,
+       "skipped": 0,
+       "pct": 62.5
+     },
+     "statements": {
+       "total": 78,
+       "covered": 61,
+       "skipped": 0,
+       "pct": 78.2
+     },
+     "branches": {
+       "total": 29,
+       "covered": 17,
+       "skipped": 0,
+       "pct": 58.62
+     },
+     "lowestPct": {
+       "curr": 58.62,
+       "prev": 58.62,
+       "diff": 0
+     },
+     "averagePct": {
+       "curr": 70.2125,
+       "prev": 70.2125,
+       "diff": 0
+     }
+   },
   "src/closestSpec.js": {
     "lines": {
       "total": 64,

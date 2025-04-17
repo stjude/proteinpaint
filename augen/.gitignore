@@ -11,6 +11,7 @@ public/server-api.json
 !**/dev.js
 !src/test/*.js
 !src/test/toyApp/*.js
+src/public/*
 src/test/toyApp/checkers*/*
 .coverage/*
 coverage/*

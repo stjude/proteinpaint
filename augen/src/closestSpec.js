@@ -18,6 +18,7 @@ export function getClosestSpec(dirname, relevantSubdirs = [], opts = {}) {
 	if (!commitRef) {
 		const commitRefFile = path.join(gitProjectRoot, 'public/coverage/commitRef')
 		if (!fs.existsSync(commitRefFile)) {
+			/* c8 ignore start */
 			console.log(`!!! missing '${commitRefFile}' !!!`)
 			return {
 				matchedByFile: {},
@@ -25,6 +26,7 @@ export function getClosestSpec(dirname, relevantSubdirs = [], opts = {}) {
 				numUnit: 0,
 				numIntegration: 0
 			}
+			/* c8 ignore stop */
 		}
 		commitRef = fs.readFileSync(commitRefFile, { encoding: 'utf8' }).trim()
 		// to suppress warning related to experimental fs.globSync(),
@@ -38,7 +40,7 @@ export function getClosestSpec(dirname, relevantSubdirs = [], opts = {}) {
 
 	let changedFiles
 	if (opts.changedFiles) changedFiles = opts.changedFiles
-	else {
+	/* c8 ignore start */ else {
 		// TODO: may need to detect release branch instead of master
 		const modifiedFiles = execSync(`git diff --name-status ${commitRef}..${branch}`, { encoding: 'utf8' })
 		// only added and modified code files should be tested
@@ -51,6 +53,7 @@ export function getClosestSpec(dirname, relevantSubdirs = [], opts = {}) {
 		const stagedFiles = execSync(`git diff --cached --name-only | sed 's| |\\ |g'`, { encoding: 'utf8' })
 		changedFiles = [...committedFiles, ...stagedFiles.trim().split('\n')]
 	}
+	/* c8 ignore stop */
 	changedFiles = changedFiles.filter(f => codeFileExt.has(path.extname(f)))
 	changedFiles = new Set(changedFiles)
 

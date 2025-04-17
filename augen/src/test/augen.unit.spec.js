@@ -1,3 +1,4 @@
+import tape from 'tape'
 import { testApi } from '#src/tester.ts'
 import { existsSync, rmSync, readdirSync, statSync } from 'fs'
 import { join, dirname } from 'path'
@@ -6,11 +7,22 @@ import { execSync } from 'child_process'
 
 const __dirname = import.meta.dirname.trim()
 const wasCalledDirectly = process.argv[1]?.includes('augen.unit.spec')
-console.log(8, { wasCalledDirectly })
+// console.log(8, { wasCalledDirectly })
 
-await runTests()
+tape('setRoutes()', async test => {
+	const message = `should load a toy app that uses setRoutes()`
+	try {
+		const { server } = await import('./toyApp/app.js')
+		test.pass(message)
+		server.close()
+	} catch (e) {
+		console.log(18, e)
+		test.fail(message)
+	}
+	test.end()
+})
 
-async function runTests() {
+tape('testApi()', async test => {
 	const routesDir = join(__dirname, './toyApp/routes')
 	let endpoints
 	try {
@@ -47,4 +59,5 @@ async function runTests() {
 	} catch (e) {
 		throw e
 	}
-}
+	test.end()
+})
