@@ -9,7 +9,8 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 const files = readdirSync(join(__dirname, './routes'))
 const endpoints = files.filter(f => f.endsWith('.ts')) //|| f.endsWith('.js'))
 const port = 'PORT' in process.env ? Number(process.env.PORT) : 8999
-init({ port })
+
+export const server = await init({ port })
 
 async function init(opts = {}) {
 	const basepath = '/api'
@@ -35,6 +36,6 @@ async function init(opts = {}) {
 	if (opts.port) {
 		const port = opts.port
 		console.log(`STANDBY PORT ${port}`)
-		app.listen(port)
+		return app.listen(port)
 	}
 }

@@ -1,4 +1,4 @@
-import { evalSpecCovResults, publicSpecsDir } from '@sjcrh/augen'
+import { evalSpecCovResults, publicSpecsDir } from '@sjcrh/augen/dev'
 import path from 'path'
 import fs from 'fs'
 

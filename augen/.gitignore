@@ -8,6 +8,7 @@ public/server-api.json
 !**/closestSpec.*
 !**/*Relevant*.*
 !**/evalSpec*.*
+!**/dev.js
 !src/test/*.js
 !src/test/toyApp/*.js
 src/test/toyApp/checkers*/*

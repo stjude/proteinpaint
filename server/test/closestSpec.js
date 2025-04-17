@@ -1,5 +1,5 @@
 import path from 'path'
-import { getClosestSpec } from '@sjcrh/augen'
+import { getClosestSpec } from '@sjcrh/augen/dev'
 
 /*
 	This script can be

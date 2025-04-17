@@ -2,7 +2,7 @@ import serverconfig from '../../serverconfig.js'
 import fs from 'fs'
 import { promisify } from 'util'
 import { exec } from 'child_process'
-import { gitProjectRoot } from '@sjcrh/augen'
+import { gitProjectRoot } from '@sjcrh/augen/dev'
 
 const execProm = promisify(exec)
 

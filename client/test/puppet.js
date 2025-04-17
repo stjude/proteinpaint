@@ -7,7 +7,7 @@ import path from 'path'
 import crypto from 'crypto'
 import { decode as urlJsonDecode } from '#shared/urljson.js'
 import bodyParser from 'body-parser'
-import { ReqResCache, emitRelevantSpecCovDetails, publicSpecsDir } from '@sjcrh/augen'
+import { ReqResCache, emitRelevantSpecCovDetails, publicSpecsDir } from '@sjcrh/augen/dev'
 import { getRelevantClientSpecs, getUrlParams } from './closestSpec.js'
 import { minimatch } from 'minimatch'
 

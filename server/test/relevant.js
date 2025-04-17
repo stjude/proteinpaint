@@ -1,4 +1,4 @@
-import { runRelevantSpecs } from '@sjcrh/augen'
+import { runRelevantSpecs } from '@sjcrh/augen/dev'
 import { getRelevantServerSpecs } from './closestSpec.js'
 import path from 'path'
 
