@@ -1479,8 +1479,8 @@ class singleCellPlot {
 					}
 
 					// hardcode to always add in experiment id column
-					if (this.state.vocab.dslabel == 'GDC')
-						row.push({ value: exp.experimentID, url: `https://portal.gdc.cancer.gov/files/${exp.experimentID}` })
+					const urlTemp = this.state.termdbConfig?.urlTemplates?.scrnaExperimentId
+					if (urlTemp) row.push({ value: exp.experimentID, url: `${urlTemp.base}${exp.experimentID}` })
 					else row.push({ value: exp.experimentID })
 					rows.push(row)
 				}
