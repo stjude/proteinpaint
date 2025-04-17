@@ -10,6 +10,7 @@ import { mayLog } from '#src/helpers.ts'
 import serverconfig from '../src/serverconfig.js'
 import imagesize from 'image-size'
 import { get_header_txt } from '#src/utils.js'
+import { formatElapsedTime } from '@sjcrh/proteinpaint-shared/time.js'
 
 export const api: RouteApi = {
 	endpoint: 'DEanalysis',
@@ -277,7 +278,7 @@ values[] // using integer sample id
 		const result = JSON.parse(
 			await run_R(path.join(serverconfig.binpath, 'utils', 'edge.R'), JSON.stringify(expression_input))
 		)
-		mayLog('Time taken to run edgeR:', Date.now() - time1, 'ms')
+		mayLog('Time taken to run edgeR:', formatElapsedTime(Date.now() - time1))
 		param.method = 'edgeR'
 		const ql_imagePath: string = path.join(serverconfig.cachedir, result.edgeR_ql_image_name[0]) // Retrieve the edgeR quality image and send it to client side. Does not need to be an array, will address this later.
 		mayLog('ql_imagePath:', ql_imagePath)
@@ -305,7 +306,7 @@ values[] // using integer sample id
 	// Wilcoxon test will be used for DE analysis
 	const time1 = new Date().valueOf()
 	const result = JSON.parse(await run_rust('DEanalysis', JSON.stringify(expression_input)))
-	mayLog('Time taken to run rust DE pipeline:', Date.now() - time1, 'ms')
+	mayLog('Time taken to run rust DE pipeline:', formatElapsedTime(Date.now() - time1))
 	param.method = 'wilcoxon'
 	return { data: result, sample_size1: sample_size1, sample_size2: sample_size2, method: param.method } as DEResponse
 }
