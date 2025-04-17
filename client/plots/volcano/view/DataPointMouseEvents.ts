@@ -38,8 +38,8 @@ export class DataPointMouseEvents {
 
 	mayAddGeneExpressionRows(d: DataPointEntry, table: any) {
 		if (this.termType !== 'geneExpression') return
+		this.addTooltipRow(table, 'Gene ID', d.gene_id)
 		this.addTooltipRow(table, 'Gene name', d.gene_name)
-		this.addTooltipRow(table, 'Gene symbol', d.gene_symbol)
 		this.addTooltipRow(table, 'log2(fold change)', roundValueAuto(d.fold_change))
 		this.addTooltipRow(table, 'Original p value', roundValueAuto(d.original_p_value))
 		this.addTooltipRow(table, 'Adjusted p value', roundValueAuto(d.adjusted_p_value))

@@ -195,7 +195,7 @@ export class VolcanoPlotView {
 				//Highlight the data point when hovering over the table row
 				//Previously highlighted data points are not affected
 				const circles = this.volcanoDom.plot.selectAll('circle').nodes()
-				const circle = circles.find((d: any) => d.__data__.gene_symbol == row[0].value) as any
+				const circle = circles.find((d: any) => d.__data__.gene_name == row[0].value) as any
 				if (!circle || circle.__data__.highlighted) return
 
 				/** Circles may render behind several other circles, making it hard
