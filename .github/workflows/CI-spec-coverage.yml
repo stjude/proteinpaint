@@ -164,15 +164,16 @@ jobs:
           BRANCH=$(git rev-parse --abbrev-ref HEAD)
           STAGEDFILES=$(git diff --cached --name-only | sed 's| |\\ |g')
           
-          # this CI is intended to run on approving and closing a PR,
-          # should not automatically push to master since its protected
+          # this CI is intended to run on approving and closing a PR
           if [[ "$BRANCH" == "master" && "$STAGEDFILES" != "" ]]; then
-            echo "$(git rev-parse --short HEAD)" > public/coverage/commitRef
-            git add public/coverage/commitRef
-
             git config --global user.email "PPTeam@STJUDE.ORG"
             git config --global user.name "PPTeam CI"
             git commit -m "update relevant workspace coverage json"
             git pull --rebase
+            
+            echo "$(git rev-parse --short HEAD)" > public/coverage/commitRef
+            git add public/coverage/commitRef
+            git commit --amend
+
             git push origin $BRANCH
           fi

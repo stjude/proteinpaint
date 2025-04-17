@@ -16,8 +16,10 @@ tape('setRoutes()', async test => {
 		test.pass(message)
 		server.close()
 	} catch (e) {
+		/* c8 ignore start */
 		console.log(18, e)
 		test.fail(message)
+		/* c8 ignore stop */
 	}
 	test.end()
 })
@@ -47,7 +49,9 @@ tape('testApi()', async test => {
 			console.log(log)
 		}
 	} catch (e) {
+		/* c8 ignore start */
 		throw e
+		/* c8 ignore stop */
 	}
 
 	try {
@@ -57,7 +61,9 @@ tape('testApi()', async test => {
 			await testApi(route, f, checkers)
 		}
 	} catch (e) {
+		/* c8 ignore start */
 		throw e
+		/* c8 ignore stop */
 	}
 	test.end()
 })

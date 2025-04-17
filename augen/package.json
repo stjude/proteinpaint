@@ -39,6 +39,7 @@
   },
   "files": [
     "src",
+    "!src/test",
     "build.sh",
     "cli.js",
     "readme.sh",
