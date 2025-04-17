@@ -87,71 +87,71 @@ export const groups = [
 
 export const responseData = [
 	{
-		gene_name: 'ENSG00000187634.6',
-		gene_symbol: 'SAMD11',
+		gene_id: 'ENSG00000187634.6',
+		gene_name: 'SAMD11',
 		fold_change: 0.1128,
 		original_p_value: 0.3325,
 		adjusted_p_value: 0.1565
 	},
 	{
-		gene_name: 'ENSG00000188976.6',
-		gene_symbol: 'NOC2L',
+		gene_id: 'ENSG00000188976.6',
+		gene_name: 'NOC2L',
 		fold_change: 0.1569,
 		original_p_value: 0.7206,
 		adjusted_p_value: 0.3427
 	},
 	{
-		gene_name: 'ENSG00000187961.9',
-		gene_symbol: 'KLHL17',
+		gene_id: 'ENSG00000187961.9',
+		gene_name: 'KLHL17',
 		fold_change: -0.1281,
 		original_p_value: 0.2826,
 		adjusted_p_value: 0.1345
 	},
 	{
-		gene_name: 'ENSG00000187608.5',
-		gene_symbol: 'ISG15',
+		gene_id: 'ENSG00000187608.5',
+		gene_name: 'ISG15',
 		fold_change: 0.1667,
 		original_p_value: 0.2198,
 		adjusted_p_value: 0.1032
 	},
 	{
-		gene_name: 'ENSG00000188157.9',
-		gene_symbol: 'AGRN',
+		gene_id: 'ENSG00000188157.9',
+		gene_name: 'AGRN',
 		fold_change: 0.6196,
 		original_p_value: 1.483,
 		adjusted_p_value: 0.7022
 	},
 	{
-		gene_name: 'ENSG00000131591.13',
-		gene_symbol: 'C1orf159',
+		gene_id: 'ENSG00000131591.13',
+		gene_name: 'C1orf159',
 		fold_change: -0.0021,
 		original_p_value: 0.0049,
 		adjusted_p_value: 0.0021
 	},
 	{
-		gene_name: 'ENSG00000078808.12',
-		gene_symbol: 'SDF4',
+		gene_id: 'ENSG00000078808.12',
+		gene_name: 'SDF4',
 		fold_change: 0.4862,
 		original_p_value: 3.2334,
 		adjusted_p_value: 1.5562
 	},
 	{
-		gene_name: 'ENSG00000176022.3',
-		gene_symbol: 'B3GALT6',
+		gene_id: 'ENSG00000176022.3',
+		gene_name: 'B3GALT6',
 		fold_change: 0.0751,
 		original_p_value: 0.1906,
 		adjusted_p_value: 0.0888
 	},
 	{
-		gene_name: 'ENSG00000160087.16',
-		gene_symbol: 'UBE2J2',
+		gene_id: 'ENSG00000160087.16',
+		gene_name: 'UBE2J2',
 		fold_change: 0.0744,
 		original_p_value: 0.3546,
 		adjusted_p_value: 0.168
 	},
 	{
-		gene_name: 'ENSG00000162572.15',
-		gene_symbol: 'SCNN1D',
+		gene_id: 'ENSG00000162572.15',
+		gene_name: 'SCNN1D',
 		fold_change: 0.0993,
 		original_p_value: 0.1659,
 		adjusted_p_value: 0.0758
