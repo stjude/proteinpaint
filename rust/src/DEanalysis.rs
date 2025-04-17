@@ -86,6 +86,18 @@ fn input_data_from_HDF5(
     //println!("num_samples bulk:{}", num_samples);
     //println!("num_genes bulk:{}", num_genes);
 
+    //let now_gene_ids = Instant::now();
+    let ds_gene_ids = file.dataset("gene_ids").unwrap();
+    //println!("ds_gene_ids:{:?}", ds_gene_ids);
+    let gene_ids = ds_gene_ids
+        .read::<VarLenAscii, Dim<[usize; 1]>>()
+        .unwrap();
+    //println!("\tgene_ids = {:?}", gene_ids);
+    //println!("\tgene_ids.shape() = {:?}", gene_ids.shape());
+    //println!("\tgene_ids.strides() = {:?}", gene_ids.strides());
+    //println!("\tgene_ids.ndim() = {:?}", gene_ids.ndim());
+    //println!("Time for parsing gene names:{:?}", now_gene_ids.elapsed());
+
     //let now_gene_names = Instant::now();
     let ds_gene_names = file.dataset("gene_names").unwrap();
     //println!("ds_gene_names:{:?}", ds_gene_names);
@@ -96,28 +108,16 @@ fn input_data_from_HDF5(
     //println!("\tgene_names.shape() = {:?}", gene_names.shape());
     //println!("\tgene_names.strides() = {:?}", gene_names.strides());
     //println!("\tgene_names.ndim() = {:?}", gene_names.ndim());
-    //println!("Time for parsing gene names:{:?}", now_gene_names.elapsed());
-
-    //let now_gene_symbols = Instant::now();
-    let ds_gene_symbols = file.dataset("gene_symbols").unwrap();
-    //println!("ds_gene_symbols:{:?}", ds_gene_symbols);
-    let gene_symbols = ds_gene_symbols
-        .read::<VarLenAscii, Dim<[usize; 1]>>()
-        .unwrap();
-    //println!("\tgene_symbols = {:?}", gene_symbols);
-    //println!("\tgene_symbols.shape() = {:?}", gene_symbols.shape());
-    //println!("\tgene_symbols.strides() = {:?}", gene_symbols.strides());
-    //println!("\tgene_symbols.ndim() = {:?}", gene_symbols.ndim());
     //println!(
     //    "Time for parsing gene symbols:{:?}",
-    //    now_gene_symbols.elapsed()
+    //    now_gene_names.elapsed()
     //);
 
+    let mut gene_ids_string: Vec<String> = Vec::with_capacity(gene_ids.len());
     let mut gene_names_string: Vec<String> = Vec::with_capacity(gene_names.len());
-    let mut gene_symbols_string: Vec<String> = Vec::with_capacity(gene_symbols.len());
-    for i in 0..gene_names.len() {
+    for i in 0..gene_ids.len() {
+        gene_ids_string.push(gene_ids[i].to_string());
         gene_names_string.push(gene_names[i].to_string());
-        gene_symbols_string.push(gene_symbols[i].to_string());
     }
 
     //let now_samples = Instant::now();
@@ -154,7 +154,7 @@ fn input_data_from_HDF5(
         }
 
         let sample_array: Array2<f64> = ds_counts
-            .read_slice_2d((0..gene_names.len(), sample_index..sample_index + 1))
+            .read_slice_2d((0..gene_ids.len(), sample_index..sample_index + 1))
             .unwrap();
         //println!("Length of gene array:{:?}", sample_array.len()); // Please check the result
         input_vector.append(&mut sample_array.as_slice().unwrap().to_vec());
@@ -183,7 +183,7 @@ fn input_data_from_HDF5(
         //let data_counts: Array1<_> = ds_counts.read::<f64, Dim<[usize; 1]>>().unwrap();
         //println!("Data_counts: {:?}", data_counts);
         let sample_array: Array2<f64> = ds_counts
-            .read_slice_2d((0..gene_names.len(), sample_index..sample_index + 1))
+            .read_slice_2d((0..gene_ids.len(), sample_index..sample_index + 1))
             .unwrap();
         //println!("Length of gene array:{:?}", sample_array.len()); // Please check the result
         input_vector.append(&mut sample_array.as_slice().unwrap().to_vec());
@@ -196,19 +196,19 @@ fn input_data_from_HDF5(
     //    "case + control length:{}",
     //    case_list.len() + control_list.len()
     //);
-    //println!("gene_names length:{}", gene_names.len());
+    //println!("gene_ids length:{}", gene_ids.len());
     //println!("input_vector length:{}", input_vector.len());
     let dm = DMatrix::from_row_slice(
         case_list.len() + control_list.len(),
-        gene_names.len(),
+        gene_ids.len(),
         &input_vector,
     );
     (
         dm.transpose(), // Transposing the matrix
         case_indexes,
         control_indexes,
+        gene_ids_string,
         gene_names_string,
-        gene_symbols_string,
     )
 }
 
@@ -227,8 +227,8 @@ fn input_data_from_text(
     let mut file = File::open(filename).unwrap();
     let mut num_lines: usize = 0;
     let mut input_vector: Vec<f64> = Vec::with_capacity(500 * 65000);
+    let mut gene_ids: Vec<String> = Vec::with_capacity(65000);
     let mut gene_names: Vec<String> = Vec::with_capacity(65000);
-    let mut gene_symbols: Vec<String> = Vec::with_capacity(65000);
     let mut num_columns: usize = 0;
 
     // Check headers for samples
@@ -289,9 +289,9 @@ fn input_data_from_text(
             let mut index = 0;
             for field in line.split('\t').collect::<Vec<&str>>() {
                 if index == gene_name_index.unwrap() {
-                    gene_names.push(field.to_string());
+                    gene_ids.push(field.to_string());
                 } else if index == gene_symbol_index.unwrap() {
-                    gene_symbols.push(field.to_string());
+                    gene_names.push(field.to_string());
                 } else if binary_search(&case_indexes_original, index) != -1 {
                     let num = FromStr::from_str(field);
                     match num {
@@ -475,8 +475,8 @@ fn input_data_from_text(
         input_vector.append(&mut *input_vector_temp.lock().unwrap());
         case_indexes.append(&mut *case_indexes_temp.lock().unwrap());
         control_indexes.append(&mut *control_indexes_temp.lock().unwrap());
-        gene_names.append(&mut *genes_names_temp.lock().unwrap());
-        gene_symbols.append(&mut *genes_symbols_temp.lock().unwrap());
+        gene_ids.append(&mut *genes_names_temp.lock().unwrap());
+        gene_names.append(&mut *genes_symbols_temp.lock().unwrap());
 
         num_lines += *num_lines_temp.lock().unwrap();
         num_columns += *num_columns_temp.lock().unwrap();
@@ -490,7 +490,7 @@ fn input_data_from_text(
     //println!("Time for inputting data:{:?}", input_time.elapsed());
     let dm = DMatrix::from_row_slice(num_lines, num_columns, &input_vector);
     //println!("dm:{:?}", dm);
-    (dm, case_indexes, control_indexes, gene_names, gene_symbols)
+    (dm, case_indexes, control_indexes, gene_ids, gene_names)
 }
 
 #[allow(dead_code)]
@@ -625,16 +625,16 @@ fn main() {
                                     input_matrix,
                                     case_indexes,
                                     control_indexes,
+                                    gene_ids,
                                     gene_names,
-                                    gene_symbols,
                                 );
                                 if storage_type == "text" {
                                     (
                                         input_matrix,
                                         case_indexes,
                                         control_indexes,
+                                        gene_ids,
                                         gene_names,
-                                        gene_symbols,
                                     ) = input_data_from_text(file_name, &case_list, &control_list);
                                 } else {
                                     // Parsing data from a HDF5 file
@@ -642,8 +642,8 @@ fn main() {
                                         input_matrix,
                                         case_indexes,
                                         control_indexes,
+                                        gene_ids,
                                         gene_names,
-                                        gene_symbols,
                                     ) = input_data_from_HDF5(file_name, &case_list, &control_list);
                                 }
                                 //let filtering_time = Instant::now();
@@ -651,15 +651,15 @@ fn main() {
                                     filtered_matrix,
                                     lib_sizes,
                                     filtered_genes,
-                                    filtered_gene_symbols,
+                                    filtered_gene_names,
                                 ) = filter_by_expr(
                                     min_count,
                                     min_total_count,
                                     &input_matrix,
                                     case_indexes.len(),
                                     control_indexes.len(),
+                                    gene_ids,
                                     gene_names,
-                                    gene_symbols,
                                 );
                                 //println!("filtering time:{:?}", filtering_time.elapsed());
                                 //println!("filtered_matrix_rows:{:?}", filtered_matrix.nrows());
@@ -747,7 +747,7 @@ fn main() {
                                             p_values.push(PValueIndexes {
                                                 index: i,
                                                 gene_name: filtered_genes[i].to_owned(),
-                                                gene_symbol: filtered_gene_symbols[i].to_owned(),
+                                                gene_symbol: filtered_gene_names[i].to_owned(),
                                                 fold_change: (treated_mean.unwrap()
                                                     / control_mean.unwrap())
                                                 .log2(),
@@ -759,8 +759,8 @@ fn main() {
                                     // Multithreaded implementation of calculating wilcoxon p-values
                                     let normalized_matrix_temp = Arc::new(normalized_matrix);
                                     let filtered_genes_temp = Arc::new(filtered_genes);
-                                    let filtered_gene_symbols_temp =
-                                        Arc::new(filtered_gene_symbols);
+                                    let filtered_gene_names_temp =
+                                        Arc::new(filtered_gene_names);
                                     let case_indexes_temp = Arc::new(case_indexes);
                                     let control_indexes_temp = Arc::new(control_indexes);
                                     let p_values_temp =
@@ -774,8 +774,8 @@ fn main() {
                                             Arc::clone(&control_indexes_temp);
                                         let p_values_temp = Arc::clone(&p_values_temp);
                                         let filtered_genes_temp = Arc::clone(&filtered_genes_temp);
-                                        let filtered_gene_symbols_temp =
-                                            Arc::clone(&filtered_gene_symbols_temp);
+                                        let filtered_gene_names_temp =
+                                            Arc::clone(&filtered_gene_names_temp);
                                         let handle = thread::spawn(move || {
                                             let mut p_values_thread: Vec<PValueIndexes> =
                                                 Vec::with_capacity(
@@ -835,7 +835,7 @@ fn main() {
                                                             index: i,
                                                             gene_name: filtered_genes_temp[i]
                                                                 .to_owned(),
-                                                            gene_symbol: filtered_gene_symbols_temp
+                                                            gene_symbol: filtered_gene_names_temp
                                                                 [i]
                                                                 .to_owned(),
                                                             fold_change: (treated_mean.unwrap()
@@ -1245,8 +1245,8 @@ fn filter_by_expr(
     raw_data: &Matrix<f64, Dyn, Dyn, VecStorage<f64, Dyn, Dyn>>,
     num_diseased: usize,
     num_control: usize,
+    gene_ids: Vec<String>,
     gene_names: Vec<String>,
-    gene_symbols: Vec<String>,
 ) -> (
     Matrix<f64, Dyn, Dyn, VecStorage<f64, Dyn, Dyn>>,
     Vec<f64>,
@@ -1338,14 +1338,14 @@ fn filter_by_expr(
     }
     let mut filtered_matrix = DMatrix::from_vec(positives.len(), num_diseased + num_control, blank);
     let mut filtered_genes: Vec<String> = Vec::with_capacity(positives.len());
-    let mut filtered_gene_symbols: Vec<String> = Vec::with_capacity(positives.len());
+    let mut filtered_gene_names: Vec<String> = Vec::with_capacity(positives.len());
     let mut i = 0;
     //println!("filtered_matrix rows:{}", filtered_matrix.nrows());
     //println!("filtered_matrix cols:{}", filtered_matrix.ncols());
     for index in positives {
         let row = raw_data.row(index);
-        filtered_genes.push(gene_names[index].to_owned());
-        filtered_gene_symbols.push(gene_symbols[index].to_owned());
+        filtered_genes.push(gene_ids[index].to_owned());
+        filtered_gene_names.push(gene_names[index].to_owned());
         let mut j = 0;
         for item in &row {
             //println!("index:{}", index);
@@ -1369,7 +1369,7 @@ fn filter_by_expr(
         filtered_matrix,
         modified_lib_sizes,
         filtered_genes,
-        filtered_gene_symbols,
+        filtered_gene_names,
     )
 }
 
