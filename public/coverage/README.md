@@ -4,7 +4,7 @@ This public/coverage directory will hold generated reports, html, json
 and other static artifacts from test coverage runs.
 
 To generate reports,
-- from pp dir, `npm run spec:coverage` and load http://localhost:3000/coverage/relevant.html
+- from pp dir, `npm run spec:coverage` and load http://localhost:3000/coverage.html
 - from pp dir, `npm run combined:coverage`: will generate combined unit and integration
 test of client and server code
 - from pp dir, `npm run client:coverage`: will generate combined unit and integration

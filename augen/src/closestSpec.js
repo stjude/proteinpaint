@@ -2,11 +2,16 @@ import { execSync } from 'child_process'
 import path from 'path'
 import fs from 'fs'
 
+// to suppress warning related to experimental fs.globSync(),
+// only applies to the runtime where this script is called
+process.removeAllListeners('warning')
+
 export const gitProjectRoot = path.join(import.meta.dirname, '../..') // execSync(`git rev-parse --show-toplevel`, { encoding: 'utf8' }).trim()
 export const publicSpecsDir = path.join(gitProjectRoot, 'public/coverage/specs')
 
 const ignore = ['dist/**', 'node_modules/**']
 const codeFileExt = new Set(['.js', '.mjs', '.cjs', '.ts'])
+const commitRef = fs.readFileSync(path.join(gitProjectRoot, 'public/coverage/commitRef'), { encoding: 'utf8' }).trim()
 
 /*
 	dirname: the directory name of the 
@@ -16,14 +21,13 @@ const codeFileExt = new Set(['.js', '.mjs', '.cjs', '.ts'])
 export function getClosestSpec(dirname, relevantSubdirs = [], opts = {}) {
 	const workspace = dirname.replace(gitProjectRoot + '/', '')
 	const workspace_ = workspace + '/'
-
 	const branch = execSync(`git rev-parse --abbrev-ref HEAD`, { encoding: 'utf8' })
 
 	let changedFiles
 	if (opts.changedFiles) changedFiles = opts.changedFiles
 	else {
 		// TODO: may need to detect release branch instead of master
-		const modifiedFiles = execSync(`git diff --name-status master..${branch}`, { encoding: 'utf8' })
+		const modifiedFiles = execSync(`git diff --name-status ${commitRef}..${branch}`, { encoding: 'utf8' })
 		// only added and modified code files should be tested
 		const committedFiles = modifiedFiles
 			.split('\n')

@@ -45,7 +45,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
         with:
-          fetch-depth: 10
+          fetch-depth: 1
 
       - uses: actions/setup-node@v3
         with:
@@ -77,12 +77,9 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.PAT }}
 
-      - name: Fetch master
+      - name: Fetch commitRef
         run: |
-          BRANCH=$(git rev-parse --abbrev-ref HEAD)
-          if [[ "$BRANCH" != "master" ]]; then
-            git fetch --depth=10 origin master:master
-          fi
+          git fetch origin $(cat public/coverage/commitRef)
 
       - name: Run relevant augen specs
         run: |
@@ -173,6 +170,9 @@ jobs:
           BRANCH=$(git rev-parse --abbrev-ref HEAD)
           STAGEDFILES=$(git diff --cached --name-only | sed 's| |\\ |g')
           if [[ "$BRANCH" == "master" && "$STAGEDFILES" != "" ]]; then
+            echo "$(git rev-parse --short HEAD)" > public/coverage/commitRef
+            git add public/coverage/commitRef
+
             git config --global user.email "PPTeam@STJUDE.ORG"
             git config --global user.name "PPTeam CI"
             git commit -m "update relevant workspace coverage json"
