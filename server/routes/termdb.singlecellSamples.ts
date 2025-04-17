@@ -10,7 +10,7 @@ import type {
 	SingleCellSamples,
 	SingleCellDataNative,
 	SingleCellGeneExpressionNative,
-	Sample,
+	SingleCellSample,
 	TermdbSingleCellSamplesRequest,
 	TermdbSingleCellSamplesResponse,
 	Cell,
@@ -148,7 +148,7 @@ async function validateSamplesNative(S: SingleCellSamples, D: SingleCellDataNati
 		}
 	}
 	S.get = () => {
-		return { samples: [...samples.values()] as Sample[] }
+		return { samples: [...samples.values()] as SingleCellSample[] }
 	}
 }
 
