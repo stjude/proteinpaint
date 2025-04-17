@@ -212,6 +212,8 @@ export function setRenderers(self) {
 				.attr('width', self.settings.svgw)
 				.attr('height', self.settings.svgh)
 				.attr('fill', 'white')
+			chart.serie = chart.mainG.append('g').attr('class', 'sjpcb-runchart-serieG')
+
 			const id = 'clip' + self.id
 			chart.svg
 				.append('defs')
@@ -228,6 +230,7 @@ export function setRenderers(self) {
 			chart.legendG = svg.append('g').attr('class', 'sjpcb-runchart-legend')
 		} else {
 			chart.mainG = svg.select('.sjpcb-runchart-mainG')
+			chart.serie = svg.select('.sjpcb-runchart-serieG')
 			chart.regressionG = chart.mainG.select('.sjpcb-runchart-lowess')
 			axisG = svg.select('.sjpcb-runchart-axis')
 			labelsG = svg.select('.sjpcb-runchart-labelsG')
@@ -287,7 +290,7 @@ export function setRenderers(self) {
 	}
 
 	function renderSerie(chart, duration) {
-		const g = chart.mainG.append('g')
+		const g = chart.serie.append('g')
 
 		const samples = chart.samples
 
@@ -348,8 +351,7 @@ export function setRenderers(self) {
 			.attr('stroke', color)
 			.attr('stroke-width', 1)
 			.attr('opacity', 0.5)
-		chart.mainG
-			.append('text')
+		g.append('text')
 			.attr('x', xtext)
 			.attr('y', y - 5)
 			.attr('text-anchor', 'start')
@@ -555,17 +557,13 @@ export function setRenderers(self) {
 				chart.serie.attr('transform', event.transform)
 				self.zoom = event.transform.scale(1).k
 				//on zoom in the particle size is kept
-				const symbols = chart.serie.selectAll('path[name="serie"')
-				symbols.attr('transform', c => self.transform(chart, c, 1))
 				if (self.lassoOn) chart.lasso.selectedItems().attr('transform', c => self.transform(chart, c, 1.2))
 				if (self.config.scaleDotTW) self.drawScaleDotLegend(chart)
 			}
 		}
 
 		function zoomIn() {
-			for (const chart of self.charts)
-				if (self.is2DLarge) self.zoom = self.zoom + 0.15
-				else zoom.scaleBy(chart.mainG.transition().duration(750), 1.2)
+			for (const chart of self.charts) zoom.scaleBy(chart.mainG.transition().duration(750), 1.2)
 		}
 
 		function zoomOut() {
@@ -575,9 +573,7 @@ export function setRenderers(self) {
 		}
 
 		function resetToIdentity() {
-			for (const chart of self.charts)
-				if (self.is2DLarge) self.zoom = 1
-				else chart.mainG.transition().duration(750).call(zoom.transform, zoomIdentity)
+			for (const chart of self.charts) chart.mainG.transition().duration(750).call(zoom.transform, zoomIdentity)
 			self.render()
 		}
 	}
