@@ -5,6 +5,10 @@
   "type": "module",
   "main": "src/augen.js",
   "bin": "cli.js",
+  "exports": {
+    ".": "./src/augen.js",
+    "./dev": "./src/dev.js"
+  },
   "imports": {
     "#src/*": "./src/*",
     "#public/*": "./public/*"

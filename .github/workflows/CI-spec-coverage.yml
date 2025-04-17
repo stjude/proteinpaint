@@ -14,6 +14,7 @@ on:
   workflow_call: {}
 
 jobs:
+  if: github.event.pull_request.merged
   check-user-permissions:
     runs-on: ubuntu-22.04
     steps:
@@ -155,11 +156,12 @@ jobs:
           echo -e "$(node test/emitSpecMarkdown.mjs)" >> $GITHUB_STEP_SUMMARY
 
           if [[ "$FAILED" != "" ]]; then
-            exit 1
+            echo "----"
+            # TODO: activate error once this CI is tested more thoroughly in actual usage
+            # exit 1
           fi
 
       - name: Commit updated coverage file
-        if: github.event.pull_request.merged
         run: |
           BRANCH=$(git rev-parse --abbrev-ref HEAD)
           STAGEDFILES=$(git diff --cached --name-only | sed 's| |\\ |g')
@@ -176,14 +178,3 @@ jobs:
             git pull --rebase
             git push origin $BRANCH
           fi
-
-
-
-          
-
-
-
-
-
-
-

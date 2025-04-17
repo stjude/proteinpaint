@@ -1,10 +1,7 @@
 import fs from 'fs'
 import path from 'path'
+// do not transitively export non-prod code here
 export * from './ReqResCache.js'
-export * from './closestSpec.js'
-export * from './runRelevantSpecs.js'
-export * from './emitRelevantSpecCovDetails.js'
-export * from './evalSpecCovResults.js'
 
 export function setRoutes(app, routes, _opts = {}) {
 	const opts = Object.assign({ basepath: '' }, _opts)

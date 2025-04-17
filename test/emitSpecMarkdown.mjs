@@ -1,6 +1,6 @@
 import fs from 'fs'
 import path from 'path'
-import { publicSpecsDir } from '@sjcrh/augen'
+import { publicSpecsDir } from '@sjcrh/augen/dev'
 // import { getRelevantServerSpecs, extractFiles as serverExtractFiles } from '../server/test/relevant.js'
 
 const workspaces = ['server', 'client', 'augen']
