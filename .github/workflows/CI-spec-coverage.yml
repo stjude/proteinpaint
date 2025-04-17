@@ -1,16 +1,9 @@
 name: Spec Coverage
 
 on:
-  push:
-    branches:
-      - master
-      - release-*
-      - fake-master
-    paths-ignore:
-      - '**.md'
-      - '**.txt'
-      - '.**ignore'
-      - 'docs/**'
+  pull_request_target:
+    types:
+      - closed
 
   workflow_dispatch:
     inputs:
@@ -166,10 +159,14 @@ jobs:
           fi
 
       - name: Commit updated coverage file
+        if: github.event.pull_request.merged
         run: |
           BRANCH=$(git rev-parse --abbrev-ref HEAD)
           STAGEDFILES=$(git diff --cached --name-only | sed 's| |\\ |g')
-          if [[ "$BRANCH" == "master" && "$STAGEDFILES" != "" ]]; then
+          
+          # this CI is intended to run on approving and closing a PR,
+          # should not automatically push to master since its protected
+          if [[ "$BRANCH" != "master" && "$STAGEDFILES" != "" ]]; then
             echo "$(git rev-parse --short HEAD)" > public/coverage/commitRef
             git add public/coverage/commitRef
 
