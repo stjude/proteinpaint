@@ -32,8 +32,8 @@ read_json_time <- system.time({
 # Read counts data
 read_counts_time <- system.time({
   if (input$storage_type == "HDF5") {
-    geneIDs <- h5read(input$input_file, "gene_names")
-    geneSymbols <- h5read(input$input_file, "gene_symbols")
+    geneIDs <- h5read(input$input_file, "gene_ids")
+    geneSymbols <- h5read(input$input_file, "gene_names")
     samples <- h5read(input$input_file, "samples")
 
     # Find indices of case and control samples in the HDF5 file
