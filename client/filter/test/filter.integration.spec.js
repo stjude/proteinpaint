@@ -1322,7 +1322,7 @@ tape('renderAs: htmlSelect', async test => {
 
 tape('getNormalRoot()', async test => {
 	test.timeoutAfter(3000)
-	test.plan(7)
+	test.plan(8)
 
 	{
 		// direct testing of getNormalRoot
@@ -1332,6 +1332,7 @@ tape('getNormalRoot()', async test => {
 		const D = { type: 'tvs', tvs: { term_D: true } }
 		const input = {
 			type: 'tvslst',
+			//in:true, // cannot set in=true here. output.lst[0].type becomes "tvslst". see if this is issue
 			join: 'and',
 			lst: [
 				{
@@ -1349,11 +1350,31 @@ tape('getNormalRoot()', async test => {
 		const output = getNormalRoot(input)
 		const expectedOutput = {
 			type: 'tvslst',
+			//in:true,
 			join: 'and',
 			lst: [A, B, C, D]
 		}
 		test.deepEqual(output, expectedOutput, 'should flatten (A && B) && (C && D) into A && B && C && D')
 		test.notEqual(output.lst[0], A, 'should not output original filter data')
+	}
+
+	{
+		// allow negating tvslst of single tvs (needed for single-group-based custom term...)
+		const A = { type: 'tvs', tvs: { term_A: true } }
+		const input = {
+			type: 'tvslst',
+			in: false,
+			join: 'and',
+			lst: [A]
+		}
+		const output = getNormalRoot(input)
+		const expectedOutput = {
+			type: 'tvslst',
+			in: false,
+			join: 'and',
+			lst: [A]
+		}
+		test.deepEqual(output, expectedOutput, 'should allow tvslst of single-tvs to be negated')
 	}
 
 	const hidden = {
