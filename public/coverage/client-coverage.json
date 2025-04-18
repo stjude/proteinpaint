@@ -1,38 +1,28 @@
 {
-  "filter/tvs.js": {
+  "mass/nav.js": {
     "lines": {
-      "total": 106,
-      "covered": 96,
+      "total": 207,
+      "covered": 156,
       "skipped": 0,
-      "pct": 90.56
+      "pct": 75.36
     },
     "functions": {
-      "total": 30,
-      "covered": 27,
+      "total": 41,
+      "covered": 29,
       "skipped": 0,
-      "pct": 90
+      "pct": 70.73
     },
     "statements": {
-      "total": 118,
-      "covered": 102,
+      "total": 232,
+      "covered": 168,
       "skipped": 0,
-      "pct": 86.44
+      "pct": 72.41
     },
     "branches": {
-      "total": 79,
-      "covered": 56,
+      "total": 190,
+      "covered": 108,
       "skipped": 0,
-      "pct": 70.88
-    },
-    "lowestPct": {
-      "curr": 69.76,
-      "prev": 0,
-      "diff": 70.88
-    },
-    "averagePct": {
-      "curr": 83.4,
-      "prev": 0,
-      "diff": 84.47
+      "pct": 56.84
     }
   }
 }

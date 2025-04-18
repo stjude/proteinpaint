@@ -2,9 +2,9 @@
   "src/augen.js": {
     "lines": {
       "total": 61,
-      "covered": 56,
+      "covered": 57,
       "skipped": 0,
-      "pct": 91.8
+      "pct": 93.44
     },
     "functions": {
       "total": 8,
@@ -14,25 +14,25 @@
     },
     "statements": {
       "total": 74,
-      "covered": 65,
+      "covered": 66,
       "skipped": 0,
-      "pct": 87.83
+      "pct": 89.18
     },
     "branches": {
       "total": 29,
-      "covered": 19,
+      "covered": 20,
       "skipped": 0,
-      "pct": 65.51
+      "pct": 68.96
     },
     "lowestPct": {
-      "curr": 65.51,
-      "prev": 58.62,
-      "diff": 6.890000000000008
+      "curr": 68.96,
+      "prev": 65.51,
+      "diff": 3.4499999999999886
     },
     "averagePct": {
-      "curr": 80.035,
-      "prev": 70.2125,
-      "diff": 9.822499999999991
+      "curr": 81.645,
+      "prev": 80.035,
+      "diff": 1.6099999999999994
     }
   },
   "src/test/augen.unit.spec.js": {
@@ -59,6 +59,16 @@
       "covered": 6,
       "skipped": 0,
       "pct": 66.66
+    },
+    "lowestPct": {
+      "curr": 66.66,
+      "prev": 66.66,
+      "diff": 0
+    },
+    "averagePct": {
+      "curr": 90.41499999999999,
+      "prev": 90.41499999999999,
+      "diff": 0
     }
   }
 }
