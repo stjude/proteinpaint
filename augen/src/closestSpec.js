@@ -41,7 +41,6 @@ export function getClosestSpec(dirname, relevantSubdirs = [], opts = {}) {
 	let changedFiles
 	if (opts.changedFiles) changedFiles = opts.changedFiles
 	/* c8 ignore start */ else {
-		// TODO: may need to detect release branch instead of master
 		const modifiedFiles = execSync(`git diff --name-status ${commitRef}..${branch}`, { encoding: 'utf8' })
 		// only added and modified code files should be tested
 		const committedFiles = modifiedFiles
@@ -50,8 +49,9 @@ export function getClosestSpec(dirname, relevantSubdirs = [], opts = {}) {
 			.map(l => l.split('\t').pop())
 
 		// detect staged files for local testing, should not have any in github CI
-		const stagedFiles = execSync(`git diff --cached --name-only | sed 's| |\\ |g'`, { encoding: 'utf8' })
-		changedFiles = [...committedFiles, ...stagedFiles.trim().split('\n')]
+		// const stagedFiles = execSync(`git diff --cached --name-only | sed 's| |\\ |g'`, { encoding: 'utf8' })
+		const diffFiles = execSync(`git diff --name-only HEAD | sed 's| |\\ |g'`, { encoding: 'utf8' })
+		changedFiles = [...committedFiles, ...diffFiles.trim().split('\n')]
 	}
 	/* c8 ignore stop */
 	changedFiles = changedFiles.filter(f => codeFileExt.has(path.extname(f)))
