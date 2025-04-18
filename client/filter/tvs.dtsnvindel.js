@@ -1,8 +1,7 @@
-import { handler as catHandler } from './tvs.categorical.js'
+import { handler as dtHandler } from './tvs.dt.js'
 
-export const handler = Object.assign({}, catHandler, { type: 'dtsnvindel', term_name_gen })
+/*
+TVS handler for dtsnvindel term
+*/
 
-function term_name_gen(d) {
-	const name = d.term.geneVariantTerm ? `${d.term.geneVariantTerm.name} ${d.term.name}` : d.term.name
-	return name.length < 31 ? name : '<label title="' + name + '">' + name.substring(0, 28) + '...' + '</label>'
-}
+export const handler = Object.assign({}, dtHandler, { type: 'dtsnvindel' })

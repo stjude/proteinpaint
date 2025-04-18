@@ -1,3 +1,7 @@
-import { handler as snvHandler } from './tvs.dtsnvindel.js'
+import { handler as dtHandler } from './tvs.dt.js'
 
-export const handler = Object.assign({}, snvHandler, { type: 'dtsv' })
+/*
+TVS handler for dtsv term
+*/
+
+export const handler = Object.assign({}, dtHandler, { type: 'dtsv' })

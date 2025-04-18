@@ -39,14 +39,14 @@ async function fillMenu(self, _div, tvs) {
 				// no need to pass vocabApi as a termdb.appInit() option, since
 				// termdb app will create vocabApi as needed from state.vocab
 				// if provided
-				terms: term.filter.terms
+				terms: term.filter.terms,
+				parent_termdbConfig: self.opts.vocabApi.termdbConfig
 			},
 			tree: { usecase: { target: 'filter' } }
 		},
 		tree: {
 			click_term2select_tvs(tvs) {
 				tvs.term.geneVariantTerm = structuredClone(term)
-				delete tvs.term.geneVariantTerm.filter
 				self.opts.callback(tvs)
 			}
 		}
