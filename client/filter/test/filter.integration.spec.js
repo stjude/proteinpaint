@@ -1363,16 +1363,23 @@ tape('getNormalRoot()', async test => {
 		const A = { type: 'tvs', tvs: { term_A: true } }
 		const input = {
 			type: 'tvslst',
-			in: false,
 			join: 'and',
-			lst: [A]
+			lst: [
+				{
+					type: 'tvslst',
+					in: false,
+					lst: [A]
+				}
+			]
 		}
-		const output = getNormalRoot(input)
+		const output = getNormalRoot(structuredClone(input))
+		const Acopy = structuredClone(A)
+		Acopy.tvs.isnot = true // negate the tvs based on input.lst[0].in === false
 		const expectedOutput = {
 			type: 'tvslst',
-			in: false,
-			join: 'and',
-			lst: [A]
+			in: true,
+			join: '',
+			lst: [Acopy] // since the nested tvslst with negation was removed, the 'hoisted' tvs must be negated
 		}
 		test.deepEqual(output, expectedOutput, 'should allow tvslst of single-tvs to be negated')
 	}
