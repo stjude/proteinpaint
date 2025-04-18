@@ -122,8 +122,9 @@ class MassGroups {
 				// not using cohort
 				filtercopy.in = !filtercopy.in
 			}
-			console.log(filtercopy)
-			const samples = await this.app.vocabApi.getFilteredSampleList(filtercopy)
+			const filter = Object.assign({}, this.app.getState().termfilter.filter, filtercopy)
+			filter.lst[1].lst[0].tvs.isnot = true
+			const samples = await this.app.vocabApi.getFilteredSampleList(filter)
 			if (!samples.length) throw '0 samples for the other group'
 			console.log(`Not in ${groups[0].name} has ${samples.length} samples`)
 			const items = []
