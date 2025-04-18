@@ -94,7 +94,7 @@ function setRenderers(self) {
 		)
 	}
 
-	self.makeRibbon = function(ribbon) {
+	self.makeRibbon = function (ribbon) {
 		//only relevant for 'card', not 'nestedCard'
 		const ribbonDiv = card
 			.append('div')
@@ -144,6 +144,11 @@ function setRenderers(self) {
 			value: false
 		})
 		slideDrawer(self)
-		await openSandbox(self.opts.element, self.opts)
+		/** Focused elements rendering concurrently with the drawer
+		 * animation cause the drawer scrolling to jerk. Wait till
+		 * the animation is complete, then open the sandbox. */
+		setTimeout(async () => {
+			await openSandbox(self.opts.element, self.opts)
+		}, self.state.duration + 5)
 	})
 }

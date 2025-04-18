@@ -1,1 +1,2 @@
-
+Fixes:
+- Allow the app drawer to finish transition before loading the sandbox
