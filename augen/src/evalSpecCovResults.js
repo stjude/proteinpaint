@@ -75,7 +75,8 @@ export async function evalSpecCovResults({ workspace, jsonExtract }) {
 			// or add TRACK_SPEC_COVERAGE=1 when running a script that calls this function
 			if (gitProjectRoot.endsWith('proteinpaint/proteinpaint') || process.env.TRACK_SPEC_COVERAGE) {
 				try {
-					fs.writeFileSync(covFile, JSON.stringify(relevantCoverage, null, '  '))
+					const updatedCov = Object.assign({}, previousCoverage, relevantCoverage)
+					fs.writeFileSync(covFile, JSON.stringify(updatedCov, null, '  '))
 					const out = execSync(`cd ${gitProjectRoot} && git add ${covFile}`, { encoding: 'utf8' })
 					console.log(out)
 				} catch (e) {
