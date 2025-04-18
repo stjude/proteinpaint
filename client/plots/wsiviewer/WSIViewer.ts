@@ -17,6 +17,12 @@ import { table2col } from '#dom/table2col'
 import { Projection } from 'ol/proj'
 import { Extent } from 'ol/extent'
 import { RxComponentInner } from '../../types/rx.d'
+import 'ol-ext/dist/ol-ext.css'
+import LayerSwitcherImage from 'ol-ext/control/LayerSwitcherImage'
+import { Collection } from 'ol'
+import BaseLayer from 'ol/layer/Base'
+import { Layer } from 'ol/layer'
+import LayerSwitcher from 'ol-ext/control/LayerSwitcher'
 
 export default class WSIViewer extends RxComponentInner {
 	// following attributes are required by rx
@@ -137,7 +143,8 @@ export default class WSIViewer extends RxComponentInner {
 				preview: `/tileserver/layer/slide/${data.wsiSessionId}/zoomify/TileGroup0/0-0-0@1x.jpg?${queryParams}`,
 				metadata: wsimages[i].metadata,
 				source: source,
-				baseLayer: true
+				baseLayer: true,
+				title: 'Slide'
 			}
 			const layer = new TileLayer(options)
 
@@ -145,11 +152,7 @@ export default class WSIViewer extends RxComponentInner {
 				wsimage: layer
 			}
 
-			console.log('wsimages', wsimages[i])
-
 			const overlays = wsimages[i].overlays
-
-			console.log('overlays', overlays)
 
 			if (overlays) {
 				for (const overlay of overlays) {
@@ -165,9 +168,10 @@ export default class WSIViewer extends RxComponentInner {
 					})
 
 					const optionsOverlay = {
-						preview: `/tileserver/layer/slide/${data.wsiSessionId}/zoomify/TileGroup0/0-0-0@1x.jpg?${queryParams}`,
+						preview: `/tileserver/layer/overlay/${data.wsiSessionId}/zoomify/TileGroup0/0-0-0@1x.jpg?${overlayQueryParams}`,
 						metadata: wsimages[i].metadata,
-						source: sourceOverlay
+						source: sourceOverlay,
+						title: 'Overlay'
 					}
 
 					wsiImageLayers.overlay = new TileLayer(optionsOverlay)
@@ -261,6 +265,13 @@ export default class WSIViewer extends RxComponentInner {
 	}
 
 	private addControls(map: OLMap, firstLayer: TileLayer) {
+		map.addControl(
+			new LayerSwitcher({
+				collapsed: true,
+				mouseover: true
+			})
+		)
+
 		const fullscreen = new FullScreen()
 		map.addControl(fullscreen)
 

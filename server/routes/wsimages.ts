@@ -53,6 +53,8 @@ function init({ genomes }) {
 
 			const getWsiImageResponse: any = await getWsiImageDimensions(sessionId, getCookieString, wsiImagePath)
 
+			console.log('getWsiImageResponse', getWsiImageResponse)
+
 			const payload: WSImagesResponse = {
 				status: 'ok',
 				wsiSessionId: sessionId,
