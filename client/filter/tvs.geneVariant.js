@@ -25,9 +25,11 @@ export const handler = {
 
 async function fillMenu(self, _div, tvs) {
 	const term = structuredClone(tvs.term)
+	// add a variant filter onto the geneVariant term
 	await mayMakeVariantFilter({ q: {}, term }, self.opts.vocabApi)
 	if (!term.filter?.terms?.length) return
-
+	// generate a frontend vocab using dt terms from the variant filter
+	// and render a data dictionary of this vocab
 	const termdb = await import('../termdb/app')
 	termdb.appInit({
 		holder: _div.append('div').style('margin-top', '15px'),
@@ -46,7 +48,7 @@ async function fillMenu(self, _div, tvs) {
 		},
 		tree: {
 			click_term2select_tvs(tvs) {
-				tvs.term.geneVariantTerm = structuredClone(term)
+				tvs.term.geneVariantTerm = structuredClone(term) // track the parent geneVariant term
 				self.opts.callback(tvs)
 			}
 		}
