@@ -168,7 +168,7 @@ jobs:
             git stash
             git pull --rebase
             
-            echo "$(git rev-parse --short HEAD)" > public/coverage/commitRef
+            echo "$(git rev-parse HEAD)" > public/coverage/commitRef
             git add public/coverage/commitRef
             git commit --amend -m "update relevant workspace coverage json"
 
