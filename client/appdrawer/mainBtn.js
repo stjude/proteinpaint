@@ -60,7 +60,12 @@ class MainHeadboxBtn {
 			)
 			//Give the drawerDiv time to render before calculating height
 			setTimeout(() => {
-				this.drawerFullHeight = this.dom.drawerDiv.node().getBoundingClientRect().height + 5
+				//Use request animation frame to ensure the drawer is fully rendered
+				requestAnimationFrame(() => {
+					//Use scrollHeight to get the full height of the drawer,
+					//both visible in the viewport and not visible to the user.
+					this.drawerFullHeight = this.dom.drawerDiv.node().scrollHeight + 5
+				})
 			}, this.state.duration + 5)
 			slideDrawer(this)
 			this.btnRendered = true
@@ -81,7 +86,7 @@ function setRenderers(self) {
 			slideDrawer(self)
 			if (self.state.appBtnActive) {
 				setTimeout(() => {
-					self.drawerFullHeight = self.dom.drawerDiv.node().getBoundingClientRect().height + 5
+					self.drawerFullHeight = self.dom.drawerDiv.node().scrollHeight + 5
 				}, self.state.duration + 5)
 			}
 		})
@@ -130,7 +135,7 @@ function setRenderers(self) {
 		.style('pointer-events', self.state.appBtnActive ? 'auto' : 'none')
 		.html('&#9660;')
 
-	self.drawerFullHeight = self.dom.drawerRow.node().getBoundingClientRect().height + 5
+	self.drawerFullHeight = self.dom.drawerRow.node().scrollHeight + 5
 }
 
 export async function slideDrawer(self) {
