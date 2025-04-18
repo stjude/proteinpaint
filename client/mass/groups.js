@@ -81,6 +81,7 @@ class MassGroups {
 			overlap = []
 		for (const g of groups) {
 			const samples = await this.app.vocabApi.getFilteredSampleList(g.filter)
+
 			const items = []
 			for (const sample of samples) {
 				const item = { sampleId: sample.id }
@@ -108,6 +109,38 @@ class MassGroups {
 			if (!ok) return
 			samplelstGroups.push({ name: 'Group overlap', items: overlap })
 		}
+
+		if (groups.length == 1) {
+			/* request rest of samples not in this single group, to form group2
+			 */
+			const filtercopy = structuredClone(groups[0].filter)
+			if (this.app.vocabApi.termdbConfig.selectCohort) {
+				// using cohort. assumes..
+				if (!filtercopy.lst?.[1]) throw 'filtercopy.lst[1] missing when using cohort'
+				filtercopy.lst[1].in = !filtercopy.lst[1].in
+			} else {
+				// not using cohort
+				filtercopy.in = !filtercopy.in
+			}
+			console.log(filtercopy)
+			const samples = await this.app.vocabApi.getFilteredSampleList(filtercopy)
+			if (!samples.length) throw '0 samples for the other group'
+			console.log(`Not in ${groups[0].name} has ${samples.length} samples`)
+			const items = []
+			for (const sample of samples) {
+				const item = { sampleId: sample.id }
+				if ('name' in sample) {
+					item.sample = sample.name
+				}
+				items.push(item)
+			}
+			samplelstGroups.push({ name: 'Not in ' + groups[0].name, items, color: '#ccc' })
+		}
+
+		const tw2 = getSamplelstTW2(samplelstGroups)
+		return tw2
+
+		//////////////// delete rest of code
 
 		const name = samplelstGroups.length == 1 ? samplelstGroups[0].name : 'Sample groups'
 		const tw = getSamplelstTW(samplelstGroups, name, this.app.vocabApi)
@@ -941,6 +974,28 @@ export function getSampleFilter(sampleId) {
 	return filter
 }
 
+export function getSamplelstTW2(groups) {
+	const values = {}
+	const qgroups = []
+	for (const group of groups) {
+		const samples = getGroupSamples(group)
+		const qgroup = {
+			name: group.name,
+			in: true,
+			values: samples
+		}
+		qgroups.push(qgroup)
+		values[group.name] = { key: group.name, label: group.name, color: group.color, list: samples } //samples need to be passed for the samplelst filter to work
+	}
+	const tw = {
+		isAtomic: true,
+		term: { name, type: 'samplelst', values },
+		q: { groups: qgroups }
+	}
+	console.log('tw2', tw)
+	return tw
+}
+
 export function getSamplelstTW(groups, name = 'groups', notIn = true) {
 	const values = {}
 	const qgroups = []
@@ -970,16 +1025,15 @@ export function getSamplelstTW(groups, name = 'groups', notIn = true) {
 		q: { groups: qgroups }
 	}
 	return tw
-
-	function getGroupSamples(group) {
-		const values = []
-		for (const item of group.items) {
-			const value = { sampleId: item.sampleId }
-			if ('sample' in item) {
-				value.sample = item.sample
-			}
-			values.push(value)
+}
+function getGroupSamples(group) {
+	const values = []
+	for (const item of group.items) {
+		const value = { sampleId: item.sampleId }
+		if ('sample' in item) {
+			value.sample = item.sample
 		}
-		return values
+		values.push(value)
 	}
+	return values
 }
