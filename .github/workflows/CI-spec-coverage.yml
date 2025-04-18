@@ -156,21 +156,24 @@ jobs:
       - name: Commit updated coverage file
         run: |
           BRANCH=$(git rev-parse --abbrev-ref HEAD)
+          # evalSpecCoveResults() will stage <workspace>-coverage.json(s) if applicable
           STAGEDFILES=$(git diff --cached --name-only | sed 's| |\\ |g')
-          echo -e "STAGEDFILES=[$STAGEDFILES]"
+          echo -e "STAGEDFILES=[\n$STAGEDFILES\n]\n"
+          
           # this CI is intended to run on approving and closing a PR
           if [[ "$BRANCH" == "master" && "$STAGEDFILES" != "" ]]; then
             git config --global user.email "PPTeam@STJUDE.ORG"
             git config --global user.name "PPTeam CI"
-            git commit -m "update relevant workspace coverage json"
+
+            git diff --name-only      # detect unstaged changes, if any
+            git commit -m "update relevant workspace coverage json(s)"
+
+            git restore .             # discard unstaged, uncommitted changes, such as from using pack.sh
+            git pull --rebase         # in case the upstream branch was updated during this CI run
             
-            git diff --name-only
-            git stash
-            git pull --rebase
-            
-            echo "$(git rev-parse HEAD)" > public/coverage/commitRef
-            git add public/coverage/commitRef
-            git commit --amend -m "update relevant workspace coverage json"
+            echo "$(git rev-parse HEAD)" > public/coverage/commitRef   # save the last rebased commit hash as reference for computing changed files
+            git add public/coverage/commitRef                          # cannot combine this commit with the last one, since the commitRef must have the updated workspace coverage json 
+            git commit -m "update public/coverage/commitRef"
 
             git push origin $BRANCH
           fi
