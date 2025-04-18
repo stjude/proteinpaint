@@ -42,16 +42,16 @@ export async function evalSpecCovResults({ workspace, jsonExtract }) {
 	const failedCoverage = new Map()
 	const getPct = v => (Object.hasOwn(v, 'pct') ? v.pct : 0)
 	for (const f of coveredFilenames) {
-		if (!Object.hasOwn(previousCoverage, f)) continue
+		const hasPrev = Object.hasOwn(previousCoverage, f)
 		{
-			const prev = getLowestPct(previousCoverage[f])
+			const prev = hasPrev ? getLowestPct(previousCoverage[f]) : 0
 			const curr = getLowestPct(relevantCoverage[f])
 			const diff = curr - prev
 			relevantCoverage[f].lowestPct = { curr, prev, diff }
 			if (diff < 0) failedCoverage.set(f, relevantCoverage[f])
 		}
 		{
-			const prev = getAveragePct(previousCoverage[f])
+			const prev = hasPrev ? getAveragePct(previousCoverage[f]) : 0
 			const curr = getAveragePct(relevantCoverage[f])
 			const diff = curr - prev
 			relevantCoverage[f].averagePct = { curr, prev, diff }
