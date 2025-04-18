@@ -1,6 +1,6 @@
 import { copyMerge, getCompInit } from '#rx'
 import { Menu, addGeneSearchbox, GeneSetEditUI, renderTable, table2col } from '#dom'
-import { filterInit, getNormalRoot, filterPromptInit, getFilterItemByTag } from '#filter/filter'
+import { filterInit, getNormalRoot, filterPromptInit, getFilterItemByTag, negateFilter } from '#filter/filter'
 import { appInit } from '#termdb/app'
 import { get$id } from '#termsetting'
 import { getCurrentCohortChartTypes } from './charts'
@@ -113,20 +113,8 @@ class MassGroups {
 		if (groups.length == 1) {
 			/* request rest of samples not in this single group, to form group2
 			 */
-			const filtercopy = structuredClone(groups[0].filter)
-			if (this.app.vocabApi.termdbConfig.selectCohort) {
-				// using cohort. assumes..
-				if (!filtercopy.lst?.[1]) throw 'filtercopy.lst[1] missing when using cohort'
-				filtercopy.lst[1].in = !filtercopy.lst[1].in
-			} else {
-				// not using cohort
-				filtercopy.in = !filtercopy.in
-			}
-			const filter = Object.assign({}, this.app.getState().termfilter.filter, filtercopy)
-			filter.lst[1].lst[0].tvs.isnot = true
-			const samples = await this.app.vocabApi.getFilteredSampleList(filter)
+			const samples = await this.app.vocabApi.getFilteredSampleList(negateFilter(groups[0].filter))
 			if (!samples.length) throw '0 samples for the other group'
-			console.log(`Not in ${groups[0].name} has ${samples.length} samples`)
 			const items = []
 			for (const sample of samples) {
 				const item = { sampleId: sample.id }
