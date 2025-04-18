@@ -58,6 +58,7 @@ export async function initGenomesDs(serverconfig) {
 	//DELETE THIS after process for deleting mass session files moved into production
 	serverconfig.cachedir_massSessionTrash = await mayCreateSubdirInCache('massSessionTrash')
 	deleteSessionFiles()
+	deletePklFiles()
 
 	serverconfig.cache_snpgt = {
 		dir: await mayCreateSubdirInCache('snpgt'),
@@ -597,6 +598,31 @@ async function deleteSessionFiles() {
 				await fs.promises.unlink(path.join(serverconfig.cachedir_massSession, file))
 
 				console.log('File deleted: ', file, sessionCreationDate)
+			}
+		})
+	} catch (e) {
+		throw `Error: ${e}`
+	}
+}
+
+//Specifically deletes pickle files created during the
+//gene enrichment route (see server/routes/genesetEnrichment.ts)
+async function deletePklFiles() {
+	const files = await fs.promises.readdir(serverconfig.cachedir)
+	try {
+		files.forEach(async file => {
+			if (!file.endsWith('pkl')) return
+			const stats = await fs.promises.stat(path.join(serverconfig.cachedir, file))
+			const sessionCreationDate = stats.birthtime
+
+			//Delete the pickle file if older than 30 days
+			const today = new Date()
+			const fileDate = new Date(sessionCreationDate)
+			const numOfSaveDays = 30
+			const sessionDaysElapsed = Math.round((today.getTime() - fileDate.getTime()) / (1000 * 3600 * 24))
+			if (sessionDaysElapsed > numOfSaveDays) {
+				await fs.promises.unlink(path.join(serverconfig.cachedir, file))
+				console.log('Pickle file deleted: ', file, sessionCreationDate)
 			}
 		})
 	} catch (e) {
