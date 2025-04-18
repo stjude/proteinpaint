@@ -12,7 +12,7 @@ import type TileSource from 'ol/source/Tile'
 import { WSIViewerInteractions } from '#plots/wsiviewer/interactions/WSIViewerInteractions.ts'
 import type Settings from '#plots/wsiviewer/Settings.ts'
 import wsiViewerDefaults from '#plots/wsiviewer/defaults.ts'
-import type { WSImage, WSImagesRequest, WSImagesResponse } from '#types'
+import { SampleWSImagesResponse, WSImage, WSImagesRequest, WSImagesResponse } from '#types'
 import { table2col } from '#dom/table2col'
 import { Projection } from 'ol/proj'
 import { Extent } from 'ol/extent'
@@ -38,7 +38,7 @@ export default class WSIViewer extends RxComponentInner {
 		const settings = state.plots.find(p => p.id === this.id).settings as Settings
 		const holder = this.opts.holder
 
-		const data = await dofetch3('samplewsimages', {
+		const data: SampleWSImagesResponse = await dofetch3('samplewsimages', {
 			body: {
 				genome: state.genome || state.vocab.genome,
 				dslabel: state.dslabel || state.vocab.dslabel,
@@ -145,29 +145,34 @@ export default class WSIViewer extends RxComponentInner {
 				wsimage: layer
 			}
 
-			// TODO fix this hardcoded overlay
-			const overlayFile = 'CMU-1.geojson'
-			// if(wsimages[i].overlay) {
+			console.log('wsimages', wsimages[i])
 
-			const overlayQueryParams = `wsi_image=${overlayFile}&dslabel=${dslabel}&genome=${genome}&sample_id=${sampleId}`
+			const overlays = wsimages[i].overlays
 
-			const zoomifyOverlayLatUrl = `/tileserver/layer/overlay/${data.wsiSessionId}/zoomify/{TileGroup}/{z}-{x}-{y}@1x.jpg?${overlayQueryParams}`
+			console.log('overlays', overlays)
 
-			const sourceOverlay = new Zoomify({
-				url: zoomifyOverlayLatUrl,
-				size: [imgWidth, imgHeight],
-				crossOrigin: 'anonymous',
-				zDirection: -1 // Ensure we get a tile with the screen resolution or higher
-			})
+			if (overlays) {
+				for (const overlay of overlays) {
+					const overlayQueryParams = `wsi_image=${overlay}&dslabel=${dslabel}&genome=${genome}&sample_id=${sampleId}`
 
-			const optionsOverlay = {
-				preview: `/tileserver/layer/slide/${data.wsiSessionId}/zoomify/TileGroup0/0-0-0@1x.jpg?${queryParams}`,
-				metadata: wsimages[i].metadata,
-				source: sourceOverlay
+					const zoomifyOverlayLatUrl = `/tileserver/layer/overlay/${data.wsiSessionId}/zoomify/{TileGroup}/{z}-{x}-{y}@1x.jpg?${overlayQueryParams}`
+
+					const sourceOverlay = new Zoomify({
+						url: zoomifyOverlayLatUrl,
+						size: [imgWidth, imgHeight],
+						crossOrigin: 'anonymous',
+						zDirection: -1 // Ensure we get a tile with the screen resolution or higher
+					})
+
+					const optionsOverlay = {
+						preview: `/tileserver/layer/slide/${data.wsiSessionId}/zoomify/TileGroup0/0-0-0@1x.jpg?${queryParams}`,
+						metadata: wsimages[i].metadata,
+						source: sourceOverlay
+					}
+
+					wsiImageLayers.overlay = new TileLayer(optionsOverlay)
+				}
 			}
-
-			wsiImageLayers.overlay = new TileLayer(optionsOverlay)
-			// }
 
 			layers.push(wsiImageLayers)
 		}
@@ -233,7 +238,7 @@ export default class WSIViewer extends RxComponentInner {
 			code: 'ZoomifyProjection',
 			units: 'pixels',
 			extent: extent,
-			metersPerUnit: 0.4557375840456018 * 1e-6,
+			// metersPerUnit: 0.4557375840456018 * 1e-6,
 			getPointResolution: function (resolution) {
 				return resolution
 			}

@@ -27,8 +27,18 @@ function init({ genomes }) {
 			const ds = g.datasets[query.dslabel]
 			if (!ds) throw 'invalid dataset name'
 			const sampleId = query.sample_id
-			const images: WSImage[] = await ds.queries.WSImages.getWSImages(sampleId)
-			res.send({ sampleWSImages: images } satisfies SampleWSImagesResponse)
+			const wsimages: WSImage[] = await ds.queries.WSImages.getWSImages(sampleId)
+
+			if (ds.queries.WSImages.getWSIAnnotations) {
+				for (const wsimage of wsimages) {
+					const annotations = await ds.queries.WSImages.getWSIAnnotations(sampleId, wsimage.filename)
+					if (annotations) {
+						wsimage.overlays = annotations
+					}
+				}
+			}
+
+			res.send({ sampleWSImages: wsimages } satisfies SampleWSImagesResponse)
 		} catch (e: any) {
 			console.log(e)
 			res.status(404).send('Sample images not found')

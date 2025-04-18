@@ -13,7 +13,7 @@ export type SampleWSImagesResponse = {
 
 export type WSImage = {
 	filename: string
-	overlay?: string
+	overlays?: Array<string>
 	metadata: string
 }
 
