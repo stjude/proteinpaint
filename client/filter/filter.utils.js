@@ -186,3 +186,32 @@ export function filterJoin(lst) {
 	}
 	return f
 }
+
+/* make copy of input filter, return negated copy
+if tag=filterUiRoot is found, negate that;
+else, assume is tvslst of single tvs an negate at tvs level
+
+allow other tags for future use
+*/
+export function negateFilter(f0, tag = 'filterUiRoot') {
+	const f = structuredClone(f0)
+	const fui = getFilterItemByTag(f, tag)
+	if (fui) {
+		if (typeof fui.in != 'boolean') throw 'filterUiRoot f.in is not boolean'
+		fui.in = !fui.in
+		return f
+	}
+	// tag not found, try root
+
+	if (f.lst?.length == 1 && f.lst[0].type == 'tvs' && typeof f.lst[0].tvs == 'object') {
+		// is a tvslst containing a single tvs. negate at tvs level
+		f.lst[0].tvs.isnot = !f.lst[0].tvs.isnot
+		return f
+	}
+	if (f.lst?.length > 1 && typeof f.in == 'boolean') {
+		// is a tvslst with multiple tvs. maybe from a subfilter nested somewhere
+		f.in = !f.in
+		return f
+	}
+	throw 'cannot negate filter'
+}
