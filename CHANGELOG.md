@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Fixes:
+- Added tabix support back for all non-HDF5 datasets
+
 
 ## 2.118.2
 
