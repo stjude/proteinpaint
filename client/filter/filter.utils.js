@@ -80,9 +80,20 @@ function normalizeFilter(filter) {
 		// keep non-tvslst entries or tvslst with non-empty lst.length
 		.filter(f => f.type !== 'tvslst' || f.lst.length > 0)
 		// do not reformat an entry unless it is a tvslst with only one entry,
-		// in which case just return that filter's first lst entry instead
-		// of the filter itself
-		.map(f => (f.type !== 'tvslst' || f.lst.length > 1 ? f : f.lst[0]))
+		// in which case just return that filter's first lst entry and negated as needed,
+		// instead of returning the filter itself
+		.map(f => {
+			if (f.type !== 'tvslst' || f.lst.length > 1) return f
+			// f.in defaults to true if missing, negation requires a strict boolean false
+			if (f.in !== false) return f.lst[0]
+			if (f.lst[0].type !== 'tvs') throw `unable to handle filter entry type='${f.lst[0].type}'`
+			if (!f.lst[0].tvs) throw `missing filter entry tvs`
+			// handle a single-entry tvslst where filter.in != true, which is not created from the filter UI,
+			// but may be created internally by non-UI code, so need to support under the hood
+			f.lst[0].tvs.isnot = !f.lst[0].tvs.isnot
+			// return the single entry after applying the tvslst negation to the tvs itself
+			return f.lst[0]
+		})
 
 	lst.forEach(normalizeProps)
 

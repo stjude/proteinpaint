@@ -58,8 +58,11 @@ fi
 PLATFORM=""
 ARCH=$( uname -m )
 if [[ ${ARCH} == "arm64" ]]; then 
-	ARCH="aarch64";
-	PLATFORM="--platform=linux/arm64"
+	ARCH="x86-64";
+  PLATFORM="--platform=linux/amd64"
+# Enable this if you want to build for arm64
+#	ARCH="aarch64";
+#	PLATFORM="--platform=linux/arm64"
 fi
 
 
