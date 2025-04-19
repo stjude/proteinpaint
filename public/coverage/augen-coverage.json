@@ -70,5 +70,41 @@
       "prev": 90.41499999999999,
       "diff": 0
     }
+  },
+  "src/closestSpec.js": {
+    "lines": {
+      "total": 64,
+      "covered": 53,
+      "skipped": 0,
+      "pct": 82.81
+    },
+    "functions": {
+      "total": 6,
+      "covered": 5,
+      "skipped": 0,
+      "pct": 83.33
+    },
+    "statements": {
+      "total": 71,
+      "covered": 59,
+      "skipped": 0,
+      "pct": 83.09
+    },
+    "branches": {
+      "total": 29,
+      "covered": 18,
+      "skipped": 0,
+      "pct": 62.06
+    },
+    "lowestPct": {
+      "curr": 62.06,
+      "prev": 0,
+      "diff": 62.06
+    },
+    "averagePct": {
+      "curr": 77.82249999999999,
+      "prev": 0,
+      "diff": 77.82249999999999
+    }
   }
 }
