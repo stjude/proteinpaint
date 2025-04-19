@@ -138,7 +138,7 @@ export class VolcanoViewModel {
 		const radius = Math.max(this.settings.width, this.settings.height) / 80
 		const dataCopy: any = structuredClone(this.response.data)
 		for (const d of dataCopy) {
-			d.highlighted = this.config.highlightedData.includes(d.gene_symbol)
+			d.highlighted = this.config.highlightedData.includes(d.gene_name)
 			const significant = this.isSignificant(d)
 			this.getGenesColor(d, significant, controlColor, caseColor)
 			if (significant) {
@@ -149,7 +149,7 @@ export class VolcanoViewModel {
 					{ value: roundValueAuto(d.adjusted_p_value) }
 				]
 				if (this.dataType == 'genes') {
-					row.splice(0, 0, { value: d.gene_symbol })
+					row.splice(0, 0, { value: d.gene_name })
 				}
 				this.pValueTable.rows.push(row)
 			} else {
@@ -175,7 +175,7 @@ export class VolcanoViewModel {
 
 	getGenesColor(d: DataPointEntry, significant: boolean, controlColor: string, caseColor: string) {
 		if (this.termType != 'geneExpression') return
-		if (!d.gene_symbol) throw `Missing gene_symbol in data: ${JSON.stringify(d)} [VolcanoViewModel getGenesColor()]`
+		if (!d.gene_name) throw `Missing gene_name in data: ${JSON.stringify(d)} [VolcanoViewModel getGenesColor()]`
 		if (significant) {
 			if (controlColor && caseColor) d.color = d.fold_change > 0 ? caseColor : controlColor
 			else d.color = this.settings.defaultSignColor
