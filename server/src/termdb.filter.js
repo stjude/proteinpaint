@@ -1,6 +1,8 @@
 import { isDictionaryType, TermTypes, getBin } from '#shared/terms.js'
 import { getParentType, getSampleType } from '#shared/terms.js'
+import { dtTerms } from '#shared/common.js'
 import { getSnpData } from './termdb.matrix.js'
+import { filterByItem } from './mds3.init.js'
 
 /*
 nested filter documented at:
@@ -60,6 +62,8 @@ export async function getFilterCTEs(filter, ds, sampleTypes = new Set(), CTEname
 			f = await get_geneExpression(item.tvs, CTEname_i, ds)
 		} else if (item.tvs.term.type == TermTypes.METABOLITE_INTENSITY) {
 			f = await get_metaboliteIntensity(item.tvs, CTEname_i, ds)
+		} else if (dtTerms.map(t => t.type).includes(item.tvs.term.type)) {
+			f = await get_dtTerm(item.tvs, CTEname_i, ds)
 		} else if (
 			item.tvs.term.id &&
 			(!item.tvs.term.type || isDictionaryType(item.tvs.term.type)) &&
@@ -183,6 +187,8 @@ function get_samplelst(tvs, CTEname, ds, sample_type, onlyChildren) {
 	}
 }
 
+// TODO: may retire get_geneVariant() as geneVariant filtering is now
+// performed by get_dtTerm()
 async function get_geneVariant(tvs, CTEname, ds, onlyChildren) {
 	const tw = { $id: Math.random().toString(), term: tvs.term, q: {} }
 	const data = await ds.mayGetGeneVariantData(tw, { genome: ds.genomename })
@@ -310,6 +316,36 @@ async function get_metaboliteIntensity(tvs, CTEname, ds) {
 		const value = termData[sample]
 		const filterBin = getBin(tvs.ranges, value)
 		if (filterBin != -1) samples.push(sample)
+	}
+
+	let query = `SELECT id as sample
+				FROM sampleidmap
+				WHERE id IN (${samples.map(i => '?').join(', ')})`
+
+	const result = {
+		CTEs: [
+			`
+		  ${CTEname} AS (
+				${query}
+			)`
+		],
+		values: [...samples],
+		CTEname
+	}
+	return result
+}
+
+async function get_dtTerm(tvs, CTEname, ds) {
+	const tw = { $id: Math.random().toString(), term: tvs.term.geneVariantTerm, q: {} }
+	const data = await ds.mayGetGeneVariantData(tw, { genome: ds.genomename })
+
+	const samples = []
+	for (const [sample, value] of data) {
+		const mlst = value[tw.$id]?.values
+		if (!mlst) throw 'mlst is missing'
+		const filter = { type: 'tvs', tvs }
+		const [pass, tested] = filterByItem(filter, mlst)
+		if (pass) samples.push(sample)
 	}
 
 	let query = `SELECT id as sample

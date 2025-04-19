@@ -2772,7 +2772,7 @@ function filterByTvsLst(filter, mlst) {
 }
 
 // function to filter a sample based on its mlst and a filter item
-function filterByItem(filter, mlst) {
+export function filterByItem(filter, mlst) {
 	if (filter.type == 'tvslst') return filterByTvsLst(filter, mlst)
 	if (filter.type != 'tvs') throw 'unexpected filter.type'
 	const tvs = filter.tvs

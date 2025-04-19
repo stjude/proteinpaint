@@ -1,3 +1,7 @@
-import { handler as catHandler } from './tvs.categorical.js'
+import { handler as dtHandler } from './tvs.dt.js'
 
-export const handler = Object.assign({}, catHandler, { type: 'dtsv' })
+/*
+TVS handler for dtsv term
+*/
+
+export const handler = Object.assign({}, dtHandler, { type: 'dtsv' })

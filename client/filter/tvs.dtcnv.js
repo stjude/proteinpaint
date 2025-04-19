@@ -1,9 +1,13 @@
-import { handler as catHandler } from './tvs.categorical.js'
+import { handler as dtHandler } from './tvs.dt.js'
 import { Menu } from '../dom/menu'
 
-export const handler = Object.assign({}, catHandler, { type: 'dtcnv', setMethods })
+/*
+TVS handler for dtcnv term
+*/
 
-function setMethods(self) {
+export const handler = Object.assign({}, dtHandler, { type: 'dtcnv', setMethods })
+
+function setMethods(self, tvs) {
 	const cnv = self.opts.vocabApi.parent_termdbConfig?.queries?.cnv
 	if (!cnv) throw 'cnv query is missing'
 	const keys = Object.keys(cnv)
@@ -13,12 +17,12 @@ function setMethods(self) {
 		// to fill menu with cnv cutoff settings
 		handler.fillMenu = fillMenu_cont
 		handler.get_pill_label = get_pill_label_cont
-		self.tvs.cnvMode = 'continuous'
+		tvs.cnvMode = 'continuous'
 	} else {
 		// dataset has categorical cnv data
 		// keep using categorical fill menu
 		// to fill menu with mutation classes
-		self.tvs.cnvMode = 'categorical'
+		tvs.cnvMode = 'categorical'
 	}
 }
 
