@@ -1,6 +1,13 @@
 import { copyMerge, getCompInit } from '#rx'
 import { Menu, addGeneSearchbox, GeneSetEditUI, renderTable, table2col } from '#dom'
-import { filterInit, getNormalRoot, filterPromptInit, getFilterItemByTag, negateFilter } from '#filter/filter'
+import {
+	filterInit,
+	getNormalRoot,
+	filterPromptInit,
+	getFilterItemByTag,
+	negateFilter,
+	filterJoin
+} from '#filter/filter'
 import { appInit } from '#termdb/app'
 import { get$id } from '#termsetting'
 import { getCurrentCohortChartTypes } from './charts'
@@ -80,7 +87,9 @@ class MassGroups {
 		const processedSamples = new Set(),
 			overlap = []
 		for (const g of groups) {
-			const samples = await this.app.vocabApi.getFilteredSampleList(g.filter)
+			const samples = await this.app.vocabApi.getFilteredSampleList(
+				filterJoin([g.filter, this.state.termfilter.filter])
+			)
 
 			const items = []
 			for (const sample of samples) {
@@ -113,7 +122,9 @@ class MassGroups {
 		if (groups.length == 1) {
 			/* request rest of samples not in this single group, to form group2
 			 */
-			const samples = await this.app.vocabApi.getFilteredSampleList(negateFilter(groups[0].filter))
+			const samples = await this.app.vocabApi.getFilteredSampleList(
+				filterJoin([negateFilter(groups[0].filter), this.state.termfilter.filter])
+			)
 			if (!samples.length) throw '0 samples for the other group'
 			const items = []
 			for (const sample of samples) {
@@ -126,41 +137,7 @@ class MassGroups {
 			samplelstGroups.push({ name: 'Not in ' + groups[0].name, items, color: '#ccc' })
 		}
 
-		const tw2 = getSamplelstTW2(samplelstGroups)
-		return tw2
-
-		//////////////// delete rest of code
-
-		const name = samplelstGroups.length == 1 ? samplelstGroups[0].name : 'Sample groups'
-		const tw = getSamplelstTW(samplelstGroups, name, this.app.vocabApi)
-		/* 
-		when samplelstGroups has 1 group,
-		tw.q.groups[0] has values as samplelstGroups[0].items, with a filter of {in: true}
-		tw.q.groups[1] has values as samplelstGroups[0].items, with a filter of {in: false}
-		*/
-
-		//when there is only one group and need to create a others group
-		if (groups.length == 1) {
-			// find the sample count in current cohort
-			let countSampleCount
-			if (this.state.termfilter.filter.lst.length)
-				countSampleCount = await this.app.vocabApi.getFilteredSampleCount(this.state.termfilter.filter)
-			else countSampleCount = await this.app.vocabApi.getCohortSampleCount(this.activeCohortName)
-
-			const countSampleCountInt = parseInt(countSampleCount, 10)
-
-			// get the sample count in "others" group
-			const othersGroup = Object.values(tw.term.values).find(v => v.key.startsWith('Not in'))
-			othersGroup.othersGroupSampleNum = countSampleCountInt - othersGroup.list.length
-		}
-
-		// TEMP change, to be done elsewhere e.g. in getSamplelstTW()
-		for (const g of tw.q.groups) {
-			tw.term.values[g.name].list = g.values
-			tw.term.values[g.name].inuse = g.inuse
-		}
-
-		return tw
+		return getSamplelstTW2(samplelstGroups)
 	}
 
 	updateLaunchButton() {
@@ -963,6 +940,7 @@ export function getSampleFilter(sampleId) {
 	return filter
 }
 
+// no special handling when groups.length=1
 export function getSamplelstTW2(groups) {
 	const values = {}
 	const qgroups = []
@@ -976,13 +954,11 @@ export function getSamplelstTW2(groups) {
 		qgroups.push(qgroup)
 		values[group.name] = { key: group.name, label: group.name, color: group.color, list: samples } //samples need to be passed for the samplelst filter to work
 	}
-	const tw = {
+	return {
 		isAtomic: true,
-		term: { name, type: 'samplelst', values },
+		term: { name: 'groups', type: 'samplelst', values },
 		q: { groups: qgroups }
 	}
-	console.log('tw2', tw)
-	return tw
 }
 
 export function getSamplelstTW(groups, name = 'groups', notIn = true) {
