@@ -1,2 +1,4 @@
+Features:
+- new geneVariant tvs UI in global filter
 Fixes:
 - Allow the app drawer to finish transition before loading the sandbox

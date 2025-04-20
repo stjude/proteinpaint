@@ -27,7 +27,10 @@ Tests:
 	series visibility - q.hiddenValue
 	series visibility - numeric
 	series visibility - condition
-	single barchart, filtered
+
+	single barchart, categorical filter
+	single barchart, TP53 mutation dtTerm filter
+
 	click non-group bar to add filter
 	click custom categorical group bar to add filter
 	single chart, genotype overlay
@@ -342,16 +345,16 @@ tape('term1=categorical, term2=geneVariant', function (test) {
 	}
 })
 
-// FIXME this test times out, seems like postRender is never called
-tape.skip('term1=geneExp, term2=geneVariant SKIPPED', function (test) {
+tape('term1=geneExp, term2=geneVariant SKIPPED', function (test) {
 	test.timeoutAfter(10000)
 	runpp({
 		state: {
 			plots: [
 				{
-					chartType: 'summary', // cannot use 'barchart', breaks
+					chartType: 'summary',
 					term2: geneVariantTw,
-					term: { term: { type: 'geneExpression', gene: 'TP53' } }
+					// must set geneExp q.mode=discrete to show barchart, otherwise it will become violin and not trigger provied postRender for barchart
+					term: { term: { type: 'geneExpression', gene: 'TP53' }, q: { mode: 'discrete' } }
 				}
 			]
 		},
@@ -366,7 +369,7 @@ tape.skip('term1=geneExp, term2=geneVariant SKIPPED', function (test) {
 		const barDiv = barchart.Inner.dom.barDiv
 		const numCharts = barDiv.selectAll('.pp-sbar-div').size()
 		test.true(numCharts == 1, 'Should have 1 chart from gene variant term')
-		//if (test._ok) barchart.Inner.app.destroy()
+		if (test._ok) barchart.Inner.app.destroy()
 		test.end()
 	}
 })
@@ -828,7 +831,7 @@ tape('series visibility and order - condition', function (test) {
 	}
 })
 
-tape('single barchart, filtered', function (test) {
+tape('single barchart, categorical filter', function (test) {
 	test.timeoutAfter(3000)
 
 	runpp({
@@ -883,6 +886,38 @@ tape('single barchart, filtered', function (test) {
 			barchart.Inner.dom.holder.node().querySelector('.bars-cell-grp').__data__.seriesId,
 			'1',
 			'should show one bar series that matches filter value'
+		)
+		if (test._ok) barchart.Inner.app.destroy()
+		test.end()
+	}
+})
+
+tape('single barchart, TP53 mutation dtTerm filter', function (test) {
+	test.timeoutAfter(3000)
+	runpp({
+		state: {
+			termfilter: { filter: tp53dtTermFilter },
+			plots: [
+				{
+					chartType: 'barchart',
+					term: { id: 'agedx' }
+					// since p53 mutation filter is applied at sample level, barchart term must be sample-level (agedx)
+					// patient-level term (sex) won't show data
+				}
+			]
+		},
+		barchart: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+	function runTests(barchart) {
+		barchart.on('postRender.test', null)
+		test.equal(
+			barchart.Inner.dom.holder.node().querySelectorAll('.bars-cell-grp').length,
+			3,
+			'should show one bar series'
 		)
 		if (test._ok) barchart.Inner.app.destroy()
 		test.end()
@@ -1961,7 +1996,9 @@ tape.skip('customized bins', test => {
 	}
 })
 
-// to make or update this config, on the browser build/modify the tw, apply to chart, at Session > Share > Open link, open the session file and locate the gV tw entry and copy it out here
+// to make or update following config, on the browser build/modify the tw or filter, apply to chart, at Session > Share > Open link, open the session file and locate the record and copy it here:
+// for geneVariant tw, search for string "geneVariant"
+// for filter, search for "termfilter"
 const geneVariantTw = {
 	term: {
 		type: 'geneVariant',
@@ -2249,4 +2286,171 @@ const geneVariantTw = {
 			]
 		}
 	}
+}
+
+const tp53dtTermFilter = {
+	type: 'tvslst',
+	in: true,
+	join: '',
+	lst: [
+		{
+			type: 'tvs',
+			tvs: {
+				term: {
+					query: 'snvindel',
+					name: 'SNV/indel',
+					parent_id: null,
+					isleaf: true,
+					type: 'dtsnvindel',
+					dt: 1,
+					values: {
+						M: {
+							label: 'MISSENSE'
+						},
+						F: {
+							label: 'FRAMESHIFT'
+						},
+						N: {
+							label: 'NONSENSE'
+						},
+						S: {
+							label: 'SILENT'
+						},
+						D: {
+							label: 'PROTEINDEL'
+						},
+						I: {
+							label: 'PROTEININS'
+						},
+						ProteinAltering: {
+							label: 'PROTEINALTERING'
+						},
+						L: {
+							label: 'SPLICE'
+						},
+						Intron: {
+							label: 'INTRON'
+						},
+						WT: {
+							label: 'Wildtype'
+						}
+					},
+					name_noOrigin: 'SNV/indel',
+					geneVariantTerm: {
+						gene: 'TP53',
+						name: 'TP53',
+						type: 'geneVariant',
+						filter: {
+							opts: {
+								joinWith: ['and', 'or']
+							},
+							terms: [
+								{
+									id: 'snvindel',
+									query: 'snvindel',
+									name: 'SNV/indel',
+									parent_id: null,
+									isleaf: true,
+									type: 'dtsnvindel',
+									dt: 1,
+									values: {
+										M: {
+											label: 'MISSENSE'
+										},
+										F: {
+											label: 'FRAMESHIFT'
+										},
+										N: {
+											label: 'NONSENSE'
+										},
+										S: {
+											label: 'SILENT'
+										},
+										D: {
+											label: 'PROTEINDEL'
+										},
+										I: {
+											label: 'PROTEININS'
+										},
+										ProteinAltering: {
+											label: 'PROTEINALTERING'
+										},
+										L: {
+											label: 'SPLICE'
+										},
+										Intron: {
+											label: 'INTRON'
+										},
+										WT: {
+											label: 'Wildtype'
+										}
+									},
+									name_noOrigin: 'SNV/indel'
+								},
+								{
+									id: 'cnv',
+									query: 'cnv',
+									name: 'CNV',
+									parent_id: null,
+									isleaf: true,
+									type: 'dtcnv',
+									dt: 4,
+									values: {
+										CNV_amp: {
+											label: 'Copy number gain'
+										},
+										CNV_loss: {
+											label: 'Copy number loss'
+										},
+										WT: {
+											label: 'Wildtype'
+										}
+									},
+									name_noOrigin: 'CNV'
+								},
+								{
+									id: 'fusion',
+									query: 'svfusion',
+									name: 'Fusion RNA',
+									parent_id: null,
+									isleaf: true,
+									type: 'dtfusion',
+									dt: 2,
+									values: {
+										Fuserna: {
+											label: 'Fusion transcript'
+										},
+										WT: {
+											label: 'Wildtype'
+										}
+									},
+									name_noOrigin: 'Fusion RNA'
+								},
+								{
+									id: 'sv',
+									query: 'svfusion',
+									name: 'SV',
+									parent_id: null,
+									isleaf: true,
+									type: 'dtsv',
+									dt: 5,
+									values: {
+										SV: {
+											label: 'Structural variation'
+										}
+									},
+									name_noOrigin: 'SV'
+								}
+							]
+						}
+					}
+				},
+				values: [
+					{
+						key: 'M'
+					}
+				]
+			}
+		}
+	]
 }
