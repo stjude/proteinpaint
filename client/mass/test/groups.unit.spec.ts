@@ -1,5 +1,5 @@
 import tape from 'tape'
-import { getFilter, getSampleFilter, getSamplelstTW, getSamplelstTWFromIds } from '../groups'
+import { getFilter, getSampleFilter, getSamplelstTW, getSamplelstTW2, getSamplelstTWFromIds } from '../groups'
 
 /**
  * Tests:
@@ -319,5 +319,25 @@ tape('groups getSamplelstTW()', test => {
 	]
 	result = getSamplelstTW(input)
 	test.deepEqual(result, mockSamplelstTW, 'getSamplelstTW should return the correct sample list for two groups.')
+	test.end()
+})
+
+tape('groups getSamplelstTW2()', test => {
+	test.timeoutAfter(100)
+
+	const input = [
+		{
+			color: 'blue',
+			items: mockGrp1Values,
+			name: mockGrp1Name
+		},
+		{
+			color: 'green',
+			items: mockGrp2Values,
+			name: mockGrp2Name
+		}
+	]
+	const result = getSamplelstTW2(input)
+	test.deepEqual(result, mockSamplelstTW, 'getSamplelstTW2 should return the correct sample list for two groups.')
 	test.end()
 })
