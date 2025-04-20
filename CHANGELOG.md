@@ -4,8 +4,12 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- new geneVariant tvs UI in global filter
+
 Fixes:
 - Added tabix support back for all non-HDF5 datasets
+- Allow the app drawer to finish transition before loading the sandbox
 
 
 ## 2.118.2
