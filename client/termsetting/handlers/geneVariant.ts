@@ -236,7 +236,7 @@ async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 	*/
 	const div = _div.append('div').style('padding', '10px')
 	div.append('div').style('font-size', '1.2rem').text(self.term.name)
-	const optsDiv = div.append('div').style('margin-top', '10px')
+	const optsDiv = div.append('div').style('margin-top', '10px').style('margin-bottom', '1px')
 	const groupsDiv = div
 		.append('div')
 		.style('display', 'none')
@@ -246,6 +246,25 @@ async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 	const originDiv = groupsDiv.append('div').style('margin-top', '15px')
 	const groupsetDiv = groupsDiv.append('div').style('margin-top', '15px')*/
 	const draggablesDiv = div.append('div').style('display', 'none').style('margin-left', '15px')
+	// apply button
+	// must create it at beginning to allow toggling applySpan message
+	const applyRow = div.append('div').style('margin-top', '15px')
+	applyRow
+		.append('button')
+		.style('display', 'inline-block')
+		.text('Apply')
+		.on('click', () => {
+			if (self.groupSettingInstance) self.groupSettingInstance.processDraggables()
+			self.runCallback()
+		})
+	applyRow
+		.append('span')
+		.attr('id', 'applySpan')
+		.style('display', 'none')
+		.style('padding-left', '15px')
+		.style('opacity', 0.8)
+		.style('font-size', '.8em')
+		.text('Only tested variants are considered')
 
 	// radio buttons for whether or not to group variants
 	optsDiv.append('div').style('font-weight', 'bold').text('Group variants')
@@ -257,15 +276,13 @@ async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 			{ label: 'Assign variants to groups', value: 'group', checked: isGroupset }
 		],
 		callback: async v => {
-			const applySpan = div.select('#applySpan')
 			if (v == 'group') {
 				await makeGroupUI()
-				applySpan.style('display', 'inline')
 			} else {
 				clearGroupset(self)
 				groupsDiv.style('display', 'none')
 				draggablesDiv.style('display', 'none')
-				applySpan.style('display', 'none')
+				applyRow.select('#applySpan').style('display', 'none')
 			}
 		}
 	})
@@ -283,6 +300,7 @@ async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 	async function makeGroupUI() {
 		if (self.q.type != 'predefined-groupset' && self.q.type != 'custom-groupset') self.q.type = 'filter'
 		await makeGroupsetDraggables()
+		applyRow.select('#applySpan').style('display', 'inline')
 		/*groupsDiv.style('display', 'inline-block')
 		makeDtRadios()
 		makeOriginRadios()
@@ -453,25 +471,6 @@ async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 		})
 		await self.groupSettingInstance.main()
 	}
-
-	// Apply button
-	const applyRow = div.append('div').style('margin-top', '15px')
-	applyRow
-		.append('button')
-		.style('display', 'inline-block')
-		.text('Apply')
-		.on('click', () => {
-			if (self.groupSettingInstance) self.groupSettingInstance.processDraggables()
-			self.runCallback()
-		})
-	applyRow
-		.append('span')
-		.attr('id', 'applySpan')
-		.style('display', 'none')
-		.style('padding-left', '15px')
-		.style('opacity', 0.8)
-		.style('font-size', '.8em')
-		.text('Only tested variants are considered')
 
 	/*
 	const applyBtn = div
