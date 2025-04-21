@@ -270,8 +270,8 @@ async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 		}
 	})
 
-	if (self.usecase?.detail == 'term0' || self.usecase?.detail == 'term2') {
-		// hide option for turning off groupsetting for term0/term2
+	if (self.usecase?.detail == 'term0' || self.usecase?.detail == 'term2' || self.opts.geneVariantEditMenuOnlyGrp) {
+		// hide option for turning off groupsetting
 		optsDiv.style('display', 'none')
 		groupsDiv.style('margin', '10px 0px 0px 00px')
 	}
