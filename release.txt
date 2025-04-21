@@ -1,2 +1,1 @@
-Fixes:
-- Remove the GFF "load gene sets" option from Gene set edit UI in unclustered genes panel. 
+
