@@ -168,40 +168,45 @@ function mayMakeGroups(tw) {
 	if (tw.q.type != 'custom-groupset' || tw.q.customset?.groups.length) return
 	// custom groupset, but customset.groups[] is empty
 	// fill with mutated group vs. wildtype group
-	// for the first dt specified in dataset
+	// for the first applicable dt in dataset
 	const dtFilter = tw.term.filter
-	const dtTerm = dtFilter.terms[0]
-	// wildtype filter
-	const WTfilter = structuredClone(dtFilter)
-	WTfilter.group = 2
-	const WT = 'WT'
-	const WTvalue = { key: WT, label: dtTerm.values[WT].label, value: WT }
-	const WTtvs = { type: 'tvs', tvs: { term: dtTerm, values: [WTvalue] } }
-	WTfilter.active = getWrappedTvslst([WTtvs])
-	let WTname = 'Wildtype'
-	if (dtTerm.origin) WTname += ` (${dtTerm.origin})`
-	// mutated filter
-	const MUTfilter = structuredClone(dtFilter)
-	MUTfilter.group = 1
-	const classes = Object.keys(dtTerm.values)
-	if (classes.length < 2) throw 'should have at least 2 classes'
-	let MUTtvs, MUTname
-	if (classes.length == 2) {
-		// only 2 classes
-		// mutant filter will filter for the mutant class
-		const MUT = classes.find(c => c != WT)
-		if (!MUT) throw 'mutant class cannot be found'
-		const MUTvalue = { key: MUT, label: dtTerm.values[MUT].label, value: MUT }
-		MUTtvs = { type: 'tvs', tvs: { term: dtTerm, values: [MUTvalue] } }
-		MUTname = dtTerm.values[MUT].label
-		if (dtTerm.origin) MUTname += ` (${dtTerm.origin})`
-	} else {
-		// more than 2 classes
-		// mutant filter will filter for all non-wildtype classes
-		MUTtvs = { type: 'tvs', tvs: { term: dtTerm, values: [WTvalue], isnot: true } }
-		MUTname = dtTerm.name
+	let WTfilter, WTname, MUTfilter, MUTtvs, MUTname
+	for (const dtTerm of dtFilter.terms) {
+		// wildtype filter
+		WTfilter = structuredClone(dtFilter)
+		WTfilter.group = 2
+		const WT = 'WT'
+		const WTvalue = { key: WT, label: dtTerm.values[WT].label, value: WT }
+		const WTtvs = { type: 'tvs', tvs: { term: dtTerm, values: [WTvalue] } }
+		WTfilter.active = getWrappedTvslst([WTtvs])
+		WTname = 'Wildtype'
+		if (dtTerm.origin) WTname += ` (${dtTerm.origin})`
+		// mutated filter
+		MUTfilter = structuredClone(dtFilter)
+		MUTfilter.group = 1
+		const classes = Object.keys(dtTerm.values)
+		if (classes.length < 2) {
+			// fewer than 2 classes, try next dt term
+			continue
+		}
+		if (classes.length == 2) {
+			// only 2 classes
+			// mutant filter will filter for the mutant class
+			const MUT = classes.find(c => c != WT)
+			if (!MUT) throw 'mutant class cannot be found'
+			const MUTvalue = { key: MUT, label: dtTerm.values[MUT].label, value: MUT }
+			MUTtvs = { type: 'tvs', tvs: { term: dtTerm, values: [MUTvalue] } }
+			MUTname = dtTerm.values[MUT].label
+			if (dtTerm.origin) MUTname += ` (${dtTerm.origin})`
+		} else {
+			// more than 2 classes
+			// mutant filter will filter for all non-wildtype classes
+			MUTtvs = { type: 'tvs', tvs: { term: dtTerm, values: [WTvalue], isnot: true } }
+			MUTname = dtTerm.name
+		}
+		MUTfilter.active = getWrappedTvslst([MUTtvs])
+		break
 	}
-	MUTfilter.active = getWrappedTvslst([MUTtvs])
 	// excluded filter
 	const EXCLUDEfilter = structuredClone(dtFilter)
 	EXCLUDEfilter.group = 0
