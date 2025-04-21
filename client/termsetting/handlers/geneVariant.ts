@@ -255,6 +255,18 @@ async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 		.text('Apply')
 		.on('click', () => {
 			if (self.groupSettingInstance) self.groupSettingInstance.processDraggables()
+			let validGrpset = false
+			if (self.q.type == 'custom-groupset') {
+				// groupset is assigned
+				if (self.q.customset.groups.map((group: any) => group.filter?.active.lst).some(lst => lst.length)) {
+					// filters in groupset are non-empty
+					validGrpset = true
+				}
+			}
+			if (!validGrpset) {
+				// groupset is not valid, so clear it
+				clearGroupset(self)
+			}
 			self.runCallback()
 		})
 	applyRow
@@ -290,7 +302,7 @@ async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 	if (self.usecase?.detail == 'term0' || self.usecase?.detail == 'term2' || self.opts.geneVariantEditMenuOnlyGrp) {
 		// hide option for turning off groupsetting
 		optsDiv.style('display', 'none')
-		groupsDiv.style('margin', '10px 0px 0px 00px')
+		groupsDiv.style('margin-top', '10px')
 	}
 
 	const selected = radios.inputs.filter(d => d.checked)
@@ -298,7 +310,7 @@ async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 
 	// make radio buttons for grouping variants
 	async function makeGroupUI() {
-		if (self.q.type != 'predefined-groupset' && self.q.type != 'custom-groupset') self.q.type = 'filter'
+		if (self.q.type != 'custom-groupset') self.q.type = 'filter'
 		await makeGroupsetDraggables()
 		applyRow.select('#applySpan').style('display', 'inline')
 		/*groupsDiv.style('display', 'inline-block')
