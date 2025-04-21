@@ -168,40 +168,45 @@ function mayMakeGroups(tw) {
 	if (tw.q.type != 'custom-groupset' || tw.q.customset?.groups.length) return
 	// custom groupset, but customset.groups[] is empty
 	// fill with mutated group vs. wildtype group
-	// for the first dt specified in dataset
+	// for the first applicable dt in dataset
 	const dtFilter = tw.term.filter
-	const dtTerm = dtFilter.terms[0]
-	// wildtype filter
-	const WTfilter = structuredClone(dtFilter)
-	WTfilter.group = 2
-	const WT = 'WT'
-	const WTvalue = { key: WT, label: dtTerm.values[WT].label, value: WT }
-	const WTtvs = { type: 'tvs', tvs: { term: dtTerm, values: [WTvalue] } }
-	WTfilter.active = getWrappedTvslst([WTtvs])
-	let WTname = 'Wildtype'
-	if (dtTerm.origin) WTname += ` (${dtTerm.origin})`
-	// mutated filter
-	const MUTfilter = structuredClone(dtFilter)
-	MUTfilter.group = 1
-	const classes = Object.keys(dtTerm.values)
-	if (classes.length < 2) throw 'should have at least 2 classes'
-	let MUTtvs, MUTname
-	if (classes.length == 2) {
-		// only 2 classes
-		// mutant filter will filter for the mutant class
-		const MUT = classes.find(c => c != WT)
-		if (!MUT) throw 'mutant class cannot be found'
-		const MUTvalue = { key: MUT, label: dtTerm.values[MUT].label, value: MUT }
-		MUTtvs = { type: 'tvs', tvs: { term: dtTerm, values: [MUTvalue] } }
-		MUTname = dtTerm.values[MUT].label
-		if (dtTerm.origin) MUTname += ` (${dtTerm.origin})`
-	} else {
-		// more than 2 classes
-		// mutant filter will filter for all non-wildtype classes
-		MUTtvs = { type: 'tvs', tvs: { term: dtTerm, values: [WTvalue], isnot: true } }
-		MUTname = dtTerm.name
+	let WTfilter, WTname, MUTfilter, MUTtvs, MUTname
+	for (const dtTerm of dtFilter.terms) {
+		// wildtype filter
+		WTfilter = structuredClone(dtFilter)
+		WTfilter.group = 2
+		const WT = 'WT'
+		const WTvalue = { key: WT, label: dtTerm.values[WT].label, value: WT }
+		const WTtvs = { type: 'tvs', tvs: { term: dtTerm, values: [WTvalue] } }
+		WTfilter.active = getWrappedTvslst([WTtvs])
+		WTname = 'Wildtype'
+		if (dtTerm.origin) WTname += ` (${dtTerm.origin})`
+		// mutated filter
+		MUTfilter = structuredClone(dtFilter)
+		MUTfilter.group = 1
+		const classes = Object.keys(dtTerm.values)
+		if (classes.length < 2) {
+			// fewer than 2 classes, try next dt term
+			continue
+		}
+		if (classes.length == 2) {
+			// only 2 classes
+			// mutant filter will filter for the mutant class
+			const MUT = classes.find(c => c != WT)
+			if (!MUT) throw 'mutant class cannot be found'
+			const MUTvalue = { key: MUT, label: dtTerm.values[MUT].label, value: MUT }
+			MUTtvs = { type: 'tvs', tvs: { term: dtTerm, values: [MUTvalue] } }
+			MUTname = dtTerm.values[MUT].label
+			if (dtTerm.origin) MUTname += ` (${dtTerm.origin})`
+		} else {
+			// more than 2 classes
+			// mutant filter will filter for all non-wildtype classes
+			MUTtvs = { type: 'tvs', tvs: { term: dtTerm, values: [WTvalue], isnot: true } }
+			MUTname = dtTerm.name
+		}
+		MUTfilter.active = getWrappedTvslst([MUTtvs])
+		break
 	}
-	MUTfilter.active = getWrappedTvslst([MUTtvs])
 	// excluded filter
 	const EXCLUDEfilter = structuredClone(dtFilter)
 	EXCLUDEfilter.group = 0
@@ -236,7 +241,7 @@ async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 	*/
 	const div = _div.append('div').style('padding', '10px')
 	div.append('div').style('font-size', '1.2rem').text(self.term.name)
-	const optsDiv = div.append('div').style('margin-top', '10px')
+	const optsDiv = div.append('div').style('margin-top', '10px').style('margin-bottom', '1px')
 	const groupsDiv = div
 		.append('div')
 		.style('display', 'none')
@@ -246,6 +251,37 @@ async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 	const originDiv = groupsDiv.append('div').style('margin-top', '15px')
 	const groupsetDiv = groupsDiv.append('div').style('margin-top', '15px')*/
 	const draggablesDiv = div.append('div').style('display', 'none').style('margin-left', '15px')
+	// apply button
+	// must create it at beginning to allow toggling applySpan message
+	const applyRow = div.append('div').style('margin-top', '15px')
+	applyRow
+		.append('button')
+		.style('display', 'inline-block')
+		.text('Apply')
+		.on('click', () => {
+			if (self.groupSettingInstance) self.groupSettingInstance.processDraggables()
+			let validGrpset = false
+			if (self.q.type == 'custom-groupset') {
+				// groupset is assigned
+				if (self.q.customset.groups.map((group: any) => group.filter?.active.lst).some(lst => lst.length)) {
+					// filters in groupset are non-empty
+					validGrpset = true
+				}
+			}
+			if (!validGrpset) {
+				// groupset is not valid, so clear it
+				clearGroupset(self)
+			}
+			self.runCallback()
+		})
+	applyRow
+		.append('span')
+		.attr('id', 'applySpan')
+		.style('display', 'none')
+		.style('padding-left', '15px')
+		.style('opacity', 0.8)
+		.style('font-size', '.8em')
+		.text('Only tested variants are considered')
 
 	// radio buttons for whether or not to group variants
 	optsDiv.append('div').style('font-weight', 'bold').text('Group variants')
@@ -257,23 +293,21 @@ async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 			{ label: 'Assign variants to groups', value: 'group', checked: isGroupset }
 		],
 		callback: async v => {
-			const applySpan = div.select('#applySpan')
 			if (v == 'group') {
 				await makeGroupUI()
-				applySpan.style('display', 'inline')
 			} else {
 				clearGroupset(self)
 				groupsDiv.style('display', 'none')
 				draggablesDiv.style('display', 'none')
-				applySpan.style('display', 'none')
+				applyRow.select('#applySpan').style('display', 'none')
 			}
 		}
 	})
 
-	if (self.usecase?.detail == 'term0' || self.usecase?.detail == 'term2') {
-		// hide option for turning off groupsetting for term0/term2
+	if (self.usecase?.detail == 'term0' || self.usecase?.detail == 'term2' || self.opts.geneVariantEditMenuOnlyGrp) {
+		// hide option for turning off groupsetting
 		optsDiv.style('display', 'none')
-		groupsDiv.style('margin', '10px 0px 0px 00px')
+		groupsDiv.style('margin-top', '10px')
 	}
 
 	const selected = radios.inputs.filter(d => d.checked)
@@ -281,8 +315,9 @@ async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 
 	// make radio buttons for grouping variants
 	async function makeGroupUI() {
-		if (self.q.type != 'predefined-groupset' && self.q.type != 'custom-groupset') self.q.type = 'filter'
+		if (self.q.type != 'custom-groupset') self.q.type = 'filter'
 		await makeGroupsetDraggables()
+		applyRow.select('#applySpan').style('display', 'inline')
 		/*groupsDiv.style('display', 'inline-block')
 		makeDtRadios()
 		makeOriginRadios()
@@ -453,25 +488,6 @@ async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 		})
 		await self.groupSettingInstance.main()
 	}
-
-	// Apply button
-	const applyRow = div.append('div').style('margin-top', '15px')
-	applyRow
-		.append('button')
-		.style('display', 'inline-block')
-		.text('Apply')
-		.on('click', () => {
-			if (self.groupSettingInstance) self.groupSettingInstance.processDraggables()
-			self.runCallback()
-		})
-	applyRow
-		.append('span')
-		.attr('id', 'applySpan')
-		.style('display', 'none')
-		.style('padding-left', '15px')
-		.style('opacity', 0.8)
-		.style('font-size', '.8em')
-		.text('Only tested variants are considered')
 
 	/*
 	const applyBtn = div
