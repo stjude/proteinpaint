@@ -1152,7 +1152,8 @@ export class MatrixControls {
 				holder,
 				genome: app.opts.genome,
 				geneList,
-				customInputs: this.parent.opts.customInputs?.geneset,
+				// Remove the Loads Gene Sets option from unclustered genes panel.
+				customInputs: geneInputType == 'hierCluster' ? this.parent.opts.customInputs?.geneset : undefined,
 				/* running hier clustering and the editing group is the group used for clustering
 				pass this mode value to inform ui to support the optional button "top variably exp gene"
 				this is hardcoded for the purpose of gene expression and should be improved
