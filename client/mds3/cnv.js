@@ -1,5 +1,5 @@
 import { scaleLinear } from 'd3-scale'
-import { mclasscnvgain, mclasscnvloss } from '#shared/common.js'
+import { mclass, mclasscnvgain, mclasscnvloss } from '#shared/common.js'
 import { table_cnv } from './itemtable'
 import { table2col } from '#dom'
 
@@ -42,6 +42,8 @@ function getRowHeight(rows, tk) {
 
 /*
 tk.cnv = {
+
+	// following are optional setting when tk.cnv.cnvGainCutoff is used (cnv using numeric values)
 	presetMax: number // if set, use this to set colorscale domain
 	absoluteMax: number // if presetMax is not set, use this for colorscale domain
 }
@@ -106,28 +108,14 @@ export function may_render_cnv(data, tk, block) {
 	tk.subtk2height.cnv = rowc * rowheight + (rowc - 1) * rowspace
 }
 
-function prepData(data, tk, block) {
+export function prepData(data, tk, block) {
 	// return following 3 variables. contents will vary depends on if sample is present
-	let maxAbsoluteValue = 0
+	let maxAbsoluteValue = 0 // updated if cnv uses numeric value
 	const sample2cnv = new Map() // k: sample_id, v: [{chr/start/stop/value/x1/x2}]. only populated when cnv has sample, in order to show cnvs from the same sample grouped together rather than scattered
 	const cnvLst = [] // raw list of events passing filter, each has structure of {samples:[]} to be used in itemtable. is used for cnv rendering when there's no sample
 
 	for (const v of data.cnv) {
 		if (!v.chr) continue
-		if (!Number.isFinite(v.value)) {
-			// no value. to cope with ds supplying qualitative calls
-			if (typeof v.class == 'string') {
-				if (v.class == mclasscnvgain) {
-					v.value = 1
-				} else if (v.class == mclasscnvloss) {
-					v.value = -1
-				} else {
-					continue
-				}
-			} else {
-				continue
-			}
-		}
 		if (!Number.isInteger(v.start) || !Number.isInteger(v.stop)) continue
 
 		const t1 = block.seekcoord(v.chr, v.start)[0]
@@ -147,8 +135,9 @@ function prepData(data, tk, block) {
 			j.x2 = t2.x
 		}
 
-		// valid
-		maxAbsoluteValue = Math.max(maxAbsoluteValue, Math.abs(v.value))
+		// only when cnv uses numeric value
+		if (Number.isFinite(v.value)) maxAbsoluteValue = Math.max(maxAbsoluteValue, Math.abs(v.value))
+
 		cnvLst.push(j)
 
 		if (Array.isArray(v.samples)) {
@@ -195,7 +184,7 @@ function plotOneSegment(c, y, rowheight, tk, block, sample) {
 		.attr('y', y)
 		.attr('width', x2 - x1)
 		.attr('height', Math.max(rowheight, 1))
-		.attr('fill', tk.cnv.colorScale(c.value))
+		.attr('fill', Number.isFinite(c.value) ? tk.cnv.colorScale(c.value) : mclass[c.class].color)
 		.on('mouseover', event => {
 			event.target.setAttribute('stroke', 'black')
 			tk.itemtip.clear().show(event.clientX, event.clientY)

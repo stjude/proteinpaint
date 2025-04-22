@@ -335,17 +335,37 @@ function mayInitSkewer(tk) {
 	}
 	setSkewerMode(tk) // adds skewer.viewModes[]
 }
+
 function mayInitCnv(tk) {
-	let cfg = tk.mds.termdbConfig?.queries?.cnv // the config object for rendering cnv
-	if (!cfg) {
-		// no cnv from native data. cnv can also come from custom data. check it
-		if (tk.mds.has_cnv) {
-			// has custom cnv. supply a blank obj as defaults
-			cfg = {}
+	let cfg // the config object for rendering cnv
+	if (tk.mds.termdbConfig?.queries?.cnv) {
+		cfg = tk.mds.termdbConfig.queries.cnv // native ds config
+	} else if (tk.custom_variants?.find(i => i.dt == dtcnv)) {
+		// has custom cnv; require that all are same type (using value or using category)
+		let useValue = false,
+			useCat = false
+		for (const m of tk.custom_variants) {
+			if (m.dt == dtcnv) {
+				if (Number.isFinite(m.value)) useValue = true
+				else useCat = true
+			}
 		}
+		if (useValue && useCat) throw 'custom cnv should be either using numeric value or not, but cannot be mixture'
+		if (useValue) {
+			cfg = {
+				cnvGainCutoff: 0, // use 0 for not filtering and show all events
+				cnvLossCutoff: 0
+			}
+		} else if (useCat) {
+			cfg = {} // no need for flags
+		} else {
+			throw 'custom cnv is neither value or category, should not happen'
+		}
+	} else {
+		return // no cnv from this tk
 	}
-	if (!cfg) return // lack this. no cnv from this tk
-	if (!tk.cnv) tk.cnv = {} // preserve
+
+	if (!tk.cnv) tk.cnv = {} // preserve existing setting
 	tk.cnv.g = tk.glider.append('g')
 	tk.cnv.cnvMaxLength = cfg.cnvMaxLength // if missing do not filter
 	tk.cnv.cnvGainCutoff = cfg.cnvGainCutoff // if missing do not filter
@@ -811,6 +831,7 @@ makes no return
 */
 function validateCustomVariants(tk, block) {
 	for (const m of tk.custom_variants) {
+		// has_skewer is a convenient flag to indicate skewer will render based on multiple datatypes; a flag for cnv is not needed
 		if (m.dt == dtsnvindel) {
 			tk.mds.has_skewer = true // enable skewer tk
 			validateCustomSnvindel(m)
@@ -822,7 +843,6 @@ function validateCustomVariants(tk, block) {
 			continue
 		}
 		if (m.dt == dtcnv) {
-			tk.mds.has_cnv = true // enable cnv tk
 			m.ssm_id = [m.chr, m.start, m.stop, m.class].join(ssmIdFieldsSeparator)
 			continue
 		}
