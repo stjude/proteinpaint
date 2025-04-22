@@ -187,11 +187,11 @@ export default function (): Mds3 {
 				file: 'files/hg38/TermdbTest/TermdbTest_CNV_gene.gz'
 			},
 			/*
-			on the fly cnv calls from gene body probe signals are no longer used
-			probe2cnv:{
-				file: 'files/hg19/pnet/PNET.probesignals.gz'
-			}
-			*/
+            on the fly cnv calls from gene body probe signals are no longer used
+            probe2cnv:{
+                    file: 'files/hg19/pnet/PNET.probesignals.gz'
+            }
+            */
 			singleSampleMutation: {
 				src: 'native',
 				sample_id_key: 'sample_id',
@@ -227,6 +227,10 @@ export default function (): Mds3 {
 			},
 			topVariablyExpressedGenes: {
 				src: 'native'
+			},
+			rnaseqGeneCount: {
+				storage_type: 'HDF5',
+				file: 'files/hg38/TermdbTest/TermdbTest.geneCounts.h5'
 			},
 			WSImages: {
 				type: 'H&E',
