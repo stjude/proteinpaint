@@ -17,7 +17,7 @@ Custom cnv only, no sample
 Custom ssm only, no sample
 Custom cnv and ssm, no sample
 Custom cnv and ssm, WITH sample
-Custom cnv (category but not value), WITH sample
+Custom cnv (category but not numeric value), WITH sample
 Custom variants, missing or invalid mclass
 Custom variants WITH samples (allows some to be without)
 Custom data with samples and sample selection
@@ -496,7 +496,7 @@ tape('Official - hardcodeCnvOnly', test => {
 		test.ok(tk.leftlabels.doms.samples, 'tk.leftlabels.doms.samples is set')
 
 		// in termdbtest, cnvGainCutoff is not set on ds.queries.cnv, meaning the cnv is not by numeric value, and thus the legend is not rendered as a quickfix solution to support cnv segment by category. can reenable it when it changes later
-		//test.ok(tk.legend.cnv, 'tk.legend.cnv{} is set')
+		test.ok(tk.legend.cnv, 'tk.legend.cnv{} is set')
 
 		// todo: more tests
 		if (test._ok) holder.remove()
@@ -1016,7 +1016,7 @@ tape('Custom cnv and ssm, WITH sample', test => {
 	}
 })
 
-tape('Custom cnv (category but not value), WITH sample', test => {
+tape('Custom cnv (category but not numeric value), WITH sample', test => {
 	test.timeoutAfter(3000)
 	const holder = getHolder()
 

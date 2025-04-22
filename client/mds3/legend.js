@@ -838,20 +838,61 @@ function may_update_ld(tk) {
 function may_create_cnv(tk, block) {
 	if (!tk.cnv) return
 
-	// temp fix and subject to change
-	// missing property means cnv doesn't use numeric values, thus do not show colorscale
-	if (!Number.isFinite(tk.cnv.cnvGainCutoff)) return
-
 	const R = (tk.legend.cnv = {})
 	R.row = tk.legend.table.append('tr')
 	R.headerTd = R.row.append('td').style('text-align', 'right').style('opacity', 0.7).text('CNV')
 	R.holder = R.row.append('td').style('padding-left', '10px')
-	// make all pieces that are arranged left to right inside <td>
-	R.colorscaleHolder = R.holder.append('div') // visibility determined by if any segments are shown in view range
-	R.colorscaleHolder.append('span').text('Loss').style('font-size', '.8em').style('opacity', 0.6) // "Loss" label on left of colorscale
-	const csHolder = R.colorscaleHolder.append('span') // actual holder of colorscale
-	R.colorscaleHolder.append('span').text('Gain').style('font-size', '.8em').style('opacity', 0.6) // "Gain" label on right of colorscale
-	R.noCnv = R.holder.append('div').text('No data').style('opacity', 0.6) // indicator there's no cnv in the region
+
+	if (Number.isFinite(tk.cnv.cnvGainCutoff)) {
+		// has the cutoff and cnv data uses numeric value; show colorscale
+
+		// make all pieces that are arranged left to right inside <td>
+		R.colorscaleHolder = R.holder.append('div') // visibility determined by if any segments are shown in view range
+		R.colorscaleHolder.append('span').text('Loss').style('font-size', '.8em').style('opacity', 0.6) // "Loss" label on left of colorscale
+		const csHolder = R.colorscaleHolder.append('span') // actual holder of colorscale
+		R.colorscaleHolder.append('span').text('Gain').style('font-size', '.8em').style('opacity', 0.6) // "Gain" label on right of colorscale
+		R.noCnv = R.holder.append('div').text('No data').style('opacity', 0.6) // indicator there's no cnv in the region
+
+		// initiate colorscale component
+		const axisheight = 20
+		const barheight = 15
+		const xpad = 10
+		const axiswidth = 150
+
+		R.colorScale = new ColorScale({
+			barwidth: axiswidth,
+			barheight,
+			colors: [tk.cnv.lossColor, 'white', tk.cnv.gainColor],
+			domain: [-1, 0, 1], // actual domain added during update
+			fontSize: 12,
+			holder: csHolder,
+			height: axisheight + barheight,
+			width: xpad * 2 + axiswidth,
+			position: `${xpad},${axisheight}`,
+			ticks: 4,
+			tickSize: 6,
+			topTicks: true,
+			numericInputs: {
+				callback: obj => {
+					if (obj.cutoffMode == 'auto') {
+						delete tk.cnv.presetMax
+					} else if (obj.cutoffMode == 'fixed') {
+						tk.cnv.presetMax = Math.abs(obj.max)
+					} else {
+						throw 'unknown cutoffMode value'
+					}
+					tk.load()
+				}
+			}
+		})
+	} else {
+		// cnv data uses category but not numeric value
+		// will auto-fill category legend when available
+		R.cnvCategoryHolder = R.holder.append('span')
+	}
+
+	// following prompt will always be shown for cnv both using numeric value or not
+
 	const menu = new Menu() // launched by prompt
 	// prompt to show cnv filter stats. click prompt to show menu to adjust filter parameters
 	R.cnvFilterPrompt = R.holder
@@ -873,45 +914,14 @@ function may_create_cnv(tk, block) {
 					menu.hide()
 					tk.load()
 				})
-		})
-
-	// initiate colorscale component
-	const axisheight = 20
-	const barheight = 15
-	const xpad = 10
-	const axiswidth = 150
-
-	R.colorScale = new ColorScale({
-		barwidth: axiswidth,
-		barheight,
-		colors: [tk.cnv.lossColor, 'white', tk.cnv.gainColor],
-		domain: [-1, 0, 1], // actual domain added during update
-		fontSize: 12,
-		holder: csHolder,
-		height: axisheight + barheight,
-		width: xpad * 2 + axiswidth,
-		position: `${xpad},${axisheight}`,
-		ticks: 4,
-		tickSize: 6,
-		topTicks: true,
-		numericInputs: {
-			callback: obj => {
-				if (obj.cutoffMode == 'auto') {
-					delete tk.cnv.presetMax
-				} else if (obj.cutoffMode == 'fixed') {
-					tk.cnv.presetMax = Math.abs(obj.max)
-				} else {
-					throw 'unknown cutoffMode value'
-				}
-				tk.load()
+			if (Number.isFinite(tk.cnv.cnvGainCutoff)) {
+				console.log('todo show prompt')
 			}
-		}
-	})
+		})
 }
 
 function may_update_cnv(tk) {
 	if (!tk.cnv) return
-	if (!Number.isFinite(tk.cnv.cnvGainCutoff)) return // see may_create_cnv
 
 	// tk is equipped with cnv. determine if cnv data is actually shown
 	if (!tk.cnv.cnvLst || tk.cnv.cnvLst.length == 0) {
@@ -920,16 +930,52 @@ function may_update_cnv(tk) {
 		tk.legend.cnv.colorscaleHolder.style('display', 'none')
 		tk.legend.cnv.noCnv.style('display', 'inline-block')
 	} else {
-		// has cnv shown
-		tk.legend.cnv.colorscaleHolder.style('display', 'inline-block')
-		tk.legend.cnv.noCnv.style('display', 'none')
-		// update colorscale
-		tk.legend.cnv.colorScale.colors = [tk.cnv.lossColor, 'white', tk.cnv.gainColor]
-		tk.legend.cnv.colorScale.domain = tk.cnv.presetMax
-			? [-tk.cnv.presetMax, 0, tk.cnv.presetMax]
-			: [-tk.cnv.absoluteMax, 0, tk.cnv.absoluteMax]
-		tk.legend.cnv.colorScale.updateScale()
+		// has cnv showing; update legend with data contents
+		if (Number.isFinite(tk.cnv.cnvGainCutoff)) {
+			// cnv uses numeric values
+			tk.legend.cnv.colorscaleHolder.style('display', 'inline-block')
+			tk.legend.cnv.noCnv.style('display', 'none')
+			// update colorscale
+			tk.legend.cnv.colorScale.colors = [tk.cnv.lossColor, 'white', tk.cnv.gainColor]
+			tk.legend.cnv.colorScale.domain = tk.cnv.presetMax
+				? [-tk.cnv.presetMax, 0, tk.cnv.presetMax]
+				: [-tk.cnv.absoluteMax, 0, tk.cnv.absoluteMax]
+			tk.legend.cnv.colorScale.updateScale()
+		} else {
+			// uses categories
+			if (tk.hardcodeCnvOnly) {
+				// tricky! only show legend in cnv-only mode
+				// when not in such mode, the categories are already shown in Mutation legend section
+				tk.legend.cnv.cnvCategoryHolder.selectAll('*').remove()
+				const class2count = new Map()
+				for (const c of tk.cnv.cnvLst) {
+					if (!c.class) continue
+					class2count.set(c.class, 1 + (class2count.get(c.class) || 0))
+				}
+				for (const [cls, count] of [...class2count].sort((i, j) => j[1] - i[1])) {
+					const cell = tk.legend.cnv.cnvCategoryHolder
+						.append('div')
+						.attr('class', 'sja_clb')
+						.style('display', 'inline-block')
+						.on('click', event => {
+							// todo
+						})
+					cell
+						.append('div')
+						.style('display', 'inline-block')
+						.attr('class', 'sja_mcdot')
+						.style('background', mclass[cls].color)
+						.html(count > 1 ? count : '&nbsp;')
+					cell
+						.append('div')
+						.style('display', 'inline-block')
+						.style('color', mclass[cls].color)
+						.html('&nbsp;' + mclass[cls].label)
+				}
+			}
+		}
 	}
+
 	// update filter prompt. each applicable filter criteria generates a phrase. concatenated phrases are shown in prompt
 	// must do this even if no cnv is shown, which could be caused by filter param and allow to change here
 	const lst = [
