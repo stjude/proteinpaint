@@ -8,7 +8,7 @@ import { wsImagesPayload } from '#types/checkers'
 import SessionManager from '../src/wsisessions/SessionManager.ts'
 import { ShardManager } from '#src/sharding/ShardManager.ts'
 import { TileServerShardingAlgorithm } from '#src/sharding/TileServerShardingAlgorithm.ts'
-import { TileServerShard } from '#src/sharding/TileServerShard.ts'
+import type { TileServerShard } from '#src/sharding/TileServerShard.ts'
 import serverconfig from '#src/serverconfig.js'
 
 const routePath = 'wsimages'
@@ -49,7 +49,7 @@ function init({ genomes }) {
 
 			const wsiImagePath = path.join(`${mount}/${ds.queries.WSImages.imageBySampleFolder}/${sampleId}`, wsimage)
 
-			const sessionId = await getSessionId(cookieJar, getCookieString, setCookie, wsiImagePath)
+			const sessionId = await getSessionId(ds, sampleId, cookieJar, getCookieString, setCookie, wsiImagePath)
 
 			const getWsiImageResponse: any = await getWsiImageDimensions(sessionId, getCookieString, wsiImagePath)
 
@@ -70,7 +70,14 @@ function init({ genomes }) {
 	}
 }
 
-async function getSessionId(cookieJar: any, getCookieString: any, setCookie: any, wsimage: string) {
+async function getSessionId(
+	ds: any,
+	sampleId: string,
+	cookieJar: any,
+	getCookieString: any,
+	setCookie: any,
+	wsimage: string
+) {
 	const sessionManager = SessionManager.getInstance()
 
 	const invalidateResult = await sessionManager.syncAndInvalidateSessions(wsimage)
@@ -109,6 +116,56 @@ async function getSessionId(cookieJar: any, getCookieString: any, setCookie: any
 	})
 
 	await sessionManager.setSession(wsimage, sessionId, tileServer)
+
+	if (ds.queries.WSImages.getWSIAnnotations) {
+		const annotationFiles = await ds.queries.WSImages.getWSIAnnotations(sampleId, wsimage)
+
+		if (!annotationFiles) throw new Error('No annotations files found')
+
+		const mount = serverconfig.features?.tileserver?.mount
+
+		if (!mount) throw new Error('No mount available for TileServer')
+
+		if (annotationFiles.length > 0) {
+			for (const annotationFile of annotationFiles) {
+				const annotationsFilePath = path.join(
+					`${mount}/${ds.queries.WSImages.imageBySampleFolder}/${sampleId}`,
+					annotationFile
+				)
+				const annotationsData = qs.stringify({
+					overlay_path: annotationsFilePath
+				})
+
+				await ky.put(`${tileServer.url}/tileserver/overlay`, {
+					body: annotationsData,
+					timeout: 50000,
+					headers: {
+						'Content-Type': 'application/x-www-form-urlencoded',
+						Cookie: `session_id=${sessionId}`
+					},
+					hooks: getHooks(cookieJar, getCookieString, setCookie)
+				})
+			}
+
+			// Submit the color map for annotations
+			const cmapData = qs.stringify({
+				cmap: JSON.stringify({
+					keys: ['annotation'],
+					values: [ds.queries.WSImages.annotationsColor]
+				})
+			})
+
+			await ky.put(`${tileServer.url}/tileserver/cmap`, {
+				body: cmapData,
+				timeout: 50000,
+				headers: {
+					'Content-Type': 'application/x-www-form-urlencoded',
+					Cookie: `session_id=${sessionId}`
+				},
+				hooks: getHooks(cookieJar, getCookieString, setCookie)
+			})
+		}
+	}
 
 	return sessionId
 }

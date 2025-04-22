@@ -930,10 +930,14 @@ export type WSImages = {
 	*/
 	imageBySampleFolder: string
 
+	annotationsColor?: Array<number>
+
 	/** either ds supplied or dynamically added on launch with built in logic (retrieve the sample list from the wsimages table) */
 	getSamples?: () => Promise<Array<WSISample>>
 	/** either ds supplied or dynamically added on launch with built in logic */
 	getWSImages?: (sampleName: string) => Promise<WSImage[]>
+	/**  ds supplied */
+	getWSIAnnotations?: (sampleName: string, wsiImage: string) => Promise<string[]>
 }
 
 /*** types supporting Termdb ***/

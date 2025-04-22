@@ -6,6 +6,8 @@ import { context } from 'esbuild'
 import { polyfillNode } from 'esbuild-plugin-polyfill-node'
 import notifier from 'node-notifier'
 import { getCodeText } from './emitImports.mjs'
+import postcss from 'postcss'
+import escapeFix from './postcss-escape-fix.mjs'
 
 const exec = promisify(child_process.exec)
 const __dirname = import.meta.dirname
@@ -190,13 +192,26 @@ function cssLoader() {
 		name: 'cssLoader',
 		setup(build) {
 			build.onLoad({ filter: /\.css$/ }, async args => {
+				if (args.path.includes('ol-ext/dist/ol-ext.css')) {
+					const css = fs.readFileSync(args.path, 'utf8')
+					const result = await postcss([escapeFix()]).process(css, { from: args.path })
+					const contents = `
+            const styles = new CSSStyleSheet();
+            styles.replaceSync(\`${result.css.replace(/[`$]/gm, '\\$&')}\`);
+            document.adoptedStyleSheets.push(styles);
+          `
+					return { contents, loader: 'js' }
+				}
+
+				// Default handling for other CSS files
 				const css = fs.readFileSync(args.path, 'utf8')
 				const contents = `
-          const styles = new CSSStyleSheet();
-          styles.replaceSync(\`${css.replaceAll(/[`$]/gm, '\\$&')}\`);
-          document.adoptedStyleSheets.push(styles)
-        `
-				return { contents }
+				const styles = new CSSStyleSheet();
+				styles.replaceSync(\`${css.replaceAll(/[`$]/gm, '\\$&')}\`);
+				document.adoptedStyleSheets.push(styles);
+				`
+
+				return { contents, loader: 'js' }
 			})
 		}
 	}
