@@ -517,7 +517,11 @@ export function table_cnv(arg, table) {
 	{
 		const [c1, c2] = table.addRow()
 		c1.text('Copy number change')
-		c2.html(`<span style="background:${arg.tk.cnv.colorScale(m.value)}">&nbsp;&nbsp;</span> ${m.value}`)
+		if (Number.isFinite(m.value)) {
+			c2.html(`<span style="background:${arg.tk.cnv.colorScale(m.value)}">&nbsp;&nbsp;</span> ${m.value}`)
+		} else {
+			c2.html(`<span style="background:${mclass[m.class].color}">&nbsp;&nbsp;</span> ${mclass[m.class].label}`)
+		}
 	}
 	{
 		const [c1, c2] = table.addRow()

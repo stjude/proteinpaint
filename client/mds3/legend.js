@@ -837,6 +837,11 @@ function may_update_ld(tk) {
 
 function may_create_cnv(tk, block) {
 	if (!tk.cnv) return
+
+	// temp fix and subject to change
+	// missing property means cnv doesn't use numeric values, thus do not show colorscale
+	if (!Number.isFinite(tk.cnv.cnvGainCutoff)) return
+
 	const R = (tk.legend.cnv = {})
 	R.row = tk.legend.table.append('tr')
 	R.headerTd = R.row.append('td').style('text-align', 'right').style('opacity', 0.7).text('CNV')
@@ -906,6 +911,8 @@ function may_create_cnv(tk, block) {
 
 function may_update_cnv(tk) {
 	if (!tk.cnv) return
+	if (!Number.isFinite(tk.cnv.cnvGainCutoff)) return // see may_create_cnv
+
 	// tk is equipped with cnv. determine if cnv data is actually shown
 	if (!tk.cnv.cnvLst || tk.cnv.cnvLst.length == 0) {
 		// no cnv shown in this region. hide colorscale

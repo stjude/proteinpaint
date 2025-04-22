@@ -292,7 +292,7 @@ mclass[mclasssv] = {
 // "CNV_amp" have to stay as-is since it may be hardcoded in lots of data beyond portal code.
 export const mclasscnvgain = 'CNV_amp'
 mclass[mclasscnvgain] = {
-	label: 'Copy number gain',
+	label: 'Copy number gain', // TODO change to 'Gain'
 	color: '#e9a3c9',
 	dt: dtcnv,
 	desc: 'Copy number gain',

@@ -580,14 +580,22 @@ type CnvSegment = {
 	/** presence of these properties indicate cnv is quantified as log(ratio) or similar
 	filter segments by following two cutoffs only apply to log ratio, cnv gain value is positive, cnv loss value is negative
 	samples with all events filtered out should be treated as wildtype
+
+	- if m.value>0, skip m if m.value<this cutoff
+	- set to 0 to not filtering and show all gain events
+	- set to a large value e.g. 99 to hide all gain events
 	*/
-	/** if value>0, skip if value<this cutoff, set to a large value e.g. 100 for not filtering */
 	cnvGainCutoff?: number
-	/** if value<0, skip if value>this cutoff, set to a large negative value e.g. -100 for not filtering */
+	/*
+	- if m.value<0, skip m if m.value>this cutoff
+	- set to 0 to not filtering and show all loss events
+	- set to a large negative value e.g. -99 to hide all loss events
+	*/
 	cnvLossCutoff?: number
 
 	/** presence of these properties indicate cnv is quantified as integer copy number
 	* not in use yet *
+	enable when there's such data
 	cnvMinCopynumber?: number
 	cnvMaxCopynumber?: number
 	 */
