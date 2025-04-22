@@ -2,6 +2,7 @@ import { TermWrapper } from '@sjcrh/proteinpaint-types/updated'
 import { TwOpts, TwBase } from './TwBase'
 import { mayHydrateDictTwLst } from '../termsetting/termsetting.ts'
 import { CategoricalBase, CatValues, CatPredefinedGS, CatCustomGS } from './categorical'
+import { GeneVariantBase } from './geneVariant'
 import { NumericBase, NumRegularBin, NumCustomBins, NumCont } from './numeric'
 
 export type UseCase = {
@@ -66,8 +67,8 @@ export class TwRouter {
 			// case 'survival':
 			// 	return
 
-			// case 'geneVariant':
-			// 	return
+			case 'geneVariant':
+				return await GeneVariantBase.fill(tw, opts)
 
 			// case 'geneExpression':
 			// 	return
