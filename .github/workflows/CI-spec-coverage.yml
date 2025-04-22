@@ -146,20 +146,14 @@ jobs:
           node test/evalAllSpecCovResults.mjs 0
 
           FAILEDTEXTFILE=./public/coverage/specs/failedTexts.txt
-          FAILED=''
           if [[ -f $FAILEDTEXTFILE ]]; then
             echo "# !!! Failed spec coverage !!! " >> $GITHUB_STEP_SUMMARY
             cat $FAILEDTEXTFILE >> $GITHUB_STEP_SUMMARY
             echo -e "\n" >> $GITHUB_STEP_SUMMARY
-            FAILED=true
           fi
           
           echo "# Coverage report for relevant spec tests" >> $GITHUB_STEP_SUMMARY
           echo -e "$(node test/emitSpecMarkdown.mjs)" >> $GITHUB_STEP_SUMMARY
-
-          if [[ "$FAILED" != "" ]]; then
-            exit 1
-          fi
 
       - name: Commit updated coverage file
         run: |
@@ -181,4 +175,11 @@ jobs:
             git commit -m "update public/coverage/commitRef"
 
             git push origin $BRANCH
+          fi
+
+      - name: Detect failure
+        run: |
+          FAILEDTEXTFILE=./public/coverage/specs/failedTexts.txt
+          if [[ -f $FAILEDTEXTFILE ]]; then
+            exit 1
           fi

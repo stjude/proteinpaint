@@ -44,14 +44,14 @@ export async function evalSpecCovResults({ workspace, jsonExtract }) {
 	for (const f of coveredFilenames) {
 		const hasPrev = Object.hasOwn(previousCoverage, f)
 		{
-			const prev = hasPrev ? getLowestPct(previousCoverage[f]) : 0
+			const prev = hasPrev ? getLowestPct(previousCoverage[f], 'target') : 0
 			const curr = getLowestPct(relevantCoverage[f])
 			const diff = curr - prev
 			relevantCoverage[f].lowestPct = { curr, prev, diff }
 			if (diff < 0) failedCoverage.set(f, relevantCoverage[f])
 		}
 		{
-			const prev = hasPrev ? getAveragePct(previousCoverage[f]) : 0
+			const prev = hasPrev ? getAveragePct(previousCoverage[f], 'target') : 0
 			const curr = getAveragePct(relevantCoverage[f])
 			const diff = curr - prev
 			relevantCoverage[f].averagePct = { curr, prev, diff }
@@ -71,18 +71,6 @@ export async function evalSpecCovResults({ workspace, jsonExtract }) {
 		if (!failedCoverage.size) {
 			console.log(`\n👏 ${workspace} branch coverage test PASSED! 🎉`)
 			console.log('--- Percent coverage was maintained or improved across relevant files! ---\n')
-			// only commit updated coverage json when running in github CI as indicated by repeated 'proteinpaint' path,
-			// or add TRACK_SPEC_COVERAGE=1 when running a script that calls this function
-			if (gitProjectRoot.endsWith('proteinpaint/proteinpaint') || process.env.TRACK_SPEC_COVERAGE) {
-				try {
-					const updatedCov = Object.assign({}, previousCoverage, relevantCoverage)
-					fs.writeFileSync(covFile, JSON.stringify(updatedCov, null, '  '))
-					const out = execSync(`cd ${gitProjectRoot} && git add ${covFile}`, { encoding: 'utf8' })
-					console.log(out)
-				} catch (e) {
-					console.log(`error updating '${covFile}'`, e)
-				}
-			}
 		} else {
 			console.log(
 				`\n!!! Failed ${workspace} coverage: average and/or lowest percent coverage decreased for ${failedCoverage.size} relevant files !!!`
@@ -90,6 +78,24 @@ export async function evalSpecCovResults({ workspace, jsonExtract }) {
 			console.log(Object.fromEntries(failedCoverage.entries()))
 			console.log(`\n`)
 			//process.exit(1)
+		}
+
+		// NOTE: should save updated workspace coverage json even if failed, since the lowestPct.prev and/or
+		// averagePct.prev will be used if higher than current corresponding value in subsequent evaluations;
+		// not committing the latest results will cause the commitRef to fall behind and give inaccurate
+		// relevant and changed files lists.
+		//
+		// only commit updated coverage json when running in github CI as indicated by repeated 'proteinpaint' path,
+		// or add TRACK_SPEC_COVERAGE=1 when running a script that calls this function
+		if (gitProjectRoot.endsWith('proteinpaint/proteinpaint') || process.env.TRACK_SPEC_COVERAGE) {
+			try {
+				const updatedCov = Object.assign({}, previousCoverage, relevantCoverage)
+				fs.writeFileSync(covFile, JSON.stringify(updatedCov, null, '  '))
+				const out = execSync(`cd ${gitProjectRoot} && git add ${covFile}`, { encoding: 'utf8' })
+				console.log(out)
+			} catch (e) {
+				console.log(`error updating '${covFile}'`, e)
+			}
 		}
 	}
 
@@ -103,8 +109,9 @@ export async function evalSpecCovResults({ workspace, jsonExtract }) {
 
 const relevantKeys = new Set(['lines', 'functions', 'statements', 'branches'])
 
-function getLowestPct(result) {
-	if (Object.hasOwn(result, 'lowestPct')) return result.lowestPct.curr
+function getLowestPct(result, useCase = '') {
+	if (Object.hasOwn(result, 'lowestPct'))
+		return useCase != 'target' ? result.lowestPct.curr : Math.max(result.lowestPct.curr, result.lowestPct.prev)
 	const entries = Object.entries(result).filter(kv => relevantKeys.has(kv[0]))
 	if (!entries.length) return 0
 	let min
@@ -115,8 +122,9 @@ function getLowestPct(result) {
 	return min
 }
 
-function getAveragePct(result) {
-	if (Object.hasOwn(result, 'averagePct')) return result.averagePct.curr
+function getAveragePct(result, useCase = '') {
+	if (Object.hasOwn(result, 'averagePct'))
+		return useCase != 'target' ? result.averagePct.curr : Math.max(result.averagePct.curr, result.averagePct.prev)
 	const entries = Object.entries(result).filter(kv => relevantKeys.has(kv[0]))
 	if (!entries.length) return 0
 	let total = 0
