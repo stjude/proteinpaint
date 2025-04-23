@@ -664,6 +664,14 @@ fn main() {
                                 //println!("filtering time:{:?}", filtering_time.elapsed());
                                 //println!("filtered_matrix_rows:{:?}", filtered_matrix.nrows());
                                 //println!("filtered_matrix_cols:{:?}", filtered_matrix.ncols());
+                                if filtered_matrix.nrows() == 0 {
+                                    // Its possible after filtering there might not be any genes left in the matrix, in such a case the rust code must exit gracefully with an error.
+                                    panic!("Number of genes after filtering = 0, cannot proceed any further")
+                                }
+                                if filtered_matrix.ncols() == 0 {
+                                    // Its possible after filtering there might not be any samples left in the matrix, in such a case the rust code must exit gracefully with an error.
+                                    panic!("Number of samples after filtering = 0, cannot proceed any further")
+                                }
                                 //let cpm_normalization_time = Instant::now();
                                 let mut normalized_matrix = cpm(&filtered_matrix);
                                 //println!(
@@ -1214,7 +1222,6 @@ fn calc_factor_quantile(
         for i in 0..input_matrix.nrows() {
             row_vec.push(input_matrix[(i, j)] as f64);
         }
-        //println!("row_vec:{:?}", row_vec);
         let quan = calc_quantile(row_vec, P);
         //println!("quan:{}", quan);
         let num = quan / lib_sizes[j];
