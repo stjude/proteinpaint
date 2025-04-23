@@ -1,24 +1,29 @@
-import type { MinBaseQ, BaseTerm, TermGroupSetting, BaseTW, GroupSettingQ, ValuesQ, TermValues } from '../index.ts'
+import type { MinBaseQ, BaseTerm, TermGroupSetting, BaseTW, TermValues, BaseGroupSet } from '../index.ts'
 import type { TermSettingInstance } from '../termsetting.ts'
 
-export type GeneVariantBaseQ = MinBaseQ & {
-	// cnv cutoffs may no longer be necessary, but keeping for now
-	// see fillTW() in termsetting/handlers/geneVariant.ts
+// q types
+export type GvBaseQ = MinBaseQ & {
 	cnvGainCutoff?: number
 	cnvMaxLength?: number
 	cnvMinAbsValue?: number
 	cnvLossCutoff?: number
-	exclude: string[]
 }
 
-export type GeneVariantQ = GeneVariantBaseQ & (ValuesQ | GroupSettingQ)
+type RawGvValuesQ = GvBaseQ & { type?: 'values' }
+type RawGvCustomGsQ = GvBaseQ & { type: 'custom-groupset'; customset?: BaseGroupSet }
 
-type GeneVariantBaseTerm = BaseTerm & {
+export type GvValuesQ = GvBaseQ & { type: 'values' }
+export type GvCustomGsQ = GvBaseQ & { type: 'custom-groupset'; customset: BaseGroupSet }
+
+export type GvQ = GvValuesQ | GvCustomGsQ
+
+// term types
+type GvBaseTerm = BaseTerm & {
 	type: 'geneVariant'
 	groupsetting: TermGroupSetting
 }
 
-export type GeneVariantGeneTerm = GeneVariantBaseTerm & {
+export type GvGeneTerm = GvBaseTerm & {
 	kind: 'gene'
 	gene: string
 	// chr,start,stop should exist together as a separate type called
@@ -29,36 +34,60 @@ export type GeneVariantGeneTerm = GeneVariantBaseTerm & {
 	stop?: number
 }
 
-export type GeneVariantCoordTerm = GeneVariantBaseTerm & {
+export type GvCoordTerm = GvBaseTerm & {
 	kind: 'coord'
 	chr: string
 	start: number
 	stop: number
 }
 
-export type GeneVariantTerm = GeneVariantGeneTerm | GeneVariantCoordTerm
+export type GvTerm = GvGeneTerm | GvCoordTerm
 
-export type GeneVariantTW = BaseTW & {
-	term: GeneVariantTerm
-	q: GeneVariantQ
+// tw types
+export type RawGvValuesTW = BaseTW & {
+	type?: 'GvValuesTW'
+	term: GvTerm
+	q: RawGvValuesQ
 }
 
+export type GvValuesTW = BaseTW & {
+	type: 'GvValuesTW'
+	term: GvTerm
+	q: GvValuesQ
+}
+
+export type RawGvCustomGsTW = BaseTW & {
+	type?: 'GvCustomGsTW'
+	term: GvTerm
+	q: RawGvCustomGsQ
+}
+
+export type GvCustomGsTW = BaseTW & {
+	type: 'GvCustomGsTW'
+	term: GvTerm
+	q: GvCustomGsQ
+}
+
+export type GvTW = GvValuesTW | GvCustomGsTW
+export type RawGvTW = RawGvValuesTW | RawGvCustomGsTW
+
+// termsetting types
 export type GeneVariantTermSettingInstance = TermSettingInstance & {
-	q: GeneVariantQ
-	term: GeneVariantTerm
+	q: GvQ
+	term: GvTerm
 	category2samplecount: any
 	groupSettingInstance?: any
 }
 
+// miscellaneous types
 export type DtTerm = {
 	id: string
 	name: string
+	name_noOrigin: string
 	parent_id: any
 	isleaf: boolean
 	type: string
 	dt: number
 	origin?: string
 	values?: TermValues
-	min?: number
-	max?: number
 }

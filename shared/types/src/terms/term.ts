@@ -2,7 +2,7 @@ import type { Filter } from '../filter.js'
 import type { CategoricalTerm, CategoricalBaseQ } from './categorical.js'
 import type { ConditionTerm } from './condition.js'
 import type { NumericTerm } from './numeric.js'
-import type { GeneVariantTerm } from './geneVariant.js'
+import type { GvTerm, DtTerm } from './geneVariant.js'
 import type { SampleLstTerm } from './samplelst.js'
 import type { SnpsTerm } from './snps.js'
 
@@ -108,8 +108,7 @@ export type BaseTerm = {
 	filter?: any
 }
 
-export type Term = BaseTerm &
-	(NumericTerm | CategoricalTerm | ConditionTerm | GeneVariantTerm | SampleLstTerm | SnpsTerm)
+export type Term = BaseTerm & (NumericTerm | CategoricalTerm | ConditionTerm | GvTerm | SampleLstTerm | SnpsTerm)
 
 export type ValuesGroup = {
 	name: string
@@ -118,12 +117,18 @@ export type ValuesGroup = {
 	uncomputable?: boolean // if true, do not include this group in computations
 }
 
-// TODO: determine if this is used
 export type FilterGroup = {
 	name: string
 	type: 'filter'
-	filter: any
-	uncomputable?: boolean // if true, do not include this group in computations
+	filter: FilterGroupObj
+	uncomputable?: boolean
+}
+
+type FilterGroupObj = {
+	active: Filter // active filter
+	group: number // group index
+	opts: { joinWith: string[] }
+	terms: DtTerm[] // dt terms used to build frontend vocab for geneVariant term // TODO: generalize the term structure used here
 }
 
 export type GroupEntry = ValuesGroup | FilterGroup

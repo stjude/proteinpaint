@@ -1,7 +1,7 @@
 import { BaseValue } from './terms/term.ts'
 import { NumericTerm, NumericBin } from './terms/numeric.ts'
 import { CategoricalTerm } from './terms/categorical.ts'
-import { GeneVariantTerm } from './terms/geneVariant.ts'
+import { GvTerm } from './terms/geneVariant.ts'
 import { ConditionTerm } from './terms/condition.ts'
 
 /*
@@ -109,7 +109,7 @@ type FusionTvsValue = {
 type GeneVariantTvsValue = SNVIndelTvsValue | CNVTvsValue | SVTvsValue | FusionTvsValue
 
 type GeneVariantTvs = BaseTvs & {
-	term: GeneVariantTerm
+	term: GvTerm
 	values: GeneVariantTvsValue[]
 }
 /*** types supporting Filter type ***/
@@ -117,9 +117,9 @@ type GeneVariantTvs = BaseTvs & {
 export type Tvs = CategoricalTvs | NumericTvs | ConditionTvs | GeneVariantTvs // | SampleLstTvs ...
 
 export type Filter = {
-	type: 'lst'
+	type: 'tvslst'
 	in?: boolean
 	join: 'and' | 'or'
 	tag?: string // client-side only
-	lst: (Filter | Tvs)[]
+	lst: ({ type: 'tvs'; tvs: Tvs } | Filter)[]
 }
