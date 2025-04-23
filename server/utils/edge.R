@@ -107,6 +107,13 @@ filter_using_cpm_time <- system.time({
 })
 #cat("Filter using cpm time: ", as.difftime(filter_using_cpm_time, units = "secs")[3], " seconds\n")
 
+if (dim(y)[1]==0) { # Its possible after filtering there might not be any genes left in the matrix, in such a case the R code must exit gracefully with an error.
+  stop("Number of genes after filtering = 0, cannot proceed any further") 
+}  
+if (dim(y)[2]==0) { # Its possible after filtering there might not be any samples left in the matrix, in such a case the R code must exit gracefully with an error.
+  stop("Number of samples after filtering = 0, cannot proceed any further") 
+}
+
 # Saving MDS plot image
 
 if (dim(read_counts)[1] * dim(read_counts)[2] < as.numeric(input$mds_cutoff)) { # If the dimensions of the read counts matrix is below this threshold, only then the mds image will be generated as its very compute intensive
