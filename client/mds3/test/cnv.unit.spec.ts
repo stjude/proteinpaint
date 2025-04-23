@@ -1,10 +1,12 @@
 import tape from 'tape'
 import { prepData } from '../cnv'
+import { mayInitCnv } from '../makeTk'
 
 /***
 test sections:
 
 prepData()
+mayInitCnv()
 */
 
 tape('\n', test => {
@@ -12,9 +14,47 @@ tape('\n', test => {
 	test.end()
 })
 
-tape('prepData()', test => {
-	test.timeoutAfter(100)
+tape('mayInitCnv()', test => {
+	{
+		const tk = {
+			mds: {},
+			custom_variants: [{ dt: 1 }]
+		}
+		mayInitCnv(tk)
+		test.false(tk.cnv, 'tk.cnv{} is not set')
+	}
+	{
+		const tk = {
+			mds: { termdbConfig: { queries: { cnv: {} } } },
+			glider: { append: () => {} }
+		}
+		mayInitCnv(tk)
+		test.true(tk.cnv, 'tk.cnv{} is set from native ds')
+	}
+	{
+		const tk = {
+			mds: {},
+			custom_variants: [{ dt: 4, class: 's' }],
+			glider: { append: () => {} }
+		}
+		mayInitCnv(tk)
+		test.true(tk.cnv, 'tk.cnv{} is set from custom cnv data')
+		test.false(tk.cnv.cnvGainCutoff, 'tk.cnv.cnvGainCutoff is not set for custom non-numeric cnv')
+	}
+	{
+		const tk = {
+			mds: {},
+			custom_variants: [{ dt: 4, class: 's', value: 1 }],
+			glider: { append: () => {} }
+		}
+		mayInitCnv(tk)
+		test.true(tk.cnv, 'tk.cnv{} is set from custom cnv data')
+		test.equal(tk.cnv.cnvGainCutoff, 0, 'tk.cnv.cnvGainCutoff=0 for custom numeric cnv')
+	}
+	test.end()
+})
 
+tape('prepData()', test => {
 	{
 		const [samples, cnvLst, absoluteMax] = prepData({ cnv: cnvNumeric }, mockTk, mockBlock)
 		test.deepEqual(cnvLst, cnvNumericProcessed, 'get expected processed cnv data')
