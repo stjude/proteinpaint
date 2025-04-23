@@ -12,7 +12,7 @@ import type {
 	GeneVariantTerm,
 	MinBaseQ
 } from '#types'
-import { filterInit, getNormalRoot, getWrappedTvslst } from '#filter/filter'
+import { filterInit, getNormalRoot, getWrappedTvslst, filterJoin } from '#filter/filter'
 
 /*
 ---------Exported---------
@@ -419,7 +419,8 @@ function setRenderers(self: any) {
 	}
 
 	self.processDraggables = () => {
-		if (!draggedItem && !addedFilter && !editedName) return // no groupset changes, so return
+		const editedGrpset = draggedItem || addedFilter || editedName || removedGrp
+		if (!editedGrpset) return // no groupset changes, so return
 		const customset: any = { groups: [] }
 		for (const group of self.data.groups) {
 			const customgroup: any = { name: group.name, type: group.type, uncomputable: group.uncomputable }
@@ -448,6 +449,7 @@ function setRenderers(self: any) {
 	let draggedItem: any
 	let addedFilter: boolean
 	let editedName: boolean
+	let removedGrp: boolean
 	async function initGroupDiv(group: GrpEntryWithDom) {
 		//Create the parent group div on load and with user actions on the top
 		const wrapper = group.currentIdx === 0 ? self.dom.excludedWrapper : self.dom.includedWrapper
@@ -554,29 +556,26 @@ function setRenderers(self: any) {
 
 		if (group.type == 'filter') {
 			// group is filter type, render filter button
-			const holder = group.draggables.append('div')
-			await mayDisplayFilter(group, holder)
+			await mayDisplayFilter(group)
 		} else {
 			// not filter type, render values in group
 			await self.addItems(group)
 		}
 	}
 
-	async function mayDisplayFilter(group, holder: any, callback2?: any) {
+	async function mayDisplayFilter(group, callback2?: any) {
+		group.draggables.selectAll('*').remove()
+		const holder = group.draggables.append('div').style('margin-top', '15px')
+
 		const filter = self.data.filters.find((d: FilterEntry) => d.group == group.currentIdx)
 		if (!filter || !filter.terms?.length) return
 		if (!filter.opts) throw 'filter.opts{} missing'
-
 		if (!filter.active) filter.active = getWrappedTvslst()
-
-		const div = holder.append('div').style('margin-top', '15px')
-
-		const filterBody = div.append('div')
 
 		filterInit({
 			joinWith: filter.opts.joinWith,
 			emptyLabel: '+Variant Filter',
-			holder: filterBody,
+			holder,
 			vocab: {
 				terms: filter.terms,
 				parent_termdbConfig: self.tsInstance.vocabApi.termdbConfig
@@ -638,19 +637,33 @@ function setRenderers(self: any) {
 	}
 
 	self.removeGroup = async function (group: GrpEntryWithDom) {
-		const itemsNum = group.wrapper.selectAll('.sjpp-drag-item').nodes()
-		if (itemsNum.length === 0) group.wrapper.remove()
-		else {
-			group.input.remove()
-			group.destroyBtn.remove()
-			group.wrapper.remove()
-			for (const v of self.data.values) {
-				//Reassign all values to excluded categories group
-				if (v.group == group.currentIdx) v.group = 0
+		removedGrp = true
+		if (self.type == 'values') {
+			const itemsNum = group.wrapper.selectAll('.sjpp-drag-item').nodes()
+			if (itemsNum.length === 0) {
+				group.wrapper.remove()
+			} else {
+				group.input.remove()
+				group.destroyBtn.remove()
+				group.wrapper.remove()
+				// reassign all values to excluded categories group
+				for (const v of self.data.values) {
+					if (v.group == group.currentIdx) v.group = 0
+				}
 			}
-			// setTimeout(() => {
-			// 	disappear(group.wrapper, true)
-			// }, defaultDuration * 3)
+		} else if (self.type == 'filter') {
+			const groupFilterIdx = self.data.filters.findIndex(f => f.group === group.currentIdx)
+			const groupFilter = self.data.filters.splice(groupFilterIdx, 1)[0]
+			if (!groupFilter.active.lst.length) {
+				group.wrapper.remove()
+			} else {
+				group.input.remove()
+				group.destroyBtn.remove()
+				group.wrapper.remove()
+				// join the group filter to the excluded filter
+				const excludedFilter = self.data.filters.find(f => f.group === 0)
+				excludedFilter.active = filterJoin([excludedFilter.active, groupFilter.active])
+			}
 		}
 		await self.update()
 
@@ -717,6 +730,7 @@ function setRenderers(self: any) {
 			if (i === 0) continue
 			if (grp.currentIdx != i) {
 				self.data.values.filter((v: ItemEntry) => v.group == grp.currentIdx).forEach((v: ItemEntry) => (v.group = i))
+				self.data.filters.filter(f => f.group == grp.currentIdx).forEach(f => (f.group = i))
 				grp.currentIdx = i
 			}
 		}
@@ -728,7 +742,8 @@ function setRenderers(self: any) {
 					group.input.node().value = group.name
 					group.destroyBtn.property('disabled', self.data.groups.length <= self.minGrpNum)
 				}
-				await self.addItems(group)
+				if (self.type == 'filter') await mayDisplayFilter(group)
+				else await self.addItems(group)
 			})
 	}
 }
