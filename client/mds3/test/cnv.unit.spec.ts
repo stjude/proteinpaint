@@ -16,7 +16,7 @@ tape('\n', test => {
 
 tape('mayInitCnv()', test => {
 	{
-		const tk = {
+		const tk: any = {
 			mds: {},
 			custom_variants: [{ dt: 1 }]
 		}
@@ -24,7 +24,7 @@ tape('mayInitCnv()', test => {
 		test.false(tk.cnv, 'tk.cnv{} is not set')
 	}
 	{
-		const tk = {
+		const tk: any = {
 			mds: { termdbConfig: { queries: { cnv: {} } } },
 			glider: { append: () => {} }
 		}
@@ -32,7 +32,7 @@ tape('mayInitCnv()', test => {
 		test.true(tk.cnv, 'tk.cnv{} is set from native ds')
 	}
 	{
-		const tk = {
+		const tk: any = {
 			mds: {},
 			custom_variants: [{ dt: 4, class: 's' }],
 			glider: { append: () => {} }
@@ -42,7 +42,7 @@ tape('mayInitCnv()', test => {
 		test.false(tk.cnv.cnvGainCutoff, 'tk.cnv.cnvGainCutoff is not set for custom non-numeric cnv')
 	}
 	{
-		const tk = {
+		const tk: any = {
 			mds: {},
 			custom_variants: [{ dt: 4, class: 's', value: 1 }],
 			glider: { append: () => {} }
