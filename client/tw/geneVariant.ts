@@ -1,17 +1,17 @@
 import {
-	CategoricalTerm,
-	ValuesQ,
-	PredefinedGroupSettingQ,
-	CustomGroupSettingQ,
+	GvTerm,
 	BaseGroupSet,
-	CatTWTypes,
-	CatTWValues,
-	CatTWPredefinedGS,
-	CatTWCustomGS,
-	RawCatTW,
-	RawCatTWValues,
-	RawCatTWPredefinedGS,
-	RawCatTWCustomGS
+	GvValuesQ,
+	GvCustomGsQ,
+	RawGvValuesTW,
+	GvValuesTW,
+	RawGvCustomGsTW,
+	GvCustomGsTW,
+	RawGvTW,
+	GvTW,
+	FilterGroup,
+	VocabApi,
+	DtTerm
 } from '#types'
 import { TwBase, TwOpts } from './TwBase.ts'
 import { copyMerge } from '#rx'
@@ -19,21 +19,17 @@ import { set_hiddenvalues } from '#termsetting'
 import { dtTerms } from '#shared/common.js'
 import { getWrappedTvslst } from '#filter/filter'
 
-export type CatInstance = CatValues | CatPredefinedGS | CatCustomGS
-export type CatTypes = typeof CatValues | typeof CatPredefinedGS | typeof CatCustomGS
-
 export class GeneVariantBase extends TwBase {
 	// type, isAtomic, $id are set in ancestor base classes
-	term: CategoricalTerm
+	term: GvTerm
 
-	constructor(tw: CatTWTypes, opts: TwOpts) {
+	constructor(tw: GvTW, opts: TwOpts) {
 		super(tw, opts)
 		this.term = tw.term
 	}
 
 	/** tw.term must already be filled-in at this point */
-	static async fill(tw /*: RawCatTW*/, opts: TwOpts = {}) /*: CatTWTypes*/ {
-		console.log('tw:', tw)
+	static async fill(tw: RawGvTW, opts: TwOpts = {}): Promise<GvTW> {
 		if (!tw.term) throw `missing tw.term, must already be filled in`
 		if (tw.term.type != 'geneVariant') throw `incorrect term.type='${tw.term?.type}', expecting 'geneVariant'`
 
@@ -97,7 +93,7 @@ export class GeneVariantBase extends TwBase {
 		*/
 		// TODO: add case for tw.q.type='filter'
 		tw.type =
-			!tw.q.type || tw.q.type == 'values' ? 'GvTWValues' : tw.q.type == 'custom-groupset' ? 'GvTWCustomGS' : tw.type
+			!tw.q.type || tw.q.type == 'values' ? 'GvValuesTW' : tw.q.type == 'custom-groupset' ? 'GvCustomGsTW' : tw.type
 
 		/*
 			For each of fill() functions below:
@@ -113,20 +109,20 @@ export class GeneVariantBase extends TwBase {
 			   in order to match the function signature's return type.
 		*/
 		switch (tw.type) {
-			case 'GvTWValues':
-				return GvValues.fill(tw)
+			case 'GvValuesTW':
+				return await GvValues.fill(tw)
 
-			case 'GvTWCustomGS':
-				return GvCustomGS.fill(tw)
+			case 'GvCustomGsTW':
+				return await GvCustomGS.fill(tw)
 
 			default:
-				throw `tw.type='${tw.type} (q.mode:q.type=${tw.q.mode}:${tw.q.type}' is not supported by CategoricalBase.fill()`
+				throw `tw.type='${tw.type}' is not supported by GeneVariantBase.fill()`
 		}
 	}
 }
 
 // function to make a variant filter based on dts specified in dataset
-export async function mayMakeVariantFilter(tw: GeneVariantTW, vocabApi: VocabApi) {
+export async function mayMakeVariantFilter(tw: RawGvTW, vocabApi: VocabApi) {
 	if (tw.term.filter) return
 	const dtTermsInDs: DtTerm[] = [] // dt terms in dataset
 	const categories = await vocabApi.getCategories(tw.term)
@@ -160,12 +156,12 @@ export async function mayMakeVariantFilter(tw: GeneVariantTW, vocabApi: VocabApi
 
 export class GvValues extends GeneVariantBase {
 	// term, type, isAtomic, $id are set in ancestor base classes
-	q: ValuesQ
-	#tw: CatTWValues
+	q: GvValuesQ
+	#tw: GvValuesTW
 	#opts: TwOpts
 
 	// declare a constructor, to narrow the tw type
-	constructor(tw: CatTWValues, opts: TwOpts = {}) {
+	constructor(tw: GvValuesTW, opts: TwOpts = {}) {
 		super(tw, opts)
 		//this.term = tw.term // already set in base class
 		this.q = tw.q
@@ -178,27 +174,27 @@ export class GvValues extends GeneVariantBase {
 	}
 
 	// See the relevant comments in the GeneVariantBase.fill() function above
-	static fill(tw: RawCatTWValues): CatTWValues {
-		if (!tw.type) tw.type = 'GvTWValues'
-		else if (tw.type != 'GvTWValues') throw `expecting tw.type='GvTWValues', got '${tw.type}'`
+	static async fill(tw: RawGvValuesTW): Promise<GvValuesTW> {
+		if (!tw.type) tw.type = 'GvValuesTW'
+		else if (tw.type != 'GvValuesTW') throw `expecting tw.type='GvValuesTW', got '${tw.type}'`
 		if (tw.term.type != 'geneVariant') throw `expecting tw.term.type='geneVariant', got '${tw.term.type}'`
 		const { term, q } = tw
 		if (!q.type) q.type = 'values'
 		else if (q.type != 'values') throw `expecting tw.q.type='values', got ${tw.q.type}`
 		set_hiddenvalues(q, term)
-		return tw as CatTWValues
+		return tw as GvValuesTW
 	}
 }
 
 export class GvCustomGS extends GeneVariantBase {
 	// term, type, isAtomic, $id are set in ancestor base classes
-	q: CustomGroupSettingQ
+	q: GvCustomGsQ
 	groupset!: BaseGroupSet
-	#tw: CatTWCustomGS
+	#tw: GvCustomGsTW
 	#opts: TwOpts
 
 	// declare a constructor, to narrow the tw type
-	constructor(tw: CatTWCustomGS, opts: TwOpts = {}) {
+	constructor(tw: GvCustomGsTW, opts: TwOpts = {}) {
 		super(tw, opts)
 		// this.term = tw.term // already set in base class
 		this.q = tw.q
@@ -212,9 +208,9 @@ export class GvCustomGS extends GeneVariantBase {
 	}
 
 	// See the relevant comments in the GeneVariantBase.fill() function above
-	static fill(tw: RawCatTWCustomGS): CatTWCustomGS {
-		if (!tw.type) tw.type = 'GvTWCustomGS'
-		else if (tw.type != 'GvTWCustomGS') throw `expecting tw.type='GvTWCustomGS', got '${tw.type}'`
+	static async fill(tw: RawGvCustomGsTW): Promise<GvCustomGsTW> {
+		if (!tw.type) tw.type = 'GvCustomGsTW'
+		else if (tw.type != 'GvCustomGsTW') throw `expecting tw.type='GvCustomGsTW', got '${tw.type}'`
 
 		if (tw.term.type != 'geneVariant') throw `expecting tw.term.type='geneVariant', got '${tw.term.type}'`
 		if (tw.q.type != 'custom-groupset') throw `expecting tw.q.type='custom-groupset', got '${tw.q.type}'`
@@ -226,11 +222,11 @@ export class GvCustomGS extends GeneVariantBase {
 		if (!q.customset) throw 'missing tw.q.customset'
 		if (!q.customset.groups.length) throw 'customset.groups[] is empty'
 		set_hiddenvalues(q, term)
-		return tw as CatTWCustomGS
+		return tw as GvCustomGsTW
 	}
 }
 
-function mayMakeGroups(tw) {
+function mayMakeGroups(tw: RawGvCustomGsTW) {
 	if (tw.q.type != 'custom-groupset' || tw.q.customset?.groups.length) return
 	// custom groupset, but customset.groups[] is empty
 	// fill with mutated group vs. wildtype group
@@ -278,19 +274,19 @@ function mayMakeGroups(tw) {
 	EXCLUDEfilter.group = 0
 	EXCLUDEfilter.active = getWrappedTvslst()
 	// assign filters to groups
-	const WTgroup = {
+	const WTgroup: FilterGroup = {
 		name: WTname,
 		type: 'filter',
 		uncomputable: false,
 		filter: WTfilter
 	}
-	const MUTgroup = {
+	const MUTgroup: FilterGroup = {
 		name: MUTname,
 		type: 'filter',
 		uncomputable: false,
 		filter: MUTfilter
 	}
-	const EXCLUDEgroup = {
+	const EXCLUDEgroup: FilterGroup = {
 		name: 'Excluded categories',
 		type: 'filter',
 		uncomputable: true,
