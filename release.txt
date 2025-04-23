@@ -1,1 +1,2 @@
-
+Fixes:
+- Toggle to Charts tab when active item button is clicked on the About tab in mass UI

@@ -335,10 +335,16 @@ export class MassAbout {
 				.attr('class', 'sja_menuoption')
 				.html(item.title)
 				.on('click', () => {
+					//First create the plot
 					this.app.dispatch({
 						type: 'plot_create',
 						id: getId(),
 						config: structuredClone(item.plot)
+					})
+					//Then set the active tab to toggle to the plot
+					this.app.dispatch({
+						type: 'tab_set',
+						activeTab: 1
 					})
 				})
 		}
