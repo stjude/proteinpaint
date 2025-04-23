@@ -336,7 +336,7 @@ function mayInitSkewer(tk) {
 	setSkewerMode(tk) // adds skewer.viewModes[]
 }
 
-function mayInitCnv(tk) {
+export function mayInitCnv(tk) {
 	let cfg // the config object for rendering cnv
 	if (tk.mds.termdbConfig?.queries?.cnv) {
 		cfg = tk.mds.termdbConfig.queries.cnv // native ds config
