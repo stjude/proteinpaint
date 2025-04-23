@@ -210,7 +210,7 @@ export class VolcanoViewModel {
 
 	setPTableColumns() {
 		if (this.termType == 'geneExpression') {
-			this.pValueTable.columns.splice(0, 0, { label: 'Gene Symbol', sortable: true })
+			this.pValueTable.columns.splice(0, 0, { label: 'Gene Name', sortable: true })
 		}
 	}
 
