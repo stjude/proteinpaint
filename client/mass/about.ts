@@ -334,7 +334,10 @@ export class MassAbout {
 				.style('margin', '5px')
 				.attr('class', 'sja_menuoption')
 				.html(item.title)
-				.on('click', () => {
+				.on('click', async () => {
+					//once the plots tab is set open a plot
+					await this.app.dispatch({ type: 'tab_set', activeTab: 1 })
+
 					this.app.dispatch({
 						type: 'plot_create',
 						id: getId(),
