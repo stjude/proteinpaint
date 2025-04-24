@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.119.0
 
 Features:
 - new geneVariant tvs UI in global filter
