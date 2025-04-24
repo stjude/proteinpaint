@@ -471,7 +471,10 @@ export function getComponentApi(self) {
 		id: self.id,
 		// current: {action: RxAction, appState}
 		async update(current) {
-			if (current.action && self.reactsTo && !self.reactsTo(current.action)) return
+			if (current.action && self.reactsTo && !self.reactsTo(current.action)) {
+				if (self.type == 'genomeBrowser') console.log(474, self.reactsTo(current.action))
+				return
+			}
 			const componentState = self.getState ? self.getState(current.appState) : current.appState
 			// no new state computed for this component
 			if (!componentState) return
@@ -479,13 +482,16 @@ export function getComponentApi(self) {
 			// if the current and pending state is not equal
 			if (!current.action || !deepEqual(componentState, self.state)) {
 				if (current.action) latestActionSequenceId = current.action.sequenceId
+				if (self.type === 'genomeBrowser' && current.action) console.log(481, latestActionSequenceId)
 				if (self.mainArg == 'state') {
+					if (self.type === 'genomeBrowser') console.log(482)
 					// some components may require passing state to its .main() method,
 					// for example when extending a simple object class into an rx-component
 					await self.main(componentState)
 				} else {
 					self.state = componentState
 					if (self.main) {
+						if (self.type === 'genomeBrowser') console.log(488)
 						try {
 							await self.main()
 						} catch (e) {
@@ -494,7 +500,7 @@ export function getComponentApi(self) {
 						}
 					}
 				}
-			}
+			} else if (self.type == 'genomeBrowser') console.log(497, current.action)
 			// notify children
 			await notifyComponents(self.components, current)
 			if (self.bus && (!current.action || current.action.sequenceId === latestActionSequenceId))
