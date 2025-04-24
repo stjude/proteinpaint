@@ -2,6 +2,7 @@ import { mayCopyFromCookie, fileurl } from './utils'
 import { snvindelByRangeGetter_bcf } from './mds3.init'
 import { validate_variant2samples } from './mds3.variant2samples.js'
 import { dtcnv } from '#shared/common.js'
+import { summarize_mclass } from '#shared/mds3tk.js'
 
 /*
 method good for somatic variants, in skewer and gp queries:
@@ -48,18 +49,6 @@ export function mds3_request_closure(genomes) {
 			if (e.stack) console.log(e.stack)
 		}
 	}
-}
-
-function summarize_mclass(mlst) {
-	// should include cnv segment data here
-	// ??? if to include genecnv data here?
-	const cc = new Map() // k: mclass, v: {}
-	for (const m of mlst) {
-		// snvindel has m.class=str, svfusion has only dt=int
-		const key = m.class || m.dt
-		cc.set(key, 1 + (cc.get(key) || 0))
-	}
-	return [...cc].sort((i, j) => j[1] - i[1])
 }
 
 function init_q(req, genome) {
@@ -283,11 +272,7 @@ async function load_driver(q, ds) {
 
 			filter_data(q, result)
 
-			result.mclass2variantcount = summarize_mclass(result.skewer)
-			// [ [ 'M', 2 ], [ 'F', 1 ], ..]
-			if (result.cnv) {
-				result.mclass2variantcount.push([dtcnv, result.cnv.length])
-			}
+			result.mclass2variantcount = summarize_mclass([...result.skewer, ...(result.cnv || [])])
 		}
 
 		// add queries for new data types

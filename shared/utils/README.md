@@ -38,5 +38,9 @@ keep doing this until a dev script or another approach can take care of the `.js
 ## Test
 
 ```sh
+# run all tests
 npm test
+
+# run one script
+node test/mds3tk.unit.spec.js
 ```

@@ -4,6 +4,7 @@ import { may_render_skewer } from './skewer'
 import { may_render_cnv } from './cnv'
 import { make_leftlabels } from './leftlabel'
 import { mclass, dtsnvindel, dtsv, dtfusionrna, dtcnv } from '#shared/common.js'
+import { summarize_mclass } from '#shared/mds3tk.js'
 
 /*
 loadTk
@@ -325,6 +326,7 @@ by info_fields[] and variantcase_fields[]
 async function dataFromCustomVariants(tk, block) {
 	// return the same data{} object as server queries
 	const data = {
+		// these holder will contain subset of tk.custom_variants[] that are in view range
 		skewer: [], // for non-cnv data
 		cnv: [] // for cnv segments
 		// adds mclass2variantcount[] later
@@ -342,8 +344,6 @@ async function dataFromCustomVariants(tk, block) {
 			bbstop = Math.max(bbstop, block.rglst[i].stop)
 		}
 	}
-
-	const m2c = new Map() // k: mclass, v: count
 
 	for (const m of tk.custom_variants) {
 		if (m.dt == dtcnv) {
@@ -365,9 +365,9 @@ async function dataFromCustomVariants(tk, block) {
 		} else {
 			throw 'unknown custom data dt'
 		}
-		// for hidden mclass, must count it so the legend will be able to show the hidden item
-		m2c.set(m.class, 1 + (m2c.get(m.class) || 0))
 	}
+
+	data.mclass2variantcount = summarize_mclass([...data.skewer, ...data.cnv])
 
 	if (data.cnv.length == 0) delete data.cnv // important to delete to avoid triggering cnv logic
 
@@ -389,8 +389,6 @@ async function dataFromCustomVariants(tk, block) {
 		}
 	}
 	if (set.size) data.sampleTotalNumber = set.size
-
-	data.mclass2variantcount = [...m2c]
 
 	// a special arrangment to do ld overlay on the custom variants via the official dataset
 	await mayDoLDoverlay(tk, data.skewer)
