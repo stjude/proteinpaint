@@ -20,7 +20,7 @@ elif [[ "$NOTES" == *"Fixes:"* ]]; then
 fi
 
 BRANCH=$(git rev-parse --abbrev-ref HEAD)
-if [[ "$VERTYPE" != "pre"* && "$BRANCH" != "publish-"* && "$BRANCH" != "release"* && "$BRANCH" != "master" ]]; then
+if [[ "$VERTYPE" != "pre"* && "$BRANCH" != "publish-"* && "$BRANCH" != "release"* && "$BRANCH" != "prerelease"* && "$BRANCH" != "master" ]]; then
   VERTYPE="pre$VERTYPE"
 fi
 
