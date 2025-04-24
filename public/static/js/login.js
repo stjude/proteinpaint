@@ -1,9 +1,22 @@
-async function logout(dslabel) {
-	const body = JSON.stringify({ dslabel, route: 'termdb' })
+async function logout(dslabel, route = 'termdb') {
+	const jwtByDsRoute = getJwtByDsRoute()
+	if (jwtByDsRoute[dslabel]?.[route]) {
+		delete jwtByDsRoute[dslabel][route]
+		localStorage.setItem('jwtByDsRoute', JSON.stringify(jwtByDsRoute))
+	}
+
+	const body = JSON.stringify({ dslabel, route })
 	await fetch(`/dslogout`, { method: 'POST', body })
 		.then(r => r.json())
 		.then(console.log)
 		.catch(console.error)
+
+	window.location.reload()
+}
+
+function getJwtByDsRoute() {
+	const jwtByDsRouteStr = localStorage.getItem('jwtByDsRoute') || `{}`
+	return JSON.parse(jwtByDsRouteStr)
 }
 
 async function login(dataset) {
