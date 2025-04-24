@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.120.0
 
 Features:
 - Updated to reflect change to using gene_names and gene_ids instead of gene_symbols for HDF5 files
