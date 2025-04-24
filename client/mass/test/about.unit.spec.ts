@@ -3,10 +3,13 @@ import * as d3s from 'd3-selection'
 import { MassAbout } from '../about'
 
 /* Tests
-    - Default About tab class
-    - .initCohort()
-    - .initCohort() - .selectCohort content and .about.html
-    - .initCustomHtml()
+
+    Default About tab class
+    .initCohort()
+    .initCohort() - .selectCohort content and .about.html
+    .initCustomHtml()
+	.initActiveItems()
+
 TODO:
     - initCohort
     - renderCohortsTable
