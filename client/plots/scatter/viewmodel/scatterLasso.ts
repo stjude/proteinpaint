@@ -2,7 +2,7 @@ import { getSamplelstTW, getFilter, addNewGroup } from '../../../mass/groups.js'
 import { getId } from '#mass/nav'
 import { renderTable } from '../../../dom/table.ts'
 import { Scatter } from '../Scatter.js'
-import type { TableCell, TableColumn } from '#dom'
+import type { TableCell, TableColumn, TableRow } from '#dom'
 export class ScatterLasso {
 	scatter: Scatter
 	model: any
@@ -171,7 +171,7 @@ export class ScatterLasso {
 	}
 
 	showTable(group, x, y, addGroup) {
-		const rows: TableCell[] = []
+		const rows: TableRow[] = []
 		const columns: TableColumn[] = []
 		const first = group.items[0]
 		if ('sample' in first) columns.push(formatCell('Sample', 'label'))
@@ -182,7 +182,7 @@ export class ScatterLasso {
 		const hasSampleName = 'sample' in group.items[0]
 
 		for (const item of group.items) {
-			const row: any = []
+			const row: TableCell[] = []
 			if (hasSampleName) row.push(formatCell(item.sample))
 			if (this.scatter.config.colorTW) row.push(formatCell(this.getCategoryInfo(item, 'category')))
 			if (this.scatter.config.shapeTW) row.push(formatCell(this.getCategoryInfo(item, 'shape')))
