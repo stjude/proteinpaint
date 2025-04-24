@@ -204,5 +204,41 @@
       "prev": 0,
       "diff": 92.1875
     }
+  },
+  "termsetting/handlers/groupsetting.ts": {
+    "lines": {
+      "total": 244,
+      "covered": 98,
+      "skipped": 0,
+      "pct": 40.16
+    },
+    "functions": {
+      "total": 62,
+      "covered": 24,
+      "skipped": 0,
+      "pct": 38.7
+    },
+    "statements": {
+      "total": 265,
+      "covered": 98,
+      "skipped": 0,
+      "pct": 36.98
+    },
+    "branches": {
+      "total": 152,
+      "covered": 37,
+      "skipped": 0,
+      "pct": 24.34
+    },
+    "lowestPct": {
+      "curr": 24.34,
+      "prev": 0,
+      "diff": 24.34
+    },
+    "averagePct": {
+      "curr": 35.045,
+      "prev": 0,
+      "diff": 35.045
+    }
   }
 }
