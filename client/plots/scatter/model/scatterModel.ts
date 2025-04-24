@@ -5,7 +5,13 @@ import { axisLeft, axisBottom } from 'd3-axis'
 import { regressionPoly } from 'd3-regression'
 import { Scatter } from '../Scatter'
 import { getDateFromNumber } from '../../../../shared/utils/src/terms.js'
-import type { DataResult, DataRange } from '../scatterTypes.js'
+import type {
+	ScatterResponse,
+	ScatterChart,
+	ColorLegendItem,
+	ShapeLegendItem,
+	ScatterDataResult
+} from '../scatterTypes.js'
 //icons have size 16x16
 export const shapes = shapesArray
 
@@ -15,7 +21,7 @@ export class ScatterModel {
 	startGradient: any
 	stopGradient: any
 	range: any
-	charts!: any[]
+	charts!: ScatterChart[]
 	is2DLarge!: boolean
 	is3D: boolean
 	axisOffset: any
@@ -62,10 +68,8 @@ export class ScatterModel {
 		const reqOpts = this.getDataRequestOpts()
 		if (reqOpts.coordTWs.length == 1) return //To allow removing a term in the controls, though nothing is rendered (summary tab with violin active)
 
-		const data: { range: DataRange; result: { [index: string]: DataResult }; error?: any } =
-			await this.scatter.app.vocabApi.getScatterData(reqOpts)
-		console.log(data)
-		if (data.error) throw data.error
+		const data: ScatterResponse = await this.scatter.app.vocabApi.getScatterData(reqOpts)
+		if ('error' in data) throw data.error
 		this.range = data.range
 		this.charts = []
 		for (const [key, chartData] of Object.entries(data.result)) {
@@ -75,11 +79,11 @@ export class ScatterModel {
 		this.initRanges()
 	}
 
-	createChart(id, data) {
-		const cohortSamples = data.samples.filter(sample => 'sampleId' in sample)
+	createChart(id: string, data: ScatterDataResult) {
+		const cohortSamples: any[] = data.samples.filter(sample => 'sampleId' in sample)
 		if (cohortSamples.length > numberOfSamplesCutoff) this.is2DLarge = true
-		const colorLegend = new Map(data.colorLegend)
-		const shapeLegend = new Map(data.shapeLegend)
+		const colorLegend: Map<string, ColorLegendItem> = new Map(data.colorLegend)
+		const shapeLegend: Map<string, ShapeLegendItem> = new Map(data.shapeLegend)
 		this.charts.push({ id, data, cohortSamples, colorLegend, shapeLegend })
 	}
 
@@ -102,14 +106,16 @@ export class ScatterModel {
 			[s0.x, s0.x, s0.y, s0.y, s0.z, s0.z, s0.scale, s0.scale]
 		)
 		for (const chart of this.charts) {
-			chart.xMin = xMin
-			chart.xMax = xMax
-			chart.yMin = yMin
-			chart.yMax = yMax
-			chart.zMin = zMin
-			chart.zMax = zMax
-			chart.scaleMin = scaleMin
-			chart.scaleMax = scaleMax
+			chart.ranges = {
+				xMin,
+				xMax,
+				yMin,
+				yMax,
+				zMin,
+				zMax,
+				scaleMin,
+				scaleMax
+			}
 		}
 	}
 
@@ -149,10 +155,12 @@ export class ScatterModel {
 			const range = this.scatter.settings.maxShapeSize - this.scatter.settings.minShapeSize
 			if (this.scatter.settings.scaleDotOrder == 'Ascending')
 				scale =
-					this.scatter.settings.minShapeSize + ((c.scale - chart.scaleMin) / (chart.scaleMax - chart.scaleMin)) * range
+					this.scatter.settings.minShapeSize +
+					((c.scale - chart.ranges.scaleMin) / (chart.ranges.scaleMax - chart.ranges.scaleMin)) * range
 			else
 				scale =
-					this.scatter.settings.maxShapeSize - ((c.scale - chart.scaleMin) / (chart.scaleMax - chart.scaleMin)) * range
+					this.scatter.settings.maxShapeSize -
+					((c.scale - chart.ranges.scaleMin) / (chart.ranges.scaleMax - chart.ranges.scaleMin)) * range
 		}
 		scale = (this.scatter.vm.scatterZoom.zoom * scale * factor) / 3
 		if (this.filterSampleStr) {
@@ -219,8 +227,8 @@ export class ScatterModel {
 			let regression
 			const data: any = []
 			await chart.cohortSamples.forEach(c => {
-				const x = chart.xAxisScale(c.x)
-				const y = chart.yAxisScale(c.y)
+				const x = chart.xAxisScale!(c.x)
+				const y = chart.yAxisScale!(c.y)
 				data.push({ x, y })
 			})
 			let regressionCurve
@@ -292,7 +300,7 @@ export class ScatterModel {
 			chart.axisLeft = axisLeft(chart.yAxisScaleTime)
 		} else chart.axisLeft = axisLeft(chart.yAxisScale)
 
-		chart.zAxisScale = d3Linear().domain([chart.zMin, chart.zMax]).range([0, this.scatter.settings.svgd])
+		chart.zAxisScale = d3Linear().domain([chart.ranges.zMin, chart.ranges.zMax]).range([0, this.scatter.settings.svgd])
 
 		const gradientColor = rgb(this.scatter.settings.defaultColor)
 		if (!this.scatter.config.startColor) {
