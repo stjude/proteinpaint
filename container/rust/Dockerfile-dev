@@ -1,0 +1,19 @@
+#####################
+# Dev build
+######################
+
+# run as
+# docker build -f Dockerfile-dev --tag rustdev:latest
+# then
+# docker run rustdev:latest
+# 
+
+FROM ghcr.io/stjude/rust:latest
+
+RUN cargo install cargo-watch
+COPY ./rust ./
+# copy dinaries from this container to another
+# docker cp pprust:/home/root/rust/target ppfull:/home/root/pp/app/active/node_modules/@sjcrh/proteinpaint-rust/
+# keep active for a bit to allow time to copy binaries
+# run `docker stop pprust`
+CMD ["cargo", "watch", "--release"]
