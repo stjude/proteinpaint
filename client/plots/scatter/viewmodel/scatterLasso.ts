@@ -1,9 +1,16 @@
 import { getSamplelstTW, getFilter, addNewGroup } from '../../../mass/groups.js'
 import { getId } from '#mass/nav'
 import { renderTable } from '../../../dom/table.ts'
-
+import { Scatter } from '../Scatter.js'
 export class ScatterLasso {
-	constructor(scatter) {
+	scatter: Scatter
+	model: any
+	view: any
+	interactivity: any
+	lassoOn: boolean
+	selectedItems!: any[]
+
+	constructor(scatter: Scatter) {
 		this.scatter = scatter
 		this.model = scatter.model
 		this.view = scatter.view
@@ -121,7 +128,7 @@ export class ScatterLasso {
 				.attr('class', 'sja_menuoption sja_sharp_border')
 				.text('Open sample view')
 				.on('click', async () => {
-					const groupSamples = []
+					const groupSamples: any[] = []
 					for (const sample of samples) groupSamples.push({ sampleId: sample.sampleId, sampleName: sample.sample })
 					this.scatter.app.dispatch({
 						type: 'plot_create',
@@ -163,8 +170,8 @@ export class ScatterLasso {
 	}
 
 	showTable(group, x, y, addGroup) {
-		const rows = []
-		const columns = []
+		const rows: any[] = []
+		const columns: any = []
 		const first = group.items[0]
 		if ('sample' in first) columns.push(formatCell('Sample', 'label'))
 		if (this.scatter.config.colorTW) columns.push(formatCell(this.scatter.config.colorTW.term.name, 'label'))
@@ -174,13 +181,13 @@ export class ScatterLasso {
 		const hasSampleName = 'sample' in group.items[0]
 
 		for (const item of group.items) {
-			const row = []
+			const row: any = []
 			if (hasSampleName) row.push(formatCell(item.sample))
 			if (this.scatter.config.colorTW) row.push(formatCell(this.getCategoryInfo(item, 'category')))
 			if (this.scatter.config.shapeTW) row.push(formatCell(this.getCategoryInfo(item, 'shape')))
 			if ('info' in item) {
 				info = true
-				const values = []
+				const values: any = []
 				for (const [k, v] of Object.entries(item.info)) values.push(`${k}: ${v}`)
 				row.push(formatCell(values.join(', ')))
 			}
@@ -213,12 +220,12 @@ export class ScatterLasso {
 				input.node().select()
 			})
 		const tableDiv = div.append('div')
-		const buttons = []
+		const buttons: any[] = []
 		if (addGroup) {
 			const addGroupCallback = {
 				text: 'Add to a group',
 				callback: indexes => {
-					const items = []
+					const items: any[] = []
 					for (const i of indexes) items.push(this.selectedItems[i].__data__)
 					const group = {
 						name: `Group ${this.scatter.config.groups.length + 1}`,
@@ -239,6 +246,7 @@ export class ScatterLasso {
 				this.interactivity.openSampleView(sample)
 			}
 		}
+		const columnButtons: any[] = hasSampleName ? [columnButton] : []
 		renderTable({
 			rows,
 			columns,
@@ -248,11 +256,12 @@ export class ScatterLasso {
 			maxHeight: '35vh',
 			buttons,
 			selectAll: true,
-			columnButtons: hasSampleName ? [columnButton] : []
+			columnButtons
 		})
 
 		this.view.dom.tip.show(x, y, false, false)
-		function formatCell(column, name = 'value') {
+
+		function formatCell(column: string, name = 'value'): any {
 			const dict = {}
 			dict[name] = column
 			return dict

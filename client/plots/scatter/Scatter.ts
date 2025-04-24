@@ -15,7 +15,20 @@ import { controlsInit } from '../controls'
 import { downloadSingleSVG } from '../../common/svg.download.js'
 import { select2Terms } from '#dom/select2Terms'
 
-class Scatter extends RxComponentInner {
+export class Scatter extends RxComponentInner {
+	config: any
+	view!: ScatterView
+	model!: ScatterModel
+	vm!: ScatterViewModel
+	interactivity!: ScatterInteractivity
+	components: any
+	canvas: any
+	settings: any
+	charts: any
+	opts: any
+	state: any
+	type: string
+
 	constructor() {
 		super()
 		this.type = 'sampleScatter'
@@ -66,7 +79,7 @@ class Scatter extends RxComponentInner {
 	}
 
 	getFilter() {
-		const tvslst = {
+		const tvslst: any = {
 			type: 'tvslst',
 			in: true,
 			join: 'and',
@@ -116,7 +129,7 @@ export async function getPlotConfig(opts, app) {
 	//if (!opts.colorTW) throw 'sampleScatter getPlotConfig: opts.colorTW{} missing'
 	//if (!opts.name && !(opts.term && opts.term2)) throw 'sampleScatter getPlotConfig: missing coordinates input'
 
-	const plot = {
+	const plot: any = {
 		groups: [],
 		settings: {
 			controls: {
@@ -254,7 +267,7 @@ export function getDefaultScatterSettings() {
 }
 
 export function openScatterPlot(app, plot, filter = null) {
-	const config = {
+	const config: any = {
 		chartType: 'sampleScatter',
 		name: plot.name,
 		filter

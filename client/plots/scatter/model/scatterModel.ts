@@ -3,14 +3,25 @@ import { rgb } from 'd3-color'
 import { scaleLinear as d3Linear } from 'd3-scale'
 import { axisLeft, axisBottom } from 'd3-axis'
 import { regressionPoly } from 'd3-regression'
-
+import { Scatter } from '../Scatter'
+import { getDateFromNumber } from '../../../../shared/utils/src/terms.js'
 //icons have size 16x16
 export const shapes = shapesArray
 
 const numberOfSamplesCutoff = 20000 // if map is greater than cutoff, switch from svg to canvas rendering
 
 export class ScatterModel {
-	constructor(scatter) {
+	startGradient: any
+	stopGradient: any
+	range: any
+	charts!: any[]
+	is2DLarge!: boolean
+	is3D: boolean
+	axisOffset: any
+	filterSampleStr: string | null = null
+	scatter: Scatter
+
+	constructor(scatter: Scatter) {
 		this.startGradient = {}
 		this.stopGradient = {}
 		this.scatter = scatter
@@ -23,17 +34,17 @@ export class ScatterModel {
 	// for now, just add methods to TermdbVocab,
 	// later on, add methods with same name to FrontendVocab
 	getDataRequestOpts() {
-		const c = this.scatter.config
-		const coordTWs = []
+		const c: any = this.scatter.config
+		const coordTWs: any = []
 		if (c.term) coordTWs.push(c.term)
 		if (c.term2) coordTWs.push(c.term2)
-		const opts = {
+		const opts: any = {
 			name: c.name, // the actual identifier of the plot, for retrieving data from server
 			colorTW: c.colorTW,
 			filter: this.scatter.getFilter(),
 			coordTWs
 		}
-		if (this.scatter.state.termfilter.filter0) opts.filter0 = this.state.termfilter.filter0
+		if (this.scatter.state.termfilter.filter0) opts.filter0 = this.scatter.state.termfilter.filter0
 		if (c.colorColumn) opts.colorColumn = c.colorColumn
 		if (c.shapeTW) opts.shapeTW = c.shapeTW
 		if (c.scaleDotTW) {
@@ -53,8 +64,10 @@ export class ScatterModel {
 		const data = await this.scatter.app.vocabApi.getScatterData(reqOpts)
 		if (data.error) throw data.error
 		this.range = data.range
+
 		this.charts = []
 		for (const [key, chartData] of Object.entries(data.result)) {
+			const samples: any = chartData.samples
 			if (!Array.isArray(chartData.samples)) throw 'data.samples[] not array'
 			this.createChart(key, chartData)
 		}
@@ -70,7 +83,7 @@ export class ScatterModel {
 	}
 
 	initRanges() {
-		let samples = []
+		let samples: any[] = []
 		for (const chart of this.charts) samples = samples.concat(chart.data.samples)
 		if (samples.length == 0) return
 		const s0 = samples[0] //First sample to start reduce comparisons
@@ -190,7 +203,7 @@ export class ScatterModel {
 		const term0Values = this.scatter.config.term0?.term.values
 		if (term0Values) {
 			// sort the divideBy subCharts based on pre-defined term0 order in db
-			const orderedLabels = Object.values(term0Values).sort((a, b) =>
+			const orderedLabels: any = Object.values(term0Values).sort((a: any, b: any) =>
 				'order' in a && 'order' in b ? a.order - b.order : 0
 			)
 			this.charts.sort(
@@ -203,7 +216,7 @@ export class ScatterModel {
 
 			if (!regressionType || regressionType == 'None') continue
 			let regression
-			const data = []
+			const data: any = []
 			await chart.cohortSamples.forEach(c => {
 				const x = chart.xAxisScale(c.x)
 				const y = chart.yAxisScale(c.y)
@@ -224,8 +237,8 @@ export class ScatterModel {
 					.order(3)
 				regressionCurve = regression(data)
 			} else if (regressionType == 'Lowess') {
-				const X = [],
-					Y = []
+				const X: any = [],
+					Y: any = []
 				for (const sample of data) {
 					X.push(sample.x)
 					Y.push(sample.y)

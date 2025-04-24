@@ -52,7 +52,7 @@ export class ScatterViewModel2DLarge extends ScatterViewModel {
 
 		const controls = new DragControls.DragControls([particles], camera, renderer.domElement)
 
-		document.addEventListener('mousewheel', event => {
+		document.addEventListener('mousewheel', (event: any) => {
 			if (event.ctrlKey) camera.position.z += event.deltaY / 500
 		})
 
@@ -71,8 +71,8 @@ export class ScatterViewModel2DLarge extends ScatterViewModel {
 	getVertices(chart) {
 		const xAxisScale = chart.xAxisScale.range([-1, 1])
 		const yAxisScale = chart.yAxisScale.range([-1, 1])
-		const vertices = []
-		const colors = []
+		const vertices: any = []
+		const colors: any = []
 		for (const sample of chart.data.samples) {
 			const opacity = this.model.getOpacity(sample)
 			if (opacity == 0) continue
@@ -91,7 +91,7 @@ export function getThreeCircle(size) {
 	const c = document.createElement('canvas')
 	c.width = size
 	c.height = size
-	const ctx = c.getContext('2d')
+	const ctx: any = c.getContext('2d')
 	ctx.clearRect(0, 0, size, size)
 	ctx.fillStyle = 'white'
 	ctx.beginPath()

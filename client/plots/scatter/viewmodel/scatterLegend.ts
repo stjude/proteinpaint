@@ -6,8 +6,16 @@ import { shapes } from '../model/scatterModel.js'
 import { roundValueAuto } from '#shared/roundValue.js'
 import { ScatterLegendInteractivity } from './scatterLegendInteractivity.js'
 import { minShapeSize, maxShapeSize } from '../view/scatterView.js'
+import { Scatter } from '../Scatter.js'
 export class ScatterLegend {
-	constructor(scatter) {
+	scatter: Scatter
+	vm: any
+	model: any
+	interactivity: any
+	legendInteractivity: ScatterLegendInteractivity
+	changeGradientColor: any
+
+	constructor(scatter: Scatter) {
 		this.scatter = scatter
 		this.vm = scatter.vm
 		this.model = scatter.model
@@ -18,7 +26,7 @@ export class ScatterLegend {
 	getLegendLabelWidth(chart, key, svg, size) {
 		const legend = chart[`${key}Legend`]
 		if (!legend) return 0
-		const labels = []
+		const labels: any = []
 		for (const [k, v] of legend.entries()) {
 			if (k != 'Ref') labels.push(`${k}, n=(${v.sampleCount})`)
 		}
@@ -133,7 +141,7 @@ export class ScatterLegend {
 							defaultPercentile: this.scatter.settings.colorScalePercentile,
 
 							// This callback handles all mode changes and updates
-							callback: obj => {
+							callback: (obj: any) => {
 								// Handle different modes for color scaling
 								if (obj.cutoffMode === 'auto') {
 									min = colorValues[0]
@@ -177,7 +185,7 @@ export class ScatterLegend {
 						const hidden = this.scatter.config.colorTW?.q.hiddenValues
 							? key in this.scatter.config.colorTW.q.hiddenValues
 							: false
-						const [circleG, itemG] = this.addLegendItem(colorG, category, name, key, offsetX, offsetY, hidden)
+						const [circleG, itemG] = this.addLegendItem(chart, colorG, category, name, key, offsetX, offsetY, hidden)
 						if (!this.scatter.config.colorColumn) {
 							circleG.on('click', e => this.legendInteractivity.onLegendClick(chart, 'colorTW', key, e, category))
 							itemG.on('click', event => this.legendInteractivity.onLegendClick(chart, 'colorTW', key, event, category))
@@ -275,7 +283,7 @@ export class ScatterLegend {
 		}
 	}
 
-	addLegendItem(g, category, name, key, x, y, hidden = false) {
+	addLegendItem(chart, g, category, name, key, x, y, hidden = false) {
 		const circleG = g.append('g')
 		circleG
 			.append('path')

@@ -1,8 +1,11 @@
 import { zoom as d3zoom, zoomIdentity } from 'd3-zoom'
 import { icons as icon_functions } from '#dom'
-
+import { Scatter } from '../Scatter.js'
 export class ScatterZoom {
-	constructor(scatter) {
+	scatter: Scatter
+	zoom: number
+	zoomD3: any
+	constructor(scatter: Scatter) {
 		this.scatter = scatter
 		this.zoom = 1
 		this.zoomD3 = d3zoom()
@@ -65,7 +68,7 @@ export class ScatterZoom {
 			const symbols = chart.serie.selectAll('path[name="serie"')
 			symbols.attr('transform', c => this.scatter.model.transform(chart, c, 1))
 			if (this.scatter.vm.scatterLasso.lassoOn)
-				chart.lasso.selectedItems().attr('transform', c => this.model.transform(chart, c, 1.2))
+				chart.lasso.selectedItems().attr('transform', c => this.scatter.model.transform(chart, c, 1.2))
 			if (this.scatter.config.scaleDotTW) this.scatter.vm.legendvm.drawScaleDotLegend(chart)
 		}
 	}
