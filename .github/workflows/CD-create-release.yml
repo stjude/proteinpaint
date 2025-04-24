@@ -73,43 +73,43 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
           scope: '@sjcrh'
       - run: npm ci
+      # temporarily disable to fix interrupted npm publish
+      # - name: Run version bump
+      #   id: version_bump
+      #   run: |
+      #     exclude="";
 
-      - name: Run version bump
-        id: version_bump
-        run: |
-          exclude="";
+      #     if [ "${{ github.event.inputs.include }}" = "npm packages only" ]; then
+      #       exclude="-x=container";
+      #     fi
 
-          if [ "${{ github.event.inputs.include }}" = "npm packages only" ]; then
-            exclude="-x=container";
-          fi
+      #     . ./build/ci-version-update.sh ${{ github.event.inputs.release_type }} -w $exclude
+          
+      #     echo "::set-output name=branch::$BRANCH"
+          
+      #     if [[ "$BRANCH" != "master" && "$BRANCH" != "release"* && "$BRANCH" != "prerelease"* ]]; then
+      #       echo "::set-output name=draft::true"
+      #       echo "::set-output name=prerelease::true"
+      #     else
+      #       echo "::set-output name=draft::false"
+      #       echo "::set-output name=prerelease::false"
+      #     fi
+          
+      #     echo "::set-output name=tag_name::$TAG"
+          
+      #     ./build/ci-npm-publish.sh "$UPDATED"
+          
+      #     if [[ "$UPDATED" == *"rust"* ]]; then
+      #       echo "::set-output name=updated_rust::true"
+      #     else
+      #       echo "::set-output name=updated_rust::false"
+      #     fi
+          
+      #     CHANGES="[CHANGELOG.md](https://github.com/stjude/proteinpaint/blob/master/CHANGELOG.md)"
+      #     echo "::set-output name=latest_release_changes::$CHANGES"
 
-          . ./build/ci-version-update.sh ${{ github.event.inputs.release_type }} -w $exclude
-          
-          echo "::set-output name=branch::$BRANCH"
-          
-          if [[ "$BRANCH" != "master" && "$BRANCH" != "release"* && "$BRANCH" != "prerelease"* ]]; then
-            echo "::set-output name=draft::true"
-            echo "::set-output name=prerelease::true"
-          else
-            echo "::set-output name=draft::false"
-            echo "::set-output name=prerelease::false"
-          fi
-          
-          echo "::set-output name=tag_name::$TAG"
-          
-          ./build/ci-npm-publish.sh "$UPDATED"
-          
-          if [[ "$UPDATED" == *"rust"* ]]; then
-             echo "::set-output name=updated_rust::true"
-          else
-            echo "::set-output name=updated_rust::false"
-          fi
-          
-          CHANGES="[CHANGELOG.md](https://github.com/stjude/proteinpaint/blob/master/CHANGELOG.md)"
-          echo "::set-output name=latest_release_changes::$CHANGES"
-
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPMJS_TOKEN }}
+      #   env:
+      #     NODE_AUTH_TOKEN: ${{ secrets.NPMJS_TOKEN }}
 
       - name: Create Release
         id: create_release
