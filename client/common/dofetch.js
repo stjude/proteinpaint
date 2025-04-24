@@ -361,7 +361,9 @@ export function setAuth(opts) {
 export function getRequiredAuth(dslabel, route) {
 	if (!dsAuth || !Array.isArray(dsAuth)) return
 	for (const a of dsAuth) {
-		if (a.dslabel == dslabel && a.route == route) return a
+		// wildcard route '*' is transformed by server auth.js into '/**' to support glob-pattern matching,
+		// since a single character '*' is interpreted by glob as a file, so need to also detect '/**' route
+		if (a.dslabel == dslabel && (a.route == route || a.route == '*' || a.route == '/**')) return a
 	}
 }
 
