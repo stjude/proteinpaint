@@ -82,9 +82,9 @@ jobs:
           if [ "${{ github.event.inputs.include }}" = "npm packages only" ]; then
             exclude="-x=container";
           fi
-          # temporarily disable to fix interrupted npm publish
-          # . ./build/ci-version-update.sh ${{ github.event.inputs.release_type }} -w $exclude
-          BRANCH=MASTER
+
+          . ./build/ci-version-update.sh ${{ github.event.inputs.release_type }} -w $exclude
+          
           echo "::set-output name=branch::$BRANCH"
           
           if [[ "$BRANCH" != "master" && "$BRANCH" != "release"* && "$BRANCH" != "prerelease"* ]]; then
@@ -94,9 +94,9 @@ jobs:
             echo "::set-output name=draft::false"
             echo "::set-output name=prerelease::false"
           fi
-          TAG=2.120.0
+          
           echo "::set-output name=tag_name::$TAG"
-          UPDATED="rust server client front container/server container/full"
+          
           ./build/ci-npm-publish.sh "$UPDATED"
           
           if [[ "$UPDATED" == *"rust"* ]]; then
