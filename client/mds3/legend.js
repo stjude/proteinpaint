@@ -851,7 +851,6 @@ function may_create_cnv(tk, block) {
 		R.colorscaleHolder.append('span').text('Loss').style('font-size', '.8em').style('opacity', 0.6) // "Loss" label on left of colorscale
 		const csHolder = R.colorscaleHolder.append('span') // actual holder of colorscale
 		R.colorscaleHolder.append('span').text('Gain').style('font-size', '.8em').style('opacity', 0.6) // "Gain" label on right of colorscale
-		R.noCnv = R.holder.append('div').text('No data').style('opacity', 0.6) // indicator there's no cnv in the region
 
 		// initiate colorscale component
 		const axisheight = 20
@@ -891,6 +890,8 @@ function may_create_cnv(tk, block) {
 		R.cnvCategoryHolder = R.holder.append('span')
 	}
 
+	R.noCnv = R.holder.append('div').text('No data').style('opacity', 0.6) // indicator there's no cnv in the region
+
 	// following prompt will always be shown for cnv both using numeric value or not
 
 	const menu = new Menu() // launched by prompt
@@ -927,14 +928,15 @@ function may_update_cnv(tk) {
 	if (!tk.cnv.cnvLst || tk.cnv.cnvLst.length == 0) {
 		// no cnv shown in this region. hide colorscale
 		// possible for cnvLst to be missing! e.g. on server error
-		tk.legend.cnv.colorscaleHolder.style('display', 'none')
+		tk.legend.cnv.colorscaleHolder?.style('display', 'none')
 		tk.legend.cnv.noCnv.style('display', 'inline-block')
 	} else {
 		// has cnv showing; update legend with data contents
+		tk.legend.cnv.noCnv.style('display', 'none')
+
 		if (Number.isFinite(tk.cnv.cnvGainCutoff)) {
 			// cnv uses numeric values
 			tk.legend.cnv.colorscaleHolder.style('display', 'inline-block')
-			tk.legend.cnv.noCnv.style('display', 'none')
 			// update colorscale
 			tk.legend.cnv.colorScale.colors = [tk.cnv.lossColor, 'white', tk.cnv.gainColor]
 			tk.legend.cnv.colorScale.domain = tk.cnv.presetMax
