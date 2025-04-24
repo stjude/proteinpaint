@@ -1,9 +1,14 @@
 import { Menu } from '#dom/menu'
 import { rgb } from 'd3-color'
 import { shapesArray, shapeSelector } from '../../../dom/shapes.js'
-
+import { Scatter } from '../Scatter.js'
+import { scaleLinear as d3Linear } from 'd3-scale'
 export class ScatterLegendInteractivity {
-	constructor(scatter) {
+	scatter: Scatter
+	shapeTW: any
+	colorTW: any
+
+	constructor(scatter: Scatter) {
 		this.scatter = scatter
 	}
 
@@ -59,7 +64,7 @@ export class ScatterLegendInteractivity {
 				})
 		if (isColorTW) {
 			const color = rgb(category.color).formatHex()
-			const input = div
+			const input: any = div
 				.append('div')
 				.attr('class', 'sja_sharp_border')
 				.style('padding', '0px 10px')

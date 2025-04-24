@@ -7,9 +7,12 @@ import { scaleLinear as d3Linear } from 'd3-scale'
 import { getContourImage } from '../../singleCellPlot.js'
 import { ScatterViewModel } from './scatterViewModel.js'
 import { getThreeCircle } from './scatterViewModel2DLarge.js'
-
+import { Scatter } from '../Scatter.js'
 export class ScatterViewModel3D extends ScatterViewModel {
-	constructor(scatter) {
+	scatter!: Scatter
+	canvas: any
+
+	constructor(scatter: Scatter) {
 		super(scatter)
 	}
 
@@ -22,15 +25,15 @@ export class ScatterViewModel3D extends ScatterViewModel {
 			.range([this.scatter.settings.showContour ? -1 : 0, 1])
 		const zAxisScale = chart.zAxisScale.range([0, 1])
 
-		const vertices = []
-		const colors = []
+		const vertices: any = []
+		const colors: any = []
 
 		for (const sample of chart.data.samples) {
 			const opacity = this.model.getOpacity(sample)
 			if (opacity == 0) continue
 			const x = xAxisScale(sample.x)
 			const y = yAxisScale(sample.y)
-			const z = zAxisScale(sample.z)
+			let z = zAxisScale(sample.z)
 			if (this.scatter.settings.showContour) z = 0
 			const color = new THREE.Color(rgb(this.scatter.model.getColor(sample, chart)).toString())
 			vertices.push(x, y, z)
@@ -70,7 +73,7 @@ export class ScatterViewModel3D extends ScatterViewModel {
 			const axesHelper = new THREE.AxesHelper(1)
 			scene.add(axesHelper)
 			if (this.scatter.settings.showAxes) {
-				this.addLabels(scene, chart)
+				this.addLabels(scene)
 			}
 
 			document.addEventListener(
@@ -114,7 +117,7 @@ export class ScatterViewModel3D extends ScatterViewModel {
 		const colors = this.scatter.config.colorTW
 			? chart.data.samples.map(s => this.model.getColor(s, chart))
 			: zCoords.map(z => colorGenerator(z))
-		const colors3D = []
+		const colors3D: any = []
 		for (const color of colors) {
 			const color3D = new THREE.Color(color)
 			colors3D.push(color3D.r, color3D.g, color3D.b)

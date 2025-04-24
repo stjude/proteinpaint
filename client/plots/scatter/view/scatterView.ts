@@ -1,13 +1,23 @@
 import { fillTermWrapper } from '#termsetting'
 import { Menu, shapesArray } from '#dom'
-
+import { Scatter } from '../Scatter.js'
 import { select } from 'd3-selection'
 import { isNumericTerm } from '#shared/terms.js'
 
 export const minShapeSize = 0.2
 export const maxShapeSize = 6
 export class ScatterView {
-	constructor(scatter) {
+	opts: any
+	dom: any
+	scatter: Scatter
+	loading: any
+	loadingDiv: any
+	tooltip: any
+	tooltipDiv: any
+	chart: any
+	chartDiv: any
+
+	constructor(scatter: Scatter) {
 		this.opts = scatter.opts
 		this.scatter = scatter
 
@@ -127,7 +137,7 @@ export class ScatterView {
 			testid: 'showAxes'
 		}
 
-		const inputs = [
+		const inputs: any = [
 			{
 				type: 'term',
 				configKey: 'colorTW',
@@ -202,7 +212,7 @@ export class ScatterView {
 				}
 			)
 		if (this.scatter.config.sampleCategory) {
-			const options = Object.values(this.scatter.config.sampleCategory.tw.term.values).map(v => ({
+			const options: any = Object.values(this.scatter.config.sampleCategory.tw.term.values).map((v: any) => ({
 				label: v.label || v.key,
 				value: v.key
 			}))

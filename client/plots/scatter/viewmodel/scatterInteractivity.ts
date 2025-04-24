@@ -4,9 +4,18 @@ import { getFilter } from '../../../mass/groups.js'
 import { newSandboxDiv } from '../../../dom/sandbox.ts'
 import { getId } from '#mass/nav'
 import { searchSampleInput } from '../../sampleView.js'
-
+import { Scatter } from '../Scatter.js'
+import { select } from 'd3-selection'
 export class ScatterInteractivity {
-	constructor(scatter) {
+	scatter: Scatter
+	view: any
+	searchMenu: any
+	samplesData: any
+	shapeTW: any
+	colorTW: any
+	shapeSelector: any
+
+	constructor(scatter: Scatter) {
 		this.scatter = scatter
 		this.view = scatter.view
 	}

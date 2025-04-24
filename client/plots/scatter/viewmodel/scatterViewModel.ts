@@ -9,9 +9,24 @@ import { ScatterTooltip } from './scatterTooltip.js'
 import { ScatterLasso } from './scatterLasso.js'
 import { getTitle } from './scatterLegend.js'
 import { ScatterZoom } from './scatterZoom.js'
+import { Scatter } from '../Scatter.js'
 
 export class ScatterViewModel {
-	constructor(scatter) {
+	scatter: Scatter
+	view: any
+	model: any
+	interactivity: any
+	legendvm: ScatterLegend
+	scatterTooltip: ScatterTooltip
+	scatterLasso: ScatterLasso
+	scatterZoom: ScatterZoom
+	lassoDiv: any
+	canvas: any
+	step: any
+	legendHeight: any
+	selectedItems: any
+
+	constructor(scatter: Scatter) {
 		this.scatter = scatter
 		this.view = scatter.view
 		this.model = scatter.model
@@ -63,7 +78,7 @@ export class ScatterViewModel {
 		/** Becomes the x offset for the shape legend.
 		 * When in continuous mode, color scale renders with a
 		 * default width of 150. */
-		const labels = []
+		const labels: any = []
 		if (this.scatter.config.colorTW) labels.push(this.scatter.config.colorTW.term.name)
 		if (this.scatter.config.scaleDotTW) labels.push(this.scatter.config.scaleDotTW.term.name)
 		if (labels.length > 0) {
@@ -162,7 +177,7 @@ export class ScatterViewModel {
 				if (termName.length > 65) {
 					text
 						.on('mouseenter', event => {
-							this.showText(event, this.scatter.config.term.term.name)
+							this.interactivity.showText(event, this.scatter.config.term.term.name)
 						})
 						.on('mouseleave', () => this.view.dom.tooltip.hide())
 				}
@@ -194,7 +209,7 @@ export class ScatterViewModel {
 				if (term2Name.length > 60) {
 					text
 						.on('mouseenter', event => {
-							this.showText(event, this.scatter.config.term2.term.name)
+							this.interactivity.showText(event, this.scatter.config.term2.term.name)
 						})
 						.on('mouseleave', () => this.view.dom.tooltip.hide())
 				}
@@ -248,7 +263,7 @@ export class ScatterViewModel {
 		const contourG = chart.serie
 		let zAxisScale
 		if (this.scatter.config.colorTW?.q.mode == 'continuous') {
-			const [zMin, zMax] = extent(chart.data.samples, d => d.category)
+			const [zMin, zMax] = extent(chart.data.samples, (d: any) => d.category) as [any, any]
 			zAxisScale = d3Linear().domain([zMin, zMax]).range([0, 1])
 		}
 
@@ -300,7 +315,7 @@ export class ScatterViewModel {
 					.items()
 					.attr('r', this.scatter.settings.size)
 					.style('fill-opacity', c => this.model.getOpacity(c))
-				chart.mainG.call(this.vm.scatterZoom.zoomD3)
+				chart.mainG.call(this.scatter.vm.scatterZoom.zoomD3)
 				this.selectedItems = null
 			}
 		}
@@ -361,17 +376,17 @@ export class ScatterViewModel {
 export function renderContours(contourG, data, width, height, colorContours, bandwidth, thresholds) {
 	// Create the horizontal and vertical scales.
 	const x = d3Linear()
-		.domain(extent(data, s => s.x))
+		.domain(extent(data, (s: any) => s.x) as [any, any])
 		.nice()
 		.rangeRound([0, width])
 	const y = d3Linear()
-		.domain(extent(data, s => s.y))
+		.domain(extent(data, (s: any) => s.y) as [any, any])
 		.nice()
 		.rangeRound([height, 0])
 	const contours = contourDensity()
-		.x(s => s.x)
-		.y(s => s.y)
-		.weight(s => s.z)
+		.x((s: any) => s.x)
+		.y((s: any) => s.y)
+		.weight((s: any) => s.z)
 		.size([width, height])
 		.cellSize(2)
 
@@ -379,7 +394,7 @@ export function renderContours(contourG, data, width, height, colorContours, ban
 		.thresholds(thresholds)(data)
 
 	const colorScale = scaleSequential()
-		.domain([0, max(contours, d => d.value)])
+		.domain([0, max(contours, d => d.value) as any])
 		.interpolator(interpolateGreys)
 
 	// Compute the density contours.

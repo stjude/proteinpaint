@@ -3,11 +3,25 @@ import { shapesArray, shapeSelector } from '../../../dom/shapes.js'
 import { roundValueAuto } from '#shared/roundValue.js'
 import { getDateStrFromNumber } from '#shared/terms.js'
 import { rgb } from 'd3-color'
-
+import { Scatter } from '../Scatter.js'
 export class ScatterTooltip {
-	constructor(scatter) {
+	scatter: Scatter
+	view: any
+	chart: any
+	samples!: any[]
+	tree!: any[]
+	table: any
+	onClick: boolean
+	displaySample!: boolean
+	parentCategories!: string[]
+	searchMenu: any
+	samplesData: any
+	chartDiv: any
+
+	constructor(scatter: Scatter) {
 		this.scatter = scatter
 		this.view = scatter.view
+		this.onClick = false
 	}
 
 	showTooltip(event, chart) {
@@ -72,7 +86,7 @@ export class ScatterTooltip {
 				this.tree.push(node)
 				if (showCoords) {
 					const xvalue = this.getCategoryValue('x', sample, this.scatter.config.term)
-					const xnode = {
+					const xnode: any = {
 						id: xvalue,
 						parentId: id,
 						samples: [sample],
@@ -216,7 +230,7 @@ export class ScatterTooltip {
 							.append('button')
 							.text('Lollipop')
 							.on('click', async e => {
-								await this.scatter.vm.openLollipop(label)
+								await this.scatter.interactivity.openLollipop(label)
 								this.scatter.dom.tip.hide()
 							})
 					}
