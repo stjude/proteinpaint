@@ -497,8 +497,8 @@ fn input_data_from_text(
 #[derive(Debug, Serialize, Deserialize)]
 struct AdjustedPValueIndexes {
     index: usize,
+    gene_id: String,
     gene_name: String,
-    gene_symbol: String,
     fold_change: f64,
     original_p_value: f64,
     adjusted_p_value: f64,
@@ -506,8 +506,8 @@ struct AdjustedPValueIndexes {
 
 struct PValueIndexes {
     index: usize,
+    gene_id: String,
     gene_name: String,
-    gene_symbol: String,
     fold_change: f64,
     p_value: f64,
 }
@@ -746,8 +746,8 @@ fn main() {
                                         {
                                             p_values.push(PValueIndexes {
                                                 index: i,
-                                                gene_name: filtered_genes[i].to_owned(),
-                                                gene_symbol: filtered_gene_names[i].to_owned(),
+                                                gene_id: filtered_genes[i].to_owned(),
+                                                gene_name: filtered_gene_names[i].to_owned(),
                                                 fold_change: (treated_mean.unwrap()
                                                     / control_mean.unwrap())
                                                 .log2(),
@@ -833,9 +833,9 @@ fn main() {
                                                     {
                                                         p_values_thread.push(PValueIndexes {
                                                             index: i,
-                                                            gene_name: filtered_genes_temp[i]
+                                                            gene_id: filtered_genes_temp[i]
                                                                 .to_owned(),
-                                                            gene_symbol: filtered_gene_names_temp
+                                                            gene_name: filtered_gene_names_temp
                                                                 [i]
                                                                 .to_owned(),
                                                             fold_change: (treated_mean.unwrap()
@@ -919,8 +919,8 @@ fn adjust_p_values(mut original_p_values: Vec<PValueIndexes>) -> String {
         adjusted_p_values.push(AdjustedPValueIndexes {
             index: original_p_values[i].index,
             fold_change: original_p_values[i].fold_change,
+            gene_id: original_p_values[i].gene_id.to_owned(),
             gene_name: original_p_values[i].gene_name.to_owned(),
-            gene_symbol: original_p_values[i].gene_symbol.to_owned(),
             original_p_value: original_p_values[i].p_value,
             adjusted_p_value: adjusted_p_val,
         });
@@ -951,8 +951,8 @@ fn adjust_p_values_bonferroni(original_p_values: Vec<PValueIndexes>) -> Vec<Adju
         }
         adjusted_p_values.push(AdjustedPValueIndexes {
             index: original_p_values[i].index,
+            gene_id: original_p_values[i].gene_id.to_owned(),
             gene_name: original_p_values[i].gene_name.to_owned(),
-            gene_symbol: original_p_values[i].gene_symbol.to_owned(),
             fold_change: original_p_values[i].fold_change,
             original_p_value: original_p_values[i].p_value,
             adjusted_p_value: adjusted_p_value,
