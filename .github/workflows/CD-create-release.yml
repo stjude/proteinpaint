@@ -87,7 +87,7 @@ jobs:
           
           echo "::set-output name=branch::$BRANCH"
           
-          if [[ "$BRANCH" != "master" && "$BRANCH" != "release"* && "$BRANCH" != "prerelease"*]]; then
+          if [[ "$BRANCH" != "master" && "$BRANCH" != "release"* && "$BRANCH" != "prerelease"* ]]; then
             echo "::set-output name=draft::true"
             echo "::set-output name=prerelease::true"
           else
