@@ -174,7 +174,6 @@ async function colorAndShapeSamples(refSamples, cohortSamples, data, q) {
 			continue
 		}
 
-		let isLast = false
 		if ((q.colorTW && !hasValue(dbSample, q.colorTW)) || (q.shapeTW && !hasValue(dbSample, q.shapeTW))) continue
 		let divideBy = 'Default'
 		if (q.divideByTW) {
@@ -183,7 +182,6 @@ async function colorAndShapeSamples(refSamples, cohortSamples, data, q) {
 				divideBy = getMutation(true, dbSample, q.divideByTW)
 				if (divideBy == null) {
 					divideBy = getMutation(false, dbSample, q.divideByTW)
-					isLast = true
 				}
 			} else {
 				const field = q.divideByTW.$id
@@ -195,7 +193,7 @@ async function colorAndShapeSamples(refSamples, cohortSamples, data, q) {
 		}
 		if (!results[divideBy]) {
 			const samples = refSamples.map(sample => ({ ...sample, category: 'Ref', shape: 'Ref', z: 0 }))
-			results[divideBy] = { samples, colorMap: {}, shapeMap: {}, isLast }
+			results[divideBy] = { samples, colorMap: {}, shapeMap: {} }
 		}
 		if (!q.divideByTW) sample.z = 0
 		if (!q.scaleDotTW) sample.scale = 1

@@ -321,7 +321,7 @@ export class ScatterLegend {
 			.style('font-weight', 'bold')
 
 		offsetX += step
-		const mutations = []
+		const mutations: any = []
 		for (const [key, value] of map)
 			if (value.mutation)
 				//if no mutation is Ref
@@ -485,7 +485,7 @@ export class ScatterLegend {
 				const menu = new Menu({ padding: '3px' })
 				const div = menu.d
 				div.append('label').text('Min:')
-				const minInput = div
+				const minInput: any = div
 					.append('input')
 					.attr('type', 'number')
 					.attr('min', minShapeSize)
@@ -503,7 +503,7 @@ export class ScatterLegend {
 						})
 					})
 				div.append('label').text('Max:')
-				const maxInput = div
+				const maxInput: any = div
 					.append('input')
 					.attr('type', 'number')
 					.attr('step', '0.5')
@@ -512,7 +512,7 @@ export class ScatterLegend {
 					.style('width', '50px')
 					.attr('value', this.scatter.settings.maxShapeSize)
 					.on('change', () => {
-						const value = parseFloat(maxInput.node().value)
+						const value: any = parseFloat(maxInput.node().value)
 						this.scatter.config.settings.sampleScatter.maxShapeSize = value
 						this.scatter.app.dispatch({
 							type: 'plot_edit',

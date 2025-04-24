@@ -27,7 +27,7 @@ export class Scatter extends RxComponentInner {
 	charts: any
 	opts: any
 	state: any
-	type: string
+	readonly type: string
 
 	constructor() {
 		super()
