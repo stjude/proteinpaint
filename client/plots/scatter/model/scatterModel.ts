@@ -1,10 +1,11 @@
 import { shapesArray } from '#dom'
 import { rgb } from 'd3-color'
-import { scaleLinear as d3Linear } from 'd3-scale'
+import { scaleLinear as d3Linear, scaleTime } from 'd3-scale'
 import { axisLeft, axisBottom } from 'd3-axis'
 import { regressionPoly } from 'd3-regression'
 import { Scatter } from '../Scatter'
 import { getDateFromNumber } from '../../../../shared/utils/src/terms.js'
+import type { DataResult, DataRange } from '../scatterTypes.js'
 //icons have size 16x16
 export const shapes = shapesArray
 
@@ -61,13 +62,13 @@ export class ScatterModel {
 		const reqOpts = this.getDataRequestOpts()
 		if (reqOpts.coordTWs.length == 1) return //To allow removing a term in the controls, though nothing is rendered (summary tab with violin active)
 
-		const data = await this.scatter.app.vocabApi.getScatterData(reqOpts)
+		const data: { range: DataRange; result: { [index: string]: DataResult }; error?: any } =
+			await this.scatter.app.vocabApi.getScatterData(reqOpts)
+		console.log(data)
 		if (data.error) throw data.error
 		this.range = data.range
-
 		this.charts = []
 		for (const [key, chartData] of Object.entries(data.result)) {
-			const samples: any = chartData.samples
 			if (!Array.isArray(chartData.samples)) throw 'data.samples[] not array'
 			this.createChart(key, chartData)
 		}
