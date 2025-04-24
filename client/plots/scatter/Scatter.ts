@@ -27,7 +27,7 @@ export class Scatter extends RxComponentInner {
 	settings: any
 	charts: any
 	opts: any
-	state!: MassState
+	state!: any
 	readonly type: string
 
 	constructor() {
@@ -45,7 +45,7 @@ export class Scatter extends RxComponentInner {
 		else this.vm = new ScatterViewModel(this)
 	}
 
-	getState(appState) {
+	getState(appState: MassState) {
 		const config = appState.plots.find(p => p.id === this.id)
 		if (!config) {
 			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`

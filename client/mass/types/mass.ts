@@ -81,6 +81,7 @@ export type MassState = {
 		title?: {
 			text: string
 		}
+		matrixplots?: any[]
 	}
 	reuse?: {
 		customTermQ?: {

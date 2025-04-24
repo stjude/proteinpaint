@@ -110,8 +110,8 @@ export class ScatterViewModel3D extends ScatterViewModel {
 	}
 
 	async renderContourMap(scene, camera, material, vertices, zAxisScale, chart) {
-		const xAxisScale = d3Linear().domain([chart.xMin, chart.xMax]).range([0, this.scatter.settings.svgw])
-		const yAxisScale = d3Linear().domain([chart.yMax, chart.yMin]).range([0, this.scatter.settings.svgh])
+		const xAxisScale = d3Linear().domain([chart.ranges.xMin, chart.ranges.xMax]).range([0, this.scatter.settings.svgw])
+		const yAxisScale = d3Linear().domain([chart.ranges.yMax, chart.ranges.yMin]).range([0, this.scatter.settings.svgh])
 		const zCoords = chart.data.samples.map(s => zAxisScale(s.z))
 		const colorGenerator = zAxisScale.copy().range(['#aaa', this.scatter.settings.defaultColor])
 		const colors = this.scatter.config.colorTW

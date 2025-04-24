@@ -7,6 +7,7 @@ import { roundValueAuto } from '#shared/roundValue.js'
 import { ScatterLegendInteractivity } from './scatterLegendInteractivity.js'
 import { minShapeSize, maxShapeSize } from '../view/scatterView.js'
 import { Scatter } from '../Scatter.js'
+import { ScatterLegendItem } from '../scatterTypes.js'
 export class ScatterLegend {
 	scatter: Scatter
 	vm: any
@@ -24,7 +25,7 @@ export class ScatterLegend {
 	}
 	//Dynamically calculate the length of the legend labels
 	getLegendLabelWidth(chart, key, svg, size) {
-		const legend = chart[`${key}Legend`]
+		const legend: Map<string, ScatterLegendItem> = chart[`${key}Legend`]
 		if (!legend) return 0
 		const labels: any = []
 		for (const [k, v] of legend.entries()) {
@@ -408,7 +409,7 @@ export class ScatterLegend {
 		const titleG = scaleG.append('g')
 
 		titleG.append('text').text(this.scatter.config.scaleDotTW.term.name).style('font-weight', 'bold')
-		const start = roundValueAuto(chart.scaleMin).toString()
+		const start = roundValueAuto(chart.ranges.scaleMin).toString()
 		const end = roundValueAuto(chart.scaleMax).toString()
 		const x = 30
 		const y = 40
