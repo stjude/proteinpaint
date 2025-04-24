@@ -240,5 +240,41 @@
       "prev": 0,
       "diff": 35.045
     }
+  },
+  "common/dofetch.js": {
+    "lines": {
+      "total": 216,
+      "covered": 20,
+      "skipped": 0,
+      "pct": 9.25
+    },
+    "functions": {
+      "total": 26,
+      "covered": 1,
+      "skipped": 0,
+      "pct": 3.84
+    },
+    "statements": {
+      "total": 245,
+      "covered": 23,
+      "skipped": 0,
+      "pct": 9.38
+    },
+    "branches": {
+      "total": 207,
+      "covered": 5,
+      "skipped": 0,
+      "pct": 2.41
+    },
+    "lowestPct": {
+      "curr": 2.41,
+      "prev": 0,
+      "diff": 2.41
+    },
+    "averagePct": {
+      "curr": 6.22,
+      "prev": 0,
+      "diff": 6.22
+    }
   }
 }
