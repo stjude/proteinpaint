@@ -11,6 +11,7 @@ Fixes:
 - Added tabix support back for all non-HDF5 datasets
 - Allow the app drawer to finish transition before loading the sandbox
 - Remove the GFF "load gene sets" option from Gene set edit UI in unclustered genes panel.
+- Toggle to Charts tab when active item button is clicked on the About tab in mass UI
 
 
 ## 2.118.2
