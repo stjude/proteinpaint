@@ -18,7 +18,7 @@ export class ScatterZoom {
 		this.zoomD3.scaleExtent([0.1, this.scatter.config.scaleDotTW ? 4 : 10])
 
 		toolsDiv.selectAll('*').remove()
-		let display = 'block'
+		const display = 'block'
 		const resetDiv = toolsDiv
 			.insert('div')
 			.style('display', display)

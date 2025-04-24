@@ -28,9 +28,9 @@ export class ScatterViewModel3D extends ScatterViewModel {
 		for (const sample of chart.data.samples) {
 			const opacity = this.model.getOpacity(sample)
 			if (opacity == 0) continue
-			let x = xAxisScale(sample.x)
-			let y = yAxisScale(sample.y)
-			let z = zAxisScale(sample.z)
+			const x = xAxisScale(sample.x)
+			const y = yAxisScale(sample.y)
+			const z = zAxisScale(sample.z)
 			if (this.scatter.settings.showContour) z = 0
 			const color = new THREE.Color(rgb(this.scatter.model.getColor(sample, chart)).toString())
 			vertices.push(x, y, z)
