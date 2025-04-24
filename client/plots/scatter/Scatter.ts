@@ -14,6 +14,7 @@ import { ScatterViewModel3D } from './viewmodel/scatterViewModel3D.js'
 import { controlsInit } from '../controls'
 import { downloadSingleSVG } from '../../common/svg.download.js'
 import { select2Terms } from '#dom/select2Terms'
+import { MassState } from '../../../client/mass/types/mass.js'
 
 export class Scatter extends RxComponentInner {
 	config: any
@@ -26,7 +27,7 @@ export class Scatter extends RxComponentInner {
 	settings: any
 	charts: any
 	opts: any
-	state: any
+	state!: MassState
 	readonly type: string
 
 	constructor() {
