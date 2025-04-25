@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Fixes:
+- Improved error messages of HDF5 validation to make clear when parts of file are improperly formatted. Added check to ensure rust binaries are downloaded
+
 
 ## 2.120.0
 

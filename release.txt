@@ -1,2 +1,1 @@
-Fixes:
-- Improved error messages of HDF5 validation to make clear when parts of file are improperly formatted. Added check to ensure rust binaries are downloaded
+
