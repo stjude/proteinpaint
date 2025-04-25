@@ -185,6 +185,8 @@ tape('.initCustomHtml()', test => {
 tape('.initActiveItems()', test => {
 	test.timeoutAfter(100)
 
+	const itemTitle = 'abc'
+
 	const holder = getHolder() as any
 	const opts = {
 		holder,
@@ -192,8 +194,7 @@ tape('.initActiveItems()', test => {
 			activeItems: {
 				items: [
 					{
-						title: 'abc'
-						// no need to supply plot because lack of app.dispatch()
+						title: itemTitle
 					}
 				]
 			}
@@ -203,10 +204,21 @@ tape('.initActiveItems()', test => {
 	const mockAbout = getAbout(opts)
 	mockAbout.initActiveItems()
 
-	test.true(
-		mockAbout.subheader.select('[data-testid="sjpp-custom-about-activeItems"]').node(),
-		'Should render activeItems'
-	)
+	const itemNode = mockAbout.subheader.select('[data-testid="sjpp-custom-about-activeItems"]').node()
+
+	test.true(itemNode, 'Should render a node as activeItem')
+	test.equal(itemNode.firstChild.innerHTML, itemTitle, 'activeItem first child dom prints correct item title')
+
+	// this flag allows to detect if dispatch is called or not
+	let dispatchCalled = false
+	// mock a dispatch method to set flag to true; since this mock method is specific to this test, cannot mock it outside
+	mockAbout.app.dispatch = () => {
+		dispatchCalled = true
+	}
+
+	itemNode.firstChild.click() // should call this.app.dispatch()
+
+	test.true(dispatchCalled, 'Should dispatch on clicking activeItem')
 
 	if (test['_ok']) holder.remove() // must not use `if(test._ok)` to avoid tsc err
 	test.end()
