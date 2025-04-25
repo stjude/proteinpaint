@@ -17,6 +17,8 @@ export type DataPointEntry = DataEntry & {
 	y: number
 	/** radius */
 	radius: number
+	/** Indicate if the point is significant */
+	significant: boolean
 }
 
 /** Final config created in getPlotConfig() */
@@ -90,6 +92,8 @@ export type VolcanoPlotDom = {
 	pValueTable: Div
 	/** Holder for plot, axis labels, and title */
 	svg: SvgSvg
+	/** Term info */
+	top: SvgG
 	/** X axis */
 	xAxis: SvgG
 	/** X axis label */
@@ -139,11 +143,12 @@ export type VolcanoSettings = {
 
 /** Formatted data from the view model */
 export type VolcanoViewData = {
-	statsData: { label: string; value: number }[]
+	images: DEImage[]
+	info: { label: string; color: string; x: number; y: number }[]
 	plotDim: VolcanoPlotDimensions
 	pointData: DataPointEntry[]
 	pValueTableData: VolcanoPValueTableData
-	images: DEImage[]
+	statsData: { label: string; value: number }[]
 	/** special logic per termtype for userActions */
 	userActions: {
 		noShow: Set<string>

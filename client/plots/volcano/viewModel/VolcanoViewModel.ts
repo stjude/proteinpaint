@@ -67,11 +67,12 @@ export class VolcanoViewModel {
 		this.pValueTable.rows.sort((a: any, b: any) => b[foldChangeIdx].value - a[foldChangeIdx].value)
 
 		this.viewData = {
+			images: response.images || [],
+			info: this.setTermInfo(plotDim, caseColor, controlColor),
 			plotDim,
 			pointData,
-			statsData: this.setStatsData(),
 			pValueTableData: this.pValueTable,
-			images: response.images || [],
+			statsData: this.setStatsData(),
 			userActions: this.setUserActions()
 		}
 	}
@@ -98,40 +99,62 @@ export class VolcanoViewModel {
 		const yScale = scaleLinear().domain([this.minLogPValue, this.maxLogPValue]).range([this.settings.height, 0])
 		return {
 			svg: {
-				height: this.settings.height + this.topPad + this.bottomPad * 2,
+				//20 is for the term info above the plot
+				height: this.settings.height + this.topPad + this.bottomPad * 2 + this.offset * 3,
 				width: this.settings.width + this.horizPad * 2
+			},
+			top: {
+				x: this.horizPad - this.offset * 3 + 5,
+				y: 1
 			},
 			xAxisLabel: {
 				x: this.horizPad + this.settings.width / 2 + this.offset,
-				y: this.topPad + this.settings.height + this.bottomPad
+				y: this.topPad + this.settings.height + this.bottomPad + this.offset
 			},
 			xScale: {
 				scale: xScale,
 				x: this.horizPad + this.offset * 2,
-				y: this.settings.height + this.topPad + this.offset
+				y: this.settings.height + this.topPad + this.offset * 2
 			},
 			yAxisLabel: {
 				text: `-log10(${this.settings.pValueType} P value)`,
 				x: this.horizPad / 3,
-				y: this.topPad + this.settings.height / 2 + this.offset
+				y: this.topPad + this.settings.height / 2
 			},
 			yScale: {
 				scale: yScale,
 				x: this.horizPad,
-				y: this.topPad - this.offset
+				y: this.topPad
 			},
 			plot: {
 				height: this.settings.height,
 				width: this.settings.width,
 				x: this.horizPad + this.offset * 2,
-				y: this.topPad - this.offset
+				y: this.topPad
 			},
 			logFoldChangeLine: {
 				x: xScale(0) + this.horizPad + this.offset * 2,
-				y1: this.topPad - this.offset,
-				y2: this.settings.height + this.offset * 3
+				y1: this.topPad,
+				y2: this.settings.height + this.offset * 2
 			}
 		}
+	}
+
+	setTermInfo(plotDim, caseColor, controlColor) {
+		return [
+			{
+				color: controlColor || this.settings.defaultSignColor,
+				label: this.config.samplelst.groups[0].name,
+				x: plotDim.top.x,
+				y: plotDim.top.y
+			},
+			{
+				color: caseColor || this.settings.defaultSignColor,
+				label: this.config.samplelst.groups[1].name,
+				x: plotDim.top.x,
+				y: plotDim.top.y + 18
+			}
+		]
 	}
 
 	setPointData(plotDim: VolcanoPlotDimensions, controlColor: string, caseColor: string) {
@@ -139,9 +162,9 @@ export class VolcanoViewModel {
 		const dataCopy: any = structuredClone(this.response.data)
 		for (const d of dataCopy) {
 			d.highlighted = this.config.highlightedData.includes(d.gene_name)
-			const significant = this.isSignificant(d)
-			this.getGenesColor(d, significant, controlColor, caseColor)
-			if (significant) {
+			d.significant = this.isSignificant(d)
+			this.getGenesColor(d, d.significant, controlColor, caseColor)
+			if (d.significant) {
 				this.numSignificant++
 				const row = [
 					{ value: roundValueAuto(d.fold_change) },
@@ -158,7 +181,7 @@ export class VolcanoViewModel {
 			d.x = plotDim.xScale.scale(d.fold_change) + this.horizPad + this.offset * 2
 			const y =
 				d[`${this.settings.pValueType}_p_value`] == 0 ? this.minNonZeroPValue : d[`${this.settings.pValueType}_p_value`]
-			d.y = plotDim.yScale.scale(-Math.log10(y)) + this.topPad - this.offset
+			d.y = plotDim.yScale.scale(-Math.log10(y)) + this.topPad
 			d.radius = radius
 		}
 		//Sort so the highlighted points appear on top
