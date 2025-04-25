@@ -45,7 +45,7 @@ export class VolcanoPlotView {
 		this.volcanoDom = {
 			actions,
 			svg,
-			top: svg.append('g').attr('id', 'sjpp-volcano-top').attr('text-anchor', 'middle'),
+			top: svg.append('g').attr('id', 'sjpp-volcano-top'),
 			xAxis: svg.append('g').attr('id', 'sjpp-volcano-xAxis'),
 			yAxis: svg.append('g').attr('id', 'sjpp-volcano-yAxis'),
 			xAxisLabel: svg.append('text').attr('id', 'sjpp-volcano-xAxisLabel').attr('text-anchor', 'middle'),
@@ -125,10 +125,10 @@ export class VolcanoPlotView {
 	renderTermInfo(plotDim) {
 		this.volcanoDom.top.attr('transform', `translate(${plotDim.top.x}, ${plotDim.top.y})`)
 
-		for (const t of this.viewData.info) {
-			const g = this.volcanoDom.top.append('g').attr('transform', `translate(${t.x}, ${t.y})`)
-			g.append('rect').attr('width', 10).attr('height', 10).attr('fill', t.color)
-			g.append('text').attr('font-size', '0.9em').attr('transform', `translate(50, 10)`).text(t.label)
+		for (const info of this.viewData.info) {
+			const g = this.volcanoDom.top.append('g').attr('transform', `translate(${info.x}, ${info.y})`)
+			g.append('rect').attr('width', 10).attr('height', 10).attr('fill', info.color)
+			g.append('text').attr('font-size', '0.9em').attr('transform', `translate(15, 10)`).text(info.label)
 		}
 	}
 

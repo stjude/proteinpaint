@@ -135,7 +135,7 @@ export class VolcanoViewModel {
 			logFoldChangeLine: {
 				x: xScale(0) + this.horizPad + this.offset * 2,
 				y1: this.topPad,
-				y2: this.settings.height + this.offset * 2
+				y2: this.settings.height + this.offset * 4
 			}
 		}
 	}
