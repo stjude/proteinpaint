@@ -36,7 +36,7 @@ export class VolcanoViewModel {
 	constructor(config: VolcanoPlotConfig, response: DEResponse, settings: VolcanoSettings) {
 		this.config = config
 		this.response = response
-		this.pValueCutoff = -Math.log10(settings.pValue)
+		this.pValueCutoff = settings.pValue
 
 		const controlColor = (this.config.tw?.term?.values as any)?.[this.config.samplelst.groups[0].name]?.color
 		const caseColor = (this.config.tw?.term?.values as any)?.[this.config.samplelst.groups[1].name].color

@@ -31,7 +31,7 @@ export class VolcanoControlInputs {
 		//Populated with the default controls for the volcano plot
 		this.inputs = [
 			{
-				label: 'P value significance (linear)',
+				label: 'P value significance (-log₁₀)',
 				type: 'number',
 				chartType: 'volcano',
 				settingsKey: 'pValue',
