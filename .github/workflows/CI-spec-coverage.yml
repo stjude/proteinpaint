@@ -73,7 +73,11 @@ jobs:
         run: |
           cd augen
           npm run spec:coverage
-          cd ..
+
+      - name: Run relevant shared/utils specs
+        run: |
+          cd shared/utils
+          npm run spec:coverage
 
       - name: Detect if integration tests are required
         run: |
