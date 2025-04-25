@@ -347,10 +347,23 @@ async function validateNative(q: GeneExpressionQueryNative, ds: any, genome: any
 	try {
 		const vr = await validateHDF5File(q.file)
 		if (vr.status !== 'success') throw vr.message
-		if (!vr.sampleNames?.length) throw 'HDF5 file has no samples'
+		if (!vr.sampleNames?.length)
+			throw (
+				'HDF5 file has no samples' +
+				'. Your file appears to be improperly formatted or may be corrupt. Please check the file.'
+			)
 		for (const sn of vr.sampleNames) {
 			const si = ds.cohort.termdb.q.sampleName2id(sn)
-			if (si == undefined) throw 'unknown sample from HDF5: ' + sn
+			if (si == undefined)
+				throw (
+					'unknown sample from HDF5: ' +
+					sn +
+					' in ' +
+					q.file +
+					' for ' +
+					ds.label +
+					'. Your HDF5 file appears to be improperly formatted.'
+				)
 			q.samples.push(si)
 		}
 		console.log(
@@ -362,7 +375,6 @@ async function validateNative(q: GeneExpressionQueryNative, ds: any, genome: any
 		console.log(`${ds.label}: geneExpression HDF5 validation failed, falling back to tabix handling: ${error}`)
 
 		// HDF5 validation failed, try tabix (.gz) file handling. this is needed until all ds are migrated
-
 		try {
 			q.samples = [] as number[]
 			await utils.validate_tabixfile(q.file)
@@ -381,7 +393,7 @@ async function validateNative(q: GeneExpressionQueryNative, ds: any, genome: any
 				q.samples.push(id)
 			}
 		} catch (e) {
-			throw `${ds.label} geneExpression file cannot be validated as tabix file`
+			throw `${ds.label} geneExpression tabix file validation failed. Your file must be a valid HDF5 or tabix file to continue. ${e}`
 		}
 
 		// tabix file successfully initialized

@@ -1,3 +1,4 @@
+const fs = require('fs')
 const path = require('path'),
 	{ spawn, exec } = require('child_process'),
 	Readable = require('stream').Readable,
@@ -5,6 +6,10 @@ const path = require('path'),
 	{ promisify } = require('util')
 
 const execPromise = promisify(exec)
+
+// check if rust binary directory exists and is not empty
+const bindir = path.join(__dirname, '/target/release/')
+if (!fs.existsSync(bindir)) throw `missing rust binary directory='${bindir}'`
 
 exports.run_rust = function (binfile, input_data) {
 	return new Promise((resolve, reject) => {
