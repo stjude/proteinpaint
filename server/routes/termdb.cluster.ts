@@ -262,7 +262,7 @@ export async function validate_query_geneExpression(ds: any, genome: any) {
 		return
 	}
 	if (q.src == 'native') {
-		await validateNative(q as GeneExpressionQueryNative, ds, genome)
+		await validateNative(q as GeneExpressionQueryNative, ds)
 		return
 	}
 	throw 'unknown queries.geneExpression.src'
