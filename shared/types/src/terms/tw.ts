@@ -1,15 +1,15 @@
-import { BaseQ, BaseTW, Term } from './term.ts'
-import { CategoricalQ, CategoricalTW } from './categorical.ts'
-import { NumericQ, NumericTW } from './numeric.ts'
-import { SnpsQ, SnpsTW } from './snps.ts'
-import { ConditionQ } from './condition.ts'
-import { GeneVariantQ } from './geneVariant.ts'
-import { SampleLstQ } from './samplelst.ts'
+import type { BaseQ, BaseTW, Term } from './term.ts'
+import type { CategoricalQ, CategoricalTW } from './categorical.ts'
+import type { NumericQ, NumericTW } from './numeric.ts'
+import type { SnpsQ, SnpsTW } from './snps.ts'
+import type { ConditionQ } from './condition.ts'
+import type { GvQ, GvTW } from './geneVariant.ts'
+import type { SampleLstQ } from './samplelst.ts'
 
-export type TermWrapper = CategoricalTW | NumericTW | SnpsTW | (BaseTW & { term: Term; q: Q })
+export type TermWrapper = CategoricalTW | NumericTW | GvTW | SnpsTW | (BaseTW & { term: Term; q: Q })
 export type TwLst = TermWrapper[]
 
-export type Q = BaseQ | CategoricalQ | ConditionQ | NumericQ | GeneVariantQ | SampleLstQ | SnpsQ
+export type Q = BaseQ | CategoricalQ | ConditionQ | NumericQ | GvQ | SampleLstQ | SnpsQ
 
 export type RawTW =
 	//{ id: string } | RawCatTW
