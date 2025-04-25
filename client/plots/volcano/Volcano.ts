@@ -4,6 +4,7 @@ import { fillTermWrapper } from '#termsetting'
 import { Menu, sayerror } from '#dom'
 import { RxComponentInner } from '../../types/rx.d'
 import { controlsInit } from '../controls'
+import { roundValue } from '#shared/roundValue.js'
 import type { VolcanoOpts, VolcanoSettings, VolcanoDom } from './VolcanoTypes'
 import { VolcanoModel } from './model/VolcanoModel'
 import { VolcanoViewModel } from './viewModel/VolcanoViewModel'
@@ -154,7 +155,7 @@ export function getDefaultVolcanoSettings(overrides = {}, opts: any): VolcanoSet
 		method,
 		minCount: 10,
 		minTotalCount: 15,
-		pValue: 0.05,
+		pValue: roundValue(-Math.log10(0.05), 2),
 		pValueType: 'adjusted',
 		rankBy: 'abs(foldChange)',
 		//Only declare this value in one place
