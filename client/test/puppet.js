@@ -198,9 +198,11 @@ async function runTest(patternsStr) {
 							testedSpecs: patternToSpecs.get(pattern),
 							specPattern: pattern
 						})
-						//if (!title) title = extracts.title
-						html.push(extracts.html)
-						markdowns.push(extracts.markdown)
+						if (extracts) {
+							//if (!title) title = extracts.title
+							html.push(extracts.html)
+							markdowns.push(extracts.markdown)
+						}
 					}
 
 					const { default: summary } = await import(`${outputDir}/coverage-summary.json`, { with: { type: 'json' } })
