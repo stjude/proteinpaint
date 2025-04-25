@@ -9,6 +9,7 @@ import { GvBase } from '../geneVariant'
 
 async function getVocabApi() {
 	const vocabApi = vocabInit({ state: { vocab: { genome: 'hg38-test', dslabel: 'TermdbTest' } } })
+	if (!vocabApi) throw 'vocabApi is missing'
 	await vocabApi.getTermdbConfig()
 	return vocabApi
 }

@@ -3,15 +3,7 @@ import { select, type Selection } from 'd3-selection'
 //import { disappear } from '#src/client'
 import { throwMsgWithFilePathAndFnName } from '#dom/sayerror'
 import { debounce } from 'debounce'
-import type {
-	TermSettingInstance,
-	PredefinedGroupSettingQ,
-	CustomGroupSettingQ,
-	GroupSettingQ,
-	GeneVariantBaseQ,
-	GeneVariantTerm,
-	MinBaseQ
-} from '#types'
+import type { TermSettingInstance, CustomGroupSettingQ, GroupSettingQ, TermFilter, MinBaseQ } from '#types'
 import { filterInit, getNormalRoot, getWrappedTvslst, filterJoin } from '#filter/filter'
 
 /*
@@ -49,11 +41,8 @@ type ItemEntry = {
 	samplecount: number | string | null //Sample count number or 'n/a'
 	uncomputable?: boolean
 }
-type FilterEntry = {
+type FilterEntry = TermFilter & {
 	group: number // group index
-	opts?: any
-	terms?: [] // will load terms as custom terms in frontend vocab //TODO: need to make a type definition for element of array
-	active?: any
 }
 type DataInput = { [index: string]: ItemEntry }
 type GrpEntry = {
@@ -127,42 +116,24 @@ export class GroupSettingMethods {
 				this.data.values.push(value)
 				grpIdxes.add(value.group)
 			}
-		} else if (this.tsInstance.q.type == 'filter') {
-			const filter = this.tsInstance.term.filter
-			if (!filter) throw 'filter missing'
-			for (const grpIdx of grpIdxes) {
-				this.data.filters.push(Object.assign({}, filter, { group: grpIdx }))
-			}
 		} else if (this.tsInstance.q.type == 'custom-groupset') {
-			// q.type = 'custom-groupset'
-			// user generated a custom groupset
-			// returns found groups to data.groups and values for groups and excluded groups
-			this.formatCustomset(grpIdxes, input)
-		} else if (this.tsInstance.q.type == 'predefined-groupset') {
-			if (this.tsInstance.term.type == 'geneVariant') {
-				const q = this.tsInstance.q as GeneVariantBaseQ & PredefinedGroupSettingQ
-				const term = this.tsInstance.term as GeneVariantTerm
-				if (!term.groupsetting.lst) throw 'term.groupsetting.lst is missing'
-				const groupset = term.groupsetting.lst[q.predefined_groupset_idx]
-				let computableGrpIdx = 0
-				for (const g of groupset.groups) {
-					const group = g as any // TODO: improve typing
-					const grpIdx = group.uncomputable ? 0 : ++computableGrpIdx
-					this.data.groups.push({
-						currentIdx: grpIdx,
-						type: 'filter',
-						name: grpIdx === 0 ? 'Excluded categories' : group.name,
-						uncomputable: group.uncomputable
-					})
-					grpIdxes.delete(grpIdx)
-					const filter = structuredClone(group.filter)
+			if (this.tsInstance.q.customset) {
+				// custom groupset defined
+				// process the groupset
+				this.formatCustomset(grpIdxes, input)
+			} else {
+				// custom groupset undefined
+				// build empty groupset
+				if (this.type == 'filter') {
+					const filter = this.tsInstance.term.filter
 					if (!filter) throw 'filter missing'
-					// use only those filter terms that are in the dataset
-					const termsInDs = filter.terms.filter(t => term.filter.terms.some(t2 => t2.id == t.id))
-					filter.terms = termsInDs
-					this.data.filters.push(filter)
+					for (const grpIdx of grpIdxes) {
+						this.data.filters.push(Object.assign({}, filter, { group: grpIdx }))
+					}
 				}
 			}
+		} else if (this.tsInstance.q.type == 'predefined-groupset') {
+			throw "q.type='predefined-groupset' not supported"
 		} else {
 			throw 'q.type not recognized'
 		}

@@ -105,6 +105,7 @@ export type BaseTerm = {
 	included_types?: string[]
 	isleaf?: boolean
 	values?: TermValues
+	filter?: TermFilter
 }
 
 export type Term = BaseTerm & (NumericTerm | CategoricalTerm | ConditionTerm | GvTerm | SampleLstTerm | SnpsTerm)
@@ -123,7 +124,7 @@ export type FilterGroup = {
 		active: Filter // active filter
 		group: number // group index
 	}
-	uncomputable?: boolean
+	uncomputable: boolean
 }
 
 export type TermFilter = {

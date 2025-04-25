@@ -96,5 +96,5 @@ export type DtTerm = {
 	type: string
 	dt: number
 	origin?: string
-	values?: TermValues
+	values: TermValues
 }

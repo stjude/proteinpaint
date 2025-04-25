@@ -1,4 +1,4 @@
-import {
+import type {
 	GvTerm,
 	BaseGroupSet,
 	GvValuesQ,
@@ -13,7 +13,7 @@ import {
 	VocabApi,
 	DtTerm
 } from '#types'
-import { TwBase, TwOpts } from './TwBase.ts'
+import { TwBase, type TwOpts } from './TwBase.ts'
 import { copyMerge } from '#rx'
 import { set_hiddenvalues } from '#termsetting'
 import { dtTerms } from '#shared/common.js'
@@ -84,28 +84,27 @@ export class GvBase extends TwBase {
 		/* 
 			Pre-fill the tw.type, since it's required for ROUTING to the
 			correct fill() function. Tsc will be able to use tw.type as a 
-			discriminant property for the RawCatTW union type, enabling 
+			discriminant property for the RawGvTW union type, enabling 
 			static type checks on the input raw tw.
 
 			NOTE: tw.type is NOT required when calling a specialized fill() 
 			function directly, outside of TwRouter.fill(). The input tw.type
 			does not have to be discriminated in that case.
 		*/
-		// TODO: add case for tw.q.type='filter'
 		tw.type =
 			!tw.q.type || tw.q.type == 'values' ? 'GvValuesTW' : tw.q.type == 'custom-groupset' ? 'GvCustomGsTW' : tw.type
 
 		/*
 			For each of fill() functions below:
 			1. The `tw` argument must already have a tw.type string value, 
-			   which corresponds to the RawCatTW* equivalent of the full CatTW* type 
+			   which corresponds to the RawGvTW* equivalent of the full GvTW* type 
 
 			2. The fill() function must fill-in any expected missing values,
 			   validate the tw.q shape at runtime, and throw on any error or mismatched expectation.
 			   Runtime validation is required because the input raw tw can come from anywhere,
 			   like term.bins.default, which is a runtime variable that is not possible to statically check.
 
-			3. The filled-in tw, when returned, must be **coerced** to the full CatTW* type, 
+			3. The filled-in tw, when returned, must be **coerced** to the full GvTW* type, 
 			   in order to match the function signature's return type.
 		*/
 		switch (tw.type) {
@@ -233,6 +232,7 @@ function mayMakeGroups(tw: RawGvCustomGsTW) {
 	// fill with mutated group vs. wildtype group
 	// for the first applicable dt in dataset
 	const dtFilter = tw.term.filter
+	if (!dtFilter) throw 'dtFilter is missing'
 	let WTfilter, WTname, MUTfilter, MUTtvs, MUTname
 	for (const dtTerm of dtFilter.terms) {
 		// wildtype filter
@@ -271,7 +271,7 @@ function mayMakeGroups(tw: RawGvCustomGsTW) {
 		break
 	}
 	// excluded filter
-	const EXCLUDEfilter = structuredClone(dtFilter)
+	const EXCLUDEfilter: any = structuredClone(dtFilter)
 	EXCLUDEfilter.group = 0
 	EXCLUDEfilter.active = getWrappedTvslst()
 	// assign filters to groups

@@ -1034,7 +1034,7 @@ async function call_fillTW(tw: TermWrapper, vocabApi: VocabApi, defaultQByTsHand
 	if (tw.term.type) {
 		try {
 			_ = await import(`./handlers/${type}.ts`)
-		} catch (error) {
+		} catch (_e) {
 			throw `Type ${type} does not exist`
 		}
 	} else throw `Type not defined for ${JSON.stringify(tw)}`

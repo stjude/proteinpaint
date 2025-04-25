@@ -1,9 +1,9 @@
 // temporary code file to hold updated type definitions
 // as part of the tw router/handler refactor
 
-import { CatTWTypes, CategoricalQ } from './categorical.ts'
-import { NumTWTypes, NumericQ } from './numeric.ts'
-import { GvTW, GvQ } from './geneVariant.ts'
+import type { CatTWTypes, CategoricalQ } from './categorical.ts'
+import type { NumTWTypes, NumericQ } from './numeric.ts'
+import type { GvTW, GvQ } from './geneVariant.ts'
 
 export type TermWrapper = CatTWTypes | NumTWTypes | GvTW
 
