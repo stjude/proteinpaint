@@ -14,6 +14,7 @@ import type { Svg, SvgG } from '../types/d3'
  *    - Box plot data: Uses item.boxplot.label
  *    - Violin plot data: Combines item.label with item.plotValueCount as "label, n=count"
  *    - Simple data: Uses item.label directly
+ * Be aware that if the svg is hidden this function will return 0 as getBBox will return 0
  *
  * Example Usage:
  *
@@ -45,6 +46,7 @@ export function getMaxLabelWidth(svg: Svg | SvgG, items: string[], size = 1): nu
 		const label = svg.append('text').text(item).style('font-size', `${size}em`)
 
 		// Update maximum width if current label is wider
+		//If the svg is hidden getBBox will return 0 !!!!
 		maxLabelLgth = Math.max(maxLabelLgth, label.node()!.getBBox().width)
 
 		// Clean up: remove temporary element
