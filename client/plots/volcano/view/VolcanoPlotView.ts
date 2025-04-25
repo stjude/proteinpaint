@@ -45,6 +45,7 @@ export class VolcanoPlotView {
 		this.volcanoDom = {
 			actions,
 			svg,
+			top: svg.append('g').attr('id', 'sjpp-volcano-top').attr('text-anchor', 'middle'),
 			xAxis: svg.append('g').attr('id', 'sjpp-volcano-xAxis'),
 			yAxis: svg.append('g').attr('id', 'sjpp-volcano-yAxis'),
 			xAxisLabel: svg.append('text').attr('id', 'sjpp-volcano-xAxisLabel').attr('text-anchor', 'middle'),
@@ -98,6 +99,8 @@ export class VolcanoPlotView {
 	renderPlot(plotDim: VolcanoPlotDimensions) {
 		this.volcanoDom.svg.attr('width', plotDim.svg.width).attr('height', plotDim.svg.height)
 
+		this.renderTermInfo(plotDim)
+
 		this.volcanoDom.yAxisLabel
 			.attr('transform', `translate(${plotDim.yAxisLabel.x}, ${plotDim.yAxisLabel.y}) rotate(-90)`)
 			.text(plotDim.yAxisLabel.text)
@@ -117,6 +120,16 @@ export class VolcanoPlotView {
 			.attr('fill', 'transparent')
 			.attr('shape-rendering', 'crispEdges')
 			.attr('transform', `translate(${plotDim.plot.x}, ${plotDim.plot.y})`)
+	}
+
+	renderTermInfo(plotDim) {
+		this.volcanoDom.top.attr('transform', `translate(${plotDim.top.x}, ${plotDim.top.y})`)
+
+		for (const t of this.viewData.info) {
+			const g = this.volcanoDom.top.append('g').attr('transform', `translate(${t.x}, ${t.y})`)
+			g.append('rect').attr('width', 10).attr('height', 10).attr('fill', t.color)
+			g.append('text').attr('font-size', '0.9em').attr('transform', `translate(50, 10)`).text(t.label)
+		}
 	}
 
 	renderScale(scale: any, isLeft = false) {
@@ -217,9 +230,7 @@ export class VolcanoPlotView {
 					selectAll(circles).attr('stroke-opacity', 0.075)
 				})
 				this.volcanoDom.pValueTable.on('mouseleave', () => {
-					selectAll(circles).attr('stroke-opacity', (d: any) =>
-						d.color != this.settings.defaultNonSignColor ? 0.35 : 0.2
-					)
+					selectAll(circles).attr('stroke-opacity', (d: any) => (d.significant ? 0.35 : 0.2))
 				})
 			}
 		})
@@ -233,8 +244,8 @@ function renderDataPoints(self: any) {
 		.enter()
 		.append('circle')
 		.attr('stroke', (d: DataPointEntry) => rgb(d.color).formatHex())
-		.attr('stroke-opacity', (d: DataPointEntry) => (d.color != self.settings.defaultNonSignColor ? 0.35 : 0.2))
-		.attr('stroke-width', (d: DataPointEntry) => (d.color != self.settings.defaultNonSignColor ? 1.5 : 1))
+		.attr('stroke-opacity', (d: DataPointEntry) => (d.significant ? 0.35 : 0.2))
+		.attr('stroke-width', (d: DataPointEntry) => (d.significant ? 1.5 : 1))
 		.attr('fill', self.settings.defaultHighlightColor)
 		.attr('fill-opacity', (d: DataPointEntry) => (d.highlighted ? 0.9 : 0))
 		.attr('cx', (d: DataPointEntry) => d.x)
