@@ -281,6 +281,7 @@ export function getStoreApi(self) {
 			return new Promise((resolve, reject) => {
 				const interval = setInterval(() => {
 					numPromisedWrites += decrement
+					console.log(283, 'numPromisedWrites', numPromisedWrites)
 					decrement = 0
 					if (numPromisedWrites > 0) return
 					clearInterval(interval)
@@ -335,7 +336,7 @@ export function getAppApi(self) {
 						}
 					}
 				}
-
+				console.log(338, 'dispatch')
 				// expect store.write() to be debounced and handler rapid succession of dispatches
 				// replace app.state if there is an action
 				if (action) self.state = await self.store.write(action)
@@ -500,7 +501,7 @@ export function getComponentApi(self) {
 						}
 					}
 				}
-			} else if (self.type == 'genomeBrowser') console.log(497, current.action)
+			} else if (self.type == 'genomeBrowser') console.log(497, current.action, componentState, self.state)
 			// notify children
 			await notifyComponents(self.components, current)
 			if (self.bus && (!current.action || current.action.sequenceId === latestActionSequenceId))

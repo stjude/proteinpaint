@@ -127,6 +127,7 @@ class genomeBrowser {
 		try {
 			const tklst = await this.generateTracks()
 			await this.launchBlockWithTracks(tklst)
+			this.hasActiveCoordChange = false
 		} catch (e) {
 			sayerror(this.dom.errDiv, e.message || e)
 			if (e.stack) console.log(e.stack)
@@ -157,7 +158,7 @@ class genomeBrowser {
 					dslabel: this.app.opts.state.vocab.dslabel,
 					onClose: () => {
 						// on closing subtk, the filterObj corresponding to the subtk will be "removed" from subMds3TkFilters[], by regenerating the array
-						this.maySaveTrackUpdatesToState()
+						if (!this.hasActiveCoordChange) this.maySaveTrackUpdatesToState('onClose')
 					},
 					// for showing disco etc as ad-hoc sandbox, persistently in the mass plotDiv, rather than a menu
 					newChartHolder: this.opts.plotDiv
@@ -371,9 +372,11 @@ class genomeBrowser {
 			// use onsetheight but not onloadalltk_always, so callback will be called on all tk updates, including removing tk
 			//onloadalltk_always:
 			onsetheight: () => {
+				// !!! may conflict with onCoordinateChange() dispatch if no state change is detected after this callback is called first !!!
+				// !!! should not trigger a dispatch unless it's certain that a state change has occurred !!!
 				// TODO on any tk update, collect tk config and save to state so they are recoverable from session
 				// FIXME this is not called at protein mode
-				this.maySaveTrackUpdatesToState()
+				if (!this.hasActiveCoordChange) this.maySaveTrackUpdatesToState('onsetheight')
 			}
 		}
 		if (this.state.config.blockIsProteinMode) {
@@ -398,10 +401,13 @@ class genomeBrowser {
 		first_genetrack_tolist(this.app.opts.genome, arg.tklst)
 
 		arg.onCoordinateChange = async rglst => {
+			this.hasActiveCoordChange = true
+			const { chr, start, stop } = rglst[0]
+			console.log(401, { chr, start, stop })
 			await this.app.dispatch({
 				type: 'plot_edit',
 				id: this.id,
-				config: { geneSearchResult: { chr: rglst[0].chr, start: rglst[0].start, stop: rglst[0].stop } }
+				config: { geneSearchResult: { chr, start, stop } }
 			})
 		}
 
@@ -409,7 +415,10 @@ class genomeBrowser {
 		this.blockInstance = new _.Block(arg)
 	}
 
-	async maySaveTrackUpdatesToState() {
+	async maySaveTrackUpdatesToState(eventTrigger) {
+		// should be more selective when running
+		if (this.hasActiveCoordChange) return
+		console.log(413, eventTrigger)
 		/* following changes will be saved in state:
 		- when a mds3 subtk is created/updated, its tk.filterObj should be saved to state so it can be recovered from session
 		- a facet track is removed by user via block ui
@@ -435,6 +444,7 @@ class genomeBrowser {
 			const newLst = config.trackLst.activeTracks.filter(n => this.blockInstance.tklst.find(i => i.name == n))
 			config.trackLst.activeTracks = newLst
 		}
+		console.log(438)
 		await this.app.save({
 			type: 'plot_edit',
 			id: this.id,
