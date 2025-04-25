@@ -1027,9 +1027,6 @@ this is limited to only one term and doesn't allow switching between multiple te
 		/** order of categories */
 		order: string[]
 	}
-	/**  Plots are marked as large if they can not use d3, to create the proper renderer on init. 
-	They cant use d3 if they have too many particles, more than 30K, as it is the case for the BALL scatters */
-	isLarge?: boolean
 }
 
 type Scatterplots = {

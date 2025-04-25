@@ -22,7 +22,7 @@ export class ScatterModel {
 	stopGradient: any
 	range: any
 	charts!: ScatterChart[]
-	is2DLarge!: boolean
+	is2DLarge: boolean
 	is3D: boolean
 	axisOffset: any
 	filterSampleStr: string | null = null
@@ -33,7 +33,8 @@ export class ScatterModel {
 		this.stopGradient = {}
 		this.scatter = scatter
 		this.axisOffset = { x: 80, y: 30 }
-		this.is3D = this.scatter.config.term0?.q.mode == 'continuous'
+		this.is2DLarge = false
+		this.is3D = false
 	}
 
 	// creates an opts object for the vocabApi.someMethod(),
@@ -69,6 +70,7 @@ export class ScatterModel {
 		if (reqOpts.coordTWs.length == 1) return //To allow removing a term in the controls, though nothing is rendered (summary tab with violin active)
 
 		const data: ScatterResponse = await this.scatter.app.vocabApi.getScatterData(reqOpts)
+		this.is3D = this.scatter.config.term0?.q.mode == 'continuous'
 		if ('error' in data) throw data.error
 		this.range = data.range
 		this.charts = []
@@ -90,6 +92,7 @@ export class ScatterModel {
 	initRanges() {
 		let samples: any[] = []
 		for (const chart of this.charts) samples = samples.concat(chart.data.samples)
+		if (samples.length > numberOfSamplesCutoff) this.is2DLarge = true
 		if (samples.length == 0) return
 		const s0 = samples[0] //First sample to start reduce comparisons
 		const [xMin, xMax, yMin, yMax, zMin, zMax, scaleMin, scaleMax] = samples.reduce(

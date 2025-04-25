@@ -40,9 +40,6 @@ export class Scatter extends RxComponentInner {
 		this.view = new ScatterView(this)
 		this.model = new ScatterModel(this)
 		this.interactivity = new ScatterInteractivity(this)
-		if (this.model.is3D) this.vm = new ScatterViewModel3D(this)
-		else if (this.config.isLarge) this.vm = new ScatterViewModel2DLarge(this)
-		else this.vm = new ScatterViewModel(this)
 	}
 
 	getState(appState: MassState) {
@@ -70,7 +67,9 @@ export class Scatter extends RxComponentInner {
 
 		this.settings = structuredClone(this.config.settings.sampleScatter)
 		await this.model.initData()
-
+		if (this.model.is3D) this.vm = new ScatterViewModel3D(this)
+		else if (this.model.is2DLarge) this.vm = new ScatterViewModel2DLarge(this)
+		else this.vm = new ScatterViewModel(this)
 		if (!this.config.colorColumn) await this.setControls()
 		await this.model.processData()
 		this.vm.render()
