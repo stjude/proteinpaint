@@ -152,8 +152,7 @@ function addScatterplots(c, ds) {
 			sampleType: p.sampleType,
 			coordsColumns: p.coordsColumns,
 			settings: { sampleScatter: p.settings }, //the client settings are under sampleScatter so we add it here to avoid adding it in the dataset
-			sampleCategory: p.sampleCategory,
-			isLarge: p.isLarge
+			sampleCategory: p.sampleCategory
 		}
 	})
 }

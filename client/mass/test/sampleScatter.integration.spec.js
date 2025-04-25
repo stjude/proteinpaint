@@ -63,15 +63,13 @@ const open_state = {
 	]
 }
 
-const groupState = {
+const state3D = {
 	plots: [
 		{
 			chartType: 'sampleScatter',
-			colorTW: {
-				id: 'diaggrp'
-			},
+			colorTW: { id: 'diaggrp' },
 			name: 'TermdbTest TSNE',
-			groups: []
+			term0: { id: 'agedx', q: { mode: 'continuous' } }
 		}
 	]
 }
@@ -189,6 +187,27 @@ tape('Render TermdbTest scatter plot and open survival and summary', function (t
 			const newSandbox = sandboxes.find(s => !preSandboxes.includes(s))
 			test.equal(newSandbox.querySelectorAll('.sja_errorbar').length, 0, 'Should render summary plot without errors".')
 		}
+	}
+})
+
+tape('Render TermdbTest scatter plot adding age as Z to render a 3D plot', function (test) {
+	test.timeoutAfter(8000)
+	test.plan(1)
+	const holder = getHolder()
+	runpp({
+		holder, //Fix for test failing because survival & summary sandboxs are not destroyed.
+		state: state3D,
+		sampleScatter: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	async function runTests(scatter) {
+		const is3D = scatter.Inner.model.is3D
+		const scatterDiv = scatter.Inner.model.charts[0].chartDiv
+		test.true(is3D, 'Should be a 3D scatter plot')
 	}
 })
 
