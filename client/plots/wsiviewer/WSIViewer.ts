@@ -62,7 +62,6 @@ export default class WSIViewer extends RxComponentInner {
 			holder.append('div').style('margin-left', '10px').text(e.message)
 			return
 		}
-
 		this.generateThumbnails(
 			wsimageLayers.map(wsimageLayers => wsimageLayers.wsimage),
 			settings
@@ -80,19 +79,28 @@ export default class WSIViewer extends RxComponentInner {
 		const activeImageExtent = activeImage?.getSource()?.getTileGrid()?.getExtent()
 
 		const map = this.getMap(wsimageLayers[settings.displayedImageIndex])
+
 		setTimeout(() => {
 			if (!activeImageExtent) return
-
 			// //hardcoded for prototyping
-			//first feature for the first image in geojson
-			// // const coords = [[ 90624, 11776 ], [ 91136, 11776 ], [ 91136, 12288 ], [ 90624, 12288 ]]
-			//first feature for the second image in geojson
-			const coords = [
-				[77312, 11776],
-				[77824, 11776],
-				[77824, 12288],
-				[77312, 12288]
-			]
+			let coords: number[][]
+			if (settings.displayedImageIndex == 0) {
+				//first feature corrds for the first image in geojson
+				coords = [
+					[90624, 11776],
+					[91136, 11776],
+					[91136, 12288],
+					[90624, 12288]
+				]
+			} else {
+				//first feature coords for the second image in geojson
+				coords = [
+					[77312, 11776],
+					[77824, 11776],
+					[77824, 12288],
+					[77312, 12288]
+				]
+			}
 			const imageHeight = activeImageExtent[3]
 			//Calculate the center of the annotation
 			const xyAvg = coords
@@ -112,7 +120,7 @@ export default class WSIViewer extends RxComponentInner {
 			const view = map.getView()
 			view.animate({
 				center: xyAvg,
-				zoom: 4,
+				zoom: 5,
 				duration: 2000
 			})
 		}, 500)
