@@ -1,7 +1,7 @@
 import { BaseValue } from './terms/term.ts'
 import { NumericTerm, NumericBin } from './terms/numeric.ts'
 import { CategoricalTerm } from './terms/categorical.ts'
-import { GvTerm } from './terms/geneVariant.ts'
+import { DtTerm } from './terms/geneVariant.ts'
 import { ConditionTerm } from './terms/condition.ts'
 
 /*
@@ -52,74 +52,19 @@ export type ConditionTvs = BaseTvs & {
 	grade_and_child?: GradeAndChildEntry[]
 }
 
-type GeneVariantOrigin = 'somatic' | 'germline'
-
-type SNVIndelClasses =
-	| 'M'
-	| 'E'
-	| 'F'
-	| 'N'
-	| 'S'
-	| 'D'
-	| 'I'
-	| 'P'
-	| 'L'
-	| 'Intron'
-	| 'Blank'
-	| 'WT'
-	| 'ITD'
-	| 'DEL'
-	| 'NLOSS'
-	| 'CLOSS'
-	| 'Utr3'
-	| 'Utr5'
-	| 'X'
-	| 'noncoding'
-type SNVIndelTvsValue = {
-	dt: 1
-	mclassLst: SNVIndelClasses[]
-	mclassExcludeLst: SNVIndelClasses[]
-	origin?: GeneVariantOrigin
-}
-
-type CNVClasses = 'CNV_amp' | 'CNV_loss' | 'CNV_loh' | 'Blank' | 'WT' | 'CNV_amplification' | 'CNV_homozygous_deletion'
-type CNVTvsValue = {
-	dt: 4
-	mclassLst: CNVClasses[]
-	mclassExcludeLst: CNVClasses[]
-	origin?: GeneVariantOrigin
-}
-
-type SVClasses = 'SV' | 'Blank' | 'WT'
-type SVTvsValue = {
-	dt: 5
-	mclassLst: SVClasses[]
-	mclassExcludeLst: SVClasses[]
-	origin?: GeneVariantOrigin
-}
-
-type FusionRNAClasses = 'Fuserna' | 'Blank' | 'WT'
-type FusionTvsValue = {
-	dt: 2
-	mclassLst: FusionRNAClasses[]
-	mclassExcludeLst: FusionRNAClasses[]
-	origin?: GeneVariantOrigin
-}
-
-type GeneVariantTvsValue = SNVIndelTvsValue | CNVTvsValue | SVTvsValue | FusionTvsValue
-
 type GeneVariantTvs = BaseTvs & {
-	term: GvTerm
-	values: GeneVariantTvsValue[]
+	term: DtTerm
+	values: { key: string; label: string; value: string }[]
 }
+
 /*** types supporting Filter type ***/
 
 export type Tvs = CategoricalTvs | NumericTvs | ConditionTvs | GeneVariantTvs // | SampleLstTvs ...
 
 export type Filter = {
 	type: 'tvslst'
-	in?: boolean
-	join: 'and' | 'or'
+	in: boolean
+	join: string
 	tag?: string // client-side only
 	lst: ({ type: 'tvs'; tvs: Tvs } | Filter)[]
 }

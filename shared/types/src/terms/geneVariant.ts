@@ -1,4 +1,4 @@
-import type { MinBaseQ, BaseTerm, TermGroupSetting, BaseTW, TermValues, BaseGroupSet } from '../index.ts'
+import type { MinBaseQ, BaseTerm, TermGroupSetting, BaseTW, TermValues, BaseGroupSet, TermFilter } from '../index.ts'
 import type { TermSettingInstance } from '../termsetting.ts'
 
 // q types
@@ -20,10 +20,11 @@ export type GvQ = GvValuesQ | GvCustomGsQ
 // term types
 type GvBaseTerm = BaseTerm & {
 	type: 'geneVariant'
-	groupsetting: TermGroupSetting
+	groupsetting?: TermGroupSetting
+	filter?: TermFilter
 }
 
-export type GvGeneTerm = GvBaseTerm & {
+export type RawGvGeneTerm = GvBaseTerm & {
 	kind: 'gene'
 	gene: string
 	// chr,start,stop should exist together as a separate type called
@@ -34,20 +35,31 @@ export type GvGeneTerm = GvBaseTerm & {
 	stop?: number
 }
 
-export type GvCoordTerm = GvBaseTerm & {
+export type RawGvCoordTerm = GvBaseTerm & {
 	kind: 'coord'
 	chr: string
 	start: number
 	stop: number
 }
 
-export type GvTerm = GvGeneTerm | GvCoordTerm
+export type RawGvTerm = RawGvGeneTerm | RawGvCoordTerm
+
+export type GvTerm = RawGvTerm & {
+	groupsetting: TermGroupSetting
+	filter: TermFilter
+}
 
 // tw types
 export type RawGvValuesTW = BaseTW & {
 	type?: 'GvValuesTW'
-	term: GvTerm
+	term: RawGvTerm
 	q: RawGvValuesQ
+}
+
+export type RawGvCustomGsTW = BaseTW & {
+	type?: 'GvCustomGsTW'
+	term: RawGvTerm
+	q: RawGvCustomGsQ
 }
 
 export type GvValuesTW = BaseTW & {
@@ -56,20 +68,14 @@ export type GvValuesTW = BaseTW & {
 	q: GvValuesQ
 }
 
-export type RawGvCustomGsTW = BaseTW & {
-	type?: 'GvCustomGsTW'
-	term: GvTerm
-	q: RawGvCustomGsQ
-}
-
 export type GvCustomGsTW = BaseTW & {
 	type: 'GvCustomGsTW'
 	term: GvTerm
 	q: GvCustomGsQ
 }
 
-export type GvTW = GvValuesTW | GvCustomGsTW
 export type RawGvTW = RawGvValuesTW | RawGvCustomGsTW
+export type GvTW = GvValuesTW | GvCustomGsTW
 
 // termsetting types
 export type GeneVariantTermSettingInstance = TermSettingInstance & {
@@ -82,6 +88,7 @@ export type GeneVariantTermSettingInstance = TermSettingInstance & {
 // miscellaneous types
 export type DtTerm = {
 	id: string
+	query: string
 	name: string
 	name_noOrigin: string
 	parent_id: any

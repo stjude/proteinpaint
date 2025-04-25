@@ -19,7 +19,7 @@ import { set_hiddenvalues } from '#termsetting'
 import { dtTerms } from '#shared/common.js'
 import { getWrappedTvslst } from '#filter/filter'
 
-export class GeneVariantBase extends TwBase {
+export class GvBase extends TwBase {
 	// type, isAtomic, $id are set in ancestor base classes
 	term: GvTerm
 
@@ -116,7 +116,7 @@ export class GeneVariantBase extends TwBase {
 				return await GvCustomGS.fill(tw)
 
 			default:
-				throw `tw.type='${tw.type}' is not supported by GeneVariantBase.fill()`
+				throw `tw.type='${tw.type}' is not supported by GvBase.fill()`
 		}
 	}
 }
@@ -124,6 +124,7 @@ export class GeneVariantBase extends TwBase {
 // function to make a variant filter based on dts specified in dataset
 export async function mayMakeVariantFilter(tw: RawGvTW, vocabApi: VocabApi) {
 	if (tw.term.filter) return
+	if (!vocabApi.termdbConfig?.queries) throw 'termdbConfig.queries is missing'
 	const dtTermsInDs: DtTerm[] = [] // dt terms in dataset
 	const categories = await vocabApi.getCategories(tw.term)
 	for (const _t of dtTerms) {
@@ -154,7 +155,7 @@ export async function mayMakeVariantFilter(tw: RawGvTW, vocabApi: VocabApi) {
 	}
 }
 
-export class GvValues extends GeneVariantBase {
+export class GvValues extends GvBase {
 	// term, type, isAtomic, $id are set in ancestor base classes
 	q: GvValuesQ
 	#tw: GvValuesTW
@@ -173,7 +174,7 @@ export class GvValues extends GeneVariantBase {
 		return this.#tw
 	}
 
-	// See the relevant comments in the GeneVariantBase.fill() function above
+	// See the relevant comments in the GvBase.fill() function above
 	static async fill(tw: RawGvValuesTW): Promise<GvValuesTW> {
 		if (!tw.type) tw.type = 'GvValuesTW'
 		else if (tw.type != 'GvValuesTW') throw `expecting tw.type='GvValuesTW', got '${tw.type}'`
@@ -186,7 +187,7 @@ export class GvValues extends GeneVariantBase {
 	}
 }
 
-export class GvCustomGS extends GeneVariantBase {
+export class GvCustomGS extends GvBase {
 	// term, type, isAtomic, $id are set in ancestor base classes
 	q: GvCustomGsQ
 	groupset!: BaseGroupSet
@@ -207,7 +208,7 @@ export class GvCustomGS extends GeneVariantBase {
 		return this.#tw
 	}
 
-	// See the relevant comments in the GeneVariantBase.fill() function above
+	// See the relevant comments in the GvBase.fill() function above
 	static async fill(tw: RawGvCustomGsTW): Promise<GvCustomGsTW> {
 		if (!tw.type) tw.type = 'GvCustomGsTW'
 		else if (tw.type != 'GvCustomGsTW') throw `expecting tw.type='GvCustomGsTW', got '${tw.type}'`

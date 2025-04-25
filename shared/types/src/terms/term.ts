@@ -105,7 +105,6 @@ export type BaseTerm = {
 	included_types?: string[]
 	isleaf?: boolean
 	values?: TermValues
-	filter?: any
 }
 
 export type Term = BaseTerm & (NumericTerm | CategoricalTerm | ConditionTerm | GvTerm | SampleLstTerm | SnpsTerm)
@@ -120,15 +119,16 @@ export type ValuesGroup = {
 export type FilterGroup = {
 	name: string
 	type: 'filter'
-	filter: FilterGroupObj
+	filter: TermFilter & {
+		active: Filter // active filter
+		group: number // group index
+	}
 	uncomputable?: boolean
 }
 
-type FilterGroupObj = {
-	active: Filter // active filter
-	group: number // group index
-	opts: { joinWith: string[] }
-	terms: DtTerm[] // dt terms used to build frontend vocab for geneVariant term // TODO: generalize the term structure used here
+export type TermFilter = {
+	opts: { joinWith: string[] } // options for joining filters
+	terms: DtTerm[] // terms used to build a frontend vocab that will be used for filtering // TODO: generalize the term structure used here
 }
 
 export type GroupEntry = ValuesGroup | FilterGroup
@@ -161,7 +161,7 @@ export type TermGroupSetting =
 
 export type BaseTW = {
 	id?: string
-	$id: string
+	$id?: string
 	isAtomic?: true
 	// plot-specific customizations that are applied to a tw copy
 	// todo: should rethink these
