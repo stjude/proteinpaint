@@ -22,7 +22,7 @@ const mockSettings = {
 	method: 'edgeR',
 	minCount: 10,
 	minTotalCount: 15,
-	pValue: 0.05,
+	pValue: 1.3,
 	pValueType: 'adjusted',
 	rankBy: 'abs(foldChange)',
 	showImages: false,
@@ -89,7 +89,7 @@ tape('init VolcanoViewModel', function (test) {
 	test.equal(viewModel.config, mockConfig, `Should properly set config`)
 	test.equal(viewModel.response, mockResponse, `Should properly set response`)
 	test.equal(viewModel.settings, mockSettings, `Should properly set settings`)
-	test.equal(viewModel.pValueCutoff, -Math.log10(mockSettings.pValue), `Should properly set pValueCutoff`)
+	test.equal(viewModel.pValueCutoff, mockSettings.pValue, `Should properly set pValueCutoff`)
 	test.equal(viewModel.termType, mockConfig.termType, 'Should properly set termType')
 	test.equal(viewModel.numSignificant, 1, 'Should properly set numSignificant')
 	test.equal(viewModel.numNonSignificant, 9, 'Should properly set numNonSignificant')
@@ -129,19 +129,19 @@ tape('setPlotDimensions', function (test) {
 	const viewModel = new VolcanoViewModel(mockConfig as any, mockResponse, mockSettings as any)
 
 	const plotDim = viewModel.setPlotDimensions()
-	test.deepEqual(plotDim.svg, { height: 560, width: 540 }, 'Should properly set svg')
-	test.deepEqual(plotDim.xAxisLabel, { x: 280, y: 500 }, 'Should properly set xAxisLabel')
+	test.deepEqual(plotDim.svg, { height: 590, width: 540 }, 'Should properly set svg')
+	test.deepEqual(plotDim.xAxisLabel, { x: 280, y: 510 }, 'Should properly set xAxisLabel')
 	// test.deepEqual(plotDim.xScale, { x: 90, y: 450, scale: scaleLinear()}, 'Should properly set xScale')
 	test.deepEqual(
 		plotDim.yAxisLabel,
-		{ text: '-log10(adjusted P value)', x: 23.333333333333332, y: 250 },
+		{ text: '-log10(adjusted P value)', x: 23.333333333333332, y: 240 },
 		'Should properly set yAxisLabel'
 	)
 	// test.deepEqual(plotDim.yScale, { x: 70, y: 30, scale: scaleLinear() }, 'Should properly set yScale')
-	test.deepEqual(plotDim.plot, { height: 400, width: 400, x: 90, y: 30 }, 'Should properly set plot')
+	test.deepEqual(plotDim.plot, { height: 400, width: 400, x: 90, y: 40 }, 'Should properly set plot')
 	test.deepEqual(
 		plotDim.logFoldChangeLine,
-		{ x: 158.5301591547412, y1: 30, y2: 430 },
+		{ x: 158.5301591547412, y1: 40, y2: 440 },
 		'Should properly set logFoldChangeLine'
 	)
 
