@@ -22,7 +22,7 @@ export async function evalSpecCovResults({ workspace, jsonExtract }) {
 
 	const coveredFilenames = Object.keys(relevantCoverage)
 	if (!coveredFilenames.length) return { ok: true }
-	const covFile = path.join(publicCovDir, `${workspace}-coverage.json`)
+	const covFile = path.join(publicCovDir, `${workspace.replaceAll('/', '-')}-coverage.json`)
 
 	let previousCoverage
 	try {
