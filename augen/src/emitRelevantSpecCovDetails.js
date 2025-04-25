@@ -67,7 +67,11 @@ export async function emitRelevantSpecCovDetails({ workspace, relevantSpecs, rep
 							subpath += '/'
 						}
 					}
-					if (!targetFile) continue
+					if (!targetFile) {
+						srcFile = `${reportDir}/${fname}.html`
+						if (fs.existsSync(srcFile)) targetFile = `${wsSpecsExtractsDir}/${fname}.html`
+						else continue
+					}
 				}
 			}
 
