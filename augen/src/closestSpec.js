@@ -35,7 +35,6 @@ export function getClosestSpec(dirname, relevantSubdirs = [], opts = {}) {
 	}
 
 	const workspace = dirname.replace(gitProjectRoot + '/', '')
-	const workspace_ = workspace + '/'
 	const branch = execSync(`git rev-parse --abbrev-ref HEAD`, { encoding: 'utf8' })
 
 	let changedFiles
@@ -63,6 +62,56 @@ export function getClosestSpec(dirname, relevantSubdirs = [], opts = {}) {
 	// value: array of filenames that the pattern applies for test coverage
 	const matchedByFile = {}
 	const matched = []
+
+	setMatchedSpecsByFile(matchedByFile, specs, matched, workspace, changedFiles, relevantSubdirs)
+	const changedSpecs = [...changedFiles].filter(f => f.includes('.spec.')).map(f => f.replace(workspace + '/', ''))
+	const dedupedMatched = [...new Set(matched)]
+	const scannedDirs = new Set()
+	const exclude = f => !changedFiles.has(f) && (f.endsWith('.js') || f.endsWith('.ts'))
+	for (const m of dedupedMatched) {
+		if (!m.includes('.spec.')) return
+		let dirname = path.dirname(m)
+		if (dirname.endsWith('/test')) dirname = path.dirname(dirname)
+		if (scannedDirs.has(dirname)) continue
+		scannedDirs.add(dirname)
+		const codeFiles = fs
+			.globSync(`*.*s`, { cwd: dirname })
+			.filter(exclude)
+			.map(f => `${dirname}/${f}`)
+		if (!codeFiles.length) continue
+		const unchangedMatchByFile = {}
+		const unchangedMatched = []
+		setMatchedSpecsByFile(
+			unchangedMatchByFile,
+			specs,
+			unchangedMatched,
+			workspace,
+			new Set(codeFiles.map(f => `${workspace}/${f}`)),
+			relevantSubdirs
+		)
+		for (const [f, mspecs] of Object.entries(unchangedMatchByFile)) {
+			if (changedFiles.has(f) || !changedSpecs.find(m => mspecs.includes(m))) continue
+			matchedByFile[f] = mspecs
+			for (const s of mspecs) {
+				if (!dedupedMatched.includes(s)) dedupedMatched.push(f)
+			}
+		}
+		//console.log(80, unchangedMatched, unchangedMatchByFile)
+	}
+
+	// const nonSpecCodeFiles = fs.globSync(`**/test/*.spec.*s`, { cwd: dirname, ignore })
+	// console.log(93, matchedByFile, matched)
+
+	return {
+		matchedByFile,
+		matched: dedupedMatched,
+		numUnit: dedupedMatched.filter(s => s.includes('.unit.spec.')).length,
+		numIntegration: dedupedMatched.filter(s => s.includes('.integration.spec.')).length
+	}
+}
+
+function setMatchedSpecsByFile(matchedByFile, specs, matched, workspace, changedFiles, relevantSubdirs) {
+	const workspace_ = workspace + '/'
 
 	for (const wf of changedFiles) {
 		if (!wf.startsWith(workspace_)) continue
@@ -117,13 +166,5 @@ export function getClosestSpec(dirname, relevantSubdirs = [], opts = {}) {
 				}
 			}
 		}
-	}
-
-	const dedupedMatched = [...new Set(matched)]
-	return {
-		matchedByFile,
-		matched: dedupedMatched,
-		numUnit: dedupedMatched.filter(s => s.includes('.unit.spec.')).length,
-		numIntegration: dedupedMatched.filter(s => s.includes('.integration.spec.')).length
 	}
 }
