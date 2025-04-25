@@ -335,14 +335,16 @@ export class MassAbout {
 				.attr('class', 'sja_menuoption')
 				.html(item.title)
 				.on('click', async () => {
-					//Set the active tab to toggle to the plots tab and wait for the tab to be set, otherwise the plotDiv is hidden when rendering and
-					//may cause issues. A known issue is that calling betBBox on a hidden div would return 0 as width and getMaxLabelWidth would return 0. This affects
-					// the legend rendering in plots like the scatter resulting in overlapping texts
+					/* First, set the active tab to toggle to the plots tab and wait for the tab to be set,
+					otherwise the plotDiv is hidden when rendering and
+					may cause issues. A known issue is that getMaxLabelWidth getBBox on a hidden div returns width=0
+					this affects the legend rendering in plots like the scatter resulting in overlapping texts
+					*/
 					await this.app.dispatch({
 						type: 'tab_set',
 						activeTab: 1
 					})
-					//First create the plot
+					// after switching tab so plot div is shown, dispatch to create the plot
 					this.app.dispatch({
 						type: 'plot_create',
 						id: getId(),
