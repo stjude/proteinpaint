@@ -2,6 +2,9 @@
 #![allow(non_snake_case)]
 use json::JsonValue;
 use r_mathlib;
+use rand::rngs::SmallRng;
+use rand::seq::SliceRandom;
+use rand::Rng;
 use rusqlite::{Connection, Result};
 use serde::{Deserialize, Serialize};
 use serde_json;
@@ -9,6 +12,7 @@ use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::env;
+use std::hash::Hash;
 use std::io;
 use std::time::Instant;
 
@@ -181,4 +185,217 @@ fn main() -> Result<()> {
         Err(error) => println!("Piping error: {}", error),
     }
     Ok(())
+}
+
+fn prerank(
+    weight: f64,
+    genes: &[String],
+    metric: &[f64],
+    gmt: &HashMap<&str, &[String]>,
+    nperm: usize,
+    min_size: usize,
+    max_size: usize,
+    seed: u64,
+) {
+    // NOTE: input must not contain duplcated genes
+
+    let weighted_metric: Vec<f64> = metric.iter().map(|x| x.abs().powf(weight)).collect();
+    // start to calculate
+    let mut es = EnrichmentScore::new(genes, nperm, seed, false, false);
+    // let end1 = Instant::now();
+    let gperm = es.gene_permutation(); // gene permutation, only record gene idx here
+    let mut summ = Vec::<GSEASummary>::new();
+
+    for (&term, &gset) in gmt.iter() {
+        // convert gene String --> Int
+        let gtag = es.gene.isin(gset);
+        let gidx = es.hit_index(&gtag);
+        if gidx.len() > max_size || gidx.len() < min_size {
+            continue;
+        }
+        let tag_indicators: Vec<Vec<f64>> = gperm.par_iter().map(|de| de.isin(&gidx)).collect();
+        let (ess, run_es) = es.enrichment_score_gene(&weighted_metric, &tag_indicators);
+        let esnull: Vec<f64> = if ess.len() > 1 {
+            ess[1..].to_vec()
+        } else {
+            Vec::new()
+        };
+        let gss = GSEASummary {
+            term: term.to_string(),
+            es: ess[0],
+            run_es: run_es,
+            hits: gidx,
+            esnull: esnull,
+            ..Default::default()
+        };
+        summ.push(gss);
+    }
+    // let end3 = Instant::now();
+    // println!("Calculation time: {:.2?}", end3.duration_since(end2));
+    //if nperm > 0 {
+    //    stat(&mut summ);
+    //}
+    //self.summaries = summ;
+    //self.indices.push((0..genes.len()).collect_vec());
+    //self.rankings.push(metric.to_owned());
+
+    // let end4 = Instant::now();
+    // println!("Statistical time: {:.2?}", end4.duration_since(end3));
+}
+
+struct EnrichmentScore {
+    // ranking metric
+    // metric: Vec<f64>,
+    //metric2d: Vec<Vec<f64>>,
+    pub gene: DynamicEnum<String>, //  Vec<String>, // gene names
+    nperm: usize,                  // number of permutations
+    single: bool,                  // single sample GSEA
+    scale: bool,                   // whether to scale ES value
+    rng: SmallRng,
+}
+
+/// Dynamic Enum
+#[derive(Debug, Clone)]
+pub struct DynamicEnum<T> {
+    _elt_to_idx: HashMap<T, usize>, // element to index
+    _idx_to_elt: Vec<T>,            // index to element
+    _num_indices: usize,            // size
+}
+
+impl<T> DynamicEnum<T>
+where
+    T: Eq + Hash + Clone,
+{
+    /// an empty object
+    pub fn new() -> Self {
+        DynamicEnum {
+            _num_indices: 0,
+            _idx_to_elt: Vec::<T>::new(),
+            _elt_to_idx: HashMap::<T, usize>::new(),
+        }
+    }
+    /// construct from vec
+    pub fn from(vec: &[T]) -> Self {
+        //let temp = vec.to_vec();
+        let v2m: HashMap<T, usize> = vec
+            .iter()
+            .enumerate()
+            .map(|(i, v)| (v.clone(), i))
+            .collect();
+        DynamicEnum {
+            _num_indices: v2m.len(),
+            _elt_to_idx: v2m,
+            _idx_to_elt: vec.to_vec(),
+        }
+    }
+    /// add element if new
+    /// return indices whether new or not
+    pub fn add_if_new(&mut self, element: T) -> usize {
+        if self._elt_to_idx.contains_key(&element) {
+            return *self._elt_to_idx.get(&element).unwrap();
+        }
+        let key = element.clone();
+        let idx = self._num_indices;
+        self._idx_to_elt.push(element);
+        self._elt_to_idx.insert(key, idx);
+        self._num_indices += 1;
+        return idx;
+    }
+    /// get index of element
+    pub fn index_of(&self, element: &T) -> Option<&usize> {
+        self._elt_to_idx.get(element)
+    }
+    pub fn index_of_any(&self, elements: &[T]) -> Vec<&usize> {
+        elements.iter().filter_map(|e| self.index_of(e)).collect()
+    }
+    #[allow(dead_code)]
+    pub fn contain_elt(&self, element: &T) -> bool {
+        self._elt_to_idx.contains_key(element)
+    }
+    /// get element at position of index
+    pub fn elt_of(&self, idx: usize) -> Option<&T> {
+        self._idx_to_elt.get(idx)
+    }
+    /// return indicator whether the self.elements in given elements (0: absent, 1: present)
+    pub fn isin(&self, elements: &[T]) -> Vec<f64> {
+        let mut _tag_indicator: Vec<f64> = vec![0.0; self._idx_to_elt.len()];
+        elements.iter().for_each(|e| {
+            if let Some(idx) = self.index_of(e) {
+                _tag_indicator[*idx] = 1.0;
+            }
+        });
+        return _tag_indicator;
+    }
+    pub fn size(&self) -> usize {
+        return self._num_indices;
+    }
+    pub fn get_vec(&self) -> &Vec<T> {
+        return &self._idx_to_elt;
+    }
+
+    /// inplace shuffle
+    pub fn shuffle<R>(&mut self, rng: &mut R)
+    where
+        R: Rng + ?Sized,
+    {
+        self._idx_to_elt.shuffle(rng);
+        self._idx_to_elt.iter().enumerate().for_each(|(i, e)| {
+            self._elt_to_idx.insert(e.clone(), i);
+        });
+    }
+}
+
+impl EnrichmentScore {
+    pub fn new(gene: &[String], nperm: usize, seed: u64, single: bool, scale: bool) -> Self {
+        // let rng = ThreadRng::default();
+        let rng = SmallRng::seed_from_u64(seed);
+        //let rng = thread_rng();
+        EnrichmentScore {
+            // metric: gene_metric,
+            gene: DynamicEnum::from(gene),
+            nperm: nperm + 1, // add 1 to kept track of original record
+            single: single,
+            scale: scale,
+            rng: rng,
+        }
+    }
+
+    pub fn hit_index(&self, tag_indicator: &[f64]) -> Vec<usize> {
+        tag_indicator
+            .iter()
+            .enumerate()
+            .filter_map(|(i, &t)| if t > 0.0 { Some(i) } else { None })
+            .collect()
+        // let mut hit_ind: Vec<usize> = Vec::new();
+        // for (i, b) in tag_indicator.iter().enumerate() {
+        //     if b > &0.0 {
+        //         hit_ind.push(i);
+        //     }
+        // }
+        // return hit_ind;
+    }
+
+    pub fn enrichment_score_gene(
+        &mut self,
+        metric: &[f64],
+        tag_indicators: &[Vec<f64>],
+    ) -> (Vec<f64>, Vec<f64>) {
+        // pararell computing
+        // let run_es: Vec<Vec<f64>> = tag_indicators
+        //     .par_iter()
+        //     .map(|tag| {
+        //         // implement the function in trait enable you to call self.methods in struct member closure!!!
+        //         self.running_enrichment_score(metric, tag)
+        //     })
+        //     .collect();
+        // let es: Vec<f64> = run_es.par_iter().map(|r| self.select_es(r)).collect();
+
+        let es: Vec<f64> = tag_indicators
+            .par_iter()
+            .map(|tag| self.fast_random_walk(metric, tag))
+            .collect();
+        let run_es = self.running_enrichment_score(metric, &tag_indicators[0]);
+
+        return (es, run_es);
+    }
 }
