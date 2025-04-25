@@ -35,7 +35,7 @@ export default class WSIViewer extends RxComponentInner {
 	}
 
 	async main(): Promise<void> {
-		const state = this.app.getState()
+		const state = structuredClone(this.state)
 		const settings = state.plots.find(p => p.id === this.id).settings as Settings
 		const holder = this.opts.holder
 
@@ -80,6 +80,43 @@ export default class WSIViewer extends RxComponentInner {
 		const activeImageExtent = activeImage?.getSource()?.getTileGrid()?.getExtent()
 
 		const map = this.getMap(wsimageLayers[settings.displayedImageIndex])
+		setTimeout(() => {
+			if (!activeImageExtent) return
+
+			// //hardcoded for prototyping
+			//first feature for the first image in geojson
+			// // const coords = [[ 90624, 11776 ], [ 91136, 11776 ], [ 91136, 12288 ], [ 90624, 12288 ]]
+			//first feature for the second image in geojson
+			const coords = [
+				[77312, 11776],
+				[77824, 11776],
+				[77824, 12288],
+				[77312, 12288]
+			]
+			const imageHeight = activeImageExtent[3]
+			//Calculate the center of the annotation
+			const xyAvg = coords
+				.reduce(
+					(acc, [x, y]) => {
+						acc[0] += x
+						/** Zoomify tile coordinates start top-left but OpenLayers start bottom-left.
+						 * This flips the feature coordinates to match OpenLayers coordinates.*/
+						const invertedY = imageHeight - y
+						acc[1] += invertedY
+						return acc
+					},
+					[0, 0]
+				)
+				.map(sum => sum / coords.length)
+
+			const view = map.getView()
+			view.animate({
+				center: xyAvg,
+				zoom: 4,
+				duration: 2000
+			})
+		}, 500)
+
 		const hasOverlay = wsimageLayers[settings.displayedImageIndex].overlay != null
 
 		this.addControls(map, activeImage, hasOverlay)
@@ -255,7 +292,8 @@ export default class WSIViewer extends RxComponentInner {
 			view: new View({
 				projection: projection,
 				resolutions: activeImage.getSource()?.getTileGrid()?.getResolutions(),
-				constrainOnlyCenter: true
+				constrainOnlyCenter: true,
+				center: extent || [0, 0]
 			})
 		})
 	}
