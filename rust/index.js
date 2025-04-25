@@ -8,8 +8,9 @@ const path = require('path'),
 const execPromise = promisify(exec)
 
 // check if rust binary directory exists and is not empty
-const bindir = path.join(__dirname, '/target/release/')
-if (!fs.existsSync(bindir)) throw `missing rust binary directory='${bindir}'`
+const binaryDir = path.join(__dirname, '/target/release/')
+if (!fs.existsSync(binaryDir)) throw `missing rust binary directory='${binaryDir}'`
+if (!fs.readdirSync(binaryDir).length) throw `empty rust binary directory='${binaryDir}'`
 
 exports.run_rust = function (binfile, input_data) {
 	return new Promise((resolve, reject) => {
