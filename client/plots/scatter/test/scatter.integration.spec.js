@@ -1,5 +1,5 @@
 import tape from 'tape'
-import * as helpers from '../../test/front.helpers.js'
+import * as helpers from '../../../test/front.helpers.js'
 import * as d3color from 'd3-color'
 import * as d3s from 'd3-selection'
 import {
@@ -10,8 +10,8 @@ import {
 	detectChildStyle,
 	detectGte,
 	detectOne
-} from '../../test/test.helpers'
-import { openSummaryPlot, openPlot, getSamplelstTW } from '../groups'
+} from '../../../test/test.helpers'
+import { openSummaryPlot, openPlot, getSamplelstTW } from '../../../mass/groups.js'
 import { rgb } from 'd3-color'
 import { mclass } from '#shared/common.js'
 
