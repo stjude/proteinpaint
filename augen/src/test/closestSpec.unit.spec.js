@@ -44,7 +44,10 @@ const relevantSubdirs = {
 tape('simple getClosestSpec()', test => {
 	const changedFiles = ['D0/rel0/aaa.js', 'D0/ignored/ccc.js']
 	const D0dirname = path.join(gitProjectRoot, 'D0')
-	const closestSpecs = getClosestSpec(D0dirname, relevantSubdirs.toy, { specs: specs.toy, changedFiles })
+	const closestSpecs = getClosestSpec(D0dirname, relevantSubdirs.toy, {
+		specs: specs.toy,
+		changedFiles
+	})
 	test.deepEqual(
 		closestSpecs,
 		{
@@ -56,6 +59,30 @@ tape('simple getClosestSpec()', test => {
 			numIntegration: 1
 		},
 		`should return the expected matched specs`
+	)
+	test.end()
+})
+
+tape('unchanged code files that are affected by changed spec files', test => {
+	const changedFiles = ['D0/rel0/test/aaa.unit.spec.js']
+	const D0dirname = path.join(gitProjectRoot, 'D0')
+	const closestSpecs = getClosestSpec(D0dirname, relevantSubdirs.toy, {
+		specs: specs.toy,
+		changedFiles,
+		codeFiles: ['rel0/aaa.js']
+	})
+	test.deepEqual(
+		closestSpecs,
+		{
+			matchedByFile: {
+				'rel0/test/aaa.unit.spec.js': ['rel0/test/aaa.unit.spec.js'],
+				'rel0/aaa.js': ['rel0/test/aaa.unit.spec.js', 'rel0/test/aaa.integration.spec.js']
+			},
+			matched: ['rel0/test/aaa.unit.spec.js', 'rel0/test/aaa.integration.spec.js'],
+			numUnit: 1,
+			numIntegration: 1
+		},
+		`should return the expected matched specs for unchanged but affected code file`
 	)
 	test.end()
 })
