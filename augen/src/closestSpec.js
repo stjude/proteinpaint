@@ -139,7 +139,7 @@ function setMatchedSpecsByFile(matchedByFile, specs, matched, workspace, changed
 		if (!isRelevant) continue
 		if (f.includes('.unit.spec.') || f.includes('.integration.spec.')) {
 			matchedByFile[f] = [f]
-			matched.push(f)
+			if (!matched.includes(f)) matched.push(f)
 			continue
 		}
 		matchedByFile[f] = [] // default no matched spec, may be replaced below
@@ -152,6 +152,11 @@ function setMatchedSpecsByFile(matchedByFile, specs, matched, workspace, changed
 			const truncatedFilename = fileNameSegments.join('.')
 			const unitName = `${truncatedFilename}.unit.spec.`
 			const integrationName = `${truncatedFilename}.integration.spec.`
+			// To simplify relevant spec detection, matched unit and integration specs are always
+			// run together if both are available. Running them separately will result in code files
+			// having two different spec coverage results to track, which contradicts the goal of
+			// trying to have one reference coverage run to guide writing effective tests for
+			// a given code file.
 			const matchedSpecs = specs.filter(s => {
 				if (!s.includes(unitName) && !s.includes(integrationName)) return false
 				const spath = s.slice(0, s.indexOf(`/test/`))

@@ -42,6 +42,9 @@ export async function evalSpecCovResults({ workspace, jsonExtract }) {
 	const failedCoverage = new Map()
 	const getPct = v => (Object.hasOwn(v, 'pct') ? v.pct : 0)
 	for (const f of coveredFilenames) {
+		// TODO: coveredFilenames is Object.keys(relevantCoverage), not sure why this
+		// was being detected as undefined sometimes and giving an error?
+		// maybe the filename was being truncated as object key???
 		if (!relevantCoverage[f]) continue
 		const hasPrev = Object.hasOwn(previousCoverage, f) && previousCoverage[f] !== undefined
 		{
