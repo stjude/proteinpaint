@@ -40,17 +40,18 @@ export function getClosestSpec(dirname, relevantSubdirs = [], opts = {}) {
 	let changedFiles
 	if (opts.changedFiles) changedFiles = opts.changedFiles
 	/* c8 ignore start */ else {
-		const modifiedFiles = execSync(`git diff --name-status ${commitRef}..${branch}`, { encoding: 'utf8' })
-		// only added and modified code files should be tested
-		const committedFiles = modifiedFiles
-			.split('\n')
-			.filter(l => l[0] === 'A' || l[0] === 'M')
-			.map(l => l.split('\t').pop())
-
-		// detect staged files for local testing, should not have any in github CI
-		// const stagedFiles = execSync(`git diff --cached --name-only | sed 's| |\\ |g'`, { encoding: 'utf8' })
-		const diffFiles = execSync(`git diff --name-only HEAD | sed 's| |\\ |g'`, { encoding: 'utf8' })
-		changedFiles = [...committedFiles, ...diffFiles.trim().split('\n')]
+		const unstagedChanges = execSync(`git diff -M --name-status ${commitRef}`, { encoding: 'utf8' })
+		const stagedChanges = execSync(`git diff -M --staged --name-status ${commitRef}`, { encoding: 'utf8' })
+		const committedChanges = execSync(`git diff -M --name-status ${commitRef}..${branch}`, { encoding: 'utf8' })
+		const modifiedFiles = [
+			...new Set([
+				...unstagedChanges.trim().split('\n'),
+				...stagedChanges.trim().split('\n'),
+				...committedChanges.trim().split('\n')
+			])
+		]
+		// only added, modified, and renamed code files should be tested, skip deleted files
+		changedFiles = modifiedFiles.filter(l => l[0] === 'A' || l[0] === 'M' || l[0] === 'R').map(l => l.split('\t').pop())
 	}
 	/* c8 ignore stop */
 	changedFiles = changedFiles.filter(f => codeFileExt.has(path.extname(f)))
@@ -66,11 +67,16 @@ export function getClosestSpec(dirname, relevantSubdirs = [], opts = {}) {
 	setMatchedSpecsByFile(matchedByFile, specs, matched, workspace, changedFiles, relevantSubdirs)
 
 	// detect unchanged code files that may be affected by changes to a spec file
-	const changedSpecs = [...changedFiles].filter(f => f.includes('.spec.')).map(f => f.replace(workspace + '/', ''))
+	const changedSpecs = [...changedFiles]
+		.filter(f => f.includes('.unit.spec.') || f.includes('.integration.spec.'))
+		.map(f => f.replace(workspace + '/', ''))
 	const dedupedMatched = [...new Set(matched)]
 	const scannedDirs = new Set()
 	const exclude = f =>
-		!changedFiles.has(f) && !f.includes('.spec.') && !f.includes('/test/') && (f.endsWith('.js') || f.endsWith('.ts'))
+		!changedFiles.has(f) &&
+		(!f.includes('.unit.spec.') || !f.includes('.integration.spec.')) &&
+		!f.includes('/test/') &&
+		(f.endsWith('.js') || f.endsWith('.ts'))
 	for (const m of dedupedMatched) {
 		if (!m.includes('.spec.')) continue
 		let dirname = path.dirname(m)
@@ -101,7 +107,6 @@ export function getClosestSpec(dirname, relevantSubdirs = [], opts = {}) {
 				if (!dedupedMatched.includes(s)) dedupedMatched.push(s)
 			}
 		}
-		//console.log(80, unchangedMatched, unchangedMatchByFile)
 	}
 
 	// const nonSpecCodeFiles = fs.globSync(`**/test/*.spec.*s`, { cwd: dirname, ignore })
@@ -132,7 +137,7 @@ function setMatchedSpecsByFile(matchedByFile, specs, matched, workspace, changed
 			}
 		}
 		if (!isRelevant) continue
-		if (f.includes('.spec.')) {
+		if (f.includes('.unit.spec.') || f.includes('.integration.spec.')) {
 			matchedByFile[f] = [f]
 			matched.push(f)
 			continue
@@ -159,7 +164,7 @@ function setMatchedSpecsByFile(matchedByFile, specs, matched, workspace, changed
 			}
 		}
 
-		if (!matched.length) {
+		if (!matchedByFile[f].length) {
 			// try to find the closest matching spec name based on directory name
 			const dirPath = path.dirname(f)
 			const dirPathSegments = dirPath.split('/')
