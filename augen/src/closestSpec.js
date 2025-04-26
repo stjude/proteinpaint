@@ -64,20 +64,25 @@ export function getClosestSpec(dirname, relevantSubdirs = [], opts = {}) {
 	const matched = []
 
 	setMatchedSpecsByFile(matchedByFile, specs, matched, workspace, changedFiles, relevantSubdirs)
+
+	// detect unchanged code files that may be affected by changes to a spec file
 	const changedSpecs = [...changedFiles].filter(f => f.includes('.spec.')).map(f => f.replace(workspace + '/', ''))
 	const dedupedMatched = [...new Set(matched)]
 	const scannedDirs = new Set()
-	const exclude = f => !changedFiles.has(f) && (f.endsWith('.js') || f.endsWith('.ts'))
+	const exclude = f =>
+		!changedFiles.has(f) && !f.includes('.spec.') && !f.includes('/test/') && (f.endsWith('.js') || f.endsWith('.ts'))
 	for (const m of dedupedMatched) {
-		if (!m.includes('.spec.')) return
+		if (!m.includes('.spec.')) continue
 		let dirname = path.dirname(m)
 		if (dirname.endsWith('/test')) dirname = path.dirname(dirname)
-		if (scannedDirs.has(dirname)) continue
+		if (scannedDirs.has(dirname) || (!opts.codeFiles && !fs.existsSync(dirname))) continue
 		scannedDirs.add(dirname)
-		const codeFiles = fs
-			.globSync(`*.*s`, { cwd: dirname })
-			.filter(exclude)
-			.map(f => `${dirname}/${f}`)
+		const codeFiles =
+			opts.codeFiles ||
+			fs
+				.globSync(['*.*s', '**/*.*s'], { cwd: dirname })
+				.filter(exclude)
+				.map(f => `${dirname}/${f}`)
 		if (!codeFiles.length) continue
 		const unchangedMatchByFile = {}
 		const unchangedMatched = []
@@ -93,7 +98,7 @@ export function getClosestSpec(dirname, relevantSubdirs = [], opts = {}) {
 			if (changedFiles.has(f) || !changedSpecs.find(m => mspecs.includes(m))) continue
 			matchedByFile[f] = mspecs
 			for (const s of mspecs) {
-				if (!dedupedMatched.includes(s)) dedupedMatched.push(f)
+				if (!dedupedMatched.includes(s)) dedupedMatched.push(s)
 			}
 		}
 		//console.log(80, unchangedMatched, unchangedMatchByFile)
@@ -127,7 +132,11 @@ function setMatchedSpecsByFile(matchedByFile, specs, matched, workspace, changed
 			}
 		}
 		if (!isRelevant) continue
-
+		if (f.includes('.spec.')) {
+			matchedByFile[f] = [f]
+			matched.push(f)
+			continue
+		}
 		matchedByFile[f] = [] // default no matched spec, may be replaced below
 
 		const fileName = path.basename(f)
