@@ -67,22 +67,21 @@ export class ScatterLasso {
 				if ('sampleId' in data && !(data.hidden['category'] || data.hidden['shape'])) this.selectedItems.push(item)
 			}
 			chart.lasso.notSelectedItems().attr('transform', c => this.model.transform(chart, c))
-
-			this.showLassoMenu(dragEnd.sourceEvent)
+			const samples = this.selectedItems.map(item => item.__data__)
+			this.showLassoMenu(dragEnd.sourceEvent, samples)
 		}
 	}
 
-	showLassoMenu(event) {
-		const samples = this.selectedItems.map(item => item.__data__)
+	showLassoMenu(event, samples) {
 		this.view.dom.tip.clear().hide()
-		if (this.selectedItems.length == 0) return
+		if (samples.length == 0) return
 		this.view.dom.tip.show(event.clientX, event.clientY)
 
 		const menuDiv = this.view.dom.tip.d.append('div')
 		menuDiv
 			.append('div')
 			.attr('class', 'sja_menuoption sja_sharp_border')
-			.text(`List ${this.selectedItems.length} samples`)
+			.text(`List ${samples.length} samples`)
 			.on('click', event => {
 				this.view.dom.tip.hide()
 				this.showTable(
