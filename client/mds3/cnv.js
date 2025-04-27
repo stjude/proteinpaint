@@ -187,8 +187,8 @@ function plotOneSegment(c, y, rowheight, tk, block, sample) {
 		.attr('fill', Number.isFinite(c.value) ? tk.cnv.colorScale(c.value) : mclass[c.class].color)
 		.on('mouseover', event => {
 			event.target.setAttribute('stroke', 'black')
-			tk.itemtip.clear().show(event.clientX, event.clientY)
-			const table = table2col({ holder: tk.itemtip.d })
+			tk.hovertip.clear().show(event.clientX, event.clientY)
+			const table = table2col({ holder: tk.hovertip.d })
 			const cnv = structuredClone(c)
 
 			if (sample) {
@@ -200,7 +200,7 @@ function plotOneSegment(c, y, rowheight, tk, block, sample) {
 		})
 		.on('mouseout', event => {
 			event.target.setAttribute('stroke', '')
-			tk.itemtip.hide()
+			tk.hovertip.hide()
 		})
 }
 

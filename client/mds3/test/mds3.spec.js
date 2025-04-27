@@ -374,7 +374,7 @@ tape('GDC - sunburst', test => {
 
 		if (test._ok) {
 			holder.remove()
-			//tk.itemtip.d.remove()
+			tk.itemtip.d.remove()
 		}
 		test.end()
 	}
