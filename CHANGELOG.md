@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- Converting Rust workspace to ESM and update of README to reflect that. Enabled Fisher and Wilcoxon Rust tests.
+
 
 ## 2.120.1
 
