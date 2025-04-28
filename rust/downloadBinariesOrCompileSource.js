@@ -6,11 +6,12 @@ import path from 'path'
 import { exec } from 'child_process'
 import * as tar from 'tar'
 
+// Setting up directory name
+const __dirname = import.meta.dirname
+
 // Read package.json
 const packageJson = JSON.parse(fs.readFileSync(path.join(__dirname, 'package.json'), 'utf8'))
 const { version, pp_release_tag } = packageJson
-
-const __dirname = import.meta.dirname
 
 const targetDirectory = './target/release'
 
