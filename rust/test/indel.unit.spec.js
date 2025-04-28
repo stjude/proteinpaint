@@ -198,7 +198,7 @@ const examples = [
 	// one object for each example
 
 	// additional examples from separate script
-	...additionalExamples.examples,
+	...additionalExamples,
 
 	{
 		comment: '8-bp insertion at CBL exon 10',
