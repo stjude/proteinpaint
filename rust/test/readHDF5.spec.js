@@ -17,7 +17,7 @@
 
 // Import necessary modules
 import tape from 'tape'
-import { run_rust } from '@sjcrh/proteinpaint-rust'
+import run_rust from '@sjcrh/proteinpaint-rust'
 import path from 'path'
 
 // Path to the test HDF5 file containing gene expression data

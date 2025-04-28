@@ -11,8 +11,8 @@ inside this folder, run test as "% node wilcoxonTest.js"
 *********************************************/
 
 // Import necessary modules
-import { tape } from 'tape'
-import { run_rust } from '@sjcrh/proteinpaint-rust'
+import tape from 'tape'
+import run_rust from '@sjcrh/proteinpaint-rust'
 
 const testData = [
 	// len=10

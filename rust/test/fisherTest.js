@@ -8,8 +8,8 @@ Run test script as follows (from 'proteinpaint/'):
 *********************************************/
 
 // Import necessary modules
-import { tape } from 'tape'
-import { run_rust } from '@sjcrh/proteinpaint-rust'
+import tape from 'tape'
+import run_rust from '@sjcrh/proteinpaint-rust'
 
 // Fisher's exact test
 tape('test #1', async function (test) {

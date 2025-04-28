@@ -1,8 +1,8 @@
 // Import necessary modules
-import { run_rust } from '@sjcrh/proteinpaint-rust'
+import run_rust from '@sjcrh/proteinpaint-rust'
 import tape from 'tape'
 import additionalExamples from './indel.examples.js'
-// import { utils } from '@sjcrh/proteinpaint-utils'
+// import utils from '@sjcrh/proteinpaint-utils'
 
 /*
 to compile rust, see server/utils/rust/README.md

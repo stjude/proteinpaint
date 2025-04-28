@@ -1,6 +1,6 @@
 // Import necessary modules
 import tape from 'tape'
-import { run_rust } from '@sjcrh/proteinpaint-rust'
+import run_rust from '@sjcrh/proteinpaint-rust'
 
 tape.skip('indel', async test => {
 	const message = 'should match the expected indel output'
