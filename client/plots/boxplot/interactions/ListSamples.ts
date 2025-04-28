@@ -112,7 +112,7 @@ export class ListSamples {
 		]
 	}
 
-	isContinuousOrBinned(tw2: any) {
+	isContinuousOrBinned(tw2: TermWrapper) {
 		return (
 			tw2.q?.mode === 'continuous' || (['float', 'integer'].includes(tw2.term?.type) && this.plot.overlayBins != null)
 		)
