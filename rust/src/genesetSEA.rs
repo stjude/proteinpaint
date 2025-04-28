@@ -16,6 +16,7 @@ use std::collections::HashSet;
 use std::env;
 use std::hash::Hash;
 use std::io;
+use std::simd::f64x1;
 use std::time::Instant;
 
 #[allow(non_camel_case_types)]
@@ -58,9 +59,12 @@ fn main() -> Result<()> {
                         Some(genesetgroup_string) => genesetgroup = genesetgroup_string.to_string(),
                         None => panic!("genesetgroup is missing"),
                     }
-                    let sample_genes_input: &JsonValue = &json_string["sample_genes"];
+                    let sample_genes_input: &JsonValue = &json_string["genes"];
                     let sample_genes: Vec<&str> =
                         sample_genes_input.as_str().unwrap().split(",").collect();
+                    let fold_change_input: &JsonValue = &json_string["fold_change"];
+                    let fold_change: Vec<f64> =
+                        fold_change_input.as_str().unwrap().split(",").collect();
                     let mut pathway_p_values: Vec<pathway_p_value> = Vec::with_capacity(10000);
 
                     let genedb_input: &JsonValue = &json_string["genedb"];
@@ -151,14 +155,14 @@ fn main() -> Result<()> {
                                         //println!("gene_stmt:{:?}", gene_stmt);
 
                                         let mut rows = gene_stmt.query([])?;
-                                        let mut names = HashSet::<String>::new();
+                                        let mut names = Vec::<String>::new();
                                         while let Some(row) = rows.next()? {
                                             let a: String = row.get(0)?;
                                             let input_gene_json = json::parse(&a);
                                             match input_gene_json {
                                                 Ok(json_genes) => {
                                                     for json_iter in 0..json_genes.len() {
-                                                        names.insert(
+                                                        names.push(
                                                             json_genes[json_iter]["symbol"]
                                                                 .to_string(),
                                                         );
@@ -171,6 +175,26 @@ fn main() -> Result<()> {
                                                 }
                                             }
                                         }
+                                        let mut map: HashMap<&str, Vec<String>> = HashMap::new();
+                                        map.insert(&n.GO_id, names);
+                                        let nperm = 1000; // Will be later defined in client side
+                                        let min_size = 15; // Will be later defined in client side
+                                        let max_size = 100; // Will be later defined in client side
+                                        let seed = 1; // Will be later defined in client side
+                                        let sample_coding_genes_vec: Vec<String> =
+                                            sample_coding_genes.into_iter().collect();
+                                        let fold_change_vec: Vec<String> =
+                                            fold_change.into_iter().collect();
+                                        prerank(
+                                            1.0,
+                                            &sample_coding_genes_vec,
+                                            &fold_change_vec,
+                                            map,
+                                            nperm,
+                                            min_size,
+                                            max_size,
+                                            seed,
+                                        );
                                     }
                                     Err(_) => {
                                         println!("GO term not found!")
