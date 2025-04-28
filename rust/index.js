@@ -1,18 +1,20 @@
-const fs = require('fs')
-const path = require('path'),
-	{ spawn, exec } = require('child_process'),
-	Readable = require('stream').Readable,
-	Transform = require('stream').Transform,
-	{ promisify } = require('util')
+// Import necessary modules
+import fs from 'fs'
+import path from 'path'
+import { spawn, exec } from 'child_process'
+import { Readable, Transform } from 'stream'
+import { promisify } from 'util'
+
+const __dirname = import.meta.dirname
 
 const execPromise = promisify(exec)
 
-// check if rust binary directory exists and is not empty
+// Check if rust binary directory exists and is not empty
 const binaryDir = path.join(__dirname, '/target/release/')
 if (!fs.existsSync(binaryDir)) throw `missing rust binary directory='${binaryDir}'`
 if (!fs.readdirSync(binaryDir).length) throw `empty rust binary directory='${binaryDir}'`
 
-exports.run_rust = function (binfile, input_data) {
+export function run_rust(binfile, input_data) {
 	return new Promise((resolve, reject) => {
 		const binpath = path.join(__dirname, '/target/release/', binfile)
 		const ps = spawn(binpath)
@@ -52,7 +54,7 @@ exports.run_rust = function (binfile, input_data) {
 	})
 }
 
-exports.stream_rust = function (binfile, input_data, emitJson) {
+export function stream_rust(binfile, input_data, emitJson) {
 	const binpath = path.join(__dirname, '/target/release/', binfile)
 
 	const ps = spawn(binpath)

@@ -7,11 +7,12 @@ Run test script as follows (from 'proteinpaint/'):
 
 *********************************************/
 
-const tape = require('tape')
-const run_rust = require('@sjcrh/proteinpaint-rust').run_rust
+// Import necessary modules
+import { tape } from 'tape'
+import { run_rust } from '@sjcrh/proteinpaint-rust'
 
 // Fisher's exact test
-tape('test #1', async function(test) {
+tape('test #1', async function (test) {
 	const input = [
 		{ index: 0, n1: 605, n2: 2050, n3: 503, n4: 1895 },
 		{ index: 1, n1: 407, n2: 2248, n3: 329, n4: 2069 },
@@ -33,7 +34,7 @@ tape('test #1', async function(test) {
 })
 
 // FIsher's exact test and low sample size
-tape('test #2', async function(test) {
+tape('test #2', async function (test) {
 	const input = [
 		{ index: 0, n1: 1, n2: 23, n3: 0, n4: 32 },
 		{ index: 6, n1: 10, n2: 22, n3: 9, n4: 15 },
@@ -54,7 +55,7 @@ tape('test #2', async function(test) {
 })
 
 // Fisher's exact test
-tape('test #3', async function(test) {
+tape('test #3', async function (test) {
 	const input = [
 		{ index: 0, n1: 3, n2: 3, n3: 15, n4: 32 },
 		{ index: 6, n1: 10, n2: 22, n3: 9, n4: 15 },
@@ -76,7 +77,7 @@ tape('test #3', async function(test) {
 })
 
 //Fisher's exact test with FDR
-tape('test #5', async function(test) {
+tape('test #5', async function (test) {
 	const input = [
 		{ index: 1, n1: 3, n2: 29, n3: 3, n4: 21 },
 		{ index: 2, n1: 3, n2: 21, n3: 3, n4: 29 },
@@ -99,7 +100,7 @@ tape('test #5', async function(test) {
 })
 
 //Fisher's exact test with FDR, no skipped tests
-tape('test #6', async function(test) {
+tape('test #6', async function (test) {
 	const input = [
 		{ index: 0, n1: 605, n2: 2050, n3: 503, n4: 1895 },
 		{ index: 1, n1: 503, n2: 1895, n3: 605, n4: 2050 },
@@ -203,7 +204,7 @@ tape('test #6', async function(test) {
 })
 
 //Fisher's exact test with FDR, have skipped tests
-tape('test #7', async function(test) {
+tape('test #7', async function (test) {
 	const input = [
 		{ index: 0, n1: 214, n2: 2057, n3: 134, n4: 1954 },
 		{ index: 1, n1: 134, n2: 1954, n3: 214, n4: 2057 },
@@ -233,7 +234,7 @@ tape('test #7', async function(test) {
 })
 
 //chi-square test with bon, have skipped tests
-tape('test #8', async function(test) {
+tape('test #8', async function (test) {
 	const input = [
 		{ index: 0, n1: 214, n2: 2057, n3: 134, n4: 1954 },
 		{ index: 1, n1: 134, n2: 1954, n3: 214, n4: 2057 },

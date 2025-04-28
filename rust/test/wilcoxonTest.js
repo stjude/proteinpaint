@@ -10,8 +10,9 @@ inside this folder, run test as "% node wilcoxonTest.js"
 
 *********************************************/
 
-const tape = require('tape')
-const run_rust = require('@sjcrh/proteinpaint-rust').run_rust
+// Import necessary modules
+import { tape } from 'tape'
+import { run_rust } from '@sjcrh/proteinpaint-rust'
 
 const testData = [
 	// len=10
