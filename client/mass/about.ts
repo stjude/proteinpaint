@@ -333,6 +333,7 @@ export class MassAbout {
 				.style('display', 'inline-block')
 				.style('margin', '5px')
 				.attr('class', 'sja_menuoption')
+				.attr('data-testid', 'sjpp-custom-active-item-btn')
 				.html(item.title)
 				.on('click', async () => {
 					/* First, set the active tab to toggle to the plots tab and wait for the tab to be set,

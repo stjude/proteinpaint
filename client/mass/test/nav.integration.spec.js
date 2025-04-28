@@ -1,6 +1,6 @@
 import tape from 'tape'
 import * as helpers from '../../test/front.helpers.js'
-import { sleep, detectLst, detectOne, detectGte, whenVisible } from '../../test/test.helpers.js'
+import { detectLst, detectOne } from '../../test/test.helpers.js'
 
 /*
 tests:
@@ -181,6 +181,7 @@ tape('filter subheader and tab', function (test) {
 // })
 
 tape('with_cohortHtmlSelect', function (test) {
+	test.timeoutAfter(3000)
 	runpp({
 		state: {
 			nav: { header_mode: 'with_cohortHtmlSelect' }

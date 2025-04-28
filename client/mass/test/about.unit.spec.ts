@@ -210,15 +210,6 @@ tape('.initActiveItems()', test => {
 	test.true(itemNode, 'Should render a node as activeItem')
 	test.equal(itemNode.firstChild.innerHTML, itemTitle, 'activeItem first child dom prints correct item title')
 
-	//Will move to integration test
-	// // mock dispatch method and finish test in callback
-	// mockAbout.app.dispatch = async () => {
-	// 	test.ok('Should dispatch on clicking activeItem')
-	// 	if (test['_ok']) holder.remove() // must not use `if(test._ok)` to avoid tsc err
-	// 	test.end()
-	// }
-
-	// itemNode.firstChild.click() // should call this.app.dispatch()
-	if (test['_ok']) holder.remove() // must not use `if(test._ok)` to avoid tsc err
+	if (test['_ok']) holder.remove()
 	test.end()
 })
