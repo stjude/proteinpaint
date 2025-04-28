@@ -5,6 +5,7 @@ import path from 'path'
 import serverconfig from '#src/serverconfig.js'
 import { run_python } from '@sjcrh/proteinpaint-python'
 import { mayLog } from '#src/helpers.ts'
+import { Cache } from '#src/Cache.ts'
 
 export const api: RouteApi = {
 	endpoint: 'genesetEnrichment',
@@ -54,6 +55,14 @@ async function run_genesetEnrichment_analysis(
 	genomes: any
 ): Promise<GenesetEnrichmentResponse | string> {
 	if (!genomes[q.genome].termdbs) throw 'termdb database is not available for ' + q.genome
+
+	const cache = new Cache({
+		cachedir: serverconfig.cachedir_gsea,
+		fileExtensions: ['.pkl']
+	})
+
+	//Using default wait time of 1 minute
+	await cache.mayResetCacheCheckTimeout(cache.checkWait)
 
 	const genesetenrichment_input = {
 		genes: q.genes,
