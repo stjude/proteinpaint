@@ -1,5 +1,5 @@
 // Import necessary modules
-import run_rust from '@sjcrh/proteinpaint-rust'
+import { run_rust } from '@sjcrh/proteinpaint-rust'
 import tape from 'tape'
 import additionalExamples from './indel.examples.js'
 // import utils from '@sjcrh/proteinpaint-utils'
