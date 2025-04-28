@@ -5,6 +5,8 @@ use r_mathlib;
 use rand::rngs::SmallRng;
 use rand::seq::SliceRandom;
 use rand::Rng;
+use rand::SeedableRng;
+use rayon::prelude::*;
 use rusqlite::{Connection, Result};
 use serde::{Deserialize, Serialize};
 use serde_json;
@@ -243,6 +245,77 @@ fn prerank(
     // println!("Statistical time: {:.2?}", end4.duration_since(end3));
 }
 
+pub trait EnrichmentScoreTrait {
+    /// get run es only
+    fn running_enrichment_score(&self, metric: &[f64], tag_indicator: &[f64]) -> Vec<f64>;
+    /// fast GSEA only ES value return
+    fn fast_random_walk(&self, metric: &[f64], tag_indicator: &[f64]) -> f64;
+    // calucalte metric, not sorted
+    //fn calculate_metric(&self, data: &[Vec<f64>], group: &[bool], method: Metric) -> Vec<f64>;
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct GSEASummary {
+    term: String,
+    es: f64,
+    nes: f64,
+    pval: f64,  // Nominal Pvalue
+    fwerp: f64, // FWER Pvalue
+    fdr: f64,   // FDR q value. adjusted FDR
+    run_es: Vec<f64>,
+    hits: Vec<usize>, // indices of genes that matches
+    esnull: Vec<f64>,
+    index: Option<usize>, // sample index
+}
+
+impl GSEASummary {
+    pub fn new(
+        &mut self,
+        term: &str,
+        es: f64,
+        nes: f64,
+        pval: f64,
+        fwerpval: f64,
+        fdr: f64,
+        run_es: &[f64],
+        hits: &[usize],
+        esnull: &[f64],
+        index: usize,
+    ) -> Self {
+        GSEASummary {
+            term: term.to_string(),
+            es: es,
+            nes: nes,
+            pval: pval,
+            fwerp: fwerpval,
+            fdr: fdr,
+            run_es: run_es.to_vec(),
+            hits: hits.to_vec(),
+            esnull: esnull.to_vec(),
+            index: Some(index),
+        }
+    }
+
+    /// for default values, you can then init the struct with
+    /// let g = GSEASummary { es: 0.5, ..Default::default() };
+    /// need trait bound #[derive(Default)]
+    #[allow(dead_code)]
+    fn default() -> GSEASummary {
+        GSEASummary {
+            term: "".to_string(),
+            es: 0.0,
+            nes: 0.0,
+            pval: 1.0,
+            fwerp: 1.0,
+            fdr: 1.0,
+            run_es: Vec::<f64>::new(),
+            hits: Vec::<usize>::new(),
+            esnull: Vec::<f64>::new(),
+            index: None,
+        }
+    }
+}
+
 struct EnrichmentScore {
     // ranking metric
     // metric: Vec<f64>,
@@ -252,6 +325,74 @@ struct EnrichmentScore {
     single: bool,                  // single sample GSEA
     scale: bool,                   // whether to scale ES value
     rng: SmallRng,
+}
+
+impl EnrichmentScoreTrait for EnrichmentScore {
+    fn running_enrichment_score(&self, metric: &[f64], tag_indicator: &[f64]) -> Vec<f64> {
+        let n: f64 = tag_indicator.len() as f64;
+        let n_hint: f64 = tag_indicator.iter().sum();
+        let n_miss: f64 = n - n_hint;
+        let norm_notag: f64 = 1.0 / n_miss;
+        let no_tag_indicator: Vec<f64> = tag_indicator.iter().map(|&b| 1.0 - b).collect();
+        let sum_correl_tag: Vec<f64> = tag_indicator
+            .iter()
+            .zip(metric.iter())
+            .map(|(&b, &v)| b * v)
+            .collect();
+        let norm_tag: f64 = 1.0 / sum_correl_tag.iter().sum::<f64>();
+        // cumsum()
+        let run_es: Vec<f64> = sum_correl_tag
+            .iter()
+            .zip(no_tag_indicator.iter())
+            .map(|(&b, &v)| b * norm_tag - v * norm_notag)
+            .scan(0.0, |acc, x| {
+                *acc += x;
+                Some(*acc)
+            })
+            .collect();
+        return run_es;
+    }
+
+    /// see here: https://github.com/ctlab/fgsea/blob/master/src/esCalculation.cpp
+    fn fast_random_walk(&self, metric: &[f64], tag_indicator: &[f64]) -> f64 {
+        // tag_indicator and metric must be sorted
+        let ns: f64 = tag_indicator
+            .iter()
+            .zip(metric.iter())
+            .map(|(&b, &v)| b * v)
+            .sum::<f64>();
+        let n: f64 = metric.len() as f64;
+        let k: f64 = tag_indicator.iter().sum::<f64>() as f64;
+        let mut res: f64 = 0.0; // running_es
+        let mut cur: f64 = 0.0;
+        let q1: f64 = 1.0 / (n - k);
+        let q2: f64 = 1.0 / ns;
+        let mut last: f64 = -1.0;
+        let p: Vec<f64> = tag_indicator
+            .iter()
+            .enumerate()
+            .filter_map(|(i, &t)| if t > 0.0 { Some(i as f64) } else { None })
+            .collect();
+
+        for pos in p {
+            cur -= q1 * (pos - last - 1.0);
+            if cur.abs() > res.abs() {
+                res = cur;
+            }
+            cur += q2 * metric.get(pos as usize).unwrap();
+            if cur.abs() > res.abs() {
+                res = cur;
+            }
+            last = pos;
+        }
+
+        // for pos in p {
+        //     cur += q2 * metric.get(pos as usize).unwrap() - q1 * (pos - last - 1);
+        //     res = max(res, cur);
+        //     last = pos;
+        // }
+        return res;
+    }
 }
 
 /// Dynamic Enum
@@ -397,5 +538,20 @@ impl EnrichmentScore {
         let run_es = self.running_enrichment_score(metric, &tag_indicators[0]);
 
         return (es, run_es);
+    }
+
+    pub fn gene_permutation(&mut self) -> Vec<DynamicEnum<usize>> {
+        let vec: Vec<usize> = (0..self.gene.size()).collect();
+        let mut orig: DynamicEnum<usize> = DynamicEnum::from(&vec);
+        let mut gperm: Vec<DynamicEnum<usize>> = Vec::new();
+        // // now = Instant::now();
+        gperm.push(orig.clone());
+        for _ in 1..self.nperm {
+            // inplace shuffle
+            //fastrand::shuffle(&mut tags[i]); // fastrand is a little bit faster
+            orig.shuffle(&mut self.rng);
+            gperm.push(orig.clone());
+        }
+        return gperm;
     }
 }
