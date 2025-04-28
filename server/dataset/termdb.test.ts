@@ -39,7 +39,19 @@ export default function (): Mds3 {
 							version: '?',
 							link: 'testLink'
 						},
-						additionalInfo: '<a href=testLink>Tutorial</a> <a href=testLink>Get help</a>'
+						additionalInfo: '<a href=testLink>Tutorial</a> <a href=testLink>Get help</a>',
+						activeItems: {
+							items: [
+								{
+									title: 'Demo Active Item Plot Button',
+									plot: {
+										chartType: 'summary',
+										term: { id: 'agedx' },
+										term2: { id: 'sex' }
+									}
+								}
+							]
+						}
 					}
 				}
 			},
