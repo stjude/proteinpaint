@@ -3,7 +3,6 @@ import type { CategoricalQ, CategoricalTW } from './categorical.ts'
 import type { NumericQ, NumericTW } from './numeric.ts'
 import type { SnpsQ, SnpsTW } from './snps.ts'
 import type { ConditionQ } from './condition.ts'
-import type { GvQ, GvTW } from './geneVariant.ts'
 import type { SampleLstQ } from './samplelst.ts'
 
 export type TermWrapper = CategoricalTW | NumericTW | SnpsTW | (BaseTW & { term: Term; q: Q })
