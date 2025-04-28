@@ -1,16 +1,42 @@
 import tape from 'tape'
 import type { GvCustomGsQ, RawGvTW, TermFilter } from '#types'
 import { vocabInit } from '#termdb/vocabulary'
+import { TermdbVocab } from '#termdb/TermdbVocab'
 import { GvBase } from '../geneVariant'
 
 /*************************
  reusable helper functions
 **************************/
 
-async function getVocabApi() {
+function getVocabApi() {
 	const vocabApi = vocabInit({ state: { vocab: { genome: 'hg38-test', dslabel: 'TermdbTest' } } })
 	if (!vocabApi) throw 'vocabApi is missing'
-	await vocabApi.getTermdbConfig()
+	if (!(vocabApi instanceof TermdbVocab)) throw 'vocabApi is not instance of TermdbVocab'
+	// mock termdb config to avoid making a server request
+	vocabApi.termdbConfig = {
+		queries: {
+			snvindel: {},
+			cnv: {},
+			svfusion: {}
+		},
+		assayAvailability: {
+			byDt: {
+				1: {
+					byOrigin: {
+						germline: {},
+						somatic: {}
+					}
+				},
+				2: {},
+				4: {}
+			}
+		},
+		customTwQByType: {
+			geneVariant: {
+				default: { cnvGainCutoff: 0.1, cnvLossCutoff: -0.1, cnvMaxLength: 0 }
+			}
+		}
+	}
 	return vocabApi
 }
 
@@ -18,7 +44,7 @@ async function getVocabApi() {
  test sections
 ***************/
 
-const vocabApi = await getVocabApi()
+const vocabApi = getVocabApi()
 
 tape('\n', function (test) {
 	test.pass('-***- tw/geneVariant.unit -***-')
