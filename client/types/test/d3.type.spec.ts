@@ -1,5 +1,5 @@
 /*
-	Non-asserted type definition tests 
+	Non-asserted type definition tests: NOT FOR CI, for training only
 
 	manually tested in the client dir with
 	

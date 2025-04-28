@@ -1,7 +1,7 @@
 import type { StartUnboundedBin, StopUnboundedBin, FullyBoundedBin, NumericTerm } from '../terms/numeric'
 
 /*
-	Non-asserted type definition tests 
+	Non-asserted type definition tests: NOT FOR CI, for training only
 	
 	For training only 
 	- these tests are not meant to be written for all declared types

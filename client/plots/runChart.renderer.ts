@@ -1002,10 +1002,12 @@ export function setRenderers(self) {
 
 		offsetX += step
 		const mutations: any = []
-		for (const kv of map) const value = kv[1]
-		if (value.mutation)
-			//if no mutation is Ref
-			mutations.push(value.mutation)
+		for (const kv of map) {
+			const value = kv[1]
+			if (value.mutation)
+				//if no mutation is Ref
+				mutations.push(value.mutation)
+		}
 
 		const mutationsLabels = new Set()
 		offsetY += 10
