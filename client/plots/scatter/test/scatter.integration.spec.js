@@ -74,6 +74,18 @@ const state3D = {
 	]
 }
 
+const state3DContour = {
+	plots: [
+		{
+			chartType: 'sampleScatter',
+			colorTW: { id: 'diaggrp' },
+			name: 'TermdbTest TSNE',
+			term0: { id: 'agedx', q: { mode: 'continuous' } },
+			settings: { sampleScatter: { showContour: true } }
+		}
+	]
+}
+
 const groups = [
 	{
 		name: 'Test group 1',
@@ -243,6 +255,29 @@ tape('Render TermdbTest scatter plot adding age as Z to render a 3D plot', funct
 		test.true(is3D, 'Should be a 3D scatter plot')
 	}
 })
+
+tape(
+	'Render TermdbTest scatter plot with age as Z and showContour set to true to apply contour on 3D plot',
+	function (test) {
+		test.timeoutAfter(8000)
+		test.plan(1)
+		const holder = getHolder()
+		runpp({
+			holder, //Fix for test failing because survival & summary sandboxs are not destroyed.
+			state: state3DContour,
+			sampleScatter: {
+				callbacks: {
+					'postRender.test': runTests
+				}
+			}
+		})
+
+		async function runTests(scatter) {
+			const chart = scatter.Inner.model.charts[0]
+			test.true(chart.plane, 'Should have a plane with the contour map')
+		}
+	}
+)
 
 tape('Test scale dot', function (test) {
 	test.timeoutAfter(8000)
