@@ -100,27 +100,17 @@ export class ScatterLasso {
 			.attr('class', 'sja_menuoption sja_sharp_border')
 			.text('Add to a group')
 			.on('click', async () => {
-				const group = {
-					name: 'Group',
-					items: samples
-				}
-				const tw = getSamplelstTW([group])
-				const filter = getFilter(tw)
-				addNewGroup(this.scatter.app, filter, this.scatter.state.groups)
+				this.createGroup(samples)
+				this.view.dom.tip.hide()
 			})
 		menuDiv
 			.append('div')
 			.attr('class', 'sja_menuoption sja_sharp_border')
 			.text('Add to a group and filter')
 			.on('click', () => {
-				const group = {
-					name: 'Group',
-					items: samples
-				}
-				const tw = getSamplelstTW([group])
-				const filter = getFilter(tw)
-				addNewGroup(this.scatter.app, filter, this.scatter.state.groups)
+				const tw = this.createGroup(samples)
 				this.interactivity.addToFilter(tw)
+				this.view.dom.tip.hide()
 			})
 		if ('sample' in samples[0])
 			menuDiv
@@ -140,6 +130,17 @@ export class ScatterLasso {
 					})
 					this.view.dom.tip.hide()
 				})
+	}
+
+	createGroup(samples) {
+		const group = {
+			name: 'Group',
+			items: samples
+		}
+		const tw = getSamplelstTW([group])
+		const filter = getFilter(tw)
+		addNewGroup(this.scatter.app, filter, this.scatter.state.groups)
+		return tw
 	}
 
 	lassoReset(chart) {

@@ -410,7 +410,7 @@ export class ScatterLegend {
 
 		titleG.append('text').text(this.scatter.config.scaleDotTW.term.name).style('font-weight', 'bold')
 		const start = roundValueAuto(chart.ranges.scaleMin).toString()
-		const end = roundValueAuto(chart.scaleMax).toString()
+		const end = roundValueAuto(chart.ranges.scaleMax).toString()
 		const x = 30
 		const y = 40
 		const defaultSize = 16 //icons default size
