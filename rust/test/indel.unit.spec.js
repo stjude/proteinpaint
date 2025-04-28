@@ -1,9 +1,6 @@
 // Import necessary modules
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 import tape from 'tape'
-import path from 'path'
-import { spawn } from 'child_process'
-import { Readable } from 'stream'
 import additionalExamples from './indel.examples.js'
 // import { utils } from '@sjcrh/proteinpaint-utils'
 
@@ -136,64 +133,69 @@ async function runTest(e, test, strictness) {
 
 	const input_data = { reads: reads, alleles: alleles, strictness: Number(strictness) }
 
-	try {
-		const rust_output = await run_rust('indel', JSON.stringify(input_data))
-		const rust_output_list = rust_output.split('\n')
+	const rust_output = await run_rust('indel', JSON.stringify(input_data))
+	const rust_output_list = rust_output.split('\n')
 
-		for (let item of rust_output_list) {
-			if (item.includes('Final_output:')) {
-				final_output = JSON.parse(JSON.parse(item.replace('Final_output:', '')))
+	// Define final_output variable before using it
+	let final_output = null
+
+	for (let item of rust_output_list) {
+		if (item.includes('Final_output:')) {
+			final_output = JSON.parse(JSON.parse(item.replace('Final_output:', '')))
+		}
+	}
+
+	// Check if final_output was set
+	if (!final_output) {
+		test.fail('Could not find Final_output in the rust output')
+		return
+	}
+
+	test.equal(final_output.length, e.reads.length, 'indices.length should equal final_output.length')
+
+	const results = [] // in the same order as e.reads[]
+	for (let i = 0; i < final_output.length; i++) {
+		results[final_output[i].read_number] = final_output[i].categories[0] // The first element of categories contains the read classification
+	}
+	// find reads with wrong classification
+	let wrongcount = 0
+	for (let i = 0; i < results.length; i++) {
+		if (strictness == 0) {
+			// Check if "g_0" exists for that read
+			if (e.reads[i].g_0) {
+				// if it exists check with truth value for strictness = 0
+				if (e.reads[i].g_0 != results[i]) wrongcount++
+			} else {
+				// if g_0 does not exist for that read use the truth value for strictness = 1
+				if (e.reads[i].g != results[i]) wrongcount++
 			}
-		}
-		test.equal(final_output.length, e.reads.length, 'indices.length should equal final_output.length')
-
-		const results = [] // in the same order as e.reads[]
-		for (let i = 0; i < final_output.length; i++) {
-			results[final_output[i].read_number] = final_output[i].categories[0] // The first element of categories contains the read classification
-		}
-		// find reads with wrong classification
-		let wrongcount = 0
-		for (let i = 0; i < results.length; i++) {
+		} else if (e.reads[i].g != results[i]) wrongcount++ // For strictness = 1, simply check truth value for strictness = 1, i.e. .g
+	}
+	if (wrongcount) {
+		const lst = []
+		for (let i = 0; i < e.reads.length; i++) {
+			let truth
 			if (strictness == 0) {
-				// Check if "g_0" exists for that read
 				if (e.reads[i].g_0) {
 					// if it exists check with truth value for strictness = 0
-					if (e.reads[i].g_0 != results[i]) wrongcount++
+					truth = e.reads[i].g_0
 				} else {
 					// if g_0 does not exist for that read use the truth value for strictness = 1
-					if (e.reads[i].g != results[i]) wrongcount++
-				}
-			} else if (e.reads[i].g != results[i]) wrongcount++ // For strictness = 1, simply check truth value for strictness = 1, i.e. .g
-		}
-		if (wrongcount) {
-			const lst = []
-			for (let i = 0; i < e.reads.length; i++) {
-				let truth
-				if (strictness == 0) {
-					if (e.reads[i].g_0) {
-						// if it exists check with truth value for strictness = 0
-						truth = e.reads[i].g_0
-					} else {
-						// if g_0 does not exist for that read use the truth value for strictness = 1
-						truth = e.reads[i].g
-					}
-				} else {
 					truth = e.reads[i].g
 				}
-				const result = results[i]
-				lst.push(
-					i + '\t\t' + truth + '\t' + (truth != result ? result + (e.reads[i].n ? ' (' + e.reads[i].n + ')' : '') : '')
-				)
+			} else {
+				truth = e.reads[i].g
 			}
-			test.fail(`Misassigned ${wrongcount} reads:\nRead\tTruth\tResult\n${lst.join('\n')}`)
-		} else {
-			test.pass('classifications are correct')
+			const result = results[i]
+			lst.push(
+				i + '\t\t' + truth + '\t' + (truth != result ? result + (e.reads[i].n ? ' (' + e.reads[i].n + ')' : '') : '')
+			)
 		}
-	} catch (e) {
-		throw e
+		test.fail(`Misassigned ${wrongcount} reads:\nRead\tTruth\tResult\n${lst.join('\n')}`)
+	} else {
+		test.pass('classifications are correct')
 	}
 }
-
 const examples = [
 	// one object for each example
 
