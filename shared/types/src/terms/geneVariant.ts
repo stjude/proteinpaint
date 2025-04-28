@@ -20,11 +20,9 @@ export type GvQ = GvValuesQ | GvCustomGsQ
 // term types
 type GvBaseTerm = BaseTerm & {
 	type: 'geneVariant'
-	groupsetting?: TermGroupSetting
-	filter?: TermFilter
 }
 
-export type RawGvGeneTerm = GvBaseTerm & {
+export type GvGene = {
 	kind: 'gene'
 	gene: string
 	// chr,start,stop should exist together as a separate type called
@@ -35,19 +33,24 @@ export type RawGvGeneTerm = GvBaseTerm & {
 	stop?: number
 }
 
-export type RawGvCoordTerm = GvBaseTerm & {
+export type GvCoord = {
 	kind: 'coord'
 	chr: string
 	start: number
 	stop: number
 }
 
-export type RawGvTerm = RawGvGeneTerm | RawGvCoordTerm
+export type RawGvTerm = GvBaseTerm &
+	(GvGene | GvCoord) & {
+		groupsetting?: TermGroupSetting
+		filter?: TermFilter
+	}
 
-export type GvTerm = RawGvTerm & {
-	groupsetting: TermGroupSetting
-	filter: TermFilter
-}
+export type GvTerm = GvBaseTerm &
+	(GvGene | GvCoord) & {
+		groupsetting: TermGroupSetting
+		filter: TermFilter
+	}
 
 // tw types
 export type RawGvValuesTW = BaseTW & {
