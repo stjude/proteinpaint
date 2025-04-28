@@ -6,10 +6,10 @@ import type { ConditionQ } from './condition.ts'
 import type { GvQ, GvTW } from './geneVariant.ts'
 import type { SampleLstQ } from './samplelst.ts'
 
-export type TermWrapper = CategoricalTW | NumericTW | GvTW | SnpsTW | (BaseTW & { term: Term; q: Q })
+export type TermWrapper = CategoricalTW | NumericTW | SnpsTW | (BaseTW & { term: Term; q: Q })
 export type TwLst = TermWrapper[]
 
-export type Q = BaseQ | CategoricalQ | ConditionQ | NumericQ | GvQ | SampleLstQ | SnpsQ
+export type Q = BaseQ | CategoricalQ | ConditionQ | NumericQ | SampleLstQ | SnpsQ
 
 export type RawTW =
 	//{ id: string } | RawCatTW

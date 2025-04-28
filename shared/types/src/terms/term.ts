@@ -108,7 +108,7 @@ export type BaseTerm = {
 	filter?: TermFilter
 }
 
-export type Term = BaseTerm & (NumericTerm | CategoricalTerm | ConditionTerm | GvTerm | SampleLstTerm | SnpsTerm)
+export type Term = BaseTerm & (NumericTerm | CategoricalTerm | ConditionTerm | SampleLstTerm | SnpsTerm)
 
 export type ValuesGroup = {
 	name: string
