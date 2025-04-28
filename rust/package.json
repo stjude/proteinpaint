@@ -2,7 +2,6 @@
 	"version": "2.120.1",
 	"name": "@sjcrh/proteinpaint-rust",
 	"type": "module",
-	".": "./index.js",
 	"description": "Rust-based utilities for proteinpaint",
 	"main": "index.js",
 	"bin": {
