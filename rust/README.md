@@ -40,6 +40,7 @@ From the `proteinpaint/server` directory,
 
 ```bash
 npx test
+npx tsc
 ```
 
 ## Build
