@@ -9,7 +9,7 @@ import {
 	detectChildAttr,
 	detectChildStyle,
 	detectGte,
-	detectOne
+	sleep
 } from '../../../test/test.helpers'
 import { openSummaryPlot, openPlot, getSamplelstTW } from '../../../mass/groups.js'
 import { rgb } from 'd3-color'
@@ -74,79 +74,38 @@ const state3D = {
 	]
 }
 
-const groupState = {
-	plots: [
-		{
-			chartType: 'sampleScatter',
-			colorTW: {
-				id: 'diaggrp'
-			},
-			name: 'TermdbTest TSNE',
-			groups: [
-				{
-					name: 'Test group 1',
-					items: [
-						{
-							sample: '2646',
-							x: -103.141543,
-							y: 73.31223702,
-							sampleId: 2646,
-							category_info: {},
-							hidden: {
-								category: false
-							},
-							category: '"Acute lymphoblastic leukemia"',
-							shape: 'Ref'
-						},
-						{
-							sample: '2800',
-							x: -99.20065673,
-							y: 73.64971694,
-							sampleId: 2800,
-							category_info: {},
-							hidden: {
-								category: false
-							},
-							category: '"Acute lymphoblastic leukemia"',
-							shape: 'Ref'
-						}
-					],
-					index: 1
+const groups = [
+	{
+		name: 'Test group 1',
+		items: [
+			{
+				sample: '2646',
+				x: -103.141543,
+				y: 73.31223702,
+				sampleId: 41,
+				category_info: {},
+				hidden: {
+					category: false
 				},
-				{
-					name: 'Test group 2',
-					items: [
-						{
-							sample: '3178',
-							x: 121.1951911,
-							y: 73.75814818,
-							sampleId: 3178,
-							category_info: {},
-							hidden: {
-								category: false
-							},
-							category: 'Rhabdomyosarcoma',
-							shape: 'Ref'
-						},
-						{
-							sample: '3192',
-							x: 121.6732408,
-							y: 71.66798389,
-							sampleId: 3192,
-							category_info: {},
-							hidden: {
-								category: false
-							},
-							category: 'Wilms tumor',
-							shape: 'Ref'
-						}
-					],
-					index: 2
-				}
-			]
-		}
-	]
-}
+				category: '"Acute lymphoblastic leukemia"',
+				shape: 'Ref'
+			},
+			{
+				sample: '2800',
+				x: -99.20065673,
+				y: 73.64971694,
+				sampleId: 52,
+				category_info: {},
+				hidden: {
+					category: false
+				},
+				category: '"Acute lymphoblastic leukemia"',
+				shape: 'Ref'
+			}
+		],
+		index: 1
+	}
+]
 
 function getHolder() {
 	return d3s.select('body').append('div')
@@ -330,11 +289,11 @@ tape('Test scale dot', function (test) {
 	}
 })
 
-tape('Lasso and menus options', function (test) {
+tape('Test lasso menus options', function (test) {
 	test.timeoutAfter(8000)
 
 	runpp({
-		state: structuredClone(groupState),
+		state,
 		sampleScatter: {
 			callbacks: {
 				'postRender.test': runTests
@@ -355,20 +314,31 @@ tape('Lasso and menus options', function (test) {
 		/* Menu appears in the upper left corner instead of under groups button.
         This is expected. No x/y coord is provided to orient the menu 
         under the groups button. */
-		scatter.Inner.vm.scatterLasso.showLassoMenu(new PointerEvent('click'), groupState.plots[0].groups[0].items)
+		const group = groups[0]
+		scatter.Inner.vm.scatterLasso.showLassoMenu(new PointerEvent('click'), group.items)
 		const groupsMenu = scatter.Inner.view.dom.tip.d.selectAll('div.sja_menuoption').nodes()
 		const options = ['List 2 samples', 'Add to a group', 'Add to a group and filter', 'Open sample view']
 		for (const [i, node] of Object.entries(groupsMenu)) {
 			const option = node.innerText
 			test.equal(option, options[i], `Should display ${option} in the menu`)
 		}
-		const groups = scatter.Inner.state.config.groups
-		const group = groups[0]
-		scatter.Inner.vm.scatterLasso.showTable(group, 0, 0)
-		testSampleTable(scatter, 0, group)
+		//Create group and add checks
+
+		scatter.Inner.vm.scatterLasso.showTable(group, 0, 0, false)
+		testSampleTable(scatter, group)
+		groupsMenu[1].click()
+		await sleep(1000)
+		test.equal(scatter.Inner.state.groups.length, 1, `Should create a group in mass state`)
+		groupsMenu[2].click()
+		await sleep(1000)
+		test.equal(scatter.Inner.state.groups.length, 2, `Should create another group in mass state`)
+		test.true(
+			scatter.Inner.state.termfilter?.filter?.lst[1]?.lst[0]?.tvs?.term.type == 'samplelst',
+			`Should create a samplelst filter in mass state`
+		)
 	}
 
-	function testSampleTable(scatter, i, group) {
+	function testSampleTable(scatter, group) {
 		const samplesRendered = scatter.Inner.view.dom.tip.d.selectAll('.sjpp_row_wrapper > td:nth-child(4)').nodes()
 		const samples2Check = []
 		for (const item of samplesRendered) {
@@ -377,13 +347,13 @@ tape('Lasso and menus options', function (test) {
 
 		//Check every sample in group renders in sample table
 		let foundSamples = 0
-		for (const sampleData of scatter.Inner.config.groups[i].items) {
+		for (const sampleData of group.items) {
 			if (samples2Check.some(d => d == sampleData.sample)) ++foundSamples
 			else test.fail(`Sample = ${sampleData.sample} is not displayed in sample table`)
 		}
 		test.equal(samples2Check.length, foundSamples, `Should render all samples for ${group.name}`)
 
-		//if (test._ok) scatter.Inner.view.dom.tip.d.remove()
+		scatter.Inner.view.dom.tip.hide()
 	}
 })
 
