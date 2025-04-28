@@ -58,7 +58,8 @@ async function run_genesetEnrichment_analysis(
 
 	const cache = new Cache({
 		cachedir: serverconfig.cachedir_gsea,
-		fileExtensions: ['.pkl']
+		fileExtensions: ['.pkl'],
+		maxSize: 1e6
 	})
 
 	//Using default wait time of 1 minute

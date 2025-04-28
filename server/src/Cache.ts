@@ -28,7 +28,7 @@ type CacheOpts = {
 export class Cache {
 	/** a pending timeout reference from setTimeout that calls mayDeleteCacheFiles */
 	private cacheCheckTimeout: NodeJS.Timeout | undefined | number
-	private cachedir: string
+	cachedir: string
 	public checkWait: number
 	private fileExtensions: string[]
 	/** in milliseconds */
@@ -60,7 +60,7 @@ export class Cache {
 		}
 		this.nextCheckTime = checkTime
 		console.log(`will trigger mayDeleteCacheFiles() in ${wait} ms`)
-		this.cacheCheckTimeout = setTimeout(this.mayDeleteCacheFiles, wait)
+		this.cacheCheckTimeout = setTimeout(this.mayDeleteCacheFiles.bind(this), wait)
 	}
 
 	async mayDeleteCacheFiles() {
