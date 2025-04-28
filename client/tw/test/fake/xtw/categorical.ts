@@ -1,5 +1,5 @@
 import { CatValues, CatPredefinedGS, CatCustomGS } from '../../../index.ts'
-import { PlotTwRenderOpts, FakeTw } from '../types'
+import type { PlotTwRenderOpts, FakeTw } from '../types'
 
 export class FakeCatValues extends CatValues implements FakeTw {
 	render(arg: PlotTwRenderOpts): string {

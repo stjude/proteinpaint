@@ -1,5 +1,5 @@
-import { Selection } from 'd3-selection'
-import { Div } from './d3'
+import type { Selection } from 'd3-selection'
+import type { Div } from './d3'
 
 /**File intented to collect global proteinpaint data formats. Like the genome
  * chrlookup, dt, mutation classes, etc.

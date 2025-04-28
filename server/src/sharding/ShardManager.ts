@@ -1,5 +1,5 @@
 import serverconfig from '#src/serverconfig.js'
-import { ShardingAlgorithm } from '#src/sharding/ShardingAlgorithm.ts'
+import type { ShardingAlgorithm } from '#src/sharding/ShardingAlgorithm.ts'
 import { TileServerShardingAlgorithm } from '#src/sharding/TileServerShardingAlgorithm.ts'
 import { RedisShardingAlgorithm } from '#src/sharding/RedisShardingAlgorithm.ts'
 

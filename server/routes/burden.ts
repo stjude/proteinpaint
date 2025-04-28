@@ -20,7 +20,7 @@ export const api: RouteApi = {
 	}
 }
 
-const MAXBOOTNUM = 20
+//const MAXBOOTNUM = 20
 
 function init({ genomes }) {
 	return async function handler(req, res): Promise<void> {
@@ -36,7 +36,10 @@ function init({ genomes }) {
 
 			const result = await getBurdenResult(q, ds.cohort.cumburden)
 			if (!q.showCI) {
-				res.send({ status: 'ok', /*estimate: result.estimate,*/ ...formatPayload(result.estimate) } satisfies BurdenResponse)
+				res.send({
+					status: 'ok',
+					/*estimate: result.estimate,*/ ...formatPayload(result.estimate)
+				} satisfies BurdenResponse)
 			} else {
 				if (!result.ci95) await compute95ci(result, ds.cohort.cumburden)
 				res.send({ status: 'ok', /*ci95: result.ci95,*/ ...formatPayload(result.ci95) } satisfies BurdenResponse)
@@ -62,15 +65,15 @@ async function getBurdenResult(
 		// TODO: may implement this in burden.R
 		const ages = Object.keys(estimate[0]).filter(k => k.startsWith('['))
 		const overall = { chc: 0 }
-		for(const age of ages) {
+		for (const age of ages) {
 			overall[age] = [0]
-			for(const est of estimate) overall[age][0] += est[age]
+			for (const est of estimate) overall[age][0] += est[age]
 		}
 		estimate.push(overall)
 
 		// reshape to match the ci95 data shape (see details in compute95ci)
 		const burden = {}
-		for(const est of estimate) {
+		for (const est of estimate) {
 			burden[est.chc] = est
 		}
 
@@ -112,7 +115,7 @@ async function compute95ci(result, cumburden) {
 		input.burden = Object.values(result.estimate).filter((est: any) => est.chc !== 0)
 		const lowup = await run_R(path.join(serverconfig.binpath, 'utils', 'burden-ci95.R'), JSON.stringify(input), [])
 		const { low, up, overall } = JSON.parse(lowup)
-		
+
 		// ci95 = {
 		//   [chcnum]: {
 		//     [age]: [burden, lowerCI, upperCI]
@@ -142,15 +145,15 @@ async function compute95ci(result, cumburden) {
 		.run(JSON.stringify(result.ci95), result.id)
 }
 
-function sortNumericValue(a, b) {
-	return a < b ? -1 : 1
-}
+// function sortNumericValue(a, b) {
+// 	return a < b ? -1 : 1
+// }
 
 function formatPayload(estimates: object[]) {
 	const rawKeys = Object.keys(estimates['1']).filter(k => k.startsWith('[')) // estimates key is chcNum, will give age keys
 	const renamedKeys = rawKeys.map(k => `burden${k.split(',')[0].slice(1)}`)
 	const outKeys = ['chc', ...renamedKeys] as string[]
-	const rows: any[] = [] 
+	const rows: any[] = []
 	// estimates{}
 	// - key: chc number, where 0 = overall
 	// - values: {[age]: []}

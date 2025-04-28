@@ -1,9 +1,9 @@
-import Ring from './Ring.ts'
-import Chromosome from '#plots/disco/chromosome/Chromosome.ts'
-import Labels from '#plots/disco/label/Labels.ts'
-import SnvArc from '#plots/disco/snv/SnvArc.ts'
-import CnvArc from '#plots/disco/cnv/CnvArc.ts'
-import LohArc from '#plots/disco/loh/LohArc.ts'
+import type Ring from './Ring.ts'
+import type Chromosome from '#plots/disco/chromosome/Chromosome.ts'
+import type Labels from '#plots/disco/label/Labels.ts'
+import type SnvArc from '#plots/disco/snv/SnvArc.ts'
+import type CnvArc from '#plots/disco/cnv/CnvArc.ts'
+import type LohArc from '#plots/disco/loh/LohArc.ts'
 
 export default class Rings {
 	labelsRing: Labels

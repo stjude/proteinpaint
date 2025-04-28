@@ -1,7 +1,7 @@
-import { TermWrapper } from './tw.ts'
-import { BaseQ } from './term.ts'
-import { NumericTerm } from './numeric.ts'
-import { TermSettingInstance } from '../termsetting.ts'
+import type { TermWrapper } from './tw.ts'
+import type { BaseQ } from './term.ts'
+import type { NumericTerm } from './numeric.ts'
+import type { TermSettingInstance } from '../termsetting.ts'
 
 /*
 --------EXPORTED--------

@@ -1,7 +1,7 @@
 import { icons } from './control.icons'
-import { ClientCopyGenome } from '../types/global'
-import { Elem } from '../types/d3'
-import { RenderSandboxForm, NewSandboxOpts, NewSandbox } from './types/sandbox'
+import type { ClientCopyGenome } from '../types/global'
+import type { Elem } from '../types/d3'
+import type { RenderSandboxForm, NewSandboxOpts, NewSandbox } from './types/sandbox'
 
 /*
 Creates sandbox divs, containers running proteinpaint calls, forms, etc. 

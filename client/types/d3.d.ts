@@ -1,4 +1,4 @@
-import { Selection } from 'd3-selection'
+import type { Selection } from 'd3-selection'
 
 /*
 	Below are aliased d3 generic types, so that the type annotation 

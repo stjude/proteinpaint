@@ -1,4 +1,4 @@
-import { ChrPosition } from '../../../types/hic'
+import type { ChrPosition } from '../../../types/hic'
 import { FirstChrX } from './FirstChrX'
 
 export class DetailCoordinates {
@@ -70,8 +70,8 @@ export class DetailCoordinates {
 					const id_stop = idx_start + resolution
 
 					if (fragData.x.id2coord.has(id_stop)) {
-						const [a, b] = fragData.x.id2coord.get(id_stop)
-						span1 = b - coord1
+						const ab = fragData.x.id2coord.get(id_stop)
+						span1 = ab[1] - coord1
 					}
 				}
 
@@ -89,8 +89,8 @@ export class DetailCoordinates {
 					const id_stop = idy_start + resolution
 
 					if (fragData.y.id2coord.has(id_stop)) {
-						const [a, b] = fragData.y.id2coord.get(id_stop)
-						span2 = b - coord2
+						const ab = fragData.y.id2coord.get(id_stop)
+						span2 = ab[1] - coord2
 					}
 				}
 			} else {

@@ -1,4 +1,4 @@
-import { MainPlotDiv, ReturnedItems } from '../../../types/hic.ts'
+import type { MainPlotDiv, ReturnedItems } from '../../../types/hic.ts'
 import { axisstyle, font } from '#src/client'
 import { axisRight, axisBottom } from 'd3-axis'
 import { scaleLinear } from 'd3-scale'

@@ -1,7 +1,7 @@
-import Reference from '#plots/disco/chromosome/Reference.ts'
-import Data from '#plots/disco/data/Data.ts'
+import type Reference from '#plots/disco/chromosome/Reference.ts'
+import type Data from '#plots/disco/data/Data.ts'
 import MLabel from '#plots/disco/label/MLabel.ts'
-import SnvArc from './SnvArc.ts'
+import type SnvArc from './SnvArc.ts'
 
 export default class NonExonicSnvArcsMapper {
 	private sampleName: string

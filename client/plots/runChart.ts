@@ -31,7 +31,7 @@ export const maxShapeSize = 4
 //icons have size 16x16
 export const shapes = shapesArray
 
-const numberOfSamplesCutoff = 20000 // if map is greater than cutoff, switch from svg to canvas rendering
+// const numberOfSamplesCutoff = 20000 // if map is greater than cutoff, switch from svg to canvas rendering
 
 class RunChart {
 	type: string
@@ -96,8 +96,8 @@ class RunChart {
 		this.settings = {}
 		setInteractivity(this)
 		setRenderers(this)
-		document.addEventListener('scroll', event => this?.dom?.tooltip?.hide())
-		select('.sjpp-output-sandbox-content').on('scroll', event => this.dom.tooltip.hide())
+		document.addEventListener('scroll', () => this?.dom?.tooltip?.hide())
+		select('.sjpp-output-sandbox-content').on('scroll', () => this.dom.tooltip.hide())
 	}
 
 	getState(appState) {
@@ -195,7 +195,7 @@ class RunChart {
 					})
 				}
 			}
-			for (const [key, value] of groupedSamples.entries()) {
+			for (const value of groupedSamples.entries()) {
 				let x, y
 				if (this.settings.useMedian) {
 					x = median(value.samples.map(d => d.x))

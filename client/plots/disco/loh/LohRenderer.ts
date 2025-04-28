@@ -1,6 +1,6 @@
 import * as d3 from 'd3'
-import LohArc from './LohArc.ts'
-import IRenderer from '#plots/disco/IRenderer.ts'
+import type LohArc from './LohArc.ts'
+import type IRenderer from '#plots/disco/IRenderer.ts'
 import MenuProvider from '#plots/disco/menu/MenuProvider.ts'
 import { dtloh } from '#shared/common.js'
 import { table2col } from '#dom/table2col'

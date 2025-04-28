@@ -1,9 +1,9 @@
-import Data from './Data.ts'
-import Reference from '#plots/disco/chromosome/Reference.ts'
+import type Data from './Data.ts'
+import type Reference from '#plots/disco/chromosome/Reference.ts'
 import DataObjectMapper from './DataObjectMapper.ts'
-import Settings from '#plots/disco/Settings.ts'
+import type Settings from '#plots/disco/Settings.ts'
 import { ViewModelMapper } from '#plots/disco/viewmodel/ViewModelMapper.ts'
-import { DataHolder } from '#plots/disco/data/DataHolder.ts'
+import type { DataHolder } from '#plots/disco/data/DataHolder.ts'
 import { dtsnvindel, dtfusionrna, dtsv, dtcnv, dtloh } from '#shared/common.js'
 import { PercentileMapper } from '#plots/disco/data/PercentileMapper.ts'
 

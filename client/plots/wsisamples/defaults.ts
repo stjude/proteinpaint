@@ -1,4 +1,4 @@
-import Settings from './Settings'
+import type Settings from './Settings'
 import { copyMerge } from '#rx'
 
 export default function wsiSamplesDefaults(overrides = {}): Settings {

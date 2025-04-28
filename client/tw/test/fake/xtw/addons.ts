@@ -1,5 +1,5 @@
-import { PlotTwRenderOpts } from '../types'
-import { DiscreteXTW, ContinuousXTW } from '../../../../tw/composite'
+import type { PlotTwRenderOpts } from '../types'
+import type { DiscreteXTW, ContinuousXTW } from '../../../../tw/composite'
 
 const discreteAddons = {
 	render: {

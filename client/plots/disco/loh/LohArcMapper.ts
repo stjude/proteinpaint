@@ -1,6 +1,6 @@
-import Reference from '#plots/disco/chromosome/Reference.ts'
-import Data from '#plots/disco/data/Data.ts'
-import LohArc from './LohArc.ts'
+import type Reference from '#plots/disco/chromosome/Reference.ts'
+import type Data from '#plots/disco/data/Data.ts'
+import type LohArc from './LohArc.ts'
 import GradientColorProvider from './GradientColorProvider.ts'
 
 export default class LohArcMapper {

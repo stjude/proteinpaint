@@ -1,4 +1,4 @@
-import Chromosome from './Chromosome.ts'
+import type Chromosome from './Chromosome.ts'
 
 export default class Reference {
 	chromosomes: Array<Chromosome> = []

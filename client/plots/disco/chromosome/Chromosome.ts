@@ -1,4 +1,4 @@
-import Arc from '#plots/disco/arc/Arc.ts'
+import type Arc from '#plots/disco/arc/Arc.ts'
 
 export default interface Chromosome extends Arc {
 	readonly angle: number

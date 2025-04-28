@@ -1,4 +1,4 @@
-import { RoutePayload } from './routeApi.js'
+import type { RoutePayload } from './routeApi.js'
 
 export type IsoformLstRequest = any
 export type IsoformLstResponse = any

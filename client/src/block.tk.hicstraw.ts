@@ -44,18 +44,18 @@ const insidedomaincolor = '102,102,102'
 const docurl_text =
 	'https://docs.google.com/document/d/1MQ0Z_AD5moDmaSx2tcn7DyVKGp49TS63pO0cceGL_Ns/edit#heading=h.kr6p4w2zhhwq'
 
-let hicstraw // loaded on the fly, will result in bundle duplication
+// let hicstraw // loaded on the fly, will result in bundle duplication
 
 export function loadTk(tk: any, block: any) {
 	block.tkcloakon(tk)
 	block.block_setheight()
 
 	Promise.resolve()
-		.then(() => {
-			return import('../tracks/hic/HicApp.ts').then(p => {
-				hicstraw = p
-			})
-		})
+		// .then(() => {
+		// 	return import('../tracks/hic/HicApp.ts').then(_ => {
+		// 		// hicstraw = p
+		// 	})
+		// })
 
 		.then(() => {
 			if (!tk.uninitialized) return
@@ -1089,7 +1089,7 @@ function configPanel(tk: any, block: any) {
 
 	// point up down
 	{
-		const row = tk.tkconfigtip.d
+		tk.tkconfigtip.d
 			.append('div')
 			.style('margin', '20px 0px')
 			.append('button')

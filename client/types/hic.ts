@@ -1,8 +1,8 @@
-import { Selection } from 'd3'
-import { Div, Elem, Tr } from './d3'
-import { NormalizationMethodControl } from '../tracks/hic/controls/NormalizationMethodControl'
-import { MatrixTypeControl } from '../tracks/hic/controls/MatrixTypeControl'
-import { CutoffControl } from '../tracks/hic/controls/CutoffControl'
+import type { Selection } from 'd3'
+import type { Div, Elem, Tr } from './d3'
+import type { NormalizationMethodControl } from '../tracks/hic/controls/NormalizationMethodControl'
+import type { MatrixTypeControl } from '../tracks/hic/controls/MatrixTypeControl'
+import type { CutoffControl } from '../tracks/hic/controls/CutoffControl'
 
 export type MainPlotDiv = {
 	append: (s: string) => any

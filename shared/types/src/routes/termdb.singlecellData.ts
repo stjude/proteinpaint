@@ -1,5 +1,5 @@
 import type { RoutePayload } from './routeApi.js'
-import { ErrorResponse } from './errorResponse.ts'
+import type { ErrorResponse } from './errorResponse.ts'
 
 export type Cell = {
 	/** Cell id or barcode */

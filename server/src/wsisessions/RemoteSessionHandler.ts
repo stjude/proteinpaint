@@ -1,4 +1,4 @@
-import { SessionData } from '#src/wsisessions/SessionManager.ts'
+import type { SessionData } from '#src/wsisessions/SessionManager.ts'
 
 export interface RemoteSessionHandler {
 	getSessions(key: string): Promise<any | undefined>

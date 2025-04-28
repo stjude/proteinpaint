@@ -1,7 +1,7 @@
-import IRenderer from './IRenderer.ts'
-import ViewModel from './viewmodel/ViewModel.ts'
-import LegendRenderer from './legend/LegendRenderer.ts'
-import { RingType } from './ring/RingType.ts'
+import type IRenderer from './IRenderer.ts'
+import type ViewModel from './viewmodel/ViewModel.ts'
+import type LegendRenderer from './legend/LegendRenderer.ts'
+import type { RingType } from './ring/RingType.ts'
 import FusionRenderer from './fusion/FusionRenderer.ts'
 
 export class DiscoRenderer {

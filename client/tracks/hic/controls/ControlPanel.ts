@@ -1,5 +1,5 @@
 import { getCompInit } from '#rx'
-import { Elem, Tr } from '../../../types/d3'
+import type { Elem, Tr } from '../../../types/d3'
 import { NormalizationMethodControl } from './NormalizationMethodControl'
 import { CutoffControl } from './CutoffControl'
 import { MatrixTypeControl } from './MatrixTypeControl'
@@ -305,8 +305,10 @@ class ControlPanel {
 			const genomeView = this.parent('genome')
 			const chrMatrix = genomeView.viewRender.grid.chromosomeMatrix
 			if (!chrMatrix) return
-			for (const [chrx, yMap] of chrMatrix) {
-				for (const [chry, canvasObj] of yMap) {
+			for (const map of chrMatrix) {
+				const yMap = map[1]
+				for (const obj of yMap) {
+					const canvasObj = obj[1]
 					if (!canvasObj) continue
 					for (const [leadpx, followpx, val] of canvasObj.data) {
 						this.colorizeElement.colorizeElement(

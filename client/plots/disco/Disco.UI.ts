@@ -2,10 +2,11 @@ import * as uiutils from '#dom/uiUtils'
 import { Tabs } from '../../dom/toggleButtons'
 import { appear } from '#dom/animation'
 import type { RenderedTab } from '#dom/types/toggleButtons'
-import { Selection } from 'd3-selection'
+import type { Selection } from 'd3-selection'
 import type { Genome } from '#types'
 import { sayerror } from '../../dom/sayerror'
-import { launch, DiscoPlotArgs } from './launch.adhoc'
+import type { DiscoPlotArgs } from './launch.adhoc'
+import { launch } from './launch.adhoc'
 
 /** Genome with dom attributes scoped for this file */
 type ScopedGenomes = Genome & {

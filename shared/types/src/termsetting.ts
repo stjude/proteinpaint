@@ -1,8 +1,8 @@
 // TODO: will deprecate this code, should use client/termsetting/types.ts instead
-import { VocabApi } from './vocab.ts'
-import { TermWrapper, Q } from './terms/tw.ts'
-import { Term } from './terms/term.ts'
-import { Filter } from './filter.ts'
+import type { VocabApi } from './vocab.ts'
+import type { TermWrapper, Q } from './terms/tw.ts'
+import type { Term } from './terms/term.ts'
+import type { Filter } from './filter.ts'
 
 /*
 

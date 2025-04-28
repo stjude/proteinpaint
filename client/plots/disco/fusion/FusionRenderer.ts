@@ -1,6 +1,6 @@
 import * as d3 from 'd3'
 import FullArcRenderer from '#plots/disco/arc/FullArcRenderer.ts'
-import Fusion from './Fusion.ts'
+import type Fusion from './Fusion.ts'
 import MenuProvider from '#plots/disco/menu/MenuProvider.ts'
 import FusionColorProvider from '#plots/disco/fusion/FusionColorProvider.ts'
 import { table2col } from '#dom/table2col'

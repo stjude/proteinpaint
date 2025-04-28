@@ -1,4 +1,4 @@
-import {
+import type {
 	BaseTerm,
 	TermValues,
 	GroupSettingQ,
@@ -8,8 +8,8 @@ import {
 	PredefinedGroupSettingQ,
 	CustomGroupSettingQ
 } from './term.ts'
-import { RawValuesQ, RawPredefinedGroupsetQ, RawCustomGroupsetQ, MinBaseQ } from './q.ts'
-import { TermSettingInstance } from '../termsetting.ts'
+import type { RawValuesQ, RawPredefinedGroupsetQ, RawCustomGroupsetQ, MinBaseQ } from './q.ts'
+import type { TermSettingInstance } from '../termsetting.ts'
 
 /**
  * A raw categorical term q object, before filling-in

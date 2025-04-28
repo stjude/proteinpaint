@@ -1,5 +1,5 @@
 import { getCompInit } from '#rx'
-import { HicstrawDom, MainPlotDiv } from '../../types/hic.ts'
+import type { HicstrawDom, MainPlotDiv } from '../../types/hic.ts'
 import { ChrPairView } from './chrpair/ChrPairView.ts'
 import { HorizontalView } from './horizontal/HorizontalView.ts'
 import { DetailView } from './detail/DetailView.ts'

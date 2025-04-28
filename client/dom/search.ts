@@ -1,9 +1,10 @@
 import { debounce } from 'debounce'
 import { Menu } from '#dom/menu'
-import { select, Selection } from 'd3-selection'
+import type { Selection } from 'd3-selection'
+import { select } from 'd3-selection'
 import { keyupEnter } from '../src/client'
 import { throwMsgWithFilePathAndFnName } from './sayerror'
-import { Elem, Input, Span } from '../types/d3'
+import type { Elem, Input, Span } from '../types/d3'
 
 type SearchGroupEntry = {
 	/** Text appearing above the search results group */

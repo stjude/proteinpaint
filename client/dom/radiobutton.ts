@@ -1,4 +1,4 @@
-import { Elem, Input } from '../types/d3'
+import type { Elem, Input } from '../types/d3'
 
 /* makes radio buttons */
 

@@ -1,8 +1,8 @@
-import { AbcResponse, AbcRequest } from '../types/abc.ts'
+import type { AbcResponse /*, AbcRequest*/ } from '../types/abc.ts'
 
 function init() {
 	return (req, res) => {
-		const q: AbcRequest = req.query
+		//const q: AbcRequest = req.query
 		res.send({ status: 'ok' } satisfies AbcResponse)
 	}
 }

@@ -1,5 +1,5 @@
 import { ColorScale } from '#dom'
-import { Tr } from '../../../types/d3'
+import type { Tr } from '../../../types/d3'
 import { bplen } from '#shared/common.js'
 
 export class InfoBar {

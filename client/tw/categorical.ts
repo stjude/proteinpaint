@@ -1,4 +1,4 @@
-import {
+import type {
 	CategoricalTerm,
 	ValuesQ,
 	PredefinedGroupSettingQ,
@@ -13,7 +13,8 @@ import {
 	RawCatTWPredefinedGS,
 	RawCatTWCustomGS
 } from '#types'
-import { TwBase, TwOpts } from './TwBase.ts'
+import type { TwOpts } from './TwBase.ts'
+import { TwBase } from './TwBase.ts'
 import { copyMerge } from '#rx'
 import { set_hiddenvalues } from '#termsetting'
 

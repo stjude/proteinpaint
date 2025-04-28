@@ -1,5 +1,5 @@
 import { dofetch3 } from '../../../src/client'
-import { ChrPosition } from '../../../types/hic.ts'
+import type { ChrPosition } from '../../../types/hic.ts'
 
 type FragCoord = { start: number; stop: number }
 

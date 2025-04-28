@@ -12,7 +12,7 @@ import type TileSource from 'ol/source/Tile'
 import { WSIViewerInteractions } from '#plots/wsiviewer/interactions/WSIViewerInteractions.ts'
 import type Settings from '#plots/wsiviewer/Settings.ts'
 import wsiViewerDefaults from '#plots/wsiviewer/defaults.ts'
-import { SampleWSImagesResponse, WSImage, WSImagesRequest, WSImagesResponse } from '#types'
+import type { SampleWSImagesResponse, WSImage, WSImagesRequest, WSImagesResponse } from '#types'
 import { table2col } from '#dom/table2col'
 import { Projection } from 'ol/proj'
 import { RxComponentInner } from '../../types/rx.d'
@@ -312,7 +312,7 @@ export const wsiViewer = getCompInit(WSIViewer)
 
 export const componentInit = wsiViewer
 
-export async function getPlotConfig(opts: any, app: any) {
+export async function getPlotConfig(opts: any) {
 	return {
 		chartType: 'WSIViewer',
 		subfolder: 'wsiviewer',

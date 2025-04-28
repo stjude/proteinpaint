@@ -1,6 +1,6 @@
 import ky from 'ky'
-import { RemoteSessionHandler } from '#src/wsisessions/RemoteSessionHandler.ts'
-import { SessionData } from '#src/wsisessions/SessionManager.js'
+import type { RemoteSessionHandler } from '#src/wsisessions/RemoteSessionHandler.ts'
+import type { SessionData } from '#src/wsisessions/SessionManager.js'
 
 export class TileServerSessionsHandler implements RemoteSessionHandler {
 	async getSessions(url: string): Promise<any | undefined> {

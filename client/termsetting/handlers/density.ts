@@ -1,7 +1,7 @@
 import { select, pointer } from 'd3-selection'
 import { scaleLinear, drag as d3drag } from 'd3'
 import { get_bin_label, get_bin_range_equation } from '#shared/termdb.bins.js'
-import { BaseType } from 'd3-selection'
+import type { BaseType } from 'd3-selection'
 import type { NumericBin } from '#types'
 /*
 ********************** EXPORTED
@@ -54,7 +54,7 @@ export async function setDensityPlot(self) {
 		})
 	} else {
 		// svg for range plot
-		const div = self.q.mode == 'spline' ? self.dom.knots_div : self.dom.bins_div
+		// const div = self.q.mode == 'spline' ? self.dom.knots_div : self.dom.bins_div
 		self.vr.render()
 
 		// add binsize_g for termsetting lines

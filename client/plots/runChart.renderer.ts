@@ -2,7 +2,6 @@ import { zoom as d3zoom, zoomIdentity } from 'd3-zoom'
 import { icons as icon_functions, ColorScale, Menu, getMaxLabelWidth } from '#dom'
 import { dt2label, morigin } from '#shared/common.js'
 import { rgb } from 'd3-color'
-import { scaleLinear as d3Linear, scaleLinear } from 'd3-scale'
 import { axisLeft, axisBottom } from 'd3-axis'
 import { select } from 'd3-selection'
 import { regressionPoly } from 'd3-regression'
@@ -10,7 +9,7 @@ import { line, scaleTime } from 'd3'
 import { minShapeSize, maxShapeSize } from './runChart.js'
 import { shapes } from './runChart.js'
 import { roundValueAuto } from '#shared/roundValue.js'
-import { median as d3Median, mean } from 'd3-array'
+import { median as d3Median } from 'd3-array'
 import { getDateFromNumber } from '#shared/terms.js'
 
 export function setRenderers(self) {
@@ -616,7 +615,7 @@ export function setRenderers(self) {
 				30,
 				self.config.shapeTW == undefined
 			)}`
-			const colorRefCategory = chart.colorLegend.get('Ref')
+			// const colorRefCategory = chart.colorLegend.get('Ref')
 
 			if (self.config.colorTW?.term?.type == 'geneVariant' && self.config.colorTW?.q.type == 'values')
 				offsetY = self.renderGeneVariantLegend(
@@ -1003,10 +1002,10 @@ export function setRenderers(self) {
 
 		offsetX += step
 		const mutations: any = []
-		for (const [key, value] of map)
-			if (value.mutation)
-				//if no mutation is Ref
-				mutations.push(value.mutation)
+		for (const kv of map) const value = kv[1]
+		if (value.mutation)
+			//if no mutation is Ref
+			mutations.push(value.mutation)
 
 		const mutationsLabels = new Set()
 		offsetY += 10

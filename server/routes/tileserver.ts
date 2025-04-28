@@ -1,7 +1,7 @@
 import type { TileRequest /*, TileResponse*/, RouteApi } from '#types'
 import { tilePayload } from '#types/checkers'
 import ky from 'ky'
-import { TileServerShard } from '#src/sharding/TileServerShard.ts'
+import type { TileServerShard } from '#src/sharding/TileServerShard.ts'
 import { TileServerShardingAlgorithm } from '#src/sharding/TileServerShardingAlgorithm.ts'
 import { ShardManager } from '#src/sharding/ShardManager.ts'
 import SessionManager from '#src/wsisessions/SessionManager.ts'

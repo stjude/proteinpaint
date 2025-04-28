@@ -65,7 +65,7 @@ export class PlotButtons {
 				 * Need to build a route or change existing route to support
 				 */
 				isVisible: () => true,
-				getPlotConfig: gene => {
+				getPlotConfig: () => {
 					return {
 						chartType: 'violin'
 						//TODO: Finish config

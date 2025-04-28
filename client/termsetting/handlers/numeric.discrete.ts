@@ -1,6 +1,7 @@
 import { keyupEnter } from '#src/client'
 import { format } from 'd3-format'
-import { setDensityPlot, DensityData } from './density'
+import type { DensityData } from './density'
+import { setDensityPlot } from './density'
 import { get_bin_label, get_bin_range_equation } from '#shared/termdb.bins.js'
 import { make_radios, Tabs, violinRenderer } from '#dom'
 import { getPillNameDefault } from '../termsetting'

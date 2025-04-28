@@ -1,4 +1,4 @@
-import Settings from '#plots/disco/Settings.ts'
+import type Settings from '#plots/disco/Settings.ts'
 import { CnvRenderingType } from '#plots/disco/cnv/CnvRenderingType.ts'
 
 export default class CnvColorProvider {

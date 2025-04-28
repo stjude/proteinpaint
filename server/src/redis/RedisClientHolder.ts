@@ -1,13 +1,14 @@
-import { createClient, RedisClientType } from 'redis'
+import type { RedisClientType } from 'redis'
+import { createClient } from 'redis'
 import serverconfig from '#src/serverconfig.js'
-import { RedisShard } from '#src/sharding/RedisShard.ts'
+import type { RedisShard } from '#src/sharding/RedisShard.ts'
 import { ShardManager } from '#src/sharding/ShardManager.ts'
 import { RedisShardingAlgorithm } from '#src/sharding/RedisShardingAlgorithm.ts'
-import { ShardingAlgorithm } from '#src/sharding/ShardingAlgorithm.ts'
+import type { ShardingAlgorithm } from '#src/sharding/ShardingAlgorithm.ts'
 import { SessionData } from '#src/wsisessions/SessionManager.ts'
-import { TileServerShard } from '#src/sharding/TileServerShard.ts'
+import type { TileServerShard } from '#src/sharding/TileServerShard.ts'
 import { ClientHolder } from '#src/caching/ClientHolder.ts'
-import { KeyValueStorage } from '#src/caching/KeyValueStorage.ts'
+import type { KeyValueStorage } from '#src/caching/KeyValueStorage.ts'
 
 export default class RedisClientHolder implements KeyValueStorage {
 	private static instance: RedisClientHolder
@@ -151,7 +152,7 @@ export default class RedisClientHolder implements KeyValueStorage {
 			}
 		}
 
-		const result = Object.entries<string>(sessions).filter(([sessionId, filePath]) => !existingKeys.includes(filePath))
+		const result = Object.entries<string>(sessions).filter(([_, filePath]) => !existingKeys.includes(filePath))
 
 		for (const [sessionId, filePath] of result) {
 			if (!existingKeys.includes(filePath)) {

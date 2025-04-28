@@ -1,5 +1,5 @@
 import * as d3 from 'd3'
-import Arc from './Arc.ts'
+import type Arc from './Arc.ts'
 
 export default class FullArcRenderer {
 	private radius: number

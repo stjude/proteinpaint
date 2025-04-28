@@ -1,4 +1,4 @@
-import CnvArc from '#plots/disco/cnv/CnvArc.ts'
+import type CnvArc from '#plots/disco/cnv/CnvArc.ts'
 import * as d3 from 'd3'
 import MenuProvider from '#plots/disco/menu/MenuProvider.ts'
 import { table2col } from '#dom/table2col'

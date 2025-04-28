@@ -1,7 +1,7 @@
 import { first_genetrack_tolist } from '#src/client'
-import { Elem } from '../../../types/d3'
-import { ChrPosition } from '../../../types/hic'
-import { Selection } from 'd3-selection'
+import type { Elem } from '../../../types/d3'
+import type { ChrPosition } from '../../../types/hic'
+import type { Selection } from 'd3-selection'
 import blocklazyload from '#src/block.lazyload'
 
 export class DetailBlock {

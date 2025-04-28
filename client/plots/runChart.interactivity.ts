@@ -202,7 +202,7 @@ export function setInteractivity(self) {
 								.append('td')
 								.append('button')
 								.text('Lollipop')
-								.on('click', async e => {
+								.on('click', async () => {
 									await self.openLollipop(label)
 									self.dom.tip.hide()
 								})
@@ -219,7 +219,7 @@ export function setInteractivity(self) {
 						.attr('stroke', '#aaa')
 						.attr('transform', 'translate(0, -2) scale(0.5)')
 					const text = g.append('text').attr('x', 12).attr('y', 6).attr('font-size', '0.9em')
-					const span2 = text.append('tspan').text(node.value).attr('fill', fontColor)
+					// const span2 = text.append('tspan').text(node.value).attr('fill', fontColor)
 				} else td.style('padding', '2px').text(`${node.value}`)
 			}
 
@@ -241,20 +241,20 @@ export function setInteractivity(self) {
 							.append('td')
 							.append('button')
 							.text('Sample view')
-							.on('click', e => self.openSampleView(sample))
+							.on('click', () => self.openSampleView(sample))
 						if (hasDiscoPlot)
 							row
 								.append('td')
 								.append('button')
 								.text('Disco')
-								.on('click', async e => self.openDiscoPlot(sample))
+								.on('click', async () => self.openDiscoPlot(sample))
 
 						if (hasMetArrayPlot)
 							row
 								.append('td')
 								.append('button')
 								.text('Met Array')
-								.on('click', async e => self.openMetArray(sample))
+								.on('click', async () => self.openMetArray(sample))
 					}
 				}
 			}
@@ -446,7 +446,7 @@ export function setInteractivity(self) {
 		}
 		if (!isColorTW) {
 			//is shape
-			const shapeDiv = div
+			div
 				.append('div')
 				.attr('class', 'sja_menuoption sja_sharp_border')
 				.text('Change shape')

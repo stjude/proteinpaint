@@ -1,4 +1,4 @@
-import Arc from '#plots/disco/arc/Arc.ts'
+import type Arc from '#plots/disco/arc/Arc.ts'
 
 export default class Ring<T extends Arc> {
 	width: number

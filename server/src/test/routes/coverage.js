@@ -10,7 +10,8 @@ const execProm = promisify(exec)
 // a coverageKey value is detected. This is an extra security
 // measure to minimize issues and risks of having an external signal
 // close a server.
-const key = process.env.coverageKey || serverconfig.features?.coverageKey
+const key =
+	process.env.coverageKey !== undefined ? process.env.coverageKey : serverconfig.features?.coverageKey || 'test'
 const maxTries = 5
 
 export default function setRoutes(app, basepath) {

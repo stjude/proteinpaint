@@ -1,4 +1,4 @@
-import { RoutePayload } from './routeApi.js'
+import type { RoutePayload } from './routeApi.js'
 
 export type TermdbCohortsRequest = any
 export type TermdbCohortsResponse = any

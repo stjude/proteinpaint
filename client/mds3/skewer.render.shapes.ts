@@ -1,4 +1,4 @@
-import { Elem } from '../types/d3'
+import type { Elem } from '../types/d3'
 import { shapes } from '#dom'
 import { dtsnvindel, dtsv, dtfusionrna } from '#shared/common.js'
 import { select as d3select } from 'd3-selection'

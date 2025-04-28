@@ -1,4 +1,4 @@
-import { isNumeric } from './helpers.js'
+import type { isNumeric } from './helpers.js'
 
 /*
 	A custom encoder-decoder for URL query parameter values

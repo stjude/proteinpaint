@@ -1,6 +1,6 @@
 import serverconfig from '#src/serverconfig.js'
 import ky from 'ky'
-import { ShardingAlgorithm } from '#src/sharding/ShardingAlgorithm.ts'
+import type { ShardingAlgorithm } from '#src/sharding/ShardingAlgorithm.ts'
 import { TileServerShard } from '#src/sharding/TileServerShard.ts'
 import { getShardIndex } from '#src/sharding/getShardIndex.ts'
 

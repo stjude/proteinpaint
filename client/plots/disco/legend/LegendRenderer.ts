@@ -1,4 +1,4 @@
-import Legend from './Legend.ts'
+import type Legend from './Legend.ts'
 import svgLegend from '#dom/svg.legend'
 import LegendJSONMapper from './LegendJSONMapper.ts'
 

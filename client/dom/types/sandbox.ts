@@ -1,4 +1,4 @@
-import { Div } from '../../types/d3'
+import type { Div } from '../../types/d3'
 
 /** Renders forms in a specific format */
 export type RenderSandboxForm = [

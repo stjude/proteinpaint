@@ -269,7 +269,7 @@ function setSse() {
 		handleMessageData(data, { save: true })
 	}
 
-	sse.onerror = e => {
+	sse.onerror = _ => {
 		// ok to lose sse connection, since the server can only maintain
 		// up to 6 sse streams per standard; another connection will be triggered
 		// when this browser window/tab becomes visible again
@@ -311,7 +311,7 @@ function handleMessageData(_data, opts = {} as any) {
 			// debounce
 			refresh.pendingCall = setTimeout(refresh.callback, 500)
 		} else if (refresh.mode == 'full') {
-			if (refresh.pendingCall) clearTimeout(refresh.pendingCall)//
+			if (refresh.pendingCall) clearTimeout(refresh.pendingCall) //
 			// debounce
 			refresh.pendingCall = setTimeout(() => window.location.reload(), 500)
 		} else if (!refresh.modeOptions[refresh.mode]) {

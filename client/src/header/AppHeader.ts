@@ -1,11 +1,12 @@
 import { first_genetrack_tolist } from '#common/1stGenetk'
-import { InputSearch, Menu, newSandboxDiv } from '#dom'
+import type { Menu } from '#dom'
+import { InputSearch, newSandboxDiv } from '#dom'
 import { searchItems } from './omniSearch.js'
 import { appDrawerInit } from '../../appdrawer/app.js'
 import { rgb as d3rgb } from 'd3-color'
 import { defaultcolor } from '#shared/common.js'
 import { dofetch3 } from '#common/dofetch'
-import { ClientCopyGenome } from 'types/global.ts'
+import type { ClientCopyGenome } from 'types/global.ts'
 
 type Citation = {
 	id: number

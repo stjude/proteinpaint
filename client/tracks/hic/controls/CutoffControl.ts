@@ -1,4 +1,4 @@
-import { Elem } from '../../../types/d3'
+import type { Elem } from '../../../types/d3'
 
 //This could be a global input class
 export class CutoffControl {

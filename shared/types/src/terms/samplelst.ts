@@ -1,6 +1,6 @@
-import { BaseTerm, BaseQ } from './term.ts'
-import { TermWrapper } from './tw.ts'
-import { TermSettingInstance } from '../termsetting.ts'
+import type { BaseTerm, BaseQ } from './term.ts'
+import type { TermWrapper } from './tw.ts'
+import type { TermSettingInstance } from '../termsetting.ts'
 
 /*
 --------EXPORTED--------

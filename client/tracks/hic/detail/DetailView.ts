@@ -1,11 +1,12 @@
-import { MainPlotDiv, ReturnedItems } from '../../../types/hic.ts'
+import type { MainPlotDiv, ReturnedItems } from '../../../types/hic.ts'
 import { Resolution } from '../data/Resolution.ts'
 import { ColorizeElement } from '../dom/ColorizeElement.ts'
 import { DetailBlock } from './DetailBlock.ts'
-import { select, Selection } from 'd3-selection'
+import type { Selection } from 'd3-selection'
+import { select } from 'd3-selection'
 import { DetailDataMapper } from '../data/DetailDataMapper.ts'
 import { DetailCoordinates } from '../data/DetailCoodinates.ts'
-import { Elem } from '../../../types/d3'
+import type { Elem } from '../../../types/d3'
 
 export class DetailView {
 	app: any

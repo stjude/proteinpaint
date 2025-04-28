@@ -1,5 +1,5 @@
-import Reference from '#plots/disco/chromosome/Reference.ts'
-import Data from '#plots/disco/data/Data.ts'
+import type Reference from '#plots/disco/chromosome/Reference.ts'
+import type Data from '#plots/disco/data/Data.ts'
 import Fusion from './Fusion.ts'
 import FusionSubgroup from './FusionSubgroup.ts'
 

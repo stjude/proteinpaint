@@ -1,5 +1,5 @@
 import type { BaseHicRequest, XYZCoord } from './hicdata.ts'
-import { RoutePayload } from './routeApi.ts'
+import type { RoutePayload } from './routeApi.ts'
 
 export type HicGenomeRequest = BaseHicRequest & {
 	/** Entire chromosome list read from the file (see hicstate) */

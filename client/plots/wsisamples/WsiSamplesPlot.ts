@@ -1,9 +1,10 @@
 import { getCompInit } from '#rx'
 import wsiSamplesDefaults from '#plots/wsisamples/defaults.ts'
 import { dofetch3 } from '#src/client'
-import { WSISample, WSISamplesResponse } from '@sjcrh/proteinpaint-types/routes/wsisamples.ts'
+import type { WSISample, WSISamplesResponse } from '@sjcrh/proteinpaint-types/routes/wsisamples.ts'
 import type Settings from '#plots/wsisamples/Settings.ts'
-import { renderTable, TableCell, TableColumn, TableRow } from '#dom'
+import type { TableCell, TableColumn, TableRow } from '#dom'
+import { renderTable } from '#dom'
 
 export default class WSISamplesPlot {
 	// following attributes are required by rx

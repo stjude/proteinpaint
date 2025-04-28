@@ -1,4 +1,4 @@
-import { CnvType } from './CnvType.ts'
+import type { CnvType } from './CnvType.ts'
 
 export default class CnvLegend {
 	text: string

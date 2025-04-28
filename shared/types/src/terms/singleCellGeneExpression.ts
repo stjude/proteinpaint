@@ -1,8 +1,7 @@
-import { TermWrapper } from './tw.ts'
-import { BaseQ } from './term.ts'
-import { GeneExpressionQ } from './geneExpression.ts'
-import { TermSettingInstance } from '../termsetting.ts'
-import { NumericTerm } from './numeric.ts'
+import type { TermWrapper } from './tw.ts'
+import type { GeneExpressionQ } from './geneExpression.ts'
+import type { TermSettingInstance } from '../termsetting.ts'
+import type { NumericTerm } from './numeric.ts'
 
 /*
 --------EXPORTED--------

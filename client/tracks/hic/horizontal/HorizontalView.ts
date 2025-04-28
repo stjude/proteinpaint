@@ -1,5 +1,5 @@
 import { first_genetrack_tolist } from '../../../src/client'
-import { MainPlotDiv, ReturnedItems } from '../../../types/hic.ts'
+import type { MainPlotDiv, ReturnedItems } from '../../../types/hic.ts'
 import blocklazyload from '#src/block.lazyload'
 
 export class HorizontalView {

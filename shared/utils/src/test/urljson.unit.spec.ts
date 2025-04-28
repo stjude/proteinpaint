@@ -1,5 +1,6 @@
 import tape from 'tape'
-import { encode, decode, UrlJsonRaw, UrlJsonEncoded } from '../urljson.ts'
+import type { UrlJsonRaw } from '../urljson.ts'
+import { encode, decode } from '../urljson.ts'
 
 /*************************
  reusable helper functions

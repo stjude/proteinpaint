@@ -1,4 +1,4 @@
-import { Selection } from 'd3-selection'
+import type { Selection } from 'd3-selection'
 
 export interface GridElementDom {
 	canvas: HTMLCanvasElement

@@ -1,6 +1,6 @@
 import * as d3 from 'd3'
-import SnvArc from './SnvArc.ts'
-import IRenderer from '#plots/disco/IRenderer.ts'
+import type SnvArc from './SnvArc.ts'
+import type IRenderer from '#plots/disco/IRenderer.ts'
 import FullArcRenderer from '#plots/disco/arc/FullArcRenderer.ts'
 import MenuProvider from '#plots/disco/menu/MenuProvider.ts'
 import { dtsnvindel } from '#shared/common.js'

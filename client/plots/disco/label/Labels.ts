@@ -1,7 +1,7 @@
 import Ring from '#plots/disco/ring/Ring.ts'
-import Label from './Label.ts'
+import type Label from './Label.ts'
 import LabelFactory from './LabelFactory.ts'
-import Settings from '#plots/disco/Settings.ts'
+import type Settings from '#plots/disco/Settings.ts'
 
 export default class Labels extends Ring<Label> {
 	collisions?: Array<Label>

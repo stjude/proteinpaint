@@ -1,6 +1,6 @@
 import * as d3 from 'd3'
-import IRenderer from '#plots/disco/IRenderer.ts'
-import Chromosome from './Chromosome.ts'
+import type IRenderer from '#plots/disco/IRenderer.ts'
+import type Chromosome from './Chromosome.ts'
 
 export default class ChromosomesRenderer implements IRenderer {
 	private padAngle: number

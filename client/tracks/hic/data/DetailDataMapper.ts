@@ -1,5 +1,5 @@
 import { DetailDataFetcher } from './DetailDataFetcher'
-import { ChrPosition } from '../../../types/hic.ts'
+import type { ChrPosition } from '../../../types/hic.ts'
 import { ParseFragData } from './ParseFragData'
 
 export class DetailDataMapper {

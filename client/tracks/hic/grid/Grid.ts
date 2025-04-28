@@ -1,8 +1,8 @@
 import { Chromosome } from '../axes/Chromosome.ts'
 import { font } from '#src/client'
-import { GridElementData } from './GridElementData.ts'
-import { ChrLookUp } from '../../../types/global.ts'
-import { GridElementDom } from './GridElementDom.ts'
+import type { GridElementData } from './GridElementData.ts'
+import type { ChrLookUp } from '../../../types/global.ts'
+import type { GridElementDom } from './GridElementDom.ts'
 
 export class Grid {
 	static checkerFill = '#DEF3FA'

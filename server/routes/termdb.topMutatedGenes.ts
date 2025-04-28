@@ -37,7 +37,7 @@ function init({ genomes }) {
 	}
 }
 
-export function validate_query_getTopMutatedGenes(ds: any, genome: any) {
+export function validate_query_getTopMutatedGenes(ds: any) {
 	const q = ds.queries?.topMutatedGenes
 	if (!q) return // ds not equipped
 	if (typeof q.get == 'function') return // ds supplies the getter. done

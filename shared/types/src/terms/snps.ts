@@ -1,7 +1,7 @@
-import { BaseTW, BaseQ, BaseTerm } from './term.ts'
-import { TermSettingInstance, InstanceDom, UseCase } from '../termsetting.ts'
-import { VocabApi } from '../vocab.ts'
-import { Tvs, Filter } from '../filter.ts'
+import type { BaseTW, BaseQ, BaseTerm } from './term.ts'
+import type { TermSettingInstance, InstanceDom, UseCase } from '../termsetting.ts'
+import type { VocabApi } from '../vocab.ts'
+import type { Tvs, Filter } from '../filter.ts'
 
 /*
 --------EXPORTED--------

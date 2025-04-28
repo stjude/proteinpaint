@@ -1,10 +1,10 @@
-import Rings from '#plots/disco/ring/Rings.ts'
-import Legend from '#plots/disco/legend/Legend.ts'
+import type Rings from '#plots/disco/ring/Rings.ts'
+import type Legend from '#plots/disco/legend/Legend.ts'
 import { RingType } from '#plots/disco/ring/RingType.ts'
-import Arc from '#plots/disco/arc/Arc.ts'
-import Settings from '#plots/disco/Settings.ts'
-import Fusion from '#plots/disco/fusion/Fusion.ts'
-import { DataHolder } from '#plots/disco/data/DataHolder.ts'
+import type Arc from '#plots/disco/arc/Arc.ts'
+import type Settings from '#plots/disco/Settings.ts'
+import type Fusion from '#plots/disco/fusion/Fusion.ts'
+import type { DataHolder } from '#plots/disco/data/DataHolder.ts'
 
 export default class ViewModel {
 	width: number

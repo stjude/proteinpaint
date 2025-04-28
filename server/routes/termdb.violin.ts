@@ -12,7 +12,8 @@ import serverconfig from '../src/serverconfig.js'
 import run_R from '../src/run_R.js'
 import path from 'path'
 
-const minSampleSize = 5 // a group below cutoff will not compute violin
+// mark as unused by eslint, TODO: delete permanently
+// const minSampleSize = 5 // a group below cutoff will not compute violin
 
 export const api: RouteApi = {
 	endpoint: 'termdb/violin',

@@ -52,7 +52,7 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run ESLint
-        run: npx eslint . --ext .ts --quiet
+        run: npm run lint
 
       - name: Run tsc
         run: |

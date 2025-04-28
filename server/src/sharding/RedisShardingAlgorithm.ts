@@ -1,5 +1,5 @@
 import serverconfig from '#src/serverconfig.js'
-import { ShardingAlgorithm } from '#src/sharding/ShardingAlgorithm.ts'
+import type { ShardingAlgorithm } from '#src/sharding/ShardingAlgorithm.ts'
 import { getShardIndex } from '#src/sharding/getShardIndex.ts'
 import { RedisShard } from '#src/sharding/RedisShard.ts'
 import RedisClientHolder from '#src/redis/RedisClientHolder.ts'

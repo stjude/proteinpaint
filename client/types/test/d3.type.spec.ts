@@ -8,8 +8,8 @@
 	(or ... types/test/*.type.spec.ts) 
 */
 
-import { Selection, select } from 'd3-selection'
-import * as Sel from '../d3.d'
+import { select } from 'd3-selection'
+import type * as Sel from '../d3.d'
 
 // ------------
 // Declarations
