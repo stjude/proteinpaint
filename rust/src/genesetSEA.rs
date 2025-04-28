@@ -480,9 +480,13 @@ where
         R: Rng + ?Sized,
     {
         self._idx_to_elt.shuffle(rng);
-        self._idx_to_elt.iter().enumerate().for_each(|(i, e)| {
-            self._elt_to_idx.insert(e.clone(), i);
-        });
+        self.clone()
+            ._idx_to_elt
+            .iter()
+            .enumerate()
+            .for_each(|(i, e)| {
+                self._elt_to_idx.insert(e.clone(), i);
+            });
     }
 }
 
