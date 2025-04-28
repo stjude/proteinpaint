@@ -195,7 +195,7 @@ class RunChart {
 					})
 				}
 			}
-			for (const value of groupedSamples.entries()) {
+			for (const value of groupedSamples.values()) {
 				let x, y
 				if (this.settings.useMedian) {
 					x = median(value.samples.map(d => d.x))
