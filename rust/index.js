@@ -3,7 +3,7 @@ import fs from 'fs'
 import path from 'path'
 import { spawn, exec } from 'child_process'
 import { Readable, Transform } from 'stream'
-import promisify from 'util'
+import { promisify } from 'util'
 
 const __dirname = import.meta.dirname
 
