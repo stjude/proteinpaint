@@ -34,7 +34,7 @@
     "postcombined:coverage": "curl http://localhost:3000/coverage/close?key=test",
     "spec:coverage": "npm run spec:coverage --workspaces --if-present && node test/evalAllSpecCovResults.mjs 1",
     "local:integration": "cd client; npm run test:integration",
-    "lint": "eslint . --ext .ts --no-warn-ignored",
+    "lint": "eslint . --ext .ts",
     "docker": "./build/dev/run.sh",
     "testws": "npm test --workspaces",
     "sethooks": "./utils/hooks/init.sh",
