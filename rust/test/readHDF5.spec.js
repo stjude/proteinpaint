@@ -16,9 +16,9 @@
  */
 
 // Import necessary modules
-const tape = require('tape')
-const run_rust = require('@sjcrh/proteinpaint-rust').run_rust
-const path = require('path')
+import tape from 'tape'
+import { run_rust } from '@sjcrh/proteinpaint-rust'
+import path from 'path'
 
 // Path to the test HDF5 file containing gene expression data
 const HDF5_FILE = path.join('readHDF5_test_data.h5')

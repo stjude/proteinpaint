@@ -1,6 +1,7 @@
 {
 	"version": "2.120.2-0",
 	"name": "@sjcrh/proteinpaint-rust",
+	"type": "module",
 	"description": "Rust-based utilities for proteinpaint",
 	"main": "index.js",
 	"bin": {

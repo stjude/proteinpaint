@@ -1,10 +1,8 @@
-const run_rust = require('@sjcrh/proteinpaint-rust').run_rust
-const tape = require('tape')
-const path = require('path')
-const spawn = require('child_process').spawn
-const Readable = require('stream').Readable
-const additionalExamples = require('./indel.examples')
-//const utils = require('../../src/utils')
+// Import necessary modules
+import { run_rust } from '@sjcrh/proteinpaint-rust'
+import tape from 'tape'
+import additionalExamples from './indel.examples.js'
+// import utils from '@sjcrh/proteinpaint-utils'
 
 /*
 to compile rust, see server/utils/rust/README.md
@@ -69,12 +67,12 @@ const pphost = 'http://pp-int-test.stjude.org/' // show links using this host
 /**************
  Test sections
 ***************/
-tape('\n', function(test) {
+tape('\n', function (test) {
 	test.pass('-***- rust indel specs -***-')
 	test.end()
 })
 
-tape('rust indel binary', async function(test) {
+tape('rust indel binary', async function (test) {
 	const strictness_values = [0, 1] // Array containing the possible number of strictness values. This array structure is better than hardcoding, because number of strictness values may change later.
 	for (const strictness of strictness_values) {
 		console.log('Testing with strictness=', strictness)
@@ -135,69 +133,74 @@ async function runTest(e, test, strictness) {
 
 	const input_data = { reads: reads, alleles: alleles, strictness: Number(strictness) }
 
-	try {
-		const rust_output = await run_rust('indel', JSON.stringify(input_data))
-		const rust_output_list = rust_output.split('\n')
+	const rust_output = await run_rust('indel', JSON.stringify(input_data))
+	const rust_output_list = rust_output.split('\n')
 
-		for (let item of rust_output_list) {
-			if (item.includes('Final_output:')) {
-				final_output = JSON.parse(JSON.parse(item.replace('Final_output:', '')))
+	// Define final_output variable before using it
+	let final_output = null
+
+	for (let item of rust_output_list) {
+		if (item.includes('Final_output:')) {
+			final_output = JSON.parse(JSON.parse(item.replace('Final_output:', '')))
+		}
+	}
+
+	// Check if final_output was set
+	if (!final_output) {
+		test.fail('Could not find Final_output in the rust output')
+		return
+	}
+
+	test.equal(final_output.length, e.reads.length, 'indices.length should equal final_output.length')
+
+	const results = [] // in the same order as e.reads[]
+	for (let i = 0; i < final_output.length; i++) {
+		results[final_output[i].read_number] = final_output[i].categories[0] // The first element of categories contains the read classification
+	}
+	// find reads with wrong classification
+	let wrongcount = 0
+	for (let i = 0; i < results.length; i++) {
+		if (strictness == 0) {
+			// Check if "g_0" exists for that read
+			if (e.reads[i].g_0) {
+				// if it exists check with truth value for strictness = 0
+				if (e.reads[i].g_0 != results[i]) wrongcount++
+			} else {
+				// if g_0 does not exist for that read use the truth value for strictness = 1
+				if (e.reads[i].g != results[i]) wrongcount++
 			}
-		}
-		test.equal(final_output.length, e.reads.length, 'indices.length should equal final_output.length')
-
-		const results = [] // in the same order as e.reads[]
-		for (let i = 0; i < final_output.length; i++) {
-			results[final_output[i].read_number] = final_output[i].categories[0] // The first element of categories contains the read classification
-		}
-		// find reads with wrong classification
-		let wrongcount = 0
-		for (let i = 0; i < results.length; i++) {
+		} else if (e.reads[i].g != results[i]) wrongcount++ // For strictness = 1, simply check truth value for strictness = 1, i.e. .g
+	}
+	if (wrongcount) {
+		const lst = []
+		for (let i = 0; i < e.reads.length; i++) {
+			let truth
 			if (strictness == 0) {
-				// Check if "g_0" exists for that read
 				if (e.reads[i].g_0) {
 					// if it exists check with truth value for strictness = 0
-					if (e.reads[i].g_0 != results[i]) wrongcount++
+					truth = e.reads[i].g_0
 				} else {
 					// if g_0 does not exist for that read use the truth value for strictness = 1
-					if (e.reads[i].g != results[i]) wrongcount++
-				}
-			} else if (e.reads[i].g != results[i]) wrongcount++ // For strictness = 1, simply check truth value for strictness = 1, i.e. .g
-		}
-		if (wrongcount) {
-			const lst = []
-			for (let i = 0; i < e.reads.length; i++) {
-				let truth
-				if (strictness == 0) {
-					if (e.reads[i].g_0) {
-						// if it exists check with truth value for strictness = 0
-						truth = e.reads[i].g_0
-					} else {
-						// if g_0 does not exist for that read use the truth value for strictness = 1
-						truth = e.reads[i].g
-					}
-				} else {
 					truth = e.reads[i].g
 				}
-				const result = results[i]
-				lst.push(
-					i + '\t\t' + truth + '\t' + (truth != result ? result + (e.reads[i].n ? ' (' + e.reads[i].n + ')' : '') : '')
-				)
+			} else {
+				truth = e.reads[i].g
 			}
-			test.fail(`Misassigned ${wrongcount} reads:\nRead\tTruth\tResult\n${lst.join('\n')}`)
-		} else {
-			test.pass('classifications are correct')
+			const result = results[i]
+			lst.push(
+				i + '\t\t' + truth + '\t' + (truth != result ? result + (e.reads[i].n ? ' (' + e.reads[i].n + ')' : '') : '')
+			)
 		}
-	} catch (e) {
-		throw e
+		test.fail(`Misassigned ${wrongcount} reads:\nRead\tTruth\tResult\n${lst.join('\n')}`)
+	} else {
+		test.pass('classifications are correct')
 	}
 }
-
 const examples = [
 	// one object for each example
 
 	// additional examples from separate script
-	...additionalExamples.examples,
+	...additionalExamples,
 
 	{
 		comment: '8-bp insertion at CBL exon 10',
@@ -378,8 +381,7 @@ const examples = [
 		reads: [
 			{
 				n: 'mismatch and insertion on right',
-				s:
-					'CAAATTTCCTTCCACTCGGATAAGATGCTGAGGAGGGGCCAGACCTAAGAGCAATCAGTGAGGAATCAGAGGCCTGGGGACCCTGGGCAACCAGCCCTGTCGTCTCTCCAGCCCCAGCTGCTCACCATCGCTATCTGAGCAGCGCCTCACA',
+				s: 'CAAATTTCCTTCCACTCGGATAAGATGCTGAGGAGGGGCCAGACCTAAGAGCAATCAGTGAGGAATCAGAGGCCTGGGGACCCTGGGCAACCAGCCCTGTCGTCTCTCCAGCCCCAGCTGCTCACCATCGCTATCTGAGCAGCGCCTCACA',
 				p: 7578246,
 				c: '144M1I6M',
 				f: 99,
@@ -387,8 +389,7 @@ const examples = [
 			},
 			{
 				n: 'mismatch on right',
-				s:
-					'ACGCAAATTTCCTTCCACTCGGATAAGATGCTGAGGAGGGGCCAGACCTAAGAGCAATCAGTGAGGAATCAGAGGCCTGGGGACCCTGGGCCACCAGCCCTGTCGTCTCTCCAGCCCCAGCTGCTCACCATCGCTATCTGAGCAGCGCCTC',
+				s: 'ACGCAAATTTCCTTCCACTCGGATAAGATGCTGAGGAGGGGCCAGACCTAAGAGCAATCAGTGAGGAATCAGAGGCCTGGGGACCCTGGGCCACCAGCCCTGTCGTCTCTCCAGCCCCAGCTGCTCACCATCGCTATCTGAGCAGCGCCTC',
 				p: 7578243,
 				c: '151M',
 				f: 163,
@@ -396,8 +397,7 @@ const examples = [
 			},
 			{
 				n: 'Softclip on right',
-				s:
-					'TTCCACTCGGATAAGATGCTGAGGAGGGGCCAGACCTAAGAGCAATCAGTGAGGAATCAGAGGCCTGGGGACCCTGGGCAACCAGCCCTGTCGTCTCTCCAGCCCCAGCTGCTCACCATCGCTATCTGAGCAGCGCCTCACAACCTCCGTC',
+				s: 'TTCCACTCGGATAAGATGCTGAGGAGGGGCCAGACCTAAGAGCAATCAGTGAGGAATCAGAGGCCTGGGGACCCTGGGCAACCAGCCCTGTCGTCTCTCCAGCCCCAGCTGCTCACCATCGCTATCTGAGCAGCGCCTCACAACCTCCGTC',
 				p: 7578255,
 				c: '136M15S',
 				f: 99,
@@ -405,8 +405,7 @@ const examples = [
 			},
 			{
 				n: 'Insertion only on right',
-				s:
-					'CGCAAATTTCCTTCCACTCGGATAAGATGCTGAGGAGGGGCCAGACCTAAGAGCAATCAGTGAGGAATCAGAGGCCTGGGGACCCTGGGCAACCAGCCCTGTCGTCTCTCCAGCCCCAGCTGCTCACCATCGCTATCTGAGCAGCGCCTCA',
+				s: 'CGCAAATTTCCTTCCACTCGGATAAGATGCTGAGGAGGGGCCAGACCTAAGAGCAATCAGTGAGGAATCAGAGGCCTGGGGACCCTGGGCAACCAGCCCTGTCGTCTCTCCAGCCCCAGCTGCTCACCATCGCTATCTGAGCAGCGCCTCA',
 				p: 7578244,
 				c: '146M1I14M',
 				f: 83,
@@ -414,8 +413,7 @@ const examples = [
 			},
 			{
 				n: 'Deletion in middle of read',
-				s:
-					'TAAGATGCTGAGGAGGGGCCAGACCTAAGAGCAATCAGTGAGGAATCAGAGGCCTGGGGACCCTGGGCAACCAGCCCTGTCGTCTCTCCAGCCCCAGCTGCTCACCATCGCTATCTGAGCAGCGCCTCACAACCTCCGTCATGTGCTGTGA',
+				s: 'TAAGATGCTGAGGAGGGGCCAGACCTAAGAGCAATCAGTGAGGAATCAGAGGCCTGGGGACCCTGGGCAACCAGCCCTGTCGTCTCTCCAGCCCCAGCTGCTCACCATCGCTATCTGAGCAGCGCCTCACAACCTCCGTCATGTGCTGTGA',
 				p: 7578266,
 				c: '118M18D33M',
 				f: 99,
@@ -423,8 +421,7 @@ const examples = [
 			},
 			{
 				n: 'Softclip on left',
-				s:
-					'TGCTCACCATCGCTATCTGAGCAGCGCCTCACAACCTCCGTCATGTGCTGTGACTGCTTGTAGATGGCCATGGCGCGGACGCGGGTGCCGGGCGGGGGTGTGGAATCAACCCACAGCTGCACAGGGCAGGTCTTGGCCAGTTGGCAAAACA',
+				s: 'TGCTCACCATCGCTATCTGAGCAGCGCCTCACAACCTCCGTCATGTGCTGTGACTGCTTGTAGATGGCCATGGCGCGGACGCGGGTGCCGGGCGGGGGTGTGGAATCAACCCACAGCTGCACAGGGCAGGTCTTGGCCAGTTGGCAAAACA',
 				p: 7578382,
 				c: '20S131M',
 				f: 147,
@@ -432,8 +429,7 @@ const examples = [
 			},
 			{
 				n: 'Mismatch on left',
-				s:
-					'CTATCTGAGCAGCGCCTCACAACCTCCGTCATGTGCTGTGACTGCTTGTAGATGGCCATGGCGCGGACGCGGGTGCCGGGCGGGGGTGTGGAATCAACCCACAGCTGCACAGGGCAGGTCTTGGCCAGTTGGCAAAACATCTTGTTGAGGG',
+				s: 'CTATCTGAGCAGCGCCTCACAACCTCCGTCATGTGCTGTGACTGCTTGTAGATGGCCATGGCGCGGACGCGGGTGCCGGGCGGGGGTGTGGAATCAACCCACAGCTGCACAGGGCAGGTCTTGGCCAGTTGGCAAAACATCTTGTTGAGGG',
 				p: 7578394,
 				c: '151M',
 				f: 147,
@@ -441,8 +437,7 @@ const examples = [
 			},
 			{
 				n: 'Deletion (supporting alt) with mismatch, different strictness values gives different results',
-				s:
-					'GAATCAGAGGCCTGGGGACCCTGGGCAACCAGCCCTGTCGTCTCTCCAGCCCCAGCTGCTCACCATCGCTATCTGCGCAGCGCCTCACACCCTCCGTCATGTGCTGTGACTGCTTGTAGATGGCCATGGCGCGGACGCGGGTGCCGGGCGG',
+				s: 'GAATCAGAGGCCTGGGGACCCTGGGCAACCAGCCCTGTCGTCTCTCCAGCCCCAGCTGCTCACCATCGCTATCTGCGCAGCGCCTCACACCCTCCGTCATGTGCTGTGACTGCTTGTAGATGGCCATGGCGCGGACGCGGGTGCCGGGCGG',
 				p: 7578308,
 				c: '74M18D77M',
 				f: 163,
@@ -450,10 +445,8 @@ const examples = [
 				g_0: 'alt0' // Value for strictness = 0
 			},
 			{
-				n:
-					'Read supporting reference but with mismatch at variant region, different strictness values gives different results',
-				s:
-					'GGGCAACCAGCCCTGTCGTCTCTCCAGCCCCAGCTGCTCACCATCGCTATCTGAGCAGCGCCCATGGTGGGGGCGGCGCCTCACAACCTCCGTCATGTGCTGTGACTGCTTGTAGATGGCCATGGCGCGGACGCGCGTGCCGGGCGGGGGT',
+				n: 'Read supporting reference but with mismatch at variant region, different strictness values gives different results',
+				s: 'GGGCAACCAGCCCTGTCGTCTCTCCAGCCCCAGCTGCTCACCATCGCTATCTGAGCAGCGCCCATGGTGGGGGCGGCGCCTCACAACCTCCGTCATGTGCTGTGACTGCTTGTAGATGGCCATGGCGCGGACGCGCGTGCCGGGCGGGGGT',
 				p: 7578330,
 				c: '151M',
 				f: 83,
@@ -462,8 +455,7 @@ const examples = [
 			},
 			{
 				n: 'Read supporting reference but mismatch is outside variant, both strictness values should yield same result',
-				s:
-					'GGGCAACCAGCCCTGTCGTCTCTCCAGCCCCAGCTGCTCACCATCGCTATCTGAGCAGCGCTCATGGTGGGGGCGGCGCCTCACAACCTCCGTCATGTGCTGTGACTGCTTGTAGATGGCCATGGCGCGGACGCGGGTGCCGGGCGGGGGT',
+				s: 'GGGCAACCAGCCCTGTCGTCTCTCCAGCCCCAGCTGCTCACCATCGCTATCTGAGCAGCGCTCATGGTGGGGGCGGCGCCTCACAACCTCCGTCATGTGCTGTGACTGCTTGTAGATGGCCATGGCGCGGACGCGGGTGCCGGGCGGGGGT',
 				p: 7578330,
 				c: '151M',
 				f: 83,
@@ -492,8 +484,7 @@ const examples = [
 		reads: [
 			{
 				n: 'softclip on right',
-				s:
-					'GAGTGCCTCAAGTACCAGGTGCCCCTGCCCGACAGCATGAAGCTGGAGTCGTCCCACTCCCGTGGCAGCATGACCGCCCTGGGTGGAGCCTCCTCGTCGACCCACCACCCCATCACCCCTGCCTGTTGTGAGCTGCTCTACG',
+				s: 'GAGTGCCTCAAGTACCAGGTGCCCCTGCCCGACAGCATGAAGCTGGAGTCGTCCCACTCCCGTGGCAGCATGACCGCCCTGGGTGGAGCCTCCTCGTCGACCCACCACCCCATCACCCCTGCCTGTTGTGAGCTGCTCTACG',
 				p: 8100570,
 				c: '117M25S',
 				f: 147,
@@ -501,8 +492,7 @@ const examples = [
 			},
 			{
 				n: 'read supporting alt but wrong bp in alternate allele',
-				s:
-					'CGCTGGCGTCGCCCCACTCCCGTGGCAGCATGACCGCCCTAGGTGGAGCCTCCTCGTCGACCCGCCGCCCCATCGCCCCTGCCTGTTGTGAGCTGCTCGACGTGCCCTACGTGCTCTACCCGCCCTACGTGCCCGAGTACAG',
+				s: 'CGCTGGCGTCGCCCCACTCCCGTGGCAGCATGACCGCCCTAGGTGGAGCCTCCTCGTCGACCCGCCGCCCCATCGCCCCTGCCTGTTGTGAGCTGCTCGACGTGCCCTACGTGCTCTACCCGCCCTACGTGCCCGAGTACAG',
 				p: 8100610,
 				c: '74M68S',
 				f: 147,
@@ -511,8 +501,7 @@ const examples = [
 			},
 			{
 				n: 'read supporting ref allele',
-				s:
-					'CGTCCCACTCCCGCGGCAGCATGACCGCCCTGGGTGGAGCCTCCTCGTCGACCCACCACCCCATCACCACCTACCCGCCCTACGTGCCCGAGTACAGCTCCGGACTCTTCCCCCCCAGCAGCCTGCTGGGCGGACGCCCCAC',
+				s: 'CGTCCCACTCCCGCGGCAGCATGACCGCCCTGGGTGGAGCCTCCTCGTCGACCCACCACCCCATCACCACCTACCCGCCCTACGTGCCCGAGTACAGCTCCGGACTCTTCCCCCCCAGCAGCCTGCTGGGCGGACGCCCCAC',
 				p: 8100619,
 				c: '133M9S',
 				f: 163,
@@ -520,8 +509,7 @@ const examples = [
 			},
 			{
 				n: 'Read supporting ref allele but has wrong bp in variant region',
-				s:
-					'ATGGAGCTGGAGTCCTCCCCCTCCCGCGGCAGCCTGACCGCCCTGGGTGGGGCCCCCTCGGCGACCCCCCCCCCCCTCCCCCCCCACCCGCCCTACGTGCCCGGGTACAGCCCCCGGCTCTTCCCCCCCCAGCAGCCTGCTG',
+				s: 'ATGGAGCTGGAGTCCTCCCCCTCCCGCGGCAGCCTGACCGCCCTGGGTGGGGCCCCCTCGGCGACCCCCCCCCCCCTCCCCCCCCACCCGCCCTACGTGCCCGGGTACAGCCCCCGGCTCTTCCCCCCCCAGCAGCCTGCTG',
 				p: 8100606,
 				c: '122M1I19M',
 				f: 83,
@@ -666,8 +654,7 @@ const examples = [
 				g_0: 'alt0'
 			},
 			{
-				n:
-					'Read finishes near the adjoining region of the flanking region of the insertion which has the same sequence as the insertion itself, read is also hard-clipped at the end',
+				n: 'Read finishes near the adjoining region of the flanking region of the insertion which has the same sequence as the insertion itself, read is also hard-clipped at the end',
 				s: 'CCACATTTGTTTTTTTTTTTTTCCCGGCCATTCAAGATCTCTG',
 				p: 171410501,
 				c: '50H43M7H',
@@ -697,8 +684,7 @@ const examples = [
 		reads: [
 			{
 				n: 'Read supports alt allele with an insertion',
-				s:
-					'TAGTAATAATGTGAAATTATTTACAGTACCCTAACCCTAACCCTAACCCCTAATCCTAACCCTAACCCTAACCCCTAACCCTAATCCTAACCCTAACCCTAACCCTAACCCCTAACCCCTAACCCTAACCCTAAAACCCTAACCCTAAAAC',
+				s: 'TAGTAATAATGTGAAATTATTTACAGTACCCTAACCCTAACCCTAACCCCTAATCCTAACCCTAACCCTAACCCCTAACCCTAATCCTAACCCTAACCCTAACCCTAACCCCTAACCCCTAACCCTAACCCTAAAACCCTAACCCTAAAAC',
 				p: 16357,
 				c: '108M1I42M',
 				f: 147,
@@ -706,8 +692,7 @@ const examples = [
 			},
 			{
 				n: 'Read supports ref allele with no insertion but has a distal SNV',
-				s:
-					'ACCCCTAATCCTAACCCTAACCCTAACCCCTAACCCTAATCCTAACCCTAGCCCTAACCCTAACCCTAACCCCTAACCCTAACCCTAAAACCCTAACCCTAAAACCCTAACCATAACCCTTACCCTTACCCTAATCCTAACCCTAATCCTT',
+				s: 'ACCCCTAATCCTAACCCTAACCCTAACCCCTAACCCTAATCCTAACCCTAGCCCTAACCCTAACCCTAACCCCTAACCCTAACCCTAAAACCCTAACCCTAAAACCCTAACCATAACCCTTACCCTTACCCTAATCCTAACCCTAATCCTT',
 				p: 16402,
 				c: '110M1I40M',
 				f: 147,
@@ -715,8 +700,7 @@ const examples = [
 			},
 			{
 				n: 'Read supports alt allele with the insertion but the nucleotide before it is wrongly called',
-				s:
-					'TAAAGTGAAATTATTGACAGTACCCTAACCCTAACCCTAACCCCTAATCCTAACCCTAACCCTATCCCCTAACCCTAATCCTAACCCTAACCCTAACCCTATCCCCTAACCCCTAACCCTAACCCTAAAACCCTAACCCTAAAACCCTAAC',
+				s: 'TAAAGTGAAATTATTGACAGTACCCTAACCCTAACCCTAACCCCTAATCCTAACCCTAACCCTATCCCCTAACCCTAATCCTAACCCTAACCCTAACCCTATCCCCTAACCCCTAACCCTAACCCTAAAACCCTAACCCTAAAACCCTAAC',
 				p: 16363,
 				c: '101M1I49M',
 				f: 83,
@@ -743,8 +727,7 @@ const examples = [
 		},
 		reads: [
 			{
-				n:
-					'Read supports none as it contains AGGG sequence (the correct indel sequence). Here the read should be right-aligned as its softclipped to the left',
+				n: 'Read supports none as it contains AGGG sequence (the correct indel sequence). Here the read should be right-aligned as its softclipped to the left',
 				s: 'CAGAAATCCTGAAGGGCAGGCTCGTGAATGGCATGCTCCAATGTGTGGCAGCAGGATTTCCAGAGGCCCCAATAGATTGGGATTTTTGCCCAGGAACTTA',
 				p: 55589775,
 				c: '16S82M2S',
@@ -771,8 +754,7 @@ const examples = [
 				g_0: 'ref'
 			},
 			{
-				n:
-					'Read supports none as it contains AGGG sequence (the correct indel sequence). Here the read should be left-aligned as indel is close to stop position of read',
+				n: 'Read supports none as it contains AGGG sequence (the correct indel sequence). Here the read should be left-aligned as indel is close to stop position of read',
 				s: 'GAAGGGCAGGCTCGTGAATGGCATGCTCCAATGTGTGGCAGCAGGATTCCCAGAGCCCACAATAGATTGGTATTTTTGTCCAGGAACTGAGCAGAGGTGA',
 				p: 55589766,
 				c: '2M3D98M',
@@ -806,8 +788,7 @@ const examples = [
 				g: 'ref'
 			},
 			{
-				n:
-					'Read supports none as it contains the AGGG correct indel sequence. The indel is closer to end-position so the read should be left-aligned',
+				n: 'Read supports none as it contains the AGGG correct indel sequence. The indel is closer to end-position so the read should be left-aligned',
 				s: 'GAGAGGGAGTGAAGTGAATGTTGCTGAGGTTTTCCAGCACTCTGACATATGGCCATTTCTGTTTTCCTGTAGCAAAACCAGAAATCCTGAAGGGCAGGCT',
 				p: 55589678,
 				c: '90M3D10M',
@@ -836,8 +817,7 @@ const examples = [
 		},
 		reads: [
 			{
-				n:
-					'Read supports alt as it contains AGGG sequence (the correct indel sequence). Here the read should be right-aligned as its softclipped to the left',
+				n: 'Read supports alt as it contains AGGG sequence (the correct indel sequence). Here the read should be right-aligned as its softclipped to the left',
 				s: 'CAGAAATCCTGAAGGGCAGGCTCGTGAATGGCATGCTCCAATGTGTGGCAGCAGGATTTCCAGAGGCCCCAATAGATTGGGATTTTTGCCCAGGAACTTA',
 				p: 55589775,
 				c: '16S82M2S',
@@ -845,8 +825,7 @@ const examples = [
 				g: 'alt0'
 			},
 			{
-				n:
-					'Read supports none as it contains AGGG sequence (the correct indel sequence). Here the read should be right-aligned as its softclipped to the left',
+				n: 'Read supports none as it contains AGGG sequence (the correct indel sequence). Here the read should be right-aligned as its softclipped to the left',
 				s: 'AGGGATTAGAGAGGGAGTGAAGTGAATGTTGCTGAGGTTTTCCAGCACTCTGACATATGGCCATTTCTGTTTTCCTGTAGCAAAACCAGAAATTCTGAAG',
 				p: 55589670,
 				c: '98M3D2M',
@@ -864,8 +843,7 @@ const examples = [
 				g_0: 'ref'
 			},
 			{
-				n:
-					'Read supports alt as it contains AGGG sequence (the correct indel sequence). Here the read should be right-aligned as indel is close to start position of read',
+				n: 'Read supports alt as it contains AGGG sequence (the correct indel sequence). Here the read should be right-aligned as indel is close to start position of read',
 				s: 'GAAGGGCAGGCTCGTGAATGGCATGCTCCAATGTGTGGCAGCAGGATTCCCAGAGCCCACAATAGATTGGTATTTTTGTCCAGGAACTGAGCAGAGGTGA',
 				p: 55589766,
 				c: '2M3D98M',
@@ -897,8 +875,7 @@ const examples = [
 				g: 'ref'
 			},
 			{
-				n:
-					'Read supports alt as it contains the AGGG correct indel sequence. The indel is closer to end-position so the read should be left-aligned',
+				n: 'Read supports alt as it contains the AGGG correct indel sequence. The indel is closer to end-position so the read should be left-aligned',
 				s: 'GAGAGGGAGTGAAGTGAATGTTGCTGAGGTTTTCCAGCACTCTGACATATGGCCATTTCTGTTTTCCTGTAGCAAAACCAGAAATCCTGAAGGGCAGGCT',
 				p: 55589678,
 				c: '90M3D10M',
@@ -1282,8 +1259,7 @@ const examples = [
 		reads: [
 			{
 				n: 'Read supporting alt allele with 3A insertion',
-				s:
-					'AGCTACTAGGGAGGCTGAGGCTGGAGGGTGAGTTGAGCCCAGGAGTTCAAGGCTGCAGTGAGCTATGATAGCACCACTGCACTCCAGCCTGGTTAACAGAGTGAGACTCTGTCTCAGAAAAAAAAAAAAAAAAAAAAAACTGCACCCCTAG',
+				s: 'AGCTACTAGGGAGGCTGAGGCTGGAGGGTGAGTTGAGCCCAGGAGTTCAAGGCTGCAGTGAGCTATGATAGCACCACTGCACTCCAGCCTGGTTAACAGAGTGAGACTCTGTCTCAGAAAAAAAAAAAAAAAAAAAAAACTGCACCCCTAG',
 				p: 19934266,
 				c: '117M3I31M',
 				f: 99,
@@ -1291,8 +1267,7 @@ const examples = [
 			},
 			{
 				n: 'Read containing alt allele with 3A insertion that is softclipped to the right',
-				s:
-					'GGGAGGCTGAGGCTGGAGGGTGAGTTGAGCCCAGGAGTTCAAGGCTGCAGTGAGCTATGATAGCACCACTGCACTCCAGCCTGGTTAACAGAGTGAGACTCTGTCTCAGAAAAAAAAAAAAAAAAAAAAAACAGAACCCCTAGTCGGGGTA',
+				s: 'GGGAGGCTGAGGCTGGAGGGTGAGTTGAGCCCAGGAGTTCAAGGCTGCAGTGAGCTATGATAGCACCACTGCACTCCAGCCTGGTTAACAGAGTGAGACTCTGTCTCAGAAAAAAAAAAAAAAAAAAAAAACAGAACCCCTAGTCGGGGTA',
 				p: 19934274,
 				c: '128M23S',
 				f: 163,
@@ -1300,8 +1275,7 @@ const examples = [
 			},
 			{
 				n: 'Read containing ref allele with no 3A insertion',
-				s:
-					'AAGGCTGCAGTGAGCTATGATACCCCCACTGAACTCCAGCCTGGTTAACAGAGTGAGACTCGGGCTCAGAAAAAAAAAAAAAAAAAAACTGCACCCCTAGTCTGGGTACAGTGGCTCACACCTGTGTTGCAGGAAGTCAGGAACCCCGAAT',
+				s: 'AAGGCTGCAGTGAGCTATGATACCCCCACTGAACTCCAGCCTGGTTAACAGAGTGAGACTCGGGCTCAGAAAAAAAAAAAAAAAAAAACTGCACCCCTAGTCTGGGTACAGTGGCTCACACCTGTGTTGCAGGAAGTCAGGAACCCCGAAT',
 				p: 19934314,
 				c: '151M',
 				f: 83,
@@ -1309,8 +1283,7 @@ const examples = [
 			},
 			{
 				n: 'Read containing only 2A insertion',
-				s:
-					'GGGGGGGGGGGGGCTGGGGGGGGGGTTGAGCCCGGGGGTTAAAGGCTGCAGTGAGCTATGATAGCCCCACTGCCCTCCAGCCTGGTTAACAGAGTGAGACTCTGTCTCAGAAAAAAAAAAAAAAAAAAAAACTGCACCCCTAGTCTGGGTA',
+				s: 'GGGGGGGGGGGGGCTGGGGGGGGGGTTGAGCCCGGGGGTTAAAGGCTGCAGTGAGCTATGATAGCCCCACTGCCCTCCAGCCTGGTTAACAGAGTGAGACTCTGTCTCAGAAAAAAAAAAAAAAAAAAAAACTGCACCCCTAGTCTGGGTA',
 				p: 19934314,
 				c: '41S69M2I39M',
 				f: 83,
@@ -1319,8 +1292,7 @@ const examples = [
 			},
 			{
 				n: 'Read containing 1A deletion instead of insertion',
-				s:
-					'ACTAGGGAGGCTGAGGCGGAGGGGGGAGTTGAACCCAGGAGTTCAAGCCGGCGGGGAGCTCTGAGAGCACCACGGCCCCCCAGCCTGGTTAACAGAGTGAGACTTTGTTTCAGAAAAAAAAAAAAAAAAAACTGCACCCCTAGTCTGGGTA',
+				s: 'ACTAGGGAGGCTGAGGCGGAGGGGGGAGTTGAACCCAGGAGTTCAAGCCGGCGGGGAGCTCTGAGAGCACCACGGCCCCCCAGCCTGGTTAACAGAGTGAGACTTTGTTTCAGAAAAAAAAAAAAAAAAAACTGCACCCCTAGTCTGGGTA',
 				p: 19934270,
 				c: '113M1D38M',
 				f: 147,
@@ -1350,8 +1322,7 @@ const examples = [
 		reads: [
 			{
 				n: 'Read containing 3T insertion',
-				s:
-					'CAGGGACCCCGAATGGAGGGACTGGCTGGAGCCGTGGCAGAGGAACATAAATAGTGAACATTTCATTTCAATATGAACATTTATCAATTCCCAAGTAATACTTTTATACTTTTTTCTTTTTTTTTTTTTTTTTGAGGCAGATTCTCTCTCT',
+				s: 'CAGGGACCCCGAATGGAGGGACTGGCTGGAGCCGTGGCAGAGGAACATAAATAGTGAACATTTCATTTCAATATGAACATTTATCAATTCCCAAGTAATACTTTTATACTTTTTTCTTTTTTTTTTTTTTTTTGAGGCAGATTCTCTCTCT',
 				p: 19934451,
 				c: '116M3I32M',
 				f: 83,
@@ -1359,8 +1330,7 @@ const examples = [
 			},
 			{
 				n: 'Read contains 3T insertion but the cigar sequence shows only 2T insertion',
-				s:
-					'TACTTTTATACTTTTTTCTTTTTTTTTTTTTTTTTAGGCAGATTCTCTCACTGTCGCCCAGGCTGGGGTGCAGTGGCACAATCTCAGCTCACTGCAAGCACCGCCACCTGGGTTCACACCATTCTCCTGTCTCAGCCTCCTGAGTAGCTGG',
+				s: 'TACTTTTATACTTTTTTCTTTTTTTTTTTTTTTTTAGGCAGATTCTCTCACTGTCGCCCAGGCTGGGGTGCAGTGGCACAATCTCAGCTCACTGCAAGCACCGCCACCTGGGTTCACACCATTCTCCTGTCTCAGCCTCCTGAGTAGCTGG',
 				p: 19934549,
 				c: '18M2I131M',
 				f: 163,
@@ -1368,8 +1338,7 @@ const examples = [
 			},
 			{
 				n: 'Read contains no T insertion and supports ref allele',
-				s:
-					'CTGGAGCCGTGGCAGAGGAACATAAATAGTGAAGATTTCATTTCAATATGAACATTTATCAATTCCCAAGTAATACTTTTATACTTTTTTCTTTTTTTTTTTTTTGAGGCAGATTCTCTCTCTGTCGCCCAGGCTGGGGTGCAGTGGCACA',
+				s: 'CTGGAGCCGTGGCAGAGGAACATAAATAGTGAAGATTTCATTTCAATATGAACATTTATCAATTCCCAAGTAATACTTTTATACTTTTTTCTTTTTTTTTTTTTTGAGGCAGATTCTCTCTCTGTCGCCCAGGCTGGGGTGCAGTGGCACA',
 				p: 19934476,
 				c: '151M',
 				f: 99,
@@ -1377,8 +1346,7 @@ const examples = [
 			},
 			{
 				n: 'Read contains 2T insertion and therefore suppports neither ref nor alt allele',
-				s:
-					'CCGGGACCCCGAATGGAGGGACTGGCTGGAGCCGTGGCAGAGGAACATAAATAGTGAAGATTTCATTTCAATATGAACATTTATCAATTCCCAAGTAATACTTTTATACTTTTTTCTTTTTTTTTTTTTTTTGAGGCAGATTCTCT',
+				s: 'CCGGGACCCCGAATGGAGGGACTGGCTGGAGCCGTGGCAGAGGAACATAAATAGTGAAGATTTCATTTCAATATGAACATTTATCAATTCCCAAGTAATACTTTTATACTTTTTTCTTTTTTTTTTTTTTTTGAGGCAGATTCTCT',
 				p: 19934451,
 				c: '116M2I28M',
 				f: 81,
@@ -1387,8 +1355,7 @@ const examples = [
 			},
 			{
 				n: 'Read contains 1T insertion and therefore suppports neither ref nor alt allele',
-				s:
-					'GAATGGAGGGACTGGCTGGAGCCGTGGCAGAGGAACATAAATAGTGAAGATTTCATTTCAATATGAACATTTATCAATTCCCAAGTAATACTTTTATACTTTTTTCTTTTTTTTTTTTTTTGAGGCAGATT',
+				s: 'GAATGGAGGGACTGGCTGGAGCCGTGGCAGAGGAACATAAATAGTGAAGATTTCATTTCAATATGAACATTTATCAATTCCCAAGTAATACTTTTATACTTTTTTCTTTTTTTTTTTTTTTGAGGCAGATT',
 				p: 19934461,
 				c: '106M1I24M',
 				f: 145,
@@ -1494,8 +1461,7 @@ const examples = [
 		reads: [
 			{
 				n: 'Read supports 1A deletion but deletion shown as a mismatch towards the end of read',
-				s:
-					'TAACCAACCTCCCTAGTCCCGCGCAATGAGCTCACAGAAGTCAGGATGTGCACAGGCTGTATCCTTCGCTGTTTCCATTCTTGGTTTAAGATTTCCGTTCTTTCCAAAATTTTCTGACGATTGGAACTAAACATACTCTTAAAAAAAAAAT',
+				s: 'TAACCAACCTCCCTAGTCCCGCGCAATGAGCTCACAGAAGTCAGGATGTGCACAGGCTGTATCCTTCGCTGTTTCCATTCTTGGTTTAAGATTTCCGTTCTTTCCAAAATTTTCTGACGATTGGAACTAAACATACTCTTAAAAAAAAAAT',
 				p: 148846462,
 				c: '151M',
 				f: 163,
@@ -1503,8 +1469,7 @@ const examples = [
 			},
 			{
 				n: 'Read supports 1A deletion which is in the middle of the read',
-				s:
-					'TCGCTGTTTCCATTCTTGGTTTAAGATTTCCGTTCTTTCCAAAATTTTCTGACGATTGGAACTAAACATACTCTTAAAAAAAAAATGAAGGAGAGGAAAGGAGAAATTGTTCATTGTTAGAAAATGTATAACATCTGTAAAGCAGGTTAAA',
+				s: 'TCGCTGTTTCCATTCTTGGTTTAAGATTTCCGTTCTTTCCAAAATTTTCTGACGATTGGAACTAAACATACTCTTAAAAAAAAAATGAAGGAGAGGAAAGGAGAAATTGTTCATTGTTAGAAAATGTATAACATCTGTAAAGCAGGTTAAA',
 				p: 148846527,
 				c: '75M1D76M',
 				f: 99,
@@ -1512,8 +1477,7 @@ const examples = [
 			},
 			{
 				n: 'Read supports 1A deletion but deletion shown as a mismatch towards the beginning of read',
-				s:
-					'TTAAAAAAAAAATGAAGGAGAGGAAAGGAGAAATTGTTCATTGTTAGAAACTGTATAACATCTGTAAAGCAGGTTAAAAATCTAGTGTATCCTCAAAAATATCAAGAACATTTTCTTAGGTGCTTATAGAATTTACACTATAGTTTCCCAC',
+				s: 'TTAAAAAAAAAATGAAGGAGAGGAAAGGAGAAATTGTTCATTGTTAGAAACTGTATAACATCTGTAAAGCAGGTTAAAAATCTAGTGTATCCTCAAAAATATCAAGAACATTTTCTTAGGTGCTTATAGAATTTACACTATAGTTTCCCAC',
 				p: 148846601,
 				c: '151M',
 				f: 147,
@@ -1521,8 +1485,7 @@ const examples = [
 			},
 			{
 				n: 'Read supports ref allele but variant region towards end of read',
-				s:
-					'CCAACCTCCCTAGTCCCGCGCAATGAGCTCACAGAAGTCAGGATGTGCACAGGCTGTATCCTTCGCTGTTTCCATTCTTGGTTTAAGATTTCCGTTCTTTCCAAAATTTTCTGACGATTGGAACTAAACATACTCTTAAAAAAAAAAATGA',
+				s: 'CCAACCTCCCTAGTCCCGCGCAATGAGCTCACAGAAGTCAGGATGTGCACAGGCTGTATCCTTCGCTGTTTCCATTCTTGGTTTAAGATTTCCGTTCTTTCCAAAATTTTCTGACGATTGGAACTAAACATACTCTTAAAAAAAAAAATGA',
 				p: 148846465,
 				c: '151M',
 				f: 99,
@@ -1530,8 +1493,7 @@ const examples = [
 			},
 			{
 				n: 'Read supports ref allele where variant region is in the middle of the read',
-				s:
-					'TGCACAGGCTGTATCCTTCGCTGTTTCCATTCTTGGTTTAAGATTTCCGTTCTTTCCAAAATTTTCTGACGATTGGAACTAAACATACTCTTAAAAAAAAAAATGAAGGAGAGGAAAGGAGAAATTGTTCATTGTTAGAAAATGTATAACA',
+				s: 'TGCACAGGCTGTATCCTTCGCTGTTTCCATTCTTGGTTTAAGATTTCCGTTCTTTCCAAAATTTTCTGACGATTGGAACTAAACATACTCTTAAAAAAAAAAATGAAGGAGAGGAAAGGAGAAATTGTTCATTGTTAGAAAATGTATAACA',
 				p: 148846510,
 				c: '151M',
 				f: 147,
@@ -1539,8 +1501,7 @@ const examples = [
 			},
 			{
 				n: 'Read supports ref allele but variant region towards the beginning of read',
-				s:
-					'ACTCTTAAAAAAAAAAATGAAGGAGAGGAAAGGAGAAATTGTTCATCGATAGAAAATGTATAACACCTGTAACGCAGGTTAAAAATCTAGTGTATCCTCAAAAATATCAAGAACATTTTCTTAGGTGCTTATAGATTTTACACTATAGTTT',
+				s: 'ACTCTTAAAAAAAAAAATGAAGGAGAGGAAAGGAGAAATTGTTCATCGATAGAAAATGTATAACACCTGTAACGCAGGTTAAAAATCTAGTGTATCCTCAAAAATATCAAGAACATTTTCTTAGGTGCTTATAGATTTTACACTATAGTTT',
 				p: 148846596,
 				c: '151M',
 				f: 163,
@@ -1548,8 +1509,7 @@ const examples = [
 			},
 			{
 				n: 'Read containing 1A insertion instead of deletion',
-				s:
-					'GGTTCCATTCTTAGTTTAAGATTTCCGTTCTTTCCAAAATTTTCTGACGATTGGAACTAAACATACTCTTAAAAAAAAAAAATGAAGGAGAGGAAAGGAGAAATTGTTCATTGTTAGAAAATGTATAACACCTGTAAAGCAGGTTAAAAAT',
+				s: 'GGTTCCATTCTTAGTTTAAGATTTCCGTTCTTTCCAAAATTTTCTGACGATTGGAACTAAACATACTCTTAAAAAAAAAAAATGAAGGAGAGGAAAGGAGAAATTGTTCATTGTTAGAAAATGTATAACACCTGTAAAGCAGGTTAAAAAT',
 				p: 148846532,
 				c: '70M1I80M',
 				f: 147,
@@ -1558,8 +1518,7 @@ const examples = [
 			},
 			{
 				n: 'Read containing 1T substitution instead of deletion',
-				s:
-					'CCCTCCCTAGTCCCGCGCAATGAGCTCACAGAAGTCATGATGTGCACAGGCTGTATCCTTCCCTGTTTCCATTCTTGGTATAAGATTTCCGTTCTTTCCAAAATTTTCTGCCGATTGGAACTAAACATACTCTTAAAAAAAATAATGAAGG',
+				s: 'CCCTCCCTAGTCCCGCGCAATGAGCTCACAGAAGTCATGATGTGCACAGGCTGTATCCTTCCCTGTTTCCATTCTTGGTATAAGATTTCCGTTCTTTCCAAAATTTTCTGCCGATTGGAACTAAACATACTCTTAAAAAAAATAATGAAGG',
 				p: 148846468,
 				c: '151M',
 				f: 83,
@@ -1568,8 +1527,7 @@ const examples = [
 			},
 			{
 				n: 'Read does not contain the entire A repeat region, so cannot determine of it supports ref or alt allele',
-				s:
-					'TATGTTAACCAACCCCCCTAGTCCCGCGCAATGAGCTCACAGAAGTCAGTATGTGCACAGGCTGTATCCTTCGCTGTTTCCATTCTTGGTTTAAGATTTCCGTTCTTTCCAAAATTTTCTGACGATTGGAACTAAACATACTCTTAAAAAA',
+				s: 'TATGTTAACCAACCCCCCTAGTCCCGCGCAATGAGCTCACAGAAGTCAGTATGTGCACAGGCTGTATCCTTCGCTGTTTCCATTCTTGGTTTAAGATTTCCGTTCTTTCCAAAATTTTCTGACGATTGGAACTAAACATACTCTTAAAAAA',
 				p: 148846457,
 				c: '151M',
 				f: 147,
@@ -1652,8 +1610,7 @@ const examples = [
 				g_0: 'ref'
 			},
 			{
-				n:
-					'Read does not contain the variant region and the adjoining TGT monomer region so cannot determine whether read supports ref or alt allele',
+				n: 'Read does not contain the variant region and the adjoining TGT monomer region so cannot determine whether read supports ref or alt allele',
 				s: 'ATCTGGTAATTGATTATTTTAATGTAACCTTGCTAAAGGAGTGATTTCTATTTCCTTTCTTAAAGAGGAGGAACAAGAAGATGAGGAAGAAATCGATGTT',
 				p: 127740331,
 				c: '100M',
@@ -1683,8 +1640,7 @@ const examples = [
 		reads: [
 			{
 				n: 'Read contains insertion towards the end of read',
-				s:
-					'ATACATGTTTATTTTCATTATAAATTTATGTAAATCACTTTGGACCCAGCATGTCCTTAGGTTTTACCCATTCGTCAAACTGCTCTGCTGTGAGATAGCCAAGTTCGATAGCAGTTTCCTTTCAGGTTGATCCATTTTTTTT',
+				s: 'ATACATGTTTATTTTCATTATAAATTTATGTAAATCACTTTGGACCCAGCATGTCCTTAGGTTTTACCCATTCGTCAAACTGCTCTGCTGTGAGATAGCCAAGTTCGATAGCAGTTTCCTTTCAGGTTGATCCATTTTTTTT',
 				p: 241661094,
 				c: '139M3S',
 				f: 163,
@@ -1692,8 +1648,7 @@ const examples = [
 			},
 			{
 				n: 'Read contains insertion in the middle of read',
-				s:
-					'ACCCAGCATGTCCTTAGGTTTTACCCATTCGTCAAACTGCTCTGCTGTGAGATAGCCAAGTTCGATAGCAGTTTCCTTTAAGGTTGATCCATTTTTTTTGTGTGCTGTCTTAGCAATCTTTGCTGCCTTGTCATACCCTGA',
+				s: 'ACCCAGCATGTCCTTAGGTTTTACCCATTCGTCAAACTGCTCTGCTGTGAGATAGCCAAGTTCGATAGCAGTTTCCTTTAAGGTTGATCCATTTTTTTTGTGTGCTGTCTTAGCAATCTTTGCTGCCTTGTCATACCCTGA',
 				p: 241661137,
 				c: '91M3I47M',
 				f: 99,
@@ -1701,8 +1656,7 @@ const examples = [
 			},
 			{
 				n: 'Read contains insertion towards the beginning of read',
-				s:
-					'ATTTTTTTTGTGTGCTGTCTTAGCAATCTTTGCTGCCTTGTCATACCCTGAAGAAAAAATAAAAAGACGACATATGGGTTAGCAGTGATATTTGGTTTCCTAAAGCAAAAGGTGACATAATTGTTTACTTGATATTGATGCT',
+				s: 'ATTTTTTTTGTGTGCTGTCTTAGCAATCTTTGCTGCCTTGTCATACCCTGAAGAAAAAATAAAAAGACGACATATGGGTTAGCAGTGATATTTGGTTTCCTAAAGCAAAAGGTGACATAATTGTTTACTTGATATTGATGCT',
 				p: 241661228,
 				c: '4S138M',
 				f: 83,
@@ -1710,8 +1664,7 @@ const examples = [
 			},
 			{
 				n: 'Read supports ref allele and contains variant region towards the end of read',
-				s:
-					'TTAGGTTTTACCCATTCGTCAAACTGCTCTGCTGTGAGATAGCCAAGTTCGATAGCAGTTTCCTTTAAGGTTGATCCATTTTTGTGTGCTGTCTTAGCAATCTTTGCTGCCTTGTCATACCCTGAAGAAAAA',
+				s: 'TTAGGTTTTACCCATTCGTCAAACTGCTCTGCTGTGAGATAGCCAAGTTCGATAGCAGTTTCCTTTAAGGTTGATCCATTTTTGTGTGCTGTCTTAGCAATCTTTGCTGCCTTGTCATACCCTGAAGAAAAA',
 				p: 241661150,
 				c: '132M',
 				f: 163,
@@ -1719,8 +1672,7 @@ const examples = [
 			},
 			{
 				n: 'Read supports ref allele and contains variant region in the middle of read',
-				s:
-					'TAGGTTTTACCCATTCGTCAAACTGCTCTGCGGTGAGATAGCCAAGTTCGATAGCAGTTTCCTTTAAGGTTGATCCATTTTTGTGTGCTGTCTTAGCAATCTTTGCTGCCTTGTCATACCCTGACGAAAAAATAAAAAGACG',
+				s: 'TAGGTTTTACCCATTCGTCAAACTGCTCTGCGGTGAGATAGCCAAGTTCGATAGCAGTTTCCTTTAAGGTTGATCCATTTTTGTGTGCTGTCTTAGCAATCTTTGCTGCCTTGTCATACCCTGACGAAAAAATAAAAAGACG',
 				p: 241661151,
 				c: '142M',
 				f: 163,
@@ -1728,18 +1680,15 @@ const examples = [
 			},
 			{
 				n: 'Read supports ref allele and contains variant region towards the beginning of read',
-				s:
-					'ATTTTTGTGTGCTGTCTTAGCAATCTTTGCTGCCTTGTCATACCCTGAAGAAAAAATAAAAAGACGACATATGGGTTAGCAGTGATATTTGGTTTCCTAAAGCAAAAGGTGACATAATTGTTTACTTGATATTGATGCTAT',
+				s: 'ATTTTTGTGTGCTGTCTTAGCAATCTTTGCTGCCTTGTCATACCCTGAAGAAAAAATAAAAAGACGACATATGGGTTAGCAGTGATATTTGGTTTCCTAAAGCAAAAGGTGACATAATTGTTTACTTGATATTGATGCTAT',
 				p: 241661227,
 				c: '141M',
 				f: 99,
 				g: 'ref'
 			},
 			{
-				n:
-					'Read supports alt allele but contains wrong variant call in the insertion. It contains A instead of T. The variant region is towards the end of the read',
-				s:
-					'CATTATAAATTTATGTAAATCACTTTGGACCCAGCATGTCCTTAGGGTTTACCCATTCGTCAAACTTCTCTGCTGTGAGATAGCCAAGTTCGATAGCAGTTTCCTTTAAGGTTGATCCATTTTTATTGTGTACGGTCTTAGC',
+				n: 'Read supports alt allele but contains wrong variant call in the insertion. It contains A instead of T. The variant region is towards the end of the read',
+				s: 'CATTATAAATTTATGTAAATCACTTTGGACCCAGCATGTCCTTAGGGTTTACCCATTCGTCAAACTTCTCTGCTGTGAGATAGCCAAGTTCGATAGCAGTTTCCTTTAAGGTTGATCCATTTTTATTGTGTACGGTCTTAGC',
 				p: 241661109,
 				c: '122M3I17M',
 				f: 163,
@@ -1748,8 +1697,7 @@ const examples = [
 			},
 			{
 				n: 'Read contains 4T insertions instead of 3T',
-				s:
-					'CACTTTGGACCCAGCATGTCCTTAGGTTTTACCCATTCGTCAAACTGCTCTGCTGTGAGATAGCCAAGTTCGATAGCAGTTTCCTTTAAGGTTGATCCATTTTTTTTTGTGTGCTGTCTTAGCAATCTTTGCTGCCTTGTC',
+				s: 'CACTTTGGACCCAGCATGTCCTTAGGTTTTACCCATTCGTCAAACTGCTCTGCTGTGAGATAGCCAAGTTCGATAGCAGTTTCCTTTAAGGTTGATCCATTTTTTTTTGTGTGCTGTCTTAGCAATCTTTGCTGCCTTGTC',
 				p: 241661129,
 				c: '99M4I38M',
 				f: 1633,
@@ -1758,8 +1706,7 @@ const examples = [
 			},
 			{
 				n: 'Read contains 2T insertions instead of 3T',
-				s:
-					'AGGTTGATCCATTTTTTTGTGTGCTGTCTTAGCAATCTTTGCTGCCTTGTCATACCCTGAAGAAAAAATAAAAAGACGACATATGGGTTAGCAGTGATATTTGGTTTCCTAAAGCAAAAGGTGACATAATTGTTTACTTGAT',
+				s: 'AGGTTGATCCATTTTTTTGTGTGCTGTCTTAGCAATCTTTGCTGCCTTGTCATACCCTGAAGAAAAAATAAAAAGACGACATATGGGTTAGCAGTGATATTTGGTTTCCTAAAGCAAAAGGTGACATAATTGTTTACTTGAT',
 				p: 241661217,
 				c: '11M2I129M',
 				f: 147,
@@ -1767,20 +1714,16 @@ const examples = [
 				g_0: 'alt0'
 			},
 			{
-				n:
-					'Read does not cover the entire region of 5Ts towards end of read, so impossible to determine if it supports ref or alt allele',
-				s:
-					'TTATACATGTTTATTTTCATTATAAATTTATGTAAATCACTTTGGACCCAGCATGTCCTTAGGTTTTACCCATTCGTCAAACTGCTCTGCTGTGAGATAGCCAAGTTCGATAGCAGTTTCCTTTAAGGTTGATCCATTTTT',
+				n: 'Read does not cover the entire region of 5Ts towards end of read, so impossible to determine if it supports ref or alt allele',
+				s: 'TTATACATGTTTATTTTCATTATAAATTTATGTAAATCACTTTGGACCCAGCATGTCCTTAGGTTTTACCCATTCGTCAAACTGCTCTGCTGTGAGATAGCCAAGTTCGATAGCAGTTTCCTTTAAGGTTGATCCATTTTT',
 				p: 241661092,
 				c: '141M',
 				f: 147,
 				g: 'amb'
 			},
 			{
-				n:
-					'Read does not cover the entire region of 5Ts at the beginning of read, so impossible to determine if it supports ref or alt allele',
-				s:
-					'TTTTGTGTGCTGTCTTAGCAATCTTTGCTGCCTTGTCATACCCTGAAGAAAAAATAAAAAGACGACATATGGGTTAGCAGTGATATTTGGTTTCCTAAAGCAAAAGGTGACATAATTGTTTACTTGATATTGATGCTATATG',
+				n: 'Read does not cover the entire region of 5Ts at the beginning of read, so impossible to determine if it supports ref or alt allele',
+				s: 'TTTTGTGTGCTGTCTTAGCAATCTTTGCTGCCTTGTCATACCCTGAAGAAAAAATAAAAAGACGACATATGGGTTAGCAGTGATATTTGGTTTCCTAAAGCAAAAGGTGACATAATTGTTTACTTGATATTGATGCTATATG',
 				p: 241661229,
 				c: '142M',
 				f: 163,
@@ -1893,18 +1836,15 @@ const examples = [
 		reads: [
 			{
 				n: 'Read containing alt allele consiting of 3 monomeric GCT insertions shown as mismatches of T',
-				s:
-					'GCTTTTTTCACAAAGGGATGACTGTGCTGCTCCGTCTTCCTTCTTTTTTGTTTGCAAGGCCACAGGGAAAGCTGGATCCTCTGGTGAAAAAGCAAATCCAGTTGCTGCTGCTGCTGCTGCTGCTGCTGCTGCTGCTGCTGCTGCCGCCGCC',
+				s: 'GCTTTTTTCACAAAGGGATGACTGTGCTGCTCCGTCTTCCTTCTTTTTTGTTTGCAAGGCCACAGGGAAAGCTGGATCCTCTGGTGAAAAAGCAAATCCAGTTGCTGCTGCTGCTGCTGCTGCTGCTGCTGCTGCTGCTGCTGCCGCCGCC',
 				p: 35341,
 				c: '149M2S',
 				f: 83,
 				g: 'alt0'
 			},
 			{
-				n:
-					'Read containing alt allele consiting of 3 monomeric GCT insertions but those insertions shown are far from predicted variant region consist of repeat monomeric GCT',
-				s:
-					'CAAAGGGATGACTGTGCTGCTCCGTCTTCCTTCTTTTTTGTTTGCAAGGCCACAGGGAAAGCTGGATCCTCTGGTGAAAAAGCAAATCCAGTTGCTGCTGCTGCTGCTGCTGCTGCTGCTGCTGCTGCTGCTGCCGCCGCCGCCGCCGGTT',
+				n: 'Read containing alt allele consiting of 3 monomeric GCT insertions but those insertions shown are far from predicted variant region consist of repeat monomeric GCT',
+				s: 'CAAAGGGATGACTGTGCTGCTCCGTCTTCCTTCTTTTTTGTTTGCAAGGCCACAGGGAAAGCTGGATCCTCTGGTGAAAAAGCAAATCCAGTTGCTGCTGCTGCTGCTGCTGCTGCTGCTGCTGCTGCTGCTGCCGCCGCCGCCGCCGGTT',
 				p: 35351,
 				c: '92M9I50M',
 				f: 83,
@@ -1912,8 +1852,7 @@ const examples = [
 			},
 			{
 				n: 'Read containing alt allele consiting of 2 monomeric GCT insertions (instead of 3) shown as mismatches of T',
-				s:
-					'TCACAAAGGGATGACTGTGCTGCTCCGTCTTCCTTCTTTTTTGTTTGCAAGGCCACAGGGAAATCTGGATCCTCTGGTGAAAAAGCAAATCCAGTTGCTGCTGCTGCTGCTGCTGCTGCTGCTGCTGCTGCTGCCGCCGCCGCCGCCAGTT',
+				s: 'TCACAAAGGGATGACTGTGCTGCTCCGTCTTCCTTCTTTTTTGTTTGCAAGGCCACAGGGAAATCTGGATCCTCTGGTGAAAAAGCAAATCCAGTTGCTGCTGCTGCTGCTGCTGCTGCTGCTGCTGCTGCTGCCGCCGCCGCCGCCAGTT',
 				p: 35348,
 				c: '142M9S',
 				f: 147,
@@ -1921,10 +1860,8 @@ const examples = [
 				g_0: 'alt0'
 			},
 			{
-				n:
-					'Read containing alt allele consiting of 3 monomeric GCC deletions on the right instead of 3 monomeric GCT insertions',
-				s:
-					'TTGCGAGGCCACAGGGAAATCTGGATCCTCTGGTGAAAAAGCAAATCCAGTTGCTGCTGCTGCTGCTGCTGCTGCTGCTGCTGCCGGTTCTTGTAAATGTCCTCACTTGGTTTCTGGGCAGCAACTTCCTTGACTTGCCTGGGGAGCGGAT',
+				n: 'Read containing alt allele consiting of 3 monomeric GCC deletions on the right instead of 3 monomeric GCT insertions',
+				s: 'TTGCGAGGCCACAGGGAAATCTGGATCCTCTGGTGAAAAAGCAAATCCAGTTGCTGCTGCTGCTGCTGCTGCTGCTGCTGCTGCCGGTTCTTGTAAATGTCCTCACTTGGTTTCTGGGCAGCAACTTCCTTGACTTGCCTGGGGAGCGGAT',
 				p: 35392,
 				c: '82M12D69M',
 				f: 163,
@@ -1932,10 +1869,8 @@ const examples = [
 				g_0: 'ref'
 			},
 			{
-				n:
-					'Read containing alt allele consiting of 3 monomeric GCC deletions on the right instead of 3 monomeric GCT insertions',
-				s:
-					'TTGCGAGGCCACAGGGAAATCTGGATCCTCTGGTGAAAAAGCAAATCCAGTTGCTGCTGCTGCTGCTGCTGCTGCTGCTGCTGCCGGTTCTTGTAAATGTCCTCACTTGGTTTCTGGGCAGCAACTTCCTTGACTTGCCTGGGGAGCGGAT',
+				n: 'Read containing alt allele consiting of 3 monomeric GCC deletions on the right instead of 3 monomeric GCT insertions',
+				s: 'TTGCGAGGCCACAGGGAAATCTGGATCCTCTGGTGAAAAAGCAAATCCAGTTGCTGCTGCTGCTGCTGCTGCTGCTGCTGCTGCCGGTTCTTGTAAATGTCCTCACTTGGTTTCTGGGCAGCAACTTCCTTGACTTGCCTGGGGAGCGGAT',
 				p: 35392,
 				c: '82M12D69M',
 				f: 163,
@@ -1944,8 +1879,7 @@ const examples = [
 			},
 			{
 				n: 'Read does not contain entire indel repeat region, so cannot classify into ref or alt allele',
-				s:
-					'TGCTGCTGCTGCTGCTGCTGCTGCCGCCGCCGCCGCCGGTTCTTGTAAATGTCCTCACTTGGTTTCTGGGCAGCAACTTCCTTGACTTGCCTGGGGAGCGGATCTGAGCTGCATTTACCAGGCCATGCCCAGGGGAAGTGATCAGTGTGGG',
+				s: 'TGCTGCTGCTGCTGCTGCTGCTGCCGCCGCCGCCGCCGGTTCTTGTAAATGTCCTCACTTGGTTTCTGGGCAGCAACTTCCTTGACTTGCCTGGGGAGCGGATCTGAGCTGCATTTACCAGGCCATGCCCAGGGGAAGTGATCAGTGTGGG',
 				p: 35452,
 				c: '151M',
 				f: 163,

@@ -2,12 +2,10 @@
 
 This directory holds the source code for rust-compiled utilities.
 
-
 ## Code layout
 
 All source code files should be directly under the `src/` directory. For a source
 code file to be compiled, create a `[[bin]]` entry for it in the Cargo.toml file:
-
 
 ```toml
 [[bin]]
@@ -27,10 +25,10 @@ which goes against rust cargo's assumptions of having source code under `src/bin
 ## Using from nodejs
 
 ```js
-// assuming a js file from server/src 
-const run_rust = require('@sjcrh/proteinpaint-rust').run_rust
-// or 
-// import * as utils from './utils'
+// Assuming a js or ts file from server/src 
+
+import { run_rust } from '@sjcrh/proteinpaint-rust'
+
 
 // 'indel' may be replaced by any binary name as specified in Cargo.toml
 const out = await run_rust('indel', input_data)
@@ -39,8 +37,10 @@ const out = await run_rust('indel', input_data)
 ## Test
 
 From the `proteinpaint/server` directory,
+
 ```bash
 npx test
+npx tsc
 ```
 
 ## Build
