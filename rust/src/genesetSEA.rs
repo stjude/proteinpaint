@@ -1,7 +1,6 @@
-// Syntax: cd .. && cargo build --release && cat ~/sjpp/test.txt | target/release/genesetSEA
+// Syntax: cd .. && cargo build --release && time cat ~/sjpp/test.txt | target/release/genesetSEA
 #![allow(non_snake_case)]
 use json::JsonValue;
-use r_mathlib;
 use rand::rngs::SmallRng;
 use rand::seq::SliceRandom;
 use rand::Rng;
@@ -16,7 +15,6 @@ use std::collections::HashSet;
 use std::env;
 use std::hash::Hash;
 use std::io;
-//use std::simd::f64x1;
 use std::time::Instant;
 
 #[allow(non_camel_case_types)]
@@ -60,15 +58,19 @@ fn main() -> Result<()> {
                         None => panic!("genesetgroup is missing"),
                     }
                     let sample_genes_input: &JsonValue = &json_string["genes"];
-                    let sample_genes: Vec<&str> =
-                        sample_genes_input.as_str().unwrap().split(",").collect();
+                    let mut sample_genes = Vec::<&str>::new();
+                    for iter in 0..sample_genes_input.len() {
+                        let item = sample_genes_input[iter].as_str().unwrap();
+                        sample_genes.push(item);
+                    }
+                    //println!("sample_genes:{:?}", sample_genes);
+
                     let fold_change_input: &JsonValue = &json_string["fold_change"];
-                    let fold_change_str: &str = fold_change_input.as_str().unwrap();
-                    let fold_change_vec: Vec<&str> = fold_change_str.split(",").collect();
-                    let mut fold_change_f64 = fold_change_vec
-                        .iter()
-                        .map(|s| s.parse::<f64>().unwrap()) // Parse each string to f64
-                        .collect();
+                    let mut fold_change_f64 = Vec::<f64>::new();
+                    for iter in 0..fold_change_input.len() {
+                        let item = fold_change_input[iter].as_f64().unwrap();
+                        fold_change_f64.push(item);
+                    }
 
                     let mut pathway_p_values: Vec<pathway_p_value> = Vec::with_capacity(10000);
 
@@ -188,14 +190,12 @@ fn main() -> Result<()> {
                                         let seed = 1; // Will be later defined in client side
                                         let sample_coding_genes_vec: Vec<String> =
                                             sample_coding_genes.clone().into_iter().collect();
-                                        //let fold_change_vec: Vec<String> =
-                                        //    fold_change_f64.into_iter().collect();
                                         let mut gmt = HashMap::<&str, &[String]>::new();
                                         for (k, v) in map.iter() {
                                             gmt.insert(*k, v.as_slice());
                                         }
                                         prerank(
-                                            1.0, // Hardong weight = 1.0 for now
+                                            1.0, // Hard coding weight = 1.0 for now
                                             &sample_coding_genes_vec,
                                             &fold_change_f64,
                                             &gmt,
