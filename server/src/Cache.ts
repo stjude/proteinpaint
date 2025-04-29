@@ -30,7 +30,7 @@ export class Cache {
 	#cacheCheckTimeout: NodeJS.Timeout | undefined | number
 	cachedir: string
 	public checkWait: number
-	#fileExtensions: string[]
+	#fileExtensions: Set<string>
 	/** in milliseconds */
 	#maxAge: number
 	/** in bytes */
@@ -38,12 +38,21 @@ export class Cache {
 	#nextCheckTime = 0
 
 	constructor(opts: CacheOpts = {}) {
+		this.validateOpts(opts)
 		this.#cacheCheckTimeout = 0
 		this.cachedir = opts.cachedir || serverconfig.cachedir
 		this.checkWait = opts.checkWait || 1 * 60 * 1000
-		this.#fileExtensions = opts.fileExtensions || []
 		this.#maxAge = opts.maxAge || 2 * 60 * 60 * 1000
 		this.#maxSize = opts.maxSize || 5e9
+		this.#fileExtensions = new Set(opts.fileExtensions || [])
+	}
+
+	validateOpts(opts: CacheOpts) {
+		if (opts.fileExtensions) {
+			for (const ext of opts.fileExtensions) {
+				if (ext[0] !== '.') throw `file extension ${ext} should start with a dot`
+			}
+		}
 	}
 
 	mayResetCacheCheckTimeout(wait = 0) {
@@ -74,7 +83,7 @@ export class Cache {
 				totalCount = 0,
 				deletedCount = 0
 			for (const filename of filenames) {
-				if (this.#fileExtensions.length && !this.#fileExtensions.some(ext => filename.endsWith(ext))) continue
+				if (this.#fileExtensions.size && !this.#fileExtensions.has(path.extname(filename))) continue
 				totalCount++
 				const fp = path.join(this.cachedir, filename)
 				const s = await fs.promises.stat(fp)
