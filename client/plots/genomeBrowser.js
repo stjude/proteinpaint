@@ -403,7 +403,6 @@ class genomeBrowser {
 		arg.onCoordinateChange = async rglst => {
 			this.hasActiveCoordChange = true
 			const { chr, start, stop } = rglst[0]
-			console.log(401, { chr, start, stop })
 			await this.app.dispatch({
 				type: 'plot_edit',
 				id: this.id,
@@ -418,7 +417,6 @@ class genomeBrowser {
 	async maySaveTrackUpdatesToState(eventTrigger) {
 		// should be more selective when running
 		if (this.hasActiveCoordChange) return
-		console.log(413, eventTrigger)
 		/* following changes will be saved in state:
 		- when a mds3 subtk is created/updated, its tk.filterObj should be saved to state so it can be recovered from session
 		- a facet track is removed by user via block ui
@@ -444,7 +442,6 @@ class genomeBrowser {
 			const newLst = config.trackLst.activeTracks.filter(n => this.blockInstance.tklst.find(i => i.name == n))
 			config.trackLst.activeTracks = newLst
 		}
-		console.log(438)
 		await this.app.save({
 			type: 'plot_edit',
 			id: this.id,

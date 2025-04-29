@@ -278,7 +278,6 @@ TdbStore.prototype.actions = {
 
 	plot_edit(action) {
 		const plot = this.state.plots.find(p => p.id === action.id)
-		console.log(280, 'plot_edit', plot.id, action.config.geneSearchResult)
 		if (!plot) throw `missing plot id='${action.id}' in store.plot_edit()`
 		this.copyMerge(plot, action.config, action.opts ? action.opts : {})
 		if (plot.mayAdjustConfig) {
