@@ -6,6 +6,7 @@ import { getCompInit, copyMerge } from '#rx'
 // import { scaleLinear } from 'd3-scale'
 import { roundValueAuto } from '#shared/roundValue.js'
 import { VolcanoModel } from '#plots/volcano/model/VolcanoModel.ts'
+import { getDefaultVolcanoSettings } from '#plots/volcano/Volcano.ts'
 
 const tip = new Menu()
 
@@ -178,12 +179,9 @@ class gsea {
 	 * error. */
 	async init(appState) {
 		const config = appState.plots.find(p => p.id === this.id)
-		/** TODO: confirming the plot is running in DA ensures
-		 * the volcano settings are available. Init default
-		 * volcano settings if not available?? */
-		if (!config.gsea_params && config.chartType == 'differentialAnalysis') {
+		if (!config.gsea_params) {
 			try {
-				const volcanoSettings = config.settings.volcano
+				const volcanoSettings = getDefaultVolcanoSettings({}, { termType: 'geneExpression' })
 				const model = new VolcanoModel(this.app, config, volcanoSettings)
 				const response = await model.getData()
 				if (!response || !response.data || response.error) {
@@ -214,14 +212,15 @@ class gsea {
 		//Not not use structuredClone(this.state.config)
 		//Does not include the plot config changes in init()
 		const config = this.app.getState().plots.find(p => p.id === this.id)
-		if (config.chartType != this.type && config.childType != this.type) return
+		this.config = structuredClone(config)
+		if (this.config.chartType != this.type && this.config.childType != this.type) return
 		this.settings = this.state.config.settings.gsea
 
 		this.imageUrl = null // Reset the image URL
 		await this.setControls()
 		if (this.dom.header)
 			this.dom.header.html(
-				config.gsea_params.genes.length +
+				this.config.gsea_params.genes.length +
 					' genes <span style="font-size:.8em;opacity:.7">GENE SET ENRICHMENT ANALYSIS</span>'
 			)
 
@@ -230,7 +229,7 @@ class gsea {
 }
 
 async function renderPathwayDropdown(self) {
-	console.log(self, self.settings)
+	const settings = structuredClone(self.settings)
 	const pathwayOpts = [
 		{ label: '-', value: '-' },
 		{ label: 'BP: subset of GO', value: 'BP: subset of GO' },
@@ -261,7 +260,7 @@ async function renderPathwayDropdown(self) {
 		.text('Select a gene set group:')
 
 	const dropdown = self.dom.actionsDiv.append('select').on('change', event => {
-		if (!self.settings.pathway) {
+		if (!settings.pathway) {
 			//Remove placeholder from dropdown on first change
 			const placeholder = dropdown.select('option[value="-"]')
 			placeholder.remove()
@@ -269,7 +268,7 @@ async function renderPathwayDropdown(self) {
 		}
 
 		const idx = event.target.selectedIndex
-		self.settings.pathway = pathwayOpts[idx].value
+		settings.pathway = pathwayOpts[idx].value
 		self.app.dispatch({
 			type: 'plot_edit',
 			id: self.id,
@@ -282,7 +281,7 @@ async function renderPathwayDropdown(self) {
 				},
 				highlightGenes: [],
 				settings: {
-					gsea: self.settings
+					gsea: settings
 				}
 			}
 		})
@@ -576,7 +575,7 @@ export function getDefaultGseaSettings(overrides = {}) {
 }
 
 export async function getPlotConfig(opts, app) {
-	if (!opts.gsea_params) throw 'No gsea_params provided [gsea getPlotConfig()]'
+	// if (!opts.gsea_params) throw 'No gsea_params provided [gsea getPlotConfig()]'
 	try {
 		const config = {
 			//idea for fixing nav button
