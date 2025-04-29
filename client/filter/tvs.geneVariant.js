@@ -1,7 +1,5 @@
-import { select } from 'd3-selection'
-import { mclass, dt2label } from '#shared/common.js'
-import { mayMakeVariantFilter } from '../termsetting/handlers/geneVariant'
-import { getNormalRoot, getWrappedTvslst } from './filter'
+import { dt2label } from '#shared/common.js'
+import { mayMakeVariantFilter } from '../tw/geneVariant'
 
 /*
 ********************** EXPORTED

@@ -124,6 +124,7 @@ export class GvBase extends TwBase {
 export async function mayMakeVariantFilter(tw: RawGvTW, vocabApi: VocabApi) {
 	if (tw.term.filter) return
 	if (!vocabApi.termdbConfig?.queries) throw 'termdbConfig.queries is missing'
+	const termdbmclass = vocabApi.termdbConfig.mclass // custom mclass labels from dataset
 	const dtTermsInDs: DtTerm[] = [] // dt terms in dataset
 	const categories = await vocabApi.getCategories(tw.term)
 	for (const _t of dtTerms) {
@@ -145,6 +146,11 @@ export async function mayMakeVariantFilter(tw: RawGvTW, vocabApi: VocabApi) {
 		}
 		// filter for only those mutation classes that are in the dataset
 		const values = Object.fromEntries(Object.entries(t.values).filter(([k, _v]) => Object.keys(classes).includes(k)))
+		// add custom mclass labels from dataset
+		for (const k of Object.keys(values)) {
+			const v: any = values[k]
+			if (termdbmclass && Object.keys(termdbmclass).includes(k)) v.label = termdbmclass[k].label
+		}
 		t.values = values
 		dtTermsInDs.push(t)
 	}
