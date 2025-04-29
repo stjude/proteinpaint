@@ -3,7 +3,7 @@ import https from 'https'
 import fs from 'fs'
 import os from 'os'
 import path from 'path'
-import exec from 'child_process'
+import { exec } from 'child_process'
 import * as tar from 'tar'
 
 // Setting up directory name
