@@ -213,7 +213,7 @@ class gsea {
 		const config = this.app.getState().plots.find(p => p.id === this.id)
 		this.config = structuredClone(config)
 		if (this.config.chartType != this.type && this.config.childType != this.type) return
-		this.settings = this.state.config.settings.gsea
+		this.settings = this.config.settings.gsea
 
 		this.imageUrl = null // Reset the image URL
 		await this.setControls()
@@ -252,6 +252,11 @@ async function renderPathwayDropdown(self) {
 		)
 	}
 
+	if (settings.pathway) {
+		pathwayOpts.shift()
+		pathwayOpts.find(opt => opt.value == settings.pathway).selected = true
+	}
+
 	self.dom.actionsDiv
 		.append('span')
 		.attr('data-testid', 'sjpp-gsea-pathway')
@@ -286,7 +291,11 @@ async function renderPathwayDropdown(self) {
 		})
 	})
 	for (const opt of pathwayOpts) {
-		dropdown.append('option').text(opt.label).attr('value', opt.value)
+		dropdown
+			.append('option')
+			.text(opt.label)
+			.attr('value', opt.value)
+			.attr('selected', opt.selected ? true : null)
 	}
 }
 

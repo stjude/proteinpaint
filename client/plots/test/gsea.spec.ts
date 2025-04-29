@@ -8,6 +8,7 @@ DO NOT ENABLE THIS FILE ON CI. ITS FOR PROTOTYPING
 AND MANUAL CHECKS ONLY
 
 Tests:
+    - Default gsea
     - gsea with .tw instead of .gsea_params
 */
 
