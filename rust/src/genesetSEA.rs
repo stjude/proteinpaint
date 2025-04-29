@@ -16,7 +16,7 @@ use std::collections::HashSet;
 use std::env;
 use std::hash::Hash;
 use std::io;
-use std::simd::f64x1;
+//use std::simd::f64x1;
 use std::time::Instant;
 
 #[allow(non_camel_case_types)]
@@ -63,8 +63,13 @@ fn main() -> Result<()> {
                     let sample_genes: Vec<&str> =
                         sample_genes_input.as_str().unwrap().split(",").collect();
                     let fold_change_input: &JsonValue = &json_string["fold_change"];
-                    let fold_change: Vec<f64> =
-                        fold_change_input.as_str().unwrap().split(",").collect();
+                    let fold_change_str: &str = fold_change_input.as_str().unwrap();
+                    let fold_change_vec: Vec<&str> = fold_change_str.split(",").collect();
+                    let mut fold_change_f64 = fold_change_vec
+                        .iter()
+                        .map(|s| s.parse::<f64>().unwrap()) // Parse each string to f64
+                        .collect();
+
                     let mut pathway_p_values: Vec<pathway_p_value> = Vec::with_capacity(10000);
 
                     let genedb_input: &JsonValue = &json_string["genedb"];
@@ -175,21 +180,21 @@ fn main() -> Result<()> {
                                                 }
                                             }
                                         }
-                                        let mut map: HashMap<&str, Vec<String>> = HashMap::new();
-                                        map.insert(&n.GO_id, names);
+                                        let mut map: HashMap<&str, &Vec<String>> = HashMap::new();
+                                        map.insert(&n.GO_id, &names);
                                         let nperm = 1000; // Will be later defined in client side
                                         let min_size = 15; // Will be later defined in client side
                                         let max_size = 100; // Will be later defined in client side
                                         let seed = 1; // Will be later defined in client side
                                         let sample_coding_genes_vec: Vec<String> =
                                             sample_coding_genes.into_iter().collect();
-                                        let fold_change_vec: Vec<String> =
-                                            fold_change.into_iter().collect();
+                                        //let fold_change_vec: Vec<String> =
+                                        //    fold_change_f64.into_iter().collect();
                                         prerank(
                                             1.0,
                                             &sample_coding_genes_vec,
-                                            &fold_change_vec,
-                                            map,
+                                            &fold_change_f64,
+                                            &map,
                                             nperm,
                                             min_size,
                                             max_size,
@@ -216,7 +221,7 @@ fn main() -> Result<()> {
 fn prerank(
     weight: f64,
     genes: &[String],
-    metric: &[f64],
+    metric: &Vec<f64>,
     gmt: &HashMap<&str, &[String]>,
     nperm: usize,
     min_size: usize,
