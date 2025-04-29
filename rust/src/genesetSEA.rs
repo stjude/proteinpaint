@@ -184,7 +184,7 @@ fn main() -> Result<()> {
                                         map.insert(&n.GO_id, &names);
                                         let nperm = 1000; // Will be later defined in client side
                                         let min_size = 15; // Will be later defined in client side
-                                        let max_size = 100; // Will be later defined in client side
+                                        let max_size = 500; // Will be later defined in client side
                                         let seed = 1; // Will be later defined in client side
                                         let sample_coding_genes_vec: Vec<String> =
                                             sample_coding_genes.into_iter().collect();
