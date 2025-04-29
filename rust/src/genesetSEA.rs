@@ -1,5 +1,6 @@
 // Syntax: cd .. && cargo build --release && time cat ~/sjpp/test.txt | target/release/genesetSEA
 #![allow(non_snake_case)]
+use itertools::{izip, Itertools};
 use json::JsonValue;
 use rand::rngs::SmallRng;
 use rand::seq::SliceRandom;
@@ -194,16 +195,25 @@ fn main() -> Result<()> {
                                         for (k, v) in map.iter() {
                                             gmt.insert(*k, v.as_slice());
                                         }
-                                        prerank(
-                                            1.0, // Hard coding weight = 1.0 for now
+                                        let weight = 1.0; // Hard coding weight = 1.0 for now
+                                        let mut gsea = GSEAResult::new(
+                                            weight, max_size, min_size, nperm, seed,
+                                        );
+                                        gsea.prerank(
                                             &sample_coding_genes_vec,
                                             &fold_change_f64,
                                             &gmt,
-                                            nperm,
-                                            min_size,
-                                            max_size,
-                                            seed,
                                         );
+                                        //prerank(
+                                        //    1.0,
+                                        //    &sample_coding_genes_vec,
+                                        //    &fold_change_f64,
+                                        //    &gmt,
+                                        //    nperm,
+                                        //    min_size,
+                                        //    max_size,
+                                        //    seed,
+                                        //);
                                     }
                                     Err(_) => {
                                         println!("GO term not found!")
@@ -220,62 +230,6 @@ fn main() -> Result<()> {
         Err(error) => println!("Piping error: {}", error),
     }
     Ok(())
-}
-
-fn prerank(
-    weight: f64,
-    genes: &[String],
-    metric: &Vec<f64>,
-    gmt: &HashMap<&str, &[String]>,
-    nperm: usize,
-    min_size: usize,
-    max_size: usize,
-    seed: u64,
-) {
-    // NOTE: input must not contain duplcated genes
-
-    let weighted_metric: Vec<f64> = metric.iter().map(|x| x.abs().powf(weight)).collect();
-    // start to calculate
-    let mut es = EnrichmentScore::new(genes, nperm, seed, false, false);
-    // let end1 = Instant::now();
-    let gperm = es.gene_permutation(); // gene permutation, only record gene idx here
-    let mut summ = Vec::<GSEASummary>::new();
-
-    for (&term, &gset) in gmt.iter() {
-        // convert gene String --> Int
-        let gtag = es.gene.isin(gset);
-        let gidx = es.hit_index(&gtag);
-        if gidx.len() > max_size || gidx.len() < min_size {
-            continue;
-        }
-        let tag_indicators: Vec<Vec<f64>> = gperm.par_iter().map(|de| de.isin(&gidx)).collect();
-        let (ess, run_es) = es.enrichment_score_gene(&weighted_metric, &tag_indicators);
-        let esnull: Vec<f64> = if ess.len() > 1 {
-            ess[1..].to_vec()
-        } else {
-            Vec::new()
-        };
-        let gss = GSEASummary {
-            term: term.to_string(),
-            es: ess[0],
-            run_es: run_es,
-            hits: gidx,
-            esnull: esnull,
-            ..Default::default()
-        };
-        summ.push(gss);
-    }
-    // let end3 = Instant::now();
-    // println!("Calculation time: {:.2?}", end3.duration_since(end2));
-    //if nperm > 0 {
-    //    stat(&mut summ);
-    //}
-    //self.summaries = summ;
-    //self.indices.push((0..genes.len()).collect_vec());
-    //self.rankings.push(metric.to_owned());
-
-    // let end4 = Instant::now();
-    // println!("Statistical time: {:.2?}", end4.duration_since(end3));
 }
 
 pub trait EnrichmentScoreTrait {
@@ -327,6 +281,82 @@ impl GSEASummary {
             esnull: esnull.to_vec(),
             index: Some(index),
         }
+    }
+
+    fn normalize(&mut self) -> Vec<f64> {
+        let e: f64 = self.es;
+        // n_mean = esnull[esnull>= 0].mean()
+        let pos_phi: Vec<f64> = self
+            .esnull
+            .iter()
+            .filter_map(|&x| if x >= 0.0 { Some(x) } else { None })
+            .collect();
+
+        // n_mean = esnull[esnull< 0].mean()
+        let neg_phi: Vec<f64> = self
+            .esnull
+            .iter()
+            .filter_map(|&x| if x < 0.0 { Some(x) } else { None })
+            .collect();
+
+        // FIXME: Potential NaN number here
+        // When input a rare causes of an extreamly screwed null distribution. e.g.
+        // es = - 27, esnull = [13, 24, 57, 88]
+        // nes will be NaN. You have to increased the permutation number for safe
+        // a tricky fixed here: set n_mean as itself
+        // so esnull = [-27, 13, 24, 57, 88]
+        let pos_mean = if pos_phi.len() > 0 {
+            pos_phi.as_slice().mean()
+        } else {
+            e
+        };
+
+        let neg_mean = if neg_phi.len() > 0 {
+            neg_phi.as_slice().mean()
+        } else {
+            e
+        };
+
+        self.nes = if e >= 0.0 {
+            e / pos_mean
+        } else {
+            e / neg_mean.abs()
+        };
+
+        let nesnull: Vec<f64> = self
+            .esnull
+            .iter()
+            .map(|&e| {
+                if e >= 0.0 {
+                    e / pos_mean
+                } else {
+                    e / neg_mean.abs()
+                }
+            })
+            .collect();
+        // store normalized esnull temporatory.
+        nesnull
+    }
+
+    fn pval(&mut self) {
+        let deno: usize;
+        let nomi: usize;
+        // When input a rare causes of an extreamly screwed null distribution. e.g.
+        // es = - 27, esnull = [13, 24, 57, 88]
+        // pval will be NaN.
+        if self.es < 0.0 {
+            deno = self.esnull.iter().filter(|&x| *x < 0.0).count();
+            nomi = self.esnull.iter().filter(|&x| x <= &self.es).count();
+        } else {
+            deno = self.esnull.iter().filter(|&x| *x >= 0.0).count();
+            nomi = self.esnull.iter().filter(|&x| x >= &self.es).count();
+        }
+
+        if deno == 0 {
+            self.pval = 1.0;
+            return;
+        }
+        self.pval = (nomi as f64) / (deno as f64);
     }
 
     /// for default values, you can then init the struct with
@@ -590,5 +620,274 @@ impl EnrichmentScore {
             gperm.push(orig.clone());
         }
         return gperm;
+    }
+}
+
+#[allow(dead_code)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct GSEAResult {
+    summaries: Vec<GSEASummary>,
+    weight: f64,
+    min_size: usize,
+    max_size: usize,
+    nperm: usize,
+    nes_concat: Vec<f64>,
+    nesnull_concat: Vec<f64>,
+    seed: u64,
+    rankings: Vec<Vec<f64>>,
+    indices: Vec<Vec<usize>>, // indices after ranking
+}
+
+impl GSEAResult {
+    pub fn new(weight: f64, max_size: usize, min_size: usize, nperm: usize, seed: u64) -> Self {
+        GSEAResult {
+            summaries: Vec::<GSEASummary>::new(),
+            weight: weight,
+            max_size: max_size,
+            min_size: min_size,
+            nperm: nperm,
+            nes_concat: Vec::<f64>::new(),
+            nesnull_concat: Vec::<f64>::new(),
+            seed: seed,
+            rankings: Vec::<Vec<f64>>::new(),
+            indices: Vec::<Vec<usize>>::new(),
+        }
+    }
+    pub fn default() -> GSEAResult {
+        GSEAResult {
+            summaries: Vec::<GSEASummary>::new(),
+            weight: 1.0,
+            max_size: 1000,
+            min_size: 3,
+            nperm: 1000,
+            nes_concat: Vec::<f64>::new(),
+            nesnull_concat: Vec::<f64>::new(),
+            seed: 0,
+            rankings: Vec::<Vec<f64>>::new(),
+            indices: Vec::<Vec<usize>>::new(),
+        }
+    }
+    pub fn stat(&mut self, summary: &mut [GSEASummary]) {
+        // clear vector incase you re-run this command
+        self.nes_concat.clear();
+        self.nesnull_concat.clear();
+
+        summary.iter_mut().for_each(|g| {
+            // calculate stats here
+            g.pval();
+            let mut nesnull = g.normalize(); // update esnull to normalized nesnull
+            self.nes_concat.push(g.nes);
+            self.nesnull_concat.append(&mut nesnull);
+            // g.esnull.clear();
+        });
+        // FWER p
+        let fwerps: Vec<f64> = self.fwer_pval();
+        // FDR q
+        let fdrs = self.fdr();
+
+        for (p, q, g) in izip!(fwerps, fdrs, summary) {
+            g.fdr = q;
+            g.fwerp = p;
+        }
+        // clear vector to save some space
+        self.nes_concat.clear();
+        self.nesnull_concat.clear();
+    }
+
+    fn fwer_pval(&self) -> Vec<f64> {
+        // suppose a matrix of nesnull with shape [ n_genesets, n_perm ]
+        // max_nes_pos = colMax(nesull) for nes >= 0;
+        // min_nes_neg = colMin(nesnull) for nes < 0;
+        let mut max_nes_pos = vec![0.0; self.nperm];
+        let mut min_nes_neg = vec![0.0; self.nperm];
+        self.nesnull_concat.iter().enumerate().for_each(|(i, &e)| {
+            let idx = i % self.nperm;
+            if e >= 0.0 {
+                max_nes_pos[idx] = e.max(max_nes_pos[idx]);
+            } else {
+                min_nes_neg[idx] = e.min(min_nes_neg[idx]);
+            }
+        });
+
+        let fwerp: Vec<f64> = self
+            .nes_concat
+            .par_iter()
+            .map(|e| {
+                if e < &0.0 {
+                    (min_nes_neg.iter().filter(|&x| x < e).count() as f64)
+                        / (min_nes_neg.iter().filter(|&x| x < &0.0).count() as f64)
+                } else {
+                    (max_nes_pos.iter().filter(|&x| x >= e).count() as f64)
+                        / (max_nes_pos.len() as f64)
+                }
+            })
+            .collect();
+        fwerp
+    }
+
+    pub fn fdr(&mut self) -> Vec<f64> {
+        // let mut nesnull_concat: Vec<&f64> = nesnull.iter().flatten().collect(); // nesnull.concat(); // concat items
+
+        // To speedup, sort f64 in acending order in place, then do a binary search
+        self.nesnull_concat
+            .sort_unstable_by(|a, b| a.partial_cmp(b).unwrap()); // if descending -> b.partial_cmp(a)
+        let (indices, nes_sorted) = self.nes_concat.as_slice().argsort(true); // ascending order
+
+        // binary_search assumes that the elements are sorted in less-to-greater order.
+        // partition_point return the index of the first element of the second partition)
+        // since partition_point is just a wrapper of self.binary_search_by(|x| if pred(x) { Less } else { Greater }).unwrap_or_else(|i| i)
+        let all_idx = self.nesnull_concat.partition_point(|x| *x < 0.0);
+        let nes_idx = nes_sorted.partition_point(|x| *x < 0.0);
+
+        // fdr
+        let fdrs: Vec<f64> = nes_sorted
+            .iter()
+            .map(|&e| {
+                let phi_norm: f64;
+                let phi_obs: f64;
+                let nes_higher: usize;
+                let all_higher: usize;
+                let all_pos: usize;
+                let nes_pos: usize;
+                if e < 0.0 {
+                    // let nes_higher = nes_concat.iter().filter(|&x| *x < e).count();
+                    // let all_higher = nesnull_concat.iter().filter(|&x| *x < e).count();
+                    nes_higher = nes_sorted.partition_point(|x| *x <= e); // left side
+                    all_higher = self.nesnull_concat.partition_point(|x| *x <= e); // left side
+                    all_pos = all_idx;
+                    nes_pos = nes_idx;
+                } else {
+                    // let nes_higher = self.nes_concat.iter().filter(|&x| *x >= e).count();
+                    // let all_higher = self.nesnull_concat.iter().filter(|&x| *x >= e).count();
+                    nes_higher = nes_sorted.len() - nes_sorted.partition_point(|x| *x < e); // right side
+                    all_higher =
+                        self.nesnull_concat.len() - self.nesnull_concat.partition_point(|x| *x < e); // right side; count.col ( /count.col.norm)
+                    all_pos = self.nesnull_concat.len() - all_idx; // right side; count.col.norm
+                    nes_pos = nes_sorted.len() - nes_idx; // right side; obs.count.col.norm
+                }
+                // println!("neg_higher {}, all_higher {}, all_pos {}, nes_pos {}", nes_higher, all_higher, all_pos, all_higher);
+                phi_norm = if all_pos > 0 {
+                    (all_higher as f64) / (all_pos as f64)
+                } else {
+                    0.0
+                }; // count.col
+                phi_obs = if nes_pos > 0 {
+                    (nes_higher as f64) / (nes_pos as f64)
+                } else {
+                    0.0
+                }; // obs.count.col
+                   // FDR
+                (phi_norm / phi_obs).clamp(f64::MIN, 1.0)
+            })
+            .collect();
+
+        // by default, we'er no gnna adjusted fdr q value
+        // self.adjust_fdr(&mut fdrs, nes_idx);
+        let mut fdr_orig_order: Vec<f64> = vec![0.0; fdrs.len()];
+        indices.iter().zip(fdrs.iter()).for_each(|(&i, &v)| {
+            fdr_orig_order[i] = v;
+        });
+        return fdr_orig_order;
+    }
+
+    fn prerank(&mut self, genes: &[String], metric: &[f64], gmt: &HashMap<&str, &[String]>) {
+        // NOTE: input must not contain duplcated genes
+
+        let weighted_metric: Vec<f64> = metric.iter().map(|x| x.abs().powf(self.weight)).collect();
+        // start to calculate
+        let mut es = EnrichmentScore::new(genes, self.nperm, self.seed, false, false);
+        // let end1 = Instant::now();
+        let gperm = es.gene_permutation(); // gene permutation, only record gene idx here
+        let mut summ = Vec::<GSEASummary>::new();
+
+        for (&term, &gset) in gmt.iter() {
+            // convert gene String --> Int
+            let gtag = es.gene.isin(gset);
+            let gidx = es.hit_index(&gtag);
+            if gidx.len() > self.max_size || gidx.len() < self.min_size {
+                continue;
+            }
+            let tag_indicators: Vec<Vec<f64>> = gperm.par_iter().map(|de| de.isin(&gidx)).collect();
+            let (ess, run_es) = es.enrichment_score_gene(&weighted_metric, &tag_indicators);
+            let esnull: Vec<f64> = if ess.len() > 1 {
+                ess[1..].to_vec()
+            } else {
+                Vec::new()
+            };
+            let gss = GSEASummary {
+                term: term.to_string(),
+                es: ess[0],
+                run_es: run_es,
+                hits: gidx,
+                esnull: esnull,
+                ..Default::default()
+            };
+            summ.push(gss);
+        }
+        //println!("Hello");
+        //println!("summ:{:?}", summ);
+        let end3 = Instant::now();
+        // println!("Calculation time: {:.2?}", end3.duration_since(end2));
+        if self.nperm > 0 {
+            self.stat(&mut summ);
+        }
+        self.summaries = summ.clone();
+        println!("summ:{:?}", summ);
+        //self.indices.push((0..genes.len()).collect_vec());
+        //self.rankings.push(metric.to_owned());
+
+        // let end4 = Instant::now();
+        // println!("Statistical time: {:.2?}", end4.duration_since(end3));
+    }
+}
+
+pub trait Statistic {
+    fn mean(&self) -> f64;
+    fn stat(&self, ddof: usize) -> (f64, f64);
+    fn argsort(&self, assending: bool) -> (Vec<usize>, Vec<f64>);
+}
+
+impl Statistic for &[f64] {
+    /// caculate mean
+    fn mean(&self) -> f64 {
+        let sum = self.iter().sum::<f64>();
+        let count = self.len() as f64;
+        sum / count
+    }
+    /// return (mean, std), don't know why this is very slow
+    fn stat(&self, ddof: usize) -> (f64, f64) {
+        let sum: f64 = self.iter().sum();
+        let count = self.len();
+        let mean = sum / (count as f64);
+        let variance = self
+            .iter()
+            .map(|&value| {
+                let diff = mean - value;
+                diff * diff
+            })
+            .sum::<f64>()
+            / ((count - ddof) as f64);
+        (mean, variance.sqrt())
+    }
+    fn argsort(&self, ascending: bool) -> (Vec<usize>, Vec<f64>) {
+        let indices: Vec<usize> = (0..self.len()).collect();
+        let sorted_col: Vec<(usize, &f64)> = indices
+            .into_iter()
+            .zip(self.iter())
+            .sorted_by(|&a, &b| a.1.partial_cmp(b.1).unwrap())
+            .collect();
+        //.sorted_by(|&a, &b| a.1.partial_cmp(b.1).unwrap()).collect();
+
+        let mut sidx: Vec<usize> = Vec::new();
+        let mut sval: Vec<f64> = Vec::new();
+        sorted_col.iter().for_each(|(i, &v)| {
+            sidx.push(*i);
+            sval.push(v);
+        });
+        if !ascending {
+            sidx.reverse(); // inplace
+            sval.reverse();
+        }
+        (sidx, sval)
     }
 }

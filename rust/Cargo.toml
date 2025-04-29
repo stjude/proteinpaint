@@ -35,6 +35,7 @@ flate2 = "1"
 futures = "0.3" 
 num_cpus = "1.16.0"
 rand = {version = "0.9.1", features = ['small_rng']}
+itertools = "0.14.0"
 
 [profile.release]
 lto = "fat"
