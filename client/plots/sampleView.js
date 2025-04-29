@@ -873,7 +873,9 @@ export function searchSampleInput(holder, samplesData, hasSampleAncestry, callba
 		.attr('list', 'sampleDatalist')
 		.property('autocomplete', 'off')
 		.attr('placeholder', sampleName)
-		.style('width', '400px')
+		.style('width', '250px')
+
+	holder.style('opacity', '0.8')
 	const datalist = holder.append('datalist').attr('id', 'sampleDatalist')
 	addOptions(allSamples)
 	input.on('keyup', e => {
