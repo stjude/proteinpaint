@@ -1,4 +1,4 @@
-// Syntax: cd .. && cargo build --release && cat ~/sjpp/test.txt | target/release/genesetORA
+// Syntax: cd .. && cargo build --release && cat ~/sjpp/test.txt | target/release/genesetSEA
 #![allow(non_snake_case)]
 use json::JsonValue;
 use r_mathlib;
@@ -47,14 +47,14 @@ fn main() -> Result<()> {
             match input_json {
                 Ok(json_string) => {
                     let run_time = Instant::now();
-                    let msigdb_input: &JsonValue = &json_string["msigdb"];
+                    let msigdb_input: &JsonValue = &json_string["db"];
                     let msigdb;
                     match msigdb_input.as_str() {
                         Some(db_string) => msigdb = db_string.to_string(),
                         None => panic!("msigdb file path is missing"),
                     }
                     let genesetgroup;
-                    let genesetgroup_input: &JsonValue = &json_string["gene_set_group"];
+                    let genesetgroup_input: &JsonValue = &json_string["geneset_group"];
                     match genesetgroup_input.as_str() {
                         Some(genesetgroup_string) => genesetgroup = genesetgroup_string.to_string(),
                         None => panic!("genesetgroup is missing"),
