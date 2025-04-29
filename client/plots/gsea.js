@@ -19,16 +19,14 @@ class gsea {
 		}
 		//Either allow a node to be passed or create a new div
 		const controlsDiv =
-			typeof opts.controls == 'object'
-				? opts.controls
-				: opts.holder || opts.holder.append('div').style('display', 'inline-block')
-		opts.holder.style('display', 'inline-block')
-		const actionsDiv = opts.holder
+			typeof opts.controls == 'object' ? opts.controls : opts.holder.append('div').style('display', 'inline-block')
+		const main = opts.holder.append('div').style('display', 'inline-block')
+		const actionsDiv = main
 			.append('div')
 			.attr('data-testid', 'sjpp-gsea-actions')
 			.style('margin', '10px')
 			.style('text-align', 'left')
-		const loadingDiv = opts.holder
+		const loadingDiv = main
 			.append('div')
 			.attr('data-testid', 'sjpp-gsea-loading')
 			.style('text-align', 'center')
@@ -36,19 +34,19 @@ class gsea {
 			.style('margin', '10px')
 			.style('text-align', 'left')
 			.text('Loading...')
-		const holder = opts.holder
+		const holder = main
 			.append('div')
 			.style('margin-left', '50px')
 			.style('display', 'inline-block')
 			.attr('data-testid', 'sjpp-gsea-holder')
-		const detailsDiv = opts.holder
+		const detailsDiv = main
 			.append('div')
 			.attr('data-testid', 'sjpp-gsea-details')
 			.style('display', 'inline-block')
 			.style('vertical-align', 'top')
 			.style('margin-top', '50px')
 
-		const tableDiv = opts.holder.append('div').style('margin', '10px').attr('data-testid', 'sjpp-gsea-results-table')
+		const tableDiv = main.append('div').style('margin', '10px').attr('data-testid', 'sjpp-gsea-results-table')
 
 		this.dom = {
 			holder,
@@ -181,7 +179,8 @@ class gsea {
 		const config = appState.plots.find(p => p.id === this.id)
 		if (!config.gsea_params) {
 			try {
-				const volcanoSettings = getDefaultVolcanoSettings({}, { termType: 'geneExpression' })
+				const volcanoSettings =
+					config.settings?.volcano || getDefaultVolcanoSettings({}, { termType: 'geneExpression' })
 				const model = new VolcanoModel(this.app, config, volcanoSettings)
 				const response = await model.getData()
 				if (!response || !response.data || response.error) {
