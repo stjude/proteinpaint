@@ -34,7 +34,7 @@ export class VolcanoModel {
 			samplelst: this.config.samplelst
 		} as any
 		//This is a workaround until the server can accept an arr of confounder tws
-		const confounders = this.config.confounderTws
+		const confounders = this.config?.confounderTws
 		if (confounders?.length) {
 			body.tw = this.config.confounderTws[0]
 			if (confounders.length > 1) body.tw2 = this.config.confounderTws[1]
