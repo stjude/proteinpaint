@@ -74,6 +74,18 @@ const state3D = {
 	]
 }
 
+const stateDynamicScatter = {
+	plots: [
+		{
+			chartType: 'sampleScatter',
+			colorTW: { id: 'diaggrp' },
+			name: 'TermdbTest TSNE',
+			term: { id: 'agedx', q: { mode: 'continuous' } },
+			term2: { id: 'hrtavg', q: { mode: 'continuous' } }
+		}
+	]
+}
+
 const state3DContour = {
 	plots: [
 		{
@@ -278,6 +290,38 @@ tape(
 		}
 	}
 )
+
+tape('Render scatter plot of agedx vs hrtavg', function (test) {
+	test.timeoutAfter(8000)
+	test.plan(2)
+	const holder = getHolder()
+	runpp({
+		holder, //Fix for test failing because survival & summary sandboxs are not destroyed.
+		state: stateDynamicScatter,
+		sampleScatter: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	async function runTests(scatter) {
+		scatter.on('postRender.test', null)
+		const chart = scatter.Inner.model.charts[0]
+		test.true(scatter.Inner.settings.showAxes, 'Dynamic scatter should have axes')
+		scatter.Inner.settings.showContour = true
+		await scatter.Inner.app.dispatch({
+			type: 'plot_edit',
+			id: scatter.Inner.id,
+			config: { settings: { sampleScatter: scatter.Inner.settings } }
+		})
+		const contourG = scatter.Inner.model.charts[0].chartDiv.select('g[stroke-linejoin="round"]').node()
+		test.true(
+			contourG != null,
+			'Scatter should have contour showing the density of points after selecting show contour'
+		)
+	}
+})
 
 tape('Test scale dot', function (test) {
 	test.timeoutAfter(8000)
