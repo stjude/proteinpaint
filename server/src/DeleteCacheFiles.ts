@@ -2,7 +2,7 @@ import fs from 'fs'
 import path from 'path'
 import serverconfig from './serverconfig.js'
 
-type CacheOpts = {
+type DeleteCacheFilesOpts = {
 	/** Set a specific directory within the cache (e.g. bam, gsea, etc.) instead of
 	 * the default/root cachedir.*/
 	cachedir?: string
@@ -25,7 +25,7 @@ type CacheOpts = {
  * This is a prototype cache class for managing files in the cachedir.
  */
 
-export class Cache {
+export class DeleteCacheFiles {
 	/** a pending timeout reference from setTimeout that calls mayDeleteCacheFiles */
 	#cacheCheckTimeout: NodeJS.Timeout | undefined | number
 	cachedir: string
@@ -37,7 +37,7 @@ export class Cache {
 	#maxSize: number
 	#nextCheckTime = 0
 
-	constructor(opts: CacheOpts = {}) {
+	constructor(opts: DeleteCacheFilesOpts = {}) {
 		this.validateOpts(opts)
 		this.#cacheCheckTimeout = 0
 		this.cachedir = opts.cachedir || serverconfig.cachedir
@@ -47,7 +47,7 @@ export class Cache {
 		this.#fileExtensions = new Set(opts.fileExtensions || [])
 	}
 
-	validateOpts(opts: CacheOpts) {
+	validateOpts(opts: DeleteCacheFilesOpts) {
 		if (opts.fileExtensions) {
 			for (const ext of opts.fileExtensions) {
 				if (ext[0] !== '.') throw `file extension ${ext} should start with a dot`
