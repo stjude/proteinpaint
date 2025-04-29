@@ -12,7 +12,6 @@ export function setInteractivity(self) {
 	self.showTooltip = function (event, chart) {
 		const onClick = event.type == 'click'
 		self.onClick = onClick
-		if (onClick) self.searchMenu?.hide()
 
 		if (!(event.target.tagName == 'path' && event.target.getAttribute('name') == 'serie')) {
 			if (self.onClick && onClick) {

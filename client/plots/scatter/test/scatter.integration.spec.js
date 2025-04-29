@@ -268,28 +268,26 @@ tape('Render TermdbTest scatter plot adding age as Z to render a 3D plot', funct
 	}
 })
 
-tape(
-	'Render TermdbTest scatter plot with age as Z and showContour set to true to apply contour on 3D plot',
-	function (test) {
-		test.timeoutAfter(8000)
-		test.plan(1)
-		const holder = getHolder()
-		runpp({
-			holder, //Fix for test failing because survival & summary sandboxs are not destroyed.
-			state: state3DContour,
-			sampleScatter: {
-				callbacks: {
-					'postRender.test': runTests
-				}
+tape('Render 3D plot with age as Z and showContour set to true to apply contour on 3D plot', function (test) {
+	test.timeoutAfter(8000)
+	test.plan(1)
+	const holder = getHolder()
+	runpp({
+		holder, //Fix for test failing because survival & summary sandboxs are not destroyed.
+		state: state3DContour,
+		sampleScatter: {
+			callbacks: {
+				'postRender.test': runTests
 			}
-		})
-
-		async function runTests(scatter) {
-			const chart = scatter.Inner.model.charts[0]
-			test.true(chart.plane, 'Should have a plane with the contour map')
 		}
+	})
+
+	async function runTests(scatter) {
+		const chart = scatter.Inner.model.charts[0]
+		await sleep(1000)
+		test.true(chart.plane != null, 'Should have a plane with the contour map')
 	}
-)
+})
 
 tape('Render scatter plot of agedx vs hrtavg', function (test) {
 	test.timeoutAfter(8000)
@@ -320,6 +318,34 @@ tape('Render scatter plot of agedx vs hrtavg', function (test) {
 			contourG != null,
 			'Scatter should have contour showing the density of points after selecting show contour'
 		)
+	}
+})
+
+tape('Show tooltip for sample', function (test) {
+	test.timeoutAfter(8000)
+	test.plan(2)
+	const holder = getHolder()
+	runpp({
+		holder, //Fix for test failing because survival & summary sandboxs are not destroyed.
+		state,
+		sampleScatter: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	async function runTests(scatter) {
+		scatter.on('postRender.test', null)
+		const chart = scatter.Inner.model.charts[0]
+		const sample = groups[0].items[0]
+		scatter.Inner.vm.scatterTooltip.showSampleTooltip(sample, 100, 100, chart)
+		const tooltipDiv = scatter.Inner.view.dom.tooltip.d.node()
+		const tree = scatter.Inner.vm.scatterTooltip.tree
+		const parentNode = tree.find(n => n.id == 'Acute lymphoblastic leukemia' && n.samples.length == 3)
+		test.true(parentNode != null, 'Tooltip should have 3 samples for Acute lymphoblastic leukemia')
+		test.true(tooltipDiv != null, 'Tooltip should be shown')
+		scatter.Inner.view.dom.tooltip.hide()
 	}
 })
 

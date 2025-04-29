@@ -4,6 +4,7 @@ import { roundValueAuto } from '#shared/roundValue.js'
 import { getDateStrFromNumber } from '#shared/terms.js'
 import { rgb } from 'd3-color'
 import { Scatter } from '../Scatter.js'
+
 export class ScatterTooltip {
 	scatter: Scatter
 	view: any
@@ -28,7 +29,7 @@ export class ScatterTooltip {
 		this.chart = chart
 		const onClick = event.type == 'click'
 		this.onClick = onClick
-		if (onClick) this.searchMenu?.hide()
+		if (onClick) this.scatter.interactivity.searchMenu?.hide()
 		if (!(event.target.tagName == 'path' && event.target.getAttribute('name') == 'serie')) {
 			if (this.onClick && onClick) {
 				this.onClick = false
@@ -40,10 +41,13 @@ export class ScatterTooltip {
 			} //dont hide current tooltip if mouse moved away, may want to scroll
 			return
 		}
-		const s2 = event.target.__data__
+		this.showSampleTooltip(event.target.__data__, event.clientX, event.clientY, chart)
+	}
+
+	showSampleTooltip(s2, x, y, chart) {
+		this.chart = chart
 		this.displaySample = 'sample' in s2
-		let threshold = 10 //min distance in pixels to be in the neighborhood
-		threshold = threshold / this.scatter.vm.scatterZoom.zoom //Threshold should consider the zoom
+		const threshold = 5 / this.scatter.vm.scatterZoom.zoom //Threshold should consider the zoom
 		const samples = chart.data.samples.filter(s => {
 			const dist = distance(s.x, s.y, s2.x, s2.y, chart)
 			if (!('sampleId' in s) && (!this.scatter.settings.showRef || this.scatter.settings.refSize == 0)) return false
@@ -132,7 +136,6 @@ export class ScatterTooltip {
 		this.view.dom.tooltip.clear()
 		//Rendering tooltip
 		const div = this.view.dom.tooltip.d.style('padding', '5px')
-
 		if (samples.length > 1)
 			div
 				.append('div')
@@ -160,7 +163,7 @@ export class ScatterTooltip {
 				this.addCategory(node)
 			}
 
-		this.view.dom.tooltip.show(event.clientX, event.clientY, true, false)
+		this.view.dom.tooltip.show(x, y, true, false)
 	}
 
 	getTW(category) {
