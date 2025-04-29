@@ -2,26 +2,18 @@ import type { MassAppApi } from '#mass/types/mass'
 import { Tabs } from '#dom'
 import type { RenderedTab } from '#dom'
 import type { DiffAnalysisDom, DiffAnalysisPlotConfig } from '../DiffAnalysisTypes'
-import type { DiffAnalysisInteractions } from '../interactions/DiffAnalysisInteractions'
 
 export class DiffAnalysisView {
 	app: MassAppApi
 	config: DiffAnalysisPlotConfig
 	dom: DiffAnalysisDom
-	interactions: DiffAnalysisInteractions
 	tabs: Tabs
 	tabsData: RenderedTab[]
 	getTabsOptions: any
-	constructor(
-		app: MassAppApi,
-		config: DiffAnalysisPlotConfig,
-		dom: DiffAnalysisDom,
-		interactions: DiffAnalysisInteractions
-	) {
+	constructor(app: MassAppApi, config: DiffAnalysisPlotConfig, dom: DiffAnalysisDom) {
 		this.app = app
 		this.config = config
 		this.dom = dom
-		this.interactions = interactions
 		setRenderers(this)
 		this.tabsData = this.getTabsOptions(this)
 		this.tabs = new Tabs({ holder: this.dom.tabsDiv, tabs: this.tabsData })
@@ -55,11 +47,11 @@ function setRenderers(self) {
 				label: 'Gene Set Enrichment Analysis',
 				isVisible: () => self.config.termType === 'geneExpression',
 				getPlotConfig: () => {
-					const gsea_params = self.interactions.getGseaParameters()
-					return {
-						childType: 'gsea',
-						gsea_params
-					}
+					// const gsea_params = self.interactions.getGseaParameters()
+					// return {
+					// 	childType: 'gsea',
+					// 	gsea_params
+					// }
 				},
 				callback: self.tabCallback
 			}

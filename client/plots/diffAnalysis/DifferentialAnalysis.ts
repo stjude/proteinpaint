@@ -8,7 +8,6 @@ import type { DiffAnalysisDom, DiffAnalysisOpts, DiffAnalysisPlotConfig } from '
 import { DiffAnalysisView } from './view/DiffAnalysisView'
 import { getDefaultVolcanoSettings, validateVolcanoSettings } from '../volcano/Volcano.ts'
 import { getDefaultGseaSettings } from '#plots/gsea.js'
-import { DiffAnalysisInteractions } from './interactions/DiffAnalysisInteractions.ts'
 
 /** TODO:
  * - type this file
@@ -19,7 +18,6 @@ class DifferentialAnalysis extends RxComponentInner {
 		plots: { [key: string]: any }
 	}
 	dom: DiffAnalysisDom
-	interactions?: DiffAnalysisInteractions
 	plotTabs?: DiffAnalysisView
 	plotsDiv: { [key: string]: Div }
 	plotsControlsDiv: { [key: string]: Div }
@@ -79,12 +77,10 @@ class DifferentialAnalysis extends RxComponentInner {
 	}
 
 	async init(appState: MassState) {
-		this.interactions = new DiffAnalysisInteractions(this.app)
-
 		const state = this.getState(appState)
 		const config = structuredClone(state.config) as DiffAnalysisPlotConfig
 
-		this.plotTabs = new DiffAnalysisView(this.app, config, this.dom, this.interactions)
+		this.plotTabs = new DiffAnalysisView(this.app, config, this.dom)
 	}
 
 	async setComponent(config: DiffAnalysisPlotConfig) {
@@ -102,10 +98,6 @@ class DifferentialAnalysis extends RxComponentInner {
 			parent: this.api,
 			controls: this.plotsControlsDiv[config.childType],
 			termType: config.termType
-		}
-		//TODO: Fix this
-		if (config.childType == 'volcano') {
-			opts['diffAnalysisInteractions'] = this.interactions
 		}
 		this.components.plots[config.childType] = await _.componentInit(opts)
 	}
