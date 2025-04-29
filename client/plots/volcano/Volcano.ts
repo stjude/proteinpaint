@@ -4,7 +4,6 @@ import { fillTermWrapper } from '#termsetting'
 import { Menu, sayerror } from '#dom'
 import { RxComponentInner } from '../../types/rx.d'
 import { controlsInit } from '../controls'
-import type { DiffAnalysisInteractions } from '../diffAnalysis/interactions/DiffAnalysisInteractions'
 import type { VolcanoOpts, VolcanoSettings, VolcanoDom } from './VolcanoTypes'
 import { VolcanoModel } from './model/VolcanoModel'
 import { VolcanoViewModel } from './viewModel/VolcanoViewModel'
@@ -21,7 +20,6 @@ class Volcano extends RxComponentInner {
 	dom: VolcanoDom
 	interactions?: VolcanoInteractions
 	termType: string
-	diffAnalysisInteractions?: DiffAnalysisInteractions
 	constructor(opts: VolcanoOpts) {
 		super()
 		this.components = {
@@ -45,7 +43,6 @@ class Volcano extends RxComponentInner {
 			tip: new Menu({ padding: '' }),
 			actionsTip: new Menu({ padding: '' })
 		}
-		if (opts.diffAnalysisInteractions) this.diffAnalysisInteractions = opts.diffAnalysisInteractions
 	}
 
 	reactsTo(action: { type: string; id: string }) {
@@ -121,7 +118,6 @@ class Volcano extends RxComponentInner {
 			}
 
 			this.interactions.clearDom()
-			if (this.diffAnalysisInteractions) this.diffAnalysisInteractions.setVar('volcanoResponse', response)
 
 			/** Format response into an object for rendering */
 			const viewModel = new VolcanoViewModel(config, response, settings)
