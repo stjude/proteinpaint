@@ -1328,13 +1328,15 @@ export function setRenderers(self) {
 				}
 				const hidden = tw.q.hiddenValues ? key in tw.q.hiddenValues : false
 
+				const label = category.mutation.label || mkey
+
 				G.append('g')
 					.append('text')
 					.attr('x', offsetX - step + 24)
 					.attr('y', offsetY + 4)
 					.attr('name', 'sjpp-scatter-legend-label')
 					.style('text-decoration', hidden ? 'line-through' : 'none')
-					.text(mkey.toUpperCase() + (key.includes(dtlabel) ? `, n=${category.sampleCount}` : ''))
+					.text(label.toUpperCase() + (key.includes(dtlabel) ? `, n=${category.sampleCount}` : ''))
 					.on('click', event =>
 						self.onLegendClick(chart, cname == 'shape' ? 'shapeTW' : 'colorTW', key, event, category)
 					)

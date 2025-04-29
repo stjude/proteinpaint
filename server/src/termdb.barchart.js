@@ -216,6 +216,7 @@ function processGeneVariantSamples(map, bins, data, samplesMap, ds) {
 			const value1 = values[id1]
 			if (!value1) continue // skip samples without data for geneVariant term
 			for (const v1 of value1.values) {
+				const v1label = v1.label || mclass[v1.class].label
 				if (processedValues.some(p => p.value.dt == v1.dt && (v1.origin ? v1.origin == p.value.origin : true))) {
 					const sameDtOrigin = processedValues.filter(
 						p => p.value.dt == v1.dt && (v1.origin ? v1.origin == p.value.origin : true)
@@ -225,13 +226,12 @@ function processGeneVariantSamples(map, bins, data, samplesMap, ds) {
 						sameDtOrigin.item[`key1`] = {}
 						sameDtOrigin.item[`key1`][tmpKey] = 1
 					}
-					sameDtOrigin.item[`key1`][mclass[v1.class].label] = sameDtOrigin.item[`key1`][mclass[v1.class].label]
-						? sameDtOrigin.item[`key1`][mclass[v1.class].label] + 1
+					sameDtOrigin.item[`key1`][v1label] = sameDtOrigin.item[`key1`][v1label]
+						? sameDtOrigin.item[`key1`][v1label] + 1
 						: 1
 				} else {
 					const item = { sample: customSampleID }
-					item[`key1`] = mclass[v1.class].label
-					item[`val1`] = mclass[v1.class].label
+					item[`key1`] = item[`val1`] = v1label
 
 					const byOrigin = ds.assayAvailability?.byDt?.[v1.dt]?.byOrigin
 					if (byOrigin) {
@@ -264,6 +264,7 @@ function processGeneVariantSamples(map, bins, data, samplesMap, ds) {
 			const value1 = values[id1]
 			if (!value2) continue // skip samples without data for geneVariant term
 			for (const v2 of value2.values) {
+				const v2label = v2.label || mclass[v2.class].label
 				if (processedValues.some(p => p.value.dt == v2.dt && (v2.origin ? v2.origin == p.value.origin : true))) {
 					const sameDtOrigin = processedValues.filter(
 						p => p.value.dt == v2.dt && (v2.origin ? v2.origin == p.value.origin : true)
@@ -273,8 +274,8 @@ function processGeneVariantSamples(map, bins, data, samplesMap, ds) {
 						sameDtOrigin.item[`key2`] = {}
 						sameDtOrigin.item[`key2`][tmpKey] = 1
 					}
-					sameDtOrigin.item[`key2`][mclass[v2.class].label] = sameDtOrigin.item[`key2`][mclass[v2.class].label]
-						? sameDtOrigin.item[`key2`][mclass[v2.class].label] + 1
+					sameDtOrigin.item[`key2`][v2label] = sameDtOrigin.item[`key2`][v2label]
+						? sameDtOrigin.item[`key2`][v2label] + 1
 						: 1
 				} else {
 					const item = { sample: customSampleID }
@@ -289,8 +290,8 @@ function processGeneVariantSamples(map, bins, data, samplesMap, ds) {
 						item.key0 = item.val0 = dt2label[v2.dt]
 					}
 
-					item[`key2`] = mclass[v2.class].label
-					item[`val2`] = mclass[v2.class].label
+					item[`key2`] = v2label
+					item[`val2`] = v2label
 					processedValues.push({ value: v2, item })
 				}
 			}

@@ -2571,6 +2571,7 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 		if (ds.queries.geneCnv) dts.push('geneCnv')
 
 		// retrieve mutation data for each dt
+		const termdbmclass = q.ds?.cohort?.termdb?.mclass // custom mclass labels from dataset
 		for (const dt of dts) {
 			const mlst =
 				dt == dtsnvindel
@@ -2611,7 +2612,8 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 						dt: m.dt,
 						chr: tw.term.chr,
 						class: m.class,
-						mname: m.mname
+						mname: m.mname,
+						label: termdbmclass?.[m.class]?.label || mclass[m.class].label
 					}
 					if (m.start) m2.start = m.start
 					if (m.stop) m2.stop = m.stop
@@ -2623,18 +2625,17 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 					}
 
 					if (s.formatK2v) {
-						// sample has format values
-						if (tw.q.origin) {
-							// origin specified
-							if (!Object.keys(s.formatK2v).includes('origin')) throw 'format does not include origin'
-							if (s.formatK2v['origin'] != tw.q.origin) {
-								// mutation origin does not match specified origin
-								// skip sample
+						// flatten the format values
+						for (const k in s.formatK2v) {
+							if (k == 'origin' && !ds.assayAvailability?.byDt?.[dt]?.byOrigin) {
+								// possible that a dt can have origin
+								// annotations in data file, but not
+								// in ds.assayAvailability{}, because
+								// some data files use fake origin
+								// annotations for compatibility
+								// purposes (see mbmeta CNV data file)
 								continue
 							}
-						}
-						// flatten format values
-						for (const k in s.formatK2v) {
 							m2[k] = s.formatK2v[k]
 						}
 					}
