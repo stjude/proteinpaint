@@ -68,6 +68,9 @@ export async function initGenomesDs(serverconfig) {
 	serverconfig.cachedir_genome = await mayCreateSubdirInCache('genome')
 	serverconfig.cachedir_ssid = await mayCreateSubdirInCache('ssid')
 
+	//Attach to features object??
+	serverconfig.cachedir_gsea = await mayCreateSubdirInCache('gsea')
+
 	// NOTE: required or imported code files are only loaded once by Nodejs
 	// and variables are static so that changes to common key-values will affect all
 	// server-side code that import common.js
