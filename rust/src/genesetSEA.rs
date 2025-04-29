@@ -187,14 +187,18 @@ fn main() -> Result<()> {
                                         let max_size = 500; // Will be later defined in client side
                                         let seed = 1; // Will be later defined in client side
                                         let sample_coding_genes_vec: Vec<String> =
-                                            sample_coding_genes.into_iter().collect();
+                                            sample_coding_genes.clone().into_iter().collect();
                                         //let fold_change_vec: Vec<String> =
                                         //    fold_change_f64.into_iter().collect();
+                                        let mut gmt = HashMap::<&str, &[String]>::new();
+                                        for (k, v) in map.iter() {
+                                            gmt.insert(*k, v.as_slice());
+                                        }
                                         prerank(
-                                            1.0,
+                                            1.0, // Hardong weight = 1.0 for now
                                             &sample_coding_genes_vec,
                                             &fold_change_f64,
-                                            &map,
+                                            &gmt,
                                             nperm,
                                             min_size,
                                             max_size,
