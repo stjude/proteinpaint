@@ -47,11 +47,9 @@ function setRenderers(self) {
 				label: 'Gene Set Enrichment Analysis',
 				isVisible: () => self.config.termType === 'geneExpression',
 				getPlotConfig: () => {
-					// const gsea_params = self.interactions.getGseaParameters()
-					// return {
-					// 	childType: 'gsea',
-					// 	gsea_params
-					// }
+					return {
+						childType: 'gsea'
+					}
 				},
 				callback: self.tabCallback
 			}

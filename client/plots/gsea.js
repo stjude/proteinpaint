@@ -5,6 +5,7 @@ import { controlsInit } from './controls'
 import { getCompInit, copyMerge } from '#rx'
 // import { scaleLinear } from 'd3-scale'
 import { roundValueAuto } from '#shared/roundValue.js'
+import { VolcanoModel } from '#plots/volcano/model/VolcanoModel.ts'
 
 const tip = new Menu()
 
@@ -168,16 +169,59 @@ class gsea {
 		}
 	}
 
+	/** This allows the gsea to run independently. If the DE data
+	 * was already requested (e.g. in the DA from the volcano plot),
+	 * the cached response returns rather than running the DE
+	 * route again.
+	 *
+	 * Also allows loading the gsea from a mass session file without
+	 * error. */
+	async init(appState) {
+		const config = appState.plots.find(p => p.id === this.id)
+		/** TODO: confirming the plot is running in DA ensures
+		 * the volcano settings are available. Init default
+		 * volcano settings if not available?? */
+		if (!config.gsea_params && config.chartType == 'differentialAnalysis') {
+			try {
+				const volcanoSettings = config.settings.volcano
+				const model = new VolcanoModel(this.app, config, volcanoSettings)
+				const response = await model.getData()
+				if (!response || !response.data || response.error) {
+					throw response.error || 'No data returned from volcano model'
+				}
+				const inputGenes = response.data.map(g => g.gene_name)
+				await this.app.save({
+					type: 'plot_edit',
+					id: this.id,
+					config: {
+						gsea_params: {
+							genes: inputGenes,
+							fold_change: response.data.map(g => g.fold_change),
+							genome: this.app.vocabApi.opts.state.vocab.genome,
+							genes_length: inputGenes.length
+						}
+					}
+				})
+			} catch (e) {
+				if (e instanceof Error) console.error(e.message || e)
+				else if (e.stack) console.log(e.stack)
+				throw e
+			}
+		}
+	}
+
 	async main() {
-		this.config = structuredClone(this.state.config)
-		if (this.config.chartType != this.type && this.config.childType != this.type) return
-		this.settings = this.config.settings.gsea
+		//Not not use structuredClone(this.state.config)
+		//Does not include the plot config changes in init()
+		const config = this.app.getState().plots.find(p => p.id === this.id)
+		if (config.chartType != this.type && config.childType != this.type) return
+		this.settings = this.state.config.settings.gsea
 
 		this.imageUrl = null // Reset the image URL
 		await this.setControls()
 		if (this.dom.header)
 			this.dom.header.html(
-				this.config.gsea_params.genes.length +
+				config.gsea_params.genes.length +
 					' genes <span style="font-size:.8em;opacity:.7">GENE SET ENRICHMENT ANALYSIS</span>'
 			)
 
@@ -186,6 +230,7 @@ class gsea {
 }
 
 async function renderPathwayDropdown(self) {
+	console.log(self, self.settings)
 	const pathwayOpts = [
 		{ label: '-', value: '-' },
 		{ label: 'BP: subset of GO', value: 'BP: subset of GO' },
