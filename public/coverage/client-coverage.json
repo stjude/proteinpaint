@@ -420,5 +420,41 @@
       "prev": 0,
       "diff": 1.42
     }
+  },
+  "dom/genesearch.ts": {
+    "lines": {
+      "total": 258,
+      "covered": 111,
+      "skipped": 0,
+      "pct": 43.02
+    },
+    "functions": {
+      "total": 24,
+      "covered": 11,
+      "skipped": 0,
+      "pct": 45.83
+    },
+    "statements": {
+      "total": 283,
+      "covered": 115,
+      "skipped": 0,
+      "pct": 40.63
+    },
+    "branches": {
+      "total": 175,
+      "covered": 58,
+      "skipped": 0,
+      "pct": 33.14
+    },
+    "lowestPct": {
+      "curr": 33.14,
+      "prev": 0,
+      "diff": 33.14
+    },
+    "averagePct": {
+      "curr": 40.655,
+      "prev": 0,
+      "diff": 40.655
+    }
   }
 }
