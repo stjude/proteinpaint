@@ -135,6 +135,21 @@ if [[ "$CHANGEDWS" == *"python"* ]]; then
 	cd ../container
 fi
 
+if [[ "$CHANGEDWS" == *"R"* ]]; then
+	cd ../R
+	echo "packing R ..."
+	npm pack
+	RPKGVER=$(node -p "require('./package.json').version")
+	RTGZ=sjcrh-proteinpaint-r-$RPKGVER.tgz
+	mv $RTGZ ../container/tmppack/
+
+	cd ../server
+	RDEPNAME="@sjcrh/proteinpaint-r"
+	# may reset the dep new version temporarily, for package testing 
+	npm pkg set "dependencies.$RDEPNAME"=$PKGPATH/$RTGZ
+	cd ../container
+fi
+
 if [[ "$CHANGEDWS" == *"server"* ]]; then
 	cd ../server
 	echo "packing server ..."

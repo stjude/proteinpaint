@@ -66,6 +66,7 @@
   },
   "dependencies": {
     "@sjcrh/augen": "2.121.0",
+    "@sjcrh/proteinpaint-r": "2.121.0",
     "@sjcrh/proteinpaint-python": "2.118.0",
     "@sjcrh/proteinpaint-rust": "2.122.0",
     "@sjcrh/proteinpaint-shared": "2.121.0",
