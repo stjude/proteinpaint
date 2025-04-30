@@ -59,6 +59,7 @@ callbacks from constructor options
 - onCoordinateChange
 - onpanning
 - onsetheight
+- onAddRemoveTk
 
 **************** METHODS
 updateruler()
@@ -143,6 +144,10 @@ export class Block {
 		this.onloadalltk_always = arg.onloadalltk_always
 		this.onpanning = arg.onpanning
 		this.onsetheight = arg.onsetheight
+		if (arg.onAddRemoveTk) {
+			if (typeof arg.onAddRemoveTk != 'function') throw 'onAddRemoveTk() not function'
+			this.onAddRemoveTk = arg.onAddRemoveTk
+		}
 		this.onCoordinateChange = arg.onCoordinateChange // argument is the rglst[]
 
 		this.exonsf = 1 // # pixel per basepair
@@ -2328,6 +2333,7 @@ seekrange(chr,start,stop) {
 		if (oldt.tr_legend) {
 			disappear(oldt.tr_legend, true)
 		}
+		if (this.onAddRemoveTk) this.onAddRemoveTk(oldt) // lack of 2nd arg for removing
 	}
 
 	deletecustomdsbyname(dsname) {
@@ -3096,6 +3102,7 @@ seekrange(chr,start,stop) {
 			default:
 				this.error('tk_load: unknown tk type')
 		}
+		if (this.onAddRemoveTk) this.onAddRemoveTk(tk, true)
 	}
 
 	cloakOn() {
