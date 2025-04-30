@@ -1,2 +1,2 @@
 Features:
-- Added unit tests for readHDF5.rs
+- Added unit tests for readHDF5.rs and validateHDF5.rs
