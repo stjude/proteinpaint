@@ -32,6 +32,8 @@ jobs:
     needs: check-user-permissions
     runs-on: ubuntu-22.04
     timeout-minutes: 20
+    outputs:
+      updated_rust: ${{ steps.version_bump.outputs.updated_rust }}
     steps:
       - uses: actions/checkout@v3
         with:
