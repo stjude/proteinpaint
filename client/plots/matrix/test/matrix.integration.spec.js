@@ -1,8 +1,8 @@
 import tape from 'tape'
-import { termjson } from '../../test/testdata/termjson'
-import * as helpers from '../../test/front.helpers.js'
-import { sleep, detectLst, detectGte } from '../../test/test.helpers.js'
-import { getSortOptions } from '../../plots/matrix/matrix.sort.js'
+import { termjson } from '#test/testdata/termjson.ts'
+import * as helpers from '#test/front.helpers.js'
+import { sleep, detectLst, detectGte } from '#test/test.helpers.js'
+import { getSortOptions } from '../matrix.sort.js'
 import {
 	proteinChangingMutations,
 	truncatingMutations,
