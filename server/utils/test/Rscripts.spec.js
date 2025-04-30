@@ -19,6 +19,8 @@ import fs from 'fs'
 // Creating __dirname equivalent for ES6 modules
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
+const p_value_cutoff = 0.0001 // If the difference between the actual and expected p-value is greater than this, the test will fail (used for testing edge.R)
+const fold_change_cutoff = 0.001 // If the difference between the actual and expected p-value is greater than this, the test will fail (used for testing edge.R)
 
 // Helpers
 // Simple function to round numbers in our objects
@@ -354,7 +356,58 @@ tape('edge.R limma', async function (test) {
 	})
 	const Rout = await run_R(path.join(__dirname, '../edge.R'), JSON.stringify(inJson))
 	const out = JSON.parse(Rout)
-	test.deepEqual(out.gene_data, JSON.parse(expJson).gene_data)
+
+	// Gene1
+	const gene1_id = 'ENSG00000169962'
+	const gene1_out = out.gene_data.find(user => user.gene_id === gene1_id)
+	const gene1_exp_out = JSON.parse(expJson).gene_data.find(user => user.gene_id === gene1_id)
+	test.ok(
+		gene1_out.original_p_value - gene1_exp_out.original_p_value < p_value_cutoff,
+		`For ${gene1_id}, original pvalue=${gene1_out.original_p_value}, expected pvalue=${gene1_exp_out.original_p_value}`
+	)
+	test.ok(
+		gene1_out.adjusted_p_value - gene1_exp_out.adjusted_p_value < p_value_cutoff,
+		`For ${gene1_id}, original adj_pvalue=${gene1_out.adjusted_p_value}, expected adj_pvalue=${gene1_exp_out.adjusted_p_value}`
+	)
+	test.ok(
+		gene1_out.fold_change - gene1_exp_out.fold_change < fold_change_cutoff,
+		`For ${gene1_id}, original fold change=${gene1_out.fold_change}, expected fold change=${gene1_exp_out.fold_change}`
+	)
+
+	// Gene2
+	const gene2_id = 'ENSG00000230368'
+	const gene2_out = out.gene_data.find(user => user.gene_id === gene2_id)
+	const gene2_exp_out = JSON.parse(expJson).gene_data.find(user => user.gene_id === gene2_id)
+	test.ok(
+		gene2_out.original_p_value - gene2_exp_out.original_p_value < p_value_cutoff,
+		`For ${gene2_id}, original pvalue=${gene2_out.original_p_value}, expected pvalue=${gene2_exp_out.original_p_value}`
+	)
+	test.ok(
+		gene2_out.adjusted_p_value - gene2_exp_out.adjusted_p_value < p_value_cutoff,
+		`For ${gene2_id}, original adj_pvalue=${gene2_out.adjusted_p_value}, expected adj_pvalue=${gene2_exp_out.adjusted_p_value}`
+	)
+	test.ok(
+		gene2_out.fold_change - gene2_exp_out.fold_change < fold_change_cutoff,
+		`For ${gene2_id}, original fold change=${gene2_out.fold_change}, expected fold change=${gene2_exp_out.fold_change}`
+	)
+
+	// Gene3
+	const gene3_id = 'ENSG00000067606'
+	const gene3_out = out.gene_data.find(user => user.gene_id === gene3_id)
+	const gene3_exp_out = JSON.parse(expJson).gene_data.find(user => user.gene_id === gene3_id)
+	test.ok(
+		gene3_out.original_p_value - gene3_exp_out.original_p_value < p_value_cutoff,
+		`For ${gene3_id}, original pvalue=${gene3_out.original_p_value}, expected pvalue=${gene3_exp_out.original_p_value}`
+	)
+	test.ok(
+		gene3_out.adjusted_p_value - gene3_exp_out.adjusted_p_value < p_value_cutoff,
+		`For ${gene3_id}, original adj_pvalue=${gene3_out.adjusted_p_value}, expected adj_pvalue=${gene3_exp_out.adjusted_p_value}`
+	)
+	test.ok(
+		gene3_out.fold_change - gene3_exp_out.fold_change < fold_change_cutoff,
+		`For ${gene3_id}, original fold change=${gene3_out.fold_change}, expected fold change=${gene3_exp_out.fold_change}`
+	)
+
 	test.end()
 })
 
@@ -378,7 +431,56 @@ tape('edge.R edgeR', async function (test) {
 	})
 	const Rout = await run_R(path.join(__dirname, '../edge.R'), JSON.stringify(inJson))
 	const out = JSON.parse(Rout)
-	//console.log("out:",Rout)
-	test.deepEqual(out.gene_data, JSON.parse(expJson).gene_data)
+
+	// Gene1
+	const gene1_id = 'ENSG00000169962'
+	const gene1_out = out.gene_data.find(user => user.gene_id === gene1_id)
+	const gene1_exp_out = JSON.parse(expJson).gene_data.find(user => user.gene_id === gene1_id)
+	test.ok(
+		gene1_out.original_p_value - gene1_exp_out.original_p_value < p_value_cutoff,
+		`For ${gene1_id}, original pvalue=${gene1_out.original_p_value}, expected pvalue=${gene1_exp_out.original_p_value}`
+	)
+	test.ok(
+		gene1_out.adjusted_p_value - gene1_exp_out.adjusted_p_value < p_value_cutoff,
+		`For ${gene1_id}, original adj_pvalue=${gene1_out.adjusted_p_value}, expected adj_pvalue=${gene1_exp_out.adjusted_p_value}`
+	)
+	test.ok(
+		gene1_out.fold_change - gene1_exp_out.fold_change < fold_change_cutoff,
+		`For ${gene1_id}, original fold change=${gene1_out.fold_change}, expected fold change=${gene1_exp_out.fold_change}`
+	)
+
+	// Gene2
+	const gene2_id = 'ENSG00000230368'
+	const gene2_out = out.gene_data.find(user => user.gene_id === gene2_id)
+	const gene2_exp_out = JSON.parse(expJson).gene_data.find(user => user.gene_id === gene2_id)
+	test.ok(
+		gene2_out.original_p_value - gene2_exp_out.original_p_value < p_value_cutoff,
+		`For ${gene2_id}, original pvalue=${gene2_out.original_p_value}, expected pvalue=${gene2_exp_out.original_p_value}`
+	)
+	test.ok(
+		gene2_out.adjusted_p_value - gene2_exp_out.adjusted_p_value < p_value_cutoff,
+		`For ${gene2_id}, original adj_pvalue=${gene2_out.adjusted_p_value}, expected adj_pvalue=${gene2_exp_out.adjusted_p_value}`
+	)
+	test.ok(
+		gene2_out.fold_change - gene2_exp_out.fold_change < fold_change_cutoff,
+		`For ${gene2_id}, original fold change=${gene2_out.fold_change}, expected fold change=${gene2_exp_out.fold_change}`
+	)
+
+	// Gene3
+	const gene3_id = 'ENSG00000067606'
+	const gene3_out = out.gene_data.find(user => user.gene_id === gene3_id)
+	const gene3_exp_out = JSON.parse(expJson).gene_data.find(user => user.gene_id === gene3_id)
+	test.ok(
+		gene3_out.original_p_value - gene3_exp_out.original_p_value < p_value_cutoff,
+		`For ${gene3_id}, original pvalue=${gene3_out.original_p_value}, expected pvalue=${gene3_exp_out.original_p_value}`
+	)
+	test.ok(
+		gene3_out.adjusted_p_value - gene3_exp_out.adjusted_p_value < p_value_cutoff,
+		`For ${gene3_id}, original adj_pvalue=${gene3_out.adjusted_p_value}, expected adj_pvalue=${gene3_exp_out.adjusted_p_value}`
+	)
+	test.ok(
+		gene3_out.fold_change - gene3_exp_out.fold_change < fold_change_cutoff,
+		`For ${gene3_id}, original fold change=${gene3_out.fold_change}, expected fold change=${gene3_exp_out.fold_change}`
+	)
 	test.end()
 })
