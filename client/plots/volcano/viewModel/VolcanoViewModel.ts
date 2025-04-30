@@ -144,13 +144,13 @@ export class VolcanoViewModel {
 		return [
 			{
 				color: controlColor || this.settings.defaultSignColor,
-				label: this.config.samplelst.groups[0].name,
+				label: `${this.config.samplelst.groups[0].name} (control group)`,
 				x: plotDim.top.x,
 				y: plotDim.top.y
 			},
 			{
 				color: caseColor || this.settings.defaultSignColor,
-				label: this.config.samplelst.groups[1].name,
+				label: `${this.config.samplelst.groups[1].name} (case group)`,
 				x: plotDim.top.x,
 				y: plotDim.top.y + 18
 			}
