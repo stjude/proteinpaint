@@ -66,6 +66,8 @@ struct OutputJson {
 //    freq: usize,
 //}
 
+// Test comment
+
 fn main() {
     let mut input = String::new();
     match io::stdin().read_line(&mut input) {
