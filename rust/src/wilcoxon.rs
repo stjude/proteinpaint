@@ -66,14 +66,12 @@ struct OutputJson {
 //    freq: usize,
 //}
 
-// Test comment
-
 fn main() {
     let mut input = String::new();
     match io::stdin().read_line(&mut input) {
         // Accepting the piped input from nodejs (or command line from testing)
         Ok(_n) => {
-            //println!("{} bytes read", n);
+            println!("{} bytes read", n);
             //println!("input:{}", input);
             const THRESHOLD: usize = 50; // Decrease this number so as to invoke the normal approximation for lower sample sizes. This would speed up the test at the cost of sacrificing accuracy.
             let input_json = json::parse(&input);

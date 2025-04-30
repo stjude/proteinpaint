@@ -80,6 +80,11 @@ jobs:
           cd ./container
           ./pack.sh
           
+          if [[ "CHANGEDWS" == *"rust"* ]]; then
+            echo "Rust changed"
+          else
+            echo "Rust not change changed"
+          fi
           
 
       - name: Login to Github
