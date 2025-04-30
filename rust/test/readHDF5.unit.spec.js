@@ -13,15 +13,23 @@
  * The tests use an HDF5 test file with simpulated sample gene expression data.
  *
  * To run the tests use the command: node readHDF5.unit.spec.js
+ * To run the entire Rust unit test suite use the command: npm run test:unit from proteinpaint/rust
  */
 
 // Import necessary modules
 import tape from 'tape'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 import path from 'path'
+import fs from 'fs'
+import serverconfig from '@sjcrh/proteinpaint-server/src/serverconfig.js'
 
-// Path to the test HDF5 file containing gene expression data
-const HDF5_FILE = path.join('readHDF5_test_data.h5')
+// Load HDF5 test file
+const HDF5_FILE = path.join(serverconfig.binpath, '/test/tp/files/hg38/TermdbTest/TermdbTest.fpkm.matrix.h5')
+
+// Verify file exists
+if (!fs.existsSync(HDF5_FILE)) {
+	throw new Error(`Test data file not found: ${HDF5_FILE}`)
+}
 
 /**************
  * Test sections
@@ -164,7 +172,7 @@ tape('Query Multiple Genes', async t => {
 /**
  * Test: Dataset Dimensions
  *
- * Verifies that the dataset contains the expected number of samples (5)
+ * Verifies that the dataset contains the expected number of samples (100)
  * and that sample names match the expected format. This indirectly tests
  * that the counts dataset is read correctly.
  */
@@ -189,10 +197,10 @@ tape('Counts Dataset Dimensions', async t => {
 
 		// Check that we have the expected number of samples
 		const numSamples = Object.keys(data.samples).length
-		t.equal(numSamples, 5, 'Should have 5 samples') // Adjust based on your dataset
+		t.equal(numSamples, 100, 'Should have 100 samples') // Adjust based on your dataset
 
 		// Check if all sample names are present (adjust sample names as needed)
-		const expectedSampleNames = ['Sample1', 'Sample2', 'Sample3', 'Sample4', 'Sample5']
+		const expectedSampleNames = ['2646', '2660', '2674', '2688', '2702']
 		expectedSampleNames.forEach(sampleName => {
 			const hasMatch = Object.keys(data.samples).some(
 				key => key.includes(sampleName) || key === sampleName.toLowerCase()
