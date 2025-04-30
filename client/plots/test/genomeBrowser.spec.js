@@ -1,117 +1,7 @@
 import tape from 'tape'
 import * as d3s from 'd3-selection'
 import * as helpers from '../../test/front.helpers.js'
-import { sleep, detectLst, detectOne, detectZero, whenHidden, whenVisible, detectGte } from '../../test/test.helpers'
-
-// run this test at http://localhost:3000/testrun.html?name=genomeBrowser
-
-/*************************
- reusable helper functions
-**************************/
-
-function getHolder() {
-	return d3s
-		.select('body')
-		.append('div')
-		.style('border', '1px solid #aaa')
-		.style('padding', '5px')
-		.style('margin', '5px')
-}
-
-function getPlot(groups) {
-	const p = {
-		chartType: 'genomeBrowser',
-		geneSearchResult: { chr: 'chr10', start: 61901683, stop: 62096944 }
-	}
-	if (groups) {
-		p.snvindel = { details: { groups } }
-	}
-	return p
-}
-
-const runpp = helpers.getRunPp('mass', {
-	state: {
-		nav: { activeTab: 1 },
-		vocab: { dslabel: 'SJLife', genome: 'hg38' },
-		plots: [getPlot()]
-	},
-	debug: 1
-})
-
-// reusable tester to return postRender callback that scopes "test" and "holder"
-function runTests(test, holder) {
-	return async gb => {
-		// gb{} is the genomebrowser plot instance
-		const div = gb.Inner.dom.holder
-		const blockDiv = await detectOne({ elem: div.node(), selector: '.sja_Block_div' })
-		test.ok(blockDiv, 'Block div is rendered')
-		test.equal(gb.Inner.blockInstance.tklst.length, 2, 'Block has 2 tracks')
-		const tk = gb.Inner.blockInstance.tklst.find(i => i.type == 'mds3')
-		test.ok(tk, 'One of the track is mds3')
-		test.ok(tk.custom_variants.length > 0, 'Many variants are found in mds3 tk')
-		if (test._ok) holder.remove()
-		test.end()
-	}
-}
-
-// reusable groups
-
-const groupFilterAML = {
-	type: 'filter',
-	filter: {
-		type: 'tvslst',
-		in: true,
-		join: '',
-		lst: [
-			{
-				type: 'tvs',
-				tvs: {
-					term: { id: 'diaggrp_s', name: 'Diagnosis Group', type: 'categorical' },
-					values: [{ key: 'Acute myeloid leukemia', label: 'Acute myeloid leukemia' }]
-				}
-			}
-		]
-	}
-}
-const groupFilterALLmale = {
-	type: 'filter',
-	filter: {
-		type: 'tvslst',
-		in: true,
-		join: 'and',
-		lst: [
-			{
-				type: 'tvs',
-				tvs: {
-					term: { id: 'diaggrp_s', name: 'Diagnosis Group', type: 'categorical' },
-					values: [{ key: 'Acute lymphoblastic leukemia', label: 'Acute lymphoblastic leukemia' }]
-				}
-			},
-			{
-				type: 'tvs',
-				tvs: { term: { id: 'sex_s', name: 'Sex', type: 'categorical' }, values: [{ key: '1', label: 'Male' }] }
-			}
-		]
-	}
-}
-
-const groupPopulation1 = {
-	type: 'population',
-	key: 'gnomAD',
-	label: 'gnomAD',
-	allowto_adjust_race: true,
-	adjust_race: true
-}
-const groupPopulation2 = {
-	type: 'population',
-	key: 'TOPMed',
-	label: 'TOPMed',
-	allowto_adjust_race: true,
-	adjust_race: true
-}
-
-const groupInfo1 = { type: 'info', infoKey: 'AF_sjlife' }
-const groupInfo2 = { type: 'info', infoKey: 'gnomAD_AF' }
+import { detectLst, detectOne, detectZero, whenHidden, whenVisible, detectGte } from '../../test/test.helpers'
 
 /********************************************
  TEST SECTIONS
@@ -131,6 +21,7 @@ Single group: filter
 Single group: info
 
 ********************************************/
+
 tape('\n', function (test) {
 	test.pass('-***- mass/genomeBrowser -***-')
 	test.end()
@@ -265,3 +156,120 @@ tape('Single group: info', test => {
 		genomeBrowser: { callbacks: { 'postRender.test': runTests(test, holder) } }
 	})
 })
+
+/*************************
+ reusable helper functions
+**************************/
+
+function getHolder() {
+	return d3s
+		.select('body')
+		.append('div')
+		.style('border', '1px solid #aaa')
+		.style('padding', '5px')
+		.style('margin', '5px')
+}
+
+function getPlot(groups) {
+	const p = {
+		chartType: 'genomeBrowser',
+		geneSearchResult: { chr: 'chr10', start: 61901683, stop: 62096944 }
+	}
+	if (groups) {
+		p.snvindel = {
+			details: {
+				groups,
+				groupTestMethods: [
+					{ name: 'Allele frequency difference' },
+					{ name: "Fisher's exact test", axisLabel: '-log10(pvalue)' }
+				],
+				groupTestMethodsIdx: 1
+			}
+		}
+	}
+	return p
+}
+
+const runpp = helpers.getRunPp('mass', {
+	state: {
+		nav: { activeTab: 1 },
+		vocab: { dslabel: 'SJLife', genome: 'hg38' },
+		plots: [getPlot()]
+	},
+	debug: 1
+})
+
+// reusable tester to return postRender callback that scopes "test" and "holder"
+function runTests(test, holder) {
+	return async gb => {
+		// gb{} is the genomebrowser plot instance
+		const div = gb.Inner.dom.holder
+		const blockDiv = await detectOne({ elem: div.node(), selector: '.sja_Block_div' })
+		test.ok(blockDiv, 'Block div is rendered')
+		test.equal(gb.Inner.blockInstance.tklst.length, 2, 'Block has 2 tracks')
+		const tk = gb.Inner.blockInstance.tklst.find(i => i.type == 'mds3')
+		test.ok(tk, 'One of the track is mds3')
+		test.ok(tk.custom_variants.length > 0, 'Many variants are found in mds3 tk')
+		if (test._ok) holder.remove()
+		test.end()
+	}
+}
+
+// reusable groups
+
+const groupFilterAML = {
+	type: 'filter',
+	filter: {
+		type: 'tvslst',
+		in: true,
+		join: '',
+		lst: [
+			{
+				type: 'tvs',
+				tvs: {
+					term: { id: 'diaggrp_s', name: 'Diagnosis Group', type: 'categorical' },
+					values: [{ key: 'Acute myeloid leukemia', label: 'Acute myeloid leukemia' }]
+				}
+			}
+		]
+	}
+}
+const groupFilterALLmale = {
+	type: 'filter',
+	filter: {
+		type: 'tvslst',
+		in: true,
+		join: 'and',
+		lst: [
+			{
+				type: 'tvs',
+				tvs: {
+					term: { id: 'diaggrp_s', name: 'Diagnosis Group', type: 'categorical' },
+					values: [{ key: 'Acute lymphoblastic leukemia', label: 'Acute lymphoblastic leukemia' }]
+				}
+			},
+			{
+				type: 'tvs',
+				tvs: { term: { id: 'sex_s', name: 'Sex', type: 'categorical' }, values: [{ key: '1', label: 'Male' }] }
+			}
+		]
+	}
+}
+
+const groupPopulation1 = {
+	type: 'population',
+	key: 'gnomAD',
+	label: 'gnomAD',
+	allowto_adjust_race: true,
+	adjust_race: true
+}
+const groupPopulation2 = {
+	type: 'population',
+	key: 'TOPMed',
+	label: 'TOPMed',
+	allowto_adjust_race: true,
+	adjust_race: true
+}
+
+const groupInfo1 = { type: 'info', infoKey: 'AF_sjlife' }
+const groupInfo2 = { type: 'info', infoKey: 'gnomAD_AF' }
