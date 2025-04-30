@@ -1,0 +1,30 @@
+{
+  "version": "2.121.0",
+  "name": "@sjcrh/proteinpaint-r",
+  "description": "R-based utilities for proteinpaint",
+  "main": "index.js",
+  "type": "module",
+  "bin": {
+    "proteinpaint-r": "index.js"
+  },
+  "author": "Gavriel Matt",
+  "license": "SEE LICENSE IN ./LICENSE",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/stjude/proteinpaint.git",
+    "directory": "R"
+  },
+  "files": [
+    "index.js",
+    "src",
+    "LICENSE/*"
+  ],
+  "bugs": {
+    "url": "https://github.com/stjude/proteinpaint"
+  },
+  "homepage": "https://github.com/stjude/proteinpaint#readme",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": []
+}

@@ -15,7 +15,7 @@ import serverconfig from './serverconfig.js'
 import { spawn } from 'child_process'
 import { Readable } from 'stream'
 
-export default async function run_R(path, data, args) {
+export async function run_R(path, data, args) {
 	try {
 		await fs.promises.stat(path)
 	} catch (e) {

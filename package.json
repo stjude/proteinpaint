@@ -11,6 +11,7 @@
     "shared/*",
     "rust",
     "python",
+    "R",
     "server",
     "client",
     "front",
