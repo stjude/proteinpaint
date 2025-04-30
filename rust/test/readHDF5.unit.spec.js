@@ -27,7 +27,6 @@ const HDF5_FILE = path.join(
 	os.homedir(),
 	'~/dev/sjpp/proteinpaint/server/test/tp/files/hg38/TermdbTest/TermdbTest.fpkm.matrix.h5'.substring(1)
 )
-console.log('HDF5_FILE:', HDF5_FILE)
 
 /**************
  * Test sections
