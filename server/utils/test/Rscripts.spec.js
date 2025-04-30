@@ -357,3 +357,28 @@ tape('edge.R limma', async function (test) {
 	test.deepEqual(out.gene_data, JSON.parse(expJson).gene_data)
 	test.end()
 })
+
+tape('edge.R edgeR', async function (test) {
+	test.timeoutAfter(10000)
+	const inJson = {
+		case: '2702,2800,2828,2982,3052,3234,3290,3346,3360,3388,3402,3444,3472',
+		control:
+			'2646,2674,2688,2744,2758,2786,2814,2842,2856,2884,2912,2926,2954,2968,2996,3010,3038,3080,3094,3122,3164,3220,3248,3416,3430,3458',
+		data_type: 'do_DE',
+		input_file: serverconfig.binpath + '/test/tp/files/hg38/TermdbTest/TermdbTest.geneCounts.h5',
+		cachedir: serverconfig.cachedir,
+		min_count: 10,
+		min_total_count: 15,
+		storage_type: 'HDF5',
+		DE_method: 'edgeR',
+		mds_cutoff: 10000
+	}
+	const expJson = fs.readFileSync(path.join(serverconfig.binpath, 'test/testdata/R/edgeR-output.json'), {
+		encoding: 'utf8'
+	})
+	const Rout = await run_R(path.join(__dirname, '../edge.R'), JSON.stringify(inJson))
+	const out = JSON.parse(Rout)
+	//console.log("out:",Rout)
+	test.deepEqual(out.gene_data, JSON.parse(expJson).gene_data)
+	test.end()
+})
