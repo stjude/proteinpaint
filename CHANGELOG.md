@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- Added unit tests for readHDF5.rs and validateHDF5.rs
+
 
 ## 2.121.0
 
