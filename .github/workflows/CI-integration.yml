@@ -81,7 +81,7 @@ jobs:
         id: version_bump
         run: |
           cd ./container
-          ./pack.sh
+          . ./pack.sh
           echo "$CHANGEDWS"
           
           if [[ "$CHANGEDWS" == *"rust"* ]]; then
