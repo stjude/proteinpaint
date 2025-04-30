@@ -21,48 +21,10 @@ import tape from 'tape'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 import path from 'path'
 import fs from 'fs'
+import serverconfig from '@sjcrh/proteinpaint-server/src/serverconfig.js'
 
-const __dirname = import.meta.dirname
-
-/**
- * Find the proteinpaint project root directory
- * @returns {string} Path to project root
- */
-function findProjectRoot() {
-	let currentDir = __dirname
-
-	// Keep going up the directory tree until we find a reliable project marker
-	while (currentDir !== path.parse(currentDir).root) {
-		// Look for package.json in the proteinpaint directory
-		if (fs.existsSync(path.join(currentDir, 'package.json')) && path.basename(currentDir) === 'proteinpaint') {
-			return currentDir
-		}
-		// Go up one directory
-		currentDir = path.dirname(currentDir)
-	}
-
-	throw new Error('Could not find proteinpaint project root directory')
-}
-
-/**
- * Get path to test resource file that works in any environment
- * @param {string} relativePath - Path relative to project root
- * @returns {string} - Absolute path to the resource
- */
-function getTestResourcePath(relativePath) {
-	const projectRoot = findProjectRoot()
-	const resourcePath = path.join(projectRoot, relativePath)
-
-	// Log path during test runs for debugging
-	if (process.env.NODE_ENV === 'test') {
-		console.log(`Using test resource at: ${resourcePath}`)
-	}
-
-	return resourcePath
-}
-
-// Path to the test HDF5 file relative to the proteinpaint project root
-const HDF5_FILE = getTestResourcePath('server/test/tp/files/hg38/TermdbTest/TermdbTest.fpkm.matrix.h5')
+// Load HDF5 test file
+const HDF5_FILE = path.join(serverconfig.binpath, '/test/tp/files/hg38/TermdbTest/TermdbTest.fpkm.matrix.h5')
 
 // Verify file exists
 if (!fs.existsSync(HDF5_FILE)) {
