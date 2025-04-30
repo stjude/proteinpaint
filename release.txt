@@ -1,1 +1,2 @@
-
+Features:
+- Added unit tests for readHDF5.rs
