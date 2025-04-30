@@ -79,6 +79,7 @@ jobs:
         run: |
           cd ./container
           ./pack.sh
+          echo "$CHANGEDWS"
           
           if [[ "$CHANGEDWS" == *"rust"* ]]; then
             echo "Rust changed"

@@ -7,7 +7,7 @@
 		"release": ""
 	},
 	"dependencies": {
-		"@sjcrh/proteinpaint-server": "2.121.1-0"
+		"@sjcrh/proteinpaint-server": "/home/root/pp/tmppack/sjcrh-proteinpaint-server-2.121.1-0.tgz"
 	},
 	"files": [
 		"app-server.js"
