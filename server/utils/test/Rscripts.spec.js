@@ -1,9 +1,9 @@
 /********************************************
-Test script for R scripts in 'server/utils/'
+The R script must be run from sjpp directory:
 
 Run test script as follows (from 'server/'):
 
-	npx tape -r '@babel/register' utils/test/Rscripts.spec.js
+	npx tsx proteinpaint/server/utils/test/Rscripts.spec.js
 
 *********************************************/
 
