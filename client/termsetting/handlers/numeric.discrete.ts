@@ -7,6 +7,7 @@ import { make_radios, Tabs, violinRenderer } from '#dom'
 import { getPillNameDefault } from '../termsetting'
 import { convertViolinData } from '#filter/tvs.numeric'
 import type { PillData, RangeEntry, NumericQ } from '#types'
+import { getNumberFromDate, getNumberFromDateStr } from '#shared/terms.js'
 
 /*
 ********************** EXPORTED
@@ -337,6 +338,38 @@ export function renderBoundaryInclusionInput(self) {
 		.html((d: htmlData) => d.html)
 }
 
+function renderDatesEditor(self, holder) {
+	const lst = self.q.lst
+	holder.append('label').text('Add date:')
+	const dateInput = holder.append('input').attr('type', 'date')
+	holder
+		.append('button')
+		.text('Add')
+		.on('click', function () {
+			const previousNum = lst[lst.length - 1].start
+			const date = dateInput.node().value
+			const dateNum = getNumberFromDateStr(date)
+			const startinclusive = self.dom.boundaryInput.property('value') == 'startinclusive'
+			const stopinclusive = self.dom.boundaryInput.property('value') == 'stopinclusive'
+			if (dateNum) {
+				lst[lst.length - 1].start = dateNum
+				lst.splice(lst.length - 1, 0, {
+					start: previousNum,
+					stop: dateNum,
+					startinclusive,
+					stopinclusive
+				})
+
+				setDensityPlot(self)
+				const values = lst.map(d => d.stop)
+				values.pop()
+				self.dom.customBinBoundaryInput.property('value', values.join('\n'))
+				handleChange(self)
+				self.renderBinLines(self, self.q as NumericQ)
+			}
+		})
+}
+
 function renderTypeInputs(self) {
 	const div = self.dom.bins_div.append('div').style('margin', '10px')
 
@@ -584,14 +617,14 @@ function renderCustomBinInputs(self, tablediv: any) {
 				.map(d => d.start)
 				.join('\n')
 		)
-		.on('change', handleChange)
+		.on('change', () => handleChange(self))
 		.on('keyup', async function (this: any, event: any) {
 			// enter or backspace/delete
 			// i don't think backspace works
 			if (!keyupEnter(event) && event.key != 8) return
 			if (!self.dom.bins_table.selectAll('input').node().value) return
 			// Fix for if user hits enter with no values. Reverts to default cutoff.
-			handleChange.call(this)
+			handleChange.call(this, self)
 		})
 
 	// help note
@@ -602,41 +635,41 @@ function renderCustomBinInputs(self, tablediv: any) {
 		.style('color', '#858585')
 		.html('Enter numeric values </br>seperated by ENTER')
 
-	function handleChange() {
-		const inputs = self.dom.bins_table.selectAll('input')
-		inputs.property('value', '')
-		const data = processCustomBinInputs(self)
-		if (data == undefined) {
-			// alert('Enter custom bin value(s)')
-			return
-		}
-		// update self.q.lst and render bin lines only if bin boundry changed
-		const q = self.numqByTermIdModeType[self.term.id].discrete[self.q.type!]
-		if (self.q.hiddenValues!) q.hiddenValues = self.q.hiddenValues!
-		if (binsChanged(data, q.lst)) {
-			q.lst = data
-			self.renderBinLines!(self, q)
-		}
-		renderBoundaryInputDivs(self, q.lst)
-		self.q.lst = q.lst //store the new ranges in self.q, the mode is initialized when selecting the tab
-	}
-
-	function binsChanged(data, qlst) {
-		if (data.length != qlst.length) return true
-		if (Object.keys(data[0]).length !== Object.keys(qlst[0]).length) return true
-		for (const [i, bin] of qlst.entries()) {
-			for (const k of Object.keys(bin)) {
-				if (bin[k] && bin[k] !== data[i][k]) {
-					return true
-				}
-			}
-		}
-		return false
-	}
-
 	renderBoundaryInputDivs(self, self.q.lst)
 
 	// add help message for custom bin labels
+}
+
+function handleChange(self) {
+	const inputs = self.dom.bins_table.selectAll('input')
+	inputs.property('value', '')
+	const data = processCustomBinInputs(self)
+	if (data == undefined) {
+		// alert('Enter custom bin value(s)')
+		return
+	}
+	// update self.q.lst and render bin lines only if bin boundry changed
+	const q = self.numqByTermIdModeType[self.term.id].discrete[self.q.type!]
+	if (self.q.hiddenValues!) q.hiddenValues = self.q.hiddenValues!
+	if (binsChanged(data, q.lst)) {
+		q.lst = data
+		self.renderBinLines!(self, q)
+	}
+	renderBoundaryInputDivs(self, q.lst)
+	self.q.lst = q.lst //store the new ranges in self.q, the mode is initialized when selecting the tab
+}
+
+function binsChanged(data, qlst) {
+	if (data.length != qlst.length) return true
+	if (Object.keys(data[0]).length !== Object.keys(qlst[0]).length) return true
+	for (const [i, bin] of qlst.entries()) {
+		for (const k of Object.keys(bin)) {
+			if (bin[k] && bin[k] !== data[i][k]) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 export function renderBoundaryInputDivs(self, data: any) {
@@ -653,7 +686,9 @@ export function renderBoundaryInputDivs(self, data: any) {
 	grid.append('div').style('margin-bottom', '3px').style('color', 'rgb(136, 136, 136)').text('Range')
 
 	grid.append('div').style('margin-bottom', '3px').style('color', 'rgb(136, 136, 136)').text('Bin label')
-
+	if (self.term.type == 'date') {
+		renderDatesEditor(self, holder)
+	}
 	for (const [i, d] of data.entries()) {
 		grid.append('div').attr('name', 'range').html(d.range)
 
