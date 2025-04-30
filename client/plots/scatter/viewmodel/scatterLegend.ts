@@ -131,7 +131,7 @@ export class ScatterLegend {
 
 						// Callback for when gradient colors are changed via color picker
 						setColorsCallback: (val, idx) => {
-							this.changeGradientColor(chart, val, idx)
+							this.legendInteractivity.changeGradientColor(chart, val, idx)
 						},
 
 						// Configuration for our enhanced scaling modes

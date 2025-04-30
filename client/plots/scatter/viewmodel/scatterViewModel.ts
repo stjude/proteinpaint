@@ -124,7 +124,7 @@ export class ScatterViewModel {
 				.attr('height', this.scatter.settings.svgh)
 				.attr('fill', 'white')
 			const id = 'clip' + this.scatter.id
-			chart.svg
+			chart.clipRect = chart.svg
 				.append('defs')
 				.append('clipPath')
 				.attr('id', id)
@@ -147,7 +147,9 @@ export class ScatterViewModel {
 			chart.xAxis = axisG.select('.sjpcb-scatter-x-axis')
 			chart.yAxis = axisG.select('.sjpcb-scatter-y-axis')
 			chart.legendG = svg.select('.sjpcb-scatter-legend')
+			chart.clipRect = svg.select('defs').select('clipPath').select('rect')
 		}
+		chart.clipRect.attr('width', this.scatter.settings.svgw + 10).attr('height', this.scatter.settings.svgh)
 		chart.xAxis.attr('transform', `translate(0, ${this.scatter.settings.svgh + this.model.axisOffset.y})`)
 
 		chart.legendG.attr('transform', `translate(${this.scatter.settings.svgw + this.model.axisOffset.x + 50}, 20)`)
