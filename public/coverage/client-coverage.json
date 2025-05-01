@@ -1101,8 +1101,8 @@
     },
     "averagePct": {
       "curr": 7.0225,
-      "prev": 0,
-      "diff": 7.0225
+      "prev": 7.0225,
+      "diff": 0
     }
   },
   "plots/volcano/model/VolcanoModel.ts": {
@@ -1137,8 +1137,8 @@
     },
     "averagePct": {
       "curr": 3.7075,
-      "prev": 0,
-      "diff": 3.7075
+      "prev": 3.7075,
+      "diff": 0
     }
   },
   "plots/volcano/test/volcano.unit.spec.ts": {
@@ -1168,36 +1168,36 @@
     },
     "lowestPct": {
       "curr": 100,
-      "prev": 0,
-      "diff": 100
+      "prev": 100,
+      "diff": 0
     },
     "averagePct": {
       "curr": 100,
-      "prev": 0,
-      "diff": 100
+      "prev": 100,
+      "diff": 0
     }
   },
   "plots/volcano/view/VolcanoPlotView.ts": {
     "lines": {
-      "total": 73,
+      "total": 84,
       "covered": 2,
       "skipped": 0,
-      "pct": 2.73
+      "pct": 2.38
     },
     "functions": {
-      "total": 30,
+      "total": 32,
       "covered": 0,
       "skipped": 0,
       "pct": 0
     },
     "statements": {
-      "total": 80,
+      "total": 92,
       "covered": 2,
       "skipped": 0,
-      "pct": 2.5
+      "pct": 2.17
     },
     "branches": {
-      "total": 39,
+      "total": 41,
       "covered": 0,
       "skipped": 0,
       "pct": 0
@@ -1208,45 +1208,45 @@
       "diff": 0
     },
     "averagePct": {
-      "curr": 1.3075,
-      "prev": 0,
-      "diff": 1.3075
+      "curr": 1.1375,
+      "prev": 1.3075,
+      "diff": -0.17000000000000015
     }
   },
   "plots/volcano/viewModel/VolcanoViewModel.ts": {
     "lines": {
-      "total": 78,
-      "covered": 75,
+      "total": 84,
+      "covered": 81,
       "skipped": 0,
-      "pct": 96.15
+      "pct": 96.42
     },
     "functions": {
-      "total": 13,
-      "covered": 12,
+      "total": 15,
+      "covered": 14,
+      "skipped": 0,
+      "pct": 93.33
+    },
+    "statements": {
+      "total": 91,
+      "covered": 84,
       "skipped": 0,
       "pct": 92.3
     },
-    "statements": {
-      "total": 83,
-      "covered": 78,
-      "skipped": 0,
-      "pct": 93.97
-    },
     "branches": {
-      "total": 40,
-      "covered": 27,
+      "total": 44,
+      "covered": 29,
       "skipped": 0,
-      "pct": 67.5
+      "pct": 65.9
     },
     "lowestPct": {
-      "curr": 67.5,
-      "prev": 0,
-      "diff": 67.5
+      "curr": 65.9,
+      "prev": 67.5,
+      "diff": -1.5999999999999943
     },
     "averagePct": {
-      "curr": 87.47999999999999,
-      "prev": 0,
-      "diff": 87.47999999999999
+      "curr": 86.98750000000001,
+      "prev": 87.47999999999999,
+      "diff": -0.4924999999999784
     }
   },
   "plots/volcano/VolcanoControlInputs.ts": {
@@ -1281,8 +1281,8 @@
     },
     "averagePct": {
       "curr": 3.645,
-      "prev": 0,
-      "diff": 3.645
+      "prev": 3.645,
+      "diff": 0
     }
   },
   "plots/volcano/view/DataPointMouseEvents.ts": {
@@ -1317,8 +1317,8 @@
     },
     "averagePct": {
       "curr": 4.172499999999999,
-      "prev": 0,
-      "diff": 4.172499999999999
+      "prev": 4.172499999999999,
+      "diff": 0
     }
   },
   "plots/volcano/test/testData.js": {
@@ -1348,13 +1348,13 @@
     },
     "lowestPct": {
       "curr": 100,
-      "prev": 0,
-      "diff": 100
+      "prev": 100,
+      "diff": 0
     },
     "averagePct": {
       "curr": 100,
-      "prev": 0,
-      "diff": 100
+      "prev": 100,
+      "diff": 0
     }
   },
   "plots/volcano/interactions/VolcanoInteractions.ts": {
@@ -1389,8 +1389,8 @@
     },
     "averagePct": {
       "curr": 1.8325,
-      "prev": 0,
-      "diff": 1.8325
+      "prev": 1.8325,
+      "diff": 0
     }
   }
 }
