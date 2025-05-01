@@ -1032,5 +1032,41 @@
       "prev": 0,
       "diff": 6.6975
     }
+  },
+  "dom/table.ts": {
+    "lines": {
+      "total": 289,
+      "covered": 187,
+      "skipped": 0,
+      "pct": 64.7
+    },
+    "functions": {
+      "total": 36,
+      "covered": 18,
+      "skipped": 0,
+      "pct": 50
+    },
+    "statements": {
+      "total": 337,
+      "covered": 201,
+      "skipped": 0,
+      "pct": 59.64
+    },
+    "branches": {
+      "total": 274,
+      "covered": 155,
+      "skipped": 0,
+      "pct": 56.56
+    },
+    "lowestPct": {
+      "curr": 50,
+      "prev": 0,
+      "diff": 50
+    },
+    "averagePct": {
+      "curr": 57.725,
+      "prev": 0,
+      "diff": 57.725
+    }
   }
 }
