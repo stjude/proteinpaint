@@ -125,13 +125,6 @@ jobs:
           toolchain: 1.86.0
           override: true
 
-      - name: Cache Rust dependencies
-        uses: Swatinem/rust-cache@v2
-        if: contains(env.WS_TO_TEST, 'rust')
-        with:
-          workspaces: "rust -> target"
-          # The line above tells the cache action where to find Cargo.toml
-
       - name: 🔎 Rust unit tests
         if: contains(env.WS_TO_TEST, 'rust')
         run: |
