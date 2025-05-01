@@ -10,16 +10,10 @@ Run test script as follows (from 'server/'):
 import tape from 'tape'
 import serverconfig from '../../src/serverconfig.js'
 import path from 'path'
-import * as utils from '../../src/utils.js'
-import run_R from '../../src/run_R.js'
-import { fileURLToPath } from 'url'
-import { dirname } from 'path'
+import { run_R } from '@sjcrh/proteinpaint-r'
 import fs from 'fs'
 import { roundValueAuto } from '#shared/roundValue.js'
 
-// Creating __dirname equivalent for ES6 modules
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = dirname(__filename)
 const p_value_cutoff = 0.0001 // If the difference between the actual and expected p-value is greater than this, the test will fail (used for testing edge.R)
 const fold_change_cutoff = 0.001 // If the difference between the actual and expected p-value is greater than this, the test will fail (used for testing edge.R)
 
@@ -210,7 +204,7 @@ tape('survival.R', async function (test) {
 	})
 
 	// Run the R script
-	const Rout = await run_R(path.join(__dirname, '../survival.R'), inJson, [])
+	const Rout = await run_R('survival.R', inJson, [])
 
 	// Get expected output
 	const expJson = fs.readFileSync(path.join(serverconfig.binpath, 'test/testdata/R/survival_output.json'), {
@@ -316,7 +310,7 @@ tape('corr.R pearson', async function (test) {
 	const expJson = fs.readFileSync(path.join(serverconfig.binpath, 'test/testdata/R/pearson-output.json'), {
 		encoding: 'utf8'
 	})
-	const Rout = await run_R(path.join(__dirname, '../corr.R'), inJson)
+	const Rout = await run_R('corr.R', inJson)
 	let out = JSON.parse(Rout)
 	let exp = JSON.parse(expJson)
 	// Round values to avoid precision issues
@@ -334,7 +328,7 @@ tape('corr.R spearman', async function (test) {
 	const expJson = fs.readFileSync(path.join(serverconfig.binpath, 'test/testdata/R/spearman-output.json'), {
 		encoding: 'utf8'
 	})
-	const Rout = await run_R(path.join(__dirname, '../corr.R'), inJson)
+	const Rout = await run_R('corr.R', inJson)
 	let out = JSON.parse(Rout)
 	let exp = JSON.parse(expJson)
 	// Round values to avoid precision issues
@@ -352,7 +346,7 @@ tape('corr.R kendall', async function (test) {
 	const expJson = fs.readFileSync(path.join(serverconfig.binpath, 'test/testdata/R/kendall-output.json'), {
 		encoding: 'utf8'
 	})
-	const Rout = await run_R(path.join(__dirname, '../corr.R'), inJson)
+	const Rout = await run_R('corr.R', inJson)
 	let out = JSON.parse(Rout)
 	let exp = JSON.parse(expJson)
 	// Round values to avoid precision issues
@@ -381,7 +375,7 @@ tape('edge.R limma', async function (test) {
 	const expJson = fs.readFileSync(path.join(serverconfig.binpath, 'test/testdata/R/limma-output.json'), {
 		encoding: 'utf8'
 	})
-	const Rout = await run_R(path.join(__dirname, '../edge.R'), JSON.stringify(inJson))
+	const Rout = await run_R('edge.R', JSON.stringify(inJson))
 	const out = JSON.parse(Rout)
 
 	// Gene1
@@ -456,7 +450,7 @@ tape('edge.R edgeR', async function (test) {
 	const expJson = fs.readFileSync(path.join(serverconfig.binpath, 'test/testdata/R/edgeR-output.json'), {
 		encoding: 'utf8'
 	})
-	const Rout = await run_R(path.join(__dirname, '../edge.R'), JSON.stringify(inJson))
+	const Rout = await run_R('edge.R', JSON.stringify(inJson))
 	const out = JSON.parse(Rout)
 
 	// Gene1
@@ -526,7 +520,7 @@ tape('hclust.R Clustering:Average-Distance:Euclidean', async function (test) {
 			encoding: 'utf8'
 		}
 	)
-	const Rout = await run_R(path.join(__dirname, '../hclust.R'), inJson)
+	const Rout = await run_R('hclust.R', inJson)
 	const out = JSON.parse(Rout)
 	test.deepEqual(out, JSON.parse(expJson), 'Test Clustering:Average-Distance:Euclidean should match expected output')
 	test.end()
@@ -546,7 +540,7 @@ tape('hclust.R Clustering:Complete-Distance:Maximum', async function (test) {
 			encoding: 'utf8'
 		}
 	)
-	const Rout = await run_R(path.join(__dirname, '../hclust.R'), inJson)
+	const Rout = await run_R('hclust.R', inJson)
 	const out = JSON.parse(Rout)
 	test.deepEqual(out, JSON.parse(expJson), 'Test Clustering:Complete-Distance:Maximum should match expected output')
 	test.end()
