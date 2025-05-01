@@ -124,6 +124,13 @@ jobs:
         with:
           override: true
 
+      - name: Format Rust code
+        if: contains(env.WS_TO_TEST, 'rust')
+        run: |
+          cd rust
+          rustup component add rustfmt
+          cargo fmt --all -- --check
+
       - name: 🔎 Rust unit tests
         if: contains(env.WS_TO_TEST, 'rust')
         run: |
