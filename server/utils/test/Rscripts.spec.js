@@ -15,6 +15,7 @@ import run_R from '../../src/run_R.js'
 import { fileURLToPath } from 'url'
 import { dirname } from 'path'
 import fs from 'fs'
+import { roundValueAuto } from '#shared/roundValue.js'
 
 // Creating __dirname equivalent for ES6 modules
 const __filename = fileURLToPath(import.meta.url)
@@ -294,6 +295,19 @@ tape('\n', function (test) {
 	test.end()
 })
 
+// Function to round estimate values to fixed number of digits
+function roundCorrEstimates(data, digits = 10) {
+	if (!data) throw 'estimates missing'
+	const estimates = data.map(x => {
+		x.correlation = Number.isFinite(x.correlation) ? roundValueAuto(x.correlation) : x.correlation
+		x.original_p_value = Number.isFinite(x.original_p_value) ? roundValueAuto(x.original_p_value) : x.original_p_value
+		x.adjusted_p_value = Number.isFinite(x.adjusted_p_value) ? roundValueAuto(x.adjusted_p_value) : x.adjusted_p_value
+		return x
+	})
+	data = estimates
+	return data
+}
+
 tape('corr.R pearson', async function (test) {
 	test.timeoutAfter(10000)
 	const inJson = fs.readFileSync(path.join(serverconfig.binpath, 'test/testdata/R/pearson-input.json'), {
@@ -303,8 +317,12 @@ tape('corr.R pearson', async function (test) {
 		encoding: 'utf8'
 	})
 	const Rout = await run_R(path.join(__dirname, '../corr.R'), inJson)
-	const out = JSON.parse(Rout)
-	test.deepEqual(out, JSON.parse(expJson))
+	let out = JSON.parse(Rout)
+	let exp = JSON.parse(expJson)
+	// Round values to avoid precision issues
+	out = roundCorrEstimates(out)
+	exp = roundCorrEstimates(exp)
+	test.deepEqual(out, exp)
 	test.end()
 })
 
@@ -317,8 +335,12 @@ tape('corr.R spearman', async function (test) {
 		encoding: 'utf8'
 	})
 	const Rout = await run_R(path.join(__dirname, '../corr.R'), inJson)
-	const out = JSON.parse(Rout)
-	test.deepEqual(out, JSON.parse(expJson))
+	let out = JSON.parse(Rout)
+	let exp = JSON.parse(expJson)
+	// Round values to avoid precision issues
+	out = roundCorrEstimates(out)
+	exp = roundCorrEstimates(exp)
+	test.deepEqual(out, exp)
 	test.end()
 })
 
@@ -331,11 +353,16 @@ tape('corr.R kendall', async function (test) {
 		encoding: 'utf8'
 	})
 	const Rout = await run_R(path.join(__dirname, '../corr.R'), inJson)
-	const out = JSON.parse(Rout)
-	test.deepEqual(out, JSON.parse(expJson))
+	let out = JSON.parse(Rout)
+	let exp = JSON.parse(expJson)
+	// Round values to avoid precision issues
+	out = roundCorrEstimates(out)
+	exp = roundCorrEstimates(exp)
+	test.deepEqual(out, exp)
 	test.end()
 })
 
+// For edgeR and limma we cannot compare objects because in the future parallel processing of genes may occur which may cause the order of genes to be random and non-deterministic. Therefore its just better to test some random individual genes than the entire set of genes.
 tape('edge.R limma', async function (test) {
 	test.timeoutAfter(10000)
 	const inJson = {
