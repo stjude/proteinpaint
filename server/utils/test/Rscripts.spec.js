@@ -322,7 +322,7 @@ tape('corr.R pearson', async function (test) {
 	// Round values to avoid precision issues
 	out = roundCorrEstimates(out)
 	exp = roundCorrEstimates(exp)
-	test.deepEqual(out, exp)
+	test.deepEqual(out, exp, 'Test corr.R pearson should match expected output')
 	test.end()
 })
 
@@ -340,7 +340,7 @@ tape('corr.R spearman', async function (test) {
 	// Round values to avoid precision issues
 	out = roundCorrEstimates(out)
 	exp = roundCorrEstimates(exp)
-	test.deepEqual(out, exp)
+	test.deepEqual(out, exp, 'Test corr.R spearman should match expected output')
 	test.end()
 })
 
@@ -358,7 +358,7 @@ tape('corr.R kendall', async function (test) {
 	// Round values to avoid precision issues
 	out = roundCorrEstimates(out)
 	exp = roundCorrEstimates(exp)
-	test.deepEqual(out, exp)
+	test.deepEqual(out, exp, 'Test corr.R kendall should match expected output')
 	test.end()
 })
 
@@ -528,7 +528,7 @@ tape('hclust.R Clustering:Average-Distance:Euclidean', async function (test) {
 	)
 	const Rout = await run_R(path.join(__dirname, '../hclust.R'), inJson)
 	const out = JSON.parse(Rout)
-	test.deepEqual(out, JSON.parse(expJson))
+	test.deepEqual(out, JSON.parse(expJson), 'Test Clustering:Average-Distance:Euclidean should match expected output')
 	test.end()
 })
 
@@ -548,6 +548,6 @@ tape('hclust.R Clustering:Complete-Distance:Maximum', async function (test) {
 	)
 	const Rout = await run_R(path.join(__dirname, '../hclust.R'), inJson)
 	const out = JSON.parse(Rout)
-	test.deepEqual(out, JSON.parse(expJson))
+	test.deepEqual(out, JSON.parse(expJson), 'Test Clustering:Complete-Distance:Maximum should match expected output')
 	test.end()
 })
