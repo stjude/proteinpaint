@@ -146,6 +146,6 @@ export type VolcanoViewData = {
 	images: DEImage[]
 	/** special logic per termtype for userActions */
 	userActions: {
-		noShow: string[]
+		noShow: Set<string>
 	}
 }

@@ -4,12 +4,13 @@ import { VolcanoViewModel } from '../viewModel/VolcanoViewModel'
 // import { scaleLinear } from 'd3-scale'
 
 /* Tests:
-    -init VolcanoViewModel
-    -setDataType
-    -setMinMaxValues
-    -setPlotDimensions
-    -setPointData
-    -setStatsData
+    - init VolcanoViewModel
+    - setDataType
+    - setMinMaxValues
+    - setPlotDimensions
+    - setPointData
+    - setStatsData
+	- setUserActions
 */
 
 const mockSettings = {
@@ -185,6 +186,25 @@ tape('setStatsData', function (test) {
 		{ label: 'Resistant sample size (case group)', value: 3 }
 	]
 	test.deepEqual(statsData, expected, 'Should properly set statsData')
+
+	test.end()
+})
+
+tape('setUserActions', function (test) {
+	test.timeoutAfter(100)
+
+	let result, expected
+
+	const viewModel = new VolcanoViewModel(mockConfig as any, mockResponse, mockSettings as any)
+
+	result = viewModel.setUserActions()
+	expected = { noShow: new Set() }
+	test.deepEqual(result, expected, `Should properly set user actions when method is ${viewModel.settings.method}`)
+
+	viewModel.settings.method = 'wilcoxon'
+	result = viewModel.setUserActions()
+	expected = { noShow: new Set(['Confounding factors']) }
+	test.deepEqual(result, expected, `Should properly set user actions when method is ${viewModel.settings.method}`)
 
 	test.end()
 })
