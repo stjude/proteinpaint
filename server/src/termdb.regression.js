@@ -2,7 +2,7 @@ import path from 'path'
 import fs from 'fs'
 import imagesize from 'image-size'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
-import run_R from './run_R.js'
+import { run_R } from '@sjcrh/proteinpaint-r'
 import serverconfig from './serverconfig.js'
 import { boxplot_getvalue } from './utils.js'
 import { runCumincR } from './termdb.cuminc.js'
@@ -528,9 +528,7 @@ function validateRinput(Rinput) {
 async function runRegression(Rinput, id2originalId, q, result) {
 	// run regression analysis in R
 	stime = new Date().getTime()
-	const Routput = JSON.parse(
-		await run_R(path.join(serverconfig.binpath, 'utils', 'regression.R'), JSON.stringify(Rinput))
-	)
+	const Routput = JSON.parse(await run_R('regression.R', JSON.stringify(Rinput)))
 	await parseRoutput(Rinput, Routput, id2originalId, q, result)
 	etime = new Date().getTime()
 	benchmark['NodeJS']['runRegression'] = (etime - stime) / 1000 + ' sec'

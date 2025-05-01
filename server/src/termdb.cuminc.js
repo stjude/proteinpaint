@@ -1,7 +1,5 @@
-import path from 'path'
 import { getData } from './termdb.matrix'
-import run_R from './run_R'
-import serverconfig from './serverconfig'
+import { run_R } from '@sjcrh/proteinpaint-r'
 
 /*********** EXPORT
 get_incidence()
@@ -125,7 +123,7 @@ export async function runCumincR(Rinput) {
 	}
 
 	// run cumulative incidence analysis
-	const ci_data = JSON.parse(await run_R(path.join(serverconfig.binpath, 'utils', 'cuminc.R'), JSON.stringify(Rinput)))
+	const ci_data = JSON.parse(await run_R('cuminc.R', JSON.stringify(Rinput)))
 
 	// parse cumulative incidence results
 	// revert placeholders

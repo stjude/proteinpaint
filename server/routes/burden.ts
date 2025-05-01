@@ -2,7 +2,7 @@ import type { BurdenRequest, BurdenResponse, RouteApi, CumBurdenData } from '#ty
 import { burdenPayload } from '#types/checkers'
 // may decide to use these checkers later
 //import { validBurdenRequest, validBurdenResponse } from '#types/checkers/routes.js'
-import run_R from '#src/run_R.js'
+import { run_R } from '@sjcrh/proteinpaint-r'
 import path from 'path'
 import serverconfig from '#src/serverconfig.js'
 
@@ -58,7 +58,7 @@ async function getBurdenResult(
 	let result = cumburden.db.connection.prepare('SELECT * FROM estimates WHERE id=?').get(id)
 	if (!result) {
 		result = { id, status: null, input: jsonInput }
-		const estJson = await run_R(path.join(serverconfig.binpath, 'utils', 'burden-main.R'), jsonInput, [])
+		const estJson = await run_R('burden-main.R', jsonInput, [])
 		const estimate = JSON.parse(estJson)
 
 		// compute overall burden by adding burdens from all chc's for each age
@@ -113,7 +113,7 @@ async function compute95ci(result, cumburden) {
 		const input = structuredClone(result.input)
 		// attach main burden estimate to the input, but filter out overall estimate
 		input.burden = Object.values(result.estimate).filter((est: any) => est.chc !== 0)
-		const lowup = await run_R(path.join(serverconfig.binpath, 'utils', 'burden-ci95.R'), JSON.stringify(input), [])
+		const lowup = await run_R('burden-ci95.R', JSON.stringify(input), [])
 		const { low, up, overall } = JSON.parse(lowup)
 
 		// ci95 = {
