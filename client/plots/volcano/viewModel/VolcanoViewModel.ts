@@ -216,12 +216,13 @@ export class VolcanoViewModel {
 
 	setUserActions() {
 		const userActions = {
-			noShow: [] as string[]
+			noShow: new Set<string>()
 		}
 		if (this.termType == 'geneExpression') {
 			if (this.settings.method == 'edgeR' && getSampleNum(this.config) > 100) {
-				userActions.noShow.push('Confounding factors')
+				userActions.noShow.add('Confounding factors')
 			}
+			if (this.settings.method == 'wilcoxon') userActions.noShow.add('Confounding factors')
 		}
 		return userActions
 	}
