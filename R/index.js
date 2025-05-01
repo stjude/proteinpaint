@@ -2,7 +2,7 @@
 Module for running R
 
 Arguments:
-	- <path>: [string] path to R script.
+	- <filename>: [string] name of R script file (see 'R/src/').
 	- <data>: [string] input data for R script.
 	- <args>: [array] arguments for R script.
 
@@ -11,21 +11,19 @@ Standard output of the R script is returned.
 */
 
 import fs from 'fs'
-import serverconfig from './serverconfig.js'
 import { spawn } from 'child_process'
 import { Readable } from 'stream'
+import path from 'path'
+const __dirname = import.meta.dirname
 
-export async function run_R(path, data, args) {
-	try {
-		await fs.promises.stat(path)
-	} catch (e) {
-		throw `${path} does not exist`
-	}
+export async function run_R(filename, data, args) {
+	const filepath = path.join(__dirname, 'src', filename)
+	if (!fs.existsSync(filepath)) throw `${filepath} does not exist`
 	return new Promise((resolve, reject) => {
 		const _stdout = []
 		const _stderr = []
 		// spawn R child process
-		const sp = spawn(serverconfig.Rscript, args ? [path, ...args] : [path])
+		const sp = spawn('Rscript', args ? [filepath, ...args] : [filepath])
 		if (data) {
 			// stream input data into R
 			try {

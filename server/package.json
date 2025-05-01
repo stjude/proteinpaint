@@ -111,12 +111,9 @@
     "start.js",
     "src/app.js",
     "src/serverconfig.js",
-    "src/run_R.js",
     "src/mds3.gdc.filter.js",
     "src/checkReadingFrame.js",
     "src/bedj.parseBed.js",
-    "utils/*.R",
-    "utils/*.py",
     "LICENSE/*"
   ],
   "bugs": {

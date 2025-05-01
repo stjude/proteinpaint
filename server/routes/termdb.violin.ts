@@ -9,7 +9,7 @@ import { summaryStats } from '#shared/descriptive.stats.js'
 import { isNumericTerm } from '#shared/terms.js'
 import { numericBins, parseValues } from './termdb.boxplot.ts'
 import serverconfig from '../src/serverconfig.js'
-import run_R from '../src/run_R.js'
+import { run_R } from '@sjcrh/proteinpaint-r'
 import path from 'path'
 
 // mark as unused by eslint, TODO: delete permanently
@@ -305,8 +305,7 @@ export async function getDensity(
 }
 
 export async function getDensities(plot2Values, min: number, max: number): Promise<{ [plot: string]: any }> {
-	const densityScript = path.join(serverconfig.binpath, 'utils', 'density.R')
-	const plot2Density: any = JSON.parse(await run_R(densityScript, JSON.stringify({ plot2Values, min, max })))
+	const plot2Density: any = JSON.parse(await run_R('density.R', JSON.stringify({ plot2Values, min, max })))
 	const densities = {}
 	for (const plot in plot2Density) {
 		const result: { x: number[]; y: number[] } = plot2Density[plot]
