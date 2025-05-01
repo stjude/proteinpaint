@@ -250,7 +250,6 @@ function checkTwAncestryRestriction(tw, q, ds) {
 /*
 Rinput {
 	regressionType: regression type (linear/logistic/cox)
-	binpath: server bin path
 	data: [{}] per-sample data values
 	outcome: {} outcome variable
 	independent: [{}] independent variables
@@ -385,7 +384,6 @@ function makeRinput(q, sampledata) {
 
 	const Rinput = {
 		regressionType: q.regressionType,
-		binpath: serverconfig.binpath, // for importing regression utilities
 		cachedir: serverconfig.cachedir, // for creating spline plot file
 		data,
 		outcome,

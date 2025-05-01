@@ -14,7 +14,6 @@
 # Input JSON specifications:
 # {
 #   "regressionType": regression type (linear/logistic/cox)
-#   "binpath": server bin path
 #   "data": [{}] per-sample data values
 #   "outcome": {
 #     "id": variable id
@@ -94,7 +93,9 @@ dtime <- etime - stime
 benchmark[["read_json_input"]] <- unbox(paste(round(as.numeric(dtime), 4), attr(dtime, "units")))
 
 # import regression utilities
-source(paste0(input$binpath, "/utils/regression.utils.R"))
+filepath <- gsub("^--file=", "", grep("^--file=", commandArgs(), value = TRUE)) # path of this script
+dirpath <- dirname(filepath) # path of this directory
+source(file.path(dirpath, "regression.utils.R"))
 
 # prepare data table
 stime <- Sys.time()
