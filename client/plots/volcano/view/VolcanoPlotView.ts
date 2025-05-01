@@ -123,13 +123,37 @@ export class VolcanoPlotView {
 	}
 
 	renderTermInfo(plotDim) {
+		if (this.viewData.termInfo == undefined) return
 		this.volcanoDom.top.attr('transform', `translate(${plotDim.top.x}, ${plotDim.top.y})`)
 
-		for (const info of this.viewData.info) {
-			const g = this.volcanoDom.top.append('g').attr('transform', `translate(${info.x}, ${info.y})`)
-			g.append('rect').attr('width', 10).attr('height', 10).attr('fill', info.color)
-			g.append('text').attr('font-size', '0.9em').attr('transform', `translate(15, 10)`).text(info.label)
+		const y = this.viewData.termInfo.y
+		const addLabel = term => {
+			return (
+				this.volcanoDom.top
+					.append('text')
+					.attr('font-size', '0.9em')
+					.attr('transform', `translate(${term.x}, ${y + 10})`)
+					// .attr('text-anchor', 'start')
+					.text(term.label)
+			)
 		}
+
+		// const addRect = (term) => {
+		// 	this.volcanoDom.top.append('rect')
+		// 		.attr('width', 10)
+		// 		.attr('height', 10)
+		// 		.attr('transform', `translate(${term.rectX}, ${y})`)
+		// 		.attr('fill', term.color)
+		// }
+
+		const firstTerm = this.viewData.termInfo.first
+		addLabel(firstTerm)
+		// addRect(firstTerm)
+
+		const secondTerm = this.viewData.termInfo.second
+		// addRect(secondTerm)
+		const secondLabel = addLabel(secondTerm)
+		secondLabel.attr('text-anchor', 'end')
 	}
 
 	renderScale(scale: any, isLeft = false) {

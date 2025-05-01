@@ -44,6 +44,7 @@ export type VolcanoPlotConfig = PlotConfig & {
 export type VolcanoPlotDimensions = {
 	logFoldChangeLine: { x: number; y1: number; y2: number }
 	plot: { width: number; height: number; x: number; y: number }
+	top: { x: number; y: number }
 	svg: { width: number; height: number }
 	xAxisLabel: { x: number; y: number }
 	xScale: { x: number; y: number; scale: any }
@@ -141,10 +142,21 @@ export type VolcanoSettings = {
 	width: number
 }
 
+type TermInfoEntry = {
+	/** Not in use */
+	// color: string;
+	/** Formated label to show */
+	label: string
+	/** x coord */
+	x: number
+	/** Not in use */
+	// rectX: number
+}
+
 /** Formatted data from the view model */
 export type VolcanoViewData = {
 	images: DEImage[]
-	info: { label: string; color: string; x: number; y: number }[]
+	termInfo: { y: number; first: TermInfoEntry; second: TermInfoEntry } | undefined
 	plotDim: VolcanoPlotDimensions
 	pointData: DataPointEntry[]
 	pValueTableData: VolcanoPValueTableData
