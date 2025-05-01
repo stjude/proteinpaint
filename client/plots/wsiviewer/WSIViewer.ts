@@ -35,7 +35,7 @@ export default class WSIViewer extends RxComponentInner {
 	}
 
 	async main(): Promise<void> {
-		const state = this.app.getState()
+		const state = structuredClone(this.state)
 		const settings = state.plots.find(p => p.id === this.id).settings as Settings
 		const holder = this.opts.holder
 
@@ -62,7 +62,6 @@ export default class WSIViewer extends RxComponentInner {
 			holder.append('div').style('margin-left', '10px').text(e.message)
 			return
 		}
-
 		this.generateThumbnails(
 			wsimageLayers.map(wsimageLayers => wsimageLayers.wsimage),
 			settings
@@ -80,7 +79,14 @@ export default class WSIViewer extends RxComponentInner {
 		const activeImageExtent = activeImage?.getSource()?.getTileGrid()?.getExtent()
 
 		const map = this.getMap(wsimageLayers[settings.displayedImageIndex])
+
 		const hasOverlay = wsimageLayers[settings.displayedImageIndex].overlay != null
+
+		const zoomInPoints = wsimages[settings.displayedImageIndex].zoomInPoints
+
+		if (zoomInPoints != undefined) {
+			this.addZoomInEffect(activeImageExtent, zoomInPoints, map)
+		}
 
 		this.addControls(map, activeImage, hasOverlay)
 
@@ -255,7 +261,8 @@ export default class WSIViewer extends RxComponentInner {
 			view: new View({
 				projection: projection,
 				resolutions: activeImage.getSource()?.getTileGrid()?.getResolutions(),
-				constrainOnlyCenter: true
+				constrainOnlyCenter: true,
+				center: extent || [0, 0]
 			})
 		})
 	}
@@ -300,6 +307,36 @@ export default class WSIViewer extends RxComponentInner {
 				c2.html(value)
 			})
 		}
+	}
+
+	private addZoomInEffect(activeImageExtent: unknown, zoomInPoints: [number, number][], map: OLMap) {
+		setTimeout(() => {
+			if (!activeImageExtent) return
+
+			const imageHeight = activeImageExtent[3]
+
+			//Calculate the center of the annotation
+			const xyAvg = zoomInPoints
+				.reduce(
+					(acc, [x, y]) => {
+						acc[0] += x
+						/** Zoomify tile coordinates start top-left but OpenLayers start bottom-left.
+						 * This flips the feature coordinates to match OpenLayers coordinates.*/
+						const invertedY = imageHeight - y
+						acc[1] += invertedY
+						return acc
+					},
+					[0, 0]
+				)
+				.map(sum => sum / zoomInPoints.length)
+
+			const view = map.getView()
+			view.animate({
+				center: xyAvg,
+				zoom: 5,
+				duration: 2000
+			})
+		}, 500)
 	}
 }
 
