@@ -1,5 +1,5 @@
 import path from 'path'
-import run_R from '#src/run_R.js'
+import { run_R } from '@sjcrh/proteinpaint-r'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 import type {
 	TermdbClusterRequestGeneExpression,
@@ -208,9 +208,7 @@ async function doClustering(data: any, q: TermdbClusterRequest, numCases = 1000)
 	}
 
 	if (inputData.matrix.length == 0) throw 'Clustering matrix is empty'
-	const Routput = JSON.parse(
-		await run_R(path.join(serverconfig.binpath, 'utils', 'hclust.R'), JSON.stringify(inputData))
-	)
+	const Routput = JSON.parse(await run_R('hclust.R', JSON.stringify(inputData)))
 
 	const row_names_index: number[] = Routput.RowOrder.map(row => inputData.row_names.indexOf(row.name)) // sorted rows. value is array index in input data
 	const col_names_index: number[] = Routput.ColOrder.map(col => inputData.col_names.indexOf(col.name)) // sorted columns, value is array index from input array

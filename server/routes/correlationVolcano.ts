@@ -1,10 +1,8 @@
 import type { CorrelationVolcanoRequest, CorrelationVolcanoResponse, RouteApi } from '#types'
 import { CorrelationVolcanoPayload } from '#types/checkers'
 import { getData } from '../src/termdb.matrix.js'
-import run_R from '../src/run_R.js'
-import serverconfig from '../src/serverconfig.js'
+import { run_R } from '@sjcrh/proteinpaint-r'
 import { mayLog } from '#src/helpers.ts'
-import path from 'path'
 import { getStdDev } from '#shared/descriptive.stats.js'
 import { formatElapsedTime } from '#shared/time.js'
 // to avoid crashing r, an array must meet below; otherwise the variable is skipped
@@ -106,7 +104,7 @@ async function compute(q: CorrelationVolcanoRequest, ds: any, genome: any) {
 
 	const time1 = Date.now()
 	const output = {
-		terms: JSON.parse(await run_R(path.join(serverconfig.binpath, 'utils', 'corr.R'), JSON.stringify(input)))
+		terms: JSON.parse(await run_R('corr.R', JSON.stringify(input)))
 	}
 	// Format the elapsed time with appropriate units
 	const elapsedMs = Date.now() - time1

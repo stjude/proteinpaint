@@ -4,7 +4,7 @@ import serverconfig from './serverconfig.js'
 import { schemeCategory20, getColors } from '#shared/common.js'
 import { mclass, dt2label, morigin } from '#shared/common.js'
 import { authApi } from './auth.js'
-import run_R from './run_R.js'
+import { run_R } from '@sjcrh/proteinpaint-r'
 import { read_file } from './utils.js'
 import { isNumericTerm } from '@sjcrh/proteinpaint-shared/terms.js'
 /*
@@ -427,7 +427,7 @@ function isComputable(term, value) {
 
 export async function trigger_getLowessCurve(req, q, res) {
 	const data = q.coords
-	const result = JSON.parse(await run_R(path.join(serverconfig.binpath, 'utils', 'lowess.R'), JSON.stringify(data)))
+	const result = JSON.parse(await run_R('lowess.R', JSON.stringify(data)))
 	const lowessCurve = []
 	for (const [i, x] of Object.entries(result.x)) lowessCurve.push([x, result.y[i]])
 	return res.send(lowessCurve)

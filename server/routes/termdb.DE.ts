@@ -5,7 +5,7 @@ import { diffExpPayload } from '#types/checkers'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 import { getData } from '../src/termdb.matrix.js'
 import { get_ds_tdb } from '../src/termdb.js'
-import run_R from '../src/run_R.js'
+import { run_R } from '@sjcrh/proteinpaint-r'
 import { mayLog } from '#src/helpers.ts'
 import serverconfig from '../src/serverconfig.js'
 import imagesize from 'image-size'
@@ -275,9 +275,7 @@ values[] // using integer sample id
 	) {
 		// edgeR will be used for DE analysis
 		const time1 = new Date().valueOf()
-		const result = JSON.parse(
-			await run_R(path.join(serverconfig.binpath, 'utils', 'edge.R'), JSON.stringify(expression_input))
-		)
+		const result = JSON.parse(await run_R('edge.R', JSON.stringify(expression_input)))
 		mayLog('Time taken to run edgeR:', formatElapsedTime(Date.now() - time1))
 		param.method = 'edgeR'
 		const ql_imagePath: string = path.join(serverconfig.cachedir, result.edgeR_ql_image_name[0]) // Retrieve the edgeR quality image and send it to client side. Does not need to be an array, will address this later.
