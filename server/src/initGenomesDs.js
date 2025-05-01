@@ -58,6 +58,7 @@ export async function initGenomesDs(serverconfig) {
 	//DELETE THIS after process for deleting mass session files moved into production
 	serverconfig.cachedir_massSessionTrash = await mayCreateSubdirInCache('massSessionTrash')
 	deleteSessionFiles()
+	deleteTrashSessionFiles()
 
 	serverconfig.cache_snpgt = {
 		dir: await mayCreateSubdirInCache('snpgt'),
@@ -575,20 +576,16 @@ async function mayCreateSubdirInCache(subdir) {
 	return dir
 }
 
+//Moves the file out of the massSession dir to the trash dir if
+//older than the massSessionDuration in serverconfig or 30 days default
 async function deleteSessionFiles() {
-	//Delete mass session files older than the massSessionDuration in serverconfig or 30 days default
 	const files = await fs.promises.readdir(serverconfig.cachedir_massSession)
 	try {
 		files.forEach(async file => {
-			//Return creation Time
-			const stats = await fs.promises.stat(path.join(serverconfig.cachedir_massSession, file))
-			const sessionCreationDate = stats.birthtime
-
-			//Determine file age against massSessionDuration
-			const today = new Date()
-			const fileDate = new Date(sessionCreationDate)
-			const massSessionDuration = serverconfig.features.massSessionDuration || 30
-			const sessionDaysElapsed = Math.round((today.getTime() - fileDate.getTime()) / (1000 * 3600 * 24))
+			const [massSessionDuration, sessionDaysElapsed] = await getDateDifferences(
+				serverconfig.cachedir_massSession,
+				file
+			)
 			if (sessionDaysElapsed > massSessionDuration) {
 				// Move file to massSessionTrash
 				// Process in place until users get use to it
@@ -599,10 +596,48 @@ async function deleteSessionFiles() {
 				// Delete file out of massSession
 				await fs.promises.unlink(path.join(serverconfig.cachedir_massSession, file))
 
-				console.log('File deleted: ', file, sessionCreationDate)
+				console.log('File deleted from massSession: ', file, sessionCreationDate)
 			}
 		})
 	} catch (e) {
 		throw `Error: ${e}`
 	}
+}
+
+//Permanently deletes the file from the cache
+async function deleteTrashSessionFiles() {
+	const files = await fs.promises.readdir(serverconfig.cachedir_massSessionTrash)
+	try {
+		files.forEach(async file => {
+			const [massSessionDuration, sessionDaysElapsed] = await getDateDifferences(
+				serverconfig.cachedir_massSessionTrash,
+				file
+			)
+			console.log('File: ', file, sessionDaysElapsed, 'trash')
+			if (sessionDaysElapsed > massSessionDuration * 2) {
+				await fs.promises.unlink(path.join(serverconfig.cachedir_massSessionTrash, file))
+
+				console.log('File deleted from massSessionTrash: ', file, sessionCreationDate)
+			}
+		})
+	} catch (e) {
+		throw `Error: ${e}`
+	}
+}
+
+//Return the length of the time when a file is to be deleted
+// (i.e. massSessionDuration) and the time elapsed since
+// the file was created
+async function getDateDifferences(cachedir, file) {
+	//Return creation Time
+	const stats = await fs.promises.stat(path.join(cachedir, file))
+	const sessionCreationDate = stats.birthtime
+
+	//Determine file age against massSessionDuration
+	const today = new Date()
+	const fileDate = new Date(sessionCreationDate)
+	const massSessionDuration = serverconfig.features.massSessionDuration || 30
+	const sessionDaysElapsed = Math.round((today.getTime() - fileDate.getTime()) / (1000 * 3600 * 24))
+
+	return [massSessionDuration, sessionDaysElapsed]
 }
