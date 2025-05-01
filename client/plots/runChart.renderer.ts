@@ -215,15 +215,14 @@ export function setRenderers(self) {
 			chart.serie = chart.mainG.append('g').attr('class', 'sjpcb-runchart-serieG')
 
 			const id = 'clip' + self.id
-			chart.svg
+			chart.clipRect = chart.svg
 				.append('defs')
 				.append('clipPath')
 				.attr('id', id)
 				.append('rect')
 				.attr('x', self.axisOffset.x)
 				.attr('y', self.axisOffset.y)
-				.attr('width', self.settings.svgw + 10)
-				.attr('height', self.settings.svgh)
+
 			chart.mainG.attr('clip-path', `url(#${id})`)
 
 			chart.regressionG = chart.mainG.append('g').attr('class', 'sjpcb-runchart-lowess')
@@ -237,7 +236,9 @@ export function setRenderers(self) {
 			chart.xAxis = axisG.select('.sjpcb-runchart-x-axis')
 			chart.yAxis = axisG.select('.sjpcb-runchart-y-axis')
 			chart.legendG = svg.select('.sjpcb-runchart-legend')
+			chart.clipRect = svg.select('defs').select('clipPath').select('rect')
 		}
+		chart.clipRect.attr('width', self.settings.svgw + 10).attr('height', self.settings.svgh)
 		chart.xAxis.attr('transform', `translate(0, ${self.settings.svgh + self.axisOffset.y})`)
 
 		chart.legendG.attr('transform', `translate(${self.settings.svgw + self.axisOffset.x + 50}, 20)`)

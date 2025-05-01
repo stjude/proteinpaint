@@ -9,7 +9,7 @@ import { downloadSingleSVG } from '../common/svg.download.js'
 import { select } from 'd3-selection'
 import { plotColor } from '#shared/common.js'
 import { filterJoin } from '#filter'
-import { getDateFromNumber, isNumericTerm } from '#shared/terms.js'
+import { getDateFromNumber, isNumericTerm, getNumberFromDate } from '#shared/terms.js'
 import { median } from 'd3-array'
 import { getColors } from '#shared/common.js'
 
@@ -178,7 +178,7 @@ class RunChart {
 	createChart(id, data) {
 		const aggregate = this.settings.aggregateData
 		const samples = data.samples
-		if (aggregate) {
+		if (aggregate !== 'None') {
 			const groupedSamples = new Map()
 			for (const sample of samples) {
 				const date = new Date(getDateFromNumber(sample.x))
@@ -195,14 +195,18 @@ class RunChart {
 					})
 				}
 			}
-			for (const value of groupedSamples.values()) {
+			for (const [key, value] of groupedSamples.entries()) {
 				let x, y
-				if (this.settings.useMedian) {
+				if (aggregate == 'Median') {
 					x = median(value.samples.map(d => d.x))
 					y = median(value.samples.map(d => d.y))
-				} else {
+				} else if (aggregate == 'Mean') {
 					y = value.ysum / value.samples.length
 					x = value.xsum / value.samples.length
+				} else if (aggregate == 'Count events') {
+					y = value.samples.length
+					const [year, month] = key.split('-')
+					x = getNumberFromDate(new Date(year, month, 1)) //grouped samples by month and year
 				}
 				for (const sample of value.samples) {
 					sample.x = x //grouped samples by month and year
@@ -402,10 +406,17 @@ class RunChart {
 			{
 				boxLabel: '',
 				label: 'Aggregate data',
-				type: 'checkbox',
 				chartType: 'runChart',
 				settingsKey: 'aggregateData',
-				title: `Group samples from the same month and year`
+				title: `Group samples from the same month and year`,
+				type: 'dropdown',
+				options: [
+					{ label: 'None', value: 'None' },
+					//{ label: 'Loess', value: 'Loess' },
+					{ label: 'Median', value: 'Median' },
+					{ label: 'Mean', value: 'Mean' },
+					{ label: 'Count events', value: 'Count events' }
+				]
 			},
 
 			{
@@ -483,16 +494,6 @@ class RunChart {
 				]
 			})
 
-		if (this.settings.aggregateData) {
-			inputs.splice(5, 0, {
-				boxLabel: '',
-				label: 'Use median to aggregate',
-				type: 'checkbox',
-				chartType: 'runChart',
-				settingsKey: 'useMedian',
-				title: `Use median instead of mean to aggregate the data`
-			})
-		}
 		if (!this.config.term0)
 			inputs.push({
 				label: 'Show regression',
@@ -601,15 +602,14 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 
 export function getDefaultRunChartSettings() {
 	return {
-		aggregateData: true,
-		useMedian: true,
+		aggregateData: 'Median',
 		size: 0.5,
 		minShapeSize: 0.5,
 		maxShapeSize: 4,
 		scaleDotOrder: 'Ascending',
 		refSize: 0.8,
-		svgw: 1200,
-		svgh: 700,
+		svgw: 1000,
+		svgh: 500,
 		axisTitleFontSize: 16,
 		opacity: 0.6,
 		defaultColor: plotColor,
