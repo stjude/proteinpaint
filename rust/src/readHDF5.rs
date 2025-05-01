@@ -109,7 +109,7 @@ fn query_gene(hdf5_filename: String, gene_name: String) -> Result<()> {
 ///
 /// # Error Handling
 /// Handles file access issues, missing datasets, and gene not found scenarios
-fn query_gene_dense(hdf5_filename: String, gene_name: String) -> Result<()> {
+fn query_gene_dense(hdf5_filename: String, gene_name: String                     ) -> Result<()> {
     let file = match File::open(hdf5_filename) {
         Ok(f) => f,
         Err(err) => {
