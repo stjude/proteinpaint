@@ -14,6 +14,7 @@ export type SampleWSImagesResponse = {
 export type WSImage = {
 	filename: string
 	overlays?: Array<string>
+	zoomInPoints?: Array<[number, number]>
 	metadata: string
 }
 

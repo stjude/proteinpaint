@@ -80,52 +80,13 @@ export default class WSIViewer extends RxComponentInner {
 
 		const map = this.getMap(wsimageLayers[settings.displayedImageIndex])
 
-		setTimeout(() => {
-			if (!activeImageExtent) return
-			// //hardcoded for prototyping
-			let coords: number[][]
-			if (settings.displayedImageIndex == 0) {
-				//first feature corrds for the first image in geojson
-				coords = [
-					[90624, 11776],
-					[91136, 11776],
-					[91136, 12288],
-					[90624, 12288]
-				]
-			} else {
-				//first feature coords for the second image in geojson
-				coords = [
-					[77312, 11776],
-					[77824, 11776],
-					[77824, 12288],
-					[77312, 12288]
-				]
-			}
-			const imageHeight = activeImageExtent[3]
-			//Calculate the center of the annotation
-			const xyAvg = coords
-				.reduce(
-					(acc, [x, y]) => {
-						acc[0] += x
-						/** Zoomify tile coordinates start top-left but OpenLayers start bottom-left.
-						 * This flips the feature coordinates to match OpenLayers coordinates.*/
-						const invertedY = imageHeight - y
-						acc[1] += invertedY
-						return acc
-					},
-					[0, 0]
-				)
-				.map(sum => sum / coords.length)
-
-			const view = map.getView()
-			view.animate({
-				center: xyAvg,
-				zoom: 5,
-				duration: 2000
-			})
-		}, 500)
-
 		const hasOverlay = wsimageLayers[settings.displayedImageIndex].overlay != null
+
+		const zoomInPoints = wsimages[settings.displayedImageIndex].zoomInPoints
+
+		if (zoomInPoints != undefined) {
+			this.addZoomInEffect(activeImageExtent, zoomInPoints, map)
+		}
 
 		this.addControls(map, activeImage, hasOverlay)
 
@@ -346,6 +307,36 @@ export default class WSIViewer extends RxComponentInner {
 				c2.html(value)
 			})
 		}
+	}
+
+	private addZoomInEffect(activeImageExtent: unknown, zoomInPoints: [number, number][], map: OLMap) {
+		setTimeout(() => {
+			if (!activeImageExtent) return
+
+			const imageHeight = activeImageExtent[3]
+
+			//Calculate the center of the annotation
+			const xyAvg = zoomInPoints
+				.reduce(
+					(acc, [x, y]) => {
+						acc[0] += x
+						/** Zoomify tile coordinates start top-left but OpenLayers start bottom-left.
+						 * This flips the feature coordinates to match OpenLayers coordinates.*/
+						const invertedY = imageHeight - y
+						acc[1] += invertedY
+						return acc
+					},
+					[0, 0]
+				)
+				.map(sum => sum / zoomInPoints.length)
+
+			const view = map.getView()
+			view.animate({
+				center: xyAvg,
+				zoom: 5,
+				duration: 2000
+			})
+		}, 500)
 	}
 }
 
