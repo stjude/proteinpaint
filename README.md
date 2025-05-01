@@ -1,8 +1,8 @@
 # ProteinPaint
 
-a genomics visualization tool for exploring a cohort's genotype and phenotype data
+A genomics visualization tool for exploring a cohort's genotype and phenotype data
 
-## Source Code 
+## Source Code
 
 ```bash
 git clone git@github.com:stjude/proteinpaint.git
@@ -12,23 +12,22 @@ git clone git@github.com:stjude/proteinpaint.git
 
 ### Host Machine installation
 
-```bash
-
-If working on the server code: Install the 
+If working on the server code: Install the
 [system depedencies](https://docs.google.com/document/d/1tkEHG_vYtT-OifPV-tlPeWQUMsEd3aWAKf5ExOT8G34/edit#heading=h.jy5sdrb1zkut)
 as listed in the [installation instructions](https://docs.google.com/document/d/1tkEHG_vYtT-OifPV-tlPeWQUMsEd3aWAKf5ExOT8G34/edit#heading=h.6nxua6c3ik9l).
 
 ```bash
 cd proteinpaint
 npm run sethooks
-nvm use 20
+nvm use 22
 npm install
-# follow the instructions at https://docs.google.com/document/d/1tkEHG_vYtT-OifPV-tlPeWQUMsEd3aWAKf5ExOT8G34/edit
 ```
+
+Once you have run the above steps follow the instructions [here](https://docs.google.com/document/d/1tkEHG_vYtT-OifPV-tlPeWQUMsEd3aWAKf5ExOT8G34/edit)
 
 ### Docker dev container installation
 
-Requires Docker Desktop on your host machine. 
+Requires Docker [Desktop](https://docs.docker.com/get-started/) on your host machine.
 
 ```bash
 cd proteinpaint
@@ -38,12 +37,18 @@ cd container/dev
 ```
 
 ## Develop
+
 ### Host Machine development
 
-These scripts require npm v10.2+ and are tested with Node v20+.
+### Requirements
+
+- Node v22
+- npm 10.2+
+- Rust 1.86.0
+
+These scripts require npm v10.2+ and are tested with Node v22+.
 
 ```bash
-
 # develop BOTH server and client code using 2 terminal windows/tabs
 npm run dev # rebundles frontend code
 npm start # in separate terminal runs the ProteinPaint server, requires a serverconfig.json at the project root
@@ -56,13 +61,13 @@ npm run dev1
 # --- OR ---
 # see build/dev/README.md to use a Docker container for development
 ```
-When running your dev server, you can see [marked up README's in the browser](http://localhost:3000/readme.html).
 
+When running your dev server, you can see [marked up README's in the browser](http://localhost:3000/readme.html).
 
 ### Docker dev container development
 
 Changes made to the code in the host machine will be reflected in the container and re-bundled automatically.
-The command npm run dev1 will be run in the container when starting the docker image using /container/dev/run.sh script.
+The command `npm run dev1` will be run in the container when starting the docker image using `/container/dev/run.sh` script.
 
 ### Docker dev container development using VSCode
 
@@ -82,6 +87,7 @@ npm run dev1
 ```
 
 ## Test
+
 ```bash
 npm testws # tests all workspaces
 ```
@@ -123,6 +129,7 @@ To auto-generate documentation to public/docs,
 npm run doc
 ```
 
-TODOs: 
+TODOs:
+
 - Organize the leftbar links by API topics, by using typescript namespaces or coding a custom plugin
 - Display test code that are specific to a documented type or interface

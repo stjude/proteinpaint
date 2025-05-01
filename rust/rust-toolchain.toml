@@ -1,0 +1,5 @@
+# When pinning versions in rust it does a minimal install that doesn't include the rustfmt (formatter/styler) and clippy (linter).
+# We include them here to ensure we get the versions of these tools that are with 1.86.0
+[toolchain]
+channel = "1.86.0" 
+components = ["rustfmt", "clippy"]
