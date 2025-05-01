@@ -1,11 +1,8 @@
-import fs from 'fs'
 import path from 'path'
-import { spawn } from 'child_process'
 import * as utils from './utils.js'
 import * as vcf from '#shared/vcf.js'
 import * as common from '#shared/common.js'
 import * as termdbsql from './termdb.sql.js'
-import run_R from './run_R.js'
 import serverconfig from './serverconfig.js'
 
 /*

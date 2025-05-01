@@ -1,9 +1,5 @@
-import path from 'path'
 import { getData } from './termdb.matrix'
-import { write_file } from './utils'
-import fs from 'fs'
-import serverconfig from './serverconfig'
-import run_R from './run_R'
+import { run_R } from '@sjcrh/proteinpaint-r'
 
 export async function get_survival(q, ds) {
 	try {
@@ -97,9 +93,7 @@ export async function get_survival(q, ds) {
 		// perform survival analysis for each chart
 		for (const chartId in byChartSeries) {
 			const data = byChartSeries[chartId]
-			const survival_data = JSON.parse(
-				await run_R(path.join(serverconfig.binpath, 'utils', 'survival.R'), JSON.stringify(data))
-			)
+			const survival_data = JSON.parse(await run_R('survival.R', JSON.stringify(data)))
 			// parse survival estimates
 			for (const obj of survival_data.estimates) {
 				for (const key in obj) {

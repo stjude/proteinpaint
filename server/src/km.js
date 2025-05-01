@@ -1,12 +1,9 @@
-import fs from 'fs'
 import path from 'path'
 import * as utils from './utils.js'
 import serverconfig from './serverconfig'
-import { spawn } from 'child_process'
-import readline from 'readline'
 import * as common from '#shared/common.js'
 import * as vcf from '#shared/vcf.js'
-import run_R from './run_R.js'
+import { run_R } from '@sjcrh/proteinpaint-r'
 
 /*
 function cascade
@@ -99,7 +96,7 @@ async function get_pvalue(samplesets) {
 			lines.push(v.serialtime + '\t' + v.censored + '\t' + i)
 		}
 	}
-	const p = await run_R(path.join(serverconfig.binpath, 'utils', 'km.R'), lines.join('\n'))
+	const p = await run_R('km.R', lines.join('\n'))
 	return Number(p)
 }
 

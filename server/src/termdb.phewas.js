@@ -6,7 +6,6 @@ import { createCanvas } from 'canvas'
 import * as termdb from './termdb'
 import readline from 'readline'
 import serverconfig from './serverconfig'
-import run_R from './run_R.js'
 
 /*
 ********************** EXPORTED

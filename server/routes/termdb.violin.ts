@@ -8,9 +8,7 @@ import { getOrderedLabels } from '../src/termdb.barchart.js'
 import { summaryStats } from '#shared/descriptive.stats.js'
 import { isNumericTerm } from '#shared/terms.js'
 import { numericBins, parseValues } from './termdb.boxplot.ts'
-import serverconfig from '../src/serverconfig.js'
 import { run_R } from '@sjcrh/proteinpaint-r'
-import path from 'path'
 
 // mark as unused by eslint, TODO: delete permanently
 // const minSampleSize = 5 // a group below cutoff will not compute violin
