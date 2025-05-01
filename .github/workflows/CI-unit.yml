@@ -124,6 +124,7 @@ jobs:
         with:
           toolchain: 1.86.0
           override: true
+          working-directory: ./rust
 
       - name: 🔎 Rust unit tests
         if: contains(env.WS_TO_TEST, 'rust')
