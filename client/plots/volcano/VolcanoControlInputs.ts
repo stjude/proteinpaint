@@ -37,8 +37,11 @@ export class VolcanoControlInputs {
 				settingsKey: 'pValue',
 				title: 'The p-value threshold to determine statistical significance',
 				min: 0,
-				max: 1,
-				step: 0.05
+				// 5e-324 is the smallest positive number greater than 0 representable
+				// in IEEE 64-bit floating point (i.e. javascripts native Number.MIN_VALUE)
+				// -Math.log10(5e-324) = 323.3
+				max: 323.3,
+				step: 1
 			},
 			{
 				label: 'P value',
