@@ -132,6 +132,15 @@ jobs:
           echo "Checking Rust formatting (warnings only, will not fail the build)..."
           cargo fmt --all -- --check || echo "::warning::Rust formatting issues found. Please run 'cargo fmt' locally."
 
+      - name: Run Clippy (warnings only)
+        if: contains(env.WS_TO_TEST, 'rust')
+        continue-on-error: true  # This makes the step always pass
+        run: |
+          cd rust
+          rustup component add clippy
+          echo "Running Clippy lints (warnings only, will not fail the build)..."
+          cargo clippy -- -D warnings || echo "::warning::Clippy lints found issues. Please run 'cargo clippy' locally to fix them."
+
       - name: 🔎 Rust unit tests
         if: contains(env.WS_TO_TEST, 'rust')
         run: |
