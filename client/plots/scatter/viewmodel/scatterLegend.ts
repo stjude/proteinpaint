@@ -205,7 +205,7 @@ export class ScatterLegend {
 				const refColorG = legendG.append('g')
 				refColorG
 					.append('path')
-					.attr('transform', () => `translate(${offsetX - 2}, ${offsetY - 5}) scale(1)`)
+					.attr('transform', () => `translate(${offsetX - 2}, ${offsetY - 5}) scale(0.7)`)
 					.style('fill', colorRefCategory.color)
 					.attr('d', shapes[0])
 					.style('stroke', rgb(colorRefCategory.color).darker())
