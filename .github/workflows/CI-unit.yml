@@ -139,7 +139,7 @@ jobs:
           cd rust
           rustup component add clippy
           echo "Running Clippy lints (warnings only, will not fail the build)..."
-          cargo clippy || echo "::warning::Clippy lints found issues. Please run 'cargo clippy' locally to fix them."
+          cargo clippy -- -D warnings || echo "::warning::Clippy lints found issues. Please run 'cargo clippy' locally to fix them."
 
       - name: 🔎 Rust unit tests
         if: contains(env.WS_TO_TEST, 'rust')
