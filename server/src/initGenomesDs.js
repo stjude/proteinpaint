@@ -582,7 +582,7 @@ async function deleteSessionFiles() {
 	const files = await fs.promises.readdir(serverconfig.cachedir_massSession)
 	try {
 		files.forEach(async file => {
-			const [massSessionDuration, sessionDaysElapsed] = await getDateDifferences(
+			const [massSessionDuration, sessionCreationDate, sessionDaysElapsed] = await getDateDifferences(
 				serverconfig.cachedir_massSession,
 				file
 			)
@@ -609,7 +609,7 @@ async function deleteTrashSessionFiles() {
 	const files = await fs.promises.readdir(serverconfig.cachedir_massSessionTrash)
 	try {
 		files.forEach(async file => {
-			const [massSessionDuration, sessionDaysElapsed] = await getDateDifferences(
+			const [massSessionDuration, sessionCreationDate, sessionDaysElapsed] = await getDateDifferences(
 				serverconfig.cachedir_massSessionTrash,
 				file
 			)
@@ -639,5 +639,5 @@ async function getDateDifferences(cachedir, file) {
 	const massSessionDuration = serverconfig.features.massSessionDuration || 30
 	const sessionDaysElapsed = Math.round((today.getTime() - fileDate.getTime()) / (1000 * 3600 * 24))
 
-	return [massSessionDuration, sessionDaysElapsed]
+	return [massSessionDuration, sessionCreationDate, sessionDaysElapsed]
 }
