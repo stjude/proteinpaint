@@ -47,7 +47,7 @@ fi
 # We need two variables:
 # 1. Full paths for git operations
 # 2. Just filenames for rustfmt/clippy
-RUST_FULL_PATHS=$(git diff --cached --name-only --diff-filter=ACM "rust/src/**/*.rs" | sed 's| |\\ |g')
+RUST_FULL_PATHS=$(git diff --cached --name-only --diff-filter=ACM "*.rs" | sed 's| |\\ |g')
 
 if [[ "$RUST_FULL_PATHS" != "" ]]; then
   echo "RUST_FULL_PATHS: $RUST_FULL_PATHS"
@@ -69,7 +69,7 @@ if [[ "$RUST_FULL_PATHS" != "" ]]; then
   echo "Linting Rust files with clippy..."
   for f in $RUST_FILES; do
     echo "Linting $f..."
-    clippy-driver --edition 2024 -Cpanic=abort --all-targets $f
+    clippy-driver --edition 2024 -Cpanic=abort $f
   done
   
   # Return to original directory
