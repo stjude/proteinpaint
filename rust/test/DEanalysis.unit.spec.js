@@ -2,7 +2,7 @@
 Test script for 'rust/src/DEanalysis.rs'
 This script must be run from the sjpp directory
 
-cd ~/sjpp && node proteinpaint/rust/test/wilcoxon_DE_Test.unit.spec.js
+cd ~/sjpp && node proteinpaint/rust/test/DEanalysis.unit.spec.js
 
 *********************************************/
 
@@ -10,7 +10,7 @@ cd ~/sjpp && node proteinpaint/rust/test/wilcoxon_DE_Test.unit.spec.js
 import tape from 'tape'
 import fs from 'fs'
 import path from 'path'
-import serverconfig from '../../server/src/serverconfig.js'
+import serverconfig from '@sjcrh/proteinpaint-server/src/serverconfig.js'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 
 const p_value_cutoff = 0.0001 // If the difference between the actual and expected p-value is greater than this, the test will fail
@@ -31,9 +31,8 @@ tape('rust DE wilcoxon unit test', async function (test) {
 		DE_method: 'wilcoxon',
 		mds_cutoff: 10000
 	}
-	const Rout = await run_rust('DEanalysis', JSON.stringify(inJson))
-	//console.log("Rout:",Rout)
-	const out = JSON.parse(Rout)
+	const Rustout = await run_rust('DEanalysis', JSON.stringify(inJson))
+	const out = JSON.parse(Rustout)
 
 	const expJson = fs.readFileSync(
 		path.join(serverconfig.binpath + '/test/tp/files/hg38/TermdbTest', 'TermdbTest_DE_wilcoxon_exp_output.json'),
@@ -91,5 +90,24 @@ tape('rust DE wilcoxon unit test', async function (test) {
 		gene3_out.fold_change - gene3_exp_out.fold_change < fold_change_cutoff,
 		`For ${gene3_id}, original fold change=${gene3_out.fold_change}, expected fold change=${gene3_exp_out.fold_change}`
 	)
+	test.end()
+})
+
+// This tests the rust gene counts HDF5 query
+tape('rust DE sample search test from raw gene counts HDF5 file', async function (test) {
+	const inJson = {
+		input_file: serverconfig.binpath + '/test/tp/files/hg38/TermdbTest/TermdbTest.geneCounts.h5',
+		data_type: 'get_samples'
+	}
+	const Rustout = await run_rust('DEanalysis', JSON.stringify(inJson))
+
+	const expJson = fs.readFileSync(
+		path.join(serverconfig.binpath + '/test/tp/files/hg38/TermdbTest', 'TermdbTest_DE_samples_exp_output.json'),
+		{
+			encoding: 'utf8'
+		}
+	)
+
+	test.deepEqual(Rustout, expJson, 'Test rust DE sample search from raw gene counts HDF5 should match expected output')
 	test.end()
 })
