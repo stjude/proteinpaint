@@ -3,6 +3,24 @@
 set -e
 
 STAGEDFILES=$(git diff --cached --name-only | sed 's| |\\ |g')
+
+# Add Rust formatting and linting for files in the rust/src directory.
+# We check if Rust files have been modified, run `cargo fmt` and `cargo clippy` on them.
+RUST_FILES=$(git diff --cached --name-only --diff-filter=ACM "rust/src/**/*.rs" | sed 's| |\\ |g')
+
+if [[ "$RUST_FILES" != "" ]]; then
+  echo "Formatting Rust files with rustfmt..."
+  (cd rust && cargo fmt)
+  
+  echo "Linting Rust files with clippy..."
+  # Run clippy with:
+  # --all-targets ensures all targets (lib, bins, tests) are checked
+  (cd rust && cargo clippy --all-targets)
+  
+  # If clippy passed without errors, add back the formatted Rust files to staging
+  echo "$RUST_FILES" | xargs git add
+fi
+
 # doing per GDC requirements
 pre-commit run --files "$STAGEDFILES"
 
