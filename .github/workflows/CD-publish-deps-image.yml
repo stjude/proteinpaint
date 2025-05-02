@@ -91,51 +91,26 @@ jobs:
           cd ../client
           npm run tsc
 
-      - name: Build image
+      - name: Update version
         run: |
           npm install glob
           cd container
 
           BRANCH=$(git rev-parse --abbrev-ref HEAD)
-          if [[ "$BRANCH" != "publish-image" && "$BRANCH" != "release-chain" && "$BRANCH" != "master" && ${{ github.event_name }} != "workflow_dispatch" ]]; then
+          if [[ "$BRANCH" != "master" && "$BRANCH" != "release"* && "$BRANCH" != "prerelease"* && ${{ github.event_name }} != "workflow_dispatch" ]]; then
             echo "skipping build and publishing"
           else
             cd deps
             ./version.sh deps
-            ./build.sh -m "ghcr.io/stjude/"
-            TAG="$(node -p "require('./package.json').version")"
-            cd ..
-
-            ./run.sh ghcr.io/stjude/ppserver:$TAG
-            sleep 10
-            cd ..
-            xvfb-run --auto-servernum npm run test:integration
-          
-            HASH=$(git rev-parse --short HEAD 2>/dev/null)
-            docker push ghcr.io/stjude/ppbase:latest
-            docker push ghcr.io/stjude/ppserver:$TAG
-            docker push ghcr.io/stjude/ppfull:$TAG
-            docker push ghcr.io/stjude/ppserver:latest
-            docker push ghcr.io/stjude/ppfull:latest
-
-            cd container
-            ./update_deps_version.sh $TAG ./full/Dockerfile
-            ./update_deps_version.sh $TAG ./server/Dockerfile
-          
-            if [[ "$BRANCH" != "master" ]]; then
-              echo "merging to master"
-              git fetch --depth=10 origin master:master
-              git switch master
-              git merge $BRANCH
-            fi
-          
-            git config --global user.email "PPTeam@STJUDE.ORG"
-            git config --global user.name "PPTeam CI"
-            git add deps/package.json
-            git add full/Dockerfile
-            git add server/Dockerfile
-            git commit -m "Update deps version to $TAG"
-            git stash -a
-            git pull --rebase
-            git push origin master
           fi
+
+      - name: Build Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./container/deps
+          file: ./container/deps/Dockerfile
+          tags: ppserver:latest
+          platforms: linux/amd64, linux/arm64
+          outputs: type=docker
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
