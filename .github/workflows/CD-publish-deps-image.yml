@@ -102,6 +102,11 @@ jobs:
           else
             cd deps
             ./version.sh deps
+           
+            cp -r ../public ./
+            cp ../full/app-full.mjs .
+            cp ../server/app-server.mjs .
+          
           fi
 
       - name: Set up Docker Buildx
@@ -112,7 +117,7 @@ jobs:
         with:
           context: ./container
           file: ./container/deps/Dockerfile
-          tags: ghcr.io/stjude/ppbase:latest
+          tags: ghcr.io/stjude/ppbase:test
           platforms: linux/amd64,linux/arm64
           outputs: type=registry
           cache-from: type=gha
