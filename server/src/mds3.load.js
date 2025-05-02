@@ -180,7 +180,7 @@ async function get_ds(q, genome) {
 	return ds
 }
 
-async function load_driver(q, ds) {
+export async function load_driver(q, ds) {
 	// various bits of data to be appended as keys to result{}
 	// what other loaders can be if not in ds.queries?
 
@@ -189,13 +189,6 @@ async function load_driver(q, ds) {
 		const p = ds.queries.singleSampleGenomeQuantification[q.singleSampleGenomeQuantification.dataType]
 		if (!p) throw 'invalid dataType'
 		return await p.get(q.singleSampleGenomeQuantification.sample, q.devicePixelRatio)
-	}
-
-	if (q.NIdata) {
-		if (!ds.queries.NIdata) throw 'brainImaging not supported on this dataset'
-		const p = ds.queries.NIdata[q.NIdata.dataType]
-		if (!p) throw 'invalid dataType'
-		return await p.get(q.NIdata.sample, q.l, q.f, q.t)
 	}
 
 	if (q.singleSampleGbtk) {
@@ -252,19 +245,11 @@ async function load_driver(q, ds) {
 				if (d) result.skewer.push(...d)
 			}
 
-			if (ds.queries.geneCnv && !q.hardcodeCnvOnly) {
-				// just a test; can allow gene-level cnv to be indicated as leftlabel
-				// can disable this step if not to show it in skewer tk
-				// trouble is that it's using case id as event.samples[].sample_id
-				// compared to ssm where it is sample id for m.samples[].sample_id
-				const lst = await query_geneCnv(q, ds)
-				// this is not appended to result.skewer[]
-				result.geneCnv = lst
-			}
-
 			if (ds.queries.cnv) {
 				if (q.hiddenmclass?.has(dtcnv)) {
 					// cnv is hidden, do not load
+				} else if (ds.queries.cnv.requiresHardcodeCnvOnlyFlag && !q.hardcodeCnvOnly) {
+					// the required flag is missing. do not load
 				} else {
 					result.cnv = await ds.queries.cnv.get(q)
 				}
@@ -374,8 +359,6 @@ function filter_data(q, result) {
 		result.skewer = newskewer
 	}
 
-	if (result.genecnvAtsample) {
-	}
 	// other sample-level data types that need filtering
 }
 

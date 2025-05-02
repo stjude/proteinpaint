@@ -600,9 +600,13 @@ type CnvSegment = {
 	cnvMaxCopynumber?: number
 	 */
 
-	/** if cnv is using qualitative categories. ui will show checkboxes for each category that's present
-	cnvCategories?:string[]
+	/** quick fix for gdc cnv tool:
+	if not set, mds3 tk & matrix will load cnv segments and show them together with ssm & fusion
+	if set: 
+		- for mds3 tk loading via mds3.load.js, only when tk.hardcodeCnvOnly=true, this will be loaded and shown
+		- for others using mayGetGeneVariantData(), this is always disabled, as request won't have this flag
 	*/
+	requiresHardcodeCnvOnlyFlag?: true
 }
 
 /*
