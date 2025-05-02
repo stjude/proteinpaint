@@ -2584,6 +2584,13 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 					? await getGenecnvByTerm(ds, tw.term, genome, q)
 					: []
 
+			if (!mlst) continue // cnv seg query now may return undefined
+
+			//////////////////////////////////////
+			// MUST NOT QUIT when mlst.length==0!
+			//////////////////////////////////////
+			// if ds has assayAvailability, on empty mlst, it should proceed to add wt status to all assayed samples
+
 			for (const m of mlst) {
 				/*
 				m={
@@ -2913,6 +2920,13 @@ async function getCnvByTw(ds, tw, genome, q) {
 	/* tw.term.type is "geneVariant"
 	tw.q{} carries optional cutoffs (max length and min value) to filter cnv segments
 	*/
+
+	if (ds.queries.cnv.requiresHardcodeCnvOnlyFlag && !q.hardcodeCnvOnly) {
+		// in gdc, the cnv segment datatype can only work for "cnv tool" but not any other case; this allow it to be disabled in oncomatrix and summary tool; these tools will use geneCnv instead
+		// later if ever cnv seg must be used for such in gdc, need a different solution
+		return
+	}
+
 	const arg = {
 		addFormatValues: true,
 		filter0: q.filter0, // hidden filter
