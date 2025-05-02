@@ -18,6 +18,7 @@ import { get_samples_ancestry, get_samples } from './termdb.sql.js'
 import { TermTypeGroups } from '#shared/terms.js'
 import { trigger_getDefaultBins } from './termdb.getDefaultBins.js'
 import serverconfig from './serverconfig.js'
+import { filterTerms } from './termdb.server.init.js'
 /*
 ********************** EXPORTED
 handle_request_closure
@@ -42,7 +43,7 @@ export function handle_request_closure(genomes) {
 			const [ds, tdb] = get_ds_tdb(genome, q)
 
 			// process triggers
-			if (q.findterm) return await trigger_findterm(q, res, tdb, ds, genome)
+			if (q.findterm) return await trigger_findterm(q, req, res, tdb, ds, genome)
 			if (q.getterminfo) return trigger_getterminfo(q, res, tdb)
 			if (q.phewas) {
 				if (q.update) return await phewas.update_image(q, res)
@@ -162,13 +163,13 @@ q.targetType
 	"snp"
 	"category" TODO
 */
-async function trigger_findterm(q, res, termdb, ds, genome) {
+async function trigger_findterm(q, req, res, termdb, ds, genome) {
 	const matches = { equals: [], startsWith: [], startsWord: [], includes: [] }
 
 	// to allow search to work, must unescape special char, e.g. %20 to space
 	const str = decodeURIComponent(q.findterm).toUpperCase()
 
-	const terms = []
+	let terms = []
 
 	try {
 		if (q.targetType == TermTypeGroups.DICTIONARY_VARIABLES) {
@@ -183,6 +184,7 @@ async function trigger_findterm(q, res, termdb, ds, genome) {
 			}
 			terms.push(...foundTerms)
 		}
+		terms = filterTerms(req, ds, terms)
 		const id2ancestors = {}
 		terms.forEach(term => {
 			term.__ancestors = termdb.q.getAncestorIDs(term.id)
