@@ -104,13 +104,16 @@ jobs:
             ./version.sh deps
           fi
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
       - name: Build Docker Image
         uses: docker/build-push-action@v5
         with:
           context: ./container/deps
           file: ./container/deps/Dockerfile
-          tags: ppserver:latest
-          platforms: linux/amd64, linux/arm64
-          outputs: type=docker
+          tags: ghcr.io/stjude/ppbase:latest
+          platforms: linux/amd64,linux/arm64
+          outputs: type=registry
           cache-from: type=gha
           cache-to: type=gha,mode=max
