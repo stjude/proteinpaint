@@ -244,11 +244,11 @@ export function server_init_db_queries(ds) {
 			ORDER BY child_order ASC`
 		)
 		const cache = new Map()
-		q.getRootTerms = (cohortStr = '') => {
+		q.getRootTerms = (req, cohortStr = '') => {
 			const cacheId = cohortStr
 			if (cache.has(cacheId)) return cache.get(cacheId)
 			const tmp = sql.all(cohortStr)
-			const re = tmp.map(i => {
+			let re = tmp.map(i => {
 				const t = JSON.parse(i.jsondata)
 				t.id = i.id
 				t.name = i.name || t.name
@@ -256,7 +256,10 @@ export function server_init_db_queries(ds) {
 				t.child_types = i.child_types ? i.child_types.split(',') : []
 				return t
 			})
-			cache.set(cacheId, re)
+			re = filterTerms(req, ds, re)
+			//do not use cache if using login as the visible terms depends on the user
+			if (!ds.cohort.termdb.isTermVisible) cache.set(cacheId, re)
+
 			return re
 		}
 	}
@@ -314,11 +317,11 @@ export function server_init_db_queries(ds) {
 		)
 
 		const cache = new Map()
-		q.getTermChildren = (id, cohortStr = '') => {
+		q.getTermChildren = (req, id, cohortStr = '') => {
 			const cacheId = id + ';;' + cohortStr
 			if (cache.has(cacheId)) return cache.get(cacheId)
 			const tmp = sql.all([cohortStr, id])
-			let re = undefined
+			let re: any = undefined
 			if (tmp) {
 				re = tmp.map(i => {
 					const j = JSON.parse(i.jsondata)
@@ -329,7 +332,9 @@ export function server_init_db_queries(ds) {
 					return j
 				})
 			}
-			cache.set(cacheId, re)
+			re = filterTerms(req, ds, re)
+			//do not use cache if using login as the visible terms depends on the user
+			if (!ds.cohort.termdb.isTermVisible) cache.set(cacheId, re)
 			return re
 		}
 	}
@@ -577,6 +582,13 @@ export function server_init_db_queries(ds) {
 		const rows = sql.all()
 		return rows
 	}
+}
+
+export function filterTerms(req, ds, terms) {
+	if (!ds.cohort.termdb.isTermVisible || !terms) return terms
+	const authInfo: any = authApi.getNonsensitiveInfo(req)
+	terms = terms.filter(term => ds.cohort.termdb.isTermVisible(authInfo?.clientAuthResult, term.id))
+	return terms
 }
 
 /*

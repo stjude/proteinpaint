@@ -31,7 +31,7 @@ function init({ genomes }) {
 			if (!ds) throw 'invalid dataset name'
 			if (!tdb) throw 'invalid termdb object'
 
-			await trigger_rootterm(q, res, tdb) // as getroottermResponse
+			await trigger_rootterm(req, q, res, tdb) // as getroottermResponse
 		} catch (e) {
 			res.send({ error: e instanceof Error ? e.message : e })
 			if (e instanceof Error && e.stack) console.log(e)
@@ -40,11 +40,12 @@ function init({ genomes }) {
 }
 
 async function trigger_rootterm(
+	req: any,
 	q: { cohortValues: any; treeFilter: any },
 	res: { send: (arg0: { lst: any }) => void },
-	tdb: { q: { getRootTerms: (arg0: any, arg1: any) => any } }
+	tdb: { q: { getRootTerms: (req: any, arg0: any, arg1: any) => any } }
 ) {
 	const cohortValues = q.cohortValues ? q.cohortValues : ''
 	const treeFilter = q.treeFilter ? q.treeFilter : ''
-	res.send({ lst: await tdb.q.getRootTerms(cohortValues, treeFilter) } satisfies RootTermResponse)
+	res.send({ lst: await tdb.q.getRootTerms(req, cohortValues, treeFilter) } satisfies RootTermResponse)
 }

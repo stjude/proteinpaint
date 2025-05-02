@@ -1434,8 +1434,8 @@ keep this setting here for reason of:
 		/** colors for a category multivalues */
 		[index: string]: { [index: string]: string }
 	}
-	//terms that are not shown in the dictionary tree unless the user is admin. If there is no authentication the terms listes are always hidden
-	hiddenTermIds?: string[]
+	//terms  are shown in the dictionary based on term and user role.
+	isTermVisible(clientAuthResult: any, id: string): boolean
 }
 
 type SampleType = {
