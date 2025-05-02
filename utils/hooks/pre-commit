@@ -44,24 +44,39 @@ fi
 
 # Add Rust formatting and linting for files in the rust/src directory.
 # We check if Rust files have been modified, run `cargo fmt` and `cargo clippy` on them.
-RUST_FILES=$(git diff --cached --name-only --diff-filter=ACM "*.rs" | sed 's| |\\ |g')
+# We need two variables:
+# 1. Full paths for git operations
+# 2. Just filenames for rustfmt/clippy
+RUST_FULL_PATHS=$(git diff --cached --name-only --diff-filter=ACM "rust/src/**/*.rs" | sed 's| |\\ |g')
 
-if [[ "$RUST_FILES" != "" ]]; then
-  echo "Formatting $RUST_FILES files with rustfmt..."
-  (cd rust/src && rustfmt $RUST_FILES)
+if [[ "$RUST_FULL_PATHS" != "" ]]; then
+  echo "RUST_FULL_PATHS: $RUST_FULL_PATHS"
   
-  echo "Linting $RUST_FILES files with clippy..."
-  # Run clippy with:
-  # --edition 2024 ensures the code is checked with the 2024 edition
-  # -C panic=abort ensures that the code is checked with the panic=abort option
-  # --all-targets ensures all targets (lib, bins, tests) are checked
+  # Change to rust/src directory
   cd rust/src
-  for f in $RUST_FILES; do
-	  clippy-driver --edition 2024 -Cpanic=abort --all-targets $f
   
-  # If clippy passed without errors, add back the formatted Rust files to staging
-  echo "$RUST_FILES" | xargs git add
+  # Extract just the filenames without the path prefix
+  RUST_FILES=$(echo "$RUST_FULL_PATHS" | sed 's|^rust/src/||g')
+  echo "RUST_FILES (for formatting): $RUST_FILES"
+  
+  # Format each file
+  echo "Formatting Rust files with rustfmt..."
+  for f in $RUST_FILES; do
+    rustfmt $f
   done
+  
+  # Lint each file
+  echo "Linting Rust files with clippy..."
+  for f in $RUST_FILES; do
+    echo "Linting $f..."
+    clippy-driver --edition 2024 -Cpanic=abort --all-targets $f
+  done
+  
+  # Return to original directory
+  cd ../..
+  
+  # Add back the formatted Rust files to staging
+  echo "$RUST_FULL_PATHS" | xargs git add
 fi
 
 exit 0
