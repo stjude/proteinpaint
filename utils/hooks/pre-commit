@@ -52,11 +52,16 @@ if [[ "$RUST_FILES" != "" ]]; then
   
   echo "Linting $RUST_FILES files with clippy..."
   # Run clippy with:
+  # --edition 2024 ensures the code is checked with the 2024 edition
+  # -C panic=abort ensures that the code is checked with the panic=abort option
   # --all-targets ensures all targets (lib, bins, tests) are checked
-  (cd rust && clippy-driver --edition 2024 -Cpanic=abort $RUST_FILES --all-targets)
+  cd rust/src
+  for f in $RUST_FILES; do
+	  clippy-driver --edition 2024 -Cpanic=abort --all-targets $f
   
   # If clippy passed without errors, add back the formatted Rust files to staging
   echo "$RUST_FILES" | xargs git add
+  done
 fi
 
 exit 0
