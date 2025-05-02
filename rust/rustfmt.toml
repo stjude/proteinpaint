@@ -1,5 +1,5 @@
 ignore = [
-    "src/ttest_examples.rs"
+    "src/test_examples.rs"
 ]
 edition = "2024"
 max_width = 120
