@@ -9,7 +9,7 @@ import { downloadSingleSVG } from '../common/svg.download.js'
 import { select } from 'd3-selection'
 import { plotColor } from '#shared/common.js'
 import { filterJoin } from '#filter'
-import { getDateFromNumber, isNumericTerm, getNumberFromDate } from '#shared/terms.js'
+import { getDateFromNumber, isNumericTerm } from '#shared/terms.js'
 import { median } from 'd3-array'
 import { getColors } from '#shared/common.js'
 
@@ -195,7 +195,7 @@ class RunChart {
 					})
 				}
 			}
-			for (const [key, value] of groupedSamples.entries()) {
+			for (const value of groupedSamples.values()) {
 				let x, y
 				if (aggregate == 'Median') {
 					x = median(value.samples.map(d => d.x))
@@ -203,10 +203,6 @@ class RunChart {
 				} else if (aggregate == 'Mean') {
 					y = value.ysum / value.samples.length
 					x = value.xsum / value.samples.length
-				} else if (aggregate == 'Count events') {
-					y = value.samples.length
-					const [year, month] = key.split('-')
-					x = getNumberFromDate(new Date(year, month, 1)) //grouped samples by month and year
 				}
 				for (const sample of value.samples) {
 					sample.x = x //grouped samples by month and year
@@ -414,8 +410,7 @@ class RunChart {
 					{ label: 'None', value: 'None' },
 					//{ label: 'Loess', value: 'Loess' },
 					{ label: 'Median', value: 'Median' },
-					{ label: 'Mean', value: 'Mean' },
-					{ label: 'Count events', value: 'Count events' }
+					{ label: 'Mean', value: 'Mean' }
 				]
 			},
 
@@ -584,7 +579,7 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 		termdbConfig is accessible at chartsInstance.state.termdbConfig{}
 		mass option is accessible at chartsInstance.app.opts{}
 	*/
-	const menuDiv = holder.append('div')
+	holder.append('div')
 	const callback = (xterm, yterm) => {
 		chartsInstance.app.dispatch({
 			type: 'plot_create',
