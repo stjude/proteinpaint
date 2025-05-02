@@ -115,7 +115,7 @@ jobs:
       - name: Build Docker Image
         uses: docker/build-push-action@v5
         with:
-          context: ./container
+          context: ./container/deps
           file: ./container/deps/Dockerfile
           tags: ghcr.io/stjude/ppbase:test
           platforms: linux/amd64,linux/arm64
