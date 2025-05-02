@@ -185,10 +185,7 @@ class TdbTree {
 			return []
 		}
 		const terms = []
-		const auth = this.app.vocabApi.getClientAuthResult()
 		for (const t of data.lst) {
-			const isVisible = isVisibleTerm(this.app, auth, t)
-			if (!isVisible) continue
 			const copy = Object.assign({}, t)
 			terms.push(copy)
 			// rehydrate expanded terms as needed
