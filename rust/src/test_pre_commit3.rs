@@ -1,1 +1,7 @@
-fn main() {println!("Hello");}
+fn main() {
+    println!("Hello");
+    println!("Hello");
+    println!("Hello");
+    println!("Hello");
+    println!("Hello");
+}

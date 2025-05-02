@@ -50,21 +50,15 @@ fi
 RUST_FULL_PATHS=$(git diff --cached --name-only --diff-filter=ACM "*.rs" | sed 's| |\\ |g')
 
 if [[ "$RUST_FULL_PATHS" != "" ]]; then
-  echo "RUST_FULL_PATHS: $RUST_FULL_PATHS"
+  # echo "RUST_FULL_PATHS: $RUST_FULL_PATHS"
   
+  echo "formatting $RUST_FULL_PATHS"
+  rustfmt $RUST_FULL_PATHS
+
   # Change to rust/src directory
   cd rust/src
-  
   # Extract just the filenames without the path prefix
-  RUST_FILES=$(echo "$RUST_FULL_PATHS" | sed 's|^rust/src/||g')
-  echo "RUST_FILES (for formatting): $RUST_FILES"
-  
-  # Format each file
-  echo "Formatting Rust files with rustfmt..."
-  for f in $RUST_FILES; do
-    rustfmt $f
-  done
-  
+  RUST_FILES=$(echo "$RUST_FULL_PATHS" | xargs basename)
   # Lint each file
   echo "Linting Rust files with clippy..."
   for f in $RUST_FILES; do
