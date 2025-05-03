@@ -1392,5 +1392,77 @@
       "prev": 1.8325,
       "diff": 0
     }
+  },
+  "termdb/search.js": {
+    "lines": {
+      "total": 132,
+      "covered": 96,
+      "skipped": 0,
+      "pct": 72.72
+    },
+    "functions": {
+      "total": 23,
+      "covered": 18,
+      "skipped": 0,
+      "pct": 78.26
+    },
+    "statements": {
+      "total": 148,
+      "covered": 100,
+      "skipped": 0,
+      "pct": 67.56
+    },
+    "branches": {
+      "total": 115,
+      "covered": 57,
+      "skipped": 0,
+      "pct": 49.56
+    },
+    "lowestPct": {
+      "curr": 49.56,
+      "prev": 0,
+      "diff": 49.56
+    },
+    "averagePct": {
+      "curr": 67.025,
+      "prev": 0,
+      "diff": 67.025
+    }
+  },
+  "termdb/tree.js": {
+    "lines": {
+      "total": 173,
+      "covered": 122,
+      "skipped": 0,
+      "pct": 70.52
+    },
+    "functions": {
+      "total": 28,
+      "covered": 17,
+      "skipped": 0,
+      "pct": 60.71
+    },
+    "statements": {
+      "total": 196,
+      "covered": 130,
+      "skipped": 0,
+      "pct": 66.32
+    },
+    "branches": {
+      "total": 149,
+      "covered": 70,
+      "skipped": 0,
+      "pct": 46.97
+    },
+    "lowestPct": {
+      "curr": 46.97,
+      "prev": 0,
+      "diff": 46.97
+    },
+    "averagePct": {
+      "curr": 61.129999999999995,
+      "prev": 0,
+      "diff": 61.129999999999995
+    }
   }
 }
