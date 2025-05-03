@@ -296,6 +296,10 @@ export async function validate_termdb(ds) {
 		}
 	}
 
+	if (tdb.isTermVisible) {
+		if (typeof tdb.isTermVisible != 'function') throw 'tdb.isTermVisible not function'
+	}
+
 	mayValidateSelectCohort(tdb)
 
 	// must validate selectCohort first, then restrictAncestries, as latter may depend on former

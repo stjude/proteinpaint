@@ -584,11 +584,11 @@ export function server_init_db_queries(ds) {
 	}
 }
 
+// ds computes term visibility in dictionary based on client auth; returns list of visible terms
 export function filterTerms(req, ds, terms) {
 	if (!ds.cohort.termdb.isTermVisible || !terms) return terms
 	const authInfo: any = authApi.getNonsensitiveInfo(req)
-	terms = terms.filter(term => ds.cohort.termdb.isTermVisible(authInfo?.clientAuthResult, term.id))
-	return terms
+	return terms.filter(term => ds.cohort.termdb.isTermVisible(authInfo?.clientAuthResult, term.id))
 }
 
 /*
