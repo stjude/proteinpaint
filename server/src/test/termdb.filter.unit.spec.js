@@ -1,7 +1,9 @@
 /*
+test sections:
 
-$ npx tape modules/test/*.spec.js
-
+simple filter
+nested filter
+invalid filter term
 */
 
 import tape from 'tape'
