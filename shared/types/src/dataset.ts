@@ -1435,7 +1435,7 @@ keep this setting here for reason of:
 		[index: string]: { [index: string]: string }
 	}
 	//terms  are shown in the dictionary based on term and user role.
-	isTermVisible?(clientAuthResult: any, id: string): boolean
+	isTermVisible?: (clientAuthResult: any, id: string) => boolean
 }
 
 type SampleType = {
