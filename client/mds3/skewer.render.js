@@ -272,11 +272,34 @@ export function skewer_make(tk, block) {
 			event.stopPropagation()
 		})
 		.on('mouseover', (event, d) => {
+			tk.hovertip.clear().show(event.clientX, event.clientY)
+			if (d.mlst?.[0]) {
+				// d.mlst has at least 1 item
+				const m = mclass[d.mlst[0]?.class] || { color: 'black', label: '_unknown' }
+				tk.hovertip.d
+					.append('div')
+					.style('font-size', '.9em')
+					.html(`<span style="background:${m.color}">&nbsp;&nbsp;</span> ${m.label}`)
+				if (d.mlst[0].occurrence) {
+					const c = d.mlst.reduce((t, i) => t + i.occurrence, 0)
+					tk.hovertip.d.append('div').text(`${c} sample${c > 1 ? 's' : ''}`)
+				}
+				if (d.mlst.length > 1) {
+					// this disc represents multiple item/variants
+					// assuming all mlst has same dt; call as "variants/alteractions" depending on dt
+					tk.hovertip.d
+						.append('div')
+						.text(`${d.mlst.length} ${d.mlst[0].dt == dtsnvindel ? 'variants' : 'alterations'}`)
+				}
+			} else {
+				tk.hovertip.d.append('div').text('d.mlst[] missing or blank')
+			}
 			if (tk.disc_mouseover) {
 				tk.disc_mouseover(d, event.target)
 			}
 		})
 		.on('mouseout', (event, d) => {
+			tk.hovertip.hide()
 			if (tk.disc_mouseout) {
 				tk.disc_mouseout(d)
 			}

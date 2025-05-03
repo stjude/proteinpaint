@@ -83,6 +83,15 @@ In numeric mode, the shape is defined individually via the custom_variants.shape
 The default is the `filledCircle` for both modes. 
 */
 
+// names of client-supplied optional callbacks attached to tk body, to centralize list and easy validation
+const callbacknames = [
+	'onClose', // this only takes effect if tk shows the "Close" handle, e.g. on subtk
+	'click_snvindel',
+	'callbackOnRender',
+	'disc_mouseover',
+	'disc_mouseout'
+]
+
 export async function makeTk(tk, block) {
 	// run just once to initiate a track by adding in essential attributes to tk object
 
@@ -227,13 +236,8 @@ export async function makeTk(tk, block) {
 		console.error(e)
 	}
 
-	// validate optional callbacks directly attached to tkobj
-	if (tk.onClose) {
-		if (typeof tk.onClose != 'function') throw '.onClose() is not function'
-		// this only takes effect if tk shows the "Close" handle, e.g. on subtk
-	}
-	if (tk.callbackOnRender) {
-		if (typeof tk.callbackOnRender != 'function') throw '.callbackOnRender() is not function'
+	for (const n of callbacknames) {
+		if (tk[n] && typeof tk[n] != 'function') throw `.${n}() is not function`
 	}
 }
 
