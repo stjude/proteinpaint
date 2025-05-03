@@ -212,24 +212,6 @@ class TdbTree {
 	}
 }
 
-export function isVisibleTerm(app, auth, term) {
-	const hiddenTermIds = app.vocabApi.termdbConfig?.hiddenTermIds
-	if (hiddenTermIds && hiddenTermIds.includes(term.id)) {
-		if (auth) {
-			let isAdmin = false
-			if ('role' in auth) isAdmin = auth.role == 'admin'
-			else {
-				for (const cohort in auth) {
-					const role = auth[cohort].role
-					if (role == 'admin') isAdmin = true
-				}
-			}
-			return isAdmin
-		}
-		return false
-	} else return true
-}
-
 export const treeInit = getCompInit(TdbTree)
 
 function setRenderers(self) {
