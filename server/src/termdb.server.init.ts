@@ -585,6 +585,7 @@ export function server_init_db_queries(ds) {
 }
 
 // ds computes term visibility in dictionary based on client auth; returns list of visible terms
+// function name is intentionally general but not specific to auth, later might add other term filtering context in here
 export function filterTerms(req, ds, terms) {
 	if (!ds.cohort.termdb.isTermVisible || !terms) return terms
 	const authInfo: any = authApi.getNonsensitiveInfo(req)
