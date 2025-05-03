@@ -616,8 +616,9 @@ q.getSupportedChartTypes
 function makeTermdbQueries(ds, id2term) {
 	const q = (ds.cohort.termdb.q = {})
 
-	q.getRootTerms = async (vocab, treeFilter = null) => {
+	q.getRootTerms = async (req, cohortValues, treeFilter = null) => {
 		// find terms without term.parent_id
+		// first two args are not used
 		const terms = []
 		for (const term of id2term.values()) {
 			if (term.parent_id == undefined) terms.push(JSON.parse(JSON.stringify(term)))
@@ -626,9 +627,9 @@ function makeTermdbQueries(ds, id2term) {
 		return terms
 	}
 
-	q.getTermChildren = async (id, cohortValues = null, treeFilter = null) => {
+	q.getTermChildren = async (req, id, cohortValues = null, treeFilter = null) => {
 		// find terms which have term.parent_id as clicked term
-		// cohortValues is in concordance with previous design and does not apply to gdc
+		// req and cohortValues is in concordance with previous design and does not apply to gdc
 		const terms = []
 		for (const term of id2term.values()) {
 			if (term.parent_id == id) terms.push(JSON.parse(JSON.stringify(term)))
