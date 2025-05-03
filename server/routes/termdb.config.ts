@@ -77,7 +77,6 @@ function make(q, req, res, ds: Mds3WithCohort, genome) {
 	const c: any = {
 		selectCohort: getSelectCohort(ds, req),
 		supportedChartTypes: tdb.q?.getSupportedChartTypes(req),
-		isTermVisible: ds.cohort.termdb.isTermVisible,
 		renamedChartTypes: ds.cohort.renamedChartTypes,
 		allowedTermTypes: getAllowedTermTypes(ds),
 		termMatch2geneSet: tdb.termMatch2geneSet,
