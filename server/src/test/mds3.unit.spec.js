@@ -1,8 +1,15 @@
 import tape from 'tape'
 import { load_driver } from '../mds3.load.js'
+import { guessSsmid } from '../mds3.variant2samples.js'
+
+/* test sections
+
+load_driver()
+guessSsmid()
+*/
 
 tape('\n', function (test) {
-	test.pass('-***- mds3.load specs -***-')
+	test.pass('-***- mds3 unit tests -***-')
 	test.end()
 })
 
@@ -48,7 +55,50 @@ tape('load_driver()', async function (test) {
 	test.end()
 })
 
-///////// constants
+tape('guessSsmid()', async function (test) {
+	test.throws(() => guessSsmid('invalid'), /unknown ssmid/, 'should throw')
+
+	// snvindel
+	test.throws(() => guessSsmid('chr1__invalidPos__A__T'), /ssmid snvindel pos not integer/, 'should throw')
+	test.deepEqual(guessSsmid('chr1__123__A__T'), { dt: 1, l: ['chr1', 123, 'A', 'T'] }, 'good snvindel')
+
+	// cnv
+	test.throws(
+		() => guessSsmid('chr1__invalidstart__456__CNV_amp__1'),
+		/ssmid cnv start\/stop not integer/,
+		'should throw'
+	)
+	test.deepEqual(
+		guessSsmid('chr1__123__456__CNV_amp__1'), // cnv with value
+		{ dt: 4, l: ['chr1', 123, 456, 'CNV_amp', 1] },
+		'good cnv'
+	)
+	test.deepEqual(
+		guessSsmid('chr1__123__456__CNV_amp__'), // cnv with no value
+		{ dt: 4, l: ['chr1', 123, 456, 'CNV_amp', 0] },
+		'good cnv'
+	)
+	test.deepEqual(
+		guessSsmid('chr1__123__456__CNV_amp__1__sample1'), // cnv with value, with sample
+		{ dt: 4, l: ['chr1', 123, 456, 'CNV_amp', 1, 'sample1'] },
+		'good cnv'
+	)
+	test.deepEqual(
+		guessSsmid('chr1__123__456__CNV_amp____sample1'), // cnv with no value, with sample
+		{ dt: 4, l: ['chr1', 123, 456, 'CNV_amp', 0, 'sample1'] },
+		'good cnv'
+	)
+
+	// svfusion
+	test.throws(() => guessSsmid('invalidDt__chr1__111__+__1__xx'), /ssmid dt not sv\/fusion/, 'should throw')
+	test.throws(() => guessSsmid('2__chr1__invaliPos__+__1__xx'), /ssmid svfusion position not integer/, 'should throw')
+	test.deepEqual(guessSsmid('2__chr1__123__+__1__xx'), { dt: 2, l: [2, 'chr1', 123, '+', 1, 'xx'] }, 'good fusion')
+
+	test.end()
+})
+
+///////////////////// constants
+
 const ds = {
 	queries: {
 		snvindel: {

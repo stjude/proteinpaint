@@ -1,6 +1,6 @@
 import { scaleLinear } from 'd3-scale'
 import { mclass, mclasscnvgain, mclasscnvloss } from '#shared/common.js'
-import { table_cnv } from './itemtable'
+import { table_cnv, itemtable_oneItem } from './itemtable'
 import { table2col } from '#dom'
 
 /* (important param for cnv tk rendering thus is put at top)
@@ -189,22 +189,29 @@ function plotOneSegment(c, y, rowheight, tk, block, sample) {
 			event.target.setAttribute('stroke', 'black')
 			tk.hovertip.clear().show(event.clientX, event.clientY)
 			const table = table2col({ holder: tk.hovertip.d })
-			const cnv = structuredClone(c)
-
+			table_cnv({ mlst: [c], tk }, table)
 			if (sample) {
-				// tricky! sample is optional
-				cnv.samples = [{ sample_id: sample.sample_id }]
+				const [t1, t2] = table.addRow()
+				t1.text('Sample')
+				t2.text(sample.sample_id)
 			}
-
-			table_cnv({ mlst: [cnv], tk }, table)
 		})
 		.on('mouseout', event => {
 			event.target.setAttribute('stroke', '')
 			tk.hovertip.hide()
 		})
-		.on('click', event => {
+		.on('click', async event => {
 			// TODO show more contents in click menu
 			tk.itemtip.clear().show(event.clientX, event.clientY)
+			await itemtable_oneItem({
+				mlst: [c],
+				tk,
+				block,
+				div: tk.itemtip.d
+			})
+
+			return
+
 			const table = table2col({ holder: tk.itemtip.d })
 			const cnv = structuredClone(c)
 
@@ -213,7 +220,7 @@ function plotOneSegment(c, y, rowheight, tk, block, sample) {
 				cnv.samples = [{ sample_id: sample.sample_id }]
 			}
 
-			table_cnv({ mlst: [cnv], tk }, table)
+			table_cnv({ mlst: [cnv], tk }, table, true)
 		})
 }
 

@@ -1,4 +1,4 @@
-import { mclass, dtsnvindel, dtfusionrna, dtsv, dtcnv } from '#shared/common.js'
+import { mclass, dtsnvindel, dtfusionrna, dtsv, dtcnv, bplen } from '#shared/common.js'
 import { init_sampletable } from './sampletable'
 import { appear, renderTable, table2col, makeSsmLink } from '#dom'
 import { dofetch3 } from '#common/dofetch'
@@ -87,7 +87,7 @@ function mayMoveTipDiv2left(arg) {
 /*
 display full details (and samples) for one item
 */
-async function itemtable_oneItem(arg) {
+export async function itemtable_oneItem(arg) {
 	const table = table2col({ holder: arg.div })
 
 	const m = arg.mlst[0]
@@ -99,7 +99,7 @@ async function itemtable_oneItem(arg) {
 	} else if (m.dt == dtcnv) {
 		table_cnv(arg, table)
 	} else {
-		throw 'oneItem: unknown dt'
+		throw 'itemtable_oneItem: unknown dt'
 	}
 
 	// if the variant has only one sample,
@@ -516,6 +516,8 @@ export function table_cnv(arg, table) {
 	const m = arg.mlst[0]
 	{
 		const [c1, c2] = table.addRow()
+		// TODO need queries.cnv.type=cat/lr/cn
+		// with type, will be able to make better indication
 		c1.text('Copy number change')
 		if (Number.isFinite(m.value)) {
 			c2.html(`<span style="background:${arg.tk.cnv.colorScale(m.value)}">&nbsp;&nbsp;</span> ${m.value}`)
@@ -526,15 +528,7 @@ export function table_cnv(arg, table) {
 	{
 		const [c1, c2] = table.addRow()
 		c1.text('Position')
-		c2.text(m.chr + ':' + m.start + '-' + m.stop)
-	}
-	if (m.samples) {
-		const [c1, c2] = table.addRow()
-		c1.text('Sample')
-		for (const s of m.samples) {
-			c2.append('div').text(s.sample_id)
-			// TODO disco
-		}
+		c2.html(`${m.chr}:${m.start}-${m.stop} <span style="font-size:.8em">${bplen(m.stop - m.start)}</span>`)
 	}
 }
 
