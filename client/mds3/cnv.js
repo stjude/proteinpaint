@@ -202,6 +202,19 @@ function plotOneSegment(c, y, rowheight, tk, block, sample) {
 			event.target.setAttribute('stroke', '')
 			tk.hovertip.hide()
 		})
+		.on('click', event => {
+			// TODO show more contents in click menu
+			tk.itemtip.clear().show(event.clientX, event.clientY)
+			const table = table2col({ holder: tk.itemtip.d })
+			const cnv = structuredClone(c)
+
+			if (sample) {
+				// tricky! sample is optional
+				cnv.samples = [{ sample_id: sample.sample_id }]
+			}
+
+			table_cnv({ mlst: [cnv], tk }, table)
+		})
 }
 
 /* TODO sharable function.

@@ -235,6 +235,14 @@ export function skewer_make(tk, block) {
 			fold_glyph([d.aa], tk)
 			unfold_update(tk, block)
 		})
+		.on('mouseover', (event, d) => {
+			event.target.setAttribute('font-size', d._labfontsize * 1.1)
+			showHoverTipOnDisk(event, d, tk)
+		})
+		.on('mouseout', (event, d) => {
+			event.target.setAttribute('font-size', d._labfontsize)
+			tk.hovertip.hide()
+		})
 
 	// red box for highlighting, under the kick cover
 	ss.hlBoxG = discg.append('g')
@@ -272,28 +280,7 @@ export function skewer_make(tk, block) {
 			event.stopPropagation()
 		})
 		.on('mouseover', (event, d) => {
-			tk.hovertip.clear().show(event.clientX, event.clientY)
-			if (d.mlst?.[0]) {
-				// d.mlst has at least 1 item
-				const m = mclass[d.mlst[0]?.class] || { color: 'black', label: '_unknown' }
-				tk.hovertip.d
-					.append('div')
-					.style('font-size', '.9em')
-					.html(`<span style="background:${m.color}">&nbsp;&nbsp;</span> ${m.label}`)
-				if (d.mlst[0].occurrence) {
-					const c = d.mlst.reduce((t, i) => t + i.occurrence, 0)
-					tk.hovertip.d.append('div').text(`${c} sample${c > 1 ? 's' : ''}`)
-				}
-				if (d.mlst.length > 1) {
-					// this disc represents multiple item/variants
-					// assuming all mlst has same dt; call as "variants/alteractions" depending on dt
-					tk.hovertip.d
-						.append('div')
-						.text(`${d.mlst.length} ${d.mlst[0].dt == dtsnvindel ? 'variants' : 'alterations'}`)
-				}
-			} else {
-				tk.hovertip.d.append('div').text('d.mlst[] missing or blank')
-			}
+			showHoverTipOnDisk(event, d, tk)
 			if (tk.disc_mouseover) {
 				tk.disc_mouseover(d, event.target)
 			}
@@ -970,4 +957,29 @@ export function mayHighlightDiskBySsmid(tk) {
 		.attr('stroke-width', g => (g.radius > 10 ? 1.5 : 1))
 		.attr('fill', 'none')
 		.attr('class', 'sja_mds3_skewer_ssmhlbox') // for testing
+}
+
+export function showHoverTipOnDisk(event, d, tk) {
+	tk.hovertip.clear().show(event.clientX, event.clientY)
+	if (!d.mlst?.[0]) {
+		// should not happen
+		tk.hovertip.d.append('div').text('d.mlst[] missing or blank')
+		return
+	}
+	// d.mlst[] is valid and has at least 1 item
+	// when there are multiple items, assume they all have same dt and class
+	const m = mclass[d.mlst[0]?.class] || { color: 'black', label: '_unknown' }
+	tk.hovertip.d
+		.append('div')
+		.style('font-size', '.9em')
+		.html(`<span style="background:${m.color}">&nbsp;&nbsp;</span> ${m.label}`)
+	if (d.mlst[0].occurrence) {
+		const c = d.mlst.reduce((t, i) => t + i.occurrence, 0)
+		tk.hovertip.d.append('div').text(`${c} sample${c > 1 ? 's' : ''}`)
+	}
+	if (d.mlst.length > 1) {
+		// this disc represents multiple item/variants
+		// assuming all mlst has same dt; call as "variants/alteractions" depending on dt
+		tk.hovertip.d.append('div').text(`${d.mlst.length} ${d.mlst[0].dt == dtsnvindel ? 'variants' : 'alterations'}`)
+	}
 }
