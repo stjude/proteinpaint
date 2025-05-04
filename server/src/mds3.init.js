@@ -2451,6 +2451,9 @@ async function addCnvGetter(ds, genome) {
 					j.stop = stop
 
 					/*
+
+					TODO need queries.cnv.type=cat/lr/cn
+
 						if value=number is present, it's a quantitative call, j.class will be computed dynamically
 							TODO distinguish segmean vs integer copy number; what class to assign when value is copy number?
 						if value is missing, it should be a qualitative call, with j.class=mclasscnvgain/mclasscnvloss 
@@ -2464,8 +2467,6 @@ async function addCnvGetter(ds, genome) {
 						// should be qualitative, valid class is required
 						if (j.class != mclasscnvgain && j.class != mclasscnvloss) return // no valid class
 					}
-
-					j.ssm_id = [r.chr, j.start, j.stop, j.class].join(ssmIdFieldsSeparator) // no longer use j.value as that's optional
 
 					if (param.hiddenmclass && param.hiddenmclass.has(j.class)) return
 
@@ -2504,6 +2505,12 @@ async function addCnvGetter(ds, genome) {
 						}
 						delete j.sample
 						j.samples = [sampleObj]
+						j.occurrence = 1 // each cnv seg is hardcoded to only have 1 sample
+
+						j.ssm_id = [r.chr, j.start, j.stop, j.class, j.value, j.sample].join(ssmIdFieldsSeparator)
+					} else {
+						// cnv without sample
+						j.ssm_id = [r.chr, j.start, j.stop, j.class, j.value].join(ssmIdFieldsSeparator)
 					}
 					cnvs.push(j)
 				}
