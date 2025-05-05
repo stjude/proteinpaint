@@ -1,9 +1,11 @@
+#[allow(dead_code)]
+fn main() {}
+
 #[cfg(test)]
 mod tests {
-
     #[test]
     fn test_wilcoxon_rank_sum() {
-        use crate::wilcoxon_rank_sum_test;
+        use crate::stats_functions::wilcoxon_rank_sum_test;
         assert_eq!(
             wilcoxon_rank_sum_test(
                 vec![
