@@ -1,7 +1,7 @@
 import { Menu } from '#dom/menu'
 import { rgb } from 'd3-color'
-import { shapesArray, shapeSelector } from '../../../dom/shapes.js'
-import { Scatter } from '../Scatter.js'
+import { shapeSelector } from '../../../dom/shapes.js'
+import type { Scatter } from '../scatter.js'
 import { scaleLinear as d3Linear } from 'd3-scale'
 export class ScatterLegendInteractivity {
 	scatter: Scatter
@@ -79,7 +79,7 @@ export class ScatterLegendInteractivity {
 		}
 		if (!isColorTW) {
 			//is shape
-			const shapeDiv = div
+			div
 				.append('div')
 				.attr('class', 'sja_menuoption sja_sharp_border')
 				.text('Change shape')

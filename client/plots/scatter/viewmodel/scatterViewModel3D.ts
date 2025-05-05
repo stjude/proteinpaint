@@ -7,7 +7,7 @@ import { scaleLinear as d3Linear } from 'd3-scale'
 import { getContourImage } from '../../singleCellPlot.js'
 import { ScatterViewModel } from './scatterViewModel.js'
 import { getThreeCircle } from './scatterViewModel2DLarge.js'
-import { Scatter } from '../Scatter.js'
+import type { Scatter } from '../scatter.js'
 export class ScatterViewModel3D extends ScatterViewModel {
 	scatter!: Scatter
 	canvas: any
@@ -130,7 +130,7 @@ export class ScatterViewModel3D extends ScatterViewModel {
 		geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors3D, 3))
 		const particles = new THREE.Points(geometry, material)
 		const DragControls = await import('three/examples/jsm/controls/DragControls.js')
-		const controls = new DragControls.DragControls([particles], camera, this.canvas)
+		new DragControls.DragControls([particles], camera, this.canvas)
 		scene.add(particles)
 		this.canvas.addEventListener('mousewheel', event => {
 			if (!event.ctrlKey) return
@@ -138,7 +138,7 @@ export class ScatterViewModel3D extends ScatterViewModel {
 			particles.position.z -= event.deltaY / 500
 		})
 
-		const data = chart.data.samples.map((s, i) => ({ x: xAxisScale(s.x), y: yAxisScale(s.y), z: zAxisScale(s.z) }))
+		const data = chart.data.samples.map(s => ({ x: xAxisScale(s.x), y: yAxisScale(s.y), z: zAxisScale(s.z) }))
 		const width = this.scatter.settings.svgw
 		const height = this.scatter.settings.svgh
 		const imageUrl = getContourImage(

@@ -4,7 +4,7 @@ import { getFilter } from '../../../mass/groups.js'
 import { newSandboxDiv } from '../../../dom/sandbox.ts'
 import { getId } from '#mass/nav'
 import { searchSampleInput } from '../../sampleView.js'
-import { Scatter } from '../Scatter.js'
+import type { Scatter } from '../scatter.js'
 import { select } from 'd3-selection'
 export class ScatterInteractivity {
 	scatter: Scatter
@@ -108,11 +108,11 @@ export class ScatterInteractivity {
 				filter: this.scatter.state.termfilter.filter
 			})
 			const callback = sampleName => {
-				// if (this.samplesData[sampleName]) {
-				// 	const samples = getSamplesRelated(this.samplesData, sampleName)
-				// 	const samplelsttw = getSamplelstTWFromIds(samples.map(s => s.sampleId))
-				// 	this.addToFilter(samplelsttw)
-				// }
+				if (this.samplesData[sampleName]) {
+					// 	const samples = getSamplesRelated(this.samplesData, sampleName)
+					// 	const samplelsttw = getSamplelstTWFromIds(samples.map(s => s.sampleId))
+					// 	this.addToFilter(samplelsttw)
+				}
 			}
 			searchSampleInput(
 				this.searchMenu.d,

@@ -1,1 +1,1 @@
-export * from './scatter/Scatter.js'
+export * from './scatter/scatter.js'

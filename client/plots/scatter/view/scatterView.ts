@@ -1,6 +1,6 @@
 import { fillTermWrapper } from '#termsetting'
-import { Menu, shapesArray } from '#dom'
-import { Scatter } from '../Scatter.js'
+import { Menu } from '#dom'
+import type { Scatter } from '../scatter.js'
 import { select } from 'd3-selection'
 import { isNumericTerm } from '#shared/terms.js'
 
@@ -45,8 +45,8 @@ export class ScatterView {
 					this.scatter.config.name || ''
 				} <span style="opacity:.6;font-size:.7em;margin-left:10px;">SCATTER PLOT</span>`
 			)
-		document.addEventListener('scroll', event => this?.dom?.tooltip?.hide())
-		select('.sjpp-output-sandbox-content').on('scroll', event => this.dom.tooltip.hide())
+		document.addEventListener('scroll', () => this?.dom?.tooltip?.hide())
+		select('.sjpp-output-sandbox-content').on('scroll', () => this.dom.tooltip.hide())
 	}
 
 	getControlInputs() {

@@ -1,4 +1,4 @@
-import { AxisScale } from 'd3'
+import type { AxisScale } from 'd3'
 
 export type ColorLegendItem = {
 	key: string
@@ -88,4 +88,6 @@ export type ScatterChart = {
 	colorLegend: Map<string, ColorLegendItem>
 	/** The shape legend map for the chart */
 	shapeLegend: Map<string, ShapeLegendItem>
+	axisG?: any
+	labelsG?: any
 }
