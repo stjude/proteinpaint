@@ -4,9 +4,6 @@
   "description": "R-based utilities for proteinpaint",
   "main": "index.js",
   "type": "module",
-  "bin": {
-    "proteinpaint-r": "index.js"
-  },
   "author": "Gavriel Matt",
   "license": "SEE LICENSE IN ./LICENSE",
   "repository": {
