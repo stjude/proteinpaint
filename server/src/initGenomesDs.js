@@ -11,6 +11,7 @@ import { mds_init } from './mds.init.js'
 import * as mds3_init from './mds3.init.js'
 import { parse_textfilewithheader } from './parse_textfilewithheader.js'
 import { clinsig } from '../dataset/clinvar.ts'
+import { Cache } from './Cache.ts'
 
 // Global variable (storing things in memory)
 export const genomes = {} // { hg19: {...}, ... }
@@ -50,27 +51,11 @@ export async function initGenomesDs(serverconfig) {
 	if (!serverconfig.tpmasterdir) throw '.tpmasterdir missing'
 	if (!serverconfig.cachedir) throw '.cachedir missing'
 
-	// create sub directories under cachedir, and register path in serverconfig
-	// to ensure temp files saved in previous server session are accessible in current session
-	// must use consistent dir name but not random dir name that changes from last server boot
-	serverconfig.cachedir_massSession = await mayCreateSubdirInCache('massSession')
+	const cache = new Cache()
+	await cache.init()
 
-	//DELETE THIS after process for deleting mass session files moved into production
-	serverconfig.cachedir_massSessionTrash = await mayCreateSubdirInCache('massSessionTrash')
 	deleteSessionFiles()
 	deleteTrashSessionFiles()
-
-	serverconfig.cache_snpgt = {
-		dir: await mayCreateSubdirInCache('snpgt'),
-		fileNameRegexp: /[^\w]/, // client-provided cache file name matching with this are denied
-		sampleColumn: 6 // in cache file, sample column starts from 7th column
-	}
-	serverconfig.cachedir_bam = await mayCreateSubdirInCache('bam')
-	serverconfig.cachedir_genome = await mayCreateSubdirInCache('genome')
-	serverconfig.cachedir_ssid = await mayCreateSubdirInCache('ssid')
-
-	//Attach to features object??
-	serverconfig.cachedir_gsea = await mayCreateSubdirInCache('gsea')
 
 	// NOTE: required or imported code files are only loaded once by Nodejs
 	// and variables are static so that changes to common key-values will affect all
@@ -556,24 +541,6 @@ function mayRetryInit(g, ds, d, e) {
 			}
 		}
 	}, ds.init.retryDelay)
-}
-
-async function mayCreateSubdirInCache(subdir) {
-	const dir = path.join(serverconfig.cachedir, subdir)
-	try {
-		await fs.promises.stat(dir)
-	} catch (e) {
-		if (e.code == 'ENOENT') {
-			try {
-				await fs.promises.mkdir(dir)
-			} catch (e) {
-				throw 'cannot make dir'
-			}
-		} else {
-			throw 'error stating dir'
-		}
-	}
-	return dir
 }
 
 //Moves the file out of the massSession dir to the trash dir if
