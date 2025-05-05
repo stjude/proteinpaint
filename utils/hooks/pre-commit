@@ -71,13 +71,12 @@ if [[ "$RUST_FULL_PATHS" != "" ]]; then
   for f in $RUST_FILES; do
     # Get the base filename without extension
     BINARY_NAME=$(basename "$f" .rs)
+	echo "BINARY_NAME: $BINARY_NAME"
     
     # Check if binary exists in rust/src directory and delete it
     BINARY_PATH="rust/src/$BINARY_NAME"
-    if [[ -f "$BINARY_PATH" ]]; then
-      echo "Deleting binary: $BINARY_PATH"
-      rm "$BINARY_PATH"
-    fi
+	echo "Deleting binary: $BINARY_NAME"
+	rm "$BINARY_NAME"
   done
   
   # Return to original directory
