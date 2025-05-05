@@ -101,7 +101,6 @@ function normalizeInput(q, cumburden) {
 		files: cumburden.files,
 		boosubdir: cumburden.bootsubdir
 	}
-	normalized.binpath = serverconfig.binpath
 	const jsonInput = JSON.stringify(normalized)
 	return { id, jsonInput }
 }

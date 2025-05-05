@@ -33,7 +33,10 @@ chc_nums <- c(1:32)[-c(2,5,14,20,23,26)] # CHCs. 6 out of 32 CHCs not used.
 # setwd("R:/Biostatistics/Biostatistics2/Qi/QiCommon/St Jude/Nature Review/CHCs/App/Rdata")
 
 # import get_burden() function
-source(file.path(input$binpath, "utils/getBurden.R"))
+# import regression utilities
+filepath <- gsub("^--file=", "", grep("^--file=", commandArgs(), value = TRUE)) # path of this script
+dirpath <- dirname(filepath) # path of this directory
+source(file.path(dirpath, "getBurden.R"))
 
 # compute main burden estimate
 # parallelize across CHCs

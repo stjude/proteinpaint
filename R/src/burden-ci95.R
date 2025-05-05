@@ -38,7 +38,10 @@ chc_nums <- c(1:32)[-c(2,5,14,20,23,26)] # CHCs. 6 out of 32 CHCs not used.
 #################################
 
 # import get_burden() function
-source(file.path(input$binpath, "utils/getBurden.R"))
+# import regression utilities
+filepath <- gsub("^--file=", "", grep("^--file=", commandArgs(), value = TRUE)) # path of this script
+dirpath <- dirname(filepath) # path of this directory
+source(file.path(dirpath, "getBurden.R"))
 
 # compute burden estimate for each bootstrap
 # parallelize across bootstraps (not across chcs)
