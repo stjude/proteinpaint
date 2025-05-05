@@ -113,7 +113,7 @@ function setRenderers(self) {
 				else return 'none'
 			})
 			.property('disabled', tab => (tab.disabled ? tab.disabled() : false))
-			.each(async function (this: any, tab, index) {
+			.each(async function (this: any, tab) {
 				if (tab.active) {
 					// assume that an active tabbed content div should receive focus when first rendered,
 					// otherwise using tabs to navigate would not be intuitive or user-friendly if it
