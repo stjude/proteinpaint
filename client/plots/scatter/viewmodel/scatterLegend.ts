@@ -6,8 +6,8 @@ import { shapes } from '../model/scatterModel.js'
 import { roundValueAuto } from '#shared/roundValue.js'
 import { ScatterLegendInteractivity } from './scatterLegendInteractivity.js'
 import { minShapeSize, maxShapeSize } from '../view/scatterView.js'
-import { Scatter } from '../Scatter.js'
-import { ScatterLegendItem } from '../scatterTypes.js'
+import type { Scatter } from '../scatter.js'
+import type { ScatterLegendItem } from '../scatterTypes.js'
 export class ScatterLegend {
 	scatter: Scatter
 	vm: any
@@ -323,7 +323,7 @@ export class ScatterLegend {
 
 		offsetX += step
 		const mutations: any = []
-		for (const [key, value] of map)
+		for (const [value] of map)
 			if (value.mutation)
 				//if no mutation is Ref
 				mutations.push(value.mutation)

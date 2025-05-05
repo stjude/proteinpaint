@@ -184,6 +184,11 @@ function getChartTypeList(self, state) {
 			}
 		},
 		{
+			label: 'Summary Report',
+			chartType: 'summaryReport',
+			clickTo: self.loadChartSpecificMenu
+		},
+		{
 			label: 'Sample View',
 			clickTo: self.prepPlot,
 			chartType: 'sampleView',
@@ -191,6 +196,7 @@ function getChartTypeList(self, state) {
 				chartType: 'sampleView'
 			}
 		},
+
 		{
 			label: 'Summary Plots',
 			chartType: 'summary',
@@ -207,11 +213,7 @@ function getChartTypeList(self, state) {
 			chartType: 'runChart',
 			clickTo: self.loadChartSpecificMenu
 		},
-		{
-			label: 'Summary Report',
-			chartType: 'summaryReport',
-			clickTo: self.loadChartSpecificMenu
-		},
+
 		{
 			label: 'Cumulative Incidence',
 			chartType: 'cuminc',

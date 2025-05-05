@@ -1,10 +1,11 @@
 import { zoom as d3zoom, zoomIdentity } from 'd3-zoom'
 import { icons as icon_functions } from '#dom'
-import { Scatter } from '../Scatter.js'
+import type { Scatter } from '../scatter.js'
 export class ScatterZoom {
 	scatter: Scatter
 	zoom: number
 	zoomD3: any
+
 	constructor(scatter: Scatter) {
 		this.scatter = scatter
 		this.zoom = 1
@@ -47,7 +48,6 @@ export class ScatterZoom {
 			handler: () => this.zoomOut(),
 			title: 'Zoom out. You can also zoom out pressing the Ctrl key and using the mouse wheel'
 		})
-
 		const mainG = this.scatter.model.charts[0].mainG
 
 		if (this.scatter.config.scaleDotTW && this.zoom > 4) this.resetToIdentity()
@@ -67,7 +67,7 @@ export class ScatterZoom {
 			//on zoom in the particle size is kept
 			const symbols = chart.serie.selectAll('path[name="serie"')
 			symbols.attr('transform', c => this.scatter.model.transform(chart, c, 1))
-			if (this.scatter.vm.scatterLasso.lassoOn)
+			if (this.scatter.vm.scatterLasso?.lassoOn)
 				chart.lasso.selectedItems().attr('transform', c => this.scatter.model.transform(chart, c, 1.2))
 			if (this.scatter.config.scaleDotTW) this.scatter.vm.legendvm.drawScaleDotLegend(chart)
 		}

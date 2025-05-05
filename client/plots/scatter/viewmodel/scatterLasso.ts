@@ -1,7 +1,7 @@
 import { getSamplelstTW, getFilter, addNewGroup } from '../../../mass/groups.js'
 import { getId } from '#mass/nav'
 import { renderTable } from '../../../dom/table.ts'
-import { Scatter } from '../Scatter.js'
+import type { Scatter } from '../scatter.js'
 import type { TableCell, TableColumn, TableRow } from '#dom'
 export class ScatterLasso {
 	scatter: Scatter

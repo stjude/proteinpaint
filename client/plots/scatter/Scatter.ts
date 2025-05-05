@@ -14,13 +14,13 @@ import { ScatterViewModel3D } from './viewmodel/scatterViewModel3D.js'
 import { controlsInit } from '../controls'
 import { downloadSingleSVG } from '../../common/svg.download.js'
 import { select2Terms } from '#dom/select2Terms'
-import { MassState } from '../../../client/mass/types/mass.js'
+import type { MassState } from '../../../client/mass/types/mass.js'
 
 export class Scatter extends RxComponentInner {
 	config: any
 	view!: ScatterView
 	model!: ScatterModel
-	vm!: ScatterViewModel
+	vm!: any
 	interactivity!: ScatterInteractivity
 	components: any
 	canvas: any
@@ -288,27 +288,4 @@ export function openScatterPlot(app, plot, filter = null) {
 		type: 'plot_create',
 		config: config
 	})
-}
-
-export async function renderScatter(holder, state, plot) {
-	const opts = {
-		holder,
-		state: {
-			vocab: state.vocab,
-			plots: [
-				{
-					chartType: 'sampleScatter',
-					subfolder: 'plots',
-					name: plot.name,
-					colorTW: plot.colorTW,
-					sampleType: plot.sampleType,
-					sampleCategory: {
-						tw: structuredClone(plot.sampleCategory.tw),
-						order: plot.sampleCategory.order,
-						defaultValue: plot.sampleCategory.defaultValue
-					}
-				}
-			]
-		}
-	}
 }

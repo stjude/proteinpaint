@@ -3,7 +3,7 @@ import { rgb } from 'd3-color'
 import { scaleLinear as d3Linear, scaleTime } from 'd3-scale'
 import { axisLeft, axisBottom } from 'd3-axis'
 import { regressionPoly } from 'd3-regression'
-import { Scatter } from '../Scatter'
+import type { Scatter } from '../scatter'
 import { getDateFromNumber } from '../../../../shared/utils/src/terms.js'
 import type {
 	ScatterResponse,
@@ -46,10 +46,11 @@ export class ScatterModel {
 		const coordTWs: any = []
 		if (c.term) coordTWs.push(c.term)
 		if (c.term2) coordTWs.push(c.term2)
+		const filter = this.scatter.getFilter()
 		const opts: any = {
 			name: c.name, // the actual identifier of the plot, for retrieving data from server
 			colorTW: c.colorTW,
-			filter: this.scatter.getFilter(),
+			filter,
 			coordTWs
 		}
 		if (this.scatter.state.termfilter.filter0) opts.filter0 = this.scatter.state.termfilter.filter0
@@ -288,10 +289,10 @@ export class ScatterModel {
 
 			chart.axisBottom = axisBottom(chart.xAxisScaleTime)
 		} else chart.axisBottom = axisBottom(chart.xAxisScale)
-
+		const svgh = this.scatter.settings.svgh
 		chart.yAxisScale = d3Linear()
 			.domain([yMax + extraSpaceY, yMin - extraSpaceY])
-			.range([offsetY, this.scatter.settings.svgh + offsetY])
+			.range([offsetY, svgh + offsetY])
 		if (this.scatter.config.term2 && this.scatter.config.term2.term.type == 'date') {
 			const yMinDate = getDateFromNumber(yMin - extraSpaceY)
 			const yMaxDate = getDateFromNumber(yMax + extraSpaceY)
