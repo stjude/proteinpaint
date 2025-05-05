@@ -6,35 +6,32 @@ This is already included in the deps image and other images that use it as a bas
 
 ## Mac
 
-1. Go to the Downloads directory
+Go to the Downloads directory
 
 ```sh
 cd ~/Downloads
 ```
 
-2. Download the R .pkg file, where `VERSION` is the same version of R specified in Dockerfile (see `proteinpaint/container/deps/Dockerfile`)
+Download the R .pkg file, where `VERSION` is the same version of R specified in Dockerfile (see `proteinpaint/container/deps/Dockerfile`)
 
+arm64-based (Apple silicon):
 ```sh
-curl https://cran.r-project.org/bin/macosx/big-sur-arm64/base/R-{VERSION}-arm64.pkg -O
+curl -O https://cran.r-project.org/bin/macosx/big-sur-arm64/base/R-{VERSION}-arm64.pkg
 ```
 
-3. Open the .pkg file and follow the installation instructions
+Intel-based:
+```sh
+curl -O https://cran.r-project.org/bin/macosx/big-sur-x86_64/base/R-{VERSION}-x86_64.pkg
+```
 
-4. Verify that the correct version of R was installed
+Open the .pkg file and follow the installation instructions.
 
+Verify that the correct version of R was installed
 ```sh
 R --version
 ```
 
-5. Install R libraries
-
+Update and install R packages. See R script for adding new packages.
 ```sh
-# open R
-R
-```
-```R
-# install R libraries specified in Dockerfile
-# see "proteinpaint/container/deps/Dockerfile"
-install.packages(...)
-BiocManager::install(...)
+Rscript ~/dev/sjpp/proteinpaint/R/src/install.pkgs.R
 ```
