@@ -64,20 +64,12 @@ if [[ "$RUST_FULL_PATHS" != "" ]]; then
   for f in $RUST_FILES; do
     echo "Linting $f..."
     clippy-driver --edition 2024 -Cpanic=abort $f
-  done
-
-  # After linting the files with clippy-driver, delete the generated binaries
-  echo "Removing binary artifacts..."
-  for f in $RUST_FILES; do
     # Get the base filename without extension
     BINARY_NAME=$(basename "$f" .rs)
-    
-    # Check if binary exists in rust/src directory and delete it
-    BINARY_PATH="rust/src/$BINARY_NAME"
-	echo "Deleting binary: $BINARY_NAME"
-	rm "$BINARY_NAME"
+    echo "Deleting binary: $BINARY_NAME"
+		rm -f "$BINARY_NAME"
   done
-  
+
   # Return to original directory
   cd ../..
   
