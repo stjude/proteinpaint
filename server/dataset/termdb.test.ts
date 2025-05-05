@@ -61,7 +61,7 @@ export default function (): Mds3 {
 
 			termdb: {
 				allowedTermTypes: ['geneVariant'],
-				displaySampleIds: true, // allow to display sample-level data
+				displaySampleIds: () => true, // allow to display sample-level data
 
 				timeUnit: 'years',
 
