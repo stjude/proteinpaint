@@ -107,7 +107,6 @@ function make(q, req, res, ds: Mds3WithCohort, genome) {
 	if (tdb.minTimeSinceDx) c.minTimeSinceDx = tdb.minTimeSinceDx
 	if (tdb.timeUnit) c.timeUnit = tdb.timeUnit
 	if (tdb.cohortStartTimeMsg) c.cohortStartTimeMsg = tdb.cohortStartTimeMsg
-	if (tdb.displaySampleIds) c.displaySampleIds = tdb.displaySampleIds
 	if (tdb.hasAncestry) c.hasAncestry = tdb.hasAncestry
 	if (tdb.logscaleBase2) c.logscaleBase2 = tdb.logscaleBase2
 	if (tdb.useCasesExcluded) c.useCasesExcluded = tdb.useCasesExcluded
@@ -128,6 +127,7 @@ function make(q, req, res, ds: Mds3WithCohort, genome) {
 	c.requiredAuth = authApi.getRequiredCredForDsEmbedder(q.dslabel, q.embedder)
 	const info: any = authApi.getNonsensitiveInfo(req) // type any to avoid tsc err
 	c.clientAuthResult = info?.clientAuthResult || {}
+	if (tdb.displaySampleIds) c.displaySampleIds = tdb.displaySampleIds(c.clientAuthResult)
 
 	res.send({ termdbConfig: c })
 }
