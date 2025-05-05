@@ -183,7 +183,7 @@ tape('GDC - allow2selectSamples', test => {
 	testAllow2selectSamples('hg38', 'IDH1', 'GDC', test)
 })
 
-tape('geneSearch4GDCmds3', async test => {
+tape.only('geneSearch4GDCmds3', async test => {
 	// enter a gene name into search box, find the gene match in tooltip, select matched gene to launch block with gdc track
 	const holder = getHolder()
 	const gene = 'HOXA1'
@@ -211,7 +211,7 @@ tape('geneSearch4GDCmds3', async test => {
 
 		const blockDiv = await detectOne({ elem: blockHolder, selector: '.sja_Block_div' })
 		test.ok(blockDiv, 'A block is rendered')
-		if (test._ok) holder.remove()
+		//if (test._ok) holder.remove()
 		test.end()
 	}
 })

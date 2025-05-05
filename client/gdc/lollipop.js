@@ -3,19 +3,26 @@ import { Menu } from '#dom/menu'
 import { dofetch3 } from '#common/dofetch'
 import blockinit from '#src/block.init'
 
-/*
+/* designed to work for lollipop & cnv apps in GDC Analysis Tools Framework
 
 test with http://localhost:3000/example.gdc.html
-runpp({ geneSearch4GDCmds3:true })
 
-designed to work for ssm lollipop app in GDC Analysis Tools Framework
+to launch lollipop:
+	runpp({ geneSearch4GDCmds3:true })
+to launch cnv tool:
+	runpp({ geneSearch4GDCmds3:{hardcodeCnvOnly:1} })
+
 
 ********* parameters
 
 arg = {}
-	runpp() argument object
-	geneSearch4GDCmds3:{ postRender(), onloadalltk_always() }
-		optional callbacks for testing
+	// runpp() argument object
+	geneSearch4GDCmds3:{}
+		.postRender()
+		.onloadalltk_always() }
+			// optional callbacks for testing
+		.hardcodeCnvOnly:1
+			// if true, launches cnv tool (gene search box allows searching both gene/coord and yields coord)
 	.allow2selectSamples:{}
 		pass to mds3 tk object to enable sample selection
 	.geneSymbol:str
@@ -69,7 +76,11 @@ export async function init(arg, holder, genomes) {
 	const coordInput = addGeneSearchbox(searchOpt)
 
 	// must declare this variable first then call postRender(), other wise it can crash for accessing variable before initialization...
-	let selectedIsoform
+	// saves user-selected isoform from <input>; on cohort change, this value will be used so the lollipop of the same gene can be auto updated
+	let selectedIsoform // str
+	// saves user-selected region
+	let selectedRegion // {chr,start,stop}
+
 	if (typeof arg.geneSearch4GDCmds3.postRender == 'function') {
 		// supports testing
 		await arg.geneSearch4GDCmds3.postRender({ tip })
@@ -81,6 +92,7 @@ export async function init(arg, holder, genomes) {
 	}
 
 	async function launchView(triggeredByInput = true, isoform) {
+		console.log(triggeredByInput, isoform)
 		let gmmode = 'exon only'
 		if (isoform) {
 			selectedIsoform = isoform

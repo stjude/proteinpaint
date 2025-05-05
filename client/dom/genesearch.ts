@@ -5,9 +5,22 @@ import { invalidcoord, string2pos } from '#src/coord'
 import type { ClientCopyGenome } from '../types/global'
 
 /*
-*********************************** EXPORT
+exports:
+
 addGeneSearchbox()
 string2variant()
+
+typical usage:
+
+	const arg={
+		genome: <>,
+		row: <>,
+		callback: async ()=>{
+			doAction(result)
+		}
+	}
+	const result=addGeneSearchbox(arg)
+
 
 
 TODO
@@ -16,8 +29,7 @@ TODO
 -- dedup code with block.js
 -- dedup code with app header
 -- unify help message from gdc bam slicing ui and termsetting.snplst
-
-***********************************/
+*/
 
 type GeneSearchBoxArg = {
 	/** required. menu instance to show list of matching genes */
