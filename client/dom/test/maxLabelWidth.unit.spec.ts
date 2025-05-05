@@ -27,7 +27,7 @@
 import tape from 'tape'
 import type { Selection } from 'd3-selection'
 import { select } from 'd3-selection'
-import type { Svg, SvgG } from '../../types/d3'
+import type { SvgG } from '../../types/d3'
 import { getMaxLabelWidth } from '../maxLabelWidth'
 
 // First, we'll create interfaces to define the return types of our container functions.
@@ -290,7 +290,7 @@ tape('Font loading affects width measurements', async test => {
  * directional content. Supporting multiple writing systems is crucial
  * for international applications.
  *
- * We test with Hebrew and Arabic text to verify:
+ * We test with Hebrew and English text to verify:
  * 1. Basic RTL text measurement
  * 2. Mixed RTL/LTR content handling
  * 3. Proper respect for text direction attributes
@@ -300,8 +300,6 @@ tape('Right-to-left text handling', test => {
 
 	// Hebrew text (RTL)
 	const rtlText = 'שָׁלוֹם'
-	// Arabic text (RTL)
-	const arabicText = 'مرحبا'
 	// Mixed RTL and LTR
 	const mixedText = 'Hello שָׁלוֹם'
 
@@ -358,7 +356,6 @@ tape('Dynamic content updates', test => {
 	// Test rapid updates
 	const texts = ['Short', 'Much Longer Text Here', 'Medium Text', 'Very Very Long Text That Should Definitely Be Wider']
 
-	let previousWidth = 0
 	texts.forEach(text => {
 		textElement.text(text)
 		const currentWidth = getMaxLabelWidth(svg, [text])
@@ -369,8 +366,6 @@ tape('Dynamic content updates', test => {
 		if (text.length > texts[0].length) {
 			test.ok(currentWidth > getMaxLabelWidth(svg, [texts[0]]), 'Longer text should have greater width')
 		}
-
-		previousWidth = currentWidth
 	})
 
 	// Test update with empty content
