@@ -70,7 +70,7 @@ export type MassState = {
 	termdbConfig: {
 		allowedChartTypes: string[]
 		allowedTermTypes: string[]
-		displaySampleIds?: boolean
+		displaySampleIds?: (clientAuthResult: any) => boolean
 		correlationVolcano?: any
 		massSessionDuration: number
 		queries?: any

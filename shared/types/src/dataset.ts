@@ -1284,7 +1284,7 @@ type Termdb = {
 	/** Terms */
 	termIds?: TermIds
 	/** if true, backend is allowed to send sample names to client in charts */
-	displaySampleIds?: boolean
+	displaySampleIds?: (clientAuthResult: any) => boolean
 	converSampleIds?: boolean
 	alwaysShowBranchTerms?: boolean
 	minimumSampleAllowed4filter?: number
