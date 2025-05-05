@@ -3,6 +3,7 @@
 set -e
 
 STAGEDFILES=$(git diff --cached --name-only | sed 's| |\\ |g')
+
 # doing per GDC requirements
 pre-commit run --files "$STAGEDFILES"
 
@@ -39,6 +40,41 @@ if [[ "$FILES" != "" ]]; then
 		echo "$PRODINNER\n"
 		exit 1
 	fi
+fi
+
+# Add Rust formatting and linting for files in the rust/src directory.
+# We check if Rust files have been modified, run `cargo fmt` and `cargo clippy` on them.
+# We need two variables:
+# 1. Full paths for git operations
+# 2. Just filenames for rustfmt/clippy
+RUST_FULL_PATHS=$(git diff --cached --name-only --diff-filter=ACM "*.rs" | sed 's| |\\ |g')
+
+if [[ "$RUST_FULL_PATHS" != "" ]]; then
+  # echo "RUST_FULL_PATHS: $RUST_FULL_PATHS"
+  
+  echo "formatting $RUST_FULL_PATHS"
+  rustfmt $RUST_FULL_PATHS
+
+  # Change to rust/src directory
+  cd rust/src
+  # Extract just the filenames without the path prefix
+  RUST_FILES=$(echo "$RUST_FULL_PATHS" | xargs basename)
+  # Lint each file
+  echo "Linting Rust files with clippy..."
+  for f in $RUST_FILES; do
+    echo "Linting $f..."
+    clippy-driver --edition 2024 -Cpanic=abort $f
+    # Get the base filename without extension
+    BINARY_NAME=$(basename "$f" .rs)
+    echo "Deleting binary: $BINARY_NAME"
+		rm -f "$BINARY_NAME"
+  done
+
+  # Return to original directory
+  cd ../..
+  
+  # Add back the formatted Rust files to staging
+  echo "$RUST_FULL_PATHS" | xargs git add
 fi
 
 exit 0
