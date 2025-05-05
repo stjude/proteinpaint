@@ -10,7 +10,7 @@ export class ItemToolTip {
 			tip.clear().showunder(circle.node())
 			const table = table2col({ holder: tip.d.append('table') })
 			//Header
-			const [th, _] = table.addRow()
+			const [th /* unused */] = table.addRow()
 			th.attr('colspan', '2').style('text-align', 'center').text(item.label)
 			//Show correlation
 			this.addLine(table, 'Correlation (&#961;)', item.correlation)
