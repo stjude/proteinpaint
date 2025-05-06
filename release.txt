@@ -1,1 +1,2 @@
-
+Fixes:
+- Skip any fusions from non major chromosomes
