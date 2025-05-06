@@ -2503,11 +2503,12 @@ async function addCnvGetter(ds, genome) {
 								sampleObj.formatK2v = j.mattr
 							}
 						}
+
+						j.ssm_id = [r.chr, j.start, j.stop, j.class, j.value, j.sample].join(ssmIdFieldsSeparator)
+
 						delete j.sample
 						j.samples = [sampleObj]
 						j.occurrence = 1 // each cnv seg is hardcoded to only have 1 sample
-
-						j.ssm_id = [r.chr, j.start, j.stop, j.class, j.value, j.sample].join(ssmIdFieldsSeparator)
 					} else {
 						// cnv without sample
 						j.ssm_id = [r.chr, j.start, j.stop, j.class, j.value].join(ssmIdFieldsSeparator)
