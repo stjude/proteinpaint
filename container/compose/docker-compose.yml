@@ -1,0 +1,50 @@
+services:
+  pp0:
+    image: ghcr.io/stjude/ppfull:2.122.0-dca7a83a7
+    container_name: container0
+    platform: linux/amd64
+    ports:
+      - "3456:3000"
+    volumes:
+      - /path/to/local/data/tp/:/home/root/pp/tp/
+      - /path/to/local/proteinpaint/container/serverconfig.json:/home/root/pp/app/active/serverconfig.json
+      - /path/to/local/proteinpaint/container/dataset:/home/root/pp/app/active/dataset
+      - /path/to/local/proteinpaint/container/public:/home/root/pp/app/active/public
+    restart: unless-stopped
+    user: root
+    depends_on:
+      - redis
+      - tile-server
+    networks:
+      - pp_network
+
+  redis:
+    image: redis:alpine
+    container_name: redis_container0
+    ports:
+      - "6379:6379"
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    restart: unless-stopped
+    networks:
+      - pp_network
+
+  tile-server:
+    image: ghcr.io/stjude/tiatoolbox:latest
+    container_name: tileserver_container0
+    ports:
+      - "5000:5000"
+    volumes:
+      - /Users/aacic/data/tp/:/home/root/tileserver/tp:ro
+    environment:
+      - PORT=5000
+    deploy:
+      resources:
+        limits:
+          memory: 4g
+          cpus: '4'
+    restart: unless-stopped
+    networks:
+      - pp_network
+
+networks:
+  pp_network:
