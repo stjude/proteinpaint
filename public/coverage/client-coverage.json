@@ -448,13 +448,13 @@
     },
     "lowestPct": {
       "curr": 33.14,
-      "prev": 0,
-      "diff": 33.14
+      "prev": 33.14,
+      "diff": 0
     },
     "averagePct": {
       "curr": 40.655,
-      "prev": 0,
-      "diff": 40.655
+      "prev": 40.655,
+      "diff": 0
     }
   },
   "plots/matrix/test/matrix.integration.spec.js": {
