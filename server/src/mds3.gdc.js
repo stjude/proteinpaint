@@ -1463,7 +1463,7 @@ async function querySamplesWithCnv(q, dictTwLst, ds) {
 		// filter cnvs[] to get sample of this cnv seg!
 		const t = guessSsmid(q.ssm_id_lst)
 		for (const c of cnvs) {
-			if (c.start == t.l[1] && c.stop == t.l[2] && c.class == t.l[3] && c.samples[0].sample_id == t.l[5]) {
+			if (c.start == t.l[1] && c.stop == t.l[2] && c.class == t.l[3] && c.samples?.[0]?.sample_id == t.l[5]) {
 				return [{}, [c.samples[0]]]
 			}
 		}
