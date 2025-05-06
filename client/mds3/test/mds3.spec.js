@@ -22,6 +22,7 @@ GDC - KRAS SSM ID
 GDC - ssm by range
 GDC - allow2selectSamples
 geneSearch4GDCmds3
+geneSearch4GDCmds3 hardcodeCnvOnly
 GDC - gene hoxa1 - Disco button
 Clinvar - gene kras
 GDC - sample summaries table, create subtrack (tk.filterObj)
@@ -183,7 +184,7 @@ tape('GDC - allow2selectSamples', test => {
 	testAllow2selectSamples('hg38', 'IDH1', 'GDC', test)
 })
 
-tape.only('geneSearch4GDCmds3', async test => {
+tape('geneSearch4GDCmds3', async test => {
 	// enter a gene name into search box, find the gene match in tooltip, select matched gene to launch block with gdc track
 	const holder = getHolder()
 	const gene = 'HOXA1'
@@ -208,6 +209,34 @@ tape.only('geneSearch4GDCmds3', async test => {
 		const geneHitDivs = await detectGte({ elem: arg.tip.d.node(), selector: '.sja_menuoption', count: 1 })
 		test.equal(geneHitDivs[0].innerHTML, gene, 'Gene search found ' + gene)
 		geneHitDivs[0].dispatchEvent(new Event('click'))
+
+		const blockDiv = await detectOne({ elem: blockHolder, selector: '.sja_Block_div' })
+		test.ok(blockDiv, 'A block is rendered')
+		if (test._ok) holder.remove()
+		test.end()
+	}
+})
+
+tape.skip('geneSearch4GDCmds3 hardcodeCnvOnly', async test => {
+	// enter a gene name into search box, find the gene match in tooltip, select matched gene to launch block with gdc track
+	const holder = getHolder()
+	await runproteinpaint({
+		holder,
+		noheader: 1,
+		geneSearch4GDCmds3: { hardcodeCnvOnly: 1, postRender }
+	})
+	async function postRender(arg) {
+		// arg={tip}; convenient method to provide the tooltip used by gene search <input> (remove some hassle of finding this tooltip)_
+		const searchBox = await detectOne({ elem: holder, selector: '.sja_genesearchinput' })
+		test.ok(searchBox, 'Gene search box is made')
+
+		const blockHolder = await detectOne({ elem: holder, selector: '.sja_geneSearch4GDCmds3_blockdiv' })
+		test.ok(blockHolder, 'Block holder is made')
+
+		// enter gene name and trigger search
+		searchBox.value = 'chr11:108195437-108267444'
+		searchBox.dispatchEvent(new Event('Enter'))
+		// FIXME this cannot trigger sja_Block_div to be made, making the test fail
 
 		const blockDiv = await detectOne({ elem: blockHolder, selector: '.sja_Block_div' })
 		test.ok(blockDiv, 'A block is rendered')
