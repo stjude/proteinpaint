@@ -30,6 +30,8 @@ export default class NonExonicSnvArcsMapper {
 
 			const startAngle = this.calculateStartAngle(data)
 			const endAngle = this.calculateEndAngle(data)
+			if (startAngle === null || endAngle === null) return
+
 			const arc: SnvArc = {
 				startAngle: startAngle,
 				endAngle: endAngle,
@@ -52,6 +54,7 @@ export default class NonExonicSnvArcsMapper {
 
 	calculateStartAngle(data: Data) {
 		const index = this.reference.chromosomesOrder.indexOf(data.chr)
+		if (index === -1) return null
 		const chromosome = this.reference.chromosomes[index]
 		return (
 			chromosome.startAngle +

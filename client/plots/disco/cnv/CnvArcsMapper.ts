@@ -93,6 +93,8 @@ export default class CnvArcsMapper {
 			let startAngle = this.calculateStartAngle(data)
 			let endAngle = this.calculateEndAngle(data)
 
+			if (startAngle === null || endAngle === null) return
+
 			if (endAngle - startAngle < this.onePxArcAngle) {
 				const restAngle = this.onePxArcAngle - (endAngle - startAngle)
 				startAngle = startAngle - restAngle / 2
@@ -128,6 +130,7 @@ export default class CnvArcsMapper {
 
 	calculateStartAngle(data: Data) {
 		const index = this.reference.chromosomesOrder.indexOf(data.chr)
+		if (index == -1) return null
 		const chromosome = this.reference.chromosomes[index]
 		return (
 			chromosome.startAngle + (chromosome.endAngle - chromosome.startAngle) * (Number(data.start) / chromosome.size)
