@@ -85,28 +85,28 @@ jobs:
 
           . ./build/ci-version-update.sh ${{ github.event.inputs.release_type }} -w $exclude
           
-          echo "::set-output name=branch::$BRANCH"
+          echo "branch=$BRANCH" >> $GITHUB_OUTPUT
           
           if [[ "$BRANCH" != "master" && "$BRANCH" != "release"* && "$BRANCH" != "prerelease"* ]]; then
-            echo "::set-output name=draft::true"
-            echo "::set-output name=prerelease::true"
+           echo "draft=true" >> $GITHUB_OUTPUT
+           echo "prerelease=true" >> $GITHUB_OUTPUT
           else
-            echo "::set-output name=draft::false"
-            echo "::set-output name=prerelease::false"
+            echo "draft=false" >> $GITHUB_OUTPUT
+            echo "prerelease=false" >> $GITHUB_OUTPUT
           fi
           
-          echo "::set-output name=tag_name::$TAG"
+          echo "tag_name=$TAG" >> $GITHUB_OUTPUT
           
           ./build/ci-npm-publish.sh "$UPDATED"
           
           if [[ "$UPDATED" == *"rust"* ]]; then
-            echo "::set-output name=updated_rust::true"
+            echo "updated_rust=true" >> $GITHUB_OUTPUT
           else
-            echo "::set-output name=updated_rust::false"
+            echo "updated_rust=false" >> $GITHUB_OUTPUT
           fi
           
           CHANGES="[CHANGELOG.md](https://github.com/stjude/proteinpaint/blob/master/CHANGELOG.md)"
-          echo "::set-output name=latest_release_changes::$CHANGES"
+          echo "latest_release_changes=$CHANGES" >> $GITHUB_OUTPUT
 
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPMJS_TOKEN }}
@@ -137,7 +137,7 @@ jobs:
         uses: stjude/proteinpaint/.github/actions/upload-rust-assets@master
         with:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
+       
   publish-docker-no-new-rust-module:
     if: needs.publish-npm.outputs.updated_rust == 'false' && github.event.inputs.include == 'npm packages + Docker image'
     needs: publish-npm
@@ -149,13 +149,33 @@ jobs:
           PAT: ${{ secrets.PAT }}
           GITHUB_ACTOR: ${{ github.actor }}
 
-  publish-docker-with-new-rust-module:
-    if: github.event.inputs.include == 'npm packages + Docker image'
-    needs: upload-rust-assets
+  publish-docker-with-rust-changes:
+    if: needs.publish-npm.outputs.updated_rust == 'true' && github.event.inputs.include == 'npm packages + Docker image'
+    needs: [publish-npm, rust-build]
     runs-on: ubuntu-22.04
     steps:
-      - name: Publish docker image
+      - uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.PAT }}
+          
+      # Download the Rust binaries built by the rust-build workflow
+      - name: Download Rust Binaries
+        uses: actions/download-artifact@v4
+        with:
+          name: rust-binaries
+          path: rust-binaries
+          
+      # Pack binaries into a tarball if needed
+      - name: Pack Rust binaries into tarball
+        run: |
+          mkdir -p dist/rust
+          cp -r rust-binaries/* dist/rust/
+          tar -czf rust-binaries.tar.gz -C dist/rust .
+          echo "Rust binaries packed into tarball"
+          
+      # Publish Docker image with the Rust binaries included
+      - name: Publish docker image with Rust binaries
         uses: stjude/proteinpaint/.github/actions/publish-docker@master
         with:
-          PAT: ${{ secrets.PAT  }}
+          PAT: ${{ secrets.PAT }}
           GITHUB_ACTOR: ${{ github.actor }}

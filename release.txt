@@ -1,1 +1,2 @@
-
+Features:
+- Recompiling Rust binaries when Rust code changes and adding to Docker container
