@@ -34,6 +34,7 @@ export default class LabelsMapper {
 			if (data.dt == dtsnvindel) {
 				const startAngle = this.calculateStartAngle(data.chr, data.position)
 				const endAngle = this.calculateEndAngle(data.chr, data.position)
+				if (startAngle === null || endAngle === null) return
 
 				const mLabel = MLabel.getInstance().mlabel ? MLabel.getInstance().mlabel[data.mClass] : undefined
 
@@ -55,6 +56,7 @@ export default class LabelsMapper {
 				if (data.geneA) {
 					const startAngleSource = this.calculateStartAngle(data.chrA, data.posA)
 					const endAngleSource = this.calculateEndAngle(data.chrA, data.posA)
+					if (startAngleSource === null || endAngleSource === null) return
 
 					this.addLabelOrFusion(
 						data,
@@ -71,6 +73,8 @@ export default class LabelsMapper {
 				if (data.geneB && data.geneA != data.geneB) {
 					const startAngleTarget = this.calculateStartAngle(data.chrB, data.posB)
 					const endAngleTarget = this.calculateEndAngle(data.chrB, data.posB)
+
+					if (startAngleTarget == null || endAngleTarget == null) return
 
 					this.addLabelOrFusion(
 						data,
@@ -220,6 +224,7 @@ export default class LabelsMapper {
 
 	private calculateStartAngle(chr: string, position: number) {
 		const index = this.reference.chromosomesOrder.findIndex(element => element == chr)
+		if (index === -1) return null
 		const chromosome = this.reference.chromosomes[index]
 
 		return chromosome.startAngle + (chromosome.endAngle - chromosome.startAngle) * (Number(position) / chromosome.size)
@@ -227,6 +232,7 @@ export default class LabelsMapper {
 
 	private calculateEndAngle(chr: string, position: number) {
 		const index = this.reference.chromosomesOrder.findIndex(element => element == chr)
+		if (index === -1) return null
 		const chromosome = this.reference.chromosomes[index]
 
 		return chromosome.startAngle + (chromosome.endAngle - chromosome.startAngle) * (Number(position) / chromosome.size)

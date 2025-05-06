@@ -23,6 +23,8 @@ export default class LohArcMapper {
 			const startAngle = this.calculateStartAngle(data)
 			const endAngle = this.calculateEndAngle(data)
 
+			if (startAngle === null || endAngle === null) return
+
 			const innerRadius = this.lohInnerRadius
 			const outerRadius = innerRadius + this.lohWidth
 			const color = GradientColorProvider.provide(data.segmean)
@@ -48,6 +50,7 @@ export default class LohArcMapper {
 
 	private calculateStartAngle(data: Data) {
 		const index = this.reference.chromosomesOrder.indexOf(data.chr)
+		if (index === -1) return null
 		const chromosome = this.reference.chromosomes[index]
 		return (
 			chromosome.startAngle + (chromosome.endAngle - chromosome.startAngle) * (Number(data.start) / chromosome.size)
