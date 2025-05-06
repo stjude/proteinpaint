@@ -22,9 +22,14 @@ export default class FusionMapper {
 			genes.add(data.geneA)
 			genes.add(data.geneB)
 
+			/** skip any null (i.e. from isoforms or minor chrs) fusions */
+			const startAngle = this.calculateStartAngle(data.chrA, data.posA)
+			const endAngle = this.calculateEndAngle(data.chrA, data.posA)
+			if (startAngle === null || endAngle === null) return
+
 			const source = new FusionSubgroup(
-				this.calculateStartAngle(data.chrA, data.posA),
-				this.calculateEndAngle(data.chrA, data.posA),
+				startAngle,
+				endAngle,
 				this.radius,
 				data.geneA,
 				data.value,
@@ -38,9 +43,13 @@ export default class FusionMapper {
 
 			let target
 			if (data.chrB && data.posB) {
+				/** skip any null (i.e. from isoforms or minor chrs) fusions */
+				const startAngle = this.calculateStartAngle(data.chrB, data.posB)
+				const endAngle = this.calculateEndAngle(data.chrB, data.posB)
+				if (startAngle === null || endAngle === null) return
 				target = new FusionSubgroup(
-					this.calculateStartAngle(data.chrB, data.posB),
-					this.calculateEndAngle(data.chrB, data.posB),
+					startAngle,
+					endAngle,
 					this.radius,
 					data.geneB,
 					data.value,
@@ -62,6 +71,8 @@ export default class FusionMapper {
 
 	calculateStartAngle(chr: string, pos: number) {
 		const index = this.reference.chromosomesOrder.indexOf(chr)
+		/** Return null for isforms or minor chr */
+		if (index === -1) return null
 		const chromosome = this.reference.chromosomes[index]
 		// TODO calculate 0.01 base on BPs
 		return (
@@ -71,6 +82,8 @@ export default class FusionMapper {
 
 	private calculateEndAngle(chr: string, pos: number) {
 		const index = this.reference.chromosomesOrder.indexOf(chr)
+		/** Return null for isforms or minor chr*/
+		if (index === -1) return null
 		const chromosome = this.reference.chromosomes[index]
 		// TODO calculate 0.01 base on BPs
 		return (
