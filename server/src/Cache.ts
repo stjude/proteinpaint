@@ -16,14 +16,12 @@ export class Cache {
 		{ dir: 'massSession' },
 		/** DELETE THIS after process for deleting mass session files moved into production */
 		{ dir: 'massSessionTrash' },
-		/** In use? */
+		/** Used by snplst and snplocus terms */
 		{
 			dir: 'snpgt',
 			fileNameRegexp: /[^\w]/, // client-provided cache file name matching with this are denied
 			sampleColumn: 6 // in cache file, sample column starts from 7th column
-		},
-		/** TODO: description */
-		{ dir: 'ssid' }
+		}
 	]
 
 	async init() {
