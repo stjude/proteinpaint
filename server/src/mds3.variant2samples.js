@@ -883,7 +883,7 @@ export function guessSsmid(ssmid) {
 		const [chr, _start, _stop, _class, _value] = l
 		const start = Number(_start),
 			stop = Number(_stop),
-			value = Number(_value)
+			value = _value == '' ? null : Number(_value)
 		if (Number.isNaN(start) || Number.isNaN(stop)) throw 'ssmid cnv start/stop not integer'
 		return { dt: dtcnv, l: [chr, start, stop, _class, value] }
 	}
@@ -906,7 +906,7 @@ export function guessSsmid(ssmid) {
 		const [chr, _start, _stop, _class, _value, sample] = l
 		const start = Number(_start),
 			stop = Number(_stop),
-			value = Number(_value)
+			value = _value == '' ? null : Number(_value) // if cnv not using value, must avoid `Number('')=0`
 		if (Number.isNaN(start) || Number.isNaN(stop)) throw 'ssmid cnv start/stop not integer'
 		return { dt: dtcnv, l: [chr, start, stop, _class, value, sample] }
 	}
