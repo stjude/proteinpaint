@@ -286,7 +286,7 @@ export default class WSIViewer extends RxComponentInner {
 			}
 			const mousePositionControl = new MousePosition({
 				coordinateFormat: coordinateFormat,
-				/** The project is custom so don't set. */
+				// TODO Reuse projection from the map creation?
 				projection: undefined,
 				className: 'ol-mouse-position',
 				placeholder: '&nbsp;'
