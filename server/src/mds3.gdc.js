@@ -2,7 +2,7 @@ import * as common from '#shared/common.js'
 import { compute_bins } from '#shared/termdb.bins.js'
 import ky from 'ky'
 import nodeFetch from 'node-fetch'
-import { combineSamplesById } from './mds3.variant2samples.js'
+import { combineSamplesById, guessSsmid } from './mds3.variant2samples.js'
 import { filter2GDCfilter } from './mds3.gdc.filter.js'
 import { write_tmpfile } from './utils.js'
 import { mayLog } from './helpers'
@@ -36,6 +36,7 @@ gdc_validate_query_singleCell_DEgenes
 	getSinglecellDEfile
 	getSinglecellDEgenes
 querySamples_gdcapi
+	querySamplesWithCnv
 	querySamplesTwlstForGeneexpclustering
 	querySamplesTwlstNotForGeneexpclustering
 		querySamplesTwlstNotForGeneexpclustering_withGenomicFilter
@@ -1173,6 +1174,8 @@ args:
 	start with caseObj as "current" root
 	default is 1 as fields[0]='case', and caseObj is already the "case", so start from i=1
 	if caseObj data is returned by /cases/, use 0
+
+todo unit test
 */
 function flattenCaseByFields(sample, caseObj, tw, startIdx = 1) {
 	const fields = tw.term.id.split('.')
@@ -1386,7 +1389,7 @@ returns:
 	samples[]
 		list of sample objects:
 		sample.sample_id is the unique identifier of a sample
-		value is variable, dependens on context
+		with additional key-value pairs for tw.term.id and annotation value
 }
 */
 
@@ -1411,8 +1414,13 @@ export async function querySamples_gdcapi(q, twLst, ds, geneTwLst) {
 	// step 2: querying dict term data
 
 	if (dictTwLst.length) {
-		if (q.isHierCluster) {
-			// running gene exp clustering, must only restrict to cases with exp data, but not by mutated cases anymore, thus geneTwLst should not be used (and not supplied)
+		if (q.hardcodeCnvOnly) {
+			// user interactions from cnv tool will have this flag in request;
+			// this allows accessing sample details for cases with cnv
+			;[byTermId, samples] = await querySamplesWithCnv(q, dictTwLst, ds)
+		} else if (q.isHierCluster) {
+			// running gene exp clustering, must only restrict to cases with exp data,
+			// but not by mutated cases anymore, thus geneTwLst should not be used (and not supplied)
 			;[byTermId, samples] = await querySamplesTwlstForGeneexpclustering(q, dictTwLst, ds)
 		} else {
 			// not in gene exp clustering mode
@@ -1427,6 +1435,50 @@ export async function querySamples_gdcapi(q, twLst, ds, geneTwLst) {
 	}
 
 	return { byTermId, samples }
+}
+
+async function querySamplesWithCnv(q, dictTwLst, ds) {
+	// create q2 that's submitted to cnv getter
+	const q2 = {
+		dictTwLst,
+		cnvMaxLength: q.cnvMaxLength
+	}
+	if (q.rglst) {
+		// is from sample summary via leftlabel
+		q2.rglst = q.rglst
+	} else if (q.ssm_id_lst) {
+		// is from clicking a cnv seg. ssm_id_lst value must be a single id of a cnv
+		const t = guessSsmid(q.ssm_id_lst)
+		q2.rglst = [
+			{
+				chr: t.l[0],
+				start: t.l[1],
+				stop: t.l[2]
+			}
+		]
+	}
+	const cnvs = await ds.queries.cnv.get(q2)
+
+	if (q.ssm_id_lst) {
+		// filter cnvs[] to get sample of this cnv seg!
+		const t = guessSsmid(q.ssm_id_lst)
+		for (const c of cnvs) {
+			if (c.start == t.l[1] && c.stop == t.l[2] && c.class == t.l[3] && c.samples[0].sample_id == t.l[5]) {
+				return [{}, [c.samples[0]]]
+			}
+		}
+		throw 'cnv not found by queried segment'
+	}
+	// collect all samples
+	const samples = cnvs.map(c => c.samples[0])
+	const byTermId = mayApplyBinning(samples, dictTwLst)
+
+	const id2samples = new Map()
+	for (const s of samples) {
+		combineSamplesById([s], id2samples, s.ssm_id)
+	}
+
+	return [byTermId, [...id2samples.values()]]
 }
 
 async function querySamplesSurvival(q, survivalTwLst, ds, samples, geneTwLst) {
