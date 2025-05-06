@@ -18,6 +18,8 @@ import { Projection } from 'ol/proj'
 import { RxComponentInner } from '../../types/rx.d'
 import 'ol-ext/dist/ol-ext.css'
 import LayerSwitcher from 'ol-ext/control/LayerSwitcher'
+import MousePosition from 'ol/control/MousePosition.js'
+import { format as formatCoordinate } from 'ol/coordinate.js'
 
 export default class WSIViewer extends RxComponentInner {
 	// following attributes are required by rx
@@ -275,6 +277,29 @@ export default class WSIViewer extends RxComponentInner {
 					mouseover: true
 				})
 			)
+
+			// Display the mouse position in the upper right corner
+			// Uncomment import statements above to use
+			const coordinateFormat = function (coordinate) {
+				coordinate = [coordinate[0], -coordinate[1]]
+				return formatCoordinate(coordinate, '{x}, {y}', 0)
+			}
+			const mousePositionControl = new MousePosition({
+				coordinateFormat: coordinateFormat,
+				/** The project is custom so don't set. */
+				projection: undefined,
+				className: 'ol-mouse-position',
+				placeholder: '&nbsp;'
+			})
+
+			map.addControl(mousePositionControl)
+
+			//Console.log the mouse position
+			map.on('singleclick', function (event) {
+				const coordinate = event.coordinate
+				const flipped = [coordinate[0], -coordinate[1]] // Flip Y if needed
+				console.log(`Mouse position: ${flipped[0]}, ${flipped[1]}`)
+			})
 		}
 
 		const fullscreen = new FullScreen()
