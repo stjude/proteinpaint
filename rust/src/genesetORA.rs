@@ -9,7 +9,7 @@ use serde_json;
 use std::cmp::Ordering;
 use std::collections::HashSet;
 use std::io;
-use std::time::Instant;
+//use std::time::Instant;
 
 #[allow(non_camel_case_types)]
 #[allow(non_snake_case)]
@@ -37,10 +37,7 @@ fn calculate_hypergeometric_p_value(
 ) -> (f64, f64, String) {
     let mut gene_set_hits: String = "".to_string();
 
-    let gene_intersections: HashSet<String> = genes_in_pathway
-        .intersection(sample_genes)
-        .cloned()
-        .collect();
+    let gene_intersections: HashSet<String> = genes_in_pathway.intersection(sample_genes).cloned().collect();
     for gene in &gene_intersections {
         gene_set_hits += &(gene.to_string() + &",");
     }
@@ -78,7 +75,7 @@ fn main() -> Result<()> {
             let input_json = json::parse(&input);
             match input_json {
                 Ok(json_string) => {
-                    let run_time = Instant::now();
+                    //let run_time = Instant::now();
                     let msigdb_input: &JsonValue = &json_string["msigdb"];
                     let msigdb;
                     match msigdb_input.as_str() {
@@ -92,8 +89,7 @@ fn main() -> Result<()> {
                         None => panic!("genesetgroup is missing"),
                     }
                     let sample_genes_input: &JsonValue = &json_string["sample_genes"];
-                    let sample_genes: Vec<&str> =
-                        sample_genes_input.as_str().unwrap().split(",").collect();
+                    let sample_genes: Vec<&str> = sample_genes_input.as_str().unwrap().split(",").collect();
                     let mut pathway_p_values: Vec<pathway_p_value> = Vec::with_capacity(10000);
 
                     let genedb_input: &JsonValue = &json_string["genedb"];
@@ -103,10 +99,8 @@ fn main() -> Result<()> {
                         None => panic!("genedb file path is missing"),
                     }
 
-                    let filter_non_coding_genes_input: &JsonValue =
-                        &json_string["filter_non_coding_genes"];
-                    let filter_non_coding_genes: bool =
-                        filter_non_coding_genes_input.as_bool().unwrap();
+                    let filter_non_coding_genes_input: &JsonValue = &json_string["filter_non_coding_genes"];
+                    let filter_non_coding_genes: bool = filter_non_coding_genes_input.as_bool().unwrap();
 
                     let genedbconn = Connection::open(genedb)?;
                     let genedb_result = genedbconn.prepare(&("select * from codingGenes"));
@@ -120,8 +114,7 @@ fn main() -> Result<()> {
                                 //println!("coding_gene:{:?}", coding_gene);
                                 for sample_gene in &sample_genes {
                                     let code_gene: String = coding_gene.get(0).unwrap();
-                                    if filter_non_coding_genes == true && code_gene == *sample_gene
-                                    {
+                                    if filter_non_coding_genes == true && code_gene == *sample_gene {
                                         sample_coding_genes.insert(code_gene);
                                     } else if filter_non_coding_genes == false {
                                         sample_coding_genes.insert(code_gene);
@@ -160,25 +153,19 @@ fn main() -> Result<()> {
                     let num_items_output = 100; // Number of top pathways to be specified in the output
 
                     let msigdbconn = Connection::open(msigdb)?;
-                    let stmt_result = msigdbconn.prepare(
-                        &("select id from terms where parent_id='".to_owned()
-                            + &genesetgroup
-                            + "'"),
-                    );
+                    let stmt_result = msigdbconn
+                        .prepare(&("select id from terms where parent_id='".to_owned() + &genesetgroup + "'"));
                     match stmt_result {
                         Ok(mut stmt) => {
                             #[allow(non_snake_case)]
-                            let GO_iter =
-                                stmt.query_map([], |row| Ok(GO_pathway { GO_id: row.get(0)? }))?;
+                            let GO_iter = stmt.query_map([], |row| Ok(GO_pathway { GO_id: row.get(0)? }))?;
                             #[allow(non_snake_case)]
                             for GO_term in GO_iter {
                                 match GO_term {
                                     Ok(n) => {
                                         //println!("GO term {:?}", n);
                                         let sql_statement =
-                                            "select genes from term2genes where id='".to_owned()
-                                                + &n.GO_id
-                                                + &"'";
+                                            "select genes from term2genes where id='".to_owned() + &n.GO_id + &"'";
                                         //println!("sql_statement:{}", sql_statement);
                                         let mut gene_stmt = msigdbconn.prepare(&(sql_statement))?;
                                         //println!("gene_stmt:{:?}", gene_stmt);
@@ -191,26 +178,20 @@ fn main() -> Result<()> {
                                             match input_gene_json {
                                                 Ok(json_genes) => {
                                                     for json_iter in 0..json_genes.len() {
-                                                        names.insert(
-                                                            json_genes[json_iter]["symbol"]
-                                                                .to_string(),
-                                                        );
+                                                        names.insert(json_genes[json_iter]["symbol"].to_string());
                                                     }
                                                 }
                                                 Err(_) => {
-                                                    panic!(
-                                                "Symbol, ensg, enstCanonical structure is missing!"
-                                            )
+                                                    panic!("Symbol, ensg, enstCanonical structure is missing!")
                                                 }
                                             }
                                         }
                                         let gene_set_size = names.len();
-                                        let (p_value, matches, gene_set_hits) =
-                                            calculate_hypergeometric_p_value(
-                                                &sample_coding_genes,
-                                                num_background_genes,
-                                                names,
-                                            );
+                                        let (p_value, matches, gene_set_hits) = calculate_hypergeometric_p_value(
+                                            &sample_coding_genes,
+                                            num_background_genes,
+                                            names,
+                                        );
                                         if matches >= 1.0 && p_value.is_nan() == false {
                                             pathway_p_values.push(pathway_p_value {
                                                 pathway_name: n.GO_id,
@@ -234,11 +215,8 @@ fn main() -> Result<()> {
                         + &",\"pathways\":"
                         + &adjust_p_values(pathway_p_values, num_items_output)
                         + &"}";
-                    println!("pathway_p_values:{}", output_string);
-                    println!(
-                        "Time for calculating gene overrepresentation:{:?}",
-                        run_time.elapsed()
-                    );
+                    println!("{}", output_string);
+                    //println!("Time for calculating gene overrepresentation:{:?}", run_time.elapsed());
                 }
                 Err(error) => println!("Incorrect json:{}", error),
             }
@@ -248,10 +226,7 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-fn adjust_p_values(
-    mut original_p_values: Vec<pathway_p_value>,
-    mut num_items_output: usize,
-) -> String {
+fn adjust_p_values(mut original_p_values: Vec<pathway_p_value>, mut num_items_output: usize) -> String {
     // Sorting p-values in ascending order
     original_p_values.as_mut_slice().sort_by(|a, b| {
         (a.p_value_original)
@@ -266,8 +241,7 @@ fn adjust_p_values(
         let i = original_p_values.len() - j - 1;
 
         //println!("p_val:{}", p_val);
-        let mut adjusted_p_val: f64 =
-            original_p_values[i].p_value_original * (original_p_values.len() as f64 / rank); // adjusted p-value = original_p_value * (N/rank)
+        let mut adjusted_p_val: f64 = original_p_values[i].p_value_original * (original_p_values.len() as f64 / rank); // adjusted p-value = original_p_value * (N/rank)
         if adjusted_p_val > 1.0 {
             // p_value should NEVER be greater than 1
             adjusted_p_val = 1.0;
