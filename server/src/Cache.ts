@@ -74,12 +74,12 @@ export class Cache {
 				if (subdir.dir !== 'gsea') continue
 				const maxAge = cacheMonitor?.[subdir.dir].maxAge || 1000 * 60 * 60 * 2 // 2 hours
 				const maxSize = cacheMonitor?.[subdir.dir].maxSize || 5e9 // 5 GB
-				await this.mayDeleteCacheFiles(maxAge, maxSize, serverconfig[`cache_${subdir.dir}`])
+				await this.mayDeleteCacheFiles(maxAge, maxSize, serverconfig[`cache_${subdir.dir}`], interval)
 			}
 		}, interval)
 	}
 
-	async mayDeleteCacheFiles(maxAge, maxSize, subdir) {
+	async mayDeleteCacheFiles(maxAge: number, maxSize: number, subdir, interval: number) {
 		console.log(`checking for cached ${subdir.dir} files to delete ...`)
 		try {
 			const minTime = Date.now() - maxAge
@@ -117,10 +117,10 @@ export class Cache {
 					a lot of recent requests may have deposited lots of cache files
 					must delete more old files ranked by age
 					*/
-				// const minMtime = Date.now() - checkWait
+				const minMtime = Date.now() - interval
 				for (const f of files) {
-					// // do not delete files too soon that it may affect a current file read
-					// if (f.time > minMtime) break
+					// do not delete files too soon that it may affect a current file read
+					if (f.time > minMtime) break
 					await fs.promises.unlink(f.path)
 					f.deleted = true
 					deletedCount++
@@ -132,19 +132,6 @@ export class Cache {
 			console.log(
 				`deleted ${deletedCount} of ${totalCount} cached files (${deletedSize} bytes deleted, ${totalSize} remaining)`
 			)
-			// // empty out the following tracking variables
-			// this.#cacheCheckTimeout = undefined
-			// this.#nextCheckTime = 0
-			// const nextFile = totalSize && files.find(f => !f.deleted)
-			// if (nextFile) {
-			// 	// trigger another mayDeleteCachefile() call with setTimeout,
-			// 	// using the oldest file mtime + checkWait as the wait time,
-			// 	// or much sooner if the max cache size is currently exceeded
-			// 	const wait =
-			// 		this.checkWait +
-			// 		Math.round(totalSize >= this.#maxSize ? 0 : Math.max(0, nextFile.time + this.#maxAge - Date.now()))
-			// 	this.mayResetCacheCheckTimeout(wait)
-			// }
 		} catch (e) {
 			console.error('Error in mayDeleteCacheFiles(): ' + e)
 		}
