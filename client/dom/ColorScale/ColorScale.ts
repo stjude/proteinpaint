@@ -69,12 +69,12 @@ export class ColorScale {
 		if (this.topTicks === true) {
 			const { scale, scaleAxis } = this.makeAxis(barG, id)
 			this.makeColorBar(gradient)
-			this.dom = { gradient, scale, scaleAxis }
+			this.dom = { gradient, scale, scaleAxis, barG }
 		} else {
 			this.makeColorBar(gradient)
 			const { scale, scaleAxis } = this.makeAxis(barG, id)
-			this.dom = { gradient, scale, scaleAxis }
-			if (this.markedValue !== null) this.markedValueInColorBar(barG)
+			this.dom = { gradient, scale, scaleAxis, barG }
+			this.markedValueInColorBar()
 		}
 		this.render()
 
@@ -149,10 +149,10 @@ export class ColorScale {
 		return { scale, scaleAxis }
 	}
 
-	markedValueInColorBar(div: SvgG) {
-		if (!this.markedValue || this.topTicks == true) return
+	markedValueInColorBar() {
+		if (this.markedValue == null || this.topTicks === true) return
 
-		this.dom.line = div
+		this.dom.line = this.dom.barG
 			.append('line')
 			.classed('sjpp-color-scale-marked', true)
 			.attr('data-testid', 'sjpp-color-scale-marked-tick')
@@ -160,7 +160,7 @@ export class ColorScale {
 			.attr('y2', this.barheight + 1)
 			.attr('stroke', 'black')
 
-		this.dom.label = div
+		this.dom.label = this.dom.barG
 			.append('text')
 			.classed('sjpp-color-scale-marked', true)
 			.attr('data-testid', 'sjpp-color-scale-marked-label')
@@ -201,7 +201,7 @@ export class ColorScale {
 			}
 		if (opts.numericInputs) {
 			_opts.cutoffMode = opts.numericInputs.cutoffMode || 'auto'
-			if (opts.numericInputs?.defaultPercentile) _opts.percentile = opts.numericInputs?.defaultPercentile
+			if (opts.numericInputs.defaultPercentile) _opts.percentile = opts.numericInputs?.defaultPercentile
 			_opts.setNumbersCallback = async obj => {
 				if (!obj) return
 				await opts.numericInputs!.callback(obj)
@@ -244,13 +244,14 @@ export class ColorScale {
 	}
 
 	updateValueInColorBar() {
-		if (!this.markedValue || this.topTicks == true) return
-		if (!this.dom.line || !this.dom.label)
-			throw new Error('Missing dom elements to update value in color bar in #dom/ColorScale.')
-
+		if (this.markedValue == null || this.topTicks === true) return
+		if (!this.dom.line || !this.dom.label) {
+			/** Allow the line to be made if the init value was < 0.001 */
+			this.markedValueInColorBar()
+		}
 		const x = Math.min(this.barwidth, this.dom.scale(this.markedValue))
-		this.dom.line.attr('x1', x).attr('x2', x)
-		this.dom.label.attr('x', x).text(Math.floor(this.markedValue))
+		this.dom.line!.attr('x1', x).attr('x2', x)
+		this.dom.label!.attr('x', x).text(Math.floor(this.markedValue))
 
 		// /**Determine if the text should be white or black based on the
 		//  * background color.

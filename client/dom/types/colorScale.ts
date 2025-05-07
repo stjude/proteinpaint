@@ -60,10 +60,17 @@ export type ColorScaleOpts = {
 }
 
 export type ColorScaleDom = {
+	/** Holder for the axis, and gradient */
+	barG: SvgG
+	/** color bar */
 	gradient: GradientElem
+	/** d3 scale */
 	scale: ScaleLinear<number, number, never>
+	/** holder for the d3 scale */
 	scaleAxis: SvgG
+	/** Marked value label */
 	label?: SvgText
+	/** vertical line shown to indicate a marked value */
 	line?: SvgLine
 }
 
