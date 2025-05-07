@@ -1,1 +1,2 @@
-
+Fixes
+- Create elements for marked values in the color scale after init rather than throwing
