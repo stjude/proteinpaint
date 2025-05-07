@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.123.0
 
 Features:
 - Migrated all R source code to a new R workspace.
