@@ -28,13 +28,15 @@ export class Cache {
 		// create sub directories under cachedir, and register path in serverconfig
 		for (const dir of this.defaultCacheDirs) {
 			if (Object.keys(dir).length > 1) {
-				serverconfig[`cachedir_${dir.dir}`] = {
+				//cache objs are defined as cache_<dir> in serverconfig
+				serverconfig[`cache_${dir.dir}`] = {
 					dir: await this.mayCreateSubdirInCache(dir.dir),
 					fileNameRegexp: dir.fileNameRegexp || '',
 					sampleColumn: dir.sampleColumn || 0
 				}
 			}
-			serverconfig[`cachedir_${dir.dir}`] = await this.mayCreateSubdirInCache(dir.dir)
+			// cache dirs are defined as cachedir_<dir> in serverconfig
+			else serverconfig[`cachedir_${dir.dir}`] = await this.mayCreateSubdirInCache(dir.dir)
 		}
 	}
 
