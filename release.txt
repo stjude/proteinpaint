@@ -1,3 +1,1 @@
-Fixes:
-- improve gdcmaf ui not to show empty table and disable interactivity while downloading
-- Disabled Rust linting on commit for now until can find a better solution for clippy-driver
+
