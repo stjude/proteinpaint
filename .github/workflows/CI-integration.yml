@@ -190,6 +190,15 @@ jobs:
           name: rust-binaries
           path: rust-binaries
 
+      - uses: actions/setup-node@v3
+        with:
+          cache: 'npm'
+          node-version: '22'
+
+      - name: Install PP packages
+        run: |
+          npm ci
+
       - name: Login to Github
         uses: docker/login-action@v3.4.0
         with:
