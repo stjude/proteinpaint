@@ -2,115 +2,132 @@ import type { Genome } from '#types'
 import { CancerGeneCensusLst } from './cgc.js'
 
 export default <Genome>{
-	species: 'human',
-	genomefile: 'genomes/hg38.gz',
-	genedb: {
-		dbfile: 'anno/genes.hg38.db'
-	},
+    species: 'human',
+    genomefile: 'genomes/hg38.gz',
+    genedb: {
+        dbfile: 'anno/genes.hg38.db'
+    },
 
-	termdbs: {
-		msigdb: {
-			label: 'MSigDB (2023.2.Hs)', // to be compatible with ds.label
-			cohort: {
-				db: { file: 'anno/msigdb/db_2023.2.Hs' },
-				termdb: {
-					isGeneSetTermdb: true
-				}
-			}
-		}
-	},
+    termdbs: {
+        msigdb: {
+            label: 'MSigDB (2023.2.Hs)', // to be compatible with ds.label
+            cohort: {
+                db: { file: 'anno/msigdb/db_2023.2.Hs' },
+                termdb: {
+                    isGeneSetTermdb: true
+                }
+            },
+            analysisGenesetGroups: [
+                { label: '-', value: '-' },
+                { label: 'BP: subset of GO', value: 'BP: subset of GO' },
+                { label: 'MF: subset of GO', value: 'MF: subset of GO' },
+                { label: 'CC: subset of GO', value: 'CC: subset of GO' },
+                { label: 'WikiPathways subset of CP', value: 'WikiPathways subset of CP' },
+                { label: 'REACTOME subset of CP', value: 'REACTOME subset of CP' },
+                /* QUICK FIX
+                geneset name ending in "--blitzgsea" signals to use built-in genesets but not msigdb
+                later a proper fix is to add a radio toggle of Blitzgsea versus MSigDB, and do not use such hardcode
+                */
+                { label: 'H: hallmark gene sets', value: 'H: hallmark gene sets' }
+            ],
+            geneORAParam: {
+                minCutoff: 0
+            },
+            gseaParam: {}
+        }
+    },
 
-	proteindomain: {
-		dbfile: 'anno/db/proteindomain.db',
-		statement: 'select data from domain where isoform=? collate nocase'
-	},
-	snp: {
-		bigbedfile: 'anno/dbsnp.hg38.bb'
-	},
-	fimo_motif: {
-		db: 'utils/meme/motif_databases/HUMAN/HOCOMOCOv11_full_HUMAN_mono_meme_format.meme',
-		annotationfile: 'utils/meme/motif_databases/HUMAN/HOCOMOCOv11_full_annotation_HUMAN_mono.tsv'
-	},
-	tracks: [
-		{
-			__isgene: true,
-			translatecoding: true,
-			file: 'anno/refGene.hg38.gz',
-			type: 'bedj',
-			name: 'RefGene',
-			stackheight: 16,
-			stackspace: 1,
-			vpad: 4,
-			color: '#1D591D'
-		},
-		{
-			__isgene: true,
-			name: 'GENCODE v47',
-			file: 'anno/gencode.v47.hg38.gz',
-			translatecoding: true,
-			categories: {
-				coding: { color: '#004D99', label: 'Coding gene' },
-				nonCoding: { color: '#008833', label: 'Noncoding gene' },
-				problem: { color: '#CC3300', label: 'Problem' },
-				pseudo: { color: '#CC00CC', label: 'Pseudogene' }
-			},
-			type: 'bedj',
-			stackheight: 16,
-			stackspace: 1,
-			vpad: 4
-		},
-		{
-			type: 'bedj',
-			name: 'RepeatMasker',
-			stackheight: 14,
-			file: 'anno/rmsk.hg38.gz',
-			onerow: true,
-			categories: {
-				SINE: { color: '#ED8C8E', label: 'SINE' },
-				LINE: { color: '#EDCB8C', label: 'LINE' },
-				LTR: { color: '#E38CED', label: 'LTR' },
-				DNA: { color: '#8C8EED', label: 'DNA transposon' },
-				simple: { color: '#8EB88C', label: 'Simple repeats' },
-				low_complexity: { color: '#ACEBA9', label: 'Low complexity' },
-				satellite: { color: '#B59A84', label: 'Satellite' },
-				RNA: { color: '#9DE0E0', label: 'RNA repeat' },
-				other: { color: '#9BADC2', label: 'Other' },
-				unknown: { color: '#858585', label: 'Unknown' }
-			}
-		}
-	],
-	defaultcoord: { chr: 'chr17', start: 7666657, stop: 7688274 },
-	hicenzymefragment: [
-		{
-			enzyme: 'DpnII',
-			file: 'anno/hicFragment/hic.DpnII.hg38.gz'
-		},
-		{
-			enzyme: 'EcoRI',
-			file: 'anno/hicFragment/hic.EcoRI.hg38.gz'
-		},
-		{
-			enzyme: 'HindIII',
-			file: 'anno/hicFragment/hic.HindIII.hg38.gz'
-		},
-		{
-			enzyme: 'MboI',
-			file: 'anno/hicFragment/hic.MboI.hg38.gz'
-		},
-		{
-			enzyme: 'NcoI',
-			file: 'anno/hicFragment/hic.NcoI.hg38.gz'
-		}
-	],
+    proteindomain: {
+        dbfile: 'anno/db/proteindomain.db',
+        statement: 'select data from domain where isoform=? collate nocase'
+    },
+    snp: {
+        bigbedfile: 'anno/dbsnp.hg38.bb'
+    },
+    fimo_motif: {
+        db: 'utils/meme/motif_databases/HUMAN/HOCOMOCOv11_full_HUMAN_mono_meme_format.meme',
+        annotationfile: 'utils/meme/motif_databases/HUMAN/HOCOMOCOv11_full_annotation_HUMAN_mono.tsv'
+    },
+    tracks: [
+        {
+            __isgene: true,
+            translatecoding: true,
+            file: 'anno/refGene.hg38.gz',
+            type: 'bedj',
+            name: 'RefGene',
+            stackheight: 16,
+            stackspace: 1,
+            vpad: 4,
+            color: '#1D591D'
+        },
+        {
+            __isgene: true,
+            name: 'GENCODE v47',
+            file: 'anno/gencode.v47.hg38.gz',
+            translatecoding: true,
+            categories: {
+                coding: { color: '#004D99', label: 'Coding gene' },
+                nonCoding: { color: '#008833', label: 'Noncoding gene' },
+                problem: { color: '#CC3300', label: 'Problem' },
+                pseudo: { color: '#CC00CC', label: 'Pseudogene' }
+            },
+            type: 'bedj',
+            stackheight: 16,
+            stackspace: 1,
+            vpad: 4
+        },
+        {
+            type: 'bedj',
+            name: 'RepeatMasker',
+            stackheight: 14,
+            file: 'anno/rmsk.hg38.gz',
+            onerow: true,
+            categories: {
+                SINE: { color: '#ED8C8E', label: 'SINE' },
+                LINE: { color: '#EDCB8C', label: 'LINE' },
+                LTR: { color: '#E38CED', label: 'LTR' },
+                DNA: { color: '#8C8EED', label: 'DNA transposon' },
+                simple: { color: '#8EB88C', label: 'Simple repeats' },
+                low_complexity: { color: '#ACEBA9', label: 'Low complexity' },
+                satellite: { color: '#B59A84', label: 'Satellite' },
+                RNA: { color: '#9DE0E0', label: 'RNA repeat' },
+                other: { color: '#9BADC2', label: 'Other' },
+                unknown: { color: '#858585', label: 'Unknown' }
+            }
+        }
+    ],
+    defaultcoord: { chr: 'chr17', start: 7666657, stop: 7688274 },
+    hicenzymefragment: [
+        {
+            enzyme: 'DpnII',
+            file: 'anno/hicFragment/hic.DpnII.hg38.gz'
+        },
+        {
+            enzyme: 'EcoRI',
+            file: 'anno/hicFragment/hic.EcoRI.hg38.gz'
+        },
+        {
+            enzyme: 'HindIII',
+            file: 'anno/hicFragment/hic.HindIII.hg38.gz'
+        },
+        {
+            enzyme: 'MboI',
+            file: 'anno/hicFragment/hic.MboI.hg38.gz'
+        },
+        {
+            enzyme: 'NcoI',
+            file: 'anno/hicFragment/hic.NcoI.hg38.gz'
+        }
+    ],
 
-	geneset: [
-		{
-			name: 'Cancer Gene Census',
-			lst: CancerGeneCensusLst
-		}
-	],
+    geneset: [
+        {
+            name: 'Cancer Gene Census',
+            lst: CancerGeneCensusLst
+        }
+    ],
 
-	majorchr: `chr1	248956422
+    majorchr: `chr1	248956422
 chr2	242193529
 chr3	198295559
 chr4	190214555
@@ -135,7 +152,7 @@ chr22	50818468
 chrX	156040895
 chrY	57227415
 chrM	16569`,
-	minorchr: `chr15_KI270905v1_alt	5161414 chr6_GL000256v2_alt	4929269 chr6_GL000254v2_alt	4827813 chr6_GL000251v2_alt	4795265 chr6_GL000253v2_alt	4677643
+    minorchr: `chr15_KI270905v1_alt	5161414 chr6_GL000256v2_alt	4929269 chr6_GL000254v2_alt	4827813 chr6_GL000251v2_alt	4795265 chr6_GL000253v2_alt	4677643
 	chr6_GL000250v2_alt	4672374 chr6_GL000255v2_alt	4606388 chr6_GL000252v2_alt	4604811 chr17_KI270857v1_alt	2877074 chr16_KI270853v1_alt	2659700
 	chr16_KI270728v1_random	1872759 chr17_GL000258v2_alt	1821992 chr5_GL339449v2_alt	1612928 chr14_KI270847v1_alt	1511111 chr17_KI270908v1_alt	1423190
 	chr14_KI270846v1_alt	1351393 chr5_KI270897v1_alt	1144418 chr7_KI270803v1_alt	1111570 chr19_GL949749v2_alt	1091841 chr19_KI270938v1_alt	1066800
