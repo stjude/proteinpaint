@@ -1,2 +1,1 @@
-Fixes:
-- improve gdcmaf ui not to show empty table and disable interactivity while downloading
+

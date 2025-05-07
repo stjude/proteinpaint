@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Fixes:
+- improve gdcmaf ui not to show empty table and disable interactivity while downloading
+
+
 ## 2.123.0
 
 Features:
