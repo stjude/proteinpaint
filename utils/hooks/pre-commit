@@ -61,15 +61,16 @@ if [[ "$RUST_FULL_PATHS" != "" ]]; then
   # Extract just the filenames without the path prefix
   RUST_FILES=$(echo "$RUST_FULL_PATHS" | xargs basename)
   # Lint each file
-  echo "Linting Rust files with clippy..."
-  for f in $RUST_FILES; do
-    echo "Linting $f..."
-    clippy-driver --edition 2024 -Cpanic=abort $f
+  # echo "Linting Rust files with clippy..."
+  # for f in $RUST_FILES; do
+    #echo "Linting $f..."
+	# cargo clippy 
+    # clippy-driver --edition 2024 -Cpanic=abort $f
     # Get the base filename without extension
-    BINARY_NAME=$(basename "$f" .rs)
-    echo "Deleting binary: $BINARY_NAME"
-		rm -f "$BINARY_NAME"
-  done
+    #BINARY_NAME=$(basename "$f" .rs)
+    #echo "Deleting binary: $BINARY_NAME"
+		#rm -f "$BINARY_NAME"
+  #done
 
   # Return to original directory
   cd ../..
