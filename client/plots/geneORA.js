@@ -90,16 +90,9 @@ class geneORA {
 			chartType: 'geneORA',
 			settingsKey: 'pathway',
 			title: 'Display table showing original and adjusted pvalues corresponding to each significant pathway',
-			boxLabel: '',
-			options: [
-				{ label: 'BP: subset of GO', value: 'BP: subset of GO' },
-				{ label: 'MF: subset of GO', value: 'MF: subset of GO' },
-				{ label: 'CC: subset of GO', value: 'CC: subset of GO' },
-				{ label: 'WikiPathways subset of CP', value: 'WikiPathways subset of CP' },
-				{ label: 'REACTOME subset of CP', value: 'REACTOME subset of CP' },
-				{ label: 'H: hallmark gene sets', value: 'H: hallmark gene sets' }
-			]
+			boxLabel: ''
 		}
+		geneSet.options = this.app.opts.genome.termdbs.msigdb.analysisGenesetGroups // Gene set groups queried from genome file
 		if (!this.settings.pathway) {
 			geneSet.options.unshift({ label: '-', value: '-' })
 			this.settings.pathway = '-'

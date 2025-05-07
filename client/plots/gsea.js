@@ -222,26 +222,13 @@ class gsea {
 				this.config.gsea_params.genes.length +
 					' genes <span style="font-size:.8em;opacity:.7">GENE SET ENRICHMENT ANALYSIS</span>'
 			)
-
 		render_gsea(this)
 	}
 }
 
 async function renderPathwayDropdown(self) {
 	const settings = structuredClone(self.settings)
-	const pathwayOpts = [
-		{ label: '-', value: '-' },
-		{ label: 'BP: subset of GO', value: 'BP: subset of GO' },
-		{ label: 'MF: subset of GO', value: 'MF: subset of GO' },
-		{ label: 'CC: subset of GO', value: 'CC: subset of GO' },
-		{ label: 'WikiPathways subset of CP', value: 'WikiPathways subset of CP' },
-		{ label: 'REACTOME subset of CP', value: 'REACTOME subset of CP' },
-		/* QUICK FIX
-		geneset name ending in "--blitzgsea" signals to use built-in genesets but not msigdb
-		later a proper fix is to add a radio toggle of Blitzgsea versus MSigDB, and do not use such hardcode
-		*/
-		{ label: 'H: hallmark gene sets', value: 'H: hallmark gene sets' }
-	]
+	const pathwayOpts = self.app.opts.genome.termdbs.msigdb.analysisGenesetGroups // Gene set groups queried from genome file
 
 	// Now blitzgsea geneSets are inside serverconfig flag
 	if (JSON.parse(sessionStorage.getItem('optionalFeatures')).gsea_test == true) {
