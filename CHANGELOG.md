@@ -7,6 +7,9 @@ All notable changes to this project will be documented in this file.
 Features:
 - Migrated all R source code to a new R workspace.
 
+Fixes:
+- Skip any fusions from non major chromosomes
+
 
 ## 2.122.0
 
