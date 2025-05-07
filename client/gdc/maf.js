@@ -11,6 +11,9 @@ filter0=str
 	optional, stringified json obj as the cohort filter from gdc ATF
 	simply pass to backend to include in api queries
 callbacks{ postRender() }
+
+obj {} TODO convert to class and declare properties
+
 */
 
 const tip = new Menu()
@@ -169,6 +172,15 @@ const mafColumns = [
 
 export async function gdcMAFui({ holder, filter0, callbacks, debugmode = false }) {
 	try {
+		if (callbacks) {
+			/* due to src/app.js line 100
+			delete this when that is reshaped to app.sjcharts.callbacks={}
+			*/
+			delete callbacks.sjcharts
+			for (const n in callbacks) {
+				if (typeof callbacks[n] != 'function') throw `callbacks.${n} not function`
+			}
+		}
 		{
 			// validate column names in case of human err
 			const cn = new Set()
@@ -186,26 +198,27 @@ export async function gdcMAFui({ holder, filter0, callbacks, debugmode = false }
 
 	async function update({ filter0 }) {
 		holder.selectAll('*').remove()
+		// TODO convert obj to class and declare all properties
 		const obj = {
-			// old habit of wrapping everything
 			errDiv: holder.append('div'),
 			controlDiv: holder.append('div'),
 			tableDiv: holder.append('div'),
 			opts: {
 				filter0,
 				experimentalStrategy: 'WXS'
-			}
+			},
+			busy: false, // when downloading, set to true for disabling ui interactivity
+			mafTableArg: null,
+			expStrategyRadio: null
 		}
 		makeControls(obj)
 		await getFilesAndShowTable(obj)
-		if (typeof callbacks?.postRender == 'function') {
-			callbacks.postRender(publicApi)
-		}
+		callbacks?.postRender?.(publicApi)
 	}
 
-	// public api obj to be returned
+	// return api to be accessible by react wrapper; will call api.update() to auto refresh cohortmaf UI on GFF cohort change
 	const publicApi = { update }
-	return publicApi // ?
+	return publicApi
 }
 
 function makeControls(obj) {
@@ -214,7 +227,7 @@ function makeControls(obj) {
 	table.addRow('Workflow Type', 'Aliquot Ensemble Somatic Variant Merging and Masking')
 	{
 		const [td1, td2] = table.addRow('Experimental Strategy')
-		make_radios({
+		obj.expStrategyRadio = make_radios({
 			holder: td2,
 			options: [
 				{ label: 'WXS', value: 'WXS', checked: obj.opts.experimentalStrategy == 'WXS' },
@@ -270,72 +283,86 @@ function makeControls(obj) {
 
 async function getFilesAndShowTable(obj) {
 	obj.tableDiv.selectAll('*').remove()
-	const wait = obj.tableDiv.append('div').text('Loading...')
+	const wait = obj.tableDiv.append('div').style('margin', '30px 10px 10px 10px').text('Loading...')
 
-	const body = {
-		experimentalStrategy: obj.opts.experimentalStrategy
-	}
-	if (obj.opts.filter0) body.filter0 = obj.opts.filter0
-	const result = await dofetch3('gdc/maf', { body })
-	if (result.error) throw result.error
-	wait.remove()
+	let result // convenient for accessing outside of try-catch
 
-	// render
-	{
-		const row = obj.tableDiv.append('div').style('margin', '20px')
-		if (result.filesTotal > result.files.length) {
-			row.append('div').text(`Showing first ${result.files.length} files out of ${result.filesTotal} total.`)
-		} else {
-			row.append('div').text(`Showing ${result.files.length} files.`)
+	try {
+		const body = {
+			experimentalStrategy: obj.opts.experimentalStrategy
 		}
-	}
+		if (obj.opts.filter0) body.filter0 = obj.opts.filter0
+		result = await dofetch3('gdc/maf', { body })
+		if (result.error) throw result.error
+		if (!Array.isArray(result.files)) throw 'result.files[] not array'
+		if (result.files.length == 0) throw 'No MAF files available.'
 
-	const rows = []
-	for (const f of result.files) {
-		const row = [
-			{
-				//html: `<a href=https://portal.gdc.cancer.gov/cases/${f.case_uuid} target=_blank>${f.case_submitter_id}</a>`,
-				// no longer links to case but links to maf file which makes more sense
-				html: `<a href=https://portal.gdc.cancer.gov/files/${f.id} target=_blank>${f.case_submitter_id}</a>`,
-				value: f.case_submitter_id
-			},
-			{ value: f.project_id },
-			{
-				html: f.sample_types
-					.map(i => {
-						return (
-							'<span class="sja_mcdot" style="padding:1px 8px;background:#ddd;color:black;white-space:nowrap">' +
-							i +
-							'</span>'
-						)
-					})
-					.join(' ')
-			},
-			{ value: f.file_size }
-			// do not send in text-formated file size, table sorting not smart to handle such
-			//{ value: fileSize(f.file_size), url: 'https://portal.gdc.cancer.gov/files/' + f.id }
-		]
-		rows.push(row)
+		// render
+		if (result.filesTotal > result.files.length) {
+			wait.text(`Showing first ${result.files.length} MAF files out of ${result.filesTotal} total.`)
+		} else {
+			wait.text(`Showing ${result.files.length} MAF files.`)
+		}
+
+		const rows = []
+		for (const f of result.files) {
+			const row = [
+				{
+					html: `<a href=https://portal.gdc.cancer.gov/files/${f.id} target=_blank>${f.case_submitter_id}</a>`,
+					value: f.case_submitter_id
+				},
+				{ value: f.project_id },
+				{
+					html: f.sample_types
+						.map(i => {
+							return (
+								'<span class="sja_mcdot" style="padding:1px 8px;background:#ddd;color:black;white-space:nowrap">' +
+								i +
+								'</span>'
+							)
+						})
+						.join(' ')
+				},
+				{ value: f.file_size } // do not send in text-formated file size, table sorting won't work
+			]
+			rows.push(row)
+		}
+
+		// tracks table arg, so that the created button DOM element is accessible and can be modified
+		obj.mafTableArg = {
+			rows,
+			columns: tableColumns,
+			resize: true,
+			div: obj.tableDiv.append('div'),
+			selectAll: true, // comment out for quicker testing
+			dataTestId: 'sja_mafFileTable',
+			header: { allowSort: true },
+			selectedRows: [], //[198], // uncomment out for quicker testing
+			buttons: [
+				{
+					text: 'Aggregate selected MAF files and download',
+					onChange: updateButtonBySelectionChange,
+					callback: submitSelectedFiles
+				}
+			]
+		}
+		renderTable(obj.mafTableArg)
+	} catch (e) {
+		wait.text(e.message || e)
+		if (e.stack) console.log(e.stack)
 	}
-	renderTable({
-		rows,
-		columns: tableColumns,
-		resize: true,
-		div: obj.tableDiv.append('div'),
-		selectAll: true, // comment out for quicker testing
-		dataTestId: 'sja_mafFileTable',
-		header: { allowSort: true },
-		selectedRows: [], //[198], // uncomment out for quicker testing
-		buttons: [
-			{
-				text: 'Aggregate selected MAF files and download',
-				onChange: updateButtonBySelectionChange,
-				callback: submitSelectedFiles
-			}
-		]
-	})
 
 	function updateButtonBySelectionChange(lst, button) {
+		if (obj.busy) {
+			/* is waiting for server response. do not proceed to alter submit button
+			because the checkboxes in the maf table cannot be disabled when submission is running,
+			thus user can still check and uncheck maf files, that can cause the submit button to be enabled
+			thus do below to disable it
+			*/
+			obj.mafTableArg.buttons[0].button.property('disabled', true)
+			return
+		}
+
 		let sum = 0
 		for (const i of lst) sum += result.files[i].file_size
 		if (sum == 0) {
@@ -385,25 +412,18 @@ async function getFilesAndShowTable(obj) {
 
 		let data
 		try {
-			/* expect multipart response, as preprocessed by dofetch into the following object
-			 {
-			 	  gzfile: {
-					 	headers: {'content-type': '...', [key?]: string}, 
-			    	body: File/Blob
-		     	},
-		     	errors: [
-		     		// empty array, or any entries
-						{error: '...', url}
-						{error?: '...', message?: '...'}
-		   		]
-			 }
-			*/
+			obj.busy = true
+			obj.expStrategyRadio.inputs.property('disabled', true)
 			data = await dofetch3('gdc/mafBuild', { body: { fileIdLst, columns: outColumns } })
 			if (!Object.keys(data).length) throw 'server returned blank multipart'
+			obj.busy = false
+			obj.expStrategyRadio.inputs.property('disabled', false)
 		} catch (e) {
 			sayerror(obj.errDiv, e)
 			button.innerHTML = oldText
 			button.disabled = false
+			obj.busy = false
+			obj.expStrategyRadio.property('disabled', false)
 			return
 		}
 
