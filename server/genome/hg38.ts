@@ -24,16 +24,12 @@ export default <Genome>{
                 { label: 'CC: subset of GO', value: 'CC: subset of GO' },
                 { label: 'WikiPathways subset of CP', value: 'WikiPathways subset of CP' },
                 { label: 'REACTOME subset of CP', value: 'REACTOME subset of CP' },
-                /* QUICK FIX
-                geneset name ending in "--blitzgsea" signals to use built-in genesets but not msigdb
-                later a proper fix is to add a radio toggle of Blitzgsea versus MSigDB, and do not use such hardcode
-                */
                 { label: 'H: hallmark gene sets', value: 'H: hallmark gene sets' }
             ],
-            geneORAParam: {
-                minCutoff: 0
-            },
-            gseaParam: {}
+            geneORAparam: {
+                minCutoff: 15,
+                maxCutoff: 500
+            }
         }
     },
 
