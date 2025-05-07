@@ -157,38 +157,22 @@ jobs:
     needs: build
     if: needs.build.outputs.updated_rust == 'true'
     runs-on: ubuntu-22.04
+    container:
+      image: ghcr.io/stjude/rust:latest
     steps:
-      - uses: actions/checkout@v3
-        with:
-          fetch-depth: 10
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      - name: Set up Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          profile: minimal
-          override: true
-
-      - name: Build Rust binaries
+      - name: build rust
         run: |
-          cd rust
-          cargo build --release
-          
-          # Create a directory for the binaries
-          mkdir -p ../rust-binaries
-          
-          # Copy all relevant binaries to the output directory
-          find ./target/release -maxdepth 1 -type f -executable -not -name "*.d" -exec cp {} ../rust-binaries/ \;
-          
-          echo "Rust binaries built successfully"
-          ls -la ../rust-binaries
+          cd rust && cargo build --release
+          ./extract_binaries.sh
 
-      - name: Upload Rust binaries
+      - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: rust-binaries
-          path: rust-binaries
-          retention-days: 1
+          path: rust/extracted_binaries
 
   # Add Docker build job with Rust binaries
   docker-with-rust:
