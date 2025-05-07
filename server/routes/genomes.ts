@@ -101,7 +101,7 @@ function clientcopy_genome(genomename, genomes) {
 	if (g.termdbs) {
 		g2.termdbs = {}
 		for (const k in g.termdbs) {
-			g2.termdbs[k] = { label: g.termdbs[k].label }
+			g2.termdbs[k] = { label: g.termdbs[k].label, analysisGenesetGroups: g.termdbs[k].analysisGenesetGroups }
 		}
 	}
 
