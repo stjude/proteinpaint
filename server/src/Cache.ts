@@ -9,7 +9,7 @@ export class Cache {
 		/** In use? */
 		{ dir: 'genome' },
 		/** Temporarily stores pickle files for gsea */
-		{ dir: 'gsea' },
+		{ dir: 'gsea', fileExtensions: new Set(['.pkl']) },
 		/** to ensure temp files saved in previous server session are accessible in current session
 		 * must use consistent dir name but not random dir name that changes from last server boot
 		 */
@@ -26,17 +26,17 @@ export class Cache {
 
 	async init() {
 		// create sub directories under cachedir, and register path in serverconfig
-		for (const dir of this.defaultCacheDirs) {
-			if (Object.keys(dir).length > 1) {
+		for (const subdir of this.defaultCacheDirs) {
+			if (Object.keys(subdir).length > 1) {
 				//cache objs are defined as cache_<dir> in serverconfig
-				serverconfig[`cache_${dir.dir}`] = {
-					dir: await this.mayCreateSubdirInCache(dir.dir),
-					fileNameRegexp: dir.fileNameRegexp || '',
-					sampleColumn: dir.sampleColumn || 0
+				serverconfig[`cache_${subdir.dir}`] = {
+					dir: await this.mayCreateSubdirInCache(subdir.dir),
+					fileNameRegexp: subdir.fileNameRegexp || '',
+					sampleColumn: subdir.sampleColumn || 0
 				}
 			}
 			// cache dirs are defined as cachedir_<dir> in serverconfig
-			else serverconfig[`cachedir_${dir.dir}`] = await this.mayCreateSubdirInCache(dir.dir)
+			else serverconfig[`cachedir_${subdir.dir}`] = await this.mayCreateSubdirInCache(subdir.dir)
 		}
 	}
 
@@ -58,5 +58,95 @@ export class Cache {
 			}
 		}
 		return dir
+	}
+
+	deleteCacheFiles() {
+		// Allow the serverconfig to override the default interval of 1 minute
+		// Useful for CI
+		const cacheMonitor = serverconfig.features?.cacheMonitor
+		const interval = cacheMonitor.intervalOverride || 1000 * 60
+		// Clear the subdirectories periodically, defined by the interval
+		// and optional cacheMonitor settings in serverconfig
+		setInterval(async () => {
+			console.log('Checking for cached files to delete ...')
+			for (const subdir of this.defaultCacheDirs) {
+				//Only enable gsea for now
+				if (subdir.dir !== 'gsea') continue
+				const maxAge = cacheMonitor?.[subdir.dir].maxAge || 1000 * 60 * 60 * 2 // 2 hours
+				const maxSize = cacheMonitor?.[subdir.dir].maxSize || 5e9 // 5 GB
+				await this.mayDeleteCacheFiles(maxAge, maxSize, serverconfig[`cache_${subdir.dir}`])
+			}
+		}, interval)
+	}
+
+	async mayDeleteCacheFiles(maxAge, maxSize, subdir) {
+		console.log(`checking for cached ${subdir.dir} files to delete ...`)
+		try {
+			const minTime = Date.now() - maxAge
+			const filenames = await fs.promises.readdir(subdir.dir)
+			// keep list of undeleted files. may need to rank them and delete old ones ranked by age
+			const files: { path: any; time: any; size: any; deleted?: any }[] = []
+			let totalSize = 0,
+				deletedSize = 0,
+				totalCount = 0,
+				deletedCount = 0
+			for (const filename of filenames) {
+				if (subdir.fileExtensions.size && !subdir.fileExtensions.has(path.extname(filename))) continue
+				totalCount++
+				const fp = path.join(subdir, filename)
+				const s = await fs.promises.stat(fp)
+				if (!s.isFile()) continue
+				const time = s.mtimeMs
+				if (time < minTime) {
+					await fs.promises.unlink(fp)
+					deletedCount++
+					deletedSize += s.size
+					continue
+				}
+				files.push({
+					path: fp,
+					time,
+					size: s.size
+				})
+				totalSize += s.size
+			}
+			files.sort((i, j) => j.time - i.time) // descending
+			if (totalSize >= maxSize) {
+				/*
+					storage use is still above limit, deleting files just older than cutoff is not enough
+					a lot of recent requests may have deposited lots of cache files
+					must delete more old files ranked by age
+					*/
+				// const minMtime = Date.now() - checkWait
+				for (const f of files) {
+					// // do not delete files too soon that it may affect a current file read
+					// if (f.time > minMtime) break
+					await fs.promises.unlink(f.path)
+					f.deleted = true
+					deletedCount++
+					deletedSize += f.size
+					totalSize -= f.size
+					if (totalSize < maxSize) break
+				}
+			}
+			console.log(
+				`deleted ${deletedCount} of ${totalCount} cached files (${deletedSize} bytes deleted, ${totalSize} remaining)`
+			)
+			// // empty out the following tracking variables
+			// this.#cacheCheckTimeout = undefined
+			// this.#nextCheckTime = 0
+			// const nextFile = totalSize && files.find(f => !f.deleted)
+			// if (nextFile) {
+			// 	// trigger another mayDeleteCachefile() call with setTimeout,
+			// 	// using the oldest file mtime + checkWait as the wait time,
+			// 	// or much sooner if the max cache size is currently exceeded
+			// 	const wait =
+			// 		this.checkWait +
+			// 		Math.round(totalSize >= this.#maxSize ? 0 : Math.max(0, nextFile.time + this.#maxAge - Date.now()))
+			// 	this.mayResetCacheCheckTimeout(wait)
+			// }
+		} catch (e) {
+			console.error('Error in mayDeleteCacheFiles(): ' + e)
+		}
 	}
 }

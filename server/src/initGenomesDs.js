@@ -53,6 +53,7 @@ export async function initGenomesDs(serverconfig) {
 
 	const cache = new Cache()
 	await cache.init()
+	cache.deleteCacheFiles()
 
 	deleteSessionFiles()
 	deleteTrashSessionFiles()
