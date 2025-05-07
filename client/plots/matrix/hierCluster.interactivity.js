@@ -89,8 +89,8 @@ export function addSelectedRowsOptions(clickedRowNames, event) {
 		this.config.dataType == 'geneExpression'
 			? 'genes'
 			: this.config.dataType == 'metaboliteIntensity'
-				? 'metabolites'
-				: 'items'
+			? 'metabolites'
+			: 'items'
 
 	const optionArr = [
 		{
@@ -99,7 +99,6 @@ export function addSelectedRowsOptions(clickedRowNames, event) {
 		}
 	]
 
-	console.log('this:', this)
 	const minGeneCutoff = this.app.opts.genome.termdbs.msigdb.geneORAparam.minCutoff // gene ORA cutoffs queried from genome file
 	const maxGeneCutoff = this.app.opts.genome.termdbs.msigdb.geneORAparam.maxCutoff // gene ORA cutoffs queried from genome file
 	if (this.app.opts.genome.termdbs) {
@@ -200,7 +199,7 @@ export function showTable4selectedSamples(clickedSampleNames) {
 	const rows = templates?.sample
 		? clickedSampleNames.map(c => [
 				{ value: this.hierClusterData.bySampleId[c].label, url: `${templates.sample.base}${c}` }
-			])
+		  ])
 		: clickedSampleNames.map(c => [{ value: this.hierClusterData.bySampleId[c].label }])
 
 	const columns = [{ label: this.settings.matrix.controlLabels.Sample }]
@@ -225,7 +224,7 @@ export function showTable4selectedRows(clickedRowNames, rowType) {
 					this.hierClusterData.byTermId[c]?.gencodeId
 						? [{ value: c, url: `${templates.gene.base}${this.hierClusterData.byTermId[c].gencodeId}` }]
 						: [{ value: c }]
-				)
+			  )
 			: clickedRowNames.map(c => [{ value: c }])
 
 	const columns = [{ label: rowType }]
@@ -313,10 +312,10 @@ export function setClusteringBtn(holder, callback) {
 		dataType == 'geneExpression'
 			? 'Genes'
 			: dataType == 'metaboliteIntensity'
-				? 'Metabolites'
-				: dataType == 'numericDictTerm'
-					? 'Terms'
-					: 'Rows'
+			? 'Metabolites'
+			: dataType == 'numericDictTerm'
+			? 'Terms'
+			: 'Rows'
 	holder
 		.append('button')
 		//.property('disabled', d => d.disabled)

@@ -1,64 +1,64 @@
 import type { Genome } from '#types'
 
 const genome: Genome = {
-    species: 'human',
-    genomefile: 'NA',
-    genedb: {
-        dbfile: 'anno/genes.hg38.test.db'
-    },
+	species: 'human',
+	genomefile: 'NA',
+	genedb: {
+		dbfile: 'anno/genes.hg38.test.db'
+	},
 
-    termdbs: {
-        msigdb: {
-            label: 'MSigDB',
-            cohort: {
-                db: { file: 'files/hg38/TermdbTest/msigdb/db' }, // nest file under TermdbTest since the folder is auto symlinked
-                termdb: {
-                    isGeneSetTermdb: true
-                }
-            },
-            analysisGenesetGroups: [
-                { label: '-', value: '-' },
-                { label: 'H: hallmark gene sets', value: 'H: hallmark gene sets' }
-            ],
-            geneORAparam: {
-                minCutoff: 0,
-                maxCutoff: 500
-            }
-        }
-    },
+	termdbs: {
+		msigdb: {
+			label: 'MSigDB',
+			cohort: {
+				db: { file: 'files/hg38/TermdbTest/msigdb/db' }, // nest file under TermdbTest since the folder is auto symlinked
+				termdb: {
+					isGeneSetTermdb: true
+				}
+			},
+			analysisGenesetGroups: [
+				{ label: '-', value: '-' },
+				{ label: 'H: hallmark gene sets', value: 'H: hallmark gene sets' }
+			],
+			geneORAparam: {
+				minCutoff: 0,
+				maxCutoff: 500
+			}
+		}
+	},
 
-    tracks: [
-        {
-            __isgene: true,
-            translatecoding: true,
-            file: 'anno/refGene.hg38.test.gz',
-            type: 'bedj',
-            name: 'RefGene',
-            stackheight: 16,
-            stackspace: 1,
-            vpad: 4,
-            color: '#1D591D'
-        },
-        {
-            __isgene: true,
-            file: 'anno/gencode.v41.hg38.test.gz',
-            translatecoding: true,
-            categories: {
-                coding: { color: '#004D99', label: 'Coding gene' },
-                nonCoding: { color: '#008833', label: 'Noncoding gene' },
-                problem: { color: '#CC3300', label: 'Problem' },
-                pseudo: { color: '#CC00CC', label: 'Pseudogene' }
-            },
-            type: 'bedj',
-            name: 'GENCODE v41',
-            stackheight: 16,
-            stackspace: 1,
-            vpad: 4
-        }
-    ],
-    defaultcoord: { chr: 'chr17', start: 7666657, stop: 7688274 },
+	tracks: [
+		{
+			__isgene: true,
+			translatecoding: true,
+			file: 'anno/refGene.hg38.test.gz',
+			type: 'bedj',
+			name: 'RefGene',
+			stackheight: 16,
+			stackspace: 1,
+			vpad: 4,
+			color: '#1D591D'
+		},
+		{
+			__isgene: true,
+			file: 'anno/gencode.v41.hg38.test.gz',
+			translatecoding: true,
+			categories: {
+				coding: { color: '#004D99', label: 'Coding gene' },
+				nonCoding: { color: '#008833', label: 'Noncoding gene' },
+				problem: { color: '#CC3300', label: 'Problem' },
+				pseudo: { color: '#CC00CC', label: 'Pseudogene' }
+			},
+			type: 'bedj',
+			name: 'GENCODE v41',
+			stackheight: 16,
+			stackspace: 1,
+			vpad: 4
+		}
+	],
+	defaultcoord: { chr: 'chr17', start: 7666657, stop: 7688274 },
 
-    majorchr: `chr1	248956422
+	majorchr: `chr1	248956422
 chr2	242193529
 chr3	198295559
 chr4	190214555
@@ -83,7 +83,7 @@ chr22	50818468
 chrX	156040895
 chrY	57227415
 chrM	16569`,
-    minorchr: `chr15_KI270905v1_alt	5161414 chr6_GL000256v2_alt	4929269 chr6_GL000254v2_alt	4827813 chr6_GL000251v2_alt	4795265 chr6_GL000253v2_alt	4677643
+	minorchr: `chr15_KI270905v1_alt	5161414 chr6_GL000256v2_alt	4929269 chr6_GL000254v2_alt	4827813 chr6_GL000251v2_alt	4795265 chr6_GL000253v2_alt	4677643
 	chr6_GL000250v2_alt	4672374 chr6_GL000255v2_alt	4606388 chr6_GL000252v2_alt	4604811 chr17_KI270857v1_alt	2877074 chr16_KI270853v1_alt	2659700
 	chr16_KI270728v1_random	1872759 chr17_GL000258v2_alt	1821992 chr5_GL339449v2_alt	1612928 chr14_KI270847v1_alt	1511111 chr17_KI270908v1_alt	1423190
 	chr14_KI270846v1_alt	1351393 chr5_KI270897v1_alt	1144418 chr7_KI270803v1_alt	1111570 chr19_GL949749v2_alt	1091841 chr19_KI270938v1_alt	1066800
