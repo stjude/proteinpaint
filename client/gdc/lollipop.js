@@ -21,7 +21,7 @@ to launch cnv tool:
 ********* parameters
 
 arg = {}
-	// runpp() argument object
+	// this is the runpp() argument object
 	geneSearch4GDCmds3:{}
 		.postRender()
 		.onloadalltk_always() }
@@ -30,6 +30,8 @@ arg = {}
 			// if true, launches cnv tool (gene search box allows searching both gene/coord and yields coord)
 	.allow2selectSamples:{}
 		// pass to mds3 tk object to enable sample selection
+	.filter0
+		// hidden gdc cohort filter, passed to tk obj
 	.geneSymbol:str
 		// default gene to fill into search box
 	.state{}
@@ -130,7 +132,12 @@ export async function init(arg, holder, genomes) {
 			pa.tklst = arg.tracks
 		} else {
 			// generate mds3 tk
-			const tk = { type: 'mds3', dslabel: gdcDslabel, allow2selectSamples: arg.allow2selectSamples }
+			const tk = {
+				type: 'mds3',
+				dslabel: gdcDslabel,
+				allow2selectSamples: arg.allow2selectSamples,
+				filter0: arg.filter0
+			}
 			pa.tklst = [tk]
 			if (arg.geneSearch4GDCmds3.hardcodeCnvOnly) {
 				tk.hardcodeCnvOnly = 1
