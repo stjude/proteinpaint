@@ -1,5 +1,6 @@
 export const dateCTE = {
-	getCTE(tablename, tw) {
+	getCTE(tablename, tw, values) {
+		values.push(tw.term.id)
 		return {
 			sql: `${tablename} AS (
 				SELECT 
@@ -7,7 +8,7 @@ export const dateCTE = {
 					value as key, 
 					value
 				FROM anno_date
-				WHERE term_id='${tw.term.id}'
+				WHERE term_id=?
 			)`,
 			tablename
 		}
