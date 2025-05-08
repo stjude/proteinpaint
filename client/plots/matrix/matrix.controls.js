@@ -1180,8 +1180,8 @@ export class MatrixControls {
 							//if it was present use the previous term, genomic range terms require chr, start and stop fields, found in the original term
 							let tw = group.lst.find(tw => tw.term.name == d.symbol || tw.term.name == d.gene)
 							if (!tw) {
-								tw = { term, q: {} }
-								tw.$id = await get$id(this.opts.app.vocabApi.getTwMinCopy(tw))
+								tw = { term }
+								await fillTermWrapper(tw, this.opts.app.vocabApi)
 							} else if (!tw.$id) {
 								tw.$id = await get$id(this.opts.app.vocabApi.getTwMinCopy({ term }))
 							}
