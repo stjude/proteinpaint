@@ -672,6 +672,7 @@ class singleCellPlot {
 			downloadFilename
 		}
 		const opts = {
+			genome: this.app.opts.genome,
 			holder,
 			state: {
 				vocab: this.state.vocab,
@@ -731,7 +732,7 @@ class singleCellPlot {
 		if (this.app.opts.genome.termdbs) {
 			// assumption is that can run gsea on the differential genes, when the genome-level termdb is available (which is right now geneset dbs)
 			tabs.push({
-				label: 'Gene Set Enrichment Analysis(GSEA)',
+				label: 'Gene Set Enrichment Analysis (GSEA)',
 				id: DE_GSEA_TAB,
 				active: false,
 				callback: () => showActiveDETab(DE_GSEA_TAB)
