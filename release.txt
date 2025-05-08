@@ -1,1 +1,2 @@
-Added unit test rust/test/geneORA.unit.spec.js for rust/src/genesetORA.rs
+Features:
+- Added unit test rust/test/geneORA.unit.spec.js for rust/src/genesetORA.rs
