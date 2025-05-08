@@ -72,12 +72,16 @@ export class GvBase extends TwBase {
 		await mayMakeVariantFilter(tw, opts.vocabApi)
 
 		{
+			const cnv = opts.vocabApi.termdbConfig.queries.cnv
 			// apply optional ds-level configs for this specific term
 			const c = opts.vocabApi.termdbConfig.customTwQByType?.geneVariant
 			if (c && tw.term.name) {
 				//if (c) valid js code but `&& tw.term.name` required to avoid type error
 				// order of overide: 1) do not override existing settings in tw.q{} 2) c.byGene[thisGene] 3) c.default{}
 				Object.assign(tw.q, c.default || {}, c.byGene?.[tw.term.name] || {}, tw.q)
+			} else if (cnv) {
+				const { cnvMaxLength, cnvGainCutoff, cnvLossCutoff } = cnv
+				Object.assign(tw.q, { cnvMaxLength, cnvGainCutoff, cnvLossCutoff })
 			}
 		}
 
