@@ -1172,9 +1172,12 @@ type Matrix = {
 	settings?: MatrixSettings
 	/** matrix-specific mclass override? */
 	mclass?: Mclass
-	// TODO: improve definitions below
+	/** filter to hide entire legend group, e.g. hide all CNV */
 	legendGrpFilter?: any
+	/** filter to hide categories or mclass, e.g. hide male, hide MISSENSE */
 	legendValueFilter?: any
+	/** matrix criteria for a CNV alteration */
+	cnvCutoffs?: any
 }
 
 // specific hierCluster type settings, should be named as "dataTYpe + Cluster"

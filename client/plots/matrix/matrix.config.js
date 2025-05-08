@@ -44,6 +44,7 @@ export async function getPlotConfig(opts = {}, app) {
 			join: 'and',
 			lst: []
 		},
+		cnvCutoffs: {},
 
 		// rendering options
 		settings: {
