@@ -306,8 +306,16 @@ export async function initGenomesDs(serverconfig) {
 		// termdbs{} is optional
 		if (g.termdbs) {
 			for (const key in g.termdbs) {
-				server_init_db_queries(g.termdbs[key], features)
-				console.log(`${key} initiated as ${genomename}-level termdb`)
+				if (g.termdbs[key].cohort?.termdb?.isGeneSetTermdb != true)
+					throw 'genome-level geneset db lacks flag of cohort.termdb.isGeneSetTermdb=true' // this flag is part of termdbconfig and used by tree app
+				server_init_db_queries(g.termdbs[key])
+				if (!Array.isArray(g.termdbs[key].analysisGenesetGroups)) throw '.analysisGenesetGroups[] not array'
+				if (g.termdbs[key].analysisGenesetGroups.length == 0) throw '.analysisGenesetGroups[] blank'
+				for (const a of g.termdbs[key].analysisGenesetGroups) {
+					if (!a.label || !a.value) throw 'label/value property missing from one of analysisGenesetGroups[]'
+				}
+				if (!g.termdbs[key].geneORAparam) throw '.geneORAparam missing'
+				console.log(`${key} initiated as ${genomename}-level geneset db`)
 			}
 		}
 

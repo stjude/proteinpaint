@@ -19,7 +19,11 @@ type TermDbs = {
 type TermDbsEntry = {
 	label: string
 	cohort: Cohort
+	/** list of geneset groups in db; required for geneORA and gsea
+	later allow ds override so ds can enable/disable some genesets..
+	*/
 	analysisGenesetGroups: { label: string; value: string }[]
+	/** required for gsea */
 	geneORAparam: { minCutoff: number; maxCutoff: number }
 }
 
