@@ -9,7 +9,8 @@ export function checkDependenciesAndVersions(serverconfig) {
 	}
 
 	// test if R has all required libraries
-	const rlibraries = ['jsonlite', 'cmprsk', 'hwde', 'lmtest']
+	// TODO: update this
+	const rlibraries = ['jsonlite', 'cmprsk', 'lmtest']
 	for (const lib of rlibraries) {
 		const ps = child_process.spawnSync(
 			serverconfig.Rscript,
