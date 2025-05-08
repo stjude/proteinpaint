@@ -16,7 +16,7 @@ export class RunchartView extends ScatterView {
 	async getControlInputs() {
 		const filters = {}
 		for (const tw of this.runchart.filterTWs) {
-			const filter = this.scatter.getFilter(tw)
+			const filter = this.runchart.getFilter(tw)
 			if (filter) filters[tw.term.id] = filter
 		}
 		//Dictionary with samples applying all the filters but not the one from the current term id
