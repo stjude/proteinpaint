@@ -12,12 +12,12 @@ filepath <- gsub("^--file=", "", grep("^--file=", commandArgs(), value = TRUE)) 
 dirpath <- dirname(filepath) # path of this directory
 
 # read in the lists of CRAN packages and Bioconductor packages to install
-CRANpkgs <- scan(file = file.path(dirname(dirpath), "cran.pkgs.txt"), what = "character", sep = "\n", quiet = TRUE)
-BIOCpkgs <- scan(file = file.path(dirname(dirpath), "bioconductor.pkgs.txt"), what = "character", sep = "\n", quiet = TRUE)
+CRANpkgs <- scan(file = file.path(dirpath, "cran.pkgs.txt"), what = "character", sep = "\n", quiet = TRUE)
+BIOCpkgs <- scan(file = file.path(dirpath, "bioconductor.pkgs.txt"), what = "character", sep = "\n", quiet = TRUE)
 if (length(CRANpkgs) == 0) stop("no cran packages specified")
 if (length(BIOCpkgs) == 0) stop("no bioconductor packages specified")
 
-repo <- "https://cran.rstudio.com"
+repo <- "https://cloud.r-project.org"
 
 # update and install CRAN packages
 cat("\nUPDATING CRAN PACKAGES...\n\n")
