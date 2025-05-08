@@ -31,7 +31,12 @@ Verify that the correct version of R was installed
 R --version
 ```
 
-Update and install R packages. See R script for adding new packages.
+Install R packages
 ```sh
 Rscript ~/dev/sjpp/proteinpaint/R/src/install.pkgs.R
 ```
+
+# Add new R packages
+
+Add new CRAN packages to "cran.pkgs.txt"
+Add new Bioconductor packages to "bioconductor.pkgs.txt"

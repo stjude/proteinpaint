@@ -14,7 +14,9 @@
   "files": [
     "index.js",
     "src",
-    "LICENSE/*"
+    "LICENSE/*",
+    "cran.pkgs.txt",
+    "bioconductor.pkgs.txt"
   ],
   "bugs": {
     "url": "https://github.com/stjude/proteinpaint"
