@@ -69,6 +69,8 @@ if [[ "$RUST_FULL_PATHS" != "" ]]; then
   # Run clippy and capture the output
   OUTPUT=$(cargo clippy --message-format=json -- $RUST_CLIPPY_PATHS 2>&1)
   CLIPPY_EXIT_CODE=$?
+  echo "$OUTPUT"
+  echo "Clippy exit code: $CLIPPY_EXIT_CODE"
   
   # Save the baseline path
   BASELINE_PATH="linting/clippy_baseline.json"
