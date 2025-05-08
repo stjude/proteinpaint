@@ -8,7 +8,12 @@ TVS handler for dtcnv term
 export const handler = Object.assign({}, dtHandler, { type: 'dtcnv', setMethods })
 
 function setMethods(self, tvs) {
-	const cnv = self.opts.vocabApi.parent_termdbConfig?.queries?.cnv
+	// order of overide: 1) do not override existing settings in tw.q{} 2) c.byGene[thisGene] 3) c.default{}
+	// TODO: supply gene name to tsv here, and use customTwQByType?.geneVariant.byGene cutoffs if exists
+	const customeTwQDefault = self.opts.vocabApi.parent_termdbConfig?.customTwQByType?.geneVariant?.default
+	const cnv =
+		/* c.byGene?.[tvs.term.name] || */ customeTwQDefault || self.opts.vocabApi.parent_termdbConfig?.queries?.cnv
+
 	if (!cnv) throw 'cnv query is missing'
 	const keys = Object.keys(cnv)
 	if (keys.includes('cnvGainCutoff') || keys.includes('cnvLossCutoff')) {
@@ -35,7 +40,11 @@ async function fillMenu_cont(self, div, tvs) {
 
 	const settingsDiv = div.append('div').style('margin-left', '10px')
 
-	const cnv = self.opts.vocabApi.parent_termdbConfig?.queries?.cnv
+	const customeTwQDefault = self.opts.vocabApi.parent_termdbConfig?.customTwQByType?.geneVariant?.default
+	// order of overide: 1) do not override existing settings in tw.q{} 2) c.byGene[thisGene] 3) c.default{}
+	// TODO: supply gene name to tsv here, and use customTwQByType?.geneVariant.byGene cutoffs if exists
+	const cnv =
+		/* c.byGene?.[tvs.term.name] || */ customeTwQDefault || self.opts.vocabApi.parent_termdbConfig?.queries?.cnv
 
 	let cnvGainCutoff
 	if (cnv.cnvGainCutoff) {
