@@ -193,7 +193,7 @@ export function setGeneVariantCellProps(cell, tw, anno, value, s, t, self, width
 			cell.width = colw
 			cell.x = cell.totalIndex * dx + cell.grpIndex * s.colgspace
 			cell.y = height * i
-		} else if (value.dt == dtsnvindel || value.dt == dtfusionrna) {
+		} else if (value.dt == dtsnvindel || value.dt == dtfusionrna || value.dt == dtsv) {
 			if (s.cellEncoding == 'single') {
 				// when CNV is not displayed, show as tall bar
 				cell.height = s.rowh
