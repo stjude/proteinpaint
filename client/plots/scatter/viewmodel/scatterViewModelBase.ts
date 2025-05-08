@@ -252,7 +252,6 @@ export class ScatterViewModelBase {
 			.transition()
 			.duration(duration)
 		this.mayRenderRegression()
-		if (this.scatter.settings.showContour) this.renderContours(chart)
 	}
 
 	async mayRenderRegression() {
