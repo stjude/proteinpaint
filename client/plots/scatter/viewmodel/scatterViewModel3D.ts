@@ -18,10 +18,10 @@ export class ScatterViewModel3D extends ScatterViewModel {
 
 	async renderSerie(chart) {
 		const xAxisScale = d3Linear()
-			.domain([this.model.range.xMin, this.model.range.xMax])
+			.domain([chart.ranges.xMin, chart.ranges.xMax])
 			.range([this.scatter.settings.showContour ? -1 : 0, 1])
 		const yAxisScale = d3Linear()
-			.domain([this.model.range.yMin, this.model.range.yMax])
+			.domain([chart.ranges.yMin, chart.ranges.yMax])
 			.range([this.scatter.settings.showContour ? -1 : 0, 1])
 		const zAxisScale = chart.zAxisScale.range([0, 1])
 

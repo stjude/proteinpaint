@@ -73,11 +73,10 @@ export class ScatterModel {
 		const data: ScatterResponse = await this.scatter.app.vocabApi.getScatterData(reqOpts)
 		this.is3D = this.scatter.config.term0?.q.mode == 'continuous'
 		if ('error' in data) throw data.error
-		this.range = data.range
 		this.charts = []
-		for (const [key, chartData] of Object.entries(data.result)) {
-			if (!Array.isArray(chartData.samples)) throw 'data.samples[] not array'
-			this.createChart(key, chartData)
+		for (const [key, item] of Object.entries(data)) {
+			if (!Array.isArray(item.samples)) throw 'data.samples[] not array'
+			this.createChart(key, item)
 		}
 		this.initRanges()
 	}
@@ -268,10 +267,10 @@ export class ScatterModel {
 		if (chart.data.samples.length == 0) return
 		const offsetX = this.axisOffset.x
 		const offsetY = this.axisOffset.y
-		const xMin = this.range.xMin
-		const xMax = this.range.xMax
-		const yMin = this.range.yMin
-		const yMax = this.range.yMax
+		const xMin = chart.ranges.xMin
+		const xMax = chart.ranges.xMax
+		const yMin = chart.ranges.yMin
+		const yMax = chart.ranges.yMax
 		const extraSpaceX = (xMax - xMin) * 0.01 //extra space added to avoid clipping the particles on the X axis
 		const extraSpaceY = (yMax - yMin) * 0.01 //extra space added to avoid clipping the particles on the Y axis
 
