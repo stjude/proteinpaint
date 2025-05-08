@@ -2840,6 +2840,137 @@ function setLengendActions(self) {
 						showAll(menuGrp, targetData, self)
 					})
 			}
+			// adding the option to specify criteria for a CNV alteration for numeric CNV
+			const cnv =
+				Object.keys(self.config.cnvCutoffs).length !== 0
+					? self.config.cnvCutoffs
+					: self.state.termdbConfig?.customTwQByType?.geneVariant?.default || self.state.termdbConfig?.queries?.cnv
+			const keys = Object.keys(cnv)
+
+			if (
+				targetData.dt.includes(dtcnv) &&
+				!self.settings.matrix.ignoreCnvValues &&
+				legendGrpFilterIndex == -1 &&
+				(keys.includes('cnvGainCutoff') || keys.includes('cnvLossCutoff' || keys.includes('cnvMaxLength')))
+			) {
+				const existingCnvSetDiv = div.select('.cnv-set-div')
+				if (!existingCnvSetDiv.empty()) existingCnvSetDiv.remove()
+
+				const cnvSetDiv = div.append('div').classed('cnv-set-div', true)
+				cnvSetDiv.style('margin', '10px')
+				const tip = new Menu({ padding: '5px' })
+				cnvSetDiv.append('div').style('margin-bottom', '10px').text('Specify criteria for a CNV alteration:')
+				const settingsDiv = cnvSetDiv.append('div').style('margin-left', '10px')
+
+				let cnvGainCutoff
+				cnvGainCutoff = cnv.cnvGainCutoff
+				const cnvGainDiv = settingsDiv.append('div').style('margin-bottom', '5px')
+				cnvGainDiv.append('span').style('opacity', 0.7).text('Minimum CNV Gain (log2 ratio)')
+				cnvGainDiv
+					.append('input')
+					.attr('type', 'number')
+					.property('value', cnvGainCutoff)
+					.style('width', '100px')
+					.style('margin-left', '15px')
+					.on('change', event => {
+						const value = event.target.value
+						if (value === '' || !Number.isFinite(Number(value))) {
+							window.alert('Please enter a numeric value.')
+							event.target.value = cnvGainCutoff
+							return
+						}
+						const newValue = Number(value)
+						if (newValue < 0) {
+							window.alert('Value must be a positive value.')
+							event.target.value = cnvGainCutoff
+							return
+						}
+						cnvGainCutoff = newValue
+					})
+
+				let cnvLossCutoff
+				cnvLossCutoff = cnv.cnvLossCutoff
+				const cnvLossDiv = settingsDiv.append('div').style('margin-bottom', '5px')
+				cnvLossDiv.append('span').style('opacity', 0.7).text('Maximum CNV Loss (log2 ratio)')
+				cnvLossDiv
+					.append('input')
+					.attr('type', 'number')
+					.property('value', cnvLossCutoff)
+					.style('width', '100px')
+					.style('margin-left', '15px')
+					.on('change', event => {
+						const value = event.target.value
+						if (value === '' || !Number.isFinite(Number(value))) {
+							window.alert('Please enter a numeric value.')
+							event.target.value = cnvLossCutoff
+							return
+						}
+						const newValue = Number(value)
+						if (newValue > 0) {
+							window.alert('Value must be a negative value.')
+							event.target.value = cnvLossCutoff
+							return
+						}
+						cnvLossCutoff = newValue
+					})
+
+				let cnvMaxLength
+				cnvMaxLength = cnv.cnvMaxLength
+				const cnvLengthDiv = settingsDiv.append('div').style('margin-bottom', '5px')
+				cnvLengthDiv.append('span').style('opacity', 0.7).text('CNV Max Length')
+				cnvLengthDiv
+					.append('input')
+					.attr('type', 'number')
+					.property('value', cnvMaxLength)
+					.style('width', '100px')
+					.style('margin-left', '15px')
+					.on('change', event => {
+						const value = event.target.value
+						if (value === '' || !Number.isFinite(Number(value))) {
+							window.alert('Please enter a numeric value.')
+							event.target.value = cnvMaxLength
+							return
+						}
+						const newValue = Number(value)
+						// no max length if value == -1
+						cnvMaxLength = newValue == -1 ? null : newValue
+					})
+					.on('mouseover', event => {
+						tip.clear()
+						tip.d
+							.append('div')
+							.text('Max segment length. Please enter a positive value. Set 0 for not restricting by max length.')
+						tip.showunder(event.target)
+					})
+					.on('mouseout', () => {
+						tip.hide()
+					})
+
+				// Apply button
+				cnvSetDiv
+					.append('div')
+					.append('button')
+					.style('margin-top', '15px')
+					.text('Apply')
+					.on('click', () => {
+						menuGrp.hide()
+						self.config.cnvCutoffs = { cnvGainCutoff, cnvLossCutoff, cnvMaxLength }
+						for (const termgroup of self.config.termgroups) {
+							for (const t of termgroup.lst) {
+								if (t.term.type == 'geneVariant') {
+									t.q.cnvGainCutoff = cnvGainCutoff
+									t.q.cnvLossCutoff = cnvLossCutoff
+									t.q.cnvMaxLength = cnvMaxLength
+								}
+							}
+						}
+						self.app.dispatch({
+							type: 'plot_edit',
+							id: self.id,
+							config: self.config
+						})
+					})
+			}
 			menuGrp.showunder(event.target)
 			return
 		}
@@ -3241,130 +3372,6 @@ function setLengendActions(self) {
 						}
 						icons['restart'](resetDiv, { handler, title: 'Reset to original color' })
 					}
-				}
-
-				// adding the option to specify criteria for a CNV alteration for numeric CNV
-				if (targetItemData.dt == dtcnv && targetItemData.domain) {
-					const cnv =
-						Object.keys(self.config.cnvCutoffs).length !== 0
-							? self.config.cnvCutoffs
-							: self.state.termdbConfig?.customTwQByType?.geneVariant?.default || self.state.termdbConfig?.queries?.cnv
-
-					const existingCnvSetDiv = div.select('.cnv-set-div')
-					if (!existingCnvSetDiv.empty()) existingCnvSetDiv.remove()
-
-					const cnvSetDiv = div.append('div').classed('cnv-set-div', true)
-					cnvSetDiv.style('margin', '10px')
-					const tip = new Menu({ padding: '5px' })
-					cnvSetDiv.append('div').style('margin-bottom', '10px').text('Specify criteria for a CNV alteration:')
-					const settingsDiv = cnvSetDiv.append('div').style('margin-left', '10px')
-
-					let cnvGainCutoff
-					cnvGainCutoff = cnv.cnvGainCutoff
-					const cnvGainDiv = settingsDiv.append('div').style('margin-bottom', '5px')
-					cnvGainDiv.append('span').style('opacity', 0.7).text('Minimum CNV Gain (log2 ratio)')
-					cnvGainDiv
-						.append('input')
-						.attr('type', 'number')
-						.property('value', cnvGainCutoff)
-						.style('width', '100px')
-						.style('margin-left', '15px')
-						.on('change', event => {
-							const value = event.target.value
-							if (value === '' || !Number.isFinite(Number(value))) {
-								window.alert('Please enter a numeric value.')
-								event.target.value = cnvGainCutoff
-								return
-							}
-							const newValue = Number(value)
-							if (newValue < 0) {
-								window.alert('Value must be a positive value.')
-								event.target.value = cnvGainCutoff
-								return
-							}
-							cnvGainCutoff = newValue
-						})
-
-					let cnvLossCutoff
-					cnvLossCutoff = cnv.cnvLossCutoff
-					const cnvLossDiv = settingsDiv.append('div').style('margin-bottom', '5px')
-					cnvLossDiv.append('span').style('opacity', 0.7).text('Maximum CNV Loss (log2 ratio)')
-					cnvLossDiv
-						.append('input')
-						.attr('type', 'number')
-						.property('value', cnvLossCutoff)
-						.style('width', '100px')
-						.style('margin-left', '15px')
-						.on('change', event => {
-							const value = event.target.value
-							if (value === '' || !Number.isFinite(Number(value))) {
-								window.alert('Please enter a numeric value.')
-								event.target.value = cnvLossCutoff
-								return
-							}
-							const newValue = Number(value)
-							if (newValue > 0) {
-								window.alert('Value must be a negative value.')
-								event.target.value = cnvLossCutoff
-								return
-							}
-							cnvLossCutoff = newValue
-						})
-
-					let cnvMaxLength
-					cnvMaxLength = cnv.cnvMaxLength
-					const cnvLengthDiv = settingsDiv.append('div').style('margin-bottom', '5px')
-					cnvLengthDiv.append('span').style('opacity', 0.7).text('CNV Max Length')
-					cnvLengthDiv
-						.append('input')
-						.attr('type', 'number')
-						.property('value', cnvMaxLength)
-						.style('width', '100px')
-						.style('margin-left', '15px')
-						.on('change', event => {
-							const value = event.target.value
-							if (value === '' || !Number.isFinite(Number(value))) {
-								window.alert('Please enter a numeric value.')
-								event.target.value = cnvMaxLength
-								return
-							}
-							const newValue = Number(value)
-							// no max length if value == -1
-							cnvMaxLength = newValue == -1 ? null : newValue
-						})
-						.on('mouseover', event => {
-							tip.clear()
-							tip.d.append('div').text('Please enter a positive value. To include all CNV segments, enter -1.')
-							tip.showunder(event.target)
-						})
-						.on('mouseout', () => {
-							tip.hide()
-						})
-
-					// Apply button
-					cnvSetDiv
-						.append('div')
-						.append('button')
-						.style('margin-top', '15px')
-						.text('Apply')
-						.on('click', () => {
-							menuGrp.hide()
-							self.config.cnvCutoffs = { cnvGainCutoff, cnvLossCutoff, cnvMaxLength }
-							for (const termgroup of self.config.termgroups) {
-								for (const t of termgroup.lst) {
-									if (t.term.type == 'geneVariant') {
-										t.q.cnvGainCutoff = cnvGainCutoff
-										t.q.cnvLossCutoff = cnvLossCutoff
-										t.q.cnvMaxLength = cnvMaxLength
-									}
-								}
-							}
-							self.app.dispatch({
-								type: 'plot_edit',
-								id: self.id,
-								config: self.config
-							})
-						})
 				}
 				menuGrp.showunder(event.target)
 			}
