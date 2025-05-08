@@ -18,6 +18,9 @@ import { mclass } from '#shared/common.js'
 /*
 Tests:
 	Render TermdbTest scatter plot and open survival and summary
+	Render TermdbTest scatter plot adding age as Z to render a 3D plot
+	Render 3D plot with age as Z and showContour set to true to apply contour on 3D plot
+	Render scatter plot of agedx vs hrtavg
 	Invalid colorTW.id
 	Invalid colorTW.term
 	Invalid plot name
@@ -168,7 +171,7 @@ tape('Render TermdbTest scatter plot and open survival and summary', function (t
 		await testOpenSurvivalPlot()
 		await testOpenSummaryPlot()
 
-		//if (test._ok) holder.remove()
+		if (test._ok) holder.remove()
 		test.end()
 
 		function testPlot() {
@@ -265,6 +268,8 @@ tape('Render TermdbTest scatter plot adding age as Z to render a 3D plot', funct
 		const is3D = scatter.Inner.model.is3D
 		const scatterDiv = scatter.Inner.model.charts[0].chartDiv
 		test.true(is3D, 'Should be a 3D scatter plot')
+		if (test._ok) holder.remove()
+		test.end()
 	}
 })
 
@@ -286,6 +291,8 @@ tape('Render 3D plot with age as Z and showContour set to true to apply contour 
 		const chart = scatter.Inner.model.charts[0]
 		await sleep(1000)
 		test.true(chart.plane != null, 'Should have a plane with the contour map')
+		if (test._ok) holder.remove()
+		test.end()
 	}
 })
 
@@ -318,6 +325,8 @@ tape('Render scatter plot of agedx vs hrtavg', function (test) {
 			contourG != null,
 			'Scatter should have contour showing the density of points after selecting show contour'
 		)
+		if (test._ok) holder.remove()
+		test.end()
 	}
 })
 
@@ -346,6 +355,8 @@ tape('Show tooltip for sample', function (test) {
 		test.true(parentNode != null, 'Tooltip should have 3 samples for Acute lymphoblastic leukemia')
 		test.true(tooltipDiv != null, 'Tooltip should be shown')
 		scatter.Inner.view.dom.tooltip.hide()
+		if (test._ok) holder.remove()
+		test.end()
 	}
 })
 
@@ -640,6 +651,7 @@ tape('Test legend', function (test) {
 
 		await testHideCategory(scatter, samples)
 		await testChangeColor(scatter, samples)
+		if (test._ok) scatter.Inner.app.destroy()
 		test.end()
 	}
 
@@ -1011,6 +1023,7 @@ tape('Click zoom in, zoom out, and reset buttons', function (test) {
 		await testZoomIn(scatter)
 		await testReset(scatter)
 		await testZoomOut(scatter)
+		if (test._ok) scatter.Inner.app.destroy()
 		test.end()
 	}
 
