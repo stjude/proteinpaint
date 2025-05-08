@@ -228,10 +228,12 @@ class gsea {
 
 async function renderPathwayDropdown(self) {
 	const settings = structuredClone(self.settings)
-	const pathwayOpts = self.app.opts.genome.termdbs.msigdb.analysisGenesetGroups // Gene set groups queried from genome file
+	const pathwayOpts = structuredClone(self.app.opts.genome.termdbs.msigdb.analysisGenesetGroups) // duplicate to avoid repeated insertion on each app launch
 
-	// Now blitzgsea geneSets are inside serverconfig flag
-	if (JSON.parse(sessionStorage.getItem('optionalFeatures')).gsea_test == true) {
+	if (JSON.parse(sessionStorage.getItem('optionalFeatures')).gsea_test) {
+		// TEMPORARY FIX to test this library that will trigger auto download support files in python
+		// NEVER ENABLE ON PROD especially gdc prod, where container has firewall and it crashes..
+		// delete this if library is replaced
 		pathwayOpts.push(
 			{ label: 'REACTOME (blitzgsea)', value: 'REACTOME--blitzgsea' },
 			{ label: 'KEGG (blitzgsea)', value: 'KEGG--blitzgsea' },
