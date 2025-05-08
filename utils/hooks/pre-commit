@@ -45,38 +45,66 @@ fi
 
 # Add Rust formatting and linting for files in the rust/src directory.
 # We check if Rust files have been modified, run `cargo fmt` and `cargo clippy` on them.
-# We need two variables:
-# 1. Full paths for git operations
-# 2. Just filenames for rustfmt/clippy
 RUST_FULL_PATHS=$(git diff --cached --name-only --diff-filter=ACM "*.rs" | sed 's| |\\ |g')
 
 if [[ "$RUST_FULL_PATHS" != "" ]]; then
-  # echo "RUST_FULL_PATHS: $RUST_FULL_PATHS"
-  
-  echo "formatting $RUST_FULL_PATHS"
+  echo "Formatting Rust files..."
   rustfmt $RUST_FULL_PATHS
-
-  # Change to rust/src directory
-  cd rust/src
-  # Extract just the filenames without the path prefix
-  RUST_FILES=$(echo "$RUST_FULL_PATHS" | xargs basename)
-  # Lint each file
-  # echo "Linting Rust files with clippy..."
-  # for f in $RUST_FILES; do
-    #echo "Linting $f..."
-	# cargo clippy 
-    # clippy-driver --edition 2024 -Cpanic=abort $f
-    # Get the base filename without extension
-    #BINARY_NAME=$(basename "$f" .rs)
-    #echo "Deleting binary: $BINARY_NAME"
-		#rm -f "$BINARY_NAME"
-  #done
-
-  # Return to original directory
-  cd ../..
   
   # Add back the formatted Rust files to staging
   echo "$RUST_FULL_PATHS" | xargs git add
+  
+  # Run clippy on changed files only and check for new warnings
+  echo "Running Clippy on changed Rust files..."
+  
+  # Store original directory
+  ORIG_DIR=$(pwd)
+  
+  # Change to the rust directory for running clippy
+  cd rust
+  
+  # Extract relative paths for clippy (remove the "rust/" prefix if needed)
+  RUST_CLIPPY_PATHS=$(echo "$RUST_FULL_PATHS" | sed 's|^rust/||g')
+  
+  # Run clippy and capture the output
+  OUTPUT=$(cargo clippy --message-format=json -- $RUST_CLIPPY_PATHS 2>&1)
+  CLIPPY_EXIT_CODE=$?
+  
+  # Save the baseline path
+  BASELINE_PATH="linting/clippy_baseline.json"
+  
+  # Make sure the baseline exists
+  if [ ! -f "$BASELINE_PATH" ]; then
+    echo "Warning: Clippy baseline file not found at $BASELINE_PATH"
+    echo "Creating an initial baseline..."
+    mkdir -p linting
+    cargo clippy --message-format=json > "$BASELINE_PATH"
+  fi
+  
+  # Capture both stdout and stderr and pipe to our comparison script
+  # Point the script to the correct baseline location
+  echo "$OUTPUT" | BASELINE_PATH="$BASELINE_PATH" python3 ./linting/compare_with_baseline.py
+  SCRIPT_EXIT_CODE=$?
+  
+  # If the script found new warnings, prevent the commit
+  if [ $SCRIPT_EXIT_CODE -eq 1 ]; then
+    echo "❌ New Clippy warnings detected! Please fix them before committing."
+    echo "Run the following command to see the warnings:"
+    echo "cd rust && cargo clippy -- $RUST_CLIPPY_PATHS"
+    cd "$ORIG_DIR"
+    exit 1
+  else
+    # Even if clippy had errors but no new warnings were found, allow the commit
+    if [ $CLIPPY_EXIT_CODE -ne 0 ]; then
+      echo "⚠️ Clippy reported compilation errors, but no new warnings were detected in your changes."
+      echo "Commit allowed, but you should fix these errors soon."
+    else
+      echo "✅ No new Rust warnings detected. Commit allowed."
+    fi
+  fi
+  
+  # Return to original directory
+  cd "$ORIG_DIR"
 fi
 
 exit 0

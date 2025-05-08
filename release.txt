@@ -1,1 +1,2 @@
-
+Features:
+- Improved Rust linting via clippy
