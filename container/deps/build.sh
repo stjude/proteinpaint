@@ -86,21 +86,22 @@ cp -r ../public ./
 cp ../full/app-full.mjs .
 cp ../server/app-server.mjs .
 
-# for installing R dependencies
-mkdir -p R/src
-cp ../../R/cran.pkgs.txt R/
-cp ../../R/bioconductor.pkgs.txt R/
-cp ../../R/src/install.pkgs.R R/src/
-cp ../../R/src/validate.pkgs.R R/src/
+# copy over R utilities for installing R dependencies
+mkdir -p R
+cp -r ../../R/utils R/
 
+# build ppbase, ppserver, and ppfull images
+# NOTE: important to supply the same ARCH, IMGVER, and IMGREV arguments
+# for all 3 build jobs to ensure that the ppbase stage of the build
+# is cached for the ppserver and ppfull stages
 echo "building ${MODE}ppbase image"
-docker buildx build . --file ./Dockerfile --target ppbase --tag "${MODE}ppbase:latest" $PLATFORM --build-arg ARCH="$ARCH" $BUILDARGS --output type=docker
+docker buildx build . --file ./Dockerfile --target ppbase --tag "${MODE}ppbase:latest" $PLATFORM --build-arg ARCH="$ARCH" --build-arg IMGVER=$IMGVER --build-arg IMGREV=$IMGREV $BUILDARGS --output type=docker
 
 echo "building ${MODE}ppserver image"
-docker buildx build . --file ./Dockerfile --target ppserver --tag "${MODE}ppserver:latest" $PLATFORM --build-arg IMGVER=$IMGVER --build-arg IMGREV=$IMGREV --build-arg SERVERPKGVER=$SERVERPKGVER --build-arg CROSSENV="$CROSSENV" $BUILDARGS --output type=docker
+docker buildx build . --file ./Dockerfile --target ppserver --tag "${MODE}ppserver:latest" $PLATFORM --build-arg ARCH="$ARCH" --build-arg IMGVER=$IMGVER --build-arg IMGREV=$IMGREV --build-arg SERVERPKGVER=$SERVERPKGVER --build-arg CROSSENV="$CROSSENV" $BUILDARGS --output type=docker
 
 echo "building ${MODE}ppfull image"
-docker buildx build . --file ./Dockerfile --target ppfull --tag "${MODE}ppfull:latest" $PLATFORM --build-arg IMGVER=$IMGVER --build-arg IMGREV=$IMGREV --build-arg SERVERPKGVER=$SERVERPKGVER --build-arg FRONTPKGVER=$FRONTPKGVER --build-arg CROSSENV="$CROSSENV" $BUILDARGS --output type=docker
+docker buildx build . --file ./Dockerfile --target ppfull --tag "${MODE}ppfull:latest" $PLATFORM --build-arg ARCH="$ARCH" --build-arg IMGVER=$IMGVER --build-arg IMGREV=$IMGREV --build-arg SERVERPKGVER=$SERVERPKGVER --build-arg FRONTPKGVER=$FRONTPKGVER --build-arg CROSSENV="$CROSSENV" $BUILDARGS --output type=docker
 
 # in non-dev/repo environment, may automatically add extra tags
 if [[ "$MODE" != "" ]]; then
