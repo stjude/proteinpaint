@@ -28,6 +28,8 @@ curl https://proteinpaint.stjude.org/ppSupport/refGene.hg19.gz -O
 curl https://proteinpaint.stjude.org/ppSupport/refGene.hg19.gz.tbi -O
 curl https://proteinpaint.stjude.org/ppSupport/refGene.hg38.gz -O
 curl https://proteinpaint.stjude.org/ppSupport/refGene.hg38.gz.tbi -O
+curl https://proteinpaint.stjude.org/ppSupport/gencode.v40.hg19.gz -O
+curl https://proteinpaint.stjude.org/ppSupport/gencode.v40.hg19.gz.tbi -O
 curl https://proteinpaint.stjude.org/ppSupport/gencode.v47.hg38.gz -O
 curl https://proteinpaint.stjude.org/ppSupport/gencode.v47.hg38.gz.tbi -O
 curl https://proteinpaint.stjude.org/ppSupport/genes.hg19.db -O
