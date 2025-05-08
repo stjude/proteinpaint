@@ -1,9 +1,9 @@
 //------------------------------------------------------------------------------
 // readHDF5.rs - HDF5 Gene Expression Data Reader
 //------------------------------------------------------------------------------
-// 
+//
 // Extracts gene expression values from HDF5 files in dense or sparse formats.
-// Supports single genes with memory optimization and multiple genes with 
+// Supports single genes with memory optimization and multiple genes with
 // parallel processing.
 //
 // Features:
@@ -12,15 +12,15 @@
 // - Parallel processing for multiple genes
 // - JSON output with timing metrics
 //
-// Usage: 
-//   HDF5_DIR=/usr/local/Homebrew/Cellar/hdf5/1.14.3_1 && 
+// Usage:
+//   HDF5_DIR=/usr/local/Homebrew/Cellar/hdf5/1.14.3_1 &&
 //   echo $json='{"gene":"TP53","hdf5_file":"matrix.h5"}' | target/release/readHDF5
 //------------------------------------------------------------------------------
-use rayon::prelude::*;
 use hdf5::types::{FixedAscii, VarLenAscii};
 use hdf5::{File, Result};
 use ndarray::Dim;
 use ndarray::{Array1, s};
+use rayon::prelude::*;
 use serde_json::{Map, Value, json};
 use std::io;
 use std::sync::Arc;
@@ -259,11 +259,7 @@ fn query_gene_dense(hdf5_filename: String, gene_name: String) -> Result<()> {
                     // Create direct key-value pairs where sample names are the keys
                     for i in 0..gene_expression.len() {
                         // Add each sample name as a key pointing directly to its expression value
-                        output_string += &format!(
-                            "\"{}\":{}",
-                            samples[i].to_string(),
-                            gene_expression[i].to_string()
-                        );
+                        output_string += &format!("\"{}\":{}", samples[i].to_string(), gene_expression[i].to_string());
 
                         // Add comma if not the last item
                         if i < gene_expression.len() - 1 {
@@ -296,10 +292,7 @@ fn query_gene_dense(hdf5_filename: String, gene_name: String) -> Result<()> {
                 Value::Null
             };
 
-            samples_map.insert(
-                sample.replace("\\", ""), 
-                value,
-            );
+            samples_map.insert(sample.replace("\\", ""), value);
         }
     }
 
@@ -317,7 +310,7 @@ fn query_gene_dense(hdf5_filename: String, gene_name: String) -> Result<()> {
 
 /// Reads expression data for a specific gene from a sparse format HDF5 file
 ///
-/// Extracts expression values from sparse matrix HDF5 files using Compressed 
+/// Extracts expression values from sparse matrix HDF5 files using Compressed
 /// Sparse Column (CSC) structure.
 ///
 /// # Arguments
@@ -391,15 +384,13 @@ fn query_gene_sparse(hdf5_filename: String, gene_name: String) -> Result<()> {
     // Find all columns indices that are populated for the given gene
     let now_i = Instant::now();
     let ds_i = file.dataset("data/i")?;
-    let populated_column_ids: Array1<usize> =
-        ds_i.read_slice_1d(array_start_point..array_stop_point)?;
+    let populated_column_ids: Array1<usize> = ds_i.read_slice_1d(array_start_point..array_stop_point)?;
     println!("Time for i dataset:{:?}", now_i.elapsed());
 
     // Find all columns values that are populated for the given gene
     let now_x = Instant::now();
     let ds_x = file.dataset("data/x")?;
-    let populated_column_values: Array1<f64> =
-        ds_x.read_slice_1d(array_start_point..array_stop_point)?;
+    let populated_column_values: Array1<f64> = ds_x.read_slice_1d(array_start_point..array_stop_point)?;
     println!("Time for x dataset:{:?}", now_x.elapsed());
 
     // Generate the complete array from the sparse array
@@ -425,10 +416,7 @@ fn query_gene_sparse(hdf5_filename: String, gene_name: String) -> Result<()> {
     }
     output_string += &"}".to_string();
 
-    println!(
-        "Time generating full array:{:?}",
-        time_generating_full_array.elapsed()
-    );
+    println!("Time generating full array:{:?}", time_generating_full_array.elapsed());
     println!("output_string:{}", output_string);
 
     Ok(())
@@ -465,7 +453,6 @@ fn query_multiple_genes_dense(hdf5_filename: String, gene_names: Vec<String>) ->
         }
     };
 
-
     let genes_dataset = match file.dataset("gene_ids") {
         Ok(ds) => ds,
         Err(err) => {
@@ -495,7 +482,7 @@ fn query_multiple_genes_dense(hdf5_filename: String, gene_names: Vec<String>) ->
     };
 
     let genes: Vec<String> = genes_varlen.iter().map(|g| g.to_string()).collect();
-    
+
     // Only create HashMap for multiple gene queries
     let gene_to_index: Option<std::collections::HashMap<String, usize>> = if gene_names.len() > 1 {
         let hashmap_start_time = Instant::now();
@@ -504,8 +491,8 @@ fn query_multiple_genes_dense(hdf5_filename: String, gene_names: Vec<String>) ->
             map.insert(gene.clone(), idx);
         }
         timings.insert(
-            "build_hashmap_ms".to_string(), 
-            Value::from(hashmap_start_time.elapsed().as_millis() as u64)
+            "build_hashmap_ms".to_string(),
+            Value::from(hashmap_start_time.elapsed().as_millis() as u64),
         );
         Some(map)
     } else {
@@ -586,14 +573,11 @@ fn query_multiple_genes_dense(hdf5_filename: String, gene_names: Vec<String>) ->
         };
 
         // Configurable thread count for testing
-        let thread_count = 2; 
+        let thread_count = 2;
         timings.insert("thread_count".to_string(), Value::from(thread_count));
 
         // Create a scoped thread pool with specified number of threads
-        match rayon::ThreadPoolBuilder::new()
-            .num_threads(thread_count)
-            .build()
-        {
+        match rayon::ThreadPoolBuilder::new().num_threads(thread_count).build() {
             Ok(pool) => {
                 // Use the pool for this specific work
                 pool.install(|| {
@@ -650,26 +634,20 @@ fn query_multiple_genes_dense(hdf5_filename: String, gene_names: Vec<String>) ->
                                         genes_map.insert(gene_name.clone(), gene_data);
                                     } else {
                                         // Fallback to per-gene reading if bulk load failed
-                                        match counts_dataset
-                                            .read_slice_1d::<f64, _>(s![gene_index, ..])
-                                        {
+                                        match counts_dataset.read_slice_1d::<f64, _>(s![gene_index, ..]) {
                                             Ok(gene_expression) => {
                                                 // Create samples map for this gene
                                                 let mut samples_map = Map::new();
                                                 for (i, sample) in samples.iter().enumerate() {
                                                     if i < gene_expression.len() {
                                                         // Handle potential NaN or infinity values
-                                                        let value =
-                                                            if gene_expression[i].is_finite() {
-                                                                Value::from(gene_expression[i])
-                                                            } else {
-                                                                Value::Null
-                                                            };
+                                                        let value = if gene_expression[i].is_finite() {
+                                                            Value::from(gene_expression[i])
+                                                        } else {
+                                                            Value::Null
+                                                        };
 
-                                                        samples_map.insert(
-                                                            sample.replace("\\", ""),
-                                                            value,
-                                                        );
+                                                        samples_map.insert(sample.replace("\\", ""), value);
                                                     }
                                                 }
 
@@ -693,10 +671,7 @@ fn query_multiple_genes_dense(hdf5_filename: String, gene_names: Vec<String>) ->
                                                 );
 
                                                 let mut genes_map = genes_map.lock().unwrap();
-                                                genes_map.insert(
-                                                    gene_name.clone(),
-                                                    Value::Object(error_map),
-                                                );
+                                                genes_map.insert(gene_name.clone(), Value::Object(error_map));
                                             }
                                         }
                                     }
@@ -736,7 +711,7 @@ fn query_multiple_genes_dense(hdf5_filename: String, gene_names: Vec<String>) ->
                     &counts_dataset,
                     &all_gene_data,
                     &samples,
-                    &genes_map
+                    &genes_map,
                 );
             }
         }
@@ -758,7 +733,6 @@ fn query_multiple_genes_dense(hdf5_filename: String, gene_names: Vec<String>) ->
                     // Read just this single gene's data directly
                     match counts_dataset.read_slice_1d::<f64, _>(s![gene_index, ..]) {
                         Ok(gene_expression) => {
-
                             // Create samples map for this gene
                             let mut samples_map = Map::new();
                             for (i, sample) in samples.iter().enumerate() {
@@ -786,10 +760,7 @@ fn query_multiple_genes_dense(hdf5_filename: String, gene_names: Vec<String>) ->
                             let mut error_map = Map::new();
                             error_map.insert(
                                 "error".to_string(),
-                                Value::String(format!(
-                                    "Failed to read expression values: {:?}",
-                                    err
-                                )),
+                                Value::String(format!("Failed to read expression values: {:?}", err)),
                             );
 
                             let mut genes_map = genes_map.lock().unwrap();
@@ -833,7 +804,7 @@ fn process_genes_sequentially(
     counts_dataset: &hdf5::Dataset,
     all_gene_data: &Option<ndarray::ArrayBase<ndarray::OwnedRepr<f64>, ndarray::Dim<[usize; 2]>>>,
     samples: &Vec<String>,
-    genes_map: &Arc<std::sync::Mutex<Map<String, Value>>>
+    genes_map: &Arc<std::sync::Mutex<Map<String, Value>>>,
 ) {
     for gene_name in gene_names {
         // Find the index of the requested gene, using HashMap if available
@@ -911,10 +882,7 @@ fn process_genes_sequentially(
                                 let mut error_map = Map::new();
                                 error_map.insert(
                                     "error".to_string(),
-                                    Value::String(format!(
-                                        "Failed to read expression values: {:?}",
-                                        err1
-                                    )),
+                                    Value::String(format!("Failed to read expression values: {:?}", err1)),
                                 );
 
                                 let mut genes_map = genes_map.lock().unwrap();
@@ -935,7 +903,6 @@ fn process_genes_sequentially(
                 genes_map.insert(gene_name.clone(), Value::Object(error_map));
             }
         }
-
     }
 }
 /// Queries expression data for multiple genes from a sparse format HDF5 file
@@ -1006,7 +973,6 @@ fn query_multiple_genes_sparse(hdf5_filename: String, gene_names: Vec<String>) -
     let num_threads = num_cpus::get();
     timings.insert("num_threads".to_string(), Value::from(num_threads as u64));
 
-
     // Thread-safe maps for results
     let genes_map = Arc::new(std::sync::Mutex::new(Map::new()));
     let gene_timings = Arc::new(std::sync::Mutex::new(Map::new()));
@@ -1041,8 +1007,7 @@ fn query_multiple_genes_sparse(hdf5_filename: String, gene_names: Vec<String>) -
                     // Read data for this gene
                     match ds_i.read_slice_1d::<usize, _>(array_start_point..array_stop_point) {
                         Ok(populated_column_ids) => {
-                            match ds_x.read_slice_1d::<f64, _>(array_start_point..array_stop_point)
-                            {
+                            match ds_x.read_slice_1d::<f64, _>(array_start_point..array_stop_point) {
                                 Ok(populated_column_values) => {
                                     // Generate the complete array from sparse representation
                                     let mut gene_array: Array1<f64> = Array1::zeros(num_samples);
@@ -1061,8 +1026,7 @@ fn query_multiple_genes_sparse(hdf5_filename: String, gene_names: Vec<String>) -
                                             Value::Null
                                         };
 
-                                        samples_map
-                                            .insert(sample.to_string().replace("\\", ""), value);
+                                        samples_map.insert(sample.to_string().replace("\\", ""), value);
                                     }
 
                                     let gene_data = json!({
@@ -1077,10 +1041,7 @@ fn query_multiple_genes_sparse(hdf5_filename: String, gene_names: Vec<String>) -
                                     let mut error_map = Map::new();
                                     error_map.insert(
                                         "error".to_string(),
-                                        Value::String(format!(
-                                            "Failed to read x dataset: {:?}",
-                                            err
-                                        )),
+                                        Value::String(format!("Failed to read x dataset: {:?}", err)),
                                     );
 
                                     let mut genes_map = genes_map.lock().unwrap();
