@@ -2,8 +2,9 @@
 # different registry by setting the registry arg at build time.
 ARG registry=docker.io/library
 
-# need to manually bump the base version periodically
-FROM ${registry}/node:22-bookworm-slim AS ppbase
+# Start with R image as base image
+FROM r-base:4.5.0 AS ppbase
+
 ARG ARCH='x86_64'
 ENV ARCH=$ARCH
 
@@ -58,6 +59,33 @@ RUN apt-get update && apt-get install -y \
 
 ENV PATH="/opt/venv/bin:$PATH"
 
+# Install R packages
+COPY R ./R
+RUN Rscript R/src/install.pkgs.R
+
+# TODO: determine if this is necessary
+# set locale encoding in R
+# must match encoding configuration in docker
+#RUN echo "LC_ALL=C.UTF-8" > /root/.Renviron
+
+# Install NVM and Node.js
+ENV NVM_DIR=/root/.nvm
+ARG NODE_VERSION=22.15.0
+RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash && \
+    . "$NVM_DIR/nvm.sh" && \
+    nvm install $NODE_VERSION && \
+    nvm alias default $NODE_VERSION && \
+    nvm use $NODE_VERSION && \
+    echo 'export NVM_DIR="$NVM_DIR"' >> /root/.bashrc && \
+    echo '[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"' >> /root/.bashrc
+
+ENV PATH="/root/.nvm/versions/node/v${NODE_VERSION}/bin:$PATH"
+
+# Verify node installation
+RUN node -v
+RUN npm -v
+
+# Install python dependencies
 RUN python3 -m venv /opt/venv && \
     pip install --upgrade pip && \
     pip install blitzgsea==1.3.47 matplotlib nibabel numpy pre-commit && \
@@ -77,24 +105,6 @@ RUN curl -L https://github.com/samtools/samtools/releases/download/${htsversion}
     (cd samtools-${htsversion} && ./configure --with-htslib=system && make install)
 RUN curl -L https://github.com/samtools/bcftools/releases/download/${htsversion}/bcftools-${htsversion}.tar.bz2 | tar xj && \
     (cd bcftools-${htsversion} && ./configure --enable-libgsl --with-htslib=system && make install)
-
-RUN curl -O https://cran.r-project.org/src/base/R-4/R-4.4.3.tar.gz && \
-    tar -xzf R-4.4.3.tar.gz && \
-    cd R-4.4.3 && \
-    ./configure && \
-    make && \
-    make install && \
-    R -e "install.packages(c('cmprsk', 'hwde', 'jsonlite', 'survival', 'lmtest', 'dplyr', 'tidyr', 'BiocManager', 'readr', 'doParallel', 'ggplot2'), dependencies=TRUE, repos='http://cran.rstudio.com/')" \
-    && R -e "BiocManager::install(c('edgeR','rhdf5'))" \
-    ## set locale encoding in R
-    ## must match encoding configuration in docker
-    && echo "LC_ALL=C.UTF-8" > /root/.Renviron \
-    ## clean up
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/ \
-    && rm -rf /tmp/downloaded_packages/ /tmp/*.rds \
-    && cd .. \
-    && rm R-4.4.3.tar.gz
 
 RUN mkdir -p /home/root/pp && cd /home/root/pp && mkdir app && mkdir tp && mkdir cache && mkdir tools
 
