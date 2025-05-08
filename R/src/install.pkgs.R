@@ -7,18 +7,21 @@
 # It is important to update installed packages before installing new packages
 # to ensure that newly installed packages will use up-to-date dependencies.
 
-# CRAN packages to install. Add any new packages to this vector.
-CRANpkgs <- c("cmprsk", "jsonlite", "survival", "lmtest", "dplyr", "tidyr", "BiocManager", "readr", "doParallel", "ggplot2")
-# Bioconductor packages to install. Add any new packages to this vector.
-BIOCpkgs <- c("edgeR", "rhdf5")
+# get the path of the directory containing this script
+filepath <- gsub("^--file=", "", grep("^--file=", commandArgs(), value = TRUE)) # path of this script
+dirpath <- dirname(filepath) # path of this directory
+
+# read in the lists of CRAN packages and Bioconductor packages to install
+CRANpkgs <- scan(file = file.path(dirname(dirpath), "cran.pkgs.txt"), what = "character", sep = "\n", quiet = TRUE)
+BIOCpkgs <- scan(file = file.path(dirname(dirpath), "bioconductor.pkgs.txt"), what = "character", sep = "\n", quiet = TRUE)
+if (length(CRANpkgs) == 0) stop("no cran packages specified")
+if (length(BIOCpkgs) == 0) stop("no bioconductor packages specified")
 
 repo <- "https://cran.rstudio.com"
 
-## CRAN packages
-# update installed packages
+# update and install CRAN packages
 cat("\nUPDATING CRAN PACKAGES...\n\n")
 update.packages(repos = repo, ask = FALSE)
-# install new packages
 cat("\nINSTALLING CRAN PACKAGES...\n\n")
 for (pkg in CRANpkgs) {
   if (!(pkg %in% installed.packages()[,"Package"])) {
@@ -27,11 +30,9 @@ for (pkg in CRANpkgs) {
   }
 }
 
-## Bioconductor packages
-# update installed packages
+# update and install Bioconductor packages
 cat("\nUPDATING BIOCONDUCTOR PACKAGES...\n\n")
 BiocManager::install(ask = FALSE)
-# install new packages
 cat("\nINSTALLING BIOCONDUCTOR PACKAGES...\n\n")
 for (pkg in BIOCpkgs) {
   if (!(pkg %in% installed.packages()[,"Package"])) {
@@ -39,3 +40,8 @@ for (pkg in BIOCpkgs) {
     BiocManager::install(pkg, ask = FALSE)
   }
 }
+
+# validate packages
+source(file.path(dirpath, "validate.pkgs.R"))
+cat("\nVALIDATING PACKAGES...\n\n")
+validatePkgs()

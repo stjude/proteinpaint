@@ -58,7 +58,7 @@ fi
 PLATFORM=""
 ARCH=$( uname -m )
 if [[ ${ARCH} == "arm64" ]]; then 
-	ARCH="x86-64";
+	ARCH="x86_64";
   PLATFORM="--platform=linux/amd64"
 # Enable this if you want to build for arm64
 #	ARCH="aarch64";
@@ -85,6 +85,13 @@ FRONTPKGVER="$(node -p "require('./package.json').containerDeps.front")"
 cp -r ../public ./
 cp ../full/app-full.mjs .
 cp ../server/app-server.mjs .
+
+# for installing R dependencies
+mkdir -p R/src
+cp ../../R/cran.pkgs.txt R/
+cp ../../R/bioconductor.pkgs.txt R/
+cp ../../R/src/install.pkgs.R R/src/
+cp ../../R/src/validate.pkgs.R R/src/
 
 echo "building ${MODE}ppbase image"
 docker buildx build . --file ./Dockerfile --target ppbase --tag "${MODE}ppbase:latest" $PLATFORM --build-arg ARCH="$ARCH" $BUILDARGS --output type=docker
