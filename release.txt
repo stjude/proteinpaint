@@ -1,1 +1,2 @@
-
+Features:
+- Improved PR checklist with Rust item. Fixed markdown violations
