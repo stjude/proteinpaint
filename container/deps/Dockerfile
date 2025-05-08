@@ -60,8 +60,8 @@ RUN apt-get update && apt-get install -y \
 ENV PATH="/opt/venv/bin:$PATH"
 
 # Install R packages
-COPY R ./R
-RUN Rscript R/src/install.pkgs.R
+COPY ./R/utils ./R/utils
+RUN Rscript R/utils/install.pkgs.R
 
 # TODO: determine if this is necessary
 # set locale encoding in R
