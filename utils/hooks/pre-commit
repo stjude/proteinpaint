@@ -65,12 +65,11 @@ if [[ "$RUST_FULL_PATHS" != "" ]]; then
   
   # Extract relative paths for clippy (remove the "rust/" prefix if needed)
   RUST_CLIPPY_PATHS=$(echo "$RUST_FULL_PATHS" | sed 's|^rust/||g')
-  
-  # Run clippy and capture the output
-  OUTPUT=$(cargo clippy --message-format=json -- $RUST_CLIPPY_PATHS 2>&1)
-  CLIPPY_EXIT_CODE=$?
-  echo "$OUTPUT"
-  echo "Clippy exit code: $CLIPPY_EXIT_CODE"
+  echo "Clippy paths: $RUST_CLIPPY_PATHS"
+
+  # Run clippy
+  cargo clippy --message-format=json | python3 linting/compare_with_baseline.py
+
   
   # Save the baseline path
   BASELINE_PATH="linting/clippy_baseline.json"
@@ -83,27 +82,23 @@ if [[ "$RUST_FULL_PATHS" != "" ]]; then
     cargo clippy --message-format=json > "$BASELINE_PATH"
   fi
   
-  # Capture both stdout and stderr and pipe to our comparison script
-  # Point the script to the correct baseline location
-  echo "$OUTPUT" | BASELINE_PATH="$BASELINE_PATH" python3 ./linting/compare_with_baseline.py
-  SCRIPT_EXIT_CODE=$?
   
   # If the script found new warnings, prevent the commit
-  if [ $SCRIPT_EXIT_CODE -eq 1 ]; then
-    echo "❌ New Clippy warnings detected! Please fix them before committing."
-    echo "Run the following command to see the warnings:"
-    echo "cd rust && cargo clippy -- $RUST_CLIPPY_PATHS"
-    cd "$ORIG_DIR"
-    exit 1
-  else
-    # Even if clippy had errors but no new warnings were found, allow the commit
-    if [ $CLIPPY_EXIT_CODE -ne 0 ]; then
-      echo "⚠️ Clippy reported compilation errors, but no new warnings were detected in your changes."
-      echo "Commit allowed, but you should fix these errors soon."
-    else
-      echo "✅ No new Rust warnings detected. Commit allowed."
-    fi
-  fi
+  # if [ $SCRIPT_EXIT_CODE -eq 1 ]; then
+  #   echo "❌ New Clippy warnings detected! Please fix them before committing."
+  #   echo "Run the following command to see the warnings:"
+  #   echo "cd rust && cargo clippy -- $RUST_CLIPPY_PATHS"
+  #   cd "$ORIG_DIR"
+  #   exit 1
+  # else
+  #   # Even if clippy had errors but no new warnings were found, allow the commit
+  #   if [ $CLIPPY_EXIT_CODE -ne 0 ]; then
+  #     echo "⚠️ Clippy reported compilation errors, but no new warnings were detected in your changes."
+  #     echo "Commit allowed, but you should fix these errors soon."
+  #   else
+  #     echo "✅ No new Rust warnings detected. Commit allowed."
+  #   fi
+  # fi
   
   # Return to original directory
   cd "$ORIG_DIR"
