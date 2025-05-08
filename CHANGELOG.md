@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- Added unit test rust/test/geneORA.unit.spec.js for rust/src/genesetORA.rs
+
 Fixes:
 - improve gdcmaf ui not to show empty table and disable interactivity while downloading
 - Disabled Rust linting on commit for now until can find a better solution for clippy-driver
