@@ -33,7 +33,7 @@ export class RunchartViewModel extends ScatterViewModelBase {
 	showRunChart(chart) {
 		const g = chart.serie
 		const color = this.runchart.config.term0 ? this.runchart.cat2Color(chart.id) : this.runchart.settings.defaultColor
-		const coords = chart.cohortSamples.map(s => this.getCoordinates(chart, s)).sort((a, b) => a.x - b.x)
+		const coords = chart.cohortSamples.map(s => this.model.getCoordinates(chart, s)).sort((a, b) => a.x - b.x)
 
 		const xtext = coords[coords.length - 1].x - 20
 		const areaBuilder = line()
@@ -64,28 +64,5 @@ export class RunchartViewModel extends ScatterViewModelBase {
 			.attr('opacity', 0.8)
 			.attr('font-size', '0.8em')
 			.attr('fill', color)
-	}
-
-	async mayRenderRegression() {
-		for (const chart of this.model.charts) {
-			chart.regressionG?.selectAll('*').remove()
-			if (chart.regressionCurve) {
-				const l = line()
-					.x(d => d[0])
-					.y(d => d[1])
-				const regressionPath = chart.regressionG.append('path')
-				regressionPath
-					.attr('d', l(chart.regressionCurve))
-					.attr('stroke', 'blue')
-					.attr('fill', 'none')
-					.style('stroke-width', '2')
-			}
-		}
-	}
-
-	getCoordinates(chart, c) {
-		const x = chart.xAxisScale(c.x)
-		const y = chart.yAxisScale(c.y)
-		return { x, y }
 	}
 }
