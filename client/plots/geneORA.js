@@ -94,7 +94,6 @@ class geneORA {
 		}
 		geneSet.options = this.app.opts.genome.termdbs.msigdb.analysisGenesetGroups // Gene set groups queried from genome file
 		if (!this.settings.pathway) {
-			geneSet.options.unshift({ label: '-', value: '-' })
 			this.settings.pathway = '-'
 		}
 		inputs.push(geneSet)
