@@ -607,6 +607,13 @@ type CnvSegment = {
 		- for others using mayGetGeneVariantData(), this is always disabled, as request won't have this flag
 	*/
 	requiresHardcodeCnvOnlyFlag?: true
+
+	/** CNV cutoffs (such as cnvGainCutoff, cnvLossCutoff, cnvMaxLength) that are applied to specific genes */
+	cnvCutoffsByGene?: {
+		[termType: string]: {
+			[key: string]: any
+		}
+	}
 }
 
 /*
@@ -1973,11 +1980,6 @@ export type Mds3 = BaseMds & {
 	// !!! TODO: improve these type definitions below !!!
 	getHostHeaders?: (q?: any) => any
 	serverconfigFeatures?: any
-	customTwQByType?: {
-		[termType: string]: {
-			[key: string]: any
-		}
-	}
 	getHealth?: (ds: any) => {
 		[key: string]: any
 	}
