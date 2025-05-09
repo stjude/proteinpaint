@@ -39,6 +39,15 @@ jobs:
         with:
           fetch-depth: 10
 
+      - uses: actions/setup-node@v3
+        with:
+          cache: 'npm'
+          node-version: '22'
+
+      - name: Install PP packages
+        run: |
+          npm ci
+
       # Add Rust change detection step
       - name: Check for Rust workspace changes
         id: check-rust-changes
@@ -55,124 +64,11 @@ jobs:
             echo "updated_rust=false" >> $GITHUB_OUTPUT
           fi
 
-      - name: Install dependencies for canvas
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            build-essential \
-            libcairo2-dev \
-            libpango1.0-dev \
-            libjpeg-dev \
-            libgif-dev \
-            librsvg2-dev      
-
-      - uses: actions/setup-node@v3
-        with:
-          cache: 'npm'
-          node-version: '22'
-
-      - name: Install PP packages
-        run: |
-          npm ci
-
-      - name: Copy serverconfig.json to root
-        run: |
-          cp container/ci/serverconfig.json container/
-
-      - name: Create cache folder
-        run: mkdir cache
-
-      - name: Install xvfb
-        run: sudo apt-get install xvfb
-
-      - name: TSC
-        run: |
-          cd shared/types
-          npm run build
-          cd ../../server
-          npx tsc
-          cd ..
-
-      - name: Login to Github
-        uses: docker/login-action@v3.4.0
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.PAT }}
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Pack Tarballs
-        run: |
-          cd ./container
-          ./pack.sh
-
-      - name: Build Docker Image
-        uses: docker/build-push-action@v5
-        with:
-          context: ./container/
-          file: ./container/server/Dockerfile
-          tags: ppserver:latest
-          platforms: linux/amd64
-          outputs: type=docker
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Run local server and integration tests
-        run: |
-          cd ./container
-          ./run.sh ppserver:latest
-          sleep 10
-          cd ..
-          xvfb-run --auto-servernum npm run test:integration
-
-      - name: Get current time
-        id: current-time
-        if: always()
-        run: |
-          echo "formattedTime=$(TZ=America/Chicago date '+%b %d, %Y %H:%M:%S')" >> "$GITHUB_OUTPUT"
-
-      - name: Set short git commit SHA
-        id: vars
-        if: always()
-        run: echo "SHORT_SHA=$(git rev-parse --short ${{ github.sha }})" >> $GITHUB_ENV
-
-      - name: Post build results on slack
-        id: slack
-        if: always()
-        uses: slackapi/slack-github-action@v1.23.0
-        with:
-          payload: |
-            {
-              "status": "${{ job.status }} https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}",
-              "commit": "${{ env.SHORT_SHA }}",
-              "date-time": "${{ steps.current-time.outputs.formattedTime }}"
-            }
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-
   # Add Rust build job when Rust changes are detected
   rust-build:
+    if: needs.publish-npm.outputs.updated_rust == 'true'
     needs: build
-    if: needs.build.outputs.updated_rust == 'true'
-    runs-on: ubuntu-22.04
-    container:
-      image: ghcr.io/stjude/rust:latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: build rust
-        run: |
-          cd rust && cargo build --release
-          ./extract_binaries.sh
-
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: rust-binaries
-          path: rust/extracted_binaries
+    uses: ./.github/workflows/CD-rust-build.yml
 
   # Add Docker build job with Rust binaries
   docker-with-rust:
@@ -219,6 +115,103 @@ jobs:
           cd ./container
           ./pack.sh
 
+      - name: Copy serverconfig.json to root
+        run: |
+          cp container/ci/serverconfig.json container/
+
+      - name: Create cache folder
+        run: mkdir cache
+
+      - name: Install xvfb
+        run: sudo apt-get install xvfb
+
+      - name: TSC
+        run: |
+          cd shared/types
+          npm run build
+          cd ../../server
+          npx tsc
+          cd ..
+
+      - name: Build Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./container/
+          file: ./container/server/Dockerfile
+          tags: ppserver:latest
+          platforms: linux/amd64
+          outputs: type=docker
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Run local server and integration tests
+        run: |
+          cd ./container
+          ./run.sh ppserver:latest
+          sleep 10
+          cd ..
+          xvfb-run --auto-servernum npm run test:integration
+
+      - name: Get current time
+        id: current-time
+        if: always()
+        run: |
+          echo "formattedTime=$(TZ=America/Chicago date '+%b %d, %Y %H:%M:%S')" >> "$GITHUB_OUTPUT"
+
+      - name: Set short git commit SHA
+        id: vars
+        if: always()
+        run: echo "SHORT_SHA=$(git rev-parse --short ${{ github.sha }})" >> $GITHUB_ENV
+
+      - name: Post build results on slack
+        id: slack
+        if: always()
+        uses: slackapi/slack-github-action@v1.23.0
+        with:
+          payload: |
+            {
+              "status": "${{ job.status }} https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}",
+              "commit": "${{ env.SHORT_SHA }}",
+              "date-time": "${{ steps.current-time.outputs.formattedTime }}"
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }
+
+      # Add Docker build job with Rust binaries
+  docker-without-rust:
+    needs: [build, rust-build]
+    if: needs.build.outputs.updated_rust == 'false'
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 10
+
+      - uses: actions/setup-node@v3
+        with:
+          cache: 'npm'
+          node-version: '22'
+
+      - name: Install PP packages
+        run: |
+          npm ci
+
+      - name: Login to Github
+        uses: docker/login-action@v3.4.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.PAT }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Prepare for Docker build
+        run: |          
+          # Pack tarballs
+          cd ./container
+          ./pack.sh
+
       - name: Build and push Docker image with Rust
         uses: docker/build-push-action@v5
         with:
@@ -229,5 +222,65 @@ jobs:
           push: true
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          build-args: |
-            INCLUDE_RUST=true
+
+      - name: Copy serverconfig.json to root
+        run: |
+          cp container/ci/serverconfig.json container/
+
+      - name: Create cache folder
+        run: mkdir cache
+
+      - name: Install xvfb
+        run: sudo apt-get install xvfb
+
+      - name: TSC
+        run: |
+          cd shared/types
+          npm run build
+          cd ../../server
+          npx tsc
+          cd ..
+
+      - name: Build Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./container/
+          file: ./container/server/Dockerfile
+          tags: ppserver:latest
+          platforms: linux/amd64
+          outputs: type=docker
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Run local server and integration tests
+        run: |
+          cd ./container
+          ./run.sh ppserver:latest
+          sleep 10
+          cd ..
+          xvfb-run --auto-servernum npm run test:integration
+
+      - name: Get current time
+        id: current-time
+        if: always()
+        run: |
+          echo "formattedTime=$(TZ=America/Chicago date '+%b %d, %Y %H:%M:%S')" >> "$GITHUB_OUTPUT"
+
+      - name: Set short git commit SHA
+        id: vars
+        if: always()
+        run: echo "SHORT_SHA=$(git rev-parse --short ${{ github.sha }})" >> $GITHUB_ENV
+
+      - name: Post build results on slack
+        id: slack
+        if: always()
+        uses: slackapi/slack-github-action@v1.23.0
+        with:
+          payload: |
+            {
+              "status": "${{ job.status }} https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}",
+              "commit": "${{ env.SHORT_SHA }}",
+              "date-time": "${{ steps.current-time.outputs.formattedTime }}"
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
