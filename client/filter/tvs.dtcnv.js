@@ -8,13 +8,14 @@ TVS handler for dtcnv term
 export const handler = Object.assign({}, dtHandler, { type: 'dtcnv', setMethods })
 
 function setMethods(self, tvs) {
-	// order of overide: 1) do not override existing settings in tw.q{} 2) customTwQByType.geneVariant.byGene[thisGene] 3) customTwQByType.geneVariant.default{}
-	// TODO: supply gene name to tsv here, and use customTwQByType?.geneVariant.byGene cutoffs if exists
-	const customeTwQDefault = self.opts.vocabApi.parent_termdbConfig?.customTwQByType?.geneVariant?.default
-	const cnv =
-		/* c.byGene?.[tvs.term.name] || */ customeTwQDefault || self.opts.vocabApi.parent_termdbConfig?.queries?.cnv
-
-	if (!cnv) throw 'cnv query is missing'
+	// order of overide: 1) do not override existing settings in tw.q{} 2) c.cnvCutoffsByGene[thisGene] 3) default cutoffs in c
+	// TODO: supply gene name to tsv here, and use queries.cnv.cnvCutoffsByGene cutoffs if exist
+	const cnvObj = self.opts.vocabApi.parent_termdbConfig?.queries?.cnv
+	if (!cnvObj) throw 'cnv query is missing'
+	const { cnvMaxLength, cnvGainCutoff, cnvLossCutoff } = cnvObj
+	const cnvDefault =
+		cnvMaxLength || cnvGainCutoff || cnvLossCutoff ? { cnvMaxLength, cnvGainCutoff, cnvLossCutoff } : {}
+	const cnv = /* cnvObj.cnvCutoffsByGene?.[tvs.term.name] || */ cnvDefault
 	const keys = Object.keys(cnv)
 	if (keys.includes('cnvGainCutoff') || keys.includes('cnvLossCutoff')) {
 		// dataset has continuous cnv data
@@ -40,11 +41,18 @@ async function fillMenu_cont(self, div, tvs) {
 
 	const settingsDiv = div.append('div').style('margin-left', '10px')
 
-	const customeTwQDefault = self.opts.vocabApi.parent_termdbConfig?.customTwQByType?.geneVariant?.default
-	// order of overide: 1) do not override existing settings in tw.q{} 2) customTwQByType.geneVariant.byGene[thisGene] 3) customTwQByType.geneVariant.default{}
-	// TODO: supply gene name to tsv here, and use customTwQByType?.geneVariant.byGene cutoffs if exists
-	const cnv =
-		/* c.byGene?.[tvs.term.name] || */ customeTwQDefault || self.opts.vocabApi.parent_termdbConfig?.queries?.cnv
+	// order of overide: 1) do not override existing settings in tw.q{} 2) c.cnvCutoffsByGene[thisGene] 3) default cutoffs in c
+	// TODO: supply gene name to tsv here, and use queries.cnv.cnvCutoffsByGene cutoffs if exist
+	const cnvObj = self.opts.vocabApi.parent_termdbConfig?.queries?.cnv
+	const cnvMaxLengthOriginal = cnvObj.cnvMaxLength
+	const cnvGainCutoffOriginal = cnvObj.cnvGainCutoff
+	const cnvLossCutoffOriginal = cnvObj.cnvLossCutoff
+	const cnvDefault = {
+		cnvMaxLength: cnvMaxLengthOriginal,
+		cnvGainCutoff: cnvGainCutoffOriginal,
+		cnvLossCutoff: cnvLossCutoffOriginal
+	}
+	const cnv = /* cnvObj.cnvCutoffsByGene?.[tvs.term.name] || */ cnvDefault
 
 	let cnvGainCutoff
 	if (cnv.cnvGainCutoff) {
