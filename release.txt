@@ -1,2 +1,1 @@
-Fixes:
-- block visualizing multiple gdc bam tracks allows to download all bam slices
+

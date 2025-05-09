@@ -15,6 +15,7 @@ Fixes:
 - Apply dataset level settings for genes from GenesetEditUi
 - always follow the CNV cutoffs priority: customTwQByType.geneVariant.byGene > customTwQByType.geneVariant.default > queries.cnv
 - validate term.type as used for anno_* table name, as additional protection sql injection beyond if-else/case branching against term.type's in request payload
+- block visualizing multiple gdc bam tracks allows to download all bam slices
 
 
 ## 2.123.0
