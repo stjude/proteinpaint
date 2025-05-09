@@ -72,7 +72,7 @@ jobs:
 
   # Add Docker build job with Rust binaries
   docker-with-rust:
-    needs: [build, rust-build]
+    needs: [ rust-build]
     if: needs.build.outputs.updated_rust == 'true'
     runs-on: ubuntu-22.04
     steps:
@@ -179,7 +179,7 @@ jobs:
 
       # Add Docker build job with Rust binaries
   docker-without-rust:
-    needs: [build, rust-build]
+    needs: [build]
     if: needs.build.outputs.updated_rust == 'false'
     runs-on: ubuntu-22.04
     steps:
