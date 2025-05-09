@@ -170,12 +170,17 @@ function get_samplelst(tvs, CTEname, ds, sample_type, onlyChildren) {
 		const list = tvs.term.values[field].list
 		samples.push(...list)
 	}
+	const values = []
+	const samplesString = Array(samples.length).fill('?').join(',')
 	let query = `	SELECT id as sample
 				FROM sampleidmap
-				WHERE id ${tvs.isnot ? 'NOT IN' : 'IN'} (${samples.map(s => s.sampleId || s.sample).join(', ')}) `
+				WHERE id ${tvs.isnot ? 'NOT IN' : 'IN'} (${samplesString}) `
+
+	values.push(...samples.map(i => i.sampleId || i.sample))
 	if (ds.cohort.db.tableColumns['sampleidmap'].includes('sample_type')) {
 		if (!sample_type) throw 'sample_type is missing'
-		query += `and sample_type = ${sample_type} ` //later on need to cleanup the list handling in samplelst
+		query += `and sample_type = ?` //later on need to cleanup the list handling in samplelst
+		values.push(sample_type)
 	}
 	if (onlyChildren && ds.cohort.termdb.hasSampleAncestry) query = getChildren(query)
 	return {
@@ -185,7 +190,7 @@ function get_samplelst(tvs, CTEname, ds, sample_type, onlyChildren) {
 			${query}
 			)`
 		],
-		values: [],
+		values,
 		CTEname
 	}
 }
