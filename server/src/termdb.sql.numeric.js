@@ -1,8 +1,7 @@
 import { getUncomputableClause, get_bins } from './termdb.sql'
+import { numericTypes } from '#shared/terms.js'
 
-// does not include term.type=date
-export const annoNumericTypes = new Set(['integer', 'float'])
-
+export const annoNumericTypes = numericTypes
 export const continuous = {
 	getCTE(tablename, term, ds, q, values, index, filter) {
 		const annoTable = `anno_${term.type}`
