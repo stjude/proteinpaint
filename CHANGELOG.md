@@ -6,11 +6,14 @@ All notable changes to this project will be documented in this file.
 
 Features:
 - Added unit test rust/test/geneORA.unit.spec.js for rust/src/genesetORA.rs
+- Upon clicking numeric CNV legend, show options for specifying criteria for a CNV alteration
 
 Fixes:
 - improve gdcmaf ui not to show empty table and disable interactivity while downloading
 - Disabled Rust linting on commit for now until can find a better solution for clippy-driver
 - Create elements for marked values in the color scale after init rather than throwing
+- Apply dataset level settings for genes from GenesetEditUi
+- always follow the CNV cutoffs priority: customTwQByType.geneVariant.byGene > customTwQByType.geneVariant.default > queries.cnv
 
 
 ## 2.123.0
