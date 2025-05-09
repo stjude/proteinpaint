@@ -50,7 +50,7 @@ export class ScatterViewModel2DLarge extends ScatterViewModel {
 		renderer.setSize(this.scatter.settings.svgw, this.scatter.settings.svgh)
 		renderer.setPixelRatio(window.devicePixelRatio)
 
-		const controls = new DragControls.DragControls([particles], camera, renderer.domElement)
+		new DragControls.DragControls([particles], camera, renderer.domElement)
 
 		document.addEventListener('mousewheel', (event: any) => {
 			if (event.ctrlKey) camera.position.z += event.deltaY / 500

@@ -3,7 +3,6 @@ import { getProfilePlotConfig, profilePlot, getDefaultProfilePlotSettings } from
 import { fillTwLst } from '#termsetting'
 import { axisBottom, axisTop } from 'd3-axis'
 import { scaleLinear as d3Linear } from 'd3-scale'
-import { loadFilterTerms } from './profilePlot.js'
 import { Tabs } from '../dom/toggleButtons.js'
 import { roundValueAuto } from '@sjcrh/proteinpaint-shared/roundValue.js'
 
@@ -178,7 +177,7 @@ export class profileForms extends profilePlot {
 		}
 	}
 
-	renderImpressions(samples) {}
+	renderImpressions(_samples) {}
 
 	renderLikert(samples) {
 		this.dom.headerDiv.style('display', 'block')
@@ -324,7 +323,7 @@ export class profileForms extends profilePlot {
 		}
 		const text = getText(tw.term.name)
 		const textG = this.dom.svg.append('g').attr('transform', `translate(0, ${y + this.shiftTop})`)
-		const textElem = textG
+		textG
 			.append('text')
 			.text(text)
 			.attr('y', (height * 2) / 3)
