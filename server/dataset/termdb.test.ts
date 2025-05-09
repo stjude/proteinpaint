@@ -31,6 +31,9 @@ copyDataFilesFromRepo2Tp()
 export default function (): Mds3 {
 	return {
 		isMds3: true,
+		isSupportedChartOverride: {
+			runChart: () => true
+		},
 		cohort: {
 			massNav: {
 				tabs: {
