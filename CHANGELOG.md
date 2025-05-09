@@ -8,6 +8,7 @@ Features:
 - Added unit test rust/test/geneORA.unit.spec.js for rust/src/genesetORA.rs
 - Upon clicking numeric CNV legend, show options for specifying criteria for a CNV alteration
 - Improved Rust linting via clippy
+- Improved PR checklist with Rust item. Fixed markdown violations
 
 Fixes:
 - improve gdcmaf ui not to show empty table and disable interactivity while downloading
