@@ -165,13 +165,6 @@ jobs:
           name: rust-binaries
           path: rust-binaries
           
-      # Pack binaries into a tarball if needed
-      - name: Pack Rust binaries into tarball
-        run: |
-          mkdir -p dist/rust
-          cp -r rust-binaries/* dist/rust/
-          tar -czf rust-binaries.tar.gz -C dist/rust .
-          echo "Rust binaries packed into tarball"
           
       # Publish Docker image with the Rust binaries included
       - name: Publish docker image with Rust binaries
