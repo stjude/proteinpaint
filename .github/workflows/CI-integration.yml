@@ -107,6 +107,7 @@ jobs:
           # Pack tarballs
           cd ./container
           ./pack.sh
+          cd ..
           
           SOURCE_DIR="rust-binaries"
           TARBALL_DIR="container/tmppack"
