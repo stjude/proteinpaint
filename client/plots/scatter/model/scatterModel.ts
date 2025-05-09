@@ -68,7 +68,7 @@ export class ScatterModel {
 
 	async initData() {
 		const reqOpts = this.getDataRequestOpts()
-		if (reqOpts.coordTWs.length == 1) return //To allow removing a term in the controls, though nothing is rendered (summary tab with violin active)
+		if (reqOpts.coordTWs.length == 1 && this.scatter.type == 'scatter') return //To allow removing a term in the controls, though nothing is rendered (summary tab with violin active)
 
 		const data: ScatterResponse = await this.scatter.app.vocabApi.getScatterData(reqOpts)
 		this.is3D = this.scatter.config.term0?.q.mode == 'continuous'
