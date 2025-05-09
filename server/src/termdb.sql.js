@@ -128,6 +128,7 @@ return a sample count of sample names passing through the filter
 
 	return { count: `${row.count} ${sample_type}` }
 }
+
 export async function get_summary_numericcategories(q) {
 	/*
 	q{}
@@ -141,6 +142,10 @@ export async function get_summary_numericcategories(q) {
 		// term does not have special categories
 		return []
 	}
+	const annoTable = `anno_${term.type}`
+	if (!numericSql.annoNumericTypes.has(term.type))
+		throw `unknown '${annoTable}' table in get_summary_numericcategories()`
+
 	const filter = await getFilterCTEs(q.filter, q.ds)
 	const values = filter ? filter.values.slice() : []
 	values.push(q.term_id)
@@ -152,13 +157,16 @@ export async function get_summary_numericcategories(q) {
 	const sql = `
 		${filter ? 'WITH ' + filter.filters : ''}
 		SELECT count(sample) AS samplecount,value
-		FROM anno_${term.type}
+		FROM ${annoTable}
 		WHERE term_id=?
 		${filter ? 'AND sample IN ' + filter.CTEname : ''}
 		AND value IN (${keylst.join(',')})
 		GROUP BY value`
 	return q.ds.cohort.db.connection.prepare(sql).all(values)
 }
+
+// validate for any anno_* named table, not just numeric
+const annoTableTypes = new Set(['categorical', 'integer', 'float', 'date', 'multivalue'])
 
 export async function get_rows_by_one_key(q) {
 	/*
@@ -176,14 +184,19 @@ works for all attributes, including non-termdb ones
 */
 	if (!q.key) throw '.key missing'
 	if (!q.ds) throw '.ds{} missing'
+
+	const term = q.ds.cohort.termdb.q.termjsonByOneid(q.key)
+	const annoTable = `anno_${term.type}`
+	if (!annoTableTypes.has(term.type)) throw `unknown '${annoTable}' table in get_rows_by_one_key()`
+
 	const filter = await getFilterCTEs(q.filter, q.ds)
 	const values = filter ? filter.values.slice() : []
-	const term = q.ds.cohort.termdb.q.termjsonByOneid(q.key)
+
 	values.push(q.key)
 	const sql = `
 		${filter ? 'WITH ' + filter.filters : ''}
 		SELECT sample, value
-		FROM anno_${term.type}
+		FROM ${annoTable}
 		WHERE term_id=?
 		${filter ? ' AND sample IN ' + filter.CTEname : ''}`
 	return q.ds.cohort.db.connection.prepare(sql).all(values)
@@ -656,6 +669,9 @@ to produce the summary table of mean, median, percentiles
 at a numeric barchart
 
 */
+	const annoTable = `anno_${term.type}`
+	if (!numericSql.annoNumericTypes.has(term.type)) throw `unknown '${annoTable}' table in get_numericsummary()`
+
 	const qfilter = typeof q.filter == 'string' ? JSON.parse(decodeURIComponent(q.filter)) : q.filter
 
 	if (
@@ -679,7 +695,7 @@ at a numeric barchart
 	const excludevalues = term.values ? Object.keys(term.values).filter(key => term.values[key].uncomputable) : []
 	const string = `${filter ? 'WITH ' + filter.filters + ' ' : ''}
 		SELECT value
-		FROM anno_${term.type}
+		FROM ${annoTable}
 		WHERE
 		${filter ? 'sample IN ' + filter.CTEname + ' AND ' : ''}
 		term_id=?
@@ -721,6 +737,9 @@ export function get_numericMinMaxPct(ds, term, filter, percentiles = []) {
 		pY is the value at the Yth percentile,
 		and so on ...
 */
+	const annoTable = `anno_${term.type}`
+	if (!numericSql.annoNumericTypes.has(term.type)) throw `unknown '${annoTable}' table in get_numericMinMaxPct()`
+
 	const values = []
 	if (filter) {
 		values.push(...filter.values)
@@ -756,7 +775,7 @@ export function get_numericMinMaxPct(ds, term, filter, percentiles = []) {
 		${filter ? filter.filters + ', ' : ''} 
 		vals AS (
 			SELECT value
-			FROM anno_${term.type}
+			FROM ${annoTable}
 			WHERE
 			${filter ? 'sample IN ' + filter.CTEname + ' AND ' : ''}
 			term_id=?
