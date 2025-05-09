@@ -39,7 +39,7 @@ jobs:
         with:
           fetch-depth: 10
 
-      - uses: actions/setup-node@v3
+      - uses: actions/setup-node@v4
         with:
           cache: 'npm'
           node-version: '22'
@@ -51,19 +51,17 @@ jobs:
       # Add Rust change detection step
       - name: Check for Rust workspace changes
         id: check-rust-changes
-        run: |
-          # Get the list of changed files
-          CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD || echo "")
+        run: |          
+          cd ./container
+          . ./pack.sh
           
-          # Check if any Rust files changed
-          if [[ "$CHANGED_FILES" == *"rust/src"* || "$CHANGED_FILES" == *".rs"* ]]; then
+          if [[ "$CHANGEDWS" == *"rust"* ]]; then
             echo "Rust workspace changes detected"
             echo "updated_rust=true" >> $GITHUB_OUTPUT
           else
             echo "No Rust workspace changes detected"
             echo "updated_rust=false" >> $GITHUB_OUTPUT
           fi
-
   # Add Rust build job when Rust changes are detected
   rust-build:
     if: needs.publish-npm.outputs.updated_rust == 'true'
@@ -86,7 +84,7 @@ jobs:
           name: rust-binaries
           path: rust-binaries
 
-      - uses: actions/setup-node@v3
+      - uses: actions/setup-node@v4
         with:
           cache: 'npm'
           node-version: '22'
@@ -187,7 +185,7 @@ jobs:
         with:
           fetch-depth: 10
 
-      - uses: actions/setup-node@v3
+      - uses: actions/setup-node@v4
         with:
           cache: 'npm'
           node-version: '22'
