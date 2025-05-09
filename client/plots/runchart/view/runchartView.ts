@@ -23,9 +23,30 @@ export class RunchartView extends ScatterView {
 		const samplesPerFilter = await this.runchart.app.vocabApi.getSamplesPerFilter({
 			filters
 		})
+		const inputs: any = []
+		if (this.runchart.config.countryTW) {
+			const countries = this.runchart.getList(this.runchart.config.countryTW, samplesPerFilter)
 
-		const countries = this.runchart.getList(this.runchart.config.countryTW, samplesPerFilter)
-		const sites = this.runchart.getList(this.runchart.config.siteTW, samplesPerFilter)
+			inputs.push({
+				label: 'Country',
+				type: 'dropdown',
+				chartType: 'runChart',
+				settingsKey: this.runchart.config.countryTW.term.id,
+				options: countries,
+				callback: value => this.runchart.setCountry(value)
+			})
+		}
+		if (this.runchart.config.siteTW) {
+			const sites = this.runchart.getList(this.runchart.config.siteTW, samplesPerFilter)
+			inputs.push({
+				label: 'Site',
+				type: 'dropdown',
+				chartType: 'runChart',
+				settingsKey: this.runchart.config.siteTW.term.id,
+				options: sites,
+				callback: value => this.runchart.setFilterValue(this.runchart.config.siteTW.term.id, value)
+			})
+		}
 		const shapeOption = {
 			type: 'term',
 			configKey: 'shapeTW',
@@ -74,123 +95,109 @@ export class RunchartView extends ScatterView {
 			step
 		}
 
-		const inputs: any = [
-			{
-				type: 'term',
-				configKey: 'term',
-				chartType: 'runChart',
-				usecase: { target: 'runChart', detail: 'numeric' },
-				title: 'X coordinate to plot the samples',
-				label: 'X',
-				vocabApi: this.runchart.app.vocabApi,
-				menuOptions: '!remove',
-				numericEditMenuVersion: ['continuous']
-			},
-			{
-				type: 'term',
-				configKey: 'term2',
-				chartType: 'runChart',
-				usecase: { target: 'runChart', detail: 'numeric' },
-				title: 'Y coordinate to plot the samples',
-				label: 'Y',
-				vocabApi: this.runchart.app.vocabApi,
-				menuOptions: '!remove',
-				numericEditMenuVersion: ['continuous']
-			},
-			{
-				label: 'Country',
-				type: 'dropdown',
-				chartType: 'runChart',
-				settingsKey: this.runchart.config.countryTW.term.id,
-				options: countries,
-				callback: value => this.runchart.setCountry(value)
-			},
-			{
-				label: 'Site',
-				type: 'dropdown',
-				chartType: 'runChart',
-				settingsKey: this.runchart.config.siteTW.term.id,
-				options: sites,
-				callback: value => this.runchart.setFilterValue(this.runchart.config.siteTW.term.id, value)
-			},
-			{
-				boxLabel: '',
-				label: 'Aggregate data',
-				chartType: 'runChart',
-				settingsKey: 'aggregateData',
-				title: `Group samples from the same month and year`,
-				type: 'dropdown',
-				options: [
-					{ label: 'None', value: 'None' },
-					//{ label: 'Loess', value: 'Loess' },
-					{ label: 'Median', value: 'Median' },
-					{ label: 'Mean', value: 'Mean' }
-				]
-			},
+		inputs.push(
+			...[
+				{
+					type: 'term',
+					configKey: 'term',
+					chartType: 'runChart',
+					usecase: { target: 'runChart', detail: 'numeric' },
+					title: 'X coordinate to plot the samples',
+					label: 'X',
+					vocabApi: this.runchart.app.vocabApi,
+					menuOptions: '!remove',
+					numericEditMenuVersion: ['continuous']
+				},
+				{
+					type: 'term',
+					configKey: 'term2',
+					chartType: 'runChart',
+					usecase: { target: 'runChart', detail: 'numeric' },
+					title: 'Y coordinate to plot the samples',
+					label: 'Y',
+					vocabApi: this.runchart.app.vocabApi,
+					menuOptions: '!remove',
+					numericEditMenuVersion: ['continuous']
+				},
+				{
+					boxLabel: '',
+					label: 'Aggregate data',
+					chartType: 'runChart',
+					settingsKey: 'aggregateData',
+					title: `Group samples from the same month and year`,
+					type: 'dropdown',
+					options: [
+						{ label: 'None', value: 'None' },
+						//{ label: 'Loess', value: 'Loess' },
+						{ label: 'Median', value: 'Median' },
+						{ label: 'Mean', value: 'Mean' }
+					]
+				},
 
-			{
-				type: 'term',
-				configKey: 'term0',
-				chartType: 'runChart',
-				usecase: { target: 'runChart', detail: 'term0' },
-				title: 'Term to to divide by categories',
-				label: 'Divide by',
-				vocabApi: this.runchart.app.vocabApi,
-				numericEditMenuVersion: ['discrete']
-			},
-			{
-				type: 'term',
-				configKey: 'colorTW',
-				chartType: 'runChart',
-				usecase: { target: 'runChart', detail: 'colorTW' },
-				title: 'Categories to color the samples',
-				label: 'Color',
-				vocabApi: this.runchart.app.vocabApi,
-				numericEditMenuVersion: ['continuous', 'discrete']
-			},
-			shapeOption,
-			shapeSizeOption,
+				{
+					type: 'term',
+					configKey: 'term0',
+					chartType: 'runChart',
+					usecase: { target: 'runChart', detail: 'term0' },
+					title: 'Term to to divide by categories',
+					label: 'Divide by',
+					vocabApi: this.runchart.app.vocabApi,
+					numericEditMenuVersion: ['discrete']
+				},
+				{
+					type: 'term',
+					configKey: 'colorTW',
+					chartType: 'runChart',
+					usecase: { target: 'runChart', detail: 'colorTW' },
+					title: 'Categories to color the samples',
+					label: 'Color',
+					vocabApi: this.runchart.app.vocabApi,
+					numericEditMenuVersion: ['continuous', 'discrete']
+				},
+				shapeOption,
+				shapeSizeOption,
 
-			{
-				type: 'term',
-				configKey: 'scaleDotTW',
-				chartType: 'runChart',
-				usecase: { target: 'runChart', detail: 'numeric' },
-				title: 'Scale sample by term value',
-				label: 'Scale by',
-				vocabApi: this.runchart.app.vocabApi,
-				numericEditMenuVersion: ['continuous']
-			},
+				{
+					type: 'term',
+					configKey: 'scaleDotTW',
+					chartType: 'runChart',
+					usecase: { target: 'runChart', detail: 'numeric' },
+					title: 'Scale sample by term value',
+					label: 'Scale by',
+					vocabApi: this.runchart.app.vocabApi,
+					numericEditMenuVersion: ['continuous']
+				},
 
-			{
-				label: 'Opacity',
-				type: 'number',
-				chartType: 'runChart',
-				settingsKey: 'opacity',
-				title: 'It represents the opacity of the elements',
-				min: 0,
-				max: 1,
-				step: 0.1
-			},
-			{
-				label: 'Chart width',
-				type: 'number',
-				chartType: 'runChart',
-				settingsKey: 'svgw'
-			},
-			{
-				label: 'Chart height',
-				type: 'number',
-				chartType: 'runChart',
-				settingsKey: 'svgh'
-			},
-			{
-				label: 'Default color',
-				type: 'color',
-				chartType: 'runChart',
-				settingsKey: 'defaultColor'
-			}
-		]
+				{
+					label: 'Opacity',
+					type: 'number',
+					chartType: 'runChart',
+					settingsKey: 'opacity',
+					title: 'It represents the opacity of the elements',
+					min: 0,
+					max: 1,
+					step: 0.1
+				},
+				{
+					label: 'Chart width',
+					type: 'number',
+					chartType: 'runChart',
+					settingsKey: 'svgw'
+				},
+				{
+					label: 'Chart height',
+					type: 'number',
+					chartType: 'runChart',
+					settingsKey: 'svgh'
+				},
+				{
+					label: 'Default color',
+					type: 'color',
+					chartType: 'runChart',
+					settingsKey: 'defaultColor'
+				}
+			]
+		)
 		if (this.runchart.config.scaleDotTW)
 			inputs.splice(inputs.length - 5, 0, minShapeSizeOption, maxShapeSizeOption, {
 				label: 'Scale order',

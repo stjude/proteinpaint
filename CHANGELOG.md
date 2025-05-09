@@ -7,6 +7,8 @@ All notable changes to this project will be documented in this file.
 Features:
 - Added unit test rust/test/geneORA.unit.spec.js for rust/src/genesetORA.rs
 - Upon clicking numeric CNV legend, show options for specifying criteria for a CNV alteration
+- Improved Rust linting via clippy
+- Improved PR checklist with Rust item. Fixed markdown violations
 
 Fixes:
 - improve gdcmaf ui not to show empty table and disable interactivity while downloading
@@ -15,6 +17,7 @@ Fixes:
 - Apply dataset level settings for genes from GenesetEditUi
 - always follow the CNV cutoffs priority: customTwQByType.geneVariant.byGene > customTwQByType.geneVariant.default > queries.cnv
 - validate term.type as used for anno_* table name, as additional protection sql injection beyond if-else/case branching against term.type's in request payload
+- block visualizing multiple gdc bam tracks allows to download all bam slices
 
 
 ## 2.123.0

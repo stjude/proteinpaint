@@ -75,6 +75,12 @@ const baminfo_cols = [
 	{ title: 'Tumor Descriptor', key: 'tumor_descriptor' },
 	{ title: 'Size', key: 'file_size', width: '10vw' }
 ]
+const ssmTableColumns = [
+	{ label: 'Gene', width: '10vw', sortable: true },
+	{ label: 'Mutation' },
+	{ label: 'Consequence', sortable: true },
+	{ label: 'Position' }
+]
 const noPermissionMessage =
 	'You are attempting to access a Sequence Read file that you are not authorized to access. <a href=https://gdc.cancer.gov/access-data/obtaining-access-controlled-data target=_blank>Please request dbGaP Access to the project</a>.'
 
@@ -752,7 +758,7 @@ export async function bamsliceui({
 		// display toggle between ssm list and gene search
 		const tabs = [
 			{
-				label: `${ssmLst.length} variants${data.dt2total?.[0] ? ' (' + data.dt2total[0].total + ' total)' : ''}`,
+				label: `${ssmLst.length} mutations${data.dt2total?.[0] ? ' (' + data.dt2total[0].total + ' total)' : ''}`,
 				callback: () => {
 					gdc_args.useSsmOrGene = 'ssm'
 					// Under variants tab, only enable submit button when ssmInput provided
@@ -787,15 +793,8 @@ export async function bamsliceui({
 		if (tabs[2]) tabs[2].contentHolder.append('p').text('Only download unmapped reads from this BAM file.')
 	}
 
-	// to be replaced by block ui
+	// TODO new tabs ssm/cnv/fusion/disco, click an item from any tab to optionally launch block view of and narrow down region; also
 	function temp_renderSsmList(div, mlst) {
-		const columns = [
-			{ label: 'Gene', width: '10vw' },
-			{ label: 'Mutation' },
-			{ label: 'Consequence' },
-			{ label: 'Position' }
-		]
-
 		const gene2mlst = new Map() // group by gene
 		for (const m of mlst) {
 			if (!gene2mlst.has(m.gene)) gene2mlst.set(m.gene, [])
@@ -815,10 +814,10 @@ export async function bamsliceui({
 				rows.push(row)
 			}
 		}
-
 		renderTable({
 			rows,
-			columns,
+			columns: ssmTableColumns,
+			header: { allowSort: true },
 			div,
 			noButtonCallback: (i, node) => {
 				const m = rows[i][0].data

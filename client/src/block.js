@@ -74,6 +74,7 @@ const baseheight = 16
 const ntpxwidth = 20 // max allowed pixel width for a nt
 const hlregioncolor = '#ccffff' // default color
 const rulergrabzindex = 1000
+const headerTip = new Menu()
 
 let blockId = 1
 
@@ -540,17 +541,16 @@ export class Block {
 		}
 
 		{
-			const tip = new Menu()
 			butrow
 				.append('button')
 				.style('margin-left', '10px')
 				.text('More')
 				.on('click', event => {
-					tip.clear()
+					headerTip.clear()
 					const p = event.target.getBoundingClientRect()
-					this.moremenu(tip)
+					this.moremenu(headerTip)
 					// must create menu contents first then show, so the height-placement will work
-					tip.show(p.left - 50, p.top + p.height - 15)
+					headerTip.show(p.left - 50, p.top + p.height - 15)
 				})
 		}
 
@@ -560,42 +560,59 @@ export class Block {
 			.style('display', 'none')
 			.text('Download GDC BAM slice')
 			.on('click', async () => {
-				// TODO show menu options for multiple files
-				const tk = this.tklst.find(i => i.type == 'bam' && i.gdcFile)
-				if (!tk) return
-
-				this.gdcBamSliceDownloadBtn.property('disabled', true)
-
-				// old method of window.open() won't allow passing token via request header
-				//const requestUrl = `tkbam?genome=${this.genome.name}&clientdownloadgdcslice=`
-				//window.open(requestUrl, '_self', 'download')
-
-				// FIXME the entire bam slice is cached in browser memory before downloading, which can be slow
-				// will be nice to directly "stream" to a download file without caching
-
-				const headers = {
-					'Content-Type': 'application/json',
-					Accept: 'application/json'
+				const tks = this.tklst.filter(i => i.type == 'bam' && i.gdcFile)
+				if (tks.length == 0) return
+				if (tks.length == 1) {
+					downloadOneFile(tks[0], this.gdcBamSliceDownloadBtn)
+					return
 				}
-				if (tk.gdcToken) {
-					headers['X-Auth-Token'] = tk.gdcToken
+				headerTip.clear().showunder(this.gdcBamSliceDownloadBtn.node())
+				for (const t of tks) {
+					const button = headerTip.d
+						.append('button')
+						.text(t.name)
+						.style('display', 'block')
+						.style('margin', '4px')
+						.on('click', () => downloadOneFile(t, button))
 				}
-				const lst = [
-					'clientdownloadgdcslice=1',
-					'gdcFileUUID=' + tk.gdcFile.uuid,
-					'gdcFilePosition=' + tk.gdcFile.position
-				]
-				const data = await dofetch3('tkbam?' + lst.join('&'), { headers })
 
-				this.gdcBamSliceDownloadBtn.property('disabled', false)
+				async function downloadOneFile(tk, button) {
+					button.property('disabled', true)
 
-				const a = document.createElement('a')
-				a.href = URL.createObjectURL(data)
-				a.download = tk.aboutThisFile ? tk.aboutThisFile[0].v + '.bam' : 'gdc.bam'
-				a.style.display = 'none'
-				document.body.appendChild(a)
-				a.click()
-				document.body.removeChild(a)
+					// old method of window.open() won't allow passing token via request header
+					//const requestUrl = `tkbam?genome=${this.genome.name}&clientdownloadgdcslice=`
+					//window.open(requestUrl, '_self', 'download')
+
+					// FIXME the entire bam slice is cached in browser memory before downloading, which can be slow
+					// will be nice to directly "stream" to a download file without caching
+
+					const headers = {
+						'Content-Type': 'application/json',
+						Accept: 'application/json'
+					}
+					if (tk.gdcToken) {
+						headers['X-Auth-Token'] = tk.gdcToken
+					}
+					const lst = []
+					const data = await dofetch3('tkbam', {
+						headers,
+						body: {
+							clientdownloadgdcslice: 1,
+							gdcFileUUID: tk.gdcFile.uuid,
+							gdcFilePosition: tk.gdcFile.position
+						}
+					})
+
+					button.property('disabled', false)
+
+					const a = document.createElement('a')
+					a.href = URL.createObjectURL(data)
+					a.download = tk.aboutThisFile ? tk.aboutThisFile[0].v + '.bam' : 'gdc.bam'
+					a.style.display = 'none'
+					document.body.appendChild(a)
+					a.click()
+					document.body.removeChild(a)
+				}
 			})
 
 		this.gbase = this.svg.append('g').attr('transform', 'translate(0,0)')

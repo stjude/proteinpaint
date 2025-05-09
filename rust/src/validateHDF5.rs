@@ -6,7 +6,6 @@ use hdf5::{File, Result};
 use ndarray::Array1;
 use ndarray::Dim;
 use std::io;
-use serde_json;
 
 /// Detects the format of the HDF5 file
 pub fn detect_hdf5_format(hdf5_filename: &str) -> Result<&'static str> {

@@ -3,7 +3,7 @@ import { pointer } from 'd3-selection'
 import { axisRight, axisTop } from 'd3-axis'
 import { scaleLinear } from 'd3-scale'
 import { dofetch3 } from '#common/dofetch'
-import { Menu, axisstyle, sayerror, make_radios, make_table_2col, make_one_checkbox } from '#dom'
+import { Menu, axisstyle, sayerror, make_radios, table2col, make_one_checkbox } from '#dom'
 import urlmap from '#common/urlmap'
 
 /*
@@ -1003,7 +1003,8 @@ function makeTk(tk, block) {
 			.text('About the BAM file')
 			.on('mouseover', event => {
 				tk.tktip.showunder(event.target).clear()
-				make_table_2col(tk.tktip.d, tk.aboutThisFile)
+				const t = table2col({ holder: tk.tktip.d })
+				for (const r of tk.aboutThisFile) t.addRow(r.k, r.v)
 			})
 			.on('mouseout', () => {
 				tk.tktip.hide()
