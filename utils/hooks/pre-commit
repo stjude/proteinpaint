@@ -82,25 +82,7 @@ if [[ "$RUST_FULL_PATHS" != "" ]]; then
     cargo clippy --message-format=json > "$BASELINE_PATH"
   fi
   
-  
-  # If the script found new warnings, prevent the commit
-  # if [ $SCRIPT_EXIT_CODE -eq 1 ]; then
-  #   echo "❌ New Clippy warnings detected! Please fix them before committing."
-  #   echo "Run the following command to see the warnings:"
-  #   echo "cd rust && cargo clippy -- $RUST_CLIPPY_PATHS"
-  #   cd "$ORIG_DIR"
-  #   exit 1
-  # else
-  #   # Even if clippy had errors but no new warnings were found, allow the commit
-  #   if [ $CLIPPY_EXIT_CODE -ne 0 ]; then
-  #     echo "⚠️ Clippy reported compilation errors, but no new warnings were detected in your changes."
-  #     echo "Commit allowed, but you should fix these errors soon."
-  #   else
-  #     echo "✅ No new Rust warnings detected. Commit allowed."
-  #   fi
-  # fi
-  
-  # Return to original directory
+    # Return to original directory
   cd "$ORIG_DIR"
 fi
 
