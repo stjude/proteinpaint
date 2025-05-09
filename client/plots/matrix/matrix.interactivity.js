@@ -2844,12 +2844,11 @@ function setLengendActions(self) {
 			const cnv =
 				Object.keys(self.config.cnvCutoffs).length !== 0
 					? self.config.cnvCutoffs
-					: self.state.termdbConfig?.customTwQByType?.geneVariant?.default || self.state.termdbConfig?.queries?.cnv
+					: self.state.termdbConfig?.queries?.cnv
 			const keys = Object.keys(cnv)
 
 			if (
 				targetData.dt.includes(dtcnv) &&
-				!self.settings.matrix.ignoreCnvValues &&
 				legendGrpFilterIndex == -1 &&
 				(keys.includes('cnvGainCutoff') || keys.includes('cnvLossCutoff' || keys.includes('cnvMaxLength')))
 			) {

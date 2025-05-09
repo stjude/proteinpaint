@@ -84,11 +84,14 @@ export async function fillTW(tw: GvTW, vocabApi: VocabApi, defaultQ: GvQ | null 
 
 	{
 		// apply optional ds-level configs for this specific term
-		const c = vocabApi.termdbConfig.customTwQByType?.geneVariant
+		const c = vocabApi.termdbConfig.queries?.cnv
 		if (c && tw.term.name) {
 			//if (c) valid js code but `&& tw.term.name` required to avoid type error
-			// order of overide: 1) do not override existing settings in tw.q{} 2) c.byGene[thisGene] 3) c.default{}
-			Object.assign(tw.q, c.default || {}, c.byGene?.[tw.term.name] || {}, tw.q)
+			// order of overide: 1) do not override existing settings in tw.q{} 2) c.cnvCutoffsByGene[thisGene] 3) default cutoffs in c
+			const { cnvMaxLength, cnvGainCutoff, cnvLossCutoff } = c
+			const defaultCnvCutoff =
+				cnvMaxLength || cnvGainCutoff || cnvLossCutoff ? { cnvMaxLength, cnvGainCutoff, cnvLossCutoff } : {}
+			Object.assign(tw.q, defaultCnvCutoff, c.cnvCutoffsByGene?.[tw.term.name] || {}, tw.q)
 		}
 	}
 
