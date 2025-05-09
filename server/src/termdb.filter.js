@@ -3,9 +3,7 @@ import { getParentType, getSampleType } from '#shared/terms.js'
 import { dtTerms } from '#shared/common.js'
 import { getSnpData } from './termdb.matrix.js'
 import { filterByItem } from './mds3.init.js'
-
-// includes term.type=date, unlike in termdb.sql.numeric.js
-const annoNumericTypes = new Set(['integer', 'float', 'date'])
+import { annoNumericTypes } from '#shared/terms.js'
 
 /*
 nested filter documented at:

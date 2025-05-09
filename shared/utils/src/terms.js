@@ -86,6 +86,10 @@ export const numericTypes = new Set([
 	TermTypes.DATE
 ])
 
+// available termdb numeric table names used as anno_<term.type>,
+// for example anno_integer, anno_float, anno_date
+export const annoNumericTypes = new Set([TermTypes.INTEGER, TermTypes.FLOAT, TermTypes.DATE])
+
 const categoricalTypes = new Set([TermTypes.CATEGORICAL, TermTypes.SNP])
 
 const singleSampleTerms = new Set([TermTypes.SINGLECELL_GENE_EXPRESSION])

@@ -5,9 +5,8 @@ import * as categoricalSql from './termdb.sql.categorical.js'
 import * as conditionSql from './termdb.sql.condition.js'
 import { sampleLstSql } from './termdb.sql.samplelst.js'
 import { multivalueCTE } from './termdb.sql.multivalue.js'
-import { dateCTE } from './termdb.sql.date.js'
 import { boxplot_getvalue } from './utils.js'
-import { DEFAULT_SAMPLE_TYPE, isNumericTerm } from '#shared/terms.js'
+import { DEFAULT_SAMPLE_TYPE, isNumericTerm, annoNumericTypes } from '#shared/terms.js'
 /*
 
 ********************** EXPORTED
@@ -143,8 +142,7 @@ export async function get_summary_numericcategories(q) {
 		return []
 	}
 	const annoTable = `anno_${term.type}`
-	if (!numericSql.annoNumericTypes.has(term.type))
-		throw `unknown '${annoTable}' table in get_summary_numericcategories()`
+	if (!annoNumericTypes.has(term.type)) throw `unknown '${annoTable}' table in get_summary_numericcategories()`
 
 	const filter = await getFilterCTEs(q.filter, q.ds)
 	const values = filter ? filter.values.slice() : []
@@ -468,8 +466,6 @@ export async function get_term_cte(q, values, index, filter, termWrapper = null)
 		CTE = await sampleLstSql.getCTE(q.ds, tablename, termWrapper || { term, q: termq }, values)
 	} else if (term.type == 'multivalue') {
 		CTE = await multivalueCTE.getCTE(tablename, termWrapper || { term, q: termq }, values)
-	} else if (term.type == 'date') {
-		CTE = await dateCTE.getCTE(tablename, termWrapper || { term, q: termq }, values)
 	} else {
 		throw 'unknown term type [get_term_cte() server/src/termdb.sql.js]'
 	}
@@ -670,7 +666,7 @@ at a numeric barchart
 
 */
 	const annoTable = `anno_${term.type}`
-	if (!numericSql.annoNumericTypes.has(term.type)) throw `unknown '${annoTable}' table in get_numericsummary()`
+	if (!annoNumericTypes.has(term.type)) throw `unknown '${annoTable}' table in get_numericsummary()`
 
 	const qfilter = typeof q.filter == 'string' ? JSON.parse(decodeURIComponent(q.filter)) : q.filter
 
@@ -738,7 +734,7 @@ export function get_numericMinMaxPct(ds, term, filter, percentiles = []) {
 		and so on ...
 */
 	const annoTable = `anno_${term.type}`
-	if (!numericSql.annoNumericTypes.has(term.type)) throw `unknown '${annoTable}' table in get_numericMinMaxPct()`
+	if (!annoNumericTypes.has(term.type)) throw `unknown '${annoTable}' table in get_numericMinMaxPct()`
 
 	const values = []
 	if (filter) {

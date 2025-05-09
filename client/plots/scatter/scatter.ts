@@ -152,8 +152,16 @@ export async function getPlotConfig(opts, app) {
 
 		if (plot.colorTW) await fillTermWrapper(plot.colorTW, app.vocabApi)
 		if (plot.shapeTW) await fillTermWrapper(plot.shapeTW, app.vocabApi)
-		if (plot.term) await fillTermWrapper(plot.term, app.vocabApi)
-		if (plot.term2) await fillTermWrapper(plot.term2, app.vocabApi)
+		if (plot.term) {
+			if (!plot.term.q) plot.term.q = {}
+			plot.term.q.mode = 'continuous'
+			await fillTermWrapper(plot.term, app.vocabApi)
+		}
+		if (plot.term2) {
+			if (!plot.term.q) plot.term.q = {}
+			plot.term.q.mode = 'continuous'
+			await fillTermWrapper(plot.term2, app.vocabApi)
+		}
 		if (plot.term0) await fillTermWrapper(plot.term0, app.vocabApi)
 		if (plot.scaleDotTW) await fillTermWrapper(plot.scaleDotTW, app.vocabApi)
 		if (plot.sampleCategory) await fillTermWrapper(plot.sampleCategory.tw, app.vocabApi)
