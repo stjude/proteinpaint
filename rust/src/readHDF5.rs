@@ -41,7 +41,6 @@ use std::time::Instant;
 fn detect_hdf5_format(hdf5_filename: &str) -> Result<&'static str> {
     let file = File::open(hdf5_filename)?;
 
-    let unsued_var = "test";
     // Check for dense format (has counts, gene_names, and samples datasets)
     let has_counts = file.dataset("counts").is_ok();
     let has_gene_names = file.dataset("gene_names").is_ok();
