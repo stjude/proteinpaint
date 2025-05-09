@@ -1,1 +1,2 @@
-
+Features
+- Files in cache subdirectories are cleared every minute unless otherwise set by the serverconfig. New unit tests are available for initializing the cache subdirectories and clearing old or large files.

@@ -101,7 +101,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Run local server and integration tests
+      - name: Run local client and integration tests
         run: |
           cd ./container
           ./run.sh ppserver:latest
