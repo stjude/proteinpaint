@@ -1,1 +1,2 @@
-
+Fixes:
+- validate term.type as used for anno_* table name, as additional protection sql injection beyond if-else/case branching against term.type's in request payload

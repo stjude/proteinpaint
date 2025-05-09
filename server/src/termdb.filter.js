@@ -4,6 +4,9 @@ import { dtTerms } from '#shared/common.js'
 import { getSnpData } from './termdb.matrix.js'
 import { filterByItem } from './mds3.init.js'
 
+// includes term.type=date, unlike in termdb.sql.numeric.js
+const annoNumericTypes = new Set(['integer', 'float', 'date'])
+
 /*
 nested filter documented at:
 https://docs.google.com/document/d/18Qh52MOnwIRXrcqYR43hB9ezv203y_CtJIjRgDcI42I/edit?pli=1#heading=h.eeqtb17pxcp0
@@ -79,7 +82,7 @@ export async function getFilterCTEs(filter, ds, sampleTypes = new Set(), CTEname
 			f = get_survival(item.tvs, CTEname_i, onlyChildren)
 		} else if (item.tvs.term.type == 'samplelst') {
 			f = get_samplelst(item.tvs, CTEname_i, ds, sample_type, onlyChildren)
-		} else if (item.tvs.term.type == 'integer' || item.tvs.term.type == 'float' || item.tvs.term.type == 'date') {
+		} else if (annoNumericTypes.has(item.tvs.term.type)) {
 			f = get_numerical(item.tvs, CTEname_i, ds, onlyChildren)
 		} else if (item.tvs.term.type == 'condition') {
 			f = get_condition(item.tvs, CTEname_i, ds)
@@ -384,6 +387,9 @@ so here need to allow both string and number as range.value
 	const values = [tvs.term.id]
 	// get term object
 	const term = ds.cohort.termdb.q.termjsonByOneid(tvs.term.id)
+	const annoTable = `anno_${term.type}`
+	if (!annoNumericTypes.has(term.type)) throw `unknown '${annoTable}' table in get_numerical()`
+
 	const rangeclauses = []
 	let hasactualrange = false // if true, will exclude special categories
 
@@ -430,7 +436,7 @@ so here need to allow both string and number as range.value
 	const combinedClauses = rangeclauses.join(' OR ')
 
 	let query = `SELECT sample
-					FROM anno_${term.type}
+					FROM ${annoTable}
 					WHERE term_id = ?
 					${combinedClauses ? 'AND (' + combinedClauses + ')' : ''}
 					${excludevalues && excludevalues.length ? `AND value NOT IN (${excludevalues.map(d => '?').join(',')}) ` : ''}`
