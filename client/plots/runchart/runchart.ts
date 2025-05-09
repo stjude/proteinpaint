@@ -27,7 +27,9 @@ export class Runchart extends Scatter {
 	async init(appState) {
 		const state: any = this.getState(appState)
 		this.config = structuredClone(state.config)
-		this.filterTWs = [state.config.countryTW, state.config.siteTW]
+		this.filterTWs = []
+		if (state.config.countryTW) this.filterTWs.push(state.config.countryTW)
+		if (state.config.siteTW) this.filterTWs.push(state.config.siteTW)
 		this.filtersData = await this.app.vocabApi.getAnnotatedSampleData({
 			terms: structuredClone(this.filterTWs),
 			termsPerRequest: 10
@@ -141,20 +143,20 @@ export class Runchart extends Scatter {
 export async function getPlotConfig(opts, app) {
 	//if (!opts.colorTW) throw 'runChart getPlotConfig: opts.colorTW{} missing'
 	//if (!opts.name && !(opts.term && opts.term2)) throw 'runChart getPlotConfig: missing coordinates input'
-
+	const defaultConfig = app.vocabApi.termdbConfig?.plotConfigByCohort?.default?.[opts.chartType]
+	const settings = copyMerge(getDefaultRunChartSettings(), defaultConfig?.settings)
 	const plot: any = {
 		settings: {
 			controls: {
 				isOpen: false // control panel is hidden by default
 			},
-			runChart: getDefaultRunChartSettings(),
+			runChart: settings,
 			startColor: {}, //dict to store the start color of the gradient for each chart when using continuous color
 			stopColor: {} //dict to store the stop color of the gradient for each chart when using continuous color
 		}
 	}
 
 	try {
-		const defaultConfig = app.vocabApi.termdbConfig?.plotConfigByCohort.default[opts.chartType]
 		copyMerge(plot, defaultConfig, opts)
 
 		if (plot.colorTW) await fillTermWrapper(plot.colorTW, app.vocabApi)
@@ -163,8 +165,8 @@ export async function getPlotConfig(opts, app) {
 		await fillTermWrapper(plot.term2, app.vocabApi)
 		if (plot.term0) await fillTermWrapper(plot.term0, app.vocabApi)
 		if (plot.scaleDotTW) await fillTermWrapper(plot.scaleDotTW, app.vocabApi)
-		await fillTermWrapper(plot.countryTW, app.vocabApi)
-		await fillTermWrapper(plot.siteTW, app.vocabApi)
+		if (plot.countryTW) await fillTermWrapper(plot.countryTW, app.vocabApi)
+		if (plot.siteTW) await fillTermWrapper(plot.siteTW, app.vocabApi)
 
 		return plot
 	} catch (e) {
@@ -202,7 +204,7 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 
 export function getDefaultRunChartSettings() {
 	return {
-		aggregateData: 'Median',
+		aggregateData: 'None',
 		size: 0.5,
 		minShapeSize: 0.5,
 		maxShapeSize: 4,
