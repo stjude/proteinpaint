@@ -103,14 +103,54 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Prepare for Docker build
-        run: |
-          # Copy Rust binaries to container directory
-          mkdir -p container/rust-binaries
-          cp -r rust-binaries/* container/rust-binaries/
-          
+        run: |          
           # Pack tarballs
           cd ./container
           ./pack.sh
+          
+          SOURCE_DIR="rust-binaries"
+          TARBALL_DIR="container/tmppack"
+          TARBALL_PATTERN="sjcrh-proteinpaint-rust-*.tgz"
+          DEST_DIR="target/release"
+  
+          # Find the existing tarball
+          TARBALL_PATH=$(find "$TARBALL_DIR" -type f -name "$TARBALL_PATTERN" | head -n 1)
+  
+          if [ -z "$TARBALL_PATH" ]; then
+            echo "Error: No tarball found matching pattern $TARBALL_PATTERN in $TARBALL_DIR"
+            exit 1
+          fi
+
+          echo "Using tarball: $TARBALL_PATH"
+
+          # Decompress if it's a .tgz
+          if [[ "$TARBALL_PATH" == *.tgz ]]; then
+            gunzip -f "$TARBALL_PATH"
+            TARBALL_PATH="${TARBALL_PATH%.tgz}.tar"
+          fi
+  
+          # Stage files
+          TMP_DIR=$(mktemp -d)
+          mkdir -p "$TMP_DIR/$DEST_DIR"
+  
+          # Copy and capture file list
+          ADDED_FILES=()
+          for file in "$SOURCE_DIR"/*; do
+            cp "$file" "$TMP_DIR/$DEST_DIR/"
+            basename=$(basename "$file")
+            ADDED_FILES+=("$DEST_DIR/$basename")
+          done
+  
+          # Append to the tarball
+          tar --append --file="$TARBALL_PATH" -C "$TMP_DIR" "$DEST_DIR"
+  
+          # Recompress to .tgz
+          gzip -f "$TARBALL_PATH"
+  
+          echo "Added files:"
+          for f in "${ADDED_FILES[@]}"; do
+            echo "$f"
+          done
 
       - name: Copy serverconfig.json to root
         run: |
