@@ -1,24 +1,14 @@
-import * as common from '#shared/common.js'
-import * as utils from './utils.js'
 import child_process from 'child_process'
+import { run_R } from '@sjcrh/proteinpaint-r'
 
-export function checkDependenciesAndVersions(serverconfig) {
+export async function checkDependenciesAndVersions(serverconfig) {
 	if (serverconfig.features.skip_checkDependenciesAndVersions) {
 		console.log('SKIPPED checkDependenciesAndVersions()')
 		return
 	}
 
 	// test if R has all required libraries
-	// TODO: update this
-	const rlibraries = ['jsonlite', 'cmprsk', 'lmtest']
-	for (const lib of rlibraries) {
-		const ps = child_process.spawnSync(
-			serverconfig.Rscript,
-			['-e', `suppressPackageStartupMessages(library("${lib}"))`],
-			{ encoding: 'utf8' }
-		)
-		if (ps.stderr.trim()) throw ps.stderr
-	}
+	await run_R('validate.pkgs.R', null, null, 'utils')
 
 	// samtools and bcftools usually have similar installed versions
 	const htslibMinorVer = 10

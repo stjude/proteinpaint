@@ -36,7 +36,7 @@ export async function initGenomesDs(serverconfig) {
 		}
 	}
 
-	checkDependenciesAndVersions(serverconfig)
+	await checkDependenciesAndVersions(serverconfig)
 
 	// date updated
 	if (serverconfig.base_zindex != undefined) {
