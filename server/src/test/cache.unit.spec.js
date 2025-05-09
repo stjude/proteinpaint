@@ -3,7 +3,6 @@ import serverconfig from '../serverconfig.js'
 import path from 'path'
 import fs from 'fs'
 import { Cache } from '#src/Cache.js'
-import { clear } from 'console'
 
 /** Tests
  * - init() cache files
@@ -12,17 +11,30 @@ import { clear } from 'console'
 
 const cache = new Cache(serverconfig.cachedir)
 
+/**************
+ helper functions
+***************/
+
 function makeTestFiles() {
 	for (const subdir of cache.defaultCacheDirs) {
 		const dirPath = path.join(serverconfig.cachedir, subdir.dir)
 		//Only create the file if it doesn't exist
 		//Do not create new files when tests fail.
-		const testFilePath = dirPath + '/testfile.txt'
+		const ext = subdir?.fileExtensions?.size ? Array.from(subdir.fileExtensions)[0] : 'txt'
+		const testFilePath = `${dirPath}/testfile.${ext}`
 		if (fs.existsSync(dirPath) && !fs.existsSync(testFilePath)) {
 			fs.writeFileSync(testFilePath, 'test file')
 		}
 	}
 }
+
+function sleep(ms) {
+	return new Promise(resolve => setTimeout(resolve, ms))
+}
+
+/**************
+ test sections
+***************/
 
 tape('\n', async function (test) {
 	test.pass('-***- src/Cache -***-')
@@ -32,7 +44,7 @@ tape('\n', async function (test) {
 /** The cache subdirectories are created on init.
  * The test checks whether the cache subdirectories are created. */
 tape('init() cache files', async function (test) {
-	test.timeoutAfter(3000)
+	test.timeoutAfter(100)
 
 	/** Creates all the directories under server/test/cache,
 	 * if needed, for testing. server/test/cache is ignored
@@ -54,10 +66,21 @@ tape('init() cache files', async function (test) {
 })
 
 tape('Delete cache files', async function (test) {
-	test.timeoutAfter(3000)
+	test.timeoutAfter(cache.interval + 100)
 
 	makeTestFiles()
-	const interval = cache.deleteCacheFiles()
-	interval.stop()
+	cache.deleteCacheFiles(true)
+
+	//Need to await the interval to ensure that the cache files are deleted.
+	await sleep(cache.interval + 5)
+
+	//Only the gsea is enabled at this time.
+	//No need to test the other cache subdirectories.
+	if (fs.existsSync(serverconfig.cachedir_gsea + '/testfile.pkl')) {
+		test.fail('Cache files were not deleted.')
+	} else {
+		test.pass('Cache files were deleted.')
+	}
+
 	test.end()
 })
