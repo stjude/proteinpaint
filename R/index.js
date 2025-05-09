@@ -2,9 +2,10 @@
 Module for running R
 
 Arguments:
-	- <filename>: [string] name of R script file (see 'R/src/').
+	- <filename>: [string] name of R script.
 	- <data>: [string] input data for R script.
 	- <args>: [array] arguments for R script.
+	- <subdir>: [string] subdirectory containing R script (defaults to src/).
 
 Input data is streamed into the standard input of the R script.
 Standard output of the R script is returned.
@@ -16,8 +17,8 @@ import { Readable } from 'stream'
 import path from 'path'
 const __dirname = import.meta.dirname
 
-export async function run_R(filename, data, args) {
-	const filepath = path.join(__dirname, 'src', filename)
+export async function run_R(filename, data, args, subdir = 'src') {
+	const filepath = path.join(__dirname, subdir, filename)
 	if (!fs.existsSync(filepath)) throw `${filepath} does not exist`
 	return new Promise((resolve, reject) => {
 		const _stdout = []
