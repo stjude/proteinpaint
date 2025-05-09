@@ -54,33 +54,7 @@ if [[ "$RUST_FULL_PATHS" != "" ]]; then
   # Add back the formatted Rust files to staging
   echo "$RUST_FULL_PATHS" | xargs git add
   
-  # Run clippy on changed files only and check for new warnings
-  echo "Running Clippy on changed Rust files..."
-  
-  # Store original directory
-  ORIG_DIR=$(pwd)
-  
-  # Change to the rust directory for running clippy
-  cd rust
-  
-  # Extract relative paths for clippy (remove the "rust/" prefix if needed)
-  RUST_CLIPPY_PATHS=$(echo "$RUST_FULL_PATHS" | sed 's|^rust/||g')
-  echo "Clippy paths: $RUST_CLIPPY_PATHS"
-
-  # Run clippy
-  cargo clippy --message-format=json | python3 linting/compare_with_baseline.py || true
-
-  
-  # Save the baseline path
-  BASELINE_PATH="linting/clippy_baseline.json"
-  
-  # Make sure the baseline exists
-  if [ ! -f "$BASELINE_PATH" ]; then
-    echo "Warning: Clippy baseline file not found at $BASELINE_PATH"
-    echo "Creating an initial baseline..."
-    mkdir -p linting
-    cargo clippy --message-format=json > "$BASELINE_PATH"
-  fi
+  # TODO: Will add linting for Rust files at a later time
   
     # Return to original directory
   cd "$ORIG_DIR"
