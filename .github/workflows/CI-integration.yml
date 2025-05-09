@@ -114,7 +114,7 @@ jobs:
           TARBALL_PATTERN="sjcrh-proteinpaint-rust-*.tgz"
           DEST_DIR="target/release"
   
-          # Find the existing tarball
+          # Find the tarball
           TARBALL_PATH=$(find "$TARBALL_DIR" -type f -name "$TARBALL_PATTERN" | head -n 1)
   
           if [ -z "$TARBALL_PATH" ]; then
@@ -124,30 +124,26 @@ jobs:
 
           echo "Using tarball: $TARBALL_PATH"
 
-          # Decompress if it's a .tgz
-          if [[ "$TARBALL_PATH" == *.tgz ]]; then
-            gunzip -f "$TARBALL_PATH"
-            TARBALL_PATH="${TARBALL_PATH%.tgz}.tar"
-          fi
-  
-          # Stage files
+          # Create temp working dir
           TMP_DIR=$(mktemp -d)
+  
+          # Extract current tarball
+          tar -xzf "$TARBALL_PATH" -C "$TMP_DIR"
+  
+          # Create destination dir inside extracted structure
           mkdir -p "$TMP_DIR/$DEST_DIR"
   
-          # Copy and capture file list
+          # Copy new files and track additions
           ADDED_FILES=()
           for file in "$SOURCE_DIR"/*; do
             cp "$file" "$TMP_DIR/$DEST_DIR/"
-            basename=$(basename "$file")
-            ADDED_FILES+=("$DEST_DIR/$basename")
+            ADDED_FILES+=("$DEST_DIR/$(basename "$file")")
           done
   
-          # Append to the tarball
-          tar --append --file="$TARBALL_PATH" -C "$TMP_DIR" "$DEST_DIR"
+          # Repack into .tgz (overwrite original)
+          tar -czf "$TARBALL_PATH" -C "$TMP_DIR" .
   
-          # Recompress to .tgz
-          gzip -f "$TARBALL_PATH"
-  
+          # Output added files
           echo "Added files:"
           for f in "${ADDED_FILES[@]}"; do
             echo "$f"
