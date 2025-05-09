@@ -175,7 +175,7 @@ jobs:
               "date-time": "${{ steps.current-time.outputs.formattedTime }}"
             }
         env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
       # Add Docker build job with Rust binaries
   docker-without-rust:
