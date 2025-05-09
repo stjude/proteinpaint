@@ -157,16 +157,6 @@ export default function (): Mds3 {
 				]
 			}
 		},
-		customTwQByType: {
-			// dataset-specific termsetting configs on certain term types
-			geneVariant: {
-				default: { cnvGainCutoff: 0.1, cnvLossCutoff: -0.1, cnvMaxLength: 0 },
-				byGene: {
-					// key is term.name, thus possible to use non-gene names e.g. C19MC
-					MYCN: { cnvGainCutoff: 0.5, cnvLossCutoff: -0.1, cnvMaxLength: 0 }
-				}
-			}
-		},
 		variant2samples: {
 			variantkey: 'ssm_id', // required, tells client to return ssm_id for identifying variants
 
