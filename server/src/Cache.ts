@@ -2,6 +2,8 @@ import serverconfig from './serverconfig.js'
 import fs from 'fs'
 import path from 'path'
 
+/** This class created the subdirectories under the cache
+ * and manages the cache files in those directories.*/
 export class Cache {
 	readonly defaultCacheDirs = [
 		/** Temporarily stores sliced bam files */
@@ -24,6 +26,11 @@ export class Cache {
 			onlyCache: true //Denote to use cache, not cachedir
 		}
 	]
+	interval: number
+
+	constructor() {
+		this.interval = serverconfig?.features?.cacheMonitor?.intervalOverride ?? 1000 * 60
+	}
 
 	async init() {
 		// create sub directories under cachedir, and register path in serverconfig
@@ -61,35 +68,35 @@ export class Cache {
 		return dir
 	}
 
-	deleteCacheFiles() {
+	deleteCacheFiles(testing = false) {
 		// Allow the serverconfig to override the default interval of 1 minute
 		// Useful for CI
 		const cacheMonitor = serverconfig?.features?.cacheMonitor
-		const interval = cacheMonitor?.intervalOverride ?? 1000 * 60
 		// Clear the subdirectories periodically, defined by the interval
 		// and optional cacheMonitor settings in serverconfig
 		const runInterval = setInterval(async () => {
-			console.log('Checking for cached files to delete ...')
 			for (const subdir of this.defaultCacheDirs) {
 				//Only enable gsea for now
-				// if (subdir.dir !== 'gsea') continue
-				const maxAge = cacheMonitor?.[subdir.dir]?.maxAge ?? 1000 * 60 * 60 * 2 // 2 hours
-				const maxSize = cacheMonitor?.[subdir.dir]?.maxSize ?? 5e9 // 5 GB
+				if (subdir.dir !== 'gsea') continue
+				const maxAge = testing ? 0 : cacheMonitor?.[subdir.dir]?.maxAge ?? 1000 * 60 * 60 * 2 // 2 hours
+				const maxSize = testing ? 0 : cacheMonitor?.[subdir.dir]?.maxSize ?? 5e9 // 5 GB
 				const configRef = subdir.onlyCache
 					? serverconfig[`cache_${subdir.dir}`]
 					: serverconfig[`cachedir_${subdir.dir}`]
-				await this.mayDeleteCacheFiles(maxAge, maxSize, configRef, subdir, interval)
+				await this.mayDeleteCacheFiles(maxAge, maxSize, configRef, subdir, this.interval)
 			}
-		}, interval)
+		}, this.interval)
 
-		return {
-			stop: () => clearInterval(runInterval)
+		// If testing, clear the interval after the first run
+		if (testing) {
+			setTimeout(() => {
+				clearInterval(runInterval)
+			}, this.interval + 5)
 		}
 	}
 
 	async mayDeleteCacheFiles(maxAge: number, maxSize: number, configRef, subdir, interval: number) {
 		const filePath = configRef?.dir || configRef
-		console.log(filePath)
 		console.log(`checking for cached ${subdir.dir} files to delete ...`)
 		try {
 			const minTime = Date.now() - maxAge
