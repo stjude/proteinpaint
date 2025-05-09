@@ -61,9 +61,6 @@ tape('fill() valid tw', async test => {
 	const expectedQ = {
 		isAtomic: true,
 		type: 'values',
-		cnvGainCutoff: 0.1,
-		cnvLossCutoff: -0.1,
-		cnvMaxLength: 0,
 		hiddenValues: {}
 	}
 	test.deepEqual(fullTw.q, expectedQ, 'should fill in q')
@@ -166,9 +163,6 @@ const termFilter: TermFilter = {
 const customGsQ: GvCustomGsQ = {
 	isAtomic: true,
 	type: 'custom-groupset',
-	cnvGainCutoff: 0.1,
-	cnvLossCutoff: -0.1,
-	cnvMaxLength: 0,
 	customset: {
 		groups: [
 			{
