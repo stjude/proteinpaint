@@ -7,6 +7,7 @@ import { authApi } from './auth.js'
 import { run_R } from '@sjcrh/proteinpaint-r'
 import { read_file } from './utils.js'
 import { isNumericTerm } from '@sjcrh/proteinpaint-shared/terms.js'
+import { get } from 'http'
 /*
 works with "canned" scatterplots in a dataset, e.g. data from a text file of tSNE coordinates from a pre-analyzed cohort (contrary to on-the-fly analysis)
 
@@ -91,7 +92,7 @@ export async function trigger_getSampleScatter(req, q, res, ds, genome) {
 		const data = await getData({ filter: q.filter, filter0: q.filter0, terms }, ds, genome, true)
 		if (data.error) throw data.error
 		let result
-		if (q.coordTWs.length == 2) {
+		if (q.coordTWs) {
 			const tmp = await getSampleCoordinatesByTerms(req, q, ds, data)
 			cohortSamples = tmp[0]
 			coordTwData = tmp[1]
@@ -396,18 +397,17 @@ function order(map, tw, refs) {
 async function getSampleCoordinatesByTerms(req, q, ds, data) {
 	const canDisplay = authApi.canDisplaySampleIds(req, ds)
 	const samples = []
-
 	for (const sampleId in data.samples) {
 		const values = data.samples[sampleId]
 		const x = values[q.coordTWs[0].$id]?.value
-		const y = values[q.coordTWs[1].$id]?.value
+		const y = values[q.coordTWs[1]?.$id]?.value || 0 //Event scatter only provides x and calculates y
 		const z = q.divideByTW ? values[q.divideByTW?.$id]?.value : 0
 
 		if (x == undefined || y == undefined || z == undefined) continue
 
 		if (
 			!isComputable(q.coordTWs[0].term, x) ||
-			!isComputable(q.coordTWs[1].term, y) ||
+			!isComputable(q.coordTWs[1]?.term, y) ||
 			!isComputable(q.divideByTW?.term, z)
 		) {
 			// any one of the coord value is uncomputable category, do not use this sample
@@ -421,6 +421,12 @@ async function getSampleCoordinatesByTerms(req, q, ds, data) {
 		samples.push(sample)
 	}
 	return [samples, data]
+}
+
+function getNumberFromCat(tw, cat) {
+	const categories = Object.values(tw.term.values).map(v => v.label || v.key)
+	const index = categories.indexOf(cat)
+	return index >= 0 ? index : null
 }
 
 function isComputable(term, value) {

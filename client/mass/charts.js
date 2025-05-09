@@ -213,6 +213,12 @@ function getChartTypeList(self, state) {
 			chartType: 'runChart',
 			clickTo: self.loadChartSpecificMenu
 		},
+		{
+			label: 'Event Count',
+			chartType: 'eventCount',
+			clickTo: self.showTree_select1term,
+			usecase: { target: 'eventCount', detail: 'term' }
+		},
 
 		{
 			label: 'Cumulative Incidence',

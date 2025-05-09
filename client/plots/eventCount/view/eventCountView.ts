@@ -1,0 +1,176 @@
+import { fillTermWrapper } from '#termsetting'
+import type { EventCount } from '../eventCount.ts'
+import { RunchartView } from '../../runchart/view/runchartView.ts'
+import { isNumericTerm } from '#shared/terms.js'
+
+export const minShapeSize = 0.2
+export const maxShapeSize = 6
+export class EventCountView extends RunchartView {
+	eventCount: EventCount
+
+	constructor(eventCount: EventCount) {
+		super(eventCount)
+		this.eventCount = eventCount
+	}
+
+	async getControlInputs() {
+		const shapeOption = {
+			type: 'term',
+			configKey: 'shapeTW',
+			chartType: 'eventCount',
+			usecase: { target: 'eventCount', detail: 'shapeTW' },
+			title: 'Categories to assign a shape',
+			label: 'Shape',
+			vocabApi: this.eventCount.app.vocabApi,
+			numericEditMenuVersion: ['discrete'],
+			processInput: async tw => {
+				//only discrete mode allowed so set discrete mode and fill term wrapper to add the bins
+				if (isNumericTerm(tw?.term)) {
+					tw.q = { mode: 'discrete' } //use discrete mode by default
+					await fillTermWrapper(tw, this.eventCount.app.vocabApi)
+				}
+			}
+		}
+		const shapeSizeOption = {
+			label: 'Sample size',
+			type: 'number',
+			chartType: 'eventCount',
+			settingsKey: 'size',
+			title: 'Sample size, represents the factor used to scale the sample',
+			min: 0,
+			step: 0.1
+		}
+		const step = (maxShapeSize - minShapeSize) / 10
+		const minShapeSizeOption = {
+			label: 'Min size',
+			type: 'number',
+			chartType: 'eventCount',
+			settingsKey: 'minShapeSize',
+			title: 'Minimum sample size',
+			min: minShapeSize,
+			max: maxShapeSize,
+			step
+		}
+		const maxShapeSizeOption = {
+			label: 'Max size',
+			type: 'number',
+			chartType: 'eventCount',
+			settingsKey: 'maxShapeSize',
+			title: 'Maximum sample size',
+			min: minShapeSize,
+			max: maxShapeSize * 2,
+			step
+		}
+
+		const inputs: any = [
+			{
+				type: 'term',
+				configKey: 'term',
+				chartType: 'eventCount',
+				usecase: { target: 'eventCount', detail: 'numeric' },
+				title: 'X coordinate to plot the samples',
+				label: 'X',
+				vocabApi: this.eventCount.app.vocabApi,
+				menuOptions: '!remove',
+				numericEditMenuVersion: ['continuous']
+			},
+			
+			{
+				type: 'term',
+				configKey: 'term0',
+				chartType: 'eventCount',
+				usecase: { target: 'eventCount', detail: 'term0' },
+				title: 'Term to to divide by categories',
+				label: 'Divide by',
+				vocabApi: this.eventCount.app.vocabApi,
+				numericEditMenuVersion: ['discrete']
+			},
+			{
+				type: 'term',
+				configKey: 'colorTW',
+				chartType: 'eventCount',
+				usecase: { target: 'eventCount', detail: 'colorTW' },
+				title: 'Categories to color the samples',
+				label: 'Color',
+				vocabApi: this.eventCount.app.vocabApi,
+				numericEditMenuVersion: ['continuous', 'discrete']
+			},
+			shapeOption,
+			shapeSizeOption,
+
+			{
+				type: 'term',
+				configKey: 'scaleDotTW',
+				chartType: 'eventCount',
+				usecase: { target: 'eventCount', detail: 'numeric' },
+				title: 'Scale sample by term value',
+				label: 'Scale by',
+				vocabApi: this.eventCount.app.vocabApi,
+				numericEditMenuVersion: ['continuous']
+			},
+
+			{
+				label: 'Opacity',
+				type: 'number',
+				chartType: 'eventCount',
+				settingsKey: 'opacity',
+				title: 'It represents the opacity of the elements',
+				min: 0,
+				max: 1,
+				step: 0.1
+			},
+			{
+				label: 'Chart width',
+				type: 'number',
+				chartType: 'eventCount',
+				settingsKey: 'svgw'
+			},
+			{
+				label: 'Chart height',
+				type: 'number',
+				chartType: 'eventCount',
+				settingsKey: 'svgh'
+			},
+			{
+				label: 'Default color',
+				type: 'color',
+				chartType: 'eventCount',
+				settingsKey: 'defaultColor'
+			}
+		]
+		if (this.eventCount.config.scaleDotTW)
+			inputs.splice(inputs.length - 5, 0, minShapeSizeOption, maxShapeSizeOption, {
+				label: 'Scale order',
+				type: 'radio',
+				chartType: 'eventCount',
+				settingsKey: 'scaleDotOrder',
+				options: [
+					{ label: 'Ascending', value: 'Ascending' },
+					{ label: 'Descending', value: 'Descending' }
+				]
+			})
+
+		if (!this.eventCount.config.term0)
+			inputs.push({
+				label: 'Show regression',
+				type: 'dropdown',
+				chartType: 'eventCount',
+				settingsKey: 'regression',
+				options: [
+					{ label: 'None', value: 'None' },
+					//{ label: 'Loess', value: 'Loess' },
+					{ label: 'Lowess', value: 'Lowess' },
+					{ label: 'Polynomial', value: 'Polynomial' }
+				]
+			})
+
+		return inputs
+	}
+}
+
+/*
+	holder: the holder in the tooltip
+	chartsInstance: MassCharts instance
+		termdbConfig is accessible at chartsInstance.state.termdbConfig{}
+		mass option is accessible at chartsInstance.app.opts{}
+	*/

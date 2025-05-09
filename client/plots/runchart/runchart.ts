@@ -42,13 +42,8 @@ export class Runchart extends Scatter {
 
 	async main() {
 		this.config = structuredClone(this.state.config)
-		this.settings = this.config.settings.runChart
-		if (this.config.settings.runChart.regression !== 'None' && this.config.term0) {
-			if (this.charts) for (const chart of this.charts) chart.chartDiv.selectAll('*').remove()
-			this.dom.loadingDiv.style('display', 'block').html('Processing data...')
-		}
+		this.settings = this.config.settings[this.type]
 
-		copyMerge(this.settings, this.config.settings.runChart)
 		await this.model.initData()
 		await this.model.processData()
 		this.cat2Color = getColors(this.model.charts.length)
@@ -157,8 +152,6 @@ export async function getPlotConfig(opts, app) {
 	}
 
 	try {
-		copyMerge(plot, defaultConfig, opts)
-
 		if (plot.colorTW) await fillTermWrapper(plot.colorTW, app.vocabApi)
 		if (plot.shapeTW) await fillTermWrapper(plot.shapeTW, app.vocabApi)
 		if (!plot.term.q) plot.term.q = {}
