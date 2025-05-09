@@ -21,7 +21,7 @@ WORKDIR /home/root/pp/app/active
 # the build script/cmd must be called from the proteinpaint/container dir
 RUN npm i --package-lock-only
 COPY ./server/package.json  ./
-RUN npm install --omit=dev --prefer-offline --cache=/root/.npm
+RUN npm install
 COPY ./server/app-server.mjs  ./
 
 EXPOSE 3000
