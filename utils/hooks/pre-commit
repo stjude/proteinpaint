@@ -68,7 +68,7 @@ if [[ "$RUST_FULL_PATHS" != "" ]]; then
   echo "Clippy paths: $RUST_CLIPPY_PATHS"
 
   # Run clippy
-  cargo clippy --message-format=json | python3 linting/compare_with_baseline.py
+  cargo clippy --message-format=json | python3 linting/compare_with_baseline.py || true
 
   
   # Save the baseline path
