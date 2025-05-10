@@ -18,15 +18,12 @@ LABEL org.opencontainers.image.source="https://github.com/stjude/proteinpaint" \
 WORKDIR /home/root/pp
 COPY ./tmppack ./tmppack
 WORKDIR /home/root/pp/app/active
-
-# Copy package.json first before npm commands
-COPY ./server/package.json ./
-
-# Only now it's safe to run npm install
-RUN npm install
-
-# Copy the rest of the server files
-COPY ./server/app-server.mjs ./
+# the build script/cmd must be called from the proteinpaint/container dir
+RUN npm i --package-lock-only
+COPY ./server/package.json  ./
+RUN npm install --omit=dev --prefer-offline --cache=/root/.npm
+COPY ./server/app-server.mjs  ./
 
 EXPOSE 3000
 CMD ["sh", "-c", "node --enable-source-maps app-server.mjs"]
+# CMD ["sleep", "3600"]
