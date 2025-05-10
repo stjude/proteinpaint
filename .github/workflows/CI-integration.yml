@@ -167,14 +167,12 @@ jobs:
           npx tsc
           cd ..
 
-      - name: Build Docker Image
+      - name: Build and push Docker image with Rust
         uses: docker/build-push-action@v5
         with:
           context: ./container/
           file: ./container/server/Dockerfile
-          tags: ppserver:latest
           platforms: linux/amd64
-          outputs: type=docker
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -251,9 +249,7 @@ jobs:
         with:
           context: ./container/
           file: ./container/server/Dockerfile
-          tags: ghcr.io/${{ github.repository }}/ppserver:latest-with-rust
           platforms: linux/amd64
-          push: true
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
