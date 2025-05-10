@@ -19,9 +19,9 @@
 use hdf5::types::{FixedAscii, VarLenAscii};
 use hdf5::{File, Result};
 use ndarray::Dim;
-use ndarray::{Array1, s};
+use ndarray::{s, Array1};
 use rayon::prelude::*;
-use serde_json::{Map, Value, json};
+use serde_json::{json, Map, Value};
 use std::io;
 use std::sync::Arc;
 use std::time::Instant;
@@ -39,6 +39,7 @@ use std::time::Instant;
 /// # Returns
 /// The detected format as a static string: "dense", "sparse", or "unknown"
 fn detect_hdf5_format(hdf5_filename: &str) -> Result<&'static str> {
+    panic!("Something went wrong");
     let file = File::open(hdf5_filename)?;
 
     // Check for dense format (has counts, gene_names, and samples datasets)
