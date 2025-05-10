@@ -174,6 +174,16 @@ class GbControls {
 		then render contents into each holder for each tab
 		thus has to duplicate the logic for computing tabs
 		*/
+
+		if (state.config.trackLst?.facets) {
+			// one tab for each facet table
+			// quick fix to hardcode showing facet table as first tab. allow customization later
+			for (const facet of state.config.trackLst.facets) {
+				tabs.push({ label: facet.name || 'Facet Table' })
+			}
+			tabs[0].active = true // quick fix to open first facet table
+		}
+
 		if (state.config.snvindel) {
 			// has snvindel. some logic to decide if show tab for it
 			if (state.config.snvindel.details) {
@@ -197,12 +207,6 @@ class GbControls {
 		if (state.config.ld) {
 			tabs.push({ label: 'LD Map' })
 		}
-		if (state.config.trackLst?.facets) {
-			// one tab for each facet table
-			for (const facet of state.config.trackLst.facets) {
-				tabs.push({ label: facet.name || 'Facet Table' })
-			}
-		}
 
 		if (tabs.length == 0) {
 			// no content for config ui
@@ -216,14 +220,22 @@ class GbControls {
 		})
 		toggles.main()
 
-		// tabs[] array index; on rendering contents for an optional tab, advance this index
-		let tabsIdx = 0
-
-		//////////////////////
+		////////////////////////////////////
 		//
 		// must repeat tab-computing logic in exact order above!! otherwise out of sync
+		// after filling contents for each tab, advance index value of tabsIdx
 		//
-		//////////////////////
+		////////////////////////////////////
+		let tabsIdx = 0
+
+		if (state.config.trackLst?.facets) {
+			// (above) quick fix to hardcode showing facet table as first tab. allow customization later
+			for (const facet of state.config.trackLst.facets) {
+				const div = tabs[tabsIdx++].contentHolder.append('div')
+				renderFacetTable(this, facet, div)
+			}
+		}
+
 		if (state.config.snvindel) {
 			if (state.config.snvindel.details) {
 				const div = tabs[tabsIdx++].contentHolder.append('div')
@@ -285,12 +297,6 @@ class GbControls {
 						})
 					}
 				})
-			}
-		}
-		if (state.config.trackLst?.facets) {
-			for (const facet of state.config.trackLst.facets) {
-				const div = tabs[tabsIdx++].contentHolder.append('div')
-				renderFacetTable(this, facet, div)
 			}
 		}
 	}
