@@ -610,7 +610,7 @@ type CnvSegment = {
 
 	/** CNV cutoffs (such as cnvGainCutoff, cnvLossCutoff, cnvMaxLength) that are applied to specific genes */
 	cnvCutoffsByGene?: {
-		[termType: string]: {
+		[geneName: string]: {
 			[key: string]: any
 		}
 	}
