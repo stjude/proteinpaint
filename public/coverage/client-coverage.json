@@ -387,10 +387,10 @@
   },
   "tw/geneVariant.ts": {
     "lines": {
-      "total": 134,
+      "total": 132,
       "covered": 4,
       "skipped": 0,
-      "pct": 2.98
+      "pct": 3.03
     },
     "functions": {
       "total": 13,
@@ -399,13 +399,13 @@
       "pct": 0
     },
     "statements": {
-      "total": 168,
+      "total": 166,
       "covered": 4,
       "skipped": 0,
-      "pct": 2.38
+      "pct": 2.4
     },
     "branches": {
-      "total": 120,
+      "total": 121,
       "covered": 0,
       "skipped": 0,
       "pct": 0
@@ -416,9 +416,9 @@
       "diff": 0
     },
     "averagePct": {
-      "curr": 1.3399999999999999,
+      "curr": 1.3575,
       "prev": 1.42,
-      "diff": -0.08000000000000007
+      "diff": -0.0625
     }
   },
   "dom/genesearch.ts": {
