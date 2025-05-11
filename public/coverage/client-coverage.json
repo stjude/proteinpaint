@@ -1572,5 +1572,41 @@
       "prev": 0,
       "diff": 14.175
     }
+  },
+  "plots/genomeBrowser.controls.js": {
+    "lines": {
+      "total": 262,
+      "covered": 4,
+      "skipped": 0,
+      "pct": 1.52
+    },
+    "functions": {
+      "total": 44,
+      "covered": 0,
+      "skipped": 0,
+      "pct": 0
+    },
+    "statements": {
+      "total": 279,
+      "covered": 4,
+      "skipped": 0,
+      "pct": 1.43
+    },
+    "branches": {
+      "total": 142,
+      "covered": 0,
+      "skipped": 0,
+      "pct": 0
+    },
+    "lowestPct": {
+      "curr": 0,
+      "prev": 0,
+      "diff": 0
+    },
+    "averagePct": {
+      "curr": 0.7375,
+      "prev": 0,
+      "diff": 0.7375
+    }
   }
 }
