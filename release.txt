@@ -1,2 +1,1 @@
-Fixes:
-- Combine customTwQByType into queries.cnv and use queries.cnv for all numeric CNV default/byGene cutoffs
+
