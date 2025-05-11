@@ -711,6 +711,7 @@ function renderFacetTable(self, facet, div) {
 	// TODO click on row/column header to batch operate
 
 	const columns = [{ label: 'Sample' }] // TODO use ds sample type
+	console.log(self)
 	for (const assay of assayLst) {
 		columns.push({
 			label: assay,
@@ -724,35 +725,42 @@ function renderFacetTable(self, facet, div) {
 					.attr('class', 'sja_clbtext')
 					.style('text-align', 'center')
 					.text(tklst.length)
-					.on('click', () => {
-						// TODO click cell may show menu of track name and type, with add/remove button for each tk
-						// btn works like a toggle button; click once to show, click 2nd time to hide
-						let allTkShown = true // if all from tklst[] is in activeTracks[]
-						for (const t of tklst) {
-							if (!self.state.config.trackLst.activeTracks.includes(t.name)) allTkShown = false
+					.on('click', event => {
+						groupTip.clear().showunder(event.target)
+						const table = groupTip.d.append('table').style('margin', '5px 5px 5px 2px')
+						for (const tk of tklst) {
+							const tr = table.append('tr')
+							const td1 = tr
+								.append('td')
+								.style('font-size', '.8em')
+								.text(self.state.config.trackLst.activeTracks.includes(tk.name) ? 'SHOWN' : '')
+							const td2 = tr
+								.append('td')
+								.attr('class', 'sja_menuoption')
+								.text(tk.name)
+								.on('click', () => {
+									let newActiveTracks, newRemoveTracks // default undefined to not remove any track
+									if (self.state.config.trackLst.activeTracks.includes(tk.name)) {
+										td1.text('')
+										newActiveTracks = self.state.config.trackLst.activeTracks.filter(n => n != tk.name)
+										newRemoveTracks = [tk.name]
+									} else {
+										td1.text('SHOWN')
+										newActiveTracks = structuredClone(self.state.config.trackLst.activeTracks)
+										newActiveTracks.push(tk.name)
+									}
+									self.app.dispatch({
+										type: 'plot_edit',
+										id: self.id,
+										config: {
+											trackLst: {
+												activeTracks: newActiveTracks,
+												removeTracks: newRemoveTracks
+											}
+										}
+									})
+								})
 						}
-						let newActiveTracks, newRemoveTracks // default undefined to not remove any track
-						if (allTkShown) {
-							// all are shown. on clicking btn remove all
-							newActiveTracks = self.state.config.trackLst.activeTracks.filter(n => !tklst.find(i => i.name == n))
-							newRemoveTracks = tklst.map(i => i.name) // all tracks will be removed
-						} else {
-							// not all shown. add all
-							newActiveTracks = structuredClone(self.state.config.trackLst.activeTracks)
-							for (const t of tklst) {
-								if (!newActiveTracks.includes(t.name)) newActiveTracks.push(t.name)
-							}
-						}
-						self.app.dispatch({
-							type: 'plot_edit',
-							id: self.id,
-							config: {
-								trackLst: {
-									activeTracks: newActiveTracks,
-									removeTracks: newRemoveTracks
-								}
-							}
-						})
 					})
 			}
 		})
