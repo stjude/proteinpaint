@@ -62,33 +62,33 @@
     },
     "lowestPct": {
       "curr": 68.67,
-      "prev": 0,
-      "diff": 68.67
+      "prev": 68.67,
+      "diff": 0
     },
     "averagePct": {
       "curr": 89.1575,
-      "prev": 0,
-      "diff": 89.1575
+      "prev": 89.1575,
+      "diff": 0
     }
   },
   "src/test/auth.unit.spec.js": {
     "lines": {
-      "total": 262,
+      "total": 264,
       "covered": 240,
       "skipped": 0,
-      "pct": 91.6
+      "pct": 90.9
     },
     "functions": {
-      "total": 71,
+      "total": 73,
       "covered": 51,
       "skipped": 0,
-      "pct": 71.83
+      "pct": 69.86
     },
     "statements": {
-      "total": 271,
+      "total": 273,
       "covered": 245,
       "skipped": 0,
-      "pct": 90.4
+      "pct": 89.74
     },
     "branches": {
       "total": 24,
@@ -98,13 +98,13 @@
     },
     "lowestPct": {
       "curr": 45.83,
-      "prev": 0,
-      "diff": 45.83
+      "prev": 45.83,
+      "diff": 0
     },
     "averagePct": {
-      "curr": 74.915,
-      "prev": 0,
-      "diff": 74.915
+      "curr": 74.0825,
+      "prev": 74.915,
+      "diff": -0.8325000000000102
     }
   }
 }
