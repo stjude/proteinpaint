@@ -84,7 +84,7 @@ jobs:
       - name: Run integration tests
         uses: stjude/proteinpaint/.github/actions/run-integration-tests@rust.recompile.on.change
         with:
-          GITHUB_TOKEN: ${{ secrets.PAT }}
+          PAT: ${{ secrets.PAT }}
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
   docker-without-rust:
@@ -95,7 +95,7 @@ jobs:
       - name: Run integration tests
         uses: stjude/proteinpaint/.github/actions/run-integration-tests@rust.recompile.on.change
         with:
-          GITHUB_TOKEN: ${{ secrets.PAT }}
+          PAT: ${{ secrets.PAT }}
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
 
