@@ -114,7 +114,7 @@ jobs:
         run: |
           # Pack tarballs
           cd ./container
-          ./pack.sh ../rust-binaries
+          ./pack.sh
 
       - name: Copy serverconfig.json to root
         run: |
