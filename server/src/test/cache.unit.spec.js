@@ -8,7 +8,6 @@ import { Cache } from '#src/Cache.ts'
  * - init() cache files
  * - Delete cache files
  */
-console.log(serverconfig.cachedir)
 const cache = new Cache(serverconfig.cachedir)
 
 /**************
@@ -71,6 +70,7 @@ tape('init() cache files', async function (test) {
 })
 
 tape('Delete cache files', async function (test) {
+	//Ensure there's enough time with the cache interval
 	test.timeoutAfter(cache.interval + 200)
 
 	const filePaths = makeTestFiles()
