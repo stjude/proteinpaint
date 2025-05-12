@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.124.1
 
 Fixes:
 - reload page on successful password login to fix bug when the password gets changed
