@@ -171,7 +171,7 @@ export function runproteinpaint(arg) {
 			app.cardsPath = data.cardsPath
 			app.pkgver = data.pkgver
 			app.launchDate = data.launchdate
-			setAuth({ dsAuth: data.dsAuth, holder: app.holder })
+			await setAuth({ dsAuth: data.dsAuth, holder: app.holder })
 
 			if (data.commonOverrides || arg.commonOverrides) {
 				// NOTE: required or imported code files are only loaded once

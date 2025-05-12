@@ -109,6 +109,8 @@ async function validateDsCredentials(creds, serverconfig) {
 				if (cred.type == 'basic') {
 					if (!cred.secret) cred.secret = cred.password
 					cred.authRoute = '/dslogin'
+					// after a successful login, a session jwt is generated which requires a custom headerKey
+					if (!cred.headerKey) cred.headerKey = headerKey
 					// NOTE: an empty password will be considered as forbidden
 					//if (!cred.password)
 					//throw `missing password for dsCredentials[${dslabel}][${embedderHost}][${serverRoute}], type: '${cred.type}'`
@@ -410,10 +412,11 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 				res.send({ status: 'ok' })
 				return
 			}
-			if (cred.authRoute != '/jwt-status') {
-				code = 400
-				throw `Incorrect authorization route, use ${cred.authRoute}'`
-			}
+			// NOTE: session jwt is generated for non-jwt auth.type, so must not limit to cred.authRoute === '/jwt-status'
+			// if (cred.authRoute != '/jwt-status') {
+			// 	code = 400
+			// 	throw `Incorrect authorization route, use ${cred.authRoute}'`
+			// }
 			const result = getJwtPayload(q, req.headers, cred)
 			const { email, ip, clientAuthResult } = getJwtPayload(q, req.headers, cred)
 
@@ -794,8 +797,11 @@ function getJwtPayload(q, headers, cred, _time, session = null) {
 	if (time > payload.exp) throw `Please login again to access this feature. (expired token)`
 
 	const dsnames = cred.dsnames || [q.dslabel]
-	const missingAccess = dsnames.filter(d => !payload.datasets?.includes(d.id)).map(d => d.id)
-	if (missingAccess.length) {
+	// some dslabels do not specify datasets[] array in the serverconfig.dsCredentials[dslabel],
+	// and in that case the jwt payload access is applied to the full dataset cohort instead of a subset/subcohort
+	const missingAccess =
+		payload.datasets?.length && dsnames.filter(d => !payload.datasets?.includes(d.id)).map(d => d.id)
+	if (missingAccess?.length) {
 		throw { error: 'Missing access', linkKey: missingAccess.join(',') }
 	}
 	return { iat: payload.iat, email: payload.email, ip: payload.ip, clientAuthResult: payload.clientAuthResult }
