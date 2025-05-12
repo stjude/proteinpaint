@@ -117,21 +117,15 @@ if [[ "$CHANGEDWS" == *"rust"* ]]; then
 
   # Only copy binaries if RUST_BINARIES_DIR exists
   if [[ -d "$RUST_BINARIES_DIR" ]]; then
-    echo "Cleaning previous build output..."
+    echo "RUST_BINARIES_DIR found at $RUST_BINARIES_DIR"
+    echo "Cleaning previous rust build..."
     rm -rf target/release
     mkdir -p target/release
 
-    echo "Copying compiled binaries from $RUST_BINARIES_DIR to target/release ..."
-    ADDED_FILES=()
-    for file in "$RUST_BINARIES_DIR"/*; do
-      cp "$file" target/release/
-      ADDED_FILES+=("target/release/$(basename "$file")")
-    done
-
-    echo "Added files:"
-    for f in "${ADDED_FILES[@]}"; do
-      echo "$f"
-    done
+    echo "Copying compiled rust binaries to target/release ..."
+    cp "$RUST_BINARIES_DIR"/* target/release/
+  else
+    echo "RUST_BINARIES_DIR not found at $RUST_BINARIES_DIR — skipping binary copy."
   fi
 
   echo "Packing rust module with npm ..."
