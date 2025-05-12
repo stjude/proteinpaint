@@ -63,11 +63,6 @@ ENV PATH="/opt/venv/bin:$PATH"
 COPY ./R/utils ./R/utils
 RUN Rscript R/utils/install.pkgs.R
 
-# TODO: determine if this is necessary
-# set locale encoding in R
-# must match encoding configuration in docker
-#RUN echo "LC_ALL=C.UTF-8" > /root/.Renviron
-
 # Install NVM and Node.js
 ENV NVM_DIR=/root/.nvm
 ARG NODE_VERSION=22.15.0
