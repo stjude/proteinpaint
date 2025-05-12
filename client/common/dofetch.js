@@ -346,7 +346,7 @@ let dsAuth,
 	.authUi: optional, a custom login UI function to launch as needed
 	.holder: optional, a d3-wrapped selection to hold the auth UI
 */
-export function setAuth(opts) {
+export async function setAuth(opts) {
 	dsAuth = opts.dsAuth
 	authUi = opts.ui || defaultAuthUi
 	authUiHolder = opts.holder || select('body')
@@ -354,6 +354,29 @@ export function setAuth(opts) {
 		// fillin all the dslabels that has an active session
 		// so that an unnecessary login form will not be shown
 		if (auth.insession) dsAuthOk.add(auth)
+		else {
+			// check if there is a PP-server generated session token that has been saved from a previous login
+			const { dslabel, route } = auth
+			const jwt = getSavedToken(dslabel, route)
+			if (jwt) {
+				const data = await dofetch3('/jwt-status', {
+					method: 'POST',
+					headers: {
+						//authorization: `Bearer ${btoa(jwt)}`
+						[auth.headerKey]: jwt
+					},
+					body: {
+						dslabel,
+						route,
+						embedder: location.hostname
+					}
+				})
+				if (data.ok || data.status == 'ok') {
+					dsAuthOk.add(auth)
+					auth.insession = true
+				}
+			}
+		}
 	}
 	includeEmbedder = opts.dsAuth?.length > 0 || false
 }
@@ -372,7 +395,7 @@ export function getRequiredAuth(dslabel, route) {
 export function isInSession(dslabel, route) {
 	if (!dslabel) return false
 	for (const a of dsAuthOk) {
-		if (a.dslabel == dslabel && a.route == route) return true
+		if (a.dslabel == dslabel && (a.route == route || a.route == '/**')) return true
 	}
 	// no matching sessions found for this dslabel and route
 	return false
@@ -384,7 +407,7 @@ export function isInSession(dslabel, route) {
 */
 async function mayShowAuthUi(init, path) {
 	const ok = { status: 'ok' }
-	if (!dsAuth) return ok
+	if (!dsAuth || path.endsWith('jwt-status')) return ok
 	for (const a of dsAuth) {
 		const body = JSON.parse(init.body || `{}`)
 		const params = (path.split('?')[1] || '').split('&').reduce((obj, kv) => {
@@ -493,7 +516,7 @@ export function setTokenByDsRoute(dslabel, route, jwt) {
 
 // get jwt string directly from localStorage/jwtByDsRoute tracking object
 export function getSavedToken(dslabel, route) {
-	return jwtByDsRoute[dslabel]?.[route]
+	return jwtByDsRoute[dslabel]?.[route] || jwtByDsRoute[dslabel]?.['/**']
 }
 
 function mayAddJwtToRequest(init, body, url) {
