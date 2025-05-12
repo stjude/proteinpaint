@@ -1,2 +1,1 @@
-Fixes:
-- use a saved jwt token from a previous successful password login, if available for a protected dataset route
+

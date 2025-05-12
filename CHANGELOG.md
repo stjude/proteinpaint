@@ -19,6 +19,7 @@ Fixes:
 - validate term.type as used for anno_* table name, as additional protection sql injection beyond if-else/case branching against term.type's in request payload
 - block visualizing multiple gdc bam tracks allows to download all bam slices
 - Combine customTwQByType into queries.cnv and use queries.cnv for all numeric CNV default/byGene cutoffs
+- use a saved jwt token from a previous successful password login, if available for a protected dataset route
 
 
 ## 2.123.0
