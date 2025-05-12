@@ -1,1 +1,2 @@
-
+Fixes:
+- reload page on successful password login to fix bug when the password gets changed
