@@ -243,10 +243,10 @@
   },
   "common/dofetch.js": {
     "lines": {
-      "total": 216,
+      "total": 223,
       "covered": 20,
       "skipped": 0,
-      "pct": 9.25
+      "pct": 8.96
     },
     "functions": {
       "total": 26,
@@ -255,26 +255,26 @@
       "pct": 3.84
     },
     "statements": {
-      "total": 245,
+      "total": 252,
       "covered": 23,
       "skipped": 0,
-      "pct": 9.38
+      "pct": 9.12
     },
     "branches": {
-      "total": 207,
+      "total": 218,
       "covered": 5,
       "skipped": 0,
-      "pct": 2.41
+      "pct": 2.29
     },
     "lowestPct": {
-      "curr": 2.41,
-      "prev": 0,
-      "diff": 2.41
+      "curr": 2.29,
+      "prev": 2.41,
+      "diff": -0.1200000000000001
     },
     "averagePct": {
-      "curr": 6.22,
-      "prev": 0,
-      "diff": 6.22
+      "curr": 6.0525,
+      "prev": 6.22,
+      "diff": -0.16749999999999954
     }
   },
   "dom/maxLabelWidth.ts": {
