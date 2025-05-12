@@ -16,6 +16,7 @@ console.log(`-***- common/auth unit -***-`)
 tape('setDsAuthOk()', async test => {
 	// clear saved tokens by not having 3rd argument
 	await auth.setTokenByDsRoute('abc', 'termdb')
+	await auth.setTokenByDsRoute('abc', '/**')
 	await auth.setTokenByDsRoute('xyz', '/**')
 
 	const opts = {
@@ -26,8 +27,8 @@ tape('setDsAuthOk()', async test => {
 	}
 	const fakeDofetch3 = () => ({ status: 'ok' })
 	await auth.setDsAuthOk(opts, fakeDofetch3)
-	test.equal(auth.isInSession('abc'), false, 'should detect a dslabel that is not in session')
-	test.equal(auth.isInSession('xyz'), true, 'should detect a dslabel that is in session')
+	test.equal(auth.isInSession('abc', 'termdb'), false, 'should detect a dslabel that is not in session')
+	test.equal(auth.isInSession('xyz', 'fake-route'), true, 'should detect a dslabel that is in session')
 	await auth.setTokenByDsRoute(opts.dsAuth[0].dslabel, opts.dsAuth[0].route) // clear jwtByDsRoute[dslabel][route]
 	await auth.setTokenByDsRoute(opts.dsAuth[1].dslabel, opts.dsAuth[1].route) // clear jwtByDsRoute[dslabel][route]
 	test.end()

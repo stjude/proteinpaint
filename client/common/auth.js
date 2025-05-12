@@ -199,12 +199,14 @@ async function defaultAuthUi(dslabel, auth, opts = {}) {
 				.then(res => res.json())
 				.then(res => {
 					if (res.error) throw res.error
+
 					mask.remove()
 					dsAuthOk.add(auth)
 					if (res.jwt) {
 						setTokenByDsRoute(dslabel, res.route, res.jwt)
 					}
-					resolve(dslabel)
+					if (!opts.setDomRefs) window.location.reload()
+					else resolve(dslabel)
 				})
 				.catch(e => {
 					alert('login error: ' + e)
