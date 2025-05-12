@@ -150,7 +150,7 @@ tape(`initialization`, async test => {
 		)
 		test.deepEqual(
 			authApi.getDsAuth({ query: { embedder: 'localhost' } }),
-			[{ dslabel: 'testds', route: '/**', type: 'basic', headerKey: undefined, insession: false }],
+			[{ dslabel: 'testds', route: '/**', type: 'basic', headerKey: 'x-ds-access-token', insession: false }],
 			'should return all dslabels that require authorization for a given embedder'
 		)
 
@@ -229,7 +229,8 @@ tape('legacy reshape', async test => {
 						dslabel: 'ds1',
 						route: '/**',
 						authRoute: '/dslogin',
-						cookieId: 'ds1-/**-*-Id'
+						cookieId: 'ds1-/**-*-Id',
+						headerKey: 'x-ds-access-token'
 					}
 				}
 			}
