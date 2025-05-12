@@ -76,6 +76,7 @@ pub fn validate_hdf5_file(hdf5_filename: String) -> Result<()> {
             // Create JSON with both sample names and gene names
             serde_json::json!({
                 "status": "success",
+                "INFO": "Test to test CI"
                 "message": "HDF5 file loaded successfully",
                 "file_path": hdf5_filename,
                 "format": "dense",
