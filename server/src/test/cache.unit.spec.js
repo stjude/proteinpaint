@@ -2,13 +2,13 @@ import tape from 'tape'
 import serverconfig from '../serverconfig.js'
 import path from 'path'
 import fs from 'fs'
-import { Cache } from '#src/Cache.js'
+import { Cache } from '#src/Cache.ts'
 
 /** Tests
  * - init() cache files
  * - Delete cache files
  */
-
+console.log(serverconfig.cachedir)
 const cache = new Cache(serverconfig.cachedir)
 
 /**************
@@ -16,16 +16,21 @@ const cache = new Cache(serverconfig.cachedir)
 ***************/
 
 function makeTestFiles() {
+	const filesCreated = []
 	for (const subdir of cache.defaultCacheDirs) {
+		//Only gsea is enabled at this time.
+		if (subdir.dir != 'gsea') continue
 		const dirPath = path.join(serverconfig.cachedir, subdir.dir)
 		//Only create the file if it doesn't exist
 		//Do not create new files when tests fail.
-		const ext = subdir?.fileExtensions?.size ? Array.from(subdir.fileExtensions)[0] : 'txt'
-		const testFilePath = `${dirPath}/testfile.${ext}`
+		const ext = subdir?.fileExtensions?.size ? Array.from(subdir.fileExtensions)[0] : '.txt'
+		const testFilePath = `${dirPath}/testfile${ext}`
 		if (fs.existsSync(dirPath) && !fs.existsSync(testFilePath)) {
 			fs.writeFileSync(testFilePath, 'test file')
 		}
+		filesCreated.push(testFilePath)
 	}
+	return filesCreated
 }
 
 function sleep(ms) {
@@ -68,18 +73,18 @@ tape('init() cache files', async function (test) {
 tape('Delete cache files', async function (test) {
 	test.timeoutAfter(cache.interval + 100)
 
-	makeTestFiles()
+	const filePaths = makeTestFiles()
 	cache.deleteCacheFiles(true)
-
 	//Need to await the interval to ensure that the cache files are deleted.
-	await sleep(cache.interval + 5)
+	await sleep(cache.interval + 50)
 
-	//Only the gsea is enabled at this time.
-	//No need to test the other cache subdirectories.
-	if (fs.existsSync(serverconfig.cachedir_gsea + '/testfile.pkl')) {
-		test.fail('Cache files were not deleted.')
-	} else {
-		test.pass('Cache files were deleted.')
+	for (const filePath of filePaths) {
+		const message = `Should delete test cache file: ${filePath}`
+		if (fs.existsSync(filePath)) {
+			test.fail(message)
+		} else {
+			test.pass(message)
+		}
 	}
 
 	test.end()
