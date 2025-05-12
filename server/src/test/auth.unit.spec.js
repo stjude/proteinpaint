@@ -634,7 +634,7 @@ tape(`invalid jwt`, async test => {
 	test.end()
 })
 
-tape(`session-handling by the middleware`, async test => {
+tape(`session handling by the middleware`, async test => {
 	test.timeoutAfter(1000)
 	test.plan(5)
 
@@ -669,6 +669,9 @@ tape(`session-handling by the middleware`, async test => {
 			get() {}
 		}
 		const res = {
+			status(num) {
+				test.equal(num, 401, 'should set a 401 status for an expired jwt')
+			},
 			send(data) {
 				if (data.error) test.fail(message + ': ' + data.error)
 				else test.pass(message)
@@ -695,6 +698,9 @@ tape(`session-handling by the middleware`, async test => {
 		}
 		//let sessionId
 		const res = {
+			status(num) {
+				test.fail(`should set a ${num} status for a valid jwt`)
+			},
 			send(data) {
 				test.deepEqual(data.status, 'ok', 'should respond ok on a valid jwt-status login')
 			},
