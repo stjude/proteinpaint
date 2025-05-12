@@ -29,7 +29,7 @@ function init({ genomes }) {
 			if (!genome) throw `invalid q.genome=${req.query.genome}`
 			const q: BurdenRequest = req.query
 			const ds = genome.datasets[q.dslabel]
-			if (!ds) throw `invalid q.genome=${req.query.dslabel}`
+			if (!ds) throw `invalid q.dslabel=${req.query.dslabel}`
 			if (!ds.cohort.cumburden?.files) throw `missing ds.cohort.cumburden.files`
 			if (!ds.cohort?.cumburden?.db) throw `missing ds.cohort.cumburden.db`
 			if (!ds.cohort?.cumburden?.bootsubdir) throw `missing ds.cohort.cumburden.bootsubdir`
