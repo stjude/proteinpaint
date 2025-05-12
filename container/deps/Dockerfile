@@ -77,8 +77,7 @@ RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | b
 ENV PATH="/root/.nvm/versions/node/v${NODE_VERSION}/bin:$PATH"
 
 # Verify node installation
-RUN node -v
-RUN npm -v
+RUN node -v && npm -v
 
 # Install python dependencies
 RUN python3 -m venv /opt/venv && \
