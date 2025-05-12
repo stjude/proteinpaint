@@ -320,6 +320,11 @@ async function validateNative(q: GeneExpressionQueryNative, ds: any) {
 		const tmp = await run_rust('validateHDF5', JSON.stringify({ hdf5_file: q.file }))
 		const vr = JSON.parse(tmp)
 
+		// Display the INFO field to confirm our change went through
+		if (vr.INFO) {
+			console.log(`INFO from Rust: ${vr.INFO}`)
+		}
+
 		if (vr.status !== 'success') throw vr.message
 		if (!vr.sampleNames?.length) throw 'HDF5 file has no samples, please check file.'
 		for (const sn of vr.sampleNames) {
