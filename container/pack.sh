@@ -11,15 +11,22 @@ set -euxo pipefail
 
 # defaults
 PKGPATH=/home/root/pp/tmppack
-TMPDIR=/home/root/pp/tmppack/
+TMPDIR=/home/root/pp/tmppack
+RUST_BINARIES_DIR=../rust-binaries
 
 if (( $# == 1 )); then
-	PKGPATH="$1"
+  PKGPATH="$1"
 fi
 
 if (( $# == 2 )); then
-	PKGPATH="$1"
-	TMPDIR="$2"
+  PKGPATH="$1"
+  TMPDIR="$2"
+fi
+
+if (( $# >= 3 )); then
+  PKGPATH="$1"
+  TMPDIR="$2"
+  RUST_BINARIES_DIR="$3"
 fi
 
 rm -rf tmppack
@@ -106,18 +113,38 @@ if [[ "$CHANGEDWS" == *"augen"* ]]; then
 fi
 
 if [[ "$CHANGEDWS" == *"rust"* ]]; then
-	cd ../rust
-	echo "packing rust ..."
-	npm pack
-	RUSTPKGVER=$(node -p "require('./package.json').version")
-	RUSTTGZ=sjcrh-proteinpaint-rust-$RUSTPKGVER.tgz
-	mv $RUSTTGZ ../container/tmppack/
+  cd ../rust
 
-	cd ../server
-	RUSTDEPNAME="@sjcrh/proteinpaint-rust"
-	# may reset the dep new version temporarily, for package testing 
-	npm pkg set "dependencies.$RUSTDEPNAME"=$PKGPATH/$RUSTTGZ
-	cd ../container
+  # Only copy binaries if RUST_BINARIES_DIR exists
+  if [[ -d "$RUST_BINARIES_DIR" ]]; then
+    echo "Cleaning previous build output..."
+    rm -rf target/release
+    mkdir -p target/release
+
+    echo "Copying compiled binaries from $RUST_BINARIES_DIR to target/release ..."
+    ADDED_FILES=()
+    for file in "$RUST_BINARIES_DIR"/*; do
+      cp "$file" target/release/
+      ADDED_FILES+=("target/release/$(basename "$file")")
+    done
+
+    echo "Added files:"
+    for f in "${ADDED_FILES[@]}"; do
+      echo "$f"
+    done
+  fi
+
+  echo "Packing rust module with npm ..."
+  RUSTTGZ=$(npm pack)
+  RUSTPKGVER=$(node -p "require('./package.json').version")
+
+  mv "$RUSTTGZ" ../container/tmppack/
+
+  cd ../server
+  RUSTDEPNAME="@sjcrh/proteinpaint-rust"
+  npm pkg set "dependencies.$RUSTDEPNAME"="file:$PKGPATH/$RUSTTGZ"
+
+  cd ../container
 fi
 
 if [[ "$CHANGEDWS" == *"python"* ]]; then
