@@ -71,13 +71,13 @@ tape('init() cache files', async function (test) {
 })
 
 tape('Delete cache files', async function (test) {
-	test.timeoutAfter(cache.interval + 100)
+	test.timeoutAfter(cache.interval + 200)
 
 	const filePaths = makeTestFiles()
 	cache.deleteCacheFiles(true)
 	//Need to await the interval to ensure that the cache files are deleted.
-	await sleep(cache.interval + 50)
-
+	//Keep + 100 for CI.
+	await sleep(cache.interval + 100)
 	for (const filePath of filePaths) {
 		const message = `Should delete test cache file: ${filePath}`
 		if (fs.existsSync(filePath)) {
