@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.124.0
 
 Features:
 - Added unit test rust/test/geneORA.unit.spec.js for rust/src/genesetORA.rs
