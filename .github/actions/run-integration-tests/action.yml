@@ -23,30 +23,11 @@ runs:
       run: |
         npm ci
 
-    - name: TSC
-      shell: bash
-      run: |
-        cd shared/types
-        npm run build
-        cd ../../server
-        npx tsc
-        cd ..
-
     - name: Prepare for Docker build
       shell: bash
       run: |
         cd ./container
         ./pack.sh
-
-    - name: Login to Github
-      uses: docker/login-action@v3.4.0
-      with:
-        registry: ghcr.io
-        username: ${{ github.actor }}
-        password: ${{ inputs.PAT }}
-
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
 
     - name: Copy serverconfig.json to root
       shell: bash
@@ -60,6 +41,16 @@ runs:
     - name: Install xvfb
       shell: bash
       run: sudo apt-get install -y xvfb
+
+    - name: Login to Github
+      uses: docker/login-action@v3.4.0
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ inputs.PAT }}
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
 
     - name: Build Docker Image
       uses: docker/build-push-action@v5

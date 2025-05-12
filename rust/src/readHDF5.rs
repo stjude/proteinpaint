@@ -39,7 +39,6 @@ use std::time::Instant;
 /// # Returns
 /// The detected format as a static string: "dense", "sparse", or "unknown"
 fn detect_hdf5_format(hdf5_filename: &str) -> Result<&'static str> {
-    panic!("Something went wrong");
     let file = File::open(hdf5_filename)?;
 
     // Check for dense format (has counts, gene_names, and samples datasets)

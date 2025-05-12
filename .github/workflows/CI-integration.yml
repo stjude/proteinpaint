@@ -48,6 +48,15 @@ jobs:
         run: |
           npm ci
 
+      - name: TSC
+        shell: bash
+        run: |
+          cd shared/types
+          npm run build
+          cd ../../server
+          npx tsc
+          cd ..    
+
       - name: Check for Rust workspace changes
         id: check-rust-changes
         run: |
