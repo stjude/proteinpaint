@@ -17,6 +17,7 @@ import * as phewas from './termdb.phewas.js'
 import { sendMessageToSlack } from './postOnSlack.js'
 import { routeFiles } from './app.routes.js'
 import { setPythonBinPath } from '@sjcrh/proteinpaint-python'
+import { CacheManager } from './CacheManager.ts'
 
 const basepath = serverconfig.basepath || ''
 Object.freeze(process.argv)
@@ -25,6 +26,8 @@ if (serverconfig.python) setPythonBinPath(serverconfig.python)
 
 export async function launch() {
 	try {
+		new CacheManager(serverconfig.features?.cacheMonitor)
+
 		const trackedDatasets = await initGenomesDs(serverconfig)
 		const doneLoading = processTrackedDs(trackedDatasets)
 

@@ -362,7 +362,7 @@ async function clientdownloadgdcsliceFromCache_withDenial(req, res) {
 		throw 'clientdownloadgdcslice: unauthorized access'
 	}
 	// read the cached bam slice for client to download
-	const file = path.join(serverconfig.cachedir_bam, req.query.file)
+	const file = path.join(cachedir_bam, req.query.file)
 	const data = await fs.promises.readFile(file)
 	res.writeHead(200, {
 		'Content-Type': 'application/octet-stream',
@@ -738,7 +738,7 @@ function softclip_mismatch_pileup2(ridx, r, templates, bplst) {
 async function getFilefullpathOrUrl(req) {
 	if (req.query.gdcFileUUID) {
 		// is gdc bam slice, join with cache dir
-		const cachefile = path.join(serverconfig.cachedir_bam, req.query.file)
+		const cachefile = path.join(cachedir_bam, req.query.file)
 		// before the file is accessed, test if missing! if so re-slice in case the query runs on a different worker on the gdc environment..
 		await mayReSliceFile(req, cachefile)
 		return [cachefile, null]
@@ -3646,6 +3646,8 @@ const maxSize = bamCache.maxSize || 5e9
 // this last assumption only applies to file deletion when the maxSize is exceeded
 const checkWait = bamCache.checkWait || 1 * 60 * 1000
 
+const cachedir_bam = serverconfig.cachedir_bam || path.join(serverconfig.cachedir, 'bam')
+
 // a pending timeout reference from setTimeout that calls mayDeleteCacheFiles
 let cacheCheckTimeout,
 	nextCheckTime = 0
@@ -3674,7 +3676,7 @@ async function mayDeleteCacheFiles() {
 	console.log(`checking for cached bam files to delete ...`)
 	try {
 		const minTime = Date.now() - maxAge
-		const filenames = await fs.promises.readdir(serverconfig.cachedir_bam)
+		const filenames = await fs.promises.readdir(cachedir_bam)
 		const files = [] // keep list of undeleted bam files. may need to rank them and delete old ones ranked by age
 		let totalSize = 0,
 			deletedSize = 0,
@@ -3683,7 +3685,7 @@ async function mayDeleteCacheFiles() {
 		for (const filename of filenames) {
 			if (!filename.endsWith('.bam') && !filename.endsWith('.bai')) continue
 			totalCount++
-			const fp = path.join(serverconfig.cachedir_bam, filename)
+			const fp = path.join(cachedir_bam, filename)
 			const s = await fs.promises.stat(fp)
 			if (!s.isFile()) continue
 			const time = s.mtimeMs
@@ -3751,7 +3753,7 @@ async function get_gdc_bam(chr, start, stop, gdcFileUUID, bamfilename, req) {
 	// also no body is submitted with a GET request, should not set a Content-type request header
 	const { host, headers } = getGdcDs(req.query.__genomes).getHostHeaders(req.query)
 	headers.compression = false
-	const fullpath = path.join(serverconfig.cachedir_bam, bamfilename)
+	const fullpath = path.join(cachedir_bam, bamfilename)
 	const url = path.join(host.rest, '/slicing/view/', gdcFileUUID + '?region=' + chr + ':' + start + '-' + stop)
 
 	let timeTaken4streaming = 0
