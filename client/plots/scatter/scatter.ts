@@ -270,7 +270,8 @@ export function getDefaultScatterSettings() {
 		colorContours: false,
 		contourBandwidth: 30,
 		contourThresholds: 10,
-		duration: 500
+		duration: 500,
+		useGlobalMinMax: true
 	}
 }
 

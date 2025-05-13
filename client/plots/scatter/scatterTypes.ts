@@ -14,7 +14,7 @@ export type ShapeLegendItem = {
 
 export type ScatterLegendItem = ColorLegendItem | ShapeLegendItem
 
-export type ScatterDataResponse = { [index: string]: ScatterDataResult }
+export type ScatterDataResponse = { range: DataRange; result: { [index: string]: ScatterDataResult } }
 
 export type ErrorResponse = { error: string }
 
