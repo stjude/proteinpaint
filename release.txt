@@ -1,2 +1,1 @@
-Fixes:
-- dictionary ui new option backToSelectionText avoids duplicating Back handle with geneVariant tvs
+
