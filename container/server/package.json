@@ -7,7 +7,7 @@
 		"release": ""
 	},
 	"dependencies": {
-		"@sjcrh/proteinpaint-server": "2.124.1""
+		"@sjcrh/proteinpaint-server": "2.124.1"
 	},
 	"files": [
 		"app-server.js"
