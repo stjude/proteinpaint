@@ -126,8 +126,21 @@ export async function trigger_getSampleScatter(req, q, res, ds, genome) {
 				}
 			}
 		}
+		const samples = [...cohortSamples, ...refSamples]
+		let range
+		if (samples.length > 0) {
+			// Calculate global min/max range of x/y coordinates needed for the scatter plot. Needs to be done before colorAndShapeSamples that will dismiss
+			//  samples without color/shape or filtered out. If the plot is not premade and a filter on the coordinate terms is done, the coordinates excluded will be filtered out,
+			// . In that case the min and max values are not global.
+			const s0 = samples[0]
+			const [xMin, xMax, yMin, yMax] = samples.reduce(
+				(s, d) => [d.x < s[0] ? d.x : s[0], d.x > s[1] ? d.x : s[1], d.y < s[2] ? d.y : s[2], d.y > s[3] ? d.y : s[3]],
+				[s0.x, s0.x, s0.y, s0.y]
+			)
+			range = { xMin, xMax, yMin, yMax }
+		}
 		if (!result) result = await colorAndShapeSamples(refSamples, cohortSamples, data, q)
-		res.send({ ...result })
+		res.send({ result, range })
 	} catch (e) {
 		if (e.stack) console.log(e.stack)
 		res.send({ error: e.message || e })

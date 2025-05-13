@@ -73,10 +73,11 @@ export class ScatterModel {
 		const data: ScatterResponse = await this.scatter.app.vocabApi.getScatterData(reqOpts)
 		this.is3D = this.scatter.config.term0?.q.mode == 'continuous'
 		if ('error' in data) throw data.error
+		this.range = data.range
 		this.charts = []
-		for (const [key, item] of Object.entries(data)) {
-			if (!Array.isArray(item.samples)) throw 'data.samples[] not array'
-			this.createChart(key, item)
+		for (const [key, chartData] of Object.entries(data.result)) {
+			if (!Array.isArray(chartData.samples)) throw 'data.samples[] not array'
+			this.createChart(key, chartData)
 		}
 		this.initRanges()
 	}
@@ -110,10 +111,10 @@ export class ScatterModel {
 		)
 		for (const chart of this.charts) {
 			chart.ranges = {
-				xMin,
-				xMax,
-				yMin,
-				yMax,
+				xMin: this.scatter.settings.useGlobalMinMax ? this.range.xMin : xMin,
+				xMax: this.scatter.settings.useGlobalMinMax ? this.range.xMax : xMax,
+				yMin: this.scatter.settings.useGlobalMinMax ? this.range.yMin : yMin,
+				yMax: this.scatter.settings.useGlobalMinMax ? this.range.yMax : yMax,
 				zMin,
 				zMax,
 				scaleMin,
