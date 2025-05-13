@@ -120,15 +120,15 @@ jobs:
           docker push ghcr.io/stjude/ppfull:$TAG
           docker push ghcr.io/stjude/ppserver:latest
           docker push ghcr.io/stjude/ppfull:latest
-
-          cd container
-          ./update_deps_version.sh $TAG ./full/Dockerfile
-          ./update_deps_version.sh $TAG ./server/Dockerfile
-
+          
           if [[ "$BRANCH" =~ ^(release|prerelease) ]]; then
             echo "On release/prerelease branch, not merging to master."
             exit 0
           fi
+
+          cd container
+          ./update_deps_version.sh $TAG ./full/Dockerfile
+          ./update_deps_version.sh $TAG ./server/Dockerfile
 
           if [[ "$BRANCH" != "master" ]]; then
             echo "Merging to master"
