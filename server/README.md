@@ -1,4 +1,4 @@
-# Proteinpaint Server
+# ProteinPaint Server
 
 The data server backend for the ProteinPaint application
 
@@ -6,17 +6,15 @@ The data server backend for the ProteinPaint application
 
 The client dependencies should be installed as a workspace, follow the README at the project root.
 
-You can either:
-- use a docker container for development, see ../build/dev/README.md
-- or install the [system depedencies](https://docs.google.com/document/d/1tkEHG_vYtT-OifPV-tlPeWQUMsEd3aWAKf5ExOT8G34/edit#heading=h.jy5sdrb1zkut)
-as listed in the [installation instructions](https://docs.google.com/document/d/1tkEHG_vYtT-OifPV-tlPeWQUMsEd3aWAKf5ExOT8G34/edit#heading=h.6nxua6c3ik9l).
+You can either use a docker container for development (../build/dev/README.md), or build from source.
+See https://github.com/stjude/proteinpaint/wiki.
 
 
 ## Serverconfig
 
 `server/serverconfig.json` is used:
 - when running any server or test scripts from the pp/server directory
-- if `${process.cwd()/serverconfig.json` does not exist wherever `@sjcrh/proteinpaint-server` is called
+- if `${process.cwd()/serverconfig.json` does not exist wherever `@sjcrh/proteinpaint-server` is called (if can give example of this usecase)
 
 If no `test:unit` code uses serverconfig, then it would have been okay to not have `server/serverconfig.json`.
 However, it's safer to simply have that file available just in case any imported server code uses serverconfig
