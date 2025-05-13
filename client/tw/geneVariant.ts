@@ -155,13 +155,14 @@ export async function mayMakeVariantFilter(tw: RawGvTW, vocabApi: VocabApi) {
 			if (termdbmclass && Object.keys(termdbmclass).includes(k)) v.label = termdbmclass[k].label
 		}
 		t.values = values
-		t.geneVariantTerm = structuredClone(tw.term) // track the parent geneVariant term
 		dtTermsInDs.push(t)
 	}
 	tw.term.filter = {
 		opts: { joinWith: ['and', 'or'] },
 		terms: dtTermsInDs // will load dt terms as custom terms in frontend vocab
 	}
+	// track the parent geneVariant term on each dt term
+	for (const term of tw.term.filter.terms) term.geneVariantTerm = structuredClone(tw.term)
 }
 
 export class GvValues extends GvBase {
