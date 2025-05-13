@@ -45,6 +45,7 @@ function setRenderers(self) {
 			.append('span')
 			.html('&laquo; ' + (self.app.opts.tree?.backToSelectionText || 'Back to variable selection'))
 			.attr('class', 'sja_clbtext')
+			.attr('data-testid', 'sja_treesubmenu_backprompt')
 			.on('click', () => self.app.dispatch({ type: 'submenu_set', submenu: {} }))
 
 		self.dom.holder
