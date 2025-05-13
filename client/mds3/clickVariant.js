@@ -65,6 +65,13 @@ async function click2sunburst(d, tk, block, tippos) {
 		querytype: tk.mds.variant2samples.type_sunburst
 	})
 	tk.glider.style('cursor', 'auto')
+
+	if (!dataGood4sunburst(data)) {
+		await variant_details({ mlst: d.mlst, tk, block, tippos })
+		return
+	}
+
+	// when no samples from this group are annotated by sunburst terms, avoid showing a blank sunburst
 	const arg = {
 		nodes: data.nodes,
 		occurrence: d.occurrence,
@@ -158,6 +165,23 @@ async function click2sunburst(d, tk, block, tippos) {
 	}
 	const _ = await import('#src/sunburst')
 	_.default(arg)
+}
+
+export function dataGood4sunburst(data) {
+	// return true/false to show/not show sunburst; throws on data error
+	// data={nodes:[ {id:'root'}, {id:'root...cat1'}, ...]}
+	if (!Array.isArray(data.nodes)) throw 'nodes not array'
+	if (data.nodes.length == 0) throw 'nodes empty array'
+	// just {root} element means samples are not annotated by sunburst terms. return false to avoid showing a blank sunburst
+	if (data.nodes.length == 1) return false
+	// root node is not validated, do if needed
+	for (let i = 1; i < data.nodes.length; i++) {
+		const n = data.nodes[i]
+		if (!n.name) throw 'node name missing'
+		if (!Number.isInteger(n.cohortsize)) throw 'node cohortsize not integer'
+		// validate additional properties if needed
+	}
+	return true
 }
 
 /*
