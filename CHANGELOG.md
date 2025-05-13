@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Features:
+- Build the pp docker image by using an R image as the base image.
+- Use cached steps across ppbase, ppserver, and ppfull build jobs.
+
+
 ## 2.124.1
 
 Fixes:
