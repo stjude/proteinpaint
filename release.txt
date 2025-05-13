@@ -1,1 +1,2 @@
-
+Fixes:
+- broken mds3 legend items will appear when skewer mode is `skewer`
