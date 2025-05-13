@@ -323,7 +323,7 @@ export class ScatterLegend {
 
 		offsetX += step
 		const mutations: any = []
-		for (const [value] of map)
+		for (const value of map.values())
 			if (value.mutation)
 				//if no mutation is Ref
 				mutations.push(value.mutation)
