@@ -101,9 +101,9 @@ export default function svgLegend(opts) {
 		if (settings.linesep) {
 			currlinex = settings.padleft
 			currliney += settings.lineh
-		} else if (d.hasScale) {
+		} /* else if (d.hasScale) {
 			currlinex = leftdist - 2 * settings.padx + 2
-		} else if (d.hasScale || settings.hangleft) {
+		} */ else if (d.hasScale || settings.hangleft) {
 			currlinex = leftdist + 2 * settings.padx
 		} else {
 			currlinex += settings.padleft + grplabel.node().getBBox().width + 2 * settings.padx
