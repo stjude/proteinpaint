@@ -83,6 +83,8 @@ export async function setDsAuthOk(opts, dofetch3) {
 			const { dslabel, route } = auth
 			const jwt = getSavedToken(dslabel, route)
 			if (jwt) {
+				const payload = JSON.parse(atob(jwt.split('.')[1]))
+				if (payload.exp && Math.ceil(Date.now() / 1000) > payload.exp) continue
 				const data = await dofetch3('/jwt-status', {
 					method: 'POST',
 					headers: {
