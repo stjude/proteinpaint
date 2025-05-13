@@ -613,7 +613,7 @@ function update_mclass(tk) {
 						isChangeShape: true,
 						isVisible: () => {
 							if (c.k == dtcnv) return false // no changing shape for cnv
-							return !tk.skewer.viewModes.find(v => v.type === 'numeric').inuse
+							return !tk.skewer.viewModes.find(v => v.type === 'numeric')?.inuse
 								? tk.mds?.termdbConfig?.tracks?.allowSkewerChanges ?? true
 								: false
 						},
