@@ -47,7 +47,6 @@ async function fillMenu(self, _div, tvs) {
 		tree: {
 			backToSelectionText: 'Change alteration type',
 			click_term2select_tvs(tvs) {
-				tvs.term.geneVariantTerm = structuredClone(term) // track the parent geneVariant term
 				self.opts.callback(tvs)
 			}
 		}
