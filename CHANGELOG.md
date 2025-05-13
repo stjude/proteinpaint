@@ -8,6 +8,9 @@ Features:
 - Build the pp docker image by using an R image as the base image.
 - Use cached steps across ppbase, ppserver, and ppfull build jobs.
 
+Fixes:
+- avoid blank sunburst when samples are not annotated by sunburst terms; just show table view
+
 
 ## 2.124.1
 
