@@ -43,7 +43,7 @@ function setRenderers(self) {
 			.append('div')
 			.style('margin', '10px')
 			.append('span')
-			.html('&laquo; Back to variable selection')
+			.html('&laquo; ' + (self.app.opts.tree?.backToSelectionText || 'Back to variable selection'))
 			.attr('class', 'sja_clbtext')
 			.on('click', () => self.app.dispatch({ type: 'submenu_set', submenu: {} }))
 

@@ -6,17 +6,23 @@ import { TermTypeSearchInit } from './TermTypeSearch'
 import { submenuInit } from './submenu'
 import { searchInit } from './search'
 import { select } from 'd3-selection'
-import { Menu } from '#dom/menu'
-import { sayerror } from '../dom/sayerror.ts'
+import { Menu, sayerror } from '#dom'
 import { dofetch3 } from '#common/dofetch'
 import { isUsableTerm } from '#shared/termdb.usecase.js'
 
 /*
 opts{}
-.state{}
-	required, will fill-in or override store.defaultState
-.app{} .tree{} etc
-see doc for full spec
+	state{}
+		required, will fill-in or override store.defaultState
+	app{}
+	tree{}
+		disable_terms[]
+		click_term2select_tvs()
+		click_term()
+		backToSelectionText:str
+	search{}
+	vocabApi
+	getCategoriesArguments{}
 */
 
 class TdbApp {
