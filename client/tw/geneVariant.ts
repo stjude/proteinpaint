@@ -155,6 +155,7 @@ export async function mayMakeVariantFilter(tw: RawGvTW, vocabApi: VocabApi) {
 			if (termdbmclass && Object.keys(termdbmclass).includes(k)) v.label = termdbmclass[k].label
 		}
 		t.values = values
+		t.geneVariantTerm = structuredClone(tw.term) // track the parent geneVariant term
 		dtTermsInDs.push(t)
 	}
 	tw.term.filter = {
