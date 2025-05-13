@@ -12,20 +12,34 @@ You can either:
 as listed in the [installation instructions](https://docs.google.com/document/d/1tkEHG_vYtT-OifPV-tlPeWQUMsEd3aWAKf5ExOT8G34/edit#heading=h.6nxua6c3ik9l).
 
 
+## Serverconfig
+
+`server/serverconfig.json` is used:
+- when running any server or test scripts from the pp/server directory
+- if `${process.cwd()/serverconfig.json` does not exist wherever `@sjcrh/proteinpaint-server` is called
+
+If no `test:unit` code uses serverconfig, then it would have been okay to not have `server/serverconfig.json`.
+However, it's safer to simply have that file available just in case any imported server code uses serverconfig
+and runs as part of test:unit, and that's why `server/emitImports.js` creates one if it doesn't exist by
+copying `container/ci/serverconfig.json`.
+
+
 ## Develop
 
-From the proteinpaint/server/ directory:
-
-`npm run dev` rebundles backend code
-
-`npm start` runs the proteinpaint server
-
+The local development environment is usually triggered following one of these:
+- follow the `Develop` section in [proteinpaint/README.md](https://github.com/stjude/proteinpaint/blob/master/README.md) (preferred)
+- `npm start` from the `server` dir
 
 ## Test
 
-```bash
-npm test
-```
+To run both type checks and test:unit: `npm run test`.
+
+To run type check only: `npx tsc`.
+
+To run unit tests only: `npm run test:unit`
+
+To run specific test file: `npx tsx path/to/spec.ts` 
+
 
 ## Build
 
