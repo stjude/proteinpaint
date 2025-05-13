@@ -1,4 +1,4 @@
-// Syntax: cd .. && cargo build --release && time cat ~/sjpp/test.txt | target/release/genesetSEA
+// Syntax: cd .. && cargo build --release && time cat ~/sjpp/test.txt | target/release/cerno
 #![allow(non_snake_case)]
 use json::JsonValue;
 use r_mathlib::chi_squared_cdf;
@@ -74,6 +74,10 @@ fn main() -> Result<()> {
                         fold_change_f64.push(item);
                     }
 
+                    if sample_genes.len() == 0 {
+                        panic!("No sample genes provided");
+                    }
+
                     if sample_genes.len() != fold_change_f64.len() {
                         panic!("Length of genes array and fold change array are not equal");
                     }
@@ -127,7 +131,7 @@ fn main() -> Result<()> {
                     // Sort sample_coding_gene in descending order
                     sample_coding_genes
                         .as_mut_slice()
-                        .sort_by(|a, b| (a.fold_change).partial_cmp(&b.fold_change).unwrap_or(Ordering::Equal));
+                        .sort_by(|a, b| (b.fold_change).partial_cmp(&a.fold_change).unwrap_or(Ordering::Equal));
 
                     // Assign ranks to each gene
                     for i in 0..sample_coding_genes.len() {
@@ -136,11 +140,6 @@ fn main() -> Result<()> {
 
                     //println!("sample_genes:{:?}", sample_genes);
                     //println!("background_genes:{:?}", background_genes);
-
-                    if sample_genes.len() == 0 {
-                        panic!("No sample genes provided");
-                    }
-                    let num_items_output = 100; // Number of top pathways to be specified in the output
 
                     let msigdbconn = Connection::open(msigdb)?;
                     let stmt_result = msigdbconn
@@ -180,7 +179,13 @@ fn main() -> Result<()> {
                                         let (p_value, auc, es, matches, gene_set_hits) =
                                             cerno(&sample_coding_genes, names);
 
-                                        if matches >= 1.0 && p_value.is_nan() == false {
+                                        if matches >= 1.0
+                                            && p_value.is_nan() == false
+                                            && es.is_nan() == false
+                                            && es != f64::INFINITY
+                                            && auc != f64::INFINITY
+                                            && auc.is_nan() == false
+                                        {
                                             pathway_p_values.push(pathway_p_value {
                                                 pathway_name: n.GO_id,
                                                 p_value_original: p_value,
@@ -203,7 +208,7 @@ fn main() -> Result<()> {
                     let output_string = "{\"num_pathways\":".to_string()
                         + &pathway_p_values.len().to_string()
                         + &",\"pathways\":"
-                        + &adjust_p_values(pathway_p_values, num_items_output)
+                        + &adjust_p_values(pathway_p_values)
                         + &"}";
                     println!("{}", output_string);
                 }
@@ -233,12 +238,12 @@ fn cerno(sample_coding_genes: &Vec<gene_order>, genes_in_pathway: HashSet<String
         gene_set_hits.pop();
     }
 
-    let ranks: Vec<usize> = gene_intersections
+    let ranks: Vec<usize> = gene_intersections // x <- l %in% mset$gs2gv[[m]] ; ranks <- c(1:N)[x]
         .iter()
         .map(|x| x.rank.unwrap())
         .collect::<Vec<usize>>();
 
-    let cerno: f64 = ranks
+    let cerno: f64 = ranks // -2 * sum( log(ranks/N) )
         .iter()
         .map(|x| ((*x as f64) / N).ln())
         .collect::<Vec<f64>>()
@@ -246,16 +251,16 @@ fn cerno(sample_coding_genes: &Vec<gene_order>, genes_in_pathway: HashSet<String
         .sum::<f64>()
         * (-2.0);
 
-    let cES: f64 = cerno / (2.0 * (N1 as f64));
-    let N2 = N - N1;
-    let R1 = ranks.iter().sum::<usize>() as f64;
-    let U = N1 * N2 + N1 * (N1 + 1.0) / 2.0 - R1;
-    let AUC = U / (N1 * N2);
-    let p_value = chi_squared_cdf(cerno, 2.0 * N1, false, false);
+    let cES: f64 = cerno / (2.0 * (N1 as f64)); // cES <- cerno/(2*N1)
+    let N2 = N - N1; // N2 = N - N1
+    let R1 = ranks.iter().sum::<usize>() as f64; // R1 <- sum(ranks)
+    let U = N1 * N2 + N1 * (N1 + 1.0) / 2.0 - R1; // U  <- N1*N2+N1*(N1+1)/2-R1
+    let AUC = U / (N1 * N2); // AUC <- U/(N1*N2)
+    let p_value = chi_squared_cdf(cerno, 2.0 * N1, false, false); // pchisq(ret$cerno, 2*N1, lower.tail=FALSE)
     (p_value, AUC, cES, N1, gene_set_hits)
 }
 
-fn adjust_p_values(mut original_p_values: Vec<pathway_p_value>, mut num_items_output: usize) -> String {
+fn adjust_p_values(mut original_p_values: Vec<pathway_p_value>) -> String {
     // Sorting p-values in ascending order
     original_p_values.as_mut_slice().sort_by(|a, b| {
         (a.p_value_original)
@@ -302,14 +307,10 @@ fn adjust_p_values(mut original_p_values: Vec<pathway_p_value>, mut num_items_ou
             .unwrap_or(Ordering::Equal)
     });
 
-    if num_items_output > adjusted_p_values.len() {
-        num_items_output = adjusted_p_values.len()
-    }
-
     let mut output_string = "[".to_string();
-    for i in 0..num_items_output {
+    for i in 0..adjusted_p_values.len() {
         output_string += &serde_json::to_string(&adjusted_p_values[i]).unwrap();
-        if i < num_items_output - 1 {
+        if i < adjusted_p_values.len() - 1 {
             output_string += &",".to_string();
         }
     }
