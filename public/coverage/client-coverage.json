@@ -1716,5 +1716,41 @@
       "prev": 0,
       "diff": 62.162499999999994
     }
+  },
+  "plots/scatter/viewmodel/scatterLegend.ts": {
+    "lines": {
+      "total": 208,
+      "covered": 135,
+      "skipped": 0,
+      "pct": 64.9
+    },
+    "functions": {
+      "total": 29,
+      "covered": 9,
+      "skipped": 0,
+      "pct": 31.03
+    },
+    "statements": {
+      "total": 220,
+      "covered": 140,
+      "skipped": 0,
+      "pct": 63.63
+    },
+    "branches": {
+      "total": 134,
+      "covered": 69,
+      "skipped": 0,
+      "pct": 51.49
+    },
+    "lowestPct": {
+      "curr": 31.03,
+      "prev": 0,
+      "diff": 31.03
+    },
+    "averagePct": {
+      "curr": 52.7625,
+      "prev": 0,
+      "diff": 52.7625
+    }
   }
 }
