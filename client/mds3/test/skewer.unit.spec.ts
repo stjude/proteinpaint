@@ -1,10 +1,14 @@
 import tape from 'tape'
 import { whenVisible } from '../../test/test.helpers'
 import { showHoverTipOnDisk } from '../skewer.render.js'
+import { dataGood4sunburst } from '../clickVariant.js'
 import { Menu } from '#dom'
 
 /*
 Tests: 
+
+showHoverTipOnDisk()
+dataGood4sunburst()
 */
 
 tape('\n', test => {
@@ -74,5 +78,43 @@ tape('showHoverTipOnDisk()', async function (test) {
 	test.true(tk.hovertip.d.node()!.innerHTML.includes('2 alterations'), 'should show 2 alterations')
 
 	if (test['_ok']) tk.hovertip.d.remove()
+	test.end()
+})
+
+tape('dataGood4sunburst()', function (test) {
+	test.throws(
+		() => {
+			dataGood4sunburst({ nodes: 11 })
+		},
+		/nodes not array/,
+		'should throw'
+	)
+	test.throws(
+		() => {
+			dataGood4sunburst({ nodes: [] })
+		},
+		/nodes empty array/,
+		'should throw'
+	)
+	test.equal(
+		dataGood4sunburst({ nodes: [{}] }),
+		false,
+		'returns false when data.nodes.length==1 to disable sunburst rendering'
+	)
+	test.throws(
+		() => {
+			dataGood4sunburst({ nodes: [{}, {}] })
+		},
+		/node name missing/,
+		'should throw'
+	)
+	test.throws(
+		() => {
+			dataGood4sunburst({ nodes: [{}, { name: 'x' }] })
+		},
+		/node cohortsize not integer/,
+		'should throw'
+	)
+	test.equal(dataGood4sunburst({ nodes: [{}, { name: 'x', cohortsize: 1 }] }), true, 'returns true on good data')
 	test.end()
 })
