@@ -94,6 +94,7 @@ export type DtTerm = {
 	query: string
 	name: string
 	name_noOrigin: string
+	geneVariantTerm: RawGvTerm
 	parent_id: any
 	isleaf: boolean
 	type: string
