@@ -1,8 +1,7 @@
 use flate2::read::GzDecoder;
-use flate2::write::GzEncoder;
 use futures::StreamExt;
 use serde::Deserialize;
-use serde_json::Value;
+use serde_json;
 use std::collections::HashMap;
 use std::io::{self, Read, Write};
 use std::time::Duration;
@@ -34,20 +33,20 @@ fn parse_content(content: &str, case_id: &str, data_type: &str) -> Result<String
     //let mut parsed_data = Vec::new();
     let mut parsed_data: String = String::new();
     let mut columns_indices: Vec<usize> = Vec::new();
-    let mut headerMk: &str = "";
+    let mut header_mk: &str = "";
     let mut columns = Vec::new(); // columns selected from GDC file
     if data_type == "cnv" {
-        headerMk = "GDC_Aliquot_ID";
+        header_mk = "GDC_Aliquot_ID";
         columns = vec!["Chromosome", "Start", "End", "Segment_Mean"]
     } else if data_type == "maf" {
-        headerMk = "Hugo_Symbol";
+        header_mk = "Hugo_Symbol";
         columns = vec!["Chromosome", "Start_Position", "End_Position"]
     };
     let mut header: Vec<String> = Vec::new(); // GDC file header
     for line in lines {
         if line.starts_with("#") {
             continue;
-        } else if line.contains(&headerMk) {
+        } else if line.contains(&header_mk) {
             // header line
             header = line.split("\t").map(|s| s.to_string()).collect();
             for col in &columns {
@@ -69,7 +68,7 @@ fn parse_content(content: &str, case_id: &str, data_type: &str) -> Result<String
                 ));
             };
         } else {
-            let mut keepCK: bool = true;
+            let mut keep_ck: bool = true;
             let cont_lst: Vec<String> = line.split("\t").map(|s| s.to_string()).collect();
             let mut out_lst: Vec<String> = Vec::new();
             // add sample ID first
@@ -78,19 +77,19 @@ fn parse_content(content: &str, case_id: &str, data_type: &str) -> Result<String
                 let mut element = cont_lst[*x].to_string();
                 if data_type == "cnv" && &header[*x] == "Segment_Mean" {
                     // convert to f32 (segment_mean)
-                    let segMean = match element.parse::<f32>() {
+                    let seg_mean = match element.parse::<f32>() {
                         Ok(val) => val,
                         Err(_e) => {
                             let error_msg = "Segment_Mean in cnv file is not float".to_string();
                             return Err((case_id.to_string(), data_type.to_string(), error_msg));
                         }
                     };
-                    if segMean >= 0.2 {
+                    if seg_mean >= 0.2 {
                         element = "gain".to_string();
-                    } else if segMean <= -0.2 {
+                    } else if seg_mean <= -0.2 {
                         element = "loss".to_string();
                     } else {
-                        keepCK = false;
+                        keep_ck = false;
                     }
                 }
                 out_lst.push(element);
@@ -99,7 +98,7 @@ fn parse_content(content: &str, case_id: &str, data_type: &str) -> Result<String
             if data_type == "maf" {
                 out_lst.push("mutation".to_string());
             }
-            if keepCK {
+            if keep_ck {
                 parsed_data.push_str(out_lst.join("\t").as_str());
                 parsed_data.push_str("\n");
             }
@@ -112,7 +111,7 @@ fn parse_content(content: &str, case_id: &str, data_type: &str) -> Result<String
 //async fn download_data(data4dl: HashMap<String,DataType>, host: &str) -> Vec<Result<(String, String), (String, String)>> {
 async fn download_data(data4dl: HashMap<String, DataType>, host: &str) -> () {
     // Generate URLs from data4dl, handling optional cnv and maf
-    let dataUrls = data4dl
+    let data_urls = data4dl
         .into_iter()
         .flat_map(|(case_id, data_types)| {
             let mut urls = Vec::new();
@@ -125,7 +124,7 @@ async fn download_data(data4dl: HashMap<String, DataType>, host: &str) -> () {
             urls
         })
         .collect::<Vec<_>>();
-    let download_futures = futures::stream::iter(dataUrls.into_iter().map(|(case_id, data_type, url)| {
+    let download_futures = futures::stream::iter(data_urls.into_iter().map(|(case_id, data_type, url)| {
         async move {
             //let case_dt = format!("{}/{}",case_id,data_type).to_string();
             // Build HTTP client with timeouts
@@ -182,7 +181,7 @@ async fn download_data(data4dl: HashMap<String, DataType>, host: &str) -> () {
                         }
                     }
                 }
-                Err(e) => {
+                Err(_e) => {
                     let error_msg = "Client build error".to_string();
                     Err((case_id, data_type, error_msg))
                 }
@@ -231,7 +230,7 @@ async fn download_data(data4dl: HashMap<String, DataType>, host: &str) -> () {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    const Host: &str = "https://api.gdc.cancer.gov/data/";
+    const HOST: &str = "https://api.gdc.cancer.gov/data/";
 
     // Accepting the piped input json from nodejs
     let timeout_duration = Duration::from_secs(5); // Set a 5-second timeout
@@ -291,7 +290,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     //println!("{}",&Host);
 
     // Download data
-    download_data(input_js, Host).await;
+    download_data(input_js, HOST).await;
 
     Ok(())
 }
