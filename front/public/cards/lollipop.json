@@ -164,7 +164,7 @@
                             "label": "Serine",
                             "color": "#E74C3C",
                             "desc": "phosphorylated amino acid"
-                        }, 
+                        },
                         "F": {
                             "label": "Tyrosine",
                             "color": "#00A86B",
@@ -174,9 +174,11 @@
                 }
             },
             "testSpec": {
-                "expected": { "circle": 10 }
+                "expected": {
+                    "circle": 10
+                }
             },
-            "buttons":[
+            "buttons": [
                 {
                     "name": "Custom Data Documentation",
                     "link": "https://github.com/stjude/proteinpaint/wiki/Lollipop-%E2%80%90-mds3#tkskewermodes"
@@ -277,7 +279,7 @@
                             "label": "Serine",
                             "color": "#E74C3C",
                             "desc": "phosphorylated amino acid"
-                        }, 
+                        },
                         "F": {
                             "label": "Tyrosine",
                             "color": "#00A86B",
@@ -286,34 +288,54 @@
                     }
                 }
             },
-            "buttons":[
+            "buttons": [
                 {
-                    "name":"Data Point Shape Documentation",
+                    "name": "Data Point Shape Documentation",
                     "link": "https://github.com/stjude/proteinpaint/wiki/Lollipop-%E2%80%90-mds3#mshape"
                 }
             ],
             "testSpec": {
-                "expected": { "circle": 10 }
+                "expected": {
+                    "circle": 10
+                }
+            }
+        },
+        {
+            "label": "Setting default view",
+            "message": "Adding <span style='font-family: Courier; opacity: 0.6;'>gmmode</span> to the block level sets the default view. Valid values are <span style='font-family: Courier; opacity: 0.6;'>protein, exon only, splicing RNA</span>, and <span style='font-family: Courier; opacity: 0.6;'>genomic</span> ",
+            "runargs": {
+                "nobox": 1,
+                "noheader": 1,
+                "genome": "hg38",
+                "gene": "TP53",
+                "gmmode": "splicing RNA"
+            },
+            "testSpec": {
+                "expected": {
+                    "rect": 1
+                }
             }
         },
         {
             "label": "Official dataset",
             "urlparam": "?genome=hg19&gene=JAK2&dataset=Pediatric",
             "runargs": {
-                "gene":"jak2",
+                "gene": "jak2",
                 "nobox": 1,
                 "noheader": 1,
                 "genome": "hg19",
-                "dataset":"Pediatric"
+                "dataset": "Pediatric"
             },
-            "buttons":[
+            "buttons": [
                 {
-                    "name":"Build an Official Dataset",
+                    "name": "Build an Official Dataset",
                     "link": "https://docs.google.com/document/d/1iY7x9PzAzLKzdABam_Tfg8h-kQ0oh2UyyKC0cP-9YWA/edit"
                 }
             ],
             "testSpec": {
-                "expected": { "circle": 10 }
+                "expected": {
+                    "circle": 10
+                }
             }
         }
     ],
@@ -323,6 +345,6 @@
             "link": "https://docs.google.com/document/d/1D78jKVaQrWBhAjnfmCqj0Cirf6s-CdcbfPkuZQMT8Co/edit#heading=h.tyjcwt"
         }
     ],
-    "ribbonMessage": "Please see the newest Custom Variant example!",
+    "ribbonMessage": "Please see our newest example of setting the default protein view.",
     "citation_id": 1001
-} 
+}
