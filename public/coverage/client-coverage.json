@@ -1752,5 +1752,41 @@
       "prev": 0,
       "diff": 52.7625
     }
+  },
+  "termdb/submenu.js": {
+    "lines": {
+      "total": 20,
+      "covered": 3,
+      "skipped": 0,
+      "pct": 15
+    },
+    "functions": {
+      "total": 7,
+      "covered": 0,
+      "skipped": 0,
+      "pct": 0
+    },
+    "statements": {
+      "total": 23,
+      "covered": 3,
+      "skipped": 0,
+      "pct": 13.04
+    },
+    "branches": {
+      "total": 10,
+      "covered": 0,
+      "skipped": 0,
+      "pct": 0
+    },
+    "lowestPct": {
+      "curr": 0,
+      "prev": 0,
+      "diff": 0
+    },
+    "averagePct": {
+      "curr": 7.01,
+      "prev": 0,
+      "diff": 7.01
+    }
   }
 }
