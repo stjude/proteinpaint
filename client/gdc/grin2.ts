@@ -106,14 +106,7 @@ function makeControls(obj) {
 		const [, td2] = table.addRow('Experimental Strategy')
 		obj.expStrategyRadio = make_radios({
 			holder: td2,
-			options: [
-				{ label: 'WXS', value: 'WXS', checked: obj.opts.experimentalStrategy == 'WXS' },
-				{
-					label: 'Targeted Sequencing',
-					value: 'Targeted Sequencing',
-					checked: obj.opts.experimentalStrategy == 'Targeted Sequencing'
-				}
-			],
+			options: [{ label: 'WXS', value: 'WXS', checked: obj.opts.experimentalStrategy == 'WXS' }],
 			styles: { display: 'inline' },
 			callback: async value => {
 				obj.opts.experimentalStrategy = value
@@ -209,7 +202,7 @@ async function getFilesAndShowTable(obj) {
 			selectedRows: [], //[198], // uncomment out for quicker testing
 			buttons: [
 				{
-					text: 'Aggregate selected MAF files and download',
+					text: 'Submit selected data to GRIN2',
 					onChange: updateButtonBySelectionChange,
 					callback: submitSelectedFiles
 				}
@@ -245,9 +238,7 @@ async function getFilesAndShowTable(obj) {
 
 		button.disabled = false
 		button.innerHTML =
-			sum < result.maxTotalSizeCompressed
-				? `Download ${fileSize(sum)} compressed MAF data`
-				: `Download ${fileSize(result.maxTotalSizeCompressed)} compressed MAF data (${fileSize(sum)} selected)`
+			sum < result.maxTotalSizeCompressed ? `Submit selected data to GRIN2` : `Submit selected data to GRIN2)`
 	}
 
 	/* after table is created, on clicking download btn for first time, create a <span> after download btn,
@@ -273,7 +264,7 @@ async function getFilesAndShowTable(obj) {
 		if (fileIdLst.length == 0) return
 
 		const oldText = button.innerHTML
-		button.innerHTML = 'Loading... Please wait'
+		button.innerHTML = 'Analyzing... Please wait'
 		button.disabled = true
 		serverMessage.style('display', 'none')
 
