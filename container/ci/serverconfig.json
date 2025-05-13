@@ -6,16 +6,25 @@
       "name": "hg38-test",
       "species": "human",
       "file": "./genome/hg38.test.js",
-      "datasets": [{
-        "name": "TermdbTest",
-        "jsfile": "./dataset/termdb.test.js"
-      }]
+      "datasets": [
+        {
+          "name": "TermdbTest",
+          "jsfile": "./dataset/termdb.test.js"
+        }
+      ]
     }
   ],
   "features": {
     "regressionResultMsgs": true,
     "extApiCache": {
-        "fake.org": "fake-test"
+      "fake.org": "fake-test"
+    },
+    "cacheMonitor": {
+      "intervalOverride": 500,
+      "gsea": {
+        "maxAge": 10000,
+        "maxSize": 5e9
+      }
     }
   },
   "tpmasterdir": "/home/runner/work/proteinpaint/proteinpaint/server/test/tp",
