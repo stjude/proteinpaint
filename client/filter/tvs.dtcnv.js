@@ -8,14 +8,9 @@ TVS handler for dtcnv term
 export const handler = Object.assign({}, dtHandler, { type: 'dtcnv', setMethods })
 
 function setMethods(self, tvs) {
-	// order of overide: 1) do not override existing settings in tw.q{} 2) c.cnvCutoffsByGene[thisGene] 3) default cutoffs in c
-	// TODO: supply gene name to tsv here, and use queries.cnv.cnvCutoffsByGene cutoffs if exist
-	const cnvObj = self.opts.vocabApi.parent_termdbConfig?.queries?.cnv
-	if (!cnvObj) throw 'cnv query is missing'
-	const { cnvMaxLength, cnvGainCutoff, cnvLossCutoff } = cnvObj
-	const cnvDefault =
-		cnvMaxLength || cnvGainCutoff || cnvLossCutoff ? { cnvMaxLength, cnvGainCutoff, cnvLossCutoff } : {}
-	const cnv = /* cnvObj.cnvCutoffsByGene?.[tvs.term.name] || */ cnvDefault
+	// fill cnv menu based on whether cnv data is continuous or categorical
+	const cnv = self.opts.vocabApi.parent_termdbConfig?.queries?.cnv
+	if (!cnv) throw 'cnv query is missing'
 	const keys = Object.keys(cnv)
 	if (keys.includes('cnvGainCutoff') || keys.includes('cnvLossCutoff')) {
 		// dataset has continuous cnv data
@@ -41,18 +36,14 @@ async function fillMenu_cont(self, div, tvs) {
 
 	const settingsDiv = div.append('div').style('margin-left', '10px')
 
-	// order of overide: 1) do not override existing settings in tw.q{} 2) c.cnvCutoffsByGene[thisGene] 3) default cutoffs in c
-	// TODO: supply gene name to tsv here, and use queries.cnv.cnvCutoffsByGene cutoffs if exist
+	// get cnv cutoff values
 	const cnvObj = self.opts.vocabApi.parent_termdbConfig?.queries?.cnv
-	const cnvMaxLengthOriginal = cnvObj.cnvMaxLength
-	const cnvGainCutoffOriginal = cnvObj.cnvGainCutoff
-	const cnvLossCutoffOriginal = cnvObj.cnvLossCutoff
 	const cnvDefault = {
-		cnvMaxLength: cnvMaxLengthOriginal,
-		cnvGainCutoff: cnvGainCutoffOriginal,
-		cnvLossCutoff: cnvLossCutoffOriginal
+		cnvMaxLength: cnvObj.cnvMaxLength,
+		cnvGainCutoff: cnvObj.cnvGainCutoff,
+		cnvLossCutoff: cnvObj.cnvLossCutoff
 	}
-	const cnv = /* cnvObj.cnvCutoffsByGene?.[tvs.term.name] || */ cnvDefault
+	const cnv = cnvObj.cnvCutoffsByGene?.[tvs.term.geneVariantTerm.name] || cnvDefault
 
 	let cnvGainCutoff
 	if (cnv.cnvGainCutoff) {

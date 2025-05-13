@@ -201,6 +201,7 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome) {
 			'cnvMaxLength',
 			'cnvGainCutoff',
 			'cnvLossCutoff',
+			'cnvCutoffsByGene',
 			'absoluteValueRenderMax',
 			'gainColor',
 			'lossColor'
