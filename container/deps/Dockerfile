@@ -128,11 +128,12 @@ RUN if [ "$ARCH" = "x86_64" ]; then \
 FROM ppbase AS ppserverdeps
 
 WORKDIR /home/root/pp
-
+COPY ./tmppack ./tmppack
 WORKDIR /home/root/pp/app 
 RUN mkdir active
 # !!! NOTE: after open-sourcing, will only need the @sjcrh registry URL, no token required !!!
 WORKDIR /home/root/pp/app/active
+
 ARG SERVERPKGVER
 RUN if [ -f /home/root/pp/tmppack/sjcrh-proteinpaint-server-${SERVERPKGVER}.tgz ]; then \
       npm install /home/root/pp/tmppack/sjcrh-proteinpaint-server-${SERVERPKGVER}.tgz; \
