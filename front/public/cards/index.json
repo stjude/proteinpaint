@@ -116,6 +116,7 @@
             "type": "card",
             "name": "Lollipop",
             "section": "tracks",
+            "ribbon": {"text": "updated", "expireDate": "2025-06-15"},
             "description": "Coding mutations and gene fusions",
             "image": "https://proteinpaint.stjude.org/ppdemo/images/lollipop-square.png",
             "sandboxJson": "lollipop",
