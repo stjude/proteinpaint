@@ -102,7 +102,11 @@ jobs:
             echo "Skipping build and publishing"
             exit 0
           fi
-
+          
+          ./pack.sh
+          mkdir -p ./deps/tmppack
+          cp -a ./tmppack/. ./deps/tmppack/
+          
           cd deps
           ./version.sh deps
           ./build.sh -m "ghcr.io/stjude/"
