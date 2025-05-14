@@ -26,7 +26,7 @@ if (serverconfig.python) setPythonBinPath(serverconfig.python)
 
 export async function launch() {
 	try {
-		new CacheManager(serverconfig.features?.cacheMonitor)
+		new CacheManager(Object.assign({ cachedir: serverconfig.cachedir }, serverconfig.features?.cacheMonitor || {}))
 
 		const trackedDatasets = await initGenomesDs(serverconfig)
 		const doneLoading = processTrackedDs(trackedDatasets)
