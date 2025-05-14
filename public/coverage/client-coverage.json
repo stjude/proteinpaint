@@ -1636,13 +1636,13 @@
     },
     "lowestPct": {
       "curr": 59.22,
-      "prev": 55.55,
-      "diff": 3.6700000000000017
+      "prev": 59.22,
+      "diff": 0
     },
     "averagePct": {
       "curr": 69.3275,
-      "prev": 65.64,
-      "diff": 3.6875
+      "prev": 69.3275,
+      "diff": 0
     }
   },
   "common/test/auth.unit.spec.js": {
@@ -1672,13 +1672,13 @@
     },
     "lowestPct": {
       "curr": 100,
-      "prev": 71.42,
-      "diff": 28.58
+      "prev": 100,
+      "diff": 0
     },
     "averagePct": {
       "curr": 100,
-      "prev": 91.335,
-      "diff": 8.665000000000006
+      "prev": 100,
+      "diff": 0
     }
   },
   "plots/scatter/model/scatterModel.ts": {
