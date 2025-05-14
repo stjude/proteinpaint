@@ -17,7 +17,7 @@ import { mclass } from '#shared/common.js'
 Tests:
 	Render TermdbTest summary plot
 	Test legend
-	Change symbol
+	Change symbol and reference size from menu
 	Change chart width and height from menu
 	Click zoom in, zoom out, and reset buttons
  */
@@ -36,9 +36,8 @@ const runpp = helpers.getRunPp('mass', {
 const state = {
 	plots: [
 		{
-			chartType: 'runChart',
+			chartType: 'eventCount',
 			term: { id: 'date' },
-			term2: { id: 'hrtavg' },
 			colorTW: { id: 'sex' }
 		}
 	]
@@ -52,18 +51,18 @@ function getHolder() {
  test sections
 ***************/
 tape('\n', function (test) {
-	test.pass('-***- plots/runchart -***-')
+	test.pass('-***- plots/eventCount -***-')
 	test.end()
 })
 
-tape('Render TermdbTest runchart plot', function (test) {
+tape('Render TermdbTest eventCount plot', function (test) {
 	test.timeoutAfter(8000)
 	test.plan(1)
 	const holder = getHolder()
 	runpp({
 		holder, //Fix for test failing because survival & summary sandboxs are not destroyed.
 		state,
-		runChart: {
+		eventCount: {
 			callbacks: {
 				'postRender.test': runTests
 			}
@@ -108,9 +107,8 @@ tape('Test scale dot', function (test) {
 	const state = {
 		plots: [
 			{
-				chartType: 'runChart',
+				chartType: 'eventCount',
 				term: { id: 'date' },
-				term2: { id: 'hrtavg' },
 				scaleDotTW: { id: 'agedx', q: { mode: 'continuous' } }
 			}
 		]
@@ -118,7 +116,7 @@ tape('Test scale dot', function (test) {
 	runpp({
 		holder, //Fix for test failing because survival & summary sandboxs are not destroyed.
 		state,
-		runChart: {
+		eventCount: {
 			callbacks: {
 				'postRender.test': runTests
 			}
@@ -152,7 +150,7 @@ tape('Test legend', function (test) {
 
 	runpp({
 		state: structuredClone(state),
-		runChart: {
+		eventCount: {
 			callbacks: {
 				'postRender.test': runTests
 			}
@@ -203,7 +201,7 @@ tape('Change symbol size from menu', function (test) {
 
 	runpp({
 		state,
-		runChart: {
+		eventCount: {
 			callbacks: { 'postRender.test': runTests }
 		}
 	})
@@ -236,7 +234,7 @@ tape('Change chart width and height from menu', function (test) {
 
 	runpp({
 		state,
-		runChart: {
+		eventCount: {
 			callbacks: { 'postRender.test': runTests }
 		}
 	})
@@ -305,7 +303,7 @@ tape('Click zoom in, zoom out, and reset buttons', function (test) {
 
 	runpp({
 		state: structuredClone(state),
-		runChart: {
+		eventCount: {
 			callbacks: {
 				'postRender.test': runTests
 			}
