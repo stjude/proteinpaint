@@ -56,7 +56,9 @@ export async function searchItems(app, tip, help, publications, jwt) {
 		),
 		color: '#E6E6FA',
 		callback: d => {
-			window.open(d.doi, d.title)
+			const url = d.pmidURL || d.doi
+			if (!url || !d.title) throw `Missing url or title for search selection`
+			window.open(url, d.title)
 		}
 	})
 	return data

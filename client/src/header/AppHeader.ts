@@ -284,7 +284,9 @@ export class AppHeader {
 						.data(this.publications)
 						.enter()
 						.append('p')
-						.html((d: any) => `<a href=${d.doi} target=_blank>${d.appHeaderTitle}, ${d.journal}, ${d.year}</a>`)
+						.html(
+							(d: any) => `<a href=${d.pmidURL || d.doi} target=_blank>${d.appHeaderTitle}, ${d.journal}, ${d.year}</a>`
+						)
 				})
 		}
 	}
