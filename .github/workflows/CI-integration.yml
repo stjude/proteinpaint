@@ -91,7 +91,7 @@ jobs:
           path: rust-binaries
 
       - name: Run integration tests
-        uses: stjude/proteinpaint/.github/actions/run-integration-tests@rust.recompile.on.change
+        uses: stjude/proteinpaint/.github/actions/run-integration-tests@master
         with:
           PAT: ${{ secrets.PAT }}
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
@@ -102,7 +102,7 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - name: Run integration tests
-        uses: stjude/proteinpaint/.github/actions/run-integration-tests@rust.recompile.on.change
+        uses: stjude/proteinpaint/.github/actions/run-integration-tests@master
         with:
           PAT: ${{ secrets.PAT }}
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
