@@ -125,6 +125,9 @@ if [[ "$CHANGEDWS" == *"rust"* ]]; then
     echo "Copying compiled rust binaries to target/release ..."
     cp "$RUST_BINARIES_DIR"/* target/release/
 
+    echo "Making all files in target/release executable..."
+    chmod +x target/release/*
+
     echo "Ensuring target/* is included in package.json files array..."
 
       node -e '

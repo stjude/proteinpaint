@@ -29,6 +29,5 @@ for item in * .*; do
         echo "Copying: $item to $dest_dir"
         # Copy the file or directory to the destination directory
         cp -r "$item" "./../../$dest_dir"
-        chmod +x "./../../$dest_dir/$item"
     fi
 done
