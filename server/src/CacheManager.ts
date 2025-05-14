@@ -17,19 +17,19 @@ type SubdirOpts = {
 
 // computed configuration for each cache subdir
 type ComputedSubdirOpts = {
-	absPath: string //
+	absPath: string // joins absolute cachedir path with subdir name
 	skipUntil: number
 }
 
 // argument to CacheManager constructor
 type CacheOpts = {
-	cachedir?: string // equals serverconfig.cachedir, unless overridden
+	cachedir?: string // equals defaultOpts.cachedir or serverconfig.cachedir or runtime overrides (such as in spec files)
 	interval?: number
 	subdirs?: {
 		[dirName: string]: {
-			maxAge?: number
-			maxSize?: number
-			skipMs?: number
+			maxAge?: number // file expiration in milliseconds
+			maxSize?: number // total cache subdir size of all files, in bytes
+			skipMs?: number // milliseconds to wait before rerunning cache subdir checks, cause some check iterations to be skipped
 			fileExtensions?: Set<string | RegExp>
 		}
 	}
@@ -86,7 +86,7 @@ export class CacheManager {
 	cachedir: string
 	// the wait time before each iteration of checking the cache for expired files
 	interval: number
-	subdirs: Map<string, SubdirOpts & ComputedSubdirOpts> //
+	subdirs: Map<string, SubdirOpts & ComputedSubdirOpts>
 	// the reference to setInterval
 	intervalId!: any // Timeout
 	callbacks: Callbacks
@@ -161,6 +161,7 @@ export class CacheManager {
 		if (!this.intervalId) return
 		clearInterval(this.intervalId)
 		delete this.intervalId
+		if (this.callbacks.postStop) this.callbacks.postStop(this)
 	}
 
 	async mayDeleteCacheFiles(subdir, dirOpts, interval: number) {
