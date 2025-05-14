@@ -301,8 +301,8 @@
             }
         },
         {
-            "label": "Setting default view",
-            "message": "Adding <span style='font-family: Courier; opacity: 0.6;'>gmmode</span> to the block level sets the default view. Valid values are <span style='font-family: Courier; opacity: 0.6;'>protein, exon only, splicing RNA</span>, and <span style='font-family: Courier; opacity: 0.6;'>genomic</span> ",
+            "label": "Setting default display",
+            "message": "Adding <span style='font-family: Courier; opacity: 0.6;'>gmmode</span> to the block level sets the default display. Valid values are <span style='font-family: Courier; opacity: 0.6;'>protein, exon only, splicing RNA</span>, and <span style='font-family: Courier; opacity: 0.6;'>genomic</span> ",
             "runargs": {
                 "nobox": 1,
                 "noheader": 1,
@@ -310,6 +310,12 @@
                 "gene": "TP53",
                 "gmmode": "splicing RNA"
             },
+            "buttons": [
+                {
+                    "name": "Gene View Documentation",
+                    "link": "https://github.com/stjude/proteinpaint/wiki/Embedding#gene-view"
+                }
+            ],
             "testSpec": {
                 "expected": {
                     "rect": 1
