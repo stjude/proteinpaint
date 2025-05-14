@@ -150,6 +150,7 @@ export async function getPlotConfig(opts, app) {
 			stopColor: {} //dict to store the stop color of the gradient for each chart when using continuous color
 		}
 	}
+	copyMerge(plot, defaultConfig, opts)
 
 	try {
 		if (plot.colorTW) await fillTermWrapper(plot.colorTW, app.vocabApi)
