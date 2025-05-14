@@ -711,7 +711,6 @@ function renderFacetTable(self, facet, div) {
 	// TODO click on row/column header to batch operate
 
 	const columns = [{ label: 'Sample' }] // TODO use ds sample type
-	console.log(self)
 	for (const assay of assayLst) {
 		columns.push({
 			label: assay,
