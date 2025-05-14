@@ -48,7 +48,7 @@ do
 	else
 		sharedws=$shareddir
 	fi
-  
+
 	if [[ "$CHANGEDWS" == *"shared/$shareddir"* ]]; then
 		cd ../shared/$shareddir
 		echo "packing shared/$sharedws ..."
@@ -58,10 +58,10 @@ do
 		mv $SHAREDTGZ ../../container/tmppack/
 		SHAREDDEPNAME="@sjcrh/proteinpaint-$sharedws"
 		cd ../../client
-		# may reset the dep new version temporarily, for package testing 
+		# may reset the dep new version temporarily, for package testing
 		npm pkg set "devDependencies.$SHAREDDEPNAME"=$PKGPATH/$SHAREDTGZ
 		cd ../server
-		# may reset the dep new version temporarily, for package testing 
+		# may reset the dep new version temporarily, for package testing
 		npm pkg set "dependencies.$SHAREDDEPNAME"=$PKGPATH/$SHAREDTGZ
 		cd ../container
 	fi
@@ -77,7 +77,7 @@ if [[ "$CHANGEDWS" == *"client"* ]]; then
 	git restore package.json
 	cd ../front
 	CLIENTDEPNAME="@sjcrh/proteinpaint-client"
-	# may reset the dep new version temporarily, for package testing 
+	# may reset the dep new version temporarily, for package testing
 	npm pkg set "devDependencies.$CLIENTDEPNAME"=$PKGPATH/$CLIENTTGZ
 	cd ../container
 fi
@@ -107,7 +107,7 @@ if [[ "$CHANGEDWS" == *"augen"* ]]; then
 
 	cd ../server
 	AUGENDEPNAME="@sjcrh/augen"
-	# may reset the dep new version temporarily, for package testing 
+	# may reset the dep new version temporarily, for package testing
 	npm pkg set "dependencies.$AUGENDEPNAME"=$PKGPATH/$AUGENTGZ
 	cd ../container
 fi
@@ -151,7 +151,7 @@ if [[ "$CHANGEDWS" == *"python"* ]]; then
 
 	cd ../server
 	PYDEPNAME="@sjcrh/proteinpaint-python"
-	# may reset the dep new version temporarily, for package testing 
+	# may reset the dep new version temporarily, for package testing
 	npm pkg set "dependencies.$PYDEPNAME"=$PKGPATH/$PYTGZ
 	cd ../container
 fi
@@ -166,7 +166,7 @@ if [[ "$CHANGEDWS" == *"R"* ]]; then
 
 	cd ../server
 	RDEPNAME="@sjcrh/proteinpaint-r"
-	# may reset the dep new version temporarily, for package testing 
+	# may reset the dep new version temporarily, for package testing
 	npm pkg set "dependencies.$RDEPNAME"=$PKGPATH/$RTGZ
 	cd ../container
 fi
