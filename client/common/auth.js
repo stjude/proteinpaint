@@ -135,15 +135,17 @@ export function isInSession(dslabel, route) {
 export async function mayShowAuthUi(init, path, opts = {}) {
 	const ok = { status: 'ok' }
 	if (!dsAuth || path.endsWith('jwt-status')) return ok
+
+	const body = JSON.parse(init.body || `{}`)
+	const params = (path.split('?')[1] || '').split('&').reduce((obj, kv) => {
+		const [key, value] = kv.split('=')
+		obj[key] = value
+		return obj
+	}, {})
+	const q = Object.assign({}, body, params)
+	const route = ((path.split('?')[0] || '').split('//')[1] || '').split('/').slice(1).join('/')
+
 	for (const a of dsAuth) {
-		const body = JSON.parse(init.body || `{}`)
-		const params = (path.split('?')[1] || '').split('&').reduce((obj, kv) => {
-			const [key, value] = kv.split('=')
-			obj[key] = value
-			return obj
-		}, {})
-		const q = Object.assign({}, body, params)
-		const route = ((path.split('?')[0] || '').split('//')[1] || '').split('/').slice(1).join('/')
 		if (q.dslabel == a.dslabel && (a.route == '/**' || route == a.route)) {
 			if (dsAuthOk.has(a)) return ok
 			// dofetch should show the authUi only when all routes ('/**') are protected

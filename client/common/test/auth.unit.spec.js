@@ -25,8 +25,8 @@ tape('setDsAuthOk()', async test => {
 			{ dslabel: 'xyz', route: '/**', type: 'basic', insession: true }
 		]
 	}
-	const fakeDofetch3 = () => ({ status: 'ok' })
-	await auth.setDsAuthOk(opts, fakeDofetch3)
+	//const fakeDofetch3 = () => ({ status: 'ok' }) // uncomment only if there is a saved token for one of the test dslabels
+	await auth.setDsAuthOk(opts /*, fakeDofetch3 */)
 	test.equal(auth.isInSession('abc', 'termdb'), false, 'should detect a dslabel that is not in session')
 	test.equal(auth.isInSession('xyz', 'fake-route'), true, 'should detect a dslabel that is in session')
 	await auth.setTokenByDsRoute(opts.dsAuth[0].dslabel, opts.dsAuth[0].route) // clear jwtByDsRoute[dslabel][route]
@@ -98,8 +98,8 @@ tape('mayShowAuthUi()', async test => {
 	const opts = {
 		dsAuth: [{ dslabel, route, type: 'basic', insession: false }]
 	}
-	const fakeDofetch3 = () => ({ status: 'ok' })
-	await auth.setDsAuthOk(opts, fakeDofetch3) // clear jwtByDsRoute[dslabel][route]
+	//const fakeDofetch3 = () => ({ status: 'ok' }) // uncomment only if there is a saved token for one of the test dslabels
+	await auth.setDsAuthOk(opts /*, fakeDofetch3*/)
 
 	//await auth.setTokenByDsRoute(dslabel, route, fakeJwt)
 	const init = { body: JSON.stringify({ dslabel }) }
@@ -108,8 +108,27 @@ tape('mayShowAuthUi()', async test => {
 			test.true(refs.pwd?.node() instanceof HTMLElement, `should display a password input`)
 			test.notEqual(refs.mask?.style('display'), 'none', `should display an overlay mask`)
 			refs.authUiHolder.selectAll('*').remove()
+			auth.setTokenByDsRoute(dslabel, route) // clear jwtByDsRoute[dslabel][route]
+			test.end()
 		}
 	})
+})
+
+tape('getRequiredAuth()', async test => {
+	test.timeoutAfter(200)
+	test.plan(1)
+
+	const dslabel = 'p6'
+	const route = '/fake-route'
+	await auth.setTokenByDsRoute(dslabel, route) // clear jwtByDsRoute[dslabel][route]
+
+	const dsAuthEntry = { dslabel, route, type: 'basic', insession: false }
+	const opts = {
+		dsAuth: [structuredClone(dsAuthEntry)]
+	}
+	// const fakeDofetch3 = () => ({ status: 'ok' }) // uncomment only if there is a saved token for one of the test dslabels
+	await auth.setDsAuthOk(opts /*, fakeDofetch3*/)
+	test.deepEqual(auth.getRequiredAuth(dslabel, route), dsAuthEntry, `should return the expected required auth`)
 
 	await auth.setTokenByDsRoute(dslabel, route) // clear jwtByDsRoute[dslabel][route]
 	test.end()
