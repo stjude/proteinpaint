@@ -267,7 +267,7 @@ async function getFilesAndShowTable(obj) {
 		}
 
 		// Debug output
-		console.log('Sending to GRIN2:', caseFiles)
+		//console.log('Sending to GRIN2:', caseFiles)
 
 		if (Object.keys(caseFiles).length === 0) return
 
@@ -301,6 +301,18 @@ async function getFilesAndShowTable(obj) {
 
 			// Handle different response types
 			if (response instanceof Blob) {
+				// Check if the blob is too small (might indicate an error)
+				if (response.size < 500) {
+					// For debugging, let's try to read the small blob
+					const text = await response.text()
+					console.log('Small blob content:', text)
+
+					// If it's an error message in text format
+					if (text.includes('error') || text.includes('Error')) {
+						throw new Error(text)
+					}
+				}
+
 				// Display the image result
 				const imageUrl = URL.createObjectURL(response)
 
@@ -315,7 +327,21 @@ async function getFilesAndShowTable(obj) {
 					.style('overflow', 'auto')
 
 				// Add the image
-				imgContainer.append('img').attr('src', imageUrl).attr('alt', 'GRIN2 Analysis Result').style('max-width', '100%')
+				const img = imgContainer
+					.append('img')
+					.attr('src', imageUrl)
+					.attr('alt', 'GRIN2 Analysis Result')
+					.style('max-width', '100%')
+
+				// Add error handler for image loading failures
+				img.node().onerror = () => {
+					console.error('Image failed to load')
+					imgContainer.html('') // Clear container
+					imgContainer
+						.append('div')
+						.attr('class', 'sja_error')
+						.text('Failed to load image result. The analysis may have encountered an error.')
+				}
 
 				// Add download button for the image
 				obj.resultDiv
