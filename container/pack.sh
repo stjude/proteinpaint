@@ -124,6 +124,20 @@ if [[ "$CHANGEDWS" == *"rust"* ]]; then
 
     echo "Copying compiled rust binaries to target/release ..."
     cp "$RUST_BINARIES_DIR"/* target/release/
+
+    echo "Ensuring target/* is included in package.json files array..."
+
+      node -e '
+        const fs = require("fs");
+        const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
+        if (!pkg.files.includes("target/*")) {
+          pkg.files.push("target/*");
+          fs.writeFileSync("package.json", JSON.stringify(pkg, null, 2) + "\n");
+          console.log("\"target/*\" added to package.json files array.");
+        } else {
+          console.log("\"target/*\" already present in package.json files array.");
+        }
+      '
   else
     echo "RUST_BINARIES_DIR not found at $RUST_BINARIES_DIR — skipping binary copy."
   fi
