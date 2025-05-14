@@ -32,52 +32,23 @@ jobs:
 
   build:
     needs: check-user-permissions
-    timeout-minutes: 150
-    if: github.event.pull_request.draft == false
     runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    outputs:
+      updated_rust: ${{ steps.check-rust-changes.outputs.updated_rust }}
     steps:
       - uses: actions/checkout@v3
         with:
-          token: ${{ secrets.PAT }}
+          fetch-depth: 10
 
-      - name: Login to Github
-        uses: docker/login-action@v3.4.0
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.PAT }}
-
-      - name: Install dependencies for canvas
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            build-essential \
-            libcairo2-dev \
-            libpango1.0-dev \
-            libjpeg-dev \
-            libgif-dev \
-            librsvg2-dev      
-
-      # Setup .npmrc file to publish to GitHub Packages
-      - uses: actions/setup-node@v3
+      - uses: actions/setup-node@v4
         with:
           cache: 'npm'
           node-version: '22'
-          registry-url: 'https://registry.npmjs.org'
-          scope: '@sjcrh'
 
-      - name: Run npm ci
-        run: npm ci
-
-      - name: Copy serverconfig.json to root
+      - name: Install PP packages
         run: |
-          cp container/ci/serverconfig.json container/
-
-      - name: Create cache folder
-        run: mkdir cache
-
-      - name: Install xvfb
-        run: sudo apt-get install xvfb
+          npm ci
 
       - name: TSC
         run: |
@@ -89,7 +60,40 @@ jobs:
           cd ../../server
           npx tsc
           cd ../client
-          npm run tsc
+          npm run tsc  
+
+      - name: Check for Rust workspace changes
+        id: check-rust-changes
+        run: |
+          CHANGEDWS=$(./build/bump.js prerelease)
+          
+          if [[ "$CHANGEDWS" == *"rust"* ]]; then
+            echo "Rust workspace changes detected"
+            echo "updated_rust=true" >> $GITHUB_OUTPUT
+          else
+            echo "No Rust workspace changes detected"
+            echo "updated_rust=false" >> $GITHUB_OUTPUT
+          fi
+
+  rust-build:
+    if: needs.build.outputs.updated_rust == 'true'
+    needs: build
+    uses: ./.github/workflows/CD-rust-build.yml
+
+  docker-with-rust:
+    needs: rust-build
+    if: needs.build.outputs.updated_rust == 'true'
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 10
+
+      - name: Download Rust binaries
+        uses: actions/download-artifact@v4
+        with:
+          name: rust-binaries
+          path: rust-binaries
 
       - name: Build image
         run: |
@@ -102,11 +106,11 @@ jobs:
             echo "Skipping build and publishing"
             exit 0
           fi
-          
+
           ./pack.sh
           mkdir -p ./deps/tmppack
           cp -a ./tmppack/. ./deps/tmppack/
-          
+
           cd deps
           ./version.sh deps
           ./build.sh -m "ghcr.io/stjude/"
@@ -117,6 +121,11 @@ jobs:
           sleep 10
           cd ..
           xvfb-run --auto-servernum npm run test:integration
+          
+          if [[ "$BRANCH" =~ ^(release|prerelease) ]]; then
+            echo "On release/prerelease branch, not merging to master."
+            exit 0
+          fi
 
           HASH=$(git rev-parse --short HEAD 2>/dev/null)
           docker push ghcr.io/stjude/ppbase:latest
@@ -124,11 +133,6 @@ jobs:
           docker push ghcr.io/stjude/ppfull:$TAG
           docker push ghcr.io/stjude/ppserver:latest
           docker push ghcr.io/stjude/ppfull:latest
-          
-          if [[ "$BRANCH" =~ ^(release|prerelease) ]]; then
-            echo "On release/prerelease branch, not merging to master."
-            exit 0
-          fi
 
           cd container
           ./update_deps_version.sh $TAG ./full/Dockerfile
@@ -149,4 +153,4 @@ jobs:
           git commit -m "Update deps version to $TAG"
           git stash -a
           git pull --rebase
-          git push origin master
+          git push origin master      
