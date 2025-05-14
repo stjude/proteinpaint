@@ -1612,57 +1612,57 @@
   "common/auth.js": {
     "lines": {
       "total": 96,
-      "covered": 70,
+      "covered": 74,
       "skipped": 0,
-      "pct": 72.91
+      "pct": 77.08
     },
     "functions": {
       "total": 17,
-      "covered": 11,
+      "covered": 12,
       "skipped": 0,
-      "pct": 64.7
+      "pct": 70.58
     },
     "statements": {
       "total": 115,
-      "covered": 76,
+      "covered": 81,
       "skipped": 0,
-      "pct": 66.08
+      "pct": 70.43
     },
     "branches": {
       "total": 103,
-      "covered": 55,
+      "covered": 61,
       "skipped": 0,
-      "pct": 53.39
+      "pct": 59.22
     },
     "lowestPct": {
-      "curr": 53.39,
+      "curr": 59.22,
       "prev": 55.55,
-      "diff": -2.1599999999999966
+      "diff": 3.6700000000000017
     },
     "averagePct": {
-      "curr": 64.27,
+      "curr": 69.3275,
       "prev": 65.64,
-      "diff": -1.3700000000000045
+      "diff": 3.6875
     }
   },
   "common/test/auth.unit.spec.js": {
     "lines": {
-      "total": 66,
-      "covered": 64,
+      "total": 76,
+      "covered": 76,
       "skipped": 0,
-      "pct": 96.96
+      "pct": 100
     },
     "functions": {
-      "total": 7,
-      "covered": 5,
+      "total": 6,
+      "covered": 6,
       "skipped": 0,
-      "pct": 71.42
+      "pct": 100
     },
     "statements": {
-      "total": 66,
-      "covered": 64,
+      "total": 76,
+      "covered": 76,
       "skipped": 0,
-      "pct": 96.96
+      "pct": 100
     },
     "branches": {
       "total": 0,
@@ -1671,14 +1671,14 @@
       "pct": 100
     },
     "lowestPct": {
-      "curr": 71.42,
-      "prev": 0,
-      "diff": 71.42
+      "curr": 100,
+      "prev": 71.42,
+      "diff": 28.58
     },
     "averagePct": {
-      "curr": 91.335,
-      "prev": 0,
-      "diff": 91.335
+      "curr": 100,
+      "prev": 91.335,
+      "diff": 8.665000000000006
     }
   },
   "plots/scatter/model/scatterModel.ts": {
