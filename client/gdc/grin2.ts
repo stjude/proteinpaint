@@ -1,19 +1,11 @@
 import { dofetch3 } from '#common/dofetch'
 import { make_radios, renderTable, sayerror, Menu, table2col } from '#dom'
-import { fileSize } from '#shared/fileSize.js'
 import { select } from 'd3-selection'
 
 /*
 a UI to list open-access maf and cnv files from current cohort
-let user selects some, for the backend to generate an aggregated maf file and download to user
-
-filter0=str
-    optional, stringified json obj as the cohort filter from gdc ATF
-    simply pass to backend to include in api queries
-callbacks{ postRender() }
-
-obj {} TODO convert to class and declare properties
-
+let user selects some, for the backend to run GRIN2 analysis
+and display the resulting visualization
 */
 
 const tip = new Menu()
@@ -26,13 +18,11 @@ const tableColumns = [
 	{ label: 'File Size', barplot: { tickFormat: '~s' }, sortable: true } // barchart column not sortable yet
 ]
 
-// list of gdc maf file columns; selected ones are used for output
-const mafColumns = [
-	{ column: 'gene.name', selected: true },
-	{ column: 'nsubj.fusion', selected: true },
-	{ column: 'nsubj.gain', selected: true },
-	{ column: 'nsubj.loss', selected: true },
-	{ column: 'nsubj.mutation', selected: true }
+// list of analysis options
+const analysisOptions = [
+	{ option: 'includeGain', selected: true, label: 'Include Gain' },
+	{ option: 'includeLoss', selected: true, label: 'Include Loss' },
+	{ option: 'includeFusion', selected: true, label: 'Include Fusion' }
 ]
 
 export async function gdcMAFui({ holder, filter0, callbacks, debugmode = false }) {
@@ -50,15 +40,6 @@ export async function gdcMAFui({ holder, filter0, callbacks, debugmode = false }
 				if (typeof callbacks[n] != 'function') throw `callbacks.${n} not function`
 			}
 		}
-		{
-			// validate column names in case of human err
-			const cn = new Set()
-			for (const c of mafColumns) {
-				if (!c.column) throw '.column missing from an element'
-				if (cn.has(c.column)) throw 'duplicate column: ' + c.column
-				cn.add(c.column)
-			}
-		}
 		update({ filter0 })
 	} catch (e) {
 		console.log(e)
@@ -72,11 +53,12 @@ export async function gdcMAFui({ holder, filter0, callbacks, debugmode = false }
 			errDiv: holder.append('div'),
 			controlDiv: holder.append('div'),
 			tableDiv: holder.append('div'),
+			resultDiv: holder.append('div').style('margin-top', '20px'),
 			opts: {
 				filter0,
 				experimentalStrategy: 'WXS'
 			},
-			busy: false, // when downloading, set to true for disabling ui interactivity
+			busy: false, // when analyzing, set to true for disabling ui interactivity
 			mafTableArg: null,
 			expStrategyRadio: null
 		}
@@ -94,9 +76,9 @@ function makeControls(obj) {
 	let clickText
 	function updateText() {
 		clickText.text(
-			`${mafColumns.reduce((c, i) => c + (i.selected ? 1 : 0), 0)} of ${
-				mafColumns.length
-			} columns selected. Click to change`
+			`${analysisOptions.reduce((c, i) => c + (i.selected ? 1 : 0), 0)} of ${
+				analysisOptions.length
+			} options selected. Click to change`
 		)
 	}
 	const table = table2col({ holder: obj.controlDiv })
@@ -116,24 +98,24 @@ function makeControls(obj) {
 	}
 
 	{
-		const [, td2] = table.addRow('Output Columns')
+		const [, td2] = table.addRow('Analysis Options')
 		clickText = td2
 			.append('span')
 			.attr('class', 'sja_clbtext')
 			.on('click', event => {
 				const rows = [],
 					selectedRows = []
-				for (const [i, c] of mafColumns.entries()) {
-					rows.push([{ value: c.column }])
+				for (const [i, c] of analysisOptions.entries()) {
+					rows.push([{ value: c.label }])
 					if (c.selected) selectedRows.push(i)
 				}
 				renderTable({
 					div: tip.clear().showunder(event.target).d,
 					rows,
-					columns: [{ label: 'Column Name' }],
+					columns: [{ label: 'Option' }],
 					selectedRows,
 					noButtonCallback: (i, n) => {
-						mafColumns[i].selected = n.checked
+						analysisOptions[i].selected = n.checked
 						updateText()
 					}
 				})
@@ -145,6 +127,7 @@ function makeControls(obj) {
 
 async function getFilesAndShowTable(obj) {
 	obj.tableDiv.selectAll('*').remove()
+	obj.resultDiv.selectAll('*').remove()
 	const wait = obj.tableDiv.append('div').style('margin', '30px 10px 10px 10px').text('Loading...')
 
 	let result // convenient for accessing outside of try-catch
@@ -154,20 +137,27 @@ async function getFilesAndShowTable(obj) {
 			experimentalStrategy: obj.opts.experimentalStrategy
 		}
 		if (obj.opts.filter0) body.filter0 = obj.opts.filter0
+
+		// Keep using the existing gdc/maf endpoint which now includes CNV files
 		result = await dofetch3('gdc/maf', { body })
+
 		if (result.error) throw result.error
 		if (!Array.isArray(result.files)) throw 'result.files[] not array'
-		if (result.files.length == 0) throw 'No MAF files available.'
+		if (result.files.length == 0) throw 'No MAF/CNV files available.'
 
 		// render
 		if (result.filesTotal > result.files.length) {
-			wait.text(`Showing first ${result.files.length} MAF files out of ${result.filesTotal} total.`)
+			wait.text(`Showing first ${result.files.length} files out of ${result.filesTotal} total.`)
 		} else {
-			wait.text(`Showing ${result.files.length} MAF files.`)
+			wait.text(`Showing ${result.files.length} files.`)
 		}
 
 		const rows = []
 		for (const f of result.files) {
+			// Determine if the file is MAF or CNV
+			const isMaf = f.id.toLowerCase().includes('.maf') || f.data_format === 'MAF'
+			f.fileFormat = isMaf ? 'maf' : 'cnv'
+
 			const row = [
 				{
 					html: `<a href=https://portal.gdc.cancer.gov/files/${f.id} target=_blank>${f.case_submitter_id}</a>`,
@@ -202,9 +192,9 @@ async function getFilesAndShowTable(obj) {
 			selectedRows: [], //[198], // uncomment out for quicker testing
 			buttons: [
 				{
-					text: 'Submit selected data to GRIN2',
+					text: 'Run GRIN2 Analysis',
 					onChange: updateButtonBySelectionChange,
-					callback: submitSelectedFiles
+					callback: runGRIN2Analysis
 				}
 			]
 		}
@@ -237,8 +227,7 @@ async function getFilesAndShowTable(obj) {
 		select(button.parentElement).style('float', 'left')
 
 		button.disabled = false
-		button.innerHTML =
-			sum < result.maxTotalSizeCompressed ? `Submit selected data to GRIN2` : `Submit selected data to GRIN2)`
+		button.innerHTML = sum < result.maxTotalSizeCompressed ? `Run GRIN2 Analysis` : `Run GRIN2 Analysis (large files)`
 	}
 
 	/* after table is created, on clicking download btn for first time, create a <span> after download btn,
@@ -248,111 +237,144 @@ async function getFilesAndShowTable(obj) {
     */
 	let serverMessage
 
-	async function submitSelectedFiles(lst, button) {
-		const outColumns = mafColumns.filter(i => i.selected).map(i => i.column)
-		if (outColumns.length == 0) {
-			window.alert('No output columns selected.')
-			return
-		}
-
+	async function runGRIN2Analysis(lst, button) {
 		mayCreateServerMessageSpan(button)
 
-		const fileIdLst = []
+		// Format the data according to what the Rust code expects
+		const caseFiles = {}
+
 		for (const i of lst) {
-			fileIdLst.push(result.files[i].id)
+			const file = result.files[i]
+			const caseId = file.case_submitter_id
+
+			// Determine the file format - use existing fileFormat field or infer from other properties
+			const fileFormat =
+				file.fileFormat || (file.id.toLowerCase().includes('.maf') || file.data_format === 'MAF' ? 'maf' : 'cnv')
+
+			// Convert to lowercase to match Rust expectations (maf or cnv)
+			const formatKey = fileFormat.toLowerCase()
+
+			// Initialize case entry if it doesn't exist
+			if (!caseFiles[caseId]) {
+				caseFiles[caseId] = {
+					maf: null,
+					cnv: null
+				}
+			}
+
+			// Set the file ID in the appropriate field
+			caseFiles[caseId][formatKey] = file.id
 		}
-		if (fileIdLst.length == 0) return
+
+		// Debug output
+		console.log('Sending to GRIN2:', caseFiles)
+
+		if (Object.keys(caseFiles).length === 0) return
 
 		const oldText = button.innerHTML
 		button.innerHTML = 'Analyzing... Please wait'
 		button.disabled = true
 		serverMessage.style('display', 'none')
 
-		// may disable the "Aggregate" button here and re-enable later
+		// Clear previous results
+		obj.resultDiv.selectAll('*').remove()
 
-		let data
 		try {
 			obj.busy = true
 			obj.expStrategyRadio.inputs.property('disabled', true)
-			data = await dofetch3('gdc/mafBuild', { body: { fileIdLst, columns: outColumns } })
-			if (!Object.keys(data).length) throw 'server returned blank multipart'
+
+			// Call the GRIN2 run endpoint with the correctly formatted data
+			const response = await dofetch3('gdc/runGRIN2', {
+				body: caseFiles
+			})
+
 			obj.busy = false
 			obj.expStrategyRadio.inputs.property('disabled', false)
+
+			// Log the response type for debugging
+			console.log('Response type:', typeof response)
+			if (response instanceof Blob) {
+				console.log('Response is a Blob, size:', response.size)
+			} else {
+				console.log('Response details:', response)
+			}
+
+			// Handle different response types
+			if (response instanceof Blob) {
+				// Display the image result
+				const imageUrl = URL.createObjectURL(response)
+
+				// Add title for the results
+				obj.resultDiv.append('h3').text('GRIN2 Analysis Results')
+
+				// Create image container with fixed dimensions
+				const imgContainer = obj.resultDiv
+					.append('div')
+					.style('margin-top', '10px')
+					.style('max-width', '100%')
+					.style('overflow', 'auto')
+
+				// Add the image
+				imgContainer.append('img').attr('src', imageUrl).attr('alt', 'GRIN2 Analysis Result').style('max-width', '100%')
+
+				// Add download button for the image
+				obj.resultDiv
+					.append('button')
+					.text('Download Image')
+					.style('margin-top', '10px')
+					.on('click', () => {
+						const a = document.createElement('a')
+						a.href = imageUrl
+						a.download = `GRIN2_Analysis_${new Date().toISOString().split('T')[0]}.png`
+						document.body.appendChild(a)
+						a.click()
+						document.body.removeChild(a)
+					})
+
+				// Scroll to the results
+				obj.resultDiv.node().scrollIntoView({ behavior: 'smooth' })
+			} else {
+				// If response is not a blob, it might be JSON with information
+				if (response.status === 'error') {
+					throw new Error(response.error || 'Unknown error occurred')
+				} else if (response.imagePath) {
+					// If the server returns an image path instead of the image itself
+					obj.resultDiv.append('h3').text('GRIN2 Analysis Results')
+					obj.resultDiv
+						.append('img')
+						.attr('src', response.imagePath)
+						.attr('alt', 'GRIN2 Analysis Result')
+						.style('max-width', '100%')
+				} else {
+					// Handle other response formats
+					obj.resultDiv.append('h3').text('GRIN2 Analysis Complete')
+					obj.resultDiv
+						.append('pre')
+						.style('max-height', '400px')
+						.style('overflow', 'auto')
+						.style('background', '#f5f5f5')
+						.style('padding', '10px')
+						.style('border-radius', '4px')
+						.text(JSON.stringify(response, null, 2))
+				}
+			}
 		} catch (e) {
+			console.error('GRIN2 Analysis Error:', e)
 			sayerror(obj.errDiv, e)
+			obj.resultDiv
+				.append('div')
+				.attr('class', 'sja_error')
+				.text('Error running GRIN2 analysis: ' + (e.message || e))
+		} finally {
 			button.innerHTML = oldText
 			button.disabled = false
 			obj.busy = false
-			obj.expStrategyRadio.property('disabled', false)
-			return
+			obj.expStrategyRadio.inputs.property('disabled', false)
 		}
-
-		button.innerHTML = oldText
-		button.disabled = false
-
-		if (data.errors?.body) {
-			// expect gdc/mafBuild errors to be an array
-			const errors = data.errors.body || []
-			if (Array.isArray(errors)) {
-				const fileErrors = errors.filter(d => d.url)
-				if (fileErrors.length) displayRunStatusErrors(fileErrors)
-				const nonFileErrors = errors.filter(d => !d.url)
-				for (const e of nonFileErrors) sayerror(obj.errDiv, e.error || e.message)
-			}
-		}
-
-		// download the file to client
-		if (!data.gzfile) throw 'missing gzfile from response'
-		const href = URL.createObjectURL(data.gzfile.body)
-		// console.log(394, [octetData?.body.size, href.length, href], octetData)
-		const a = document.createElement('a')
-		a.href = href
-		a.download = `cohortMAF.${new Date().toISOString().split('T')[0]}.maf.gz`
-		a.style.display = 'none'
-		document.body.appendChild(a)
-		a.click()
-		document.body.removeChild(a)
 	}
-
 	function mayCreateServerMessageSpan(button) {
 		if (serverMessage) return // message <span> are already created
 		const holder = select(button.parentElement)
 		serverMessage = holder.append('span').attr('class', 'sja_clbtext').style('display', 'none')
-	}
-
-	function displayRunStatusErrors(errors) {
-		// errors[] each ele: {error:str, url:str}
-		const rows = [] // map errors[] to rows[] to show in table of menu
-		for (const e of errors) {
-			if (typeof e.error != 'string') throw '.error=string missing from an entry'
-			if (typeof e.url != 'string') throw '.url=string missing from an entry'
-			// url should end in file uuid, which can be used to match with original record of that file
-			const l = e.url.split('/')
-			const uuid = l[l.length - 1]
-			const fo = result.files.find(i => i.id == uuid)
-			if (fo) {
-				// record is found for this failed uuid
-				rows.push([
-					{ html: `<a href=${e.url} target=_blank>${fo.case_submitter_id}</a>` },
-					{ value: fo.project_id },
-					{ value: fileSize(fo.file_size) },
-					{ value: e.error }
-				])
-			} else {
-				// file is not found; could happen in testing when backend hardcodes a uuid not in result.files[], or even gdc backend changes..
-				rows.push([{ value: uuid }, { value: '?' }, { value: '?' }, { value: e.error }])
-			}
-		}
-		serverMessage
-			.text(`${errors.length} empty/failed file${errors.length > 1 ? 's' : ''}`)
-			.style('display', '')
-			.on('click', event => {
-				renderTable({
-					rows,
-					columns: [{ column: '' }, { column: '' }, { column: '' }, { column: '' }],
-					showHeader: false,
-					div: tip.clear().showunder(event.target).d
-				})
-			})
 	}
 }
