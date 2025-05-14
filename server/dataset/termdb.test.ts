@@ -2,6 +2,7 @@ import type { Mds3 } from '#types'
 import serverconfig from '@sjcrh/proteinpaint-server/src/serverconfig.js'
 import * as path from 'path'
 import { existsSync, unlinkSync, symlinkSync, access, constants } from 'fs'
+
 // import { WSISample } from '@sjcrh/proteinpaint-types/routes/wsisamples.js'
 
 /*
@@ -32,7 +33,8 @@ export default function (): Mds3 {
 	return {
 		isMds3: true,
 		isSupportedChartOverride: {
-			runChart: () => true
+			runChart: () => true,
+			eventCount: () => true
 		},
 		cohort: {
 			massNav: {

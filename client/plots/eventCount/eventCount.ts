@@ -5,8 +5,6 @@ import { EventCountViewModel } from './viewmodel/eventCountViewModel.ts'
 import { EventCountView } from './view/eventCountView.ts'
 import { plotColor } from '#shared/common.js'
 import { ScatterInteractivity } from '../scatter/viewmodel/scatterInteractivity.ts'
-import { controlsInit } from '../controls.js'
-import { downloadSingleSVG } from '../../common/svg.download.js'
 import { Runchart } from '../runchart/runchart.ts'
 import { getColors } from '#shared/common.js'
 
@@ -48,23 +46,6 @@ export class EventCount extends Runchart {
 		this.vm.render()
 		this.view.dom.loadingDiv.style('display', 'none')
 		this.vm.setTools()
-	}
-
-	async setControls() {
-		this.view.dom.controlsHolder.selectAll('*').remove()
-		const inputs = await this.view.getControlInputs()
-		this.components = {
-			controls: await controlsInit({
-				app: this.app,
-				id: this.id,
-				holder: this.view.dom.controlsHolder,
-				inputs
-			})
-		}
-		// TODO: handle multiple chart download when there is a divide by term
-		this.components.controls.on('downloadClick.scatter', () => {
-			downloadSingleSVG(this.view.dom.svg, 'scatter.svg', this.opts.holder.node())
-		})
 	}
 }
 
