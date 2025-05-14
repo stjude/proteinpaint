@@ -89,6 +89,15 @@ jobs:
         with:
           fetch-depth: 10
 
+      - uses: actions/setup-node@v4
+        with:
+          cache: 'npm'
+          node-version: '22'
+
+      - name: Install PP packages
+        run: |
+          npm ci    
+
       - name: Download Rust binaries
         uses: actions/download-artifact@v4
         with:
