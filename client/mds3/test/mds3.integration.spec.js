@@ -21,7 +21,9 @@ Custom cnv (category but not numeric value), WITH sample
 Custom variants, missing or invalid mclass
 Custom variants WITH samples (allows some to be without)
 Custom data with samples and sample selection
+skewerMode with improper setting and should not break
 Numeric mode custom dataset, with mode change
+Custom bcf with sample
 
 
 this script exports following test methods to share with non-CI test using GDC/clinvar
@@ -399,6 +401,9 @@ export async function testVariantLeftLabel(test, tk, bb) {
 			test.ok(expandedText, 'Should find some expanded skewers')
 		}
 	}
+
+	// TODO test that view mode change options are not shown
+
 	tk.menutip.hide()
 }
 
@@ -1077,6 +1082,41 @@ tape('Custom cnv (category but not numeric value), WITH sample', test => {
 			tk.menutip.d.remove()
 			holder.remove()
 		}
+		test.end()
+	}
+})
+
+tape('skewerMode with improper setting and should not break', test => {
+	const holder = getHolder()
+
+	const custom_variants = [
+		{ chr: 'chr17', pos: 7676228, mname: 'P75', class: 'M', dt: 1, lpv: 1, value2: 4 },
+		{ chr: 'chr17', pos: 7675208, mname: 'T73', class: 'M', dt: 1, lpv: 2, value2: 5 },
+		{ chr: 'chr17', pos: 7674922, mname: 'WTPinsP75', class: 'I', dt: 1, lpv: 3, value2: 6 },
+		{ chr: 'chr17', pos: 7674225, mname: 'data point', class: 'I', dt: 1 }
+	]
+
+	runproteinpaint({
+		holder,
+		noheader: true,
+		genome: 'hg38-test',
+		gene: 'NM_000546',
+		tracks: [
+			{
+				type: 'mds3',
+				// type=skewer is supplied instead of type=numeric
+				skewerModes: [{ type: 'skewer', byAttribute: 'lpv', label: '-log10(p-value)', inuse: true, axisheight: 100 }],
+				name: 'AA sites with numbers',
+				custom_variants,
+				axisSetting: { auto: 1 },
+				callbackOnRender
+			}
+		]
+	})
+
+	async function callbackOnRender(tk, bb) {
+		await testVariantLeftLabel(test, tk, bb)
+		if (test._ok) holder.remove()
 		test.end()
 	}
 })
