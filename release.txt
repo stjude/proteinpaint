@@ -1,1 +1,2 @@
-
+Fixes:
+- handle geneVariant dtTerms in getFilterName()
