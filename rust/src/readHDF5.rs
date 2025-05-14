@@ -19,9 +19,9 @@
 use hdf5::types::{FixedAscii, VarLenAscii};
 use hdf5::{File, Result};
 use ndarray::Dim;
-use ndarray::{Array1, s};
+use ndarray::{s, Array1};
 use rayon::prelude::*;
-use serde_json::{Map, Value, json};
+use serde_json::{json, Map, Value};
 use std::io;
 use std::sync::Arc;
 use std::time::Instant;
