@@ -173,11 +173,14 @@ upon error, throw err message as a string
 		let opts
 		if (urlp.has('mass-session-file')) {
 			const file = urlp.get('mass-session-file')
-			const jsonFile = await client.dofetch3(`/textfile`, {
+			const d = await client.dofetch3(`/textfile`, {
 				method: 'POST',
 				body: JSON.stringify({ file })
 			})
-			const state = JSON.parse(jsonFile.text)
+			if (typeof d != 'object') throw 'data not object'
+			if (d.error) throw d.error
+			if (!d.text) throw 'data.text missing'
+			const state = JSON.parse(d.text)
 			opts = {
 				debug: arg.app.debugmode,
 				holder: arg.holder,
@@ -186,14 +189,16 @@ upon error, throw err message as a string
 				pkgver: arg.app.pkgver,
 				launchDate: arg.app.launchDate
 			}
-		}
-		if (urlp.has('mass-session-url')) {
+		} else if (urlp.has('mass-session-url')) {
 			const url = urlp.get('mass-session-url')
-			const jsonURL = await client.dofetch3('/urltextfile', {
+			const d = await client.dofetch3('/urltextfile', {
 				method: 'POST',
 				body: JSON.stringify({ url })
 			})
-			const state = JSON.parse(jsonURL.text)
+			if (typeof d != 'object') throw 'data not object'
+			if (d.error) throw d.error
+			if (!d.text) throw 'data.text missing'
+			const state = JSON.parse(d.text)
 			opts = {
 				debug: arg.app.debugmode,
 				holder: arg.holder,
