@@ -1788,5 +1788,41 @@
       "prev": 0,
       "diff": 7.01
     }
+  },
+  "dom/toggleButtons.ts": {
+    "lines": {
+      "total": 87,
+      "covered": 72,
+      "skipped": 0,
+      "pct": 82.75
+    },
+    "functions": {
+      "total": 22,
+      "covered": 19,
+      "skipped": 0,
+      "pct": 86.36
+    },
+    "statements": {
+      "total": 102,
+      "covered": 81,
+      "skipped": 0,
+      "pct": 79.41
+    },
+    "branches": {
+      "total": 124,
+      "covered": 86,
+      "skipped": 0,
+      "pct": 69.35
+    },
+    "lowestPct": {
+      "curr": 69.35,
+      "prev": 0,
+      "diff": 69.35
+    },
+    "averagePct": {
+      "curr": 79.4675,
+      "prev": 0,
+      "diff": 79.4675
+    }
   }
 }
