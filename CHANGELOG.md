@@ -7,6 +7,8 @@ All notable changes to this project will be documented in this file.
 Features:
 - Build the pp docker image by using an R image as the base image.
 - Use cached steps across ppbase, ppserver, and ppfull build jobs.
+- Recompiling Rust binaries when Rust code changes and adding to Docker container
+- Add Rust detection and build to CI integration workflow for docker image
 
 Fixes:
 - avoid blank sunburst when samples are not annotated by sunburst terms; just show table view
