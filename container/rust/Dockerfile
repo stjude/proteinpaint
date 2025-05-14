@@ -21,8 +21,10 @@ RUN apt-get update && apt-get install -y \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 
-# Install Rust with rustup (installs cargo, rustc, rustup)
-RUN curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain 1.86.0
+# Install Rust with rustup and set default toolchain
+RUN curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain 1.86.0 && \
+    . "$HOME/.cargo/env" && \
+    rustup default 1.86.0
 
 # Add Rust to PATH
 ENV PATH="/root/.cargo/bin:${PATH}"
