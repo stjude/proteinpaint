@@ -105,6 +105,17 @@ class gsea {
 					{ label: 'FDR', value: 'fdr' },
 					{ label: 'Top Gene Sets', value: 'top' }
 				]
+			},
+			{
+				label: 'GSEA method',
+				type: 'radio',
+				chartType: 'gsea',
+				settingsKey: 'gsea_method',
+				title: 'Toggle between blitzgsea and CERNO method',
+				options: [
+					{ label: 'blitzgsea', value: 'blitzgsea' },
+					{ label: 'CERNO', value: 'cerno' }
+				]
 			}
 		]
 
@@ -321,7 +332,8 @@ add:
 			fold_change: self.config.gsea_params.fold_change,
 			geneSetGroup: self.settings.pathway,
 			filter_non_coding_genes: self.settings.filter_non_coding_genes,
-			num_permutations: self.settings.num_permutations
+			num_permutations: self.settings.num_permutations,
+			method: self.settings.gsea_method
 		}
 		output = await rungsea(body, self.dom)
 		if (output.error) {
@@ -364,6 +376,7 @@ add:
 	const output_keys = Object.entries(output.data).map(([key, value]) => {
 		return { key, value } // Convert to an array of objects
 	})
+
 	if (self.settings.fdr_or_top == 'top') {
 		// Sorting the top (top_genesets) genesets in decreasing order
 		output_keys.sort((i, j) => Number(i.value.fdr) - Number(j.value.fdr))
@@ -391,16 +404,31 @@ add:
 	self.dom.tableDiv.selectAll('*').remove()
 	const d_gsea = self.dom.tableDiv.append('div')
 	// table columns showing analysis results for each gene set
-	self.gsea_table_cols = [
-		{ label: 'Gene Set', sortable: true },
-		//{ label: 'Enrichment Score' },
-		{ label: 'Normalized Enrichment Score', barplot: { axisWidth: 200 }, sortable: true },
-		{ label: 'Gene Set Size', sortable: true },
-		{ label: 'P value', sortable: true },
-		//{ label: 'Sidak' },
-		{ label: 'FDR', sortable: true },
-		{ label: 'Leading Edge' }
-	]
+	self.gsea_table_cols = []
+	if (self.settings.gsea_method == 'blitzgsea') {
+		self.gsea_table_cols = [
+			{ label: 'Gene Set', sortable: true },
+			//{ label: 'Enrichment Score' },
+			{ label: 'Normalized Enrichment Score', barplot: { axisWidth: 200 }, sortable: true },
+			{ label: 'Gene Set Size', sortable: true },
+			{ label: 'P value', sortable: true },
+			//{ label: 'Sidak' },
+			{ label: 'FDR', sortable: true },
+			{ label: 'Leading Edge' }
+		]
+	} else if (self.settings.gsea_method == 'cerno') {
+		self.gsea_table_cols = [
+			{ label: 'Gene Set', sortable: true },
+			{ label: 'Area Under Curve', barplot: { axisWidth: 200 }, sortable: true },
+			{ label: 'Enrichment Score', barplot: { axisWidth: 200 }, sortable: true },
+			{ label: 'Gene Set Size', sortable: true },
+			{ label: 'P value', sortable: true },
+			{ label: 'FDR', sortable: true },
+			{ label: 'Leading Edge' }
+		]
+	} else {
+		throw 'Unknown method:' + self.settings.gsea_method
+	}
 	let download = {}
 
 	if (self.config.chartType == 'differentialAnalysis') {
@@ -435,6 +463,7 @@ add:
 	const geneSetIdx = self.gsea_table_rows.findIndex(row => row[0].value == self.config.gsea_params.geneset_name)
 	const selectedRows = geneSetIdx > -1 ? [geneSetIdx] : []
 
+	console.log('self.gsea_table_rows:', self.gsea_table_rows)
 	renderTable({
 		download,
 		columns: self.gsea_table_cols,
@@ -469,28 +498,39 @@ add:
 
 function setResultsRows(output_keys, iter, self) {
 	const pathway_name = output_keys[iter].key
-	// const es = output_keys[iter].value.es
-	// ? roundValueAuto(output_keys[iter].value.es)
-	// : output_keys[iter].value.es
-	const nes = output_keys[iter].value.nes ? roundValueAuto(output_keys[iter].value.nes) : output_keys[iter].value.nes
 	const pval = output_keys[iter].value.pval
 		? roundValueAuto(output_keys[iter].value.pval)
 		: output_keys[iter].value.pval
-	// const sidak = output_keys[iter].value.sidak
-	// 	? roundValueAuto(output_keys[iter].value.sidak)
-	// 	: output_keys[iter].value.sidak
 	const fdr = output_keys[iter].value.fdr ? roundValueAuto(output_keys[iter].value.fdr) : output_keys[iter].value.fdr
-
-	self.gsea_table_rows.push([
-		{ value: pathway_name },
-		//{ value: es },
-		{ value: nes },
-		{ value: output_keys[iter].value.geneset_size },
-		{ value: pval },
-		//{ value: sidak },
-		{ value: fdr },
-		{ value: output_keys[iter].value.leading_edge }
-	])
+	if (self.settings.gsea_method == 'blitzgsea') {
+		const nes = output_keys[iter].value.nes ? roundValueAuto(output_keys[iter].value.nes) : output_keys[iter].value.nes
+		// const sidak = output_keys[iter].value.sidak
+		// 	? roundValueAuto(output_keys[iter].value.sidak)
+		// 	: output_keys[iter].value.sidak
+		self.gsea_table_rows.push([
+			{ value: pathway_name },
+			{ value: nes },
+			{ value: output_keys[iter].value.geneset_size },
+			{ value: pval },
+			//{ value: sidak },
+			{ value: fdr },
+			{ value: output_keys[iter].value.leading_edge }
+		])
+	} else if (self.settings.gsea_method == 'cerno') {
+		const auc = output_keys[iter].value.auc ? roundValueAuto(output_keys[iter].value.auc) : output_keys[iter].value.auc
+		const es = output_keys[iter].value.es ? roundValueAuto(output_keys[iter].value.es) : output_keys[iter].value.es
+		self.gsea_table_rows.push([
+			{ value: pathway_name },
+			{ value: auc },
+			{ value: es },
+			{ value: output_keys[iter].value.geneset_size },
+			{ value: pval },
+			{ value: fdr },
+			{ value: output_keys[iter].value.leading_edge }
+		])
+	} else {
+		throw 'Unknown method:' + self.settings.gsea_method
+	}
 }
 
 // function render_gsea_plot(self, plot_data) {
@@ -566,7 +606,8 @@ export function getDefaultGseaSettings(overrides = {}) {
 		min_gene_set_size_cutoff: 0,
 		max_gene_set_size_cutoff: 20000,
 		filter_non_coding_genes: true,
-		fdr_or_top: 'top'
+		fdr_or_top: 'top',
+		gsea_method: 'blitzgsea'
 	}
 	return Object.assign(defaults, overrides)
 }
