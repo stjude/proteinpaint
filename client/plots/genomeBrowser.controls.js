@@ -216,7 +216,8 @@ class GbControls {
 		// has some tabs! initiate the tab ui, then at <div> of each tab, render contents
 		const toggles = new Tabs({
 			holder: this.opts.holder.append('div').style('border-bottom', 'solid 1px #ccc').style('padding-bottom', '20px'),
-			tabs
+			tabs,
+			hideOnDblClick: true
 		})
 		toggles.main()
 
