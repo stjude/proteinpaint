@@ -98,6 +98,15 @@ jobs:
         run: |
           npm ci    
 
+      - name: Copy serverconfig.json to root
+        shell: bash
+        run: |
+          cp container/ci/serverconfig.json container/
+
+      - name: Create cache folder
+        shell: bash
+        run: mkdir cache
+
       - name: Download Rust binaries
         uses: actions/download-artifact@v4
         with:
