@@ -14,6 +14,7 @@ Fixes:
 - avoid blank sunburst when samples are not annotated by sunburst terms; just show table view
 - dictionary ui new option backToSelectionText avoids duplicating Back handle with geneVariant tvs
 - handle geneVariant dtTerms in getFilterName()
+- broken mds3 legend items will appear when skewer mode is `skewer`
 
 
 ## 2.124.1
