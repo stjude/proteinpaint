@@ -3,6 +3,9 @@ import type { Elem } from 'types/d3'
 export type TabsOpts = {
 	/** optional: if not provided, create new under opts.holder */
 	contentHolder?: Elem
+	/** On double click, the tab content is hidden and there
+	 * is no active tab. Default: false. */
+	hideOnDblClick?: boolean
 	holder: any
 	/**  Optional: Gap between tabs. Must be = '[number]px'
 	 * Only applies to vertical position. Default = '' */
