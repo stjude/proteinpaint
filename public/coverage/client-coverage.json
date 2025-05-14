@@ -1575,10 +1575,10 @@
   },
   "plots/genomeBrowser.controls.js": {
     "lines": {
-      "total": 262,
+      "total": 261,
       "covered": 4,
       "skipped": 0,
-      "pct": 1.52
+      "pct": 1.53
     },
     "functions": {
       "total": 44,
@@ -1587,7 +1587,7 @@
       "pct": 0
     },
     "statements": {
-      "total": 279,
+      "total": 278,
       "covered": 4,
       "skipped": 0,
       "pct": 1.43
@@ -1604,9 +1604,9 @@
       "diff": 0
     },
     "averagePct": {
-      "curr": 0.7375,
-      "prev": 0,
-      "diff": 0.7375
+      "curr": 0.74,
+      "prev": 0.7375,
+      "diff": 0.0024999999999999467
     }
   },
   "common/auth.js": {
