@@ -11,6 +11,7 @@ Features:
 Fixes:
 - avoid blank sunburst when samples are not annotated by sunburst terms; just show table view
 - dictionary ui new option backToSelectionText avoids duplicating Back handle with geneVariant tvs
+- handle geneVariant dtTerms in getFilterName()
 
 
 ## 2.124.1
