@@ -1,12 +1,13 @@
 import { niceNumLabels } from '../dom/niceNumLabels.ts'
 import { convertUnits } from '#shared/helpers.js'
+import { dtTerms } from '#shared/common.js'
 
 /*
 try to provide a meaningful name based on filter content; 
 when filter is single-tvs, return a human-readable label.
-when there's >=2 tvs, which is hard to summarize, return a general name with total number of tvs
+when there's >=2 tvs, which is hard to summarize, return `Filter (n)` and give up
 
-not specific to mds3, may move to client/filter/ or even shared/ in case backend needs to do same
+not specific to mds3, can move to client/filter/ or shared/
 */
 
 export function getFilterName(f) {
@@ -52,6 +53,12 @@ export function getFilterName(f) {
 				// XXX quick fix! only uses first key in tvs.term.values{}
 				return Object.keys(tvs.term.values)[0]
 			default:
+				// after exhausting above term types, find a match from dtTerms[]; this avoids repeating them in many "case" statements
+				for (const dtt of dtTerms) {
+					if (dtt.type == tvs.term.type) {
+						return (tvs.term.geneVariantTerm?.name || '?') + ' ' + dtt.name
+					}
+				}
 				throw 'unknown tvs term type'
 		}
 	}
