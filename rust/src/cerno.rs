@@ -39,6 +39,19 @@ struct pathway_p_value {
     gene_set_size: usize,
 }
 
+#[allow(non_camel_case_types)]
+#[allow(non_snake_case)]
+#[derive(Debug, Serialize, Deserialize)]
+//#[allow(dead_code)]
+struct output_struct {
+    pval: f64,
+    fdr: f64,
+    leading_edge: String,
+    auc: f64,
+    es: f64,
+    geneset_size: usize,
+}
+
 fn main() -> Result<()> {
     let mut input = String::new();
     match io::stdin().read_line(&mut input) {
@@ -205,11 +218,8 @@ fn main() -> Result<()> {
                         }
                         Err(_) => panic!("sqlite database file not found"),
                     }
-                    let output_string = "{\"num_pathways\":".to_string()
-                        + &pathway_p_values.len().to_string()
-                        + &",\"pathways\":"
-                        + &adjust_p_values(pathway_p_values)
-                        + &"}";
+                    let output_string =
+                        "result: {".to_string() + &"\"data\":" + &adjust_p_values(pathway_p_values) + &"}";
                     println!("{}", output_string);
                 }
                 Err(error) => println!("Incorrect json:{}", error),
@@ -307,13 +317,25 @@ fn adjust_p_values(mut original_p_values: Vec<pathway_p_value>) -> String {
             .unwrap_or(Ordering::Equal)
     });
 
-    let mut output_string = "[".to_string();
+    let mut output_string = "{".to_string();
     for i in 0..adjusted_p_values.len() {
-        output_string += &serde_json::to_string(&adjusted_p_values[i]).unwrap();
+        let item = output_struct {
+            pval: adjusted_p_values[i].p_value_original,
+            fdr: adjusted_p_values[i].p_value_adjusted.unwrap(),
+            leading_edge: adjusted_p_values[i].gene_set_hits.clone(),
+            geneset_size: adjusted_p_values[i].gene_set_size,
+            es: adjusted_p_values[i].es,
+            auc: adjusted_p_values[i].auc,
+        };
+        output_string += &format!(
+            "\"{}\":{}",
+            adjusted_p_values[i].pathway_name.clone(),
+            serde_json::to_string(&item).unwrap()
+        );
         if i < adjusted_p_values.len() - 1 {
             output_string += &",".to_string();
         }
     }
-    output_string += &"]".to_string();
+    output_string += &"}".to_string();
     output_string
 }
