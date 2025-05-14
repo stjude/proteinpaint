@@ -162,7 +162,8 @@ export async function mayMakeVariantFilter(tw: RawGvTW, vocabApi: VocabApi) {
 		terms: dtTermsInDs // will load dt terms as custom terms in frontend vocab
 	}
 	// track the parent geneVariant term on each dt term
-	for (const term of tw.term.filter.terms) term.geneVariantTerm = structuredClone(tw.term)
+	const geneVariantTerm = structuredClone(tw.term)
+	for (const term of tw.term.filter.terms) term.geneVariantTerm = geneVariantTerm
 }
 
 export class GvValues extends GvBase {
