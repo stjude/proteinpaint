@@ -201,9 +201,15 @@ function setRenderers(self) {
 			})
 			.on('click', async (event, tab) => {
 				for (const t of self.tabs) {
+					/** Hide tab content on double click if specified */
+					if (self.opts.hideOnDblClick && t.active == true && t === tab) {
+						t.active = false
+						continue
+					}
 					t.active = t === tab
 				}
 				const activeTabIndex = self.tabs.findIndex(t => t.active) //Fix for non-Rx implementations
+
 				/*
 				TODO: self.update() not required for non-RX components
 				Idea is to create super class, then state and stateless components
