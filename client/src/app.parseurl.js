@@ -108,6 +108,15 @@ upon error, throw err message as a string
 		return
 	}
 
+	if (urlp.has('gdcgrin2')) {
+		const _ = await import('../gdc/grin2.ts')
+		_.gdcMAFui({
+			holder: arg.holder,
+			debugmode: arg.debugmode
+		})
+		return
+	}
+
 	if (urlp.has('termdb')) {
 		const value = urlp.get('termdb')
 		const state = typeof value === 'string' ? JSON.parse(value) : value
