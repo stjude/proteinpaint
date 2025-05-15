@@ -41,13 +41,11 @@ export default class WSIViewer extends RxComponentInner {
 		const settings = state.plots.find(p => p.id === this.id).settings as Settings
 		const holder = this.opts.holder
 
-		const data: SampleWSImagesResponse = await dofetch3('samplewsimages', {
-			body: {
-				genome: state.genome || state.vocab.genome,
-				dslabel: state.dslabel || state.vocab.dslabel,
-				sample_id: state.sample_id
-			}
-		})
+		// TODO: Eventually save index to the state?
+		// const index = settings?.index || 0
+		const index = 0
+
+		const data: SampleWSImagesResponse = await this.requestData(state, index)
 
 		const wsimages: WSImage[] = data.sampleWSImages
 
@@ -88,6 +86,28 @@ export default class WSIViewer extends RxComponentInner {
 
 		if (zoomInPoints != undefined) {
 			this.addZoomInEffect(activeImageExtent, zoomInPoints, map)
+			let currentIndex = index
+			let keyPressTimeout: ReturnType<typeof setTimeout>
+			window.addEventListener('keydown', async (event: KeyboardEvent) => {
+				if (event.key === 'ArrowRight') {
+					//TODO: length of annotations?
+					currentIndex += 1
+					clearTimeout(keyPressTimeout)
+				}
+				if (event.key === 'ArrowLeft') {
+					//Do not react if at the starting annotation
+					if (currentIndex === 0) return
+					currentIndex -= 1
+					clearTimeout(keyPressTimeout)
+				}
+				/** In case the user presses the arrows multiple times, wait a third of second
+				 * before animation*/
+				keyPressTimeout = setTimeout(async () => {
+					const newData: SampleWSImagesResponse = await this.requestData(state, currentIndex)
+					const newZoomInPoints = newData.sampleWSImages[settings.displayedImageIndex].zoomInPoints
+					if (newZoomInPoints != undefined) this.addZoomInEffect(activeImageExtent, newZoomInPoints, map)
+				}, 300)
+			})
 		}
 
 		this.addControls(map, activeImage, hasOverlay)
@@ -104,6 +124,17 @@ export default class WSIViewer extends RxComponentInner {
 		}
 
 		this.renderMetadata(holder, wsimageLayers, settings)
+	}
+
+	private async requestData(state: any, index: number): Promise<SampleWSImagesResponse> {
+		return await dofetch3('samplewsimages', {
+			body: {
+				genome: state.genome || state.vocab.genome,
+				dslabel: state.dslabel || state.vocab.dslabel,
+				sample_id: state.sample_id,
+				index
+			}
+		})
 	}
 
 	private async getWSImageLayers(state: any, wsimages: WSImage[]): Promise<WSImageLayers[]> {
