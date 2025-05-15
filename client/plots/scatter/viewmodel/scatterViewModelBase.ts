@@ -15,7 +15,6 @@ export class ScatterViewModelBase {
 	legendvm: ScatterLegend
 	scatterTooltip: ScatterTooltip
 	scatterZoom: ScatterZoom
-	lassoDiv: any
 	canvas: any
 	step: any
 	legendHeight: any

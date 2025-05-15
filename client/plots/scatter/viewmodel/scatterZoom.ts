@@ -67,7 +67,7 @@ export class ScatterZoom {
 			//on zoom in the particle size is kept
 			const symbols = chart.serie.selectAll('path[name="serie"')
 			symbols.attr('transform', c => this.scatter.model.transform(chart, c, 1))
-			if (this.scatter.vm.scatterLasso?.lassoOn)
+			if (this.scatter.config.lassoOn)
 				chart.lasso.selectedItems().attr('transform', c => this.scatter.model.transform(chart, c, 1.2))
 			if (this.scatter.config.scaleDotTW) this.scatter.vm.legendvm.drawScaleDotLegend(chart)
 		}

@@ -68,9 +68,9 @@ export class ScatterViewModel extends ScatterViewModelBase {
 	}
 
 	toggleLasso() {
-		this.scatterLasso.lassoOn = !this.scatterLasso.lassoOn
+		this.scatter.config.lassoOn = !this.scatter.config.lassoOn
 		for (const chart of this.model.charts) {
-			if (this.scatterLasso.lassoOn) {
+			if (this.scatter.config.lassoOn) {
 				chart.mainG.on('.zoom', null)
 				chart.mainG.call(chart.lasso)
 			} else {
@@ -85,12 +85,13 @@ export class ScatterViewModel extends ScatterViewModelBase {
 				this.scatterLasso.selectedItems = []
 			}
 		}
-		this.lassoDiv.select('*').remove()
-		icon_functions['lasso'](this.lassoDiv, {
+		this.view.dom.lassoDiv.select('*').remove()
+		icon_functions['lasso'](this.view.dom.lassoDiv, {
 			handler: () => this.toggleLasso(),
-			enabled: this.scatterLasso.lassoOn,
+			enabled: this.scatter.config.lassoOn,
 			title: 'Select a group of samples'
 		})
+		this.scatter.app.dispatch({ type: 'plot_edit', id: this.scatter.id, config: this.scatter.config })
 	}
 
 	async addGroup(group) {
@@ -103,11 +104,11 @@ export class ScatterViewModel extends ScatterViewModelBase {
 		const toolsDiv = this.view.dom.toolsDiv
 		const display = 'block'
 		const searchDiv = toolsDiv.insert('div').style('display', display).style('margin', '15px 10px')
-		this.lassoDiv = toolsDiv.insert('div').style('display', display).style('margin', '15px 10px')
+		this.view.dom.lassoDiv = toolsDiv.insert('div').style('display', display).style('margin', '15px 10px')
 		icon_functions['search'](searchDiv, { handler: e => this.interactivity.searchSample(e), title: 'Search samples' })
-		icon_functions['lasso'](this.lassoDiv, {
+		icon_functions['lasso'](this.view.dom.lassoDiv, {
 			handler: () => this.toggleLasso(),
-			enabled: this.scatterLasso.lassoOn,
+			enabled: this.scatter.config.lassoOn,
 			title: 'Select a group of samples'
 		})
 		this.view.dom.groupDiv = toolsDiv.insert('div').style('display', display).style('margin', '15px 10px')
