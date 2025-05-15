@@ -1,1 +1,4 @@
+Features
 
+- Added Runchart and Event count plots that can be used in any dataset with date annotations
+- Added date annotations to TermdbTest
