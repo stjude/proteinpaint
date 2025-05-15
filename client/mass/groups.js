@@ -862,7 +862,7 @@ export function addMatrixMenuItems(menu, menuDiv, tw, app, id, state, newId) {
 	}
 }
 
-export function getNewGroup(filter, groups) {
+export function addNewGroup(app, filter, groups) {
 	groups = JSON.parse(JSON.stringify(groups))
 	let name = 'New group'
 	let i = 0
@@ -877,11 +877,6 @@ export function getNewGroup(filter, groups) {
 		filter,
 		color: rgb(colorScale(groups.length)).formatHex()
 	}
-	return newGroup
-}
-
-export function addNewGroup(app, filter, groups) {
-	const newGroup = getNewGroup(filter, groups)
 	groups.push(newGroup)
 	app.dispatch({
 		type: 'app_refresh',
