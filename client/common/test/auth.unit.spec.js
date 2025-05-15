@@ -107,7 +107,7 @@ tape('mayShowAuthUi()', async test => {
 		setDomRefs: refs => {
 			test.true(refs.pwd?.node() instanceof HTMLElement, `should display a password input`)
 			test.notEqual(refs.mask?.style('display'), 'none', `should display an overlay mask`)
-			refs.authUiHolder.selectAll('*').remove()
+			refs.mask.remove()
 			auth.setTokenByDsRoute(dslabel, route) // clear jwtByDsRoute[dslabel][route]
 			test.end()
 		}

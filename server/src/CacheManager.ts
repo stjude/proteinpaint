@@ -158,6 +158,8 @@ export class CacheManager {
 	}
 
 	async start() {
+		console.log('starting cache monitor ...')
+
 		const checkCacheFiles = async () => {
 			if (this.hasActiveCheck) return // prevent two active checks from running at the same time
 			this.hasActiveCheck = true
@@ -185,6 +187,7 @@ export class CacheManager {
 	// can call this in spec file after running tests
 	stop() {
 		if (!this.intervalId) return
+		console.log('--- stopping cache monitor ---')
 		clearInterval(this.intervalId)
 		delete this.intervalId
 		if (this.callbacks.postStop) this.callbacks.postStop(this)
@@ -192,12 +195,12 @@ export class CacheManager {
 
 	async mayDeleteCacheFiles(subdir, dirOpts, interval: number) {
 		const { maxSize, maxAge, absPath, fileExtensions, movePath } = dirOpts
-		if (!this.quiet) console.log(`checking for cached ${subdir} files to delete ...`)
+		//if (!this.quiet) console.log(`checking for cached ${subdir} files to delete ...`)
 		try {
 			const minTime = Date.now() - maxAge
 			const filenames = await fs.promises.readdir(absPath)
 			if (filenames.length == 0) {
-				if (!this.quiet) console.log(`No ${subdir} cached files to delete`)
+				//if (!this.quiet) console.log(`No ${subdir} cached files to delete`)
 				return { deletedCount: 0, totalCount: 0 }
 			}
 			// keep list of undeleted files. may need to rank them and delete old ones ranked by age

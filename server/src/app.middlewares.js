@@ -183,12 +183,12 @@ function setHeaders(req, res, next) {
 }
 
 function maySetTestDataCacheDir(doneLoading) {
-	if (!serverconfig.publicDir || !serverconfig.debugmode) return
+	if (!serverconfig.features?.cacheTestData || !serverconfig.publicDir || !serverconfig.debugmode) return
 	if (!doneLoading.includes('hg38-test/TermdbTest') || !fs.existsSync(`${serverconfig.publicDir}/testrun.html`)) return
 
 	const testDataCacheDir = path.join(serverconfig.binpath, '../public/testrunData')
 	if (!fs.existsSync(testDataCacheDir)) fs.mkdirSync(testDataCacheDir)
-	console.log(`---- mayCacheReqRes at ${testDataCacheDir} ----`)
+	console.log(`mayCacheReqRes at ${testDataCacheDir}`)
 	return testDataCacheDir
 }
 
