@@ -979,7 +979,7 @@ export type WSImages = {
 	/**  ds supplied */
 	getWSIAnnotations?: (sampleName: string, wsiImage: string) => Promise<string[]>
 	/**  ds supplied */
-	getZoomInPoints?: (sampleName: string, wsiImage: string) => Promise<Array<[number, number]>>
+	getZoomInPoints?: (sampleName: string, wsiImage: string, index: number) => Promise<Array<[number, number]>>
 }
 
 /*** types supporting Termdb ***/

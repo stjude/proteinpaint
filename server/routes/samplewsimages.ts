@@ -39,7 +39,8 @@ function init({ genomes }) {
 					if (ds.queries.WSImages.getZoomInPoints) {
 						const zoomInPoints: Array<[number, number]> = await ds.queries.WSImages.getZoomInPoints(
 							sampleId,
-							wsimage.filename
+							wsimage.filename,
+							query.index
 						)
 						if (zoomInPoints) {
 							wsimage.zoomInPoints = zoomInPoints
