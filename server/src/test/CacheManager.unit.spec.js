@@ -100,9 +100,9 @@ tape('defaults', function (test) {
 	})
 })
 
-tape('delete by maxAge', function (test) {
+tape('move or delete by maxAge', function (test) {
 	test.timeoutAfter(10000)
-	test.plan(6)
+	test.plan(15)
 
 	const cachedir = path.join(process.cwd(), '.cache-test2')
 	// clear any previously created test cache dir
@@ -121,7 +121,12 @@ tape('delete by maxAge', function (test) {
 			massSessionTrash: undefined,
 			test0: {
 				// only test0 will be created
-				maxAge
+				maxAge,
+				moveTo: 'trash'
+			},
+			trash: {
+				maxAge: maxAge * 2,
+				skipMs: interval * 2
 			}
 		},
 		callbacks: {
@@ -134,6 +139,15 @@ tape('delete by maxAge', function (test) {
 							maxSize: 5000000000,
 							skipMs: 0,
 							absPath: `${cachedir}/test0`,
+							skipUntil: 0,
+							moveTo: 'trash',
+							movePath: `${cachedir}/trash`
+						},
+						trash: {
+							maxAge: maxAge * 2,
+							maxSize: 5000000000,
+							skipMs: interval * 2,
+							absPath: `${cachedir}/trash`,
 							skipUntil: 0
 						}
 					},
@@ -163,11 +177,29 @@ tape('delete by maxAge', function (test) {
 						: { deletedCount: 0, totalCount: 0 }
 
 				test.deepEqual(results.test0, expected, `should have expected results after check #${numChecks}`)
+
+				const expectedTrash =
+					numChecks == 0
+						? { deletedCount: 0, totalCount: 0 }
+						: numChecks == 1
+						? undefined
+						: numChecks == 2
+						? { deletedCount: 1, totalCount: 2 }
+						: numChecks == 3
+						? undefined
+						: numChecks == 4
+						? { deletedCount: 2, totalCount: 2 }
+						: undefined
+
+				test.deepEqual(results.trash, expectedTrash, `should have expected trash after check #${numChecks}`)
+
 				numChecks++
-				if (numChecks > 3) {
+				if (numChecks > 5) {
 					monitor.stop()
 					const remainingFiles = fs.readdirSync(`${cachedir}/test0`)
-					test.equal(remainingFiles.length, 0, `should delete all cache files after the test`)
+					test.equal(remainingFiles.length, 0, `should have no remaining cache files after the test`)
+					const remainingTrash = fs.readdirSync(`${cachedir}/trash`)
+					test.equal(remainingTrash.length, 0, `should have no remaining trash files after the test`)
 					fs.rmSync(cachedir, { force: true, recursive: true })
 					test.end()
 				}
