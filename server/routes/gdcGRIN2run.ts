@@ -35,10 +35,10 @@ function init({ genomes }) {
 			if (!ds) throw 'hg38 GDC missing'
 
 			// Cast the request body to RunGRIN2Request type
-			const { filesByCase } = req.body as RunGRIN2Request
-			console.log(`[GRIN2] Request received with cases: ${JSON.stringify(filesByCase)}`)
+			const { cases } = req.body as RunGRIN2Request
+			console.log(`[GRIN2] Request received with cases: ${JSON.stringify(cases)}`)
 
-			if (!filesByCase || !Array.isArray(filesByCase) || filesByCase.length === 0) {
+			if (!cases || !Array.isArray(cases) || cases.length === 0) {
 				throw 'Missing or invalid cases data'
 			}
 
@@ -49,7 +49,7 @@ function init({ genomes }) {
 				// await fs.mkdir(tempDir, { recursive: true })
 				// console.log(`[GRIN2] Temporary directory created: ${tempDir}`)
 
-				console.log(`[GRIN2] Running analysis for ${filesByCase.length} cases`)
+				console.log(`[GRIN2] Running analysis for ${cases.length} cases`)
 
 				// Step 1: Call Rust to process the MAF files and get JSON data
 				console.log('[GRIN2] Calling Rust for file processing...')
@@ -57,7 +57,7 @@ function init({ genomes }) {
 
 				// Prepare input parameters for the Rust function
 				const rustInput = JSON.stringify({
-					filesByCase: filesByCase
+					cases: cases
 				})
 				console.log(`[GRIN2] Rust input: ${rustInput}`)
 
@@ -139,7 +139,7 @@ function init({ genomes }) {
 
 				// Create a metadata object for logging
 				const metadata = {
-					filesAnalyzed: filesByCase.length,
+					filesAnalyzed: cases.length,
 					samplesIncluded: parsedRustResult.sampleCount || 0,
 					analysisDate: new Date().toISOString(),
 					executionTime
