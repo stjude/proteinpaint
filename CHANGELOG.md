@@ -9,6 +9,7 @@ Features:
 - Use cached steps across ppbase, ppserver, and ppfull build jobs.
 - Recompiling Rust binaries when Rust code changes and adding to Docker container
 - Add Rust detection and build to CI integration workflow for docker image
+- Files in cache subdirectories are cleared every minute unless otherwise set by the serverconfig. New unit tests are available for initializing the cache subdirectories and clearing old or large files.
 
 Fixes:
 - avoid blank sunburst when samples are not annotated by sunburst terms; just show table view
