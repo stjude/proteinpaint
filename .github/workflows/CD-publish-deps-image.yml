@@ -100,19 +100,18 @@ jobs:
         with:
           PAT: ${{ secrets.PAT }}
           GITHUB_ACTOR: ${{ github.actor }}
-          
 
-    docker-without-rust:
-      needs: build
-      if: needs.build.outputs.updated_rust == 'false'
-      runs-on: ubuntu-22.04
-      steps:
-        - uses: actions/checkout@v3
-          with:
-            fetch-depth: 10
+  docker-without-rust:
+    needs: build
+    if: needs.build.outputs.updated_rust == 'false'
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 10
 
-        - name: Publish docker image
-          uses: stjude/proteinpaint/.github/actions/publish-deps-image@prerelease-r-base-image
-          with:
-            PAT: ${{ secrets.PAT }}
-            GITHUB_ACTOR: ${{ github.actor }}
+      - name: Publish docker image
+        uses: stjude/proteinpaint/.github/actions/publish-deps-image@prerelease-r-base-image
+        with:
+          PAT: ${{ secrets.PAT }}
+          GITHUB_ACTOR: ${{ github.actor }}
