@@ -10,17 +10,17 @@ type SubdirOpts = {
 	 * - if zero, run on every interval of the cache monitor
 	 * - if >1, do not check files again in the subdir until the skipped time is reached/exceeded
 	 */
-	skipMs: number
+	skipMs: number // how many milliseconds to skip after the last check
 	fileExtensions?: Set<string | RegExp>
 	absPath?: string // absolute path to cache dir
-	moveTo?: string // move expired files to this cache subdir instead of deleting right away
+	moveTo?: string // move expired files to this abs path or cache subdir instead of deleting right away
 }
 
 // computed configuration for each cache subdir
 type ComputedSubdirOpts = {
 	absPath: string // joins absolute cachedir path with subdir name
-	skipUntil: number
-	movePath?: string // joins absolute cachedir path with subdir name
+	movePath?: string // joins absolute cachedir path with moveTo name
+	skipUntil: number // unix time in milliseconds when cache check should resume, will skip check iterations before then
 }
 
 type FullSubdirOpts = SubdirOpts & ComputedSubdirOpts
@@ -48,9 +48,10 @@ type Callbacks = {
 	postStop?: (c: CacheManager) => void
 }
 
-const hour = 1000 * 60 * 60 // 1 hour in milliseconds
+const minute = 1000 * 60
+const hour = minute * 60 // 1 hour in milliseconds
 const halfDay = hour * 12 // 12 hours in milliseconds
-const fullDay = halfDay * 2 // 24 hours in milliseconds
+const day = halfDay * 2 // 24 hours in milliseconds
 
 // defaults
 const subdirOptsDefaults: SubdirOpts = {
@@ -63,7 +64,7 @@ const subdirOptsDefaults: SubdirOpts = {
 // which is primarily specified in serverconfig.features.cache
 const defaultOpts = {
 	cachedir: path.join(process.cwd(), '.cache'),
-	interval: 1000 * 60, // default every minute
+	interval: minute,
 	subdirs: {
 		gsea: {
 			...subdirOptsDefaults,
@@ -71,12 +72,12 @@ const defaultOpts = {
 		},
 		massSession: {
 			...subdirOptsDefaults,
-			maxAge: fullDay * 30, // total milliseconds in 30 days
+			maxAge: day * 30, // total milliseconds in 30 days
 			skipMs: halfDay // every 12 hours
 		},
 		massSessionTrash: {
 			...subdirOptsDefaults,
-			maxAge: fullDay * 60, // total milliseconds in 60 days
+			maxAge: day * 60, // total milliseconds in 60 days
 			skipMs: halfDay // run every 12 hours
 		}
 		// bam: {
@@ -100,10 +101,10 @@ export class CacheManager {
 	callbacks: Callbacks
 
 	constructor(opts: CacheOpts = defaultOpts) {
+		this.interval = opts.interval || defaultOpts.interval
 		this.cachedir = opts.cachedir || defaultOpts.cachedir
 		this.callbacks = opts.callbacks || defaultOpts.callbacks
 		this.subdirs = new Map()
-		this.interval = opts.interval || defaultOpts.interval
 		this.init(opts) // do not await, since contructor() can only return an object instance and not a Promise
 	}
 
