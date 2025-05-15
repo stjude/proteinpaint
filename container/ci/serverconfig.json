@@ -18,13 +18,6 @@
     "regressionResultMsgs": true,
     "extApiCache": {
       "fake.org": "fake-test"
-    },
-    "cacheMonitor": {
-      "intervalOverride": 500,
-      "gsea": {
-        "maxAge": 10000,
-        "maxSize": 5e9
-      }
     }
   },
   "tpmasterdir": "/home/runner/work/proteinpaint/proteinpaint/server/test/tp",
