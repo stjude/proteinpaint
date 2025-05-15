@@ -29,13 +29,17 @@ type FullSubdirOpts = SubdirOpts & ComputedSubdirOpts
 type CacheOpts = {
 	cachedir?: string // equals defaultOpts.cachedir or serverconfig.cachedir or runtime overrides (such as in spec files)
 	interval?: number // wait time between each interval loop to check cache files
+	quiet?: boolean
 	subdirs?: {
-		[dirName: string]: {
-			maxAge?: number // file expiration in milliseconds
-			maxSize?: number // total cache subdir size of all files, in bytes
-			skipMs?: number // milliseconds to wait before rerunning cache subdir checks, cause some check iterations to be skipped
-			fileExtensions?: Set<string | RegExp>
-		}
+		[dirName: string]:
+			| undefined
+			| {
+					maxAge?: number // file expiration in milliseconds
+					maxSize?: number // total cache subdir size of all files, in bytes
+					skipMs?: number // milliseconds to wait before rerunning cache subdir checks, cause some check iterations to be skipped
+					moveTo?: string
+					fileExtensions?: Set<string | RegExp>
+			  }
 	}
 	callbacks: Callbacks
 }
@@ -100,11 +104,15 @@ export class CacheManager {
 	intervalId!: any // Timeout
 	callbacks: Callbacks
 	hasActiveCheck = false
+	quiet = false
 
 	constructor(opts: CacheOpts = defaultOpts) {
+		/* v8 ignore start */
 		this.interval = opts.interval || defaultOpts.interval
 		this.cachedir = opts.cachedir || defaultOpts.cachedir
 		this.callbacks = opts.callbacks || defaultOpts.callbacks
+		if (opts.quiet) this.quiet = opts.quiet
+		/* v8 ignore stop */
 		this.subdirs = new Map()
 		this.init(opts) // do not await, since contructor() can only return an object instance and not a Promise
 	}
@@ -184,12 +192,12 @@ export class CacheManager {
 
 	async mayDeleteCacheFiles(subdir, dirOpts, interval: number) {
 		const { maxSize, maxAge, absPath, fileExtensions, movePath } = dirOpts
-		console.log(`checking for cached ${subdir} files to delete ...`)
+		if (!this.quiet) console.log(`checking for cached ${subdir} files to delete ...`)
 		try {
 			const minTime = Date.now() - maxAge
 			const filenames = await fs.promises.readdir(absPath)
 			if (filenames.length == 0) {
-				console.log(`No ${subdir} cached files to delete`)
+				if (!this.quiet) console.log(`No ${subdir} cached files to delete`)
 				return { deletedCount: 0, totalCount: 0 }
 			}
 			// keep list of undeleted files. may need to rank them and delete old ones ranked by age
@@ -199,7 +207,7 @@ export class CacheManager {
 				totalCount = 0,
 				deletedCount = 0
 			for (const filename of filenames) {
-				if (fileExtensions?.has(path.extname(filename))) continue
+				if (fileExtensions?.size && !fileExtensions.has(path.extname(filename))) continue
 				totalCount++
 				const fp = path.join(absPath, filename)
 				const s = await fs.promises.stat(fp)
@@ -240,9 +248,10 @@ export class CacheManager {
 					if (totalSize < maxSize) break
 				}
 			}
-			console.log(
-				`deleted ${deletedCount} of ${totalCount} ${subdir} cached files (${deletedSize} bytes deleted, ${totalSize} remaining)`
-			)
+			if (!this.quiet)
+				console.log(
+					`deleted ${deletedCount} of ${totalCount} ${subdir} cached files (${deletedSize} bytes deleted, ${totalSize} remaining)`
+				)
 			return { deletedCount, totalCount }
 		} catch (e) {
 			// console.trace(e)
