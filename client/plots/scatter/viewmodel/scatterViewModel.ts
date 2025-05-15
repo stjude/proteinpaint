@@ -69,28 +69,6 @@ export class ScatterViewModel extends ScatterViewModelBase {
 
 	toggleLasso() {
 		this.scatter.config.lassoOn = !this.scatter.config.lassoOn
-		for (const chart of this.model.charts) {
-			if (this.scatter.config.lassoOn) {
-				chart.mainG.on('.zoom', null)
-				chart.mainG.call(chart.lasso)
-			} else {
-				chart.mainG.on('mousedown.drag', null)
-				chart.lasso.items().classed('not_possible', false)
-				chart.lasso.items().classed('possible', false)
-				chart.lasso
-					.items()
-					.attr('r', this.scatter.settings.size)
-					.style('fill-opacity', c => this.model.getOpacity(c))
-				chart.mainG.call(this.scatter.vm.scatterZoom.zoomD3)
-				this.scatterLasso.selectedItems = []
-			}
-		}
-		this.view.dom.lassoDiv.select('*').remove()
-		icon_functions['lasso'](this.view.dom.lassoDiv, {
-			handler: () => this.toggleLasso(),
-			enabled: this.scatter.config.lassoOn,
-			title: 'Select a group of samples'
-		})
 		this.scatter.app.dispatch({ type: 'plot_edit', id: this.scatter.id, config: this.scatter.config })
 	}
 
