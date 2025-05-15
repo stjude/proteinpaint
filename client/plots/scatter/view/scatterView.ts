@@ -39,12 +39,14 @@ export class ScatterView {
 			toolsDiv: leftDiv.insert('div')
 		}
 
-		if (this.dom.header)
+		if (this.dom.header) {
+			const chartName = splitCamelCase(this.scatter.type).toUpperCase()
 			this.dom.header.html(
 				`${
 					this.scatter.config.name || ''
-				} <span style="opacity:.6;font-size:.7em;margin-left:10px;">SCATTER PLOT</span>`
+				} <span style="opacity:.6;font-size:.7em;margin-left:10px;">${chartName}</span>`
 			)
+		}
 		document.addEventListener('scroll', () => this?.dom?.tooltip?.hide())
 		select('.sjpp-output-sandbox-content').on('scroll', () => this.dom.tooltip.hide())
 	}
@@ -374,3 +376,6 @@ export class ScatterView {
 		termdbConfig is accessible at chartsInstance.state.termdbConfig{}
 		mass option is accessible at chartsInstance.app.opts{}
 	*/
+function splitCamelCase(text) {
+	return text.split(/(?=[A-Z])/).join(' ')
+}
