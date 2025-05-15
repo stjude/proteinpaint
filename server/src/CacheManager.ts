@@ -13,18 +13,22 @@ type SubdirOpts = {
 	skipMs: number
 	fileExtensions?: Set<string | RegExp>
 	absPath?: string // absolute path to cache dir
+	moveTo?: string // move expired files to this cache subdir instead of deleting right away
 }
 
 // computed configuration for each cache subdir
 type ComputedSubdirOpts = {
 	absPath: string // joins absolute cachedir path with subdir name
 	skipUntil: number
+	movePath?: string // joins absolute cachedir path with subdir name
 }
+
+type FullSubdirOpts = SubdirOpts & ComputedSubdirOpts
 
 // argument to CacheManager constructor
 type CacheOpts = {
 	cachedir?: string // equals defaultOpts.cachedir or serverconfig.cachedir or runtime overrides (such as in spec files)
-	interval?: number
+	interval?: number // wait time between each interval loop to check cache files
 	subdirs?: {
 		[dirName: string]: {
 			maxAge?: number // file expiration in milliseconds
@@ -44,9 +48,13 @@ type Callbacks = {
 	postStop?: (c: CacheManager) => void
 }
 
+const hour = 1000 * 60 * 60 // 1 hour in milliseconds
+const halfDay = hour * 12 // 12 hours in milliseconds
+const fullDay = halfDay * 2 // 24 hours in milliseconds
+
 // defaults
 const subdirOptsDefaults: SubdirOpts = {
-	maxAge: 1000 * 60 * 60 * 2, // 2 hours
+	maxAge: hour * 2, // 2 hours
 	maxSize: 5e9, // 5 GB
 	skipMs: 0 // run on every interval check
 }
@@ -55,7 +63,7 @@ const subdirOptsDefaults: SubdirOpts = {
 // which is primarily specified in serverconfig.features.cache
 const defaultOpts = {
 	cachedir: path.join(process.cwd(), '.cache'),
-	interval: 1000 * 60, // wait time between each interval loop to check cache files
+	interval: 1000 * 60, // default every minute
 	subdirs: {
 		gsea: {
 			...subdirOptsDefaults,
@@ -63,13 +71,13 @@ const defaultOpts = {
 		},
 		massSession: {
 			...subdirOptsDefaults,
-			maxAge: 1000 * 60 * 60 * 24 * 30, // total milliseconds in 30 days
-			skipMs: 1000 * 60 * 60 * 12 // every 12 hours
+			maxAge: fullDay * 30, // total milliseconds in 30 days
+			skipMs: halfDay // every 12 hours
 		},
 		massSessionTrash: {
 			...subdirOptsDefaults,
-			maxAge: 1000 * 60 * 60 * 24 * 60, // total milliseconds in 60 days
-			skipMs: 1000 * 60 * 60 * 12 // run every 12 hours
+			maxAge: fullDay * 60, // total milliseconds in 60 days
+			skipMs: halfDay // run every 12 hours
 		}
 		// bam: {
 		//  ...subdirOptsDefaults,
@@ -86,7 +94,7 @@ export class CacheManager {
 	cachedir: string
 	// the wait time before each iteration of checking the cache for expired files
 	interval: number
-	subdirs: Map<string, SubdirOpts & ComputedSubdirOpts>
+	subdirs: Map<string, FullSubdirOpts>
 	// the reference to setInterval
 	intervalId!: any // Timeout
 	callbacks: Callbacks
@@ -95,7 +103,7 @@ export class CacheManager {
 		this.cachedir = opts.cachedir || defaultOpts.cachedir
 		this.callbacks = opts.callbacks || defaultOpts.callbacks
 		this.subdirs = new Map()
-		this.interval = opts.interval || defaultOpts.interval || 1000 * 60 // default, every minute
+		this.interval = opts.interval || defaultOpts.interval
 		this.init(opts) // do not await, since contructor() can only return an object instance and not a Promise
 	}
 
@@ -131,7 +139,12 @@ export class CacheManager {
 				throw `error stating sub cache ${subdir}`
 			}
 		}
-		this.subdirs.set(subdir, { ...subdirOpts, absPath: dir, skipUntil: 0 })
+		const fullOpts: FullSubdirOpts = { ...subdirOpts, absPath: dir, skipUntil: 0 }
+		if (subdirOpts.moveTo)
+			fullOpts.movePath = subdirOpts.moveTo.startsWith('/')
+				? subdirOpts.moveTo
+				: path.join(this.cachedir, subdirOpts.moveTo)
+		this.subdirs.set(subdir, fullOpts)
 	}
 
 	async start() {
@@ -141,8 +154,8 @@ export class CacheManager {
 			for (const [subdir, dirOpts] of this.subdirs.entries()) {
 				if (now > dirOpts.skipUntil) {
 					results[subdir] = await this.mayDeleteCacheFiles(subdir, dirOpts, this.interval)
+					dirOpts.skipUntil = now + dirOpts.skipMs
 				}
-				dirOpts.skipUntil = now + dirOpts.skipMs
 			}
 			if (this.callbacks.postCheck) this.callbacks.postCheck(results)
 		}
@@ -165,7 +178,7 @@ export class CacheManager {
 	}
 
 	async mayDeleteCacheFiles(subdir, dirOpts, interval: number) {
-		const { maxSize, maxAge, absPath, fileExtensions } = dirOpts
+		const { maxSize, maxAge, absPath, fileExtensions, movePath } = dirOpts
 		console.log(`checking for cached ${subdir} files to delete ...`)
 		try {
 			const minTime = Date.now() - maxAge
@@ -189,7 +202,8 @@ export class CacheManager {
 				const time = s.mtimeMs
 				// console.log(188, filename, time < minTime, time, minTime)
 				if (time < minTime) {
-					await fs.promises.unlink(fp)
+					if (movePath) await fs.promises.rename(fp, path.join(movePath, filename))
+					else await fs.promises.unlink(fp)
 					deletedCount++
 					deletedSize += s.size
 					continue
@@ -212,6 +226,7 @@ export class CacheManager {
 				for (const f of files) {
 					// do not delete files too soon that it may affect a current file read
 					if (f.time > minMtime) break
+
 					await fs.promises.unlink(f.path)
 					f.deleted = true
 					deletedCount++
