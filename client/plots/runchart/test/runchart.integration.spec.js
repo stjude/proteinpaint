@@ -366,3 +366,45 @@ tape('Click zoom in, zoom out, and reset buttons', function (test) {
 
 	//Add tests for changes in axes
 })
+
+tape('Test divide by date', function (test) {
+	test.timeoutAfter(3000) //Fix for breaking on local CI but maynot be necessary for nightly build
+
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'runChart',
+					term: { id: 'date' },
+					term2: { id: 'hrtavg' },
+					term0: { id: 'date' }
+				}
+			]
+		},
+		runChart: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	async function runTests(scatter) {
+		scatter.on('postRender.test', null)
+		const samples = scatter.Inner.model.charts[0].data.samples
+		const scatterDiv = scatter.Inner.model.charts[0].chartDiv
+		testPlot()
+		if (test._ok) scatter.Inner.app.destroy()
+		test.end()
+
+		function testPlot() {
+			const serieG = scatterDiv.select('.sjpcb-scatter-series')
+			const paths = serieG.selectAll('path')
+			const numSymbols = paths.size() - 7 // exclude the line paths for each time frame
+			test.equal(
+				numSymbols,
+				scatter.Inner.model.charts[0].data.samples.length,
+				`Should be ${scatter.Inner.model.charts[0].data.samples.length}. Rendered ${numSymbols} symbols.`
+			)
+		}
+	}
+})
