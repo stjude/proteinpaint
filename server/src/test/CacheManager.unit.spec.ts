@@ -1,5 +1,4 @@
 import tape from 'tape'
-import serverconfig from '../serverconfig.js'
 import path from 'path'
 import fs from 'fs'
 import { CacheManager } from '#src/CacheManager.ts'
@@ -24,7 +23,6 @@ tape('\n', async function (test) {
 
 tape('defaults', function (test) {
 	test.timeoutAfter(1000)
-	test.plan()
 
 	const cachedir = path.join(process.cwd(), '.cache-test1')
 	// clear any previously created test cache dir
@@ -32,6 +30,7 @@ tape('defaults', function (test) {
 	let numChecks = 0
 
 	const monitor = new CacheManager({
+		quiet: true,
 		cachedir,
 		interval: 100,
 		callbacks: {
@@ -101,7 +100,7 @@ tape('defaults', function (test) {
 })
 
 tape('move or delete by maxAge', function (test) {
-	test.timeoutAfter(10000)
+	test.timeoutAfter(1000)
 	test.plan(15)
 
 	const cachedir = path.join(process.cwd(), '.cache-test2')
@@ -110,9 +109,9 @@ tape('move or delete by maxAge', function (test) {
 	let numChecks = 0
 
 	const interval = 100
-	// has to divide millisecond interval by 2 to force file to be rounded
 	const maxAge = interval - 10
 	const monitor = new CacheManager({
+		//quiet: true,
 		cachedir,
 		interval,
 		subdirs: {
@@ -212,3 +211,81 @@ tape('move or delete by maxAge', function (test) {
 // tape('delete by maxSize', async function (test) {
 // 	...
 // })
+
+tape('limit deletion by file extension', test => {
+	test.timeoutAfter(1000)
+	test.plan(3)
+
+	const cachedir = path.join(process.cwd(), '.cache-test3')
+	// clear any previously created test cache dir
+	fs.rmSync(cachedir, { force: true, recursive: true })
+
+	const interval = 100
+	// has to divide millisecond interval by 2 to force file to be rounded
+	const monitor = new CacheManager({
+		//quiet: true,
+		cachedir,
+		interval,
+		subdirs: {
+			gsea: undefined, // clear default entries, so they are not included in the test
+			massSession: undefined,
+			massSessionTrash: undefined,
+			test0: {
+				maxAge: -10, // force deletion of all files (with matching extension) by maxAge
+				fileExtensions: new Set(['.txt'])
+			}
+		},
+		callbacks: {
+			preStart: () => {
+				for (const i of [1, 2, 3]) {
+					const f = `${cachedir}/test0/file-${i}.${i === 1 ? 'json' : 'txt'}`
+					fs.openSync(f, 'w')
+				}
+			},
+			postCheck: results => {
+				const remainingFiles = fs.readdirSync(`${cachedir}/test0`)
+				if (monitor.intervalId) {
+					monitor.stop()
+					test.equal(remainingFiles.length, 1, `should have no remaining cache files after the test`)
+					fs.rmSync(cachedir, { force: true, recursive: true })
+					test.end()
+					return
+				}
+				test.deepEqual(results.test0, { deletedCount: 2, totalCount: 2 }, `should only files with matching extension`)
+				test.equal(remainingFiles.length, 1, `should have no remaining cache files after the test`)
+			}
+		}
+	})
+})
+
+tape('checks concurrency and postStop callback', test => {
+	let hasChecked = false
+	const message = `should not have multiple active checks`
+	const interval = 100
+	const monitor = new CacheManager({
+		quiet: true,
+		interval,
+		callbacks: {
+			preStart: m => {
+				m.hasActiveCheck = true // force
+			},
+			/* v8 ignore start */
+			postCheck: () => {
+				hasChecked = true
+				test.fail(message)
+				monitor.stop()
+			},
+			/* v8 ignore stop */
+			postStop: () => {
+				test.pass(`should call a postStop callback if supplied`)
+				test.end()
+			}
+		}
+	})
+	setTimeout(() => {
+		/* v8 ignore next */
+		if (hasChecked) return
+		test.pass(message)
+		monitor.stop()
+	}, 2 * interval + 10)
+})
