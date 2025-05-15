@@ -63,15 +63,6 @@ class gsea {
 		this.dom.controlsDiv.selectAll('*').remove()
 		const inputs = [
 			{
-				label: 'Number of Permutations',
-				type: 'number',
-				chartType: 'gsea',
-				settingsKey: 'num_permutations',
-				title: 'Number of permutations to be used for GSEA. Higher number increases accuracy but also compute time.',
-				min: 0,
-				max: 40000 // Setting it to pretty lenient limit for testing
-			},
-			{
 				label: 'Minimum Gene Set Size Filter Cutoff',
 				type: 'number',
 				chartType: 'gsea',
@@ -105,8 +96,11 @@ class gsea {
 					{ label: 'FDR', value: 'fdr' },
 					{ label: 'Top Gene Sets', value: 'top' }
 				]
-			},
-			{
+			}
+		]
+
+		if (JSON.parse(sessionStorage.getItem('optionalFeatures')).gsea_test) {
+			inputs.push({
 				label: 'GSEA method',
 				type: 'radio',
 				chartType: 'gsea',
@@ -116,9 +110,19 @@ class gsea {
 					{ label: 'blitzgsea', value: 'blitzgsea' },
 					{ label: 'CERNO', value: 'cerno' }
 				]
-			}
-		]
-
+			})
+		}
+		if (this.settings.gsea_method == 'blitzgsea') {
+			inputs.push({
+				label: 'Number of Permutations',
+				type: 'number',
+				chartType: 'gsea',
+				settingsKey: 'num_permutations',
+				title: 'Number of permutations to be used for GSEA. Higher number increases accuracy but also compute time.',
+				min: 0,
+				max: 40000 // Setting it to pretty lenient limit for testing
+			})
+		}
 		if (this.settings.fdr_or_top == 'fdr') {
 			inputs.push({
 				label: 'FDR Filter Cutoff (Linear Scale)',
@@ -241,7 +245,8 @@ async function renderPathwayDropdown(self) {
 	const settings = structuredClone(self.settings)
 	const pathwayOpts = structuredClone(self.app.opts.genome.termdbs.msigdb.analysisGenesetGroups) // duplicate to avoid repeated insertion on each app launch
 
-	if (JSON.parse(sessionStorage.getItem('optionalFeatures')).gsea_test) {
+	if (JSON.parse(sessionStorage.getItem('optionalFeatures')).gsea_test && self.settings.gsea_method == 'blitzgsea') {
+		// This contains geneset groups that are specific to blitzgsea itself
 		// TEMPORARY FIX to test this library that will trigger auto download support files in python
 		// NEVER ENABLE ON PROD especially gdc prod, where container has firewall and it crashes..
 		// delete this if library is replaced
@@ -332,8 +337,11 @@ add:
 			fold_change: self.config.gsea_params.fold_change,
 			geneSetGroup: self.settings.pathway,
 			filter_non_coding_genes: self.settings.filter_non_coding_genes,
-			num_permutations: self.settings.num_permutations,
 			method: self.settings.gsea_method
+		}
+
+		if (self.settings.gsea_method == 'blitzgsea') {
+			body.num_permutations = self.settings.num_permutations
 		}
 		output = await rungsea(body, self.dom)
 		if (output.error) {
@@ -463,7 +471,6 @@ add:
 	const geneSetIdx = self.gsea_table_rows.findIndex(row => row[0].value == self.config.gsea_params.geneset_name)
 	const selectedRows = geneSetIdx > -1 ? [geneSetIdx] : []
 
-	console.log('self.gsea_table_rows:', self.gsea_table_rows)
 	renderTable({
 		download,
 		columns: self.gsea_table_cols,
@@ -484,7 +491,14 @@ add:
 			}
 			if (self.config.chartType == 'differentialAnalysis') {
 				//Saves the data to highlight in the volcano plot
-				const genes = [...self.gsea_table_rows[index][5].value.split(',')]
+				let genes
+				if (self.settings.gsea_method == 'blitzgsea') {
+					genes = [...self.gsea_table_rows[index][5].value.split(',')]
+				} else if (self.settings.gsea_method == 'cerno') {
+					genes = [...self.gsea_table_rows[index][6].value.split(',')]
+				} else {
+					throw 'Unknown method:' + self.settings.gsea_method
+				}
 				if (genes) config.highlightGenes = genes
 			}
 			await self.app.dispatch({
