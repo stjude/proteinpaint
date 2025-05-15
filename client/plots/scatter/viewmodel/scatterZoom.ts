@@ -3,12 +3,10 @@ import { icons as icon_functions } from '#dom'
 import type { Scatter } from '../scatter.js'
 export class ScatterZoom {
 	scatter: Scatter
-	zoom: number
 	zoomD3: any
 
 	constructor(scatter: Scatter) {
 		this.scatter = scatter
-		this.zoom = 1
 		this.zoomD3 = d3zoom()
 			.scaleExtent([0.1, 10])
 			.on('zoom', event => this.handleZoom(event))
@@ -63,32 +61,49 @@ export class ScatterZoom {
 			chart.xAxis.call(chart.axisBottom.scale(new_xScale))
 			chart.yAxis.call(chart.axisLeft.scale(new_yScale))
 			chart.serie.attr('transform', event.transform)
-			this.zoom = event.transform.scale(1).k
+			const zoom = event.transform.scale(1).k
 			//on zoom in the particle size is kept
 			const symbols = chart.serie.selectAll('path[name="serie"')
 			symbols.attr('transform', c => this.scatter.model.transform(chart, c, 1))
 			if (this.scatter.config.lassoOn)
 				chart.lasso.selectedItems().attr('transform', c => this.scatter.model.transform(chart, c, 1.2))
 			if (this.scatter.config.scaleDotTW) this.scatter.vm.legendvm.drawScaleDotLegend(chart)
+			this.scatter.app.dispatch({
+				type: 'plot_edit',
+				id: this.scatter.id,
+				config: {
+					zoom
+				}
+			})
 		}
+	}
+
+	updateZoom(zoom) {
+		this.scatter.app.dispatch({
+			type: 'plot_edit',
+			id: this.scatter.id,
+			config: {
+				zoom
+			}
+		})
 	}
 
 	zoomIn() {
 		for (const chart of this.scatter.model.charts) {
-			if (this.scatter.model.is2DLarge) this.zoom = this.zoom + 0.15
-			else this.zoomD3.scaleBy(chart.mainG.transition().duration(750), 1.2)
+			if (this.scatter.model.is2DLarge) this.updateZoom(this.scatter.state.config.zoom + 0.15)
+			else this.zoomD3.scaleBy(chart.mainG.transition().duration(500), 1.2)
 		}
 	}
 
 	zoomOut() {
 		for (const chart of this.scatter.model.charts)
-			if (this.scatter.model.is2DLarge) this.zoom = this.zoom - 0.15
-			else this.zoomD3.scaleBy(chart.mainG.transition().duration(750), 0.8)
+			if (this.scatter.model.is2DLarge) this.updateZoom(this.scatter.state.config.zoom - 0.15)
+			else this.zoomD3.scaleBy(chart.mainG.transition().duration(500), 0.8)
 	}
 
 	resetToIdentity() {
 		for (const chart of this.scatter.model.charts)
-			if (this.scatter.model.is2DLarge) this.zoom = 1
-			else chart.mainG.transition().duration(750).call(this.zoomD3.transform, zoomIdentity)
+			if (this.scatter.model.is2DLarge) this.updateZoom(1)
+			else chart.mainG.transition().duration(500).call(this.zoomD3.transform, zoomIdentity)
 	}
 }

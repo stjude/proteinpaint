@@ -166,12 +166,16 @@ export class ScatterModel {
 					this.scatter.settings.maxShapeSize -
 					((c.scale - chart.ranges.scaleMin) / (chart.ranges.scaleMax - chart.ranges.scaleMin)) * range
 		}
-		scale = (this.scatter.vm.scatterZoom.zoom * scale * factor) / 3
+
+		scale = (this.getZoom() * scale * factor) / 3
 		if (this.filterSampleStr) {
 			if (c.sample?.toLowerCase().includes(this.filterSampleStr.toLowerCase())) scale = scale * 2
 			else scale = scale * 0.8
 		}
 		return scale
+	}
+	getZoom() {
+		return this.scatter.state.config.zoom || 1
 	}
 
 	transform(chart, c, factor = 1) {
