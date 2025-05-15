@@ -8,19 +8,17 @@ export class ScatterLasso {
 	model: any
 	view: any
 	interactivity: any
-	lassoOn: boolean
 	selectedItems!: any[]
 
 	constructor(scatter: Scatter) {
 		this.scatter = scatter
 		this.model = scatter.model
 		this.view = scatter.view
-		this.lassoOn = false
 		this.interactivity = scatter.interactivity
 	}
 
 	start(chart) {
-		if (this.lassoOn) {
+		if (this.scatter.config.lassoOn) {
 			chart.lasso
 				.items()
 				.attr('transform', c => this.model.transform(chart, c, 1 / 2))
@@ -31,7 +29,7 @@ export class ScatterLasso {
 	}
 
 	draw(chart) {
-		if (this.lassoOn) {
+		if (this.scatter.config.lassoOn) {
 			// Style the possible dots
 
 			chart.lasso
@@ -52,12 +50,11 @@ export class ScatterLasso {
 	}
 
 	end(dragEnd, chart) {
-		if (this.lassoOn) {
+		if (this.scatter.config.lassoOn) {
 			// Reset classes of all items (.possible and .not_possible are useful
 			// only while drawing lasso. At end of drawing, only selectedItems()
 			// should be used)
 			chart.lasso.items().classed('not_possible', false).classed('possible', false)
-
 			// Style the selected dots
 			chart.lasso.selectedItems().attr('transform', c => this.model.transform(chart, c, 1.3))
 			chart.lasso.items().style('fill-opacity', c => this.model.getOpacity(c))
@@ -154,7 +151,7 @@ export class ScatterLasso {
 				.on('draw', () => this.draw(chart))
 				.on('end', event => this.end(event, chart))
 
-		if (this.lassoOn) {
+		if (this.scatter.config.lassoOn) {
 			// this seems to clear stale lasso data as sometimes seen
 			// when the global filter is changed between lassoing
 			// uncertain explanation: the svg and mainG is potentially different between rerenders,
