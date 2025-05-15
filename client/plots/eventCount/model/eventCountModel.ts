@@ -20,7 +20,7 @@ export class EventCountModel extends RunchartModel {
 		for (const [key, value] of groupedSamples.entries()) {
 			const [year, month] = key.split('-')
 			for (const sample of value.samples) {
-				sample.x = getNumberFromDate(new Date(year, month - 1, 15))
+				sample.x = getNumberFromDate(new Date(year, month, 15))
 				sample.y = value.samples.length
 			}
 		}
