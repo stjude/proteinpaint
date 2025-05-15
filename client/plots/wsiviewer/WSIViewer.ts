@@ -86,9 +86,12 @@ export default class WSIViewer extends RxComponentInner {
 
 		if (zoomInPoints != undefined) {
 			this.addZoomInEffect(activeImageExtent, zoomInPoints, map)
+
+			const image = holder.select('div > .ol-viewport').attr('tabindex', 0)
+
 			let currentIndex = index
-			let keyPressTimeout: ReturnType<typeof setTimeout>
-			window.addEventListener('keydown', async (event: KeyboardEvent) => {
+			let keyPressTimeout: NodeJS.Timeout
+			image.on('keydown', async (event: KeyboardEvent) => {
 				if (event.key === 'ArrowRight') {
 					//TODO: length of annotations?
 					currentIndex += 1
@@ -100,13 +103,15 @@ export default class WSIViewer extends RxComponentInner {
 					currentIndex -= 1
 					clearTimeout(keyPressTimeout)
 				}
+			})
+			image.on('keyup', () => {
 				/** In case the user presses the arrows multiple times, wait a third of second
 				 * before animation*/
 				keyPressTimeout = setTimeout(async () => {
 					const newData: SampleWSImagesResponse = await this.requestData(state, currentIndex)
 					const newZoomInPoints = newData.sampleWSImages[settings.displayedImageIndex].zoomInPoints
 					if (newZoomInPoints != undefined) this.addZoomInEffect(activeImageExtent, newZoomInPoints, map)
-				}, 300)
+				}, 200)
 			})
 		}
 
