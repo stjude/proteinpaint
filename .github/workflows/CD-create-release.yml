@@ -168,7 +168,7 @@ jobs:
 
       # Publish Docker image with the Rust binaries included
       - name: Publish docker image with Rust binaries
-        uses: stjude/proteinpaint/.github/actions/publish-docker@master
+        uses: stjude/proteinpaint/.github/actions/publish-ppfull-ppserver-image@prerelease-r-base-image
         with:
           PAT: ${{ secrets.PAT }}
           GITHUB_ACTOR: ${{ github.actor }}
