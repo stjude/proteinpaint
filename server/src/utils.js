@@ -559,12 +559,15 @@ export const genotype_types = {
 	het: 'Heterozygous'
 }
 
+export const cachedir_ssid = serverconfig.cachedir_ssid || path.join(serverconfig.cachedir, 'ssid')
+if (!fs.existsSync(cachedir_ssid)) fs.mkdirSync(cachedir_ssid)
+
 export async function loadfile_ssid(id, samplefilterset) {
 	/*
 samplefilterset:
 	optional Set of samples to restrict to
 */
-	const text = await read_file(path.join(serverconfig.cachedir_ssid, id))
+	const text = await read_file(path.join(cachedir_ssid, id))
 	const sample2gt = new Map()
 	// k: sample, v: genotype str
 	const genotype2sample = new Map()

@@ -4,6 +4,9 @@ import * as utils from './utils'
 import serverconfig from './serverconfig'
 import { authApi } from './auth'
 
+const cachedir_massSession = serverconfig.cachedir_massSession || path.join(serverconfig.cachedir, 'massSession')
+if (!fs.existsSync(cachedir_massSession)) fs.mkdirSync(cachedir_massSession)
+
 export async function save(req, res) {
 	// POST
 	try {
@@ -23,7 +26,7 @@ export async function save(req, res) {
 
 		// req.body is some string data, save it to file named by the session id
 		const content = JSON.stringify(req.body)
-		const dir = filename ? getSessionPath(q, payload) : serverconfig.cachedir_massSession
+		const dir = filename ? getSessionPath(q, payload) : cachedir_massSession
 		const dirExists = await fs.promises
 			.access(dir)
 			.then(() => true)
@@ -48,7 +51,7 @@ export async function get(req, res) {
 		if (!id) throw 'session id missing'
 		const { route, dslabel, embedder } = req.query
 		const payload = req.query.route ? authApi.getPayloadFromHeaderAuth(req, req.query.route) : null //; console.log(14, payload)
-		const dir = req.query.route ? getSessionPath(req.query, payload) : serverconfig.cachedir_massSession
+		const dir = req.query.route ? getSessionPath(req.query, payload) : cachedir_massSession
 		const file = path.join(dir, id)
 		let sessionCreationDate
 		try {
@@ -89,7 +92,7 @@ export async function _delete(req, res) {
 		const { route, dslabel, embedder } = req.query
 		const payload = req.query.route ? authApi.getPayloadFromHeaderAuth(req, req.query.route) : null
 		if (!payload) throw 'missing credentials'
-		const dir = req.query.route ? getSessionPath(req.query, payload) : serverconfig.cachedir_massSession
+		const dir = req.query.route ? getSessionPath(req.query, payload) : cachedir_massSession
 		const errors = []
 		for (const id of ids) {
 			const file = path.join(dir, id)
