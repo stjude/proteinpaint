@@ -144,7 +144,7 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - name: Publish docker image
-        uses: stjude/proteinpaint/.github/actions/publish-docker@master
+        uses: stjude/proteinpaint/.github/actions/publish-ppfull-ppserver-image@prerelease-r-base-image
         with:
           PAT: ${{ secrets.PAT }}
           GITHUB_ACTOR: ${{ github.actor }}
@@ -154,21 +154,8 @@ jobs:
     needs: upload-rust-assets
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v3
-        with:
-          token: ${{ secrets.PAT }}
-          
-      # Download the Rust binaries built by the rust-build workflow
-      - name: Download Rust Binaries
-        uses: actions/download-artifact@v4
-        with:
-          name: rust-binaries
-          path: rust-binaries
-          
-          
-      # Publish Docker image with the Rust binaries included
-      - name: Publish docker image with Rust binaries
-        uses: stjude/proteinpaint/.github/actions/publish-docker@master
+      - name: Publish docker image
+        uses: stjude/proteinpaint/.github/actions/publish-ppfull-ppserver-image@prerelease-r-base-image
         with:
           PAT: ${{ secrets.PAT }}
           GITHUB_ACTOR: ${{ github.actor }}
