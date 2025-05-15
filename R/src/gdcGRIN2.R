@@ -4,6 +4,7 @@ suppressPackageStartupMessages({
   library(RSQLite)
   library(dplyr)
   library(base64enc)
+  library(jsonlite)
 })
 
 ### Function to write error messages to stderr
@@ -11,10 +12,18 @@ write_error <- function(msg) {
   cat("ERROR: ", msg, "\n", file = stderr())
 }
 
+### stream in json input data
+con <- file('stdin','r')
+json_input <- readLines(con)
+close(con)
+input <- fromJSON(json_input)
+
 ### generate gene annotation table from gene2coord
 tryCatch({
+  dbfile <- input$genedb
   # connect to SQLite database
-  con <- dbConnect(RSQLite::SQLite(), dbname = "/Users/jwang7/data/tp/anno/genes.hg19.db")
+  print(dbfile)
+  con <- dbConnect(RSQLite::SQLite(), dbname = dbfile)
   }, 
   error = function(e){
     write_error(paste("Failed to connect to the gene database:", conditionMessage(e)))
@@ -86,7 +95,7 @@ gene.anno <- gene.anno %>%
 
 
 ### generate chromosome size table
-chrome.size.file <- "/Users/jwang7/data/tp/genomes/hg19.gz.fai"
+chrome.size.file <- "/Users/jwang7/data/tp/genomes/hg38.gz.fai"
 tryCatch({
   chrome.size <- read.table(
     chrome.size.file,
@@ -100,7 +109,7 @@ tryCatch({
   },
   error = function(e){
     write_error(paste("Failed to read chromosome size file:", conditionMessage(e)))
-    stop("Chromosome size file error")
+    quit(status = 1)
   })
 
 ### receive lesion data from node 
@@ -118,9 +127,9 @@ lesion_df <- data.frame(
 process_tsv <- function(tsv_string) {
   tryCatch({
     # Clean the TSV string: remove outer quotes and chunk separators
-    tsv_string <- gsub('^"|"$', '', tsv_string)  # Remove leading/trailing quotes
-    tsv_string <- gsub('""', '', tsv_string)  # Remove double quotes between chunks
-    tsv_string <- gsub('^\n|\n$', '', tsv_string) # Remove empty line
+    #tsv_string <- gsub('^"|"$', '', tsv_string)  # Remove leading/trailing quotes
+    #tsv_string <- gsub('""', '', tsv_string)  # Remove double quotes between chunks
+    #tsv_string <- gsub('^\n|\n$', '', tsv_string) # Remove empty line
     if (nchar(tsv_string) == 0 ){
       return(NULL)
     }
@@ -151,17 +160,29 @@ process_tsv <- function(tsv_string) {
 }
 
 # Read all streamed data into a single string
+#tryCatch({
+#  stream_data <- paste(readLines("stdin"), collapse="\n")
+#  },
+#  error = function(e){
+#    write_error(paste("Failed to read streamed data:", conditionMessage(e)))
+#    stop("Stream input error")
+#  })
+# Read lesion data from input JSON
 tryCatch({
-  stream_data <- paste(readLines("stdin"), collapse="\n")
-  },
-  error = function(e){
-    write_error(paste("Failed to read streamed data:", conditionMessage(e)))
-    stop("Stream input error")
-  })
+  lesion_data <- input$lesion
+  lesion_data <- gsub('^\n|\n$', '', lesion_data) # Remove empty line
+  lesion_data <- gsub('^"|"$|\\"', '', lesion_data)  # Remove leading/trailing quotes
+  lesion_data <- gsub('\\\\t', '\t', lesion_data) # Replace escaped tabs with actual tabs
+  lesion_data <- gsub('\\\\n', '\n', lesion_data) # Replace escaped newlines with actual newlines
+},
+error = function(e) {
+  write_error(paste("Failed to read lesion data from input JSON:", conditionMessage(e)))
+  quit(status = 1)
+})
 
 # Process the TSV
-if (nchar(stream_data) > 0) {
-  for (line in strsplit(stream_data,"\n")[[1]]) {
+if (nchar(lesion_data) > 0) {
+  for (line in strsplit(lesion_data,"\n")[[1]]) {
     temp_df <- process_tsv(line)
     if (!is.null(temp_df)) {
       lesion_df <- rbind(lesion_df, temp_df)
@@ -197,17 +218,21 @@ tryCatch({
     quit(status = 1)
   })
 
+
 # Generate genomewide plot and encode PNG as Base64
 tryCatch({
-  genomewide.plot <- genomewide.lsn.plot(grin.results, max.log10q=150)
-  png("temp_plot.png",width=800,height=600)
-  print(genomewide.plot)
+  temp_file <- tempfile("plot", tmpdir = "/Users/jwang7/data/tp", fileext = ".png")
+  png(temp_file, width=800, height=600)
+  genomewide.lsn.plot(grin.results, max.log10q=150)
   dev.off()
-  base64_string <- base64encode("temp_plot.png")
+  plot_bytes <- readBin(temp_file, "raw", file.size(temp_file))
+  unlink(temp_file)
+  base64_string <- base64enc::base64encode(plot_bytes)
+  cat(base64_string, "\n")
+  flush(stdout())
   },
   error = function(e) {
     write_error(paste("Failed to generate genomewide plot:", e$message))
     quit(status = 1)
   })
-
 print(base64_string)
