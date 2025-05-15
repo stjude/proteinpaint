@@ -43,7 +43,7 @@ export async function gdcMAFui({ holder, filter0, callbacks, debugmode = false }
 		update({ filter0 })
 	} catch (e) {
 		console.log(e)
-		sayerror(holder, e.message || e)
+		sayerror(holder, e instanceof Error ? e.message : String(e))
 	}
 
 	async function update({ filter0 }) {
@@ -139,7 +139,7 @@ async function getFilesAndShowTable(obj) {
 		if (obj.opts.filter0) body.filter0 = obj.opts.filter0
 
 		// Keep using the existing gdc/maf endpoint which now includes CNV files
-		result = await dofetch3('gdc/maf', { body })
+		result = await dofetch3('gdc/GRIN2list', { body })
 
 		if (result.error) throw result.error
 		if (!Array.isArray(result.files)) throw 'result.files[] not array'
@@ -200,8 +200,8 @@ async function getFilesAndShowTable(obj) {
 		}
 		renderTable(obj.mafTableArg)
 	} catch (e) {
-		wait.text(e.message || e)
-		if (e.stack) console.log(e.stack)
+		wait.text(e instanceof Error ? e.message : String(e))
+		if (e instanceof Error && e.stack) console.log(e.stack)
 	}
 
 	function updateButtonBySelectionChange(lst, button) {
@@ -266,8 +266,37 @@ async function getFilesAndShowTable(obj) {
 			caseFiles[caseId][formatKey] = file.id
 		}
 
-		// Debug output
-		//console.log('Sending to GRIN2:', caseFiles)
+		// Transform with type assertion for files
+		const transformedRequestBody = {
+			cases: Object.entries(caseFiles).map(([caseId, files]: [string, any]) => {
+				const fileIds: string[] = []
+				if (files.cnv) fileIds.push(files.cnv)
+				if (files.maf) fileIds.push(files.maf)
+
+				return {
+					caseId,
+					fileIds
+				}
+			})
+		}
+
+		// const casesWithFileIds = Object.entries(caseFiles).map(([caseId, files]: [string, any]) => {
+		// const fileIds: string[] = [];
+
+		// if (files.cnv) fileIds.push(files.cnv);
+		// if (files.maf) fileIds.push(files.maf);
+
+		// return {
+		// 	caseId,
+		// 	fileIds
+		// };
+		// });
+
+		// console.log('Sending to GRIN2:', JSON.stringify(fileIdsArray, null, 2));
+
+		// Log the exact URL and payload being used
+		const url = '/gdc/runGRIN2'
+		console.log('GRIN2 request URL:', url)
 
 		if (Object.keys(caseFiles).length === 0) return
 
@@ -284,8 +313,9 @@ async function getFilesAndShowTable(obj) {
 			obj.expStrategyRadio.inputs.property('disabled', true)
 
 			// Call the GRIN2 run endpoint with the correctly formatted data
+			console.log('Sending GRIN2 request:', transformedRequestBody)
 			const response = await dofetch3('gdc/runGRIN2', {
-				body: caseFiles
+				body: transformedRequestBody
 			})
 
 			obj.busy = false
@@ -390,7 +420,7 @@ async function getFilesAndShowTable(obj) {
 			obj.resultDiv
 				.append('div')
 				.attr('class', 'sja_error')
-				.text('Error running GRIN2 analysis: ' + (e.message || e))
+				.text('Error running GRIN2 analysis: ' + (e instanceof Error ? e.message : String(e)))
 		} finally {
 			button.innerHTML = oldText
 			button.disabled = false

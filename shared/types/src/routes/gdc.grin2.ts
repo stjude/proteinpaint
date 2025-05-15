@@ -21,7 +21,6 @@ export type GdcGRIN2File = {
 }
 
 enum ExperimentalStrategy {
-	targeted = 'Targeted Sequencing',
 	wxs = 'WXS'
 }
 
@@ -64,8 +63,10 @@ export type GdcGRIN2Response = {
  * Parameters for running GRIN2 analysis
  */
 export type RunGRIN2Request = {
-	/** List of file IDs to include in the analysis */
-	fileIds: string[]
+	cases: Array<{
+		caseId: string
+		fileIds: string[]
+	}>
 }
 
 /**

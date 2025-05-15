@@ -5,10 +5,11 @@ import { joinUrl } from '#shared/joinUrl.js'
 import serverconfig from '#src/serverconfig.js'
 
 /*
-this route lists available gdc MAF files based on user's cohort filter
+this route lists available gdc MAF and CNV files based on user's cohort filter
 and return them to client to be shown in a table for selection
 */
 
+console.log('GDC GRIN2 list route registered!')
 const maxFileNumber = 1000 // determines max number of files to return to client
 // preliminary testing:
 // 36s for 1000 (87Mb)
@@ -21,7 +22,7 @@ const allowedWorkflowType = 'Aliquot Ensemble Somatic Variant Merging and Maskin
 export const maxTotalSizeCompressed = serverconfig.features.gdcMafMaxFileSize || 400000000 // 400Mb
 
 export const api: RouteApi = {
-	endpoint: 'gdc/maf',
+	endpoint: 'gdc/GRIN2list',
 	methods: {
 		get: {
 			...gdcMafPayload,

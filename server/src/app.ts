@@ -47,6 +47,8 @@ export async function launch() {
 		authApi.maySetAuthRoutes(app, basepath, serverconfig)
 
 		const routes = await Promise.all(routeFiles)
+		console.log('setting data routes ...')
+		console.log('routes:', routes)
 
 		const __dirname = import.meta.dirname || new URL('.', import.meta.url).pathname
 
