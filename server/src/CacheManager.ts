@@ -99,6 +99,7 @@ export class CacheManager {
 	// the reference to setInterval
 	intervalId!: any // Timeout
 	callbacks: Callbacks
+	hasActiveCheck = false
 
 	constructor(opts: CacheOpts = defaultOpts) {
 		this.interval = opts.interval || defaultOpts.interval
@@ -150,6 +151,8 @@ export class CacheManager {
 
 	async start() {
 		const checkCacheFiles = async () => {
+			if (this.hasActiveCheck) return // prevent two active checks from running at the same time
+			this.hasActiveCheck = true
 			const now = Date.now()
 			const results = {}
 			for (const [subdir, dirOpts] of this.subdirs.entries()) {
@@ -159,6 +162,7 @@ export class CacheManager {
 				}
 			}
 			if (this.callbacks.postCheck) this.callbacks.postCheck(results)
+			this.hasActiveCheck = false
 		}
 
 		// clear expired cache files initially when this instance is constructed,
