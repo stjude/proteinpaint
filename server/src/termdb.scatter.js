@@ -7,7 +7,7 @@ import { authApi } from './auth.js'
 import { run_R } from '@sjcrh/proteinpaint-r'
 import { read_file } from './utils.js'
 import { isNumericTerm } from '@sjcrh/proteinpaint-shared/terms.js'
-import { get } from 'http'
+
 /*
 works with "canned" scatterplots in a dataset, e.g. data from a text file of tSNE coordinates from a pre-analyzed cohort (contrary to on-the-fly analysis)
 
