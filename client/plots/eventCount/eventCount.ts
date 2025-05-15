@@ -1,7 +1,7 @@
 import { getCompInit, copyMerge } from '../../rx/index.js'
 import { fillTermWrapper } from '#termsetting'
 import { EventCountModel } from './model/eventCountModel.ts'
-import { EventCountViewModel } from './viewmodel/eventCountViewModel.ts'
+import { RunchartViewModel } from '../runchart/viewmodel/runchartViewModel.ts'
 import { EventCountView } from './view/eventCountView.ts'
 import { plotColor } from '#shared/common.js'
 import { ScatterInteractivity } from '../scatter/viewmodel/scatterInteractivity.ts'
@@ -11,7 +11,6 @@ import { getColors } from '#shared/common.js'
 export class EventCount extends Runchart {
 	type: string
 	cat2Color: any
-	eventCountvm!: EventCountViewModel
 
 	constructor() {
 		super()
@@ -30,7 +29,7 @@ export class EventCount extends Runchart {
 		})
 		this.view = new EventCountView(this)
 		this.model = new EventCountModel(this)
-		this.vm = new EventCountViewModel(this)
+		this.vm = new RunchartViewModel(this)
 		this.interactivity = new ScatterInteractivity(this)
 	}
 
