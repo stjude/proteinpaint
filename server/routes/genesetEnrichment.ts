@@ -20,6 +20,8 @@ export const api: RouteApi = {
 	}
 }
 
+const cachedir_gsea = path.join(serverconfig.cachedir, 'gsea')
+
 function init({ genomes }) {
 	return async (req, res): Promise<void> => {
 		try {
@@ -29,12 +31,21 @@ function init({ genomes }) {
 			// instead of trying to generalize the same function to do different things
 			const results = await run_genesetEnrichment_analysis(q, genomes)
 			if (!q.geneset_name) {
-				// req.query.geneset_name contains the geneset name which is defined only when a request for plotting the details of a particular geneset_name is made. During the initial computation this is not defined as this will be selected by the user from the client side. When this is not defined, it will send the table output. The python code saves the table in serverconfig.cachedir_gsea in a pickle file (gsea_result_{random_number}.pkl) which will later be retrieved by a subsequent server request asking to plot the details of that geneset.
+				// req.query.geneset_name contains the geneset name which is defined only
+				// when a request for plotting the details of a particular geneset_name is made.
+				// During the initial computation this is not defined as this will be selected
+				// by the user from the client side. When this is not defined, it will send the
+				// table output. The python code saves the table in cachedir_gsea in a pickle file
+				// (gsea_result_{random_number}.pkl) which will later be retrieved by a subsequent
+				// server request asking to plot the details of that geneset.
 				if (typeof results != 'object') throw 'gsea result is not object'
 				res.send(results satisfies GenesetEnrichmentResponse)
 				return
 			}
-			// req.query.geneset_name is present, this will cause the geneset image to be generated. The python code will retrieve gsea_result_{random_number}.pkl from serverconfig.cachedir_gsea to generate the image (gsea_plot_{random_num}.png). This prevents having to rerun the entire gsea computation again.
+			// req.query.geneset_name is present, this will cause the geneset image to be generated.
+			// The python code will retrieve gsea_result_{random_number}.pkl from cachedir_gsea to
+			// generate the image (gsea_plot_{random_num}.png). This prevents having to rerun the
+			// entire gsea computation again.
 			if (typeof results != 'string') throw 'gsea result is not string'
 			res.sendFile(results, (err: any) => {
 				fs.unlink(results, () => {})
@@ -60,7 +71,7 @@ async function run_genesetEnrichment_analysis(
 		fold_change: q.fold_change,
 		db: genomes[q.genome].termdbs.msigdb.cohort.db.connection.name, // For now msigdb has been added, but later databases other than msigdb may be used
 		geneset_group: q.geneSetGroup,
-		cachedir: serverconfig.cachedir_gsea,
+		cachedir: cachedir_gsea,
 		geneset_name: q.geneset_name,
 		pickle_file: q.pickle_file,
 		num_permutations: q.num_permutations,
@@ -98,6 +109,6 @@ async function run_genesetEnrichment_analysis(
 	}
 
 	if (data_found) return result as GenesetEnrichmentResponse
-	if (image_found) return path.join(serverconfig.cachedir_gsea, result.image_file)
+	if (image_found) return path.join(cachedir_gsea, result.image_file)
 	throw 'data or image not found in gsea output; this should not happen'
 }
