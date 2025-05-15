@@ -151,7 +151,7 @@ jobs:
 
   publish-docker-with-rust-changes:
     if: needs.publish-npm.outputs.updated_rust == 'true' && github.event.inputs.include == 'npm packages + Docker image'
-    needs: [publish-npm, rust-build]
+    needs: upload-rust-assets
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v3
