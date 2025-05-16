@@ -62,12 +62,16 @@ export type GdcGRIN2Response = {
 /**
  * Parameters for running GRIN2 analysis
  */
-export type RunGRIN2Request = {
-	cases: Array<{
-		caseId: string
-		fileIds: string[]
-	}>
-}
+// export type RunGRIN2Request = {
+// 	cases: Array<{
+// 		caseId: string
+// 		fileIds: string[]
+// 	}>
+// }
+
+// type RunGRIN2Request = {
+//   [caseId: string]: { maf?: string; cnv?: string }
+// }
 
 /**
  * Response for GRIN2 analysis run
