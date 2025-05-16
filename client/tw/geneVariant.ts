@@ -68,8 +68,8 @@ export class GvBase extends TwBase {
 		// fill term.groupsetting
 		if (!tw.term.groupsetting) tw.term.groupsetting = { disabled: false }
 
-		// may fill variant filter
-		await mayMakeVariantFilter(tw, opts.vocabApi)
+		// get child dt terms
+		await mayGetChildTerms(tw, opts.vocabApi)
 
 		{
 			// apply optional ds-level configs for this specific term
@@ -123,9 +123,9 @@ export class GvBase extends TwBase {
 	}
 }
 
-// function to make a variant filter based on dts specified in dataset
-export async function mayMakeVariantFilter(tw: RawGvTW, vocabApi: VocabApi) {
-	if (tw.term.filter) return
+// function to get child dt terms
+export async function mayGetChildTerms(tw: RawGvTW, vocabApi: VocabApi) {
+	if (tw.term.childTerms) return
 	if (!vocabApi.termdbConfig?.queries) throw 'termdbConfig.queries is missing'
 	const termdbmclass = vocabApi.termdbConfig.mclass // custom mclass labels from dataset
 	const dtTermsInDs: DtTerm[] = [] // dt terms in dataset
@@ -134,7 +134,7 @@ export async function mayMakeVariantFilter(tw: RawGvTW, vocabApi: VocabApi) {
 		const t = structuredClone(_t)
 		if (!Object.keys(vocabApi.termdbConfig.queries).includes(t.query)) continue // dt is not in dataset
 		const data = categories.lst.find(x => x.dt == t.dt)
-		if (!data) continue
+		if (!data) continue // gene does not have this dt
 		const byOrigin = vocabApi.termdbConfig.assayAvailability?.byDt[t.dt]?.byOrigin
 		let classes
 		if (byOrigin) {
@@ -155,15 +155,14 @@ export async function mayMakeVariantFilter(tw: RawGvTW, vocabApi: VocabApi) {
 			if (termdbmclass && Object.keys(termdbmclass).includes(k)) v.label = termdbmclass[k].label
 		}
 		t.values = values
+		t.parentTerm = structuredClone(tw.term)
 		dtTermsInDs.push(t)
 	}
-	tw.term.filter = {
-		opts: { joinWith: ['and', 'or'] },
-		terms: dtTermsInDs // will load dt terms as custom terms in frontend vocab
-	}
+	tw.term.childTerms = dtTermsInDs // will load dt terms as custom terms in frontend vocab
+
 	// track the parent geneVariant term on each dt term
-	const geneVariantTerm = structuredClone(tw.term)
-	for (const term of tw.term.filter.terms) term.geneVariantTerm = geneVariantTerm
+	//const geneVariantTerm = structuredClone(tw.term)
+	//for (const term of tw.term.filter.terms) term.geneVariantTerm = geneVariantTerm
 }
 
 export class GvValues extends GvBase {
@@ -243,22 +242,18 @@ function mayMakeGroups(tw: RawGvCustomGsTW) {
 	// custom groupset, but customset.groups[] is empty
 	// fill with mutated group vs. wildtype group
 	// for the first applicable dt in dataset
-	const dtFilter = tw.term.filter
-	if (!dtFilter) throw 'dtFilter is missing'
+	const dtTerms = tw.term.childTerms
+	if (!dtTerms) throw 'dtTerms is missing'
 	let WTfilter, WTname, MUTfilter, MUTtvs, MUTname
-	for (const dtTerm of dtFilter.terms) {
+	for (const dtTerm of dtTerms) {
 		// wildtype filter
-		WTfilter = structuredClone(dtFilter)
-		WTfilter.group = 2
 		const WT = 'WT'
 		const WTvalue = { key: WT, label: dtTerm.values[WT].label, value: WT }
 		const WTtvs = { type: 'tvs', tvs: { term: dtTerm, values: [WTvalue] } }
-		WTfilter.active = getWrappedTvslst([WTtvs])
+		WTfilter = getWrappedTvslst([WTtvs])
 		WTname = 'Wildtype'
 		if (dtTerm.origin) WTname += ` (${dtTerm.origin})`
 		// mutated filter
-		MUTfilter = structuredClone(dtFilter)
-		MUTfilter.group = 1
 		const classes = Object.keys(dtTerm.values)
 		if (classes.length < 2) {
 			// fewer than 2 classes, try next dt term
@@ -279,13 +274,11 @@ function mayMakeGroups(tw: RawGvCustomGsTW) {
 			MUTtvs = { type: 'tvs', tvs: { term: dtTerm, values: [WTvalue], isnot: true } }
 			MUTname = dtTerm.name
 		}
-		MUTfilter.active = getWrappedTvslst([MUTtvs])
+		MUTfilter = getWrappedTvslst([MUTtvs])
 		break
 	}
 	// excluded filter
-	const EXCLUDEfilter: any = structuredClone(dtFilter)
-	EXCLUDEfilter.group = 0
-	EXCLUDEfilter.active = getWrappedTvslst()
+	const EXCLUDEfilter: any = getWrappedTvslst()
 	// assign filters to groups
 	const WTgroup: FilterGroup = {
 		name: WTname,

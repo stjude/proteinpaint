@@ -38,7 +38,7 @@ export function getHandler(self: GeneVariantTermSettingInstance) {
 	}
 }
 
-// TODO: can eventually retire fillTW() as it has been replaced with
+//// TODO: can eventually retire fillTW() as it has been replaced with
 // fill() functions in client/tw/geneVariant.ts
 export async function fillTW(tw: GvTW, vocabApi: VocabApi, defaultQ: GvQ | null = null) {
 	if (!tw.term.kind) {
@@ -98,7 +98,7 @@ export async function fillTW(tw: GvTW, vocabApi: VocabApi, defaultQ: GvQ | null 
 	set_hiddenvalues(tw.q, tw.term)
 }
 
-// TODO: can remove mayMakeVariantFilter() as it is already in use
+//// TODO: can remove mayMakeVariantFilter() as it is already in use
 // in client/tw/geneVariant.ts
 // function to make a variant filter based on dts specified in dataset
 export async function mayMakeVariantFilter(tw: GvTW, vocabApi: VocabApi) {
@@ -133,7 +133,7 @@ export async function mayMakeVariantFilter(tw: GvTW, vocabApi: VocabApi) {
 	}
 }
 
-// TODO: can remove mayMakeGroups() as it is already in use
+//// TODO: can remove mayMakeGroups() as it is already in use
 // in client/tw/geneVariant.ts
 function mayMakeGroups(tw) {
 	if (tw.q.type != 'custom-groupset' || tw.q.customset?.groups.length) return
@@ -231,7 +231,7 @@ async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 			let validGrpset = false
 			if (self.q.type == 'custom-groupset') {
 				// groupset is assigned
-				if (self.q.customset?.groups.map((group: any) => group.filter?.active.lst).some(lst => lst.length)) {
+				if (self.q.customset?.groups.map((group: any) => group.filter?.lst).some(lst => lst.length)) {
 					// filters in groupset are non-empty
 					validGrpset = true
 				}

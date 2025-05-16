@@ -2700,7 +2700,7 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 				// the sample will be assigned to groups[0]
 				const group = groupset.groups.find(group => {
 					if (group.type != 'filter') throw 'unexpected group.type'
-					const filter = group.filter.active
+					const filter = group.filter
 					const [pass, tested] = filterByTvsLst(filter, mlst)
 					return pass
 				})
