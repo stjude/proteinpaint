@@ -98,6 +98,8 @@ export default class WSIViewer extends RxComponentInner {
 					isSpaceDown = true
 				}
 				if (isSpaceDown) {
+					event.preventDefault()
+					event.stopPropagation()
 					const idx = currentIndex
 					if (event.key == 'ArrowRight') {
 						//TODO: length of annotations?
