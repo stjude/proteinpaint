@@ -1,5 +1,6 @@
 use flate2::read::GzDecoder;
 use futures::StreamExt;
+use memchr::memchr;
 use serde::Deserialize;
 use serde_json;
 use std::collections::HashMap;
@@ -60,13 +61,6 @@ fn parse_content(content: &str, case_id: &str, data_type: &str) -> Result<String
                     }
                 }
             }
-            if columns_indices.is_empty() {
-                return Err((
-                    case_id.to_string(),
-                    data_type.to_string(),
-                    "No matching columns found".to_string(),
-                ));
-            };
         } else {
             let mut keep_ck: bool = true;
             let cont_lst: Vec<String> = line.split("\t").map(|s| s.to_string()).collect();
@@ -104,6 +98,13 @@ fn parse_content(content: &str, case_id: &str, data_type: &str) -> Result<String
             }
         }
     }
+    if columns_indices.is_empty() {
+        return Err((
+            case_id.to_string(),
+            data_type.to_string(),
+            "No matching columns found. Problematic file!".to_string(),
+        ));
+    };
     Ok(parsed_data)
 }
 
@@ -140,7 +141,8 @@ async fn download_data(data4dl: HashMap<String, DataType>, host: &str) -> () {
                         Ok(resp) if resp.status().is_success() => {
                             match resp.bytes().await {
                                 Ok(content) => {
-                                    if data_type == "cnv" {
+                                    // if data_type == "cnv" {
+                                    if !memchr(0x00, &content).is_some() {
                                         // CNV files are plain text
                                         let text = String::from_utf8_lossy(&content).to_string();
                                         Ok((case_id.clone(), data_type.clone(), text))
@@ -285,9 +287,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             )) as Box<dyn std::error::Error>);
         }
     };
-
-    //println!("{:?}",&input_js);
-    //println!("{}",&Host);
 
     // Download data
     download_data(input_js, HOST).await;
