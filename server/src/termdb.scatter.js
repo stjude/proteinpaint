@@ -423,12 +423,6 @@ async function getSampleCoordinatesByTerms(req, q, ds, data) {
 	return [samples, data]
 }
 
-function getNumberFromCat(tw, cat) {
-	const categories = Object.values(tw.term.values).map(v => v.label || v.key)
-	const index = categories.indexOf(cat)
-	return index >= 0 ? index : null
-}
-
 function isComputable(term, value) {
 	if (!term) return true
 	return !term.values?.[value]?.uncomputable
