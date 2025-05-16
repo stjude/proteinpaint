@@ -6,10 +6,9 @@
 # USAGE
 ########
 
-#Usage: echo <in_json> | Rscript gdcGRIN2.R <out_json>
+#Usage: echo <in_json> | Rscript gdcGRIN2.R 
 
 # in_json: [string] input data in JSON format. Streamed through stdin
-# out_json: [string] base64 string of png figure
 
 #Input JSON:
 #{
