@@ -266,24 +266,6 @@ async function getFilesAndShowTable(obj) {
 			caseFiles[caseId][formatKey] = file.id
 		}
 
-		/**
-		 * Constructs the request body for an API call, containing files grouped by case.
-		 *
-		 * @remarks
-		 * This object is used to send a mapping of cases to their associated files in the request payload.
-		 *
-		 * @example
-		 * {
-		 *   filesByCase: {
-		 *     "case1": ["fileA", "fileB"],
-		 *     "case2": ["fileC"]
-		 *   }
-		 * }
-		 */
-		const requestBody = {
-			filesByCase: caseFiles
-		}
-
 		// Log the exact URL and payload being used
 		const url = '/gdc/runGRIN2'
 		console.log('GRIN2 request URL:', url)
@@ -303,9 +285,9 @@ async function getFilesAndShowTable(obj) {
 			obj.expStrategyRadio.inputs.property('disabled', true)
 
 			// Call the GRIN2 run endpoint with the correctly formatted data
-			console.log('Sending GRIN2 request:', requestBody)
+			console.log('Sending GRIN2 request:', caseFiles)
 			const response = await dofetch3('gdc/runGRIN2', {
-				body: requestBody
+				body: caseFiles
 			})
 
 			obj.busy = false

@@ -1,4 +1,4 @@
-import type { RunGRIN2Request, RunGRIN2Response, RouteApi } from '#types'
+import type { RunGRIN2Response, RouteApi } from '#types'
 import { runGRIN2Payload } from '#types/checkers'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 import { run_R } from '@sjcrh/proteinpaint-r'
@@ -35,12 +35,16 @@ function init({ genomes }) {
 			if (!ds) throw 'hg38 GDC missing'
 
 			// Cast the request body to RunGRIN2Request type
-			const { cases } = req.body as RunGRIN2Request
-			console.log(`[GRIN2] Request received with cases: ${JSON.stringify(cases)}`)
+			//const { cases } = req.body as RunGRIN2Request
+			// const caseFiles = req.body as { [caseId: string]: { maf?: string; cnv?: string } };
+			// const caseFiles = req.body as RunGRIN2Request;
+			// console.log(`[GRIN2] Request received with cases: ${JSON.stringify(caseFiles)}`)
+			const caseFiles = req.body as { [caseId: string]: { maf?: string; cnv?: string } }
+			console.log(`[GRIN2] Request received: ${JSON.stringify(caseFiles)}`)
 
-			if (!cases || !Array.isArray(cases) || cases.length === 0) {
-				throw 'Missing or invalid cases data'
-			}
+			// if (!cases || !Array.isArray(cases) || cases.length === 0) {
+			// 	throw 'Missing or invalid cases data'
+			// }
 
 			try {
 				// Create a simple random folder name for testing
@@ -49,17 +53,18 @@ function init({ genomes }) {
 				// await fs.mkdir(tempDir, { recursive: true })
 				// console.log(`[GRIN2] Temporary directory created: ${tempDir}`)
 
-				console.log(`[GRIN2] Running analysis for ${cases.length} cases`)
+				console.log(`[GRIN2] Running analysis for ${caseFiles.length} cases`)
 
 				// Step 1: Call Rust to process the MAF files and get JSON data
 				console.log('[GRIN2] Calling Rust for file processing...')
 				const startTime = Date.now()
 
 				// Prepare input parameters for the Rust function
-				const rustInput = JSON.stringify({
-					cases: cases
-				})
-				console.log(`[GRIN2] Rust input: ${rustInput}`)
+				// const rustInput = JSON.stringify({
+				// 	caseFiles
+				// })
+				// //console.log(`[GRIN2] Rust input: ${rustInput}`)
+				const rustInput = JSON.stringify(caseFiles)
 
 				// Call the Rust implementation and get JSON result
 				console.log('[GRIN2] Executing Rust function...')
@@ -97,6 +102,7 @@ function init({ genomes }) {
 					rustData: parsedRustResult,
 					outputPath: outputImagePath
 				})
+				console.log(`[GRIN2] R input: ${rInput}`)
 				console.log(`[GRIN2] R input prepared`)
 
 				// Call the R script
@@ -139,7 +145,7 @@ function init({ genomes }) {
 
 				// Create a metadata object for logging
 				const metadata = {
-					filesAnalyzed: cases.length,
+					filesAnalyzed: caseFiles.length,
 					samplesIncluded: parsedRustResult.sampleCount || 0,
 					analysisDate: new Date().toISOString(),
 					executionTime
