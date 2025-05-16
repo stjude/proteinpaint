@@ -40,7 +40,7 @@ function init({ genomes }) {
 			const ds = g.datasets.GDC
 			if (!ds) throw 'hg38 GDC missing'
 
-			const caseFiles = req.body as RunGRIN2Request
+			const caseFiles = req.query as RunGRIN2Request
 			console.log(`[GRIN2] Request received: ${JSON.stringify(caseFiles)}`)
 
 			if (!caseFiles) {
@@ -62,7 +62,7 @@ function init({ genomes }) {
 
 				// Log the result to see its structure
 				console.log(`[GRIN2] Rust result type: ${typeof rustResult}`)
-				console.log(`[GRIN2] Rust result: ${JSON.stringify(rustResult).substring(0, 200)}...`)
+				// console.log(`[GRIN2] Rust result: ${JSON.stringify(rustResult).substring(0, 200)}...`)
 
 				// Check if Rust execution was successful
 				if (!rustResult) {
@@ -73,7 +73,7 @@ function init({ genomes }) {
 				let parsedRustResult
 				try {
 					parsedRustResult = typeof rustResult === 'string' ? JSON.parse(rustResult) : rustResult
-					console.log(`[GRIN2] Parsed Rust result keys: ${Object.keys(parsedRustResult)}`)
+					// console.log(`[GRIN2] Parsed Rust result keys: ${Object.keys(parsedRustResult)}`)
 				} catch (parseError) {
 					console.error('[GRIN2] Error parsing Rust result:', parseError)
 					// console.log('[GRIN2] Raw Rust result:', rustResult)
