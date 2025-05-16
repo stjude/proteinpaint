@@ -108,7 +108,6 @@ export default class WSIViewer extends RxComponentInner {
 						if (currentIndex === 0) return
 						currentIndex -= 1
 					}
-
 					if (idx !== currentIndex) {
 						//When the index changes, scroll to the new annotation
 						//Timeout for when user presses arrows multiple times.
@@ -117,6 +116,16 @@ export default class WSIViewer extends RxComponentInner {
 							const newZoomInPoints = newData.sampleWSImages[settings.displayedImageIndex].zoomInPoints
 							if (newZoomInPoints != undefined) this.addZoomInEffect(activeImageExtent, newZoomInPoints, map)
 							isSpaceDown = false
+
+							//crude implementation of a table
+							holder.select('table').remove()
+							const table = holder.append('table')
+							const header = table.append('tr')
+							header.append('th').text('Index')
+							header.append('th').text('Coordinates')
+							const row = table.append('tr')
+							row.append('td').text(currentIndex)
+							row.append('td').text(newZoomInPoints)
 						}, 300)
 						d()
 					}
