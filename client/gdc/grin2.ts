@@ -25,7 +25,7 @@ const analysisOptions = [
 	{ option: 'includeFusion', selected: true, label: 'Include Fusion' }
 ]
 
-export async function gdcMAFui({ holder, filter0, callbacks, debugmode = false }) {
+export async function gdcGRIN2ui({ holder, filter0, callbacks, debugmode = false }) {
 	if (debugmode) {
 		console.log('Debug mode enabled')
 		// Additional debug logic
@@ -138,12 +138,11 @@ async function getFilesAndShowTable(obj) {
 		}
 		if (obj.opts.filter0) body.filter0 = obj.opts.filter0
 
-		// Keep using the existing gdc/maf endpoint which now includes CNV files
 		result = await dofetch3('gdc/GRIN2list', { body })
 
 		if (result.error) throw result.error
 		if (!Array.isArray(result.files)) throw 'result.files[] not array'
-		if (result.files.length == 0) throw 'No MAF/CNV files available.'
+		if (result.files.length == 0) throw 'No MAF files available.'
 
 		// render
 		if (result.filesTotal > result.files.length) {
@@ -154,10 +153,6 @@ async function getFilesAndShowTable(obj) {
 
 		const rows = []
 		for (const f of result.files) {
-			// Determine if the file is MAF or CNV
-			const isMaf = f.id.toLowerCase().includes('.maf') || f.data_format === 'MAF'
-			f.fileFormat = isMaf ? 'maf' : 'cnv'
-
 			const row = [
 				{
 					html: `<a href=https://portal.gdc.cancer.gov/files/${f.id} target=_blank>${f.case_submitter_id}</a>`,
@@ -245,25 +240,14 @@ async function getFilesAndShowTable(obj) {
 
 		for (const i of lst) {
 			const file = result.files[i]
+			console.log('File object:', file)
 			const caseId = file.case_submitter_id
 
-			// Determine the file format - use existing fileFormat field or infer from other properties
-			const fileFormat =
-				file.fileFormat || (file.id.toLowerCase().includes('.maf') || file.data_format === 'MAF' ? 'maf' : 'cnv')
-
-			// Convert to lowercase to match Rust expectations (maf or cnv)
-			const formatKey = fileFormat.toLowerCase()
-
-			// Initialize case entry if it doesn't exist
 			if (!caseFiles[caseId]) {
-				caseFiles[caseId] = {
-					maf: null,
-					cnv: null
-				}
+				caseFiles[caseId] = { maf: null }
 			}
 
-			// Set the file ID in the appropriate field
-			caseFiles[caseId][formatKey] = file.id
+			caseFiles[caseId].maf = file.id
 		}
 
 		// Log the exact URL and payload being used
@@ -286,9 +270,8 @@ async function getFilesAndShowTable(obj) {
 
 			// Call the GRIN2 run endpoint with the correctly formatted data
 			console.log('Sending GRIN2 request:', caseFiles)
-			const response = await dofetch3('gdc/runGRIN2', {
-				body: caseFiles
-			})
+			console.log('GRIN2 request body:', JSON.stringify(caseFiles, null, 2))
+			const response = await dofetch3('gdc/runGRIN2', caseFiles)
 
 			obj.busy = false
 			obj.expStrategyRadio.inputs.property('disabled', false)

@@ -1,7 +1,7 @@
 import type { RoutePayload } from './routeApi.js'
 
 /**
- * Represents a file from GDC API (MAF or CNV format)
+ * Represents a file from GDC API (MAF)
  */
 export type GdcGRIN2File = {
 	/** A string representing the file's UUID, can be accessed via https://api.gdc.cancer.gov/data/<uuid> */
@@ -16,8 +16,8 @@ export type GdcGRIN2File = {
 	sample_types: string[]
 	/** A string as the project id of the case */
 	project_id: string
-	/** The format of the file (MAF or CNV) */
-	file_format?: 'MAF' | 'CNV'
+	/** The format of the file (MAF) */
+	file_format?: 'MAF'
 }
 
 enum ExperimentalStrategy {
@@ -32,8 +32,8 @@ export type GdcGRIN2Request = {
 	experimentalStrategy: ExperimentalStrategy
 	/** JSON, optional GDC cohort filter to restrict cases */
 	filter0?: any
-	/** Optional array of file types to include ('MAF', 'CNV', or both) */
-	fileTypes?: Array<'MAF' | 'CNV'>
+	/** Optional array of file types to include ('MAF') */
+	fileTypes?: Array<'MAF'>
 }
 
 /**
@@ -62,16 +62,9 @@ export type GdcGRIN2Response = {
 /**
  * Parameters for running GRIN2 analysis
  */
-// export type RunGRIN2Request = {
-// 	cases: Array<{
-// 		caseId: string
-// 		fileIds: string[]
-// 	}>
-// }
-
-// type RunGRIN2Request = {
-//   [caseId: string]: { maf?: string; cnv?: string }
-// }
+export type RunGRIN2Request = {
+	[caseId: string]: { maf?: string }
+}
 
 /**
  * Response for GRIN2 analysis run

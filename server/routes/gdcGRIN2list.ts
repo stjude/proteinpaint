@@ -9,7 +9,6 @@ this route lists available gdc MAF and CNV files based on user's cohort filter
 and return them to client to be shown in a table for selection
 */
 
-console.log('GDC GRIN2 list route registered!')
 const maxFileNumber = 1000 // determines max number of files to return to client
 // preliminary testing:
 // 36s for 1000 (87Mb)
@@ -67,11 +66,8 @@ ds {
 async function listMafFiles(q: GdcMafRequest, ds: any) {
 	// Replace the single data_format filter with an OR condition for both formats
 	const dataFormatFilter = {
-		op: 'or',
-		content: [
-			{ op: '=', content: { field: 'data_format', value: 'MAF' } },
-			{ op: '=', content: { field: 'data_format', value: 'TSV' } } // For CNV files
-		]
+		op: 'and',
+		content: [{ op: '=', content: { field: 'data_format', value: 'MAF' } }]
 	}
 
 	// Then use the same filter array as before
