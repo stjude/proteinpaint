@@ -133,6 +133,11 @@ export class ScatterViewModelBase {
 			chart.mainG.attr('clip-path', `url(#${id})`)
 
 			chart.serie = chart.mainG.append('g').attr('class', 'sjpcb-scatter-series')
+			if (this.scatter.state.config.transform) {
+				chart.mainG.attr('transform', this.scatter.state.config.transform)
+				//reset transform to null as the transformation was applied
+				this.scatter.app.dispatch({ type: 'plot_edit', id: this.scatter.id, config: { transform: null } })
+			}
 			chart.regressionG = chart.mainG.append('g').attr('class', 'sjpcb-scatter-lowess')
 			chart.legendG = svg.append('g').attr('class', 'sjpcb-scatter-legend')
 		} else {
@@ -146,6 +151,7 @@ export class ScatterViewModelBase {
 			chart.legendG = svg.select('.sjpcb-scatter-legend')
 			chart.clipRect = svg.select('defs').select('clipPath').select('rect')
 		}
+
 		chart.axisG = axisG
 		chart.labelsG = labelsG
 		chart.clipRect.attr('width', this.scatter.settings.svgw + 10).attr('height', this.scatter.settings.svgh)
@@ -220,6 +226,7 @@ export class ScatterViewModelBase {
 		if (this.canvas) this.canvas.remove()
 
 		const g = chart.serie
+
 		const data = chart.data
 		if (removePrevious) chart.serie.selectAll('*').remove()
 
@@ -257,7 +264,6 @@ export class ScatterViewModelBase {
 		for (const chart of this.model.charts) {
 			chart.regressionG?.selectAll('*').remove()
 			if (chart.regressionCurve) {
-				console.log(chart)
 				const l = line()
 					.x(d => d[0])
 					.y(d => d[1])
