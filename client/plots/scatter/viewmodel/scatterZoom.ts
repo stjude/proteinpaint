@@ -1,27 +1,33 @@
 import { zoom as d3zoom } from 'd3-zoom'
 import { icons as icon_functions } from '#dom'
 import type { Scatter } from '../scatter.js'
+import { zoomIdentity } from 'd3-zoom'
 export class ScatterZoom {
 	scatter: Scatter
 	zoomD3: any
 	dragD3: any
+	zoom: number
+	transform: any
 
 	constructor(scatter: Scatter) {
 		this.scatter = scatter
 		this.zoomD3 = d3zoom()
 			.scaleExtent([0.1, 10])
-			.on('zoom', event => this.handleZoom(event))
+			.on('zoom', event => this.handleZoom(event.transform))
 			.filter(event => {
 				if (event.type === 'wheel') return event.ctrlKey
 				return true
 			})
-			.on('end', () => {
+			.on('end', event => {
+				this.transform = event.transform
+				this.scatter.config.transform = event.transform.toString()
 				this.scatter.app.dispatch({
 					type: 'plot_edit',
 					id: this.scatter.id,
 					config: this.scatter.config
 				})
 			})
+		this.zoom = 1
 	}
 
 	initZoom(toolsDiv) {
@@ -61,14 +67,13 @@ export class ScatterZoom {
 		if (this.scatter.config.scaleDotTW && this.scatter.model.getZoom() > 4) this.resetToIdentity()
 	}
 
-	handleZoom(event) {
-		this.scatter.config.zoom = event.transform.scale(1).k
-		this.scatter.config.transform = event.transform.toString()
+	handleZoom(transform) {
+		this.zoom = transform.scale(1).k
 		for (const chart of this.scatter.model.charts) {
 			// create new scale ojects based on event
-			const new_xScale = event.transform.rescaleX(chart.xAxisScale)
-			const new_yScale = event.transform.rescaleY(chart.yAxisScale)
-			chart.serie.attr('transform', event.transform)
+			const new_xScale = transform.rescaleX(chart.xAxisScale)
+			const new_yScale = transform.rescaleY(chart.yAxisScale)
+			chart.serie.attr('transform', transform)
 			chart.xAxis.call(chart.axisBottom.scale(new_xScale))
 			chart.yAxis.call(chart.axisLeft.scale(new_yScale))
 			if (this.scatter.config.lassoOn)
@@ -77,25 +82,16 @@ export class ScatterZoom {
 		}
 	}
 
-	updateZoom(zoom) {
-		this.scatter.app.dispatch({
-			type: 'plot_edit',
-			id: this.scatter.id,
-			config: {
-				zoom
-			}
-		})
-	}
-
 	zoomIn() {
-		this.updateZoom(this.scatter.model.getZoom() + 0.25)
+		for (const chart of this.scatter.model.charts) this.zoomD3.scaleBy(chart.mainG.transition().duration(500), 1.2)
 	}
 
 	zoomOut() {
-		this.updateZoom(this.scatter.model.getZoom() - 0.25)
+		for (const chart of this.scatter.model.charts) this.zoomD3.scaleBy(chart.mainG.transition().duration(500), 0.8)
 	}
 
 	resetToIdentity() {
-		this.updateZoom(1)
+		for (const chart of this.scatter.model.charts)
+			chart.mainG.transition().duration(500).call(this.zoomD3.transform, zoomIdentity)
 	}
 }
