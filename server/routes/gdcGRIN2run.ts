@@ -2,8 +2,10 @@ import type { RunGRIN2Request, RunGRIN2Response, RouteApi } from '#types'
 import { runGRIN2Payload } from '#types/checkers'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 import { run_R } from '@sjcrh/proteinpaint-r'
+import serverconfig from '#src/serverconfig.js'
 import fs from 'fs/promises'
 import path from 'path'
+import os from 'os'
 import { formatElapsedTime } from '@sjcrh/proteinpaint-shared/time.js'
 import { mayLog } from '#src/helpers.ts'
 
@@ -46,14 +48,6 @@ function init({ genomes }) {
 			}
 
 			try {
-				// Create a simple random folder name for testing
-				// const tempDir = path.join('.', `grin2-test-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`)
-				// console.log(`[GRIN2] Temporary directory for testing: ${tempDir}`)
-				// await fs.mkdir(tempDir, { recursive: true })
-				// console.log(`[GRIN2] Temporary directory created: ${tempDir}`)
-
-				console.log(`[GRIN2] Running analysis for ${caseFiles.length} cases`)
-
 				// Step 1: Call Rust to process the MAF files and get JSON data
 				console.log('[GRIN2] Calling Rust for file processing...')
 				const startTime = Date.now()
@@ -82,7 +76,7 @@ function init({ genomes }) {
 					console.log(`[GRIN2] Parsed Rust result keys: ${Object.keys(parsedRustResult)}`)
 				} catch (parseError) {
 					console.error('[GRIN2] Error parsing Rust result:', parseError)
-					console.log('[GRIN2] Raw Rust result:', rustResult)
+					// console.log('[GRIN2] Raw Rust result:', rustResult)
 				}
 
 				// Create a temporary file path for our output image
@@ -92,13 +86,26 @@ function init({ genomes }) {
 				// Step 2: Call R script to generate the plot
 				console.log('[GRIN2] Calling R script to generate plot...')
 
-				// Prepare input for R script - pass the Rust output as input to R
+				const { rustData } = parsedRustResult
+
+				const g = genomes.hg38
+				const chromosomelist = g.majorchr
+
+				// Prepare the path to the gene database file
+				const genedb = path.join(os.homedir(), '/data/tp/anno/genes.hg38.db')
+
+				// Generate a unique image file name
+				const imagefile = path.join(serverconfig.cachedir, `grin2_${Date.now()}_${Math.floor(Math.random() * 1e9)}.png`)
+
+				// Prepare input for R script - pass the Rust output and the additional properties as input to R
 				const rInput = JSON.stringify({
-					rustData: parsedRustResult,
-					outputPath: outputImagePath
+					genedb: genedb,
+					chromosomelist: chromosomelist,
+					imagefile: imagefile,
+					lesion: rustData // The mutation string from Rust
 				})
-				console.log(`[GRIN2] R input: ${rInput}`)
-				console.log(`[GRIN2] R input prepared`)
+
+				// console.log(`[GRIN2] R input: ${rInput}`)
 
 				// Call the R script
 				console.log('[GRIN2] Executing R script...')
