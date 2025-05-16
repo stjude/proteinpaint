@@ -1,5 +1,5 @@
 import { dt2label } from '#shared/common.js'
-import { mayMakeVariantFilter } from '../tw/geneVariant'
+import { mayGetChildTerms } from '../tw/geneVariant'
 
 /*
 ********************** EXPORTED
@@ -24,7 +24,7 @@ export const handler = {
 async function fillMenu(self, _div, tvs) {
 	const term = structuredClone(tvs.term)
 	// add a variant filter onto the geneVariant term
-	await mayMakeVariantFilter({ q: {}, term }, self.opts.vocabApi)
+	await mayGetChildTerms({ q: {}, term }, self.opts.vocabApi)
 	if (!term.filter?.terms?.length) return
 	// generate a frontend vocab using dt terms from the variant filter
 	// and render a data dictionary of this vocab

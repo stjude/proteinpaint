@@ -125,10 +125,10 @@ export class GroupSettingMethods {
 				// custom groupset undefined
 				// build empty groupset
 				if (this.type == 'filter') {
-					const filter = this.tsInstance.term.filter
-					if (!filter) throw 'filter missing'
+					const terms = this.tsInstance.term.childTerms
+					if (!terms) throw 'child terms missing'
 					for (const grpIdx of grpIdxes) {
-						this.data.filters.push(Object.assign({}, filter, { group: grpIdx }))
+						this.data.filters.push({ terms, group: grpIdx })
 					}
 				}
 			}
@@ -398,8 +398,7 @@ function setRenderers(self: any) {
 			if (group.type == 'filter') {
 				const groupFilter = self.data.filters.find((d: FilterEntry) => d.group == group.currentIdx)
 				if (!groupFilter) throw 'filter missing'
-				customgroup.filter = structuredClone(groupFilter)
-				customgroup.filter.active = getNormalRoot(groupFilter.active)
+				customgroup.filter = getNormalRoot(groupFilter.active)
 			} else if (group.type == 'values') {
 				const groupValues = self.data.values
 					.filter((v: ItemEntry) => v.group == group.currentIdx)
@@ -540,11 +539,10 @@ function setRenderers(self: any) {
 
 		const filter = self.data.filters.find((d: FilterEntry) => d.group == group.currentIdx)
 		if (!filter || !filter.terms?.length) return
-		if (!filter.opts) throw 'filter.opts{} missing'
 		if (!filter.active) filter.active = getWrappedTvslst()
 
 		filterInit({
-			joinWith: filter.opts.joinWith,
+			joinWith: ['and', 'or'],
 			emptyLabel: '+Variant Filter',
 			holder,
 			vocab: {
