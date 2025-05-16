@@ -144,7 +144,7 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - name: Publish docker image
-        uses: stjude/proteinpaint/.github/actions/publish-ppfull-ppserver-image@prerelease-r-base-image
+        uses: stjude/proteinpaint/.github/actions/publish-ppfull-ppserver-image@master
         with:
           PAT: ${{ secrets.PAT }}
           GITHUB_ACTOR: ${{ github.actor }}
@@ -168,7 +168,7 @@ jobs:
 
       # Publish Docker image with the Rust binaries included
       - name: Publish docker image with Rust binaries
-        uses: stjude/proteinpaint/.github/actions/publish-ppfull-ppserver-image@prerelease-r-base-image
+        uses: stjude/proteinpaint/.github/actions/publish-ppfull-ppserver-image@master
         with:
           PAT: ${{ secrets.PAT }}
           GITHUB_ACTOR: ${{ github.actor }}
