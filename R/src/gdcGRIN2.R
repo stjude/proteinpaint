@@ -1,3 +1,29 @@
+###################
+#gdcGRIN2         #
+###################
+
+########
+# USAGE
+########
+
+#Usage: echo <in_json> | Rscript gdcGRIN2.R <out_json>
+
+# in_json: [string] input data in JSON format. Streamed through stdin
+# out_json: [string] base64 string of png figure
+
+#Input JSON:
+#{
+#  genedb: gene db file path
+#  chromosomelist={ <key>: <len>, }
+#  imagefile: temporary file for generating png figure
+#  lesion: string from the output of gdcGRIN2.rs
+#}
+
+#Output JSON:
+#{
+#  png: [<base64 string>]
+#}
+
 suppressPackageStartupMessages({
   library(GRIN2)
   library(DBI)
@@ -12,22 +38,21 @@ write_error <- function(msg) {
   cat("ERROR: ", msg, "\n", file = stderr())
 }
 
-### stream in json input data
+### 1. stream in json input data
 con <- file('stdin','r')
 json_input <- readLines(con)
 close(con)
 input <- fromJSON(json_input)
 
-### generate gene annotation table from gene2coord
+### 2. generate gene annotation table from gene2coord
 tryCatch({
   dbfile <- input$genedb
   # connect to SQLite database
-  print(dbfile)
   con <- dbConnect(RSQLite::SQLite(), dbname = dbfile)
   }, 
   error = function(e){
     write_error(paste("Failed to connect to the gene database:", conditionMessage(e)))
-    stop("Database connection error")
+    quit(status = 1)
   })
 
 ## Query the gene2coord table
@@ -40,13 +65,13 @@ tryCatch ({
   error = function(e){
     dbDisconnect(con)
     write_error(paste("Failed to query the gene database:", conditionMessage(e)))
-    stop("Database query error")
+    quit(status = 1)
   })
 
 # Check if dataframe is empty
 if (nrow(gene.anno) == 0) {
   write_error("No data retrieved from gene2coord table")
-  stop("Empty gene2coord table")
+  quit(status = 1)
 }
 
 ## Remove the problematic header-like row
@@ -64,7 +89,7 @@ tryCatch({
   },
   error = function(e){
     write_error(paste("Failed to convert start/stop to integers:", conditionMessage(e)))
-    stop("Data conversion error")
+    quit(status = 1)
   })
 
 
@@ -94,25 +119,22 @@ gene.anno <- gene.anno %>%
   select(gene, chrom, loc.start, loc.end, gene.name)
 
 
-### generate chromosome size table
-chrome.size.file <- "/Users/jwang7/data/tp/genomes/hg38.gz.fai"
+### 3. generate chromosome size table
 tryCatch({
-  chrome.size <- read.table(
-    chrome.size.file,
-    sep = "\t",
-    header = FALSE,
-    stringsAsFactors = FALSE,
-    colClasses = c("character", "integer", rep("NULL", 3))
+  chromosomelist <- input$chromosomelist
+  chrom.size <- data.frame(
+    chrom = names(chromosomelist),
+    size = as.integer(chromosomelist),
+    stringsAsFactors = FALSE
   )
-  colnames(chrome.size) <- c("chrom","size")
-  chrome.size <- chrome.size[order(chrome.size$chrom),]
+  chrom.size <- chrom.size[order(chrom.size$chrom),]
   },
   error = function(e){
     write_error(paste("Failed to read chromosome size file:", conditionMessage(e)))
     quit(status = 1)
   })
 
-### receive lesion data from node 
+### 4. receive lesion data from node 
 # Initialize an empty dataframe with appropriate columns
 lesion_df <- data.frame(
   ID = character(),
@@ -190,15 +212,15 @@ if (nchar(lesion_data) > 0) {
   }
 } else {
   write_error("No data received from stream")
-  stop("Empty stream input")
+  quit(status = 1)
 }
 
-### run GRIN2 analysis
+### 5. run GRIN2 analysis
 # Compute grin.stats
 tryCatch({
   grin.results <- grin.stats(lesion_df,
                           gene.anno,
-                          chrome.size)
+                          chrom.size)
   if (is.null(grin.results) || !is.list(grin.results)) {
     write_error("grin.stats returned invalid or null results")
     quit(status = 1)
@@ -221,18 +243,24 @@ tryCatch({
 
 # Generate genomewide plot and encode PNG as Base64
 tryCatch({
-  temp_file <- tempfile("plot", tmpdir = "/Users/jwang7/data/tp", fileext = ".png")
+  temp_file <- input$imagefile
+},
+error = function(e) {
+  write_error(paste("Temporary file for png figure is not provided:", e$message))
+  quit(status = 1)
+})
+
+tryCatch({
   png(temp_file, width=800, height=600)
   genomewide.lsn.plot(grin.results, max.log10q=150)
   dev.off()
   plot_bytes <- readBin(temp_file, "raw", file.size(temp_file))
   unlink(temp_file)
   base64_string <- base64enc::base64encode(plot_bytes)
-  cat(base64_string, "\n")
-  flush(stdout())
+  grin2png <- list(png=base64_string)
+  cat(toJSON(grin2png))
   },
   error = function(e) {
     write_error(paste("Failed to generate genomewide plot:", e$message))
     quit(status = 1)
   })
-print(base64_string)
