@@ -20,6 +20,7 @@ import 'ol-ext/dist/ol-ext.css'
 import LayerSwitcher from 'ol-ext/control/LayerSwitcher'
 import MousePosition from 'ol/control/MousePosition.js'
 import { format as formatCoordinate } from 'ol/coordinate.js'
+import { debounce } from 'debounce'
 
 export default class WSIViewer extends RxComponentInner {
 	// following attributes are required by rx
@@ -89,29 +90,37 @@ export default class WSIViewer extends RxComponentInner {
 
 			const image = holder.select('div > .ol-viewport').attr('tabindex', 0)
 
+			//To scroll to next annotation, hold the space bar and press left/right arrows
 			let currentIndex = index
-			let keyPressTimeout: NodeJS.Timeout
+			let isSpaceDown = false
 			image.on('keydown', async (event: KeyboardEvent) => {
-				if (event.key === 'ArrowRight') {
-					//TODO: length of annotations?
-					currentIndex += 1
-					clearTimeout(keyPressTimeout)
+				if (event.code === 'Space') {
+					isSpaceDown = true
 				}
-				if (event.key === 'ArrowLeft') {
-					//Do not react if at the starting annotation
-					if (currentIndex === 0) return
-					currentIndex -= 1
-					clearTimeout(keyPressTimeout)
+				if (isSpaceDown) {
+					const idx = currentIndex
+					if (event.key == 'ArrowRight') {
+						//TODO: length of annotations?
+						currentIndex += 1
+					}
+					if (event.key == 'ArrowLeft') {
+						//Do not react if at the starting annotation
+						if (currentIndex === 0) return
+						currentIndex -= 1
+					}
+
+					if (idx !== currentIndex) {
+						//When the index changes, scroll to the new annotation
+						//Timeout for when user presses arrows multiple times.
+						const d = debounce(async () => {
+							const newData: SampleWSImagesResponse = await this.requestData(state, currentIndex)
+							const newZoomInPoints = newData.sampleWSImages[settings.displayedImageIndex].zoomInPoints
+							if (newZoomInPoints != undefined) this.addZoomInEffect(activeImageExtent, newZoomInPoints, map)
+							isSpaceDown = false
+						}, 300)
+						d()
+					}
 				}
-			})
-			image.on('keyup', () => {
-				/** In case the user presses the arrows multiple times, wait a third of second
-				 * before animation*/
-				keyPressTimeout = setTimeout(async () => {
-					const newData: SampleWSImagesResponse = await this.requestData(state, currentIndex)
-					const newZoomInPoints = newData.sampleWSImages[settings.displayedImageIndex].zoomInPoints
-					if (newZoomInPoints != undefined) this.addZoomInEffect(activeImageExtent, newZoomInPoints, map)
-				}, 200)
 			})
 		}
 
