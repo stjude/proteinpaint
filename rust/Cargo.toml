@@ -101,3 +101,7 @@ path="src/readHDF5.rs"
 [[bin]]
 name="validateHDF5"
 path="src/validateHDF5.rs"
+
+[[bin]]
+name="gdcGRIN2"
+path="src/gdcGRIN2.rs"
