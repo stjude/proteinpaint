@@ -50,6 +50,8 @@ export type DataRange = {
 }
 
 export type ScatterChart = {
+	chartDiv: any
+	rect: any
 	mainG?: any
 	xAxis?: any
 	axisBottom?: any
