@@ -7,6 +7,7 @@ import { execSync } from 'child_process'
 // - in prod build: esbuild will be required to generate static dist/*.js files
 //
 
+console.log(execSync(`npm run predev`).toString())
 console.log(execSync(`npx typia generate --input ./checkers --output ./dist`).toString())
 // typia does not emit js files, must manually copy index.js
 // which is referenced as package.json:exports."./checkers" subpath alias
