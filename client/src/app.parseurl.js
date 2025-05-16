@@ -110,7 +110,7 @@ upon error, throw err message as a string
 
 	if (urlp.has('gdcgrin2')) {
 		const _ = await import('../gdc/grin2.ts')
-		_.gdcMAFui({
+		_.gdcGRIN2ui({
 			holder: arg.holder,
 			debugmode: arg.debugmode
 		})
