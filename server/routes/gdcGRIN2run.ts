@@ -1,4 +1,4 @@
-import type { RunGRIN2Response, RouteApi } from '#types'
+import type { RunGRIN2Request, RunGRIN2Response, RouteApi } from '#types'
 import { runGRIN2Payload } from '#types/checkers'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 import { run_R } from '@sjcrh/proteinpaint-r'
@@ -18,6 +18,10 @@ console.log('GRIN2 Run route registered!')
 export const api: RouteApi = {
 	endpoint: 'gdc/runGRIN2',
 	methods: {
+		get: {
+			...runGRIN2Payload,
+			init
+		},
 		post: {
 			...runGRIN2Payload,
 			init
@@ -34,17 +38,12 @@ function init({ genomes }) {
 			const ds = g.datasets.GDC
 			if (!ds) throw 'hg38 GDC missing'
 
-			// Cast the request body to RunGRIN2Request type
-			//const { cases } = req.body as RunGRIN2Request
-			// const caseFiles = req.body as { [caseId: string]: { maf?: string; cnv?: string } };
-			// const caseFiles = req.body as RunGRIN2Request;
-			// console.log(`[GRIN2] Request received with cases: ${JSON.stringify(caseFiles)}`)
-			const caseFiles = req.body as { [caseId: string]: { maf?: string; cnv?: string } }
+			const caseFiles = req.body as RunGRIN2Request
 			console.log(`[GRIN2] Request received: ${JSON.stringify(caseFiles)}`)
 
-			// if (!cases || !Array.isArray(cases) || cases.length === 0) {
-			// 	throw 'Missing or invalid cases data'
-			// }
+			if (!caseFiles) {
+				throw 'Missing or invalid cases data'
+			}
 
 			try {
 				// Create a simple random folder name for testing
@@ -59,11 +58,7 @@ function init({ genomes }) {
 				console.log('[GRIN2] Calling Rust for file processing...')
 				const startTime = Date.now()
 
-				// Prepare input parameters for the Rust function
-				// const rustInput = JSON.stringify({
-				// 	caseFiles
-				// })
-				// //console.log(`[GRIN2] Rust input: ${rustInput}`)
+				//console.log(`[GRIN2] Rust input: ${rustInput}`)
 				const rustInput = JSON.stringify(caseFiles)
 
 				// Call the Rust implementation and get JSON result
