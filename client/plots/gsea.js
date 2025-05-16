@@ -63,15 +63,6 @@ class gsea {
 		this.dom.controlsDiv.selectAll('*').remove()
 		const inputs = [
 			{
-				label: 'Number of Permutations',
-				type: 'number',
-				chartType: 'gsea',
-				settingsKey: 'num_permutations',
-				title: 'Number of permutations to be used for GSEA. Higher number increases accuracy but also compute time.',
-				min: 0,
-				max: 40000 // Setting it to pretty lenient limit for testing
-			},
-			{
 				label: 'Minimum Gene Set Size Filter Cutoff',
 				type: 'number',
 				chartType: 'gsea',
@@ -108,6 +99,30 @@ class gsea {
 			}
 		]
 
+		if (JSON.parse(sessionStorage.getItem('optionalFeatures')).gsea_test) {
+			inputs.push({
+				label: 'GSEA method',
+				type: 'radio',
+				chartType: 'gsea',
+				settingsKey: 'gsea_method',
+				title: 'Toggle between blitzgsea and CERNO method',
+				options: [
+					{ label: 'blitzgsea', value: 'blitzgsea' },
+					{ label: 'CERNO', value: 'cerno' }
+				]
+			})
+		}
+		if (this.settings.gsea_method == 'blitzgsea') {
+			inputs.push({
+				label: 'Number of Permutations',
+				type: 'number',
+				chartType: 'gsea',
+				settingsKey: 'num_permutations',
+				title: 'Number of permutations to be used for GSEA. Higher number increases accuracy but also compute time.',
+				min: 0,
+				max: 40000 // Setting it to pretty lenient limit for testing
+			})
+		}
 		if (this.settings.fdr_or_top == 'fdr') {
 			inputs.push({
 				label: 'FDR Filter Cutoff (Linear Scale)',
@@ -230,7 +245,8 @@ async function renderPathwayDropdown(self) {
 	const settings = structuredClone(self.settings)
 	const pathwayOpts = structuredClone(self.app.opts.genome.termdbs.msigdb.analysisGenesetGroups) // duplicate to avoid repeated insertion on each app launch
 
-	if (JSON.parse(sessionStorage.getItem('optionalFeatures')).gsea_test) {
+	if (JSON.parse(sessionStorage.getItem('optionalFeatures')).gsea_test && self.settings.gsea_method == 'blitzgsea') {
+		// This contains geneset groups that are specific to blitzgsea itself
 		// TEMPORARY FIX to test this library that will trigger auto download support files in python
 		// NEVER ENABLE ON PROD especially gdc prod, where container has firewall and it crashes..
 		// delete this if library is replaced
@@ -321,7 +337,11 @@ add:
 			fold_change: self.config.gsea_params.fold_change,
 			geneSetGroup: self.settings.pathway,
 			filter_non_coding_genes: self.settings.filter_non_coding_genes,
-			num_permutations: self.settings.num_permutations
+			method: self.settings.gsea_method
+		}
+
+		if (self.settings.gsea_method == 'blitzgsea') {
+			body.num_permutations = self.settings.num_permutations
 		}
 		output = await rungsea(body, self.dom)
 		if (output.error) {
@@ -364,6 +384,7 @@ add:
 	const output_keys = Object.entries(output.data).map(([key, value]) => {
 		return { key, value } // Convert to an array of objects
 	})
+
 	if (self.settings.fdr_or_top == 'top') {
 		// Sorting the top (top_genesets) genesets in decreasing order
 		output_keys.sort((i, j) => Number(i.value.fdr) - Number(j.value.fdr))
@@ -391,16 +412,31 @@ add:
 	self.dom.tableDiv.selectAll('*').remove()
 	const d_gsea = self.dom.tableDiv.append('div')
 	// table columns showing analysis results for each gene set
-	self.gsea_table_cols = [
-		{ label: 'Gene Set', sortable: true },
-		//{ label: 'Enrichment Score' },
-		{ label: 'Normalized Enrichment Score', barplot: { axisWidth: 200 }, sortable: true },
-		{ label: 'Gene Set Size', sortable: true },
-		{ label: 'P value', sortable: true },
-		//{ label: 'Sidak' },
-		{ label: 'FDR', sortable: true },
-		{ label: 'Leading Edge' }
-	]
+	self.gsea_table_cols = []
+	if (self.settings.gsea_method == 'blitzgsea') {
+		self.gsea_table_cols = [
+			{ label: 'Gene Set', sortable: true },
+			//{ label: 'Enrichment Score' },
+			{ label: 'Normalized Enrichment Score', barplot: { axisWidth: 200 }, sortable: true },
+			{ label: 'Gene Set Size', sortable: true },
+			{ label: 'P value', sortable: true },
+			//{ label: 'Sidak' },
+			{ label: 'FDR', sortable: true },
+			{ label: 'Leading Edge' }
+		]
+	} else if (self.settings.gsea_method == 'cerno') {
+		self.gsea_table_cols = [
+			{ label: 'Gene Set', sortable: true },
+			{ label: 'Area Under Curve', barplot: { axisWidth: 200 }, sortable: true },
+			{ label: 'Enrichment Score', barplot: { axisWidth: 200 }, sortable: true },
+			{ label: 'Gene Set Size', sortable: true },
+			{ label: 'P value', sortable: true },
+			{ label: 'FDR', sortable: true },
+			{ label: 'Leading Edge' }
+		]
+	} else {
+		throw 'Unknown method:' + self.settings.gsea_method
+	}
 	let download = {}
 
 	if (self.config.chartType == 'differentialAnalysis') {
@@ -455,7 +491,14 @@ add:
 			}
 			if (self.config.chartType == 'differentialAnalysis') {
 				//Saves the data to highlight in the volcano plot
-				const genes = [...self.gsea_table_rows[index][5].value.split(',')]
+				let genes
+				if (self.settings.gsea_method == 'blitzgsea') {
+					genes = [...self.gsea_table_rows[index][5].value.split(',')]
+				} else if (self.settings.gsea_method == 'cerno') {
+					genes = [...self.gsea_table_rows[index][6].value.split(',')]
+				} else {
+					throw 'Unknown method:' + self.settings.gsea_method
+				}
 				if (genes) config.highlightGenes = genes
 			}
 			await self.app.dispatch({
@@ -469,28 +512,39 @@ add:
 
 function setResultsRows(output_keys, iter, self) {
 	const pathway_name = output_keys[iter].key
-	// const es = output_keys[iter].value.es
-	// ? roundValueAuto(output_keys[iter].value.es)
-	// : output_keys[iter].value.es
-	const nes = output_keys[iter].value.nes ? roundValueAuto(output_keys[iter].value.nes) : output_keys[iter].value.nes
 	const pval = output_keys[iter].value.pval
 		? roundValueAuto(output_keys[iter].value.pval)
 		: output_keys[iter].value.pval
-	// const sidak = output_keys[iter].value.sidak
-	// 	? roundValueAuto(output_keys[iter].value.sidak)
-	// 	: output_keys[iter].value.sidak
 	const fdr = output_keys[iter].value.fdr ? roundValueAuto(output_keys[iter].value.fdr) : output_keys[iter].value.fdr
-
-	self.gsea_table_rows.push([
-		{ value: pathway_name },
-		//{ value: es },
-		{ value: nes },
-		{ value: output_keys[iter].value.geneset_size },
-		{ value: pval },
-		//{ value: sidak },
-		{ value: fdr },
-		{ value: output_keys[iter].value.leading_edge }
-	])
+	if (self.settings.gsea_method == 'blitzgsea') {
+		const nes = output_keys[iter].value.nes ? roundValueAuto(output_keys[iter].value.nes) : output_keys[iter].value.nes
+		// const sidak = output_keys[iter].value.sidak
+		// 	? roundValueAuto(output_keys[iter].value.sidak)
+		// 	: output_keys[iter].value.sidak
+		self.gsea_table_rows.push([
+			{ value: pathway_name },
+			{ value: nes },
+			{ value: output_keys[iter].value.geneset_size },
+			{ value: pval },
+			//{ value: sidak },
+			{ value: fdr },
+			{ value: output_keys[iter].value.leading_edge }
+		])
+	} else if (self.settings.gsea_method == 'cerno') {
+		const auc = output_keys[iter].value.auc ? roundValueAuto(output_keys[iter].value.auc) : output_keys[iter].value.auc
+		const es = output_keys[iter].value.es ? roundValueAuto(output_keys[iter].value.es) : output_keys[iter].value.es
+		self.gsea_table_rows.push([
+			{ value: pathway_name },
+			{ value: auc },
+			{ value: es },
+			{ value: output_keys[iter].value.geneset_size },
+			{ value: pval },
+			{ value: fdr },
+			{ value: output_keys[iter].value.leading_edge }
+		])
+	} else {
+		throw 'Unknown method:' + self.settings.gsea_method
+	}
 }
 
 // function render_gsea_plot(self, plot_data) {
@@ -566,7 +620,8 @@ export function getDefaultGseaSettings(overrides = {}) {
 		min_gene_set_size_cutoff: 0,
 		max_gene_set_size_cutoff: 20000,
 		filter_non_coding_genes: true,
-		fdr_or_top: 'top'
+		fdr_or_top: 'top',
+		gsea_method: 'blitzgsea'
 	}
 	return Object.assign(defaults, overrides)
 }

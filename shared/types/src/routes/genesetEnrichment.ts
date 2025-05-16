@@ -17,6 +17,8 @@ export type GenesetEnrichmentRequest = {
 	pickle_file?: string
 	/** Number of permutations to be carried out for GSEA analysis */
 	num_permutations: number
+	/** Method used for GSEA blitzgsea/cerno */
+	method: 'blitzgsea' | 'cerno'
 }
 
 type pathway_attributes = {
