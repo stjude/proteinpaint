@@ -73,6 +73,7 @@ function init({ genomes }) {
 				try {
 					parsedRustResult = typeof rustResult === 'string' ? JSON.parse(rustResult) : rustResult
 					// console.log(`[GRIN2] Parsed Rust result keys: ${Object.keys(parsedRustResult)}`)
+					console.log(`[GRIN2] Parsed Rust result: ${JSON.stringify(parsedRustResult).substring(0, 200)}...`)
 				} catch (parseError) {
 					console.error('[GRIN2] Error parsing Rust result:', parseError)
 					// console.log('[GRIN2] Raw Rust result:', rustResult)
@@ -84,8 +85,6 @@ function init({ genomes }) {
 
 				// Step 2: Call R script to generate the plot
 				console.log('[GRIN2] Calling R script to generate plot...')
-
-				const { rustData } = parsedRustResult
 
 				const g = genomes.hg38
 				const chromosomelist = g.majorchr
@@ -101,10 +100,16 @@ function init({ genomes }) {
 					genedb: genedb,
 					chromosomelist: chromosomelist,
 					imagefile: imagefile,
-					lesion: rustData // The mutation string from Rust
+					lesion: rustResult // The mutation string from Rust
 				})
 
-				// console.log(`[GRIN2] R input: ${rInput}`)
+				console.log(`[DEBUG] R input: ${rInput}`)
+				const parsedInput = JSON.parse(rInput)
+				console.log('[DEBUG] Parsed lesion data type:', typeof parsedInput.lesion)
+				console.log(
+					'[DEBUG] Parsed lesion data length:',
+					typeof parsedInput.lesion === 'string' ? parsedInput.lesion.length : 'not a string'
+				)
 
 				// Call the R script
 				console.log('[GRIN2] Executing R script...')
