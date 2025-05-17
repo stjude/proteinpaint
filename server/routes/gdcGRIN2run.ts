@@ -3,11 +3,8 @@ import { runGRIN2Payload } from '#types/checkers'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 import { run_R } from '@sjcrh/proteinpaint-r'
 import serverconfig from '#src/serverconfig.js'
-import fs from 'fs/promises'
 import path from 'path'
 import os from 'os'
-import { formatElapsedTime } from '@sjcrh/proteinpaint-shared/time.js'
-import { mayLog } from '#src/helpers.ts'
 
 /**
  * Route to run GRIN2 analysis:
@@ -49,7 +46,6 @@ function init({ genomes }) {
 			try {
 				// Step 1: Call Rust to process the MAF files and get JSON data
 				console.log('[GRIN2] Calling Rust for file processing...')
-				const startTime = Date.now()
 
 				//console.log(`[GRIN2] Rust input: ${rustInput}`)
 				const rustInput = JSON.stringify(caseFiles)
@@ -120,7 +116,7 @@ function init({ genomes }) {
 				let resultData
 				try {
 					resultData = JSON.parse(rResult)
-					console.log(`[GRIN2] Parsed R result: ${JSON.stringify(resultData)}`)
+					// console.log(`[GRIN2] Parsed R result: ${JSON.stringify(resultData)}`)
 				} catch (parseError) {
 					console.error('[GRIN2] Error parsing R result:', parseError)
 					console.log('[GRIN2] Raw R result:', rResult)
@@ -129,46 +125,6 @@ function init({ genomes }) {
 				if (!resultData.success) {
 					throw new Error(resultData.error || 'R script failed to generate plot')
 				}
-
-				// Step 3: Read the generated image
-				console.log(`[GRIN2] Checking if image exists at path: ${outputImagePath}`)
-				const imageExists = await fs
-					.access(outputImagePath)
-					.then(() => true)
-					.catch(() => false)
-
-				console.log(`[GRIN2] Image exists: ${imageExists}`)
-
-				if (!imageExists) {
-					throw new Error('R script completed but output image not found')
-				}
-
-				console.log('[GRIN2] Reading image file...')
-				const imageBuffer = await fs.readFile(outputImagePath)
-				console.log(`[GRIN2] Image loaded, size: ${imageBuffer.length} bytes`)
-
-				const executionTime = mayLog(formatElapsedTime(Date.now() - startTime))
-
-				// Create a metadata object for logging
-				const metadata = {
-					filesAnalyzed: caseFiles.length,
-					samplesIncluded: parsedRustResult.sampleCount || 0,
-					analysisDate: new Date().toISOString(),
-					executionTime
-				}
-
-				// Log metadata for debugging
-				console.log('[GRIN2] Analysis completed:', JSON.stringify(metadata))
-
-				// Send the image to the client
-				console.log('[GRIN2] Sending image to client...')
-				res.setHeader('Content-Type', 'image/png')
-				res.setHeader('Content-Disposition', 'inline; filename="grin2_analysis.png"')
-				res.send(imageBuffer)
-				console.log('[GRIN2] Response sent successfully')
-
-				// For testing purposes, let's not delete the temp directory immediately
-				// console.log(`[GRIN2] Temporary files kept for inspection at: ${tempDir}`)
 			} finally {
 				// We're not cleaning up the temp directory for local testing
 				// This allows you to examine the files after running
