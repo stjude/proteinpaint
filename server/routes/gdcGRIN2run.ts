@@ -16,7 +16,6 @@ import { mayLog } from '#src/helpers.ts'
  * 3. Return the plot image to client
  */
 
-console.log('GRIN2 Run route registered!')
 export const api: RouteApi = {
 	endpoint: 'gdc/runGRIN2',
 	methods: {

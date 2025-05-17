@@ -8,6 +8,13 @@ let user selects some, for the backend to run GRIN2 analysis
 and display the resulting visualization
 */
 
+// Adding type definitions to solve typescript errors
+// Interface for table row item
+interface TableRowItem {
+	html?: string
+	value?: any
+}
+
 const tip = new Menu()
 
 // list of columns to show in MAF file table
@@ -103,8 +110,8 @@ function makeControls(obj) {
 			.append('span')
 			.attr('class', 'sja_clbtext')
 			.on('click', event => {
-				const rows = [],
-					selectedRows = []
+				const rows: TableRowItem[][] = []
+				const selectedRows: number[] = []
 				for (const [i, c] of analysisOptions.entries()) {
 					rows.push([{ value: c.label }])
 					if (c.selected) selectedRows.push(i)
@@ -133,7 +140,7 @@ async function getFilesAndShowTable(obj) {
 	let result // convenient for accessing outside of try-catch
 
 	try {
-		const body = {
+		const body: { experimentalStrategy: string; filter0?: any } = {
 			experimentalStrategy: obj.opts.experimentalStrategy
 		}
 		if (obj.opts.filter0) body.filter0 = obj.opts.filter0
@@ -151,7 +158,7 @@ async function getFilesAndShowTable(obj) {
 			wait.text(`Showing ${result.files.length} files.`)
 		}
 
-		const rows = []
+		const rows: TableRowItem[][] = []
 		for (const f of result.files) {
 			const row = [
 				{
@@ -271,7 +278,7 @@ async function getFilesAndShowTable(obj) {
 			// Call the GRIN2 run endpoint with the correctly formatted data
 			console.log('Sending GRIN2 request:', caseFiles)
 			console.log('GRIN2 request body:', JSON.stringify(caseFiles, null, 2))
-			const response = await dofetch3('gdc/runGRIN2', caseFiles)
+			const response = await dofetch3('gdc/runGRIN2', { body: caseFiles })
 
 			obj.busy = false
 			obj.expStrategyRadio.inputs.property('disabled', false)
