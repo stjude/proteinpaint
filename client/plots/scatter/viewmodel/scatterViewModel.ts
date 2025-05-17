@@ -68,29 +68,8 @@ export class ScatterViewModel extends ScatterViewModelBase {
 	}
 
 	toggleLasso() {
-		this.scatterLasso.lassoOn = !this.scatterLasso.lassoOn
-		for (const chart of this.model.charts) {
-			if (this.scatterLasso.lassoOn) {
-				chart.mainG.on('.zoom', null)
-				chart.mainG.call(chart.lasso)
-			} else {
-				chart.mainG.on('mousedown.drag', null)
-				chart.lasso.items().classed('not_possible', false)
-				chart.lasso.items().classed('possible', false)
-				chart.lasso
-					.items()
-					.attr('r', this.scatter.settings.size)
-					.style('fill-opacity', c => this.model.getOpacity(c))
-				chart.mainG.call(this.scatter.vm.scatterZoom.zoomD3)
-				this.scatterLasso.selectedItems = []
-			}
-		}
-		this.lassoDiv.select('*').remove()
-		icon_functions['lasso'](this.lassoDiv, {
-			handler: () => this.toggleLasso(),
-			enabled: this.scatterLasso.lassoOn,
-			title: 'Select a group of samples'
-		})
+		this.scatter.config.lassoOn = !this.scatter.config.lassoOn
+		this.scatter.app.dispatch({ type: 'plot_edit', id: this.scatter.id, config: this.scatter.config })
 	}
 
 	async addGroup(group) {
@@ -103,11 +82,11 @@ export class ScatterViewModel extends ScatterViewModelBase {
 		const toolsDiv = this.view.dom.toolsDiv
 		const display = 'block'
 		const searchDiv = toolsDiv.insert('div').style('display', display).style('margin', '15px 10px')
-		this.lassoDiv = toolsDiv.insert('div').style('display', display).style('margin', '15px 10px')
+		this.view.dom.lassoDiv = toolsDiv.insert('div').style('display', display).style('margin', '15px 10px')
 		icon_functions['search'](searchDiv, { handler: e => this.interactivity.searchSample(e), title: 'Search samples' })
-		icon_functions['lasso'](this.lassoDiv, {
+		icon_functions['lasso'](this.view.dom.lassoDiv, {
 			handler: () => this.toggleLasso(),
-			enabled: this.scatterLasso.lassoOn,
+			enabled: this.scatter.config.lassoOn,
 			title: 'Select a group of samples'
 		})
 		this.view.dom.groupDiv = toolsDiv.insert('div').style('display', display).style('margin', '15px 10px')

@@ -1,21 +1,33 @@
-import { zoom as d3zoom, zoomIdentity } from 'd3-zoom'
+import { zoom as d3zoom } from 'd3-zoom'
 import { icons as icon_functions } from '#dom'
 import type { Scatter } from '../scatter.js'
+import { zoomIdentity } from 'd3-zoom'
 export class ScatterZoom {
 	scatter: Scatter
-	zoom: number
 	zoomD3: any
+	dragD3: any
+	zoom: number
+	transform: any
 
 	constructor(scatter: Scatter) {
 		this.scatter = scatter
-		this.zoom = 1
 		this.zoomD3 = d3zoom()
 			.scaleExtent([0.1, 10])
-			.on('zoom', event => this.handleZoom(event))
+			.on('zoom', event => this.handleZoom(event.transform))
 			.filter(event => {
 				if (event.type === 'wheel') return event.ctrlKey
 				return true
 			})
+			.on('end', event => {
+				this.transform = event.transform
+				this.scatter.config.transform = event.transform.toString()
+				this.scatter.app.dispatch({
+					type: 'plot_edit',
+					id: this.scatter.id,
+					config: this.scatter.config
+				})
+			})
+		this.zoom = 1
 	}
 
 	initZoom(toolsDiv) {
@@ -48,47 +60,38 @@ export class ScatterZoom {
 			handler: () => this.zoomOut(),
 			title: 'Zoom out. You can also zoom out pressing the Ctrl key and using the mouse wheel'
 		})
-		const mainG = this.scatter.model.charts[0].mainG
+		for (const chart of this.scatter.model.charts) {
+			chart.mainG.call(this.zoomD3)
+		}
 
-		if (this.scatter.config.scaleDotTW && this.zoom > 4) this.resetToIdentity()
-		mainG.call(this.zoomD3)
+		if (this.scatter.config.scaleDotTW && this.scatter.model.getZoom() > 4) this.resetToIdentity()
 	}
 
-	handleZoom(event) {
+	handleZoom(transform) {
+		this.zoom = transform.scale(1).k
 		for (const chart of this.scatter.model.charts) {
 			// create new scale ojects based on event
-			const new_xScale = event.transform.rescaleX(chart.xAxisScale)
-			const new_yScale = event.transform.rescaleY(chart.yAxisScale)
-
+			const new_xScale = transform.rescaleX(chart.xAxisScale)
+			const new_yScale = transform.rescaleY(chart.yAxisScale)
+			chart.serie.attr('transform', transform)
 			chart.xAxis.call(chart.axisBottom.scale(new_xScale))
 			chart.yAxis.call(chart.axisLeft.scale(new_yScale))
-			chart.serie.attr('transform', event.transform)
-			this.zoom = event.transform.scale(1).k
-			//on zoom in the particle size is kept
-			const symbols = chart.serie.selectAll('path[name="serie"')
-			symbols.attr('transform', c => this.scatter.model.transform(chart, c, 1))
-			if (this.scatter.vm.scatterLasso?.lassoOn)
+			if (this.scatter.config.lassoOn)
 				chart.lasso.selectedItems().attr('transform', c => this.scatter.model.transform(chart, c, 1.2))
 			if (this.scatter.config.scaleDotTW) this.scatter.vm.legendvm.drawScaleDotLegend(chart)
 		}
 	}
 
 	zoomIn() {
-		for (const chart of this.scatter.model.charts) {
-			if (this.scatter.model.is2DLarge) this.zoom = this.zoom + 0.15
-			else this.zoomD3.scaleBy(chart.mainG.transition().duration(750), 1.2)
-		}
+		for (const chart of this.scatter.model.charts) this.zoomD3.scaleBy(chart.mainG.transition().duration(500), 1.2)
 	}
 
 	zoomOut() {
-		for (const chart of this.scatter.model.charts)
-			if (this.scatter.model.is2DLarge) this.zoom = this.zoom - 0.15
-			else this.zoomD3.scaleBy(chart.mainG.transition().duration(750), 0.8)
+		for (const chart of this.scatter.model.charts) this.zoomD3.scaleBy(chart.mainG.transition().duration(500), 0.8)
 	}
 
 	resetToIdentity() {
 		for (const chart of this.scatter.model.charts)
-			if (this.scatter.model.is2DLarge) this.zoom = 1
-			else chart.mainG.transition().duration(750).call(this.zoomD3.transform, zoomIdentity)
+			chart.mainG.transition().duration(500).call(this.zoomD3.transform, zoomIdentity)
 	}
 }

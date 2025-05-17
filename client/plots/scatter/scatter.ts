@@ -47,6 +47,7 @@ export class Scatter extends RxComponentInner {
 		if (!config) {
 			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
 		}
+
 		return {
 			config,
 			termfilter: appState.termfilter,
