@@ -34,6 +34,7 @@ reqwest = "0.11"
 flate2 = "1"
 futures = "0.3" 
 num_cpus = "1.16.0"
+memchr = "2"
 
 [profile.release]
 lto = "fat"
@@ -100,3 +101,7 @@ path="src/readHDF5.rs"
 [[bin]]
 name="validateHDF5"
 path="src/validateHDF5.rs"
+
+[[bin]]
+name="gdcGRIN2"
+path="src/gdcGRIN2.rs"

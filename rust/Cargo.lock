@@ -17,6 +17,7 @@ dependencies = [
  "json",
  "kodama",
  "libmath",
+ "memchr",
  "nalgebra 0.32.3",
  "ndarray 0.16.1",
  "num",
