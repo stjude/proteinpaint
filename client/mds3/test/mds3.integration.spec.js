@@ -14,6 +14,9 @@ Official - allow2selectSamples
 Official - hardcodeCnvOnly
 Incorrect dslabel
 Custom cnv only, no sample
+
+(todo) Custom fusion
+
 Custom ssm only, no sample
 Custom cnv and ssm, no sample
 Custom cnv and ssm, WITH sample
@@ -889,7 +892,7 @@ tape('Custom cnv only, no sample', test => {
 			test.ok(lab, '"Variants" leftlabel should be displayed')
 			test.equal(
 				lab.node().innerHTML,
-				`${custom_variants.length} variants`,
+				`${custom_variants.length} CNVs`,
 				`Variant leftlabel should print "${custom_variants.length} variants"`
 			)
 		}
