@@ -256,12 +256,12 @@ tryCatch(
       write_error("grin.stats returned invalid or null results")
       quit(status = 1)
     } else {
-      message("Successfully completed grin.stats analysis")
-      message("Saving the results...")
+      #message("Successfully completed grin.stats analysis")
+      #message("Saving the results...")
       data_path <- input$imagefile
       data_path <- gsub("\\.png$", ".rds", data_path)
       saveRDS(grin_results, file = data_path)
-      message("Results saved successfully to ", data_path)
+      #message("Results saved successfully to ", data_path)
       # Instead of quitting, set a flag if results are invalid
       valid_results <- TRUE
       if (is.null(grin_results)) {
@@ -289,12 +289,12 @@ tryCatch(
     sorted_results <- grin_table[
       order(as.numeric(as.character(grin_table$p2.nsubj))),
     ]
-    message("Saving the sorted gene.hits table...")
+    #message("Saving the sorted gene.hits table...")
     data_path <- input$imagefile
     data_path <- gsub("grin2_", "grin2_sorted_gene_hits_", data_path)
     data_path <- gsub("\\.png$", ".rds", data_path)
     saveRDS(sorted_results, file = data_path)
-    message("Results saved successfully to ", data_path)
+    #message("Results saved successfully to ", data_path)
   },
   error = function(e) {
     write_error(paste(
@@ -309,7 +309,7 @@ tryCatch(
 tryCatch(
   {
     temp_file <- input$imagefile
-    message("Temporary file for png figure is: ", temp_file)
+    #message("Temporary file for png figure is: ", temp_file)
   },
   error = function(e) {
     write_error(paste(
@@ -345,14 +345,14 @@ tryCatch(
       stop("Plot file was created but is empty")
     }
 
-    message("Plotting completed successfully")
+    #message("Plotting completed successfully")
 
     # Read the file and convert to base64
     plot_bytes <- readBin(temp_file, "raw", file.size(temp_file))
     base64_string <- base64enc::base64encode(plot_bytes)
     grin2png <- list(png = base64_string)
 
-    message("Plot saved successfully. Sending data to node...")
+    #message("Plot saved successfully. Sending data to node...")
     cat(toJSON(grin2png))
   },
   error = function(e) {
