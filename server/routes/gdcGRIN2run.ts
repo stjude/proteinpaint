@@ -112,7 +112,7 @@ function init({ genomes }) {
 				const rResult = await run_R('gdcGRIN2.R', rInput, [])
 				console.log(`[GRIN2] R execution completed, result: ${rResult}`)
 
-				// Parse R result to get metadata or check for errors
+				// Parse R result to get image or check for errors
 				let resultData
 				try {
 					resultData = JSON.parse(rResult)
@@ -124,6 +124,20 @@ function init({ genomes }) {
 
 				if (!resultData.success) {
 					throw new Error(resultData.error || 'R script failed to generate plot')
+				}
+
+				// Display the PNG image (assuming resultData contains base64 encoded PNG)
+				const imageData = resultData.grin2png
+				const imageElement = `
+				<div class="plot-container">
+					<img src="data:image/png;base64,${imageData}" alt="GRIN2 Analysis Result" style="max-width: 100%;">
+				</div>
+				`
+
+				// Add the image to your response
+				const resultDisplay = document.getElementById('result-display')
+				if (resultDisplay) {
+					resultDisplay.innerHTML = imageElement
 				}
 			} finally {
 				// We're not cleaning up the temp directory for local testing
