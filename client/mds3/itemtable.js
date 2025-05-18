@@ -1,4 +1,4 @@
-import { mclass, dtsnvindel, dtfusionrna, dtsv, dtcnv, bplen } from '#shared/common.js'
+import { mclass, dtsnvindel, dtfusionrna, dtsv, dtcnv, bplen, dt2label } from '#shared/common.js'
 import { init_sampletable } from './sampletable'
 import { appear, renderTable, table2col, makeSsmLink } from '#dom'
 import { dofetch3 } from '#common/dofetch'
@@ -138,7 +138,7 @@ async function itemtable_multiItems(arg) {
 
 	const columns = [
 		{
-			label: 'Click a variant to see details',
+			label: `Click a ${dt2label[arg.mlst[0].dt]} to see details`,
 			fillCell: (td, i) => {
 				// to render an item into a cell, not convenient to use "value" or "html", use fillCell() to create elements with click handler
 				const m = arg.mlst[i]
@@ -158,13 +158,8 @@ async function itemtable_multiItems(arg) {
 
 					printSvPair(m.pairlst[0], td)
 				} else if (m.dt == dtcnv) {
-					td.append('span')
-						.style('background', arg.tk.cnv.colorScale(m.value))
-						.text(m.value)
-						.style('font-size', '.8em')
-						.style('padding', '0px 3px')
-					td.append('span').style('margin-left', '10px').text(`${m.chr}:${m.start}-${m.stop}`)
-					// sample?
+					const cs = cnv2str(m, arg.tk)
+					td.html(cs.value + '&nbsp;&nbsp;' + cs.pos)
 				} else {
 					td.text('error: unknown m.dt')
 				}
@@ -224,7 +219,7 @@ async function itemtable_multiItems(arg) {
 			}
 		}
 		if (numViewMode) {
-			row.push({ value: m[numViewMode.byAttribute] })
+			row.push({ value: m.__value_use })
 		}
 		rows.push(row)
 	}
@@ -513,23 +508,30 @@ async function table_svfusion(arg, table) {
 }
 
 export function table_cnv(arg, table) {
-	const m = arg.mlst[0]
+	const cs = cnv2str(arg.mlst[0], arg.tk)
 	{
 		const [c1, c2] = table.addRow()
-		// TODO need queries.cnv.type=cat/lr/cn
-		// with type, will be able to make better indication
 		c1.text('Copy number change')
-		if (Number.isFinite(m.value)) {
-			c2.html(`<span style="background:${arg.tk.cnv.colorScale(m.value)}">&nbsp;&nbsp;</span> ${m.value}`)
-		} else {
-			c2.html(`<span style="background:${mclass[m.class].color}">&nbsp;&nbsp;</span> ${mclass[m.class].label}`)
-		}
+		c2.html(cs.value)
 	}
 	{
 		const [c1, c2] = table.addRow()
 		c1.text('Position')
-		c2.html(`${m.chr}:${m.start}-${m.stop} <span style="font-size:.8em">${bplen(m.stop - m.start)}</span>`)
+		c2.html(cs.pos)
 	}
+}
+
+function cnv2str(m, tk) {
+	const cs = {}
+	// TODO need queries.cnv.type=cat/lr/cn
+	// with type, will be able to make better indication
+	if (Number.isFinite(m.value)) {
+		cs.value = `<span style="background:${tk.cnv.colorScale(m.value)}">&nbsp;&nbsp;</span> ${m.value}`
+	} else {
+		cs.value = `<span style="background:${mclass[m.class].color}">&nbsp;&nbsp;</span> ${mclass[m.class].label}`
+	}
+	cs.pos = `${m.chr}:${m.start}-${m.stop} <span style="font-size:.8em">${bplen(m.stop - m.start)}</span>`
+	return cs
 }
 
 export function printSvPair(pair, div) {
