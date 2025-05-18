@@ -2,6 +2,7 @@ import tape from 'tape'
 import { whenVisible } from '../../test/test.helpers'
 import { showHoverTipOnDisk } from '../skewer.render.js'
 import { dataGood4sunburst } from '../clickVariant.js'
+import { getVariantLabelText } from '../leftlabel.variant.js'
 import { Menu } from '#dom'
 
 /*
@@ -9,6 +10,7 @@ Tests:
 
 showHoverTipOnDisk()
 dataGood4sunburst()
+getVariantLabelText
 */
 
 tape('\n', test => {
@@ -116,5 +118,78 @@ tape('dataGood4sunburst()', function (test) {
 		'should throw'
 	)
 	test.equal(dataGood4sunburst({ nodes: [{}, { name: 'x', cohortsize: 1 }] }), true, 'returns true on good data')
+	test.end()
+})
+
+tape('getVariantLabelText()', function (test) {
+	{
+		// nothing
+		const data = {},
+			tk = {},
+			block = {}
+		const re = getVariantLabelText(data, tk, block)
+		test.equal(re[0], 'No data', 'correct label')
+	}
+	{
+		// custom snv
+		const data = {},
+			tk = {
+				custom_variants: [{ dt: 1 }, { dt: 1 }],
+				skewer: {
+					viewModes: [{ inuse: true, type: 'skewer' }],
+					data: [{ x: 1, mlst: [1, 1] }]
+				}
+			},
+			block = { width: 10 }
+		const re = getVariantLabelText(data, tk, block)
+		test.equal(re[0], '2 variants', 'correct label')
+	}
+	{
+		// native snv
+		const data = {},
+			tk = {
+				skewer: {
+					rawmlst: [{ dt: 1 }, { dt: 1 }],
+					viewModes: [{ inuse: true, type: 'skewer' }],
+					data: [{ x: 1, mlst: [1, 1] }]
+				}
+			},
+			block = { width: 10 }
+		const re = getVariantLabelText(data, tk, block)
+		test.equal(re[0], '2 variants', 'correct label')
+	}
+	{
+		// custom cnv
+		const data = { cnv: [1, 1] },
+			tk = {
+				custom_variants: [{ dt: 4 }, { dt: 4 }]
+			},
+			block = { width: 10 }
+		const re = getVariantLabelText(data, tk, block)
+		test.equal(re[0], '2 CNVs', 'correct label')
+	}
+	{
+		// native cnv
+		const data = { cnv: [{ dt: 4 }, { dt: 4 }] },
+			tk = {},
+			block = { width: 10 }
+		const re = getVariantLabelText(data, tk, block)
+		test.equal(re[0], '2 CNVs', 'correct label')
+	}
+	{
+		// native snv and cnv
+		const data = { cnv: [{ dt: 4 }, { dt: 4 }] },
+			tk = {
+				skewer: {
+					rawmlst: [{ dt: 1 }, { dt: 1 }],
+					viewModes: [{ inuse: true, type: 'skewer' }],
+					data: [{ x: 1, mlst: [1, 1] }]
+				}
+			},
+			block = { width: 10 }
+		const re = getVariantLabelText(data, tk, block)
+		test.equal(re[0], '4 variants', 'correct label')
+	}
+
 	test.end()
 })

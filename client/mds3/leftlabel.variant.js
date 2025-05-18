@@ -8,42 +8,71 @@ import { samples2columnsRows, block2source } from './sampletable'
 import { dt2label, mclass, dtsnvindel, dtsv, dtcnv, dtfusionrna } from '#shared/common.js'
 
 /*
-the "#variants" label should always be made as it is about any content displayed in mds3 track
-(variant just refers to those dots!)
-
-for now data{} is no longer used! as mlst used for display is cached on client
-if type=skewer, cached at tk.skewer.data
-if type=numeric, cached at currentMode.data
-
-may allow to show a different name instead of "variant"
+variant label covers any data item rendered in a mds3 tk
+if has tk.skewer{}
+	if type=skewer, cached at tk.skewer.data
+	if type=numeric, cached at currentMode.data
+if has tk.cnv:
+	get count from data.cnv[] as that's per segment
+	but not tk.cnv.cnvLst as that's aggregated by sample
 */
 export function makeVariantLabel(data, tk, block, laby) {
 	// variant label covers skewer and cnv
 	if (!tk.skewer && !tk.cnv) return
+	// skewer and/or cnv subtrack available. will create this label
 
-	// skewer subtrack is visible, create leftlabel based on #variants that is displayed/total
 	if (!tk.leftlabels.doms.variants) {
 		tk.leftlabels.doms.variants = makelabel(tk, block, laby)
 		tk.leftlabels.doms.variants.attr('data-testid', 'sja_variants_label')
 	}
 
-	let totalcount, showcount
+	const [labeltext, totalcount, showcount] = getVariantLabelText(data, tk, block)
+
+	if (totalcount == 0) {
+		tk.leftlabels.doms.variants.text(labeltext).attr('class', '').style('opacity', 0.7).on('click', null)
+		return
+	}
+
+	if (showcount == 0) {
+		// has data but none displayed
+		tk.leftlabels.doms.variants.text(labeltext).attr('class', '').style('opacity', 0.5).on('click', null)
+		return
+	}
+
+	tk.leftlabels.doms.variants
+		.style('opacity', 1) // restore style in case label was disabled
+		.attr('class', 'sja_clbtext2')
+		.text(labeltext)
+		.on('click', event => {
+			tk.menutip.clear().showunder(event.target)
+			menu_variants(tk, block)
+		})
+}
+
+export function getVariantLabelText(data, tk, block) {
+	let totalcount = 0,
+		showcount = 0
+	const dtset = new Set() // count number of unique dt, to detect if visible data has only one dt, if so show new label
 
 	if (tk.custom_variants) {
 		// if custom list is available, total is defined by its array length
 		totalcount = tk.custom_variants.length
+		for (const m of tk.custom_variants) dtset.add(m.dt)
 	} else {
 		// no custom data but server returned data, get total from it
-		totalcount = tk.skewer.rawmlst.length + (data.cnv?.length || 0)
+		if (tk.skewer?.rawmlst) {
+			totalcount += tk.skewer.rawmlst.length
+			for (const m of tk.skewer.rawmlst) dtset.add(m.dt)
+		}
+		if (data.cnv) {
+			totalcount += data.cnv.length
+			for (const m of data.cnv) dtset.add(m.dt)
+		}
 	}
 
-	if (totalcount == 0) {
-		tk.leftlabels.doms.variants.text('No variants').attr('class', '').style('opacity', 0.7).on('click', null)
-		return
-	}
+	if (totalcount == 0) return ['No data', 0, 0]
 
-	// there is at least 1 variant shown. start to count
-	showcount = 0
+	// there is at least 1 variant shown. start to count those that are shown which could be less than totalcount
 
 	if (tk.skewer) {
 		const currentMode = tk.skewer.viewModes.find(i => i.inuse)
@@ -64,29 +93,28 @@ export function makeVariantLabel(data, tk, block, laby) {
 
 	if (data.cnv) showcount += data.cnv.length // always count cnv when present, so as not to trigger "xx of yy" at variant label
 
-	if (showcount == 0) {
-		// has data but none displayed
-		tk.leftlabels.doms.variants
-			.text('0 out of ' + totalcount + ' variant' + (totalcount > 1 ? 's' : ''))
-			.attr('class', '')
-			.style('opacity', 0.5)
-			.on('click', null)
-		return
+	// what to call the items: if only a single dt shown, call by its name; if items are of multiple dts, use generic name "variant"
+	let vn = 'variant'
+	if (dtset.size == 1) {
+		const dt = [...dtset][0]
+		if (dt == dtsnvindel) {
+			// do not change. avoid using snv/indel, looks odd
+		} else {
+			vn = dt2label[dt]
+		}
 	}
 
-	tk.leftlabels.doms.variants
-		.style('opacity', 1) // restore style in case label was disabled
-		.attr('class', 'sja_clbtext2')
-		.text(
-			showcount < totalcount
-				? showcount + ' of ' + totalcount + ' variants'
-				: showcount + ' variant' + (showcount > 1 ? 's' : '')
-		)
-		.on('click', event => {
-			tk.menutip.clear().showunder(event.target)
-			menu_variants(tk, block)
-		})
-	return
+	if (showcount == 0) {
+		return [`0 out of ${totalcount} ${vn}${totalcount > 1 ? 's' : ''}`, totalcount, showcount]
+	}
+
+	return [
+		showcount < totalcount
+			? showcount + ' of ' + totalcount + ' ' + vn + 's'
+			: showcount + ' ' + vn + (showcount > 1 ? 's' : ''),
+		totalcount,
+		showcount
+	]
 }
 
 function menu_variants(tk, block) {
