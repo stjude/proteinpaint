@@ -1,2 +1,1 @@
-Fixes:
-- mds3 tk cnvonly mode, leftlabel shows #CNVs but not variants
+

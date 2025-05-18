@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Fixes:
+- mds3 tk cnvonly mode, leftlabel shows #CNVs but not variants
+
 
 ## 2.125.0
 
