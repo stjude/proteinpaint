@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 Fixes:
 - mds3 tk cnvonly mode, leftlabel shows #CNVs but not variants
+- mds3 tk variant List menu will not show CNV tab when no cnv loaded
 
 
 ## 2.125.0
