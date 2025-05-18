@@ -1,1 +1,2 @@
-
+Fixes:
+- mds3 tk variant List menu will not show CNV tab when no cnv loaded
