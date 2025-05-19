@@ -27,7 +27,7 @@ enum ExperimentalStrategy {
 /**
  * Request parameters for GRIN2 file listing
  */
-export type GdcGRIN2Request = {
+export type GdcGRIN2listRequest = {
 	/** Name of experimental strategy to get files for */
 	experimentalStrategy: ExperimentalStrategy
 	/** JSON, optional GDC cohort filter to restrict cases */
@@ -39,7 +39,7 @@ export type GdcGRIN2Request = {
 /**
  * Response for GRIN2 file listing
  */
-export type GdcGRIN2Response = {
+export type GdcGRIN2listResponse = {
 	/** List of file objects passing filter and to be displayed on client */
 	files: GdcGRIN2File[]
 	/** Total number of files found by API (in case bigger than files.length) */
@@ -49,12 +49,10 @@ export type GdcGRIN2Response = {
 	/** File counts by type */
 	fileCounts?: {
 		maf: number
-		cnv: number
-		total: number
 	}
 	/** Applied filters (for UI reference) */
 	appliedFilters?: {
-		fileTypes?: Array<'MAF' | 'CNV'>
+		fileTypes?: Array<'MAF'>
 		experimentalStrategy?: ExperimentalStrategy
 	}
 }
@@ -75,25 +73,21 @@ export type RunGRIN2Response = {
 	/** Error message if status is 'error' */
 	error?: string
 	/** Path to the generated image if status is 'success' */
-	imagePath?: string
-	/** Analysis metadata */
-	metadata?: {
-		filesAnalyzed: number
-		samplesIncluded: number
-		analysisDate: string
-		executionTime: number
-	}
+	imagestring?: string
+	/** Download status */
+	download?: any
+	/** Table of top genes indentified by analysis */
+	topgenetable?: any
 }
-
 /**
  * Route payload definitions for type checking
  */
 export const gdcGRIN2Payload: RoutePayload = {
 	request: {
-		typeId: 'GdcGRIN2Request'
+		typeId: 'GdcGRIN2listRequest'
 	},
 	response: {
-		typeId: 'GdcGRIN2Response'
+		typeId: 'GdcGRIN2listResponse'
 	}
 }
 

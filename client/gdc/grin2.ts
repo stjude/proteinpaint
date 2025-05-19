@@ -34,7 +34,6 @@ const analysisOptions = [
 
 export async function gdcGRIN2ui({ holder, filter0, callbacks, debugmode = false }) {
 	if (debugmode) {
-		console.log('Debug mode enabled')
 		// Additional debug logic
 	}
 	try {
@@ -237,11 +236,8 @@ async function getFilesAndShowTable(obj) {
     scope this <span> for easy access by helpers,
     detect if it is truthy to only create it once
     */
-	let serverMessage
 
 	async function runGRIN2Analysis(lst, button) {
-		mayCreateServerMessageSpan(button)
-
 		// Format the data according to what the Rust code expects
 		const caseFiles = {}
 
@@ -266,7 +262,7 @@ async function getFilesAndShowTable(obj) {
 		const oldText = button.innerHTML
 		button.innerHTML = 'Analyzing... Please wait'
 		button.disabled = true
-		serverMessage.style('display', 'none')
+		// serverMessage.style('display', 'none')
 
 		// Clear previous results
 		obj.resultDiv.selectAll('*').remove()
@@ -280,38 +276,26 @@ async function getFilesAndShowTable(obj) {
 			console.log('GRIN2 request body:', JSON.stringify(caseFiles, null, 2))
 			const response = await dofetch3('gdc/runGRIN2', { body: caseFiles })
 
+			console.log('GRIN2 response:', response)
 			obj.busy = false
 			obj.expStrategyRadio.inputs.property('disabled', false)
-
-			// Log the response type for debugging
 			console.log('Response type:', typeof response)
-			if (response instanceof Blob) {
-				console.log('Response is a Blob, size:', response.size)
-			} else {
-				console.log('Response details:', response)
-			}
 
-			// Handle different response types
-			if (response instanceof Blob) {
-				// Check if the blob is too small (might indicate an error)
-				if (response.size < 500) {
-					// For debugging, let's try to read the small blob
-					const text = await response.text()
-					console.log('Small blob content:', text)
+			// Handle the response
+			if (response) {
+				console.log('In the if block')
+				// The response.png is an array of base64 chunks
+				// Join all chunks to get the complete base64 string
+				const base64Data = Array.isArray(response.png) ? response.pngImg.join('') : response.pngImg
 
-					// If it's an error message in text format
-					if (text.includes('error') || text.includes('Error')) {
-						throw new Error(text)
-					}
-				}
-
-				// Display the image result
-				const imageUrl = URL.createObjectURL(response)
+				// Create image URL from base64 data
+				const imageUrl = `data:image/png;base64,${base64Data}`
+				console.log('Image URL:', imageUrl)
 
 				// Add title for the results
 				obj.resultDiv.append('h3').text('GRIN2 Analysis Results')
 
-				// Create image container with fixed dimensions
+				// Create image container
 				const imgContainer = obj.resultDiv
 					.append('div')
 					.style('margin-top', '10px')
@@ -351,48 +335,41 @@ async function getFilesAndShowTable(obj) {
 
 				// Scroll to the results
 				obj.resultDiv.node().scrollIntoView({ behavior: 'smooth' })
+			} else if (response.status === 'error') {
+				// Handle error response
+				throw new Error(response.error || 'Unknown error occurred')
 			} else {
-				// If response is not a blob, it might be JSON with information
-				if (response.status === 'error') {
-					throw new Error(response.error || 'Unknown error occurred')
-				} else if (response.imagePath) {
-					// If the server returns an image path instead of the image itself
-					obj.resultDiv.append('h3').text('GRIN2 Analysis Results')
-					obj.resultDiv
-						.append('img')
-						.attr('src', response.imagePath)
-						.attr('alt', 'GRIN2 Analysis Result')
-						.style('max-width', '100%')
-				} else {
-					// Handle other response formats
-					obj.resultDiv.append('h3').text('GRIN2 Analysis Complete')
-					obj.resultDiv
-						.append('pre')
-						.style('max-height', '400px')
-						.style('overflow', 'auto')
-						.style('background', '#f5f5f5')
-						.style('padding', '10px')
-						.style('border-radius', '4px')
-						.text(JSON.stringify(response, null, 2))
-				}
+				// Handle unexpected response format
+				console.log('Unexpected response format:', response)
+				obj.resultDiv.append('h3').text('GRIN2 Analysis Result')
+				obj.resultDiv
+					.append('div')
+					.attr('class', 'sja_warning')
+					.text('The server returned data in an unexpected format')
+
+				obj.resultDiv
+					.append('pre')
+					.style('max-height', '400px')
+					.style('overflow', 'auto')
+					.style('background', '#f5f5f5')
+					.style('padding', '10px')
+					.style('border-radius', '4px')
+					.text(JSON.stringify(response, null, 2))
 			}
 		} catch (e) {
+			// Handle errors
 			console.error('GRIN2 Analysis Error:', e)
-			sayerror(obj.errDiv, e)
+			sayerror(obj.errDiv, e) // Assuming you have this function
 			obj.resultDiv
 				.append('div')
 				.attr('class', 'sja_error')
 				.text('Error running GRIN2 analysis: ' + (e instanceof Error ? e.message : String(e)))
 		} finally {
+			// Reset button state
 			button.innerHTML = oldText
 			button.disabled = false
 			obj.busy = false
 			obj.expStrategyRadio.inputs.property('disabled', false)
 		}
-	}
-	function mayCreateServerMessageSpan(button) {
-		if (serverMessage) return // message <span> are already created
-		const holder = select(button.parentElement)
-		serverMessage = holder.append('span').attr('class', 'sja_clbtext').style('display', 'none')
 	}
 }
