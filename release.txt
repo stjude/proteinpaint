@@ -1,1 +1,2 @@
-
+Features
+- Initial prototype of GRIN2 tool (https://cran.r-project.org/web/packages/GRIN2/vignettes/GRIN2.html)
