@@ -23,6 +23,9 @@
 #  png: [<base64 string>]
 # }
 
+# supress warnings
+options(warn = -1)
+
 suppressPackageStartupMessages({
   library(GRIN2)
   library(DBI)
@@ -36,6 +39,7 @@ suppressPackageStartupMessages({
 write_error <- function(msg) {
   cat("ERROR: ", msg, "\n", file = stderr())
 }
+
 
 ### 1. stream in json input data
 con <- file("stdin", "r")
@@ -248,40 +252,24 @@ if (nchar(lesion_data) > 0) {
 ### 5. run GRIN2 analysis
 # Compute grin.stats
 tryCatch(
-  {
-    invisible(suppressMessages(
-      grin_results <- grin.stats(lesion_df, gene_anno, chrom_size)
-    ))
+ {
+    # More comprehensive suppression of all types of output
+    suppressMessages({
+      suppressWarnings({
+        grin_results <- grin.stats(lesion_df, gene_anno, chrom_size)
+      })
+    })
     if (is.null(grin_results) || !is.list(grin_results)) {
       write_error("grin.stats returned invalid or null results")
       quit(status = 1)
-    } else {
-      #message("Successfully completed grin.stats analysis")
-      #message("Saving the results...")
-      data_path <- input$imagefile
-      data_path <- gsub("\\.png$", ".rds", data_path)
-      saveRDS(grin_results, file = data_path)
-      #message("Results saved successfully to ", data_path)
-      # Instead of quitting, set a flag if results are invalid
-      valid_results <- TRUE
-      if (is.null(grin_results)) {
-        write_error(
-          "Warning: grin.stats returned null results, but continuing to plot phase"
-        )
-        valid_results <- FALSE
-      } else if (!is.list(grin_results)) {
-        write_error(
-          "Warning: grin.stats returned non-list results, but continuing to plot phase"
-        )
-        valid_results <- FALSE
-      }
-    }
+    } 
   },
   error = function(e) {
     write_error(paste("Failed to compute grin.stats:", e$message))
     quit(status = 1)
   }
 )
+
 # Extract gene.hits and sort the table
 tryCatch(
   {
@@ -289,12 +277,6 @@ tryCatch(
     sorted_results <- grin_table[
       order(as.numeric(as.character(grin_table$p2.nsubj))),
     ]
-    #message("Saving the sorted gene.hits table...")
-    data_path <- input$imagefile
-    data_path <- gsub("grin2_", "grin2_sorted_gene_hits_", data_path)
-    data_path <- gsub("\\.png$", ".rds", data_path)
-    saveRDS(sorted_results, file = data_path)
-    #message("Results saved successfully to ", data_path)
   },
   error = function(e) {
     write_error(paste(
@@ -308,8 +290,8 @@ tryCatch(
 # Generate genomewide plot and encode PNG as Base64
 tryCatch(
   {
+    # Temporary file for png figure
     temp_file <- input$imagefile
-    #message("Temporary file for png figure is: ", temp_file)
   },
   error = function(e) {
     write_error(paste(
@@ -345,14 +327,10 @@ tryCatch(
       stop("Plot file was created but is empty")
     }
 
-    #message("Plotting completed successfully")
-
     # Read the file and convert to base64
     plot_bytes <- readBin(temp_file, "raw", file.size(temp_file))
     base64_string <- base64enc::base64encode(plot_bytes)
     grin2png <- list(png = base64_string)
-
-    #message("Plot saved successfully. Sending data to node...")
     cat(toJSON(grin2png))
   },
   error = function(e) {
