@@ -86,12 +86,15 @@ export async function runRemainingWithoutAwait(ds) {
 				// one of the `.then()` test callbacks to be uncommented
 				// delete ds.init.recoverableError
 
+				// always allow retries, regardless of error type (fatal or recoverable)
+				delete ds.__pendingCacheVersion
+				if (ds.__gdc) delete ds.__gdc.data_release_version
+
 				if (ds.init.recoverableError) {
-					console.log(`allow retries of cacheMappingOnNewRelease()`, e)
+					console.log(`allow retries of cacheMappingOnNewRelease()`)
+					console.trace(e)
 				} else {
 					console.log(`force retries of cacheMappingOnNewRelease()`, e)
-					delete ds.__pendingCacheVersion
-					if (ds.__gdc) delete ds.__gdc.data_release_version
 					// TODO: may uncomment below and/or improve logic above
 					// ds.init.fatalError = `cacheMappingOnNewRelease()`
 					// // cancel retries/auto-recovery, but do not crash server
@@ -161,118 +164,9 @@ async function getOpenProjects(ds, ref) {
 	console.log('GDC open-access projects:', ref.gdcOpenProjects.size)
 }
 
-/*** no longer used ***
-this function is called when the gdc mds3 dataset is initiated on a pp instance
-primary purpose is to catch malformed api URLs on dev environment
-when running this on sj prod server, the gdc api can be down due to maintainance, and we do not want to prevent our server from launching
-thus do not halt process if api is down
-async function testGDCapi(ds) {
-	const { host, headers } = ds.getHostHeaders()
-	try {
-		// all these apis are available on gdc production and are publicly available
-		// if any returns an error code, will abort
-		{
-			const u = path.join(host.rest, 'ssms')
-			const c = await testRestApi(u)
-			if (c) throw `${u} returns error code: ${c}`
-		}
-		{
-			const u = path.join(host.rest, 'ssm_occurrences')
-			const c = await testRestApi(u)
-			if (c) throw `${u} returns error code: ${c}`
-		}
-		{
-			const u = path.join(host.rest, 'cases')
-			const c = await testRestApi(u)
-			if (c) throw `${u} returns error code: ${c}`
-		}
-		{
-			const u = path.join(host.rest, 'files')
-			const c = await testRestApi(u)
-			if (c) throw `${u} returns error code: ${c}`
-		}
-		{
-			const u = path.join(host.rest, 'analysis/top_mutated_genes_by_project')
-			const c = await testRestApi(u)
-			if (c) throw `${u} returns error code: ${c}`
-		}
-
-		// /data/ and /slicing/view/ are not tested as they require file uuid which is unstable across data releases
-
-		{
-			const c = await testGraphqlApi(host.graphql, JSON.parse(JSON.stringify(headers)))
-			if (c) throw `${host.graphql} returns error code: ${c}`
-		}
-	} catch (e) {
-		console.log(e)
-		throw `
-##########################################
-#
-#   Some GDC API unavailable, see error above
-#   ${host.rest}
-#   ${host.graphql}
-#
-##########################################`
-	}
-}
-*/
-
-/* no longer used
-if url is accessible, do not return
-if gets error:
-	return error code if available, so downstream logic can further act on the code
-	if no error code, throw and abort
-async function testRestApi(url) {
-	try {
-		const t = new Date()
-		const response = await ky(url)
-		if (response.status > 399) {
-			// 400 and above are all error, do not use !=200 as redirect (300+) is allowed...
-			// TODO console log additional response msg to help diagnosis
-			return response.status
-		}
-		console.log('GDC API okay: ' + url, new Date() - t, 'ms')
-	} catch (e) {
-		// if gdc service is down
-		console.log('See error from', url)
-		console.log(e)
-		if (e.code) return e.code
-		throw 'gdc api down: ' + url // no code, just throw to abort
-	}
-}
-
-async function testGraphqlApi(url, headers) {
-	// FIXME lightweight method to test if graphql is accessible?
-	const t = new Date()
-	try {
-		const query = `query termislst2total( $filters: FiltersArgument) {
-		explore {
-			cases {
-				aggregations (filters: $filters, aggregations_filter_themselves: true) {
-					primary_site {buckets { doc_count, key }}
-				}
-			}
-		}}`
-		const response = await ky.post(url, {
-			timeout: false,
-			headers,
-			json: { query, variables: {} }
-		})
-		if (response.status > 399) {
-			// 400 and above are all error, do not use !=200 as redirect (300+) is allowed...
-			// TODO console log additional response msg to help diagnosis
-			return response.status
-		}
-	} catch (e) {
-		console.log(e)
-		if (e.code) return e.code
-		throw 'see above error from graphql API ' + url
-	}
-	console.log('GDC GraphQL API okay: ' + url, new Date() - t, 'ms')
-}
-*/
-
 function getCacheRef(ds) {
+	const date = new Date()
+
 	// gather these arbitrary gdc stuff under __gdc{} to be safe
 	// do not freeze the object; they will be rewritten if cache is stale
 	const ref = {
@@ -307,7 +201,10 @@ function getCacheRef(ds) {
 		gdcOpenProjects: new Set(), // names of open-access projects
 		scrnaAnalysis2hdf5: new Map(), // for scrna, k: seurat.analysis.tsv uuid, v: hdf5/loom uuid. maps a analysis tvs file to loom file, latter is required for querying scrna gene exp data
 		doneCaching: false,
-		cacheTimes: {}
+		cacheTimes: {
+			// may be overwritten with a more accurate
+			requested: { unixTime: Date.now(), local: date.toLocaleDateString() + ' ' + date.toLocaleTimeString() }
+		}
 	}
 
 	return ref
@@ -343,6 +240,8 @@ async function cacheMappingOnNewRelease(ds) {
 		// since this runs in a loop, the API status could change between requests
 		const response = await ds.preInit.getStatus()
 		version = response?.data_release_version
+		if (!version) return
+
 		// __pendingCacheVersion: started, but not completed
 		if (deepEqual(version, ds.__pendingCacheVersion) || deepEqual(version, ds.__gdc.data_release_version)) {
 			if (ds.preInit.test)
@@ -358,13 +257,13 @@ async function cacheMappingOnNewRelease(ds) {
 			// should try restart caching optimistically (that the network or server issue was resolved)
 			if (!ds.init.recoverableError) return
 			else {
-				console.log(`detected caching error: ${ds.init.recoverableError}`)
+				console.log(`detected caching error: `, ds.init.recoverableError)
 				console.log(`cached gdc data version is up-to-date, but there was a caching error, will restart cache`)
 			}
 		}
-		delete ds.init.recoverableError
+		// delete ds.init.recoverableError
 		// need to check before resetting ds.__pendingCacheVersion in subsequent lines
-		if (mayCancelStalePendingCache(ds, { data_release_version: version })) return
+		if (/*!ds.init.recoverableError &&*/ mayCancelStalePendingCache(ds, { data_release_version: version })) return
 		// not using deepEqual() here, since on initial call ds.__gdc and ref directly reference the same object
 		if (ds.__gdc !== ref) console.log('GDC: cache is stale. Re-caching...', version.minor)
 
@@ -375,7 +274,10 @@ async function cacheMappingOnNewRelease(ds) {
 		ds.__pendingCacheVersion = version
 		ref.data_release_version = version
 		const date = new Date()
-		ds.__gdc.cacheTimes.start = {unixTime: Date.now(), local: date.toLocaleDateString() + ' ' + date.toLocaleTimeString()}
+		ds.__gdc.cacheTimes.start = {
+			unixTime: Date.now(),
+			local: date.toLocaleDateString() + ' ' + date.toLocaleTimeString()
+		}
 		await getOpenProjects(ds, ref)
 		const size = 1000 // fetch 1000 ids at a time
 		const totalCases = await fetchIdsFromGdcApi(ds, 1, 0, ref)
@@ -391,6 +293,8 @@ async function cacheMappingOnNewRelease(ds) {
 	} catch (e) {
 		if (isRecoverableError(e)) {
 			console.log(ds.__gdc?.recoverableError)
+			delete ds.__pendingCacheVersion
+			if (ds.__gdc) delete ds.__gdc.data_release_version
 			// the periodic rerun of this function will allow auto-recovery
 		}
 		throw e
@@ -411,7 +315,10 @@ async function cacheMappingOnNewRelease(ds) {
 	console.log('\t', ds.__gdc.map2caseid.cache.size, 'different ids to case uuid,')
 	console.log('\t', ds.__gdc.casesWithExpData.size, 'cases with gene expression data.')
 	const date = new Date()
-	ds.__gdc.cacheTimes.stop = {unixTime: Date.now(), local: date.toLocaleDateString() + ' ' + date.toLocaleTimeString()}
+	ds.__gdc.cacheTimes.stop = {
+		unixTime: Date.now(),
+		local: date.toLocaleDateString() + ' ' + date.toLocaleTimeString()
+	}
 }
 
 // may cancel an unfinished caching for an older data_release_version,

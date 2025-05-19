@@ -52,21 +52,26 @@ export async function initGDCdictionary(ds) {
 		// only use on dev environment. here as soon as server is launched,
 		// it will signal client to refresh (sse). if still caching asyncly,
 		// a gdc view may break due to incomplete cache, thus await a bit for cache to complete.
-		// also should use extApiCache
+		// also should use extApiCache;
+		// calling here means it's invoked before ds queries are validated in mds3.init.js init()
 		await runRemainingWithoutAwait(ds)
 	} else {
 		ds.init.status = 'nonblocking'
-		// use on prod, not to hold up container launch while caching
-		runRemainingWithoutAwait(ds)
-			.then(() => {
-				ds.init.status = 'done'
-			})
-			.catch(e => {
-				if (ds.init.recoverableError) return
-				ds.init.status = 'fatalError'
-				ds.init.fatalError = e
-				console.log(`${ds.genomename}/${ds.label} fatal error`, e)
-				// TODO: notify team of ds load failure
-			})
+		// this will be called after all ds queries are validated in mds3.init.js init(),
+		// otherwise it's harder to coordinate failures from either query validation or caching
+		ds.initRemainingWithoutAwait = () => {
+			// use on prod, not to hold up container launch while caching
+			runRemainingWithoutAwait(ds)
+				.then(() => {
+					ds.init.status = 'done'
+				})
+				.catch(e => {
+					if (ds.init.recoverableError) return
+					ds.init.status = 'fatalError'
+					ds.init.fatalError = e
+					console.log(`${ds.genomename}/${ds.label} fatal error`, e)
+					// TODO: notify team of ds load failure
+				})
+		}
 	}
 }

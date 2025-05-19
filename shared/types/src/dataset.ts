@@ -1966,6 +1966,12 @@ export type Mds3 = BaseMds & {
 	isMds3: boolean
 	loadWithoutBlocking?: boolean
 	preInit?: PreInit
+	init?: {
+		/** number of milliseconds to wait before calling th preInit.getStatus() again */
+		retryDelay?: number
+		/** maximum number of times to call preInit.getStatus() before giving up */
+		retryMax?: number
+	}
 	initErrorCallback?: (a: any) => void
 	viewModes?: ViewMode[]
 	dsinfo?: KeyVal[]

@@ -123,7 +123,9 @@ export async function init(ds, genome) {
 	}
 
 	if (ds.preInit) {
-		const response = await ds.preInit.getStatus(ds)
+		const response = await ds.preInit.getStatus(ds).catch(e => {
+			throw e
+		})
 		if (response?.status != 'OK') throw response
 	}
 
@@ -165,6 +167,7 @@ export async function init(ds, genome) {
 	await mayValidateAssayAvailability(ds)
 	await mayValidateViewModes(ds)
 	if (ds.cohort?.db?.refresh) throw `!!! ds.cohort.db.refresh has been deprecated !!!`
+	if (ds.initRemainingWithoutAwait) ds.initRemainingWithoutAwait()
 }
 
 export function client_copy(ds) {
