@@ -99,11 +99,11 @@ function init({ genomes }) {
 					lesion: rustResult // The mutation string from Rust
 				})
 
-				console.log(`[DEBUG] R input: ${rInput}`)
+				console.log(`R input: ${rInput}`)
 				const parsedInput = JSON.parse(rInput)
-				console.log('[DEBUG] Parsed lesion data type:', typeof parsedInput.lesion)
+				console.log('Parsed lesion data type:', typeof parsedInput.lesion)
 				console.log(
-					'[DEBUG] Parsed lesion data length:',
+					'Parsed lesion data length:',
 					typeof parsedInput.lesion === 'string' ? parsedInput.lesion.length : 'not a string'
 				)
 
@@ -116,28 +116,13 @@ function init({ genomes }) {
 				let resultData
 				try {
 					resultData = JSON.parse(rResult)
+					console.log('[GRIN2] Finished R analysis')
 					// console.log(`[GRIN2] Parsed R result: ${JSON.stringify(resultData)}`)
+					const pngImg = resultData.png[0]
+					return res.json({ pngImg })
 				} catch (parseError) {
 					console.error('[GRIN2] Error parsing R result:', parseError)
 					console.log('[GRIN2] Raw R result:', rResult)
-				}
-
-				if (!resultData.success) {
-					throw new Error(resultData.error || 'R script failed to generate plot')
-				}
-
-				// Display the PNG image (assuming resultData contains base64 encoded PNG)
-				const imageData = resultData.grin2png
-				const imageElement = `
-				<div class="plot-container">
-					<img src="data:image/png;base64,${imageData}" alt="GRIN2 Analysis Result" style="max-width: 100%;">
-				</div>
-				`
-
-				// Add the image to your response
-				const resultDisplay = document.getElementById('result-display')
-				if (resultDisplay) {
-					resultDisplay.innerHTML = imageElement
 				}
 			} finally {
 				// We're not cleaning up the temp directory for local testing
