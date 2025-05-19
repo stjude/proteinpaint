@@ -133,13 +133,12 @@ export class ScatterViewModelBase {
 			chart.mainG.attr('clip-path', `url(#${id})`)
 
 			chart.serie = chart.mainG.append('g').attr('class', 'sjpcb-scatter-series')
-			if (this.scatter.state.config.transform) {
-				chart.mainG.attr('transform', this.scatter.state.config.transform)
-				//reset transform to null as the transformation was applied
-				this.scatter.app.dispatch({ type: 'plot_edit', id: this.scatter.id, config: { transform: null } })
-			}
+
 			chart.regressionG = chart.mainG.append('g').attr('class', 'sjpcb-scatter-lowess')
 			chart.legendG = svg.append('g').attr('class', 'sjpcb-scatter-legend')
+			if (this.scatter.state.config.transform && chart.mainG.attr('transform') != this.scatter.state.config.transform) {
+				chart.mainG.attr('transform', this.scatter.state.config.transform)
+			}
 		} else {
 			chart.mainG = svg.select('.sjpcb-scatter-mainG')
 			chart.serie = chart.mainG.select('.sjpcb-scatter-series')
@@ -154,7 +153,6 @@ export class ScatterViewModelBase {
 
 		chart.axisG = axisG
 		chart.labelsG = labelsG
-		chart.clipRect.attr('width', this.scatter.settings.svgw + 10).attr('height', this.scatter.settings.svgh)
 		chart.xAxis.attr('transform', `translate(0, ${this.scatter.settings.svgh + this.model.axisOffset.y})`)
 
 		chart.legendG.attr('transform', `translate(${this.scatter.settings.svgw + this.model.axisOffset.x + 50}, 20)`)

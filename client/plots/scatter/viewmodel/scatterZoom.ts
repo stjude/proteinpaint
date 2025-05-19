@@ -18,7 +18,7 @@ export class ScatterZoom {
 				if (event.type === 'wheel') return event.ctrlKey
 				return true
 			})
-			.on('end', event => {
+			.on('end', async event => {
 				this.transform = event.transform
 				this.scatter.config.transform = event.transform.toString()
 				this.scatter.app.dispatch({
@@ -64,7 +64,7 @@ export class ScatterZoom {
 			chart.mainG.call(this.zoomD3)
 		}
 
-		if (this.scatter.config.scaleDotTW && this.scatter.model.getZoom() > 4) this.resetToIdentity()
+		if (this.scatter.config.scaleDotTW && this.zoom > 4) this.resetToIdentity()
 	}
 
 	handleZoom(transform) {
@@ -83,15 +83,21 @@ export class ScatterZoom {
 	}
 
 	zoomIn() {
-		for (const chart of this.scatter.model.charts) this.zoomD3.scaleBy(chart.mainG.transition().duration(500), 1.2)
+		this.zoom = this.zoom * 1.2
+		if (!this.scatter.model.is2DLarge)
+			for (const chart of this.scatter.model.charts) this.zoomD3.scaleBy(chart.mainG.transition().duration(500), 1.2)
 	}
 
 	zoomOut() {
-		for (const chart of this.scatter.model.charts) this.zoomD3.scaleBy(chart.mainG.transition().duration(500), 0.8)
+		this.zoom = this.zoom * 0.8
+		if (!this.scatter.model.is2DLarge)
+			for (const chart of this.scatter.model.charts) this.zoomD3.scaleBy(chart.mainG.transition().duration(500), 0.8)
 	}
 
 	resetToIdentity() {
-		for (const chart of this.scatter.model.charts)
-			chart.mainG.transition().duration(500).call(this.zoomD3.transform, zoomIdentity)
+		this.zoom = 1
+		if (!this.scatter.model.is2DLarge)
+			for (const chart of this.scatter.model.charts)
+				chart.mainG.transition().duration(500).call(this.zoomD3.transform, zoomIdentity)
 	}
 }

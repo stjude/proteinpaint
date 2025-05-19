@@ -15,14 +15,7 @@ export class RunchartViewModel extends ScatterViewModelBase {
 	render() {
 		if (!this.view.dom.svg) this.view.dom.svg = this.view.dom.mainDiv.append('svg')
 		else this.view.dom.svg.selectAll('*').remove()
-		const chartDivs = this.view.dom.mainDiv.selectAll(':scope > div').data(this.model.charts, chart => chart?.id)
-		chartDivs.exit().remove()
-		chartDivs.each(chart => this.renderChart(chart, this.view.dom.mainDiv, false))
-		chartDivs
-			.enter()
-			.append('div')
-			.style('vertical-align', 'top')
-			.each(chart => this.renderChart(chart, this.view.dom.mainDiv, false))
+		for (const chart of this.model.charts) this.renderChart(chart, this.view.dom.mainDiv, false)
 	}
 
 	renderSerie(chart, removePrevious) {
