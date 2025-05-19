@@ -354,13 +354,20 @@ add:
 
 	//Ensure the image renders when toggling between tabs
 	if (self.config.gsea_params.geneset_name != null) {
-		const image = await rungsea(self.config.gsea_params, self.dom)
-		// //render_gsea_plot(self, plot_data)
-		if (image.error) throw image.error
-		self.imageUrl = URL.createObjectURL(image)
-		const png_width = 600
-		const png_height = 400
-		self.dom.holder.append('img').attr('width', png_width).attr('height', png_height).attr('src', self.imageUrl)
+		if (self.settings.gsea_method == 'blitzgsea') {
+			self.config.gsea_params.method = self.settings.gsea_method
+			const image = await rungsea(self.config.gsea_params, self.dom)
+			// //render_gsea_plot(self, plot_data)
+			if (image.error) throw image.error
+			self.imageUrl = URL.createObjectURL(image)
+			const png_width = 600
+			const png_height = 400
+			self.dom.holder.append('img').attr('width', png_width).attr('height', png_height).attr('src', self.imageUrl)
+		} else if (self.settings.gsea_method == 'cerno') {
+			// Need to do client side rendering of the code here in case of CERNO (will do in a following branch)
+		} else {
+			throw 'Unknown method:' + self.settings.gsea_method
+		}
 	}
 
 	const table_stats = table2col({ holder: self.dom.detailsDiv.attr('data-testid', 'sjpp-gsea-stats') })
