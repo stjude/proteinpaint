@@ -104,7 +104,8 @@ export class ScatterViewModelBase {
 		const svg = chart.svg
 		let axisG, labelsG
 		if (svg.select('.sjpcb-scatter-mainG').size() == 0) {
-			chart.mainG = svg.append('g').attr('class', 'sjpcb-scatter-mainG')
+			chart.G = svg.append('g').attr('class', 'sjpcb-scatter-G')
+			chart.mainG = chart.G.append('g').attr('class', 'sjpcb-scatter-mainG')
 			axisG = svg.append('g').attr('class', 'sjpcb-scatter-axis')
 			labelsG = svg.append('g').attr('class', 'sjpcb-scatter-labelsG')
 			chart.xAxis = axisG.append('g').attr('class', 'sjpcb-scatter-x-axis')
@@ -130,7 +131,6 @@ export class ScatterViewModelBase {
 				.attr('y', this.model.axisOffset.y)
 				.attr('width', this.scatter.settings.svgw + 10)
 				.attr('height', this.scatter.settings.svgh)
-			chart.mainG.attr('clip-path', `url(#${id})`)
 
 			chart.serie = chart.mainG.append('g').attr('class', 'sjpcb-scatter-series')
 
@@ -139,7 +139,9 @@ export class ScatterViewModelBase {
 			if (this.scatter.state.config.transform && chart.mainG.attr('transform') != this.scatter.state.config.transform) {
 				chart.mainG.attr('transform', this.scatter.state.config.transform)
 			}
+			chart.G.attr('clip-path', `url(#${id})`)
 		} else {
+			chart.G = svg.select('.sjpcb-scatter-G')
 			chart.mainG = svg.select('.sjpcb-scatter-mainG')
 			chart.serie = chart.mainG.select('.sjpcb-scatter-series')
 			chart.regressionG = chart.mainG.select('.sjpcb-scatter-lowess')
