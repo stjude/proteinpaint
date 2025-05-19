@@ -464,7 +464,7 @@ export async function initGenomesDs(serverconfig) {
 function mayRetryInit(g, ds, d, e) {
 	// if initial attempt fails, can stop or retry
 	const gdlabel = `${g.label}/${ds.label}`
-	console.log(`Init error with ${gdlabel}: ${e}`)
+	console.log(`Init error with ${gdlabel}: `, e)
 	console.trace(e)
 
 	if (!ds.init.recoverableError && !utils.nonFatalStatus.has(ds.init.status) && !utils.nonFatalStatus.has(e.status)) {
@@ -502,8 +502,7 @@ function mayRetryInit(g, ds, d, e) {
 			clearInterval(interval)
 			if (ds.init.status != 'nonblocking') ds.init.status = 'done'
 		} catch (e) {
-			console.log('init retry error:', gdlabel, e)
-			if (!ds.init.recoverableError && !utils.isRecoverableError(e)) {
+			if (ds.init.status != 'recoverableError' && !ds.init.recoverableError && !utils.isRecoverableError(e)) {
 				const msg = `Fatal error on ${gdlabel} retry, stopping retry`
 				console.log(msg)
 				clearInterval(interval) // cancel since retrying will not change the outcome
