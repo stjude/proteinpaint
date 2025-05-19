@@ -134,7 +134,7 @@ class MassApp {
 	async main() {
 		await this.api.vocabApi.main()
 		//Do not show the plots below the about tab
-		this.dom.plotDiv.style(
+		this.dom.plotDiv?.style(
 			'display',
 			this.state.nav?.header_mode != 'hidden' && this.state.nav?.activeTab == 0 ? 'none' : 'block'
 		)
