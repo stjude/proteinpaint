@@ -57,13 +57,15 @@ export async function initGDCdictionary(ds) {
 		await runRemainingWithoutAwait(ds)
 	} else {
 		ds.init.status = 'nonblocking'
-		// this will be called after all ds queries are validated in mds3.init.js init(),
+		// below will be called after all ds queries are validated in mds3.init.js init(),
 		// otherwise it's harder to coordinate failures from either query validation or caching
 		ds.initRemainingWithoutAwait = () => {
 			// use on prod, not to hold up container launch while caching
 			runRemainingWithoutAwait(ds)
 				.then(() => {
-					ds.init.status = 'done'
+					if (ds.init.status == 'nonblocking') {
+						ds.init.status = ds.init.recoverableError ? 'recoverableError' : ds.init.fatalError ? 'fatalError' : 'done'
+					}
 				})
 				.catch(e => {
 					if (ds.init.recoverableError) return
