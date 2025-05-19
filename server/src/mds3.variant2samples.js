@@ -26,6 +26,7 @@ variant2samples_getresult()
 export async function validate_variant2samples(ds) {
 	const vs = ds.variant2samples
 	if (!vs) return
+	// throw `!!! fake validate_variant2samples() failure !!!` // uncomment to test
 
 	if (ds.preInit?.getStatus) {
 		// should wait for dataset or API to be "healthy" before attempting to validate,

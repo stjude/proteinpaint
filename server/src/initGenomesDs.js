@@ -493,6 +493,7 @@ function mayRetryInit(g, ds, d, e) {
 	let currentRetry = 0
 	const interval = setInterval(async () => {
 		currentRetry++
+		ds.init.currentRetry = currentRetry
 		try {
 			console.log(`Retrying ${gdlabel} init(), attempt #${currentRetry} ...`)
 			if (ds.isMds3) await mds3_init.init(ds, g)

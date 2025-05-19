@@ -62,55 +62,52 @@ export async function runRemainingWithoutAwait(ds) {
 			console.log('recoverableError: ', ds.init.recoverableError, e)
 			delete ds.__pendingCacheVersion
 		} else {
-			// immediately crash when the initial try fails with non-recoverable error
 			console.trace(e)
+			// forced retry: DO NOT immediately crash when the initial try fails with non-recoverable error
 			// throw 'cacheSampleIdMapping() failed: ' + (e.message || e)
 			// forced retry of caching, may improve logic later
 			console.log('cacheSampleIdMapping() failed: ' + (e.message || e), ds.init.fatalError)
 			delete ds.init.fatalError
 			ds.init.recoverableError = 'fatal error forced to recoverable: cacheSampleIdMapping()'
 			delete ds.__pendingCacheVersion
+			// forced retry: do not return
 		}
 	}
 
+	// After the initial caching attempt on dataset initialization, periodic checks will run;
 	// use setInterval instead of using setTimeout within cacheMappingOnNewRelease(),
 	// which will require separate setTimeout() calls at the end of the function
 	// plus within each error catch block
-	// setInterval(cacheMappingOnNewRelease, cacheCheckWait, ds)
-	const interval = setInterval(
-		async () => {
-			try {
-				await cacheMappingOnNewRelease(ds)
-			} catch (e) {
-				// uncomment to test cancellation of retries and also requires
-				// one of the `.then()` test callbacks to be uncommented
-				// delete ds.init.recoverableError
+	const interval = setInterval(async () => {
+		try {
+			await cacheMappingOnNewRelease(ds)
+		} catch (e) {
+			// uncomment to test cancellation of retries and also requires
+			// one of the `.then()` test callbacks to be uncommented
+			// delete ds.init.recoverableError
 
-				// always allow retries, regardless of error type (fatal or recoverable)
-				delete ds.__pendingCacheVersion
-				if (ds.__gdc) delete ds.__gdc.data_release_version
+			// always allow retries, regardless of error type (fatal or recoverable)
+			delete ds.__pendingCacheVersion
+			if (ds.__gdc) delete ds.__gdc.data_release_version
 
-				if (ds.init.recoverableError) {
-					console.log(`allow retries of cacheMappingOnNewRelease()`)
-					console.trace(e)
-				} else {
-					console.log(`force retries of cacheMappingOnNewRelease()`, e)
-					// TODO: may uncomment below and/or improve logic above
-					// ds.init.fatalError = `cacheMappingOnNewRelease()`
-					// // cancel retries/auto-recovery, but do not crash server
-					// // TODO: send a Slack message
-					// clearInterval(interval)
-					console.log(e.stack || e)
-					// console.log(
-					// 	`non-recoverable error during gdc map recaching: ` +
-					// 		`cancel retries of cacheMappingOnNewRelease() to not crash server`
-					// )
-				}
+			if (ds.init.recoverableError) {
+				console.log(`allow retries of cacheMappingOnNewRelease()`)
+				console.trace(e)
+			} else {
+				console.log(`force retries of cacheMappingOnNewRelease()`, e)
+				// TODO: may uncomment below and/or improve logic above
+				// ds.init.fatalError = `cacheMappingOnNewRelease()`
+				// // cancel retries/auto-recovery, but do not crash server
+				// // TODO: send a Slack message
+				// clearInterval(interval)
+				console.log(e.stack || e)
+				// console.log(
+				// 	`non-recoverable error during gdc map recaching: ` +
+				// 		`cancel retries of cacheMappingOnNewRelease() to not crash server`
+				// )
 			}
-		},
-		cacheCheckWait,
-		ds
-	)
+		}
+	}, cacheCheckWait)
 
 	// add any other gdc stuff
 }
@@ -202,8 +199,8 @@ function getCacheRef(ds) {
 		scrnaAnalysis2hdf5: new Map(), // for scrna, k: seurat.analysis.tsv uuid, v: hdf5/loom uuid. maps a analysis tvs file to loom file, latter is required for querying scrna gene exp data
 		doneCaching: false,
 		cacheTimes: {
-			// may be overwritten with a more accurate
-			requested: { unixTime: Date.now(), local: date.toLocaleDateString() + ' ' + date.toLocaleTimeString() }
+			// uncomment for testing scenario where cacheTimes.start is somehow not set
+			// requested: { unixTime: Date.now(), local: date.toLocaleDateString() + ' ' + date.toLocaleTimeString() }
 		}
 	}
 
@@ -267,14 +264,25 @@ async function cacheMappingOnNewRelease(ds) {
 		// not using deepEqual() here, since on initial call ds.__gdc and ref directly reference the same object
 		if (ds.__gdc !== ref) console.log('GDC: cache is stale. Re-caching...', version.minor)
 
-		// reset doneCaching to false, which may overwrite it for a previous data version that completed caching;
-		// important to keep the existing ds.__gdc cacheRef to prevent race condition causing a stale cacheRef
-		// to be used as ds.__gdc later
-		ds.__gdc.doneCaching = false // equivalent to having a ds.__pendingCacheVersion object present
+		// reset doneCaching to false, which may overwrite it for a previous data version that has completed caching:
+		// the healthcheck?dslabel=GDC response will include doneCaching, so that the client code can display
+		// `the dataset has not finished loading` message
+		ds.__gdc.doneCaching = false
+		// above is equivalent to having a ds.__pendingCacheVersion object present
+		// it's important to keep the existing ds.__gdc cacheRef
+		// - to allow the server to finish serving data for a request that has started before a pending recache attempt
+		// - to prevent race condition causing a stale cacheRef to be filled-in as ds.__gdc during a recache
+
+		// the pending version will be tracked outside of ds.__gdc and ref objects,
+		// so that be use to compare for staleness
 		ds.__pendingCacheVersion = version
+
+		// ref is not equal to ds.__gdc at this point during a retry/recache,
+		// must attach the release version to the pending ref object that will be filled-in
 		ref.data_release_version = version
+
 		const date = new Date()
-		ds.__gdc.cacheTimes.start = {
+		ref.cacheTimes.start = {
 			unixTime: Date.now(),
 			local: date.toLocaleDateString() + ' ' + date.toLocaleTimeString()
 		}
@@ -292,7 +300,7 @@ async function cacheMappingOnNewRelease(ds) {
 		await getAnalysisTsv2loom4scrna(ds, ref)
 	} catch (e) {
 		if (isRecoverableError(e)) {
-			console.log(ds.__gdc?.recoverableError)
+			console.log(ds.__gdc?.recoverableError || ds.init?.recoverableError)
 			delete ds.__pendingCacheVersion
 			if (ds.__gdc) delete ds.__gdc.data_release_version
 			// the periodic rerun of this function will allow auto-recovery
