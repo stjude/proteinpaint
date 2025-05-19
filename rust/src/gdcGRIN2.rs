@@ -131,7 +131,7 @@ async fn download_data(data4dl: HashMap<String, DataType>, host: &str) -> () {
             // Build HTTP client with timeouts
             let client = reqwest::Client::builder()
                 .timeout(Duration::from_secs(60)) // 60-second timeout per request
-                .connect_timeout(Duration::from_secs(15))
+                .connect_timeout(Duration::from_secs(30))
                 .build()
                 .map_err(|_e| "Client build error".to_string());
             // Handle client creation result
