@@ -40,8 +40,13 @@ RUN apt-get update && apt-get install -y \
 	g++ \
     pkg-config \
     cmake \
-    python3-pip \
-    python3-venv \
+    python3=3.13.3-1 \
+    python3-venv=3.13.3-1 \
+    python3-pip=25.1.1+dfsg-1 \
+#    In case the python3 pin breaks the build use:
+#    python3-pip \
+#    python3-venv \
+#    and read the versions and pin again.
     x11-common \
     libx11-dev \
     libx11-data \
