@@ -257,8 +257,8 @@ export function setInteractivity(self) {
 	self.mouseout = function () {
 		if (!self.activeLabel && self.dom.tip) self.dom.tip.hide()
 		delete self.imgBox
-		self.dom.colBeam.style('display', 'none')
-		self.dom.rowBeam.style('display', 'none')
+		if (self.dom.colBeam) self.dom.colBeam.style('display', 'none')
+		if (self.dom.rowBeam) self.dom.rowBeam.style('display', 'none')
 		self.dom.matrixCellHoverOver.clear()
 	}
 
