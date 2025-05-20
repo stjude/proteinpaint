@@ -5088,7 +5088,7 @@ function makecoordinput(bb, butrow) {
 				bb.coord.inputtip.hide()
 				if (bb.rglst.length == 1) {
 					const r = bb.rglst[0]
-					input.value = r.chr + ':' + r.start + '-' + r.stop
+					input.value = r.chr + ':' + (r.start + 1) + '-' + (r.stop + 1)
 				}
 				input.blur()
 				return

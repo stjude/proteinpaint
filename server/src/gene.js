@@ -63,6 +63,11 @@ export function getResult(g, q) {
 		const tmp = g.genedb.getjsonbyname.all(symbol)
 		result.gmlst = tmp.map(i => {
 			const j = JSON.parse(i.genemodel)
+			/* gene coordinate is from bed files with start=0-based, and stop=not included for feature display
+			minus 1 from stop is a stop-gap for client to uniformly "plus 1" to both start & stop when displaying
+			e.g. hg38 sox1 bed=chr13:112067148-112071706, client shows=chr13:112067149-112071706
+			*/
+			j.stop--
 			if (i.isdefault) j.isdefault = true
 			return j
 		})
