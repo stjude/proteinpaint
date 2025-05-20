@@ -278,7 +278,7 @@ async function getFilesAndShowTable(obj) {
 			// Create image URL from base64 data
 			const imageUrl = `data:image/png;base64,${response.pngImg}`
 
-			// Show and populate download button div below the Run Analysis button
+			// Show and populate download button div next the Run Analysis button
 			obj.downloadButtonDiv.selectAll('*').remove()
 			obj.downloadButtonDiv
 				.append('button')
