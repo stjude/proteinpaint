@@ -73,7 +73,7 @@ export type RunGRIN2Response = {
 	/** Error message if status is 'error' */
 	error?: string
 	/** Path to the generated image if status is 'success' */
-	imagestring?: string
+	pngImg?: string
 	/** Download status */
 	download?: any
 	/** Table of top genes indentified by analysis */
@@ -82,7 +82,7 @@ export type RunGRIN2Response = {
 /**
  * Route payload definitions for type checking
  */
-export const gdcGRIN2Payload: RoutePayload = {
+export const gdcGRIN2listPayload: RoutePayload = {
 	request: {
 		typeId: 'GdcGRIN2listRequest'
 	},

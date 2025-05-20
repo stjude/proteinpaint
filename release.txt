@@ -1,1 +1,3 @@
-
+Fixes:
+- simplify error handling by logging more non-sensitive information and moving non-blocking dataset initialization at the end of mds3 init
+- Addressing additional issues from previous pr
