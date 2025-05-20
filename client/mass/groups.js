@@ -770,6 +770,7 @@ export function addHierClusterPlotMenuItem(chartType, div, text, tip, samplelstT
 				genome: parent.app.opts.genome,
 				geneList: [],
 				vocabApi: parent.app.vocabApi,
+				mode: TermTypes.GENE_EXPRESSION,
 				callback: async ({ geneList, groupName }) => {
 					tip.hide()
 					const group = { name: groupName, lst: [], type: 'hierCluster' }
