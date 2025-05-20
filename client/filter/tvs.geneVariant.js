@@ -25,7 +25,7 @@ async function fillMenu(self, _div, tvs) {
 	const term = structuredClone(tvs.term)
 	// add a variant filter onto the geneVariant term
 	await mayGetChildTerms({ q: {}, term }, self.opts.vocabApi)
-	if (!term.filter?.terms?.length) return
+	if (!term.childTerms?.length) return
 	// generate a frontend vocab using dt terms from the variant filter
 	// and render a data dictionary of this vocab
 	const termdb = await import('../termdb/app')
@@ -39,7 +39,7 @@ async function fillMenu(self, _div, tvs) {
 				// no need to pass vocabApi as a termdb.appInit() option, since
 				// termdb app will create vocabApi as needed from state.vocab
 				// if provided
-				terms: term.filter.terms,
+				terms: term.childTerms,
 				parent_termdbConfig: self.opts.vocabApi.termdbConfig
 			},
 			tree: { usecase: { target: 'filter' } }
