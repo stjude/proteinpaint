@@ -212,7 +212,7 @@ async function getFilesAndShowTable(obj) {
             thus user can still check and uncheck maf files, that can cause the submit button to be enabled
             thus do below to disable it
             */
-			obj.mafTableArg.buttons[0].button.property('disabled', true)
+			button.property('disabled', true)
 			return
 		}
 
@@ -253,10 +253,6 @@ async function getFilesAndShowTable(obj) {
 			caseFiles[caseId].maf = file.id
 		}
 
-		// Log the exact URL and payload being used
-		const url = '/gdc/runGRIN2'
-		console.log('GRIN2 request URL:', url)
-
 		if (Object.keys(caseFiles).length === 0) return
 
 		const oldText = button.innerHTML
@@ -275,101 +271,67 @@ async function getFilesAndShowTable(obj) {
 			console.log('Sending GRIN2 request:', caseFiles)
 			console.log('GRIN2 request body:', JSON.stringify(caseFiles, null, 2))
 			const response = await dofetch3('gdc/runGRIN2', { body: caseFiles })
+			if (!response) throw 'invalid response'
+			if (response.error) throw response.error
 
 			console.log('GRIN2 response:', response)
-			obj.busy = false
-			obj.expStrategyRadio.inputs.property('disabled', false)
-			console.log('Response type:', typeof response)
 
-			// Handle the response
-			if (response) {
-				console.log('In the if block')
-				// The response.png is an array of base64 chunks
-				// Join all chunks to get the complete base64 string
-				const base64Data = Array.isArray(response.png) ? response.pngImg.join('') : response.pngImg
+			if (!response.pngImg) throw 'result.pngImg missing'
 
-				// Create image URL from base64 data
-				const imageUrl = `data:image/png;base64,${base64Data}`
-				console.log('Image URL:', imageUrl)
+			// Create image URL from base64 data
+			const imageUrl = `data:image/png;base64,${response.pngImg}`
 
-				// Add title for the results
-				obj.resultDiv.append('h3').text('GRIN2 Analysis Results')
+			// Add title for the results
+			obj.resultDiv.append('h3').text('GRIN2 Analysis Results')
 
-				// Create image container
-				const imgContainer = obj.resultDiv
-					.append('div')
-					.style('margin-top', '10px')
-					.style('max-width', '100%')
-					.style('overflow', 'auto')
-
-				// Add the image
-				const img = imgContainer
-					.append('img')
-					.attr('src', imageUrl)
-					.attr('alt', 'GRIN2 Analysis Result')
-					.style('max-width', '100%')
-
-				// Add error handler for image loading failures
-				img.node().onerror = () => {
-					console.error('Image failed to load')
-					imgContainer.html('') // Clear container
-					imgContainer
-						.append('div')
-						.attr('class', 'sja_error')
-						.text('Failed to load image result. The analysis may have encountered an error.')
-				}
-
-				// Add download button for the image
-				obj.resultDiv
-					.append('button')
-					.text('Download Image')
-					.style('margin-top', '10px')
-					.on('click', () => {
-						const a = document.createElement('a')
-						a.href = imageUrl
-						a.download = `GRIN2_Analysis_${new Date().toISOString().split('T')[0]}.png`
-						document.body.appendChild(a)
-						a.click()
-						document.body.removeChild(a)
-					})
-
-				// Scroll to the results
-				obj.resultDiv.node().scrollIntoView({ behavior: 'smooth' })
-			} else if (response.status === 'error') {
-				// Handle error response
-				throw new Error(response.error || 'Unknown error occurred')
-			} else {
-				// Handle unexpected response format
-				console.log('Unexpected response format:', response)
-				obj.resultDiv.append('h3').text('GRIN2 Analysis Result')
-				obj.resultDiv
-					.append('div')
-					.attr('class', 'sja_warning')
-					.text('The server returned data in an unexpected format')
-
-				obj.resultDiv
-					.append('pre')
-					.style('max-height', '400px')
-					.style('overflow', 'auto')
-					.style('background', '#f5f5f5')
-					.style('padding', '10px')
-					.style('border-radius', '4px')
-					.text(JSON.stringify(response, null, 2))
-			}
-		} catch (e) {
-			// Handle errors
-			console.error('GRIN2 Analysis Error:', e)
-			sayerror(obj.errDiv, e) // Assuming you have this function
-			obj.resultDiv
+			// Create image container
+			const imgContainer = obj.resultDiv
 				.append('div')
-				.attr('class', 'sja_error')
-				.text('Error running GRIN2 analysis: ' + (e instanceof Error ? e.message : String(e)))
-		} finally {
-			// Reset button state
-			button.innerHTML = oldText
-			button.disabled = false
-			obj.busy = false
-			obj.expStrategyRadio.inputs.property('disabled', false)
+				.style('margin-top', '10px')
+				.style('max-width', '100%')
+				.style('overflow', 'auto')
+
+			// Add the image
+			const img = imgContainer
+				.append('img')
+				.attr('src', imageUrl)
+				.attr('alt', 'GRIN2 Analysis Result')
+				.style('max-width', '100%')
+
+			// Add error handler for image loading failures
+			img.node().onerror = () => {
+				console.error('Image failed to load')
+				imgContainer.html('') // Clear container
+				imgContainer
+					.append('div')
+					.attr('class', 'sja_error')
+					.text('Failed to load image result. The analysis may have encountered an error.')
+			}
+
+			// Add download button for the image
+			obj.resultDiv
+				.append('button')
+				.text('Download Image')
+				.style('margin-top', '10px')
+				.on('click', () => {
+					const a = document.createElement('a')
+					a.href = imageUrl
+					a.download = `GRIN2_Analysis_${new Date().toISOString().split('T')[0]}.png`
+					document.body.appendChild(a)
+					a.click()
+					document.body.removeChild(a)
+				})
+
+			// Scroll to the results
+			obj.resultDiv.node().scrollIntoView({ behavior: 'smooth' })
+		} catch (e: any) {
+			sayerror(obj.errDiv, e.message || e)
+			if (e.stack) console.log(e.stack)
 		}
+		// Reset button state
+		button.innerHTML = oldText
+		button.disabled = false
+		obj.busy = false
+		obj.expStrategyRadio.inputs.property('disabled', false)
 	}
 }

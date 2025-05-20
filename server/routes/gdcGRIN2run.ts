@@ -4,7 +4,6 @@ import { run_rust } from '@sjcrh/proteinpaint-rust'
 import { run_R } from '@sjcrh/proteinpaint-r'
 import serverconfig from '#src/serverconfig.js'
 import path from 'path'
-import os from 'os'
 
 /**
  * Route to run GRIN2 analysis:
@@ -75,26 +74,18 @@ function init({ genomes }) {
 					// console.log('[GRIN2] Raw Rust result:', rustResult)
 				}
 
-				// Create a temporary file path for our output image
-				const outputImagePath = path.join('grin2_output.png')
-				console.log(`[GRIN2] Output image path: ${outputImagePath}`)
-
 				// Step 2: Call R script to generate the plot
-				console.log('[GRIN2] Calling R script to generate plot...')
-
-				const g = genomes.hg38
-				const chromosomelist = g.majorchr
 
 				// Prepare the path to the gene database file
-				const genedb = path.join(os.homedir(), '/data/tp/anno/genes.hg38.db')
+				const genedbfile = path.join(serverconfig.tpmasterdir, g.genedb.dbfile)
 
 				// Generate a unique image file name
 				const imagefile = path.join(serverconfig.cachedir, `grin2_${Date.now()}_${Math.floor(Math.random() * 1e9)}.png`)
 
 				// Prepare input for R script - pass the Rust output and the additional properties as input to R
 				const rInput = JSON.stringify({
-					genedb: genedb,
-					chromosomelist: chromosomelist,
+					genedb: genedbfile,
+					chromosomelist: g.majorchr,
 					imagefile: imagefile,
 					lesion: rustResult // The mutation string from Rust
 				})
