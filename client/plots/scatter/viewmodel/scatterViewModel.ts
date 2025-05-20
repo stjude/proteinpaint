@@ -53,7 +53,6 @@ export class ScatterViewModel extends ScatterViewModelBase {
 		for (const chart of this.model.charts) {
 			chart.regressionG?.selectAll('*').remove()
 			if (chart.regressionCurve) {
-				console.log(chart)
 				const l = line()
 					.x(d => d[0])
 					.y(d => d[1])
