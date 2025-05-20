@@ -140,6 +140,7 @@ async function listMafFiles(q: GdcMafRequest, ds: any) {
 
 		const c = h.cases?.[0]
 		if (!c) throw 'h.cases[0] missing'
+		if (h.file_size > 1000000) continue // ignore files larger than 1Mb
 
 		// only keep files from open access projects for now
 		/*
