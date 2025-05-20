@@ -11,6 +11,7 @@ Fixes:
 - mds3 tk cnvonly mode, leftlabel shows #CNVs but not variants
 - mds3 tk variant List menu will not show CNV tab when no cnv loaded
 - simplify error handling by logging more non-sensitive information and moving non-blocking dataset initialization at the end of mds3 init
+- backend always return 0-based start & stop for BED-based gene coord
 
 
 ## 2.125.0
