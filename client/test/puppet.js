@@ -243,7 +243,8 @@ async function runTest(patternsStr) {
 		const combinedMarkdown = markdowns.join('\n')
 		fs.writeFileSync(extractFiles.markdown, combinedMarkdown, { encoding: 'utf8' })
 	}
-	fs.writeFileSync(extractFiles.json, JSON.stringify(json, null, '  '), { encoding: 'utf8' })
+	if (fs.existsSync(path.dirname(extractFiles.json)))
+		fs.writeFileSync(extractFiles.json, JSON.stringify(json, null, '  '), { encoding: 'utf8' })
 
 	if (Object.keys(errors).length) {
 		console.log(`\n!!! Errors detected !!!`)
@@ -252,6 +253,7 @@ async function runTest(patternsStr) {
 			console.log(error)
 		}
 		console.log(`\n`)
+		process.exit(1)
 	}
 }
 
