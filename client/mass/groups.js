@@ -841,6 +841,9 @@ export function addHierClusterPlotMenuItem(chartType, div, text, tip, samplelstT
 }
 
 export function addMatrixMenuItems(div, text, tip, samplelstTW, id, parent, state, openOnTop = false, newId) {
+	const preBuiltMatrix = state.matrixplots
+	const hasSnvIndel = parent.app.vocabApi.termdbConfig?.queries?.snvindel
+	if (!preBuiltMatrix && !hasSnvIndel) return
 	const itemDiv = div
 		.append('div')
 		.attr('class', 'sja_menuoption sja_sharp_border')
@@ -849,10 +852,10 @@ export function addMatrixMenuItems(div, text, tip, samplelstTW, id, parent, stat
 			addTip2(tip) // tip2 is added if missing and ready to use
 			tip2.showunderoffset(itemDiv.node())
 
-			if (state.matrixplots) {
+			if (preBuiltMatrix) {
 				// adding buttons to divide each pre-built matrix
 				const preBuiltMatrixDiv = tip2.d.append('div')
-				for (const plot of state.matrixplots) {
+				for (const plot of preBuiltMatrix) {
 					preBuiltMatrixDiv
 						.append('button')
 						.style('margin', '10px')
@@ -877,50 +880,52 @@ export function addMatrixMenuItems(div, text, tip, samplelstTW, id, parent, stat
 				}
 			}
 
-			// adding geneSet edit UI for building new matrix
-			const newMatrixDiv = tip2.d.append('div')
-			new GeneSetEditUI({
-				holder: newMatrixDiv,
-				genome: parent.app.opts.genome,
-				geneList: [],
-				mode: TermTypes.GENE_VARIANT,
-				vocabApi: parent.app.vocabApi,
-				callback: async ({ geneList, groupName }) => {
-					tip.hide()
-					const group = { name: groupName, lst: [] }
-					const lst = group.lst.filter(tw => tw.term.type != 'geneVariant')
+			if (hasSnvIndel) {
+				// adding geneSet edit UI for building new matrix
+				const newMatrixDiv = tip2.d.append('div')
+				new GeneSetEditUI({
+					holder: newMatrixDiv,
+					genome: parent.app.opts.genome,
+					geneList: [],
+					mode: TermTypes.GENE_VARIANT,
+					vocabApi: parent.app.vocabApi,
+					callback: async ({ geneList, groupName }) => {
+						tip.hide()
+						const group = { name: groupName, lst: [] }
+						const lst = group.lst.filter(tw => tw.term.type != 'geneVariant')
 
-					const tws = await Promise.all(
-						geneList.map(async d => {
-							const term = {
-								gene: d.symbol || d.gene,
-								name: d.symbol || d.gene,
-								type: 'geneVariant'
+						const tws = await Promise.all(
+							geneList.map(async d => {
+								const term = {
+									gene: d.symbol || d.gene,
+									name: d.symbol || d.gene,
+									type: 'geneVariant'
+								}
+								let tw = group.lst.find(tw => tw.term.name == d.symbol || tw.term.name == d.gene)
+								if (!tw) {
+									tw = { term }
+									await fillTermWrapper(tw, parent.app.vocabApi)
+								} else if (!tw.$id) {
+									tw.$id = await get$id(parent.app.vocabApi.getTwMinCopy({ term }))
+								}
+								return tw
+							})
+						)
+						// close geneset edit ui after clicking submit
+						tip2.d.selectAll('*').remove()
+						group.lst = [...lst, ...tws]
+						parent.app.dispatch({
+							type: 'plot_create',
+							config: {
+								chartType: 'matrix',
+								termgroups: [group],
+								dataType: TermTypes.GENE_VARIANT,
+								divideBy: samplelstTW
 							}
-							let tw = group.lst.find(tw => tw.term.name == d.symbol || tw.term.name == d.gene)
-							if (!tw) {
-								tw = { term }
-								await fillTermWrapper(tw, parent.app.vocabApi)
-							} else if (!tw.$id) {
-								tw.$id = await get$id(parent.app.vocabApi.getTwMinCopy({ term }))
-							}
-							return tw
 						})
-					)
-					// close geneset edit ui after clicking submit
-					tip2.d.selectAll('*').remove()
-					group.lst = [...lst, ...tws]
-					parent.app.dispatch({
-						type: 'plot_create',
-						config: {
-							chartType: 'matrix',
-							termgroups: [group],
-							dataType: TermTypes.GENE_VARIANT,
-							divideBy: samplelstTW
-						}
-					})
-				}
-			})
+					}
+				})
+			}
 		})
 }
 
