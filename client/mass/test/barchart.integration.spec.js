@@ -916,8 +916,8 @@ tape('single barchart, TP53 mutation dtTerm filter', function (test) {
 		barchart.on('postRender.test', null)
 		test.equal(
 			barchart.Inner.dom.holder.node().querySelectorAll('.bars-cell-grp').length,
-			3,
-			'should show one bar series'
+			2,
+			'should show two bar series'
 		)
 		if (test._ok) barchart.Inner.app.destroy()
 		test.end()
@@ -2001,291 +2001,310 @@ tape.skip('customized bins', test => {
 // for filter, search for "termfilter"
 const geneVariantTw = {
 	term: {
-		type: 'geneVariant',
+		kind: 'gene',
+		id: 'TP53',
 		gene: 'TP53',
+		name: 'TP53',
+		type: 'geneVariant',
 		groupsetting: { disabled: false },
-		filter: {
-			opts: { joinWith: ['and', 'or'] },
-			terms: [
-				{
-					id: 'snvindel_somatic',
-					query: 'snvindel',
-					name: 'SNV/indel (somatic)',
-					parent_id: null,
-					isleaf: true,
-					type: 'dtsnvindel',
-					dt: 1,
-					values: { M: { label: 'MISSENSE' }, F: { label: 'FRAMESHIFT' }, WT: { label: 'Wildtype' } },
-					name_noOrigin: 'SNV/indel',
-					origin: 'somatic'
+		childTerms: [
+			{
+				id: 'snvindel_somatic',
+				query: 'snvindel',
+				name: 'SNV/indel (somatic)',
+				parent_id: null,
+				isleaf: true,
+				type: 'dtsnvindel',
+				dt: 1,
+				values: {
+					M: { label: 'MISSENSE' },
+					F: { label: 'FRAMESHIFT' },
+					WT: { label: 'Wildtype' }
 				},
-				{
-					id: 'snvindel_germline',
-					query: 'snvindel',
-					name: 'SNV/indel (germline)',
-					parent_id: null,
-					isleaf: true,
-					type: 'dtsnvindel',
-					dt: 1,
-					values: { M: { label: 'MISSENSE' }, F: { label: 'FRAMESHIFT' }, WT: { label: 'Wildtype' } },
-					name_noOrigin: 'SNV/indel',
-					origin: 'germline'
-				},
-				{
-					id: 'cnv',
-					query: 'cnv',
-					name: 'CNV',
-					parent_id: null,
-					isleaf: true,
-					type: 'dtcnv',
-					dt: 4,
-					values: { CNV_amp: { label: 'Copy number gain' }, WT: { label: 'Wildtype' } },
-					name_noOrigin: 'CNV'
-				},
-				{
-					id: 'fusion',
-					query: 'svfusion',
-					name: 'Fusion RNA',
-					parent_id: null,
-					isleaf: true,
-					type: 'dtfusion',
-					dt: 2,
-					values: { Fuserna: { label: 'Fusion transcript' }, WT: { label: 'Wildtype' } },
-					name_noOrigin: 'Fusion RNA'
+				name_noOrigin: 'SNV/indel',
+				origin: 'somatic',
+				parentTerm: {
+					kind: 'gene',
+					id: 'TP53',
+					gene: 'TP53',
+					name: 'TP53',
+					type: 'geneVariant',
+					groupsetting: { disabled: false }
 				}
-			]
-		}
+			},
+			{
+				id: 'snvindel_germline',
+				query: 'snvindel',
+				name: 'SNV/indel (germline)',
+				parent_id: null,
+				isleaf: true,
+				type: 'dtsnvindel',
+				dt: 1,
+				values: {
+					M: { label: 'MISSENSE' },
+					F: { label: 'FRAMESHIFT' },
+					WT: { label: 'Wildtype' }
+				},
+				name_noOrigin: 'SNV/indel',
+				origin: 'germline',
+				parentTerm: {
+					kind: 'gene',
+					id: 'TP53',
+					gene: 'TP53',
+					name: 'TP53',
+					type: 'geneVariant',
+					groupsetting: { disabled: false }
+				}
+			},
+			{
+				id: 'cnv',
+				query: 'cnv',
+				name: 'CNV',
+				parent_id: null,
+				isleaf: true,
+				type: 'dtcnv',
+				dt: 4,
+				values: {
+					CNV_amp: { label: 'Copy number gain' },
+					WT: { label: 'Wildtype' }
+				},
+				name_noOrigin: 'CNV',
+				parentTerm: {
+					kind: 'gene',
+					id: 'TP53',
+					gene: 'TP53',
+					name: 'TP53',
+					type: 'geneVariant',
+					groupsetting: { disabled: false }
+				}
+			},
+			{
+				id: 'fusion',
+				query: 'svfusion',
+				name: 'Fusion RNA',
+				parent_id: null,
+				isleaf: true,
+				type: 'dtfusion',
+				dt: 2,
+				values: {
+					Fuserna: { label: 'Fusion transcript' },
+					WT: { label: 'Wildtype' }
+				},
+				name_noOrigin: 'Fusion RNA',
+				parentTerm: {
+					kind: 'gene',
+					id: 'TP53',
+					gene: 'TP53',
+					name: 'TP53',
+					type: 'geneVariant',
+					groupsetting: { disabled: false }
+				}
+			}
+		]
 	},
 	q: {
+		isAtomic: true,
 		type: 'custom-groupset',
+		hiddenValues: {},
 		customset: {
 			groups: [
 				{
 					name: 'Excluded categories',
 					type: 'filter',
 					uncomputable: true,
-					filter: {
-						opts: { joinWith: ['and', 'or'] },
-						terms: [
-							{
-								id: 'snvindel_somatic',
-								query: 'snvindel',
-								name: 'SNV/indel (somatic)',
-								parent_id: null,
-								isleaf: true,
-								type: 'dtsnvindel',
-								dt: 1,
-								values: { M: { label: 'MISSENSE' }, F: { label: 'FRAMESHIFT' }, WT: { label: 'Wildtype' } },
-								name_noOrigin: 'SNV/indel',
-								origin: 'somatic'
-							},
-							{
-								id: 'snvindel_germline',
-								query: 'snvindel',
-								name: 'SNV/indel (germline)',
-								parent_id: null,
-								isleaf: true,
-								type: 'dtsnvindel',
-								dt: 1,
-								values: { M: { label: 'MISSENSE' }, F: { label: 'FRAMESHIFT' }, WT: { label: 'Wildtype' } },
-								name_noOrigin: 'SNV/indel',
-								origin: 'germline'
-							},
-							{
-								id: 'cnv',
-								query: 'cnv',
-								name: 'CNV',
-								parent_id: null,
-								isleaf: true,
-								type: 'dtcnv',
-								dt: 4,
-								values: { CNV_amp: { label: 'Copy number gain' }, WT: { label: 'Wildtype' } },
-								name_noOrigin: 'CNV'
-							},
-							{
-								id: 'fusion',
-								query: 'svfusion',
-								name: 'Fusion RNA',
-								parent_id: null,
-								isleaf: true,
-								type: 'dtfusion',
-								dt: 2,
-								values: { Fuserna: { label: 'Fusion transcript' }, WT: { label: 'Wildtype' } },
-								name_noOrigin: 'Fusion RNA'
-							}
-						],
-						group: 0,
-						active: { type: 'tvslst', in: true, join: '', lst: [] }
-					}
+					filter: { type: 'tvslst', in: true, join: '', lst: [] }
 				},
 				{
-					name: 'WTSnvindel',
+					name: 'SNV/indel',
 					type: 'filter',
 					uncomputable: false,
 					filter: {
-						opts: { joinWith: ['and', 'or'] },
-						terms: [
+						type: 'tvslst',
+						in: true,
+						join: 'or',
+						lst: [
 							{
-								id: 'snvindel_somatic',
-								query: 'snvindel',
-								name: 'SNV/indel (somatic)',
-								parent_id: null,
-								isleaf: true,
-								type: 'dtsnvindel',
-								dt: 1,
-								values: { M: { label: 'MISSENSE' }, F: { label: 'FRAMESHIFT' }, WT: { label: 'Wildtype' } },
-								name_noOrigin: 'SNV/indel',
-								origin: 'somatic'
-							},
-							{
-								id: 'snvindel_germline',
-								query: 'snvindel',
-								name: 'SNV/indel (germline)',
-								parent_id: null,
-								isleaf: true,
-								type: 'dtsnvindel',
-								dt: 1,
-								values: { M: { label: 'MISSENSE' }, F: { label: 'FRAMESHIFT' }, WT: { label: 'Wildtype' } },
-								name_noOrigin: 'SNV/indel',
-								origin: 'germline'
-							},
-							{
-								id: 'cnv',
-								query: 'cnv',
-								name: 'CNV',
-								parent_id: null,
-								isleaf: true,
-								type: 'dtcnv',
-								dt: 4,
-								values: { CNV_amp: { label: 'Copy number gain' }, WT: { label: 'Wildtype' } },
-								name_noOrigin: 'CNV'
-							},
-							{
-								id: 'fusion',
-								query: 'svfusion',
-								name: 'Fusion RNA',
-								parent_id: null,
-								isleaf: true,
-								type: 'dtfusion',
-								dt: 2,
-								values: { Fuserna: { label: 'Fusion transcript' }, WT: { label: 'Wildtype' } },
-								name_noOrigin: 'Fusion RNA'
-							}
-						],
-						group: 1,
-						active: {
-							type: 'tvslst',
-							in: true,
-							join: '',
-							lst: [
-								{
-									type: 'tvs',
-									tvs: {
-										term: {
-											id: 'snvindel_somatic',
-											query: 'snvindel',
-											name: 'SNV/indel (somatic)',
-											parent_id: null,
-											isleaf: true,
-											type: 'dtsnvindel',
-											dt: 1,
-											values: { M: { label: 'MISSENSE' }, F: { label: 'FRAMESHIFT' }, WT: { label: 'Wildtype' } },
-											name_noOrigin: 'SNV/indel',
-											origin: 'somatic'
+								type: 'tvs',
+								tvs: {
+									term: {
+										id: 'snvindel_somatic',
+										query: 'snvindel',
+										name: 'SNV/indel (somatic)',
+										parent_id: null,
+										isleaf: true,
+										type: 'dtsnvindel',
+										dt: 1,
+										values: {
+											M: { label: 'MISSENSE' },
+											F: { label: 'FRAMESHIFT' },
+											WT: { label: 'Wildtype' }
 										},
-										values: [{ key: 'WT', label: 'Wildtype', value: 'WT', bar_width_frac: null }]
-									}
+										name_noOrigin: 'SNV/indel',
+										origin: 'somatic',
+										parentTerm: {
+											kind: 'gene',
+											id: 'TP53',
+											gene: 'TP53',
+											name: 'TP53',
+											type: 'geneVariant',
+											groupsetting: { disabled: false }
+										}
+									},
+									values: [
+										{
+											key: 'M',
+											label: 'MISSENSE',
+											value: 'M',
+											bar_width_frac: null
+										},
+										{
+											key: 'F',
+											label: 'FRAMESHIFT',
+											value: 'F',
+											bar_width_frac: null
+										}
+									]
 								}
-							]
-						}
+							},
+							{
+								type: 'tvs',
+								tvs: {
+									term: {
+										id: 'snvindel_germline',
+										query: 'snvindel',
+										name: 'SNV/indel (germline)',
+										parent_id: null,
+										isleaf: true,
+										type: 'dtsnvindel',
+										dt: 1,
+										values: {
+											M: { label: 'MISSENSE' },
+											F: { label: 'FRAMESHIFT' },
+											WT: { label: 'Wildtype' }
+										},
+										name_noOrigin: 'SNV/indel',
+										origin: 'germline',
+										parentTerm: {
+											kind: 'gene',
+											id: 'TP53',
+											gene: 'TP53',
+											name: 'TP53',
+											type: 'geneVariant',
+											groupsetting: { disabled: false }
+										}
+									},
+									values: [
+										{
+											key: 'M',
+											label: 'MISSENSE',
+											value: 'M',
+											bar_width_frac: null
+										},
+										{
+											key: 'F',
+											label: 'FRAMESHIFT',
+											value: 'F',
+											bar_width_frac: null
+										}
+									]
+								}
+							}
+						]
 					}
 				},
 				{
-					name: 'ANYSnvindel',
+					name: 'Wildtype',
 					type: 'filter',
 					uncomputable: false,
 					filter: {
-						opts: { joinWith: ['and', 'or'] },
-						terms: [
+						type: 'tvslst',
+						in: true,
+						join: 'and',
+						lst: [
 							{
-								id: 'snvindel_somatic',
-								query: 'snvindel',
-								name: 'SNV/indel (somatic)',
-								parent_id: null,
-								isleaf: true,
-								type: 'dtsnvindel',
-								dt: 1,
-								values: { M: { label: 'MISSENSE' }, F: { label: 'FRAMESHIFT' }, WT: { label: 'Wildtype' } },
-								name_noOrigin: 'SNV/indel',
-								origin: 'somatic'
-							},
-							{
-								id: 'snvindel_germline',
-								query: 'snvindel',
-								name: 'SNV/indel (germline)',
-								parent_id: null,
-								isleaf: true,
-								type: 'dtsnvindel',
-								dt: 1,
-								values: { M: { label: 'MISSENSE' }, F: { label: 'FRAMESHIFT' }, WT: { label: 'Wildtype' } },
-								name_noOrigin: 'SNV/indel',
-								origin: 'germline'
-							},
-							{
-								id: 'cnv',
-								query: 'cnv',
-								name: 'CNV',
-								parent_id: null,
-								isleaf: true,
-								type: 'dtcnv',
-								dt: 4,
-								values: { CNV_amp: { label: 'Copy number gain' }, WT: { label: 'Wildtype' } },
-								name_noOrigin: 'CNV'
-							},
-							{
-								id: 'fusion',
-								query: 'svfusion',
-								name: 'Fusion RNA',
-								parent_id: null,
-								isleaf: true,
-								type: 'dtfusion',
-								dt: 2,
-								values: { Fuserna: { label: 'Fusion transcript' }, WT: { label: 'Wildtype' } },
-								name_noOrigin: 'Fusion RNA'
-							}
-						],
-						group: 2,
-						active: {
-							type: 'tvslst',
-							in: true,
-							join: '',
-							lst: [
-								{
-									type: 'tvs',
-									tvs: {
-										term: {
-											id: 'snvindel_somatic',
-											query: 'snvindel',
-											name: 'SNV/indel (somatic)',
-											parent_id: null,
-											isleaf: true,
-											type: 'dtsnvindel',
-											dt: 1,
-											values: { M: { label: 'MISSENSE' }, F: { label: 'FRAMESHIFT' }, WT: { label: 'Wildtype' } },
-											name_noOrigin: 'SNV/indel',
-											origin: 'somatic'
+								type: 'tvs',
+								tvs: {
+									term: {
+										id: 'snvindel_somatic',
+										query: 'snvindel',
+										name: 'SNV/indel (somatic)',
+										parent_id: null,
+										isleaf: true,
+										type: 'dtsnvindel',
+										dt: 1,
+										values: {
+											M: { label: 'MISSENSE' },
+											F: { label: 'FRAMESHIFT' },
+											WT: { label: 'Wildtype' }
 										},
-										values: [{ key: 'WT', label: 'Wildtype', value: 'WT', bar_width_frac: null }],
-										isnot: true
-									}
+										name_noOrigin: 'SNV/indel',
+										origin: 'somatic',
+										parentTerm: {
+											kind: 'gene',
+											id: 'TP53',
+											gene: 'TP53',
+											name: 'TP53',
+											type: 'geneVariant',
+											groupsetting: { disabled: false }
+										}
+									},
+									values: [
+										{
+											key: 'WT',
+											label: 'Wildtype',
+											value: 'WT',
+											bar_width_frac: null
+										}
+									]
 								}
-							]
-						}
+							},
+							{
+								type: 'tvs',
+								tvs: {
+									term: {
+										id: 'snvindel_germline',
+										query: 'snvindel',
+										name: 'SNV/indel (germline)',
+										parent_id: null,
+										isleaf: true,
+										type: 'dtsnvindel',
+										dt: 1,
+										values: {
+											M: { label: 'MISSENSE' },
+											F: { label: 'FRAMESHIFT' },
+											WT: { label: 'Wildtype' }
+										},
+										name_noOrigin: 'SNV/indel',
+										origin: 'germline',
+										parentTerm: {
+											kind: 'gene',
+											id: 'TP53',
+											gene: 'TP53',
+											name: 'TP53',
+											type: 'geneVariant',
+											groupsetting: { disabled: false }
+										}
+									},
+									values: [
+										{
+											key: 'WT',
+											label: 'Wildtype',
+											value: 'WT',
+											bar_width_frac: null
+										}
+									]
+								}
+							}
+						]
 					}
 				}
 			]
 		}
-	}
+	},
+	isAtomic: true,
+	$id: 'tfRs1cT97E6FB8ELUMcyrbYMZjY-',
+	type: 'GvCustomGsTW',
+	bins: []
 }
 
 const tp53dtTermFilter = {
@@ -2297,160 +2316,38 @@ const tp53dtTermFilter = {
 			type: 'tvs',
 			tvs: {
 				term: {
+					id: 'snvindel_somatic',
 					query: 'snvindel',
-					name: 'SNV/indel',
+					name: 'SNV/indel (somatic)',
 					parent_id: null,
 					isleaf: true,
 					type: 'dtsnvindel',
 					dt: 1,
 					values: {
-						M: {
-							label: 'MISSENSE'
-						},
-						F: {
-							label: 'FRAMESHIFT'
-						},
-						N: {
-							label: 'NONSENSE'
-						},
-						S: {
-							label: 'SILENT'
-						},
-						D: {
-							label: 'PROTEINDEL'
-						},
-						I: {
-							label: 'PROTEININS'
-						},
-						ProteinAltering: {
-							label: 'PROTEINALTERING'
-						},
-						L: {
-							label: 'SPLICE'
-						},
-						Intron: {
-							label: 'INTRON'
-						},
-						WT: {
-							label: 'Wildtype'
-						}
+						M: { label: 'MISSENSE' },
+						F: { label: 'FRAMESHIFT' },
+						WT: { label: 'Wildtype' }
 					},
 					name_noOrigin: 'SNV/indel',
-					geneVariantTerm: {
+					origin: 'somatic',
+					parentTerm: {
+						kind: 'gene',
+						id: 'TP53',
 						gene: 'TP53',
 						name: 'TP53',
-						type: 'geneVariant',
-						filter: {
-							opts: {
-								joinWith: ['and', 'or']
-							},
-							terms: [
-								{
-									id: 'snvindel',
-									query: 'snvindel',
-									name: 'SNV/indel',
-									parent_id: null,
-									isleaf: true,
-									type: 'dtsnvindel',
-									dt: 1,
-									values: {
-										M: {
-											label: 'MISSENSE'
-										},
-										F: {
-											label: 'FRAMESHIFT'
-										},
-										N: {
-											label: 'NONSENSE'
-										},
-										S: {
-											label: 'SILENT'
-										},
-										D: {
-											label: 'PROTEINDEL'
-										},
-										I: {
-											label: 'PROTEININS'
-										},
-										ProteinAltering: {
-											label: 'PROTEINALTERING'
-										},
-										L: {
-											label: 'SPLICE'
-										},
-										Intron: {
-											label: 'INTRON'
-										},
-										WT: {
-											label: 'Wildtype'
-										}
-									},
-									name_noOrigin: 'SNV/indel'
-								},
-								{
-									id: 'cnv',
-									query: 'cnv',
-									name: 'CNV',
-									parent_id: null,
-									isleaf: true,
-									type: 'dtcnv',
-									dt: 4,
-									values: {
-										CNV_amp: {
-											label: 'Copy number gain'
-										},
-										CNV_loss: {
-											label: 'Copy number loss'
-										},
-										WT: {
-											label: 'Wildtype'
-										}
-									},
-									name_noOrigin: 'CNV'
-								},
-								{
-									id: 'fusion',
-									query: 'svfusion',
-									name: 'Fusion RNA',
-									parent_id: null,
-									isleaf: true,
-									type: 'dtfusion',
-									dt: 2,
-									values: {
-										Fuserna: {
-											label: 'Fusion transcript'
-										},
-										WT: {
-											label: 'Wildtype'
-										}
-									},
-									name_noOrigin: 'Fusion RNA'
-								},
-								{
-									id: 'sv',
-									query: 'svfusion',
-									name: 'SV',
-									parent_id: null,
-									isleaf: true,
-									type: 'dtsv',
-									dt: 5,
-									values: {
-										SV: {
-											label: 'Structural variation'
-										}
-									},
-									name_noOrigin: 'SV'
-								}
-							]
-						}
+						type: 'geneVariant'
 					}
 				},
 				values: [
 					{
-						key: 'M'
+						key: 'M',
+						label: 'MISSENSE',
+						value: 'M',
+						bar_width_frac: null
 					}
 				]
 			}
 		}
-	]
+	],
+	tag: 'filterUiRoot'
 }
