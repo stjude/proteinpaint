@@ -300,6 +300,70 @@ tape('Change chart width and height from menu', function (test) {
 	}
 })
 
+tape('Click zoom in, zoom out, and reset buttons', function (test) {
+	test.timeoutAfter(10000)
+
+	runpp({
+		state: structuredClone(state),
+		runChart: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	async function runTests(scatter) {
+		scatter.on('postRender.test', null)
+
+		await testZoomIn(scatter)
+		await testReset(scatter)
+		await testZoomOut(scatter)
+		if (test._ok) scatter.Inner.app.destroy()
+		test.end()
+	}
+
+	async function testZoomIn(scatter) {
+		const zoomin_bt = scatter.Inner.view.dom.toolsDiv.node().querySelector('div[name="sjpp-zoom-in-btn"]')
+		const m = await detectTransform(scatter, zoomin_bt, 1.2)
+		test.ok(m != null, `Plot should zoom in`)
+	}
+
+	async function testReset(scatter) {
+		const reset_bt = scatter.Inner.view.dom.toolsDiv.node().querySelector('div[name="sjpp-reset-btn"]')
+		const m = await detectTransform(scatter, reset_bt, 1)
+		test.ok(m != null, `Plot should reset`)
+	}
+
+	async function testZoomOut(scatter) {
+		const zoomout_bt = scatter.Inner.view.dom.toolsDiv.node().querySelector('div[name="sjpp-zoom-out-btn"]')
+		const m = await detectTransform(scatter, zoomout_bt, 0.8)
+		test.ok(m != null, `Plot should zoom out`)
+	}
+
+	async function detectTransform(scatter, btn, scale) {
+		const target = await detectAttr({
+			target: scatter.Inner.view.dom.mainDiv.node().querySelector('.sjpcb-scatter-series'),
+			observe: {
+				subtree: true,
+				characterData: true,
+				attributeFilter: ['transform']
+			},
+			count: 1,
+			trigger() {
+				btn.click()
+			},
+			matcher(mutations) {
+				for (const m of mutations) {
+					if (m.attributeName == 'transform' && m.target.attributes[1].value.includes(`scale(${scale})`)) return m
+				}
+			}
+		})
+		return target
+	}
+
+	//Add tests for changes in axes
+})
+
 tape('Test divide by date', function (test) {
 	test.timeoutAfter(3000) //Fix for breaking on local CI but maynot be necessary for nightly build
 
