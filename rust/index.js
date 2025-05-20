@@ -5,7 +5,7 @@ import { spawn, exec } from 'child_process'
 import { Readable, Transform } from 'stream'
 import { promisify } from 'util'
 
-const __dirname = import.meta.dirname
+const __dirname = import.meta.dirname // set __dirname for consistency with cjs code
 
 const execPromise = promisify(exec)
 

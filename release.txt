@@ -1,1 +1,2 @@
-
+Fixes:
+- force a release of workspaces that were updated in a prerelease branch instead of master
