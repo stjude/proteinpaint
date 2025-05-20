@@ -3,7 +3,7 @@ import { select, type Selection } from 'd3-selection'
 //import { disappear } from '#src/client'
 import { throwMsgWithFilePathAndFnName } from '#dom/sayerror'
 import { debounce } from 'debounce'
-import type { TermSettingInstance, CustomGroupSettingQ, GroupSettingQ, TermFilter, MinBaseQ } from '#types'
+import type { TermSettingInstance, CustomGroupSettingQ, GroupSettingQ, MinBaseQ, GvTerm, DtTerm } from '#types'
 import { filterInit, getNormalRoot, getWrappedTvslst, filterJoin } from '#filter/filter'
 
 /*
@@ -41,7 +41,8 @@ type ItemEntry = {
 	samplecount: number | string | null //Sample count number or 'n/a'
 	uncomputable?: boolean
 }
-type FilterEntry = TermFilter & {
+type FilterEntry = {
+	terms: DtTerm[]
 	group: number // group index
 }
 type DataInput = { [index: string]: ItemEntry }
@@ -124,12 +125,11 @@ export class GroupSettingMethods {
 			} else {
 				// custom groupset undefined
 				// build empty groupset
-				if (this.type == 'filter') {
-					const terms = this.tsInstance.term.childTerms
-					if (!terms) throw 'child terms missing'
-					for (const grpIdx of grpIdxes) {
-						this.data.filters.push({ terms, group: grpIdx })
-					}
+				if (this.tsInstance.term.type != 'geneVariant') throw 'unexpected term type'
+				const term = this.tsInstance.term as GvTerm
+				if (!term.childTerms) throw 'child terms missing'
+				for (const grpIdx of grpIdxes) {
+					this.data.filters.push({ terms: term.childTerms, group: grpIdx })
 				}
 			}
 		} else if (this.tsInstance.q.type == 'predefined-groupset') {
