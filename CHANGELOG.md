@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.126.0
 
 Features:
 - Initial prototype of GRIN2 tool (https://cran.r-project.org/web/packages/GRIN2/vignettes/GRIN2.html)

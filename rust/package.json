@@ -1,5 +1,5 @@
 {
-	"version": "2.125.0",
+	"version": "2.126.0",
 	"name": "@sjcrh/proteinpaint-rust",
 	"type": "module",
 	"description": "Rust-based utilities for proteinpaint",
@@ -39,5 +39,5 @@
 	"devDependencies": {
 		"tape": "^5.2.2"
 	},
-	"pp_release_tag": "v2.125.0"
+	"pp_release_tag": "v2.126.0"
 }
