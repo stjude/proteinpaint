@@ -13,8 +13,6 @@ export class RunchartViewModel extends ScatterViewModelBase {
 	}
 
 	render() {
-		if (!this.view.dom.svg) this.view.dom.svg = this.view.dom.mainDiv.append('svg')
-		else this.view.dom.svg.selectAll('*').remove()
 		for (const chart of this.model.charts) this.renderChart(chart, this.view.dom.mainDiv, false)
 	}
 
