@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Fixes:
+- use ds.label instead of ds.__gdc to correctly detect when to display incomplete cache message
+
 
 ## 2.126.0
 
