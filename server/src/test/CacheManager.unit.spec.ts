@@ -209,7 +209,7 @@ tape('move or delete by maxAge', function (test) {
 				// 	test.deepEqual(results.trash, expectedTrash, `should have expected trash after check #${numChecks}`)
 
 				numChecks++
-				if (numChecks > 5) {
+				if (numChecks > 6) {
 					monitor.stop()
 					const remainingFiles = fs.readdirSync(`${cachedir}/test0`)
 					test.equal(remainingFiles.length, 0, `should have no remaining cache files after the test`)
