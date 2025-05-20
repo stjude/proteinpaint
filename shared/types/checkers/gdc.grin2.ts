@@ -3,7 +3,7 @@ import { createValidate } from 'typia'
 import type { GdcGRIN2listRequest, GdcGRIN2listResponse } from '../src/routes/gdc.grin2.ts'
 import type { RunGRIN2Request, RunGRIN2Response } from '../src/routes/gdc.grin2.ts'
 
-export { gdcGRIN2Payload } from '../src/routes/gdc.grin2.ts'
+export { gdcGRIN2listPayload } from '../src/routes/gdc.grin2.ts'
 export { runGRIN2Payload } from '../src/routes/gdc.grin2.ts'
 
 export const validGdcGRIN2listRequest = createValidate<GdcGRIN2listRequest>()
