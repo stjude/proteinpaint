@@ -12,11 +12,20 @@
 set -euxo pipefail
 
 VERTYPE=prerelease # default
-NOTES=$(node ./build/changeLogGenerator.js -u)
-if [[ "$NOTES" == *"Features:"* ]]; then
-  VERTYPE=minor
-elif [[ "$NOTES" == *"Fixes:"* ]]; then
-  VERTYPE=patch
+if [[ "$1" == "pre"* ]]; then
+  # respect user-selected prerelease, prepatch, preminor, premajor
+  VERTYPE=$1
+else
+  # non pre* version type will be ignored, instead auto-detect 
+  # the version type based on unreleased changelog entries 
+  NOTES=$(node ./build/changeLogGenerator.js -u)
+  if [[ "$NOTES" == *"Features:"* ]]; then
+    VERTYPE=minor
+  elif [[ "$NOTES" == *"Fixes:"* ]]; then
+    VERTYPE=patch
+  # else # devops, docs changelog defaults to prerelease 
+  #   VERTYPE=prerelease
+  fi
 fi
 
 BRANCH=$(git rev-parse --abbrev-ref HEAD)
