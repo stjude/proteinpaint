@@ -22,15 +22,11 @@ const tableColumns = [
 	{ label: 'Case', sortable: true },
 	{ label: 'Project', sortable: true },
 	{ label: 'Samples' },
-	{ label: 'File Size', barplot: { tickFormat: '~s' }, sortable: true } // barchart column not sortable yet
+	{ label: 'File Size', barplot: { tickFormat: '~s' }, sortable: true }
 ]
 
 // list of analysis options
-const analysisOptions = [
-	{ option: 'includeGain', selected: true, label: 'Include Gain' },
-	{ option: 'includeLoss', selected: true, label: 'Include Loss' },
-	{ option: 'includeFusion', selected: true, label: 'Include Fusion' }
-]
+const analysisOptions = [{ option: 'includeMutation', selected: true, label: 'Include Mutation' }]
 
 export async function gdcGRIN2ui({ holder, filter0, callbacks, debugmode = false }) {
 	if (debugmode) {
@@ -54,7 +50,6 @@ export async function gdcGRIN2ui({ holder, filter0, callbacks, debugmode = false
 
 	async function update({ filter0 }) {
 		holder.selectAll('*').remove()
-		// TODO convert obj to class and declare all properties
 		const obj = {
 			errDiv: holder.append('div'),
 			controlDiv: holder.append('div'),
@@ -88,7 +83,7 @@ function makeControls(obj) {
 		)
 	}
 	const table = table2col({ holder: obj.controlDiv })
-	table.addRow('Access', 'Open')
+	table.addRow('Data Access', 'Open')
 	table.addRow('Workflow Type', 'Aliquot Ensemble Somatic Variant Merging and Masking')
 	{
 		const [, td2] = table.addRow('Experimental Strategy')
@@ -104,7 +99,7 @@ function makeControls(obj) {
 	}
 
 	{
-		const [, td2] = table.addRow('Analysis Options')
+		const [, td2] = table.addRow('Mutation Type')
 		clickText = td2
 			.append('span')
 			.attr('class', 'sja_clbtext')
@@ -118,7 +113,7 @@ function makeControls(obj) {
 				renderTable({
 					div: tip.clear().showunder(event.target).d,
 					rows,
-					columns: [{ label: 'Option' }],
+					columns: [{ label: 'Mutation types' }],
 					selectedRows,
 					noButtonCallback: (i, n) => {
 						analysisOptions[i].selected = n.checked
@@ -136,8 +131,7 @@ async function getFilesAndShowTable(obj) {
 	obj.resultDiv.selectAll('*').remove()
 	const wait = obj.tableDiv.append('div').style('margin', '30px 10px 10px 10px').text('Loading...')
 
-	let result // convenient for accessing outside of try-catch
-
+	let result
 	try {
 		const body: { experimentalStrategy: string; filter0?: any } = {
 			experimentalStrategy: obj.opts.experimentalStrategy
@@ -185,12 +179,12 @@ async function getFilesAndShowTable(obj) {
 		obj.mafTableArg = {
 			rows,
 			columns: tableColumns,
-			resize: true,
+			resize: false,
 			div: obj.tableDiv.append('div'),
-			selectAll: true, // comment out for quicker testing
+			selectAll: false,
 			dataTestId: 'sja_mafFileTable',
 			header: { allowSort: true },
-			selectedRows: [], //[198], // uncomment out for quicker testing
+			selectedRows: [0],
 			buttons: [
 				{
 					text: 'Run GRIN2 Analysis',
@@ -258,7 +252,6 @@ async function getFilesAndShowTable(obj) {
 		const oldText = button.innerHTML
 		button.innerHTML = 'Analyzing... Please wait'
 		button.disabled = true
-		// serverMessage.style('display', 'none')
 
 		// Clear previous results
 		obj.resultDiv.selectAll('*').remove()
@@ -281,38 +274,39 @@ async function getFilesAndShowTable(obj) {
 			// Create image URL from base64 data
 			const imageUrl = `data:image/png;base64,${response.pngImg}`
 
-			// Add title for the results
-			obj.resultDiv.append('h3').text('GRIN2 Analysis Results')
-
-			// Create image container
-			const imgContainer = obj.resultDiv
+			// Create results container
+			const resultContainer = obj.resultDiv
 				.append('div')
-				.style('margin-top', '10px')
-				.style('max-width', '100%')
-				.style('overflow', 'auto')
+				.style('text-align', 'center') // center title + button + image
+				.style('margin-top', '20px')
 
-			// Add the image
-			const img = imgContainer
+			// Add title
+			resultContainer.append('h3').text('GRIN2 Analysis Results').style('margin-bottom', '0px', 'padding-bottom', '0px')
+
+			// Add image
+			const img = resultContainer
 				.append('img')
 				.attr('src', imageUrl)
 				.attr('alt', 'GRIN2 Analysis Result')
 				.style('max-width', '100%')
+				.style('display', 'block')
+				.style('margin', '0 auto')
 
-			// Add error handler for image loading failures
+			// Add error handler
 			img.node().onerror = () => {
 				console.error('Image failed to load')
-				imgContainer.html('') // Clear container
-				imgContainer
+				resultContainer.html('') // Clear container
+				resultContainer
 					.append('div')
 					.attr('class', 'sja_error')
 					.text('Failed to load image result. The analysis may have encountered an error.')
 			}
 
-			// Add download button for the image
-			obj.resultDiv
+			// Add download button just below the plot
+			resultContainer
 				.append('button')
-				.text('Download Image')
-				.style('margin-top', '10px')
+				.text('Download Plot')
+				.style('margin-top', '0px', 'padding-top', '0px')
 				.on('click', () => {
 					const a = document.createElement('a')
 					a.href = imageUrl
@@ -321,9 +315,6 @@ async function getFilesAndShowTable(obj) {
 					a.click()
 					document.body.removeChild(a)
 				})
-
-			// Scroll to the results
-			obj.resultDiv.node().scrollIntoView({ behavior: 'smooth' })
 		} catch (e: any) {
 			sayerror(obj.errDiv, e.message || e)
 			if (e.stack) console.log(e.stack)
