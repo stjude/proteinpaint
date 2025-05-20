@@ -2302,7 +2302,6 @@ const geneVariantTw = {
 		}
 	},
 	isAtomic: true,
-	$id: 'tfRs1cT97E6FB8ELUMcyrbYMZjY-',
 	type: 'GvCustomGsTW',
 	bins: []
 }
