@@ -5,15 +5,11 @@ import { joinUrl } from '#shared/joinUrl.js'
 import serverconfig from '#src/serverconfig.js'
 
 /*
-this route lists available gdc MAF and CNV files based on user's cohort filter
+This route lists available gdc MAF files based on user's cohort filter
 and return them to client to be shown in a table for selection
 */
 
 const maxFileNumber = 1000 // determines max number of files to return to client
-// preliminary testing:
-// 36s for 1000 (87Mb)
-// 78s for 2000 (177Mb)
-// if safe to increase to 2000, maybe fast when this runs in gdc env
 
 const allowedWorkflowType = 'Aliquot Ensemble Somatic Variant Merging and Masking'
 
@@ -37,7 +33,6 @@ export const api: RouteApi = {
 function init({ genomes }) {
 	return async (req: any, res: any): Promise<void> => {
 		try {
-			// g and ds are not used right now, but could be later
 			const g = genomes.hg38
 			if (!g) throw 'hg38 missing'
 			const ds = g.datasets.GDC
@@ -64,13 +59,11 @@ ds {
 }
 */
 async function listMafFiles(q: GdcMafRequest, ds: any) {
-	// Replace the single data_format filter with an OR condition for both formats
 	const dataFormatFilter = {
 		op: 'and',
 		content: [{ op: '=', content: { field: 'data_format', value: 'MAF' } }]
 	}
 
-	// Then use the same filter array as before
 	const filters = {
 		op: 'and',
 		content: [
@@ -140,21 +133,7 @@ async function listMafFiles(q: GdcMafRequest, ds: any) {
 
 		const c = h.cases?.[0]
 		if (!c) throw 'h.cases[0] missing'
-		if (h.file_size > 1000000) continue // ignore files larger than 1Mb
-
-		// only keep files from open access projects for now
-		/*
-		if (c.project?.project_id) {
-			if (ds.__gdc.gdcOpenProjects.has(c.project.project_id)) {
-				// open-access project, keep
-			} else {
-				// not open access
-				continue
-			}
-		} else {
-			throw 'h.cases[0].project.project_id missing'
-		}
-		*/
+		if (h.file_size >= 1000000) continue // ignore files larger than or equal to 1Mb
 
 		const file: GdcMafFile = {
 			id: h.id,
