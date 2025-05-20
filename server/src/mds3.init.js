@@ -169,9 +169,10 @@ export async function init(ds, genome) {
 	if (ds.cohort?.db?.refresh) throw `!!! ds.cohort.db.refresh has been deprecated !!!`
 	// invoke non-blocking initialization steps at the end, after validation is complete,
 	// otherwise it will be difficult to coordinate the handling of errors from either
-	// validation or remaining steps that may include setInterval that can run at the
-	// same time as mayRetryInit() in initGenomesDs.js
-	if (ds.initRemainingWithoutAwait) ds.initRemainingWithoutAwait()
+	// validation or remaining steps that may include setInterval that runs at the
+	// same time as mayRetryInit() in initGenomesDs.js (avoids race condition)
+	// NOTE: for GDC, this callback is set during runtime in initGdc.js
+	if (ds.initNonblocking) ds.initNonblocking()
 }
 
 export function client_copy(ds) {

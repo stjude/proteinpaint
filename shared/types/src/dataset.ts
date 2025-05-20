@@ -1930,12 +1930,6 @@ export type PreInit = {
 	/** maximum number of times to call preInit.getStatus() before giving up */
 	retryMax?: number
 	/**
-	 * optional callback to send notifications of pre-init errors
-	 * for St. Jude, this may reuse code that post to Slack channel;
-	 * in dev and other portals, this may use custom callbacks
-	 * */
-	errorCallback?: (response: PreInitStatus) => void
-	/**
 	 * dev only, used to test preInit handling by simulating different
 	 * responses in a known sequence of steps that may edit the preInit
 	 * response
@@ -1971,8 +1965,19 @@ export type Mds3 = BaseMds & {
 		retryDelay?: number
 		/** maximum number of times to call preInit.getStatus() before giving up */
 		retryMax?: number
+		/** server-computed cumulative count of the attempted init retries */
+		currentRetry?: number
+		/**
+		 * optional callback to send notifications of pre-init errors
+		 * for St. Jude, this may reuse code that post to Slack channel;
+		 * in dev and other portals, this may use custom callbacks
+		 * */
+		errorCallback?: (response: PreInitStatus) => void
 	}
-	initErrorCallback?: (a: any) => void
+	/** optional callback to invoke non-blocking code after dataset query validation in mds3.init.js;
+	 * for GDC, this callback is created after buildDictionary in initGdc.js
+	 **/
+	initNonblocking?: (a: any) => void
 	viewModes?: ViewMode[]
 	dsinfo?: KeyVal[]
 	queries?: Mds3Queries

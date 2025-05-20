@@ -1,6 +1,6 @@
 import serverconfig from './serverconfig.js'
 import { buildGDCdictionary } from './initGdc.termdb.js'
-import { runRemainingWithoutAwait } from './initGdc.cache.js'
+import { initGdcCache } from './initGdc.cache.js'
 
 /*
 ********************   Comment   *****************
@@ -54,14 +54,14 @@ export async function initGDCdictionary(ds) {
 		// a gdc view may break due to incomplete cache, thus await a bit for cache to complete.
 		// also should use extApiCache;
 		// calling here means it's invoked before ds queries are validated in mds3.init.js init()
-		await runRemainingWithoutAwait(ds)
+		await initGdcCache(ds)
 	} else {
 		ds.init.status = 'nonblocking'
 		// below will be called after all ds queries are validated in mds3.init.js init(),
 		// otherwise it's harder to coordinate failures from either query validation or caching
-		ds.initRemainingWithoutAwait = () => {
+		ds.initNonblocking = () => {
 			// use on prod, not to hold up container launch while caching
-			runRemainingWithoutAwait(ds)
+			initGdcCache(ds)
 				.then(() => {
 					if (ds.init.status == 'nonblocking') {
 						ds.init.status = ds.init.recoverableError ? 'recoverableError' : ds.init.fatalError ? 'fatalError' : 'done'

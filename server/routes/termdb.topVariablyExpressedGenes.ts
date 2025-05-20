@@ -202,7 +202,8 @@ function gdcValidateQuery(ds: any, genome: any) {
 			return serverconfig.features.gdcGenes as string[]
 		}
 
-		if (ds.__gdc && !ds.__gdc?.doneCaching) {
+		// TODO: generalize to any dataset
+		if (ds.label === 'GDC' && !ds.__gdc?.doneCaching) {
 			// disable when caching is incomplete (particularly cases with gene exp data); to prevent showing wrong data on client
 			throw 'The server has not finished caching the case IDs: try again in about 2 minutes.'
 		}
