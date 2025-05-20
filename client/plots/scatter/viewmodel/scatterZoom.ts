@@ -21,7 +21,7 @@ export class ScatterZoom {
 			.on('end', async event => {
 				this.transform = event.transform
 				this.scatter.config.transform = event.transform.toString()
-				this.scatter.app.dispatch({
+				await this.scatter.app.dispatch({
 					type: 'plot_edit',
 					id: this.scatter.id,
 					config: this.scatter.config
