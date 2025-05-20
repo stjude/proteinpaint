@@ -2,7 +2,7 @@ import type { Filter } from '../filter.js'
 import type { CategoricalTerm, CategoricalBaseQ } from './categorical.js'
 import type { ConditionTerm } from './condition.js'
 import type { NumericTerm } from './numeric.js'
-import type { GvTerm, DtTerm } from './geneVariant.js'
+import type { GvTerm } from './geneVariant.js'
 import type { SampleLstTerm } from './samplelst.js'
 import type { SnpsTerm } from './snps.js'
 
@@ -105,7 +105,6 @@ export type BaseTerm = {
 	included_types?: string[]
 	isleaf?: boolean
 	values?: TermValues
-	filter?: TermFilter
 }
 
 export type Term = BaseTerm & (NumericTerm | CategoricalTerm | ConditionTerm | SampleLstTerm | SnpsTerm | GvTerm)
@@ -120,16 +119,8 @@ export type ValuesGroup = {
 export type FilterGroup = {
 	name: string
 	type: 'filter'
-	filter: TermFilter & {
-		active: Filter // active filter
-		group: number // group index
-	}
+	filter: Filter
 	uncomputable: boolean
-}
-
-export type TermFilter = {
-	opts: { joinWith: string[] } // options for joining filters
-	terms: DtTerm[] // terms used to build a frontend vocab that will be used for filtering // TODO: generalize the term structure used here
 }
 
 export type GroupEntry = ValuesGroup | FilterGroup

@@ -1,4 +1,4 @@
-import type { MinBaseQ, BaseTerm, TermGroupSetting, BaseTW, TermValues, BaseGroupSet, TermFilter } from '../index.ts'
+import type { MinBaseQ, BaseTerm, TermGroupSetting, BaseTW, TermValues, BaseGroupSet } from '../index.ts'
 import type { TermSettingInstance } from '../termsetting.ts'
 
 // q types
@@ -43,13 +43,13 @@ export type GvCoord = {
 export type RawGvTerm = GvBaseTerm &
 	(GvGene | GvCoord) & {
 		groupsetting?: TermGroupSetting
-		filter?: TermFilter
+		childTerms?: DtTerm[]
 	}
 
 export type GvTerm = GvBaseTerm &
 	(GvGene | GvCoord) & {
 		groupsetting: TermGroupSetting
-		filter: TermFilter
+		childTerms: DtTerm[]
 	}
 
 // tw types
@@ -94,7 +94,7 @@ export type DtTerm = {
 	query: string
 	name: string
 	name_noOrigin: string
-	geneVariantTerm?: RawGvTerm
+	parentTerm?: RawGvTerm
 	parent_id: any
 	isleaf: boolean
 	type: string
