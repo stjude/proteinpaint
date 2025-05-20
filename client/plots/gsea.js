@@ -630,6 +630,10 @@ export function getDefaultGseaSettings(overrides = {}) {
 		fdr_or_top: 'top',
 		gsea_method: 'blitzgsea'
 	}
+	if (JSON.parse(sessionStorage.getItem('optionalFeatures')).gsea_test) {
+		// set default method to CERNO when serverconfig flag gsea_test is defined
+		defaults.gsea_method = 'cerno'
+	}
 	return Object.assign(defaults, overrides)
 }
 
