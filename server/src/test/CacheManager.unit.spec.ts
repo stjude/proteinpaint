@@ -101,7 +101,7 @@ tape('defaults', function (test) {
 
 tape('move or delete by maxAge', function (test) {
 	test.timeoutAfter(2000)
-	test.plan(9)
+	test.plan(10)
 
 	const cachedir = path.join(process.cwd(), '.cache-test2')
 	// clear any previously created test cache dir
