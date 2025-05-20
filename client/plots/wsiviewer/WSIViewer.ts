@@ -21,6 +21,7 @@ import LayerSwitcher from 'ol-ext/control/LayerSwitcher'
 import MousePosition from 'ol/control/MousePosition.js'
 import { format as formatCoordinate } from 'ol/coordinate.js'
 import { debounce } from 'debounce'
+// import KeyboardPan from 'ol/interaction/KeyboardPan.js'
 
 export default class WSIViewer extends RxComponentInner {
 	// following attributes are required by rx
@@ -93,9 +94,15 @@ export default class WSIViewer extends RxComponentInner {
 			//To scroll to next annotation, hold the space bar and press left/right arrows
 			let currentIndex = index
 			let isSpaceDown = false
+			// const keyboardPan = map.getInteractions().getArray().find(i => i instanceof KeyboardPan)
+
 			image.on('keydown', async (event: KeyboardEvent) => {
 				if (event.code === 'Space') {
 					isSpaceDown = true
+
+					// if (keyboardPan && map.getInteractions().getArray().includes(keyboardPan)) {
+					// 	map.removeInteraction(keyboardPan);
+					//   }
 				}
 				if (isSpaceDown) {
 					event.preventDefault()
@@ -128,11 +135,21 @@ export default class WSIViewer extends RxComponentInner {
 							const row = table.append('tr')
 							row.append('td').text(currentIndex)
 							row.append('td').text(newZoomInPoints)
-						}, 300)
+						}, 500)
 						d()
 					}
 				}
 			})
+
+			// image.on('keyup', (event: KeyboardEvent) => {
+			// 	if (event.code === 'Space') {
+			// 		isSpaceDown= false
+
+			// 		if (keyboardPan && !map.getInteractions().getArray().includes(keyboardPan)) {
+			// 		  map.addInteraction(keyboardPan)
+			// 		}
+			// 	  }
+			// })
 		}
 
 		this.addControls(map, activeImage, hasOverlay)
