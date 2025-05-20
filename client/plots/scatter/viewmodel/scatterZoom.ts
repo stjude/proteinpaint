@@ -20,12 +20,6 @@ export class ScatterZoom {
 			})
 			.on('end', async event => {
 				this.transform = event.transform
-				this.scatter.config.transform = event.transform.toString()
-				await this.scatter.app.dispatch({
-					type: 'plot_edit',
-					id: this.scatter.id,
-					config: this.scatter.config
-				})
 			})
 		this.zoom = 1
 	}
@@ -60,11 +54,29 @@ export class ScatterZoom {
 			handler: () => this.zoomOut(),
 			title: 'Zoom out. You can also zoom out pressing the Ctrl key and using the mouse wheel'
 		})
+		const saveZoomDiv = toolsDiv
+			.insert('div')
+			.style('display', display)
+			.style('margin', '15px 10px')
+			.attr('name', 'sjpp-zoom-save-btn') //For unit tests
+		icon_functions['save'](saveZoomDiv, {
+			handler: () => this.saveZoom(),
+			title: 'Save the zoom transformation in the state. Needed when creating a session to persist the zoom'
+		})
 		for (const chart of this.scatter.model.charts) {
 			chart.mainG.call(this.zoomD3)
 		}
 
 		if (this.scatter.config.scaleDotTW && this.zoom > 4) this.resetToIdentity()
+	}
+
+	saveZoom() {
+		this.scatter.config.transform = this.transform.toString()
+		this.scatter.app.dispatch({
+			type: 'plot_edit',
+			id: this.scatter.id,
+			config: this.scatter.config
+		})
 	}
 
 	handleZoom(transform) {
