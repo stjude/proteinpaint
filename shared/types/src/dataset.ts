@@ -973,6 +973,7 @@ export type WSImages = {
 	imageBySampleFolder: string
 
 	annotationsColor?: Array<number>
+	classes?: { id: number; label: string; color: string }[]
 
 	/** either ds supplied or dynamically added on launch with built in logic (retrieve the sample list from the wsimages table) */
 	getSamples?: () => Promise<Array<WSISample>>
