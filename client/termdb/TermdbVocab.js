@@ -1,11 +1,11 @@
-import { q_to_param } from './vocabulary'
 import { Vocab } from './Vocab'
 import { dofetch3 } from '../common/dofetch'
 import { getNormalRoot } from '#filter'
-import { isUsableTerm, graphableTypes } from '#shared/termdb.usecase.js'
+import { isUsableTerm } from '#shared/termdb.usecase.js'
 import { throwMsgWithFilePathAndFnName } from '../dom/sayerror'
 import { isDictionaryType } from '#shared/terms.js'
-import { fillTermWrapper } from '#termsetting'
+import { dtTerms } from '#shared/common.js'
+import { getCategoryData } from '../plots/barchart.data'
 
 export class TermdbVocab extends Vocab {
 	// migrated from termdb/store
@@ -608,6 +608,13 @@ export class TermdbVocab extends Vocab {
 			}
 			return await dofetch3('/termdb', { headers, body })
 		}
+
+		if (dtTerms.map(t => t.type).includes(term.type)) {
+			// dt term, grab categories directly from term
+			const data = getCategoryData({ term })
+			return data
+		}
+
 		if (term.category2samplecount) {
 			// grab directly from term and not the server
 			// { categoryKey: count }

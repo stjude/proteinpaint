@@ -345,7 +345,7 @@ async function get_metaboliteIntensity(tvs, CTEname, ds) {
 }
 
 async function get_dtTerm(tvs, CTEname, ds) {
-	const tw = { $id: Math.random().toString(), term: tvs.term.geneVariantTerm, q: {} }
+	const tw = { $id: Math.random().toString(), term: tvs.term.parentTerm, q: {} }
 	const data = await ds.mayGetGeneVariantData(tw, { genome: ds.genomename })
 
 	const samples = []

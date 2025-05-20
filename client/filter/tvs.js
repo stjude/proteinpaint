@@ -66,7 +66,6 @@ class TVS {
 			try {
 				const _ = await import(`./tvs.${type}.js`)
 				const handler = _.handler
-				if (handler.setVocabApi) handler.setVocabApi(this, this.tvs)
 				if (handler.setMethods) handler.setMethods(this, this.tvs)
 				this.handlerByType[type] = handler
 			} catch (e) {
