@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- Initial prototype of GRIN2 tool (https://cran.r-project.org/web/packages/GRIN2/vignettes/GRIN2.html)
+
 Fixes:
 - mds3 tk cnvonly mode, leftlabel shows #CNVs but not variants
 - mds3 tk variant List menu will not show CNV tab when no cnv loaded
