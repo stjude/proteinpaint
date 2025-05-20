@@ -252,7 +252,7 @@ if (nchar(lesion_data) > 0) {
 ### 5. run GRIN2 analysis
 # Compute grin.stats
 tryCatch(
- {
+  {
     # More comprehensive suppression of all types of output
     suppressMessages({
       suppressWarnings({
@@ -262,7 +262,7 @@ tryCatch(
     if (is.null(grin_results) || !is.list(grin_results)) {
       write_error("grin.stats returned invalid or null results")
       quit(status = 1)
-    } 
+    }
   },
   error = function(e) {
     write_error(paste("Failed to compute grin.stats:", e$message))
@@ -306,7 +306,7 @@ tryCatch(
   {
     # Create the PNG device
     png(temp_file, width = 800, height = 600)
-
+    par(mar = c(1, 1, 1, 1))
     # More comprehensive suppression of all types of output
     suppressMessages({
       suppressWarnings({

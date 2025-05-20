@@ -30,7 +30,7 @@ const analysisOptions = [{ option: 'includeMutation', selected: true, label: 'In
 
 export async function gdcGRIN2ui({ holder, filter0, callbacks, debugmode = false }) {
 	if (debugmode) {
-		// Additional debug logic
+		// Debug logic
 	}
 	try {
 		if (callbacks) {
@@ -50,10 +50,12 @@ export async function gdcGRIN2ui({ holder, filter0, callbacks, debugmode = false
 
 	async function update({ filter0 }) {
 		holder.selectAll('*').remove()
+		holder.style('width', '100%').style('max-width', 'none')
 		const obj = {
 			errDiv: holder.append('div'),
 			controlDiv: holder.append('div'),
-			tableDiv: holder.append('div'),
+			tableDiv: holder.append('div').style('width', '100%'),
+			downloadButtonDiv: holder.append('div').style('margin-top', '10px').style('display', 'none'),
 			resultDiv: holder.append('div').style('margin-top', '20px'),
 			opts: {
 				filter0,
@@ -146,9 +148,11 @@ async function getFilesAndShowTable(obj) {
 
 		// render
 		if (result.filesTotal > result.files.length) {
-			wait.text(`Showing first ${result.files.length} files out of ${result.filesTotal} total.`)
+			wait.text(
+				`Showing first ${result.files.length} files out of ${result.filesTotal} total. Only files smaller than 1 Mb are shown.`
+			)
 		} else {
-			wait.text(`Showing ${result.files.length} files.`)
+			wait.text(`Showing ${result.files.length} files. Only files smaller than 1 Mb are shown.`)
 		}
 
 		const rows: TableRowItem[][] = []
@@ -274,23 +278,40 @@ async function getFilesAndShowTable(obj) {
 			// Create image URL from base64 data
 			const imageUrl = `data:image/png;base64,${response.pngImg}`
 
+			// Show and populate download button div below the Run Analysis button
+			obj.downloadButtonDiv.selectAll('*').remove()
+			obj.downloadButtonDiv
+				.append('button')
+				.text('Download Plot')
+				.on('click', () => {
+					const a = document.createElement('a')
+					a.href = imageUrl
+					a.download = `GRIN2_Analysis_${new Date().toISOString().split('T')[0]}.png`
+					document.body.appendChild(a)
+					a.click()
+					document.body.removeChild(a)
+				})
+			obj.downloadButtonDiv.style('display', 'block')
+
 			// Create results container
-			const resultContainer = obj.resultDiv
-				.append('div')
-				.style('text-align', 'center') // center title + button + image
-				.style('margin-top', '20px')
+			const resultContainer = obj.resultDiv.append('div').style('text-align', 'left').style('margin', '0 auto')
 
-			// Add title
-			resultContainer.append('h3').text('GRIN2 Analysis Results').style('margin-bottom', '0px', 'padding-bottom', '0px')
+			// Add title with spacing above
+			resultContainer
+				.append('h3')
+				.text('GRIN2 Analysis Results')
+				.style('margin-top', '40px')
+				.style('margin-bottom', '0px')
+				.style('text-align', 'left')
 
-			// Add image
+			// Add image (left aligned)
 			const img = resultContainer
 				.append('img')
 				.attr('src', imageUrl)
 				.attr('alt', 'GRIN2 Analysis Result')
 				.style('max-width', '100%')
 				.style('display', 'block')
-				.style('margin', '0 auto')
+				.style('margin', '0')
 
 			// Add error handler
 			img.node().onerror = () => {
@@ -301,20 +322,6 @@ async function getFilesAndShowTable(obj) {
 					.attr('class', 'sja_error')
 					.text('Failed to load image result. The analysis may have encountered an error.')
 			}
-
-			// Add download button just below the plot
-			resultContainer
-				.append('button')
-				.text('Download Plot')
-				.style('margin-top', '0px', 'padding-top', '0px')
-				.on('click', () => {
-					const a = document.createElement('a')
-					a.href = imageUrl
-					a.download = `GRIN2_Analysis_${new Date().toISOString().split('T')[0]}.png`
-					document.body.appendChild(a)
-					a.click()
-					document.body.removeChild(a)
-				})
 		} catch (e: any) {
 			sayerror(obj.errDiv, e.message || e)
 			if (e.stack) console.log(e.stack)
