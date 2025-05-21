@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.128.0
 
 Features:
 - Added several miscellaneous minor cleanups and improvements to the GRIN2 prototype
