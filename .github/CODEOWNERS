@@ -1,0 +1,19 @@
+# see example at 
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners#example-of-a-codeowners-file
+
+# require a review from any experienced team member for any file changed;
+# later, may remove users here later to assign more specific folders
+* @xzhou82 @siosonel @josephpowi @creilly8 @gavrielm @robinpaul85 @congyu-lu @airenzp @aacic
+
+# ORDER IS IMPORTANT
+# NOTE: more specific assignments below will override previous assigned rules
+# .github/ @aacic @siosonel
+# R/ @gavrielm @josephpowi @compbiolover @robinpaul85
+# rust/ @josephpowi @compbiolover @robinpaul85
+
+# client/appdrawer @creilly8
+# client/gdc/ @xzhou82 @siosonel @congyu-lu
+# client/plots/matrix @siosonel @congyu-lu
+# client/plots/profile @airenzp
+# client/plots/regression* @gavrielm
+# client/plots/wsi* @aacic

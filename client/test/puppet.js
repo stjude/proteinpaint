@@ -52,6 +52,8 @@ if (patternsStr) {
 		console.log('\n--- No applicable client specs to test in this branch. ---\n')
 		patternsStr = ''
 	} else {
+		// IMPORTANT: runTest call process.exit(1) if there are any detected errors,
+		// no need to throw here, just log to the console
 		runTest(patternsStr).catch(console.error)
 	}
 }
@@ -59,7 +61,7 @@ if (patternsStr) {
 async function runTest(patternsStr) {
 	const startTime = Date.now()
 	const server = initServer()
-	const patternsArr = patternsStr.split(' ') //; console.log(21, paramsArr, DATAPORT); return;
+	const patternsArr = patternsStr.split(' ')
 
 	const browser = await puppeteer.launch({
 		// headless: false, // uncomment to see puppeteer chrome instance

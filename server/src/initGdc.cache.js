@@ -16,7 +16,7 @@ const cacheCheckWait = serverconfig.features.gdcCacheCheckWait || 5 * 60 * 1000
 *****************************************************
 
 ********************   functions    *************
-runRemainingWithoutAwait
+initGdcCache
 	cacheMappingOnNewRelease
 		getOpenProjects
 		fetchIdsFromGdcApi
@@ -30,7 +30,7 @@ Important!
 - inside the function should await each step so they work in sequence
 */
 
-export async function runRemainingWithoutAwait(ds) {
+export async function initGdcCache(ds) {
 	/* 
 		this one-time api test is not informative due to below reason and subject to removal:
 		on some pp env e.g. ppirt, this api test sometimes fails. in order not to abort pp launch, only logs err out
@@ -290,6 +290,7 @@ async function cacheMappingOnNewRelease(ds) {
 		const size = 1000 // fetch 1000 ids at a time
 		const totalCases = await fetchIdsFromGdcApi(ds, 1, 0, ref)
 		if (!Number.isInteger(totalCases)) throw 'totalCases not integer'
+		ds.init.expectedTotalCases = totalCases
 
 		console.log('GDC: Start to cache sample IDs of', totalCases, 'cases...')
 		for (let i = 0; i < Math.ceil(totalCases / size); i++) {

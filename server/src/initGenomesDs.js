@@ -522,7 +522,7 @@ function mayRetryInit(g, ds, d, e) {
 					clearInterval(interval) // cancel retries
 					const msg = `Max retry attempts for ${gdlabel} reached. Failing with error:`
 					console.error(msg)
-					if (ds.initErrorCallback) ds.initErrorCallback(response)
+					if (ds.init.errorCallback) ds.init.errorCallback(response)
 					else {
 						// allow to fail silently to not affect other loaded datasets
 						console.log(e)
