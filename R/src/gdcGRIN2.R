@@ -142,6 +142,18 @@ gene_anno <- gene_anno %>%
 
 
 ### 3. generate chromosome size table
+# Function to create a sorting key
+get_chrom_key <- function(chrom) {
+  # Remove 'chr' prefix
+  num <- sub("^chr","", chrom)
+  # check if numeric
+  if (grepl("^[0-9]+$", num)) {
+    return(as.numeric(num))
+  } else {
+    # Assign fixed values for non-numeric (X=23, Y=24, others=100)
+    return(ifelse(num == "X", 23, ifelse(num == "Y", 24, 100)))
+  }
+}
 tryCatch(
   {
     chromosomelist <- input$chromosomelist
@@ -150,7 +162,9 @@ tryCatch(
       size = as.integer(chromosomelist),
       stringsAsFactors = FALSE
     )
-    chrom_size <- chrom_size[order(chrom_size$chrom), ]
+    chrom_size$sort_key <- sapply(chrom_size$chrom, get_chrom_key)
+    chrom_size <- chrom_size[order(chrom_size$sort_key), ]
+    chrom_size$sort_key <- NULL # Remove the sorting key
   },
   error = function(e) {
     write_error(paste(
@@ -305,7 +319,8 @@ tryCatch(
 tryCatch(
   {
     # Create the PNG device
-    png(temp_file, width = 800, height = 600)
+    #png(temp_file, width = 800, height = 600)
+    png(temp_file, width = 900, height = 600, res = 110)
     par(mar = c(1, 1, 1, 1))
     # More comprehensive suppression of all types of output
     suppressMessages({
