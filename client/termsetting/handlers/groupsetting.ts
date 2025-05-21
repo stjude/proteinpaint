@@ -3,7 +3,7 @@ import { select, type Selection } from 'd3-selection'
 //import { disappear } from '#src/client'
 import { throwMsgWithFilePathAndFnName } from '#dom/sayerror'
 import { debounce } from 'debounce'
-import type { TermSettingInstance, CustomGroupSettingQ, GroupSettingQ, MinBaseQ, Term, Filter } from '#types'
+import type { TermSettingInstance, CustomGroupSettingQ, GroupSettingQ, MinBaseQ, Term, Filter, GvTerm } from '#types'
 import { filterInit, getNormalRoot, getWrappedTvslst, filterJoin } from '#filter/filter'
 
 /*
@@ -126,7 +126,7 @@ export class GroupSettingMethods {
 			} else {
 				// custom groupset undefined
 				// build empty groupset
-				const term = this.tsInstance.term
+				const term = this.tsInstance.term as GvTerm
 				if (!term.childTerms) throw 'child terms missing'
 				for (const grpIdx of grpIdxes) {
 					this.data.filters.push({ terms: term.childTerms, group: grpIdx })
@@ -178,7 +178,7 @@ export class GroupSettingMethods {
 			})
 			grpIdxes.delete(i)
 			if (group.type == 'filter') {
-				const term = this.tsInstance.term
+				const term = this.tsInstance.term as GvTerm
 				if (!term.childTerms) throw 'child terms missing'
 				this.data.filters.push({ terms: term.childTerms, active: group.filter, group: i })
 			} else if (group.type == 'values') {
