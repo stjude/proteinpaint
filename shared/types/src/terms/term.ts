@@ -2,7 +2,7 @@ import type { Filter } from '../filter.js'
 import type { CategoricalTerm, CategoricalBaseQ } from './categorical.js'
 import type { ConditionTerm } from './condition.js'
 import type { NumericTerm } from './numeric.js'
-import type { GvTerm, DtTerm } from './geneVariant.js'
+import type { GvTerm } from './geneVariant.js'
 import type { SampleLstTerm } from './samplelst.js'
 import type { SnpsTerm } from './snps.js'
 
@@ -105,11 +105,9 @@ export type BaseTerm = {
 	included_types?: string[]
 	isleaf?: boolean
 	values?: TermValues
-	childTerms?: Term[] // custom children terms (e.g., DtTerm)
 }
 
-export type Term = BaseTerm &
-	(NumericTerm | CategoricalTerm | ConditionTerm | SampleLstTerm | SnpsTerm | GvTerm | DtTerm)
+export type Term = BaseTerm & (NumericTerm | CategoricalTerm | ConditionTerm | SampleLstTerm | SnpsTerm | GvTerm)
 
 export type ValuesGroup = {
 	name: string
