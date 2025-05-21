@@ -12,6 +12,7 @@ and return them to client to be shown in a table for selection
 const maxFileNumber = 1000 // determines max number of files to return to client
 
 const allowedWorkflowType = 'Aliquot Ensemble Somatic Variant Merging and Masking'
+const maxFileSizeAllowed = 1000000 // 1Mb; this is to avoid sending large files to client; if file size is larger than this, it will be ignored and not shown on client
 
 // change to 400 so it won't limit number of files; should keep this setting as a safeguard; also it's fast to check file size (.5s in gdc.mafBuild.ts)
 export const maxTotalSizeCompressed = serverconfig.features.gdcMafMaxFileSize || 400000000 // 400Mb
@@ -133,7 +134,7 @@ async function listMafFiles(q: GdcGRIN2listRequest, ds: any) {
 
 		const c = h.cases?.[0]
 		if (!c) throw 'h.cases[0] missing'
-		if (h.file_size >= 1000000) continue // ignore files larger than or equal to 1Mb
+		if (h.file_size >= maxFileSizeAllowed) continue // ignore files larger than or equal to 1Mb
 
 		const file: GdcGRIN2File = {
 			id: h.id,
