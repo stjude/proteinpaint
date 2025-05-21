@@ -28,12 +28,6 @@ enum ExperimentalStrategy {
  * Request parameters for GRIN2 file listing
  */
 export type GdcGRIN2listRequest = {
-	/**
-	 * Name of experimental strategy (legacy format - maintained for backward compatibility)
-	 * @deprecated Use mafOptions.experimentalStrategy instead
-	 */
-	experimentalStrategy?: ExperimentalStrategy
-
 	/** JSON, optional GDC cohort filter to restrict cases */
 	filter0?: any
 
