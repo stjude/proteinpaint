@@ -28,12 +28,26 @@ enum ExperimentalStrategy {
  * Request parameters for GRIN2 file listing
  */
 export type GdcGRIN2listRequest = {
-	/** Name of experimental strategy to get files for */
-	experimentalStrategy: ExperimentalStrategy
+	/**
+	 * Name of experimental strategy (legacy format - maintained for backward compatibility)
+	 * @deprecated Use mafOptions.experimentalStrategy instead
+	 */
+	experimentalStrategy?: ExperimentalStrategy
+
 	/** JSON, optional GDC cohort filter to restrict cases */
 	filter0?: any
-	/** Optional array of file types to include ('MAF') */
-	fileTypes?: Array<'MAF'>
+
+	/** Options for MAF file retrieval. Presence indicates MAF files should be returned */
+	mafOptions?: {
+		/** Name of experimental strategy to get files for */
+		experimentalStrategy: ExperimentalStrategy
+	}
+
+	/** Options for CNV file retrieval. Presence indicates CNV files should be returned (for future use) */
+	cnvOptions?: any
+
+	/** Options for fusion file retrieval. Presence indicates fusion files should be returned (for future use) */
+	fusionOptions?: any
 }
 
 /**
@@ -52,7 +66,6 @@ export type GdcGRIN2listResponse = {
 	}
 	/** Applied filters (for UI reference) */
 	appliedFilters?: {
-		fileTypes?: Array<'MAF'>
 		experimentalStrategy?: ExperimentalStrategy
 	}
 }
