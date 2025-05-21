@@ -26,11 +26,11 @@ const tableColumns = [
 	{ label: 'File Size', barplot: { tickFormat: '~s' }, sortable: true }
 ]
 
-// list of analysis options
+// List of analysis options
+// CNV includes both loss and gain
 const analysisOptions = [
 	{ option: 'includeMutation', selected: true, label: 'Include Mutation' },
-	{ option: 'includeCnvLoss', selected: true, label: 'Include CNV Loss' },
-	{ option: 'includeCnvGain', selected: true, label: 'Include CNV Gain' }
+	{ option: 'includeCnv', selected: true, label: 'Include CNV' }
 ]
 
 export async function gdcGRIN2ui({ holder, filter0, callbacks, debugmode = false }) {
@@ -149,7 +149,7 @@ async function getFilesAndShowTable(obj) {
 
 		if (result.error) throw result.error
 		if (!Array.isArray(result.files)) throw 'result.files[] not array'
-		if (result.files.length == 0) throw 'No MAF files available.'
+		if (result.files.length == 0) throw 'No files available.'
 
 		// render
 		if (result.filesTotal > result.files.length) {
@@ -191,7 +191,7 @@ async function getFilesAndShowTable(obj) {
 			resize: false,
 			div: obj.tableDiv.append('div'),
 			selectAll: false,
-			dataTestId: 'sja_mafFileTable',
+			dataTestId: 'sja_FileTable',
 			header: { allowSort: true },
 			selectedRows: [0],
 			buttons: [
