@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Features:
+- Added several miscellaneous minor cleanups and improvements to the GRIN2 prototype
+
+Fixes:
+- simplify error handling by logging more non-sensitive information and moving non-blocking dataset initialization at the end of mds3 init
+- Addressing additional issues from previous pr
+
+
 ## 2.127.0
 
 Features:
