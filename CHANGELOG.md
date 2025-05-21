@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Features:
+- add option upon clicking custom variable to launch both pre-built and new matrix
+
+Fixes:
+- add "Top variably expressed genes" to geneset edit UI of hiercluster launced from custom variable
+
+
 ## 2.126.2
 
 Fixes:
