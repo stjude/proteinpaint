@@ -11,6 +11,9 @@
 	Instead, this emitter will read the contents of route ts files
 	and add the typia checker code that esbuild + plugins could use
 	at build time.
+
+	TODO: may deprecate exporting type checkers if these are not used during runtime,
+	or may only use for testing and not prod
 */
 import fs from 'fs'
 import path from 'path'
