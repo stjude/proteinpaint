@@ -9,7 +9,8 @@ export const handler = Object.assign({}, dtHandler, { type: 'dtcnv', setMethods 
 
 function setMethods(self, tvs) {
 	// fill cnv menu based on whether cnv data is continuous or categorical
-	const cnv = self.opts.vocabApi.parent_termdbConfig?.queries?.cnv
+	const termdbConfig = self.opts.vocabApi.termdbConfig || self.opts.vocabApi.parent_termdbConfig
+	const cnv = termdbConfig.queries?.cnv
 	if (!cnv) throw 'cnv query is missing'
 	const keys = Object.keys(cnv)
 	if (keys.includes('cnvGainCutoff') || keys.includes('cnvLossCutoff')) {
@@ -37,13 +38,14 @@ async function fillMenu_cont(self, div, tvs) {
 	const settingsDiv = div.append('div').style('margin-left', '10px')
 
 	// get cnv cutoff values
-	const cnvObj = self.opts.vocabApi.parent_termdbConfig?.queries?.cnv
+	const termdbConfig = self.opts.vocabApi.termdbConfig || self.opts.vocabApi.parent_termdbConfig
+	const cnvObj = termdbConfig.queries?.cnv
 	const cnvDefault = {
 		cnvMaxLength: cnvObj.cnvMaxLength,
 		cnvGainCutoff: cnvObj.cnvGainCutoff,
 		cnvLossCutoff: cnvObj.cnvLossCutoff
 	}
-	const cnv = cnvObj.cnvCutoffsByGene?.[tvs.term.geneVariantTerm.name] || cnvDefault
+	const cnv = cnvObj.cnvCutoffsByGene?.[tvs.term.parentTerm.name] || cnvDefault
 
 	let cnvGainCutoff
 	if (cnv.cnvGainCutoff) {
