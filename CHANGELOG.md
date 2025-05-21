@@ -10,6 +10,7 @@ Features:
 Fixes:
 - simplify error handling by logging more non-sensitive information and moving non-blocking dataset initialization at the end of mds3 init
 - Addressing additional issues from previous pr
+- use new data_type value "Allele-specific Copy Number Segment" when looking for cnv seg txt file from gdc, so cnv can show in disco
 
 
 ## 2.127.0
