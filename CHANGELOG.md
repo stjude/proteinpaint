@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.126.2
 
 Fixes:
 - force a release of workspaces that were updated in a prerelease branch instead of master
