@@ -147,25 +147,6 @@ export class profilePlot {
 		await this.app.dispatch({ type: 'plot_edit', id: this.id, config: { settings: { [this.type]: this.settings } } })
 	}
 
-	getList(tw) {
-		let values = Object.values(tw.term.values)
-		values.sort((v1, v2) => v1.label.localeCompare(v2.label))
-		const twSamples = this.samplesPerFilter[tw.term.id]
-		const data = []
-		for (const sample of twSamples) {
-			data.push(this.filtersData.samples[sample])
-		}
-		//select samples with data for that term
-		const sampleValues = Array.from(new Set(data.map(sample => sample[tw.$id]?.value)))
-		for (const value of values) {
-			value.value = value.label
-			value.disabled = !sampleValues.includes(value.label)
-		}
-		values.unshift({ label: '', value: '' })
-		if (!(tw.term.id in this.settings)) this.settings[tw.term.id] = values[0].label
-		return values
-	}
-
 	async main() {
 		this.config = JSON.parse(JSON.stringify(this.state.config))
 		this.settings = this.config.settings[this.type]
@@ -180,23 +161,19 @@ export class profilePlot {
 			if (filter) filters[tw.term.id] = filter
 		}
 
-		//Dictionary with samples applying all the filters but not the one from the current term id
-		this.samplesPerFilter = await this.app.vocabApi.getSamplesPerFilter({
+		this.plotFilters = await this.app.vocabApi.getPlotFilters({
+			filterTWs: this.config.filterTWs,
 			filters
 		})
-		this.filtersData = await this.app.vocabApi.getAnnotatedSampleData({
-			terms: this.config.filterTWs,
-			termsPerRequest: 10
-		})
 
-		this.regions = this.getList(this.config.regionTW)
-		this.countries = this.getList(this.config.countryTW)
-		this.incomes = this.getList(this.config.incomeTW)
-		this.teachingStates = this.getList(this.config.teachingStatusTW)
-		this.referralStates = this.getList(this.config.referralStatusTW)
-		this.fundingSources = this.getList(this.config.fundingSourceTW)
-		this.hospitalVolumes = this.getList(this.config.hospitalVolumeTW)
-		this.yearsOfImplementation = this.getList(this.config.yearOfImplementationTW)
+		this.regions = this.plotFilters[this.config.regionTW.id]
+		this.countries = this.plotFilters[this.config.countryTW.id]
+		this.incomes = this.plotFilters[this.config.incomeTW.id]
+		this.teachingStates = this.plotFilters[this.config.teachingStatusTW.id]
+		this.referralStates = this.plotFilters[this.config.referralStatusTW.id]
+		this.fundingSources = this.plotFilters[this.config.fundingSourceTW.id]
+		this.hospitalVolumes = this.plotFilters[this.config.hospitalVolumeTW.id]
+		this.yearsOfImplementation = this.plotFilters[this.config.yearOfImplementationTW.id]
 
 		this.incomes.sort((elem1, elem2) => {
 			const i1 = orderedIncomes.indexOf(elem1.value)
@@ -210,9 +187,15 @@ export class profilePlot {
 			if (i1 < i2) return -1
 			return 1
 		})
-		this.types = this.getList(this.config.typeTW)
-
+		this.types = this.plotFilters[this.config.typeTW.id]
 		const filter = this.config.filter || this.getFilter()
+
+		this.profileScores = await this.app.vocabApi.getProfileScores({
+			terms: [...this.twLst, this.config.facilityTW], //added facility term to all the plots to get the hospital name
+			scoreTerms: this.config.terms,
+			filter
+		})
+		console.log('profileScores', this.profileScores)
 		this.data = await this.app.vocabApi.getAnnotatedSampleData({
 			terms: [...this.twLst, this.config.facilityTW], //added facility term to all the plots to get the hospital name
 			filter,

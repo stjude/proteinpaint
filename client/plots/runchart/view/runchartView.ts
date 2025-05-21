@@ -23,6 +23,7 @@ export class RunchartView extends ScatterView {
 		const samplesPerFilter = await this.runchart.app.vocabApi.getSamplesPerFilter({
 			filters
 		})
+		console.log('samplesPerFilter', samplesPerFilter)
 		const inputs: any = []
 		if (this.runchart.config.countryTW) {
 			const countries = this.runchart.getList(this.runchart.config.countryTW, samplesPerFilter)
