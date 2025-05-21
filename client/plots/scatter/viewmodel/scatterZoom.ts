@@ -71,6 +71,7 @@ export class ScatterZoom {
 	}
 
 	saveZoom() {
+		if (!this.transform) return
 		this.scatter.config.transform = this.transform.toString()
 		this.scatter.app.dispatch({
 			type: 'plot_edit',
