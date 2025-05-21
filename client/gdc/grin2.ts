@@ -150,10 +150,10 @@ async function getFilesAndShowTable(obj) {
 		// render
 		if (result.filesTotal > result.files.length) {
 			wait.text(
-				`Showing first ${result.files.length} files out of ${result.filesTotal} total. Only files smaller than 1 Mb are shown.`
+				`Showing first ${result.files.length.toLocaleString()} files out of ${result.filesTotal.toLocaleString()} total. Only files smaller than 1 Mb are shown.`
 			)
 		} else {
-			wait.text(`Showing ${result.files.length} files. Only files smaller than 1 Mb are shown.`)
+			wait.text(`Showing ${result.files.length.toLocaleString()} files. Only files smaller than 1 Mb are shown.`)
 		}
 
 		const rows: TableRowItem[][] = []
