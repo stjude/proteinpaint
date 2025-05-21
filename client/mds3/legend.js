@@ -885,8 +885,7 @@ function may_create_cnv(tk, block) {
 			}
 		})
 	} else {
-		// cnv data uses category but not numeric value
-		// will auto-fill category legend when available
+		// cnv data uses category but not numeric value; fill category legend based on returned data
 		R.cnvCategoryHolder = R.holder.append('span')
 	}
 
@@ -945,9 +944,11 @@ function may_update_cnv(tk) {
 			tk.legend.cnv.colorScale.updateScale()
 		} else {
 			// uses categories
-			if (tk.hardcodeCnvOnly) {
-				// tricky! only show legend in cnv-only mode
-				// when not in such mode, the categories are already shown in Mutation legend section
+			if (!tk.hardcodeCnvOnly) {
+				// !!! tricky !!!
+				// not in cnv-only mode, the categories are already shown in Mutation legend section; do not duplicate legend here
+			} else {
+				// show legend in cnv-only mode
 				tk.legend.cnv.cnvCategoryHolder.selectAll('*').remove()
 				const class2count = new Map()
 				for (const c of tk.cnv.cnvLst) {
@@ -960,7 +961,30 @@ function may_update_cnv(tk) {
 						.attr('class', 'sja_clb')
 						.style('display', 'inline-block')
 						.on('click', event => {
-							// todo
+							const opts = [
+								{
+									label: 'Hide',
+									isVisible: () => true,
+									callback: () => {
+										// NOTE add hidden cnv class here and pass it to backend using existing method
+										tk.legend.mclass.hiddenvalues.add(cls)
+									}
+								},
+								{
+									isChangeColor: true,
+									value: mclass[cls].color,
+									isVisible: () => true,
+									callback: colorValue => {
+										if (!mclass[cls].origColor) mclass[cls].origColor = mclass[cls].color
+										mclass[cls].color = colorValue
+									},
+									reset: {
+										isVisible: () => mclass[cls].origColor,
+										callback: () => (mclass[cls].color = mclass[cls].origColor)
+									}
+								}
+							]
+							createLegendTipMenu(opts, tk, event.target)
 						})
 					cell
 						.append('div')
@@ -973,6 +997,24 @@ function may_update_cnv(tk) {
 						.style('display', 'inline-block')
 						.style('color', mclass[cls].color)
 						.html('&nbsp;' + mclass[cls].label)
+				}
+
+				for (const cls of tk.legend.mclass.hiddenvalues) {
+					let loading = false
+					tk.legend.cnv.cnvCategoryHolder
+						.append('div')
+						.style('display', 'inline-block')
+						.attr('class', 'sja_clb')
+						.style('text-decoration', 'line-through')
+						.style('opacity', 0.7)
+						.text(mclass[cls].label)
+						.on('click', async event => {
+							if (loading) return
+							loading = true
+							tk.legend.mclass.hiddenvalues.delete(cls)
+							event.target.innerHTML = 'Updating...'
+							await tk.load()
+						})
 				}
 			}
 		}

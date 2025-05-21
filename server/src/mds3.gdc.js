@@ -1442,7 +1442,8 @@ async function querySamplesWithCnv(q, dictTwLst, ds) {
 	// create q2 that's submitted to cnv getter
 	const q2 = {
 		dictTwLst,
-		cnvMaxLength: q.cnvMaxLength
+		cnvMaxLength: q.cnvMaxLength,
+		hiddenmclass: q.hiddenmclass
 	}
 	if (q.rglst) {
 		// is from sample summary via leftlabel
