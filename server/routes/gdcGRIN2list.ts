@@ -60,19 +60,36 @@ ds {
 }
 */
 async function listMafFiles(q: GdcGRIN2listRequest, ds: any) {
+	// Determine if we should retrieve MAF files (based on presence of mafOptions)
+	const shouldRetrieveMaf = !!q.mafOptions
+
+	// Extract experimentalStrategy from mafOptions
+	const experimentalStrategy = q.mafOptions?.experimentalStrategy
+
+	if (shouldRetrieveMaf && !experimentalStrategy) {
+		throw 'Missing experimentalStrategy parameter for MAF file retrieval'
+	}
+
 	const dataFormatFilter = {
 		op: 'and',
 		content: [{ op: '=', content: { field: 'data_format', value: 'MAF' } }]
 	}
 
-	const filters = {
-		op: 'and',
-		content: [
-			dataFormatFilter,
-			{ op: '=', content: { field: 'experimental_strategy', value: q.experimentalStrategy } },
-			{ op: '=', content: { field: 'analysis.workflow_type', value: allowedWorkflowType } },
-			{ op: '=', content: { field: 'access', value: 'open' } }
-		]
+	// Only build and use MAF filters if we need to retrieve MAF files
+	let filters: any
+	if (shouldRetrieveMaf) {
+		filters = {
+			op: 'and',
+			content: [
+				dataFormatFilter,
+				{ op: '=', content: { field: 'experimental_strategy', value: experimentalStrategy } },
+				{ op: '=', content: { field: 'analysis.workflow_type', value: allowedWorkflowType } },
+				{ op: '=', content: { field: 'access', value: 'open' } }
+			]
+		}
+	} else {
+		// TODO: Add handling for CNV or fusion file types when those options are present
+		throw 'At least one file type option must be specified (mafOptions, cnvOptions, or fusionOptions)'
 	}
 
 	const case_filters: any = { op: 'and', content: [] }
@@ -80,6 +97,7 @@ async function listMafFiles(q: GdcGRIN2listRequest, ds: any) {
 		case_filters.content.push(q.filter0)
 	}
 
+	// Continue with the rest of your existing code
 	const { host } = ds.getHostHeaders(q)
 
 	const body: any = {
@@ -88,9 +106,9 @@ async function listMafFiles(q: GdcGRIN2listRequest, ds: any) {
 		fields: [
 			'id',
 			'file_size',
-			'cases.project.project_id', // for display only
-			'cases.case_id', // case uuid for making case url link to portal
-			'cases.submitter_id', // used when listing all cases & files
+			'cases.project.project_id',
+			'cases.case_id',
+			'cases.submitter_id',
 			'cases.samples.tissue_type',
 			'cases.samples.tumor_descriptor'
 		].join(',')
@@ -168,10 +186,18 @@ async function listMafFiles(q: GdcGRIN2listRequest, ds: any) {
 	// sort files in descending order of file size and show on table as default
 	files.sort((a, b) => b.file_size - a.file_size)
 
+	// Add file type information to the response
 	const result = {
 		files,
 		filesTotal: re.data.pagination.total,
-		maxTotalSizeCompressed
+		maxTotalSizeCompressed,
+		fileCounts: {
+			maf: files.length
+		},
+		appliedFilters: {
+			fileTypes: shouldRetrieveMaf ? ['MAF'] : [],
+			experimentalStrategy: experimentalStrategy
+		}
 	} as GdcGRIN2listResponse
 
 	return result

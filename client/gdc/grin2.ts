@@ -27,7 +27,11 @@ const tableColumns = [
 ]
 
 // list of analysis options
-const analysisOptions = [{ option: 'includeMutation', selected: true, label: 'Include Mutation' }]
+const datatypeOptions = [
+	{ option: 'mafOption', selected: true, label: 'Include Mutation' },
+	{ option: 'cnvOption', selected: true, label: 'Include CNV' },
+	{ option: 'fusionOption', selected: true, label: 'Include Fusion' }
+]
 
 export async function gdcGRIN2ui({ holder, filter0, callbacks, debugmode = false }) {
 	if (debugmode) {
@@ -80,8 +84,8 @@ function makeControls(obj) {
 	let clickText
 	function updateText() {
 		clickText.text(
-			`${analysisOptions.reduce((c, i) => c + (i.selected ? 1 : 0), 0)} of ${
-				analysisOptions.length
+			`${datatypeOptions.reduce((c, i) => c + (i.selected ? 1 : 0), 0)} of ${
+				datatypeOptions.length
 			} options selected. Click to change`
 		)
 	}
@@ -102,24 +106,24 @@ function makeControls(obj) {
 	}
 
 	{
-		const [, td2] = table.addRow('Mutation Type')
+		const [, td2] = table.addRow('Data Type Options')
 		clickText = td2
 			.append('span')
 			.attr('class', 'sja_clbtext')
 			.on('click', event => {
 				const rows: TableRowItem[][] = []
 				const selectedRows: number[] = []
-				for (const [i, c] of analysisOptions.entries()) {
+				for (const [i, c] of datatypeOptions.entries()) {
 					rows.push([{ value: c.label }])
 					if (c.selected) selectedRows.push(i)
 				}
 				renderTable({
 					div: tip.clear().showunder(event.target).d,
 					rows,
-					columns: [{ label: 'Mutation types' }],
+					columns: [{ label: 'Data types' }],
 					selectedRows,
 					noButtonCallback: (i, n) => {
-						analysisOptions[i].selected = n.checked
+						datatypeOptions[i].selected = n.checked
 						updateText()
 					}
 				})
@@ -136,16 +140,30 @@ async function getFilesAndShowTable(obj) {
 
 	let result
 	try {
-		const body: { experimentalStrategy: string; filter0?: any } = {
-			experimentalStrategy: obj.opts.experimentalStrategy
-		}
+		// Initialize the request body
+		const body: {
+			filter0?: any
+			mafOptions?: {
+				experimentalStrategy: string
+			}
+			cnvOptions?: any // Placeholder for future implementation
+			fusionOptions?: any // Placeholder for future implementation
+		} = {}
+
 		if (obj.opts.filter0) body.filter0 = obj.opts.filter0
+
+		// Add mafOptions if experimentalStrategy exists
+		if (obj.opts.experimentalStrategy) {
+			body.mafOptions = {
+				experimentalStrategy: obj.opts.experimentalStrategy
+			}
+		}
 
 		result = await dofetch3('gdc/GRIN2list', { body })
 
 		if (result.error) throw result.error
 		if (!Array.isArray(result.files)) throw 'result.files[] not array'
-		if (result.files.length == 0) throw 'No MAF files available.'
+		if (result.files.length == 0) throw 'No files available.'
 
 		// render
 		if (result.filesTotal > result.files.length) {
@@ -285,11 +303,10 @@ async function getFilesAndShowTable(obj) {
 			// Show and populate download button div next the Run Analysis button
 			// Create a unique name for the download file based on selected mutations
 			// and the current timestamp
-			const selectedMutations = analysisOptions
+			const selectedMutations = datatypeOptions
 				.filter(opt => opt.selected)
 				.map(opt => opt.label.replace(/[^a-zA-Z0-9]/g, ''))
 				.join('_')
-			console.log('Selected mutations:', selectedMutations)
 
 			const now = new Date()
 			const timestamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(

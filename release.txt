@@ -1,1 +1,2 @@
-
+Fixes:
+- Additional refactoring of GRIN2 prototype. Now using new payload structure
