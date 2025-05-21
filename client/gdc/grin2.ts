@@ -27,7 +27,11 @@ const tableColumns = [
 ]
 
 // list of analysis options
-const analysisOptions = [{ option: 'includeMutation', selected: true, label: 'Include Mutation' }]
+const analysisOptions = [
+	{ option: 'includeMutation', selected: true, label: 'Include Mutation' },
+	{ option: 'includeCnvLoss', selected: true, label: 'Include CNV Loss' },
+	{ option: 'includeCnvGain', selected: true, label: 'Include CNV Gain' }
+]
 
 export async function gdcGRIN2ui({ holder, filter0, callbacks, debugmode = false }) {
 	if (debugmode) {
@@ -102,7 +106,7 @@ function makeControls(obj) {
 	}
 
 	{
-		const [, td2] = table.addRow('Mutation Type')
+		const [, td2] = table.addRow('Genomic Alterations')
 		clickText = td2
 			.append('span')
 			.attr('class', 'sja_clbtext')
@@ -116,7 +120,7 @@ function makeControls(obj) {
 				renderTable({
 					div: tip.clear().showunder(event.target).d,
 					rows,
-					columns: [{ label: 'Mutation types' }],
+					columns: [{ label: 'Genomic Alterations' }],
 					selectedRows,
 					noButtonCallback: (i, n) => {
 						analysisOptions[i].selected = n.checked
