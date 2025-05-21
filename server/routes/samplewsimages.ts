@@ -31,6 +31,10 @@ function init({ genomes }) {
 
 			if (ds.queries.WSImages.getWSIAnnotations) {
 				for (const wsimage of wsimages) {
+					// if (ds.queries.WSImages.makeGeoJson) {
+					// 	await ds.queries.WSImages.makeGeoJson(sampleId, wsimage)
+					// }
+
 					const annotations = await ds.queries.WSImages.getWSIAnnotations(sampleId, wsimage.filename)
 					if (annotations) {
 						wsimage.overlays = annotations
