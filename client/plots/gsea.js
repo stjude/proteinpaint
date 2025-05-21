@@ -318,10 +318,9 @@ add:
 
 	//Render the dropdown if launched from state
 	//Otherwise will persist on load
-	const foundDropdown = self.dom.actionsDiv.select('span[data-testid="sjpp-gsea-pathway"]').node()
-	if (!foundDropdown) renderPathwayDropdown(self)
+	self.dom.actionsDiv.selectAll('*').remove()
+	renderPathwayDropdown(self)
 	if (self.settings.pathway == '-' || self.settings.pathway == undefined) return
-
 	self.dom.detailsDiv.selectAll('*').remove()
 	self.dom.holder.selectAll('*').remove()
 	self.dom.tableDiv.selectAll('*').remove()
