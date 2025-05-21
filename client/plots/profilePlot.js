@@ -22,6 +22,7 @@ export class profilePlot {
 		this.type = 'profilePlot'
 		this.downloadCount = 0
 		this.tip = new Menu({ padding: '4px', offsetX: 10, offsetY: 15 })
+		this.scoreTerms = []
 	}
 
 	getState(appState) {
@@ -43,10 +44,11 @@ export class profilePlot {
 		}
 	}
 
+	//refers to the view where all the filters are shown and not the preselected site
 	isAggregate() {
 		if (!this.state.logged) return true
-		if (this.state.sites?.length > 1 || this.state.user == 'admin') return true
-		return this.settings.isAggregate
+		if (this.settings.isAggregate) return true //marked by the user
+		if (this.state.sites?.length > 1 || this.state.user == 'admin') return true //multiple sites selected
 	}
 
 	async init(appState) {
@@ -84,13 +86,6 @@ export class profilePlot {
 		//this.dom.rightDiv.on('mousemove', event => this.onMouseOver(event))
 		this.dom.rightDiv.on('mouseleave', event => this.onMouseOut(event))
 		this.dom.rightDiv.on('mouseout', event => this.onMouseOut(event))
-		this.sampleidmap = await this.app.vocabApi.getSamplesByName()
-
-		if (state.site) {
-			if (Object.keys(this.sampleidmap).length == 0) throw 'You must login to view site info' //no sample data returned
-			const id = this.sampleidmap[state.site]?.id
-			if (!id) throw 'Invalid site'
-		}
 
 		document.addEventListener('scroll', () => this?.tip?.hide())
 		icon_functions['pdf'](iconsDiv.append('div').style('padding', '0px 5px 15px 5px'), {
@@ -147,25 +142,6 @@ export class profilePlot {
 		await this.app.dispatch({ type: 'plot_edit', id: this.id, config: { settings: { [this.type]: this.settings } } })
 	}
 
-	getList(tw) {
-		let values = Object.values(tw.term.values)
-		values.sort((v1, v2) => v1.label.localeCompare(v2.label))
-		const twSamples = this.samplesPerFilter[tw.term.id]
-		const data = []
-		for (const sample of twSamples) {
-			data.push(this.filtersData.samples[sample])
-		}
-		//select samples with data for that term
-		const sampleValues = Array.from(new Set(data.map(sample => sample[tw.$id]?.value)))
-		for (const value of values) {
-			value.value = value.label
-			value.disabled = !sampleValues.includes(value.label)
-		}
-		values.unshift({ label: '', value: '' })
-		if (!(tw.term.id in this.settings)) this.settings[tw.term.id] = values[0].label
-		return values
-	}
-
 	async main() {
 		this.config = JSON.parse(JSON.stringify(this.state.config))
 		this.settings = this.config.settings[this.type]
@@ -180,23 +156,19 @@ export class profilePlot {
 			if (filter) filters[tw.term.id] = filter
 		}
 
-		//Dictionary with samples applying all the filters but not the one from the current term id
-		this.samplesPerFilter = await this.app.vocabApi.getSamplesPerFilter({
+		this.plotFilters = await this.app.vocabApi.getPlotFilters({
+			filterTWs: this.config.filterTWs,
 			filters
 		})
-		this.filtersData = await this.app.vocabApi.getAnnotatedSampleData({
-			terms: this.config.filterTWs,
-			termsPerRequest: 10
-		})
 
-		this.regions = this.getList(this.config.regionTW)
-		this.countries = this.getList(this.config.countryTW)
-		this.incomes = this.getList(this.config.incomeTW)
-		this.teachingStates = this.getList(this.config.teachingStatusTW)
-		this.referralStates = this.getList(this.config.referralStatusTW)
-		this.fundingSources = this.getList(this.config.fundingSourceTW)
-		this.hospitalVolumes = this.getList(this.config.hospitalVolumeTW)
-		this.yearsOfImplementation = this.getList(this.config.yearOfImplementationTW)
+		this.regions = this.plotFilters[this.config.regionTW.id]
+		this.countries = this.plotFilters[this.config.countryTW.id]
+		this.incomes = this.plotFilters[this.config.incomeTW.id]
+		this.teachingStates = this.plotFilters[this.config.teachingStatusTW.id]
+		this.referralStates = this.plotFilters[this.config.referralStatusTW.id]
+		this.fundingSources = this.plotFilters[this.config.fundingSourceTW.id]
+		this.hospitalVolumes = this.plotFilters[this.config.hospitalVolumeTW.id]
+		this.yearsOfImplementation = this.plotFilters[this.config.yearOfImplementationTW.id]
 
 		this.incomes.sort((elem1, elem2) => {
 			const i1 = orderedIncomes.indexOf(elem1.value)
@@ -210,18 +182,30 @@ export class profilePlot {
 			if (i1 < i2) return -1
 			return 1
 		})
-		this.types = this.getList(this.config.typeTW)
-
-		const filter = this.config.filter || this.getFilter()
-		this.data = await this.app.vocabApi.getAnnotatedSampleData({
+		this.types = this.plotFilters[this.config.typeTW.id]
+		this.filter = this.config.filter || this.getFilter()
+		const isAggregate = this.isAggregate()
+		this.data = await this.app.vocabApi.getProfileScores({
 			terms: [...this.twLst, this.config.facilityTW], //added facility term to all the plots to get the hospital name
-			filter,
-			termsPerRequest: 30
+			scoreTerms: this.scoreTerms,
+			filter: this.filter,
+			isAggregate,
+			site: this.isRadarFacility ? null : this.settings.site,
+			isRadarFacility: this.isRadarFacility,
+			userSites: this.state.sites,
+			facilityTW: this.config.facilityTW
 		})
+		this.sites = this.data.sites
+		if (!this.isRadarFacility) this.sites.unshift({ label: '', value: '' })
+		this.sites.sort((a, b) => {
+			if (a.label < b.label) return -1
+			if (a.label > b.label) return 1
+			return 0
+		})
+
 		const chartType = this.type
 		this.dom.controlsDiv.selectAll('*').remove()
 		let inputs = []
-		const isAggregate = this.isAggregate()
 		if (this.state.sites?.length == 1 && !this.isRadarFacility) {
 			const dataInput = {
 				label: 'Data',
@@ -232,7 +216,11 @@ export class profilePlot {
 				options: [
 					{ label: this.state.site, value: false },
 					{ label: 'Aggregate', value: true }
-				]
+				],
+				callback: isAggregate => {
+					this.settings.isAggregate = isAggregate
+					isAggregate ? this.setSite('') : this.setSite(this.state.site)
+				}
 			}
 			inputs.push(dataInput)
 		}
@@ -314,10 +302,21 @@ export class profilePlot {
 				]
 			)
 		}
-		await this.loadSampleData(chartType, inputs)
+		if (this.state.logged) {
+			if (isAggregate && (this.state.sites?.length > 1 || this.state.user == 'admin')) {
+				const sitesInput = {
+					label: 'Site',
+					type: 'dropdown',
+					chartType,
+					options: this.sites,
+					settingsKey: 'site',
+					callback: value => this.setSite(value)
+				}
+				this.type == 'profileRadarFacility' ? inputs.unshift(sitesInput) : inputs.push(sitesInput)
+			}
+		}
 
 		inputs.unshift(...additionalInputs)
-
 		this.components = {
 			controls: await controlsInit({
 				app: this.app,
@@ -355,68 +354,6 @@ export class profilePlot {
 		this.filtersCount = 0
 	}
 
-	async loadSampleData(chartType, inputs) {
-		if (this.state.logged) {
-			if (this.state.site && !this.settings.isAggregate) {
-				this.loadSites()
-				if (this.state.sites.length == 1) {
-					//select site if only choice to load its data
-					const id = this.sampleidmap[this.state.sites[0]]?.id
-					this.settings.site = id
-				}
-			} //Admin
-			else if (!this.state.site) {
-				this.sites = this.data.lst.map(s => {
-					return { label: this.data.refs.bySampleId[s.sample].label, value: s.sample }
-				})
-				this.sites.sort((a, b) => {
-					if (a.label < b.label) return -1
-					if (a.label > b.label) return 1
-					return 0
-				})
-				this.sites.unshift({ label: '', value: '' })
-			}
-			const isAggregate = this.isAggregate()
-			if (isAggregate && (this.state.sites?.length > 1 || this.state.user == 'admin'))
-				inputs.push({
-					label: 'Site',
-					type: 'dropdown',
-					chartType,
-					options: this.sites,
-					settingsKey: 'site',
-					callback: value => this.setSite(value)
-				})
-			this.sampleData = await this.getSampleData()
-		}
-	}
-
-	loadSites() {
-		this.sites = []
-		if (!this.isRadarFacility) this.sites.push({ label: '', value: '' })
-		for (const site of this.state.sites) {
-			const id = this.sampleidmap[site]?.id
-			this.sites.push({ label: site, value: id })
-		}
-	}
-
-	async getSampleData() {
-		if (this.settings.site) {
-			//sample selected or provided from login
-			let sampleData = this.data.samples[this.settings.site]
-			if (sampleData) return sampleData
-			//may have been filtered out
-			const data = await this.app.vocabApi.getAnnotatedSampleData({
-				terms: this.twLst,
-				filter: getSampleFilter(parseInt(this.settings.site)),
-				termsPerRequest: 30
-			})
-			if (data.lst.length == 0)
-				throw 'No data available for the selected site. Please change the cohort and close this message'
-			return data.samples[this.settings.site]
-		}
-		return null
-	}
-
 	setFilterValue(key, value) {
 		const config = this.config
 		this.settings[key] = value
@@ -440,7 +377,6 @@ export class profilePlot {
 
 	setSite(site) {
 		this.settings.site = site
-		this.sampleData = null
 		this.app.dispatch({ type: 'plot_edit', id: this.id, config: this.config })
 	}
 
@@ -480,14 +416,14 @@ export class profilePlot {
 				.append('text')
 				.attr('text-anchor', 'left')
 				.style('font-weight', 'bold')
-				.text(`${title} (n=${this.data.lst.length})`)
+				.text(`${title} (n=${this.sites.length - 1})`) //-1 because the first site is empty
 				.attr('transform', `translate(0, -5)`)
 			for (const tw of this.config.filterTWs) this.addFilterLegendItem(tw.term.name, this.settings[tw.term.id])
 		}
 		if (this.settings.site && !this.isRadarFacility) {
 			const label = this.sites.find(s => s.value == this.settings.site).label
 			this.addFilterLegendItem('Facility ID', label)
-			const hospital = this.sampleData?.[this.config.facilityTW.$id]?.value
+			const hospital = this.data.hospital
 			this.addFilterLegendItem('Facility', hospital)
 		}
 	}
@@ -552,24 +488,10 @@ export class profilePlot {
 		return filename
 	}
 
-	getPercentage(d, isAggregate = null) {
-		if (!d) return null
-		if (isAggregate == null)
-			// if not specified when called (not profileRadarFacility), if a sample is loaded do not aggregate
-			isAggregate = this.sampleData == null
-		if (isAggregate) {
-			const maxScore = d.maxScore.term ? this.data.lst[0]?.[d.maxScore.$id]?.value : d.maxScore
-			let scores = this.data.lst.map(sample => (sample[d.score.$id]?.value / maxScore) * 100)
-			scores.sort((s1, s2) => s1 - s2)
-			const middle = Math.floor(scores.length / 2)
-			const score = scores.length % 2 !== 0 ? scores[middle] : (scores[middle - 1] + scores[middle]) / 2
-			return Math.round(score)
-		} else {
-			const score = this.sampleData[d.score.$id]?.value
-			const maxScore = d.maxScore.term ? this.sampleData[d.maxScore.$id]?.value : d.maxScore //if maxScore is not a term, it is a number
-			const percentage = (score / maxScore) * 100
-			return Math.round(percentage)
-		}
+	getPercentage(d) {
+		if (!d) return 0
+		const score = this.data.term2Score[d.score.term.id]
+		return score
 	}
 }
 
@@ -583,12 +505,12 @@ export function makeChartBtnMenu(holder, chartsInstance, chartType) {
 	const state = chartsInstance.state
 	const key = state.activeCohort == FULL_COHORT ? 'full' : 'abbrev'
 	const typeConfig = state.termdbConfig?.plotConfigByCohort[key][chartType]
-	if (typeConfig.plots.length == 1) {
-		createPlot(typeConfig.plots[0], chartType, chartsInstance)
+	if (typeConfig.configs.length == 1) {
+		createPlot(typeConfig.configs[0], chartType, chartsInstance)
 		return
 	}
 	const menuDiv = holder.append('div')
-	for (const plotConfig of typeConfig.plots) {
+	for (const plotConfig of typeConfig.configs) {
 		menuDiv
 			.append('div')
 			.attr('class', 'sja_menuoption sja_sharp_border')

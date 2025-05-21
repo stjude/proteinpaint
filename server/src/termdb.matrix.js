@@ -13,6 +13,7 @@ import {
 } from '#shared/terms.js'
 import { get_bin_label, compute_bins } from '#shared/termdb.bins.js'
 import { trigger_getDefaultBins } from './termdb.getDefaultBins.js'
+import { get } from 'http'
 
 /*
 
@@ -347,7 +348,12 @@ async function mayGetSampleFilterSet4snplst(q, nonDictTerms) {
 	return new Set((await get_samples(q.filter, q.ds)).map(i => i.id))
 }
 
-export async function getSamplesPerFilter(q, ds, res) {
+export async function getSamplesPerFilterResponse(q, ds, res) {
+	const samples = await getSamplesPerFilter(q, ds)
+	res.send(samples)
+}
+
+export async function getSamplesPerFilter(q, ds) {
 	q.ds = ds
 	const samples = {}
 	for (const id in q.filters) {
@@ -355,7 +361,7 @@ export async function getSamplesPerFilter(q, ds, res) {
 		const result = (await get_samples(filter, q.ds)).map(i => i.id)
 		samples[id] = Array.from(new Set(result))
 	}
-	res.send(samples)
+	return samples
 }
 
 export function divideTerms(lst) {

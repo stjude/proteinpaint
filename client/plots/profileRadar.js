@@ -23,8 +23,10 @@ class profileRadar extends profilePlot {
 		for (const row of this.terms) {
 			this.twLst.push(row.term1.score)
 			if (row.term1.maxScore.term) this.twLst.push(row.term1.maxScore)
+			this.scoreTerms.push(row.term1)
 			this.twLst.push(row.term2.score)
 			if (row.term2.maxScore.term) this.twLst.push(row.term2.maxScore)
+			this.scoreTerms.push(row.term2)
 		}
 		this.arcGenerator = d3.arc().innerRadius(0)
 	}
@@ -40,7 +42,6 @@ class profileRadar extends profilePlot {
 	plot() {
 		const config = this.config
 		this.dom.plotDiv.selectAll('*').remove()
-		if (this.data.lst.length == 0) return
 		const width = 1180
 		const height = 800
 		this.dom.svg = this.dom.plotDiv
