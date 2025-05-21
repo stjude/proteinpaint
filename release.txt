@@ -1,1 +1,3 @@
-
+Fixes:
+- server cache manager must allow validate step to exit immediately
+- create bam cache dir as needed

@@ -3647,6 +3647,7 @@ const maxSize = bamCache.maxSize || 5e9
 const checkWait = bamCache.checkWait || 1 * 60 * 1000
 
 const cachedir_bam = serverconfig.cachedir_bam || path.join(serverconfig.cachedir, 'bam')
+if (!fs.existsSync(cachedir_bam)) fs.mkdirSync(cachedir_bam, { recursive: true })
 
 // a pending timeout reference from setTimeout that calls mayDeleteCacheFiles
 let cacheCheckTimeout,
