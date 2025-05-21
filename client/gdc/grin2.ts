@@ -279,6 +279,21 @@ async function getFilesAndShowTable(obj) {
 			const imageUrl = `data:image/png;base64,${response.pngImg}`
 
 			// Show and populate download button div next the Run Analysis button
+			// Create a unique name for the download file based on selected mutations
+			// and the current timestamp
+			const selectedMutations = analysisOptions
+				.filter(opt => opt.selected)
+				.map(opt => opt.label.replace(/[^a-zA-Z0-9]/g, ''))
+				.join('_')
+			console.log('Selected mutations:', selectedMutations)
+
+			const now = new Date()
+			const timestamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(
+				now.getDate()
+			).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}-${String(now.getMinutes()).padStart(
+				2,
+				'0'
+			)}-${String(now.getSeconds()).padStart(2, '0')}`
 			obj.downloadButtonDiv.selectAll('*').remove()
 			obj.downloadButtonDiv
 				.append('button')
@@ -286,7 +301,7 @@ async function getFilesAndShowTable(obj) {
 				.on('click', () => {
 					const a = document.createElement('a')
 					a.href = imageUrl
-					a.download = `GRIN2_Analysis_${new Date().toISOString().split('T')[0]}.png`
+					a.download = `GRIN2_Analysis_${selectedMutations}_${timestamp}.png`
 					document.body.appendChild(a)
 					a.click()
 					document.body.removeChild(a)
