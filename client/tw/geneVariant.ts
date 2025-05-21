@@ -124,6 +124,7 @@ export class GvBase extends TwBase {
 }
 
 // function to get child dt terms
+// will use these terms to generate a frontend vocab
 export async function mayGetChildTerms(tw: RawGvTW, vocabApi: VocabApi) {
 	if (tw.term.childTerms) return
 	if (!vocabApi.termdbConfig?.queries) throw 'termdbConfig.queries is missing'
@@ -158,11 +159,7 @@ export async function mayGetChildTerms(tw: RawGvTW, vocabApi: VocabApi) {
 		t.parentTerm = structuredClone(tw.term)
 		dtTermsInDs.push(t)
 	}
-	tw.term.childTerms = dtTermsInDs // will load dt terms as custom terms in frontend vocab
-
-	// track the parent geneVariant term on each dt term
-	//const geneVariantTerm = structuredClone(tw.term)
-	//for (const term of tw.term.filter.terms) term.geneVariantTerm = geneVariantTerm
+	tw.term.childTerms = dtTermsInDs
 }
 
 export class GvValues extends GvBase {
