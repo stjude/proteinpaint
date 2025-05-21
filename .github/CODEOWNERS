@@ -7,6 +7,7 @@
 
 # ORDER IS IMPORTANT
 # NOTE: more specific assignments below will override previous assigned rules
+.devcontainer/ @aacic @siosonel
 .github/ @aacic @siosonel @xzhou82
 .sse/ @siosonel
 
@@ -17,24 +18,27 @@ client/ @xzhou82 @siosonel
 client/appdrawer/ @creilly8 @xzhou82
 client/common/ @xzhou82 @siosonel
 client/filter/ @siosonel @xzhou82
-client/dom/ @creilly @siosonel
+client/dom/ @creilly8 @siosonel
 client/gdc/ @xzhou82 @siosonel @congyu-lu
 client/mass/ @xzhou82 @siosonel @congyu-lu
 client/mds3/ @xzhou82
+client/plots/ @xzhou82 @siosonel
 client/plots/matrix @siosonel @congyu-lu
 client/plots/profile @airenzp
 client/plots/regression* @gavrielm
 client/plots/wsi* @aacic
 client/plots/termdb/ @siosonel @xzhou82
-client/plots/test/ @siosonel 
+client/plots/test/ @siosonel @aacic
+client/src/ @xzhou82 @siosonel
 client/termsetting/ @siosonel @xzhou82
 client/tracks/ @xzhou82 @creilly8
 client/tw/ @siosonel @gavrielm
+client/types/ @creilly8 @siosonel
 client/*.* @siosonel
 
 container/ @aacic @siosonel @xzhou82
 
-front/ @aacic @siosonel @xzhou82 @creilly
+front/ @aacic @siosonel @xzhou82 @creilly8
 python/ @gavrielm @josephpowi @compbiolover @robinpaul85 @aacic
 R/ @gavrielm @josephpowi @compbiolover @robinpaul85
 rust/ @josephpowi @compbiolover @robinpaul85
@@ -42,7 +46,7 @@ rust/ @josephpowi @compbiolover @robinpaul85
 server/ @xzhou82 @siosonel
 server/*.* @xzhou82 @siosonel @aacic
 
-shared/types/ @creilly @siosonel @gavrielm @xzhou82
+shared/types/ @creilly8 @siosonel @gavrielm @xzhou82
 shared/utils/ @siosonel @xzhou82
 test/ @siosonel
 utils/ @siosonel
