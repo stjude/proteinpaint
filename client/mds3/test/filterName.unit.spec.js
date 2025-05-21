@@ -118,7 +118,7 @@ const fdtSnv = {
 		{
 			type: 'tvs',
 			tvs: {
-				term: { type: 'dtsnvindel', geneVariantTerm: { name: 'xx' } }
+				term: { type: 'dtsnvindel', parentTerm: { name: 'xx' } }
 			}
 		}
 	]
@@ -129,7 +129,7 @@ const fdtCnv = {
 		{
 			type: 'tvs',
 			tvs: {
-				term: { type: 'dtcnv', geneVariantTerm: { name: 'xx' } }
+				term: { type: 'dtcnv', parentTerm: { name: 'xx' } }
 			}
 		}
 	]
@@ -139,7 +139,7 @@ const fdtFusion = {
 		{
 			type: 'tvs',
 			tvs: {
-				term: { type: 'dtfusion', geneVariantTerm: { name: 'xx' } }
+				term: { type: 'dtfusion', parentTerm: { name: 'xx' } }
 			}
 		}
 	]
@@ -149,7 +149,7 @@ const fdtSv = {
 		{
 			type: 'tvs',
 			tvs: {
-				term: { type: 'dtsv', geneVariantTerm: { name: 'xx' } }
+				term: { type: 'dtsv', parentTerm: { name: 'xx' } }
 			}
 		}
 	]

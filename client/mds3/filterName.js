@@ -56,7 +56,7 @@ export function getFilterName(f) {
 				// after exhausting above term types, find a match from dtTerms[]; this avoids repeating them in many "case" statements
 				for (const dtt of dtTerms) {
 					if (dtt.type == tvs.term.type) {
-						return (tvs.term.geneVariantTerm?.name || '?') + ' ' + dtt.name
+						return (tvs.term.parentTerm?.name || '?') + ' ' + dtt.name
 					}
 				}
 				throw 'unknown tvs term type'
