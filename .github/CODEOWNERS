@@ -7,13 +7,43 @@
 
 # ORDER IS IMPORTANT
 # NOTE: more specific assignments below will override previous assigned rules
-# .github/ @aacic @siosonel
-# R/ @gavrielm @josephpowi @compbiolover @robinpaul85
-# rust/ @josephpowi @compbiolover @robinpaul85
+.github/ @aacic @siosonel @xzhou82
+.sse/ @siosonel
 
-# client/appdrawer @creilly8
-# client/gdc/ @xzhou82 @siosonel @congyu-lu
-# client/plots/matrix @siosonel @congyu-lu
-# client/plots/profile @airenzp
-# client/plots/regression* @gavrielm
-# client/plots/wsi* @aacic
+augen/ @siosonel
+build/ @aacic @siosonel @xzhou82
+
+client/ @xzhou82 @siosonel
+client/appdrawer/ @creilly8 @xzhou82
+client/common/ @xzhou82 @siosonel
+client/filter/ @siosonel @xzhou82
+client/dom/ @creilly @siosonel
+client/gdc/ @xzhou82 @siosonel @congyu-lu
+client/mass/ @xzhou82 @siosonel @congyu-lu
+client/mds3/ @xzhou82
+client/plots/matrix @siosonel @congyu-lu
+client/plots/profile @airenzp
+client/plots/regression* @gavrielm
+client/plots/wsi* @aacic
+client/plots/termdb/ @siosonel @xzhou82
+client/plots/test/ @siosonel 
+client/termsetting/ @siosonel @xzhou82
+client/tracks/ @xzhou82 @creilly8
+client/tw/ @siosonel @gavrielm
+client/*.* @siosonel
+
+container/ @aacic @siosonel @xzhou82
+
+front/ @aacic @siosonel @xzhou82 @creilly
+python/ @gavrielm @josephpowi @compbiolover @robinpaul85 @aacic
+R/ @gavrielm @josephpowi @compbiolover @robinpaul85
+rust/ @josephpowi @compbiolover @robinpaul85
+
+server/ @xzhou82 @siosonel
+server/*.* @xzhou82 @siosonel @aacic
+
+shared/types/ @creilly @siosonel @gavrielm @xzhou82
+shared/utils/ @siosonel @xzhou82
+test/ @siosonel
+utils/ @siosonel
+*.* @xzhou82 @siosonel @aacic
