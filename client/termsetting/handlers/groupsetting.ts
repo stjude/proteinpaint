@@ -3,7 +3,7 @@ import { select, type Selection } from 'd3-selection'
 //import { disappear } from '#src/client'
 import { throwMsgWithFilePathAndFnName } from '#dom/sayerror'
 import { debounce } from 'debounce'
-import type { TermSettingInstance, CustomGroupSettingQ, GroupSettingQ, MinBaseQ, GvTerm, DtTerm } from '#types'
+import type { TermSettingInstance, CustomGroupSettingQ, GroupSettingQ, MinBaseQ, Term, Filter } from '#types'
 import { filterInit, getNormalRoot, getWrappedTvslst, filterJoin } from '#filter/filter'
 
 /*
@@ -42,8 +42,9 @@ type ItemEntry = {
 	uncomputable?: boolean
 }
 type FilterEntry = {
-	terms: DtTerm[]
+	terms: Term[]
 	group: number // group index
+	active?: Filter
 }
 type DataInput = { [index: string]: ItemEntry }
 type GrpEntry = {
@@ -125,8 +126,7 @@ export class GroupSettingMethods {
 			} else {
 				// custom groupset undefined
 				// build empty groupset
-				if (this.tsInstance.term.type != 'geneVariant') throw 'unexpected term type'
-				const term = this.tsInstance.term as GvTerm
+				const term = this.tsInstance.term
 				if (!term.childTerms) throw 'child terms missing'
 				for (const grpIdx of grpIdxes) {
 					this.data.filters.push({ terms: term.childTerms, group: grpIdx })
@@ -178,9 +178,9 @@ export class GroupSettingMethods {
 			})
 			grpIdxes.delete(i)
 			if (group.type == 'filter') {
-				const filter = group.filter
-				if (!filter) throw 'filter missing'
-				this.data.filters.push(filter)
+				const term = this.tsInstance.term
+				if (!term.childTerms) throw 'child terms missing'
+				this.data.filters.push({ terms: term.childTerms, active: group.filter, group: i })
 			} else if (group.type == 'values') {
 				for (const value of group.values) {
 					/** label may not be provided in groupsetting.customset.
@@ -203,6 +203,8 @@ export class GroupSettingMethods {
 				}
 			}
 		}
+
+		if (this.type == 'filter') return
 
 		//Find excluded values not returned in customset
 		if (
@@ -325,9 +327,9 @@ function setRenderers(self: any) {
 				if (self.type == 'filter') {
 					// add empty filter for this group
 					// will display filter button in UI
-					const filter = self.tsInstance.term.filter
-					if (!filter) throw 'filter missing'
-					self.data.filters.push(Object.assign({}, filter, { group: group.currentIdx }))
+					const term = self.tsInstance.term
+					if (!term.childTerms) throw 'child terms missing'
+					self.data.filters.push({ terms: term.childTerms, group: group.currentIdx })
 				}
 				await initGroupDiv(group)
 				await self.update()
