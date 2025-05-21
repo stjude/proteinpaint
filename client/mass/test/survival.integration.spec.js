@@ -627,3 +627,39 @@ tape('survival term as term1, term0 = agedx, custom bins', function (test) {
 		test.end()
 	}
 })
+
+tape('survival term as term1, term2 = geneVariant', function (test) {
+	test.timeoutAfter(10000)
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'survival',
+					term: {
+						id: 'efs'
+					},
+					term2: { term: { type: 'geneVariant', gene: 'TP53' } }
+				}
+			]
+		},
+		survival: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	let survivalDiv
+	async function runTests(survival) {
+		survivalDiv = survival.Inner.dom.chartsDiv
+		test.equal(survivalDiv && survivalDiv.selectAll('.sjpp-survival-series').size(), 2, 'should render 2 surv series g')
+		test.equal(
+			survivalDiv && survivalDiv.selectAll('.sjpp-survival-censored-x').size(),
+			10,
+			'should render 10 survival censored symbols'
+		)
+
+		if (test._ok) survival.Inner.app.destroy()
+		test.end()
+	}
+})

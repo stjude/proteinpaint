@@ -269,7 +269,7 @@ tape('term1=geneVariant no group', function (test) {
 		state: {
 			plots: [
 				{
-					chartType: 'summary', // cannot use 'barchart', breaks
+					chartType: 'barchart',
 					term: { term: { type: 'geneVariant', gene: 'TP53' } }
 				}
 			]
@@ -296,7 +296,7 @@ tape('term1=geneVariant with groups', function (test) {
 		state: {
 			plots: [
 				{
-					chartType: 'summary', // cannot use 'barchart', breaks
+					chartType: 'barchart',
 					term: geneVariantTw
 				}
 			]
@@ -323,7 +323,7 @@ tape('term1=categorical, term2=geneVariant', function (test) {
 		state: {
 			plots: [
 				{
-					chartType: 'summary', // cannot use 'barchart', breaks
+					chartType: 'barchart',
 					term: { id: 'diaggrp' },
 					term2: geneVariantTw
 				}
@@ -380,7 +380,7 @@ tape('term2=geneExp, term1=geneVariant', function (test) {
 		state: {
 			plots: [
 				{
-					chartType: 'summary', // cannot use 'barchart', breaks
+					chartType: 'barchart',
 					term: geneVariantTw,
 					term2: { term: { type: 'geneExpression', gene: 'TP53' } }
 				}
