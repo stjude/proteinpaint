@@ -1,5 +1,5 @@
-import type { GdcMafRequest, GdcMafResponse, GdcMafFile, RouteApi } from '#types'
-import { gdcMafPayload } from '#types/checkers'
+import type { GdcGRIN2listRequest, GdcGRIN2listResponse, GdcGRIN2File, RouteApi } from '#types'
+import { gdcGRIN2listPayload } from '#types/checkers'
 import ky from 'ky'
 import { joinUrl } from '#shared/joinUrl.js'
 import serverconfig from '#src/serverconfig.js'
@@ -20,11 +20,11 @@ export const api: RouteApi = {
 	endpoint: 'gdc/GRIN2list',
 	methods: {
 		get: {
-			...gdcMafPayload,
+			...gdcGRIN2listPayload,
 			init
 		},
 		post: {
-			...gdcMafPayload,
+			...gdcGRIN2listPayload,
 			init
 		}
 	}
@@ -38,7 +38,7 @@ function init({ genomes }) {
 			const ds = g.datasets.GDC
 			if (!ds) throw 'hg38 GDC missing'
 
-			const payload = await listMafFiles(req.query as GdcMafRequest, ds)
+			const payload = await listMafFiles(req.query as GdcGRIN2listRequest, ds)
 			res.send(payload)
 		} catch (e: any) {
 			res.send({ status: 'error', error: e.message || e })
@@ -58,7 +58,7 @@ ds {
 	}
 }
 */
-async function listMafFiles(q: GdcMafRequest, ds: any) {
+async function listMafFiles(q: GdcGRIN2listRequest, ds: any) {
 	const dataFormatFilter = {
 		op: 'and',
 		content: [{ op: '=', content: { field: 'data_format', value: 'MAF' } }]
@@ -105,7 +105,7 @@ async function listMafFiles(q: GdcMafRequest, ds: any) {
 
 	// flatten api return to table row objects
 	// it is possible to set a max size limit to limit the number of files passed to client
-	const files: GdcMafFile[] = []
+	const files: GdcGRIN2File[] = []
 
 	for (const h of re.data.hits) {
 		/*
@@ -135,7 +135,7 @@ async function listMafFiles(q: GdcMafRequest, ds: any) {
 		if (!c) throw 'h.cases[0] missing'
 		if (h.file_size >= 1000000) continue // ignore files larger than or equal to 1Mb
 
-		const file: GdcMafFile = {
+		const file: GdcGRIN2File = {
 			id: h.id,
 			project_id: c.project.project_id,
 			file_size: h.file_size,
@@ -171,7 +171,7 @@ async function listMafFiles(q: GdcMafRequest, ds: any) {
 		files,
 		filesTotal: re.data.pagination.total,
 		maxTotalSizeCompressed
-	} as GdcMafResponse
+	} as GdcGRIN2listResponse
 
 	return result
 }
