@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.127.0
 
 Features:
 - add option upon clicking custom variable to launch both pre-built and new matrix
