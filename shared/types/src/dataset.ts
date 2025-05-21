@@ -981,6 +981,8 @@ export type WSImages = {
 	getWSIAnnotations?: (sampleName: string, wsiImage: string) => Promise<string[]>
 	/**  ds supplied */
 	getZoomInPoints?: (sampleName: string, wsiImage: string, index: number) => Promise<Array<[number, number]>>
+	/**  ds supplied */
+	makeGeoJson?: (sampleId: string, wsiImage: string) => void
 }
 
 /*** types supporting Termdb ***/
