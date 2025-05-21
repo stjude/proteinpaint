@@ -36,7 +36,7 @@ class ProfilePolar extends profilePlot {
 	async init(appState: MassState) {
 		await super.init(appState)
 		const config = appState.plots.find(p => p.id === this.id) as any
-
+		this.scoreTerms = config.terms
 		for (const data of config.terms) {
 			this.twLst.push(data.score)
 			this.twLst.push(data.maxScore)
