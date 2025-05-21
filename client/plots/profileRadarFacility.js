@@ -16,6 +16,7 @@ class profileRadarFacility extends profilePlot {
 	async init(appState) {
 		await super.init(appState)
 		const config = structuredClone(appState.plots.find(p => p.id === this.id))
+		this.scoreTerms = []
 		this.plotConfig = config
 		this.twLst = [config.facilityTW]
 		this.terms = config.terms
@@ -23,64 +24,32 @@ class profileRadarFacility extends profilePlot {
 			this.rowCount++
 			this.twLst.push(row.score)
 			this.twLst.push(row.maxScore)
+			this.scoreTerms.push(row)
 		}
 		this.lineGenerator = d3.line()
 		this.arcGenerator = d3.arc().innerRadius(0)
 	}
 
-	async loadSampleData(chartType, inputs) {
-		const isAggregate = this.isAggregate()
-		if (this.state.logged) {
-			let result
-
-			if (this.state.site && !isAggregate) {
-				this.loadSites()
-				if (!this.settings.site) {
-					//select site if only choice to load its data
-					const id = this.sampleidmap[this.state.sites[0]]?.id
-					this.settings.site = id
-				}
-				this.sampleData = await this.getSampleData()
-			} //Admin
-			else {
-				result = await this.app.vocabApi.getAnnotatedSampleData({
-					terms: this.twLst,
-					termsPerRequest: 30
-				})
-				this.sites = result.lst.map(s => {
-					return { label: result.refs.bySampleId[s.sample].label, value: s.sample }
-				})
-				this.sites.sort((a, b) => {
-					if (a.label < b.label) return -1
-					if (a.label > b.label) return 1
-					return 0
-				})
-				if (!this.settings.site) this.settings.site = this.sites[0].value
-				this.sampleData = result.samples[Number(this.settings.site)]
-			}
-			inputs.unshift({
-				label: 'Site',
-				type: 'dropdown',
-				chartType,
-				options: this.sites,
-				settingsKey: 'site',
-				callback: value => this.setSite(value)
-			})
-		}
-	}
-
 	async main() {
 		await super.main()
-
 		await this.setControls()
-
+		const site = this.settings.site || this.data.sites?.[0]?.value
+		this.sampleData = await this.app.vocabApi.getProfileScores({
+			terms: [...this.twLst, this.config.facilityTW], //added facility term to all the plots to get the hospital name
+			scoreTerms: this.scoreTerms,
+			filter: this.filter,
+			isAggregate: false,
+			isRadarFacility: true,
+			site,
+			userSites: this.state.sites,
+			facilityTW: this.config.facilityTW
+		})
 		this.angle = (Math.PI * 2) / this.terms.length
 		this.plot()
 	}
 
 	plot() {
 		this.dom.plotDiv.selectAll('*').remove()
-		if (this.data.lst.length == 0) return
 		const width = 1200
 		const height = 800
 		this.dom.svg = this.dom.plotDiv
@@ -132,8 +101,8 @@ class profileRadarFacility extends profilePlot {
 			data2 = []
 		for (const item of this.terms) {
 			const iangle = i * this.angle - Math.PI / 2
-			const percentage1 = this.getPercentage(item, false) //facility
-			const percentage2 = this.getPercentage(item, true)
+			const percentage1 = this.getSamplePercentage(item) //facility
+			const percentage2 = this.getPercentage(item)
 
 			this.radarG
 				.append('path')
@@ -229,7 +198,7 @@ class profileRadarFacility extends profilePlot {
 		this.addFilterLegend()
 		this.legendG.append('text').attr('text-anchor', 'left').style('font-weight', 'bold').text('Legend')
 		const site = this.settings.site || this.sites[0].value
-		const hospital = this.sampleData[this.config.facilityTW.$id].value
+		const hospital = this.sampleData.hospital
 		const siteLabel = this.sites.find(s => s.value == site).label
 		this.addLegendItem(`${siteLabel} / ${hospital}`, color1, 0, 'none')
 		this.addLegendItem(this.config.score, color2, 1, '5, 5')
@@ -320,6 +289,12 @@ class profileRadarFacility extends profilePlot {
 			tr.append('td').text(d.percentage2)
 			menu.show(event.clientX, event.clientY, true, true)
 		} else this.onMouseOut(event)
+	}
+
+	getSamplePercentage(d) {
+		if (!d) return 0
+		const score = this.sampleData.term2Score[d.score.term.id]
+		return score
 	}
 }
 

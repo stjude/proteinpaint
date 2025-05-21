@@ -51,10 +51,12 @@ class profileBarchart extends profilePlot {
 				if (row.term1) {
 					this.twLst.push(row.term1.score)
 					this.twLst.push(row.term1.maxScore)
+					this.scoreTerms.push(row.term1)
 				}
 				if (row.term2) {
 					this.twLst.push(row.term2.score)
 					this.twLst.push(row.term2.maxScore)
+					this.scoreTerms.push(row.term2)
 				}
 			}
 		await this.setControls([this.componentInput])

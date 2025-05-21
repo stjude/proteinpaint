@@ -57,5 +57,7 @@ export const routeFiles = [
 	import('../routes/tileserver.ts'),
 	import('../routes/wsimages.ts'),
 	import('../routes/wsisamples.ts'),
-	import('../routes/img.ts')
+	import('../routes/img.ts'),
+	import('../routes/plotFilters.ts'),
+	import('../routes/profileScores.ts')
 ]
