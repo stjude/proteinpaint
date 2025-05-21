@@ -2436,5 +2436,41 @@
       "prev": 0,
       "diff": 16.815
     }
+  },
+  "mass/groups.js": {
+    "lines": {
+      "total": 405,
+      "covered": 145,
+      "skipped": 0,
+      "pct": 35.8
+    },
+    "functions": {
+      "total": 73,
+      "covered": 19,
+      "skipped": 0,
+      "pct": 26.02
+    },
+    "statements": {
+      "total": 440,
+      "covered": 152,
+      "skipped": 0,
+      "pct": 34.54
+    },
+    "branches": {
+      "total": 194,
+      "covered": 41,
+      "skipped": 0,
+      "pct": 21.13
+    },
+    "lowestPct": {
+      "curr": 21.13,
+      "prev": 0,
+      "diff": 21.13
+    },
+    "averagePct": {
+      "curr": 29.372499999999995,
+      "prev": 0,
+      "diff": 29.372499999999995
+    }
   }
 }
