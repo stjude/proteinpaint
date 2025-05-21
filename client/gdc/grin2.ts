@@ -1,6 +1,7 @@
 import { dofetch3 } from '#common/dofetch'
 import { make_radios, renderTable, sayerror, Menu, table2col } from '#dom'
 import { select } from 'd3-selection'
+import { formatElapsedTime } from '@sjcrh/proteinpaint-shared/time.js'
 
 /*
 a UI to list open-access maf and cnv files from current cohort
@@ -267,7 +268,10 @@ async function getFilesAndShowTable(obj) {
 			// Call the GRIN2 run endpoint with the correctly formatted data
 			console.log('Sending GRIN2 request:', caseFiles)
 			console.log('GRIN2 request body:', JSON.stringify(caseFiles, null, 2))
+			const startTime = Date.now()
 			const response = await dofetch3('gdc/runGRIN2', { body: caseFiles })
+			const elapsedTime = formatElapsedTime(Date.now() - startTime)
+			console.log(`GRIN2 analysis took ${elapsedTime}`)
 			if (!response) throw 'invalid response'
 			if (response.error) throw response.error
 
