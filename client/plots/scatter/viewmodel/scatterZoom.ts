@@ -2,6 +2,8 @@ import { zoom as d3zoom } from 'd3-zoom'
 import { icons as icon_functions } from '#dom'
 import type { Scatter } from '../scatter.js'
 import { zoomIdentity } from 'd3-zoom'
+import { to_textfile } from '#dom/downloadTextfile'
+
 export class ScatterZoom {
 	scatter: Scatter
 	zoomD3: any
@@ -60,24 +62,14 @@ export class ScatterZoom {
 			.style('margin', '15px 10px')
 			.attr('name', 'sjpp-zoom-save-btn') //For unit tests
 		icon_functions['save'](saveZoomDiv, {
-			handler: () => this.saveZoom(),
-			title: 'Save the zoom transformation in the state. Needed when creating a session to persist the zoom'
+			handler: () => this.saveSession(),
+			title: 'Save the current view to a session to reload it later'
 		})
 		for (const chart of this.scatter.model.charts) {
 			chart.mainG.call(this.zoomD3)
 		}
 
 		if (this.scatter.config.scaleDotTW && this.zoom > 4) this.resetToIdentity()
-	}
-
-	saveZoom() {
-		if (!this.transform) return
-		this.scatter.config.transform = this.transform.toString()
-		this.scatter.app.dispatch({
-			type: 'plot_edit',
-			id: this.scatter.id,
-			config: this.scatter.config
-		})
 	}
 
 	handleZoom(transform) {
@@ -112,5 +104,16 @@ export class ScatterZoom {
 		if (!this.scatter.model.is2DLarge)
 			for (const chart of this.scatter.model.charts)
 				chart.mainG.transition().duration(500).call(this.zoomD3.transform, zoomIdentity)
+	}
+
+	saveSession(name = 'scatter') {
+		const sessionName = name
+		const ext = sessionName?.endsWith('.txt') ? '' : '.txt'
+		const filename = `${sessionName}${ext}`
+		const state = structuredClone(this.scatter.app.getState())
+		const plot = state.plots.find(p => p.id == this.scatter.id)
+		if (this.transform) plot.transform = this.transform.toString()
+		const session = JSON.stringify(state)
+		to_textfile(filename, session)
 	}
 }
