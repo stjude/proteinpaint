@@ -873,7 +873,7 @@ async function getCnvFusion4oneCase(opts, ds) {
 			if (h.experimental_strategy == 'WGS') {
 				// is wgs, no need to check tissue_type, the file is usable
 				if (!h.file_id) continue
-				if (h.data_type != 'Copy Number Segment') continue
+				if (h.data_type != 'Allele-specific Copy Number Segment') continue
 				wgsFile = h.file_id
 				continue
 			}
@@ -883,11 +883,11 @@ async function getCnvFusion4oneCase(opts, ds) {
 	const events = [] // collect cnv and fusion events into one array
 
 	if (wgsFile || snpFile) {
+		//console.log('wgs',wgsFile,'snp',snpFile) // for testing to find out which is used
 		// has cnv file based on either wgs or snp array; wgs has priority
 		// do not use headers here since accept should be 'text/plain', not 'application/json'
 		const re = await ky(joinUrl(host.rest, 'data', wgsFile || snpFile), { timeout: false }).text()
 		parseCnvFile(re.trim().split('\n'), events)
-		//console.log(11, wgsFile ? 'wgs' : 'snp') // for testing to find out which is used
 	}
 
 	if (arribaFile) {
@@ -932,7 +932,7 @@ async function getCnvFusion4oneCase(opts, ds) {
 						field: 'data_type',
 						value: [
 							'Masked Copy Number Segment', // for snp array we only want this type of file
-							'Copy Number Segment', // for wgs we want this type of file
+							'Allele-specific Copy Number Segment', //'Copy Number Variation', // for wgs we want this type of file
 							'Transcript Fusion' // fusion
 						]
 					}
