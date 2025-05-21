@@ -42,6 +42,7 @@ type CacheOpts = {
 			  }
 	}
 	callbacks: Callbacks
+	mustExitPendingValidation?: boolean
 }
 
 // options to trigger a callback after
@@ -129,7 +130,7 @@ export class CacheManager {
 			}
 		}
 		if (this.callbacks.preStart) await this.callbacks.preStart(this)
-		await this.start()
+		if (!opts.mustExitPendingValidation) await this.start()
 	}
 
 	/** Check if the subdir exists. If not create. */

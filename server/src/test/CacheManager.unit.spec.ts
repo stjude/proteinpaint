@@ -99,7 +99,7 @@ tape('defaults', function (test) {
 	})
 })
 
-tape('move or delete by maxAge', function (test) {
+tape('move or delete by maxAge', test => {
 	test.timeoutAfter(2000)
 	test.plan(10)
 
@@ -304,4 +304,34 @@ tape('checks concurrency and postStop callback', test => {
 		test.pass(message)
 		monitor.stop()
 	}, 2 * interval + 10)
+})
+
+tape('may skip start()', test => {
+	test.timeoutAfter(300)
+	test.plan(2)
+	const cachedir = path.join(process.cwd(), '.cache-test4')
+	let numChecks = 0
+	const monitor = new CacheManager({
+		quiet: true,
+		cachedir,
+		interval: 100,
+		callbacks: {
+			preStart: () => {
+				test.pass('should call preStart callback')
+			},
+			/* v8 ignore start */
+			postCheck: () => {
+				numChecks++
+				// will fail in the setTimeout callback below
+				monitor.stop()
+			}
+			/* v8 ignore stop */
+		},
+		mustExitPendingValidation: true
+	})
+
+	setTimeout(() => {
+		test.equal(numChecks, 0, 'must not start checking cache files when opts.mustExitPendingValidation=true')
+		test.end()
+	}, 200)
 })

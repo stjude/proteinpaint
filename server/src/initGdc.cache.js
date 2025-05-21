@@ -44,7 +44,7 @@ export async function initGdcCache(ds) {
 
 	// may do it because it could be disabled by feature toggle
 	// caching action is fine-tuned by the feature toggle on a pp instance; log out detailed status per setting
-	if (serverconfig.features.stopGdcCacheAliquot) {
+	if (serverconfig.features.stopGdcCacheAliquot || serverconfig.features.mustExitPendingValidation) {
 		// do not cache at all. this flag is auto-set for container validation. running stale cache check will cause the server process not to quit, and break validation, thus must skip this when flag is true
 		console.log('GDC: sample IDs are not cached! No periodic check will take place!')
 		if (!ds.__gdc) ds.__gdc = getCacheRef(ds) // though nothing is cached, must init the cache holder so not to break code that accesses this holder

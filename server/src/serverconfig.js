@@ -228,6 +228,7 @@ if (process.argv.find(a => a == 'validate')) {
 	// async methods will still block the validation. Only other async methods are not blocked
 	// by each other while executing.
 	serverconfig.features.stopGdcCacheAliquot = true
+	serverconfig.features.mustExitPendingValidation = true
 }
 
 const publicDir = path.join(process.cwd(), './public')
