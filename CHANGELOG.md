@@ -9,6 +9,8 @@ Features:
 
 Fixes:
 - add "Top variably expressed genes" to geneset edit UI of hiercluster launced from custom variable
+- server cache manager must allow validate step to exit immediately
+- create bam cache dir as needed
 
 
 ## 2.126.2
