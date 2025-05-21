@@ -464,8 +464,15 @@ export async function initGenomesDs(serverconfig) {
 function mayRetryInit(g, ds, d, e) {
 	// if initial attempt fails, can stop or retry
 	const gdlabel = `${g.label}/${ds.label}`
-	console.log(`Init error with ${gdlabel}: `, e)
-	console.trace(e)
+	console.log(`Init error with ${gdlabel}`)
+
+	if (serverconfig.features.mustExitPendingValidation) {
+		const msg = ds.init.fatalError || ds.init.recoverableError || e?.error || e
+		// optional slack notification will be handled in app.ts
+		throw msg
+	}
+
+	if (e) console.trace(e)
 
 	if (!ds.init.recoverableError && !utils.nonFatalStatus.has(ds.init.status) && !utils.nonFatalStatus.has(e.status)) {
 		// forget datasets that did not load or cannot be loaded with retries
@@ -509,7 +516,6 @@ function mayRetryInit(g, ds, d, e) {
 				clearInterval(interval) // cancel since retrying will not change the outcome
 				ds.init.status = 'fatalError'
 				if (serverconfig.slackWebhookUrl) {
-					const url = serverconfig.URL
 					sendMessageToSlack(
 						serverconfig.slackWebhookUrl,
 						`\n${serverconfig.URL}: ${msg}`,
@@ -528,7 +534,6 @@ function mayRetryInit(g, ds, d, e) {
 						console.log(e)
 					}
 					if (serverconfig.slackWebhookUrl) {
-						const url = serverconfig.URL
 						sendMessageToSlack(
 							serverconfig.slackWebhookUrl,
 							`\n${serverconfig.URL}: ${msg}`,

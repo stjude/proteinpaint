@@ -105,7 +105,7 @@ export async function launch() {
 			}
 		}
 
-		if (err.stack) console.log(err.stack)
+		if (err?.stack) console.log(err.stack)
 		if (exitCode) console.error('\n!!!\n' + err + '\n\n')
 		else console.log('\n!!!\n' + err + '\n\n')
 		/*
@@ -114,7 +114,7 @@ export async function launch() {
       and thereby avoid unnecessary endless restarts of an invalid server
       init with bad config, data, and/or code
     */
-		const msg = err.stack ? err.stack : err
+		const msg = err?.stack || err
 		if (serverconfig.slackWebhookUrl) {
 			const url = serverconfig.URL
 			const message = `Startup error on: ${url} \n` + `${msg}`
