@@ -884,6 +884,7 @@ async function getCnvFusion4oneCase(opts, ds) {
 
 	if (wgsFile || snpFile) {
 		//console.log('wgs',wgsFile,'snp',snpFile) // for testing to find out which is used
+
 		// has cnv file based on either wgs or snp array; wgs has priority
 		// do not use headers here since accept should be 'text/plain', not 'application/json'
 		const re = await ky(joinUrl(host.rest, 'data', wgsFile || snpFile), { timeout: false }).text()
@@ -932,7 +933,7 @@ async function getCnvFusion4oneCase(opts, ds) {
 						field: 'data_type',
 						value: [
 							'Masked Copy Number Segment', // for snp array we only want this type of file
-							'Allele-specific Copy Number Segment', //'Copy Number Variation', // for wgs we want this type of file
+							'Allele-specific Copy Number Segment', // for wgs we want this type of file
 							'Transcript Fusion' // fusion
 						]
 					}
