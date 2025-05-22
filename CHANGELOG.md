@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 Fixes:
 - allow to filter cnv segments by cnv class category
 - Additional refactoring of GRIN2 prototype. Now using new payload structure
+- pass fusion breakpoints as sample property for correct display in mds3 tk sample table
 
 
 ## 2.128.0
