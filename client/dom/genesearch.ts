@@ -76,6 +76,12 @@ type GeneSearchBoxArg = {
 	genome: ClientCopyGenome
 	/** default gene name to fill into search box */
 	geneSymbol?: string
+	/** option to automatically trigger a search when a geneSymbol is specified */
+	triggerSearch?: boolean
+	/** option to hide the search input after search results are generated */
+	hideInputBeforeCallback?: boolean
+	/** option to disable the input, useful in demo mode */
+	disableInput?: boolean
 }
 /*************************************
 by calling addGeneSearchbox(), it redirectly returns a RESULT object detailed below without await
@@ -177,8 +183,10 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 		.attr('type', 'text')
 		.attr('placeholder', placeholder)
 		.attr('aria-label', 'Gene symbol, position, or alias')
+		.property('disabled', arg.disableInput || false)
 		.attr('class', 'sja_genesearchinput')
 		.style('width', width + 'px')
+
 	result.searchbox = searchbox
 
 	searchbox
@@ -313,11 +321,11 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 			}
 			debouncer()
 		})
+
 	// focusOff fix for jerky (unsmooth) app drawer sliding.
 	// App drawer slide animation very jerky when .focus() is applied to any
 	// input box. Set focusOff: true to smoothly execute animations.
 	if (!arg.focusOff) searchbox.node().focus()
-
 	const searchStat = {
 		mark: row.append('span').style('margin-left', '5px'),
 		word: row.append('span').style('margin-left', '5px').style('font-size', '.8em').style('opacity', 0.6)
@@ -520,6 +528,11 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 		result.fromWhat = fromWhat
 
 		if (r && arg.callback) {
+			if (arg.hideInputBeforeCallback) {
+				// hide this search box after getting the results
+				searchbox.style('display', 'none') // hide input
+				arg.row.selectAll(':scope>span').style('display', 'none') // hide input label, checkbox
+			}
 			// has valid result, trigger callback (no need to await?)
 			await arg.callback()
 		}
@@ -531,7 +544,18 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 	const geneSymbol = arg.geneSymbol || ''
 	if (geneSymbol) {
 		searchbox.property('value', geneSymbol)
-		setTimeout(() => getResult({ geneSymbol: arg.geneSymbol }, geneSymbol), 10)
+		if (arg.triggerSearch)
+			searchbox.node().dispatchEvent(
+				new KeyboardEvent('keyup', {
+					key: 'Enter',
+					code: 'Enter',
+					keyCode: 13, // deprecated but still widely used
+					which: 13, // deprecated but still widely used
+					bubbles: true, // important to allow the event to bubble up
+					cancelable: true
+				})
+			)
+		else setTimeout(() => getResult({ geneSymbol: arg.geneSymbol }, geneSymbol), 10)
 	}
 
 	return result //searchbox
