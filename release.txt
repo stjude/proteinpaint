@@ -1,1 +1,2 @@
-
+Fixes:
+- Added logic to remove duplicate MAF files for the same case and report them to console.log. Now reporting files that have been excluded due to file size to console.log
