@@ -27,7 +27,7 @@ const tableColumns = [
 	{ label: 'File Size', barplot: { tickFormat: '~s' }, sortable: true }
 ]
 
-// list of analysis options
+// list of data type options
 const datatypeOptions = [
 	{ option: 'mafOption', selected: true, label: 'Include Mutation' },
 	{ option: 'cnvOption', selected: true, label: 'Include CNV' },
@@ -158,6 +158,30 @@ async function getFilesAndShowTable(obj) {
 		if (result.error) throw result.error
 		if (!Array.isArray(result.files)) throw 'result.files[] not array'
 		if (result.files.length == 0) throw 'No files available.'
+
+		// Show deduplication information if any duplicates were removed
+		if (result.deduplicationStats && result.deduplicationStats.duplicatesRemoved > 0) {
+			const deduplicationDiv = obj.deduplicationInfoDiv
+				.append('div')
+				.style('background-color', '#f0f8ff')
+				.style('border', '1px solid #87ceeb')
+				.style('border-radius', '4px')
+				.style('padding', '10px')
+				.style('margin', '10px 0')
+
+			deduplicationDiv
+				.append('div')
+				.style('font-weight', 'bold')
+				.style('color', '#2c5aa0')
+				.text('🔄 File Deduplication Applied')
+
+			deduplicationDiv.append('div').style('margin-top', '5px').style('font-size', '14px').html(`
+					Found <strong>${result.deduplicationStats.originalFileCount}</strong> total MAF files, 
+					but <strong>${result.deduplicationStats.duplicatesRemoved}</strong> were duplicates from the same cases. 
+					<br/>Showing <strong>${result.deduplicationStats.deduplicatedFileCount}</strong> unique cases 
+					(largest file selected for each case).
+				`)
+		}
 
 		// render
 		if (result.filesTotal > result.files.length) {

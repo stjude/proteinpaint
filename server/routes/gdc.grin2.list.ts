@@ -152,7 +152,12 @@ async function listMafFiles(q: GdcGRIN2listRequest, ds: any) {
 
 		const c = h.cases?.[0]
 		if (!c) throw 'h.cases[0] missing'
-		if (h.file_size >= maxFileSizeAllowed) continue // ignore files larger than or equal to 1Mb
+		if (h.file_size >= maxFileSizeAllowed) {
+			console.log(
+				`File ${h.id} with a size of ${h.file_size} bytes is larger then the allowed file size. It is excluded from the list.\nIf you want to include it, please increase the maxFileSizeAllowed in the code.`
+			)
+			continue
+		}
 
 		const file: GdcGRIN2File = {
 			id: h.id,
@@ -183,12 +188,56 @@ async function listMafFiles(q: GdcGRIN2listRequest, ds: any) {
 		files.push(file)
 	}
 
+	// DEDUPLICATION LOGIC: Keep only one MAF file per case
+	// Group files by case_submitter_id and keep the largest file for each case
+	const filesByCase = new Map<string, GdcGRIN2File[]>()
+
+	// Group all files by case
+	for (const file of files) {
+		const caseId = file.case_submitter_id
+		if (!filesByCase.has(caseId)) {
+			filesByCase.set(caseId, [])
+		}
+		filesByCase.get(caseId)!.push(file)
+	}
+
+	// Select the best file for each case (largest file size)
+	const deduplicatedFiles: GdcGRIN2File[] = []
+	let duplicatesRemoved = 0
+
+	for (const [caseId, caseFiles] of filesByCase) {
+		if (caseFiles.length > 1) {
+			// Multiple files for this case - keep the largest one
+			// Sort by file size descending and take the first one
+			caseFiles.sort((a, b) => b.file_size - a.file_size)
+			deduplicatedFiles.push(caseFiles[0])
+			duplicatesRemoved += caseFiles.length - 1
+
+			console.log(
+				`Case ${caseId}: Found ${caseFiles.length} MAF files, keeping largest (${caseFiles[0].file_size} bytes)`
+			)
+		} else {
+			// Only one file for this case
+			deduplicatedFiles.push(caseFiles[0])
+		}
+	}
+
+	// Log deduplication results
+	if (duplicatesRemoved > 0) {
+		console.log(
+			`GRIN2 MAF deduplication: Removed ${duplicatesRemoved} duplicate files, kept ${deduplicatedFiles.length} unique cases`
+		)
+	}
+
 	// sort files in descending order of file size and show on table as default
-	files.sort((a, b) => b.file_size - a.file_size)
+	//files.sort((a, b) => b.file_size - a.file_size)
+
+	// sort final files in descending order of file size and show on table as default
+	deduplicatedFiles.sort((a, b) => b.file_size - a.file_size)
 
 	// Add file type information to the response
 	const result = {
-		files,
+		files: deduplicatedFiles,
 		filesTotal: re.data.pagination.total,
 		maxTotalSizeCompressed,
 		fileCounts: {
