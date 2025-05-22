@@ -938,6 +938,10 @@ export class Block {
 				'No tracks specified. If you don\'t expect to see this, delete the "block:true" from runproteinpaint() argument.'
 			)
 		}
+
+		if (this.tklst?.[0].hardcodeCnvOnly && this.tklst[0].disableSearchInput) {
+			this.coord.input.property('disabled', true).attr('title', 'This search input is disabled in demo mode.')
+		}
 	}
 	/****** end of constructor ***/
 
