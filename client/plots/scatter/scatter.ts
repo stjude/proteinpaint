@@ -29,6 +29,7 @@ export class Scatter extends RxComponentInner {
 	opts: any
 	state!: any
 	readonly type: string
+	transform: any
 
 	constructor() {
 		super()
@@ -272,7 +273,8 @@ export function getDefaultScatterSettings() {
 		contourBandwidth: 30,
 		contourThresholds: 10,
 		duration: 500,
-		useGlobalMinMax: true
+		useGlobalMinMax: true,
+		saveZoomTransform: false
 	}
 }
 

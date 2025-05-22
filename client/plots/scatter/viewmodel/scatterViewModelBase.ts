@@ -137,7 +137,7 @@ export class ScatterViewModelBase {
 			chart.regressionG = chart.mainG.append('g').attr('class', 'sjpcb-scatter-lowess')
 			chart.legendG = svg.append('g').attr('class', 'sjpcb-scatter-legend')
 			if (this.scatter.state.config.transform && chart.mainG.attr('transform') != this.scatter.state.config.transform) {
-				chart.mainG.attr('transform', this.scatter.state.config.transform, chart.mainG.attr('transform'))
+				chart.mainG.attr('transform', this.scatter.state.config.transform)
 			}
 			chart.G.attr('clip-path', `url(#${id})`)
 		} else {

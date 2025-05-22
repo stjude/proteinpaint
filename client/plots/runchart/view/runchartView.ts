@@ -195,6 +195,15 @@ export class RunchartView extends ScatterView {
 					type: 'color',
 					chartType: 'runChart',
 					settingsKey: 'defaultColor'
+				},
+				{
+					label: 'Save zoom transform',
+					boxLabel: '',
+					type: 'checkbox',
+					chartType: 'runChart',
+					settingsKey: 'saveZoomTransform',
+					title: `Option to save the zoom transformation in the state. Needed if you want to save a session with zoom and pan applied`,
+					processInput: value => this.saveZoomTransform(value)
 				}
 			]
 		)
