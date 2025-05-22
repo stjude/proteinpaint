@@ -77,7 +77,19 @@ export function renderTable({
 
 	const uniqueInputName = inputName || getUniqueNameOrId('input')
 	const parentDiv = div.append('div').style('background-color', 'white').style('display', 'inline-block')
+	if (download) {
+		parentDiv
+			.append('div')
+			.append('button')
+			.style('float', 'right')
+			.style('margin', '10px 50px 10px 0')
 
+			.text('Download')
+
+			.on('click', () => {
+				downloadTable(rows, columns, download.fileName || 'table.tsv')
+			})
+	}
 	if (resize) {
 		if (rows.length > 15) parentDiv.style('height', maxHeight)
 		parentDiv.style('max-width', maxWidth)
@@ -367,17 +379,6 @@ export function renderTable({
 
 		// call function to update buttons with .onChange(), so their text can reflect default checkbox selection
 		updateButtons()
-	}
-
-	if (download) {
-		div
-			.append('div')
-			.style('padding', '10px')
-			.append('button')
-			.text('Download')
-			.on('click', () => {
-				downloadTable(rows, columns, download.fileName || 'table.tsv')
-			})
 	}
 
 	function updateButtons() {
