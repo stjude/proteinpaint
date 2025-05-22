@@ -141,17 +141,15 @@ export class ScatterLasso {
 	}
 
 	lassoReset(chart) {
-		const mainG = chart.chartDiv.select('.sjpcb-scatter-mainG')
+		const mainG = chart.mainG
 
-		if (chart.lasso)
+		if (this.scatter.config.lassoOn) {
 			chart.lasso
 				.items(mainG.select('.sjpcb-scatter-series').selectAll('path[name="serie"]'))
 				.targetArea(mainG)
 				.on('start', () => this.start(chart))
 				.on('draw', () => this.draw(chart))
 				.on('end', event => this.end(event, chart))
-
-		if (this.scatter.config.lassoOn) {
 			// this seems to clear stale lasso data as sometimes seen
 			// when the global filter is changed between lassoing
 			// uncertain explanation: the svg and mainG is potentially different between rerenders,
@@ -159,6 +157,10 @@ export class ScatterLasso {
 			mainG.on('.zoom', null)
 			mainG.on('mousedown.drag', null)
 			mainG.call(chart.lasso)
+		} else {
+			chart.mainG.on('.dragstart', null)
+			chart.mainG.on('.drag', null)
+			chart.mainG.on('.dragend', null)
 		}
 	}
 
