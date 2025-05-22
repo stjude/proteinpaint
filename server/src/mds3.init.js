@@ -2177,6 +2177,11 @@ export async function svfusionByRangeGetter_file(ds, genome) {
 							must attach pairlst at a sample so it's available to downstream
 							_pairlst is not required for skewer summary view, but required for sample table view
 							where sample._pairlst must be used instead of m.pairlst for displaying actual breakpoints in each sample
+
+							known issue!
+							on clicking a fusion disk that covers multiple fusion m objects,
+							it still displays a single breakpoint for each m object, dispite samples from a m can have different breakpoints
+							this is due to practical design issue that sample-level breakpoint info is not known at the aggregated skewer view
 							*/
 							_pairlst: pairlst
 						}
