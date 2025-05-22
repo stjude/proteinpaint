@@ -20,6 +20,7 @@ GDC - GENCODE gene ENSG00000133703
 GDC - RefSeq NM_005163
 GDC - KRAS SSM ID
 GDC - ssm by range
+GDC - cnv only
 GDC - allow2selectSamples
 geneSearch4GDCmds3
 geneSearch4GDCmds3 hardcodeCnvOnly
@@ -172,9 +173,34 @@ tape('GDC - ssm by range', test => {
 		]
 	})
 
-	function callbackOnRender(tk, bb) {
+	async function callbackOnRender(tk, bb) {
 		test.ok(tk.skewer.rawmlst.length > 0, 'mds3 tk should have loaded many data points')
+		await testVariantLeftLabel(test, tk, bb)
 		// FIXME click sample left label breaks
+		if (test._ok) holder.remove()
+		test.end()
+	}
+})
+
+tape('GDC - cnv only', test => {
+	test.timeoutAfter(10000)
+	const holder = getHolder()
+	runproteinpaint({
+		holder,
+		noheader: true,
+		genome: 'hg38',
+		block: 1,
+		nobox: 1,
+		position: 'chr14:104769348-104795751', // akt1
+		tracks: [
+			{ type: 'mds3', dslabel: 'GDC', hardcodeCnvOnly: 1, callbackOnRender }
+			//{type:'bedj',file:'anno/refGene.hg38.gz',name:'RefGene',__isgene:true}
+		]
+	})
+
+	async function callbackOnRender(tk, bb) {
+		test.ok(tk.cnv.cnvLst.length > 0, 'cnv only mode has loaded cnv segments')
+		await testVariantLeftLabel(test, tk, bb)
 		if (test._ok) holder.remove()
 		test.end()
 	}
@@ -217,7 +243,7 @@ tape('geneSearch4GDCmds3', async test => {
 	}
 })
 
-tape.skip('geneSearch4GDCmds3 hardcodeCnvOnly', async test => {
+tape('geneSearch4GDCmds3 hardcodeCnvOnly', async test => {
 	// enter a gene name into search box, find the gene match in tooltip, select matched gene to launch block with gdc track
 	const holder = getHolder()
 	await runproteinpaint({
@@ -234,13 +260,23 @@ tape.skip('geneSearch4GDCmds3 hardcodeCnvOnly', async test => {
 		test.ok(blockHolder, 'Block holder is made')
 
 		// enter gene name and trigger search
-		searchBox.value = 'chr11:108195437-108267444'
-		searchBox.dispatchEvent(new Event('Enter'))
-		// FIXME this cannot trigger sja_Block_div to be made, making the test fail
+		searchBox.value = 'akt1'
+		searchBox.dispatchEvent(
+			//
+			// must do below; `new Event('keyup')` doesn't work
+			new KeyboardEvent('keyup', {
+				key: 'Enter',
+				code: 'Enter',
+				keyCode: 13, // deprecated but still widely used
+				which: 13, // deprecated but still widely used
+				bubbles: true, // important to allow the event to bubble up
+				cancelable: true
+			})
+		)
 
 		const blockDiv = await detectOne({ elem: blockHolder, selector: '.sja_Block_div' })
 		test.ok(blockDiv, 'A block is rendered')
-		//if (test._ok) holder.remove()
+		if (test._ok) holder.remove()
 		test.end()
 	}
 })
