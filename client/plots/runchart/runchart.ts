@@ -225,8 +225,7 @@ export function getDefaultRunChartSettings() {
 		// up to the 95th percentile by default
 		colorScaleMinFixed: null, // User-defined minimum value for fixed mode
 		// Null indicates this hasn't been set yet
-		colorScaleMaxFixed: null // User-defined maximum value for fixed mode
-		// Null indicates this hasn't been set yet
-		//3D Plot settings,
+		colorScaleMaxFixed: null, // User-defined maximum value for fixed mode
+		saveZoomTransform: false
 	}
 }

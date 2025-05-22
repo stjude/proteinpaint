@@ -74,7 +74,7 @@ export class EventCountView extends RunchartView {
 				menuOptions: '!remove',
 				numericEditMenuVersion: ['continuous']
 			},
-			
+
 			{
 				type: 'term',
 				configKey: 'term0',
@@ -136,6 +136,15 @@ export class EventCountView extends RunchartView {
 				type: 'color',
 				chartType: 'eventCount',
 				settingsKey: 'defaultColor'
+			},
+			{
+				label: 'Save zoom transform',
+				boxLabel: '',
+				type: 'checkbox',
+				chartType: 'eventCount',
+				settingsKey: 'saveZoomTransform',
+				title: `Option to save the zoom transformation in the state. Needed if you want to save a session with the actual zoom and pan applied`,
+				processInput: value => this.saveZoomTransform(value)
 			}
 		]
 		if (this.eventCount.config.scaleDotTW)

@@ -2,14 +2,12 @@ import { zoom as d3zoom } from 'd3-zoom'
 import { icons as icon_functions } from '#dom'
 import type { Scatter } from '../scatter.js'
 import { zoomIdentity } from 'd3-zoom'
-import { to_textfile } from '#dom/downloadTextfile'
 
 export class ScatterZoom {
 	scatter: Scatter
 	zoomD3: any
 	dragD3: any
 	zoom: number
-	transform: any
 
 	constructor(scatter: Scatter) {
 		this.scatter = scatter
@@ -21,9 +19,15 @@ export class ScatterZoom {
 				return true
 			})
 			.on('end', async event => {
-				this.transform = event.transform
+				this.scatter.transform = event.transform
+				if (this.scatter.settings.saveZoomTransform) this.saveZoomTransform()
 			})
 		this.zoom = 1
+	}
+
+	async saveZoomTransform() {
+		const transform = this.scatter.transform?.toString() || null
+		this.scatter.app.dispatch({ type: 'plot_edit', id: this.scatter.id, config: { transform } })
 	}
 
 	initZoom(toolsDiv) {
@@ -56,15 +60,7 @@ export class ScatterZoom {
 			handler: () => this.zoomOut(),
 			title: 'Zoom out. You can also zoom out pressing the Ctrl key and using the mouse wheel'
 		})
-		const saveZoomDiv = toolsDiv
-			.insert('div')
-			.style('display', display)
-			.style('margin', '15px 10px')
-			.attr('name', 'sjpp-zoom-save-btn') //For unit tests
-		icon_functions['save'](saveZoomDiv, {
-			handler: () => this.saveSession(),
-			title: 'Save the current view to a session to reload it later'
-		})
+
 		for (const chart of this.scatter.model.charts) {
 			chart.mainG.call(this.zoomD3)
 		}
@@ -104,16 +100,5 @@ export class ScatterZoom {
 		if (!this.scatter.model.is2DLarge)
 			for (const chart of this.scatter.model.charts)
 				chart.mainG.transition().duration(500).call(this.zoomD3.transform, zoomIdentity)
-	}
-
-	saveSession(name = 'scatter') {
-		const sessionName = name
-		const ext = sessionName?.endsWith('.txt') ? '' : '.txt'
-		const filename = `${sessionName}${ext}`
-		const state = structuredClone(this.scatter.app.getState())
-		const plot = state.plots.find(p => p.id == this.scatter.id)
-		if (this.transform) plot.transform = this.transform.toString()
-		const session = JSON.stringify(state)
-		to_textfile(filename, session)
 	}
 }

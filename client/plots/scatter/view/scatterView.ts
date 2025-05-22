@@ -3,7 +3,6 @@ import { Menu } from '#dom'
 import type { Scatter } from '../scatter.js'
 import { select } from 'd3-selection'
 import { isNumericTerm } from '#shared/terms.js'
-
 export const minShapeSize = 0.2
 export const maxShapeSize = 6
 export class ScatterView {
@@ -181,6 +180,15 @@ export class ScatterView {
 				settingsKey: 'showContour',
 				title:
 					"Shows the density of point clouds. If 'Color' is used in continous mode, it uses it to weight the points when calculating the density contours. If 'Z/Divide by' is added in continous mode, it used it instead."
+			},
+			{
+				label: 'Save zoom transform',
+				boxLabel: '',
+				type: 'checkbox',
+				chartType: 'sampleScatter',
+				settingsKey: 'saveZoomTransform',
+				title: `Option to save the zoom transformation in the state. Needed if you want to save a session with the actual zoom and pan applied`,
+				processInput: value => this.saveZoomTransform(value)
 			}
 		]
 		if (this.scatter.settings.showContour)
@@ -367,6 +375,11 @@ export class ScatterView {
 			inputs.push(showAxes)
 		}
 		return inputs
+	}
+
+	saveZoomTransform(value: any) {
+		if (value) this.scatter.vm.scatterZoom.saveZoomTransform()
+		return value
 	}
 }
 
