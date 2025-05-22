@@ -66,7 +66,7 @@ export class ScatterViewModel extends ScatterViewModelBase {
 		}
 	}
 
-	toggleLasso() {
+	async toggleLasso() {
 		this.scatter.config.lassoOn = !this.scatter.config.lassoOn
 		this.scatter.app.dispatch({ type: 'plot_edit', id: this.scatter.id, config: this.scatter.config })
 	}
@@ -91,7 +91,7 @@ export class ScatterViewModel extends ScatterViewModelBase {
 		this.view.dom.groupDiv = toolsDiv.insert('div').style('display', display).style('margin', '15px 10px')
 
 		for (const chart of this.model.charts) {
-			chart.lasso = d3lasso()
+			if (!chart.lasso) chart.lasso = d3lasso()
 			this.scatterLasso.lassoReset(chart)
 		}
 	}
