@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Fixes:
+- allow to filter cnv segments by cnv class category
+
+
 ## 2.128.0
 
 Features:
