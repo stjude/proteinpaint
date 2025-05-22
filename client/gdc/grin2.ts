@@ -2,6 +2,7 @@ import { dofetch3 } from '#common/dofetch'
 import { make_radios, renderTable, sayerror, Menu, table2col } from '#dom'
 import { select } from 'd3-selection'
 import { formatElapsedTime } from '@sjcrh/proteinpaint-shared/time.js'
+import type { GdcGRIN2listRequest } from '#types'
 
 /*
 a UI to list open-access maf and cnv files from current cohort
@@ -141,14 +142,7 @@ async function getFilesAndShowTable(obj) {
 	let result
 	try {
 		// Initialize the request body
-		const body: {
-			filter0?: any
-			mafOptions?: {
-				experimentalStrategy: string
-			}
-			cnvOptions?: any // Placeholder for future implementation
-			fusionOptions?: any // Placeholder for future implementation
-		} = {}
+		const body: GdcGRIN2listRequest = {}
 
 		if (obj.opts.filter0) body.filter0 = obj.opts.filter0
 
@@ -205,7 +199,7 @@ async function getFilesAndShowTable(obj) {
 			resize: false,
 			div: obj.tableDiv.append('div'),
 			selectAll: false,
-			dataTestId: 'sja_mafFileTable',
+			dataTestId: 'sja_FileTable',
 			header: { allowSort: true },
 			selectedRows: [0],
 			buttons: [
