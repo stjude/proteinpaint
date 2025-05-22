@@ -474,7 +474,7 @@ export async function samples2columnsRows(samples, tk) {
 								oneHtml.push(m.mname)
 							}
 						} else if (m.dt == dtsv || m.dt == dtfusionrna) {
-							const p = m.pairlst[0]
+							const p = sample._pairlst?.[0] || m.pairlst[0]
 							oneHtml.push(
 								`${p.a.name || ''} ${p.a.chr}:${p.a.pos} ${p.a.strand == '+' ? 'forward' : 'reverse'} > ${
 									p.b.name || ''

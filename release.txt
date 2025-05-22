@@ -1,1 +1,2 @@
-
+Fixes:
+- pass fusion breakpoints as sample property for correct display in mds3 tk sample table
