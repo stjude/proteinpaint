@@ -218,8 +218,7 @@ fn main() -> Result<()> {
                         }
                         Err(_) => panic!("sqlite database file not found"),
                     }
-                    let output_string =
-                        "result: {".to_string() + &"\"data\":" + &adjust_p_values(pathway_p_values) + &"}";
+                    let output_string = adjust_p_values(pathway_p_values);
                     println!("{}", output_string);
                 }
                 Err(error) => println!("Incorrect json:{}", error),

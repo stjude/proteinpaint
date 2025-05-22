@@ -6,6 +6,7 @@ import serverconfig from '#src/serverconfig.js'
 import { run_python } from '@sjcrh/proteinpaint-python'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 import { mayLog } from '#src/helpers.ts'
+import { formatElapsedTime } from '@sjcrh/proteinpaint-shared/time.js'
 
 export const api: RouteApi = {
 	endpoint: 'genesetEnrichment',
@@ -82,9 +83,37 @@ async function run_genesetEnrichment_analysis(
 		genesetenrichment_input.pickle_file = q.pickle_file
 		genesetenrichment_input.geneset_name = q.geneset_name
 		genesetenrichment_input.num_permutations = q.num_permutations
+		const time1 = new Date().valueOf()
 		gsea_output = await run_python('gsea.py', '/' + JSON.stringify(genesetenrichment_input))
+		mayLog('Time taken to run blitzgsea:', formatElapsedTime(Date.now() - time1))
+		let result
+		let data_found = false
+		let image_found = false
+		//
+		for (const line of gsea_output.split('\n')) {
+			// Parsing table output
+			if (line.startsWith('result: ')) {
+				result = JSON.parse(line.replace('result: ', ''))
+				data_found = true
+			} else if (line.startsWith('image: ')) {
+				// Getting image to be sent to client
+				result = JSON.parse(line.replace('image: ', ''))
+				image_found = true
+			} else {
+				// is a status line reporting time spent etc
+				mayLog(line)
+			}
+		}
+
+		if (data_found) return result as GenesetEnrichmentResponse
+		const image_file_name: any = path.join(cachedir_gsea, result.image_file)
+		if (image_found) return image_file_name as GenesetEnrichmentResponse
+		throw 'data or image not found in gsea output; this should not happen'
 	} else if (q.method == 'cerno') {
-		gsea_output = await run_rust('cerno', JSON.stringify(genesetenrichment_input))
+		const time1 = new Date().valueOf()
+		gsea_output = JSON.parse(await run_rust('cerno', JSON.stringify(genesetenrichment_input)))
+		mayLog('Time taken to run CERNO:', formatElapsedTime(Date.now() - time1))
+		return gsea_output as GenesetEnrichmentResponse
 	} else {
 		throw 'Unknown method:' + q.method
 	}
@@ -96,27 +125,4 @@ async function run_genesetEnrichment_analysis(
 	//})
 
 	// script output is line-based, each line can be 1) gsea result for genesets 2) an gsea plot image for a geneset 3) status logs that's very helpful to log out, thus process as below
-
-	let result
-	let data_found = false
-	let image_found = false
-	//
-	for (const line of gsea_output.split('\n')) {
-		// Parsing table output
-		if (line.startsWith('result: ')) {
-			result = JSON.parse(line.replace('result: ', ''))
-			data_found = true
-		} else if (line.startsWith('image: ')) {
-			// Getting image to be sent to client
-			result = JSON.parse(line.replace('image: ', ''))
-			image_found = true
-		} else {
-			// is a status line reporting time spent etc
-			mayLog(line)
-		}
-	}
-
-	if (data_found) return result as GenesetEnrichmentResponse
-	if (image_found) return path.join(cachedir_gsea, result.image_file)
-	throw 'data or image not found in gsea output; this should not happen'
 }
