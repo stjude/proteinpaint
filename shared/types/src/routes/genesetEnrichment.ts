@@ -21,7 +21,7 @@ export type GenesetEnrichmentRequest = {
 	method: 'blitzgsea' | 'cerno'
 }
 
-type pathway_attributes = {
+type blitzgsea_geneset_attributes = {
 	/** Absolute enrichment score */
 	es: number
 	/** Normalized enrichment score */
@@ -38,19 +38,52 @@ type pathway_attributes = {
 	fdr: number
 }
 
-type gsea_result = {
+// Key value pair of geneset name and blitzgsea geneset attributes
+type blitzgsea_map = {
+	[geneset_name: string]: blitzgsea_geneset_attributes
+}
+
+type cerno_geneset_attributes = {
+	/** Absolute enrichment score */
+	es: number
+	/** Area under curve score */
+	auc: number
+	/** Size of gene set */
+	geneset_size: number
+	/** Leading edge genes */
+	leading_edge: string
+	/** pvalue */
+	pvalue: number
+	/** false discovery rate */
+	fdr: number
+}
+
+type blitzgsea_json = {
 	/** array of pathway_attributes */
-	data: pathway_attributes[]
+	data: blitzgsea_map[]
 	/** file name of pickle file containing the stored gsea result in cache directory */
 	pickle_file: string
 }
 
+// Key value pair of geneset name and cerno geneset attributes
+type cerno_map = {
+	[geneset_name: string]: cerno_geneset_attributes
+}
+
 /** Pass gsea image to client side */
-type gsea_image = any
+type blitzgsea_image_name = string
+
+type blitzgseaResult = {
+	pathway: blitzgsea_json | blitzgsea_image_name
+}
+
+type cernoResult = {
+	data: cerno_map[]
+}
 
 export type GenesetEnrichmentResponse = {
 	/** gsea result or an image (for plotting) is sent to client side */
-	pathway: gsea_result | gsea_image
+	data: blitzgseaResult | cernoResult
 }
 
 export const genesetEnrichmentPayload: RoutePayload = {

@@ -372,12 +372,24 @@ add:
 	const table_stats = table2col({ holder: self.dom.detailsDiv.attr('data-testid', 'sjpp-gsea-stats') })
 	const [t1, t2] = table_stats.addRow()
 	t2.style('text-align', 'center').style('font-size', '0.8em').style('opacity', '0.8').text('COUNT')
-	const addStats = [
-		{
-			label: 'Gene sets analyzed',
-			values: Object.keys(output.data).length
-		}
-	]
+	let addStats
+	if (self.settings.gsea_method == 'blitzgsea') {
+		addStats = [
+			{
+				label: 'Gene sets analyzed',
+				values: Object.keys(output.data).length
+			}
+		]
+	} else if (self.settings.gsea_method == 'cerno') {
+		addStats = [
+			{
+				label: 'Gene sets analyzed',
+				values: Object.keys(output).length
+			}
+		]
+	} else {
+		throw 'Unknown method:' + self.settings.gsea_method
+	}
 
 	for (const dataRow of addStats) {
 		const [td1, td2] = table_stats.addRow()
@@ -387,9 +399,18 @@ add:
 
 	// Generating the table
 	self.gsea_table_rows = []
-	const output_keys = Object.entries(output.data).map(([key, value]) => {
-		return { key, value } // Convert to an array of objects
-	})
+	let output_keys
+	if (self.settings.gsea_method == 'blitzgsea') {
+		output_keys = Object.entries(output.data).map(([key, value]) => {
+			return { key, value } // Convert to an array of objects
+		})
+	} else if (self.settings.gsea_method == 'cerno') {
+		output_keys = Object.entries(output).map(([key, value]) => {
+			return { key, value } // Convert to an array of objects
+		})
+	} else {
+		throw 'Unknown method:' + self.settings.gsea_method
+	}
 
 	if (self.settings.fdr_or_top == 'top') {
 		// Sorting the top (top_genesets) genesets in decreasing order
