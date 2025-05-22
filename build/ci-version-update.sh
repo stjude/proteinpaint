@@ -94,6 +94,6 @@ fi
 
 git tag $TAG
 BRANCH=$(git rev-parse --abbrev-ref HEAD)
-git pull --rebase
+git pull --merge
 git push origin $BRANCH
 git push origin $TAG
