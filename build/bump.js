@@ -239,5 +239,10 @@ function gitRevParseErrHandler(pkgDir) {
 }
 
 function fileAffectsVersion(f) {
+	// specific patterns to supercede the general not-matched pattern at the end of this function
+	if (f.toUpperCase() === 'requirements.txt') return true
+	if (f.endsWith('pkgs.txt')) return true
+
+	// any filename not matching below indicates a relevant file that should cause a workspace package version bump
 	return !f.endsWith('.md') && !f.endsWith('.txt') && !f.endsWith('ignore')
 }
