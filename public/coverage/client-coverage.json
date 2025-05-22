@@ -1,38 +1,38 @@
 {
   "filter/tvs.js": {
     "lines": {
-      "total": 106,
-      "covered": 96,
+      "total": 108,
+      "covered": 98,
       "skipped": 0,
-      "pct": 90.56
+      "pct": 90.74
     },
     "functions": {
-      "total": 30,
+      "total": 31,
       "covered": 27,
       "skipped": 0,
-      "pct": 90
+      "pct": 87.09
     },
     "statements": {
-      "total": 118,
-      "covered": 102,
+      "total": 121,
+      "covered": 104,
       "skipped": 0,
-      "pct": 86.44
+      "pct": 85.95
     },
     "branches": {
-      "total": 79,
-      "covered": 56,
+      "total": 86,
+      "covered": 60,
       "skipped": 0,
-      "pct": 70.88
+      "pct": 69.76
     },
     "lowestPct": {
       "curr": 69.76,
-      "prev": 0,
-      "diff": 70.88
+      "prev": 69.76,
+      "diff": 0
     },
     "averagePct": {
-      "curr": 83.4,
-      "prev": 0,
-      "diff": 84.47
+      "curr": 83.38499999999999,
+      "prev": 83.4,
+      "diff": -0.01500000000001478
     }
   },
   "mass/nav.js": {
@@ -387,10 +387,10 @@
   },
   "tw/geneVariant.ts": {
     "lines": {
-      "total": 132,
+      "total": 127,
       "covered": 4,
       "skipped": 0,
-      "pct": 3.03
+      "pct": 3.14
     },
     "functions": {
       "total": 13,
@@ -399,10 +399,10 @@
       "pct": 0
     },
     "statements": {
-      "total": 166,
+      "total": 161,
       "covered": 4,
       "skipped": 0,
-      "pct": 2.4
+      "pct": 2.48
     },
     "branches": {
       "total": 121,
@@ -416,9 +416,9 @@
       "diff": 0
     },
     "averagePct": {
-      "curr": 1.3575,
+      "curr": 1.405,
       "prev": 1.42,
-      "diff": -0.0625
+      "diff": -0.014999999999999902
     }
   },
   "dom/genesearch.ts": {
