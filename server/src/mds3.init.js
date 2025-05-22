@@ -2170,7 +2170,17 @@ export async function svfusionByRangeGetter_file(ds, genome) {
 						// for ds with sampleidmap, j.sample value should be integer
 						// XXX not guarding against file uses non-integer sample values in such case
 
-						sampleObj = { sample_id: j.sample }
+						sampleObj = {
+							sample_id: j.sample,
+							/* ssm_id of a fusion can only identify one breakend. 
+							position of the other breakend is missing from ssm_id
+							must attach pairlst at a sample so it's available to downstream
+							_pairlst is not required for skewer summary view, but required for sample table view
+							where sample._pairlst must be used instead of m.pairlst for displaying actual breakpoints in each sample
+							*/
+							_pairlst: pairlst
+						}
+
 						if (j.mattr) {
 							// mattr{} has sample-level attributes on this sv event, equivalent to FORMAT
 							if (formatFilter) {
