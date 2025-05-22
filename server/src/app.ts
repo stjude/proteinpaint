@@ -81,10 +81,15 @@ export async function launch() {
 		console.log(`\nValidation succeeded.\n`)
 
 		// may exit early depending on command-line options
-		const exitMessage = handle_argv(process.argv)
-		if (exitMessage) {
-			console.log(exitMessage)
-			return
+		const exit = await handle_argv(process.argv)
+		if (exit) {
+			if (exit.error) console.error(exit.error)
+			else if (exit.message) console.log(exit.message)
+
+			// may terminate background setInterval, timeout, listen to allow immediate exit here
+			if (typeof exit.code == 'number') process.exit(exit.code)
+			// or, allow async code/computation to finish naturally in the background
+			else return
 		}
 
 		await startServer(app, routeCallbacks)
@@ -135,22 +140,23 @@ export async function launch() {
 	}
 }
 
-function handle_argv(argv) {
+async function handle_argv(argv) {
 	if (!argv?.length) return
 	if (argv.includes('validate'))
 		// exit early if only doing a validation of configuration + data + startup code
-		return `You may now run the server.`
+		return { message: `You may now run the server.`, code: 0 }
 
 	if (argv.includes('phewas-precompute')) {
 		// argv[3] is genome, argv[4] is dslabel
 		const gn = argv[3],
 			dslabel = argv[4]
 		const genome = genomes[gn]
-		if (!genome) throw 'invalid genome name: ' + gn
+		if (!genome) return { error: 'invalid genome name: ' + gn, code: 1 }
 		const ds = genome.datasets[dslabel]
-		if (!ds) throw 'invalid dataset: ' + dslabel
-		phewas.do_precompute(ds)
-		return `computed phewas`
+		if (!ds) return { error: 'invalid dataset: ' + dslabel, code: 1 }
+		await phewas.do_precompute(ds)
+		// do not return exit code, in case any precomputation step does not await
+		return { message: `computed phewas` }
 	}
 }
 
