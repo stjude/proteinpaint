@@ -70,7 +70,7 @@ export async function displaySampleTable(samples, args) {
 		return await make_singleSampleTable(samples[0], args)
 	}
 	const [columns, rows] = await samples2columnsRows(samples, args.tk)
-	const params = { rows, columns, div: args.div, resize: rows.length > 10, dataTestId: 'sjpp_mds3tk_sampletable' }
+	const params = { rows, columns, div: args.div, resize: rows.length > 10, dataTestId: 'sjpp_mds3tk_sampletable' , download: { fileName: 'Sample table' } }
 	//if (args.maxWidth) params.maxWidth = args.maxWidth
 	//if (args.maxHeight) params.maxHeight = args.maxHeight
 
