@@ -86,7 +86,10 @@ export async function init(arg, holder, genomes) {
 		tip,
 		row: geneInputDiv,
 		callback: launchView,
-		geneSymbol: arg.geneSymbol
+		geneSymbol: arg.geneSymbol,
+		triggerSearch: arg.geneSymbol && arg.geneSearch4GDCmds3?.hardcodeCnvOnly == true,
+		hideInputBeforeCallback: arg.geneSearch4GDCmds3?.hardcodeCnvOnly == true,
+		disableInput: arg.geneSearch4GDCmds3?.hardcodeCnvOnly == true
 	}
 	if (!arg.geneSearch4GDCmds3.hardcodeCnvOnly) {
 		// not in cnv mode; is in lollipop mode to show coding ssm over gene coding exons, apply this flag
@@ -188,6 +191,7 @@ export async function init(arg, holder, genomes) {
 		if (!arg.geneSearch4GDCmds3.hardcodeCnvOnly) return await blockinit(pa) // does it need to return?
 		// launch genome browser view
 		const _ = await import('../src/block')
+		// TODO: pa argument needs an option to freeze the searchbox to demo geneSymbol, maybe .property('disable', true)
 		return new _.Block(pa)
 	}
 
