@@ -474,6 +474,7 @@ export async function samples2columnsRows(samples, tk) {
 								oneHtml.push(m.mname)
 							}
 						} else if (m.dt == dtsv || m.dt == dtfusionrna) {
+							// server-returned data has sample._pairlst and shouldn't use m.pairlst; client-side custom data only has m.pairlst
 							const p = sample._pairlst?.[0] || m.pairlst[0]
 							oneHtml.push(
 								`${p.a.name || ''} ${p.a.chr}:${p.a.pos} ${p.a.strand == '+' ? 'forward' : 'reverse'} > ${
