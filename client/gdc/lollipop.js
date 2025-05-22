@@ -144,6 +144,7 @@ export async function init(arg, holder, genomes) {
 			pa.tklst = [tk]
 			if (arg.geneSearch4GDCmds3.hardcodeCnvOnly) {
 				tk.hardcodeCnvOnly = 1
+				tk.disableSearchInput = searchOpt.disableInput
 				// also block is in genome browser mode
 				delete pa.gmmode
 				first_genetrack_tolist(pa.genome, pa.tklst)
@@ -191,7 +192,6 @@ export async function init(arg, holder, genomes) {
 		if (!arg.geneSearch4GDCmds3.hardcodeCnvOnly) return await blockinit(pa) // does it need to return?
 		// launch genome browser view
 		const _ = await import('../src/block')
-		// TODO: pa argument needs an option to freeze the searchbox to demo geneSymbol, maybe .property('disable', true)
 		return new _.Block(pa)
 	}
 
