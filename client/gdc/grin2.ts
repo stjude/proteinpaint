@@ -272,9 +272,30 @@ async function getFilesAndShowTable(obj) {
     detect if it is truthy to only create it once
     */
 
+	/**
+	 * Formats selected files for GRIN2 Rust backend
+	 *
+	 * @param lst - Array of selected table row indices
+	 *
+	 * Creates structure expected by Rust:
+	 * {
+	 *   caseFiles: {
+	 *     [case_submitter_id]: { maf: file_id }
+	 *   },
+	 *   mafOptions: { minTotalDepth: 10, minAltAlleleCount: 2 }
+	 * }
+	 *
+	 */
+
 	async function runGRIN2Analysis(lst, button) {
 		// Format the data according to what the Rust code expects
-		const caseFiles = {}
+		const caseFiles = {
+			caseFiles: {},
+			mafOptions: {
+				minTotalDepth: 10,
+				minAltAlleleCount: 2
+			}
+		}
 
 		for (const i of lst) {
 			const file = result.files[i]
@@ -282,13 +303,13 @@ async function getFilesAndShowTable(obj) {
 			const caseId = file.case_submitter_id
 
 			if (!caseFiles[caseId]) {
-				caseFiles[caseId] = { maf: null }
+				caseFiles.caseFiles[caseId] = {}
 			}
 
-			caseFiles[caseId].maf = file.id
+			caseFiles.caseFiles[caseId].maf = file.id
 		}
 
-		if (Object.keys(caseFiles).length === 0) return
+		if (Object.keys(caseFiles.caseFiles).length === 0) return
 
 		const oldText = button.innerHTML
 		button.innerHTML = 'Analyzing... Please wait'
@@ -303,7 +324,7 @@ async function getFilesAndShowTable(obj) {
 
 			// Call the GRIN2 run endpoint with the correctly formatted data
 			console.log('Sending GRIN2 request:', caseFiles)
-			console.log('GRIN2 request body:', JSON.stringify(caseFiles, null, 2))
+			console.log('GRIN2 request structure:', JSON.stringify(caseFiles, null, 2))
 			const startTime = Date.now()
 			const response = await dofetch3('gdc/runGRIN2', { body: caseFiles })
 			const elapsedTime = formatElapsedTime(Date.now() - startTime)
