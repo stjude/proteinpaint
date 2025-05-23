@@ -2115,74 +2115,74 @@
   },
   "plots/scatter/viewmodel/scatterLasso.ts": {
     "lines": {
-      "total": 110,
-      "covered": 2,
+      "total": 112,
+      "covered": 63,
       "skipped": 0,
-      "pct": 1.81
+      "pct": 56.25
     },
     "functions": {
       "total": 31,
-      "covered": 0,
+      "covered": 9,
       "skipped": 0,
-      "pct": 0
+      "pct": 29.03
     },
     "statements": {
-      "total": 125,
-      "covered": 2,
+      "total": 127,
+      "covered": 67,
       "skipped": 0,
-      "pct": 1.6
+      "pct": 52.75
     },
     "branches": {
-      "total": 51,
-      "covered": 0,
+      "total": 49,
+      "covered": 15,
       "skipped": 0,
-      "pct": 0
+      "pct": 30.61
     },
     "lowestPct": {
-      "curr": 0,
+      "curr": 29.03,
       "prev": 0,
-      "diff": 0
+      "diff": 29.03
     },
     "averagePct": {
-      "curr": 0.8525,
-      "prev": 0,
-      "diff": 0.8525
+      "curr": 42.16,
+      "prev": 0.8525,
+      "diff": 41.3075
     }
   },
   "plots/scatter/viewmodel/scatterViewModel.ts": {
     "lines": {
       "total": 45,
-      "covered": 2,
+      "covered": 36,
       "skipped": 0,
-      "pct": 4.44
+      "pct": 80
     },
     "functions": {
       "total": 23,
-      "covered": 0,
+      "covered": 15,
       "skipped": 0,
-      "pct": 0
+      "pct": 65.21
     },
     "statements": {
-      "total": 46,
-      "covered": 2,
+      "total": 47,
+      "covered": 38,
       "skipped": 0,
-      "pct": 4.34
+      "pct": 80.85
     },
     "branches": {
-      "total": 16,
-      "covered": 0,
+      "total": 18,
+      "covered": 13,
       "skipped": 0,
-      "pct": 0
+      "pct": 72.22
     },
     "lowestPct": {
-      "curr": 0,
+      "curr": 65.21,
       "prev": 0,
-      "diff": 0
+      "diff": 65.21
     },
     "averagePct": {
-      "curr": 2.1950000000000003,
-      "prev": 0,
-      "diff": 2.1950000000000003
+      "curr": 74.57,
+      "prev": 2.1950000000000003,
+      "diff": 72.375
     }
   },
   "plots/scatter/viewmodel/scatterViewModelBase.ts": {
