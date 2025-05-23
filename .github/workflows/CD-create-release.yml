@@ -8,10 +8,10 @@ on:
         description: Release type
         options:
           - auto-detect
+          - prerelease
           - prepatch
           - preminor
           - premajor
-          - prerelease
 
       include:
         type: choice
@@ -81,6 +81,7 @@ jobs:
             exclude="-x=container";
           fi
 
+          # NOTE: inputs.release_type may be ignored based on unreleased entries in CHANGELOG
           . ./build/ci-version-update.sh ${{ github.event.inputs.release_type }} -w $exclude
           
           echo "branch=$BRANCH" >> $GITHUB_OUTPUT
@@ -105,7 +106,7 @@ jobs:
           
           CHANGES="[CHANGELOG.md](https://github.com/stjude/proteinpaint/blob/master/CHANGELOG.md)"
           echo "latest_release_changes=$CHANGES" >> $GITHUB_OUTPUT
-
+          exit 1
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPMJS_TOKEN }}
 

@@ -21,7 +21,9 @@ for WS in ${WORKSPACES}; do
   if [[ "$PUBLISHEDVER" != "$CURRENTVER" ]]; then
     cd $WS
     echo "publishing $WS-$CURRENTVER"
-    npm publish --access public
+    # npm publish --access public
     cd $PPDIR
   fi
 done
+
+exit 1

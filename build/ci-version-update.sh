@@ -106,14 +106,14 @@ git reset --hard HEAD~1 # go back one commit on the current branch
 git pull # may already be at current tip or new commits may have been added
 # at this point, the local commit history will look like one of these
 # (A)
-# fast-forward       (B)
-# where both are     merge
+# fast-forward         (B)
+# where both are       merge
 # at same commit     
 #                          branch fast-forwarded to a new commit from remote
 # tag,branch           tag |
-# |                       \| 
-# |                        |
-# |                        |
+#    |                    \| 
+#    |                     |
+#    |                     |
 #
 
 # check in case another CI bumped the version in github while this CI was running
@@ -145,7 +145,5 @@ git push origin $BRANCH # synchronize branch tip with remote, may already be up-
 git push origin $TAG    # remote should not have this tag yet, should error if it's already there (non-fast-forward)
 # IMPORTANT:
 # subsequent steps after this script must use the tagged commit, since the pulled branch tip may have moved
-git branch -D $BRANCH # delete temporarily in order to make it easy to move to the tagged repo state
-git checkout $TAG
-git checkout -b $BRANCH # in case the local branch tip was moved, will revert to tag and allows subsequent CI steps to use branch name
-                        # the local commit history will look like (A) in the diagram above after git pull
+git reset $TAG # in case the local branch tip was moved, revert to the tagged commit and allow subsequent CI steps to use branch name
+               # at this point, the local commit history will look like (A) in the diagram above after git pull
