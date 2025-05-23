@@ -146,9 +146,9 @@ git merge $TAG # can either fast-forward, or merge if there are new commits from
 
 git push origin $BRANCH # synchronize branch tip with remote, may already be up-to-date 
                         # or will update remote commit history to look like (B) after git merge diagram
-# git push origin $TAG    # remote should not have this tag yet, should error if it's already there (non-fast-forward)
+git push origin $TAG    # remote should not have this tag yet, should error if it's already there (non-fast-forward)
 
 # IMPORTANT:
 # subsequent steps after this script must use the tagged commit, since the pulled branch tip may have moved
-git reset $TAG # if the branch tip did not move after pull, then nothing changes with this reset;
-               # if it moved, this will revert to the tagged commit and the commit history will look like (A) in the diagram above after git pull
+git reset --hard $TAG # if the branch tip did not move after pull, then nothing changes with this reset;
+                      # if it moved, this will revert to the tagged commit and the commit history will look like (A) in the diagram above after git pull
