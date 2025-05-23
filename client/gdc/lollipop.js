@@ -88,8 +88,7 @@ export async function init(arg, holder, genomes) {
 		callback: launchView,
 		geneSymbol: arg.geneSymbol,
 		triggerSearch: arg.geneSymbol && arg.geneSearch4GDCmds3?.hardcodeCnvOnly == true,
-		hideInputBeforeCallback: arg.geneSearch4GDCmds3?.hardcodeCnvOnly == true,
-		disableInput: arg.geneSearch4GDCmds3?.hardcodeCnvOnly == true
+		hideInputBeforeCallback: arg.geneSearch4GDCmds3?.hardcodeCnvOnly == true
 	}
 	if (!arg.geneSearch4GDCmds3.hardcodeCnvOnly) {
 		// not in cnv mode; is in lollipop mode to show coding ssm over gene coding exons, apply this flag
@@ -144,7 +143,6 @@ export async function init(arg, holder, genomes) {
 			pa.tklst = [tk]
 			if (arg.geneSearch4GDCmds3.hardcodeCnvOnly) {
 				tk.hardcodeCnvOnly = 1
-				tk.disableSearchInput = searchOpt.disableInput
 				// also block is in genome browser mode
 				delete pa.gmmode
 				first_genetrack_tolist(pa.genome, pa.tklst)
