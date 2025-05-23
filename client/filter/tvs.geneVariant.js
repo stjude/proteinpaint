@@ -1,25 +1,11 @@
-import { dt2label } from '#shared/common.js'
+import { handler as catHandler } from './tvs.categorical.js'
 import { mayGetChildTerms } from '../tw/geneVariant'
 
 /*
-********************** EXPORTED
-handler:
-    // internal functions as part of handler
-    term_name_gen()
-    get_pill_label()
-    getSelectRemovePos()
-    fillMenu()
-    setTvsDefaults()
+TVS handler for geneVariant term
 */
 
-export const handler = {
-	type: 'geneVariant',
-	term_name_gen,
-	get_pill_label,
-	getSelectRemovePos,
-	fillMenu,
-	setTvsDefaults
-}
+export const handler = Object.assign({}, catHandler, { type: 'geneVariant', fillMenu, term_name_gen })
 
 async function fillMenu(self, _div, tvs) {
 	const term = structuredClone(tvs.term)
@@ -54,27 +40,6 @@ async function fillMenu(self, _div, tvs) {
 }
 
 function term_name_gen(d) {
-	const name = d.term.name
-	return name.length < 21 ? name : '<label title="' + name + '">' + name.substring(0, 18) + '...' + '</label>'
-}
-
-function get_pill_label(tvs) {
-	const modifiedGrp = tvs.values.filter(v => v.mclassExcludeLst.length > 0)[0]
-	const mGroup = dt2label[modifiedGrp.dt]
-
-	if (modifiedGrp.mclassLst.length == 1) {
-		// single
-		const m = modifiedGrp.mclassLst[0]
-		return { txt: `${mGroup}:${m}` }
-	}
-	// multiple
-	return { txt: `${mGroup}:${modifiedGrp.mclassLst.length} groups` }
-}
-
-function getSelectRemovePos(j) {
-	return j
-}
-
-function setTvsDefaults(tvs) {
-	if (!tvs.values) tvs.values = []
+	const name = d.term.parentTerm ? `${d.term.parentTerm.name} ${d.term.name}` : d.term.name
+	return name.length < 31 ? name : '<label title="' + name + '">' + name.substring(0, 28) + '...' + '</label>'
 }
