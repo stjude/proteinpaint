@@ -106,14 +106,14 @@ git reset --hard HEAD~1 # go back one commit on the current branch
 git pull # may already be at current tip or new commits may have been added
 # at this point, the local commit history will look like one of these
 # (A)
-# fast-forward       (B)
-# where both are     merge
+# fast-forward         (B)
+# where both are       merge
 # at same commit     
 #                          branch fast-forwarded to a new commit from remote
 # tag,branch           tag |
-# |                       \| 
-# |                        |
-# |                        |
+#    |                    \| 
+#    |                     |
+#    |                     |
 #
 
 # check in case another CI bumped the version in github while this CI was running
