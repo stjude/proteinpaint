@@ -521,7 +521,7 @@ export function table_cnv(arg, table) {
 	}
 }
 
-function cnv2str(m, tk) {
+export function cnv2str(m, tk) {
 	const cs = {}
 	// TODO need queries.cnv.type=cat/lr/cn
 	// with type, will be able to make better indication

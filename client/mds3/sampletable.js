@@ -1,7 +1,7 @@
 import { fillbar, renderTable, newSandboxDiv, table2col } from '#dom'
-import { mclass, dtsnvindel, dtsv, dtfusionrna } from '#shared/common.js'
+import { mclass, dtsnvindel, dtsv, dtfusionrna, dtcnv } from '#shared/common.js'
 import { rgb } from 'd3-color'
-import { print_snv, printSvPair } from './itemtable'
+import { print_snv, printSvPair, cnv2str } from './itemtable'
 import { convertUnits } from '#shared/helpers.js'
 
 /*
@@ -463,16 +463,18 @@ export async function samples2columnsRows(samples, tk) {
 			if (ssm_id_lst) {
 				const htmls = []
 				for (const ssm_id of ssm_id_lst) {
+					const m = findMbyId(ssm_id, tk)
 					const oneHtml = []
-					const m = (tk.skewer.rawmlst || tk.custom_variants).find(i => i.ssm_id == ssm_id)
 					if (m) {
 						// found m data point
+						let showClass
 						if (m.dt == dtsnvindel) {
 							if (tk.mds.queries && tk.mds.queries.snvindel && tk.mds.queries.snvindel.url) {
 								oneHtml.push(`<a href=${tk.mds.queries.snvindel.url.base + m.ssm_id} target=_blank>${m.mname}</a>`)
 							} else {
 								oneHtml.push(m.mname)
 							}
+							showClass = true
 						} else if (m.dt == dtsv || m.dt == dtfusionrna) {
 							// server-returned data has sample._pairlst and shouldn't use m.pairlst; client-side custom data only has m.pairlst
 							const p = sample._pairlst?.[0] || m.pairlst[0]
@@ -481,19 +483,27 @@ export async function samples2columnsRows(samples, tk) {
 									p.b.name || ''
 								} ${p.b.chr}:${p.b.pos} ${p.b.strand == '+' ? 'forward' : 'reverse'}`
 							)
+							showClass = true
+						} else if (m.dt == dtcnv) {
+							const v = cnv2str(m, tk)
+							oneHtml.push(v.value + ' ' + v.pos)
+							showClass = Number.isFinite(m.value) // display class when using numeric value
 						} else {
 							throw 'unknown dt'
 						}
-						oneHtml.push(
-							`<span style="color:${rgb(mclass[m.class].color).darker()};font-size:0.8em;">${
-								mclass[m.class].label
-							}</span>`
-						)
+
+						if (showClass) {
+							oneHtml.push(
+								`<span style="color:${rgb(mclass[m.class].color).darker()};font-size:0.8em;">${
+									mclass[m.class].label
+								}</span>`
+							)
+						}
 
 						htmls.push(oneHtml.join(' '))
 					} else {
 						// m datapoint not found on client
-						htmls.push(ssm_id)
+						htmls.push(ssm_id + '?')
 					}
 				}
 				row.push({ html: htmls.join('<br>') })
@@ -525,6 +535,19 @@ export async function samples2columnsRows(samples, tk) {
 		rows.push(row)
 	}
 	return [columns, rows]
+}
+
+export function findMbyId(str, tk) {
+	const lst = tk.skewer?.rawmlst || tk.custom_variants
+	if (lst) {
+		const m = lst.find(i => i.ssm_id == str)
+		if (m) return m
+	}
+	if (tk.cnv?.cnvLst) {
+		const m = tk.cnv.cnvLst.find(i => i.ssm_id == str)
+		if (m) return m
+	}
+	return null
 }
 
 function printFormat(fobj, value) {
