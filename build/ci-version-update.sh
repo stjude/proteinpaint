@@ -11,10 +11,15 @@
 
 set -euxo pipefail
 
+BRANCH=$(git rev-parse --abbrev-ref HEAD)
 VERTYPE=prerelease # default
+
 if [[ "$1" == "pre"* ]]; then
   # respect user-selected prerelease, prepatch, preminor, premajor
   VERTYPE=$1
+elif [[ "$BRANCH" == "prerelease"* && "$1" == "auto-detect" ]]; then
+  # in case the CI UI input was not changed to 'prerelease'
+  VERTYPE=prerelease
 else
   # non pre* version type will be ignored, instead auto-detect 
   # the version type based on unreleased changelog entries 
@@ -28,8 +33,7 @@ else
   fi
 fi
 
-BRANCH=$(git rev-parse --abbrev-ref HEAD)
-if [[ "$VERTYPE" != "pre"* && "$BRANCH" != "publish-"* && "$BRANCH" != "release"* && "$BRANCH" != "prerelease"* && "$BRANCH" != "master" ]]; then
+if [[ "$VERTYPE" != "pre"* && "$BRANCH" != "master" && "$BRANCH" != "publish-"* && "$BRANCH" != "release"* && "$BRANCH" != "prerelease"* ]]; then
   VERTYPE="pre$VERTYPE"
 fi
 
@@ -142,8 +146,9 @@ git merge $TAG # can either fast-forward, or merge if there are new commits from
 
 git push origin $BRANCH # synchronize branch tip with remote, may already be up-to-date 
                         # or will update remote commit history to look like (B) after git merge diagram
-git push origin $TAG    # remote should not have this tag yet, should error if it's already there (non-fast-forward)
+# git push origin $TAG    # remote should not have this tag yet, should error if it's already there (non-fast-forward)
+
 # IMPORTANT:
 # subsequent steps after this script must use the tagged commit, since the pulled branch tip may have moved
-git reset $TAG # in case the local branch tip was moved, revert to the tagged commit and allow subsequent CI steps to use branch name
-               # at this point, the local commit history will look like (A) in the diagram above after git pull
+git reset $TAG # if the branch tip did not move after pull, then nothing changes with this reset;
+               # if it moved, this will revert to the tagged commit and the commit history will look like (A) in the diagram above after git pull

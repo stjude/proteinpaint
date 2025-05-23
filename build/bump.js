@@ -98,7 +98,11 @@ if (opts.refCommit.endsWith('^{commit}')) {
 }
 
 // set a prerelease identifier option for semver.inc(), if applicable
-const preid = verType.startsWith('pre') && !rootPkg.version.includes('-') ? ex(`git rev-parse --short HEAD`) : ''
+const branch = ex(`git rev-parse --abbrev-ref HEAD`)
+const preid =
+	branch != 'master' && verType.startsWith('pre') && !rootPkg.version.includes('-')
+		? ex(`git rev-parse --short HEAD`)
+		: ''
 const newVersion = semver.inc(rootPkg.version, verType, preid)
 
 const pkgs = {}
