@@ -1476,8 +1476,8 @@ async function querySamplesWithCnv(q, dictTwLst, ds) {
 	const byTermId = mayApplyBinning(samples, dictTwLst)
 
 	const id2samples = new Map()
-	for (const s of samples) {
-		combineSamplesById([s], id2samples, s.ssm_id)
+	for (const c of cnvs) {
+		combineSamplesById(c.samples, id2samples, c.ssm_id)
 	}
 
 	return [byTermId, [...id2samples.values()]]

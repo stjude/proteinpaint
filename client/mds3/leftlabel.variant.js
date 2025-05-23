@@ -4,7 +4,7 @@ import { itemtable } from './itemtable'
 import { makelabel, positionLeftlabelg } from './leftlabel'
 import { to_textfile, Tabs, make_radios, shapes, shapeSelector } from '#dom'
 import { rangequery_rglst } from './tk'
-import { samples2columnsRows, block2source } from './sampletable'
+import { samples2columnsRows, block2source, findMbyId } from './sampletable'
 import { dt2label, mclass, dtsnvindel, dtsv, dtcnv, dtfusionrna } from '#shared/common.js'
 
 /*
@@ -468,7 +468,7 @@ async function downloadVariants(tk, block) {
 		}
 
 		for (const ssmid of ssm_id_lst) {
-			const m = tk.skewer.rawmlst.find(i => i.ssm_id == ssmid)
+			const m = findMbyId(ssmid, tk)
 			if (!m) {
 				console.log('ssm not found by id: ' + ssmid)
 				continue
@@ -491,6 +491,12 @@ async function downloadVariants(tk, block) {
 						line.push(
 							m.pairlst[0].a.chr + ':' + m.pairlst[0].a.pos + '>' + m.pairlst[0].b.chr + ':' + m.pairlst[0].b.pos
 						)
+					} else if (m.dt == dtcnv) {
+						line.push(Number.isFinite(m.value) ? m.value : '')
+						line.push(mclass[m.class].label)
+						line.push(m.chr + ':' + (m.start + 1) + '-' + (m.stop + 1))
+					} else {
+						throw 'unknown m.dt'
 					}
 					continue
 				}
