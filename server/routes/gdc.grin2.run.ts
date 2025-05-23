@@ -26,6 +26,20 @@ export const api: RouteApi = {
 	}
 }
 
+/**
+ * Main GRIN2 analysis handler
+ * Processes MAF files through Rust and generates plots via R
+ *
+ * @param req - Express request (data comes via req.query after middleware merge)
+ * @param res - Express response (returns PNG image as base64)
+ *
+ * Data Flow:
+ * 1. Extract caseFiles from req.query (already parsed by middleware)
+ * 2. Pass caseFiles to Rust for mutation processing
+ * 3. Pass Rust output to R for plot generation
+ * 4. Return generated PNG as base64 string
+ */
+
 function init({ genomes }) {
 	return async (req: any, res: any): Promise<void> => {
 		try {
@@ -35,18 +49,15 @@ function init({ genomes }) {
 			const ds = g.datasets.GDC
 			if (!ds) throw 'hg38 GDC missing'
 
-			const caseFiles = req.query as RunGRIN2Request
-			console.log(`[GRIN2] Request received: ${JSON.stringify(caseFiles)}`)
-
-			if (!caseFiles) {
-				throw 'Missing or invalid cases data'
-			}
+			console.log(`[GRIN2] Request received:`, JSON.stringify(req.query))
+			const parsedRequest = req.query as RunGRIN2Request
+			console.log(`[GRIN2] Parsed request: ${JSON.stringify(parsedRequest)}`)
 
 			// Step 1: Call Rust to process the MAF files and get JSON data
 			console.log('[GRIN2] Calling Rust for file processing...')
 
-			//console.log(`[GRIN2] Rust input: ${rustInput}`)
-			const rustInput = JSON.stringify(caseFiles)
+			// console.log(`[GRIN2] Rust input: ${rustInput}`)
+			const rustInput = JSON.stringify(parsedRequest.caseFiles)
 
 			// Call the Rust implementation and get JSON result
 			console.log('[GRIN2] Executing Rust function...')

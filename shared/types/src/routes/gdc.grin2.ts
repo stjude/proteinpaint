@@ -67,8 +67,21 @@ export type GdcGRIN2listResponse = {
 /**
  * Parameters for running GRIN2 analysis
  */
+
 export type RunGRIN2Request = {
-	[caseId: string]: { maf?: string }
+	/**  Case files to analyze - maps case ID to file information */
+	caseFiles: {
+		[caseId: string]: {
+			maf?: string
+		}
+	}
+	/**  Options for filtering MAF file content */
+	mafOptions?: {
+		/** Minimum total depth of returned MAF files */
+		minTotalDepth?: number // Default: 10
+		/** Minimum alternate allele count of returned MAF files */
+		minAltAlleleCount?: number // Default: 2
+	}
 }
 
 /**
