@@ -28,7 +28,7 @@ runs:
         # should detect and pull latest tag in branch and build from it,
         # and avoid building from branch HEAD/tip that may have already moved
         TAG="$(node -p "require('./package.json').version")"
-        git fetch $TAG
+        git fetch origin $TAG
         git checkout $TAG
         
         cd container;
