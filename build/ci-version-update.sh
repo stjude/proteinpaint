@@ -100,7 +100,21 @@ fi
 git tag $TAG # the absolute reference to the repo state at the time of build
 BRANCH=$(git rev-parse --abbrev-ref HEAD)
 git reset --hard HEAD~1 # go back one commit on the current branch
+                        # to allow local branch to get fast-forwarded after pull, if applicable;
+                        # tag will now be ahead of branch by one commit
+
 git pull # may already be at current tip or new commits may have been added
+# at this point, the local commit history will look like one of these
+# (A)
+# fast-forward       (B)
+# where both are     merge
+# at same commit     
+#                          branch fast-forwarded to a new commit from remote
+# tag,branch           tag |
+# |                       \| 
+# |                        |
+# |                        |
+#
 
 # check in case another CI bumped the version in github while this CI was running
 PULLED_VERSION="$(node -p "require('./package.json').version")"
@@ -113,10 +127,25 @@ fi
 
 # !!! DO NOT REBASE !!!
 git merge $TAG # can either fast-forward, or merge if there are new commits from remote
-git push origin $BRANCH # synchronize new tag/commit with remote
-git push origin $TAG # in case a merge occurred instead of fast-forward, otherwise will be redundant with previous push
+# after merge,
+# (A) tag and branch will remain at the same commit if no new branch commits were pulled from remote
+#     - OR -
+# (B) if new commits were pulled, the commit history will now look like this
+#
+#     branch, after tag is merged into a new commit tip from remote
+#    /|
+# tag |
+#    \| 
+#     |
+#     |
+# 
+
+git push origin $BRANCH # synchronize branch tip with remote, may already be up-to-date 
+                        # or will update remote commit history to look like (B) after git merge diagram
+git push origin $TAG    # remote should not have this tag yet, should error if it's already there (non-fast-forward)
 # IMPORTANT:
 # subsequent steps after this script must use the tagged commit, since the pulled branch tip may have moved
 git branch -D $BRANCH # delete temporarily in order to make it easy to move to the tagged repo state
 git checkout $TAG
-git checkout -b $BRANCH # in case the local branch tip was moved, will revert to tag and allows subsequent CI steps to use branch name 
+git checkout -b $BRANCH # in case the local branch tip was moved, will revert to tag and allows subsequent CI steps to use branch name
+                        # the local commit history will look like (A) in the diagram above after git pull
