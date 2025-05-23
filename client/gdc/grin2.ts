@@ -132,6 +132,75 @@ function makeControls(obj) {
 
 		updateText()
 	}
+	// Add MAF filtering options to the controls table
+	{
+		const [, td2] = table.addRow('MAF Filtering Options')
+
+		// Create container for the MAF options
+		const mafOptionsDiv = td2.append('div').style('display', 'inline-block')
+
+		// Min Total Depth input
+		mafOptionsDiv.append('label').style('margin-right', '10px').style('font-size', '14px').text('Min Total Depth:')
+
+		mafOptionsDiv
+			.append('input')
+			.attr('type', 'number')
+			.attr('min', '0')
+			.attr('step', '1')
+			.attr('value', obj.mafOptions?.minTotalDepth || 10)
+			.style('width', '60px')
+			.style('margin-right', '20px')
+			.style('padding', '2px 4px')
+			.style('border', '1px solid #ccc')
+			.style('border-radius', '3px')
+			.on('input', function (this: HTMLInputElement) {
+				const value = parseInt(this.value, 10)
+				if (!isNaN(value) && value >= 0) {
+					obj.mafOptions.minTotalDepth = value
+				}
+			})
+
+		// Min Alt Allele Count input
+		mafOptionsDiv.append('label').style('margin-right', '10px').style('font-size', '14px').text('Min Alt Allele Count:')
+
+		mafOptionsDiv
+			.append('input')
+			.attr('type', 'number')
+			.attr('min', '0')
+			.attr('step', '1')
+			.attr('value', obj.mafOptions?.minAltAlleleCount || 2)
+			.style('width', '60px')
+			.style('padding', '2px 4px')
+			.style('border', '1px solid #ccc')
+			.style('border-radius', '3px')
+			.on('input', function (this: HTMLInputElement) {
+				const value = parseInt(this.value, 10)
+				if (!isNaN(value) && value >= 0) {
+					obj.mafOptions.minAltAlleleCount = value
+				}
+			})
+
+		// Add help tooltip
+		mafOptionsDiv
+			.append('span')
+			.attr('class', 'sja_clbtext')
+			.style('margin-left', '10px')
+			.style('font-size', '12px')
+			.style('color', '#666')
+			.text('ⓘ')
+			.attr(
+				'title',
+				'Min Total Depth: Minimum read depth required\nMin Alt Allele Count: Minimum alternate allele count required'
+			)
+	}
+
+	// Initialize mafOptions if not exists
+	if (!obj.mafOptions) {
+		obj.mafOptions = {
+			minTotalDepth: 10,
+			minAltAlleleCount: 2
+		}
+	}
 }
 
 async function getFilesAndShowTable(obj) {
@@ -230,7 +299,7 @@ async function getFilesAndShowTable(obj) {
 				{
 					text: 'Run GRIN2 Analysis',
 					onChange: updateButtonBySelectionChange,
-					callback: runGRIN2Analysis
+					callback: (lst, button) => runGRIN2Analysis(lst, button, obj)
 				}
 			]
 		}
@@ -287,13 +356,13 @@ async function getFilesAndShowTable(obj) {
 	 *
 	 */
 
-	async function runGRIN2Analysis(lst, button) {
+	async function runGRIN2Analysis(lst, button, obj) {
 		// Format the data according to what the Rust code expects
 		const caseFiles = {
 			caseFiles: {},
 			mafOptions: {
-				minTotalDepth: 10,
-				minAltAlleleCount: 2
+				minTotalDepth: obj.mafOptions.minTotalDepth,
+				minAltAlleleCount: obj.mafOptions.minAltAlleleCount
 			}
 		}
 
