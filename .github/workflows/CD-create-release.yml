@@ -106,7 +106,6 @@ jobs:
           
           CHANGES="[CHANGELOG.md](https://github.com/stjude/proteinpaint/blob/master/CHANGELOG.md)"
           echo "latest_release_changes=$CHANGES" >> $GITHUB_OUTPUT
-          exit 1
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPMJS_TOKEN }}
 
