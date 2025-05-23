@@ -41,6 +41,7 @@ jobs:
             git config --global user.name "PPTeam CI"
             git commit -m "append release notes to change log"
             BRANCH=$(git rev-parse --abbrev-ref HEAD)
+            # okay to rebase since only changelog.md, release.txt are changed
             git pull --rebase
             git push origin $BRANCH
           fi

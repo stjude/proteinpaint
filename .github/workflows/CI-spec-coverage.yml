@@ -145,6 +145,7 @@ jobs:
           git pull --rebase               # in case the upstream branch was updated during this CI run,
                                           # pull those updates before before evaluating spec coverage results 
                                           # that will generate new extracts to be merged to the coverage json
+                                          # NOTE that nothing has been committed at this point
 
           # NOTE: this command will update workspace coverage file and stage them with `git add`
           node test/evalAllSpecCovResults.mjs 0

@@ -37,12 +37,16 @@ fi
 # CONTEXT
 ##########
 
+# version before calling bump.js
+PREVIOUS_VERSION="$(node -p "require('./package.json').version")"
+
 UPDATED=$(./build/bump.js $VERTYPE "$@")
 if [[ "$UPDATED" == "" ]]; then
   echo "No workspace package updates, exiting script with code 1"
   exit 1
 fi
 
+# this is the version that was assigned after ./build/bump.js [...] -w
 VERSION="$(node -p "require('./package.json').version")"
 if [[ $UPDATED == *"rust"* ]]; then
   cd rust
@@ -85,6 +89,7 @@ if [[ "$VERTYPE" == "pre"* ]]; then
   if [[ "$EXISTINGTAG" != "" ]]; then
     git tag -d $TAG
   fi
+  # okay to rebase in prerelease branch???
   git pull --rebase
   git push origin :refs/tags/$TAG
 elif [[ "$EXISTINGTAG" != "" ]]; then
@@ -92,8 +97,26 @@ elif [[ "$EXISTINGTAG" != "" ]]; then
   exit 1
 fi
 
-git tag $TAG
+git tag $TAG # the absolute reference to the repo state at the time of build
 BRANCH=$(git rev-parse --abbrev-ref HEAD)
-git pull --rebase
-git push origin $BRANCH
-git push origin $TAG
+git reset --hard HEAD~1 # go back one commit on the current branch
+git pull # may already be at current tip or new commits may have been added
+
+# check in case another CI bumped the version in github while this CI was running
+PULLED_VERSION="$(node -p "require('./package.json').version")"
+if [[ "$PULLED_VERSION" != "$PREVIOUS_VERSION" ]]; then
+  echo "!!! Error: !!!"
+  echo "the remote version has changed from '$PREVIOUS_VERSION' to '$PULLED_VERSION' while this CI workflow/action was running"
+  echo "!!! ------ !!!"
+  exit 1
+fi
+
+# !!! DO NOT REBASE !!!
+git merge $TAG # can either fast-forward, or merge if there are new commits from remote
+git push origin $BRANCH # synchronize new tag/commit with remote
+git push origin $TAG # in case a merge occurred instead of fast-forward, otherwise will be redundant with previous push
+# IMPORTANT:
+# subsequent steps after this script must use the tagged commit, since the pulled branch tip may have moved
+git branch -D $BRANCH # delete temporarily in order to make it easy to move to the tagged repo state
+git checkout $TAG
+git checkout -b $BRANCH # in case the local branch tip was moved, will revert to tag and allows subsequent CI steps to use branch name 
