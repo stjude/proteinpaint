@@ -1,4 +1,4 @@
-import { dtgeneexpression, dtmetaboliteintensity, TermTypeGroups } from './common.js'
+import { dtgeneexpression, dtmetaboliteintensity, TermTypeGroups, dtTerms } from './common.js'
 import { roundValueAuto } from './roundValue.js'
 
 // moved TermTypeGroups to `server/src/common.js`, so now has to re-export
@@ -41,6 +41,10 @@ export const TermTypes = {
 	MULTIVALUE: 'multivalue',
 	DATE: 'date'
 }
+const dtTermTypes = new Set(dtTerms.map(t => t.type))
+for (const dtTermType of dtTermTypes) {
+	TermTypes[dtTermType.toUpperCase()] = dtTermType
+}
 
 export const NUMERIC_DICTIONARY_TERM = 'numericDictTerm'
 
@@ -76,6 +80,9 @@ const nonDictTypes = new Set([
 	TermTypes.SINGLECELL_GENE_EXPRESSION,
 	TermTypes.SINGLECELL_CELLTYPE
 ])
+for (const dtTermType of dtTermTypes) {
+	nonDictTypes.add(TermTypes[dtTermType.toUpperCase()])
+}
 
 export const numericTypes = new Set([
 	TermTypes.INTEGER,

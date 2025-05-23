@@ -1,11 +1,11 @@
-import { handler as dtHandler } from './tvs.dt.js'
+import { handler as _handler } from './tvs.geneVariant.js'
 import { Menu } from '../dom/menu'
 
 /*
 TVS handler for dtcnv term
 */
 
-export const handler = Object.assign({}, dtHandler, { type: 'dtcnv', setMethods })
+export const handler = Object.assign({}, _handler, { type: 'dtcnv', setMethods })
 
 function setMethods(self, tvs) {
 	// fill cnv menu based on whether cnv data is continuous or categorical

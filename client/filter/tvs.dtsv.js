@@ -1,7 +1,7 @@
-import { handler as dtHandler } from './tvs.dt.js'
+import { handler as _handler } from './tvs.geneVariant.js'
 
 /*
 TVS handler for dtsv term
 */
 
-export const handler = Object.assign({}, dtHandler, { type: 'dtsv' })
+export const handler = Object.assign({}, _handler, { type: 'dtsv' })
