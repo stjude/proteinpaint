@@ -423,10 +423,10 @@
   },
   "dom/genesearch.ts": {
     "lines": {
-      "total": 258,
+      "total": 263,
       "covered": 111,
       "skipped": 0,
-      "pct": 43.02
+      "pct": 42.2
     },
     "functions": {
       "total": 24,
@@ -435,14 +435,14 @@
       "pct": 45.83
     },
     "statements": {
-      "total": 283,
+      "total": 288,
       "covered": 115,
       "skipped": 0,
-      "pct": 40.63
+      "pct": 39.93
     },
     "branches": {
-      "total": 175,
-      "covered": 58,
+      "total": 181,
+      "covered": 60,
       "skipped": 0,
       "pct": 33.14
     },
@@ -452,9 +452,9 @@
       "diff": 0
     },
     "averagePct": {
-      "curr": 40.655,
+      "curr": 40.275000000000006,
       "prev": 40.655,
-      "diff": 0
+      "diff": -0.37999999999999545
     }
   },
   "plots/matrix/test/matrix.integration.spec.js": {
