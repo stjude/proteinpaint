@@ -37,18 +37,7 @@ if (mode == 'dev') {
 				const dotpath = cwds[cwd]
 				const frelpath = `${dotpath}/${dir}/${f}`
 				if (!fs.existsSync(abspath)) continue
-				//const vname = f == 'clinvar.js' ? '* as clinvar' : normalizeName(f)
 				imports.push(`import '${frelpath}'`)
-				// const v = await import(abspath) //; if (f == 'termdb.test.js') console.log(v)
-				// const { isMds3, isMds2, isMds, isMinGenome } = v.default || v
-				// const vtype = isMds3 ? 'Mds3' : isMds2 ? 'any' : isMds ? 'Mds' : isMinGenome ? 'MinGenome' : 'Genome'
-				// if (f == 'clinvar.js') {
-				// 	vartypes.push(`const v${i}a: ClinvarClinsig = clinvar.clinsig`)
-				// 	vartypes.push(`const v${i}b: ClinvarAF = clinvar.AF`)
-				// } else {
-				// 	vartypes.push(`const v${i}: ${vtype} = ${vname}`)
-				// }
-				// i++
 			}
 		}
 	}
