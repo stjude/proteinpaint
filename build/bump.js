@@ -96,7 +96,10 @@ if (opts.refCommit.endsWith('^{commit}')) {
 		throw e
 	}
 }
-const newVersion = semver.inc(rootPkg.version, verType)
+
+// set a prerelease identifier option for semver.inc(), if applicable
+const preid = verType.startsWith('pre') && !rootPkg.version.includes('-') ? ex(`git rev-parse --short HEAD`) : ''
+const newVersion = semver.inc(rootPkg.version, verType, preid)
 
 const pkgs = {}
 const changedFiles = ex(`git diff --name-only ${opts.refCommit} HEAD`).split('\n')
@@ -225,7 +228,7 @@ function minWrite(name) {
 
 function ex(cmd, opts = {}) {
 	try {
-		return execSync(cmd, { encoding: 'utf8' })
+		return execSync(cmd, { encoding: 'utf8' }).trim()
 	} catch (e) {
 		if (opts.handler) opts.handler(e)
 		else if (opts.message) throw opts.message + ': ' + e
