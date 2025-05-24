@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.128.2
 
 Fixes:
 - properly display cnv entries in mds3 tk sample table, support cnv data download
