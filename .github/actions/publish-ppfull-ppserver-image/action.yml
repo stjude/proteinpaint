@@ -25,9 +25,13 @@ runs:
       run: |
         sleep 90   # give npmjs registry enough time to be ready with the newly published packages (check if this delay is still needed)
 
+        # set the branch name before checking out tag
+        BRANCH=$(git rev-parse --abbrev-ref HEAD)
+        echo "::set-output name=branch::$BRANCH";
+
         # should detect and pull latest tag in branch and build from it,
         # and avoid building from branch HEAD/tip that may have already moved
-        TAG="$(node -p "require('./package.json').version")"
+        TAG="v$(node -p "require('./package.json').version")"
         git fetch origin $TAG # always use tagged commit for build 
         git checkout $TAG
         
@@ -44,8 +48,6 @@ runs:
         docker push "ghcr.io/stjude/ppfull:latest";
         
         echo "::set-output name=docker_version::$TAG-$HASH";
-        BRANCH=$(git rev-parse --abbrev-ref HEAD)
-        echo "::set-output name=branch::$BRANCH";
 
     - name: get pp version
       id: pp-version
