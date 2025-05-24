@@ -27,7 +27,7 @@ const tableColumns = [
 	{ label: 'File Size', barplot: { tickFormat: '~s' }, sortable: true }
 ]
 
-// list of analysis options
+// list of data type options
 const datatypeOptions = [
 	{ option: 'mafOption', selected: true, label: 'Include Mutation' },
 	{ option: 'cnvOption', selected: true, label: 'Include CNV' },
@@ -132,6 +132,75 @@ function makeControls(obj) {
 
 		updateText()
 	}
+	// Add MAF filtering options to the controls table
+	{
+		const [, td2] = table.addRow('MAF Filtering Options')
+
+		// Create container for the MAF options
+		const mafOptionsDiv = td2.append('div').style('display', 'inline-block')
+
+		// Min Total Depth input
+		mafOptionsDiv.append('label').style('margin-right', '10px').style('font-size', '14px').text('Min Total Depth:')
+
+		mafOptionsDiv
+			.append('input')
+			.attr('type', 'number')
+			.attr('min', '0')
+			.attr('step', '1')
+			.attr('value', obj.mafOptions?.minTotalDepth || 10)
+			.style('width', '60px')
+			.style('margin-right', '20px')
+			.style('padding', '2px 4px')
+			.style('border', '1px solid #ccc')
+			.style('border-radius', '3px')
+			.on('input', function (this: HTMLInputElement) {
+				const value = parseInt(this.value, 10)
+				if (!isNaN(value) && value >= 0) {
+					obj.mafOptions.minTotalDepth = value
+				}
+			})
+
+		// Min Alt Allele Count input
+		mafOptionsDiv.append('label').style('margin-right', '10px').style('font-size', '14px').text('Min Alt Allele Count:')
+
+		mafOptionsDiv
+			.append('input')
+			.attr('type', 'number')
+			.attr('min', '0')
+			.attr('step', '1')
+			.attr('value', obj.mafOptions?.minAltAlleleCount || 2)
+			.style('width', '60px')
+			.style('padding', '2px 4px')
+			.style('border', '1px solid #ccc')
+			.style('border-radius', '3px')
+			.on('input', function (this: HTMLInputElement) {
+				const value = parseInt(this.value, 10)
+				if (!isNaN(value) && value >= 0) {
+					obj.mafOptions.minAltAlleleCount = value
+				}
+			})
+
+		// Add help tooltip
+		mafOptionsDiv
+			.append('span')
+			.attr('class', 'sja_clbtext')
+			.style('margin-left', '10px')
+			.style('font-size', '12px')
+			.style('color', '#666')
+			.text('ⓘ')
+			.attr(
+				'title',
+				'Min Total Depth: Minimum read depth required\nMin Alt Allele Count: Minimum alternate allele count required'
+			)
+	}
+
+	// Initialize mafOptions if not exists
+	if (!obj.mafOptions) {
+		obj.mafOptions = {
+			minTotalDepth: 10,
+			minAltAlleleCount: 2
+		}
+	}
 }
 
 async function getFilesAndShowTable(obj) {
@@ -158,6 +227,30 @@ async function getFilesAndShowTable(obj) {
 		if (result.error) throw result.error
 		if (!Array.isArray(result.files)) throw 'result.files[] not array'
 		if (result.files.length == 0) throw 'No files available.'
+
+		// Show deduplication information if any duplicates were removed
+		if (result.deduplicationStats && result.deduplicationStats.duplicatesRemoved > 0) {
+			const deduplicationDiv = obj.deduplicationInfoDiv
+				.append('div')
+				.style('background-color', '#f0f8ff')
+				.style('border', '1px solid #87ceeb')
+				.style('border-radius', '4px')
+				.style('padding', '10px')
+				.style('margin', '10px 0')
+
+			deduplicationDiv
+				.append('div')
+				.style('font-weight', 'bold')
+				.style('color', '#2c5aa0')
+				.text('🔄 File Deduplication Applied')
+
+			deduplicationDiv.append('div').style('margin-top', '5px').style('font-size', '14px').html(`
+					Found <strong>${result.deduplicationStats.originalFileCount}</strong> total MAF files, 
+					but <strong>${result.deduplicationStats.duplicatesRemoved}</strong> were duplicates from the same cases. 
+					<br/>Showing <strong>${result.deduplicationStats.deduplicatedFileCount}</strong> unique cases 
+					(largest file selected for each case).
+				`)
+		}
 
 		// render
 		if (result.filesTotal > result.files.length) {
@@ -206,7 +299,7 @@ async function getFilesAndShowTable(obj) {
 				{
 					text: 'Run GRIN2 Analysis',
 					onChange: updateButtonBySelectionChange,
-					callback: runGRIN2Analysis
+					callback: (lst, button) => runGRIN2Analysis(lst, button, obj)
 				}
 			]
 		}
@@ -248,9 +341,30 @@ async function getFilesAndShowTable(obj) {
     detect if it is truthy to only create it once
     */
 
-	async function runGRIN2Analysis(lst, button) {
+	/**
+	 * Formats selected files for GRIN2 Rust backend
+	 *
+	 * @param lst - Array of selected table row indices
+	 *
+	 * Creates structure expected by Rust:
+	 * {
+	 *   caseFiles: {
+	 *     [case_submitter_id]: { maf: file_id }
+	 *   },
+	 *   mafOptions: { minTotalDepth: 10, minAltAlleleCount: 2 }
+	 * }
+	 *
+	 */
+
+	async function runGRIN2Analysis(lst, button, obj) {
 		// Format the data according to what the Rust code expects
-		const caseFiles = {}
+		const caseFiles = {
+			caseFiles: {},
+			mafOptions: {
+				minTotalDepth: obj.mafOptions.minTotalDepth,
+				minAltAlleleCount: obj.mafOptions.minAltAlleleCount
+			}
+		}
 
 		for (const i of lst) {
 			const file = result.files[i]
@@ -258,13 +372,13 @@ async function getFilesAndShowTable(obj) {
 			const caseId = file.case_submitter_id
 
 			if (!caseFiles[caseId]) {
-				caseFiles[caseId] = { maf: null }
+				caseFiles.caseFiles[caseId] = {}
 			}
 
-			caseFiles[caseId].maf = file.id
+			caseFiles.caseFiles[caseId].maf = file.id
 		}
 
-		if (Object.keys(caseFiles).length === 0) return
+		if (Object.keys(caseFiles.caseFiles).length === 0) return
 
 		const oldText = button.innerHTML
 		button.innerHTML = 'Analyzing... Please wait'
@@ -279,7 +393,7 @@ async function getFilesAndShowTable(obj) {
 
 			// Call the GRIN2 run endpoint with the correctly formatted data
 			console.log('Sending GRIN2 request:', caseFiles)
-			console.log('GRIN2 request body:', JSON.stringify(caseFiles, null, 2))
+			console.log('GRIN2 request structure:', JSON.stringify(caseFiles, null, 2))
 			const startTime = Date.now()
 			const response = await dofetch3('gdc/runGRIN2', { body: caseFiles })
 			const elapsedTime = formatElapsedTime(Date.now() - startTime)
