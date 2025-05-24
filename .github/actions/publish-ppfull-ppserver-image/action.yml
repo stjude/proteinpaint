@@ -11,6 +11,8 @@ runs:
   using: 'composite'
   steps:
     - uses: actions/checkout@v4
+      with:
+        fetch-depth: 5
 
     - name: Login to Github
       uses: docker/login-action@v3.4.0
@@ -33,7 +35,7 @@ runs:
         # should detect and pull latest tag in branch and build from it,
         # and avoid building from branch HEAD/tip that may have already moved
         TAG="v$(node -p "require('./package.json').version")"
-        git fetch origin $TAG # always use tagged commit for build 
+        git fetch --tags origin $TAG # always use tagged commit for build 
         git checkout $TAG
         
         cd container;
