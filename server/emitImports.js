@@ -32,7 +32,6 @@ if (mode == 'dev') {
 		for (const cwd in cwds) {
 			const files = glob.sync('*.ts', { cwd })
 			for (const f of files) {
-				//if (f == 'cgc.ts') continue
 				const abspath = `${cwd}/${f}`
 				const dotpath = cwds[cwd]
 				const frelpath = `${dotpath}/${dir}/${f}`
