@@ -23,12 +23,12 @@ runs:
       id: docker-publish
       shell: bash
       run: |
-        sleep 90 # should check if this delay is still needed
-        
+        sleep 90   # give npmjs registry enough time to be ready with the newly published packages (check if this delay is still needed)
+
         # should detect and pull latest tag in branch and build from it,
         # and avoid building from branch HEAD/tip that may have already moved
         TAG="$(node -p "require('./package.json').version")"
-        git fetch $TAG
+        git fetch origin $TAG # always use tagged commit for build 
         git checkout $TAG
         
         cd container;
