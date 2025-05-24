@@ -1,9 +1,9 @@
+name: "Draft CI steps"
+
 # edit and reuse this script to test a very specific step, to develop 
 # better understanding, intuition of how certain commands, 
 # such as git pull, may work differently between local terminal 
 # and github ci environment
-
-name: "Draft CI steps"
 
 on:
    workflow_dispatch:
@@ -31,7 +31,6 @@ jobs:
           INPUT_BUILD_SECRET: ${{ steps.set-build-secret.outputs.BUILD_SECRET }}
 
   test:
-    if: github.event.pull_request.merged || github.event_name == 'workflow_dispatch'
     needs: check-user-permissions
     runs-on: ubuntu-22.04
     timeout-minutes: 5
@@ -42,18 +41,18 @@ jobs:
           token: ${{ secrets.PAT }}
 
       - name: Build and Publish Docker Images
-      id: docker-publish
-      shell: bash
-      run: |
-        # set the branch name before checking out tag
-        BRANCH=$(git rev-parse --abbrev-ref HEAD)
-        echo "::set-output name=branch::$BRANCH"
+        id: docker-publish
+        shell: bash
+        run: |
+          # set the branch name before checking out tag
+          BRANCH=$(git rev-parse --abbrev-ref HEAD)
+          echo "::set-output name=branch::$BRANCH"
 
-        git pull origin $BRANCH # in case this action is not able to access a pushed tagged commit/branch tip from a previous step within the CI environment
-        
-        # should detect and pull latest tag in branch and build from it,
-        # and avoid building from branch HEAD/tip that may have already moved
-        TAG="v$(node -p "require('./package.json').version")"
-        git fetch origin $TAG # always use tagged commit for build 
-        git checkout $TAG
+          git pull origin $BRANCH # in case this action is not able to access a pushed tagged commit/branch tip from a previous step within the CI environment
+          
+          # should detect and pull latest tag in branch and build from it,
+          # and avoid building from branch HEAD/tip that may have already moved
+          TAG="v$(node -p "require('./package.json').version")"
+          git fetch origin $TAG # always use tagged commit for build 
+          git checkout $TAG
 
