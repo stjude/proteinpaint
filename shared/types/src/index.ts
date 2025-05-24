@@ -1,4 +1,9 @@
-// please list in alphanumeric order, include file extension
+// NOTES:
+// - in dev, the `tsx ...` command allows importing src/*.ts files directly,
+//   as specified in `exports: {".": "./src/index.ts"}` entry in shared/types/package.json
+// - in prod, server code cannot import payload object from any of the files below using `src/index.ts`,
+//   since at runtime only js files can be handled by non-experimental node 22 (node 24 can do it natively)
+// - please list in alphanumeric order, include file extension
 export * from './genome.ts'
 export * from './dataset.ts'
 export * from './termsetting.ts'
