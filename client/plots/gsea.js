@@ -583,15 +583,15 @@ function render_cerno_plot(self, cerno_output) {
 	const svg_width = 400
 	const svg_height = 400
 	const svg = holder.append('svg').attr('width', svg_width).attr('height', svg_height)
-	const toppad = 50
-	const rightpad = 50
+	const toppad = 5
+	const rightpad = 5
 	const yaxisw = Math.max(50, svg_width / 8)
 	const xaxish = Math.max(50, svg_height / 8)
 	const yaxisg = svg.append('g')
 	const xaxisg = svg.append('g')
 	const xpad = 50
-	const ypad = 50
-	yaxisg.attr('transform', 'translate(' + xpad + ',' + 0 + ')')
+	const ypad = 100
+	yaxisg.attr('transform', 'translate(' + xpad + ',' + toppad + ')')
 	xaxisg.attr('transform', 'translate(' + 0 + ',' + (svg_height - ypad) + ')')
 	const xlab = xaxisg.append('text').text('Gene list').attr('fill', 'black').attr('text-anchor', 'middle') //.attr('transform', 'translate(' + 200 + ',' + 200 + ')')
 	const ylab = yaxisg
@@ -607,12 +607,13 @@ function render_cerno_plot(self, cerno_output) {
 		DE_output.push(item)
 	}
 	DE_output.sort((i, j) => j.fold_change - i.fold_change) // Sorting genes in descending order of fold change
-	console.log('DE_output:', DE_output)
 
-	const xscale = scaleLinear().domain([0, DE_output.length]).range([xpad, svg_width])
+	const xscale = scaleLinear()
+		.domain([0, DE_output.length])
+		.range([xpad, svg_width - rightpad])
 	const yscale = scaleLinear()
 		.domain([0, 100])
-		.range([0, svg_height - ypad])
+		.range([toppad, svg_height - ypad])
 	//const xscale = scaleLinear().domain([Math.min(running_sum), Math.max(running_sum)]).range([0, 100])
 	axisstyle({
 		axis: yaxisg.call(d3axis.axisLeft().scale(yscale)),
@@ -641,6 +642,13 @@ function render_cerno_plot(self, cerno_output) {
 			// Increment y only when gene is found in geneset
 			if (hit_genes.includes(DE_output[i].gene)) {
 				y_iter = y_iter - y_increment
+				lines
+					.append('line') // attach a line
+					.style('stroke', 'red') // colour the line
+					.attr('x1', xscale(i)) // x position of the first end of the line
+					.attr('y1', svg_height) // y position of the first end of the line
+					.attr('x2', xscale(i)) // x position of the second end of the line
+					.attr('y2', svg_height - ypad + 5 * toppad) // y position of the second end of the line
 			}
 			lines
 				.append('line') // attach a line
