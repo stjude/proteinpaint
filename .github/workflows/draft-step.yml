@@ -35,10 +35,9 @@ jobs:
     runs-on: ubuntu-22.04
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 10
-          token: ${{ secrets.PAT }}
 
       - name: Build and Publish Docker Images
         id: docker-publish
