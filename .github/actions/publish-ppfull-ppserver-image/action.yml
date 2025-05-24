@@ -11,6 +11,8 @@ runs:
   using: 'composite'
   steps:
     - uses: actions/checkout@v4
+      with:
+        fetch-depth: 10
 
     - name: Login to Github
       uses: docker/login-action@v3.4.0
@@ -25,6 +27,7 @@ runs:
       run: |
         sleep 90   # give npmjs registry enough time to be ready with the newly published packages (check if this delay is still needed)
 
+        git pull   # in case this action is not able to access a pushed tagged commit/branch tip from a previous step within the CI environment
         # set the branch name before checking out tag
         BRANCH=$(git rev-parse --abbrev-ref HEAD)
         echo "::set-output name=branch::$BRANCH";
@@ -32,7 +35,7 @@ runs:
         # should detect and pull latest tag in branch and build from it,
         # and avoid building from branch HEAD/tip that may have already moved
         TAG="v$(node -p "require('./package.json').version")"
-        git fetch origin $TAG # always use tagged commit for build 
+        git fetch --tags origin $TAG # always use tagged commit for build 
         git checkout $TAG
         
         cd container;
