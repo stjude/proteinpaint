@@ -43,7 +43,6 @@ if (mode == 'dev') {
 
 	if (hasServerConfig) imports.push(`import { launch } from '${relpath}/src/app.ts'`)
 	console.log(imports.join('\n'))
-	//console.log(vartypes.join('\n'))
 	if (hasServerConfig) console.log('await launch()')
 } else if (mode == 'unit') {
 	if (!hasServerConfig) {
