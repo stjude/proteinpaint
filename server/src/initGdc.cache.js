@@ -288,18 +288,23 @@ async function cacheMappingOnNewRelease(ds) {
 		}
 		await getOpenProjects(ds, ref)
 		const size = 1000 // fetch 1000 ids at a time
+		// may force totalCases to 8000 for quicker testing but still multiple fetch iterations
 		const totalCases = await fetchIdsFromGdcApi(ds, 1, 0, ref)
 		if (!Number.isInteger(totalCases)) throw 'totalCases not integer'
 		ds.init.expectedTotalCases = totalCases
 
 		console.log('GDC: Start to cache sample IDs of', totalCases, 'cases...')
 		for (let i = 0; i < Math.ceil(totalCases / size); i++) {
-			await fetchIdsFromGdcApi(ds, size, i * 1000, ref)
+			const count = await fetchIdsFromGdcApi(ds, size, i * 1000, ref)
+			// IMPORTANT to break the loop early if no data is fetched in a loop iteration,
+			// there's a chance that expectedTotalCases may not be reached after a data version change
+			if (count === 0) break
 		}
 
 		await getCasesWithGeneExpression(ds, ref)
 		await getAnalysisTsv2loom4scrna(ds, ref)
 	} catch (e) {
+		if (mayCancelStalePendingCache(ds, ref)) return // avoid resetting ds.__* variables that may affect newer data version caching
 		if (isRecoverableError(e)) {
 			console.log(ds.__gdc?.recoverableError || ds.init?.recoverableError)
 			delete ds.__pendingCacheVersion
@@ -313,7 +318,7 @@ async function cacheMappingOnNewRelease(ds) {
 	// do not proceed to marking caching as being done, otherwise
 	// stale cache data will be served to users
 	if (mayCancelStalePendingCache(ds, ref)) return
-	if (ds.init.recoverableError) return // should not allow doneCaching: true when there is an ignnored error
+	if (ds.init.recoverableError) return // should not allow doneCaching: true when there is an ignored error
 	delete ds.__pendingCacheVersion
 	// swap to the newly completed cache reference
 	ds.__gdc = ref
@@ -330,7 +335,7 @@ async function cacheMappingOnNewRelease(ds) {
 	}
 }
 
-// may cancel an unfinished caching for an older data_release_version,
+// may cancel unfinished caching for an older data_release_version,
 // if a new data_release_version is detected in cacheMappingOnNewRelease() runs
 function mayCancelStalePendingCache(ds, ref) {
 	const current = ds.__pendingCacheVersion || ds.__gdc.data_release_version
@@ -359,8 +364,11 @@ output:
 aliquot-to-submitter mapping are automatically cached
 */
 async function fetchIdsFromGdcApi(ds, size, from, ref, aliquot_id) {
-	// since this function is called in a loop, exit early as needed to avoid unnecessary requests
-	if (mayCancelStalePendingCache(ds, ref)) return
+	// since this function is called in a loop, exit early as needed to avoid unnecessary requests;
+	// also, when a data version changes, it's possible that the expected number of cases or
+	// pagination results from the response may be less than the previous version's expected number of cases,
+	// in which case the loop to fetch IDs will never reach the total count, therefore trigger the caching to stop
+	if (mayCancelStalePendingCache(ds, ref)) return 0
 	const param = ['fields=submitter_id,samples.portions.analytes.aliquots.aliquot_id,samples.submitter_id']
 	if (aliquot_id) {
 		param.push(
@@ -463,10 +471,15 @@ async function fetchIdsFromGdcApi(ds, size, from, ref, aliquot_id) {
 			}
 		}
 	}
+	// NOTE: If total=0, it will cause the caching to terminate early
 	return re.data?.pagination?.total
 }
 
 async function getCasesWithGeneExpression(ds, ref) {
+	// it's simpler to avoid stale requests that may run concurrently with new version caching,
+	// since there are shared tracking variables across each caching attempts, such as ds.__pendingCacheVersion
+	if (mayCancelStalePendingCache(ds, ref)) return
+
 	const { host, headers } = ds.getHostHeaders()
 	const url = joinUrl(host.rest, 'gene_expression/availability')
 
@@ -512,6 +525,10 @@ async function getCasesWithGeneExpression(ds, ref) {
 }
 
 async function getAnalysisTsv2loom4scrna(ds, ref) {
+	// it's simpler to avoid stale requests that may run concurrently with new version caching,
+	// since there are shared tracking variables across each caching attempts, such as ds.__pendingCacheVersion
+	if (mayCancelStalePendingCache(ds, ref)) return
+
 	const { host, headers } = ds.getHostHeaders()
 	const filters = {
 		op: 'and',
