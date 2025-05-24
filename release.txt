@@ -1,1 +1,2 @@
-
+Fixes:
+- cancel a stale gdc cache fetch loop to prevent race condition issues
