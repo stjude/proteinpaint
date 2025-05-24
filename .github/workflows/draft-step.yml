@@ -1,19 +1,29 @@
 name: "Draft CI steps"
 
-# edit and reuse this script to test a very specific step, to develop 
-# better understanding, intuition of how certain commands, 
-# such as git pull, may work differently between local terminal 
-# and github ci environment
+# Edit and reuse this script to test a very specific step from another workflow, 
+# in order to develop better understand how certain commands, such as git pull, 
+# may work differently between local terminal and github ci environment.
+# 
+# The draft step should finish within a few minutes, this draft CI is 
+# meant to test a very specific step detail and not a full job.
+#
 
 on:
-   workflow_dispatch:
+  # keep this event trigger to allow team members to run this CI using a password
+  workflow_dispatch:
     inputs:
       build_secret:
         type: string
         description: Build secret
 
+  # can try different event triggers here
+  # pull_request_target:
+    # types:
+    #   - closed
+
 jobs:
   check-user-permissions:
+    # keep this job as-is to allow team members to run this CI using a password
     runs-on: ubuntu-22.04
     steps:
       - id: set-build-secret
@@ -30,28 +40,53 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           INPUT_BUILD_SECRET: ${{ steps.set-build-secret.outputs.BUILD_SECRET }}
 
-  test:
+  example-debug:
+    # keep the requirement for the previous step
     needs: check-user-permissions
+    # this should match the debian version that's used in the deps image
     runs-on: ubuntu-22.04
-    timeout-minutes: 5
+    # expect this job to finish quickly, not meant to test intensive job steps from a real workflow 
+    timeout-minutes: 2
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 10
 
-      - name: Build and Publish Docker Images
-        id: docker-publish
+      - name: Set the steps to test
+        run: |
+          # identify which steps to run below, space-separated step names
+          echo "STEPS_TO_TEST=checkout-tag" >> $GITHUB_ENV
+
+      - name: checkout-tag
+        if: contains(env.STEPS_TO_TEST, 'checkout-tag')
         shell: bash
         run: |
           # set the branch name before checking out tag
           BRANCH=$(git rev-parse --abbrev-ref HEAD)
           echo "::set-output name=branch::$BRANCH"
 
-          git pull origin $BRANCH # in case this action is not able to access a pushed tagged commit/branch tip from a previous step within the CI environment
+          git pull # in case this action is not able to access a pushed tagged commit/branch tip from a previous step within the CI environment
           
           # should detect and pull latest tag in branch and build from it,
           # and avoid building from branch HEAD/tip that may have already moved
           TAG="v$(node -p "require('./package.json').version")"
-          git fetch origin $TAG # always use tagged commit for build 
+          git fetch --tags --quiet origin $TAG # always use tagged commit for build 
           git checkout $TAG
+    # 
+    # copy a step/detail from another workflow and paste here;
+    # if others would benefit from this example, open a PR/commit to master
+    # - name: another-step
+    #   if: contains(env.STEPS_TO_TEST, 'another-step')
+    #   shell: bash
+    #   run: | 
+    #
+
+    # 
+    # copy a step/detail from another workflow and paste here;
+    # if others would benefit from this example, open a PR/commit to master
+    # - name: aaa-xxx
+    #   if: contains(env.STEPS_TO_TEST, 'aaa-xxx')
+    #   shell: bash
+    #   run: | 
+    #
 
