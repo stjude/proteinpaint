@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- mds3 tk cnv piles up as density plot when too many
+
 Fixes:
 - cancel a stale gdc cache fetch loop to prevent race condition issues
 
