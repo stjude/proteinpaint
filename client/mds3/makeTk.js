@@ -264,6 +264,7 @@ function loadTk_finish_closure(tk, block) {
 				let totalCount = 0
 				if (data.skewer) totalCount = data.skewer.length
 				if (data.cnv) totalCount += data.cnv.length
+				if (data.cnvDensity) totalCount += data.cnvDensity.segmentCount
 				if (totalCount == 0) {
 					// show blank tk with msg
 					let context = 'view range'
@@ -378,6 +379,9 @@ export function mayInitCnv(tk) {
 	tk.cnv.absoluteValueRenderMax = cfg.absoluteValueRenderMax || 5
 	tk.cnv.gainColor = cfg.gainColor || '#D6683C'
 	tk.cnv.lossColor = cfg.lossColor || '#67a9cf'
+	tk.cnv.density = {
+		barheight: 60
+	}
 }
 
 function setSkewerMode(tk) {

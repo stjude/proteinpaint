@@ -1,7 +1,8 @@
 import { scaleLinear } from 'd3-scale'
 import { mclass, mclasscnvgain, mclasscnvloss } from '#shared/common.js'
 import { table_cnv, itemtable_oneItem } from './itemtable'
-import { table2col } from '#dom'
+import { axisRight } from 'd3-axis'
+import { table2col, axisstyle } from '#dom'
 
 /* (important param for cnv tk rendering thus is put at top)
 arg is an array. each element is a row of either:
@@ -62,12 +63,81 @@ also
 */
 export function may_render_cnv(data, tk, block) {
 	tk.cnv?.g.selectAll('*').remove()
-	if (!data.cnv) {
-		tk.subtk2height.cnv = 0 // set to 0 in case cnv was showing before and now turned off so as to remove its space
-		if (tk.cnv) tk.cnv.cnvLst = [] // a trick to hide legend colorscale
+
+	if (data.cnv) {
+		// has moderate amounts of segments. show as lines
+		renderSegments(data, tk, block)
+		// tk.cnv.cnvLst created
+		return
+	}
+	if (data.cnvDensity) {
+		delete tk.cnv.cnvLst
+		tk.cnv.cnvInDensity = true
+		renderDensity(data, tk, block)
 		return
 	}
 
+	tk.subtk2height.cnv = 0 // set to 0 in case cnv was showing before and now turned off so as to remove its space
+	if (tk.cnv) tk.cnv.cnvLst = [] // a trick to hide legend colorscale
+}
+
+function renderDensity(data, tk, block) {
+	/* render two subtracks, one for density of gain and loss
+	 */
+	tk.cnv.g
+		.append('image')
+		.attr('width', block.width)
+		.attr('height', tk.cnv.density.barheight)
+		.attr('xlink:href', data.cnvDensity.gain.src)
+	tk.cnv.g
+		.append('image')
+		.attr('width', block.width)
+		.attr('height', tk.cnv.density.barheight)
+		.attr('xlink:href', data.cnvDensity.loss.src)
+		.attr('y', tk.cnv.density.barheight)
+
+	// todo show axis in tk.gleft
+	axisstyle({
+		axis: tk.cnv.g
+			.append('g')
+			.attr('transform', `translate(-1,0)`)
+			.call(
+				axisRight()
+					.scale(scaleLinear().domain([0, data.cnvDensity.max]).range([tk.cnv.density.barheight, 0]))
+					.tickValues([0, data.cnvDensity.max])
+			),
+		color: 'black',
+		showline: true
+	})
+	axisstyle({
+		axis: tk.cnv.g
+			.append('g')
+			.attr('transform', `translate(-1,${tk.cnv.density.barheight})`)
+			.call(
+				axisRight()
+					.scale(scaleLinear().domain([0, data.cnvDensity.max]).range([0, tk.cnv.density.barheight]))
+					.tickValues([0, data.cnvDensity.max])
+			),
+		color: 'black',
+		showline: true
+	})
+	tk.cnv.g
+		.append('text')
+		.text('Gain')
+		.attr('font-size', block.labelfontsize * 0.9)
+		.attr('x', 5)
+		.attr('y', tk.cnv.density.barheight / 2)
+	tk.cnv.g
+		.append('text')
+		.text('Loss')
+		.attr('font-size', block.labelfontsize * 0.9)
+		.attr('x', 5)
+		.attr('y', tk.cnv.density.barheight * 1.5)
+
+	tk.subtk2height.cnv = tk.cnv.density.barheight * 2
+}
+
+function renderSegments(data, tk, block) {
 	const [cnvBySample, cnvLst, absoluteMax] = prepData(data, tk, block)
 	tk.cnv.cnvLst = cnvLst // raw list of events to be used in itemtable
 

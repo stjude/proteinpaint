@@ -1,8 +1,9 @@
 import { mayCopyFromCookie, fileurl } from './utils'
 import { snvindelByRangeGetter_bcf } from './mds3.init'
 import { validate_variant2samples } from './mds3.variant2samples.js'
-import { dtcnv } from '#shared/common.js'
+import { dtcnv, mclasscnvgain, mclasscnvAmp, mclasscnvloss, mclasscnvHomozygousDel } from '#shared/common.js'
 import { summarize_mclass } from '#shared/mds3tk.js'
+import { plotWiggle } from './bw'
 
 /*
 method good for somatic variants, in skewer and gp queries:
@@ -102,12 +103,77 @@ function finalize_result(q, ds, result) {
 				}
 			}
 		}
+		// TODO cutoff
+		if (result.cnv.length > 200) {
+			const q1 = {
+				rglst: structuredClone(q.rglst),
+				width: q.cnvDensity.width,
+				devicePixelRatio: q.devicePixelRatio,
+				barheight: q.cnvDensity.barheight,
+				name: 'gain',
+				pcolor: q.cnvDensity.pcolor
+			}
+			const q2 = {
+				rglst: structuredClone(q.rglst),
+				width: q.cnvDensity.width,
+				devicePixelRatio: q.devicePixelRatio,
+				barheight: q.cnvDensity.barheight,
+				name: 'loss',
+				ncolor: q.cnvDensity.ncolor
+			}
+			let bothMax = 0 // max for both gain and loss
+			for (const [i, r] of q.rglst.entries()) {
+				const [dgain, dloss] = getCnvDensity(result.cnv, r)
+				console.log('gain', Math.max(...dgain), 'loss', Math.max(...dloss))
+				bothMax = Math.max(bothMax, ...dgain, ...dloss)
+				q1.rglst[i].values = dgain
+				q2.rglst[i].values = dloss.map(i => i * -1)
+			}
+			result.cnvDensity = {
+				gain: plotWiggle(q1, { fixminv: 0, fixmaxv: bothMax }),
+				loss: plotWiggle(q2, { fixminv: -bothMax, fixmaxv: 0 }),
+				max: bothMax,
+				segmentCount: result.cnv.length
+			}
+			delete result.cnv
+		}
 	}
 
 	if (sampleSet.size) {
 		// has samples, report total number of unique samples across all data types
 		result.sampleTotalNumber = sampleSet.size
 	}
+}
+
+function getCnvDensity(lst, r) {
+	const binCount = Math.floor(r.width) // sometimes width is not integer
+	const binSize = (r.stop - r.start) / binCount
+
+	const gainDensity = new Array(binCount).fill(0)
+	const lossDensity = new Array(binCount).fill(0)
+
+	for (const c of lst) {
+		if (Number.isFinite(c.value)) {
+			pileup(c, c.value > 0 ? gainDensity : lossDensity)
+		} else if (c.class == mclasscnvgain || c.class == mclasscnvAmp) {
+			pileup(c, gainDensity)
+		} else if (c.class == mclasscnvloss || c.class == mclasscnvHomozygousDel) {
+			pileup(c, lossDensity)
+		} else {
+			throw 'cannot identify cnv'
+		}
+	}
+
+	function pileup(c, density) {
+		const binStart = Math.floor((Math.max(c.start, r.start) - r.start) / binSize)
+		const binEnd = Math.floor((Math.min(c.stop, r.stop) - r.start) / binSize)
+		for (let i = binStart; i <= binEnd; i++) {
+			if (i >= 0 && i < binCount) {
+				density[i]++
+			}
+		}
+	}
+	return [gainDensity, lossDensity]
 }
 
 function mayAddSkewerRimCount(m, q, ds) {

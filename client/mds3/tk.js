@@ -181,13 +181,17 @@ function getParameter(tk, block) {
 			par.formatFilter = filter
 		}
 	}
-
 	if (tk.cnv) {
 		if (tk.cnv.cnvMaxLength) par.cnvMaxLength = tk.cnv.cnvMaxLength
 		if (tk.cnv.cnvGainCutoff) par.cnvGainCutoff = tk.cnv.cnvGainCutoff
 		if (tk.cnv.cnvLossCutoff) par.cnvLossCutoff = tk.cnv.cnvLossCutoff
+		par.cnvDensity = {
+			width: block.width,
+			barheight: tk.cnv.density.barheight,
+			pcolor: tk.cnv.gainColor,
+			ncolor: tk.cnv.lossColor
+		}
 	}
-
 	return [par, headers]
 }
 
@@ -271,6 +275,8 @@ export function rangequery_rglst(tk, block, par) {
 		}
 	}
 	par.rglst = rglst
+	par.regionspace = block.regionspace
+	par.devicePixelRatio = window.devicePixelRatio > 1 ? window.devicePixelRatio : 1
 }
 
 function rangequery_add_variantfilters(par, tk) {

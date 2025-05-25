@@ -67,6 +67,9 @@ export function getVariantLabelText(data, tk, block) {
 		if (data.cnv) {
 			totalcount += data.cnv.length
 			for (const m of data.cnv) dtset.add(m.dt)
+		} else if (data.cnvDensity) {
+			totalcount += data.cnvDensity.segmentCount
+			dtset.add(dtcnv)
 		}
 	}
 
@@ -91,7 +94,12 @@ export function getVariantLabelText(data, tk, block) {
 		}
 	}
 
-	if (data.cnv) showcount += data.cnv.length // always count cnv when present, so as not to trigger "xx of yy" at variant label
+	if (data.cnv) {
+		// always count cnv when present, so as not to trigger "xx of yy" at variant label
+		showcount += data.cnv.length
+	} else if (data.cnvDensity) {
+		showcount += data.cnvDensity.segmentCount
+	}
 
 	// what to call the items: if only a single dt shown, call by its name; if items are of multiple dts, use generic name "variant"
 	let vn = 'variant'

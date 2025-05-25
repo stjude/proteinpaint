@@ -928,7 +928,9 @@ function may_update_cnv(tk) {
 		// no cnv shown in this region. hide colorscale
 		// possible for cnvLst to be missing! e.g. on server error
 		tk.legend.cnv.colorscaleHolder?.style('display', 'none')
-		tk.legend.cnv.noCnv.style('display', 'inline-block')
+
+		// when cnvLst is missing, could be showing density instead of segments. in such case do not show noCnv message
+		tk.legend.cnv.noCnv.style('display', tk.cnv.cnvInDensity ? 'none' : 'inline-block')
 	} else {
 		// has cnv showing; update legend with data contents
 		tk.legend.cnv.noCnv.style('display', 'none')
