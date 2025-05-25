@@ -364,7 +364,6 @@ add:
 			const png_height = 400
 			self.dom.holder.append('img').attr('width', png_width).attr('height', png_height).attr('src', self.imageUrl)
 		} else if (self.settings.gsea_method == 'cerno') {
-			// Need to do client side rendering of the code here in case of CERNO (will do in a following branch)
 			render_cerno_plot(self, output)
 		} else {
 			throw 'Unknown method:' + self.settings.gsea_method
@@ -579,27 +578,17 @@ function setResultsRows(output_keys, iter, self) {
 function render_cerno_plot(self, cerno_output) {
 	const holder = self.dom.holder
 	holder.selectAll('*').remove()
-
 	const svg_width = 400
 	const svg_height = 400
 	const svg = holder.append('svg').attr('width', svg_width).attr('height', svg_height)
 	const toppad = 5
 	const rightpad = 5
-	const yaxisw = Math.max(50, svg_width / 8)
-	const xaxish = Math.max(50, svg_height / 8)
+	const yaxisw = 50 //Math.max(50, svg_width / 8)
+	const xaxish = 50 //Math.max(50, svg_height / 8)
 	const yaxisg = svg.append('g')
 	const xaxisg = svg.append('g')
 	const xpad = 50
 	const ypad = 100
-	yaxisg.attr('transform', 'translate(' + xpad + ',' + toppad + ')')
-	xaxisg.attr('transform', 'translate(' + 0 + ',' + (svg_height - ypad) + ')')
-	const xlab = xaxisg.append('text').text('Gene list').attr('fill', 'black').attr('text-anchor', 'middle') //.attr('transform', 'translate(' + 200 + ',' + 200 + ')')
-	const ylab = yaxisg
-		.append('text')
-		.text('Fraction of gene set')
-		.attr('fill', 'black')
-		.attr('text-anchor', 'start')
-		.attr('transform', 'rotate(-90)')
 
 	const DE_output = []
 	for (let i = 0; i < self.config.gsea_params.genes.length; i++) {
@@ -614,7 +603,24 @@ function render_cerno_plot(self, cerno_output) {
 	const yscale = scaleLinear()
 		.domain([0, 100])
 		.range([toppad, svg_height - ypad])
-	//const xscale = scaleLinear().domain([Math.min(running_sum), Math.max(running_sum)]).range([0, 100])
+
+	yaxisg.attr('transform', 'translate(' + xpad + ',' + toppad + ')')
+	xaxisg.attr('transform', 'translate(' + 0 + ',' + (svg_height - ypad) + ')')
+	const xlab = svg
+		.append('text')
+		.text('Gene list')
+		.attr('fill', 'black')
+		.attr('text-anchor', 'start')
+		.attr('transform', 'translate(' + xscale(DE_output.length / 3) + ',' + (svg_height - ypad + 8 * toppad) + ')')
+	const ylab = svg
+		.append('text')
+		.text('Fraction of gene set')
+		.attr('fill', 'black')
+		.attr('text-anchor', 'middle')
+		.attr('y', xpad / 2)
+		.attr('x', -svg_width / 3)
+		.attr('transform', 'rotate(-90)')
+
 	axisstyle({
 		axis: yaxisg.call(d3axis.axisLeft().scale(yscale)),
 		color: 'black',
@@ -631,7 +637,6 @@ function render_cerno_plot(self, cerno_output) {
 	// Find genes that were found from cerno output
 	if (Object.keys(cerno_output).includes(self.config.gsea_params.geneset_name)) {
 		const hit_genes = cerno_output[self.config.gsea_params.geneset_name].leading_edge.split(',')
-		console.log('hit_genes:', hit_genes)
 		const y_increment = 100 / hit_genes.length
 		const lines = svg.append('g')
 
@@ -648,7 +653,7 @@ function render_cerno_plot(self, cerno_output) {
 					.attr('x1', xscale(i)) // x position of the first end of the line
 					.attr('y1', svg_height) // y position of the first end of the line
 					.attr('x2', xscale(i)) // x position of the second end of the line
-					.attr('y2', svg_height - ypad + 5 * toppad) // y position of the second end of the line
+					.attr('y2', svg_height - ypad + 10 * toppad) // y position of the second end of the line
 			}
 			lines
 				.append('line') // attach a line
