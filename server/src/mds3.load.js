@@ -124,7 +124,6 @@ function finalize_result(q, ds, result) {
 			let bothMax = 0 // max for both gain and loss
 			for (const [i, r] of q.rglst.entries()) {
 				const [dgain, dloss] = getCnvDensity(result.cnv, r)
-				console.log('gain', Math.max(...dgain), 'loss', Math.max(...dloss))
 				bothMax = Math.max(bothMax, ...dgain, ...dloss)
 				q1.rglst[i].values = dgain
 				q2.rglst[i].values = dloss.map(i => i * -1)
@@ -164,6 +163,8 @@ function getCnvDensity(lst, r) {
 		}
 	}
 
+	return [gainDensity, lossDensity]
+
 	function pileup(c, density) {
 		const binStart = Math.floor((Math.max(c.start, r.start) - r.start) / binSize)
 		const binEnd = Math.floor((Math.min(c.stop, r.stop) - r.start) / binSize)
@@ -173,7 +174,6 @@ function getCnvDensity(lst, r) {
 			}
 		}
 	}
-	return [gainDensity, lossDensity]
 }
 
 function mayAddSkewerRimCount(m, q, ds) {
