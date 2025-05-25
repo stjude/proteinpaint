@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Fixes:
+- cancel a stale gdc cache fetch loop to prevent race condition issues
+
+
 ## 2.128.2
 
 Fixes:
