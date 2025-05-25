@@ -10,7 +10,7 @@ Tests:
 
 showHoverTipOnDisk()
 dataGood4sunburst()
-getVariantLabelText
+getVariantLabelText()
 */
 
 tape('\n', test => {
@@ -189,6 +189,28 @@ tape('getVariantLabelText()', function (test) {
 			block = { width: 10 }
 		const re = getVariantLabelText(data, tk, block)
 		test.equal(re[0], '4 variants', 'correct label')
+	}
+	{
+		// cnv density
+		const data = { cnvDensity: { segmentCount: 10 } },
+			tk = {},
+			block = { width: 10 }
+		const re = getVariantLabelText(data, tk, block)
+		test.equal(re[0], '10 CNVs', 'correct label')
+	}
+	{
+		// native snv and cnv density
+		const data = { cnvDensity: { segmentCount: 10 } },
+			tk = {
+				skewer: {
+					rawmlst: [{ dt: 1 }, { dt: 1 }],
+					viewModes: [{ inuse: true, type: 'skewer' }],
+					data: [{ x: 1, mlst: [1, 1] }]
+				}
+			},
+			block = { width: 10 }
+		const re = getVariantLabelText(data, tk, block)
+		test.equal(re[0], '12 variants', 'correct label')
 	}
 
 	test.end()
