@@ -973,7 +973,7 @@ export type WSImages = {
 	imageBySampleFolder: string
 
 	annotationsColor?: Array<number>
-	classes?: { id: number; label: string; color: string }[]
+	classes?: WSIClass[]
 
 	/** either ds supplied or dynamically added on launch with built in logic (retrieve the sample list from the wsimages table) */
 	getSamples?: () => Promise<Array<WSISample>>
@@ -986,6 +986,8 @@ export type WSImages = {
 	/**  ds supplied */
 	makeGeoJson?: (sampleId: string, wsiImage: string) => void
 }
+
+export type WSIClass = { id: number; shortcut: any; label: string; color: string }
 
 /*** types supporting Termdb ***/
 
