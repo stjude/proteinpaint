@@ -601,7 +601,7 @@ function render_cerno_plot(self, cerno_output) {
 		.domain([0, DE_output.length])
 		.range([xpad, svg_width - rightpad])
 	const yscale = scaleLinear()
-		.domain([0, 100])
+		.domain([100, 0])
 		.range([toppad, svg_height - ypad])
 
 	yaxisg.attr('transform', 'translate(' + xpad + ',' + toppad + ')')
@@ -620,6 +620,26 @@ function render_cerno_plot(self, cerno_output) {
 		.attr('y', xpad / 2)
 		.attr('x', -svg_width / 3)
 		.attr('transform', 'rotate(-90)')
+
+	const auc = cerno_output[self.config.gsea_params.geneset_name].auc
+	if (typeof auc === 'number') {
+		let auc_pos
+		if (auc >= 0.5) {
+			// The position of the text changes depending upon the value of auc so as to avoid the auc curve overlapping with the text
+			auc_pos = xscale((DE_output.length * 3) / 3.5) + ',' + (svg_height - ypad * 1.5)
+		} else {
+			auc_pos = xscale((DE_output.length * 0.8) / 4.5) + ',' + (svg_height - ypad * 3)
+		}
+		const auc_text = svg
+			.append('text')
+			.text('AUC=' + roundValueAuto(auc))
+			.attr('fill', 'black')
+			.attr('text-anchor', 'middle')
+			.attr('transform', 'translate(' + auc_pos + ')')
+	} else {
+		// Should not happen
+		throw 'AUC not a number:' + auc
+	}
 
 	axisstyle({
 		axis: yaxisg.call(d3axis.axisLeft().scale(yscale)),
@@ -659,9 +679,9 @@ function render_cerno_plot(self, cerno_output) {
 				.append('line') // attach a line
 				.style('stroke', 'red') // colour the line
 				.attr('x1', xscale(i)) // x position of the first end of the line
-				.attr('y1', yscale(y_old)) // y position of the first end of the line
+				.attr('y1', yscale(100 - y_old)) // y position of the first end of the line
 				.attr('x2', xscale(i + 1)) // x position of the second end of the line
-				.attr('y2', yscale(y_iter)) // y position of the second end of the line
+				.attr('y2', yscale(100 - y_iter)) // y position of the second end of the line
 		}
 	} else {
 		// Should not happen
