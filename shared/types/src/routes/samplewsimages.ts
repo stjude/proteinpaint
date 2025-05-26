@@ -1,4 +1,5 @@
 import type { RoutePayload } from './routeApi.ts'
+import type { WSIClass } from '../dataset.ts'
 
 export type SampleWSImagesRequest = {
 	genome: string
@@ -17,7 +18,8 @@ export type WSImage = {
 	overlays?: Array<string>
 	zoomInPoints?: Array<[number, number]>
 	metadata: string
-	annotationsData?: any
+	annotationsData?: { zoomCoordinates: [number, number]; type: string; class: string }[]
+	classes?: WSIClass
 }
 
 export const sampleWSImagesPayload: RoutePayload = {

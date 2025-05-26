@@ -50,6 +50,11 @@ function init({ genomes }) {
 							annotations[0]
 						)
 						const annotationData = JSON.parse(fs.readFileSync(annotationFilePath, 'utf8'))
+						//This assumes that classes are always present in the dataset.
+						if (!annotationData.features && !ds.queries.WSImages?.classes?.length) {
+							throw new Error(`No classes found for WSImage annotations in dataset ${ds.label}`)
+						}
+
 						wsimage.annotationsData = annotationData.features.map((d: any) => {
 							const featClass =
 								ds.queries.WSImages?.classes?.find(f => f.id == d.properties.class).label || d.properties.class
@@ -59,6 +64,8 @@ function init({ genomes }) {
 								class: featClass
 							}
 						})
+
+						wsimage.classes = ds.queries.WSImages.classes
 					}
 
 					if (ds.queries.WSImages.getZoomInPoints) {
