@@ -92,17 +92,7 @@ export default class WSIViewer extends RxComponentInner {
 		}
 
 		if (wsimages[settings.displayedImageIndex]?.annotationsData?.length) {
-			const selectedRows: number[] = []
-			const rows = wsimages[settings.displayedImageIndex].annotationsData.map((d, i) => {
-				if (zoomInPoints?.includes(d.zoomCoordinates)) selectedRows.push(i) //cheating
-				return [{ value: i }, { value: d.zoomCoordinates }, { value: d.class }]
-			})
-			renderTable({
-				columns: [{ label: 'Index' }, { label: 'Coordinates' }, { label: 'Class' }],
-				rows,
-				div: holder.append('div').attr('id', 'annotations').style('margin-left', '10px'),
-				selectedRows
-			})
+			this.renderAnnotationsTables(holder, wsimages[settings.displayedImageIndex])
 		}
 
 		this.addControls(map, activeImage, hasOverlay)
@@ -434,6 +424,55 @@ export default class WSIViewer extends RxComponentInner {
 					d()
 				}
 			}
+		})
+	}
+
+	private renderAnnotationsTables(holder: any, data: WSImage) {
+		const tablesWrapper = holder
+			.append('div')
+			.attr('id', 'annotations-table-wrapper')
+			.style('display', 'block')
+			.style('padding', '20px')
+		// const selectedRows: number[] = []
+		const annotationsRows: any[] = []
+		data.annotationsData!.forEach((d, i) => {
+			// const isSelected = zoomInPoints?.some(([x, y]) =>
+			// 	x === d.zoomCoordinates[0] && y === d.zoomCoordinates[1]
+			// )
+			// if (isSelected) selectedRows.push(i)
+
+			annotationsRows.push([{ value: i }, { value: d.zoomCoordinates }, { value: d.class }])
+		})
+		renderTable({
+			columns: [{ label: 'Index', sortable: true }, { label: 'Coordinates' }, { label: 'Class', sortable: true }],
+			rows: annotationsRows,
+			div: tablesWrapper
+				.append('div')
+				.attr('id', 'annotations-table')
+				.style('margins', '20px')
+				.style('display', 'inline-block'),
+			// selectedRows
+			header: { allowSort: true }
+		})
+
+		const classRows: any[] = []
+		for (const c of data?.classes || ([] as any)) {
+			classRows.push([
+				{ value: c.label },
+				{ html: `<span style="display:inline-block;width:20px;height:20px;background-color:${c.color}"></span>` },
+				{ value: c.shortcut }
+			])
+		}
+
+		renderTable({
+			columns: [{ label: 'Class' }, { label: 'Color' }, { label: 'Shortcut' }],
+			rows: classRows,
+			div: tablesWrapper
+				.append('div')
+				.attr('id', 'annotations-legend')
+				.style('display', 'inline-block')
+				.style('vertical-align', 'top')
+				.style('margin-left', '20px')
 		})
 	}
 }
