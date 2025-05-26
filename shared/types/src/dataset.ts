@@ -614,6 +614,19 @@ type CnvSegment = {
 			[key: string]: any
 		}
 	}
+
+	/** in mds3 tk view and gdc cnv tool, when number of segments from view region exceeds this cutoff, it's piled up into density view to speed up
+	overrides default 1000
+	this cutoff does not apply to other uses beyond mds3 tk, including matrix and geneVariant
+	*/
+	densityViewCutoff?: number
+
+	/** this cutoff is applied in ds.queries.cnv.get(), in that up to this number of segments will be returned
+	overrides default 10k
+	this applies to matrix, geneVariant, and mds3 tk
+	todo there lacks a way for getter to message downstream code of exceeding limit
+	*/
+	maxReturnCutoff?: number
 }
 
 /*

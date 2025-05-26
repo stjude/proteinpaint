@@ -1551,6 +1551,11 @@ async function validate_query_cnv(ds, genome) {
 	// cnv segments, compared to geneCnv
 	const q = ds.queries.cnv
 	if (!q) return
+	if (!q.densityViewCutoff) q.densityViewCutoff = 1000
+	if (!Number.isInteger(q.densityViewCutoff)) throw 'cnv.densityViewCutoff not integer'
+	if (!q.maxReturnCutoff) q.maxReturnCutoff = 10000
+	if (!Number.isInteger(q.maxReturnCutoff)) throw 'cnv.maxReturnCutoff not integer'
+
 	if (typeof q.get == 'function') return // ds-supplied
 	// add built in getter
 	if (!q.file) throw 'cnv.file missing'
@@ -2452,7 +2457,16 @@ async function addCnvGetter(ds, genome) {
 			await utils.get_lines_bigfile({
 				args: [q.file || q.url, (q.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + r.start + '-' + r.stop],
 				dir: q.dir,
-				callback: line => {
+				callback: (line, ps) => {
+					if (cnvs.length > ds.queries.cnv.maxReturnCutoff) {
+						/* exceeds max allowed limit. do not accept new data anymore
+						do this before parsing new cnv and inserting to array
+						*/
+						ps.kill()
+						return
+						// lacks a way to message downstream
+					}
+
 					const l = line.split('\t')
 					const start = Number(l[1]) // must always be numbers
 					const stop = Number(l[2])

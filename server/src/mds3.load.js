@@ -103,8 +103,7 @@ function finalize_result(q, ds, result) {
 				}
 			}
 		}
-		// TODO cutoff
-		if (result.cnv.length > 200) {
+		if (result.cnv.length > ds.queries.cnv.densityViewCutoff) {
 			const q1 = {
 				rglst: structuredClone(q.rglst),
 				width: q.cnvDensity.width,
@@ -144,6 +143,7 @@ function finalize_result(q, ds, result) {
 	}
 }
 
+// todo unit test
 function getCnvDensity(lst, r) {
 	const binCount = Math.floor(r.width) // sometimes width is not integer
 	const binSize = (r.stop - r.start) / binCount
