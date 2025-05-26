@@ -13,7 +13,7 @@ import { WSIViewerInteractions } from '#plots/wsiviewer/interactions/WSIViewerIn
 import type Settings from '#plots/wsiviewer/Settings.ts'
 import wsiViewerDefaults from '#plots/wsiviewer/defaults.ts'
 import type { SampleWSImagesResponse, WSImage, WSImagesRequest, WSImagesResponse } from '#types'
-import { table2col } from '#dom/table2col'
+import { table2col, renderTable } from '#dom'
 import { Projection } from 'ol/proj'
 import { RxComponentInner } from '../../types/rx.d'
 import 'ol-ext/dist/ol-ext.css'
@@ -21,7 +21,6 @@ import LayerSwitcher from 'ol-ext/control/LayerSwitcher'
 import MousePosition from 'ol/control/MousePosition.js'
 import { format as formatCoordinate } from 'ol/coordinate.js'
 import { debounce } from 'debounce'
-// import KeyboardPan from 'ol/interaction/KeyboardPan.js'
 
 export default class WSIViewer extends RxComponentInner {
 	// following attributes are required by rx
@@ -89,67 +88,21 @@ export default class WSIViewer extends RxComponentInner {
 		if (zoomInPoints != undefined) {
 			this.addZoomInEffect(activeImageExtent, zoomInPoints, map)
 
-			const image = holder.select('div > .ol-viewport').attr('tabindex', 0)
+			this.addMapKeyDownListener(holder, settings.displayedImageIndex, state, map, settings, activeImageExtent)
+		}
 
-			//To scroll to next annotation, hold the space bar and press left/right arrows
-			let currentIndex = index
-			let isSpaceDown = false
-			// const keyboardPan = map.getInteractions().getArray().find(i => i instanceof KeyboardPan)
-
-			image.on('keydown', async (event: KeyboardEvent) => {
-				if (event.code === 'Space') {
-					isSpaceDown = true
-
-					// if (keyboardPan && map.getInteractions().getArray().includes(keyboardPan)) {
-					// 	map.removeInteraction(keyboardPan);
-					//   }
-				}
-				if (isSpaceDown) {
-					event.preventDefault()
-					event.stopPropagation()
-					const idx = currentIndex
-					if (event.key == 'ArrowRight') {
-						//TODO: length of annotations?
-						currentIndex += 1
-					}
-					if (event.key == 'ArrowLeft') {
-						//Do not react if at the starting annotation
-						if (currentIndex === 0) return
-						currentIndex -= 1
-					}
-					if (idx !== currentIndex) {
-						//When the index changes, scroll to the new annotation
-						//Timeout for when user presses arrows multiple times.
-						const d = debounce(async () => {
-							const newData: SampleWSImagesResponse = await this.requestData(state, currentIndex)
-							const newZoomInPoints = newData.sampleWSImages[settings.displayedImageIndex].zoomInPoints
-							if (newZoomInPoints != undefined) this.addZoomInEffect(activeImageExtent, newZoomInPoints, map)
-							isSpaceDown = false
-
-							//crude implementation of a table
-							holder.select('table').remove()
-							const table = holder.append('table')
-							const header = table.append('tr')
-							header.append('th').text('Index')
-							header.append('th').text('Coordinates')
-							const row = table.append('tr')
-							row.append('td').text(currentIndex)
-							row.append('td').text(newZoomInPoints)
-						}, 500)
-						d()
-					}
-				}
+		if (wsimages[settings.displayedImageIndex]?.annotationsData?.length) {
+			const selectedRows: number[] = []
+			const rows = wsimages[settings.displayedImageIndex].annotationsData.map((d, i) => {
+				if (zoomInPoints?.includes(d.zoomCoordinates)) selectedRows.push(i) //cheating
+				return [{ value: i }, { value: d.zoomCoordinates }, { value: d.class }]
 			})
-
-			// image.on('keyup', (event: KeyboardEvent) => {
-			// 	if (event.code === 'Space') {
-			// 		isSpaceDown= false
-
-			// 		if (keyboardPan && !map.getInteractions().getArray().includes(keyboardPan)) {
-			// 		  map.addInteraction(keyboardPan)
-			// 		}
-			// 	  }
-			// })
+			renderTable({
+				columns: [{ label: 'Index' }, { label: 'Coordinates' }, { label: 'Class' }],
+				rows,
+				div: holder.append('div').attr('id', 'annotations').style('margin-left', '10px'),
+				selectedRows
+			})
 		}
 
 		this.addControls(map, activeImage, hasOverlay)
@@ -435,6 +388,53 @@ export default class WSIViewer extends RxComponentInner {
 				duration: 2000
 			})
 		}, 500)
+	}
+
+	private addMapKeyDownListener(
+		holder: any,
+		index: any,
+		state: any,
+		map: OLMap,
+		settings: Settings,
+		activeImageExtent: any
+	) {
+		// Add keydown listener to the image container
+		const image = holder.select('div > .ol-viewport').attr('tabindex', 0)
+
+		//To scroll to next annotation, hold the space bar and press left/right arrows
+		let currentIndex = index
+		let isSpaceDown = false
+
+		image.on('keydown', async (event: KeyboardEvent) => {
+			if (event.code === 'Space') {
+				isSpaceDown = true
+			}
+			if (isSpaceDown) {
+				event.preventDefault()
+				event.stopPropagation()
+				const idx = currentIndex
+				if (event.key == 'ArrowRight') {
+					//TODO: length of annotations?
+					currentIndex += 1
+				}
+				if (event.key == 'ArrowLeft') {
+					//Do not react if at the starting annotation
+					if (currentIndex === 0) return
+					currentIndex -= 1
+				}
+				if (idx !== currentIndex) {
+					//When the index changes, scroll to the new annotation
+					//Timeout for when user presses arrows multiple times.
+					const d = debounce(async () => {
+						const newData: SampleWSImagesResponse = await this.requestData(state, currentIndex)
+						const newZoomInPoints = newData.sampleWSImages[settings.displayedImageIndex].zoomInPoints
+						if (newZoomInPoints != undefined) this.addZoomInEffect(activeImageExtent, newZoomInPoints, map)
+						isSpaceDown = false
+					}, 500)
+					d()
+				}
+			}
+		})
 	}
 }
 
