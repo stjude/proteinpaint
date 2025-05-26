@@ -1,5 +1,8 @@
 import type { SampleWSImagesRequest, SampleWSImagesResponse, WSImage, RouteApi, Mds3 } from '#types'
 import { sampleWSImagesPayload } from '#types/checkers'
+import path from 'path'
+import fs from 'fs'
+import serverconfig from '#src/serverconfig.js'
 /*
 given a sample, return all whole slide images for specified dataset
 */
@@ -31,13 +34,31 @@ function init({ genomes }) {
 
 			if (ds.queries.WSImages.getWSIAnnotations) {
 				for (const wsimage of wsimages) {
-					// if (ds.queries.WSImages.makeGeoJson) {
-					// 	await ds.queries.WSImages.makeGeoJson(sampleId, wsimage)
-					// }
+					if (ds.queries.WSImages.makeGeoJson) {
+						await ds.queries.WSImages.makeGeoJson(sampleId, wsimage)
+					}
 
 					const annotations = await ds.queries.WSImages.getWSIAnnotations(sampleId, wsimage.filename)
 					if (annotations) {
+						//Replace with annotations data??
 						wsimage.overlays = annotations
+
+						const annotationFilePath = path.join(
+							serverconfig.tpmasterdir,
+							ds.queries.WSImages.imageBySampleFolder,
+							sampleId,
+							annotations[0]
+						)
+						const annotationData = JSON.parse(fs.readFileSync(annotationFilePath, 'utf8'))
+						wsimage.annotationsData = annotationData.features.map((d: any) => {
+							const featClass =
+								ds.queries.WSImages?.classes?.find(f => f.id == d.properties.class).label || d.properties.class
+							return {
+								zoomCoordinates: d.properties.zoomCoordinates,
+								type: d.properties.type,
+								class: featClass
+							}
+						})
 					}
 
 					if (ds.queries.WSImages.getZoomInPoints) {
