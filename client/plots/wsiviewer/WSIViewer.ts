@@ -92,7 +92,17 @@ export default class WSIViewer extends RxComponentInner {
 		}
 
 		if (wsimages[settings.displayedImageIndex]?.annotationsData?.length) {
-			this.renderAnnotationsTables(holder, wsimages[settings.displayedImageIndex])
+			const selectedRows: number[] = []
+			const rows = wsimages[settings.displayedImageIndex].annotationsData.map((d, i) => {
+				if (zoomInPoints?.includes(d.zoomCoordinates)) selectedRows.push(i) //cheating
+				return [{ value: i }, { value: d.zoomCoordinates }, { value: d.class }]
+			})
+			renderTable({
+				columns: [{ label: 'Index' }, { label: 'Coordinates' }, { label: 'Class' }],
+				rows,
+				div: holder.append('div').attr('id', 'annotations').style('margin-left', '10px'),
+				selectedRows
+			})
 		}
 
 		this.addControls(map, activeImage, hasOverlay)
