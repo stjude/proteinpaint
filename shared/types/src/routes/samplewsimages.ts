@@ -17,6 +17,7 @@ export type WSImage = {
 	overlays?: Array<string>
 	zoomInPoints?: Array<[number, number]>
 	metadata: string
+	annotationsData?: any
 }
 
 export const sampleWSImagesPayload: RoutePayload = {
