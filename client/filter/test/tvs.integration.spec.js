@@ -1,6 +1,7 @@
 import tape from 'tape'
 import * as d3s from 'd3-selection'
 import { filterInit } from '../filter'
+import { vocabInit } from '#termdb/vocabulary'
 import { parseRange } from '../../dom/numericRangeInput'
 import { detectLst, detectOne, detectZero, detectGte, detectChildText, whenHidden } from '../../test/test.helpers'
 
@@ -12,6 +13,10 @@ Tests:
 	tvs: Condition
 	tvs: Cohort + Numeric
 	tvs: unbounded range
+	tvs: Gene Variant - SNV/indel
+	tvs: Gene Variant - CNV - cateogrical
+	tvs: Gene Variant - CNV - continuous
+
 
 the direct functional testing of the component, without the use of runpp()
 
@@ -30,10 +35,7 @@ function getOpts(_opts = {}) {
 		.style('border', '1px solid #000')
 
 	const opts = Object.assign({ holder }, _opts)
-	const vocab = _opts.vocab ? _opts.vocab : { route: 'termdb', genome: 'hg38-test', dslabel: 'TermdbTest' }
-
-	opts.filter = filterInit({
-		vocab,
+	const arg = {
 		termdbConfig: {
 			selectCohort: {
 				term: { id: 'subcohort', type: 'multivalue' },
@@ -73,7 +75,13 @@ function getOpts(_opts = {}) {
 			opts.filter.main(filter)
 		},
 		callbacks: opts.callbacks
-	})
+	}
+
+	// use vocabApi if supplied
+	if (opts.vocabApi) arg.vocabApi = opts.vocabApi
+	else arg.vocab = opts.vocab || { route: 'termdb', genome: 'hg38-test', dslabel: 'TermdbTest' }
+
+	opts.filter = filterInit(arg)
 
 	opts.test = ({ callback, trigger }) => {
 		opts.testCallback = callback
@@ -81,6 +89,13 @@ function getOpts(_opts = {}) {
 	}
 
 	return opts
+}
+
+async function getVocabApi() {
+	const vocabApi = vocabInit({ state: { vocab: { genome: 'hg38-test', dslabel: 'TermdbTest' } } })
+	if (!vocabApi) throw 'vocabApi is missing'
+	await vocabApi.getTermdbConfig()
+	return vocabApi
 }
 
 /**************
@@ -799,5 +814,273 @@ tape('tvs: unbounded range', async test => {
 	const sjcsDensityData = opts.filter.Inner.pills['2'].Inner.num_obj.density_data*/
 	const valLabel = await detectOne({ target: opts.holder.select('.tvs_pill').node(), selector: '.value_btn' })
 	test.equal(valLabel.textContent, '﹣∞ < x < ﹢∞', 'should show an unbounded range label in the blue pill')
+	test.end()
+})
+
+tape('tvs: Gene Variant - SNV/indel', async test => {
+	const opts = getOpts({
+		filterData: {
+			type: 'tvslst',
+			in: true,
+			join: '',
+			lst: [
+				{
+					type: 'tvs',
+					tvs: {
+						term: {
+							id: 'snvindel_somatic',
+							query: 'snvindel',
+							name: 'SNV/indel (somatic)',
+							parent_id: null,
+							isleaf: true,
+							type: 'dtsnvindel',
+							dt: 1,
+							values: {
+								M: { label: 'MISSENSE' },
+								F: { label: 'FRAMESHIFT' },
+								WT: { label: 'Wildtype' }
+							},
+							name_noOrigin: 'SNV/indel',
+							origin: 'somatic',
+							parentTerm: {
+								kind: 'gene',
+								id: 'TP53',
+								gene: 'TP53',
+								name: 'TP53',
+								type: 'geneVariant'
+							}
+						},
+						values: [{ key: 'M', label: 'MISSENSE', value: 'M', bar_width_frac: null }]
+					}
+				}
+			]
+		}
+	})
+
+	const filternode = opts.holder.node()
+	await opts.filter.main(opts.filterData)
+
+	try {
+		const pill = await detectOne({ target: filternode, selector: '.tvs_pill' })
+		const controlTipd = opts.filter.Inner.dom.controlsTip.d
+		const menuRows = controlTipd.selectAll('tr')
+		const editOpt = menuRows.filter(d => d.action == 'edit').node()
+		const tipd = opts.filter.Inner.dom.termSrcDiv
+
+		// --- trigger and check tip menu ---
+		pill.click()
+		editOpt.click()
+		const applyBtn = await detectOne({ target: tipd.node(), selector: '.sjpp_apply_btn' })
+
+		test.ok(applyBtn, 'Should have 1 button to apply value change')
+		test.equal(tipd.selectAll("input[name^='sjpp-input']").size(), 3, 'Should have a checkbox for each value')
+		test.equal(tipd.selectAll("input[name^='sjpp-input']:checked").size(), 1, 'Should have 1 box checked')
+
+		//trigger and test addition of new value
+		tipd.node().querySelectorAll("input[name^='sjpp-input']")[1].click()
+
+		// defer the execution of the next step to the next process loop "tick"
+		const valueBtn = await detectChildText({
+			target: filternode,
+			selector: '.value_btn:nth-child(1n)',
+			trigger: () => applyBtn.click()
+		})
+		test.equal(
+			valueBtn[0].innerHTML.split('<')[0],
+			opts.filterData.lst[0].tvs.values.length + ' groups',
+			'should change the pill value btn after adding value from menu'
+		)
+	} catch (e) {
+		test.fail('test error: ' + e)
+	}
+	test.end()
+})
+
+tape('tvs: Gene Variant - CNV - cateogrical', async test => {
+	// generating vocabApi here in order to generate
+	// a termdbConfig, which is needed for cnv tvs
+	const vocabApi = await getVocabApi()
+	const opts = getOpts({
+		vocabApi,
+		filterData: {
+			type: 'tvslst',
+			in: true,
+			join: '',
+			lst: [
+				{
+					type: 'tvs',
+					tvs: {
+						term: {
+							id: 'cnv',
+							query: 'cnv',
+							name: 'CNV',
+							parent_id: null,
+							isleaf: true,
+							type: 'dtcnv',
+							dt: 4,
+							values: {
+								CNV_amp: { label: 'Copy number gain' },
+								WT: { label: 'Wildtype' }
+							},
+							name_noOrigin: 'CNV',
+							parentTerm: {
+								kind: 'gene',
+								id: 'TP53',
+								gene: 'TP53',
+								name: 'TP53',
+								type: 'geneVariant'
+							}
+						},
+						values: [{ key: 'CNV_amp', label: 'Copy number gain', value: 'CNV_amp', bar_width_frac: null }]
+					}
+				}
+			]
+		}
+	})
+
+	const filternode = opts.holder.node()
+	await opts.filter.main(opts.filterData)
+
+	try {
+		const pill = await detectOne({ target: filternode, selector: '.tvs_pill' })
+		const controlTipd = opts.filter.Inner.dom.controlsTip.d
+		const menuRows = controlTipd.selectAll('tr')
+		const editOpt = menuRows.filter(d => d.action == 'edit').node()
+		const tipd = opts.filter.Inner.dom.termSrcDiv
+
+		// --- trigger and check tip menu ---
+		pill.click()
+		editOpt.click()
+		const applyBtn = await detectOne({ target: tipd.node(), selector: '.sjpp_apply_btn' })
+
+		test.ok(applyBtn, 'Should have 1 button to apply value change')
+		test.equal(tipd.selectAll("input[name^='sjpp-input']").size(), 2, 'Should have a checkbox for each value')
+		test.equal(tipd.selectAll("input[name^='sjpp-input']:checked").size(), 1, 'Should have 1 box checked')
+
+		//trigger and test addition of new value
+		tipd.node().querySelectorAll("input[name^='sjpp-input']")[1].click()
+
+		// defer the execution of the next step to the next process loop "tick"
+		const valueBtn = await detectChildText({
+			target: filternode,
+			selector: '.value_btn:nth-child(1n)',
+			trigger: () => applyBtn.click()
+		})
+		test.equal(
+			valueBtn[0].innerHTML.split('<')[0],
+			opts.filterData.lst[0].tvs.values.length + ' groups',
+			'should change the pill value btn after adding value from menu'
+		)
+	} catch (e) {
+		test.fail('test error: ' + e)
+	}
+	test.end()
+})
+
+tape('tvs: Gene Variant - CNV - continuous', async test => {
+	// generating vocabApi here in order to generate
+	// a termdbConfig, which is needed for cnv tvs
+	const vocabApi = await getVocabApi()
+	// set cnv cutoffs
+	// presence of these properties signals that cnv data is continuous
+	vocabApi.termdbConfig.queries.cnv = {
+		cnvMaxLength: 2000000,
+		cnvGainCutoff: 0.1,
+		cnvLossCutoff: -0.1
+	}
+	const opts = getOpts({
+		vocabApi,
+		filterData: {
+			type: 'tvslst',
+			in: true,
+			join: '',
+			lst: [
+				{
+					type: 'tvs',
+					tvs: {
+						term: {
+							id: 'cnv',
+							query: 'cnv',
+							name: 'CNV',
+							parent_id: null,
+							isleaf: true,
+							type: 'dtcnv',
+							dt: 4,
+							values: {
+								CNV_amp: { label: 'Copy number gain' },
+								WT: { label: 'Wildtype' }
+							},
+							name_noOrigin: 'CNV',
+							parentTerm: {
+								kind: 'gene',
+								id: 'TP53',
+								gene: 'TP53',
+								name: 'TP53',
+								type: 'geneVariant'
+							}
+						},
+						values: [],
+						cnvGainCutoff: 0.5,
+						cnvLossCutoff: -0.5,
+						cnvMaxLength: 4000000,
+						cnvMode: 'continuous',
+						cnvWT: false
+					}
+				}
+			]
+		}
+	})
+
+	const filternode = opts.holder.node()
+	await opts.filter.main(opts.filterData)
+
+	try {
+		const pill = await detectOne({ target: filternode, selector: '.tvs_pill' })
+		const controlTipd = opts.filter.Inner.dom.controlsTip.d
+		const menuRows = controlTipd.selectAll('tr')
+		const editOpt = menuRows.filter(d => d.action == 'edit').node()
+		const tipd = opts.filter.Inner.dom.termSrcDiv
+
+		let valueBtn = await detectOne({ target: pill, selector: '.value_btn' })
+		test.equal(valueBtn.innerText, 'Altered', "Pill value button should be labeled 'Altered'")
+
+		// --- trigger and check tip menu ---
+		pill.click()
+		editOpt.click()
+
+		const cutoffsInputs = tipd.selectAll("input[type='number']").nodes()
+		test.equal(cutoffsInputs.length, 3, 'Should have three numeric inputs')
+		test.equal(
+			Number(cutoffsInputs[0].value),
+			opts.filterData.lst[0].tvs.cnvGainCutoff,
+			'Value of first input should be gain cutoff'
+		)
+		test.equal(
+			Number(cutoffsInputs[1].value),
+			opts.filterData.lst[0].tvs.cnvLossCutoff,
+			'Value of second input should be loss cutoff'
+		)
+		test.equal(
+			Number(cutoffsInputs[2].value),
+			opts.filterData.lst[0].tvs.cnvMaxLength,
+			'Value of third input should be max length'
+		)
+
+		const wildtypeCheckbox = tipd.selectAll("input[type='checkbox']").node()
+		test.ok(wildtypeCheckbox, 'Should have a wildtype checkbox')
+
+		const applyBtn = await detectOne({ target: tipd.node(), selector: '.sjpp_apply_btn' })
+		test.ok(applyBtn, 'Should have 1 button to apply changes')
+
+		wildtypeCheckbox.click()
+		valueBtn = await detectChildText({
+			target: pill,
+			selector: '.value_btn',
+			trigger: () => applyBtn.click()
+		})
+		test.equal(valueBtn[0].innerText, 'Wildtype', "Pill value should change to 'Wildtype'")
+	} catch (e) {
+		test.fail('test error: ' + e)
+	}
 	test.end()
 })

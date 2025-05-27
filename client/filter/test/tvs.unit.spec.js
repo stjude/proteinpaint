@@ -53,6 +53,19 @@ async function getPillFilterItem(termType) {
 			.sort()
 		item.tvs.ranges = [{ start: values[1], stop: values[2] }]
 	}
+	if (dtTerms.map(t => t.type).includes(termType)) {
+		const cnv = vocabApi.termdbConfig.queries.cnv
+		const cnvKeys = Object.keys(cnv)
+		if (termType == 'dtcnv' && (cnvKeys.includes('cnvGainCutoff') || cnvKeys.includes('cnvLossCutoff'))) {
+			item.tvs.cnvMode = 'continuous'
+			if (cnv.cnvGainCutoff) item.tvs.cnvGainCutoff = cnv.cnvGainCutoff
+			if (cnv.cnvLossCutoff) item.tvs.cnvLossCutoff = cnv.cnvLossCutoff
+			if (cnv.cnvMaxLength) item.tvs.cnvMaxLength = cnv.cnvMaxLength
+			item.tvs.cnvWT = false
+		} else {
+			item.tvs.values = [{ key: Object.keys(term.values)[0] }]
+		}
+	}
 
 	const filter = {
 		type: 'tvslst',
@@ -148,6 +161,20 @@ function getGeneVariantTerm() {
 	]
 	const term = Object.assign({}, parentTerm, { childTerms })
 	return term
+}
+
+async function testTvs(test, pill, filter, item, term) {
+	await pill.main({ tvs: item.tvs, filter })
+	test.equal(
+		pill.Inner.dom.holder.node().querySelectorAll('.tvs_pill').length,
+		1,
+		'should render 1 pill for a single-tvs filter'
+	)
+	const handler = pill.Inner.handler
+	test.equal(handler.type, term.type, `should use the ${handler.type} handler for a ${term.type} term`)
+	testHandlerMethodsExists(test, handler)
+	testTermNameGen(test, handler)
+	pill.Inner.dom.holder.remove()
 }
 
 function testHandlerMethodsExists(test, handler) {
@@ -263,24 +290,26 @@ tape('numeric tvs', async test => {
 })
 
 tape('geneVariant tvs', async test => {
-	const { pill, filter, item, term } = await getPillFilterItem('geneVariant')
 	try {
 		// gene variant tvs
-		await pill.main({ tvs: item.tvs, filter })
-		const handler = pill.Inner.handler
-		test.equal(handler.type, 'geneVariant', 'should use the geneVariant handler for a geneVariant term')
-		testHandlerMethodsExists(test, handler)
-		testTermNameGen(test, handler)
-		pill.Inner.dom.holder.remove()
+		const { pill, filter, item, term } = await getPillFilterItem('geneVariant')
+		await testTvs(test, pill, filter, item, term)
 		// dt tvs
 		for (const dtTerm of term.childTerms) {
-			const { pill, filter, item } = await getPillFilterItem(dtTerm.type)
-			await pill.main({ tvs: item.tvs, filter })
+			const { pill, filter, item, term } = await getPillFilterItem(dtTerm.type)
+			await testTvs(test, pill, filter, item, term)
+		}
+		// dt cnv tvs - continuous cnv data
+		{
+			vocabApi.termdbConfig.queries.cnv = {
+				cnvMaxLength: 2000000,
+				cnvGainCutoff: 0.1,
+				cnvLossCutoff: -0.1
+			}
+			const { pill, filter, item, term } = await getPillFilterItem('dtcnv')
+			await testTvs(test, pill, filter, item, term)
 			const handler = pill.Inner.handler
-			test.equal(handler.type, dtTerm.type, `should use the ${dtTerm.type} handler for a ${dtTerm.type} term`)
-			testHandlerMethodsExists(test, handler)
-			testTermNameGen(test, handler)
-			pill.Inner.dom.holder.remove()
+			test.equal(typeof handler.setMethods, 'function', 'should have a setMethods() method')
 		}
 	} catch (e) {
 		test.fail('test error: ' + e)

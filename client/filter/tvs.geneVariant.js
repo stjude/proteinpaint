@@ -1,11 +1,17 @@
-import { handler as catHandler } from './tvs.categorical.js'
 import { mayGetChildTerms } from '../tw/geneVariant'
 
 /*
 TVS handler for geneVariant term
 */
 
-export const handler = Object.assign({}, catHandler, { type: 'geneVariant', fillMenu, term_name_gen })
+export const handler = {
+	type: 'geneVariant',
+	term_name_gen,
+	get_pill_label,
+	getSelectRemovePos,
+	fillMenu,
+	setTvsDefaults
+}
 
 async function fillMenu(self, _div, tvs) {
 	const term = structuredClone(tvs.term)
@@ -40,6 +46,20 @@ async function fillMenu(self, _div, tvs) {
 }
 
 function term_name_gen(d) {
-	const name = d.term.parentTerm ? `${d.term.parentTerm.name} ${d.term.name}` : d.term.name
-	return name.length < 31 ? name : '<label title="' + name + '">' + name.substring(0, 28) + '...' + '</label>'
+	const name = d.term.name
+	return name.length < 21 ? name : '<label title="' + name + '">' + name.substring(0, 18) + '...' + '</label>'
+}
+
+function getSelectRemovePos(j) {
+	return j
+}
+
+function setTvsDefaults(tvs) {
+	if (!tvs.values) tvs.values = []
+}
+
+// no need for pill label since no pill will be rendered
+// for geneVariant term (pill will be rendered for child dt term)
+function get_pill_label(tvs) {
+	return { txt: '' }
 }
