@@ -29,10 +29,11 @@ struct DataType {
 // Segment_Mean >= 0.2 => gain; Segment_Mean <= -0.2 => loss
 // MAF:
 // Select MAF columns ["Chromosome","Start_Position","End_Position"]
-fn parse_content(content: &str, case_id: &str, data_type: &str) -> Result<String, (String, String, String)> {
+fn parse_content(content: &str, case_id: &str, data_type: &str) -> Result<Vec<Vec<String>>, (String, String, String)> {
+    //) -> Result<String, (String, String, String)> {
     let lines = content.lines();
-    //let mut parsed_data = Vec::new();
-    let mut parsed_data: String = String::new();
+    let mut parsed_data = Vec::new();
+    //let mut parsed_data: String = String::new();
     let mut columns_indices: Vec<usize> = Vec::new();
     let mut header_mk: &str = "";
     let mut columns = Vec::new(); // columns selected from GDC file
@@ -78,9 +79,9 @@ fn parse_content(content: &str, case_id: &str, data_type: &str) -> Result<String
                             return Err((case_id.to_string(), data_type.to_string(), error_msg));
                         }
                     };
-                    if seg_mean >= 0.2 {
+                    if seg_mean >= 0.3 {
                         element = "gain".to_string();
-                    } else if seg_mean <= -0.2 {
+                    } else if seg_mean <= -0.4 {
                         element = "loss".to_string();
                     } else {
                         keep_ck = false;
@@ -93,8 +94,9 @@ fn parse_content(content: &str, case_id: &str, data_type: &str) -> Result<String
                 out_lst.push("mutation".to_string());
             }
             if keep_ck {
-                parsed_data.push_str(out_lst.join("\t").as_str());
-                parsed_data.push_str("\n");
+                parsed_data.push(out_lst);
+                //parsed_data.push_str(out_lst.join("\t").as_str());
+                //parsed_data.push_str("\n");
             }
         }
     }
