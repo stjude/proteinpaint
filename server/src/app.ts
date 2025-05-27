@@ -86,7 +86,13 @@ export async function launch() {
 			if (exit.error) console.error(exit.error)
 			else if (exit.message) console.log(exit.message)
 
-			// may terminate background setInterval, timeout, listen to allow immediate exit here
+			// May terminate background setInterval, timeout, listen steps to allow immediate exit here.
+			// Notes:
+			// - exit.code=0 means a non-error, successful init, but the server will not listen to port,
+			//   so that the caller code/script can continue executing without being blocked by an active express app.
+			// - it's cleaner for async ds init steps to be skipped if serverconfig.features.mustExitPendingValidation == true,
+			//   but a forced exit here makes command line handling less sensitive to active async code that should have been
+			//   skipped (but was not) in mds*, route, caching code
 			if (typeof exit.code == 'number') process.exit(exit.code)
 			// or, allow async code/computation to finish naturally in the background
 			else return

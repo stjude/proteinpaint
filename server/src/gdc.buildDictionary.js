@@ -4,9 +4,20 @@ import { cachedFetch, isRecoverableError } from './utils'
 import { deepEqual } from '#shared/helpers.js'
 import { joinUrl } from '#shared/joinUrl.js'
 
+
+
+/******************** major tasks *****************
+- parsing gdc variables and constructing in-memory termdb:
+  HARDCODED LOGIC, does not need any configuration in dataset file
+  standard termdb "interface" functions are added to ds.cohort.termdb.q{}
+
+- determine default binconfig for all numeric terms
+  added to term json objects
+*/
+
 /*
 ********************   functions    *************
-buildGDCdictionary
+gdcBuildDictionary
 	mayAddTermAttribute
 	assignDefaultBins
 	makeTermdbQueries
@@ -110,7 +121,7 @@ re.expand: []
 // prefix for keys in re._mapping{}
 const mapping_prefix = 'ssm_occurrence_centrics'
 
-export async function buildGDCdictionary(ds) {
+export async function gdcBuildDictionary(ds) {
 	const id2term = new Map()
 	// k: term id, string with full path
 	// v: term obj
@@ -140,7 +151,7 @@ export async function buildGDCdictionary(ds) {
 	const { body: re } = await cachedFetch(dictUrl, { headers }).catch(e => {
 		console.log(e)
 		if (isRecoverableError(e)) {
-			ds.init.recoverableError = 'buildGDCdictionary() ${dictUrl}'
+			ds.init.recoverableError = 'gdcBuildDictionary() ${dictUrl}'
 		}
 		// should still throw to stop code execution here and allow caller to catch
 		throw 'failed to get GDC API _mapping: ' + (e.message || e)

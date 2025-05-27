@@ -16,7 +16,7 @@ const cacheCheckWait = serverconfig.features.gdcCacheCheckWait || 5 * 60 * 1000
 *****************************************************
 
 ********************   functions    *************
-initGdcCache
+gdcInitCache
 	cacheMappingOnNewRelease
 		getOpenProjects
 		fetchIdsFromGdcApi
@@ -30,22 +30,33 @@ Important!
 - inside the function should await each step so they work in sequence
 */
 
-export async function initGdcCache(ds) {
-	/* 
-		this one-time api test is not informative due to below reason and subject to removal:
-		on some pp env e.g. ppirt, this api test sometimes fails. in order not to abort pp launch, only logs err out
-		 no need to record this test failure and report via healthcheck: since this test runs just once on launch. during the container lifetime it never runs again and thus is not informative of actual api status
-	try {
-		await testGDCapi(ds)
-	} catch (e) {
-		console.log(e.message || e)
-	}
-	*/
+/******************** major tasks *****************
+- querying list of open-access projects
+  stores at: ds.gdcOpenProjects = set of project ids that are open-access
 
-	// may do it because it could be disabled by feature toggle
+- test gdc api, make sure they're all online
+
+- cache sample/case name/uuid mapping
+  creates these new dataset-level attributes
+  ds.__gdc {
+  	aliquot2submitter{ get() }
+  	map2caseid{ get() }
+  	doneCaching: boolean, falg to indicate when the sample ID caching is done
+	casesWithExpData Set
+	caseid2submitter
+	data_release_version
+  }
+
+- periodic check of stale cache and re-cache above
+*/
+export async function gdcInitCache(ds) {
 	// caching action is fine-tuned by the feature toggle on a pp instance; log out detailed status per setting
-	if (serverconfig.features.stopGdcCacheAliquot || serverconfig.features.mustExitPendingValidation) {
-		// do not cache at all. this flag is auto-set for container validation. running stale cache check will cause the server process not to quit, and break validation, thus must skip this when flag is true
+	// NOTE: serverconfig.features."mustExitPendingValidation" has replaced "stopGdcCacheAliquot" option,
+	// serverconfig.js will automatically convert the latter to the "mustExitPendingValidation" as needed
+	if (serverconfig.features.mustExitPendingValidation) {
+		// do not cache at all. this flag is auto-set for container validation.
+		// running stale cache check will cause the server process not to quit,
+		// and break validation, thus must skip this when flag is true
 		console.log('GDC: sample IDs are not cached! No periodic check will take place!')
 		if (!ds.__gdc) ds.__gdc = getCacheRef(ds) // though nothing is cached, must init the cache holder so not to break code that accesses this holder
 		///////////////////// NOTE ///////////////////////
@@ -54,111 +65,192 @@ export async function initGdcCache(ds) {
 		return
 	}
 
+	if (ds.init.status != 'nonblocking') {
+		// NOTE: mds3.init.js calls initNonBlocking after all validation steps are done
+		throw `initGdcCache() should only be called when ds.init.status == 'nonblocking'`
+	}
+
+	// !!! DISABLED option to await the initial check below !!!
+	// This was previously implied by the serverconfig.features.gdcCacheCheckWait option, but it
+	// complicates the handling of mds3 non-blocking init steps after all the validation steps are done.
+	// Consumer code should instead detect `"doneCaching": true` from the `/healthcheck?dslabel=GDC` reponse,
+	// and there is also a `The server has not finished caching ...` error message that's displayed in the UI.
+	mayRefreshCache(ds) // do not await initial call
+	setInterval(mayRefreshCache, cacheCheckWait, ds) // periodic check after initial call
+}
+
+async function mayRefreshCache(ds) {
+	let version
 	try {
-		// obtain case id mapping for the first time and store at ds.__gdc
-		await cacheMappingOnNewRelease(ds)
+		version = await hasNewVersion(ds)
+		if (!version) return
+		await cacheMappingOnNewRelease(ds, version)
 	} catch (e) {
-		if (isRecoverableError(e)) {
-			console.log('recoverableError: ', ds.init.recoverableError, e)
+		// uncomment to test cancellation of retries and also requires
+		// one of the `.then()` test callbacks to be uncommented
+		// delete ds.init.recoverableError
+
+		// always allow retries, regardless of error type (fatal or recoverable)
+		delete ds.__pendingCacheVersion
+		if (ds.__gdc) delete ds.__gdc.data_release_version
+
+		if (ds.init.recoverableError) {
+			console.log(`allow retries of cacheMappingOnNewRelease()`)
+			console.trace(e)
+		} else if (isRecoverableError(e)) {
+			console.log('recoverableError: ', e)
 			delete ds.__pendingCacheVersion
 		} else {
+			console.log(`force retries of cacheMappingOnNewRelease()`)
 			console.trace(e)
-			// forced retry: DO NOT immediately crash when the initial try fails with non-recoverable error
-			// throw 'cacheSampleIdMapping() failed: ' + (e.message || e)
-			// forced retry of caching, may improve logic later
+
+			// !!! forced retry of caching, assume caching error should always be recoverable !!!
 			console.log('cacheSampleIdMapping() failed: ' + (e.message || e), ds.init.fatalError)
-			delete ds.init.fatalError
 			ds.init.recoverableError = 'fatal error forced to recoverable: cacheSampleIdMapping()'
+			// delete ds.init.fatalError
 			delete ds.__pendingCacheVersion
 			// forced retry: do not return
 		}
 	}
-
-	// After the initial caching attempt on dataset initialization, periodic checks will run;
-	// use setInterval instead of using setTimeout within cacheMappingOnNewRelease(),
-	// which will require separate setTimeout() calls at the end of the function
-	// plus within each error catch block
-	const interval = setInterval(async () => {
-		try {
-			await cacheMappingOnNewRelease(ds)
-		} catch (e) {
-			// uncomment to test cancellation of retries and also requires
-			// one of the `.then()` test callbacks to be uncommented
-			// delete ds.init.recoverableError
-
-			// always allow retries, regardless of error type (fatal or recoverable)
-			delete ds.__pendingCacheVersion
-			if (ds.__gdc) delete ds.__gdc.data_release_version
-
-			if (ds.init.recoverableError) {
-				console.log(`allow retries of cacheMappingOnNewRelease()`)
-				console.trace(e)
-			} else {
-				console.log(`force retries of cacheMappingOnNewRelease()`, e)
-				// TODO: may uncomment below and/or improve logic above
-				// ds.init.fatalError = `cacheMappingOnNewRelease()`
-				// // cancel retries/auto-recovery, but do not crash server
-				// // TODO: send a Slack message
-				// clearInterval(interval)
-				console.log(e.stack || e)
-				// console.log(
-				// 	`non-recoverable error during gdc map recaching: ` +
-				// 		`cancel retries of cacheMappingOnNewRelease() to not crash server`
-				// )
-			}
-		}
-	}, cacheCheckWait)
-
-	// add any other gdc stuff
 }
 
-async function getOpenProjects(ds, ref) {
-	const data = {
-		filters: {
-			op: 'and',
-			content: [
-				{
-					op: '=',
-					content: {
-						field: 'access',
-						value: 'open'
-					}
-				},
-				{
-					op: '=',
-					content: {
-						field: 'data_type',
-						value: 'Masked Somatic Mutation'
-					}
-				}
-			]
-		},
-		facets: 'cases.project.project_id',
-		size: 0
-	}
-
-	const { host, headers } = ds.getHostHeaders()
-	const url = joinUrl(host.rest, 'files')
-	const { body: re } = await cachedFetch(url, { method: 'POST', headers, body: data })
-		// uncomment this then() callback to test recoverable error handling,
-		// use `npx tsx server.ts` from sjpp instead of `npm start`, and
-		// have serverconfig.features.gdcCacheCheckWait=9000 to more clearly observe server crash
-		//.then(_ => {throw {status: 404}}) // client request error detected by healthy API -- should cause an IMMEDIATE crash
-		.catch(e => {
-			if (isRecoverableError(e)) ds.init.recoverableError = `getOpenProjects() ${url}`
-			// still throw to stop code execution here and allow caller to catch
-			throw e
-		})
-
-	if (!Array.isArray(re?.data?.aggregations?.['cases.project.project_id']?.buckets)) {
-		console.log("getting open project_id but return is not re.data.aggregations['cases.project.project_id'].buckets[]")
+async function hasNewVersion(ds) {
+	// an empty run will cancel the subsequent recache step in mayRefreshCache
+	if (ds.__pendingCacheVersion) {
+		console.log(`${ds.label}: allow pending cache to finish (${JSON.stringify(ds.__pendingCacheVersion)})`)
 		return
 	}
-	for (const b of re.data.aggregations['cases.project.project_id'].buckets) {
-		// key is project_id value
-		if (b.key) ref.gdcOpenProjects.add(b.key)
+	console.log('GDC: checking if cache is stale OR should recover from an error')
+	let version
+	try {
+		// since this runs in a loop, the API status could change between requests
+		const response = await ds.preInit.getStatus()
+		version = response?.data_release_version
+		if (!version) return
+	} catch (e) {
+		if (e.status == 'recoverableError') ds.init.recoverableError = e.error
+		return
 	}
-	console.log('GDC open-access projects:', ref.gdcOpenProjects.size)
+
+	// __pendingCacheVersion: started, but not completed
+	if (deepEqual(version, ds.__pendingCacheVersion) || deepEqual(version, ds.__gdc?.data_release_version)) {
+		if (ds.preInit.test)
+			console.log(
+				'GDC: skip recache of ',
+				version.minor,
+				ds.__pendingCacheVersion?.minor,
+				ds.__gdc?.data_release_version.minor
+			)
+		// do not trigger duplicate caching for the same release version, whether pending or completed
+
+		// even if version has not changed, still recache if a recoverable error was encountered,
+		// should try restart caching optimistically (that the network or server issue was resolved)
+		if (!ds.init.recoverableError) return
+		else {
+			console.log(`detected caching error: `, ds.init.recoverableError)
+			console.log(`cached gdc data version is up-to-date, but there was a caching error, will restart cache`)
+			//
+		}
+	}
+	// if ds.preInit.getStatus() took a long time, another mayRefreshCache() could have been triggered,
+	// and potentially result in this detection being stale
+	if (mayCancelStalePendingCache(ds, { data_release_version: version })) return
+	return version
+}
+
+/*
+cache gdc sample id mappings
+** this is an optional step and can be skipped on dev machines **
+- create a map from sample aliquot id to sample submitter id, for displaying in mds3 tk
+- create a map from differet ids to case uuid, for creating gdc cohort with selected samples
+- cache list of case uuids with expression data
+
+function will rerun when it detects stale case id cache
+*/
+async function cacheMappingOnNewRelease(ds, version) {
+	// to avoid issues from race condition:
+	// - do not set ds.__gdc until the caching is complete, unless none exists initially
+	// - create a new ref object to map pending cacheable data
+	// - if a new cacheMapping call is triggered before the previous one is finished,
+	//   then make sure the previous cacheRef object is not used as ds.__gdc
+	const ref = getCacheRef(ds) // a new empty nested cache object
+	if (!ds.__gdc) ds.__gdc = ref // would reference the same object only on initial call
+
+	const begin = new Date()
+
+	try {
+		// not using deepEqual() here, since on initial call ds.__gdc and ref directly reference the same object
+		if (ds.__gdc !== ref) console.log(`GDC: cache is stale. Caching version.minor='${version.minor}' ...`)
+
+		// reset doneCaching to false, which may overwrite it for a previous data version that has completed caching:
+		// the healthcheck?dslabel=GDC response will include doneCaching, so that the client code can display
+		// `the dataset has not finished loading` message
+		ds.__gdc.doneCaching = false
+		// above is equivalent to having a ds.__pendingCacheVersion object present
+		// it's important to keep the existing ds.__gdc cacheRef
+		// - to allow the server to finish serving data for a request that has started before a pending recache attempt
+		// - to prevent race condition causing a stale cacheRef to be filled-in as ds.__gdc during a recache
+
+		// the pending version will be tracked outside of ds.__gdc and ref objects,
+		// so that be use to compare for staleness
+		ds.__pendingCacheVersion = version
+
+		// ref is not equal to ds.__gdc at this point during a retry/recache,
+		// must attach the release version to the pending ref object that will be filled-in
+		ref.data_release_version = version
+
+		const date = new Date()
+		ref.cacheTimes.start = {
+			unixTime: Date.now(),
+			local: date.toLocaleDateString() + ' ' + date.toLocaleTimeString()
+		}
+		await getOpenProjects(ds, ref)
+		const size = 1000 // fetch 1000 ids at a time
+		// may force totalCases to 8000 for quicker testing but still multiple fetch iterations
+		const totalCases = serverconfig.features.gdcCacheCheckWait ? 8000 : await fetchIdsFromGdcApi(ds, 1, 0, ref)
+		if (!Number.isInteger(totalCases)) throw 'totalCases not integer'
+		ds.init.expectedTotalCases = totalCases
+
+		console.log('GDC: Start to cache sample IDs of', totalCases, 'cases...')
+		for (let i = 0; i < Math.ceil(totalCases / size); i++) {
+			const count = await fetchIdsFromGdcApi(ds, size, i * 1000, ref)
+			// IMPORTANT to break the loop early if no data is fetched in a loop iteration,
+			// there's a chance that expectedTotalCases may not be reached after a data version change
+			if (count === 0) break
+		}
+
+		await getCasesWithGeneExpression(ds, ref)
+		await getAnalysisTsv2loom4scrna(ds, ref)
+	} catch (e) {
+		if (mayCancelStalePendingCache(ds, ref)) return // avoid resetting ds.__* variables that may affect newer data version caching
+		if (isRecoverableError(e)) {
+			console.log(ds.__gdc?.recoverableError || ds.init?.recoverableError)
+			delete ds.__pendingCacheVersion
+			if (ds.__gdc) delete ds.__gdc.data_release_version
+			// the periodic rerun of this function will allow auto-recovery
+		}
+		throw e
+	}
+
+	// if the version has changed while caching was being performed,
+	// do not proceed to marking caching as being done, otherwise
+	// stale cache data will be served to users
+	if (mayCancelStalePendingCache(ds, ref)) return
+	if (ds.init.recoverableError) return // should not allow doneCaching: true when there is an ignored error
+	delete ds.__pendingCacheVersion
+	// swap to the newly completed cache reference
+	ds.__gdc = ref
+	ds.__gdc.doneCaching = true
+	console.log('GDC: Done caching sample IDs. Time:', Math.ceil((new Date() - begin) / 1000), 's')
+	console.log('\t', ds.__gdc.aliquot2submitter.cache.size, 'aliquot IDs to sample submitter id,')
+	console.log('\t', ds.__gdc.caseid2submitter.size, 'case uuid to submitter id,')
+	console.log('\t', ds.__gdc.map2caseid.cache.size, 'different ids to case uuid,')
+	console.log('\t', ds.__gdc.casesWithExpData.size, 'cases with gene expression data.')
+	const date = new Date()
+	ds.__gdc.cacheTimes.stop = {
+		unixTime: Date.now(),
+		local: date.toLocaleDateString() + ' ' + date.toLocaleTimeString()
+	}
 }
 
 function getCacheRef(ds) {
@@ -207,138 +299,10 @@ function getCacheRef(ds) {
 	return ref
 }
 
-/*
-cache gdc sample id mappings
-** this is an optional step and can be skipped on dev machines **
-- create a map from sample aliquot id to sample submitter id, for displaying in mds3 tk
-- create a map from differet ids to case uuid, for creating gdc cohort with selected samples
-- cache list of case uuids with expression data
-
-function will rerun when it detects stale case id cache
-*/
-async function cacheMappingOnNewRelease(ds) {
-	if (ds.__pendingCacheVersion) {
-		console.log(`${ds.label}: allow pending cache to finish (${JSON.stringify(ds.__pendingCacheVersion)})`)
-		return
-	}
-
-	console.log('GDC: checking if cache is stale OR should recover from an error')
-	// to avoid issues from race condition:
-	// - do not set ds.__gdc until the caching is complete
-	// - create a new ref object to map pending cacheable data
-	// - if a new cacheMapping call is triggered before the previous one is finished,
-	//   then make sure the previous cacheRef object is not used as ds.__gdc
-	const ref = getCacheRef(ds) // a new empty nested cache object
-	if (!ds.__gdc) ds.__gdc = ref // would reference the same object only on initial call
-
-	const begin = new Date()
-	let version
-	try {
-		// since this runs in a loop, the API status could change between requests
-		const response = await ds.preInit.getStatus()
-		version = response?.data_release_version
-		if (!version) return
-
-		// __pendingCacheVersion: started, but not completed
-		if (deepEqual(version, ds.__pendingCacheVersion) || deepEqual(version, ds.__gdc.data_release_version)) {
-			if (ds.preInit.test)
-				console.log(
-					'GDC: skip recache of ',
-					version.minor,
-					ds.__pendingCacheVersion?.minor,
-					ds.__gdc.data_release_version.minor
-				)
-			// do not trigger duplicate caching for the same release version, whether pending or completed
-
-			// even if version has not changed, still recache if a recoverable error was encountered,
-			// should try restart caching optimistically (that the network or server issue was resolved)
-			if (!ds.init.recoverableError) return
-			else {
-				console.log(`detected caching error: `, ds.init.recoverableError)
-				console.log(`cached gdc data version is up-to-date, but there was a caching error, will restart cache`)
-			}
-		}
-		// delete ds.init.recoverableError
-		// need to check before resetting ds.__pendingCacheVersion in subsequent lines
-		if (/*!ds.init.recoverableError &&*/ mayCancelStalePendingCache(ds, { data_release_version: version })) return
-		// not using deepEqual() here, since on initial call ds.__gdc and ref directly reference the same object
-		if (ds.__gdc !== ref) console.log('GDC: cache is stale. Re-caching...', version.minor)
-
-		// reset doneCaching to false, which may overwrite it for a previous data version that has completed caching:
-		// the healthcheck?dslabel=GDC response will include doneCaching, so that the client code can display
-		// `the dataset has not finished loading` message
-		ds.__gdc.doneCaching = false
-		// above is equivalent to having a ds.__pendingCacheVersion object present
-		// it's important to keep the existing ds.__gdc cacheRef
-		// - to allow the server to finish serving data for a request that has started before a pending recache attempt
-		// - to prevent race condition causing a stale cacheRef to be filled-in as ds.__gdc during a recache
-
-		// the pending version will be tracked outside of ds.__gdc and ref objects,
-		// so that be use to compare for staleness
-		ds.__pendingCacheVersion = version
-
-		// ref is not equal to ds.__gdc at this point during a retry/recache,
-		// must attach the release version to the pending ref object that will be filled-in
-		ref.data_release_version = version
-
-		const date = new Date()
-		ref.cacheTimes.start = {
-			unixTime: Date.now(),
-			local: date.toLocaleDateString() + ' ' + date.toLocaleTimeString()
-		}
-		await getOpenProjects(ds, ref)
-		const size = 1000 // fetch 1000 ids at a time
-		// may force totalCases to 8000 for quicker testing but still multiple fetch iterations
-		const totalCases = await fetchIdsFromGdcApi(ds, 1, 0, ref)
-		if (!Number.isInteger(totalCases)) throw 'totalCases not integer'
-		ds.init.expectedTotalCases = totalCases
-
-		console.log('GDC: Start to cache sample IDs of', totalCases, 'cases...')
-		for (let i = 0; i < Math.ceil(totalCases / size); i++) {
-			const count = await fetchIdsFromGdcApi(ds, size, i * 1000, ref)
-			// IMPORTANT to break the loop early if no data is fetched in a loop iteration,
-			// there's a chance that expectedTotalCases may not be reached after a data version change
-			if (count === 0) break
-		}
-
-		await getCasesWithGeneExpression(ds, ref)
-		await getAnalysisTsv2loom4scrna(ds, ref)
-	} catch (e) {
-		if (mayCancelStalePendingCache(ds, ref)) return // avoid resetting ds.__* variables that may affect newer data version caching
-		if (isRecoverableError(e)) {
-			console.log(ds.__gdc?.recoverableError || ds.init?.recoverableError)
-			delete ds.__pendingCacheVersion
-			if (ds.__gdc) delete ds.__gdc.data_release_version
-			// the periodic rerun of this function will allow auto-recovery
-		}
-		throw e
-	}
-
-	// if the version has changed while caching was being performed,
-	// do not proceed to marking caching as being done, otherwise
-	// stale cache data will be served to users
-	if (mayCancelStalePendingCache(ds, ref)) return
-	if (ds.init.recoverableError) return // should not allow doneCaching: true when there is an ignored error
-	delete ds.__pendingCacheVersion
-	// swap to the newly completed cache reference
-	ds.__gdc = ref
-	ds.__gdc.doneCaching = true
-	console.log('GDC: Done caching sample IDs. Time:', Math.ceil((new Date() - begin) / 1000), 's')
-	console.log('\t', ds.__gdc.aliquot2submitter.cache.size, 'aliquot IDs to sample submitter id,')
-	console.log('\t', ds.__gdc.caseid2submitter.size, 'case uuid to submitter id,')
-	console.log('\t', ds.__gdc.map2caseid.cache.size, 'different ids to case uuid,')
-	console.log('\t', ds.__gdc.casesWithExpData.size, 'cases with gene expression data.')
-	const date = new Date()
-	ds.__gdc.cacheTimes.stop = {
-		unixTime: Date.now(),
-		local: date.toLocaleDateString() + ' ' + date.toLocaleTimeString()
-	}
-}
-
 // may cancel unfinished caching for an older data_release_version,
 // if a new data_release_version is detected in cacheMappingOnNewRelease() runs
 function mayCancelStalePendingCache(ds, ref) {
-	const current = ds.__pendingCacheVersion || ds.__gdc.data_release_version
+	const current = ds.__pendingCacheVersion || ds.__gdc?.data_release_version
 	if (!current) return false
 	const next = ref.data_release_version
 	if (next.major < current.major || next.minor < current.minor) {
@@ -346,6 +310,59 @@ function mayCancelStalePendingCache(ds, ref) {
 		return true
 	}
 	return false
+}
+
+/*
+	ds: gdc dataset object
+	ref: the cache reference object from getCacheRef(), used to track caching status, progress, errors
+*/
+async function getOpenProjects(ds, ref) {
+	const data = {
+		filters: {
+			op: 'and',
+			content: [
+				{
+					op: '=',
+					content: {
+						field: 'access',
+						value: 'open'
+					}
+				},
+				{
+					op: '=',
+					content: {
+						field: 'data_type',
+						value: 'Masked Somatic Mutation'
+					}
+				}
+			]
+		},
+		facets: 'cases.project.project_id',
+		size: 0
+	}
+
+	const { host, headers } = ds.getHostHeaders()
+	const url = joinUrl(host.rest, 'files')
+	const { body: re } = await cachedFetch(url, { method: 'POST', headers, body: data })
+		// uncomment this then() callback to test recoverable error handling,
+		// use `npx tsx server.ts` from sjpp instead of `npm start`, and
+		// have serverconfig.features.gdcCacheCheckWait=9000 to more clearly observe server crash
+		//.then(_ => {throw {status: 404}}) // client request error detected by healthy API -- should cause an IMMEDIATE crash
+		.catch(e => {
+			if (isRecoverableError(e)) ds.init.recoverableError = `getOpenProjects() ${url}`
+			// still throw to stop code execution here and allow caller to catch
+			throw e
+		})
+
+	if (!Array.isArray(re?.data?.aggregations?.['cases.project.project_id']?.buckets)) {
+		console.log("getting open project_id but return is not re.data.aggregations['cases.project.project_id'].buckets[]")
+		return
+	}
+	for (const b of re.data.aggregations['cases.project.project_id'].buckets) {
+		// key is project_id value
+		if (b.key) ref.gdcOpenProjects.add(b.key)
+	}
+	console.log('GDC open-access projects:', ref.gdcOpenProjects.size)
 }
 
 /*
