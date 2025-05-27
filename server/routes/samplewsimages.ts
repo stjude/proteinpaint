@@ -39,7 +39,8 @@ function init({ genomes }) {
 					}
 
 					const annotations = await ds.queries.WSImages.getWSIAnnotations(sampleId, wsimage.filename)
-					if (annotations) {
+
+					if (annotations && annotations.length > 0) {
 						//Replace with annotations data??
 						wsimage.overlays = annotations
 
@@ -57,7 +58,7 @@ function init({ genomes }) {
 
 						wsimage.annotationsData = annotationData.features.map((d: any) => {
 							const featClass =
-								ds.queries.WSImages?.classes?.find(f => f.id == d.properties.class).label || d.properties.class
+								ds.queries.WSImages?.classes?.find(f => f.id == d.properties.class)?.label || d.properties.class
 							return {
 								zoomCoordinates: d.properties.zoomCoordinates,
 								type: d.properties.type,
@@ -77,6 +78,20 @@ function init({ genomes }) {
 						if (zoomInPoints) {
 							wsimage.zoomInPoints = zoomInPoints
 						}
+					}
+				}
+			}
+
+			if (ds.queries.WSImages.getWSIPredictionOverlay) {
+				for (const wsimage of wsimages) {
+					// if (ds.queries.WSImages.makeGeoJson) {
+					// 	await ds.queries.WSImages.makeGeoJson(sampleId, wsimage)
+					// }
+
+					const predictionOverlay = await ds.queries.WSImages.getWSIPredictionOverlay(sampleId, wsimage.filename)
+
+					if (predictionOverlay) {
+						wsimage.predictionLayers = [predictionOverlay]
 					}
 				}
 			}
