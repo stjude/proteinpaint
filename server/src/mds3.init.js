@@ -173,7 +173,7 @@ export async function init(ds, genome) {
 	// otherwise it will be difficult to coordinate the handling of errors from either
 	// validation or remaining steps that may include setInterval that runs at the
 	// same time as mayRetryInit() in initGenomesDs.js (avoids race condition)
-	if (ds.init?.retryMax) mds3InitNonblocking(ds)
+	if (ds.init?.hasNonblockingSteps) mds3InitNonblocking(ds)
 }
 
 export function client_copy(ds) {
