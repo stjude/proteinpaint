@@ -240,8 +240,10 @@ async function getFilesAndShowTable(obj) {
 				.style('background-color', '#f0f8ff')
 				.style('border', '1px solid #87ceeb')
 				.style('border-radius', '1px')
-				.style('padding', '20px')
-				.style('margin', '20px 0')
+				.style('padding', '5px')
+				.style('margin', '40px 0')
+				.style('max-width', '100%') // Don't exceed container width
+				.style('width', 'fit-content') // Only as wide as content needs
 
 			deduplicationDiv
 				.append('div')
