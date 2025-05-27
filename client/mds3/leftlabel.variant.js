@@ -126,6 +126,11 @@ export function getVariantLabelText(data, tk, block) {
 }
 
 function menu_variants(tk, block) {
+	// in case only showing cnv density but no skewer, disable all options from this menu as they do not apply to cnv density
+	if ((!tk.skewer?.rawmlst || tk.skewer.rawmlst?.length == 0) && tk.cnv?.cnvInDensity) {
+		tk.menutip.d.append('div').style('margin', '10px').text('Viewing CNV density and cannot access segment details')
+		return
+	}
 	const listDiv = tk.menutip.d
 		.append('div')
 		.text('List')
