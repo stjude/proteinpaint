@@ -1,4 +1,4 @@
-import { handler as _handler } from './tvs.geneVariant.js'
+import { handler as _handler } from './tvs.dt.js'
 import { Menu } from '../dom/menu'
 
 /*
@@ -158,11 +158,11 @@ async function fillMenu_cont(self, div, tvs) {
 	div
 		.append('div')
 		.append('button')
-		//.attr('class', 'sja_filter_tag_btn sjpp_apply_btn')
-		//.style('border-radius', '13px')
+		.attr('class', 'sja_filter_tag_btn sjpp_apply_btn')
+		.style('border-radius', '13px')
 		.style('margin-top', '15px')
-		//.style('font-size', '.8em')
-		.text('Apply')
+		.style('font-size', '.8em')
+		.text('APPLY')
 		.on('click', () => {
 			const new_tvs = structuredClone(tvs)
 			new_tvs.cnvWT = cnvWT

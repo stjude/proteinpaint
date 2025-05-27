@@ -1,4 +1,4 @@
-import { handler as _handler } from './tvs.geneVariant.js'
+import { handler as _handler } from './tvs.dt.js'
 
 /*
 TVS handler for dtsv term
