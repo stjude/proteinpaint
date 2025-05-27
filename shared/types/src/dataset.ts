@@ -985,6 +985,10 @@ export type WSImages = {
 	getZoomInPoints?: (sampleName: string, wsiImage: string, index: number) => Promise<Array<[number, number]>>
 	/**  ds supplied */
 	makeGeoJson?: (sampleId: string, wsiImage: string) => void
+	/**  ds supplied */
+	getWSIPredictionOverlay?: (sampleName: string, wsiImage: string) => Promise<string | undefined>
+	/**  ds supplied */
+	getWSIUncertaintyOverlay?: (sampleName: string, wsiImage: string) => Promise<string | undefined>
 }
 
 export type WSIClass = { id: number; shortcut: any; label: string; color: string }

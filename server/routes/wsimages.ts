@@ -117,6 +117,34 @@ async function getSessionId(
 
 	await sessionManager.setSession(wsimage, sessionId, tileServer)
 
+	if (ds.queries.WSImages.getWSIPredictionOverlay) {
+		const predictionOverlay = await ds.queries.WSImages.getWSIPredictionOverlay(sampleId, wsimage)
+
+		if (predictionOverlay) {
+			const mount = serverconfig.features?.tileserver?.mount
+
+			const annotationsFilePath = path.join(
+				`${mount}/${ds.queries.WSImages.imageBySampleFolder}/${sampleId}`,
+				predictionOverlay
+			)
+			const annotationsData = qs.stringify({
+				overlay_path: annotationsFilePath
+			})
+
+			const layerNumber = await ky
+				.put(`${tileServer.url}/tileserver/overlay`, {
+					body: annotationsData,
+					timeout: 50000,
+					headers: {
+						'Content-Type': 'application/x-www-form-urlencoded',
+						Cookie: `session_id=${sessionId}`
+					},
+					hooks: getHooks(cookieJar, getCookieString, setCookie)
+				})
+				.text()
+		}
+	}
+
 	if (ds.queries.WSImages.getWSIAnnotations) {
 		const annotationFiles = await ds.queries.WSImages.getWSIAnnotations(sampleId, wsimage)
 
@@ -217,3 +245,5 @@ function getHooks(cookieJar: any, getCookieString, setCookie) {
 		]
 	}
 }
+
+type Session = {}

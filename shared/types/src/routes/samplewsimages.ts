@@ -16,6 +16,7 @@ export type SampleWSImagesResponse = {
 export type WSImage = {
 	filename: string
 	overlays?: Array<string>
+	predictionLayers?: Array<string>
 	zoomInPoints?: Array<[number, number]>
 	metadata: string
 	annotationsData?: { zoomCoordinates: [number, number]; type: string; class: string }[]
