@@ -1925,10 +1925,6 @@ export type PreInit = {
 		status 4xx are not considered recoverable (client-related request errors)
 	*/
 	getStatus: () => Promise<PreInitStatus>
-	/** number of milliseconds to wait before calling th preInit.getStatus() again */
-	retryDelay?: number
-	/** maximum number of times to call preInit.getStatus() before giving up */
-	retryMax?: number
 	/**
 	 * dev only, used to test preInit handling by simulating different
 	 * responses in a known sequence of steps that may edit the preInit
@@ -1967,6 +1963,8 @@ export type Mds3 = BaseMds & {
 		 * and the nonblocking steps after validation. Before the retryMax is reached, errors are considered recoverable;
 		 * errors when retryMax is reached will be fatal. */
 		retryMax?: number
+		/** option to trigger mds3InitNonblocking() on this dataset */
+		hasNonblockingSteps?: boolean
 		/** server-computed cumulative count of the attempted init retries */
 		currentRetry?: number
 		/**

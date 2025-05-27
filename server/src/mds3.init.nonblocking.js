@@ -25,7 +25,7 @@ export async function mds3InitNonblocking(ds) {
 	// it they are running at the same time.
 	//
 	// These dataset-specific init steps are not coded in the dataset js files because
-	// the nonblocking code uses common and helper functions that is not exposed by
+	// the nonblocking code uses helper functions that is not exposed by
 	// the `@sjcrh/proteinpaint-server` package. For example, gdc.initCache.js imports
 	// cachedFetch() and isRecoverableError() helpers from server/utils.js
 	//
