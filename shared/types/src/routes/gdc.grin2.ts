@@ -62,6 +62,12 @@ export type GdcGRIN2listResponse = {
 	appliedFilters?: {
 		experimentalStrategy?: ExperimentalStrategy
 	}
+	/* Deduplication stats */
+	deduplicationStats?: {
+		originalFileCount: number
+		deduplicatedFileCount: number
+		duplicatesRemoved: number
+	}
 }
 
 /**
@@ -97,7 +103,7 @@ export type RunGRIN2Response = {
 	/** Download status */
 	download?: any
 	/** Table of top genes indentified by analysis */
-	topgenetable?: any
+	topGeneTable?: any
 }
 /**
  * Route payload definitions for type checking

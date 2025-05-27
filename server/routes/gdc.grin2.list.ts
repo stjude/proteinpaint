@@ -229,9 +229,6 @@ async function listMafFiles(q: GdcGRIN2listRequest, ds: any) {
 		)
 	}
 
-	// sort files in descending order of file size and show on table as default
-	//files.sort((a, b) => b.file_size - a.file_size)
-
 	// sort final files in descending order of file size and show on table as default
 	deduplicatedFiles.sort((a, b) => b.file_size - a.file_size)
 
@@ -246,6 +243,11 @@ async function listMafFiles(q: GdcGRIN2listRequest, ds: any) {
 		appliedFilters: {
 			fileTypes: shouldRetrieveMaf ? ['MAF'] : [],
 			experimentalStrategy: experimentalStrategy
+		},
+		deduplicationStats: {
+			originalFileCount: files.length,
+			deduplicatedFileCount: deduplicatedFiles.length,
+			duplicatesRemoved: duplicatesRemoved
 		}
 	} as GdcGRIN2listResponse
 
