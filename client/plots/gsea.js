@@ -457,10 +457,10 @@ add:
 			{ label: 'Gene Set', sortable: true },
 			{ label: 'Area Under Curve', barplot: { axisWidth: 200 }, sortable: true },
 			{ label: 'Enrichment Score', barplot: { axisWidth: 200 }, sortable: true },
-			{ label: 'Gene Set Size', sortable: true },
+			{ label: 'Total Gene Set Size', sortable: true },
 			{ label: 'P value', sortable: true },
 			{ label: 'FDR', sortable: true },
-			{ label: 'Leading Edge' }
+			{ label: 'Gene Set Hits' }
 		]
 	} else {
 		throw 'Unknown method:' + self.settings.gsea_method
