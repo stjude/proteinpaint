@@ -61,6 +61,7 @@ export async function gdcGRIN2ui({ holder, filter0, callbacks, debugmode = false
 			errDiv: holder.append('div'),
 			controlDiv: holder.append('div'),
 			tableDiv: holder.append('div').style('width', '100%'),
+			deduplicationInfoDiv: holder.append('div'),
 			downloadButtonDiv: holder.append('div').style('margin-top', '10px').style('display', 'none'),
 			resultDiv: holder.append('div').style('margin-top', '20px'),
 			opts: {
@@ -227,16 +228,20 @@ async function getFilesAndShowTable(obj) {
 		if (result.error) throw result.error
 		if (!Array.isArray(result.files)) throw 'result.files[] not array'
 		if (result.files.length == 0) throw 'No files available.'
+		console.log('Result:', result)
 
 		// Show deduplication information if any duplicates were removed
 		if (result.deduplicationStats && result.deduplicationStats.duplicatesRemoved > 0) {
+			// Clear any previous deduplication info
+			obj.deduplicationInfoDiv.selectAll('*').remove()
+
 			const deduplicationDiv = obj.deduplicationInfoDiv
 				.append('div')
 				.style('background-color', '#f0f8ff')
 				.style('border', '1px solid #87ceeb')
-				.style('border-radius', '4px')
-				.style('padding', '10px')
-				.style('margin', '10px 0')
+				.style('border-radius', '1px')
+				.style('padding', '20px')
+				.style('margin', '20px 0')
 
 			deduplicationDiv
 				.append('div')
@@ -250,6 +255,9 @@ async function getFilesAndShowTable(obj) {
 					<br/>Showing <strong>${result.deduplicationStats.deduplicatedFileCount}</strong> unique cases 
 					(largest file selected for each case).
 				`)
+		} else {
+			// Clear deduplication info if no duplicates were found
+			obj.deduplicationInfoDiv.selectAll('*').remove()
 		}
 
 		// render
@@ -455,16 +463,134 @@ async function getFilesAndShowTable(obj) {
 				.attr('alt', 'GRIN2 Analysis Result')
 				.style('max-width', '100%')
 				.style('display', 'block')
-				.style('margin', '0')
+				.style('margin', '30px')
 
-			// Add error handler
+			console.log('Top genes table:', response.topGeneTable)
+
+			// Add error handler for image
 			img.node().onerror = () => {
 				console.error('Image failed to load')
-				resultContainer.html('') // Clear container
+				img.remove()
 				resultContainer
 					.append('div')
 					.attr('class', 'sja_error')
+					.style('padding', '10px')
+					.style('background-color', '#f8d7da')
+					.style('border', '1px solid #f5c6cb')
+					.style('margin', '10px 0')
 					.text('Failed to load image result. The analysis may have encountered an error.')
+			}
+
+			// FIXED: Check for table data (was response.topGeneTable, now response.topgenetable)
+			console.log('Top genes table:', response.topgenetable)
+
+			if (response.topgenetable && response.topgenetable.rows && response.topgenetable.rows.length > 0) {
+				// Add table title with summary information
+				const tableTitle = resultContainer.append('h4').style('margin-bottom', '15px').style('text-align', 'left')
+
+				// Show summary info if available (NEW: handle the metadata from R)
+				if (response.totalGenes && response.showingTop) {
+					tableTitle.text(`Top ${response.showingTop} Significant Genes`)
+
+					resultContainer
+						.append('p')
+						.html(
+							`Showing top <strong>${
+								response.showingTop
+							}</strong> most significant genes out of <strong>${response.totalGenes.toLocaleString()}</strong> total genes analyzed.`
+						)
+						.style('color', '#495057')
+						.style('font-size', '14px')
+						.style('margin', '10px 0 20px 0')
+				} else {
+					tableTitle.text('Significant Genes')
+
+					resultContainer
+						.append('p')
+						.text(`Found ${response.topgenetable.rows.length} significant genes`)
+						.style('color', '#495057')
+						.style('font-size', '14px')
+						.style('margin', '10px 0 20px 0')
+				}
+
+				// Create a container for the table
+				const tableContainer = resultContainer.append('div').style('margin-bottom', '20px')
+
+				// Define table columns - enhanced with tooltips
+				const tableColumns = [
+					{
+						label: 'Gene',
+						sortable: true,
+						width: '150px',
+						tooltip: 'Gene symbol'
+					},
+					{
+						label: 'P-value',
+						sortable: true,
+						width: '120px',
+						tooltip: 'Statistical significance of gene association'
+					},
+					{
+						label: 'Q-value',
+						sortable: true,
+						width: '120px',
+						tooltip: 'False discovery rate adjusted p-value'
+					}
+				]
+
+				// Render the table using your existing table component
+				renderTable({
+					div: tableContainer,
+					columns: tableColumns,
+					rows: response.topgenetable.rows,
+					showLines: true, // Show row numbers
+					striped: true, // Alternate row colors
+					showHeader: true, // Show column headers
+					maxHeight: '500px', // Increased height since we're limiting rows in R
+					maxWidth: '100%', // Full width available
+					resize: false, // Don't allow manual resizing
+					header: {
+						allowSort: true, // Enable column sorting
+						style: {
+							'background-color': '#f8f9fa',
+							'font-weight': 'bold',
+							'border-bottom': '2px solid #dee2e6'
+						}
+					},
+					download: {
+						// Enable table download functionality
+						fileName: `GRIN2_TopGenes_${timestamp}.tsv`
+					}
+				})
+
+				console.log(`Displayed table with ${response.topgenetable.rows.length} genes`)
+
+				// Add note about full results if truncated (NEW: informative message)
+				if (response.totalGenes && response.showingTop && response.totalGenes > response.showingTop) {
+					resultContainer
+						.append('div')
+						.style('margin-top', '15px')
+						.style('padding', '10px')
+						.style('background-color', '#e9ecef')
+						.style('border-radius', '4px')
+						.style('font-size', '14px')
+						.style('color', '#495057').html(`
+							<strong>Note:</strong> For performance reasons, only the top ${response.showingTop} 
+							most significant genes are displayed. The complete analysis identified 
+							${response.totalGenes.toLocaleString()} genes total.
+						`)
+				}
+			} else {
+				// No table data available
+				console.log('No table data received or empty results')
+				resultContainer
+					.append('div')
+					.style('padding', '15px')
+					.style('background-color', '#fff3cd')
+					.style('border', '1px solid #ffeaa7')
+					.style('border-radius', '4px')
+					.style('margin', '15px 0')
+					.text('No significant genes found in the analysis.')
 			}
 		} catch (e: any) {
 			sayerror(obj.errDiv, e.message || e)
