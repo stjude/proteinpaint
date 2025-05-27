@@ -228,7 +228,6 @@ async function getFilesAndShowTable(obj) {
 		if (result.error) throw result.error
 		if (!Array.isArray(result.files)) throw 'result.files[] not array'
 		if (result.files.length == 0) throw 'No files available.'
-		console.log('Result:', result)
 
 		// Show deduplication information if any duplicates were removed
 		if (result.deduplicationStats && result.deduplicationStats.duplicatesRemoved > 0) {
@@ -483,14 +482,11 @@ async function getFilesAndShowTable(obj) {
 					.text('Failed to load image result. The analysis may have encountered an error.')
 			}
 
-			// FIXED: Check for table data (was response.topGeneTable, now response.topgenetable)
-			console.log('Top genes table:', response.topgenetable)
-
-			if (response.topgenetable && response.topgenetable.rows && response.topgenetable.rows.length > 0) {
+			if (response.topGeneTable && response.topGeneTable.rows && response.topGeneTable.rows.length > 0) {
 				// Add table title with summary information
 				const tableTitle = resultContainer.append('h4').style('margin-bottom', '15px').style('text-align', 'left')
 
-				// Show summary info if available (NEW: handle the metadata from R)
+				// Show summary info if available
 				if (response.totalGenes && response.showingTop) {
 					tableTitle.text(`Top ${response.showingTop} Significant Genes`)
 
@@ -509,7 +505,7 @@ async function getFilesAndShowTable(obj) {
 
 					resultContainer
 						.append('p')
-						.text(`Found ${response.topgenetable.rows.length} significant genes`)
+						.text(`Found ${response.topGeneTable.rows.length} significant genes`)
 						.style('color', '#495057')
 						.style('font-size', '14px')
 						.style('margin', '10px 0 20px 0')
@@ -544,7 +540,7 @@ async function getFilesAndShowTable(obj) {
 				renderTable({
 					div: tableContainer,
 					columns: tableColumns,
-					rows: response.topgenetable.rows,
+					rows: response.topGeneTable.rows,
 					showLines: true, // Show row numbers
 					striped: true, // Alternate row colors
 					showHeader: true, // Show column headers
@@ -565,7 +561,7 @@ async function getFilesAndShowTable(obj) {
 					}
 				})
 
-				console.log(`Displayed table with ${response.topgenetable.rows.length} genes`)
+				console.log(`Displayed table with ${response.topGeneTable.rows.length} genes`)
 
 				// Add note about full results if truncated (NEW: informative message)
 				if (response.totalGenes && response.showingTop && response.totalGenes > response.showingTop) {
@@ -576,6 +572,8 @@ async function getFilesAndShowTable(obj) {
 						.style('background-color', '#e9ecef')
 						.style('border-radius', '4px')
 						.style('font-size', '14px')
+						.style('max-width', '100%') // Don't exceed container width
+						.style('width', 'fit-content') // Only as wide as content needs
 						.style('color', '#495057').html(`
 							<strong>Note:</strong> For performance reasons, only the top ${response.showingTop} 
 							most significant genes are displayed. The complete analysis identified 
@@ -592,6 +590,8 @@ async function getFilesAndShowTable(obj) {
 					.style('border', '1px solid #ffeaa7')
 					.style('border-radius', '4px')
 					.style('margin', '15px 0')
+					.style('max-width', '100%') // Don't exceed container width
+					.style('width', 'fit-content') // Only as wide as content needs
 					.text('No significant genes found in the analysis.')
 			}
 		} catch (e: any) {
