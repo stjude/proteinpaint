@@ -11,11 +11,6 @@ import { TileServerShardingAlgorithm } from '#src/sharding/TileServerShardingAlg
 import type { TileServerShard } from '#src/sharding/TileServerShard.ts'
 import serverconfig from '#src/serverconfig.js'
 
-type SessionLayers = {
-	sessionId: string
-	layerNumbers: string[]
-}
-
 const routePath = 'wsimages'
 export const api: RouteApi = {
 	endpoint: `${routePath}`,
