@@ -9,6 +9,7 @@ Features:
 
 Fixes:
 - cancel a stale gdc cache fetch loop to prevent race condition issues
+- apply ds specific cutoffs of maxReturnCutoff densityViewCutoff for cnv view
 
 
 ## 2.128.2
