@@ -54,7 +54,6 @@ function term_name_gen(d) {
 }
 
 function get_pill_label(tvs) {
-	if (!tvs.values?.length) return { txt: '' }
 	if (tvs.values.length == 1) {
 		// single
 		const v = tvs.values[0]
