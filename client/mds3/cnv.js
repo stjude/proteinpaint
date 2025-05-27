@@ -62,7 +62,10 @@ also
 - subtk maintains same absoluteMax as parent tk
 */
 export function may_render_cnv(data, tk, block) {
+	// reset all properties indicative of run state; other code relies on them to detect if in segment or density mode
 	tk.cnv?.g.selectAll('*').remove()
+	delete tk.cnv.cnvLst
+	delete tk.cnv.cnvInDensity
 
 	if (data.cnv) {
 		// has moderate amounts of segments. show as lines
@@ -71,7 +74,6 @@ export function may_render_cnv(data, tk, block) {
 		return
 	}
 	if (data.cnvDensity) {
-		delete tk.cnv.cnvLst
 		tk.cnv.cnvInDensity = true
 		renderDensity(data, tk, block)
 		return

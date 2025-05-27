@@ -1,1 +1,2 @@
-
+Fixes:
+- mds3 tk variant leftlabel will not break in cnv density mode
