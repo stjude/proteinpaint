@@ -176,53 +176,6 @@ tryCatch(
 )
 
 ### 4. receive lesion data from node
-# Initialize an empty dataframe with appropriate columns
-lesion_df <- data.frame(
-  ID = character(),
-  chrom = character(),
-  loc.start = integer(),
-  loc.end = integer(),
-  lsn.type = character(),
-  stringsAsFactors = FALSE
-)
-
-# Function to process TSV string into dataframe
-process_tsv <- function(tsv_string) {
-  tryCatch(
-    {
-      # Clean the TSV string: remove outer quotes and chunk separators
-      # tsv_string <- gsub('^"|"$', '', tsv_string)  # Remove leading/trailing quotes
-      # tsv_string <- gsub('""', '', tsv_string)  # Remove double quotes between chunks
-      # tsv_string <- gsub('^\n|\n$', '', tsv_string) # Remove empty line
-      if (nchar(tsv_string) == 0) {
-        return(NULL)
-      }
-      # cat("Raw TSV string:\n",tsv_string,"\n\n")
-
-      # Parse TSV string using textConnection
-      temp_df <- read.table(
-        text = tsv_string,
-        sep = "\t",
-        header = FALSE,
-        col.names = c("ID", "chrom", "loc.start", "loc.end", "lsn.type"),
-        stringsAsFactors = FALSE
-      )
-
-      # Ensure correct column types
-      temp_df$loc.start <- as.integer(temp_df$loc.start)
-      temp_df$loc.end <- as.integer(temp_df$loc.end)
-      temp_df$ID <- as.character(temp_df$ID)
-      temp_df$chrom <- as.character(temp_df$chrom)
-      temp_df$lsn.type <- as.character(temp_df$lsn.type)
-
-      return(temp_df)
-    },
-    error = function(e) {
-      write_error(paste("Error processing mutation data:", conditionMessage(e)))
-      NULL
-    }
-  )
-}
 
 # Read all streamed data into a single string
 # tryCatch({
@@ -237,9 +190,17 @@ tryCatch(
   {
     lesion_data <- input$lesion
     lesion_data <- gsub("^\n|\n$", "", lesion_data) # Remove empty line
-    lesion_data <- gsub('^"|"$|\\"', "", lesion_data) # Remove leading/trailing quotes
-    lesion_data <- gsub("\\\\t", "\t", lesion_data) # Replace escaped tabs with actual tabs
-    lesion_data <- gsub("\\\\n", "\n", lesion_data) # Replace escaped newlines with actual newlines
+    lesion_data <- gsub(']\\n\\[', ',', lesion_data) # merges the two separate JSON arrays into a single array
+    lesion_df <- fromJSON(lesion_data, flatten = TRUE)
+    lesion_df <- as.data.frame(lesion_df, stringsAsFactors = FALSE)
+    # Assign column names
+    colnames(lesion_df) <- c("ID", "chrom", "loc.start", "loc.end", "lsn.type")
+    # Ensure correct column types
+    lesion_df$ID <- as.character(lesion_df$ID)
+    lesion_df$chrom <- as.character(lesion_df$chrom)
+    lesion_df$loc.start <- as.integer(lesion_df$loc.start)
+    lesion_df$loc.end <- as.integer(lesion_df$loc.end)
+    lesion_df$lsn.type <- as.character(lesion_df$lsn.type)
   },
   error = function(e) {
     write_error(paste(
@@ -249,19 +210,6 @@ tryCatch(
     quit(status = 1)
   }
 )
-
-# Process the TSV
-if (nchar(lesion_data) > 0) {
-  for (line in strsplit(lesion_data, "\n")[[1]]) {
-    temp_df <- process_tsv(line)
-    if (!is.null(temp_df)) {
-      lesion_df <- rbind(lesion_df, temp_df)
-    }
-  }
-} else {
-  write_error("No data received from stream")
-  quit(status = 1)
-}
 
 ### 5. run GRIN2 analysis
 # Compute grin.stats
