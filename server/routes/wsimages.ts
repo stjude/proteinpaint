@@ -6,6 +6,7 @@ import { promisify } from 'util'
 import type { RouteApi, WSImagesRequest, WSImagesResponse } from '#types'
 import { wsImagesPayload } from '#types/checkers'
 import SessionManager from '../src/wsisessions/SessionManager.ts'
+import type { SessionData } from '../src/wsisessions/SessionManager.ts'
 import { ShardManager } from '#src/sharding/ShardManager.ts'
 import { TileServerShardingAlgorithm } from '#src/sharding/TileServerShardingAlgorithm.ts'
 import type { TileServerShard } from '#src/sharding/TileServerShard.ts'
@@ -49,13 +50,18 @@ function init({ genomes }) {
 
 			const wsiImagePath = path.join(`${mount}/${ds.queries.WSImages.imageBySampleFolder}/${sampleId}`, wsimage)
 
-			const sessionId = await getSessionId(ds, sampleId, cookieJar, getCookieString, setCookie, wsiImagePath)
+			const session = await getSessionId(ds, sampleId, cookieJar, getCookieString, setCookie, wsiImagePath)
 
-			const getWsiImageResponse: any = await getWsiImageDimensions(sessionId, getCookieString, wsiImagePath)
+			const getWsiImageResponse: any = await getWsiImageDimensions(
+				session.imageSessionId,
+				getCookieString,
+				wsiImagePath
+			)
 
 			const payload: WSImagesResponse = {
 				status: 'ok',
-				wsiSessionId: sessionId,
+				wsiSessionId: session.imageSessionId,
+				layerNumbers: session.imageLayers,
 				slide_dimensions: getWsiImageResponse.slide_dimensions
 			}
 
@@ -77,17 +83,19 @@ async function getSessionId(
 	getCookieString: any,
 	setCookie: any,
 	wsimage: string
-) {
+): Promise<SessionData> {
 	const sessionManager = SessionManager.getInstance()
 
 	const invalidateResult = await sessionManager.syncAndInvalidateSessions(wsimage)
 
 	if (!invalidateResult) throw new Error('Session invalidation failed')
 
-	const sessionData = await sessionManager.getSession(wsimage)
+	const session = await sessionManager.getSession(wsimage)
 
-	if (sessionData) {
-		return sessionData.imageSessionId
+	// TODO fix image layers recovery in case redis goes down.
+
+	if (session) {
+		return session
 	}
 
 	const tileServer = await sessionManager.getTileServerShard(wsimage)
@@ -177,7 +185,7 @@ async function getSessionId(
 		}
 	}
 
-	await sessionManager.setSession(wsimage, sessionId, tileServer, imageLayers)
+	const sessionData: SessionData = await sessionManager.setSession(wsimage, sessionId, tileServer, imageLayers)
 
 	if (ds.queries.WSImages.getWSIAnnotations) {
 		const annotationFiles = await ds.queries.WSImages.getWSIAnnotations(sampleId, wsimage)
@@ -229,7 +237,7 @@ async function getSessionId(
 		}
 	}
 
-	return sessionId
+	return sessionData
 }
 
 async function getWsiImageDimensions(sessionId, getCookieString, wsimage) {
