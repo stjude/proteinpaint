@@ -17,11 +17,18 @@ export class SessionData {
 	public imageSessionId: string
 	public lastAccessTimestamp: string
 	public tileServerShard: TileServerShard
+	public imageLayers: Array<string> | undefined
 
-	public constructor(imageSessionId: string, lastAccessTimestamp: string, tileServerShard: TileServerShard) {
+	public constructor(
+		imageSessionId: string,
+		lastAccessTimestamp: string,
+		tileServerShard: TileServerShard,
+		imageLayers?: Array<string>
+	) {
 		this.imageSessionId = imageSessionId
 		this.lastAccessTimestamp = lastAccessTimestamp
 		this.tileServerShard = tileServerShard
+		this.imageLayers = imageLayers
 	}
 }
 
@@ -111,9 +118,15 @@ export default class SessionManager {
 		key: string,
 		imageSessionId: string,
 		tileServerShard: TileServerShard,
+		imageLayers?: string[] | undefined,
 		lastAccessTimestamp = new Date().toISOString()
 	): Promise<void> {
-		const sessionData = new SessionData(imageSessionId, lastAccessTimestamp, tileServerShard)
+		const sessionData = new SessionData(
+			imageSessionId,
+			lastAccessTimestamp,
+			tileServerShard,
+			imageLayers ? imageLayers : []
+		)
 		const serializedData = JSON.stringify(sessionData)
 		await this.keyValueStorages.set(key, serializedData)
 	}

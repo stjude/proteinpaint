@@ -11,6 +11,11 @@ import { TileServerShardingAlgorithm } from '#src/sharding/TileServerShardingAlg
 import type { TileServerShard } from '#src/sharding/TileServerShard.ts'
 import serverconfig from '#src/serverconfig.js'
 
+type SessionLayers = {
+	sessionId: string
+	layerNumbers: string[]
+}
+
 const routePath = 'wsimages'
 export const api: RouteApi = {
 	endpoint: `${routePath}`,
@@ -103,6 +108,8 @@ async function getSessionId(
 	const sessionId = cookieString.match(/session_id=([^;]*)/)?.[1]
 	if (!sessionId) throw new Error('session_id not found')
 
+	const imageLayers: Array<string> = []
+
 	const data = qs.stringify({ slide_path: wsimage })
 
 	await ky.put(`${tileServer.url}/tileserver/slide`, {
@@ -114,8 +121,6 @@ async function getSessionId(
 		},
 		hooks: getHooks(cookieJar, getCookieString, setCookie)
 	})
-
-	await sessionManager.setSession(wsimage, sessionId, tileServer)
 
 	if (ds.queries.WSImages.getWSIPredictionOverlay) {
 		const predictionOverlay = await ds.queries.WSImages.getWSIPredictionOverlay(sampleId, wsimage)
@@ -142,8 +147,42 @@ async function getSessionId(
 					hooks: getHooks(cookieJar, getCookieString, setCookie)
 				})
 				.text()
+
+			imageLayers.push(layerNumber)
 		}
 	}
+
+	if (ds.queries.WSImages.getWSIUncertaintyOverlay) {
+		const uncertaintyOverlay = await ds.queries.WSImages.getWSIUncertaintyOverlay(sampleId, wsimage)
+
+		if (uncertaintyOverlay) {
+			const mount = serverconfig.features?.tileserver?.mount
+
+			const annotationsFilePath = path.join(
+				`${mount}/${ds.queries.WSImages.imageBySampleFolder}/${sampleId}`,
+				uncertaintyOverlay
+			)
+			const annotationsData = qs.stringify({
+				overlay_path: annotationsFilePath
+			})
+
+			const layerNumber = await ky
+				.put(`${tileServer.url}/tileserver/overlay`, {
+					body: annotationsData,
+					timeout: 50000,
+					headers: {
+						'Content-Type': 'application/x-www-form-urlencoded',
+						Cookie: `session_id=${sessionId}`
+					},
+					hooks: getHooks(cookieJar, getCookieString, setCookie)
+				})
+				.text()
+
+			imageLayers.push(layerNumber)
+		}
+	}
+
+	await sessionManager.setSession(wsimage, sessionId, tileServer, imageLayers)
 
 	if (ds.queries.WSImages.getWSIAnnotations) {
 		const annotationFiles = await ds.queries.WSImages.getWSIAnnotations(sampleId, wsimage)
@@ -245,5 +284,3 @@ function getHooks(cookieJar: any, getCookieString, setCookie) {
 		]
 	}
 }
-
-type Session = {}
