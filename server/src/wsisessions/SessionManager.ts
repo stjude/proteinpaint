@@ -120,7 +120,7 @@ export default class SessionManager {
 		tileServerShard: TileServerShard,
 		imageLayers?: string[] | undefined,
 		lastAccessTimestamp = new Date().toISOString()
-	): Promise<void> {
+	): Promise<SessionData> {
 		const sessionData = new SessionData(
 			imageSessionId,
 			lastAccessTimestamp,
@@ -129,6 +129,8 @@ export default class SessionManager {
 		)
 		const serializedData = JSON.stringify(sessionData)
 		await this.keyValueStorages.set(key, serializedData)
+
+		return sessionData
 	}
 
 	public async getSession(key: string): Promise<SessionData | undefined> {

@@ -10,6 +10,7 @@ export type WSImagesRequest = {
 export type WSImagesResponse = {
 	// TileServer image session id
 	wsiSessionId?: string
+	layerNumbers?: Array<string>
 	slide_dimensions: number[]
 	status: string
 	error?: string

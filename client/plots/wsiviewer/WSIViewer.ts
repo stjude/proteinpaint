@@ -208,13 +208,13 @@ export default class WSIViewer extends RxComponentInner {
 				}
 			}
 
-			const predictionLayers = wsimages[i].predictionLayers
-
-			if (predictionLayers) {
-				for (const prediction of predictionLayers) {
-					const predictionQueryParams = `wsi_image=${prediction}&dslabel=${dslabel}&genome=${genome}&sample_id=${sampleId}`
-
-					const zoomifyOverlayLatUrl = `/tileserver/layer/layer1/${data.wsiSessionId}/zoomify/{TileGroup}/{z}-{x}-{y}@1x.jpg?${predictionQueryParams}`
+			if (data.layerNumbers) {
+				for (const layerNumber of data.layerNumbers) {
+					const predictionQueryParams = `wsi_image=${wsimage}&dslabel=${dslabel}&genome=${genome}&sample_id=${sampleId}`
+					// TODO fix .slice(1, -1)
+					const zoomifyOverlayLatUrl = `/tileserver/layer/${layerNumber.slice(1, -1)}/${
+						data.wsiSessionId
+					}/zoomify/{TileGroup}/{z}-{x}-{y}@1x.jpg?${predictionQueryParams}`
 
 					const sourceOverlay = new Zoomify({
 						url: zoomifyOverlayLatUrl,
@@ -224,13 +224,19 @@ export default class WSIViewer extends RxComponentInner {
 					})
 
 					const optionsOverlay = {
-						preview: `/tileserver/layer/layer1/${data.wsiSessionId}/zoomify/TileGroup0/0-0-0@1x.jpg?${predictionQueryParams}`,
+						preview: `/tileserver/layer/${layerNumber.slice(1, -1)}/${
+							data.wsiSessionId
+						}/zoomify/TileGroup0/0-0-0@1x.jpg?${predictionQueryParams}`,
 						metadata: wsimages[i].metadata,
 						source: sourceOverlay,
-						title: 'Predictions'
+						title: layerNumber
 					}
 
-					wsiImageLayers.overlay = new TileLayer(optionsOverlay)
+					if (wsiImageLayers.overlays) {
+						wsiImageLayers.overlays.push(new TileLayer(optionsOverlay))
+					} else {
+						wsiImageLayers.overlays = [new TileLayer(optionsOverlay)]
+					}
 				}
 			}
 
@@ -305,8 +311,10 @@ export default class WSIViewer extends RxComponentInner {
 		})
 
 		const layers = [activeImage]
-		if (wSImageLayers.overlay) {
-			layers.push(wSImageLayers.overlay)
+		if (wSImageLayers.overlays) {
+			for (const overlay of wSImageLayers.overlays) {
+				layers.push(overlay)
+			}
 		}
 
 		return new OLMap({
@@ -515,7 +523,7 @@ export default class WSIViewer extends RxComponentInner {
 
 type WSImageLayers = {
 	wsimage: TileLayer<Zoomify>
-	overlay?: TileLayer<Zoomify>
+	overlays?: Array<TileLayer<Zoomify>>
 }
 
 export const wsiViewer = getCompInit(WSIViewer)
