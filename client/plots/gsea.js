@@ -620,13 +620,22 @@ function render_cerno_plot(self, cerno_output) {
 		.attr('y', xpad / 2)
 		.attr('x', -svg_width / 2.5)
 		.attr('transform', 'rotate(-90)')
+	let fontSize = 30
 	const title = svg
 		.append('text')
 		.text(self.config.gsea_params.geneset_name)
 		.attr('fill', 'black')
 		.attr('text-anchor', 'start')
-		.attr('font-size', '12px')
+		.attr('font-size', fontSize + 'px')
 		.attr('transform', 'translate(' + xpad + ',' + toppad / 2 + ')')
+
+	// Check to see if the text fits into the svg width and toppad dimensions. If not, decrease the font size until the text fits into these dimensions
+	let title_bbox = title.node().getBBox()
+	while (title_bbox.width > svg_width - xpad || title_bbox.height > (toppad * 3.5) / 5) {
+		fontSize -= 1 // Decrease font size
+		title.node().setAttribute('font-size', fontSize + 'px')
+		title_bbox = title.node().getBBox() // Measure again
+	}
 
 	const auc = cerno_output[self.config.gsea_params.geneset_name].auc
 	if (typeof auc === 'number') {
@@ -667,7 +676,6 @@ function render_cerno_plot(self, cerno_output) {
 		const y_increment = 100 / hit_genes.length
 		const lines = svg.append('g')
 
-		//let x_iter = 0
 		let y_iter = 100
 		for (let i = 0; i < DE_output.length; i++) {
 			const y_old = y_iter
