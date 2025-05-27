@@ -5,7 +5,7 @@ import { spawnSync } from 'child_process'
 import { scaleLinear } from 'd3-scale'
 import { createCanvas } from 'canvas'
 import * as gdc from './mds3.gdc.js'
-import { initGDCdictionary } from './initGdc.js'
+import { gdcBuildDictionary } from './gdc.buildDictionary.js'
 import { validate_variant2samples } from './mds3.variant2samples.js'
 import { ssmIdFieldsSeparator } from '#shared/mds3tk.js'
 import * as utils from './utils.js'
@@ -43,6 +43,7 @@ import { validate_query_getSampleImages } from '#routes/termdb.sampleImages.ts'
 import { validate_query_rnaseqGeneCount } from '#routes/termdb.DE.ts'
 import { validate_query_getSampleWSImages } from '#routes/samplewsimages.ts'
 import { validate_query_getWSISamples } from '#routes/wsisamples.ts'
+import { mds3InitNonblocking } from './mds3.init.nonblocking.js'
 
 /*
 init
@@ -167,12 +168,12 @@ export async function init(ds, genome) {
 	await mayValidateAssayAvailability(ds)
 	await mayValidateViewModes(ds)
 	if (ds.cohort?.db?.refresh) throw `!!! ds.cohort.db.refresh has been deprecated !!!`
+
 	// invoke non-blocking initialization steps at the end, after validation is complete,
 	// otherwise it will be difficult to coordinate the handling of errors from either
 	// validation or remaining steps that may include setInterval that runs at the
 	// same time as mayRetryInit() in initGenomesDs.js (avoids race condition)
-	// NOTE: for GDC, this callback is set during runtime in initGdc.js
-	if (ds.initNonblocking) ds.initNonblocking()
+	if (ds.init?.retryMax) mds3InitNonblocking(ds)
 }
 
 export function client_copy(ds) {
@@ -265,7 +266,7 @@ export async function validate_termdb(ds) {
 
 	if (tdb.q) {
 	} else if (tdb?.dictionary?.gdcapi) {
-		await initGDCdictionary(ds)
+		await gdcBuildDictionary(ds)
 		// ds.cohort.termdb.q={} created
 	} else if (tdb?.dictionary?.dbFile) {
 		ds.cohort.db = { file: tdb.dictionary.dbFile }

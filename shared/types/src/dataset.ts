@@ -1963,7 +1963,9 @@ export type Mds3 = BaseMds & {
 	init?: {
 		/** number of milliseconds to wait before calling th preInit.getStatus() again */
 		retryDelay?: number
-		/** maximum number of times to call preInit.getStatus() before giving up */
+		/** maximum number of tries to complete initialization, including preInit.getStatus() before validation steps
+		 * and the nonblocking steps after validation. Before the retryMax is reached, errors are considered recoverable;
+		 * errors when retryMax is reached will be fatal. */
 		retryMax?: number
 		/** server-computed cumulative count of the attempted init retries */
 		currentRetry?: number
