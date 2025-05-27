@@ -581,7 +581,7 @@ function render_cerno_plot(self, cerno_output) {
 	const svg_width = 400
 	const svg_height = 400
 	const svg = holder.append('svg').attr('width', svg_width).attr('height', svg_height)
-	const toppad = 5
+	const toppad = 20
 	const rightpad = 5
 	const yaxisw = 50 //Math.max(50, svg_width / 8)
 	const xaxish = 50 //Math.max(50, svg_height / 8)
@@ -604,22 +604,29 @@ function render_cerno_plot(self, cerno_output) {
 		.domain([100, 0])
 		.range([toppad, svg_height - ypad])
 
-	yaxisg.attr('transform', 'translate(' + xpad + ',' + toppad + ')')
+	yaxisg.attr('transform', 'translate(' + xpad + ',' + 0 + ')')
 	xaxisg.attr('transform', 'translate(' + 0 + ',' + (svg_height - ypad) + ')')
 	const xlab = svg
 		.append('text')
 		.text('Gene list')
 		.attr('fill', 'black')
 		.attr('text-anchor', 'start')
-		.attr('transform', 'translate(' + xscale(DE_output.length / 3) + ',' + (svg_height - ypad + 8 * toppad) + ')')
+		.attr('transform', 'translate(' + xscale(DE_output.length / 3) + ',' + (svg_height - ypad + 2 * toppad) + ')')
 	const ylab = svg
 		.append('text')
 		.text('Fraction of gene set')
 		.attr('fill', 'black')
 		.attr('text-anchor', 'middle')
 		.attr('y', xpad / 2)
-		.attr('x', -svg_width / 3)
+		.attr('x', -svg_width / 2.5)
 		.attr('transform', 'rotate(-90)')
+	const title = svg
+		.append('text')
+		.text(self.config.gsea_params.geneset_name)
+		.attr('fill', 'black')
+		.attr('text-anchor', 'start')
+		.attr('font-size', '12px')
+		.attr('transform', 'translate(' + xpad + ',' + toppad / 2 + ')')
 
 	const auc = cerno_output[self.config.gsea_params.geneset_name].auc
 	if (typeof auc === 'number') {
@@ -673,7 +680,7 @@ function render_cerno_plot(self, cerno_output) {
 					.attr('x1', xscale(i)) // x position of the first end of the line
 					.attr('y1', svg_height) // y position of the first end of the line
 					.attr('x2', xscale(i)) // x position of the second end of the line
-					.attr('y2', svg_height - ypad + 10 * toppad) // y position of the second end of the line
+					.attr('y2', svg_height - ypad + 2.5 * toppad) // y position of the second end of the line
 			}
 			lines
 				.append('line') // attach a line
