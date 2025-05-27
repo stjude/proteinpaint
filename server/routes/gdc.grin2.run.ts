@@ -107,7 +107,8 @@ function init({ genomes }) {
 				resultData = JSON.parse(rResult)
 				console.log('[GRIN2] Finished R analysis')
 				const pngImg = resultData.png[0]
-				return res.json({ pngImg })
+				const topGeneTable = resultData.topGeneTable || null
+				return res.json({ pngImg, topGeneTable, status: 'success' })
 			} catch (parseError) {
 				console.error('[GRIN2] Error parsing R result:', parseError)
 				console.log('[GRIN2] Raw R result:', rResult)

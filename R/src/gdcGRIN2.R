@@ -138,14 +138,14 @@ gene_anno$gene <- gene_anno$gene.name
 
 ## Reorder columns to match requested output
 gene_anno <- gene_anno %>%
-  select(gene, chrom, loc.start, loc.end, gene.name)
+  select(gene, chrom, loc.start, loc.end)
 
 
 ### 3. generate chromosome size table
 # Function to create a sorting key
 get_chrom_key <- function(chrom) {
   # Remove 'chr' prefix
-  num <- sub("^chr","", chrom)
+  num <- sub("^chr", "", chrom)
   # check if numeric
   if (grepl("^[0-9]+$", num)) {
     return(as.numeric(num))
@@ -232,13 +232,12 @@ tryCatch(
   }
 )
 
-# Extract gene.hits and sort the table
+# Extract gene.hits and sort the table by the p-value of subject mutations
 tryCatch(
   {
     grin_table <- grin_results$gene.hits
-    sorted_results <- grin_table[
-      order(as.numeric(as.character(grin_table$p2.nsubj))),
-    ]
+    sorted_results <- grin_table %>%
+      arrange(desc(p.nsubj.mutation))
   },
   error = function(e) {
     write_error(paste(
@@ -264,10 +263,10 @@ tryCatch(
   }
 )
 
+# Now we can generate the genomewide plot
 tryCatch(
   {
     # Create the PNG device
-    #png(temp_file, width = 800, height = 600)
     png(temp_file, width = 900, height = 600, res = 110)
     par(mar = c(1, 1, 1, 1))
     # More comprehensive suppression of all types of output
@@ -293,8 +292,56 @@ tryCatch(
     # Read the file and convert to base64
     plot_bytes <- readBin(temp_file, "raw", file.size(temp_file))
     base64_string <- base64enc::base64encode(plot_bytes)
-    grin2png <- list(png = base64_string)
-    cat(toJSON(grin2png))
+
+    # Convert the sorted_results dataframe to a format suitable for your frontend table
+    # The table component expects specific column structures
+
+    # Initialize the list
+    max_genes_to_show <- 100 # Adjust this number as needed
+    num_rows_to_process <- min(nrow(sorted_results), max_genes_to_show)
+
+    topgene_table_data <- list()
+
+    # Convert each row of the dataframe to the format expected by table.ts
+    # We only take the top 'num_rows_to_process' rows
+    for (i in seq_len(nrow(sorted_results[1:num_rows_to_process, ]))) {
+      row_data <- list(
+        # Each cell in a row is an object with 'value' property
+        list(value = as.character(sorted_results[i, "gene"])), # Gene name
+        list(value = as.numeric(sorted_results[i, "p.nsubj.mutation"])), # P-value
+        list(value = as.numeric(sorted_results[i, "q.nsubj.mutation"])) # Q-value
+        # Add more columns as needed based on what's in your sorted_results
+      )
+      topgene_table_data[[i]] <- row_data
+    }
+
+    # VERIFICATION it worked:
+    # write_error(paste("SUCCESS: Created", length(topgene_table_data), "rows"))
+    # if (length(topgene_table_data) > 0) {
+    #   first_row <- topgene_table_data[[1]]
+    #   write_error(paste("First gene:", first_row[[1]]$value))
+    #   write_error(paste("First p-value:", first_row[[2]]$value))
+    # }
+
+    grin2_response <- list(
+      png = list(base64_string), # PNG data as before
+      topGeneTable = list(
+        columns = list(
+          # Define the table structure
+          list(label = "Gene", sortable = TRUE),
+          list(label = "P-value", sortable = TRUE),
+          list(label = "Q-value", sortable = TRUE)
+          # Add more column definitions as needed
+        ),
+        rows = topgene_table_data # The actual data rows
+      ),
+      totalGenes = nrow(sorted_results), # Let frontend know total count
+      showingTop = num_rows_to_process # Let frontend know how many are displayed
+    )
+
+    cat(toJSON(grin2_response))
+    # grin2png <- list(png = base64_string)
+    # cat(toJSON(grin2png))
   },
   error = function(e) {
     # Check if device is still open and close it if needed
