@@ -208,6 +208,32 @@ export default class WSIViewer extends RxComponentInner {
 				}
 			}
 
+			const predictionLayers = wsimages[i].predictionLayers
+
+			if (predictionLayers) {
+				for (const prediction of predictionLayers) {
+					const predictionQueryParams = `wsi_image=${prediction}&dslabel=${dslabel}&genome=${genome}&sample_id=${sampleId}`
+
+					const zoomifyOverlayLatUrl = `/tileserver/layer/layer1/${data.wsiSessionId}/zoomify/{TileGroup}/{z}-{x}-{y}@1x.jpg?${predictionQueryParams}`
+
+					const sourceOverlay = new Zoomify({
+						url: zoomifyOverlayLatUrl,
+						size: [imgWidth, imgHeight],
+						crossOrigin: 'anonymous',
+						zDirection: -1 // Ensure we get a tile with the screen resolution or higher
+					})
+
+					const optionsOverlay = {
+						preview: `/tileserver/layer/layer1/${data.wsiSessionId}/zoomify/TileGroup0/0-0-0@1x.jpg?${predictionQueryParams}`,
+						metadata: wsimages[i].metadata,
+						source: sourceOverlay,
+						title: 'Predictions'
+					}
+
+					wsiImageLayers.overlay = new TileLayer(optionsOverlay)
+				}
+			}
+
 			layers.push(wsiImageLayers)
 		}
 		return layers
