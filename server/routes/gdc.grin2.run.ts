@@ -4,7 +4,6 @@ import { run_rust } from '@sjcrh/proteinpaint-rust'
 import { run_R } from '@sjcrh/proteinpaint-r'
 import serverconfig from '#src/serverconfig.js'
 import path from 'path'
-
 /**
  * Route to run GRIN2 analysis:
  * 1. Call Rust to process MAF files and get JSON data
@@ -35,9 +34,9 @@ export const api: RouteApi = {
  *
  * Data Flow:
  * 1. Extract caseFiles from req.query (already parsed by middleware)
- * 2. Pass caseFiles to Rust for mutation processing
+ * 2. Pass caseFiles and mafOptions to Rust for mutation processing
  * 3. Pass Rust output to R for plot generation
- * 4. Return generated PNG as base64 string
+ * 4. Return generated PNG as base64 string and the top gene table as JSON
  */
 
 function init({ genomes }) {
@@ -56,8 +55,11 @@ function init({ genomes }) {
 			// Step 1: Call Rust to process the MAF files and get JSON data
 			console.log('[GRIN2] Calling Rust for file processing...')
 
+			const rustInput = JSON.stringify({
+				caseFiles: parsedRequest.caseFiles,
+				mafOptions: parsedRequest.mafOptions
+			})
 			// console.log(`[GRIN2] Rust input: ${rustInput}`)
-			const rustInput = JSON.stringify(parsedRequest.caseFiles)
 
 			// Call the Rust implementation and get JSON result
 			console.log('[GRIN2] Executing Rust function...')
