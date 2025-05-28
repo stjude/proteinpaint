@@ -166,7 +166,7 @@ else if (opts.output.endsWith('line')) {
 	}
 }
 
-if (opts.write) {
+if (opts.write && Object.values(pkgs).find(pkg => pkg.hasChaged)) {
 	ex(`npm pkg set version=${newVersion}`)
 	ex(`npm i --package-lock-only`)
 }
