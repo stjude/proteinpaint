@@ -204,6 +204,7 @@ async function listMafFiles(q: GdcGRIN2listRequest, ds: any) {
 	// Select the best file for each case (largest file size)
 	const deduplicatedFiles: GdcGRIN2File[] = []
 	let duplicatesRemoved = 0
+	const caseDetails: Array<{ caseName: string; fileCount: number; keptFileSize: number }> = []
 
 	for (const [caseId, caseFiles] of filesByCase) {
 		if (caseFiles.length > 1) {
@@ -212,6 +213,12 @@ async function listMafFiles(q: GdcGRIN2listRequest, ds: any) {
 			caseFiles.sort((a, b) => b.file_size - a.file_size)
 			deduplicatedFiles.push(caseFiles[0])
 			duplicatesRemoved += caseFiles.length - 1
+
+			caseDetails.push({
+				caseName: caseId,
+				fileCount: caseFiles.length,
+				keptFileSize: caseFiles[0].file_size
+			})
 
 			console.log(
 				`Case ${caseId}: Found ${caseFiles.length} MAF files, keeping largest (${caseFiles[0].file_size} bytes)`
@@ -247,7 +254,8 @@ async function listMafFiles(q: GdcGRIN2listRequest, ds: any) {
 		deduplicationStats: {
 			originalFileCount: files.length,
 			deduplicatedFileCount: deduplicatedFiles.length,
-			duplicatesRemoved: duplicatesRemoved
+			duplicatesRemoved: duplicatesRemoved,
+			caseDetails: caseDetails
 		}
 	} as GdcGRIN2listResponse
 
