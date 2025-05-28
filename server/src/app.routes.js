@@ -32,6 +32,7 @@ export const routeFiles = [
 	import('../routes/pdomain.ts'),
 	import('../routes/sampledzimages.ts'),
 	import('../routes/samplewsimages.ts'),
+	import('../routes/sampleWsiAiApi.ts'),
 	import('../routes/snp.ts'),
 	import('../routes/termdb.DE.ts'),
 	import('../routes/termdb.boxplot.ts'),
