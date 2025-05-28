@@ -88,11 +88,12 @@ export default class WSIViewer extends RxComponentInner {
 		if (zoomInPoints != undefined) {
 			this.addZoomInEffect(activeImageExtent, zoomInPoints, map)
 
-			this.addMapKeyDownListener(holder, settings.displayedImageIndex, state, map, settings, activeImageExtent)
+			const classes = this.setClassCodes((wsimages[settings.displayedImageIndex]?.classes || []) as any[])
+			this.addMapKeyDownListener(holder, settings.displayedImageIndex, state, map, settings, activeImageExtent, classes)
 		}
 
 		if (wsimages[settings.displayedImageIndex]?.annotationsData?.length) {
-			this.renderAnnotationsTables(holder, wsimages[settings.displayedImageIndex])
+			this.renderAnnotationsTables(holder, wsimages[settings.displayedImageIndex], index)
 		}
 
 		this.addControls(map, activeImage, hasOverlay)
@@ -420,7 +421,8 @@ export default class WSIViewer extends RxComponentInner {
 		state: any,
 		map: OLMap,
 		settings: Settings,
-		activeImageExtent: any
+		activeImageExtent: any,
+		classCodes: string[] = []
 	) {
 		// Add keydown listener to the image container
 		const image = holder.select('div > .ol-viewport').attr('tabindex', 0)
@@ -458,7 +460,7 @@ export default class WSIViewer extends RxComponentInner {
 					d()
 				}
 			}
-			if (['Enter', 'Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5'].includes(event.code)) {
+			if (classCodes.includes(event.code)) {
 				const body = {
 					//I'd rather come up with an id since
 					//the index provided and the index used are
@@ -473,21 +475,20 @@ export default class WSIViewer extends RxComponentInner {
 		})
 	}
 
-	private renderAnnotationsTables(holder: any, data: WSImage) {
+	private renderAnnotationsTables(holder: any, data: WSImage, index: number) {
 		const tablesWrapper = holder
 			.append('div')
 			.attr('id', 'annotations-table-wrapper')
 			.style('display', 'block')
 			.style('padding', '20px')
 		// const selectedRows: number[] = []
-		const annotationsRows: any[] = []
-		data.annotationsData!.forEach((d, i) => {
-			// const isSelected = zoomInPoints?.some(([x, y]) =>
+		const annotationsRows: any = data.annotationsData!.map((d, i) => {
+			// const isSelected = data.zoomInPoints?.some(([x, y]) =>
 			// 	x === d.zoomCoordinates[0] && y === d.zoomCoordinates[1]
 			// )
 			// if (isSelected) selectedRows.push(i)
 
-			annotationsRows.push([{ value: i }, { value: d.zoomCoordinates }, { value: d.class }])
+			return [{ value: i }, { value: d.zoomCoordinates }, { value: d.class }]
 		})
 		renderTable({
 			columns: [{ label: 'Index', sortable: true }, { label: 'Coordinates' }, { label: 'Class', sortable: true }],
@@ -497,12 +498,12 @@ export default class WSIViewer extends RxComponentInner {
 				.attr('id', 'annotations-table')
 				.style('margins', '20px')
 				.style('display', 'inline-block'),
-			// selectedRows
 			header: { allowSort: true },
-			showLines: true
+			showLines: false,
+			selectedRows: [index]
 		})
 
-		const classRows: any[] = []
+		const classRows: { [index: string]: any }[][] = []
 		for (const c of data?.classes || ([] as any)) {
 			classRows.push([
 				{ value: c.label },
@@ -512,7 +513,7 @@ export default class WSIViewer extends RxComponentInner {
 		}
 
 		renderTable({
-			columns: [{ label: 'Class' }, { label: 'Color' }, { label: 'Shortcut' }],
+			columns: [{ label: 'Class' }, { label: 'Color', align: 'center' }, { label: 'Shortcut', align: 'center' }],
 			rows: classRows,
 			div: tablesWrapper
 				.append('div')
@@ -520,8 +521,26 @@ export default class WSIViewer extends RxComponentInner {
 				.style('display', 'inline-block')
 				.style('vertical-align', 'top')
 				.style('margin-left', '20px'),
-			showLines: true
+			showLines: false
 		})
+	}
+
+	private setClassCodes(classes: any[], addEnter = true) {
+		const classEventCodes: string[] = []
+		if (addEnter) classEventCodes.push('Enter')
+		for (const c of classes) {
+			if (typeof c.shortcut == 'number') {
+				classEventCodes.push(`Digit${c.shortcut}`)
+			}
+			if (typeof c.shortcut == 'string') {
+				if (c.shortcut.length === 1) {
+					classEventCodes.push(`Key${c.shortcut.toUpperCase()}`)
+				} else {
+					classEventCodes.push(c.shortcut)
+				}
+			}
+		}
+		return classEventCodes
 	}
 }
 
