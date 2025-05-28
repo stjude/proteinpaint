@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Fixes:
+- mds3 tk variant leftlabel will not break in cnv density mode
+
+
 ## 2.129.0
 
 Features:
