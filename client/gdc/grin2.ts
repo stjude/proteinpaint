@@ -426,6 +426,101 @@ function makeControls(obj) {
 			minAltAlleleCount: 2
 		}
 	}
+
+	{
+		const [, td2] = table.addRow('CNV Filtering Options')
+
+		// Create container for the CNV options
+		const cnvOptionsDiv = td2.append('div').style('display', 'inline-block')
+
+		// Loss Threshold input
+		cnvOptionsDiv.append('label').style('margin-right', '10px').style('font-size', '14px').text('Loss Threshold:')
+
+		cnvOptionsDiv
+			.append('input')
+			.attr('type', 'number')
+			.attr('min', '-10')
+			.attr('max', '0')
+			.attr('step', '0.1')
+			.attr('value', obj.cnvOptions?.lossThreshold || -0.5)
+			.style('width', '70px')
+			.style('margin-right', '20px')
+			.style('padding', '2px 4px')
+			.style('border', '1px solid #ccc')
+			.style('border-radius', '3px')
+			.on('input', function (this: HTMLInputElement) {
+				const value = parseFloat(this.value)
+				if (!isNaN(value) && value <= 0) {
+					obj.cnvOptions.lossThreshold = value
+				}
+			})
+
+		// Gain Threshold input
+		cnvOptionsDiv.append('label').style('margin-right', '10px').style('font-size', '14px').text('Gain Threshold:')
+
+		cnvOptionsDiv
+			.append('input')
+			.attr('type', 'number')
+			.attr('min', '0')
+			.attr('max', '10')
+			.attr('step', '0.1')
+			.attr('value', obj.cnvOptions?.gainThreshold || 0.5)
+			.style('width', '70px')
+			.style('margin-right', '20px')
+			.style('padding', '2px 4px')
+			.style('border', '1px solid #ccc')
+			.style('border-radius', '3px')
+			.on('input', function (this: HTMLInputElement) {
+				const value = parseFloat(this.value)
+				if (!isNaN(value) && value >= 0) {
+					obj.cnvOptions.gainThreshold = value
+				}
+			})
+
+		// Seg.mean Cutoff input
+		cnvOptionsDiv.append('label').style('margin-right', '10px').style('font-size', '14px').text('Seg.mean Cutoff:')
+
+		cnvOptionsDiv
+			.append('input')
+			.attr('type', 'number')
+			.attr('min', '0')
+			.attr('max', '5')
+			.attr('step', '0.01')
+			.attr('value', obj.cnvOptions?.segMeanCutoff || 0.2)
+			.style('width', '70px')
+			.style('padding', '2px 4px')
+			.style('border', '1px solid #ccc')
+			.style('border-radius', '3px')
+			.on('input', function (this: HTMLInputElement) {
+				const value = parseFloat(this.value)
+				if (!isNaN(value) && value >= 0) {
+					obj.cnvOptions.segMeanCutoff = value
+				}
+			})
+
+		// Add help tooltip for CNV options
+		cnvOptionsDiv
+			.append('span')
+			.attr('class', 'sja_clbtext')
+			.style('margin-left', '10px')
+			.style('font-size', '12px')
+			.style('color', '#666')
+			.text('ⓘ')
+			.attr(
+				'title',
+				'Loss Threshold: Log2 ratio threshold for copy number loss (negative values)\n' +
+					'Gain Threshold: Log2 ratio threshold for copy number gain (positive values)\n' +
+					'Seg.mean Cutoff: Minimum absolute segment mean value to consider significant'
+			)
+	}
+
+	if (!obj.cnvOptions) {
+		obj.cnvOptions = {
+			lossThreshold: -0.4,
+			gainThreshold: 0.3,
+			segMeanCutoff: 0.2
+		}
+	}
 }
 
 async function getFilesAndShowTable(obj) {
