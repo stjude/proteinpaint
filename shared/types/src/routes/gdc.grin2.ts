@@ -62,12 +62,13 @@ export type GdcGRIN2listResponse = {
 	appliedFilters?: {
 		experimentalStrategy?: ExperimentalStrategy
 	}
-	/* Deduplication stats */
+	/** Deduplication stats */
 	deduplicationStats?: {
 		originalFileCount: number
 		deduplicatedFileCount: number
 		duplicatesRemoved: number
 		caseDetails?: Array<{ caseName: string; fileCount: number; keptFileSize: number }>
+		filteredFiles: Array<{ fileId: string; fileSize: number; reason: string }>
 	}
 }
 

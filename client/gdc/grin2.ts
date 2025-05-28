@@ -40,9 +40,9 @@ function showDeduplicationPopup(deduplicationStats) {
 		.append('div')
 		.style('background-color', 'white')
 		.style('border-radius', '8px')
-		.style('max-width', '600px')
+		.style('max-width', '700px')
 		.style('width', '90%')
-		.style('max-height', '70vh')
+		.style('max-height', '80vh')
 		.style('overflow', 'hidden')
 		.style('box-shadow', '0 4px 20px rgba(0, 0, 0, 0.3)')
 
@@ -55,7 +55,9 @@ function showDeduplicationPopup(deduplicationStats) {
 		.style('justify-content', 'space-between')
 		.style('align-items', 'center')
 
-	header.append('h3').style('margin', '0').style('color', '#333').text('Removed Duplicate Files')
+	const totalExcluded = deduplicationStats.duplicatesRemoved + (deduplicationStats.filteredFiles?.length || 0)
+
+	header.append('h3').style('margin', '0').style('color', '#333').text(`Excluded Files (${totalExcluded} total)`)
 
 	// Close button
 	header
@@ -70,46 +72,110 @@ function showDeduplicationPopup(deduplicationStats) {
 			popup.remove()
 		})
 
-	// Content area
+	// Content area - scrollable
 	const content = popupContent
 		.append('div')
 		.style('padding', '20px')
-		.style('max-height', '50vh')
+		.style('max-height', '55vh')
 		.style('overflow-y', 'auto')
 
-	// Display the deduplication details
-	// Assuming you pass the console.log data in deduplicationStats.caseDetails
+	// Section 1: Duplicate Files Removed
 	if (deduplicationStats.caseDetails && deduplicationStats.caseDetails.length > 0) {
+		content
+			.append('h4')
+			.style('margin', '0 0 12px 0')
+			.style('color', '#d84315')
+			.style('display', 'flex')
+			.style('align-items', 'center')
+			.style('gap', '8px')
+			.html('🔄 Duplicate Files Removed')
+
+		content
+			.append('p')
+			.style('margin', '0 0 16px 0')
+			.style('font-size', '14px')
+			.style('color', '#666')
+			.text(`${deduplicationStats.duplicatesRemoved} duplicate files were removed (largest file kept for each case)`)
+
 		deduplicationStats.caseDetails.forEach(caseInfo => {
 			const caseDiv = content
 				.append('div')
-				.style('margin-bottom', '12px')
-				.style('padding', '10px')
-				.style('background-color', '#f9f9f9')
+				.style('margin-bottom', '8px')
+				.style('padding', '8px 12px')
+				.style('background-color', '#fff3e0')
 				.style('border-radius', '4px')
-				.style('border-left', '3px solid #2c5aa0')
-
-			caseDiv
-				.append('div')
-				.style('font-weight', 'bold')
-				.style('color', '#333')
-				.style('margin-bottom', '4px')
-				.text(`Case ${caseInfo.caseName}`)
+				.style('border-left', '3px solid #ff9800')
 
 			caseDiv
 				.append('div')
 				.style('font-size', '14px')
-				.style('color', '#666')
-				.text(`Found ${caseInfo.fileCount} MAF files, keeping largest (${formatBytes(caseInfo.keptFileSize)})`)
+				.style('color', '#333')
+				.html(
+					`<strong>Case ${caseInfo.caseName}:</strong> Found ${
+						caseInfo.fileCount
+					} MAF files, keeping largest (${formatBytes(caseInfo.keptFileSize)})`
+				)
 		})
-	} else {
-		// Fallback if detailed data isn't available
-		content.append('div').style('text-align', 'center').style('padding', '20px').style('color', '#666').html(`
-				<p><strong>${deduplicationStats.duplicatesRemoved}</strong> duplicate files were removed.</p>
-				<p>Kept <strong>${deduplicationStats.deduplicatedFileCount}</strong> unique cases.</p>
-				<p style="font-size: 14px; margin-top: 16px;">
-					<em>For each case with multiple files, the largest file was retained.</em>
-				</p>
+	}
+
+	// Section 2: Size-Filtered Files
+	if (deduplicationStats.filteredFiles && deduplicationStats.filteredFiles.length > 0) {
+		// Add separator if we have both sections
+		if (deduplicationStats.caseDetails && deduplicationStats.caseDetails.length > 0) {
+			content.append('hr').style('margin', '20px 0').style('border', 'none').style('border-top', '1px solid #e0e0e0')
+		}
+
+		content
+			.append('h4')
+			.style('margin', '0 0 12px 0')
+			.style('color', '#c62828')
+			.style('display', 'flex')
+			.style('align-items', 'center')
+			.style('gap', '8px')
+			.html('📏 Files Excluded by Size')
+
+		content
+			.append('p')
+			.style('margin', '0 0 16px 0')
+			.style('font-size', '14px')
+			.style('color', '#666')
+			.text(
+				`${deduplicationStats.filteredFiles.length} files were excluded for being too large (>${formatBytes(1000000)})`
+			)
+
+		deduplicationStats.filteredFiles.forEach(fileInfo => {
+			const fileDiv = content
+				.append('div')
+				.style('margin-bottom', '8px')
+				.style('padding', '8px 12px')
+				.style('background-color', '#ffebee')
+				.style('border-radius', '4px')
+				.style('border-left', '3px solid #f44336')
+
+			fileDiv
+				.append('div')
+				.style('font-size', '13px')
+				.style('color', '#333')
+				.style('margin-bottom', '4px')
+				.html(`<strong>File ID:</strong> ${fileInfo.fileId}`)
+
+			fileDiv
+				.append('div')
+				.style('font-size', '12px')
+				.style('color', '#666')
+				.text(`Size: ${formatBytes(fileInfo.fileSize)} - ${fileInfo.reason}`)
+		})
+	}
+
+	// Show message if no excluded files
+	if (
+		(!deduplicationStats.caseDetails || deduplicationStats.caseDetails.length === 0) &&
+		(!deduplicationStats.filteredFiles || deduplicationStats.filteredFiles.length === 0)
+	) {
+		content.append('div').style('text-align', 'center').style('padding', '40px').style('color', '#666').html(`
+				<div style="font-size: 48px; margin-bottom: 16px;">✅</div>
+				<p>No files were excluded.</p>
+				<p style="font-size: 14px;">All files passed size and deduplication checks.</p>
 			`)
 	}
 
@@ -119,7 +185,15 @@ function showDeduplicationPopup(deduplicationStats) {
 		.style('padding', '16px 20px')
 		.style('border-top', '1px solid #e0e0e0')
 		.style('background-color', '#f8f9fa')
-		.style('text-align', 'right')
+		.style('display', 'flex')
+		.style('justify-content', 'space-between')
+		.style('align-items', 'center')
+
+	footer
+		.append('div')
+		.style('font-size', '13px')
+		.style('color', '#666')
+		.text('Files are filtered to ensure optimal performance and avoid duplicates.')
 
 	footer
 		.append('button')
@@ -145,11 +219,10 @@ function showDeduplicationPopup(deduplicationStats) {
 	d3.select('body').on('keydown.popup', function (event) {
 		if (event.key === 'Escape') {
 			popup.remove()
-			d3.select('body').on('keydown.popup', null) // Remove event listener
+			d3.select('body').on('keydown.popup', null)
 		}
 	})
 }
-
 /**
  * Helper function to format bytes
  */
@@ -380,8 +453,13 @@ async function getFilesAndShowTable(obj) {
 		if (!Array.isArray(result.files)) throw 'result.files[] not array'
 		if (result.files.length == 0) throw 'No files available.'
 
-		// Show deduplication information if any duplicates were removed
-		if (result.deduplicationStats && result.deduplicationStats.duplicatesRemoved > 0) {
+		// Show deduplication information if any duplicates were removed OR files were size-filtered
+		if (
+			(result.deduplicationStats && result.deduplicationStats.duplicatesRemoved > 0) ||
+			(result.deduplicationStats &&
+				result.deduplicationStats.filteredFiles &&
+				result.deduplicationStats.filteredFiles.length > 0)
+		) {
 			// Clear any previous deduplication info
 			obj.deduplicationInfoDiv.selectAll('*').remove()
 
@@ -395,33 +473,66 @@ async function getFilesAndShowTable(obj) {
 				.style('max-width', '100%') // Don't exceed container width
 				.style('width', 'fit-content') // Only as wide as content needs
 
+			const duplicatesRemoved = result.deduplicationStats.duplicatesRemoved || 0
+			const sizeFilteredCount = result.deduplicationStats.filteredFiles
+				? result.deduplicationStats.filteredFiles.length
+				: 0
+			const totalExcluded = duplicatesRemoved + sizeFilteredCount
+			const originalTotal = result.deduplicationStats.originalFileCount + sizeFilteredCount // Add back the size-filtered files to get true original count
+
 			deduplicationDiv
 				.append('div')
 				.style('font-weight', 'bold')
 				.style('color', '#2c5aa0')
-				.text('🔄 File Deduplication Applied')
+				.text('🔄 File Deduplication and Size Filtering Applied')
 
-			deduplicationDiv.append('div').style('margin-top', '5px').style('font-size', '14px').html(`
-					Found <strong>${result.deduplicationStats.originalFileCount}</strong> total MAF files, 
-					but <strong>${result.deduplicationStats.duplicatesRemoved}</strong> were duplicates from the same cases. 
-					<br/>Showing <strong>${result.deduplicationStats.deduplicatedFileCount}</strong> unique cases 
-					(largest file selected for each case).
-				`)
+			// Build the description text based on what types of filtering occurred
+			let descriptionText = `Found <strong>${originalTotal}</strong> total MAF files`
+			if (totalExcluded > 0) {
+				descriptionText += `, but <strong>${totalExcluded}</strong> were excluded`
 
-			deduplicationDiv
-				.append('div')
-				.style('margin-top', '8px')
-				.append('a')
-				.style('color', '#2c5aa0')
-				.style('text-decoration', 'underline')
-				.style('cursor', 'pointer')
-				.style('font-size', '13px')
-				.text('View removed files')
-				.on('click', function () {
-					showDeduplicationPopup(result.deduplicationStats)
-				})
+				// Add details about what was excluded
+				const exclusionDetails: string[] = []
+				if (duplicatesRemoved > 0) {
+					exclusionDetails.push(`${duplicatesRemoved} duplicates from the same cases`)
+				}
+				if (sizeFilteredCount > 0) {
+					exclusionDetails.push(`${sizeFilteredCount} files too large`)
+				}
+
+				if (exclusionDetails.length > 0) {
+					descriptionText += ` (${exclusionDetails.join(' and ')})`
+				}
+
+				descriptionText += `. <br/>Showing <strong>${result.deduplicationStats.deduplicatedFileCount}</strong> unique cases`
+
+				if (duplicatesRemoved > 0) {
+					descriptionText += ` (largest file selected for each case)`
+				}
+				descriptionText += `.`
+			} else {
+				descriptionText += `. All files are included.`
+			}
+
+			deduplicationDiv.append('div').style('margin-top', '5px').style('font-size', '14px').html(descriptionText)
+
+			// Add clickable link to view excluded files (only if there are excluded files)
+			if (totalExcluded > 0) {
+				deduplicationDiv
+					.append('div')
+					.style('margin-top', '8px')
+					.append('a')
+					.style('color', '#2c5aa0')
+					.style('text-decoration', 'underline')
+					.style('cursor', 'pointer')
+					.style('font-size', '13px')
+					.text('View excluded files')
+					.on('click', function () {
+						showDeduplicationPopup(result.deduplicationStats)
+					})
+			}
 		} else {
-			// Clear deduplication info if no duplicates were found
+			// Clear deduplication info if no filtering occurred
 			obj.deduplicationInfoDiv.selectAll('*').remove()
 		}
 

@@ -125,6 +125,7 @@ async function listMafFiles(q: GdcGRIN2listRequest, ds: any) {
 	// flatten api return to table row objects
 	// it is possible to set a max size limit to limit the number of files passed to client
 	const files: GdcGRIN2File[] = []
+	const filteredFiles: Array<{ fileId: string; fileSize: number; reason: string }> = []
 
 	for (const h of re.data.hits) {
 		/*
@@ -153,6 +154,12 @@ async function listMafFiles(q: GdcGRIN2listRequest, ds: any) {
 		const c = h.cases?.[0]
 		if (!c) throw 'h.cases[0] missing'
 		if (h.file_size >= maxFileSizeAllowed) {
+			// Collect filtered file info
+			filteredFiles.push({
+				fileId: h.id,
+				fileSize: h.file_size,
+				reason: `File size (${h.file_size} bytes) exceeds maximum allowed size (${maxFileSizeAllowed} bytes)`
+			})
 			console.log(
 				`File ${h.id} with a size of ${h.file_size} bytes is larger then the allowed file size. It is excluded from the list.\nIf you want to include it, please increase the maxFileSizeAllowed in the code.`
 			)
@@ -255,7 +262,8 @@ async function listMafFiles(q: GdcGRIN2listRequest, ds: any) {
 			originalFileCount: files.length,
 			deduplicatedFileCount: deduplicatedFiles.length,
 			duplicatesRemoved: duplicatesRemoved,
-			caseDetails: caseDetails
+			caseDetails: caseDetails,
+			filteredFiles: filteredFiles
 		}
 	} as GdcGRIN2listResponse
 
