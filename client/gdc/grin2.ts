@@ -477,8 +477,12 @@ function makeControls(obj) {
 				}
 			})
 
-		// Seg.mean Cutoff input
-		cnvOptionsDiv.append('label').style('margin-right', '10px').style('font-size', '14px').text('Seg.mean Cutoff:')
+		// Segment Length Cutoff input
+		cnvOptionsDiv
+			.append('label')
+			.style('margin-right', '10px')
+			.style('font-size', '14px')
+			.text('Segment Length Cutoff:')
 
 		cnvOptionsDiv
 			.append('input')
@@ -486,7 +490,7 @@ function makeControls(obj) {
 			.attr('min', '0')
 			.attr('max', '5')
 			.attr('step', '0.01')
-			.attr('value', obj.cnvOptions?.segMeanCutoff || 0.2)
+			.attr('value', obj.cnvOptions?.segLength || 2000000)
 			.style('width', '70px')
 			.style('padding', '2px 4px')
 			.style('border', '1px solid #ccc')
@@ -494,7 +498,7 @@ function makeControls(obj) {
 			.on('input', function (this: HTMLInputElement) {
 				const value = parseFloat(this.value)
 				if (!isNaN(value) && value >= 0) {
-					obj.cnvOptions.segMeanCutoff = value
+					obj.cnvOptions.segLength = value
 				}
 			})
 
@@ -510,7 +514,7 @@ function makeControls(obj) {
 				'title',
 				'Loss Threshold: Log2 ratio threshold for copy number loss (negative values)\n' +
 					'Gain Threshold: Log2 ratio threshold for copy number gain (positive values)\n' +
-					'Seg.mean Cutoff: Minimum absolute segment mean value to consider significant'
+					'Segment Length: Limit the CNV segment length to show only focal events.\nCNV segment size limit is 2000,000 bp'
 			)
 	}
 
@@ -518,7 +522,7 @@ function makeControls(obj) {
 		obj.cnvOptions = {
 			lossThreshold: -0.4,
 			gainThreshold: 0.3,
-			segMeanCutoff: 0.2
+			segLength: 2000000 // Default segment length cutoff
 		}
 	}
 }

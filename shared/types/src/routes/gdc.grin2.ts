@@ -90,6 +90,13 @@ export type RunGRIN2Request = {
 		/** Minimum alternate allele count of returned MAF files */
 		minAltAlleleCount?: number // Default: 2
 	}
+	/**  Options for CNV file retrieval (will be added later)
+	 cnvOptions?: {
+	 * lossThreshold?: number // Default: -0.5
+	 * gainThreshold?: number // Default: 0.5
+	 * segLength?: number // Default: 2000000
+	 *}
+	 */
 }
 
 /**
