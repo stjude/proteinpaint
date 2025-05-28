@@ -427,6 +427,7 @@ function makeControls(obj) {
 		}
 	}
 
+	// Add CNV filtering options to the controls table
 	{
 		const [, td2] = table.addRow('CNV Filtering Options')
 
@@ -893,7 +894,7 @@ async function getFilesAndShowTable(obj) {
 						label: 'Gene',
 						sortable: true,
 						width: '150px',
-						tooltip: 'Gene symbol'
+						tooltip: 'Gene name'
 					},
 					{
 						label: 'P-value',
@@ -936,7 +937,7 @@ async function getFilesAndShowTable(obj) {
 
 				console.log(`Displayed table with ${response.topGeneTable.rows.length} genes`)
 
-				// Add note about full results if truncated (NEW: informative message)
+				// Add note about full results if truncated
 				if (response.totalGenes && response.showingTop && response.totalGenes > response.showingTop) {
 					resultContainer
 						.append('div')
