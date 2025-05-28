@@ -45,31 +45,29 @@ fi
 PREVIOUS_VERSION="$(node -p "require('./package.json').version")"
 
 UPDATED=$(./build/bump.js $VERTYPE "$@")
+
 if [[ "$UPDATED" == "" ]]; then
-  echo "No workspace package updates, exiting script with code 1"
-  exit 1
+  echo "No workspace package updates - assume a release was interrupted and needs to be resumed."
 fi
 
 # this is the version that was assigned after ./build/bump.js [...] -w
 VERSION="$(node -p "require('./package.json').version")"
-if [[ $UPDATED == *"rust"* ]]; then
-  cd rust
-  npm pkg set "pp_release_tag"="v$VERSION"
-  cd ..
-fi
 
 ########################
 # Update the change log
 ########################
 
 if [[ "$VERTYPE" != "pre"* ]]; then
-  if [[ "$(grep 'Unreleased' CHANGELOG.md)" == "" ]]; then
-    echo "No unreleased changes to publish"
+  if [[ "$(grep $VERSION CHANGELOG.md)" != "" ]]; then
+    echo "The changelog has already been updated with this version as released."
+  elif [[ "$(grep 'Unreleased' CHANGELOG.md)" == "" ]]; then
+    # non-pre* releases must have unreleased changelog entries to release
+    echo "No unreleased change logs to publish."
     exit 1
+  else
+    # only update the change log if the version type is not prepatch, preminor, prerelease, pre*
+    sed -i.bak "s|Unreleased|$VERSION|" CHANGELOG.md
   fi
-
-  # only update the change log if the version type is not prepatch, preminor, prerelease, pre*
-  sed -i.bak "s|Unreleased|$VERSION|" CHANGELOG.md
 fi
 
 #################
@@ -78,6 +76,16 @@ fi
 
 npm i --package-lock-only
 TAG="v$VERSION"
+
+EXISTINGTAG=$(git tag -l "$TAG")
+if [[ "$EXISTINGTAG" != "" ]]; then
+  echo "Tag='$TAG' already exists"
+  # assume an interrupted release that needs to be resumed
+  # if the tag exists, then the commit must also exist since a 
+  # new tag is pushed after the branch commit
+  exit 0
+fi
+
 COMMITMSG="$TAG $UPDATED"
 echo "$COMMITMSG"
 echo "committing version change ..."
@@ -85,23 +93,9 @@ git config --global user.email "PPTeam@STJUDE.ORG"
 git config --global user.name "PPTeam CI"
 git add --all
 git commit -m "$COMMITMSG"
-echo "VERTYPE=[$VERTYPE]"
-
-EXISTINGTAG=$(git tag -l "$TAG")
-if [[ "$VERTYPE" == "pre"* ]]; then
-  # delete existing tags that match
-  if [[ "$EXISTINGTAG" != "" ]]; then
-    git tag -d $TAG
-  fi
-  # okay to rebase in prerelease branch???
-  git pull --rebase
-  git push origin :refs/tags/$TAG
-elif [[ "$EXISTINGTAG" != "" ]]; then
-  echo "Tag='$TAG' already exists"
-  exit 1
-fi
 
 git tag $TAG # the absolute reference to the repo state at the time of build
+
 BRANCH=$(git rev-parse --abbrev-ref HEAD)
 git reset --hard HEAD~1 # go back one commit on the current branch
                         # to allow local branch to get fast-forwarded after pull, if applicable;
@@ -144,11 +138,17 @@ git merge $TAG # can either fast-forward, or merge if there are new commits from
 #     |
 # 
 
-git push origin $BRANCH # synchronize branch tip with remote, may already be up-to-date 
-                        # or will update remote commit history to look like (B) after git merge diagram
-git push origin $TAG    # remote should not have this tag yet, should error if it's already there (non-fast-forward)
+if [[ "$PWD" != *"/sjpp/"* ]]; then
+  # must be in the remote ci environment
+  git push origin $BRANCH # synchronize branch tip with remote, may already be up-to-date 
+                          # or will update remote commit history to look like (B) after git merge diagram
+  git push origin $TAG    # remote should not have this tag yet, should error if it's already there (non-fast-forward)
 
-# IMPORTANT:
-# subsequent steps after this script must use the tagged commit, since the pulled branch tip may have moved
-git reset $TAG # if the branch tip did not move after pull, then nothing changes with this reset;
-               # if it moved, this will revert to the tagged commit and the commit history will look like (A) in the diagram above after git pull
+  # IMPORTANT:
+  # subsequent steps after this script must use the tagged commit, since the pulled branch tip may have moved
+  git reset --hard $TAG # if the branch tip did not move after pull, then nothing changes with this reset;
+                 # if it moved, this will revert to the tagged commit and the commit history will look like (A) in the diagram above after git pull
+else 
+  # /sjpp/ in the path means a dev environment
+  echo "to undo release steps in dev, run: 'git reset --hard HEAD^1 && git tag -d $TAG'"
+fi
