@@ -42,8 +42,7 @@ const defaults = {
 	// -x
 	exclude: [], // list of workspace name patterns to exclude from processing,
 	// -c
-	refCommit: `v${rootPkg.version}^{commit}`
-	//
+	refCommit: `v${rootPkg.version}^{commit}` // the commit reference to use for git diff
 }
 const opts = JSON.parse(JSON.stringify(defaults))
 for (const k of process.argv.slice(3)) {

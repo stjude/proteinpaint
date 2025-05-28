@@ -11,8 +11,8 @@ const __dirname = import.meta.dirname
 
 // Read package.json
 const packageJson = JSON.parse(fs.readFileSync(path.join(__dirname, 'package.json'), 'utf8'))
-const { version, pp_release_tag } = packageJson
-
+const { version } = packageJson
+const pp_release_tag = `v${version}`
 const targetDirectory = './target/release'
 
 function downloadBinary(url, outputPath) {
