@@ -140,10 +140,12 @@ for (const w of rootPkg.workspaces) {
 // ************************************
 
 // detect changed workspaces, including deps that have changed
+let hasChanges = false
 for (const name in pkgs) {
 	setWsDeps(name)
 	if (pkgs[name].hasChanged) {
 		pkgs[name].version = newVersion
+		hasChanges = true
 	}
 }
 
@@ -166,7 +168,7 @@ else if (opts.output.endsWith('line')) {
 	}
 }
 
-if (opts.write && Object.values(pkgs).find(pkg => pkg.hasChaged)) {
+if (opts.write && hasChanges) {
 	ex(`npm pkg set version=${newVersion}`)
 	ex(`npm i --package-lock-only`)
 }
