@@ -19,11 +19,13 @@ runs:
       shell: bash
       id: rename_rust_binaries
       run: |
-        git pull
-        git fetch --all --tags
+        BRANCH=$(git rev-parse --abbrev-ref HEAD)
+        git pull origin $BRANCH 
+        PP_TAG="v$(node -p "require('./package.json').version")"
+        echo "::set-output name=pp_tag::$PP_TAG"; 
+        git fetch --tags --quiet origin $PP_TAG # always use tagged commit for build 
+        
         PP_RUST_TAG="$(node -p "require('./rust/package.json').version")";
-        PP_TAG=$(git describe --tags `git rev-list --tags --max-count=1`)
-        echo "::set-output name=pp_tag::$PP_TAG";
         RENAMED="rust-binaries-$PP_RUST_TAG-linux-x64.tar.gz"
         tar -czvf "$RENAMED" -C rust-binaries .
         echo "::set-output name=renamed_rust_binaries::$RENAMED";
