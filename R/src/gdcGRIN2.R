@@ -21,6 +21,7 @@
 # Output JSON:
 # {
 #  png: [<base64 string>]
+#  topGeneTable: [<list>]
 # }
 
 # supress warnings
@@ -314,13 +315,6 @@ tryCatch(
       )
       topgene_table_data[[i]] <- row_data
     }
-
-    # write.csv(sorted_results, "~/Desktop/grin2_results.csv", row.names = FALSE)
-    # write.csv(
-    #   topgene_table_data,
-    #   "~/Desktop/topgene_table_data3.csv",
-    #   row.names = FALSE
-    # )
 
     grin2_response <- list(
       png = list(base64_string), # PNG data as before
