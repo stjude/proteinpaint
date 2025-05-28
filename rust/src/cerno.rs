@@ -11,7 +11,7 @@ use std::io;
 
 #[allow(non_camel_case_types)]
 #[allow(non_snake_case)]
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct GO_pathway {
     GO_id: String,
 }
@@ -162,57 +162,59 @@ fn main() -> Result<()> {
                             #[allow(non_snake_case)]
                             let GO_iter = stmt.query_map([], |row| Ok(GO_pathway { GO_id: row.get(0)? }))?;
                             #[allow(non_snake_case)]
+                            let mut genesets = Vec::<String>::new();
                             for GO_term in GO_iter {
                                 match GO_term {
                                     Ok(n) => {
-                                        //println!("GO term {:?}", n);
-                                        let sql_statement =
-                                            "select genes from term2genes where id='".to_owned() + &n.GO_id + &"'";
-                                        //println!("sql_statement:{}", sql_statement);
-                                        let mut gene_stmt = msigdbconn.prepare(&(sql_statement))?;
-                                        //println!("gene_stmt:{:?}", gene_stmt);
-
-                                        let mut rows = gene_stmt.query([])?;
-                                        let mut names = HashSet::<String>::new();
-                                        while let Some(row) = rows.next()? {
-                                            let a: String = row.get(0)?;
-                                            let input_gene_json = json::parse(&a);
-                                            match input_gene_json {
-                                                Ok(json_genes) => {
-                                                    for json_iter in 0..json_genes.len() {
-                                                        names.insert(json_genes[json_iter]["symbol"].to_string());
-                                                    }
-                                                }
-                                                Err(_) => {
-                                                    panic!("Symbol, ensg, enstCanonical structure is missing!")
-                                                }
-                                            }
-                                        }
-                                        let gene_set_size = names.len();
-                                        let (p_value, auc, es, matches, gene_set_hits) =
-                                            cerno(&sample_coding_genes, names);
-
-                                        if matches >= 1.0
-                                            && p_value.is_nan() == false
-                                            && es.is_nan() == false
-                                            && es != f32::INFINITY
-                                            && auc != f32::INFINITY
-                                            && auc.is_nan() == false
-                                        {
-                                            pathway_p_values.push(pathway_p_value {
-                                                pathway_name: n.GO_id,
-                                                p_value_original: p_value,
-                                                p_value_adjusted: None,
-                                                auc: auc,
-                                                es: es,
-                                                gene_set_hits: gene_set_hits,
-                                                gene_set_size: gene_set_size,
-                                            })
-                                        }
+                                        genesets.push(n.GO_id);
                                     }
                                     Err(_) => {
                                         println!("GO term not found!")
                                     }
+                                }
+                            }
+
+                            for gs in genesets {
+                                let sql_statement = "select genes from term2genes where id='".to_owned() + &gs + &"'";
+                                //println!("sql_statement:{}", sql_statement);
+                                let mut gene_stmt = msigdbconn.prepare(&(sql_statement))?;
+                                //println!("gene_stmt:{:?}", gene_stmt);
+
+                                let mut rows = gene_stmt.query([])?;
+                                let mut names = HashSet::<String>::new();
+                                while let Some(row) = rows.next()? {
+                                    let a: String = row.get(0)?;
+                                    let input_gene_json = json::parse(&a);
+                                    match input_gene_json {
+                                        Ok(json_genes) => {
+                                            for json_iter in 0..json_genes.len() {
+                                                names.insert(json_genes[json_iter]["symbol"].to_string());
+                                            }
+                                        }
+                                        Err(_) => {
+                                            panic!("Symbol, ensg, enstCanonical structure is missing!")
+                                        }
+                                    }
+                                }
+                                let gene_set_size = names.len();
+                                let (p_value, auc, es, matches, gene_set_hits) = cerno(&sample_coding_genes, names);
+
+                                if matches >= 1.0
+                                    && p_value.is_nan() == false
+                                    && es.is_nan() == false
+                                    && es != f32::INFINITY
+                                    && auc != f32::INFINITY
+                                    && auc.is_nan() == false
+                                {
+                                    pathway_p_values.push(pathway_p_value {
+                                        pathway_name: gs,
+                                        p_value_original: p_value,
+                                        p_value_adjusted: None,
+                                        auc: auc,
+                                        es: es,
+                                        gene_set_hits: gene_set_hits,
+                                        gene_set_size: gene_set_size,
+                                    })
                                 }
                             }
                         }
