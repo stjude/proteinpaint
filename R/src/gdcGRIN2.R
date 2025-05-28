@@ -237,7 +237,7 @@ tryCatch(
   {
     grin_table <- grin_results$gene.hits
     sorted_results <- grin_table %>%
-      arrange(desc(p.nsubj.mutation))
+      arrange(p.nsubj.mutation)
   },
   error = function(e) {
     write_error(paste(
@@ -297,7 +297,7 @@ tryCatch(
     # The table component expects specific column structures
 
     # Initialize the list
-    max_genes_to_show <- 100 # Adjust this number as needed
+    max_genes_to_show <- 30000 # Adjust this number as needed
     num_rows_to_process <- min(nrow(sorted_results), max_genes_to_show)
 
     topgene_table_data <- list()
@@ -310,18 +310,17 @@ tryCatch(
         list(value = as.character(sorted_results[i, "gene"])), # Gene name
         list(value = as.numeric(sorted_results[i, "p.nsubj.mutation"])), # P-value
         list(value = as.numeric(sorted_results[i, "q.nsubj.mutation"])) # Q-value
-        # Add more columns as needed based on what's in your sorted_results
+        # Add more columns as needed based on what's in sorted_results
       )
       topgene_table_data[[i]] <- row_data
     }
 
-    # VERIFICATION it worked:
-    # write_error(paste("SUCCESS: Created", length(topgene_table_data), "rows"))
-    # if (length(topgene_table_data) > 0) {
-    #   first_row <- topgene_table_data[[1]]
-    #   write_error(paste("First gene:", first_row[[1]]$value))
-    #   write_error(paste("First p-value:", first_row[[2]]$value))
-    # }
+    # write.csv(sorted_results, "~/Desktop/grin2_results.csv", row.names = FALSE)
+    # write.csv(
+    #   topgene_table_data,
+    #   "~/Desktop/topgene_table_data3.csv",
+    #   row.names = FALSE
+    # )
 
     grin2_response <- list(
       png = list(base64_string), # PNG data as before
@@ -340,8 +339,6 @@ tryCatch(
     )
 
     cat(toJSON(grin2_response))
-    # grin2png <- list(png = base64_string)
-    # cat(toJSON(grin2png))
   },
   error = function(e) {
     # Check if device is still open and close it if needed

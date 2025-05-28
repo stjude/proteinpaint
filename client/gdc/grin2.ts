@@ -3,12 +3,163 @@ import { make_radios, renderTable, sayerror, Menu, table2col } from '#dom'
 import { select } from 'd3-selection'
 import { formatElapsedTime } from '@sjcrh/proteinpaint-shared/time.js'
 import type { GdcGRIN2listRequest } from '#types'
+import * as d3 from 'd3'
 
 /*
 a UI to list open-access maf and cnv files from current cohort
 let user selects some, for the backend to run GRIN2 analysis
 and display the resulting visualization
 */
+
+/**
+ * Function to show the deduplication popup
+ * Pass your deduplication stats that include the console.log data
+ */
+function showDeduplicationPopup(deduplicationStats) {
+	// Remove any existing popup
+	d3.select('.deduplication-popup').remove()
+
+	// Create popup overlay
+	const popup = d3
+		.select('body')
+		.append('div')
+		.attr('class', 'deduplication-popup')
+		.style('position', 'fixed')
+		.style('top', '0')
+		.style('left', '0')
+		.style('width', '100%')
+		.style('height', '100%')
+		.style('background-color', 'rgba(0, 0, 0, 0.5)')
+		.style('z-index', '9999')
+		.style('display', 'flex')
+		.style('justify-content', 'center')
+		.style('align-items', 'center')
+
+	// Create popup content
+	const popupContent = popup
+		.append('div')
+		.style('background-color', 'white')
+		.style('border-radius', '8px')
+		.style('max-width', '600px')
+		.style('width', '90%')
+		.style('max-height', '70vh')
+		.style('overflow', 'hidden')
+		.style('box-shadow', '0 4px 20px rgba(0, 0, 0, 0.3)')
+
+	// Header
+	const header = popupContent
+		.append('div')
+		.style('padding', '16px 20px')
+		.style('border-bottom', '1px solid #e0e0e0')
+		.style('display', 'flex')
+		.style('justify-content', 'space-between')
+		.style('align-items', 'center')
+
+	header.append('h3').style('margin', '0').style('color', '#333').text('Removed Duplicate Files')
+
+	// Close button
+	header
+		.append('button')
+		.style('background', 'none')
+		.style('border', 'none')
+		.style('font-size', '20px')
+		.style('cursor', 'pointer')
+		.style('color', '#666')
+		.text('✕')
+		.on('click', function () {
+			popup.remove()
+		})
+
+	// Content area
+	const content = popupContent
+		.append('div')
+		.style('padding', '20px')
+		.style('max-height', '50vh')
+		.style('overflow-y', 'auto')
+
+	// Display the deduplication details
+	// Assuming you pass the console.log data in deduplicationStats.caseDetails
+	if (deduplicationStats.caseDetails && deduplicationStats.caseDetails.length > 0) {
+		deduplicationStats.caseDetails.forEach(caseInfo => {
+			const caseDiv = content
+				.append('div')
+				.style('margin-bottom', '12px')
+				.style('padding', '10px')
+				.style('background-color', '#f9f9f9')
+				.style('border-radius', '4px')
+				.style('border-left', '3px solid #2c5aa0')
+
+			caseDiv
+				.append('div')
+				.style('font-weight', 'bold')
+				.style('color', '#333')
+				.style('margin-bottom', '4px')
+				.text(`Case ${caseInfo.caseName}`)
+
+			caseDiv
+				.append('div')
+				.style('font-size', '14px')
+				.style('color', '#666')
+				.text(`Found ${caseInfo.fileCount} MAF files, keeping largest (${formatBytes(caseInfo.keptFileSize)})`)
+		})
+	} else {
+		// Fallback if detailed data isn't available
+		content.append('div').style('text-align', 'center').style('padding', '20px').style('color', '#666').html(`
+				<p><strong>${deduplicationStats.duplicatesRemoved}</strong> duplicate files were removed.</p>
+				<p>Kept <strong>${deduplicationStats.deduplicatedFileCount}</strong> unique cases.</p>
+				<p style="font-size: 14px; margin-top: 16px;">
+					<em>For each case with multiple files, the largest file was retained.</em>
+				</p>
+			`)
+	}
+
+	// Footer
+	const footer = popupContent
+		.append('div')
+		.style('padding', '16px 20px')
+		.style('border-top', '1px solid #e0e0e0')
+		.style('background-color', '#f8f9fa')
+		.style('text-align', 'right')
+
+	footer
+		.append('button')
+		.style('background-color', '#2c5aa0')
+		.style('color', 'white')
+		.style('border', 'none')
+		.style('padding', '8px 16px')
+		.style('border-radius', '4px')
+		.style('cursor', 'pointer')
+		.text('Close')
+		.on('click', function () {
+			popup.remove()
+		})
+
+	// Close popup when clicking outside
+	popup.on('click', function (event) {
+		if (event.target === popup.node()) {
+			popup.remove()
+		}
+	})
+
+	// Close with Escape key
+	d3.select('body').on('keydown.popup', function (event) {
+		if (event.key === 'Escape') {
+			popup.remove()
+			d3.select('body').on('keydown.popup', null) // Remove event listener
+		}
+	})
+}
+
+/**
+ * Helper function to format bytes
+ */
+function formatBytes(bytes) {
+	if (bytes === 0) return '0 Bytes'
+	const k = 1024
+	const sizes = ['Bytes', 'KB', 'MB', 'GB']
+	const i = Math.floor(Math.log(bytes) / Math.log(k))
+	return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+}
 
 // Adding type definitions to solve typescript errors
 // Interface for table row item
@@ -256,6 +407,19 @@ async function getFilesAndShowTable(obj) {
 					<br/>Showing <strong>${result.deduplicationStats.deduplicatedFileCount}</strong> unique cases 
 					(largest file selected for each case).
 				`)
+
+			deduplicationDiv
+				.append('div')
+				.style('margin-top', '8px')
+				.append('a')
+				.style('color', '#2c5aa0')
+				.style('text-decoration', 'underline')
+				.style('cursor', 'pointer')
+				.style('font-size', '13px')
+				.text('View removed files')
+				.on('click', function () {
+					showDeduplicationPopup(result.deduplicationStats)
+				})
 		} else {
 			// Clear deduplication info if no duplicates were found
 			obj.deduplicationInfoDiv.selectAll('*').remove()
@@ -488,24 +652,23 @@ async function getFilesAndShowTable(obj) {
 
 				// Show summary info if available
 				if (response.totalGenes && response.showingTop) {
-					tableTitle.text(`Top ${response.showingTop} Significant Genes`)
+					tableTitle.text(`Top ${response.showingTop} Genes`)
 
 					resultContainer
 						.append('p')
 						.html(
 							`Showing top <strong>${
 								response.showingTop
-							}</strong> most significant genes out of <strong>${response.totalGenes.toLocaleString()}</strong> total genes analyzed.`
+							}</strong> genes out of <strong>${response.totalGenes.toLocaleString()}</strong> total genes analyzed.`
 						)
 						.style('color', '#495057')
 						.style('font-size', '14px')
 						.style('margin', '10px 0 20px 0')
 				} else {
-					tableTitle.text('Significant Genes')
+					tableTitle.text('Top Genes')
 
 					resultContainer
 						.append('p')
-						.text(`Found ${response.topGeneTable.rows.length} significant genes`)
 						.style('color', '#495057')
 						.style('font-size', '14px')
 						.style('margin', '10px 0 20px 0')

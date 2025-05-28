@@ -67,6 +67,7 @@ export type GdcGRIN2listResponse = {
 		originalFileCount: number
 		deduplicatedFileCount: number
 		duplicatesRemoved: number
+		caseDetails?: Array<{ caseName: string; fileCount: number; keptFileSize: number }>
 	}
 }
 
