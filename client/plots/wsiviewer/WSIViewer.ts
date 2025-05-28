@@ -81,7 +81,7 @@ export default class WSIViewer extends RxComponentInner {
 
 		const map = this.getMap(wsimageLayers[settings.displayedImageIndex])
 
-		const hasOverlay = wsimageLayers[settings.displayedImageIndex].overlay != null
+		const hasOverlay = wsimageLayers[settings.displayedImageIndex].overlays != null
 
 		const zoomInPoints = wsimages[settings.displayedImageIndex].zoomInPoints
 
@@ -92,17 +92,7 @@ export default class WSIViewer extends RxComponentInner {
 		}
 
 		if (wsimages[settings.displayedImageIndex]?.annotationsData?.length) {
-			const selectedRows: number[] = []
-			const rows = wsimages[settings.displayedImageIndex].annotationsData.map((d, i) => {
-				if (zoomInPoints?.includes(d.zoomCoordinates)) selectedRows.push(i) //cheating
-				return [{ value: i }, { value: d.zoomCoordinates }, { value: d.class }]
-			})
-			renderTable({
-				columns: [{ label: 'Index' }, { label: 'Coordinates' }, { label: 'Class' }],
-				rows,
-				div: holder.append('div').attr('id', 'annotations').style('margin-left', '10px'),
-				selectedRows
-			})
+			this.renderAnnotationsTables(holder, wsimages[settings.displayedImageIndex])
 		}
 
 		this.addControls(map, activeImage, hasOverlay)
@@ -468,6 +458,18 @@ export default class WSIViewer extends RxComponentInner {
 					d()
 				}
 			}
+			if (['Enter', 'Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5'].includes(event.code)) {
+				const body = {
+					//I'd rather come up with an id since
+					//the index provided and the index used are
+					//not the same.
+					index: currentIndex,
+					confirmed: event.code === 'Enter',
+					class: event.code === 'Enter' ? null : event.code.replace('Digit', '')
+				}
+				//Send user confirmation or change to server
+				await dofetch3('sampleWsiAiApi', { body })
+			}
 		})
 	}
 
@@ -496,7 +498,8 @@ export default class WSIViewer extends RxComponentInner {
 				.style('margins', '20px')
 				.style('display', 'inline-block'),
 			// selectedRows
-			header: { allowSort: true }
+			header: { allowSort: true },
+			showLines: true
 		})
 
 		const classRows: any[] = []
@@ -516,7 +519,8 @@ export default class WSIViewer extends RxComponentInner {
 				.attr('id', 'annotations-legend')
 				.style('display', 'inline-block')
 				.style('vertical-align', 'top')
-				.style('margin-left', '20px')
+				.style('margin-left', '20px'),
+			showLines: true
 		})
 	}
 }
