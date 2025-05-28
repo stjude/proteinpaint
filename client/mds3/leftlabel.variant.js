@@ -308,7 +308,7 @@ async function listVariantData(tk, block) {
 		}
 	}
 
-	if (tk.cnv?.cnvLst.length) {
+	if (tk.cnv?.cnvLst?.length) {
 		dt2mlst.set(dtcnv, tk.cnv.cnvLst)
 	}
 
