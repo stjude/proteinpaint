@@ -81,7 +81,7 @@ export default class WSIViewer extends RxComponentInner {
 
 		const map = this.getMap(wsimageLayers[settings.displayedImageIndex])
 
-		const hasOverlay = wsimageLayers[settings.displayedImageIndex].overlay != null
+		const hasOverlay = wsimageLayers[settings.displayedImageIndex].overlays != null
 
 		const zoomInPoints = wsimages[settings.displayedImageIndex].zoomInPoints
 
