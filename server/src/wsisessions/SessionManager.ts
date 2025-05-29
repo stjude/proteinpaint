@@ -6,6 +6,7 @@ import RedisClientHolder from '#src/redis/RedisClientHolder.js'
 import { ShardManager } from '#src/sharding/ShardManager.js'
 import { TileServerShardingAlgorithm } from '#src/sharding/TileServerShardingAlgorithm.js'
 import { TileServerSessionsHandler } from '#src/wsisessions/TileServerSessionsHandler.js'
+import type { PredictionOverlay } from '@sjcrh/proteinpaint-types'
 
 /**
  *  Represents the TileServer session data object.
@@ -17,18 +18,18 @@ export class SessionData {
 	public imageSessionId: string
 	public lastAccessTimestamp: string
 	public tileServerShard: TileServerShard
-	public imageLayers: Array<string> | undefined
+	public overlays: Array<PredictionOverlay> | undefined
 
 	public constructor(
 		imageSessionId: string,
 		lastAccessTimestamp: string,
 		tileServerShard: TileServerShard,
-		imageLayers?: Array<string>
+		overlays?: Array<PredictionOverlay>
 	) {
 		this.imageSessionId = imageSessionId
 		this.lastAccessTimestamp = lastAccessTimestamp
 		this.tileServerShard = tileServerShard
-		this.imageLayers = imageLayers
+		this.overlays = overlays
 	}
 }
 
@@ -118,15 +119,10 @@ export default class SessionManager {
 		key: string,
 		imageSessionId: string,
 		tileServerShard: TileServerShard,
-		imageLayers?: string[] | undefined,
+		overlays?: PredictionOverlay[] | undefined,
 		lastAccessTimestamp = new Date().toISOString()
 	): Promise<SessionData> {
-		const sessionData = new SessionData(
-			imageSessionId,
-			lastAccessTimestamp,
-			tileServerShard,
-			imageLayers ? imageLayers : []
-		)
+		const sessionData = new SessionData(imageSessionId, lastAccessTimestamp, tileServerShard, overlays ? overlays : [])
 		const serializedData = JSON.stringify(sessionData)
 		await this.keyValueStorages.set(key, serializedData)
 
