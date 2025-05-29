@@ -1,6 +1,5 @@
 import * as d3axis from 'd3-axis'
-import { axisstyle } from '#dom'
-import { Menu, renderTable, table2col } from '#dom'
+import { Menu, renderTable, table2col, axisstyle } from '#dom'
 import { dofetch3 } from '#common/dofetch'
 import { controlsInit } from './controls'
 import { getCompInit, copyMerge } from '#rx'
@@ -614,7 +613,7 @@ function render_cerno_plot(self, cerno_output) {
 		.attr('transform', 'translate(' + xscale(DE_output.length / 3) + ',' + (svg_height - ypad + 2 * toppad) + ')')
 	const ylab = svg
 		.append('text')
-		.text('Fraction of gene set')
+		.text('Percentage of gene set')
 		.attr('fill', 'black')
 		.attr('text-anchor', 'middle')
 		.attr('y', xpad / 2)
