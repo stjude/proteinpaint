@@ -2,12 +2,16 @@
 #![allow(non_snake_case)]
 use json::JsonValue;
 use r_mathlib::chi_squared_cdf;
+use r2d2;
+use r2d2_sqlite::SqliteConnectionManager;
 use rusqlite::{Connection, Result};
 use serde::{Deserialize, Serialize};
 use serde_json;
 use std::cmp::Ordering;
 use std::collections::HashSet;
 use std::io;
+use std::sync::{Arc, Mutex}; // Multithreading library
+use std::thread;
 
 #[allow(non_camel_case_types)]
 #[allow(non_snake_case)]
@@ -51,6 +55,9 @@ struct output_struct {
     es: f32,
     geneset_size: usize,
 }
+const PAR_CUTOFF: usize = 1000; // Cutoff for triggering multithreading processing of data
+#[allow(non_upper_case_globals)]
+const max_threads: usize = 3; // Max number of threads in case the parallel processing of reads is invoked
 
 fn main() -> Result<()> {
     let mut input = String::new();
@@ -154,7 +161,7 @@ fn main() -> Result<()> {
                     //println!("sample_genes:{:?}", sample_genes);
                     //println!("background_genes:{:?}", background_genes);
 
-                    let msigdbconn = Connection::open(msigdb)?;
+                    let msigdbconn = Connection::open(&msigdb)?;
                     let stmt_result = msigdbconn
                         .prepare(&("select id from terms where parent_id='".to_owned() + &genesetgroup + "'"));
                     match stmt_result {
@@ -174,48 +181,136 @@ fn main() -> Result<()> {
                                 }
                             }
 
-                            for gs in genesets {
-                                let sql_statement = "select genes from term2genes where id='".to_owned() + &gs + &"'";
-                                //println!("sql_statement:{}", sql_statement);
-                                let mut gene_stmt = msigdbconn.prepare(&(sql_statement))?;
-                                //println!("gene_stmt:{:?}", gene_stmt);
+                            if genesets.len() < PAR_CUTOFF {
+                                for gs in genesets {
+                                    let sql_statement =
+                                        "select genes from term2genes where id='".to_owned() + &gs + &"'";
+                                    //println!("sql_statement:{}", sql_statement);
+                                    let mut gene_stmt = msigdbconn.prepare(&(sql_statement))?;
+                                    //println!("gene_stmt:{:?}", gene_stmt);
 
-                                let mut rows = gene_stmt.query([])?;
-                                let mut names = HashSet::<String>::new();
-                                while let Some(row) = rows.next()? {
-                                    let a: String = row.get(0)?;
-                                    let input_gene_json = json::parse(&a);
-                                    match input_gene_json {
-                                        Ok(json_genes) => {
-                                            for json_iter in 0..json_genes.len() {
-                                                names.insert(json_genes[json_iter]["symbol"].to_string());
+                                    let mut rows = gene_stmt.query([])?;
+                                    let mut names = HashSet::<String>::new();
+                                    while let Some(row) = rows.next()? {
+                                        let a: String = row.get(0)?;
+                                        let input_gene_json = json::parse(&a);
+                                        match input_gene_json {
+                                            Ok(json_genes) => {
+                                                for json_iter in 0..json_genes.len() {
+                                                    names.insert(json_genes[json_iter]["symbol"].to_string());
+                                                }
+                                            }
+                                            Err(_) => {
+                                                panic!("Symbol, ensg, enstCanonical structure is missing!")
                                             }
                                         }
-                                        Err(_) => {
-                                            panic!("Symbol, ensg, enstCanonical structure is missing!")
-                                        }
+                                    }
+                                    let gene_set_size = names.len();
+                                    let (p_value, auc, es, matches, gene_set_hits) = cerno(&sample_coding_genes, names);
+
+                                    if matches >= 1.0
+                                        && p_value.is_nan() == false
+                                        && es.is_nan() == false
+                                        && es != f32::INFINITY
+                                        && auc != f32::INFINITY
+                                        && auc.is_nan() == false
+                                    {
+                                        pathway_p_values.push(pathway_p_value {
+                                            pathway_name: gs,
+                                            p_value_original: p_value,
+                                            p_value_adjusted: None,
+                                            auc: auc,
+                                            es: es,
+                                            gene_set_hits: gene_set_hits,
+                                            gene_set_size: gene_set_size,
+                                        })
                                     }
                                 }
-                                let gene_set_size = names.len();
-                                let (p_value, auc, es, matches, gene_set_hits) = cerno(&sample_coding_genes, names);
+                            } else {
+                                // Multithreaded implementation
+                                let manager = SqliteConnectionManager::file(&msigdb); // This enables sqlite query from multiple threads simultaneously
+                                let pool = r2d2::Pool::new(manager).unwrap(); // This enables sqlite query from multiple threads simultaneously
+                                let genesets = Arc::new(genesets);
+                                let pool_arc = Arc::new(pool);
+                                let sample_coding_genes = Arc::new(sample_coding_genes);
+                                let pathway_p_values_temp =
+                                    Arc::new(Mutex::new(Vec::<pathway_p_value>::with_capacity(genesets.len())));
+                                let mut handles = vec![]; // Vector to store handle which is used to prevent one thread going ahead of another
+                                for thread_num in 0..max_threads {
+                                    let genesets = Arc::clone(&genesets);
+                                    let pool_arc = Arc::clone(&pool_arc);
+                                    let sample_coding_genes = Arc::clone(&sample_coding_genes);
+                                    let pathway_p_values_temp = Arc::clone(&pathway_p_values_temp);
+                                    let handle = thread::spawn(move || {
+                                        let mut pathway_p_values_thread: Vec<pathway_p_value> =
+                                            Vec::with_capacity(10000);
+                                        for iter in 0..genesets.len() {
+                                            let remainder: usize = iter % max_threads;
+                                            if remainder == thread_num {
+                                                let sql_statement = "select genes from term2genes where id='"
+                                                    .to_owned()
+                                                    + &genesets[iter]
+                                                    + &"'";
+                                                //println!("sql_statement:{}", sql_statement);
+                                                let conn = pool_arc.get().unwrap();
+                                                let mut gene_stmt = conn.prepare(&sql_statement).unwrap();
+                                                //println!("gene_stmt:{:?}", gene_stmt);
 
-                                if matches >= 1.0
-                                    && p_value.is_nan() == false
-                                    && es.is_nan() == false
-                                    && es != f32::INFINITY
-                                    && auc != f32::INFINITY
-                                    && auc.is_nan() == false
-                                {
-                                    pathway_p_values.push(pathway_p_value {
-                                        pathway_name: gs,
-                                        p_value_original: p_value,
-                                        p_value_adjusted: None,
-                                        auc: auc,
-                                        es: es,
-                                        gene_set_hits: gene_set_hits,
-                                        gene_set_size: gene_set_size,
-                                    })
+                                                let mut rows = gene_stmt.query([]).unwrap();
+                                                let mut names = HashSet::<String>::new();
+                                                while let Some(row) = rows.next().unwrap() {
+                                                    let a: String = row.get(0).unwrap();
+                                                    let input_gene_json = json::parse(&a);
+                                                    match input_gene_json {
+                                                        Ok(json_genes) => {
+                                                            for json_iter in 0..json_genes.len() {
+                                                                names.insert(
+                                                                    json_genes[json_iter]["symbol"].to_string(),
+                                                                );
+                                                            }
+                                                        }
+                                                        Err(_) => {
+                                                            panic!("Symbol, ensg, enstCanonical structure is missing!")
+                                                        }
+                                                    }
+                                                }
+                                                let gene_set_size = names.len();
+                                                let (p_value, auc, es, matches, gene_set_hits) =
+                                                    cerno(&sample_coding_genes, names);
+
+                                                if matches >= 1.0
+                                                    && p_value.is_nan() == false
+                                                    && es.is_nan() == false
+                                                    && es != f32::INFINITY
+                                                    && auc != f32::INFINITY
+                                                    && auc.is_nan() == false
+                                                {
+                                                    pathway_p_values_thread.push(pathway_p_value {
+                                                        pathway_name: genesets[iter].clone(),
+                                                        p_value_original: p_value,
+                                                        p_value_adjusted: None,
+                                                        auc: auc,
+                                                        es: es,
+                                                        gene_set_hits: gene_set_hits,
+                                                        gene_set_size: gene_set_size,
+                                                    })
+                                                }
+                                            }
+                                        }
+                                        pathway_p_values_temp
+                                            .lock()
+                                            .unwrap()
+                                            .append(&mut pathway_p_values_thread);
+                                        drop(pathway_p_values_temp);
+                                    });
+                                    handles.push(handle); // The handle (which contains the thread) is stored in the handles vector
                                 }
+                                for handle in handles {
+                                    // Wait for all threads to finish before proceeding further
+                                    handle.join().unwrap();
+                                }
+                                // Combining data from all different threads
+                                pathway_p_values.append(&mut *pathway_p_values_temp.lock().unwrap());
                             }
                         }
                         Err(_) => panic!("sqlite database file not found"),
