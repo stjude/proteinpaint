@@ -20,8 +20,9 @@ validatePkgs <- function() {
     if (pkg == "BiocManager") {
       # loading BiocManager requires internet connection to reference a remote yaml file (see https://cran.r-project.org/web/packages/BiocManager/vignettes/BiocManager.html#offline-config.yaml)
       # should avoid internet requirement since this script runs upon server startup
-      # therefore will skip validation of this package, which is fine since it is
-      # only needed to install Bioconductor packages (which has already been performed by install.pkgs.R)
+      # therefore will skip validation of this package, which is ok since it is
+      # only needed to install Bioconductor packages (see "install.pkgs.R") and is
+      # not used in runtime
       next
     }
     suppressPackageStartupMessages(library(pkg, character.only = TRUE))
