@@ -342,7 +342,7 @@ export async function getSamplesPerFilter(q, ds, res) {
 	res.send(samples)
 }
 
-function divideTerms(lst) {
+export function divideTerms(lst) {
 	// divide query list of tw into following lists based on term type
 	const dict = [],
 		geneVariantTws = [],
