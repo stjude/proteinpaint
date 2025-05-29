@@ -52,7 +52,7 @@ export async function handle_tkbigwig(req, res) {
 		if (!Number.isFinite(req.query.barheight)) throw 'invalid barheight'
 		if (!Number.isFinite(req.query.regionspace)) throw 'invalid regionspace'
 		if (!Number.isFinite(req.query.width)) throw 'invalid width'
-		if (!Array.isArray(req.query.rglst) || !req.query.rglst.length) throw 'rglst not array'
+		utils.validateRglst(req.query)
 		if (req.query.dotplotfactor) {
 			if (!Number.isInteger(req.query.dotplotfactor)) throw 'dotplotfactor value should be positive integer'
 		}
@@ -77,7 +77,6 @@ export async function handle_tkbigwig(req, res) {
 
 			if (out) {
 				r.values = out.trim().split('\t').map(Number.parseFloat)
-				console.log(r.values.length, 'bw')
 				if (req.query.dividefactor) {
 					r.values = r.values.map(i => i / req.query.dividefactor)
 				}

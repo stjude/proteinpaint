@@ -763,6 +763,43 @@ export async function testIfFileIsBigbed(file) {
 	})
 }
 
+/* 
+q is req.query
+	q.rglst=stringified json
+		will update q.rglst in-place to maintain existing usage pattern
+	or
+	q.rglst=properly formed array
+genome is used for validating chr names
+
+throws on any err. makes no return. may update q
+*/
+export function validateRglst(q, genome) {
+	if (typeof q.rglst == 'string') {
+		try {
+			q.rglst = JSON.parse(q.rglst)
+		} catch (e) {
+			throw 'invalid JSON in q.rglst="[]"'
+		}
+	}
+	if (!Array.isArray(q.rglst)) throw 'q.rglst[] not array'
+	if (q.rglst.length == 0) throw 'q.rglst[] blank array'
+	for (const r of q.rglst) {
+		if (typeof r != 'object') throw 'element of q.rglst[] not object'
+		if (typeof r.chr != 'string') throw 'q.rglst[].chr not string'
+		let c // allow case when not able to supply genome for the moment
+		if (genome) {
+			c = genome.chrlookup[r.chr.toUpperCase()]
+			if (!c) throw 'q.rglst[].chr invalid chr name'
+		}
+		if (!Number.isFinite(r.start)) throw 'q.rglst[].start not number' // client may assign decimal number and tabix allows it
+		if (r.start < 0) throw 'q.rglst[].start<0'
+		if (c && r.start > c.len) throw 'q.rglst[].start out of bound'
+		if (!Number.isFinite(r.stop)) throw 'q.rglst[].stop not number'
+		if (r.stop < 0) throw 'q.rglst[].stop<0'
+		if (c && r.stop > c.len) throw 'q.rglst[].stop out of bound'
+	}
+}
+
 export function mayCopyFromCookie(q, cookies) {
 	if (cookies.sessionid) {
 		if ('sessionid' in q) throw 'q.sessionid already exists so cannot copy from cookies.sessionid'

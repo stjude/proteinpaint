@@ -3568,6 +3568,7 @@ seekrange(chr,start,stop) {
 		// bigwig track
 		const a = {
 			jwt: this.jwt,
+			genome: this.genome.name,
 			name: tk.name,
 			rglst: this.tkarg_rglst(),
 			regionspace: this.regionspace,
