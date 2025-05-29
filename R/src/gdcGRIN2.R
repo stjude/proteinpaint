@@ -298,7 +298,7 @@ tryCatch(
     # The table component expects specific column structures
 
     # Initialize the list
-    max_genes_to_show <- 30000 # Adjust this number as needed
+    max_genes_to_show <- 500 # Adjust this number as needed
     num_rows_to_process <- min(nrow(sorted_results), max_genes_to_show)
 
     topgene_table_data <- list()
