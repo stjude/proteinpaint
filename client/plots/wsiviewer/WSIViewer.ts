@@ -46,9 +46,9 @@ export default class WSIViewer extends RxComponentInner {
 
 		// TODO: Eventually save index to the state?
 		// const index = settings?.index || 0
-		const index = 0
+		const annotationIndex = 0
 
-		const data: SampleWSImagesResponse = await this.requestData(state, index)
+		const data: SampleWSImagesResponse = await this.requestData(state, annotationIndex)
 
 		const wsimages: WSImage[] = data.sampleWSImages
 
@@ -92,9 +92,17 @@ export default class WSIViewer extends RxComponentInner {
 		new WSImageRenderer(holder, viewModel.viewData)
 
 		if (zoomInPoints != undefined) {
-			this.addZoomInEffect(activeImageExtent, zoomInPoints, map)
+			this.wsiViewerInteractions.addZoomInEffect(activeImageExtent, zoomInPoints, map)
 
-			this.addMapKeyDownListener(holder, index, state, map, settings, activeImageExtent, viewModel.viewData.shortcuts)
+			this.addMapKeyDownListener(
+				holder,
+				annotationIndex,
+				state,
+				map,
+				settings,
+				activeImageExtent,
+				viewModel.viewData.shortcuts
+			)
 		}
 
 		this.addControls(map, activeImage, hasOverlay)
@@ -385,36 +393,6 @@ export default class WSIViewer extends RxComponentInner {
 		}
 	}
 
-	private addZoomInEffect(activeImageExtent: unknown, zoomInPoints: [number, number][], map: OLMap) {
-		setTimeout(() => {
-			if (!activeImageExtent) return
-
-			const imageHeight = activeImageExtent[3]
-
-			//Calculate the center of the annotation
-			const xyAvg = zoomInPoints
-				.reduce(
-					(acc, [x, y]) => {
-						acc[0] += x
-						/** Zoomify tile coordinates start top-left but OpenLayers start bottom-left.
-						 * This flips the feature coordinates to match OpenLayers coordinates.*/
-						const invertedY = imageHeight - y
-						acc[1] += invertedY
-						return acc
-					},
-					[0, 0]
-				)
-				.map(sum => sum / zoomInPoints.length)
-
-			const view = map.getView()
-			view.animate({
-				center: xyAvg,
-				zoom: 5,
-				duration: 2000
-			})
-		}, 500)
-	}
-
 	private addMapKeyDownListener(
 		holder: any,
 		index: any,
@@ -454,7 +432,8 @@ export default class WSIViewer extends RxComponentInner {
 					const d = debounce(async () => {
 						const newData: SampleWSImagesResponse = await this.requestData(state, currentIndex)
 						const newZoomInPoints = newData.sampleWSImages[settings.displayedImageIndex].zoomInPoints
-						if (newZoomInPoints != undefined) this.addZoomInEffect(activeImageExtent, newZoomInPoints, map)
+						if (newZoomInPoints != undefined)
+							this.wsiViewerInteractions.addZoomInEffect(activeImageExtent, newZoomInPoints, map)
 						isSpaceDown = false
 					}, 500)
 					d()
