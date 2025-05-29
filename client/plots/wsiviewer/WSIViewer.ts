@@ -21,7 +21,7 @@ import LayerSwitcher from 'ol-ext/control/LayerSwitcher'
 import MousePosition from 'ol/control/MousePosition.js'
 import { format as formatCoordinate } from 'ol/coordinate.js'
 import { debounce } from 'debounce'
-import { ViewModel } from '#plots/wsiviewer/viewModel/ViewModel.ts'
+import { ViewModelMapper } from '#plots/wsiviewer/viewModel/ViewModelMapper.ts'
 import { WSImageRenderer } from '#plots/wsiviewer/view/WSImageRenderer.ts'
 
 export default class WSIViewer extends RxComponentInner {
@@ -83,7 +83,7 @@ export default class WSIViewer extends RxComponentInner {
 
 		const map = this.getMap(wsimageLayers[settings.displayedImageIndex])
 
-		const viewModel = new ViewModel(wsimages[settings.displayedImageIndex])
+		const viewModel = new ViewModelMapper(wsimages[settings.displayedImageIndex])
 
 		const hasOverlay = wsimageLayers[settings.displayedImageIndex].overlays != null
 

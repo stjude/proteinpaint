@@ -1,11 +1,13 @@
 import { renderTable } from '#dom'
+import type { ViewData } from '../viewModel/ViewModel'
+import type { Elem, Div } from '../../../types/d3'
 
 export class WSImageRenderer {
-	holder: any
-	viewData: any
-	tablesWrapper: any
+	holder: Elem
+	viewData: ViewData
+	tablesWrapper: Div
 
-	constructor(holder, viewData) {
+	constructor(holder: Elem, viewData: ViewData) {
 		this.holder = holder
 		this.viewData = viewData
 		this.tablesWrapper = this.holder
