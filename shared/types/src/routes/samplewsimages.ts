@@ -20,7 +20,7 @@ export type WSImage = {
 	zoomInPoints?: Array<[number, number]>
 	metadata: string
 	annotationsData?: { zoomCoordinates: [number, number]; type: string; class: string }[]
-	classes?: WSIClass
+	classes?: WSIClass[]
 }
 
 export const sampleWSImagesPayload: RoutePayload = {

@@ -989,7 +989,7 @@ export type WSImages = {
 	getWSIUncertaintyOverlay?: (sampleName: string, wsiImage: string) => Promise<string | undefined>
 }
 
-export type WSIClass = { id: number; shortcut: any; label: string; color: string }
+export type WSIClass = { id: number; shortcut: string; label: string; color: string }
 
 /*** types supporting Termdb ***/
 
