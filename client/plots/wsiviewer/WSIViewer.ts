@@ -81,7 +81,7 @@ export default class WSIViewer extends RxComponentInner {
 
 		const map = this.getMap(wsimageLayers[settings.displayedImageIndex])
 
-		const hasOverlay = wsimageLayers[settings.displayedImageIndex].overlays != null
+		const hasOverlay = wsimageLayers[settings.displayedImageIndex].overlay != null
 
 		const zoomInPoints = wsimages[settings.displayedImageIndex].zoomInPoints
 
@@ -173,6 +173,33 @@ export default class WSIViewer extends RxComponentInner {
 				wsimage: layer
 			}
 
+			if (data.overlays) {
+				for (const overlay of data.overlays) {
+					const predictionQueryParams = `wsi_image=${wsimage}&dslabel=${dslabel}&genome=${genome}&sample_id=${sampleId}`
+					const zoomifyOverlayLatUrl = `/tileserver/layer/${overlay.layerNumber}/${data.wsiSessionId}/zoomify/{TileGroup}/{z}-{x}-{y}@1x.jpg?${predictionQueryParams}`
+
+					const sourceOverlay = new Zoomify({
+						url: zoomifyOverlayLatUrl,
+						size: [imgWidth, imgHeight],
+						crossOrigin: 'anonymous',
+						zDirection: -1 // Ensure we get a tile with the screen resolution or higher
+					})
+
+					const optionsOverlay = {
+						preview: `/tileserver/layer/${overlay.layerNumber}/${data.wsiSessionId}/zoomify/TileGroup0/0-0-0@1x.jpg?${predictionQueryParams}`,
+						metadata: wsimages[i].metadata,
+						source: sourceOverlay,
+						title: overlay.predictionOverlayType
+					}
+
+					if (wsiImageLayers.overlays) {
+						wsiImageLayers.overlays.push(new TileLayer(optionsOverlay))
+					} else {
+						wsiImageLayers.overlays = [new TileLayer(optionsOverlay)]
+					}
+				}
+			}
+
 			const overlays = wsimages[i].overlays
 
 			if (overlays) {
@@ -192,35 +219,7 @@ export default class WSIViewer extends RxComponentInner {
 						preview: `/tileserver/layer/overlay/${data.wsiSessionId}/zoomify/TileGroup0/0-0-0@1x.jpg?${overlayQueryParams}`,
 						metadata: wsimages[i].metadata,
 						source: sourceOverlay,
-						title: 'Overlay'
-					}
-
-					wsiImageLayers.overlay = new TileLayer(optionsOverlay)
-				}
-			}
-
-			if (data.layerNumbers) {
-				for (const layerNumber of data.layerNumbers) {
-					const predictionQueryParams = `wsi_image=${wsimage}&dslabel=${dslabel}&genome=${genome}&sample_id=${sampleId}`
-					// TODO fix .slice(1, -1)
-					const zoomifyOverlayLatUrl = `/tileserver/layer/${layerNumber.slice(1, -1)}/${
-						data.wsiSessionId
-					}/zoomify/{TileGroup}/{z}-{x}-{y}@1x.jpg?${predictionQueryParams}`
-
-					const sourceOverlay = new Zoomify({
-						url: zoomifyOverlayLatUrl,
-						size: [imgWidth, imgHeight],
-						crossOrigin: 'anonymous',
-						zDirection: -1 // Ensure we get a tile with the screen resolution or higher
-					})
-
-					const optionsOverlay = {
-						preview: `/tileserver/layer/${layerNumber.slice(1, -1)}/${
-							data.wsiSessionId
-						}/zoomify/TileGroup0/0-0-0@1x.jpg?${predictionQueryParams}`,
-						metadata: wsimages[i].metadata,
-						source: sourceOverlay,
-						title: layerNumber
+						title: 'Selected Patches'
 					}
 
 					if (wsiImageLayers.overlays) {

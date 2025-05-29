@@ -3,7 +3,8 @@ import qs from 'qs'
 import path from 'path'
 import { CookieJar } from 'tough-cookie'
 import { promisify } from 'util'
-import type { RouteApi, WSImagesRequest, WSImagesResponse } from '#types'
+import type { PredictionOverlay, RouteApi, WSImagesRequest, WSImagesResponse } from '#types'
+import { PredictionOverlayType } from '#types'
 import { wsImagesPayload } from '#types/checkers'
 import SessionManager from '../src/wsisessions/SessionManager.ts'
 import type { SessionData } from '../src/wsisessions/SessionManager.ts'
@@ -61,7 +62,7 @@ function init({ genomes }) {
 			const payload: WSImagesResponse = {
 				status: 'ok',
 				wsiSessionId: session.imageSessionId,
-				layerNumbers: session.imageLayers,
+				overlays: session.overlays,
 				slide_dimensions: getWsiImageResponse.slide_dimensions
 			}
 
@@ -111,7 +112,7 @@ async function getSessionId(
 	const sessionId = cookieString.match(/session_id=([^;]*)/)?.[1]
 	if (!sessionId) throw new Error('session_id not found')
 
-	const imageLayers: Array<string> = []
+	const overlays: Array<PredictionOverlay> = []
 
 	const data = qs.stringify({ slide_path: wsimage })
 
@@ -139,7 +140,7 @@ async function getSessionId(
 				overlay_path: annotationsFilePath
 			})
 
-			const layerNumber = await ky
+			const layerNumber: string = await ky
 				.put(`${tileServer.url}/tileserver/overlay`, {
 					body: annotationsData,
 					timeout: 50000,
@@ -149,9 +150,14 @@ async function getSessionId(
 					},
 					hooks: getHooks(cookieJar, getCookieString, setCookie)
 				})
-				.text()
+				.json()
 
-			imageLayers.push(layerNumber)
+			const overlay: PredictionOverlay = {
+				layerNumber: layerNumber,
+				predictionOverlayType: PredictionOverlayType.PREDICTION
+			}
+
+			overlays.push(overlay)
 		}
 	}
 
@@ -169,7 +175,7 @@ async function getSessionId(
 				overlay_path: annotationsFilePath
 			})
 
-			const layerNumber = await ky
+			const layerNumber: string = await ky
 				.put(`${tileServer.url}/tileserver/overlay`, {
 					body: annotationsData,
 					timeout: 50000,
@@ -179,13 +185,18 @@ async function getSessionId(
 					},
 					hooks: getHooks(cookieJar, getCookieString, setCookie)
 				})
-				.text()
+				.json()
 
-			imageLayers.push(layerNumber)
+			const overlay: PredictionOverlay = {
+				layerNumber: layerNumber,
+				predictionOverlayType: PredictionOverlayType.UNCERTAINTY
+			}
+
+			overlays.push(overlay)
 		}
 	}
 
-	const sessionData: SessionData = await sessionManager.setSession(wsimage, sessionId, tileServer, imageLayers)
+	const sessionData: SessionData = await sessionManager.setSession(wsimage, sessionId, tileServer, overlays)
 
 	if (ds.queries.WSImages.getWSIAnnotations) {
 		const annotationFiles = await ds.queries.WSImages.getWSIAnnotations(sampleId, wsimage)
