@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 Fixes:
 - mds3 tk variant leftlabel will not break in cnv density mode
+- mds3 tk cnv density switching will show/hide category legend div
 
 
 ## 2.129.0

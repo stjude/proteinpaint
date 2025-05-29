@@ -1,2 +1,1 @@
-Fixes:
-- mds3 tk cnv density switching will show/hide category legend div
+
