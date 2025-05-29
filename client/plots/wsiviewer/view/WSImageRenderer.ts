@@ -32,7 +32,6 @@ export class WSImageRenderer {
 				.style('display', 'inline-block'),
 			header: { allowSort: true },
 			showLines: false
-			// selectedRows: [index]
 		})
 	}
 
