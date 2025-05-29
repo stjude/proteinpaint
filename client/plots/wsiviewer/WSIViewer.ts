@@ -91,16 +91,10 @@ export default class WSIViewer extends RxComponentInner {
 
 		new WSImageRenderer(holder, viewModel.viewData)
 
-		// let table //don't like
-		// if (wsimages[settings.displayedImageIndex]?.annotationsData?.length) {
-		// 	table = this.renderAnnotationsTables(holder, wsimages[settings.displayedImageIndex], index)
-		// }
-
 		if (zoomInPoints != undefined) {
 			this.addZoomInEffect(activeImageExtent, zoomInPoints, map)
 
-			const classes = this.setClassCodes((wsimages[settings.displayedImageIndex]?.classes || []) as any[])
-			this.addMapKeyDownListener(holder, settings.displayedImageIndex, state, map, settings, activeImageExtent, classes)
+			this.addMapKeyDownListener(holder, index, state, map, settings, activeImageExtent, viewModel.viewData.shortcuts)
 		}
 
 		this.addControls(map, activeImage, hasOverlay)
@@ -428,7 +422,7 @@ export default class WSIViewer extends RxComponentInner {
 		map: OLMap,
 		settings: Settings,
 		activeImageExtent: any,
-		classCodes: string[] = []
+		shortcuts: string[] = []
 	) {
 		// Add keydown listener to the image container
 		const image = holder.select('div > .ol-viewport').attr('tabindex', 0)
@@ -466,7 +460,7 @@ export default class WSIViewer extends RxComponentInner {
 					d()
 				}
 			}
-			if (classCodes.includes(event.code)) {
+			if (shortcuts.includes(event.code)) {
 				const body = {
 					//I'd rather come up with an id since
 					//the index provided and the index used are
@@ -479,77 +473,6 @@ export default class WSIViewer extends RxComponentInner {
 				await dofetch3('sampleWsiAiApi', { body })
 			}
 		})
-	}
-
-	// private renderAnnotationsTables(holder: any, data: WSImage, index: number) {
-	// 	holder.select('div[id="annotations-table-wrapper"]').remove()
-	// 	const tablesWrapper = holder
-	// 		.append('div')
-	// 		.attr('id', 'annotations-table-wrapper')
-	// 		.style('display', 'block')
-	// 		.style('padding', '20px')
-	// 	// const selectedRows: number[] = []
-	// 	//Remove filter() after development
-	// 	const annotationsRows: any = data.annotationsData!.filter((_, i) => i < 30).map((d, i) => {
-	// 		// const isSelected = data.zoomInPoints?.some(([x, y]) =>
-	// 		// 	x === d.zoomCoordinates[0] && y === d.zoomCoordinates[1]
-	// 		// )
-	// 		// if (isSelected) selectedRows.push(i)
-	// 		return [{ value: i }, { value: d.zoomCoordinates }, { value: d.class }]
-	// 	})
-	// 	const annotationTable = renderTable({
-	// 		columns: [{ label: 'Index', sortable: true, align: 'center' }, { label: 'Coordinates' }, { label: 'Class', sortable: true }],
-	// 		rows: annotationsRows,
-	// 		div: tablesWrapper
-	// 			.append('div')
-	// 			.attr('id', 'annotations-table')
-	// 			.style('margins', '20px')
-	// 			.style('display', 'inline-block'),
-	// 		header: { allowSort: true },
-	// 		showLines: false,
-	// 		selectedRows: [index]
-	// 	})
-
-	// 	const classRows: { [index: string]: any }[][] = []
-	// 	for (const c of data?.classes || ([] as any)) {
-	// 		classRows.push([
-	// 			{ value: c.label },
-	// 			{ html: `<span style="display:inline-block;width:20px;height:20px;background-color:${c.color}"></span>` },
-	// 			{ value: c.shortcut }
-	// 		])
-	// 	}
-
-	// 	renderTable({
-	// 		columns: [{ label: 'Class' }, { label: 'Color', align: 'center' }, { label: 'Shortcut', align: 'center' }],
-	// 		rows: classRows,
-	// 		div: tablesWrapper
-	// 			.append('div')
-	// 			.attr('id', 'annotations-legend')
-	// 			.style('display', 'inline-block')
-	// 			.style('vertical-align', 'top')
-	// 			.style('margin-left', '20px'),
-	// 		showLines: false
-	// 	})
-
-	// 	return annotationTable
-	// }
-
-	private setClassCodes(classes: any[], addEnter = true) {
-		const classEventCodes: string[] = []
-		if (addEnter) classEventCodes.push('Enter')
-		for (const c of classes) {
-			if (typeof c.shortcut == 'number') {
-				classEventCodes.push(`Digit${c.shortcut}`)
-			}
-			if (typeof c.shortcut == 'string') {
-				if (c.shortcut.length === 1) {
-					classEventCodes.push(`Key${c.shortcut.toUpperCase()}`)
-				} else {
-					classEventCodes.push(c.shortcut)
-				}
-			}
-		}
-		return classEventCodes
 	}
 }
 
