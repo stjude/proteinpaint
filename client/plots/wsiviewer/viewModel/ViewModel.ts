@@ -10,7 +10,7 @@ export class ViewModel {
 
 		const data = {}
 		this.setAnnonationsTableData(data)
-		this.setClassTableData(data)
+		this.setClassData(data)
 
 		this.viewData = data
 	}
@@ -37,9 +37,10 @@ export class ViewModel {
 		}
 	}
 
-	setClassTableData(data) {
+	setClassData(data) {
 		if (!this.imageData?.classes?.length) return
 
+		const shortcuts: string[] = ['Enter']
 		const classRows: TableCell[][] = []
 		for (const c of this.imageData.classes) {
 			classRows.push([
@@ -47,6 +48,7 @@ export class ViewModel {
 				{ html: `<span style="display:inline-block;width:20px;height:20px;background-color:${c.color}"></span>` },
 				{ value: c.shortcut.replace('Key', '').replace('Digit', '') }
 			])
+			shortcuts.push(c.shortcut)
 		}
 		const columns = [{ label: 'Class' }, { label: 'Color', align: 'center' }, { label: 'Shortcut', align: 'center' }]
 
@@ -54,5 +56,6 @@ export class ViewModel {
 			rows: classRows,
 			columns: columns
 		}
+		data.shortcuts = shortcuts
 	}
 }
