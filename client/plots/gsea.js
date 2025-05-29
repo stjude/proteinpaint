@@ -1,6 +1,5 @@
 import * as d3axis from 'd3-axis'
-import { axisstyle } from '#dom'
-import { Menu, renderTable, table2col } from '#dom'
+import { Menu, renderTable, table2col, axisstyle } from '#dom'
 import { dofetch3 } from '#common/dofetch'
 import { controlsInit } from './controls'
 import { getCompInit, copyMerge } from '#rx'
