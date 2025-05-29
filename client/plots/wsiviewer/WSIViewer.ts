@@ -13,7 +13,7 @@ import { WSIViewerInteractions } from '#plots/wsiviewer/interactions/WSIViewerIn
 import type Settings from '#plots/wsiviewer/Settings.ts'
 import wsiViewerDefaults from '#plots/wsiviewer/defaults.ts'
 import type { SampleWSImagesResponse, WSImage, WSImagesRequest, WSImagesResponse } from '#types'
-import { table2col, renderTable } from '#dom'
+import { table2col } from '#dom'
 import { Projection } from 'ol/proj'
 import { RxComponentInner } from '../../types/rx.d'
 import 'ol-ext/dist/ol-ext.css'
@@ -21,6 +21,8 @@ import LayerSwitcher from 'ol-ext/control/LayerSwitcher'
 import MousePosition from 'ol/control/MousePosition.js'
 import { format as formatCoordinate } from 'ol/coordinate.js'
 import { debounce } from 'debounce'
+import { ViewModel } from '#plots/wsiviewer/viewModel/ViewModel.ts'
+import { WSImageRenderer } from '#plots/wsiviewer/view/WSImageRenderer.ts'
 
 export default class WSIViewer extends RxComponentInner {
 	// following attributes are required by rx
@@ -81,19 +83,24 @@ export default class WSIViewer extends RxComponentInner {
 
 		const map = this.getMap(wsimageLayers[settings.displayedImageIndex])
 
+		const viewModel = new ViewModel(wsimages[settings.displayedImageIndex])
+
 		const hasOverlay = wsimageLayers[settings.displayedImageIndex].overlays != null
 
 		const zoomInPoints = wsimages[settings.displayedImageIndex].zoomInPoints
+
+		new WSImageRenderer(holder, viewModel.viewData)
+
+		// let table //don't like
+		// if (wsimages[settings.displayedImageIndex]?.annotationsData?.length) {
+		// 	table = this.renderAnnotationsTables(holder, wsimages[settings.displayedImageIndex], index)
+		// }
 
 		if (zoomInPoints != undefined) {
 			this.addZoomInEffect(activeImageExtent, zoomInPoints, map)
 
 			const classes = this.setClassCodes((wsimages[settings.displayedImageIndex]?.classes || []) as any[])
 			this.addMapKeyDownListener(holder, settings.displayedImageIndex, state, map, settings, activeImageExtent, classes)
-		}
-
-		if (wsimages[settings.displayedImageIndex]?.annotationsData?.length) {
-			this.renderAnnotationsTables(holder, wsimages[settings.displayedImageIndex], index)
 		}
 
 		this.addControls(map, activeImage, hasOverlay)
@@ -474,55 +481,58 @@ export default class WSIViewer extends RxComponentInner {
 		})
 	}
 
-	private renderAnnotationsTables(holder: any, data: WSImage, index: number) {
-		const tablesWrapper = holder
-			.append('div')
-			.attr('id', 'annotations-table-wrapper')
-			.style('display', 'block')
-			.style('padding', '20px')
-		// const selectedRows: number[] = []
-		const annotationsRows: any = data.annotationsData!.map((d, i) => {
-			// const isSelected = data.zoomInPoints?.some(([x, y]) =>
-			// 	x === d.zoomCoordinates[0] && y === d.zoomCoordinates[1]
-			// )
-			// if (isSelected) selectedRows.push(i)
+	// private renderAnnotationsTables(holder: any, data: WSImage, index: number) {
+	// 	holder.select('div[id="annotations-table-wrapper"]').remove()
+	// 	const tablesWrapper = holder
+	// 		.append('div')
+	// 		.attr('id', 'annotations-table-wrapper')
+	// 		.style('display', 'block')
+	// 		.style('padding', '20px')
+	// 	// const selectedRows: number[] = []
+	// 	//Remove filter() after development
+	// 	const annotationsRows: any = data.annotationsData!.filter((_, i) => i < 30).map((d, i) => {
+	// 		// const isSelected = data.zoomInPoints?.some(([x, y]) =>
+	// 		// 	x === d.zoomCoordinates[0] && y === d.zoomCoordinates[1]
+	// 		// )
+	// 		// if (isSelected) selectedRows.push(i)
+	// 		return [{ value: i }, { value: d.zoomCoordinates }, { value: d.class }]
+	// 	})
+	// 	const annotationTable = renderTable({
+	// 		columns: [{ label: 'Index', sortable: true, align: 'center' }, { label: 'Coordinates' }, { label: 'Class', sortable: true }],
+	// 		rows: annotationsRows,
+	// 		div: tablesWrapper
+	// 			.append('div')
+	// 			.attr('id', 'annotations-table')
+	// 			.style('margins', '20px')
+	// 			.style('display', 'inline-block'),
+	// 		header: { allowSort: true },
+	// 		showLines: false,
+	// 		selectedRows: [index]
+	// 	})
 
-			return [{ value: i }, { value: d.zoomCoordinates }, { value: d.class }]
-		})
-		renderTable({
-			columns: [{ label: 'Index', sortable: true }, { label: 'Coordinates' }, { label: 'Class', sortable: true }],
-			rows: annotationsRows,
-			div: tablesWrapper
-				.append('div')
-				.attr('id', 'annotations-table')
-				.style('margins', '20px')
-				.style('display', 'inline-block'),
-			header: { allowSort: true },
-			showLines: false,
-			selectedRows: [index]
-		})
+	// 	const classRows: { [index: string]: any }[][] = []
+	// 	for (const c of data?.classes || ([] as any)) {
+	// 		classRows.push([
+	// 			{ value: c.label },
+	// 			{ html: `<span style="display:inline-block;width:20px;height:20px;background-color:${c.color}"></span>` },
+	// 			{ value: c.shortcut }
+	// 		])
+	// 	}
 
-		const classRows: { [index: string]: any }[][] = []
-		for (const c of data?.classes || ([] as any)) {
-			classRows.push([
-				{ value: c.label },
-				{ html: `<span style="display:inline-block;width:20px;height:20px;background-color:${c.color}"></span>` },
-				{ value: c.shortcut }
-			])
-		}
+	// 	renderTable({
+	// 		columns: [{ label: 'Class' }, { label: 'Color', align: 'center' }, { label: 'Shortcut', align: 'center' }],
+	// 		rows: classRows,
+	// 		div: tablesWrapper
+	// 			.append('div')
+	// 			.attr('id', 'annotations-legend')
+	// 			.style('display', 'inline-block')
+	// 			.style('vertical-align', 'top')
+	// 			.style('margin-left', '20px'),
+	// 		showLines: false
+	// 	})
 
-		renderTable({
-			columns: [{ label: 'Class' }, { label: 'Color', align: 'center' }, { label: 'Shortcut', align: 'center' }],
-			rows: classRows,
-			div: tablesWrapper
-				.append('div')
-				.attr('id', 'annotations-legend')
-				.style('display', 'inline-block')
-				.style('vertical-align', 'top')
-				.style('margin-left', '20px'),
-			showLines: false
-		})
-	}
+	// 	return annotationTable
+	// }
 
 	private setClassCodes(classes: any[], addEnter = true) {
 		const classEventCodes: string[] = []
