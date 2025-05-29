@@ -928,6 +928,7 @@ function may_update_cnv(tk) {
 		// no cnv shown in this region. hide colorscale
 		// possible for cnvLst to be missing! e.g. on server error
 		tk.legend.cnv.colorscaleHolder?.style('display', 'none')
+		tk.legend.cnv.cnvCategoryHolder?.style('display', 'none')
 
 		// when cnvLst is missing, could be showing density instead of segments. in such case do not show noCnv message
 		tk.legend.cnv.noCnv.style('display', tk.cnv.cnvInDensity ? 'none' : 'inline-block')
@@ -951,7 +952,7 @@ function may_update_cnv(tk) {
 				// not in cnv-only mode, the categories are already shown in Mutation legend section; do not duplicate legend here
 			} else {
 				// show legend in cnv-only mode
-				tk.legend.cnv.cnvCategoryHolder.selectAll('*').remove()
+				tk.legend.cnv.cnvCategoryHolder.style('display', 'inline-block').selectAll('*').remove()
 				const class2count = new Map()
 				for (const c of tk.cnv.cnvLst) {
 					if (!c.class) continue
