@@ -23,6 +23,7 @@ import { format as formatCoordinate } from 'ol/coordinate.js'
 import { debounce } from 'debounce'
 import { ViewModelMapper } from '#plots/wsiviewer/viewModel/ViewModelMapper.ts'
 import { WSImageRenderer } from '#plots/wsiviewer/view/WSImageRenderer.ts'
+import { Buffer } from '#plots/wsiviewer/interactions/Buffer.ts'
 
 export default class WSIViewer extends RxComponentInner {
 	// following attributes are required by rx
@@ -44,8 +45,7 @@ export default class WSIViewer extends RxComponentInner {
 		const settings = state.plots.find(p => p.id === this.id).settings as Settings
 		const holder = this.opts.holder
 
-		// TODO: Eventually save index to the state?
-		// const index = settings?.index || 0
+		//TODO: Maybe index comes from state? or ds.queries?
 		const annotationIndex = 0
 
 		const data: SampleWSImagesResponse = await this.requestData(state, annotationIndex)
@@ -89,7 +89,11 @@ export default class WSIViewer extends RxComponentInner {
 
 		const zoomInPoints = wsimages[settings.displayedImageIndex].zoomInPoints
 
-		new WSImageRenderer(holder, viewModel.viewData)
+		const buffers = {
+			annotations: new Buffer<number>(annotationIndex)
+		}
+
+		new WSImageRenderer(holder, viewModel.viewData, buffers)
 
 		if (zoomInPoints != undefined) {
 			this.wsiViewerInteractions.addZoomInEffect(activeImageExtent, zoomInPoints, map)
@@ -101,7 +105,8 @@ export default class WSIViewer extends RxComponentInner {
 				map,
 				settings,
 				activeImageExtent,
-				viewModel.viewData.shortcuts
+				viewModel.viewData.shortcuts,
+				buffers
 			)
 		}
 
@@ -400,7 +405,8 @@ export default class WSIViewer extends RxComponentInner {
 		map: OLMap,
 		settings: Settings,
 		activeImageExtent: any,
-		shortcuts: string[] = []
+		shortcuts: string[] = [],
+		buffers: any
 	) {
 		// Add keydown listener to the image container
 		const image = holder.select('div > .ol-viewport').attr('tabindex', 0)
@@ -430,6 +436,7 @@ export default class WSIViewer extends RxComponentInner {
 					//When the index changes, scroll to the new annotation
 					//Timeout for when user presses arrows multiple times.
 					const d = debounce(async () => {
+						buffers.annotations.set(currentIndex)
 						const newData: SampleWSImagesResponse = await this.requestData(state, currentIndex)
 						const newZoomInPoints = newData.sampleWSImages[settings.displayedImageIndex].zoomInPoints
 						if (newZoomInPoints != undefined)
