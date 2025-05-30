@@ -99,6 +99,32 @@ export type RunGRIN2Request = {
 	 */
 }
 
+/** Error entry from failed file downloads */
+export type RustErrorEntry = {
+	case_id: string
+	data_type: string
+	error_type: string
+	error_details: string
+	attempts_made: number
+}
+
+/** Summary information from Rust processing */
+export type RustSummary = {
+	total_files: number
+	successful_files: number
+	failed_files: number
+}
+
+/** Structured output from Rust GRIN2 processing */
+export type RustGRIN2Result = {
+	/** Array of successful file data arrays */
+	successful_data: string[][]
+	/** Array of failed file information */
+	failed_files: RustErrorEntry[]
+	/** Summary statistics */
+	summary: RustSummary
+}
+
 /**
  * Response for GRIN2 analysis run
  */
@@ -113,6 +139,8 @@ export type RunGRIN2Response = {
 	download?: any
 	/** Table of top genes indentified by analysis */
 	topGeneTable?: any
+	/** Data from Rust for making the failed files div */
+	rustResult?: RustGRIN2Result
 }
 /**
  * Route payload definitions for type checking

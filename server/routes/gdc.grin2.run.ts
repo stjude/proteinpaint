@@ -71,13 +71,36 @@ function init({ genomes }) {
 				throw new Error('Failed to process MAF files: No result from Rust')
 			}
 
+			// // Parse the rustResult if it's a string
+			// let parsedRustResult
+			// try {
+			// 	parsedRustResult = typeof rustResult === 'string' ? JSON.parse(rustResult) : rustResult
+			// 	console.log(`[GRIN2] Parsed Rust result: ${JSON.stringify(parsedRustResult).substring(0, 200)}...`)
+			// } catch (parseError) {
+			// 	console.error('[GRIN2] Error parsing Rust result:', parseError)
+			// }
+
 			// Parse the rustResult if it's a string
 			let parsedRustResult
+			let dataForR: any[] = []
 			try {
 				parsedRustResult = typeof rustResult === 'string' ? JSON.parse(rustResult) : rustResult
-				console.log(`[GRIN2] Parsed Rust result: ${JSON.stringify(parsedRustResult).substring(0, 200)}...`)
+				console.log(`[GRIN2] Parsed Rust result structure received`)
+
+				// Extract only successful data for R script
+				if (parsedRustResult.successful_data && Array.isArray(parsedRustResult.successful_data)) {
+					dataForR = parsedRustResult.successful_data.flat()
+					console.log(`[GRIN2] Extracted ${dataForR.length} records for R script`)
+					console.log(
+						`[GRIN2] Success: ${parsedRustResult.summary.successful_files}, Failed: ${parsedRustResult.summary.failed_files}`
+					)
+				} else {
+					console.warn('[GRIN2] Unexpected Rust result format')
+					dataForR = []
+				}
 			} catch (parseError) {
 				console.error('[GRIN2] Error parsing Rust result:', parseError)
+				dataForR = []
 			}
 
 			// Step 2: Call R script to generate the plot
@@ -93,7 +116,7 @@ function init({ genomes }) {
 				genedb: genedbfile,
 				chromosomelist: g.majorchr,
 				imagefile: imagefile,
-				lesion: rustResult // The mutation string from Rust
+				lesion: dataForR // The mutation string from Rust
 			})
 
 			console.log(`R input: ${rInput}`)
@@ -110,7 +133,7 @@ function init({ genomes }) {
 				console.log('[GRIN2] Finished R analysis')
 				const pngImg = resultData.png[0]
 				const topGeneTable = resultData.topGeneTable || null
-				return res.json({ pngImg, topGeneTable, status: 'success' })
+				return res.json({ pngImg, topGeneTable, rustResult: parsedRustResult, status: 'success' })
 			} catch (parseError) {
 				console.error('[GRIN2] Error parsing R result:', parseError)
 				console.log('[GRIN2] Raw R result:', rResult)

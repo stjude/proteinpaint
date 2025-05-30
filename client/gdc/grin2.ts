@@ -234,6 +234,198 @@ function formatBytes(bytes) {
 	return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
 }
 
+/**
+ * Function to show the failed files popup
+ * Similar to deduplication popup but for download failures
+ */
+function showFailedFilesPopup(failedFilesData) {
+	// Remove any existing popup
+	d3.select('.failed-files-popup').remove()
+
+	// Create popup overlay
+	const popup = d3
+		.select('body')
+		.append('div')
+		.attr('class', 'failed-files-popup')
+		.style('position', 'fixed')
+		.style('top', '0')
+		.style('left', '0')
+		.style('width', '100%')
+		.style('height', '100%')
+		.style('background-color', 'rgba(0, 0, 0, 0.5)')
+		.style('z-index', '9999')
+		.style('display', 'flex')
+		.style('justify-content', 'center')
+		.style('align-items', 'center')
+
+	// Create popup content
+	const popupContent = popup
+		.append('div')
+		.style('background-color', 'white')
+		.style('border-radius', '8px')
+		.style('max-width', '800px')
+		.style('width', '90%')
+		.style('max-height', '80vh')
+		.style('overflow', 'hidden')
+		.style('box-shadow', '0 4px 20px rgba(0, 0, 0, 0.3)')
+
+	// Header
+	const header = popupContent
+		.append('div')
+		.style('padding', '16px 20px')
+		.style('border-bottom', '1px solid #e0e0e0')
+		.style('display', 'flex')
+		.style('justify-content', 'space-between')
+		.style('align-items', 'center')
+
+	header
+		.append('h3')
+		.style('margin', '0')
+		.style('color', '#333')
+		.text(`Failed File Downloads (${failedFilesData.count} files)`)
+
+	// Close button
+	header
+		.append('button')
+		.style('background', 'none')
+		.style('border', 'none')
+		.style('font-size', '20px')
+		.style('cursor', 'pointer')
+		.style('color', '#666')
+		.text('✕')
+		.on('click', function () {
+			popup.remove()
+		})
+
+	// Content area - scrollable
+	const content = popupContent
+		.append('div')
+		.style('padding', '20px')
+		.style('max-height', '60vh')
+		.style('overflow-y', 'auto')
+
+	// Error summary section
+	if (failedFilesData.errorSummary) {
+		content
+			.append('h4')
+			.style('margin', '0 0 12px 0')
+			.style('color', '#d32f2f')
+			.style('display', 'flex')
+			.style('align-items', 'center')
+			.style('gap', '8px')
+			.html('📊 Error Summary')
+
+		const summaryDiv = content
+			.append('div')
+			.style('margin-bottom', '20px')
+			.style('padding', '12px')
+			.style('background-color', '#fff3e0')
+			.style('border-radius', '6px')
+			.style('border-left', '4px solid #ff9800')
+
+		const { errorSummary } = failedFilesData
+		const summaryItems: string[] = []
+
+		if (errorSummary.connectionErrors > 0) {
+			summaryItems.push(`${errorSummary.connectionErrors} connection errors`)
+		}
+		if (errorSummary.timeoutErrors > 0) {
+			summaryItems.push(`${errorSummary.timeoutErrors} timeout errors`)
+		}
+		if (errorSummary.serverErrors > 0) {
+			summaryItems.push(`${errorSummary.serverErrors} server errors`)
+		}
+		if (errorSummary.otherErrors > 0) {
+			summaryItems.push(`${errorSummary.otherErrors} other errors`)
+		}
+
+		summaryDiv.append('div').style('font-size', '14px').style('color', '#333').text(summaryItems.join(', '))
+
+		// Add separator
+		content.append('hr').style('margin', '20px 0').style('border', 'none').style('border-top', '1px solid #e0e0e0')
+	}
+
+	// Failed files table section
+	content
+		.append('h4')
+		.style('margin', '0 0 12px 0')
+		.style('color', '#d32f2f')
+		.style('display', 'flex')
+		.style('align-items', 'center')
+		.style('gap', '8px')
+		.html('📋 Failed Files Details')
+
+	// Create table container
+	const tableContainer = content.append('div').style('margin-top', '12px')
+
+	// Render the failed files table using your existing renderTable function
+	renderTable({
+		div: tableContainer,
+		columns: failedFilesData.tableData.headers.map(header => ({
+			label: header,
+			sortable: true
+		})),
+		rows: failedFilesData.tableData.rows.map(row => row.map(cell => ({ value: cell }))),
+		showLines: true,
+		striped: true,
+		showHeader: true,
+		maxHeight: '300px',
+		resize: false,
+		header: {
+			allowSort: true,
+			style: {
+				'background-color': '#f8f9fa',
+				'font-weight': 'bold',
+				'border-bottom': '2px solid #dee2e6'
+			}
+		}
+	})
+
+	// Footer
+	const footer = popupContent
+		.append('div')
+		.style('padding', '16px 20px')
+		.style('border-top', '1px solid #e0e0e0')
+		.style('background-color', '#f8f9fa')
+		.style('display', 'flex')
+		.style('justify-content', 'space-between')
+		.style('align-items', 'center')
+
+	footer
+		.append('div')
+		.style('font-size', '13px')
+		.style('color', '#666')
+		.text('These files could not be downloaded due to network or server issues.')
+
+	footer
+		.append('button')
+		.style('background-color', '#2c5aa0')
+		.style('color', 'white')
+		.style('border', 'none')
+		.style('padding', '8px 16px')
+		.style('border-radius', '4px')
+		.style('cursor', 'pointer')
+		.text('Close')
+		.on('click', function () {
+			popup.remove()
+		})
+
+	// Close popup when clicking outside
+	popup.on('click', function (event) {
+		if (event.target === popup.node()) {
+			popup.remove()
+		}
+	})
+
+	// Close with Escape key
+	d3.select('body').on('keydown.failed-popup', function (event) {
+		if (event.key === 'Escape') {
+			popup.remove()
+			d3.select('body').on('keydown.failed-popup', null)
+		}
+	})
+}
+
 // Adding type definitions to solve typescript errors
 // Interface for table row item
 interface TableRowItem {
@@ -786,6 +978,161 @@ async function getFilesAndShowTable(obj) {
 			if (response.error) throw response.error
 
 			console.log('GRIN2 response:', response)
+
+			if (response.rustResult) {
+				console.log('[GRIN2] rustResult received:', response.rustResult)
+				console.log('[GRIN2] Summary:', response.rustResult.summary)
+				console.log('[GRIN2] Failed files:', response.rustResult.failed_files)
+				console.log('[GRIN2] Successful data arrays:', response.rustResult.successful_data?.length)
+			} else {
+				console.log('[GRIN2] No rustResult in response')
+			}
+
+			// Handle the structured Rust output
+			const rustData = response.rustResult
+			let failedFilesInfo: any = null
+
+			// Parse the rustResult if it's a string (your existing logic)
+			let parsedRustResult
+			let processedData: any[] = []
+
+			try {
+				parsedRustResult = typeof rustData === 'string' ? JSON.parse(rustData) : rustData
+				console.log(`[GRIN2] Parsed Rust result structure received`)
+				console.log(`[GRIN2] Parsed Rust result:`, parsedRustResult)
+
+				// Handle the new structured output
+				if (parsedRustResult) {
+					// Check if it's the new structured format
+					if (parsedRustResult.successful_data && parsedRustResult.summary) {
+						console.log(`[GRIN2] New format detected - Processing ${parsedRustResult.summary.total_files} files`)
+						console.log(
+							`[GRIN2] Success: ${parsedRustResult.summary.successful_files}, Failed: ${parsedRustResult.summary.failed_files}`
+						)
+
+						// Flatten all successful data arrays into one array - THIS GOES TO R
+						processedData = parsedRustResult.successful_data.flat()
+
+						console.log(`[GRIN2] parsedRustResult structure:`, parsedRustResult)
+
+						// Process failed files information for UI display
+						if (parsedRustResult.failed_files && parsedRustResult.failed_files.length > 0) {
+							failedFilesInfo = {
+								count: parsedRustResult.failed_files.length,
+								files: parsedRustResult.failed_files,
+								// Create table data for UI display (similar to your deduplication/filter tables)
+								tableData: {
+									headers: ['Case ID', 'Data Type', 'Error Type', 'Error Details', 'Attempts'],
+									rows: parsedRustResult.failed_files.map(file => [
+										file.case_id,
+										file.data_type,
+										file.error_type,
+										file.error_details,
+										file.attempts_made.toString()
+									])
+								},
+								// Error summary for the popup
+								errorSummary: {
+									connectionErrors: parsedRustResult.failed_files.filter(f => f.error_type === 'connection_error')
+										.length,
+									timeoutErrors: parsedRustResult.failed_files.filter(f => f.error_type === 'timeout_error').length,
+									serverErrors: parsedRustResult.failed_files.filter(f => f.error_type === 'server_error').length,
+									otherErrors: parsedRustResult.failed_files.filter(
+										f => !['connection_error', 'timeout_error', 'server_error'].includes(f.error_type)
+									).length
+								}
+							}
+
+							console.log(`[GRIN2] ${failedFilesInfo.count} files failed - error details prepared for UI`)
+						}
+					}
+
+					console.log(`[GRIN2] Final processed data contains ${processedData.length} records`)
+				}
+			} catch (parseError) {
+				console.error('[GRIN2] Error parsing Rust result:', parseError)
+				// Set empty defaults on parse error
+				processedData = []
+				failedFilesInfo = null
+			}
+
+			// Always show file download summary if we have rustResult data
+			if (parsedRustResult && parsedRustResult.summary) {
+				// Create the summary info div (similar to deduplication div)
+				if (!obj.failedFilesInfoDiv) {
+					obj.failedFilesInfoDiv = obj.resultDiv.append('div')
+				}
+
+				obj.failedFilesInfoDiv.selectAll('*').remove()
+
+				const summaryDiv = obj.failedFilesInfoDiv
+					.append('div')
+					.style('background-color', failedFilesInfo && failedFilesInfo.count > 0 ? '#fff3f3' : '#f0f8ff')
+					.style('border', failedFilesInfo && failedFilesInfo.count > 0 ? '1px solid #f5c6cb' : '1px solid #87ceeb')
+					.style('border-radius', '4px')
+					.style('padding', '12px')
+					.style('margin', '10px 0 20px 0')
+					.style('max-width', '100%')
+					.style('width', 'fit-content')
+
+				// Header with appropriate icon and color
+				const headerIcon = failedFilesInfo && failedFilesInfo.count > 0 ? '⚠️' : '✅'
+				const headerColor = failedFilesInfo && failedFilesInfo.count > 0 ? '#721c24' : '#2c5aa0'
+				const headerText =
+					failedFilesInfo && failedFilesInfo.count > 0
+						? 'File Download Summary (Some Files Failed)'
+						: 'File Download Summary (All Files Successful)'
+
+				summaryDiv
+					.append('div')
+					.style('font-weight', 'bold')
+					.style('color', headerColor)
+					.style('margin-bottom', '8px')
+					.text(`${headerIcon} ${headerText}`)
+
+				// Build description based on summary data
+				const totalAttempted = parsedRustResult.summary.total_files
+				const successful = parsedRustResult.summary.successful_files
+				const failed = parsedRustResult.summary.failed_files
+
+				let descriptionText = `Downloaded <strong>${successful}</strong> of <strong>${totalAttempted}</strong> files successfully`
+
+				if (failed > 0) {
+					descriptionText += `. <strong>${failed}</strong> files failed to download and were excluded from analysis.`
+				} else {
+					descriptionText += `. All files downloaded without issues.`
+				}
+
+				summaryDiv
+					.append('div')
+					.style('margin-bottom', '8px')
+					.style('font-size', '14px')
+					.style('color', headerColor)
+					.html(descriptionText)
+
+				// Add clickable link to view failed files (only if there are failures)
+				if (failedFilesInfo && failedFilesInfo.count > 0) {
+					summaryDiv
+						.append('div')
+						.append('a')
+						.style('color', headerColor)
+						.style('text-decoration', 'underline')
+						.style('cursor', 'pointer')
+						.style('font-size', '13px')
+						.text('View failed files details')
+						.on('click', function () {
+							showFailedFilesPopup(failedFilesInfo)
+						})
+				} else {
+					// Optional: Add a message for successful downloads
+					summaryDiv
+						.append('div')
+						.style('font-size', '13px')
+						.style('color', '#666')
+						.style('font-style', 'italic')
+						.text('All files processed successfully for analysis.')
+				}
+			}
 
 			if (!response.pngImg) throw 'result.pngImg missing'
 
