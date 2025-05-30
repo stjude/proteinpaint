@@ -441,7 +441,7 @@ export default class WSIViewer extends RxComponentInner {
 					//not the same.
 					index: buffers.annotationsIdx.get(),
 					confirmed: event.code === 'Enter',
-					class: event.code === 'Enter' ? null : event.code.replace('Digit', '')
+					class: event.code === 'Enter' ? null : event.code.replace('Digit', '').replace('Key', '')
 				}
 				//Send user confirmation or change to server
 				await dofetch3('sampleWsiAiApi', { body })

@@ -10,14 +10,21 @@ export class WSImageRenderer {
 	buffers: any
 	interactions: WSIViewerInteractions
 
-	constructor(holder: Elem, viewData: ViewData, buffers: any, wsiinteractions: any, activeImageExtent, map) {
+	constructor(
+		holder: Elem,
+		viewData: ViewData,
+		buffers: any,
+		wsiinteractions: WSIViewerInteractions,
+		activeImageExtent: any,
+		map: any
+	) {
 		this.holder = holder
 		this.viewData = viewData
 		this.buffers = buffers
 		this.interactions = wsiinteractions
 
-		this.holder.select('div[id="annotations-table-wrapper"]').remove()
-		this.tablesWrapper = this.holder
+		holder.select('div[id="annotations-table-wrapper"]').remove()
+		this.tablesWrapper = holder
 			.append('div')
 			.attr('id', 'annotations-table-wrapper')
 			.style('display', 'block')
@@ -29,6 +36,7 @@ export class WSImageRenderer {
 
 	renderAnnotationsTable(activeImageExtent, map) {
 		if (!this.viewData.annotations) return
+		const selectedColor = '#fcfc8b'
 
 		renderTable({
 			columns: this.viewData.annotations.columns,
@@ -44,16 +52,18 @@ export class WSImageRenderer {
 				const origColor = tr.style('background-color')
 				this.buffers.annotationsIdx.addListener((index: number) => {
 					if (index === row[0].value) {
-						tr.style('background-color', '#fcfcca')
+						tr.style('background-color', selectedColor)
 					} else {
 						tr.style('background-color', origColor)
 					}
 				})
 				tr.on('click', () => {
+					tr.style('background-color', selectedColor)
 					this.buffers.annotationsIdx.set(row[0].value)
 					const coords = [this.viewData.annotations!.rows[row[0].value!][1].value] as [number, number][]
 					this.interactions.addZoomInEffect(activeImageExtent, coords, map)
-					map.getTargetElement().focus()
+					// map.getTargetElement().setAttribute('tabindex', '-1')
+					// map.getTargetElement().focus()
 				})
 			}
 		})
