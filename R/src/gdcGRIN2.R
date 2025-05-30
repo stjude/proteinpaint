@@ -15,7 +15,7 @@
 #  genedb: gene db file path
 #  chromosomelist={ <key>: <len>, }
 #  imagefile: temporary file for generating png figure
-#  lesion: string from the output of gdcGRIN2.rs
+#  lesion: flattened string from the output of gdcGRIN2.rs
 # }
 
 # Output JSON:
@@ -149,10 +149,10 @@ get_chrom_key <- function(chrom) {
   num <- sub("^chr", "", chrom)
   # check if numeric
   if (grepl("^[0-9]+$", num)) {
-    return(as.numeric(num))
+    as.numeric(num)
   } else {
     # Assign fixed values for non-numeric (X=23, Y=24, others=100)
-    return(ifelse(num == "X", 23, ifelse(num == "Y", 24, 100)))
+    ifelse(num == "X", 23, ifelse(num == "Y", 24, 100))
   }
 }
 tryCatch(
@@ -190,9 +190,6 @@ tryCatch(
 tryCatch(
   {
     lesion_data <- input$lesion
-    # lesion_data <- gsub("^\n|\n$", "", lesion_data) # Remove empty line
-    # lesion_data <- gsub(']\\n\\[', ',', lesion_data) # merges the two separate JSON arrays into a single array
-    # lesion_df <- fromJSON(lesion_data, flatten = TRUE)
     lesion_df <- as.data.frame(lesion_data, stringsAsFactors = FALSE)
     # Assign column names
     colnames(lesion_df) <- c("ID", "chrom", "loc.start", "loc.end", "lsn.type")
@@ -293,9 +290,6 @@ tryCatch(
     # Read the file and convert to base64
     plot_bytes <- readBin(temp_file, "raw", file.size(temp_file))
     base64_string <- base64enc::base64encode(plot_bytes)
-
-    # Convert the sorted_results dataframe to a format suitable for your frontend table
-    # The table component expects specific column structures
 
     # Initialize the list
     max_genes_to_show <- 500 # Adjust this number as needed
