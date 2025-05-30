@@ -148,7 +148,7 @@ export async function getPlotConfig(opts, app) {
 		// observe default config specified in ds, if available
 		if (opts.name) {
 			const p = app.vocabApi?.termdbConfig?.scatterplots?.find(i => i.name == opts.name)
-			if (p) defaultConfig = p
+			if (p) defaultConfig = structuredClone(p)
 		}
 		copyMerge(plot, defaultConfig, opts)
 
