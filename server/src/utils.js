@@ -763,6 +763,7 @@ export async function testIfFileIsBigbed(file) {
 	})
 }
 
+const alphaNumericRegex = new RegExp('^[a-zA-Z0-9]+$')
 /* 
 q is req.query
 	q.rglst=stringified json
@@ -773,30 +774,43 @@ genome is used for validating chr names
 
 throws on any err. makes no return. may update q
 */
-export function validateRglst(q, genome) {
-	if (typeof q.rglst == 'string') {
-		try {
-			q.rglst = JSON.parse(q.rglst)
-		} catch (e) {
-			throw 'invalid JSON in q.rglst="[]"'
+export function hasValidRglst(q, res, genome) {
+	try {
+		if (!q.rglst) throw 'rglst missing'
+		if (typeof q.rglst == 'string') {
+			try {
+				q.rglst = JSON.parse(q.rglst)
+			} catch (e) {
+				throw 'invalid JSON in q.rglst="[]"'
+			}
 		}
-	}
-	if (!Array.isArray(q.rglst)) throw 'q.rglst[] not array'
-	if (q.rglst.length == 0) throw 'q.rglst[] blank array'
-	for (const r of q.rglst) {
-		if (typeof r != 'object') throw 'element of q.rglst[] not object'
-		if (typeof r.chr != 'string') throw 'q.rglst[].chr not string'
-		let c // allow case when not able to supply genome for the moment
-		if (genome) {
-			c = genome.chrlookup[r.chr.toUpperCase()]
-			if (!c) throw 'q.rglst[].chr invalid chr name'
+		if (!Array.isArray(q.rglst)) throw 'q.rglst[] not array'
+		if (q.rglst.length == 0) throw 'q.rglst[] blank array'
+		for (const r of q.rglst) {
+			if (typeof r != 'object') throw 'element of q.rglst[] not object'
+			if (typeof r.chr != 'string') throw 'q.rglst[].chr not string'
+			let c // allow case when not able to supply genome for the moment
+			if (genome) {
+				c = genome.chrlookup[r.chr.toUpperCase()]
+				if (!c) throw 'q.rglst[].chr invalid chr name'
+			} else if (r.chr) {
+				// this max string length makes it harder to insert useful inject code
+				if (r.chr.length > 8) throw 'r.chr is limited to a maximum of 8 characters'
+				// do the regex matching after max length test, just in case regex evaluation can be attacked,
+				// whereas length test is a very simple and straightforward
+				if (!alphaNumericRegex.test(r.chr)) throw 'r.chr must be alphanumeric'
+			}
+			if (!Number.isFinite(r.start)) throw 'q.rglst[].start not number' // client may assign decimal number and tabix allows it
+			if (r.start < 0) throw 'q.rglst[].start<0'
+			if (c && r.start > c.len) throw 'q.rglst[].start out of bound'
+			if (!Number.isFinite(r.stop)) throw 'q.rglst[].stop not number'
+			if (r.stop < 0) throw 'q.rglst[].stop<0'
+			if (c && r.stop > c.len) throw 'q.rglst[].stop out of bound'
 		}
-		if (!Number.isFinite(r.start)) throw 'q.rglst[].start not number' // client may assign decimal number and tabix allows it
-		if (r.start < 0) throw 'q.rglst[].start<0'
-		if (c && r.start > c.len) throw 'q.rglst[].start out of bound'
-		if (!Number.isFinite(r.stop)) throw 'q.rglst[].stop not number'
-		if (r.stop < 0) throw 'q.rglst[].stop<0'
-		if (c && r.stop > c.len) throw 'q.rglst[].stop out of bound'
+		return true
+	} catch (error) {
+		res.send({ error })
+		return false
 	}
 }
 

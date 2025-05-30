@@ -72,8 +72,8 @@ export function decode(query: UrlJsonEncoded) {
 			value == 'true' || // NEED TO FIND-REPLACE CODE THAT USES value == 'true'
 			value == 'false' || // NEED TO FIND-REPLACE CODE THAT USES value == 'false'
 			isNumeric(value) || // NEED TO check
-			(value.startsWith('"') && value.endsWith('"')) ||
-			(value.startsWith('{') && value.endsWith('}')) ||
+			(typeof value == 'string' && value.startsWith('"') && value.endsWith('"')) ||
+			(typeof value == 'string' && value.startsWith('{') && value.endsWith('}')) ||
 			(value.startsWith('[') && value.endsWith(']'))
 		)
 			query[key] = JSON.parse(value)
