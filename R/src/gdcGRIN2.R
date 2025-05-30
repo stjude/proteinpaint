@@ -15,12 +15,13 @@
 #  genedb: gene db file path
 #  chromosomelist={ <key>: <len>, }
 #  imagefile: temporary file for generating png figure
-#  lesion: string from the output of gdcGRIN2.rs
+#  lesion: flattened string from the output of gdcGRIN2.rs
 # }
 
 # Output JSON:
 # {
 #  png: [<base64 string>]
+#  topGeneTable: [<list>]
 # }
 
 # supress warnings
@@ -138,20 +139,20 @@ gene_anno$gene <- gene_anno$gene.name
 
 ## Reorder columns to match requested output
 gene_anno <- gene_anno %>%
-  select(gene, chrom, loc.start, loc.end, gene.name)
+  select(gene, chrom, loc.start, loc.end)
 
 
 ### 3. generate chromosome size table
 # Function to create a sorting key
 get_chrom_key <- function(chrom) {
   # Remove 'chr' prefix
-  num <- sub("^chr","", chrom)
+  num <- sub("^chr", "", chrom)
   # check if numeric
   if (grepl("^[0-9]+$", num)) {
-    return(as.numeric(num))
+    as.numeric(num)
   } else {
     # Assign fixed values for non-numeric (X=23, Y=24, others=100)
-    return(ifelse(num == "X", 23, ifelse(num == "Y", 24, 100)))
+    ifelse(num == "X", 23, ifelse(num == "Y", 24, 100))
   }
 }
 tryCatch(
@@ -176,53 +177,6 @@ tryCatch(
 )
 
 ### 4. receive lesion data from node
-# Initialize an empty dataframe with appropriate columns
-lesion_df <- data.frame(
-  ID = character(),
-  chrom = character(),
-  loc.start = integer(),
-  loc.end = integer(),
-  lsn.type = character(),
-  stringsAsFactors = FALSE
-)
-
-# Function to process TSV string into dataframe
-process_tsv <- function(tsv_string) {
-  tryCatch(
-    {
-      # Clean the TSV string: remove outer quotes and chunk separators
-      # tsv_string <- gsub('^"|"$', '', tsv_string)  # Remove leading/trailing quotes
-      # tsv_string <- gsub('""', '', tsv_string)  # Remove double quotes between chunks
-      # tsv_string <- gsub('^\n|\n$', '', tsv_string) # Remove empty line
-      if (nchar(tsv_string) == 0) {
-        return(NULL)
-      }
-      # cat("Raw TSV string:\n",tsv_string,"\n\n")
-
-      # Parse TSV string using textConnection
-      temp_df <- read.table(
-        text = tsv_string,
-        sep = "\t",
-        header = FALSE,
-        col.names = c("ID", "chrom", "loc.start", "loc.end", "lsn.type"),
-        stringsAsFactors = FALSE
-      )
-
-      # Ensure correct column types
-      temp_df$loc.start <- as.integer(temp_df$loc.start)
-      temp_df$loc.end <- as.integer(temp_df$loc.end)
-      temp_df$ID <- as.character(temp_df$ID)
-      temp_df$chrom <- as.character(temp_df$chrom)
-      temp_df$lsn.type <- as.character(temp_df$lsn.type)
-
-      return(temp_df)
-    },
-    error = function(e) {
-      write_error(paste("Error processing mutation data:", conditionMessage(e)))
-      NULL
-    }
-  )
-}
 
 # Read all streamed data into a single string
 # tryCatch({
@@ -236,10 +190,15 @@ process_tsv <- function(tsv_string) {
 tryCatch(
   {
     lesion_data <- input$lesion
-    lesion_data <- gsub("^\n|\n$", "", lesion_data) # Remove empty line
-    lesion_data <- gsub('^"|"$|\\"', "", lesion_data) # Remove leading/trailing quotes
-    lesion_data <- gsub("\\\\t", "\t", lesion_data) # Replace escaped tabs with actual tabs
-    lesion_data <- gsub("\\\\n", "\n", lesion_data) # Replace escaped newlines with actual newlines
+    lesion_df <- as.data.frame(lesion_data, stringsAsFactors = FALSE)
+    # Assign column names
+    colnames(lesion_df) <- c("ID", "chrom", "loc.start", "loc.end", "lsn.type")
+    # Ensure correct column types
+    lesion_df$ID <- as.character(lesion_df$ID)
+    lesion_df$chrom <- as.character(lesion_df$chrom)
+    lesion_df$loc.start <- as.integer(lesion_df$loc.start)
+    lesion_df$loc.end <- as.integer(lesion_df$loc.end)
+    lesion_df$lsn.type <- as.character(lesion_df$lsn.type)
   },
   error = function(e) {
     write_error(paste(
@@ -249,19 +208,6 @@ tryCatch(
     quit(status = 1)
   }
 )
-
-# Process the TSV
-if (nchar(lesion_data) > 0) {
-  for (line in strsplit(lesion_data, "\n")[[1]]) {
-    temp_df <- process_tsv(line)
-    if (!is.null(temp_df)) {
-      lesion_df <- rbind(lesion_df, temp_df)
-    }
-  }
-} else {
-  write_error("No data received from stream")
-  quit(status = 1)
-}
 
 ### 5. run GRIN2 analysis
 # Compute grin.stats
@@ -284,13 +230,12 @@ tryCatch(
   }
 )
 
-# Extract gene.hits and sort the table
+# Extract gene.hits and sort the table by the p-value of subject mutations
 tryCatch(
   {
     grin_table <- grin_results$gene.hits
-    sorted_results <- grin_table[
-      order(as.numeric(as.character(grin_table$p2.nsubj))),
-    ]
+    sorted_results <- grin_table %>%
+      arrange(p.nsubj.mutation)
   },
   error = function(e) {
     write_error(paste(
@@ -316,10 +261,10 @@ tryCatch(
   }
 )
 
+# Now we can generate the genomewide plot
 tryCatch(
   {
     # Create the PNG device
-    #png(temp_file, width = 800, height = 600)
     png(temp_file, width = 900, height = 600, res = 110)
     par(mar = c(1, 1, 1, 1))
     # More comprehensive suppression of all types of output
@@ -345,8 +290,43 @@ tryCatch(
     # Read the file and convert to base64
     plot_bytes <- readBin(temp_file, "raw", file.size(temp_file))
     base64_string <- base64enc::base64encode(plot_bytes)
-    grin2png <- list(png = base64_string)
-    cat(toJSON(grin2png))
+
+    # Initialize the list
+    max_genes_to_show <- 500 # Adjust this number as needed
+    num_rows_to_process <- min(nrow(sorted_results), max_genes_to_show)
+
+    topgene_table_data <- list()
+
+    # Convert each row of the dataframe to the format expected by table.ts
+    # We only take the top 'num_rows_to_process' rows
+    for (i in seq_len(nrow(sorted_results[1:num_rows_to_process, ]))) {
+      row_data <- list(
+        # Each cell in a row is an object with 'value' property
+        list(value = as.character(sorted_results[i, "gene"])), # Gene name
+        list(value = as.numeric(sorted_results[i, "p.nsubj.mutation"])), # P-value
+        list(value = as.numeric(sorted_results[i, "q.nsubj.mutation"])) # Q-value
+        # Add more columns as needed based on what's in sorted_results
+      )
+      topgene_table_data[[i]] <- row_data
+    }
+
+    grin2_response <- list(
+      png = list(base64_string), # PNG data as before
+      topGeneTable = list(
+        columns = list(
+          # Define the table structure
+          list(label = "Gene", sortable = TRUE),
+          list(label = "P-value", sortable = TRUE),
+          list(label = "Q-value", sortable = TRUE)
+          # Add more column definitions as needed
+        ),
+        rows = topgene_table_data # The actual data rows
+      ),
+      totalGenes = nrow(sorted_results), # Let frontend know total count
+      showingTop = num_rows_to_process # Let frontend know how many are displayed
+    )
+
+    cat(toJSON(grin2_response))
   },
   error = function(e) {
     # Check if device is still open and close it if needed

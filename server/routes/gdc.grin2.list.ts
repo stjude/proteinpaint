@@ -125,6 +125,7 @@ async function listMafFiles(q: GdcGRIN2listRequest, ds: any) {
 	// flatten api return to table row objects
 	// it is possible to set a max size limit to limit the number of files passed to client
 	const files: GdcGRIN2File[] = []
+	const filteredFiles: Array<{ fileId: string; fileSize: number; reason: string }> = []
 
 	for (const h of re.data.hits) {
 		/*
@@ -152,7 +153,18 @@ async function listMafFiles(q: GdcGRIN2listRequest, ds: any) {
 
 		const c = h.cases?.[0]
 		if (!c) throw 'h.cases[0] missing'
-		if (h.file_size >= maxFileSizeAllowed) continue // ignore files larger than or equal to 1Mb
+		if (h.file_size >= maxFileSizeAllowed) {
+			// Collect filtered file info
+			filteredFiles.push({
+				fileId: h.id,
+				fileSize: h.file_size,
+				reason: `File size (${h.file_size} bytes) exceeds maximum allowed size (${maxFileSizeAllowed} bytes)`
+			})
+			console.log(
+				`File ${h.id} with a size of ${h.file_size} bytes is larger then the allowed file size. It is excluded from the list.\nIf you want to include it, please increase the maxFileSizeAllowed in the code.`
+			)
+			continue
+		}
 
 		const file: GdcGRIN2File = {
 			id: h.id,
@@ -183,12 +195,60 @@ async function listMafFiles(q: GdcGRIN2listRequest, ds: any) {
 		files.push(file)
 	}
 
-	// sort files in descending order of file size and show on table as default
-	files.sort((a, b) => b.file_size - a.file_size)
+	// DEDUPLICATION LOGIC: Keep only one MAF file per case
+	// Group files by case_submitter_id and keep the largest file for each case
+	const filesByCase = new Map<string, GdcGRIN2File[]>()
+
+	// Group all files by case
+	for (const file of files) {
+		const caseId = file.case_submitter_id
+		if (!filesByCase.has(caseId)) {
+			filesByCase.set(caseId, [])
+		}
+		filesByCase.get(caseId)!.push(file)
+	}
+
+	// Select the best file for each case (largest file size)
+	const deduplicatedFiles: GdcGRIN2File[] = []
+	let duplicatesRemoved = 0
+	const caseDetails: Array<{ caseName: string; fileCount: number; keptFileSize: number }> = []
+
+	for (const [caseId, caseFiles] of filesByCase) {
+		if (caseFiles.length > 1) {
+			// Multiple files for this case - keep the largest one
+			// Sort by file size descending and take the first one
+			caseFiles.sort((a, b) => b.file_size - a.file_size)
+			deduplicatedFiles.push(caseFiles[0])
+			duplicatesRemoved += caseFiles.length - 1
+
+			caseDetails.push({
+				caseName: caseId,
+				fileCount: caseFiles.length,
+				keptFileSize: caseFiles[0].file_size
+			})
+
+			console.log(
+				`Case ${caseId}: Found ${caseFiles.length} MAF files, keeping largest (${caseFiles[0].file_size} bytes)`
+			)
+		} else {
+			// Only one file for this case
+			deduplicatedFiles.push(caseFiles[0])
+		}
+	}
+
+	// Log deduplication results
+	if (duplicatesRemoved > 0) {
+		console.log(
+			`GRIN2 MAF deduplication: Removed ${duplicatesRemoved} duplicate files, kept ${deduplicatedFiles.length} unique cases`
+		)
+	}
+
+	// sort final files in descending order of file size and show on table as default
+	deduplicatedFiles.sort((a, b) => b.file_size - a.file_size)
 
 	// Add file type information to the response
 	const result = {
-		files,
+		files: deduplicatedFiles,
 		filesTotal: re.data.pagination.total,
 		maxTotalSizeCompressed,
 		fileCounts: {
@@ -197,6 +257,13 @@ async function listMafFiles(q: GdcGRIN2listRequest, ds: any) {
 		appliedFilters: {
 			fileTypes: shouldRetrieveMaf ? ['MAF'] : [],
 			experimentalStrategy: experimentalStrategy
+		},
+		deduplicationStats: {
+			originalFileCount: files.length,
+			deduplicatedFileCount: deduplicatedFiles.length,
+			duplicatesRemoved: duplicatesRemoved,
+			caseDetails: caseDetails,
+			filteredFiles: filteredFiles
 		}
 	} as GdcGRIN2listResponse
 

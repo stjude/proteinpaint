@@ -3,12 +3,428 @@ import { make_radios, renderTable, sayerror, Menu, table2col } from '#dom'
 import { select } from 'd3-selection'
 import { formatElapsedTime } from '@sjcrh/proteinpaint-shared/time.js'
 import type { GdcGRIN2listRequest } from '#types'
+import * as d3 from 'd3'
 
 /*
 a UI to list open-access maf and cnv files from current cohort
 let user selects some, for the backend to run GRIN2 analysis
 and display the resulting visualization
 */
+
+/**
+ * Function to show the deduplication popup
+ * Pass your deduplication stats that include the console.log data
+ */
+function showDeduplicationPopup(deduplicationStats) {
+	// Remove any existing popup
+	d3.select('.deduplication-popup').remove()
+
+	// Create popup overlay
+	const popup = d3
+		.select('body')
+		.append('div')
+		.attr('class', 'deduplication-popup')
+		.style('position', 'fixed')
+		.style('top', '0')
+		.style('left', '0')
+		.style('width', '100%')
+		.style('height', '100%')
+		.style('background-color', 'rgba(0, 0, 0, 0.5)')
+		.style('z-index', '9999')
+		.style('display', 'flex')
+		.style('justify-content', 'center')
+		.style('align-items', 'center')
+
+	// Create popup content
+	const popupContent = popup
+		.append('div')
+		.style('background-color', 'white')
+		.style('border-radius', '8px')
+		.style('max-width', '700px')
+		.style('width', '90%')
+		.style('max-height', '80vh')
+		.style('overflow', 'hidden')
+		.style('box-shadow', '0 4px 20px rgba(0, 0, 0, 0.3)')
+
+	// Header
+	const header = popupContent
+		.append('div')
+		.style('padding', '16px 20px')
+		.style('border-bottom', '1px solid #e0e0e0')
+		.style('display', 'flex')
+		.style('justify-content', 'space-between')
+		.style('align-items', 'center')
+
+	const totalExcluded = deduplicationStats.duplicatesRemoved + (deduplicationStats.filteredFiles?.length || 0)
+
+	header.append('h3').style('margin', '0').style('color', '#333').text(`Excluded Files (${totalExcluded} total)`)
+
+	// Close button
+	header
+		.append('button')
+		.style('background', 'none')
+		.style('border', 'none')
+		.style('font-size', '20px')
+		.style('cursor', 'pointer')
+		.style('color', '#666')
+		.text('✕')
+		.on('click', function () {
+			popup.remove()
+		})
+
+	// Content area - scrollable
+	const content = popupContent
+		.append('div')
+		.style('padding', '20px')
+		.style('max-height', '55vh')
+		.style('overflow-y', 'auto')
+
+	// Section 1: Duplicate Files Removed
+	if (deduplicationStats.caseDetails && deduplicationStats.caseDetails.length > 0) {
+		content
+			.append('h4')
+			.style('margin', '0 0 12px 0')
+			.style('color', '#d84315')
+			.style('display', 'flex')
+			.style('align-items', 'center')
+			.style('gap', '8px')
+			.html('🔄 Duplicate Files Removed')
+
+		content
+			.append('p')
+			.style('margin', '0 0 16px 0')
+			.style('font-size', '14px')
+			.style('color', '#666')
+			.text(`${deduplicationStats.duplicatesRemoved} duplicate files were removed (largest file kept for each case)`)
+
+		deduplicationStats.caseDetails.forEach(caseInfo => {
+			const caseDiv = content
+				.append('div')
+				.style('margin-bottom', '8px')
+				.style('padding', '8px 12px')
+				.style('background-color', '#fff3e0')
+				.style('border-radius', '4px')
+				.style('border-left', '3px solid #ff9800')
+
+			caseDiv
+				.append('div')
+				.style('font-size', '14px')
+				.style('color', '#333')
+				.html(
+					`<strong>Case ${caseInfo.caseName}:</strong> Found ${
+						caseInfo.fileCount
+					} MAF files, keeping largest (${formatBytes(caseInfo.keptFileSize)})`
+				)
+		})
+	}
+
+	// Section 2: Size-Filtered Files
+	if (deduplicationStats.filteredFiles && deduplicationStats.filteredFiles.length > 0) {
+		// Add separator if we have both sections
+		if (deduplicationStats.caseDetails && deduplicationStats.caseDetails.length > 0) {
+			content.append('hr').style('margin', '20px 0').style('border', 'none').style('border-top', '1px solid #e0e0e0')
+		}
+
+		content
+			.append('h4')
+			.style('margin', '0 0 12px 0')
+			.style('color', '#c62828')
+			.style('display', 'flex')
+			.style('align-items', 'center')
+			.style('gap', '8px')
+			.html('📏 Files Excluded by Size')
+
+		content
+			.append('p')
+			.style('margin', '0 0 16px 0')
+			.style('font-size', '14px')
+			.style('color', '#666')
+			.text(
+				`${deduplicationStats.filteredFiles.length} files were excluded for being too large (>${formatBytes(1000000)})`
+			)
+
+		deduplicationStats.filteredFiles.forEach(fileInfo => {
+			const fileDiv = content
+				.append('div')
+				.style('margin-bottom', '8px')
+				.style('padding', '8px 12px')
+				.style('background-color', '#ffebee')
+				.style('border-radius', '4px')
+				.style('border-left', '3px solid #f44336')
+
+			fileDiv
+				.append('div')
+				.style('font-size', '13px')
+				.style('color', '#333')
+				.style('margin-bottom', '4px')
+				.html(`<strong>File ID:</strong> ${fileInfo.fileId}`)
+
+			fileDiv
+				.append('div')
+				.style('font-size', '12px')
+				.style('color', '#666')
+				.text(`Size: ${formatBytes(fileInfo.fileSize)} - ${fileInfo.reason}`)
+		})
+	}
+
+	// Show message if no excluded files
+	if (
+		(!deduplicationStats.caseDetails || deduplicationStats.caseDetails.length === 0) &&
+		(!deduplicationStats.filteredFiles || deduplicationStats.filteredFiles.length === 0)
+	) {
+		content.append('div').style('text-align', 'center').style('padding', '40px').style('color', '#666').html(`
+				<div style="font-size: 48px; margin-bottom: 16px;">✅</div>
+				<p>No files were excluded.</p>
+				<p style="font-size: 14px;">All files passed size and deduplication checks.</p>
+			`)
+	}
+
+	// Footer
+	const footer = popupContent
+		.append('div')
+		.style('padding', '16px 20px')
+		.style('border-top', '1px solid #e0e0e0')
+		.style('background-color', '#f8f9fa')
+		.style('display', 'flex')
+		.style('justify-content', 'space-between')
+		.style('align-items', 'center')
+
+	footer
+		.append('div')
+		.style('font-size', '13px')
+		.style('color', '#666')
+		.text('Files are filtered to ensure optimal performance and avoid duplicates.')
+
+	footer
+		.append('button')
+		.style('background-color', '#2c5aa0')
+		.style('color', 'white')
+		.style('border', 'none')
+		.style('padding', '8px 16px')
+		.style('border-radius', '4px')
+		.style('cursor', 'pointer')
+		.text('Close')
+		.on('click', function () {
+			popup.remove()
+		})
+
+	// Close popup when clicking outside
+	popup.on('click', function (event) {
+		if (event.target === popup.node()) {
+			popup.remove()
+		}
+	})
+
+	// Close with Escape key
+	d3.select('body').on('keydown.popup', function (event) {
+		if (event.key === 'Escape') {
+			popup.remove()
+			d3.select('body').on('keydown.popup', null)
+		}
+	})
+}
+/**
+ * Helper function to format bytes
+ */
+function formatBytes(bytes) {
+	if (bytes === 0) return '0 Bytes'
+	const k = 1024
+	const sizes = ['Bytes', 'KB', 'MB', 'GB']
+	const i = Math.floor(Math.log(bytes) / Math.log(k))
+	return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+}
+
+/**
+ * Function to show the failed files popup
+ * Similar to deduplication popup but for download failures
+ */
+function showFailedFilesPopup(failedFilesData) {
+	// Remove any existing popup
+	d3.select('.failed-files-popup').remove()
+
+	// Create popup overlay
+	const popup = d3
+		.select('body')
+		.append('div')
+		.attr('class', 'failed-files-popup')
+		.style('position', 'fixed')
+		.style('top', '0')
+		.style('left', '0')
+		.style('width', '100%')
+		.style('height', '100%')
+		.style('background-color', 'rgba(0, 0, 0, 0.5)')
+		.style('z-index', '9999')
+		.style('display', 'flex')
+		.style('justify-content', 'center')
+		.style('align-items', 'center')
+
+	// Create popup content
+	const popupContent = popup
+		.append('div')
+		.style('background-color', 'white')
+		.style('border-radius', '8px')
+		.style('max-width', '800px')
+		.style('width', '90%')
+		.style('max-height', '80vh')
+		.style('overflow', 'hidden')
+		.style('box-shadow', '0 4px 20px rgba(0, 0, 0, 0.3)')
+
+	// Header
+	const header = popupContent
+		.append('div')
+		.style('padding', '16px 20px')
+		.style('border-bottom', '1px solid #e0e0e0')
+		.style('display', 'flex')
+		.style('justify-content', 'space-between')
+		.style('align-items', 'center')
+
+	header
+		.append('h3')
+		.style('margin', '0')
+		.style('color', '#333')
+		.text(`Failed File Downloads (${failedFilesData.count} files)`)
+
+	// Close button
+	header
+		.append('button')
+		.style('background', 'none')
+		.style('border', 'none')
+		.style('font-size', '20px')
+		.style('cursor', 'pointer')
+		.style('color', '#666')
+		.text('✕')
+		.on('click', function () {
+			popup.remove()
+		})
+
+	// Content area - scrollable
+	const content = popupContent
+		.append('div')
+		.style('padding', '20px')
+		.style('max-height', '60vh')
+		.style('overflow-y', 'auto')
+
+	// Error summary section
+	if (failedFilesData.errorSummary) {
+		content
+			.append('h4')
+			.style('margin', '0 0 12px 0')
+			.style('color', '#d32f2f')
+			.style('display', 'flex')
+			.style('align-items', 'center')
+			.style('gap', '8px')
+			.html('📊 Error Summary')
+
+		const summaryDiv = content
+			.append('div')
+			.style('margin-bottom', '20px')
+			.style('padding', '12px')
+			.style('background-color', '#fff3e0')
+			.style('border-radius', '6px')
+			.style('border-left', '4px solid #ff9800')
+
+		const { errorSummary } = failedFilesData
+		const summaryItems: string[] = []
+
+		if (errorSummary.connectionErrors > 0) {
+			summaryItems.push(`${errorSummary.connectionErrors} connection errors`)
+		}
+		if (errorSummary.timeoutErrors > 0) {
+			summaryItems.push(`${errorSummary.timeoutErrors} timeout errors`)
+		}
+		if (errorSummary.serverErrors > 0) {
+			summaryItems.push(`${errorSummary.serverErrors} server errors`)
+		}
+		if (errorSummary.otherErrors > 0) {
+			summaryItems.push(`${errorSummary.otherErrors} other errors`)
+		}
+
+		summaryDiv.append('div').style('font-size', '14px').style('color', '#333').text(summaryItems.join(', '))
+
+		// Add separator
+		content.append('hr').style('margin', '20px 0').style('border', 'none').style('border-top', '1px solid #e0e0e0')
+	}
+
+	// Failed files table section
+	content
+		.append('h4')
+		.style('margin', '0 0 12px 0')
+		.style('color', '#d32f2f')
+		.style('display', 'flex')
+		.style('align-items', 'center')
+		.style('gap', '8px')
+		.html('📋 Failed Files Details')
+
+	// Create table container
+	const tableContainer = content.append('div').style('margin-top', '12px')
+
+	// Render the failed files table using your existing renderTable function
+	renderTable({
+		div: tableContainer,
+		columns: failedFilesData.tableData.headers.map(header => ({
+			label: header,
+			sortable: true
+		})),
+		rows: failedFilesData.tableData.rows.map(row => row.map(cell => ({ value: cell }))),
+		showLines: true,
+		striped: true,
+		showHeader: true,
+		maxHeight: '300px',
+		resize: false,
+		header: {
+			allowSort: true,
+			style: {
+				'background-color': '#f8f9fa',
+				'font-weight': 'bold',
+				'border-bottom': '2px solid #dee2e6'
+			}
+		}
+	})
+
+	// Footer
+	const footer = popupContent
+		.append('div')
+		.style('padding', '16px 20px')
+		.style('border-top', '1px solid #e0e0e0')
+		.style('background-color', '#f8f9fa')
+		.style('display', 'flex')
+		.style('justify-content', 'space-between')
+		.style('align-items', 'center')
+
+	footer
+		.append('div')
+		.style('font-size', '13px')
+		.style('color', '#666')
+		.text('These files could not be downloaded due to network or server issues.')
+
+	footer
+		.append('button')
+		.style('background-color', '#2c5aa0')
+		.style('color', 'white')
+		.style('border', 'none')
+		.style('padding', '8px 16px')
+		.style('border-radius', '4px')
+		.style('cursor', 'pointer')
+		.text('Close')
+		.on('click', function () {
+			popup.remove()
+		})
+
+	// Close popup when clicking outside
+	popup.on('click', function (event) {
+		if (event.target === popup.node()) {
+			popup.remove()
+		}
+	})
+
+	// Close with Escape key
+	d3.select('body').on('keydown.failed-popup', function (event) {
+		if (event.key === 'Escape') {
+			popup.remove()
+			d3.select('body').on('keydown.failed-popup', null)
+		}
+	})
+}
 
 // Adding type definitions to solve typescript errors
 // Interface for table row item
@@ -27,7 +443,7 @@ const tableColumns = [
 	{ label: 'File Size', barplot: { tickFormat: '~s' }, sortable: true }
 ]
 
-// list of analysis options
+// list of data type options
 const datatypeOptions = [
 	{ option: 'mafOption', selected: true, label: 'Include Mutation' },
 	{ option: 'cnvOption', selected: true, label: 'Include CNV' },
@@ -61,6 +477,7 @@ export async function gdcGRIN2ui({ holder, filter0, callbacks, debugmode = false
 			errDiv: holder.append('div'),
 			controlDiv: holder.append('div'),
 			tableDiv: holder.append('div').style('width', '100%'),
+			deduplicationInfoDiv: holder.append('div'),
 			downloadButtonDiv: holder.append('div').style('margin-top', '10px').style('display', 'none'),
 			resultDiv: holder.append('div').style('margin-top', '20px'),
 			opts: {
@@ -132,6 +549,175 @@ function makeControls(obj) {
 
 		updateText()
 	}
+	// Add MAF filtering options to the controls table
+	{
+		const [, td2] = table.addRow('MAF Filtering Options')
+
+		// Create container for the MAF options
+		const mafOptionsDiv = td2.append('div').style('display', 'inline-block')
+
+		// Min Total Depth input
+		mafOptionsDiv.append('label').style('margin-right', '10px').style('font-size', '14px').text('Min Total Depth:')
+
+		mafOptionsDiv
+			.append('input')
+			.attr('type', 'number')
+			.attr('min', '0')
+			.attr('step', '1')
+			.attr('value', obj.mafOptions?.minTotalDepth || 10)
+			.style('width', '60px')
+			.style('margin-right', '20px')
+			.style('padding', '2px 4px')
+			.style('border', '1px solid #ccc')
+			.style('border-radius', '3px')
+			.on('input', function (this: HTMLInputElement) {
+				const value = parseInt(this.value, 10)
+				if (!isNaN(value) && value >= 0) {
+					obj.mafOptions.minTotalDepth = value
+				}
+			})
+
+		// Min Alt Allele Count input
+		mafOptionsDiv.append('label').style('margin-right', '10px').style('font-size', '14px').text('Min Alt Allele Count:')
+
+		mafOptionsDiv
+			.append('input')
+			.attr('type', 'number')
+			.attr('min', '0')
+			.attr('step', '1')
+			.attr('value', obj.mafOptions?.minAltAlleleCount || 2)
+			.style('width', '60px')
+			.style('padding', '2px 4px')
+			.style('border', '1px solid #ccc')
+			.style('border-radius', '3px')
+			.on('input', function (this: HTMLInputElement) {
+				const value = parseInt(this.value, 10)
+				if (!isNaN(value) && value >= 0) {
+					obj.mafOptions.minAltAlleleCount = value
+				}
+			})
+
+		// Add help tooltip
+		mafOptionsDiv
+			.append('span')
+			.attr('class', 'sja_clbtext')
+			.style('margin-left', '10px')
+			.style('font-size', '12px')
+			.style('color', '#666')
+			.text('ⓘ')
+			.attr(
+				'title',
+				'Min Total Depth: Minimum read depth required\nMin Alt Allele Count: Minimum alternate allele count required'
+			)
+	}
+
+	// Initialize mafOptions if not exists
+	if (!obj.mafOptions) {
+		obj.mafOptions = {
+			minTotalDepth: 10,
+			minAltAlleleCount: 2
+		}
+	}
+
+	// Add CNV filtering options to the controls table
+	{
+		const [, td2] = table.addRow('CNV Filtering Options')
+
+		// Create container for the CNV options
+		const cnvOptionsDiv = td2.append('div').style('display', 'inline-block')
+
+		// Loss Threshold input
+		cnvOptionsDiv.append('label').style('margin-right', '10px').style('font-size', '14px').text('Loss Threshold:')
+
+		cnvOptionsDiv
+			.append('input')
+			.attr('type', 'number')
+			.attr('min', '-10')
+			.attr('max', '0')
+			.attr('step', '0.1')
+			.attr('value', obj.cnvOptions?.lossThreshold || -0.5)
+			.style('width', '70px')
+			.style('margin-right', '20px')
+			.style('padding', '2px 4px')
+			.style('border', '1px solid #ccc')
+			.style('border-radius', '3px')
+			.on('input', function (this: HTMLInputElement) {
+				const value = parseFloat(this.value)
+				if (!isNaN(value) && value <= 0) {
+					obj.cnvOptions.lossThreshold = value
+				}
+			})
+
+		// Gain Threshold input
+		cnvOptionsDiv.append('label').style('margin-right', '10px').style('font-size', '14px').text('Gain Threshold:')
+
+		cnvOptionsDiv
+			.append('input')
+			.attr('type', 'number')
+			.attr('min', '0')
+			.attr('max', '10')
+			.attr('step', '0.1')
+			.attr('value', obj.cnvOptions?.gainThreshold || 0.5)
+			.style('width', '70px')
+			.style('margin-right', '20px')
+			.style('padding', '2px 4px')
+			.style('border', '1px solid #ccc')
+			.style('border-radius', '3px')
+			.on('input', function (this: HTMLInputElement) {
+				const value = parseFloat(this.value)
+				if (!isNaN(value) && value >= 0) {
+					obj.cnvOptions.gainThreshold = value
+				}
+			})
+
+		// Segment Length Cutoff input
+		cnvOptionsDiv
+			.append('label')
+			.style('margin-right', '10px')
+			.style('font-size', '14px')
+			.text('Segment Length Cutoff:')
+
+		cnvOptionsDiv
+			.append('input')
+			.attr('type', 'number')
+			.attr('min', '0')
+			.attr('max', '2000000')
+			.attr('step', '1')
+			.attr('value', obj.cnvOptions?.segLength || 2000000)
+			.style('width', '80px')
+			.style('padding', '2px 4px')
+			.style('border', '1px solid #ccc')
+			.style('border-radius', '3px')
+			.on('input', function (this: HTMLInputElement) {
+				const value = parseFloat(this.value)
+				if (!isNaN(value) && value >= 0) {
+					obj.cnvOptions.segLength = value
+				}
+			})
+
+		// Add help tooltip for CNV options
+		cnvOptionsDiv
+			.append('span')
+			.attr('class', 'sja_clbtext')
+			.style('margin-left', '10px')
+			.style('font-size', '12px')
+			.style('color', '#666')
+			.text('ⓘ')
+			.attr(
+				'title',
+				'Loss Threshold: Log2 ratio threshold for copy number loss (negative values)\n' +
+					'Gain Threshold: Log2 ratio threshold for copy number gain (positive values)\n' +
+					'Segment Length: Limit the CNV segment length to show only focal events.\nCNV segment size limit is 2000,000 bp'
+			)
+	}
+
+	if (!obj.cnvOptions) {
+		obj.cnvOptions = {
+			lossThreshold: -0.4,
+			gainThreshold: 0.3,
+			segLength: 2000000 // Default segment length cutoff
+		}
+	}
 }
 
 async function getFilesAndShowTable(obj) {
@@ -158,6 +744,89 @@ async function getFilesAndShowTable(obj) {
 		if (result.error) throw result.error
 		if (!Array.isArray(result.files)) throw 'result.files[] not array'
 		if (result.files.length == 0) throw 'No files available.'
+
+		// Show deduplication information if any duplicates were removed OR files were size-filtered
+		if (
+			(result.deduplicationStats && result.deduplicationStats.duplicatesRemoved > 0) ||
+			(result.deduplicationStats &&
+				result.deduplicationStats.filteredFiles &&
+				result.deduplicationStats.filteredFiles.length > 0)
+		) {
+			// Clear any previous deduplication info
+			obj.deduplicationInfoDiv.selectAll('*').remove()
+
+			const deduplicationDiv = obj.deduplicationInfoDiv
+				.append('div')
+				.style('background-color', '#f0f8ff')
+				.style('border', '1px solid #87ceeb')
+				.style('border-radius', '1px')
+				.style('padding', '5px')
+				.style('margin', '40px 0')
+				.style('max-width', '100%') // Don't exceed container width
+				.style('width', 'fit-content') // Only as wide as content needs
+
+			const duplicatesRemoved = result.deduplicationStats.duplicatesRemoved || 0
+			const sizeFilteredCount = result.deduplicationStats.filteredFiles
+				? result.deduplicationStats.filteredFiles.length
+				: 0
+			const totalExcluded = duplicatesRemoved + sizeFilteredCount
+			const originalTotal = result.deduplicationStats.originalFileCount + sizeFilteredCount // Add back the size-filtered files to get true original count
+
+			deduplicationDiv
+				.append('div')
+				.style('font-weight', 'bold')
+				.style('color', '#2c5aa0')
+				.text('🔄 File Deduplication and Size Filtering Applied')
+
+			// Build the description text based on what types of filtering occurred
+			let descriptionText = `Found <strong>${originalTotal}</strong> total MAF files`
+			if (totalExcluded > 0) {
+				descriptionText += `, but <strong>${totalExcluded}</strong> were excluded`
+
+				// Add details about what was excluded
+				const exclusionDetails: string[] = []
+				if (duplicatesRemoved > 0) {
+					exclusionDetails.push(`${duplicatesRemoved} duplicates from the same cases`)
+				}
+				if (sizeFilteredCount > 0) {
+					exclusionDetails.push(`${sizeFilteredCount} files too large`)
+				}
+
+				if (exclusionDetails.length > 0) {
+					descriptionText += ` (${exclusionDetails.join(' and ')})`
+				}
+
+				descriptionText += `. <br/>Showing <strong>${result.deduplicationStats.deduplicatedFileCount}</strong> unique cases`
+
+				if (duplicatesRemoved > 0) {
+					descriptionText += ` (largest file selected for each case)`
+				}
+				descriptionText += `.`
+			} else {
+				descriptionText += `. All files are included.`
+			}
+
+			deduplicationDiv.append('div').style('margin-top', '5px').style('font-size', '14px').html(descriptionText)
+
+			// Add clickable link to view excluded files (only if there are excluded files)
+			if (totalExcluded > 0) {
+				deduplicationDiv
+					.append('div')
+					.style('margin-top', '8px')
+					.append('a')
+					.style('color', '#2c5aa0')
+					.style('text-decoration', 'underline')
+					.style('cursor', 'pointer')
+					.style('font-size', '13px')
+					.text('View excluded files')
+					.on('click', function () {
+						showDeduplicationPopup(result.deduplicationStats)
+					})
+			}
+		} else {
+			// Clear deduplication info if no filtering occurred
+			obj.deduplicationInfoDiv.selectAll('*').remove()
+		}
 
 		// render
 		if (result.filesTotal > result.files.length) {
@@ -206,7 +875,7 @@ async function getFilesAndShowTable(obj) {
 				{
 					text: 'Run GRIN2 Analysis',
 					onChange: updateButtonBySelectionChange,
-					callback: runGRIN2Analysis
+					callback: (lst, button) => runGRIN2Analysis(lst, button, obj)
 				}
 			]
 		}
@@ -248,9 +917,30 @@ async function getFilesAndShowTable(obj) {
     detect if it is truthy to only create it once
     */
 
-	async function runGRIN2Analysis(lst, button) {
+	/**
+	 * Formats selected files for GRIN2 Rust backend
+	 *
+	 * @param lst - Array of selected table row indices
+	 *
+	 * Creates structure expected by Rust:
+	 * {
+	 *   caseFiles: {
+	 *     [case_submitter_id]: { maf: file_id }
+	 *   },
+	 *   mafOptions: { minTotalDepth: 10, minAltAlleleCount: 2 }
+	 * }
+	 *
+	 */
+
+	async function runGRIN2Analysis(lst, button, obj) {
 		// Format the data according to what the Rust code expects
-		const caseFiles = {}
+		const caseFiles = {
+			caseFiles: {},
+			mafOptions: {
+				minTotalDepth: obj.mafOptions.minTotalDepth,
+				minAltAlleleCount: obj.mafOptions.minAltAlleleCount
+			}
+		}
 
 		for (const i of lst) {
 			const file = result.files[i]
@@ -258,13 +948,13 @@ async function getFilesAndShowTable(obj) {
 			const caseId = file.case_submitter_id
 
 			if (!caseFiles[caseId]) {
-				caseFiles[caseId] = { maf: null }
+				caseFiles.caseFiles[caseId] = {}
 			}
 
-			caseFiles[caseId].maf = file.id
+			caseFiles.caseFiles[caseId].maf = file.id
 		}
 
-		if (Object.keys(caseFiles).length === 0) return
+		if (Object.keys(caseFiles.caseFiles).length === 0) return
 
 		const oldText = button.innerHTML
 		button.innerHTML = 'Analyzing... Please wait'
@@ -279,7 +969,7 @@ async function getFilesAndShowTable(obj) {
 
 			// Call the GRIN2 run endpoint with the correctly formatted data
 			console.log('Sending GRIN2 request:', caseFiles)
-			console.log('GRIN2 request body:', JSON.stringify(caseFiles, null, 2))
+			console.log('GRIN2 request structure:', JSON.stringify(caseFiles, null, 2))
 			const startTime = Date.now()
 			const response = await dofetch3('gdc/runGRIN2', { body: caseFiles })
 			const elapsedTime = formatElapsedTime(Date.now() - startTime)
@@ -288,6 +978,161 @@ async function getFilesAndShowTable(obj) {
 			if (response.error) throw response.error
 
 			console.log('GRIN2 response:', response)
+
+			if (response.rustResult) {
+				console.log('[GRIN2] rustResult received:', response.rustResult)
+				console.log('[GRIN2] Summary:', response.rustResult.summary)
+				console.log('[GRIN2] Failed files:', response.rustResult.failed_files)
+				console.log('[GRIN2] Successful data arrays:', response.rustResult.successful_data?.length)
+			} else {
+				console.log('[GRIN2] No rustResult in response')
+			}
+
+			// Handle the structured Rust output
+			const rustData = response.rustResult
+			let failedFilesInfo: any = null
+
+			// Parse the rustResult if it's a string
+			let parsedRustResult
+			let processedData: any[] = []
+
+			try {
+				parsedRustResult = typeof rustData === 'string' ? JSON.parse(rustData) : rustData
+				console.log(`[GRIN2] Parsed Rust result structure received`)
+				console.log(`[GRIN2] Parsed Rust result:`, parsedRustResult)
+
+				// Handle the new structured output
+				if (parsedRustResult) {
+					// Check if it's the new structured format
+					if (parsedRustResult.successful_data && parsedRustResult.summary) {
+						console.log(`[GRIN2] New format detected - Processing ${parsedRustResult.summary.total_files} files`)
+						console.log(
+							`[GRIN2] Success: ${parsedRustResult.summary.successful_files}, Failed: ${parsedRustResult.summary.failed_files}`
+						)
+
+						// Flatten all successful data arrays into one array - THIS GOES TO R
+						processedData = parsedRustResult.successful_data.flat()
+
+						console.log(`[GRIN2] parsedRustResult structure:`, parsedRustResult)
+
+						// Process failed files information for UI display
+						if (parsedRustResult.failed_files && parsedRustResult.failed_files.length > 0) {
+							failedFilesInfo = {
+								count: parsedRustResult.failed_files.length,
+								files: parsedRustResult.failed_files,
+								// Create table data for UI display (similar to your deduplication/filter tables)
+								tableData: {
+									headers: ['Case ID', 'Data Type', 'Error Type', 'Error Details', 'Attempts'],
+									rows: parsedRustResult.failed_files.map(file => [
+										file.case_id,
+										file.data_type,
+										file.error_type,
+										file.error_details,
+										file.attempts_made.toString()
+									])
+								},
+								// Error summary for the popup
+								errorSummary: {
+									connectionErrors: parsedRustResult.failed_files.filter(f => f.error_type === 'connection_error')
+										.length,
+									timeoutErrors: parsedRustResult.failed_files.filter(f => f.error_type === 'timeout_error').length,
+									serverErrors: parsedRustResult.failed_files.filter(f => f.error_type === 'server_error').length,
+									otherErrors: parsedRustResult.failed_files.filter(
+										f => !['connection_error', 'timeout_error', 'server_error'].includes(f.error_type)
+									).length
+								}
+							}
+
+							console.log(`[GRIN2] ${failedFilesInfo.count} files failed - error details prepared for UI`)
+						}
+					}
+
+					console.log(`[GRIN2] Final processed data contains ${processedData.length} records`)
+				}
+			} catch (parseError) {
+				console.error('[GRIN2] Error parsing Rust result:', parseError)
+				// Set empty defaults on parse error
+				processedData = []
+				failedFilesInfo = null
+			}
+
+			// Always show file download summary if we have rustResult data
+			if (parsedRustResult && parsedRustResult.summary) {
+				// Create the summary info div (similar to deduplication div)
+				if (!obj.failedFilesInfoDiv) {
+					obj.failedFilesInfoDiv = obj.resultDiv.append('div')
+				}
+
+				obj.failedFilesInfoDiv.selectAll('*').remove()
+
+				const summaryDiv = obj.failedFilesInfoDiv
+					.append('div')
+					.style('background-color', failedFilesInfo && failedFilesInfo.count > 0 ? '#fff3f3' : '#f0f8ff')
+					.style('border', failedFilesInfo && failedFilesInfo.count > 0 ? '1px solid #f5c6cb' : '1px solid #87ceeb')
+					.style('border-radius', '4px')
+					.style('padding', '12px')
+					.style('margin', '10px 0 20px 0')
+					.style('max-width', '100%')
+					.style('width', 'fit-content')
+
+				// Header with appropriate icon and color
+				const headerIcon = failedFilesInfo && failedFilesInfo.count > 0 ? '⚠️' : '✅'
+				const headerColor = failedFilesInfo && failedFilesInfo.count > 0 ? '#721c24' : '#2c5aa0'
+				const headerText =
+					failedFilesInfo && failedFilesInfo.count > 0
+						? 'File Download Summary (Some Files Failed)'
+						: 'File Download Summary (All Files Successful)'
+
+				summaryDiv
+					.append('div')
+					.style('font-weight', 'bold')
+					.style('color', headerColor)
+					.style('margin-bottom', '8px')
+					.text(`${headerIcon} ${headerText}`)
+
+				// Build description based on summary data
+				const totalAttempted = parsedRustResult.summary.total_files
+				const successful = parsedRustResult.summary.successful_files
+				const failed = parsedRustResult.summary.failed_files
+
+				let descriptionText = `Downloaded <strong>${successful}</strong> of <strong>${totalAttempted}</strong> files successfully`
+
+				if (failed > 0) {
+					descriptionText += `. <strong>${failed}</strong> files failed to download and were excluded from analysis.`
+				} else {
+					descriptionText += `. All files downloaded without issues.`
+				}
+
+				summaryDiv
+					.append('div')
+					.style('margin-bottom', '8px')
+					.style('font-size', '14px')
+					.style('color', headerColor)
+					.html(descriptionText)
+
+				// Add clickable link to view failed files (only if there are failures)
+				if (failedFilesInfo && failedFilesInfo.count > 0) {
+					summaryDiv
+						.append('div')
+						.append('a')
+						.style('color', headerColor)
+						.style('text-decoration', 'underline')
+						.style('cursor', 'pointer')
+						.style('font-size', '13px')
+						.text('View failed files details')
+						.on('click', function () {
+							showFailedFilesPopup(failedFilesInfo)
+						})
+				} else {
+					// Optional: Add a message for successful downloads
+					summaryDiv
+						.append('div')
+						.style('font-size', '13px')
+						.style('color', '#666')
+						.style('font-style', 'italic')
+						.text('All files processed successfully for analysis.')
+				}
+			}
 
 			if (!response.pngImg) throw 'result.pngImg missing'
 
@@ -341,16 +1186,134 @@ async function getFilesAndShowTable(obj) {
 				.attr('alt', 'GRIN2 Analysis Result')
 				.style('max-width', '100%')
 				.style('display', 'block')
-				.style('margin', '0')
+				.style('margin', '30px')
 
-			// Add error handler
+			console.log('Top genes table:', response.topGeneTable)
+
+			// Add error handler for image
 			img.node().onerror = () => {
 				console.error('Image failed to load')
-				resultContainer.html('') // Clear container
+				img.remove()
 				resultContainer
 					.append('div')
 					.attr('class', 'sja_error')
+					.style('padding', '10px')
+					.style('background-color', '#f8d7da')
+					.style('border', '1px solid #f5c6cb')
+					.style('margin', '10px 0')
 					.text('Failed to load image result. The analysis may have encountered an error.')
+			}
+
+			if (response.topGeneTable && response.topGeneTable.rows && response.topGeneTable.rows.length > 0) {
+				// Add table title with summary information
+				const tableTitle = resultContainer.append('h4').style('margin-bottom', '15px').style('text-align', 'left')
+
+				// Show summary info if available
+				if (response.totalGenes && response.showingTop) {
+					tableTitle.text(`Top ${response.showingTop} Genes`)
+
+					resultContainer
+						.append('p')
+						.html(
+							`Showing top <strong>${
+								response.showingTop
+							}</strong> genes out of <strong>${response.totalGenes.toLocaleString()}</strong> total genes analyzed.`
+						)
+						.style('color', '#495057')
+						.style('font-size', '14px')
+						.style('margin', '10px 0 20px 0')
+				} else {
+					tableTitle.text('Top Genes')
+
+					resultContainer
+						.append('p')
+						.style('color', '#495057')
+						.style('font-size', '14px')
+						.style('margin', '10px 0 20px 0')
+				}
+
+				// Create a container for the table
+				const tableContainer = resultContainer.append('div').style('margin-bottom', '20px')
+
+				// Define table columns - enhanced with tooltips
+				const tableColumns = [
+					{
+						label: 'Gene',
+						sortable: true,
+						width: '150px',
+						tooltip: 'Gene name'
+					},
+					{
+						label: 'P-value',
+						sortable: true,
+						width: '120px',
+						tooltip: 'Statistical significance of gene association'
+					},
+					{
+						label: 'Q-value',
+						sortable: true,
+						width: '120px',
+						tooltip: 'False discovery rate adjusted p-value'
+					}
+				]
+
+				// Render the table using your existing table component
+				renderTable({
+					div: tableContainer,
+					columns: tableColumns,
+					rows: response.topGeneTable.rows,
+					showLines: true, // Show row numbers
+					striped: true, // Alternate row colors
+					showHeader: true, // Show column headers
+					maxHeight: '500px', // Increased height since we're limiting rows in R
+					maxWidth: '100%', // Full width available
+					resize: false, // Don't allow manual resizing
+					header: {
+						allowSort: true, // Enable column sorting
+						style: {
+							'background-color': '#f8f9fa',
+							'font-weight': 'bold',
+							'border-bottom': '2px solid #dee2e6'
+						}
+					},
+					download: {
+						// Enable table download functionality
+						fileName: `GRIN2_TopGenes_${timestamp}.tsv`
+					}
+				})
+
+				console.log(`Displayed table with ${response.topGeneTable.rows.length} genes`)
+
+				// Add note about full results if truncated
+				if (response.totalGenes && response.showingTop && response.totalGenes > response.showingTop) {
+					resultContainer
+						.append('div')
+						.style('margin-top', '15px')
+						.style('padding', '10px')
+						.style('background-color', '#e9ecef')
+						.style('border-radius', '4px')
+						.style('font-size', '14px')
+						.style('max-width', '100%') // Don't exceed container width
+						.style('width', 'fit-content') // Only as wide as content needs
+						.style('color', '#495057').html(`
+							<strong>Note:</strong> For performance reasons, only the top ${response.showingTop} 
+							most significant genes are displayed. The complete analysis identified 
+							${response.totalGenes.toLocaleString()} genes total.
+						`)
+				}
+			} else {
+				// No table data available
+				console.log('No table data received or empty results')
+				resultContainer
+					.append('div')
+					.style('padding', '15px')
+					.style('background-color', '#fff3cd')
+					.style('border', '1px solid #ffeaa7')
+					.style('border-radius', '4px')
+					.style('margin', '15px 0')
+					.style('max-width', '100%') // Don't exceed container width
+					.style('width', 'fit-content') // Only as wide as content needs
+					.text('No significant genes found in the analysis.')
 			}
 		} catch (e: any) {
 			sayerror(obj.errDiv, e.message || e)

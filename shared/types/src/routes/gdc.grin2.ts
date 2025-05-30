@@ -62,13 +62,67 @@ export type GdcGRIN2listResponse = {
 	appliedFilters?: {
 		experimentalStrategy?: ExperimentalStrategy
 	}
+	/** Deduplication stats */
+	deduplicationStats?: {
+		originalFileCount: number
+		deduplicatedFileCount: number
+		duplicatesRemoved: number
+		caseDetails?: Array<{ caseName: string; fileCount: number; keptFileSize: number }>
+		filteredFiles: Array<{ fileId: string; fileSize: number; reason: string }>
+	}
 }
 
 /**
  * Parameters for running GRIN2 analysis
  */
+
 export type RunGRIN2Request = {
-	[caseId: string]: { maf?: string }
+	/**  Case files to analyze - maps case ID to file information */
+	caseFiles: {
+		[caseId: string]: {
+			maf?: string
+		}
+	}
+	/**  Options for filtering MAF file content */
+	mafOptions?: {
+		/** Minimum total depth of returned MAF files */
+		minTotalDepth?: number // Default: 10
+		/** Minimum alternate allele count of returned MAF files */
+		minAltAlleleCount?: number // Default: 2
+	}
+	/**  Options for CNV file retrieval (will be added later)
+	 cnvOptions?: {
+	 * lossThreshold?: number // Default: -0.5
+	 * gainThreshold?: number // Default: 0.5
+	 * segLength?: number // Default: 2000000
+	 *}
+	 */
+}
+
+/** Error entry from failed file downloads */
+export type RustErrorEntry = {
+	case_id: string
+	data_type: string
+	error_type: string
+	error_details: string
+	attempts_made: number
+}
+
+/** Summary information from Rust processing */
+export type RustSummary = {
+	total_files: number
+	successful_files: number
+	failed_files: number
+}
+
+/** Structured output from Rust GRIN2 processing */
+export type RustGRIN2Result = {
+	/** Array of successful file data arrays */
+	successful_data: string[][]
+	/** Array of failed file information */
+	failed_files: RustErrorEntry[]
+	/** Summary statistics */
+	summary: RustSummary
 }
 
 /**
@@ -84,7 +138,9 @@ export type RunGRIN2Response = {
 	/** Download status */
 	download?: any
 	/** Table of top genes indentified by analysis */
-	topgenetable?: any
+	topGeneTable?: any
+	/** Data from Rust for making the failed files div */
+	rustResult?: RustGRIN2Result
 }
 /**
  * Route payload definitions for type checking
