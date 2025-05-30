@@ -52,7 +52,7 @@ export async function handle_tkbigwig(req, res) {
 		if (!Number.isFinite(req.query.barheight)) throw 'invalid barheight'
 		if (!Number.isFinite(req.query.regionspace)) throw 'invalid regionspace'
 		if (!Number.isFinite(req.query.width)) throw 'invalid width'
-		utils.validateRglst(req.query)
+		if (!utils.hasValidRglst(req.query, res)) return
 		if (req.query.dotplotfactor) {
 			if (!Number.isInteger(req.query.dotplotfactor)) throw 'dotplotfactor value should be positive integer'
 		}

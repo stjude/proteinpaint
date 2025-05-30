@@ -794,7 +794,7 @@ export function hasValidRglst(q, res, genome) {
 				c = genome.chrlookup[r.chr.toUpperCase()]
 				if (!c) throw 'q.rglst[].chr invalid chr name'
 			} else if (r.chr) {
-				// this max string length makes it harder to insert useful inject code
+				// this max string length makes it harder to inject code that's useful
 				if (r.chr.length > 8) throw 'r.chr is limited to a maximum of 8 characters'
 				// do the regex matching after max length test, just in case regex evaluation can be attacked,
 				// whereas length test is a very simple and straightforward

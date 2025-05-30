@@ -1847,6 +1847,7 @@ async function handle_mdssvcnv_vcf(
 				const variants = []
 
 				const tasks = []
+				// utils.hasValidRglst() was aleady called in the route handler that calls this function
 				for (const r of req.query.rglst) {
 					const task = new Promise((resolve, reject) => {
 						const ps = spawn(
