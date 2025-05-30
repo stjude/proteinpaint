@@ -16,7 +16,7 @@ export class ViewModelMapper implements ViewModel {
 		this.viewData = data
 	}
 
-	setAnnonationsTableData(data) {
+	setAnnonationsTableData(data: ViewData) {
 		if (!this.imageData?.annotationsData?.length) return
 
 		//Remove filter() after development
@@ -38,7 +38,7 @@ export class ViewModelMapper implements ViewModel {
 		}
 	}
 
-	setClassData(data) {
+	setClassData(data: ViewData) {
 		if (!this.imageData?.classes?.length) return
 
 		const shortcuts: string[] = ['Enter']
