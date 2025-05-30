@@ -992,7 +992,7 @@ async function getFilesAndShowTable(obj) {
 			const rustData = response.rustResult
 			let failedFilesInfo: any = null
 
-			// Parse the rustResult if it's a string (your existing logic)
+			// Parse the rustResult if it's a string
 			let parsedRustResult
 			let processedData: any[] = []
 

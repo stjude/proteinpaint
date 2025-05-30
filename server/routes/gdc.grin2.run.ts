@@ -35,7 +35,8 @@ export const api: RouteApi = {
  * Data Flow:
  * 1. Extract caseFiles from req.query (already parsed by middleware)
  * 2. Pass caseFiles and mafOptions to Rust for mutation processing
- * 3. Pass Rust output to R for plot generation
+ * 3. Parse Rust output to get mutation data and summary of files
+ * 3. Pass Rust mutation output to R for plot generation while we send the file summary to the div for downloaded files
  * 4. Return generated PNG as base64 string and the top gene table as JSON
  */
 
@@ -70,15 +71,6 @@ function init({ genomes }) {
 			if (!rustResult) {
 				throw new Error('Failed to process MAF files: No result from Rust')
 			}
-
-			// // Parse the rustResult if it's a string
-			// let parsedRustResult
-			// try {
-			// 	parsedRustResult = typeof rustResult === 'string' ? JSON.parse(rustResult) : rustResult
-			// 	console.log(`[GRIN2] Parsed Rust result: ${JSON.stringify(parsedRustResult).substring(0, 200)}...`)
-			// } catch (parseError) {
-			// 	console.error('[GRIN2] Error parsing Rust result:', parseError)
-			// }
 
 			// Parse the rustResult if it's a string
 			let parsedRustResult
