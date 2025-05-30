@@ -2,16 +2,20 @@
 #![allow(non_snake_case)]
 use json::JsonValue;
 use r_mathlib::chi_squared_cdf;
+use r2d2;
+use r2d2_sqlite::SqliteConnectionManager;
 use rusqlite::{Connection, Result};
 use serde::{Deserialize, Serialize};
 use serde_json;
 use std::cmp::Ordering;
 use std::collections::HashSet;
 use std::io;
+use std::sync::{Arc, Mutex}; // Multithreading library
+use std::thread;
 
 #[allow(non_camel_case_types)]
 #[allow(non_snake_case)]
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct GO_pathway {
     GO_id: String,
 }
@@ -21,7 +25,7 @@ struct GO_pathway {
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
 struct gene_order {
     gene_name: String,
-    fold_change: f64,
+    fold_change: f32,
     rank: Option<usize>,
 }
 
@@ -31,11 +35,11 @@ struct gene_order {
 //#[allow(dead_code)]
 struct pathway_p_value {
     pathway_name: String,
-    p_value_original: f64,
-    p_value_adjusted: Option<f64>,
+    p_value_original: f32,
+    p_value_adjusted: Option<f32>,
     gene_set_hits: String,
-    auc: f64,
-    es: f64,
+    auc: f32,
+    es: f32,
     gene_set_size: usize,
 }
 
@@ -44,13 +48,16 @@ struct pathway_p_value {
 #[derive(Debug, Serialize, Deserialize)]
 //#[allow(dead_code)]
 struct output_struct {
-    pval: f64,
-    fdr: f64,
+    pval: f32,
+    fdr: f32,
     leading_edge: String,
-    auc: f64,
-    es: f64,
+    auc: f32,
+    es: f32,
     geneset_size: usize,
 }
+const PAR_CUTOFF: usize = 1000; // Cutoff for triggering multithreading processing of data
+#[allow(non_upper_case_globals)]
+const max_threads: usize = 3; // Max number of threads in case the parallel processing of reads is invoked
 
 fn main() -> Result<()> {
     let mut input = String::new();
@@ -81,17 +88,17 @@ fn main() -> Result<()> {
                     //println!("sample_genes:{:?}", sample_genes);
 
                     let fold_change_input: &JsonValue = &json_string["fold_change"];
-                    let mut fold_change_f64 = Vec::<f64>::new();
+                    let mut fold_change_f32 = Vec::<f32>::new();
                     for iter in 0..fold_change_input.len() {
-                        let item = fold_change_input[iter].as_f64().unwrap();
-                        fold_change_f64.push(item);
+                        let item = fold_change_input[iter].as_f32().unwrap();
+                        fold_change_f32.push(item);
                     }
 
                     if sample_genes.len() == 0 {
                         panic!("No sample genes provided");
                     }
 
-                    if sample_genes.len() != fold_change_f64.len() {
+                    if sample_genes.len() != fold_change_f32.len() {
                         panic!("Length of genes array and fold change array are not equal");
                     }
 
@@ -99,7 +106,7 @@ fn main() -> Result<()> {
                     for i in 0..sample_genes.len() {
                         let item: gene_order = gene_order {
                             gene_name: sample_genes[i].to_string(),
-                            fold_change: fold_change_f64[i],
+                            fold_change: fold_change_f32[i],
                             rank: None, // Will be calculated later
                         };
                         genes_vector.push(item)
@@ -154,7 +161,7 @@ fn main() -> Result<()> {
                     //println!("sample_genes:{:?}", sample_genes);
                     //println!("background_genes:{:?}", background_genes);
 
-                    let msigdbconn = Connection::open(msigdb)?;
+                    let msigdbconn = Connection::open(&msigdb)?;
                     let stmt_result = msigdbconn
                         .prepare(&("select id from terms where parent_id='".to_owned() + &genesetgroup + "'"));
                     match stmt_result {
@@ -162,58 +169,148 @@ fn main() -> Result<()> {
                             #[allow(non_snake_case)]
                             let GO_iter = stmt.query_map([], |row| Ok(GO_pathway { GO_id: row.get(0)? }))?;
                             #[allow(non_snake_case)]
+                            let mut genesets = Vec::<String>::new();
                             for GO_term in GO_iter {
                                 match GO_term {
                                     Ok(n) => {
-                                        //println!("GO term {:?}", n);
-                                        let sql_statement =
-                                            "select genes from term2genes where id='".to_owned() + &n.GO_id + &"'";
-                                        //println!("sql_statement:{}", sql_statement);
-                                        let mut gene_stmt = msigdbconn.prepare(&(sql_statement))?;
-                                        //println!("gene_stmt:{:?}", gene_stmt);
-
-                                        let mut rows = gene_stmt.query([])?;
-                                        let mut names = HashSet::<String>::new();
-                                        while let Some(row) = rows.next()? {
-                                            let a: String = row.get(0)?;
-                                            let input_gene_json = json::parse(&a);
-                                            match input_gene_json {
-                                                Ok(json_genes) => {
-                                                    for json_iter in 0..json_genes.len() {
-                                                        names.insert(json_genes[json_iter]["symbol"].to_string());
-                                                    }
-                                                }
-                                                Err(_) => {
-                                                    panic!("Symbol, ensg, enstCanonical structure is missing!")
-                                                }
-                                            }
-                                        }
-                                        let gene_set_size = names.len();
-                                        let (p_value, auc, es, matches, gene_set_hits) =
-                                            cerno(&sample_coding_genes, names);
-
-                                        if matches >= 1.0
-                                            && p_value.is_nan() == false
-                                            && es.is_nan() == false
-                                            && es != f64::INFINITY
-                                            && auc != f64::INFINITY
-                                            && auc.is_nan() == false
-                                        {
-                                            pathway_p_values.push(pathway_p_value {
-                                                pathway_name: n.GO_id,
-                                                p_value_original: p_value,
-                                                p_value_adjusted: None,
-                                                auc: auc,
-                                                es: es,
-                                                gene_set_hits: gene_set_hits,
-                                                gene_set_size: gene_set_size,
-                                            })
-                                        }
+                                        genesets.push(n.GO_id);
                                     }
                                     Err(_) => {
                                         println!("GO term not found!")
                                     }
                                 }
+                            }
+
+                            if genesets.len() < PAR_CUTOFF {
+                                for gs in genesets {
+                                    let sql_statement =
+                                        "select genes from term2genes where id='".to_owned() + &gs + &"'";
+                                    //println!("sql_statement:{}", sql_statement);
+                                    let mut gene_stmt = msigdbconn.prepare(&(sql_statement))?;
+                                    //println!("gene_stmt:{:?}", gene_stmt);
+
+                                    let mut rows = gene_stmt.query([])?;
+                                    let mut names = HashSet::<String>::new();
+                                    while let Some(row) = rows.next()? {
+                                        let a: String = row.get(0)?;
+                                        let input_gene_json = json::parse(&a);
+                                        match input_gene_json {
+                                            Ok(json_genes) => {
+                                                for json_iter in 0..json_genes.len() {
+                                                    names.insert(json_genes[json_iter]["symbol"].to_string());
+                                                }
+                                            }
+                                            Err(_) => {
+                                                panic!("Symbol, ensg, enstCanonical structure is missing!")
+                                            }
+                                        }
+                                    }
+                                    let gene_set_size = names.len();
+                                    let (p_value, auc, es, matches, gene_set_hits) = cerno(&sample_coding_genes, names);
+
+                                    if matches >= 1.0
+                                        && p_value.is_nan() == false
+                                        && es.is_nan() == false
+                                        && es != f32::INFINITY
+                                        && auc != f32::INFINITY
+                                        && auc.is_nan() == false
+                                    {
+                                        pathway_p_values.push(pathway_p_value {
+                                            pathway_name: gs,
+                                            p_value_original: p_value,
+                                            p_value_adjusted: None,
+                                            auc: auc,
+                                            es: es,
+                                            gene_set_hits: gene_set_hits,
+                                            gene_set_size: gene_set_size,
+                                        })
+                                    }
+                                }
+                            } else {
+                                // Multithreaded implementation
+                                let manager = SqliteConnectionManager::file(&msigdb); // This enables sqlite query from multiple threads simultaneously
+                                let pool = r2d2::Pool::new(manager).unwrap(); // This enables sqlite query from multiple threads simultaneously
+                                let genesets = Arc::new(genesets);
+                                let pool_arc = Arc::new(pool);
+                                let sample_coding_genes = Arc::new(sample_coding_genes);
+                                let pathway_p_values_temp =
+                                    Arc::new(Mutex::new(Vec::<pathway_p_value>::with_capacity(genesets.len())));
+                                let mut handles = vec![]; // Vector to store handle which is used to prevent one thread going ahead of another
+                                for thread_num in 0..max_threads {
+                                    let genesets = Arc::clone(&genesets);
+                                    let pool_arc = Arc::clone(&pool_arc);
+                                    let sample_coding_genes = Arc::clone(&sample_coding_genes);
+                                    let pathway_p_values_temp = Arc::clone(&pathway_p_values_temp);
+                                    let handle = thread::spawn(move || {
+                                        let mut pathway_p_values_thread: Vec<pathway_p_value> =
+                                            Vec::with_capacity(10000);
+                                        for iter in 0..genesets.len() {
+                                            let remainder: usize = iter % max_threads;
+                                            if remainder == thread_num {
+                                                let sql_statement = "select genes from term2genes where id='"
+                                                    .to_owned()
+                                                    + &genesets[iter]
+                                                    + &"'";
+                                                //println!("sql_statement:{}", sql_statement);
+                                                let conn = pool_arc.get().unwrap();
+                                                let mut gene_stmt = conn.prepare(&sql_statement).unwrap();
+                                                //println!("gene_stmt:{:?}", gene_stmt);
+
+                                                let mut rows = gene_stmt.query([]).unwrap();
+                                                let mut names = HashSet::<String>::new();
+                                                while let Some(row) = rows.next().unwrap() {
+                                                    let a: String = row.get(0).unwrap();
+                                                    let input_gene_json = json::parse(&a);
+                                                    match input_gene_json {
+                                                        Ok(json_genes) => {
+                                                            for json_iter in 0..json_genes.len() {
+                                                                names.insert(
+                                                                    json_genes[json_iter]["symbol"].to_string(),
+                                                                );
+                                                            }
+                                                        }
+                                                        Err(_) => {
+                                                            panic!("Symbol, ensg, enstCanonical structure is missing!")
+                                                        }
+                                                    }
+                                                }
+                                                let gene_set_size = names.len();
+                                                let (p_value, auc, es, matches, gene_set_hits) =
+                                                    cerno(&sample_coding_genes, names);
+
+                                                if matches >= 1.0
+                                                    && p_value.is_nan() == false
+                                                    && es.is_nan() == false
+                                                    && es != f32::INFINITY
+                                                    && auc != f32::INFINITY
+                                                    && auc.is_nan() == false
+                                                {
+                                                    pathway_p_values_thread.push(pathway_p_value {
+                                                        pathway_name: genesets[iter].clone(),
+                                                        p_value_original: p_value,
+                                                        p_value_adjusted: None,
+                                                        auc: auc,
+                                                        es: es,
+                                                        gene_set_hits: gene_set_hits,
+                                                        gene_set_size: gene_set_size,
+                                                    })
+                                                }
+                                            }
+                                        }
+                                        pathway_p_values_temp
+                                            .lock()
+                                            .unwrap()
+                                            .append(&mut pathway_p_values_thread);
+                                        drop(pathway_p_values_temp);
+                                    });
+                                    handles.push(handle); // The handle (which contains the thread) is stored in the handles vector
+                                }
+                                for handle in handles {
+                                    // Wait for all threads to finish before proceeding further
+                                    handle.join().unwrap();
+                                }
+                                // Combining data from all different threads
+                                pathway_p_values.append(&mut *pathway_p_values_temp.lock().unwrap());
                             }
                         }
                         Err(_) => panic!("sqlite database file not found"),
@@ -229,15 +326,15 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-fn cerno(sample_coding_genes: &Vec<gene_order>, genes_in_pathway: HashSet<String>) -> (f64, f64, f64, f64, String) {
+fn cerno(sample_coding_genes: &Vec<gene_order>, genes_in_pathway: HashSet<String>) -> (f32, f32, f32, f32, String) {
     // Filter the sample_coding_genes vector to only include those whose gene_names are in the HashSet genes_in_pathway
     let gene_intersections: Vec<&gene_order> = sample_coding_genes
         .iter()
         .filter(|sample_coding_genes| genes_in_pathway.contains(&sample_coding_genes.gene_name)) // Check if name is in the HashSet genes_in_pathway
         .collect(); // Collect the results into a new vector
 
-    let N1 = gene_intersections.len() as f64;
-    let N = sample_coding_genes.len() as f64;
+    let N1 = gene_intersections.len() as f32;
+    let N = sample_coding_genes.len() as f32;
     let mut gene_set_hits: String = "".to_string();
     for gene in &gene_intersections {
         gene_set_hits += &(gene.gene_name.to_string() + &",");
@@ -252,21 +349,21 @@ fn cerno(sample_coding_genes: &Vec<gene_order>, genes_in_pathway: HashSet<String
         .map(|x| x.rank.unwrap())
         .collect::<Vec<usize>>();
 
-    let cerno: f64 = ranks // -2 * sum( log(ranks/N) )
+    let cerno: f32 = ranks // -2 * sum( log(ranks/N) )
         .iter()
-        .map(|x| ((*x as f64) / N).ln())
-        .collect::<Vec<f64>>()
+        .map(|x| ((*x as f32) / N).ln())
+        .collect::<Vec<f32>>()
         .iter()
-        .sum::<f64>()
+        .sum::<f32>()
         * (-2.0);
 
-    let cES: f64 = cerno / (2.0 * (N1 as f64)); // cES <- cerno/(2*N1)
+    let cES: f32 = cerno / (2.0 * (N1 as f32)); // cES <- cerno/(2*N1)
     let N2 = N - N1; // N2 = N - N1
-    let R1 = ranks.iter().sum::<usize>() as f64; // R1 <- sum(ranks)
+    let R1 = ranks.iter().sum::<usize>() as f32; // R1 <- sum(ranks)
     let U = N1 * N2 + N1 * (N1 + 1.0) / 2.0 - R1; // U  <- N1*N2+N1*(N1+1)/2-R1
     let AUC = U / (N1 * N2); // AUC <- U/(N1*N2)
-    let p_value = chi_squared_cdf(cerno, 2.0 * N1, false, false); // pchisq(ret$cerno, 2*N1, lower.tail=FALSE)
-    (p_value, AUC, cES, N1, gene_set_hits)
+    let p_value = chi_squared_cdf(cerno as f64, (2.0 * N1) as f64, false, false); // pchisq(ret$cerno, 2*N1, lower.tail=FALSE)
+    (p_value as f32, AUC, cES, N1, gene_set_hits)
 }
 
 fn adjust_p_values(mut original_p_values: Vec<pathway_p_value>) -> String {
@@ -278,13 +375,13 @@ fn adjust_p_values(mut original_p_values: Vec<pathway_p_value>) -> String {
     });
 
     let mut adjusted_p_values: Vec<pathway_p_value> = Vec::with_capacity(original_p_values.len());
-    let mut old_p_value: f64 = 0.0;
-    let mut rank: f64 = original_p_values.len() as f64;
+    let mut old_p_value: f32 = 0.0;
+    let mut rank: f32 = original_p_values.len() as f32;
     for j in 0..original_p_values.len() {
         let i = original_p_values.len() - j - 1;
 
         //println!("p_val:{}", p_val);
-        let mut adjusted_p_val: f64 = original_p_values[i].p_value_original * (original_p_values.len() as f64 / rank); // adjusted p-value = original_p_value * (N/rank)
+        let mut adjusted_p_val: f32 = original_p_values[i].p_value_original * (original_p_values.len() as f32 / rank); // adjusted p-value = original_p_value * (N/rank)
         if adjusted_p_val > 1.0 {
             // p_value should NEVER be greater than 1
             adjusted_p_val = 1.0;
