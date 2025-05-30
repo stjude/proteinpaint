@@ -1,17 +1,20 @@
 import { renderTable } from '#dom'
 import type { ViewData } from '../viewModel/ViewModel'
 import type { Elem, Div } from '../../../types/d3'
+import type { WSIViewerInteractions } from '../interactions/WSIViewerInteractions'
 
 export class WSImageRenderer {
 	holder: Elem
 	viewData: ViewData
 	tablesWrapper: Div
 	buffers: any
+	interactions: WSIViewerInteractions
 
-	constructor(holder: Elem, viewData: ViewData, buffers: any) {
+	constructor(holder: Elem, viewData: ViewData, buffers: any, wsiinteractions: any, activeImageExtent, map) {
 		this.holder = holder
 		this.viewData = viewData
 		this.buffers = buffers
+		this.interactions = wsiinteractions
 
 		this.holder.select('div[id="annotations-table-wrapper"]').remove()
 		this.tablesWrapper = this.holder
@@ -20,11 +23,11 @@ export class WSImageRenderer {
 			.style('display', 'block')
 			.style('padding', '20px')
 
-		this.renderAnnotationsTable()
+		this.renderAnnotationsTable(activeImageExtent, map)
 		this.renderClassesTable()
 	}
 
-	renderAnnotationsTable() {
+	renderAnnotationsTable(activeImageExtent, map) {
 		if (!this.viewData.annotations) return
 
 		renderTable({
@@ -39,12 +42,18 @@ export class WSImageRenderer {
 			showLines: false,
 			hoverEffects: (tr, row) => {
 				const origColor = tr.style('background-color')
-				this.buffers.annotations.addListener((index: number) => {
+				this.buffers.annotationsIdx.addListener((index: number) => {
 					if (index === row[0].value) {
 						tr.style('background-color', '#fcfcca')
 					} else {
 						tr.style('background-color', origColor)
 					}
+				})
+				tr.on('click', () => {
+					this.buffers.annotationsIdx.set(row[0].value)
+					const coords = [this.viewData.annotations!.rows[row[0].value!][1].value] as [number, number][]
+					this.interactions.addZoomInEffect(activeImageExtent, coords, map)
+					map.getTargetElement().focus()
 				})
 			}
 		})
