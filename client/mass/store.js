@@ -1,4 +1,4 @@
-import { getStoreInit } from '#rx'
+import { getStoreInit, deepFreeze } from '#rx'
 import { dofetch3 } from '#common/dofetch'
 import { getFilterItemByTag, findParent } from '#filter/filter'
 import { getSamplelstTW, getFilter } from '../mass/groups.js'
@@ -82,6 +82,8 @@ class TdbStore {
 	async init() {
 		try {
 			this.state.termdbConfig = await this.app.vocabApi.getTermdbConfig()
+			// termdbConfig should be readonly, not editable
+			deepFreeze(this.state.termdbConfig)
 			await this.setTermfilter()
 			await this.rehydrateGroups()
 

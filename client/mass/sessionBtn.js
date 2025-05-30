@@ -343,6 +343,8 @@ class MassSessionBtn {
 	async getSessionUrl(filename = '') {
 		const headers = this.app.vocabApi.mayGetAuthHeaders('termdb')
 		const state = structuredClone(this.app.getState())
+		// this is always replaced as part of store.init() rehydration
+		delete state.termdbConfig
 		const { protocol, host, search, origin, href } = window.location
 		state.embedder = { protocol, host, search, origin, href }
 		if (filename) {

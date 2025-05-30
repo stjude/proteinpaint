@@ -24,8 +24,18 @@ export async function save(req, res) {
 		const sessionID = filename || makeID()
 		// not checking duplicating id
 
+		// termdbConfig should be read-only from dataset js file, is always rehydrated in client-side store.init(),
+		// it's unnecessary to save in session
+		delete req.body.termdbConfig
+
 		// req.body is some string data, save it to file named by the session id
 		const content = JSON.stringify(req.body)
+		const contentLower = content.toLowerCase()
+		if (contentLower.includes('<script>')) {
+			res.send({ error: 'invalid string in saved application state' })
+			return
+		}
+
 		const dir = filename ? getSessionPath(q, payload) : cachedir_massSession
 		const dirExists = await fs.promises
 			.access(dir)
