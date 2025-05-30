@@ -190,10 +190,10 @@ tryCatch(
 tryCatch(
   {
     lesion_data <- input$lesion
-    lesion_data <- gsub("^\n|\n$", "", lesion_data) # Remove empty line
-    lesion_data <- gsub(']\\n\\[', ',', lesion_data) # merges the two separate JSON arrays into a single array
-    lesion_df <- fromJSON(lesion_data, flatten = TRUE)
-    lesion_df <- as.data.frame(lesion_df, stringsAsFactors = FALSE)
+    # lesion_data <- gsub("^\n|\n$", "", lesion_data) # Remove empty line
+    # lesion_data <- gsub(']\\n\\[', ',', lesion_data) # merges the two separate JSON arrays into a single array
+    # lesion_df <- fromJSON(lesion_data, flatten = TRUE)
+    lesion_df <- as.data.frame(lesion_data, stringsAsFactors = FALSE)
     # Assign column names
     colnames(lesion_df) <- c("ID", "chrom", "loc.start", "loc.end", "lsn.type")
     # Ensure correct column types
