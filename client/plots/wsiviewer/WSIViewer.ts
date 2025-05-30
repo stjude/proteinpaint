@@ -46,9 +46,11 @@ export default class WSIViewer extends RxComponentInner {
 		const holder = this.opts.holder
 
 		//TODO: Maybe index comes from state? or ds.queries?
-		const annotationIndex = 0
+		const buffers = {
+			annotationsIdx: new Buffer<number>(0)
+		}
 
-		const data: SampleWSImagesResponse = await this.requestData(state, annotationIndex)
+		const data: SampleWSImagesResponse = await this.requestData(state, buffers.annotationsIdx.get())
 
 		const wsimages: WSImage[] = data.sampleWSImages
 
@@ -89,25 +91,12 @@ export default class WSIViewer extends RxComponentInner {
 
 		const zoomInPoints = wsimages[settings.displayedImageIndex].zoomInPoints
 
-		const buffers = {
-			annotations: new Buffer<number>(annotationIndex)
-		}
-
-		new WSImageRenderer(holder, viewModel.viewData, buffers)
+		new WSImageRenderer(holder, viewModel.viewData, buffers, this.wsiViewerInteractions, activeImageExtent, map)
 
 		if (zoomInPoints != undefined) {
 			this.wsiViewerInteractions.addZoomInEffect(activeImageExtent, zoomInPoints, map)
 
-			this.addMapKeyDownListener(
-				holder,
-				annotationIndex,
-				state,
-				map,
-				settings,
-				activeImageExtent,
-				viewModel.viewData.shortcuts,
-				buffers
-			)
+			this.addMapKeyDownListener(holder, state, map, settings, activeImageExtent, viewModel.viewData.shortcuts, buffers)
 		}
 
 		this.addControls(map, activeImage, hasOverlay)
@@ -400,7 +389,6 @@ export default class WSIViewer extends RxComponentInner {
 
 	private addMapKeyDownListener(
 		holder: any,
-		index: any,
 		state: any,
 		map: OLMap,
 		settings: Settings,
@@ -412,7 +400,7 @@ export default class WSIViewer extends RxComponentInner {
 		const image = holder.select('div > .ol-viewport').attr('tabindex', 0)
 
 		//To scroll to next annotation, hold the space bar and press left/right arrows
-		let currentIndex = index
+		let currentIndex = buffers.annotationsIdx.get()
 		let isSpaceDown = false
 
 		image.on('keydown', async (event: KeyboardEvent) => {
@@ -436,8 +424,8 @@ export default class WSIViewer extends RxComponentInner {
 					//When the index changes, scroll to the new annotation
 					//Timeout for when user presses arrows multiple times.
 					const d = debounce(async () => {
-						buffers.annotations.set(currentIndex)
-						const newData: SampleWSImagesResponse = await this.requestData(state, currentIndex)
+						buffers.annotationsIdx.set(currentIndex)
+						const newData: SampleWSImagesResponse = await this.requestData(state, buffers.annotationsIdx.get())
 						const newZoomInPoints = newData.sampleWSImages[settings.displayedImageIndex].zoomInPoints
 						if (newZoomInPoints != undefined)
 							this.wsiViewerInteractions.addZoomInEffect(activeImageExtent, newZoomInPoints, map)
@@ -451,7 +439,7 @@ export default class WSIViewer extends RxComponentInner {
 					//I'd rather come up with an id since
 					//the index provided and the index used are
 					//not the same.
-					index: currentIndex,
+					index: buffers.annotationsIdx.get(),
 					confirmed: event.code === 'Enter',
 					class: event.code === 'Enter' ? null : event.code.replace('Digit', '')
 				}
