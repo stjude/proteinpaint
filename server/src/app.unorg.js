@@ -432,7 +432,7 @@ function handle_mdscnv(req, res) {
 
 	///////////////// getting all cnv from view range
 
-	if (!req.query.rglst) return res.send({ error: 'rglst missing' })
+	if (!utils.hasValidRglst(req.query, res)) return
 	if (!req.query.gain) return res.send({ error: '.gain missing' })
 	if (!req.query.loss) return res.send({ error: '.loss missing' })
 
@@ -785,6 +785,8 @@ async function handle_mdssvcnv(req, res) {
     */
 	let gn, ds, dsquery
 
+	if (!utils.hasValidRglst(req.query, res)) return
+
 	if (req.query.iscustom) {
 		// is custom track
 		if (req.query.file) {
@@ -869,8 +871,6 @@ async function handle_mdssvcnv(req, res) {
 	///////////////// exits that require dsquery (svcnv)
 	if (req.query.getexpression4gene) return mdssvcnv_exit_getexpression4gene(req, res, gn, ds, dsquery)
 	if (req.query.ifsamplehasvcf) return mdssvcnv_exit_ifsamplehasvcf(req, res, gn, ds, dsquery)
-
-	if (!req.query.rglst) return res.send({ error: 'rglst missing' })
 
 	if (dsquery.viewrangeupperlimit) {
 		// hard limit from official dataset
@@ -2179,6 +2179,7 @@ bad repetition
 	const variants = []
 
 	const tasks = []
+	// utils.hasValidRglst() was aleady called in the route handler that calls this function
 	for (const r of req.query.rglst) {
 		const task = new Promise((resolve, reject) => {
 			const ps = spawn(tabix, [
@@ -2358,6 +2359,7 @@ function handle_mdssvcnv_cnv(ds, dsquery, req, hiddendt, hiddensampleattr, hidde
 
 	const tasks = []
 
+	// utils.hasValidRglst() was aleady called in the route handler that calls this function
 	for (const r of req.query.rglst) {
 		const task = new Promise((resolve, reject) => {
 			const data = []
@@ -3614,7 +3616,8 @@ function handle_mdsexpressionrank(req, res) {
 
 	Promise.resolve()
 		.then(() => {
-			if (!req.query.rglst) throw 'rglst missing'
+			if (!utils.hasValidRglst(req.query, res)) return
+
 			if (req.query.rglst.reduce((i, j) => i + j.stop - j.start, 0) > 10000000)
 				throw 'Zoom in below 10 Mb to show expression rank'
 			if (!req.query.sample) throw 'sample missing'
