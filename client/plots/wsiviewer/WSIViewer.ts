@@ -400,10 +400,11 @@ export default class WSIViewer extends RxComponentInner {
 		const image = holder.select('div > .ol-viewport').attr('tabindex', 0)
 
 		//To scroll to next annotation, hold the space bar and press left/right arrows
-		let currentIndex = buffers.annotationsIdx.get()
 		let isSpaceDown = false
 
 		image.on('keydown', async (event: KeyboardEvent) => {
+			let currentIndex = buffers.annotationsIdx.get()
+
 			if (event.code === 'Space') {
 				isSpaceDown = true
 			}
