@@ -167,10 +167,11 @@ async function do_query(req, genomes) {
 		if (Number.isNaN(req.query.bplengthUpperLimit)) throw 'bplengthUpperLimit not number'
 	}
 
-	if (!req.query.rglst) throw 'no rglst[]'
-	//req.query.rglst = JSON.parse(req.query.rglst)
-	if (!Array.isArray(req.query.rglst)) throw 'rglst is not an array'
-	if (req.query.rglst.length == 0) throw 'empty rglst'
+	if (!req.query.genome) throw 'genome missing'
+	const genomeobj = genomes[req.query.genome]
+	if (!genomeobj) throw 'invalid genome'
+
+	utils.validateRglst(req.query, genomeobj)
 	for (const r of req.query.rglst) {
 		// TODO validate regions
 		if (r.reverse) {
@@ -343,12 +344,6 @@ async function do_query(req, genomes) {
 
 	const bpcount = req.query.rglst.reduce((a, b) => a + b.stop - b.start, 0)
 	const maytranslate = req.query.translatecoding && bpcount < width * 3
-	let genomeobj
-	if (maytranslate) {
-		if (!req.query.genome) throw 'genome missing for translating genes'
-		genomeobj = genomes[req.query.genome]
-		if (!genomeobj) throw 'invalid genome'
-	}
 	const translateitem = []
 	const canvas = createCanvas(10, 10) // for measuring text only
 	let ctx = canvas.getContext('2d')

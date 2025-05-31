@@ -20,11 +20,8 @@ export default async function (req, res) {
 		if (!Number.isInteger(regionspace)) throw 'regionspace is not integer'
 		// width could be float!!
 		if (!Number.isFinite(width)) throw 'width is not a number'
-		const rglst = typeof req.query.rglst == 'string' ? JSON.parse(req.query.rglst) : req.query.rglst
-		if (!rglst) throw 'no rglst[]'
-		if (!Array.isArray(rglst)) throw 'rglst is not an array'
-		if (rglst.length == 0) throw 'empty rglst'
-		for (const r of rglst) {
+		utils.validateRglst(req.query)
+		for (const r of req.query.rglst) {
 			if (r.reverse) {
 				r.scale = p => Math.ceil((r.width * (r.stop - p)) / (r.stop - r.start))
 			} else {
@@ -37,7 +34,7 @@ export default async function (req, res) {
 			dir = await utils.cache_index(tkfile, req.query.indexURL)
 		}
 
-		for (const r of rglst) {
+		for (const r of req.query.rglst) {
 			r.items = []
 			let errlinecount = 0
 			await utils.get_lines_bigfile({
@@ -60,7 +57,7 @@ export default async function (req, res) {
 
 		const height = allheight + midpad + fineheight
 		const canvas = createCanvas(width, height)
-		const itemcount = rglst.reduce((i, j) => i + j.items.length, 0)
+		const itemcount = req.query.rglst.reduce((i, j) => i + j.items.length, 0)
 		const ctx = canvas.getContext('2d')
 		if (itemcount == 0) {
 			// no data
@@ -76,7 +73,7 @@ export default async function (req, res) {
 		if (!usegrade) {
 			// get all grades
 			const gradeset = new Set()
-			for (const r of rglst) {
+			for (const r of req.query.rglst) {
 				for (const i of r.items) {
 					for (const k in i.data) {
 						gradeset.add(k)
@@ -93,7 +90,7 @@ export default async function (req, res) {
 			}
 		}
 		let allmax = 0
-		for (const r of rglst) {
+		for (const r of req.query.rglst) {
 			for (const i of r.items) {
 				if (i.data[usegrade]) {
 					let sum = 0
@@ -108,7 +105,7 @@ export default async function (req, res) {
 		let x = 0
 		const allhsf = allheight / allmax
 		const allhsf2 = fineheight / fineymax
-		for (const r of rglst) {
+		for (const r of req.query.rglst) {
 			const bpwidth = r.width / (r.stop - r.start)
 			for (const item of r.items) {
 				const ntd = item.data[usegrade]

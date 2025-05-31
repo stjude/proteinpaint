@@ -921,8 +921,7 @@ export async function snvindelByRangeGetter_bcfMaf(ds, genome) {
 			{ <formatKey> : set of hidden values }
 	*/
 	return async param => {
-		if (!Array.isArray(param.rglst)) throw 'q.rglst[] is not array'
-		if (param.rglst.length == 0) throw 'q.rglst[] blank array'
+		utils.validateRglst(param, genome)
 		const formatFilter = getFormatFilter(param)
 
 		let bcfpath = q._tk.file
@@ -1202,8 +1201,7 @@ export async function snvindelByRangeGetter_bcf(ds, genome) {
 			{ <formatKey> : set of hidden values }
 	*/
 	return async param => {
-		if (!Array.isArray(param.rglst)) throw 'q.rglst[] is not array'
-		if (param.rglst.length == 0) throw 'q.rglst[] blank array'
+		utils.validateRglst(param, genome)
 
 		const formatFilter = getFormatFilter(param)
 
@@ -1725,8 +1723,7 @@ async function validate_query_probe2cnv(ds, genome) {
 	format attributes are not used since this file does not supply format values for events (unlike cnv segment file in bed-json)
 	*/
 	q.get = async param => {
-		if (!Array.isArray(param.rglst)) throw 'q.rglst[] is not array'
-		if (param.rglst.length == 0) throw 'q.rglst[] blank array'
+		utils.validateRglst(param, genome)
 		if (param.cnvGainCutoff && !Number.isFinite(param.cnvGainCutoff)) throw 'cnvGainCutoff is not finite'
 		if (param.cnvLossCutoff && !Number.isFinite(param.cnvLossCutoff)) throw 'cnvLossCutoff is not finite'
 
@@ -2059,8 +2056,7 @@ export async function svfusionByRangeGetter_file(ds, genome) {
 
 	// same parameter as snvindel.byrange.get()
 	return async param => {
-		if (!Array.isArray(param.rglst)) throw 'q.rglst[] is not array'
-		if (param.rglst.length == 0) throw 'q.rglst[] blank array'
+		utils.validateRglst(param, genome)
 
 		const formatFilter = getFormatFilter(param)
 
@@ -2236,8 +2232,7 @@ export async function svfusionByRangeGetter_file(ds, genome) {
 export async function svfusionByNameGetter_file(ds, genome) {
 	const q = ds.queries.svfusion.byname
 	return async param => {
-		if (!Array.isArray(param.rglst)) throw 'q.rglst[] is not array'
-		if (param.rglst.length == 0) throw 'q.rglst[] blank array'
+		utils.validateRglst(param, genome)
 
 		const formatFilter = getFormatFilter(param)
 
@@ -2438,8 +2433,7 @@ async function addCnvGetter(ds, genome) {
 	cnvLossCutoff: float
 	*/
 	return async param => {
-		if (!Array.isArray(param.rglst)) throw 'q.rglst[] is not array'
-		if (param.rglst.length == 0) throw 'q.rglst[] blank array'
+		utils.validateRglst(param, genome)
 		if (param.cnvMaxLength && !Number.isInteger(param.cnvMaxLength)) throw 'cnvMaxLength is not integer' // cutoff<=0 is ignored
 		if (param.cnvGainCutoff && !Number.isFinite(param.cnvGainCutoff)) throw 'cnvGainCutoff is not finite'
 		if (param.cnvLossCutoff && !Number.isFinite(param.cnvLossCutoff)) throw 'cnvLossCutoff is not finite'

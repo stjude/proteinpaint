@@ -64,9 +64,6 @@ import { request_closure as blat_request_closure } from './blat.js'
 import { mds3_request_closure } from './mds3.load.js'
 import { handle_mdssvcnv_expression } from './handle_mdssvcnv_expression.js'
 import { server_updateAttr } from './dsUpdateAttr.js'
-import * as mds2_init from './mds2.init.js'
-import * as mds3_init from './mds3.init.js'
-import * as mds2_load from './mds2.load.js'
 import * as massSession from './massSession.js'
 import * as singlecell from './singlecell.js'
 import * as fimo from './fimo.js'
@@ -129,12 +126,9 @@ export function setRoutes(app, _genomes, serverconfig) {
 	app.post(basepath + '/mdsjunction', mdsjunction_request_closure(genomes))
 	app.post(basepath + '/mdssvcnv', handle_mdssvcnv)
 	app.post(basepath + '/mdsgenecount', handle_mdsgenecount)
-	app.post(basepath + '/mds2', mds2_load.handle_request(genomes))
 	app.post(basepath + '/mdsexpressionrank', handle_mdsexpressionrank) // expression rank as a browser track
 	app.post(basepath + '/mdsgeneboxplot', mdsgeneboxplot_closure(genomes))
 	app.post(basepath + '/mdsgenevalueonesample', handle_mdsgenevalueonesample)
-
-	app.post(basepath + '/vcf', handle_vcf) // for old ds/vcf and old junction
 
 	app.get(basepath + '/vcfheader', handle_vcfheader)
 	app.get(basepath + '/bcfheader', handle_bcfheader)
@@ -5119,28 +5113,6 @@ async function handle_bcfheader(req, res) {
 		})
 	} catch (e) {
 		if (e.stack) console.error(e.stack)
-		res.send({ error: e.message || e })
-	}
-}
-
-async function handle_vcf(req, res) {
-	// single vcf
-	try {
-		const [e, file, isurl] = utils.fileurl(req)
-		if (e) throw e
-		const dir = isurl ? await utils.cache_index(file, req.query.indexURL) : null
-		if (!req.query.rglst) throw 'rglst missing'
-		const lines = []
-		for (const r of req.query.rglst) {
-			await utils.get_lines_bigfile({
-				args: [file, r.chr + ':' + r.start + '-' + r.stop],
-				dir,
-				callback: line => lines.push(line)
-			})
-		}
-		res.send({ linestr: lines.join('\n') })
-	} catch (e) {
-		if (e.stack) console.log(e.stack)
 		res.send({ error: e.message || e })
 	}
 }
