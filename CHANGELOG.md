@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Fixes:
+- Added logic to remove duplicate MAF files for the same case and report them to console.log and to the user
+- Added reporting of files that have been excluded due to file size to console.log and to the user
+- Added top genes table in addition to GRIN2 plot. Genes table is filtered by p-value
+- Added initial UI elements for CNV options
+- Added somatic filterinng options for MAF files in UI and payload information
+
+
 ## 2.129.1
 
 Fixes:
