@@ -34,7 +34,7 @@ async function loadTk(req, genome) {
 		dir = await utils.cache_index(tkfile, req.query.indexURL)
 	}
 
-	if (!req.query.rglst) throw 'rglst missing'
+	utils.validateRglst(req.query, genome)
 	const nochr = await utils.tabix_is_nochr(tkfile, dir, genome)
 
 	const connheight = req.query.connheight || 50

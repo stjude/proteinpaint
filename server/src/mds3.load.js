@@ -1,4 +1,4 @@
-import { mayCopyFromCookie, fileurl } from './utils'
+import { mayCopyFromCookie, fileurl, validateRglst } from './utils'
 import { snvindelByRangeGetter_bcf } from './mds3.init'
 import { validate_variant2samples } from './mds3.variant2samples.js'
 import { dtcnv, mclasscnvgain, mclasscnvAmp, mclasscnvloss, mclasscnvHomozygousDel } from '#shared/common.js'
@@ -67,6 +67,10 @@ function init_q(req, genome) {
 		query.hiddenmclass = new Set(JSON.parse(query.hiddenmclasslst))
 		delete query.hiddenmclasslst
 		// this filter set is passed to actual data querying method, after class is set for each item, will check it to decide if to drop
+	}
+	if (query.rglst) {
+		// only some queries use rglst
+		validateRglst(query, genome)
 	}
 	return query
 }

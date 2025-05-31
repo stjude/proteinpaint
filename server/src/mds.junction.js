@@ -49,8 +49,8 @@ const infoFilter_unannotated = 'Unannotated'
 export function mdsjunction_request_closure(genomes) {
 	return async (req, res) => {
 		try {
-			const [q, ds, dsquery] = await get_q(req, genomes)
-			const data = await do_query(q, ds, dsquery)
+			const [q, ds, dsquery, gn] = await get_q(req, genomes)
+			const data = await do_query(q, ds, dsquery, gn)
 			res.send(data)
 		} catch (e) {
 			if (e.stack) console.log(e.stack)
@@ -94,10 +94,10 @@ async function get_q(req, genomes) {
 		dsquery = ds.queries[q.querykey]
 		if (!dsquery) throw 'invalid querykey'
 	}
-	return [q, ds, dsquery]
+	return [q, ds, dsquery, gn]
 }
 
-async function do_query(q, ds, dsquery) {
+async function do_query(q, ds, dsquery, gn) {
 	if (q.junction) {
 		// details about a clicked junction
 		return await get_singlejunction(q, ds, dsquery)
@@ -124,7 +124,7 @@ async function do_query(q, ds, dsquery) {
 		}
 	}
 
-	if (!q.rglst) throw 'rglst missing'
+	utils.validateRglst(q, gn)
 
 	if (dsquery.viewrangeupperlimit) {
 		const len = q.rglst.reduce((i, j) => i + j.stop - j.start, 0)

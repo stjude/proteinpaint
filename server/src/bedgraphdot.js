@@ -27,7 +27,7 @@ export default function (genomes) {
 
 			const nochr = await utils.tabix_is_nochr(q.file || q.url, dir, gn)
 
-			const result = await run_request(q, dir, nochr)
+			const result = await run_request(q, dir, nochr, gn)
 
 			res.send(result)
 		} catch (e) {
@@ -37,8 +37,9 @@ export default function (genomes) {
 	}
 }
 
-async function run_request(q, dir, nochr) {
+async function run_request(q, dir, nochr, gn) {
 	const result = { rglst: [] }
+	utils.validateRglst(q, gn)
 
 	let minv = 0,
 		maxv = 0

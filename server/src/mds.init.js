@@ -6,7 +6,6 @@ import serverconfig from './serverconfig.js'
 import * as common from '#shared/common.js'
 import * as vcf from '#shared/vcf.js'
 import { parse_textfilewithheader } from './parse_textfilewithheader.js'
-import * as mds2_init from './mds2.init.js'
 import { server_updateAttr } from './dsUpdateAttr'
 
 const tabix = serverconfig.tabix
@@ -117,10 +116,6 @@ export async function mds_init(ds, genome, rawds) {
 			}
 		}
 		console.log(count + ' samples for disco plot')
-	}
-
-	if (ds.cohort && ds.cohort.db && ds.cohort.termdb) {
-		await mds2_init.init_db(ds, app, basepath)
 	}
 
 	if (ds.cohort && ds.cohort.files) {
@@ -524,10 +519,6 @@ export async function mds_init(ds, genome, rawds) {
 				throw 'unknown type of query from ' + querykey
 			}
 		}
-	}
-
-	if (ds.track) {
-		await mds2_init.init_track(ds, genome)
 	}
 
 	if (ds.annotationsampleset2matrix) {
