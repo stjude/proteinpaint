@@ -127,7 +127,6 @@ export function setRoutes(app, _genomes, serverconfig) {
 	app.post(basepath + '/urltextfile', handle_urltextfile)
 	app.get(basepath + '/junction', junction_request) // legacy, including rnapeg
 	app.post(basepath + '/mdsjunction', mdsjunction_request_closure(genomes))
-	app.post(basepath + '/mdscnv', handle_mdscnv)
 	app.post(basepath + '/mdssvcnv', handle_mdssvcnv)
 	app.post(basepath + '/mdsgenecount', handle_mdsgenecount)
 	app.post(basepath + '/mds2', mds2_load.handle_request(genomes))
@@ -411,314 +410,6 @@ function mds_query_arg_check(q) {
 	return [null, g, ds, query]
 }
 
-function handle_mdscnv(req, res) {
-	/*
-    get all cnv in view range, make stats for:
-    	- sample annotation
-
-
-    ****** filter attributes (added by addFilterToLoadParam)
-
-    .cohortHiddenAttr (for dropping sample by annotation)
-    	.key
-    		.value
-
-
-    ******* routes
-
-    */
-	const [err, gn, ds, dsquery] = mds_query_arg_check(req.query)
-	if (err) return res.send({ error: err })
-
-	///////////////// getting all cnv from view range
-
-	if (!utils.hasValidRglst(req.query, res)) return
-	if (!req.query.gain) return res.send({ error: '.gain missing' })
-	if (!req.query.loss) return res.send({ error: '.loss missing' })
-
-	if (dsquery.viewrangeupperlimit) {
-		const len = req.query.rglst.reduce((i, j) => i + j.stop - j.start, 0)
-		if (len >= dsquery.viewrangeupperlimit) {
-			return res.send({ error: 'zoom in under ' + common.bplen(dsquery.viewrangeupperlimit) + ' to view details' })
-		}
-	}
-
-	if (req.query.permanentHierarchy) {
-		const err = mds_tkquery_parse_permanentHierarchy(req.query, ds)
-		if (err) return res.send({ error: 'permanentHierarchy error: ' + err })
-	}
-
-	const tasks = []
-
-	// cnv event number in view range, and samples, gain/loss separately
-	const gain = {
-		count: 0, // number of lines
-		samples: new Set()
-	}
-	const loss = {
-		count: 0,
-		samples: new Set()
-	}
-
-	for (const r of req.query.rglst) {
-		const task = new Promise((resolve, reject) => {
-			const ps = spawn(
-				tabix,
-				[
-					dsquery.file ? path.join(serverconfig.tpmasterdir, dsquery.file) : dsquery.url,
-					r.chr + ':' + r.start + '-' + r.stop
-				],
-				{ cwd: dsquery.usedir }
-			)
-			const rl = readline.createInterface({
-				input: ps.stdout
-			})
-
-			/* r.width (# of pixels) is number of bins in this region
-            bin resolution is # of bp per bin
-            */
-			const binresolution = (r.stop - r.start) / r.width
-
-			// cumulative value per pixel, for this region
-			const regioncumv = []
-			for (let i = 0; i < r.width; i++) {
-				regioncumv.push({ positive: 0, negative: 0 })
-			}
-
-			rl.on('line', line => {
-				const l = line.split('\t')
-				const start0 = Number.parseInt(l[1])
-				const stop0 = Number.parseInt(l[2])
-
-				if (req.query.bplengthUpperLimit) {
-					if (stop0 - start0 > req.query.bplengthUpperLimit) {
-						return
-					}
-				}
-
-				const j = JSON.parse(l[3])
-
-				if (req.query.valueCutoff) {
-					if (Math.abs(j.value) < req.query.valueCutoff) {
-						return
-					}
-				}
-
-				if (j.sample && ds.cohort && ds.cohort.annotation) {
-					// may apply sample annotation filtering
-					const anno = ds.cohort.annotation[j.sample]
-					if (!anno) {
-						// this sample has no annotation at all, since it's doing filtering, will drop it
-						return
-					}
-
-					if (req.query.cohortOnlyAttr && ds.cohort && ds.cohort.annotation) {
-						/*
-                        from subtrack, will only use samples for one attribute (from hierarchies)
-                        cannot refer ds.cohort.attributes
-                        */
-						let keep = false // if match with any in cohortOnlyAttr, will keep the sample
-						for (const attrkey in req.query.cohortOnlyAttr) {
-							const value = anno[attrkey]
-							if (value && req.query.cohortOnlyAttr[attrkey][value]) {
-								keep = true
-								break
-							}
-						}
-						if (!keep) {
-							return
-						}
-					}
-
-					if (req.query.cohortHiddenAttr && ds.cohort.attributes) {
-						let hidden = false
-
-						for (const attrkey in req.query.cohortHiddenAttr) {
-							// this attribute in registry, so to be able to tell if it's numeric
-							const attr = ds.cohort.attributes.lst.find(i => i.key == attrkey)
-
-							if (attr.isNumeric) {
-								//continue
-							}
-
-							// categorical
-							const value = anno[attrkey]
-							if (value) {
-								// this sample has annotation for this attrkey
-								if (req.query.cohortHiddenAttr[attrkey][value]) {
-									hidden = true
-									break
-								}
-							} else {
-								// this sample has no value for attrkey
-								if (req.query.cohortHiddenAttr[attrkey][infoFilter_unannotated]) {
-									// to drop unannotated ones
-									hidden = true
-									break
-								}
-							}
-						}
-						if (hidden) {
-							// this sample has a hidden value for an attribute, skip
-							return
-						}
-					}
-				}
-				// this item is acceptable
-				if (j.value > 0) {
-					gain.count++
-					gain.samples.add(j.sample)
-				} else if (j.value < 0) {
-					loss.count++
-					loss.samples.add(j.sample)
-				}
-
-				// accumulate
-				const start = Math.max(r.start, start0)
-				const stop = Math.min(r.stop, stop0)
-
-				let startidx, stopidx
-				if (r.reverse) {
-					startidx = Math.floor((r.stop - stop) / binresolution)
-					stopidx = Math.floor((r.stop - start) / binresolution)
-				} else {
-					startidx = Math.floor((start - r.start) / binresolution)
-					stopidx = Math.floor((stop - r.start) / binresolution)
-				}
-				for (let i = startidx; i < stopidx; i++) {
-					if (j.value > 0) {
-						//regioncumv[i].positive += j.value
-						regioncumv[i].positive++
-					} else if (j.value < 0) {
-						//regioncumv[i].negative += -j.value
-						regioncumv[i].negative++
-					}
-				}
-			})
-
-			const errout = []
-			ps.stderr.on('data', i => errout.push(i))
-			ps.on('close', code => {
-				const e = errout.join('')
-				if (e && !tabixnoterror(e)) {
-					reject(e)
-					return
-				}
-				resolve(regioncumv)
-			})
-		})
-		tasks.push(task)
-	}
-
-	Promise.all(tasks)
-		.then(data => {
-			// canvas width
-			const width = req.query.rglst.reduce((i, j) => i + j.width + req.query.regionspace, 0) - req.query.regionspace
-			const canvas = createCanvas(width, req.query.gain.barheight + req.query.loss.barheight)
-			const ctx = canvas.getContext('2d')
-
-			const result = {
-				gain: {
-					count: gain.count,
-					samplenumber: gain.samples.size
-				},
-				loss: {
-					count: loss.count,
-					samplenumber: loss.samples.size
-				},
-				maxvalue: 0 // max cumulative cnv value, shared for both negative & positive
-			}
-
-			if (gain.count + loss.count == 0) {
-				// no data
-				ctx.font = '15px Arial'
-				ctx.fillStyle = '#aaa'
-				ctx.textAlign = 'center'
-				ctx.textBaseline = 'middle'
-				ctx.fillText('No data in view range', width / 2, req.query.gain.barheight)
-				result.src = canvas.toDataURL()
-				res.send(result)
-				return
-			}
-
-			for (const r of data) {
-				for (const c of r) {
-					result.maxvalue = Math.max(result.maxvalue, c.positive, c.negative)
-				}
-			}
-
-			const maxvalue = req.query.maxvalue || result.maxvalue
-
-			// render
-			let x = 0
-			for (const regioncumv of data) {
-				for (const c of regioncumv) {
-					if (c.positive) {
-						ctx.fillStyle = req.query.gain.color || '#67a9cf'
-						const h = Math.ceil((req.query.gain.barheight * Math.min(maxvalue, c.positive)) / maxvalue)
-						const y = req.query.gain.barheight - h
-						ctx.fillRect(x, y, 1, h)
-					}
-					if (c.negative) {
-						ctx.fillStyle = req.query.loss.color || '#ef8a62'
-						const h = Math.ceil((req.query.loss.barheight * Math.min(maxvalue, c.negative)) / maxvalue)
-						const y = req.query.gain.barheight
-						ctx.fillRect(x, y, 1, h)
-					}
-					x++
-				}
-				x += req.query.regionspace
-			}
-
-			result.src = canvas.toDataURL()
-
-			/* annotation summary
-		must pool gain & loss samples together for annotation summary
-		*/
-			if (gain.samples.size || loss.samples.size) {
-				const allsamples = new Set([...gain.samples, ...loss.samples])
-				const [attributeSummary, hierarchySummary] = mds_tkquery_samplesummary(ds, dsquery, [...allsamples])
-				if (attributeSummary) {
-					for (const attr of attributeSummary) {
-						for (const value of attr.values) {
-							value.gain = 0
-							value.loss = 0
-							for (const samplename of value.sampleset) {
-								if (gain.samples.has(samplename)) value.gain++
-								if (loss.samples.has(samplename)) value.loss++
-							}
-							delete value.sampleset
-						}
-					}
-					result.attributeSummary = attributeSummary
-				}
-				if (hierarchySummary) {
-					for (const k in hierarchySummary) {
-						for (const node of hierarchySummary[k]) {
-							if (!node.sampleset) continue
-							node.gain = 0
-							node.loss = 0
-							for (const samplename of node.sampleset) {
-								if (gain.samples.has(samplename)) node.gain++
-								if (loss.samples.has(samplename)) node.loss++
-							}
-						}
-					}
-					result.hierarchySummary = hierarchySummary
-				}
-			}
-
-			res.send(result)
-		})
-		.catch(err => {
-			res.send({ error: err })
-			if (err.stack) {
-				// debug
-				console.error(err.stack)
-			}
-		})
-}
-
 async function handle_mdsgenecount(req, res) {
 	try {
 		const genome = genomes[req.query.genome]
@@ -783,283 +474,287 @@ async function handle_mdssvcnv(req, res) {
     .showonlycnvwithsv
 
     */
-	let gn, ds, dsquery
+	try {
+		const gn = genomes[req.query.genome]
+		if (!gn) throw 'invalid genome'
 
-	if (!utils.hasValidRglst(req.query, res)) return
-
-	if (req.query.iscustom) {
-		// is custom track
-		if (req.query.file) {
-			if (utils.illegalpath(req.query.file, false, false)) return res.send({ error: 'invalid svcnv file' })
-		}
-		gn = genomes[req.query.genome]
-		if (!gn) return res.send({ error: 'invalid genome' })
-
-		// in ase by vcf and rnabam mode, svcnv file is optional
-		//if(!req.query.file && !req.query.url) return res.send({error:'no file or url for svcnv track'})
-
-		ds = {}
-		dsquery = {
-			iscustom: 1,
-			file: req.query.file,
-			url: req.query.url,
-			indexURL: req.query.indexURL,
-			allow_getallsamples: true
+		if (req.query.rglst) {
+			// only validate if present; not every query has rglst param
+			utils.validateRglst(req.query, gn)
 		}
 
-		if (req.query.checkexpressionrank) {
-			if (!req.query.checkexpressionrank.file && !req.query.checkexpressionrank.url)
-				return res.send({ error: 'no file or url for checkexpressionrank' })
-			if (req.query.checkexpressionrank.file) {
-				if (utils.illegalpath(req.query.checkexpressionrank.file, false, false))
-					return res.send({ error: 'invalid expression file' })
+		let ds, dsquery
+
+		if (req.query.iscustom) {
+			// is custom track
+			if (req.query.file) {
+				if (utils.illegalpath(req.query.file, false, false)) throw 'invalid svcnv file'
+				await utils.file_is_readable(path.join(serverconfig.tpmasterdir, req.query.file))
 			}
-			dsquery.checkexpressionrank = {
-				file: req.query.checkexpressionrank.file,
-				url: req.query.checkexpressionrank.url,
-				indexURL: req.query.checkexpressionrank.indexURL
+
+			// in ase by vcf and rnabam mode, svcnv file is optional
+			//if(!req.query.file && !req.query.url) return res.send({error:'no file or url for svcnv track'})
+
+			ds = {}
+			dsquery = {
+				iscustom: 1,
+				file: req.query.file,
+				url: req.query.url,
+				indexURL: req.query.indexURL,
+				allow_getallsamples: true
 			}
-		}
 
-		if (req.query.checkvcf) {
-			let vcf
-			try {
-				vcf = JSON.parse(req.query.checkvcf)
-			} catch (e) {
-				return res.send({ error: 'invalid JSON for VCF object' })
+			if (req.query.checkexpressionrank) {
+				if (!req.query.checkexpressionrank.file && !req.query.checkexpressionrank.url)
+					throw 'no file or url for checkexpressionrank'
+				if (req.query.checkexpressionrank.file) {
+					if (utils.illegalpath(req.query.checkexpressionrank.file, false, false)) throw 'invalid expression file'
+					await utils.file_is_readable(path.join(serverconfig.tpmasterdir, req.query.checkexpressionrank.file))
+				}
+				dsquery.checkexpressionrank = {
+					file: req.query.checkexpressionrank.file,
+					url: req.query.checkexpressionrank.url,
+					indexURL: req.query.checkexpressionrank.indexURL
+				}
 			}
-			if (!vcf.file && !vcf.url) return res.send({ error: 'no file or url for custom VCF track' })
-			if (vcf.file) {
-				if (utils.illegalpath(vcf.file, false, false)) return res.send({ error: 'invalid vcf file' })
+
+			if (req.query.checkvcf) {
+				const vcf = JSON.parse(req.query.checkvcf)
+				if (!vcf.file && !vcf.url) throw 'no file or url for custom VCF track'
+				if (vcf.file) {
+					if (utils.illegalpath(vcf.file, false, false)) throw 'invalid vcf file'
+					await utils.file_is_readable(path.join(serverconfig.tpmasterdir, vcf.file))
+				}
+				vcf.type = common.mdsvcftype.vcf
+				dsquery.checkvcf = {
+					info: vcf.info,
+					tracks: [vcf]
+				}
 			}
-			vcf.type = common.mdsvcftype.vcf
-			dsquery.checkvcf = {
-				info: vcf.info,
-				tracks: [vcf]
+
+			if (req.query.checkrnabam) {
+				if (!req.query.checkrnabam.samples) throw 'samples{} missing from checkrnabam'
+				let n = 0
+				for (const k in req.query.checkrnabam.samples) n++
+				if (n > 13) throw 'no more than 13 BAM files allowed'
+				const e = ase_testarg(req.query.checkrnabam)
+				if (e) throw e
+				dsquery.checkrnabam = req.query.checkrnabam
 			}
-		}
-
-		if (req.query.checkrnabam) {
-			if (!req.query.checkrnabam.samples) return res.send({ error: 'samples{} missing from checkrnabam' })
-			let n = 0
-			for (const k in req.query.checkrnabam.samples) n++
-			if (n > 13) return res.send({ error: 'no more than 13 BAM files allowed' })
-			const e = ase_testarg(req.query.checkrnabam)
-			if (e) return res.send({ error: e })
-			dsquery.checkrnabam = req.query.checkrnabam
-		}
-	} else {
-		// is native track
-
-		gn = genomes[req.query.genome]
-		if (!gn) return res.send({ error: 'invalid genome' })
-		if (!gn.datasets) return res.send({ error: 'genome is not equipped with datasets' })
-		ds = gn.datasets[req.query.dslabel]
-		if (!ds) return res.send({ error: 'invalid dslabel' })
-
-		//////////// exits that only requires ds but not dsquery
-		if (req.query.getsample4disco) return mdssvcnv_exit_getsample4disco(req, res, gn, ds)
-		if (req.query.gettrack4singlesample) return mdssvcnv_exit_gettrack4singlesample(req, res, ds)
-		if (req.query.findsamplename) return mdssvcnv_exit_findsamplename(req, res, ds)
-		if (req.query.assaymap) return mdssvcnv_exit_assaymap(req, res, ds)
-
-		if (!ds.queries) return res.send({ error: 'dataset is not equipped with queries' })
-		dsquery = ds.queries[req.query.querykey]
-		if (!dsquery) return res.send({ error: 'invalid querykey' })
-	}
-
-	///////////////// exits that require dsquery (svcnv)
-	if (req.query.getexpression4gene) return mdssvcnv_exit_getexpression4gene(req, res, gn, ds, dsquery)
-	if (req.query.ifsamplehasvcf) return mdssvcnv_exit_ifsamplehasvcf(req, res, gn, ds, dsquery)
-
-	if (dsquery.viewrangeupperlimit) {
-		// hard limit from official dataset
-		const len = req.query.rglst.reduce((i, j) => i + j.stop - j.start, 0)
-		if (len >= dsquery.viewrangeupperlimit) {
-			return res.send({ error: 'zoom in under ' + common.bplen(dsquery.viewrangeupperlimit) + ' to view details' })
-		}
-	}
-
-	/*******
-    TODO rewrite: helper func return {} attached with all possible filters
-    ***/
-
-	// single or multi: hidden dt, for cnv/loh/sv/fusion/itd, all from one file
-	let hiddendt
-	if (req.query.hiddendt) {
-		hiddendt = new Set(req.query.hiddendt)
-	}
-
-	/*
-    multi: mutation attributes selected to be hidden from client
-    terms defined in ds.mutationAttribute
-    */
-	let hiddenmattr
-	if (req.query.hiddenmattr) {
-		hiddenmattr = {}
-		for (const key in req.query.hiddenmattr) {
-			hiddenmattr[key] = new Set(req.query.hiddenmattr[key])
-		}
-	}
-
-	/*
-    multi: vcf info field allele-level
-    */
-	let filteralleleattr
-	if (req.query.filteralleleattr) {
-		filteralleleattr = {}
-		for (const key in req.query.filteralleleattr) {
-			const v = req.query.filteralleleattr[key]
-			if (v.cutoffvalue != undefined) {
-				// numeric
-				filteralleleattr[key] = v
-			} else {
-				// categorical
-				filteralleleattr[key] = v
-			}
-		}
-	}
-	/*
-    multi: vcf info field locus-level
-    */
-	let filterlocusattr
-	if (req.query.filterlocusattr) {
-		filterlocusattr = {}
-		for (const key in req.query.filterlocusattr) {
-			const v = req.query.filterlocusattr[key]
-			if (v.cutoffvalue != undefined) {
-				// numeric
-				filterlocusattr[key] = v
-			} else {
-				// categorical
-				filterlocusattr[key] = v
-			}
-		}
-	}
-
-	let filter_sampleset
-	if (req.query.sampleset) {
-		const set = new Set()
-		const sample2group = new Map()
-		for (const i of req.query.sampleset) {
-			for (const s of i.samples) {
-				set.add(s)
-				sample2group.set(s, i.name)
-			}
-		}
-		if (set.size) {
-			filter_sampleset = { set, sample2group }
-		}
-	}
-
-	// TODO terms from locusAttribute
-
-	/*
-    multi: sample attributes selected to be hidden from client
-    as defined in ds.cohort.sampleAttribute
-    */
-	let hiddensampleattr
-	if (req.query.hiddensampleattr) {
-		hiddensampleattr = {}
-		for (const key in req.query.hiddensampleattr) {
-			hiddensampleattr[key] = new Set(req.query.hiddensampleattr[key])
-		}
-	}
-
-	// cache svcnv tk url index
-	if (dsquery.url) {
-		try {
-			dsquery.dir = await utils.cache_index(dsquery.url, dsquery.indexURL)
-		} catch (e) {
-			return res.send({ error: 'svcnv file index url error' })
-		}
-	}
-
-	// query svcnv
-	const data_cnv = await handle_mdssvcnv_cnv(
-		ds,
-		dsquery,
-		req,
-		hiddendt,
-		hiddensampleattr,
-		hiddenmattr,
-		filter_sampleset
-	)
-
-	// expression query
-	const [expressionrangelimit, gene2sample2obj] = await handle_mdssvcnv_expression(ds, dsquery, req, data_cnv)
-
-	// vcf query
-	// for both single- and multi sample
-	// each member track has its own data type
-	// querying procedure is the same for all types, data parsing will be different
-	const [vcfrangelimit, data_vcf] = await handle_mdssvcnv_vcf(
-		gn,
-		ds,
-		dsquery,
-		req,
-		filteralleleattr,
-		filterlocusattr,
-		hiddendt,
-		hiddenmattr,
-		hiddensampleattr,
-		filter_sampleset
-	)
-
-	// group samples by svcnv, calculate expression rank
-	const sample2item = mdssvcnv_do_sample2item(data_cnv)
-
-	/*
-    if(req.query.showonlycnvwithsv) {
-    	mdssvcnv_do_showonlycnvwithsv(sample2item)
-    }
-    */
-
-	if (req.query.singlesample) {
-		/*
-        exit
-        single sample does not include expression
-        but will include vcf
-        */
-		const result = {
-			lst: sample2item.get(req.query.singlesample)
-		}
-
-		if (vcfrangelimit) {
-			// out of range
-			result.vcfrangelimit = vcfrangelimit
 		} else {
-			result.data_vcf = data_vcf
+			// is native track
+
+			if (!gn.datasets) throw 'genome is not equipped with datasets'
+			ds = gn.datasets[req.query.dslabel]
+			if (!ds) throw 'invalid dslabel'
+
+			//////////// exits that only requires ds but not dsquery
+			if (req.query.getsample4disco) return mdssvcnv_exit_getsample4disco(req, res, gn, ds)
+			if (req.query.gettrack4singlesample) return mdssvcnv_exit_gettrack4singlesample(req, res, ds)
+			if (req.query.findsamplename) return mdssvcnv_exit_findsamplename(req, res, ds)
+			if (req.query.assaymap) return mdssvcnv_exit_assaymap(req, res, ds)
+
+			if (!ds.queries) throw 'dataset is not equipped with queries'
+			dsquery = ds.queries[req.query.querykey]
+			if (!dsquery) throw 'invalid querykey'
 		}
+
+		///////////////// exits that require dsquery (svcnv)
+		if (req.query.getexpression4gene) return mdssvcnv_exit_getexpression4gene(req, res, gn, ds, dsquery)
+		if (req.query.ifsamplehasvcf) return mdssvcnv_exit_ifsamplehasvcf(req, res, gn, ds, dsquery)
+
+		if (dsquery.viewrangeupperlimit) {
+			// hard limit from official dataset
+			const len = req.query.rglst.reduce((i, j) => i + j.stop - j.start, 0)
+			if (len >= dsquery.viewrangeupperlimit) {
+				throw 'zoom in under ' + common.bplen(dsquery.viewrangeupperlimit) + ' to view details'
+			}
+		}
+
+		/*******
+		TODO rewrite: helper func return {} attached with all possible filters
+		***/
+
+		// single or multi: hidden dt, for cnv/loh/sv/fusion/itd, all from one file
+		let hiddendt
+		if (req.query.hiddendt) {
+			hiddendt = new Set(req.query.hiddendt)
+		}
+
+		/*
+		multi: mutation attributes selected to be hidden from client
+		terms defined in ds.mutationAttribute
+		*/
+		let hiddenmattr
+		if (req.query.hiddenmattr) {
+			hiddenmattr = {}
+			for (const key in req.query.hiddenmattr) {
+				hiddenmattr[key] = new Set(req.query.hiddenmattr[key])
+			}
+		}
+
+		/*
+		multi: vcf info field allele-level
+		*/
+		let filteralleleattr
+		if (req.query.filteralleleattr) {
+			filteralleleattr = {}
+			for (const key in req.query.filteralleleattr) {
+				const v = req.query.filteralleleattr[key]
+				if (v.cutoffvalue != undefined) {
+					// numeric
+					filteralleleattr[key] = v
+				} else {
+					// categorical
+					filteralleleattr[key] = v
+				}
+			}
+		}
+		/*
+		multi: vcf info field locus-level
+		*/
+		let filterlocusattr
+		if (req.query.filterlocusattr) {
+			filterlocusattr = {}
+			for (const key in req.query.filterlocusattr) {
+				const v = req.query.filterlocusattr[key]
+				if (v.cutoffvalue != undefined) {
+					// numeric
+					filterlocusattr[key] = v
+				} else {
+					// categorical
+					filterlocusattr[key] = v
+				}
+			}
+		}
+
+		let filter_sampleset
+		if (req.query.sampleset) {
+			const set = new Set()
+			const sample2group = new Map()
+			for (const i of req.query.sampleset) {
+				for (const s of i.samples) {
+					set.add(s)
+					sample2group.set(s, i.name)
+				}
+			}
+			if (set.size) {
+				filter_sampleset = { set, sample2group }
+			}
+		}
+
+		// TODO terms from locusAttribute
+
+		/*
+		multi: sample attributes selected to be hidden from client
+		as defined in ds.cohort.sampleAttribute
+		*/
+		let hiddensampleattr
+		if (req.query.hiddensampleattr) {
+			hiddensampleattr = {}
+			for (const key in req.query.hiddensampleattr) {
+				hiddensampleattr[key] = new Set(req.query.hiddensampleattr[key])
+			}
+		}
+
+		// cache svcnv tk url index
+		if (dsquery.url) {
+			try {
+				dsquery.dir = await utils.cache_index(dsquery.url, dsquery.indexURL)
+			} catch (e) {
+				throw 'svcnv file index url error'
+			}
+		}
+
+		// query svcnv
+		const data_cnv = await handle_mdssvcnv_cnv(
+			ds,
+			dsquery,
+			req,
+			hiddendt,
+			hiddensampleattr,
+			hiddenmattr,
+			filter_sampleset
+		)
+
+		// expression query
+		const [expressionrangelimit, gene2sample2obj] = await handle_mdssvcnv_expression(ds, dsquery, req, data_cnv)
+
+		// vcf query
+		// for both single- and multi sample
+		// each member track has its own data type
+		// querying procedure is the same for all types, data parsing will be different
+		const [vcfrangelimit, data_vcf] = await handle_mdssvcnv_vcf(
+			gn,
+			ds,
+			dsquery,
+			req,
+			filteralleleattr,
+			filterlocusattr,
+			hiddendt,
+			hiddenmattr,
+			hiddensampleattr,
+			filter_sampleset
+		)
+
+		// group samples by svcnv, calculate expression rank
+		const sample2item = mdssvcnv_do_sample2item(data_cnv)
+
+		/*
+		if(req.query.showonlycnvwithsv) {
+			mdssvcnv_do_showonlycnvwithsv(sample2item)
+		}
+		*/
+
+		if (req.query.singlesample) {
+			/*
+			exit
+			single sample does not include expression
+			but will include vcf
+			*/
+			const result = {
+				lst: sample2item.get(req.query.singlesample)
+			}
+
+			if (vcfrangelimit) {
+				// out of range
+				result.vcfrangelimit = vcfrangelimit
+			} else {
+				result.data_vcf = data_vcf
+			}
+
+			res.send(result)
+			return
+		}
+
+		const samplegroups = handle_mdssvcnv_groupsample(ds, dsquery, data_cnv, data_vcf, sample2item, filter_sampleset)
+
+		const result = {
+			samplegroups,
+			vcfrangelimit,
+			data_vcf
+		}
+
+		// QUICK FIX!!
+		if (req.query.getallsamples && dsquery.allow_getallsamples) {
+			result.getallsamples = true
+		}
+
+		if (dsquery.checkrnabam) {
+			// should be only one querying region
+			await handle_mdssvcnv_rnabam(req.query.rglst[0], gn, dsquery, result)
+			// added result.checkrnabam[{}]
+		} else {
+			handle_mdssvcnv_addexprank(result, ds, expressionrangelimit, gene2sample2obj)
+		}
+
+		handle_mdssvcnv_end(ds, result)
 
 		res.send(result)
-		return
+	} catch (e) {
+		if (e.stack) console.log(e.stack)
+		res.send({ error: e.message || e })
 	}
-
-	const samplegroups = handle_mdssvcnv_groupsample(ds, dsquery, data_cnv, data_vcf, sample2item, filter_sampleset)
-
-	const result = {
-		samplegroups,
-		vcfrangelimit,
-		data_vcf
-	}
-
-	// QUICK FIX!!
-	if (req.query.getallsamples && dsquery.allow_getallsamples) {
-		result.getallsamples = true
-	}
-
-	if (dsquery.checkrnabam) {
-		// should be only one querying region
-		await handle_mdssvcnv_rnabam(req.query.rglst[0], gn, dsquery, result)
-		// added result.checkrnabam[{}]
-	} else {
-		handle_mdssvcnv_addexprank(result, ds, expressionrangelimit, gene2sample2obj)
-	}
-
-	handle_mdssvcnv_end(ds, result)
-
-	res.send(result)
 }
 
 async function mdssvcnv_exit_assaymap(req, res, ds) {
@@ -1847,7 +1542,7 @@ async function handle_mdssvcnv_vcf(
 				const variants = []
 
 				const tasks = []
-				// utils.hasValidRglst() was aleady called in the route handler that calls this function
+				// utils.validateRglst() was aleady called in the route handler that calls this function
 				for (const r of req.query.rglst) {
 					const task = new Promise((resolve, reject) => {
 						const ps = spawn(
@@ -2180,7 +1875,7 @@ bad repetition
 	const variants = []
 
 	const tasks = []
-	// utils.hasValidRglst() was aleady called in the route handler that calls this function
+	// utils.validateRglst() was aleady called in the route handler that calls this function
 	for (const r of req.query.rglst) {
 		const task = new Promise((resolve, reject) => {
 			const ps = spawn(tabix, [
@@ -2360,7 +2055,7 @@ function handle_mdssvcnv_cnv(ds, dsquery, req, hiddendt, hiddensampleattr, hidde
 
 	const tasks = []
 
-	// utils.hasValidRglst() was aleady called in the route handler that calls this function
+	// utils.validateRglst() was aleady called in the route handler that calls this function
 	for (const r of req.query.rglst) {
 		const task = new Promise((resolve, reject) => {
 			const data = []
@@ -3617,10 +3312,6 @@ function handle_mdsexpressionrank(req, res) {
 
 	Promise.resolve()
 		.then(() => {
-			if (!utils.hasValidRglst(req.query, res)) return
-
-			if (req.query.rglst.reduce((i, j) => i + j.stop - j.start, 0) > 10000000)
-				throw 'Zoom in below 10 Mb to show expression rank'
 			if (!req.query.sample) throw 'sample missing'
 
 			if (req.query.iscustom) {
@@ -3645,6 +3336,11 @@ function handle_mdsexpressionrank(req, res) {
 				// check if the said sample exists
 				if (dsquery.samples.indexOf(req.query.sample) == -1) throw { nodata: 1 }
 			}
+
+			utils.validateRglst(req.query, gn)
+
+			if (req.query.rglst.reduce((i, j) => i + j.stop - j.start, 0) > 10000000)
+				throw 'Zoom in below 10 Mb to show expression rank'
 
 			if (dsquery.viewrangeupperlimit) {
 				if (req.query.rglst.reduce((i, j) => i + j.stop - j.start, 0) > dsquery.viewrangeupperlimit)

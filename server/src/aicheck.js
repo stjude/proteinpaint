@@ -7,7 +7,7 @@ import { createCanvas } from 'canvas'
 export default function (genomes) {
 	return async (req, res) => {
 		try {
-			res.send(await do_query(req))
+			res.send(await do_query(req, genomes))
 		} catch (e) {
 			res.send({ error: e.message || e })
 			if (e.stack) console.log(e.stack)
@@ -15,7 +15,7 @@ export default function (genomes) {
 	}
 }
 
-async function do_query(req) {
+async function do_query(req, genomes) {
 	/*
 	no caching markers, draw them as along as they are retrieved
 	do not try to estimate marker size, determined by client
@@ -33,8 +33,7 @@ async function do_query(req) {
 	if (!Number.isInteger(rowspace)) throw 'invalid rowspace'
 	const dotsize = Number(req.query.dotsize) || 1
 	if (!Number.isInteger(dotsize)) throw 'invalid dotsize'
-	if (!req.query.rglst) throw '.rglst missing'
-	if (typeof req.query.rglst == 'string') req.query.rglst = JSON.parse(req.query.rglst)
+	utils.validateRglst(req.query)
 
 	const gtotalcutoff = req.query.gtotalcutoff
 	const gmafrestrict = req.query.gmafrestrict

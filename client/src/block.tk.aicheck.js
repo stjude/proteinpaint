@@ -91,6 +91,7 @@ function makeTk(tk, block) {
 function tkarg(tk, block, width, rglst) {
 	const lst = [
 		'rglst=' + JSON.stringify(rglst || block.tkarg_rglst()),
+		'genome=' + block.genome.name,
 		'regionspace=' + block.regionspace,
 		'width=' + (width || block.width),
 		'coveragemax=' + tk.coveragemax,

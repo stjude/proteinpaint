@@ -7,10 +7,7 @@ export default async function (req, res) {
 	try {
 		const [e, file, isurl] = utils.fileurl(req)
 		if (e) throw e
-		if (!req.query.rglst) throw 'rglst[] missing'
-		if (typeof req.query.rglst == 'string') req.query.rglst = JSON.parse(req.query.rglst)
-		if (!Array.isArray(req.query.rglst)) throw 'rglst[] not an array'
-
+		utils.validateRglst(req.query)
 		if (req.query.rglst.reduce((i, j) => j.stop - j.start + i, 0) > 1000000)
 			throw 'Zoom in below 1 Mb to show junctions'
 
