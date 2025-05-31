@@ -28,10 +28,7 @@ export function makeLegend_cohort_hierarchy(arg) {
 			.text(hierarchyname)
 			.style('color', '#858585')
 			.style('margin-top', '7px')
-		const treeholder = tr
-			.append('td')
-			.append('div')
-			.style('display', 'inline-block') // so that row won't expand to full
+		const treeholder = tr.append('td').append('div').style('display', 'inline-block') // so that row won't expand to full
 
 		let folderstack = []
 
@@ -86,10 +83,7 @@ export function makeLegend_cohort_hierarchy(arg) {
 function make_one_node(arg, node, holder, hierarchyname) {
 	const row = holder.append('div')
 
-	const labeldiv = row
-		.append('div')
-		.style('display', 'inline-block')
-		.style('margin-right', '10px')
+	const labeldiv = row.append('div').style('display', 'inline-block').style('margin-right', '10px')
 	arg.makenodelabel(node, labeldiv)
 
 	/*
@@ -180,18 +174,6 @@ export function showHideSubtrack_byHierarchyLevel(parentTk, block, hierarchy) {
 			tktemp[k] = tk0[k]
 		}
 		switch (tk0.type) {
-			case client.tkt.mdscnv:
-				tktemp.valueCutoff = parentTk.valueCutoff
-				tktemp.bplengthUpperLimit = parentTk.bplengthUpperLimit
-				tktemp.gain = {
-					color: parentTk.gain.color,
-					barheight: parentTk.gain.barheight
-				}
-				tktemp.loss = {
-					color: parentTk.loss.color,
-					barheight: parentTk.loss.barheight
-				}
-				break
 			case client.tkt.mdsjunction:
 				tktemp.readcountCutoff = parentTk.readcountCutoff
 				tktemp.axisheight = parentTk.axisheight
@@ -233,7 +215,10 @@ export function subtrackclosehandle(tk, block, y) {
 		.maketklefthandle(tk, y || 0)
 		.text('Close')
 		.on('click', () => {
-			tk.parentTk.subTracks.splice(tk.parentTk.subTracks.findIndex(i => i.tkid == tk.tkid), 1)
+			tk.parentTk.subTracks.splice(
+				tk.parentTk.subTracks.findIndex(i => i.tkid == tk.tkid),
+				1
+			)
 			block.tk_remove(block.tklst.findIndex(i => i.tkid == tk.tkid))
 			tk.parentTk.cohortFilter.hierarchies.keys[tk.permanentHierarchy.hierarchyname].allnodes
 				.find(i => i.nodeid == tk.permanentHierarchy.nodeid)

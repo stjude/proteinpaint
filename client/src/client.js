@@ -988,7 +988,6 @@ export function tkexists(t, tklst) {
 			case tkt.bedj:
 			case tkt.junction:
 			case tkt.mdsjunction:
-			case tkt.mdscnv:
 			case tkt.bampile:
 			case tkt.hicstraw:
 			case tkt.expressionrank:

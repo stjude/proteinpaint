@@ -530,7 +530,6 @@ export const tkt = {
 	bigwigstranded: 'bigwigstranded',
 	junction: 'junction',
 	mdsjunction: 'mdsjunction',
-	mdscnv: 'mdscnv',
 	mdssvcnv: 'mdssvcnv', // no longer use as driver
 	mdsexpressionrank: 'mdsexpressionrank',
 	mdsvcf: 'mdsvcf', // for snv/indels, currently vcf, may include MAF

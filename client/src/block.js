@@ -33,7 +33,6 @@ import { hicstrawfromtemplate, hicstrawmaketk, hicstrawload } from './block.tk.h
 import { asefromtemplate, asemaketk, aseload } from './block.tk.ase.adaptor'
 
 import { mdsjunctionfromtemplate, mdsjunctionmaketk, mdsjunctionload } from './block.mds.junction.adaptor'
-import { mdscnvfromtemplate, mdscnvmaketk, mdscnvload } from './block.mds.cnv.adaptor'
 import { mdssvcnvfromtemplate, mdssvcnvmaketk, mdssvcnvload } from './block.mds.svcnv.adaptor'
 import {
 	mdsexpressionrankfromtemplate,
@@ -2518,9 +2517,6 @@ seekrange(chr,start,stop) {
 					return
 				}
 				break
-			case client.tkt.mdscnv:
-				mdscnvfromtemplate(tk, template)
-				break
 			case client.tkt.mdssvcnv:
 				const e7 = mdssvcnvfromtemplate(tk, template)
 				if (e7) {
@@ -2727,9 +2723,6 @@ seekrange(chr,start,stop) {
 				break
 			case client.tkt.mdsjunction:
 				mdsjunctionmaketk(tk, this)
-				break
-			case client.tkt.mdscnv:
-				mdscnvmaketk(tk, this)
 				break
 			case client.tkt.mdssvcnv:
 				mdssvcnvmaketk(tk, this)
@@ -3091,9 +3084,6 @@ seekrange(chr,start,stop) {
 				break
 			case client.tkt.mdsjunction:
 				mdsjunctionload(tk, this)
-				break
-			case client.tkt.mdscnv:
-				mdscnvload(tk, this)
 				break
 			case client.tkt.mdssvcnv:
 				mdssvcnvload(tk, this)
