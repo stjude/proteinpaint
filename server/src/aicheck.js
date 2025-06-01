@@ -20,6 +20,9 @@ async function do_query(req, genomes) {
 	no caching markers, draw them as along as they are retrieved
 	do not try to estimate marker size, determined by client
 	*/
+	const gn = genomes[req.query.genome]
+	if (!gn) throw 'invalid genome'
+	utils.validateRglst(req.query, gn)
 
 	const [e, file, isurl] = utils.fileurl(req)
 	if (e) throw e
@@ -33,7 +36,6 @@ async function do_query(req, genomes) {
 	if (!Number.isInteger(rowspace)) throw 'invalid rowspace'
 	const dotsize = Number(req.query.dotsize) || 1
 	if (!Number.isInteger(dotsize)) throw 'invalid dotsize'
-	utils.validateRglst(req.query)
 
 	const gtotalcutoff = req.query.gtotalcutoff
 	const gmafrestrict = req.query.gmafrestrict

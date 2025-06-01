@@ -3,6 +3,13 @@ import fs from 'fs'
 import serverconfig from '../serverconfig.js'
 import * as utils from '../utils.js'
 
+/* test sections
+
+stripJsScript
+cachedFetch
+validateRglst
+*/
+
 tape('\n', function (test) {
 	test.pass('-***- server/utils specs -***-')
 	test.end()
@@ -77,5 +84,79 @@ tape('cachedFetch', async test => {
 		JSON.parse(cachedBody),
 		'should create a cache file in the serverconfig.cachedir with the expected content'
 	)
+	test.end()
+})
+
+tape('validateRglst', test => {
+	{
+		const rglst = [{ chr: 'x', start: 1, stop: 2 }]
+		const q = { rglst: JSON.stringify(rglst) }
+		utils.validateRglst(q)
+		test.deepEqual(q, { rglst }, 'updates q{} in place to parse stringified rglst')
+	}
+
+	test.throws(() => utils.validateRglst({ rglst: 11 }), /q\.rglst\[\] not array/, 'throws with rglst=1')
+
+	test.throws(
+		() => utils.validateRglst({ rglst: ['aa'] }),
+		/element of q\.rglst\[\] not object/,
+		'throws with rglst[0] not object'
+	)
+
+	test.throws(
+		() => utils.validateRglst({ rglst: [{ chr: 11 }] }),
+		/q\.rglst\[\]\.chr not string/,
+		'throws with rglst[0].chr not string'
+	)
+	test.throws(
+		() => utils.validateRglst({ rglst: [{ chr: '1', start: '1' }] }),
+		/q\.rglst\[\]\.start not number/,
+		'throws with rglst[0].start not number'
+	)
+	test.throws(
+		() => utils.validateRglst({ rglst: [{ chr: '1', start: -1 }] }),
+		/q\.rglst\[\]\.start\<0/,
+		'throws with rglst[0].start<0'
+	)
+	test.throws(
+		() => utils.validateRglst({ rglst: [{ chr: '1', start: 1, stop: -1 }] }),
+		/q\.rglst\[\]\.stop\<0/,
+		'throws with rglst[0].stop<0'
+	)
+	test.throws(
+		() => utils.validateRglst({ rglst: [{ chr: '1', start: 10, stop: 1 }] }),
+		/q\.rglst\[\]\.stop < start/,
+		'throws with rglst[0].stop<start'
+	)
+	test.throws(
+		() => utils.validateRglst({ rglst: [{ chr: '1', start: 1, stop: 10 }, {}] }),
+		/q\.rglst\[\]\.chr not string/,
+		'throws with 2nd region err'
+	)
+
+	const genome = {
+		chrlookup: { XX: { len: 10 } }
+	}
+	test.throws(
+		() => utils.validateRglst({ rglst: [{ chr: 'yy' }] }, genome),
+		/q\.rglst\[\]\.chr invalid chr name/,
+		'throws with rglst[0].chr invalid'
+	)
+	test.throws(
+		() => utils.validateRglst({ rglst: [{ chr: 'xx', start: 99 }] }, genome),
+		/q\.rglst\[\]\.start out of bound/,
+		'throws with rglst[0].start out of bound'
+	)
+	test.throws(
+		() => utils.validateRglst({ rglst: [{ chr: 'xx', start: 1, stop: 99 }] }, genome),
+		/q\.rglst\[\]\.stop out of bound/,
+		'throws with rglst[0].stop out of bound'
+	)
+	test.throws(
+		() => utils.validateRglst({ rglst: [{ chr: 'xx', start: 1, stop: 10 }, { chr: 'yy' }] }, genome),
+		/q\.rglst\[\]\.chr invalid chr name/,
+		'throws with 2nd region err'
+	)
+
 	test.end()
 })

@@ -48,7 +48,7 @@ import * as vcf from '#shared/vcf.js'
 import { decode as urlJsonDecode } from '#shared/urljson.js'
 import handle_study from './handle_study.js'
 import * as termdb from './termdb.js'
-import { handle_tkbigwig } from './bw.js'
+import bw_request_closure from './bw.js'
 import { handle_tkld } from './ld.js'
 import * as termdbbarsql from './termdb.barchart.js'
 import bedgraphdot_request_closure from './bedgraphdot.js'
@@ -57,8 +57,8 @@ import { mdsjunction_request_closure } from './mds.junction.js'
 import { gdc_bam_request } from './bam.gdc.js'
 import * as mds3Gdc from './mds3.gdc.js'
 import aicheck_request_closure from './aicheck.js'
-import bampile_request from './bampile.js'
-import junction_request from './junction.js'
+import bampile_request_closure from './bampile.js'
+import junction_request_closure from './junction.js'
 import bedj_request_closure from './bedj.js'
 import { request_closure as blat_request_closure } from './blat.js'
 import { mds3_request_closure } from './mds3.load.js'
@@ -114,15 +114,15 @@ export function setRoutes(app, _genomes, serverconfig) {
 	app.get(basepath + '/tkaicheck', aicheck_request_closure(genomes))
 	app.get(basepath + '/blat', blat_request_closure(genomes))
 	app.all(basepath + '/mds3', mds3_request_closure(genomes))
-	app.get(basepath + '/tkbampile', bampile_request)
-	app.post(basepath + '/tkbigwig', handle_tkbigwig)
+	app.get(basepath + '/tkbampile', bampile_request_closure(genomes))
+	app.post(basepath + '/tkbigwig', bw_request_closure(genomes))
 	app.post(basepath + '/tkld', handle_tkld(genomes))
 	app.get(basepath + '/tabixheader', handle_tabixheader)
 	app.post(basepath + '/svmr', handle_svmr)
 	app.post(basepath + '/study', handle_study)
 	app.post(basepath + '/textfile', handle_textfile)
 	app.post(basepath + '/urltextfile', handle_urltextfile)
-	app.get(basepath + '/junction', junction_request) // legacy, including rnapeg
+	app.get(basepath + '/junction', junction_request_closure(genomes)) // legacy, including rnapeg
 	app.post(basepath + '/mdsjunction', mdsjunction_request_closure(genomes))
 	app.post(basepath + '/mdssvcnv', handle_mdssvcnv)
 	app.post(basepath + '/mdsgenecount', handle_mdsgenecount)
