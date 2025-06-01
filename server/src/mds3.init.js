@@ -343,12 +343,6 @@ export async function validate_termdb(ds) {
 	// k: sampleid, v: type of that sample
 	ds.sampleId2Type = new Map()
 
-	//////////////////////////////////////////////////////
-	//
-	// XXX rest are quick fixes taken from mds2.init.js
-	//
-	//////////////////////////////////////////////////////
-
 	if (ds.cohort?.db?.connection) {
 		// gdc does not use db connection
 		ds.sampleName2Id = new Map()

@@ -99,18 +99,8 @@ async function summarizeSamplesFromCache(q, tdb, ds, genome) {
 	if (!q.cacheid) throw 'cacheid missing'
 	if (serverconfig.cache_snpgt.fileNameRegexp.test(q.cacheid)) throw 'invalid cacheid'
 
-	let tk
-
-	if (ds.track) {
-		//////////////////////////////
-		// using mds2 architecture
-		// mds2delete
-		//////////////////////////////
-		tk = ds.track.vcf
-		if (!tk) throw 'ds.track.vcf missing'
-	} else {
-		tk = ds.queries.snvindel.byrange._tk
-	}
+	const tk = ds.queries?.snvindel?.byrange?._tk
+	if (!tk) throw 'ds.queries.snvindel.byrange._tk missing'
 
 	// samples are at tk.samples[], each element: {name: int ID}
 
@@ -277,17 +267,7 @@ async function mapRsid2chr(snps, genome) {
 }
 
 async function queryBcf(q, snps, ds) {
-	let tk
-	if (ds.track) {
-		//////////////////////////////
-		// using mds2 architecture
-		// mds2delete
-		//////////////////////////////
-		tk = ds.track.vcf
-		if (!tk) throw 'ds.track.vcf missing'
-	} else {
-		tk = ds.queries.snvindel.byrange._tk
-	}
+	const tk = ds.queries.snvindel.byrange._tk
 
 	// samples are at tk.samples[], each element: {name: int ID}
 	// do not filter on samples. write all samples to cache file
@@ -300,14 +280,7 @@ async function queryBcf(q, snps, ds) {
 		if (snp.invalid) continue
 
 		let bcffile
-		if (tk.chr2files) {
-			bcffile = tk.chr2files?.[snp.chr].file
-			if (!bcffile) throw 'chr not in chr2files'
-		} else if (tk.chr2bcffile) {
-			//////////////////////////////
-			// using mds2 architecture
-			// mds2delete
-			//////////////////////////////
+		if (tk.chr2bcffile) {
 			bcffile = tk.chr2bcffile[snp.chr]
 			if (!bcffile) throw 'chr not in chr2bcffile'
 		} else {
@@ -403,26 +376,15 @@ async function validateInputCreateCache_by_coord(q, ds, genome) {
 	if (!Number.isInteger(start) || !Number.isInteger(stop)) throw 'start/stop are not integers'
 	if (start > stop || start < 0) throw 'invalid start/stop coordinate'
 
-	let tk, file
-
-	if (ds.track) {
-		//////////////////////////////
-		// using mds2 architecture
-		// mds2delete
-		//////////////////////////////
-		tk = ds.track.vcf
-		if (!tk) throw 'ds.track.vcf missing'
-		file = tk.chr2bcffile[q.chr]
-		if (!file) throw 'chr not in chr2bcffile'
+	const tk = ds.queries?.snvindel?.byrange?._tk
+	if (!tk) throw 'tk missing'
+	let file
+	if (tk.chr2files) {
+		file = tk.chr2files?.[q.chr].file
 	} else {
-		tk = ds.queries.snvindel.byrange._tk
-		if (tk.chr2files) {
-			file = tk.chr2files?.[q.chr].file
-		} else {
-			file = tk.file || tk.url
-		}
-		if (!file) throw 'no bcf file'
+		file = tk.file || tk.url
 	}
+	if (!file) throw 'no bcf file'
 
 	const coord = (tk.nochr ? q.chr.replace('chr', '') : q.chr) + ':' + start + '-' + stop
 

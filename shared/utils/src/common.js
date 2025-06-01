@@ -530,7 +530,7 @@ export const tkt = {
 	bigwigstranded: 'bigwigstranded',
 	junction: 'junction',
 	mdsjunction: 'mdsjunction',
-	mdssvcnv: 'mdssvcnv', // no longer use as driver
+	mdssvcnv: 'mdssvcnv', // replaced by mds3
 	mdsexpressionrank: 'mdsexpressionrank',
 	mdsvcf: 'mdsvcf', // for snv/indels, currently vcf, may include MAF
 	//mdsgeneral:'mdsgeneral', // replaces mdssvcnv   ****** not ready yet
@@ -541,8 +541,7 @@ export const tkt = {
 	expressionrank: 'expressionrank',
 	aicheck: 'aicheck',
 	ase: 'ase',
-	mds2: 'mds2', // mds 2nd gen
-	mds3: 'mds3', // 3rd gen
+	mds3: 'mds3', //
 	bedgraphdot: 'bedgraphdot',
 	bam: 'bam',
 	ld: 'ld'

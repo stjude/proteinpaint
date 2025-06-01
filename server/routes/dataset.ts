@@ -1,4 +1,3 @@
-import * as mds2_init from '#src/mds2.init.js'
 import * as mds3_init from '#src/mds3.init.js'
 import * as common from '#shared/common.js'
 import type { DatasetRequest, DatasetResponse, RouteApi } from '#types'
@@ -68,10 +67,6 @@ function mds_clientcopy(ds) {
 
 	if (ds.queries) {
 		ds2.queries = {}
-	}
-
-	if (ds.track) {
-		ds2.track = mds2_init.client_copy(ds)
 	}
 
 	if (ds.singlesamplemutationjson) {
