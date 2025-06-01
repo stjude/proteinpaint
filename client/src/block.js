@@ -39,7 +39,6 @@ import {
 	mdsexpressionrankmaketk,
 	mdsexpressionrankload
 } from './block.mds.expressionrank.adaptor'
-import { mds2_fromtemplate, mds2_maketk, mds2_load } from './block.mds2.adaptor'
 import { mds3_fromtemplate, mds3_maketk, mds3_load } from '../mds3/adaptor'
 import { bedgraphdot_fromtemplate, bedgraphdot_maketk, bedgraphdot_load } from './block.tk.bedgraphdot.adaptor'
 
@@ -2524,13 +2523,6 @@ seekrange(chr,start,stop) {
 					return
 				}
 				break
-			case client.tkt.mds2:
-				const e10 = mds2_fromtemplate(tk, template)
-				if (e10) {
-					this.error(e10)
-					return
-				}
-				break
 			case client.tkt.mds3:
 				const e13 = mds3_fromtemplate(tk, template)
 				if (e13) {
@@ -2726,9 +2718,6 @@ seekrange(chr,start,stop) {
 				break
 			case client.tkt.mdssvcnv:
 				mdssvcnvmaketk(tk, this)
-				break
-			case client.tkt.mds2:
-				mds2_maketk(tk, this)
 				break
 			case client.tkt.mds3:
 				mds3_maketk(tk, this)
@@ -3087,9 +3076,6 @@ seekrange(chr,start,stop) {
 				break
 			case client.tkt.mdssvcnv:
 				mdssvcnvload(tk, this)
-				break
-			case client.tkt.mds2:
-				mds2_load(tk, this)
 				break
 			case client.tkt.mds3:
 				mds3_load(tk, this)
@@ -4116,9 +4102,6 @@ seekrange(chr,start,stop) {
 						break
 					case client.tkt.mdssvcnv:
 						mdssvcnvload(tk, this)
-						break
-					case client.tkt.mds2:
-						mds2_load(tk, this)
 						break
 					case client.tkt.mds3:
 						mds3_load(tk, this)
