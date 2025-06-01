@@ -15,79 +15,88 @@ if file/url ends with .gz, it is bedgraph
 - bedgraph should render bars while reading data, with predefined y axis; no storing data
 */
 
-export async function handle_tkbigwig(req, res) {
-	try {
-		const pa = {
-			// plot arg
-			fixminv: null,
-			fixmaxv: null,
-			percentile: null,
-			autoscale: false,
-			isbedgraph: false,
-			bedgraphdir: null
+export default function (genomes) {
+	return async (req, res) => {
+		try {
+			await handle_tkbigwig(req, res, genomes)
+		} catch (e) {
+			res.send({ error: e.message || e })
+			if (e.stack) console.log(e.stack)
 		}
-
-		const [e, file, isurl] = utils.fileurl(req)
-		if (e) throw e
-
-		if (file.endsWith('.gz')) {
-			// is bedgraph, will cache index if is url
-			pa.isbedgraph = true
-			if (isurl) {
-				pa.bedgraphdir = await utils.cache_index(file, req.query.indexURL)
-			}
-		}
-
-		if (req.query.autoscale) {
-			pa.autoscale = true
-		} else if (req.query.percentile) {
-			pa.percentile = req.query.percentile
-			if (!Number.isFinite(pa.percentile)) throw 'invalid percentile'
-		} else {
-			pa.fixminv = req.query.minv
-			pa.fixmaxv = req.query.maxv
-			if (!Number.isFinite(pa.fixminv)) throw 'invalid minv'
-			if (!Number.isFinite(pa.fixmaxv)) throw 'invalid maxv'
-		}
-		if (!Number.isFinite(req.query.barheight)) throw 'invalid barheight'
-		if (!Number.isFinite(req.query.regionspace)) throw 'invalid regionspace'
-		if (!Number.isFinite(req.query.width)) throw 'invalid width'
-		utils.validateRglst(req.query)
-		if (req.query.dotplotfactor) {
-			if (!Number.isInteger(req.query.dotplotfactor)) throw 'dotplotfactor value should be positive integer'
-		}
-
-		if (pa.isbedgraph) {
-			return await getBedgraph(req, res, file, pa)
-		}
-
-		for (const r of req.query.rglst) {
-			let out
-
-			if (serverconfig.features.bigwig_rust) {
-				// When bigwig_rust is defined in serverconfig.json, bigwig rust binary will be used to query the bigwig file (currently experimental!!)
-				const input_data =
-					file + ',' + r.chr + ',' + r.start + ',' + r.stop + ',' + Math.ceil(r.width * (req.query.dotplotfactor || 1))
-
-				out = await run_rust('bigwig', input_data)
-			} else {
-				// When this flag is not defined, the ucsc bigwigsummary will be used to query the bigwig file
-				out = await run_bigwigsummary(req, r, file)
-			}
-
-			if (out) {
-				r.values = out.trim().split('\t').map(Number.parseFloat)
-				if (req.query.dividefactor) {
-					r.values = r.values.map(i => i / req.query.dividefactor)
-				}
-			}
-		}
-
-		res.send(plotWiggle(req.query, pa))
-	} catch (err) {
-		if (err.stack) console.log(err.stack)
-		res.send({ error: err.message || err })
 	}
+}
+
+async function handle_tkbigwig(req, res, genomes) {
+	const gn = genomes[req.query.genome]
+	if (!gn) throw 'invalid genome'
+	utils.validateRglst(req.query, gn)
+
+	const pa = {
+		// plot arg
+		fixminv: null,
+		fixmaxv: null,
+		percentile: null,
+		autoscale: false,
+		isbedgraph: false,
+		bedgraphdir: null
+	}
+
+	const [e, file, isurl] = utils.fileurl(req)
+	if (e) throw e
+
+	if (file.endsWith('.gz')) {
+		// is bedgraph, will cache index if is url
+		pa.isbedgraph = true
+		if (isurl) {
+			pa.bedgraphdir = await utils.cache_index(file, req.query.indexURL)
+		}
+	}
+
+	if (req.query.autoscale) {
+		pa.autoscale = true
+	} else if (req.query.percentile) {
+		pa.percentile = req.query.percentile
+		if (!Number.isFinite(pa.percentile)) throw 'invalid percentile'
+	} else {
+		pa.fixminv = req.query.minv
+		pa.fixmaxv = req.query.maxv
+		if (!Number.isFinite(pa.fixminv)) throw 'invalid minv'
+		if (!Number.isFinite(pa.fixmaxv)) throw 'invalid maxv'
+	}
+	if (!Number.isFinite(req.query.barheight)) throw 'invalid barheight'
+	if (!Number.isFinite(req.query.regionspace)) throw 'invalid regionspace'
+	if (!Number.isFinite(req.query.width)) throw 'invalid width'
+	if (req.query.dotplotfactor) {
+		if (!Number.isInteger(req.query.dotplotfactor)) throw 'dotplotfactor value should be positive integer'
+	}
+
+	if (pa.isbedgraph) {
+		return await getBedgraph(req, res, file, pa)
+	}
+
+	for (const r of req.query.rglst) {
+		let out
+
+		if (serverconfig.features.bigwig_rust) {
+			// When bigwig_rust is defined in serverconfig.json, bigwig rust binary will be used to query the bigwig file (currently experimental!!)
+			const input_data =
+				file + ',' + r.chr + ',' + r.start + ',' + r.stop + ',' + Math.ceil(r.width * (req.query.dotplotfactor || 1))
+
+			out = await run_rust('bigwig', input_data)
+		} else {
+			// When this flag is not defined, the ucsc bigwigsummary will be used to query the bigwig file
+			out = await run_bigwigsummary(req, r, file)
+		}
+
+		if (out) {
+			r.values = out.trim().split('\t').map(Number.parseFloat)
+			if (req.query.dividefactor) {
+				r.values = r.values.map(i => i / req.query.dividefactor)
+			}
+		}
+	}
+
+	res.send(plotWiggle(req.query, pa))
 }
 
 /*

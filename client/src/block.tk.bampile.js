@@ -41,6 +41,7 @@ export function bampilemaketk(tk, block) {
 export function bampileload(tk, block) {
 	block.tkcloakon(tk)
 	const par = [
+		'genome=' + block.genome.name,
 		'fineheight=' + tk.fineheight,
 		'allheight=' + tk.allheight,
 		'midpad=' + tk.midpad,

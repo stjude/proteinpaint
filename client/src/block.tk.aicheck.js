@@ -1,6 +1,7 @@
 import { scaleLinear } from 'd3-scale'
 import { axisLeft, axisRight } from 'd3-axis'
 import * as client from './client'
+import { dofetch3 } from '#common/dofetch'
 import { make_radios } from '#dom'
 
 /*
@@ -89,27 +90,27 @@ function makeTk(tk, block) {
 }
 
 function tkarg(tk, block, width, rglst) {
-	const lst = [
-		'rglst=' + JSON.stringify(rglst || block.tkarg_rglst()),
-		'genome=' + block.genome.name,
-		'regionspace=' + block.regionspace,
-		'width=' + (width || block.width),
-		'coveragemax=' + tk.coveragemax,
-		'gtotalcutoff=' + tk.gtotalcutoff,
-		'gmafrestrict=' + tk.gmafrestrict,
-		'vafheight=' + tk.vafheight,
-		'coverageheight=' + tk.coverageheight,
-		'rowspace=' + tk.rowspace,
-		'dotsize=' + tk.dotsize,
-		'devicePixelRatio=' + (window.devicePixelRatio > 1 ? window.devicePixelRatio : 1)
-	]
-	if (tk.file) {
-		lst.push('file=' + tk.file)
-	} else {
-		lst.push('url=' + tk.url)
-		if (tk.indexURL) lst.push('indexURL=' + tk.indexURL)
+	const a = {
+		rglst: rglst || block.tkarg_rglst(),
+		genome: block.genome.name,
+		regionspace: block.regionspace,
+		width: width || block.width,
+		coveragemax: tk.coveragemax,
+		gtotalcutoff: tk.gtotalcutoff,
+		gmafrestrict: tk.gmafrestrict,
+		vafheight: tk.vafheight,
+		coverageheight: tk.coverageheight,
+		rowspace: tk.rowspace,
+		dotsize: tk.dotsize,
+		devicePixelRatio: window.devicePixelRatio > 1 ? window.devicePixelRatio : 1
 	}
-	return lst.join('&')
+	if (tk.file) {
+		a.file = tk.file
+	} else {
+		a.url = tk.url
+		if (tk.indexURL) a.indexURL = tk.indexURL
+	}
+	return a
 }
 
 export function loadTk(tk, block) {
@@ -122,8 +123,7 @@ export function loadTk(tk, block) {
 
 	block.tkcloakon(tk)
 
-	client
-		.dofetch2('tkaicheck?' + tkarg(tk, block))
+	dofetch3('tkaicheck', { body: tkarg(tk, block) })
 		.then(data => {
 			if (data.error) throw { message: data.error }
 
@@ -221,8 +221,7 @@ export function loadTksubpanel(tk, block, panel) {
 		}
 	])
 
-	client
-		.dofetch2('tkaicheck?' + par)
+	dofetch3('tkaicheck', { body: par })
 		.then(data => {
 			if (data.error) throw { message: data.error }
 

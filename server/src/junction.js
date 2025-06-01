@@ -3,29 +3,37 @@ import * as utils from './utils'
 import readline from 'readline'
 import serverconfig from './serverconfig'
 
-export default async function (req, res) {
-	try {
-		const [e, file, isurl] = utils.fileurl(req)
-		if (e) throw e
-		utils.validateRglst(req.query)
-		if (req.query.rglst.reduce((i, j) => j.stop - j.start + i, 0) > 1000000)
-			throw 'Zoom in below 1 Mb to show junctions'
-
-		let lst // list of junctions
-		if (req.query.isrnapeg) {
-			if (!serverconfig.features.junctionrnapeg) throw 'rnapeg not supported on this server'
-			if (isurl) throw 'rnapeg file from url is not supported'
-			lst = await get_rnapeg(req.query, file)
-		} else {
-			// a tabix file
-			const dir = isurl ? await utils.cache_index(file, req.query.indexURL) : null
-			lst = await get_tabix(req.query, file, dir)
+export default function (genomes) {
+	return async (req, res) => {
+		try {
+			await do_query(req, res, genomes)
+		} catch (e) {
+			res.send({ error: e.message || e })
+			if (e.stack) console.log(e.stack)
 		}
-		res.send({ lst })
-	} catch (e) {
-		if (e.stack) console.log(e.stack)
-		res.send({ error: e.message || e })
 	}
+}
+
+async function do_query(req, res, genomes) {
+	const gn = genomes[req.query.genome]
+	if (!gn) throw 'invalid genome'
+	utils.validateRglst(req.query, gn)
+
+	const [e, file, isurl] = utils.fileurl(req)
+	if (e) throw e
+	if (req.query.rglst.reduce((i, j) => j.stop - j.start + i, 0) > 1000000) throw 'Zoom in below 1 Mb to show junctions'
+
+	let lst // list of junctions
+	if (req.query.isrnapeg) {
+		if (!serverconfig.features.junctionrnapeg) throw 'rnapeg not supported on this server'
+		if (isurl) throw 'rnapeg file from url is not supported'
+		lst = await get_rnapeg(req.query, file)
+	} else {
+		// a tabix file
+		const dir = isurl ? await utils.cache_index(file, req.query.indexURL) : null
+		lst = await get_tabix(req.query, file, dir)
+	}
+	res.send({ lst })
 }
 
 async function get_tabix(q, file, dir) {

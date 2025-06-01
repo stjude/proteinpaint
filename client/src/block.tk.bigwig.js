@@ -1,6 +1,7 @@
 import { scaleLinear } from 'd3-scale'
 import * as d3axis from 'd3-axis'
 import * as client from './client'
+import { dofetch3 } from '#common/dofetch'
 import { format as d3format } from 'd3-format'
 import { makeNumericAxisConfig } from '#dom/numericAxis'
 
@@ -47,7 +48,7 @@ export function bigwigmaketk(tk, block) {
 	})
 }
 
-export function bigwigload(tk, block) {
+export async function bigwigload(tk, block) {
 	/*
 	called by change view range
 	or updating any rendering style, e.g. height
@@ -61,64 +62,63 @@ export function bigwigload(tk, block) {
 	tk.height_main = tk.toppad + tk.barheight + tk.bottompad
 	tk.img.attr('width', block.width).attr('height', tk.barheight)
 
-	client
-		.dofetch('tkbigwig', par)
-		.then(data => {
-			if (data.error) throw data.error
+	let errtext
+	try {
+		const data = await dofetch3('tkbigwig', { method: 'POST', body: JSON.stringify(par) })
+		if (data.error) throw data.error
+		if (!data.src) throw 'data.src missing'
 
-			// in case height changed
-			tk.tklabel.transition().attr('y', tk.barheight / 2)
+		// in case height changed
+		tk.tklabel.transition().attr('y', tk.barheight / 2)
 
-			tk.img.attr('xlink:href', data.src)
+		tk.img.attr('xlink:href', data.src)
 
-			if (data.minv != undefined) {
-				tk.scale.min = data.minv
-			}
-			if (data.maxv != undefined) {
-				tk.scale.max = data.maxv
-			}
-			tk.leftaxis.selectAll('*').remove()
+		if (data.minv != undefined) {
+			tk.scale.min = data.minv
+		}
+		if (data.maxv != undefined) {
+			tk.scale.max = data.maxv
+		}
+		tk.leftaxis.selectAll('*').remove()
 
-			if (data.nodata) {
-				throw 'no data in view range'
-				// won't update axis
-			}
+		if (data.nodata) {
+			throw 'No data in view range'
+			// won't update axis
+		}
 
-			// update axis
-			const scale = scaleLinear().domain([tk.scale.min, tk.scale.max]).range([tk.barheight, 0])
+		// update axis
+		const scale = scaleLinear().domain([tk.scale.min, tk.scale.max]).range([tk.barheight, 0])
 
-			const axis = d3axis.axisLeft().scale(scale).tickValues([tk.scale.min, tk.scale.max])
+		const axis = d3axis.axisLeft().scale(scale).tickValues([tk.scale.min, tk.scale.max])
 
-			if (tk.integer4axis) {
-				axis.tickFormat(d3format('d'))
-			}
+		if (tk.integer4axis) {
+			axis.tickFormat(d3format('d'))
+		}
 
-			client.axisstyle({
-				axis: tk.leftaxis.call(axis),
-				color: 'black',
-				showline: true
-			})
+		client.axisstyle({
+			axis: tk.leftaxis.call(axis),
+			color: 'black',
+			showline: true
 		})
-		.catch(err => {
-			tk.img.attr('width', 1).attr('height', 1)
-			if (err.stack) {
-				// error
-				console.log(err.stack)
-			}
-			return typeof err == 'string' ? err : err.message
-		})
-		.then(errtext => {
-			block.tkcloakoff(tk, { error: errtext })
-			block.block_setheight()
+	} catch (err) {
+		tk.img.attr('width', 1).attr('height', 1)
+		if (err.stack) {
+			// error
+			console.log(err.stack)
+		}
+		errtext = typeof err == 'string' ? err : err.message
+	} finally {
+		block.tkcloakoff(tk, { error: errtext })
+		block.block_setheight()
 
-			// also load subpanels whenever main panel updates
-			for (const panel of tk.subpanels) {
-				bigwigloadsubpanel(tk, block, panel)
-			}
-		})
+		// also load subpanels whenever main panel updates
+		for (const panel of tk.subpanels) {
+			bigwigloadsubpanel(tk, block, panel)
+		}
+	}
 }
 
-export function bigwigloadsubpanel(tk, block, panel) {
+export async function bigwigloadsubpanel(tk, block, panel) {
 	block.tkcloakon_subpanel(panel)
 	const par = block.tkarg_q(tk)
 	if (tk.dotplotfactor) {
@@ -138,23 +138,21 @@ export function bigwigloadsubpanel(tk, block, panel) {
 
 	panel.img.attr('width', panel.width).attr('height', tk.barheight)
 
-	client
-		.dofetch('tkbigwig', par)
-		.then(data => {
-			if (data.error) throw data.error
-			panel.img.attr('xlink:href', data.src)
-		})
-		.catch(err => {
-			panel.img.attr('width', 1).attr('height', 1)
-			if (err.stack) {
-				// error
-				console.log(err.stack)
-			}
-			return typeof err == 'string' ? err : err.message
-		})
-		.then(errtext => {
-			block.tkcloakoff_subpanel(panel, { error: errtext })
-		})
+	let errtext
+	try {
+		const data = await dofetch3('tkbigwig', { method: 'POST', body: JSON.stringify(par) })
+		if (data.error) throw data.error
+		panel.img.attr('xlink:href', data.src)
+	} catch (err) {
+		panel.img.attr('width', 1).attr('height', 1)
+		if (err.stack) {
+			// error
+			console.log(err.stack)
+		}
+		errtext = typeof err == 'string' ? err : err.message
+	} finally {
+		block.tkcloakoff_subpanel(panel, { error: errtext })
+	}
 }
 
 export function bigwigconfigpanel(tk, block, holder, loader) {

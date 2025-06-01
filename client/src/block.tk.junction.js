@@ -3,6 +3,7 @@ import { schemeCategory10 } from 'd3-scale-chromatic'
 import { select as d3select } from 'd3-selection'
 import { transition } from 'd3-transition'
 import * as client from './client'
+import { dofetch3 } from '#common/dofetch'
 import * as common from '#shared/common.js'
 import * as coord from './coord'
 import { legend_newrow } from './block.legend'
@@ -181,14 +182,14 @@ export function junctionload(tk, block) {
 		t.checkedheader=true to make sure the header will be loaded only once
 		this can happen if the file has no header, and do not have data at current view range
 		*/
-			const par = []
+			const par = {}
 			if (t.file) {
-				par.push('file=' + t.file)
+				par.file = t.file
 			} else {
-				par.push('url=' + t.url)
-				if (t.indexURL) par.push('indexURL=' + t.indexURL)
+				par.url = t.url
+				if (t.indexURL) par.indexURL = t.indexURL
 			}
-			client.dofetch2('tabixheader?' + par.join('&')).then(data => {
+			dofetch3('tabixheader', { body: par }).then(data => {
 				if (data.error) return reject('cannot load header for member track ' + t.name + ': ' + data.error)
 				t.checkedheader = true
 				const str = data.lines.join('')
@@ -249,18 +250,21 @@ export function junctionload(tk, block) {
 		const getdata = new Promise((resolve, reject) => {
 			getheader
 				.then(() => {
-					const par = ['rglst=' + JSON.stringify(block.tkarg_maygm(t))]
-					if (bincount) par.push('bincount=' + bincount)
+					const par = {
+						genome: block.genome.name,
+						rglst: block.tkarg_maygm(t)
+					}
+					if (bincount) par.bincount = bincount
 					if (t.file || t.rnapegfile) {
-						par.push('file=' + (t.file || t.rnapegfile))
+						par.file = t.file || t.rnapegfile
 					} else {
-						par.push('url=' + t.url)
-						if (t.indexURL) par.push('indexURL=' + t.indexURL)
+						par.url = t.url
+						if (t.indexURL) par.indexURL = t.indexURL
 					}
 					if (t.rnapegfile) {
-						par.push('isrnapeg=1')
+						par.isrnapeg = 1
 					}
-					client.dofetch2('junction?' + par.join('&')).then(data => {
+					dofetch3('junction', { body: par }).then(data => {
 						donenum++
 						if (tk.tracks.length > 1) {
 							block.tkprogress(tk, donenum / tk.tracks.length)
