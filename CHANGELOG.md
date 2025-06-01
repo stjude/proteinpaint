@@ -10,6 +10,7 @@ Fixes:
 - Added top genes table in addition to GRIN2 plot. Genes table is filtered by p-value
 - Added initial UI elements for CNV options
 - Added somatic filterinng options for MAF files in UI and payload information
+- strictly validate rglst chr name using genome obj for all legacy routes
 
 
 ## 2.129.1
