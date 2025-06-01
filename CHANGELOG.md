@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.129.2
 
 Fixes:
 - Added logic to remove duplicate MAF files for the same case and report them to console.log and to the user
