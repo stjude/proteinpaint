@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.129.3
 
 Fixes:
 - loosen gdc recoverableError handling, including clearing it to allow a subsequent recache attempt to complete
