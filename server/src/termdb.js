@@ -41,10 +41,6 @@ export function handle_request_closure(genomes) {
 			if (!genome) throw 'invalid genome'
 
 			const [ds, tdb] = get_ds_tdb(genome, q)
-			// TODO: generalize to any dataset, not just __gdc
-			if (ds.label == 'GDC' && !ds.__gdc?.doneCaching)
-				throw 'The server has not finished caching the case IDs: try again in about 2 minutes.'
-
 			// process triggers
 			if (q.findterm) return await trigger_findterm(q, req, res, tdb, ds, genome)
 			if (q.getterminfo) return trigger_getterminfo(q, res, tdb)

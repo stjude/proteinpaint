@@ -1,1 +1,3 @@
-
+Fixes:
+- loosen gdc recoverableError handling, including clearing it to allow a subsequent recache attempt to complete
+- catch fimo error in server code
