@@ -847,7 +847,7 @@ function makeControls(obj) {
 		.append('input')
 		.attr('type', 'checkbox')
 		.attr('id', 'cnv-checkbox')
-		.property('checked', false) // Unchecked by default
+		.property('checked', true) // Unchecked by default
 		.style('margin', '0')
 		.style('cursor', 'pointer')
 
@@ -865,13 +865,199 @@ function makeControls(obj) {
 		.style('vertical-align', 'top')
 
 	// CNV options container (hidden by default since CNV is unchecked)
-	const cnvOptionsContainer = cnvOptionsCell.append('div').style('display', 'none') // Hidden by default
+	const cnvOptionsContainer = cnvOptionsCell.append('div').style('display', 'block') // Visible by default
+	createCNVOptionsContent(cnvOptionsContainer, obj)
 
-	cnvOptionsContainer
-		.append('div')
-		.style('color', '#666')
-		.style('font-style', 'italic')
-		.text('CNV filtering options: Loss Threshold, Gain Threshold, Segment Length')
+	function createCNVOptionsContent(container, obj) {
+		// Clear any existing content
+		container.selectAll('*').remove()
+
+		// Initialize CNV data type if not exists
+		if (!obj.cnvOptions.dataType) {
+			obj.cnvOptions.dataType = 'segment_mean' // default selection
+		}
+
+		// Create a grid layout for CNV options
+		const optionsGrid = container
+			.append('div')
+			.style('display', 'grid')
+			.style('grid-template-columns', 'auto auto')
+			.style('gap', '15px')
+			.style('margin-top', '10px')
+			.style('max-width', 'fit-content')
+
+		// Row 0: Data Type (spans full width)
+		const dataTypeContainer = optionsGrid
+			.append('div')
+			.style('display', 'flex')
+			.style('align-items', 'center')
+			.style('gap', '8px')
+			.style('grid-column', '1 / -1') // Span full width
+
+		dataTypeContainer
+			.append('label')
+			.style('font-size', '14px')
+			.style('font-weight', '500')
+			.style('min-width', '80px')
+			.text('Data Type:')
+
+		const radioContainer = dataTypeContainer
+			.append('div')
+			.style('display', 'flex')
+			.style('align-items', 'center')
+			.style('gap', '6px')
+
+		const segmentMeanRadio = radioContainer
+			.append('input')
+			.attr('type', 'radio')
+			.attr('id', 'cnv-segment-mean')
+			.attr('name', 'cnv-data-type')
+			.attr('value', 'segment_mean')
+			.property('checked', obj.cnvOptions.dataType === 'segment_mean')
+			.style('margin', '0')
+			.style('cursor', 'pointer')
+
+		radioContainer
+			.append('label')
+			.attr('for', 'cnv-segment-mean')
+			.style('cursor', 'pointer')
+			.style('font-size', '14px')
+			.style('color', '#333')
+			.text('Segment mean')
+
+		// Add change handler for radio button
+		segmentMeanRadio.on('change', function (this: HTMLInputElement) {
+			if (this.checked) {
+				obj.cnvOptions.dataType = this.value
+				console.log('CNV data type updated:', obj.cnvOptions.dataType)
+			}
+		})
+
+		// Row 1: Loss Threshold
+		const lossContainer = optionsGrid
+			.append('div')
+			.style('display', 'flex')
+			.style('align-items', 'center')
+			.style('gap', '8px')
+
+		lossContainer
+			.append('label')
+			.style('font-size', '14px')
+			.style('font-weight', '500')
+			.style('min-width', '120px')
+			.text('Loss Threshold:')
+
+		const lossInput = lossContainer
+			.append('input')
+			.attr('type', 'number')
+			.attr('min', '-10')
+			.attr('max', '0')
+			.attr('step', '0.1')
+			.attr('value', obj.cnvOptions.lossThreshold || -0.4)
+			.style('width', '70px')
+			.style('padding', '4px 8px')
+			.style('border', '1px solid #ccc')
+			.style('border-radius', '4px')
+			.style('font-size', '14px')
+
+		// Add input handler
+		lossInput.on('input', function (this: HTMLInputElement) {
+			const value = parseFloat(this.value)
+			if (!isNaN(value) && value <= 0) {
+				obj.cnvOptions.lossThreshold = value
+			}
+		})
+
+		// Row 1: Gain Threshold
+		const gainContainer = optionsGrid
+			.append('div')
+			.style('display', 'flex')
+			.style('align-items', 'center')
+			.style('gap', '8px')
+
+		gainContainer
+			.append('label')
+			.style('font-size', '14px')
+			.style('font-weight', '500')
+			.style('min-width', '120px')
+			.text('Gain Threshold:')
+
+		const gainInput = gainContainer
+			.append('input')
+			.attr('type', 'number')
+			.attr('min', '0')
+			.attr('max', '10')
+			.attr('step', '0.1')
+			.attr('value', obj.cnvOptions.gainThreshold || 0.3)
+			.style('width', '70px')
+			.style('padding', '4px 8px')
+			.style('border', '1px solid #ccc')
+			.style('border-radius', '4px')
+			.style('font-size', '14px')
+
+		// Add input handler
+		gainInput.on('input', function (this: HTMLInputElement) {
+			const value = parseFloat(this.value)
+			if (!isNaN(value) && value >= 0) {
+				obj.cnvOptions.gainThreshold = value
+			}
+		})
+
+		// Row 2: Segment Length Cutoff (spans full width)
+		const segmentContainer = optionsGrid
+			.append('div')
+			.style('display', 'flex')
+			.style('align-items', 'center')
+			.style('gap', '8px')
+			.style('grid-column', '1 / -1') // Span full width
+
+		segmentContainer
+			.append('label')
+			.style('font-size', '14px')
+			.style('font-weight', '500')
+			.style('min-width', '140px')
+			.text('Segment Length Cutoff:')
+
+		const segmentInput = segmentContainer
+			.append('input')
+			.attr('type', 'number')
+			.attr('min', '0')
+			.attr('max', '2000000')
+			.attr('step', '1000')
+			.attr('value', obj.cnvOptions.segLength || 2000000)
+			.style('width', '100px')
+			.style('padding', '4px 8px')
+			.style('border', '1px solid #ccc')
+			.style('border-radius', '4px')
+			.style('font-size', '14px')
+
+		// Add input handler
+		segmentInput.on('input', function (this: HTMLInputElement) {
+			const value = parseInt(this.value, 10)
+			if (!isNaN(value) && value >= 0) {
+				obj.cnvOptions.segLength = value
+			}
+		})
+
+		segmentContainer.append('span').style('font-size', '13px').style('color', '#666').text('bp')
+
+		// Row 4: Help/Info section (spans full width)
+		const helpContainer = optionsGrid
+			.append('div')
+			.style('grid-column', '1 / -1') // Span full width
+			.style('margin-top', '8px')
+			.style('padding', '8px')
+			.style('background-color', '#f8f9fa')
+			.style('border-radius', '4px')
+			.style('border-left', '3px solid #6c757d')
+
+		helpContainer.append('div').style('font-size', '12px').style('color', '#495057').style('line-height', '1.4').html(`
+			<strong>CNV Thresholds:</strong><br>
+			• Loss Threshold: Log2 ratio for copy number loss (negative values)<br>
+			• Gain Threshold: Log2 ratio for copy number gain (positive values)<br>
+			• Segment Length: Maximum CNV segment size to include (focal events only)
+		`)
+	}
 
 	// Row 3: Fusion (unchecked by default)
 	const fusionRow = optionsTable.append('tr')
@@ -955,6 +1141,11 @@ function makeControls(obj) {
 		const isChecked = this.checked
 		obj.dataTypeStates.cnv = isChecked
 		cnvOptionsContainer.style('display', isChecked ? 'block' : 'none')
+
+		// Create CNV options content when checkbox is checked for the first time
+		if (isChecked) {
+			createCNVOptionsContent(cnvOptionsContainer, obj)
+		}
 	})
 
 	fusionCheckbox.on('change', function (this: HTMLInputElement) {
