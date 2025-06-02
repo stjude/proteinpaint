@@ -220,6 +220,7 @@ async function run_fimo(q, gn, fasta) {
 		const ps = spawn(fimo, lst)
 		const out = []
 		ps.stdout.on('data', i => out.push(i))
+		ps.on('error', e => reject('cannot run fimo'))
 		ps.on('close', code => {
 			fs.unlink(fastafile, () => {})
 
