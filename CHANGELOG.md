@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Fixes:
+- loosen gdc recoverableError handling, including clearing it to allow a subsequent recache attempt to complete
+- catch fimo error in server code
+
+
 ## 2.129.2
 
 Fixes:
