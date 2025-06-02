@@ -1,9 +1,9 @@
 import { dofetch3 } from '#common/dofetch'
-import { make_radios, renderTable, sayerror, Menu, table2col } from '#dom'
+// import { make_radios, renderTable, sayerror, Menu, table2col } from '#dom'
+import { renderTable, sayerror } from '#dom'
 import { select } from 'd3-selection'
 import { formatElapsedTime } from '@sjcrh/proteinpaint-shared/time.js'
 import type { GdcGRIN2listRequest } from '#types'
-// import * as d3 from 'd3'
 
 /*
 a UI to list open-access maf and cnv files from current cohort
@@ -433,7 +433,7 @@ interface TableRowItem {
 	value?: any
 }
 
-const tip = new Menu()
+// const tip = new Menu()
 
 // list of columns to show in MAF file table
 const tableColumns = [
@@ -499,225 +499,502 @@ export async function gdcGRIN2ui({ holder, filter0, callbacks, debugmode = false
 }
 
 function makeControls(obj) {
-	let clickText
-	function updateText() {
-		clickText.text(
-			`${datatypeOptions.reduce((c, i) => c + (i.selected ? 1 : 0), 0)} of ${
-				datatypeOptions.length
-			} options selected. Click to change`
-		)
-	}
-	const table = table2col({ holder: obj.controlDiv })
-	table.addRow('Data Access', 'Open')
-	table.addRow('Workflow Type', 'Aliquot Ensemble Somatic Variant Merging and Masking')
-	{
-		const [, td2] = table.addRow('Experimental Strategy')
-		obj.expStrategyRadio = make_radios({
-			holder: td2,
-			options: [{ label: 'WXS', value: 'WXS', checked: obj.opts.experimentalStrategy == 'WXS' }],
-			styles: { display: 'inline' },
-			callback: async value => {
-				obj.opts.experimentalStrategy = value
-				await getFilesAndShowTable(obj)
-			}
-		})
-	}
-
-	{
-		const [, td2] = table.addRow('Data Type Options')
-		clickText = td2
-			.append('span')
-			.attr('class', 'sja_clbtext')
-			.on('click', event => {
-				const rows: TableRowItem[][] = []
-				const selectedRows: number[] = []
-				for (const [i, c] of datatypeOptions.entries()) {
-					rows.push([{ value: c.label }])
-					if (c.selected) selectedRows.push(i)
-				}
-				renderTable({
-					div: tip.clear().showunder(event.target).d,
-					rows,
-					columns: [{ label: 'Data types' }],
-					selectedRows,
-					noButtonCallback: (i, n) => {
-						datatypeOptions[i].selected = n.checked
-						updateText()
-					}
-				})
-			})
-
-		updateText()
-	}
-	// Add MAF filtering options to the controls table
-	{
-		const [, td2] = table.addRow('MAF Filtering Options')
-
-		// Create container for the MAF options
-		const mafOptionsDiv = td2.append('div').style('display', 'inline-block')
-
-		// Min Total Depth input
-		mafOptionsDiv.append('label').style('margin-right', '10px').style('font-size', '14px').text('Min Total Depth:')
-
-		mafOptionsDiv
-			.append('input')
-			.attr('type', 'number')
-			.attr('min', '0')
-			.attr('step', '1')
-			.attr('value', obj.mafOptions?.minTotalDepth || 10)
-			.style('width', '60px')
-			.style('margin-right', '20px')
-			.style('padding', '2px 4px')
-			.style('border', '1px solid #ccc')
-			.style('border-radius', '3px')
-			.on('input', function (this: HTMLInputElement) {
-				const value = parseInt(this.value, 10)
-				if (!isNaN(value) && value >= 0) {
-					obj.mafOptions.minTotalDepth = value
-				}
-			})
-
-		// Min Alt Allele Count input
-		mafOptionsDiv.append('label').style('margin-right', '10px').style('font-size', '14px').text('Min Alt Allele Count:')
-
-		mafOptionsDiv
-			.append('input')
-			.attr('type', 'number')
-			.attr('min', '0')
-			.attr('step', '1')
-			.attr('value', obj.mafOptions?.minAltAlleleCount || 2)
-			.style('width', '60px')
-			.style('padding', '2px 4px')
-			.style('border', '1px solid #ccc')
-			.style('border-radius', '3px')
-			.on('input', function (this: HTMLInputElement) {
-				const value = parseInt(this.value, 10)
-				if (!isNaN(value) && value >= 0) {
-					obj.mafOptions.minAltAlleleCount = value
-				}
-			})
-
-		// Add help tooltip
-		mafOptionsDiv
-			.append('span')
-			.attr('class', 'sja_clbtext')
-			.style('margin-left', '10px')
-			.style('font-size', '12px')
-			.style('color', '#666')
-			.text('ⓘ')
-			.attr(
-				'title',
-				'Min Total Depth: Minimum read depth required\nMin Alt Allele Count: Minimum alternate allele count required'
-			)
-	}
-
-	// Initialize mafOptions if not exists
+	// Initialize options objects
 	if (!obj.mafOptions) {
 		obj.mafOptions = {
 			minTotalDepth: 10,
-			minAltAlleleCount: 2
+			minAltAlleleCount: 2,
+			consequences: ['missense', 'frameshift', 'duplication'], // Updated defaults
+			hypermutatorMaxCutoff: 8000
 		}
-	}
-
-	// Add CNV filtering options to the controls table
-	{
-		const [, td2] = table.addRow('CNV Filtering Options')
-
-		// Create container for the CNV options
-		const cnvOptionsDiv = td2.append('div').style('display', 'inline-block')
-
-		// Loss Threshold input
-		cnvOptionsDiv.append('label').style('margin-right', '10px').style('font-size', '14px').text('Loss Threshold:')
-
-		cnvOptionsDiv
-			.append('input')
-			.attr('type', 'number')
-			.attr('min', '-10')
-			.attr('max', '0')
-			.attr('step', '0.1')
-			.attr('value', obj.cnvOptions?.lossThreshold || -0.5)
-			.style('width', '70px')
-			.style('margin-right', '20px')
-			.style('padding', '2px 4px')
-			.style('border', '1px solid #ccc')
-			.style('border-radius', '3px')
-			.on('input', function (this: HTMLInputElement) {
-				const value = parseFloat(this.value)
-				if (!isNaN(value) && value <= 0) {
-					obj.cnvOptions.lossThreshold = value
-				}
-			})
-
-		// Gain Threshold input
-		cnvOptionsDiv.append('label').style('margin-right', '10px').style('font-size', '14px').text('Gain Threshold:')
-
-		cnvOptionsDiv
-			.append('input')
-			.attr('type', 'number')
-			.attr('min', '0')
-			.attr('max', '10')
-			.attr('step', '0.1')
-			.attr('value', obj.cnvOptions?.gainThreshold || 0.5)
-			.style('width', '70px')
-			.style('margin-right', '20px')
-			.style('padding', '2px 4px')
-			.style('border', '1px solid #ccc')
-			.style('border-radius', '3px')
-			.on('input', function (this: HTMLInputElement) {
-				const value = parseFloat(this.value)
-				if (!isNaN(value) && value >= 0) {
-					obj.cnvOptions.gainThreshold = value
-				}
-			})
-
-		// Segment Length Cutoff input
-		cnvOptionsDiv
-			.append('label')
-			.style('margin-right', '10px')
-			.style('font-size', '14px')
-			.text('Segment Length Cutoff:')
-
-		cnvOptionsDiv
-			.append('input')
-			.attr('type', 'number')
-			.attr('min', '0')
-			.attr('max', '2000000')
-			.attr('step', '1')
-			.attr('value', obj.cnvOptions?.segLength || 2000000)
-			.style('width', '80px')
-			.style('padding', '2px 4px')
-			.style('border', '1px solid #ccc')
-			.style('border-radius', '3px')
-			.on('input', function (this: HTMLInputElement) {
-				const value = parseFloat(this.value)
-				if (!isNaN(value) && value >= 0) {
-					obj.cnvOptions.segLength = value
-				}
-			})
-
-		// Add help tooltip for CNV options
-		cnvOptionsDiv
-			.append('span')
-			.attr('class', 'sja_clbtext')
-			.style('margin-left', '10px')
-			.style('font-size', '12px')
-			.style('color', '#666')
-			.text('ⓘ')
-			.attr(
-				'title',
-				'Loss Threshold: Log2 ratio threshold for copy number loss (negative values)\n' +
-					'Gain Threshold: Log2 ratio threshold for copy number gain (positive values)\n' +
-					'Segment Length: Limit the CNV segment length to show only focal events.\nCNV segment size limit is 2000,000 bp'
-			)
 	}
 
 	if (!obj.cnvOptions) {
 		obj.cnvOptions = {
 			lossThreshold: -0.4,
 			gainThreshold: 0.3,
-			segLength: 2000000 // Default segment length cutoff
+			segLength: 2000000
 		}
 	}
+
+	// Initialize checkbox states - MAF checked by default
+	obj.dataTypeStates = {
+		maf: true,
+		cnv: false,
+		fusion: false,
+		grin2: false
+	}
+
+	// Create the main 2-column, 4-row table for data type options
+	const optionsTable = obj.controlDiv
+		.append('table')
+		.style('width', 'auto')
+		.style('border-collapse', 'collapse')
+		.style('margin-top', '10px')
+		.style('border', '1px solid #ddd')
+
+	// Create table header
+	const headerRow = optionsTable.append('tr')
+
+	headerRow
+		.append('th')
+		.style('width', '200px')
+		.style('padding', '12px')
+		.style('background-color', '#f8f9fa')
+		.style('border', '1px solid #ddd')
+		.style('font-weight', 'bold')
+		.style('text-align', 'left')
+		.text('Data Type')
+
+	headerRow
+		.append('th')
+		.style('padding', '12px')
+		.style('background-color', '#f8f9fa')
+		.style('border', '1px solid #ddd')
+		.style('font-weight', 'bold')
+		.style('text-align', 'left')
+		.text('Options')
+
+	// Row 1: MAF (checked by default, shows all the MAF-related options)
+	const mafRow = optionsTable.append('tr')
+
+	const mafCheckboxCell = mafRow
+		.append('td')
+		.style('padding', '12px')
+		.style('border', '1px solid #ddd')
+		.style('vertical-align', 'top')
+
+	// MAF checkbox and label
+	const mafCheckboxContainer = mafCheckboxCell
+		.append('div')
+		.style('display', 'flex')
+		.style('align-items', 'center')
+		.style('gap', '8px')
+
+	const mafCheckbox = mafCheckboxContainer
+		.append('input')
+		.attr('type', 'checkbox')
+		.attr('id', 'maf-checkbox')
+		.property('checked', true) // Checked by default
+		.style('margin', '0')
+		.style('cursor', 'pointer')
+
+	mafCheckboxContainer
+		.append('label')
+		.attr('for', 'maf-checkbox')
+		.style('cursor', 'pointer')
+		.style('font-weight', '500')
+		.text('MAF (Mutation)')
+
+	const mafOptionsCell = mafRow
+		.append('td')
+		.style('padding', '12px')
+		.style('border', '1px solid #ddd')
+		.style('vertical-align', 'top')
+
+	// MAF options container (visible by default since MAF is checked)
+	const mafOptionsContainer = mafOptionsCell.append('div').style('display', 'block') // Visible by default
+	createMAFOptionsContent(mafOptionsContainer, obj)
+
+	function createMAFOptionsContent(container, obj) {
+		// Clear any existing content
+		container.selectAll('*').remove()
+
+		// Create a grid layout for MAF options
+		const optionsGrid = container
+			.append('div')
+			.style('display', 'grid')
+			.style('grid-template-columns', 'auto auto')
+			.style('gap', '15px')
+			.style('margin-top', '10px')
+			.style('max-width', 'fit-content')
+
+		// Row 1: Min Total Depth
+		const depthContainer = optionsGrid
+			.append('div')
+			.style('display', 'flex')
+			.style('align-items', 'center')
+			.style('gap', '8px')
+
+		depthContainer
+			.append('label')
+			.style('font-size', '14px')
+			.style('font-weight', '500')
+			.style('min-width', '140px')
+			.text('Min Total Depth:')
+
+		const depthInput = depthContainer
+			.append('input')
+			.attr('type', 'number')
+			.attr('min', '0')
+			.attr('step', '1')
+			.attr('value', obj.mafOptions.minTotalDepth || 10)
+			.style('width', '80px')
+			.style('padding', '4px 8px')
+			.style('border', '1px solid #ccc')
+			.style('border-radius', '4px')
+			.style('font-size', '14px')
+
+		// Add input handler
+		depthInput.on('input', function (this: HTMLInputElement) {
+			const value = parseInt(this.value, 10)
+			if (!isNaN(value) && value >= 0) {
+				obj.mafOptions.minTotalDepth = value
+			}
+		})
+
+		// Row 1: Min Mutant Allele Count
+		const alleleContainer = optionsGrid
+			.append('div')
+			.style('display', 'flex')
+			.style('align-items', 'center')
+			.style('gap', '8px')
+
+		alleleContainer
+			.append('label')
+			.style('font-size', '14px')
+			.style('font-weight', '500')
+			.style('min-width', '160px')
+			.text('Min Mutant Allele Count:')
+
+		const alleleInput = alleleContainer
+			.append('input')
+			.attr('type', 'number')
+			.attr('min', '0')
+			.attr('step', '1')
+			.attr('value', obj.mafOptions.minAltAlleleCount || 2)
+			.style('width', '80px')
+			.style('padding', '4px 8px')
+			.style('border', '1px solid #ccc')
+			.style('border-radius', '4px')
+			.style('font-size', '14px')
+
+		// Add input handler
+		alleleInput.on('input', function (this: HTMLInputElement) {
+			const value = parseInt(this.value, 10)
+			if (!isNaN(value) && value >= 0) {
+				obj.mafOptions.minAltAlleleCount = value
+			}
+		})
+
+		// Row 2: Consequences Dropdown
+		const consequencesContainer = optionsGrid
+			.append('div')
+			.style('display', 'flex')
+			.style('align-items', 'center')
+			.style('gap', '8px')
+
+		consequencesContainer
+			.append('label')
+			.style('font-size', '14px')
+			.style('font-weight', '500')
+			.style('min-width', '100px')
+			.text('Consequences:')
+
+		// Initialize consequences if not exists
+		if (!obj.mafOptions.consequences) {
+			obj.mafOptions.consequences = ['missense'] // default selection
+		}
+
+		const consequencesCheckboxContainer = consequencesContainer
+			.append('div')
+			.style('display', 'grid')
+			.style('grid-template-columns', 'repeat(2, 1fr)')
+			.style('gap', '8px')
+			.style('max-width', '250px')
+
+		// Mutation type options
+		const mutationTypes = ['missense', 'nonsense', 'frameshift', 'duplication', 'deletion', 'insertion', 'inversion']
+
+		// Create checkboxes for each mutation type
+		mutationTypes.forEach(mutationType => {
+			const checkboxDiv = consequencesCheckboxContainer
+				.append('div')
+				.style('display', 'flex')
+				.style('align-items', 'center')
+				.style('gap', '6px')
+				.style('font-size', '13px')
+
+			const checkbox = checkboxDiv
+				.append('input')
+				.attr('type', 'checkbox')
+				.attr('id', `consequence-${mutationType}`)
+				.property('checked', obj.mafOptions.consequences.includes(mutationType))
+				.style('margin', '0')
+				.style('cursor', 'pointer')
+
+			checkboxDiv
+				.append('label')
+				.attr('for', `consequence-${mutationType}`)
+				.style('cursor', 'pointer')
+				.style('font-size', '13px')
+				.text(mutationType.charAt(0).toUpperCase() + mutationType.slice(1))
+
+			// Add change handler
+			checkbox.on('change', function (this: HTMLInputElement) {
+				const isChecked = this.checked
+				if (isChecked) {
+					// Add to consequences if not already present
+					if (!obj.mafOptions.consequences.includes(mutationType)) {
+						obj.mafOptions.consequences.push(mutationType)
+					}
+				} else {
+					// Remove from consequences
+					obj.mafOptions.consequences = obj.mafOptions.consequences.filter(c => c !== mutationType)
+				}
+				console.log('Updated consequences:', obj.mafOptions.consequences)
+			})
+		})
+		// Row 2: Hypermutator Max Cut Off
+		const hyperContainer = optionsGrid
+			.append('div')
+			.style('display', 'flex')
+			.style('align-items', 'center')
+			.style('gap', '8px')
+
+		hyperContainer
+			.append('label')
+			.style('font-size', '14px')
+			.style('font-weight', '500')
+			.style('min-width', '160px')
+			.text('Hypermutator Max Cut Off:')
+
+		const hyperInput = hyperContainer
+			.append('input')
+			.attr('type', 'number')
+			.attr('min', '0')
+			.attr('step', '100')
+			.attr('value', obj.mafOptions.hypermutatorMaxCutoff || 8000)
+			.style('width', '100px')
+			.style('padding', '4px 8px')
+			.style('border', '1px solid #ccc')
+			.style('border-radius', '4px')
+			.style('font-size', '14px')
+
+		// Add input handler
+		hyperInput.on('input', function (this: HTMLInputElement) {
+			const value = parseInt(this.value, 10)
+			if (!isNaN(value) && value >= 0) {
+				obj.mafOptions.hypermutatorMaxCutoff = value
+			}
+		})
+
+		// Row 3: Workflow Type (read-only display)
+		const workflowContainer = optionsGrid
+			.append('div')
+			.style('display', 'flex')
+			.style('align-items', 'center')
+			.style('gap', '8px')
+			.style('grid-column', '1 / -1') // Span full width
+
+		workflowContainer
+			.append('label')
+			.style('font-size', '14px')
+			.style('font-weight', '500')
+			.style('min-width', '100px')
+			.text('Workflow Type:')
+
+		workflowContainer
+			.append('span')
+			.style('font-size', '14px')
+			.style('color', '#666')
+			.style('font-style', 'italic')
+			.text('Aliquot Ensemble Somatic Variant Merging and Masking')
+
+		// Row 4: Dedup (placeholder with clickable link)
+		const dedupContainer = optionsGrid
+			.append('div')
+			.style('display', 'flex')
+			.style('align-items', 'center')
+			.style('gap', '8px')
+			.style('grid-column', '1 / -1') // Span full width
+
+		dedupContainer
+			.append('label')
+			.style('font-size', '14px')
+			.style('font-weight', '500')
+			.style('min-width', '100px')
+			.text('Deduplication:')
+
+		// Create the dedup status area (this will be updated when files are loaded)
+		const dedupStatus = dedupContainer
+			.append('span')
+			.attr('id', 'dedup-status')
+			.style('font-size', '14px')
+			.style('color', '#666')
+
+		// Initial placeholder text
+		dedupStatus.text('File deduplication status will appear here after loading files')
+
+		// Store reference for later updates
+		obj.dedupStatusElement = dedupStatus
+	}
+
+	// Row 2: CNV (unchecked by default)
+	const cnvRow = optionsTable.append('tr')
+
+	const cnvCheckboxCell = cnvRow
+		.append('td')
+		.style('padding', '12px')
+		.style('border', '1px solid #ddd')
+		.style('vertical-align', 'top')
+
+	const cnvCheckboxContainer = cnvCheckboxCell
+		.append('div')
+		.style('display', 'flex')
+		.style('align-items', 'center')
+		.style('gap', '8px')
+
+	const cnvCheckbox = cnvCheckboxContainer
+		.append('input')
+		.attr('type', 'checkbox')
+		.attr('id', 'cnv-checkbox')
+		.property('checked', false) // Unchecked by default
+		.style('margin', '0')
+		.style('cursor', 'pointer')
+
+	cnvCheckboxContainer
+		.append('label')
+		.attr('for', 'cnv-checkbox')
+		.style('cursor', 'pointer')
+		.style('font-weight', '500')
+		.text('CNV (Copy Number)')
+
+	const cnvOptionsCell = cnvRow
+		.append('td')
+		.style('padding', '12px')
+		.style('border', '1px solid #ddd')
+		.style('vertical-align', 'top')
+
+	// CNV options container (hidden by default since CNV is unchecked)
+	const cnvOptionsContainer = cnvOptionsCell.append('div').style('display', 'none') // Hidden by default
+
+	cnvOptionsContainer
+		.append('div')
+		.style('color', '#666')
+		.style('font-style', 'italic')
+		.text('CNV filtering options: Loss Threshold, Gain Threshold, Segment Length')
+
+	// Row 3: Fusion (unchecked by default)
+	const fusionRow = optionsTable.append('tr')
+
+	const fusionCheckboxCell = fusionRow
+		.append('td')
+		.style('padding', '12px')
+		.style('border', '1px solid #ddd')
+		.style('vertical-align', 'top')
+
+	const fusionCheckboxContainer = fusionCheckboxCell
+		.append('div')
+		.style('display', 'flex')
+		.style('align-items', 'center')
+		.style('gap', '8px')
+
+	const fusionCheckbox = fusionCheckboxContainer
+		.append('input')
+		.attr('type', 'checkbox')
+		.attr('id', 'fusion-checkbox')
+		.property('checked', false) // Unchecked by default
+		.style('margin', '0')
+		.style('cursor', 'pointer')
+
+	fusionCheckboxContainer
+		.append('label')
+		.attr('for', 'fusion-checkbox')
+		.style('cursor', 'pointer')
+		.style('font-weight', '500')
+		.text('Fusion')
+
+	const fusionOptionsCell = fusionRow
+		.append('td')
+		.style('padding', '12px')
+		.style('border', '1px solid #ddd')
+		.style('vertical-align', 'top')
+
+	// Fusion options container (hidden by default)
+	const fusionOptionsContainer = fusionOptionsCell.append('div').style('display', 'none') // Hidden by default
+
+	fusionOptionsContainer
+		.append('div')
+		.style('color', '#666')
+		.style('font-style', 'italic')
+		.text('Fusion analysis options will be configured here')
+
+	// Row 4: GRIN2 (unchecked by default)
+	const grin2Row = optionsTable.append('tr')
+
+	const grin2CheckboxCell = grin2Row
+		.append('td')
+		.style('padding', '12px')
+		.style('border', '1px solid #ddd')
+		.style('vertical-align', 'top')
+
+	const grin2CheckboxContainer = grin2CheckboxCell
+		.append('div')
+		.style('display', 'flex')
+		.style('align-items', 'center')
+		.style('gap', '8px')
+
+	const grin2Checkbox = grin2CheckboxContainer
+		.append('input')
+		.attr('type', 'checkbox')
+		.attr('id', 'grin2-checkbox')
+		.property('checked', false) // Unchecked by default
+		.style('margin', '0')
+		.style('cursor', 'pointer')
+
+	grin2CheckboxContainer
+		.append('label')
+		.attr('for', 'grin2-checkbox')
+		.style('cursor', 'pointer')
+		.style('font-weight', '500')
+		.text('GRIN2 Analysis')
+
+	const grin2OptionsCell = grin2Row
+		.append('td')
+		.style('padding', '12px')
+		.style('border', '1px solid #ddd')
+		.style('vertical-align', 'top')
+
+	// GRIN2 options container (hidden by default)
+	const grin2OptionsContainer = grin2OptionsCell.append('div').style('display', 'none') // Hidden by default
+
+	grin2OptionsContainer
+		.append('div')
+		.style('color', '#666')
+		.style('font-style', 'italic')
+		.text('GRIN2 analysis options will be configured here')
+
+	// Add checkbox change handlers (basic show/hide functionality)
+	mafCheckbox.on('change', function (this: HTMLInputElement) {
+		const isChecked = this.checked
+		obj.dataTypeStates.maf = isChecked
+		mafOptionsContainer.style('display', isChecked ? 'block' : 'none')
+	})
+
+	cnvCheckbox.on('change', function (this: HTMLInputElement) {
+		const isChecked = this.checked
+		obj.dataTypeStates.cnv = isChecked
+		cnvOptionsContainer.style('display', isChecked ? 'block' : 'none')
+	})
+
+	fusionCheckbox.on('change', function (this: HTMLInputElement) {
+		const isChecked = this.checked
+		obj.dataTypeStates.fusion = isChecked
+		fusionOptionsContainer.style('display', isChecked ? 'block' : 'none')
+	})
+
+	grin2Checkbox.on('change', function (this: HTMLInputElement) {
+		const isChecked = this.checked
+		obj.dataTypeStates.grin2 = isChecked
+		grin2OptionsContainer.style('display', isChecked ? 'block' : 'none')
+	})
+
+	// Store references for easy access later
+	obj.mafOptionsContainer = mafOptionsContainer
+	obj.cnvOptionsContainer = cnvOptionsContainer
+	obj.fusionOptionsContainer = fusionOptionsContainer
+	obj.grin2OptionsContainer = grin2OptionsContainer
 }
 
 async function getFilesAndShowTable(obj) {
@@ -745,89 +1022,10 @@ async function getFilesAndShowTable(obj) {
 		if (!Array.isArray(result.files)) throw 'result.files[] not array'
 		if (result.files.length == 0) throw 'No files available.'
 
-		// Show deduplication information if any duplicates were removed OR files were size-filtered
-		if (
-			(result.deduplicationStats && result.deduplicationStats.duplicatesRemoved > 0) ||
-			(result.deduplicationStats &&
-				result.deduplicationStats.filteredFiles &&
-				result.deduplicationStats.filteredFiles.length > 0)
-		) {
-			// Clear any previous deduplication info
-			obj.deduplicationInfoDiv.selectAll('*').remove()
-
-			const deduplicationDiv = obj.deduplicationInfoDiv
-				.append('div')
-				.style('background-color', '#f0f8ff')
-				.style('border', '1px solid #87ceeb')
-				.style('border-radius', '1px')
-				.style('padding', '5px')
-				.style('margin', '40px 0')
-				.style('max-width', '100%') // Don't exceed container width
-				.style('width', 'fit-content') // Only as wide as content needs
-
-			const duplicatesRemoved = result.deduplicationStats.duplicatesRemoved || 0
-			const sizeFilteredCount = result.deduplicationStats.filteredFiles
-				? result.deduplicationStats.filteredFiles.length
-				: 0
-			const totalExcluded = duplicatesRemoved + sizeFilteredCount
-			const originalTotal = result.deduplicationStats.originalFileCount + sizeFilteredCount // Add back the size-filtered files to get true original count
-
-			deduplicationDiv
-				.append('div')
-				.style('font-weight', 'bold')
-				.style('color', '#2c5aa0')
-				.text('🔄 File Deduplication and Size Filtering Applied')
-
-			// Build the description text based on what types of filtering occurred
-			let descriptionText = `Found <strong>${originalTotal}</strong> total MAF files`
-			if (totalExcluded > 0) {
-				descriptionText += `, but <strong>${totalExcluded}</strong> were excluded`
-
-				// Add details about what was excluded
-				const exclusionDetails: string[] = []
-				if (duplicatesRemoved > 0) {
-					exclusionDetails.push(`${duplicatesRemoved} duplicates from the same cases`)
-				}
-				if (sizeFilteredCount > 0) {
-					exclusionDetails.push(`${sizeFilteredCount} files too large`)
-				}
-
-				if (exclusionDetails.length > 0) {
-					descriptionText += ` (${exclusionDetails.join(' and ')})`
-				}
-
-				descriptionText += `. <br/>Showing <strong>${result.deduplicationStats.deduplicatedFileCount}</strong> unique cases`
-
-				if (duplicatesRemoved > 0) {
-					descriptionText += ` (largest file selected for each case)`
-				}
-				descriptionText += `.`
-			} else {
-				descriptionText += `. All files are included.`
-			}
-
-			deduplicationDiv.append('div').style('margin-top', '5px').style('font-size', '14px').html(descriptionText)
-
-			// Add clickable link to view excluded files (only if there are excluded files)
-			if (totalExcluded > 0) {
-				deduplicationDiv
-					.append('div')
-					.style('margin-top', '8px')
-					.append('a')
-					.style('color', '#2c5aa0')
-					.style('text-decoration', 'underline')
-					.style('cursor', 'pointer')
-					.style('font-size', '13px')
-					.text('View excluded files')
-					.on('click', function () {
-						gdcGrin2ShowDeduplicationPopup(result.deduplicationStats)
-					})
-			}
-		} else {
-			// Clear deduplication info if no filtering occurred
-			obj.deduplicationInfoDiv.selectAll('*').remove()
+		// Update the dedup status in MAF options
+		if (result.deduplicationStats) {
+			updateDedupStatus(obj, result.deduplicationStats)
 		}
-
 		// render
 		if (result.filesTotal > result.files.length) {
 			wait.text(
@@ -1324,5 +1522,97 @@ async function getFilesAndShowTable(obj) {
 		button.disabled = false
 		obj.busy = false
 		obj.expStrategyRadio.inputs.property('disabled', false)
+	}
+}
+
+function updateDedupStatus(obj, deduplicationStats) {
+	if (!obj.dedupStatusElement) return
+
+	const dedupElement = obj.dedupStatusElement
+	dedupElement.selectAll('*').remove() // Clear existing content
+
+	if (!deduplicationStats) {
+		dedupElement.style('color', '#666').text('No deduplication data available')
+		return
+	}
+
+	// Create a container for the detailed dedup info
+	const dedupContainer = dedupElement
+		.append('div')
+		.style('display', 'flex')
+		.style('flex-direction', 'column')
+		.style('gap', '8px')
+
+	const duplicatesRemoved = deduplicationStats.duplicatesRemoved || 0
+	const sizeFilteredCount = deduplicationStats.filteredFiles ? deduplicationStats.filteredFiles.length : 0
+	const totalExcluded = duplicatesRemoved + sizeFilteredCount
+	const originalTotal = deduplicationStats.originalFileCount + sizeFilteredCount
+
+	if (totalExcluded > 0) {
+		// Summary line
+		const summaryDiv = dedupContainer
+			.append('div')
+			.style('font-size', '14px')
+			.style('color', '#d84315')
+			.style('font-weight', '500')
+
+		summaryDiv.html(
+			`Found <strong>${originalTotal}</strong> total MAF files, excluded <strong>${totalExcluded}</strong>`
+		)
+
+		// Details line
+		const detailsDiv = dedupContainer.append('div').style('font-size', '13px').style('color', '#666')
+
+		const exclusionDetails: string[] = []
+		if (duplicatesRemoved > 0) {
+			exclusionDetails.push(`${duplicatesRemoved} duplicates from same cases`)
+		}
+		if (sizeFilteredCount > 0) {
+			exclusionDetails.push(`${sizeFilteredCount} files too large`)
+		}
+
+		detailsDiv.text(`(${exclusionDetails.join(' and ')})`)
+
+		// Final result line
+		const resultDiv = dedupContainer
+			.append('div')
+			.style('font-size', '13px')
+			.style('color', '#28a745')
+			.style('font-weight', '500')
+
+		resultDiv.html(`Showing <strong>${deduplicationStats.deduplicatedFileCount}</strong> unique cases`)
+		if (duplicatesRemoved > 0) {
+			resultDiv.append('span').style('color', '#666').style('font-weight', 'normal').text(' (largest file per case)')
+		}
+
+		// Add clickable link to view excluded files
+		if (totalExcluded > 0) {
+			const linkDiv = dedupContainer.append('div').style('margin-top', '4px')
+
+			linkDiv
+				.append('a')
+				.style('color', '#2c5aa0')
+				.style('text-decoration', 'underline')
+				.style('cursor', 'pointer')
+				.style('font-size', '12px')
+				.text('View excluded files details')
+				.on('click', function () {
+					gdcGrin2ShowDeduplicationPopup(deduplicationStats)
+				})
+		}
+	} else {
+		// No exclusions
+		dedupContainer
+			.append('div')
+			.style('color', '#28a745')
+			.style('font-weight', '500')
+			.style('font-size', '14px')
+			.html(`All <strong>${deduplicationStats.deduplicatedFileCount}</strong> files included`)
+
+		dedupContainer
+			.append('div')
+			.style('color', '#666')
+			.style('font-size', '13px')
+			.text('No duplicates or oversized files found')
 	}
 }
