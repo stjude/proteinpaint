@@ -521,8 +521,7 @@ function makeControls(obj) {
 	obj.dataTypeStates = {
 		maf: true,
 		cnv: false,
-		fusion: false,
-		grin2: false
+		fusion: false
 	}
 
 	// Create the main 2-column, 4-row table for data type options
@@ -765,7 +764,7 @@ function makeControls(obj) {
 			.attr('min', '0')
 			.attr('step', '100')
 			.attr('value', obj.mafOptions.hypermutatorMaxCutoff || 8000)
-			.style('width', '100px')
+			.style('width', '70px')
 			.style('padding', '4px 8px')
 			.style('border', '1px solid #ccc')
 			.style('border-radius', '4px')
@@ -798,7 +797,6 @@ function makeControls(obj) {
 			.append('span')
 			.style('font-size', '14px')
 			.style('color', '#666')
-			.style('font-style', 'italic')
 			.text('Aliquot Ensemble Somatic Variant Merging and Masking')
 
 		// Row 4: Dedup (placeholder with clickable link)
@@ -929,26 +927,7 @@ function makeControls(obj) {
 		.style('border', '1px solid #ddd')
 		.style('vertical-align', 'top')
 
-	const grin2CheckboxContainer = grin2CheckboxCell
-		.append('div')
-		.style('display', 'flex')
-		.style('align-items', 'center')
-		.style('gap', '8px')
-
-	const grin2Checkbox = grin2CheckboxContainer
-		.append('input')
-		.attr('type', 'checkbox')
-		.attr('id', 'grin2-checkbox')
-		.property('checked', false) // Unchecked by default
-		.style('margin', '0')
-		.style('cursor', 'pointer')
-
-	grin2CheckboxContainer
-		.append('label')
-		.attr('for', 'grin2-checkbox')
-		.style('cursor', 'pointer')
-		.style('font-weight', '500')
-		.text('GRIN2 Analysis')
+	grin2CheckboxCell.append('div').style('font-weight', '500').style('color', '#333').text('GRIN2 Analysis')
 
 	const grin2OptionsCell = grin2Row
 		.append('td')
@@ -957,12 +936,12 @@ function makeControls(obj) {
 		.style('vertical-align', 'top')
 
 	// GRIN2 options container (hidden by default)
-	const grin2OptionsContainer = grin2OptionsCell.append('div').style('display', 'none') // Hidden by default
+	const grin2OptionsContainer = grin2OptionsCell.append('div').style('display', 'inline')
 
 	grin2OptionsContainer
 		.append('div')
 		.style('color', '#666')
-		.style('font-style', 'italic')
+		.style('font-style', 'plain')
 		.text('GRIN2 analysis options will be configured here')
 
 	// Add checkbox change handlers (basic show/hide functionality)
@@ -984,17 +963,10 @@ function makeControls(obj) {
 		fusionOptionsContainer.style('display', isChecked ? 'block' : 'none')
 	})
 
-	grin2Checkbox.on('change', function (this: HTMLInputElement) {
-		const isChecked = this.checked
-		obj.dataTypeStates.grin2 = isChecked
-		grin2OptionsContainer.style('display', isChecked ? 'block' : 'none')
-	})
-
 	// Store references for easy access later
 	obj.mafOptionsContainer = mafOptionsContainer
 	obj.cnvOptionsContainer = cnvOptionsContainer
 	obj.fusionOptionsContainer = fusionOptionsContainer
-	obj.grin2OptionsContainer = grin2OptionsContainer
 }
 
 async function getFilesAndShowTable(obj) {
@@ -1163,7 +1135,6 @@ async function getFilesAndShowTable(obj) {
 
 		try {
 			obj.busy = true
-			obj.expStrategyRadio.inputs.property('disabled', true)
 
 			// Call the GRIN2 run endpoint with the correctly formatted data
 			console.log('Sending GRIN2 request:', caseFiles)
