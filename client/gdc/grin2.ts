@@ -3,7 +3,7 @@ import { make_radios, renderTable, sayerror, Menu, table2col } from '#dom'
 import { select } from 'd3-selection'
 import { formatElapsedTime } from '@sjcrh/proteinpaint-shared/time.js'
 import type { GdcGRIN2listRequest } from '#types'
-import * as d3 from 'd3'
+// import * as d3 from 'd3'
 
 /*
 a UI to list open-access maf and cnv files from current cohort
@@ -15,13 +15,12 @@ and display the resulting visualization
  * Function to show the deduplication popup
  * Pass your deduplication stats that include the console.log data
  */
-function showDeduplicationPopup(deduplicationStats) {
+function gdcGrin2ShowDeduplicationPopup(deduplicationStats) {
 	// Remove any existing popup
-	d3.select('.deduplication-popup').remove()
+	select('.deduplication-popup').remove()
 
 	// Create popup overlay
-	const popup = d3
-		.select('body')
+	const popup = select('body')
 		.append('div')
 		.attr('class', 'deduplication-popup')
 		.style('position', 'fixed')
@@ -113,7 +112,7 @@ function showDeduplicationPopup(deduplicationStats) {
 				.html(
 					`<strong>Case ${caseInfo.caseName}:</strong> Found ${
 						caseInfo.fileCount
-					} MAF files, keeping largest (${formatBytes(caseInfo.keptFileSize)})`
+					} MAF files, keeping largest (${gdcGrin2FormatBytes(caseInfo.keptFileSize)})`
 				)
 		})
 	}
@@ -140,7 +139,9 @@ function showDeduplicationPopup(deduplicationStats) {
 			.style('font-size', '14px')
 			.style('color', '#666')
 			.text(
-				`${deduplicationStats.filteredFiles.length} files were excluded for being too large (>${formatBytes(1000000)})`
+				`${deduplicationStats.filteredFiles.length} files were excluded for being too large (>${gdcGrin2FormatBytes(
+					1000000
+				)})`
 			)
 
 		deduplicationStats.filteredFiles.forEach(fileInfo => {
@@ -163,7 +164,7 @@ function showDeduplicationPopup(deduplicationStats) {
 				.append('div')
 				.style('font-size', '12px')
 				.style('color', '#666')
-				.text(`Size: ${formatBytes(fileInfo.fileSize)} - ${fileInfo.reason}`)
+				.text(`Size: ${gdcGrin2FormatBytes(fileInfo.fileSize)} - ${fileInfo.reason}`)
 		})
 	}
 
@@ -216,17 +217,17 @@ function showDeduplicationPopup(deduplicationStats) {
 	})
 
 	// Close with Escape key
-	d3.select('body').on('keydown.popup', function (event) {
+	select('body').on('keydown.popup', function (event) {
 		if (event.key === 'Escape') {
 			popup.remove()
-			d3.select('body').on('keydown.popup', null)
+			select('body').on('keydown.popup', null)
 		}
 	})
 }
 /**
  * Helper function to format bytes
  */
-function formatBytes(bytes) {
+function gdcGrin2FormatBytes(bytes) {
 	if (bytes === 0) return '0 Bytes'
 	const k = 1024
 	const sizes = ['Bytes', 'KB', 'MB', 'GB']
@@ -238,13 +239,12 @@ function formatBytes(bytes) {
  * Function to show the failed files popup
  * Similar to deduplication popup but for download failures
  */
-function showFailedFilesPopup(failedFilesData) {
+function gdcGrin2ShowFailedFilesPopup(failedFilesData) {
 	// Remove any existing popup
-	d3.select('.failed-files-popup').remove()
+	select('.failed-files-popup').remove()
 
 	// Create popup overlay
-	const popup = d3
-		.select('body')
+	const popup = select('body')
 		.append('div')
 		.attr('class', 'failed-files-popup')
 		.style('position', 'fixed')
@@ -418,10 +418,10 @@ function showFailedFilesPopup(failedFilesData) {
 	})
 
 	// Close with Escape key
-	d3.select('body').on('keydown.failed-popup', function (event) {
+	select('body').on('keydown.failed-popup', function (event) {
 		if (event.key === 'Escape') {
 			popup.remove()
-			d3.select('body').on('keydown.failed-popup', null)
+			select('body').on('keydown.failed-popup', null)
 		}
 	})
 }
@@ -820,7 +820,7 @@ async function getFilesAndShowTable(obj) {
 					.style('font-size', '13px')
 					.text('View excluded files')
 					.on('click', function () {
-						showDeduplicationPopup(result.deduplicationStats)
+						gdcGrin2ShowDeduplicationPopup(result.deduplicationStats)
 					})
 			}
 		} else {
@@ -1121,7 +1121,7 @@ async function getFilesAndShowTable(obj) {
 						.style('font-size', '13px')
 						.text('View failed files details')
 						.on('click', function () {
-							showFailedFilesPopup(failedFilesInfo)
+							gdcGrin2ShowFailedFilesPopup(failedFilesInfo)
 						})
 				} else {
 					// Optional: Add a message for successful downloads
