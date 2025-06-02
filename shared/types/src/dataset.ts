@@ -971,7 +971,7 @@ export type WSImages = {
 	required; for both cases where image files are hosted locally, or loaded from remote via ds-supplied getter
 	*/
 	imageBySampleFolder: string
-
+	predictionColor?: Array<number>
 	annotationsColor?: Array<number>
 	classes?: WSIClass[]
 
@@ -979,6 +979,8 @@ export type WSImages = {
 	getSamples?: () => Promise<Array<WSISample>>
 	/** either ds supplied or dynamically added on launch with built in logic */
 	getWSImages?: (sampleName: string) => Promise<WSImage[]>
+	/**  ds supplied */
+	getWSIPredictionPatches?: (sampleName: string, wsiImage: string) => Promise<string[]>
 	/**  ds supplied */
 	getWSIAnnotations?: (sampleName: string, wsiImage: string) => Promise<string[]>
 	/**  ds supplied */
