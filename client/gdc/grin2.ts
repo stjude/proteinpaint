@@ -1537,7 +1537,8 @@ async function getFilesAndShowTable(obj) {
 			caseFiles: {},
 			mafOptions: {
 				minTotalDepth: obj.mafOptions.minTotalDepth,
-				minAltAlleleCount: obj.mafOptions.minAltAlleleCount
+				minAltAlleleCount: obj.mafOptions.minAltAlleleCount,
+				consequences: obj.mafOptions.consequences
 			}
 		}
 

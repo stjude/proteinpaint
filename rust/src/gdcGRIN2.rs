@@ -69,6 +69,7 @@ struct MafOptions {
     min_total_depth: i32,
     #[serde(rename = "minAltAlleleCount")]
     min_alt_allele_count: i32,
+    consequences: Option<Vec<String>>, // Optional list of consequences to filter MAF files
 }
 
 // Define the top-level input structure
@@ -81,16 +82,19 @@ struct InputData {
 }
 
 // Function to parse TSV content
+// Updated parse_content function with better consequence filtering
 fn parse_content(
     content: &str,
     case_id: &str,
     data_type: &str,
     min_total_depth: i32,
     min_alt_allele_count: i32,
+    consequences: &Option<Vec<String>>,
 ) -> Result<Vec<Vec<String>>, (String, String, String)> {
     let lines = content.lines();
     let mut parsed_data = Vec::new();
     let mut columns_indices: Vec<usize> = Vec::new();
+    let mut variant_classification_index: Option<usize> = None;
     let mut header_mk: &str = "";
     let mut columns = Vec::new();
 
@@ -99,7 +103,15 @@ fn parse_content(
         columns = vec!["Chromosome", "Start", "End", "Segment_Mean"]
     } else if data_type == "maf" {
         header_mk = "Hugo_Symbol";
-        columns = vec!["Chromosome", "Start_Position", "End_Position", "t_depth", "t_alt_count"]
+        // Include Variant_Classification for filtering but we'll handle it separately
+        columns = vec![
+            "Chromosome",
+            "Start_Position",
+            "End_Position",
+            "t_depth",
+            "t_alt_count",
+            "Variant_Classification",
+        ]
     };
 
     let mut header: Vec<String> = Vec::new();
@@ -109,7 +121,15 @@ fn parse_content(
             continue;
         } else if line.contains(&header_mk) {
             header = line.split("\t").map(|s| s.to_string()).collect();
-            for col in &columns {
+
+            // Map the columns we need for output (excluding Variant_Classification from output)
+            let output_columns = if data_type == "maf" {
+                vec!["Chromosome", "Start_Position", "End_Position", "t_depth", "t_alt_count"]
+            } else {
+                columns.clone()
+            };
+
+            for col in &output_columns {
                 match header.iter().position(|x| x == col) {
                     Some(index) => {
                         columns_indices.push(index);
@@ -120,60 +140,112 @@ fn parse_content(
                     }
                 }
             }
+
+            // Separately find Variant_Classification index for filtering
+            if data_type == "maf" {
+                variant_classification_index = header.iter().position(|x| x == "Variant_Classification");
+                if variant_classification_index.is_none() {
+                    let error_msg = "Column Variant_Classification was not found".to_string();
+                    return Err((case_id.to_string(), data_type.to_string(), error_msg));
+                }
+            }
         } else {
             let mut keep_ck: bool = true;
             let cont_lst: Vec<String> = line.split("\t").map(|s| s.to_string()).collect();
             let mut out_lst: Vec<String> = Vec::new();
             out_lst.push(case_id.to_string());
 
-            for x in columns_indices.iter() {
-                let mut element = cont_lst[*x].to_string();
-
-                if data_type == "cnv" && &header[*x] == "Segment_Mean" {
-                    let seg_mean = match element.parse::<f32>() {
-                        Ok(val) => val,
-                        Err(_e) => {
-                            let error_msg = "Segment_Mean in cnv file is not float".to_string();
-                            return Err((case_id.to_string(), data_type.to_string(), error_msg));
-                        }
-                    };
-                    if seg_mean >= 0.3 {
-                        element = "gain".to_string();
-                    } else if seg_mean <= -0.4 {
-                        element = "loss".to_string();
-                    } else {
-                        keep_ck = false;
-                    }
-                }
-                out_lst.push(element);
-            }
-
+            // UPDATED: Check consequence filtering for MAF files FIRST
             if data_type == "maf" {
-                let alle_depth = match out_lst[4].parse::<i32>() {
-                    Ok(value) => value,
-                    Err(_) => {
-                        let error_msg = "Failed to convert t_depth to i32.".to_string();
-                        return Err((case_id.to_string(), data_type.to_string(), error_msg));
-                    }
-                };
-                let alt_count = match out_lst[5].parse::<i32>() {
-                    Ok(value) => value,
-                    Err(_) => {
-                        let error_msg = "Failed to convert t_alt_count to i32.".to_string();
-                        return Err((case_id.to_string(), data_type.to_string(), error_msg));
-                    }
-                };
+                // Only apply consequence filtering if consequences are specified AND the list is not empty
+                if let Some(consequence_filter) = consequences {
+                    if !consequence_filter.is_empty() {
+                        // We have specific consequences to filter for
+                        if let Some(var_class_idx) = variant_classification_index {
+                            if var_class_idx < cont_lst.len() {
+                                let variant_classification = &cont_lst[var_class_idx];
 
-                if alle_depth >= min_total_depth && alt_count >= min_alt_allele_count {
-                    out_lst = out_lst[0..4].to_vec();
-                    out_lst.push("mutation".to_string());
-                } else {
-                    keep_ck = false;
+                                // Try to normalize the consequence - returns None for unknown types
+                                if let Some(normalized_consequence) = normalize_consequence(variant_classification) {
+                                    // Check if this consequence is in our filter list
+                                    if !consequence_filter.contains(&normalized_consequence) {
+                                        keep_ck = false; // Skip this mutation - consequence not selected
+                                    }
+                                } else {
+                                    // Unknown consequence type - skip this mutation when filtering is active
+                                    keep_ck = false;
+                                }
+                            } else {
+                                keep_ck = false; // Invalid row
+                            }
+                        }
+                    }
+                    // If consequence_filter is empty, we don't filter by consequence - include all mutations
                 }
+                // If consequences is None, we don't filter by consequence - include all mutations
             }
 
+            // Only process if we're keeping this record
             if keep_ck {
-                parsed_data.push(out_lst);
+                for x in columns_indices.iter() {
+                    if *x >= cont_lst.len() {
+                        keep_ck = false; // Invalid row
+                        break;
+                    }
+
+                    let mut element = cont_lst[*x].to_string();
+
+                    if data_type == "cnv" && &header[*x] == "Segment_Mean" {
+                        let seg_mean = match element.parse::<f32>() {
+                            Ok(val) => val,
+                            Err(_e) => {
+                                let error_msg = "Segment_Mean in cnv file is not float".to_string();
+                                return Err((case_id.to_string(), data_type.to_string(), error_msg));
+                            }
+                        };
+                        if seg_mean >= 0.3 {
+                            element = "gain".to_string();
+                        } else if seg_mean <= -0.4 {
+                            element = "loss".to_string();
+                        } else {
+                            keep_ck = false;
+                        }
+                    }
+                    out_lst.push(element);
+                }
+
+                if data_type == "maf" && keep_ck {
+                    // Validate we have enough elements (should have case_id + 5 columns)
+                    if out_lst.len() >= 6 {
+                        let alle_depth = match out_lst[4].parse::<i32>() {
+                            Ok(value) => value,
+                            Err(_) => {
+                                let error_msg = "Failed to convert t_depth to i32.".to_string();
+                                return Err((case_id.to_string(), data_type.to_string(), error_msg));
+                            }
+                        };
+                        let alt_count = match out_lst[5].parse::<i32>() {
+                            Ok(value) => value,
+                            Err(_) => {
+                                let error_msg = "Failed to convert t_alt_count to i32.".to_string();
+                                return Err((case_id.to_string(), data_type.to_string(), error_msg));
+                            }
+                        };
+
+                        if alle_depth >= min_total_depth && alt_count >= min_alt_allele_count {
+                            out_lst = out_lst[0..4].to_vec(); // Keep case_id, chr, start, end
+                            out_lst.push("mutation".to_string());
+                        } else {
+                            keep_ck = false;
+                        }
+                    } else {
+                        keep_ck = false; // Not enough columns
+                    }
+                }
+
+                if keep_ck {
+                    parsed_data.push(out_lst);
+                }
             }
         }
     }
@@ -188,7 +260,24 @@ fn parse_content(
 
     Ok(parsed_data)
 }
-
+/// Updated helper function to normalize MAF consequence types to frontend format
+/// Returns None for unknown consequence types (which will be filtered out)
+fn normalize_consequence(maf_consequence: &str) -> Option<String> {
+    match maf_consequence.to_lowercase().as_str() {
+        // Only map the consequence types we actually support
+        "missense_mutation" => Some("missense".to_string()),
+        "nonsense_mutation" | "stop_gained" | "stop_lost" => Some("nonsense".to_string()),
+        "frame_shift_del" | "frame_shift_ins" | "frameshift_variant" => Some("frameshift".to_string()),
+        "silent" | "synonymous_variant" => Some("silent".to_string()),
+        "in_frame_del" => Some("deletion".to_string()),
+        "in_frame_ins" => Some("insertion".to_string()),
+        "splice_site" | "splice_acceptor_variant" | "splice_donor_variant" => Some("splice_site".to_string()),
+        "tandem_duplication" | "duplication" => Some("duplication".to_string()),
+        "inversion" => Some("inversion".to_string()),
+        // Return None for all unknown consequence types - they will be filtered out
+        _ => None,
+    }
+}
 /// Downloads a single file with minimal retry logic for transient failures
 async fn download_single_file(
     case_id: String,
@@ -297,6 +386,7 @@ async fn download_data(
     host: &str,
     min_total_depth: i32,
     min_alt_allele_count: i32,
+    consequences: &Option<Vec<String>>,
 ) {
     // Generate URLs from data4dl, handling optional cnv and maf
     let data_urls: Vec<(String, String, String)> = data4dl
@@ -344,7 +434,14 @@ async fn download_data(
                 match download_result {
                     Ok((case_id, data_type, content)) => {
                         // Successfully downloaded, now try to parse
-                        match parse_content(&content, &case_id, &data_type, min_total_depth, min_alt_allele_count) {
+                        match parse_content(
+                            &content,
+                            &case_id,
+                            &data_type,
+                            min_total_depth,
+                            min_alt_allele_count,
+                            &consequences,
+                        ) {
                             Ok(parsed_data) => {
                                 // Store successful data
                                 successful_data.lock().await.push(parsed_data);
@@ -455,13 +552,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let case_files = input_js.case_files;
 
     // Set default maf_options
-    let (min_total_depth, min_alt_allele_count) = match input_js.maf_options {
-        Some(options) => (options.min_total_depth, options.min_alt_allele_count),
-        None => (10, 2), // Default values
+    let (min_total_depth, min_alt_allele_count, consequences) = match input_js.maf_options {
+        Some(options) => (
+            options.min_total_depth,
+            options.min_alt_allele_count,
+            options.consequences.clone(),
+        ),
+        None => (10, 2, None), // Default values
     };
 
     // Download data - this will now handle errors gracefully
-    download_data(case_files, HOST, min_total_depth, min_alt_allele_count).await;
+    download_data(case_files, HOST, min_total_depth, min_alt_allele_count, &consequences).await;
 
     // Always exit successfully - individual file failures are logged but don't stop the process
     Ok(())
