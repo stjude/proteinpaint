@@ -1,7 +1,6 @@
 // Syntax: cd .. && cargo build --release && time cat ~/sjpp/test.txt | target/release/cerno
 #![allow(non_snake_case)]
 use json::JsonValue;
-use r_mathlib::chi_squared_cdf;
 use r2d2;
 use r2d2_sqlite::SqliteConnectionManager;
 use rusqlite::{Connection, Result};
@@ -13,20 +12,15 @@ use std::io;
 use std::sync::{Arc, Mutex}; // Multithreading library
 use std::thread;
 
+mod stats_functions;
+#[cfg(test)]
+mod test_cerno; // Contains test examples to test cerno
+
 #[allow(non_camel_case_types)]
 #[allow(non_snake_case)]
 #[derive(Debug, Clone)]
 struct GO_pathway {
     GO_id: String,
-}
-
-#[allow(non_camel_case_types)]
-#[allow(non_snake_case)]
-#[derive(Debug, Clone, PartialEq, PartialOrd)]
-struct gene_order {
-    gene_name: String,
-    fold_change: f32,
-    rank: Option<usize>,
 }
 
 #[allow(non_camel_case_types)]
@@ -102,9 +96,9 @@ fn main() -> Result<()> {
                         panic!("Length of genes array and fold change array are not equal");
                     }
 
-                    let mut genes_vector: Vec<gene_order> = Vec::with_capacity(sample_genes.len());
+                    let mut genes_vector: Vec<stats_functions::gene_order> = Vec::with_capacity(sample_genes.len());
                     for i in 0..sample_genes.len() {
-                        let item: gene_order = gene_order {
+                        let item: stats_functions::gene_order = stats_functions::gene_order {
                             gene_name: sample_genes[i].to_string(),
                             fold_change: fold_change_f32[i],
                             rank: None, // Will be calculated later
@@ -125,7 +119,7 @@ fn main() -> Result<()> {
 
                     let genedbconn = Connection::open(genedb)?;
                     let genedb_result = genedbconn.prepare(&("select * from codingGenes"));
-                    let mut sample_coding_genes: Vec<gene_order> = Vec::with_capacity(24000);
+                    let mut sample_coding_genes: Vec<stats_functions::gene_order> = Vec::with_capacity(24000);
                     match genedb_result {
                         Ok(mut x) => {
                             let mut genes = x.query([])?;
@@ -206,7 +200,8 @@ fn main() -> Result<()> {
                                         }
                                     }
                                     let gene_set_size = names.len();
-                                    let (p_value, auc, es, matches, gene_set_hits) = cerno(&sample_coding_genes, names);
+                                    let (p_value, auc, es, matches, gene_set_hits) =
+                                        stats_functions::cerno(&sample_coding_genes, names);
 
                                     if matches >= 1.0
                                         && p_value.is_nan() == false
@@ -276,7 +271,7 @@ fn main() -> Result<()> {
                                                 }
                                                 let gene_set_size = names.len();
                                                 let (p_value, auc, es, matches, gene_set_hits) =
-                                                    cerno(&sample_coding_genes, names);
+                                                    stats_functions::cerno(&sample_coding_genes, names);
 
                                                 if matches >= 1.0
                                                     && p_value.is_nan() == false
@@ -324,46 +319,6 @@ fn main() -> Result<()> {
         Err(error) => println!("Piping error: {}", error),
     }
     Ok(())
-}
-
-fn cerno(sample_coding_genes: &Vec<gene_order>, genes_in_pathway: HashSet<String>) -> (f32, f32, f32, f32, String) {
-    // Filter the sample_coding_genes vector to only include those whose gene_names are in the HashSet genes_in_pathway
-    let gene_intersections: Vec<&gene_order> = sample_coding_genes
-        .iter()
-        .filter(|sample_coding_genes| genes_in_pathway.contains(&sample_coding_genes.gene_name)) // Check if name is in the HashSet genes_in_pathway
-        .collect(); // Collect the results into a new vector
-
-    let N1 = gene_intersections.len() as f32;
-    let N = sample_coding_genes.len() as f32;
-    let mut gene_set_hits: String = "".to_string();
-    for gene in &gene_intersections {
-        gene_set_hits += &(gene.gene_name.to_string() + &",");
-    }
-    if gene_intersections.len() > 0 {
-        // Remove the last "," in string
-        gene_set_hits.pop();
-    }
-
-    let ranks: Vec<usize> = gene_intersections // x <- l %in% mset$gs2gv[[m]] ; ranks <- c(1:N)[x]
-        .iter()
-        .map(|x| x.rank.unwrap())
-        .collect::<Vec<usize>>();
-
-    let cerno: f32 = ranks // -2 * sum( log(ranks/N) )
-        .iter()
-        .map(|x| ((*x as f32) / N).ln())
-        .collect::<Vec<f32>>()
-        .iter()
-        .sum::<f32>()
-        * (-2.0);
-
-    let cES: f32 = cerno / (2.0 * (N1 as f32)); // cES <- cerno/(2*N1)
-    let N2 = N - N1; // N2 = N - N1
-    let R1 = ranks.iter().sum::<usize>() as f32; // R1 <- sum(ranks)
-    let U = N1 * N2 + N1 * (N1 + 1.0) / 2.0 - R1; // U  <- N1*N2+N1*(N1+1)/2-R1
-    let AUC = U / (N1 * N2); // AUC <- U/(N1*N2)
-    let p_value = chi_squared_cdf(cerno as f64, (2.0 * N1) as f64, false, false); // pchisq(ret$cerno, 2*N1, lower.tail=FALSE)
-    (p_value as f32, AUC, cES, N1, gene_set_hits)
 }
 
 fn adjust_p_values(mut original_p_values: Vec<pathway_p_value>) -> String {
