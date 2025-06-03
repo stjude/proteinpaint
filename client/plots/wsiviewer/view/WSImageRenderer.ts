@@ -49,6 +49,7 @@ export class WSImageRenderer {
 			header: { allowSort: true },
 			showLines: false,
 			hoverEffects: (tr, row) => {
+				tr.style('cursor', 'pointer')
 				const origColor = tr.style('background-color')
 				this.buffers.annotationsIdx.addListener((index: number) => {
 					if (index === row[0].value) {
