@@ -178,7 +178,10 @@ export function dataGood4sunburst(data) {
 	for (let i = 1; i < data.nodes.length; i++) {
 		const n = data.nodes[i]
 		if (!n.name) throw 'node name missing'
-		if (!Number.isInteger(n.cohortsize)) throw 'node cohortsize not integer'
+		if (!Number.isInteger(n.cohortsize)) {
+			// known issue: cohortsize can be missing for controlled gdc data. (might also happen for non-gdc). this check is disabled and sunburst rendering already handles missing cohortsize
+			//throw 'node cohortsize not integer'
+		}
 		// validate additional properties if needed
 	}
 	return true
