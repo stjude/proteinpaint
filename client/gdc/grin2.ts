@@ -4,6 +4,158 @@ import { renderTable, sayerror } from '#dom'
 import { select } from 'd3-selection'
 import { formatElapsedTime } from '@sjcrh/proteinpaint-shared/time.js'
 import type { GdcGRIN2listRequest } from '#types'
+import { mclass } from '@sjcrh/proteinpaint-shared/common.js'
+
+/* Temporary note for mclass mutation types */
+console.log('mclass structure:', mclass)
+console.log('mclass keys:', Object.keys(mclass))
+
+/**
+ * Maps mclass constants to user-friendly mutation type names
+ * Based on the mclass keys you provided
+ */
+interface MutationType {
+	mclassKey: string
+	mclassValue: string | number
+	displayName: string
+	description: string
+	category: 'coding' | 'structural' | 'noncoding'
+}
+
+/**
+ * Generates mutation types from mclass constants
+ * Filters for relevant MAF mutation types only
+ */
+function generateMutationTypesFromMclass(): MutationType[] {
+	// Create reverse lookup: value -> key
+	const mclassReverse: { [value: string]: string } = {}
+	Object.entries(mclass).forEach(([key, value]) => {
+		mclassReverse[String(value)] = key
+	})
+
+	// Define the relevant MAF mutation types with their mclass mappings
+	const relevantMutationTypes: MutationType[] = [
+		{
+			mclassKey: mclassReverse['M'] || '0',
+			mclassValue: 'M',
+			displayName: 'Missense',
+			description: 'Single nucleotide change resulting in amino acid substitution',
+			category: 'coding'
+		},
+		{
+			mclassKey: mclassReverse['N'] || '3',
+			mclassValue: 'N',
+			displayName: 'Nonsense',
+			description: 'Premature stop codon introduction',
+			category: 'coding'
+		},
+		{
+			mclassKey: mclassReverse['F'] || '2',
+			mclassValue: 'F',
+			displayName: 'Frameshift',
+			description: 'Insertion/deletion causing reading frame shift',
+			category: 'coding'
+		},
+		{
+			mclassKey: mclassReverse['D'] || '5',
+			mclassValue: 'D',
+			displayName: 'Deletion',
+			description: 'In-frame deletion',
+			category: 'coding'
+		},
+		{
+			mclassKey: mclassReverse['I'] || '6',
+			mclassValue: 'I',
+			displayName: 'Insertion',
+			description: 'In-frame insertion',
+			category: 'coding'
+		},
+		{
+			mclassKey: mclassReverse['S'] || '4',
+			mclassValue: 'S',
+			displayName: 'Silent',
+			description: 'Synonymous mutation (no amino acid change)',
+			category: 'coding'
+		},
+		{
+			mclassKey: mclassReverse['ProteinAltering'] || '7',
+			mclassValue: 'ProteinAltering',
+			displayName: 'Protein Altering',
+			description: 'Mutations that alter protein sequence',
+			category: 'coding'
+		},
+		{
+			mclassKey: mclassReverse['ITD'] || '13',
+			mclassValue: 'ITD',
+			displayName: 'Internal Tandem Duplication',
+			description: 'Tandem duplication within gene',
+			category: 'structural'
+		}
+	]
+
+	// Filter out any that don't exist in the current mclass
+	return relevantMutationTypes.filter(type => {
+		const exists = Object.values(mclass).some(m => m.key === type.mclassValue)
+		if (!exists) {
+			console.warn(`Mutation type ${type.displayName} (${type.mclassValue}) not found in mclass`)
+		}
+		return exists
+	})
+}
+
+/**
+ * Gets just the display names for backward compatibility
+ */
+function getMutationTypeNames(): string[] {
+	return generateMutationTypesFromMclass().map(type => type.displayName.toLowerCase())
+}
+
+/**
+ * Gets mutation types grouped by category
+ */
+function getMutationTypesByCategory(): { [category: string]: MutationType[] } {
+	const allTypes = generateMutationTypesFromMclass()
+
+	return allTypes.reduce((groups, type) => {
+		if (!groups[type.category]) {
+			groups[type.category] = []
+		}
+		groups[type.category].push(type)
+		return groups
+	}, {} as { [category: string]: MutationType[] })
+}
+
+/**
+ * Gets the mclass constant for a given mutation type name
+ */
+function getMclassConstant(mutationTypeName: string): string | number | null {
+	const types = generateMutationTypesFromMclass()
+	const found = types.find(type => type.displayName.toLowerCase() === mutationTypeName.toLowerCase())
+	return found ? found.mclassValue : null
+}
+
+/**
+ * Validates if a mutation type is supported
+ */
+function isValidMutationType(mutationTypeName: string): boolean {
+	return getMclassConstant(mutationTypeName) !== null
+}
+
+// Export the functions
+export {
+	generateMutationTypesFromMclass,
+	getMutationTypeNames,
+	getMutationTypesByCategory,
+	getMclassConstant,
+	isValidMutationType,
+	type MutationType
+}
+
+// For debugging - log the available mutation types
+console.log('Available MAF mutation types from mclass:')
+generateMutationTypesFromMclass().forEach(type => {
+	console.log(`  ${type.displayName}: mclass[${type.mclassKey}] = "${type.mclassValue}"`)
+})
 
 /*
 a UI to list open-access maf and cnv files from current cohort
@@ -498,15 +650,757 @@ export async function gdcGRIN2ui({ holder, filter0, callbacks, debugmode = false
 	return publicApi
 }
 
+// function makeControls(obj) {
+// 	// Initialize options objects
+// 	if (!obj.mafOptions) {
+// 		obj.mafOptions = {
+// 			minTotalDepth: 10,
+// 			minAltAlleleCount: 2,
+// 			consequences: ['missense', 'frameshift', 'duplication'], // Updated defaults
+// 			hypermutatorMaxCutoff: 8000
+// 		}
+// 	}
+
+// 	if (!obj.cnvOptions) {
+// 		obj.cnvOptions = {
+// 			lossThreshold: -0.4,
+// 			gainThreshold: 0.3,
+// 			segLength: 2000000
+// 		}
+// 	}
+
+// 	// Initialize checkbox states - MAF checked by default
+// 	obj.dataTypeStates = {
+// 		maf: true,
+// 		cnv: false,
+// 		fusion: false
+// 	}
+
+// 	// Create the main 2-column, 4-row table for data type options
+// 	const optionsTable = obj.controlDiv
+// 		.append('table')
+// 		.style('width', 'auto')
+// 		.style('border-collapse', 'collapse')
+// 		.style('margin-top', '10px')
+// 		.style('border', '1px solid #ddd')
+
+// 	// Create table header
+// 	const headerRow = optionsTable.append('tr')
+
+// 	headerRow
+// 		.append('th')
+// 		.style('width', '200px')
+// 		.style('padding', '12px')
+// 		.style('background-color', '#f8f9fa')
+// 		.style('border', '1px solid #ddd')
+// 		.style('font-weight', 'bold')
+// 		.style('text-align', 'left')
+// 		.text('Data Type')
+
+// 	headerRow
+// 		.append('th')
+// 		.style('padding', '12px')
+// 		.style('background-color', '#f8f9fa')
+// 		.style('border', '1px solid #ddd')
+// 		.style('font-weight', 'bold')
+// 		.style('text-align', 'left')
+// 		.text('Options')
+
+// 	// Row 1: MAF (checked by default, shows all the MAF-related options)
+// 	const mafRow = optionsTable.append('tr')
+
+// 	const mafCheckboxCell = mafRow
+// 		.append('td')
+// 		.style('padding', '12px')
+// 		.style('border', '1px solid #ddd')
+// 		.style('vertical-align', 'top')
+
+// 	// MAF checkbox and label
+// 	const mafCheckboxContainer = mafCheckboxCell
+// 		.append('div')
+// 		.style('display', 'flex')
+// 		.style('align-items', 'center')
+// 		.style('gap', '8px')
+
+// 	const mafCheckbox = mafCheckboxContainer
+// 		.append('input')
+// 		.attr('type', 'checkbox')
+// 		.attr('id', 'maf-checkbox')
+// 		.property('checked', true) // Checked by default
+// 		.style('margin', '0')
+// 		.style('cursor', 'pointer')
+
+// 	mafCheckboxContainer
+// 		.append('label')
+// 		.attr('for', 'maf-checkbox')
+// 		.style('cursor', 'pointer')
+// 		.style('font-weight', '500')
+// 		.text('MAF (Mutation)')
+
+// 	const mafOptionsCell = mafRow
+// 		.append('td')
+// 		.style('padding', '12px')
+// 		.style('border', '1px solid #ddd')
+// 		.style('vertical-align', 'top')
+
+// 	// MAF options container (visible by default since MAF is checked)
+// 	const mafOptionsContainer = mafOptionsCell.append('div').style('display', 'block') // Visible by default
+// 	createMAFOptionsContent(mafOptionsContainer, obj)
+
+// /**
+//  * Updated createMAFOptionsContent function using mclass mutation types
+//  * Replace your existing function with this version
+//  */
+// function createMAFOptionsContent(container, obj) {
+//   // Clear any existing content
+//   container.selectAll('*').remove()
+
+//   // Generate mutation types dynamically from mclass
+//   const mutationTypesFromMclass = generateMutationTypesFromMclass()
+//   const mutationTypesByCategory = getMutationTypesByCategory()
+
+//   console.log('Available mutation types from mclass:', mutationTypesFromMclass)
+
+//   // Create a grid layout for MAF options
+//   const optionsGrid = container
+//     .append('div')
+//     .style('display', 'grid')
+//     .style('grid-template-columns', 'auto auto')
+//     .style('gap', '15px')
+//     .style('margin-top', '10px')
+//     .style('max-width', 'fit-content')
+
+//   // Row 1: Min Total Depth
+//   const depthContainer = optionsGrid
+//     .append('div')
+//     .style('display', 'flex')
+//     .style('align-items', 'center')
+//     .style('gap', '8px')
+
+//   depthContainer
+//     .append('label')
+//     .style('font-size', '14px')
+//     .style('font-weight', '500')
+//     .style('min-width', '140px')
+//     .text('Min Total Depth:')
+
+//   const depthInput = depthContainer
+//     .append('input')
+//     .attr('type', 'number')
+//     .attr('min', '0')
+//     .attr('step', '1')
+//     .attr('value', obj.mafOptions.minTotalDepth || 10)
+//     .style('width', '80px')
+//     .style('padding', '4px 8px')
+//     .style('border', '1px solid #ccc')
+//     .style('border-radius', '4px')
+//     .style('font-size', '14px')
+
+//   depthInput.on('input', function (this: HTMLInputElement) {
+//     const value = parseInt(this.value, 10)
+//     if (!isNaN(value) && value >= 0) {
+//       obj.mafOptions.minTotalDepth = value
+//     }
+//   })
+
+//   // Row 1: Min Mutant Allele Count
+//   const alleleContainer = optionsGrid
+//     .append('div')
+//     .style('display', 'flex')
+//     .style('align-items', 'center')
+//     .style('gap', '8px')
+
+//   alleleContainer
+//     .append('label')
+//     .style('font-size', '14px')
+//     .style('font-weight', '500')
+//     .style('min-width', '160px')
+//     .text('Min Mutant Allele Count:')
+
+//   const alleleInput = alleleContainer
+//     .append('input')
+//     .attr('type', 'number')
+//     .attr('min', '0')
+//     .attr('step', '1')
+//     .attr('value', obj.mafOptions.minAltAlleleCount || 2)
+//     .style('width', '80px')
+//     .style('padding', '4px 8px')
+//     .style('border', '1px solid #ccc')
+//     .style('border-radius', '4px')
+//     .style('font-size', '14px')
+
+//   alleleInput.on('input', function (this: HTMLInputElement) {
+//     const value = parseInt(this.value, 10)
+//     if (!isNaN(value) && value >= 0) {
+//       obj.mafOptions.minAltAlleleCount = value
+//     }
+//   })
+
+//   // Row 2: Consequences Section - Using Dynamic mclass Types
+//   const consequencesContainer = optionsGrid
+//     .append('div')
+//     .style('display', 'flex')
+//     .style('align-items', 'flex-start') // Changed to flex-start for better alignment
+//     .style('gap', '8px')
+//     .style('grid-column', '1 / -1') // Span full width for more space
+
+//   consequencesContainer
+//     .append('label')
+//     .style('font-size', '14px')
+//     .style('font-weight', '500')
+//     .style('min-width', '100px')
+//     .style('margin-top', '4px') // Align with first checkbox
+//     .text('Consequences:')
+
+//   // Initialize consequences with smart defaults from mclass
+//   if (!obj.mafOptions.consequences) {
+//     // Default to common protein-coding mutations
+//     const defaultTypes = ['missense', 'nonsense', 'frameshift']
+//     obj.mafOptions.consequences = defaultTypes.filter(type => isValidMutationType(type))
+//     console.log('Initialized default consequences from mclass:', obj.mafOptions.consequences)
+//   }
+
+//   // Create consequences selection area
+//   const consequencesSelectionDiv = consequencesContainer
+//     .append('div')
+//     .style('flex', '1')
+
+//   // Group mutation types by category for better organization
+//   Object.entries(mutationTypesByCategory).forEach(([category, types]) => {
+//     if (types.length === 0) return
+
+//     // Add category header
+//     const categoryDiv = consequencesSelectionDiv
+//       .append('div')
+//       .style('margin-bottom', '12px')
+
+//     categoryDiv
+//       .append('div')
+//       .style('font-size', '13px')
+//       .style('font-weight', '600')
+//       .style('color', '#495057')
+//       .style('margin-bottom', '6px')
+//       .style('text-transform', 'capitalize')
+//       .text(`${category} Mutations`)
+
+//     // Create checkboxes for this category
+//     const categoryCheckboxContainer = categoryDiv
+//       .append('div')
+//       .style('display', 'grid')
+//       .style('grid-template-columns', 'repeat(auto-fit, minmax(180px, 1fr))')
+//       .style('gap', '8px')
+//       .style('margin-left', '12px')
+
+//     types.forEach(mutationType => {
+//       const checkboxDiv = categoryCheckboxContainer
+//         .append('div')
+//         .style('display', 'flex')
+//         .style('align-items', 'center')
+//         .style('gap', '6px')
+//         .style('font-size', '13px')
+
+//       const mutationTypeKey = mutationType.displayName.toLowerCase()
+
+//       const checkbox = checkboxDiv
+//         .append('input')
+//         .attr('type', 'checkbox')
+//         .attr('id', `consequence-${mutationTypeKey}`)
+//         .property('checked', obj.mafOptions.consequences.includes(mutationTypeKey))
+//         .style('margin', '0')
+//         .style('cursor', 'pointer')
+
+//       const label = checkboxDiv
+//         .append('label')
+//         .attr('for', `consequence-${mutationTypeKey}`)
+//         .style('cursor', 'pointer')
+//         .style('font-size', '13px')
+//         .style('color', '#333')
+//         .text(mutationType.displayName)
+//         .attr('title', mutationType.description) // Tooltip with description
+
+//       // Add mclass constant indicator (for debugging/reference)
+//       if (process.env.NODE_ENV === 'development') {
+//         label.append('span')
+//           .style('font-size', '10px')
+//           .style('color', '#999')
+//           .style('margin-left', '4px')
+//           .text(`(${mutationType.mclassValue})`)
+//       }
+
+//       // Add change handler
+//       checkbox.on('change', function (this: HTMLInputElement) {
+//         const isChecked = this.checked
+//         if (isChecked) {
+//           // Add to consequences if not already present
+//           if (!obj.mafOptions.consequences.includes(mutationTypeKey)) {
+//             obj.mafOptions.consequences.push(mutationTypeKey)
+//           }
+//         } else {
+//           // Remove from consequences
+//           obj.mafOptions.consequences = obj.mafOptions.consequences.filter(c => c !== mutationTypeKey)
+//         }
+//         console.log('Updated consequences:', obj.mafOptions.consequences)
+//         console.log('Corresponding mclass values:', obj.mafOptions.consequences.map(c => getMclassConstant(c)))
+//       })
+//     })
+//   })
+
+//   // Add helper text explaining the mutation types
+//   consequencesSelectionDiv
+//     .append('div')
+//     .style('margin-top', '8px')
+//     .style('padding', '8px')
+//     .style('background-color', '#f8f9fa')
+//     .style('border-radius', '4px')
+//     .style('border-left', '3px solid #6c757d')
+//     .style('font-size', '12px')
+//     .style('color', '#495057')
+//     .style('line-height', '1.4')
+//     .html(`
+//       <strong>Mutation Types:</strong> Select the types of mutations to include in your analysis.
+//       Hover over each option to see detailed descriptions. These correspond to standard MAF consequence types.
+//     `)
+
+//   // Row 3: Hypermutator Max Cut Off
+//   const hyperContainer = optionsGrid
+//     .append('div')
+//     .style('display', 'flex')
+//     .style('align-items', 'center')
+//     .style('gap', '8px')
+
+//   hyperContainer
+//     .append('label')
+//     .style('font-size', '14px')
+//     .style('font-weight', '500')
+//     .style('min-width', '160px')
+//     .text('Hypermutator Max Cut Off:')
+
+//   const hyperInput = hyperContainer
+//     .append('input')
+//     .attr('type', 'number')
+//     .attr('min', '0')
+//     .attr('step', '100')
+//     .attr('value', obj.mafOptions.hypermutatorMaxCutoff || 8000)
+//     .style('width', '70px')
+//     .style('padding', '4px 8px')
+//     .style('border', '1px solid #ccc')
+//     .style('border-radius', '4px')
+//     .style('font-size', '14px')
+
+//   hyperInput.on('input', function (this: HTMLInputElement) {
+//     const value = parseInt(this.value, 10)
+//     if (!isNaN(value) && value >= 0) {
+//       obj.mafOptions.hypermutatorMaxCutoff = value
+//     }
+//   })
+
+//   // Rest of the function remains the same (workflow type and deduplication sections)
+
+//   // Row 4: Workflow Type (read-only display)
+//   const workflowContainer = optionsGrid
+//     .append('div')
+//     .style('display', 'flex')
+//     .style('align-items', 'center')
+//     .style('gap', '8px')
+//     .style('grid-column', '1 / -1') // Span full width
+
+//   workflowContainer
+//     .append('label')
+//     .style('font-size', '14px')
+//     .style('font-weight', '500')
+//     .style('min-width', '100px')
+//     .text('Workflow Type:')
+
+//   workflowContainer
+//     .append('span')
+//     .style('font-size', '14px')
+//     .style('color', '#666')
+//     .text('Aliquot Ensemble Somatic Variant Merging and Masking')
+
+//   // Row 5: Dedup (placeholder with clickable link)
+//   const dedupContainer = optionsGrid
+//     .append('div')
+//     .style('display', 'flex')
+//     .style('align-items', 'center')
+//     .style('gap', '8px')
+//     .style('grid-column', '1 / -1') // Span full width
+
+//   dedupContainer
+//     .append('label')
+//     .style('font-size', '14px')
+//     .style('font-weight', '500')
+//     .style('min-width', '100px')
+//     .text('Deduplication:')
+
+//   // Create the dedup status area (this will be updated when files are loaded)
+//   const dedupStatus = dedupContainer
+//     .append('span')
+//     .attr('id', 'dedup-status')
+//     .style('font-size', '14px')
+//     .style('color', '#666')
+
+//   // Initial placeholder text
+//   dedupStatus.text('File deduplication status will appear here after loading files')
+
+//   // Store reference for later updates
+//   obj.dedupStatusElement = dedupStatus
+// }
+
+// 	// Row 2: CNV (unchecked by default)
+// 	const cnvRow = optionsTable.append('tr')
+
+// 	const cnvCheckboxCell = cnvRow
+// 		.append('td')
+// 		.style('padding', '12px')
+// 		.style('border', '1px solid #ddd')
+// 		.style('vertical-align', 'top')
+
+// 	const cnvCheckboxContainer = cnvCheckboxCell
+// 		.append('div')
+// 		.style('display', 'flex')
+// 		.style('align-items', 'center')
+// 		.style('gap', '8px')
+
+// 	const cnvCheckbox = cnvCheckboxContainer
+// 		.append('input')
+// 		.attr('type', 'checkbox')
+// 		.attr('id', 'cnv-checkbox')
+// 		.property('checked', true) // Unchecked by default
+// 		.style('margin', '0')
+// 		.style('cursor', 'pointer')
+
+// 	cnvCheckboxContainer
+// 		.append('label')
+// 		.attr('for', 'cnv-checkbox')
+// 		.style('cursor', 'pointer')
+// 		.style('font-weight', '500')
+// 		.text('CNV (Copy Number)')
+
+// 	const cnvOptionsCell = cnvRow
+// 		.append('td')
+// 		.style('padding', '12px')
+// 		.style('border', '1px solid #ddd')
+// 		.style('vertical-align', 'top')
+
+// 	// CNV options container (hidden by default since CNV is unchecked)
+// 	const cnvOptionsContainer = cnvOptionsCell.append('div').style('display', 'block') // Visible by default
+// 	createCNVOptionsContent(cnvOptionsContainer, obj)
+
+// 	function createCNVOptionsContent(container, obj) {
+// 		// Clear any existing content
+// 		container.selectAll('*').remove()
+
+// 		// Initialize CNV data type if not exists
+// 		if (!obj.cnvOptions.dataType) {
+// 			obj.cnvOptions.dataType = 'segment_mean' // default selection
+// 		}
+
+// 		// Create a grid layout for CNV options
+// 		const optionsGrid = container
+// 			.append('div')
+// 			.style('display', 'grid')
+// 			.style('grid-template-columns', 'auto auto')
+// 			.style('gap', '15px')
+// 			.style('margin-top', '10px')
+// 			.style('max-width', 'fit-content')
+
+// 		// Row 0: Data Type (spans full width)
+// 		const dataTypeContainer = optionsGrid
+// 			.append('div')
+// 			.style('display', 'flex')
+// 			.style('align-items', 'center')
+// 			.style('gap', '8px')
+// 			.style('grid-column', '1 / -1') // Span full width
+
+// 		dataTypeContainer
+// 			.append('label')
+// 			.style('font-size', '14px')
+// 			.style('font-weight', '500')
+// 			.style('min-width', '80px')
+// 			.text('Data Type:')
+
+// 		const radioContainer = dataTypeContainer
+// 			.append('div')
+// 			.style('display', 'flex')
+// 			.style('align-items', 'center')
+// 			.style('gap', '6px')
+
+// 		const segmentMeanRadio = radioContainer
+// 			.append('input')
+// 			.attr('type', 'radio')
+// 			.attr('id', 'cnv-segment-mean')
+// 			.attr('name', 'cnv-data-type')
+// 			.attr('value', 'segment_mean')
+// 			.property('checked', obj.cnvOptions.dataType === 'segment_mean')
+// 			.style('margin', '0')
+// 			.style('cursor', 'pointer')
+
+// 		radioContainer
+// 			.append('label')
+// 			.attr('for', 'cnv-segment-mean')
+// 			.style('cursor', 'pointer')
+// 			.style('font-size', '14px')
+// 			.style('color', '#333')
+// 			.text('Segment mean')
+
+// 		// Add change handler for radio button
+// 		segmentMeanRadio.on('change', function (this: HTMLInputElement) {
+// 			if (this.checked) {
+// 				obj.cnvOptions.dataType = this.value
+// 				console.log('CNV data type updated:', obj.cnvOptions.dataType)
+// 			}
+// 		})
+
+// 		// Row 1: Loss Threshold
+// 		const lossContainer = optionsGrid
+// 			.append('div')
+// 			.style('display', 'flex')
+// 			.style('align-items', 'center')
+// 			.style('gap', '8px')
+
+// 		lossContainer
+// 			.append('label')
+// 			.style('font-size', '14px')
+// 			.style('font-weight', '500')
+// 			.style('min-width', '120px')
+// 			.text('Loss Threshold:')
+
+// 		const lossInput = lossContainer
+// 			.append('input')
+// 			.attr('type', 'number')
+// 			.attr('min', '-10')
+// 			.attr('max', '0')
+// 			.attr('step', '0.1')
+// 			.attr('value', obj.cnvOptions.lossThreshold || -0.4)
+// 			.style('width', '70px')
+// 			.style('padding', '4px 8px')
+// 			.style('border', '1px solid #ccc')
+// 			.style('border-radius', '4px')
+// 			.style('font-size', '14px')
+
+// 		// Add input handler
+// 		lossInput.on('input', function (this: HTMLInputElement) {
+// 			const value = parseFloat(this.value)
+// 			if (!isNaN(value) && value <= 0) {
+// 				obj.cnvOptions.lossThreshold = value
+// 			}
+// 		})
+
+// 		// Row 1: Gain Threshold
+// 		const gainContainer = optionsGrid
+// 			.append('div')
+// 			.style('display', 'flex')
+// 			.style('align-items', 'center')
+// 			.style('gap', '8px')
+
+// 		gainContainer
+// 			.append('label')
+// 			.style('font-size', '14px')
+// 			.style('font-weight', '500')
+// 			.style('min-width', '120px')
+// 			.text('Gain Threshold:')
+
+// 		const gainInput = gainContainer
+// 			.append('input')
+// 			.attr('type', 'number')
+// 			.attr('min', '0')
+// 			.attr('max', '10')
+// 			.attr('step', '0.1')
+// 			.attr('value', obj.cnvOptions.gainThreshold || 0.3)
+// 			.style('width', '70px')
+// 			.style('padding', '4px 8px')
+// 			.style('border', '1px solid #ccc')
+// 			.style('border-radius', '4px')
+// 			.style('font-size', '14px')
+
+// 		// Add input handler
+// 		gainInput.on('input', function (this: HTMLInputElement) {
+// 			const value = parseFloat(this.value)
+// 			if (!isNaN(value) && value >= 0) {
+// 				obj.cnvOptions.gainThreshold = value
+// 			}
+// 		})
+
+// 		// Row 2: Segment Length Cutoff (spans full width)
+// 		const segmentContainer = optionsGrid
+// 			.append('div')
+// 			.style('display', 'flex')
+// 			.style('align-items', 'center')
+// 			.style('gap', '8px')
+// 			.style('grid-column', '1 / -1') // Span full width
+
+// 		segmentContainer
+// 			.append('label')
+// 			.style('font-size', '14px')
+// 			.style('font-weight', '500')
+// 			.style('min-width', '140px')
+// 			.text('Segment Length Cutoff:')
+
+// 		const segmentInput = segmentContainer
+// 			.append('input')
+// 			.attr('type', 'number')
+// 			.attr('min', '0')
+// 			.attr('max', '2000000')
+// 			.attr('step', '1000')
+// 			.attr('value', obj.cnvOptions.segLength || 2000000)
+// 			.style('width', '100px')
+// 			.style('padding', '4px 8px')
+// 			.style('border', '1px solid #ccc')
+// 			.style('border-radius', '4px')
+// 			.style('font-size', '14px')
+
+// 		// Add input handler
+// 		segmentInput.on('input', function (this: HTMLInputElement) {
+// 			const value = parseInt(this.value, 10)
+// 			if (!isNaN(value) && value >= 0) {
+// 				obj.cnvOptions.segLength = value
+// 			}
+// 		})
+
+// 		segmentContainer.append('span').style('font-size', '13px').style('color', '#666').text('bp')
+
+// 		// Row 4: Help/Info section (spans full width)
+// 		const helpContainer = optionsGrid
+// 			.append('div')
+// 			.style('grid-column', '1 / -1') // Span full width
+// 			.style('margin-top', '8px')
+// 			.style('padding', '8px')
+// 			.style('background-color', '#f8f9fa')
+// 			.style('border-radius', '4px')
+// 			.style('border-left', '3px solid #6c757d')
+
+// 		helpContainer.append('div').style('font-size', '12px').style('color', '#495057').style('line-height', '1.4').html(`
+// 			<strong>CNV Thresholds:</strong><br>
+// 			• Loss Threshold: Log2 ratio for copy number loss (negative values)<br>
+// 			• Gain Threshold: Log2 ratio for copy number gain (positive values)<br>
+// 			• Segment Length: Maximum CNV segment size to include (focal events only)
+// 		`)
+// 	}
+
+// 	// Row 3: Fusion (unchecked by default)
+// 	const fusionRow = optionsTable.append('tr')
+
+// 	const fusionCheckboxCell = fusionRow
+// 		.append('td')
+// 		.style('padding', '12px')
+// 		.style('border', '1px solid #ddd')
+// 		.style('vertical-align', 'top')
+
+// 	const fusionCheckboxContainer = fusionCheckboxCell
+// 		.append('div')
+// 		.style('display', 'flex')
+// 		.style('align-items', 'center')
+// 		.style('gap', '8px')
+
+// 	const fusionCheckbox = fusionCheckboxContainer
+// 		.append('input')
+// 		.attr('type', 'checkbox')
+// 		.attr('id', 'fusion-checkbox')
+// 		.property('checked', false) // Unchecked by default
+// 		.style('margin', '0')
+// 		.style('cursor', 'pointer')
+
+// 	fusionCheckboxContainer
+// 		.append('label')
+// 		.attr('for', 'fusion-checkbox')
+// 		.style('cursor', 'pointer')
+// 		.style('font-weight', '500')
+// 		.text('Fusion')
+
+// 	const fusionOptionsCell = fusionRow
+// 		.append('td')
+// 		.style('padding', '12px')
+// 		.style('border', '1px solid #ddd')
+// 		.style('vertical-align', 'top')
+
+// 	// Fusion options container (hidden by default)
+// 	const fusionOptionsContainer = fusionOptionsCell.append('div').style('display', 'none') // Hidden by default
+
+// 	fusionOptionsContainer
+// 		.append('div')
+// 		.style('color', '#666')
+// 		.style('font-style', 'italic')
+// 		.text('Fusion analysis options will be configured here')
+
+// 	// Row 4: GRIN2 (unchecked by default)
+// 	const grin2Row = optionsTable.append('tr')
+
+// 	const grin2CheckboxCell = grin2Row
+// 		.append('td')
+// 		.style('padding', '12px')
+// 		.style('border', '1px solid #ddd')
+// 		.style('vertical-align', 'top')
+
+// 	grin2CheckboxCell.append('div').style('font-weight', '500').style('color', '#333').text('GRIN2 Analysis')
+
+// 	const grin2OptionsCell = grin2Row
+// 		.append('td')
+// 		.style('padding', '12px')
+// 		.style('border', '1px solid #ddd')
+// 		.style('vertical-align', 'top')
+
+// 	// GRIN2 options container (hidden by default)
+// 	const grin2OptionsContainer = grin2OptionsCell.append('div').style('display', 'inline')
+
+// 	grin2OptionsContainer
+// 		.append('div')
+// 		.style('color', '#666')
+// 		.style('font-style', 'plain')
+// 		.text('GRIN2 analysis options will be configured here')
+
+// 	// Add checkbox change handlers (basic show/hide functionality)
+// 	mafCheckbox.on('change', function (this: HTMLInputElement) {
+// 		const isChecked = this.checked
+// 		obj.dataTypeStates.maf = isChecked
+// 		mafOptionsContainer.style('display', isChecked ? 'block' : 'none')
+// 	})
+
+// 	cnvCheckbox.on('change', function (this: HTMLInputElement) {
+// 		const isChecked = this.checked
+// 		obj.dataTypeStates.cnv = isChecked
+// 		cnvOptionsContainer.style('display', isChecked ? 'block' : 'none')
+
+// 		// Create CNV options content when checkbox is checked for the first time
+// 		if (isChecked) {
+// 			createCNVOptionsContent(cnvOptionsContainer, obj)
+// 		}
+// 	})
+
+// 	fusionCheckbox.on('change', function (this: HTMLInputElement) {
+// 		const isChecked = this.checked
+// 		obj.dataTypeStates.fusion = isChecked
+// 		fusionOptionsContainer.style('display', isChecked ? 'block' : 'none')
+// 	})
+
+// 	// Store references for easy access later
+// 	obj.mafOptionsContainer = mafOptionsContainer
+// 	obj.cnvOptionsContainer = cnvOptionsContainer
+// 	obj.fusionOptionsContainer = fusionOptionsContainer
+// }
+
 function makeControls(obj) {
-	// Initialize options objects
+	// Initialize options objects with mclass-aware defaults
 	if (!obj.mafOptions) {
+		// Get available mutation types from mclass
+		const availableMutationTypes = getMutationTypeNames()
+
+		// Set smart defaults - prefer common coding mutations if available
+		const preferredDefaults = ['missense', 'nonsense', 'frameshift']
+		const defaultConsequences = preferredDefaults.filter(type => availableMutationTypes.includes(type))
+
+		// If none of the preferred defaults are available, use the first few available
+		if (defaultConsequences.length === 0) {
+			defaultConsequences.push(...availableMutationTypes.slice(0, 3))
+		}
+
 		obj.mafOptions = {
 			minTotalDepth: 10,
 			minAltAlleleCount: 2,
-			consequences: ['missense', 'frameshift', 'duplication'], // Updated defaults
+			consequences: defaultConsequences, // Dynamic defaults from mclass
 			hypermutatorMaxCutoff: 8000
 		}
+
+		console.log('Initialized MAF options with mclass-based consequences:', obj.mafOptions.consequences)
 	}
 
 	if (!obj.cnvOptions) {
@@ -585,6 +1479,15 @@ function makeControls(obj) {
 		.style('font-weight', '500')
 		.text('MAF (Mutation)')
 
+	// Add a small indicator showing how many mutation types are available
+	const availableTypesCount = generateMutationTypesFromMclass().length
+	mafCheckboxContainer
+		.append('span')
+		.style('font-size', '12px')
+		.style('color', '#666')
+		.style('margin-left', '8px')
+		.text(`(${availableTypesCount} types available)`)
+
 	const mafOptionsCell = mafRow
 		.append('td')
 		.style('padding', '12px')
@@ -595,9 +1498,19 @@ function makeControls(obj) {
 	const mafOptionsContainer = mafOptionsCell.append('div').style('display', 'block') // Visible by default
 	createMAFOptionsContent(mafOptionsContainer, obj)
 
+	/**
+	 * Updated createMAFOptionsContent function using mclass mutation types
+	 * Replace your existing function with this version
+	 */
 	function createMAFOptionsContent(container, obj) {
 		// Clear any existing content
 		container.selectAll('*').remove()
+
+		// Generate mutation types dynamically from mclass
+		const mutationTypesFromMclass = generateMutationTypesFromMclass()
+		const mutationTypesByCategory = getMutationTypesByCategory()
+
+		console.log('Available mutation types from mclass:', mutationTypesFromMclass)
 
 		// Create a grid layout for MAF options
 		const optionsGrid = container
@@ -634,7 +1547,6 @@ function makeControls(obj) {
 			.style('border-radius', '4px')
 			.style('font-size', '14px')
 
-		// Add input handler
 		depthInput.on('input', function (this: HTMLInputElement) {
 			const value = parseInt(this.value, 10)
 			if (!isNaN(value) && value >= 0) {
@@ -668,7 +1580,6 @@ function makeControls(obj) {
 			.style('border-radius', '4px')
 			.style('font-size', '14px')
 
-		// Add input handler
 		alleleInput.on('input', function (this: HTMLInputElement) {
 			const value = parseInt(this.value, 10)
 			if (!isNaN(value) && value >= 0) {
@@ -676,75 +1587,131 @@ function makeControls(obj) {
 			}
 		})
 
-		// Row 2: Consequences Dropdown
+		// Row 2: Consequences Section - Using Dynamic mclass Types
 		const consequencesContainer = optionsGrid
 			.append('div')
 			.style('display', 'flex')
-			.style('align-items', 'center')
+			.style('align-items', 'flex-start') // Changed to flex-start for better alignment
 			.style('gap', '8px')
+			.style('grid-column', '1 / -1') // Span full width for more space
 
 		consequencesContainer
 			.append('label')
 			.style('font-size', '14px')
 			.style('font-weight', '500')
 			.style('min-width', '100px')
+			.style('margin-top', '4px') // Align with first checkbox
 			.text('Consequences:')
 
-		// Initialize consequences if not exists
+		// Initialize consequences with smart defaults from mclass
 		if (!obj.mafOptions.consequences) {
-			obj.mafOptions.consequences = ['missense'] // default selection
+			// Default to common protein-coding mutations
+			const defaultTypes = ['missense', 'nonsense', 'frameshift']
+			obj.mafOptions.consequences = defaultTypes.filter(type => isValidMutationType(type))
+			console.log('Initialized default consequences from mclass:', obj.mafOptions.consequences)
 		}
 
-		const consequencesCheckboxContainer = consequencesContainer
-			.append('div')
-			.style('display', 'grid')
-			.style('grid-template-columns', 'repeat(2, 1fr)')
-			.style('gap', '8px')
-			.style('max-width', '250px')
+		// Create consequences selection area
+		const consequencesSelectionDiv = consequencesContainer.append('div').style('flex', '1')
 
-		// Mutation type options
-		const mutationTypes = ['missense', 'nonsense', 'frameshift', 'duplication', 'deletion', 'insertion', 'inversion']
+		// Group mutation types by category for better organization
+		Object.entries(mutationTypesByCategory).forEach(([category, types]) => {
+			if (types.length === 0) return
 
-		// Create checkboxes for each mutation type
-		mutationTypes.forEach(mutationType => {
-			const checkboxDiv = consequencesCheckboxContainer
+			// Add category header
+			const categoryDiv = consequencesSelectionDiv.append('div').style('margin-bottom', '12px')
+
+			categoryDiv
 				.append('div')
-				.style('display', 'flex')
-				.style('align-items', 'center')
-				.style('gap', '6px')
 				.style('font-size', '13px')
+				.style('font-weight', '600')
+				.style('color', '#495057')
+				.style('margin-bottom', '6px')
+				.style('text-transform', 'capitalize')
+				.text(`${category} Mutations`)
 
-			const checkbox = checkboxDiv
-				.append('input')
-				.attr('type', 'checkbox')
-				.attr('id', `consequence-${mutationType}`)
-				.property('checked', obj.mafOptions.consequences.includes(mutationType))
-				.style('margin', '0')
-				.style('cursor', 'pointer')
+			// Create checkboxes for this category
+			const categoryCheckboxContainer = categoryDiv
+				.append('div')
+				.style('display', 'grid')
+				.style('grid-template-columns', 'repeat(auto-fit, minmax(180px, 1fr))')
+				.style('gap', '8px')
+				.style('margin-left', '12px')
 
-			checkboxDiv
-				.append('label')
-				.attr('for', `consequence-${mutationType}`)
-				.style('cursor', 'pointer')
-				.style('font-size', '13px')
-				.text(mutationType.charAt(0).toUpperCase() + mutationType.slice(1))
+			types.forEach(mutationType => {
+				const checkboxDiv = categoryCheckboxContainer
+					.append('div')
+					.style('display', 'flex')
+					.style('align-items', 'center')
+					.style('gap', '6px')
+					.style('font-size', '13px')
 
-			// Add change handler
-			checkbox.on('change', function (this: HTMLInputElement) {
-				const isChecked = this.checked
-				if (isChecked) {
-					// Add to consequences if not already present
-					if (!obj.mafOptions.consequences.includes(mutationType)) {
-						obj.mafOptions.consequences.push(mutationType)
-					}
-				} else {
-					// Remove from consequences
-					obj.mafOptions.consequences = obj.mafOptions.consequences.filter(c => c !== mutationType)
+				const mutationTypeKey = mutationType.displayName.toLowerCase()
+
+				const checkbox = checkboxDiv
+					.append('input')
+					.attr('type', 'checkbox')
+					.attr('id', `consequence-${mutationTypeKey}`)
+					.property('checked', obj.mafOptions.consequences.includes(mutationTypeKey))
+					.style('margin', '0')
+					.style('cursor', 'pointer')
+
+				const label = checkboxDiv
+					.append('label')
+					.attr('for', `consequence-${mutationTypeKey}`)
+					.style('cursor', 'pointer')
+					.style('font-size', '13px')
+					.style('color', '#333')
+					.text(mutationType.displayName)
+					.attr('title', mutationType.description) // Tooltip with description
+
+				// Add mclass constant indicator (for debugging/reference)
+				if (process.env.NODE_ENV === 'development') {
+					label
+						.append('span')
+						.style('font-size', '10px')
+						.style('color', '#999')
+						.style('margin-left', '4px')
+						.text(`(${mutationType.mclassValue})`)
 				}
-				console.log('Updated consequences:', obj.mafOptions.consequences)
+
+				// Add change handler
+				checkbox.on('change', function (this: HTMLInputElement) {
+					const isChecked = this.checked
+					if (isChecked) {
+						// Add to consequences if not already present
+						if (!obj.mafOptions.consequences.includes(mutationTypeKey)) {
+							obj.mafOptions.consequences.push(mutationTypeKey)
+						}
+					} else {
+						// Remove from consequences
+						obj.mafOptions.consequences = obj.mafOptions.consequences.filter(c => c !== mutationTypeKey)
+					}
+					console.log('Updated consequences:', obj.mafOptions.consequences)
+					console.log(
+						'Corresponding mclass values:',
+						obj.mafOptions.consequences.map(c => getMclassConstant(c))
+					)
+				})
 			})
 		})
-		// Row 2: Hypermutator Max Cut Off
+
+		// Add helper text explaining the mutation types
+		consequencesSelectionDiv
+			.append('div')
+			.style('margin-top', '8px')
+			.style('padding', '8px')
+			.style('background-color', '#f8f9fa')
+			.style('border-radius', '4px')
+			.style('border-left', '3px solid #6c757d')
+			.style('font-size', '12px')
+			.style('color', '#495057')
+			.style('line-height', '1.4').html(`
+				<strong>Mutation Types:</strong> Select the types of mutations to include in your analysis. 
+				Hover over each option to see detailed descriptions. These correspond to standard MAF consequence types.
+			`)
+
+		// Row 3: Hypermutator Max Cut Off
 		const hyperContainer = optionsGrid
 			.append('div')
 			.style('display', 'flex')
@@ -770,7 +1737,6 @@ function makeControls(obj) {
 			.style('border-radius', '4px')
 			.style('font-size', '14px')
 
-		// Add input handler
 		hyperInput.on('input', function (this: HTMLInputElement) {
 			const value = parseInt(this.value, 10)
 			if (!isNaN(value) && value >= 0) {
@@ -778,7 +1744,7 @@ function makeControls(obj) {
 			}
 		})
 
-		// Row 3: Workflow Type (read-only display)
+		// Row 4: Workflow Type (read-only display)
 		const workflowContainer = optionsGrid
 			.append('div')
 			.style('display', 'flex')
@@ -799,7 +1765,7 @@ function makeControls(obj) {
 			.style('color', '#666')
 			.text('Aliquot Ensemble Somatic Variant Merging and Masking')
 
-		// Row 4: Dedup (placeholder with clickable link)
+		// Row 5: Dedup (placeholder with clickable link)
 		const dedupContainer = optionsGrid
 			.append('div')
 			.style('display', 'flex')
@@ -1192,10 +2158,10 @@ async function getFilesAndShowTable(obj) {
 		// render
 		if (result.filesTotal > result.files.length) {
 			wait.text(
-				`Showing first ${result.files.length.toLocaleString()} files out of ${result.filesTotal.toLocaleString()} total. Only files smaller than 1 Mb are shown.`
+				`Showing first ${result.files.length.toLocaleString()} files out of ${result.filesTotal.toLocaleString()} total.`
 			)
 		} else {
-			wait.text(`Showing ${result.files.length.toLocaleString()} files. Only files smaller than 1 Mb are shown.`)
+			wait.text(`Showing ${result.files.length.toLocaleString()} files.`)
 		}
 
 		const rows: TableRowItem[][] = []
@@ -1683,7 +2649,6 @@ async function getFilesAndShowTable(obj) {
 		button.innerHTML = oldText
 		button.disabled = false
 		obj.busy = false
-		obj.expStrategyRadio.inputs.property('disabled', false)
 	}
 }
 
