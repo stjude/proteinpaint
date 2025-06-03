@@ -32,8 +32,15 @@ q{}
 		each element is {id=str, term={}, q={}}
 ds{}
 	server-side dataset object
+
 genome{}
 	server-side genome object
+	XXX avoid using this argument!
+	some calling code (barchart) has bug of suppling genome name instead of obj 
+
+onlyChildren
+	true: the term annotates parent samples, the query will return annotations for the children of the samples that have the term
+	false: the term annotates child samples, the query will return annotations for the samples that have the term
 
 Returns:
 	- see ValidGetDataResponse type in shared/types/src/termdb.matrix.ts
@@ -44,7 +51,7 @@ Returns:
 
 export async function getData(q, ds, genome, onlyChildren = false) {
 	try {
-		validateArg(q, ds, genome)
+		validateArg(q, ds)
 		return await getSampleData(q, ds, onlyChildren)
 	} catch (e) {
 		if (e.stack) console.log(e.stack)
@@ -52,13 +59,12 @@ export async function getData(q, ds, genome, onlyChildren = false) {
 	}
 }
 
-function validateArg(q, ds, genome) {
+function validateArg(q, ds) {
 	if (!ds.cohort) throw 'cohort missing from ds'
 	if (!q.terms) throw `missing 'terms' parameter`
 
 	// needed by some helper functions
 	q.ds = ds
-	q.genome = genome
 
 	for (const tw of q.terms) {
 		// TODO clean up

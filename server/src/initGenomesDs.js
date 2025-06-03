@@ -431,6 +431,7 @@ export async function initGenomesDs(serverconfig) {
 			ds.noHandleOnClient = d.noHandleOnClient
 			ds.label = d.name
 			ds.genomename = genomename
+			ds.genomeObj = g // this makes genome obj readily accessible to functions that already accepts ds obj as argument, avoid retrofit to add in additional genome obj argument
 			g.datasets[ds.label] = ds
 
 			// populate possibly missing ds.init option values
