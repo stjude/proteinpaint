@@ -231,8 +231,8 @@ async function getSessionId(
 			// Submit the color map for predictions
 			const cmapData = qs.stringify({
 				cmap: JSON.stringify({
-					keys: ['predictions'],
-					values: [ds.queries.WSImages.predictionsColor]
+					keys: ['prediction'],
+					values: [ds.queries.WSImages.predictionColor]
 				})
 			})
 
@@ -246,9 +246,7 @@ async function getSessionId(
 				hooks: getHooks(cookieJar, getCookieString, setCookie)
 			})
 		}
-	}
-
-	if (ds.queries.WSImages.getWSIAnnotations) {
+	} else if (ds.queries.WSImages.getWSIAnnotations) {
 		const annotationFiles = await ds.queries.WSImages.getWSIAnnotations(sampleId, wsimage)
 
 		if (!annotationFiles) throw new Error('No annotations files found')
