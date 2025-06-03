@@ -1429,7 +1429,7 @@ function setTermActions(self) {
 
 				//if (self.moveInput.property('checked')) {}
 
-				if (sortColInput.property('checked') || self.moveInput.property('checked')) {
+				if (sortColInput.property('checked') || self.moveInput?.property('checked')) {
 					self.app.dispatch({
 						type: 'plot_nestedEdits',
 						id: self.opts.id,
@@ -1940,17 +1940,16 @@ function setTermGroupActions(self) {
 
 		self.dom.menubody.style('padding', 0).selectAll('*').remove()
 
-		const menuOptions = [
-			{ label: 'Edit', callback: self.showTermGroupEditMenu },
-			{ label: 'Add Rows', callback: self.showTermInsertMenu },
-			{ label: 'Sort', callback: self.showSortMenu },
-			{ label: 'Delete', callback: self.removeTermGroup }
-		]
-		if (self.chartType == 'hierCluster') {
-			// Do not show the 'Edit' and 'Sort' option in the term group menu for hierCluster term groups
-			// for hiercluster gene expression term group, the term group menu won't be shown after clicking the term group label.
-			menuOptions.splice(0, 1)
-			menuOptions.splice(1, 1)
+		const menuOptions = [{ label: 'Add Rows', callback: self.showTermInsertMenu }]
+		// try to maintain a familiar button order
+		if (self.chartType != 'hierCluster') {
+			menuOptions.push(
+				{ label: 'Edit', callback: self.showTermGroupEditMenu }
+				//{ label: 'Sort', callback: self.showSortMenu },
+			)
+		}
+		if (self.activeLabel.grp.type != 'hierCluster') {
+			menuOptions.push({ label: 'Delete', callback: self.removeTermGroup })
 		}
 
 		holder
