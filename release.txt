@@ -1,0 +1,2 @@
+Fixes:
+- remove delete option for hierCluster term group; remove sort option from term group menu
