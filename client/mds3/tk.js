@@ -124,7 +124,7 @@ function getParameter(tk, block) {
 	}
 
 	if (tk.token) {
-		// quick fix for testing with gdc token, which is submitted as url parameter
+		// quick fix for testing with gdc token, which is supplied as url parameter; token is added to http header in adhoc way as dofetch() doesn't handle adhoc token
 		// this method is not used in production
 		headers['X-Auth-Token'] = tk.token
 	}

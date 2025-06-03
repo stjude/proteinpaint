@@ -292,7 +292,8 @@ function createSubTk(tk, block, tvs) {
 		filterObj: getNewFilter(tk, tvs),
 		allow2selectSamples: tk.allow2selectSamples,
 		onClose: tk.onClose,
-		hardcodeCnvOnly: tk.hardcodeCnvOnly
+		hardcodeCnvOnly: tk.hardcodeCnvOnly,
+		token: tk.token // for testing
 	}
 	if (tk.cnv?.presetMax) tkarg.cnv = { presetMax: tk.cnv.presetMax } // preset value is present, pass to subtk
 	if (tk.legend.mclass?.hiddenvalues?.size) {

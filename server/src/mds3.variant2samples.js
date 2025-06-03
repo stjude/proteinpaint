@@ -701,13 +701,7 @@ export async function get_crosstabCombinations(twLst, ds, q, nodes) {
 	// get term[0] category total, not dependent on other terms
 	const id0 = twLst[0].term.id
 	{
-		// make new q{} with filters, for termid2totalsize2.get()
-		// must not directly submit q{} to .get([], q), this will filter to only those mutated samples rather than category total size
-		const _q = {}
-		if (q.filterObj) _q.filterObj = q.filterObj
-		if (q.filter0) _q.filter0 = q.filter0
-
-		const tv2counts = await ds.cohort.termdb.termid2totalsize2.get([twLst[0]], _q)
+		const tv2counts = await ds.cohort.termdb.termid2totalsize2.get([twLst[0]], dupRequest(q))
 		for (const [v, count] of tv2counts.get(id0)) {
 			const v0 = ds.cohort.termdb.useLower ? v.toLowerCase() : v
 			if (useall) {
@@ -728,10 +722,8 @@ export async function get_crosstabCombinations(twLst, ds, q, nodes) {
 		// for every id0 category, get id1 category/count conditional on it
 		for (const v0 of id2categories.get(id0)) {
 			// make new q with filters
-			const _q = { tid2value: { [id0]: v0 } }
-			if (q.filterObj) _q.filterObj = q.filterObj
-			if (q.filter0) _q.filter0 = q.filter0
-
+			const _q = dupRequest(q)
+			_q.tid2value = { [id0]: v0 }
 			promises.push(ds.cohort.termdb.termid2totalsize2.get([twLst[1]], _q, v0))
 		}
 		const lst = await Promise.all(promises)
@@ -758,10 +750,8 @@ export async function get_crosstabCombinations(twLst, ds, q, nodes) {
 		for (const v0 of id2categories.get(id0)) {
 			for (const v1 of id2categories.get(id1)) {
 				// make new q with filters
-				const _q = { tid2value: { [id0]: v0, [id1]: v1 } }
-				if (q.filterObj) _q.filterObj = q.filterObj
-				if (q.filter0) _q.filter0 = q.filter0
-
+				const _q = dupRequest(q)
+				_q.tid2value = { [id0]: v0, [id1]: v1 }
 				promises.push(ds.cohort.termdb.termid2totalsize2.get([twLst[2]], _q, { v0, v1 }))
 			}
 		}
@@ -781,6 +771,22 @@ export async function get_crosstabCombinations(twLst, ds, q, nodes) {
 		}
 	}
 	return combinations
+}
+
+/*
+make new q{} with filters, for termid2totalsize2.get()
+must not directly submit q{} to .get([], q), original q{} contains ssm_id_lst etc that will filter to only those mutated samples rather than category total size
+this strips away any such properties that will limit to mutated samples
+*/
+function dupRequest(q) {
+	return {
+		filterObj: q.filterObj,
+		filter0: q.filter0,
+		// must include below for controlled data query
+		token: q.token,
+		sessionid: q.sessionid,
+		__protected__: q.__protected__
+	}
 }
 
 /* for an ele of nodes[], find matching ele from combinations[]
