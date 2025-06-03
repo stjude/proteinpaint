@@ -10,6 +10,7 @@ mod tests {
     const P_VALUE_CUTOFF: f32 = 0.0001; // Threshold difference between calculated and expected p-value for the test to pass
     const AUC_CUTOFF: f32 = 0.0001; // Threshold difference between calculated and expected AUC for the test to pass
     const ES_CUTOFF: f32 = 0.001; // Threshold difference between calculated and expected ES for the test to pass
+    const CERNO_CUTOFF: f32 = 1.0; // Threshold difference between calculated and expected CERNO value for the test to pass
     #[test]
     fn cerno_test() {
         let sample_genes: Vec<String> = vec![
@@ -20912,16 +20913,18 @@ mod tests {
             "TKT".to_string(),
             "SUCLG1".to_string(),
         ]);
-        let (p_value1, auc1, es1, _matches1, _gene_set_hits1) = cerno(&sample_coding_genes, geneset1);
-        //println!("p_value1:{}", p_value1);
-        //println!("auc1:{}", auc1);
-        //println!("es1:{}", es1);
+        let (p_value1, auc1, es1, _matches1, _gene_set_hits1, cerno_output1) = cerno(&sample_coding_genes, geneset1);
+        println!("p_value1:{}", p_value1);
+        println!("auc1:{}", auc1);
+        println!("es1:{}", es1);
+        println!("cerno1:{}", cerno_output1);
         //println!("matches:{}", _matches1);
         //println!("gene_set_hits:{}", _gene_set_hits1);
 
         assert_eq!(p_value1 - 0.9744196 < P_VALUE_CUTOFF, true); // The expected p-value comes from the original tmod package in R
         assert_eq!(auc1 - 0.4657391 < AUC_CUTOFF, true); // The expected auc comes from the original tmod package in R
         assert_eq!(es1 - 0.8499401 < ES_CUTOFF, true); // The expected es comes from the original tmod package in R
+        assert_eq!(cerno_output1 - 265.1813 < CERNO_CUTOFF, true); // The expected es comes from the original tmod package in R
 
         let geneset2: HashSet<String> = HashSet::from([
             "GCNT1".to_string(),
@@ -21126,15 +21129,17 @@ mod tests {
             "IL7".to_string(),
         ]);
 
-        let (p_value2, auc2, es2, _matches2, _gene_set_hits2) = cerno(&sample_coding_genes, geneset2);
-        //println!("p_value2:{}", p_value2);
-        //println!("auc2:{}", auc2);
-        //println!("es2:{}", es2);
+        let (p_value2, auc2, es2, _matches2, _gene_set_hits2, cerno_output2) = cerno(&sample_coding_genes, geneset2);
+        println!("p_value2:{}", p_value2);
+        println!("auc2:{}", auc2);
+        println!("es2:{}", es2);
+        println!("cerno2:{}", cerno_output2);
         //println!("matches:{}", _matches2);
         //println!("gene_set_hits:{}", _gene_set_hits2);
 
         assert_eq!(p_value2 - 0.6661019 < P_VALUE_CUTOFF, true); // The expected p-value comes from the original tmod package in R
         assert_eq!(auc2 - 0.4136105 < AUC_CUTOFF, true); // The expected auc comes from the original tmod package in R
         assert_eq!(es2 - 0.9619778 < ES_CUTOFF, true); // The expected es comes from the original tmod package in R
+        assert_eq!(cerno_output2 - 271.2777 < CERNO_CUTOFF, true); // The expected es comes from the original tmod package in R
     }
 }
