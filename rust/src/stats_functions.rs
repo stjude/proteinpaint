@@ -418,7 +418,10 @@ pub struct gene_order {
 }
 
 #[allow(dead_code)]
-pub fn cerno(sample_coding_genes: &Vec<gene_order>, genes_in_pathway: HashSet<String>) -> (f32, f32, f32, f32, String) {
+pub fn cerno(
+    sample_coding_genes: &Vec<gene_order>,
+    genes_in_pathway: HashSet<String>,
+) -> (f32, f32, f32, f32, String, f32) {
     // Ensure sample_coding_genes is sorted in decreasing order of fold_change
     // Filter the sample_coding_genes vector to only include those whose gene_names are in the HashSet genes_in_pathway
     let gene_intersections: Vec<&gene_order> = sample_coding_genes
@@ -456,5 +459,5 @@ pub fn cerno(sample_coding_genes: &Vec<gene_order>, genes_in_pathway: HashSet<St
     let U = N1 * N2 + N1 * (N1 + 1.0) / 2.0 - R1; // U  <- N1*N2+N1*(N1+1)/2-R1
     let AUC = U / (N1 * N2); // AUC <- U/(N1*N2)
     let p_value = chi_squared_cdf(cerno as f64, (2.0 * N1) as f64, false, false); // pchisq(ret$cerno, 2*N1, lower.tail=FALSE)
-    (p_value as f32, AUC, cES, N1, gene_set_hits)
+    (p_value as f32, AUC, cES, N1, gene_set_hits, cerno)
 }
