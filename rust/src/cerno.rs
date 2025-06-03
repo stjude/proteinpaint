@@ -200,7 +200,7 @@ fn main() -> Result<()> {
                                         }
                                     }
                                     let gene_set_size = names.len();
-                                    let (p_value, auc, es, matches, gene_set_hits) =
+                                    let (p_value, auc, es, matches, gene_set_hits, _cerno_output) =
                                         stats_functions::cerno(&sample_coding_genes, names);
 
                                     if matches >= 1.0
@@ -270,7 +270,7 @@ fn main() -> Result<()> {
                                                     }
                                                 }
                                                 let gene_set_size = names.len();
-                                                let (p_value, auc, es, matches, gene_set_hits) =
+                                                let (p_value, auc, es, matches, gene_set_hits, _cerno_output) =
                                                     stats_functions::cerno(&sample_coding_genes, names);
 
                                                 if matches >= 1.0
