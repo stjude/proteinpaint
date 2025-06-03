@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.129.4
 
 Fixes:
 - remove delete option for hierCluster term group; remove sort option from term group menu
