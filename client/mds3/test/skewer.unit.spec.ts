@@ -110,6 +110,7 @@ tape('dataGood4sunburst()', function (test) {
 		/node name missing/,
 		'should throw'
 	)
+	/* disabled test, cohortsize is allowed to be missing
 	test.throws(
 		() => {
 			dataGood4sunburst({ nodes: [{}, { name: 'x' }] })
@@ -117,7 +118,13 @@ tape('dataGood4sunburst()', function (test) {
 		/node cohortsize not integer/,
 		'should throw'
 	)
+	*/
 	test.equal(dataGood4sunburst({ nodes: [{}, { name: 'x', cohortsize: 1 }] }), true, 'returns true on good data')
+	test.equal(
+		dataGood4sunburst({ nodes: [{}, { name: 'x' }] }),
+		true,
+		'returns true on good data with missing cohortsize'
+	)
 	test.end()
 })
 

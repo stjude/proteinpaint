@@ -1,0 +1,2 @@
+Fixes:
+- disable cohortsize check to avoid breaking sunburst for controlled lollipop view, also fix a minor sunburst rendering issue

@@ -352,7 +352,7 @@ function slicemouseover(d, sun) {
 			.append('rect')
 			.attr('x', 2)
 			.attr('y', 2)
-			.attr('width', (barwidth * d.value) / cohortsize)
+			.attr('width', barwidth * Math.min(1, d.value / cohortsize)) // avoids showing a very long bar when cohortsize<d.value (in gdc controlled data)
 			.attr('height', barheight)
 			.attr('fill', '#9F80FF')
 			.attr('shape-rendering', 'crispEdges')
