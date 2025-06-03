@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 Fixes:
 - remove delete option for hierCluster term group; remove sort option from term group menu
+- disable cohortsize check to avoid breaking sunburst for controlled lollipop view, also fix a minor sunburst rendering issue
 
 
 ## 2.129.3
