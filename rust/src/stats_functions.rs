@@ -454,7 +454,7 @@ pub fn cerno(
         .sum::<f32>()
         * (-2.0);
 
-    let cES: f32 = cerno / (2.0 * (N1 as f32)); // cES <- cerno/(2*N1)
+    let cES;
     let N2 = N - N1; // N2 = N - N1
     let R1 = ranks_descending.iter().sum::<usize>() as f32; // R1 <- sum(ranks)
     let U = N1 * N2 + N1 * (N1 + 1.0) / 2.0 - R1; // U  <- N1*N2+N1*(N1+1)/2-R1
@@ -462,6 +462,7 @@ pub fn cerno(
     let p_value;
     if AUC >= 0.5 {
         // Upregulated geneset
+        cES = cerno / (2.0 * (N1 as f32)); // cES <- cerno/(2*N1)
         p_value = chi_squared_cdf(cerno as f64, (2.0 * N1) as f64, false, false);
     // pchisq(ret$cerno, 2*N1, lower.tail=FALSE)
     } else {
@@ -480,6 +481,7 @@ pub fn cerno(
             .iter()
             .sum::<f32>()
             * (-2.0);
+        cES = cerno_ascending / (2.0 * (N1 as f32)); // cES <- cerno/(2*N1)
         p_value = chi_squared_cdf(cerno_ascending as f64, (2.0 * N1) as f64, false, false);
     }
     (p_value as f32, AUC, cES, N1, gene_set_hits, cerno)
