@@ -25,6 +25,7 @@ import { ViewModelMapper } from '#plots/wsiviewer/viewModel/ViewModelMapper.ts'
 import { WSImageRenderer } from '#plots/wsiviewer/view/WSImageRenderer.ts'
 import { Buffer } from '#plots/wsiviewer/interactions/Buffer.ts'
 import { ViewModelProvider } from '#plots/wsiviewer/viewModelNew/ViewModelProvider.ts'
+import { ThumbnailRenderer } from '#plots/wsiviewer/view/ThumbnailRenderer.ts'
 
 export default class WSIViewer extends RxComponentInner {
 	// following attributes are required by rx
@@ -78,9 +79,14 @@ export default class WSIViewer extends RxComponentInner {
 			return
 		}
 
-		this.generateThumbnails(
+		const thumbnailRenderer = new ThumbnailRenderer()
+
+		this.thumbnailsContainer = thumbnailRenderer.render(
+			holder,
+			this.thumbnailsContainer,
 			wsimageLayers.map(wsimageLayers => wsimageLayers.wsimage),
-			settings
+			settings,
+			this.wsiViewerInteractions
 		)
 
 		holder.select('div[id="wsi-viewer"]').remove()
@@ -133,57 +139,6 @@ export default class WSIViewer extends RxComponentInner {
 		}
 
 		this.renderMetadata(holder, wsimageLayers, settings)
-	}
-
-	private generateThumbnails(layers: Array<TileLayer<Zoomify>>, setting: Settings) {
-		if (!this.thumbnailsContainer) {
-			// First-time initialization
-			const holder = this.opts.holder
-			this.thumbnailsContainer = holder
-				.append('div')
-				.attr('id', 'thumbnails')
-				.attr('data-testid', 'sjpp-thumbnails')
-				.style('width', '600px')
-				.style('height', '80px')
-				.style('display', 'flex')
-				.style('margin-left', '20px')
-				.style('margin-bottom', '20px')
-
-			for (let i = 0; i < layers.length; i++) {
-				const isActive = i === setting.displayedImageIndex
-				const thumbnail = this.thumbnailsContainer
-					.append('div')
-					.attr('id', `thumbnail${i}`)
-					.style('width', setting.thumbnailWidth)
-					.style('height', setting.thumbnailHeight)
-					.style('margin-right', '10px')
-					.style('display', 'flex')
-					.style('height', 'auto')
-					.style('align-items', 'center')
-					.style('justify-content', 'center')
-					.style('border', isActive ? setting.activeThumbnailBorderStyle : setting.nonActiveThumbnailBorderStyle)
-					.style('cursor', 'pointer')
-					.on('click', () => {
-						this.wsiViewerInteractions.thumbnailClickListener(i)
-					})
-
-				thumbnail
-					.append('img')
-					.attr('src', layers[i].get('preview'))
-					.attr('alt', `Thumbnail ${i}`)
-					.style('max-width', '100%')
-					.style('height', '60px')
-					.style('object-fit', 'cover')
-			}
-		} else {
-			// Update borders only
-			for (let i = 0; i < layers.length; i++) {
-				const isActive = i === setting.displayedImageIndex
-				this.thumbnailsContainer
-					.select(`#thumbnail${i}`)
-					.style('border', isActive ? setting.activeThumbnailBorderStyle : setting.nonActiveThumbnailBorderStyle)
-			}
-		}
 	}
 
 	private getMap(wSImageLayers: WSImageLayers): OLMap {
