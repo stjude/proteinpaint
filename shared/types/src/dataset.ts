@@ -1495,41 +1495,51 @@ type MutationSet = {
 	fusion: string
 }
 
-type BaseDtEntry = {
+/** different methods to return samples with assay availability info */
+type DtAssayAvailability = DtAssayAvailabilityGetter | DtAssayAvailabilityTerm
+
+/** using ds-supplied getter */
+type DtAssayAvailabilityGetter = {
+	get: (q: any) => any
+}
+/** using dictionary term */
+type DtAssayAvailabilityTerm = {
+	/** id of this assay term for this dt */
 	term_id: string
-	yes: { value: string[] }
-	no: { value: string[] }
+	/** optional label */
 	label?: string
+	/** categories meaning the sample has this assay */
+	yes: { value: string[] }
+	/** categories meaning the sample doesn't have this assay */
+	no: { value: string[] }
 }
 
-type SNVByOrigin = {
-	[index: string]: BaseDtEntry
+type DtAssayAvailabilityByOrigin = {
+	byOrigin: {
+		/** each key is an origin value or category */
+		[index: string]: DtAssayAvailability
+	}
 }
 
-type DtEntrySNV = {
-	byOrigin: SNVByOrigin
+type Mds3AssayAvailability = {
+	/** object of key-value pairs. keys are dt values */
+	byDt: {
+		/** each index is a dt value */
+		[index: number]: DtAssayAvailabilityByOrigin | DtAssayAvailability
+	}
 }
 
-type ByDt = {
-	/** SNVs differentiate by sample origin. Non-SNV, no differentiation*/
-	[index: number]: DtEntrySNV | BaseDtEntry
-}
-
-type AssayValuesEntry = {
-	[index: string]: { label: string; color: string }
-}
-
-type AssaysEntry = {
-	id: string
-	name: string
-	type: string
-	values?: AssayValuesEntry
-}
-
-type AssayAvailability = {
-	byDt?: ByDt
+// mds legacy; delete when all are migrated to mds3
+type LegacyAssayAvailability = {
 	file?: string
-	assays?: AssaysEntry[]
+	assays?: {
+		id: string
+		name: string
+		type: string
+		values?: {
+			[index: string]: { label: string; color: string }
+		}
+	}[]
 }
 
 export type CumBurdenData = {
@@ -1887,7 +1897,7 @@ type ViewMode = {
 /*** types supporting Mds Dataset types ***/
 type BaseMds = {
 	genome?: string //Not declared in TermdbTest
-	assayAvailability?: AssayAvailability
+	assayAvailability?: Mds3AssayAvailability | LegacyAssayAvailability
 }
 
 export type Mds = BaseMds & {
