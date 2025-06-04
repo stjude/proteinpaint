@@ -1,10 +1,10 @@
 import { getCompInit } from '#rx'
 import 'ol/ol.css'
 import OLMap from 'ol/Map.js'
-import TileLayer from 'ol/layer/Tile.js'
+import type TileLayer from 'ol/layer/Tile.js'
 import Tile from 'ol/layer/Tile.js'
 import View from 'ol/View.js'
-import Zoomify from 'ol/source/Zoomify.js'
+import type Zoomify from 'ol/source/Zoomify.js'
 import OverviewMap from 'ol/control/OverviewMap.js'
 import FullScreen from 'ol/control/FullScreen.js'
 import { dofetch3 } from '#common/dofetch'
@@ -12,7 +12,7 @@ import type TileSource from 'ol/source/Tile'
 import { WSIViewerInteractions } from '#plots/wsiviewer/interactions/WSIViewerInteractions.ts'
 import type Settings from '#plots/wsiviewer/Settings.ts'
 import wsiViewerDefaults from '#plots/wsiviewer/defaults.ts'
-import type { SampleWSImagesResponse, WSImage, WSImagesRequest, WSImagesResponse } from '#types'
+import type { SampleWSImagesResponse } from '#types'
 import { table2col } from '#dom'
 import { Projection } from 'ol/proj'
 import { RxComponentInner } from '../../types/rx.d'
@@ -24,6 +24,7 @@ import { debounce } from 'debounce'
 import { ViewModelMapper } from '#plots/wsiviewer/viewModel/ViewModelMapper.ts'
 import { WSImageRenderer } from '#plots/wsiviewer/view/WSImageRenderer.ts'
 import { Buffer } from '#plots/wsiviewer/interactions/Buffer.ts'
+import { ViewModelProvider } from '#plots/wsiviewer/viewModelNew/ViewModelProvider.ts'
 
 export default class WSIViewer extends RxComponentInner {
 	// following attributes are required by rx
@@ -50,23 +51,33 @@ export default class WSIViewer extends RxComponentInner {
 			annotationsIdx: new Buffer<number>(0)
 		}
 
-		const data: SampleWSImagesResponse = await this.requestData(state, buffers.annotationsIdx.get())
+		// TODO verify if state.vocab.genome is needed?
+		const genome = state.genome || state.vocab.genome
+		const dslabel = state.dslabel || state.vocab.dslabel
+		const sample_id = state.sample_id
 
-		const wsimages: WSImage[] = data.sampleWSImages
+		const viewModelProvider = new ViewModelProvider()
+		const viewModelNew = await viewModelProvider.provide(
+			genome,
+			dslabel,
+			sample_id,
+			buffers.annotationsIdx.get(),
+			settings
+		)
+		const wsimages = viewModelNew.sampleWSImages
+		const wsimageLayers = viewModelNew.wsimageLayers
+		const wsimageLayersLoadError = viewModelNew.wsimageLayersLoadError
 
 		if (wsimages.length === 0) {
 			holder.append('div').style('margin-left', '10px').text('No WSI images.')
 			return
 		}
 
-		let wsimageLayers: Array<WSImageLayers> = []
-
-		try {
-			wsimageLayers = await this.getWSImageLayers(state, wsimages)
-		} catch (e: any) {
-			holder.append('div').style('margin-left', '10px').text(e.message)
+		if (wsimageLayersLoadError) {
+			holder.append('div').style('margin-left', '10px').text(wsimageLayersLoadError)
 			return
 		}
+
 		this.generateThumbnails(
 			wsimageLayers.map(wsimageLayers => wsimageLayers.wsimage),
 			settings
@@ -96,7 +107,16 @@ export default class WSIViewer extends RxComponentInner {
 		if (zoomInPoints != undefined) {
 			this.wsiViewerInteractions.addZoomInEffect(activeImageExtent, zoomInPoints, map)
 
-			this.addMapKeyDownListener(holder, state, map, settings, activeImageExtent, viewModel.viewData.shortcuts, buffers)
+			this.addMapKeyDownListener(
+				holder,
+				state,
+				map,
+				settings,
+				activeImageExtent,
+				viewModel.viewData.shortcuts,
+				buffers,
+				viewModelProvider
+			)
 		}
 
 		this.addControls(map, activeImage, hasOverlay)
@@ -113,129 +133,6 @@ export default class WSIViewer extends RxComponentInner {
 		}
 
 		this.renderMetadata(holder, wsimageLayers, settings)
-	}
-
-	private async requestData(state: any, index: number): Promise<SampleWSImagesResponse> {
-		return await dofetch3('samplewsimages', {
-			body: {
-				genome: state.genome || state.vocab.genome,
-				dslabel: state.dslabel || state.vocab.dslabel,
-				sample_id: state.sample_id,
-				index
-			}
-		})
-	}
-
-	private async getWSImageLayers(state: any, wsimages: WSImage[]): Promise<WSImageLayers[]> {
-		const layers: Array<WSImageLayers> = []
-
-		const genome = state.genome || state.vocab.genome
-		const dslabel = state.dslabel || state.vocab.dslabel
-		const sampleId = state.sample_id
-
-		for (let i = 0; i < wsimages.length; i++) {
-			const wsimage = wsimages[i].filename
-
-			const body: WSImagesRequest = {
-				genome: genome,
-				dslabel: dslabel,
-				sampleId: sampleId,
-				wsimage: wsimages[i].filename
-			}
-
-			const data: WSImagesResponse = await dofetch3('wsimages', { body })
-
-			if (data.status === 'error') {
-				throw new Error(`${data.error}`)
-			}
-
-			const imgWidth = data.slide_dimensions[0]
-			const imgHeight = data.slide_dimensions[1]
-
-			const queryParams = `wsi_image=${wsimage}&dslabel=${dslabel}&genome=${genome}&sample_id=${sampleId}`
-
-			const zoomifyUrl = `/tileserver/layer/slide/${data.wsiSessionId}/zoomify/{TileGroup}/{z}-{x}-{y}@1x.jpg?${queryParams}`
-
-			const source = new Zoomify({
-				url: zoomifyUrl,
-				size: [imgWidth, imgHeight],
-				crossOrigin: 'anonymous',
-				zDirection: -1 // Ensure we get a tile with the screen resolution or higher
-			})
-
-			const options = {
-				preview: `/tileserver/layer/slide/${data.wsiSessionId}/zoomify/TileGroup0/0-0-0@1x.jpg?${queryParams}`,
-				metadata: wsimages[i].metadata,
-				source: source,
-				baseLayer: true,
-				title: 'Slide'
-			}
-			const layer = new TileLayer(options)
-
-			const wsiImageLayers: WSImageLayers = {
-				wsimage: layer
-			}
-
-			if (data.overlays) {
-				for (const overlay of data.overlays) {
-					const predictionQueryParams = `wsi_image=${wsimage}&dslabel=${dslabel}&genome=${genome}&sample_id=${sampleId}`
-					const zoomifyOverlayLatUrl = `/tileserver/layer/${overlay.layerNumber}/${data.wsiSessionId}/zoomify/{TileGroup}/{z}-{x}-{y}@1x.jpg?${predictionQueryParams}`
-
-					const sourceOverlay = new Zoomify({
-						url: zoomifyOverlayLatUrl,
-						size: [imgWidth, imgHeight],
-						crossOrigin: 'anonymous',
-						zDirection: -1 // Ensure we get a tile with the screen resolution or higher
-					})
-
-					const optionsOverlay = {
-						preview: `/tileserver/layer/${overlay.layerNumber}/${data.wsiSessionId}/zoomify/TileGroup0/0-0-0@1x.jpg?${predictionQueryParams}`,
-						metadata: wsimages[i].metadata,
-						source: sourceOverlay,
-						title: overlay.predictionOverlayType
-					}
-
-					if (wsiImageLayers.overlays) {
-						wsiImageLayers.overlays.push(new TileLayer(optionsOverlay))
-					} else {
-						wsiImageLayers.overlays = [new TileLayer(optionsOverlay)]
-					}
-				}
-			}
-
-			const overlays = wsimages[i].overlays
-
-			if (overlays) {
-				for (const overlay of overlays) {
-					const overlayQueryParams = `wsi_image=${overlay}&dslabel=${dslabel}&genome=${genome}&sample_id=${sampleId}`
-
-					const zoomifyOverlayLatUrl = `/tileserver/layer/overlay/${data.wsiSessionId}/zoomify/{TileGroup}/{z}-{x}-{y}@1x.jpg?${overlayQueryParams}`
-
-					const sourceOverlay = new Zoomify({
-						url: zoomifyOverlayLatUrl,
-						size: [imgWidth, imgHeight],
-						crossOrigin: 'anonymous',
-						zDirection: -1 // Ensure we get a tile with the screen resolution or higher
-					})
-
-					const optionsOverlay = {
-						preview: `/tileserver/layer/overlay/${data.wsiSessionId}/zoomify/TileGroup0/0-0-0@1x.jpg?${overlayQueryParams}`,
-						metadata: wsimages[i].metadata,
-						source: sourceOverlay,
-						title: 'Selected Patches'
-					}
-
-					if (wsiImageLayers.overlays) {
-						wsiImageLayers.overlays.push(new TileLayer(optionsOverlay))
-					} else {
-						wsiImageLayers.overlays = [new TileLayer(optionsOverlay)]
-					}
-				}
-			}
-
-			layers.push(wsiImageLayers)
-		}
-		return layers
 	}
 
 	private generateThumbnails(layers: Array<TileLayer<Zoomify>>, setting: Settings) {
@@ -394,7 +291,9 @@ export default class WSIViewer extends RxComponentInner {
 		settings: Settings,
 		activeImageExtent: any,
 		shortcuts: string[] = [],
-		buffers: any
+		buffers: any,
+		// TODO deal with this in a better way
+		viewModelProvider: ViewModelProvider
 	) {
 		// Add keydown listener to the image container
 		const image = holder.select('div > .ol-viewport').attr('tabindex', 0)
@@ -426,7 +325,12 @@ export default class WSIViewer extends RxComponentInner {
 					//Timeout for when user presses arrows multiple times.
 					const d = debounce(async () => {
 						buffers.annotationsIdx.set(currentIndex)
-						const newData: SampleWSImagesResponse = await this.requestData(state, buffers.annotationsIdx.get())
+						const newData: SampleWSImagesResponse = await viewModelProvider.requestData(
+							state.genome,
+							state.dslabel,
+							state.sample_id,
+							buffers.annotationsIdx.get()
+						)
 						const newZoomInPoints = newData.sampleWSImages[settings.displayedImageIndex].zoomInPoints
 						if (newZoomInPoints != undefined)
 							this.wsiViewerInteractions.addZoomInEffect(activeImageExtent, newZoomInPoints, map)
