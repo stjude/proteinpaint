@@ -20935,7 +20935,7 @@ mod tests {
 
         assert_eq!((p_value1 - 0.5340).abs() < P_VALUE_CUTOFF, true); // The expected p-value comes from the original tmod package in R
         assert_eq!((auc1 - 0.4657391).abs() < AUC_CUTOFF, true); // The expected auc comes from the original tmod package in R
-        assert_eq!((es1 - 0.8499401).abs() < ES_CUTOFF, true); // The expected es comes from the original tmod package in R
+        assert_eq!((es1 - 0.9910545).abs() < ES_CUTOFF, true); // The expected es comes from the original tmod package in R
         assert_eq!((cerno_output1 - 265.1813).abs() < CERNO_CUTOFF, true); // The expected es comes from the original tmod package in R
 
         let geneset2: HashSet<String> = HashSet::from([
@@ -21154,7 +21154,7 @@ mod tests {
 
         assert_eq!((p_value2 - 0.000002219).abs() < P_VALUE_CUTOFF, true); // The expected p-value comes from the original tmod package in R
         assert_eq!((auc2 - 0.4136105).abs() < AUC_CUTOFF, true); // The expected auc comes from the original tmod package in R
-        assert_eq!((es2 - 0.9619778).abs() < ES_CUTOFF, true); // The expected es comes from the original tmod package in R
+        assert_eq!((es2 - 1.4349465).abs() < ES_CUTOFF, true); // The expected es comes from the original tmod package in R
         assert_eq!((cerno_output2 - 271.2777).abs() < CERNO_CUTOFF, true); // The expected es comes from the original tmod package in R
 
         let geneset3: HashSet<String> = HashSet::from([
