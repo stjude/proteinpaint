@@ -1,3 +1,16 @@
+/*******************************
+
+				!!!
+       THIS SCRIPT IS NO LONGER MAINTAINED
+				!!!
+
+invalidcoord() and string2pos() has been copied to share/utils/src/common.js
+
+they will be deleted from this script
+
+client script should switch import to `import { invalidcoord, string2pos } from '#shared/common.js'`
+
+*******************************/
 export function invalidcoord(thisgenome, chrom, start, stop) {
 	if (!thisgenome) return 'no genome'
 	if (!chrom) return 'no chr name'
