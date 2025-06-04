@@ -2796,7 +2796,7 @@ function addDataAvailability(sid, sample2mlst, dtKey, mclass, origin, sampleFilt
 }
 
 // function to filter a sample based on its mlst and a tvslst
-function filterByTvsLst(filter, mlst) {
+export function filterByTvsLst(filter, mlst) {
 	if (filter.type != 'tvslst') throw 'unexpected filter.type'
 	const passLst = []
 	const testedLst = []
@@ -2808,9 +2808,12 @@ function filterByTvsLst(filter, mlst) {
 	const passFilterLst = filter.join == 'and' ? passLst.every(pass => pass) : passLst.some(pass => pass)
 	const allTested = testedLst.every(tested => tested)
 	if (!passFilterLst && !allTested) {
-		// sample does not pass the filter list and
-		// is not tested for all of the dts
-		// so sample cannot not pass the filter
+		// sample does not pass the filter list and is not tested for all of
+		// the dts so return here to prevent the sample from passing when
+		// filter.in=false
+		// e.g. if filter has .in=false and .lst[] includes a CNV tvs, then a
+		// sample not tested for CNV should not pass the filter because its CNV
+		// mutation status is not known
 		return [false, false]
 	}
 	const passFilter = filter.in ? passFilterLst : !passFilterLst
@@ -2833,25 +2836,27 @@ export function filterByItem(filter, mlst) {
 	if (mlst_tested.length) {
 		// sample is tested for the dt of the filter
 		tested = true
-		// determine if sample has any mutations specified in the filter
-		const sampleHasMutation =
-			tvs.cnvMode == 'continuous'
-				? // continuous cnv data
-				  mlst_tested.some(m => {
-						if (!m.value) return false // will also consider value=0 as not mutated
-						if (m.value > 0 && tvs.cnvGainCutoff && m.value < tvs.cnvGainCutoff) return false
-						if (m.value < 0 && tvs.cnvLossCutoff && m.value > tvs.cnvLossCutoff) return false
-						if (tvs.cnvMaxLength && m.stop - m.start > tvs.cnvMaxLength) return false
-						return true
-				  })
-				: // categorical mutation data
-				  mlst_tested.some(m => tvs.values.some(v => v.key == m.class))
-		// for wildtype cnv genotype, negate the sampleHasMutation boolean
-		const sampleHasGenotype = tvs.cnvWT ? !sampleHasMutation : sampleHasMutation
+		// determine if sample genotype matches filter genotype
+		let sampleHasGenotype
+		if (tvs.cnvMode == 'continuous') {
+			// continuous cnv data
+			if (tvs.term.dt != dtcnv) throw 'unexpected dt value'
+			const sampleHasMutation = mlst_tested.some(m => {
+				if (!m.value) return false // will also consider value=0 as not mutated
+				if (m.value > 0 && tvs.cnvGainCutoff && m.value < tvs.cnvGainCutoff) return false
+				if (m.value < 0 && tvs.cnvLossCutoff && m.value > tvs.cnvLossCutoff) return false
+				if (tvs.cnvMaxLength && m.stop - m.start > tvs.cnvMaxLength) return false
+				return true
+			})
+			sampleHasGenotype = tvs.cnvWT ? !sampleHasMutation : sampleHasMutation
+		} else {
+			// categorical mutation data
+			sampleHasGenotype = mlst_tested.some(m => tvs.values.some(v => v.key == m.class))
+		}
 		// for tvs.isnot=true, negate the sampleHasGenotype boolean
 		pass = tvs.isnot ? !sampleHasGenotype : sampleHasGenotype
 	} else {
-		// sample does not have tested mutations for the dt
+		// sample is not tested for the dt of the filter
 		// so sample does not pass the filter
 		tested = false
 		pass = false
