@@ -574,19 +574,20 @@ interface TableRowItem {
 	value?: any
 }
 
-// list of columns to show in MAF file table
+// list of columns to show in file table
 const tableColumns = [
 	{ label: 'Case', sortable: true },
 	{ label: 'Project', sortable: true },
-	{ label: 'Samples' },
-	{ label: 'File Size', barplot: { tickFormat: '~s' }, sortable: true }
+	{ label: 'MAF Sample' },
+	{ label: 'MAF File Size', barplot: { tickFormat: '~s' }, sortable: true },
+	{ label: 'CNV File ID', sortable: true }
 ]
 
 // list of data type options
 const datatypeOptions = [
 	{ option: 'mafOption', selected: true, label: 'Include Mutation' },
-	{ option: 'cnvOption', selected: true, label: 'Include CNV' },
-	{ option: 'fusionOption', selected: true, label: 'Include Fusion' }
+	{ option: 'cnvOption', selected: false, label: 'Include CNV' },
+	{ option: 'fusionOption', selected: false, label: 'Include Fusion' }
 ]
 
 export async function gdcGRIN2ui({ holder, filter0, callbacks, debugmode = false }) {
@@ -1404,7 +1405,12 @@ async function getFilesAndShowTable(obj) {
 			}
 		}
 
+		// Add cnvOptions if available
+		body.cnvOptions = {}
+
+		console.log('Request body for GRIN2list:', body)
 		result = await dofetch3('gdc/GRIN2list', { body })
+		console.log('GRIN2list result:', result)
 
 		if (result.error) throw result.error
 		if (!Array.isArray(result.files)) throw 'result.files[] not array'
@@ -1424,7 +1430,21 @@ async function getFilesAndShowTable(obj) {
 		}
 
 		const rows: TableRowItem[][] = []
+
+		// Create a simple map of CNV files by case
+		const cnvFilesByCase = new Map<string, any>()
+		if (result.cnvFiles && result.cnvFiles.files) {
+			for (const cnvFile of result.cnvFiles.files) {
+				const caseId = cnvFile.case_submitter_id
+				// Just store the first CNV file for each case (or you could store all and pick one)
+				if (!cnvFilesByCase.has(caseId)) {
+					cnvFilesByCase.set(caseId, cnvFile)
+				}
+			}
+		}
+
 		for (const f of result.files) {
+			const cnvFile = cnvFilesByCase.get(f.case_submitter_id)
 			const row = [
 				{
 					html: `<a href=https://portal.gdc.cancer.gov/files/${f.id} target=_blank>${f.case_submitter_id}</a>`,
@@ -1442,7 +1462,13 @@ async function getFilesAndShowTable(obj) {
 						})
 						.join(' ')
 				},
-				{ value: f.file_size } // do not send in text-formated file size, table sorting won't work
+				{ value: f.file_size }, // do not send in text-formated file size, table sorting won't work
+				{
+					html: cnvFile
+						? `<a href=https://portal.gdc.cancer.gov/files/${cnvFile.id} target=_blank>${cnvFile.id}</a>`
+						: '<span style="color: #6c757d;">No CNV file</span>',
+					value: cnvFile ? cnvFile.id : 'No CNV file'
+				}
 			]
 			rows.push(row)
 		}

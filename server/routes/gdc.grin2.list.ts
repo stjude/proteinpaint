@@ -60,8 +60,6 @@ function init({ genomes }) {
 	}
 }
 
-/*
- */
 async function mayListMafFiles(q: GdcGRIN2listRequest, result: GdcGRIN2listResponse, ds: any) {
 	if (!q.mafOptions) return
 
@@ -247,59 +245,108 @@ async function mayListMafFiles(q: GdcGRIN2listRequest, result: GdcGRIN2listRespo
 }
 
 async function mayListCnvFiles(q: GdcGRIN2listRequest, result: GdcGRIN2listResponse, ds: any) {
-	if (!q.cnvOptions) return
+	// Always initialize cnvFiles
+	result.cnvFiles = { files: [] }
+
+	// Early return if no CNV options requested
+	if (!q.cnvOptions) {
+		console.log('No cnvOptions provided, returning empty cnvFiles')
+		return
+	}
+
+	// console.log('Fetching all CNV files...')
+
+	// Field names for the GDC API
 	const fields = [
 		'cases.samples.tissue_type',
+		'cases.project.project_id',
+		'cases.submitter_id',
+		'cases.case_id',
 		'data_type',
 		'file_id',
+		'file_size',
 		'data_format',
 		'experimental_strategy',
 		'analysis.workflow_type'
 	]
+
 	const { host, headers } = ds.getHostHeaders(q)
-	const re: any = await ky
-		.post(joinUrl(host.rest, 'files'), {
-			timeout: false,
-			headers,
-			json: {
-				size: cnvMaxFileNumber,
-				fields: fields.join(','),
-				filters: {
-					op: 'in',
-					content: {
-						field: 'data_type',
-						value: [
-							'Masked Copy Number Segment', // for snp array we only want this type of file
-							'Allele-specific Copy Number Segment' // for wgs we want this type of file
-						]
+
+	try {
+		const re: any = await ky
+			.post(joinUrl(host.rest, 'files'), {
+				timeout: false,
+				headers,
+				json: {
+					size: cnvMaxFileNumber,
+					fields: fields.join(','),
+					filters: {
+						op: 'in',
+						content: {
+							field: 'data_type',
+							value: ['Masked Copy Number Segment', 'Allele-specific Copy Number Segment']
+						}
 					}
 				}
-			}
+			})
+			.json()
+
+		console.log('API Response:', {
+			hits: re.data?.hits?.length || 0,
+			firstHit: re.data?.hits?.[0]
 		})
-		.json()
-	if (!Array.isArray(re.data.hits)) throw 're.data.hits[] not array'
 
-	/* list of files without deduping
-	 */
-	const cnvFiles: GdcGRIN2File[] = []
+		if (!Array.isArray(re.data.hits)) {
+			throw new Error('API response data.hits is not an array')
+		}
 
-	for (const h of re.data.hits) {
-		if (h.data_format == 'TXT') {
-			if (h.data_type == 'Masked Copy Number Segment' || h.data_type == 'Allele-specific Copy Number Segment') {
-				// is a cnv file. later use experimental_strategy to filter file by array or wgs
-				const c = h.cases?.[0]
-				if (!c) throw 'h.cases[0] missing'
-				const file: GdcGRIN2File = {
-					id: h.id,
-					project_id: c.project.project_id,
-					file_size: h.file_size,
-					case_submitter_id: c.submitter_id,
-					case_uuid: c.case_id,
-					sample_types: []
+		const cnvFiles: GdcGRIN2File[] = []
+
+		for (const h of re.data.hits) {
+			console.log('Processing file:', {
+				file_id: h.file_id,
+				data_format: h.data_format,
+				data_type: h.data_type,
+				cases_length: h.cases?.length
+			})
+
+			if (h.data_format === 'TXT') {
+				if (h.data_type === 'Masked Copy Number Segment' || h.data_type === 'Allele-specific Copy Number Segment') {
+					const c = h.cases?.[0]
+					if (!c) {
+						console.warn(`Skipping file ${h.file_id} - missing case data`)
+						continue
+					}
+
+					// Debug: Log the case structure
+					console.log('Case structure:', {
+						case_id: c.case_id,
+						submitter_id: c.submitter_id,
+						project: c.project,
+						samples: c.samples?.length
+					})
+
+					// QUICK FIX: Just add safety checks to your existing code
+					const file: GdcGRIN2File = {
+						id: h.file_id || h.id, // Handle both field names
+						project_id: c.project?.project_id || 'unknown', // Safe access with fallback
+						file_size: h.file_size,
+						case_submitter_id: c.submitter_id,
+						case_uuid: c.case_id,
+						sample_types: c.samples?.map((s: any) => s.tissue_type).filter(Boolean) || []
+					}
+
+					cnvFiles.push(file)
+					// console.log(`Added CNV file: ${file.id}`)
 				}
-				cnvFiles.push(file)
 			}
 		}
+
+		result.cnvFiles = { files: cnvFiles }
+		console.log(`Successfully processed ${cnvFiles.length} CNV files`)
+	} catch (error) {
+		console.error('Error fetching CNV files:', error)
+		result.cnvFiles = { files: [] }
+		// Don't re-throw - let the request continue
 	}
-	result.cnvFiles = { files: cnvFiles }
 }
