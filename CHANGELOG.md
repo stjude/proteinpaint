@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Fixes:
+- fix cardsjson to validate client input before running tabix
+
+
 ## 2.129.4
 
 Fixes:
