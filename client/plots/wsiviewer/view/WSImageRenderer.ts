@@ -1,4 +1,4 @@
-import { renderTable } from '#dom'
+import { renderTable, getMaxLabelWidth, ColorScale } from '#dom'
 import type { ViewData } from '../viewModel/ViewModel'
 import type { Elem, Div } from '../../../types/d3'
 import type { WSIViewerInteractions } from '../interactions/WSIViewerInteractions'
@@ -9,6 +9,7 @@ export class WSImageRenderer {
 	tablesWrapper: Div
 	buffers: any
 	interactions: WSIViewerInteractions
+	legend: Div
 
 	constructor(
 		holder: Elem,
@@ -24,14 +25,24 @@ export class WSImageRenderer {
 		this.interactions = wsiinteractions
 
 		holder.select('div[id="annotations-table-wrapper"]').remove()
+		holder.select('div[id="legend-wrapper"]').remove()
+
 		this.tablesWrapper = holder
 			.append('div')
 			.attr('id', 'annotations-table-wrapper')
-			.style('display', 'block')
+			.style('display', 'inline-block')
 			.style('padding', '20px')
+
+		this.legend = holder
+			.append('div')
+			.attr('id', 'legend-wrapper')
+			.style('display', 'inline-block')
+			.style('padding', '20px')
+			.style('vertical-align', 'top')
 
 		this.renderAnnotationsTable(activeImageExtent, map)
 		this.renderClassesTable()
+		this.renderUncertainityLegend()
 	}
 
 	renderAnnotationsTable(activeImageExtent, map) {
@@ -76,13 +87,42 @@ export class WSImageRenderer {
 		renderTable({
 			columns: this.viewData.classes.columns,
 			rows: this.viewData.classes.rows,
-			div: this.tablesWrapper
+			div: this.legend
 				.append('div')
 				.attr('id', 'annotations-legend')
 				.style('display', 'inline-block')
-				.style('vertical-align', 'top')
-				.style('margin-left', '20px'),
+				.style('vertical-align', 'top'),
 			showLines: false
+		})
+	}
+
+	renderUncertainityLegend() {
+		//Hardcoded for prototyping
+		//defined in ds file. Waiting to alter route code
+		const uncertainty = [
+			{ color: '#fde725', label: 'low' },
+			{ color: '#440154', label: 'high' }
+		]
+
+		const svgHolder = this.legend.append('div').attr('id', 'uncertainty-legend').style('margin-top', '20px')
+		const width = 300
+		const height = 50
+		const svg = svgHolder.append('svg').style('width', width).style('height', height)
+		const title = 'Uncertainty'
+		const titleLth = getMaxLabelWidth(svg as any, [title], 1)
+		svg
+			.append('text')
+			.attr('x', (width - titleLth) / 2) //Center the title
+			.attr('y', 15)
+			.text(title)
+
+		new ColorScale({
+			holder: svg,
+			domain: [0, 1],
+			colors: uncertainty.map(u => u.color),
+			position: '0, 25',
+			ticks: 2,
+			barwidth: width
 		})
 	}
 }
