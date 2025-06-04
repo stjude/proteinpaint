@@ -16,6 +16,7 @@ Tests:
 	tvs: Gene Variant - SNV/indel
 	tvs: Gene Variant - CNV - cateogrical
 	tvs: Gene Variant - CNV - continuous
+	tvs: Gene Variant - Fusion
 
 
 the direct functional testing of the component, without the use of runpp()

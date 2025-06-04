@@ -14,6 +14,7 @@ Tests:
 	survival term as term1, term2 = agedx, regular bins
 	survival term as term1, term2 = agedx, custom bins
 	survival term as term1, term0 = agedx, custom bins
+	survival term as term1, term2 = geneVariant
  */
 
 /*************************
