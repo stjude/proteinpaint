@@ -243,15 +243,15 @@ function mayMakeGroups(tw: RawGvCustomGsTW) {
 	if (!dtTerms) throw 'dtTerms is missing'
 	let WTfilter, WTname, MUTfilter, MUTtvs, MUTname
 	for (const dtTerm of dtTerms) {
+		const classes = Object.keys(dtTerm.values)
 		// wildtype filter
-		const WT = 'WT'
+		const WT = classes.includes('WT') ? 'WT' : classes[0] // TODO: this is a quick fix, should generalize groups to be grp1 vs. grp2 instead of mut vs. wt
 		const WTvalue = { key: WT, label: dtTerm.values[WT].label, value: WT }
 		const WTtvs = { type: 'tvs', tvs: { term: dtTerm, values: [WTvalue] } }
 		WTfilter = getWrappedTvslst([WTtvs])
-		WTname = 'Wildtype'
+		WTname = dtTerm.values[WT].label
 		if (dtTerm.origin) WTname += ` (${dtTerm.origin})`
 		// mutated filter
-		const classes = Object.keys(dtTerm.values)
 		if (classes.length < 2) {
 			// fewer than 2 classes, try next dt term
 			continue
@@ -269,7 +269,7 @@ function mayMakeGroups(tw: RawGvCustomGsTW) {
 			// more than 2 classes
 			// mutant filter will filter for all non-wildtype classes
 			MUTtvs = { type: 'tvs', tvs: { term: dtTerm, values: [WTvalue], isnot: true } }
-			MUTname = dtTerm.name
+			MUTname = classes.includes('WT') ? dtTerm.name : `Other ${dtTerm.name}`
 		}
 		MUTfilter = getWrappedTvslst([MUTtvs])
 		break
