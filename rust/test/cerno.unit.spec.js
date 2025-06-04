@@ -16,6 +16,7 @@ import { run_rust } from '@sjcrh/proteinpaint-rust'
 const p_value_cutoff = 0.0001 // If the difference between the actual and expected p-value is greater than this, the test will fail
 const geneset_size_cutoff = 0.001 // If the difference between the actual and expected p-value is greater than this, the test will fail
 const auc_cutoff = 0.0001 // If the difference between the actual and expected p-value is greater than this, the test will fail
+const es_cutoff = 0.0001 // If the difference between the actual and expected p-value is greater than this, the test will fail
 
 //CERNO gsea test
 tape('rust GSEA cerno unit test upregulated', async function (test) {
@@ -31,7 +32,10 @@ tape('rust GSEA cerno unit test upregulated', async function (test) {
 
 	const expJson = JSON.parse(
 		fs.readFileSync(
-			path.join(serverconfig.binpath + '/test/tp/files/hg38/TermdbTest', 'TermdbTest_cerno_exp_output.json'),
+			path.join(
+				serverconfig.binpath + '/test/tp/files/hg38/TermdbTest',
+				'TermdbTest_cerno_exp_upregulated_output.json'
+			),
 			{
 				encoding: 'utf8'
 			}
@@ -55,6 +59,10 @@ tape('rust GSEA cerno unit test upregulated', async function (test) {
 		`For ${pathway1_id}, original geneset_size=${pathway1_out.geneset_size}, expected geneset_size=${pathway1_exp_out.geneset_size}`
 	)
 	test.ok(
+		pathway1_out.es - pathway1_exp_out.es < es_cutoff,
+		`For ${pathway1_id}, original es=${pathway1_out.es}, expected es=${pathway1_exp_out.es}`
+	)
+	test.ok(
 		pathway1_out.auc - pathway1_exp_out.auc < auc_cutoff,
 		`For ${pathway1_id}, original auc=${pathway1_out.auc}, expected auc=${pathway1_exp_out.auc}`
 	)
@@ -76,6 +84,10 @@ tape('rust GSEA cerno unit test upregulated', async function (test) {
 		`For ${pathway2_id}, original geneset_size=${pathway2_out.geneset_size}, expected geneset_size=${pathway2_exp_out.geneset_size}`
 	)
 	test.ok(
+		pathway2_out.es - pathway2_exp_out.es < es_cutoff,
+		`For ${pathway2_id}, original es=${pathway2_out.es}, expected es=${pathway2_exp_out.es}`
+	)
+	test.ok(
 		pathway2_out.auc - pathway2_exp_out.auc < auc_cutoff,
 		`For ${pathway2_id}, original auc=${pathway2_out.auc}, expected auc=${pathway2_exp_out.auc}`
 	)
@@ -95,6 +107,10 @@ tape('rust GSEA cerno unit test upregulated', async function (test) {
 	test.ok(
 		pathway3_out.geneset_size - pathway3_exp_out.geneset_size < geneset_size_cutoff,
 		`For ${pathway3_id}, original geneset_size=${pathway3_out.geneset_size}, expected geneset_size=${pathway3_exp_out.geneset_size}`
+	)
+	test.ok(
+		pathway3_out.es - pathway3_exp_out.es < es_cutoff,
+		`For ${pathway3_id}, original es=${pathway3_out.es}, expected es=${pathway3_exp_out.es}`
 	)
 	test.ok(
 		pathway3_out.auc - pathway3_exp_out.auc < auc_cutoff,
@@ -117,7 +133,10 @@ tape('rust GSEA cerno unit test downregulated', async function (test) {
 
 	const expJson = JSON.parse(
 		fs.readFileSync(
-			path.join(serverconfig.binpath + '/test/tp/files/hg38/TermdbTest', 'TermdbTest_cerno_exp_output.json'),
+			path.join(
+				serverconfig.binpath + '/test/tp/files/hg38/TermdbTest',
+				'TermdbTest_cerno_exp_downregulated_output.json'
+			),
 			{
 				encoding: 'utf8'
 			}
@@ -129,19 +148,23 @@ tape('rust GSEA cerno unit test downregulated', async function (test) {
 	const pathway1_out = out[pathway1_id]
 	const pathway1_exp_out = expJson[pathway1_id]
 	test.ok(
-		pathway1_out.pval - pathway1_exp_out.pval < p_value_cutoff,
+		Math.abs(pathway1_out.pval - pathway1_exp_out.pval) < p_value_cutoff,
 		`For ${pathway1_id}, original pvalue=${pathway1_out.pval}, expected pvalue=${pathway1_exp_out.pval}`
 	)
 	test.ok(
-		pathway1_out.fdr - pathway1_exp_out.fdr < p_value_cutoff,
+		Math.abs(pathway1_out.fdr - pathway1_exp_out.fdr) < p_value_cutoff,
 		`For ${pathway1_id}, original adj_pvalue=${pathway1_out.fdr}, expected adj_pvalue=${pathway1_exp_out.fdr}`
 	)
 	test.ok(
-		pathway1_out.geneset_size - pathway1_exp_out.geneset_size < geneset_size_cutoff,
+		Math.abs(pathway1_out.geneset_size - pathway1_exp_out.geneset_size) < geneset_size_cutoff,
 		`For ${pathway1_id}, original geneset_size=${pathway1_out.geneset_size}, expected geneset_size=${pathway1_exp_out.geneset_size}`
 	)
 	test.ok(
-		pathway1_out.auc - pathway1_exp_out.auc < auc_cutoff,
+		Math.abs(pathway1_out.es - pathway1_exp_out.es) < es_cutoff,
+		`For ${pathway1_id}, original es=${pathway1_out.es}, expected es=${pathway1_exp_out.es}`
+	)
+	test.ok(
+		Math.abs(pathway1_out.auc - pathway1_exp_out.auc) < auc_cutoff,
 		`For ${pathway1_id}, original auc=${pathway1_out.auc}, expected auc=${pathway1_exp_out.auc}`
 	)
 
@@ -150,19 +173,23 @@ tape('rust GSEA cerno unit test downregulated', async function (test) {
 	const pathway2_out = out[pathway2_id]
 	const pathway2_exp_out = expJson[pathway2_id]
 	test.ok(
-		pathway2_out.pval - pathway2_exp_out.pval < p_value_cutoff,
+		Math.abs(pathway2_out.pval - pathway2_exp_out.pval) < p_value_cutoff,
 		`For ${pathway2_id}, original pvalue=${pathway2_out.pval}, expected pvalue=${pathway2_exp_out.pval}`
 	)
 	test.ok(
-		pathway2_out.fdr - pathway2_exp_out.fdr < p_value_cutoff,
+		Math.abs(pathway2_out.fdr - pathway2_exp_out.fdr) < p_value_cutoff,
 		`For ${pathway2_id}, original adj_pvalue=${pathway2_out.fdr}, expected adj_pvalue=${pathway2_exp_out.fdr}`
 	)
 	test.ok(
-		pathway2_out.geneset_size - pathway2_exp_out.geneset_size < geneset_size_cutoff,
+		Math.abs(pathway2_out.geneset_size - pathway2_exp_out.geneset_size) < geneset_size_cutoff,
 		`For ${pathway2_id}, original geneset_size=${pathway2_out.geneset_size}, expected geneset_size=${pathway2_exp_out.geneset_size}`
 	)
 	test.ok(
-		pathway2_out.auc - pathway2_exp_out.auc < auc_cutoff,
+		Math.abs(pathway2_out.es - pathway2_exp_out.es) < es_cutoff,
+		`For ${pathway2_id}, original es=${pathway2_out.es}, expected es=${pathway2_exp_out.es}`
+	)
+	test.ok(
+		Math.abs(pathway2_out.auc - pathway2_exp_out.auc) < auc_cutoff,
 		`For ${pathway2_id}, original auc=${pathway2_out.auc}, expected auc=${pathway2_exp_out.auc}`
 	)
 
@@ -171,19 +198,23 @@ tape('rust GSEA cerno unit test downregulated', async function (test) {
 	const pathway3_out = out[pathway3_id]
 	const pathway3_exp_out = expJson[pathway3_id]
 	test.ok(
-		pathway3_out.pval - pathway3_exp_out.pval < p_value_cutoff,
+		Math.abs(pathway3_out.pval - pathway3_exp_out.pval) < p_value_cutoff,
 		`For ${pathway3_id}, original pvalue=${pathway3_out.pval}, expected pvalue=${pathway3_exp_out.pval}`
 	)
 	test.ok(
-		pathway3_out.fdr - pathway3_exp_out.fdr < p_value_cutoff,
+		Math.abs(pathway3_out.fdr - pathway3_exp_out.fdr) < p_value_cutoff,
 		`For ${pathway3_id}, original adj_pvalue=${pathway3_out.fdr}, expected adj_pvalue=${pathway3_exp_out.fdr}`
 	)
 	test.ok(
-		pathway3_out.geneset_size - pathway3_exp_out.geneset_size < geneset_size_cutoff,
+		Math.abs(pathway3_out.geneset_size - pathway3_exp_out.geneset_size) < geneset_size_cutoff,
 		`For ${pathway3_id}, original geneset_size=${pathway3_out.geneset_size}, expected geneset_size=${pathway3_exp_out.geneset_size}`
 	)
 	test.ok(
-		pathway3_out.auc - pathway3_exp_out.auc < auc_cutoff,
+		Math.abs(pathway3_out.es - pathway3_exp_out.es) < es_cutoff,
+		`For ${pathway3_id}, original es=${pathway3_out.es}, expected es=${pathway3_exp_out.es}`
+	)
+	test.ok(
+		Math.abs(pathway3_out.auc - pathway3_exp_out.auc) < auc_cutoff,
 		`For ${pathway3_id}, original auc=${pathway3_out.auc}, expected auc=${pathway3_exp_out.auc}`
 	)
 	test.end()
