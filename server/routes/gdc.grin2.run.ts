@@ -4,6 +4,7 @@ import { stream_rust } from '@sjcrh/proteinpaint-rust'
 import { run_R } from '@sjcrh/proteinpaint-r'
 import serverconfig from '#src/serverconfig.js'
 import path from 'path'
+import { formatElapsedTime } from '@sjcrh/proteinpaint-shared/time.js'
 
 /**
  * Route to run GRIN2 analysis:
@@ -34,7 +35,7 @@ function parseJsonlOutput(rustOutput: string): any {
 	const lines = rustOutput.trim().split('\n')
 	const allSuccessfulData: any[] = []
 	let finalSummary: any = null
-	let processedFiles = 0
+	// let processedFiles = 0
 
 	for (const line of lines) {
 		const trimmedLine = line.trim()
@@ -44,11 +45,11 @@ function parseJsonlOutput(rustOutput: string): any {
 
 				if (data.type === 'data') {
 					// Individual file completed successfully
-					processedFiles++
+					// processedFiles++
 					allSuccessfulData.push(data.data)
-					console.log(
-						`[GRIN2] Processed file ${processedFiles}: ${data.case_id} (${data.data_type}) - ${data.data.length} records`
-					)
+					// console.log(
+					// 	`[GRIN2] Processed file ${processedFiles}: ${data.case_id} (${data.data_type}) - ${data.data.length} records`
+					// )
 				} else if (data.type === 'summary') {
 					// Final summary - all files processed
 					finalSummary = data
@@ -109,8 +110,6 @@ function init({ genomes }) {
 			console.log(`[GRIN2] Parsed request: ${JSON.stringify(parsedRequest)}`)
 
 			// Step 1: Call Rust to process the MAF files and get JSON data (now with streaming)
-			console.log('[GRIN2] Calling Rust for file processing...')
-
 			const rustInput = JSON.stringify({
 				caseFiles: parsedRequest.caseFiles,
 				mafOptions: parsedRequest.mafOptions
@@ -123,6 +122,7 @@ function init({ genomes }) {
 			let rustOutput = ''
 			let buffer = '' // For incomplete lines
 
+			const downloadStartTime = Date.now()
 			const streamResult = stream_rust('gdcGRIN2', rustInput, errors => {
 				if (errors) {
 					throw new Error(`Rust process failed: ${errors}`)
@@ -165,6 +165,8 @@ function init({ genomes }) {
 			}
 
 			console.log('[GRIN2] Rust execution completed')
+			const downloadTime = formatElapsedTime(Date.now() - downloadStartTime)
+			console.log(`[GRIN2] Rust processing took ${downloadTime}`)
 
 			// Parse the JSONL output
 			const rustResult = parseJsonlOutput(rustOutput)
@@ -211,12 +213,15 @@ function init({ genomes }) {
 				lesion: dataForR // The mutation string from Rust
 			})
 
-			console.log(`R input: ${rInput}`)
+			// console.log(`R input: ${rInput}`)
 
 			// Call the R script
 			console.log('[GRIN2] Executing R script...')
+			const rAnalysisTime = Date.now()
 			const rResult = await run_R('gdcGRIN2.R', rInput, [])
-			console.log(`[GRIN2] R execution completed, result: ${rResult}`)
+			// console.log(`[GRIN2] R execution completed, result: ${rResult}`)
+			console.log('[GRIN2] R execution completed')
+			console.log(`[GRIN2] R analysis took ${formatElapsedTime(Date.now() - rAnalysisTime)}`)
 
 			// Parse R result to get image or check for errors
 			let resultData
@@ -225,10 +230,11 @@ function init({ genomes }) {
 				console.log('[GRIN2] Finished R analysis')
 				const pngImg = resultData.png[0]
 				const topGeneTable = resultData.topGeneTable || null
+				console.log('[GRIN2] Total GRIN2 processing time:', formatElapsedTime(Date.now() - downloadStartTime))
 				return res.json({ pngImg, topGeneTable, rustResult: parsedRustResult, status: 'success' })
 			} catch (parseError) {
 				console.error('[GRIN2] Error parsing R result:', parseError)
-				console.log('[GRIN2] Raw R result:', rResult)
+				// console.log('[GRIN2] Raw R result:', rResult)
 			}
 		} catch (e: any) {
 			console.error('[GRIN2] Error running analysis:', e)
