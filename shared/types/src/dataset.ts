@@ -972,6 +972,7 @@ export type WSImages = {
 	predictionColor?: Array<number>
 	annotationsColor?: Array<number>
 	classes?: WSIClass[]
+	uncertainty?: { color: string; label: string }[]
 
 	/** either ds supplied or dynamically added on launch with built in logic (retrieve the sample list from the wsimages table) */
 	getSamples?: () => Promise<Array<WSISample>>
