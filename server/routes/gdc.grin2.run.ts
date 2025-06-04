@@ -116,23 +116,12 @@ function init({ genomes }) {
 				mafOptions: parsedRequest.mafOptions
 			})
 
-			// NEW: Use stream_rust instead of run_rust with progress bar
+			// NEW: Use stream_rust instead of run_rust
 			console.log('[GRIN2] Executing Rust function with streaming...')
 
-			// Collect output from stream_rust with progress bar
+			// Collect output from stream_rust
 			let rustOutput = ''
 			let buffer = '' // For incomplete lines
-			let processedFiles = 0
-			let totalFiles = 0
-			const startTime = Date.now()
-
-			// Calculate total expected files
-			const { caseFiles } = parsedRequest
-			totalFiles = Object.values(caseFiles).reduce((sum: number, fileTypes: any) => {
-				return sum + (fileTypes.maf ? 1 : 0) + (fileTypes.cnv ? 1 : 0)
-			}, 0)
-
-			console.log(`[GRIN2] Starting download of ${totalFiles} files...`)
 
 			const streamResult = stream_rust('gdcGRIN2', rustInput, errors => {
 				if (errors) {
@@ -144,43 +133,13 @@ function init({ genomes }) {
 				throw new Error('Failed to start Rust streaming process')
 			}
 
-			// Helper function to update progress bar
-			const updateProgressBar = (processed: number, total: number, startTime: number) => {
-				const percentage = Math.round((processed / total) * 100)
-				const elapsed = Date.now() - startTime
-				const avgTimePerFile = elapsed / processed
-				const remainingFiles = total - processed
-				const estimatedTimeRemaining = remainingFiles * avgTimePerFile
-
-				// Create progress bar (20 characters wide)
-				const barWidth = 20
-				const filledWidth = Math.round((processed / total) * barWidth)
-				const bar = '█'.repeat(filledWidth) + '░'.repeat(barWidth - filledWidth)
-
-				// Format time remaining
-				const formatTime = (ms: number) => {
-					if (ms < 1000) return '< 1s'
-					const seconds = Math.round(ms / 1000)
-					if (seconds < 60) return `${seconds}s`
-					const minutes = Math.floor(seconds / 60)
-					const remainingSeconds = seconds % 60
-					return `${minutes}m ${remainingSeconds}s`
-				}
-
-				const eta = processed > 0 && remainingFiles > 0 ? formatTime(estimatedTimeRemaining) : 'calculating...'
-
-				// Clear previous line and write new progress
-				process.stdout.write('\r\x1b[K') // Clear current line
-				process.stdout.write(`[GRIN2] ${bar} ${percentage}% (${processed}/${total}) ETA: ${eta}`)
-			}
-
-			// Collect all chunks from the stream and show progress
+			// Collect all chunks from the stream
 			for await (const chunk of streamResult.rustStream) {
 				const chunkStr = chunk.toString()
 				rustOutput += chunkStr
 				buffer += chunkStr
 
-				// Process complete lines for real-time progress updates
+				// Process complete lines to check for summary
 				const lines = buffer.split('\n')
 				buffer = lines.pop() || ''
 
@@ -190,22 +149,12 @@ function init({ genomes }) {
 						try {
 							const data = JSON.parse(trimmedLine)
 
-							if (data.type === 'data') {
-								// Update progress bar for each completed file
-								processedFiles++
-								updateProgressBar(processedFiles, totalFiles, startTime)
-							} else if (data.type === 'summary') {
-								// Final summary - clear progress bar and show completion
-								process.stdout.write('\r\x1b[K') // Clear progress bar line
-								const totalTime = Date.now() - startTime
-								console.log(
-									`[GRIN2] ✅ Download complete: ${data.successful_files}/${data.total_files} files (${Math.round(
-										totalTime / 1000
-									)}s)`
-								)
+							if (data.type === 'summary') {
+								// Only log the final summary
+								console.log(`[GRIN2] Download complete: ${data.successful_files}/${data.total_files} files successful`)
 
 								if (data.failed_files > 0) {
-									console.log(`[GRIN2] ⚠️  ${data.failed_files} files failed`)
+									console.log(`[GRIN2] ${data.failed_files} files failed`)
 								}
 							}
 						} catch (_parseError) {
@@ -215,8 +164,6 @@ function init({ genomes }) {
 				}
 			}
 
-			// Ensure we're on a new line after progress bar
-			console.log('')
 			console.log('[GRIN2] Rust execution completed')
 
 			// Parse the JSONL output
