@@ -630,9 +630,9 @@ async function showViewData(btns, data, genome) {
 			try {
 				for (const file of data) {
 					//Genome arg required for validation check
-					const res = await dofetch3(
-						`/cardsjson?datafile=${file.file}&genome=${genome}&tabixCoord=${file.tabixQueryCoord}`
-					)
+					const res = await dofetch3('cardsjson', {
+						body: { datafile: file.file, genome, tabixCoord: file.tabixQueryCoord }
+					})
 					if (res.error) {
 						console.error(`Error: ${res.error}`)
 						return
