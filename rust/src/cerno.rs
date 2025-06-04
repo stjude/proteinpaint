@@ -146,10 +146,20 @@ fn main() -> Result<()> {
                     sample_coding_genes
                         .as_mut_slice()
                         .sort_by(|a, b| (b.fold_change).partial_cmp(&a.fold_change).unwrap_or(Ordering::Equal));
+                    let mut genes_descending = sample_coding_genes.clone();
+                    //println!("genes_descending:{:?}", genes_descending);
+
+                    // Sort sample_coding_gene in descending order
+                    sample_coding_genes
+                        .as_mut_slice()
+                        .sort_by(|a, b| (a.fold_change).partial_cmp(&b.fold_change).unwrap_or(Ordering::Equal));
+                    let mut genes_ascending = sample_coding_genes.clone();
+                    //println!("genes_ascending:{:?}", genes_ascending);
 
                     // Assign ranks to each gene
                     for i in 0..sample_coding_genes.len() {
-                        sample_coding_genes[i].rank = Some(i)
+                        genes_descending[i].rank = Some(i);
+                        genes_ascending[i].rank = Some(i)
                     }
 
                     //println!("sample_genes:{:?}", sample_genes);
@@ -201,7 +211,7 @@ fn main() -> Result<()> {
                                     }
                                     let gene_set_size = names.len();
                                     let (p_value, auc, es, matches, gene_set_hits, _cerno_output) =
-                                        stats_functions::cerno(&sample_coding_genes, names);
+                                        stats_functions::cerno(&genes_descending, &genes_ascending, names);
 
                                     if matches >= 1.0
                                         && p_value.is_nan() == false
@@ -227,14 +237,16 @@ fn main() -> Result<()> {
                                 let pool = r2d2::Pool::new(manager).unwrap(); // This enables sqlite query from multiple threads simultaneously
                                 let genesets = Arc::new(genesets);
                                 let pool_arc = Arc::new(pool);
-                                let sample_coding_genes = Arc::new(sample_coding_genes);
+                                let genes_descending = Arc::new(genes_descending);
+                                let genes_ascending = Arc::new(genes_ascending);
                                 let pathway_p_values_temp =
                                     Arc::new(Mutex::new(Vec::<pathway_p_value>::with_capacity(genesets.len())));
                                 let mut handles = vec![]; // Vector to store handle which is used to prevent one thread going ahead of another
                                 for thread_num in 0..max_threads {
                                     let genesets = Arc::clone(&genesets);
                                     let pool_arc = Arc::clone(&pool_arc);
-                                    let sample_coding_genes = Arc::clone(&sample_coding_genes);
+                                    let genes_descending = Arc::clone(&genes_descending);
+                                    let genes_ascending = Arc::clone(&genes_ascending);
                                     let pathway_p_values_temp = Arc::clone(&pathway_p_values_temp);
                                     let handle = thread::spawn(move || {
                                         let mut pathway_p_values_thread: Vec<pathway_p_value> =
@@ -271,7 +283,7 @@ fn main() -> Result<()> {
                                                 }
                                                 let gene_set_size = names.len();
                                                 let (p_value, auc, es, matches, gene_set_hits, _cerno_output) =
-                                                    stats_functions::cerno(&sample_coding_genes, names);
+                                                    stats_functions::cerno(&genes_descending, &genes_ascending, names);
 
                                                 if matches >= 1.0
                                                     && p_value.is_nan() == false
