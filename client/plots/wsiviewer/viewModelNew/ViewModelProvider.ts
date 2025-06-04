@@ -9,8 +9,8 @@ import TileLayer from 'ol/layer/Tile'
 export class ViewModelProvider {
 	constructor() {}
 
-	async provide(genome: string, dslabel: string, sampleId: string, settings: Settings): Promise<ViewModel> {
-		const data: SampleWSImagesResponse = await this.requestData(genome, dslabel, sampleId)
+	async provide(genome: string, dslabel: string, sampleId: string, index, settings: Settings): Promise<ViewModel> {
+		const data: SampleWSImagesResponse = await this.requestData(genome, dslabel, sampleId, index)
 
 		let wsimageLayers: Array<WSImageLayers> = []
 		let wsimageLayersLoadError: string | undefined = undefined
@@ -28,12 +28,18 @@ export class ViewModelProvider {
 		return new ViewModel(data.sampleWSImages, wsimageLayers, wsimageLayersLoadError)
 	}
 
-	private async requestData(genome: string, dslabel: string, sample_id: string): Promise<SampleWSImagesResponse> {
+	public async requestData(
+		genome: string,
+		dslabel: string,
+		sample_id: string,
+		index: any
+	): Promise<SampleWSImagesResponse> {
 		return await dofetch3('samplewsimages', {
 			body: {
 				genome: genome,
 				dslabel: dslabel,
-				sample_id: sample_id
+				sample_id: sample_id,
+				index
 			}
 		})
 	}
