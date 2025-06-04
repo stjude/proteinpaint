@@ -45,7 +45,7 @@ function init({ genomes }) {
 				files: [],
 				filesTotal: 0,
 				maxTotalSizeCompressed: 0,
-				fileCounts: {}
+				fileCounts: { maf: 0 }
 			}
 
 			// run each getter per file type, and accumulate files in result
@@ -234,7 +234,9 @@ async function mayListMafFiles(q: GdcGRIN2listRequest, result: GdcGRIN2listRespo
 
 	result.files.push(...deduplicatedFiles)
 	result.filesTotal = re.data.pagination.total
-	result.fileCounts.maf = files.length
+	if (result.fileCounts) {
+		result.fileCounts.maf = files.length
+	}
 	result.deduplicationStats = {
 		originalFileCount: files.length,
 		deduplicatedFileCount: deduplicatedFiles.length,
@@ -255,7 +257,7 @@ async function mayListCnvFiles(q: GdcGRIN2listRequest, result: GdcGRIN2listRespo
 		'analysis.workflow_type'
 	]
 	const { host, headers } = ds.getHostHeaders(q)
-	const re = await ky
+	const re: any = await ky
 		.post(joinUrl(host.rest, 'files'), {
 			timeout: false,
 			headers,
