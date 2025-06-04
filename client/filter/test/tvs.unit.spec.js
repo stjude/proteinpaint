@@ -6,13 +6,22 @@ import { getExample } from '#termdb/test/vocabData'
 import { isDictionaryType } from '#shared/terms.js'
 import { dtTerms } from '#shared/common.js'
 
-const vocab = getExample()
-const vocabApi = vocabInit({ state: { vocab } })
-vocabApi.termdbConfig = { queries: { cnv: {} } }
+/*
+Tests:
+	categorical tvs
+	survival tvs
+	condition tvs
+	numeric tvs
+	geneVariant tvs
+*/
 
 /*************************
  reusable helper functions
 **************************/
+
+const vocab = getExample()
+const vocabApi = vocabInit({ state: { vocab } })
+vocabApi.termdbConfig = { queries: { cnv: {} } }
 
 async function getPillFilterItem(termType) {
 	if (!termType) throw `missing type`
