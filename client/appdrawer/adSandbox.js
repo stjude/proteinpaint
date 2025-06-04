@@ -400,7 +400,8 @@ async function addArrowBtns(args, type, bdiv, rdiv, pageArgs) {
 	//Creates arrow buttons from every .arrowButtons object as well as `Code`, `View Data`, and `Citation`.
 	let btns = []
 	if (type == 'call') showCode(args, btns) //Only show Code for examples, not in top div
-	if (args.datapreview) showViewData(btns, args.datapreview, pageArgs)
+	const genome = args?.runargs?.genome
+	if (args.datapreview && genome) showViewData(btns, args.datapreview, genome)
 	if (args.citation || args.data_source) {
 		//Show citation for the entire card
 		//Or data_source for individual examples
@@ -620,14 +621,18 @@ function makeDataPreviewDiv(content, contLength, div, filename, message) {
 	})
 }
 
-async function showViewData(btns, data, pageArgs) {
-	//Push 'View Data' and div callback to `btns`. Create button in addArrowButtons
+async function showViewData(btns, data, genome) {
+	// Push 'View Data' and div callback to `btns`.
+	// Create button in addArrowButtons
 	btns.push({
 		name: 'View Data',
 		callback: async rdiv => {
 			try {
 				for (const file of data) {
-					const res = await dofetch3(`/cardsjson?datafile=${file.file}&tabixCoord=${file.tabixQueryCoord}`)
+					//Genome arg required for validation check
+					const res = await dofetch3(
+						`/cardsjson?datafile=${file.file}&genome=${genome}&tabixCoord=${file.tabixQueryCoord}`
+					)
 					if (res.error) {
 						console.error(`Error: ${res.error}`)
 						return
