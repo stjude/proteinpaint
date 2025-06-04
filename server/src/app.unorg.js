@@ -193,6 +193,11 @@ function log(req) {
 async function handle_cards(req, res) {
 	try {
 		if (req.query.datafile && req.query.tabixCoord) {
+			const gn = genomes[req.query.genome]
+			if (!gn) throw 'invalid genome'
+			// todo
+			const [e, file] = utils.fileurl({ query: { file: req.query.datafile } })
+			if (e) throw e
 			// does not return the raw contents of a file, so okay not to use utils.illegalpath() ???
 			// may also be too strict with file extensions that tabix expects
 			// if (utils.illegalpath(req.query.datafile)) throw 'Invalid file'
