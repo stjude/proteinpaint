@@ -156,8 +156,10 @@ fn main() -> Result<()> {
                     let mut genes_ascending = sample_coding_genes.clone();
                     //println!("genes_ascending:{:?}", genes_ascending);
 
+                    drop(sample_coding_genes); // sample_coding_genes no longer deleted, so the variable is deleted
+
                     // Assign ranks to each gene
-                    for i in 0..sample_coding_genes.len() {
+                    for i in 0..genes_descending.len() {
                         genes_descending[i].rank = Some(i);
                         genes_ascending[i].rank = Some(i)
                     }

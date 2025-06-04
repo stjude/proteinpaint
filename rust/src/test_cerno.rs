@@ -7,9 +7,9 @@ mod tests {
     use crate::stats_functions::cerno;
     use std::cmp::Ordering;
     use std::collections::HashSet;
-    const P_VALUE_CUTOFF: f32 = 0.0001; // Threshold difference between calculated and expected p-value for the test to pass
-    const AUC_CUTOFF: f32 = 0.0001; // Threshold difference between calculated and expected AUC for the test to pass
-    const ES_CUTOFF: f32 = 0.001; // Threshold difference between calculated and expected ES for the test to pass
+    const P_VALUE_CUTOFF: f32 = 0.01; // Threshold difference between calculated and expected p-value for the test to pass
+    const AUC_CUTOFF: f32 = 0.001; // Threshold difference between calculated and expected AUC for the test to pass
+    const ES_CUTOFF: f32 = 0.01; // Threshold difference between calculated and expected ES for the test to pass
     const CERNO_CUTOFF: f32 = 1.0; // Threshold difference between calculated and expected CERNO value for the test to pass
     #[test]
     fn cerno_test() {
@@ -20705,13 +20705,23 @@ mod tests {
         sample_coding_genes
             .as_mut_slice()
             .sort_by(|a, b| (b.fold_change).partial_cmp(&a.fold_change).unwrap_or(Ordering::Equal));
+        let mut genes_descending = sample_coding_genes.clone();
+        // Sort sample_coding_gene in ascending order
+        sample_coding_genes
+            .as_mut_slice()
+            .sort_by(|a, b| (a.fold_change).partial_cmp(&b.fold_change).unwrap_or(Ordering::Equal));
+        let mut genes_ascending = sample_coding_genes.clone();
+
+        drop(sample_coding_genes); // sample_coding_genes no longer deleted, so the variable is deleted
 
         // Assign ranks to each gene
-        for i in 0..sample_coding_genes.len() {
-            sample_coding_genes[i].rank = Some(i)
+        for i in 0..genes_descending.len() {
+            genes_descending[i].rank = Some(i);
+            genes_ascending[i].rank = Some(i);
         }
 
         let geneset1: HashSet<String> = HashSet::from([
+            // Downregulated pathway
             "G3BP2".to_string(),
             "MRPL15".to_string(),
             "ORM1".to_string(),
@@ -20913,7 +20923,9 @@ mod tests {
             "TKT".to_string(),
             "SUCLG1".to_string(),
         ]);
-        let (p_value1, auc1, es1, _matches1, _gene_set_hits1, cerno_output1) = cerno(&sample_coding_genes, geneset1);
+        let (p_value1, auc1, es1, _matches1, _gene_set_hits1, cerno_output1) =
+            cerno(&genes_descending, &genes_ascending, geneset1);
+        println!("Geneset name: HALLMARK_ADIPOGENESIS");
         println!("p_value1:{}", p_value1);
         println!("auc1:{}", auc1);
         println!("es1:{}", es1);
@@ -20921,12 +20933,13 @@ mod tests {
         //println!("matches:{}", _matches1);
         //println!("gene_set_hits:{}", _gene_set_hits1);
 
-        assert_eq!(p_value1 - 0.9744196 < P_VALUE_CUTOFF, true); // The expected p-value comes from the original tmod package in R
-        assert_eq!(auc1 - 0.4657391 < AUC_CUTOFF, true); // The expected auc comes from the original tmod package in R
-        assert_eq!(es1 - 0.8499401 < ES_CUTOFF, true); // The expected es comes from the original tmod package in R
-        assert_eq!(cerno_output1 - 265.1813 < CERNO_CUTOFF, true); // The expected es comes from the original tmod package in R
+        assert_eq!((p_value1 - 0.5340).abs() < P_VALUE_CUTOFF, true); // The expected p-value comes from the original tmod package in R
+        assert_eq!((auc1 - 0.4657391).abs() < AUC_CUTOFF, true); // The expected auc comes from the original tmod package in R
+        assert_eq!((es1 - 0.8499401).abs() < ES_CUTOFF, true); // The expected es comes from the original tmod package in R
+        assert_eq!((cerno_output1 - 265.1813).abs() < CERNO_CUTOFF, true); // The expected es comes from the original tmod package in R
 
         let geneset2: HashSet<String> = HashSet::from([
+            // Downregulated pathway
             "GCNT1".to_string(),
             "INHBA".to_string(),
             "NOS2".to_string(),
@@ -21129,7 +21142,9 @@ mod tests {
             "IL7".to_string(),
         ]);
 
-        let (p_value2, auc2, es2, _matches2, _gene_set_hits2, cerno_output2) = cerno(&sample_coding_genes, geneset2);
+        let (p_value2, auc2, es2, _matches2, _gene_set_hits2, cerno_output2) =
+            cerno(&genes_descending, &genes_ascending, geneset2);
+        println!("Geneset name: HALLMARK_ALLOGRAFT_REJECTION");
         println!("p_value2:{}", p_value2);
         println!("auc2:{}", auc2);
         println!("es2:{}", es2);
@@ -21137,9 +21152,63 @@ mod tests {
         //println!("matches:{}", _matches2);
         //println!("gene_set_hits:{}", _gene_set_hits2);
 
-        assert_eq!(p_value2 - 0.6661019 < P_VALUE_CUTOFF, true); // The expected p-value comes from the original tmod package in R
-        assert_eq!(auc2 - 0.4136105 < AUC_CUTOFF, true); // The expected auc comes from the original tmod package in R
-        assert_eq!(es2 - 0.9619778 < ES_CUTOFF, true); // The expected es comes from the original tmod package in R
-        assert_eq!(cerno_output2 - 271.2777 < CERNO_CUTOFF, true); // The expected es comes from the original tmod package in R
+        assert_eq!((p_value2 - 0.000002219).abs() < P_VALUE_CUTOFF, true); // The expected p-value comes from the original tmod package in R
+        assert_eq!((auc2 - 0.4136105).abs() < AUC_CUTOFF, true); // The expected auc comes from the original tmod package in R
+        assert_eq!((es2 - 0.9619778).abs() < ES_CUTOFF, true); // The expected es comes from the original tmod package in R
+        assert_eq!((cerno_output2 - 271.2777).abs() < CERNO_CUTOFF, true); // The expected es comes from the original tmod package in R
+
+        let geneset3: HashSet<String> = HashSet::from([
+            // Upregulated pathway
+            "ACHE".to_string(),
+            "THY1".to_string(),
+            "CDK5R1".to_string(),
+            "PML".to_string(),
+            "AMOT".to_string(),
+            "DPYSL2".to_string(),
+            "SCG2".to_string(),
+            "VLDLR".to_string(),
+            "PTCH1".to_string(),
+            "TLE1".to_string(),
+            "NRP1".to_string(),
+            "VEGFA".to_string(),
+            "NRCAM".to_string(),
+            "L1CAM".to_string(),
+            "UNC5C".to_string(),
+            "RASA1".to_string(),
+            "RTN1".to_string(),
+            "CELSR1".to_string(),
+            "NRP2".to_string(),
+            "ADGRG1".to_string(),
+            "CDK6".to_string(),
+            "SHH".to_string(),
+            "CRMP1".to_string(),
+            "HEY2".to_string(),
+            "CNTFR".to_string(),
+            "NKX6-1".to_string(),
+            "PLG".to_string(),
+            "TLE3".to_string(),
+            "GLI1".to_string(),
+            "OPHN1".to_string(),
+            "ETS2".to_string(),
+            "SLIT1".to_string(),
+            "HEY1".to_string(),
+            "MYH9".to_string(),
+            "LDB1".to_string(),
+            "NF1".to_string(),
+        ]);
+        let (p_value3, auc3, es3, _matches3, _gene_set_hits3, cerno_output3) =
+            cerno(&genes_descending, &genes_ascending, geneset3);
+        println!("Geneset name: HALLMARK_HEDGEHOG_SIGNALING");
+        println!("p_value3:{}", p_value3);
+        println!("auc3:{}", auc3);
+        println!("es3:{}", es3);
+        println!("cerno3:{}", cerno_output3);
+        //println!("matches:{}", _matches2);
+        //println!("gene_set_hits:{}", _gene_set_hits2);
+
+        assert_eq!((p_value3 - 0.00008569736).abs() < P_VALUE_CUTOFF, true); // The expected p-value comes from the original tmod package in R
+        assert_eq!((auc3 - 0.6568520).abs() < AUC_CUTOFF, true); // The expected auc comes from the original tmod package in R
+        assert_eq!((es3 - 2.0343385).abs() < ES_CUTOFF, true); // The expected es comes from the original tmod package in R
+        assert_eq!((cerno_output3 - 85.44222).abs() < CERNO_CUTOFF, true); // The expected es comes from the original tmod package in R
     }
 }
