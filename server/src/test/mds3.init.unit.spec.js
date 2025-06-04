@@ -1,6 +1,21 @@
 import test from 'tape'
 import { filterByItem, filterByTvsLst } from '../mds3.init.js'
 
+/*
+Tests:
+	filterByItem: sample has mutation for dt
+	filterByItem: sample tested for dt but no mutation
+	filterByItem: sample not tested for dt
+	filterByItem: .isnot flag
+	filterByItem: mutation origin
+	filterByItem: continuous CNV
+	filterByTvsLst: single tvs
+	filterByTvsLst: multiple tvs, AND join
+	filterByTvsLst: multiple tvs, OR join
+	filterByTvsLst: in=false
+	filterByTvsLst: nested tvslst
+*/
+
 test('filterByItem: sample has mutation for dt', t => {
 	const filter = {
 		type: 'tvs',
