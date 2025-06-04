@@ -1,1 +1,2 @@
-
+Fixes:
+- singlecell sample table allows showing "termid" as is
