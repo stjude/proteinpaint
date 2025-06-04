@@ -830,7 +830,7 @@ opts{}
 */
 async function getCnvFusion4oneCase(opts, ds) {
 	const fields = [
-		'cases.samples.tissue_type',
+		'cases.samples.tissue_type', // may not be needed
 		'data_type',
 		'file_id',
 		'data_format',
@@ -854,6 +854,8 @@ async function getCnvFusion4oneCase(opts, ds) {
 	let snpFile, wgsFile, arribaFile // detect result files from accepted assays
 
 	for (const h of re.data.hits) {
+		//console.log(JSON.stringify(h,null,2))
+
 		if (h.data_format == 'BEDPE') {
 			if (h.experimental_strategy != 'RNA-Seq') continue
 			if (h.analysis?.workflow_type != 'Arriba') continue
@@ -864,10 +866,9 @@ async function getCnvFusion4oneCase(opts, ds) {
 
 		if (h.data_format == 'TXT') {
 			if (h.experimental_strategy == 'Genotyping Array') {
-				// is snp array, there're two files for tumor and normal. skip the normal one by sample_tye
-				if (h.cases?.[0].samples?.[0].tissue_type == 'Normal') continue
-				if (h.data_type != 'Masked Copy Number Segment') continue
-				snpFile = h.file_id
+				if (h.data_type == 'Masked Copy Number Segment' || h.data_type == 'Allele-specific Copy Number Segment') {
+					snpFile = h.file_id
+				}
 				continue
 			}
 			if (h.experimental_strategy == 'WGS') {
