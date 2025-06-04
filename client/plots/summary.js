@@ -368,6 +368,7 @@ export async function getPlotConfig(opts, app) {
 		if (opts.shapeTW) await fillTermWrapper(opts.shapeTW, app.vocabApi)
 		if (opts.scaleDotTW) await fillTermWrapper(opts.scaleDotTW, app.vocabApi)
 	} catch (e) {
+		if (e.stack) console.log(e.stack)
 		throw `${e} [summary getPlotConfig()]`
 	}
 
