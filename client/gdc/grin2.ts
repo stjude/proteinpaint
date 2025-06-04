@@ -1,14 +1,9 @@
 import { dofetch3 } from '#common/dofetch'
-// import { make_radios, renderTable, sayerror, Menu, table2col } from '#dom'
 import { renderTable, sayerror } from '#dom'
 import { select } from 'd3-selection'
 import { formatElapsedTime } from '@sjcrh/proteinpaint-shared/time.js'
 import type { GdcGRIN2listRequest } from '#types'
 import { mclass } from '@sjcrh/proteinpaint-shared/common.js'
-
-/* Temporary note for mclass mutation types */
-console.log('mclass structure:', mclass)
-console.log('mclass keys:', Object.keys(mclass))
 
 /**
  * Maps mclass constants to user-friendly mutation type names
@@ -150,12 +145,6 @@ export {
 	isValidMutationType,
 	type MutationType
 }
-
-// For debugging - log the available mutation types
-console.log('Available MAF mutation types from mclass:')
-generateMutationTypesFromMclass().forEach(type => {
-	console.log(`  ${type.displayName}: mclass[${type.mclassKey}] = "${type.mclassValue}"`)
-})
 
 /*
 a UI to list open-access maf and cnv files from current cohort
@@ -584,8 +573,6 @@ interface TableRowItem {
 	html?: string
 	value?: any
 }
-
-// const tip = new Menu()
 
 // list of columns to show in MAF file table
 const tableColumns = [
