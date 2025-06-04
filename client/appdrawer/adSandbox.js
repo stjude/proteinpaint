@@ -635,6 +635,7 @@ async function showViewData(btns, data, genome) {
 					})
 					if (res.error) {
 						console.error(`Error: ${res.error}`)
+						rdiv.text(`Error retrieving example data: ${res.error}`)
 						return
 					}
 					const returnedContent = res.file
