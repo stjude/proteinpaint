@@ -1,1 +1,2 @@
-
+Fixes:
+- fix cardsjson to validate client input before running tabix

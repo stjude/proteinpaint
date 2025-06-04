@@ -195,31 +195,23 @@ async function handle_cards(req, res) {
 		if (req.query.datafile && req.query.tabixCoord) {
 			const gn = genomes[req.query.genome]
 			if (!gn) throw 'invalid genome'
-			// todo
+
+			const c = common.string2pos(req.query.tabixCoord, gn, true)
+			if (!c) throw 'invalid tabixCoord'
+
 			const [e, file] = utils.fileurl({ query: { file: req.query.datafile } })
 			if (e) throw e
-			// does not return the raw contents of a file, so okay not to use utils.illegalpath() ???
-			// may also be too strict with file extensions that tabix expects
-			// if (utils.illegalpath(req.query.datafile)) throw 'Invalid file'
-			return new Promise((resolve, reject) => {
-				const sp = spawn(tabix, [path.join(serverconfig.tpmasterdir, req.query.datafile), req.query.tabixCoord])
-				const output = [],
-					errOut = []
-				sp.stdout.on('data', i => output.push(i))
-				sp.stderr.on('data', i => errOut.push(i))
-				sp.on('close', code => {
-					const e = errOut.join('').trim()
-					if (e != '') reject('error querying bedj file')
-					const tmp = output.join('').trim()
-					resolve(res.send({ file: tmp.split('\n') }))
-				})
-			}).catch(err => {
-				if (err.stack) {
-					// debug
-					console.error(err.stack)
-				}
+			await utils.file_is_readable(file)
+
+			const lines = []
+			await utils.get_lines_bigfile({
+				args: [file, `${c.chr}:${c.start}-${c.stop}`],
+				callback: line => lines.push(line)
 			})
-		} else throw `invalid cards request`
+			res.send({ file: lines })
+		} else {
+			throw `invalid cards request`
+		}
 	} catch (e) {
 		res.send({ error: e.message || e })
 	}
