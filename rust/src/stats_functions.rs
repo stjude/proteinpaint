@@ -419,33 +419,34 @@ pub struct gene_order {
 
 #[allow(dead_code)]
 pub fn cerno(
-    sample_coding_genes: &Vec<gene_order>,
+    genes_descending: &Vec<gene_order>,
+    genes_ascending: &Vec<gene_order>,
     genes_in_pathway: HashSet<String>,
 ) -> (f32, f32, f32, f32, String, f32) {
     // Ensure sample_coding_genes is sorted in decreasing order of fold_change
-    // Filter the sample_coding_genes vector to only include those whose gene_names are in the HashSet genes_in_pathway
-    let gene_intersections: Vec<&gene_order> = sample_coding_genes
+    // Filter the genes_descending vector to only include those whose gene_names are in the HashSet genes_in_pathway
+    let gene_intersections_descending: Vec<&gene_order> = genes_descending
         .iter()
-        .filter(|sample_coding_genes| genes_in_pathway.contains(&sample_coding_genes.gene_name)) // Check if name is in the HashSet genes_in_pathway
+        .filter(|genes_descending| genes_in_pathway.contains(&genes_descending.gene_name)) // Check if name is in the HashSet genes_in_pathway
         .collect(); // Collect the results into a new vector
 
-    let N1 = gene_intersections.len() as f32;
-    let N = sample_coding_genes.len() as f32;
+    let N1 = gene_intersections_descending.len() as f32;
+    let N = genes_descending.len() as f32;
     let mut gene_set_hits: String = "".to_string();
-    for gene in &gene_intersections {
+    for gene in &gene_intersections_descending {
         gene_set_hits += &(gene.gene_name.to_string() + &",");
     }
-    if gene_intersections.len() > 0 {
+    if gene_intersections_descending.len() > 0 {
         // Remove the last "," in string
         gene_set_hits.pop();
     }
 
-    let ranks: Vec<usize> = gene_intersections // x <- l %in% mset$gs2gv[[m]] ; ranks <- c(1:N)[x]
+    let ranks_descending: Vec<usize> = gene_intersections_descending // x <- l %in% mset$gs2gv[[m]] ; ranks <- c(1:N)[x]
         .iter()
         .map(|x| x.rank.unwrap())
         .collect::<Vec<usize>>();
 
-    let cerno: f32 = ranks // -2 * sum( log(ranks/N) )
+    let cerno: f32 = ranks_descending // -2 * sum( log(ranks/N) )
         .iter()
         .map(|x| ((*x as f32) / N).ln())
         .collect::<Vec<f32>>()
@@ -455,9 +456,31 @@ pub fn cerno(
 
     let cES: f32 = cerno / (2.0 * (N1 as f32)); // cES <- cerno/(2*N1)
     let N2 = N - N1; // N2 = N - N1
-    let R1 = ranks.iter().sum::<usize>() as f32; // R1 <- sum(ranks)
+    let R1 = ranks_descending.iter().sum::<usize>() as f32; // R1 <- sum(ranks)
     let U = N1 * N2 + N1 * (N1 + 1.0) / 2.0 - R1; // U  <- N1*N2+N1*(N1+1)/2-R1
     let AUC = U / (N1 * N2); // AUC <- U/(N1*N2)
-    let p_value = chi_squared_cdf(cerno as f64, (2.0 * N1) as f64, false, false); // pchisq(ret$cerno, 2*N1, lower.tail=FALSE)
+    let p_value;
+    if AUC >= 0.5 {
+        // Upregulated geneset
+        p_value = chi_squared_cdf(cerno as f64, (2.0 * N1) as f64, false, false);
+    // pchisq(ret$cerno, 2*N1, lower.tail=FALSE)
+    } else {
+        let gene_intersections_ascending: Vec<&gene_order> = genes_ascending
+            .iter()
+            .filter(|genes_ascending| genes_in_pathway.contains(&genes_ascending.gene_name)) // Check if name is in the HashSet genes_in_pathway
+            .collect(); // Collect the results into a new vector
+        let ranks_ascending: Vec<usize> = gene_intersections_ascending // x <- l %in% mset$gs2gv[[m]] ; ranks <- c(1:N)[x]
+            .iter()
+            .map(|x| x.rank.unwrap())
+            .collect::<Vec<usize>>();
+        let cerno_ascending: f32 = ranks_ascending // -2 * sum( log(ranks/N) )
+            .iter()
+            .map(|x| ((*x as f32) / N).ln())
+            .collect::<Vec<f32>>()
+            .iter()
+            .sum::<f32>()
+            * (-2.0);
+        p_value = chi_squared_cdf(cerno_ascending as f64, (2.0 * N1) as f64, false, false);
+    }
     (p_value as f32, AUC, cES, N1, gene_set_hits, cerno)
 }
