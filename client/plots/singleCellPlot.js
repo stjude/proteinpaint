@@ -1457,10 +1457,16 @@ class singleCellPlot {
 
 		// add in optional sample columns
 		for (const c of s.sampleColumns || []) {
-			columns.push({
-				label: (await this.app.vocabApi.getterm(c.termid)).name,
-				width: '14vw'
-			})
+			let label = c.termid
+			try {
+				label = (await this.app.vocabApi.getterm(c.termid)).name
+			} catch (e) {
+				/* term not found by c.termid, in such case ignore and just show termid as column header
+				this is due to practical constrain that gdc needs to supply analysis.workflow_type as 'Library',
+				but this is not a term in gdc dictionary
+				*/
+			}
+			columns.push({ label, width: '14vw' })
 		}
 
 		// if samples are using experiments, add the hardcoded experiment column at the end
