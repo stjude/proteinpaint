@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 Fixes:
 - fix cardsjson to validate client input before running tabix
+- singlecell sample table allows showing "termid" as is
 
 
 ## 2.129.4
