@@ -1491,7 +1491,7 @@ async function querySamplesSurvival(q, survivalTwLst, ds, samples, geneTwLst) {
 		filter.content.push(q.filter0)
 	}
 
-	if (geneTwLst) q.isoforms = mapGenes2isoforms(geneTwLst, q.genome)
+	if (geneTwLst) q.isoforms = mapGenes2isoforms(geneTwLst, ds.genomeObj)
 
 	addSsmIsoformRegion4filter(filter.content, q, 'survival')
 
@@ -1583,7 +1583,7 @@ async function querySamplesTwlstNotForGeneexpclustering(q, dictTwLst, ds, geneTw
 
 	if (geneTwLst) {
 		// temporarily create q.isoforms[] to filter for cases with ssm on these genes; will be deleted after query completes
-		q.isoforms = mapGenes2isoforms(geneTwLst, q.genome)
+		q.isoforms = mapGenes2isoforms(geneTwLst, ds.genomeObj)
 	}
 
 	if (q.isoforms || q.isoform || q.ssm_id_lst || q.rglst) {
