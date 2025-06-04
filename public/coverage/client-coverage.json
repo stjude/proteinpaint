@@ -747,38 +747,38 @@
   },
   "plots/matrix/matrix.interactivity.js": {
     "lines": {
-      "total": 1453,
-      "covered": 284,
+      "total": 1522,
+      "covered": 287,
       "skipped": 0,
-      "pct": 19.54
+      "pct": 18.85
     },
     "functions": {
-      "total": 252,
+      "total": 258,
       "covered": 61,
       "skipped": 0,
-      "pct": 24.2
+      "pct": 23.64
     },
     "statements": {
-      "total": 1547,
-      "covered": 294,
+      "total": 1619,
+      "covered": 299,
       "skipped": 0,
-      "pct": 19
+      "pct": 18.46
     },
     "branches": {
-      "total": 1128,
-      "covered": 158,
+      "total": 1164,
+      "covered": 163,
       "skipped": 0,
       "pct": 14
     },
     "lowestPct": {
       "curr": 14,
-      "prev": 0,
-      "diff": 14
+      "prev": 14,
+      "diff": 0
     },
     "averagePct": {
-      "curr": 19.185,
-      "prev": 0,
-      "diff": 19.185
+      "curr": 18.7375,
+      "prev": 19.185,
+      "diff": -0.447499999999998
     }
   },
   "plots/matrix/matrix.js": {
