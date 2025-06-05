@@ -1,6 +1,17 @@
 import test from 'tape'
 import { mayMakeGroups } from '../geneVariant.ts'
 
+/* Tests:
+	mayMakeGroups: fills groups for >2 classes
+	mayMakeGroups: fills groups for 2 classes
+	mayMakeGroups: fills groups for >2 classes (WT absent)
+	mayMakeGroups: fills groups for 2 classes (WT absent)
+	mayMakeGroups: fills groups with origins
+	mayMakeGroups: skips dtTerms with < 2 classes
+	mayMakeGroups: does nothing if groups already present
+	mayMakeGroups: throws if dtTerms missing
+*/
+
 test('\n', t => {
 	t.pass('-***- tw/geneVariant.unit -***-')
 	t.end()
