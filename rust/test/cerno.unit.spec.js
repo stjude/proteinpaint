@@ -31,15 +31,9 @@ tape('rust GSEA cerno unit test upregulated', async function (test) {
 	const out = JSON.parse(Rustout)
 
 	const expJson = JSON.parse(
-		fs.readFileSync(
-			path.join(
-				serverconfig.binpath + '/test/tp/files/hg38/TermdbTest',
-				'TermdbTest_cerno_exp_upregulated_output.json'
-			),
-			{
-				encoding: 'utf8'
-			}
-		)
+		fs.readFileSync(path.join(serverconfig.binpath + '/../rust/test', 'TermdbTest_cerno_exp_upregulated_output.json'), {
+			encoding: 'utf8'
+		})
 	)
 
 	//     // Pathway1
@@ -133,10 +127,7 @@ tape('rust GSEA cerno unit test downregulated', async function (test) {
 
 	const expJson = JSON.parse(
 		fs.readFileSync(
-			path.join(
-				serverconfig.binpath + '/test/tp/files/hg38/TermdbTest',
-				'TermdbTest_cerno_exp_downregulated_output.json'
-			),
+			path.join(serverconfig.binpath + '/../rust/test', 'TermdbTest_cerno_exp_downregulated_output.json'),
 			{
 				encoding: 'utf8'
 			}
