@@ -325,7 +325,7 @@ async function getBamfileByFileId(id, field, q) {
 	return re
 }
 
-function getQueryApi(ds) {
+export function getQueryApi(ds) {
 	// Should be generated once per dataset, in this case once for gdc only
 	if (queryApi) throw `The gdc queryApi has already been set.`
 
