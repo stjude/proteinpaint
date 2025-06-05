@@ -2,14 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
-
 
 ## 2.129.5
 
 Fixes:
 - fix cardsjson to validate client input before running tabix
 - singlecell sample table allows showing "termid" as is
+
+
+## 2.129.5-c5a0eaea6.0
+
+Fixes:
+- on clicking a gene model from gene track, launch new protein view in a sandbox instead of floating pane
 
 
 ## 2.129.4
