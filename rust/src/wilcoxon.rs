@@ -48,6 +48,7 @@ use serde::{Deserialize, Serialize};
 use std::io;
 
 mod stats_functions; // Import Wilcoxon function
+#[cfg(test)]
 mod test_examples; // Contains examples to test the wilcoxon rank sum test
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -101,14 +102,8 @@ fn main() {
                         if vec1.len() == 0 || vec2.len() == 0 {
                             // If one of the vectors has a length of zero, wilcoxon test is not performed and a pvalue of NULL is given.
                             output_string += &serde_json::to_string(&OutputJson {
-                                group1_id: json_string[i]["group1_id"]
-                                    .as_str()
-                                    .unwrap()
-                                    .to_string(),
-                                group2_id: json_string[i]["group2_id"]
-                                    .as_str()
-                                    .unwrap()
-                                    .to_string(),
+                                group1_id: json_string[i]["group1_id"].as_str().unwrap().to_string(),
+                                group2_id: json_string[i]["group2_id"].as_str().unwrap().to_string(),
                                 group1_values: vec1,
                                 group2_values: vec2,
                                 pvalue: None,
@@ -129,14 +124,8 @@ fn main() {
                             //}
                             //println!("pvalue:{}", pvalue);
                             output_string += &serde_json::to_string(&OutputJson {
-                                group1_id: json_string[i]["group1_id"]
-                                    .as_str()
-                                    .unwrap()
-                                    .to_string(),
-                                group2_id: json_string[i]["group2_id"]
-                                    .as_str()
-                                    .unwrap()
-                                    .to_string(),
+                                group1_id: json_string[i]["group1_id"].as_str().unwrap().to_string(),
+                                group2_id: json_string[i]["group2_id"].as_str().unwrap().to_string(),
                                 group1_values: vec1,
                                 group2_values: vec2,
                                 pvalue: Some(pvalue),
