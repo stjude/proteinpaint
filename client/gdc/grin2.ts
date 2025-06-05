@@ -580,7 +580,9 @@ const tableColumns = [
 	{ label: 'Project', sortable: true },
 	{ label: 'MAF Sample' },
 	{ label: 'MAF File Size', barplot: { tickFormat: '~s' }, sortable: true },
-	{ label: 'CNV File ID', sortable: true }
+	{ label: 'CNV File ID', sortable: true },
+	{ label: 'CNV Sample' },
+	{ label: 'CNV File Size', barplot: { tickFormat: '~s' }, sortable: true }
 ]
 
 // list of data type options
@@ -1468,6 +1470,25 @@ async function getFilesAndShowTable(obj) {
 						? `<a href=https://portal.gdc.cancer.gov/files/${cnvFile.id} target=_blank>${cnvFile.id}</a>`
 						: '<span style="color: #6c757d;">No CNV file</span>',
 					value: cnvFile ? cnvFile.id : 'No CNV file'
+				},
+				{
+					// CNV Sample column - display CNV sample types similar to MAF sample types
+					html:
+						cnvFile && cnvFile.sample_types
+							? cnvFile.sample_types
+									.map(i => {
+										return (
+											'<span class="sja_mcdot" style="padding:1px 8px;background:#e1f5fe;color:black;white-space:nowrap">' +
+											i +
+											'</span>'
+										)
+									})
+									.join(' ')
+							: '<span style="color: #6c757d;">No CNV sample</span>',
+					value: cnvFile && cnvFile.sample_types ? cnvFile.sample_types.join(' ') : 'No CNV sample'
+				},
+				{
+					value: cnvFile ? cnvFile.file_size : 0
 				}
 			]
 			rows.push(row)
