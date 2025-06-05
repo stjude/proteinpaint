@@ -167,7 +167,7 @@ async function getSampleData(q, ds, onlyChildren = false) {
 				byTermId[tw.$id] = { bins: lstOfBins }
 			}
 			const args = {
-				genome: q.ds.genome,
+				genome: q.ds.genomename,
 				dslabel: q.ds.label,
 				dataType: tw.term.type,
 				terms: [tw.term],
@@ -689,7 +689,7 @@ async function findListOfBins(q, tw, ds) {
 			await new Promise(async (resolve, reject) => {
 				const _q = {
 					tw,
-					genome: ds.genome,
+					genome: ds.genomename,
 					dslabel: ds.label,
 					filter: q.filter,
 					filter0: q.filter0
