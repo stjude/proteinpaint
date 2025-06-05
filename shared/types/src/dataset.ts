@@ -1975,6 +1975,14 @@ export type isSupportedChartCallbacks = {
 }
 
 export type Mds3 = BaseMds & {
+	/** set in initGenomesDs.js during launch, should use .genomename instead of .genome */
+	genomename?: string // use this
+	genome?: string // avoid using it
+	/** server-side genome obj to which this ds belongs to is attached here in initGenomesDs.js during launch, 
+	so this obj can be conveniently available to server side functions without having to introduce extra param
+	TODO apply Genome type
+	*/
+	genomeObj?: any
 	label?: Title
 	isMds3: boolean
 	loadWithoutBlocking?: boolean
