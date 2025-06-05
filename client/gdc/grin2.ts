@@ -1404,29 +1404,8 @@ function makeControls(obj) {
 	const submitButton = submitButtonContainer
 		.append('button')
 		.attr('id', 'submit-options-button')
-		.style('background-color', 'white')
-		.style('color', 'white')
-		.style('border', '1px solid #000')
-		.style('padding', '4px 8px')
-		.style('border-radius', '3px')
-		.style('font-size', '14px')
-		.style('cursor', 'pointer')
-		.style('font-family', 'inherit')
-		.style('margin', '0')
+		.style('margin', '10px 10px 0 0') // Same margin as table.ts buttons
 		.text('Apply Options & Refresh Files')
-
-	// Add hover effects to match the table button style
-	submitButton
-		.on('mouseover', function (this: HTMLButtonElement) {
-			if (!this.disabled) {
-				this.style.setProperty('background-color', '#f0f0f0')
-			}
-		})
-		.on('mouseout', function (this: HTMLButtonElement) {
-			if (!this.disabled) {
-				this.style.setProperty('background-color', 'white')
-			}
-		})
 
 	// Store submit button reference for easy access
 	obj.submitButton = submitButton
@@ -1450,60 +1429,16 @@ function makeControls(obj) {
 	// Initial button state check
 	updateSubmitButtonState()
 
-	// Store references for easy access later
-	obj.mafOptionsContainer = mafOptionsContainer
-	obj.cnvOptionsContainer = cnvOptionsContainer
-	obj.fusionOptionsContainer = fusionOptionsContainer
-
-	// Add hover effects
-	submitButton
-		.on('mouseover', function (this: HTMLButtonElement) {
-			if (!this.disabled) {
-				this.style.backgroundColor = '#1e4a8c'
-			}
-		})
-		.on('mouseout', function (this) {
-			if (!this.disabled) {
-				this.style.backgroundColor = '#2c5aa0'
-			}
-		})
-
-	// Store submit button reference for easy access
-	obj.submitButton = submitButton
-
-	// Add submit button click handler
-	submitButton.on('click', function (this) {
-		if (!this.disabled) {
-			console.log('Submit button clicked - refreshing files with options:', {
-				dataTypeStates: obj.dataTypeStates,
-				mafOptions: obj.mafOptions,
-				cnvOptions: obj.cnvOptions
-			})
-			// Re-fetch files with current options
-			getFilesAndShowTable(obj)
-		}
-	})
-
 	// Function to update submit button state based on checkbox selections
 	function updateSubmitButtonState() {
 		const hasAnyDataTypeSelected = obj.dataTypeStates.maf || obj.dataTypeStates.cnv || obj.dataTypeStates.fusion
 
 		if (hasAnyDataTypeSelected) {
 			// Enable button
-			submitButton
-				.property('disabled', false)
-				.style('background-color', '#2c5aa0')
-				.style('cursor', 'pointer')
-				.style('opacity', '1')
-				.text('Apply Options & Refresh Files')
+			submitButton.attr('disabled', null).text('Apply Options & Refresh Files')
 		} else {
 			// Disable button
-			submitButton
-				.property('disabled', true)
-				.style('background-color', '#6c757d')
-				.style('cursor', 'not-allowed')
-				.style('opacity', '0.6')
-				.text('Select at least one data type')
+			submitButton.attr('disabled', true).text('Select at least one data type')
 		}
 	}
 
