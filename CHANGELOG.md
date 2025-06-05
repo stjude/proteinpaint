@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Fixes:
+- on clicking a gene model from gene track, launch new protein view in a sandbox instead of floating pane
+
+
 ## 2.129.4
 
 Fixes:
