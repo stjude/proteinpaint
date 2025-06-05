@@ -11,7 +11,8 @@ import type {
 	GvTW,
 	FilterGroup,
 	VocabApi,
-	DtTerm
+	DtTerm,
+	Filter
 } from '#types'
 import { TwBase, type TwOpts } from './TwBase.ts'
 import { copyMerge } from '#rx'
@@ -241,60 +242,55 @@ function mayMakeGroups(tw: RawGvCustomGsTW) {
 	// for the first applicable dt in dataset
 	const dtTerms = tw.term.childTerms
 	if (!dtTerms) throw 'dtTerms is missing'
-	let WTfilter, WTname, MUTfilter, MUTtvs, MUTname
+	let grp1Class, grp1Name, grp1Value, grp1Tvs, grp1Filter
+	let grp2Class, grp2Name, grp2Value, grp2Tvs, grp2Filter
 	for (const dtTerm of dtTerms) {
 		const classes = Object.keys(dtTerm.values)
-		// wildtype filter
-		const WT = classes.includes('WT') ? 'WT' : classes[0] // TODO: this is a quick fix, should generalize groups to be grp1 vs. grp2 instead of mut vs. wt
-		const WTvalue = { key: WT, label: dtTerm.values[WT].label, value: WT }
-		const WTtvs = { type: 'tvs', tvs: { term: dtTerm, values: [WTvalue] } }
-		WTfilter = getWrappedTvslst([WTtvs])
-		WTname = dtTerm.values[WT].label
-		if (dtTerm.origin) WTname += ` (${dtTerm.origin})`
-		// mutated filter
 		if (classes.length < 2) {
 			// fewer than 2 classes, try next dt term
 			continue
 		}
+		// group 1 will be wildtype or first available mutant class
+		grp1Class = classes.includes('WT') ? 'WT' : classes[0]
+		grp1Name = dtTerm.values[grp1Class].label
+		grp1Value = { key: grp1Class, label: grp1Name, value: grp1Class }
+		grp1Tvs = { type: 'tvs', tvs: { term: dtTerm, values: [grp1Value] } }
+		grp1Filter = getWrappedTvslst([grp1Tvs])
+		if (dtTerm.origin) grp1Name += ` (${dtTerm.origin})`
+		// group 2 will be all other classes
 		if (classes.length == 2) {
-			// only 2 classes
-			// mutant filter will filter for the mutant class
-			const MUT = classes.find(c => c != WT)
-			if (!MUT) throw 'mutant class cannot be found'
-			const MUTvalue = { key: MUT, label: dtTerm.values[MUT].label, value: MUT }
-			MUTtvs = { type: 'tvs', tvs: { term: dtTerm, values: [MUTvalue] } }
-			MUTname = dtTerm.values[MUT].label
-			if (dtTerm.origin) MUTname += ` (${dtTerm.origin})`
+			grp2Class = classes.find(c => c != grp1Class)
+			if (!grp2Class) throw 'mutant class cannot be found'
+			grp2Name = dtTerm.values[grp2Class].label
+			grp2Value = { key: grp2Class, label: grp2Name, value: grp2Class }
+			grp2Tvs = { type: 'tvs', tvs: { term: dtTerm, values: [grp2Value] } }
+			if (dtTerm.origin) grp2Name += ` (${dtTerm.origin})`
 		} else {
-			// more than 2 classes
-			// mutant filter will filter for all non-wildtype classes
-			MUTtvs = { type: 'tvs', tvs: { term: dtTerm, values: [WTvalue], isnot: true } }
-			MUTname = classes.includes('WT') ? dtTerm.name : `Other ${dtTerm.name}`
+			grp2Tvs = { type: 'tvs', tvs: { term: dtTerm, values: [grp1Value], isnot: true } }
+			grp2Name = classes.includes('WT') ? dtTerm.name : `Other ${dtTerm.name}`
 		}
-		MUTfilter = getWrappedTvslst([MUTtvs])
+		grp2Filter = getWrappedTvslst([grp2Tvs])
 		break
 	}
-	// excluded filter
-	const EXCLUDEfilter: any = getWrappedTvslst()
 	// assign filters to groups
-	const WTgroup: FilterGroup = {
-		name: WTname,
+	const grp1: FilterGroup = {
+		name: grp1Name,
 		type: 'filter',
 		uncomputable: false,
-		filter: WTfilter
+		filter: grp1Filter
 	}
-	const MUTgroup: FilterGroup = {
-		name: MUTname,
+	const grp2: FilterGroup = {
+		name: grp2Name,
 		type: 'filter',
 		uncomputable: false,
-		filter: MUTfilter
+		filter: grp2Filter
 	}
-	const EXCLUDEgroup: FilterGroup = {
+	const grp0: FilterGroup = {
 		name: 'Excluded categories',
 		type: 'filter',
 		uncomputable: true,
-		filter: EXCLUDEfilter
+		filter: getWrappedTvslst() as Filter
 	}
 	// assign groups to custom groupset
-	tw.q.customset = { groups: [EXCLUDEgroup, MUTgroup, WTgroup] }
+	tw.q.customset = { groups: [grp0, grp1, grp2] }
 }
