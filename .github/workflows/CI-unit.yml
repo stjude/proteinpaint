@@ -117,5 +117,7 @@ jobs:
         if: contains(env.WS_TO_TEST, 'rust')
         run: |
           npm run build --workspace="rust"
-          cp container/ci/serverconfig.json rust/ 
+          cp container/ci/serverconfig.json rust/
           npm run test:unit --workspace="rust"
+	  cd rust && cargo test
+	  
