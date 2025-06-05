@@ -235,11 +235,10 @@ export class GvCustomGS extends GvBase {
 	}
 }
 
-function mayMakeGroups(tw: RawGvCustomGsTW) {
+export function mayMakeGroups(tw: RawGvCustomGsTW) {
 	if (tw.q.type != 'custom-groupset' || tw.q.customset?.groups.length) return
 	// custom groupset, but customset.groups[] is empty
-	// fill with mutated group vs. wildtype group
-	// for the first applicable dt in dataset
+	// fill with 2 groups for the first applicable dt term
 	const dtTerms = tw.term.childTerms
 	if (!dtTerms) throw 'dtTerms is missing'
 	let grp1Class, grp1Name, grp1Value, grp1Tvs, grp1Filter

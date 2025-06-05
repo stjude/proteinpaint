@@ -16,6 +16,11 @@ Tests:
 	filterByTvsLst: nested tvslst
 */
 
+test('\n', t => {
+	t.pass('-***- mds3.init unit tests -***-')
+	t.end()
+})
+
 test('filterByItem: sample has mutation for dt', t => {
 	const filter = {
 		type: 'tvs',
