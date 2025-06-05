@@ -84,7 +84,6 @@ tape('fill() tw with defaultQ', async test => {
 	const defaultQ = { type: 'custom-groupset' }
 	const fullTw = await GvBase.fill(tw, { vocabApi, defaultQ })
 	test.equal(fullTw.type, 'GvCustomGsTW', 'should fill in tw.type=GvCustomGsTW')
-	console.log('fullTw:', fullTw)
 	test.deepEqual(fullTw.q, customGsQ, 'should fill in q with custom groupset')
 	test.deepEqual(fullTw.term.groupsetting, { disabled: false }, 'should fill in term.groupsetting')
 	test.deepEqual(fullTw.term.childTerms, childTerms, 'should fill in term.childTerms')
@@ -202,6 +201,48 @@ const customGsQ: GvCustomGsQ = {
 				filter: { type: 'tvslst', in: true, join: '', lst: [] }
 			},
 			{
+				name: 'Wildtype (somatic)',
+				type: 'filter',
+				uncomputable: false,
+				filter: {
+					type: 'tvslst',
+					in: true,
+					join: '',
+					lst: [
+						{
+							type: 'tvs',
+							tvs: {
+								term: {
+									id: 'snvindel_somatic',
+									query: 'snvindel',
+									name: 'SNV/indel (somatic)',
+									parent_id: null,
+									isleaf: true,
+									type: 'dtsnvindel',
+									dt: 1,
+									values: {
+										M: { label: 'MISSENSE' },
+										F: { label: 'FRAMESHIFT' },
+										WT: { label: 'Wildtype' }
+									},
+									name_noOrigin: 'SNV/indel',
+									origin: 'somatic',
+									parentTerm: {
+										kind: 'gene',
+										id: 'TP53',
+										gene: 'TP53',
+										name: 'TP53',
+										type: 'geneVariant',
+										groupsetting: { disabled: false }
+									}
+								},
+								values: [{ key: 'WT', label: 'Wildtype', value: 'WT' }]
+							}
+						}
+					]
+				}
+			},
+			{
 				name: 'SNV/indel (somatic)',
 				type: 'filter',
 				uncomputable: false,
@@ -239,48 +280,6 @@ const customGsQ: GvCustomGsQ = {
 								},
 								values: [{ key: 'WT', label: 'Wildtype', value: 'WT' }],
 								isnot: true
-							}
-						}
-					]
-				}
-			},
-			{
-				name: 'Wildtype (somatic)',
-				type: 'filter',
-				uncomputable: false,
-				filter: {
-					type: 'tvslst',
-					in: true,
-					join: '',
-					lst: [
-						{
-							type: 'tvs',
-							tvs: {
-								term: {
-									id: 'snvindel_somatic',
-									query: 'snvindel',
-									name: 'SNV/indel (somatic)',
-									parent_id: null,
-									isleaf: true,
-									type: 'dtsnvindel',
-									dt: 1,
-									values: {
-										M: { label: 'MISSENSE' },
-										F: { label: 'FRAMESHIFT' },
-										WT: { label: 'Wildtype' }
-									},
-									name_noOrigin: 'SNV/indel',
-									origin: 'somatic',
-									parentTerm: {
-										kind: 'gene',
-										id: 'TP53',
-										gene: 'TP53',
-										name: 'TP53',
-										type: 'geneVariant',
-										groupsetting: { disabled: false }
-									}
-								},
-								values: [{ key: 'WT', label: 'Wildtype', value: 'WT' }]
 							}
 						}
 					]
