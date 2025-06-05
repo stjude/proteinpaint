@@ -575,15 +575,15 @@ interface TableRowItem {
 }
 
 // list of columns to show in file table
-const tableColumns = [
-	{ label: 'Case', sortable: true },
-	{ label: 'Project', sortable: true },
-	{ label: 'MAF Sample' },
-	{ label: 'MAF File Size', barplot: { tickFormat: '~s' }, sortable: true },
-	{ label: 'CNV File ID', sortable: true },
-	{ label: 'CNV Sample' },
-	{ label: 'CNV File Size', barplot: { tickFormat: '~s' }, sortable: true }
-]
+// const tableColumns = [
+// 	{ label: 'Case', sortable: true },
+// 	{ label: 'Project', sortable: true },
+// 	{ label: 'MAF Sample' },
+// 	{ label: 'MAF File Size', barplot: { tickFormat: '~s' }, sortable: true },
+// 	{ label: 'CNV File ID', sortable: true },
+// 	{ label: 'CNV Sample' },
+// 	{ label: 'CNV File Size', barplot: { tickFormat: '~s' }, sortable: true }
+// ]
 
 // list of data type options
 const datatypeOptions = [
@@ -673,10 +673,10 @@ function makeControls(obj) {
 		}
 	}
 
-	// Initialize checkbox states - MAF checked by default
+	// Initialize checkbox states - MAF and CNV checked by default
 	obj.dataTypeStates = {
 		maf: true,
-		cnv: false,
+		cnv: true,
 		fusion: false
 	}
 
@@ -740,15 +740,6 @@ function makeControls(obj) {
 		.style('cursor', 'pointer')
 		.style('font-weight', '500')
 		.text('MAF (Mutation)')
-
-	// Add a small indicator showing how many mutation types are available
-	const availableTypesCount = generateMutationTypesFromMclass().length
-	mafCheckboxContainer
-		.append('span')
-		.style('font-size', '12px')
-		.style('color', '#666')
-		.style('margin-left', '8px')
-		.text(`(${availableTypesCount} types available)`)
 
 	const mafOptionsCell = mafRow
 		.append('td')
@@ -1056,7 +1047,7 @@ function makeControls(obj) {
 		obj.dedupStatusElement = dedupStatus
 	}
 
-	// Row 2: CNV (unchecked by default)
+	// Row 2: CNV (checked by default)
 	const cnvRow = optionsTable.append('tr')
 
 	const cnvCheckboxCell = cnvRow
@@ -1075,7 +1066,7 @@ function makeControls(obj) {
 		.append('input')
 		.attr('type', 'checkbox')
 		.attr('id', 'cnv-checkbox')
-		.property('checked', true) // Unchecked by default
+		.property('checked', true) // Checked by default
 		.style('margin', '0')
 		.style('cursor', 'pointer')
 
@@ -1092,7 +1083,7 @@ function makeControls(obj) {
 		.style('border', '1px solid #ddd')
 		.style('vertical-align', 'top')
 
-	// CNV options container (hidden by default since CNV is unchecked)
+	// CNV options container
 	const cnvOptionsContainer = cnvOptionsCell.append('div').style('display', 'block') // Visible by default
 	createCNVOptionsContent(cnvOptionsContainer, obj)
 
@@ -1332,6 +1323,45 @@ function makeControls(obj) {
 		.style('font-style', 'italic')
 		.text('Fusion analysis options will be configured here')
 
+	// Add checkbox change handlers (basic show/hide functionality)
+	mafCheckbox.on('change', function (this: HTMLInputElement) {
+		const isChecked = this.checked
+		obj.dataTypeStates.maf = isChecked
+		mafOptionsContainer.style('display', isChecked ? 'block' : 'none')
+
+		// Update submit button state
+		if (obj.updateSubmitButtonState) {
+			obj.updateSubmitButtonState()
+		}
+	})
+
+	cnvCheckbox.on('change', function (this: HTMLInputElement) {
+		const isChecked = this.checked
+		obj.dataTypeStates.cnv = isChecked
+		cnvOptionsContainer.style('display', isChecked ? 'block' : 'none')
+
+		// Create CNV options content when checkbox is checked for the first time
+		if (isChecked) {
+			createCNVOptionsContent(cnvOptionsContainer, obj)
+		}
+
+		// Update submit button state
+		if (obj.updateSubmitButtonState) {
+			obj.updateSubmitButtonState()
+		}
+	})
+
+	fusionCheckbox.on('change', function (this: HTMLInputElement) {
+		const isChecked = this.checked
+		obj.dataTypeStates.fusion = isChecked
+		fusionOptionsContainer.style('display', isChecked ? 'block' : 'none')
+
+		// Update submit button state
+		if (obj.updateSubmitButtonState) {
+			obj.updateSubmitButtonState()
+		}
+	})
+
 	// Row 4: GRIN2 (unchecked by default)
 	const grin2Row = optionsTable.append('tr')
 
@@ -1359,33 +1389,129 @@ function makeControls(obj) {
 		.text('GRIN2 analysis options will be configured here')
 
 	// Add checkbox change handlers (basic show/hide functionality)
-	mafCheckbox.on('change', function (this: HTMLInputElement) {
-		const isChecked = this.checked
-		obj.dataTypeStates.maf = isChecked
-		mafOptionsContainer.style('display', isChecked ? 'block' : 'none')
-	})
+	// Store references for easy access later
+	obj.mafOptionsContainer = mafOptionsContainer
+	obj.cnvOptionsContainer = cnvOptionsContainer
+	obj.fusionOptionsContainer = fusionOptionsContainer
 
-	cnvCheckbox.on('change', function (this: HTMLInputElement) {
-		const isChecked = this.checked
-		obj.dataTypeStates.cnv = isChecked
-		cnvOptionsContainer.style('display', isChecked ? 'block' : 'none')
+	// Add submit button after the options table
+	const submitButtonContainer = obj.controlDiv
+		.append('div')
+		.style('margin-top', '2px')
+		.style('margin-bottom', '2px')
+		.style('text-align', 'left')
 
-		// Create CNV options content when checkbox is checked for the first time
-		if (isChecked) {
-			createCNVOptionsContent(cnvOptionsContainer, obj)
+	const submitButton = submitButtonContainer
+		.append('button')
+		.attr('id', 'submit-options-button')
+		.style('background-color', 'white')
+		.style('color', 'white')
+		.style('border', '1px solid #000')
+		.style('padding', '4px 8px')
+		.style('border-radius', '3px')
+		.style('font-size', '14px')
+		.style('cursor', 'pointer')
+		.style('font-family', 'inherit')
+		.style('margin', '0')
+		.text('Apply Options & Refresh Files')
+
+	// Add hover effects to match the table button style
+	submitButton
+		.on('mouseover', function (this: HTMLButtonElement) {
+			if (!this.disabled) {
+				this.style.setProperty('background-color', '#f0f0f0')
+			}
+		})
+		.on('mouseout', function (this: HTMLButtonElement) {
+			if (!this.disabled) {
+				this.style.setProperty('background-color', 'white')
+			}
+		})
+
+	// Store submit button reference for easy access
+	obj.submitButton = submitButton
+
+	// Add submit button click handler
+	submitButton.on('click', function (this: HTMLButtonElement) {
+		if (!this.disabled) {
+			console.log('Submit button clicked - refreshing files with options:', {
+				dataTypeStates: obj.dataTypeStates,
+				mafOptions: obj.mafOptions,
+				cnvOptions: obj.cnvOptions
+			})
+			// Re-fetch files with current options
+			getFilesAndShowTable(obj)
 		}
 	})
 
-	fusionCheckbox.on('change', function (this: HTMLInputElement) {
-		const isChecked = this.checked
-		obj.dataTypeStates.fusion = isChecked
-		fusionOptionsContainer.style('display', isChecked ? 'block' : 'none')
-	})
+	// Store the update function for use in checkbox handlers
+	obj.updateSubmitButtonState = updateSubmitButtonState
+
+	// Initial button state check
+	updateSubmitButtonState()
 
 	// Store references for easy access later
 	obj.mafOptionsContainer = mafOptionsContainer
 	obj.cnvOptionsContainer = cnvOptionsContainer
 	obj.fusionOptionsContainer = fusionOptionsContainer
+
+	// Add hover effects
+	submitButton
+		.on('mouseover', function (this: HTMLButtonElement) {
+			if (!this.disabled) {
+				this.style.backgroundColor = '#1e4a8c'
+			}
+		})
+		.on('mouseout', function (this) {
+			if (!this.disabled) {
+				this.style.backgroundColor = '#2c5aa0'
+			}
+		})
+
+	// Store submit button reference for easy access
+	obj.submitButton = submitButton
+
+	// Add submit button click handler
+	submitButton.on('click', function (this) {
+		if (!this.disabled) {
+			console.log('Submit button clicked - refreshing files with options:', {
+				dataTypeStates: obj.dataTypeStates,
+				mafOptions: obj.mafOptions,
+				cnvOptions: obj.cnvOptions
+			})
+			// Re-fetch files with current options
+			getFilesAndShowTable(obj)
+		}
+	})
+
+	// Function to update submit button state based on checkbox selections
+	function updateSubmitButtonState() {
+		const hasAnyDataTypeSelected = obj.dataTypeStates.maf || obj.dataTypeStates.cnv || obj.dataTypeStates.fusion
+
+		if (hasAnyDataTypeSelected) {
+			// Enable button
+			submitButton
+				.property('disabled', false)
+				.style('background-color', '#2c5aa0')
+				.style('cursor', 'pointer')
+				.style('opacity', '1')
+				.text('Apply Options & Refresh Files')
+		} else {
+			// Disable button
+			submitButton
+				.property('disabled', true)
+				.style('background-color', '#6c757d')
+				.style('cursor', 'not-allowed')
+				.style('opacity', '0.6')
+				.text('Select at least one data type')
+		}
+	}
+
+	// Store the update function for use in checkbox handlers
+	obj.updateSubmitButtonState = updateSubmitButtonState
+
+	// Initial button state check
+	updateSubmitButtonState()
 }
 
 async function getFilesAndShowTable(obj) {
@@ -1431,73 +1557,130 @@ async function getFilesAndShowTable(obj) {
 			wait.text(`Showing ${result.files.length.toLocaleString()} files.`)
 		}
 
+		// Build table columns dynamically based on selected data types
+		const dynamicTableColumns = [
+			{ label: 'Case', sortable: true },
+			{ label: 'Project', sortable: true }
+		]
+
+		// Add MAF columns only if MAF is selected
+		if (obj.dataTypeStates.maf) {
+			dynamicTableColumns.push({ label: 'MAF Sample', sortable: false }, {
+				label: 'MAF File Size',
+				barplot: { tickFormat: '~s' },
+				sortable: true
+			} as any)
+		}
+
+		// Add CNV columns only if CNV is selected
+		if (obj.dataTypeStates.cnv) {
+			dynamicTableColumns.push({ label: 'CNV File ID', sortable: true }, { label: 'CNV Sample', sortable: false }, {
+				label: 'CNV File Size',
+				barplot: { tickFormat: '~s' },
+				sortable: true
+			} as any)
+		}
+
+		// Add Fusion columns only if Fusion is selected (when implemented)
+		if (obj.dataTypeStates.fusion) {
+			dynamicTableColumns.push(
+				{ label: 'Fusion File ID', sortable: true },
+				{ label: 'Fusion Sample', sortable: false },
+				{ label: 'Fusion File Size', barplot: { tickFormat: '~s' }, sortable: true } as any
+			)
+		}
+
 		const rows: TableRowItem[][] = []
 
-		// Create a simple map of CNV files by case
+		// Create CNV files map (only if CNV is selected)
 		const cnvFilesByCase = new Map<string, any>()
-		if (result.cnvFiles && result.cnvFiles.files) {
+		if (obj.dataTypeStates.cnv && result.cnvFiles && result.cnvFiles.files) {
 			for (const cnvFile of result.cnvFiles.files) {
 				const caseId = cnvFile.case_submitter_id
-				// Just store the first CNV file for each case (or you could store all and pick one)
 				if (!cnvFilesByCase.has(caseId)) {
 					cnvFilesByCase.set(caseId, cnvFile)
 				}
 			}
 		}
 
+		// Build table rows dynamically
 		for (const f of result.files) {
-			const cnvFile = cnvFilesByCase.get(f.case_submitter_id)
-			const row = [
+			const row: TableRowItem[] = []
+
+			// Always include Case and Project columns
+			row.push(
 				{
 					html: `<a href=https://portal.gdc.cancer.gov/files/${f.id} target=_blank>${f.case_submitter_id}</a>`,
 					value: f.case_submitter_id
 				},
-				{ value: f.project_id },
-				{
-					html: f.sample_types
-						.map(i => {
-							return (
-								'<span class="sja_mcdot" style="padding:1px 8px;background:#ddd;color:black;white-space:nowrap">' +
-								i +
-								'</span>'
-							)
-						})
-						.join(' ')
-				},
-				{ value: f.file_size }, // do not send in text-formated file size, table sorting won't work
-				{
-					html: cnvFile
-						? `<a href=https://portal.gdc.cancer.gov/files/${cnvFile.id} target=_blank>${cnvFile.id}</a>`
-						: '<span style="color: #6c757d;">No CNV file</span>',
-					value: cnvFile ? cnvFile.id : 'No CNV file'
-				},
-				{
-					// CNV Sample column - display CNV sample types similar to MAF sample types
-					html:
-						cnvFile && cnvFile.sample_types
-							? cnvFile.sample_types
-									.map(i => {
-										return (
-											'<span class="sja_mcdot" style="padding:1px 8px;background:#e1f5fe;color:black;white-space:nowrap">' +
-											i +
-											'</span>'
-										)
-									})
-									.join(' ')
-							: '<span style="color: #6c757d;">No CNV sample</span>',
-					value: cnvFile && cnvFile.sample_types ? cnvFile.sample_types.join(' ') : 'No CNV sample'
-				},
-				{
-					value: cnvFile ? cnvFile.file_size : 0
-				}
-			]
+				{ value: f.project_id }
+			)
+
+			// Add MAF columns only if MAF is selected
+			if (obj.dataTypeStates.maf) {
+				row.push(
+					{
+						html: f.sample_types
+							.map(i => {
+								return (
+									'<span class="sja_mcdot" style="padding:1px 8px;background:#ddd;color:black;white-space:nowrap">' +
+									i +
+									'</span>'
+								)
+							})
+							.join(' ')
+					},
+					{ value: f.file_size }
+				)
+			}
+
+			// Add CNV columns only if CNV is selected
+			if (obj.dataTypeStates.cnv) {
+				const cnvFile = cnvFilesByCase.get(f.case_submitter_id)
+				row.push(
+					{
+						html: cnvFile
+							? `<a href=https://portal.gdc.cancer.gov/files/${cnvFile.id} target=_blank>${cnvFile.id}</a>`
+							: '<span style="color: #6c757d;">No CNV file</span>',
+						value: cnvFile ? cnvFile.id : 'No CNV file'
+					},
+					{
+						html:
+							cnvFile && cnvFile.sample_types
+								? cnvFile.sample_types
+										.map(i => {
+											return (
+												'<span class="sja_mcdot" style="padding:1px 8px;background:#e1f5fe;color:black;white-space:nowrap">' +
+												i +
+												'</span>'
+											)
+										})
+										.join(' ')
+								: '<span style="color: #6c757d;">No CNV sample</span>',
+						value: cnvFile && cnvFile.sample_types ? cnvFile.sample_types.join(' ') : 'No CNV sample'
+					},
+					{
+						value: cnvFile ? cnvFile.file_size : 0
+					}
+				)
+			}
+
+			// Add Fusion columns only if Fusion is selected (placeholder for when implemented)
+			if (obj.dataTypeStates.fusion) {
+				row.push(
+					{ html: '<span style="color: #6c757d;">No Fusion file</span>', value: 'No Fusion file' },
+					{ html: '<span style="color: #6c757d;">No Fusion sample</span>', value: 'No Fusion sample' },
+					{ value: 0 }
+				)
+			}
+
 			rows.push(row)
 		}
 
-		// tracks table arg, so that the created button DOM element is accessible and can be modified
+		// Update the renderTable call to use dynamic columns
 		obj.mafTableArg = {
 			rows,
-			columns: tableColumns,
+			columns: dynamicTableColumns, // Use dynamic columns instead of static tableColumns
 			resize: false,
 			div: obj.tableDiv.append('div'),
 			selectAll: false,
@@ -1512,6 +1695,8 @@ async function getFilesAndShowTable(obj) {
 				}
 			]
 		}
+
+		// Render the table with the dynamic columns
 		renderTable(obj.mafTableArg)
 	} catch (e) {
 		wait.text(e instanceof Error ? e.message : String(e))
