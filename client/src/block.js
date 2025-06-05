@@ -3433,38 +3433,18 @@ seekrange(chr,start,stop) {
 		}
 	}
 
+	/* show protein view for a given isoform
+	and bring along current tracks
+	if fromgenetk is provided, will skip this track
+	*/
 	to_proteinview(isoform, fromgenetk) {
-		/*
-		show protein view for a given isoform
-		and bring along current tracks
-		if fromgenetk is provided, will skip this track
-		*/
-		// example of how to use new sandbox div
-		// cases where gene panel is used from genomepaint track
-		// 1. on landing page: use sandbox, sandbox_div is 2nd child div of .sja_root_holder parent div (1st child is header)
-		// 2. on page with track (mds2): use sandbox same as landing page (case 1)
-		// 3. for page with embedded pp: use tip, .sja_root_holder will only have 1 child and sanbox_div is missing
-		// 4. for multiple pp instance on same page: use tip as embdded pp (case 3)
-		let pane
-		const sja_root_holders = d3selectAll('.sja_root_holder').nodes() // pp instance count
-		const root_divs = d3selectAll('.sja_root_holder > div').nodes() // >1 for with header, 1 for without header
-		const use_tip = root_divs.length == 1 || sja_root_holders.length > 1 // case 3 and 4
-		if (use_tip)
-			// case 3 & 4
-			pane = client.newpane({ x: 100, y: 100 })
-		// original floating tip
-		else {
-			// case 1 & 2
-			const sandbox_div = d3select(root_divs[2])
-			pane = newSandboxDiv(sandbox_div)
-		}
-		pane.header.text(isoform)
+		// when a mds3 tk is part of genomebrowser app in mass ui, this special folder exists; create sandbox into it to make it look nice that the new sandbox is on top of existing genomebrowser sandbox, rather than inside it which looks bad
+		const sandbox = newSandboxDiv(this.tklst.find(i => i.type == 'mds3')?.newChartHolder || this.holder0)
+		sandbox.header.text(isoform)
 		const arg = {
 			genome: this.genome,
 			debugmode: this.debugmode,
-			holder: pane.body,
-			jwt: this.jwt,
-			hostURL: this.hostURL,
+			holder: sandbox.body,
 			tklst: [],
 			query: isoform
 		}
@@ -3474,10 +3454,33 @@ seekrange(chr,start,stop) {
 				continue
 			}
 			if (tk.type == common.tkt.mdsexpressionrank) {
-				// FIXME somehow this track won't work
+				// somehow this track won't work (no need to fix)
+				continue
+			}
+			if (tk.type == 'mds3') {
+				// TODO code duplication limits script change; after release use createSubTk method instead
+				//arg.tklst.push(tk.createSubTk())
+				const tkarg = {
+					type: 'mds3',
+					dslabel: tk.dslabel,
+					filter0: tk.filter0,
+					showCloseLeftlabel: true,
+					filterObj: structuredClone(tk.filterObj),
+					allow2selectSamples: tk.allow2selectSamples,
+					onClose: tk.onClose,
+					hardcodeCnvOnly: tk.hardcodeCnvOnly,
+					token: tk.token // for testing
+				}
+				if (tk.cnv?.presetMax) tkarg.cnv = { presetMax: tk.cnv.presetMax } // preset value is present, pass to subtk
+				if (tk.legend.mclass?.hiddenvalues?.size) {
+					tkarg.legend = { mclass: { hiddenvalues: new Set() } }
+					for (const v of tk.legend.mclass.hiddenvalues) tkarg.legend.mclass.hiddenvalues.add(v)
+				}
+				arg.tklst.push(tkarg)
 				continue
 			}
 			arg.tklst.push(tk)
+			console.log('tk used as-is')
 		}
 		blockinit(arg)
 	}

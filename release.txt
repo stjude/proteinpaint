@@ -1,1 +1,2 @@
-
+Fixes:
+- on clicking a gene model from gene track, launch new protein view in a sandbox instead of floating pane
