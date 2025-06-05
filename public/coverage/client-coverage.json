@@ -26,13 +26,13 @@
     },
     "lowestPct": {
       "curr": 79.06,
-      "prev": 69.76,
-      "diff": 9.299999999999997
+      "prev": 79.06,
+      "diff": 0
     },
     "averagePct": {
       "curr": 86.7225,
-      "prev": 83.4,
-      "diff": 3.322499999999991
+      "prev": 86.7225,
+      "diff": 0
     }
   },
   "mass/nav.js": {
@@ -2500,13 +2500,13 @@
     },
     "lowestPct": {
       "curr": 44,
-      "prev": 0,
-      "diff": 44
+      "prev": 44,
+      "diff": 0
     },
     "averagePct": {
       "curr": 63.620000000000005,
-      "prev": 0,
-      "diff": 63.620000000000005
+      "prev": 63.620000000000005,
+      "diff": 0
     }
   },
   "filter/test/tvs.unit.spec.js": {
@@ -2536,13 +2536,13 @@
     },
     "lowestPct": {
       "curr": 81.81,
-      "prev": 0,
-      "diff": 81.81
+      "prev": 81.81,
+      "diff": 0
     },
     "averagePct": {
       "curr": 91.2075,
-      "prev": 0,
-      "diff": 91.2075
+      "prev": 91.2075,
+      "diff": 0
     }
   },
   "filter/tvs.dt.js": {
@@ -2572,13 +2572,13 @@
     },
     "lowestPct": {
       "curr": 100,
-      "prev": 0,
-      "diff": 100
+      "prev": 100,
+      "diff": 0
     },
     "averagePct": {
       "curr": 100,
-      "prev": 0,
-      "diff": 100
+      "prev": 100,
+      "diff": 0
     }
   },
   "filter/tvs.dtcnv.js": {
@@ -2608,13 +2608,13 @@
     },
     "lowestPct": {
       "curr": 42.3,
-      "prev": 0,
-      "diff": 42.3
+      "prev": 42.3,
+      "diff": 0
     },
     "averagePct": {
       "curr": 54.459999999999994,
-      "prev": 0,
-      "diff": 54.459999999999994
+      "prev": 54.459999999999994,
+      "diff": 0
     }
   },
   "filter/tvs.dtfusion.js": {
@@ -2644,13 +2644,13 @@
     },
     "lowestPct": {
       "curr": 100,
-      "prev": 0,
-      "diff": 100
+      "prev": 100,
+      "diff": 0
     },
     "averagePct": {
       "curr": 100,
-      "prev": 0,
-      "diff": 100
+      "prev": 100,
+      "diff": 0
     }
   },
   "filter/tvs.dtsnvindel.js": {
@@ -2680,13 +2680,13 @@
     },
     "lowestPct": {
       "curr": 100,
-      "prev": 0,
-      "diff": 100
+      "prev": 100,
+      "diff": 0
     },
     "averagePct": {
       "curr": 100,
-      "prev": 0,
-      "diff": 100
+      "prev": 100,
+      "diff": 0
     }
   },
   "filter/tvs.dtsv.js": {
@@ -2716,13 +2716,13 @@
     },
     "lowestPct": {
       "curr": 100,
-      "prev": 0,
-      "diff": 100
+      "prev": 100,
+      "diff": 0
     },
     "averagePct": {
       "curr": 100,
-      "prev": 0,
-      "diff": 100
+      "prev": 100,
+      "diff": 0
     }
   },
   "filter/tvs.geneVariant.js": {
@@ -2752,13 +2752,13 @@
     },
     "lowestPct": {
       "curr": 33.33,
-      "prev": 0,
-      "diff": 33.33
+      "prev": 33.33,
+      "diff": 0
     },
     "averagePct": {
       "curr": 35.135000000000005,
-      "prev": 0,
-      "diff": 35.135000000000005
+      "prev": 35.135000000000005,
+      "diff": 0
     }
   },
   "filter/tvs.categorical.js": {
@@ -2788,13 +2788,13 @@
     },
     "lowestPct": {
       "curr": 69.23,
-      "prev": 0,
-      "diff": 69.23
+      "prev": 69.23,
+      "diff": 0
     },
     "averagePct": {
       "curr": 78.765,
-      "prev": 0,
-      "diff": 78.765
+      "prev": 78.765,
+      "diff": 0
     }
   },
   "filter/tvs.condition.js": {
@@ -2824,13 +2824,13 @@
     },
     "lowestPct": {
       "curr": 39.72,
-      "prev": 0,
-      "diff": 39.72
+      "prev": 39.72,
+      "diff": 0
     },
     "averagePct": {
       "curr": 58.0225,
-      "prev": 0,
-      "diff": 58.0225
+      "prev": 58.0225,
+      "diff": 0
     }
   },
   "filter/tvs.numeric.js": {
@@ -2860,13 +2860,13 @@
     },
     "lowestPct": {
       "curr": 18.07,
-      "prev": 0,
-      "diff": 18.07
+      "prev": 18.07,
+      "diff": 0
     },
     "averagePct": {
       "curr": 33.1625,
-      "prev": 0,
-      "diff": 33.1625
+      "prev": 33.1625,
+      "diff": 0
     }
   },
   "filter/tvs.survival.js": {
@@ -2896,13 +2896,13 @@
     },
     "lowestPct": {
       "curr": 18.18,
-      "prev": 0,
-      "diff": 18.18
+      "prev": 18.18,
+      "diff": 0
     },
     "averagePct": {
       "curr": 23.759999999999998,
-      "prev": 0,
-      "diff": 23.759999999999998
+      "prev": 23.759999999999998,
+      "diff": 0
     }
   }
 }
