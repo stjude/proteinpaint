@@ -574,18 +574,7 @@ interface TableRowItem {
 	value?: any
 }
 
-// list of columns to show in file table
-// const tableColumns = [
-// 	{ label: 'Case', sortable: true },
-// 	{ label: 'Project', sortable: true },
-// 	{ label: 'MAF Sample' },
-// 	{ label: 'MAF File Size', barplot: { tickFormat: '~s' }, sortable: true },
-// 	{ label: 'CNV File ID', sortable: true },
-// 	{ label: 'CNV Sample' },
-// 	{ label: 'CNV File Size', barplot: { tickFormat: '~s' }, sortable: true }
-// ]
-
-// list of data type options
+// List of data type options
 const datatypeOptions = [
 	{ option: 'mafOption', selected: true, label: 'Include Mutation' },
 	{ option: 'cnvOption', selected: false, label: 'Include CNV' },
@@ -1585,7 +1574,7 @@ async function getFilesAndShowTable(obj) {
 								? cnvFile.sample_types
 										.map(i => {
 											return (
-												'<span class="sja_mcdot" style="padding:1px 8px;background:#e1f5fe;color:black;white-space:nowrap">' +
+												'<span class="sja_mcdot" style="padding:1px 8px;background:#ddd;color:black;white-space:nowrap">' +
 												i +
 												'</span>'
 											)
