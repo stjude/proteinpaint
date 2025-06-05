@@ -1,53 +1,48 @@
-//Victor LP
-//Hello thank you for reviewing this I have written some comments, please
-//feel free to correct me.
 import test from 'tape'
-//From what I can discoDefaults has default vizualisations settings
-//like the radii space between arcs of of the 'disco' where data is vizualised
-//Red is for copy number variaion and gray for loss of heterozygosity
+
+// Contains default visualization settings for the disco plot,
+// such as arc radii and spacing between tracks.
+// Red represents copy number variation (CNV); gray indicates loss of heterozygosity (LOH).
 import discoDefaults from '#plots/disco/defaults.ts'
 
-//Contains chromosome sizes and transforms base pair coordinates to coordinates
-//radians for the disco plot visualisation.
+// Manages chromosome sizes and provides coordinate transformations
+// (from base pairs to radians) for disco plot rendering.
 import Reference from '#plots/disco/chromosome/Reference.ts'
 
-//Takes LOH data and converts into drawable arc objects
+// Converts LOH data into arc objects suitable for visual rendering.
 import LohArcMapper from '#plots/disco/loh/LohArcMapper.ts'
 
-//Filters data by data type (dt) and organises to groups
-//like lohData and cnvData
+// Filters and organizes data by type (e.g., CNV, LOH) into structured groups.
 import DataMapper from '#plots/disco/data/DataMapper.ts'
 
-//Removes gaps between arches
+// Overrides default pad angle between arcs (removes gaps).
 const overriders = { padAngle: 0.0 }
 
-//This is passed into classes that need plot configuration
+// Generates the full settings object, incorporating custom overrides.
 const settings = discoDefaults(overriders)
 
-//I think the name sample is just a label
-// not a data type like dt: 4 for cnv
+// Represents the label used to identify the sample (not a data type like `dt`).
 const sampleName = 'sample'
 
-//I think this this a dictionary with the lenght of the chromosomes,
-// I assume 100 base pairs
-//A circle is 0-2(pi) so each chromosome here would be (pi) in arc lenght
+// Defines chromosome lengths in base pairs.
+// Each chromosome is assigned 100 units; since a circle spans 0 to 2π,
+// this maps each chromosome to π radians.
 const chromosomes = {
 	chr1: 100,
 	chr2: 100
 }
 
-//This is a genome object that 'know' the chromosomes (chr1 and 2)
-//their lenght and how to convert genome coordinates (start-end) into start
-//and end angle
+// Initializes a genome reference object with chromosome definitions
+// and logic to convert base pair positions to angles.
 const reference = new Reference(settings, chromosomes)
 
 test('LohArcMapper.map() should return an array of LohArc objects', function (t) {
 	const rawData = [
-		//Each object represents a regeon of loss of heterozygosity
-		//each entry in this case spans the full lenght of the chromosome
+		// Each object denotes a region of LOH,
+		// in this case spanning the full length of each chromosome.
 		{
 			chr: 'chr1',
-			dt: 10, //DataType for LOH
+			dt: 10, // 10 = LOH data type
 			start: 0,
 			stop: 100
 		},
@@ -59,42 +54,34 @@ test('LohArcMapper.map() should return an array of LohArc objects', function (t)
 		}
 	]
 
-	//Takes data and splits into lohData, cnvData, and so on depending on dt
-	//computes scaling values.
-	//has structured ready to plot data
-	//No clue about the 4th parameter for gene prioritization so i just put an empty list
-	//Maybe it highlights a UI element to show genes of interest
+	// Maps raw data into structured form by type (e.g., LOH, CNV).
+	// Fourth argument likely relates to gene prioritization/highlighting—left empty here.
 	const dataHolder = new DataMapper(settings, reference, sampleName, []).map(rawData)
 
-	//gets only LOH processed data for LohArcMapper.map()
+	// Extracts only the LOH-related data for visualization.
 	const data = dataHolder.lohData
 
 	const lohArcMapper = new LohArcMapper(
-		10,
-		5,
-		//LohArcMapper does not take settings as a parameter? cnvArcsMapper takes both settings and reference
-
+		10, // inner radius
+		5, // radial thickness
 		sampleName,
 		reference
 	)
 
-	//Takes organized data and returns array of arcs
+	// Converts LOH data into visual arc objects.
 	const arcs = lohArcMapper.map(data)
 
 	t.equal(arcs.length, 2, 'Should return one arc per LOH segment')
 	const arc0 = arcs[0]
 	const arc1 = arcs[1]
 
-	//Tests the start and end in radians, 0 and (pi).
+	// Verify angles and radii for arc on chr1
 	t.equal(arc0.startAngle, 0, 'Arc 0 start angle should be 0')
 	t.equal(arc0.endAngle, Math.PI, 'Arc 0 end angle should be π')
-	//gave inner radius of 10 when creating arcMapper, this makes sure
-	//that radius is not smaller than 10
 	t.ok(arc0.innerRadius >= 10, 'Arc 0 inner radius should be at least 10')
-	//check outer radious is larger than inner
 	t.ok(arc0.outerRadius > arc0.innerRadius, 'Arc 0 outer radius should be greater than inner')
 
-	//simmilar to above but for arc 2
+	// Verify angles and radii for arc on chr2
 	t.equal(arc1.startAngle, Math.PI, 'Arc 1 start angle should be π')
 	t.equal(arc1.endAngle, 2 * Math.PI, 'Arc 1 end angle should be 2π')
 	t.ok(arc1.innerRadius >= 10, 'Arc 1 inner radius should be at least 10')
@@ -102,12 +89,3 @@ test('LohArcMapper.map() should return an array of LohArc objects', function (t)
 
 	t.end()
 })
-
-/**************
- test sections
-***************/
-
-//tape('\n', function (test) {
-//	test.pass('-***- plots/disco/loh/LohArcMapper -***-')
-//	test.end()
-//})
