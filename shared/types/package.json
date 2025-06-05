@@ -1,6 +1,6 @@
 {
   "name": "@sjcrh/proteinpaint-types",
-  "version": "2.129.2",
+  "version": "2.129.6-2b2fdc7ee.0",
   "type": "module",
   "description": "Shared type definitions between ProteinPaint server and client code",
   "main": "src/index.ts",
