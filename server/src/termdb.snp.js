@@ -280,9 +280,9 @@ async function queryBcf(q, snps, ds) {
 		if (snp.invalid) continue
 
 		let bcffile
-		if (tk.chr2bcffile) {
-			bcffile = tk.chr2bcffile[snp.chr]
-			if (!bcffile) throw 'chr not in chr2bcffile'
+		if (tk.chr2files) {
+			bcffile = tk.chr2files[snp.chr].file
+			if (!bcffile) throw 'chr not in chr2files'
 		} else {
 			bcffile = tk.file || tk.url
 		}
