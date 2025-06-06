@@ -5,11 +5,12 @@ fn main() {}
 #[cfg(test)]
 mod tests {
     use crate::stats_functions::cerno;
+    use flate2::read::GzDecoder;
     use json::JsonValue;
     use std::cmp::Ordering;
     use std::collections::HashSet;
     use std::fs::File;
-    use std::io::{BufRead, BufReader};
+    use std::io::{BufReader, Read};
 
     const P_VALUE_CUTOFF: f32 = 0.01; // Threshold difference between calculated and expected p-value for the test to pass
     const AUC_CUTOFF: f32 = 0.001; // Threshold difference between calculated and expected AUC for the test to pass
@@ -18,17 +19,23 @@ mod tests {
     #[test]
     fn cerno_test() {
         // Specify the path to the json file
-        let file_path = "test/cerno_test.json";
+        let file_path = "test/cerno_test.json.gz";
         // Open the file
         let file = File::open(file_path).unwrap();
         // Create a buffered reader
-        let mut buf_reader = BufReader::new(file);
+        let buf_reader = BufReader::new(file);
+
+        // Create a GzDecoder to read the Gzip data
+        let mut gz_decoder = GzDecoder::new(buf_reader);
 
         // Create a String to hold the first line
         let mut first_line = String::new();
 
+        // Read the decompressed data into the String
+        gz_decoder.read_to_string(&mut first_line).unwrap();
+
         // Read the first line
-        buf_reader.read_line(&mut first_line).unwrap();
+        //buf_reader.read_line(&mut first_line).unwrap();
         let input_json = json::parse(&first_line);
         match input_json {
             Ok(json_string) => {
@@ -76,18 +83,16 @@ mod tests {
                 }
 
                 let modules_2_genes: &JsonValue = &json_string["MODULES2GENES"];
-                //println!("modules2genes:{:?}", modules_2_genes.entries());
+                let expected_p_values_json: &JsonValue = &json_string["expected_p_values"]; // The expected p-value comes from the original tmod package in R
+                let expected_auc_json: &JsonValue = &json_string["expected_auc"]; // The expected auc comes from the original tmod package in R
+                let expected_es_json: &JsonValue = &json_string["expected_es"]; // The expected es comes from the original tmod package in R
+                let expected_cerno_json: &JsonValue = &json_string["expected_cerno"]; // The expected cerno comes from the original tmod package in R
 
-                let expected_p_values_json: &JsonValue = &json_string["expected_p_values"];
-                let expected_auc_json: &JsonValue = &json_string["expected_auc"];
-                let expected_es_json: &JsonValue = &json_string["expected_es"];
-                let expected_cerno_json: &JsonValue = &json_string["expected_cerno"];
-                println!("expected_p_values_json:{:?}", expected_p_values_json);
+                let mut expected_p_values = Vec::<f32>::new();
+                let mut expected_auc = Vec::<f32>::new();
+                let mut expected_es = Vec::<f32>::new();
+                let mut expected_cerno = Vec::<f32>::new();
 
-                let mut expected_p_values = Vec::<f32>::new(); // The expected p-value comes from the original tmod package in R
-                let mut expected_auc = Vec::<f32>::new(); // The expected auc comes from the original tmod package in R
-                let mut expected_es = Vec::<f32>::new(); // The expected es comes from the original tmod package in R
-                let mut expected_cerno = Vec::<f32>::new(); // The expected cerno comes from the original tmod package in R
                 for j in 0..expected_p_values_json.len() {
                     expected_p_values.push(expected_p_values_json[j].as_f32().unwrap());
                     expected_auc.push(expected_auc_json[j].as_f32().unwrap());
@@ -97,10 +102,8 @@ mod tests {
 
                 let mut iter = 0;
                 for item in modules_2_genes.entries() {
-                    //println!("item:{:?}", item);
                     let (key, value) = item;
                     let mut geneset = HashSet::<String>::new();
-                    //println!("value:{:?}", value.members());
                     for item2 in value.members() {
                         geneset.insert(item2.to_string());
                     }
