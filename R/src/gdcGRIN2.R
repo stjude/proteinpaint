@@ -199,6 +199,12 @@ tryCatch(
     lesion_df$loc.start <- as.integer(lesion_df$loc.start)
     lesion_df$loc.end <- as.integer(lesion_df$loc.end)
     lesion_df$lsn.type <- as.character(lesion_df$lsn.type)
+
+    # Normalize chromosome names- Add "chr" prefix if missing
+    lesion_df <- lesion_df %>%
+      mutate(
+        chrom = ifelse(grepl("^chr", chrom), chrom, paste0("chr", chrom))
+      )
   },
   error = function(e) {
     write_error(paste(

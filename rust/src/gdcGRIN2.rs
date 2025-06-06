@@ -13,7 +13,7 @@
   Output mutations as JSON array.
 
   Example of usage:
-    echo '{"caseFiles": {"MP2PRT-PATFJE": {"maf": "26ea7b6f-8bc4-4e83-ace1-2125b493a361"},"MP2PRT-PAPIGD": {"maf": "653d7458-f4af-4328-a1ce-3bbf22a2e347"}},"mafOptions": {"minTotalDepth": 10,"minAltAlleleCount": 2}}' | ./target/release/gdcGRIN2
+    echo '{"caseFiles": {"MP2PRT-PATFJE": {"maf": "26ea7b6f-8bc4-4e83-ace1-2125b493a361"},"MP2PRT-PAPIGD": {"maf": "653d7458-f4af-4328-a1ce-3bbf22a2e347"}, "TCGA-CG-4300": { "cnv":"46372ec2-ff79-4d07-b375-9ba8a12c11f3", "maf":"c09b208d-2e7b-4116-9580-27f20f4c7e67"}},"mafOptions": {"minTotalDepth": 100,"minAltAlleleCount": 20}, "cnvOptions":{"lossThreshold":-1, "gainThreshold": 1.5, "segLength":2000000}}' | ./target/release/gdcGRIN2
 */
 
 use flate2::read::GzDecoder;
@@ -40,21 +40,6 @@ struct ErrorEntry {
     attempts_made: u32,
 }
 
-// Struct for the final output that includes both successful data and errors
-#[derive(serde::Serialize)]
-struct GdcOutput {
-    successful_data: Vec<Vec<Vec<String>>>, // Array of successful file data arrays
-    failed_files: Vec<ErrorEntry>,
-    summary: OutputSummary,
-}
-
-#[derive(serde::Serialize)]
-struct OutputSummary {
-    total_files: usize,
-    successful_files: usize,
-    failed_files: usize,
-}
-
 // Define the structure for datadd
 #[derive(Deserialize, Debug)]
 struct DataType {
@@ -69,6 +54,39 @@ struct MafOptions {
     min_total_depth: i32,
     #[serde(rename = "minAltAlleleCount")]
     min_alt_allele_count: i32,
+    consequences: Option<Vec<String>>, // Optional list of consequences to filter MAF files
+}
+
+// Define the structure for cnvOptions
+#[derive(Deserialize, Debug)]
+struct CnvOptions {
+    #[serde(rename = "lossThreshold")]
+    loss_threshold: f32,
+    #[serde(rename = "gainThreshold")]
+    gain_threshold: f32,
+    #[serde(rename = "segLength")]
+    seg_length: i32,
+}
+
+// Individual successful file output (JSONL format)
+#[derive(serde::Serialize)]
+struct SuccessfulFileOutput {
+    #[serde(rename = "type")]
+    output_type: String, // Always "data"
+    case_id: String,
+    data_type: String,
+    data: Vec<Vec<String>>,
+}
+
+// Final summary output (JSONL format)
+#[derive(serde::Serialize)]
+struct FinalSummary {
+    #[serde(rename = "type")]
+    output_type: String, // Always "summary"
+    total_files: usize,
+    successful_files: usize,
+    failed_files: usize,
+    errors: Vec<ErrorEntry>,
 }
 
 // Define the top-level input structure
@@ -78,104 +96,114 @@ struct InputData {
     case_files: HashMap<String, DataType>,
     #[serde(rename = "mafOptions")]
     maf_options: Option<MafOptions>,
+    #[serde(rename = "cnvOptions")]
+    cnv_options: Option<CnvOptions>,
+}
+
+// Configuration for different data types
+#[derive(Deserialize, Debug)]
+struct DataTypeConfig {
+    header_marker: &'static str,
+    output_columns: Vec<&'static str>,
+}
+
+// Function to check if CNV file has Segment_Mean column
+fn has_segment_mean_column(content: &str) -> bool {
+    for line in content.lines() {
+        // Check if this line contains Segment_Mean (likely the header)
+        if line.contains("Segment_Mean") {
+            return true;
+        }
+        // Stop checking after a few non-comment lines to avoid parsing entire file
+        if !line.trim().is_empty() {
+            break;
+        }
+    }
+    false
 }
 
 // Function to parse TSV content
+// Updated parse_content function with better consequence filtering
 fn parse_content(
     content: &str,
     case_id: &str,
     data_type: &str,
     min_total_depth: i32,
     min_alt_allele_count: i32,
+    consequences: &Option<Vec<String>>,
+    gain_threshold: f32,
+    loss_threshold: f32,
+    seg_length: i32,
 ) -> Result<Vec<Vec<String>>, (String, String, String)> {
+    // Early filter for CNV files - only process files with Segment_Mean
+    if data_type == "cnv" && !has_segment_mean_column(content) {
+        return Ok(Vec::new()); // Return empty result, no error
+    }
+
+    let config = match data_type {
+        "cnv" => DataTypeConfig {
+            header_marker: "Segment_Mean",
+            output_columns: vec!["Chromosome", "Start", "End", "Segment_Mean"],
+        },
+        "maf" => DataTypeConfig {
+            header_marker: "Hugo_Symbol",
+            output_columns: vec!["Chromosome", "Start_Position", "End_Position", "t_depth", "t_alt_count"],
+        },
+        _ => {
+            return Err((
+                case_id.to_string(),
+                data_type.to_string(),
+                "Invalid data type".to_string(),
+            ));
+        }
+    };
+
     let lines = content.lines();
     let mut parsed_data = Vec::new();
     let mut columns_indices: Vec<usize> = Vec::new();
-    let mut header_mk: &str = "";
-    let mut columns = Vec::new();
-
-    if data_type == "cnv" {
-        header_mk = "GDC_Aliquot_ID";
-        columns = vec!["Chromosome", "Start", "End", "Segment_Mean"]
-    } else if data_type == "maf" {
-        header_mk = "Hugo_Symbol";
-        columns = vec!["Chromosome", "Start_Position", "End_Position", "t_depth", "t_alt_count"]
-    };
+    let mut variant_classification_index: Option<usize> = None;
+    //let mut header_mk: &str = "";
+    //let mut columns = Vec::new();
 
     let mut header: Vec<String> = Vec::new();
 
     for line in lines {
         if line.starts_with("#") {
             continue;
-        } else if line.contains(&header_mk) {
+        };
+        if line.contains(config.header_marker) {
             header = line.split("\t").map(|s| s.to_string()).collect();
-            for col in &columns {
-                match header.iter().position(|x| x == col) {
-                    Some(index) => {
-                        columns_indices.push(index);
-                    }
-                    None => {
-                        let error_msg = format!("Column {} was not found", col);
-                        return Err((case_id.to_string(), data_type.to_string(), error_msg));
-                    }
-                }
+            if let Err(err) = setup_columns(
+                &header,
+                &config,
+                &mut columns_indices,
+                &mut variant_classification_index,
+                case_id,
+                data_type,
+            ) {
+                return Err(err);
             }
-        } else {
-            let mut keep_ck: bool = true;
-            let cont_lst: Vec<String> = line.split("\t").map(|s| s.to_string()).collect();
-            let mut out_lst: Vec<String> = Vec::new();
-            out_lst.push(case_id.to_string());
+            continue;
+        };
 
-            for x in columns_indices.iter() {
-                let mut element = cont_lst[*x].to_string();
+        let row = process_row(
+            line,
+            case_id,
+            data_type,
+            &header,
+            &columns_indices,
+            variant_classification_index,
+            consequences,
+            min_total_depth,
+            min_alt_allele_count,
+            gain_threshold,
+            loss_threshold,
+            seg_length,
+        )?;
 
-                if data_type == "cnv" && &header[*x] == "Segment_Mean" {
-                    let seg_mean = match element.parse::<f32>() {
-                        Ok(val) => val,
-                        Err(_e) => {
-                            let error_msg = "Segment_Mean in cnv file is not float".to_string();
-                            return Err((case_id.to_string(), data_type.to_string(), error_msg));
-                        }
-                    };
-                    if seg_mean >= 0.3 {
-                        element = "gain".to_string();
-                    } else if seg_mean <= -0.4 {
-                        element = "loss".to_string();
-                    } else {
-                        keep_ck = false;
-                    }
-                }
-                out_lst.push(element);
-            }
-
-            if data_type == "maf" {
-                let alle_depth = match out_lst[4].parse::<i32>() {
-                    Ok(value) => value,
-                    Err(_) => {
-                        let error_msg = "Failed to convert t_depth to i32.".to_string();
-                        return Err((case_id.to_string(), data_type.to_string(), error_msg));
-                    }
-                };
-                let alt_count = match out_lst[5].parse::<i32>() {
-                    Ok(value) => value,
-                    Err(_) => {
-                        let error_msg = "Failed to convert t_alt_count to i32.".to_string();
-                        return Err((case_id.to_string(), data_type.to_string(), error_msg));
-                    }
-                };
-
-                if alle_depth >= min_total_depth && alt_count >= min_alt_allele_count {
-                    out_lst = out_lst[0..4].to_vec();
-                    out_lst.push("mutation".to_string());
-                } else {
-                    keep_ck = false;
-                }
-            }
-
-            if keep_ck {
-                parsed_data.push(out_lst);
-            }
-        }
+        if let Some(out_lst) = row {
+            parsed_data.push(out_lst);
+        };
     }
 
     if columns_indices.is_empty() {
@@ -189,6 +217,204 @@ fn parse_content(
     Ok(parsed_data)
 }
 
+// Set up column indices for processing
+fn setup_columns(
+    header: &[String],
+    config: &DataTypeConfig,
+    columns_indices: &mut Vec<usize>,
+    variant_classification_index: &mut Option<usize>,
+    case_id: &str,
+    data_type: &str,
+) -> Result<(), (String, String, String)> {
+    for col in &config.output_columns {
+        match header.iter().position(|x| x == col) {
+            Some(index) => columns_indices.push(index),
+            None => {
+                return Err((
+                    case_id.to_string(),
+                    data_type.to_string(),
+                    format!("Column {} was not found", col),
+                ));
+            }
+        }
+    }
+
+    if data_type == "maf" {
+        *variant_classification_index = header.iter().position(|x| x == "Variant_Classification");
+        if variant_classification_index.is_none() {
+            return Err((
+                case_id.to_string(),
+                data_type.to_string(),
+                "Column Variant_Classification was not found".to_string(),
+            ));
+        }
+    }
+
+    Ok(())
+}
+
+// Process a single row of data
+fn process_row(
+    line: &str,
+    case_id: &str,
+    data_type: &str,
+    header: &[String],
+    columns_indices: &[usize],
+    variant_classification_index: Option<usize>,
+    consequences: &Option<Vec<String>>,
+    min_total_depth: i32,
+    min_alt_allele_count: i32,
+    gain_threshold: f32,
+    loss_threshold: f32,
+    seg_length: i32,
+) -> Result<Option<Vec<String>>, (String, String, String)> {
+    let cont_lst: Vec<String> = line.split("\t").map(|s| s.to_string()).collect();
+    let mut out_lst = vec![case_id.to_string()];
+
+    // Check consequence filtering for MAF files
+    if data_type == "maf" && !is_valid_consequence(&cont_lst, variant_classification_index, consequences) {
+        return Ok(None);
+    }
+
+    // Extract relevant columns
+    for &x in columns_indices {
+        if x >= cont_lst.len() {
+            return Ok(None); // Invalid row
+        }
+
+        let mut element = cont_lst[x].to_string();
+        if data_type == "cnv" && header[x] == "Segment_Mean" {
+            element = process_segment_mean(&element, case_id, data_type, gain_threshold, loss_threshold)?;
+            if element.is_empty() {
+                return Ok(None);
+            }
+        }
+        out_lst.push(element);
+    }
+
+    // Additional MAF-specific processing
+    if data_type == "maf" {
+        if out_lst.len() < 6 {
+            return Ok(None); // Not enough columns
+        }
+
+        let alle_depth = out_lst[4].parse::<i32>().map_err(|_| {
+            (
+                case_id.to_string(),
+                data_type.to_string(),
+                "Failed to convert t_depth to integer.".to_string(),
+            )
+        })?;
+
+        let alt_count = out_lst[5].parse::<i32>().map_err(|_| {
+            (
+                case_id.to_string(),
+                data_type.to_string(),
+                "Failed to convert t_alt_count to integer.".to_string(),
+            )
+        })?;
+
+        if alle_depth < min_total_depth || alt_count < min_alt_allele_count {
+            return Ok(None);
+        }
+
+        // Keep case_id, chr, start, end, and add "mutation"
+        out_lst = out_lst[0..4].to_vec();
+        out_lst.push("mutation".to_string());
+    }
+
+    // filter cnvs based on segment length. Default: 2000000
+    if data_type == "cnv" {
+        // calculate segment length (End_Position - Start_Position)
+        let end_position = out_lst[3].parse::<i32>().map_err(|_| {
+            (
+                case_id.to_string(),
+                data_type.to_string(),
+                "Failed to convert End Position of cnv to integer.".to_string(),
+            )
+        })?;
+
+        let start_position = out_lst[2].parse::<i32>().map_err(|_| {
+            (
+                case_id.to_string(),
+                data_type.to_string(),
+                "Failed to convert Start Position of cnv to integer.".to_string(),
+            )
+        })?;
+        let cnv_length = end_position - start_position;
+        if cnv_length > seg_length {
+            return Ok(None);
+        }
+    }
+
+    Ok(Some(out_lst))
+}
+
+// Check if the row meets consequence filtering criteria
+fn is_valid_consequence(
+    cont_lst: &[String],
+    variant_classification_index: Option<usize>,
+    consequences: &Option<Vec<String>>,
+) -> bool {
+    if let Some(consequence_filter) = consequences {
+        if !consequence_filter.is_empty() {
+            if let Some(var_class_idx) = variant_classification_index {
+                if var_class_idx < cont_lst.len() {
+                    let variant_classification = &cont_lst[var_class_idx];
+                    if let Some(normalized_consequence) = normalize_consequence(variant_classification) {
+                        return consequence_filter.contains(&normalized_consequence);
+                    }
+                }
+                return false; // Invalid row or unknown consequence
+            }
+        }
+    }
+    true // No filtering or empty filter
+}
+
+// Process Segment_Mean for CNV files
+fn process_segment_mean(
+    element: &str,
+    case_id: &str,
+    data_type: &str,
+    gain_threshold: f32,
+    loss_threshold: f32,
+) -> Result<String, (String, String, String)> {
+    let seg_mean = element.parse::<f32>().map_err(|_| {
+        (
+            case_id.to_string(),
+            data_type.to_string(),
+            "Segment_Mean in cnv file is not float".to_string(),
+        )
+    })?;
+
+    if seg_mean >= gain_threshold {
+        Ok("gain".to_string())
+    } else if seg_mean <= loss_threshold {
+        Ok("loss".to_string())
+    } else {
+        Ok(String::new())
+    }
+}
+
+/// Updated helper function to normalize MAF consequence types to frontend format
+/// Returns None for unknown consequence types (which will be filtered out)
+fn normalize_consequence(maf_consequence: &str) -> Option<String> {
+    match maf_consequence.to_lowercase().as_str() {
+        // Only map the consequence types we actually support
+        "missense_mutation" => Some("missense".to_string()),
+        "nonsense_mutation" | "stop_gained" | "stop_lost" => Some("nonsense".to_string()),
+        "frame_shift_del" | "frame_shift_ins" | "frameshift_variant" => Some("frameshift".to_string()),
+        "silent" | "synonymous_variant" => Some("silent".to_string()),
+        "in_frame_del" => Some("deletion".to_string()),
+        "in_frame_ins" => Some("insertion".to_string()),
+        "splice_site" | "splice_acceptor_variant" | "splice_donor_variant" => Some("splice_site".to_string()),
+        "tandem_duplication" | "duplication" => Some("duplication".to_string()),
+        "inversion" => Some("inversion".to_string()),
+        // Return None for all unknown consequence types - they will be filtered out
+        _ => None,
+    }
+}
 /// Downloads a single file with minimal retry logic for transient failures
 async fn download_single_file(
     case_id: String,
@@ -291,14 +517,19 @@ async fn download_single_file(
     ))
 }
 
-/// Main download function with structured JSON output including errors
-async fn download_data(
+/// NEW: Phase 1 streaming download function
+/// Outputs JSONL format: one JSON object per line
+/// Node.js will read this line-by-line but still wait for completion
+async fn download_data_streaming(
     data4dl: HashMap<String, DataType>,
     host: &str,
     min_total_depth: i32,
     min_alt_allele_count: i32,
+    consequences: &Option<Vec<String>>,
+    gain_threshold: f32,
+    loss_threshold: f32,
+    seg_length: i32,
 ) {
-    // Generate URLs from data4dl, handling optional cnv and maf
     let data_urls: Vec<(String, String, String)> = data4dl
         .into_iter()
         .flat_map(|(case_id, data_types)| {
@@ -315,42 +546,63 @@ async fn download_data(
 
     let total_files = data_urls.len();
 
-    // Use atomic counters that can be safely shared across async closures
+    // Counters for final summary
     let successful_downloads = Arc::new(AtomicUsize::new(0));
     let failed_downloads = Arc::new(AtomicUsize::new(0));
 
-    // Create shared vectors to collect successful data and errors
-    let successful_data = Arc::new(Mutex::new(Vec::<Vec<Vec<String>>>::new()));
+    // Only collect errors (successful data is output immediately)
     let errors = Arc::new(Mutex::new(Vec::<ErrorEntry>::new()));
 
-    // Create download futures with smart retry logic
-    let download_futures = futures::stream::iter(data_urls.into_iter().map(|(case_id, data_type, url)| {
-        async move {
-            // Try each file up to 2 times for transient failures
-            download_single_file(case_id, data_type, url, 2).await
-        }
-    }));
+    let download_futures = futures::stream::iter(
+        data_urls
+            .into_iter()
+            .map(|(case_id, data_type, url)| async move { download_single_file(case_id, data_type, url, 2).await }),
+    );
 
-    // Execute downloads concurrently with high concurrency for speed
+    // Process downloads and output results immediately as JSONL
     download_futures
-        .buffer_unordered(15) // Increased to 15 concurrent downloads for speed
+        .buffer_unordered(20) // Increased concurrency for better performance
         .for_each(|download_result| {
             let successful_downloads = Arc::clone(&successful_downloads);
             let failed_downloads = Arc::clone(&failed_downloads);
-            let successful_data = Arc::clone(&successful_data);
             let errors = Arc::clone(&errors);
 
             async move {
                 match download_result {
                     Ok((case_id, data_type, content)) => {
-                        // Successfully downloaded, now try to parse
-                        match parse_content(&content, &case_id, &data_type, min_total_depth, min_alt_allele_count) {
+                        // Try to parse the content
+                        match parse_content(
+                            &content,
+                            &case_id,
+                            &data_type,
+                            min_total_depth,
+                            min_alt_allele_count,
+                            &consequences,
+                            gain_threshold,
+                            loss_threshold,
+                            seg_length,
+                        ) {
                             Ok(parsed_data) => {
-                                // Store successful data
-                                successful_data.lock().await.push(parsed_data);
+                                // SUCCESS: Output immediately as JSONL
+                                let success_output = SuccessfulFileOutput {
+                                    output_type: "data".to_string(),
+                                    case_id: case_id.clone(),
+                                    data_type: data_type.clone(),
+                                    data: parsed_data,
+                                };
+
+                                // Output this successful result immediately - Node.js will see this in real-time
+                                if let Ok(json) = serde_json::to_string(&success_output) {
+                                    println!("{}", json); // IMMEDIATE output to stdout
+                                    // Force flush to ensure Node.js sees it immediately
+                                    use std::io::Write;
+                                    let _ = std::io::stdout().flush();
+                                }
+
                                 successful_downloads.fetch_add(1, Ordering::Relaxed);
                             }
                             Err((cid, dtp, error)) => {
+                                // Parsing failed - add to errors
                                 failed_downloads.fetch_add(1, Ordering::Relaxed);
                                 let error = ErrorEntry {
                                     case_id: cid,
@@ -364,9 +616,9 @@ async fn download_data(
                         }
                     }
                     Err((case_id, data_type, error_details, attempts)) => {
+                        // Download failed - add to errors
                         failed_downloads.fetch_add(1, Ordering::Relaxed);
 
-                        // Parse error type from error details
                         let (error_type, clean_details) = if error_details.contains(":") {
                             let parts: Vec<&str> = error_details.splitn(2, ": ").collect();
                             (parts[0].to_string(), parts[1].to_string())
@@ -388,27 +640,23 @@ async fn download_data(
         })
         .await;
 
-    // Create final output structure
+    // Output final summary as the last line
     let success_count = successful_downloads.load(Ordering::Relaxed);
     let failed_count = failed_downloads.load(Ordering::Relaxed);
 
-    let output = GdcOutput {
-        successful_data: successful_data.lock().await.clone(),
-        failed_files: errors.lock().await.clone(),
-        summary: OutputSummary {
-            total_files,
-            successful_files: success_count,
-            failed_files: failed_count,
-        },
+    let summary = FinalSummary {
+        output_type: "summary".to_string(),
+        total_files,
+        successful_files: success_count,
+        failed_files: failed_count,
+        errors: errors.lock().await.clone(),
     };
 
-    // Output the complete structure as JSON
-    match serde_json::to_string(&output) {
-        Ok(json) => println!("{}", json),
-        Err(_) => {
-            // Silent failure - exit without stderr
-            std::process::exit(1);
-        }
+    // Output final summary - Node.js will know processing is complete when it sees this
+    if let Ok(json) = serde_json::to_string(&summary) {
+        println!("{}", json);
+        use std::io::Write;
+        let _ = std::io::stdout().flush();
     }
 }
 
@@ -455,13 +703,34 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let case_files = input_js.case_files;
 
     // Set default maf_options
-    let (min_total_depth, min_alt_allele_count) = match input_js.maf_options {
-        Some(options) => (options.min_total_depth, options.min_alt_allele_count),
-        None => (10, 2), // Default values
+    let (min_total_depth, min_alt_allele_count, consequences) = match input_js.maf_options {
+        Some(options) => (
+            options.min_total_depth,
+            options.min_alt_allele_count,
+            options.consequences.clone(),
+        ),
+        None => (10, 2, None), // Default values
+    };
+
+    // Set default cnv_options
+    let (gain_threshold, loss_threshold, seg_length) = match input_js.cnv_options {
+        Some(options) => (options.gain_threshold, options.loss_threshold, options.seg_length),
+        None => (0.3, -0.4, 2000000), // Default values
     };
 
     // Download data - this will now handle errors gracefully
-    download_data(case_files, HOST, min_total_depth, min_alt_allele_count).await;
+    // download_data(case_files, HOST, min_total_depth, min_alt_allele_count, &consequences).await;
+    download_data_streaming(
+        case_files,
+        HOST,
+        min_total_depth,
+        min_alt_allele_count,
+        &consequences,
+        gain_threshold,
+        loss_threshold,
+        seg_length,
+    )
+    .await;
 
     // Always exit successfully - individual file failures are logged but don't stop the process
     Ok(())

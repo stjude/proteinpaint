@@ -1,12 +1,14 @@
 import type { RunGRIN2Request, RunGRIN2Response, RouteApi } from '#types'
 import { runGRIN2Payload } from '#types/checkers'
-import { run_rust } from '@sjcrh/proteinpaint-rust'
+import { stream_rust } from '@sjcrh/proteinpaint-rust'
 import { run_R } from '@sjcrh/proteinpaint-r'
 import serverconfig from '#src/serverconfig.js'
 import path from 'path'
+import { formatElapsedTime } from '@sjcrh/proteinpaint-shared/time.js'
+
 /**
  * Route to run GRIN2 analysis:
- * 1. Call Rust to process MAF files and get JSON data
+ * 1. Call Rust to process MAF & CNV files and get JSON data (now with streaming)
  * 2. Pipe the JSON to R script to generate a plot
  * 3. Return the plot image to client
  */
@@ -26,6 +28,60 @@ export const api: RouteApi = {
 }
 
 /**
+ * Parse JSONL output from stream_rust
+ * Converts streaming JSONL format to the same structure as run_rust
+ */
+function parseJsonlOutput(rustOutput: string): any {
+	const lines = rustOutput.trim().split('\n')
+	const allSuccessfulData: any[] = []
+	let finalSummary: any = null
+	// let processedFiles = 0
+
+	for (const line of lines) {
+		const trimmedLine = line.trim()
+		if (trimmedLine) {
+			try {
+				const data = JSON.parse(trimmedLine)
+
+				if (data.type === 'data') {
+					// Individual file completed successfully
+					// processedFiles++
+					allSuccessfulData.push(data.data)
+					// console.log(
+					// 	`[GRIN2] Processed file ${processedFiles}: ${data.case_id} (${data.data_type}) - ${data.data.length} records`
+					// )
+				} else if (data.type === 'summary') {
+					// Final summary - all files processed
+					finalSummary = data
+					console.log(`[GRIN2] Download complete: ${data.successful_files}/${data.total_files} files successful`)
+					if (data.failed_files > 0) {
+						console.log(`[GRIN2] ${data.failed_files} files failed`)
+					}
+				}
+			} catch (parseError) {
+				console.error('[GRIN2] JSONL parse error:', parseError)
+				console.error('[GRIN2] Problematic line:', trimmedLine)
+			}
+		}
+	}
+
+	if (!finalSummary) {
+		throw new Error('No summary found in Rust output')
+	}
+
+	// Return same format as the original run_rust result
+	return {
+		successful_data: allSuccessfulData,
+		failed_files: finalSummary.errors || [],
+		summary: {
+			total_files: finalSummary.total_files,
+			successful_files: finalSummary.successful_files,
+			failed_files: finalSummary.failed_files
+		}
+	}
+}
+
+/**
  * Main GRIN2 analysis handler
  * Processes MAF files through Rust and generates plots via R
  *
@@ -34,7 +90,7 @@ export const api: RouteApi = {
  *
  * Data Flow:
  * 1. Extract caseFiles from req.query (already parsed by middleware)
- * 2. Pass caseFiles and mafOptions to Rust for mutation processing
+ * 2. Pass caseFiles and mafOptions to Rust for mutation processing (now streaming)
  * 3. Parse Rust output to get mutation data and summary of files
  * 3. Pass Rust mutation output to R for plot generation while we send the file summary to the div for downloaded files
  * 4. Return generated PNG as base64 string and the top gene table as JSON
@@ -53,32 +109,78 @@ function init({ genomes }) {
 			const parsedRequest = req.query as RunGRIN2Request
 			console.log(`[GRIN2] Parsed request: ${JSON.stringify(parsedRequest)}`)
 
-			// Step 1: Call Rust to process the MAF files and get JSON data
-			console.log('[GRIN2] Calling Rust for file processing...')
-
+			// Step 1: Call Rust to process the MAF files and get JSON data (now with streaming)
 			const rustInput = JSON.stringify({
 				caseFiles: parsedRequest.caseFiles,
 				mafOptions: parsedRequest.mafOptions
 			})
-			// console.log(`[GRIN2] Rust input: ${rustInput}`)
 
-			// Call the Rust implementation and get JSON result
-			console.log('[GRIN2] Executing Rust function...')
-			const rustResult = await run_rust('gdcGRIN2', rustInput)
+			// NEW: Use stream_rust instead of run_rust
+			console.log('[GRIN2] Executing Rust function with streaming...')
+
+			// Collect output from stream_rust
+			let rustOutput = ''
+			let buffer = '' // For incomplete lines
+
+			const downloadStartTime = Date.now()
+			const streamResult = stream_rust('gdcGRIN2', rustInput, errors => {
+				if (errors) {
+					throw new Error(`Rust process failed: ${errors}`)
+				}
+			})
+
+			if (!streamResult) {
+				throw new Error('Failed to start Rust streaming process')
+			}
+
+			// Collect all chunks from the stream
+			for await (const chunk of streamResult.rustStream) {
+				const chunkStr = chunk.toString()
+				rustOutput += chunkStr
+				buffer += chunkStr
+
+				// Process complete lines to check for summary
+				const lines = buffer.split('\n')
+				buffer = lines.pop() || ''
+
+				for (const line of lines) {
+					const trimmedLine = line.trim()
+					if (trimmedLine) {
+						try {
+							const data = JSON.parse(trimmedLine)
+
+							if (data.type === 'summary') {
+								// Only log the final summary
+								console.log(`[GRIN2] Download complete: ${data.successful_files}/${data.total_files} files successful`)
+
+								if (data.failed_files > 0) {
+									console.log(`[GRIN2] ${data.failed_files} files failed`)
+								}
+							}
+						} catch (_parseError) {
+							// Ignore parse errors during real-time processing
+						}
+					}
+				}
+			}
+
 			console.log('[GRIN2] Rust execution completed')
+			const downloadTime = formatElapsedTime(Date.now() - downloadStartTime)
+			console.log(`[GRIN2] Rust processing took ${downloadTime}`)
+
+			// Parse the JSONL output
+			const rustResult = parseJsonlOutput(rustOutput)
 
 			// Check if Rust execution was successful
 			if (!rustResult) {
 				throw new Error('Failed to process MAF files: No result from Rust')
 			}
 
-			// Parse the rustResult if it's a string
-			let parsedRustResult
+			// Process the rustResult (same logic as before, but rustResult is already parsed)
+			const parsedRustResult = rustResult
 			let dataForR: any[] = []
-			try {
-				parsedRustResult = typeof rustResult === 'string' ? JSON.parse(rustResult) : rustResult
-				console.log(`[GRIN2] Parsed Rust result structure received`)
 
+			try {
 				// Extract only successful data for R script
 				if (parsedRustResult.successful_data && Array.isArray(parsedRustResult.successful_data)) {
 					dataForR = parsedRustResult.successful_data.flat()
@@ -91,11 +193,11 @@ function init({ genomes }) {
 					dataForR = []
 				}
 			} catch (parseError) {
-				console.error('[GRIN2] Error parsing Rust result:', parseError)
+				console.error('[GRIN2] Error processing Rust result:', parseError)
 				dataForR = []
 			}
 
-			// Step 2: Call R script to generate the plot
+			// Step 2: Call R script to generate the plot (unchanged)
 
 			// Prepare the path to the gene database file
 			const genedbfile = path.join(serverconfig.tpmasterdir, g.genedb.dbfile)
@@ -111,12 +213,15 @@ function init({ genomes }) {
 				lesion: dataForR // The mutation string from Rust
 			})
 
-			console.log(`R input: ${rInput}`)
+			// console.log(`R input: ${rInput}`)
 
 			// Call the R script
 			console.log('[GRIN2] Executing R script...')
+			const rAnalysisTime = Date.now()
 			const rResult = await run_R('gdcGRIN2.R', rInput, [])
-			console.log(`[GRIN2] R execution completed, result: ${rResult}`)
+			// console.log(`[GRIN2] R execution completed, result: ${rResult}`)
+			console.log('[GRIN2] R execution completed')
+			console.log(`[GRIN2] R analysis took ${formatElapsedTime(Date.now() - rAnalysisTime)}`)
 
 			// Parse R result to get image or check for errors
 			let resultData
@@ -125,10 +230,11 @@ function init({ genomes }) {
 				console.log('[GRIN2] Finished R analysis')
 				const pngImg = resultData.png[0]
 				const topGeneTable = resultData.topGeneTable || null
+				console.log('[GRIN2] Total GRIN2 processing time:', formatElapsedTime(Date.now() - downloadStartTime))
 				return res.json({ pngImg, topGeneTable, rustResult: parsedRustResult, status: 'success' })
 			} catch (parseError) {
 				console.error('[GRIN2] Error parsing R result:', parseError)
-				console.log('[GRIN2] Raw R result:', rResult)
+				// console.log('[GRIN2] Raw R result:', rResult)
 			}
 		} catch (e: any) {
 			console.error('[GRIN2] Error running analysis:', e)

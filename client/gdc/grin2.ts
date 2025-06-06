@@ -1,9 +1,151 @@
 import { dofetch3 } from '#common/dofetch'
-import { make_radios, renderTable, sayerror, Menu, table2col } from '#dom'
+import { renderTable, sayerror } from '#dom'
 import { select } from 'd3-selection'
 import { formatElapsedTime } from '@sjcrh/proteinpaint-shared/time.js'
 import type { GdcGRIN2listRequest } from '#types'
-import * as d3 from 'd3'
+import { mclass } from '@sjcrh/proteinpaint-shared/common.js'
+import { bplen } from '@sjcrh/proteinpaint-shared/common.js'
+
+/**
+ * Maps mclass constants to user-friendly mutation type names
+ * Based on the mclass keys you provided
+ */
+interface MutationType {
+	mclassKey: string
+	mclassValue: string | number
+	displayName: string
+	description: string
+	category: 'coding' | 'structural' | 'noncoding'
+}
+
+/**
+ * Generates mutation types from mclass constants
+ * Filters for relevant MAF mutation types only
+ */
+function generateMutationTypesFromMclass(): MutationType[] {
+	// Create reverse lookup: value -> key
+	const mclassReverse: { [value: string]: string } = {}
+	Object.entries(mclass).forEach(([key, value]) => {
+		mclassReverse[String(value)] = key
+	})
+
+	// Define the relevant MAF mutation types with their mclass mappings
+	const relevantMutationTypes: MutationType[] = [
+		{
+			mclassKey: mclassReverse['M'] || '0',
+			mclassValue: 'M',
+			displayName: 'Missense',
+			description: 'Single nucleotide change resulting in amino acid substitution',
+			category: 'coding'
+		},
+		{
+			mclassKey: mclassReverse['N'] || '3',
+			mclassValue: 'N',
+			displayName: 'Nonsense',
+			description: 'Premature stop codon introduction',
+			category: 'coding'
+		},
+		{
+			mclassKey: mclassReverse['F'] || '2',
+			mclassValue: 'F',
+			displayName: 'Frameshift',
+			description: 'Insertion/deletion causing reading frame shift',
+			category: 'coding'
+		},
+		{
+			mclassKey: mclassReverse['D'] || '5',
+			mclassValue: 'D',
+			displayName: 'Deletion',
+			description: 'In-frame deletion',
+			category: 'coding'
+		},
+		{
+			mclassKey: mclassReverse['I'] || '6',
+			mclassValue: 'I',
+			displayName: 'Insertion',
+			description: 'In-frame insertion',
+			category: 'coding'
+		},
+		{
+			mclassKey: mclassReverse['S'] || '4',
+			mclassValue: 'S',
+			displayName: 'Silent',
+			description: 'Synonymous mutation (no amino acid change)',
+			category: 'coding'
+		},
+		{
+			mclassKey: mclassReverse['ProteinAltering'] || '7',
+			mclassValue: 'ProteinAltering',
+			displayName: 'Protein Altering',
+			description: 'Mutations that alter protein sequence',
+			category: 'coding'
+		},
+		{
+			mclassKey: mclassReverse['ITD'] || '13',
+			mclassValue: 'ITD',
+			displayName: 'Internal Tandem Duplication',
+			description: 'Tandem duplication within gene',
+			category: 'structural'
+		}
+	]
+
+	// Filter out any that don't exist in the current mclass
+	return relevantMutationTypes.filter(type => {
+		const exists = Object.values(mclass).some(m => m.key === type.mclassValue)
+		if (!exists) {
+			console.warn(`Mutation type ${type.displayName} (${type.mclassValue}) not found in mclass`)
+		}
+		return exists
+	})
+}
+
+/**
+ * Gets just the display names for backward compatibility
+ */
+function getMutationTypeNames(): string[] {
+	return generateMutationTypesFromMclass().map(type => type.displayName.toLowerCase())
+}
+
+/**
+ * Gets mutation types grouped by category
+ */
+function getMutationTypesByCategory(): { [category: string]: MutationType[] } {
+	const allTypes = generateMutationTypesFromMclass()
+
+	return allTypes.reduce((groups, type) => {
+		if (!groups[type.category]) {
+			groups[type.category] = []
+		}
+		groups[type.category].push(type)
+		return groups
+	}, {} as { [category: string]: MutationType[] })
+}
+
+/**
+ * Gets the mclass constant for a given mutation type name
+ */
+function getMclassConstant(mutationTypeName: string): string | number | null {
+	const types = generateMutationTypesFromMclass()
+	const found = types.find(type => type.displayName.toLowerCase() === mutationTypeName.toLowerCase())
+	return found ? found.mclassValue : null
+}
+
+/**
+ * Validates if a mutation type is supported
+ */
+function isValidMutationType(mutationTypeName: string): boolean {
+	return getMclassConstant(mutationTypeName) !== null
+}
+
+// Export the functions
+export {
+	generateMutationTypesFromMclass,
+	getMutationTypeNames,
+	getMutationTypesByCategory,
+	getMclassConstant,
+	isValidMutationType,
+	type MutationType
+}
 
 /*
 a UI to list open-access maf and cnv files from current cohort
@@ -15,13 +157,12 @@ and display the resulting visualization
  * Function to show the deduplication popup
  * Pass your deduplication stats that include the console.log data
  */
-function showDeduplicationPopup(deduplicationStats) {
+function gdcGrin2ShowDeduplicationPopup(deduplicationStats) {
 	// Remove any existing popup
-	d3.select('.deduplication-popup').remove()
+	select('.deduplication-popup').remove()
 
 	// Create popup overlay
-	const popup = d3
-		.select('body')
+	const popup = select('body')
 		.append('div')
 		.attr('class', 'deduplication-popup')
 		.style('position', 'fixed')
@@ -111,9 +252,9 @@ function showDeduplicationPopup(deduplicationStats) {
 				.style('font-size', '14px')
 				.style('color', '#333')
 				.html(
-					`<strong>Case ${caseInfo.caseName}:</strong> Found ${
-						caseInfo.fileCount
-					} MAF files, keeping largest (${formatBytes(caseInfo.keptFileSize)})`
+					`<strong>Case ${caseInfo.caseName}:</strong> Found ${caseInfo.fileCount} MAF files, keeping largest (${bplen(
+						caseInfo.keptFileSize
+					)})`
 				)
 		})
 	}
@@ -139,9 +280,7 @@ function showDeduplicationPopup(deduplicationStats) {
 			.style('margin', '0 0 16px 0')
 			.style('font-size', '14px')
 			.style('color', '#666')
-			.text(
-				`${deduplicationStats.filteredFiles.length} files were excluded for being too large (>${formatBytes(1000000)})`
-			)
+			.text(`${deduplicationStats.filteredFiles.length} files were excluded for being too large (>${bplen(1000000)})`)
 
 		deduplicationStats.filteredFiles.forEach(fileInfo => {
 			const fileDiv = content
@@ -163,7 +302,7 @@ function showDeduplicationPopup(deduplicationStats) {
 				.append('div')
 				.style('font-size', '12px')
 				.style('color', '#666')
-				.text(`Size: ${formatBytes(fileInfo.fileSize)} - ${fileInfo.reason}`)
+				.text(`Size: ${bplen(fileInfo.fileSize)} - ${fileInfo.reason}`)
 		})
 	}
 
@@ -216,35 +355,24 @@ function showDeduplicationPopup(deduplicationStats) {
 	})
 
 	// Close with Escape key
-	d3.select('body').on('keydown.popup', function (event) {
+	select('body').on('keydown.popup', function (event) {
 		if (event.key === 'Escape') {
 			popup.remove()
-			d3.select('body').on('keydown.popup', null)
+			select('body').on('keydown.popup', null)
 		}
 	})
-}
-/**
- * Helper function to format bytes
- */
-function formatBytes(bytes) {
-	if (bytes === 0) return '0 Bytes'
-	const k = 1024
-	const sizes = ['Bytes', 'KB', 'MB', 'GB']
-	const i = Math.floor(Math.log(bytes) / Math.log(k))
-	return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
 }
 
 /**
  * Function to show the failed files popup
  * Similar to deduplication popup but for download failures
  */
-function showFailedFilesPopup(failedFilesData) {
+function gdcGrin2ShowFailedFilesPopup(failedFilesData) {
 	// Remove any existing popup
-	d3.select('.failed-files-popup').remove()
+	select('.failed-files-popup').remove()
 
 	// Create popup overlay
-	const popup = d3
-		.select('body')
+	const popup = select('body')
 		.append('div')
 		.attr('class', 'failed-files-popup')
 		.style('position', 'fixed')
@@ -418,10 +546,10 @@ function showFailedFilesPopup(failedFilesData) {
 	})
 
 	// Close with Escape key
-	d3.select('body').on('keydown.failed-popup', function (event) {
+	select('body').on('keydown.failed-popup', function (event) {
 		if (event.key === 'Escape') {
 			popup.remove()
-			d3.select('body').on('keydown.failed-popup', null)
+			select('body').on('keydown.failed-popup', null)
 		}
 	})
 }
@@ -433,21 +561,11 @@ interface TableRowItem {
 	value?: any
 }
 
-const tip = new Menu()
-
-// list of columns to show in MAF file table
-const tableColumns = [
-	{ label: 'Case', sortable: true },
-	{ label: 'Project', sortable: true },
-	{ label: 'Samples' },
-	{ label: 'File Size', barplot: { tickFormat: '~s' }, sortable: true }
-]
-
-// list of data type options
+// List of data type options
 const datatypeOptions = [
 	{ option: 'mafOption', selected: true, label: 'Include Mutation' },
-	{ option: 'cnvOption', selected: true, label: 'Include CNV' },
-	{ option: 'fusionOption', selected: true, label: 'Include Fusion' }
+	{ option: 'cnvOption', selected: false, label: 'Include CNV' },
+	{ option: 'fusionOption', selected: false, label: 'Include Fusion' }
 ]
 
 export async function gdcGRIN2ui({ holder, filter0, callbacks, debugmode = false }) {
@@ -499,225 +617,812 @@ export async function gdcGRIN2ui({ holder, filter0, callbacks, debugmode = false
 }
 
 function makeControls(obj) {
-	let clickText
-	function updateText() {
-		clickText.text(
-			`${datatypeOptions.reduce((c, i) => c + (i.selected ? 1 : 0), 0)} of ${
-				datatypeOptions.length
-			} options selected. Click to change`
-		)
-	}
-	const table = table2col({ holder: obj.controlDiv })
-	table.addRow('Data Access', 'Open')
-	table.addRow('Workflow Type', 'Aliquot Ensemble Somatic Variant Merging and Masking')
-	{
-		const [, td2] = table.addRow('Experimental Strategy')
-		obj.expStrategyRadio = make_radios({
-			holder: td2,
-			options: [{ label: 'WXS', value: 'WXS', checked: obj.opts.experimentalStrategy == 'WXS' }],
-			styles: { display: 'inline' },
-			callback: async value => {
-				obj.opts.experimentalStrategy = value
-				await getFilesAndShowTable(obj)
-			}
-		})
-	}
-
-	{
-		const [, td2] = table.addRow('Data Type Options')
-		clickText = td2
-			.append('span')
-			.attr('class', 'sja_clbtext')
-			.on('click', event => {
-				const rows: TableRowItem[][] = []
-				const selectedRows: number[] = []
-				for (const [i, c] of datatypeOptions.entries()) {
-					rows.push([{ value: c.label }])
-					if (c.selected) selectedRows.push(i)
-				}
-				renderTable({
-					div: tip.clear().showunder(event.target).d,
-					rows,
-					columns: [{ label: 'Data types' }],
-					selectedRows,
-					noButtonCallback: (i, n) => {
-						datatypeOptions[i].selected = n.checked
-						updateText()
-					}
-				})
-			})
-
-		updateText()
-	}
-	// Add MAF filtering options to the controls table
-	{
-		const [, td2] = table.addRow('MAF Filtering Options')
-
-		// Create container for the MAF options
-		const mafOptionsDiv = td2.append('div').style('display', 'inline-block')
-
-		// Min Total Depth input
-		mafOptionsDiv.append('label').style('margin-right', '10px').style('font-size', '14px').text('Min Total Depth:')
-
-		mafOptionsDiv
-			.append('input')
-			.attr('type', 'number')
-			.attr('min', '0')
-			.attr('step', '1')
-			.attr('value', obj.mafOptions?.minTotalDepth || 10)
-			.style('width', '60px')
-			.style('margin-right', '20px')
-			.style('padding', '2px 4px')
-			.style('border', '1px solid #ccc')
-			.style('border-radius', '3px')
-			.on('input', function (this: HTMLInputElement) {
-				const value = parseInt(this.value, 10)
-				if (!isNaN(value) && value >= 0) {
-					obj.mafOptions.minTotalDepth = value
-				}
-			})
-
-		// Min Alt Allele Count input
-		mafOptionsDiv.append('label').style('margin-right', '10px').style('font-size', '14px').text('Min Alt Allele Count:')
-
-		mafOptionsDiv
-			.append('input')
-			.attr('type', 'number')
-			.attr('min', '0')
-			.attr('step', '1')
-			.attr('value', obj.mafOptions?.minAltAlleleCount || 2)
-			.style('width', '60px')
-			.style('padding', '2px 4px')
-			.style('border', '1px solid #ccc')
-			.style('border-radius', '3px')
-			.on('input', function (this: HTMLInputElement) {
-				const value = parseInt(this.value, 10)
-				if (!isNaN(value) && value >= 0) {
-					obj.mafOptions.minAltAlleleCount = value
-				}
-			})
-
-		// Add help tooltip
-		mafOptionsDiv
-			.append('span')
-			.attr('class', 'sja_clbtext')
-			.style('margin-left', '10px')
-			.style('font-size', '12px')
-			.style('color', '#666')
-			.text('ⓘ')
-			.attr(
-				'title',
-				'Min Total Depth: Minimum read depth required\nMin Alt Allele Count: Minimum alternate allele count required'
-			)
-	}
-
-	// Initialize mafOptions if not exists
+	// Initialize options objects with mclass-aware defaults
 	if (!obj.mafOptions) {
+		// Get available mutation types from mclass
+		const availableMutationTypes = getMutationTypeNames()
+
+		// Set smart defaults - prefer common coding mutations if available
+		const preferredDefaults = ['missense', 'nonsense', 'frameshift']
+		const defaultConsequences = preferredDefaults.filter(type => availableMutationTypes.includes(type))
+
+		// If none of the preferred defaults are available, use the first few available
+		if (defaultConsequences.length === 0) {
+			defaultConsequences.push(...availableMutationTypes.slice(0, 3))
+		}
+
 		obj.mafOptions = {
 			minTotalDepth: 10,
-			minAltAlleleCount: 2
+			minAltAlleleCount: 2,
+			consequences: defaultConsequences, // Dynamic defaults from mclass
+			hypermutatorMaxCutoff: 8000
 		}
-	}
 
-	// Add CNV filtering options to the controls table
-	{
-		const [, td2] = table.addRow('CNV Filtering Options')
-
-		// Create container for the CNV options
-		const cnvOptionsDiv = td2.append('div').style('display', 'inline-block')
-
-		// Loss Threshold input
-		cnvOptionsDiv.append('label').style('margin-right', '10px').style('font-size', '14px').text('Loss Threshold:')
-
-		cnvOptionsDiv
-			.append('input')
-			.attr('type', 'number')
-			.attr('min', '-10')
-			.attr('max', '0')
-			.attr('step', '0.1')
-			.attr('value', obj.cnvOptions?.lossThreshold || -0.5)
-			.style('width', '70px')
-			.style('margin-right', '20px')
-			.style('padding', '2px 4px')
-			.style('border', '1px solid #ccc')
-			.style('border-radius', '3px')
-			.on('input', function (this: HTMLInputElement) {
-				const value = parseFloat(this.value)
-				if (!isNaN(value) && value <= 0) {
-					obj.cnvOptions.lossThreshold = value
-				}
-			})
-
-		// Gain Threshold input
-		cnvOptionsDiv.append('label').style('margin-right', '10px').style('font-size', '14px').text('Gain Threshold:')
-
-		cnvOptionsDiv
-			.append('input')
-			.attr('type', 'number')
-			.attr('min', '0')
-			.attr('max', '10')
-			.attr('step', '0.1')
-			.attr('value', obj.cnvOptions?.gainThreshold || 0.5)
-			.style('width', '70px')
-			.style('margin-right', '20px')
-			.style('padding', '2px 4px')
-			.style('border', '1px solid #ccc')
-			.style('border-radius', '3px')
-			.on('input', function (this: HTMLInputElement) {
-				const value = parseFloat(this.value)
-				if (!isNaN(value) && value >= 0) {
-					obj.cnvOptions.gainThreshold = value
-				}
-			})
-
-		// Segment Length Cutoff input
-		cnvOptionsDiv
-			.append('label')
-			.style('margin-right', '10px')
-			.style('font-size', '14px')
-			.text('Segment Length Cutoff:')
-
-		cnvOptionsDiv
-			.append('input')
-			.attr('type', 'number')
-			.attr('min', '0')
-			.attr('max', '2000000')
-			.attr('step', '1')
-			.attr('value', obj.cnvOptions?.segLength || 2000000)
-			.style('width', '80px')
-			.style('padding', '2px 4px')
-			.style('border', '1px solid #ccc')
-			.style('border-radius', '3px')
-			.on('input', function (this: HTMLInputElement) {
-				const value = parseFloat(this.value)
-				if (!isNaN(value) && value >= 0) {
-					obj.cnvOptions.segLength = value
-				}
-			})
-
-		// Add help tooltip for CNV options
-		cnvOptionsDiv
-			.append('span')
-			.attr('class', 'sja_clbtext')
-			.style('margin-left', '10px')
-			.style('font-size', '12px')
-			.style('color', '#666')
-			.text('ⓘ')
-			.attr(
-				'title',
-				'Loss Threshold: Log2 ratio threshold for copy number loss (negative values)\n' +
-					'Gain Threshold: Log2 ratio threshold for copy number gain (positive values)\n' +
-					'Segment Length: Limit the CNV segment length to show only focal events.\nCNV segment size limit is 2000,000 bp'
-			)
+		console.log('Initialized MAF options with mclass-based consequences:', obj.mafOptions.consequences)
 	}
 
 	if (!obj.cnvOptions) {
 		obj.cnvOptions = {
 			lossThreshold: -0.4,
 			gainThreshold: 0.3,
-			segLength: 2000000 // Default segment length cutoff
+			segLength: 2000000
 		}
 	}
+
+	// Initialize checkbox states - MAF and CNV checked by default
+	obj.dataTypeStates = {
+		maf: true,
+		cnv: true,
+		fusion: false
+	}
+
+	// Create the main 2-column, 4-row table for data type options
+	const optionsTable = obj.controlDiv
+		.append('table')
+		.style('width', 'auto')
+		.style('border-collapse', 'collapse')
+		.style('margin-top', '10px')
+		.style('border', '1px solid #ddd')
+
+	// Create table header
+	const headerRow = optionsTable.append('tr')
+
+	headerRow
+		.append('th')
+		.style('width', '200px')
+		.style('padding', '12px')
+		.style('background-color', '#f8f9fa')
+		.style('border', '1px solid #ddd')
+		.style('font-weight', 'bold')
+		.style('text-align', 'left')
+		.text('Data Type')
+
+	headerRow
+		.append('th')
+		.style('padding', '12px')
+		.style('background-color', '#f8f9fa')
+		.style('border', '1px solid #ddd')
+		.style('font-weight', 'bold')
+		.style('text-align', 'left')
+		.text('Options')
+
+	// Row 1: MAF (checked by default, shows all the MAF-related options)
+	const mafRow = optionsTable.append('tr')
+
+	const mafCheckboxCell = mafRow
+		.append('td')
+		.style('padding', '12px')
+		.style('border', '1px solid #ddd')
+		.style('vertical-align', 'top')
+
+	// MAF checkbox and label
+	const mafCheckboxContainer = mafCheckboxCell
+		.append('div')
+		.style('display', 'flex')
+		.style('align-items', 'center')
+		.style('gap', '8px')
+
+	const mafCheckbox = mafCheckboxContainer
+		.append('input')
+		.attr('type', 'checkbox')
+		.attr('id', 'maf-checkbox')
+		.property('checked', true) // Checked by default
+		.style('margin', '0')
+		.style('cursor', 'pointer')
+
+	mafCheckboxContainer
+		.append('label')
+		.attr('for', 'maf-checkbox')
+		.style('cursor', 'pointer')
+		.style('font-weight', '500')
+		.text('MAF (Mutation)')
+
+	const mafOptionsCell = mafRow
+		.append('td')
+		.style('padding', '12px')
+		.style('border', '1px solid #ddd')
+		.style('vertical-align', 'top')
+
+	// MAF options container (visible by default since MAF is checked)
+	const mafOptionsContainer = mafOptionsCell.append('div').style('display', 'block') // Visible by default
+	createMAFOptionsContent(mafOptionsContainer, obj)
+
+	/**
+	 * Updated createMAFOptionsContent function using mclass mutation types
+	 * Replace your existing function with this version
+	 */
+	function createMAFOptionsContent(container, obj) {
+		// Clear any existing content
+		container.selectAll('*').remove()
+
+		// Generate mutation types dynamically from mclass
+		const mutationTypesFromMclass = generateMutationTypesFromMclass()
+		const mutationTypesByCategory = getMutationTypesByCategory()
+
+		console.log('Available mutation types from mclass:', mutationTypesFromMclass)
+
+		// Create a grid layout for MAF options
+		const optionsGrid = container
+			.append('div')
+			.style('display', 'grid')
+			.style('grid-template-columns', 'auto auto')
+			.style('gap', '15px')
+			.style('margin-top', '10px')
+			.style('max-width', 'fit-content')
+
+		// Row 1: Min Total Depth
+		const depthContainer = optionsGrid
+			.append('div')
+			.style('display', 'flex')
+			.style('align-items', 'center')
+			.style('gap', '8px')
+
+		depthContainer
+			.append('label')
+			.style('font-size', '14px')
+			.style('font-weight', '500')
+			.style('min-width', '140px')
+			.text('Min Total Depth:')
+
+		const depthInput = depthContainer
+			.append('input')
+			.attr('type', 'number')
+			.attr('min', '0')
+			.attr('step', '1')
+			.attr('value', obj.mafOptions.minTotalDepth || 10)
+			.style('width', '80px')
+			.style('padding', '4px 8px')
+			.style('border', '1px solid #ccc')
+			.style('border-radius', '4px')
+			.style('font-size', '14px')
+
+		depthInput.on('input', function (this: HTMLInputElement) {
+			const value = parseInt(this.value, 10)
+			if (!isNaN(value) && value >= 0) {
+				obj.mafOptions.minTotalDepth = value
+			}
+		})
+
+		// Row 1: Min Mutant Allele Count
+		const alleleContainer = optionsGrid
+			.append('div')
+			.style('display', 'flex')
+			.style('align-items', 'center')
+			.style('gap', '8px')
+
+		alleleContainer
+			.append('label')
+			.style('font-size', '14px')
+			.style('font-weight', '500')
+			.style('min-width', '160px')
+			.text('Min Mutant Allele Count:')
+
+		const alleleInput = alleleContainer
+			.append('input')
+			.attr('type', 'number')
+			.attr('min', '0')
+			.attr('step', '1')
+			.attr('value', obj.mafOptions.minAltAlleleCount || 2)
+			.style('width', '80px')
+			.style('padding', '4px 8px')
+			.style('border', '1px solid #ccc')
+			.style('border-radius', '4px')
+			.style('font-size', '14px')
+
+		alleleInput.on('input', function (this: HTMLInputElement) {
+			const value = parseInt(this.value, 10)
+			if (!isNaN(value) && value >= 0) {
+				obj.mafOptions.minAltAlleleCount = value
+			}
+		})
+
+		// Row 2: Consequences Section - Using Dynamic mclass Types
+		const consequencesContainer = optionsGrid
+			.append('div')
+			.style('display', 'flex')
+			.style('align-items', 'flex-start') // Changed to flex-start for better alignment
+			.style('gap', '8px')
+			.style('grid-column', '1 / -1') // Span full width for more space
+
+		consequencesContainer
+			.append('label')
+			.style('font-size', '14px')
+			.style('font-weight', '500')
+			.style('min-width', '100px')
+			.style('margin-top', '4px') // Align with first checkbox
+			.text('Consequences:')
+
+		// Initialize consequences with smart defaults from mclass
+		if (!obj.mafOptions.consequences) {
+			// Default to common protein-coding mutations
+			const defaultTypes = ['missense', 'nonsense', 'frameshift']
+			obj.mafOptions.consequences = defaultTypes.filter(type => isValidMutationType(type))
+			console.log('Initialized default consequences from mclass:', obj.mafOptions.consequences)
+		}
+
+		// Create consequences selection area
+		const consequencesSelectionDiv = consequencesContainer.append('div').style('flex', '1')
+
+		// Group mutation types by category for better organization
+		Object.entries(mutationTypesByCategory).forEach(([category, types]) => {
+			if (types.length === 0) return
+
+			// Add category header
+			const categoryDiv = consequencesSelectionDiv.append('div').style('margin-bottom', '12px')
+
+			categoryDiv
+				.append('div')
+				.style('font-size', '13px')
+				.style('font-weight', '600')
+				.style('color', '#495057')
+				.style('margin-bottom', '6px')
+				.style('text-transform', 'capitalize')
+				.text(`${category} Mutations`)
+
+			// Create checkboxes for this category
+			const categoryCheckboxContainer = categoryDiv
+				.append('div')
+				.style('display', 'grid')
+				.style('grid-template-columns', 'repeat(auto-fit, minmax(180px, 1fr))')
+				.style('gap', '8px')
+				.style('margin-left', '12px')
+
+			types.forEach(mutationType => {
+				const checkboxDiv = categoryCheckboxContainer
+					.append('div')
+					.style('display', 'flex')
+					.style('align-items', 'center')
+					.style('gap', '6px')
+					.style('font-size', '13px')
+
+				const mutationTypeKey = mutationType.displayName.toLowerCase()
+
+				const checkbox = checkboxDiv
+					.append('input')
+					.attr('type', 'checkbox')
+					.attr('id', `consequence-${mutationTypeKey}`)
+					.property('checked', obj.mafOptions.consequences.includes(mutationTypeKey))
+					.style('margin', '0')
+					.style('cursor', 'pointer')
+
+				const label = checkboxDiv
+					.append('label')
+					.attr('for', `consequence-${mutationTypeKey}`)
+					.style('cursor', 'pointer')
+					.style('font-size', '13px')
+					.style('color', '#333')
+					.text(mutationType.displayName)
+					.attr('title', mutationType.description) // Tooltip with description
+
+				// Add mclass constant indicator (for debugging/reference)
+				if (process.env.NODE_ENV === 'development') {
+					label
+						.append('span')
+						.style('font-size', '10px')
+						.style('color', '#999')
+						.style('margin-left', '4px')
+						.text(`(${mutationType.mclassValue})`)
+				}
+
+				// Add change handler
+				checkbox.on('change', function (this: HTMLInputElement) {
+					const isChecked = this.checked
+					if (isChecked) {
+						// Add to consequences if not already present
+						if (!obj.mafOptions.consequences.includes(mutationTypeKey)) {
+							obj.mafOptions.consequences.push(mutationTypeKey)
+						}
+					} else {
+						// Remove from consequences
+						obj.mafOptions.consequences = obj.mafOptions.consequences.filter(c => c !== mutationTypeKey)
+					}
+					console.log('Updated consequences:', obj.mafOptions.consequences)
+					console.log(
+						'Corresponding mclass values:',
+						obj.mafOptions.consequences.map(c => getMclassConstant(c))
+					)
+				})
+			})
+		})
+
+		// Add helper text explaining the mutation types
+		consequencesSelectionDiv
+			.append('div')
+			.style('margin-top', '8px')
+			.style('padding', '8px')
+			.style('background-color', '#f8f9fa')
+			.style('border-radius', '4px')
+			.style('border-left', '3px solid #6c757d')
+			.style('font-size', '12px')
+			.style('color', '#495057')
+			.style('line-height', '1.4').html(`
+				<strong>Mutation Types:</strong> Select the types of mutations to include in your analysis. 
+				Hover over each option to see detailed descriptions. These correspond to standard MAF consequence types.
+			`)
+
+		// Row 3: Hypermutator Max Cut Off
+		const hyperContainer = optionsGrid
+			.append('div')
+			.style('display', 'flex')
+			.style('align-items', 'center')
+			.style('gap', '8px')
+
+		hyperContainer
+			.append('label')
+			.style('font-size', '14px')
+			.style('font-weight', '500')
+			.style('min-width', '160px')
+			.text('Hypermutator Max Cut Off:')
+
+		const hyperInput = hyperContainer
+			.append('input')
+			.attr('type', 'number')
+			.attr('min', '0')
+			.attr('step', '100')
+			.attr('value', obj.mafOptions.hypermutatorMaxCutoff || 8000)
+			.style('width', '70px')
+			.style('padding', '4px 8px')
+			.style('border', '1px solid #ccc')
+			.style('border-radius', '4px')
+			.style('font-size', '14px')
+
+		hyperInput.on('input', function (this: HTMLInputElement) {
+			const value = parseInt(this.value, 10)
+			if (!isNaN(value) && value >= 0) {
+				obj.mafOptions.hypermutatorMaxCutoff = value
+			}
+		})
+
+		// Row 4: Workflow Type (read-only display)
+		const workflowContainer = optionsGrid
+			.append('div')
+			.style('display', 'flex')
+			.style('align-items', 'center')
+			.style('gap', '8px')
+			.style('grid-column', '1 / -1') // Span full width
+
+		workflowContainer
+			.append('label')
+			.style('font-size', '14px')
+			.style('font-weight', '500')
+			.style('min-width', '100px')
+			.text('Workflow Type:')
+
+		workflowContainer
+			.append('span')
+			.style('font-size', '14px')
+			.style('color', '#666')
+			.text('Aliquot Ensemble Somatic Variant Merging and Masking')
+
+		// Row 5: Dedup (placeholder with clickable link)
+		const dedupContainer = optionsGrid
+			.append('div')
+			.style('display', 'flex')
+			.style('align-items', 'center')
+			.style('gap', '8px')
+			.style('grid-column', '1 / -1') // Span full width
+
+		dedupContainer
+			.append('label')
+			.style('font-size', '14px')
+			.style('font-weight', '500')
+			.style('min-width', '100px')
+			.text('Deduplication:')
+
+		// Create the dedup status area (this will be updated when files are loaded)
+		const dedupStatus = dedupContainer
+			.append('span')
+			.attr('id', 'dedup-status')
+			.style('font-size', '14px')
+			.style('color', '#666')
+
+		// Initial placeholder text
+		dedupStatus.text('File deduplication status will appear here after loading files')
+
+		// Store reference for later updates
+		obj.dedupStatusElement = dedupStatus
+	}
+
+	// Row 2: CNV (checked by default)
+	const cnvRow = optionsTable.append('tr')
+
+	const cnvCheckboxCell = cnvRow
+		.append('td')
+		.style('padding', '12px')
+		.style('border', '1px solid #ddd')
+		.style('vertical-align', 'top')
+
+	const cnvCheckboxContainer = cnvCheckboxCell
+		.append('div')
+		.style('display', 'flex')
+		.style('align-items', 'center')
+		.style('gap', '8px')
+
+	const cnvCheckbox = cnvCheckboxContainer
+		.append('input')
+		.attr('type', 'checkbox')
+		.attr('id', 'cnv-checkbox')
+		.property('checked', true) // Checked by default
+		.style('margin', '0')
+		.style('cursor', 'pointer')
+
+	cnvCheckboxContainer
+		.append('label')
+		.attr('for', 'cnv-checkbox')
+		.style('cursor', 'pointer')
+		.style('font-weight', '500')
+		.text('CNV (Copy Number)')
+
+	const cnvOptionsCell = cnvRow
+		.append('td')
+		.style('padding', '12px')
+		.style('border', '1px solid #ddd')
+		.style('vertical-align', 'top')
+
+	// CNV options container
+	const cnvOptionsContainer = cnvOptionsCell.append('div').style('display', 'block') // Visible by default
+	createCNVOptionsContent(cnvOptionsContainer, obj)
+
+	function createCNVOptionsContent(container, obj) {
+		// Clear any existing content
+		container.selectAll('*').remove()
+
+		// Initialize CNV data type if not exists
+		if (!obj.cnvOptions.dataType) {
+			obj.cnvOptions.dataType = 'segment_mean' // default selection
+		}
+
+		// Create a grid layout for CNV options
+		const optionsGrid = container
+			.append('div')
+			.style('display', 'grid')
+			.style('grid-template-columns', 'auto auto')
+			.style('gap', '15px')
+			.style('margin-top', '10px')
+			.style('max-width', 'fit-content')
+
+		// Row 0: Data Type (spans full width)
+		const dataTypeContainer = optionsGrid
+			.append('div')
+			.style('display', 'flex')
+			.style('align-items', 'center')
+			.style('gap', '8px')
+			.style('grid-column', '1 / -1') // Span full width
+
+		dataTypeContainer
+			.append('label')
+			.style('font-size', '14px')
+			.style('font-weight', '500')
+			.style('min-width', '80px')
+			.text('Data Type:')
+
+		const radioContainer = dataTypeContainer
+			.append('div')
+			.style('display', 'flex')
+			.style('align-items', 'center')
+			.style('gap', '6px')
+
+		const segmentMeanRadio = radioContainer
+			.append('input')
+			.attr('type', 'radio')
+			.attr('id', 'cnv-segment-mean')
+			.attr('name', 'cnv-data-type')
+			.attr('value', 'segment_mean')
+			.property('checked', obj.cnvOptions.dataType === 'segment_mean')
+			.style('margin', '0')
+			.style('cursor', 'pointer')
+
+		radioContainer
+			.append('label')
+			.attr('for', 'cnv-segment-mean')
+			.style('cursor', 'pointer')
+			.style('font-size', '14px')
+			.style('color', '#333')
+			.text('Segment mean')
+
+		// Add change handler for radio button
+		segmentMeanRadio.on('change', function (this: HTMLInputElement) {
+			if (this.checked) {
+				obj.cnvOptions.dataType = this.value
+				console.log('CNV data type updated:', obj.cnvOptions.dataType)
+			}
+		})
+
+		// Row 1: Loss Threshold
+		const lossContainer = optionsGrid
+			.append('div')
+			.style('display', 'flex')
+			.style('align-items', 'center')
+			.style('gap', '8px')
+
+		lossContainer
+			.append('label')
+			.style('font-size', '14px')
+			.style('font-weight', '500')
+			.style('min-width', '120px')
+			.text('Loss Threshold:')
+
+		const lossInput = lossContainer
+			.append('input')
+			.attr('type', 'number')
+			.attr('min', '-10')
+			.attr('max', '0')
+			.attr('step', '0.1')
+			.attr('value', obj.cnvOptions.lossThreshold || -0.4)
+			.style('width', '70px')
+			.style('padding', '4px 8px')
+			.style('border', '1px solid #ccc')
+			.style('border-radius', '4px')
+			.style('font-size', '14px')
+
+		// Add input handler
+		lossInput.on('input', function (this: HTMLInputElement) {
+			const value = parseFloat(this.value)
+			if (!isNaN(value) && value <= 0) {
+				obj.cnvOptions.lossThreshold = value
+			}
+		})
+
+		// Row 1: Gain Threshold
+		const gainContainer = optionsGrid
+			.append('div')
+			.style('display', 'flex')
+			.style('align-items', 'center')
+			.style('gap', '8px')
+
+		gainContainer
+			.append('label')
+			.style('font-size', '14px')
+			.style('font-weight', '500')
+			.style('min-width', '120px')
+			.text('Gain Threshold:')
+
+		const gainInput = gainContainer
+			.append('input')
+			.attr('type', 'number')
+			.attr('min', '0')
+			.attr('max', '10')
+			.attr('step', '0.1')
+			.attr('value', obj.cnvOptions.gainThreshold || 0.3)
+			.style('width', '70px')
+			.style('padding', '4px 8px')
+			.style('border', '1px solid #ccc')
+			.style('border-radius', '4px')
+			.style('font-size', '14px')
+
+		// Add input handler
+		gainInput.on('input', function (this: HTMLInputElement) {
+			const value = parseFloat(this.value)
+			if (!isNaN(value) && value >= 0) {
+				obj.cnvOptions.gainThreshold = value
+			}
+		})
+
+		// Row 2: Segment Length Cutoff (spans full width)
+		const segmentContainer = optionsGrid
+			.append('div')
+			.style('display', 'flex')
+			.style('align-items', 'center')
+			.style('gap', '8px')
+			.style('grid-column', '1 / -1') // Span full width
+
+		segmentContainer
+			.append('label')
+			.style('font-size', '14px')
+			.style('font-weight', '500')
+			.style('min-width', '140px')
+			.text('Segment Length Cutoff:')
+
+		const segmentInput = segmentContainer
+			.append('input')
+			.attr('type', 'number')
+			.attr('min', '0')
+			.attr('max', '2000000')
+			.attr('step', '1000')
+			.attr('value', obj.cnvOptions.segLength || 2000000)
+			.style('width', '100px')
+			.style('padding', '4px 8px')
+			.style('border', '1px solid #ccc')
+			.style('border-radius', '4px')
+			.style('font-size', '14px')
+
+		// Add input handler
+		segmentInput.on('input', function (this: HTMLInputElement) {
+			const value = parseInt(this.value, 10)
+			if (!isNaN(value) && value >= 0) {
+				obj.cnvOptions.segLength = value
+			}
+		})
+
+		segmentContainer.append('span').style('font-size', '13px').style('color', '#666').text('bp')
+
+		// Row 4: Help/Info section (spans full width)
+		const helpContainer = optionsGrid
+			.append('div')
+			.style('grid-column', '1 / -1') // Span full width
+			.style('margin-top', '8px')
+			.style('padding', '8px')
+			.style('background-color', '#f8f9fa')
+			.style('border-radius', '4px')
+			.style('border-left', '3px solid #6c757d')
+
+		helpContainer.append('div').style('font-size', '12px').style('color', '#495057').style('line-height', '1.4').html(`
+			<strong>CNV Thresholds:</strong><br>
+			• Loss Threshold: Log2 ratio for copy number loss (negative values)<br>
+			• Gain Threshold: Log2 ratio for copy number gain (positive values)<br>
+			• Segment Length: Maximum CNV segment size to include (focal events only)
+		`)
+	}
+
+	// Row 3: Fusion (unchecked by default)
+	const fusionRow = optionsTable.append('tr')
+
+	const fusionCheckboxCell = fusionRow
+		.append('td')
+		.style('padding', '12px')
+		.style('border', '1px solid #ddd')
+		.style('vertical-align', 'top')
+
+	const fusionCheckboxContainer = fusionCheckboxCell
+		.append('div')
+		.style('display', 'flex')
+		.style('align-items', 'center')
+		.style('gap', '8px')
+
+	const fusionCheckbox = fusionCheckboxContainer
+		.append('input')
+		.attr('type', 'checkbox')
+		.attr('id', 'fusion-checkbox')
+		.property('checked', false) // Unchecked by default
+		.style('margin', '0')
+		.style('cursor', 'pointer')
+
+	fusionCheckboxContainer
+		.append('label')
+		.attr('for', 'fusion-checkbox')
+		.style('cursor', 'pointer')
+		.style('font-weight', '500')
+		.text('Fusion')
+
+	const fusionOptionsCell = fusionRow
+		.append('td')
+		.style('padding', '12px')
+		.style('border', '1px solid #ddd')
+		.style('vertical-align', 'top')
+
+	// Fusion options container (hidden by default)
+	const fusionOptionsContainer = fusionOptionsCell.append('div').style('display', 'none') // Hidden by default
+
+	fusionOptionsContainer
+		.append('div')
+		.style('color', '#666')
+		.style('font-style', 'italic')
+		.text('Fusion analysis options will be configured here')
+
+	// Add checkbox change handlers (basic show/hide functionality)
+	mafCheckbox.on('change', function (this: HTMLInputElement) {
+		const isChecked = this.checked
+		obj.dataTypeStates.maf = isChecked
+		mafOptionsContainer.style('display', isChecked ? 'block' : 'none')
+
+		// Update submit button state
+		if (obj.updateSubmitButtonState) {
+			obj.updateSubmitButtonState()
+		}
+	})
+
+	cnvCheckbox.on('change', function (this: HTMLInputElement) {
+		const isChecked = this.checked
+		obj.dataTypeStates.cnv = isChecked
+		cnvOptionsContainer.style('display', isChecked ? 'block' : 'none')
+
+		// Create CNV options content when checkbox is checked for the first time
+		if (isChecked) {
+			createCNVOptionsContent(cnvOptionsContainer, obj)
+		}
+
+		// Update submit button state
+		if (obj.updateSubmitButtonState) {
+			obj.updateSubmitButtonState()
+		}
+	})
+
+	fusionCheckbox.on('change', function (this: HTMLInputElement) {
+		const isChecked = this.checked
+		obj.dataTypeStates.fusion = isChecked
+		fusionOptionsContainer.style('display', isChecked ? 'block' : 'none')
+
+		// Update submit button state
+		if (obj.updateSubmitButtonState) {
+			obj.updateSubmitButtonState()
+		}
+	})
+
+	// Row 4: GRIN2 (unchecked by default)
+	const grin2Row = optionsTable.append('tr')
+
+	const grin2CheckboxCell = grin2Row
+		.append('td')
+		.style('padding', '12px')
+		.style('border', '1px solid #ddd')
+		.style('vertical-align', 'top')
+
+	grin2CheckboxCell.append('div').style('font-weight', '500').style('color', '#333').text('GRIN2 Analysis')
+
+	const grin2OptionsCell = grin2Row
+		.append('td')
+		.style('padding', '12px')
+		.style('border', '1px solid #ddd')
+		.style('vertical-align', 'top')
+
+	// GRIN2 options container (hidden by default)
+	const grin2OptionsContainer = grin2OptionsCell.append('div').style('display', 'inline')
+
+	grin2OptionsContainer
+		.append('div')
+		.style('color', '#666')
+		.style('font-style', 'plain')
+		.text('GRIN2 analysis options will be configured here')
+
+	// Add checkbox change handlers (basic show/hide functionality)
+	// Store references for easy access later
+	obj.mafOptionsContainer = mafOptionsContainer
+	obj.cnvOptionsContainer = cnvOptionsContainer
+	obj.fusionOptionsContainer = fusionOptionsContainer
+
+	// Add submit button after the options table
+	const submitButtonContainer = obj.controlDiv
+		.append('div')
+		.style('margin-top', '2px')
+		.style('margin-bottom', '2px')
+		.style('text-align', 'left')
+
+	const submitButton = submitButtonContainer
+		.append('button')
+		.attr('id', 'submit-options-button')
+		.style('margin', '10px 10px 0 0') // Same margin as table.ts buttons
+		.text('Apply Options & Refresh Files')
+
+	// Store submit button reference for easy access
+	obj.submitButton = submitButton
+
+	// Add submit button click handler
+	submitButton.on('click', function (this: HTMLButtonElement) {
+		if (!this.disabled) {
+			console.log('Submit button clicked - refreshing files with options:', {
+				dataTypeStates: obj.dataTypeStates,
+				mafOptions: obj.mafOptions,
+				cnvOptions: obj.cnvOptions
+			})
+			// Re-fetch files with current options
+			getFilesAndShowTable(obj)
+		}
+	})
+
+	// Store the update function for use in checkbox handlers
+	obj.updateSubmitButtonState = updateSubmitButtonState
+
+	// Initial button state check
+	updateSubmitButtonState()
+
+	// Function to update submit button state based on checkbox selections
+	function updateSubmitButtonState() {
+		const hasAnyDataTypeSelected = obj.dataTypeStates.maf || obj.dataTypeStates.cnv || obj.dataTypeStates.fusion
+
+		if (hasAnyDataTypeSelected) {
+			// Enable button
+			submitButton.attr('disabled', null).text('Apply Options & Refresh Files')
+		} else {
+			// Disable button
+			submitButton.attr('disabled', true).text('Select at least one data type')
+		}
+	}
+
+	// Store the update function for use in checkbox handlers
+	obj.updateSubmitButtonState = updateSubmitButtonState
+
+	// Initial button state check
+	updateSubmitButtonState()
 }
 
 async function getFilesAndShowTable(obj) {
@@ -739,132 +1444,154 @@ async function getFilesAndShowTable(obj) {
 			}
 		}
 
+		// Add cnvOptions if available
+		body.cnvOptions = {}
+
+		console.log('Request body for GRIN2list:', body)
 		result = await dofetch3('gdc/GRIN2list', { body })
+		console.log('GRIN2list result:', result)
 
 		if (result.error) throw result.error
 		if (!Array.isArray(result.files)) throw 'result.files[] not array'
 		if (result.files.length == 0) throw 'No files available.'
 
-		// Show deduplication information if any duplicates were removed OR files were size-filtered
-		if (
-			(result.deduplicationStats && result.deduplicationStats.duplicatesRemoved > 0) ||
-			(result.deduplicationStats &&
-				result.deduplicationStats.filteredFiles &&
-				result.deduplicationStats.filteredFiles.length > 0)
-		) {
-			// Clear any previous deduplication info
-			obj.deduplicationInfoDiv.selectAll('*').remove()
-
-			const deduplicationDiv = obj.deduplicationInfoDiv
-				.append('div')
-				.style('background-color', '#f0f8ff')
-				.style('border', '1px solid #87ceeb')
-				.style('border-radius', '1px')
-				.style('padding', '5px')
-				.style('margin', '40px 0')
-				.style('max-width', '100%') // Don't exceed container width
-				.style('width', 'fit-content') // Only as wide as content needs
-
-			const duplicatesRemoved = result.deduplicationStats.duplicatesRemoved || 0
-			const sizeFilteredCount = result.deduplicationStats.filteredFiles
-				? result.deduplicationStats.filteredFiles.length
-				: 0
-			const totalExcluded = duplicatesRemoved + sizeFilteredCount
-			const originalTotal = result.deduplicationStats.originalFileCount + sizeFilteredCount // Add back the size-filtered files to get true original count
-
-			deduplicationDiv
-				.append('div')
-				.style('font-weight', 'bold')
-				.style('color', '#2c5aa0')
-				.text('🔄 File Deduplication and Size Filtering Applied')
-
-			// Build the description text based on what types of filtering occurred
-			let descriptionText = `Found <strong>${originalTotal}</strong> total MAF files`
-			if (totalExcluded > 0) {
-				descriptionText += `, but <strong>${totalExcluded}</strong> were excluded`
-
-				// Add details about what was excluded
-				const exclusionDetails: string[] = []
-				if (duplicatesRemoved > 0) {
-					exclusionDetails.push(`${duplicatesRemoved} duplicates from the same cases`)
-				}
-				if (sizeFilteredCount > 0) {
-					exclusionDetails.push(`${sizeFilteredCount} files too large`)
-				}
-
-				if (exclusionDetails.length > 0) {
-					descriptionText += ` (${exclusionDetails.join(' and ')})`
-				}
-
-				descriptionText += `. <br/>Showing <strong>${result.deduplicationStats.deduplicatedFileCount}</strong> unique cases`
-
-				if (duplicatesRemoved > 0) {
-					descriptionText += ` (largest file selected for each case)`
-				}
-				descriptionText += `.`
-			} else {
-				descriptionText += `. All files are included.`
-			}
-
-			deduplicationDiv.append('div').style('margin-top', '5px').style('font-size', '14px').html(descriptionText)
-
-			// Add clickable link to view excluded files (only if there are excluded files)
-			if (totalExcluded > 0) {
-				deduplicationDiv
-					.append('div')
-					.style('margin-top', '8px')
-					.append('a')
-					.style('color', '#2c5aa0')
-					.style('text-decoration', 'underline')
-					.style('cursor', 'pointer')
-					.style('font-size', '13px')
-					.text('View excluded files')
-					.on('click', function () {
-						showDeduplicationPopup(result.deduplicationStats)
-					})
-			}
-		} else {
-			// Clear deduplication info if no filtering occurred
-			obj.deduplicationInfoDiv.selectAll('*').remove()
+		// Update the dedup status in MAF options
+		if (result.deduplicationStats) {
+			updateDedupStatus(obj, result.deduplicationStats)
 		}
-
 		// render
 		if (result.filesTotal > result.files.length) {
 			wait.text(
-				`Showing first ${result.files.length.toLocaleString()} files out of ${result.filesTotal.toLocaleString()} total. Only files smaller than 1 Mb are shown.`
+				`Showing first ${result.files.length.toLocaleString()} files out of ${result.filesTotal.toLocaleString()} total.`
 			)
 		} else {
-			wait.text(`Showing ${result.files.length.toLocaleString()} files. Only files smaller than 1 Mb are shown.`)
+			wait.text(`Showing ${result.files.length.toLocaleString()} files.`)
+		}
+
+		// Build table columns dynamically based on selected data types
+		const dynamicTableColumns = [
+			{ label: 'Case', sortable: true },
+			{ label: 'Project', sortable: true }
+		]
+
+		// Add MAF columns only if MAF is selected
+		if (obj.dataTypeStates.maf) {
+			dynamicTableColumns.push({ label: 'MAF Sample', sortable: false }, {
+				label: 'MAF File Size',
+				barplot: { tickFormat: '~s' },
+				sortable: true
+			} as any)
+		}
+
+		// Add CNV columns only if CNV is selected
+		if (obj.dataTypeStates.cnv) {
+			dynamicTableColumns.push({ label: 'CNV File ID', sortable: true }, { label: 'CNV Sample', sortable: false }, {
+				label: 'CNV File Size',
+				barplot: { tickFormat: '~s' },
+				sortable: true
+			} as any)
+		}
+
+		// Add Fusion columns only if Fusion is selected (when implemented)
+		if (obj.dataTypeStates.fusion) {
+			dynamicTableColumns.push(
+				{ label: 'Fusion File ID', sortable: true },
+				{ label: 'Fusion Sample', sortable: false },
+				{ label: 'Fusion File Size', barplot: { tickFormat: '~s' }, sortable: true } as any
+			)
 		}
 
 		const rows: TableRowItem[][] = []
+
+		// Create CNV files map (only if CNV is selected)
+		const cnvFilesByCase = new Map<string, any>()
+		if (obj.dataTypeStates.cnv && result.cnvFiles && result.cnvFiles.files) {
+			for (const cnvFile of result.cnvFiles.files) {
+				const caseId = cnvFile.case_submitter_id
+				if (!cnvFilesByCase.has(caseId)) {
+					cnvFilesByCase.set(caseId, cnvFile)
+				}
+			}
+		}
+
+		// Build table rows dynamically
 		for (const f of result.files) {
-			const row = [
+			const row: TableRowItem[] = []
+
+			// Always include Case and Project columns
+			row.push(
 				{
 					html: `<a href=https://portal.gdc.cancer.gov/files/${f.id} target=_blank>${f.case_submitter_id}</a>`,
 					value: f.case_submitter_id
 				},
-				{ value: f.project_id },
-				{
-					html: f.sample_types
-						.map(i => {
-							return (
-								'<span class="sja_mcdot" style="padding:1px 8px;background:#ddd;color:black;white-space:nowrap">' +
-								i +
-								'</span>'
-							)
-						})
-						.join(' ')
-				},
-				{ value: f.file_size } // do not send in text-formated file size, table sorting won't work
-			]
+				{ value: f.project_id }
+			)
+
+			// Add MAF columns only if MAF is selected
+			if (obj.dataTypeStates.maf) {
+				row.push(
+					{
+						html: f.sample_types
+							.map(i => {
+								return (
+									'<span class="sja_mcdot" style="padding:1px 8px;background:#ddd;color:black;white-space:nowrap">' +
+									i +
+									'</span>'
+								)
+							})
+							.join(' ')
+					},
+					{ value: f.file_size }
+				)
+			}
+
+			// Add CNV columns only if CNV is selected
+			if (obj.dataTypeStates.cnv) {
+				const cnvFile = cnvFilesByCase.get(f.case_submitter_id)
+				row.push(
+					{
+						html: cnvFile
+							? `<a href=https://portal.gdc.cancer.gov/files/${cnvFile.id} target=_blank>${cnvFile.id}</a>`
+							: '<span style="color: #6c757d;">No CNV file</span>',
+						value: cnvFile ? cnvFile.id : 'No CNV file'
+					},
+					{
+						html:
+							cnvFile && cnvFile.sample_types
+								? cnvFile.sample_types
+										.map(i => {
+											return (
+												'<span class="sja_mcdot" style="padding:1px 8px;background:#ddd;color:black;white-space:nowrap">' +
+												i +
+												'</span>'
+											)
+										})
+										.join(' ')
+								: '<span style="color: #6c757d;">No CNV sample</span>',
+						value: cnvFile && cnvFile.sample_types ? cnvFile.sample_types.join(' ') : 'No CNV sample'
+					},
+					{
+						value: cnvFile ? cnvFile.file_size : 0
+					}
+				)
+			}
+
+			// Add Fusion columns only if Fusion is selected (placeholder for when implemented)
+			if (obj.dataTypeStates.fusion) {
+				row.push(
+					{ html: '<span style="color: #6c757d;">No Fusion file</span>', value: 'No Fusion file' },
+					{ html: '<span style="color: #6c757d;">No Fusion sample</span>', value: 'No Fusion sample' },
+					{ value: 0 }
+				)
+			}
+
 			rows.push(row)
 		}
 
-		// tracks table arg, so that the created button DOM element is accessible and can be modified
+		// Update the renderTable call to use dynamic columns
 		obj.mafTableArg = {
 			rows,
-			columns: tableColumns,
+			columns: dynamicTableColumns, // Use dynamic columns instead of static tableColumns
 			resize: false,
 			div: obj.tableDiv.append('div'),
 			selectAll: false,
@@ -879,6 +1606,8 @@ async function getFilesAndShowTable(obj) {
 				}
 			]
 		}
+
+		// Render the table with the dynamic columns
 		renderTable(obj.mafTableArg)
 	} catch (e) {
 		wait.text(e instanceof Error ? e.message : String(e))
@@ -908,7 +1637,7 @@ async function getFilesAndShowTable(obj) {
 		select(button.parentElement).style('float', 'left')
 
 		button.disabled = false
-		button.innerHTML = sum < result.maxTotalSizeCompressed ? `Run GRIN2 Analysis` : `Run GRIN2 Analysis (large files)`
+		button.innerHTML = sum < result.maxTotalSizeCompressed ? `Run GRIN2 Analysis` : `Run GRIN2 Analysis`
 	}
 
 	/* after table is created, on clicking download btn for first time, create a <span> after download btn,
@@ -925,9 +1654,10 @@ async function getFilesAndShowTable(obj) {
 	 * Creates structure expected by Rust:
 	 * {
 	 *   caseFiles: {
-	 *     [case_submitter_id]: { maf: file_id }
+	 *     [case_submitter_id]: { maf: file_id, cnv: file_id },
 	 *   },
-	 *   mafOptions: { minTotalDepth: 10, minAltAlleleCount: 2 }
+	 *   mafOptions: { minTotalDepth: 10, minAltAlleleCount: 2 },
+	 *   cnvOptions: { dataType: 'segment_mean', lossThreshold: -0.4, gainThreshold: 0.3, segLength: 2000000 }
 	 * }
 	 *
 	 */
@@ -938,7 +1668,25 @@ async function getFilesAndShowTable(obj) {
 			caseFiles: {},
 			mafOptions: {
 				minTotalDepth: obj.mafOptions.minTotalDepth,
-				minAltAlleleCount: obj.mafOptions.minAltAlleleCount
+				minAltAlleleCount: obj.mafOptions.minAltAlleleCount,
+				consequences: obj.mafOptions.consequences
+			},
+			cnvOptions: {
+				dataType: obj.cnvOptions.dataType,
+				lossThreshold: obj.cnvOptions.lossThreshold,
+				gainThreshold: obj.cnvOptions.gainThreshold,
+				segLength: obj.cnvOptions.segLength
+			}
+		}
+
+		// Create CNV files map for lookup (same as in getFilesAndShowTable)
+		const cnvFilesByCase = new Map()
+		if (result.cnvFiles && result.cnvFiles.files) {
+			for (const cnvFile of result.cnvFiles.files) {
+				const caseId = cnvFile.case_submitter_id
+				if (!cnvFilesByCase.has(caseId)) {
+					cnvFilesByCase.set(caseId, cnvFile)
+				}
 			}
 		}
 
@@ -947,11 +1695,26 @@ async function getFilesAndShowTable(obj) {
 			console.log('File object:', file)
 			const caseId = file.case_submitter_id
 
-			if (!caseFiles[caseId]) {
+			if (!caseFiles.caseFiles[caseId]) {
 				caseFiles.caseFiles[caseId] = {}
 			}
 
-			caseFiles.caseFiles[caseId].maf = file.id
+			// Check what data types are selected to determine how to handle the files
+			const mafSelected = obj.dataTypeStates.maf
+			const cnvSelected = obj.dataTypeStates.cnv
+
+			if (mafSelected) {
+				// MAF is selected - files in result.files are MAF files
+				caseFiles.caseFiles[caseId].maf = file.id
+			}
+
+			if (cnvSelected) {
+				// CNV is selected - check if this case has a CNV file
+				const cnvFile = cnvFilesByCase.get(caseId)
+				if (cnvFile) {
+					caseFiles.caseFiles[caseId].cnv = cnvFile.id
+				}
+			}
 		}
 
 		if (Object.keys(caseFiles.caseFiles).length === 0) return
@@ -965,7 +1728,6 @@ async function getFilesAndShowTable(obj) {
 
 		try {
 			obj.busy = true
-			obj.expStrategyRadio.inputs.property('disabled', true)
 
 			// Call the GRIN2 run endpoint with the correctly formatted data
 			console.log('Sending GRIN2 request:', caseFiles)
@@ -1121,7 +1883,7 @@ async function getFilesAndShowTable(obj) {
 						.style('font-size', '13px')
 						.text('View failed files details')
 						.on('click', function () {
-							showFailedFilesPopup(failedFilesInfo)
+							gdcGrin2ShowFailedFilesPopup(failedFilesInfo)
 						})
 				} else {
 					// Optional: Add a message for successful downloads
@@ -1296,10 +2058,10 @@ async function getFilesAndShowTable(obj) {
 						.style('max-width', '100%') // Don't exceed container width
 						.style('width', 'fit-content') // Only as wide as content needs
 						.style('color', '#495057').html(`
-							<strong>Note:</strong> For performance reasons, only the top ${response.showingTop} 
-							most significant genes are displayed. The complete analysis identified 
-							${response.totalGenes.toLocaleString()} genes total.
-						`)
+						<strong>Note:</strong> For performance reasons, only the top ${response.showingTop} 
+						most significant genes are displayed. The complete analysis identified 
+						${response.totalGenes.toLocaleString()} genes total.
+					`)
 				}
 			} else {
 				// No table data available
@@ -1323,6 +2085,97 @@ async function getFilesAndShowTable(obj) {
 		button.innerHTML = oldText
 		button.disabled = false
 		obj.busy = false
-		obj.expStrategyRadio.inputs.property('disabled', false)
+	}
+}
+
+function updateDedupStatus(obj, deduplicationStats) {
+	if (!obj.dedupStatusElement) return
+
+	const dedupElement = obj.dedupStatusElement
+	dedupElement.selectAll('*').remove() // Clear existing content
+
+	if (!deduplicationStats) {
+		dedupElement.style('color', '#666').text('No deduplication data available')
+		return
+	}
+
+	// Create a container for the detailed dedup info
+	const dedupContainer = dedupElement
+		.append('div')
+		.style('display', 'flex')
+		.style('flex-direction', 'column')
+		.style('gap', '8px')
+
+	const duplicatesRemoved = deduplicationStats.duplicatesRemoved || 0
+	const sizeFilteredCount = deduplicationStats.filteredFiles ? deduplicationStats.filteredFiles.length : 0
+	const totalExcluded = duplicatesRemoved + sizeFilteredCount
+	const originalTotal = deduplicationStats.originalFileCount + sizeFilteredCount
+
+	if (totalExcluded > 0) {
+		// Summary line
+		const summaryDiv = dedupContainer
+			.append('div')
+			.style('font-size', '14px')
+			.style('color', '#d84315')
+			.style('font-weight', '500')
+
+		summaryDiv.html(
+			`Found <strong>${originalTotal}</strong> total MAF files, excluded <strong>${totalExcluded}</strong>`
+		)
+
+		// Details line
+		const detailsDiv = dedupContainer.append('div').style('font-size', '13px').style('color', '#666')
+
+		const exclusionDetails: string[] = []
+		if (duplicatesRemoved > 0) {
+			exclusionDetails.push(`${duplicatesRemoved} duplicates from same cases`)
+		}
+		if (sizeFilteredCount > 0) {
+			exclusionDetails.push(`${sizeFilteredCount} files too large`)
+		}
+
+		detailsDiv.text(`(${exclusionDetails.join(' and ')})`)
+
+		// Final result line
+		const resultDiv = dedupContainer
+			.append('div')
+			.style('font-size', '13px')
+			.style('color', '#28a745')
+			.style('font-weight', '500')
+
+		resultDiv.html(`Showing <strong>${deduplicationStats.deduplicatedFileCount}</strong> unique cases`)
+		if (duplicatesRemoved > 0) {
+			resultDiv.append('span').style('color', '#666').style('font-weight', 'normal').text(' (largest file per case)')
+		}
+
+		// Add clickable link to view excluded files
+		if (totalExcluded > 0) {
+			const linkDiv = dedupContainer.append('div').style('margin-top', '4px')
+
+			linkDiv
+				.append('a')
+				.style('color', '#2c5aa0')
+				.style('text-decoration', 'underline')
+				.style('cursor', 'pointer')
+				.style('font-size', '12px')
+				.text('View excluded files details')
+				.on('click', function () {
+					gdcGrin2ShowDeduplicationPopup(deduplicationStats)
+				})
+		}
+	} else {
+		// No exclusions
+		dedupContainer
+			.append('div')
+			.style('color', '#28a745')
+			.style('font-weight', '500')
+			.style('font-size', '14px')
+			.html(`All <strong>${deduplicationStats.deduplicatedFileCount}</strong> files included`)
+
+		dedupContainer
+			.append('div')
+			.style('color', '#666')
+			.style('font-size', '13px')
+			.text('No duplicates or oversized files found')
 	}
 }

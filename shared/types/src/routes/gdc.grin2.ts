@@ -70,6 +70,18 @@ export type GdcGRIN2listResponse = {
 		caseDetails?: Array<{ caseName: string; fileCount: number; keptFileSize: number }>
 		filteredFiles: Array<{ fileId: string; fileSize: number; reason: string }>
 	}
+	/** all maf-related results when mafOptions is supplied */
+	mafFiles?: {
+		// TODO suggest to move above maf-related results under mafFiles{}
+		/** list of maf files returned to client */
+		files: GdcGRIN2File[]
+	}
+	/** all cnv-related results when cnvOptions is supplied */
+	cnvFiles?: {
+		/** list of cnv files returned to client */
+		files: GdcGRIN2File[]
+		/** to add additional stats on cnv file listing */
+	}
 }
 
 /**

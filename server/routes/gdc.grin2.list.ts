@@ -3,13 +3,15 @@ import { gdcGRIN2listPayload } from '#types/checkers'
 import ky from 'ky'
 import { joinUrl } from '#shared/joinUrl.js'
 import serverconfig from '#src/serverconfig.js'
+import { mayLog } from '#src/helpers.ts'
 
 /*
 This route lists available gdc MAF files based on user's cohort filter
 and return them to client to be shown in a table for selection
 */
 
-const maxFileNumber = 1000 // determines max number of files to return to client
+const mafMaxFileNumber = 1000, // max number of maf files for api to return
+	cnvMaxFileNumber = 1000 // max number of cnv files for api to return
 
 const allowedWorkflowType = 'Aliquot Ensemble Somatic Variant Merging and Masking'
 const maxFileSizeAllowed = 1000000 // 1Mb; this is to avoid sending large files to client; if file size is larger than this, it will be ignored and not shown on client
@@ -36,60 +38,40 @@ function init({ genomes }) {
 		try {
 			const g = genomes.hg38
 			if (!g) throw 'hg38 missing'
-			const ds = g.datasets.GDC
+			const ds = g.datasets?.GDC
 			if (!ds) throw 'hg38 GDC missing'
 
-			const payload = await listMafFiles(req.query as GdcGRIN2listRequest, ds)
-			res.send(payload)
+			const result: GdcGRIN2listResponse = {
+				files: [],
+				filesTotal: 0,
+				maxTotalSizeCompressed: 0,
+				fileCounts: { maf: 0 }
+			}
+
+			// run each getter per file type, and accumulate files in result
+			await mayListMafFiles(req.query as GdcGRIN2listRequest, result, ds)
+			await mayListCnvFiles(req.query as GdcGRIN2listRequest, result, ds)
+
+			res.send(result)
 		} catch (e: any) {
+			if (e.stack) console.log(e.stack)
 			res.send({ status: 'error', error: e.message || e })
 		}
 	}
 }
 
-/*
-req.query {
-	filter0 // optional gdc GFF cohort filter, invisible and read only
-	experimentalStrategy: WXS/Targeted Sequencing
-}
-
-ds {
-	__gdc {
-		gdcOpenProjects
-	}
-}
-*/
-async function listMafFiles(q: GdcGRIN2listRequest, ds: any) {
-	// Determine if we should retrieve MAF files (based on presence of mafOptions)
-	const shouldRetrieveMaf = !!q.mafOptions
-
-	// Extract experimentalStrategy from mafOptions
-	const experimentalStrategy = q.mafOptions?.experimentalStrategy
-
-	if (shouldRetrieveMaf && !experimentalStrategy) {
-		throw 'Missing experimentalStrategy parameter for MAF file retrieval'
-	}
-
-	const dataFormatFilter = {
-		op: 'and',
-		content: [{ op: '=', content: { field: 'data_format', value: 'MAF' } }]
-	}
+async function mayListMafFiles(q: GdcGRIN2listRequest, result: GdcGRIN2listResponse, ds: any) {
+	if (!q.mafOptions) return
 
 	// Only build and use MAF filters if we need to retrieve MAF files
-	let filters: any
-	if (shouldRetrieveMaf) {
-		filters = {
-			op: 'and',
-			content: [
-				dataFormatFilter,
-				{ op: '=', content: { field: 'experimental_strategy', value: experimentalStrategy } },
-				{ op: '=', content: { field: 'analysis.workflow_type', value: allowedWorkflowType } },
-				{ op: '=', content: { field: 'access', value: 'open' } }
-			]
-		}
-	} else {
-		// TODO: Add handling for CNV or fusion file types when those options are present
-		throw 'At least one file type option must be specified (mafOptions, cnvOptions, or fusionOptions)'
+	const filters = {
+		op: 'and',
+		content: [
+			{ op: '=', content: { field: 'data_format', value: 'MAF' } },
+			{ op: '=', content: { field: 'experimental_strategy', value: q.mafOptions.experimentalStrategy } },
+			{ op: '=', content: { field: 'analysis.workflow_type', value: allowedWorkflowType } },
+			{ op: '=', content: { field: 'access', value: 'open' } }
+		]
 	}
 
 	const case_filters: any = { op: 'and', content: [] }
@@ -97,12 +79,11 @@ async function listMafFiles(q: GdcGRIN2listRequest, ds: any) {
 		case_filters.content.push(q.filter0)
 	}
 
-	// Continue with the rest of your existing code
-	const { host } = ds.getHostHeaders(q)
+	const { host, headers } = ds.getHostHeaders(q)
 
 	const body: any = {
 		filters,
-		size: maxFileNumber,
+		size: mafMaxFileNumber,
 		fields: [
 			'id',
 			'file_size',
@@ -115,15 +96,18 @@ async function listMafFiles(q: GdcGRIN2listRequest, ds: any) {
 	}
 	if (case_filters.content.length) body.case_filters = case_filters
 
-	const response = await ky.post(joinUrl(host.rest, 'files'), { timeout: false, json: body })
+	const response = await ky.post(joinUrl(host.rest, 'files'), { timeout: false, headers, json: body })
 	if (!response.ok) throw `HTTP Error: ${response.status} ${response.statusText}`
 	const re: any = await response.json() // type any to avoid tsc err
 
 	if (!Number.isInteger(re.data?.pagination?.total)) throw 're.data.pagination.total is not int'
 	if (!Array.isArray(re.data?.hits)) throw 're.data.hits[] not array'
 
-	// flatten api return to table row objects
-	// it is possible to set a max size limit to limit the number of files passed to client
+	/* list of maf files returned by api
+	a case may have multiple maf files, either duplicates or multiple samples of a case
+	for now dedup to only one maf file a case *randomly*
+	future may restrict to maf files from one type of samples e.g. diagnosis or relapse
+	*/
 	const files: GdcGRIN2File[] = []
 	const filteredFiles: Array<{ fileId: string; fileSize: number; reason: string }> = []
 
@@ -154,13 +138,14 @@ async function listMafFiles(q: GdcGRIN2listRequest, ds: any) {
 		const c = h.cases?.[0]
 		if (!c) throw 'h.cases[0] missing'
 		if (h.file_size >= maxFileSizeAllowed) {
+			// ???
 			// Collect filtered file info
 			filteredFiles.push({
 				fileId: h.id,
 				fileSize: h.file_size,
 				reason: `File size (${h.file_size} bytes) exceeds maximum allowed size (${maxFileSizeAllowed} bytes)`
 			})
-			console.log(
+			mayLog(
 				`File ${h.id} with a size of ${h.file_size} bytes is larger then the allowed file size. It is excluded from the list.\nIf you want to include it, please increase the maxFileSizeAllowed in the code.`
 			)
 			continue
@@ -208,6 +193,7 @@ async function listMafFiles(q: GdcGRIN2listRequest, ds: any) {
 		filesByCase.get(caseId)!.push(file)
 	}
 
+	// TODO make dedup function and add unit test
 	// Select the best file for each case (largest file size)
 	const deduplicatedFiles: GdcGRIN2File[] = []
 	let duplicatesRemoved = 0
@@ -227,9 +213,7 @@ async function listMafFiles(q: GdcGRIN2listRequest, ds: any) {
 				keptFileSize: caseFiles[0].file_size
 			})
 
-			console.log(
-				`Case ${caseId}: Found ${caseFiles.length} MAF files, keeping largest (${caseFiles[0].file_size} bytes)`
-			)
+			mayLog(`Case ${caseId}: Found ${caseFiles.length} MAF files, keeping largest (${caseFiles[0].file_size} bytes)`)
 		} else {
 			// Only one file for this case
 			deduplicatedFiles.push(caseFiles[0])
@@ -238,7 +222,7 @@ async function listMafFiles(q: GdcGRIN2listRequest, ds: any) {
 
 	// Log deduplication results
 	if (duplicatesRemoved > 0) {
-		console.log(
+		mayLog(
 			`GRIN2 MAF deduplication: Removed ${duplicatesRemoved} duplicate files, kept ${deduplicatedFiles.length} unique cases`
 		)
 	}
@@ -246,26 +230,123 @@ async function listMafFiles(q: GdcGRIN2listRequest, ds: any) {
 	// sort final files in descending order of file size and show on table as default
 	deduplicatedFiles.sort((a, b) => b.file_size - a.file_size)
 
-	// Add file type information to the response
-	const result = {
-		files: deduplicatedFiles,
-		filesTotal: re.data.pagination.total,
-		maxTotalSizeCompressed,
-		fileCounts: {
-			maf: files.length
-		},
-		appliedFilters: {
-			fileTypes: shouldRetrieveMaf ? ['MAF'] : [],
-			experimentalStrategy: experimentalStrategy
-		},
-		deduplicationStats: {
-			originalFileCount: files.length,
-			deduplicatedFileCount: deduplicatedFiles.length,
-			duplicatesRemoved: duplicatesRemoved,
-			caseDetails: caseDetails,
-			filteredFiles: filteredFiles
-		}
-	} as GdcGRIN2listResponse
+	result.files.push(...deduplicatedFiles)
+	result.filesTotal = re.data.pagination.total
+	if (result.fileCounts) {
+		result.fileCounts.maf = files.length
+	}
+	result.deduplicationStats = {
+		originalFileCount: files.length,
+		deduplicatedFileCount: deduplicatedFiles.length,
+		duplicatesRemoved: duplicatesRemoved,
+		caseDetails: caseDetails,
+		filteredFiles: filteredFiles
+	}
+}
 
-	return result
+async function mayListCnvFiles(q: GdcGRIN2listRequest, result: GdcGRIN2listResponse, ds: any) {
+	// Always initialize cnvFiles
+	result.cnvFiles = { files: [] }
+
+	// Early return if no CNV options requested
+	if (!q.cnvOptions) {
+		console.log('No cnvOptions provided, returning empty cnvFiles')
+		return
+	}
+
+	// console.log('Fetching all CNV files...')
+
+	// Field names for the GDC API
+	const fields = [
+		'cases.samples.tissue_type',
+		'cases.project.project_id',
+		'cases.submitter_id',
+		'cases.case_id',
+		'data_type',
+		'file_id',
+		'file_size',
+		'data_format',
+		'experimental_strategy',
+		'analysis.workflow_type'
+	]
+
+	const { host, headers } = ds.getHostHeaders(q)
+
+	try {
+		const re: any = await ky
+			.post(joinUrl(host.rest, 'files'), {
+				timeout: false,
+				headers,
+				json: {
+					size: cnvMaxFileNumber,
+					fields: fields.join(','),
+					filters: {
+						op: 'in',
+						content: {
+							field: 'data_type',
+							value: ['Masked Copy Number Segment', 'Allele-specific Copy Number Segment']
+						}
+					}
+				}
+			})
+			.json()
+
+		console.log('API Response:', {
+			hits: re.data?.hits?.length || 0,
+			firstHit: re.data?.hits?.[0]
+		})
+
+		if (!Array.isArray(re.data.hits)) {
+			throw new Error('API response data.hits is not an array')
+		}
+
+		const cnvFiles: GdcGRIN2File[] = []
+
+		for (const h of re.data.hits) {
+			console.log('Processing file:', {
+				file_id: h.file_id,
+				data_format: h.data_format,
+				data_type: h.data_type,
+				cases_length: h.cases?.length
+			})
+
+			if (h.data_format === 'TXT') {
+				if (h.data_type === 'Masked Copy Number Segment' || h.data_type === 'Allele-specific Copy Number Segment') {
+					const c = h.cases?.[0]
+					if (!c) {
+						console.warn(`Skipping file ${h.file_id} - missing case data`)
+						continue
+					}
+
+					// Debug: Log the case structure
+					console.log('Case structure:', {
+						case_id: c.case_id,
+						submitter_id: c.submitter_id,
+						project: c.project,
+						samples: c.samples?.length
+					})
+
+					// QUICK FIX: Just add safety checks to your existing code
+					const file: GdcGRIN2File = {
+						id: h.file_id || h.id, // Handle both field names
+						project_id: c.project?.project_id || 'unknown', // Safe access with fallback
+						file_size: h.file_size,
+						case_submitter_id: c.submitter_id,
+						case_uuid: c.case_id,
+						sample_types: c.samples?.map((s: any) => s.tissue_type).filter(Boolean) || []
+					}
+
+					cnvFiles.push(file)
+					// console.log(`Added CNV file: ${file.id}`)
+				}
+			}
+		}
+
+		result.cnvFiles = { files: cnvFiles }
+		console.log(`Successfully processed ${cnvFiles.length} CNV files`)
+	} catch (error) {
+		console.error('Error fetching CNV files:', error)
+		result.cnvFiles = { files: [] }
+		// Don't re-throw - let the request continue
+	}
 }
