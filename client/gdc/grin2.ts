@@ -4,6 +4,7 @@ import { select } from 'd3-selection'
 import { formatElapsedTime } from '@sjcrh/proteinpaint-shared/time.js'
 import type { GdcGRIN2listRequest } from '#types'
 import { mclass } from '@sjcrh/proteinpaint-shared/common.js'
+import { bplen } from '@sjcrh/proteinpaint-shared/common.js'
 
 /**
  * Maps mclass constants to user-friendly mutation type names
@@ -251,9 +252,9 @@ function gdcGrin2ShowDeduplicationPopup(deduplicationStats) {
 				.style('font-size', '14px')
 				.style('color', '#333')
 				.html(
-					`<strong>Case ${caseInfo.caseName}:</strong> Found ${
-						caseInfo.fileCount
-					} MAF files, keeping largest (${gdcGrin2FormatBytes(caseInfo.keptFileSize)})`
+					`<strong>Case ${caseInfo.caseName}:</strong> Found ${caseInfo.fileCount} MAF files, keeping largest (${bplen(
+						caseInfo.keptFileSize
+					)})`
 				)
 		})
 	}
@@ -279,11 +280,7 @@ function gdcGrin2ShowDeduplicationPopup(deduplicationStats) {
 			.style('margin', '0 0 16px 0')
 			.style('font-size', '14px')
 			.style('color', '#666')
-			.text(
-				`${deduplicationStats.filteredFiles.length} files were excluded for being too large (>${gdcGrin2FormatBytes(
-					1000000
-				)})`
-			)
+			.text(`${deduplicationStats.filteredFiles.length} files were excluded for being too large (>${bplen(1000000)})`)
 
 		deduplicationStats.filteredFiles.forEach(fileInfo => {
 			const fileDiv = content
@@ -305,7 +302,7 @@ function gdcGrin2ShowDeduplicationPopup(deduplicationStats) {
 				.append('div')
 				.style('font-size', '12px')
 				.style('color', '#666')
-				.text(`Size: ${gdcGrin2FormatBytes(fileInfo.fileSize)} - ${fileInfo.reason}`)
+				.text(`Size: ${bplen(fileInfo.fileSize)} - ${fileInfo.reason}`)
 		})
 	}
 
@@ -364,16 +361,6 @@ function gdcGrin2ShowDeduplicationPopup(deduplicationStats) {
 			select('body').on('keydown.popup', null)
 		}
 	})
-}
-/**
- * Helper function to format bytes
- */
-function gdcGrin2FormatBytes(bytes) {
-	if (bytes === 0) return '0 Bytes'
-	const k = 1024
-	const sizes = ['Bytes', 'KB', 'MB', 'GB']
-	const i = Math.floor(Math.log(bytes) / Math.log(k))
-	return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
 }
 
 /**
