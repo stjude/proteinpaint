@@ -107,6 +107,21 @@ struct DataTypeConfig {
     output_columns: Vec<&'static str>,
 }
 
+// Function to check if CNV file has Segment_Mean column
+fn has_segment_mean_column(content: &str) -> bool {
+    for line in content.lines() {
+        // Check if this line contains Segment_Mean (likely the header)
+        if line.contains("Segment_Mean") {
+            return true;
+        }
+        // Stop checking after a few non-comment lines to avoid parsing entire file
+        if !line.trim().is_empty() {
+            break;
+        }
+    }
+    false
+}
+
 // Function to parse TSV content
 // Updated parse_content function with better consequence filtering
 fn parse_content(
@@ -120,6 +135,11 @@ fn parse_content(
     loss_threshold: f32,
     seg_length: i32,
 ) -> Result<Vec<Vec<String>>, (String, String, String)> {
+    // Early filter for CNV files - only process files with Segment_Mean
+    if data_type == "cnv" && !has_segment_mean_column(content) {
+        return Ok(Vec::new()); // Return empty result, no error
+    }
+
     let config = match data_type {
         "cnv" => DataTypeConfig {
             header_marker: "Segment_Mean",

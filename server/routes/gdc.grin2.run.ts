@@ -8,7 +8,7 @@ import { formatElapsedTime } from '@sjcrh/proteinpaint-shared/time.js'
 
 /**
  * Route to run GRIN2 analysis:
- * 1. Call Rust to process MAF files and get JSON data (now with streaming)
+ * 1. Call Rust to process MAF & CNV files and get JSON data (now with streaming)
  * 2. Pipe the JSON to R script to generate a plot
  * 3. Return the plot image to client
  */
