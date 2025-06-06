@@ -228,7 +228,7 @@ tmodCERNOtest_local <- function(l, modules=NULL, qval= 0.05, order.by= "pval", f
   ret
 }
 # Input data from cerno_test.json
-input<-fromJSON("cerno_test.json")
+input<-fromJSON(gzfile("cerno_test.json.gz"))
 
 gs2gv <- list()
 for (i in 1:length(input$MODULES2GENES)) {
