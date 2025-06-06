@@ -1,6 +1,9 @@
+#![allow(non_snake_case)]
 use fishers_exact::fishers_exact;
 //use r_mathlib;
+use r_mathlib::chi_squared_cdf;
 use statrs::distribution::{ChiSquared, ContinuousCDF};
+use std::collections::HashSet;
 use std::panic;
 
 #[allow(dead_code)]
@@ -99,24 +102,19 @@ fn chi_square_test(
     {
         0.05 // Arbitarily put a very high number when there are only forward or reverse reads for alternate/reference
     } else {
-        let total: f64 = (alternate_forward_count
-            + alternate_reverse_count
-            + reference_forward_count
-            + reference_reverse_count) as f64;
-        let expected_alternate_forward_count: f64 = (alternate_forward_count
-            + alternate_reverse_count) as f64
+        let total: f64 =
+            (alternate_forward_count + alternate_reverse_count + reference_forward_count + reference_reverse_count)
+                as f64;
+        let expected_alternate_forward_count: f64 = (alternate_forward_count + alternate_reverse_count) as f64
             * (alternate_forward_count + reference_forward_count) as f64
             / total;
-        let expected_alternate_reverse_count: f64 = (alternate_forward_count
-            + alternate_reverse_count) as f64
+        let expected_alternate_reverse_count: f64 = (alternate_forward_count + alternate_reverse_count) as f64
             * (alternate_reverse_count + reference_reverse_count) as f64
             / total;
-        let expected_reference_forward_count: f64 = (alternate_forward_count
-            + reference_forward_count) as f64
+        let expected_reference_forward_count: f64 = (alternate_forward_count + reference_forward_count) as f64
             * (reference_forward_count + reference_reverse_count) as f64
             / total;
-        let expected_reference_reverse_count: f64 = (reference_forward_count
-            + reference_reverse_count) as f64
+        let expected_reference_reverse_count: f64 = (reference_forward_count + reference_reverse_count) as f64
             * (alternate_reverse_count + reference_reverse_count) as f64
             / total;
 
@@ -315,15 +313,12 @@ pub fn wilcoxon_rank_sum_test(
         //println!("z_original:{}", z);
         let mut nties_sum: f64 = 0.0;
         for i in 0..rank_frequencies.len() {
-            nties_sum += rank_frequencies[i] * rank_frequencies[i] * rank_frequencies[i]
-                - rank_frequencies[i];
+            nties_sum += rank_frequencies[i] * rank_frequencies[i] * rank_frequencies[i] - rank_frequencies[i];
         }
 
         let sigma = (((group1.len() * group2.len()) as f64) / 12.0
             * ((group1.len() + group2.len() + 1) as f64
-                - nties_sum
-                    / (((group1.len() + group2.len()) as f64)
-                        * ((group1.len() + group2.len() - 1) as f64))))
+                - nties_sum / (((group1.len() + group2.len()) as f64) * ((group1.len() + group2.len() - 1) as f64))))
             .sqrt();
         //println!("sigma:{}", sigma);
         let mut correction: f64 = 0.0;
@@ -411,4 +406,83 @@ pub fn calculate_frac_rank(current_rank: f64, num_repeats: f64) -> f64 {
         sum += rank;
     }
     sum / num_repeats
+}
+
+#[allow(non_camel_case_types)]
+#[allow(non_snake_case)]
+#[derive(Debug, Clone, PartialEq, PartialOrd)]
+pub struct gene_order {
+    pub gene_name: String,
+    pub fold_change: f32,
+    pub rank: Option<usize>,
+}
+
+#[allow(dead_code)]
+pub fn cerno(
+    genes_descending: &Vec<gene_order>,
+    genes_ascending: &Vec<gene_order>,
+    genes_in_pathway: HashSet<String>,
+) -> (f32, f32, f32, f32, String, f32) {
+    // Ensure sample_coding_genes is sorted in decreasing order of fold_change
+    // Filter the genes_descending vector to only include those whose gene_names are in the HashSet genes_in_pathway
+    let gene_intersections_descending: Vec<&gene_order> = genes_descending
+        .iter()
+        .filter(|genes_descending| genes_in_pathway.contains(&genes_descending.gene_name)) // Check if name is in the HashSet genes_in_pathway
+        .collect(); // Collect the results into a new vector
+
+    let N1 = gene_intersections_descending.len() as f32;
+    let N = genes_descending.len() as f32;
+    let mut gene_set_hits: String = "".to_string();
+    for gene in &gene_intersections_descending {
+        gene_set_hits += &(gene.gene_name.to_string() + &",");
+    }
+    if gene_intersections_descending.len() > 0 {
+        // Remove the last "," in string
+        gene_set_hits.pop();
+    }
+
+    let ranks_descending: Vec<usize> = gene_intersections_descending // x <- l %in% mset$gs2gv[[m]] ; ranks <- c(1:N)[x]
+        .iter()
+        .map(|x| x.rank.unwrap())
+        .collect::<Vec<usize>>();
+
+    let cerno: f32 = ranks_descending // -2 * sum( log(ranks/N) )
+        .iter()
+        .map(|x| ((*x as f32) / N).ln())
+        .collect::<Vec<f32>>()
+        .iter()
+        .sum::<f32>()
+        * (-2.0);
+
+    let cES;
+    let N2 = N - N1; // N2 = N - N1
+    let R1 = ranks_descending.iter().sum::<usize>() as f32; // R1 <- sum(ranks)
+    let U = N1 * N2 + N1 * (N1 + 1.0) / 2.0 - R1; // U  <- N1*N2+N1*(N1+1)/2-R1
+    let AUC = U / (N1 * N2); // AUC <- U/(N1*N2)
+    let p_value;
+    if AUC >= 0.5 {
+        // Upregulated geneset
+        cES = cerno / (2.0 * (N1 as f32)); // cES <- cerno/(2*N1)
+        p_value = chi_squared_cdf(cerno as f64, (2.0 * N1) as f64, false, false);
+    // pchisq(ret$cerno, 2*N1, lower.tail=FALSE)
+    } else {
+        let gene_intersections_ascending: Vec<&gene_order> = genes_ascending
+            .iter()
+            .filter(|genes_ascending| genes_in_pathway.contains(&genes_ascending.gene_name)) // Check if name is in the HashSet genes_in_pathway
+            .collect(); // Collect the results into a new vector
+        let ranks_ascending: Vec<usize> = gene_intersections_ascending // x <- l %in% mset$gs2gv[[m]] ; ranks <- c(1:N)[x]
+            .iter()
+            .map(|x| x.rank.unwrap())
+            .collect::<Vec<usize>>();
+        let cerno_ascending: f32 = ranks_ascending // -2 * sum( log(ranks/N) )
+            .iter()
+            .map(|x| ((*x as f32) / N).ln())
+            .collect::<Vec<f32>>()
+            .iter()
+            .sum::<f32>()
+            * (-2.0);
+        cES = cerno_ascending / (2.0 * (N1 as f32)); // cES <- cerno/(2*N1)
+        p_value = chi_squared_cdf(cerno_ascending as f64, (2.0 * N1) as f64, false, false);
+    }
+    (p_value as f32, AUC, cES, N1, gene_set_hits, cerno)
 }

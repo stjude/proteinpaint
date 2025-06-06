@@ -119,3 +119,4 @@ jobs:
           npm run build --workspace="rust"
           cp container/ci/serverconfig.json rust/ 
           npm run test:unit --workspace="rust"
+          cd rust && cargo test

@@ -1,9 +1,9 @@
-// import * as d3axis from 'd3-axis'
-import { Menu, renderTable, table2col } from '#dom'
+import * as d3axis from 'd3-axis'
+import { Menu, renderTable, table2col, axisstyle } from '#dom'
 import { dofetch3 } from '#common/dofetch'
 import { controlsInit } from './controls'
 import { getCompInit, copyMerge } from '#rx'
-// import { scaleLinear } from 'd3-scale'
+import { scaleLinear } from 'd3-scale'
 import { roundValueAuto } from '#shared/roundValue.js'
 import { VolcanoModel } from '#plots/volcano/model/VolcanoModel.ts'
 import { getDefaultVolcanoSettings } from '#plots/volcano/Volcano.ts'
@@ -363,7 +363,7 @@ add:
 			const png_height = 400
 			self.dom.holder.append('img').attr('width', png_width).attr('height', png_height).attr('src', self.imageUrl)
 		} else if (self.settings.gsea_method == 'cerno') {
-			// Need to do client side rendering of the code here in case of CERNO (will do in a following branch)
+			render_cerno_plot(self, output)
 		} else {
 			throw 'Unknown method:' + self.settings.gsea_method
 		}
@@ -456,10 +456,10 @@ add:
 			{ label: 'Gene Set', sortable: true },
 			{ label: 'Area Under Curve', barplot: { axisWidth: 200 }, sortable: true },
 			{ label: 'Enrichment Score', barplot: { axisWidth: 200 }, sortable: true },
-			{ label: 'Gene Set Size', sortable: true },
+			{ label: 'Total Gene Set Size', sortable: true },
 			{ label: 'P value', sortable: true },
 			{ label: 'FDR', sortable: true },
-			{ label: 'Leading Edge' }
+			{ label: 'Gene Set Hits' }
 		]
 	} else {
 		throw 'Unknown method:' + self.settings.gsea_method
@@ -572,6 +572,140 @@ function setResultsRows(output_keys, iter, self) {
 	} else {
 		throw 'Unknown method:' + self.settings.gsea_method
 	}
+}
+
+function render_cerno_plot(self, cerno_output) {
+	const holder = self.dom.holder
+	holder.selectAll('*').remove()
+	const svg_width = 400
+	const svg_height = 400
+	const svg = holder.append('svg').attr('width', svg_width).attr('height', svg_height)
+	const toppad = 20
+	const rightpad = 5
+	const yaxisw = 50 //Math.max(50, svg_width / 8)
+	const xaxish = 50 //Math.max(50, svg_height / 8)
+	const yaxisg = svg.append('g')
+	const xaxisg = svg.append('g')
+	const xpad = 50
+	const ypad = 100
+
+	const DE_output = []
+	for (let i = 0; i < self.config.gsea_params.genes.length; i++) {
+		const item = { gene: self.config.gsea_params.genes[i], fold_change: self.config.gsea_params.fold_change[i] }
+		DE_output.push(item)
+	}
+	DE_output.sort((i, j) => j.fold_change - i.fold_change) // Sorting genes in descending order of fold change
+
+	const xscale = scaleLinear()
+		.domain([0, DE_output.length])
+		.range([xpad, svg_width - rightpad])
+	const yscale = scaleLinear()
+		.domain([100, 0])
+		.range([toppad, svg_height - ypad])
+
+	yaxisg.attr('transform', 'translate(' + xpad + ',' + 0 + ')')
+	xaxisg.attr('transform', 'translate(' + 0 + ',' + (svg_height - ypad) + ')')
+	const xlab = svg
+		.append('text')
+		.text('Gene list')
+		.attr('fill', 'black')
+		.attr('text-anchor', 'start')
+		.attr('transform', 'translate(' + xscale(DE_output.length / 3) + ',' + (svg_height - ypad + 2 * toppad) + ')')
+	const ylab = svg
+		.append('text')
+		.text('Percentage of gene set')
+		.attr('fill', 'black')
+		.attr('text-anchor', 'middle')
+		.attr('y', xpad / 2)
+		.attr('x', -svg_width / 2.5)
+		.attr('transform', 'rotate(-90)')
+	let fontSize = 30
+	const title = svg
+		.append('text')
+		.text(self.config.gsea_params.geneset_name)
+		.attr('fill', 'black')
+		.attr('text-anchor', 'start')
+		.attr('font-size', fontSize + 'px')
+		.attr('transform', 'translate(' + xpad + ',' + toppad / 2 + ')')
+
+	// Check to see if the text fits into the svg width and toppad dimensions. If not, decrease the font size until the text fits into these dimensions
+	let title_bbox = title.node().getBBox()
+	while (title_bbox.width > svg_width - xpad || title_bbox.height > (toppad * 3.5) / 5) {
+		fontSize -= 1 // Decrease font size
+		title.node().setAttribute('font-size', fontSize + 'px')
+		title_bbox = title.node().getBBox() // Measure again
+	}
+
+	const auc = cerno_output[self.config.gsea_params.geneset_name].auc
+	if (typeof auc === 'number') {
+		let auc_pos
+		if (auc >= 0.5) {
+			// The position of the text changes depending upon the value of auc so as to avoid the auc curve overlapping with the text
+			auc_pos = xscale((DE_output.length * 3) / 3.5) + ',' + (svg_height - ypad * 1.5)
+		} else {
+			auc_pos = xscale((DE_output.length * 0.8) / 4.5) + ',' + (svg_height - ypad * 3)
+		}
+		const auc_text = svg
+			.append('text')
+			.text('AUC=' + roundValueAuto(auc))
+			.attr('fill', 'black')
+			.attr('text-anchor', 'middle')
+			.attr('transform', 'translate(' + auc_pos + ')')
+	} else {
+		// Should not happen
+		throw 'AUC not a number:' + auc
+	}
+
+	axisstyle({
+		axis: yaxisg.call(d3axis.axisLeft().scale(yscale)),
+		color: 'black',
+		showline: true,
+		fontsize: '10'
+	})
+	axisstyle({
+		axis: xaxisg.call(d3axis.axisBottom().scale(xscale)),
+		color: 'black',
+		showline: true,
+		fontsize: '10'
+	})
+
+	// Find genes that were found from cerno output
+	if (Object.keys(cerno_output).includes(self.config.gsea_params.geneset_name)) {
+		const hit_genes = cerno_output[self.config.gsea_params.geneset_name].leading_edge.split(',')
+		const y_increment = 100 / hit_genes.length
+		const lines = svg.append('g')
+
+		let y_iter = 100
+		for (let i = 0; i < DE_output.length; i++) {
+			const y_old = y_iter
+			// Increment y only when gene is found in geneset
+			if (hit_genes.includes(DE_output[i].gene)) {
+				y_iter = y_iter - y_increment
+				lines
+					.append('line') // attach a line
+					.style('stroke', 'red') // colour the line
+					.attr('x1', xscale(i)) // x position of the first end of the line
+					.attr('y1', svg_height) // y position of the first end of the line
+					.attr('x2', xscale(i)) // x position of the second end of the line
+					.attr('y2', svg_height - ypad + 2.5 * toppad) // y position of the second end of the line
+			}
+			lines
+				.append('line') // attach a line
+				.style('stroke', 'red') // colour the line
+				.attr('x1', xscale(i)) // x position of the first end of the line
+				.attr('y1', yscale(100 - y_old)) // y position of the first end of the line
+				.attr('x2', xscale(i + 1)) // x position of the second end of the line
+				.attr('y2', yscale(100 - y_iter)) // y position of the second end of the line
+		}
+	} else {
+		// Should not happen
+		throw '${self.config.gsea_params.geneset_name} not found'
+	}
+
+	//console.log('cerno_output:', cerno_output)
+
+	// Find the genes that were found in the clicked geneset
+	//const genes_found
 }
 
 // function render_gsea_plot(self, plot_data) {
