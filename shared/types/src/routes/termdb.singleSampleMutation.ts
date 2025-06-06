@@ -6,8 +6,8 @@ export type TermdbSingleSampleMutationRequest = {
 	genome: string
 	/** Dataset label */
 	dslabel: string
-	/** sample id */
-	sample: string
+	/** sample id, allow string or number; for native ds, sample name in number will be cast into string */
+	sample: string | number
 }
 type ValidResponse = {
 	/** List of mutation data points from this sample TODO change to type of M elements */
