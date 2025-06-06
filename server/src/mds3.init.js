@@ -2755,7 +2755,7 @@ async function mayAddDataAvailability(sample2mlst, dtKey, ds, origin, filter, q)
 	// get the list of samples/cases that passed filter0 (GDC) or filter
 	const sampleFilter = q.filter0
 		? new Set(await getCasesByFilter(q.filter0, q))
-		: filter
+		: filter && filter.lst.length
 		? new Set((await get_samples(filter, ds)).map(i => i.id))
 		: null
 
