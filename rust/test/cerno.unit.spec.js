@@ -31,9 +31,7 @@ tape('rust GSEA cerno unit test upregulated', async function (test) {
 	const out = JSON.parse(Rustout)
 
 	const expJson = JSON.parse(
-		fs.readFileSync(path.join(serverconfig.binpath + '/../rust/test', 'TermdbTest_cerno_exp_upregulated_output.json'), {
-			encoding: 'utf8'
-		})
+		'{"HALLMARK_DNA_REPAIR":{"pval":0.14545453,"fdr":0.14545453,"leading_edge":"BCR","auc":0.8703704,"es":1.9278917,"geneset_size":4},"HALLMARK_COMPLEMENT":{"pval":0.14545453,"fdr":0.14545453,"leading_edge":"BCR","auc":0.8703704,"es":1.9278917,"geneset_size":4},"HALLMARK_COAGULATION":{"pval":0.14545453,"fdr":0.14545453,"leading_edge":"BCR","auc":0.8703704,"es":1.9278917,"geneset_size":4},"HALLMARK_CHOLESTEROL_HOMEOSTASIS":{"pval":0.14545453,"fdr":0.14545453,"leading_edge":"BCR","auc":0.8703704,"es":1.9278917,"geneset_size":4},"HALLMARK_BILE_ACID_METABOLISM":{"pval":0.14545453,"fdr":0.14545453,"leading_edge":"BCR","auc":0.8703704,"es":1.9278917,"geneset_size":4},"HALLMARK_APOPTOSIS":{"pval":0.14545453,"fdr":0.14545453,"leading_edge":"BCR","auc":0.8703704,"es":1.9278917,"geneset_size":4},"HALLMARK_APICAL_SURFACE":{"pval":0.14545453,"fdr":0.14545453,"leading_edge":"BCR","auc":0.8703704,"es":1.9278917,"geneset_size":4},"HALLMARK_APICAL_JUNCTION":{"pval":0.14545453,"fdr":0.14545453,"leading_edge":"BCR","auc":0.8703704,"es":1.9278917,"geneset_size":4},"HALLMARK_ANGIOGENESIS":{"pval":0.14545453,"fdr":0.14545453,"leading_edge":"BCR","auc":0.8703704,"es":1.9278917,"geneset_size":4},"HALLMARK_ANDROGEN_RESPONSE":{"pval":0.14545453,"fdr":0.14545453,"leading_edge":"BCR","auc":0.8703704,"es":1.9278917,"geneset_size":4},"HALLMARK_ALLOGRAFT_REJECTION":{"pval":0.14545453,"fdr":0.14545453,"leading_edge":"BCR","auc":0.8703704,"es":1.9278917,"geneset_size":4},"HALLMARK_ADIPOGENESIS":{"pval":0.14545453,"fdr":0.14545453,"leading_edge":"BCR","auc":0.8703704,"es":1.9278917,"geneset_size":4}}'
 	)
 
 	//     // Pathway1
@@ -126,12 +124,7 @@ tape('rust GSEA cerno unit test downregulated', async function (test) {
 	const out = JSON.parse(Rustout)
 
 	const expJson = JSON.parse(
-		fs.readFileSync(
-			path.join(serverconfig.binpath + '/../rust/test', 'TermdbTest_cerno_exp_downregulated_output.json'),
-			{
-				encoding: 'utf8'
-			}
-		)
+		'{"HALLMARK_DNA_REPAIR":{"pval":0.14545453,"fdr":0.14545453,"leading_edge":"BCR","auc":0.16666667,"es":1.9278917,"geneset_size":4},"HALLMARK_COMPLEMENT":{"pval":0.14545453,"fdr":0.14545453,"leading_edge":"BCR","auc":0.16666667,"es":1.9278917,"geneset_size":4},"HALLMARK_COAGULATION":{"pval":0.14545453,"fdr":0.14545453,"leading_edge":"BCR","auc":0.16666667,"es":1.9278917,"geneset_size":4},"HALLMARK_CHOLESTEROL_HOMEOSTASIS":{"pval":0.14545453,"fdr":0.14545453,"leading_edge":"BCR","auc":0.16666667,"es":1.9278917,"geneset_size":4},"HALLMARK_BILE_ACID_METABOLISM":{"pval":0.14545453,"fdr":0.14545453,"leading_edge":"BCR","auc":0.16666667,"es":1.9278917,"geneset_size":4},"HALLMARK_APOPTOSIS":{"pval":0.14545453,"fdr":0.14545453,"leading_edge":"BCR","auc":0.16666667,"es":1.9278917,"geneset_size":4},"HALLMARK_APICAL_SURFACE":{"pval":0.14545453,"fdr":0.14545453,"leading_edge":"BCR","auc":0.16666667,"es":1.9278917,"geneset_size":4},"HALLMARK_APICAL_JUNCTION":{"pval":0.14545453,"fdr":0.14545453,"leading_edge":"BCR","auc":0.16666667,"es":1.9278917,"geneset_size":4},"HALLMARK_ANGIOGENESIS":{"pval":0.14545453,"fdr":0.14545453,"leading_edge":"BCR","auc":0.16666667,"es":1.9278917,"geneset_size":4},"HALLMARK_ANDROGEN_RESPONSE":{"pval":0.14545453,"fdr":0.14545453,"leading_edge":"BCR","auc":0.16666667,"es":1.9278917,"geneset_size":4},"HALLMARK_ALLOGRAFT_REJECTION":{"pval":0.14545453,"fdr":0.14545453,"leading_edge":"BCR","auc":0.16666667,"es":1.9278917,"geneset_size":4},"HALLMARK_ADIPOGENESIS":{"pval":0.14545453,"fdr":0.14545453,"leading_edge":"BCR","auc":0.16666667,"es":1.9278917,"geneset_size":4}}'
 	)
 
 	//     // Pathway1
