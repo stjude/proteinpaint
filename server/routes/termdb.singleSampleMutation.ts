@@ -1,6 +1,5 @@
-import fs from 'fs'
 import path from 'path'
-import { read_file } from '#src/utils.js'
+import { read_file, file_is_readable } from '#src/utils.js'
 import serverconfig from '#src/serverconfig.js'
 import type { TermdbSingleSampleMutationRequest, TermdbSingleSampleMutationResponse, RouteApi } from '#types'
 import { termdbSingleSampleMutationPayload } from '#types/checkers'
@@ -45,18 +44,27 @@ export async function validate_query_singleSampleMutation(ds: any, genome: any) 
 	if (_q.src == 'gdcapi') {
 		gdcValidate_query_singleSampleMutation(ds, genome)
 	} else if (_q.src == 'native') {
-		// using a folder to store text files for individual samples
-		// file names are string sample name
+		/* using a folder to store text files for individual samples
+		file names are string sample name
+		getter will throw on any error
+		*/
 		_q.get = async (q: TermdbSingleSampleMutationRequest) => {
-			const file = path.join(serverconfig.tpmasterdir, _q.folder, q.sample)
-			try {
-				await fs.promises.stat(file)
-			} catch (e: any) {
-				if (e.code == 'EACCES') throw 'cannot read file, permission denied'
-				if (e.code == 'ENOENT') throw 'no data for this sample'
-				throw 'failed to load data'
+			let sample: string
+			{
+				const vt = typeof q.sample // to only compute value type once
+				if (vt == 'string') {
+					if (q.sample == '') throw 'sample is blank string'
+					sample = q.sample as string // accepted
+				} else if (vt == 'number') {
+					// termdbtest and possibly other ds may use integer as sample name, which is not allowed by path.join(), thus need to call toString()
+					sample = q.sample.toString()
+				} else {
+					throw 'sample value is not string or number'
+				}
 			}
 
+			const file = path.join(serverconfig.tpmasterdir, _q.folder, sample)
+			await file_is_readable(file)
 			const data = await read_file(file)
 			// object wraps around mlst[] so it's possible to add other attr e.g. total number of mutations that exceeds viewing limit
 			return { mlst: JSON.parse(data) }
