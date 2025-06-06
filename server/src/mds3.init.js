@@ -44,7 +44,6 @@ import { validate_query_rnaseqGeneCount } from '#routes/termdb.DE.ts'
 import { validate_query_getSampleWSImages } from '#routes/samplewsimages.ts'
 import { validate_query_getWSISamples } from '#routes/wsisamples.ts'
 import { mds3InitNonblocking } from './mds3.init.nonblocking.js'
-import { getQueryApi } from './bam.gdc.js'
 
 /*
 init
@@ -110,7 +109,6 @@ arguments:
 /* used in mds3 tk ui, when a info or format key is not found in a variant, to be able to count the variant by this key in the info/format legend
  this duplicates the same string in mds3/legend.js
 */
-let queryApi
 const unannotatedKey = 'Unannotated'
 
 export async function init(ds, genome) {
@@ -176,7 +174,6 @@ export async function init(ds, genome) {
 	// validation or remaining steps that may include setInterval that runs at the
 	// same time as mayRetryInit() in initGenomesDs.js (avoids race condition)
 	if (ds.init?.hasNonblockingSteps) mds3InitNonblocking(ds)
-	if (ds.getHostHeaders) queryApi = getQueryApi(ds)
 }
 
 export function client_copy(ds) {
@@ -2749,28 +2746,30 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 
 async function mayAddDataAvailability(sample2mlst, dtKey, ds, origin, filter, q) {
 	if (!ds.assayAvailability?.byDt) return // this ds is not equipped with assay availability by dt
-	const _dt = structuredClone(ds.assayAvailability.byDt[dtKey])
+	const _dt = ds.assayAvailability.byDt[dtKey]
 	if (!_dt) return // this ds has assay availability but lacks setting for this dt. this is allowed e.g. we only specify availability for cnv but not snvindel.
 
-	// get the list of samples/cases that passed filter0 (GDC) or filter
-	const sampleFilter = q.filter0
-		? new Set(await getCasesByFilter(q.filter0, q))
-		: filter && filter.lst.length
-		? new Set((await get_samples(filter, ds)).map(i => i.id))
-		: null
+	// get the list of samples/cases that passed filter.
+	const sampleFilter = filter && filter.lst.length ? new Set((await get_samples(filter, ds)).map(i => i.id)) : null
 
 	const dts = []
 	if (_dt.byOrigin) {
 		for (const o in _dt.byOrigin) {
 			if (origin && origin != o) continue // if specific origin is requested then restrict to that origin
 			const dt = _dt.byOrigin[o]
-			dt.origin = o
-			dts.push(dt)
+			dts.push({ ...dt, origin: o })
 		}
 	} else {
-		dts.push(_dt)
+		dts.push({ ..._dt })
 	}
 	for (const dt of dts) {
+		if (dt.get) {
+			// get() returns yesSamples and noSamples that passed filter0
+			const result = await dt.get(q.filter0)
+			dt.yesSamples = result.yesSamples
+			dt.noSamples = result.noSamples
+		}
+
 		for (const sid of dt.yesSamples) {
 			// sample has been assayed
 			// if sample does not have annotated mutation for dt
@@ -3076,11 +3075,8 @@ async function mayValidateAssayAvailability(ds) {
 async function getAssayAvailablility(ds, dt) {
 	// cache sample id list for each category, set .yesSamples(), .noSamples()
 	if (dt.get) {
-		// for assay availability from get function
-		const result = await dt.get()
-		dt.yesSamples = result.yesSamples
-		dt.noSamples = result.noSamples
-		delete dt.get
+		// for assay availability from get function, do not cache. get() will return
+		// yesSamples and noSamples passed filter0
 	} else {
 		// for assay availability from a db term
 		dt.yesSamples = new Set()
@@ -3095,19 +3091,4 @@ async function getAssayAvailablility(ds, dt) {
 			//else throw `value of term ${dt.term_id} is invalid`
 		}
 	}
-}
-
-// used by mayAddDataAvailability to get list of cases by filter0
-async function getCasesByFilter(filter0, q) {
-	const re = await queryApi(
-		null,
-		{
-			end_point: 'cases/',
-			fields: ['case_id']
-		},
-		30000, // max number of cases to request.
-		filter0,
-		q
-	)
-	return re.data.hits.map(i => i.id)
 }
