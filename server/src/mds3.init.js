@@ -2703,7 +2703,7 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 				}
 			}
 
-			await mayAddDataAvailability(sample2mlst, dt, ds, tw.q.origin, q.filter)
+			await mayAddDataAvailability(sample2mlst, dt, ds, tw.q.origin, q.filter, q)
 		}
 
 		const groupset = get_active_groupset(tw.term, tw.q)
@@ -2744,23 +2744,32 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 	}
 }
 
-async function mayAddDataAvailability(sample2mlst, dtKey, ds, origin, filter) {
+async function mayAddDataAvailability(sample2mlst, dtKey, ds, origin, filter, q) {
 	if (!ds.assayAvailability?.byDt) return // this ds is not equipped with assay availability by dt
-	const _dt = structuredClone(ds.assayAvailability.byDt[dtKey])
+	const _dt = ds.assayAvailability.byDt[dtKey]
 	if (!_dt) return // this ds has assay availability but lacks setting for this dt. this is allowed e.g. we only specify availability for cnv but not snvindel.
-	const sampleFilter = filter ? new Set((await get_samples(filter, ds)).map(i => i.id)) : null
+
+	// get the list of samples/cases that passed filter.
+	const sampleFilter = filter && filter.lst.length ? new Set((await get_samples(filter, ds)).map(i => i.id)) : null
+
 	const dts = []
 	if (_dt.byOrigin) {
 		for (const o in _dt.byOrigin) {
 			if (origin && origin != o) continue // if specific origin is requested then restrict to that origin
 			const dt = _dt.byOrigin[o]
-			dt.origin = o
-			dts.push(dt)
+			dts.push({ ...dt, origin: o })
 		}
 	} else {
-		dts.push(_dt)
+		dts.push({ ..._dt })
 	}
 	for (const dt of dts) {
+		if (dt.get) {
+			// get() returns yesSamples and noSamples that passed filter0
+			const result = await dt.get(q.filter0)
+			dt.yesSamples = result.yesSamples
+			dt.noSamples = result.noSamples
+		}
+
 		for (const sid of dt.yesSamples) {
 			// sample has been assayed
 			// if sample does not have annotated mutation for dt
@@ -3036,7 +3045,7 @@ function mayValidateViewModes(ds) {
 	}
 }
 
-function mayValidateAssayAvailability(ds) {
+async function mayValidateAssayAvailability(ds) {
 	if (!ds.assayAvailability) return
 	// has this setting. cache sample list
 	if (ds.assayAvailability.byDt) {
@@ -3047,34 +3056,39 @@ function mayValidateAssayAvailability(ds) {
 				for (const key in dt.byOrigin) {
 					const sub_dt = dt.byOrigin[key]
 					// validate structure
-					// require .yes{} .no{}
-					if (!sub_dt.yes || !sub_dt.no || !sub_dt.term_id)
-						throw 'ds.assayAvailability.byDt.*.byOrigin properties require .term_id .yes{} .no{}'
-					getAssayAvailablility(ds, sub_dt)
+					// require {.yes{} .no{}, term_id} or get()
+					if (!((sub_dt.yes && sub_dt.no && sub_dt.term_id) || sub_dt.get))
+						throw 'ds.assayAvailability.byDt.*.byOrigin requires {term_id, yes{}, no{}} or get()'
+					await getAssayAvailablility(ds, sub_dt)
 				}
 			} else {
 				// validate structure
-				// require .yes{} .no{}
-				if (!dt.yes || !dt.no || !dt.term_id) throw 'ds.assayAvailability.byDt properties require .term_id .yes{} .no{}'
-				getAssayAvailablility(ds, dt)
+				// require {.yes{} .no{}, term_id} or get()
+				if (!((dt.yes && dt.no && dt.term_id) || dt.get))
+					throw 'ds.assayAvailability.byDt requires {term_id, yes{}, no{}} or get()'
+				await getAssayAvailablility(ds, dt)
 			}
 		}
 	}
 }
 
-function getAssayAvailablility(ds, dt) {
+async function getAssayAvailablility(ds, dt) {
 	// cache sample id list for each category, set .yesSamples(), .noSamples()
-	dt.yesSamples = new Set()
-	dt.noSamples = new Set()
-
-	const sql = `SELECT sample, value
-				FROM anno_categorical
-				WHERE term_id = '${dt.term_id}'`
-
-	const rows = ds.cohort.db.connection.prepare(sql).all()
-	for (const r of rows) {
-		if (dt.yes.value.includes(r.value)) dt.yesSamples.add(r.sample)
-		else if (dt.no.value.includes(r.value)) dt.noSamples.add(r.sample)
-		//else throw `value of term ${dt.term_id} is invalid`
+	if (dt.get) {
+		// for assay availability from get function, do not cache. get() will return
+		// yesSamples and noSamples passed filter0
+	} else {
+		// for assay availability from a db term
+		dt.yesSamples = new Set()
+		dt.noSamples = new Set()
+		const sql = `SELECT sample, value
+					FROM anno_categorical
+					WHERE term_id = '${dt.term_id}'`
+		const rows = ds.cohort.db.connection.prepare(sql).all()
+		for (const r of rows) {
+			if (dt.yes.value.includes(r.value)) dt.yesSamples.add(r.sample)
+			else if (dt.no.value.includes(r.value)) dt.noSamples.add(r.sample)
+			//else throw `value of term ${dt.term_id} is invalid`
+		}
 	}
 }
