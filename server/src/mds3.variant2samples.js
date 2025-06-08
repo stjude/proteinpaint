@@ -191,7 +191,7 @@ function mayAllow2returnFormatValues(q, ds) {
 	if (q.get == 'samples') {
 		const byrange = ds.queries?.snvindel?.byrange
 		if (byrange) {
-			if ((byrange.bcffile || byrange.chr2bcffile) && byrange._tk.format) {
+			if ((byrange.bcffile || byrange._tk?.chr2files) && byrange._tk.format) {
 				// byrange query uses bcf file and the files have FORMAT fields,
 				// q.get=samples will make sample table display with the variant, return FORMAT for sample-level info on variants
 				q.addFormatValues = true
