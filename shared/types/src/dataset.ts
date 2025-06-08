@@ -78,12 +78,6 @@ type GenomicPositionEntry = {
 }
 */
 
-type Chr2bcffile = {
-	/** index is the chr (e.g. 'chr1', 'chr2', etc.)
-	 * value is the bcf file path */
-	[index: string]: string
-}
-
 type bcfMafFile = {
 	/** bcf file for only variants, no samples and FORMAT */
 	bcffile: string
@@ -113,8 +107,14 @@ type SnvindelByRange = {
 	//local ds can have following different setup
 	/** one single bcf file */
 	bcffile?: string
-	/** one bcf file per chr */
-	chr2bcffile?: Chr2bcffile
+	/** one bcf file per chr
+	after loading, this is transformed into byrange._tk.chr2files{}, and deleted!
+	*/
+	chr2bcffile?: {
+		/** index is the chr (e.g. 'chr1', 'chr2', etc.)
+		 * value is the bcf file path */
+		[index: string]: string
+	}
 	/** bcf+maf combined */
 	bcfMafFile?: bcfMafFile
 	/** allow to apply special configurations to certain INFO fields of the bcf file */
