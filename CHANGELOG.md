@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Fixes:
+- Beginning refactor of UI
+
 
 ## 2.129.5
 
