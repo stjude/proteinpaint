@@ -41,6 +41,78 @@ write_error <- function(msg) {
   cat("ERROR: ", msg, "\n", file = stderr())
 }
 
+### Function to determine color assignment based on mutation type
+#' Assign colors to lesion types based on what's present in the data
+#'
+#' @param lesion_types A vector of lesion types from your lsn.type column
+#' @return A named vector where names are lesion types and values are colors
+#'
+#' @examples
+#' # Example with all three types
+#' types1 <- c("mutation", "gain", "loss", "mutation", "gain")
+#' colors1 <- assign_lesion_colors(types1)
+#'
+#' # Example with only two types
+#' types2 <- c("gain", "loss", "gain", "loss")
+#' colors2 <- assign_lesion_colors(types2)
+assign_lesion_colors <- function(lesion_types) {
+  # Define color mapping
+  color_map <- c(
+    "mutation" = "grey",
+    "gain" = "red",
+    "loss" = "blue"
+  )
+
+  # Find unique lesion types in your actual data
+  unique_types <- unique(lesion_types)
+
+  # Check for any unexpected types
+  unknown_types <- setdiff(unique_types, names(color_map))
+  if (length(unknown_types) > 0) {
+    warning(
+      "Unknown lesion types found: ",
+      paste(unknown_types, collapse = ", ")
+    )
+  }
+
+  # Return only the colors for types that exist in your data
+  available_colors <- color_map[unique_types]
+
+  # Remove any NA values for unknown types
+  available_colors <- available_colors[!is.na(available_colors)]
+
+  # R implicity returns this
+  available_colors
+}
+
+#' Sort Mutation data based on available p.nsubj columns with priority system
+#'
+#' @param data Dataframe containing GRIN results (e.g., grin_table)
+#' @return Sorted dataframe
+#'
+#' Priority order:
+#' 1. p.nsubj.mutation (highest priority - if available, always use this)
+#' 2. p.nsubj.gain (medium priority - use if mutation not available)
+#' 3. p.nsubj.loss (lowest priority - use only if neither mutation nor gain available)
+sort_grin2_data <- function(data) {
+  # Define the possible column names in priority order
+  possible_cols <- c("p.nsubj.mutation", "p.nsubj.gain", "p.nsubj.loss")
+
+  # Check if any of our sorting columns exist in the data
+  for (col in possible_cols) {
+    if (col %in% colnames(data)) {
+      sort_column <- col
+      break # Stop at first match (highest priority)
+    }
+  }
+
+  # Perform the sorting
+  sorted_data <- data %>%
+    arrange(.data[[sort_column]])
+
+  sorted_data
+}
+
 
 ### 1. stream in json input data
 con <- file("stdin", "r")
@@ -178,14 +250,6 @@ tryCatch(
 
 ### 4. receive lesion data from node
 
-# Read all streamed data into a single string
-# tryCatch({
-#  stream_data <- paste(readLines("stdin"), collapse="\n")
-#  },
-#  error = function(e){
-#    write_error(paste("Failed to read streamed data:", conditionMessage(e)))
-#    stop("Stream input error")
-#  })
 # Read lesion data from input JSON
 tryCatch(
   {
@@ -200,11 +264,14 @@ tryCatch(
     lesion_df$loc.end <- as.integer(lesion_df$loc.end)
     lesion_df$lsn.type <- as.character(lesion_df$lsn.type)
 
-    # Normalize chromosome names- Add "chr" prefix if missing
+    # Normalize chromosome names - Add "chr" prefix if missing
     lesion_df <- lesion_df %>%
       mutate(
         chrom = ifelse(grepl("^chr", chrom), chrom, paste0("chr", chrom))
       )
+
+    # Get unique lesion types and assign colors for use in plotting later
+    lsn_colors <- assign_lesion_colors(lesion_df$lsn.type)
   },
   error = function(e) {
     write_error(paste(
@@ -240,8 +307,7 @@ tryCatch(
 tryCatch(
   {
     grin_table <- grin_results$gene.hits
-    sorted_results <- grin_table %>%
-      arrange(p.nsubj.mutation)
+    sorted_results <- sort_grin2_data(grin_table)
   },
   error = function(e) {
     write_error(paste(
@@ -277,7 +343,11 @@ tryCatch(
     suppressMessages({
       suppressWarnings({
         # Main plotting function
-        genomewide.lsn.plot(grin_results, max.log10q = 150)
+        genomewide.lsn.plot(
+          grin_results,
+          max.log10q = 150,
+          lsn.colors = lsn_colors
+        )
       })
     })
 
@@ -305,12 +375,32 @@ tryCatch(
 
     # Convert each row of the dataframe to the format expected by table.ts
     # We only take the top 'num_rows_to_process' rows
+
+    # Simple function to determine the sorting column based on available p.nsubj columns
+    get_sig_values <- function(data) {
+      # Explicitly check in priority order
+      if ("p.nsubj.mutation" %in% colnames(data)) {
+        p_col <- "p.nsubj.mutation"
+        q_col <- "q.nsubj.mutation"
+      } else if ("p.nsubj.gain" %in% colnames(data)) {
+        p_col <- "p.nsubj.gain"
+        q_col <- "q.nsubj.gain"
+      } else if ("p.nsubj.loss" %in% colnames(data)) {
+        p_col <- "p.nsubj.loss"
+        q_col <- "q.nsubj.loss"
+      }
+      list(p_col, q_col)
+    }
+
+    p_col <- get_sig_values(sorted_results)[[1]]
+    q_col <- get_sig_values(sorted_results)[[2]]
+
     for (i in seq_len(nrow(sorted_results[1:num_rows_to_process, ]))) {
       row_data <- list(
         # Each cell in a row is an object with 'value' property
         list(value = as.character(sorted_results[i, "gene"])), # Gene name
-        list(value = as.numeric(sorted_results[i, "p.nsubj.mutation"])), # P-value
-        list(value = as.numeric(sorted_results[i, "q.nsubj.mutation"])) # Q-value
+        list(value = as.numeric(sorted_results[i, p_col])), # Dynamic p-value
+        list(value = as.numeric(sorted_results[i, q_col])) # Dynamic q-value
         # Add more columns as needed based on what's in sorted_results
       )
       topgene_table_data[[i]] <- row_data
