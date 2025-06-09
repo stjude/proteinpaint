@@ -254,42 +254,39 @@ async function mayListCnvFiles(q: GdcGRIN2listRequest, result: GdcGRIN2listRespo
 		return
 	}
 
-	// console.log('Fetching all CNV files...')
+	const case_filters: any = { op: 'and', content: [] }
+	if (q.filter0) {
+		case_filters.content.push(q.filter0)
+	}
 
-	// Field names for the GDC API
-	const fields = [
-		'cases.samples.tissue_type',
-		'cases.project.project_id',
-		'cases.submitter_id',
-		'cases.case_id',
-		'data_type',
-		'file_id',
-		'file_size',
-		'data_format',
-		'experimental_strategy',
-		'analysis.workflow_type'
-	]
+	const body = {
+		size: cnvMaxFileNumber,
+		fields: [
+			'cases.samples.tissue_type',
+			'cases.project.project_id',
+			'cases.submitter_id',
+			'cases.case_id',
+			'data_type',
+			'file_id',
+			'file_size',
+			'data_format',
+			'experimental_strategy',
+			'analysis.workflow_type'
+		].join(','),
+		filters: {
+			op: 'in',
+			content: {
+				field: 'data_type',
+				value: ['Copy Number Segment', 'Masked Copy Number Segment', 'Allele-specific Copy Number Segment']
+			}
+		}
+	}
+	if (case_filters.content.length) body.case_filters = case_filters
 
 	const { host, headers } = ds.getHostHeaders(q)
 
 	try {
-		const re: any = await ky
-			.post(joinUrl(host.rest, 'files'), {
-				timeout: false,
-				headers,
-				json: {
-					size: cnvMaxFileNumber,
-					fields: fields.join(','),
-					filters: {
-						op: 'in',
-						content: {
-							field: 'data_type',
-							value: ['Copy Number Segment', 'Masked Copy Number Segment', 'Allele-specific Copy Number Segment']
-						}
-					}
-				}
-			})
-			.json()
+		const re: any = await ky.post(joinUrl(host.rest, 'files'), { timeout: false, headers, json: body }).json()
 
 		console.log('API Response:', {
 			hits: re.data?.hits?.length || 0,
