@@ -113,7 +113,7 @@ export function runproteinpaint(arg) {
 		.attr('class', 'sja_root_holder')
 		//must not use the method of ".datum({ clientVersion })", as d3 propagates bound data custom property to all descendents and are accidentally passed to event listeners
 		.attr('data-ppclientversion', `___current-proteinpaint-client-version___`)
-		.style('font', '1em Arial, sans-serif')
+		.style('font', arg.font ? arg.font : '1em Arial, sans-serif')
 		.style('color', 'black')
 
 	app.sandbox_header = arg.sandbox_header || undefined
@@ -184,6 +184,7 @@ export function runproteinpaint(arg) {
 			//       where is it certain html, body css resets will not conflict with portal styles;
 			//       will also need to remove the import of the unscoped.css file from style.css
 			if (data.targetPortal && data.targetPortal == 'gdc') await import('./style.gdc.css')
+
 			// genome data init
 			for (const genomename in app.genomes) {
 				const err = initgenome(app.genomes[genomename])
