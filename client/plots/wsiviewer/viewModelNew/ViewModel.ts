@@ -1,12 +1,13 @@
 import type { WSImage } from '@sjcrh/proteinpaint-types'
 import type { WSImageLayers } from '#plots/wsiviewer/viewModelNew/WSImageLayers.ts'
 import type { TableCell } from '#dom'
+import { roundValue } from '#shared/roundValue.js'
 
 export class ViewModel {
 	public sampleWSImages: WSImage[]
 	public wsimageLayers: Array<WSImageLayers>
 	public wsimageLayersLoadError: string | undefined
-	viewData: (imageData: WSImage) => any
+	viewData: (imageData: WSImage) => { annotations?: any; classes?: any; shortcuts?: string[] }
 
 	constructor(
 		sampleWSImages: WSImage[],
@@ -23,6 +24,9 @@ export class ViewModel {
 		const viewData: any = {}
 		this.setAnnonationsTableData(viewData, imageData)
 		this.setClassData(viewData, imageData)
+		if (imageData?.uncertainty) {
+			viewData.uncertainty = imageData?.uncertainty
+		}
 
 		return viewData
 	}
@@ -34,14 +38,14 @@ export class ViewModel {
 		const annotationsRows: any = imageData
 			.annotationsData!.filter((_, i) => i < 30)
 			.map((d, i) => {
-				return [{ value: i }, { value: d.zoomCoordinates }, { value: d.uncertainty }, { value: d.class }]
+				return [{ value: i }, { value: d.zoomCoordinates }, { value: roundValue(d.uncertainty, 4) }, { value: d.class }]
 			})
 
 		const columns = [
 			{ label: 'Index', sortable: true, align: 'center' },
 			{ label: 'Coordinates' },
 			{ label: 'Uncertainty', sortable: true },
-			{ label: 'Class', sortable: true }
+			{ label: 'Model-Predicted Class', sortable: true }
 		]
 
 		viewData.annotations = {

@@ -67,7 +67,8 @@ function init({ genomes }) {
 							}
 						})
 
-						wsimage.classes = ds.queries.WSImages.classes
+						wsimage.classes = ds.queries?.WSImages?.classes
+						wsimage.uncertainty = ds.queries?.WSImages?.uncertainty
 					}
 
 					if (ds.queries.WSImages.getZoomInPoints) {
