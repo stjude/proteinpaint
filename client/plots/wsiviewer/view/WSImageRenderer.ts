@@ -96,32 +96,34 @@ export class WSImageRenderer {
 	}
 
 	renderUncertaintyLegend() {
-		//Hardcoded for prototyping
-		//defined in ds file. Waiting to alter route code
-		const uncertainty = [
-			{ color: '#fde725', label: 'low' },
-			{ color: '#440154', label: 'high' }
-		]
+		if (!this.viewData.uncertainty) return
 
 		const svgHolder = this.legend.append('div').attr('id', 'uncertainty-legend').style('margin-top', '20px')
-		const width = 300
+		const width = 200
 		const height = 50
-		const svg = svgHolder.append('svg').style('width', width).style('height', height)
+		const svg = svgHolder
+			.append('svg')
+			.style('width', width * 1.5)
+			.style('height', height)
 		const title = 'Uncertainty'
 		const titleLth = getMaxLabelWidth(svg as any, [title], 1)
 		svg
 			.append('text')
-			.attr('x', (width - titleLth) / 2) //Center the title
+			.attr('x', (width * 1.5 - titleLth) / 2) //Center the title
 			.attr('y', 15)
 			.text(title)
 
 		new ColorScale({
 			holder: svg,
 			domain: [0, 1],
-			colors: uncertainty.map(u => u.color),
-			position: '0, 25',
+			colors: this.viewData.uncertainty.map(u => u.color),
+			position: '25, 25',
 			ticks: 2,
-			barwidth: width
+			barwidth: width,
+			labels: {
+				left: this.viewData.uncertainty[0].label,
+				right: this.viewData.uncertainty[this.viewData.uncertainty.length - 1].label
+			}
 		})
 	}
 }
