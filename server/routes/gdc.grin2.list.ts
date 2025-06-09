@@ -284,7 +284,7 @@ async function mayListCnvFiles(q: GdcGRIN2listRequest, result: GdcGRIN2listRespo
 						op: 'in',
 						content: {
 							field: 'data_type',
-							value: ['Masked Copy Number Segment', 'Allele-specific Copy Number Segment']
+							value: ['Copy Number Segment', 'Masked Copy Number Segment', 'Allele-specific Copy Number Segment']
 						}
 					}
 				}
@@ -303,42 +303,36 @@ async function mayListCnvFiles(q: GdcGRIN2listRequest, result: GdcGRIN2listRespo
 		const cnvFiles: GdcGRIN2File[] = []
 
 		for (const h of re.data.hits) {
-			console.log('Processing file:', {
-				file_id: h.file_id,
-				data_format: h.data_format,
-				data_type: h.data_type,
-				cases_length: h.cases?.length
-			})
+			if (h.data_format != 'TXT') {
+				// must be txt file
+				continue
+			}
+			if (!h.analysis?.workflow_type) throw 'h.analysis.workflow_type missing'
+			const c = h.cases?.[0]
+			if (!c) throw 'h.cases[0] missing'
 
-			if (h.data_format === 'TXT') {
-				if (h.data_type === 'Masked Copy Number Segment' || h.data_type === 'Allele-specific Copy Number Segment') {
-					const c = h.cases?.[0]
-					if (!c) {
-						console.warn(`Skipping file ${h.file_id} - missing case data`)
-						continue
-					}
+			// method to tell numeric value type of a cnv file: Zhenyu 6/6/2025
+			if (h.data_type == 'Allele-specific Copy Number Segment') {
+				// cnv values are integer
+				// TODO determine file usage by q.cnvOptions{}
+			} else if (
+				h.data_type == 'Masked Copy Number Segment' ||
+				(h.data_type == 'Copy Number Segment' && h.analysis.workflow_type != 'DNACopy')
+			) {
+				// cnv values are segmean
+				// hardcoded to use segmean for now FIXME
+				// TODO determine file usage by q.cnvOptions{}
 
-					// Debug: Log the case structure
-					console.log('Case structure:', {
-						case_id: c.case_id,
-						submitter_id: c.submitter_id,
-						project: c.project,
-						samples: c.samples?.length
-					})
-
-					// QUICK FIX: Just add safety checks to your existing code
-					const file: GdcGRIN2File = {
-						id: h.file_id || h.id, // Handle both field names
-						project_id: c.project?.project_id || 'unknown', // Safe access with fallback
-						file_size: h.file_size,
-						case_submitter_id: c.submitter_id,
-						case_uuid: c.case_id,
-						sample_types: c.samples?.map((s: any) => s.tissue_type).filter(Boolean) || []
-					}
-
-					cnvFiles.push(file)
-					// console.log(`Added CNV file: ${file.id}`)
+				const file: GdcGRIN2File = {
+					id: h.file_id || h.id, // Handle both field names
+					project_id: c.project?.project_id || 'unknown', // Safe access with fallback
+					file_size: h.file_size,
+					case_submitter_id: c.submitter_id,
+					case_uuid: c.case_id,
+					sample_types: c.samples?.map((s: any) => s.tissue_type).filter(Boolean) || []
 				}
+
+				cnvFiles.push(file)
 			}
 		}
 
