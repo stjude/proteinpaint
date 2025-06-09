@@ -101,19 +101,23 @@ upon error, throw err message as a string
 
 	if (urlp.has('gdcmaf')) {
 		const _ = await import('../gdc/maf.js')
-		_.gdcMAFui({
+		const p = {
 			holder: arg.holder,
 			debugmode: arg.debugmode
-		})
+		}
+		if (urlp.has('filter0')) p.filter0 = urlp.get('filter0')
+		_.gdcMAFui(p)
 		return
 	}
 
 	if (urlp.has('gdcgrin2')) {
 		const _ = await import('../gdc/grin2.ts')
-		_.gdcGRIN2ui({
+		const p = {
 			holder: arg.holder,
 			debugmode: arg.debugmode
-		})
+		}
+		if (urlp.has('filter0')) p.filter0 = urlp.get('filter0')
+		_.gdcGRIN2ui(p)
 		return
 	}
 
