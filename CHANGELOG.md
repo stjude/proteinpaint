@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 Fixes:
 - Beginning refactor of UI
+- Include genome in hicstraw req for security purposes
 
 
 ## 2.129.5
