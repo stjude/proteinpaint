@@ -1459,13 +1459,77 @@ async function getFilesAndShowTable(obj) {
 		if (result.deduplicationStats) {
 			updateDedupStatus(obj, result.deduplicationStats)
 		}
-		// render
+
+		// Create CNV files map for lookup
+		const cnvFilesByCase = new Map<string, any>()
+		if (obj.dataTypeStates.cnv && result.cnvFiles && result.cnvFiles.files) {
+			for (const cnvFile of result.cnvFiles.files) {
+				const caseId = cnvFile.case_submitter_id
+				if (!cnvFilesByCase.has(caseId)) {
+					cnvFilesByCase.set(caseId, cnvFile)
+				}
+			}
+		}
+
+		// Filter files based on selected data types and availability**
+		let filteredFiles = result.files
+		let filteringMessage = ''
+
+		// Determine which data types are selected
+		const mafSelected = obj.dataTypeStates.maf
+		const cnvSelected = obj.dataTypeStates.cnv
+
+		// If both MAF and CNV are selected, only include cases that have both
+		if (mafSelected && cnvSelected) {
+			const originalCount = filteredFiles.length
+			filteredFiles = filteredFiles.filter(mafFile => {
+				const caseId = mafFile.case_submitter_id
+				const hasCnv = cnvFilesByCase.has(caseId)
+				return hasCnv
+			})
+			const filteredCount = filteredFiles.length
+			const excludedCount = originalCount - filteredCount
+
+			if (excludedCount > 0) {
+				filteringMessage = `Filtered to ${filteredCount} cases with both MAF and CNV files (excluded ${excludedCount} cases with only MAF files)`
+			} else {
+				filteringMessage = `All ${filteredCount} cases have both MAF and CNV files`
+			}
+		}
+		// If only CNV is selected, filter to cases that have CNV files
+		else if (cnvSelected && !mafSelected) {
+			const originalCount = filteredFiles.length
+			// In this case, we need to build the list from CNV files instead
+			const cnvCases = Array.from(cnvFilesByCase.keys())
+			filteredFiles = filteredFiles.filter(file => cnvCases.includes(file.case_submitter_id))
+			const filteredCount = filteredFiles.length
+			const excludedCount = originalCount - filteredCount
+
+			if (excludedCount > 0) {
+				filteringMessage = `Filtered to ${filteredCount} cases with CNV files (excluded ${excludedCount} cases without CNV files)`
+			}
+		}
+		// If only MAF is selected, no additional filtering needed
+		else if (mafSelected && !cnvSelected) {
+			filteringMessage = `Showing ${filteredFiles.length} cases with MAF files`
+		}
+
+		// Check if we have any files left after filtering
+		if (filteredFiles.length === 0) {
+			throw 'No files match the selected data type criteria. Try adjusting your data type selections.'
+		}
+
+		// Render status message with filtering information
 		if (result.filesTotal > result.files.length) {
-			wait.text(
-				`Showing first ${result.files.length.toLocaleString()} files out of ${result.filesTotal.toLocaleString()} total.`
-			)
+			wait.html(`
+				Showing first ${result.files.length.toLocaleString()} files out of ${result.filesTotal.toLocaleString()} total.<br>
+				${filteringMessage ? `<span style="color: #666; font-style: italic;">${filteringMessage}</span>` : ''}
+			`)
 		} else {
-			wait.text(`Showing ${result.files.length.toLocaleString()} files.`)
+			wait.html(`
+				Showing ${result.files.length.toLocaleString()} files.<br>
+				${filteringMessage ? `<span style="color: #666; font-style: italic;">${filteringMessage}</span>` : ''}
+			`)
 		}
 
 		// Build table columns dynamically based on selected data types
@@ -1503,19 +1567,8 @@ async function getFilesAndShowTable(obj) {
 
 		const rows: TableRowItem[][] = []
 
-		// Create CNV files map (only if CNV is selected)
-		const cnvFilesByCase = new Map<string, any>()
-		if (obj.dataTypeStates.cnv && result.cnvFiles && result.cnvFiles.files) {
-			for (const cnvFile of result.cnvFiles.files) {
-				const caseId = cnvFile.case_submitter_id
-				if (!cnvFilesByCase.has(caseId)) {
-					cnvFilesByCase.set(caseId, cnvFile)
-				}
-			}
-		}
-
-		// Build table rows dynamically
-		for (const f of result.files) {
+		// **UPDATED: Build table rows using filtered files**
+		for (const f of filteredFiles) {
 			const row: TableRowItem[] = []
 
 			// Always include Case and Project columns
@@ -1548,12 +1601,18 @@ async function getFilesAndShowTable(obj) {
 			// Add CNV columns only if CNV is selected
 			if (obj.dataTypeStates.cnv) {
 				const cnvFile = cnvFilesByCase.get(f.case_submitter_id)
+
+				// **IMPROVED: Better handling when CNV file should exist**
+				if (cnvSelected && !cnvFile) {
+					console.warn(`Expected CNV file for case ${f.case_submitter_id} but not found`)
+				}
+
 				row.push(
 					{
 						html: cnvFile
 							? `<a href=https://portal.gdc.cancer.gov/files/${cnvFile.id} target=_blank>${cnvFile.id}</a>`
-							: '<span style="color: #6c757d;">No CNV file</span>',
-						value: cnvFile ? cnvFile.id : 'No CNV file'
+							: '<span style="color: #dc3545; font-weight: 500;">Missing CNV file</span>',
+						value: cnvFile ? cnvFile.id : 'Missing CNV file'
 					},
 					{
 						html:
@@ -1567,7 +1626,7 @@ async function getFilesAndShowTable(obj) {
 											)
 										})
 										.join(' ')
-								: '<span style="color: #6c757d;">No CNV sample</span>',
+								: '<span style="color: #dc3545;">No CNV sample</span>',
 						value: cnvFile && cnvFile.sample_types ? cnvFile.sample_types.join(' ') : 'No CNV sample'
 					},
 					{
@@ -1588,10 +1647,10 @@ async function getFilesAndShowTable(obj) {
 			rows.push(row)
 		}
 
-		// Update the renderTable call to use dynamic columns
+		// **UPDATED: Use filteredFiles for table operations**
 		obj.mafTableArg = {
 			rows,
-			columns: dynamicTableColumns, // Use dynamic columns instead of static tableColumns
+			columns: dynamicTableColumns,
 			resize: false,
 			div: obj.tableDiv.append('div'),
 			selectAll: false,
@@ -1601,8 +1660,8 @@ async function getFilesAndShowTable(obj) {
 			buttons: [
 				{
 					text: 'Run GRIN2 Analysis',
-					onChange: updateButtonBySelectionChange,
-					callback: (lst, button) => runGRIN2Analysis(lst, button, obj)
+					onChange: (lst, button) => updateButtonBySelectionChange(lst, button, filteredFiles),
+					callback: (lst, button) => runGRIN2Analysis(lst, button, obj, filteredFiles)
 				}
 			]
 		}
@@ -1614,7 +1673,7 @@ async function getFilesAndShowTable(obj) {
 		if (e instanceof Error && e.stack) console.log(e.stack)
 	}
 
-	function updateButtonBySelectionChange(lst, button) {
+	function updateButtonBySelectionChange(lst, button, filteredFiles) {
 		if (obj.busy) {
 			/* is waiting for server response. do not proceed to alter submit button
             because the checkboxes in the maf table cannot be disabled when submission is running,
@@ -1626,7 +1685,7 @@ async function getFilesAndShowTable(obj) {
 		}
 
 		let sum = 0
-		for (const i of lst) sum += result.files[i].file_size
+		for (const i of lst) sum += filteredFiles[i].file_size
 		if (sum == 0) {
 			button.innerHTML = 'No file selected'
 			button.disabled = true
@@ -1662,7 +1721,7 @@ async function getFilesAndShowTable(obj) {
 	 *
 	 */
 
-	async function runGRIN2Analysis(lst, button, obj) {
+	async function runGRIN2Analysis(lst, button, obj, filteredFiles = result.files) {
 		// Format the data according to what the Rust code expects
 		const caseFiles = {
 			caseFiles: {},
@@ -1691,7 +1750,7 @@ async function getFilesAndShowTable(obj) {
 		}
 
 		for (const i of lst) {
-			const file = result.files[i]
+			const file = filteredFiles[i]
 			console.log('File object:', file)
 			const caseId = file.case_submitter_id
 
@@ -1997,7 +2056,7 @@ async function getFilesAndShowTable(obj) {
 				// Create a container for the table
 				const tableContainer = resultContainer.append('div').style('margin-bottom', '20px')
 
-				// Define table columns - enhanced with tooltips
+				// Define table columns
 				const tableColumns = [
 					{
 						label: 'Gene',
