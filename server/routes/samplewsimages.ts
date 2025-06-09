@@ -62,6 +62,7 @@ function init({ genomes }) {
 							return {
 								zoomCoordinates: d.properties.zoomCoordinates,
 								type: d.properties.type,
+								uncertainty: d.properties.uncertainty,
 								class: featClass
 							}
 						})

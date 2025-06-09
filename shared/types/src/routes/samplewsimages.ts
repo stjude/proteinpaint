@@ -19,8 +19,9 @@ export type WSImage = {
 	predictionLayers?: Array<string>
 	zoomInPoints?: Array<[number, number]>
 	metadata: string
-	annotationsData?: { zoomCoordinates: [number, number]; type: string; class: string }[]
+	annotationsData?: { zoomCoordinates: [number, number]; type: string; class: string; uncertainty: number }[]
 	classes?: WSIClass[]
+	uncertainty?: any
 }
 
 export const sampleWSImagesPayload: RoutePayload = {
