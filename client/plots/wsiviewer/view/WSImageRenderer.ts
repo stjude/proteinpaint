@@ -1,11 +1,10 @@
 import { renderTable, getMaxLabelWidth, ColorScale } from '#dom'
-import type { ViewData } from '../viewModel/ViewModel'
 import type { Elem, Div } from '../../../types/d3'
 import type { WSIViewerInteractions } from '../interactions/WSIViewerInteractions'
 
 export class WSImageRenderer {
 	holder: Elem
-	viewData: ViewData
+	viewData: any
 	tablesWrapper: Div
 	buffers: any
 	interactions: WSIViewerInteractions
@@ -13,7 +12,7 @@ export class WSImageRenderer {
 
 	constructor(
 		holder: Elem,
-		viewData: ViewData,
+		viewData: any,
 		buffers: any,
 		wsiinteractions: WSIViewerInteractions,
 		activeImageExtent: any,
@@ -42,7 +41,7 @@ export class WSImageRenderer {
 
 		this.renderAnnotationsTable(activeImageExtent, map)
 		this.renderClassesTable()
-		this.renderUncertainityLegend()
+		this.renderUncertaintyLegend()
 	}
 
 	renderAnnotationsTable(activeImageExtent, map) {
@@ -96,7 +95,7 @@ export class WSImageRenderer {
 		})
 	}
 
-	renderUncertainityLegend() {
+	renderUncertaintyLegend() {
 		//Hardcoded for prototyping
 		//defined in ds file. Waiting to alter route code
 		const uncertainty = [
