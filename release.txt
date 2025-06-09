@@ -1,1 +1,2 @@
-
+Fixes:
+- Include genome in hicstraw req for security purposes

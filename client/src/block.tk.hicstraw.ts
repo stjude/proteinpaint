@@ -195,7 +195,8 @@ function setResolution(tk: any, block: any) {
 					getdata: 1,
 					getBED: 1,
 					file: tk.hic.enzymefile,
-					rglst: [{ chr: r.chr, start: r.start, stop: r.stop }]
+					rglst: [{ chr: r.chr, start: r.start, stop: r.stop }],
+					genome: block.genome.name
 				}
 				tasks.push(
 					client.dofetch2('tkbedj', { method: 'POST', body: JSON.stringify(arg) }).then(data => {
@@ -330,7 +331,8 @@ function bedfile_load(tk: any, block: any) {
 		getBED: 1,
 		rglst: tk.regions.map(i => {
 			return { chr: i.chr, start: i.start, stop: i.stop }
-		})
+		}),
+		genome: block.genome.name
 	}
 	if (tk.bedfile) {
 		arg.file = tk.bedfile
