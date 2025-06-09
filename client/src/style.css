@@ -1292,3 +1292,9 @@ sandbox header
       opacity: 0;
     }
   }
+
+
+  @font-face {
+    font-family: 'Tangerine, serif'; /*a name to be used later*/
+    src: url("https://fonts.googleapis.com/css?family=Tangerine")/* Replace with path to font in static/fonts */
+}
