@@ -1,1 +1,2 @@
-
+Features:
+- Added filtering logic to display only complete files when both MAF and CNV are checked
