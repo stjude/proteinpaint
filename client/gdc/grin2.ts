@@ -6,152 +6,33 @@ import type { GdcGRIN2listRequest } from '#types'
 import { mclass } from '@sjcrh/proteinpaint-shared/common.js'
 import { bplen } from '@sjcrh/proteinpaint-shared/common.js'
 
-/**
- * Maps mclass constants to user-friendly mutation type names
- * Based on the mclass keys you provided
- */
-interface MutationType {
-	mclassKey: string
-	mclassValue: string | number
-	displayName: string
-	description: string
-	category: 'coding' | 'structural' | 'noncoding'
-}
-
-/**
- * Generates mutation types from mclass constants
- * Filters for relevant MAF mutation types only
- */
-function generateMutationTypesFromMclass(): MutationType[] {
-	// Create reverse lookup: value -> key
-	const mclassReverse: { [value: string]: string } = {}
-	Object.entries(mclass).forEach(([key, value]) => {
-		mclassReverse[String(value)] = key
-	})
-
-	// Define the relevant MAF mutation types with their mclass mappings
-	const relevantMutationTypes: MutationType[] = [
-		{
-			mclassKey: mclassReverse['M'] || '0',
-			mclassValue: 'M',
-			displayName: 'Missense',
-			description: 'Single nucleotide change resulting in amino acid substitution',
-			category: 'coding'
-		},
-		{
-			mclassKey: mclassReverse['N'] || '3',
-			mclassValue: 'N',
-			displayName: 'Nonsense',
-			description: 'Premature stop codon introduction',
-			category: 'coding'
-		},
-		{
-			mclassKey: mclassReverse['F'] || '2',
-			mclassValue: 'F',
-			displayName: 'Frameshift',
-			description: 'Insertion/deletion causing reading frame shift',
-			category: 'coding'
-		},
-		{
-			mclassKey: mclassReverse['D'] || '5',
-			mclassValue: 'D',
-			displayName: 'Deletion',
-			description: 'In-frame deletion',
-			category: 'coding'
-		},
-		{
-			mclassKey: mclassReverse['I'] || '6',
-			mclassValue: 'I',
-			displayName: 'Insertion',
-			description: 'In-frame insertion',
-			category: 'coding'
-		},
-		{
-			mclassKey: mclassReverse['S'] || '4',
-			mclassValue: 'S',
-			displayName: 'Silent',
-			description: 'Synonymous mutation (no amino acid change)',
-			category: 'coding'
-		},
-		{
-			mclassKey: mclassReverse['ProteinAltering'] || '7',
-			mclassValue: 'ProteinAltering',
-			displayName: 'Protein Altering',
-			description: 'Mutations that alter protein sequence',
-			category: 'coding'
-		},
-		{
-			mclassKey: mclassReverse['ITD'] || '13',
-			mclassValue: 'ITD',
-			displayName: 'Internal Tandem Duplication',
-			description: 'Tandem duplication within gene',
-			category: 'structural'
-		}
-	]
-
-	// Filter out any that don't exist in the current mclass
-	return relevantMutationTypes.filter(type => {
-		const exists = Object.values(mclass).some(m => m.key === type.mclassValue)
-		if (!exists) {
-			console.warn(`Mutation type ${type.displayName} (${type.mclassValue}) not found in mclass`)
-		}
-		return exists
-	})
-}
-
-/**
- * Gets just the display names for backward compatibility
- */
-function getMutationTypeNames(): string[] {
-	return generateMutationTypesFromMclass().map(type => type.displayName.toLowerCase())
-}
-
-/**
- * Gets mutation types grouped by category
- */
-function getMutationTypesByCategory(): { [category: string]: MutationType[] } {
-	const allTypes = generateMutationTypesFromMclass()
-
-	return allTypes.reduce((groups, type) => {
-		if (!groups[type.category]) {
-			groups[type.category] = []
-		}
-		groups[type.category].push(type)
-		return groups
-	}, {} as { [category: string]: MutationType[] })
-}
-
-/**
- * Gets the mclass constant for a given mutation type name
- */
-function getMclassConstant(mutationTypeName: string): string | number | null {
-	const types = generateMutationTypesFromMclass()
-	const found = types.find(type => type.displayName.toLowerCase() === mutationTypeName.toLowerCase())
-	return found ? found.mclassValue : null
-}
-
-/**
- * Validates if a mutation type is supported
- */
-function isValidMutationType(mutationTypeName: string): boolean {
-	return getMclassConstant(mutationTypeName) !== null
-}
-
-// Export the functions
-export {
-	generateMutationTypesFromMclass,
-	getMutationTypeNames,
-	getMutationTypesByCategory,
-	getMclassConstant,
-	isValidMutationType,
-	type MutationType
-}
-
 /*
 a UI to list open-access maf and cnv files from current cohort
 let user selects some, for the backend to run GRIN2 analysis
 and display the resulting visualization
 */
+
+/**
+ * Converts mclass keys to the format expected by the Rust backend
+ * Based on the normalize_consequence function in the Rust code
+ */
+function convertMclassKeysToRustFormat(mclassKeys: string[]): string[] {
+	const mclassToRustMap: { [key: string]: string } = {
+		// Map mclass keys to what Rust normalize_consequence expects
+		M: 'missense', // MISSENSE -> missense
+		N: 'nonsense', // NONSENSE -> nonsense
+		F: 'frameshift', // FRAMESHIFT -> frameshift
+		S: 'silent', // SILENT -> silent
+		D: 'deletion', // PROTEINDEL -> deletion (maps to in_frame_del in Rust)
+		I: 'insertion', // PROTEININS -> insertion (maps to in_frame_ins in Rust)
+		L: 'splice_site', // SPLICE -> splice_site
+		P: 'splice_site', // SPLICE_REGION -> splice_site (both map to same)
+		ProteinAltering: 'missense' // Map to missense as closest equivalent
+		// Add more mappings as needed based on what Rust backend supports
+	}
+
+	return mclassKeys.map(key => mclassToRustMap[key]).filter(mapped => mapped !== undefined) // Remove unmapped keys
+}
 
 /**
  * Function to show the deduplication popup
@@ -616,31 +497,24 @@ export async function gdcGRIN2ui({ holder, filter0, callbacks, debugmode = false
 	return publicApi
 }
 
+/**
+ * Simple helper to categorize mutation types for UI organization
+ */
+function getCategoryForMclass(key: string): 'coding' | 'noncoding' {
+	const codingTypes = ['M', 'N', 'F', 'D', 'I', 'ProteinAltering', 'S']
+	return codingTypes.includes(key) ? 'coding' : 'noncoding'
+}
+
 function makeControls(obj) {
 	// Initialize options objects with mclass-aware defaults
 	if (!obj.mafOptions) {
-		// Get available mutation types from mclass
-		const availableMutationTypes = getMutationTypeNames()
-
-		// Set smart defaults - prefer common coding mutations if available
-		const preferredDefaults = ['missense', 'nonsense', 'frameshift']
-		const defaultConsequences = preferredDefaults.filter(type => availableMutationTypes.includes(type))
-
-		// If none of the preferred defaults are available, use the first few available
-		if (defaultConsequences.length === 0) {
-			defaultConsequences.push(...availableMutationTypes.slice(0, 3))
-		}
-
 		obj.mafOptions = {
 			minTotalDepth: 10,
 			minAltAlleleCount: 2,
-			consequences: defaultConsequences, // Dynamic defaults from mclass
+			consequences: ['M', 'N', 'F'], // Just use mclass keys directly
 			hypermutatorMaxCutoff: 8000
 		}
-
-		console.log('Initialized MAF options with mclass-based consequences:', obj.mafOptions.consequences)
 	}
-
 	if (!obj.cnvOptions) {
 		obj.cnvOptions = {
 			lossThreshold: -0.4,
@@ -729,17 +603,11 @@ function makeControls(obj) {
 
 	/**
 	 * Updated createMAFOptionsContent function using mclass mutation types
-	 * Replace your existing function with this version
 	 */
+
 	function createMAFOptionsContent(container, obj) {
 		// Clear any existing content
 		container.selectAll('*').remove()
-
-		// Generate mutation types dynamically from mclass
-		const mutationTypesFromMclass = generateMutationTypesFromMclass()
-		const mutationTypesByCategory = getMutationTypesByCategory()
-
-		console.log('Available mutation types from mclass:', mutationTypesFromMclass)
 
 		// Create a grid layout for MAF options
 		const optionsGrid = container
@@ -816,11 +684,11 @@ function makeControls(obj) {
 			}
 		})
 
-		// Row 2: Consequences Section - Using Dynamic mclass Types
+		// Row 2: Consequences Section - Using mclass directly
 		const consequencesContainer = optionsGrid
 			.append('div')
 			.style('display', 'flex')
-			.style('align-items', 'flex-start') // Changed to flex-start for better alignment
+			.style('align-items', 'flex-start')
 			.style('gap', '8px')
 			.style('grid-column', '1 / -1') // Span full width for more space
 
@@ -829,103 +697,108 @@ function makeControls(obj) {
 			.style('font-size', '14px')
 			.style('font-weight', '500')
 			.style('min-width', '100px')
-			.style('margin-top', '4px') // Align with first checkbox
+			.style('margin-top', '4px')
 			.text('Consequences:')
 
-		// Initialize consequences with smart defaults from mclass
-		if (!obj.mafOptions.consequences) {
-			// Default to common protein-coding mutations
-			const defaultTypes = ['missense', 'nonsense', 'frameshift']
-			obj.mafOptions.consequences = defaultTypes.filter(type => isValidMutationType(type))
-			console.log('Initialized default consequences from mclass:', obj.mafOptions.consequences)
+		// Initialize consequences with simple defaults if not set
+		if (!obj.mafOptions.consequences || obj.mafOptions.consequences.length === 0) {
+			// Just use the mclass keys directly for common coding mutations
+			obj.mafOptions.consequences = ['M', 'N', 'F'] // missense, nonsense, frameshift
+			console.log('Initialized default consequences:', obj.mafOptions.consequences)
 		}
 
 		// Create consequences selection area
 		const consequencesSelectionDiv = consequencesContainer.append('div').style('flex', '1')
 
+		// Fix TypeScript issues by explicitly typing the arrays
+		type MclassItem = {
+			key: string
+			entry: {
+				label: string
+				color: string
+				desc: string
+				[key: string]: any
+			}
+		}
+
 		// Group mutation types by category for better organization
-		Object.entries(mutationTypesByCategory).forEach(([category, types]) => {
-			if (types.length === 0) return
+		const codingTypes: MclassItem[] = []
 
-			// Add category header
-			const categoryDiv = consequencesSelectionDiv.append('div').style('margin-bottom', '12px')
+		// Skip utility types and organize by category
+		const skipTypes = ['Blank', 'WT']
 
-			categoryDiv
+		for (const [key, mclassEntry] of Object.entries(mclass)) {
+			if (skipTypes.includes(key)) continue
+
+			if (getCategoryForMclass(key) === 'coding') {
+				codingTypes.push({ key, entry: mclassEntry })
+			}
+		}
+
+		// Render coding mutations section
+		if (codingTypes.length > 0) {
+			const codingDiv = consequencesSelectionDiv.append('div').style('margin-bottom', '12px')
+
+			codingDiv
 				.append('div')
 				.style('font-size', '13px')
 				.style('font-weight', '600')
 				.style('color', '#495057')
 				.style('margin-bottom', '6px')
-				.style('text-transform', 'capitalize')
-				.text(`${category} Mutations`)
+				.text('Coding Mutations')
 
-			// Create checkboxes for this category
-			const categoryCheckboxContainer = categoryDiv
+			const codingCheckboxContainer = codingDiv
 				.append('div')
 				.style('display', 'grid')
 				.style('grid-template-columns', 'repeat(auto-fit, minmax(180px, 1fr))')
 				.style('gap', '8px')
 				.style('margin-left', '12px')
 
-			types.forEach(mutationType => {
-				const checkboxDiv = categoryCheckboxContainer
+			codingTypes.forEach(({ key, entry }) => {
+				const checkboxDiv = codingCheckboxContainer
 					.append('div')
 					.style('display', 'flex')
 					.style('align-items', 'center')
 					.style('gap', '6px')
 					.style('font-size', '13px')
 
-				const mutationTypeKey = mutationType.displayName.toLowerCase()
-
 				const checkbox = checkboxDiv
 					.append('input')
 					.attr('type', 'checkbox')
-					.attr('id', `consequence-${mutationTypeKey}`)
-					.property('checked', obj.mafOptions.consequences.includes(mutationTypeKey))
+					.attr('id', `consequence-${key}`)
+					.property('checked', obj.mafOptions.consequences.includes(key))
 					.style('margin', '0')
 					.style('cursor', 'pointer')
 
 				const label = checkboxDiv
 					.append('label')
-					.attr('for', `consequence-${mutationTypeKey}`)
+					.attr('for', `consequence-${key}`)
 					.style('cursor', 'pointer')
 					.style('font-size', '13px')
 					.style('color', '#333')
-					.text(mutationType.displayName)
-					.attr('title', mutationType.description) // Tooltip with description
+					.attr('title', entry.desc) // Tooltip with description
 
-				// Add mclass constant indicator (for debugging/reference)
-				if (process.env.NODE_ENV === 'development') {
-					label
-						.append('span')
-						.style('font-size', '10px')
-						.style('color', '#999')
-						.style('margin-left', '4px')
-						.text(`(${mutationType.mclassValue})`)
-				}
+				// Add label text
+				label.append('span').text(entry.label)
 
 				// Add change handler
 				checkbox.on('change', function (this: HTMLInputElement) {
 					const isChecked = this.checked
 					if (isChecked) {
-						// Add to consequences if not already present
-						if (!obj.mafOptions.consequences.includes(mutationTypeKey)) {
-							obj.mafOptions.consequences.push(mutationTypeKey)
+						// Add mclass key if not already present
+						if (!obj.mafOptions.consequences.includes(key)) {
+							obj.mafOptions.consequences.push(key)
 						}
 					} else {
-						// Remove from consequences
-						obj.mafOptions.consequences = obj.mafOptions.consequences.filter(c => c !== mutationTypeKey)
+						// Remove mclass key
+						obj.mafOptions.consequences = obj.mafOptions.consequences.filter(c => c !== key)
 					}
 					console.log('Updated consequences:', obj.mafOptions.consequences)
-					console.log(
-						'Corresponding mclass values:',
-						obj.mafOptions.consequences.map(c => getMclassConstant(c))
-					)
 				})
 			})
-		})
+		}
 
-		// Add helper text explaining the mutation types
+		// Add helper text
 		consequencesSelectionDiv
 			.append('div')
 			.style('margin-top', '8px')
@@ -936,9 +809,9 @@ function makeControls(obj) {
 			.style('font-size', '12px')
 			.style('color', '#495057')
 			.style('line-height', '1.4').html(`
-				<strong>Mutation Types:</strong> Select the types of mutations to include in your analysis. 
-				Hover over each option to see detailed descriptions. These correspond to standard MAF consequence types.
-			`)
+			<strong>Mutation Types:</strong> Select the types of mutations to include in your analysis. 
+			Hover over each option to see detailed descriptions.
+		`)
 
 		// Row 3: Hypermutator Max Cut Off
 		const hyperContainer = optionsGrid
@@ -979,7 +852,7 @@ function makeControls(obj) {
 			.style('display', 'flex')
 			.style('align-items', 'center')
 			.style('gap', '8px')
-			.style('grid-column', '1 / -1') // Span full width
+			.style('grid-column', '1 / -1')
 
 		workflowContainer
 			.append('label')
@@ -994,13 +867,13 @@ function makeControls(obj) {
 			.style('color', '#666')
 			.text('Aliquot Ensemble Somatic Variant Merging and Masking')
 
-		// Row 5: Dedup (placeholder with clickable link)
+		// Row 5: Dedup status
 		const dedupContainer = optionsGrid
 			.append('div')
 			.style('display', 'flex')
 			.style('align-items', 'center')
 			.style('gap', '8px')
-			.style('grid-column', '1 / -1') // Span full width
+			.style('grid-column', '1 / -1')
 
 		dedupContainer
 			.append('label')
@@ -1009,17 +882,13 @@ function makeControls(obj) {
 			.style('min-width', '100px')
 			.text('Deduplication:')
 
-		// Create the dedup status area (this will be updated when files are loaded)
 		const dedupStatus = dedupContainer
 			.append('span')
 			.attr('id', 'dedup-status')
 			.style('font-size', '14px')
 			.style('color', '#666')
 
-		// Initial placeholder text
 		dedupStatus.text('File deduplication status will appear here after loading files')
-
-		// Store reference for later updates
 		obj.dedupStatusElement = dedupStatus
 	}
 
@@ -1715,22 +1584,34 @@ async function getFilesAndShowTable(obj) {
 	 *   caseFiles: {
 	 *     [case_submitter_id]: { maf: file_id, cnv: file_id },
 	 *   },
-	 *   mafOptions: { minTotalDepth: 10, minAltAlleleCount: 2 },
+	 *   mafOptions: { minTotalDepth: 10, minAltAlleleCount: 2, consequences: [] },
 	 *   cnvOptions: { dataType: 'segment_mean', lossThreshold: -0.4, gainThreshold: 0.3, segLength: 2000000 }
 	 * }
 	 *
 	 */
 
 	async function runGRIN2Analysis(lst, button, obj, filteredFiles = result.files) {
-		// Format the data according to what the Rust code expects
-		const caseFiles = {
-			caseFiles: {},
-			mafOptions: {
+		// Check what data types are selected
+		const mafSelected = obj.dataTypeStates.maf
+		const cnvSelected = obj.dataTypeStates.cnv
+
+		// Build the request object conditionally
+		const caseFiles: any = {
+			caseFiles: {}
+		}
+
+		// Only add mafOptions if MAF is selected
+		if (mafSelected) {
+			caseFiles.mafOptions = {
 				minTotalDepth: obj.mafOptions.minTotalDepth,
 				minAltAlleleCount: obj.mafOptions.minAltAlleleCount,
-				consequences: obj.mafOptions.consequences
-			},
-			cnvOptions: {
+				consequences: convertMclassKeysToRustFormat(obj.mafOptions.consequences)
+			}
+		}
+
+		// Only add cnvOptions if CNV is selected
+		if (cnvSelected) {
+			caseFiles.cnvOptions = {
 				dataType: obj.cnvOptions.dataType,
 				lossThreshold: obj.cnvOptions.lossThreshold,
 				gainThreshold: obj.cnvOptions.gainThreshold,
