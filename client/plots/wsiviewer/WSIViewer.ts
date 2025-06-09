@@ -21,7 +21,6 @@ import LayerSwitcher from 'ol-ext/control/LayerSwitcher'
 import MousePosition from 'ol/control/MousePosition.js'
 import { format as formatCoordinate } from 'ol/coordinate.js'
 import { debounce } from 'debounce'
-import { ViewModelMapper } from '#plots/wsiviewer/viewModel/ViewModelMapper.ts'
 import { WSImageRenderer } from '#plots/wsiviewer/view/WSImageRenderer.ts'
 import { Buffer } from '#plots/wsiviewer/interactions/Buffer.ts'
 import { ViewModelProvider } from '#plots/wsiviewer/viewModelNew/ViewModelProvider.ts'
@@ -102,13 +101,13 @@ export default class WSIViewer extends RxComponentInner {
 
 		const map = this.getMap(wsimageLayers[settings.displayedImageIndex])
 
-		const viewModel = new ViewModelMapper(wsimages[settings.displayedImageIndex])
+		const viewData = viewModelNew.getViewData(wsimages[settings.displayedImageIndex])
 
 		const hasOverlay = wsimageLayers[settings.displayedImageIndex].overlays != null
 
 		const zoomInPoints = wsimages[settings.displayedImageIndex].zoomInPoints
 
-		new WSImageRenderer(holder, viewModel.viewData, buffers, this.wsiViewerInteractions, activeImageExtent, map)
+		new WSImageRenderer(holder, viewData, buffers, this.wsiViewerInteractions, activeImageExtent, map)
 
 		if (zoomInPoints != undefined) {
 			this.wsiViewerInteractions.addZoomInEffect(activeImageExtent, zoomInPoints, map)
@@ -119,7 +118,7 @@ export default class WSIViewer extends RxComponentInner {
 				map,
 				settings,
 				activeImageExtent,
-				viewModel.viewData.shortcuts,
+				viewData.shortcuts,
 				buffers,
 				viewModelProvider
 			)
