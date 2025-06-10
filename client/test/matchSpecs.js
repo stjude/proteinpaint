@@ -2,6 +2,13 @@ import process from 'process'
 import { minimatch } from 'minimatch'
 
 window.process = process
+/* sessionStorage is required by all client code https://github.com/stjude/proteinpaint/pull/3411/files
+- set below for integration tests to run
+- minimum code duplication: keep it consistent with client/src/app.js
+- okay to not to declare actual styles e.g. ".styles['font-family']",
+  js ignores undefined css settings and won't break test, and minimizes code duplication
+*/
+sessionStorage.setItem('sjRunppArg', `{"styles":{}}`)
 
 const params = getParams()
 //const CURRSPECDIR = params.dir ? `./${params.dir}` : '.'
