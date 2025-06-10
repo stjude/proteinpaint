@@ -1,5 +1,5 @@
 import type { WSImage } from '@sjcrh/proteinpaint-types'
-import type { WSImageLayers } from '#plots/wsiviewer/viewModelNew/WSImageLayers.ts'
+import type { WSImageLayers } from '#plots/wsiviewer/viewModel/WSImageLayers.ts'
 import type { TableCell } from '#dom'
 import { roundValue } from '#shared/roundValue.js'
 

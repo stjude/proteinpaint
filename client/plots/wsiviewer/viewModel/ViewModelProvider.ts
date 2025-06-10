@@ -1,8 +1,8 @@
 import type Settings from '#plots/wsiviewer/Settings.ts'
 import { dofetch3 } from '#common/dofetch'
 import type { SampleWSImagesResponse, WSImage, WSImagesRequest, WSImagesResponse } from '@sjcrh/proteinpaint-types'
-import { ViewModel } from '#plots/wsiviewer/viewModelNew/ViewModel.ts'
-import type { WSImageLayers } from '#plots/wsiviewer/viewModelNew/WSImageLayers.ts'
+import { ViewModel } from '#plots/wsiviewer/viewModel/ViewModel.ts'
+import type { WSImageLayers } from '#plots/wsiviewer/viewModel/WSImageLayers.ts'
 import Zoomify from 'ol/source/Zoomify'
 import TileLayer from 'ol/layer/Tile'
 
