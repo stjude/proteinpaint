@@ -36,7 +36,6 @@ export class Menu {
 			.style('display', 'none')
 			.style('position', 'absolute')
 			.style('background-color', 'white')
-			.style('font-family', JSON.parse(sessionStorage.getItem('sjRunppArg')).styles['font-family'])
 			.on('mousedown.menu' + this.typename, event => {
 				/* 
 					When clicking on non-interactive elements within a menu, 

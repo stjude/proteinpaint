@@ -22,14 +22,18 @@ import { Menu, renderSandboxFormDiv, sayerror } from '#dom'
 /*
 exports a function runproteinpaint(), referred to as "runpp"
 runpp arg:
-	- styles{}
-		supports following css styles that will be applied to this portal instance. settings are tracked in sessionStorage
+	- styles ''
+		supports overriding css styles, with or without using sjpp CSS tag or class names
 		advantage:
 		* offers more freedom at customization at runpp level
 		* is ds-independent and possible to make same ds appears different in multiple browser tabs
 		* entirely up to "portal" code and no need to track any such settings in pp repos
 
-		.font-family
+		runproteinpaint({
+			styles: `.sja_root_holder {
+				font-family: cursive
+			}`
+		})
 
 runpp is called for launching anything from pp
 returns a promise that resolve to something e.g. block
@@ -74,21 +78,13 @@ headtip.d.style('z-index', 5555)
 // headtip must get a crazy high z-index so it can stay on top of all, no matter if server config has base_zindex or not
 
 export function runproteinpaint(arg) {
-	if (arg.styles && typeof arg.styles != 'object') throw 'arg.styles{} not object'
-	// persist runpp(arg) settings to make them accessible by other scripts
-	sessionStorage.setItem(
-		'sjRunppArg',
-		JSON.stringify({
-			styles: Object.assign(
-				{
-					'font-family': 'Arial'
-					// declare other default styles
-				},
-				arg.styles || {} // apply optional override
-			)
-			// add additional non-style settings
-		})
-	)
+	if (arg.styles) {
+		// must load portal css overrides after imports of git-tracked css files
+		if (typeof arg.styles != 'string') throw 'arg.styles{} not string'
+		const styles = new CSSStyleSheet()
+		styles.replaceSync(arg.styles)
+		document.adoptedStyleSheets.push(styles)
+	}
 
 	/* the "app" object is the main Proteinpaint instance, unique for each runproteinpaint() call
 	NOTE: this app instance may be returned or not depending on the
@@ -134,7 +130,6 @@ export function runproteinpaint(arg) {
 		//must not use the method of ".datum({ clientVersion })", as d3 propagates bound data custom property to all descendents and are accidentally passed to event listeners
 		.attr('data-ppclientversion', `___current-proteinpaint-client-version___`)
 		.style('font-size', '1em')
-		.style('font-family', JSON.parse(sessionStorage.getItem('sjRunppArg')).styles['font-family'])
 		.style('color', 'black')
 
 	app.sandbox_header = arg.sandbox_header || undefined
