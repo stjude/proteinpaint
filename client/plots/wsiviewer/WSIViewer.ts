@@ -2,21 +2,14 @@ import { getCompInit } from '#rx'
 import 'ol/ol.css'
 import type OLMap from 'ol/Map.js'
 import type TileLayer from 'ol/layer/Tile.js'
-import Tile from 'ol/layer/Tile.js'
 import type Zoomify from 'ol/source/Zoomify.js'
-import OverviewMap from 'ol/control/OverviewMap.js'
-import FullScreen from 'ol/control/FullScreen.js'
 import { dofetch3 } from '#common/dofetch'
-import type TileSource from 'ol/source/Tile'
 import { WSIViewerInteractions } from '#plots/wsiviewer/interactions/WSIViewerInteractions.ts'
 import type Settings from '#plots/wsiviewer/Settings.ts'
 import wsiViewerDefaults from '#plots/wsiviewer/defaults.ts'
 import type { SampleWSImagesResponse } from '#types'
 import { RxComponentInner } from '../../types/rx.d'
 import 'ol-ext/dist/ol-ext.css'
-import LayerSwitcher from 'ol-ext/control/LayerSwitcher'
-import MousePosition from 'ol/control/MousePosition.js'
-import { format as formatCoordinate } from 'ol/coordinate.js'
 import { debounce } from 'debounce'
 import { WSImageRenderer } from '#plots/wsiviewer/view/WSImageRenderer.ts'
 import { Buffer } from '#plots/wsiviewer/interactions/Buffer.ts'
@@ -94,14 +87,12 @@ export default class WSIViewer extends RxComponentInner {
 			.style('width', settings.imageWidth)
 			.style('height', settings.imageHeight)
 
+		const viewData = viewModel.getViewData(settings.displayedImageIndex)
+
 		const activeImage: TileLayer = wsimageLayers[settings.displayedImageIndex].wsimage
 		const activeImageExtent = activeImage?.getSource()?.getTileGrid()?.getExtent()
 
 		const map = new MapRenderer(wsimageLayers[settings.displayedImageIndex]).getMap()
-
-		const viewData = viewModel.getViewData(settings.displayedImageIndex)
-
-		const hasOverlay = wsimageLayers[settings.displayedImageIndex].overlays != null
 
 		const zoomInPoints = wsimages[settings.displayedImageIndex].zoomInPoints
 
@@ -122,8 +113,6 @@ export default class WSIViewer extends RxComponentInner {
 			)
 		}
 
-		this.addControls(map, activeImage, hasOverlay)
-
 		if (activeImageExtent) {
 			map.getView().fit(activeImageExtent)
 		}
@@ -134,54 +123,6 @@ export default class WSIViewer extends RxComponentInner {
 				`${state.sample_id} <span style="font-size:.8em">${state.termdbConfig.queries.WSImages.type} images</span>`
 			)
 		}
-	}
-
-	private addControls(map: OLMap, firstLayer: TileLayer, hasOverlay: boolean) {
-		if (hasOverlay) {
-			map.addControl(
-				new LayerSwitcher({
-					collapsed: true,
-					mouseover: true
-				})
-			)
-
-			// Display the mouse position in the upper right corner
-			// Uncomment import statements above to use
-			const coordinateFormat = function (coordinate) {
-				coordinate = [coordinate[0], -coordinate[1]]
-				return formatCoordinate(coordinate, '{x}, {y}', 0)
-			}
-			const mousePositionControl = new MousePosition({
-				coordinateFormat: coordinateFormat,
-				// TODO Reuse projection from the map creation?
-				projection: undefined,
-				className: 'ol-mouse-position',
-				placeholder: '&nbsp;'
-			})
-
-			map.addControl(mousePositionControl)
-
-			//Console.log the mouse position
-			map.on('singleclick', function (event) {
-				const coordinate = event.coordinate
-				const flipped = [coordinate[0], -coordinate[1]] // Flip Y if needed
-				console.log(`Mouse position: ${flipped[0]}, ${flipped[1]}`)
-			})
-		}
-
-		const fullscreen = new FullScreen()
-		map.addControl(fullscreen)
-
-		const overviewMapControl = new OverviewMap({
-			className: 'ol-overviewmap ol-custom-overviewmap',
-			layers: [
-				new Tile({
-					source: firstLayer.getSource() as TileSource
-				})
-			]
-		})
-
-		map.addControl(overviewMapControl)
 	}
 
 	private addMapKeyDownListener(
