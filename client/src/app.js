@@ -17,13 +17,21 @@ import blockinit from './block.init'
 import * as parseurl from './app.parseurl'
 import { init_mdsjson } from './app.mdsjson'
 import urlmap from '#common/urlmap'
-import { renderSandboxFormDiv } from '../dom/sandbox.ts'
-import { sayerror } from '../dom/sayerror'
-import { Menu } from '#dom/menu'
+import { Menu, renderSandboxFormDiv, sayerror } from '#dom'
 
 /*
-exports a global function runproteinpaint()
-will be called for launching anything from pp
+exports a function runproteinpaint(), referred to as "runpp"
+runpp arg:
+	- styles{}
+		supports following css styles that will be applied to this portal instance. settings are tracked in sessionStorage
+		advantage:
+		* offers more freedom at customization at runpp level
+		* is ds-independent and possible to make same ds appears different in multiple browser tabs
+		* entirely up to "portal" code and no need to track any such settings in pp repos
+
+		.font-family
+
+runpp is called for launching anything from pp
 returns a promise that resolve to something e.g. block
 
 internal "app{}"
@@ -66,10 +74,23 @@ headtip.d.style('z-index', 5555)
 // headtip must get a crazy high z-index so it can stay on top of all, no matter if server config has base_zindex or not
 
 export function runproteinpaint(arg) {
-	// polyfill
-	if (!window.structuredClone) window.structuredClone = val => JSON.parse(JSON.stringify(val))
-	/*
-	the "app" object is the main Proteinpaint instance, unique for each runproteinpaint() call
+	if (arg.styles && typeof arg.styles != 'object') throw 'arg.styles{} not object'
+	// persist runpp(arg) settings to make them accessible by other scripts
+	sessionStorage.setItem(
+		'sjRunppArg',
+		JSON.stringify({
+			styles: Object.assign(
+				{
+					'font-family': 'Arial'
+					// declare other default styles
+				},
+				arg.styles || {} // apply optional override
+			)
+			// add additional non-style settings
+		})
+	)
+
+	/* the "app" object is the main Proteinpaint instance, unique for each runproteinpaint() call
 	NOTE: this app instance may be returned or not depending on the
 	results of parseEmbedThenUrl()
 	TODO: standardize runpp() return value to better work with external portal
@@ -113,7 +134,7 @@ export function runproteinpaint(arg) {
 		//must not use the method of ".datum({ clientVersion })", as d3 propagates bound data custom property to all descendents and are accidentally passed to event listeners
 		.attr('data-ppclientversion', `___current-proteinpaint-client-version___`)
 		.style('font-size', '1em')
-		.style('font-family', arg.fontFamily || 'Arial, sans-serif')
+		.style('font-family', JSON.parse(sessionStorage.getItem('sjRunppArg')).styles['font-family'])
 		.style('color', 'black')
 
 	app.sandbox_header = arg.sandbox_header || undefined
