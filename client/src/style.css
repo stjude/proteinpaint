@@ -62,14 +62,18 @@ by normalize.css are covered here
 
 
 .sja_root_holder {
+    all: initial;  /* block inheritance for all properties */
+    font-family: Arial, sans-serif;
     /*background-color: #fff;*/
 }
 
-.sja_root_holder,
 .sja_menu_div,
 .sja_pane {
-    all: initial;
-    /* block inheritance for all properties */
+    all: initial; /* block inheritance for all properties */
+}
+
+.sja_menu_div {
+  font-family: Arial;
 }
 
 .sja_root_holder table,
@@ -1291,9 +1295,3 @@ sandbox header
       opacity: 0;
     }
   }
-
-
-  @font-face {
-    font-family: 'Tangerine, serif'; /*a name to be used later*/
-    src: url("https://fonts.googleapis.com/css?family=Tangerine")/* Replace with path to font in static/fonts */
-}
