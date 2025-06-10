@@ -1,6 +1,7 @@
 import { renderTable, getMaxLabelWidth, ColorScale } from '#dom'
 import type { Elem, Div } from '../../../types/d3'
 import type { WSIViewerInteractions } from '../interactions/WSIViewerInteractions'
+import { table2col } from '#dom'
 
 export class WSImageRenderer {
 	holder: Elem
@@ -25,6 +26,7 @@ export class WSImageRenderer {
 
 		holder.select('div[id="annotations-table-wrapper"]').remove()
 		holder.select('div[id="legend-wrapper"]').remove()
+		holder.select('div[id="metadata"]').remove()
 
 		this.tablesWrapper = holder
 			.append('div')
@@ -42,9 +44,10 @@ export class WSImageRenderer {
 		this.renderAnnotationsTable(activeImageExtent, map)
 		this.renderClassesTable()
 		this.renderUncertaintyLegend()
+		this.renderMetadata()
 	}
 
-	renderAnnotationsTable(activeImageExtent, map) {
+	private renderAnnotationsTable(activeImageExtent, map) {
 		if (!this.viewData.annotations) return
 		const selectedColor = '#fcfc8b'
 
@@ -80,7 +83,7 @@ export class WSImageRenderer {
 		})
 	}
 
-	renderClassesTable() {
+	private renderClassesTable() {
 		if (!this.viewData.classes) return
 
 		renderTable({
@@ -95,7 +98,7 @@ export class WSImageRenderer {
 		})
 	}
 
-	renderUncertaintyLegend() {
+	private renderUncertaintyLegend() {
 		if (!this.viewData.uncertainty) return
 
 		const svgHolder = this.legend.append('div').attr('id', 'uncertainty-legend').style('margin-top', '20px')
@@ -124,6 +127,21 @@ export class WSImageRenderer {
 				left: this.viewData.uncertainty[0].label,
 				right: this.viewData.uncertainty[this.viewData.uncertainty.length - 1].label
 			}
+		})
+	}
+
+	//TODO: Need an example for testing
+	private renderMetadata() {
+		if (!this.viewData.metadata) return
+		const holderDiv = this.holder.append('div').attr('id', 'metadata')
+
+		const table = table2col({ holder: holderDiv })
+
+		// Create table rows for each key-value pair
+		Object.entries(JSON.parse(this.viewData.metadata)).forEach(([key, value]) => {
+			const [c1, c2] = table.addRow()
+			c1.html(key)
+			c2.html(value)
 		})
 	}
 }

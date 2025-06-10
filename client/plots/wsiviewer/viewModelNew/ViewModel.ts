@@ -7,7 +7,7 @@ export class ViewModel {
 	public sampleWSImages: WSImage[]
 	public wsimageLayers: Array<WSImageLayers>
 	public wsimageLayersLoadError: string | undefined
-	viewData: (imageData: WSImage) => { annotations?: any; classes?: any; shortcuts?: string[] }
+	viewData: (index: number) => { annotations?: any; classes?: any; shortcuts?: string[] }
 
 	constructor(
 		sampleWSImages: WSImage[],
@@ -17,16 +17,19 @@ export class ViewModel {
 		this.sampleWSImages = sampleWSImages
 		this.wsimageLayers = wsimageLayers
 		this.wsimageLayersLoadError = wsimageLayersLoadError
-		this.viewData = imageData => this.getViewData(imageData)
+		this.viewData = index => this.getViewData(index)
 	}
 
-	getViewData(imageData: WSImage) {
+	getViewData(index: number) {
 		const viewData: any = {}
+		const imageData = this.sampleWSImages[index]
 		this.setAnnonationsTableData(viewData, imageData)
 		this.setClassData(viewData, imageData)
 		if (imageData?.uncertainty) {
 			viewData.uncertainty = imageData?.uncertainty
 		}
+		const metadata = this.wsimageLayers[index].wsimage.get('metadata')
+		if (metadata) viewData.metadata = metadata
 
 		return viewData
 	}

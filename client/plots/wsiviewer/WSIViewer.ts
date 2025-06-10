@@ -13,7 +13,6 @@ import { WSIViewerInteractions } from '#plots/wsiviewer/interactions/WSIViewerIn
 import type Settings from '#plots/wsiviewer/Settings.ts'
 import wsiViewerDefaults from '#plots/wsiviewer/defaults.ts'
 import type { SampleWSImagesResponse } from '#types'
-import { table2col } from '#dom'
 import { Projection } from 'ol/proj'
 import { RxComponentInner } from '../../types/rx.d'
 import 'ol-ext/dist/ol-ext.css'
@@ -101,7 +100,7 @@ export default class WSIViewer extends RxComponentInner {
 
 		const map = this.getMap(wsimageLayers[settings.displayedImageIndex])
 
-		const viewData = viewModelNew.getViewData(wsimages[settings.displayedImageIndex])
+		const viewData = viewModelNew.getViewData(settings.displayedImageIndex)
 
 		const hasOverlay = wsimageLayers[settings.displayedImageIndex].overlays != null
 
@@ -136,8 +135,6 @@ export default class WSIViewer extends RxComponentInner {
 				`${state.sample_id} <span style="font-size:.8em">${state.termdbConfig.queries.WSImages.type} images</span>`
 			)
 		}
-
-		this.renderMetadata(holder, wsimageLayers, settings)
 	}
 
 	private getMap(wSImageLayers: WSImageLayers): OLMap {
@@ -219,23 +216,6 @@ export default class WSIViewer extends RxComponentInner {
 		})
 
 		map.addControl(overviewMapControl)
-	}
-
-	private renderMetadata(holder: any, layers: Array<WSImageLayers>, settings: Settings) {
-		holder.select('div[id="metadata"]').remove()
-		const holderDiv = holder.append('div').attr('id', 'metadata')
-
-		const table = table2col({ holder: holderDiv })
-		const metadata = layers[settings.displayedImageIndex].wsimage.get('metadata')
-
-		if (metadata) {
-			// Create table rows for each key-value pair
-			Object.entries(JSON.parse(metadata)).forEach(([key, value]) => {
-				const [c1, c2] = table.addRow()
-				c1.html(key)
-				c2.html(value)
-			})
-		}
 	}
 
 	private addMapKeyDownListener(
