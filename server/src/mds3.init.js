@@ -2703,7 +2703,7 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 				}
 			}
 
-			await mayAddDataAvailability(sample2mlst, dt, ds, tw.q.origin, q.filter, q)
+			await mayAddDataAvailability(sample2mlst, dt, ds, tw.q.origin, q)
 		}
 
 		const groupset = get_active_groupset(tw.term, tw.q)
@@ -2744,13 +2744,10 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 	}
 }
 
-async function mayAddDataAvailability(sample2mlst, dtKey, ds, origin, filter, q) {
+async function mayAddDataAvailability(sample2mlst, dtKey, ds, origin, q) {
 	if (!ds.assayAvailability?.byDt) return // this ds is not equipped with assay availability by dt
 	const _dt = ds.assayAvailability.byDt[dtKey]
 	if (!_dt) return // this ds has assay availability but lacks setting for this dt. this is allowed e.g. we only specify availability for cnv but not snvindel.
-
-	// get the list of samples/cases that passed filter.
-	const sampleFilter = filter && filter.lst.length ? new Set((await get_samples(filter, ds)).map(i => i.id)) : null
 
 	const dts = []
 	if (_dt.byOrigin) {
@@ -2765,10 +2762,14 @@ async function mayAddDataAvailability(sample2mlst, dtKey, ds, origin, filter, q)
 	for (const dt of dts) {
 		if (dt.get) {
 			// get() returns yesSamples and noSamples that passed filter0
-			const result = await dt.get(q.filter0)
+			const result = await dt.get({ filter0: q.filter0, filter: q.filter })
 			dt.yesSamples = result.yesSamples
 			dt.noSamples = result.noSamples
 		}
+
+		// get the list of samples/cases that passed filter for dt without get(). dt.get() will handle both filter and filter0
+		const sampleFilter =
+			!dt.get && q.filter && q.filter.lst.length ? new Set((await get_samples(q.filter, ds)).map(i => i.id)) : null
 
 		for (const sid of dt.yesSamples) {
 			// sample has been assayed
