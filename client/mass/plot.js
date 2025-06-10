@@ -54,7 +54,6 @@ class MassPlot {
 				maxHistoryLen: 10
 			})
 		}
-
 		const _ = await import(`../plots/${opts.chartType}.js`)
 		this.components.chart = await _.componentInit({
 			app: this.app,
