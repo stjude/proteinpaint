@@ -1,9 +1,8 @@
 import { getCompInit } from '#rx'
 import 'ol/ol.css'
-import OLMap from 'ol/Map.js'
+import type OLMap from 'ol/Map.js'
 import type TileLayer from 'ol/layer/Tile.js'
 import Tile from 'ol/layer/Tile.js'
-import View from 'ol/View.js'
 import type Zoomify from 'ol/source/Zoomify.js'
 import OverviewMap from 'ol/control/OverviewMap.js'
 import FullScreen from 'ol/control/FullScreen.js'
@@ -13,7 +12,6 @@ import { WSIViewerInteractions } from '#plots/wsiviewer/interactions/WSIViewerIn
 import type Settings from '#plots/wsiviewer/Settings.ts'
 import wsiViewerDefaults from '#plots/wsiviewer/defaults.ts'
 import type { SampleWSImagesResponse } from '#types'
-import { Projection } from 'ol/proj'
 import { RxComponentInner } from '../../types/rx.d'
 import 'ol-ext/dist/ol-ext.css'
 import LayerSwitcher from 'ol-ext/control/LayerSwitcher'
@@ -24,6 +22,7 @@ import { WSImageRenderer } from '#plots/wsiviewer/view/WSImageRenderer.ts'
 import { Buffer } from '#plots/wsiviewer/interactions/Buffer.ts'
 import { ViewModelProvider } from '#plots/wsiviewer/viewModel/ViewModelProvider.ts'
 import { ThumbnailRenderer } from '#plots/wsiviewer/view/ThumbnailRenderer.ts'
+import { MapRenderer } from '#plots/wsiviewer/view/MapRenderer.ts'
 
 export default class WSIViewer extends RxComponentInner {
 	// following attributes are required by rx
@@ -98,7 +97,7 @@ export default class WSIViewer extends RxComponentInner {
 		const activeImage: TileLayer = wsimageLayers[settings.displayedImageIndex].wsimage
 		const activeImageExtent = activeImage?.getSource()?.getTileGrid()?.getExtent()
 
-		const map = this.getMap(wsimageLayers[settings.displayedImageIndex])
+		const map = new MapRenderer(wsimageLayers[settings.displayedImageIndex]).getMap()
 
 		const viewData = viewModel.getViewData(settings.displayedImageIndex)
 
@@ -135,39 +134,6 @@ export default class WSIViewer extends RxComponentInner {
 				`${state.sample_id} <span style="font-size:.8em">${state.termdbConfig.queries.WSImages.type} images</span>`
 			)
 		}
-	}
-
-	private getMap(wSImageLayers: WSImageLayers): OLMap {
-		const activeImage: TileLayer = wSImageLayers.wsimage
-		const extent = activeImage?.getSource()?.getTileGrid()?.getExtent()
-
-		// TODO Add metersPerUnit?
-		const projection = new Projection({
-			code: 'ZoomifyProjection',
-			units: 'pixels',
-			extent: extent,
-			getPointResolution: function (resolution) {
-				return resolution
-			}
-		})
-
-		const layers = [activeImage]
-		if (wSImageLayers.overlays) {
-			for (const overlay of wSImageLayers.overlays) {
-				layers.push(overlay)
-			}
-		}
-
-		return new OLMap({
-			layers: layers,
-			target: 'wsi-viewer',
-			view: new View({
-				projection: projection,
-				resolutions: activeImage.getSource()?.getTileGrid()?.getResolutions(),
-				constrainOnlyCenter: true,
-				center: extent || [0, 0]
-			})
-		})
 	}
 
 	private addControls(map: OLMap, firstLayer: TileLayer, hasOverlay: boolean) {
@@ -289,7 +255,7 @@ export default class WSIViewer extends RxComponentInner {
 	}
 }
 
-type WSImageLayers = {
+export type WSImageLayers = {
 	wsimage: TileLayer<Zoomify>
 	overlays?: Array<TileLayer<Zoomify>>
 }
