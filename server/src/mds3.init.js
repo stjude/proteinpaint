@@ -16,6 +16,7 @@ import serverconfig from './serverconfig.js'
 import {
 	dtsnvindel,
 	dtfusionrna,
+	dt2label,
 	dtsv,
 	dtcnv,
 	mclass,
@@ -3051,23 +3052,49 @@ async function mayValidateAssayAvailability(ds) {
 	// has this setting. cache sample list
 	if (ds.assayAvailability.byDt) {
 		for (const key in ds.assayAvailability.byDt) {
+			if (!dt2label[key]) throw 'unknown dt in assayAvailability.byDt: ' + key
 			const dt = ds.assayAvailability.byDt[key]
 
 			if (dt.byOrigin) {
-				for (const key in dt.byOrigin) {
-					const sub_dt = dt.byOrigin[key]
-					// validate structure
-					// require {.yes{} .no{}, term_id} or get()
-					if (!((sub_dt.yes && sub_dt.no && sub_dt.term_id) || sub_dt.get))
-						throw 'ds.assayAvailability.byDt.*.byOrigin requires {term_id, yes{}, no{}} or get()'
-					await getAssayAvailablility(ds, sub_dt)
+				for (const oname in dt.byOrigin) {
+					const sub_dt = dt.byOrigin[oname]
+					if (sub_dt.get) {
+						if (typeof sub_dt.get != 'function') throw 'sub_dt.get specified but is not function'
+						// see comments below
+					} else {
+						if (!sub_dt.yes || !sub_dt.no || !sub_dt.term_id)
+							throw 'ds.assayAvailability.byDt.*.byOrigin requires {term_id, yes{}, no{}}'
+						await getAssayAvailablility(ds, sub_dt)
+						console.log(
+							ds.label + ': assayAvailability',
+							dt2label[key],
+							oname,
+							'yes',
+							sub_dt.yesSamples.size,
+							'no',
+							sub_dt.noSamples.size
+						)
+					}
 				}
 			} else {
-				// validate structure
-				// require {.yes{} .no{}, term_id} or get()
-				if (!((dt.yes && dt.no && dt.term_id) || dt.get))
-					throw 'ds.assayAvailability.byDt requires {term_id, yes{}, no{}} or get()'
-				await getAssayAvailablility(ds, dt)
+				// not by origin
+				if (dt.get) {
+					if (typeof dt.get != 'function') throw 'dt.get specified but is not function'
+					// using ds-supplied getter, no additional validation
+					// also no need to cache yes/no samples, they will be dynamically returned from getter
+				} else {
+					if (!dt.yes || !dt.no || !dt.term_id)
+						throw 'ds.assayAvailability.byDt requires {term_id, yes{}, no{}} or get()'
+					await getAssayAvailablility(ds, dt)
+					console.log(
+						ds.label + ': assayAvailability',
+						dt2label[key],
+						'yes',
+						dt.yesSamples.size,
+						'no',
+						dt.noSamples.size
+					)
+				}
 			}
 		}
 	}
@@ -3075,21 +3102,16 @@ async function mayValidateAssayAvailability(ds) {
 
 async function getAssayAvailablility(ds, dt) {
 	// cache sample id list for each category, set .yesSamples(), .noSamples()
-	if (dt.get) {
-		// for assay availability from get function, do not cache. get() will return
-		// yesSamples and noSamples passed filter0
-	} else {
-		// for assay availability from a db term
-		dt.yesSamples = new Set()
-		dt.noSamples = new Set()
-		const sql = `SELECT sample, value
+	// for assay availability from a db term
+	dt.yesSamples = new Set()
+	dt.noSamples = new Set()
+	const sql = `SELECT sample, value
 					FROM anno_categorical
 					WHERE term_id = '${dt.term_id}'`
-		const rows = ds.cohort.db.connection.prepare(sql).all()
-		for (const r of rows) {
-			if (dt.yes.value.includes(r.value)) dt.yesSamples.add(r.sample)
-			else if (dt.no.value.includes(r.value)) dt.noSamples.add(r.sample)
-			//else throw `value of term ${dt.term_id} is invalid`
-		}
+	const rows = ds.cohort.db.connection.prepare(sql).all()
+	for (const r of rows) {
+		if (dt.yes.value.includes(r.value)) dt.yesSamples.add(r.sample)
+		else if (dt.no.value.includes(r.value)) dt.noSamples.add(r.sample)
+		//else throw `value of term ${dt.term_id} is invalid`
 	}
 }
