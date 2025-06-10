@@ -10,6 +10,7 @@ import { getDefaultScatterSettings } from './sampleScatter.js'
 import { Tabs } from '../dom/toggleButtons'
 import { isNumericTerm } from '#shared/terms.js'
 import { term0_term2_defaultQ } from './controls'
+import { sum } from 'd3'
 
 //import {  } from ''
 
@@ -120,9 +121,11 @@ class SummaryPlot {
 }
 
 export const summaryInit = getCompInit(SummaryPlot)
+export const componentInit = summaryInit
 
 function setRenderers(self) {
 	self.initUi = function (opts, config) {
+		console.log(config)
 		const holder = opts.holder
 		try {
 			self.dom = {

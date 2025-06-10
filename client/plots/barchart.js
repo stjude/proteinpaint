@@ -261,6 +261,7 @@ export class Barchart {
 
 	async main() {
 		const c = this.state.config
+		console.log(c)
 		if (c.chartType != this.type && c.childType != this.type) return
 		try {
 			this.config = structuredClone(c)
