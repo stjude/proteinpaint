@@ -22,7 +22,7 @@ import { format as formatCoordinate } from 'ol/coordinate.js'
 import { debounce } from 'debounce'
 import { WSImageRenderer } from '#plots/wsiviewer/view/WSImageRenderer.ts'
 import { Buffer } from '#plots/wsiviewer/interactions/Buffer.ts'
-import { ViewModelProvider } from '#plots/wsiviewer/viewModelNew/ViewModelProvider.ts'
+import { ViewModelProvider } from '#plots/wsiviewer/viewModel/ViewModelProvider.ts'
 import { ThumbnailRenderer } from '#plots/wsiviewer/view/ThumbnailRenderer.ts'
 
 export default class WSIViewer extends RxComponentInner {
@@ -56,16 +56,16 @@ export default class WSIViewer extends RxComponentInner {
 		const sample_id = state.sample_id
 
 		const viewModelProvider = new ViewModelProvider()
-		const viewModelNew = await viewModelProvider.provide(
+		const viewModel = await viewModelProvider.provide(
 			genome,
 			dslabel,
 			sample_id,
 			buffers.annotationsIdx.get(),
 			settings
 		)
-		const wsimages = viewModelNew.sampleWSImages
-		const wsimageLayers = viewModelNew.wsimageLayers
-		const wsimageLayersLoadError = viewModelNew.wsimageLayersLoadError
+		const wsimages = viewModel.sampleWSImages
+		const wsimageLayers = viewModel.wsimageLayers
+		const wsimageLayersLoadError = viewModel.wsimageLayersLoadError
 
 		if (wsimages.length === 0) {
 			holder.append('div').style('margin-left', '10px').text('No WSI images.')
@@ -100,7 +100,7 @@ export default class WSIViewer extends RxComponentInner {
 
 		const map = this.getMap(wsimageLayers[settings.displayedImageIndex])
 
-		const viewData = viewModelNew.getViewData(settings.displayedImageIndex)
+		const viewData = viewModel.getViewData(settings.displayedImageIndex)
 
 		const hasOverlay = wsimageLayers[settings.displayedImageIndex].overlays != null
 
