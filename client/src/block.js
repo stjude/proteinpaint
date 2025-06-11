@@ -4,7 +4,7 @@ import { format as d3format } from 'd3-format'
 import { axisTop, axisLeft } from 'd3-axis'
 import { debounce } from 'debounce'
 import * as client from './client'
-import { Menu, newSandboxDiv, sayerror, appear, disappear } from '#dom'
+import { axisstyle, Menu, newSandboxDiv, sayerror, appear, disappear } from '#dom'
 import { dofetch3 } from '../common/dofetch'
 import * as common from '#shared/common.js'
 import * as coord from './coord'
@@ -343,7 +343,6 @@ export class Block {
 				.style('display', 'inline-block')
 				.style('font-size', '.7em')
 				.style('color', this.legend.legendcolor)
-				.style('font-family', client.font)
 				.on('click', () => {
 					if (shown) {
 						shown = false
@@ -443,7 +442,6 @@ export class Block {
 				// custom data, legacy ds
 				butrow
 					.append('div')
-					.style('font-family', client.font)
 					.attr('class', 'sja_opaque8 sjpp-plus-button')
 					.text('+')
 					.on('click', event => {
@@ -668,7 +666,6 @@ export class Block {
 			.attr('y', -this.rulerheight / 2)
 			.attr('dominant-baseline', 'central')
 			.attr('font-size', 13)
-			.attr('font-family', client.font)
 		if (this.hidegenecontrol) {
 			this.coord.name
 				.text('Zoom out')
@@ -1139,7 +1136,7 @@ export class Block {
 					.range([0, this.width])
 				const axis = axisTop().scale(scale).tickFormat(d3format('d'))
 				const __g = this.coord.axesg.append('g').attr('transform', 'translate(0,0)')
-				client.axisstyle({
+				axisstyle({
 					axis: __g.call(axis),
 					color: 'black',
 					showline: true
@@ -1188,7 +1185,7 @@ export class Block {
 				const scale = scaleLinear().domain(domain).range(range)
 				const axis = axisTop().scale(scale).tickFormat(tickformat)
 				const __g = this.coord.axesg.append('g').attr('transform', 'translate(0,0)')
-				client.axisstyle({
+				axisstyle({
 					axis: __g.call(axis),
 					color: 'black',
 					showline: true
@@ -1338,7 +1335,6 @@ export class Block {
 				.append('text')
 				.text(pos > 1000000 ? d3format('s')(pos) : d3format(',d')(pos))
 				.attr('font-size', this.rulerfontsize)
-				.attr('font-family', client.font)
 			maxticknumber = Math.floor(this.width / (t.node().getBBox().width + 60))
 			t.remove()
 		}
@@ -1353,7 +1349,7 @@ export class Block {
 		} else {
 			axis.tickFormat(d3format(',d'))
 		}
-		client.axisstyle({
+		axisstyle({
 			axis: rulerg.call(axis),
 			color: 'black',
 			showline: true,
@@ -2030,10 +2026,7 @@ reverseorient() {
 			this.error('unknown dsname ' + dsname)
 			return
 		}
-		const box = this.ctrl.dshandleholder
-			.append('div')
-			.attr('class', 'sjpp-dshandleholder')
-			.style('font-family', client.font)
+		const box = this.ctrl.dshandleholder.append('div').attr('class', 'sjpp-dshandleholder')
 		const says = box
 			.append('div')
 			.attr('class', 'sja_opaque8 sjpp-dslabel')
@@ -3197,7 +3190,6 @@ seekrange(chr,start,stop) {
 			.attr('y', y ? y : (tk.height_main - tk.toppad - tk.bottompad) / 2)
 			.attr('dominant-baseline', 'central')
 			.attr('font-size', '14px')
-			.attr('font-family', client.font)
 	}
 
 	block_setheight() {
@@ -3577,7 +3569,6 @@ seekrange(chr,start,stop) {
 			.append('text')
 			.text('CONFIG')
 			.attr('fill', '#555')
-			.attr('font-family', client.font)
 			.attr('font-size', this.labelfontsize)
 			.attr('y', this.labelfontsize)
 			.attr('class', 'sja_clbtext2')
@@ -3587,7 +3578,6 @@ seekrange(chr,start,stop) {
 		return tk.gleft
 			.append('text')
 			.attr('font-size', this.labelfontsize)
-			.attr('font-family', client.font)
 			.attr('y', this.labelfontsize / 2 + (y || 0))
 			.attr('text-anchor', 'end')
 			.attr('dominant-baseline', 'central')
@@ -4309,7 +4299,6 @@ seekrange(chr,start,stop) {
 			.attr('y', panel.height / 2)
 			.attr('dominant-baseline', 'central')
 			.attr('font-size', '14px')
-			.attr('font-family', client.font)
 	}
 
 	zoombutton_mouseover(fold, zoomout, button) {
@@ -4500,7 +4489,6 @@ seekrange(chr,start,stop) {
 					.append('text')
 					.text(pos > 1000000 ? d3format('s')(pos) : d3format(',d')(pos))
 					.attr('font-size', this.rulerfontsize)
-					.attr('font-family', client.font)
 					.each(function () {
 						w = this.getBBox().width
 					})
@@ -4515,7 +4503,7 @@ seekrange(chr,start,stop) {
 			} else {
 				axis.tickFormat(d3format(',d'))
 			}
-			client.axisstyle({
+			axisstyle({
 				axis: rulerg.call(axis),
 				color: 'black',
 				showline: true,

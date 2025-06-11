@@ -3,7 +3,6 @@ import { select } from 'd3-selection'
 // variant label is always made. sample label is optional and dynamically loads script when needed
 
 const labyspace = 5
-const font = 'Arial'
 
 /*
 make_leftlabels
@@ -111,7 +110,6 @@ export function makelabel(tk, block, y) {
 	const text = tk.leftlabels.g
 		.append('text')
 		.attr('font-size', block.labelfontsize)
-		.attr('font-family', font)
 		.attr('y', block.labelfontsize / 2 + y)
 		.attr('text-anchor', 'end')
 		.attr('dominant-baseline', 'central')

@@ -1,4 +1,5 @@
 import * as client from './client'
+import { table2col } from '#dom'
 import { scaleLinear } from 'd3-scale'
 import { axisBottom } from 'd3-axis'
 import { format as d3format } from 'd3-format'
@@ -280,7 +281,6 @@ export function gmtkrender(tk, block) {
 				.attr('x', -12)
 				.attr('text-anchor', 'end')
 				.attr('dominant-baseline', 'central')
-				.attr('font-family', client.font)
 				.attr('fill', 'black')
 				.attr('font-size', block.labelfontsize)
 				.each(function () {
@@ -680,13 +680,13 @@ block:
 					tkg
 						.append('text')
 						.text(gm.cdseq[j]) // do not use j2 here
-						.attr('font-family', 'Courier')
 						.attr('font-size', rowh)
 						.attr('dominant-baseline', 'central')
 						.attr('text-anchor', 'middle')
 						.attr('fill', 'black')
 						.attr('x', x + pxstart + (j - cdsstart + 0.5) * block.exonsf)
 						.attr('y', 2 + rowh / 2)
+						.attr('font-family', 'Courier') // no override; customary to show nucleotide/aa in this font
 				}
 			}
 			if (cdsstart % 3 == 2) {
@@ -705,7 +705,6 @@ block:
 					tkg
 						.append('text')
 						.text(gm.aaseq[Math.floor(j2 / 3)])
-						.attr('font-family', 'Courier')
 						.attr('font-size', rowh)
 						.attr('font-weight', 'bold')
 						.attr('fill', 'black')
@@ -713,6 +712,7 @@ block:
 						.attr('text-anchor', 'middle')
 						.attr('x', x + pxstart + (j - cdsstart + 0.5) * block.exonsf) // do not use j2 here
 						.attr('y', h / 2)
+						.attr('font-family', 'Courier') // no override; customary to show nucleotide/aa in this font
 				}
 			}
 		}
@@ -755,11 +755,11 @@ block:
 					tkg
 						.append('text')
 						.text(nt)
-						.attr('font-family', 'Courier')
 						.attr('font-size', rowh)
 						.attr('dominant-baseline', 'central')
 						.attr('text-anchor', 'middle')
 						.attr('fill', 'black')
+						.attr('font-family', 'Courier') // no override; customary to show nucleotide/aa in this font
 						.attr(
 							'x',
 							x +
@@ -857,7 +857,7 @@ function moveisoform(gm, block, y0, height) {
 
 function coord2legend(tk, event, r, start, stop, gm, block, h) {
 	tk.tktip.clear()
-	const div = tk.tktip.d.append('div').style('font-family', 'Courier')
+	const table = table2col({ holder: tk.tktip.d, margin: '0px' })
 	const a = event.target.getBoundingClientRect()
 	const x = event.clientX - a.left
 
@@ -874,44 +874,31 @@ function coord2legend(tk, event, r, start, stop, gm, block, h) {
 	}
 
 	const p = coord.genomic2gm(pos, gm)
-	if (p.atexon) {
-		div.append('div').html('&nbsp;&nbsp;<span style="opacity:.5">exon:</span> ' + p.atexon)
-	}
-	if (p.atutr5) {
-		div.append('div').html('<span style="opacity:.5">5\' UTR:</span> ' + p.atutr5.off + ' bp')
-	} else if (p.atutr3) {
-		div.append('div').html('<span style="opacity:.5">3\' UTR:</span> ' + p.atutr3.off + ' bp')
-	} else if (p.aapos) {
-		div.append('div').html('&nbsp;&nbsp;&nbsp;&nbsp;<span style="opacity:.5">AA:</span> ' + p.aapos + ' aa')
-	}
-	if (p.rnapos) {
-		div.append('div').html('&nbsp;&nbsp;&nbsp;<span style="opacity:.5">RNA:</span> ' + p.rnapos + ' bp')
-	}
+	if (p.atexon) table.addRow('Exon', p.atexon)
+
+	if (p.atutr5) table.addRow("5' UTR", p.atutr5.off + ' bp')
+	else if (p.atutr3) table.addRow("3' UTR", p.atutr3.off + ' bp')
+	else if (p.aapos) table.addRow('AA', p.aapos + ' aa')
+
+	if (p.rnapos) table.addRow('RNA', p.rnapos + ' bp')
+	table.addRow(gm.chr, pos + 1)
 	if (p.aapos && gm.pdomains) {
+		table.table.style('margin-bottom', '5px')
 		for (const d of gm.pdomains) {
 			if (d.name + d.description in gm.domain_hidden) continue
 			if (d.start <= p.aapos && d.stop >= p.aapos) {
-				const row = div.append('div')
+				const row = tk.tktip.d.append('div')
 				row.append('span').style('background-color', d.color).html('&nbsp;&nbsp;')
-				row
-					.append('span')
-					.style('font-family', client.font)
-					.html('&nbsp;' + d.name)
+				row.append('span').html('&nbsp;' + d.name)
 				if (d.description) {
 					row
 						.append('span')
-						.style('font-family', client.font)
 						.style('font-size', '.7em')
 						.html('&nbsp;' + (d.description.length > 30 ? d.description.substring(0, 20) + ' ...' : d.description))
 				}
 			}
 		}
 	}
-	div
-		.append('div')
-		.style('margin-top', '5px')
-		.style('font-size', '.8em')
-		.text(gm.chr + ' ' + (pos + 1))
 	tk.tktip.show(event.clientX, gm.__tkg.node().getBoundingClientRect().top + h - 10)
 }
 
@@ -1177,7 +1164,6 @@ function customdomainmakeui(block, tk, proteinDomainUI) {
 				.style('display', 'inline-block')
 				.style('margin-right', '5px')
 				.style('padding', '1px 2px')
-				.style('font-family', 'Courier')
 				.html('&nbsp;')
 			row.append('div').style('display', 'inline-block').text(i.name)
 			row.on('click', () => {

@@ -1,1 +1,2 @@
-
+Fixes:
+- allow to customize font for many parts of block and mds3 tk

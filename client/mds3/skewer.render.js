@@ -27,7 +27,6 @@ const modeshow = 1
 const middlealignshift = 0.3
 const disclabelspacing = 1 // px spacing between disc and label
 const textlensf = 0.6 // to replace n.getBBox().width for detecting filling font size which breaks in chrome
-const font = 'Arial'
 
 /*
 sets tk.skewer.maxheight
@@ -181,7 +180,6 @@ export function skewer_make(tk, block) {
 		.filter(d => d.occurrence > 1)
 		.append('text')
 		.text(d => d.occurrence)
-		.attr('font-family', font)
 		.attr('class', 'sja_aa_discnum')
 		.attr('fill-opacity', d => (d.aa.showmode == modefold ? 0 : 1))
 		.attr('stroke-opacity', d => (d.aa.showmode == modefold ? 0 : 1))
@@ -224,7 +222,6 @@ export function skewer_make(tk, block) {
 		.attr('fill', d => tk.color4disc(d.mlst[0]))
 		.attr('x', d => d.radius + d.rimwidth + 1)
 		.attr('y', d => d._labfontsize * middlealignshift)
-		.attr('font-family', font)
 		.classed('sja_aa_disclabel', true)
 		.attr('fill-opacity', d => (d.aa.showmode == modefold ? 0 : 1))
 		.attr('transform', 'scale(1) rotate(0)')
