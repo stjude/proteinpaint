@@ -1,10 +1,13 @@
 import { renderTable, getMaxLabelWidth, ColorScale, table2col } from '#dom'
 import type { Elem, Div } from '../../../types/d3'
 import type { WSIViewerInteractions } from '../interactions/WSIViewerInteractions'
+import type OLMap from 'ol/Map.js'
+import type { ImageViewData } from '../viewModel/ViewModel'
+import type { Extent } from 'ol/extent'
 
 export class WSImageRenderer {
 	holder: Elem
-	viewData: any
+	imageViewData: ImageViewData
 	tablesWrapper: Div
 	buffers: any
 	interactions: WSIViewerInteractions
@@ -12,14 +15,14 @@ export class WSImageRenderer {
 
 	constructor(
 		holder: Elem,
-		viewData: any,
+		imageViewData: ImageViewData,
 		buffers: any,
 		wsiinteractions: WSIViewerInteractions,
-		activeImageExtent: any,
-		map: any
+		activeImageExtent: Extent,
+		map: OLMap
 	) {
 		this.holder = holder
-		this.viewData = viewData
+		this.imageViewData = imageViewData
 		this.buffers = buffers
 		this.interactions = wsiinteractions
 
@@ -46,13 +49,13 @@ export class WSImageRenderer {
 		this.renderMetadata()
 	}
 
-	private renderAnnotationsTable(activeImageExtent, map) {
-		if (!this.viewData.annotations) return
+	private renderAnnotationsTable(activeImageExtent, map: OLMap) {
+		if (!this.imageViewData.annotations) return
 		const selectedColor = '#fcfc8b'
 
 		renderTable({
-			columns: this.viewData.annotations.columns,
-			rows: this.viewData.annotations.rows,
+			columns: this.imageViewData.annotations.columns,
+			rows: this.imageViewData.annotations.rows,
 			div: this.tablesWrapper
 				.append('div')
 				.attr('id', 'annotations-table')
@@ -76,7 +79,7 @@ export class WSImageRenderer {
 
 				tr.on('click', () => {
 					this.buffers.annotationsIdx.set(rowIdx)
-					const coords = [this.viewData.annotations!.rows[rowIdx][1].value] as [number, number][]
+					const coords = [this.imageViewData.annotations!.rows[rowIdx][1].value] as unknown as [number, number][]
 					this.interactions.addZoomInEffect(activeImageExtent, coords, map)
 				})
 			}
@@ -84,11 +87,11 @@ export class WSImageRenderer {
 	}
 
 	private renderClassesTable() {
-		if (!this.viewData.classes) return
+		if (!this.imageViewData.classes) return
 
 		renderTable({
-			columns: this.viewData.classes.columns,
-			rows: this.viewData.classes.rows,
+			columns: this.imageViewData.classes.columns,
+			rows: this.imageViewData.classes.rows,
 			div: this.legend
 				.append('div')
 				.attr('id', 'annotations-legend')
@@ -99,7 +102,7 @@ export class WSImageRenderer {
 	}
 
 	private renderUncertaintyLegend() {
-		if (!this.viewData.uncertainty) return
+		if (!this.imageViewData.uncertainty) return
 
 		const svgHolder = this.legend.append('div').attr('id', 'uncertainty-legend').style('margin-top', '20px')
 		const width = 200
@@ -119,26 +122,26 @@ export class WSImageRenderer {
 		new ColorScale({
 			holder: svg,
 			domain: [0, 1],
-			colors: this.viewData.uncertainty.map(u => u.color),
+			colors: this.imageViewData.uncertainty.map(u => u.color),
 			position: '25, 25',
 			ticks: 2,
 			barwidth: width,
 			labels: {
-				left: this.viewData.uncertainty[0].label,
-				right: this.viewData.uncertainty[this.viewData.uncertainty.length - 1].label
+				left: this.imageViewData.uncertainty[0].label,
+				right: this.imageViewData.uncertainty[this.imageViewData.uncertainty.length - 1].label
 			}
 		})
 	}
 
 	//TODO: Need an example for testing
 	private renderMetadata() {
-		if (!this.viewData.metadata) return
+		if (!this.imageViewData.metadata) return
 		const holderDiv = this.holder.append('div').attr('id', 'metadata')
 
 		const table = table2col({ holder: holderDiv })
 
 		// Create table rows for each key-value pair
-		Object.entries(JSON.parse(this.viewData.metadata)).forEach(([key, value]) => {
+		Object.entries(JSON.parse(this.imageViewData.metadata)).forEach(([key, value]) => {
 			const [c1, c2] = table.addRow()
 			c1.html(key)
 			c2.html(value)

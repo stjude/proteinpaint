@@ -83,7 +83,7 @@ export default class WSIViewer extends RxComponentInner {
 			.style('width', settings.imageWidth)
 			.style('height', settings.imageHeight)
 
-		const viewData = viewModel.getViewData(settings.displayedImageIndex)
+		const imageViewData = viewModel.getImageViewData(settings.displayedImageIndex)
 
 		const activeImage: TileLayer = wsimageLayers[settings.displayedImageIndex].wsimage
 		const activeImageExtent = activeImage?.getSource()?.getTileGrid()?.getExtent()
@@ -92,7 +92,7 @@ export default class WSIViewer extends RxComponentInner {
 
 		const zoomInPoints = wsimages[settings.displayedImageIndex].zoomInPoints
 
-		new WSImageRenderer(holder, viewData, buffers, this.wsiViewerInteractions, activeImageExtent, map)
+		new WSImageRenderer(holder, imageViewData, buffers, this.wsiViewerInteractions, activeImageExtent!, map)
 
 		if (zoomInPoints != undefined) {
 			this.wsiViewerInteractions.addZoomInEffect(activeImageExtent, zoomInPoints, map)
@@ -100,7 +100,7 @@ export default class WSIViewer extends RxComponentInner {
 				holder,
 				map,
 				activeImageExtent,
-				viewData.shortcuts,
+				imageViewData.shortcuts,
 				buffers,
 				wsimages[settings.displayedImageIndex].annotationsData
 			)

@@ -7,7 +7,7 @@ export class ViewModel {
 	public sampleWSImages: WSImage[]
 	public wsimageLayers: Array<WSImageLayers>
 	public wsimageLayersLoadError: string | undefined
-	viewData: (index: number) => { annotations?: any; classes?: any; shortcuts?: string[] }
+	imageViewData: (index: number) => ImageViewData
 
 	constructor(
 		sampleWSImages: WSImage[],
@@ -17,21 +17,21 @@ export class ViewModel {
 		this.sampleWSImages = sampleWSImages
 		this.wsimageLayers = wsimageLayers
 		this.wsimageLayersLoadError = wsimageLayersLoadError
-		this.viewData = index => this.getViewData(index)
+		this.imageViewData = index => this.getImageViewData(index)
 	}
 
-	getViewData(index: number) {
-		const viewData: any = {}
+	getImageViewData(index: number) {
+		const imageViewData: any = {}
 		const imageData = this.sampleWSImages[index]
-		this.setAnnonationsTableData(viewData, imageData)
-		this.setClassData(viewData, imageData)
+		this.setAnnonationsTableData(imageViewData, imageData)
+		this.setClassData(imageViewData, imageData)
 		if (imageData?.uncertainty) {
-			viewData.uncertainty = imageData?.uncertainty
+			imageViewData.uncertainty = imageData?.uncertainty
 		}
 		const metadata = this.wsimageLayers[index].wsimage.get('metadata')
-		if (metadata) viewData.metadata = metadata
+		if (metadata) imageViewData.metadata = metadata
 
-		return viewData
+		return imageViewData
 	}
 
 	setAnnonationsTableData(viewData: any, imageData: WSImage) {
@@ -90,4 +90,18 @@ export class ViewModel {
 		}
 		viewData.shortcuts = shortcuts
 	}
+}
+
+export type ImageViewData = {
+	annotations?: {
+		rows: TableCell[][]
+		columns: { label: string; sortable?: boolean; align?: string }[]
+	}
+	classes?: {
+		rows: TableCell[][]
+		columns: { label: string; sortable?: boolean; align?: string }[]
+	}
+	shortcuts?: string[]
+	uncertainty?: any
+	metadata?: any
 }
