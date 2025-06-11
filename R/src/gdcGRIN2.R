@@ -58,7 +58,7 @@ write_error <- function(msg) {
 assign_lesion_colors <- function(lesion_types) {
   # Define color mapping
   color_map <- c(
-    "mutation" = "grey",
+    "mutation" = "black",
     "gain" = "red",
     "loss" = "blue"
   )

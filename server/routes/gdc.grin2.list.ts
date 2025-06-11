@@ -259,7 +259,7 @@ async function mayListCnvFiles(q: GdcGRIN2listRequest, result: GdcGRIN2listRespo
 		case_filters.content.push(q.filter0)
 	}
 
-	const body = {
+	const body: any = {
 		size: cnvMaxFileNumber,
 		fields: [
 			'cases.samples.tissue_type',
