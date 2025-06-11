@@ -192,7 +192,7 @@ function gettvs(id, val = '', overrides = {}) {
 ***************/
 
 tape('\n', test => {
-	test.pass('-***- filter/filter -***-')
+	test.pass('-***- filter/filter.integration -***-')
 	test.end()
 })
 

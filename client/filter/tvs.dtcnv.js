@@ -5,6 +5,8 @@ import { Menu } from '../dom/menu'
 TVS handler for dtcnv term
 */
 
+// TODO: handler instance should NOT be shared if the mehtods (such as fillMenu()) depends on mode (continuous, categorical),
+// since dynamically changing instance methods would affect different terms that use this same handler instance
 export const handler = Object.assign({}, _handler, { type: 'dtcnv', setMethods })
 
 function setMethods(self, tvs) {
@@ -25,6 +27,8 @@ function setMethods(self, tvs) {
 		// keep using categorical fill menu
 		// to fill menu with mutation classes
 		tvs.cnvMode = 'categorical'
+		handler.fillMenu = _handler.fillMenu
+		handler.get_pill_label = _handler.get_pill_label
 	}
 }
 

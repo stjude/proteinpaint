@@ -21,7 +21,7 @@ Tests:
 
 const vocab = getExample()
 const vocabApi = vocabInit({ state: { vocab } })
-vocabApi.termdbConfig = { queries: { cnv: {} } }
+vocabApi.termdbConfig = { queries: { cnv: {} }, test: 'test' }
 
 async function getPillFilterItem(termType) {
 	if (!termType) throw `missing type`
@@ -209,7 +209,7 @@ function testTermNameGen(test, handler) {
 */
 
 tape('\n', async test => {
-	test.pass('-***- filter/tvs -***-')
+	test.pass('-***- filter/tvs.unit -***-')
 	test.end()
 })
 

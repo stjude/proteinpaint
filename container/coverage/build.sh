@@ -61,10 +61,11 @@ fi
 ##############################
 
 PLATFORM=""
-# ARCH=$( uname -m )
+ARCH=$( uname -m )
 if [[ ${ARCH} == "arm64" ]]; then 
-  # ARCH="aarch64";
-  PLATFORM="--platform=linux/arm64"
+  # in Apple Silicon machines, need to emulate x86 platform of the base image, 
+  # otherwise this error comes up: `no match for platform in manifest: not found`
+  PLATFORM="--platform=linux/amd64"
 fi
 
 IMGNAME="ppcov:latest"

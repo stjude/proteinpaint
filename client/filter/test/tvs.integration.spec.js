@@ -104,7 +104,7 @@ async function getVocabApi() {
 ***************/
 
 tape('\n', test => {
-	test.pass('-***- filter/tvs -***-')
+	test.pass('-***- filter/tvs.integration -***-')
 	test.end()
 })
 
@@ -897,7 +897,7 @@ tape('tvs: Gene Variant - SNV/indel', async test => {
 	test.end()
 })
 
-tape('tvs: Gene Variant - CNV - cateogrical', async test => {
+tape('tvs: Gene Variant - CNV - categorical', async test => {
 	// generating vocabApi here in order to generate
 	// a termdbConfig, which is needed for cnv tvs
 	const vocabApi = await getVocabApi()
@@ -953,7 +953,6 @@ tape('tvs: Gene Variant - CNV - cateogrical', async test => {
 		pill.click()
 		editOpt.click()
 		const applyBtn = await detectOne({ target: tipd.node(), selector: '.sjpp_apply_btn' })
-
 		test.ok(applyBtn, 'Should have 1 button to apply value change')
 		test.equal(tipd.selectAll("input[name^='sjpp-input']").size(), 2, 'Should have a checkbox for each value')
 		test.equal(tipd.selectAll("input[name^='sjpp-input']:checked").size(), 1, 'Should have 1 box checked')
