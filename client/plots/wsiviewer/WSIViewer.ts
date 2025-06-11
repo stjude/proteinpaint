@@ -1,16 +1,12 @@
 import { getCompInit } from '#rx'
 import 'ol/ol.css'
-import type OLMap from 'ol/Map.js'
 import type TileLayer from 'ol/layer/Tile.js'
 import type Zoomify from 'ol/source/Zoomify.js'
-import { dofetch3 } from '#common/dofetch'
 import { WSIViewerInteractions } from '#plots/wsiviewer/interactions/WSIViewerInteractions.ts'
 import type Settings from '#plots/wsiviewer/Settings.ts'
 import wsiViewerDefaults from '#plots/wsiviewer/defaults.ts'
-import type { SampleWSImagesResponse } from '#types'
 import { RxComponentInner } from '../../types/rx.d'
 import 'ol-ext/dist/ol-ext.css'
-import { debounce } from 'debounce'
 import { WSImageRenderer } from '#plots/wsiviewer/view/WSImageRenderer.ts'
 import { Buffer } from '#plots/wsiviewer/interactions/Buffer.ts'
 import { ViewModelProvider } from '#plots/wsiviewer/viewModel/ViewModelProvider.ts'
@@ -100,16 +96,13 @@ export default class WSIViewer extends RxComponentInner {
 
 		if (zoomInPoints != undefined) {
 			this.wsiViewerInteractions.addZoomInEffect(activeImageExtent, zoomInPoints, map)
-
-			this.addMapKeyDownListener(
+			this.wsiViewerInteractions.addMapKeyDownListener(
 				holder,
-				state,
 				map,
-				settings,
 				activeImageExtent,
 				viewData.shortcuts,
 				buffers,
-				viewModelProvider
+				wsimages[settings.displayedImageIndex].annotationsData
 			)
 		}
 
@@ -123,76 +116,6 @@ export default class WSIViewer extends RxComponentInner {
 				`${state.sample_id} <span style="font-size:.8em">${state.termdbConfig.queries.WSImages.type} images</span>`
 			)
 		}
-	}
-
-	private addMapKeyDownListener(
-		holder: any,
-		state: any,
-		map: OLMap,
-		settings: Settings,
-		activeImageExtent: any,
-		shortcuts: string[] = [],
-		buffers: any,
-		// TODO deal with this in a better way
-		viewModelProvider: ViewModelProvider
-	) {
-		// Add keydown listener to the image container
-		const image = holder.select('div > .ol-viewport').attr('tabindex', 0)
-
-		//To scroll to next annotation, hold the space bar and press left/right arrows
-		let isSpaceDown = false
-
-		image.on('keydown', async (event: KeyboardEvent) => {
-			let currentIndex = buffers.annotationsIdx.get()
-
-			if (event.code === 'Space') {
-				isSpaceDown = true
-			}
-			if (isSpaceDown) {
-				event.preventDefault()
-				event.stopPropagation()
-				const idx = currentIndex
-				if (event.key == 'ArrowRight') {
-					//TODO: length of annotations?
-					currentIndex += 1
-				}
-				if (event.key == 'ArrowLeft') {
-					//Do not react if at the starting annotation
-					if (currentIndex === 0) return
-					currentIndex -= 1
-				}
-				if (idx !== currentIndex) {
-					//When the index changes, scroll to the new annotation
-					//Timeout for when user presses arrows multiple times.
-					const d = debounce(async () => {
-						buffers.annotationsIdx.set(currentIndex)
-						const newData: SampleWSImagesResponse = await viewModelProvider.requestData(
-							state.genome,
-							state.dslabel,
-							state.sample_id,
-							buffers.annotationsIdx.get()
-						)
-						const newZoomInPoints = newData.sampleWSImages[settings.displayedImageIndex].zoomInPoints
-						if (newZoomInPoints != undefined)
-							this.wsiViewerInteractions.addZoomInEffect(activeImageExtent, newZoomInPoints, map)
-						isSpaceDown = false
-					}, 500)
-					d()
-				}
-			}
-			if (shortcuts.includes(event.code)) {
-				const body = {
-					//I'd rather come up with an id since
-					//the index provided and the index used are
-					//not the same.
-					index: buffers.annotationsIdx.get(),
-					confirmed: event.code === 'Enter',
-					class: event.code === 'Enter' ? null : event.code.replace('Digit', '').replace('Key', '')
-				}
-				//Send user confirmation or change to server
-				await dofetch3('sampleWsiAiApi', { body })
-			}
-		})
 	}
 }
 

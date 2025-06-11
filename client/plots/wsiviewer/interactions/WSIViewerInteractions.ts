@@ -1,8 +1,18 @@
 import type OLMap from 'ol/Map.js'
+import { debounce } from 'debounce'
+import { dofetch3 } from '#common/dofetch'
 
 export class WSIViewerInteractions {
 	thumbnailClickListener: (index: number) => void
 	addZoomInEffect: (activeImageExtent: unknown, zoomInPoints: [number, number][], map: OLMap) => void
+	addMapKeyDownListener: (
+		holder: any,
+		map: OLMap,
+		activeImageExtent: any,
+		shortcuts?: string[],
+		buffers?: any,
+		annotationsData?: any[]
+	) => void
 
 	constructor(wsiApp: any, opts: any) {
 		this.thumbnailClickListener = (index: number) => {
@@ -42,6 +52,65 @@ export class WSIViewerInteractions {
 					duration: 2000
 				})
 			}, 500)
+		}
+
+		this.addMapKeyDownListener = (
+			holder: any,
+			map: OLMap,
+			activeImageExtent: any,
+			shortcuts: string[] = [],
+			buffers: any,
+			annotationsData: any[] = []
+		) => {
+			// Add keydown listener to the image container
+			const image = holder.select('div > .ol-viewport').attr('tabindex', 0)
+
+			//To scroll to next annotation, hold the space bar and press left/right arrows
+			let isSpaceDown = false
+
+			image.on('keydown', async (event: KeyboardEvent) => {
+				let currentIndex = buffers.annotationsIdx.get()
+
+				if (event.code === 'Space') {
+					isSpaceDown = true
+				}
+				if (isSpaceDown) {
+					event.preventDefault()
+					event.stopPropagation()
+					const idx = currentIndex
+					if (event.key == 'ArrowRight') {
+						//Do not react if at the last annotation
+						if (currentIndex == annotationsData.length) return
+						currentIndex += 1
+					}
+					if (event.key == 'ArrowLeft') {
+						//Do not react if at the starting annotation
+						if (currentIndex === 0) return
+						currentIndex -= 1
+					}
+					if (idx !== currentIndex) {
+						//When the index changes, scroll to the new annotation
+						//Timeout for when user presses arrows multiple times.
+						const d = debounce(async () => {
+							buffers.annotationsIdx.set(currentIndex)
+							const newZoomInPoints = annotationsData[currentIndex].zoomCoordinates
+							if (newZoomInPoints != undefined) this.addZoomInEffect(activeImageExtent, [newZoomInPoints], map)
+							isSpaceDown = false
+						}, 500)
+						d()
+					}
+				}
+				if (shortcuts.includes(event.code)) {
+					const body = {
+						coordinates: annotationsData[currentIndex].zoomCoordinates, //Original x,y coordinates
+						index: buffers.annotationsIdx.get(),
+						confirmed: event.code === 'Enter',
+						class: event.code === 'Enter' ? null : event.code.replace('Digit', '').replace('Key', '')
+					}
+					//TODO: Show change on table
+					await dofetch3('sampleWsiAiApi', { body })
+				}
+			})
 		}
 	}
 }

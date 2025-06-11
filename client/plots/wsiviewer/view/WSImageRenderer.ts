@@ -1,7 +1,6 @@
-import { renderTable, getMaxLabelWidth, ColorScale } from '#dom'
+import { renderTable, getMaxLabelWidth, ColorScale, table2col } from '#dom'
 import type { Elem, Div } from '../../../types/d3'
 import type { WSIViewerInteractions } from '../interactions/WSIViewerInteractions'
-import { table2col } from '#dom'
 
 export class WSImageRenderer {
 	holder: Elem
@@ -62,22 +61,23 @@ export class WSImageRenderer {
 			header: { allowSort: true },
 			showLines: false,
 			hoverEffects: (tr, row) => {
+				const selectedIdx = this.buffers.annotationsIdx.get()
+				const rowIdx = row[0].value as number
+				const isSelected = selectedIdx === rowIdx
+				const origColor = tr.style('background-color') || 'transparent'
+
 				tr.style('cursor', 'pointer')
-				const origColor = tr.style('background-color')
+				//Show selected row in yellow on render
+				tr.style('background-color', isSelected ? selectedColor : origColor)
+
 				this.buffers.annotationsIdx.addListener((index: number) => {
-					if (index === row[0].value) {
-						tr.style('background-color', selectedColor)
-					} else {
-						tr.style('background-color', origColor)
-					}
+					tr.style('background-color', index === rowIdx ? selectedColor : origColor)
 				})
+
 				tr.on('click', () => {
-					tr.style('background-color', selectedColor)
-					this.buffers.annotationsIdx.set(row[0].value)
-					const coords = [this.viewData.annotations!.rows[row[0].value!][1].value] as [number, number][]
+					this.buffers.annotationsIdx.set(rowIdx)
+					const coords = [this.viewData.annotations!.rows[rowIdx][1].value] as [number, number][]
 					this.interactions.addZoomInEffect(activeImageExtent, coords, map)
-					// map.getTargetElement().setAttribute('tabindex', '-1')
-					// map.getTargetElement().focus()
 				})
 			}
 		})
