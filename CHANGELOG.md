@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Fixes:
+- allow to customize font for many parts of block and mds3 tk
+
 
 ## 2.129.6
 
