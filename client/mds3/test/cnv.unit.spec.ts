@@ -56,20 +56,20 @@ tape('mayInitCnv()', test => {
 
 tape('prepData()', test => {
 	{
-		const [samples, cnvLst, absoluteMax] = prepData({ cnv: cnvNumeric }, mockTk, mockBlock)
+		const [samples, cnvLst, absoluteMax] = prepData({ cnv: { cnvs: cnvNumeric } }, mockTk, mockBlock)
 		test.deepEqual(cnvLst, cnvNumericProcessed, 'get expected processed cnv data')
 		test.equal(samples, undefined, 'no sample')
 		test.equal(absoluteMax, 1, 'absoluteMax=1')
 	}
 	{
-		const [samples, cnvLst, absoluteMax] = prepData({ cnv: cnvSample }, mockTk, mockBlock)
+		const [samples, cnvLst, absoluteMax] = prepData({ cnv: { cnvs: cnvSample } }, mockTk, mockBlock)
 		test.deepEqual(cnvLst, cnvSampleProcessed, 'get expected processed cnv data')
 		test.equal((samples as any[]).length, 1, 'returned 1 sample') // avoid tsc err
 
 		test.equal(absoluteMax, 1, 'absoluteMax=1')
 	}
 	{
-		const [samples, cnvLst, absoluteMax] = prepData({ cnv: cnvCategory }, mockTk, mockBlock)
+		const [samples, cnvLst, absoluteMax] = prepData({ cnv: { cnvs: cnvCategory } }, mockTk, mockBlock)
 		test.deepEqual(cnvLst, cnvCategoryProcessed, 'get expected processed cnv data')
 		test.equal(samples, undefined, 'no sample')
 		test.equal(absoluteMax, 0, 'absoluteMax=0')

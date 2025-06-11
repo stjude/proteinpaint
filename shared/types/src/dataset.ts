@@ -549,8 +549,16 @@ configs for types of cnv data
 important: presence of filtering properties indiate the type of cnv quantification
 and will trigger rendering of ui controls
 */
-type CnvSegment = {
-	/** ds supplied ordynamically added getter */
+type CnvSegmentQuery = {
+	/** ds supplied or dynamically added getter
+	todo properly type input/output
+	returns:
+		{
+			cnvs:[]
+				{ chr, start, stop, value?, class, samples[], occurrence=1, ssm_id }
+			cnvMsg:string
+		}
+	*/
 	get?: (q: any) => any
 	/** either file or get is required. file is bgzipped with columns:
 	1. chr
@@ -633,7 +641,7 @@ type CnvSegment = {
 no longer used!!
 file content is a probe-by-sample matrix, values are signals
 for a given region, the median signal from probes in the region is used to make a gain/loss call for each sample
-this is alternative to CnvSegment
+this is alternative to CnvSegmentQuery
 
 type Probe2Cnv = {
                 file: string
@@ -901,7 +909,7 @@ type Mds3Queries = {
 	gbRestrictMode?: 'protein' | 'genomic'
 	snvindel?: SnvIndelQuery
 	svfusion?: SvFusion
-	cnv?: CnvSegment
+	cnv?: CnvSegmentQuery
 	trackLst?: TrackLst
 	ld?: LdQuery
 	defaultCoord?: string

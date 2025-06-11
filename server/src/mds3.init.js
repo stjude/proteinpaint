@@ -1548,6 +1548,7 @@ async function validate_query_cnv(ds, genome) {
 	if (!Number.isInteger(q.densityViewCutoff)) throw 'cnv.densityViewCutoff not integer'
 	if (!q.maxReturnCutoff) q.maxReturnCutoff = 10000
 	if (!Number.isInteger(q.maxReturnCutoff)) throw 'cnv.maxReturnCutoff not integer'
+	if (q.densityViewCutoff >= q.maxReturnCutoff) throw 'cnv.densityViewCutoff > cnv.maxReturnCutoff' // not allowed by rendering code; must be in density mode when reaching max cutoff
 
 	if (typeof q.get == 'function') return // ds-supplied
 	// add built in getter
@@ -2441,7 +2442,8 @@ async function addCnvGetter(ds, genome) {
 			return []
 		}
 
-		const cnvs = []
+		const cnvs = [] // list of cnv events to be returned
+		let cnvMsg // optional server generated message (e.g. exceeding limit) to be shown on client alongside cnvs
 		for (const r of param.rglst) {
 			await utils.get_lines_bigfile({
 				args: [q.file || q.url, (q.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + r.start + '-' + r.stop],
@@ -2452,6 +2454,7 @@ async function addCnvGetter(ds, genome) {
 						do this before parsing new cnv and inserting to array
 						*/
 						ps.kill()
+						cnvMsg = 'Maximum CNV segment limit reached. Some CNV data may be omitted.'
 						return
 						// lacks a way to message downstream
 					}
@@ -2544,7 +2547,7 @@ async function addCnvGetter(ds, genome) {
 				}
 			})
 		}
-		return cnvs
+		return { cnvs, cnvMsg }
 	}
 }
 
@@ -2993,7 +2996,9 @@ async function getCnvByTw(ds, tw, genome, q) {
 	await mayMapGeneName2coord(tw.term, genome)
 	// tw.term.chr/start/stop are set
 	arg.rglst = [tw.term]
-	return await ds.queries.cnv.get(arg)
+	const re = await ds.queries.cnv.get(arg)
+	if (!Array.isArray(re.cnvs)) throw 're.cnvs not array'
+	return re.cnvs
 }
 async function getProbe2cnvByTw(ds, tw, genome, q) {
 	/* tw.term.type is "geneVariant"

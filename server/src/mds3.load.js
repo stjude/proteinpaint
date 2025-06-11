@@ -94,7 +94,7 @@ function finalize_result(q, ds, result) {
 		}
 	}
 	if (result.cnv) {
-		for (const c of result.cnv) {
+		for (const c of result.cnv.cnvs) {
 			if (c.samples) {
 				for (const s of c.samples) {
 					sampleSet.add(s.sample_id)
@@ -107,7 +107,7 @@ function finalize_result(q, ds, result) {
 				}
 			}
 		}
-		if (result.cnv.length > ds.queries.cnv.densityViewCutoff) {
+		if (result.cnv.cnvs.length > ds.queries.cnv.densityViewCutoff) {
 			const q1 = {
 				rglst: structuredClone(q.rglst),
 				width: q.cnvDensity.width,
@@ -126,16 +126,17 @@ function finalize_result(q, ds, result) {
 			}
 			let bothMax = 0 // max for both gain and loss
 			for (const [i, r] of q.rglst.entries()) {
-				const [dgain, dloss] = getCnvDensity(result.cnv, r)
+				const [dgain, dloss] = getCnvDensity(result.cnv.cnvs, r)
 				bothMax = Math.max(bothMax, ...dgain, ...dloss)
 				q1.rglst[i].values = dgain
 				q2.rglst[i].values = dloss.map(i => i * -1)
 			}
 			result.cnvDensity = {
+				cnvMsg: result.cnv.cnvMsg,
 				gain: plotWiggle(q1, { fixminv: 0, fixmaxv: bothMax }),
 				loss: plotWiggle(q2, { fixminv: -bothMax, fixmaxv: 0 }),
 				max: bothMax,
-				segmentCount: result.cnv.length
+				segmentCount: result.cnv.cnvs.length
 			}
 			delete result.cnv
 		}
@@ -327,7 +328,7 @@ export async function load_driver(q, ds) {
 
 			filter_data(q, result)
 
-			result.mclass2variantcount = summarize_mclass([...result.skewer, ...(result.cnv || [])])
+			result.mclass2variantcount = summarize_mclass([...result.skewer, ...(result.cnv?.cnvs || [])])
 		}
 
 		// add queries for new data types
