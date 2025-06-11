@@ -1436,7 +1436,7 @@ async function getFilesAndShowTable(obj) {
 
 		const rows: TableRowItem[][] = []
 
-		// **UPDATED: Build table rows using filtered files**
+		// Build table rows using filtered files**
 		for (const f of filteredFiles) {
 			const row: TableRowItem[] = []
 
@@ -1516,7 +1516,7 @@ async function getFilesAndShowTable(obj) {
 			rows.push(row)
 		}
 
-		// **UPDATED: Use filteredFiles for table operations**
+		// Use filteredFiles for table operations**
 		obj.mafTableArg = {
 			rows,
 			columns: dynamicTableColumns,
@@ -1946,16 +1946,40 @@ async function getFilesAndShowTable(obj) {
 						tooltip: 'Gene name'
 					},
 					{
-						label: 'P-value',
+						label: 'Mutation P-value',
 						sortable: true,
 						width: '120px',
-						tooltip: 'Statistical significance of gene association'
+						tooltip: 'Statistical significance of gene association for mutations'
 					},
 					{
-						label: 'Q-value',
+						label: 'Mutation Q-value',
 						sortable: true,
 						width: '120px',
-						tooltip: 'False discovery rate adjusted p-value'
+						tooltip: 'False discovery rate adjusted p-value for mutations'
+					},
+					{
+						label: 'CNV Gain P-value',
+						sortable: true,
+						width: '120px',
+						tooltip: 'Statistical significance of gene association for CNV gains'
+					},
+					{
+						label: 'CNV Gain Q-value',
+						sortable: true,
+						width: '120px',
+						tooltip: 'False discovery rate adjusted p-value for CNV gains'
+					},
+					{
+						label: 'CNV Loss P-value',
+						sortable: true,
+						width: '120px',
+						tooltip: 'Statistical significance of gene association for CNV losses'
+					},
+					{
+						label: 'CNV Loss Q-value',
+						sortable: true,
+						width: '120px',
+						tooltip: 'False discovery rate adjusted p-value for CNV losses'
 					}
 				]
 

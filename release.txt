@@ -1,2 +1,3 @@
 Features:
 - Added filtering logic to display only complete files when both MAF and CNV are checked
+- Added new columns to show p and q-values of specific mutation types. Still WIP
