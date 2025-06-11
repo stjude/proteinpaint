@@ -376,31 +376,61 @@ tryCatch(
     # Convert each row of the dataframe to the format expected by table.ts
     # We only take the top 'num_rows_to_process' rows
 
-    # Simple function to determine the sorting column based on available p.nsubj columns
     get_sig_values <- function(data) {
-      # Explicitly check in priority order
-      if ("p.nsubj.mutation" %in% colnames(data)) {
-        p_col <- "p.nsubj.mutation"
-        q_col <- "q.nsubj.mutation"
-      } else if ("p.nsubj.gain" %in% colnames(data)) {
-        p_col <- "p.nsubj.gain"
-        q_col <- "q.nsubj.gain"
-      } else if ("p.nsubj.loss" %in% colnames(data)) {
-        p_col <- "p.nsubj.loss"
-        q_col <- "q.nsubj.loss"
-      }
-      list(p_col, q_col)
+      #' Find all existing p-value columns and return corresponding q-value columns
+      #'
+      #' Since q-values are guaranteed to exist whenever p-values exist,
+      #' we only need to check for p-value columns and construct the corresponding
+      #' q-value column names.
+      #'
+      #' @param data A data frame to search for significance columns
+      #'
+      #' @return A list containing two character vectors:
+      #'         - p_cols: Names of all found p-value columns
+      #'         - q_cols: Names of corresponding q-value columns
+      #'
+      #' @examples
+      #' result <- get_sig_values(my_data)
+      #' p_columns <- result$p_cols
+      #' q_columns <- result$q_cols
+
+      # Define all possible column types to check for
+      column_types <- c("mutation", "gain", "loss")
+
+      # Get all column names from the dataframe
+      available_cols <- colnames(data)
+
+      # Create expected p-value column names
+      expected_p_cols <- paste0("p.nsubj.", column_types)
+
+      # Find which p-value columns actually exist
+      existing_p_cols <- expected_p_cols[expected_p_cols %in% available_cols]
+
+      # Create corresponding q-value column names
+      # Simply replace "p.nsubj." with "q.nsubj."
+      existing_q_cols <- gsub("^p\\.", "q.", existing_p_cols)
+
+      # Return both vectors
+      list(
+        p_cols = existing_p_cols,
+        q_cols = existing_q_cols
+      )
     }
 
-    p_col <- get_sig_values(sorted_results)[[1]]
-    q_col <- get_sig_values(sorted_results)[[2]]
+    result <- get_sig_values(sorted_results)
+    p_cols <- result$p_cols # All found p-value columns
+    q_cols <- result$q_cols # Corresponding q-value columns
 
     for (i in seq_len(nrow(sorted_results[1:num_rows_to_process, ]))) {
       row_data <- list(
         # Each cell in a row is an object with 'value' property
         list(value = as.character(sorted_results[i, "gene"])), # Gene name
-        list(value = as.numeric(sorted_results[i, p_col])), # Dynamic p-value
-        list(value = as.numeric(sorted_results[i, q_col])) # Dynamic q-value
+        list(value = as.numeric(sorted_results[i, p_cols[1]])), # Dynamic mutation p-value
+        list(value = as.numeric(sorted_results[i, q_cols[1]])), # Dynamic mutation q-value
+        list(value = as.numeric(sorted_results[i, p_cols[2]])), # Dynamic cnv gain p-value
+        list(value = as.numeric(sorted_results[i, q_cols[2]])), # Dynamic cnv gain q-value
+        list(value = as.numeric(sorted_results[i, p_cols[3]])), # Dynamic cnv loss p-value
+        list(value = as.numeric(sorted_results[i, q_cols[3]])) # Dynamic cnv loss q-value
         # Add more columns as needed based on what's in sorted_results
       )
       topgene_table_data[[i]] <- row_data
@@ -412,8 +442,12 @@ tryCatch(
         columns = list(
           # Define the table structure
           list(label = "Gene", sortable = TRUE),
-          list(label = "P-value", sortable = TRUE),
-          list(label = "Q-value", sortable = TRUE)
+          list(label = "Mutation P-value", sortable = TRUE),
+          list(label = "Mutation Q-value", sortable = TRUE),
+          list(label = "CNV Gain P-value", sortable = TRUE),
+          list(label = "CNV Gain Q-value", sortable = TRUE),
+          list(label = "CNV Loss P-value", sortable = TRUE),
+          list(label = "CNV Loss Q-value", sortable = TRUE)
           # Add more column definitions as needed
         ),
         rows = topgene_table_data # The actual data rows
