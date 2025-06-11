@@ -16,6 +16,7 @@ export class Barchart {
 	constructor(opts) {
 		// rx.getComponentInit() will set this.app, this.id, this.opts
 		this.type = 'barchart'
+		if (opts.parentId) this.parentId = opts.parentId
 	}
 	//freeze the api of this class. don't want embedder functions to modify it.
 	preApiFreeze(api) {
@@ -231,7 +232,10 @@ export class Barchart {
 
 	reactsTo(action) {
 		if (action.type.startsWith('plot_')) {
-			return action.id === this.id && (!action.config.childType || action.config.childType == this.type)
+			return (
+				(action.id === this.id || action.id == this.parentId) &&
+				(!action.config?.childType || action.config?.childType == this.type)
+			)
 		}
 		return true
 	}
@@ -261,7 +265,6 @@ export class Barchart {
 
 	async main() {
 		const c = this.state.config
-		console.log(c)
 		if (c.chartType != this.type && c.childType != this.type) return
 		try {
 			this.config = structuredClone(c)

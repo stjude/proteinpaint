@@ -142,6 +142,8 @@ class MassApp {
 		const newPlots = {}
 		let sandbox
 		for (const plot of this.state.plots) {
+			// plots with parentId means the parent plot will trigger the plot instead of being triggered here
+			if (plot.parentId) continue
 			if (this.components.plots && !(plot.id in this.components.plots)) {
 				sandbox = newSandboxDiv(this.dom.plotDiv, {
 					close: () => {
