@@ -402,9 +402,11 @@ tryCatch(
 
       # Create expected p-value column names
       expected_p_cols <- paste0("p.nsubj.", column_types)
+      expected_n_cols <- paste0("nsubj.", column_types)
 
       # Find which p-value columns actually exist
       existing_p_cols <- expected_p_cols[expected_p_cols %in% available_cols]
+      existing_n_cols <- expected_n_cols[expected_n_cols %in% available_cols]
 
       # Create corresponding q-value column names
       # Simply replace "p.nsubj." with "q.nsubj."
@@ -413,24 +415,31 @@ tryCatch(
       # Return both vectors
       list(
         p_cols = existing_p_cols,
-        q_cols = existing_q_cols
+        q_cols = existing_q_cols,
+        n_cols = existing_n_cols
       )
     }
 
     result <- get_sig_values(sorted_results)
     p_cols <- result$p_cols # All found p-value columns
     q_cols <- result$q_cols # Corresponding q-value columns
+    n_cols <- result$n_cols # Corresponding counts columns
+    # write.csv(n_cols, file = "~/Desktop/n_cols.csv", row.names = FALSE)
 
     for (i in seq_len(nrow(sorted_results[1:num_rows_to_process, ]))) {
       row_data <- list(
         # Each cell in a row is an object with 'value' property
         list(value = as.character(sorted_results[i, "gene"])), # Gene name
+        list(value = as.character(sorted_results[i, "chrom"])), # Chromosome
         list(value = as.numeric(sorted_results[i, p_cols[1]])), # Dynamic mutation p-value
         list(value = as.numeric(sorted_results[i, q_cols[1]])), # Dynamic mutation q-value
+        list(value = as.numeric(sorted_results[i, n_cols[1]])), # Dynamic mutation subject count
         list(value = as.numeric(sorted_results[i, p_cols[2]])), # Dynamic cnv gain p-value
         list(value = as.numeric(sorted_results[i, q_cols[2]])), # Dynamic cnv gain q-value
+        list(value = as.numeric(sorted_results[i, n_cols[2]])), # Dynamic cnv gain subject count
         list(value = as.numeric(sorted_results[i, p_cols[3]])), # Dynamic cnv loss p-value
-        list(value = as.numeric(sorted_results[i, q_cols[3]])) # Dynamic cnv loss q-value
+        list(value = as.numeric(sorted_results[i, q_cols[3]])), # Dynamic cnv loss q-value
+        list(value = as.numeric(sorted_results[i, n_cols[3]])) # Dynamic cnv loss subject count
         # Add more columns as needed based on what's in sorted_results
       )
       topgene_table_data[[i]] <- row_data
@@ -442,12 +451,16 @@ tryCatch(
         columns = list(
           # Define the table structure
           list(label = "Gene", sortable = TRUE),
+          list(label = "Chromosome", sortable = TRUE),
           list(label = "Mutation P-value", sortable = TRUE),
           list(label = "Mutation Q-value", sortable = TRUE),
+          list(label = "Mutation Subject Count", sortable = TRUE),
           list(label = "CNV Gain P-value", sortable = TRUE),
           list(label = "CNV Gain Q-value", sortable = TRUE),
+          list(label = "CNV Gain Subject Count", sortable = TRUE),
           list(label = "CNV Loss P-value", sortable = TRUE),
-          list(label = "CNV Loss Q-value", sortable = TRUE)
+          list(label = "CNV Loss Q-value", sortable = TRUE),
+          list(label = "CNV Loss Subject Count", sortable = TRUE)
           # Add more column definitions as needed
         ),
         rows = topgene_table_data # The actual data rows
