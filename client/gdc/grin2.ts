@@ -519,7 +519,7 @@ function makeControls(obj) {
 		obj.cnvOptions = {
 			lossThreshold: -0.4,
 			gainThreshold: 0.3,
-			segLength: 2000000
+			segLength: 0
 		}
 	}
 
@@ -1088,7 +1088,7 @@ function makeControls(obj) {
 			.attr('min', '0')
 			.attr('max', '2000000')
 			.attr('step', '1000')
-			.attr('value', obj.cnvOptions.segLength || 2000000)
+			.attr('value', obj.cnvOptions.segLength || 0)
 			.style('width', '100px')
 			.style('padding', '4px 8px')
 			.style('border', '1px solid #ccc')
@@ -1119,7 +1119,7 @@ function makeControls(obj) {
 			<strong>CNV Thresholds:</strong><br>
 			• Loss Threshold: Log2 ratio for copy number loss (negative values)<br>
 			• Gain Threshold: Log2 ratio for copy number gain (positive values)<br>
-			• Segment Length: Maximum CNV segment size to include (focal events only)
+			• Segment Length: Maximum CNV segment size to include (no filter if 0)
 		`)
 	}
 
@@ -1522,10 +1522,10 @@ async function getFilesAndShowTable(obj) {
 			columns: dynamicTableColumns,
 			resize: false,
 			div: obj.tableDiv.append('div'),
-			selectAll: false,
+			selectAll: true,
 			dataTestId: 'sja_FileTable',
 			header: { allowSort: true },
-			selectedRows: [0],
+			selectedRows: [],
 			buttons: [
 				{
 					text: 'Run GRIN2 Analysis',
@@ -1585,7 +1585,7 @@ async function getFilesAndShowTable(obj) {
 	 *     [case_submitter_id]: { maf: file_id, cnv: file_id },
 	 *   },
 	 *   mafOptions: { minTotalDepth: 10, minAltAlleleCount: 2, consequences: [] },
-	 *   cnvOptions: { dataType: 'segment_mean', lossThreshold: -0.4, gainThreshold: 0.3, segLength: 2000000 }
+	 *   cnvOptions: { dataType: 'segment_mean', lossThreshold: -0.4, gainThreshold: 0.3, segLength: 0 }
 	 * }
 	 *
 	 */
