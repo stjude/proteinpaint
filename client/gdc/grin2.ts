@@ -1937,56 +1937,10 @@ async function getFilesAndShowTable(obj) {
 				// Create a container for the table
 				const tableContainer = resultContainer.append('div').style('margin-bottom', '20px')
 
-				// Define table columns
-				const tableColumns = [
-					{
-						label: 'Gene',
-						sortable: true,
-						width: '150px',
-						tooltip: 'Gene name'
-					},
-					{
-						label: 'Mutation P-value',
-						sortable: true,
-						width: '120px',
-						tooltip: 'Statistical significance of gene association for mutations'
-					},
-					{
-						label: 'Mutation Q-value',
-						sortable: true,
-						width: '120px',
-						tooltip: 'False discovery rate adjusted p-value for mutations'
-					},
-					{
-						label: 'CNV Gain P-value',
-						sortable: true,
-						width: '120px',
-						tooltip: 'Statistical significance of gene association for CNV gains'
-					},
-					{
-						label: 'CNV Gain Q-value',
-						sortable: true,
-						width: '120px',
-						tooltip: 'False discovery rate adjusted p-value for CNV gains'
-					},
-					{
-						label: 'CNV Loss P-value',
-						sortable: true,
-						width: '120px',
-						tooltip: 'Statistical significance of gene association for CNV losses'
-					},
-					{
-						label: 'CNV Loss Q-value',
-						sortable: true,
-						width: '120px',
-						tooltip: 'False discovery rate adjusted p-value for CNV losses'
-					}
-				]
-
 				// Render the table using your existing table component
 				renderTable({
 					div: tableContainer,
-					columns: tableColumns,
+					columns: response.topGeneTable.columns,
 					rows: response.topGeneTable.rows,
 					showLines: true, // Show row numbers
 					striped: true, // Alternate row colors
