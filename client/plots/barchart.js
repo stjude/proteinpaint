@@ -94,7 +94,13 @@ export class Barchart {
 					usecase: { target: 'barchart', detail: 'term' },
 					label: renderTerm1Label,
 					vocabApi: this.app.vocabApi,
-					menuOptions: 'edit'
+					menuOptions: 'edit',
+					getBodyParams: () => {
+						const tw = this.config['term']
+						if (!tw) return { skip_samplecounts: true }
+						if (tw.term.samplecounts) return { samplecounts: tw.term.samplecounts }
+						return {}
+					}
 				},
 				{
 					type: 'term',
@@ -118,6 +124,12 @@ export class Barchart {
 						//Revert back to Linear radio when Proportion is selected
 						//but the overlay term is removed
 						if (!config.term2 && s.unit == 'pct') config.settings.barchart.unit = 'abs'
+					},
+					getBodyParams: () => {
+						const tw = this.config['term2']
+						if (!tw) return { skip_samplecounts: true }
+						if (tw.term.samplecounts) return { samplecounts: tw.term.samplecounts }
+						return {}
 					}
 				},
 				{
@@ -129,7 +141,13 @@ export class Barchart {
 					label: 'Divide by',
 					vocabApi: this.app.vocabApi,
 					numericEditMenuVersion: this.opts.numericEditMenuVersion,
-					defaultQ4fillTW: term0_term2_defaultQ
+					defaultQ4fillTW: term0_term2_defaultQ,
+					getBodyParams: () => {
+						const tw = this.config['term0']
+						if (!tw) return { skip_samplecounts: true }
+						if (tw.term.samplecounts) return { samplecounts: tw.term.samplecounts }
+						return {}
+					}
 				},
 				{
 					label: 'Orientation',

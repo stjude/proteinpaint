@@ -190,6 +190,7 @@ export async function barchart_data(q, ds, tdb) {
 		}
 	}
 	const result = { data: pj.tree.results, bins, sampleType: data.sampleType }
+	if (data.categories) result.categories = data.categories
 	return result
 }
 
