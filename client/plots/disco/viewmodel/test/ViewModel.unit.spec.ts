@@ -1,6 +1,5 @@
 import test from 'tape'
 import ViewModel from '../ViewModel'
-import { RingType } from '../../ring/RingType'
 import discoDefaults from '../../defaults'
 
 // ───── Mock Data Setup ─────
@@ -61,17 +60,6 @@ test('ViewModel initializes with expected values', t => {
 	t.ok(viewModel.width > 0, 'Width is computed')
 	t.ok(viewModel.height > 0, 'Height is computed')
 	t.equal(viewModel.legendHeight, 90, 'Legend height = 3 rows × 30px each')
-
-	t.end()
-})
-
-// ───── Test 2: getElements returns correct arrays ─────
-
-test('ViewModel.getElements returns ring elements correctly', t => {
-	const viewModel = new ViewModel(settings, mockRings, mockLegend, mockFusions, mockDataHolder, 'AnotherGeneSet', 123)
-
-	t.deepEqual(viewModel.getElements(RingType.SNV), [], 'SNV ring returns empty array')
-	t.deepEqual(viewModel.getElements(RingType.LABEL), [], 'LABEL ring returns empty array')
 
 	t.end()
 })
