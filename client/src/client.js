@@ -13,14 +13,10 @@ import { dofetch, dofetch2, dofetch3 } from '../common/dofetch'
 // support client code that import dofetch* from client.js
 // TODO: update affected code to import dofetch* directly from common/dofetch.js
 export { dofetch, dofetch2, dofetch3 }
-import { Menu } from '../dom/menu'
-export { Menu }
+import { Menu, make_table_2col, fillbar, axisstyle, sayerror } from '#dom'
+export { Menu, axisstyle, fillbar, make_table_2col, sayerror }
 import { first_genetrack_tolist } from '../common/1stGenetk'
 export { first_genetrack_tolist }
-import { make_table_2col } from '../dom/table2col'
-export { make_table_2col }
-import { fillbar } from '../dom/fillbar'
-export { fillbar }
 
 export const font = 'Arial'
 export const unspecified = 'Unspecified'
@@ -73,38 +69,6 @@ export function disappear(d, remove) {
 
 export const tip = new Menu({ padding: '' })
 tip.d.style('z-index', 1000)
-
-export function sayerror(holder, msg) {
-	const div = holder.append('div').attr('class', 'sja_errorbar')
-	// msg can contain injected XSS, so never do .html(msg)
-	div.append('div').text(msg)
-	div
-		.append('div')
-		.html('&#10005;')
-		.on('click', () => {
-			disappear(div, true)
-		})
-}
-
-export function axisstyle(p) {
-	if (!p || !p.axis) return
-	if (!p.color) {
-		p.color = '#545454'
-	}
-	p.axis.selectAll('line').attr('stroke', p.color).attr('shape-rendering', 'crispEdges')
-	p.axis
-		.selectAll('path')
-		.attr('fill', 'none')
-		.attr('stroke', p.showline ? p.color : 'none')
-		.attr('stroke-width', p.showline ? 1 : 0)
-		.attr('shape-rendering', 'crispEdges')
-	p.axis
-		.selectAll('text')
-		.style('cursor', 'default')
-		.attr('font-family', font)
-		.attr('font-size', p.fontsize ? p.fontsize + 'px' : '12px')
-		.attr('fill', p.color)
-}
 
 export function newpane(pm) {
 	/*

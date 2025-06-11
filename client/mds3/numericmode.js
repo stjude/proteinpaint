@@ -182,7 +182,6 @@ function numeric_make(nm, tk, block) {
 			tk.glider
 				.append('text')
 				.text(tk.mnamegetter(m))
-				.attr('font-family', font)
 				.attr('font-size', m.radius * 2 - 2)
 				.each(function () {
 					m.labwidth = this.getBBox().width
@@ -378,7 +377,6 @@ function numeric_make(nm, tk, block) {
 			m.__svg_textlabel = this
 		})
 		.text(m => tk.mnamegetter(m))
-		.attr('font-family', font)
 		.attr('font-size', m => {
 			m._labfontsize = Math.max(12, m.radius * 1.2)
 			return m._labfontsize
@@ -667,7 +665,6 @@ function m_mouseover(m, nm, tk) {
 		tk.pica.g
 			.append('text')
 			.attr('font-size', fontsize)
-			.attr('font-family', font)
 			.text(w)
 			.each(function () {
 				textw = Math.max(textw, this.getBBox().width)
@@ -730,7 +727,6 @@ function m_mouseover(m, nm, tk) {
 			.text(w)
 			.attr('text-anchor', onleft ? 'end' : 'start')
 			.attr('font-size', fontsize)
-			.attr('font-family', font)
 			.attr('x', onleft ? linex1 - boxpad : boxx + boxpad)
 			.attr('y', y)
 			.attr('fill', color)

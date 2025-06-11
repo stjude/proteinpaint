@@ -1143,7 +1143,6 @@ sandbox header
 /*.sjpp_row_wrapper:nth-child(odd) {background: rgb(237, 237, 237)}*/
 
 .sjpp_table_header {
-    font-family: 'Arial';
     font-size: 1em;
     text-align: left;
     position: sticky;

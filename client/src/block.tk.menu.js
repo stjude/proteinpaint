@@ -390,9 +390,7 @@ function customtracktypeui(block, div) {
 	row
 		.append('span')
 		.style('padding-left', '10px')
-		.html(
-			'<a href=https://docs.google.com/document/d/1ZnPZKSSajWyNISSLELMozKxrZHQbdxQkkkQFnxw6zTs/edit?usp=sharing target=_blank>Track format</a>'
-		)
+		.html('<a href=https://github.com/stjude/proteinpaint/wiki/Tracks target=_blank>Track format</a>')
 	row.append('span').style('padding-left', '10px').html('<a href=https://jsonlint.com/ target=_blank>debug</a>')
 }
 
@@ -429,7 +427,7 @@ function newtk_bw(block, div) {
 		.append('div')
 		.style('margin', '20px')
 		.style('display', 'inline-block')
-		.html('&lt; go back')
+		.html('≪ Go back')
 		.attr('class', 'sja_menuoption')
 		.on('click', () => customtracktypeui(block, div))
 
@@ -658,7 +656,7 @@ function newtk_bedj(block, div) {
 	box
 		.append('p')
 		.html(
-			'<a href=https://drive.google.com/open?id=1GP81rer7YEb0RpIej2XXfx-k7SCAL1Od9At_oczf06A target=_blank>JSON-BED format</a>'
+			'<a href=https://github.com/stjude/proteinpaint/wiki/Tracks#Track-JSON-BED-track-format target=_blank>JSON-BED format</a>'
 		)
 }
 
@@ -716,7 +714,7 @@ function newtk_junction(block, div) {
 	box
 		.append('p')
 		.html(
-			'<a href=https://docs.google.com/document/d/1PFva3Mn-U4VPNW0vHHC-CSnYBeotRnqbhCMQPmyLQG4/edit?usp=sharing target=_blank>Junction track format</a>'
+			'<a href=https://github.com/stjude/proteinpaint/wiki/Tracks#Track-splice-junction target=_blank>Junction track format</a>'
 		)
 }
 
@@ -777,11 +775,7 @@ function newtk_vcf(block, div) {
 	p.append('button')
 		.text('Clear')
 		.on('click', () => (ta.node().value = nta.node().value = ''))
-	box
-		.append('p')
-		.html(
-			'<a href=https://drive.google.com/open?id=1dbuYeQR6cgkpzcPaIChRFtXwolJVheoTr9NEW_Mfthw target=_blank>VCF format</a>'
-		)
+	box.append('p').html('<a href=https://en.wikipedia.org/wiki/Variant_Call_Format target=_blank>VCF format</a>')
 	box.append('p').style('color', '#858585').style('font-size', '.8em').text('SNV/indel data only')
 }
 
@@ -911,7 +905,7 @@ function newtk_interaction(block, div) {
 		div2
 			.append('p')
 			.html(
-				'<a href=https://docs.google.com/document/d/1MQ0Z_AD5moDmaSx2tcn7DyVKGp49TS63pO0cceGL_Ns/edit#heading=h.kr6p4w2zhhwq target=_blank>BED file format</a>'
+				'<a href=https://github.com/stjude/proteinpaint/wiki/Tracks#track-json-bed-track-format target=_blank>BED file format</a>'
 			)
 		const urlinput = div2
 			.append('p')
@@ -945,7 +939,7 @@ function newtk_interaction(block, div) {
 		div3
 			.append('p')
 			.html(
-				'Enter interaction data as <a href=https://docs.google.com/document/d/1MQ0Z_AD5moDmaSx2tcn7DyVKGp49TS63pO0cceGL_Ns/edit#heading=h.kr6p4w2zhhwq target=_blank>tab-delimited text</a>.'
+				'Enter interaction data as <a href=https://github.com/stjude/proteinpaint/wiki/Tracks#Track-splice-junction target=_blank>tab-delimited text</a>.'
 			)
 		const textinput = div3
 			.append('textarea')
