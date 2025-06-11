@@ -67,8 +67,11 @@ export function may_render_cnv(data, tk, block) {
 	tk.cnv?.g.selectAll('*').remove()
 	delete tk.cnv.cnvLst
 	delete tk.cnv.cnvInDensity
+	delete tk.cnv.cnvMsg
 
 	if (data.cnv) {
+		if (!Array.isArray(data.cnv.cnvs)) throw 'data.cnv.cnvs[] not array'
+		tk.cnv.cnvMsg = data.cnv.cnvMsg
 		// has moderate amounts of segments. show as lines
 		renderSegments(data, tk, block)
 		// tk.cnv.cnvLst created
@@ -76,6 +79,7 @@ export function may_render_cnv(data, tk, block) {
 	}
 	if (data.cnvDensity) {
 		tk.cnv.cnvInDensity = true
+		tk.cnv.cnvMsg = data.cnvDensity.cnvMsg
 		renderDensity(data, tk, block)
 		return
 	}
@@ -187,7 +191,7 @@ export function prepData(data, tk, block) {
 	const sample2cnv = new Map() // k: sample_id, v: [{chr/start/stop/value/x1/x2}]. only populated when cnv has sample, in order to show cnvs from the same sample grouped together rather than scattered
 	const cnvLst = [] // raw list of events passing filter, each has structure of {samples:[]} to be used in itemtable. is used for cnv rendering when there's no sample
 
-	for (const v of data.cnv) {
+	for (const v of data.cnv.cnvs) {
 		if (!v.chr) continue
 		if (!Number.isInteger(v.start) || !Number.isInteger(v.stop)) continue
 

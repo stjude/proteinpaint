@@ -28,13 +28,13 @@ tape('load_driver()', async function (test) {
 		// should return both skewer and cnv
 		const r = await load_driver(q, ds)
 		test.equal(r.skewer.length, 1, 'r.skewer.length=1')
-		test.equal(r.cnv.length, 1, 'r.cnv.length=1')
+		test.equal(r.cnv.cnvs.length, 1, 'r.cnv.length=1')
 	}
 	{
 		// q.hardcodeCnvOnly=1 and should only return cnv
 		const r = await load_driver(Object.assign({ hardcodeCnvOnly: 1 }, q), ds)
 		test.equal(r.skewer.length, 0, 'r.skewer.length=0 when hardcodeCnvOnly=1')
-		test.equal(r.cnv.length, 1, 'r.cnv.length=1')
+		test.equal(r.cnv.cnvs.length, 1, 'r.cnv.length=1')
 	}
 
 	// ds change!
@@ -49,7 +49,7 @@ tape('load_driver()', async function (test) {
 		// should only return cnv but not skewer
 		const r = await load_driver(Object.assign({ hardcodeCnvOnly: 1 }, q), ds)
 		test.equal(r.skewer.length, 0, 'r.skewer.length=0 when hardcodeCnvOnly=1')
-		test.equal(r.cnv.length, 1, 'r.cnv.length=1')
+		test.equal(r.cnv.cnvs.length, 1, 'r.cnv.length=1')
 	}
 
 	test.end()
@@ -111,7 +111,7 @@ const ds = {
 		},
 		cnv: {
 			get: () => {
-				return [{}]
+				return { cnvs: [{}] }
 			}
 		}
 	}

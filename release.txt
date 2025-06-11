@@ -1,1 +1,2 @@
-
+Fixes:
+- cnv.get() returns {cnvs[], cnvMsg} to include server generated msg on exceeding limit

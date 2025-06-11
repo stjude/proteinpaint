@@ -334,7 +334,9 @@ async function dataFromCustomVariants(tk, block) {
 	const data = {
 		// these holder will contain subset of tk.custom_variants[] that are in view range
 		skewer: [], // for non-cnv data
-		cnv: [] // for cnv segments
+		cnv: {
+			cnvs: [] // for cnv segments
+		}
 		// adds mclass2variantcount[] later
 	}
 
@@ -355,7 +357,7 @@ async function dataFromCustomVariants(tk, block) {
 		if (m.dt == dtcnv) {
 			if (m.chr != block.rglst[0].chr) continue
 			if (Math.max(m.start, bbstart) > Math.min(m.stop, bbstop)) continue
-			data.cnv.push(m)
+			data.cnv.cnvs.push(m)
 		} else if (m.dt == dtsnvindel || m.dt == dtsv || m.dt == dtfusionrna) {
 			if (m.chr != block.rglst[0].chr) continue // may not work for subpanel
 			if (m.pos <= bbstart || m.pos >= bbstop) continue
@@ -375,7 +377,7 @@ async function dataFromCustomVariants(tk, block) {
 
 	data.mclass2variantcount = summarize_mclass([...data.skewer, ...data.cnv])
 
-	if (data.cnv.length == 0) delete data.cnv // important to delete to avoid triggering cnv logic
+	if (data.cnv.cnvs.length == 0) delete data.cnv // important to delete to avoid triggering cnv logic
 
 	// count unique number of samples, if has such
 	const set = new Set()
@@ -387,8 +389,8 @@ async function dataFromCustomVariants(tk, block) {
 			}
 		}
 	}
-	if (data.cnv?.some(i => i.samples)) {
-		for (const m of data.cnv) {
+	if (data.cnv?.cnvs?.some(i => i.samples)) {
+		for (const m of data.cnv.cnvs) {
 			if (m.samples) {
 				for (const s of m.samples) set.add(s.sample_id)
 			}

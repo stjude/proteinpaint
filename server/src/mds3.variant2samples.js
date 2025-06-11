@@ -338,8 +338,9 @@ async function queryServerFileBySsmid(q, twLst, ds) {
 			if (!ds.queries.cnv) throw 'queries.cnv missing'
 			const [chr, start, stop, _class, value, sample] = _g.l
 			const param = Object.assign({}, q, { rglst: [{ chr, start, stop: start + 1 }] })
-			const mlst = await ds.queries.cnv.get(param)
-			for (const m of mlst) {
+			const cnv = await ds.queries.cnv.get(param)
+			if (!Array.isArray(cnv?.cnvs)) throw 'cnv.cnvs[] not array'
+			for (const m of cnv.cnvs) {
 				if (m.start != start || m.stop != stop) continue
 				if (m.class != _class) continue
 				if (Number.isFinite(value) && m.value != value) continue
@@ -437,8 +438,9 @@ async function queryServerFileByRglst(q, twLst, ds) {
 		}
 	}
 	if (ds.queries.cnv) {
-		const mlst = await ds.queries.cnv.get(q)
-		for (const m of mlst) {
+		const cnv = await ds.queries.cnv.get(q)
+		if (!Array.isArray(cnv?.cnvs)) throw 'cnv.cnvs[] not array'
+		for (const m of cnv.cnvs) {
 			combineSamplesById(m.samples, samples, m.ssm_id)
 		}
 	}

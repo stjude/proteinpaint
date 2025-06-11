@@ -65,8 +65,8 @@ export function getVariantLabelText(data, tk, block) {
 			for (const m of tk.skewer.rawmlst) dtset.add(m.dt)
 		}
 		if (data.cnv) {
-			totalcount += data.cnv.length
-			for (const m of data.cnv) dtset.add(m.dt)
+			totalcount += data.cnv.cnvs.length
+			for (const m of data.cnv.cnvs) dtset.add(m.dt)
 		} else if (data.cnvDensity) {
 			totalcount += data.cnvDensity.segmentCount
 			dtset.add(dtcnv)
@@ -96,7 +96,7 @@ export function getVariantLabelText(data, tk, block) {
 
 	if (data.cnv) {
 		// always count cnv when present, so as not to trigger "xx of yy" at variant label
-		showcount += data.cnv.length
+		showcount += data.cnv.cnvs.length
 	} else if (data.cnvDensity) {
 		showcount += data.cnvDensity.segmentCount
 	}
@@ -128,7 +128,13 @@ export function getVariantLabelText(data, tk, block) {
 function menu_variants(tk, block) {
 	// in case only showing cnv density but no skewer, disable all options from this menu as they do not apply to cnv density
 	if ((!tk.skewer?.rawmlst || tk.skewer.rawmlst?.length == 0) && tk.cnv?.cnvInDensity) {
-		tk.menutip.d.append('div').style('margin', '10px').text('Viewing CNV density and cannot access segment details')
+		tk.menutip.d
+			.append('div')
+			.style('margin', '10px')
+			.text('Viewing CNV segment density, no information on individual segments.')
+		if (tk.cnv.cnvMsg) {
+			tk.menutip.d.append('div').style('margin', '10px').text(tk.cnv.cnvMsg)
+		}
 		return
 	}
 	const listDiv = tk.menutip.d
