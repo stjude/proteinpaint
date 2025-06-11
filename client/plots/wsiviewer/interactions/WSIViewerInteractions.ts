@@ -11,7 +11,7 @@ export class WSIViewerInteractions {
 		activeImageExtent: any,
 		shortcuts?: string[],
 		buffers?: any,
-		annotationsData?: any[]
+		imageData?: any
 	) => void
 
 	constructor(wsiApp: any, opts: any) {
@@ -60,10 +60,11 @@ export class WSIViewerInteractions {
 			activeImageExtent: any,
 			shortcuts: string[] = [],
 			buffers: any,
-			annotationsData: any[] = []
+			imageData: any
 		) => {
 			// Add keydown listener to the image container
 			const image = holder.select('div > .ol-viewport').attr('tabindex', 0)
+			const annotationsData = imageData?.annotationsData || []
 
 			//To scroll to next annotation, hold the space bar and press left/right arrows
 			let isSpaceDown = false
@@ -101,13 +102,25 @@ export class WSIViewerInteractions {
 					}
 				}
 				if (shortcuts.includes(event.code)) {
+					//Update buffer to change table
+					let matchingClass = imageData?.classes?.find(c => c.shortcut === event.code)
+					if (!matchingClass) {
+						matchingClass = imageData?.classes?.find(c => c.label === annotationsData[currentIndex].class)
+					}
+					const tmpClass =
+						event.code === 'Enter' || matchingClass.label == annotationsData[currentIndex].class
+							? { label: 'Confirmed', color: matchingClass?.color || '' }
+							: { label: matchingClass.label, color: matchingClass.color }
+					console.log('tmpClass', tmpClass)
+					buffers.tmpClass.set(tmpClass)
+
 					const body = {
 						coordinates: annotationsData[currentIndex].zoomCoordinates, //Original x,y coordinates
 						index: buffers.annotationsIdx.get(),
 						confirmed: event.code === 'Enter',
 						class: event.code === 'Enter' ? null : event.code.replace('Digit', '').replace('Key', '')
 					}
-					//TODO: Show change on table
+
 					await dofetch3('sampleWsiAiApi', { body })
 				}
 			})

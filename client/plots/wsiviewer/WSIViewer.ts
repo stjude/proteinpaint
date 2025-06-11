@@ -35,7 +35,8 @@ export default class WSIViewer extends RxComponentInner {
 
 		//TODO: Maybe index comes from state? or ds.queries?
 		const buffers = {
-			annotationsIdx: new Buffer<number>(0)
+			annotationsIdx: new Buffer<number>(0),
+			tmpClass: new Buffer<{ label: string; color: string }>({ label: '', color: '' })
 		}
 
 		// TODO verify if state.vocab.genome is needed?
@@ -102,7 +103,7 @@ export default class WSIViewer extends RxComponentInner {
 				activeImageExtent,
 				imageViewData.shortcuts,
 				buffers,
-				wsimages[settings.displayedImageIndex].annotationsData
+				wsimages[settings.displayedImageIndex]
 			)
 		}
 

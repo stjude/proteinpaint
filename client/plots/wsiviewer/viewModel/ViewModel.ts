@@ -38,16 +38,12 @@ export class ViewModel {
 		if (!imageData?.annotationsData?.length) return
 
 		const annotationsRows: any = imageData.annotationsData!.map((d, i) => {
-			const color = imageData?.classes?.find(c => c.label === d.class)?.color || ''
-
 			return [
 				{ value: i }, // Index
 				{ value: d.zoomCoordinates },
 				{ value: roundValue(d.uncertainty, 4) },
 				{ value: d.class },
-				{
-					html: `<span style="display:inline-block;width:10px;height:20px;background-color:${color};border:grey 1px solid;"></span>`
-				}, //Show the color next to the class
+				{ html: '' }, //Show the color next to the class
 				{ value: '' } // Annotated class will be set later
 			]
 		})
