@@ -2,6 +2,11 @@ import test from 'tape'
 import ViewModel from '../ViewModel'
 import discoDefaults from '../../defaults'
 
+/*
+Tests:
+	ViewModel initializes with expected values
+*/
+
 // ───── Mock Data Setup ─────
 
 // Use discoDefaults to avoid manually writing every settings field
@@ -45,21 +50,52 @@ const mockDataHolder = {
 	percentilePositive: 2
 } as any
 
+test('\n', function (t) {
+	t.pass('-***- plots/disco/viewmodel/ViewModel -***-')
+	t.end()
+})
+
 // ───── Test 1: Constructor and field assignments ─────
 
 test('ViewModel initializes with expected values', t => {
 	const viewModel = new ViewModel(settings, mockRings, mockLegend, mockFusions, mockDataHolder, 'GeneSet123', 999)
 
-	t.equal(viewModel.snvDataLength, 3, 'SNV data length is correct')
-	t.equal(viewModel.filteredSnvDataLength, 1, 'Filtered SNV data length is correct')
-	t.equal(viewModel.cnvMaxValue, 5, 'CNV gain max value is correct')
-	t.equal(viewModel.cnvMinValue, -3, 'CNV loss max value is correct')
-	t.equal(viewModel.positivePercentile80, 2, 'Percentile positive is correct')
+	t.equal(
+		viewModel.snvDataLength,
+		mockDataHolder.snvData.length,
+		`SNV data length should return ${mockDataHolder.snvData.length}`
+	)
+	t.equal(
+		viewModel.filteredSnvDataLength,
+		mockDataHolder.filteredSnvData.length,
+		`Filtered SNV data length should return ${mockDataHolder.filteredSnvData.length}`
+	)
+	t.equal(
+		viewModel.cnvMaxValue,
+		mockDataHolder.cnvGainMaxValue,
+		`CNV max gain value should return ${mockDataHolder.cnvGainMaxValue}`
+	)
+	t.equal(
+		viewModel.cnvMinValue,
+		mockDataHolder.cnvLossMaxValue,
+		`CNV min loss value should return ${mockDataHolder.cnvLossMaxValue}`
+	)
+	t.equal(
+		viewModel.positivePercentile80,
+		mockDataHolder.percentilePositive,
+		`Percentile positive should return ${mockDataHolder.percentilePositive}`
+	)
 	t.equal(viewModel.genesetName, 'GeneSet123', 'Gene set name is stored')
 
-	t.ok(viewModel.width > 0, 'Width is computed')
-	t.ok(viewModel.height > 0, 'Height is computed')
-	t.equal(viewModel.legendHeight, 90, 'Legend height = 3 rows × 30px each')
+	t.ok(viewModel.width > 0, 'Width is computed and greater than 0')
+	t.ok(viewModel.height > 0, 'Height is computed and greater than 0')
+	t.equal(
+		viewModel.legendHeight,
+		mockLegend.legendCount() * settings.legend.rowHeight,
+		`Legend height should return ${mockLegend.legendCount()} rows × ${settings.legend.rowHeight}px = ${
+			mockLegend.legendCount() * settings.legend.rowHeight
+		}`
+	)
 
 	t.end()
 })
