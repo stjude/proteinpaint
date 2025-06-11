@@ -110,6 +110,8 @@ export class TermdbVocab extends Vocab {
 			}
 		}
 
+		this.mayFillInValues(opts, data.categories)
+
 		return data
 	}
 
@@ -125,6 +127,25 @@ export class TermdbVocab extends Vocab {
 		// !!! NOTE: assumes a sample may only have at most one value by term
 		// and so can add samplecount totals for an overlay term across charts and serieses
 		t.samplecount[key].samplecount += total
+	}
+
+	// fill in term.values and term.samplecounts with
+	// categories computed from the data
+	mayFillInValues(opts, categories) {
+		if (!categories) return
+		for (const key of ['term0', 'term', 'term2']) {
+			const tw = opts[key]
+			if (!tw) continue
+			const clst = categories[tw.$id]
+			if (!clst) continue
+			const term = tw.term
+			term.values = {}
+			term.samplecounts = []
+			for (const c of clst) {
+				term.values[c.key] = { key: c.key, label: c.label }
+				term.samplecounts.push({ key: c.key, label: c.label, samplecount: c.samplecount })
+			}
+		}
 	}
 
 	/*
@@ -627,6 +648,16 @@ export class TermdbVocab extends Vocab {
 				})
 			}
 			return { lst: l2 }
+		}
+
+		if (_body.samplecounts) {
+			// grab directly from body and not server
+			return { lst: _body.samplecounts }
+		}
+
+		if (_body.skip_samplecounts) {
+			// do not query server
+			return { lst: [] }
 		}
 
 		// no need to supply tw.$id: 1) this method is one term only and no need to distinguish multiple terms 2) backend will auto fill $id before retrieving data
