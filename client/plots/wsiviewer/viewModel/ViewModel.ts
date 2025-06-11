@@ -44,10 +44,10 @@ export class ViewModel {
 				{ value: i }, // Index
 				{ value: d.zoomCoordinates },
 				{ value: roundValue(d.uncertainty, 4) },
+				{ value: d.class },
 				{
 					html: `<span style="display:inline-block;width:10px;height:20px;background-color:${color};border:grey 1px solid;"></span>`
 				}, //Show the color next to the class
-				{ value: d.class },
 				{ value: '' } // Annotated class will be set later
 			]
 		})
@@ -56,8 +56,8 @@ export class ViewModel {
 			{ label: 'Index', sortable: true, align: 'center' },
 			{ label: 'Coordinates' },
 			{ label: 'Uncertainty', sortable: true },
-			{ label: '', align: 'center' }, //Show the color next to the class
 			{ label: 'Model-Predicted Class', sortable: true },
+			{ label: '', align: 'center' }, //Show the color next to the class
 			{ label: 'Annotated Class', sortable: true }
 		]
 
