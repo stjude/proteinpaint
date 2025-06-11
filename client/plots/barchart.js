@@ -16,7 +16,7 @@ export class Barchart {
 	constructor(opts) {
 		// rx.getComponentInit() will set this.app, this.id, this.opts
 		this.type = 'barchart'
-		if (opts.parentId) this.parentId = opts.parentId
+		if (opts?.parentId) this.parentId = opts.parentId
 	}
 	//freeze the api of this class. don't want embedder functions to modify it.
 	preApiFreeze(api) {

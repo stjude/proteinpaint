@@ -274,6 +274,18 @@ TdbStore.prototype.actions = {
 			plot.mayAdjustConfig(plot, action.config)
 		}
 		this.state.plots.push(plot)
+		if (plot.plots) {
+			// this is handled for embedder convenience,
+			// ideally app state.plots would already have all the plot entries
+			// instead of having nested plot.plots[]
+			for (const p of plot.plots) {
+				p.parentId = plot.id
+				const _ = await import(`../plots/${p.chartType}.js`)
+				const config = await _.getPlotConfig(p, this.app)
+				this.state.plots.push(config)
+			}
+			delete plot.plots // delete, state.plots will be used from now on instead of the nested plot.plots[] entries
+		}
 	},
 
 	plot_edit(action) {
