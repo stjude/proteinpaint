@@ -29,26 +29,6 @@ export class SummaryReport extends RxComponentInner {
 		this.model = new SummaryReportModel(this)
 		this.vm = new SummaryReportViewModel(this)
 		this.components = { plots: {} }
-		for (const plot of this.config.plots) {
-			console.log('summaryReport init plot', plot)
-			const header = this.view.dom.mainDiv.append('div')
-			const holder = this.view.dom.mainDiv.append('div')
-			const opts = structuredClone(plot)
-			opts.header = header
-			opts.holder = holder
-			opts.app = this.app
-			opts.id = this.id
-			opts.controls = this.view.dom.controlsHolder
-			//opts.parent = this.api
-			await this.openPlot(opts)
-		}
-	}
-
-	async openPlot(opts) {
-		console.log(opts)
-		const plot = await import(`../../plots/${opts.chartType}.js`)
-		const plotObj = await plot.componentInit(opts)
-		this.components.plots[plot.id] = plotObj
 	}
 
 	getState(appState: any) {
@@ -59,6 +39,7 @@ export class SummaryReport extends RxComponentInner {
 
 		return {
 			config,
+			plots: appState.plots.filter(p => p.parentId === this.id),
 			termfilter: appState.termfilter,
 			vocab: appState.vocab,
 			termdbConfig: appState.termdbConfig
@@ -68,7 +49,26 @@ export class SummaryReport extends RxComponentInner {
 	async main() {
 		this.config = structuredClone(this.state.config)
 		this.settings = this.config.settings.summaryReport
-		console.log('summaryReport main', this.config)
+
+		for (const plot of this.state.plots) {
+			if (this.components.plots[plot.id]) continue
+			await this.setPlot(plot)
+		}
+	}
+
+	async setPlot(plot) {
+		//console.log('summaryReport init plot', plot)
+		const header = this.view.dom.mainDiv.append('div')
+		const holder = this.view.dom.mainDiv.append('div')
+		const opts = structuredClone(plot)
+		opts.header = header
+		opts.holder = holder
+		opts.app = this.app
+		opts.parentId = this.id
+		//opts.id = plot.id; console.log(64, plot.id)
+		opts.controls = this.view.dom.controlsHolder
+		const { componentInit } = await import(`../../plots/${opts.chartType}.js`)
+		this.components.plots[opts.id] = await componentInit(opts)
 	}
 
 	async setControls() {
@@ -138,6 +138,7 @@ export async function makeChartBtnMenu(holder, chartsInstance) {
 			.on('click', () => {
 				chartsInstance.app.dispatch({
 					type: 'plot_create',
+					id: 'summaryReport-1',
 					config: {
 						chartType: 'summaryReport',
 						country

@@ -428,7 +428,8 @@ function setRenderers(self) {
 				}
 
 				if (d.subheader === 'charts') {
-					const n = self.state.plots.length
+					// only a plot in it's own sandbox will be counted; do not separately count child plots in the same sandbox
+					const n = self.state.plots.filter(p => !p.parentId).length
 					if (d.key == 'mid') return !n ? 'NONE' : n
 					else return ''
 				} else if (d.subheader === 'about') {
