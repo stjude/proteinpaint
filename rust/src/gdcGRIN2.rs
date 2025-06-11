@@ -19,12 +19,13 @@
 use flate2::read::GzDecoder;
 use futures::StreamExt;
 use memchr::memchr;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_json;
 use std::collections::HashMap;
 use std::io::{self, Read};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::thread::sleep;
 use std::time::Duration;
 use tokio::io::{AsyncReadExt, BufReader};
 use tokio::sync::Mutex;
@@ -78,6 +79,30 @@ struct SuccessfulFileOutput {
     data: Vec<Vec<String>>,
 }
 
+// struct for MAF filter details
+#[derive(Clone, Serialize, Default)]
+struct FilteredMafDetails {
+    invalid_consequences: usize,
+    t_alt_count: usize,
+    t_depth: usize,
+    invalid_rows: usize,
+}
+
+// struct for CNV filter details
+#[derive(Clone, Serialize, Default)]
+struct FilteredCnvDetails {
+    segment_mean: usize,
+    seg_length: usize,
+    invalid_rows: usize,
+}
+
+// struct for per-case filter details
+#[derive(Clone, Serialize)]
+struct FilteredCaseDetails {
+    maf: FilteredMafDetails,
+    cnv: FilteredCnvDetails,
+}
+
 // Final summary output (JSONL format)
 #[derive(serde::Serialize)]
 struct FinalSummary {
@@ -87,6 +112,9 @@ struct FinalSummary {
     successful_files: usize,
     failed_files: usize,
     errors: Vec<ErrorEntry>,
+    filtered_maf_records: usize,
+    filtered_cnv_records: usize,
+    filtered_records_by_case: HashMap<String, FilteredCaseDetails>,
 }
 
 // Define the top-level input structure
@@ -107,24 +135,9 @@ struct DataTypeConfig {
     output_columns: Vec<&'static str>,
 }
 
-// Function to check if CNV file has Segment_Mean column
-fn has_segment_mean_column(content: &str) -> bool {
-    for line in content.lines() {
-        // Check if this line contains Segment_Mean (likely the header)
-        if line.contains("Segment_Mean") {
-            return true;
-        }
-        // Stop checking after a few non-comment lines to avoid parsing entire file
-        if !line.trim().is_empty() {
-            break;
-        }
-    }
-    false
-}
-
 // Function to parse TSV content
 // Updated parse_content function with better consequence filtering
-fn parse_content(
+async fn parse_content(
     content: &str,
     case_id: &str,
     data_type: &str,
@@ -134,12 +147,10 @@ fn parse_content(
     gain_threshold: f32,
     loss_threshold: f32,
     seg_length: i32,
+    filtered_records: &Arc<Mutex<HashMap<String, FilteredCaseDetails>>>,
+    filtered_maf_records: &AtomicUsize,
+    filtered_cnv_records: &AtomicUsize,
 ) -> Result<Vec<Vec<String>>, (String, String, String)> {
-    // Early filter for CNV files - only process files with Segment_Mean
-    if data_type == "cnv" && !has_segment_mean_column(content) {
-        return Ok(Vec::new()); // Return empty result, no error
-    }
-
     let config = match data_type {
         "cnv" => DataTypeConfig {
             header_marker: "Segment_Mean",
@@ -199,7 +210,11 @@ fn parse_content(
             gain_threshold,
             loss_threshold,
             seg_length,
-        )?;
+            filtered_records,
+            filtered_maf_records,
+            filtered_cnv_records,
+        )
+        .await?;
 
         if let Some(out_lst) = row {
             parsed_data.push(out_lst);
@@ -254,7 +269,7 @@ fn setup_columns(
 }
 
 // Process a single row of data
-fn process_row(
+async fn process_row(
     line: &str,
     case_id: &str,
     data_type: &str,
@@ -267,18 +282,41 @@ fn process_row(
     gain_threshold: f32,
     loss_threshold: f32,
     seg_length: i32,
+    filtered_records: &Arc<Mutex<HashMap<String, FilteredCaseDetails>>>,
+    filtered_maf_records: &AtomicUsize,
+    filtered_cnv_records: &AtomicUsize,
 ) -> Result<Option<Vec<String>>, (String, String, String)> {
     let cont_lst: Vec<String> = line.split("\t").map(|s| s.to_string()).collect();
     let mut out_lst = vec![case_id.to_string()];
 
+    // Initialize or update case details
+    let mut filtered_map = filtered_records.lock().await;
+    filtered_map
+        .entry(case_id.to_string())
+        .or_insert_with(|| FilteredCaseDetails {
+            maf: FilteredMafDetails::default(),
+            cnv: FilteredCnvDetails::default(),
+        });
+
+    let case_details = filtered_map.get_mut(case_id).unwrap();
+
     // Check consequence filtering for MAF files
     if data_type == "maf" && !is_valid_consequence(&cont_lst, variant_classification_index, consequences) {
+        case_details.maf.invalid_consequences += 1;
+        filtered_maf_records.fetch_add(1, Ordering::Relaxed);
         return Ok(None);
     }
 
     // Extract relevant columns
     for &x in columns_indices {
         if x >= cont_lst.len() {
+            if data_type == "maf" {
+                case_details.maf.invalid_rows += 1;
+                filtered_maf_records.fetch_add(1, Ordering::Relaxed);
+            } else if data_type == "cnv" {
+                case_details.cnv.invalid_rows += 1;
+                filtered_cnv_records.fetch_add(1, Ordering::Relaxed);
+            }
             return Ok(None); // Invalid row
         }
 
@@ -286,6 +324,8 @@ fn process_row(
         if data_type == "cnv" && header[x] == "Segment_Mean" {
             element = process_segment_mean(&element, case_id, data_type, gain_threshold, loss_threshold)?;
             if element.is_empty() {
+                case_details.cnv.segment_mean += 1;
+                filtered_cnv_records.fetch_add(1, Ordering::Relaxed);
                 return Ok(None);
             }
         }
@@ -295,10 +335,14 @@ fn process_row(
     // Additional MAF-specific processing
     if data_type == "maf" {
         if out_lst.len() < 6 {
+            case_details.maf.invalid_rows += 1;
+            filtered_maf_records.fetch_add(1, Ordering::Relaxed);
             return Ok(None); // Not enough columns
         }
 
         let alle_depth = out_lst[4].parse::<i32>().map_err(|_| {
+            case_details.maf.invalid_rows += 1;
+            filtered_maf_records.fetch_add(1, Ordering::Relaxed);
             (
                 case_id.to_string(),
                 data_type.to_string(),
@@ -307,6 +351,8 @@ fn process_row(
         })?;
 
         let alt_count = out_lst[5].parse::<i32>().map_err(|_| {
+            case_details.maf.invalid_rows += 1;
+            filtered_maf_records.fetch_add(1, Ordering::Relaxed);
             (
                 case_id.to_string(),
                 data_type.to_string(),
@@ -314,7 +360,14 @@ fn process_row(
             )
         })?;
 
-        if alle_depth < min_total_depth || alt_count < min_alt_allele_count {
+        if alle_depth < min_total_depth {
+            case_details.maf.t_depth += 1;
+            filtered_maf_records.fetch_add(1, Ordering::Relaxed);
+            return Ok(None);
+        }
+        if alt_count < min_alt_allele_count {
+            case_details.maf.t_alt_count += 1;
+            filtered_maf_records.fetch_add(1, Ordering::Relaxed);
             return Ok(None);
         }
 
@@ -327,6 +380,8 @@ fn process_row(
     if data_type == "cnv" {
         // calculate segment length (End_Position - Start_Position)
         let end_position = out_lst[3].parse::<i32>().map_err(|_| {
+            case_details.cnv.invalid_rows += 1;
+            filtered_cnv_records.fetch_add(1, Ordering::Relaxed);
             (
                 case_id.to_string(),
                 data_type.to_string(),
@@ -335,6 +390,8 @@ fn process_row(
         })?;
 
         let start_position = out_lst[2].parse::<i32>().map_err(|_| {
+            case_details.cnv.invalid_rows += 1;
+            filtered_cnv_records.fetch_add(1, Ordering::Relaxed);
             (
                 case_id.to_string(),
                 data_type.to_string(),
@@ -343,6 +400,8 @@ fn process_row(
         })?;
         let cnv_length = end_position - start_position;
         if cnv_length > seg_length {
+            case_details.cnv.seg_length += 1;
+            filtered_cnv_records.fetch_add(1, Ordering::Relaxed);
             return Ok(None);
         }
     }
@@ -549,6 +608,9 @@ async fn download_data_streaming(
     // Counters for final summary
     let successful_downloads = Arc::new(AtomicUsize::new(0));
     let failed_downloads = Arc::new(AtomicUsize::new(0));
+    let filtered_maf_records = Arc::new(AtomicUsize::new(0));
+    let filtered_cnv_records = Arc::new(AtomicUsize::new(0));
+    let filtered_records = Arc::new(Mutex::new(HashMap::<String, FilteredCaseDetails>::new()));
 
     // Only collect errors (successful data is output immediately)
     let errors = Arc::new(Mutex::new(Vec::<ErrorEntry>::new()));
@@ -565,6 +627,9 @@ async fn download_data_streaming(
         .for_each(|download_result| {
             let successful_downloads = Arc::clone(&successful_downloads);
             let failed_downloads = Arc::clone(&failed_downloads);
+            let filtered_maf_records = Arc::clone(&filtered_maf_records);
+            let filtered_cnv_records = Arc::clone(&filtered_cnv_records);
+            let filtered_records = Arc::clone(&filtered_records);
             let errors = Arc::clone(&errors);
 
             async move {
@@ -581,7 +646,12 @@ async fn download_data_streaming(
                             gain_threshold,
                             loss_threshold,
                             seg_length,
-                        ) {
+                            &filtered_records,
+                            &filtered_maf_records,
+                            &filtered_cnv_records,
+                        )
+                        .await
+                        {
                             Ok(parsed_data) => {
                                 // SUCCESS: Output immediately as JSONL
                                 let success_output = SuccessfulFileOutput {
@@ -597,6 +667,8 @@ async fn download_data_streaming(
                                     // Force flush to ensure Node.js sees it immediately
                                     use std::io::Write;
                                     let _ = std::io::stdout().flush();
+                                    // Optional: Add small delay to separate lines
+                                    sleep(Duration::from_millis(10));
                                 }
 
                                 successful_downloads.fetch_add(1, Ordering::Relaxed);
@@ -643,6 +715,8 @@ async fn download_data_streaming(
     // Output final summary as the last line
     let success_count = successful_downloads.load(Ordering::Relaxed);
     let failed_count = failed_downloads.load(Ordering::Relaxed);
+    let filtered_maf_count = filtered_maf_records.load(Ordering::Relaxed);
+    let filtered_cnv_count = filtered_cnv_records.load(Ordering::Relaxed);
 
     let summary = FinalSummary {
         output_type: "summary".to_string(),
@@ -650,6 +724,9 @@ async fn download_data_streaming(
         successful_files: success_count,
         failed_files: failed_count,
         errors: errors.lock().await.clone(),
+        filtered_maf_records: filtered_maf_count,
+        filtered_cnv_records: filtered_cnv_count,
+        filtered_records_by_case: filtered_records.lock().await.clone(),
     };
 
     // Output final summary - Node.js will know processing is complete when it sees this
