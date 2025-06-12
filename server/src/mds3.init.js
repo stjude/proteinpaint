@@ -2997,7 +2997,7 @@ async function getCnvByTw(ds, tw, genome, q) {
 	// tw.term.chr/start/stop are set
 	arg.rglst = [tw.term]
 	const re = await ds.queries.cnv.get(arg)
-	if (!Array.isArray(re.cnvs)) throw 're.cnvs not array'
+	if (!Array.isArray(re?.cnvs)) throw 're.cnvs not array'
 	return re.cnvs
 }
 async function getProbe2cnvByTw(ds, tw, genome, q) {

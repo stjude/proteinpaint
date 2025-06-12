@@ -323,6 +323,7 @@ export async function load_driver(q, ds) {
 					// the required flag is missing. do not load
 				} else {
 					result.cnv = await ds.queries.cnv.get(q)
+					if (!Array.isArray(result.cnv?.cnvs)) throw 'result.cnv.cnvs[] not array'
 				}
 			}
 
