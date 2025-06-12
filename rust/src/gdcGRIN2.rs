@@ -376,7 +376,7 @@ async fn process_row(
         out_lst.push("mutation".to_string());
     }
 
-    // filter cnvs based on segment length. Default: 2000000
+    // filter cnvs based on segment length. Default: 0 (no filtering)
     if data_type == "cnv" {
         // calculate segment length (End_Position - Start_Position)
         let end_position = out_lst[3].parse::<i32>().map_err(|_| {
@@ -399,7 +399,7 @@ async fn process_row(
             )
         })?;
         let cnv_length = end_position - start_position;
-        if cnv_length > seg_length {
+        if seg_length > 0 && cnv_length > seg_length {
             case_details.cnv.seg_length += 1;
             filtered_cnv_records.fetch_add(1, Ordering::Relaxed);
             return Ok(None);
@@ -576,7 +576,7 @@ async fn download_single_file(
     ))
 }
 
-/// NEW: Phase 1 streaming download function
+/// Phase 1 streaming download function
 /// Outputs JSONL format: one JSON object per line
 /// Node.js will read this line-by-line but still wait for completion
 async fn download_data_streaming(
@@ -792,7 +792,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Set default cnv_options
     let (gain_threshold, loss_threshold, seg_length) = match input_js.cnv_options {
         Some(options) => (options.gain_threshold, options.loss_threshold, options.seg_length),
-        None => (0.3, -0.4, 2000000), // Default values
+        None => (0.3, -0.4, 0), // Default values
     };
 
     // Download data - this will now handle errors gracefully
