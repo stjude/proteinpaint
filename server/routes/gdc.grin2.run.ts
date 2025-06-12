@@ -76,7 +76,12 @@ function parseJsonlOutput(rustOutput: string): any {
 		summary: {
 			total_files: finalSummary.total_files,
 			successful_files: finalSummary.successful_files,
-			failed_files: finalSummary.failed_files
+			failed_files: finalSummary.failed_files,
+			errors: finalSummary.errors || [],
+			filtered_records: finalSummary.filtered_records || 0,
+			filtered_maf_records: finalSummary.filtered_maf_records || 0,
+			filtered_cnv_records: finalSummary.filtered_cnv_records || 0,
+			filtered_records_by_case: finalSummary.filtered_records_by_case || {}
 		}
 	}
 }
@@ -115,7 +120,7 @@ function init({ genomes }) {
 				mafOptions: parsedRequest.mafOptions
 			})
 
-			// NEW: Use stream_rust instead of run_rust
+			// Use stream_rust instead of run_rust
 			console.log('[GRIN2] Executing Rust function with streaming...')
 
 			// Collect output from stream_rust
@@ -188,6 +193,11 @@ function init({ genomes }) {
 					console.log(
 						`[GRIN2] Success: ${parsedRustResult.summary.successful_files}, Failed: ${parsedRustResult.summary.failed_files}`
 					)
+					// console.log(`[GRIN2] Filtered Stats Object: ${parsedRustResult.summary}`)
+					// console.log(`[GRIN2] Filtered Stats Object: ${JSON.stringify(parsedRustResult, null, 2)}`);
+					// console.log(`[GRIN2] Filtered MAF Records: ${parsedRustResult.summary.filtered_maf_records}`)
+					// console.log(`[GRIN2] Filtered CNV Records: ${parsedRustResult.summary.filtered_cnv_records}`)
+					// console.log(`[GRIN2] Filtered Total Results: ${parsedRustResult.summary.filtered_records}`)
 				} else {
 					console.warn('[GRIN2] Unexpected Rust result format')
 					dataForR = []
@@ -230,8 +240,15 @@ function init({ genomes }) {
 				console.log('[GRIN2] Finished R analysis')
 				const pngImg = resultData.png[0]
 				const topGeneTable = resultData.topGeneTable || null
+				const analysisStats = parsedRustResult.summary || {}
 				console.log('[GRIN2] Total GRIN2 processing time:', formatElapsedTime(Date.now() - downloadStartTime))
-				return res.json({ pngImg, topGeneTable, rustResult: parsedRustResult, status: 'success' })
+				return res.json({
+					pngImg,
+					topGeneTable,
+					rustResult: parsedRustResult,
+					analysisStats: analysisStats,
+					status: 'success'
+				})
 			} catch (parseError) {
 				console.error('[GRIN2] Error parsing R result:', parseError)
 				// console.log('[GRIN2] Raw R result:', rResult)

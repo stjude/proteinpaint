@@ -112,6 +112,7 @@ struct FinalSummary {
     successful_files: usize,
     failed_files: usize,
     errors: Vec<ErrorEntry>,
+    filtered_records: usize,
     filtered_maf_records: usize,
     filtered_cnv_records: usize,
     filtered_records_by_case: HashMap<String, FilteredCaseDetails>,
@@ -136,7 +137,6 @@ struct DataTypeConfig {
 }
 
 // Function to parse TSV content
-// Updated parse_content function with better consequence filtering
 async fn parse_content(
     content: &str,
     case_id: &str,
@@ -576,7 +576,7 @@ async fn download_single_file(
     ))
 }
 
-/// Phase 1 streaming download function
+/// Streaming download function
 /// Outputs JSONL format: one JSON object per line
 /// Node.js will read this line-by-line but still wait for completion
 async fn download_data_streaming(
@@ -724,6 +724,7 @@ async fn download_data_streaming(
         successful_files: success_count,
         failed_files: failed_count,
         errors: errors.lock().await.clone(),
+        filtered_records: filtered_maf_count + filtered_cnv_count,
         filtered_maf_records: filtered_maf_count,
         filtered_cnv_records: filtered_cnv_count,
         filtered_records_by_case: filtered_records.lock().await.clone(),
@@ -796,7 +797,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     // Download data - this will now handle errors gracefully
-    // download_data(case_files, HOST, min_total_depth, min_alt_allele_count, &consequences).await;
     download_data_streaming(
         case_files,
         HOST,
