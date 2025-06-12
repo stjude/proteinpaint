@@ -16,7 +16,11 @@ export class SummaryReportView {
 			.insert('div')
 			.style('display', 'inline-block')
 			.attr('class', 'pp-termdb-plot-controls')
-		const mainDiv = this.opts.holder.insert('div').style('display', 'inline-block').style('vertical-align', 'top')
+		const mainDiv = this.opts.holder
+			.insert('div')
+			.style('display', 'inline-block')
+			.style('vertical-align', 'top')
+			.style('padding', '20px')
 
 		this.dom = {
 			mainDiv,
