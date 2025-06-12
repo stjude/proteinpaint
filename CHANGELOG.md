@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 Fixes:
 - allow to customize font for many parts of block and mds3 tk
+- cnv.get() returns {cnvs[], cnvMsg} to include server generated msg on exceeding limit
 
 
 ## 2.129.6
