@@ -133,7 +133,7 @@ export class Barchart {
 					defaultQ4fillTW: term0_term2_defaultQ
 				},
 				{
-					label: 'Divide by Orientation',
+					label: 'Divide by orientation',
 					type: 'radio',
 					chartType: 'barchart',
 					settingsKey: 'divideOrientation',
@@ -143,7 +143,7 @@ export class Barchart {
 					]
 				},
 				{
-					label: 'Orientation',
+					label: 'Plot orientation',
 					type: 'radio',
 					chartType: 'barchart',
 					settingsKey: 'orientation',
