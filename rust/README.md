@@ -36,12 +36,17 @@ const out = await run_rust('indel', input_data)
 
 ## Test
 
-From the `proteinpaint/server` directory,
+For running the tests written in nodejs, from the `proteinpaint` directory run,
 
 ```bash
-npx test
-npx tsc
+npm run test:unit --workspace="rust"
 ```
+
+For running the tests written in native rust, from the `proteinpaint/rust` directory run.
+```bash
+cargo test
+```
+
 
 ## Build
 
