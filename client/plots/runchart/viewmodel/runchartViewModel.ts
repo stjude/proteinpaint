@@ -13,6 +13,7 @@ export class RunchartViewModel extends ScatterViewModelBase {
 	}
 
 	render() {
+		this.view.dom.mainDiv.selectAll('*').remove() // Clear previous content
 		for (const chart of this.model.charts) this.renderChart(chart, this.view.dom.mainDiv, false)
 	}
 

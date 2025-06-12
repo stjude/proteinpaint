@@ -17,11 +17,20 @@ export class EventCountModel extends RunchartModel {
 				value.samples.push(sample)
 			}
 		}
-		for (const [key, value] of groupedSamples.entries()) {
+		let count = 0
+		const sortedKeys = Array.from(groupedSamples.keys()).sort((a, b) => {
+			const [yearA, monthA] = a.split('-').map(Number)
+			const [yearB, monthB] = b.split('-').map(Number)
+			if (yearA !== yearB) return yearA - yearB
+			return monthA - monthB
+		})
+		for (const key of sortedKeys) {
 			const [year, month] = key.split('-')
+			const value = groupedSamples.get(key)
 			for (const sample of value.samples) {
 				sample.x = getNumberFromDate(new Date(year, month, 15))
-				sample.y = value.samples.length
+				count += value.samples.length
+				sample.y = this.scatter.settings.showAccrual ? count : value.samples.length
 			}
 		}
 
