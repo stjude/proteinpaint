@@ -110,6 +110,7 @@ export function getDefaultEventCountSettings() {
 		colorScaleMinFixed: null, // User-defined minimum value for fixed mode
 		// Null indicates this hasn't been set yet
 		colorScaleMaxFixed: null, // User-defined maximum value for fixed mode
-		saveZoomTransform: false
+		saveZoomTransform: false,
+		showAccrual: true
 	}
 }

@@ -145,6 +145,14 @@ export class EventCountView extends RunchartView {
 				settingsKey: 'saveZoomTransform',
 				title: `Option to save the zoom transformation in the state. Needed if you want to save a session with the actual zoom and pan applied`,
 				processInput: value => this.saveZoomTransform(value)
+			},
+			{
+				label: 'Show accrual',
+				boxLabel: '',
+				type: 'checkbox',
+				chartType: 'eventCount',
+				settingsKey: 'showAccrual',
+				title: `Option to show the cumulative number of events over time`
 			}
 		]
 		if (this.eventCount.config.scaleDotTW)
