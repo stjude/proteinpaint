@@ -133,6 +133,16 @@ export class Barchart {
 					defaultQ4fillTW: term0_term2_defaultQ
 				},
 				{
+					label: 'Divide by Orientation',
+					type: 'radio',
+					chartType: 'barchart',
+					settingsKey: 'divideOrientation',
+					options: [
+						{ label: 'Vertical', value: 'vertical' },
+						{ label: 'Horizontal', value: 'horizontal' }
+					]
+				},
+				{
 					label: 'Orientation',
 					type: 'radio',
 					chartType: 'barchart',
@@ -142,6 +152,7 @@ export class Barchart {
 						{ label: 'Horizontal', value: 'horizontal' }
 					]
 				},
+
 				{
 					label: 'Scale',
 					type: 'radio',
@@ -217,6 +228,7 @@ export class Barchart {
 					title: `Perform multiple testing correction (${mtcMethod == 'bon' ? 'Bonferroni' : mtcMethod})`
 				})
 			}
+
 			this.components = {
 				controls: await controlsInit({
 					app: this.app,
@@ -855,6 +867,11 @@ function setRenderers(self) {
 		self.renderers[chart.chartId](chart)
 
 		const div = select(this)
+		div.style(
+			'display',
+			self.state.config.settings.barchart.divideOrientation == 'horizontal' ? 'inline-block' : 'block'
+		)
+
 		div.select('.pp-sbar-div-chartLengends').selectAll('*').remove()
 
 		if (self.chartsData.tests && self.chartsData.tests[chart.chartId]) {
@@ -866,7 +883,10 @@ function setRenderers(self) {
 	self.addChart = function (chart, i) {
 		const div = select(this)
 			.attr('class', 'pp-sbar-div')
-			.style('display', 'inline-block')
+			.style(
+				'display',
+				self.state.config.settings.barchart.divideOrientation == 'horizontal' ? 'inline-block' : 'block'
+			)
 			.style('padding', '20px')
 			.style('vertical-align', 'top')
 		self.renderers[chart.chartId] = barsRenderer(self, select(this))
@@ -1144,6 +1164,8 @@ function setInteractivity(self) {
 export function getDefaultBarSettings(app) {
 	return {
 		orientation: 'horizontal',
+		divideOrientation: 'vertical',
+
 		unit: 'abs',
 		overlay: 'none',
 		divideBy: 'none',
