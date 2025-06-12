@@ -111,6 +111,6 @@ export function getDefaultEventCountSettings() {
 		// Null indicates this hasn't been set yet
 		colorScaleMaxFixed: null, // User-defined maximum value for fixed mode
 		saveZoomTransform: false,
-		showAccrual: true
+		showAccrual: false
 	}
 }
