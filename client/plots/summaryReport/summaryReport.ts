@@ -1,7 +1,5 @@
 import { getCompInit, copyMerge } from '../../rx/index.js'
 import { fillTermWrapper } from '#termsetting'
-import { SummaryReportModel } from './model/summaryReportModel.js'
-import { SummaryReportViewModel } from './viewmodel/summaryReportViewModel.js'
 import { SummaryReportView } from './view/summaryReportView.js'
 import { RxComponentInner } from '../../types/rx.d.js'
 import { controlsInit } from '../controls'
@@ -9,8 +7,6 @@ import { controlsInit } from '../controls'
 export class SummaryReport extends RxComponentInner {
 	config: any
 	view!: SummaryReportView
-	model!: SummaryReportModel
-	vm!: any
 	components: any
 	settings: any
 	opts: any
@@ -26,8 +22,6 @@ export class SummaryReport extends RxComponentInner {
 	async init(appState) {
 		this.config = appState.plots.find(p => p.id === this.id)
 		this.view = new SummaryReportView(this)
-		this.model = new SummaryReportModel(this)
-		this.vm = new SummaryReportViewModel(this)
 		this.components = { plots: {} }
 	}
 
@@ -39,7 +33,7 @@ export class SummaryReport extends RxComponentInner {
 
 		return {
 			config,
-			plots: appState.plots.filter(p => p.parentId === this.id),
+			plots: appState.plots.filter(p => p.parentId === this.id), //this property is needed to indicate that child plots need to be added to the appState plots
 			termfilter: appState.termfilter,
 			vocab: appState.vocab,
 			termdbConfig: appState.termdbConfig
@@ -58,14 +52,13 @@ export class SummaryReport extends RxComponentInner {
 
 	async setPlot(plot) {
 		//console.log('summaryReport init plot', plot)
-		const header = this.view.dom.mainDiv.append('div')
+		const header = this.view.dom.mainDiv.append('div').style('font-size', '1.2em').style('font-weight', 'bold')
 		const holder = this.view.dom.mainDiv.append('div')
 		const opts = structuredClone(plot)
 		opts.header = header
 		opts.holder = holder
 		opts.app = this.app
 		opts.parentId = this.id
-		//opts.id = plot.id; console.log(64, plot.id)
 		opts.controls = this.view.dom.controlsHolder
 		const { componentInit } = await import(`../../plots/${opts.chartType}.js`)
 		this.components.plots[opts.id] = await componentInit(opts)
@@ -138,7 +131,6 @@ export async function makeChartBtnMenu(holder, chartsInstance) {
 			.on('click', () => {
 				chartsInstance.app.dispatch({
 					type: 'plot_create',
-					id: 'summaryReport-1',
 					config: {
 						chartType: 'summaryReport',
 						country
