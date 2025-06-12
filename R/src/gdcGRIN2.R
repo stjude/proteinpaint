@@ -426,44 +426,134 @@ tryCatch(
     n_cols <- result$n_cols # Corresponding counts columns
     # write.csv(n_cols, file = "~/Desktop/n_cols.csv", row.names = FALSE)
 
-    for (i in seq_len(nrow(sorted_results[1:num_rows_to_process, ]))) {
-      row_data <- list(
-        # Each cell in a row is an object with 'value' property
-        list(value = as.character(sorted_results[i, "gene"])), # Gene name
-        list(value = as.character(sorted_results[i, "chrom"])), # Chromosome
-        list(value = as.numeric(sorted_results[i, p_cols[1]])), # Dynamic mutation p-value
-        list(value = as.numeric(sorted_results[i, q_cols[1]])), # Dynamic mutation q-value
-        list(value = as.numeric(sorted_results[i, n_cols[1]])), # Dynamic mutation subject count
-        list(value = as.numeric(sorted_results[i, p_cols[2]])), # Dynamic cnv gain p-value
-        list(value = as.numeric(sorted_results[i, q_cols[2]])), # Dynamic cnv gain q-value
-        list(value = as.numeric(sorted_results[i, n_cols[2]])), # Dynamic cnv gain subject count
-        list(value = as.numeric(sorted_results[i, p_cols[3]])), # Dynamic cnv loss p-value
-        list(value = as.numeric(sorted_results[i, q_cols[3]])), # Dynamic cnv loss q-value
-        list(value = as.numeric(sorted_results[i, n_cols[3]])) # Dynamic cnv loss subject count
-        # Add more columns as needed based on what's in sorted_results
-      )
-      topgene_table_data[[i]] <- row_data
+    # Function to check if a column has meaningful data
+    has_data <- function(column_data, sample_size = 20) {
+      # Take a sample of the column (first 20 rows or whatever exists)
+      sample_data <- head(column_data, sample_size)
+
+      # Remove NA, NULL, empty strings, and 0 values
+      meaningful_data <- sample_data[
+        !is.na(sample_data) &
+          !is.null(sample_data) &
+          sample_data != "" &
+          sample_data != 0
+      ]
+
+      # Return TRUE if we have any meaningful data
+      return(length(meaningful_data) > 0)
     }
+
+    simple_column_filter <- function(sorted_results, num_rows_to_process = 50) {
+      # Check which column groups have data (using your existing p_cols, q_cols, n_cols)
+      mutation_has_data <- has_data(sorted_results[[p_cols[1]]])
+      cnv_gain_has_data <- has_data(sorted_results[[p_cols[2]]])
+      cnv_loss_has_data <- has_data(sorted_results[[p_cols[3]]])
+
+      # Build columns list dynamically
+      columns <- list(
+        list(label = "Gene", sortable = TRUE),
+        list(label = "Chromosome", sortable = TRUE)
+      )
+
+      # Add mutation columns if they have data
+      if (mutation_has_data) {
+        columns <- append(
+          columns,
+          list(
+            list(label = "Mutation P-value", sortable = TRUE),
+            list(label = "Mutation Q-value", sortable = TRUE),
+            list(label = "Mutation Subject Count", sortable = TRUE)
+          )
+        )
+      }
+
+      # Add CNV gain columns if they have data
+      if (cnv_gain_has_data) {
+        columns <- append(
+          columns,
+          list(
+            list(label = "CNV Gain P-value", sortable = TRUE),
+            list(label = "CNV Gain Q-value", sortable = TRUE),
+            list(label = "CNV Gain Subject Count", sortable = TRUE)
+          )
+        )
+      }
+
+      # Add CNV loss columns if they have data
+      if (cnv_loss_has_data) {
+        columns <- append(
+          columns,
+          list(
+            list(label = "CNV Loss P-value", sortable = TRUE),
+            list(label = "CNV Loss Q-value", sortable = TRUE),
+            list(label = "CNV Loss Subject Count", sortable = TRUE)
+          )
+        )
+      }
+
+      # Build rows to match the active columns
+      topgene_table_data <- list()
+
+      for (i in seq_len(min(nrow(sorted_results), num_rows_to_process))) {
+        row_data <- list(
+          list(value = as.character(sorted_results[i, "gene"])),
+          list(value = as.character(sorted_results[i, "chrom"]))
+        )
+
+        # Add mutation data if it exists
+        if (mutation_has_data) {
+          row_data <- append(
+            row_data,
+            list(
+              list(value = as.numeric(sorted_results[i, p_cols[1]])),
+              list(value = as.numeric(sorted_results[i, q_cols[1]])),
+              list(value = as.numeric(sorted_results[i, n_cols[1]]))
+            )
+          )
+        }
+
+        # Add CNV gain data if it exists
+        if (cnv_gain_has_data) {
+          row_data <- append(
+            row_data,
+            list(
+              list(value = as.numeric(sorted_results[i, p_cols[2]])),
+              list(value = as.numeric(sorted_results[i, q_cols[2]])),
+              list(value = as.numeric(sorted_results[i, n_cols[2]]))
+            )
+          )
+        }
+
+        # Add CNV loss data if it exists
+        if (cnv_loss_has_data) {
+          row_data <- append(
+            row_data,
+            list(
+              list(value = as.numeric(sorted_results[i, p_cols[3]])),
+              list(value = as.numeric(sorted_results[i, q_cols[3]])),
+              list(value = as.numeric(sorted_results[i, n_cols[3]]))
+            )
+          )
+        }
+
+        topgene_table_data[[i]] <- row_data
+      }
+
+      return(list(
+        columns = columns,
+        rows = topgene_table_data
+      ))
+    }
+
+    table_result <- simple_column_filter(sorted_results, num_rows_to_process)
+    columns <- table_result$columns
+    topgene_table_data <- table_result$rows
 
     grin2_response <- list(
       png = list(base64_string), # PNG data as before
       topGeneTable = list(
-        columns = list(
-          # Define the table structure
-          list(label = "Gene", sortable = TRUE),
-          list(label = "Chromosome", sortable = TRUE),
-          list(label = "Mutation P-value", sortable = TRUE),
-          list(label = "Mutation Q-value", sortable = TRUE),
-          list(label = "Mutation Subject Count", sortable = TRUE),
-          list(label = "CNV Gain P-value", sortable = TRUE),
-          list(label = "CNV Gain Q-value", sortable = TRUE),
-          list(label = "CNV Gain Subject Count", sortable = TRUE),
-          list(label = "CNV Loss P-value", sortable = TRUE),
-          list(label = "CNV Loss Q-value", sortable = TRUE),
-          list(label = "CNV Loss Subject Count", sortable = TRUE)
-          # Add more column definitions as needed
-        ),
-        rows = topgene_table_data # The actual data rows
+        columns = columns, # Use the dynamically generated columns
+        rows = topgene_table_data # Use the dynamically generated rows
       ),
       totalGenes = nrow(sorted_results), # Let frontend know total count
       showingTop = num_rows_to_process # Let frontend know how many are displayed
