@@ -280,6 +280,7 @@ TdbStore.prototype.actions = {
 			// instead of having nested plot.plots[]
 			for (const p of plot.plots) {
 				p.parentId = plot.id
+				if (!p.id) p.id = getId() // fill in missing child plot id
 				const _ = await import(`../plots/${p.chartType}.js`)
 				const config = await _.getPlotConfig(p, this.app)
 				this.state.plots.push(config)
