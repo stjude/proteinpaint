@@ -1460,12 +1460,13 @@ async function querySamplesWithCnv(q, dictTwLst, ds) {
 			}
 		]
 	}
-	const cnvs = await ds.queries.cnv.get(q2)
+	const re = await ds.queries.cnv.get(q2)
+	if (!Array.isArray(re?.cnvs)) throw 're.cnvs[] not array'
 
 	if (q.ssm_id_lst) {
 		// filter cnvs[] to get sample of this cnv seg!
 		const t = guessSsmid(q.ssm_id_lst)
-		for (const c of cnvs) {
+		for (const c of re.cnvs) {
 			if (c.start == t.l[1] && c.stop == t.l[2] && c.class == t.l[3] && c.samples?.[0]?.sample_id == t.l[5]) {
 				return [{}, [c.samples[0]]]
 			}
@@ -1473,11 +1474,11 @@ async function querySamplesWithCnv(q, dictTwLst, ds) {
 		throw 'cnv not found by queried segment'
 	}
 	// collect all samples
-	const samples = cnvs.map(c => c.samples[0])
+	const samples = re.cnvs.map(c => c.samples[0])
 	const byTermId = mayApplyBinning(samples, dictTwLst)
 
 	const id2samples = new Map()
-	for (const c of cnvs) {
+	for (const c of re.cnvs) {
 		combineSamplesById(c.samples, id2samples, c.ssm_id)
 	}
 

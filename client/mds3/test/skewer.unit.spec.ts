@@ -167,7 +167,7 @@ tape('getVariantLabelText()', function (test) {
 	}
 	{
 		// custom cnv
-		const data = { cnv: [1, 1] },
+		const data = { cnv: { cnvs: [1, 1] } },
 			tk = {
 				custom_variants: [{ dt: 4 }, { dt: 4 }]
 			},
@@ -177,7 +177,7 @@ tape('getVariantLabelText()', function (test) {
 	}
 	{
 		// native cnv
-		const data = { cnv: [{ dt: 4 }, { dt: 4 }] },
+		const data = { cnv: { cnvs: [{ dt: 4 }, { dt: 4 }] } },
 			tk = {},
 			block = { width: 10 }
 		const re = getVariantLabelText(data, tk, block)
@@ -185,7 +185,7 @@ tape('getVariantLabelText()', function (test) {
 	}
 	{
 		// native snv and cnv
-		const data = { cnv: [{ dt: 4 }, { dt: 4 }] },
+		const data = { cnv: { cnvs: [{ dt: 4 }, { dt: 4 }] } },
 			tk = {
 				skewer: {
 					rawmlst: [{ dt: 1 }, { dt: 1 }],

@@ -853,7 +853,7 @@ tape('Custom data with samples and sample selection', test => {
 	}
 })
 
-tape.only('Custom cnv only, no sample', test => {
+tape('Custom cnv only, no sample', test => {
 	test.timeoutAfter(3000)
 	const holder = getHolder()
 
