@@ -1934,8 +1934,19 @@ async function getFilesAndShowTable(obj) {
 						.style('margin', '10px 0 20px 0')
 				}
 
-				// Create a container for the table
-				const tableContainer = resultContainer.append('div').style('margin-bottom', '20px')
+				// Create a container for the genes container
+				const tableContainer = resultContainer
+					.append('div')
+					.style('margin-bottom', '20px')
+					.style('display', 'flex')
+					.style('flex', '2')
+
+				// Summary statistics container
+				const statsContainer = resultContainer
+					.append('div')
+					.style('flex', '1')
+					.style('min-width', '250px')
+					.style('max-width', '350px')
 
 				// Render the table using your existing table component
 				renderTable({
@@ -1945,7 +1956,7 @@ async function getFilesAndShowTable(obj) {
 					showLines: true, // Show row numbers
 					striped: true, // Alternate row colors
 					showHeader: true, // Show column headers
-					maxHeight: '500px', // Increased height since we're limiting rows in R
+					maxHeight: '500px',
 					maxWidth: '100%', // Full width available
 					resize: false, // Don't allow manual resizing
 					header: {
@@ -1961,6 +1972,120 @@ async function getFilesAndShowTable(obj) {
 						fileName: `GRIN2_TopGenes_${timestamp}.tsv`
 					}
 				})
+
+				// Create summary statistics panel
+				if (response.analysisStats) {
+					const statsPanel = statsContainer
+						.append('div')
+						.style('background-color', '#f8f9fa')
+						.style('border', '1px solid #dee2e6')
+						.style('border-radius', '8px')
+						.style('padding', '20px')
+						.style('box-shadow', '0 2px 4px rgba(0,0,0,0.1)')
+
+					// Stats panel title
+					statsPanel
+						.append('h5')
+						.text('Analysis Summary')
+						.style('margin', '0 0 15px 0')
+						.style('color', '#343a40')
+						.style('font-weight', 'bold')
+						.style('border-bottom', '2px solid #dee2e6')
+						.style('padding-bottom', '8px')
+
+					// File processing stats
+					const fileStats = statsPanel.append('div').style('margin-bottom', '20px')
+
+					fileStats
+						.append('h6')
+						.text('File Processing')
+						.style('margin', '0 0 10px 0')
+						.style('color', '#495057')
+						.style('font-size', '14px')
+						.style('font-weight', 'bold')
+
+					const fileStatsGrid = fileStats
+						.append('div')
+						.style('display', 'grid')
+						.style('grid-template-columns', '1fr 1fr')
+						.style('gap', '8px')
+						.style('font-size', '13px')
+
+					// File processing metrics
+					fileStatsGrid.append('div').style('color', '#6c757d').text('Total Files:')
+					fileStatsGrid
+						.append('div')
+						.style('font-weight', 'bold')
+						.text(response.analysisStats.total_files || 0)
+
+					fileStatsGrid.append('div').style('color', '#28a745').text('Successful:')
+					fileStatsGrid
+						.append('div')
+						.style('font-weight', 'bold')
+						.style('color', '#28a745')
+						.text(response.analysisStats.successful_files || 0)
+
+					fileStatsGrid.append('div').style('color', '#dc3545').text('Failed:')
+					fileStatsGrid
+						.append('div')
+						.style('font-weight', 'bold')
+						.style('color', '#dc3545')
+						.text(response.analysisStats.failed_files || 0)
+
+					// Data filtering stats
+					if (
+						response.analysisStats.filtered_records !== undefined ||
+						response.analysisStats.filtered_maf_records !== undefined ||
+						response.analysisStats.filtered_cnv_records !== undefined
+					) {
+						const filterStats = statsPanel.append('div').style('margin-bottom', '20px')
+
+						filterStats
+							.append('h6')
+							.text('Data Filtering')
+							.style('margin', '0 0 10px 0')
+							.style('color', '#495057')
+							.style('font-size', '14px')
+							.style('font-weight', 'bold')
+
+						const filterStatsGrid = filterStats
+							.append('div')
+							.style('display', 'grid')
+							.style('grid-template-columns', '1fr 1fr')
+							.style('gap', '8px')
+							.style('font-size', '13px')
+
+						// Total filtered records
+						if (response.analysisStats.filtered_records !== undefined) {
+							filterStatsGrid.append('div').style('color', '#6c757d').text('Total Filtered:')
+							filterStatsGrid
+								.append('div')
+								.style('font-weight', 'bold')
+								.style('color', 'black')
+								.text(response.analysisStats.filtered_records.toLocaleString())
+						}
+
+						// MAF filtered records
+						if (response.analysisStats.filtered_maf_records !== undefined) {
+							filterStatsGrid.append('div').style('color', '#6c757d').text('MAF Filtered:')
+							filterStatsGrid
+								.append('div')
+								.style('font-weight', 'bold')
+								.style('color', 'black')
+								.text(response.analysisStats.filtered_maf_records.toLocaleString())
+						}
+
+						// CNV filtered records
+						if (response.analysisStats.filtered_cnv_records !== undefined) {
+							filterStatsGrid.append('div').style('color', '#6c757d').text('CNV Filtered:')
+							filterStatsGrid
+								.append('div')
+								.style('font-weight', 'bold')
+								.style('color', 'black')
+								.text(response.analysisStats.filtered_cnv_records.toLocaleString())
+						}
+					}
+				}
 
 				console.log(`Displayed table with ${response.topGeneTable.rows.length} genes`)
 
