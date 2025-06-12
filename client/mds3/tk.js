@@ -375,7 +375,7 @@ async function dataFromCustomVariants(tk, block) {
 		}
 	}
 
-	data.mclass2variantcount = summarize_mclass([...data.skewer, ...data.cnv])
+	data.mclass2variantcount = summarize_mclass([...data.skewer, ...data.cnv.cnvs])
 
 	if (data.cnv.cnvs.length == 0) delete data.cnv // important to delete to avoid triggering cnv logic
 
