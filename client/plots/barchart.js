@@ -133,7 +133,7 @@ export class Barchart {
 					defaultQ4fillTW: term0_term2_defaultQ
 				},
 				{
-					label: 'Divide by orientation',
+					label: 'Charts layout',
 					type: 'radio',
 					chartType: 'barchart',
 					settingsKey: 'divideOrientation',
@@ -143,7 +143,7 @@ export class Barchart {
 					]
 				},
 				{
-					label: 'Plot orientation',
+					label: 'Bar orientation',
 					type: 'radio',
 					chartType: 'barchart',
 					settingsKey: 'orientation',
@@ -351,6 +351,7 @@ export class Barchart {
 			term2: config.term2 ? config.term2.term.id : '',
 			unit: config.settings.barchart.unit,
 			orientation: config.settings.barchart.orientation,
+			divideOrientation: config.settings.barchart.divideOrientation,
 			asterisksVisible: config.settings.barchart.asterisksVisible,
 			multiTestingCorr: config.settings.barchart.multiTestingCorr,
 			defaultColor: config.settings.barchart.defaultColor,
@@ -1164,8 +1165,7 @@ function setInteractivity(self) {
 export function getDefaultBarSettings(app) {
 	return {
 		orientation: 'horizontal',
-		divideOrientation: 'vertical',
-
+		divideOrientation: 'horizontal', // maintain horizontal as default charts layout
 		unit: 'abs',
 		overlay: 'none',
 		divideBy: 'none',
