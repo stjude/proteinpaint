@@ -424,7 +424,6 @@ tryCatch(
     p_cols <- result$p_cols # All found p-value columns
     q_cols <- result$q_cols # Corresponding q-value columns
     n_cols <- result$n_cols # Corresponding counts columns
-    # write.csv(n_cols, file = "~/Desktop/n_cols.csv", row.names = FALSE)
 
     # Function to check if a column has meaningful data
     has_data <- function(column_data, sample_size = 20) {
