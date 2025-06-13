@@ -11,6 +11,7 @@ TODO cover all combinations
 
 Tests:
 	term1=categorical
+	term1=categorical (no values)
 	term1=categorical, term2=defaultbins
 	term0=defaultbins, term1=categorical
 	term1=geneVariant no group
@@ -97,6 +98,62 @@ tape('term1=categorical', function (test) {
 		testAxisDimension(barchart)
 		if (test._ok) barchart.Inner.app.destroy()
 		test.end()
+	}
+
+	let barDiv
+	function testBarCount(barchart) {
+		barDiv = barchart.Inner.dom.barDiv
+		const minBars = 5
+		const numBars = barDiv.selectAll('.bars-cell-grp').size()
+		const numOverlays = barDiv.selectAll('.bars-cell').size()
+		test.true(numBars > minBars, `should have more than ${minBars} Diagnosis Group bars`)
+		test.equal(numBars, numOverlays, 'should have equal numbers of bars and overlays')
+	}
+
+	function testAxisDimension(barchart) {
+		const xAxis = barDiv.select('.sjpcb-bar-chart-x-axis').node()
+		const seriesG = barDiv.select('.bars-series').node()
+		test.true(xAxis.getBBox().width >= seriesG.getBBox().width, 'x-axis width should be >= series width')
+	}
+})
+
+tape('term1=categorical (no values)', function (test) {
+	test.timeoutAfter(3000)
+
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'barchart',
+					term: {
+						id: 'diaggrp_novalues'
+					}
+				}
+			]
+		},
+		barchart: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	function runTests(barchart) {
+		barchart.on('postRender.test', null)
+		testTw(barchart)
+		testBarCount(barchart)
+		testAxisDimension(barchart)
+		if (test._ok) barchart.Inner.app.destroy()
+		test.end()
+	}
+
+	function testTw(barchart) {
+		// testing if term.values{} and term.samplecounts[] get filled
+		const tw = barchart.Inner.config.term
+		test.ok(tw.term.values && typeof tw.term.values == 'object', 'term.values{} should be an object')
+		test.equal(Object.keys(tw.term.values).length, 7, 'term.values{} should have 7 values')
+		test.ok(Array.isArray(tw.term.samplecounts), 'term.samplecounts[] should be an array')
+		test.equal(tw.term.samplecounts.length, 7, 'term.samplecounts[] should have 7 sample counts')
 	}
 
 	let barDiv
