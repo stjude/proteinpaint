@@ -229,6 +229,32 @@ tape('Change symbol size from menu', function (test) {
 	}
 })
 
+tape('Show accrual', function (test) {
+	test.timeoutAfter(10000)
+
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'eventCount',
+					term: { id: 'date' },
+					settings: { eventCount: { showAccrual: true } }
+				}
+			]
+		},
+		eventCount: {
+			callbacks: { 'postRender.test': runTests }
+		}
+	})
+
+	async function runTests(scatter) {
+		const chart = scatter.Inner.model.charts[0]
+		const lastEvent = chart.events[chart.events.length - 1]
+		const sum = chart.cohortSamples.length
+		test.equal(lastEvent, sum, `the last event y value should be equal to the sum of all events`)
+	}
+})
+
 tape('Change chart width and height from menu', function (test) {
 	test.timeoutAfter(1000)
 
