@@ -496,32 +496,36 @@ tape('mayFillInValues: single term', test => {
 		}
 	})
 	let categories = undefined
-	const opts = { term: { $id: 't', term: structuredClone(term) } }
+	const opts = { term: { term: structuredClone(term) } }
 	termdbVocabApi.mayFillInValues(opts, categories)
 	test.deepEqual(opts.term.term, term, 'opts.term.term should not change when categories is undefined')
 
-	categories = {
-		t2: [
+	categories = [
+		[],
+		[],
+		[
 			{ key: 'v4', label: 'value4', samplecount: 5 },
 			{ key: 'v5', label: 'value5', samplecount: 10 },
 			{ key: 'v6', label: 'value6', samplecount: 15 }
 		]
-	}
+	]
 	termdbVocabApi.mayFillInValues(opts, categories)
 	test.deepEqual(opts.term.term, term, 'opts.term.term should not change when term is not in categories')
 
-	categories = {
-		t: [
+	categories = [
+		[],
+		[
 			{ key: 'v4', label: 'value4', samplecount: 5 },
 			{ key: 'v5', label: 'value5', samplecount: 10 },
 			{ key: 'v6', label: 'value6', samplecount: 15 }
-		]
-	}
+		],
+		[]
+	]
 	termdbVocabApi.mayFillInValues(opts, categories)
 	let expectedValues = {
-		v4: { key: 'v4', label: 'value4' },
-		v5: { key: 'v5', label: 'value5' },
-		v6: { key: 'v6', label: 'value6' }
+		v4: { label: 'value4' },
+		v5: { label: 'value5' },
+		v6: { label: 'value6' }
 	}
 	let expectedSampleCounts = [
 		{ key: 'v4', label: 'value4', samplecount: 5 },
@@ -561,24 +565,26 @@ tape('mayFillInValues: multiple terms', test => {
 			v6: { label: 'value6' }
 		}
 	})
-	let categories = {
-		t2: [
+	let categories = [
+		[],
+		[],
+		[
 			{ key: 'v7', label: 'value7', samplecount: 5 },
 			{ key: 'v8', label: 'value8', samplecount: 10 },
 			{ key: 'v9', label: 'value9', samplecount: 15 }
 		]
-	}
+	]
 	const opts = {
-		term: { $id: 't', term: structuredClone(term) },
-		term2: { $id: 't2', term: structuredClone(term2) }
+		term: { term: structuredClone(term) },
+		term2: { term: structuredClone(term2) }
 	}
 	termdbVocabApi.mayFillInValues(opts, categories)
 	test.deepEqual(opts.term.term, term, 'opts.term.term should not change when term is not in categories')
 	test.notDeepEqual(opts.term2.term, term2, 'opts.term.term2 should change when term is in categories')
 	let expectedValues = {
-		v7: { key: 'v7', label: 'value7' },
-		v8: { key: 'v8', label: 'value8' },
-		v9: { key: 'v9', label: 'value9' }
+		v7: { label: 'value7' },
+		v8: { label: 'value8' },
+		v9: { label: 'value9' }
 	}
 	let expectedSampleCounts = [
 		{ key: 'v7', label: 'value7', samplecount: 5 },
