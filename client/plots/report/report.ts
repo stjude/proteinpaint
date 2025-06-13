@@ -1,12 +1,12 @@
 import { getCompInit, copyMerge } from '../../rx/index.js'
 import { fillTermWrapper } from '#termsetting'
-import { SummaryReportView } from './view/summaryReportView.js'
-import { RxComponentInner } from '../../types/rx.d.js'
-import { controlsInit } from '../controls'
+import { ReportView } from './view/reportView'
+import { RxComponentInner } from '../../types/rx.d'
+import { controlsInit } from '../controls.js'
 
-export class SummaryReport extends RxComponentInner {
+export class Report extends RxComponentInner {
 	config: any
-	view!: SummaryReportView
+	view!: ReportView
 	components: any
 	settings: any
 	opts: any
@@ -16,12 +16,12 @@ export class SummaryReport extends RxComponentInner {
 
 	constructor() {
 		super()
-		this.type = 'summaryReport'
+		this.type = 'report'
 	}
 
 	async init(appState) {
 		this.config = appState.plots.find(p => p.id === this.id)
-		this.view = new SummaryReportView(this)
+		this.view = new ReportView(this)
 		this.components = { plots: {} }
 	}
 
@@ -42,7 +42,7 @@ export class SummaryReport extends RxComponentInner {
 
 	async main() {
 		this.config = structuredClone(this.state.config)
-		this.settings = this.config.settings.summaryReport
+		this.settings = this.config.settings.report
 
 		for (const plot of this.state.plots) {
 			if (this.components.plots[plot.id]) continue
@@ -51,7 +51,7 @@ export class SummaryReport extends RxComponentInner {
 	}
 
 	async setPlot(plot) {
-		//console.log('summaryReport init plot', plot)
+		//console.log('report init plot', plot)
 		const header = this.view.dom.mainDiv.append('div').style('font-size', '1.2em').style('font-weight', 'bold')
 		const holder = this.view.dom.mainDiv.append('div')
 		const opts = structuredClone(plot)
@@ -87,14 +87,14 @@ export async function getPlotConfig(opts, app) {
 			controls: {
 				isOpen: false // control panel is hidden by default
 			},
-			SummaryReport: getDefaultSummaryReportSettings(),
+			Report: getDefaultReportSettings(),
 			startColor: {}, //dict to store the start color of the gradient for each chart when using continuous color
 			stopColor: {} //dict to store the stop color of the gradient for each chart when using continuous color
 		}
 	}
 
 	try {
-		const config = app.vocabApi?.termdbConfig?.plotConfigByCohort?.default?.summaryReport
+		const config = app.vocabApi?.termdbConfig?.plotConfigByCohort?.default?.report
 		copyMerge(plot, config, opts)
 
 		return plot
@@ -104,9 +104,9 @@ export async function getPlotConfig(opts, app) {
 	}
 }
 
-export const summaryReportInit = getCompInit(SummaryReport)
+export const reportInit = getCompInit(Report)
 // this alias will allow abstracted dynamic imports
-export const componentInit = summaryReportInit
+export const componentInit = reportInit
 
 export async function makeChartBtnMenu(holder, chartsInstance) {
 	const countryTW: any = { id: 'ISOcode' }
@@ -132,7 +132,7 @@ export async function makeChartBtnMenu(holder, chartsInstance) {
 				chartsInstance.app.dispatch({
 					type: 'plot_create',
 					config: {
-						chartType: 'summaryReport',
+						chartType: 'report',
 						country
 					}
 				})
@@ -142,6 +142,6 @@ export async function makeChartBtnMenu(holder, chartsInstance) {
 	}
 }
 
-export function getDefaultSummaryReportSettings() {
+export function getDefaultReportSettings() {
 	return {}
 }

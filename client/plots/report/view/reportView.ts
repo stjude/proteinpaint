@@ -1,15 +1,15 @@
 import { select } from 'd3-selection'
-import type { SummaryReport } from '../summaryReport'
-export class SummaryReportView {
+import type { Report } from '../report.ts'
+export class ReportView {
 	opts: any
 	dom: any
-	summaryReport: SummaryReport
+	report: Report
 	loading: any
 	loadingDiv: any
 
-	constructor(summaryReport: SummaryReport) {
-		this.opts = summaryReport.opts
-		this.summaryReport = summaryReport
+	constructor(report: Report) {
+		this.opts = report.opts
+		this.report = report
 
 		const leftDiv = this.opts.holder.insert('div').style('display', 'inline-block')
 		const controlsHolder = leftDiv
@@ -31,7 +31,7 @@ export class SummaryReportView {
 		}
 
 		if (this.dom.header) {
-			this.dom.header.html(this.summaryReport.config.name || 'Summary Report')
+			this.dom.header.html(this.report.config.name || 'Summary Report')
 		}
 		document.addEventListener('scroll', () => this?.dom?.tooltip?.hide())
 		select('.sjpp-output-sandbox-content').on('scroll', () => this.dom.tooltip.hide())
