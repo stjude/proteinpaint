@@ -35,6 +35,163 @@ function convertMclassKeysToRustFormat(mclassKeys: string[]): string[] {
 }
 
 /**
+ * Adds expandable failed files section to any stats container
+ * @param statsContainer - The stats container to append the expandable section to
+ * @param failedFilesInfo - Object containing failed files data and error summaries
+ */
+function addExpandableFailedFilesToStats(statsContainer, failedFilesInfo) {
+	// Create expandable container for failed files
+	const expandableContainer = statsContainer.append('div').style('margin-top', '12px')
+
+	// Create clickable header
+	const expandableHeader = expandableContainer
+		.append('div')
+		.style('display', 'flex')
+		.style('align-items', 'center')
+		.style('gap', '8px')
+		.style('cursor', 'pointer')
+		.style('padding', '8px')
+		.style('border-radius', '4px')
+		.style('transition', 'background-color 0.2s')
+		.style('background-color', 'rgba(220, 53, 69, 0.1)')
+		.style('border', '1px solid rgba(220, 53, 69, 0.2)')
+		.on('mouseenter', function (this: HTMLElement) {
+			select(this).style('background-color', 'rgba(220, 53, 69, 0.15)')
+		})
+		.on('mouseleave', function (this) {
+			select(this).style('background-color', 'rgba(220, 53, 69, 0.1)')
+		})
+
+	// Expand/collapse icon
+	const expandIcon = expandableHeader
+		.append('span')
+		.style('font-size', '12px')
+		.style('color', '#dc3545')
+		.style('transition', 'transform 0.2s')
+		.text('▶')
+
+	// Clickable text
+	expandableHeader
+		.append('span')
+		.style('color', '#dc3545')
+		.style('text-decoration', 'underline')
+		.style('font-size', '13px')
+		.style('font-weight', '500')
+		.text(`View ${failedFilesInfo.count} failed files details`)
+
+	// Error summary text (visible by default)
+	if (failedFilesInfo.errorSummary) {
+		const { errorSummary } = failedFilesInfo
+		const summaryItems: string[] = []
+
+		if (errorSummary.connectionErrors > 0) {
+			summaryItems.push(`${errorSummary.connectionErrors} connection`)
+		}
+		if (errorSummary.timeoutErrors > 0) {
+			summaryItems.push(`${errorSummary.timeoutErrors} timeout`)
+		}
+		if (errorSummary.serverErrors > 0) {
+			summaryItems.push(`${errorSummary.serverErrors} server`)
+		}
+		if (errorSummary.otherErrors > 0) {
+			summaryItems.push(`${errorSummary.otherErrors} other`)
+		}
+
+		if (summaryItems.length > 0) {
+			expandableHeader
+				.append('span')
+				.style('margin-left', '8px')
+				.style('font-size', '12px')
+				.style('color', '#666')
+				.style('font-weight', 'normal')
+				.text(`(${summaryItems.join(', ')})`)
+		}
+	}
+
+	// Create expandable content (hidden by default)
+	const expandableContent = expandableContainer
+		.append('div')
+		.style('display', 'none')
+		.style('margin-top', '12px')
+		.style('padding', '12px')
+		.style('background-color', '#fff')
+		.style('border', '1px solid #f5c6cb')
+		.style('border-radius', '4px')
+		.style('box-shadow', 'inset 0 1px 3px rgba(0, 0, 0, 0.1)')
+
+	// Failed files table section (no error summary box)
+	const tableSection = expandableContent.append('div')
+
+	tableSection
+		.append('h6')
+		.style('margin', '0 0 12px 0')
+		.style('color', '#721c24')
+		.style('font-size', '14px')
+		.style('font-weight', 'bold')
+		.text('📋 Failed Files Details')
+
+	// Create table container with max height and scroll
+	const tableContainer = tableSection
+		.append('div')
+		.style('max-height', '300px')
+		.style('overflow-y', 'auto')
+		.style('border', '1px solid #dee2e6')
+		.style('border-radius', '4px')
+
+	// Render the failed files table using existing renderTable function
+	renderTable({
+		div: tableContainer,
+		columns: failedFilesInfo.tableData.headers.map(header => ({
+			label: header,
+			sortable: true
+		})),
+		rows: failedFilesInfo.tableData.rows.map(row => row.map(cell => ({ value: cell }))),
+		showLines: true,
+		striped: true,
+		showHeader: true,
+		maxHeight: '280px',
+		resize: false,
+		header: {
+			allowSort: true,
+			style: {
+				'background-color': '#f8f9fa',
+				'font-weight': 'bold',
+				'border-bottom': '2px solid #dee2e6'
+			}
+		}
+	})
+
+	// Add explanatory text
+	expandableContent
+		.append('div')
+		.style('margin-top', '12px')
+		.style('padding', '8px')
+		.style('background-color', '#f8f9fa')
+		.style('border-radius', '4px')
+		.style('font-size', '12px')
+		.style('color', '#495057')
+		.style('line-height', '1.4')
+		.text('These files could not be downloaded due to network or server issues and were excluded from the analysis.')
+
+	// Track expanded state
+	let isExpanded = false
+
+	// Add click handler for expand/collapse
+	expandableHeader.on('click', function () {
+		isExpanded = !isExpanded
+
+		if (isExpanded) {
+			// Expand
+			expandableContent.style('display', 'block')
+			expandIcon.style('transform', 'rotate(90deg)').text('▼')
+		} else {
+			// Collapse
+			expandableContent.style('display', 'none')
+			expandIcon.style('transform', 'rotate(0deg)').text('▶')
+		}
+	})
+}
+/**
  * Function to show the deduplication popup
  * Pass your deduplication stats that include the console.log data
  */
@@ -240,197 +397,6 @@ function gdcGrin2ShowDeduplicationPopup(deduplicationStats) {
 		if (event.key === 'Escape') {
 			popup.remove()
 			select('body').on('keydown.popup', null)
-		}
-	})
-}
-
-/**
- * Function to show the failed files popup
- * Similar to deduplication popup but for download failures
- */
-function gdcGrin2ShowFailedFilesPopup(failedFilesData) {
-	// Remove any existing popup
-	select('.failed-files-popup').remove()
-
-	// Create popup overlay
-	const popup = select('body')
-		.append('div')
-		.attr('class', 'failed-files-popup')
-		.style('position', 'fixed')
-		.style('top', '0')
-		.style('left', '0')
-		.style('width', '100%')
-		.style('height', '100%')
-		.style('background-color', 'rgba(0, 0, 0, 0.5)')
-		.style('z-index', '9999')
-		.style('display', 'flex')
-		.style('justify-content', 'center')
-		.style('align-items', 'center')
-
-	// Create popup content
-	const popupContent = popup
-		.append('div')
-		.style('background-color', 'white')
-		.style('border-radius', '8px')
-		.style('max-width', '800px')
-		.style('width', '90%')
-		.style('max-height', '80vh')
-		.style('overflow', 'hidden')
-		.style('box-shadow', '0 4px 20px rgba(0, 0, 0, 0.3)')
-
-	// Header
-	const header = popupContent
-		.append('div')
-		.style('padding', '16px 20px')
-		.style('border-bottom', '1px solid #e0e0e0')
-		.style('display', 'flex')
-		.style('justify-content', 'space-between')
-		.style('align-items', 'center')
-
-	header
-		.append('h3')
-		.style('margin', '0')
-		.style('color', '#333')
-		.text(`Failed File Downloads (${failedFilesData.count} files)`)
-
-	// Close button
-	header
-		.append('button')
-		.style('background', 'none')
-		.style('border', 'none')
-		.style('font-size', '20px')
-		.style('cursor', 'pointer')
-		.style('color', '#666')
-		.text('✕')
-		.on('click', function () {
-			popup.remove()
-		})
-
-	// Content area - scrollable
-	const content = popupContent
-		.append('div')
-		.style('padding', '20px')
-		.style('max-height', '60vh')
-		.style('overflow-y', 'auto')
-
-	// Error summary section
-	if (failedFilesData.errorSummary) {
-		content
-			.append('h4')
-			.style('margin', '0 0 12px 0')
-			.style('color', '#d32f2f')
-			.style('display', 'flex')
-			.style('align-items', 'center')
-			.style('gap', '8px')
-			.html('📊 Error Summary')
-
-		const summaryDiv = content
-			.append('div')
-			.style('margin-bottom', '20px')
-			.style('padding', '12px')
-			.style('background-color', '#fff3e0')
-			.style('border-radius', '6px')
-			.style('border-left', '4px solid #ff9800')
-
-		const { errorSummary } = failedFilesData
-		const summaryItems: string[] = []
-
-		if (errorSummary.connectionErrors > 0) {
-			summaryItems.push(`${errorSummary.connectionErrors} connection errors`)
-		}
-		if (errorSummary.timeoutErrors > 0) {
-			summaryItems.push(`${errorSummary.timeoutErrors} timeout errors`)
-		}
-		if (errorSummary.serverErrors > 0) {
-			summaryItems.push(`${errorSummary.serverErrors} server errors`)
-		}
-		if (errorSummary.otherErrors > 0) {
-			summaryItems.push(`${errorSummary.otherErrors} other errors`)
-		}
-
-		summaryDiv.append('div').style('font-size', '14px').style('color', '#333').text(summaryItems.join(', '))
-
-		// Add separator
-		content.append('hr').style('margin', '20px 0').style('border', 'none').style('border-top', '1px solid #e0e0e0')
-	}
-
-	// Failed files table section
-	content
-		.append('h4')
-		.style('margin', '0 0 12px 0')
-		.style('color', '#d32f2f')
-		.style('display', 'flex')
-		.style('align-items', 'center')
-		.style('gap', '8px')
-		.html('📋 Failed Files Details')
-
-	// Create table container
-	const tableContainer = content.append('div').style('margin-top', '12px')
-
-	// Render the failed files table using your existing renderTable function
-	renderTable({
-		div: tableContainer,
-		columns: failedFilesData.tableData.headers.map(header => ({
-			label: header,
-			sortable: true
-		})),
-		rows: failedFilesData.tableData.rows.map(row => row.map(cell => ({ value: cell }))),
-		showLines: true,
-		striped: true,
-		showHeader: true,
-		maxHeight: '300px',
-		resize: false,
-		header: {
-			allowSort: true,
-			style: {
-				'background-color': '#f8f9fa',
-				'font-weight': 'bold',
-				'border-bottom': '2px solid #dee2e6'
-			}
-		}
-	})
-
-	// Footer
-	const footer = popupContent
-		.append('div')
-		.style('padding', '16px 20px')
-		.style('border-top', '1px solid #e0e0e0')
-		.style('background-color', '#f8f9fa')
-		.style('display', 'flex')
-		.style('justify-content', 'space-between')
-		.style('align-items', 'center')
-
-	footer
-		.append('div')
-		.style('font-size', '13px')
-		.style('color', '#666')
-		.text('These files could not be downloaded due to network or server issues.')
-
-	footer
-		.append('button')
-		.style('background-color', '#2c5aa0')
-		.style('color', 'white')
-		.style('border', 'none')
-		.style('padding', '8px 16px')
-		.style('border-radius', '4px')
-		.style('cursor', 'pointer')
-		.text('Close')
-		.on('click', function () {
-			popup.remove()
-		})
-
-	// Close popup when clicking outside
-	popup.on('click', function (event) {
-		if (event.target === popup.node()) {
-			popup.remove()
-		}
-	})
-
-	// Close with Escape key
-	select('body').on('keydown.failed-popup', function (event) {
-		if (event.key === 'Escape') {
-			popup.remove()
-			select('body').on('keydown.failed-popup', null)
 		}
 	})
 }
@@ -1758,84 +1724,6 @@ async function getFilesAndShowTable(obj) {
 				failedFilesInfo = null
 			}
 
-			// Always show file download summary if we have rustResult data
-			if (parsedRustResult && parsedRustResult.summary) {
-				// Create the summary info div (similar to deduplication div)
-				if (!obj.failedFilesInfoDiv) {
-					obj.failedFilesInfoDiv = obj.resultDiv.append('div')
-				}
-
-				obj.failedFilesInfoDiv.selectAll('*').remove()
-
-				const summaryDiv = obj.failedFilesInfoDiv
-					.append('div')
-					.style('background-color', failedFilesInfo && failedFilesInfo.count > 0 ? '#fff3f3' : '#f0f8ff')
-					.style('border', failedFilesInfo && failedFilesInfo.count > 0 ? '1px solid #f5c6cb' : '1px solid #87ceeb')
-					.style('border-radius', '4px')
-					.style('padding', '12px')
-					.style('margin', '10px 0 20px 0')
-					.style('max-width', '100%')
-					.style('width', 'fit-content')
-
-				// Header with appropriate icon and color
-				const headerIcon = failedFilesInfo && failedFilesInfo.count > 0 ? '⚠️' : '✅'
-				const headerColor = failedFilesInfo && failedFilesInfo.count > 0 ? '#721c24' : '#2c5aa0'
-				const headerText =
-					failedFilesInfo && failedFilesInfo.count > 0
-						? 'File Download Summary (Some Files Failed)'
-						: 'File Download Summary (All Files Successful)'
-
-				summaryDiv
-					.append('div')
-					.style('font-weight', 'bold')
-					.style('color', headerColor)
-					.style('margin-bottom', '8px')
-					.text(`${headerIcon} ${headerText}`)
-
-				// Build description based on summary data
-				const totalAttempted = parsedRustResult.summary.total_files
-				const successful = parsedRustResult.summary.successful_files
-				const failed = parsedRustResult.summary.failed_files
-
-				let descriptionText = `Downloaded <strong>${successful}</strong> of <strong>${totalAttempted}</strong> files successfully`
-
-				if (failed > 0) {
-					descriptionText += `. <strong>${failed}</strong> files failed to download and were excluded from analysis.`
-				} else {
-					descriptionText += `. All files downloaded without issues.`
-				}
-
-				summaryDiv
-					.append('div')
-					.style('margin-bottom', '8px')
-					.style('font-size', '14px')
-					.style('color', headerColor)
-					.html(descriptionText)
-
-				// Add clickable link to view failed files (only if there are failures)
-				if (failedFilesInfo && failedFilesInfo.count > 0) {
-					summaryDiv
-						.append('div')
-						.append('a')
-						.style('color', headerColor)
-						.style('text-decoration', 'underline')
-						.style('cursor', 'pointer')
-						.style('font-size', '13px')
-						.text('View failed files details')
-						.on('click', function () {
-							gdcGrin2ShowFailedFilesPopup(failedFilesInfo)
-						})
-				} else {
-					// Optional: Add a message for successful downloads
-					summaryDiv
-						.append('div')
-						.style('font-size', '13px')
-						.style('color', '#666')
-						.style('font-style', 'italic')
-						.text('All files processed successfully for analysis.')
-				}
-			}
-
 			if (!response.pngImg) throw 'result.pngImg missing'
 
 			// Create image URL from base64 data
@@ -1973,8 +1861,11 @@ async function getFilesAndShowTable(obj) {
 					}
 				})
 
+				// Replace the Analysis Summary section in runGRIN2Analysis
+				// This consolidates both analysisStats and file download stats into one panel
+
 				// Create summary statistics panel
-				if (response.analysisStats) {
+				if (response.analysisStats || (parsedRustResult && parsedRustResult.summary)) {
 					const statsPanel = statsContainer
 						.append('div')
 						.style('background-color', '#f8f9fa')
@@ -1993,50 +1884,62 @@ async function getFilesAndShowTable(obj) {
 						.style('border-bottom', '2px solid #dee2e6')
 						.style('padding-bottom', '8px')
 
-					// File processing stats
-					const fileStats = statsPanel.append('div').style('margin-bottom', '20px')
+					// File Download/Processing Stats Section
+					if (parsedRustResult && parsedRustResult.summary) {
+						const downloadStats = statsPanel.append('div').style('margin-bottom', '20px')
 
-					fileStats
-						.append('h6')
-						.text('File Processing')
-						.style('margin', '0 0 10px 0')
-						.style('color', '#495057')
-						.style('font-size', '14px')
-						.style('font-weight', 'bold')
+						downloadStats
+							.append('h6')
+							.text('File Download & Processing')
+							.style('margin', '0 0 10px 0')
+							.style('color', '#495057')
+							.style('font-size', '14px')
+							.style('font-weight', 'bold')
 
-					const fileStatsGrid = fileStats
-						.append('div')
-						.style('display', 'grid')
-						.style('grid-template-columns', '1fr 1fr')
-						.style('gap', '8px')
-						.style('font-size', '13px')
+						const downloadStatsGrid = downloadStats
+							.append('div')
+							.style('display', 'grid')
+							.style('grid-template-columns', '1fr 1fr')
+							.style('gap', '8px')
+							.style('font-size', '13px')
 
-					// File processing metrics
-					fileStatsGrid.append('div').style('color', '#6c757d').text('Total Files:')
-					fileStatsGrid
-						.append('div')
-						.style('font-weight', 'bold')
-						.text(response.analysisStats.total_files || 0)
+						// File download metrics from parsedRustResult
+						const totalAttempted = parsedRustResult.summary.total_files
+						const successful = parsedRustResult.summary.successful_files
+						const failed = parsedRustResult.summary.failed_files
 
-					fileStatsGrid.append('div').style('color', '#28a745').text('Successful:')
-					fileStatsGrid
-						.append('div')
-						.style('font-weight', 'bold')
-						.style('color', '#28a745')
-						.text(response.analysisStats.successful_files || 0)
+						downloadStatsGrid.append('div').style('color', '#6c757d').text('Total Attempted:')
+						downloadStatsGrid
+							.append('div')
+							.style('font-weight', 'bold')
+							.text(totalAttempted || 0)
 
-					fileStatsGrid.append('div').style('color', '#dc3545').text('Failed:')
-					fileStatsGrid
-						.append('div')
-						.style('font-weight', 'bold')
-						.style('color', '#dc3545')
-						.text(response.analysisStats.failed_files || 0)
+						downloadStatsGrid.append('div').style('color', '#28a745').text('Successfully Downloaded:')
+						downloadStatsGrid
+							.append('div')
+							.style('font-weight', 'bold')
+							.style('color', '#28a745')
+							.text(successful || 0)
 
-					// Data filtering stats
+						downloadStatsGrid.append('div').style('color', '#dc3545').text('Failed Downloads:')
+						downloadStatsGrid
+							.append('div')
+							.style('font-weight', 'bold')
+							.style('color', '#dc3545')
+							.text(failed || 0)
+
+						// Add expandable failed files section if there are failures
+						if (failedFilesInfo && failedFilesInfo.count > 0) {
+							addExpandableFailedFilesToStats(downloadStats, failedFilesInfo)
+						}
+					}
+
+					// Data Filtering Stats Section (if available)
 					if (
-						response.analysisStats.filtered_records !== undefined ||
-						response.analysisStats.filtered_maf_records !== undefined ||
-						response.analysisStats.filtered_cnv_records !== undefined
+						response.analysisStats &&
+						(response.analysisStats.filtered_records !== undefined ||
+							response.analysisStats.filtered_maf_records !== undefined ||
+							response.analysisStats.filtered_cnv_records !== undefined)
 					) {
 						const filterStats = statsPanel.append('div').style('margin-bottom', '20px')
 
