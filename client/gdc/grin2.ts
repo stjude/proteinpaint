@@ -1698,6 +1698,12 @@ async function getFilesAndShowTable(obj) {
 		button.innerHTML = 'Analyzing... Please wait'
 		button.disabled = true
 
+		// Clear/hide download button when starting new analysis
+		if (obj.downloadButtonDiv) {
+			obj.downloadButtonDiv.selectAll('*').remove()
+			obj.downloadButtonDiv.style('display', 'none')
+		}
+
 		// Clear previous results
 		obj.resultDiv.selectAll('*').remove()
 
