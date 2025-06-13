@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- GDC-GRIN2 improvements: When both MAF and CNV data types are selected, the interface now displays only cases with complete file sets; Cancer-specific cohort filtering: Extended GDC cohort filter support to CNV file listings via URL parameters, enabling targeted analysis of specific cancer types and study populations; Automated data type detection: Implemented prototype method for programmatically identifying CNV file data types; Streamlined deduplication interface: Replaced popup-based file exclusion details with an intuitive inline expandable view; Dynamic request optimization: Implemented conditional GRIN2 request structure that includes only selected data types reducing payload size; Streamlined mutation type handling: Simplified mclass mutation type management by eliminating redundant mappings and utilizing native classification keys directly; Extended top genes table: Added statistical significance indicators (p-values and q-values) for specific mutation types, along with patient impact counts; Comprehensive filtering metrics: The Analysis Summary now displays detailed counts of filtered MAF and CNV records based on user-specified parameters; Consolidated analysis dashboard: Integrated file download statistics directly into the Analysis Summary panel for a unified view of the analysis
+
 Fixes:
 - allow to customize font for many parts of block and mds3 tk
 - cnv.get() returns {cnvs[], cnvMsg} to include server generated msg on exceeding limit
