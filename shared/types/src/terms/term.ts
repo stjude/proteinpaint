@@ -105,6 +105,9 @@ export type BaseTerm = {
 	included_types?: string[]
 	isleaf?: boolean
 	values?: TermValues
+	/** Do not build .values{} when building termdb. Used for 
+	making categorical term with empty .values{} in TermdbTest */
+	skipValuesBuild?: boolean
 }
 
 export type Term = BaseTerm & (NumericTerm | CategoricalTerm | ConditionTerm | SampleLstTerm | SnpsTerm | GvTerm)
