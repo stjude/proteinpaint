@@ -43,10 +43,10 @@
       "pct": 75.36
     },
     "functions": {
-      "total": 41,
+      "total": 42,
       "covered": 29,
       "skipped": 0,
-      "pct": 70.73
+      "pct": 69.04
     },
     "statements": {
       "total": 232,
@@ -59,6 +59,16 @@
       "covered": 108,
       "skipped": 0,
       "pct": 56.84
+    },
+    "lowestPct": {
+      "curr": 56.84,
+      "prev": 56.84,
+      "diff": 0
+    },
+    "averagePct": {
+      "curr": 68.4125,
+      "prev": 68.83500000000001,
+      "diff": -0.42250000000001364
     }
   },
   "filter/filter.utils.js": {
@@ -3047,6 +3057,42 @@
       "curr": 100,
       "prev": 0,
       "diff": 100
+    }
+  },
+  "plots/barchart.js": {
+    "lines": {
+      "total": 423,
+      "covered": 4,
+      "skipped": 0,
+      "pct": 0.94
+    },
+    "functions": {
+      "total": 89,
+      "covered": 0,
+      "skipped": 0,
+      "pct": 0
+    },
+    "statements": {
+      "total": 473,
+      "covered": 4,
+      "skipped": 0,
+      "pct": 0.84
+    },
+    "branches": {
+      "total": 402,
+      "covered": 0,
+      "skipped": 0,
+      "pct": 0
+    },
+    "lowestPct": {
+      "curr": 0,
+      "prev": 0,
+      "diff": 0
+    },
+    "averagePct": {
+      "curr": 0.44499999999999995,
+      "prev": 0,
+      "diff": 0.44499999999999995
     }
   }
 }
