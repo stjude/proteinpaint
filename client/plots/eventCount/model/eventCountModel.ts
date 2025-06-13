@@ -24,18 +24,21 @@ export class EventCountModel extends RunchartModel {
 			if (yearA !== yearB) return yearA - yearB
 			return monthA - monthB
 		})
+		const events: any[] = []
 		for (const key of sortedKeys) {
 			const [year, month] = key.split('-')
 			const value = groupedSamples.get(key)
+			count += value.samples.length
+
 			for (const sample of value.samples) {
 				sample.x = getNumberFromDate(new Date(year, month, 15))
-				count += value.samples.length
 				sample.y = this.scatter.settings.showAccrual ? count : value.samples.length
+				events.push(sample.y)
 			}
 		}
 
 		const colorLegend = new Map(data.colorLegend) as Map<string, ColorLegendItem>
 		const shapeLegend = new Map(data.shapeLegend) as Map<string, ShapeLegendItem>
-		this.charts.push({ id, data, cohortSamples: samples, colorLegend, shapeLegend })
+		this.charts.push({ id, data, cohortSamples: samples, colorLegend, shapeLegend, events })
 	}
 }

@@ -202,12 +202,11 @@ export class ScatterViewModelBase {
 			}
 			const isEvents = this.scatter.config.term2 ? false : true
 			const term2Name = isEvents ? 'Events' : getTitle(this.scatter.config.term2.term.name, 60)
-			const padding = isEvents && this.scatter.settings.showAccrual ? 60 : 50
 			text = labelsG
 				.append('text')
 				.attr(
 					'transform',
-					`translate(${this.model.axisOffset.x - padding}, ${
+					`translate(${this.model.axisOffset.x - 50}, ${
 						this.scatter.settings.svgh / 2 + this.model.axisOffset.y
 					}) rotate(-90)`
 				)
