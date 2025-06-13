@@ -17,6 +17,12 @@ type SampleEntry = {
 	}
 }
 
+type CategoryEntry = {
+	key: string
+	label: string
+	samplecount: number
+}
+
 export type ValidGetDataResponse = {
 	samples: {
 		[index: string | number]: SampleEntry
@@ -33,6 +39,9 @@ export type ValidGetDataResponse = {
 				bins?: any
 				/** CTE.events. These info are not available in term object and is computed during run time. */
 				events?: any
+				/** Categories of term. Only computed for categorical terms that
+				have an empty term.values{}. */
+				categories?: CategoryEntry[]
 			}
 		>
 		/** metadata about samples (e.g. print names). avoid duplicating such in sample data elements (e.g. mutations)

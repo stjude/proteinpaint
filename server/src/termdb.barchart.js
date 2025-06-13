@@ -112,6 +112,7 @@ export async function barchart_data(q, ds, tdb) {
 	if (data.error) throw data.error
 	const samplesMap = new Map()
 	const bins = []
+	const categories = []
 	if (data.samples) {
 		const t1 = map.get(1)
 		const t2 = map.get(2)
@@ -131,6 +132,8 @@ export async function barchart_data(q, ds, tdb) {
 				const id = tw?.$id
 				if (id && data.refs.byTermId[id]?.bins) bins.push(data.refs.byTermId[id]?.bins)
 				else bins.push([])
+				if (id && data.refs.byTermId[id]?.categories) categories.push(data.refs.byTermId[id]?.categories)
+				else categories.push([])
 				if (q?.binColored) {
 					for (const bin of bins[i]) {
 						const qbin = q.binColored
@@ -189,8 +192,7 @@ export async function barchart_data(q, ds, tdb) {
 			pj: pj.times
 		}
 	}
-	const result = { data: pj.tree.results, bins, sampleType: data.sampleType }
-	if (data.categories) result.categories = data.categories
+	const result = { data: pj.tree.results, bins, categories, sampleType: data.sampleType }
 	return result
 }
 
