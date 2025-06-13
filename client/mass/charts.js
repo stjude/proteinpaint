@@ -184,8 +184,8 @@ function getChartTypeList(self, state) {
 			}
 		},
 		{
-			label: 'Summary Report',
-			chartType: 'summaryReport',
+			label: 'Report',
+			chartType: 'report',
 			clickTo: self.loadChartSpecificMenu
 		},
 		{
