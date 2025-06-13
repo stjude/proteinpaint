@@ -191,104 +191,132 @@ function addExpandableFailedFilesToStats(statsContainer, failedFilesInfo) {
 		}
 	})
 }
+
 /**
- * Function to show the deduplication popup
- * Pass your deduplication stats that include the console.log data
+ * Creates an expandable deduplication section inline with multi-column layout
+ * @param container - The container to append the expandable section to
+ * @param deduplicationStats - Object containing deduplication data
  */
-function gdcGrin2ShowDeduplicationPopup(deduplicationStats) {
-	// Remove any existing popup
-	select('.deduplication-popup').remove()
+function createExpandableDeduplicationSection(container, deduplicationStats) {
+	const duplicatesRemoved = deduplicationStats.duplicatesRemoved || 0
+	const sizeFilteredCount = deduplicationStats.filteredFiles ? deduplicationStats.filteredFiles.length : 0
+	const totalExcluded = duplicatesRemoved + sizeFilteredCount
 
-	// Create popup overlay
-	const popup = select('body')
+	if (totalExcluded === 0) {
+		// No exclusions - just show success message
+		return
+	}
+
+	// Create expandable container for excluded files
+	const expandableContainer = container.append('div').style('margin-top', '8px')
+
+	// Create clickable header
+	const expandableHeader = expandableContainer
 		.append('div')
-		.attr('class', 'deduplication-popup')
-		.style('position', 'fixed')
-		.style('top', '0')
-		.style('left', '0')
-		.style('width', '100%')
-		.style('height', '100%')
-		.style('background-color', 'rgba(0, 0, 0, 0.5)')
-		.style('z-index', '9999')
 		.style('display', 'flex')
-		.style('justify-content', 'center')
 		.style('align-items', 'center')
-
-	// Create popup content
-	const popupContent = popup
-		.append('div')
-		.style('background-color', 'white')
-		.style('border-radius', '8px')
-		.style('max-width', '700px')
-		.style('width', '90%')
-		.style('max-height', '80vh')
-		.style('overflow', 'hidden')
-		.style('box-shadow', '0 4px 20px rgba(0, 0, 0, 0.3)')
-
-	// Header
-	const header = popupContent
-		.append('div')
-		.style('padding', '16px 20px')
-		.style('border-bottom', '1px solid #e0e0e0')
-		.style('display', 'flex')
-		.style('justify-content', 'space-between')
-		.style('align-items', 'center')
-
-	const totalExcluded = deduplicationStats.duplicatesRemoved + (deduplicationStats.filteredFiles?.length || 0)
-
-	header.append('h3').style('margin', '0').style('color', '#333').text(`Excluded Files (${totalExcluded} total)`)
-
-	// Close button
-	header
-		.append('button')
-		.style('background', 'none')
-		.style('border', 'none')
-		.style('font-size', '20px')
+		.style('gap', '8px')
 		.style('cursor', 'pointer')
-		.style('color', '#666')
-		.text('✕')
-		.on('click', function () {
-			popup.remove()
+		.style('padding', '6px 8px')
+		.style('border-radius', '4px')
+		.style('transition', 'background-color 0.2s')
+		.style('background-color', 'rgba(216, 67, 21, 0.1)') // Orange theme for deduplication
+		.style('border', '1px solid rgba(216, 67, 21, 0.2)')
+		.on('mouseenter', function (this: HTMLElement) {
+			select(this).style('background-color', 'rgba(216, 67, 21, 0.15)')
+		})
+		.on('mouseleave', function (this: HTMLElement) {
+			select(this).style('background-color', 'rgba(216, 67, 21, 0.1)')
 		})
 
-	// Content area - scrollable
-	const content = popupContent
+	// Expand/collapse icon
+	const expandIcon = expandableHeader
+		.append('span')
+		.style('font-size', '12px')
+		.style('color', '#d84315')
+		.style('transition', 'transform 0.2s')
+		.text('▶')
+
+	// Clickable text
+	expandableHeader
+		.append('span')
+		.style('color', '#d84315')
+		.style('text-decoration', 'underline')
+		.style('font-size', '12px')
+		.style('font-weight', '500')
+		.text('View excluded files details')
+
+	// Summary text (visible by default)
+	const exclusionDetails: string[] = []
+	if (duplicatesRemoved > 0) {
+		exclusionDetails.push(`${duplicatesRemoved} duplicates`)
+	}
+	if (sizeFilteredCount > 0) {
+		exclusionDetails.push(`${sizeFilteredCount} oversized`)
+	}
+
+	if (exclusionDetails.length > 0) {
+		expandableHeader
+			.append('span')
+			.style('margin-left', '8px')
+			.style('font-size', '11px')
+			.style('color', '#666')
+			.style('font-weight', 'normal')
+			.text(`(${exclusionDetails.join(', ')})`)
+	}
+
+	// Create expandable content (hidden by default) with max height and scroll
+	const expandableContent = expandableContainer
 		.append('div')
-		.style('padding', '20px')
-		.style('max-height', '55vh')
-		.style('overflow-y', 'auto')
+		.style('display', 'none')
+		.style('margin-top', '8px')
+		.style('padding', '12px')
+		.style('background-color', '#fff')
+		.style('border', '1px solid rgba(216, 67, 21, 0.3)')
+		.style('border-radius', '4px')
+		.style('box-shadow', 'inset 0 1px 3px rgba(0, 0, 0, 0.1)')
+		.style('max-height', '400px') // Limit height
+		.style('overflow-y', 'auto') // Add scroll if needed
 
 	// Section 1: Duplicate Files Removed
 	if (deduplicationStats.caseDetails && deduplicationStats.caseDetails.length > 0) {
-		content
-			.append('h4')
-			.style('margin', '0 0 12px 0')
-			.style('color', '#d84315')
-			.style('display', 'flex')
-			.style('align-items', 'center')
-			.style('gap', '8px')
-			.html('🔄 Duplicate Files Removed')
+		const duplicatesSection = expandableContent.append('div').style('margin-bottom', '16px')
 
-		content
+		duplicatesSection
+			.append('h6')
+			.style('margin', '0 0 8px 0')
+			.style('color', '#d84315')
+			.style('font-size', '13px')
+			.style('font-weight', 'bold')
+			.text('🔄 Duplicate Files Removed')
+
+		duplicatesSection
 			.append('p')
-			.style('margin', '0 0 16px 0')
-			.style('font-size', '14px')
+			.style('margin', '0 0 12px 0')
+			.style('font-size', '12px')
 			.style('color', '#666')
 			.text(`${deduplicationStats.duplicatesRemoved} duplicate files were removed (largest file kept for each case)`)
 
+		// Create multi-column container for duplicate cases
+		const duplicatesCasesContainer = duplicatesSection
+			.append('div')
+			.style('display', 'grid')
+			.style('grid-template-columns', 'repeat(auto-fill, minmax(300px, 1fr))')
+			.style('gap', '8px')
+
 		deduplicationStats.caseDetails.forEach(caseInfo => {
-			const caseDiv = content
+			const caseDiv = duplicatesCasesContainer
 				.append('div')
-				.style('margin-bottom', '8px')
-				.style('padding', '8px 12px')
+				.style('padding', '6px 8px')
 				.style('background-color', '#fff3e0')
-				.style('border-radius', '4px')
+				.style('border-radius', '3px')
 				.style('border-left', '3px solid #ff9800')
 
 			caseDiv
 				.append('div')
-				.style('font-size', '14px')
+				.style('font-size', '12px')
 				.style('color', '#333')
+				.style('line-height', '1.3')
 				.html(
 					`<strong>Case ${caseInfo.caseName}:</strong> Found ${caseInfo.fileCount} MAF files, keeping largest (${bplen(
 						caseInfo.keptFileSize
@@ -301,104 +329,158 @@ function gdcGrin2ShowDeduplicationPopup(deduplicationStats) {
 	if (deduplicationStats.filteredFiles && deduplicationStats.filteredFiles.length > 0) {
 		// Add separator if we have both sections
 		if (deduplicationStats.caseDetails && deduplicationStats.caseDetails.length > 0) {
-			content.append('hr').style('margin', '20px 0').style('border', 'none').style('border-top', '1px solid #e0e0e0')
+			expandableContent
+				.append('hr')
+				.style('margin', '12px 0')
+				.style('border', 'none')
+				.style('border-top', '1px solid #e0e0e0')
 		}
 
-		content
-			.append('h4')
-			.style('margin', '0 0 12px 0')
-			.style('color', '#c62828')
-			.style('display', 'flex')
-			.style('align-items', 'center')
-			.style('gap', '8px')
-			.html('📏 Files Excluded by Size')
+		const sizeFilterSection = expandableContent.append('div')
 
-		content
+		sizeFilterSection
+			.append('h6')
+			.style('margin', '0 0 8px 0')
+			.style('color', '#c62828')
+			.style('font-size', '13px')
+			.style('font-weight', 'bold')
+			.text('📏 Files Excluded by Size')
+
+		sizeFilterSection
 			.append('p')
-			.style('margin', '0 0 16px 0')
-			.style('font-size', '14px')
+			.style('margin', '0 0 12px 0')
+			.style('font-size', '12px')
 			.style('color', '#666')
 			.text(`${deduplicationStats.filteredFiles.length} files were excluded for being too large (>${bplen(1000000)})`)
 
+		// Create multi-column container for oversized files
+		const oversizedFilesContainer = sizeFilterSection
+			.append('div')
+			.style('display', 'grid')
+			.style('grid-template-columns', 'repeat(auto-fill, minmax(280px, 1fr))')
+			.style('gap', '8px')
+
 		deduplicationStats.filteredFiles.forEach(fileInfo => {
-			const fileDiv = content
+			const fileDiv = oversizedFilesContainer
 				.append('div')
-				.style('margin-bottom', '8px')
-				.style('padding', '8px 12px')
+				.style('padding', '6px 8px')
 				.style('background-color', '#ffebee')
-				.style('border-radius', '4px')
+				.style('border-radius', '3px')
 				.style('border-left', '3px solid #f44336')
 
 			fileDiv
 				.append('div')
-				.style('font-size', '13px')
+				.style('font-size', '11px')
 				.style('color', '#333')
-				.style('margin-bottom', '4px')
+				.style('margin-bottom', '2px')
+				.style('line-height', '1.2')
 				.html(`<strong>File ID:</strong> ${fileInfo.fileId}`)
 
 			fileDiv
 				.append('div')
-				.style('font-size', '12px')
+				.style('font-size', '10px')
 				.style('color', '#666')
+				.style('line-height', '1.2')
 				.text(`Size: ${bplen(fileInfo.fileSize)} - ${fileInfo.reason}`)
 		})
 	}
 
-	// Show message if no excluded files
-	if (
-		(!deduplicationStats.caseDetails || deduplicationStats.caseDetails.length === 0) &&
-		(!deduplicationStats.filteredFiles || deduplicationStats.filteredFiles.length === 0)
-	) {
-		content.append('div').style('text-align', 'center').style('padding', '40px').style('color', '#666').html(`
-				<div style="font-size: 48px; margin-bottom: 16px;">✅</div>
-				<p>No files were excluded.</p>
-				<p style="font-size: 14px;">All files passed size and deduplication checks.</p>
-			`)
-	}
-
-	// Footer
-	const footer = popupContent
+	// Add explanatory text
+	expandableContent
 		.append('div')
-		.style('padding', '16px 20px')
-		.style('border-top', '1px solid #e0e0e0')
+		.style('margin-top', '12px')
+		.style('padding', '6px 8px')
 		.style('background-color', '#f8f9fa')
-		.style('display', 'flex')
-		.style('justify-content', 'space-between')
-		.style('align-items', 'center')
-
-	footer
-		.append('div')
-		.style('font-size', '13px')
-		.style('color', '#666')
+		.style('border-radius', '4px')
+		.style('font-size', '11px')
+		.style('color', '#495057')
+		.style('line-height', '1.3')
 		.text('Files are filtered to ensure optimal performance and avoid duplicates.')
 
-	footer
-		.append('button')
-		.style('background-color', '#2c5aa0')
-		.style('color', 'white')
-		.style('border', 'none')
-		.style('padding', '8px 16px')
-		.style('border-radius', '4px')
-		.style('cursor', 'pointer')
-		.text('Close')
-		.on('click', function () {
-			popup.remove()
-		})
+	// Track expanded state
+	let isExpanded = false
 
-	// Close popup when clicking outside
-	popup.on('click', function (event) {
-		if (event.target === popup.node()) {
-			popup.remove()
+	// Add click handler for expand/collapse
+	expandableHeader.on('click', function () {
+		isExpanded = !isExpanded
+
+		if (isExpanded) {
+			// Expand
+			expandableContent.style('display', 'block')
+			expandIcon.style('transform', 'rotate(90deg)').text('▼')
+		} else {
+			// Collapse
+			expandableContent.style('display', 'none')
+			expandIcon.style('transform', 'rotate(0deg)').text('▶')
 		}
 	})
+}
 
-	// Close with Escape key
-	select('body').on('keydown.popup', function (event) {
-		if (event.key === 'Escape') {
-			popup.remove()
-			select('body').on('keydown.popup', null)
+// Updated updateDedupStatus function to use inline expandable instead of popup link
+function updateDedupStatus(obj, deduplicationStats) {
+	if (!obj.dedupStatusElement) return
+
+	const dedupElement = obj.dedupStatusElement
+	dedupElement.selectAll('*').remove() // Clear existing content
+
+	if (!deduplicationStats) {
+		dedupElement.style('color', '#666').text('No deduplication data available')
+		return
+	}
+
+	// Create a container for the detailed dedup info
+	const dedupContainer = dedupElement
+		.append('div')
+		.style('display', 'flex')
+		.style('flex-direction', 'column')
+		.style('gap', '6px')
+
+	const duplicatesRemoved = deduplicationStats.duplicatesRemoved || 0
+	const sizeFilteredCount = deduplicationStats.filteredFiles ? deduplicationStats.filteredFiles.length : 0
+	const totalExcluded = duplicatesRemoved + sizeFilteredCount
+	const originalTotal = deduplicationStats.originalFileCount + sizeFilteredCount
+
+	if (totalExcluded > 0) {
+		// Summary line
+		const summaryDiv = dedupContainer
+			.append('div')
+			.style('font-size', '14px')
+			.style('color', '#d84315')
+			.style('font-weight', '500')
+
+		summaryDiv.html(
+			`Found <strong>${originalTotal}</strong> total MAF files, excluded <strong>${totalExcluded}</strong>`
+		)
+
+		// Final result line
+		const resultDiv = dedupContainer
+			.append('div')
+			.style('font-size', '13px')
+			.style('color', '#28a745')
+			.style('font-weight', '500')
+
+		resultDiv.html(`Showing <strong>${deduplicationStats.deduplicatedFileCount}</strong> unique cases`)
+		if (duplicatesRemoved > 0) {
+			resultDiv.append('span').style('color', '#666').style('font-weight', 'normal').text(' (largest file per case)')
 		}
-	})
+
+		// Add inline expandable section instead of popup link
+		createExpandableDeduplicationSection(dedupContainer, deduplicationStats)
+	} else {
+		// No exclusions
+		dedupContainer
+			.append('div')
+			.style('color', '#28a745')
+			.style('font-weight', '500')
+			.style('font-size', '14px')
+			.html(`All <strong>${deduplicationStats.deduplicatedFileCount}</strong> files included`)
+
+		dedupContainer
+			.append('div')
+			.style('color', '#666')
+			.style('font-size', '13px')
+			.text('No duplicates or oversized files found')
+	}
 }
 
 // Adding type definitions to solve typescript errors
@@ -854,7 +936,6 @@ function makeControls(obj) {
 			.style('font-size', '14px')
 			.style('color', '#666')
 
-		dedupStatus.text('File deduplication status will appear here after loading files')
 		obj.dedupStatusElement = dedupStatus
 	}
 
@@ -2031,97 +2112,5 @@ async function getFilesAndShowTable(obj) {
 		button.innerHTML = oldText
 		button.disabled = false
 		obj.busy = false
-	}
-}
-
-function updateDedupStatus(obj, deduplicationStats) {
-	if (!obj.dedupStatusElement) return
-
-	const dedupElement = obj.dedupStatusElement
-	dedupElement.selectAll('*').remove() // Clear existing content
-
-	if (!deduplicationStats) {
-		dedupElement.style('color', '#666').text('No deduplication data available')
-		return
-	}
-
-	// Create a container for the detailed dedup info
-	const dedupContainer = dedupElement
-		.append('div')
-		.style('display', 'flex')
-		.style('flex-direction', 'column')
-		.style('gap', '8px')
-
-	const duplicatesRemoved = deduplicationStats.duplicatesRemoved || 0
-	const sizeFilteredCount = deduplicationStats.filteredFiles ? deduplicationStats.filteredFiles.length : 0
-	const totalExcluded = duplicatesRemoved + sizeFilteredCount
-	const originalTotal = deduplicationStats.originalFileCount + sizeFilteredCount
-
-	if (totalExcluded > 0) {
-		// Summary line
-		const summaryDiv = dedupContainer
-			.append('div')
-			.style('font-size', '14px')
-			.style('color', '#d84315')
-			.style('font-weight', '500')
-
-		summaryDiv.html(
-			`Found <strong>${originalTotal}</strong> total MAF files, excluded <strong>${totalExcluded}</strong>`
-		)
-
-		// Details line
-		const detailsDiv = dedupContainer.append('div').style('font-size', '13px').style('color', '#666')
-
-		const exclusionDetails: string[] = []
-		if (duplicatesRemoved > 0) {
-			exclusionDetails.push(`${duplicatesRemoved} duplicates from same cases`)
-		}
-		if (sizeFilteredCount > 0) {
-			exclusionDetails.push(`${sizeFilteredCount} files too large`)
-		}
-
-		detailsDiv.text(`(${exclusionDetails.join(' and ')})`)
-
-		// Final result line
-		const resultDiv = dedupContainer
-			.append('div')
-			.style('font-size', '13px')
-			.style('color', '#28a745')
-			.style('font-weight', '500')
-
-		resultDiv.html(`Showing <strong>${deduplicationStats.deduplicatedFileCount}</strong> unique cases`)
-		if (duplicatesRemoved > 0) {
-			resultDiv.append('span').style('color', '#666').style('font-weight', 'normal').text(' (largest file per case)')
-		}
-
-		// Add clickable link to view excluded files
-		if (totalExcluded > 0) {
-			const linkDiv = dedupContainer.append('div').style('margin-top', '4px')
-
-			linkDiv
-				.append('a')
-				.style('color', '#2c5aa0')
-				.style('text-decoration', 'underline')
-				.style('cursor', 'pointer')
-				.style('font-size', '12px')
-				.text('View excluded files details')
-				.on('click', function () {
-					gdcGrin2ShowDeduplicationPopup(deduplicationStats)
-				})
-		}
-	} else {
-		// No exclusions
-		dedupContainer
-			.append('div')
-			.style('color', '#28a745')
-			.style('font-weight', '500')
-			.style('font-size', '14px')
-			.html(`All <strong>${deduplicationStats.deduplicatedFileCount}</strong> files included`)
-
-		dedupContainer
-			.append('div')
-			.style('color', '#666')
-			.style('font-size', '13px')
-			.text('No duplicates or oversized files found')
 	}
 }
