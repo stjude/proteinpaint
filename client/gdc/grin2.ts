@@ -1,3 +1,15 @@
+/*
+================================================================================
+GRIN2 UI Module - Genomic Data Analysis Interface
+================================================================================
+A comprehensive UI for listing and analyzing genomic files (MAF, CNV, Fusion)
+from GDC cohorts, with GRIN2 analysis capabilities and result visualization.
+
+Author: PP Team
+Last Updated: 06-13-2025
+================================================================================
+*/
+
 import { dofetch3 } from '#common/dofetch'
 import { renderTable, sayerror } from '#dom'
 import { select } from 'd3-selection'
@@ -6,11 +18,19 @@ import type { GdcGRIN2listRequest } from '#types'
 import { mclass } from '@sjcrh/proteinpaint-shared/common.js'
 import { bplen } from '@sjcrh/proteinpaint-shared/common.js'
 
-/*
-a UI to list open-access maf and cnv files from current cohort
-let user selects some, for the backend to run GRIN2 analysis
-and display the resulting visualization
-*/
+// ================================================================================
+// TYPE DEFINITIONS & INTERFACES
+// ================================================================================
+
+// Interface for table row item
+interface TableRowItem {
+	html?: string
+	value?: any
+}
+
+// ================================================================================
+// UTILITY FUNCTIONS
+// ================================================================================
 
 /**
  * Converts mclass keys to the format expected by the Rust backend
@@ -33,6 +53,18 @@ function convertMclassKeysToRustFormat(mclassKeys: string[]): string[] {
 
 	return mclassKeys.map(key => mclassToRustMap[key]).filter(mapped => mapped !== undefined) // Remove unmapped keys
 }
+
+/**
+ * Simple helper to categorize mutation types for UI organization
+ */
+function getCategoryForMclass(key: string): 'coding' | 'noncoding' {
+	const codingTypes = ['M', 'N', 'F', 'D', 'I', 'ProteinAltering', 'S']
+	return codingTypes.includes(key) ? 'coding' : 'noncoding'
+}
+
+// ================================================================================
+// UI COMPONENT BUILDERS
+// ================================================================================
 
 /**
  * Adds expandable failed files section to any stats container
@@ -416,7 +448,13 @@ function createExpandableDeduplicationSection(container, deduplicationStats) {
 	})
 }
 
-// Updated updateDedupStatus function to use inline expandable instead of popup link
+/**
+ * Updates deduplication status display in MAF options section
+ * Shows summary of file filtering and provides expandable details
+ *
+ * @param obj - Main application object containing UI references
+ * @param deduplicationStats - Statistics from backend deduplication process
+ */
 function updateDedupStatus(obj, deduplicationStats) {
 	if (!obj.dedupStatusElement) return
 
@@ -483,76 +521,16 @@ function updateDedupStatus(obj, deduplicationStats) {
 	}
 }
 
-// Adding type definitions to solve typescript errors
-// Interface for table row item
-interface TableRowItem {
-	html?: string
-	value?: any
-}
-
-// List of data type options
-const datatypeOptions = [
-	{ option: 'mafOption', selected: true, label: 'Include Mutation' },
-	{ option: 'cnvOption', selected: false, label: 'Include CNV' },
-	{ option: 'fusionOption', selected: false, label: 'Include Fusion' }
-]
-
-export async function gdcGRIN2ui({ holder, filter0, callbacks, debugmode = false }) {
-	if (debugmode) {
-		// Debug logic
-	}
-	try {
-		if (callbacks) {
-			/* due to src/app.js line 100
-            delete this when that is reshaped to app.sjcharts.callbacks={}
-            */
-			delete callbacks.sjcharts
-			for (const n in callbacks) {
-				if (typeof callbacks[n] != 'function') throw `callbacks.${n} not function`
-			}
-		}
-		update({ filter0 })
-	} catch (e) {
-		console.log(e)
-		sayerror(holder, e instanceof Error ? e.message : String(e))
-	}
-
-	async function update({ filter0 }) {
-		holder.selectAll('*').remove()
-		holder.style('width', '100%').style('max-width', 'none')
-		const obj = {
-			errDiv: holder.append('div'),
-			controlDiv: holder.append('div'),
-			tableDiv: holder.append('div').style('width', '100%'),
-			deduplicationInfoDiv: holder.append('div'),
-			downloadButtonDiv: holder.append('div').style('margin-top', '10px').style('display', 'none'),
-			resultDiv: holder.append('div').style('margin-top', '20px'),
-			opts: {
-				filter0,
-				experimentalStrategy: 'WXS'
-			},
-			busy: false, // when analyzing, set to true for disabling ui interactivity
-			mafTableArg: null,
-			expStrategyRadio: null
-		}
-		makeControls(obj)
-		await getFilesAndShowTable(obj)
-		callbacks?.postRender?.(publicApi)
-	}
-
-	// return api to be accessible by react wrapper; will call api.update() to auto refresh cohortmaf UI on GFF cohort change
-	const publicApi = { update }
-	return publicApi
-}
+// ================================================================================
+// MAIN UI BUILDERS
+// ================================================================================
 
 /**
- * Simple helper to categorize mutation types for UI organization
+ * Creates the main data type options table with MAF, CNV, and Fusion sections
+ * Builds the primary configuration interface for analysis parameters
+ *
+ * @param obj - Main application object containing state and UI references
  */
-function getCategoryForMclass(key: string): 'coding' | 'noncoding' {
-	const codingTypes = ['M', 'N', 'F', 'D', 'I', 'ProteinAltering', 'S']
-	return codingTypes.includes(key) ? 'coding' : 'noncoding'
-}
-
 function makeControls(obj) {
 	// Initialize options objects with mclass-aware defaults
 	if (!obj.mafOptions) {
@@ -1341,6 +1319,16 @@ function makeControls(obj) {
 	updateSubmitButtonState()
 }
 
+// ================================================================================
+// DATA FETCHING & TABLE MANAGEMENT
+// ================================================================================
+
+/**
+ * Fetches available files and renders the selection table
+ * Main data loading function that handles file filtering and display
+ *
+ * @param obj - Main application object containing configuration
+ */
 async function getFilesAndShowTable(obj) {
 	obj.tableDiv.selectAll('*').remove()
 	obj.resultDiv.selectAll('*').remove()
@@ -2113,4 +2101,66 @@ async function getFilesAndShowTable(obj) {
 		button.disabled = false
 		obj.busy = false
 	}
+}
+
+// List of data type options
+const datatypeOptions = [
+	{ option: 'mafOption', selected: true, label: 'Include Mutation' },
+	{ option: 'cnvOption', selected: false, label: 'Include CNV' },
+	{ option: 'fusionOption', selected: false, label: 'Include Fusion' }
+]
+
+/**
+ * Main GRIN2 UI initialization function
+ * Entry point for the GRIN2 analysis interface
+ *
+ * @param config - Configuration object containing holder, filters, and callbacks
+ * @returns Public API object with update method
+ */
+export async function gdcGRIN2ui({ holder, filter0, callbacks, debugmode = false }) {
+	if (debugmode) {
+		// Debug logic
+	}
+	try {
+		if (callbacks) {
+			/* due to src/app.js line 100
+            delete this when that is reshaped to app.sjcharts.callbacks={}
+            */
+			delete callbacks.sjcharts
+			for (const n in callbacks) {
+				if (typeof callbacks[n] != 'function') throw `callbacks.${n} not function`
+			}
+		}
+		update({ filter0 })
+	} catch (e) {
+		console.log(e)
+		sayerror(holder, e instanceof Error ? e.message : String(e))
+	}
+
+	async function update({ filter0 }) {
+		holder.selectAll('*').remove()
+		holder.style('width', '100%').style('max-width', 'none')
+		const obj = {
+			errDiv: holder.append('div'),
+			controlDiv: holder.append('div'),
+			tableDiv: holder.append('div').style('width', '100%'),
+			deduplicationInfoDiv: holder.append('div'),
+			downloadButtonDiv: holder.append('div').style('margin-top', '10px').style('display', 'none'),
+			resultDiv: holder.append('div').style('margin-top', '20px'),
+			opts: {
+				filter0,
+				experimentalStrategy: 'WXS'
+			},
+			busy: false, // when analyzing, set to true for disabling ui interactivity
+			mafTableArg: null,
+			expStrategyRadio: null
+		}
+		makeControls(obj)
+		await getFilesAndShowTable(obj)
+		callbacks?.postRender?.(publicApi)
+	}
+
+	// return api to be accessible by react wrapper; will call api.update() to auto refresh cohortmaf UI on GFF cohort change
+	const publicApi = { update }
+	return publicApi
 }
