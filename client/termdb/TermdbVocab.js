@@ -133,16 +133,17 @@ export class TermdbVocab extends Vocab {
 	// categories computed from the data
 	mayFillInValues(opts, categories) {
 		if (!categories) return
-		for (const key of ['term0', 'term', 'term2']) {
-			const tw = opts[key]
+		if (!Array.isArray(categories)) throw 'categories is not array'
+		for (const [i, k] of ['term0', 'term', 'term2'].entries()) {
+			const tw = opts[k]
 			if (!tw) continue
-			const clst = categories[tw.$id]
-			if (!clst) continue
+			const clst = categories[i]
+			if (!clst?.length) continue
 			const term = tw.term
 			term.values = {}
 			term.samplecounts = []
 			for (const c of clst) {
-				term.values[c.key] = { key: c.key, label: c.label }
+				term.values[c.key] = { label: c.label }
 				term.samplecounts.push({ key: c.key, label: c.label, samplecount: c.samplecount })
 			}
 		}

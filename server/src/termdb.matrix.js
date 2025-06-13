@@ -55,7 +55,13 @@ export async function getData(q, ds, genome, onlyChildren = false) {
 		// query data and categories concurrently to avoid separate requests
 		// which can be time-consuming for datasets without local db (e.g. GDC)
 		const [data, categories] = await Promise.all([getSampleData(q, ds, onlyChildren), mayGetCategories(q)])
-		if (categories) data.categories = categories
+		if (categories) {
+			const byTermId = data.refs.byTermId
+			for (const k of Object.keys(categories)) {
+				if (!Object.keys(byTermId).includes(k)) byTermId[k] = {}
+				byTermId[k].categories = categories[k]
+			}
+		}
 		return data
 	} catch (e) {
 		if (e.stack) console.log(e.stack)
