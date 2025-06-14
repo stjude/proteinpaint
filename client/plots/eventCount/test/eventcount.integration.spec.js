@@ -229,7 +229,7 @@ tape('Change symbol size from menu', function (test) {
 	}
 })
 
-tape.only('Show accrual', function (test) {
+tape('Show accrual', function (test) {
 	test.timeoutAfter(10000)
 
 	runpp({
