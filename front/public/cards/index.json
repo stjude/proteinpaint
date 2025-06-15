@@ -116,11 +116,11 @@
             "type": "card",
             "name": "Lollipop",
             "section": "tracks",
-            "ribbon": {"text": "updated", "expireDate": "2025-06-15"},
+            "ribbon": {"text": "updated", "expireDate": "2025-07-20"},
             "description": "Coding mutations and gene fusions",
             "image": "https://proteinpaint.stjude.org/ppdemo/images/lollipop-square.png",
             "sandboxJson": "lollipop",
-            "searchterms": []
+            "searchterms": ["cnv", "copy number gain", "copy number loss"]
         },
         {
             "type": "card",

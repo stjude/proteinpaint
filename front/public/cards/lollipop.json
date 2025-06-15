@@ -5,19 +5,21 @@
             "message": "To view a different gene from the GDC dataset: <ul><li>Scroll to the top of the page. Select 'human hg38' from the dropdown menu in the header.</li><li>Start typing the gene into the search bar. A vertical menu of gene options will appear. Click the appropriate option or hit enter.</li><li>The protein view of the gene will appear. Click on <div class='sja_opaque8' style='display: inline-block; color: black; padding: 1px 2px; border: solid 1px #545454; font-size: .9em;'>GDC</div> in the toolbar.</li></ul>",
             "urlparam": "?genome=hg38&gene=ENST00000407796&mds3=GDC",
             "runargs": {
-                "gene":"ENST00000407796",
+                "gene": "ENST00000407796",
                 "nobox": 1,
                 "noheader": 1,
                 "genome": "hg38",
-                "tracks":[
+                "tracks": [
                     {
                         "type": "mds3",
-                        "dslabel":"GDC"
+                        "dslabel": "GDC"
                     }
                 ]
             },
             "testSpec": {
-                "expected": { "circle": 10 }
+                "expected": {
+                    "circle": 10
+                }
             }
         },
         {
@@ -25,19 +27,44 @@
             "message": "To view a different gene from the GDC dataset: <ul><li>Scroll to the top of the page. Select 'human hg38' from the dropdown menu in the header.</li><li>Start typing the gene into the search bar. A vertical menu of gene options will appear. Click the appropriate option or hit enter.</li><li>The protein view of the gene will appear. Click on <div class='sja_opaque8' style='display: inline-block; color: black; padding: 1px 2px; border: solid 1px #545454; font-size: .9em;'>GDC</div> in the toolbar.</li></ul>",
             "urlparam": "?genome=hg38&gene=NM_005163&mds3=GDC",
             "runargs": {
-                "gene":"NM_005163",
+                "gene": "NM_005163",
                 "nobox": 1,
                 "noheader": 1,
                 "genome": "hg38",
-                "tracks":[
+                "tracks": [
                     {
                         "type": "mds3",
-                        "dslabel":"GDC"
+                        "dslabel": "GDC"
                     }
                 ]
             },
             "testSpec": {
-                "expected": { "circle": 10 }
+                "expected": {
+                    "circle": 10
+                }
+            }
+        },
+        {
+            "label": "GDC CNV",
+            "runargs": {
+                "nobox": 1,
+                "noheader": 1,
+                "genome": "hg38",
+                "block": 1,
+                "position": "chr9:36698457-37324899",
+                "nativetracks": "refgene",
+                "tracks": [
+                    {
+                        "type": "mds3",
+                        "dslabel": "GDC",
+                        "hardcodeCnvOnly": true
+                    }
+                ]
+            },
+            "testSpec": {
+                "expected": {
+                    "rect": 30
+                }
             }
         },
         {
@@ -48,33 +75,128 @@
                 "nobox": true,
                 "genome": "hg19",
                 "gene": "NM_016734",
-                "tracks":[{
-                    "type":"mds3",
-                    "name":"custom snvindel and fusion",
-                    "custom_variants":[
-                        {"chr":"chr9","pos":37015165,"mname":"P80R","class":"M","dt":1,"ref":"G","alt":"C"},
-                        {
-                            "gene1":"PAX5", "chr1":"chr9", "pos1":37002646, "strand1":"-",
-                            "gene2":"JAK2", "chr2":"chr9", "pos2":5081726, "strand2":"+",
-                            "dt":2, "class":"Fuserna", "sample": "Fusion Sample ID"
-                        },
-                        {
-                            "gene1":"ZCCHC7", "chr1":"chr9", "pos1":37257786, "strand1":"-",
-                            "gene2":"PAX5", "chr2":"chr9", "pos2":37024824, "strand2":"-",
-                            "dt":5, "class":"SV", "sample": "SV Sample ID"
-                        }
-                    ]
-                }]
+                "tracks": [
+                    {
+                        "type": "mds3",
+                        "name": "custom snvindel and fusion",
+                        "custom_variants": [
+                            {
+                                "chr": "chr9",
+                                "pos": 37015165,
+                                "mname": "P80R",
+                                "class": "M",
+                                "dt": 1,
+                                "ref": "G",
+                                "alt": "C"
+                            },
+                            {
+                                "gene1": "PAX5",
+                                "chr1": "chr9",
+                                "pos1": 37002646,
+                                "strand1": "-",
+                                "gene2": "JAK2",
+                                "chr2": "chr9",
+                                "pos2": 5081726,
+                                "strand2": "+",
+                                "dt": 2,
+                                "class": "Fuserna",
+                                "sample": "Fusion Sample ID"
+                            },
+                            {
+                                "gene1": "ZCCHC7",
+                                "chr1": "chr9",
+                                "pos1": 37257786,
+                                "strand1": "-",
+                                "gene2": "PAX5",
+                                "chr2": "chr9",
+                                "pos2": 37024824,
+                                "strand2": "-",
+                                "dt": 5,
+                                "class": "SV",
+                                "sample": "SV Sample ID"
+                            }
+                        ]
+                    }
+                ]
             },
             "testSpec": {
-                "expected": { "circle": 2 }
+                "expected": {
+                    "circle": 2
+                }
             },
-            "buttons":[
+            "buttons": [
                 {
                     "name": "Custom Data Documentation",
                     "link": "https://github.com/stjude/proteinpaint/wiki/Lollipop-%E2%80%90-mds3#tkskewermodes"
                 }
             ]
+        },
+        {
+            "label": "Custom CNV and SNV Data",
+            "runargs": {
+                "nobox": 1,
+                "noheader": 1,
+                "genome": "hg38",
+                "gene": "NM_000546",
+                "tracks": [
+                    {
+                        "type": "mds3",
+                        "name": "Custom data",
+                        "custom_variants": [
+                            {
+                                "chr": "chr17",
+                                "start": 7670699,
+                                "stop": 7674000,
+                                "dt": 4,
+                                "class": "CNV_amp",
+                                "value": 1
+                            },
+                            {
+                                "chr": "chr17",
+                                "start": 7670699,
+                                "stop": 7674000,
+                                "dt": 4,
+                                "class": "CNV_loss",
+                                "value": -1
+                            },
+                            {
+                                "chr": "chr17",
+                                "start": 7670699,
+                                "stop": 7676000,
+                                "dt": 4,
+                                "class": "CNV_loss",
+                                "value": -0.5
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 7675993,
+                                "mname": "Custom snv 1",
+                                "class": "M",
+                                "dt": 1
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 7676520,
+                                "mname": "Custom snv 2",
+                                "class": "M",
+                                "dt": 1
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 7676381,
+                                "mname": "Custom snv 3",
+                                "class": "M",
+                                "dt": 1
+                            }
+                        ]
+                    }
+                ]
+            },
+            "testSpec": {
+                "expected": {
+                    "rect": 3
+                }
+            }
         },
         {
             "label": "Custom Data (Differential Phosphorylation)",
@@ -87,74 +209,474 @@
                 "tracks": [
                     {
                         "type": "mds3",
-                        "skewerModes":[
-                            {"type":"numeric", "byAttribute":"logValue", "label":"Log2FC AD vs Control", "inuse":true, "axisheight":100}
+                        "skewerModes": [
+                            {
+                                "type": "numeric",
+                                "byAttribute": "logValue",
+                                "label": "Log2FC AD vs Control",
+                                "inuse": true,
+                                "axisheight": 100
+                            }
                         ],
-                        "name":"Tau Phosphosites",
-                        "custom_variants":[
-                            {"chr":"chr17","pos":45962452,"mname":"T39","class":"M","dt":1, "logValue": 1.32, "value2": 1},
-                            {"chr":"chr17","pos":45971861,"mname":"S46","class":"I","dt":1, "logValue": -0.06},
-                            {"chr":"chr17","pos":45971873,"mname":"T50","class":"M","dt":1, "logValue": -0.21},
-                            {"chr":"chr17","pos":45971879,"mname":"T52","class":"M","dt":1, "logValue": -0.14},
-                            {"chr":"chr17","pos":45971891,"mname":"S56","class":"I","dt":1, "logValue": 0.16, "value2": 3},
-                            {"chr":"chr17","pos":45971906,"mname":"S61","class":"I","dt":1, "logValue": -0.03},
-                            {"chr":"chr17","pos":45971912,"mname":"T63","class":"M","dt":1, "logValue": -0.05},
-                            {"chr":"chr17","pos":45971915,"mname":"S64","class":"I","dt":1, "logValue": -0.02},
-                            {"chr":"chr17","pos":45971927,"mname":"S68","class":"I","dt":1, "logValue": -0.03},
-                            {"chr":"chr17","pos":45971930,"mname":"T69","class":"M","dt":1, "logValue": -0.07},
-                            {"chr":"chr17","pos":45971936,"mname":"T71","class":"M","dt":1, "logValue": 0.08},
-                            {"chr":"chr17","pos":45974390,"mname":"T76","class":"M","dt":1, "logValue": -0.12},
-                            {"chr":"chr17","pos":45978398,"mname":"T111","class":"M","dt":1, "logValue": 0.65},
-                            {"chr":"chr17","pos":45978404,"mname":"S113","class":"I","dt":1, "logValue": 0.56},
-                            {"chr":"chr17","pos":45991553,"mname":"T175","class":"M","dt":1, "logValue": 1.74},
-                            {"chr":"chr17","pos":45991571,"mname":"T181","class":"M","dt":1, "logValue": 0.82, "value2": 4},
-                            {"chr":"chr17","pos":45991580,"mname":"S184","class":"I","dt":1, "logValue": 1.44},
-                            {"chr":"chr17","pos":45991583,"mname":"S185","class":"I","dt":1, "logValue": 0.49},
-                            {"chr":"chr17","pos":45996413,"mname":"S191","class":"I","dt":1, "logValue": 0.73},
-                            {"chr":"chr17","pos":45996425,"mname":"S195","class":"I","dt":1, "logValue": -0.21},
-                            {"chr":"chr17","pos":45996431,"mname":"Y197","class":"F","dt":1, "logValue": 0.44},
-                            {"chr":"chr17","pos":45996434,"mname":"S198","class":"I","dt":1, "logValue": 1.01},
-                            {"chr":"chr17","pos":45996437,"mname":"S199","class":"I","dt":1, "logValue": 1.59},
-                            {"chr":"chr17","pos":45996446,"mname":"S202","class":"I","dt":1, "logValue": 1.69},
-                            {"chr":"chr17","pos":45996455,"mname":"T205","class":"M","dt":1, "logValue": 1.53},
-                            {"chr":"chr17","pos":45996464,"mname":"S208","class":"I","dt":1, "logValue": -0.14},
-                            {"chr":"chr17","pos":45996470,"mname":"S210","class":"I","dt":1, "logValue": 0.04},
-                            {"chr":"chr17","pos":45996476,"mname":"S212","class":"I","dt":1, "logValue": 1.94},
-                            {"chr":"chr17","pos":45996482,"mname":"S214","class":"I","dt":1, "logValue": 0.01},
-                            {"chr":"chr17","pos":45996492,"mname":"T217","class":"M","dt":1, "logValue": 2.35},
-                            {"chr":"chr17","pos":45996502,"mname":"T220","class":"M","dt":1, "logValue": 1.82},
-                            {"chr":"chr17","pos":45996533,"mname":"T231","class":"M","dt":1, "logValue": 4.07},
-                            {"chr":"chr17","pos":45996545,"mname":"S235","class":"I","dt":1, "logValue": 4.31},
-                            {"chr":"chr17","pos":45996551,"mname":"S237","class":"I","dt":1, "logValue": 2.77},
-                            {"chr":"chr17","pos":45996554,"mname":"S238","class":"I","dt":1, "logValue": 4.36},
-                            {"chr":"chr17","pos":45996563,"mname":"S241","class":"I","dt":1, "logValue": 1.52},
-                            {"chr":"chr17","pos":45996626,"mname":"S262","class":"I","dt":1, "logValue": 2.43},
-                            {"chr":"chr17","pos":45996629,"mname":"T263","class":"M","dt":1, "logValue": 2.43},
-                            {"chr":"chr17","pos":46010340,"mname":"S285","class":"I","dt":1, "logValue": 3.22},
-                            {"chr":"chr17","pos":46010352,"mname":"S289","class":"I","dt":1, "logValue": 2.83},
-                            {"chr":"chr17","pos":46010400,"mname":"S305","class":"I","dt":1, "logValue": 5.07},
-                            {"chr":"chr17","pos":46014297,"mname":"S324","class":"I","dt":1, "logValue": 2.20},
-                            {"chr":"chr17","pos":46018686,"mname":"S356","class":"I","dt":1, "logValue": 0.65},
-                            {"chr":"chr17","pos":46018701,"mname":"T361","class":"M","dt":1, "logValue": 0.85},
-                            {"chr":"chr17","pos":46024001,"mname":"T386","class":"M","dt":1, "logValue": 1.76},
-                            {"chr":"chr17","pos":46024025,"mname":"Y394","class":"F","dt":1, "logValue": 1.43},
-                            {"chr":"chr17","pos":46024031,"mname":"S396","class":"I","dt":1, "logValue": 2.02},
-                            {"chr":"chr17","pos":46024043,"mname":"S400","class":"I","dt":1, "logValue": 2.06},
-                            {"chr":"chr17","pos":46024052,"mname":"T403","class":"M","dt":1, "logValue": 1.72},
-                            {"chr":"chr17","pos":46024055,"mname":"S404","class":"I","dt":1, "logValue": 0.61},
-                            {"chr":"chr17","pos":46024070,"mname":"S409","class":"I","dt":1, "logValue": 0.95},
-                            {"chr":"chr17","pos":46024085,"mname":"T414","class":"M","dt":1, "logValue": -0.21},
-                            {"chr":"chr17","pos":46024091,"mname":"S416","class":"I","dt":1, "logValue": 0.14},
-                            {"chr":"chr17","pos":46024109,"mname":"S422","class":"I","dt":1, "logValue": 0.53},
-                            {"chr":"chr17","pos":46024143,"mname":"S433","class":"I","dt":1, "logValue": 0.32},
-                            {"chr":"chr17","pos":46024149,"mname":"S435","class":"I","dt":1, "logValue": 0.51}
-
+                        "name": "Tau Phosphosites",
+                        "custom_variants": [
+                            {
+                                "chr": "chr17",
+                                "pos": 45962452,
+                                "mname": "T39",
+                                "class": "M",
+                                "dt": 1,
+                                "logValue": 1.32,
+                                "value2": 1
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 45971861,
+                                "mname": "S46",
+                                "class": "I",
+                                "dt": 1,
+                                "logValue": -0.06
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 45971873,
+                                "mname": "T50",
+                                "class": "M",
+                                "dt": 1,
+                                "logValue": -0.21
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 45971879,
+                                "mname": "T52",
+                                "class": "M",
+                                "dt": 1,
+                                "logValue": -0.14
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 45971891,
+                                "mname": "S56",
+                                "class": "I",
+                                "dt": 1,
+                                "logValue": 0.16,
+                                "value2": 3
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 45971906,
+                                "mname": "S61",
+                                "class": "I",
+                                "dt": 1,
+                                "logValue": -0.03
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 45971912,
+                                "mname": "T63",
+                                "class": "M",
+                                "dt": 1,
+                                "logValue": -0.05
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 45971915,
+                                "mname": "S64",
+                                "class": "I",
+                                "dt": 1,
+                                "logValue": -0.02
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 45971927,
+                                "mname": "S68",
+                                "class": "I",
+                                "dt": 1,
+                                "logValue": -0.03
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 45971930,
+                                "mname": "T69",
+                                "class": "M",
+                                "dt": 1,
+                                "logValue": -0.07
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 45971936,
+                                "mname": "T71",
+                                "class": "M",
+                                "dt": 1,
+                                "logValue": 0.08
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 45974390,
+                                "mname": "T76",
+                                "class": "M",
+                                "dt": 1,
+                                "logValue": -0.12
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 45978398,
+                                "mname": "T111",
+                                "class": "M",
+                                "dt": 1,
+                                "logValue": 0.65
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 45978404,
+                                "mname": "S113",
+                                "class": "I",
+                                "dt": 1,
+                                "logValue": 0.56
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 45991553,
+                                "mname": "T175",
+                                "class": "M",
+                                "dt": 1,
+                                "logValue": 1.74
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 45991571,
+                                "mname": "T181",
+                                "class": "M",
+                                "dt": 1,
+                                "logValue": 0.82,
+                                "value2": 4
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 45991580,
+                                "mname": "S184",
+                                "class": "I",
+                                "dt": 1,
+                                "logValue": 1.44
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 45991583,
+                                "mname": "S185",
+                                "class": "I",
+                                "dt": 1,
+                                "logValue": 0.49
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 45996413,
+                                "mname": "S191",
+                                "class": "I",
+                                "dt": 1,
+                                "logValue": 0.73
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 45996425,
+                                "mname": "S195",
+                                "class": "I",
+                                "dt": 1,
+                                "logValue": -0.21
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 45996431,
+                                "mname": "Y197",
+                                "class": "F",
+                                "dt": 1,
+                                "logValue": 0.44
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 45996434,
+                                "mname": "S198",
+                                "class": "I",
+                                "dt": 1,
+                                "logValue": 1.01
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 45996437,
+                                "mname": "S199",
+                                "class": "I",
+                                "dt": 1,
+                                "logValue": 1.59
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 45996446,
+                                "mname": "S202",
+                                "class": "I",
+                                "dt": 1,
+                                "logValue": 1.69
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 45996455,
+                                "mname": "T205",
+                                "class": "M",
+                                "dt": 1,
+                                "logValue": 1.53
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 45996464,
+                                "mname": "S208",
+                                "class": "I",
+                                "dt": 1,
+                                "logValue": -0.14
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 45996470,
+                                "mname": "S210",
+                                "class": "I",
+                                "dt": 1,
+                                "logValue": 0.04
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 45996476,
+                                "mname": "S212",
+                                "class": "I",
+                                "dt": 1,
+                                "logValue": 1.94
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 45996482,
+                                "mname": "S214",
+                                "class": "I",
+                                "dt": 1,
+                                "logValue": 0.01
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 45996492,
+                                "mname": "T217",
+                                "class": "M",
+                                "dt": 1,
+                                "logValue": 2.35
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 45996502,
+                                "mname": "T220",
+                                "class": "M",
+                                "dt": 1,
+                                "logValue": 1.82
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 45996533,
+                                "mname": "T231",
+                                "class": "M",
+                                "dt": 1,
+                                "logValue": 4.07
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 45996545,
+                                "mname": "S235",
+                                "class": "I",
+                                "dt": 1,
+                                "logValue": 4.31
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 45996551,
+                                "mname": "S237",
+                                "class": "I",
+                                "dt": 1,
+                                "logValue": 2.77
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 45996554,
+                                "mname": "S238",
+                                "class": "I",
+                                "dt": 1,
+                                "logValue": 4.36
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 45996563,
+                                "mname": "S241",
+                                "class": "I",
+                                "dt": 1,
+                                "logValue": 1.52
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 45996626,
+                                "mname": "S262",
+                                "class": "I",
+                                "dt": 1,
+                                "logValue": 2.43
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 45996629,
+                                "mname": "T263",
+                                "class": "M",
+                                "dt": 1,
+                                "logValue": 2.43
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 46010340,
+                                "mname": "S285",
+                                "class": "I",
+                                "dt": 1,
+                                "logValue": 3.22
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 46010352,
+                                "mname": "S289",
+                                "class": "I",
+                                "dt": 1,
+                                "logValue": 2.83
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 46010400,
+                                "mname": "S305",
+                                "class": "I",
+                                "dt": 1,
+                                "logValue": 5.07
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 46014297,
+                                "mname": "S324",
+                                "class": "I",
+                                "dt": 1,
+                                "logValue": 2.20
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 46018686,
+                                "mname": "S356",
+                                "class": "I",
+                                "dt": 1,
+                                "logValue": 0.65
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 46018701,
+                                "mname": "T361",
+                                "class": "M",
+                                "dt": 1,
+                                "logValue": 0.85
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 46024001,
+                                "mname": "T386",
+                                "class": "M",
+                                "dt": 1,
+                                "logValue": 1.76
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 46024025,
+                                "mname": "Y394",
+                                "class": "F",
+                                "dt": 1,
+                                "logValue": 1.43
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 46024031,
+                                "mname": "S396",
+                                "class": "I",
+                                "dt": 1,
+                                "logValue": 2.02
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 46024043,
+                                "mname": "S400",
+                                "class": "I",
+                                "dt": 1,
+                                "logValue": 2.06
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 46024052,
+                                "mname": "T403",
+                                "class": "M",
+                                "dt": 1,
+                                "logValue": 1.72
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 46024055,
+                                "mname": "S404",
+                                "class": "I",
+                                "dt": 1,
+                                "logValue": 0.61
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 46024070,
+                                "mname": "S409",
+                                "class": "I",
+                                "dt": 1,
+                                "logValue": 0.95
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 46024085,
+                                "mname": "T414",
+                                "class": "M",
+                                "dt": 1,
+                                "logValue": -0.21
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 46024091,
+                                "mname": "S416",
+                                "class": "I",
+                                "dt": 1,
+                                "logValue": 0.14
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 46024109,
+                                "mname": "S422",
+                                "class": "I",
+                                "dt": 1,
+                                "logValue": 0.53
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 46024143,
+                                "mname": "S433",
+                                "class": "I",
+                                "dt": 1,
+                                "logValue": 0.32
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 46024149,
+                                "mname": "S435",
+                                "class": "I",
+                                "dt": 1,
+                                "logValue": 0.51
+                            }
                         ]
                     }
                 ],
                 "mclassOverride": {
                     "className": "Amino Acid Phosphosite",
-                    "classes":{
+                    "classes": {
                         "M": {
                             "label": "Threonine",
                             "color": "#2874A6",
@@ -196,80 +718,499 @@
                 "tracks": [
                     {
                         "type": "mds3",
-                        "skewerModes":[
-                            {"type":"numeric", "byAttribute":"logValue", "label":"Log2FC AD vs Control", "inuse":true, "axisheight":100}
+                        "skewerModes": [
+                            {
+                                "type": "numeric",
+                                "byAttribute": "logValue",
+                                "label": "Log2FC AD vs Control",
+                                "inuse": true,
+                                "axisheight": 100
+                            }
                         ],
-                        "name":"Tau Phosphosites",
-                        "custom_variants":[
-                            {"chr":"chr17","pos":45962452,"mname":"T39","class":"M","dt":1, "logValue": 1.32, "shape": "filledTriangle"},
-                            {"chr":"chr17","pos":45971861,"mname":"S46","class":"I","dt":1, "logValue": -0.06},
-                            {"chr":"chr17","pos":45971873,"mname":"T50","class":"M","dt":1, "logValue": -0.21, "shape": "filledTriangle"},
-                            {"chr":"chr17","pos":45971879,"mname":"T52","class":"M","dt":1, "logValue": -0.14, "shape": "filledTriangle"},
-                            {"chr":"chr17","pos":45971891,"mname":"S56","class":"I","dt":1, "logValue": 0.16},
-                            {"chr":"chr17","pos":45971906,"mname":"S61","class":"I","dt":1, "logValue": -0.03},
-                            {"chr":"chr17","pos":45971912,"mname":"T63","class":"M","dt":1, "logValue": -0.05, "shape": "filledTriangle"},
-                            {"chr":"chr17","pos":45971915,"mname":"S64","class":"I","dt":1, "logValue": -0.02},
-                            {"chr":"chr17","pos":45971927,"mname":"S68","class":"I","dt":1, "logValue": -0.03},
-                            {"chr":"chr17","pos":45971930,"mname":"T69","class":"M","dt":1, "logValue": -0.07, "shape": "filledTriangle"},
-                            {"chr":"chr17","pos":45971936,"mname":"T71","class":"M","dt":1, "logValue": 0.08, "shape": "filledTriangle"},
-                            {"chr":"chr17","pos":45974390,"mname":"T76","class":"M","dt":1, "logValue": -0.12, "shape": "filledTriangle"},
-                            {"chr":"chr17","pos":45978398,"mname":"T111","class":"M","dt":1, "logValue": 0.65, "shape": "filledTriangle"},
-                            {"chr":"chr17","pos":45978404,"mname":"S113","class":"I","dt":1, "logValue": 0.56},
-                            {"chr":"chr17","pos":45991553,"mname":"T175","class":"M","dt":1, "logValue": 1.74, "shape": "filledTriangle"},
-                            {"chr":"chr17","pos":45991571,"mname":"T181","class":"M","dt":1, "logValue": 0.82, "shape": "filledTriangle"},
-                            {"chr":"chr17","pos":45991580,"mname":"S184","class":"I","dt":1, "logValue": 1.44},
-                            {"chr":"chr17","pos":45991583,"mname":"S185","class":"I","dt":1, "logValue": 0.49},
-                            {"chr":"chr17","pos":45996413,"mname":"S191","class":"I","dt":1, "logValue": 0.73},
-                            {"chr":"chr17","pos":45996425,"mname":"S195","class":"I","dt":1, "logValue": -0.21},
-                            {"chr":"chr17","pos":45996431,"mname":"Y197","class":"F","dt":1, "logValue": 0.44, "shape": "emptyCircle"},
-                            {"chr":"chr17","pos":45996434,"mname":"S198","class":"I","dt":1, "logValue": 1.01},
-                            {"chr":"chr17","pos":45996437,"mname":"S199","class":"I","dt":1, "logValue": 1.59},
-                            {"chr":"chr17","pos":45996446,"mname":"S202","class":"I","dt":1, "logValue": 1.69},
-                            {"chr":"chr17","pos":45996455,"mname":"T205","class":"M","dt":1, "logValue": 1.53, "shape": "filledTriangle"},
-                            {"chr":"chr17","pos":45996464,"mname":"S208","class":"I","dt":1, "logValue": -0.14},
-                            {"chr":"chr17","pos":45996470,"mname":"S210","class":"I","dt":1, "logValue": 0.04},
-                            {"chr":"chr17","pos":45996476,"mname":"S212","class":"I","dt":1, "logValue": 1.94},
-                            {"chr":"chr17","pos":45996482,"mname":"S214","class":"I","dt":1, "logValue": 0.01},
-                            {"chr":"chr17","pos":45996492,"mname":"T217","class":"M","dt":1, "logValue": 2.35, "shape": "filledTriangle"},
-                            {"chr":"chr17","pos":45996502,"mname":"T220","class":"M","dt":1, "logValue": 1.82, "shape": "filledTriangle"},
-                            {"chr":"chr17","pos":45996533,"mname":"T231","class":"M","dt":1, "logValue": 4.07, "shape": "filledTriangle"},
-                            {"chr":"chr17","pos":45996545,"mname":"S235","class":"I","dt":1, "logValue": 4.31},
-                            {"chr":"chr17","pos":45996551,"mname":"S237","class":"I","dt":1, "logValue": 2.77},
-                            {"chr":"chr17","pos":45996554,"mname":"S238","class":"I","dt":1, "logValue": 4.36},
-                            {"chr":"chr17","pos":45996563,"mname":"S241","class":"I","dt":1, "logValue": 1.52},
-                            {"chr":"chr17","pos":45996626,"mname":"S262","class":"I","dt":1, "logValue": 2.43},
-                            {"chr":"chr17","pos":45996629,"mname":"T263","class":"M","dt":1, "logValue": 2.43, "shape": "filledTriangle"},
-                            {"chr":"chr17","pos":46010340,"mname":"S285","class":"I","dt":1, "logValue": 3.22},
-                            {"chr":"chr17","pos":46010352,"mname":"S289","class":"I","dt":1, "logValue": 2.83},
-                            {"chr":"chr17","pos":46010400,"mname":"S305","class":"I","dt":1, "logValue": 5.07},
-                            {"chr":"chr17","pos":46014297,"mname":"S324","class":"I","dt":1, "logValue": 2.20},
-                            {"chr":"chr17","pos":46018686,"mname":"S356","class":"I","dt":1, "logValue": 0.65},
-                            {"chr":"chr17","pos":46018701,"mname":"T361","class":"M","dt":1, "logValue": 0.85, "shape": "filledTriangle"},
-                            {"chr":"chr17","pos":46024001,"mname":"T386","class":"M","dt":1, "logValue": 1.76, "shape": "filledTriangle"},
-                            {"chr":"chr17","pos":46024025,"mname":"Y394","class":"F","dt":1, "logValue": 1.43, "shape": "emptyCircle"},
-                            {"chr":"chr17","pos":46024031,"mname":"S396","class":"I","dt":1, "logValue": 2.02},
-                            {"chr":"chr17","pos":46024043,"mname":"S400","class":"I","dt":1, "logValue": 2.06},
-                            {"chr":"chr17","pos":46024052,"mname":"T403","class":"M","dt":1, "logValue": 1.72, "shape": "filledTriangle"},
-                            {"chr":"chr17","pos":46024055,"mname":"S404","class":"I","dt":1, "logValue": 0.61},
-                            {"chr":"chr17","pos":46024070,"mname":"S409","class":"I","dt":1, "logValue": 0.95},
-                            {"chr":"chr17","pos":46024085,"mname":"T414","class":"M","dt":1, "logValue": -0.21, "shape": "filledTriangle"},
-                            {"chr":"chr17","pos":46024091,"mname":"S416","class":"I","dt":1, "logValue": 0.14},
-                            {"chr":"chr17","pos":46024109,"mname":"S422","class":"I","dt":1, "logValue": 0.53},
-                            {"chr":"chr17","pos":46024143,"mname":"S433","class":"I","dt":1, "logValue": 0.32},
-                            {"chr":"chr17","pos":46024149,"mname":"S435","class":"I","dt":1, "logValue": 0.51}
-
+                        "name": "Tau Phosphosites",
+                        "custom_variants": [
+                            {
+                                "chr": "chr17",
+                                "pos": 45962452,
+                                "mname": "T39",
+                                "class": "M",
+                                "dt": 1,
+                                "logValue": 1.32,
+                                "shape": "filledTriangle"
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 45971861,
+                                "mname": "S46",
+                                "class": "I",
+                                "dt": 1,
+                                "logValue": -0.06
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 45971873,
+                                "mname": "T50",
+                                "class": "M",
+                                "dt": 1,
+                                "logValue": -0.21,
+                                "shape": "filledTriangle"
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 45971879,
+                                "mname": "T52",
+                                "class": "M",
+                                "dt": 1,
+                                "logValue": -0.14,
+                                "shape": "filledTriangle"
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 45971891,
+                                "mname": "S56",
+                                "class": "I",
+                                "dt": 1,
+                                "logValue": 0.16
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 45971906,
+                                "mname": "S61",
+                                "class": "I",
+                                "dt": 1,
+                                "logValue": -0.03
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 45971912,
+                                "mname": "T63",
+                                "class": "M",
+                                "dt": 1,
+                                "logValue": -0.05,
+                                "shape": "filledTriangle"
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 45971915,
+                                "mname": "S64",
+                                "class": "I",
+                                "dt": 1,
+                                "logValue": -0.02
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 45971927,
+                                "mname": "S68",
+                                "class": "I",
+                                "dt": 1,
+                                "logValue": -0.03
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 45971930,
+                                "mname": "T69",
+                                "class": "M",
+                                "dt": 1,
+                                "logValue": -0.07,
+                                "shape": "filledTriangle"
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 45971936,
+                                "mname": "T71",
+                                "class": "M",
+                                "dt": 1,
+                                "logValue": 0.08,
+                                "shape": "filledTriangle"
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 45974390,
+                                "mname": "T76",
+                                "class": "M",
+                                "dt": 1,
+                                "logValue": -0.12,
+                                "shape": "filledTriangle"
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 45978398,
+                                "mname": "T111",
+                                "class": "M",
+                                "dt": 1,
+                                "logValue": 0.65,
+                                "shape": "filledTriangle"
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 45978404,
+                                "mname": "S113",
+                                "class": "I",
+                                "dt": 1,
+                                "logValue": 0.56
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 45991553,
+                                "mname": "T175",
+                                "class": "M",
+                                "dt": 1,
+                                "logValue": 1.74,
+                                "shape": "filledTriangle"
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 45991571,
+                                "mname": "T181",
+                                "class": "M",
+                                "dt": 1,
+                                "logValue": 0.82,
+                                "shape": "filledTriangle"
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 45991580,
+                                "mname": "S184",
+                                "class": "I",
+                                "dt": 1,
+                                "logValue": 1.44
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 45991583,
+                                "mname": "S185",
+                                "class": "I",
+                                "dt": 1,
+                                "logValue": 0.49
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 45996413,
+                                "mname": "S191",
+                                "class": "I",
+                                "dt": 1,
+                                "logValue": 0.73
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 45996425,
+                                "mname": "S195",
+                                "class": "I",
+                                "dt": 1,
+                                "logValue": -0.21
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 45996431,
+                                "mname": "Y197",
+                                "class": "F",
+                                "dt": 1,
+                                "logValue": 0.44,
+                                "shape": "emptyCircle"
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 45996434,
+                                "mname": "S198",
+                                "class": "I",
+                                "dt": 1,
+                                "logValue": 1.01
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 45996437,
+                                "mname": "S199",
+                                "class": "I",
+                                "dt": 1,
+                                "logValue": 1.59
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 45996446,
+                                "mname": "S202",
+                                "class": "I",
+                                "dt": 1,
+                                "logValue": 1.69
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 45996455,
+                                "mname": "T205",
+                                "class": "M",
+                                "dt": 1,
+                                "logValue": 1.53,
+                                "shape": "filledTriangle"
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 45996464,
+                                "mname": "S208",
+                                "class": "I",
+                                "dt": 1,
+                                "logValue": -0.14
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 45996470,
+                                "mname": "S210",
+                                "class": "I",
+                                "dt": 1,
+                                "logValue": 0.04
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 45996476,
+                                "mname": "S212",
+                                "class": "I",
+                                "dt": 1,
+                                "logValue": 1.94
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 45996482,
+                                "mname": "S214",
+                                "class": "I",
+                                "dt": 1,
+                                "logValue": 0.01
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 45996492,
+                                "mname": "T217",
+                                "class": "M",
+                                "dt": 1,
+                                "logValue": 2.35,
+                                "shape": "filledTriangle"
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 45996502,
+                                "mname": "T220",
+                                "class": "M",
+                                "dt": 1,
+                                "logValue": 1.82,
+                                "shape": "filledTriangle"
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 45996533,
+                                "mname": "T231",
+                                "class": "M",
+                                "dt": 1,
+                                "logValue": 4.07,
+                                "shape": "filledTriangle"
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 45996545,
+                                "mname": "S235",
+                                "class": "I",
+                                "dt": 1,
+                                "logValue": 4.31
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 45996551,
+                                "mname": "S237",
+                                "class": "I",
+                                "dt": 1,
+                                "logValue": 2.77
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 45996554,
+                                "mname": "S238",
+                                "class": "I",
+                                "dt": 1,
+                                "logValue": 4.36
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 45996563,
+                                "mname": "S241",
+                                "class": "I",
+                                "dt": 1,
+                                "logValue": 1.52
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 45996626,
+                                "mname": "S262",
+                                "class": "I",
+                                "dt": 1,
+                                "logValue": 2.43
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 45996629,
+                                "mname": "T263",
+                                "class": "M",
+                                "dt": 1,
+                                "logValue": 2.43,
+                                "shape": "filledTriangle"
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 46010340,
+                                "mname": "S285",
+                                "class": "I",
+                                "dt": 1,
+                                "logValue": 3.22
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 46010352,
+                                "mname": "S289",
+                                "class": "I",
+                                "dt": 1,
+                                "logValue": 2.83
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 46010400,
+                                "mname": "S305",
+                                "class": "I",
+                                "dt": 1,
+                                "logValue": 5.07
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 46014297,
+                                "mname": "S324",
+                                "class": "I",
+                                "dt": 1,
+                                "logValue": 2.20
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 46018686,
+                                "mname": "S356",
+                                "class": "I",
+                                "dt": 1,
+                                "logValue": 0.65
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 46018701,
+                                "mname": "T361",
+                                "class": "M",
+                                "dt": 1,
+                                "logValue": 0.85,
+                                "shape": "filledTriangle"
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 46024001,
+                                "mname": "T386",
+                                "class": "M",
+                                "dt": 1,
+                                "logValue": 1.76,
+                                "shape": "filledTriangle"
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 46024025,
+                                "mname": "Y394",
+                                "class": "F",
+                                "dt": 1,
+                                "logValue": 1.43,
+                                "shape": "emptyCircle"
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 46024031,
+                                "mname": "S396",
+                                "class": "I",
+                                "dt": 1,
+                                "logValue": 2.02
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 46024043,
+                                "mname": "S400",
+                                "class": "I",
+                                "dt": 1,
+                                "logValue": 2.06
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 46024052,
+                                "mname": "T403",
+                                "class": "M",
+                                "dt": 1,
+                                "logValue": 1.72,
+                                "shape": "filledTriangle"
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 46024055,
+                                "mname": "S404",
+                                "class": "I",
+                                "dt": 1,
+                                "logValue": 0.61
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 46024070,
+                                "mname": "S409",
+                                "class": "I",
+                                "dt": 1,
+                                "logValue": 0.95
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 46024085,
+                                "mname": "T414",
+                                "class": "M",
+                                "dt": 1,
+                                "logValue": -0.21,
+                                "shape": "filledTriangle"
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 46024091,
+                                "mname": "S416",
+                                "class": "I",
+                                "dt": 1,
+                                "logValue": 0.14
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 46024109,
+                                "mname": "S422",
+                                "class": "I",
+                                "dt": 1,
+                                "logValue": 0.53
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 46024143,
+                                "mname": "S433",
+                                "class": "I",
+                                "dt": 1,
+                                "logValue": 0.32
+                            },
+                            {
+                                "chr": "chr17",
+                                "pos": 46024149,
+                                "mname": "S435",
+                                "class": "I",
+                                "dt": 1,
+                                "logValue": 0.51
+                            }
                         ],
                         "legend": {
                             "customShapeLabels": {
-                            "filledCircle": "Serine",
-                            "filledTriangle": "Threonine",
-                            "emptyCircle": "Tyrosine"
-                        }}
+                                "filledCircle": "Serine",
+                                "filledTriangle": "Threonine",
+                                "emptyCircle": "Tyrosine"
+                            }
+                        }
                     }
                 ],
                 "mclassOverride": {
                     "className": "Amino Acid Phosphosite",
-                    "classes":{
+                    "classes": {
                         "M": {
                             "label": "Threonine",
                             "color": "#2874A6",
@@ -351,6 +1292,6 @@
             "link": "https://docs.google.com/document/d/1D78jKVaQrWBhAjnfmCqj0Cirf6s-CdcbfPkuZQMT8Co/edit#heading=h.tyjcwt"
         }
     ],
-    "ribbonMessage": "Please see our newest example of setting the default protein view.",
+    "ribbonMessage": "Please see our newest examples for displaying cnv data: GDC CNV and Custom CNV and SNV Data.",
     "citation_id": 1001
 }

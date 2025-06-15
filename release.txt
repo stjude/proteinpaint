@@ -1,1 +1,2 @@
-
+Features:
+- N ew cnv examples in the lollipop card; new search terms for card
