@@ -2852,7 +2852,7 @@ export function filterByItem(filter, mlst) {
 		tested = true
 		// determine if sample genotype matches filter genotype
 		let sampleHasGenotype
-		if (tvs.cnvMode == 'continuous') {
+		if (tvs.continuousCnv) {
 			// continuous cnv data
 			if (tvs.term.dt != dtcnv) throw 'unexpected dt value'
 			const sampleHasMutation = mlst_tested.some(m => {

@@ -61,18 +61,34 @@ class TVS {
 	async setHandler() {
 		if (!this.tvs || !this.tvs.term) return
 		const term = this.tvs.term
-		const type = isNumericTerm(term) ? 'numeric' : isCategoricalTerm(term) ? 'categorical' : term.type
+		const type = isNumericTerm(term)
+			? 'numeric'
+			: isCategoricalTerm(term)
+			? 'categorical'
+			: term.type == 'dtcnv'
+			? this.getDtCnvType(term)
+			: term.type
 		if (!this.handlerByType[type]) {
 			try {
 				const _ = await import(`./tvs.${type}.js`)
 				const handler = _.handler
-				if (handler.setMethods) handler.setMethods(this, this.tvs)
 				this.handlerByType[type] = handler
 			} catch (e) {
 				throw `error with handler='./tvs.${type}.js': ${e}`
 			}
 		}
 		this.handler = this.handlerByType[type]
+	}
+
+	getDtCnvType(term) {
+		// determine dtcnv type by whether cnv data is continuous or categorical
+		if (term.type != 'dtcnv') return
+		const termdbConfig = this.opts.vocabApi.termdbConfig || this.opts.vocabApi.parent_termdbConfig
+		const cnv = termdbConfig.queries?.cnv
+		if (!cnv) throw 'cnv query is missing'
+		const keys = Object.keys(cnv)
+		const mode = keys.includes('cnvGainCutoff') || keys.includes('cnvLossCutoff') ? 'continuous' : 'categorical'
+		return term.type + '.' + mode
 	}
 }
 
@@ -133,7 +149,7 @@ function setRenderers(self) {
 	// optional _holder, for example when called by filter.js
 	self.showMenu = _holder => {
 		const holder = _holder ? _holder : self.dom.tip
-		if (self.tvs.term.type != 'geneVariant' && !(self.tvs.term.type == 'dtcnv' && self.tvs.cnvMode == 'continuous')) {
+		if (self.tvs.term.type != 'geneVariant' && !(self.tvs.term.type == 'dtcnv' && self.tvs.continuousCnv)) {
 			addExcludeCheckbox(holder, self.tvs, self)
 		}
 		self.handler.fillMenu(self, holder, self.tvs)

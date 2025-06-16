@@ -1023,7 +1023,7 @@ tape('tvs: Gene Variant - CNV - continuous', async test => {
 						cnvGainCutoff: 0.5,
 						cnvLossCutoff: -0.5,
 						cnvMaxLength: 4000000,
-						cnvMode: 'continuous',
+						continuousCnv: true,
 						cnvWT: false
 					}
 				}
