@@ -13,24 +13,25 @@ export class RunchartView extends ScatterView {
 		this.runchart = runchart
 	}
 
-	async getControlInputs() {
+	async getFilterControlInputs() {
 		const filters = {}
 		for (const tw of this.runchart.filterTWs) {
 			const filter = this.runchart.getFilter(tw)
 			if (filter) filters[tw.term.id] = filter
 		}
+
 		//Dictionary with samples applying all the filters but not the one from the current term id
 		const samplesPerFilter = await this.runchart.app.vocabApi.getSamplesPerFilter({
 			filters
 		})
-		const inputs: any = []
+		const inputs: any[] = []
 		if (this.runchart.config.countryTW) {
 			const countries = this.runchart.getList(this.runchart.config.countryTW, samplesPerFilter)
 
 			inputs.push({
 				label: 'Country',
 				type: 'dropdown',
-				chartType: 'runChart',
+				chartType: this.runchart.type,
 				settingsKey: this.runchart.config.countryTW.term.id,
 				options: countries,
 				callback: value => this.runchart.setCountry(value)
@@ -41,12 +42,17 @@ export class RunchartView extends ScatterView {
 			inputs.push({
 				label: 'Site',
 				type: 'dropdown',
-				chartType: 'runChart',
+				chartType: this.runchart.type,
 				settingsKey: this.runchart.config.siteTW.term.id,
 				options: sites,
 				callback: value => this.runchart.setFilterValue(this.runchart.config.siteTW.term.id, value)
 			})
 		}
+		return inputs
+	}
+
+	async getControlInputs() {
+		const inputs: any[] = await this.getFilterControlInputs()
 		const shapeOption = {
 			type: 'term',
 			configKey: 'shapeTW',

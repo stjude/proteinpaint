@@ -66,7 +66,6 @@ export async function getPlotConfig(opts, app) {
 	try {
 		const defaultConfig = app.vocabApi.termdbConfig?.plotConfigByCohort?.default?.[opts.chartType]
 		copyMerge(plot, defaultConfig, opts)
-
 		if (plot.colorTW) await fillTermWrapper(plot.colorTW, app.vocabApi)
 		if (plot.shapeTW) await fillTermWrapper(plot.shapeTW, app.vocabApi)
 		await fillTermWrapper(plot.term, app.vocabApi)

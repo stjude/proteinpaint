@@ -14,6 +14,7 @@ export class EventCountView extends RunchartView {
 	}
 
 	async getControlInputs() {
+		const filterInputs = await this.getFilterControlInputs()
 		const shapeOption = {
 			type: 'term',
 			configKey: 'shapeTW',
@@ -63,6 +64,7 @@ export class EventCountView extends RunchartView {
 		}
 
 		const inputs: any = [
+			...filterInputs,
 			{
 				type: 'term',
 				configKey: 'term',
