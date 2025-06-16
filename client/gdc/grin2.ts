@@ -872,6 +872,50 @@ function makeControls(obj) {
 			}
 		})
 
+		// Row: Project Filter (spans full width)
+		const projectContainer = optionsGrid
+			.append('div')
+			.style('display', 'flex')
+			.style('align-items', 'center')
+			.style('gap', '8px')
+			.style('grid-column', '1 / -1') // Span full width
+
+		projectContainer
+			.append('label')
+			.style('font-size', '14px')
+			.style('font-weight', '500')
+			.style('min-width', '120px')
+			.text('Project Filter:')
+
+		const projectSelect = projectContainer
+			.append('select')
+			.style('padding', '4px 8px')
+			.style('border', '1px solid #ccc')
+			.style('border-radius', '4px')
+			.style('font-size', '14px')
+			.style('min-width', '200px')
+
+		// Add options
+		projectSelect.append('option').attr('value', '').text('All Projects (No Filter)')
+		projectSelect.append('option').attr('value', 'TCGA-GBM').text('TCGA-GBM (Brain Cancer)')
+		projectSelect.append('option').attr('value', 'CPTAC-3').text('CPTAC-3')
+		projectSelect.append('option').attr('value', 'HCMI-CMDC').text('HCMI-CMDC')
+
+		// Initialize default value
+		if (!obj.mafOptions.projectIds) {
+			obj.mafOptions.projectIds = [] // Empty = no filter
+		}
+
+		projectSelect.on('change', function (this: HTMLSelectElement) {
+			const selectedValue = this.value
+			if (selectedValue === '') {
+				obj.mafOptions.projectIds = [] // No filter
+			} else {
+				obj.mafOptions.projectIds = [selectedValue] // Single project filter
+			}
+			console.log('MAF Project filter updated:', obj.mafOptions.projectIds)
+		})
+
 		// Row 4: Workflow Type (read-only display)
 		const workflowContainer = optionsGrid
 			.append('div')
@@ -1146,6 +1190,50 @@ function makeControls(obj) {
 			• Gain Threshold: Log2 ratio for copy number gain (positive values)<br>
 			• Segment Length: Maximum CNV segment size to include (no filter if 0)
 		`)
+
+		// Row: Project Filter for CNV (spans full width)
+		const cnvProjectContainer = optionsGrid
+			.append('div')
+			.style('display', 'flex')
+			.style('align-items', 'center')
+			.style('gap', '8px')
+			.style('grid-column', '1 / -1') // Span full width
+
+		cnvProjectContainer
+			.append('label')
+			.style('font-size', '14px')
+			.style('font-weight', '500')
+			.style('min-width', '120px')
+			.text('Project Filter:')
+
+		const cnvProjectSelect = cnvProjectContainer
+			.append('select')
+			.style('padding', '4px 8px')
+			.style('border', '1px solid #ccc')
+			.style('border-radius', '4px')
+			.style('font-size', '14px')
+			.style('min-width', '200px')
+
+		// Add options
+		cnvProjectSelect.append('option').attr('value', '').text('All Projects (No Filter)')
+		cnvProjectSelect.append('option').attr('value', 'TCGA-GBM').text('TCGA-GBM (Brain Cancer)')
+		cnvProjectSelect.append('option').attr('value', 'CPTAC-3').text('CPTAC-3')
+		cnvProjectSelect.append('option').attr('value', 'HCMI-CMDC').text('HCMI-CMDC')
+
+		// Initialize default value
+		if (!obj.cnvOptions.projectIds) {
+			obj.cnvOptions.projectIds = [] // Empty = no filter
+		}
+
+		cnvProjectSelect.on('change', function (this: HTMLSelectElement) {
+			const selectedValue = this.value
+			if (selectedValue === '') {
+				obj.cnvOptions.projectIds = [] // No filter
+			} else {
+				obj.cnvOptions.projectIds = [selectedValue] // Single project filter
+			}
+			console.log('CNV Project filter updated:', obj.cnvOptions.projectIds)
+		})
 	}
 
 	// Row 3: Fusion (unchecked by default)
@@ -1336,24 +1424,35 @@ async function getFilesAndShowTable(obj) {
 
 	let result
 	try {
-		// Initialize the request body
 		const body: GdcGRIN2listRequest = {}
 
 		if (obj.opts.filter0) body.filter0 = obj.opts.filter0
 
-		// Add mafOptions if experimentalStrategy exists
-		if (obj.opts.experimentalStrategy) {
+		// Always include mafOptions when MAF is selected
+		if (obj.dataTypeStates.maf) {
 			body.mafOptions = {
-				experimentalStrategy: obj.opts.experimentalStrategy
+				experimentalStrategy: obj.opts.experimentalStrategy || 'WXS',
+				minTotalDepth: obj.mafOptions.minTotalDepth,
+				minAltAlleleCount: obj.mafOptions.minAltAlleleCount,
+				consequences: obj.mafOptions.consequences,
+				hyperMutator: obj.mafOptions.hypermutatorCutoff,
+				projectIds: obj.mafOptions?.projectIds
 			}
 		}
 
-		// Add cnvOptions if available
-		body.cnvOptions = {}
-
-		// console.log('Request body for GRIN2list:', body)
+		// Only include cnvOptions when CNV is selected
+		if (obj.dataTypeStates.cnv) {
+			body.cnvOptions = {
+				dataType: obj.cnvOptions.dataType,
+				lossThreshold: obj.cnvOptions.lossThreshold,
+				gainThreshold: obj.cnvOptions.gainThreshold,
+				segLength: obj.cnvOptions.segLength,
+				projectIds: obj.cnvOptions?.projectIds
+			}
+		}
+		console.log('Request body for GRIN2list:', body)
 		result = await dofetch3('gdc/GRIN2list', { body })
-		// console.log('GRIN2list result:', result)
+		console.log('GRIN2list result:', result)
 
 		if (result.error) throw result.error
 		if (!Array.isArray(result.mafFiles.files)) throw 'result.mafFiles.files[] not array'
