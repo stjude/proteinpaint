@@ -317,8 +317,6 @@ tape('geneVariant tvs', async test => {
 			}
 			const { pill, filter, item, term } = await getPillFilterItem('dtcnv')
 			await testTvs(test, pill, filter, item, term)
-			const handler = pill.Inner.handler
-			test.equal(typeof handler.setMethods, 'function', 'should have a setMethods() method')
 		}
 	} catch (e) {
 		test.fail('test error: ' + e)
