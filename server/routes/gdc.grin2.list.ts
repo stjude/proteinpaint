@@ -41,16 +41,28 @@ function init({ genomes }) {
 			const ds = g.datasets?.GDC
 			if (!ds) throw 'hg38 GDC missing'
 
-			const result: GdcGRIN2listResponse = {
-				files: [],
-				filesTotal: 0,
-				maxTotalSizeCompressed: 0,
-				fileCounts: { maf: 0 }
+			// Initialize the response according to the new structure
+			const result: GdcGRIN2listResponse = {}
+
+			// Handle MAF files if mafOptions is present in the request
+			if (req.query.mafOptions) {
+				result.mafFiles = {
+					files: [],
+					filesTotal: 0,
+					maxTotalSizeCompressed: 0,
+					fileCounts: { maf: 0 }
+				}
+				await mayListMafFiles(req.query as GdcGRIN2listRequest, result, ds)
 			}
 
-			// run each getter per file type, and accumulate files in result
-			await mayListMafFiles(req.query as GdcGRIN2listRequest, result, ds)
-			await mayListCnvFiles(req.query as GdcGRIN2listRequest, result, ds)
+			// Handle CNV files if cnvOptions is present in the request
+			if (req.query.cnvOptions) {
+				result.cnvFiles = {
+					files: []
+					// Add other CNV-specific properties as needed
+				}
+				await mayListCnvFiles(req.query as GdcGRIN2listRequest, result, ds)
+			}
 
 			res.send(result)
 		} catch (e: any) {
@@ -62,6 +74,16 @@ function init({ genomes }) {
 
 async function mayListMafFiles(q: GdcGRIN2listRequest, result: GdcGRIN2listResponse, ds: any) {
 	if (!q.mafOptions) return
+
+	// Ensure mafFiles is always initialized
+	if (!result.mafFiles) {
+		result.mafFiles = {
+			files: [],
+			filesTotal: 0,
+			maxTotalSizeCompressed: 0,
+			fileCounts: { maf: 0 }
+		}
+	}
 
 	// Only build and use MAF filters if we need to retrieve MAF files
 	const filters = {
@@ -230,12 +252,22 @@ async function mayListMafFiles(q: GdcGRIN2listRequest, result: GdcGRIN2listRespo
 	// sort final files in descending order of file size and show on table as default
 	deduplicatedFiles.sort((a, b) => b.file_size - a.file_size)
 
-	result.files.push(...deduplicatedFiles)
-	result.filesTotal = re.data.pagination.total
-	if (result.fileCounts) {
-		result.fileCounts.maf = files.length
+	// CRITICAL SAFETY CHECK: Verify structure before pushing
+	console.log('About to push files - Safety check:', {
+		mafFilesExists: !!result.mafFiles,
+		filesExists: !!result.mafFiles?.files,
+		filesIsArray: Array.isArray(result.mafFiles?.files),
+		filesCurrentLength: result.mafFiles?.files?.length || 0,
+		deduplicatedFilesLength: deduplicatedFiles.length,
+		deduplicatedFilesIsArray: Array.isArray(deduplicatedFiles)
+	})
+
+	result.mafFiles.files.push(...deduplicatedFiles)
+	result.mafFiles.filesTotal = re.data.pagination.total
+	if (result.mafFiles.fileCounts) {
+		result.mafFiles.fileCounts.maf = files.length
 	}
-	result.deduplicationStats = {
+	result.mafFiles.deduplicationStats = {
 		originalFileCount: files.length,
 		deduplicatedFileCount: deduplicatedFiles.length,
 		duplicatesRemoved: duplicatesRemoved,
