@@ -230,7 +230,7 @@ tape('Change symbol size from menu', function (test) {
 })
 
 tape('Show accrual', function (test) {
-	test.timeoutAfter(10000)
+	test.timeoutAfter(1000)
 
 	runpp({
 		state: {
@@ -252,6 +252,8 @@ tape('Show accrual', function (test) {
 		const lastEvent = chart.events[chart.events.length - 1]
 		const sum = chart.cohortSamples.length
 		test.equal(lastEvent, sum, `the last event y value should be equal to the sum of all samples`)
+		if (test._ok) scatter.Inner.app.destroy()
+		test.end()
 	}
 })
 
