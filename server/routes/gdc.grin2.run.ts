@@ -81,7 +81,9 @@ function parseJsonlOutput(rustOutput: string): any {
 			filtered_records: finalSummary.filtered_records || 0,
 			filtered_maf_records: finalSummary.filtered_maf_records || 0,
 			filtered_cnv_records: finalSummary.filtered_cnv_records || 0,
-			filtered_records_by_case: finalSummary.filtered_records_by_case || {}
+			filtered_records_by_case: finalSummary.filtered_records_by_case || {},
+			included_maf_records: finalSummary.included_maf_records || 0,
+			included_cnv_records: finalSummary.included_cnv_records || 0
 		}
 	}
 }
@@ -98,7 +100,7 @@ function parseJsonlOutput(rustOutput: string): any {
  * 2. Pass caseFiles and mafOptions to Rust for mutation processing (now streaming)
  * 3. Parse Rust output to get mutation data and summary of files
  * 3. Pass Rust mutation output to R for plot generation while we send the file summary to the div for downloaded files
- * 4. Return generated PNG as base64 string and the top gene table as JSON
+ * 4. Return generated PNG as base64 string, the top gene table as JSON, and the Rust summary stats
  */
 
 function init({ genomes }) {

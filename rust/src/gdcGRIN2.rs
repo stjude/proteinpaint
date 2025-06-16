@@ -115,6 +115,8 @@ struct FinalSummary {
     filtered_records: usize,
     filtered_maf_records: usize,
     filtered_cnv_records: usize,
+    included_maf_records: usize,
+    included_cnv_records: usize,
     filtered_records_by_case: HashMap<String, FilteredCaseDetails>,
 }
 
@@ -150,6 +152,8 @@ async fn parse_content(
     filtered_records: &Arc<Mutex<HashMap<String, FilteredCaseDetails>>>,
     filtered_maf_records: &AtomicUsize,
     filtered_cnv_records: &AtomicUsize,
+    included_maf_records: &AtomicUsize,
+    included_cnv_records: &AtomicUsize,
 ) -> Result<Vec<Vec<String>>, (String, String, String)> {
     let config = match data_type {
         "cnv" => DataTypeConfig {
@@ -213,6 +217,8 @@ async fn parse_content(
             filtered_records,
             filtered_maf_records,
             filtered_cnv_records,
+            included_maf_records,
+            included_cnv_records,
         )
         .await?;
 
@@ -285,6 +291,8 @@ async fn process_row(
     filtered_records: &Arc<Mutex<HashMap<String, FilteredCaseDetails>>>,
     filtered_maf_records: &AtomicUsize,
     filtered_cnv_records: &AtomicUsize,
+    included_maf_records: &AtomicUsize,
+    included_cnv_records: &AtomicUsize,
 ) -> Result<Option<Vec<String>>, (String, String, String)> {
     let cont_lst: Vec<String> = line.split("\t").map(|s| s.to_string()).collect();
     let mut out_lst = vec![case_id.to_string()];
@@ -374,6 +382,9 @@ async fn process_row(
         // Keep case_id, chr, start, end, and add "mutation"
         out_lst = out_lst[0..4].to_vec();
         out_lst.push("mutation".to_string());
+
+        // Update counters for included MAF records
+        included_maf_records.fetch_add(1, Ordering::Relaxed);
     }
 
     // filter cnvs based on segment length. Default: 0 (no filtering)
@@ -404,6 +415,7 @@ async fn process_row(
             filtered_cnv_records.fetch_add(1, Ordering::Relaxed);
             return Ok(None);
         }
+        included_cnv_records.fetch_add(1, Ordering::Relaxed);
     }
 
     Ok(Some(out_lst))
@@ -611,6 +623,8 @@ async fn download_data_streaming(
     let filtered_maf_records = Arc::new(AtomicUsize::new(0));
     let filtered_cnv_records = Arc::new(AtomicUsize::new(0));
     let filtered_records = Arc::new(Mutex::new(HashMap::<String, FilteredCaseDetails>::new()));
+    let included_maf_records = Arc::new(AtomicUsize::new(0));
+    let included_cnv_records = Arc::new(AtomicUsize::new(0));
 
     // Only collect errors (successful data is output immediately)
     let errors = Arc::new(Mutex::new(Vec::<ErrorEntry>::new()));
@@ -630,6 +644,8 @@ async fn download_data_streaming(
             let filtered_maf_records = Arc::clone(&filtered_maf_records);
             let filtered_cnv_records = Arc::clone(&filtered_cnv_records);
             let filtered_records = Arc::clone(&filtered_records);
+            let included_maf_records = Arc::clone(&included_maf_records);
+            let included_cnv_records = Arc::clone(&included_cnv_records);
             let errors = Arc::clone(&errors);
 
             async move {
@@ -649,6 +665,8 @@ async fn download_data_streaming(
                             &filtered_records,
                             &filtered_maf_records,
                             &filtered_cnv_records,
+                            &included_maf_records,
+                            &included_cnv_records,
                         )
                         .await
                         {
@@ -717,6 +735,8 @@ async fn download_data_streaming(
     let failed_count = failed_downloads.load(Ordering::Relaxed);
     let filtered_maf_count = filtered_maf_records.load(Ordering::Relaxed);
     let filtered_cnv_count = filtered_cnv_records.load(Ordering::Relaxed);
+    let included_maf_count = included_maf_records.load(Ordering::Relaxed);
+    let included_cnv_count = included_cnv_records.load(Ordering::Relaxed);
 
     let summary = FinalSummary {
         output_type: "summary".to_string(),
@@ -728,6 +748,8 @@ async fn download_data_streaming(
         filtered_maf_records: filtered_maf_count,
         filtered_cnv_records: filtered_cnv_count,
         filtered_records_by_case: filtered_records.lock().await.clone(),
+        included_maf_records: included_maf_count,
+        included_cnv_records: included_cnv_count,
     };
 
     // Output final summary - Node.js will know processing is complete when it sees this
