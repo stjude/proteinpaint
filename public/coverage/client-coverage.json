@@ -2053,22 +2053,22 @@
   },
   "plots/runchart/view/runchartView.ts": {
     "lines": {
-      "total": 32,
-      "covered": 23,
+      "total": 34,
+      "covered": 25,
       "skipped": 0,
-      "pct": 71.87
+      "pct": 73.52
     },
     "functions": {
-      "total": 6,
-      "covered": 3,
+      "total": 7,
+      "covered": 4,
       "skipped": 0,
-      "pct": 50
+      "pct": 57.14
     },
     "statements": {
-      "total": 33,
-      "covered": 23,
+      "total": 35,
+      "covered": 25,
       "skipped": 0,
-      "pct": 69.69
+      "pct": 71.42
     },
     "branches": {
       "total": 12,
@@ -2078,13 +2078,13 @@
     },
     "lowestPct": {
       "curr": 50,
-      "prev": 0,
-      "diff": 50
+      "prev": 50,
+      "diff": 0
     },
     "averagePct": {
-      "curr": 60.39,
-      "prev": 14.2325,
-      "diff": 46.1575
+      "curr": 63.019999999999996,
+      "prev": 60.39,
+      "diff": 2.6299999999999955
     }
   },
   "plots/runchart/model/runchartModel.ts": {
