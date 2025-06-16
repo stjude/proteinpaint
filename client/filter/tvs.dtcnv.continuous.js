@@ -2,38 +2,12 @@ import { handler as _handler } from './tvs.dt.js'
 import { Menu } from '../dom/menu'
 
 /*
-TVS handler for dtcnv term
+TVS handler for dtcnv term (continuous cnv data)
 */
 
-// TODO: handler instance should NOT be shared if the mehtods (such as fillMenu()) depends on mode (continuous, categorical),
-// since dynamically changing instance methods would affect different terms that use this same handler instance
-export const handler = Object.assign({}, _handler, { type: 'dtcnv', setMethods })
+export const handler = Object.assign({}, _handler, { type: 'dtcnv', fillMenu, get_pill_label })
 
-function setMethods(self, tvs) {
-	// fill cnv menu based on whether cnv data is continuous or categorical
-	const termdbConfig = self.opts.vocabApi.termdbConfig || self.opts.vocabApi.parent_termdbConfig
-	const cnv = termdbConfig.queries?.cnv
-	if (!cnv) throw 'cnv query is missing'
-	const keys = Object.keys(cnv)
-	if (keys.includes('cnvGainCutoff') || keys.includes('cnvLossCutoff')) {
-		// dataset has continuous cnv data
-		// use continuous fill menu
-		// to fill menu with cnv cutoff settings
-		handler.fillMenu = fillMenu_cont
-		handler.get_pill_label = get_pill_label_cont
-		tvs.cnvMode = 'continuous'
-	} else {
-		// dataset has categorical cnv data
-		// keep using categorical fill menu
-		// to fill menu with mutation classes
-		tvs.cnvMode = 'categorical'
-		handler.fillMenu = _handler.fillMenu
-		handler.get_pill_label = _handler.get_pill_label
-	}
-}
-
-// fill menu for continuous CNV data
-async function fillMenu_cont(self, div, tvs) {
+async function fillMenu(self, div, tvs) {
 	div.style('margin', '10px')
 	const tip = new Menu({ padding: '5px' })
 
@@ -169,6 +143,7 @@ async function fillMenu_cont(self, div, tvs) {
 		.text('APPLY')
 		.on('click', () => {
 			const new_tvs = structuredClone(tvs)
+			new_tvs.continuousCnv = true
 			new_tvs.cnvWT = cnvWT
 			if (cnvGainCutoff) new_tvs.cnvGainCutoff = cnvGainCutoff
 			if (cnvLossCutoff) new_tvs.cnvLossCutoff = cnvLossCutoff
@@ -178,7 +153,6 @@ async function fillMenu_cont(self, div, tvs) {
 		})
 }
 
-// pill label for continuous CNV data
-function get_pill_label_cont(tvs) {
+function get_pill_label(tvs) {
 	return { txt: tvs.cnvWT ? 'Wildtype' : 'Altered' }
 }

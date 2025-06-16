@@ -140,7 +140,7 @@ test('filterByItem: continuous CNV', t => {
 		type: 'tvs',
 		tvs: {
 			term: { dt: 4 },
-			cnvMode: 'continuous',
+			continuousCnv: true,
 			cnvGainCutoff: 0.5,
 			cnvLossCutoff: -0.5,
 			cnvMaxLength: 100,

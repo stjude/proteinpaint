@@ -66,7 +66,7 @@ async function getPillFilterItem(termType) {
 		const cnv = vocabApi.termdbConfig.queries.cnv
 		const cnvKeys = Object.keys(cnv)
 		if (termType == 'dtcnv' && (cnvKeys.includes('cnvGainCutoff') || cnvKeys.includes('cnvLossCutoff'))) {
-			item.tvs.cnvMode = 'continuous'
+			item.tvs.continuousCnv = true
 			if (cnv.cnvGainCutoff) item.tvs.cnvGainCutoff = cnv.cnvGainCutoff
 			if (cnv.cnvLossCutoff) item.tvs.cnvLossCutoff = cnv.cnvLossCutoff
 			if (cnv.cnvMaxLength) item.tvs.cnvMaxLength = cnv.cnvMaxLength
