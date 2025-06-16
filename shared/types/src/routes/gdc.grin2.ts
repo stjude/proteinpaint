@@ -48,33 +48,31 @@ export type GdcGRIN2listRequest = {
  * Response for GRIN2 file listing
  */
 export type GdcGRIN2listResponse = {
-	/** List of file objects passing filter and to be displayed on client */
-	files: GdcGRIN2File[]
-	/** Total number of files found by API (in case bigger than files.length) */
-	filesTotal: number
-	/** Maximum total size of files allowed, for indicating on UI while selecting files */
-	maxTotalSizeCompressed: number
-	/** File counts by type */
-	fileCounts?: {
-		maf: number
-	}
-	/** Applied filters (for UI reference) */
-	appliedFilters?: {
-		experimentalStrategy?: ExperimentalStrategy
-	}
-	/** Deduplication stats */
-	deduplicationStats?: {
-		originalFileCount: number
-		deduplicatedFileCount: number
-		duplicatesRemoved: number
-		caseDetails?: Array<{ caseName: string; fileCount: number; keptFileSize: number }>
-		filteredFiles: Array<{ fileId: string; fileSize: number; reason: string }>
-	}
 	/** all maf-related results when mafOptions is supplied */
 	mafFiles?: {
 		// TODO suggest to move above maf-related results under mafFiles{}
 		/** list of maf files returned to client */
 		files: GdcGRIN2File[]
+		/** Total number of files found by API (in case bigger than files.length) */
+		filesTotal: number
+		/** Maximum total size of files allowed, for indicating on UI while selecting files */
+		maxTotalSizeCompressed: number
+		/** File counts by type */
+		fileCounts?: {
+			maf: number
+		}
+		/** Applied filters (for UI reference) */
+		appliedFilters?: {
+			experimentalStrategy?: ExperimentalStrategy
+		}
+		/** Deduplication stats */
+		deduplicationStats?: {
+			originalFileCount: number
+			deduplicatedFileCount: number
+			duplicatesRemoved: number
+			caseDetails?: Array<{ caseName: string; fileCount: number; keptFileSize: number }>
+			filteredFiles: Array<{ fileId: string; fileSize: number; reason: string }>
+		}
 	}
 	/** all cnv-related results when cnvOptions is supplied */
 	cnvFiles?: {
@@ -93,6 +91,7 @@ export type RunGRIN2Request = {
 	caseFiles: {
 		[caseId: string]: {
 			maf?: string
+			cnv?: string
 		}
 	}
 	/**  Options for filtering MAF file content */
@@ -102,13 +101,12 @@ export type RunGRIN2Request = {
 		/** Minimum alternate allele count of returned MAF files */
 		minAltAlleleCount?: number // Default: 2
 	}
-	/**  Options for CNV file retrieval (will be added later)
-	 cnvOptions?: {
-	 * lossThreshold?: number // Default: -0.5
-	 * gainThreshold?: number // Default: 0.5
-	 * segLength?: number // Default: 2000000
-	 *}
-	 */
+	/**  Options for filtering CNV file content*/
+	cnvOptions?: {
+		lossThreshold?: number // Default: -0.4
+		gainThreshold?: number // Default: 0.3
+		segLength?: number // Default: 0
+	}
 }
 
 /** Error entry from failed file downloads */

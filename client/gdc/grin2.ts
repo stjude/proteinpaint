@@ -1356,12 +1356,12 @@ async function getFilesAndShowTable(obj) {
 		// console.log('GRIN2list result:', result)
 
 		if (result.error) throw result.error
-		if (!Array.isArray(result.files)) throw 'result.files[] not array'
-		if (result.files.length == 0) throw 'No files available.'
+		if (!Array.isArray(result.mafFiles.files)) throw 'result.mafFiles.files[] not array'
+		if (result.mafFiles.files.length == 0) throw 'No files available.'
 
 		// Update the dedup status in MAF options
-		if (result.deduplicationStats) {
-			updateDedupStatus(obj, result.deduplicationStats)
+		if (result.mafFiles.deduplicationStats) {
+			updateDedupStatus(obj, result.mafFiles.deduplicationStats)
 		}
 
 		// Create CNV files map for lookup
@@ -1375,8 +1375,8 @@ async function getFilesAndShowTable(obj) {
 			}
 		}
 
-		// Filter files based on selected data types and availability**
-		let filteredFiles = result.files
+		// Filter files based on selected data types and availability
+		let filteredFiles = result.mafFiles.files
 		let filteringMessage = ''
 
 		// Determine which data types are selected
@@ -1424,9 +1424,9 @@ async function getFilesAndShowTable(obj) {
 		}
 
 		// Render status message with filtering information
-		if (result.filesTotal > result.files.length) {
+		if (result.mafFiles.filesTotal > result.mafFiles.files.length) {
 			wait.html(`
-				Showing first ${result.files.length.toLocaleString()} files out of ${result.filesTotal.toLocaleString()} total.<br>
+				Showing first ${result.mafFiles.files.length.toLocaleString()} files out of ${result.mafFiles.filesTotal.toLocaleString()} total.<br>
 				${filteringMessage ? `<span style="color: #666; font-style: italic;">${filteringMessage}</span>` : ''}
 			`)
 		} else {
@@ -1600,7 +1600,7 @@ async function getFilesAndShowTable(obj) {
 		select(button.parentElement).style('float', 'left')
 
 		button.disabled = false
-		button.innerHTML = sum < result.maxTotalSizeCompressed ? `Run GRIN2 Analysis` : `Run GRIN2 Analysis`
+		button.innerHTML = sum < result.mafFiles.maxTotalSizeCompressed ? `Run GRIN2 Analysis` : `Run GRIN2 Analysis`
 	}
 
 	/* after table is created, on clicking download btn for first time, create a <span> after download btn,
