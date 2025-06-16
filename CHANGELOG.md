@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- N ew cnv examples in the lollipop card; new search terms for card
+
 
 ## 2.130.0
 
