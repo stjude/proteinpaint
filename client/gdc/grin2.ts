@@ -160,7 +160,7 @@ function addExpandableFailedFilesToStats(statsContainer, failedFilesInfo) {
 		.style('color', '#721c24')
 		.style('font-size', '14px')
 		.style('font-weight', 'bold')
-		.text('📋 Failed Files Details')
+		.text('Failed Files Details')
 
 	// Create table container with max height and scroll
 	const tableContainer = tableSection
@@ -628,7 +628,7 @@ function makeControls(obj) {
 	createMAFOptionsContent(mafOptionsContainer, obj)
 
 	/**
-	 * Updated createMAFOptionsContent function using mclass mutation types
+	 * createMAFOptionsContent function using mclass mutation types
 	 */
 
 	function createMAFOptionsContent(container, obj) {
@@ -730,7 +730,7 @@ function makeControls(obj) {
 		if (!obj.mafOptions.consequences || obj.mafOptions.consequences.length === 0) {
 			// Just use the mclass keys directly for common coding mutations
 			obj.mafOptions.consequences = ['M', 'N', 'F'] // missense, nonsense, frameshift
-			console.log('Initialized default consequences:', obj.mafOptions.consequences)
+			// console.log('Initialized default consequences:', obj.mafOptions.consequences)
 		}
 
 		// Create consequences selection area
@@ -1232,7 +1232,7 @@ function makeControls(obj) {
 		}
 	})
 
-	// Row 4: GRIN2 (unchecked by default)
+	// Row 4: GRIN2
 	const grin2Row = optionsTable.append('tr')
 
 	const grin2CheckboxCell = grin2Row
@@ -1283,11 +1283,11 @@ function makeControls(obj) {
 	// Add submit button click handler
 	submitButton.on('click', function (this: HTMLButtonElement) {
 		if (!this.disabled) {
-			console.log('Submit button clicked - refreshing files with options:', {
-				dataTypeStates: obj.dataTypeStates,
-				mafOptions: obj.mafOptions,
-				cnvOptions: obj.cnvOptions
-			})
+			// console.log('Submit button clicked - refreshing files with options:', {
+			// 	dataTypeStates: obj.dataTypeStates,
+			// 	mafOptions: obj.mafOptions,
+			// 	cnvOptions: obj.cnvOptions
+			// })
 			// Re-fetch files with current options
 			getFilesAndShowTable(obj)
 		}
@@ -1351,9 +1351,9 @@ async function getFilesAndShowTable(obj) {
 		// Add cnvOptions if available
 		body.cnvOptions = {}
 
-		console.log('Request body for GRIN2list:', body)
+		// console.log('Request body for GRIN2list:', body)
 		result = await dofetch3('gdc/GRIN2list', { body })
-		console.log('GRIN2list result:', result)
+		// console.log('GRIN2list result:', result)
 
 		if (result.error) throw result.error
 		if (!Array.isArray(result.files)) throw 'result.files[] not array'
@@ -1667,7 +1667,7 @@ async function getFilesAndShowTable(obj) {
 
 		for (const i of lst) {
 			const file = filteredFiles[i]
-			console.log('File object:', file)
+			// console.log('File object:', file)
 			const caseId = file.case_submitter_id
 
 			if (!caseFiles.caseFiles[caseId]) {
@@ -1711,8 +1711,8 @@ async function getFilesAndShowTable(obj) {
 			obj.busy = true
 
 			// Call the GRIN2 run endpoint with the correctly formatted data
-			console.log('Sending GRIN2 request:', caseFiles)
-			console.log('GRIN2 request structure:', JSON.stringify(caseFiles, null, 2))
+			// console.log('Sending GRIN2 request:', caseFiles)
+			// console.log('GRIN2 request structure:', JSON.stringify(caseFiles, null, 2))
 			const startTime = Date.now()
 			const response = await dofetch3('gdc/runGRIN2', { body: caseFiles })
 			const elapsedTime = formatElapsedTime(Date.now() - startTime)
@@ -1723,10 +1723,11 @@ async function getFilesAndShowTable(obj) {
 			console.log('GRIN2 response:', response)
 
 			if (response.rustResult) {
-				console.log('[GRIN2] rustResult received:', response.rustResult)
-				console.log('[GRIN2] Summary:', response.rustResult.summary)
-				console.log('[GRIN2] Failed files:', response.rustResult.failed_files)
-				console.log('[GRIN2] Successful data arrays:', response.rustResult.successful_data?.length)
+				console.log('[GRIN2] Rust result received: ', response)
+				// console.log('[GRIN2] rustResult received:', response.rustResult)
+				// console.log('[GRIN2] Summary:', response.rustResult.summary)
+				// console.log('[GRIN2] Failed files:', response.rustResult.failed_files)
+				// console.log('[GRIN2] Successful data arrays:', response.rustResult.successful_data?.length)
 			} else {
 				console.log('[GRIN2] No rustResult in response')
 			}
@@ -1741,17 +1742,17 @@ async function getFilesAndShowTable(obj) {
 
 			try {
 				parsedRustResult = typeof rustData === 'string' ? JSON.parse(rustData) : rustData
-				console.log(`[GRIN2] Parsed Rust result structure received`)
-				console.log(`[GRIN2] Parsed Rust result:`, parsedRustResult)
+				// console.log(`[GRIN2] Parsed Rust result structure received`)
+				// console.log(`[GRIN2] Parsed Rust result:`, parsedRustResult)
 
 				// Handle the new structured output
 				if (parsedRustResult) {
 					// Check if it's the new structured format
 					if (parsedRustResult.successful_data && parsedRustResult.summary) {
-						console.log(`[GRIN2] New format detected - Processing ${parsedRustResult.summary.total_files} files`)
-						console.log(
-							`[GRIN2] Success: ${parsedRustResult.summary.successful_files}, Failed: ${parsedRustResult.summary.failed_files}`
-						)
+						// // console.log(`[GRIN2] New format detected - Processing ${parsedRustResult.summary.total_files} files`)
+						// console.log(
+						// 	`[GRIN2] Success: ${parsedRustResult.summary.successful_files}, Failed: ${parsedRustResult.summary.failed_files}`
+						// )
 
 						// Flatten all successful data arrays into one array - THIS GOES TO R
 						processedData = parsedRustResult.successful_data.flat()
@@ -1786,7 +1787,7 @@ async function getFilesAndShowTable(obj) {
 								}
 							}
 
-							console.log(`[GRIN2] ${failedFilesInfo.count} files failed - error details prepared for UI`)
+							// console.log(`[GRIN2] ${failedFilesInfo.count} files failed - error details prepared for UI`)
 						}
 					}
 
@@ -2008,6 +2009,8 @@ async function getFilesAndShowTable(obj) {
 					}
 
 					// Data Filtering Stats Section (if available)
+					console.log('Response analysisStats:', response.analysisStats)
+
 					if (
 						response.analysisStats &&
 						(response.analysisStats.filtered_records !== undefined ||
@@ -2059,6 +2062,16 @@ async function getFilesAndShowTable(obj) {
 								.text(response.analysisStats.filtered_maf_records.toLocaleString())
 						}
 
+						// MAF included (non-filtered) records
+						if (response.analysisStats.included_maf_records !== undefined) {
+							filterStatsGrid.append('div').style('color', '#6c757d').text('MAF Records Included:')
+							filterStatsGrid
+								.append('div')
+								.style('font-weight', 'bold')
+								.style('color', 'black')
+								.text(response.analysisStats.included_maf_records.toLocaleString())
+						}
+
 						// CNV excluded (filtered) records
 						if (response.analysisStats.filtered_cnv_records !== undefined) {
 							filterStatsGrid.append('div').style('color', '#6c757d').text('CNV Records Excluded:')
@@ -2067,6 +2080,16 @@ async function getFilesAndShowTable(obj) {
 								.style('font-weight', 'bold')
 								.style('color', 'black')
 								.text(response.analysisStats.filtered_cnv_records.toLocaleString())
+						}
+
+						// CNV included (non-filtered) records
+						if (response.analysisStats.included_cnv_records !== undefined) {
+							filterStatsGrid.append('div').style('color', '#6c757d').text('CNV Records Included:')
+							filterStatsGrid
+								.append('div')
+								.style('font-weight', 'bold')
+								.style('color', 'black')
+								.text(response.analysisStats.included_cnv_records.toLocaleString())
 						}
 					}
 				}
