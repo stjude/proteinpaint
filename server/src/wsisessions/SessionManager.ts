@@ -144,7 +144,12 @@ export default class SessionManager {
 			const shard = await this.getTileServerShard(key)
 			if (shard?.url === sessionData.tileServerShard.url) {
 				const lastAccessTimestamp = new Date().toISOString()
-				const updatedSessionData = new SessionData(sessionData.imageSessionId, lastAccessTimestamp, shard)
+				const updatedSessionData = new SessionData(
+					sessionData.imageSessionId,
+					lastAccessTimestamp,
+					shard,
+					sessionData.overlays
+				)
 				const serializedData = JSON.stringify(updatedSessionData)
 
 				await this.keyValueStorages.set(key, serializedData)
