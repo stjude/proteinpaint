@@ -252,16 +252,6 @@ async function mayListMafFiles(q: GdcGRIN2listRequest, result: GdcGRIN2listRespo
 	// sort final files in descending order of file size and show on table as default
 	deduplicatedFiles.sort((a, b) => b.file_size - a.file_size)
 
-	// CRITICAL SAFETY CHECK: Verify structure before pushing
-	console.log('About to push files - Safety check:', {
-		mafFilesExists: !!result.mafFiles,
-		filesExists: !!result.mafFiles?.files,
-		filesIsArray: Array.isArray(result.mafFiles?.files),
-		filesCurrentLength: result.mafFiles?.files?.length || 0,
-		deduplicatedFilesLength: deduplicatedFiles.length,
-		deduplicatedFilesIsArray: Array.isArray(deduplicatedFiles)
-	})
-
 	result.mafFiles.files.push(...deduplicatedFiles)
 	result.mafFiles.filesTotal = re.data.pagination.total
 	if (result.mafFiles.fileCounts) {
