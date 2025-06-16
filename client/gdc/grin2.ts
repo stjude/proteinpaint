@@ -1936,9 +1936,7 @@ async function getFilesAndShowTable(obj) {
 					}
 				})
 
-				// Replace the Analysis Summary section in runGRIN2Analysis
 				// This consolidates both analysisStats and file download stats into one panel
-
 				// Create summary statistics panel
 				if (response.analysisStats || (parsedRustResult && parsedRustResult.summary)) {
 					const statsPanel = statsContainer
@@ -2033,9 +2031,9 @@ async function getFilesAndShowTable(obj) {
 							.style('gap', '8px')
 							.style('font-size', '13px')
 
-						// Total filtered records
+						// Total excluded (filtered) records
 						if (response.analysisStats.filtered_records !== undefined) {
-							filterStatsGrid.append('div').style('color', '#6c757d').text('Total Filtered:')
+							filterStatsGrid.append('div').style('color', '#6c757d').text('Total Number of Excluded Records:')
 							filterStatsGrid
 								.append('div')
 								.style('font-weight', 'bold')
@@ -2043,9 +2041,17 @@ async function getFilesAndShowTable(obj) {
 								.text(response.analysisStats.filtered_records.toLocaleString())
 						}
 
-						// MAF filtered records
+						// Total included records in the analysis
+						filterStatsGrid.append('div').style('color', '#6c757d').text('Total Number of Included Records:')
+						filterStatsGrid
+							.append('div')
+							.style('font-weight', 'bold')
+							.style('color', 'black')
+							.text(processedData.length.toLocaleString())
+
+						// MAF excluded (filtered) records
 						if (response.analysisStats.filtered_maf_records !== undefined) {
-							filterStatsGrid.append('div').style('color', '#6c757d').text('MAF Filtered:')
+							filterStatsGrid.append('div').style('color', '#6c757d').text('MAF Records Excluded:')
 							filterStatsGrid
 								.append('div')
 								.style('font-weight', 'bold')
@@ -2053,9 +2059,9 @@ async function getFilesAndShowTable(obj) {
 								.text(response.analysisStats.filtered_maf_records.toLocaleString())
 						}
 
-						// CNV filtered records
+						// CNV excluded (filtered) records
 						if (response.analysisStats.filtered_cnv_records !== undefined) {
-							filterStatsGrid.append('div').style('color', '#6c757d').text('CNV Filtered:')
+							filterStatsGrid.append('div').style('color', '#6c757d').text('CNV Records Excluded:')
 							filterStatsGrid
 								.append('div')
 								.style('font-weight', 'bold')
