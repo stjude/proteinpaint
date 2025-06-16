@@ -1,6 +1,5 @@
 import path from 'path'
-import { read_file, file_is_readable } from '#src/utils.js'
-import serverconfig from '#src/serverconfig.js'
+import { read_file, file_is_readable, fileurl, illegalpath } from '#src/utils.js'
 import type { TermdbSingleSampleMutationRequest, TermdbSingleSampleMutationResponse, RouteApi } from '#types'
 import { termdbSingleSampleMutationPayload } from '#types/checkers'
 import { gdcValidate_query_singleSampleMutation } from '#src/mds3.gdc.js'
@@ -46,7 +45,7 @@ export async function validate_query_singleSampleMutation(ds: any, genome: any) 
 	} else if (_q.src == 'native') {
 		/* using a folder to store text files for individual samples
 		file names are string sample name
-		getter will throw on any error
+		throws on any error
 		*/
 		_q.get = async (q: TermdbSingleSampleMutationRequest) => {
 			let sample: string
@@ -63,7 +62,17 @@ export async function validate_query_singleSampleMutation(ds: any, genome: any) 
 				}
 			}
 
-			const file = path.join(serverconfig.tpmasterdir, _q.folder, sample)
+			// *pre* screening of file name. in case sample name has "../" to traverse back on dir structure, this will be allowed by path.join() resulting in unauthorized access, thus must be screened outside of fileurl()
+			if (illegalpath(sample)) throw 'invalid sample name'
+			// simulate a req obj as fileurl() input; MUST run this to guard against sample=../../../xx
+			const tmp: any = fileurl({
+				query: {
+					file: path.join(_q.folder, sample)
+				}
+			})
+			if (tmp[0]) throw tmp[0]
+			const file: string = tmp[1]
+			if (!file) throw 'no file returned'
 			await file_is_readable(file)
 			const data = await read_file(file)
 			// object wraps around mlst[] so it's possible to add other attr e.g. total number of mutations that exceeds viewing limit
