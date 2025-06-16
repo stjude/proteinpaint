@@ -64,13 +64,24 @@ runs:
         cache-to: type=gha,mode=max
 
     - name: Run local server and integration tests
+      id: integration
       shell: bash
       run: |
+        set -e
         cd ./container
         ./run.sh ppserver:latest
         sleep 10
         cd ..
         xvfb-run --auto-servernum npm run test:integration
+      continue-on-error: true
+
+    - name: Check if integration tests failed
+      id: check-tests
+      shell: bash
+      run: |
+        if [ "${{ steps.integration.outcome }}" != "success" ]; then
+          echo "INTEGRATION_TEST_FAILED=true" >> "$GITHUB_ENV"
+        fi
 
     - name: Get current time
       id: current-time
@@ -85,16 +96,20 @@ runs:
       shell: bash
       run: echo "SHORT_SHA=$(git rev-parse --short ${{ github.sha }})" >> $GITHUB_ENV
 
-    - name: Post build results on slack
-      id: slack
+    - name: Post build results on Slack
       if: always()
       uses: slackapi/slack-github-action@v1.23.0
       with:
         payload: |
           {
-            "status": "${{ job.status }} https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}",
+            "status": "${{ env.INTEGRATION_TEST_FAILED == 'true' && 'failure' || 'success' }} - https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}",
             "commit": "${{ env.SHORT_SHA }}",
             "date-time": "${{ steps.current-time.outputs.formattedTime }}"
           }
       env:
         SLACK_WEBHOOK_URL: ${{ inputs.SLACK_WEBHOOK_URL }}
+
+    - name: Fail job if integration test failed
+      if: env.INTEGRATION_TEST_FAILED == 'true'
+      shell: bash
+      run: exit 1
