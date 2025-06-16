@@ -35,10 +35,31 @@ export type GdcGRIN2listRequest = {
 	mafOptions?: {
 		/** Name of experimental strategy to get files for */
 		experimentalStrategy: ExperimentalStrategy
+		/** Minimum total depth for filtering */
+		minTotalDepth?: number
+		/** Minimum alternate allele count for filtering */
+		minAltAlleleCount?: number
+		/** Array of consequence types to include  */
+		consequences?: string[]
+		/** Maximum mutation count cutoff for highly mutated scenarios */
+		hyperMutator?: number
+		/** Optional array of project IDs to filter by (e.g., ["TCGA-GBM"]) */
+		projectIds?: string[]
 	}
 
-	/** Options for CNV file retrieval. Presence indicates CNV files should be returned (for future use) */
-	cnvOptions?: any
+	/** Options for CNV file retrieval. Presence indicates CNV files should be returned */
+	cnvOptions?: {
+		/** Data type for CNV analysis */
+		dataType?: string
+		/** Threshold for copy number loss detection */
+		lossThreshold?: number
+		/** Threshold for copy number gain detection */
+		gainThreshold?: number
+		/** Maximum segment length to include (0 = no filter) */
+		segLength?: number
+		/** Optional array of project IDs to filter by (e.g., ["TCGA-BRCA", "TCGA-LUAD"]) */
+		projectIds?: string[]
+	}
 
 	/** Options for fusion file retrieval. Presence indicates fusion files should be returned (for future use) */
 	fusionOptions?: any

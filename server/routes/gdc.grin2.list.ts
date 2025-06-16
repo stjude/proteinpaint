@@ -6,7 +6,7 @@ import serverconfig from '#src/serverconfig.js'
 import { mayLog } from '#src/helpers.ts'
 
 /*
-This route lists available gdc MAF files based on user's cohort filter
+This route lists available gdc MAF and CNV files based on user's cohort filter
 and return them to client to be shown in a table for selection
 */
 
@@ -40,6 +40,8 @@ function init({ genomes }) {
 			if (!g) throw 'hg38 missing'
 			const ds = g.datasets?.GDC
 			if (!ds) throw 'hg38 GDC missing'
+
+			console.log('GRIN2 List Route Received:', JSON.stringify(req.query, null, 2))
 
 			// Initialize the response according to the new structure
 			const result: GdcGRIN2listResponse = {}
@@ -94,6 +96,20 @@ async function mayListMafFiles(q: GdcGRIN2listRequest, result: GdcGRIN2listRespo
 			{ op: '=', content: { field: 'analysis.workflow_type', value: allowedWorkflowType } },
 			{ op: '=', content: { field: 'access', value: 'open' } }
 		]
+	}
+
+	// ADD PROJECT FILTERING - this should dramatically reduce file count. Just a sanity check
+	if (q.mafOptions.projectIds && q.mafOptions.projectIds.length > 0) {
+		if (q.mafOptions.projectIds.length === 1) {
+			// Single project filter
+			filters.content.push({
+				op: '=',
+				content: { field: 'cases.project.project_id', value: q.mafOptions.projectIds[0] }
+			})
+		}
+		console.log(`🎯 MAF Project filter applied: ${q.mafOptions.projectIds.join(', ')}`)
+	} else {
+		console.log('🌐 MAF No project filter - showing all projects')
 	}
 
 	const case_filters: any = { op: 'and', content: [] }
@@ -160,7 +176,6 @@ async function mayListMafFiles(q: GdcGRIN2listRequest, result: GdcGRIN2listRespo
 		const c = h.cases?.[0]
 		if (!c) throw 'h.cases[0] missing'
 		if (h.file_size >= maxFileSizeAllowed) {
-			// ???
 			// Collect filtered file info
 			filteredFiles.push({
 				fileId: h.id,
@@ -303,6 +318,28 @@ async function mayListCnvFiles(q: GdcGRIN2listRequest, result: GdcGRIN2listRespo
 			}
 		}
 	}
+
+	// ADD PROJECT FILTERING: Just a sanity check
+	if (q.cnvOptions.projectIds && q.cnvOptions.projectIds.length > 0) {
+		// Convert simple filter to AND filter and add project filter
+		body.filters = {
+			op: 'and',
+			content: [
+				body.filters, // Keep the existing data_type filter
+				{
+					op: q.cnvOptions.projectIds.length === 1 ? '=' : 'in',
+					content: {
+						field: 'cases.project.project_id',
+						value: q.cnvOptions.projectIds.length === 1 ? q.cnvOptions.projectIds[0] : q.cnvOptions.projectIds
+					}
+				}
+			]
+		}
+		console.log(`🎯 CNV Project filter applied: ${q.cnvOptions.projectIds.join(', ')}`)
+	} else {
+		console.log('🌐 CNV No project filter - showing all projects')
+	}
+
 	if (case_filters.content.length) body.case_filters = case_filters
 
 	const { host, headers } = ds.getHostHeaders(q)
