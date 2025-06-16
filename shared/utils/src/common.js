@@ -144,6 +144,21 @@ export const mclass = {
 	},
 	Intron: { label: 'INTRON', color: '#656565', dt: dtsnvindel, desc: 'An intronic variant.', key: 'Intron' },
 
+	StopLost: {
+		label: 'Stop lost',
+		color: '#ff7f0e',
+		dt: dtsnvindel,
+		desc: 'A sequence variant where at least one base of the terminator codon (stop) is changed, resulting in an elongated transcript',
+		key: 'StopLost'
+	},
+	StartLost: {
+		label: 'Start lost',
+		color: '#ff7f0e',
+		dt: dtsnvindel,
+		desc: 'A codon variant that changes at least one base of the canonical start codon',
+		key: 'StartLost'
+	},
+
 	// quick fix!! for showing genes that are not tested in samples (e.g. gene panels) in the heatmap
 	Blank: { label: 'Not tested', color: '#fff', dt: dtsnvindel, desc: 'This gene is not tested.', key: 'Blank' },
 
@@ -220,8 +235,78 @@ mclass[mclassnoncoding] = {
 	desc: 'Noncoding mutation.',
 	key: mclassnoncoding
 }
-// done point mutations
 
+/*
+includes full list of consequences from
+https://www.ensembl.org/info/genome/variation/prediction/predicted_data.html
+each entry is SO term with matching pp class
+entries that cannot be mapped to dtsnvindel classes are commented off
+order of entries is severity
+
+* since source of data! *
+from this array derives multiple types of lookup tables to perform mapping on both ways
+*/
+const SOterms = [
+	//transcript_ablation // not supported: 1) do not expect this in maf/vcf 2) should be represented as cnv deletion but not the legacy unused value "dtdel"; if needed can reenable
+	['splice_acceptor_variant', 'L'],
+	['splice_donor_variant', 'L'],
+	['stop_gained', 'N'],
+	['frameshift_variant', 'F'],
+	['stop_lost', 'StopLost'],
+	['start_lost', 'StartLost'],
+	//transcript_amplification // not supported, should be represented by cnv instead
+	['feature_elongation', mclassnoncoding],
+	['feature_truncation', mclassnoncoding],
+	['inframe_insertion', 'I'],
+	['inframe_deletion', 'D'],
+	['missense_variant', 'M'],
+	['protein_altering_variant', 'ProteinAltering'],
+	['splice_donor_5th_base_variant', 'P'],
+	['splice_region_variant', 'P'],
+	['splice_donor_region_variant', 'P'],
+	['splice_polypyrimidine_tract_variant', 'P'],
+	['incomplete_terminal_codon_variant', 'N'],
+	['start_retained_variant', 'S'],
+	['stop_retained_variant', 'S'],
+	['synonymous_variant', 'S'],
+	['coding_sequence_variant', 'E'],
+	['mature_miRNA_variant', 'E'],
+	['5_prime_UTR_variant', mclassutr5],
+	['3_prime_UTR_variant', mclassutr3],
+	['non_coding_transcript_exon_variant', 'E'],
+	['intron_variant', 'Intron'],
+	['NMD_transcript_variant', 'F'],
+	['non_coding_transcript_variant', 'E'],
+	['coding_transcript_variant', 'E'],
+	['upstream_gene_variant', mclassnoncoding],
+	['downstream_gene_variant', mclassnoncoding],
+	['TFBS_ablation', mclassnoncoding],
+	['TFBS_amplification', mclassnoncoding],
+	['TF_binding_site_variant', mclassnoncoding],
+	['regulatory_region_ablation', mclassnoncoding],
+	['regulatory_region_amplification', mclassnoncoding],
+	['regulatory_region_variant', mclassnoncoding],
+	['intergenic_variant', mclassnoncoding],
+	['sequence_variant', mclassnonstandard]
+]
+
+// maps a pp class to an array of consequences
+// k: pp class, v: array of consequences. case sensitive
+export const class2SOterm = new Map()
+for (const [csq, cls] of SOterms) {
+	if (!class2SOterm.has(cls)) class2SOterm.set(cls, [])
+	class2SOterm.get(cls).push(csq)
+}
+
+// maps a consequence to a pp class. no severity info. use vepinfo() if needs severity
+// k: consequence, v: pp class. case sensitive.
+export const SOterm2class = new Map()
+for (const [csq, cls] of SOterms) {
+	SOterm2class.set(csq, cls)
+}
+
+// outdated function to match with adhoc nonstandard notations, only used in legacy code utils/src/bulk.snv.js
+// DO NOT USE to map vep consequences
 export function mclasstester(s) {
 	switch (s.toLowerCase()) {
 		case 'missense_mutation':
@@ -388,6 +473,10 @@ export function applyOverrides(overrides = {}) {
 	}
 }
 
+/* legacy function. input is comma-joined multiple consequences
+performs case insensitive match and returns severity rank
+TODO share data with SOterms
+*/
 export const vepinfo = function (s) {
 	const l = s.toLowerCase().split(',')
 	let rank = 1
