@@ -7,9 +7,9 @@ import { gene_searchbox, findgenemodel_bysymbol } from './gene'
 import { legend_newrow } from './block.legend'
 import { schemeCategory20 } from '#common/legacy-d3-polyfill'
 import * as THREE from 'three'
-import { TrackballControls } from 'three/addons/controls/TrackballControls.js'
 import { PCDLoader } from 'three/addons/loaders/PCDLoader.js'
 import * as WEBGL from '../../server/public/static/js/WebGL.js'
+import { TrackballControls } from 'three/addons/controls/TrackballControls.js'
 
 /*
 ********************** EXPORTED
@@ -241,6 +241,10 @@ async function init_view(obj) {
 	obj.renderer.setSize(obj.width, obj.height)
 	obj.renderer.domElement.style.backgroundColor = '#ffffff'
 	obj.renderer.domElement.style.border = 'solid #dddddd 2px'
+	obj.renderer.outputColorSpace = THREE.LinearSRGBColorSpace
+	obj.renderer.toneMapping = THREE.NoToneMapping
+
+	obj.holder.style('display', 'inline-block').style('position', 'relative').node().appendChild(obj.renderer.domElement)
 
 	obj.controls = new TrackballControls(obj.camera, obj.renderer.domElement)
 
@@ -256,9 +260,8 @@ async function init_view(obj) {
 
 	obj.scene.add(obj.camera)
 
-	obj.holder.style('display', 'inline-block').style('position', 'relative').node().appendChild(obj.renderer.domElement)
-
 	obj.renderer.render(obj.scene, obj.camera)
+	obj.controls.update()
 }
 
 function render_cloud(obj, pcd_buffer) {
@@ -274,6 +277,17 @@ function render_cloud(obj, pcd_buffer) {
 	// add new points using loader
 	const loader = new PCDLoader()
 	const points = loader.parse(pcd_buffer, '')
+
+	const newMat = new THREE.PointsMaterial({
+		size: points.material.size,
+		vertexColors: true,
+		color: 0xffffff
+	})
+	points.material = newMat
+
+	points.material.vertexColors = true
+	points.material.color.set(0xffffff) // no tint
+	points.material.needsUpdate = true
 
 	if (obj.point_size) {
 		points.material.size = obj.point_size
