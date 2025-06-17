@@ -35,7 +35,7 @@ function parseJsonlOutput(rustOutput: string): any {
 	const lines = rustOutput.trim().split('\n')
 	const allSuccessfulData: any[] = []
 	let finalSummary: any = null
-	// let processedFiles = 0
+	let processedFiles = 0
 
 	for (const line of lines) {
 		const trimmedLine = line.trim()
@@ -45,11 +45,11 @@ function parseJsonlOutput(rustOutput: string): any {
 
 				if (data.type === 'data') {
 					// Individual file completed successfully
-					// processedFiles++
+					processedFiles++
 					allSuccessfulData.push(data.data)
-					// console.log(
-					// 	`[GRIN2] Processed file ${processedFiles}: ${data.case_id} (${data.data_type}) - ${data.data.length} records`
-					// )
+					console.log(
+						`[GRIN2] Processed file ${processedFiles}: ${data.case_id} (${data.data_type}) - ${data.data.length} records`
+					)
 				} else if (data.type === 'summary') {
 					// Final summary - all files processed
 					finalSummary = data
@@ -119,8 +119,11 @@ function init({ genomes }) {
 			// Step 1: Call Rust to process the MAF files and get JSON data (now with streaming)
 			const rustInput = JSON.stringify({
 				caseFiles: parsedRequest.caseFiles,
-				mafOptions: parsedRequest.mafOptions
+				mafOptions: parsedRequest.mafOptions,
+				cnvOptions: parsedRequest.cnvOptions
 			})
+
+			console.log(`[GRIN2] Rust input: ${rustInput}`)
 
 			// Use stream_rust instead of run_rust
 			console.log('[GRIN2] Executing Rust function with streaming...')
