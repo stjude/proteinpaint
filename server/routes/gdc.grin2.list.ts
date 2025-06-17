@@ -300,27 +300,6 @@ async function mayListCnvFiles(q: GdcGRIN2listRequest, result: GdcGRIN2listRespo
 		}
 	}
 
-	// ADD PROJECT FILTERING: Just a sanity check
-	if (q.cnvOptions.projectIds && q.cnvOptions.projectIds.length > 0) {
-		// Convert simple filter to AND filter and add project filter
-		body.filters = {
-			op: 'and',
-			content: [
-				body.filters, // Keep the existing data_type filter
-				{
-					op: q.cnvOptions.projectIds.length === 1 ? '=' : 'in',
-					content: {
-						field: 'cases.project.project_id',
-						value: q.cnvOptions.projectIds.length === 1 ? q.cnvOptions.projectIds[0] : q.cnvOptions.projectIds
-					}
-				}
-			]
-		}
-		console.log(`🎯 CNV Project filter applied: ${q.cnvOptions.projectIds.join(', ')}`)
-	} else {
-		console.log('🌐 CNV No project filter - showing all projects')
-	}
-
 	if (case_filters.content.length) body.case_filters = case_filters
 
 	const { host, headers } = ds.getHostHeaders(q)
