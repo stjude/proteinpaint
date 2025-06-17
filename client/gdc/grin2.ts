@@ -6,7 +6,6 @@ A comprehensive UI for listing and analyzing genomic files (MAF, CNV, Fusion)
 from GDC cohorts, with GRIN2 analysis capabilities and result visualization.
 
 Author: PP Team
-Last Updated: 06-13-2025
 ================================================================================
 */
 
@@ -19,7 +18,7 @@ import { bplen } from '@sjcrh/proteinpaint-shared/common.js'
 import { mclass, class2SOterm } from '@sjcrh/proteinpaint-shared/common.js'
 
 // ================================================================================
-// TYPE DEFINITIONS & INTERFACES
+// TYPE DEFINITIONS, INTERFACES, & DEFAULTS
 // ================================================================================
 
 // Interface for table row item
@@ -27,6 +26,33 @@ interface TableRowItem {
 	html?: string
 	value?: any
 }
+
+const defaultMAFclasses = [
+	'missense_variant',
+	'frameshift_variant',
+
+	// High impact protein-changing variants
+	'stop_gained',
+	'stop_lost',
+	'start_lost',
+	'splice_acceptor_variant',
+	'splice_donor_variant',
+
+	// Moderate impact protein-changing variants
+	'inframe_insertion',
+	'inframe_deletion',
+	'protein_altering_variant',
+
+	// Splicing variants that may affect protein
+	'splice_donor_5th_base_variant',
+	'splice_region_variant',
+	'splice_donor_region_variant',
+	'splice_polypyrimidine_tract_variant',
+
+	// Other protein-affecting variants
+	'incomplete_terminal_codon_variant',
+	'NMD_transcript_variant'
+]
 
 // ================================================================================
 // UTILITY FUNCTIONS
@@ -515,7 +541,7 @@ function makeControls(obj) {
 		obj.mafOptions = {
 			minTotalDepth: 10,
 			minAltAlleleCount: 2,
-			consequences: ['missense_variant', 'frameshift_variant'],
+			consequences: defaultMAFclasses, // Use default classes
 			hyperMutator: 8000
 		}
 	}
@@ -707,7 +733,7 @@ function makeControls(obj) {
 		// Initialize consequences with SO terms if not set
 		if (!obj.mafOptions.consequences || obj.mafOptions.consequences.length === 0) {
 			// Use SO terms directly for common coding mutations
-			obj.mafOptions.consequences = ['missense_variant', 'frameshift_variant']
+			obj.mafOptions.consequences = defaultMAFclasses
 		}
 
 		// Create consequences selection area
@@ -1354,8 +1380,8 @@ async function getFilesAndShowTable(obj) {
 		}
 
 		// Check if we have any files to work with
-		const hasMafFiles = result.mafFiles && result.mafFiles.files && result.mafFiles.files.length > 0
-		const hasCnvFiles = result.cnvFiles && result.cnvFiles.files && result.cnvFiles.files.length > 0
+		const hasMafFiles = result.mafFiles?.files?.length > 0
+		const hasCnvFiles = result.cnvFiles?.files?.length > 0
 
 		if (obj.dataTypeStates.maf && !hasMafFiles) {
 			throw 'No MAF files available for the selected criteria.'
