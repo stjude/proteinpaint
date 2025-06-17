@@ -15,8 +15,8 @@ import { renderTable, sayerror } from '#dom'
 import { select } from 'd3-selection'
 import { formatElapsedTime } from '@sjcrh/proteinpaint-shared/time.js'
 import type { GdcGRIN2listRequest } from '#types'
-import { mclass } from '@sjcrh/proteinpaint-shared/common.js'
 import { bplen } from '@sjcrh/proteinpaint-shared/common.js'
+import { mclass, class2SOterm } from '@sjcrh/proteinpaint-shared/common.js'
 
 // ================================================================================
 // TYPE DEFINITIONS & INTERFACES
@@ -31,28 +31,6 @@ interface TableRowItem {
 // ================================================================================
 // UTILITY FUNCTIONS
 // ================================================================================
-
-/**
- * Converts mclass keys to the format expected by the Rust backend
- * Based on the normalize_consequence function in the Rust code
- */
-function convertMclassKeysToRustFormat(mclassKeys: string[]): string[] {
-	const mclassToRustMap: { [key: string]: string } = {
-		// Map mclass keys to what Rust normalize_consequence expects
-		M: 'missense', // MISSENSE -> missense
-		N: 'nonsense', // NONSENSE -> nonsense
-		F: 'frameshift', // FRAMESHIFT -> frameshift
-		S: 'silent', // SILENT -> silent
-		D: 'deletion', // PROTEINDEL -> deletion (maps to in_frame_del in Rust)
-		I: 'insertion', // PROTEININS -> insertion (maps to in_frame_ins in Rust)
-		L: 'splice_site', // SPLICE -> splice_site
-		P: 'splice_site', // SPLICE_REGION -> splice_site (both map to same)
-		ProteinAltering: 'missense' // Map to missense as closest equivalent
-		// Add more mappings as needed based on what Rust backend supports
-	}
-
-	return mclassKeys.map(key => mclassToRustMap[key]).filter(mapped => mapped !== undefined) // Remove unmapped keys
-}
 
 /**
  * Simple helper to categorize mutation types for UI organization
@@ -537,8 +515,8 @@ function makeControls(obj) {
 		obj.mafOptions = {
 			minTotalDepth: 10,
 			minAltAlleleCount: 2,
-			consequences: ['M', 'N', 'F'], // Just use mclass keys directly
-			hypermutatorMaxCutoff: 8000
+			consequences: ['missense_variant', 'frameshift_variant'],
+			hyperMutator: 8000
 		}
 	}
 	if (!obj.cnvOptions) {
@@ -726,29 +704,21 @@ function makeControls(obj) {
 			.style('margin-top', '4px')
 			.text('Consequences:')
 
-		// Initialize consequences with simple defaults if not set
+		// Initialize consequences with SO terms if not set
 		if (!obj.mafOptions.consequences || obj.mafOptions.consequences.length === 0) {
-			// Just use the mclass keys directly for common coding mutations
-			obj.mafOptions.consequences = ['M', 'N', 'F'] // missense, nonsense, frameshift
-			// console.log('Initialized default consequences:', obj.mafOptions.consequences)
+			// Use SO terms directly for common coding mutations
+			obj.mafOptions.consequences = ['missense_variant', 'frameshift_variant']
 		}
 
 		// Create consequences selection area
 		const consequencesSelectionDiv = consequencesContainer.append('div').style('flex', '1')
 
-		// Fix TypeScript issues by explicitly typing the arrays
-		type MclassItem = {
-			key: string
-			entry: {
-				label: string
-				color: string
-				desc: string
-				[key: string]: any
-			}
-		}
-
-		// Group mutation types by category for better organization
-		const codingTypes: MclassItem[] = []
+		// Group mutation types by category for better organization using existing mappings
+		const codingTypes: Array<{
+			mclassKey: string
+			soTerms: string[]
+			entry: any
+		}> = []
 
 		// Skip utility types and organize by category
 		const skipTypes = ['Blank', 'WT']
@@ -757,7 +727,15 @@ function makeControls(obj) {
 			if (skipTypes.includes(key)) continue
 
 			if (getCategoryForMclass(key) === 'coding') {
-				codingTypes.push({ key, entry: mclassEntry })
+				// Get SO terms for this mclass key using existing mapping
+				const soTerms = class2SOterm.get(key) || []
+				if (soTerms.length > 0) {
+					codingTypes.push({
+						mclassKey: key,
+						soTerms: soTerms,
+						entry: mclassEntry
+					})
+				}
 			}
 		}
 
@@ -780,7 +758,7 @@ function makeControls(obj) {
 				.style('gap', '8px')
 				.style('margin-left', '12px')
 
-			codingTypes.forEach(({ key, entry }) => {
+			codingTypes.forEach(({ mclassKey, soTerms, entry }) => {
 				const checkboxDiv = codingCheckboxContainer
 					.append('div')
 					.style('display', 'flex')
@@ -791,35 +769,40 @@ function makeControls(obj) {
 				const checkbox = checkboxDiv
 					.append('input')
 					.attr('type', 'checkbox')
-					.attr('id', `consequence-${key}`)
-					.property('checked', obj.mafOptions.consequences.includes(key))
+					.attr('id', `consequence-${mclassKey}`)
+					.property(
+						'checked',
+						soTerms.some(soTerm => obj.mafOptions.consequences.includes(soTerm))
+					)
 					.style('margin', '0')
 					.style('cursor', 'pointer')
 
 				const label = checkboxDiv
 					.append('label')
-					.attr('for', `consequence-${key}`)
+					.attr('for', `consequence-${mclassKey}`)
 					.style('cursor', 'pointer')
 					.style('font-size', '13px')
 					.style('color', '#333')
-					.attr('title', entry.desc) // Tooltip with description
+					.attr('title', `${entry.desc} (SO terms: ${soTerms.join(', ')})`) // Show SO terms in tooltip
 
-				// Add label text
+				// Add label text (use the familiar mclass label)
 				label.append('span').text(entry.label)
 
 				// Add change handler
 				checkbox.on('change', function (this: HTMLInputElement) {
 					const isChecked = this.checked
 					if (isChecked) {
-						// Add mclass key if not already present
-						if (!obj.mafOptions.consequences.includes(key)) {
-							obj.mafOptions.consequences.push(key)
-						}
+						// Add all SO terms for this mclass if not already present
+						soTerms.forEach(soTerm => {
+							if (!obj.mafOptions.consequences.includes(soTerm)) {
+								obj.mafOptions.consequences.push(soTerm)
+							}
+						})
 					} else {
-						// Remove mclass key
-						obj.mafOptions.consequences = obj.mafOptions.consequences.filter(c => c !== key)
+						// Remove all SO terms for this mclass
+						obj.mafOptions.consequences = obj.mafOptions.consequences.filter(c => !soTerms.includes(c))
 					}
-					console.log('Updated consequences:', obj.mafOptions.consequences)
+					console.log('Updated consequences (SO terms):', obj.mafOptions.consequences)
 				})
 			})
 		}
@@ -836,7 +819,8 @@ function makeControls(obj) {
 			.style('color', '#495057')
 			.style('line-height', '1.4').html(`
 			<strong>Mutation Types:</strong> Select the types of mutations to include in your analysis. 
-			Hover over each option to see detailed descriptions.
+			The system will match the corresponding Sequence Ontology (SO) terms against your MAF files.
+			Hover over each option to see the specific SO terms that will be used.
 		`)
 
 		// Row 3: Hypermutator Max Cut Off
@@ -858,7 +842,7 @@ function makeControls(obj) {
 			.attr('type', 'number')
 			.attr('min', '0')
 			.attr('step', '100')
-			.attr('value', obj.mafOptions.hypermutatorMaxCutoff || 8000)
+			.attr('value', obj.mafOptions.hyperMutator || 8000)
 			.style('width', '70px')
 			.style('padding', '4px 8px')
 			.style('border', '1px solid #ccc')
@@ -868,7 +852,7 @@ function makeControls(obj) {
 		hyperInput.on('input', function (this: HTMLInputElement) {
 			const value = parseInt(this.value, 10)
 			if (!isNaN(value) && value >= 0) {
-				obj.mafOptions.hypermutatorMaxCutoff = value
+				obj.mafOptions.hyperMutator = value
 			}
 		})
 
@@ -1688,7 +1672,8 @@ async function getFilesAndShowTable(obj) {
 			caseFiles.mafOptions = {
 				minTotalDepth: obj.mafOptions.minTotalDepth,
 				minAltAlleleCount: obj.mafOptions.minAltAlleleCount,
-				consequences: convertMclassKeysToRustFormat(obj.mafOptions.consequences)
+				consequences: obj.mafOptions.consequences,
+				hyperMutator: obj.mafOptions.hyperMutator
 			}
 		}
 
