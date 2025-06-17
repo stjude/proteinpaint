@@ -52,7 +52,7 @@ tape('mayGetTkobj: mds3', async test => {
 	{
 		const urlp = new Map([
 			['filterobj', 'yy'],
-			['cnvonly', 1]
+			['cnvonly', '1'] // must use '1' but not 1: all array elements must have consistent type to avoid tsc error
 		])
 		const result = await mayGetTkobj('mds3', 'xxx', urlp, null)
 		test.deepEqual(
