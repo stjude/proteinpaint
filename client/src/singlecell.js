@@ -6,6 +6,10 @@ import { scaleLinear, scaleOrdinal } from 'd3-scale'
 import { gene_searchbox, findgenemodel_bysymbol } from './gene'
 import { legend_newrow } from './block.legend'
 import { schemeCategory20 } from '#common/legacy-d3-polyfill'
+import * as THREE from 'three'
+import { TrackballControls } from 'three/examples/jsm/controls/TrackballControls.js'
+import { PCDLoader } from 'three/examples/jsm/loaders/PCDLoader.js'
+import * as WEBGL from '../../server/public/static/js/WebGL.js'
 
 /*
 ********************** EXPORTED
@@ -208,11 +212,6 @@ or selected a gene for overlaying
 
 async function init_view(obj) {
 	// TODO only load below if to do 3d
-	await add_scriptTag('/static/js/three.js')
-	await add_scriptTag('/static/js/loaders/PCDLoader.js')
-	await add_scriptTag('/static/js/controls/TrackballControls.js')
-	await add_scriptTag('/static/js/WebGL.js')
-
 	if (WEBGL.isWebGLAvailable() === false) {
 		obj.holder.node().appendChild(WEBGL.getWebGLErrorMessage())
 		return
@@ -238,7 +237,7 @@ async function init_view(obj) {
 		obj.camera.up.set(0, 0, 1)
 	}
 
-	obj.controls = new THREE.TrackballControls(obj.camera)
+	obj.controls = new TrackballControls(obj.camera, obj.holder.node())
 
 	obj.controls.rotateSpeed = obj.canvas_2d ? 0 : 2.0
 	obj.controls.zoomSpeed = obj.canvas_2d ? 3.0 : 0.7
@@ -258,18 +257,14 @@ async function init_view(obj) {
 	obj.renderer.domElement.style.backgroundColor = '#ffffff'
 	obj.renderer.domElement.style.border = 'solid #dddddd 2px'
 
-	obj.holder
-		.style('display', 'inline-block')
-		.style('position', 'relative')
-		.node()
-		.appendChild(obj.renderer.domElement)
+	obj.holder.style('display', 'inline-block').style('position', 'relative').node().appendChild(obj.renderer.domElement)
 
 	obj.renderer.render(obj.scene, obj.camera)
 }
 
 function render_cloud(obj, pcd_buffer) {
 	// remove old points before adding new
-	obj.scene.children.forEach(function(v, i) {
+	obj.scene.children.forEach(function (v, i) {
 		if (v.material) {
 			v.material.dispose()
 			v.geometry.dispose()
@@ -278,7 +273,7 @@ function render_cloud(obj, pcd_buffer) {
 	})
 
 	// add new points using loader
-	const loader = new THREE.PCDLoader()
+	const loader = new PCDLoader()
 	const points = loader.parse(pcd_buffer, '')
 
 	if (obj.point_size) {
@@ -403,11 +398,7 @@ function render_controlpanel(obj, data) {
 			select_all_checkbox.property('checked', 1)
 		}
 
-		top_row
-			.append('span')
-			.text('Select All')
-			.style('font-size', '.8em')
-			.attr('font-family', client.font)
+		top_row.append('span').text('Select All').style('font-size', '.8em').attr('font-family', client.font)
 
 		for (const type in data.category2color) {
 			// div for each label
@@ -445,10 +436,7 @@ function render_controlpanel(obj, data) {
 				.style('margin-right', '10px')
 
 			//label text
-			row
-				.append('span')
-				.text(type)
-				.attr('font-family', client.font)
+			row.append('span').text(type).attr('font-family', client.font)
 
 			row
 				.append('span')
@@ -481,24 +469,16 @@ function render_controlpanel(obj, data) {
 
 		const colorRange = [obj.gene_expression.color_max, obj.gene_expression.color_min]
 
-		const colorScale = scaleLinear()
-			.range(colorRange)
-			.domain([data.minexpvalue, data.maxexpvalue])
+		const colorScale = scaleLinear().range(colorRange).domain([data.minexpvalue, data.maxexpvalue])
 
 		const defs = svg.append('defs')
 
 		const linearGradient = defs.append('linearGradient').attr('id', 'linear-gradient')
 		// .attr('gradientTransform', 'rotate(90)')
 
-		linearGradient
-			.append('stop')
-			.attr('offset', '0%')
-			.attr('stop-color', colorScale(data.maxexpvalue))
+		linearGradient.append('stop').attr('offset', '0%').attr('stop-color', colorScale(data.maxexpvalue))
 
-		linearGradient
-			.append('stop')
-			.attr('offset', '100%')
-			.attr('stop-color', colorScale(data.minexpvalue))
+		linearGradient.append('stop').attr('offset', '100%').attr('stop-color', colorScale(data.minexpvalue))
 
 		svg
 			.append('rect')
@@ -509,13 +489,9 @@ function render_controlpanel(obj, data) {
 			.attr('transform', 'translate(12, 0)')
 			.style('fill', 'url(#linear-gradient)')
 
-		const y = scaleLinear()
-			.range([0, scale_width])
-			.domain([data.minexpvalue, data.maxexpvalue])
+		const y = scaleLinear().range([0, scale_width]).domain([data.minexpvalue, data.maxexpvalue])
 
-		const legendAxis = axisBottom()
-			.scale(y)
-			.ticks(5)
+		const legendAxis = axisBottom().scale(y).ticks(5)
 
 		svg
 			.append('g')
@@ -523,16 +499,9 @@ function render_controlpanel(obj, data) {
 			.attr('transform', 'translate(12,' + scale_height + ')')
 			.call(legendAxis)
 
-		const stats_div = obj.menu_output
-			.append('div')
-			.style('padding-bottom', '20px')
-			.style('text-align', 'center')
+		const stats_div = obj.menu_output.append('div').style('padding-bottom', '20px').style('text-align', 'center')
 
-		stats_div
-			.append('p')
-			.style('font-size', '13px')
-			.style('margin', '2px 0')
-			.html('<b>Cells with Expression Data</b> ')
+		stats_div.append('p').style('font-size', '13px').style('margin', '2px 0').html('<b>Cells with Expression Data</b> ')
 
 		stats_div
 			.append('p')
@@ -540,10 +509,7 @@ function render_controlpanel(obj, data) {
 			.style('margin', '2px 0')
 			.html(data.numbercellwithgeneexp + ' / ' + data.numbercelltotal)
 
-		const no_exp_div = stats_div
-			.append('div')
-			.style('display', 'block')
-			.style('margin-top', '10px')
+		const no_exp_div = stats_div.append('div').style('display', 'block').style('margin-top', '10px')
 
 		no_exp_div
 			.append('div')
@@ -570,17 +536,11 @@ function render_controlpanel(obj, data) {
 
 		const boxplot_cat_select = boxplot_div.append('select').style('display', 'block')
 
-		boxplot_cat_select
-			.append('option')
-			.attr('value', 'none')
-			.text('-- Select--')
+		boxplot_cat_select.append('option').attr('value', 'none').text('-- Select--')
 
 		if (obj.cells.categories) {
 			obj.cells.categories.forEach((category, i) => {
-				boxplot_cat_select
-					.append('option')
-					.attr('value', category.columnidx)
-					.text(category.name)
+				boxplot_cat_select.append('option').attr('value', category.columnidx).text(category.name)
 			})
 		}
 		boxplot_cat_select.on('change', () => {
@@ -746,10 +706,7 @@ function make_menu(obj) {
 
 		if (obj.gene_expression.genes) {
 			if (obj.gene_expression.genes.length > 1) {
-				obj.menu.d
-					.append('div')
-					.style('padding', '5px 10px')
-					.text('Previously Selected')
+				obj.menu.d.append('div').style('padding', '5px 10px').text('Previously Selected')
 			}
 
 			obj.gene_expression.genes.forEach((gene, i) => {
@@ -783,10 +740,7 @@ function make_settings(obj) {
 		.text('Background Color')
 		.style('margin', '5px')
 
-	const black_div = back_color_div
-		.append('div')
-		.style('margin', '5px')
-		.style('display', 'block')
+	const black_div = back_color_div.append('div').style('margin', '5px').style('display', 'block')
 
 	const name = Math.random(),
 		idblack = Math.random(),
@@ -808,10 +762,7 @@ function make_settings(obj) {
 		.style('padding-left', '10px')
 		.attr('for', idblack)
 
-	const white_div = back_color_div
-		.append('div')
-		.style('margin', '5px')
-		.style('display', 'block')
+	const white_div = back_color_div.append('div').style('margin', '5px').style('display', 'block')
 
 	const inputwhite = white_div
 		.append('input')
@@ -862,11 +813,7 @@ function make_settings(obj) {
 
 	if (obj.show_zoom == false) {
 		// zoom in / zoom out
-		const zoom_div = obj.settings.d
-			.append('div')
-			.style('display', 'block')
-			.text('Zoom')
-			.style('margin', '20px 5px')
+		const zoom_div = obj.settings.d.append('div').style('display', 'block').text('Zoom').style('margin', '20px 5px')
 
 		const zoom_hide_btn = zoom_div
 			.append('div')
@@ -905,10 +852,7 @@ function make_settings(obj) {
 	}
 
 	// info for panning
-	obj.settings.d
-		.append('div')
-		.style('margin', '5px')
-		.text('Panning')
+	obj.settings.d.append('div').style('margin', '5px').text('Panning')
 
 	obj.settings.d
 		.append('div')
@@ -919,10 +863,7 @@ function make_settings(obj) {
 
 	if (!obj.canvas_2d) {
 		// info for roatation
-		obj.settings.d
-			.append('div')
-			.style('margin', '5px')
-			.text('Rotate')
+		obj.settings.d.append('div').style('margin', '5px').text('Rotate')
 
 		obj.settings.d
 			.append('div')
@@ -999,10 +940,7 @@ function make_settings(obj) {
 			// download_btn.node().click()
 		})
 		.on('mouseup', () => {
-			screenshot_btn
-				.select('a')
-				.node()
-				.click()
+			screenshot_btn.select('a').node().click()
 			screenshot_btn.selectAll('span').remove()
 		})
 }
@@ -1012,10 +950,7 @@ function heatmap_menu(obj) {
 	obj.gene_expression.heatmap_genes = []
 	obj.use_heatmap_category_index = null
 
-	const heatmap_menu_div = obj.menu.d
-		.append('div')
-		.style('display', 'block')
-		.style('padding', '10px')
+	const heatmap_menu_div = obj.menu.d.append('div').style('display', 'block').style('padding', '10px')
 
 	const genes_div = heatmap_menu_div.append('div').style('display', 'block')
 
@@ -1025,11 +960,7 @@ function heatmap_menu(obj) {
 		.style('vertical-align', 'top')
 		.style('padding', '10px')
 
-	gene_search_div
-		.append('div')
-		.style('display', 'block')
-		.style('padding-bottom', '5px')
-		.text('Add Genes')
+	gene_search_div.append('div').style('display', 'block').style('padding-bottom', '5px').text('Add Genes')
 
 	gene_search_div
 		.append('textarea')
@@ -1047,22 +978,13 @@ function heatmap_menu(obj) {
 		.style('padding-left', '10px')
 		.text('Heatmap by')
 
-	const cat_select = catagory_div
-		.append('select')
-		.style('display', 'block')
-		.style('margin-left', '10px')
+	const cat_select = catagory_div.append('select').style('display', 'block').style('margin-left', '10px')
 
-	cat_select
-		.append('option')
-		.attr('value', 'none')
-		.text('-- Select--')
+	cat_select.append('option').attr('value', 'none').text('-- Select--')
 
 	if (obj.cells.categories) {
 		obj.cells.categories.forEach((category, i) => {
-			cat_select
-				.append('option')
-				.attr('value', category.columnidx)
-				.text(category.name)
+			cat_select.append('option').attr('value', category.columnidx).text(category.name)
 		})
 	}
 
@@ -1128,15 +1050,9 @@ function make_plot(data, obj, colidx) {
 	//toggle between violin and Boxplot
 	const plot_select = control_panel.append('select').style('display', 'inline-block')
 
-	plot_select
-		.append('option')
-		.attr('value', 'violin')
-		.text('Violin Plot')
+	plot_select.append('option').attr('value', 'violin').text('Violin Plot')
 
-	plot_select
-		.append('option')
-		.attr('value', 'box')
-		.text('Box Plot')
+	plot_select.append('option').attr('value', 'box').text('Box Plot')
 
 	plot_select.on('change', () => {
 		apply()
@@ -1149,20 +1065,11 @@ function make_plot(data, obj, colidx) {
 		.style('padding-left', '15px')
 		.text('Cells without expression')
 
-	const cell_select = cell_select_div
-		.append('select')
-		.style('display', 'inline-block')
-		.style('margin-left', '5px')
+	const cell_select = cell_select_div.append('select').style('display', 'inline-block').style('margin-left', '5px')
 
-	cell_select
-		.append('option')
-		.attr('value', 'include')
-		.text('Include')
+	cell_select.append('option').attr('value', 'include').text('Include')
 
-	cell_select
-		.append('option')
-		.attr('value', 'exclude')
-		.text('Exclude')
+	cell_select.append('option').attr('value', 'exclude').text('Exclude')
 
 	cell_select.on('change', () => {
 		apply()
@@ -1212,21 +1119,14 @@ function make_violin_plot(data, svg) {
 
 	const label_width = get_max_labelwidth(data.boxplots, svg)
 
-	const x_scale = scaleLinear()
-		.range([0, box_width])
-		.domain([data.minexpvalue, data.maxexpvalue])
+	const x_scale = scaleLinear().range([0, box_width]).domain([data.minexpvalue, data.maxexpvalue])
 
-	const y_scale = scaleLinear()
-		.range([box_height, 0])
-		.domain([0, 1])
+	const y_scale = scaleLinear().range([box_height, 0]).domain([0, 1])
 
 	const svg_height = data.boxplots.length * (box_height + barspace) + axis_height
 	const svg_width = box_width + label_width + 20
 
-	svg
-		.transition()
-		.attr('width', svg_width)
-		.attr('height', svg_height)
+	svg.transition().attr('width', svg_width).attr('height', svg_height)
 
 	if (data.boxplots) {
 		data.boxplots.forEach((boxplot, i) => {
@@ -1248,24 +1148,24 @@ function make_violin_plot(data, svg) {
 
 				const line = d3
 					.line()
-					.x(function(d, j) {
+					.x(function (d, j) {
 						return x_scale((j * data.maxexpvalue) / boxplot.density.length)
 					}) // set the x values for the line generator
-					.y(function(d) {
+					.y(function (d) {
 						return y_scale(d / density_max) / 2
 					}) // set the y values for the line generator
 					.curve(d3.curveMonotoneX) // apply smoothing to the line
 
 				const area = d3
 					.area()
-					.x(function(d, j) {
+					.x(function (d, j) {
 						return x_scale((j * data.maxexpvalue) / boxplot.density.length)
 					})
-					.y0(function(d) {
+					.y0(function (d) {
 						const temp = y_scale(d / density_max) / 2
 						return box_height - temp
 					})
-					.y1(function(d) {
+					.y1(function (d) {
 						return y_scale(d / density_max) / 2
 					})
 					.curve(d3.curveMonotoneX)
@@ -1281,9 +1181,7 @@ function make_violin_plot(data, svg) {
 			}
 		})
 
-		const legendAxis = axisTop()
-			.scale(x_scale)
-			.ticks(5)
+		const legendAxis = axisTop().scale(x_scale).ticks(5)
 
 		svg
 			.append('g')
@@ -1303,21 +1201,14 @@ function make_box_plot(data, svg) {
 
 	const label_width = get_max_labelwidth(data.boxplots, svg)
 
-	const x_scale = scaleLinear()
-		.range([0, box_width])
-		.domain([data.minexpvalue, data.maxexpvalue])
+	const x_scale = scaleLinear().range([0, box_width]).domain([data.minexpvalue, data.maxexpvalue])
 
-	const y_scale = scaleLinear()
-		.range([box_height, 0])
-		.domain([0, 1])
+	const y_scale = scaleLinear().range([box_height, 0]).domain([0, 1])
 
 	const svg_height = data.boxplots.length * (box_height + barspace) + axis_height
 	const svg_width = box_width + label_width + 20
 
-	svg
-		.transition()
-		.attr('width', svg_width)
-		.attr('height', svg_height)
+	svg.transition().attr('width', svg_width).attr('height', svg_height)
 
 	if (data.boxplots) {
 		data.boxplots.forEach((boxplot, i) => {
@@ -1387,9 +1278,7 @@ function make_box_plot(data, svg) {
 			}
 		})
 
-		const legendAxis = axisTop()
-			.scale(x_scale)
-			.ticks(5)
+		const legendAxis = axisTop().scale(x_scale).ticks(5)
 
 		svg
 			.append('g')
@@ -1433,10 +1322,7 @@ function make_heatmap(data, obj, colidx) {
 	const svg_height = (box_height + barspace) * categories.length + gene_lable_height
 	const svg_width = (box_width + barspace) * gene_list.length + label_width + legend_width + 20
 
-	svg
-		.transition()
-		.attr('width', svg_width)
-		.attr('height', svg_height)
+	svg.transition().attr('width', svg_width).attr('height', svg_height)
 
 	// Build X scales and axis:
 	const x_scale = d3
@@ -1469,10 +1355,7 @@ function make_heatmap(data, obj, colidx) {
 		.remove()
 
 	// Build color scale
-	var myColor = d3
-		.scaleSequential()
-		.interpolator(interpolatePlasma)
-		.domain([0, max_mean])
+	var myColor = d3.scaleSequential().interpolator(interpolatePlasma).domain([0, max_mean])
 
 	const div = pane.pane
 		.append('div')
@@ -1499,22 +1382,16 @@ function make_heatmap(data, obj, colidx) {
 				.style('stroke', 'none')
 				.style('opacity', 0.8)
 				//tooltip
-				.on('mouseover', function(event) {
-					div
-						.transition()
-						.duration(200)
-						.style('opacity', 0.9)
+				.on('mouseover', function (event) {
+					div.transition().duration(200).style('opacity', 0.9)
 
 					div
 						.html('Mean Expression: ' + category.mean)
 						.style('left', d3.pointer(event, this)[0] + 70 + 'px')
 						.style('top', d3.pointer(event, this)[1] + 20 + 'px')
 				})
-				.on('mouseout', function() {
-					div
-						.transition()
-						.duration(500)
-						.style('opacity', 0)
+				.on('mouseout', function () {
+					div.transition().duration(500).style('opacity', 0)
 				})
 		})
 	})
@@ -1528,23 +1405,13 @@ function make_heatmap(data, obj, colidx) {
 		.enter()
 		.append('g')
 		.attr('class', 'legend')
-		.attr('transform', function(d, i) {
+		.attr('transform', function (d, i) {
 			return 'translate(' + (svg_width - legend_width) + ',' + (30 + i * 20) + ')'
 		})
 
-	legend
-		.append('rect')
-		.attr('width', 20)
-		.attr('height', 20)
-		.style('fill', myColor)
-		.style('opacity', 0.8)
+	legend.append('rect').attr('width', 20).attr('height', 20).style('fill', myColor).style('opacity', 0.8)
 
-	legend
-		.append('text')
-		.attr('x', 26)
-		.attr('y', 10)
-		.attr('dy', '.35em')
-		.text(String)
+	legend.append('text').attr('x', 26).attr('y', 10).attr('dy', '.35em').text(String)
 }
 
 function get_max_labelwidth(items, svg) {
@@ -1556,7 +1423,7 @@ function get_max_labelwidth(items, svg) {
 			.text(i.category + ' (' + i.numberofcells + ')')
 			.attr('font-family', client.font)
 			.attr('font-size', 15)
-			.each(function() {
+			.each(function () {
 				textwidth = Math.max(textwidth, this.getBBox().width)
 			})
 			.remove()
@@ -1608,10 +1475,7 @@ async function make_legend(arg, obj) {
 		.style('border-top', 'solid 1px ' + obj.legend.legendcolor)
 		.style('background-color', '#FCFBF7')
 
-	obj.legend.holder = div2
-		.append('table')
-		.style('border-spacing', '15px')
-		.style('border-collapse', 'separate')
+	obj.legend.holder = div2.append('table').style('border-spacing', '15px').style('border-collapse', 'separate')
 
 	const [tr, td] = legend_newrow(obj, obj.legendimg.name || '')
 	const data = await client.dofetch2('img?file=' + obj.legendimg.file)
@@ -1620,11 +1484,7 @@ async function make_legend(arg, obj) {
 		return
 	}
 	let fold = true
-	const img = td
-		.append('img')
-		.attr('class', 'sja_clbb')
-		.attr('src', data.src)
-		.style('height', '80px')
+	const img = td.append('img').attr('class', 'sja_clbb').attr('src', data.src).style('height', '80px')
 	img.on('click', () => {
 		if (fold) {
 			fold = false
