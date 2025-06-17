@@ -1146,50 +1146,6 @@ function makeControls(obj) {
 			• Gain Threshold: Log2 ratio for copy number gain (positive values)<br>
 			• Segment Length: Maximum CNV segment size to include (no filter if 0)
 		`)
-
-		// Row: Project Filter for CNV (spans full width)
-		const cnvProjectContainer = optionsGrid
-			.append('div')
-			.style('display', 'flex')
-			.style('align-items', 'center')
-			.style('gap', '8px')
-			.style('grid-column', '1 / -1') // Span full width
-
-		cnvProjectContainer
-			.append('label')
-			.style('font-size', '14px')
-			.style('font-weight', '500')
-			.style('min-width', '120px')
-			.text('Project Filter:')
-
-		const cnvProjectSelect = cnvProjectContainer
-			.append('select')
-			.style('padding', '4px 8px')
-			.style('border', '1px solid #ccc')
-			.style('border-radius', '4px')
-			.style('font-size', '14px')
-			.style('min-width', '200px')
-
-		// Add options
-		cnvProjectSelect.append('option').attr('value', '').text('All Projects (No Filter)')
-		cnvProjectSelect.append('option').attr('value', 'TCGA-GBM').text('TCGA-GBM (Brain Cancer)')
-		cnvProjectSelect.append('option').attr('value', 'CPTAC-3').text('CPTAC-3')
-		cnvProjectSelect.append('option').attr('value', 'HCMI-CMDC').text('HCMI-CMDC')
-
-		// Initialize default value
-		if (!obj.cnvOptions.projectIds) {
-			obj.cnvOptions.projectIds = [] // Empty = no filter
-		}
-
-		cnvProjectSelect.on('change', function (this: HTMLSelectElement) {
-			const selectedValue = this.value
-			if (selectedValue === '') {
-				obj.cnvOptions.projectIds = [] // No filter
-			} else {
-				obj.cnvOptions.projectIds = [selectedValue] // Single project filter
-			}
-			console.log('CNV Project filter updated:', obj.cnvOptions.projectIds)
-		})
 	}
 
 	// Row 3: Fusion (unchecked by default)
