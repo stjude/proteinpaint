@@ -112,6 +112,8 @@ arguments:
 */
 const unannotatedKey = 'Unannotated'
 
+const dtGeneCnv = 'geneCnv' // adhoc dt value for ds.queries.geneCnv. move to common.js. absolutely avoids hardcoding dt values
+
 export async function init(ds, genome) {
 	// optional features/settings supplied by ds, when missing from serverconfig.features{}, are centralized here.
 	// overwrite not allowed! to prevent hard-to-trace error that 2nd ds changes value set by 1st ds etc...
@@ -2610,7 +2612,7 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 		if (ds.queries.snvindel) dts.push(dtsnvindel)
 		if (ds.queries.svfusion) dts.push(dtfusionrna)
 		if (ds.queries.cnv) dts.push(dtcnv)
-		if (ds.queries.geneCnv) dts.push('geneCnv')
+		if (ds.queries.geneCnv) dts.push(dtGeneCnv)
 
 		// retrieve mutation data for each dt
 		const termdbmclass = q.ds?.cohort?.termdb?.mclass // custom mclass labels from dataset
@@ -2622,7 +2624,7 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 					? await getSvfusionByTerm(ds, tw.term, genome, q)
 					: dt == dtcnv
 					? await getCnvByTw(ds, tw, genome, q)
-					: dt == 'geneCnv'
+					: dt == dtGeneCnv
 					? await getGenecnvByTerm(ds, tw.term, genome, q)
 					: []
 
@@ -3057,7 +3059,7 @@ async function mayValidateAssayAvailability(ds) {
 	// has this setting. cache sample list
 	if (ds.assayAvailability.byDt) {
 		for (const key in ds.assayAvailability.byDt) {
-			if (!dt2label[key]) throw 'unknown dt in assayAvailability.byDt: ' + key
+			if (!dt2label[key] && key != dtGeneCnv) throw 'unknown dt in assayAvailability.byDt: ' + key
 			const dt = ds.assayAvailability.byDt[key]
 
 			if (dt.byOrigin) {
