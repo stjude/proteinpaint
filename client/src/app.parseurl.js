@@ -670,9 +670,8 @@ returns:
 - object for one successfully parsed track
 - array for multiple track objects, could be empty!
 - null for no tracks
-TODO unit test
 */
-async function mayGetTkobj(key, value, urlp, genomeobj) {
+export async function mayGetTkobj(key, value, urlp, genomeobj) {
 	if (key == 'mds3') {
 		// official mds3 dataset; value is comma-joined dslabels
 		const lst = value.split(',')
