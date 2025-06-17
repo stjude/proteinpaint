@@ -186,7 +186,9 @@ function getChartTypeList(self, state) {
 		{
 			label: 'Report',
 			chartType: 'report',
-			clickTo: self.loadChartSpecificMenu
+
+			clickTo: self.plotCreate, //when using prepPlot this error was raised: No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this). TOD0: check with Edgar
+			config: { chartType: 'report' }
 		},
 		{
 			label: 'Sample View',
@@ -573,6 +575,11 @@ function setRenderers(self) {
 	*/
 	self.prepPlot = function (chart) {
 		const action = { type: 'plot_prep', config: chart.config, id: getId() }
+		self.app.dispatch(action)
+	}
+
+	self.plotCreate = function (chart) {
+		const action = { type: 'plot_create', config: chart.config, id: getId() }
 		self.app.dispatch(action)
 	}
 }
