@@ -7,8 +7,8 @@ import { gene_searchbox, findgenemodel_bysymbol } from './gene'
 import { legend_newrow } from './block.legend'
 import { schemeCategory20 } from '#common/legacy-d3-polyfill'
 import * as THREE from 'three'
-import { TrackballControls } from 'three/examples/jsm/controls/TrackballControls.js'
-import { PCDLoader } from 'three/examples/jsm/loaders/PCDLoader.js'
+import { TrackballControls } from 'three/addons/controls/TrackballControls.js'
+import { PCDLoader } from 'three/addons/loaders/PCDLoader.js'
 import * as WEBGL from '../../server/public/static/js/WebGL.js'
 
 /*
@@ -211,7 +211,6 @@ or selected a gene for overlaying
 }
 
 async function init_view(obj) {
-	// TODO only load below if to do 3d
 	if (WEBGL.isWebGLAvailable() === false) {
 		obj.holder.node().appendChild(WEBGL.getWebGLErrorMessage())
 		return
@@ -237,7 +236,13 @@ async function init_view(obj) {
 		obj.camera.up.set(0, 0, 1)
 	}
 
-	obj.controls = new TrackballControls(obj.camera, obj.holder.node())
+	obj.renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true })
+	obj.renderer.setPixelRatio(window.devicePixelRatio)
+	obj.renderer.setSize(obj.width, obj.height)
+	obj.renderer.domElement.style.backgroundColor = '#ffffff'
+	obj.renderer.domElement.style.border = 'solid #dddddd 2px'
+
+	obj.controls = new TrackballControls(obj.camera, obj.renderer.domElement)
 
 	obj.controls.rotateSpeed = obj.canvas_2d ? 0 : 2.0
 	obj.controls.zoomSpeed = obj.canvas_2d ? 3.0 : 0.7
@@ -250,12 +255,6 @@ async function init_view(obj) {
 	obj.controls.dynamicDampingFactor = 0.3
 
 	obj.scene.add(obj.camera)
-
-	obj.renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true })
-	obj.renderer.setPixelRatio(window.devicePixelRatio)
-	obj.renderer.setSize(obj.width, obj.height)
-	obj.renderer.domElement.style.backgroundColor = '#ffffff'
-	obj.renderer.domElement.style.border = 'solid #dddddd 2px'
 
 	obj.holder.style('display', 'inline-block').style('position', 'relative').node().appendChild(obj.renderer.domElement)
 
@@ -1429,16 +1428,6 @@ function get_max_labelwidth(items, svg) {
 			.remove()
 	}
 	return textwidth + 4
-}
-
-function add_scriptTag(path) {
-	// path like /static/js/three.js, must begin with /
-	return new Promise((resolve, reject) => {
-		const script = document.createElement('script')
-		script.setAttribute('src', sessionStorage.getItem('hostURL') + path)
-		document.head.appendChild(script)
-		script.onload = resolve
-	})
 }
 
 async function make_legend(arg, obj) {
