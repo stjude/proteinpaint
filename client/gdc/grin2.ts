@@ -761,6 +761,7 @@ function makeControls(obj) {
 				'margin-top: 8px; padding: 8px; background-color: #f8f9fa; border-radius: 4px; border-left: 3px solid #6c757d; font-size: 12px; color: #495057; line-height: 1.4;'
 			).html(`
 				<strong>Mutation Types:</strong> Select the types of mutations to include in your analysis.
+				If none are selected, all mutation types will be included.<br>
 			`)
 
 		// Row 3: Hypermutator Max Cut Off
@@ -1604,19 +1605,17 @@ async function getFilesAndShowTable(obj) {
 
 		// Only add mafOptions if MAF is selected
 		if (mafSelected) {
-			// Convert mclass codes to SO terms using existing mapping
+			// Convert mclass codes to SO terms using existing mapping for rust backend
 			const soTerms: string[] = []
 			for (const mclassCode of obj.mafOptions.consequences) {
 				const soTermsForCode = class2SOterm.get(mclassCode) || []
 				soTerms.push(...soTermsForCode)
 			}
 
-			obj.mafOptions.consequences = soTerms
-
 			caseFiles.mafOptions = {
 				minTotalDepth: obj.mafOptions.minTotalDepth,
 				minAltAlleleCount: obj.mafOptions.minAltAlleleCount,
-				consequences: obj.mafOptions.consequences,
+				consequences: soTerms,
 				hyperMutator: obj.mafOptions.hyperMutator
 			}
 		}
