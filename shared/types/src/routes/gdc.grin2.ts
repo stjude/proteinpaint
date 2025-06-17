@@ -99,7 +99,8 @@ export type GdcGRIN2listResponse = {
 	cnvFiles?: {
 		/** list of cnv files returned to client */
 		files: GdcGRIN2File[]
-		/** to add additional stats on cnv file listing */
+		/** Maximum total size of files allowed, for indicating on UI while selecting files */
+		maxTotalSizeCompressed: number
 	}
 }
 

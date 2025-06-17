@@ -1454,12 +1454,36 @@ async function getFilesAndShowTable(obj) {
 		result = await dofetch3('gdc/GRIN2list', { body })
 		console.log('GRIN2list result:', result)
 
+		// Modified to handle both MAF and CNV files
 		if (result.error) throw result.error
-		if (!Array.isArray(result.mafFiles.files)) throw 'result.mafFiles.files[] not array'
-		if (result.mafFiles.files.length == 0) throw 'No files available.'
 
-		// Update the dedup status in MAF options
-		if (result.mafFiles.deduplicationStats) {
+		// Validate that we have the expected data structure based on selected data types
+		if (obj.dataTypeStates.maf && (!result.mafFiles || !Array.isArray(result.mafFiles.files))) {
+			throw 'Invalid response: missing mafFiles.files array'
+		}
+
+		if (obj.dataTypeStates.cnv && (!result.cnvFiles || !Array.isArray(result.cnvFiles.files))) {
+			throw 'Invalid response: missing cnvFiles.files array'
+		}
+
+		// Check if we have any files to work with
+		const hasMafFiles = result.mafFiles && result.mafFiles.files && result.mafFiles.files.length > 0
+		const hasCnvFiles = result.cnvFiles && result.cnvFiles.files && result.cnvFiles.files.length > 0
+
+		if (obj.dataTypeStates.maf && !hasMafFiles) {
+			throw 'No MAF files available for the selected criteria.'
+		}
+
+		if (obj.dataTypeStates.cnv && !hasCnvFiles) {
+			throw 'No CNV files available for the selected criteria.'
+		}
+
+		if (!hasMafFiles && !hasCnvFiles) {
+			throw 'No files available for the selected data types.'
+		}
+
+		// Update the dedup status in MAF options (only if MAF files exist)
+		if (result.mafFiles && result.mafFiles.deduplicationStats) {
 			updateDedupStatus(obj, result.mafFiles.deduplicationStats)
 		}
 
@@ -1475,7 +1499,7 @@ async function getFilesAndShowTable(obj) {
 		}
 
 		// Filter files based on selected data types and availability
-		let filteredFiles = result.mafFiles.files
+		let filteredFiles = result.mafFiles ? result.mafFiles.files : []
 		let filteringMessage = ''
 
 		// Determine which data types are selected
@@ -1503,8 +1527,8 @@ async function getFilesAndShowTable(obj) {
 		else if (cnvSelected && !mafSelected) {
 			const originalCount = filteredFiles.length
 			// In this case, we need to build the list from CNV files instead
-			const cnvCases = Array.from(cnvFilesByCase.keys())
-			filteredFiles = filteredFiles.filter(file => cnvCases.includes(file.case_submitter_id))
+			// const cnvCases = Array.from(cnvFilesByCase.keys())
+			filteredFiles = result.cnvFiles ? result.cnvFiles.files : []
 			const filteredCount = filteredFiles.length
 			const excludedCount = originalCount - filteredCount
 
@@ -1523,17 +1547,35 @@ async function getFilesAndShowTable(obj) {
 		}
 
 		// Render status message with filtering information
-		if (result.mafFiles.filesTotal > result.mafFiles.files.length) {
-			wait.html(`
-				Showing first ${result.mafFiles.files.length.toLocaleString()} files out of ${result.mafFiles.filesTotal.toLocaleString()} total.<br>
-				${filteringMessage ? `<span style="color: #666; font-style: italic;">${filteringMessage}</span>` : ''}
-			`)
-		} else {
-			wait.html(`
-				Showing ${result.files.length.toLocaleString()} files.<br>
-				${filteringMessage ? `<span style="color: #666; font-style: italic;">${filteringMessage}</span>` : ''}
-			`)
+		const mafFiles = result.mafFiles ? result.mafFiles.files : []
+		const cnvFiles = result.cnvFiles ? result.cnvFiles.files : []
+		const mafTotal = result.mafFiles ? result.mafFiles.filesTotal : 0
+
+		// Determine what to show based on selected data types
+		let statusMessage = ''
+		if (mafSelected && cnvSelected) {
+			// Both selected - show based on MAF files (which is the base)
+			if (mafTotal > mafFiles.length) {
+				statusMessage = `Showing first ${mafFiles.length.toLocaleString()} files out of ${mafTotal.toLocaleString()} total.`
+			} else {
+				statusMessage = `Showing ${filteredFiles.length.toLocaleString()} files.`
+			}
+		} else if (mafSelected && !cnvSelected) {
+			// MAF only
+			if (mafTotal > mafFiles.length) {
+				statusMessage = `Showing first ${mafFiles.length.toLocaleString()} MAF files out of ${mafTotal.toLocaleString()} total.`
+			} else {
+				statusMessage = `Showing ${filteredFiles.length.toLocaleString()} MAF files.`
+			}
+		} else if (!mafSelected && cnvSelected) {
+			// CNV only
+			statusMessage = `Showing ${cnvFiles.length.toLocaleString()} CNV files.`
 		}
+
+		wait.html(`
+			${statusMessage}<br>
+			${filteringMessage ? `<span style="color: #666; font-style: italic;">${filteringMessage}</span>` : ''}
+		`)
 
 		// Build table columns dynamically based on selected data types
 		const dynamicTableColumns = [
@@ -1699,7 +1741,11 @@ async function getFilesAndShowTable(obj) {
 		select(button.parentElement).style('float', 'left')
 
 		button.disabled = false
-		button.innerHTML = sum < result.mafFiles.maxTotalSizeCompressed ? `Run GRIN2 Analysis` : `Run GRIN2 Analysis`
+		const mafMaxSize = result.mafFiles ? result.mafFiles.maxTotalSizeCompressed : Infinity
+		const cnvMaxSize = result.cnvFiles ? result.cnvFiles.maxTotalSizeCompressed : Infinity
+		const maxSize = Math.min(mafMaxSize, cnvMaxSize) // Use the smaller limit
+
+		button.innerHTML = sum < maxSize ? `Run GRIN2 Analysis` : `Run GRIN2 Analysis (Large Files)`
 	}
 
 	/* after table is created, on clicking download btn for first time, create a <span> after download btn,
