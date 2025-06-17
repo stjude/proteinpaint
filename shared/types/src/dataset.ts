@@ -1508,6 +1508,13 @@ type DtAssayAvailability = DtAssayAvailabilityGetter | DtAssayAvailabilityTerm
 
 /** using ds-supplied getter */
 type DtAssayAvailabilityGetter = {
+	/** define q
+	returns:
+	{
+		yesSamples: Set() of sample ids
+		noSamples: Set() of sample ids
+	}
+	*/
 	get: (q: any) => any
 }
 /** using dictionary term */
