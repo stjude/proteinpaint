@@ -1391,8 +1391,7 @@ async function getFilesAndShowTable(obj) {
 				minTotalDepth: obj.mafOptions.minTotalDepth,
 				minAltAlleleCount: obj.mafOptions.minAltAlleleCount,
 				consequences: obj.mafOptions.consequences,
-				hyperMutator: obj.mafOptions.hypermutatorCutoff,
-				projectIds: obj.mafOptions?.projectIds
+				hyperMutator: obj.mafOptions.hypermutatorCutoff
 			}
 		}
 
@@ -1402,8 +1401,7 @@ async function getFilesAndShowTable(obj) {
 				dataType: obj.cnvOptions.dataType,
 				lossThreshold: obj.cnvOptions.lossThreshold,
 				gainThreshold: obj.cnvOptions.gainThreshold,
-				segLength: obj.cnvOptions.segLength,
-				projectIds: obj.cnvOptions?.projectIds
+				segLength: obj.cnvOptions.segLength
 			}
 		}
 		console.log('Request body for GRIN2list:', body)
