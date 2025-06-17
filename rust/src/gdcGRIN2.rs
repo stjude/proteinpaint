@@ -13,7 +13,7 @@
   Output mutations as JSON array.
 
   Example of usage:
-    echo '{"caseFiles": {"MP2PRT-PATFJE": {"maf": "26ea7b6f-8bc4-4e83-ace1-2125b493a361"},"MP2PRT-PAPIGD": {"maf": "653d7458-f4af-4328-a1ce-3bbf22a2e347"}, "TCGA-CG-4300": { "cnv":"46372ec2-ff79-4d07-b375-9ba8a12c11f3", "maf":"c09b208d-2e7b-4116-9580-27f20f4c7e67"}},"mafOptions": {"minTotalDepth": 100,"minAltAlleleCount": 20}, "cnvOptions":{"lossThreshold":-1, "gainThreshold": 1.5, "segLength":2000000}}' | ./target/release/gdcGRIN2
+    echo '{"caseFiles": {"MP2PRT-PATFJE": {"maf": "26ea7b6f-8bc4-4e83-ace1-2125b493a361"},"MP2PRT-PAPIGD": {"maf": "653d7458-f4af-4328-a1ce-3bbf22a2e347"}, "TCGA-CG-4300": { "cnv":"46372ec2-ff79-4d07-b375-9ba8a12c11f3", "maf":"c09b208d-2e7b-4116-9580-27f20f4c7e67"}},"mafOptions": {"minTotalDepth": 100,"minAltAlleleCount": 20,"hyperMutator":1000,"consequences":["missense_variant","frameshift_variant"]}, "cnvOptions":{"lossThreshold":-1, "gainThreshold": 1.5, "segLength":2000000}}' | ./target/release/gdcGRIN2
 */
 
 use flate2::read::GzDecoder;
@@ -55,6 +55,8 @@ struct MafOptions {
     min_total_depth: i32,
     #[serde(rename = "minAltAlleleCount")]
     min_alt_allele_count: i32,
+    #[serde(rename = "hyperMutator")]
+    hyper_mutator: i32,
     consequences: Option<Vec<String>>, // Optional list of consequences to filter MAF files
 }
 
@@ -82,7 +84,8 @@ struct SuccessfulFileOutput {
 // struct for MAF filter details
 #[derive(Clone, Serialize, Default)]
 struct FilteredMafDetails {
-    invalid_consequences: usize,
+    matched_consequences: HashMap<String, usize>,
+    rejected_consequences: HashMap<String, usize>,
     t_alt_count: usize,
     t_depth: usize,
     invalid_rows: usize,
@@ -118,6 +121,7 @@ struct FinalSummary {
     included_maf_records: usize,
     included_cnv_records: usize,
     filtered_records_by_case: HashMap<String, FilteredCaseDetails>,
+    hyper_mutator_records: Vec<String>,
 }
 
 // Define the top-level input structure
@@ -145,6 +149,7 @@ async fn parse_content(
     data_type: &str,
     min_total_depth: i32,
     min_alt_allele_count: i32,
+    hyper_mutator: i32,
     consequences: &Option<Vec<String>>,
     gain_threshold: f32,
     loss_threshold: f32,
@@ -154,6 +159,7 @@ async fn parse_content(
     filtered_cnv_records: &AtomicUsize,
     included_maf_records: &AtomicUsize,
     included_cnv_records: &AtomicUsize,
+    hyper_mutator_records: &Arc<Mutex<Vec<String>>>,
 ) -> Result<Vec<Vec<String>>, (String, String, String)> {
     let config = match data_type {
         "cnv" => DataTypeConfig {
@@ -170,6 +176,18 @@ async fn parse_content(
                 data_type.to_string(),
                 "Invalid data type".to_string(),
             ));
+        }
+    };
+
+    // check hyperMutator for MAF files
+    if data_type == "maf" && hyper_mutator > 0 {
+        let line_count = content.lines().count();
+        if line_count as i32 > hyper_mutator {
+            let mut hyper_records = hyper_mutator_records.lock().await;
+            if !hyper_records.contains(&case_id.to_string()) {
+                hyper_records.push(case_id.to_string());
+            }
+            return Ok(Vec::new());
         }
     };
 
@@ -261,7 +279,7 @@ fn setup_columns(
     }
 
     if data_type == "maf" {
-        *variant_classification_index = header.iter().position(|x| x == "Variant_Classification");
+        *variant_classification_index = header.iter().position(|x| x == "One_Consequence");
         if variant_classification_index.is_none() {
             return Err((
                 case_id.to_string(),
@@ -308,11 +326,56 @@ async fn process_row(
 
     let case_details = filtered_map.get_mut(case_id).unwrap();
 
-    // Check consequence filtering for MAF files
-    if data_type == "maf" && !is_valid_consequence(&cont_lst, variant_classification_index, consequences) {
-        case_details.maf.invalid_consequences += 1;
-        filtered_maf_records.fetch_add(1, Ordering::Relaxed);
-        return Ok(None);
+    // Handle consequence filtering and counting for MAF files
+    if data_type == "maf" {
+        if let Some(var_class_idx) = variant_classification_index {
+            if var_class_idx < cont_lst.len() {
+                let variant_classification = &cont_lst[var_class_idx];
+                if let Some(consequence_filter) = consequences {
+                    if !consequence_filter.is_empty() {
+                        if consequence_filter.contains(variant_classification) {
+                            // Matched consequence
+                            *case_details
+                                .maf
+                                .matched_consequences
+                                .entry(variant_classification.to_string())
+                                .or_insert(0) += 1;
+                        } else {
+                            // Unmatched consequence
+                            *case_details
+                                .maf
+                                .rejected_consequences
+                                .entry(variant_classification.to_string())
+                                .or_insert(0) += 1;
+                            filtered_maf_records.fetch_add(1, Ordering::Relaxed);
+                            return Ok(None);
+                        }
+                    } else {
+                        // Empty filter, count as matched
+                        *case_details
+                            .maf
+                            .matched_consequences
+                            .entry(variant_classification.to_string())
+                            .or_insert(0) += 1;
+                    }
+                } else {
+                    // No filter, count as matched
+                    *case_details
+                        .maf
+                        .matched_consequences
+                        .entry(variant_classification.to_string())
+                        .or_insert(0) += 1;
+                }
+            } else {
+                case_details.maf.invalid_rows += 1;
+                filtered_maf_records.fetch_add(1, Ordering::Relaxed);
+                return Ok(None);
+            }
+        } else {
+            case_details.maf.invalid_rows += 1;
+            filtered_maf_records.fetch_add(1, Ordering::Relaxed);
+            return Ok(None);
+        }
     }
 
     // Extract relevant columns
@@ -421,28 +484,6 @@ async fn process_row(
     Ok(Some(out_lst))
 }
 
-// Check if the row meets consequence filtering criteria
-fn is_valid_consequence(
-    cont_lst: &[String],
-    variant_classification_index: Option<usize>,
-    consequences: &Option<Vec<String>>,
-) -> bool {
-    if let Some(consequence_filter) = consequences {
-        if !consequence_filter.is_empty() {
-            if let Some(var_class_idx) = variant_classification_index {
-                if var_class_idx < cont_lst.len() {
-                    let variant_classification = &cont_lst[var_class_idx];
-                    if let Some(normalized_consequence) = normalize_consequence(variant_classification) {
-                        return consequence_filter.contains(&normalized_consequence);
-                    }
-                }
-                return false; // Invalid row or unknown consequence
-            }
-        }
-    }
-    true // No filtering or empty filter
-}
-
 // Process Segment_Mean for CNV files
 fn process_segment_mean(
     element: &str,
@@ -469,23 +510,6 @@ fn process_segment_mean(
 }
 
 /// Updated helper function to normalize MAF consequence types to frontend format
-/// Returns None for unknown consequence types (which will be filtered out)
-fn normalize_consequence(maf_consequence: &str) -> Option<String> {
-    match maf_consequence.to_lowercase().as_str() {
-        // Only map the consequence types we actually support
-        "missense_mutation" => Some("missense".to_string()),
-        "nonsense_mutation" | "stop_gained" | "stop_lost" => Some("nonsense".to_string()),
-        "frame_shift_del" | "frame_shift_ins" | "frameshift_variant" => Some("frameshift".to_string()),
-        "silent" | "synonymous_variant" => Some("silent".to_string()),
-        "in_frame_del" => Some("deletion".to_string()),
-        "in_frame_ins" => Some("insertion".to_string()),
-        "splice_site" | "splice_acceptor_variant" | "splice_donor_variant" => Some("splice_site".to_string()),
-        "tandem_duplication" | "duplication" => Some("duplication".to_string()),
-        "inversion" => Some("inversion".to_string()),
-        // Return None for all unknown consequence types - they will be filtered out
-        _ => None,
-    }
-}
 /// Downloads a single file with minimal retry logic for transient failures
 async fn download_single_file(
     case_id: String,
@@ -596,6 +620,7 @@ async fn download_data_streaming(
     host: &str,
     min_total_depth: i32,
     min_alt_allele_count: i32,
+    hyper_mutator: i32,
     consequences: &Option<Vec<String>>,
     gain_threshold: f32,
     loss_threshold: f32,
@@ -623,6 +648,7 @@ async fn download_data_streaming(
     let filtered_maf_records = Arc::new(AtomicUsize::new(0));
     let filtered_cnv_records = Arc::new(AtomicUsize::new(0));
     let filtered_records = Arc::new(Mutex::new(HashMap::<String, FilteredCaseDetails>::new()));
+    let hyper_mutator_records = Arc::new(Mutex::new(Vec::<String>::new()));
     let included_maf_records = Arc::new(AtomicUsize::new(0));
     let included_cnv_records = Arc::new(AtomicUsize::new(0));
 
@@ -646,6 +672,7 @@ async fn download_data_streaming(
             let filtered_records = Arc::clone(&filtered_records);
             let included_maf_records = Arc::clone(&included_maf_records);
             let included_cnv_records = Arc::clone(&included_cnv_records);
+            let hyper_mutator_records = Arc::clone(&hyper_mutator_records);
             let errors = Arc::clone(&errors);
 
             async move {
@@ -658,6 +685,7 @@ async fn download_data_streaming(
                             &data_type,
                             min_total_depth,
                             min_alt_allele_count,
+                            hyper_mutator,
                             &consequences,
                             gain_threshold,
                             loss_threshold,
@@ -667,6 +695,7 @@ async fn download_data_streaming(
                             &filtered_cnv_records,
                             &included_maf_records,
                             &included_cnv_records,
+                            &hyper_mutator_records,
                         )
                         .await
                         {
@@ -750,6 +779,7 @@ async fn download_data_streaming(
         filtered_records_by_case: filtered_records.lock().await.clone(),
         included_maf_records: included_maf_count,
         included_cnv_records: included_cnv_count,
+        hyper_mutator_records: hyper_mutator_records.lock().await.clone(),
     };
 
     // Output final summary - Node.js will know processing is complete when it sees this
@@ -803,13 +833,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let case_files = input_js.case_files;
 
     // Set default maf_options
-    let (min_total_depth, min_alt_allele_count, consequences) = match input_js.maf_options {
+    let (min_total_depth, min_alt_allele_count, hyper_mutator, consequences) = match input_js.maf_options {
         Some(options) => (
             options.min_total_depth,
             options.min_alt_allele_count,
+            options.hyper_mutator,
             options.consequences.clone(),
         ),
-        None => (10, 2, None), // Default values
+        None => (10, 2, 8000, None), // Default values
     };
 
     // Set default cnv_options
@@ -824,6 +855,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         HOST,
         min_total_depth,
         min_alt_allele_count,
+        hyper_mutator,
         &consequences,
         gain_threshold,
         loss_threshold,
