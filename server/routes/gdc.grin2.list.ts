@@ -60,8 +60,8 @@ function init({ genomes }) {
 			// Handle CNV files if cnvOptions is present in the request
 			if (req.query.cnvOptions) {
 				result.cnvFiles = {
-					files: []
-					// Add other CNV-specific properties as needed
+					files: [],
+					maxTotalSizeCompressed: maxTotalSizeCompressed
 				}
 				await mayListCnvFiles(req.query as GdcGRIN2listRequest, result, ds)
 			}
@@ -283,7 +283,7 @@ async function mayListMafFiles(q: GdcGRIN2listRequest, result: GdcGRIN2listRespo
 
 async function mayListCnvFiles(q: GdcGRIN2listRequest, result: GdcGRIN2listResponse, ds: any) {
 	// Always initialize cnvFiles
-	result.cnvFiles = { files: [] }
+	result.cnvFiles = { files: [], maxTotalSizeCompressed }
 
 	// Early return if no CNV options requested
 	if (!q.cnvOptions) {
@@ -392,11 +392,11 @@ async function mayListCnvFiles(q: GdcGRIN2listRequest, result: GdcGRIN2listRespo
 			}
 		}
 
-		result.cnvFiles = { files: cnvFiles }
+		result.cnvFiles = { files: cnvFiles, maxTotalSizeCompressed }
 		console.log(`Successfully processed ${cnvFiles.length} CNV files`)
 	} catch (error) {
 		console.error('Error fetching CNV files:', error)
-		result.cnvFiles = { files: [] }
+		result.cnvFiles = { files: [], maxTotalSizeCompressed }
 		// Don't re-throw - let the request continue
 	}
 }
