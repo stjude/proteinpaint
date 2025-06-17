@@ -627,388 +627,11 @@ function may_get_officialmds(urlp) {
 export async function get_tklst(urlp, genomeobj) {
 	const tklst = []
 
-	if (urlp.has('mds3')) {
-		// official mds3 dataset; value is comma-joined dslabels
-		const lst = urlp.get('mds3').split(',')
-		for (const n of lst) {
-			const tk = {
-				type: client.tkt.mds3,
-				dslabel: n
-			}
-			if (urlp.has('token')) tk.token = urlp.get('token') // temporary
-			if (urlp.has('filterobj')) tk.filterObj = urlp.get('filterobj')
-			if (urlp.has('cnvonly')) tk.hardcodeCnvOnly = true // quick fix for testing cnv-only mode via url param; in actual use this flag should be set in runpp()
-			tklst.push(tk)
-		}
-	}
-
-	if (urlp.has('mds3bcffile')) {
-		// "name,path" pairs to server-side vcf files
-		const [tkname, bcffile] = urlp.get('mds3bcffile').split(',')
-		if (tkname && bcffile) {
-			tklst.push({
-				type: client.tkt.mds3,
-				name: tkname,
-				bcf: { file: bcffile }
-			})
-		}
-	}
-	if (urlp.has('mds3bcfurl')) {
-		// "name,url,indexURL" to remote file. indexURL is optional when the index file is not co-locating with the bcf file
-		const [tkname, url, indexURL] = urlp.get('mds3bcfurl').split(',')
-		if (tkname && url) {
-			tklst.push({
-				type: client.tkt.mds3,
-				name: tkname,
-				bcf: { url, indexURL }
-			})
-		}
-	}
-
-	if (urlp.has('arcfile')) {
-		const lst = urlp.get('arcfile').split(',')
-		for (let i = 0; i < lst.length; i += 2) {
-			if (lst[i] && lst[i + 1]) {
-				tklst.push({
-					type: client.tkt.hicstraw,
-					name: lst[i],
-					bedfile: lst[i + 1],
-					mode_hm: false,
-					mode_arc: true
-				})
-			}
-		}
-	}
-
-	if (urlp.has('mdsjson') || urlp.has('mdsjsonurl')) {
-		const url_str = urlp.get('mdsjsonurl')
-		const file_str = urlp.get('mdsjson')
-		const tks = await mdsjson.init_mdsjson(file_str, url_str)
-		tklst.push(...tks)
-	}
-
-	if (urlp.has('tkjsonfile')) {
-		const re = await client.dofetch('textfile', { file: urlp.get('tkjsonfile') })
-		if (re.error) throw re.error
-		if (!re.text) throw '.text missing'
-		const lst = JSON.parse(re.text)
-		const tracks = []
-		for (const i of lst) {
-			if (i.isfacet) {
-				if (!genomeobj.tkset) genomeobj.tkset = []
-				if (!i.tracks) throw '.tracks[] missing from a facet table'
-				if (!Array.isArray(i.tracks)) throw '.tracks[] not an array from a facet table'
-				i.tklst = i.tracks
-				delete i.tracks
-				for (const t of i.tklst) {
-					if (!t.assay) throw '.assay missing from a facet track'
-					if (!t.sample) throw '.sample missing from a facet track'
-					// must assign tkid otherwise the tk buttons from facet table won't work
-					t.tkid = Math.random().toString()
-				}
-				genomeobj.tkset.push(i)
-			} else {
-				// must be a track
-				tklst.push(i)
-			}
-		}
-	}
-
-	if (urlp.has('bamfile')) {
-		const lst = urlp.get('bamfile').split(',')
-		for (let i = 0; i < lst.length; i += 2) {
-			if (lst[i] && lst[i + 1]) {
-				tklst.push({
-					type: client.tkt.bam,
-					name: lst[i],
-					file: lst[i + 1]
-				})
-			}
-		}
-	}
-	if (urlp.has('bamurl')) {
-		const lst = urlp.get('bamurl').split(',')
-		for (let i = 0; i < lst.length; i += 2) {
-			if (lst[i] && lst[i + 1]) {
-				tklst.push({
-					type: client.tkt.bam,
-					name: lst[i],
-					url: lst[i + 1]
-				})
-			}
-		}
-	}
-	if (urlp.has('bedjfile')) {
-		const lst = urlp.get('bedjfile').split(',')
-		for (let i = 0; i < lst.length; i += 2) {
-			if (lst[i] && lst[i + 1]) {
-				tklst.push({
-					type: client.tkt.bedj,
-					name: lst[i],
-					file: lst[i + 1]
-				})
-			}
-		}
-	}
-	if (urlp.has('bedjurl')) {
-		const lst = urlp.get('bedjurl').split(',')
-		for (let i = 0; i < lst.length; i += 2) {
-			if (lst[i] && lst[i + 1]) {
-				tklst.push({
-					type: client.tkt.bedj,
-					name: lst[i],
-					url: lst[i + 1]
-				})
-			}
-		}
-	}
-	if (urlp.has('hictkfile') || urlp.has('hictkurl')) {
-		// name,enzyme,file/url
-		const isfile = urlp.has('hictkfile')
-		const lst = urlp.get(isfile ? 'hictkfile' : 'hictkurl').split(',')
-		const norm = urlp.has('hictknorm') ? urlp.get('hictknorm').split(',') : null
-		for (let i = 0; i < lst.length; i += 3) {
-			if (lst[i] && lst[i + 1] && lst[i + 2]) {
-				const t = {
-					type: client.tkt.hicstraw,
-					name: lst[i],
-					enzyme: lst[i + 1],
-					normalizationmethod: norm ? norm[i / 3] : null
-				}
-				if (isfile) {
-					t.file = lst[i + 2]
-				} else {
-					t.url = lst[i + 2]
-				}
-				tklst.push(t)
-			}
-		}
-	}
-	if (urlp.has('ldfile')) {
-		const lst = urlp.get('ldfile').split(',')
-		for (let i = 0; i < lst.length; i += 2) {
-			if (lst[i] && lst[i + 1]) {
-				tklst.push({
-					type: client.tkt.ld,
-					name: lst[i],
-					file: lst[i + 1]
-				})
-			}
-		}
-	}
-	if (urlp.has('bigwigfile')) {
-		const lst = urlp.get('bigwigfile').split(',')
-		for (let i = 0; i < lst.length; i += 2) {
-			if (lst[i] && lst[i + 1]) {
-				tklst.push({
-					type: client.tkt.bigwig,
-					name: lst[i],
-					file: lst[i + 1],
-					scale: { auto: 1 }
-				})
-			}
-		}
-	}
-	if (urlp.has('bigwigurl')) {
-		const lst = urlp.get('bigwigurl').split(',')
-		for (let i = 0; i < lst.length; i += 2) {
-			if (lst[i] && lst[i + 1]) {
-				tklst.push({
-					type: client.tkt.bigwig,
-					name: lst[i],
-					url: lst[i + 1],
-					scale: { auto: 1 }
-				})
-			}
-		}
-	}
-	if (urlp.has('junctionfile')) {
-		// legacy
-		const lst = urlp.get('junctionfile').split(',')
-		for (let i = 0; i < lst.length; i += 2) {
-			if (lst[i] && lst[i + 1]) {
-				tklst.push({
-					type: client.tkt.junction,
-					name: lst[i],
-					tracks: [
-						{
-							file: lst[i + 1]
-						}
-					]
-				})
-			}
-		}
-	}
-	if (urlp.has('junctionurl')) {
-		const lst = urlp.get('junctionurl').split(',')
-		for (let i = 0; i < lst.length; i += 2) {
-			if (lst[i] && lst[i + 1]) {
-				tklst.push({
-					type: client.tkt.junction,
-					name: lst[i],
-					tracks: [
-						{
-							url: lst[i + 1]
-						}
-					]
-				})
-			}
-		}
-	}
-	if (urlp.has('vcffile')) {
-		const lst = urlp.get('vcffile').split(',')
-		for (let i = 0; i < lst.length; i += 2) {
-			if (lst[i] && lst[i + 1]) {
-				tklst.push({
-					type: 'vcf',
-					name: lst[i],
-					file: lst[i + 1]
-				})
-			}
-		}
-	}
-	if (urlp.has('vcfurl')) {
-		const lst = urlp.get('vcfurl').split(',')
-		for (let i = 0; i < lst.length; i += 2) {
-			if (lst[i] && lst[i + 1]) {
-				tklst.push({
-					type: 'vcf',
-					name: lst[i],
-					url: lst[i + 1]
-				})
-			}
-		}
-	}
-	if (urlp.has('aicheckfile')) {
-		const lst = urlp.get('aicheckfile').split(',')
-		for (let i = 0; i < lst.length; i += 2) {
-			if (lst[i] && lst[i + 1]) {
-				tklst.push({
-					type: 'aicheck',
-					name: lst[i],
-					file: lst[i + 1]
-				})
-			}
-		}
-	}
-	if (urlp.has('bampilefile')) {
-		const lst = urlp.get('bampilefile').split(',')
-		let links = null
-		if (urlp.has('bampilelink')) {
-			links = urlp.get('bampilelink').split(',').map(decodeURIComponent)
-		}
-		for (let i = 0; i < lst.length; i += 2) {
-			if (lst[i] && lst[i + 1]) {
-				const tk = {
-					type: client.tkt.bampile,
-					name: lst[i],
-					file: lst[i + 1]
-				}
-				if (links && links[i / 2]) {
-					tk.link = links[i / 2]
-				}
-				tklst.push(tk)
-			}
-		}
-	}
-	if (urlp.has('svcnvfpkmurl')) {
-		const lst = urlp.get('svcnvfpkmurl').split(',')
-		// defines a single track, all members using url
-		const name = lst[0]
-		const type2url = {}
-		for (let i = 1; i < lst.length; i += 2) {
-			type2url[lst[i]] = lst[i + 1]
-		}
-		if (type2url.svcnv || type2url.vcf) {
-			const tk = {
-				type: client.tkt.mdssvcnv,
-				name: name
-			}
-			if (type2url.svcnv) {
-				tk.url = type2url.svcnv
-			}
-			if (type2url.vcf) {
-				tk.checkvcf = {
-					url: type2url.vcf,
-					indexURL: type2url.vcfindex
-				}
-			}
-			if (type2url.fpkm) {
-				tk.checkexpressionrank = {
-					datatype: 'FPKM',
-					url: type2url.fpkm,
-					indexURL: type2url.fpkmindex
-				}
-			}
-			tklst.push(tk)
-		}
-	}
-	if (urlp.has('svcnvfpkmfile')) {
-		const lst = urlp.get('svcnvfpkmfile').split(',')
-		// defines a single track, all members using file
-		const name = lst[0]
-		const type2file = {}
-		for (let i = 1; i < lst.length; i += 2) {
-			type2file[lst[i]] = lst[i + 1]
-		}
-		if (type2file.svcnv || type2file.vcf) {
-			const tk = {
-				type: client.tkt.mdssvcnv,
-				name: name
-			}
-			if (type2file.svcnv) {
-				tk.file = type2file.svcnv
-			}
-			if (type2file.vcf) {
-				tk.checkvcf = {
-					file: type2file.vcf
-				}
-			}
-			if (type2file.fpkm) {
-				tk.checkexpressionrank = {
-					datatype: 'FPKM',
-					file: type2file.fpkm
-				}
-			}
-			tklst.push(tk)
-		}
-	}
-	if (urlp.has('mdsjunctionfile')) {
-		const lst = urlp.get('mdsjunctionfile').split(',')
-		for (let i = 0; i < lst.length; i += 2) {
-			if (lst[i] && lst[i + 1]) {
-				tklst.push({
-					type: 'mdsjunction',
-					name: lst[i],
-					file: lst[i + 1]
-				})
-			}
-		}
-	}
-	if (urlp.has('junctionmatrix')) {
-		const lst = urlp.get('junctionmatrix').split(',')
-		for (let i = 0; i < lst.length; i += 2) {
-			if (lst[i] && lst[i + 1]) {
-				tklst.push({
-					type: 'mdsjunction',
-					name: lst[i],
-					file2: lst[i + 1] // quick fix to support new file type
-				})
-			}
-		}
-	}
-
-	if (urlp.has('junctionrnapeg')) {
-		const lst = urlp.get('junctionrnapeg').split(',')
-		for (let i = 0; i < lst.length; i += 2) {
-			if (lst[i] && lst[i + 1]) {
-				tklst.push({
-					type: client.tkt.junction,
-					name: lst[i],
-					tracks: [{ rnapegfile: lst[i + 1] }]
-				})
-			}
-		}
+	for (const [key, value] of urlp) {
+		const tks = await mayGetTkobj(key, value, urlp, genomeobj)
+		if (!tks) continue // no tkobj derived, parameter doesn't match with anything
+		if (Array.isArray(tks)) tklst.push(...tks)
+		else tklst.push(tks)
 	}
 
 	for (const t of tklst) {
@@ -1040,6 +663,442 @@ export async function get_tklst(urlp, genomeobj) {
 			})
 	}
 	return tklst
+}
+
+/*
+returns:
+- object for one successfully parsed track
+- array for multiple track objects, could be empty!
+- null for no tracks
+TODO unit test
+*/
+async function mayGetTkobj(key, value, urlp, genomeobj) {
+	if (key == 'mds3') {
+		// official mds3 dataset; value is comma-joined dslabels
+		const lst = value.split(',')
+		const tks = []
+		for (const n of lst) {
+			const tk = {
+				type: client.tkt.mds3,
+				dslabel: n
+			}
+			if (urlp.has('token')) tk.token = urlp.get('token') // temporary
+			if (urlp.has('filterobj')) tk.filterObj = urlp.get('filterobj')
+			if (urlp.has('cnvonly')) tk.hardcodeCnvOnly = true // quick fix for testing cnv-only mode via url param; in actual use this flag should be set in runpp()
+			tks.push(tk)
+		}
+		return tks
+	}
+
+	if (key == 'mds3bcffile') {
+		// "name,path" pairs to server-side vcf files
+		const [tkname, bcffile] = value.split(',')
+		let tk
+		if (tkname && bcffile) {
+			tk = {
+				type: client.tkt.mds3,
+				name: tkname,
+				bcf: { file: bcffile }
+			}
+		}
+		return tk
+	}
+	if (key == 'mds3bcfurl') {
+		// "name,url,indexURL" to remote file. indexURL is optional when the index file is not co-locating with the bcf file
+		const [tkname, url, indexURL] = value.split(',')
+		let tk
+		if (tkname && url) {
+			tk = {
+				type: client.tkt.mds3,
+				name: tkname,
+				bcf: { url, indexURL }
+			}
+		}
+		return tk
+	}
+
+	if (key == 'arcfile') {
+		const lst = value.split(',')
+		const tks = []
+		for (let i = 0; i < lst.length; i += 2) {
+			if (lst[i] && lst[i + 1]) {
+				tks.push({
+					type: client.tkt.hicstraw,
+					name: lst[i],
+					bedfile: lst[i + 1],
+					mode_hm: false,
+					mode_arc: true
+				})
+			}
+		}
+		return tks
+	}
+
+	if (key == 'mdsjson' || key == 'mdsjsonurl') {
+		let url_str, file_str
+		if (key == 'mdsjson') file_str = value
+		else url_str = value
+		return await mdsjson.init_mdsjson(file_str, url_str)
+	}
+
+	if (key == 'tkjsonfile') {
+		const re = await client.dofetch('textfile', { file: value })
+		if (re.error) throw re.error
+		if (!re.text) throw '.text missing'
+		const lst = JSON.parse(re.text)
+		const tks = []
+		for (const i of lst) {
+			if (i.isfacet) {
+				if (!genomeobj.tkset) genomeobj.tkset = []
+				if (!i.tracks) throw '.tracks[] missing from a facet table'
+				if (!Array.isArray(i.tracks)) throw '.tracks[] not an array from a facet table'
+				i.tklst = i.tracks
+				delete i.tracks
+				for (const t of i.tklst) {
+					if (!t.assay) throw '.assay missing from a facet track'
+					if (!t.sample) throw '.sample missing from a facet track'
+					// must assign tkid otherwise the tk buttons from facet table won't work
+					t.tkid = Math.random().toString()
+				}
+				genomeobj.tkset.push(i)
+			} else {
+				// must be a track
+				tks.push(i)
+			}
+		}
+		return tks
+	}
+
+	if (key == 'bamfile') {
+		const lst = value.split(',')
+		const tks = []
+		for (let i = 0; i < lst.length; i += 2) {
+			if (lst[i] && lst[i + 1]) {
+				tks.push({
+					type: client.tkt.bam,
+					name: lst[i],
+					file: lst[i + 1]
+				})
+			}
+		}
+		return tks
+	}
+	if (key == 'bamurl') {
+		const lst = value.split(',')
+		const tks = []
+		for (let i = 0; i < lst.length; i += 2) {
+			if (lst[i] && lst[i + 1]) {
+				tks.push({
+					type: client.tkt.bam,
+					name: lst[i],
+					url: lst[i + 1]
+				})
+			}
+		}
+		return tks
+	}
+	if (key == 'bedjfile') {
+		const lst = value.split(',')
+		const tks = []
+		for (let i = 0; i < lst.length; i += 2) {
+			if (lst[i] && lst[i + 1]) {
+				tks.push({
+					type: client.tkt.bedj,
+					name: lst[i],
+					file: lst[i + 1]
+				})
+			}
+		}
+		return tks
+	}
+	if (key == 'bedjurl') {
+		const lst = value.split(',')
+		const tks = []
+		for (let i = 0; i < lst.length; i += 2) {
+			if (lst[i] && lst[i + 1]) {
+				tks.push({
+					type: client.tkt.bedj,
+					name: lst[i],
+					url: lst[i + 1]
+				})
+			}
+		}
+		return tks
+	}
+	if (key == 'hictkfile' || key == 'hictkurl') {
+		// name,enzyme,file/url
+		const isfile = key == 'hictkfile'
+		const lst = value.split(',')
+		const norm = urlp.has('hictknorm') ? urlp.get('hictknorm').split(',') : null
+		const tks = []
+		for (let i = 0; i < lst.length; i += 3) {
+			if (lst[i] && lst[i + 1] && lst[i + 2]) {
+				const t = {
+					type: client.tkt.hicstraw,
+					name: lst[i],
+					enzyme: lst[i + 1],
+					normalizationmethod: norm ? norm[i / 3] : null
+				}
+				if (isfile) {
+					t.file = lst[i + 2]
+				} else {
+					t.url = lst[i + 2]
+				}
+				tks.push(t)
+			}
+		}
+		return tks
+	}
+	if (key == 'ldfile') {
+		const lst = value.split(',')
+		const tks = []
+		for (let i = 0; i < lst.length; i += 2) {
+			if (lst[i] && lst[i + 1]) {
+				tks.push({
+					type: client.tkt.ld,
+					name: lst[i],
+					file: lst[i + 1]
+				})
+			}
+		}
+		return tks
+	}
+	if (key == 'bigwigfile') {
+		const lst = value.split(',')
+		const tks = []
+		for (let i = 0; i < lst.length; i += 2) {
+			if (lst[i] && lst[i + 1]) {
+				tks.push({
+					type: client.tkt.bigwig,
+					name: lst[i],
+					file: lst[i + 1],
+					scale: { auto: 1 }
+				})
+			}
+		}
+		return tks
+	}
+	if (key == 'bigwigurl') {
+		const lst = value.split(',')
+		const tks = []
+		for (let i = 0; i < lst.length; i += 2) {
+			if (lst[i] && lst[i + 1]) {
+				tks.push({
+					type: client.tkt.bigwig,
+					name: lst[i],
+					url: lst[i + 1],
+					scale: { auto: 1 }
+				})
+			}
+		}
+		return tks
+	}
+	if (key == 'junctionfile') {
+		// legacy
+		const lst = value.split(',')
+		const tks = []
+		for (let i = 0; i < lst.length; i += 2) {
+			if (lst[i] && lst[i + 1]) {
+				tks.push({
+					type: client.tkt.junction,
+					name: lst[i],
+					tracks: [
+						{
+							file: lst[i + 1]
+						}
+					]
+				})
+			}
+		}
+		return tks
+	}
+	if (key == 'junctionurl') {
+		const lst = value.split(',')
+		const tks = []
+		for (let i = 0; i < lst.length; i += 2) {
+			if (lst[i] && lst[i + 1]) {
+				tks.push({
+					type: client.tkt.junction,
+					name: lst[i],
+					tracks: [
+						{
+							url: lst[i + 1]
+						}
+					]
+				})
+			}
+		}
+		return tks
+	}
+	/*
+	if (urlp.has('vcffile')) {
+		const lst = urlp.get('vcffile').split(',')
+		for (let i = 0; i < lst.length; i += 2) {
+			if (lst[i] && lst[i + 1]) {
+				tklst.push({
+					type: 'vcf',
+					name: lst[i],
+					file: lst[i + 1]
+				})
+			}
+		}
+	}
+	if (urlp.has('vcfurl')) {
+		const lst = urlp.get('vcfurl').split(',')
+		for (let i = 0; i < lst.length; i += 2) {
+			if (lst[i] && lst[i + 1]) {
+				tklst.push({
+					type: 'vcf',
+					name: lst[i],
+					url: lst[i + 1]
+				})
+			}
+		}
+	}
+	*/
+	if (key == 'aicheckfile') {
+		const lst = value.split(',')
+		const tks = []
+		for (let i = 0; i < lst.length; i += 2) {
+			if (lst[i] && lst[i + 1]) {
+				tks.push({
+					type: 'aicheck',
+					name: lst[i],
+					file: lst[i + 1]
+				})
+			}
+		}
+		return tks
+	}
+	if (key == 'bampilefile') {
+		const lst = value.split(',')
+		let links = null
+		if (urlp.has('bampilelink')) {
+			links = urlp.get('bampilelink').split(',').map(decodeURIComponent)
+		}
+		const tks = []
+		for (let i = 0; i < lst.length; i += 2) {
+			if (lst[i] && lst[i + 1]) {
+				const tk = {
+					type: client.tkt.bampile,
+					name: lst[i],
+					file: lst[i + 1]
+				}
+				if (links && links[i / 2]) {
+					tk.link = links[i / 2]
+				}
+				tks.push(tk)
+			}
+		}
+		return tks
+	}
+	if (key == 'svcnvfpkmurl') {
+		const lst = value.split(',')
+		// defines a single track, all members using url
+		const name = lst[0]
+		const type2url = {}
+		for (let i = 1; i < lst.length; i += 2) {
+			type2url[lst[i]] = lst[i + 1]
+		}
+		let tk
+		if (type2url.svcnv || type2url.vcf) {
+			tk = {
+				type: client.tkt.mdssvcnv,
+				name: name
+			}
+			if (type2url.svcnv) {
+				tk.url = type2url.svcnv
+			}
+			if (type2url.vcf) {
+				tk.checkvcf = {
+					url: type2url.vcf,
+					indexURL: type2url.vcfindex
+				}
+			}
+			if (type2url.fpkm) {
+				tk.checkexpressionrank = {
+					datatype: 'FPKM',
+					url: type2url.fpkm,
+					indexURL: type2url.fpkmindex
+				}
+			}
+		}
+		return tk
+	}
+	if (key == 'svcnvfpkmfile') {
+		const lst = value.split(',')
+		// defines a single track, all members using file
+		const name = lst[0]
+		const type2file = {}
+		for (let i = 1; i < lst.length; i += 2) {
+			type2file[lst[i]] = lst[i + 1]
+		}
+		let tk
+		if (type2file.svcnv || type2file.vcf) {
+			tk = {
+				type: client.tkt.mdssvcnv,
+				name: name
+			}
+			if (type2file.svcnv) {
+				tk.file = type2file.svcnv
+			}
+			if (type2file.vcf) {
+				tk.checkvcf = {
+					file: type2file.vcf
+				}
+			}
+			if (type2file.fpkm) {
+				tk.checkexpressionrank = {
+					datatype: 'FPKM',
+					file: type2file.fpkm
+				}
+			}
+		}
+		return tk
+	}
+	if (key == 'mdsjunctionfile') {
+		const lst = value.split(',')
+		const tks = []
+		for (let i = 0; i < lst.length; i += 2) {
+			if (lst[i] && lst[i + 1]) {
+				tks.push({
+					type: 'mdsjunction',
+					name: lst[i],
+					file: lst[i + 1]
+				})
+			}
+		}
+		return tks
+	}
+	if (key == 'junctionmatrix') {
+		const lst = value.split(',')
+		const tks = []
+		for (let i = 0; i < lst.length; i += 2) {
+			if (lst[i] && lst[i + 1]) {
+				tks.push({
+					type: 'mdsjunction',
+					name: lst[i],
+					file2: lst[i + 1] // quick fix to support new file type
+				})
+			}
+		}
+		return tks
+	}
+
+	if (key == 'junctionrnapeg') {
+		const lst = value.split(',')
+		const tks = []
+		for (let i = 0; i < lst.length; i += 2) {
+			if (lst[i] && lst[i + 1]) {
+				tks.push({
+					type: client.tkt.junction,
+					name: lst[i],
+					tracks: [{ rnapegfile: lst[i + 1] }]
+				})
+			}
+		}
+		return tks
+	}
 }
 
 function mayAddBedjfilterbyname(urlp, tklst) {
