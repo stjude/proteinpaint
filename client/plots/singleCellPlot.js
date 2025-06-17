@@ -1,11 +1,11 @@
 import { getCompInit, copyMerge, deepEqual } from '../rx/index.js'
 import { scaleLinear as d3Linear } from 'd3-scale'
 import { dofetch3 } from '#common/dofetch'
-import { getColors, plotColor } from '#shared/common.js'
+import { getColors } from '#shared/common.js'
 import { controlsInit } from './controls'
 import { downloadSingleSVG } from '#common/svg.download'
 import { select } from 'd3-selection'
-import { rgb, create, extent, color } from 'd3'
+import { rgb, create, extent } from 'd3'
 import { roundValueAuto } from '#shared/roundValue.js'
 import { TermTypes } from '#shared/terms.js'
 import {
