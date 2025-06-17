@@ -62,45 +62,39 @@ export class WSIViewerInteractions {
 			buffers: any,
 			imageData: any
 		) => {
-			// Add keydown listener to the image container
-			const image = holder.select('div > .ol-viewport').attr('tabindex', 0)
+			// Add keydown listener to the holder
+			holder.attr('tabindex', 0)
+			holder.node()?.focus()
+
 			const annotationsData = imageData?.annotationsData || []
 
-			//To scroll to next annotation, hold the space bar and press left/right arrows
-			let isSpaceDown = false
-
-			image.on('keydown', async (event: KeyboardEvent) => {
+			holder.on('keydown', async (event: KeyboardEvent) => {
 				let currentIndex = buffers.annotationsIdx.get()
 
-				if (event.code === 'Space') {
-					isSpaceDown = true
+				event.preventDefault()
+				event.stopPropagation()
+				const idx = currentIndex
+				if (event.key == '.') {
+					//Do not react if at the last annotation
+					if (currentIndex == annotationsData.length) return
+					currentIndex += 1
 				}
-				if (isSpaceDown) {
-					event.preventDefault()
-					event.stopPropagation()
-					const idx = currentIndex
-					if (event.key == 'ArrowRight') {
-						//Do not react if at the last annotation
-						if (currentIndex == annotationsData.length) return
-						currentIndex += 1
-					}
-					if (event.key == 'ArrowLeft') {
-						//Do not react if at the starting annotation
-						if (currentIndex === 0) return
-						currentIndex -= 1
-					}
-					if (idx !== currentIndex) {
-						//When the index changes, scroll to the new annotation
-						//Timeout for when user presses arrows multiple times.
-						const d = debounce(async () => {
-							buffers.annotationsIdx.set(currentIndex)
-							const newZoomInPoints = annotationsData[currentIndex].zoomCoordinates
-							if (newZoomInPoints != undefined) this.addZoomInEffect(activeImageExtent, [newZoomInPoints], map)
-							isSpaceDown = false
-						}, 500)
-						d()
-					}
+				if (event.key == ',') {
+					//Do not react if at the starting annotation
+					if (currentIndex === 0) return
+					currentIndex -= 1
 				}
+				if (idx !== currentIndex) {
+					//When the index changes, scroll to the new annotation
+					//Timeout for when user presses arrows multiple times.
+					const d = debounce(async () => {
+						buffers.annotationsIdx.set(currentIndex)
+						const newZoomInPoints = annotationsData[currentIndex].zoomCoordinates
+						if (newZoomInPoints != undefined) this.addZoomInEffect(activeImageExtent, [newZoomInPoints], map)
+					}, 500)
+					d()
+				}
+
 				if (shortcuts.includes(event.code)) {
 					//Update buffer to change table
 					let matchingClass = imageData?.classes?.find(c => c.shortcut === event.code)
@@ -111,7 +105,6 @@ export class WSIViewerInteractions {
 						event.code === 'Enter' || matchingClass.label == annotationsData[currentIndex].class
 							? { label: 'Confirmed', color: matchingClass?.color || '' }
 							: { label: matchingClass.label, color: matchingClass.color }
-					console.log('tmpClass', tmpClass)
 					buffers.tmpClass.set(tmpClass)
 
 					const body = {
