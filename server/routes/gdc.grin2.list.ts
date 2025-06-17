@@ -77,14 +77,9 @@ function init({ genomes }) {
 async function mayListMafFiles(q: GdcGRIN2listRequest, result: GdcGRIN2listResponse, ds: any) {
 	if (!q.mafOptions) return
 
-	// Ensure mafFiles is always initialized
+	// Guard clause to ensure mafFiles is initialized (for typescript safety)
 	if (!result.mafFiles) {
-		result.mafFiles = {
-			files: [],
-			filesTotal: 0,
-			maxTotalSizeCompressed: 0,
-			fileCounts: { maf: 0 }
-		}
+		throw new Error('result.mafFiles must be initialized before calling mayListMafFiles')
 	}
 
 	// Only build and use MAF filters if we need to retrieve MAF files
@@ -96,20 +91,6 @@ async function mayListMafFiles(q: GdcGRIN2listRequest, result: GdcGRIN2listRespo
 			{ op: '=', content: { field: 'analysis.workflow_type', value: allowedWorkflowType } },
 			{ op: '=', content: { field: 'access', value: 'open' } }
 		]
-	}
-
-	// ADD PROJECT FILTERING - this should dramatically reduce file count. Just a sanity check
-	if (q.mafOptions.projectIds && q.mafOptions.projectIds.length > 0) {
-		if (q.mafOptions.projectIds.length === 1) {
-			// Single project filter
-			filters.content.push({
-				op: '=',
-				content: { field: 'cases.project.project_id', value: q.mafOptions.projectIds[0] }
-			})
-		}
-		console.log(`🎯 MAF Project filter applied: ${q.mafOptions.projectIds.join(', ')}`)
-	} else {
-		console.log('🌐 MAF No project filter - showing all projects')
 	}
 
 	const case_filters: any = { op: 'and', content: [] }

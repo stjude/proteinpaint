@@ -872,50 +872,6 @@ function makeControls(obj) {
 			}
 		})
 
-		// Row: Project Filter (spans full width)
-		const projectContainer = optionsGrid
-			.append('div')
-			.style('display', 'flex')
-			.style('align-items', 'center')
-			.style('gap', '8px')
-			.style('grid-column', '1 / -1') // Span full width
-
-		projectContainer
-			.append('label')
-			.style('font-size', '14px')
-			.style('font-weight', '500')
-			.style('min-width', '120px')
-			.text('Project Filter:')
-
-		const projectSelect = projectContainer
-			.append('select')
-			.style('padding', '4px 8px')
-			.style('border', '1px solid #ccc')
-			.style('border-radius', '4px')
-			.style('font-size', '14px')
-			.style('min-width', '200px')
-
-		// Add options
-		projectSelect.append('option').attr('value', '').text('All Projects (No Filter)')
-		projectSelect.append('option').attr('value', 'TCGA-GBM').text('TCGA-GBM (Brain Cancer)')
-		projectSelect.append('option').attr('value', 'CPTAC-3').text('CPTAC-3')
-		projectSelect.append('option').attr('value', 'HCMI-CMDC').text('HCMI-CMDC')
-
-		// Initialize default value
-		if (!obj.mafOptions.projectIds) {
-			obj.mafOptions.projectIds = [] // Empty = no filter
-		}
-
-		projectSelect.on('change', function (this: HTMLSelectElement) {
-			const selectedValue = this.value
-			if (selectedValue === '') {
-				obj.mafOptions.projectIds = [] // No filter
-			} else {
-				obj.mafOptions.projectIds = [selectedValue] // Single project filter
-			}
-			console.log('MAF Project filter updated:', obj.mafOptions.projectIds)
-		})
-
 		// Row 4: Workflow Type (read-only display)
 		const workflowContainer = optionsGrid
 			.append('div')
