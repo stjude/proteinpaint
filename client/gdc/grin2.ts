@@ -28,30 +28,16 @@ interface TableRowItem {
 }
 
 const defaultMAFclasses = [
-	'missense_variant',
-	'frameshift_variant',
-
-	// High impact protein-changing variants
-	'stop_gained',
-	'stop_lost',
-	'start_lost',
-	'splice_acceptor_variant',
-	'splice_donor_variant',
-
-	// Moderate impact protein-changing variants
-	'inframe_insertion',
-	'inframe_deletion',
-	'protein_altering_variant',
-
-	// Splicing variants that may affect protein
-	'splice_donor_5th_base_variant',
-	'splice_region_variant',
-	'splice_donor_region_variant',
-	'splice_polypyrimidine_tract_variant',
-
-	// Other protein-affecting variants
-	'incomplete_terminal_codon_variant',
-	'NMD_transcript_variant'
+	'M', // missense_variant
+	'F', // frameshift_variant
+	'N', // stop_gained
+	'StopLost', // stop_lost
+	'StartLost', // start_lost
+	'L', // splice_acceptor_variant, splice_donor_variant
+	'I', // inframe_insertion
+	'D', // inframe_deletion
+	'ProteinAltering', // protein_altering_variant
+	'P' // splice_donor_5th_base_variant, splice_region_variant, etc.
 ]
 
 // ================================================================================
@@ -796,10 +782,7 @@ function makeControls(obj) {
 					.append('input')
 					.attr('type', 'checkbox')
 					.attr('id', `consequence-${mclassKey}`)
-					.property(
-						'checked',
-						soTerms.some(soTerm => obj.mafOptions.consequences.includes(soTerm))
-					)
+					.property('checked', obj.mafOptions.consequences.includes(mclassKey))
 					.style('margin', '0')
 					.style('cursor', 'pointer')
 
@@ -818,15 +801,11 @@ function makeControls(obj) {
 				checkbox.on('change', function (this: HTMLInputElement) {
 					const isChecked = this.checked
 					if (isChecked) {
-						// Add all SO terms for this mclass if not already present
-						soTerms.forEach(soTerm => {
-							if (!obj.mafOptions.consequences.includes(soTerm)) {
-								obj.mafOptions.consequences.push(soTerm)
-							}
-						})
+						if (!obj.mafOptions.consequences.includes(mclassKey)) {
+							obj.mafOptions.consequences.push(mclassKey)
+						}
 					} else {
-						// Remove all SO terms for this mclass
-						obj.mafOptions.consequences = obj.mafOptions.consequences.filter(c => !soTerms.includes(c))
+						obj.mafOptions.consequences = obj.mafOptions.consequences.filter(c => c !== mclassKey)
 					}
 					console.log('Updated consequences (SO terms):', obj.mafOptions.consequences)
 				})
@@ -1695,6 +1674,15 @@ async function getFilesAndShowTable(obj) {
 
 		// Only add mafOptions if MAF is selected
 		if (mafSelected) {
+			// Convert mclass codes to SO terms using existing mapping
+			const soTerms: string[] = []
+			for (const mclassCode of obj.mafOptions.consequences) {
+				const soTermsForCode = class2SOterm.get(mclassCode) || []
+				soTerms.push(...soTermsForCode)
+			}
+
+			obj.mafOptions.consequences = soTerms
+
 			caseFiles.mafOptions = {
 				minTotalDepth: obj.mafOptions.minTotalDepth,
 				minAltAlleleCount: obj.mafOptions.minAltAlleleCount,
