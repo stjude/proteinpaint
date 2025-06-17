@@ -7,6 +7,9 @@ All notable changes to this project will be documented in this file.
 Features:
 - N ew cnv examples in the lollipop card; new search terms for card
 
+Fixes:
+- genome browser preserves order of tracks as specified in url string
+
 
 ## 2.130.0
 
