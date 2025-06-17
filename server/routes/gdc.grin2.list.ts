@@ -54,7 +54,7 @@ function init({ genomes }) {
 					maxTotalSizeCompressed: 0,
 					fileCounts: { maf: 0 }
 				}
-				await mayListMafFiles(req.query as GdcGRIN2listRequest, result, ds)
+				await listMafFiles(req.query as GdcGRIN2listRequest, result, ds)
 			}
 
 			// Handle CNV files if cnvOptions is present in the request
@@ -63,7 +63,7 @@ function init({ genomes }) {
 					files: [],
 					maxTotalSizeCompressed: maxTotalSizeCompressed
 				}
-				await mayListCnvFiles(req.query as GdcGRIN2listRequest, result, ds)
+				await listCnvFiles(req.query as GdcGRIN2listRequest, result, ds)
 			}
 
 			res.send(result)
@@ -74,12 +74,12 @@ function init({ genomes }) {
 	}
 }
 
-async function mayListMafFiles(q: GdcGRIN2listRequest, result: GdcGRIN2listResponse, ds: any) {
+async function listMafFiles(q: GdcGRIN2listRequest, result: GdcGRIN2listResponse, ds: any) {
 	if (!q.mafOptions) return
 
 	// Guard clause to ensure mafFiles is initialized (for typescript safety)
 	if (!result.mafFiles) {
-		throw new Error('result.mafFiles must be initialized before calling mayListMafFiles')
+		throw new Error('result.mafFiles must be initialized before calling listMafFiles')
 	}
 
 	// Only build and use MAF filters if we need to retrieve MAF files
@@ -262,10 +262,7 @@ async function mayListMafFiles(q: GdcGRIN2listRequest, result: GdcGRIN2listRespo
 	}
 }
 
-async function mayListCnvFiles(q: GdcGRIN2listRequest, result: GdcGRIN2listResponse, ds: any) {
-	// Always initialize cnvFiles
-	result.cnvFiles = { files: [], maxTotalSizeCompressed }
-
+async function listCnvFiles(q: GdcGRIN2listRequest, result: GdcGRIN2listResponse, ds: any) {
 	// Early return if no CNV options requested
 	if (!q.cnvOptions) {
 		console.log('No cnvOptions provided, returning empty cnvFiles')
