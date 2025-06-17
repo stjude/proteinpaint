@@ -1343,21 +1343,14 @@ async function getFilesAndShowTable(obj) {
 		// Always include mafOptions when MAF is selected
 		if (obj.dataTypeStates.maf) {
 			body.mafOptions = {
-				experimentalStrategy: obj.opts.experimentalStrategy || 'WXS',
-				minTotalDepth: obj.mafOptions.minTotalDepth,
-				minAltAlleleCount: obj.mafOptions.minAltAlleleCount,
-				consequences: obj.mafOptions.consequences,
-				hyperMutator: obj.mafOptions.hypermutatorCutoff
+				experimentalStrategy: obj.opts.experimentalStrategy || 'WXS'
 			}
 		}
 
 		// Only include cnvOptions when CNV is selected
 		if (obj.dataTypeStates.cnv) {
 			body.cnvOptions = {
-				dataType: obj.cnvOptions.dataType,
-				lossThreshold: obj.cnvOptions.lossThreshold,
-				gainThreshold: obj.cnvOptions.gainThreshold,
-				segLength: obj.cnvOptions.segLength
+				dataType: obj.cnvOptions.dataType
 			}
 		}
 		console.log('Request body for GRIN2list:', body)
