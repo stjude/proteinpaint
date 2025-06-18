@@ -9,6 +9,7 @@ export type CategoriesRequest = {
 	/** termwrapper object */
 	tw: TermWrapper
 	filter?: Filter
+	filter0?: any
 	/** quick fix only for gdc */
 	currentGeneNames?: string[]
 	/** optional property added by mds3 tk, to limit to cases mutated in this region */

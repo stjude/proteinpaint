@@ -13,6 +13,7 @@ VocabApi
 
 export type VocabApi = {
 	termdbConfig: any
+	state?: any
 	//Methods
 	cacheTermQ: (term: Term, q: any) => any
 	findTerm: (f: string, activeCohort: number, usecase: UseCase, x: string) => { lst: Term[] }

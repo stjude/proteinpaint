@@ -49,6 +49,7 @@ async function trigger_getcategories(
 	const $id = q.tw.$id
 	const arg = {
 		filter: q.filter,
+		filter0: q.filter0,
 		terms: [q.tw],
 		currentGeneNames: q.currentGeneNames, // optional, from mds3 mayAddGetCategoryArgs()
 		rglst: q.rglst // optional, from mds3 mayAddGetCategoryArgs()

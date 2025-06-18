@@ -1,4 +1,4 @@
-import { mayGetChildTerms } from '../tw/geneVariant'
+import { getChildTerms } from '../tw/geneVariant'
 
 /*
 TVS handler for geneVariant term
@@ -15,8 +15,8 @@ export const handler = {
 
 async function fillMenu(self, _div, tvs) {
 	const term = structuredClone(tvs.term)
-	// add a variant filter onto the geneVariant term
-	await mayGetChildTerms({ q: {}, term }, self.opts.vocabApi)
+	// get child dt terms of the geneVariant term
+	await getChildTerms(term, self.opts.vocabApi)
 	if (!term.childTerms?.length) return
 	// generate a frontend vocab using dt terms from the variant filter
 	// and render a data dictionary of this vocab
