@@ -2016,22 +2016,22 @@ async function getFilesAndShowTable(obj) {
 
 						// Rust Processing Time
 						if (response.timing.rustProcessingTime !== undefined) {
-							timingStatsGrid.append('div').style('color', '#6c757d').text('Rust Processing Time:')
+							timingStatsGrid.append('div').style('color', '#6c757d').text('GDC API Data Query and Parsing:')
 							timingStatsGrid
 								.append('div')
 								.style('font-weight', 'bold')
-								.style('color', '#17a2b8') // Info blue color
+								.style('color', 'black')
 								.text(response.timing.rustProcessingTime)
 						}
 
-						// R Processing Time
-						if (response.timing.rProcessingTime !== undefined) {
-							timingStatsGrid.append('div').style('color', '#6c757d').text('R Processing Time:')
+						// GRIN2 Processing Time
+						if (response.timing.grin2ProcessingTime !== undefined) {
+							timingStatsGrid.append('div').style('color', '#6c757d').text('GRIN2 Analysis:')
 							timingStatsGrid
 								.append('div')
 								.style('font-weight', 'bold')
-								.style('color', '#17a2b8') // Info blue color
-								.text(response.timing.rProcessingTime)
+								.style('color', 'black')
+								.text(response.timing.grin2ProcessingTime)
 						}
 
 						// Total Time
@@ -2040,7 +2040,7 @@ async function getFilesAndShowTable(obj) {
 							timingStatsGrid
 								.append('div')
 								.style('font-weight', 'bold')
-								.style('color', '#6f42c1') // Purple color to emphasize total
+								.style('color', 'black')
 								.text(response.timing.totalTime)
 						}
 					}
