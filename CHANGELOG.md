@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.132.0
 
 Features:
 - Adding better reporting for included vs. excluded files in the analysis summary
