@@ -437,6 +437,17 @@ function createExpandableDeduplicationSection(container, deduplicationStats) {
 	})
 }
 
+// Helper function to format case data for display in the records by case section
+function formatCaseData(obj) {
+	if (typeof obj === 'object' && obj !== null) {
+		if (obj.count !== undefined || obj.value !== undefined) {
+			return obj.count !== undefined ? obj.count : obj.value
+		}
+		return JSON.stringify(obj, null, 1).replace(/\n\s*/g, ' ')
+	}
+	return obj
+}
+
 /**
  * Updates deduplication status display in MAF options section
  * Shows summary of file filtering and provides expandable details
@@ -1984,9 +1995,57 @@ async function getFilesAndShowTable(obj) {
 						}
 					}
 
-					// Data Filtering Stats Section (if available)
-					console.log('Response analysisStats:', response.analysisStats)
+					// Processing Timings Section
+					if (response.timing) {
+						const timingStats = statsPanel.append('div').style('margin-bottom', '20px')
 
+						timingStats
+							.append('h6')
+							.text('Timings')
+							.style('margin', '0 0 10px 0')
+							.style('color', '#495057')
+							.style('font-size', '14px')
+							.style('font-weight', 'bold')
+
+						const timingStatsGrid = timingStats
+							.append('div')
+							.style('display', 'grid')
+							.style('grid-template-columns', '1fr 1fr')
+							.style('gap', '8px')
+							.style('font-size', '13px')
+
+						// Rust Processing Time
+						if (response.timing.rustProcessingTime !== undefined) {
+							timingStatsGrid.append('div').style('color', '#6c757d').text('Rust Processing Time:')
+							timingStatsGrid
+								.append('div')
+								.style('font-weight', 'bold')
+								.style('color', '#17a2b8') // Info blue color
+								.text(response.timing.rustProcessingTime)
+						}
+
+						// R Processing Time
+						if (response.timing.rProcessingTime !== undefined) {
+							timingStatsGrid.append('div').style('color', '#6c757d').text('R Processing Time:')
+							timingStatsGrid
+								.append('div')
+								.style('font-weight', 'bold')
+								.style('color', '#17a2b8') // Info blue color
+								.text(response.timing.rProcessingTime)
+						}
+
+						// Total Time
+						if (response.timing.totalTime !== undefined) {
+							timingStatsGrid.append('div').style('color', '#6c757d').text('Total Processing Time:')
+							timingStatsGrid
+								.append('div')
+								.style('font-weight', 'bold')
+								.style('color', '#6f42c1') // Purple color to emphasize total
+								.text(response.timing.totalTime)
+						}
+					}
+
+					// Data Filtering Stats Section (if available)
 					if (
 						response.analysisStats &&
 						(response.analysisStats.filtered_records !== undefined ||
@@ -2066,6 +2125,101 @@ async function getFilesAndShowTable(obj) {
 								.style('font-weight', 'bold')
 								.style('color', 'black')
 								.text(response.analysisStats.included_cnv_records.toLocaleString())
+						}
+
+						// Records by case
+						if (response.analysisStats.filtered_records_by_case !== undefined) {
+							// Create the full formatted text (same as your current approach but improved formatting)
+							const fullFormattedCases = Object.keys(response.analysisStats.filtered_records_by_case)
+								.map(caseKey => {
+									const caseValue = response.analysisStats.filtered_records_by_case[caseKey]
+									const formattedValue = formatCaseData(caseValue)
+									return `${caseKey}: ${formattedValue}`
+								})
+								.join(', ')
+
+							// Split the text for preview (show first ~300 characters)
+							const PREVIEW_LENGTH = 300
+							const needsExpansion = fullFormattedCases.length > PREVIEW_LENGTH
+							const previewText = needsExpansion
+								? fullFormattedCases.substring(0, PREVIEW_LENGTH) + '...'
+								: fullFormattedCases
+
+							// Create container that spans both columns
+							const recordsByCaseContainer = filterStats
+								.append('div')
+								.style('grid-column', '1 / -1') // Span all columns
+								.style('margin-top', '15px')
+
+							// Header for the section
+							recordsByCaseContainer
+								.append('div')
+								.style('color', '#495057')
+								.style('font-weight', 'bold')
+								.style('margin-bottom', '8px')
+								.text('Records Included & Excluded by Case:')
+
+							// Scrollable container with larger default size
+							const scrollableContainer = recordsByCaseContainer
+								.append('div')
+								.style('max-height', needsExpansion ? '120px' : '300px')
+								.style('max-width', '100%')
+								.style('overflow', 'auto')
+								.style('background-color', '#ffffff')
+								.style('border', '1px solid #e9ecef')
+								.style('border-radius', '4px')
+								.style('padding', '12px')
+								.style('font-family', 'monospace')
+								.style('font-size', '12px')
+								.style('line-height', '1.4')
+								.style('white-space', 'pre-wrap')
+
+							// Content div that will be updated
+							const contentDiv = scrollableContainer.append('div').style('color', '#212529').text(previewText)
+
+							// Add expand/collapse functionality if needed
+							if (needsExpansion) {
+								let isExpanded = false
+
+								// Create expand/collapse button
+								const toggleButton = recordsByCaseContainer
+									.append('button')
+									.style('background', 'none')
+									.style('border', 'none')
+									.style('color', '#007bff')
+									.style('cursor', 'pointer')
+									.style('font-size', '12px')
+									.style('margin-top', '8px')
+									.style('padding', '4px 0')
+									.style('text-decoration', 'underline')
+									.text('▼ Show full details')
+
+								// Toggle functionality
+								toggleButton.on('click', function () {
+									if (!isExpanded) {
+										// Expand: show full content
+										contentDiv.text(fullFormattedCases)
+										scrollableContainer.style('max-height', '400px')
+										toggleButton.text('▲ Show less')
+										isExpanded = true
+									} else {
+										// Collapse: show preview
+										contentDiv.text(previewText)
+										scrollableContainer.style('max-height', '120px')
+										toggleButton.text('▼ Show full details')
+										isExpanded = false
+									}
+								})
+
+								// Hover effects for the button
+								toggleButton
+									.on('mouseenter', function (this: any) {
+										select(this).style('color', '#0056b3')
+									})
+									.on('mouseleave', function (this: any) {
+										select(this).style('color', '#007bff')
+									})
+							}
 						}
 					}
 				}
