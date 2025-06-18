@@ -2607,27 +2607,52 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 		// primary concern is tw.term may be missing coord/isoform
 		// to perform essential query
 
-		// query all dts specified in dataset
-		const sample2mlst = new Map()
-		const dts = []
+		const sample2mlst = new Map() // collect genomic query results indexed by sample; key: sample id, value: array
+		const dts = [] // list of dt values to be queried for this ds
 		if (ds.queries.snvindel) dts.push(dtsnvindel)
 		if (ds.queries.svfusion) dts.push(dtfusionrna)
-		if (ds.queries.cnv) dts.push(dtcnv)
-		if (ds.queries.geneCnv) dts.push(dtGeneCnv)
+		if (ds.queries.geneCnv || ds.queries.cnv) {
+			/* if dt has either cnv or geneCnv, or even both, just add dt=dtcnv once
+			see below, only one type of cnv will be queried
+			avoid introducing adhoc dt value dt="geneCnv",
+			this breaks ds declaration of assayAvailability.byDt, also causes trouble for summary plot
+			*/
+			dts.push(dtcnv)
+		}
 
-		// retrieve mutation data for each dt
+		// retrieve genomic data for each dt
 		const termdbmclass = q.ds?.cohort?.termdb?.mclass // custom mclass labels from dataset
 		for (const dt of dts) {
-			const mlst =
-				dt == dtsnvindel
-					? await getSnvindelByTerm(ds, tw.term, genome, q)
-					: dt == dtfusionrna || dt == dtsv
-					? await getSvfusionByTerm(ds, tw.term, genome, q)
-					: dt == dtcnv
-					? await getCnvByTw(ds, tw, genome, q)
-					: dt == dtGeneCnv
-					? await getGenecnvByTerm(ds, tw.term, genome, q)
-					: []
+			let mlst = []
+			switch (dt) {
+				case dtsnvindel:
+					mlst = await getSnvindelByTerm(ds, tw.term, genome, q)
+					break
+				case dtfusionrna:
+				case dtsv:
+					mlst = await getSvfusionByTerm(ds, tw.term, genome, q)
+					break
+				case dtcnv:
+					/******************
+					     tricky!!
+					*******************
+					gdc has both geneCnv and cnv
+					hardcodes that mayGetGeneVariantData() only calls geneCnv but not cnv
+					for gdc, mayGetGeneVariantData() is used for oncomatrix/summary, which should only use gene-level cnv,
+					thus this hardcoded logic suits the need
+					for now only gdc has both geneCnv and cnv, thus this is not an issue for non-gdc ds
+
+					even later we may have another ds with both, may not make sense to load both here
+					*/
+					if (ds.queries.geneCnv) {
+						mlst = await getGenecnvByTerm(ds, tw.term, genome, q)
+					} else {
+						mlst = await getCnvByTw(ds, tw, genome, q)
+					}
+					break
+				default:
+					throw 'unknown dt'
+			}
 
 			if (!mlst) continue // cnv seg query now may return undefined
 
@@ -3072,7 +3097,7 @@ async function mayValidateAssayAvailability(ds) {
 	// has this setting. cache sample list
 	if (ds.assayAvailability.byDt) {
 		for (const key in ds.assayAvailability.byDt) {
-			if (!dt2label[key] && key != dtGeneCnv) throw 'unknown dt in assayAvailability.byDt: ' + key
+			if (!dt2label[key]) throw 'unknown dt in assayAvailability.byDt: ' + key
 			const dt = ds.assayAvailability.byDt[key]
 
 			if (dt.byOrigin) {
