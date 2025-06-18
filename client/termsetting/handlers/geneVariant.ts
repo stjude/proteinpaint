@@ -3,6 +3,7 @@ import type { GeneVariantTermSettingInstance } from '#types'
 import type { PillData } from '../types'
 import { make_radios } from '#dom'
 import { GroupSettingMethods } from './groupsetting.ts'
+import { getChildTerms } from '../../tw/geneVariant.ts'
 
 // self is the termsetting instance
 export function getHandler(self: GeneVariantTermSettingInstance) {
@@ -24,6 +25,10 @@ export function getHandler(self: GeneVariantTermSettingInstance) {
 
 		async showEditMenu(div: Element) {
 			await makeEditMenu(self, div)
+		},
+
+		async postMain() {
+			await getChildTerms(self.term, self.vocabApi)
 		}
 	}
 }

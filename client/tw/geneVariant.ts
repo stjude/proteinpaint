@@ -3,6 +3,7 @@ import type {
 	BaseGroupSet,
 	GvValuesQ,
 	GvCustomGsQ,
+	RawGvTerm,
 	RawGvValuesTW,
 	GvValuesTW,
 	RawGvCustomGsTW,
@@ -70,7 +71,7 @@ export class GvBase extends TwBase {
 		if (!tw.term.groupsetting) tw.term.groupsetting = { disabled: false }
 
 		// get child dt terms
-		await mayGetChildTerms(tw, opts.vocabApi)
+		await getChildTerms(tw.term, opts.vocabApi)
 
 		{
 			// apply optional ds-level configs for this specific term
@@ -126,12 +127,21 @@ export class GvBase extends TwBase {
 
 // function to get child dt terms
 // will use these terms to generate a frontend vocab
-export async function mayGetChildTerms(tw: RawGvTW, vocabApi: VocabApi) {
-	if (tw.term.childTerms) return
+export async function getChildTerms(term: RawGvTerm, vocabApi: VocabApi) {
 	if (!vocabApi.termdbConfig?.queries) throw 'termdbConfig.queries is missing'
 	const termdbmclass = vocabApi.termdbConfig.mclass // custom mclass labels from dataset
 	const dtTermsInDs: DtTerm[] = [] // dt terms in dataset
-	const categories = await vocabApi.getCategories(tw.term)
+	const body: any = {}
+	const filter = vocabApi.state?.termfilter?.filter
+	const filter0 = vocabApi.state?.termfilter?.filter0
+	if (filter0) {
+		// TODO: currently adding filter0 to body{}, but should
+		// refactor the input of getCategories() to be a single opts{}
+		// object, which can include .term, .filter, .filter0, and
+		// any other properties
+		body.filter0 = filter0
+	}
+	const categories = await vocabApi.getCategories(term, filter, body)
 	for (const _t of dtTerms) {
 		const t = structuredClone(_t)
 		if (!Object.keys(vocabApi.termdbConfig.queries).includes(t.query)) continue // dt is not in dataset
@@ -157,10 +167,10 @@ export async function mayGetChildTerms(tw: RawGvTW, vocabApi: VocabApi) {
 			if (termdbmclass && Object.keys(termdbmclass).includes(k)) v.label = termdbmclass[k].label
 		}
 		t.values = values
-		t.parentTerm = structuredClone(tw.term)
+		t.parentTerm = structuredClone(term)
 		dtTermsInDs.push(t)
 	}
-	tw.term.childTerms = dtTermsInDs
+	term.childTerms = dtTermsInDs
 }
 
 export class GvValues extends GvBase {
