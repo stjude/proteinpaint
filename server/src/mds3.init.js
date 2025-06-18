@@ -113,8 +113,6 @@ arguments:
 */
 const unannotatedKey = 'Unannotated'
 
-const dtGeneCnv = 'geneCnv' // adhoc dt value for ds.queries.geneCnv. move to common.js. absolutely avoids hardcoding dt values
-
 export async function init(ds, genome) {
 	// optional features/settings supplied by ds, when missing from serverconfig.features{}, are centralized here.
 	// overwrite not allowed! to prevent hard-to-trace error that 2nd ds changes value set by 1st ds etc...
