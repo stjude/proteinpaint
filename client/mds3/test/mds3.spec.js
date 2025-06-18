@@ -453,6 +453,13 @@ tape('GDC - barchart - categorical', test => {
 			state: {
 				dslabel: 'GDC',
 				genome: 'hg38',
+				// adding filter to reduce number of samples in order to reduce computation time
+				termfilter: {
+					filter0: {
+						op: 'in',
+						content: { field: 'cases.demographic.ethnicity', value: 'hispanic or latino' }
+					}
+				},
 				plots: [
 					{
 						chartType: 'summary',
@@ -586,11 +593,18 @@ tape('GDC - barchart - categorical/categorical', test => {
 			state: {
 				dslabel: 'GDC',
 				genome: 'hg38',
+				// adding filter to reduce number of samples in order to reduce computation time
+				termfilter: {
+					filter0: {
+						op: 'in',
+						content: { field: 'cases.demographic.ethnicity', value: 'hispanic or latino' }
+					}
+				},
 				plots: [
 					{
 						chartType: 'summary',
 						term: { id: 'case.disease_type' },
-						term2: { id: 'case.demographic.ethnicity' }
+						term2: { id: 'case.demographic.cause_of_death' }
 					}
 				],
 				nav: { activeTab: 1 }
@@ -628,6 +642,13 @@ tape('GDC - barchart - categorical/geneVariant', test => {
 			state: {
 				dslabel: 'GDC',
 				genome: 'hg38',
+				// adding filter to reduce number of samples in order to reduce computation time
+				termfilter: {
+					filter0: {
+						op: 'in',
+						content: { field: 'cases.demographic.ethnicity', value: 'hispanic or latino' }
+					}
+				},
 				plots: [
 					{
 						chartType: 'summary',
@@ -711,6 +732,7 @@ tape('GDC - barchart - categorical/geneExpression', test => {
 	}
 })
 
+// TODO: will not skip this test when violin plot of dictionary term is supported
 tape.skip('GDC - violin - numeric', test => {
 	test.timeoutAfter(70000)
 	const holder = getHolder()
@@ -903,6 +925,7 @@ tape('GDC - violin - geneExpression/geneVariant', test => {
 	}
 })
 
+// TODO: will not skip this test when boxplot of dictionary term is supported
 tape.skip('GDC - boxplot - numeric', test => {
 	test.timeoutAfter(70000)
 	const holder = getHolder()
