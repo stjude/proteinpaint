@@ -232,12 +232,12 @@ function init({ genomes }) {
 
 			// Call the R script
 			console.log('[GRIN2] Executing R script...')
-			const rAnalysisStart = Date.now()
+			const grin2AnalysisStart = Date.now()
 			const rResult = await run_R('gdcGRIN2.R', rInput, [])
 			// console.log(`[GRIN2] R execution completed, result: ${rResult}`)
 			console.log('[GRIN2] R execution completed')
-			const rAnalysisTime = formatElapsedTime(Date.now() - rAnalysisStart)
-			console.log(`[GRIN2] Rust processing took ${rAnalysisTime}`)
+			const grin2AnalysisTime = formatElapsedTime(Date.now() - grin2AnalysisStart)
+			console.log(`[GRIN2] Rust processing took ${grin2AnalysisTime}`)
 
 			// Parse R result to get image or check for errors
 			let resultData
@@ -256,7 +256,7 @@ function init({ genomes }) {
 					analysisStats: analysisStats,
 					timing: {
 						rustProcessingTime: downloadTime,
-						rProcessingTime: rAnalysisTime,
+						grin2ProcessingTime: grin2AnalysisTime,
 						totalTime: totalProcessTime
 					},
 					status: 'success'

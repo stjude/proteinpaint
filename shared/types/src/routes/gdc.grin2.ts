@@ -166,9 +166,9 @@ export type RunGRIN2Response = {
 	timing?: {
 		/** Time taken to run Rust processing */
 		rustProcessingTime: number
-		/** Time taken to run R processing */
-		rProcessingTime: number
-		/** Total time taken for the entire GRIN2 run */
+		/** Time taken to run GRIN2 processing */
+		grin2Time: number
+		/** Total time taken for the entire run */
 		totalTime: number
 	}
 }
