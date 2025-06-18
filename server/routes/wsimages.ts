@@ -231,56 +231,8 @@ async function getSessionId(
 			// Submit the color map for predictions
 			const cmapData = qs.stringify({
 				cmap: JSON.stringify({
-					keys: ['prediction'],
-					values: [ds.queries.WSImages.predictionColor]
-				})
-			})
-
-			await ky.put(`${tileServer.url}/tileserver/cmap`, {
-				body: cmapData,
-				timeout: 50000,
-				headers: {
-					'Content-Type': 'application/x-www-form-urlencoded',
-					Cookie: `session_id=${sessionId}`
-				},
-				hooks: getHooks(cookieJar, getCookieString, setCookie)
-			})
-		}
-	} else if (ds.queries.WSImages.getWSIAnnotations) {
-		const annotationFiles = await ds.queries.WSImages.getWSIAnnotations(sampleId, wsimage)
-
-		if (!annotationFiles) throw new Error('No annotations files found')
-
-		const mount = serverconfig.features?.tileserver?.mount
-
-		if (!mount) throw new Error('No mount available for TileServer')
-
-		if (annotationFiles.length > 0) {
-			for (const annotationFile of annotationFiles) {
-				const annotationsFilePath = path.join(
-					`${mount}/${ds.queries.WSImages.imageBySampleFolder}/${sampleId}`,
-					annotationFile
-				)
-				const annotationsData = qs.stringify({
-					overlay_path: annotationsFilePath
-				})
-
-				await ky.put(`${tileServer.url}/tileserver/overlay`, {
-					body: annotationsData,
-					timeout: 50000,
-					headers: {
-						'Content-Type': 'application/x-www-form-urlencoded',
-						Cookie: `session_id=${sessionId}`
-					},
-					hooks: getHooks(cookieJar, getCookieString, setCookie)
-				})
-			}
-
-			// Submit the color map for annotations
-			const cmapData = qs.stringify({
-				cmap: JSON.stringify({
-					keys: ['annotations'],
-					values: [ds.queries.WSImages.annotationsColor]
+					keys: ['prediction', 'annotation'],
+					values: [ds.queries.WSImages.predictionColor, ds.queries.WSImages.annotationsColor]
 				})
 			})
 
