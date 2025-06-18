@@ -1,1 +1,2 @@
-
+Features:
+- Adding timming information to UI analysis report; Adding case by case records summary; Updated run route response definition

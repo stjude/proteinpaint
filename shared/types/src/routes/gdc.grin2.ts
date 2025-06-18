@@ -160,8 +160,17 @@ export type RunGRIN2Response = {
 	download?: any
 	/** Table of top genes indentified by analysis */
 	topGeneTable?: any
-	/** Data from Rust for making the failed files div */
+	/** Data from Rust for making the analysis summary div */
 	rustResult?: RustGRIN2Result
+	/** Timing info from nodejs */
+	timing?: {
+		/** Time taken to run Rust processing */
+		rustProcessingTime: number
+		/** Time taken to run R processing */
+		rProcessingTime: number
+		/** Total time taken for the entire GRIN2 run */
+		totalTime: number
+	}
 }
 /**
  * Route payload definitions for type checking
