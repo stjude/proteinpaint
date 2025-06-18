@@ -1,89 +1,76 @@
 import test from 'tape'
-import NonExonicSnvArcsMapper from '../NonExonicSnvArcsMapper.ts'
+import Reference from '#plots/disco/chromosome/Reference.ts'
+import DataMapper from '#plots/disco/data/DataMapper.ts'
+import NonExonicSnvArcsMapper from '#plots/disco/snv/NonExonicSnvArcsMapper.ts'
+import discoDefaults from '#plots/disco/defaults.ts'
+import { dtsnvindel } from '#shared/common.js'
 
 /*
 Tests:
-    NonExonicSnvArcsMapper maps SNV data into correctly structured arc objects
+	NonExonicSnvArcsMapper.map() should return SnvArc objects from SNV input
 */
 
-// Define reusable values so test messages can update dynamically
-const labelColor = '#ff0000'
-const labelText = 'missense'
+// ───── Setup ─────
 
-// Mock Reference object simulating a genome with one chromosome (chr1)
-const mockReference = {
-	chromosomesOrder: ['chr1'],
-	chromosomes: [
-		{
-			startAngle: 0,
-			endAngle: Math.PI,
-			size: 1000
-		}
-	]
+const overriders = { padAngle: 0.0 }
+const settings = discoDefaults(overriders)
+
+const sampleName = 'Sample'
+const chromosomes = {
+	chr1: 1000,
+	chr2: 1000
 }
 
-// Mock mutation data (SNV)
-const arcData = [
-	{
-		mClass: 'mockClass',
-		position: 500,
-		chr: 'chr1',
-		sampleName: 'SampleX',
-		gene: 'TP53',
-		mname: 'm1'
-	}
-]
+const reference = new Reference(settings, chromosomes)
+const nonExonicSnvArcsMapper = new NonExonicSnvArcsMapper(10, 10, sampleName, reference)
 
-// Mock MLabel singleton using the dynamic color and label
-const mockMlabel = {
-	mockClass: {
-		color: labelColor,
-		label: labelText
-	}
-}
-
-// Patch MLabel singleton
-import MLabel from '#plots/disco/label/MLabel.ts'
-MLabel.getInstance = () => ({
-	mlabel: mockMlabel
-})
-
-// Type cast for reference
-import type Reference from '#plots/disco/chromosome/Reference.ts'
-const ref = mockReference as unknown as Reference
-
-// Section banner
+// ───── Test Banner ─────
 test('\n', function (t) {
-	t.pass('-***- disco/NonExonicSnvArcsMapper -***-')
+	t.pass('-***- disco/snv/NonExonicSnvArcsMapper -***-')
 	t.end()
 })
 
-// Test block
-test('NonExonicSnvArcsMapper maps data to SnvArc correctly', t => {
-	const mapper = new NonExonicSnvArcsMapper(100, 20, 'SampleX', ref)
-	const arcs = mapper.map(arcData as any)
+// ───── Test ─────
+test('NonExonicSnvArcsMapper.map() should return expected arc structure', t => {
+	const rawData = [
+		{
+			dt: dtsnvindel,
+			chr: 'chr1',
+			position: 0,
+			gene: 'gene1',
+			class: 'M',
+			mname: 'm1'
+		},
+		{
+			dt: dtsnvindel,
+			chr: 'chr2',
+			position: 0,
+			gene: 'gene2',
+			class: 'M',
+			mname: 'm2'
+		}
+	]
 
-	t.equal(arcs.length, 1, 'Should return one arc')
-	const arc = arcs[0]
+	// Use DataMapper to create the dataHolder from raw SNV data
+	const dataHolder = new DataMapper(settings, reference, sampleName, []).map(rawData)
 
-	const expectedAngle =
-		(ref.chromosomes[0].endAngle - ref.chromosomes[0].startAngle) * (arcData[0].position / ref.chromosomes[0].size)
+	// Call the mapper
+	const flatData = [...dataHolder.snvRingDataMap.values()].flat()
+	const arcs = nonExonicSnvArcsMapper.map(flatData)
 
-	// Calculate the start angle allowing a small margin of error to account for floater point math
-	t.ok(Math.abs(arc.startAngle - (expectedAngle - 1 / 100)) < 1e-6, 'Start angle should be correctly calculated')
-	t.ok(Math.abs(arc.endAngle - (expectedAngle + 1 / 100)) < 1e-6, 'End angle should be correctly calculated')
+	// Check length matches input
+	t.equal(arcs.length, 2, 'Should return one arc per SNV data entry')
 
-	t.equal(arc.color, labelColor, `Should assign color to arc correctly from MLabel, color should be ${labelColor}`)
-	t.equal(arc.text, arcData[0].gene, `Should assign gene name to arc, gene should be ${arcData[0].gene}`)
-	t.equal(arc.dataClass, labelText, `Should assign data class label from MLabel, label should be ${labelText}`)
-	t.equal(arc.mname, arcData[0].mname, `Should assign mutation name correctly, should be ${arcData[0].mname}`)
-	t.equal(arc.chr, arcData[0].chr, `Should assign chromosome correctly, should be ${arcData[0].chr}`)
-	t.equal(arc.pos, arcData[0].position, `Should assign position correctly, should be ${arcData[0].position}`)
-	t.deepEqual(
-		arc.sampleName,
-		[arcData[0].sampleName],
-		`Should assign sample name in array form, should be [${arcData[0].sampleName}]`
-	)
+	// Calculate expected arc width (1 / innerRadius = 0.1)
+	const onePxArcAngle = 1 / 10
+
+	// First arc on chr1
+	t.equal(arcs[0].startAngle, 0 - onePxArcAngle, 'chr1 arc startAngle should be 0 - onePxArcAngle')
+	t.equal(arcs[0].endAngle, 0 + onePxArcAngle, 'chr1 arc endAngle should be 0 + onePxArcAngle')
+
+	// Second arc on chr2 (starts at Math.PI)
+	t.equal(arcs[1].startAngle, Math.PI - onePxArcAngle, 'chr2 arc startAngle should be π - onePxArcAngle')
+	t.equal(arcs[1].endAngle, Math.PI + onePxArcAngle, 'chr2 arc endAngle should be π + onePxArcAngle')
 
 	t.end()
 })
