@@ -45,6 +45,7 @@ import { validate_query_rnaseqGeneCount } from '#routes/termdb.DE.ts'
 import { validate_query_getSampleWSImages } from '#routes/samplewsimages.ts'
 import { validate_query_getWSISamples } from '#routes/wsisamples.ts'
 import { mds3InitNonblocking } from './mds3.init.nonblocking.js'
+import { mayLog } from './helpers'
 
 /*
 init
@@ -2768,7 +2769,19 @@ async function mayAddDataAvailability(sample2mlst, dtKey, ds, origin, q) {
 	for (const dt of dts) {
 		if (dt.get) {
 			// get() returns yesSamples and noSamples that passed filter0
+			const t = Date.now()
 			const result = await dt.get({ filter0: q.filter0, filter: q.filter })
+			mayLog(
+				ds.label,
+				'assayAvailability dt:',
+				dtKey,
+				'get() time:',
+				Date.now() - t,
+				'yes',
+				result.yesSamples.size,
+				'no',
+				result.noSamples.size
+			)
 			dt.yesSamples = result.yesSamples
 			dt.noSamples = result.noSamples
 		}
