@@ -638,9 +638,10 @@ async function validate_query_geneCnv(ds, genome) {
 	const q = ds.queries.geneCnv
 	if (!q) return
 	if (q.bygene) {
-		if (q.bygene.gdcapi) {
-			gdc.validate_query_geneCnv2(ds)
-			// q.bygene.get() added
+		if (typeof q.bygene.get == 'function') {
+			// ds supplied getter
+		} else {
+			throw 'geneCnv.bygene{} unknown method'
 		}
 	} else {
 		throw 'geneCnv.bygene missing'

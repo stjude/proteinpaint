@@ -910,6 +910,13 @@ type Mds3Queries = {
 	snvindel?: SnvIndelQuery
 	svfusion?: SvFusion
 	cnv?: CnvSegmentQuery
+	/** gene-level cnv, only available on gdc; query by gene symbol, ds must define getter
+	 */
+	geneCnv?: {
+		bygene: {
+			get: (q: any) => any
+		}
+	}
 	trackLst?: TrackLst
 	ld?: LdQuery
 	defaultCoord?: string
@@ -928,11 +935,6 @@ type Mds3Queries = {
 		file: string
 	}
 	singleCell?: SingleCellQuery
-	geneCnv?: {
-		bygene?: {
-			gdcapi: true
-		}
-	}
 	singleSampleGenomeQuantification?: SingleSampleGenomeQuantification
 	singleSampleGbtk?: SingleSampleGbtk
 	/** depreciated. replaced by WSImages */
@@ -2034,6 +2036,13 @@ export type Mds3 = BaseMds & {
 	validate_filter0?: (f: any) => void
 	ssm2canonicalisoform?: GdcApi
 	variant2samples?: Variant2Samples
+	/** disables switching to genomic mode for the protein view mds3 tk of this ds
+	works by preventing block gmmode menu from showing "genomic" option
+	is only passed via mds3 adhoc ds copy, but not termdbConfig
+	for lack of a better place to put this attribute, as it's not appropriate to put in queries.snvindel{}
+	as it's optional attr and a dataset may only has cnv and still want to disable genomic mode
+	*/
+	noGenomicMode4lollipopTk?: true
 	// !!! TODO: improve these type definitions below !!!
 	getHostHeaders?: (q?: any) => any
 	serverconfigFeatures?: any
