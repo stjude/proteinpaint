@@ -5,6 +5,8 @@ import { ViewModel } from '#plots/wsiviewer/viewModel/ViewModel.ts'
 import type { WSImageLayers } from '#plots/wsiviewer/viewModel/WSImageLayers.ts'
 import Zoomify from 'ol/source/Zoomify'
 import TileLayer from 'ol/layer/Tile'
+import VectorLayer from 'ol/layer/Vector'
+import VectorSource from 'ol/source/Vector'
 
 export class ViewModelProvider {
 	constructor() {}
@@ -148,6 +150,21 @@ export class ViewModelProvider {
 						wsiImageLayers.overlays.push(new TileLayer(optionsOverlay))
 					} else {
 						wsiImageLayers.overlays = [new TileLayer(optionsOverlay)]
+					}
+
+					const optionsVectorLayer = {
+						source: new VectorSource({
+							features: []
+						}),
+						title: 'Session Annotations'
+					}
+
+					const vectorLayer = new VectorLayer(optionsVectorLayer)
+
+					if (wsiImageLayers.overlays) {
+						wsiImageLayers.overlays.push(vectorLayer)
+					} else {
+						wsiImageLayers.overlays = [vectorLayer]
 					}
 				}
 			}

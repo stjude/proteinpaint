@@ -1,7 +1,6 @@
 import View from 'ol/View.js'
 import { Projection } from 'ol/proj'
 import type TileLayer from 'ol/layer/Tile.js'
-import type { WSImageLayers } from '#plots/wsiviewer/WSIViewer.ts'
 import OLMap from 'ol/Map.js'
 import Tile from 'ol/layer/Tile.js'
 import OverviewMap from 'ol/control/OverviewMap.js'
@@ -10,6 +9,8 @@ import type TileSource from 'ol/source/Tile'
 import LayerSwitcher from 'ol-ext/control/LayerSwitcher'
 import MousePosition from 'ol/control/MousePosition.js'
 import { format as formatCoordinate } from 'ol/coordinate.js'
+import type { WSImageLayers } from '#plots/wsiviewer/viewModel/WSImageLayers.ts'
+import type Layer from 'ol/layer/Layer'
 
 export class MapRenderer {
 	public wSImageLayers: WSImageLayers
@@ -32,7 +33,7 @@ export class MapRenderer {
 			}
 		})
 
-		const layers = [activeImage]
+		const layers: Array<Layer> = [activeImage]
 		if (this.wSImageLayers.overlays) {
 			for (const overlay of this.wSImageLayers.overlays) {
 				layers.push(overlay)
@@ -82,12 +83,12 @@ export class MapRenderer {
 
 			map.addControl(mousePositionControl)
 
-			//Console.log the mouse position
-			map.on('singleclick', function (event) {
-				const coordinate = event.coordinate
-				const flipped = [coordinate[0], -coordinate[1]] // Flip Y if needed
-				console.log(`Mouse position: ${flipped[0]}, ${flipped[1]}`)
-			})
+			// //Console.log the mouse position
+			// map.on('singleclick', function (event) {
+			// 	const coordinate = event.coordinate
+			// 	const flipped = [coordinate[0], -coordinate[1]] // Flip Y if needed
+			// 	console.log(`Mouse position: ${flipped[0]}, ${flipped[1]}`)
+			// })
 		}
 
 		const fullscreen = new FullScreen()
