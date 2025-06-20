@@ -2,8 +2,8 @@
 ================================================================================
 GRIN2 UI Module - Genomic Data Analysis Interface
 ================================================================================
-A comprehensive UI for listing and analyzing genomic files (MAF, CNV, Fusion)
-from GDC cohorts, with GRIN2 analysis capabilities and result visualization.
+A comprehensive UI for listing genomic data (MAF, CNV, Fusion)
+from GDC cohorts and analyzing and visualizing with GRIN2.
 
 Author: PP Team
 ================================================================================
@@ -55,10 +55,123 @@ const skipMAFclasses = ['WT', 'Blank', 'X']
 // UI COMPONENT BUILDERS
 // ================================================================================
 
+/** Function to transform our R top gene table to the format expected by renderTable for proper sorting
+ * @param rows - Array of rows from R, each row is an array of objects with a 'value' property
+ * @param columns - Array of column headers from R, each header is an object with a 'label' property
+ * @returns Transformed rows in the format expected by renderTable
+ */
+// Transform rows to match the expected format for renderTable
+function transformRows(rows, columns) {
+	return rows.map(row => {
+		const transformedRow: Array<{ value: any }> = []
+
+		for (let i = 0; i < columns.length; i++) {
+			const cellData = row[i]
+			let value = null
+
+			// Extract value from complex structure from R
+			if (cellData && cellData.value && Array.isArray(cellData.value)) {
+				value = cellData.value[0]
+			} else if (cellData && cellData.value) {
+				value = cellData.value
+			} else {
+				value = cellData
+			}
+
+			// Create object with value property
+			transformedRow.push({ value: value })
+		}
+
+		return transformedRow
+	})
+}
+
+/**
+ * Parses the records by case data and creates columns/rows for renderTable
+ * @param recordsByCase - Object containing record counts by case
+ * @returns Object with columns and rows arrays for renderTable
+ */
+function parseRecordsByCaseData(recordsByCase: any): { columns: any[]; rows: any[][] } {
+	// Define columns for the table
+	const columns = [
+		{ label: 'Case ID', sortable: true },
+		{ label: 'MAF Mutations', sortable: true },
+		{ label: 'MAF Consequences', sortable: false },
+		{ label: 'CNV Segments Skipped', sortable: true },
+		{ label: 'Invalid Rows', sortable: true }
+	]
+
+	// Process each case and create table rows
+	const rows: TableRowItem[][] = []
+
+	Object.entries(recordsByCase).forEach(([caseId, caseData]: [string, any]) => {
+		const row: TableRowItem[] = []
+
+		// Case ID
+		row.push({ value: caseId })
+
+		// Parse the case data (it's either already an object or JSON string)
+		let parsedData
+		try {
+			parsedData = typeof caseData === 'string' ? JSON.parse(caseData) : caseData
+		} catch (_e) {
+			parsedData = caseData
+		}
+
+		// MAF Mutations - total count of all mutation types
+		let mafMutationCount = 0
+		let mafConsequencesText = 'N/A'
+
+		if (parsedData.maf && parsedData.maf.matched_consequences) {
+			const consequences = parsedData.maf.matched_consequences
+			mafMutationCount = Object.values(consequences).reduce((sum: number, count: any) => sum + (Number(count) || 0), 0)
+
+			// Create a summary of top consequences
+			const sortedConsequences = Object.entries(consequences)
+				.sort(([, a], [, b]) => (Number(b) || 0) - (Number(a) || 0))
+				.slice(0, 3) // Top 3 consequences
+
+			mafConsequencesText = sortedConsequences.map(([type, count]) => `${type}: ${count}`).join(', ')
+
+			if (Object.keys(consequences).length > 3) {
+				mafConsequencesText += `, +${Object.keys(consequences).length - 3} more`
+			}
+		}
+
+		row.push({ value: mafMutationCount })
+		row.push({
+			value: mafConsequencesText,
+			html: `<span title="${mafConsequencesText}" style="font-size: 11px;">${mafConsequencesText}</span>`
+		})
+
+		// CNV Segments Skipped
+		let cnvSegmentsSkipped = 0
+		if (parsedData.cnv && parsedData.cnv.segment_mean !== undefined) {
+			cnvSegmentsSkipped = Number(parsedData.cnv.segment_mean) || 0
+		}
+		row.push({ value: cnvSegmentsSkipped })
+
+		// Invalid Rows (MAF + CNV)
+		let totalInvalidRows = 0
+		if (parsedData.maf && parsedData.maf.invalid_rows !== undefined) {
+			totalInvalidRows += Number(parsedData.maf.invalid_rows) || 0
+		}
+		if (parsedData.cnv && parsedData.cnv.invalid_rows !== undefined) {
+			totalInvalidRows += Number(parsedData.cnv.invalid_rows) || 0
+		}
+		row.push({ value: totalInvalidRows })
+
+		rows.push(row)
+	})
+
+	return { columns, rows }
+}
+
 /**
  * Adds expandable failed files section to any stats container
  * @param statsContainer - The stats container to append the expandable section to
  * @param failedFilesInfo - Object containing failed files data and error summaries
+ * @returns void
  */
 function addExpandableFailedFilesToStats(statsContainer, failedFilesInfo) {
 	// Create expandable container for failed files
@@ -217,6 +330,7 @@ function addExpandableFailedFilesToStats(statsContainer, failedFilesInfo) {
  * Creates an expandable deduplication section inline with multi-column layout
  * @param container - The container to append the expandable section to
  * @param deduplicationStats - Object containing deduplication data
+ * @returns void
  */
 function createExpandableDeduplicationSection(container, deduplicationStats) {
 	const duplicatesRemoved = deduplicationStats.duplicatesRemoved || 0
@@ -443,6 +557,7 @@ function createExpandableDeduplicationSection(container, deduplicationStats) {
  *
  * @param obj - Main application object containing UI references
  * @param deduplicationStats - Statistics from backend deduplication process
+ * @returns void
  */
 function updateDedupStatus(obj, deduplicationStats) {
 	if (!obj.dedupStatusElement) return
@@ -519,6 +634,7 @@ function updateDedupStatus(obj, deduplicationStats) {
  * Builds the primary configuration interface for analysis parameters
  *
  * @param obj - Main application object containing state and UI references
+ * @returns void
  */
 function makeControls(obj) {
 	if (!obj.mafOptions) {
@@ -1248,6 +1364,7 @@ function makeControls(obj) {
  * Main data loading function that handles file filtering and display
  *
  * @param obj - Main application object containing configuration
+ * @returns void
  */
 async function getFilesAndShowTable(obj) {
 	obj.tableDiv.selectAll('*').remove()
@@ -1581,7 +1698,10 @@ async function getFilesAndShowTable(obj) {
 	 * Formats selected files for GRIN2 Rust backend
 	 *
 	 * @param lst - Array of selected table row indices
-	 *
+	 * @param button - Button element that triggered the action
+	 * @param obj - Main application object containing configuration
+	 * @param filteredFiles - Array of files to filter from (default: result.files)
+	 * @returns void
 	 * Creates structure expected by Rust:
 	 * {
 	 *   caseFiles: {
@@ -1888,19 +2008,22 @@ async function getFilesAndShowTable(obj) {
 					.style('min-width', '250px')
 					.style('max-width', '350px')
 
+				// Apply transformation
+				const transformedRows = transformRows(response.topGeneTable.rows, response.topGeneTable.columns)
+
 				// Render the table using your existing table component
 				renderTable({
 					div: tableContainer,
+					rows: transformedRows,
 					columns: response.topGeneTable.columns,
-					rows: response.topGeneTable.rows,
-					showLines: true, // Show row numbers
-					striped: true, // Alternate row colors
-					showHeader: true, // Show column headers
+					showLines: true,
+					striped: true,
+					showHeader: true,
 					maxHeight: '500px',
-					maxWidth: '100%', // Full width available
-					resize: false, // Don't allow manual resizing
+					maxWidth: '100%',
+					resize: false,
 					header: {
-						allowSort: true, // Enable column sorting
+						allowSort: true,
 						style: {
 							'background-color': '#f8f9fa',
 							'font-weight': 'bold',
@@ -1984,9 +2107,57 @@ async function getFilesAndShowTable(obj) {
 						}
 					}
 
-					// Data Filtering Stats Section (if available)
-					console.log('Response analysisStats:', response.analysisStats)
+					// Processing Timings Section
+					if (response.timing) {
+						const timingStats = statsPanel.append('div').style('margin-bottom', '20px')
 
+						timingStats
+							.append('h6')
+							.text('Timings')
+							.style('margin', '0 0 10px 0')
+							.style('color', '#495057')
+							.style('font-size', '14px')
+							.style('font-weight', 'bold')
+
+						const timingStatsGrid = timingStats
+							.append('div')
+							.style('display', 'grid')
+							.style('grid-template-columns', '1fr 1fr')
+							.style('gap', '8px')
+							.style('font-size', '13px')
+
+						// Rust Processing Time
+						if (response.timing.rustProcessingTime !== undefined) {
+							timingStatsGrid.append('div').style('color', '#6c757d').text('GDC API Data Query and Parsing:')
+							timingStatsGrid
+								.append('div')
+								.style('font-weight', 'bold')
+								.style('color', 'black')
+								.text(response.timing.rustProcessingTime)
+						}
+
+						// GRIN2 Processing Time
+						if (response.timing.grin2ProcessingTime !== undefined) {
+							timingStatsGrid.append('div').style('color', '#6c757d').text('GRIN2 Analysis:')
+							timingStatsGrid
+								.append('div')
+								.style('font-weight', 'bold')
+								.style('color', 'black')
+								.text(response.timing.grin2ProcessingTime)
+						}
+
+						// Total Time
+						if (response.timing.totalTime !== undefined) {
+							timingStatsGrid.append('div').style('color', '#6c757d').text('Total Processing Time:')
+							timingStatsGrid
+								.append('div')
+								.style('font-weight', 'bold')
+								.style('color', 'black')
+								.text(response.timing.totalTime)
+						}
+					}
+
+					// Data Filtering Stats Section (if available)
 					if (
 						response.analysisStats &&
 						(response.analysisStats.filtered_records !== undefined ||
@@ -2066,6 +2237,119 @@ async function getFilesAndShowTable(obj) {
 								.style('font-weight', 'bold')
 								.style('color', 'black')
 								.text(response.analysisStats.included_cnv_records.toLocaleString())
+						}
+
+						// Records by case
+						if (response.analysisStats.filtered_records_by_case !== undefined) {
+							// Parse the records by case data and create table structure
+							const { columns, rows } = parseRecordsByCaseData(response.analysisStats.filtered_records_by_case)
+
+							// Create container that spans both columns
+							const recordsByCaseContainer = filterStats
+								.append('div')
+								.style('grid-column', '1 / -1')
+								.style('margin-top', '15px')
+
+							// Create expandable header
+							const expandableHeader = recordsByCaseContainer
+								.append('div')
+								.style('display', 'flex')
+								.style('align-items', 'center')
+								.style('gap', '8px')
+								.style('cursor', 'pointer')
+								.style('padding', '8px')
+								.style('border-radius', '4px')
+								.style('transition', 'background-color 0.2s')
+								.style('background-color', 'rgba(0, 123, 255, 0.1)')
+								.style('border', '1px solid rgba(0, 123, 255, 0.2)')
+								.on('mouseenter', function (this: HTMLElement) {
+									select(this).style('background-color', 'rgba(0, 123, 255, 0.15)')
+								})
+								.on('mouseleave', function (this: HTMLElement) {
+									select(this).style('background-color', 'rgba(0, 123, 255, 0.1)')
+								})
+
+							// Expand/collapse icon
+							const expandIcon = expandableHeader
+								.append('span')
+								.style('font-size', '12px')
+								.style('color', '#007bff')
+								.style('transition', 'transform 0.2s')
+								.text('▶')
+
+							// Header text
+							expandableHeader
+								.append('span')
+								.style('color', '#007bff')
+								.style('text-decoration', 'underline')
+								.style('font-size', '13px')
+								.style('font-weight', '500')
+								.text(
+									`View detailed statistics for ${
+										Object.keys(response.analysisStats.filtered_records_by_case).length
+									} cases`
+								)
+
+							// Create expandable content (hidden by default)
+							const expandableContent = recordsByCaseContainer
+								.append('div')
+								.style('display', 'none')
+								.style('margin-top', '12px')
+
+							// Create table container
+							const tableContainer = expandableContent
+								.append('div')
+								.style('max-height', '400px')
+								.style('overflow-y', 'auto')
+								.style('border', '1px solid #dee2e6')
+								.style('border-radius', '4px')
+
+							// Render the table using renderTable
+							renderTable({
+								div: tableContainer,
+								columns: columns,
+								rows: rows,
+								showLines: true,
+								striped: true,
+								showHeader: true,
+								maxHeight: '380px',
+								resize: false,
+								header: {
+									allowSort: true,
+									style: {
+										'background-color': '#f8f9fa',
+										'font-weight': 'bold',
+										'border-bottom': '2px solid #dee2e6'
+									}
+								}
+							})
+
+							// Add explanatory text
+							expandableContent
+								.append('div')
+								.style('margin-top', '12px')
+								.style('padding', '8px')
+								.style('background-color', '#f8f9fa')
+								.style('border-radius', '4px')
+								.style('font-size', '12px')
+								.style('color', '#495057')
+								.style('line-height', '1.4')
+								.text(
+									'This table shows analysis statistics per case. CNV Segments Skipped indicates segments that were excluded due to filtering criteria (e.g., segment length thresholds).'
+								)
+
+							// Track expanded state and add click handler
+							let isExpanded = false
+							expandableHeader.on('click', function () {
+								isExpanded = !isExpanded
+								if (isExpanded) {
+									expandableContent.style('display', 'block')
+									expandIcon.style('transform', 'rotate(90deg)').text('▼')
+								} else {
+									expandableContent.style('display', 'none')
+									expandIcon.style('transform', 'rotate(0deg)').text('▶')
+								}
+							})
 						}
 					}
 				}

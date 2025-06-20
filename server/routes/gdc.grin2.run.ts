@@ -232,11 +232,12 @@ function init({ genomes }) {
 
 			// Call the R script
 			console.log('[GRIN2] Executing R script...')
-			const rAnalysisTime = Date.now()
+			const grin2AnalysisStart = Date.now()
 			const rResult = await run_R('gdcGRIN2.R', rInput, [])
 			// console.log(`[GRIN2] R execution completed, result: ${rResult}`)
 			console.log('[GRIN2] R execution completed')
-			console.log(`[GRIN2] R analysis took ${formatElapsedTime(Date.now() - rAnalysisTime)}`)
+			const grin2AnalysisTime = formatElapsedTime(Date.now() - grin2AnalysisStart)
+			console.log(`[GRIN2] Rust processing took ${grin2AnalysisTime}`)
 
 			// Parse R result to get image or check for errors
 			let resultData
@@ -246,12 +247,18 @@ function init({ genomes }) {
 				const pngImg = resultData.png[0]
 				const topGeneTable = resultData.topGeneTable || null
 				const analysisStats = parsedRustResult.summary || {}
-				console.log('[GRIN2] Total GRIN2 processing time:', formatElapsedTime(Date.now() - downloadStartTime))
+				const totalProcessTime = formatElapsedTime(Date.now() - downloadStartTime)
+				console.log('[GRIN2] Total GRIN2 processing time:', totalProcessTime)
 				return res.json({
 					pngImg,
 					topGeneTable,
 					rustResult: parsedRustResult,
 					analysisStats: analysisStats,
+					timing: {
+						rustProcessingTime: downloadTime,
+						grin2ProcessingTime: grin2AnalysisTime,
+						totalTime: totalProcessTime
+					},
 					status: 'success'
 				})
 			} catch (parseError) {
