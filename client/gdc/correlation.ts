@@ -1,6 +1,13 @@
 import { appInit } from '#plots/plot.app.js'
 import { copyMerge } from '#rx'
 
+/*
+launches dictionary plot; on selecting any variable, create summary plot
+instruct users to use Edit menu to select 2nd variable to make it "correlation" plot
+
+use of dictionary ui avoids creating any custom interface for selecting two terms
+*/
+
 interface InitArg {
 	filter0?: string
 	state?: {
@@ -8,7 +15,6 @@ interface InitArg {
 	}
 	opts?: {
 		app?: Record<string, any>
-		singleCellPlot?: Record<string, any>
 	}
 }
 
@@ -39,19 +45,20 @@ export async function init(
 	holder: HTMLElement,
 	genomes: any
 ): Promise<{ update: (updateArg: UpdateArg) => Promise<void> }> {
+	// after selecting a variable and showing summary plot for the selected, should revise this message to: Open Edit menu to select the second variable.
+	holder.append('div').style('margin-left', '20px').text('Select a variable below to build Correlation Plot')
+
 	const plotAppApi: PlotAppAPI = await appInit({
 		holder,
 		state: {
 			genome: gdcGenome,
 			dslabel: gdcDslabel,
 			termfilter: { filter0: arg.filter0 },
-			plots: arg.state?.plots || [{ chartType: 'singleCellPlot' }]
+			plots: [{ chartType: 'dictionary' }]
 		},
 		genome: genomes[gdcGenome],
 		app: copyMerge({}, arg.opts?.app || {}),
-		opts: {
-			singleCellPlot: arg.opts?.singleCellPlot || {}
-		}
+		opts: {}
 	})
 
 	const api = {
