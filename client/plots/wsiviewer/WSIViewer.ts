@@ -1,7 +1,6 @@
 import { getCompInit } from '#rx'
 import 'ol/ol.css'
 import type TileLayer from 'ol/layer/Tile.js'
-import type Zoomify from 'ol/source/Zoomify.js'
 import { WSIViewerInteractions } from '#plots/wsiviewer/interactions/WSIViewerInteractions.ts'
 import type Settings from '#plots/wsiviewer/Settings.ts'
 import wsiViewerDefaults from '#plots/wsiviewer/defaults.ts'
@@ -118,11 +117,6 @@ export default class WSIViewer extends RxComponentInner {
 			)
 		}
 	}
-}
-
-export type WSImageLayers = {
-	wsimage: TileLayer<Zoomify>
-	overlays?: Array<TileLayer<Zoomify>>
 }
 
 export const wsiViewer = getCompInit(WSIViewer)

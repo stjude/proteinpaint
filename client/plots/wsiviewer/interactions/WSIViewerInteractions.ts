@@ -1,6 +1,11 @@
 import type OLMap from 'ol/Map.js'
 import { debounce } from 'debounce'
 import { dofetch3 } from '#common/dofetch'
+import VectorLayer from 'ol/layer/Vector'
+import type VectorSource from 'ol/source/Vector'
+import { Feature } from 'ol'
+import type { Geometry, Polygon } from 'ol/geom'
+import { Fill, Stroke, Style } from 'ol/style'
 
 export class WSIViewerInteractions {
 	thumbnailClickListener: (index: number) => void
@@ -107,6 +112,15 @@ export class WSIViewerInteractions {
 							: { label: matchingClass.label, color: matchingClass.color }
 					buffers.tmpClass.set(tmpClass)
 
+					const vectorLayer = map
+						.getLayers()
+						.getArray()
+						.find(l => l instanceof VectorLayer)
+
+					if (!vectorLayer) return
+
+					this.addAnnotation(vectorLayer, annotationsData, currentIndex, matchingClass.color)
+
 					const body = {
 						coordinates: annotationsData[currentIndex].zoomCoordinates, //Original x,y coordinates
 						index: buffers.annotationsIdx.get(),
@@ -114,9 +128,54 @@ export class WSIViewerInteractions {
 						class: event.code === 'Enter' ? null : event.code.replace('Digit', '').replace('Key', '')
 					}
 
-					await dofetch3('sampleWsiAiApi', { body })
+					await dofetch3('sampleWsiAiApi', { body }).catch()
 				}
 			})
 		}
+	}
+
+	private addAnnotation(
+		vectorLayer: VectorLayer,
+		annotationsData: {
+			zoomCoordinates: [number, number]
+			type: string
+			class: string
+			uncertainty: number
+		}[],
+		currentIndex: number,
+		color: any
+	) {
+		const source: VectorSource<Feature<Geometry>> | null = vectorLayer.getSource()
+
+		const topLeft = [
+			annotationsData[currentIndex].zoomCoordinates[0],
+			-annotationsData[currentIndex].zoomCoordinates[1]
+		]
+		const size = 512
+
+		const squareCoords = [
+			[
+				topLeft,
+				[topLeft[0] + size, topLeft[1]],
+				[topLeft[0] + size, topLeft[1] - size],
+				[topLeft[0], topLeft[1] - size]
+			]
+		]
+
+		const square = new Feature({
+			geometry: new Polygon([squareCoords[0]]),
+			properties: {
+				isLocked: false
+			}
+		})
+
+		square.setStyle(
+			new Style({
+				fill: new Fill({ color: color }),
+				stroke: new Stroke({ color: color })
+			})
+		)
+
+		source?.addFeature(square)
 	}
 }
