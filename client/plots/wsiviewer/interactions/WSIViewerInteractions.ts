@@ -4,7 +4,8 @@ import { dofetch3 } from '#common/dofetch'
 import VectorLayer from 'ol/layer/Vector'
 import type VectorSource from 'ol/source/Vector'
 import { Feature } from 'ol'
-import type { Geometry, Polygon } from 'ol/geom'
+import { Polygon } from 'ol/geom'
+import type { Geometry } from 'ol/geom'
 import { Fill, Stroke, Style } from 'ol/style'
 
 export class WSIViewerInteractions {
