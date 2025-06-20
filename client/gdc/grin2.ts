@@ -2,8 +2,8 @@
 ================================================================================
 GRIN2 UI Module - Genomic Data Analysis Interface
 ================================================================================
-A comprehensive UI for listing and analyzing genomic files (MAF, CNV, Fusion)
-from GDC cohorts, with GRIN2 analysis capabilities and result visualization.
+A comprehensive UI for listing genomic data (MAF, CNV, Fusion)
+from GDC cohorts and analyzing and visualizing with GRIN2.
 
 Author: PP Team
 ================================================================================
@@ -55,10 +55,42 @@ const skipMAFclasses = ['WT', 'Blank', 'X']
 // UI COMPONENT BUILDERS
 // ================================================================================
 
+/** Function to transform our R top gene table to the format expected by renderTable for proper sorting
+ * @param rows - Array of rows from R, each row is an array of objects with a 'value' property
+ * @param columns - Array of column headers from R, each header is an object with a 'label' property
+ * @returns Transformed rows in the format expected by renderTable
+ */
+// Transform rows to match the expected format for renderTable
+function transformRows(rows, columns) {
+	return rows.map(row => {
+		const transformedRow: Array<{ value: any }> = []
+
+		for (let i = 0; i < columns.length; i++) {
+			const cellData = row[i]
+			let value = null
+
+			// Extract value from complex structure from R
+			if (cellData && cellData.value && Array.isArray(cellData.value)) {
+				value = cellData.value[0]
+			} else if (cellData && cellData.value) {
+				value = cellData.value
+			} else {
+				value = cellData
+			}
+
+			// Create object with value property
+			transformedRow.push({ value: value })
+		}
+
+		return transformedRow
+	})
+}
+
 /**
  * Adds expandable failed files section to any stats container
  * @param statsContainer - The stats container to append the expandable section to
  * @param failedFilesInfo - Object containing failed files data and error summaries
+ * @returns void
  */
 function addExpandableFailedFilesToStats(statsContainer, failedFilesInfo) {
 	// Create expandable container for failed files
@@ -217,6 +249,7 @@ function addExpandableFailedFilesToStats(statsContainer, failedFilesInfo) {
  * Creates an expandable deduplication section inline with multi-column layout
  * @param container - The container to append the expandable section to
  * @param deduplicationStats - Object containing deduplication data
+ * @returns void
  */
 function createExpandableDeduplicationSection(container, deduplicationStats) {
 	const duplicatesRemoved = deduplicationStats.duplicatesRemoved || 0
@@ -437,7 +470,11 @@ function createExpandableDeduplicationSection(container, deduplicationStats) {
 	})
 }
 
-// Helper function to format case data for display in the records by case section
+/**
+ * Formats case data for display in the UI
+ * @param obj - Object containing case data, can be a number, string, or object
+ * @returns Formatted string representation of the case data
+ */
 function formatCaseData(obj) {
 	if (typeof obj === 'object' && obj !== null) {
 		if (obj.count !== undefined || obj.value !== undefined) {
@@ -454,6 +491,7 @@ function formatCaseData(obj) {
  *
  * @param obj - Main application object containing UI references
  * @param deduplicationStats - Statistics from backend deduplication process
+ * @returns void
  */
 function updateDedupStatus(obj, deduplicationStats) {
 	if (!obj.dedupStatusElement) return
@@ -530,6 +568,7 @@ function updateDedupStatus(obj, deduplicationStats) {
  * Builds the primary configuration interface for analysis parameters
  *
  * @param obj - Main application object containing state and UI references
+ * @returns void
  */
 function makeControls(obj) {
 	if (!obj.mafOptions) {
@@ -1259,6 +1298,7 @@ function makeControls(obj) {
  * Main data loading function that handles file filtering and display
  *
  * @param obj - Main application object containing configuration
+ * @returns void
  */
 async function getFilesAndShowTable(obj) {
 	obj.tableDiv.selectAll('*').remove()
@@ -1592,7 +1632,10 @@ async function getFilesAndShowTable(obj) {
 	 * Formats selected files for GRIN2 Rust backend
 	 *
 	 * @param lst - Array of selected table row indices
-	 *
+	 * @param button - Button element that triggered the action
+	 * @param obj - Main application object containing configuration
+	 * @param filteredFiles - Array of files to filter from (default: result.files)
+	 * @returns void
 	 * Creates structure expected by Rust:
 	 * {
 	 *   caseFiles: {
@@ -1899,19 +1942,22 @@ async function getFilesAndShowTable(obj) {
 					.style('min-width', '250px')
 					.style('max-width', '350px')
 
+				// Apply transformation
+				const transformedRows = transformRows(response.topGeneTable.rows, response.topGeneTable.columns)
+
 				// Render the table using your existing table component
 				renderTable({
 					div: tableContainer,
+					rows: transformedRows,
 					columns: response.topGeneTable.columns,
-					rows: response.topGeneTable.rows,
-					showLines: true, // Show row numbers
-					striped: true, // Alternate row colors
-					showHeader: true, // Show column headers
+					showLines: true,
+					striped: true,
+					showHeader: true,
 					maxHeight: '500px',
-					maxWidth: '100%', // Full width available
-					resize: false, // Don't allow manual resizing
+					maxWidth: '100%',
+					resize: false,
 					header: {
-						allowSort: true, // Enable column sorting
+						allowSort: true,
 						style: {
 							'background-color': '#f8f9fa',
 							'font-weight': 'bold',
