@@ -2040,9 +2040,19 @@ export type Mds3 = BaseMds & {
 	works by preventing block gmmode menu from showing "genomic" option
 	is only passed via mds3 adhoc ds copy, but not termdbConfig
 	for lack of a better place to put this attribute, as it's not appropriate to put in queries.snvindel{}
-	as it's optional attr and a dataset may only has cnv and still want to disable genomic mode
+	as snvindel is optional so even a cnv-only ds can disable genomic mode
 	*/
 	noGenomicMode4lollipopTk?: true
+	/** if ds.queries{} exists, server launch adds this convenient getter to wrap multiple queries data types
+	 */
+	mayGetGeneVariantData?: (f: any) => void
+	/** optional key-value pairs to pass to genomic queries getter when called in mayGetGeneVariantData() 
+	- only used in mayGetGeneVariantData! not in mds3.load.js
+	- for now only passed to snvindel.*.get and not yet other data types; add when needed
+	the param contents will be assessed by ds specific getter
+	this is serverside only, not passed to termdbConfig
+	*/
+	mayGetGeneVariantDataParam?: { [key: string]: any }
 	// !!! TODO: improve these type definitions below !!!
 	getHostHeaders?: (q?: any) => any
 	serverconfigFeatures?: any

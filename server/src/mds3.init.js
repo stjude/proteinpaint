@@ -2558,6 +2558,8 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 		// no eligible data types
 		return
 	}
+	if (ds.mayGetGeneVariantDataParam && typeof ds.mayGetGeneVariantDataParam != 'object')
+		throw 'mayGetGeneVariantDataParam{} is not object'
 
 	/*
 	input:
@@ -2953,16 +2955,15 @@ async function mayMapGeneName2isoform(term, genome) {
 }
 
 async function getSnvindelByTerm(ds, term, genome, q) {
-	// to keep cohort/session etc
-	const arg = {
-		addFormatValues: true,
-		filter0: q.filter0, // hidden filter
-		filterObj: q.filter, // pp filter, must change key name to "filterObj" to be consistent with mds3 client
-		sessionid: q.sessionid,
-		// !! gdc specific parameter !!
-		// instructs byisoform.get() to return case uuid as sample.sample_id; more or less harmless as it's ignored by non-gdc ds
-		gdcUseCaseuuid: true
-	}
+	const arg = Object.assign(
+		{
+			addFormatValues: true,
+			filter0: q.filter0, // hidden filter
+			filterObj: q.filter, // pp filter, must change key name to "filterObj" to be consistent with mds3 client
+			sessionid: q.sessionid
+		},
+		ds.mayGetGeneVariantDataParam || {}
+	)
 
 	if (ds.queries.snvindel.byisoform) {
 		await mayMapGeneName2isoform(term, genome)

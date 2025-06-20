@@ -564,18 +564,17 @@ so far it's only gdc
 later can be other api-based datasets
 */
 async function getSampleData_dictionaryTerms_v2s(q, termWrappers) {
-	const q2 = {
-		filter0: q.filter0, // must pass on gdc filter0 if present
-		filterObj: q.filter, // must rename key as "filterObj" but not "filter" to go with what mds3 backend is using
-		genome: q.genome,
-		get: 'samples',
-		twLst: termWrappers,
-		// !! gdc specific parameter !!
-		// instructs querySamples_gdcapi() to return case uuid as sample.sample_id; more or less harmless as it's ignored by non-gdc ds
-		gdcUseCaseuuid: true,
-		// !! gdc specific parameter !!
-		isHierCluster: q.isHierCluster
-	}
+	const q2 = Object.assign(
+		{
+			filter0: q.filter0, // must pass on gdc filter0 if present
+			filterObj: q.filter, // must rename key as "filterObj" but not "filter" to go with what mds3 backend is using
+			genome: q.genome,
+			get: 'samples',
+			twLst: termWrappers,
+			isHierCluster: q.isHierCluster // !! gdc specific parameter !!
+		},
+		q.ds.mayGetGeneVariantDataParam || {}
+	)
 	if (q.rglst) {
 		// !! gdc specific parameter !! present for block tk in genomic mode
 		q2.rglst = q.rglst
