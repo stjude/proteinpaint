@@ -2,20 +2,31 @@ import { getAppInit } from '../rx'
 import { storeInit } from '#mass/store'
 import { vocabInit } from '#termdb/vocabulary'
 import { recoverInit } from '../rx/src/recover'
-import { sayerror } from '../dom/sayerror.ts'
-import { Menu } from '#dom/menu'
+import { sayerror, Menu } from '#dom'
 
 /*
-
 the purpose of this wrapper is to allow a mass plot to be used with control options outside of mass app
 
 TODO allow to hide controls. e.g. in the cuminc plot integrated into cox-snplocus, allowing to get rid of duplicating code of Cuminc class in cuminc.js
 
-	opts{}
-	.holder 	d3-wrapped DOM container
+FIXME convert to ts and fully type opts
 
-	.vocabApi required if state.vocab is not provided
-	
+constructor options (opts)
+
+	.holder
+		d3-wrapped DOM container
+
+	.vocabApi
+		required if state.vocab is not provided
+
+	.violin{}
+		.mode='minimal'??
+
+	.app{}
+		.features{}
+		.getPlotHolder() ??
+
+	.fetchOpts{}
 	.state: {
 		
 		// required if opts.vocabApi is not provided

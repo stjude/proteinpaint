@@ -1220,7 +1220,7 @@ async function launchGdcHierCluster(arg, app) {
 	return await _.init(arg, app.holder0, app.genomes)
 }
 async function launchGdcScRNAseq(arg, app) {
-	const _ = await import('../gdc/singlecell.js')
+	const _ = await import('../gdc/singlecell.ts')
 	return await _.init(arg, app.holder0, app.genomes)
 }
 async function launchGdcMaf(arg, app) {

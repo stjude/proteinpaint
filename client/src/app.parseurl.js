@@ -89,6 +89,7 @@ upon error, throw err message as a string
 	}
 
 	if (urlp.has('gdcbamslice')) {
+		// for local testing, not used in gdc portal
 		const _ = await import('../gdc/bam.js')
 		_.bamsliceui({
 			genomes: arg.genomes,
@@ -100,6 +101,7 @@ upon error, throw err message as a string
 	}
 
 	if (urlp.has('gdcmaf')) {
+		// for local testing, not used in gdc portal
 		const _ = await import('../gdc/maf.js')
 		const p = {
 			holder: arg.holder,
@@ -111,6 +113,7 @@ upon error, throw err message as a string
 	}
 
 	if (urlp.has('gdcgrin2')) {
+		// for local testing, not used in gdc portal
 		const _ = await import('../gdc/grin2.ts')
 		const p = {
 			holder: arg.holder,
@@ -120,6 +123,18 @@ upon error, throw err message as a string
 		_.gdcGRIN2ui(p)
 		return
 	}
+	/*
+	if (urlp.has('gdccorrelation')) { // for local testing, not used in gdc portal
+		const _ = await import('../gdc/correlation.ts')
+		const p = {
+			holder: arg.holder,
+			debugmode: arg.debugmode
+		}
+		if (urlp.has('filter0')) p.filter0 = urlp.get('filter0')
+		_.gdcCorrelation(p)
+		return
+	}
+	*/
 
 	if (urlp.has('termdb')) {
 		const value = urlp.get('termdb')
