@@ -123,18 +123,16 @@ upon error, throw err message as a string
 		_.gdcGRIN2ui(p)
 		return
 	}
-	/*
-	if (urlp.has('gdccorrelation')) { // for local testing, not used in gdc portal
+	if (urlp.has('gdccorrelation')) {
+		// for local testing, not used in gdc portal
 		const _ = await import('../gdc/correlation.ts')
 		const p = {
-			holder: arg.holder,
 			debugmode: arg.debugmode
 		}
 		if (urlp.has('filter0')) p.filter0 = urlp.get('filter0')
-		_.gdcCorrelation(p)
+		_.init(p, arg.holder, arg.genomes)
 		return
 	}
-	*/
 
 	if (urlp.has('termdb')) {
 		const value = urlp.get('termdb')
