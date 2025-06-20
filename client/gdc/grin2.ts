@@ -87,6 +87,87 @@ function transformRows(rows, columns) {
 }
 
 /**
+ * Parses the records by case data and creates columns/rows for renderTable
+ * @param recordsByCase - Object containing record counts by case
+ * @returns Object with columns and rows arrays for renderTable
+ */
+function parseRecordsByCaseData(recordsByCase: any): { columns: any[]; rows: any[][] } {
+	// Define columns for the table
+	const columns = [
+		{ label: 'Case ID', sortable: true },
+		{ label: 'MAF Mutations', sortable: true },
+		{ label: 'MAF Consequences', sortable: false },
+		{ label: 'CNV Segments Skipped', sortable: true },
+		{ label: 'Invalid Rows', sortable: true }
+	]
+
+	// Process each case and create table rows
+	const rows: TableRowItem[][] = []
+
+	Object.entries(recordsByCase).forEach(([caseId, caseData]: [string, any]) => {
+		const row: TableRowItem[] = []
+
+		// Case ID
+		row.push({ value: caseId })
+
+		// Parse the case data (it's either already an object or JSON string)
+		let parsedData
+		try {
+			parsedData = typeof caseData === 'string' ? JSON.parse(caseData) : caseData
+		} catch (_e) {
+			parsedData = caseData
+		}
+
+		// MAF Mutations - total count of all mutation types
+		let mafMutationCount = 0
+		let mafConsequencesText = 'N/A'
+
+		if (parsedData.maf && parsedData.maf.matched_consequences) {
+			const consequences = parsedData.maf.matched_consequences
+			mafMutationCount = Object.values(consequences).reduce((sum: number, count: any) => sum + (Number(count) || 0), 0)
+
+			// Create a summary of top consequences
+			const sortedConsequences = Object.entries(consequences)
+				.sort(([, a], [, b]) => (Number(b) || 0) - (Number(a) || 0))
+				.slice(0, 3) // Top 3 consequences
+
+			mafConsequencesText = sortedConsequences.map(([type, count]) => `${type}: ${count}`).join(', ')
+
+			if (Object.keys(consequences).length > 3) {
+				mafConsequencesText += `, +${Object.keys(consequences).length - 3} more`
+			}
+		}
+
+		row.push({ value: mafMutationCount })
+		row.push({
+			value: mafConsequencesText,
+			html: `<span title="${mafConsequencesText}" style="font-size: 11px;">${mafConsequencesText}</span>`
+		})
+
+		// CNV Segments Skipped
+		let cnvSegmentsSkipped = 0
+		if (parsedData.cnv && parsedData.cnv.segment_mean !== undefined) {
+			cnvSegmentsSkipped = Number(parsedData.cnv.segment_mean) || 0
+		}
+		row.push({ value: cnvSegmentsSkipped })
+
+		// Invalid Rows (MAF + CNV)
+		let totalInvalidRows = 0
+		if (parsedData.maf && parsedData.maf.invalid_rows !== undefined) {
+			totalInvalidRows += Number(parsedData.maf.invalid_rows) || 0
+		}
+		if (parsedData.cnv && parsedData.cnv.invalid_rows !== undefined) {
+			totalInvalidRows += Number(parsedData.cnv.invalid_rows) || 0
+		}
+		row.push({ value: totalInvalidRows })
+
+		rows.push(row)
+	})
+
+	return { columns, rows }
+}
+
+/**
  * Adds expandable failed files section to any stats container
  * @param statsContainer - The stats container to append the expandable section to
  * @param failedFilesInfo - Object containing failed files data and error summaries
@@ -468,21 +549,6 @@ function createExpandableDeduplicationSection(container, deduplicationStats) {
 			expandIcon.style('transform', 'rotate(0deg)').text('▶')
 		}
 	})
-}
-
-/**
- * Formats case data for display in the UI
- * @param obj - Object containing case data, can be a number, string, or object
- * @returns Formatted string representation of the case data
- */
-function formatCaseData(obj) {
-	if (typeof obj === 'object' && obj !== null) {
-		if (obj.count !== undefined || obj.value !== undefined) {
-			return obj.count !== undefined ? obj.count : obj.value
-		}
-		return JSON.stringify(obj, null, 1).replace(/\n\s*/g, ' ')
-	}
-	return obj
 }
 
 /**
@@ -2175,97 +2241,115 @@ async function getFilesAndShowTable(obj) {
 
 						// Records by case
 						if (response.analysisStats.filtered_records_by_case !== undefined) {
-							// Create the full formatted text (same as your current approach but improved formatting)
-							const fullFormattedCases = Object.keys(response.analysisStats.filtered_records_by_case)
-								.map(caseKey => {
-									const caseValue = response.analysisStats.filtered_records_by_case[caseKey]
-									const formattedValue = formatCaseData(caseValue)
-									return `${caseKey}: ${formattedValue}`
-								})
-								.join(', ')
-
-							// Split the text for preview (show first ~300 characters)
-							const PREVIEW_LENGTH = 300
-							const needsExpansion = fullFormattedCases.length > PREVIEW_LENGTH
-							const previewText = needsExpansion
-								? fullFormattedCases.substring(0, PREVIEW_LENGTH) + '...'
-								: fullFormattedCases
+							// Parse the records by case data and create table structure
+							const { columns, rows } = parseRecordsByCaseData(response.analysisStats.filtered_records_by_case)
 
 							// Create container that spans both columns
 							const recordsByCaseContainer = filterStats
 								.append('div')
-								.style('grid-column', '1 / -1') // Span all columns
+								.style('grid-column', '1 / -1')
 								.style('margin-top', '15px')
 
-							// Header for the section
-							recordsByCaseContainer
+							// Create expandable header
+							const expandableHeader = recordsByCaseContainer
 								.append('div')
-								.style('color', '#495057')
-								.style('font-weight', 'bold')
-								.style('margin-bottom', '8px')
-								.text('Records Included & Excluded by Case:')
-
-							// Scrollable container with larger default size
-							const scrollableContainer = recordsByCaseContainer
-								.append('div')
-								.style('max-height', needsExpansion ? '120px' : '300px')
-								.style('max-width', '100%')
-								.style('overflow', 'auto')
-								.style('background-color', '#ffffff')
-								.style('border', '1px solid #e9ecef')
+								.style('display', 'flex')
+								.style('align-items', 'center')
+								.style('gap', '8px')
+								.style('cursor', 'pointer')
+								.style('padding', '8px')
 								.style('border-radius', '4px')
-								.style('padding', '12px')
-								.style('font-family', 'monospace')
-								.style('font-size', '12px')
-								.style('line-height', '1.4')
-								.style('white-space', 'pre-wrap')
-
-							// Content div that will be updated
-							const contentDiv = scrollableContainer.append('div').style('color', '#212529').text(previewText)
-
-							// Add expand/collapse functionality if needed
-							if (needsExpansion) {
-								let isExpanded = false
-
-								// Create expand/collapse button
-								const toggleButton = recordsByCaseContainer
-									.append('button')
-									.style('background', 'none')
-									.style('border', 'none')
-									.style('color', '#007bff')
-									.style('cursor', 'pointer')
-									.style('font-size', '12px')
-									.style('margin-top', '8px')
-									.style('padding', '4px 0')
-									.style('text-decoration', 'underline')
-									.text('▼ Show full details')
-
-								// Toggle functionality
-								toggleButton.on('click', function () {
-									if (!isExpanded) {
-										// Expand: show full content
-										contentDiv.text(fullFormattedCases)
-										scrollableContainer.style('max-height', '400px')
-										toggleButton.text('▲ Show less')
-										isExpanded = true
-									} else {
-										// Collapse: show preview
-										contentDiv.text(previewText)
-										scrollableContainer.style('max-height', '120px')
-										toggleButton.text('▼ Show full details')
-										isExpanded = false
-									}
+								.style('transition', 'background-color 0.2s')
+								.style('background-color', 'rgba(0, 123, 255, 0.1)')
+								.style('border', '1px solid rgba(0, 123, 255, 0.2)')
+								.on('mouseenter', function (this: HTMLElement) {
+									select(this).style('background-color', 'rgba(0, 123, 255, 0.15)')
+								})
+								.on('mouseleave', function (this: HTMLElement) {
+									select(this).style('background-color', 'rgba(0, 123, 255, 0.1)')
 								})
 
-								// Hover effects for the button
-								toggleButton
-									.on('mouseenter', function (this: any) {
-										select(this).style('color', '#0056b3')
-									})
-									.on('mouseleave', function (this: any) {
-										select(this).style('color', '#007bff')
-									})
-							}
+							// Expand/collapse icon
+							const expandIcon = expandableHeader
+								.append('span')
+								.style('font-size', '12px')
+								.style('color', '#007bff')
+								.style('transition', 'transform 0.2s')
+								.text('▶')
+
+							// Header text
+							expandableHeader
+								.append('span')
+								.style('color', '#007bff')
+								.style('text-decoration', 'underline')
+								.style('font-size', '13px')
+								.style('font-weight', '500')
+								.text(
+									`View detailed statistics for ${
+										Object.keys(response.analysisStats.filtered_records_by_case).length
+									} cases`
+								)
+
+							// Create expandable content (hidden by default)
+							const expandableContent = recordsByCaseContainer
+								.append('div')
+								.style('display', 'none')
+								.style('margin-top', '12px')
+
+							// Create table container
+							const tableContainer = expandableContent
+								.append('div')
+								.style('max-height', '400px')
+								.style('overflow-y', 'auto')
+								.style('border', '1px solid #dee2e6')
+								.style('border-radius', '4px')
+
+							// Render the table using renderTable
+							renderTable({
+								div: tableContainer,
+								columns: columns,
+								rows: rows,
+								showLines: true,
+								striped: true,
+								showHeader: true,
+								maxHeight: '380px',
+								resize: false,
+								header: {
+									allowSort: true,
+									style: {
+										'background-color': '#f8f9fa',
+										'font-weight': 'bold',
+										'border-bottom': '2px solid #dee2e6'
+									}
+								}
+							})
+
+							// Add explanatory text
+							expandableContent
+								.append('div')
+								.style('margin-top', '12px')
+								.style('padding', '8px')
+								.style('background-color', '#f8f9fa')
+								.style('border-radius', '4px')
+								.style('font-size', '12px')
+								.style('color', '#495057')
+								.style('line-height', '1.4')
+								.text(
+									'This table shows analysis statistics per case. CNV Segments Skipped indicates segments that were excluded due to filtering criteria (e.g., segment length thresholds).'
+								)
+
+							// Track expanded state and add click handler
+							let isExpanded = false
+							expandableHeader.on('click', function () {
+								isExpanded = !isExpanded
+								if (isExpanded) {
+									expandableContent.style('display', 'block')
+									expandIcon.style('transform', 'rotate(90deg)').text('▼')
+								} else {
+									expandableContent.style('display', 'none')
+									expandIcon.style('transform', 'rotate(0deg)').text('▶')
+								}
+							})
 						}
 					}
 				}
