@@ -443,6 +443,7 @@ async function get_ds(tk, block) {
 		const data = await dofetch3('getDataset', { body: { genome: block.genome.name, dsname: tk.dslabel } })
 		if (data.error) throw 'Error: ' + data.error
 		if (!data.ds) throw 'data.ds{} missing'
+		if (!data.ds.isMds3) throw 'A legacy dataset cannot be loaded as a mds3 track'
 		tk.mds = data.ds
 		tk.name = data.ds.label
 		return
