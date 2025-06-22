@@ -1,5 +1,7 @@
+import { newSandboxDiv } from '#dom'
 import { appInit } from '#plots/plot.app.js'
 import { copyMerge } from '#rx'
+import type { Elem } from '../types/d3'
 
 /*
 launches dictionary plot; on selecting any variable, create summary plot
@@ -9,7 +11,7 @@ use of dictionary ui avoids creating any custom interface for selecting two term
 */
 
 interface InitArg {
-	filter0?: string
+	filter0?: object
 	state?: {
 		plots?: Array<{ chartType: string; [key: string]: any }>
 	}
@@ -19,7 +21,7 @@ interface InitArg {
 }
 
 interface UpdateArg {
-	filter0?: string
+	filter0?: object
 	[key: string]: any
 }
 
@@ -45,9 +47,6 @@ export async function init(
 	holder: HTMLElement,
 	genomes: any
 ): Promise<{ update: (updateArg: UpdateArg) => Promise<void> }> {
-	// after selecting a variable and showing summary plot for the selected, should revise this message to: Open Edit menu to select the second variable.
-	holder.append('div').style('margin-left', '20px').text('Select a variable below to build Correlation Plot')
-
 	const plotAppApi: PlotAppAPI = await appInit({
 		holder,
 		state: {
@@ -57,8 +56,20 @@ export async function init(
 			plots: [{ chartType: 'dictionary' }]
 		},
 		genome: genomes[gdcGenome],
-		app: copyMerge({}, arg.opts?.app || {}),
-		opts: {}
+		// must define opts.app.getPlotHolder() to return sandbox, otherwise summary plot breaks by not getting sandbox
+		app: copyMerge(
+			{
+				getPlotHolder: (plot: any, div: Elem) => {
+					const sandbox = newSandboxDiv(div)
+					return sandbox
+				}
+			},
+			arg.opts?.app || {} // todo if copyMerge() from arg.opts.app is necessary; copied from singlecell
+		),
+		opts: {
+			// TODO not working
+			dictionary: { headerText: 'Select a variable below to build Correlation Plot' }
+		}
 	})
 
 	const api = {
