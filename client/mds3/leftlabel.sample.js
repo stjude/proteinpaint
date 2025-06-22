@@ -283,24 +283,7 @@ async function showDensity4oneTerm(termid, div, data, tk, block) {
 }
 
 function createSubTk(tk, block, tvs) {
-	// pass properties from main tk to subtk
-	const tkarg = {
-		type: 'mds3',
-		dslabel: tk.dslabel,
-		filter0: tk.filter0,
-		showCloseLeftlabel: true,
-		filterObj: getNewFilter(tk, tvs),
-		allow2selectSamples: tk.allow2selectSamples,
-		onClose: tk.onClose,
-		hardcodeCnvOnly: tk.hardcodeCnvOnly,
-		token: tk.token // for testing
-	}
-	if (tk.cnv?.presetMax) tkarg.cnv = { presetMax: tk.cnv.presetMax } // preset value is present, pass to subtk
-	if (tk.legend.mclass?.hiddenvalues?.size) {
-		tkarg.legend = { mclass: { hiddenvalues: new Set() } }
-		for (const v of tk.legend.mclass.hiddenvalues) tkarg.legend.mclass.hiddenvalues.add(v)
-	}
-	const tk2 = block.block_addtk_template(tkarg)
+	const tk2 = block.block_addtk_template(tk.duplicateTk(getNewFilter(tk, tvs)))
 	block.tk_load(tk2)
 }
 
