@@ -1,12 +1,38 @@
 import { getCompInit, copyMerge } from '#rx'
 import { appInit } from '#termdb/app'
 
+/*
+constructor options can be one of below
+TODO clarify usecase for each
+
+opts = {
+	holder: <d3 wrapped>
+	header?: <d3 wrapped>
+}
+
+or:
+
+opts = {
+	holder: { app_div, body, header } // created by newSandboxDiv()
+}
+
+TODO support opts.headerText
+
+*/
+
 class MassDict {
 	constructor(opts) {
 		this.type = 'tree'
-		this.dom = {
-			holder: opts.holder.style('padding', '20px'),
-			header: opts.header
+		if (opts.holder.body && opts.holder.header) {
+			this.dom = {
+				holder: opts.holder.body,
+				header: opts.holder.header
+			}
+		} else {
+			this.dom = {
+				holder: opts.holder.style('padding', '20px'),
+				header: opts.header
+			}
 		}
 	}
 
