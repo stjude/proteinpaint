@@ -70,6 +70,11 @@ tape('Official data on TP53, extensive ui test', test => {
 		) // value "4" is dtcnv
 		await findSingletonMutationTestDiscoCnvPlots(test, tk)
 		await testVariantLeftLabel(test, tk, bb)
+		{
+			const t = tk.duplicateTk()
+			test.notOk(t.filterObj, 'duplicateTk() should not attach filterObj for main tk')
+			test.notOk(t.hardcodeCnvOnly, 'duplicateTk() should not attach hardcodeCnvOnly for main tk')
+		}
 		if (test._ok) holder.remove()
 		test.end()
 	}
@@ -239,6 +244,11 @@ export async function testSampleSummary2subtrack(genome, gene, dslabel, test) {
 			test.pass('subtk.menutip is shown (with filter UI), after clicking leftlabels.doms.filterObj')
 
 			test.ok(subtk.leftlabels.doms.close, '.leftlabels.doms.close is set on subtrack')
+
+			{
+				const t = subtk.duplicateTk()
+				test.deepEqual(subtk.filterObj, t.filterObj, 'duplicateTk() works for subtk')
+			}
 
 			if (test._ok) {
 				holder.remove()
@@ -505,6 +515,10 @@ tape('Official - hardcodeCnvOnly', test => {
 
 		// in termdbtest, cnvGainCutoff is not set on ds.queries.cnv, meaning the cnv is not by numeric value, and thus the legend is not rendered as a quickfix solution to support cnv segment by category. can reenable it when it changes later
 		test.ok(tk.legend.cnv, 'tk.legend.cnv{} is set')
+		{
+			const t = tk.duplicateTk()
+			test.ok(t.hardcodeCnvOnly, 'duplicateTk() should attach hardcodeCnvOnly')
+		}
 
 		// todo: more tests
 		if (test._ok) holder.remove()

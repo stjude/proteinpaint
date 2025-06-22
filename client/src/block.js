@@ -3450,25 +3450,7 @@ seekrange(chr,start,stop) {
 				continue
 			}
 			if (tk.type == 'mds3') {
-				// TODO code duplication limits script change; after release use createSubTk method instead
-				//arg.tklst.push(tk.createSubTk())
-				const tkarg = {
-					type: 'mds3',
-					dslabel: tk.dslabel,
-					filter0: tk.filter0,
-					showCloseLeftlabel: true,
-					filterObj: structuredClone(tk.filterObj),
-					allow2selectSamples: tk.allow2selectSamples,
-					onClose: tk.onClose,
-					hardcodeCnvOnly: tk.hardcodeCnvOnly,
-					token: tk.token // for testing
-				}
-				if (tk.cnv?.presetMax) tkarg.cnv = { presetMax: tk.cnv.presetMax } // preset value is present, pass to subtk
-				if (tk.legend.mclass?.hiddenvalues?.size) {
-					tkarg.legend = { mclass: { hiddenvalues: new Set() } }
-					for (const v of tk.legend.mclass.hiddenvalues) tkarg.legend.mclass.hiddenvalues.add(v)
-				}
-				arg.tklst.push(tkarg)
+				arg.tklst.push(tk.duplicateTk())
 				continue
 			}
 			arg.tklst.push(tk)

@@ -236,6 +236,28 @@ export async function makeTk(tk, block) {
 		console.error(e)
 	}
 
+	tk.duplicateTk = filter => {
+		// generate tkarg object by duplicating configration of current tk, to be used for block launch
+		// provide optional filter obj to assign to tk
+		const tkarg = {
+			type: 'mds3',
+			dslabel: tk.dslabel,
+			filter0: tk.filter0,
+			showCloseLeftlabel: true,
+			filterObj: filter || structuredClone(tk.filterObj),
+			allow2selectSamples: tk.allow2selectSamples,
+			onClose: tk.onClose,
+			hardcodeCnvOnly: tk.hardcodeCnvOnly,
+			token: tk.token // for testing
+		}
+		if (tk.cnv?.presetMax) tkarg.cnv = { presetMax: tk.cnv.presetMax } // preset value is present, pass to subtk
+		if (tk.legend.mclass?.hiddenvalues?.size) {
+			tkarg.legend = { mclass: { hiddenvalues: new Set() } }
+			for (const v of tk.legend.mclass.hiddenvalues) tkarg.legend.mclass.hiddenvalues.add(v)
+		}
+		return tkarg
+	}
+
 	for (const n of callbacknames) {
 		if (tk[n] && typeof tk[n] != 'function') throw `.${n}() is not function`
 	}
