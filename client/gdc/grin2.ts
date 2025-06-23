@@ -10,7 +10,7 @@ Author: PP Team
 */
 
 import { dofetch3 } from '#common/dofetch'
-import { renderTable, sayerror } from '#dom'
+import { renderTable, sayerror, make_one_checkbox } from '#dom'
 import { select } from 'd3-selection'
 import { formatElapsedTime } from '@sjcrh/proteinpaint-shared/time.js'
 import type { GdcGRIN2listRequest } from '#types'
@@ -26,29 +26,34 @@ interface TableRowItem {
 	value?: any
 }
 
-const defaultMAFclasses = [
-	'M',
-	'F',
-	'N',
-	'StopLost',
-	'StartLost',
-	'L',
-	'I',
-	'D',
-	'ProteinAltering',
-	'P',
-	'E',
-	'S',
-	'Intron',
-	'Utr3',
-	'Utr5',
-	'noncoding',
-	'snv',
-	'mnv',
-	'insertion',
-	'deletion'
-]
+// Default MAF classes for mutation types
+const defaultCheckedClasses = ['M', 'F', 'N', 'StopLost', 'StartLost', 'L']
 
+// Standard MAF classes with labels
+const standardConsLabels = {
+	M: 'Missense Mutation',
+	F: 'Frameshift Mutation',
+	N: 'Nonsense Mutation',
+	StopLost: 'Stop Lost',
+	StartLost: 'Start Lost',
+	L: 'Splice Site',
+	I: 'Insertion',
+	D: 'Deletion',
+	ProteinAltering: 'Protein Altering',
+	P: 'Protein Altering',
+	E: 'Exon',
+	S: 'Silent',
+	Intron: 'Intronic',
+	Utr3: "3' UTR",
+	Utr5: "5' UTR",
+	noncoding: 'Non-coding',
+	snv: 'SNV',
+	mnv: 'MNV',
+	insertion: 'Insertion',
+	deletion: 'Deletion'
+}
+
+// Classes to skip in MAF analysis
 const skipMAFclasses = ['WT', 'Blank', 'X']
 
 // ================================================================================
@@ -96,7 +101,7 @@ function parseRecordsByCaseData(recordsByCase: any): { columns: any[]; rows: any
 	const columns = [
 		{ label: 'Case ID', sortable: true },
 		{ label: 'MAF Mutations', sortable: true },
-		{ label: 'MAF Consequences', sortable: false },
+		{ label: 'MAF Consequences Included', sortable: false },
 		{ label: 'CNV Segments Skipped', sortable: true },
 		{ label: 'Invalid Rows', sortable: true }
 	]
@@ -127,9 +132,9 @@ function parseRecordsByCaseData(recordsByCase: any): { columns: any[]; rows: any
 			mafMutationCount = Object.values(consequences).reduce((sum: number, count: any) => sum + (Number(count) || 0), 0)
 
 			// Create a summary of top consequences
-			const sortedConsequences = Object.entries(consequences)
-				.sort(([, a], [, b]) => (Number(b) || 0) - (Number(a) || 0))
-				.slice(0, 3) // Top 3 consequences
+			const sortedConsequences = Object.entries(consequences).sort(
+				([, a], [, b]) => (Number(b) || 0) - (Number(a) || 0)
+			)
 
 			mafConsequencesText = sortedConsequences.map(([type, count]) => `${type}: ${count}`).join(', ')
 
@@ -815,61 +820,58 @@ function makeControls(obj) {
 			.append('div')
 			.attr(
 				'style',
-				'display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; margin-bottom: 12px;'
+				'display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px; margin-bottom: 12px;'
 			)
 
-		// Direct iteration through mclass
+		// Simplified iteration through mclass using checkbox.js
 		for (const cls in mclass) {
 			// Skip if not SNV/indel
 			if (mclass[cls].dt !== dtsnvindel) continue
 			// Skip any classes defined in skipMAFclasses
 			if (skipMAFclasses.includes(cls)) continue
 
-			// Create checkbox div
-			const checkboxDiv = checkboxContainer
-				.append('div')
-				.attr('style', 'display: flex; align-items: center; gap: 6px; font-size: 13px;')
-
 			// Determine if this should be checked by default
-			const isDefaultChecked = defaultMAFclasses.includes(cls)
+			const isDefaultChecked = defaultCheckedClasses.includes(cls)
 
-			// Create checkbox
-			const checkbox = checkboxDiv
-				.append('input')
-				.attr('type', 'checkbox')
-				.attr('id', `consequence-${cls}`)
-				.property('checked', isDefaultChecked)
-				.attr('style', 'margin: 0; cursor: pointer;')
+			// Get the standard biologist label, fallback to PP label if not found
+			const labelText = standardConsLabels[cls] || mclass[cls].label
 
-			// If it's checked by default, add it to the consequences array
+			// Create a div for this checkbox to fit in the grid
+			const checkboxDiv = checkboxContainer.append('div')
+
+			// Use the checkbox utility to create the checkbox
+			make_one_checkbox({
+				holder: checkboxDiv,
+				labeltext: labelText,
+				checked: isDefaultChecked,
+				id: `consequence-${cls}`,
+				divstyle: {
+					'font-size': '13px',
+					margin: '0'
+				},
+				callback: async isChecked => {
+					// Handle checkbox change
+					if (isChecked) {
+						if (!obj.mafOptions.consequences.includes(cls)) {
+							obj.mafOptions.consequences.push(cls)
+						}
+					} else {
+						obj.mafOptions.consequences = obj.mafOptions.consequences.filter(c => c !== cls)
+					}
+					console.log(`${labelText} (${cls}): ${isChecked ? 'checked' : 'unchecked'}`)
+				}
+			})
+
+			// Add tooltip with description to the label
+			checkboxDiv.select('label').attr('title', mclass[cls].desc)
+
+			// Initialize the consequences array if this is checked by default
 			if (isDefaultChecked && !obj.mafOptions.consequences.includes(cls)) {
 				obj.mafOptions.consequences.push(cls)
 			}
-
-			// Create label
-			const label = checkboxDiv
-				.append('label')
-				.attr('for', `consequence-${cls}`)
-				.attr('style', 'cursor: pointer; font-size: 13px; color: #333;')
-				.attr('title', mclass[cls].desc)
-
-			// Add label text
-			label.text(mclass[cls].label)
-
-			// Add change handler
-			checkbox.on('change', function (this: HTMLInputElement) {
-				const isChecked = this.checked
-				if (isChecked) {
-					if (!obj.mafOptions.consequences.includes(cls)) {
-						obj.mafOptions.consequences.push(cls)
-					}
-				} else {
-					obj.mafOptions.consequences = obj.mafOptions.consequences.filter(c => c !== cls)
-				}
-			})
 		}
 
-		// Add helper text
+		// Add updated helper text
 		consequencesSelectionDiv
 			.append('div')
 			.attr(
@@ -877,7 +879,7 @@ function makeControls(obj) {
 				'margin-top: 8px; padding: 8px; background-color: #f8f9fa; border-radius: 4px; border-left: 3px solid #6c757d; font-size: 12px; color: #495057; line-height: 1.4;'
 			).html(`
 				<strong>Mutation Types:</strong> Select the types of mutations to include in your analysis.
-				If none are selected, all mutation types will be included.<br>
+				High-impact mutations are selected by default. If none are selected, all mutation types will be included.
 			`)
 
 		// Row 3: Hypermutator Max Cut Off
@@ -2334,9 +2336,7 @@ async function getFilesAndShowTable(obj) {
 								.style('font-size', '12px')
 								.style('color', '#495057')
 								.style('line-height', '1.4')
-								.text(
-									'This table shows analysis statistics per case. CNV Segments Skipped indicates segments that were excluded due to filtering criteria (e.g., segment length thresholds).'
-								)
+								.text('This table shows analysis statistics per case.')
 
 							// Track expanded state and add click handler
 							let isExpanded = false
@@ -2365,8 +2365,8 @@ async function getFilesAndShowTable(obj) {
 						.style('background-color', '#e9ecef')
 						.style('border-radius', '4px')
 						.style('font-size', '14px')
-						.style('max-width', '100%') // Don't exceed container width
-						.style('width', 'fit-content') // Only as wide as content needs
+						.style('max-width', '100%')
+						.style('width', 'fit-content')
 						.style('color', '#495057').html(`
 						<strong>Note:</strong> For performance reasons, only the top ${response.showingTop} 
 						most significant genes are displayed. The complete analysis identified 
@@ -2383,8 +2383,8 @@ async function getFilesAndShowTable(obj) {
 					.style('border', '1px solid #ffeaa7')
 					.style('border-radius', '4px')
 					.style('margin', '15px 0')
-					.style('max-width', '100%') // Don't exceed container width
-					.style('width', 'fit-content') // Only as wide as content needs
+					.style('max-width', '100%')
+					.style('width', 'fit-content')
 					.text('No significant genes found in the analysis.')
 			}
 		} catch (e: any) {
