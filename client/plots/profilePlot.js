@@ -185,16 +185,28 @@ export class profilePlot {
 		this.types = this.plotFilters[this.config.typeTW.id]
 		this.filter = this.config.filter || this.getFilter()
 		const isAggregate = this.isAggregate()
-		this.data = await this.app.vocabApi.getProfileScores({
-			terms: [...this.twLst, this.config.facilityTW], //added facility term to all the plots to get the hospital name
-			scoreTerms: this.scoreTerms,
-			filter: this.filter,
-			isAggregate,
-			site: this.isRadarFacility ? null : this.settings.site,
-			isRadarFacility: this.isRadarFacility,
-			userSites: this.state.sites,
-			facilityTW: this.config.facilityTW
-		})
+		if (this.type != 'profileForms')
+			this.data = await this.app.vocabApi.getProfileScores({
+				terms: [...this.twLst, this.config.facilityTW], //added facility term to all the plots to get the hospital name
+				scoreTerms: this.scoreTerms,
+				filter: this.filter,
+				isAggregate,
+				site: this.isRadarFacility ? null : this.settings.site,
+				isRadarFacility: this.isRadarFacility,
+				userSites: this.state.sites,
+				facilityTW: this.config.facilityTW
+			})
+		else
+			this.data = await this.app.vocabApi.getProfileFormScores({
+				terms: [...this.twLst, this.config.facilityTW], //added facility term to all the plots to get the hospital name
+				scoreTerms: this.scoreTerms,
+				scScoreTerms: this.scScoreTerms,
+				filter: this.filter,
+				isAggregate,
+				site: this.isRadarFacility ? null : this.settings.site,
+				userSites: this.state.sites,
+				facilityTW: this.config.facilityTW
+			})
 		this.sites = this.data.sites
 		if (!this.isRadarFacility) this.sites.unshift({ label: '', value: '' })
 		this.sites.sort((a, b) => {
@@ -219,7 +231,8 @@ export class profilePlot {
 				],
 				callback: isAggregate => {
 					this.settings.isAggregate = isAggregate
-					isAggregate ? this.setSite('') : this.setSite(this.state.site)
+					const id = this.sites.find(s => s.label == this.state.site)?.value
+					isAggregate ? this.setSite('') : this.setSite(id)
 				}
 			}
 			inputs.push(dataInput)
@@ -303,7 +316,7 @@ export class profilePlot {
 			)
 		}
 		if (this.state.logged) {
-			if (isAggregate && (this.state.sites?.length > 1 || this.state.user == 'admin')) {
+			if ((isAggregate && (this.state.sites?.length > 1 || this.state.user == 'admin')) || this.isRadarFacility) {
 				const sitesInput = {
 					label: 'Site',
 					type: 'dropdown',
@@ -312,7 +325,7 @@ export class profilePlot {
 					settingsKey: 'site',
 					callback: value => this.setSite(value)
 				}
-				this.type == 'profileRadarFacility' ? inputs.unshift(sitesInput) : inputs.push(sitesInput)
+				this.isRadarFacility ? inputs.unshift(sitesInput) : inputs.push(sitesInput)
 			}
 		}
 
@@ -416,7 +429,7 @@ export class profilePlot {
 				.append('text')
 				.attr('text-anchor', 'left')
 				.style('font-weight', 'bold')
-				.text(`${title} (n=${this.sites.length - 1})`) //-1 because the first site is empty
+				.text(`${title} (n=${this.data.n})`)
 				.attr('transform', `translate(0, -5)`)
 			for (const tw of this.config.filterTWs) this.addFilterLegendItem(tw.term.name, this.settings[tw.term.id])
 		}
@@ -505,12 +518,12 @@ export function makeChartBtnMenu(holder, chartsInstance, chartType) {
 	const state = chartsInstance.state
 	const key = state.activeCohort == FULL_COHORT ? 'full' : 'abbrev'
 	const typeConfig = state.termdbConfig?.plotConfigByCohort[key][chartType]
-	if (typeConfig.configs.length == 1) {
-		createPlot(typeConfig.configs[0], chartType, chartsInstance)
+	if (typeConfig.options.length == 1) {
+		createPlot(typeConfig.options[0], chartType, chartsInstance)
 		return
 	}
 	const menuDiv = holder.append('div')
-	for (const plotConfig of typeConfig.configs) {
+	for (const plotConfig of typeConfig.options) {
 		menuDiv
 			.append('div')
 			.attr('class', 'sja_menuoption sja_sharp_border')

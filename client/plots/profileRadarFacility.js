@@ -79,7 +79,10 @@ class profileRadarFacility extends profilePlot {
 		const radarG = this.dom.svg.append('g').attr('transform', `translate(${x},${y})`)
 		this.radarG = radarG
 
-		this.legendG = this.dom.svg.append('g').attr('transform', `translate(${x + 380},${y + 100})`)
+		this.legendG = this.dom.svg
+			.append('g')
+			.attr('font-size', '0.9em')
+			.attr('transform', `translate(${x + 360},${y + 100})`)
 		this.filterG = this.dom.svg.append('g').attr('transform', `translate(${x + 380},${y + 200})`)
 
 		const rows = []
@@ -90,7 +93,7 @@ class profileRadarFacility extends profilePlot {
 			{ label: 'Global' },
 			{
 				label: 'Difference*',
-				tooltip: `* Difference between site and aggregated scores. If bigger than 20, shown in red if negative and in blue if positive.`
+				tooltip: `* Difference between site and aggregated scores. If bigger than 20 and positive shown in blue, if negative shown in red.`
 			}
 		]
 

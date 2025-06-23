@@ -25,7 +25,7 @@ export class profileForms extends profilePlot {
 	twLst: any
 	filterG: any
 	activePlot: any
-	activeTWs: any
+	scScoreTerms: any
 	tabs: any
 	shiftTop: any
 	categories: any
@@ -45,7 +45,7 @@ export class profileForms extends profilePlot {
 		const settings = config.settings.profileForms
 
 		this.tabs = []
-		for (const plot of config.plots) {
+		for (const plot of config.options) {
 			const tws = this.twLst.filter(tw => tw.term.subtype == plot.subtype)
 			if (!tws.length) continue //no terms for this plot
 			const tab: any = {
@@ -110,8 +110,9 @@ export class profileForms extends profilePlot {
 		super.main()
 		if (this.tabs.length == 0) return // no plots to show
 		const activeTab = this.state.config.activeTab || this.tabs[0].label
-		this.activePlot = this.state.config.plots.find(p => p.name == activeTab)
-		this.activeTWs = this.twLst.filter(tw => tw.term.subtype == this.activePlot.subtype)
+		this.activePlot = this.state.config.options.find(p => p.name == activeTab)
+		this.scoreTerms = this.twLst.filter(tw => tw.term.subtype == this.activePlot.subtype)
+		this.scScoreTerms = this.activePlot.scTerms
 		const parents = this.config.tw.term.id.split('__')
 		this.module = parents[1]
 		const domain = parents.slice(1).join(' / ')
@@ -124,73 +125,38 @@ export class profileForms extends profilePlot {
 		this.addFilterLegend()
 	}
 
-	getDict(key, sample) {
-		if (!sample[key]) return null
-		const termData = sample[key].value
-		return JSON.parse(termData)
-	}
-
-	getPercentsDict(getDict, samples): { [key: string]: number } {
-		const percentageDict = {}
-		for (const sample of samples) {
-			const percents: { [key: string]: number } = getDict(sample)
-			if (!percents) continue
-			for (const key in percents) {
-				const value = percents[key]
-				if (!percentageDict[key]) percentageDict[key] = 0
-				percentageDict[key] += value
-			}
-		}
-		return percentageDict
-	}
-
-	getSCPercentsDict(tw, samples): { [key: string]: number } {
-		if (!tw) throw 'tw not defined'
-		//not specified when called
-		//if defined in the settings a site is provided and the user can decide what to see, otherwise it is admin view and if the site was set sampleData is not null
-		const percentageDict = {}
-		for (const sample of samples) {
-			const key = sample[tw.$id].value
-			if (!percentageDict[key]) percentageDict[key] = 0
-			percentageDict[key] += 1
-		}
-		return percentageDict
-	}
-
 	renderPlot() {
 		this.dom.headerDiv.style('display', 'none')
 		this.dom.mainG.selectAll('*').remove()
 		this.dom.gridG.selectAll('*').remove()
 		this.dom.xAxisG.selectAll('*').remove()
 		this.dom.legendG.selectAll('*').remove()
-		const samples = this.sampleData ? [this.sampleData] : this.data.lst
 
 		switch (this.activePlot.name) {
 			case IMPRESSIONS_TAB:
-				this.renderImpressions(samples)
+				this.renderImpressions()
 				break
 			case LIKERT_TAB:
-				this.renderLikert(samples)
+				this.renderLikert()
 				break
 			case YES_NO_TAB:
-				this.renderYesNo(samples)
+				this.renderYesNo()
 		}
 	}
 
-	renderImpressions(_samples) {}
+	renderImpressions() {}
 
-	renderLikert(samples) {
+	renderLikert() {
 		this.dom.headerDiv.style('display', 'block')
 		this.dom.headerDiv.selectAll('*').remove()
 		let y = 0
 		const step = 30
-		const height = (this.activeTWs.length + 2) * step
+		const height = (this.scoreTerms.length + 2) * step
 		this.dom.svg.attr('height', height + 120)
 		const middle = this.settings.svgw * 0.3 //the middle of the svg as we leave space for the not applicable category at the end
-		for (const tw of this.activeTWs) {
+		for (const tw of this.scoreTerms) {
 			if (tw.term.type != 'multivalue') continue
-			const getDict = sample => this.getDict(tw.$id, sample)
-			const dict = this.getPercentsDict(getDict, samples) //get the dict with the counts for each category  for the list of samples
+			const dict = this.getPercentageDict(tw) //get the dict with the counts for each category  for the list of samples
 			this.renderLikertBar(dict, y, 25, tw, middle)
 			y += step
 		}
@@ -223,22 +189,21 @@ export class profileForms extends profilePlot {
 		}
 	}
 
-	renderYesNo(samples) {
+	renderYesNo() {
 		this.xAxisScale = d3Linear().domain([0, 100]).range([0, this.settings.svgw])
 		this.dom.xAxisG.call(axisTop(this.xAxisScale))
 		const step = 30
-		const height = this.activeTWs.length * step
+		const height = this.scoreTerms.length * step
 		this.dom.svg.attr('height', height * 3 + 200) //space for the sc, for the poc and between items
 
 		let y = 0
 		let showSCBar = false
 		const activePlot = this.activePlot
-		for (const tw of this.activeTWs) {
-			const getDict = sample => this.getDict(tw.$id, sample)
-			const percents: { [key: string]: number } = this.getPercentsDict(getDict, samples)
+		for (const tw of this.scoreTerms) {
+			const percents: { [key: string]: number } = this.getPercentageDict(tw)
 
 			const scTerm = activePlot.scTerms.find(t => t.term.id.includes(tw.term.id))
-			const scPercents: { [key: string]: number } = this.getSCPercentsDict(scTerm, samples)
+			const scPercents: { [key: string]: number } = this.getPercentageDict(scTerm)
 
 			const scPercentKeys = Object.keys(scPercents).sort((a, b) => a.localeCompare(b))
 			const scTotal = Object.values(scPercents).reduce((a, b) => a + b, 0)
@@ -460,6 +425,10 @@ export class profileForms extends profilePlot {
 		menu.d.style('padding', '5px').text(text)
 		menu.showunder(event.target)
 	}
+
+	getPercentageDict(tw) {
+		return this.data.term2Score[tw.term.id]
+	}
 }
 
 export async function getPlotConfig(opts, app, _activeCohort) {
@@ -469,7 +438,7 @@ export async function getPlotConfig(opts, app, _activeCohort) {
 	config.settings = getDefaultProfileFormsSettings()
 	config.header = 'Templates: Visualization tools to provide insights and assist in leveraging data'
 	config = copyMerge(structuredClone(config), opts)
-	for (const plot of config.plots) {
+	for (const plot of config.options) {
 		if (plot.terms) await fillTwLst(plot.terms, app.vocabApi)
 		if (plot.scTerms) await fillTwLst(plot.scTerms, app.vocabApi)
 	}
