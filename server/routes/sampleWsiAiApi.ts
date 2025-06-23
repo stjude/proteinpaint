@@ -21,7 +21,7 @@ function init() {
 		try {
 			const request = req.query
 			console.log('sample wsi api request:', request)
-			res.status(200)
+			res.status(200).send({ testKey: 'completed' })
 		} catch (e: any) {
 			console.warn(e)
 			res.status(500).send({

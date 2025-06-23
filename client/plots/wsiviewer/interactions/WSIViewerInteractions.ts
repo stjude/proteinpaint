@@ -177,9 +177,19 @@ export class WSIViewerInteractions {
 						class: event.code === 'Enter' ? null : event.code.replace('Digit', '').replace('Key', '')
 					}
 
-					await dofetch3('sampleWsiAiApi', { body }).catch(reason => {
-						console.error(reason)
-					})
+					//Advance to the next table row after annotating
+					const nextIdx = currentIndex + 1
+					if (nextIdx < annotationsData.length - 1) {
+						buffers.annotationsIdx.set(nextIdx)
+						const coords = [annotationsData[nextIdx].zoomCoordinates] as unknown as [number, number][]
+						this.addZoomInEffect(activeImageExtent, coords, map)
+					}
+
+					try {
+						await dofetch3('sampleWsiAiApi', { body })
+					} catch (e) {
+						console.error('Error in sampleWsiAiApi request:', e)
+					}
 				}
 			})
 		}
