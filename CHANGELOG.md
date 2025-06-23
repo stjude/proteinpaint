@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 Fixes:
 - on clicking a gene model from gene track, launch new protein view in a sandbox instead of floating pane
+- Fix the missing "load gene sets" from oncoMatrix gene set edit UI
 
 
 ## 2.129.4
