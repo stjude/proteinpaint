@@ -66,7 +66,7 @@ class profileRadar extends profilePlot {
 			{ label: config.term2.abbrev },
 			{
 				label: 'Difference*',
-				tooltip: `* Difference between ${config.term1.abbrev} and ${config.term2.abbrev}. If bigger than 20, shown in red if negative and in blue if positive.`
+				tooltip: `* Difference between ${config.term1.abbrev} and ${config.term2.abbrev}. If bigger than 20 and positive shown in blue, if negative shown in red.`
 			}
 		]
 

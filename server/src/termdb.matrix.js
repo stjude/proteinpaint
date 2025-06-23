@@ -13,7 +13,6 @@ import {
 } from '#shared/terms.js'
 import { get_bin_label, compute_bins } from '#shared/termdb.bins.js'
 import { trigger_getDefaultBins } from './termdb.getDefaultBins.js'
-import { get } from 'http'
 
 /*
 

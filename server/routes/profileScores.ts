@@ -32,10 +32,11 @@ function init({ genomes }) {
 }
 
 async function getScores(query, ds, genome) {
+	const isRadarFacility = query.isRadarFacility
 	const data = await getData(
 		{
 			terms: query.terms,
-			filter: query.filter
+			filter: isRadarFacility && query.site ? undefined : query.filter //if isRadarFacility and site is specified, do not apply the filter
 		},
 		ds,
 		genome
@@ -44,7 +45,13 @@ async function getScores(query, ds, genome) {
 	let sites = lst.map((s: any) => {
 		return { label: data.refs.bySampleId[s.sample].label, value: s.sample }
 	})
+	//The site in the facility radar is not dependent on the other filters
 
+	sites = lst.map((s: any) => {
+		return { label: data.refs.bySampleId[s.sample].label, value: s.sample }
+	})
+
+	//If the user has sites keep only the sites that are visible to the user
 	if (query.userSites) {
 		sites = sites.filter(s => query.userSites.includes(s.label))
 	}
@@ -57,7 +64,7 @@ async function getScores(query, ds, genome) {
 		}
 	}
 	let site
-	if (query.isRadarFacility) site = query.site
+	if (isRadarFacility) site = query.site
 	else site = query.isAggregate ? query.site : userSite
 	const sampleData = data.samples[site] || null
 	const samples = Object.values(data.samples)
@@ -65,9 +72,10 @@ async function getScores(query, ds, genome) {
 	for (const d of query.scoreTerms) {
 		term2Score[d.score.term.id] = getPercentage(d, samples, sampleData)
 	}
+
 	const hospital = sampleData?.[query.facilityTW.$id]?.value
 
-	return { term2Score, sites, hospital }
+	return { term2Score, sites, hospital, n: samples.length }
 }
 
 function getPercentage(d, samples, sampleData) {

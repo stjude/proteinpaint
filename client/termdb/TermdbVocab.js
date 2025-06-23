@@ -1349,6 +1349,15 @@ export class TermdbVocab extends Vocab {
 		}
 		return await dofetch3('profileScores', { method: 'GET', body })
 	}
+
+	async getProfileFormScores(args) {
+		const body = {
+			genome: this.vocab.genome,
+			dslabel: this.vocab.dslabel,
+			...args
+		}
+		return await dofetch3('profileFormScores', { method: 'GET', body })
+	}
 }
 
 /*
