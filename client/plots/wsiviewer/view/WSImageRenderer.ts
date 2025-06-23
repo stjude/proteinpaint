@@ -77,6 +77,8 @@ export class WSImageRenderer {
 					tr.style('background-color', index === rowIdx ? selectedColor : origColor)
 				})
 
+				tr.style('outline', 'none') //Remove the default outline on click
+
 				this.buffers.tmpClass.addListener((tmpClass: { label: string; color: string }) => {
 					if (this.buffers.annotationsIdx.get() === rowIdx) {
 						const spanHtml = `<span style="display:inline-block;width:12px;height:18px;background-color:${tmpClass.color};border:grey 1px solid;"></span>`
