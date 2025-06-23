@@ -89,6 +89,11 @@ struct FilteredMafDetails {
     t_alt_count: usize,
     t_depth: usize,
     invalid_rows: usize,
+    excluded_by_min_depth: usize,
+    excluded_by_min_alt_count: usize,
+    excluded_by_consequence_type: usize,
+    total_processed: usize,
+    total_included: usize,
 }
 
 // struct for CNV filter details
@@ -97,6 +102,11 @@ struct FilteredCnvDetails {
     segment_mean: usize,
     seg_length: usize,
     invalid_rows: usize,
+    excluded_by_loss_threshold: usize,
+    excluded_by_gain_threshold: usize,
+    excluded_by_segment_length: usize,
+    total_processed: usize,
+    total_included: usize,
 }
 
 // struct for per-case filter details
@@ -326,6 +336,13 @@ async fn process_row(
 
     let case_details = filtered_map.get_mut(case_id).unwrap();
 
+    // Track total processed records
+    if data_type == "maf" {
+        case_details.maf.total_processed += 1;
+    } else if data_type == "cnv" {
+        case_details.cnv.total_processed += 1;
+    }
+
     // Handle consequence filtering and counting for MAF files
     if data_type == "maf" {
         if let Some(var_class_idx) = variant_classification_index {
@@ -347,6 +364,7 @@ async fn process_row(
                                 .rejected_consequences
                                 .entry(variant_classification.to_string())
                                 .or_insert(0) += 1;
+                            case_details.maf.excluded_by_consequence_type += 1;
                             filtered_maf_records.fetch_add(1, Ordering::Relaxed);
                             return Ok(None);
                         }
@@ -396,6 +414,15 @@ async fn process_row(
             element = process_segment_mean(&element, case_id, data_type, gain_threshold, loss_threshold)?;
             if element.is_empty() {
                 case_details.cnv.segment_mean += 1;
+                let seg_mean = cont_lst[x].parse::<f32>().unwrap_or(0.0);
+                if seg_mean > loss_threshold && seg_mean < gain_threshold {
+                    // Between thresholds - not a significant gain or loss
+                    if seg_mean >= 0.0 {
+                        case_details.cnv.excluded_by_gain_threshold += 1;
+                    } else {
+                        case_details.cnv.excluded_by_loss_threshold += 1;
+                    }
+                }
                 filtered_cnv_records.fetch_add(1, Ordering::Relaxed);
                 return Ok(None);
             }
@@ -433,11 +460,13 @@ async fn process_row(
 
         if alle_depth < min_total_depth {
             case_details.maf.t_depth += 1;
+            case_details.maf.excluded_by_min_depth += 1;
             filtered_maf_records.fetch_add(1, Ordering::Relaxed);
             return Ok(None);
         }
         if alt_count < min_alt_allele_count {
             case_details.maf.t_alt_count += 1;
+            case_details.maf.excluded_by_min_alt_count += 1;
             filtered_maf_records.fetch_add(1, Ordering::Relaxed);
             return Ok(None);
         }
@@ -447,6 +476,7 @@ async fn process_row(
         out_lst.push("mutation".to_string());
 
         // Update counters for included MAF records
+        case_details.maf.total_included += 1;
         included_maf_records.fetch_add(1, Ordering::Relaxed);
     }
 
@@ -475,9 +505,11 @@ async fn process_row(
         let cnv_length = end_position - start_position;
         if seg_length > 0 && cnv_length > seg_length {
             case_details.cnv.seg_length += 1;
+            case_details.cnv.excluded_by_segment_length += 1;
             filtered_cnv_records.fetch_add(1, Ordering::Relaxed);
             return Ok(None);
         }
+        case_details.cnv.total_included += 1;
         included_cnv_records.fetch_add(1, Ordering::Relaxed);
     }
 

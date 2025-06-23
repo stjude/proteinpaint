@@ -96,17 +96,98 @@ function transformRows(rows, columns) {
  * @param recordsByCase - Object containing record counts by case
  * @returns Object with columns and rows arrays for renderTable
  */
+// function parseRecordsByCaseData(recordsByCase: any): { columns: any[]; rows: any[][] } {
+// 	// Define columns for the table
+// 	const columns = [
+// 		{ label: 'Case ID', sortable: true },
+// 		{ label: 'MAF Mutations', sortable: true },
+// 		{ label: 'MAF Consequences Included', sortable: false },
+// 		{ label: 'CNV Segments Skipped', sortable: true },
+// 		{ label: 'Invalid Rows', sortable: true }
+// 	]
+
+// 	// Process each case and create table rows
+// 	const rows: TableRowItem[][] = []
+
+// 	Object.entries(recordsByCase).forEach(([caseId, caseData]: [string, any]) => {
+// 		const row: TableRowItem[] = []
+
+// 		// Case ID
+// 		row.push({ value: caseId })
+
+// 		// Parse the case data (it's either already an object or JSON string)
+// 		let parsedData
+// 		try {
+// 			parsedData = typeof caseData === 'string' ? JSON.parse(caseData) : caseData
+// 		} catch (_e) {
+// 			parsedData = caseData
+// 		}
+
+// 		// MAF Mutations - total count of all mutation types
+// 		let mafMutationCount = 0
+// 		let mafConsequencesText = 'N/A'
+
+// 		if (parsedData.maf && parsedData.maf.matched_consequences) {
+// 			const consequences = parsedData.maf.matched_consequences
+// 			mafMutationCount = Object.values(consequences).reduce((sum: number, count: any) => sum + (Number(count) || 0), 0)
+
+// 			// Create a summary of top consequences
+// 			const sortedConsequences = Object.entries(consequences).sort(
+// 				([, a], [, b]) => (Number(b) || 0) - (Number(a) || 0)
+// 			)
+
+// 			mafConsequencesText = sortedConsequences.map(([type, count]) => `${type}: ${count}`).join(', ')
+
+// 			if (Object.keys(consequences).length > 3) {
+// 				mafConsequencesText += `, +${Object.keys(consequences).length - 3} more`
+// 			}
+// 		}
+
+// 		row.push({ value: mafMutationCount })
+// 		row.push({
+// 			value: mafConsequencesText,
+// 			html: `<span title="${mafConsequencesText}" style="font-size: 11px;">${mafConsequencesText}</span>`
+// 		})
+
+// 		// CNV Segments Skipped
+// 		let cnvSegmentsSkipped = 0
+// 		if (parsedData.cnv && parsedData.cnv.segment_mean !== undefined) {
+// 			cnvSegmentsSkipped = Number(parsedData.cnv.segment_mean) || 0
+// 		}
+// 		row.push({ value: cnvSegmentsSkipped })
+
+// 		// Invalid Rows (MAF + CNV)
+// 		let totalInvalidRows = 0
+// 		if (parsedData.maf && parsedData.maf.invalid_rows !== undefined) {
+// 			totalInvalidRows += Number(parsedData.maf.invalid_rows) || 0
+// 		}
+// 		if (parsedData.cnv && parsedData.cnv.invalid_rows !== undefined) {
+// 			totalInvalidRows += Number(parsedData.cnv.invalid_rows) || 0
+// 		}
+// 		row.push({ value: totalInvalidRows })
+
+// 		rows.push(row)
+// 	})
+
+// 	return { columns, rows }
+// }
+
 function parseRecordsByCaseData(recordsByCase: any): { columns: any[]; rows: any[][] } {
-	// Define columns for the table
+	// UPDATED: Add more columns for detailed filtering stats
 	const columns = [
 		{ label: 'Case ID', sortable: true },
-		{ label: 'MAF Mutations', sortable: true },
-		{ label: 'MAF Consequences Included', sortable: false },
-		{ label: 'CNV Segments Skipped', sortable: true },
+		{ label: 'MAF Total Processed', sortable: true },
+		{ label: 'MAF Included', sortable: true },
+		{ label: 'MAF Excluded by Depth', sortable: true },
+		{ label: 'MAF Excluded by Alt Count', sortable: true },
+		{ label: 'MAF Excluded by Consequence', sortable: true },
+		{ label: 'CNV Total Processed', sortable: true },
+		{ label: 'CNV Included', sortable: true },
+		{ label: 'CNV Excluded by Thresholds', sortable: true },
+		{ label: 'CNV Excluded by Length', sortable: true },
 		{ label: 'Invalid Rows', sortable: true }
 	]
 
-	// Process each case and create table rows
 	const rows: TableRowItem[][] = []
 
 	Object.entries(recordsByCase).forEach(([caseId, caseData]: [string, any]) => {
@@ -115,7 +196,7 @@ function parseRecordsByCaseData(recordsByCase: any): { columns: any[]; rows: any
 		// Case ID
 		row.push({ value: caseId })
 
-		// Parse the case data (it's either already an object or JSON string)
+		// Parse the case data
 		let parsedData
 		try {
 			parsedData = typeof caseData === 'string' ? JSON.parse(caseData) : caseData
@@ -123,40 +204,48 @@ function parseRecordsByCaseData(recordsByCase: any): { columns: any[]; rows: any
 			parsedData = caseData
 		}
 
-		// MAF Mutations - total count of all mutation types
-		let mafMutationCount = 0
-		let mafConsequencesText = 'N/A'
+		// MAF Statistics
+		let mafTotalProcessed = 0
+		let mafIncluded = 0
+		let mafExcludedByDepth = 0
+		let mafExcludedByAltCount = 0
+		let mafExcludedByConsequence = 0
 
-		if (parsedData.maf && parsedData.maf.matched_consequences) {
-			const consequences = parsedData.maf.matched_consequences
-			mafMutationCount = Object.values(consequences).reduce((sum: number, count: any) => sum + (Number(count) || 0), 0)
-
-			// Create a summary of top consequences
-			const sortedConsequences = Object.entries(consequences).sort(
-				([, a], [, b]) => (Number(b) || 0) - (Number(a) || 0)
-			)
-
-			mafConsequencesText = sortedConsequences.map(([type, count]) => `${type}: ${count}`).join(', ')
-
-			if (Object.keys(consequences).length > 3) {
-				mafConsequencesText += `, +${Object.keys(consequences).length - 3} more`
-			}
+		if (parsedData.maf) {
+			mafTotalProcessed = parsedData.maf.total_processed || 0
+			mafIncluded = parsedData.maf.total_included || 0
+			mafExcludedByDepth = parsedData.maf.excluded_by_min_depth || 0
+			mafExcludedByAltCount = parsedData.maf.excluded_by_min_alt_count || 0
+			mafExcludedByConsequence = parsedData.maf.excluded_by_consequence_type || 0
 		}
 
-		row.push({ value: mafMutationCount })
-		row.push({
-			value: mafConsequencesText,
-			html: `<span title="${mafConsequencesText}" style="font-size: 11px;">${mafConsequencesText}</span>`
-		})
+		row.push({ value: mafTotalProcessed })
+		row.push({ value: mafIncluded })
+		row.push({ value: mafExcludedByDepth })
+		row.push({ value: mafExcludedByAltCount })
+		row.push({ value: mafExcludedByConsequence })
 
-		// CNV Segments Skipped
-		let cnvSegmentsSkipped = 0
-		if (parsedData.cnv && parsedData.cnv.segment_mean !== undefined) {
-			cnvSegmentsSkipped = Number(parsedData.cnv.segment_mean) || 0
+		// CNV Statistics
+		let cnvTotalProcessed = 0
+		let cnvIncluded = 0
+		let cnvExcludedByThresholds = 0
+		let cnvExcludedByLength = 0
+
+		if (parsedData.cnv) {
+			cnvTotalProcessed = parsedData.cnv.total_processed || 0
+			cnvIncluded = parsedData.cnv.total_included || 0
+			// Combine loss and gain threshold exclusions
+			cnvExcludedByThresholds =
+				(parsedData.cnv.excluded_by_loss_threshold || 0) + (parsedData.cnv.excluded_by_gain_threshold || 0)
+			cnvExcludedByLength = parsedData.cnv.excluded_by_segment_length || 0
 		}
-		row.push({ value: cnvSegmentsSkipped })
 
-		// Invalid Rows (MAF + CNV)
+		row.push({ value: cnvTotalProcessed })
+		row.push({ value: cnvIncluded })
+		row.push({ value: cnvExcludedByThresholds })
+		row.push({ value: cnvExcludedByLength })
+
+		// Invalid Rows (MAF + CNV combined)
 		let totalInvalidRows = 0
 		if (parsedData.maf && parsedData.maf.invalid_rows !== undefined) {
 			totalInvalidRows += Number(parsedData.maf.invalid_rows) || 0
