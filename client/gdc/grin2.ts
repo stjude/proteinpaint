@@ -29,30 +29,6 @@ interface TableRowItem {
 // Default MAF classes for mutation types
 const defaultCheckedClasses = ['M', 'F', 'N', 'StopLost', 'StartLost', 'L']
 
-// Standard MAF classes with labels
-const standardConsLabels = {
-	M: 'Missense Mutation',
-	F: 'Frameshift Mutation',
-	N: 'Nonsense Mutation',
-	StopLost: 'Stop Lost',
-	StartLost: 'Start Lost',
-	L: 'Splice Site',
-	I: 'Insertion',
-	D: 'Deletion',
-	ProteinAltering: 'Protein Altering',
-	P: 'Protein Altering',
-	E: 'Exon',
-	S: 'Silent',
-	Intron: 'Intronic',
-	Utr3: "3' UTR",
-	Utr5: "5' UTR",
-	noncoding: 'Non-coding',
-	snv: 'SNV',
-	mnv: 'MNV',
-	insertion: 'Insertion',
-	deletion: 'Deletion'
-}
-
 // Classes to skip in MAF analysis
 const skipMAFclasses = ['WT', 'Blank', 'X']
 
@@ -912,6 +888,9 @@ function makeControls(obj) {
 				'display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px; margin-bottom: 12px;'
 			)
 
+		// Create a Set to track already seen labels and prevent duplicates
+		const seenLabels = new Set()
+
 		// Simplified iteration through mclass using checkbox.js
 		for (const cls in mclass) {
 			// Skip if not SNV/indel
@@ -919,11 +898,18 @@ function makeControls(obj) {
 			// Skip any classes defined in skipMAFclasses
 			if (skipMAFclasses.includes(cls)) continue
 
+			// Use the mclass label directly
+			const labelText = mclass[cls].label
+
+			// SKIP if we've already seen this exact label (prevents duplicates)
+			if (seenLabels.has(labelText)) {
+				console.log(`Skipping duplicate label: "${labelText}" for class: ${cls}`)
+				continue
+			}
+			seenLabels.add(labelText)
+
 			// Determine if this should be checked by default
 			const isDefaultChecked = defaultCheckedClasses.includes(cls)
-
-			// Get the standard biologist label, fallback to PP label if not found
-			const labelText = standardConsLabels[cls] || mclass[cls].label
 
 			// Create a div for this checkbox to fit in the grid
 			const checkboxDiv = checkboxContainer.append('div')
@@ -967,9 +953,10 @@ function makeControls(obj) {
 				'style',
 				'margin-top: 8px; padding: 8px; background-color: #f8f9fa; border-radius: 4px; border-left: 3px solid #6c757d; font-size: 12px; color: #495057; line-height: 1.4;'
 			).html(`
-				<strong>Mutation Types:</strong> Select the types of mutations to include in your analysis.
-				High-impact mutations are selected by default. If none are selected, all mutation types will be included.
-			`)
+		<strong>Mutation Types:</strong> Select the types of mutations to include in your analysis.
+		High-impact mutations (missense, nonsense, frameshift) are selected by default.
+		Silent/synonymous mutations are excluded by default as they don't change protein sequence.
+	`)
 
 		// Row 3: Hypermutator Max Cut Off
 		const hyperContainer = optionsGrid
