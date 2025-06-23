@@ -90,6 +90,13 @@ export class WSIViewerInteractions {
 					if (currentIndex === 0) return
 					currentIndex -= 1
 				}
+
+				// TODO handle this better
+				const vectorLayer = map
+					.getLayers()
+					.getArray()
+					.find(l => l instanceof VectorLayer)!
+
 				if (idx !== currentIndex) {
 					//When the index changes, scroll to the new annotation
 					//Timeout for when user presses arrows multiple times.
@@ -97,6 +104,54 @@ export class WSIViewerInteractions {
 						buffers.annotationsIdx.set(currentIndex)
 						const newZoomInPoints = annotationsData[currentIndex].zoomCoordinates
 						if (newZoomInPoints != undefined) this.addZoomInEffect(activeImageExtent, [newZoomInPoints], map)
+
+						const topLeft = [
+							annotationsData[currentIndex].zoomCoordinates[0],
+							-annotationsData[currentIndex].zoomCoordinates[1]
+						]
+						const size = 512
+
+						const squareCoords = [
+							[
+								topLeft,
+								[topLeft[0] + size, topLeft[1]],
+								[topLeft[0] + size, topLeft[1] - size],
+								[topLeft[0], topLeft[1] - size]
+							]
+						]
+
+						const square = new Feature({
+							geometry: new Polygon([squareCoords[0]]),
+							properties: {
+								isLocked: false
+							}
+						})
+
+						square.setStyle(
+							new Style({
+								fill: new Fill({ color: 'rgba(255, 0, 0, 0.4)' }),
+								stroke: new Stroke({ color: '#ff0000', width: 2 })
+							})
+						)
+
+						vectorLayer.getSource().forEachFeature((feature: Feature<Geometry>) => {
+							if (feature.getProperties().active) {
+								// TODO set active property or find another way to deal with this
+								feature.setStyle(
+									new Style({
+										fill: new Fill({ color: 'rgba(255, 0, 0, 0.4)' }),
+										stroke: new Stroke({ color: '#FFAACC', width: 2 })
+									})
+								)
+							} else {
+								feature.setStyle(
+									new Style({
+										fill: new Fill({ color: 'rgba(255, 0, 0, 0.4)' }),
+										stroke: new Stroke({ color: '#FFAACC', width: 2 })
+									})
+								)
+							}
+						})
 					}, 500)
 					d()
 				}
@@ -113,14 +168,7 @@ export class WSIViewerInteractions {
 							: { label: matchingClass.label, color: matchingClass.color }
 					buffers.tmpClass.set(tmpClass)
 
-					const vectorLayer = map
-						.getLayers()
-						.getArray()
-						.find(l => l instanceof VectorLayer)
-
-					if (!vectorLayer) return
-
-					this.addAnnotation(vectorLayer, annotationsData, currentIndex, matchingClass.color)
+					this.addAnnotation(vectorLayer!, annotationsData, currentIndex, matchingClass.color)
 
 					const body = {
 						coordinates: annotationsData[currentIndex].zoomCoordinates, //Original x,y coordinates
@@ -129,7 +177,9 @@ export class WSIViewerInteractions {
 						class: event.code === 'Enter' ? null : event.code.replace('Digit', '').replace('Key', '')
 					}
 
-					await dofetch3('sampleWsiAiApi', { body }).catch()
+					await dofetch3('sampleWsiAiApi', { body }).catch(reason => {
+						console.error(reason)
+					})
 				}
 			})
 		}
