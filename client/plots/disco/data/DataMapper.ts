@@ -121,7 +121,7 @@ export default class DataMapper {
 					this.addData(dObject, dataArray)
 				}
 			} else if (dObject.dt == dtfusionrna || dObject.dt == dtsv) {
-				if (indexA != -1 || indexB != -1) {
+				if (indexA != -1 && indexB != -1) {
 					// show fusion event when at least one gene knonw
 					this.addData(dObject, dataArray)
 				}
