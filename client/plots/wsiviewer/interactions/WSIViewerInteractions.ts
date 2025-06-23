@@ -179,7 +179,7 @@ export class WSIViewerInteractions {
 
 					//Advance to the next table row after annotating
 					const nextIdx = currentIndex + 1
-					if (nextIdx < annotationsData.length - 1) {
+					if (nextIdx < annotationsData.length) {
 						buffers.annotationsIdx.set(nextIdx)
 						const coords = [annotationsData[nextIdx].zoomCoordinates] as unknown as [number, number][]
 						this.addZoomInEffect(activeImageExtent, coords, map)
