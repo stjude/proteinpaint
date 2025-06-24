@@ -210,8 +210,14 @@ def simple_column_filter(sorted_results, num_rows_to_process=50):
 try:
 	# 1. Stream in JSON input data
 	json_input = sys.stdin.read().strip()
-	input_data = json.loads(json_input)
-
+	if not json_input:
+		write_error("No input data provided")
+		sys.exit(1)
+	try:
+		input_data = json.loads(json_input)
+	except json.JSONDecodeError as e:
+		write_error(f"Invalid JSON input: {str(e)}")
+		sys.exit(1)
 	# 2. Generate gene annotation table from gene2coord
 	dbfile = input_data["genedb"]
 	try:

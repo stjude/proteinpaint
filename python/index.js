@@ -22,20 +22,36 @@ export function run_python(pyfile, input_data) {
 		const stdout = []
 		const stderr = []
 
+		// Handle stdin errors (e.g. EPIPE)
+		ps.stdin.on('error', err => {
+			if (err.code === 'EPIPE') {
+				console.warn(`run_python('${pyfile}'): EPIPE error on stdin, Python may have exited early`)
+			} else {
+				console.error(`run_python('${pyfile}'): stdin error:`, err)
+			}
+		})
+
 		try {
 			Readable.from(input_data).pipe(ps.stdin)
 		} catch (error) {
 			ps.kill()
-			let errmsg = error
-			if (stderr.length) errmsg += `killed run_python('${pyfile}'), stderr: ${stderr.join('').trim()}`
-			reject(errmsg)
+			const stderrStr = stderr.join('').trim()
+			let errmsg = `run_python('${pyfile}'): Failed to pipe input: ${error.message}`
+			if (stderrStr) errmsg += `\nstderr: ${stderrStr}`
+			reject(new Error(errmsg))
+			return
 		}
 
 		ps.stdout.on('data', data => stdout.push(data))
-		ps.stderr.on('data', data => stderr.push(data))
+		ps.stderr.on('data', data => {
+			stderr.push(data)
+			console.log(`run_python('${pyfile}'): stderr: ${data.toString().trim()}`)
+		})
 		ps.on('error', err => {
-			if (stderr.length) console.log(`run_python('${pyfile}') ps.on('error') stderr:`, stderr)
-			reject(err)
+			const stderrStr = stderr.join('').trim()
+			let errmsg = `run_python('${pyfile}'): Process error: ${err.message}`
+			if (stderrStr) errmsg += `\nstderr: ${stderrStr}`
+			reject(new Error(errmsg))
 		})
 		ps.on('close', code => {
 			const stderrStr = stderr.join('').trim()
