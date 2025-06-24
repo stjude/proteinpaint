@@ -7,7 +7,7 @@ import './style.css'
 import './style-zoomify-scoped.css'
 import { select as d3select, selectAll as d3selectAll } from 'd3-selection'
 import * as client from './client'
-import { dofetch3, setAuth } from '#common/dofetch'
+import { dofetch3, setAuth, clearServerDataCache } from '#common/dofetch'
 import { findgenemodel_bysymbol } from './gene'
 import * as common from '#shared/common.js'
 import { bulkui, bulkembed } from './bulk.ui'
@@ -285,8 +285,9 @@ const boundApps = new WeakMap()
 //   getState?: () => (/*full app state object to allow recovering views on HMR */)
 // }
 //
-export function bindProteinPaint({ rootElem, initArgs, updateArgs, isStale }) {
+export function bindProteinPaint({ rootElem, initArgs, updateArgs, isStale, hasChangedUsername }) {
 	const app = boundApps.get(rootElem)
+	if (hasChangedUsername) clearServerDataCache()
 
 	// A PP tool instance may become stale due to new data and/or code version release, and
 	// in case a user browser session remained open to an outdated tool view while a new version was published.
@@ -306,15 +307,13 @@ export function bindProteinPaint({ rootElem, initArgs, updateArgs, isStale }) {
 			// so don't trigger a non-user reactive update right after the initial rendering
 			if (app.initTimeout) clearTimeout(app.initTimeout)
 
-			if (!hasUpdatedData(data)) {
-				app.initTimeout = setTimeout(() => {
-					app.then(() => {
-						if (!app) console.error('missing ppRef.current')
-						//
-						if (!isStale()) app.update(updateArgs)
-					})
-				}, 20)
-			}
+			app.initTimeout = setTimeout(() => {
+				app.then(() => {
+					if (!app) console.error('missing ppRef.current')
+					//
+					if (!isStale()) app.update(updateArgs)
+				})
+			}, 20)
 		}
 	} else {
 		const pp_holder = rootElem.querySelector('.sja_root_holder')

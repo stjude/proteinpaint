@@ -252,6 +252,14 @@ export function dofetch3(path, init = {}, opts = {}) {
 	return dofetch2(path, init, opts)
 }
 
+export function clearServerDataCache(opts = {}) {
+	const cache = opts?.serverData || defaultServerDataCache
+	if (!cache) return
+	for (const k of Object.keys(cache)) {
+		delete cache[k]
+	}
+}
+
 const urlMaxLength = 2000 // if a GET url is longer than this, will be converted to POST of the same route
 
 /*	
