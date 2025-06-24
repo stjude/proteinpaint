@@ -1,9 +1,7 @@
 import type { RoutePayload } from './routeApi.js'
 
 export type ProfileScoresRequest = {
-	terms: any[]
-	scoreTerms: any[]
-	scScoreTerms?: any[]
+	scoreTerms: { score: any; maxScore?: any }[]
 	filter?: any
 	isRadarFacility?: boolean
 	userSites?: string[]

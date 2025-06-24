@@ -1,16 +1,16 @@
 import type { RouteApi } from '#types'
-import { ProfileScoresPayload } from '#types/checkers'
+import { ProfileFormScoresPayload } from '#types/checkers'
 import { getData } from '../src/termdb.matrix.js'
 
 export const api: RouteApi = {
 	endpoint: 'profileFormScores',
 	methods: {
 		get: {
-			...ProfileScoresPayload,
+			...ProfileFormScoresPayload,
 			init
 		},
 		post: {
-			...ProfileScoresPayload,
+			...ProfileFormScoresPayload,
 			init
 		}
 	}
@@ -32,9 +32,12 @@ function init({ genomes }) {
 }
 
 async function getScoresDict(query, ds, genome) {
+	const terms = [...query.scoreTerms]
+	if (query.scScoreTerms) terms.push(...query.scScoreTerms)
+
 	const data = await getData(
 		{
-			terms: [...query.scoreTerms, ...query.scScoreTerms],
+			terms,
 			filter: query.filter //if isRadarFacility and site is specified, do not apply the filter
 		},
 		ds,
@@ -71,11 +74,12 @@ async function getScoresDict(query, ds, genome) {
 		const percents: { [key: string]: number } = getPercentsDict(getDictFunc, samples)
 		term2Score[d.term.id] = percents
 	}
-	for (const d of query.scScoreTerms) {
-		const samples = sampleData ? [sampleData] : Object.values(data.samples)
-		const percents: { [key: string]: number } = getSCPercentsDict(d, samples)
-		term2Score[d.term.id] = percents
-	}
+	if (query.scScoreTerms)
+		for (const d of query.scScoreTerms) {
+			const samples = sampleData ? [sampleData] : Object.values(data.samples)
+			const percents: { [key: string]: number } = getSCPercentsDict(d, samples)
+			term2Score[d.term.id] = percents
+		}
 
 	const hospital = sampleData?.[query.facilityTW.$id]?.value
 

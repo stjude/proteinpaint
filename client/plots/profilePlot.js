@@ -187,7 +187,6 @@ export class profilePlot {
 		const isAggregate = this.isAggregate()
 		if (this.type != 'profileForms')
 			this.data = await this.app.vocabApi.getProfileScores({
-				terms: [...this.twLst, this.config.facilityTW], //added facility term to all the plots to get the hospital name
 				scoreTerms: this.scoreTerms,
 				filter: this.filter,
 				isAggregate,
@@ -198,7 +197,6 @@ export class profilePlot {
 			})
 		else
 			this.data = await this.app.vocabApi.getProfileFormScores({
-				terms: [...this.twLst, this.config.facilityTW], //added facility term to all the plots to get the hospital name
 				scoreTerms: this.scoreTerms,
 				scScoreTerms: this.scScoreTerms,
 				filter: this.filter,
@@ -207,6 +205,7 @@ export class profilePlot {
 				userSites: this.state.sites,
 				facilityTW: this.config.facilityTW
 			})
+		console.log(this.data)
 		this.sites = this.data.sites
 		if (!this.isRadarFacility) this.sites.unshift({ label: '', value: '' })
 		this.sites.sort((a, b) => {
