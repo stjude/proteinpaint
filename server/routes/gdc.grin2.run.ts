@@ -217,18 +217,12 @@ function init({ genomes }) {
 			// Prepare the path to the gene database file
 			const genedbfile = path.join(serverconfig.tpmasterdir, g.genedb.dbfile)
 
-			// Generate a unique image file name
-			//const imagefile = path.join(serverconfig.cachedir, `grin2_${Date.now()}_${Math.floor(Math.random() * 1e9)}.png`)
-
 			// Prepare input for python script - pass the Rust output and the additional properties as input to python
 			const pyInput = JSON.stringify({
 				genedb: genedbfile,
 				chromosomelist: g.majorchr,
-				//imagefile: imagefile,
 				lesion: dataForPython // The mutation string from Rust
 			})
-
-			console.log(`python input: ${pyInput}`)
 
 			// Call the python script
 			console.log('[GRIN2] Executing python script...')
@@ -238,9 +232,12 @@ function init({ genomes }) {
 				pyResult = await run_python('gdcGRIN2.py', pyInput)
 			} catch (pyError) {
 				console.error('[GRIN2] Python execution failed:', pyError)
-				throw new Error(`Python script failed: ${pyError.message}`)
+				if (pyError && typeof pyError === 'object' && 'message' in pyError) {
+					throw new Error(`Python script failed: ${(pyError as { message: string }).message}`)
+				} else {
+					throw new Error(`Python script failed: ${String(pyError)}`)
+				}
 			}
-			//const pyResult = await run_python('gdcGRIN2.py', pyInput)
 			// console.log(`[GRIN2] python execution completed, result: ${pyResult}`)
 			console.log('[GRIN2] python execution completed')
 			console.log(`[GRIN2] Python stderr: ${pyResult.stderr}`)
@@ -250,7 +247,8 @@ function init({ genomes }) {
 			// Parse python result to get image or check for errors
 			let resultData
 			try {
-				resultData = JSON.parse(pyResult.stdout)
+				// console.log('[GRIN2] pyResult:', pyResult)
+				resultData = JSON.parse(pyResult)
 				console.log('[GRIN2] Finished python analysis')
 				const pngImg = resultData.png[0]
 				const topGeneTable = resultData.topGeneTable || null
