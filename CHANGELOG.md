@@ -6,7 +6,6 @@ All notable changes to this project will be documented in this file.
 
 General:
 - Adding timming information to UI analysis report; Adding case by case records summary; Updated run route response definition; Added table reporting MAF and CNV records included/excluded by analysis; Updated MAF options default checkbox behavior and labeling; Fixed top gene table sorting.
-- on clicking a gene model from gene track, launch new protein view in a sandbox instead of floating pane
 
 ## 2.132.0
 
@@ -47,10 +46,16 @@ Fixes:
 - singlecell sample table allows showing "termid" as is
 
 
-## 2.129.5-c5a0eaea6.0
+## 2.129.5-c5a0eaea6.1
 
 Fixes:
 - Fix the missing "load gene sets" from oncoMatrix gene set edit UI
+
+
+## 2.129.5-c5a0eaea6.0
+
+Fixes:
+- on clicking a gene model from gene track, launch new protein view in a sandbox instead of floating pane
 
 
 ## 2.129.4
