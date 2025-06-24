@@ -33,9 +33,16 @@ function init({ genomes }) {
 
 async function getScores(query, ds, genome) {
 	const isRadarFacility = query.isRadarFacility
+	const terms: any[] = [query.facilityTW]
+	for (const term of query.scoreTerms) {
+		terms.push(term.score)
+		if (term.maxScore) {
+			terms.push(term.maxScore)
+		}
+	}
 	const data = await getData(
 		{
-			terms: query.terms,
+			terms,
 			filter: isRadarFacility && query.site ? undefined : query.filter //if isRadarFacility and site is specified, do not apply the filter
 		},
 		ds,
