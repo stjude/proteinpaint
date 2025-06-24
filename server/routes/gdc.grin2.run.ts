@@ -1,7 +1,7 @@
 import type { RunGRIN2Request, RunGRIN2Response, RouteApi } from '#types'
 import { runGRIN2Payload } from '#types/checkers'
 import { stream_rust } from '@sjcrh/proteinpaint-rust'
-import { run_R } from '@sjcrh/proteinpaint-r'
+import { run_python } from '@sjcrh/proteinpaint-python'
 import serverconfig from '#src/serverconfig.js'
 import path from 'path'
 import { formatElapsedTime } from '@sjcrh/proteinpaint-shared/time.js'
@@ -9,7 +9,7 @@ import { formatElapsedTime } from '@sjcrh/proteinpaint-shared/time.js'
 /**
  * Route to run GRIN2 analysis:
  * 1. Call Rust to process MAF & CNV files and get JSON data (now with streaming)
- * 2. Pipe the JSON to R script to generate a plot
+ * 2. Pipe the JSON to python script to generate a plot
  * 3. Return the plot image to client
  */
 
@@ -99,7 +99,7 @@ function parseJsonlOutput(rustOutput: string): any {
  * 1. Extract caseFiles from req.query (already parsed by middleware)
  * 2. Pass caseFiles and mafOptions to Rust for mutation processing (now streaming)
  * 3. Parse Rust output to get mutation data and summary of files
- * 3. Pass Rust mutation output to R for plot generation while we send the file summary to the div for downloaded files
+ * 3. Pass Rust mutation output to python for plot generation while we send the file summary to the div for downloaded files
  * 4. Return generated PNG as base64 string, the top gene table as JSON, and the Rust summary stats
  */
 
@@ -191,10 +191,10 @@ function init({ genomes }) {
 			let dataForR: any[] = []
 
 			try {
-				// Extract only successful data for R script
+				// Extract only successful data for python script
 				if (parsedRustResult.successful_data && Array.isArray(parsedRustResult.successful_data)) {
 					dataForR = parsedRustResult.successful_data.flat()
-					console.log(`[GRIN2] Extracted ${dataForR.length} records for R script`)
+					console.log(`[GRIN2] Extracted ${dataForR.length} records for python script`)
 					console.log(
 						`[GRIN2] Success: ${parsedRustResult.summary.successful_files}, Failed: ${parsedRustResult.summary.failed_files}`
 					)
@@ -212,58 +212,52 @@ function init({ genomes }) {
 				dataForR = []
 			}
 
-			// Step 2: Call R script to generate the plot (unchanged)
+			// Step 2: Call python script to generate the plot (unchanged)
 
 			// Prepare the path to the gene database file
 			const genedbfile = path.join(serverconfig.tpmasterdir, g.genedb.dbfile)
 
 			// Generate a unique image file name
-			const imagefile = path.join(serverconfig.cachedir, `grin2_${Date.now()}_${Math.floor(Math.random() * 1e9)}.png`)
+			// const imagefile = path.join(serverconfig.cachedir, `grin2_${Date.now()}_${Math.floor(Math.random() * 1e9)}.png`)
 
-			// Prepare input for R script - pass the Rust output and the additional properties as input to R
-			const rInput = JSON.stringify({
+			// Prepare input for python script - pass the Rust output and the additional properties as input to R
+			const pyInput = JSON.stringify({
 				genedb: genedbfile,
 				chromosomelist: g.majorchr,
-				imagefile: imagefile,
+				// imagefile: imagefile,
 				lesion: dataForR // The mutation string from Rust
 			})
 
 			// console.log(`R input: ${rInput}`)
 
-			// Call the R script
-			console.log('[GRIN2] Executing R script...')
-			const grin2AnalysisStart = Date.now()
-			const rResult = await run_R('gdcGRIN2.R', rInput, [])
-			// console.log(`[GRIN2] R execution completed, result: ${rResult}`)
-			console.log('[GRIN2] R execution completed')
-			const grin2AnalysisTime = formatElapsedTime(Date.now() - grin2AnalysisStart)
-			console.log(`[GRIN2] Rust processing took ${grin2AnalysisTime}`)
+			// Call the python script
+			console.log('[GRIN2] Executing python script...')
+			console.log(pyInput)
+			const pyAnalysisTime = Date.now()
+			const pyResult = await run_python('gdcGRIN2.py', pyInput)
+			// console.log(`[GRIN2] python execution completed, result: ${pyResult}`)
+			console.log('[GRIN2] python execution completed')
+			console.log(`[GRIN2] python analysis took ${formatElapsedTime(Date.now() - pyAnalysisTime)}`)
 
-			// Parse R result to get image or check for errors
+			// Parse python result to get image or check for errors
 			let resultData
 			try {
-				resultData = JSON.parse(rResult)
-				console.log('[GRIN2] Finished R analysis')
+				resultData = JSON.parse(pyResult)
+				console.log('[GRIN2] Finished python analysis')
 				const pngImg = resultData.png[0]
 				const topGeneTable = resultData.topGeneTable || null
 				const analysisStats = parsedRustResult.summary || {}
-				const totalProcessTime = formatElapsedTime(Date.now() - downloadStartTime)
-				console.log('[GRIN2] Total GRIN2 processing time:', totalProcessTime)
+				console.log('[GRIN2] Total GRIN2 processing time:', formatElapsedTime(Date.now() - downloadStartTime))
 				return res.json({
 					pngImg,
 					topGeneTable,
 					rustResult: parsedRustResult,
 					analysisStats: analysisStats,
-					timing: {
-						rustProcessingTime: downloadTime,
-						grin2ProcessingTime: grin2AnalysisTime,
-						totalTime: totalProcessTime
-					},
 					status: 'success'
 				})
 			} catch (parseError) {
-				console.error('[GRIN2] Error parsing R result:', parseError)
-				// console.log('[GRIN2] Raw R result:', rResult)
+				console.error('[GRIN2] Error parsing python result:', parseError)
+				// console.log('[GRIN2] Raw python result:', pyResult)
 			}
 		} catch (e: any) {
 			console.error('[GRIN2] Error running analysis:', e)
