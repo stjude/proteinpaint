@@ -233,16 +233,24 @@ function init({ genomes }) {
 			// Call the python script
 			console.log('[GRIN2] Executing python script...')
 			const grin2AnalysisStart = Date.now()
-			const pyResult = await run_python('gdcGRIN2.py', pyInput)
+			let pyResult
+			try {
+				pyOutput = await run_python('gdcGRIN2.py', pyInput)
+			} catch (pyError) {
+				console.error('[GRIN2] Python execution failed:', pyError)
+				throw new Error(`Python script failed: ${pyError.message}`)
+			}
+			//const pyResult = await run_python('gdcGRIN2.py', pyInput)
 			// console.log(`[GRIN2] python execution completed, result: ${pyResult}`)
 			console.log('[GRIN2] python execution completed')
+			console.log(`[GRIN2] Python stderr: ${pyOutput.stderr}`)
 			const grin2AnalysisTime = formatElapsedTime(Date.now() - grin2AnalysisStart)
 			console.log(`[GRIN2] Rust processing took ${grin2AnalysisTime}`)
 
 			// Parse python result to get image or check for errors
 			let resultData
 			try {
-				resultData = JSON.parse(pyResult)
+				resultData = JSON.parse(pyResult.stdout)
 				console.log('[GRIN2] Finished python analysis')
 				const pngImg = resultData.png[0]
 				const topGeneTable = resultData.topGeneTable || null
