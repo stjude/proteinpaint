@@ -26,16 +26,17 @@
 #  showingTop: int
 # }
 """
-# Adding import statements
+
 import warnings, json, sys, os
 import sqlite3
 import base64
 import pandas as pd
 import matplotlib.pyplot as plt
+import numpy as np
 from io import BytesIO
 from grin2_core import order_index_gene_data, order_index_lsn_data, prep_gene_lsn_data, find_gene_lsn_overlaps, count_hits, row_bern_conv
 from grin2_core import row_prob_subj_hit, p_order, process_block_in_chunks, prob_hits, grin_stats, write_grin_xlsx
-from grin2_plot import compute_gw_coordinates, default_grin_colors, genomewide_lsn_plot
+from typing import Dict, Optional
 
 # Suppress all warnings 
 warnings.filterwarnings('ignore')
@@ -50,9 +51,9 @@ def assign_lesion_colors(lesion_types):
 	Assign colors to lesion types based on what's present in the data
 	"""
 	color_map = {
-		"mutation" : "black",
-		"gain" : "red",
-		"loss" : "blue"
+		"mutation" : "#44AA44",   
+        "gain" : "#FF4444",       
+        "loss" : "#4444FF"  
 	}
 	# Find unique lesion types 
 	unique_types = pd.Series(lesion_types).unique()
@@ -63,6 +64,211 @@ def assign_lesion_colors(lesion_types):
 	# Return colors for types present in data
 	available_colors = {k: color_map[k] for k in unique_types if k in color_map}
 	return available_colors
+
+def plot_grin2_manhattan(grin_results: dict, 
+                        chrom_size: pd.DataFrame,
+                        colors: Optional[Dict[str, str]] = None) -> plt.Figure:
+    """
+    Create a Manhattan plot for GRIN2 genomic analysis results using colored scatter points.
+    
+    This function generates a genome-wide visualization showing the statistical 
+    significance of genomic alterations across all chromosomes. Each point represents 
+    a gene with its significance level (-log₁₀(q-value)) plotted against its chromosome
+    start position. Different mutation types (gain, loss, mutation) are shown in different colors.
+    
+    The plot displays:
+    - X-axis: Chromosome start positions (simple coordinate system)
+    - Y-axis: Statistical significance as -log₁₀(q-value) 
+    - Colors: Different mutation types (CNV gains, losses, point mutations)
+    - Threshold lines: Common significance levels (q=0.05, 0.01, 0.001)
+    
+    Args:
+        grin_results (dict): Results dictionary from grin_stats() function containing:
+            - 'gene.hits': DataFrame with gene-level statistical results
+                Required columns:
+                - 'chrom': Chromosome names  
+                - 'loc.start': Gene start positions
+                - 'q.nsubj.gain': Q-values for CNV gains (optional)
+                - 'q.nsubj.loss': Q-values for CNV losses (optional)  
+                - 'q.nsubj.mutation': Q-values for point mutations (optional)
+                
+        chrom_size (pd.DataFrame): Chromosome size information with columns:
+            - 'chrom': Chromosome names (must match those in grin_results)
+            - 'size': Chromosome lengths in base pairs
+            
+        colors (Optional[Dict[str, str]]): Color mapping for mutation types.
+            Keys should be 'gain', 'loss', 'mutation'. If None, uses defaults:
+            - 'gain': '#FF4444' (red)  
+            - 'loss': '#4444FF' (blue)
+            - 'mutation': '#44AA44' (green)
+            
+    Returns:
+        plt.Figure: Matplotlib figure object containing the Manhattan plot.
+            The figure is ready for saving, displaying, or further customization.
+            
+    Raises:
+        KeyError: If required columns are missing from input DataFrames
+        ValueError: If no valid q-value columns are found in grin_results
+        
+        
+    Notes:
+        - Genes with q-values ≤ 0 or missing values are excluded from plotting
+        - Only points with -log₁₀(q-value) ≥ 0.1 are plotted (q-value ≤ ~0.79)
+        - Multiple mutation types at the same gene are offset horizontally for visibility
+        - Significance threshold lines help interpret results:
+            * Orange dashed: q = 0.05 (marginally significant)
+            * Dark orange dashed: q = 0.01 (significant)  
+            * Red dashed: q = 0.001 (highly significant)
+    """
+    # Default colors
+    if colors is None:
+        colors = {'gain': '#FF4444', 'loss': '#4444FF', 'mutation': '#44AA44'}
+    
+    # Extract gene hits data
+    gene_hits = grin_results['gene.hits']
+    
+    # Set up the plot
+    fig, ax = plt.subplots(figsize=(12, 6), dpi=110)
+    
+    # Find which mutation type columns exist and have data
+    mutation_cols = []
+    for mut_type in ['gain', 'loss', 'mutation']:
+        q_col = f'q.nsubj.{mut_type}'
+        if q_col in gene_hits.columns:
+            mutation_cols.append((mut_type, q_col))
+    
+    
+    # Collect data for each chromosome to calculate cumulative positions
+    chrom_data = {}
+    cumulative_pos = 0
+    
+    # Calculate cumulative chromosome positions for plotting
+    for _, row in chrom_size.iterrows():
+        chrom = row['chrom']
+        size = row['size']
+        chrom_data[chrom] = {
+            'start': cumulative_pos,
+            'size': size,
+            'center': cumulative_pos + size / 2
+        }
+        cumulative_pos += size
+    
+    total_genome_length = cumulative_pos
+    
+    # Collect all points to plot
+    plot_data = {'x': [], 'y': [], 'colors': [], 'types': []}
+    
+    # Process each gene
+    for _, gene_row in gene_hits.iterrows():
+        chrom = gene_row['chrom']
+        
+        # Skip if chromosome not in coordinate map
+        if chrom not in chrom_data:
+            continue
+            
+        # Use the gene's chromosome start position directly
+        gene_start = gene_row.get('loc.start', 0)
+        
+        # Map to cumulative genome coordinates for plotting
+        x_pos = chrom_data[chrom]['start'] + gene_start
+        
+        # Add points for each mutation type
+        for mut_type, q_col in mutation_cols:
+            if q_col not in gene_row or pd.isna(gene_row[q_col]) or gene_row[q_col] <= 0:
+                continue
+                
+            # Convert q-value to -log10(q-value)
+            q_value = gene_row[q_col]
+            neg_log10_q = -np.log10(q_value)
+            
+            # Skip if not significant enough to plot
+            if neg_log10_q < 0.1:
+                continue
+            
+            # Add slight horizontal offset for multiple mutation types at same gene
+            offset_factor = {'gain': -0.3, 'loss': 0, 'mutation': 0.3}
+            x_offset = offset_factor.get(mut_type, 0) * (total_genome_length * 0.0001)
+            
+            plot_data['x'].append(x_pos + x_offset)
+            plot_data['y'].append(neg_log10_q)
+            plot_data['colors'].append(colors.get(mut_type, '#888888'))
+            plot_data['types'].append(mut_type)
+    
+    
+    # Plot each mutation type separately for better legend control
+    for mut_type, _ in mutation_cols:
+        # Get indices for this mutation type
+        indices = [i for i, t in enumerate(plot_data['types']) if t == mut_type]
+        
+        if indices:
+            x_vals = [plot_data['x'][i] for i in indices]
+            y_vals = [plot_data['y'][i] for i in indices]
+            color = colors.get(mut_type, '#888888')
+            
+            ax.scatter(x_vals, y_vals, 
+                      c=color, 
+                      s=8,  # Point size
+                      alpha=0.7, 
+                      label=mut_type.capitalize(),
+                      edgecolors='none')
+    
+    # Set up axes limits
+    ax.set_xlim(0, total_genome_length)
+    
+    # Calculate y-axis limits from data
+    if plot_data['y']:
+        max_y = max(plot_data['y']) * 1.1
+        ax.set_ylim(0, max(max_y, 5))
+    else:
+        ax.set_ylim(0, 10)
+    
+    # Add chromosome separators and labels using the existing logic
+    chr_positions = []
+    chr_labels = []
+    
+    for _, row in chrom_size.iterrows():
+        chrom = row['chrom']
+        
+        # Add separator line (except for first chromosome)
+        if chrom_data[chrom]['start'] > 0:
+            ax.axvline(x=chrom_data[chrom]['start'], color='gray', linewidth=0.5, alpha=0.7)
+        
+        # Use center position for chromosome label
+        chr_positions.append(chrom_data[chrom]['center'])
+        chr_labels.append(chrom.replace('chr', ''))
+    
+    # Set chromosome labels
+    ax.set_xticks(chr_positions)
+    ax.set_xticklabels(chr_labels, rotation=45, ha='right')
+    
+    # Add significance threshold lines
+    significance_lines = [
+        (1.3, '#FFA500'),  # q=0.05
+        (2.0, '#FF6600'),  # q=0.01  
+        (3.0, '#FF0000')   # q=0.001
+    ]
+    
+    for threshold, line_color in significance_lines:
+        if 0 <= threshold <= ax.get_ylim()[1]:
+            ax.axhline(y=threshold, color=line_color, linestyle='--', 
+                      linewidth=1, alpha=0.7, zorder=1)
+    
+    # Labels and title
+    ax.set_ylabel('-log₁₀(q-value)', fontsize=12)
+    ax.set_xlabel('Chromosomes', fontsize=12) 
+    ax.set_title('GRIN2 Analysis - Genome-wide Significance', fontsize=14, pad=20)
+    
+    # Add legend
+    if len(mutation_cols) > 0:
+        ax.legend(loc='upper right', frameon=True, fancybox=True, shadow=True)
+    
+    # Clean up the plot
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    ax.grid(True, alpha=0.3, axis='y')
+    
+    plt.tight_layout()
+    return fig
 
 def sort_grin2_data(data):
 	"""
@@ -310,33 +516,54 @@ try:
 		write_error(f"Failed to extract gene.hits or sort grin_table: {str(e)}")
 		sys.exit(1)
 
-	# 6. Generate genomewide plot and encode as Base64
+	# # 6. Generate genomewide plot and encode as Base64
+	# try:
+	# 	# Create plot
+	# 	plt.figure(figsize=(900/110, 600/110), dpi=110)
+	# 	plt.margins(0.02)
+	# 	genomewide_lsn_plot(
+	# 		grin_results,
+	# 		max_log10q=150,
+	# 		lsn_colors=lsn_colors
+	# 	)
+	# 	# Save to BytesIO buffer
+	# 	buffer = BytesIO()
+	# 	plt.savefig(buffer, format="png", bbox_inches="tight")
+	# 	plt.close()
+
+	# 	# Get bytes and encode as base64
+	# 	buffer.seek(0)
+	# 	plot_bytes = buffer.getvalue()
+	# 	base64_string = base64.b64encode(plot_bytes).decode("utf-8")
+	# except Exception as e:
+	# 	write_error(f"Failed to generate genomewide plot: {str(e)}")
+	# 	if os.path.exists(temp_file):
+	# 		os.remove(temp_file)
+	# 	sys.exit(1)
+	# finally:
+	# 	plt.close("all")
+
+	# 6. Generate Manhattan plot and encode as Base64
 	try:
-		# Create plot
-		plt.figure(figsize=(900/110, 600/110), dpi=110)
-		plt.margins(0.02)
-		genomewide_lsn_plot(
-			grin_results,
-			max_log10q=150,
-			lsn_colors=lsn_colors
-		)
+		# Create the Manhattan plot using our new function
+		fig = plot_grin2_manhattan(grin_results, chrom_size, lsn_colors)
+		
 		# Save to BytesIO buffer
 		buffer = BytesIO()
-		plt.savefig(buffer, format="png", bbox_inches="tight")
-		plt.close()
+		fig.savefig(buffer, format="png", bbox_inches="tight", dpi=110)
+		plt.close(fig)
 
 		# Get bytes and encode as base64
 		buffer.seek(0)
 		plot_bytes = buffer.getvalue()
 		base64_string = base64.b64encode(plot_bytes).decode("utf-8")
+		
 	except Exception as e:
-		write_error(f"Failed to generate genomewide plot: {str(e)}")
-		if os.path.exists(temp_file):
-			os.remove(temp_file)
+		write_error(f"Failed to generate Manhattan plot: {str(e)}")
 		sys.exit(1)
 	finally:
 		plt.close("all")
-
+		
 	# 7. Generate topGeneTable
 	max_genes_to_show = 500
 	num_rows_to_process = min(len(sorted_results), max_genes_to_show)
