@@ -15,7 +15,6 @@
 # {
 #  genedb: gene db file path
 #  chromosomelist={ <key>: <len>, }
-#  imagefile: temporary file for generating png figure
 #  lesion: flattened string from the output of gdcGRIN2.rs
 # }
 
