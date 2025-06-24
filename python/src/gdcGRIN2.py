@@ -260,7 +260,7 @@ def plot_grin2_manhattan(grin_results: dict,
     
     # Add legend
     if len(mutation_cols) > 0:
-        ax.legend(loc='upper right', frameon=True, fancybox=True, shadow=True)
+        ax.legend(loc='upper right', frameon=False, fancybox=True, shadow=False,  framealpha=0.0)
     
     # Clean up the plot
     ax.spines['top'].set_visible(False)
