@@ -9,6 +9,8 @@ import { SessionData } from '#src/wsisessions/SessionManager.ts'
 import type { TileServerShard } from '#src/sharding/TileServerShard.ts'
 import { ClientHolder } from '#src/caching/ClientHolder.ts'
 import type { KeyValueStorage } from '#src/caching/KeyValueStorage.ts'
+import type { PredictionOverlay } from '#types'
+import { PredictionOverlayType } from '#types'
 
 export default class RedisClientHolder implements KeyValueStorage {
 	private static instance: RedisClientHolder
@@ -140,27 +142,41 @@ export default class RedisClientHolder implements KeyValueStorage {
 			throw new Error('Redis client not found for URL: ' + redisShard.url)
 		}
 
-		const existingKeys = await client.keys('*') // Fetches all keys in the shard
+		const existingKeys = await client.keys('*') // Fetch all keys in the shard
+		const existingKeysSet = new Set<string>(existingKeys)
+		const incomingIds = Object.keys(sessions) // session IDs from the new sessions
 
-		// Parse session identifiers from the fetched JSON
-		const keys = Object.values<string>(sessions)
-
-		// Deleting keys that should no longer be present
-		for (const existingKey of existingKeys) {
-			if (!keys.includes(existingKey)) {
-				await client.del(existingKey)
+		// Remove any keys that are no longer part of the current sessions
+		for (const redisKey of existingKeys) {
+			if (!incomingIds.includes(redisKey)) {
+				await client.del(redisKey)
 			}
 		}
 
-		const result = Object.entries<string>(sessions).filter(([_, filePath]) => !existingKeys.includes(filePath))
+		// Helper to determine overlay type based on filename
+		const getOverlayType = (file: string): PredictionOverlayType =>
+			/uncertainty/i.test(file) ? PredictionOverlayType.UNCERTAINTY : PredictionOverlayType.PREDICTION
 
-		for (const [sessionId, filePath] of result) {
-			if (!existingKeys.includes(filePath)) {
-				const lastAccessTimestamp = new Date().toISOString() // Get current time in ISO 8601 format
-				const sessionData = new SessionData(sessionId, lastAccessTimestamp, tileServerShard)
-				const serializedData = JSON.stringify(sessionData)
-				await client.set(key, serializedData)
+		// Add or update sessions
+		for (const [sessionId, value] of Object.entries(sessions)) {
+			if (existingKeysSet.has(sessionId)) continue
+
+			const lastAccessTimestamp = new Date().toISOString()
+			let overlays: PredictionOverlay[] | undefined
+
+			if (typeof value === 'object' && value !== null) {
+				// Layered session format
+				overlays = Object.entries(value)
+					.filter(([layerKey]) => layerKey !== 'slide')
+					.map(([layerNumber, filePath]) => ({
+						layerNumber,
+						predictionOverlayType: getOverlayType(String(filePath))
+					}))
 			}
+
+			const sessionData = new SessionData(sessionId, lastAccessTimestamp, tileServerShard, overlays)
+
+			await client.set(sessionId, JSON.stringify(sessionData))
 		}
 	}
 
