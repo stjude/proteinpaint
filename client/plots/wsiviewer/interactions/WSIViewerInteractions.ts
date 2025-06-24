@@ -104,54 +104,6 @@ export class WSIViewerInteractions {
 						buffers.annotationsIdx.set(currentIndex)
 						const newZoomInPoints = annotationsData[currentIndex].zoomCoordinates
 						if (newZoomInPoints != undefined) this.addZoomInEffect(activeImageExtent, [newZoomInPoints], map)
-
-						const topLeft = [
-							annotationsData[currentIndex].zoomCoordinates[0],
-							-annotationsData[currentIndex].zoomCoordinates[1]
-						]
-						const size = 512
-
-						const squareCoords = [
-							[
-								topLeft,
-								[topLeft[0] + size, topLeft[1]],
-								[topLeft[0] + size, topLeft[1] - size],
-								[topLeft[0], topLeft[1] - size]
-							]
-						]
-
-						const square = new Feature({
-							geometry: new Polygon([squareCoords[0]]),
-							properties: {
-								isLocked: false
-							}
-						})
-
-						square.setStyle(
-							new Style({
-								fill: new Fill({ color: 'rgba(255, 0, 0, 0.4)' }),
-								stroke: new Stroke({ color: '#ff0000', width: 2 })
-							})
-						)
-
-						vectorLayer.getSource().forEachFeature((feature: Feature<Geometry>) => {
-							if (feature.getProperties().active) {
-								// TODO set active property or find another way to deal with this
-								feature.setStyle(
-									new Style({
-										fill: new Fill({ color: 'rgba(255, 0, 0, 0.4)' }),
-										stroke: new Stroke({ color: '#FFAACC', width: 2 })
-									})
-								)
-							} else {
-								feature.setStyle(
-									new Style({
-										fill: new Fill({ color: 'rgba(255, 0, 0, 0.4)' }),
-										stroke: new Stroke({ color: '#FFAACC', width: 2 })
-									})
-								)
-							}
-						})
 					}, 500)
 					d()
 				}
@@ -183,6 +135,7 @@ export class WSIViewerInteractions {
 						buffers.annotationsIdx.set(nextIdx)
 						const coords = [annotationsData[nextIdx].zoomCoordinates] as unknown as [number, number][]
 						this.addZoomInEffect(activeImageExtent, coords, map)
+						this.addActiveBorder(vectorLayer!, annotationsData, currentIndex, nextIdx, '#00e62a')
 					}
 
 					try {
@@ -208,6 +161,12 @@ export class WSIViewerInteractions {
 	) {
 		const source: VectorSource<Feature<Geometry>> | null = vectorLayer.getSource()
 
+		//Remove any previous feature with the same ID
+		const feature = source?.getFeatureById(`annotation-square-${currentIndex}`)
+		if (feature) {
+			source?.removeFeature(feature)
+		}
+
 		const topLeft = [
 			annotationsData[currentIndex].zoomCoordinates[0],
 			-annotationsData[currentIndex].zoomCoordinates[1]
@@ -230,13 +189,75 @@ export class WSIViewerInteractions {
 			}
 		})
 
+		square.setId(`annotation-square-${currentIndex}`)
+
 		square.setStyle(
 			new Style({
 				fill: new Fill({ color: color }),
-				stroke: new Stroke({ color: color })
+				stroke: new Stroke({ color: color, width: 2 })
 			})
 		)
 
 		source?.addFeature(square)
+	}
+
+	private addActiveBorder(
+		vectorLayer: VectorLayer,
+		annotationsData: {
+			zoomCoordinates: [number, number]
+			type: string
+			class: string
+			uncertainty: number
+		}[],
+		currentIndex: number,
+		nextIdx: number,
+		color: any
+	) {
+		const source: VectorSource<Feature<Geometry>> | null = vectorLayer.getSource()
+
+		//Remove any previous border on the previous index
+		const feature = source?.getFeatureById(`active-border-${currentIndex}`)
+		if (feature) {
+			source?.removeFeature(feature)
+		}
+
+		const topLeft = [annotationsData[nextIdx].zoomCoordinates[0], -annotationsData[nextIdx].zoomCoordinates[1]]
+		const size = 512
+		const borderWth = 50
+
+		const borderCoords = [
+			[
+				topLeft,
+				[topLeft[0] + size, topLeft[1]],
+				[topLeft[0] + size, topLeft[1] - size],
+				[topLeft[0], topLeft[1] - size],
+				topLeft
+			],
+			[
+				[topLeft[0] + borderWth, topLeft[1] - borderWth],
+				[topLeft[0] + size - borderWth, topLeft[1] - borderWth],
+				[topLeft[0] + size - borderWth, topLeft[1] - size + borderWth],
+				[topLeft[0] + borderWth, topLeft[1] - size + borderWth],
+				[topLeft[0] + borderWth, topLeft[1] - borderWth]
+			]
+		]
+
+		const border = new Feature({
+			geometry: new Polygon(borderCoords),
+			properties: {
+				isLocked: false
+			}
+		})
+
+		border.setId(`active-border-${nextIdx}`)
+
+		border.setStyle(
+			new Style({
+				fill: new Fill({ color: color }),
+				stroke: new Stroke({ color: color, width: 2 })
+			})
+		)
+
+		source?.addFeature(border)
 	}
 }
