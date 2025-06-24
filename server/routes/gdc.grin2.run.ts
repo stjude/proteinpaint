@@ -235,7 +235,7 @@ function init({ genomes }) {
 			const grin2AnalysisStart = Date.now()
 			let pyResult
 			try {
-				pyOutput = await run_python('gdcGRIN2.py', pyInput)
+				pyResult = await run_python('gdcGRIN2.py', pyInput)
 			} catch (pyError) {
 				console.error('[GRIN2] Python execution failed:', pyError)
 				throw new Error(`Python script failed: ${pyError.message}`)
@@ -243,7 +243,7 @@ function init({ genomes }) {
 			//const pyResult = await run_python('gdcGRIN2.py', pyInput)
 			// console.log(`[GRIN2] python execution completed, result: ${pyResult}`)
 			console.log('[GRIN2] python execution completed')
-			console.log(`[GRIN2] Python stderr: ${pyOutput.stderr}`)
+			console.log(`[GRIN2] Python stderr: ${pyResult.stderr}`)
 			const grin2AnalysisTime = formatElapsedTime(Date.now() - grin2AnalysisStart)
 			console.log(`[GRIN2] Rust processing took ${grin2AnalysisTime}`)
 
