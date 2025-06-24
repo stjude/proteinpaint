@@ -57,6 +57,15 @@ export class WSIViewerInteractions {
 					zoom: 5,
 					duration: 2000
 				})
+
+				//On zooming to a new annotation, add a border around the annotation
+				const vectorLayer = map
+					.getLayers()
+					.getArray()
+					.find(l => l instanceof VectorLayer)!
+
+				const zoomCoordinates = [zoomInPoints[0][0], imageHeight - zoomInPoints[0][1]] as [number, number]
+				this.addActiveBorder(vectorLayer as VectorLayer, zoomCoordinates, '#00e62a')
 			}, 500)
 		}
 
@@ -135,7 +144,6 @@ export class WSIViewerInteractions {
 						buffers.annotationsIdx.set(nextIdx)
 						const coords = [annotationsData[nextIdx].zoomCoordinates] as unknown as [number, number][]
 						this.addZoomInEffect(activeImageExtent, coords, map)
-						this.addActiveBorder(vectorLayer!, annotationsData, currentIndex, nextIdx, '#00e62a')
 					}
 
 					try {
@@ -201,27 +209,16 @@ export class WSIViewerInteractions {
 		source?.addFeature(square)
 	}
 
-	private addActiveBorder(
-		vectorLayer: VectorLayer,
-		annotationsData: {
-			zoomCoordinates: [number, number]
-			type: string
-			class: string
-			uncertainty: number
-		}[],
-		currentIndex: number,
-		nextIdx: number,
-		color: any
-	) {
+	private addActiveBorder(vectorLayer: VectorLayer, zoomCoordinates: [number, number], color: any) {
 		const source: VectorSource<Feature<Geometry>> | null = vectorLayer.getSource()
 
 		//Remove any previous border on the previous index
-		const feature = source?.getFeatureById(`active-border-${currentIndex}`)
+		const feature = source?.getFeatureById(`active-border`)
 		if (feature) {
 			source?.removeFeature(feature)
 		}
 
-		const topLeft = [annotationsData[nextIdx].zoomCoordinates[0], -annotationsData[nextIdx].zoomCoordinates[1]]
+		const topLeft = zoomCoordinates
 		const size = 512
 		const borderWth = 50
 
@@ -249,7 +246,7 @@ export class WSIViewerInteractions {
 			}
 		})
 
-		border.setId(`active-border-${nextIdx}`)
+		border.setId(`active-border`)
 
 		border.setStyle(
 			new Style({
