@@ -4,6 +4,14 @@ import { appInit } from '#mass/app'
 launches mass ui, to display: 
 1) dictionary chart button on top, click to launch dict ui
 2) a dictionary plot on bottom, for user to select a term and launch summary plot
+
+todo
+- hide nav tabs, only show some plot buttons
+- customize dictionary plot sandbox header text to 'Select variable for correlation plot'
+- survival plot with gdc survival data
+- more chart buttons for typical usecases, each button will show a tailored input ui
+  1. "compare gene exp", tw1 is gene exp, tw2 is anything
+  2. "compare survival", tw1 is survival, tw2 is anything
 */
 
 interface InitArg {
@@ -39,7 +47,13 @@ export async function init(
 			dslabel: gdcDslabel,
 			termfilter: { filter0: arg.filter0 },
 			nav: { activeTab: 1 }, // todo: header_mode='only_buttons'
-			plots: [{ chartType: 'dictionary' }]
+			plots: [{ chartType: 'dictionary' }] // default shows dictionary ui, can change
+			/* todo additional customizations
+			opts:{
+				dictionary:{header:'Select a variable to build Correlation Plot'}
+				// some way to make gene exp violin/boxplot to use log scale by default, but numeric dict term should not
+			}
+			*/
 		}
 	})
 	const api = {
