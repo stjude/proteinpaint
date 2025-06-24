@@ -1,16 +1,13 @@
-import { newSandboxDiv } from '#dom'
-import { appInit } from '#plots/plot.app.js'
-import { copyMerge } from '#rx'
-import type { Elem } from '../types/d3'
+import { appInit } from '#mass/app'
 
 /*
-launches dictionary plot; on selecting any variable, create summary plot
-instruct users to use Edit menu to select 2nd variable to make it "correlation" plot
-
-use of dictionary ui avoids creating any custom interface for selecting two terms
+launches mass ui, to display: 
+1) dictionary chart button on top, click to launch dict ui
+2) a dictionary plot on bottom, for user to select a term and launch summary plot
 */
 
 interface InitArg {
+	debugmode?: true
 	filter0?: object
 	state?: {
 		plots?: Array<{ chartType: string; [key: string]: any }>
@@ -25,20 +22,6 @@ interface UpdateArg {
 	[key: string]: any
 }
 
-interface Plot {
-	chartType: string
-	insertBefore?: string
-	id: string
-	[key: string]: any
-}
-
-interface PlotAppAPI {
-	dispatch: (action: any) => void
-	getState: () => {
-		plots: Plot[]
-	}
-}
-
 const gdcGenome = 'hg38'
 const gdcDslabel = 'GDC'
 
@@ -47,37 +30,24 @@ export async function init(
 	holder: HTMLElement,
 	genomes: any
 ): Promise<{ update: (updateArg: UpdateArg) => Promise<void> }> {
-	const plotAppApi: PlotAppAPI = await appInit({
+	const massApi = await appInit({
+		//debug: arg.debugmode, // is debug accepted?
+		genome: genomes[gdcGenome],
 		holder,
 		state: {
 			genome: gdcGenome,
 			dslabel: gdcDslabel,
 			termfilter: { filter0: arg.filter0 },
+			nav: { activeTab: 1 }, // todo: header_mode='only_buttons'
 			plots: [{ chartType: 'dictionary' }]
-		},
-		genome: genomes[gdcGenome],
-		// must define opts.app.getPlotHolder() to return sandbox, otherwise summary plot breaks by not getting sandbox
-		app: copyMerge(
-			{
-				getPlotHolder: (plot: any, div: Elem) => {
-					const sandbox = newSandboxDiv(div)
-					return sandbox
-				}
-			},
-			arg.opts?.app || {} // todo if copyMerge() from arg.opts.app is necessary; copied from singlecell
-		),
-		opts: {
-			// TODO not working
-			dictionary: { headerText: 'Select a variable below to build Correlation Plot' }
 		}
 	})
-
 	const api = {
 		update: async (updateArg: UpdateArg) => {
-			if (!plotAppApi) return
+			if (massApi!) return
 
 			if ('filter0' in updateArg) {
-				plotAppApi.dispatch({
+				massApi.dispatch({
 					type: 'app_refresh',
 					subactions: [
 						{
@@ -87,9 +57,9 @@ export async function init(
 					]
 				})
 			} else {
-				plotAppApi.dispatch({
+				massApi.dispatch({
 					type: 'plot_edit',
-					id: plotAppApi.getState().plots[0].id,
+					id: massApi.getState().plots[0].id, // FIXME mass ui can contain multiple plots
 					config: updateArg
 				})
 			}

@@ -4,8 +4,6 @@ import { cachedFetch, isRecoverableError } from './utils'
 import { deepEqual } from '#shared/helpers.js'
 import { joinUrl } from '#shared/joinUrl.js'
 
-
-
 /******************** major tasks *****************
 - parsing gdc variables and constructing in-memory termdb:
   HARDCODED LOGIC, does not need any configuration in dataset file
@@ -686,9 +684,9 @@ function makeTermdbQueries(ds, id2term) {
 	}
 
 	q.getSupportedChartTypes = () => {
-		// this function is required for server-provided termdbConfig
-		// TODO FIXME if this is needed??
-		const supportedChartTypes = {}
+		const supportedChartTypes = {
+			'': ['dictionary'] // to be able to show dictionary chart button at mass ui in correlation plot http://localhost:3000/?gdccorrelation=1
+		}
 		const numericTypeCount = {}
 		// key: subcohort combinations, comma-joined, as in the subcohort_terms table
 		// value: array of chart types allowed by term types
