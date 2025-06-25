@@ -4,44 +4,45 @@ import { detectLst, detectOne } from '../../test/test.helpers.js'
 
 /*
 tests:
+	only chart buttons
 	default hidden tabs, no filter
 	chart buttons
 	filter subheader and tab
 	with_cohortHtmlSelect
 */
 
-async function addDemographicSexFilter(opts, btn) {
-	btn.click()
-	const tipd = opts.filter.Inner.dom.treeTip.d.node()
-
-	const termdiv1 = await detectLst({ elem: tipd, selector: '.termdiv', matchAs: '>=' })
-	const demoPill = termdiv1.find(elem => elem.__data__.id === 'Demographic Variables')
-	demoPill.querySelectorAll('.termbtn')[0].click()
-
-	const termdivSex = await detectLst({ elem: tipd, selector: '.termdiv', count: 6, matchAs: '>=' })
-	const sexPill = termdivSex.find(elem => elem.__data__.id === 'sex')
-	sexPill.querySelectorAll('.termlabel')[0].click()
-	const detectSelect = await detectLst({ elem: tipd, selector: "input[type='checkbox']", count: 1, matchAs: '>=' }) //; console.log(32, detectSelect); throw 'test'
-	detectSelect[1].click()
-	const applyBtn = await detectOne({ elem: tipd, selector: '.sjpp_apply_btn' })
-	applyBtn.click()
-}
-
-/**************
- test sections
-***************/
 tape('\n', function (test) {
 	test.pass('-***- mass/nav -***-')
 	test.end()
+})
+
+tape('only chart buttons', function (test) {
+	runpp({
+		state: {
+			nav: { activeTab: 1, header_mode: 'only_buttons' } // this will only show chart buttons but not toggling tabs
+		},
+		nav: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+	function runTests(nav) {
+		nav.on('postRender.test', null)
+		test.equal(nav.Inner.dom.tabDiv.style('display'), 'none', 'should hide the tabs')
+		test.equal(nav.Inner.dom.controlsDiv.style('display'), 'none', 'should hide the controlsDiv')
+		test.equal(nav.Inner.dom.subheader.charts.style('display'), 'block', 'should show subheader.charts')
+		test.equal(nav.Inner.dom.holder.style('margin-bottom'), '0px', 'should not set a margin-bottom')
+		test.equal(nav.Inner.dom.holder.style('border-bottom'), '0px none rgb(0, 0, 0)', 'should not show a border-bottom')
+		if (test._ok) nav.Inner.app.destroy()
+		test.end()
+	}
 })
 
 tape('default hidden tabs, no filter', function (test) {
 	test.timeoutAfter(3000)
 	test.plan(4)
 	runpp({
-		state: {
-			header_mode: 'search_only'
-		},
 		nav: {
 			callbacks: {
 				'postRender.test': runTests
@@ -247,3 +248,19 @@ const runpp = helpers.getRunPp('mass', {
 	},
 	debug: 1
 })
+async function addDemographicSexFilter(opts, btn) {
+	btn.click()
+	const tipd = opts.filter.Inner.dom.treeTip.d.node()
+
+	const termdiv1 = await detectLst({ elem: tipd, selector: '.termdiv', matchAs: '>=' })
+	const demoPill = termdiv1.find(elem => elem.__data__.id === 'Demographic Variables')
+	demoPill.querySelectorAll('.termbtn')[0].click()
+
+	const termdivSex = await detectLst({ elem: tipd, selector: '.termdiv', count: 6, matchAs: '>=' })
+	const sexPill = termdivSex.find(elem => elem.__data__.id === 'sex')
+	sexPill.querySelectorAll('.termlabel')[0].click()
+	const detectSelect = await detectLst({ elem: tipd, selector: "input[type='checkbox']", count: 1, matchAs: '>=' }) //; console.log(32, detectSelect); throw 'test'
+	detectSelect[1].click()
+	const applyBtn = await detectOne({ elem: tipd, selector: '.sjpp_apply_btn' })
+	applyBtn.click()
+}

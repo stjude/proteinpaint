@@ -6,7 +6,6 @@ launches mass ui, to display:
 2) a dictionary plot on bottom, for user to select a term and launch summary plot
 
 todo
-- hide nav tabs, only show some plot buttons
 - customize dictionary plot sandbox header text to 'Select variable for correlation plot'
 - survival plot with gdc survival data
 - more chart buttons for typical usecases, each button will show a tailored input ui
@@ -46,7 +45,7 @@ export async function init(
 			genome: gdcGenome,
 			dslabel: gdcDslabel,
 			termfilter: { filter0: arg.filter0 },
-			nav: { activeTab: 1 }, // todo: header_mode='only_buttons'
+			nav: { activeTab: 1, header_mode: 'only_buttons' },
 			plots: [{ chartType: 'dictionary' }] // default shows dictionary ui, can change
 			/* todo additional customizations
 			opts:{
