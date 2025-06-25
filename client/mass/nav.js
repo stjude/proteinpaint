@@ -218,6 +218,13 @@ function setRenderers(self) {
 			.style('margin', '10px')
 			.style('display', 'inline-block')
 			.style('float', 'right')
+
+		if (self.opts.header_mode === 'only_buttons') {
+			// if header_mode is only_buttons, show only buttons
+			tabDiv.style('display', 'none')
+			titleDiv.style('display', 'none')
+			controlsDiv.style('display', 'none')
+		}
 		self.opts.holder.attr('class', 'sjpp-nav')
 		self.dom = {
 			holder: self.opts.holder,

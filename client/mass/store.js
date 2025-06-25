@@ -18,7 +18,8 @@ const navHeaderModes = new Set([
 	'hidden', // no header
 	'search_only', // ?
 	'hide_search', // ?
-	'with_cohortHtmlSelect' // only show cohort toggle as <select>
+	'with_cohortHtmlSelect', // only show cohort toggle as <select>
+	'only_buttons'
 ])
 
 const defaultState = {
