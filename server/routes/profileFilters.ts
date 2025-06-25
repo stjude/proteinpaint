@@ -2,12 +2,17 @@ import type { RouteApi } from '#types'
 import { ProfileFiltersPayload } from '#types/checkers'
 import { getData, getSamplesPerFilter } from '../src/termdb.matrix.js'
 
+/*
+Given a set of terms and filters per term, this route returns the list of samples that match each term filter.
+It allows to fill the filter dropdowns in the profile plots. 
+*/
+
 export const api: RouteApi = {
 	endpoint: 'profileFilters',
 	methods: {
 		get: {
 			...ProfileFiltersPayload,
-			
+
 			init
 		},
 		post: {

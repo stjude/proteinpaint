@@ -2,7 +2,7 @@ import type { RoutePayload } from './routeApi.js'
 
 export type ProfileFiltersRequest = {
 	terms: any[]
-	filters: any[]
+	filters: { [termid: string]: any[] }
 }
 
 export type ProfileFiltersResponse = {
