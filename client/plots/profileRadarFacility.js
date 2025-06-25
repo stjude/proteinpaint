@@ -16,7 +16,6 @@ class profileRadarFacility extends profilePlot {
 	async init(appState) {
 		await super.init(appState)
 		const config = structuredClone(appState.plots.find(p => p.id === this.id))
-		this.scoreTerms = []
 		this.plotConfig = config
 		this.twLst = [config.facilityTW]
 		this.terms = config.terms

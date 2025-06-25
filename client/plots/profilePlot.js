@@ -155,7 +155,6 @@ export class profilePlot {
 			const filter = this.getFilter(tw)
 			if (filter) filters[tw.term.id] = filter
 		}
-
 		this.profileFilters = await this.app.vocabApi.getProfileFilters({
 			terms: this.config.filterTWs,
 			filters
