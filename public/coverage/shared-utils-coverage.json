@@ -170,13 +170,13 @@
     },
     "lowestPct": {
       "curr": 36.22,
-      "prev": 0,
-      "diff": 36.22
+      "prev": 36.22,
+      "diff": 0
     },
     "averagePct": {
       "curr": 44.964999999999996,
-      "prev": 0,
-      "diff": 44.964999999999996
+      "prev": 44.964999999999996,
+      "diff": 0
     }
   },
   "src/test/termdb.usecase.unit.spec.js": {
