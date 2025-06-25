@@ -10,6 +10,7 @@ ColorScale
 	- ColorScale.render() - default bottom
 	- ColorScale.render() - top
 	- With labels
+	- With .showNumsAsIs as true
 	- ColorScale.updateColors()
 	- markedValue - Show value in color bar and update
 	- ColorScale.updateAxis()
@@ -147,6 +148,28 @@ tape('With labels', test => {
 		childNodes[2].nodeName == 'text' && childNodes[2].innerHTML == opts.labels.right,
 		`Should render text element to the left with label text = ${opts.labels.right}`
 	)
+
+	if (test['_ok']) holder.remove()
+	test.end()
+})
+
+tape('With .showNumsAsIs as true', test => {
+	test.timeoutAfter(100)
+
+	const holder = getHolder() as any
+	const domain = [-1.42, 0, 0.00462, 0.5]
+	const opts = { holder, domain, colors: ['blue', 'white', 'purple', 'green'], showNumsAsIs: true }
+	const testColorScale = getColorScale(opts)
+
+	test.equal(
+		testColorScale.tickValues,
+		domain,
+		'Should not format (i.e. round) domain values when showNumsAsIs is true'
+	)
+
+	const ticks = holder.selectAll('text').nodes()
+	const tickValues = ticks.map(t => Number(t.__data__))
+	test.deepEqual(tickValues, domain, 'Should render ticks with original domain values when showNumsAsIs is true')
 
 	if (test['_ok']) holder.remove()
 	test.end()
