@@ -37,10 +37,10 @@
   },
   "mass/nav.js": {
     "lines": {
-      "total": 207,
-      "covered": 156,
+      "total": 211,
+      "covered": 160,
       "skipped": 0,
-      "pct": 75.36
+      "pct": 75.82
     },
     "functions": {
       "total": 42,
@@ -49,26 +49,26 @@
       "pct": 69.04
     },
     "statements": {
-      "total": 232,
-      "covered": 168,
+      "total": 236,
+      "covered": 172,
       "skipped": 0,
-      "pct": 72.41
+      "pct": 72.88
     },
     "branches": {
-      "total": 190,
-      "covered": 108,
+      "total": 192,
+      "covered": 110,
       "skipped": 0,
-      "pct": 56.84
+      "pct": 57.29
     },
     "lowestPct": {
-      "curr": 56.84,
+      "curr": 57.29,
       "prev": 56.84,
-      "diff": 0
+      "diff": 0.44999999999999574
     },
     "averagePct": {
-      "curr": 68.4125,
+      "curr": 68.75750000000001,
       "prev": 68.83500000000001,
-      "diff": -0.42250000000001364
+      "diff": -0.07750000000000057
     }
   },
   "filter/filter.utils.js": {
@@ -3381,6 +3381,42 @@
       "curr": 3.57,
       "prev": 0,
       "diff": 3.57
+    }
+  },
+  "mass/test/nav.integration.spec.js": {
+    "lines": {
+      "total": 81,
+      "covered": 77,
+      "skipped": 0,
+      "pct": 95.06
+    },
+    "functions": {
+      "total": 19,
+      "covered": 17,
+      "skipped": 0,
+      "pct": 89.47
+    },
+    "statements": {
+      "total": 85,
+      "covered": 80,
+      "skipped": 0,
+      "pct": 94.11
+    },
+    "branches": {
+      "total": 8,
+      "covered": 3,
+      "skipped": 0,
+      "pct": 37.5
+    },
+    "lowestPct": {
+      "curr": 37.5,
+      "prev": 0,
+      "diff": 37.5
+    },
+    "averagePct": {
+      "curr": 79.035,
+      "prev": 0,
+      "diff": 79.035
     }
   }
 }
