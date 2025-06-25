@@ -2,6 +2,11 @@ import type { RouteApi } from '#types'
 import { ProfileFormScoresPayload } from '#types/checkers'
 import { getData } from '../src/termdb.matrix.js'
 
+/*
+Given a set of multivalue score terms, a filter, login site info, etc.,
+ this route returns the  scores dictionary for each term. The dict is calculated based on the samples selected by the filter.
+It allows to build the profile forms based on the number of people who selected an answer to a question/term for a given site/hospital
+*/
 export const api: RouteApi = {
 	endpoint: 'profileFormScores',
 	methods: {
