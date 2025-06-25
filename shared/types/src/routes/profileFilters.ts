@@ -15,9 +15,9 @@ export type ProfileFiltersResponse = {
 
 export const ProfileFiltersPayload: RoutePayload = {
 	request: {
-		typeId: 'profileFiltersRequest'
+		typeId: 'ProfileFiltersRequest'
 	},
 	response: {
-		typeId: 'profileFiltersResponse'
+		typeId: 'ProfileFiltersResponse'
 	}
 }
