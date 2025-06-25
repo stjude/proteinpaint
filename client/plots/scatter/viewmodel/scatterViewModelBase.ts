@@ -201,7 +201,7 @@ export class ScatterViewModelBase {
 					.text(term0Name)
 			}
 			const isEvents = this.scatter.config.term2 ? false : true
-			const term2Name = isEvents ? 'Events' : getTitle(this.scatter.config.term2.term.name, 60)
+			const term2Name = isEvents ? 'Frequency' : getTitle(this.scatter.config.term2.term.name, 60)
 			text = labelsG
 				.append('text')
 				.attr(

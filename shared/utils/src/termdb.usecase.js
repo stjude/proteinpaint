@@ -119,7 +119,7 @@ export function isUsableTerm(term, _usecase, termdbConfig, ds) {
 				if (!term.isleaf) uses.add('branch')
 			}
 			return uses
-		case 'eventCount':
+		case 'frequencyChart':
 			if (usecase.detail == 'term') {
 				if (term.type == 'date') {
 					uses.add('plot')

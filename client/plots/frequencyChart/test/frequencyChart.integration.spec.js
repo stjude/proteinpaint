@@ -36,7 +36,7 @@ const runpp = helpers.getRunPp('mass', {
 const state = {
 	plots: [
 		{
-			chartType: 'eventCount',
+			chartType: 'frequencyChart',
 			term: { id: 'date' },
 			colorTW: { id: 'sex' }
 		}
@@ -51,18 +51,18 @@ function getHolder() {
  test sections
 ***************/
 tape('\n', function (test) {
-	test.pass('-***- plots/eventCount -***-')
+	test.pass('-***- plots/frequencyChart -***-')
 	test.end()
 })
 
-tape('Render TermdbTest eventCount plot', function (test) {
+tape('Render TermdbTest frequencyChart plot', function (test) {
 	test.timeoutAfter(8000)
 	test.plan(1)
 	const holder = getHolder()
 	runpp({
 		holder, //Fix for test failing because survival & summary sandboxs are not destroyed.
 		state,
-		eventCount: {
+		frequencyChart: {
 			callbacks: {
 				'postRender.test': runTests
 			}
@@ -107,7 +107,7 @@ tape('Test scale dot', function (test) {
 	const state = {
 		plots: [
 			{
-				chartType: 'eventCount',
+				chartType: 'frequencyChart',
 				term: { id: 'date' },
 				scaleDotTW: { id: 'agedx', q: { mode: 'continuous' } }
 			}
@@ -116,7 +116,7 @@ tape('Test scale dot', function (test) {
 	runpp({
 		holder, //Fix for test failing because survival & summary sandboxs are not destroyed.
 		state,
-		eventCount: {
+		frequencyChart: {
 			callbacks: {
 				'postRender.test': runTests
 			}
@@ -150,7 +150,7 @@ tape('Test legend', function (test) {
 
 	runpp({
 		state: structuredClone(state),
-		eventCount: {
+		frequencyChart: {
 			callbacks: {
 				'postRender.test': runTests
 			}
@@ -201,7 +201,7 @@ tape('Change symbol size from menu', function (test) {
 
 	runpp({
 		state,
-		eventCount: {
+		frequencyChart: {
 			callbacks: { 'postRender.test': runTests }
 		}
 	})
@@ -236,13 +236,13 @@ tape('Show accrual', function (test) {
 		state: {
 			plots: [
 				{
-					chartType: 'eventCount',
+					chartType: 'frequencyChart',
 					term: { id: 'date' },
-					settings: { eventCount: { showAccrual: true } }
+					settings: { frequencyChart: { showAccrual: true } }
 				}
 			]
 		},
-		eventCount: {
+		frequencyChart: {
 			callbacks: { 'postRender.test': runTests }
 		}
 	})
@@ -262,7 +262,7 @@ tape('Change chart width and height from menu', function (test) {
 
 	runpp({
 		state,
-		eventCount: {
+		frequencyChart: {
 			callbacks: { 'postRender.test': runTests }
 		}
 	})

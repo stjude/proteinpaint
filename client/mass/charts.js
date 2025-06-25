@@ -216,10 +216,10 @@ function getChartTypeList(self, state) {
 			clickTo: self.loadChartSpecificMenu
 		},
 		{
-			label: 'Event Count',
-			chartType: 'eventCount',
+			label: 'Frecuency Chart',
+			chartType: 'frequencyChart',
 			clickTo: self.showTree_select1term,
-			usecase: { target: 'eventCount', detail: 'term' }
+			usecase: { target: 'frequencyChart', detail: 'term' }
 		},
 
 		{

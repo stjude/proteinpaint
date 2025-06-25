@@ -34,7 +34,7 @@ export default function (): Mds3 {
 		isMds3: true,
 		isSupportedChartOverride: {
 			runChart: () => true,
-			eventCount: () => true
+			frequencyChart: () => true
 		},
 		cohort: {
 			massNav: {
