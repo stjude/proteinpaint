@@ -674,6 +674,9 @@ export class TermdbVocab extends Vocab {
 		if (filter) {
 			body.filter = getNormalRoot(filter)
 		}
+		// when calling getCategories(), external code does not supply filter0. to avoid much code changes, use this step to detect filter0 from this.state and supply to request
+		// TODO if this filter0 can be properly updated when api.update() is called from pp launcher on GFF cohort change
+		if (this.state.termfilter?.filter0) body.filter0 = this.state.termfilter.filter0
 
 		try {
 			const data = await dofetch3('termdb/categories', { headers, body })
