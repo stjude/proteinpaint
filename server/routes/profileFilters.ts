@@ -1,16 +1,17 @@
 import type { RouteApi } from '#types'
-import { PlotFiltersPayload } from '#types/checkers'
+import { ProfileFiltersPayload } from '#types/checkers'
 import { getData, getSamplesPerFilter } from '../src/termdb.matrix.js'
 
 export const api: RouteApi = {
-	endpoint: 'plotFilters',
+	endpoint: 'profileFilters',
 	methods: {
 		get: {
-			...PlotFiltersPayload,
+			...ProfileFiltersPayload,
+			
 			init
 		},
 		post: {
-			...PlotFiltersPayload,
+			...ProfileFiltersPayload,
 			init
 		}
 	}
@@ -54,13 +55,13 @@ async function getFilters(query, ds, genome, res) {
 		const samplesPerFilter = await getSamplesPerFilter(query, ds)
 		const filtersData = await getData(
 			{
-				terms: query.filterTWs
+				terms: query.terms
 			},
 			ds,
 			genome
 		)
 		const tw2List = {}
-		for (const tw of query.filterTWs) {
+		for (const tw of query.terms) {
 			tw2List[tw.term.id] = getList(samplesPerFilter, filtersData, tw)
 		}
 		res.send({ ...tw2List })

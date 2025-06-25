@@ -156,19 +156,18 @@ export class profilePlot {
 			if (filter) filters[tw.term.id] = filter
 		}
 
-		this.plotFilters = await this.app.vocabApi.getPlotFilters({
-			filterTWs: this.config.filterTWs,
+		this.profileFilters = await this.app.vocabApi.getProfileFilters({
+			terms: this.config.filterTWs,
 			filters
 		})
-
-		this.regions = this.plotFilters[this.config.regionTW.id]
-		this.countries = this.plotFilters[this.config.countryTW.id]
-		this.incomes = this.plotFilters[this.config.incomeTW.id]
-		this.teachingStates = this.plotFilters[this.config.teachingStatusTW.id]
-		this.referralStates = this.plotFilters[this.config.referralStatusTW.id]
-		this.fundingSources = this.plotFilters[this.config.fundingSourceTW.id]
-		this.hospitalVolumes = this.plotFilters[this.config.hospitalVolumeTW.id]
-		this.yearsOfImplementation = this.plotFilters[this.config.yearOfImplementationTW.id]
+		this.regions = this.profileFilters[this.config.regionTW.id]
+		this.countries = this.profileFilters[this.config.countryTW.id]
+		this.incomes = this.profileFilters[this.config.incomeTW.id]
+		this.teachingStates = this.profileFilters[this.config.teachingStatusTW.id]
+		this.referralStates = this.profileFilters[this.config.referralStatusTW.id]
+		this.fundingSources = this.profileFilters[this.config.fundingSourceTW.id]
+		this.hospitalVolumes = this.profileFilters[this.config.hospitalVolumeTW.id]
+		this.yearsOfImplementation = this.profileFilters[this.config.yearOfImplementationTW.id]
 
 		this.incomes.sort((elem1, elem2) => {
 			const i1 = orderedIncomes.indexOf(elem1.value)
@@ -182,7 +181,7 @@ export class profilePlot {
 			if (i1 < i2) return -1
 			return 1
 		})
-		this.types = this.plotFilters[this.config.typeTW.id]
+		this.types = this.profileFilters[this.config.typeTW.id]
 		this.filter = this.config.filter || this.getFilter()
 		const isAggregate = this.isAggregate()
 		if (this.type != 'profileForms')
@@ -205,7 +204,6 @@ export class profilePlot {
 				userSites: this.state.sites,
 				facilityTW: this.config.facilityTW
 			})
-		console.log(this.data)
 		this.sites = this.data.sites
 		if (!this.isRadarFacility) this.sites.unshift({ label: '', value: '' })
 		this.sites.sort((a, b) => {
