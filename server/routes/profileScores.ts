@@ -1,6 +1,11 @@
 import type { RouteApi } from '#types'
 import { ProfileScoresPayload } from '#types/checkers'
 import { getData } from '../src/termdb.matrix.js'
+/*
+Given a set of score terms, a filter, login site info, etc,
+ this route returns the term scores calculated based on the samples selected by the filter.
+It allows to build the profile plots based on the scores
+*/
 
 export const api: RouteApi = {
 	endpoint: 'profileScores',
