@@ -4,6 +4,7 @@ import { detectLst, detectOne } from '../../test/test.helpers.js'
 
 /*
 tests:
+	wrong header_mode
 	only chart buttons
 	default hidden tabs, no filter
 	chart buttons
@@ -14,6 +15,24 @@ tests:
 tape('\n', function (test) {
 	test.pass('-***- mass/nav -***-')
 	test.end()
+})
+
+tape.skip('wrong header_mode', function (test) {
+	runpp({
+		state: {
+			nav: { header_mode: 'xx' }
+		},
+		// FIXME need to either detect the error message, or to trigger postRender
+		mass: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+	function runTests(xx) {
+		if (test._ok) nav.Inner.app.destroy()
+		test.end()
+	}
 })
 
 tape('only chart buttons', function (test) {
