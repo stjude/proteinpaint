@@ -92,7 +92,7 @@ export class FrequencyChartView extends RunchartView {
 				boxLabel: '',
 				type: 'checkbox',
 				chartType: 'frequencyChart',
-				settingsKey: 'showAccrual',
+				settingsKey: 'showCumulativeFrequency',
 				title: `Option to show the cumulative number of events over time`
 			},
 			{

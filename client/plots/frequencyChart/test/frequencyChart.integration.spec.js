@@ -238,7 +238,7 @@ tape('Show accrual', function (test) {
 				{
 					chartType: 'frequencyChart',
 					term: { id: 'date' },
-					settings: { frequencyChart: { showAccrual: true } }
+					settings: { frequencyChart: { showCumulativeFrequency: true } }
 				}
 			]
 		},

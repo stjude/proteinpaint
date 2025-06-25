@@ -32,7 +32,7 @@ export class FrequencyChartModel extends RunchartModel {
 
 			for (const sample of value.samples) {
 				sample.x = getNumberFromDate(new Date(year, month, 15))
-				sample.y = this.scatter.settings.showAccrual ? count : value.samples.length
+				sample.y = this.scatter.settings.showCumulativeFrequency ? count : value.samples.length
 				events.push(sample.y)
 			}
 		}
