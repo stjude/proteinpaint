@@ -36,6 +36,10 @@ function parseJsonlOutput(rustOutput: string): any {
 	const allSuccessfulData: any[] = []
 	let finalSummary: any = null
 	let processedFiles = 0
+	// Maximum records to process
+	const MAX_RECORDS = 100000
+	let totalRecordsProcessed = 0
+	let isCapReached = false
 
 	for (const line of lines) {
 		const trimmedLine = line.trim()
@@ -44,16 +48,59 @@ function parseJsonlOutput(rustOutput: string): any {
 				const data = JSON.parse(trimmedLine)
 
 				if (data.type === 'data') {
+					// Check if we've already reached the cap
+					if (isCapReached) {
+						console.log(`[GRIN2] Skipping file ${data.case_id} - record cap of ${MAX_RECORDS} already reached`)
+						continue // Skip processing this file
+					}
+
+					// Calculate how many records we can still accept
+					const remainingCapacity = MAX_RECORDS - totalRecordsProcessed
+					const incomingRecords = data.data.length
+
+					// Determine how many records to actually process
+					let recordsToProcess: any[]
+					let recordsProcessedThisFile: number
+
+					if (incomingRecords <= remainingCapacity) {
+						// We can process all records from this file
+						recordsToProcess = data.data
+						recordsProcessedThisFile = incomingRecords
+					} else {
+						// We can only process part of this file to reach the cap
+						recordsToProcess = data.data.slice(0, remainingCapacity)
+						recordsProcessedThisFile = remainingCapacity
+						isCapReached = true
+
+						console.log(
+							`[GRIN2] Record cap reached! Processing only ${recordsProcessedThisFile} of ${incomingRecords} records from file ${data.case_id}`
+						)
+					}
+
 					// Individual file completed successfully
 					processedFiles++
-					allSuccessfulData.push(data.data)
+					allSuccessfulData.push(recordsToProcess)
+					totalRecordsProcessed += recordsProcessedThisFile
+					console.log(totalRecordsProcessed, MAX_RECORDS)
 					console.log(
-						`[GRIN2] Processed file ${processedFiles}: ${data.case_id} (${data.data_type}) - ${data.data.length} records`
+						`[GRIN2] Processed file ${processedFiles}: ${data.case_id} (${data.data_type}) - ${recordsProcessedThisFile} records`
 					)
+					console.log(`[GRIN2] Total records processed: ${totalRecordsProcessed}/${MAX_RECORDS}`)
+
+					// Log when cap is reached
+					if (isCapReached) {
+						console.log(
+							`[GRIN2] RECORD CAP REACHED: ${MAX_RECORDS} records processed. Subsequent files will be skipped.`
+						)
+					}
 				} else if (data.type === 'summary') {
 					// Final summary - all files processed
 					finalSummary = data
 					console.log(`[GRIN2] Download complete: ${data.successful_files}/${data.total_files} files successful`)
+					if (isCapReached) {
+						console.log(`[GRIN2] Processing stopped due to record cap of ${MAX_RECORDS}`)
+						console.log(`[GRIN2] Total records collected: ${totalRecordsProcessed}`)
+					}
 					if (data.failed_files > 0) {
 						console.log(`[GRIN2] ${data.failed_files} files failed`)
 					}
