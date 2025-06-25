@@ -81,7 +81,7 @@ export class Report extends RxComponentInner {
 		opts.holder = holder
 		opts.app = this.app
 		opts.parentId = this.id
-		opts.controls = this.view.dom.controlsHolder
+		//opts.controls = this.view.dom.controlsHolder
 		const { componentInit } = await import(`../../plots/${opts.chartType}.js`)
 		this.components.plots[opts.id] = await componentInit(opts)
 	}
