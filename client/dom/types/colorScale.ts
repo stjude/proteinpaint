@@ -1,6 +1,6 @@
 import type { SvgG, SvgLine, SvgSvg, SvgText } from '../../types/d3'
 import type { Selection } from 'd3-selection'
-import type { ScaleLinear } from 'd3-scale'
+// import type { ScaleDiverging, ScaleLinear } from 'd3-scale'
 
 export type ColorScaleOpts = {
 	/** Optional but recommended. The height of the color bar in px. Default is 14. */
@@ -46,6 +46,8 @@ export type ColorScaleOpts = {
 	height?: number
 	/** If present, creates a menu on click to change the colors */
 	setColorsCallback?: (val: string, idx: number) => void
+	/** Do not format numbers. Show as is.  */
+	showNumsAsIs: boolean
 	/** Optional. Suggested number of ticks to show. Cannot be zero. Default is 5.
 	 * NOTE: D3 considers this a ** suggested ** count. d3-axis will ultimateluy render the
 	 * ticks based on the available space of each label.
@@ -65,7 +67,7 @@ export type ColorScaleDom = {
 	/** color bar */
 	gradient: GradientElem
 	/** d3 scale */
-	scale: ScaleLinear<number, number, never>
+	scale: any
 	/** holder for the d3 scale */
 	scaleAxis: SvgG
 	/** Marked value label */

@@ -207,6 +207,7 @@ export default function svgLegend(opts) {
 				holder: g,
 				id: colorGradientId,
 				position: `${bbox.width + 25},${yPos}`,
+				showNumsAsIs: d.showNumsAsIs || false,
 				ticks: 3,
 				tickSize: 2,
 				topTicks: true

@@ -3,6 +3,7 @@ import { CnvType } from '#plots/disco/cnv/CnvType.ts'
 import { FusionLegend } from '#plots/disco/fusion/FusionLegend.ts'
 import { CnvRenderingType } from '#plots/disco/cnv/CnvRenderingType.ts'
 import { scaleLinear } from 'd3-scale'
+import { roundValueAuto } from '@sjcrh/proteinpaint-shared/roundValue.js'
 
 export default class LegendJSONMapper {
 	private cappedCnvMaxAbsValue: number
@@ -129,15 +130,19 @@ export default class LegendJSONMapper {
 				dt: 4
 			}
 			if (gain.value > 0 && loss.value < 0) {
-				const maxValue = Math.max(Math.abs(loss.value), gain.value)
-				const domain = [-maxValue, 0, maxValue]
+				/** Do not use equidistant domain (like code below) here.
+				 * Colorscale will not match the colors in the disco or tooltips. */
+				// const maxValue = Math.max(Math.abs(loss.value), gain.value)
+				// const domain = [-maxValue, 0, maxValue]
+				const domain = [roundValueAuto(loss.value), 0, roundValueAuto(gain.value)]
 				cnvItems.push(
 					Object.assign(
 						{
 							key: CnvType.LossGain,
 							domain,
-							scale: scaleLinear([-1, 0, 1], [loss.color, 'white', gain.color]),
+							colors: [loss.color, 'white', gain.color],
 							labels: { left: 'Loss', right: 'Gain' },
+							showNumsAsIs: true,
 							numericInputs: {
 								cutoffMode: legend.cnvCutoffMode,
 								defaultPercentile: legend.cnvPercentile,

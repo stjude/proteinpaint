@@ -6,7 +6,7 @@ import type {
 	ColorScaleMenuOpts,
 	NumericInputs
 } from '../types/colorScale'
-import { scaleLinear } from 'd3-scale'
+import { scaleLinear, scaleDiverging } from 'd3-scale'
 import { axisBottom, axisTop } from 'd3-axis'
 import { font } from '../../src/client'
 import { axisstyle, niceNumLabels } from '#dom'
@@ -28,6 +28,7 @@ export class ColorScale {
 	/** Purely for testing. Not used in the class but can be
 	 * called independently of user click, if needed */
 	setColorsCallback?: (val: string, idx: number) => void
+	showNumsAsIs: boolean
 	ticks: number
 	tickSize: number
 	tickValues: number[]
@@ -40,15 +41,16 @@ export class ColorScale {
 		this.domain = opts.domain
 		this.fontSize = opts.fontSize || 10
 		this.markedValue = opts.markedValue && opts.markedValue > 0.001 ? opts.markedValue : null
+		this.showNumsAsIs = opts.showNumsAsIs || false
 		this.ticks = opts.ticks || 5
 		this.tickSize = opts.tickSize || 1
 		this.topTicks = opts.topTicks || false
 
 		this.validateOpts(opts)
 
-		this.tickValues = niceNumLabels(opts.domain)
+		this.tickValues = opts.showNumsAsIs ? opts.domain : niceNumLabels(opts.domain)
 
-		let scaleSvg: SvgSvg //
+		let scaleSvg: SvgSvg
 		if (opts.width || opts.height) {
 			scaleSvg = opts.holder
 				.append('svg')
@@ -144,7 +146,8 @@ export class ColorScale {
 
 		const scaleAxis = div.append('g').attr('data-testid', 'sjpp-color-scale-axis')
 		if (this.topTicks === false) scaleAxis.attr('transform', `translate(0, ${this.barheight})`)
-		const scale = scaleLinear().domain(this.tickValues).range(this.getRange())
+		const scaleFn = this.domain.length > 2 ? scaleDiverging() : scaleLinear()
+		const scale = scaleFn.domain(this.tickValues).range(this.getRange())
 
 		return { scale, scaleAxis }
 	}
@@ -205,7 +208,7 @@ export class ColorScale {
 			_opts.setNumbersCallback = async obj => {
 				if (!obj) return
 				await opts.numericInputs!.callback(obj)
-				this.updateAxis()
+				this.updateScale()
 			}
 		}
 		const menu = new ColorScaleMenu(_opts)
@@ -214,7 +217,8 @@ export class ColorScale {
 
 	getAxis() {
 		const axis = this.topTicks === true ? axisTop(this.dom.scale) : axisBottom(this.dom.scale)
-		axis.ticks(this.ticks).tickSize(this.tickSize)
+		axis.ticks(this.ticks).tickValues(this.tickValues).tickSize(this.tickSize)
+
 		return axis
 	}
 
@@ -226,8 +230,9 @@ export class ColorScale {
 	updateAxis() {
 		this.dom.scaleAxis.selectAll('*').remove()
 
-		this.tickValues = niceNumLabels(this.domain)
-		this.dom.scale = scaleLinear().domain(this.tickValues).range(this.getRange())
+		this.tickValues = this.showNumsAsIs ? this.domain : niceNumLabels(this.domain)
+		const scaleFn = this.domain.length > 2 ? scaleDiverging() : scaleLinear()
+		this.dom.scale = scaleFn.domain(this.tickValues).range(this.getRange())
 
 		this.dom.scaleAxis
 			.transition()
