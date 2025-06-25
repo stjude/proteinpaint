@@ -3,6 +3,7 @@ import { CnvType } from '#plots/disco/cnv/CnvType.ts'
 import { FusionLegend } from '#plots/disco/fusion/FusionLegend.ts'
 import { CnvRenderingType } from '#plots/disco/cnv/CnvRenderingType.ts'
 import { scaleLinear } from 'd3-scale'
+import { rgb } from 'd3-color'
 
 export default class LegendJSONMapper {
 	private cappedCnvMaxAbsValue: number
@@ -131,12 +132,46 @@ export default class LegendJSONMapper {
 			if (gain.value > 0 && loss.value < 0) {
 				const maxValue = Math.max(Math.abs(loss.value), gain.value)
 				const domain = [-maxValue, 0, maxValue]
+				const colors = [loss.color, 'white', gain.color]
+
+				if (gain.value < maxValue) {
+					/** Insert the real gain max value to show the gradient correctly.
+					 * Fixes the problem with the colors not appearing to not match
+					 * the tooltips or the plot*/
+					const lossColor = rgb(loss.color)
+					const midwayLossColor = rgb(
+						(lossColor.r + 255) / 2,
+						(lossColor.g + 255) / 2,
+						(lossColor.b + 255) / 2
+					).formatHex()
+					domain.splice(1, 0, -maxValue / 2)
+					colors.splice(1, 0, midwayLossColor)
+
+					domain.splice(3, 0, maxValue / 2)
+					colors.splice(3, 0, gain.color)
+				}
+
+				if (loss.value > -maxValue) {
+					/** Same reason as above */
+					const gainColor = rgb(gain.color)
+					const midwayGainColor = rgb(
+						(gainColor.r + 255) / 2,
+						(gainColor.g + 255) / 2,
+						(gainColor.b + 255) / 2
+					).formatHex()
+					domain.splice(1, 0, -maxValue / 2)
+					colors.splice(1, 0, midwayGainColor)
+
+					domain.splice(3, 0, maxValue / 2)
+					colors.splice(3, 0, loss.color)
+				}
+
 				cnvItems.push(
 					Object.assign(
 						{
 							key: CnvType.LossGain,
 							domain,
-							scale: scaleLinear([-1, 0, 1], [loss.color, 'white', gain.color]),
+							colors,
 							labels: { left: 'Loss', right: 'Gain' },
 							numericInputs: {
 								cutoffMode: legend.cnvCutoffMode,
