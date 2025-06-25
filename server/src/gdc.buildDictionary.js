@@ -1,5 +1,6 @@
 import { isUsableTerm } from '#shared/termdb.usecase.js'
 import serverconfig from './serverconfig.js'
+import { DEFAULT_SAMPLE_TYPE } from '#shared/terms.js'
 import { cachedFetch, isRecoverableError } from './utils'
 import { deepEqual } from '#shared/helpers.js'
 import { joinUrl } from '#shared/joinUrl.js'
@@ -711,6 +712,12 @@ function makeTermdbQueries(ds, id2term) {
 			if (numericTypeCount[cohort] > 1) supportedChartTypes[cohort].push('scatterplot')
 		}
 		return supportedChartTypes
+	}
+
+	// same required property
+	ds.cohort.termdb.term2SampleType = new Map()
+	for (const id of id2term.keys()) {
+		ds.cohort.termdb.term2SampleType.set(id, DEFAULT_SAMPLE_TYPE)
 	}
 
 	async function mayAddSamplecount4treeFilter(terms, treeFilter) {
