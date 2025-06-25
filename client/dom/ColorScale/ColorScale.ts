@@ -6,7 +6,7 @@ import type {
 	ColorScaleMenuOpts,
 	NumericInputs
 } from '../types/colorScale'
-import { scaleLinear, scaleDiverging } from 'd3-scale'
+import { scaleLinear } from 'd3-scale'
 import { axisBottom, axisTop } from 'd3-axis'
 import { font } from '../../src/client'
 import { axisstyle, niceNumLabels } from '#dom'
@@ -156,8 +156,7 @@ export class ColorScale {
 
 		const scaleAxis = div.append('g').attr('data-testid', 'sjpp-color-scale-axis')
 		if (this.topTicks === false) scaleAxis.attr('transform', `translate(0, ${this.barheight})`)
-		const scaleFn = this.domain.length > 2 ? scaleDiverging() : scaleLinear()
-		const scale = scaleFn.domain(this.tickValues).range(this.getRange())
+		const scale = scaleLinear().domain(this.tickValues).range(this.getRange())
 
 		return { scale, scaleAxis }
 	}
@@ -246,8 +245,7 @@ export class ColorScale {
 		this.dom.scaleAxis.selectAll('*').remove()
 
 		this.tickValues = this.showNumsAsIs ? this.domain : niceNumLabels(this.domain)
-		const scaleFn = this.domain.length > 2 ? scaleDiverging() : scaleLinear()
-		this.dom.scale = scaleFn.domain(this.tickValues).range(this.getRange())
+		this.dom.scale = scaleLinear().domain(this.tickValues).range(this.getRange())
 
 		this.dom.scaleAxis
 			.transition()

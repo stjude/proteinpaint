@@ -50,7 +50,7 @@ export type ColorScaleOpts = {
 	 * If using this option, *** round the domain values in caller. *** Normal d3 rounding
 	 * functions are disabled.
 	 * Do not use with .ticks(). If .ticks() is provided it will be ignored. Default is false.*/
-	showNumsAsIs: boolean
+	showNumsAsIs?: boolean
 	/** Optional. Suggested number of ticks to show. Cannot be zero. Default is 5.
 	 * NOTE: D3 considers this a ** suggested ** count. d3-axis will ultimateluy render the
 	 * ticks based on the available space of each label.
