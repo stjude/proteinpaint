@@ -93,6 +93,11 @@ export class ColorScale {
 			throw new Error('Data and color arrays for #dom/ColorScale must be the same length')
 		if (opts.labels && (!opts.labels.left || !opts.labels.right))
 			throw new Error('Missing a label for #dom/ColorScale.')
+		if (opts.showNumsAsIs && opts.ticks) {
+			console.warn(
+				'Using showNumsAsIs will ignore the ticks option in #dom/ColorScale. The domain values will be shown as provided.'
+			)
+		}
 	}
 
 	renderLabels(scaleSvg: SvgSvg, labels: { left: string; right: string }, position: string) {
@@ -123,6 +128,11 @@ export class ColorScale {
 		return barG
 	}
 
+	/** Returns an evenly spaced range for each number in the domain.
+	 * Allows the numbers to appear visually equidistant in the
+	 * scale despite the actual interval. Matches the equidistant
+	 * color gradient in the color bar.
+	 */
 	getRange() {
 		return this.tickValues.map((_, i) => {
 			return this.barwidth * (i / (this.tickValues.length - 1))
@@ -217,7 +227,12 @@ export class ColorScale {
 
 	getAxis() {
 		const axis = this.topTicks === true ? axisTop(this.dom.scale) : axisBottom(this.dom.scale)
-		axis.ticks(this.ticks).tickValues(this.tickValues).tickSize(this.tickSize)
+		/** Use tickValues to avoid d3 generated tick values and tickFormat to avoid
+		 * unhelpful rounding (e.g 0.00462 becomes 0.0) */
+		if (this.showNumsAsIs) axis.tickValues(this.tickValues).tickFormat((d: any) => d)
+		/** Otherwise use a suggested number of tick values -- which d3 may ignore. See d3 docs. */ else
+			axis.ticks(this.ticks)
+		axis.tickSize(this.tickSize)
 
 		return axis
 	}

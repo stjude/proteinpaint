@@ -46,7 +46,10 @@ export type ColorScaleOpts = {
 	height?: number
 	/** If present, creates a menu on click to change the colors */
 	setColorsCallback?: (val: string, idx: number) => void
-	/** Do not format numbers. Show as is.  */
+	/** Avoids formating tick labels. Instead shows the domain values as is, without formating.
+	 * If using this option, *** round the domain values in caller. *** Normal d3 rounding
+	 * functions are disabled.
+	 * Do not use with .ticks(). If .ticks() is provided it will be ignored. Default is false.*/
 	showNumsAsIs: boolean
 	/** Optional. Suggested number of ticks to show. Cannot be zero. Default is 5.
 	 * NOTE: D3 considers this a ** suggested ** count. d3-axis will ultimateluy render the

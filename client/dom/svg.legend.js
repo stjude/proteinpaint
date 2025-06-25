@@ -208,9 +208,12 @@ export default function svgLegend(opts) {
 				id: colorGradientId,
 				position: `${bbox.width + 25},${yPos}`,
 				showNumsAsIs: d.showNumsAsIs || false,
-				ticks: 3,
 				tickSize: 2,
 				topTicks: true
+			}
+			if (!d.showNumsAsIs) {
+				//console.warn fires if both .showNumsAsIs and .ticks are set
+				opts.ticks = 3
 			}
 			if (d.labels) {
 				opts.labels = d.labels
