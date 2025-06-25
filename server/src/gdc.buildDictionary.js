@@ -717,6 +717,7 @@ function makeTermdbQueries(ds, id2term) {
 	// same required property
 	ds.cohort.termdb.term2SampleType = new Map()
 	for (const id of id2term.keys()) {
+		// set all terms to be default sample type, even if terms maybe describing case versus sample; also, the gdc dict data getter hardcodes to return term annotation data on cases, but not samples, so this is fine
 		ds.cohort.termdb.term2SampleType.set(id, DEFAULT_SAMPLE_TYPE)
 	}
 
