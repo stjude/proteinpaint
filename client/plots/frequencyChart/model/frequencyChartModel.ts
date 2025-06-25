@@ -2,7 +2,7 @@ import { RunchartModel } from '#plots/runchart/model/runchartModel.ts'
 import { getDateFromNumber, getNumberFromDate } from '#shared/terms.js'
 import type { ColorLegendItem, ShapeLegendItem } from '#plots/scatter/scatterTypes.ts'
 
-export class EventCountModel extends RunchartModel {
+export class FrequencyChartModel extends RunchartModel {
 	createChart(id, data) {
 		const samples = data.samples
 		const groupedSamples = new Map()

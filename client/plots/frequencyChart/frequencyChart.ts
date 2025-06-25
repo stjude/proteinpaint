@@ -1,20 +1,20 @@
 import { getCompInit, copyMerge } from '../../rx/index.js'
 import { fillTermWrapper } from '#termsetting'
-import { EventCountModel } from './model/eventCountModel.ts'
+import { FrequencyChartModel } from './model/frequencyChartModel.ts'
 import { RunchartViewModel } from '../runchart/viewmodel/runchartViewModel.ts'
-import { EventCountView } from './view/eventCountView.ts'
+import { FrequencyChartView } from './view/frequencyChartView.ts'
 import { plotColor } from '#shared/common.js'
 import { ScatterInteractivity } from '../scatter/viewmodel/scatterInteractivity.ts'
 import { Runchart } from '../runchart/runchart.ts'
 import { getColors } from '#shared/common.js'
 
-export class EventCount extends Runchart {
+export class FrequencyChart extends Runchart {
 	type: string
 	cat2Color: any
 
 	constructor() {
 		super()
-		this.type = 'eventCount'
+		this.type = 'frequencyChart'
 	}
 
 	async init(appState) {
@@ -27,8 +27,8 @@ export class EventCount extends Runchart {
 			terms: structuredClone(this.filterTWs),
 			termsPerRequest: 10
 		})
-		this.view = new EventCountView(this)
-		this.model = new EventCountModel(this)
+		this.view = new FrequencyChartView(this)
+		this.model = new FrequencyChartModel(this)
 		this.vm = new RunchartViewModel(this)
 		this.interactivity = new ScatterInteractivity(this)
 	}
@@ -49,15 +49,15 @@ export class EventCount extends Runchart {
 }
 
 export async function getPlotConfig(opts, app) {
-	//if (!opts.colorTW) throw 'eventCount getPlotConfig: opts.colorTW{} missing'
-	//if (!opts.name && !(opts.term && opts.term2)) throw 'eventCount getPlotConfig: missing coordinates input'
+	//if (!opts.colorTW) throw 'frequencyChart getPlotConfig: opts.colorTW{} missing'
+	//if (!opts.name && !(opts.term && opts.term2)) throw 'frequencyChart getPlotConfig: missing coordinates input'
 
 	const plot: any = {
 		settings: {
 			controls: {
 				isOpen: false // control panel is hidden by default
 			},
-			eventCount: getDefaultEventCountSettings(),
+			frequencyChart: getDefaultFrequencyChartSettings(),
 			startColor: {}, //dict to store the start color of the gradient for each chart when using continuous color
 			stopColor: {} //dict to store the stop color of the gradient for each chart when using continuous color
 		}
@@ -76,15 +76,15 @@ export async function getPlotConfig(opts, app) {
 		return plot
 	} catch (e) {
 		console.log(e)
-		throw `${e} [eventCount getPlotConfig()]`
+		throw `${e} [frequencyChart getPlotConfig()]`
 	}
 }
 
-export const eventCountInit = getCompInit(EventCount)
+export const frequencyChartInit = getCompInit(FrequencyChart)
 // this alias will allow abstracted dynamic imports
-export const componentInit = eventCountInit
+export const componentInit = frequencyChartInit
 
-export function getDefaultEventCountSettings() {
+export function getDefaultFrequencyChartSettings() {
 	return {
 		size: 1,
 		minShapeSize: 0.5,

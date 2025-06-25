@@ -1,16 +1,16 @@
 import { fillTermWrapper } from '#termsetting'
-import type { EventCount } from '../eventCount.ts'
+import type { FrequencyChart } from '../frequencyChart.ts'
 import { RunchartView } from '../../runchart/view/runchartView.ts'
 import { isNumericTerm } from '#shared/terms.js'
 
 export const minShapeSize = 0.2
 export const maxShapeSize = 6
-export class EventCountView extends RunchartView {
-	eventCount: EventCount
+export class FrequencyChartView extends RunchartView {
+	frequencyChart: FrequencyChart
 
-	constructor(eventCount: EventCount) {
-		super(eventCount)
-		this.eventCount = eventCount
+	constructor(frequencyChart: FrequencyChart) {
+		super(frequencyChart)
+		this.frequencyChart = frequencyChart
 	}
 
 	async getControlInputs() {
@@ -18,24 +18,24 @@ export class EventCountView extends RunchartView {
 		const shapeOption = {
 			type: 'term',
 			configKey: 'shapeTW',
-			chartType: 'eventCount',
-			usecase: { target: 'eventCount', detail: 'shapeTW' },
+			chartType: 'frequencyChart',
+			usecase: { target: 'frequencyChart', detail: 'shapeTW' },
 			title: 'Categories to assign a shape',
 			label: 'Shape',
-			vocabApi: this.eventCount.app.vocabApi,
+			vocabApi: this.frequencyChart.app.vocabApi,
 			numericEditMenuVersion: ['discrete'],
 			processInput: async tw => {
 				//only discrete mode allowed so set discrete mode and fill term wrapper to add the bins
 				if (isNumericTerm(tw?.term)) {
 					tw.q = { mode: 'discrete' } //use discrete mode by default
-					await fillTermWrapper(tw, this.eventCount.app.vocabApi)
+					await fillTermWrapper(tw, this.frequencyChart.app.vocabApi)
 				}
 			}
 		}
 		const shapeSizeOption = {
 			label: 'Sample size',
 			type: 'number',
-			chartType: 'eventCount',
+			chartType: 'frequencyChart',
 			settingsKey: 'size',
 			title: 'Sample size, represents the factor used to scale the sample',
 			min: 0,
@@ -45,7 +45,7 @@ export class EventCountView extends RunchartView {
 		const minShapeSizeOption = {
 			label: 'Min size',
 			type: 'number',
-			chartType: 'eventCount',
+			chartType: 'frequencyChart',
 			settingsKey: 'minShapeSize',
 			title: 'Minimum sample size',
 			min: minShapeSize,
@@ -55,7 +55,7 @@ export class EventCountView extends RunchartView {
 		const maxShapeSizeOption = {
 			label: 'Max size',
 			type: 'number',
-			chartType: 'eventCount',
+			chartType: 'frequencyChart',
 			settingsKey: 'maxShapeSize',
 			title: 'Maximum sample size',
 			min: minShapeSize,
@@ -68,11 +68,11 @@ export class EventCountView extends RunchartView {
 			{
 				type: 'term',
 				configKey: 'term',
-				chartType: 'eventCount',
-				usecase: { target: 'eventCount', detail: 'numeric' },
+				chartType: 'frequencyChart',
+				usecase: { target: 'frequencyChart', detail: 'numeric' },
 				title: 'X coordinate to plot the samples',
 				label: 'X',
-				vocabApi: this.eventCount.app.vocabApi,
+				vocabApi: this.frequencyChart.app.vocabApi,
 				menuOptions: '!remove',
 				numericEditMenuVersion: ['continuous']
 			},
@@ -80,29 +80,29 @@ export class EventCountView extends RunchartView {
 			{
 				type: 'term',
 				configKey: 'term0',
-				chartType: 'eventCount',
-				usecase: { target: 'eventCount', detail: 'term0' },
+				chartType: 'frequencyChart',
+				usecase: { target: 'frequencyChart', detail: 'term0' },
 				title: 'Term to to divide by categories',
 				label: 'Divide by',
-				vocabApi: this.eventCount.app.vocabApi,
+				vocabApi: this.frequencyChart.app.vocabApi,
 				numericEditMenuVersion: ['discrete']
 			},
 			{
-				label: 'Show accrual',
+				label: 'Show cumulative frecuency',
 				boxLabel: '',
 				type: 'checkbox',
-				chartType: 'eventCount',
+				chartType: 'frequencyChart',
 				settingsKey: 'showAccrual',
 				title: `Option to show the cumulative number of events over time`
 			},
 			{
 				type: 'term',
 				configKey: 'colorTW',
-				chartType: 'eventCount',
-				usecase: { target: 'eventCount', detail: 'colorTW' },
+				chartType: 'frequencyChart',
+				usecase: { target: 'frequencyChart', detail: 'colorTW' },
 				title: 'Categories to color the samples',
 				label: 'Color',
-				vocabApi: this.eventCount.app.vocabApi,
+				vocabApi: this.frequencyChart.app.vocabApi,
 				numericEditMenuVersion: ['continuous', 'discrete']
 			},
 			shapeOption,
@@ -111,18 +111,18 @@ export class EventCountView extends RunchartView {
 			{
 				type: 'term',
 				configKey: 'scaleDotTW',
-				chartType: 'eventCount',
-				usecase: { target: 'eventCount', detail: 'numeric' },
+				chartType: 'frequencyChart',
+				usecase: { target: 'frequencyChart', detail: 'numeric' },
 				title: 'Scale sample by term value',
 				label: 'Scale by',
-				vocabApi: this.eventCount.app.vocabApi,
+				vocabApi: this.frequencyChart.app.vocabApi,
 				numericEditMenuVersion: ['continuous']
 			},
 
 			{
 				label: 'Opacity',
 				type: 'number',
-				chartType: 'eventCount',
+				chartType: 'frequencyChart',
 				settingsKey: 'opacity',
 				title: 'It represents the opacity of the elements',
 				min: 0,
@@ -132,36 +132,36 @@ export class EventCountView extends RunchartView {
 			{
 				label: 'Chart width',
 				type: 'number',
-				chartType: 'eventCount',
+				chartType: 'frequencyChart',
 				settingsKey: 'svgw'
 			},
 			{
 				label: 'Chart height',
 				type: 'number',
-				chartType: 'eventCount',
+				chartType: 'frequencyChart',
 				settingsKey: 'svgh'
 			},
 			{
 				label: 'Default color',
 				type: 'color',
-				chartType: 'eventCount',
+				chartType: 'frequencyChart',
 				settingsKey: 'defaultColor'
 			},
 			{
 				label: 'Save zoom transform',
 				boxLabel: '',
 				type: 'checkbox',
-				chartType: 'eventCount',
+				chartType: 'frequencyChart',
 				settingsKey: 'saveZoomTransform',
 				title: `Option to save the zoom transformation in the state. Needed if you want to save a session with the actual zoom and pan applied`,
 				processInput: value => this.saveZoomTransform(value)
 			}
 		]
-		if (this.eventCount.config.scaleDotTW)
+		if (this.frequencyChart.config.scaleDotTW)
 			inputs.splice(inputs.length - 5, 0, minShapeSizeOption, maxShapeSizeOption, {
 				label: 'Scale order',
 				type: 'radio',
-				chartType: 'eventCount',
+				chartType: 'frequencyChart',
 				settingsKey: 'scaleDotOrder',
 				options: [
 					{ label: 'Ascending', value: 'Ascending' },
@@ -169,11 +169,11 @@ export class EventCountView extends RunchartView {
 				]
 			})
 
-		if (!this.eventCount.config.term0)
+		if (!this.frequencyChart.config.term0)
 			inputs.push({
 				label: 'Show regression',
 				type: 'dropdown',
-				chartType: 'eventCount',
+				chartType: 'frequencyChart',
 				settingsKey: 'regression',
 				options: [
 					{ label: 'None', value: 'None' },
