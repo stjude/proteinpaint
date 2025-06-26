@@ -13,7 +13,7 @@ export default function discoDefaults(overrides = {}): Settings {
 			prioritizeGeneLabelsByGeneSets: false,
 			showPrioritizeGeneLabelsByGeneSets: false,
 			cnvRenderingType: CnvRenderingType.heatmap,
-			cnvPercentile: 80,
+			cnvPercentile: 90, // 90th percentile for removing outliers
 			cnvCutoffMode: 'auto'
 		},
 

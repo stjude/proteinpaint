@@ -171,7 +171,7 @@ export default class Disco {
 		const snvRenderer = new SnvRenderer(settings.rings.snvRingWidth, geneClickListener)
 		const cnvRenderer =
 			settings.Disco.cnvRenderingType === CnvRenderingType.heatmap
-				? new CnvHeatmapRenderer(viewModel.positivePercentile80, viewModel.negativePercentile80)
+				? new CnvHeatmapRenderer(viewModel.positivePercentile, viewModel.negativePercentile)
 				: new CnvBarRenderer()
 		const lohRenderer = new LohRenderer()
 

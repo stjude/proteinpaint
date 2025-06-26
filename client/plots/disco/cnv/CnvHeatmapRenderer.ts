@@ -6,12 +6,12 @@ import { scaleLinear } from 'd3-scale'
 import { dtcnv } from '#shared/common.js'
 
 export class CnvHeatmapRenderer {
-	private positivePercentile80: number
-	private negativePercentile80: number
+	private positivePercentile: number
+	private negativePercentile: number
 
-	constructor(positivePercentile80 = 0, negativePercentile80 = 0) {
-		this.positivePercentile80 = positivePercentile80
-		this.negativePercentile80 = negativePercentile80
+	constructor(positivePercentile = 0, negativePercentile = 0) {
+		this.positivePercentile = positivePercentile
+		this.negativePercentile = negativePercentile
 	}
 
 	render(holder: any, elements: Array<CnvArc>) {
@@ -62,7 +62,7 @@ export class CnvHeatmapRenderer {
 
 	getColor(color: string, value: number) {
 		//For cnv values, use a zero-centered symmetric scale rather than the absolute values
-		const maxValue = Math.max(this.positivePercentile80, Math.abs(this.negativePercentile80))
+		const maxValue = Math.max(this.positivePercentile, Math.abs(this.negativePercentile))
 		return scaleLinear([-maxValue, 0, maxValue], [color, 'white', color]).clamp(true)(value)
 	}
 }

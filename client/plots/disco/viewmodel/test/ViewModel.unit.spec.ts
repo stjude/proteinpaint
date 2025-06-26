@@ -81,7 +81,7 @@ test('ViewModel initializes with expected values', t => {
 		`CNV min loss value should return ${mockDataHolder.cnvLossMaxValue}`
 	)
 	t.equal(
-		viewModel.positivePercentile80,
+		viewModel.positivePercentile,
 		mockDataHolder.percentilePositive,
 		`Percentile positive should return ${mockDataHolder.percentilePositive}`
 	)
