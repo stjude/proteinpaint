@@ -15,7 +15,7 @@ LABEL org.opencontainers.image.source="https://github.com/stjude/proteinpaint" \
     org.opencontainers.image.revision="$IMGREV" \
     org.opencontainers.image.version="$IMGVER"
 
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install --allow-downgrades -y \
     curl \
     wget \
     git \
@@ -26,6 +26,7 @@ RUN apt-get update && apt-get install -y \
 	libgsl0-dev \
 	libhdf5-dev \
 	liblzma-dev \
+        libdatrie1=0.2.13-3+b1 \
 	libncurses5-dev \
 	libperl-dev \
 	libssl-dev \
