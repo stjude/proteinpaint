@@ -21,7 +21,10 @@ export type WSImage = {
 	metadata: string
 	annotationsData?: { zoomCoordinates: [number, number]; type: string; class: string; uncertainty: number }[]
 	classes?: WSIClass[]
+	/** ds defined uncertainity labels and colors */
 	uncertainty?: any
+	/** Color to highlight active patches */
+	activePatchColor?: string
 }
 
 export const sampleWSImagesPayload: RoutePayload = {

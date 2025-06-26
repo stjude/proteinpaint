@@ -971,6 +971,7 @@ export type WSImages = {
 	required; for both cases where image files are hosted locally, or loaded from remote via ds-supplied getter
 	*/
 	imageBySampleFolder: string
+	activePatchColor?: string
 	predictionColor?: Array<number>
 	annotationsColor?: Array<number>
 	classes?: WSIClass[]

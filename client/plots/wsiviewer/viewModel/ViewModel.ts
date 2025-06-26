@@ -31,6 +31,8 @@ export class ViewModel {
 		const metadata = this.wsimageLayers[index].wsimage.get('metadata')
 		if (metadata) imageViewData.metadata = metadata
 
+		if (imageData.activePatchColor) imageViewData.activePatchColor = imageData.activePatchColor
+
 		return imageViewData
 	}
 
