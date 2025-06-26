@@ -40,7 +40,27 @@ mkdir tmppack
 
 **Important:** Ensure WARP is turned off before proceeding.
 
-### 5. Version and Build Dependencies
+### 5. Configure Dependencies Dockerfile
+
+Before building the dependencies, you need to modify the Dockerfile to ensure package compatibility:
+
+**Modify `container/deps/Dockerfile`:**
+
+1. Locate the section where Ubuntu packages are being installed (look for the `apt-get install` command with multiple packages)
+2. Add `libdatrie1=0.2.13-3+b1` to the package list
+3. Add the `--allow-downgrades` flag immediately after `apt-get install`
+
+**Example modification:**
+
+```dockerfile
+# Before
+RUN apt-get install package1 package2 package3 ...
+
+# After  
+RUN apt-get install --allow-downgrades package1 package2 libdatrie1=0.2.13-3+b1 package3 ...
+```
+
+### 6. Build Dependencies
 
 Generate version information and build the dependencies:
 
@@ -50,7 +70,7 @@ Generate version information and build the dependencies:
 ./build.sh
 ```
 
-### 6. Configure Full Container
+### 7. Configure Full Container
 
 Navigate to the full container directory:
 
@@ -64,15 +84,15 @@ cd proteinpaint/container/full/
 - Verify the configuration matches the requirements outlined in [the documentation](https://github.com/stjude/proteinpaint/wiki/Buiding-a-deps-image)
 - Look for the section titled "The new deps image version named 'ppfull:latest' should be added to proteinpaint/container/full/Dockerfile:" and ensure your file matches
 
-### 7. Create Server Configuration
+### 8. Create Server Configuration
 
 Ensure you have a minimal `serverconfig.json` file in `proteinpaint/container/`.
 
-### 8. Clean Docker Environment
+### 9. Clean Docker Environment
 
 Open Docker Desktop and manually remove all previous builds and images to avoid conflicts.
 
-### 9. Build and Run
+### 10. Build and Run
 
 Execute the final build and run commands:
 
@@ -83,7 +103,7 @@ cd container
 ./run.sh ppfull:NEW_VERSION
 ```
 
-**Note:** Replace `NEW_VERSION` with the actual version number from your Docker images list. This step requires the `serverconfig.json` file created in step 7.
+**Note:** Replace `NEW_VERSION` with the actual version number from your Docker images list. This step requires the `serverconfig.json` file created in step 8.
 
 ## Troubleshooting
 
@@ -91,6 +111,7 @@ cd container
 - Verify Docker Desktop is running and has sufficient resources
 - Check that WARP is disabled before building
 - Confirm the `serverconfig.json` file exists and is properly formatted
+- If you encounter package dependency issues, verify the Dockerfile modifications in step 5 were applied correctly
 
 ## Next Steps
 

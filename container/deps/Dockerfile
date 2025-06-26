@@ -15,7 +15,7 @@ LABEL org.opencontainers.image.source="https://github.com/stjude/proteinpaint" \
     org.opencontainers.image.revision="$IMGREV" \
     org.opencontainers.image.version="$IMGVER"
 
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install --allow-downgrades -y \
     curl \
     wget \
     git \
@@ -26,6 +26,7 @@ RUN apt-get update && apt-get install -y \
 	libgsl0-dev \
 	libhdf5-dev \
 	liblzma-dev \
+        libdatrie1=0.2.13-3+b1 \
 	libncurses5-dev \
 	libperl-dev \
 	libssl-dev \
@@ -87,7 +88,7 @@ RUN node -v && npm -v
 # Install python dependencies
 RUN python3 -m venv /opt/venv && \
     pip install --upgrade pip && \
-    pip install blitzgsea==1.3.47 matplotlib nibabel numpy pre-commit && \
+    pip install blitzgsea==1.3.47 matplotlib nibabel numpy numba xlsxwriter  pre-commit && \
     ## clean up
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /tmp/downloaded_packages/ /tmp/*.rds
