@@ -4668,11 +4668,39 @@ seekrange(chr,start,stop) {
 			.style('width', this.ideogram.width + 'px')
 			.style('margin', '5px')
 
-		this.ideogram.canvas = this.ideogram.div
-			.append('canvas')
-			.attr('width', this.ideogram.width)
-			.attr('height', this.ideogram.height)
-			.style('margin-top', vpad + 'px')
+               this.ideogram.canvas = this.ideogram.div
+                       .append('canvas')
+                       .attr('width', this.ideogram.width)
+                       .attr('height', this.ideogram.height)
+                       .style('margin-top', vpad + 'px')
+
+               this.ideogram.tooltip = this.ideogram.div
+                       .append('div')
+                       .style('position', 'absolute')
+                       .style('pointer-events', 'none')
+                       .style('background', 'white')
+                       .style('border', 'solid 1px #ccc')
+                       .style('font-size', '.7em')
+                       .style('padding', '1px 3px')
+                       .style('display', 'none')
+
+               this.ideogram.div
+                       .on('mousemove', event => {
+                               const rect = this.ideogram.div.node().getBoundingClientRect()
+                               const x = event.clientX - rect.left
+                               if (this.ideogram.chr) {
+                                       const chrlen = this.genome.chrlookup[this.ideogram.chr.toUpperCase()].len
+                                       const pos = Math.round((x / this.ideogram.width) * chrlen) + 1
+                                       this.ideogram.tooltip
+                                               .style('display', 'block')
+                                               .style('left', x + 'px')
+                                               .style('top', '-1.5em')
+                                               .text(this.ideogram.chr + ':' + pos.toLocaleString())
+                               }
+                       })
+                       .on('mouseleave', () => {
+                               this.ideogram.tooltip.style('display', 'none')
+                       })
 
 		this.ideogram.ctx = this.ideogram.canvas.node().getContext('2d')
 		this.ideogram.blueBox = this.ideogram.div

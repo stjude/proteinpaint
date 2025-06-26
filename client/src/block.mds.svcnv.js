@@ -85,7 +85,7 @@ maysortsamplesingroupbydt
 
 const labyspace = 5
 export const intrasvcolor = '#858585' // inter-chr sv color is defined on the fly
-const cnvhighlightcolor = '#E8FFFF'
+export const cnvhighlightcolor = '#E8FFFF'
 export const coverbarcolor_silent = '#222'
 export const coverbarcolor_active = '#ED8600'
 
@@ -1432,33 +1432,49 @@ function render_multi_cnvloh(tk, block) {
 					color = common.mclass[common.mclassitd].color
 				}
 
-				g.append('rect')
-					.attr('x', Math.min(item.x1, item.x2))
-					.attr('y', item.stack_y)
-					.attr('width', Math.max(1, Math.abs(item.x1 - item.x2)))
-					.attr('height', item.stack_h)
-					.attr('shape-rendering', 'crispEdges')
-					.attr('stroke', 'none')
-					.attr('class', 'sja_aa_skkick')
-					.attr('fill', color)
-					.on('mouseover', () => {
-						tooltip_singleitem({
-							item: item,
-							sample: sample,
-							samplegroup: samplegroup,
-							tk: tk
-						})
-					})
-					.on('mouseout', () => {
-						tk.tktip.hide()
-						multi_sample_removehighlight(sample)
-					})
-					.on('click', () => {
-						// FIXME prevent click while dragging
-						click_multi_singleitem({
-							item: item,
-							sample: sample,
-							samplegroup: samplegroup,
+                                g.append('rect')
+                                        .attr('x', Math.min(item.x1, item.x2))
+                                        .attr('y', item.stack_y)
+                                        .attr('width', Math.max(1, Math.abs(item.x1 - item.x2)))
+                                        .attr('height', item.stack_h)
+                                        .attr('shape-rendering', 'crispEdges')
+                                        .attr('stroke', 'none')
+                                        .attr('class', 'sja_aa_skkick')
+                                        .attr('fill', color)
+                                       .on('mouseover', event => {
+                                               event.stopPropagation()
+                                               const x =
+                                                       block.leftheadw +
+                                                       block.lpad +
+                                                       Math.min(item.x1, item.x2)
+                                               const w = Math.max(1, Math.abs(item.x1 - item.x2))
+                                               block.cursorhlbar
+                                                       .attr('x', x)
+                                                       .attr('y', 0)
+                                                       .attr('width', w)
+                                                       .attr('height', block.totalheight())
+                                                       .attr('fill', cnvhighlightcolor)
+
+                                               tooltip_singleitem({
+                                                       item: item,
+                                                       sample: sample,
+                                                       samplegroup: samplegroup,
+                                                       tk: tk
+                                               })
+                                       })
+                                       .on('mouseout', () => {
+                                               block.cursorhlbar
+                                                       .attr('width', 0)
+                                                       .attr('fill', block.cursorhlbarFillColor)
+                                               tk.tktip.hide()
+                                               multi_sample_removehighlight(sample)
+                                       })
+                                        .on('click', () => {
+                                                // FIXME prevent click while dragging
+                                                click_multi_singleitem({
+                                                        item: item,
+                                                        sample: sample,
+                                                        samplegroup: samplegroup,
 							tk: tk,
 							block: block
 						})
@@ -2441,9 +2457,10 @@ export async function focus_singlesample(p) {
 	const bb = block.newblock(arg)
 
 	if (m) {
-		if (m.dt == common.dtcnv || m.dt == common.dtloh) {
-			bb.addhlregion(m.chr, m.start, m.stop, cnvhighlightcolor)
-		}
+                if (m.dt == common.dtcnv || m.dt == common.dtloh) {
+                        bb.addhlregion(m.chr, m.start, m.stop, cnvhighlightcolor)
+                        bb.hlregion.g.raise()
+                }
 	}
 	if (assaytklst) {
 		// display buttons for toggling each assay track

@@ -15,6 +15,8 @@ import {
 } from './block.mds.svcnv'
 import { update_legend } from './block.mds.svcnv.legend'
 
+import { cnvhighlightcolor } from './block.mds.svcnv'
+
 export function render_singlesample(tk, block) {
 	/*
 	single-sample mode
@@ -450,25 +452,41 @@ function render_singlesample_stack(items, tk, block, svheight) {
 				color = common.mclass[common.mclassitd].color
 			}
 
-			tk.cnv_g
-				.append('rect')
-				.attr('x', Math.min(item.x1, item.x2))
-				.attr('y', yoff + (stackheight + stackspace) * item.stack)
-				.attr('width', Math.max(1, Math.abs(item.x2 - item.x1)))
-				.attr('height', stackheight)
-				.attr('fill', color)
-				.attr('shape-rendering', 'crispEdges')
-				.attr('stroke', 'none')
-				.attr('class', 'sja_aa_skkick')
-				.on('mouseover', () => {
-					tooltip_singleitem({
-						item: item,
-						tk: tk
-					})
-				})
-				.on('mouseout', () => {
-					tk.tktip.hide()
-				})
+                        tk.cnv_g
+                                .append('rect')
+                                .attr('x', Math.min(item.x1, item.x2))
+                                .attr('y', yoff + (stackheight + stackspace) * item.stack)
+                                .attr('width', Math.max(1, Math.abs(item.x2 - item.x1)))
+                                .attr('height', stackheight)
+                                .attr('fill', color)
+                                .attr('shape-rendering', 'crispEdges')
+                                .attr('stroke', 'none')
+                                .attr('class', 'sja_aa_skkick')
+                               .on('mouseover', event => {
+                                       event.stopPropagation()
+                                       const x =
+                                               block.leftheadw +
+                                               block.lpad +
+                                               Math.min(item.x1, item.x2)
+                                       const w = Math.max(1, Math.abs(item.x2 - item.x1))
+                                       block.cursorhlbar
+                                               .attr('x', x)
+                                               .attr('y', 0)
+                                               .attr('width', w)
+                                               .attr('height', block.totalheight())
+                                               .attr('fill', cnvhighlightcolor)
+
+                                       tooltip_singleitem({
+                                               item: item,
+                                               tk: tk
+                                       })
+                               })
+                               .on('mouseout', () => {
+                                       block.cursorhlbar
+                                               .attr('width', 0)
+                                               .attr('fill', block.cursorhlbarFillColor)
+                                       tk.tktip.hide()
+                               })
 			continue
 		}
 
