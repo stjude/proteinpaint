@@ -3,6 +3,7 @@ import { fillTermWrapper } from '#termsetting'
 import { ReportView } from './view/reportView'
 import { RxComponentInner } from '../../types/rx.d'
 import { controlsInit } from '../controls.js'
+import { getTermFilter } from '#shared/filter.js'
 
 export class Report extends RxComponentInner {
 	config: any
@@ -25,28 +26,49 @@ export class Report extends RxComponentInner {
 		this.components = { plots: {} }
 	}
 
-	async replaceGlobalFilter(country: string) {
+	async replaceGlobalFilter() {
+		const country = this.view.dom.countrySelect.node().value
+		const site = this.view.dom.siteSelect.node().value
 		const filter: any = {
 			type: 'tvslst',
 			in: true,
 			join: '',
-			lst: country
-				? [
-						{
-							type: 'tvs',
-							tvs: {
-								term: this.config.countryTW.term,
-								values: [{ key: country }]
-							}
-						}
-				  ]
-				: []
+			lst: []
+		}
+		if (country) {
+			filter.lst.push({
+				type: 'tvs',
+				tvs: {
+					term: this.config.countryTW.term,
+					values: [{ key: country }]
+				}
+			})
+		}
+		if (site) {
+			filter.lst.push({
+				type: 'tvs',
+				tvs: {
+					term: this.config.siteTW.term,
+					values: [{ key: site }]
+				}
+			})
 		}
 		filter.tag = 'filterUiRoot'
+		if (filter.lst.length > 1) filter.join = 'and'
 
 		this.app.dispatch({
-			type: 'filter_replace',
-			filter
+			type: 'app_refresh',
+			subactions: [
+				{
+					type: 'filter_replace',
+					filter
+				},
+				{
+					type: 'plot_edit',
+					id: this.id,
+					config: { site, country }
+				}
+			]
 		})
 	}
 
@@ -71,6 +93,7 @@ export class Report extends RxComponentInner {
 			if (this.components.plots[plot.id]) continue
 			await this.setPlot(plot)
 		}
+		this.fillSites()
 	}
 
 	async setPlot(plot) {
@@ -96,6 +119,31 @@ export class Report extends RxComponentInner {
 				holder: this.view.dom.controlsHolder,
 				inputs
 			})
+		}
+	}
+
+	async fillSites() {
+		const country = this.state.config.country
+		const site = this.state.config.site
+		const terms = [this.config.countryTW, this.config.siteTW]
+
+		const filters = { [this.config.countryTW.term.id]: this.state.termfilter.filter }
+		const values = { [this.config.countryTW.term.id]: country }
+		filters[this.config.siteTW.term.id] = getTermFilter(terms, values, this.config.siteTW, this.state.termfilter.filter)
+		const sitesData = await this.app.vocabApi.getProfileFilters({
+			terms,
+			filters
+		})
+		console.log('sitesData', sitesData)
+		const siteSelect = this.view.dom.siteSelect
+		siteSelect.selectAll('option').remove()
+
+		for (const siteOption of sitesData[this.config.siteTW.term.id]) {
+			const option = siteSelect.append('option').attr('value', siteOption.value).text(siteOption.label)
+			option.property('disabled', siteOption.disabled)
+			if (siteOption.value === site) {
+				option.attr('selected', 'selected')
+			}
 		}
 	}
 }
