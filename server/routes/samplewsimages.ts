@@ -86,10 +86,6 @@ function init({ genomes }) {
 
 			if (ds.queries.WSImages.getWSIPredictionOverlay) {
 				for (const wsimage of wsimages) {
-					// if (ds.queries.WSImages.makeGeoJson) {
-					// 	await ds.queries.WSImages.makeGeoJson(sampleId, wsimage)
-					// }
-
 					const predictionOverlay = await ds.queries.WSImages.getWSIPredictionOverlay(sampleId, wsimage.filename)
 
 					if (predictionOverlay) {
