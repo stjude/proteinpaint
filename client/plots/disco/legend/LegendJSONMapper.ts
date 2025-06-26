@@ -129,6 +129,9 @@ export default class LegendJSONMapper {
 				dt: 4
 			}
 			if (gain.value > 0 && loss.value < 0) {
+				// Use a symmetric scale for the heatmap
+				// Matches the logic for coloring the arcs in the heatmap
+				// in CnvHeatmapRenderer.ts
 				const maxValue = Math.max(Math.abs(loss.value), gain.value)
 				const domain = [-maxValue, 0, maxValue]
 				cnvItems.push(
