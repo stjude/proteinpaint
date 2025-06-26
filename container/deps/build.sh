@@ -90,6 +90,10 @@ cp ../server/app-server.mjs .
 mkdir -p R
 cp -r ../../R/utils R/
 
+# Create the tmppack folder to store pp tarballs during CI,
+# if there are changes in the pp repo
+mkdir -p ./tmppack
+
 # build ppbase, ppserver, and ppfull images
 # NOTE: important to supply the same ARCH, IMGVER, and IMGREV arguments
 # for all 3 build jobs to ensure that the ppbase stage of the build
