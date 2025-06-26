@@ -88,7 +88,7 @@ RUN node -v && npm -v
 # Install python dependencies
 RUN python3 -m venv /opt/venv && \
     pip install --upgrade pip && \
-    pip install blitzgsea==1.3.47 matplotlib nibabel numpy pre-commit && \
+    pip install blitzgsea==1.3.47 matplotlib nibabel numpy numba xlsxwriter  pre-commit && \
     ## clean up
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /tmp/downloaded_packages/ /tmp/*.rds
