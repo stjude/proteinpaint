@@ -61,8 +61,8 @@ export class CnvHeatmapRenderer {
 	}
 
 	getColor(color: string, value: number) {
-		return scaleLinear([this.negativePercentile80, 0, this.positivePercentile80], [color, 'white', color]).clamp(true)(
-			value
-		)
+		//For cnv values, use a zero-centered symmetric scale rather than the absolute values
+		const maxValue = Math.max(this.positivePercentile80, Math.abs(this.negativePercentile80))
+		return scaleLinear([-maxValue, 0, maxValue], [color, 'white', color]).clamp(true)(value)
 	}
 }

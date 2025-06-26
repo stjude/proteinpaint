@@ -2,6 +2,7 @@ import * as d3 from 'd3'
 import type IRenderer from '#plots/disco/IRenderer.ts'
 import type CnvArc from './CnvArc.ts'
 import MenuProvider from '#plots/disco/menu/MenuProvider.ts'
+
 export default class CnvRenderer implements IRenderer {
 	private menuPadding: number
 
