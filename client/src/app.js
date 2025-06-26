@@ -602,6 +602,9 @@ async function parseEmbedThenUrl(arg, app) {
 	if (arg.launchGdcMaf) {
 		return await launchGdcMaf(arg, app)
 	}
+	if (arg.launchGdcGrin2) {
+		return await launchGdcGrin2(arg, app)
+	}
 	if (arg.launchGdcScRNAseq) {
 		return await launchGdcScRNAseq(arg, app)
 	}
@@ -1226,6 +1229,15 @@ async function launchGdcScRNAseq(arg, app) {
 async function launchGdcMaf(arg, app) {
 	const _ = await import('../gdc/maf.js')
 	return await _.gdcMAFui({
+		holder: app.holder0,
+		filter0: arg.filter0,
+		callbacks: arg.callbacks || {},
+		debugmode: arg.debugmode
+	})
+}
+async function launchGdcGrin2(arg, app) {
+	const _ = await import('../gdc/grin2.ts')
+	return await _.gdcGRIN2ui({
 		holder: app.holder0,
 		filter0: arg.filter0,
 		callbacks: arg.callbacks || {},
