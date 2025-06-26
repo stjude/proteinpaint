@@ -1,5 +1,6 @@
 import { select } from 'd3-selection'
 import type { Report } from '../report.ts'
+
 export class ReportView {
 	opts: any
 	dom: any
@@ -43,11 +44,30 @@ export class ReportView {
 			for (const value in this.report.config.countryTW.term.values) {
 				const country = this.report.config.countryTW.term.values[value].label
 				select.append('option').attr('value', country).text(country)
+				if (this.report.config.country === country) {
+					select.property('value', country)
+				}
 			}
 			select.on('change', async () => {
-				const country = select.property('value')
-				await this.report.replaceGlobalFilter(country)
+				this.report.replaceGlobalFilter()
 			})
+			this.dom.countrySelect = select
+		}
+		if (this.report.config.siteTW) {
+			this.dom.headerDiv.append('label').text('Site: ')
+			const select = this.dom.headerDiv.append('select')
+			select.append('option').attr('value', '').text('')
+			for (const value in this.report.config.siteTW.term.values) {
+				const site = this.report.config.siteTW.term.values[value].label
+				select.append('option').attr('value', site).text(site)
+				if (this.report.config.site === site) {
+					select.property('value', site)
+				}
+			}
+			select.on('change', async () => {
+				await this.report.replaceGlobalFilter()
+			})
+			this.dom.siteSelect = select
 		}
 	}
 

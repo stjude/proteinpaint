@@ -41,6 +41,9 @@ function getList(samplesPerFilter, filtersData, tw) {
 	values.sort((v1: any, v2: any) => v1.label.localeCompare(v2.label))
 	const twSamples = samplesPerFilter[tw.term.id]
 	const data: any[] = []
+	//if(!twSamples)
+	//	data = Object.values(filtersData.samples)
+	//else
 	for (const sample of twSamples) {
 		data.push(filtersData.samples[sample])
 	}
@@ -48,7 +51,8 @@ function getList(samplesPerFilter, filtersData, tw) {
 	const sampleValues = Array.from(new Set(data.map(sample => sample[tw.$id]?.value)))
 	for (const value of values) {
 		value.value = value.label
-		value.disabled = !sampleValues.includes(value.label)
+		const label = value.label.replace(/['"]/g, '') //remove quotes from label, fixes some labels with quotes
+		value.disabled = !sampleValues.includes(label)
 	}
 	values.unshift({ label: '', value: '' })
 	return values
