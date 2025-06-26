@@ -1,4 +1,5 @@
 {
+    "intro": "The JSON BED format, bedj file, is a custom format for ProteinPaint that allows for flexible rendering of genomic features. It is similar to the UCSC BED format, but with additional features such as color coding and item filtering. Please note: <ul><li>Postions are zero based, like UCSC BED files.</li><li>The ProteinPaint wiki provides detailed descriptions of available options for the JSON object. Click the Documention button below to learn more.</li></ul>",
     "ppcalls": [
         {
             "label": "JSON BED",
