@@ -9,6 +9,7 @@ import type { Geometry } from 'ol/geom'
 import { Fill, Stroke, Style } from 'ol/style'
 
 export class WSIViewerInteractions {
+	public activePatchColor?: string
 	thumbnailClickListener: (index: number) => void
 	addZoomInEffect: (activeImageExtent: unknown, zoomInPoints: [number, number][], map: OLMap) => void
 	addMapKeyDownListener: (
@@ -21,6 +22,7 @@ export class WSIViewerInteractions {
 	) => void
 
 	constructor(wsiApp: any, opts: any) {
+		this.activePatchColor = '#00e62a'
 		this.thumbnailClickListener = (index: number) => {
 			wsiApp.app.dispatch({
 				type: 'plot_edit',
@@ -65,7 +67,7 @@ export class WSIViewerInteractions {
 					.find(l => l instanceof VectorLayer)!
 
 				const zoomCoordinates = [zoomInPoints[0][0], imageHeight - zoomInPoints[0][1]] as [number, number]
-				this.addActiveBorder(vectorLayer as VectorLayer, zoomCoordinates, '#00e62a')
+				this.addActiveBorder(vectorLayer as VectorLayer, zoomCoordinates, this.activePatchColor)
 			}, 200)
 		}
 

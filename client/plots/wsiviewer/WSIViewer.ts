@@ -32,7 +32,6 @@ export default class WSIViewer extends RxComponentInner {
 		const settings = state.plots.find(p => p.id === this.id).settings as Settings
 		const holder = this.opts.holder
 
-		//TODO: Maybe index comes from state? or ds.queries?
 		const buffers = {
 			annotationsIdx: new Buffer<number>(0),
 			tmpClass: new Buffer<{ label: string; color: string }>({ label: '', color: '' })
@@ -44,13 +43,7 @@ export default class WSIViewer extends RxComponentInner {
 		const sample_id = state.sample_id
 
 		const viewModelProvider = new ViewModelProvider()
-		const viewModel = await viewModelProvider.provide(
-			genome,
-			dslabel,
-			sample_id,
-			buffers.annotationsIdx.get(),
-			settings
-		)
+		const viewModel = await viewModelProvider.provide(genome, dslabel, sample_id, buffers.annotationsIdx.get())
 		const wsimages = viewModel.sampleWSImages
 		const wsimageLayers = viewModel.wsimageLayers
 		const wsimageLayersLoadError = viewModel.wsimageLayersLoadError
@@ -84,6 +77,11 @@ export default class WSIViewer extends RxComponentInner {
 			.style('height', settings.imageHeight)
 
 		const imageViewData = viewModel.getImageViewData(settings.displayedImageIndex)
+
+		//TODO: Handle this better
+		if (imageViewData.activePatchColor) {
+			this.wsiViewerInteractions.activePatchColor = imageViewData.activePatchColor
+		}
 
 		const activeImage: TileLayer = wsimageLayers[settings.displayedImageIndex].wsimage
 		const activeImageExtent = activeImage?.getSource()?.getTileGrid()?.getExtent()

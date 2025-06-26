@@ -69,6 +69,7 @@ function init({ genomes }) {
 
 						wsimage.classes = ds.queries?.WSImages?.classes
 						wsimage.uncertainty = ds.queries?.WSImages?.uncertainty
+						wsimage.activePatchColor = ds.queries?.WSImages?.activePatchColor || '#00e62a'
 					}
 
 					if (ds.queries.WSImages.getZoomInPoints) {

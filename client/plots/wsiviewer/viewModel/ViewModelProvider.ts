@@ -1,4 +1,3 @@
-import type Settings from '#plots/wsiviewer/Settings.ts'
 import { dofetch3 } from '#common/dofetch'
 import type { SampleWSImagesResponse, WSImage, WSImagesRequest, WSImagesResponse } from '@sjcrh/proteinpaint-types'
 import { ViewModel } from '#plots/wsiviewer/viewModel/ViewModel.ts'
@@ -11,7 +10,7 @@ import VectorSource from 'ol/source/Vector'
 export class ViewModelProvider {
 	constructor() {}
 
-	async provide(genome: string, dslabel: string, sampleId: string, index, settings: Settings): Promise<ViewModel> {
+	async provide(genome: string, dslabel: string, sampleId: string, index: number): Promise<ViewModel> {
 		const data: SampleWSImagesResponse = await this.requestData(genome, dslabel, sampleId, index)
 
 		let wsimageLayers: Array<WSImageLayers> = []
@@ -21,10 +20,6 @@ export class ViewModelProvider {
 			wsimageLayers = await this.getWSImageLayers(genome, dslabel, sampleId, data.sampleWSImages)
 		} catch (e: any) {
 			wsimageLayersLoadError = `Error loading image layers for sample  ${sampleId}: ${e.message || e}`
-		}
-
-		if (settings) {
-			//tmp fix to resolve ts error
 		}
 
 		return new ViewModel(data.sampleWSImages, wsimageLayers, wsimageLayersLoadError)
