@@ -1,6 +1,6 @@
 {
 	"name": "@sjcrh/proteinpaint-container",
-	"version": "2.124.1",
+	"version": "2.132.1-2",
 	"bin": "launch.js",
 	"scripts": {
 		"//": "this dev script is for developing and testing the container itself, not for using the container as a dev environment",
@@ -9,8 +9,8 @@
 		"postinstall": "if [ ! -f ./pack.sh ]; then docker pull ghcr.io/stjude/ppfull:latest; fi"
 	},
 	"containerDeps": {
-		"server": "2.124.1",
-		"front": "2.124.1"
+		"server": "2.132.1-2",
+		"front": "2.132.1-2"
 	},
 	"files": [
 		"build.sh",
