@@ -55,7 +55,7 @@ export class WSIViewerInteractions {
 				view.animate({
 					center: xyAvg,
 					zoom: 5,
-					duration: 2000
+					duration: 700
 				})
 
 				//On zooming to a new annotation, add a border around the annotation
@@ -66,7 +66,7 @@ export class WSIViewerInteractions {
 
 				const zoomCoordinates = [zoomInPoints[0][0], imageHeight - zoomInPoints[0][1]] as [number, number]
 				this.addActiveBorder(vectorLayer as VectorLayer, zoomCoordinates, '#00e62a')
-			}, 500)
+			}, 200)
 		}
 
 		this.addMapKeyDownListener = (
