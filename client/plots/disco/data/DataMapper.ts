@@ -122,7 +122,7 @@ export default class DataMapper {
 				}
 			} else if (dObject.dt == dtfusionrna || dObject.dt == dtsv) {
 				if (indexA != -1 && indexB != -1) {
-					// show fusion event when at least one gene knonw
+					// show sv/fusion event with valid A/B breakpoints.
 					this.addData(dObject, dataArray)
 				}
 			} else if ([dtcnv, dtloh].includes(Number(dObject.dt))) {
