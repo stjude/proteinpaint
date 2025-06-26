@@ -253,3 +253,32 @@ export function getWrappedTvslst(lst = [], join = '', $id = null) {
 	if ($id !== null && filter.$id !== undefined) filter.$id = $id
 	return filter
 }
+
+//build filter to retrieve the given term values after filtering out the samples with the values specified in the remaining filters
+export function getTermFilter(filterTWs, values, tw, globalFilter) {
+	const excluded = []
+	if (tw) excluded.push(tw.$id)
+	const lst = []
+	for (const tw of filterTWs) processTW(tw, values, excluded, lst)
+
+	const tvslst = {
+		type: 'tvslst',
+		in: true,
+		join: 'and',
+		lst
+	}
+	const filter = filterJoin([globalFilter, tvslst])
+	return filter
+
+	function processTW(tw, values, excluded, lst) {
+		const value = values[tw.term.id]
+		if (value && !excluded.includes(tw.$id))
+			lst.push({
+				type: 'tvs',
+				tvs: {
+					term: tw.term,
+					values: [{ key: value }]
+				}
+			})
+	}
+}
