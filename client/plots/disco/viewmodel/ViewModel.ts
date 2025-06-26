@@ -24,8 +24,8 @@ export default class ViewModel {
 	cnvMaxValue?: number
 	cnvMinValue?: number
 	cappedCnvMaxAbsValue?: number
-	negativePercentile80?: number
-	positivePercentile80?: number
+	negativePercentile?: number
+	positivePercentile?: number
 
 	constructor(
 		settings: Settings,
@@ -62,8 +62,8 @@ export default class ViewModel {
 		this.cnvMaxValue = dataHolder.cnvGainMaxValue
 		this.cnvMinValue = dataHolder.cnvLossMaxValue
 		this.cappedCnvMaxAbsValue = dataHolder.cappedCnvMaxAbsValue
-		this.negativePercentile80 = dataHolder.percentileNegative
-		this.positivePercentile80 = dataHolder.percentilePositive
+		this.negativePercentile = dataHolder.percentileNegative
+		this.positivePercentile = dataHolder.percentilePositive
 	}
 
 	getElements(ringType: RingType): Array<Arc> {
