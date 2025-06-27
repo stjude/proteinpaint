@@ -57,6 +57,7 @@ export class CnvHeatmapRenderer {
 				{
 					const [c1, c2] = table.addRow()
 					c1.text('Copy number change')
+					//Match the color shown in the tooltip to the heatmap
 					c2.html(
 						`<span style="background:${this.getColor(
 							cnv.color,
@@ -85,8 +86,10 @@ export class CnvHeatmapRenderer {
 
 	// Computes fill color using linear scale between -P80, 0, and +P80
 	getColor(color: string, value: number) {
+		//For cnv values, use a zero-centered symmetric scale rather than the absolute values
+		const maxValue = Math.max(this.positivePercentile, Math.abs(this.negativePercentile))
 		return scaleLinear(
-			[this.negativePercentile, 0, this.positivePercentile],
+			[-maxValue, 0, maxValue],
 			[color, 'white', color] // transitions to white in the middle
 		).clamp(true)(value)
 	}
