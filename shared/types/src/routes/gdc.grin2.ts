@@ -117,6 +117,8 @@ export type RunGRIN2Request = {
 		gainThreshold?: number // Default: 0.3
 		/** Maximum segment length to include (0 = no filter) */
 		segLength?: number // Default: 0
+		/** Hypermutator max cut off for CNVs per case */
+		hyperMutator?: number // Default: 500
 	}
 }
 

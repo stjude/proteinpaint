@@ -638,7 +638,8 @@ function makeControls(obj) {
 		obj.cnvOptions = {
 			lossThreshold: -0.4,
 			gainThreshold: 0.3,
-			segLength: 0
+			segLength: 0,
+			hyperMutator: 500
 		}
 	}
 
@@ -1130,7 +1131,41 @@ function makeControls(obj) {
 			}
 		})
 
-		// Row 2: Segment Length Cutoff (spans full width)
+		// Row 2: Hypermutator Max Cut Off for CNV
+		const hyperMutatorContainer = optionsGrid
+			.append('div')
+			.style('display', 'flex')
+			.style('align-items', 'center')
+			.style('gap', '8px')
+
+		hyperMutatorContainer
+			.append('label')
+			.style('font-size', '14px')
+			.style('font-weight', '500')
+			.style('min-width', '160px')
+			.text('Hypermutator Max Cut Off:')
+
+		const hyperMutatorInput = hyperMutatorContainer
+			.append('input')
+			.attr('type', 'number')
+			.attr('min', '0')
+			.attr('step', '100')
+			.attr('value', obj.cnvOptions.hyperMutator || 500)
+			.style('width', '70px')
+			.style('padding', '4px 8px')
+			.style('border', '1px solid #ccc')
+			.style('border-radius', '4px')
+			.style('font-size', '14px')
+
+		// Add input handler
+		hyperMutatorInput.on('input', function (this: HTMLInputElement) {
+			const value = parseInt(this.value, 10)
+			if (!isNaN(value) && value >= 0) {
+				obj.cnvOptions.hyperMutator = value
+			}
+		})
+
+		// Row 3: Segment Length Cutoff (spans full width)
 		const segmentContainer = optionsGrid
 			.append('div')
 			.style('display', 'flex')
@@ -1179,9 +1214,10 @@ function makeControls(obj) {
 			.style('border-left', '3px solid #6c757d')
 
 		helpContainer.append('div').style('font-size', '12px').style('color', '#495057').style('line-height', '1.4').html(`
-			<strong>CNV Thresholds:</strong><br>
+			<strong>CNV Options:</strong><br>
 			• Loss Threshold: Log2 ratio for copy number loss (negative values)<br>
 			• Gain Threshold: Log2 ratio for copy number gain (positive values)<br>
+			• Hypermutator Max Cut Off: Maximum number of CNVs per case<br>
 			• Segment Length: Maximum CNV segment size to include (no filter if 0)
 		`)
 	}
@@ -1705,7 +1741,7 @@ async function getFilesAndShowTable(obj) {
 	 *     [case_submitter_id]: { maf: file_id, cnv: file_id },
 	 *   },
 	 *   mafOptions: { minTotalDepth: 10, minAltAlleleCount: 2, consequences: [] },
-	 *   cnvOptions: { dataType: 'segment_mean', lossThreshold: -0.4, gainThreshold: 0.3, segLength: 0 }
+	 *   cnvOptions: { dataType: 'segment_mean', lossThreshold: -0.4, gainThreshold: 0.3, segLength: 0, hyperMutator: 500 }
 	 * }
 	 *
 	 */
@@ -1743,7 +1779,8 @@ async function getFilesAndShowTable(obj) {
 				dataType: obj.cnvOptions.dataType,
 				lossThreshold: obj.cnvOptions.lossThreshold,
 				gainThreshold: obj.cnvOptions.gainThreshold,
-				segLength: obj.cnvOptions.segLength
+				segLength: obj.cnvOptions.segLength,
+				hyperMutator: obj.cnvOptions.hyperMutator
 			}
 		}
 
