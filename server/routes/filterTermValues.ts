@@ -55,6 +55,8 @@ function getList(samplesPerFilter, filtersData, tw) {
 		value.disabled = !sampleValues.includes(label)
 	}
 	values.unshift({ label: '', value: '' })
+	values.sort((a, b) => a.label.localeCompare(b.label))
+
 	return values
 }
 
