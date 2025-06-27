@@ -49,6 +49,7 @@ export class ReportView {
 				}
 			}
 			select.on('change', async () => {
+				this.dom.siteSelect.node().value = ''
 				this.report.replaceGlobalFilter()
 			})
 			this.dom.countrySelect = select

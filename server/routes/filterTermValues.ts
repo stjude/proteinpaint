@@ -1,5 +1,5 @@
 import type { RouteApi } from '#types'
-import { ProfileFiltersPayload } from '#types/checkers'
+import { FilterTermValuesPayload } from '#types/checkers'
 import { getData, getSamplesPerFilter } from '../src/termdb.matrix.js'
 
 /*
@@ -8,15 +8,15 @@ It allows to fill the filter dropdowns in the profile plots.
 */
 
 export const api: RouteApi = {
-	endpoint: 'profileFilters',
+	endpoint: 'filterTermValues',
 	methods: {
 		get: {
-			...ProfileFiltersPayload,
+			...FilterTermValuesPayload,
 
 			init
 		},
 		post: {
-			...ProfileFiltersPayload,
+			...FilterTermValuesPayload,
 			init
 		}
 	}

@@ -1335,13 +1335,13 @@ export class TermdbVocab extends Vocab {
 		return d
 	}
 
-	async getProfileFilters(args) {
+	async filterTermValues(args) {
 		const body = {
 			genome: this.vocab.genome,
 			dslabel: this.vocab.dslabel,
 			...args
 		}
-		return await dofetch3('profileFilters', { method: 'GET', body })
+		return await dofetch3('filterTermValues', { method: 'GET', body })
 	}
 
 	async getProfileScores(args) {

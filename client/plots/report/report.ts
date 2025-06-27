@@ -130,7 +130,7 @@ export class Report extends RxComponentInner {
 		const filters = { [this.config.countryTW.term.id]: this.state.termfilter.filter }
 		const values = { [this.config.countryTW.term.id]: country }
 		filters[this.config.siteTW.term.id] = getTermFilter(terms, values, this.config.siteTW, this.state.termfilter.filter)
-		const sitesData = await this.app.vocabApi.getProfileFilters({
+		const sitesData = await this.app.vocabApi.filterTermValues({
 			terms,
 			filters
 		})
