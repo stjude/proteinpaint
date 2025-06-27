@@ -10,7 +10,6 @@ import { downloadSingleSVG } from '../../common/svg.download.js'
 import { select2Terms } from '#dom/select2Terms'
 import { Scatter } from '../scatter/scatter.js'
 import { getColors } from '#shared/common.js'
-import { filterJoin } from '#filter'
 
 export class Runchart extends Scatter {
 	type: string
@@ -54,36 +53,6 @@ export class Runchart extends Scatter {
 		this.vm.setTools()
 	}
 
-	processTW(tw, value, excluded, lst) {
-		if (value && !excluded.includes(tw.$id))
-			lst.push({
-				type: 'tvs',
-				tvs: {
-					term: tw.term,
-					values: [{ key: value }]
-				}
-			})
-	}
-
-	getList(tw, samplesPerFilter: any) {
-		const values: any = Object.values(tw.term.values)
-		values.sort((v1: any, v2: any) => v1.label.localeCompare(v2.label))
-		const twSamples = samplesPerFilter[tw.term.id]
-		const data: any = []
-		for (const sample of twSamples) {
-			data.push(this.filtersData.samples[sample])
-		}
-		//select samples with data for that term
-		const sampleValues = Array.from(new Set(data.map(sample => sample[tw.$id]?.value)))
-		for (const value of values) {
-			value.value = value.label
-			value.disabled = tw.term.id != this.config.countryTW.term.id ? !sampleValues.includes(value.label) : false
-		}
-		values.unshift({ label: '', value: '' })
-		if (!(tw.term.id in this.settings)) this.settings[tw.term.id] = values[0].label
-		return values
-	}
-
 	async setControls() {
 		this.view.dom.controlsHolder.selectAll('*').remove()
 		const inputs = await this.view.getControlInputs()
@@ -105,33 +74,12 @@ export class Runchart extends Scatter {
 		const config: any = this.config
 		this.settings[config.countryTW.term.id] = country
 		this.settings[config.siteTW.term.id] = '' //clear site if country is changed
-		config.filter = this.getFilter()
-		console.log('setCountry', country, config)
 		this.app.dispatch({ type: 'plot_edit', id: this.id, config })
 	}
 
 	setFilterValue(key, value) {
-		const config: any = this.config
 		this.settings[key] = value
-		config.filter = this.getFilter()
-		console.log('setFilterValue', key, value, config)
 		this.app.dispatch({ type: 'plot_edit', id: this.id, config: this.config })
-	}
-
-	getFilter(tw: any = null) {
-		const excluded: any = []
-		if (tw) excluded.push(tw.$id)
-		const lst = []
-		for (const tw of this.filterTWs) this.processTW(tw, this.settings[tw.term.id], excluded, lst)
-
-		const tvslst = {
-			type: 'tvslst',
-			in: true,
-			join: 'and',
-			lst
-		}
-		const filter = filterJoin([this.state.termfilter.filter, tvslst])
-		return filter
 	}
 }
 
