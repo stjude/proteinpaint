@@ -2189,12 +2189,15 @@ async function getFilesAndShowTable(obj) {
 						}
 
 						// Total included records in the analysis
+						const mafRecords = response.analysisStats.included_maf_records || 0
+						const cnvRecords = response.analysisStats.included_cnv_records || 0
+						const totalIncludedRecords = mafRecords + cnvRecords
 						filterStatsGrid.append('div').style('color', '#6c757d').text('Total Number of Included Records:')
 						filterStatsGrid
 							.append('div')
 							.style('font-weight', 'bold')
 							.style('color', 'black')
-							.text(processedData.length.toLocaleString())
+							.text(totalIncludedRecords.toLocaleString())
 
 						// MAF excluded (filtered) records
 						if (response.analysisStats.filtered_maf_records !== undefined) {
