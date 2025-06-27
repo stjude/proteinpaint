@@ -254,7 +254,8 @@ export function getWrappedTvslst(lst = [], join = '', $id = null) {
 	return filter
 }
 
-//build filter to retrieve the given term values after filtering out the samples with the values specified in the remaining filters
+//builds filter to retrieve a term values after filtering out samples according to other filters provided.
+// The profile filters use this function to get the filter values that populate the dropdowns in the controls
 export function getTermFilter(filterTWs, values, tw, globalFilter) {
 	const excluded = []
 	if (tw) excluded.push(tw.$id)

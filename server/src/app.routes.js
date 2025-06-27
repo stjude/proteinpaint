@@ -59,7 +59,7 @@ export const routeFiles = [
 	import('../routes/wsimages.ts'),
 	import('../routes/wsisamples.ts'),
 	import('../routes/img.ts'),
-	import('../routes/profileFilters.ts'),
+	import('../routes/filterTermValues.ts'),
 	import('../routes/profileScores.ts'),
 	import('../routes/profileFormScores.ts')
 ]
