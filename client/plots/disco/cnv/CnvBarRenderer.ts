@@ -10,6 +10,10 @@ export default class CnvBarRenderer implements IRenderer {
 		const arcGenerator = d3.arc<CnvArc>()
 
 		const arcs = holder.append('g')
+		const hoverOverlay = holder.append('g')
+			.attr('class', 'hover-overlay')
+			// prevent highlighht from blocking thin CNVs
+			.style('pointer-events', 'none') 
 
 		const menu = MenuProvider.create()
 
@@ -21,6 +25,15 @@ export default class CnvBarRenderer implements IRenderer {
 			.attr('d', (d: CnvArc) => arcGenerator(d))
 			.attr('fill', (d: CnvArc) => d.color)
 			.on('mouseover', (mouseEvent: MouseEvent, arc: CnvArc) => {
+				hoverOverlay.selectAll('*').remove() 
+
+				hoverOverlay.append('path')
+					.datum(arc)
+					.attr('d', arcGenerator(arc))
+					.attr('fill', 'none')
+					.attr('stroke', 'black')
+					.attr('stroke-width', 1)
+
 				const cnv: any = structuredClone(arc)
 				cnv.dt = dtcnv
 				cnv.samples = [{ sample_id: arc.sampleName }]
@@ -46,6 +59,7 @@ export default class CnvBarRenderer implements IRenderer {
 				menu.show(mouseEvent.x, mouseEvent.y)
 			})
 			.on('mouseout', () => {
+				hoverOverlay.selectAll('*').remove()
 				menu.clear()
 				menu.hide()
 			})
