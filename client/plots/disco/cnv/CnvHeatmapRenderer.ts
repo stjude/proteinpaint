@@ -32,11 +32,8 @@ export class CnvHeatmapRenderer {
 			.data(elements)
 			.enter()
 			.append('path')
-<<<<<<< HEAD
+
 			// Generate arc shape for each CNV
-=======
-			// Generate the arc shape for each CNV
->>>>>>> 4d6553a11 (Added comments to code from previous ccommit)
 			.attr('d', (d: CnvArc) => arcGenerator(d))
 			// Fill using interpolated color based on CNV value and percentile range
 			.attr('fill', (d: CnvArc) => this.getColor(d.color, d.value))
@@ -81,7 +78,7 @@ export class CnvHeatmapRenderer {
 			})
 
 			// Cleanup on hover out: remove highlight and hide tooltip
-			.on('mouseout', (event) => {
+			.on('mouseout', () => {
 				hoverOverlay.selectAll('*').remove()
 				menu.clear()
 				menu.hide()
