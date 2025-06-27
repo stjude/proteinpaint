@@ -6,12 +6,12 @@ import { scaleLinear } from 'd3-scale'
 import { dtcnv } from '#shared/common.js'
 
 export class CnvHeatmapRenderer {
-	private positivePercentile80: number
-	private negativePercentile80: number
+	private positivePercentile: number
+	private negativePercentile: number
 
-	constructor(positivePercentile80 = 0, negativePercentile80 = 0) {
-		this.positivePercentile80 = positivePercentile80
-		this.negativePercentile80 = negativePercentile80
+	constructor(positivePercentile = 0, negativePercentile = 0) {
+		this.positivePercentile = positivePercentile
+		this.negativePercentile = negativePercentile
 	}
 
 	render(holder: any, elements: Array<CnvArc>) {
@@ -19,9 +19,7 @@ export class CnvHeatmapRenderer {
 
 		// Group for actual heatmap CNV arcs
 		const arcs = holder.append('g')
-		const hoverOverlay = holder.append('g')
-			.attr('class', 'hover-overlay')
-			.style('pointer-events', 'none')
+		const hoverOverlay = holder.append('g').attr('class', 'hover-overlay').style('pointer-events', 'none')
 
 		const menu = MenuProvider.create()
 
@@ -37,7 +35,8 @@ export class CnvHeatmapRenderer {
 
 			// Hover event: show highlight stroke and tooltip
 			.on('mouseover', (mouseEvent: MouseEvent, arc: CnvArc) => {
-				hoverOverlay.append('path')
+				hoverOverlay
+					.append('path')
 					.datum(arc)
 					.attr('d', arcGenerator(arc))
 					.attr('fill', 'none')
@@ -71,7 +70,7 @@ export class CnvHeatmapRenderer {
 				// Show tooltip near mouse
 				menu.show(mouseEvent.x, mouseEvent.y)
 			})
-			.on('mouseout', (event) => {
+			.on('mouseout', () => {
 				hoverOverlay.selectAll('*').remove()
 				menu.clear()
 				menu.hide()
@@ -80,9 +79,8 @@ export class CnvHeatmapRenderer {
 
 	// Computes fill color using linear scale between -P80, 0, and +P80
 	getColor(color: string, value: number) {
-		return scaleLinear(
-			[this.negativePercentile80, 0, this.positivePercentile80],
-			[color, 'white', color]
-		).clamp(true)(value)
+		return scaleLinear([this.negativePercentile, 0, this.positivePercentile], [color, 'white', color]).clamp(true)(
+			value
+		)
 	}
 }
