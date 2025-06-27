@@ -3326,7 +3326,7 @@ seekrange(chr,start,stop) {
 										':' +
 										(i.start + 1) +
 										'-' +
-										(i.stop + 1) +
+										i.stop +
 										' ' +
 										common.bplen(i.stop - i.start) +
 										'</span>'
