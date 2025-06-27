@@ -391,21 +391,21 @@ def simple_column_filter(sorted_results, num_rows_to_process=50):
 		]
 		if mutation_has_data:
 			row_data.extend([
-				{"value": float(sorted_results.iloc[i][p_cols[0]])},
-				{"value": float(sorted_results.iloc[i][q_cols[0]])},
-				{"value": float(sorted_results.iloc[i][n_cols[0]])}
+				{"value": float(sorted_results.iloc[i][p_cols[0]].round(10))},
+				{"value": float(sorted_results.iloc[i][q_cols[0]].round(10))},
+				{"value": float(sorted_results.iloc[i][n_cols[0]].round(10))}
 			])
 		if cnv_gain_has_data:
 			row_data.extend([
-				{"value": float(sorted_results.iloc[i][p_cols[1]])},
-				{"value": float(sorted_results.iloc[i][q_cols[1]])},
-				{"value": float(sorted_results.iloc[i][n_cols[1]])}
+				{"value": float(sorted_results.iloc[i][p_cols[1]].round(10))},
+				{"value": float(sorted_results.iloc[i][q_cols[1]].round(10))},
+				{"value": float(sorted_results.iloc[i][n_cols[1]].round(10))}
 			])
 		if cnv_loss_has_data:
 			row_data.extend([
-				{"value": float(sorted_results.iloc[i][p_cols[2]])},
-				{"value": float(sorted_results.iloc[i][q_cols[2]])},
-				{"value": float(sorted_results.iloc[i][n_cols[2]])}
+				{"value": float(sorted_results.iloc[i][p_cols[2]].round(10))},
+				{"value": float(sorted_results.iloc[i][q_cols[2]].round(10))},
+				{"value": float(sorted_results.iloc[i][n_cols[2]].round(10))}
 			])
 		topgene_table_data.append(row_data)
 	return {
@@ -466,7 +466,6 @@ try:
 	# Reorder columns
 	gene_anno = gene_anno[["gene", "chrom", "loc.start", "loc.end"]]
 	
-	#gene_anno = pd.read_csv('gene.anno',sep='\t')
 
 	# 3. Generate chromosome size table
 	try:

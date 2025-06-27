@@ -618,6 +618,19 @@ def prob_hits(hit_cnt, chr_size):
         pi_hat = min(1, 2 * p_nsubj[i].mean(skipna=True))
         q_nsubj[i] = pi_hat * fdrcorrection(p_nsubj[i].fillna(1))[1]
 
+    # Set desired precision (significant digits)
+    round_digits = 4
+
+    # Safe significant-digit rounding function
+    def sig_round(x):
+        try:
+            if x == 0 or not np.isfinite(x):
+                return 0.0
+            with np.errstate(divide='ignore', invalid='ignore'):
+                return np.round(x, round_digits - int(np.floor(np.log10(abs(x)))) - 1)
+        except Exception:
+            return 0.0
+
     if len(num_lsn) > 1:
         p_ord_nsubj = pd.DataFrame(p_order(p_nsubj), columns=p_nsubj.columns)
         q_ord_nsubj = p_ord_nsubj.copy()
@@ -625,8 +638,15 @@ def prob_hits(hit_cnt, chr_size):
             pi_hat = min(1, 2 * p_ord_nsubj[i].mean(skipna=True))
             q_ord_nsubj[i] = pi_hat * fdrcorrection(p_ord_nsubj[i].fillna(1))[1]
 
+        # Rename columns
         p_ord_nsubj.columns = [f"p{i + 1}.nsubj" for i in range(p_nsubj.shape[1])]
         q_ord_nsubj.columns = [f"q{i + 1}.nsubj" for i in range(p_nsubj.shape[1])]
+
+        # Apply robust significant-digit rounding
+        p_nsubj = p_nsubj.apply(lambda col: col.map(sig_round))
+        q_nsubj = q_nsubj.apply(lambda col: col.map(sig_round))
+        p_ord_nsubj = p_ord_nsubj.apply(lambda col: col.map(sig_round))
+        q_ord_nsubj = q_ord_nsubj.apply(lambda col: col.map(sig_round))
 
         gene_res = pd.concat([
             gene_data.drop(columns=["glp.row.start", "glp.row.end"], errors="ignore"),
@@ -638,6 +658,10 @@ def prob_hits(hit_cnt, chr_size):
         ], axis=1)
 
     else:
+        # Apply robust rounding for single lesion type
+        p_nsubj = p_nsubj.apply(lambda col: col.map(sig_round))
+        q_nsubj = q_nsubj.apply(lambda col: col.map(sig_round))
+
         gene_res = pd.concat([
             gene_data.drop(columns=["glp.row.start", "glp.row.end"], errors="ignore"),
             nsubj_mtx.add_prefix("nsubj."),
@@ -686,13 +710,14 @@ def grin_stats(lsn_data, gene_data, chr_size):
     return result_df
 
 ############################################
-# 12) The function Write GRIN results to an excel file with multiple sheets that include GRIN results, lesion data, gene annotation data, chromosome size, gene-lesion overlap and methods paragraph.
+# 12) The function Write GRIN results to an excel file with multiple sheets that include:
+# GRIN results, input lesion data, gene annotation data, chromosome size, and methods paragraph.
 
 def write_grin_xlsx(grin_result, output_file):
-    # Extract core result components
+    # Extract core result components:
     rpt_res = {
         "gene.hits": grin_result["gene.hits"],
-        "gene.lsn.data": grin_result["gene.lsn.data"],
+        #"gene.lsn.data": grin_result["gene.lsn.data"],
         "lsn.data": grin_result["lsn.data"],
         "gene.data": grin_result["gene.data"],
         "chr.size": grin_result["chr.size"]
@@ -700,11 +725,10 @@ def write_grin_xlsx(grin_result, output_file):
 
     # Description of each sheet
     sheet_int = pd.DataFrame({
-        "sheet.name": ["gene.hits", "gene.lsn.data", "lsn.data", "gene.data", "chr.size"],
-        "col.name": ["entire sheet"] * 5,
+        "sheet.name": ["gene.hits", "lsn.data", "gene.data", "chr.size"],
+        "col.name": ["entire sheet"] * 4,
         "meaning": [
             "GRIN statistical results",
-            "gene-lesion overlaps",
             "input lesion data",
             "input gene location data",
             "input chromosome size data"

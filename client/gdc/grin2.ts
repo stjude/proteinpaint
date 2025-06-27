@@ -53,7 +53,7 @@ function transformRows(rows, columns) {
 			// Extract value from complex structure from R
 			if (cellData && cellData.value && Array.isArray(cellData.value)) {
 				value = cellData.value[0]
-			} else if (cellData && cellData.value) {
+			} else if (cellData && 'value' in cellData) {
 				value = cellData.value
 			} else {
 				value = cellData
