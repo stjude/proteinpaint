@@ -222,8 +222,9 @@ function init({ genomes }) {
 			}
 
 			console.log('[GRIN2] Rust execution completed')
-			const downloadTime = formatElapsedTime(Date.now() - downloadStartTime)
-			console.log(`[GRIN2] Rust processing took ${downloadTime}`)
+			const downloadTime = Date.now() - downloadStartTime
+			const downloadTimeToPrint = formatElapsedTime(downloadTime)
+			console.log(`[GRIN2] Rust processing took ${downloadTimeToPrint}`)
 
 			// Parse the JSONL output
 			const rustResult = parseJsonlOutput(rustOutput)
@@ -288,8 +289,9 @@ function init({ genomes }) {
 			// console.log(`[GRIN2] python execution completed, result: ${pyResult}`)
 			console.log('[GRIN2] python execution completed')
 			console.log(`[GRIN2] Python stderr: ${pyResult.stderr}`)
-			const grin2AnalysisTime = formatElapsedTime(Date.now() - grin2AnalysisStart)
-			console.log(`[GRIN2] Rust processing took ${grin2AnalysisTime}`)
+			const grin2AnalysisTime = Date.now() - grin2AnalysisStart
+			const grin2AnalysisTimeToPrint = formatElapsedTime(grin2AnalysisTime)
+			console.log(`[GRIN2] Python processing took ${grin2AnalysisTimeToPrint}`)
 
 			// Parse python result to get image or check for errors
 			let resultData
@@ -300,7 +302,7 @@ function init({ genomes }) {
 				const pngImg = resultData.png[0]
 				const topGeneTable = resultData.topGeneTable || null
 				const analysisStats = parsedRustResult.summary || {}
-				const totalProcessTime = formatElapsedTime(Date.now() - downloadStartTime)
+				const totalProcessTime = formatElapsedTime(downloadTime + grin2AnalysisTime)
 				console.log('[GRIN2] Total GRIN2 processing time:', totalProcessTime)
 				return res.json({
 					pngImg,
@@ -308,8 +310,8 @@ function init({ genomes }) {
 					rustResult: parsedRustResult,
 					analysisStats: analysisStats,
 					timing: {
-						rustProcessingTime: downloadTime,
-						grin2ProcessingTime: grin2AnalysisTime,
+						rustProcessingTime: downloadTimeToPrint,
+						grin2ProcessingTime: grin2AnalysisTimeToPrint,
 						totalTime: totalProcessTime
 					},
 					status: 'success'

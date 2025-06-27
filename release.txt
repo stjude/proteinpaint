@@ -1,2 +1,2 @@
-Features:
-GDC-GRIN2 improvements: Migrated GRIN2 analysis and plotting componenets to python; Now displaying manhattan-like plot instead of default genome-wide lesion plot.
+Fixes:
+- Fixed incorrect reporting of timing and total records included information
