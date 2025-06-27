@@ -13,7 +13,7 @@
   Output mutations as JSON array.
 
   Example of usage:
-    echo '{"caseFiles": {"MP2PRT-PATFJE": {"maf": "26ea7b6f-8bc4-4e83-ace1-2125b493a361"},"MP2PRT-PAPIGD": {"maf": "653d7458-f4af-4328-a1ce-3bbf22a2e347"}, "TCGA-CG-4300": { "cnv":"46372ec2-ff79-4d07-b375-9ba8a12c11f3", "maf":"c09b208d-2e7b-4116-9580-27f20f4c7e67"}},"mafOptions": {"minTotalDepth": 100,"minAltAlleleCount": 20,"hyperMutator":1000,"consequences":["missense_variant","frameshift_variant"]}, "cnvOptions":{"lossThreshold":-1, "gainThreshold": 1.5, "segLength":2000000}}' | ./target/release/gdcGRIN2
+    echo '{"caseFiles": {"MP2PRT-PATFJE": {"maf": "26ea7b6f-8bc4-4e83-ace1-2125b493a361"},"MP2PRT-PAPIGD": {"maf": "653d7458-f4af-4328-a1ce-3bbf22a2e347"}, "TCGA-CG-4300": { "cnv":"46372ec2-ff79-4d07-b375-9ba8a12c11f3", "maf":"c09b208d-2e7b-4116-9580-27f20f4c7e67"}},"mafOptions": {"minTotalDepth": 100,"minAltAlleleCount": 20,"hyperMutator":8000,"consequences":["missense_variant","frameshift_variant"]}, "cnvOptions":{"lossThreshold":-1, "gainThreshold": 1.5, "segLength":2000000, "hyperMutator":8000}}' | ./target/release/gdcGRIN2
 */
 
 use flate2::read::GzDecoder;
@@ -69,6 +69,8 @@ struct CnvOptions {
     gain_threshold: f32,
     #[serde(rename = "segLength")]
     seg_length: i32,
+    #[serde(rename = "hyperMutator")]
+    hyper_mutator: i32,
 }
 
 // Individual successful file output (JSONL format)
@@ -131,7 +133,7 @@ struct FinalSummary {
     included_maf_records: usize,
     included_cnv_records: usize,
     filtered_records_by_case: HashMap<String, FilteredCaseDetails>,
-    hyper_mutator_records: Vec<String>,
+    hyper_mutator_records: HashMap<String, Vec<String>>,
 }
 
 // Define the top-level input structure
@@ -159,17 +161,18 @@ async fn parse_content(
     data_type: &str,
     min_total_depth: i32,
     min_alt_allele_count: i32,
-    hyper_mutator: i32,
+    maf_hyper_mutator: i32,
     consequences: &Option<Vec<String>>,
     gain_threshold: f32,
     loss_threshold: f32,
     seg_length: i32,
+    cnv_hyper_mutator: i32,
     filtered_records: &Arc<Mutex<HashMap<String, FilteredCaseDetails>>>,
     filtered_maf_records: &AtomicUsize,
     filtered_cnv_records: &AtomicUsize,
     included_maf_records: &AtomicUsize,
     included_cnv_records: &AtomicUsize,
-    hyper_mutator_records: &Arc<Mutex<Vec<String>>>,
+    hyper_mutator_records: &Arc<Mutex<HashMap<String, Vec<String>>>>,
 ) -> Result<Vec<Vec<String>>, (String, String, String)> {
     let config = match data_type {
         "cnv" => DataTypeConfig {
@@ -189,13 +192,24 @@ async fn parse_content(
         }
     };
 
-    // check hyperMutator for MAF files
-    if data_type == "maf" && hyper_mutator > 0 {
+    // check hyperMutator for MAF and CNV files
+    let hyper_mutator = if data_type == "maf" {
+        maf_hyper_mutator
+    } else {
+        cnv_hyper_mutator
+    };
+    if hyper_mutator > 0 {
         let line_count = content.lines().count();
         if line_count as i32 > hyper_mutator {
             let mut hyper_records = hyper_mutator_records.lock().await;
-            if !hyper_records.contains(&case_id.to_string()) {
-                hyper_records.push(case_id.to_string());
+            hyper_records
+                .entry(data_type.to_string())
+                .or_insert_with(Vec::new)
+                .push(case_id.to_string());
+            if data_type == "maf" {
+                filtered_maf_records.fetch_add(line_count, Ordering::Relaxed);
+            } else if data_type == "cnv" {
+                filtered_cnv_records.fetch_add(line_count, Ordering::Relaxed);
             }
             return Ok(Vec::new());
         }
@@ -652,11 +666,12 @@ async fn download_data_streaming(
     host: &str,
     min_total_depth: i32,
     min_alt_allele_count: i32,
-    hyper_mutator: i32,
+    maf_hyper_mutator: i32,
     consequences: &Option<Vec<String>>,
     gain_threshold: f32,
     loss_threshold: f32,
     seg_length: i32,
+    cnv_hyper_mutator: i32,
 ) {
     let data_urls: Vec<(String, String, String)> = data4dl
         .into_iter()
@@ -680,7 +695,7 @@ async fn download_data_streaming(
     let filtered_maf_records = Arc::new(AtomicUsize::new(0));
     let filtered_cnv_records = Arc::new(AtomicUsize::new(0));
     let filtered_records = Arc::new(Mutex::new(HashMap::<String, FilteredCaseDetails>::new()));
-    let hyper_mutator_records = Arc::new(Mutex::new(Vec::<String>::new()));
+    let hyper_mutator_records = Arc::new(Mutex::new(HashMap::<String, Vec<String>>::new()));
     let included_maf_records = Arc::new(AtomicUsize::new(0));
     let included_cnv_records = Arc::new(AtomicUsize::new(0));
 
@@ -717,11 +732,12 @@ async fn download_data_streaming(
                             &data_type,
                             min_total_depth,
                             min_alt_allele_count,
-                            hyper_mutator,
+                            maf_hyper_mutator,
                             &consequences,
                             gain_threshold,
                             loss_threshold,
                             seg_length,
+                            cnv_hyper_mutator,
                             &filtered_records,
                             &filtered_maf_records,
                             &filtered_cnv_records,
@@ -865,7 +881,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let case_files = input_js.case_files;
 
     // Set default maf_options
-    let (min_total_depth, min_alt_allele_count, hyper_mutator, consequences) = match input_js.maf_options {
+    let (min_total_depth, min_alt_allele_count, maf_hyper_mutator, consequences) = match input_js.maf_options {
         Some(options) => (
             options.min_total_depth,
             options.min_alt_allele_count,
@@ -876,9 +892,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     // Set default cnv_options
-    let (gain_threshold, loss_threshold, seg_length) = match input_js.cnv_options {
-        Some(options) => (options.gain_threshold, options.loss_threshold, options.seg_length),
-        None => (0.3, -0.4, 0), // Default values
+    let (gain_threshold, loss_threshold, seg_length, cnv_hyper_mutator) = match input_js.cnv_options {
+        Some(options) => (
+            options.gain_threshold,
+            options.loss_threshold,
+            options.seg_length,
+            options.hyper_mutator,
+        ),
+        None => (0.3, -0.4, 0, 8000), // Default values
     };
 
     // Download data - this will now handle errors gracefully
@@ -887,11 +908,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         HOST,
         min_total_depth,
         min_alt_allele_count,
-        hyper_mutator,
+        maf_hyper_mutator,
         &consequences,
         gain_threshold,
         loss_threshold,
         seg_length,
+        cnv_hyper_mutator,
     )
     .await;
 
