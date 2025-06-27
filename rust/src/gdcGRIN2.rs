@@ -899,7 +899,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             options.seg_length,
             options.hyper_mutator,
         ),
-        None => (0.3, -0.4, 0, 8000), // Default values
+        None => (0.3, -0.4, 0, 500), // Default values
     };
 
     // Download data - this will now handle errors gracefully
