@@ -19,6 +19,8 @@ export class CnvHeatmapRenderer {
 
 		// Group for actual heatmap CNV arcs
 		const arcs = holder.append('g')
+
+		// Separate group for overlays on hover (not blocking interactions)
 		const hoverOverlay = holder.append('g')
 			.attr('class', 'hover-overlay')
 			.style('pointer-events', 'none')
@@ -30,13 +32,18 @@ export class CnvHeatmapRenderer {
 			.data(elements)
 			.enter()
 			.append('path')
+<<<<<<< HEAD
 			// Generate arc shape for each CNV
+=======
+			// Generate the arc shape for each CNV
+>>>>>>> 4d6553a11 (Added comments to code from previous ccommit)
 			.attr('d', (d: CnvArc) => arcGenerator(d))
 			// Fill using interpolated color based on CNV value and percentile range
 			.attr('fill', (d: CnvArc) => this.getColor(d.color, d.value))
 
 			// Hover event: show highlight stroke and tooltip
 			.on('mouseover', (mouseEvent: MouseEvent, arc: CnvArc) => {
+				// Add highlight stroke over the hovered arc
 				hoverOverlay.append('path')
 					.datum(arc)
 					.attr('d', arcGenerator(arc))
@@ -44,6 +51,7 @@ export class CnvHeatmapRenderer {
 					.attr('stroke', 'black')
 					.attr('stroke-width', 1)
 
+				// Prepare data for tooltip
 				const table = table2col({ holder: menu.d })
 				const cnv: any = structuredClone(arc)
 				cnv.dt = dtcnv
@@ -71,6 +79,8 @@ export class CnvHeatmapRenderer {
 				// Show tooltip near mouse
 				menu.show(mouseEvent.x, mouseEvent.y)
 			})
+
+			// Cleanup on hover out: remove highlight and hide tooltip
 			.on('mouseout', (event) => {
 				hoverOverlay.selectAll('*').remove()
 				menu.clear()
@@ -82,7 +92,7 @@ export class CnvHeatmapRenderer {
 	getColor(color: string, value: number) {
 		return scaleLinear(
 			[this.negativePercentile80, 0, this.positivePercentile80],
-			[color, 'white', color]
+			[color, 'white', color]  // transitions to white in the middle
 		).clamp(true)(value)
 	}
 }
