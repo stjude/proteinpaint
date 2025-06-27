@@ -27,7 +27,7 @@ export default class ChromosomesRenderer implements IRenderer {
 
 		const arcs = holder.append('g').attr('data-testid', 'sjpp_chromosomes_arc_group')
 
-        const menu = MenuProvider.create()
+		const menu = MenuProvider.create()
 
 		arcs
 			.selectAll('path')
@@ -37,28 +37,20 @@ export default class ChromosomesRenderer implements IRenderer {
 			.attr('d', arc)
 			.attr('fill', 'black')
 			.on('mousemove', (event: MouseEvent, d: d3.PieArcDatum<Chromosome>) => {
-				
-					let [x, y] = d3.pointer(event, arcs.node())
-					let angle = Math.atan2(y, x)  + Math.PI / 2
-					if (angle < 0) angle += 2 * Math.PI
-					let frac = Math.max(0, Math.min(1, (angle - d.data.startAngle) / (d.data.endAngle - d.data.startAngle)))
-					let pos = Math.round(d.data.start + frac * d.data.size)
-					menu.d.text(`Chr ${d.data.text}: Position: ${pos.toLocaleString()}`)
-					menu.show(event.x, event.y)
-					console.log({
-						angle,
-						startAngle: d.startAngle,
-						endAngle: d.endAngle,
-						frac,
-						pos
-					})
+				const [x, y] = d3.pointer(event, arcs.node())
+				let angle = Math.atan2(y, x) + Math.PI / 2
+				if (angle < 0) angle += 2 * Math.PI
+				const frac = Math.max(0, Math.min(1, (angle - d.data.startAngle) / (d.data.endAngle - d.data.startAngle)))
+				const pos = Math.round(d.data.start + frac * d.data.size)
+				menu.d.text(`Chr ${d.data.text}: Position: ${pos.toLocaleString()}`)
+				menu.show(event.x, event.y)
 			})
-			.on('mouseover', (event) => {
+			.on('mouseover', event => {
 				d3.select(event.currentTarget as SVGElement)
 					.attr('stroke', 'orange')
 					.attr('stroke-width', 1)
 			})
-			.on('mouseout', (event) => {
+			.on('mouseout', event => {
 				d3.select(event.currentTarget as SVGElement)
 					.attr('stroke', null)
 					.attr('stroke-width', null)
