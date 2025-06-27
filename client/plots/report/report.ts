@@ -134,7 +134,6 @@ export class Report extends RxComponentInner {
 			terms,
 			filters
 		})
-		console.log('sitesData', sitesData)
 		const siteSelect = this.view.dom.siteSelect
 		siteSelect.selectAll('option').remove()
 

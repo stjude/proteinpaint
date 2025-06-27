@@ -2,6 +2,7 @@ import { fillTermWrapper } from '#termsetting'
 import type { Runchart } from '../runchart.js'
 import { ScatterView } from '../../scatter/view/scatterView.js'
 import { isNumericTerm } from '#shared/terms.js'
+import { getTermFilter } from '#shared/filter.js'
 
 export const minShapeSize = 0.2
 export const maxShapeSize = 6
@@ -14,19 +15,21 @@ export class RunchartView extends ScatterView {
 	}
 
 	async getFilterControlInputs() {
+		const terms = this.runchart.filterTWs
 		const filters = {}
-		for (const tw of this.runchart.filterTWs) {
-			const filter = this.runchart.getFilter(tw)
+		for (const tw of terms) {
+			const filter = getTermFilter(terms, this.scatter.settings, tw, this.scatter.state.termfilter.filter)
 			if (filter) filters[tw.term.id] = filter
 		}
 
 		//Dictionary with samples applying all the filters but not the one from the current term id
-		const samplesPerFilter = await this.runchart.app.vocabApi.getSamplesPerFilter({
-			filters
+		const filterTermValues = await this.runchart.app.vocabApi.filterTermValues({
+			filters,
+			terms
 		})
 		const inputs: any[] = []
 		if (this.runchart.config.countryTW) {
-			const countries = this.runchart.getList(this.runchart.config.countryTW, samplesPerFilter)
+			const countries = filterTermValues[this.runchart.config.countryTW.term.id]
 
 			inputs.push({
 				label: 'Country',
@@ -38,7 +41,7 @@ export class RunchartView extends ScatterView {
 			})
 		}
 		if (this.runchart.config.siteTW) {
-			const sites = this.runchart.getList(this.runchart.config.siteTW, samplesPerFilter)
+			const sites = filterTermValues[this.runchart.config.siteTW.term.id]
 			inputs.push({
 				label: 'Site',
 				type: 'dropdown',

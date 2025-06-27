@@ -155,18 +155,18 @@ export class profilePlot {
 			const filter = this.getFilter(tw)
 			if (filter) filters[tw.term.id] = filter
 		}
-		this.termValues = await this.app.vocabApi.getTermValues({
+		this.filteredTermValues = await this.app.vocabApi.filterTermValues({
 			terms: this.config.filterTWs,
 			filters
 		})
-		this.regions = this.termValues[this.config.regionTW.id]
-		this.countries = this.termValues[this.config.countryTW.id]
-		this.incomes = this.termValues[this.config.incomeTW.id]
-		this.teachingStates = this.termValues[this.config.teachingStatusTW.id]
-		this.referralStates = this.termValues[this.config.referralStatusTW.id]
-		this.fundingSources = this.termValues[this.config.fundingSourceTW.id]
-		this.hospitalVolumes = this.termValues[this.config.hospitalVolumeTW.id]
-		this.yearsOfImplementation = this.termValues[this.config.yearOfImplementationTW.id]
+		this.regions = this.filteredTermValues[this.config.regionTW.id]
+		this.countries = this.filteredTermValues[this.config.countryTW.id]
+		this.incomes = this.filteredTermValues[this.config.incomeTW.id]
+		this.teachingStates = this.filteredTermValues[this.config.teachingStatusTW.id]
+		this.referralStates = this.filteredTermValues[this.config.referralStatusTW.id]
+		this.fundingSources = this.filteredTermValues[this.config.fundingSourceTW.id]
+		this.hospitalVolumes = this.filteredTermValues[this.config.hospitalVolumeTW.id]
+		this.yearsOfImplementation = this.filteredTermValues[this.config.yearOfImplementationTW.id]
 
 		this.incomes.sort((elem1, elem2) => {
 			const i1 = orderedIncomes.indexOf(elem1.value)
@@ -180,7 +180,7 @@ export class profilePlot {
 			if (i1 < i2) return -1
 			return 1
 		})
-		this.types = this.termValues[this.config.typeTW.id]
+		this.types = this.filteredTermValues[this.config.typeTW.id]
 		this.filter = this.config.filter || this.getFilter()
 		const isAggregate = this.isAggregate()
 		if (this.type != 'profileForms')
