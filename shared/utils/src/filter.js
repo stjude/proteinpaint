@@ -254,8 +254,10 @@ export function getWrappedTvslst(lst = [], join = '', $id = null) {
 	return filter
 }
 
-//builds filter to retrieve a term values after filtering out samples according to other filters provided.
-// The profile filters use this function to get the filter values that populate the dropdowns in the controls
+//This function is used where ever you need to build a group of categorical filters related.
+// It builds the filter needed to retrieve a term values after filtering out samples according to the other filters provided.
+// The profile filters, for example, use this function to get the filters needed to call filterTermValues, that populate the dropdowns in the controls.
+// If no tw is provided it returns a filter that is the combination of all the categorical filters provided in the filterTWs array.
 export function getTermFilter(filterTWs, values, tw, globalFilter) {
 	const excluded = []
 	if (tw) excluded.push(tw.$id)

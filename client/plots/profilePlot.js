@@ -1,11 +1,11 @@
 import { downloadSingleSVG } from '../common/svg.download.js'
-import { filterJoin } from '#filter'
 import { controlsInit } from './controls.js'
 import { fillTermWrapper, fillTwLst } from '#termsetting'
 import { select } from 'd3-selection'
 import { getSampleFilter } from '../mass/groups.js'
 import { Menu } from '#dom/menu'
 import { icons as icon_functions } from '#dom/control.icons'
+import { getTermFilter } from '#shared/filter.js'
 
 const orderedIncomes = ['Low income', 'Lower middle income', 'Upper middle income', 'High income']
 const orderedVolumes = [
@@ -152,7 +152,8 @@ export class profilePlot {
 	async setControls(additionalInputs = []) {
 		const filters = {}
 		for (const tw of this.config.filterTWs) {
-			const filter = this.getFilter(tw)
+			const filter = getTermFilter(this.config.filterTWs, this.settings, tw, this.state.termfilter.filter)
+
 			if (filter) filters[tw.term.id] = filter
 		}
 		this.filteredTermValues = await this.app.vocabApi.filterTermValues({
@@ -182,6 +183,7 @@ export class profilePlot {
 		})
 		this.types = this.filteredTermValues[this.config.typeTW.id]
 		this.filter = this.config.filter || this.getFilter()
+
 		const isAggregate = this.isAggregate()
 		if (this.type != 'profileForms')
 			this.data = await this.app.vocabApi.getProfileScores({
@@ -371,6 +373,10 @@ export class profilePlot {
 		this.app.dispatch({ type: 'plot_edit', id: this.id, config: this.config })
 	}
 
+	getFilter() {
+		return getTermFilter(this.config.filterTWs, this.settings, null, this.state.termfilter.filter)
+	}
+
 	setRegion(region) {
 		const config = this.config
 		this.settings[config.regionTW.term.id] = region
@@ -387,33 +393,6 @@ export class profilePlot {
 	setSite(site) {
 		this.settings.site = site
 		this.app.dispatch({ type: 'plot_edit', id: this.id, config: this.config })
-	}
-
-	getFilter(tw = null) {
-		const excluded = []
-		if (tw) excluded.push(tw.$id)
-		const lst = []
-		for (const tw of this.config.filterTWs) this.processTW(tw, this.settings[tw.term.id], excluded, lst)
-
-		const tvslst = {
-			type: 'tvslst',
-			in: true,
-			join: 'and',
-			lst
-		}
-		const filter = filterJoin([this.state.termfilter.filter, tvslst])
-		return filter
-	}
-
-	processTW(tw, value, excluded, lst) {
-		if (value && !excluded.includes(tw.$id))
-			lst.push({
-				type: 'tvs',
-				tvs: {
-					term: tw.term,
-					values: [{ key: value }]
-				}
-			})
 	}
 
 	addFilterLegend() {

@@ -10,6 +10,7 @@ import { downloadSingleSVG } from '../../common/svg.download.js'
 import { select2Terms } from '#dom/select2Terms'
 import { Scatter } from '../scatter/scatter.js'
 import { getColors } from '#shared/common.js'
+import { getTermFilter } from '#shared/filter.js'
 
 export class Runchart extends Scatter {
 	type: string
@@ -78,8 +79,13 @@ export class Runchart extends Scatter {
 	}
 
 	setFilterValue(key, value) {
+		this.config.filter = this.getFilter()
 		this.settings[key] = value
 		this.app.dispatch({ type: 'plot_edit', id: this.id, config: this.config })
+	}
+
+	getFilter() {
+		return getTermFilter(this.filterTWs, this.settings, null, this.state.termfilter.filter)
 	}
 }
 
