@@ -23,14 +23,20 @@ export class RunchartView extends ScatterView {
 		}
 
 		//Dictionary with samples applying all the filters but not the one from the current term id
-		const filterTermValues = await this.runchart.app.vocabApi.filterTermValues({
+		const filteredTermValues = await this.runchart.app.vocabApi.filterTermValues({
 			filters,
 			terms
 		})
 		const inputs: any[] = []
 		if (this.runchart.config.countryTW) {
-			const countries = filterTermValues[this.runchart.config.countryTW.term.id]
-
+			// countries can show all the values
+			const countryValues = Object.values(this.runchart.config.countryTW.term.values)
+			const countries = countryValues.map((v: any) => ({
+				label: v.label,
+				value: v.value || v.label
+			}))
+			countries.sort((a, b) => a.label.localeCompare(b.label))
+			countries.unshift({ label: '', value: '' }) // add empty option
 			inputs.push({
 				label: 'Country',
 				type: 'dropdown',
@@ -41,7 +47,7 @@ export class RunchartView extends ScatterView {
 			})
 		}
 		if (this.runchart.config.siteTW) {
-			const sites = filterTermValues[this.runchart.config.siteTW.term.id]
+			const sites = filteredTermValues[this.runchart.config.siteTW.term.id]
 			inputs.push({
 				label: 'Site',
 				type: 'dropdown',

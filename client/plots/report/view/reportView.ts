@@ -57,14 +57,7 @@ export class ReportView {
 		if (this.report.config.siteTW) {
 			this.dom.headerDiv.append('label').text('Site: ')
 			const select = this.dom.headerDiv.append('select')
-			select.append('option').attr('value', '').text('')
-			for (const value in this.report.config.siteTW.term.values) {
-				const site = this.report.config.siteTW.term.values[value].label
-				select.append('option').attr('value', site).text(site)
-				if (this.report.config.site === site) {
-					select.property('value', site)
-				}
-			}
+
 			select.on('change', async () => {
 				await this.report.replaceGlobalFilter()
 			})
