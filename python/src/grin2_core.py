@@ -494,8 +494,6 @@ def process_block_in_chunks(gene_size, lsn_size, lsn_subj_IDs, chrom_size, chunk
 # 10) Main function that computes the probability that each genomic locus is affected by one or more types of genomic lesions.
 
 def prob_hits(hit_cnt, chr_size):
-    hit_cnt["lsn.data"] = hit_cnt["lsn.data"].reset_index(drop=True)
-    hit_cnt["gene.data"] = hit_cnt["gene.data"].reset_index(drop=True)
     lsn_data = hit_cnt["lsn.data"]
     gene_data = hit_cnt["gene.data"]
     gene_lsn_data = hit_cnt["gene.lsn.data"]
@@ -503,6 +501,10 @@ def prob_hits(hit_cnt, chr_size):
     lsn_index = hit_cnt["lsn.index"]
     nhit_mtx = hit_cnt["nhit.mtx"]
     nsubj_mtx = hit_cnt["nsubj.mtx"]
+
+    # Ensure 'lsn.row' is the index for safe .loc access
+    if "lsn.row" in lsn_data.columns:
+        lsn_data = lsn_data.set_index("lsn.row", drop=False)
 
     num_lsn = lsn_data["lsn.type"].unique()
 
@@ -542,8 +544,8 @@ def prob_hits(hit_cnt, chr_size):
 
     nr_li = lsn_index.shape[0]
     cond = (
-        (lsn_index["lsn.type"].shift(-1) != lsn_index["lsn.type"]) |
-        (lsn_index["chrom"].shift(-1) != lsn_index["chrom"])
+            (lsn_index["lsn.type"].shift(-1) != lsn_index["lsn.type"]) |
+            (lsn_index["chrom"].shift(-1) != lsn_index["chrom"])
     )
     new_chr = cond[:nr_li - 1][cond[:nr_li - 1]].index
     chr_start = [0] + list(new_chr + 1)
@@ -561,7 +563,7 @@ def prob_hits(hit_cnt, chr_size):
 
     # Init p-value matrices
     p_nsubj = pd.DataFrame(np.ones((g, nlt)), columns=nsubj_mtx.columns)
-    p_nhit = pd.DataFrame(np.nan, index=range(g), columns=nhit_mtx.columns)  # placeholder for n.hit stats if we will compute it later
+    p_nhit = pd.DataFrame(np.nan, index=range(g), columns=nhit_mtx.columns)
 
     for i in range(b):
         gli_start = gene_lsn_chr_index.loc[i, "row.start"]
@@ -575,7 +577,7 @@ def prob_hits(hit_cnt, chr_size):
         lsn_chr_match = lsn_chr_index[
             (lsn_chr_index["lsn.type"] == gene_lsn_chr_index.loc[i, "lsn.type"]) &
             (lsn_chr_index["chrom"] == gene_lsn_chr_index.loc[i, "chrom"])
-        ]
+            ]
         if lsn_chr_match.empty:
             continue
 
@@ -584,10 +586,13 @@ def prob_hits(hit_cnt, chr_size):
         lsn_start = lsn_index.loc[lsn_index_start, "row.start"]
         lsn_end = lsn_index.loc[lsn_index_end, "row.end"]
         lsn_rows = list(range(lsn_start, lsn_end + 1))
-        # lsn_type = lsn_data.loc[lsn_start, "lsn.type"]
-        lsn_type = lsn_data.iloc[lsn_start - 1]["lsn.type"]
+
+        # index is the 'lsn.row'
+        lsn_type = lsn_data.loc[lsn_start, "lsn.type"]
+
         chrom = gene_lsn_chr_index.loc[i, "chrom"]
         chrom_size = chr_size.loc[chr_size["chrom"] == chrom, "size"].values[0]
+
 
         gene_pos = gene_data.index.get_indexer(gene_rows)
         if np.any(gene_pos < 0):
