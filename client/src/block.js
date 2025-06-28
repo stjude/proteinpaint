@@ -3301,12 +3301,12 @@ seekrange(chr,start,stop) {
 								stacknumber = i.y
 								lst.push(
 									i.name +
-										' <span style="opacity:.5;font-size:.7em">' +
+										' <span style="font-size:.7em">' +
 										i.chr +
 										':' +
 										(i.start + 1) +
 										'-' +
-										(i.stop + 1) +
+										i.stop +
 										' ' +
 										common.bplen(i.stop - i.start) +
 										'</span>'
@@ -3321,7 +3321,7 @@ seekrange(chr,start,stop) {
 								stacknumber = i.y
 								lst.push(
 									i.name +
-										' <span style="opacity:.5;font-size:.7em">' +
+										' <span style="font-size:.7em">' +
 										i.chr +
 										':' +
 										(i.start + 1) +
