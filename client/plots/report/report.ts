@@ -14,6 +14,7 @@ export class Report extends RxComponentInner {
 	state!: any
 	readonly type: string
 	id!: string
+	filterTWs: any[] = []
 
 	constructor() {
 		super()
@@ -26,50 +27,17 @@ export class Report extends RxComponentInner {
 		this.components = { plots: {} }
 	}
 
-	async replaceGlobalFilter() {
-		const country = this.view.dom.countrySelect.node().value
-		const site = this.view.dom.siteSelect.node().value
-		const filter: any = {
-			type: 'tvslst',
-			in: true,
-			join: '',
-			lst: []
-		}
-		if (country) {
-			filter.lst.push({
-				type: 'tvs',
-				tvs: {
-					term: this.config.countryTW.term,
-					values: [{ key: country }]
-				}
-			})
-		}
-		if (site) {
-			filter.lst.push({
-				type: 'tvs',
-				tvs: {
-					term: this.config.siteTW.term,
-					values: [{ key: site }]
-				}
-			})
-		}
-		filter.tag = 'filterUiRoot'
-		if (filter.lst.length > 1) filter.join = 'and'
-
+	async replaceFilter() {
+		const filter = this.getFilter()
 		this.app.dispatch({
-			type: 'app_refresh',
-			subactions: [
-				{
-					type: 'filter_replace',
-					filter
-				},
-				{
-					type: 'plot_edit',
-					id: this.id,
-					config: { site, country }
-				}
-			]
+			type: 'plot_edit',
+			id: this.id,
+			config: { filter, settings: { report: this.settings } }
 		})
+	}
+
+	getFilter() {
+		return getTermFilter(this.filterTWs, this.settings, null, this.state.termfilter.filter)
 	}
 
 	getState(appState: any) {
@@ -104,6 +72,7 @@ export class Report extends RxComponentInner {
 		opts.holder = holder
 		opts.app = this.app
 		opts.parentId = this.id
+		opts.filter = this.state.config.filter
 		//opts.controls = this.view.dom.controlsHolder
 		const { componentInit } = await import(`../../plots/${opts.chartType}.js`)
 		this.components.plots[opts.id] = await componentInit(opts)
@@ -123,15 +92,13 @@ export class Report extends RxComponentInner {
 	}
 
 	async fillSites() {
-		const country = this.state.config.country
-		const site = this.state.config.site
-		const terms = [this.config.countryTW, this.config.siteTW]
-
-		const filters = { [this.config.countryTW.term.id]: this.state.termfilter.filter }
-		const values = { [this.config.countryTW.term.id]: country }
-		filters[this.config.siteTW.term.id] = getTermFilter(terms, values, this.config.siteTW, this.state.termfilter.filter)
+		const site = this.settings[this.config.siteTW.term.id] || ''
+		this.filterTWs = [this.config.countryTW, this.config.siteTW]
+		const filters: any = {}
+		for (const tw of this.filterTWs)
+			filters[tw.term.id] = getTermFilter(this.filterTWs, this.settings, tw, this.state.termfilter.filter)
 		const sitesData = await this.app.vocabApi.filterTermValues({
-			terms,
+			terms: this.filterTWs,
 			filters
 		})
 		const siteSelect = this.view.dom.siteSelect
@@ -156,7 +123,7 @@ export async function getPlotConfig(opts, app) {
 			controls: {
 				isOpen: false // control panel is hidden by default
 			},
-			Report: getDefaultReportSettings(),
+			report: getDefaultReportSettings(),
 			startColor: {}, //dict to store the start color of the gradient for each chart when using continuous color
 			stopColor: {} //dict to store the stop color of the gradient for each chart when using continuous color
 		}
