@@ -494,6 +494,8 @@ def process_block_in_chunks(gene_size, lsn_size, lsn_subj_IDs, chrom_size, chunk
 # 10) Main function that computes the probability that each genomic locus is affected by one or more types of genomic lesions.
 
 def prob_hits(hit_cnt, chr_size):
+    hit_cnt["lsn.data"] = hit_cnt["lsn.data"].reset_index(drop=True)
+    hit_cnt["gene.data"] = hit_cnt["gene.data"].reset_index(drop=True)
     lsn_data = hit_cnt["lsn.data"]
     gene_data = hit_cnt["gene.data"]
     gene_lsn_data = hit_cnt["gene.lsn.data"]
@@ -582,7 +584,8 @@ def prob_hits(hit_cnt, chr_size):
         lsn_start = lsn_index.loc[lsn_index_start, "row.start"]
         lsn_end = lsn_index.loc[lsn_index_end, "row.end"]
         lsn_rows = list(range(lsn_start, lsn_end + 1))
-        lsn_type = lsn_data.loc[lsn_start, "lsn.type"]
+        # lsn_type = lsn_data.loc[lsn_start, "lsn.type"]
+        lsn_type = lsn_data.iloc[lsn_start - 1]["lsn.type"]
         chrom = gene_lsn_chr_index.loc[i, "chrom"]
         chrom_size = chr_size.loc[chr_size["chrom"] == chrom, "size"].values[0]
 
