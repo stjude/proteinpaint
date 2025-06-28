@@ -10,7 +10,6 @@ import matplotlib
 import matplotlib.pyplot as plt
 plt.close('all')
 matplotlib.use('Agg')
-import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle, Patch
 
 ###########################################################
@@ -44,7 +43,7 @@ def compute_gw_coordinates(grin_res, scl=1_000_000):
     # Sort by row index
     grin_res['gene.data'] = grin_res['gene.data'].sort_values(by='gene.row').reset_index(drop=True)
     grin_res['gene.hits'] = grin_res['gene.hits'].sort_values(by='gene.row').reset_index(drop=True)
-    grin_res['lsn.data'] = grin_res['lsn.data'].sort_values(by='lsn.row').reset_index(drop=True)
+    grin_res['lsn.data'] = grin_res['lsn.data'].reset_index(drop=True).sort_values(by='lsn.row').reset_index(drop=True)
 
     # Assign gene coordinates
     for _, row in grin_res['gene.index'].iterrows():
@@ -249,5 +248,135 @@ def genomewide_lsn_plot(grin_res, ordered=False, pt_order=None, lsn_colors=None,
         frameon=False,
         fontsize=9
     )
+
+    plt.tight_layout()
+
+
+###################################################################################
+# 4)
+
+def genomewide_log10q_plot(grin_res, lsn_colors=None, max_log10q=None):
+    # Ensure genome-wide coordinates are present
+    if "x.start" not in grin_res["lsn.data"].columns:
+        grin_res = compute_gw_coordinates(grin_res)
+
+    lsn_data = grin_res["lsn.data"].copy()
+
+    # Ensure consistent string dtype for lesion types
+    lsn_data["lsn.type"] = lsn_data["lsn.type"].astype(str)
+    lsn_types = sorted(lsn_data["lsn.type"].dropna().unique())
+
+    # Convert subject IDs to numeric and determine number of unique IDs
+    lsn_data["x.ID"] = pd.factorize(lsn_data["ID"])[0] + 1
+    n = lsn_data["x.ID"].max()
+    n_chr = grin_res["chr.size"].shape[0]
+
+    # Set up plotting area
+    fig, ax = plt.subplots(figsize=(10, 8))
+    ax.set_xlim(-0.05 * n, 1.2 * n)
+    ax.set_ylim(-1.1 * grin_res["chr.size"]["x.end"].iloc[n_chr - 1], 0)
+    ax.axis('off')
+
+    # Draw chromosome background bands
+    for i in range(n_chr):
+        col = "lightgray" if i % 2 == 0 else "gray"
+        ax.add_patch(Rectangle(
+            (0 * n, -grin_res["chr.size"]["x.start"].iloc[i]),
+            width=n,
+            height=-(grin_res["chr.size"]["x.end"].iloc[i] - grin_res["chr.size"]["x.start"].iloc[i]),
+            facecolor=col,
+            edgecolor=None
+        ))
+
+    # Extract gene.hits columns matching each lesion type
+    selected_cols = []
+    for lsn_type in lsn_types:
+        matches = grin_res["gene.hits"].filter(regex=rf"\b{lsn_type}\b")
+        selected_cols.append(matches)
+    final_data = pd.concat(selected_cols, axis=1)
+
+    # Assign default colors if needed
+    if lsn_colors is None:
+        lsn_colors = default_grin_colors(lsn_types)
+
+    lsn_data["lsn.colors"] = lsn_data["lsn.type"].map(lsn_colors)
+
+    # Sort lesions by size
+    lsn_data["lsn.size"] = lsn_data["x.end"] - lsn_data["x.start"]
+    lsn_data = lsn_data.sort_values("lsn.size", ascending=False)
+
+    # Extract subject counts and q-values
+    nsubj_cols = [f"nsubj.{lt}" for lt in lsn_types]
+    qval_cols = [f"q.nsubj.{lt}" for lt in lsn_types]
+
+    gene_hits = grin_res["gene.hits"]
+    nsubj_data_rows = []
+
+    for lsn_type in lsn_types:
+        if f"nsubj.{lsn_type}" in gene_hits.columns and f"q.nsubj.{lsn_type}" in gene_hits.columns:
+            nsubj = gene_hits[f"nsubj.{lsn_type}"].to_numpy()
+            qvals = np.clip(gene_hits[f"q.nsubj.{lsn_type}"].to_numpy(), 1e-300, None)
+            log10q = -np.log10(qvals)
+
+            df = pd.DataFrame({
+                "gene": gene_hits["gene"],
+                "x.start": gene_hits["x.start"],
+                "x.end": gene_hits["x.end"],
+                "nsubj": nsubj,
+                "log10q": log10q,
+                "lsn.type": lsn_type
+            })
+
+            nsubj_data_rows.append(df)
+
+    # Combine all lesion types
+    nsubj_data = pd.concat(nsubj_data_rows, ignore_index=True)
+    nsubj_data = nsubj_data[nsubj_data["nsubj"] > 0]
+    nsubj_data["lsn.colors"] = nsubj_data["lsn.type"].map(lsn_colors)
+
+    nsubj_data.sort_values("nsubj", ascending=False, inplace=True)
+    if max_log10q is not None:
+        nsubj_data["log10q"] = np.minimum(nsubj_data["log10q"], max_log10q)
+    nsubj_data.sort_values("log10q", ascending=False, inplace=True)
+
+    # Draw -log10(q) bars
+    for _, row in nsubj_data.iterrows():
+        y = -(row["x.start"] + row["x.end"]) / 2
+        x1 = 0
+        x2 = row["log10q"] / nsubj_data["log10q"].max() * n
+        ax.plot([x1, x2], [y, y], color=row["lsn.colors"])
+
+    # Add chromosome labels in white space beside the grey bars
+    chroms = grin_res["chr.size"]["chrom"]
+    x_offset = 0.02 * n
+
+    for i in range(n_chr):
+        y_pos = -(grin_res["chr.size"]["x.start"].iloc[i] + grin_res["chr.size"]["x.end"].iloc[i]) / 2
+        if i % 2 == 0:
+            xpos = n + x_offset
+            halign = "left"
+        else:
+            xpos = 0 - x_offset
+            halign = "right"
+        ax.text(xpos, y_pos, chroms.iloc[i], ha=halign, va="center", fontsize=10)
+
+    # Add legend
+    ax.legend(
+        handles=[Rectangle((0, 0), 1, 1, color=col) for col in lsn_colors.values()],
+        labels=lsn_colors.keys(),
+        loc="lower center",
+        bbox_to_anchor=(0.5, -0.02),
+        ncol=len(lsn_colors),
+        frameon=False,
+        fontsize=11
+    )
+
+    # Add axis annotation
+    ax.text(n / 2, 0, "-log10(q)", fontsize=12, ha="center", va="bottom")
+
+    tick_xs = np.array([0, 0.25, 0.5, 0.75, 1]) * n
+    tick_vals = np.round(np.array([0, max_log10q / 4, max_log10q / 2, max_log10q / 1.3333333333, max_log10q]), 1)
+    for tx, tv in zip(tick_xs, tick_vals):
+        ax.text(tx, -grin_res["chr.size"]["x.end"].iloc[n_chr - 1], str(tv), ha="center", va="top", fontsize=10)
 
     plt.tight_layout()
