@@ -7,6 +7,9 @@ All notable changes to this project will be documented in this file.
 General:
 - Adding timming information to UI analysis report; Adding case by case records summary; Updated run route response definition; Added table reporting MAF and CNV records included/excluded by analysis; Updated MAF options default checkbox behavior and labeling; Fixed top gene table sorting.
 
+Fixes:
+- Fixed incorrect reporting of timing and total records included information
+
 
 ## 2.132.0
 

@@ -1,2 +1,1 @@
-Fixes:
-- Fixed incorrect reporting of timing and total records included information
+
