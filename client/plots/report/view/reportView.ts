@@ -44,13 +44,15 @@ export class ReportView {
 			for (const value in this.report.config.countryTW.term.values) {
 				const country = this.report.config.countryTW.term.values[value].label
 				select.append('option').attr('value', country).text(country)
-				if (this.report.config.country === country) {
+
+				if (this.report.config.settings.report[this.report.config.countryTW.term.id] === country) {
 					select.property('value', country)
 				}
 			}
 			select.on('change', async () => {
 				this.dom.siteSelect.node().value = ''
-				this.report.replaceGlobalFilter()
+				this.report.settings[this.report.config.countryTW.term.id] = select.node().value
+				this.report.replaceFilter()
 			})
 			this.dom.countrySelect = select
 		}
@@ -59,7 +61,8 @@ export class ReportView {
 			const select = this.dom.headerDiv.append('select')
 
 			select.on('change', async () => {
-				await this.report.replaceGlobalFilter()
+				this.report.settings[this.report.config.siteTW.term.id] = select.node().value
+				await this.report.replaceFilter()
 			})
 			this.dom.siteSelect = select
 		}
