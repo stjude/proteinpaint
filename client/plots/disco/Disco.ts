@@ -141,12 +141,13 @@ export default class Disco {
 				this.features[name].update({ state: this.state, appState })
 			}
 
-			const legendRenderer = new LegendRenderer(this.viewModel.cappedCnvMaxAbsValue, settings.label.fontSize)
+                        const legendRenderer = new LegendRenderer(this.viewModel.cappedCnvMaxAbsValue, settings.label.fontSize)
 
-			const discoRenderer = new DiscoRenderer(
-				this.getRingRenderers(settings, this.viewModel, this.discoInteractions.geneClickListener),
-				legendRenderer
-			)
+                        const discoRenderer = new DiscoRenderer(
+                                this.getRingRenderers(settings, this.viewModel, this.discoInteractions.geneClickListener),
+                                legendRenderer,
+                                settings.Disco.fusionArcOpacity ?? 1
+                        )
 
 			discoRenderer.render(svgDiv, this.viewModel)
 		}
@@ -171,7 +172,7 @@ export default class Disco {
 		const snvRenderer = new SnvRenderer(settings.rings.snvRingWidth, geneClickListener)
 		const cnvRenderer =
 			settings.Disco.cnvRenderingType === CnvRenderingType.heatmap
-				? new CnvHeatmapRenderer(viewModel.positivePercentile, viewModel.negativePercentile)
+				? new CnvHeatmapRenderer(viewModel.positivePercentile80, viewModel.negativePercentile80)
 				: new CnvBarRenderer()
 		const lohRenderer = new LohRenderer()
 

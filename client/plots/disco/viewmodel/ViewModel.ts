@@ -24,8 +24,8 @@ export default class ViewModel {
 	cnvMaxValue?: number
 	cnvMinValue?: number
 	cappedCnvMaxAbsValue?: number
-	negativePercentile?: number
-	positivePercentile?: number
+	negativePercentile80?: number
+	positivePercentile80?: number
 
 	constructor(
 		settings: Settings,
@@ -43,16 +43,22 @@ export default class ViewModel {
 		this.fusions = fusions
 		this.genesetName = genesetName
 
-		this.width =
-			1.2 *
-			(this.settings.horizontalPadding +
-				this.settings.rings.labelLinesInnerRadius +
-				this.settings.rings.labelsToLinesDistance)
-		this.height =
-			2 *
-			(this.settings.rings.labelLinesInnerRadius +
-				this.settings.rings.labelsToLinesDistance +
-				this.settings.verticalPadding)
+                this.width =
+                        this.settings.width !== undefined
+                                ? this.settings.width
+                                :
+                                  1.2 *
+                                          (this.settings.horizontalPadding +
+                                                  this.settings.rings.labelLinesInnerRadius +
+                                                  this.settings.rings.labelsToLinesDistance)
+                this.height =
+                        this.settings.height !== undefined
+                                ? this.settings.height
+                                :
+                                  2 *
+                                          (this.settings.rings.labelLinesInnerRadius +
+                                                  this.settings.rings.labelsToLinesDistance +
+                                                  this.settings.verticalPadding)
 
 		this.legendHeight = this.calculateLegendHeight(legend)
 		this.snvDataLength = dataHolder.snvData.length
@@ -62,8 +68,8 @@ export default class ViewModel {
 		this.cnvMaxValue = dataHolder.cnvGainMaxValue
 		this.cnvMinValue = dataHolder.cnvLossMaxValue
 		this.cappedCnvMaxAbsValue = dataHolder.cappedCnvMaxAbsValue
-		this.negativePercentile = dataHolder.percentileNegative
-		this.positivePercentile = dataHolder.percentilePositive
+		this.negativePercentile80 = dataHolder.percentileNegative
+		this.positivePercentile80 = dataHolder.percentilePositive
 	}
 
 	getElements(ringType: RingType): Array<Arc> {

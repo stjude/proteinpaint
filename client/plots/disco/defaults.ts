@@ -14,7 +14,9 @@ export default function discoDefaults(overrides = {}): Settings {
 			showPrioritizeGeneLabelsByGeneSets: false,
 			cnvRenderingType: CnvRenderingType.heatmap,
 			cnvPercentile: 90, // 90th percentile for removing outliers
-			cnvCutoffMode: 'percentile'
+			cnvCutoffMode: 'percentile',
+			fusionArcOpacity: 0.009
+			
 		},
 
 		rings: {
@@ -36,8 +38,13 @@ export default function discoDefaults(overrides = {}): Settings {
 			nonExonicFilterValues: ['non-exonic']
 		},
 
-		verticalPadding: 70,
-		horizontalPadding: 500,
+                verticalPadding: 70,
+                horizontalPadding: 500,
+
+                // Optional plot dimensions. If omitted, they will be computed
+                // based on other padding and ring settings.
+                width: undefined,
+                height: undefined,
 
 		layerScaler: 1,
 		padAngle: 0.002, //0.01, //0.04,

@@ -11,13 +11,15 @@ Tests:
 
 // Use discoDefaults to avoid manually writing every settings field
 const settings = discoDefaults({
-	rings: {
-		labelLinesInnerRadius: 100,
-		labelsToLinesDistance: 20
-	},
-	legend: {
-		rowHeight: 30
-	}
+        rings: {
+                labelLinesInnerRadius: 100,
+                labelsToLinesDistance: 20
+        },
+        width: 500,
+        height: 400,
+        legend: {
+                rowHeight: 30
+        }
 })
 
 // Mock ring structure, each with empty elements to test getElements
@@ -81,14 +83,14 @@ test('ViewModel initializes with expected values', t => {
 		`CNV min loss value should return ${mockDataHolder.cnvLossMaxValue}`
 	)
 	t.equal(
-		viewModel.positivePercentile,
+		viewModel.positivePercentile80,
 		mockDataHolder.percentilePositive,
 		`Percentile positive should return ${mockDataHolder.percentilePositive}`
 	)
 	t.equal(viewModel.genesetName, 'GeneSet123', 'Gene set name is stored')
 
-	t.ok(viewModel.width > 0, 'Width is computed and greater than 0')
-	t.ok(viewModel.height > 0, 'Height is computed and greater than 0')
+        t.equal(viewModel.width, 500, 'Width uses override value')
+        t.equal(viewModel.height, 400, 'Height uses override value')
 	t.equal(
 		viewModel.legendHeight,
 		mockLegend.legendCount() * settings.legend.rowHeight,

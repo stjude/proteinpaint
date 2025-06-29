@@ -5,15 +5,19 @@ import type { RingType } from './ring/RingType.ts'
 import FusionRenderer from './fusion/FusionRenderer.ts'
 
 export class DiscoRenderer {
-	private renders: Map<RingType, IRenderer>
-	private legendRenderer: LegendRenderer
-	private fusionRenderer: FusionRenderer
+        private renders: Map<RingType, IRenderer>
+        private legendRenderer: LegendRenderer
+        private fusionRenderer: FusionRenderer
 
-	constructor(renders: Map<RingType, IRenderer>, legendRenderer: LegendRenderer) {
-		this.renders = renders
-		this.legendRenderer = legendRenderer
-		this.fusionRenderer = new FusionRenderer()
-	}
+        constructor(
+                renders: Map<RingType, IRenderer>,
+                legendRenderer: LegendRenderer,
+                fusionArcOpacity: number
+        ) {
+                this.renders = renders
+                this.legendRenderer = legendRenderer
+                this.fusionRenderer = new FusionRenderer(fusionArcOpacity)
+        }
 
 	render(holder: any, viewModel: ViewModel) {
 		const svgDiv = holder.append('div').style('display', 'inline-block').style('font-family', 'Arial')

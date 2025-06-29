@@ -1,21 +1,30 @@
 export default interface Settings {
-	verticalPadding: number
-	horizontalPadding: number
+        verticalPadding: number
+        horizontalPadding: number
+
+        /** Optional width of the plot SVG. If not provided, width is computed
+         *  from other layout settings. */
+        width?: number
+        /** Optional height of the plot SVG. If not provided, height is
+         *  computed from other layout settings. */
+        height?: number
 
 	downloadImgName: string // file name of downloaded svg
 
-	Disco: {
-		centerText: string
-		cnvCapping: number
-		isOpen: boolean
-		showPrioritizeGeneLabelsByGeneSets: boolean
-		prioritizeGeneLabelsByGeneSets: boolean // set to true to prioritize by default, if applicable
-		cnvRenderingType: string
-		cnvPercentile: number
-		/** auto, fixed, percentile. Used for the numeric inputs dropdown
-		 * for cnv color scales. */
-		cnvCutoffMode: string
-	}
+        Disco: {
+                centerText: string
+                cnvCapping: number
+                isOpen: boolean
+                showPrioritizeGeneLabelsByGeneSets: boolean
+                prioritizeGeneLabelsByGeneSets: boolean // set to true to prioritize by default, if applicable
+                cnvRenderingType: string
+                cnvPercentile: number
+                /** auto, fixed, percentile. Used for the numeric inputs dropdown
+                 * for cnv color scales. */
+                cnvCutoffMode: string
+                /** Opacity for fusion arcs */
+                fusionArcOpacity?: number
+        }
 
 	rings: {
 		snvRingFilters: Array<string>
