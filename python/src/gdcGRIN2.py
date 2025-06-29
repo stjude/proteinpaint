@@ -240,7 +240,8 @@ def plot_grin2_manhattan(grin_results: dict,
     # Set chromosome labels
     ax.set_xticks(chr_positions)
     ax.set_xticklabels(chr_labels, rotation=45, ha='right')
-    
+    plt.subplots_adjust(bottom=0.2)
+
     # Add significance threshold lines
     significance_lines = [
         (1.3, '#FFA500'),  # q=0.05
@@ -260,7 +261,7 @@ def plot_grin2_manhattan(grin_results: dict,
     
     # Add legend
     if len(mutation_cols) > 0:
-        ax.legend(loc='upper right', frameon=False, fancybox=True, shadow=False,  framealpha=0.0)
+        ax.legend(loc='upper right', frameon=False, fancybox=True, shadow=False,  framealpha=0.0, markerscale=2)
     
     # Clean up the plot
     ax.spines['top'].set_visible(False)
@@ -347,6 +348,15 @@ def has_data(column_data, sample_size=20):
 	]
 	return len(meaningful_data) > 0
 
+def smart_format(value):
+    """Smart formatting: scientific notation for very small/large numbers with 4 significant figures"""
+    if value == 0:
+        return 0
+    elif abs(value) < 1e-4 or abs(value) > 1e6:
+        return f"{value:.3e}"  # 4 significant figures (3 decimal places in scientific notation)
+    else:
+        return round(float(value), 6)  # Regular rounding for normal numbers
+
 def simple_column_filter(sorted_results, num_rows_to_process=50):
 	"""
 	Dynamically generate columns and rows for topGeneTable based on available data
@@ -391,21 +401,21 @@ def simple_column_filter(sorted_results, num_rows_to_process=50):
 		]
 		if mutation_has_data:
 			row_data.extend([
-				{"value": float(sorted_results.iloc[i][p_cols[0]].round(10))},
-				{"value": float(sorted_results.iloc[i][q_cols[0]].round(10))},
-				{"value": float(sorted_results.iloc[i][n_cols[0]].round(10))}
+				{"value": smart_format(sorted_results.iloc[i][p_cols[0]])},
+				{"value": smart_format(sorted_results.iloc[i][q_cols[0]])},
+				{"value": smart_format(sorted_results.iloc[i][n_cols[0]])}
 			])
 		if cnv_gain_has_data:
 			row_data.extend([
-				{"value": float(sorted_results.iloc[i][p_cols[1]].round(10))},
-				{"value": float(sorted_results.iloc[i][q_cols[1]].round(10))},
-				{"value": float(sorted_results.iloc[i][n_cols[1]].round(10))}
+				{"value": smart_format(sorted_results.iloc[i][p_cols[1]])},
+				{"value": smart_format(sorted_results.iloc[i][q_cols[1]])},
+				{"value": smart_format(sorted_results.iloc[i][n_cols[1]])}
 			])
 		if cnv_loss_has_data:
 			row_data.extend([
-				{"value": float(sorted_results.iloc[i][p_cols[2]].round(10))},
-				{"value": float(sorted_results.iloc[i][q_cols[2]].round(10))},
-				{"value": float(sorted_results.iloc[i][n_cols[2]].round(10))}
+				{"value": smart_format(sorted_results.iloc[i][p_cols[2]])},
+				{"value": smart_format(sorted_results.iloc[i][q_cols[2]])},
+				{"value": smart_format(sorted_results.iloc[i][n_cols[2]])}
 			])
 		topgene_table_data.append(row_data)
 	return {
