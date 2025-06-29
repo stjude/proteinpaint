@@ -348,13 +348,12 @@ def has_data(column_data, sample_size=20):
 	return len(meaningful_data) > 0
 
 def smart_format(value):
-    """Smart formatting: scientific notation for very small/large numbers with 4 significant figures"""
+    """Format to 4 significant digits but keep as numbers for proper sorting"""
     if value == 0:
         return 0
-    elif abs(value) < 1e-4 or abs(value) > 1e6:
-        return f"{value:.3e}"  # 4 significant figures (3 decimal places in scientific notation)
     else:
-        return round(float(value), 6)  # Regular rounding for normal numbers
+        # Convert to 4 significant digits and back to float
+        return float(f"{value:.3g}")  # .3g gives 4 significant digits total
 
 def simple_column_filter(sorted_results, num_rows_to_process=50):
 	"""
