@@ -343,8 +343,7 @@ def has_data(column_data, sample_size=20):
 	# Remove NA, NULL, empty strings, and 0 values
 	meaningful_data = sample_data[
 		sample_data.notna() &
-		(sample_data != "") &
-		(sample_data != 0)
+		(sample_data != "")
 	]
 	return len(meaningful_data) > 0
 
@@ -365,10 +364,30 @@ def simple_column_filter(sorted_results, num_rows_to_process=50):
 	p_cols = result["p_cols"]
 	q_cols = result["q_cols"]
 	n_cols = result["n_cols"]
+	
 	# Check which column groups have data (using your existing p_cols, q_cols, n_cols)
 	mutation_has_data = has_data(sorted_results[p_cols[0]]) if p_cols else False
 	cnv_gain_has_data = has_data(sorted_results[p_cols[1]]) if len(p_cols) > 1 else False
 	cnv_loss_has_data = has_data(sorted_results[p_cols[2]]) if len(p_cols) > 2 else False
+	
+	# Check CNV data availability
+	has_cnv_data = cnv_gain_has_data or cnv_loss_has_data
+	has_both_maf_and_cnv = mutation_has_data and has_cnv_data
+	
+	# Check if constellation columns actually exist
+	p3_exists = 'p3.nsubj' in sorted_results.columns
+	q3_exists = 'q3.nsubj' in sorted_results.columns
+	
+	# Sorting logic with fallbacks
+	if has_cnv_data and 'p1.nsubj' in sorted_results.columns:
+		sorted_results = sorted_results.sort_values('p1.nsubj', ascending=True)
+	elif 'p.nsubj.mutation' in sorted_results.columns:
+		sorted_results = sorted_results.sort_values('p.nsubj.mutation', ascending=True)
+	elif 'p.nsubj.gain' in sorted_results.columns:
+		sorted_results = sorted_results.sort_values('p.nsubj.gain', ascending=True)
+	else:
+		pass
+
 	# Build columns list
 	columns = [
 		{"label": "Gene", "sortable": True},
@@ -376,22 +395,40 @@ def simple_column_filter(sorted_results, num_rows_to_process=50):
 	]
 	if mutation_has_data:
 		columns.extend([
-			{"label": "Mutation P-value", "sortable": True},
-			{"label": "Mutation Q-value", "sortable": True},
-			{"label": "Mutation Subject Count", "sortable": True}
+			{"label": p_cols[0], "sortable": True},
+			{"label": q_cols[0], "sortable": True},
+			{"label": n_cols[0], "sortable": True}
 		])
 	if cnv_gain_has_data:
 		columns.extend([
-			{"label": "CNV Gain P-value", "sortable": True},
-			{"label": "CNV Gain Q-value", "sortable": True},
-			{"label": "CNV Gain Subject Count", "sortable": True}
+			{"label": p_cols[1], "sortable": True},
+			{"label": q_cols[1], "sortable": True},
+			{"label": n_cols[1], "sortable": True}
 		])
 	if cnv_loss_has_data:
 		columns.extend([
-			{"label": "CNV Loss P-value", "sortable": True},
-			{"label": "CNV Loss Q-value", "sortable": True},
-			{"label": "CNV Loss Subject Count", "sortable": True}
+			{"label": p_cols[2], "sortable": True},
+			{"label": q_cols[2], "sortable": True},
+			{"label": n_cols[2], "sortable": True}
 		])
+	
+	# Add constellation columns based on what data we have
+	if has_cnv_data:
+		# Always add p1 and p2 when CNV data is present
+		columns.extend([
+			{"label": "p1.nsubj", "sortable": True},
+			{"label": "q1.nsubj", "sortable": True},
+			{"label": "p2.nsubj", "sortable": True},
+			{"label": "q2.nsubj", "sortable": True}
+		])
+		
+		# Only add p3/q3 if columns actually exist AND we have both mutation and CNV data
+		if has_both_maf_and_cnv and p3_exists and q3_exists:
+			columns.extend([
+				{"label": "p3.nsubj", "sortable": True},
+				{"label": "q3.nsubj", "sortable": True}
+			])
+	
 	# Build rows to match the active columns
 	topgene_table_data = []
 	for i in range(min(len(sorted_results), num_rows_to_process)):
@@ -417,6 +454,24 @@ def simple_column_filter(sorted_results, num_rows_to_process=50):
 				{"value": smart_format(sorted_results.iloc[i][q_cols[2]])},
 				{"value": smart_format(sorted_results.iloc[i][n_cols[2]])}
 			])
+		
+		# Add constellation data based on what we have
+		if has_cnv_data:
+			# Always add p1 and p2 when CNV data is present
+			row_data.extend([
+				{"value": smart_format(sorted_results.iloc[i]["p1.nsubj"])},
+				{"value": smart_format(sorted_results.iloc[i]["q1.nsubj"])},
+				{"value": smart_format(sorted_results.iloc[i]["p2.nsubj"])},
+				{"value": smart_format(sorted_results.iloc[i]["q2.nsubj"])}
+			])
+			
+			# Only add p3/q3 if columns actually exist AND we have both mutation and CNV data
+			if has_both_maf_and_cnv and p3_exists and q3_exists:
+				row_data.extend([
+					{"value": smart_format(sorted_results.iloc[i]["p3.nsubj"])},
+					{"value": smart_format(sorted_results.iloc[i]["q3.nsubj"])}
+				])
+		
 		topgene_table_data.append(row_data)
 	return {
 		"columns": columns,
