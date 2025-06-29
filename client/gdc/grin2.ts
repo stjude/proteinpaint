@@ -1265,7 +1265,7 @@ function makeControls(obj) {
 		.append('div')
 		.style('color', '#666')
 		.style('font-style', 'italic')
-		.text('Fusion analysis options will be configured here')
+		.text('Please login to access RNA fusion data.')
 
 	// Add checkbox change handlers (basic show/hide functionality)
 	mafCheckbox.on('change', function (this: HTMLInputElement) {
