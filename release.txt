@@ -1,2 +1,1 @@
-Features:
-- Made legend keys bigger. Made table rounding more precise
+
