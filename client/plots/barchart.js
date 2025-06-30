@@ -338,7 +338,8 @@ export class Barchart {
 	// creates an opts object for the vocabApi.getNestedChartsData()
 	getDataRequestOpts() {
 		const c = this.config
-		const opts = { term: c.term, filter: this.state.termfilter.filter }
+		//if a filter object is passed to the barchart use this filter instead of the termfilter, used by the report
+		const opts = { term: c.term, filter: this.state.config.filter || this.state.termfilter.filter }
 		if (this.state.termfilter.filter0) opts.filter0 = this.state.termfilter.filter0
 		if (c.term2) opts.term2 = c.term2
 		if (c.term0) opts.term0 = c.term0

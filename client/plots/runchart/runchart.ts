@@ -17,7 +17,6 @@ export class Runchart extends Scatter {
 	cat2Color: any
 	runchartvm!: RunchartViewModel
 	filterTWs: any
-	filtersData: any
 
 	constructor() {
 		super()
@@ -30,10 +29,7 @@ export class Runchart extends Scatter {
 		this.filterTWs = []
 		if (state.config.countryTW) this.filterTWs.push(state.config.countryTW)
 		if (state.config.siteTW) this.filterTWs.push(state.config.siteTW)
-		this.filtersData = await this.app.vocabApi.getAnnotatedSampleData({
-			terms: structuredClone(this.filterTWs),
-			termsPerRequest: 10
-		})
+
 		this.view = new RunchartView(this)
 		this.model = new RunchartModel(this)
 		this.vm = new RunchartViewModel(this)

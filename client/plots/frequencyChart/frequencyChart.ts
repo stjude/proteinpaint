@@ -23,10 +23,7 @@ export class FrequencyChart extends Runchart {
 		this.filterTWs = []
 		if (state.config.countryTW) this.filterTWs.push(state.config.countryTW)
 		if (state.config.siteTW) this.filterTWs.push(state.config.siteTW)
-		this.filtersData = await this.app.vocabApi.getAnnotatedSampleData({
-			terms: structuredClone(this.filterTWs),
-			termsPerRequest: 10
-		})
+
 		this.view = new FrequencyChartView(this)
 		this.model = new FrequencyChartModel(this)
 		this.vm = new RunchartViewModel(this)
