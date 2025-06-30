@@ -32,14 +32,15 @@ class profileRadarFacility extends profilePlot {
 	async main() {
 		await super.main()
 		await this.setControls()
-		const site = this.settings.site || this.data.sites?.[0]?.value
+		if (!this.settings.site) this.settings.site = this.data.sites?.[0]?.value
+		const sites = this.settings.sites || [this.settings.site]
 		this.sampleData = await this.app.vocabApi.getProfileScores({
 			terms: [...this.twLst, this.config.facilityTW], //added facility term to all the plots to get the hospital name
 			scoreTerms: this.scoreTerms,
 			filter: this.filter,
 			isAggregate: false,
 			isRadarFacility: true,
-			site,
+			sites,
 			userSites: this.state.sites,
 			facilityTW: this.config.facilityTW
 		})
@@ -199,10 +200,12 @@ class profileRadarFacility extends profilePlot {
 
 		this.addFilterLegend()
 		this.legendG.append('text').attr('text-anchor', 'left').style('font-weight', 'bold').text('Legend')
-		const site = this.settings.site || this.sites[0].value
-		const hospital = this.sampleData.hospital
-		const siteLabel = this.sites.find(s => s.value == site).label
-		this.addLegendItem(`${siteLabel} / ${hospital}`, color1, 0, 'none')
+		const site = this.settings.site
+		if (site) {
+			const hospital = this.sampleData.hospital
+			const siteLabel = this.sites.find(s => s.value == site).label
+			this.addLegendItem(`${siteLabel} / ${hospital}`, color1, 0, 'none')
+		}
 		this.addLegendItem(this.config.score, color2, 1, '5, 5')
 	}
 
