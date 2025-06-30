@@ -11,6 +11,7 @@ import { ClientHolder } from '#src/caching/ClientHolder.ts'
 import type { KeyValueStorage } from '#src/caching/KeyValueStorage.ts'
 import type { PredictionOverlay } from '#types'
 import { PredictionOverlayType } from '#types'
+import path from 'path'
 
 export default class RedisClientHolder implements KeyValueStorage {
 	private static instance: RedisClientHolder
