@@ -3,7 +3,7 @@ import { fillTermWrapper } from '#termsetting'
 import { ReportView } from './view/reportView'
 import { RxComponentInner } from '../../types/rx.d'
 import { controlsInit } from '../controls.js'
-import { getTermFilter } from '#shared/filter.js'
+import { getCategoricalTermFilter } from '#shared/filter.js'
 
 export class Report extends RxComponentInner {
 	config: any
@@ -36,7 +36,7 @@ export class Report extends RxComponentInner {
 	}
 
 	getFilter() {
-		return getTermFilter(this.filterTWs, this.settings, null, this.state.termfilter.filter)
+		return getCategoricalTermFilter(this.filterTWs, this.settings, null, this.state.termfilter.filter)
 	}
 
 	getState(appState: any) {
@@ -95,7 +95,7 @@ export class Report extends RxComponentInner {
 		this.filterTWs = [this.config.countryTW, this.config.siteTW]
 		const filters: any = {}
 		for (const tw of this.filterTWs)
-			filters[tw.term.id] = getTermFilter(this.filterTWs, this.settings, tw, this.state.termfilter.filter)
+			filters[tw.term.id] = getCategoricalTermFilter(this.filterTWs, this.settings, tw, this.state.termfilter.filter)
 		const sitesData = await this.app.vocabApi.filterTermValues({
 			terms: this.filterTWs,
 			filters

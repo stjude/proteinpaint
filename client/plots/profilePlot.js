@@ -5,7 +5,7 @@ import { select } from 'd3-selection'
 import { getSampleFilter } from '../mass/groups.js'
 import { Menu } from '#dom/menu'
 import { icons as icon_functions } from '#dom/control.icons'
-import { getTermFilter } from '#shared/filter.js'
+import { getCategoricalTermFilter } from '#shared/filter.js'
 
 const orderedIncomes = ['Low income', 'Lower middle income', 'Upper middle income', 'High income']
 const orderedVolumes = [
@@ -152,7 +152,7 @@ export class profilePlot {
 	async setControls(additionalInputs = []) {
 		const filters = {}
 		for (const tw of this.config.filterTWs) {
-			const filter = getTermFilter(this.config.filterTWs, this.settings, tw, this.state.termfilter.filter)
+			const filter = getCategoricalTermFilter(this.config.filterTWs, this.settings, tw, this.state.termfilter.filter)
 
 			if (filter) filters[tw.term.id] = filter
 		}
@@ -374,7 +374,7 @@ export class profilePlot {
 	}
 
 	getFilter() {
-		return getTermFilter(this.config.filterTWs, this.settings, null, this.state.termfilter.filter)
+		return getCategoricalTermFilter(this.config.filterTWs, this.settings, null, this.state.termfilter.filter)
 	}
 
 	setRegion(region) {
