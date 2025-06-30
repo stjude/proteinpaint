@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.133.2
 
 Fixes:
 - GDC-GRIN2: Now adding rounded timing values to fix minor difference
