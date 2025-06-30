@@ -301,7 +301,7 @@ function init({ genomes }) {
 				const pngImg = resultData.png[0]
 				const topGeneTable = resultData.topGeneTable || null
 				const analysisStats = parsedRustResult.summary || {}
-				const totalProcessTime = Math.round((downloadTime + grin2AnalysisTime) / 1000)
+				const totalProcessTime = downloadTimeToPrint + grin2AnalysisTimeToPrint
 				console.log('[GRIN2] Total GRIN2 processing time:', totalProcessTime)
 				return res.json({
 					pngImg,
