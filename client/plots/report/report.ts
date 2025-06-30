@@ -28,23 +28,11 @@ export class Report extends RxComponentInner {
 	}
 
 	async replaceFilter() {
-		const filter = this.getFilter()
-		const subactions: any[] = [
-			{
-				type: 'plot_edit',
-				id: this.id,
-				config: { settings: { report: this.settings } } //update country and site in the report settings
-			}
-		]
-		for (const plot of this.state.plots) {
-			subactions.push({
-				type: 'plot_edit',
-				id: plot.id,
-				config: { filter }
-			})
-		}
-
-		this.app.dispatch({ type: 'app_refresh', subactions })
+		this.app.dispatch({
+			type: 'plot_edit',
+			id: this.id,
+			config: { filter: this.getFilter(), settings: { report: this.settings } } //update country and site in the report settings
+		})
 	}
 
 	getFilter() {

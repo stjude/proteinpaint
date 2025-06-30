@@ -275,12 +275,12 @@ export class Barchart {
 		if (!config) {
 			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
 		}
-
+		const parentConfig = appState.plots.find(p => p.id === this.parentId)
 		return {
 			nav: {
 				header_mode: appState.nav.header_mode
 			},
-			termfilter: appState.termfilter,
+			termfilter: parentConfig ? { filter: parentConfig.filter } : appState.termfilter,
 			config: Object.assign({}, config, {
 				settings: {
 					barchart: config.settings.barchart,
@@ -338,10 +338,7 @@ export class Barchart {
 	// creates an opts object for the vocabApi.getNestedChartsData()
 	getDataRequestOpts() {
 		const c = this.config
-		//if a filter object is passed to the barchart use this filter instead of the termfilter. The config filters contains the
-		// term filter plus other filters defined in a parent plot. Used by the report
-		//
-		const opts = { term: c.term, filter: this.state.config.filter || this.state.termfilter.filter }
+		const opts = { term: c.term, filter: this.state.termfilter.filter }
 		if (this.state.termfilter.filter0) opts.filter0 = this.state.termfilter.filter0
 		if (c.term2) opts.term2 = c.term2
 		if (c.term0) opts.term0 = c.term0
