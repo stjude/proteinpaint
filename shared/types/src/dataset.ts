@@ -971,18 +971,31 @@ export type WSImages = {
 	required; for both cases where image files are hosted locally, or loaded from remote via ds-supplied getter
 	*/
 	imageBySampleFolder: string
-
+	activePatchColor?: string
+	predictionColor?: Array<number>
 	annotationsColor?: Array<number>
+	classes?: WSIClass[]
+	uncertainty?: { color: string; label: string }[]
 
 	/** either ds supplied or dynamically added on launch with built in logic (retrieve the sample list from the wsimages table) */
 	getSamples?: () => Promise<Array<WSISample>>
 	/** either ds supplied or dynamically added on launch with built in logic */
 	getWSImages?: (sampleName: string) => Promise<WSImage[]>
 	/**  ds supplied */
+	getWSIPredictionPatches?: (sampleName: string, wsiImage: string) => Promise<string[]>
+	/**  ds supplied */
 	getWSIAnnotations?: (sampleName: string, wsiImage: string) => Promise<string[]>
 	/**  ds supplied */
-	getZoomInPoints?: (sampleName: string, wsiImage: string) => Promise<Array<[number, number]>>
+	getZoomInPoints?: (sampleName: string, wsiImage: string, index: number) => Promise<Array<[number, number]>>
+	/**  ds supplied */
+	makeGeoJson?: (sampleId: string, wsiImage: string) => void
+	/**  ds supplied */
+	getWSIPredictionOverlay?: (sampleName: string, wsiImage: string) => Promise<string | undefined>
+	/**  ds supplied */
+	getWSIUncertaintyOverlay?: (sampleName: string, wsiImage: string) => Promise<string | undefined>
 }
+
+export type WSIClass = { id: number; shortcut: string; label: string; color: string }
 
 /*** types supporting Termdb ***/
 

@@ -6,6 +6,7 @@ import RedisClientHolder from '#src/redis/RedisClientHolder.js'
 import { ShardManager } from '#src/sharding/ShardManager.js'
 import { TileServerShardingAlgorithm } from '#src/sharding/TileServerShardingAlgorithm.js'
 import { TileServerSessionsHandler } from '#src/wsisessions/TileServerSessionsHandler.js'
+import type { PredictionOverlay } from '@sjcrh/proteinpaint-types'
 
 /**
  *  Represents the TileServer session data object.
@@ -17,11 +18,18 @@ export class SessionData {
 	public imageSessionId: string
 	public lastAccessTimestamp: string
 	public tileServerShard: TileServerShard
+	public overlays: Array<PredictionOverlay> | undefined
 
-	public constructor(imageSessionId: string, lastAccessTimestamp: string, tileServerShard: TileServerShard) {
+	public constructor(
+		imageSessionId: string,
+		lastAccessTimestamp: string,
+		tileServerShard: TileServerShard,
+		overlays?: Array<PredictionOverlay>
+	) {
 		this.imageSessionId = imageSessionId
 		this.lastAccessTimestamp = lastAccessTimestamp
 		this.tileServerShard = tileServerShard
+		this.overlays = overlays
 	}
 }
 
@@ -111,11 +119,14 @@ export default class SessionManager {
 		key: string,
 		imageSessionId: string,
 		tileServerShard: TileServerShard,
+		overlays?: PredictionOverlay[] | undefined,
 		lastAccessTimestamp = new Date().toISOString()
-	): Promise<void> {
-		const sessionData = new SessionData(imageSessionId, lastAccessTimestamp, tileServerShard)
+	): Promise<SessionData> {
+		const sessionData = new SessionData(imageSessionId, lastAccessTimestamp, tileServerShard, overlays ? overlays : [])
 		const serializedData = JSON.stringify(sessionData)
 		await this.keyValueStorages.set(key, serializedData)
+
+		return sessionData
 	}
 
 	public async getSession(key: string): Promise<SessionData | undefined> {
@@ -133,7 +144,12 @@ export default class SessionManager {
 			const shard = await this.getTileServerShard(key)
 			if (shard?.url === sessionData.tileServerShard.url) {
 				const lastAccessTimestamp = new Date().toISOString()
-				const updatedSessionData = new SessionData(sessionData.imageSessionId, lastAccessTimestamp, shard)
+				const updatedSessionData = new SessionData(
+					sessionData.imageSessionId,
+					lastAccessTimestamp,
+					shard,
+					sessionData.overlays
+				)
 				const serializedData = JSON.stringify(updatedSessionData)
 
 				await this.keyValueStorages.set(key, serializedData)

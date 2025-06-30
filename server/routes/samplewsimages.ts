@@ -1,5 +1,8 @@
 import type { SampleWSImagesRequest, SampleWSImagesResponse, WSImage, RouteApi, Mds3 } from '#types'
 import { sampleWSImagesPayload } from '#types/checkers'
+import path from 'path'
+import fs from 'fs'
+import serverconfig from '#src/serverconfig.js'
 /*
 given a sample, return all whole slide images for specified dataset
 */
@@ -31,19 +34,63 @@ function init({ genomes }) {
 
 			if (ds.queries.WSImages.getWSIAnnotations) {
 				for (const wsimage of wsimages) {
+					if (ds.queries.WSImages.makeGeoJson) {
+						await ds.queries.WSImages.makeGeoJson(sampleId, wsimage)
+					}
+
 					const annotations = await ds.queries.WSImages.getWSIAnnotations(sampleId, wsimage.filename)
-					if (annotations) {
+
+					if (annotations && annotations.length > 0) {
+						//Replace with annotations data??
 						wsimage.overlays = annotations
+
+						const annotationFilePath = path.join(
+							serverconfig.tpmasterdir,
+							ds.queries.WSImages.imageBySampleFolder,
+							sampleId,
+							annotations[0]
+						)
+						const annotationData = JSON.parse(fs.readFileSync(annotationFilePath, 'utf8'))
+						//This assumes that classes are always present in the dataset.
+						if (!annotationData.features && !ds.queries.WSImages?.classes?.length) {
+							throw new Error(`No classes found for WSImage annotations in dataset ${ds.label}`)
+						}
+
+						wsimage.annotationsData = annotationData.features.map((d: any) => {
+							const featClass =
+								ds.queries.WSImages?.classes?.find(f => f.id == d.properties.class)?.label || d.properties.class
+							return {
+								zoomCoordinates: d.properties.zoomCoordinates,
+								type: d.properties.type,
+								uncertainty: d.properties.uncertainty,
+								class: featClass
+							}
+						})
+
+						wsimage.classes = ds.queries?.WSImages?.classes
+						wsimage.uncertainty = ds.queries?.WSImages?.uncertainty
+						wsimage.activePatchColor = ds.queries?.WSImages?.activePatchColor || '#00e62a'
 					}
 
 					if (ds.queries.WSImages.getZoomInPoints) {
 						const zoomInPoints: Array<[number, number]> = await ds.queries.WSImages.getZoomInPoints(
 							sampleId,
-							wsimage.filename
+							wsimage.filename,
+							query.index
 						)
 						if (zoomInPoints) {
 							wsimage.zoomInPoints = zoomInPoints
 						}
+					}
+				}
+			}
+
+			if (ds.queries.WSImages.getWSIPredictionOverlay) {
+				for (const wsimage of wsimages) {
+					const predictionOverlay = await ds.queries.WSImages.getWSIPredictionOverlay(sampleId, wsimage.filename)
+
+					if (predictionOverlay) {
+						wsimage.predictionLayers = [predictionOverlay]
 					}
 				}
 			}

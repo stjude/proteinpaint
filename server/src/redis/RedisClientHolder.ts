@@ -9,6 +9,9 @@ import { SessionData } from '#src/wsisessions/SessionManager.ts'
 import type { TileServerShard } from '#src/sharding/TileServerShard.ts'
 import { ClientHolder } from '#src/caching/ClientHolder.ts'
 import type { KeyValueStorage } from '#src/caching/KeyValueStorage.ts'
+import type { PredictionOverlay } from '#types'
+import { PredictionOverlayType } from '#types'
+import path from 'path'
 
 export default class RedisClientHolder implements KeyValueStorage {
 	private static instance: RedisClientHolder
@@ -132,7 +135,11 @@ export default class RedisClientHolder implements KeyValueStorage {
 		return this.clients.get(redisShard.url)?.keys('*') || []
 	}
 
-	public async update(key: string, sessions: any, tileServerShard: TileServerShard): Promise<void> {
+	public async update(
+		key: string,
+		sessions: Record<string, { [layerName: string]: string }>,
+		tileServerShard: TileServerShard
+	): Promise<void> {
 		const redisShard: RedisShard = await this.redisShardingAlgorithm?.getShard(key)
 		const client = this.getClient(redisShard.url)?.client
 
@@ -140,27 +147,54 @@ export default class RedisClientHolder implements KeyValueStorage {
 			throw new Error('Redis client not found for URL: ' + redisShard.url)
 		}
 
-		const existingKeys = await client.keys('*') // Fetches all keys in the shard
+		const existingKeys = await client.keys('*') // Current Redis keys (e.g. slide paths)
+		const existingKeysSet = new Set(existingKeys)
 
-		// Parse session identifiers from the fetched JSON
-		const keys = Object.values<string>(sessions)
+		// Helper to infer PredictionOverlayType from filename
+		const guessOverlayType = (filename: string): PredictionOverlayType =>
+			/uncertainty/i.test(filename) ? PredictionOverlayType.UNCERTAINTY : PredictionOverlayType.PREDICTION
 
-		// Deleting keys that should no longer be present
-		for (const existingKey of existingKeys) {
-			if (!keys.includes(existingKey)) {
-				await client.del(existingKey)
+		// Extract slide paths from incoming sessions
+		const slidePaths = Object.values(sessions)
+			.map(obj => obj?.slide)
+			.filter(Boolean) // remove undefined/null
+
+		// Remove stale Redis keys
+		for (const redisKey of existingKeys) {
+			if (!slidePaths.includes(redisKey)) {
+				await client.del(redisKey)
 			}
 		}
 
-		const result = Object.entries<string>(sessions).filter(([_, filePath]) => !existingKeys.includes(filePath))
+		// Find new slide paths that need to be inserted
+		const result: Array<[string, string, PredictionOverlay[]]> = []
 
-		for (const [sessionId, filePath] of result) {
-			if (!existingKeys.includes(filePath)) {
-				const lastAccessTimestamp = new Date().toISOString() // Get current time in ISO 8601 format
-				const sessionData = new SessionData(sessionId, lastAccessTimestamp, tileServerShard)
-				const serializedData = JSON.stringify(sessionData)
-				await client.set(key, serializedData)
-			}
+		for (const [sessionId, layersObj] of Object.entries(sessions)) {
+			const slidePath = layersObj.slide
+			if (!slidePath || existingKeysSet.has(slidePath)) continue
+
+			const overlays: PredictionOverlay[] = Object.entries(layersObj)
+				.filter(([layer]) => layer !== 'slide')
+				.map(([layerNumber, filePath]) => ({
+					layerNumber,
+					predictionOverlayType: guessOverlayType(path.basename(filePath))
+				}))
+
+			result.push([sessionId, slidePath, overlays])
+		}
+
+		// Store each new session by slide path
+		for (const [sessionId, slidePath, overlays] of result) {
+			const lastAccessTimestamp = new Date().toISOString()
+
+			// If no overlay layers were detected, pass `undefined` so the field
+			// is omitted from the JSON that gets stored in Redis.
+			const sessionData =
+				overlays && overlays.length
+					? new SessionData(sessionId, lastAccessTimestamp, tileServerShard, overlays)
+					: new SessionData(sessionId, lastAccessTimestamp, tileServerShard /* overlays = undefined */)
+
+			await client.set(slidePath, JSON.stringify(sessionData))
 		}
 	}
 
