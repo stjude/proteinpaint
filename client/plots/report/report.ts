@@ -29,11 +29,22 @@ export class Report extends RxComponentInner {
 
 	async replaceFilter() {
 		const filter = this.getFilter()
-		this.app.dispatch({
-			type: 'plot_edit',
-			id: this.id,
-			config: { filter, settings: { report: this.settings } }
-		})
+		const subactions: any[] = [
+			{
+				type: 'plot_edit',
+				id: this.id,
+				config: { settings: { report: this.settings } } //update country and site in the report settings
+			}
+		]
+		for (const plot of this.state.plots) {
+			subactions.push({
+				type: 'plot_edit',
+				id: plot.id,
+				config: { filter }
+			})
+		}
+
+		this.app.dispatch({ type: 'app_refresh', subactions })
 	}
 
 	getFilter() {
@@ -57,6 +68,7 @@ export class Report extends RxComponentInner {
 	async main() {
 		this.config = structuredClone(this.state.config)
 		this.settings = this.config.settings.report
+		//Though the plots are read from the dataset and do not change in the future they may be added dynamically so we keep this loop here
 		for (const plot of this.state.plots) {
 			if (this.components.plots[plot.id]) continue
 			await this.setPlot(plot)
@@ -72,7 +84,6 @@ export class Report extends RxComponentInner {
 		opts.holder = holder
 		opts.app = this.app
 		opts.parentId = this.id
-		opts.filter = this.state.config.filter
 		//opts.controls = this.view.dom.controlsHolder
 		const { componentInit } = await import(`../../plots/${opts.chartType}.js`)
 		this.components.plots[opts.id] = await componentInit(opts)

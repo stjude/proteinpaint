@@ -50,7 +50,7 @@ export class ReportView {
 				}
 			}
 			select.on('change', async () => {
-				this.dom.siteSelect.node().value = ''
+				this.report.settings[this.report.config.siteTW.term.id] = '' // clear site if country is changed
 				this.report.settings[this.report.config.countryTW.term.id] = select.node().value
 				this.report.replaceFilter()
 			})
