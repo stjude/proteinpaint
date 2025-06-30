@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.133.1
 
 Fixes:
 - GDC-GRIN2: Made timing report to just seconds instead of hundredths of a second
