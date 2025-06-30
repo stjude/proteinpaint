@@ -3,7 +3,6 @@ import { runGRIN2Payload } from '#types/checkers'
 import { stream_rust } from '@sjcrh/proteinpaint-rust'
 import serverconfig from '#src/serverconfig.js'
 import path from 'path'
-import { formatElapsedTime } from '@sjcrh/proteinpaint-shared/time.js'
 import { run_python } from '@sjcrh/proteinpaint-python'
 
 /**
@@ -223,7 +222,7 @@ function init({ genomes }) {
 
 			console.log('[GRIN2] Rust execution completed')
 			const downloadTime = Date.now() - downloadStartTime
-			const downloadTimeToPrint = formatElapsedTime(downloadTime)
+			const downloadTimeToPrint = Math.round(downloadTime / 1000)
 			console.log(`[GRIN2] Rust processing took ${downloadTimeToPrint}`)
 
 			// Parse the JSONL output
@@ -290,7 +289,7 @@ function init({ genomes }) {
 			console.log('[GRIN2] python execution completed')
 			console.log(`[GRIN2] Python stderr: ${pyResult.stderr}`)
 			const grin2AnalysisTime = Date.now() - grin2AnalysisStart
-			const grin2AnalysisTimeToPrint = formatElapsedTime(grin2AnalysisTime)
+			const grin2AnalysisTimeToPrint = Math.round(grin2AnalysisTime / 1000)
 			console.log(`[GRIN2] Python processing took ${grin2AnalysisTimeToPrint}`)
 
 			// Parse python result to get image or check for errors
@@ -302,7 +301,7 @@ function init({ genomes }) {
 				const pngImg = resultData.png[0]
 				const topGeneTable = resultData.topGeneTable || null
 				const analysisStats = parsedRustResult.summary || {}
-				const totalProcessTime = formatElapsedTime(downloadTime + grin2AnalysisTime)
+				const totalProcessTime = Math.round((downloadTime + grin2AnalysisTime) / 1000)
 				console.log('[GRIN2] Total GRIN2 processing time:', totalProcessTime)
 				return res.json({
 					pngImg,
