@@ -323,6 +323,7 @@ export class Barchart {
 			const data = results.data
 			this.sampleType = results.sampleType
 			this.bins = results.bins
+			if (results.chartid2dtterm) this.chartid2dtterm = results.chartid2dtterm
 			this.toggleLoadingDiv('none')
 			this.app.vocabApi.syncTermData(this.config, data, this.prevConfig)
 			this.currServerData = data
