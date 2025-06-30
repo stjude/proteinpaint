@@ -30,10 +30,12 @@ export class Scatter extends RxComponentInner {
 	state!: any
 	readonly type: string
 	transform: any
+	parentId: any
 
-	constructor() {
+	constructor(opts) {
 		super()
 		this.type = 'sampleScatter'
+		this.parentId = opts?.parentId //not working!!!, need to pass opts with the parentId to the component
 	}
 
 	async init(appState) {
@@ -43,15 +45,26 @@ export class Scatter extends RxComponentInner {
 		this.interactivity = new ScatterInteractivity(this)
 	}
 
+	reactsTo(action) {
+		if (action.type.startsWith('plot_')) {
+			const react =
+				(action.id === this.id || action.id == this.parentId) &&
+				(!action.config?.childType || action.config?.childType == this.type)
+			return react
+		}
+		return true
+	}
+
 	getState(appState: MassState) {
 		const config = appState.plots.find(p => p.id === this.id)
 		if (!config) {
 			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
 		}
+		const parentConfig: any = appState.plots.find(p => p.id === this.parentId)
 
 		return {
 			config,
-			termfilter: appState.termfilter,
+			termfilter: parentConfig ? { filter: parentConfig.filter } : appState.termfilter,
 			matrixplots: appState.termdbConfig.matrixplots,
 			vocab: appState.vocab,
 			termdbConfig: appState.termdbConfig,
@@ -100,6 +113,7 @@ export class Scatter extends RxComponentInner {
 				}
 			})
 		}
+		console.log(this.state.termfilter)
 		const filters = [this.state.termfilter.filter, tvslst]
 		if (this.config.filter) filters.push(this.config.filter)
 		const filter = filterJoin(filters)
