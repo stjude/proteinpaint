@@ -113,6 +113,7 @@ export async function barchart_data(q, ds, tdb) {
 	const samplesMap = new Map()
 	const bins = []
 	const categories = []
+	const chartid2dtterm = {}
 	if (data.samples) {
 		const t1 = map.get(1)
 		const t2 = map.get(2)
@@ -123,7 +124,7 @@ export async function barchart_data(q, ds, tdb) {
 			// term1 or term2 is a geneVariant term that is not using groupsetting
 			// data will need to be handled using specialized logic
 			// data from geneVariant term using groupsetting can be handled using regular logic
-			processGeneVariantSamples(map, bins, data, samplesMap, ds)
+			processGeneVariantSamples(map, bins, data, samplesMap, ds, chartid2dtterm)
 		} else {
 			for (let i = 0; i <= 2; i++) {
 				const q = map.get(i)?.q
@@ -193,12 +194,13 @@ export async function barchart_data(q, ds, tdb) {
 		}
 	}
 	const result = { data: pj.tree.results, bins, categories, sampleType: data.sampleType }
+	if (Object.keys(chartid2dtterm).length) result.chartid2dtterm = chartid2dtterm
 	return result
 }
 
 //used by barchart_data
 //process gene variant data into samplesMap
-function processGeneVariantSamples(map, bins, data, samplesMap, ds) {
+function processGeneVariantSamples(map, bins, data, samplesMap, ds, chartid2dtterm) {
 	bins.push([])
 	let customSampleID = 1
 	const tw1 = map.get(1)
@@ -243,6 +245,15 @@ function processGeneVariantSamples(map, bins, data, samplesMap, ds) {
 						// not by origin
 						item.key0 = item.val0 = dt2label[v1.dt]
 					}
+
+					// map chartId to dtTerm
+					// used for listing samples
+					const dtTerm = tw1.term.childTerms.find(t => {
+						if (t.dt != v1.dt) return false
+						if (v1.origin && t.origin != v1.origin) return false
+						return true
+					})
+					chartid2dtterm[item.key0] = dtTerm
 
 					item[`key2`] = values[id2] ? values[id2].key : ''
 					item[`val2`] = values[id2] ? values[id2].value : ''

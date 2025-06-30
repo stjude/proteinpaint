@@ -601,6 +601,14 @@ async function listSamples(event, self, seriesId, dataId, chartId) {
 			const bins = self.bins[termIndex]
 			tvs.tvs.ranges = [bins.find(bin => bin.label == value)]
 		}
+		if (term.term.type == 'geneVariant') {
+			// tvs needs to be that of a child dt term of geneVariant term
+			// TODO: handle cases when geneVariant term is term0 or term2
+			const dtTerm = self.chartid2dtterm[chartId]
+			tvs.tvs.term = dtTerm
+			const key = Object.keys(dtTerm.values).find(k => dtTerm.values[k].label == value)
+			tvs.tvs.values = [{ key }]
+		}
 		return tvs
 	}
 }

@@ -2441,7 +2441,7 @@ async function addCnvGetter(ds, genome) {
 		const limitSamples = await mayLimitSamples(param, q.samples, ds)
 		if (limitSamples?.size == 0) {
 			// got 0 sample after filtering, return blank array for no data
-			return []
+			return { cnvs: [] }
 		}
 
 		const cnvs = [] // list of cnv events to be returned
