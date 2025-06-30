@@ -2,7 +2,7 @@ import { fillTermWrapper } from '#termsetting'
 import type { Runchart } from '../runchart.js'
 import { ScatterView } from '../../scatter/view/scatterView.js'
 import { isNumericTerm } from '#shared/terms.js'
-import { getTermFilter } from '#shared/filter.js'
+import { getCategoricalTermFilter } from '#shared/filter.js'
 
 export const minShapeSize = 0.2
 export const maxShapeSize = 6
@@ -15,10 +15,11 @@ export class RunchartView extends ScatterView {
 	}
 
 	async getFilterControlInputs() {
+		if (this.scatter.parentId) return [] // no filter inputs if this is a child plot
 		const terms = this.runchart.filterTWs
 		const filters = {}
 		for (const tw of terms) {
-			const filter = getTermFilter(terms, this.scatter.settings, tw, this.scatter.state.termfilter.filter)
+			const filter = getCategoricalTermFilter(terms, this.scatter.settings, tw, this.scatter.state.termfilter.filter)
 			if (filter) filters[tw.term.id] = filter
 		}
 

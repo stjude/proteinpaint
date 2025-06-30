@@ -33,7 +33,6 @@ export class FrequencyChart extends Runchart {
 	async main() {
 		this.config = structuredClone(this.state.config)
 		this.settings = this.config.settings[this.type]
-
 		await this.model.initData()
 		await this.model.processData()
 		this.cat2Color = getColors(this.model.charts.length)

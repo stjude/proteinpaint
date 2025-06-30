@@ -10,7 +10,7 @@ import { downloadSingleSVG } from '../../common/svg.download.js'
 import { select2Terms } from '#dom/select2Terms'
 import { Scatter } from '../scatter/scatter.js'
 import { getColors } from '#shared/common.js'
-import { getTermFilter } from '#shared/filter.js'
+import { getCategoricalTermFilter } from '#shared/filter.js'
 
 export class Runchart extends Scatter {
 	type: string
@@ -81,7 +81,7 @@ export class Runchart extends Scatter {
 	}
 
 	getFilter() {
-		return getTermFilter(this.filterTWs, this.settings, null, this.state.termfilter.filter)
+		return getCategoricalTermFilter(this.filterTWs, this.settings, null, this.state.termfilter.filter)
 	}
 }
 
