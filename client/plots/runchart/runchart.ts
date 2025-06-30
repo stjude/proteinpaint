@@ -18,8 +18,8 @@ export class Runchart extends Scatter {
 	runchartvm!: RunchartViewModel
 	filterTWs: any
 
-	constructor() {
-		super()
+	constructor(opts) {
+		super(opts)
 		this.type = 'runChart'
 	}
 

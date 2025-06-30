@@ -64,7 +64,7 @@ export class Scatter extends RxComponentInner {
 
 		return {
 			config,
-			termfilter: parentConfig ? { filter: parentConfig.filter } : appState.termfilter,
+			termfilter: parentConfig?.filter ? { filter: parentConfig.filter } : appState.termfilter,
 			matrixplots: appState.termdbConfig.matrixplots,
 			vocab: appState.vocab,
 			termdbConfig: appState.termdbConfig,
@@ -113,7 +113,6 @@ export class Scatter extends RxComponentInner {
 				}
 			})
 		}
-		console.log(this.state.termfilter)
 		const filters = [this.state.termfilter.filter, tvslst]
 		if (this.config.filter) filters.push(this.config.filter)
 		const filter = filterJoin(filters)
