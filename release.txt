@@ -1,1 +1,2 @@
-
+Fixes:
+- GDC-GRIN2: Now adding rounded timing values to fix minor difference
