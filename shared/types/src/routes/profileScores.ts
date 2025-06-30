@@ -5,7 +5,7 @@ export type ProfileScoresRequest = {
 	filter?: any
 	isRadarFacility?: boolean
 	userSites?: string[]
-	site?: string
+	sites?: string[]
 	isAggregate?: boolean
 	facilityTW?: any
 }

@@ -190,7 +190,7 @@ export class profilePlot {
 				scoreTerms: this.scoreTerms,
 				filter: this.filter,
 				isAggregate,
-				site: this.isRadarFacility ? null : this.settings.site,
+				sites: this.isRadarFacility ? null : this.settings.sites,
 				isRadarFacility: this.isRadarFacility,
 				userSites: this.state.sites,
 				facilityTW: this.config.facilityTW
@@ -201,12 +201,17 @@ export class profilePlot {
 				scScoreTerms: this.scScoreTerms,
 				filter: this.filter,
 				isAggregate,
-				site: this.isRadarFacility ? null : this.settings.site,
+				sites: this.isRadarFacility ? null : this.settings.sites,
 				userSites: this.state.sites,
 				facilityTW: this.config.facilityTW
 			})
 		this.sites = this.data.sites
-		if (!this.isRadarFacility) this.sites.unshift({ label: '', value: '' })
+		if (this.settings.sites)
+			for (const site of this.settings.sites) {
+				const siteOption = this.sites.find(s => s.value == site)
+				if (siteOption) siteOption.selected = true //mark selected sites
+			}
+		//if (!this.isRadarFacility) this.sites.unshift({ label: '', value: '' })
 		this.sites.sort((a, b) => {
 			if (a.label < b.label) return -1
 			if (a.label > b.label) return 1
@@ -320,8 +325,11 @@ export class profilePlot {
 					type: 'dropdown',
 					chartType,
 					options: this.sites,
-					settingsKey: 'site',
-					callback: value => this.setSite(value)
+					//settingsKey: 'site',
+					multiple: !this.isRadarFacility,
+					callback: values => {
+						this.setSites(values)
+					}
 				}
 				this.isRadarFacility ? inputs.unshift(sitesInput) : inputs.push(sitesInput)
 			}
@@ -392,6 +400,14 @@ export class profilePlot {
 
 	setSite(site) {
 		this.settings.site = site
+		this.settings.sites = null //clear sites
+		this.app.dispatch({ type: 'plot_edit', id: this.id, config: this.config })
+	}
+
+	setSites(sites) {
+		if (sites && sites.length == 1) this.settings.site = sites[0] //if only one site selected, set it as the site
+		else this.settings.site = '' //clear site
+		this.settings.sites = sites.map(s => Number(s))
 		this.app.dispatch({ type: 'plot_edit', id: this.id, config: this.config })
 	}
 
