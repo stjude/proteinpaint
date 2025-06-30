@@ -2162,7 +2162,7 @@ async function getFilesAndShowTable(obj) {
 
 						// Rust Processing Time
 						if (response.timing.rustProcessingTime !== undefined) {
-							timingStatsGrid.append('div').style('color', '#6c757d').text('GDC API Data Query and Parsing:')
+							timingStatsGrid.append('div').style('color', '#6c757d').text('GDC API Data Query and Parsing (s):')
 							timingStatsGrid
 								.append('div')
 								.style('font-weight', 'bold')
@@ -2172,7 +2172,7 @@ async function getFilesAndShowTable(obj) {
 
 						// GRIN2 Processing Time
 						if (response.timing.grin2ProcessingTime !== undefined) {
-							timingStatsGrid.append('div').style('color', '#6c757d').text('GRIN2 Analysis:')
+							timingStatsGrid.append('div').style('color', '#6c757d').text('GRIN2 Analysis (s):')
 							timingStatsGrid
 								.append('div')
 								.style('font-weight', 'bold')
@@ -2182,7 +2182,7 @@ async function getFilesAndShowTable(obj) {
 
 						// Total Time
 						if (response.timing.totalTime !== undefined) {
-							timingStatsGrid.append('div').style('color', '#6c757d').text('Total Processing Time:')
+							timingStatsGrid.append('div').style('color', '#6c757d').text('Total Processing Time (s):')
 							timingStatsGrid
 								.append('div')
 								.style('font-weight', 'bold')

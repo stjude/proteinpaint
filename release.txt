@@ -1,1 +1,2 @@
-
+Fixes:
+- GDC-GRIN2: Made timing report to just seconds instead of hundredths of a second
