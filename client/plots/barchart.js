@@ -338,7 +338,9 @@ export class Barchart {
 	// creates an opts object for the vocabApi.getNestedChartsData()
 	getDataRequestOpts() {
 		const c = this.config
-		//if a filter object is passed to the barchart use this filter instead of the termfilter, used by the report
+		//if a filter object is passed to the barchart use this filter instead of the termfilter. The config filters contains the
+		// term filter plus other filters defined in a parent plot. Used by the report
+		//
 		const opts = { term: c.term, filter: this.state.config.filter || this.state.termfilter.filter }
 		if (this.state.termfilter.filter0) opts.filter0 = this.state.termfilter.filter0
 		if (c.term2) opts.term2 = c.term2

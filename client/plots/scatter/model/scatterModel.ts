@@ -46,7 +46,8 @@ export class ScatterModel {
 		const coordTWs: any = []
 		if (c.term) coordTWs.push(c.term)
 		if (c.term2) coordTWs.push(c.term2)
-		const filter = this.scatter.config.filter || this.scatter.getFilter() //If filter is provided in the config(from the report), use it; otherwise use the getFilter() method
+		//If filter is provided in the config use it. The config filter includes the term filter, used by the report plot
+		const filter = this.scatter.config.filter || this.scatter.getFilter()
 		const opts: any = {
 			name: c.name, // the actual identifier of the plot, for retrieving data from server
 			colorTW: c.colorTW,
