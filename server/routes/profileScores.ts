@@ -75,11 +75,12 @@ async function getScores(query, ds, genome) {
 			throw `Invalid user site: ${siteName}`
 		}
 	}
-	let site
-	if (isRadarFacility) site = query.site
-	else site = query.isAggregate ? query.site : userSite
-	const sampleData = data.samples[site] || null
-	const samples = Object.values(data.samples)
+	let sitesSelected: any[] = []
+	if (isRadarFacility) sitesSelected = query.sites
+	else sitesSelected = query.isAggregate ? query.sites : [userSite]
+	const sampleData = sitesSelected?.length == 1 ? data.samples[sitesSelected[0]] : null
+	let samples = Object.values(data.samples)
+	if (sitesSelected?.length > 0) samples = samples.filter((s: any) => sitesSelected.includes(s.sample))
 	const term2Score: any = {}
 	for (const d of query.scoreTerms) {
 		term2Score[d.score.term.id] = getPercentage(d, samples, sampleData)

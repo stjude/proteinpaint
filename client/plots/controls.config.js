@@ -494,8 +494,20 @@ function setDropdownInput(opts) {
 		.append('select')
 		.attr('aria-labelledby', id)
 		.property('disabled', opts.disabled)
+		.property('multiple', opts.multiple)
+
 		.on('change', () => {
-			const value = self.dom.select.property('value')
+			let value
+			if (opts.multiple) {
+				const options = self.dom.select.node().options
+				const values = []
+				for (const option of options) {
+					if (option.selected) values.push(option.value)
+				}
+				value = values
+			} else {
+				value = self.dom.select.property('value')
+			}
 			if (opts.callback) opts.callback(value)
 			else
 				opts.dispatch({
