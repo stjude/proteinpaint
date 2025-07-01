@@ -1,6 +1,11 @@
 import tape from 'tape'
 import { getCategoricalTermFilter } from '../filter.js'
 
+/* test sections
+
+getCategoricalTermFilter()
+*/
+
 const filterTWs = [
 	{
 		id: 'Acountry',
@@ -297,7 +302,7 @@ const filterTWs = [
 	}
 ]
 
-tape('getCategoricalTermFilter returns correct filter object', t => {
+tape('getCategoricalTermFilter()', t => {
 	const countryTW = filterTWs.find(tw => tw.term.id === 'Acountry')
 	const valuesCountry = { Acountry: 'Kenya' }
 	const emptyFilter = { type: 'tvslst', in: true, join: '', lst: [] }
