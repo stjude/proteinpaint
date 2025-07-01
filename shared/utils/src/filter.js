@@ -268,7 +268,7 @@ This function is used where ever you need to build a group of categorical filter
 */
 export function getCategoricalTermFilter(filterTWs, values, tw, globalFilter) {
 	const excluded = []
-	if (tw) excluded.push(tw.$id)
+	if (tw) excluded.push(tw.term.id)
 	const lst = []
 	for (const tw of filterTWs) processTW(tw, values, excluded, lst)
 
@@ -283,7 +283,7 @@ export function getCategoricalTermFilter(filterTWs, values, tw, globalFilter) {
 
 	function processTW(tw, values, excluded, lst) {
 		const value = values[tw.term.id]
-		if (value && !excluded.includes(tw.$id))
+		if (value && !excluded.includes(tw.term.id))
 			lst.push({
 				type: 'tvs',
 				tvs: {
