@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.134.0
 
 Features:
 - We now support the report plot that shows an aggregation of plots embedded, according to the dataset configuration for the plot. If specified this plot shows country and site filters. This plot was developed to build the sjcares report.
