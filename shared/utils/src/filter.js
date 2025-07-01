@@ -253,11 +253,19 @@ export function getWrappedTvslst(lst = [], join = '', $id = null) {
 	if ($id !== null && filter.$id !== undefined) filter.$id = $id
 	return filter
 }
-
-//This function is used where ever you need to build a group of categorical filters related.
-// It builds the filter needed to retrieve a term values after filtering out samples according to the other filters provided.
-// The profile filters, for example, use this function to get the filters needed to call filterTermValues, that populate the dropdowns in the controls.
-// If no tw is provided it returns a filter that is the combination of all the categorical filters provided in the filterTWs array.
+/*
+This function is used where ever you need to build a group of categorical filters related.
+ It builds the filter needed to retrieve a term values after filtering out samples according to the other filters provided.
+ The profile filters, for example, use this function to get the filters needed to call filterTermValues, that populate the dropdowns in the controls.
+ If no tw is provided it returns a filter that is the combination of all the categorical filters provided in the filterTWs array.
+ Input:
+ - filterTWs: list of term wrappers (tw) that are used to filter the samples
+ - values: an object with term ids as keys and the values to filter by
+ - tw: The term wrapper for which the filter is being built. If provided, it will be excluded from the filter.
+ - globalFilter: an optional filter that will be joined with the generated filter
+ Output:
+ - a filter object that can be used to filter term values based on the provided term wrappers and values.
+*/
 export function getCategoricalTermFilter(filterTWs, values, tw, globalFilter) {
 	const excluded = []
 	if (tw) excluded.push(tw.$id)
