@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 Fixes:
 - clear all fetched server data when the username has changed in bindProteinPaint()
+- Fix the sample type missing error when calling getSampleType for a samplelst term
 
 
 ## 2.133.4
