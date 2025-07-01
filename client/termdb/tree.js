@@ -336,7 +336,7 @@ function setRenderers(self) {
 		// update other parts if needed, e.g. label
 		div.select('.' + cls_termchilddiv).style('display', isExpanded ? 'block' : 'none')
 
-		const isSelected = self.state.selectedTerms.find(t => t.name === term.name && t.type === term.type)
+		const isSelected = self.state.selectedTerms.find(t => t.id === term.id && t.type === term.type)
 		div
 			.select('.' + cls_termlabel)
 			.style(
@@ -373,7 +373,7 @@ function setRenderers(self) {
 			if (self.expandAll) self.toggleBranch(term)
 		}
 
-		const isSelected = self.state.selectedTerms.find(t => t.name === term.name && t.type === term.type)
+		const isSelected = self.state.selectedTerms.find(t => t.id === term.id && t.type === term.type)
 		const labeldiv = div
 			.append('div')
 			.attr('class', cls_termlabel)
@@ -497,7 +497,7 @@ function setInteractivity(self) {
 		}
 
 		if (self.opts.submit_lst) {
-			const i = self.state.selectedTerms.findIndex(t => t.name === term.name)
+			const i = self.state.selectedTerms.findIndex(t => t.id === term.id && t.type === term.type)
 			if (i == -1) {
 				self.app.dispatch({
 					type: 'app_refresh',
