@@ -64,7 +64,6 @@ export default <Genome>{
 			categories: {
 				coding: { color: '#004D99', label: 'Coding gene' },
 				nonCoding: { color: '#008833', label: 'Noncoding gene' },
-				problem: { color: '#CC3300', label: 'Problem' },
 				pseudo: { color: '#CC00CC', label: 'Pseudogene' }
 			},
 			type: 'bedj',
