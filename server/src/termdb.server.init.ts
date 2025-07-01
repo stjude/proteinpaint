@@ -676,7 +676,15 @@ const defaultCommonCharts: isSupportedChartCallbacks = {
 	},
 	sampleView: ({ forbiddenRoutes }) => {
 		return !forbiddenRoutes.includes('termdb') && !forbiddenRoutes.includes('*')
-	}
+	},
+	/* enable grin2 when this is available
+	this solution:
+	- loads alteration data from per-sample json files
+	- this query already combines data from multiple query types, thus no need to assess availability of each of those
+	alternative:
+	- assess availability of snvindel/cnv/svfusion etc
+	*/
+	grin2: ({ ds }) => ds.queries?.singleSampleMutation
 }
 
 export function listDbTables(cn) {
