@@ -10,7 +10,6 @@ import type { TileServerShard } from '#src/sharding/TileServerShard.ts'
 import { ClientHolder } from '#src/caching/ClientHolder.ts'
 import type { KeyValueStorage } from '#src/caching/KeyValueStorage.ts'
 import type { PredictionOverlay } from '#types'
-import { PredictionOverlayType } from '#types'
 import path from 'path'
 
 export default class RedisClientHolder implements KeyValueStorage {
@@ -150,9 +149,9 @@ export default class RedisClientHolder implements KeyValueStorage {
 		const existingKeys = await client.keys('*') // Current Redis keys (e.g. slide paths)
 		const existingKeysSet = new Set(existingKeys)
 
-		// Helper to infer PredictionOverlayType from filename
-		const guessOverlayType = (filename: string): PredictionOverlayType =>
-			/uncertainty/i.test(filename) ? PredictionOverlayType.UNCERTAINTY : PredictionOverlayType.PREDICTION
+		// Helper to infer PredictionOverlayType from filename, temporally solution
+		const guessOverlayType = (filename: string): string =>
+			/uncertainty/i.test(filename) ? 'Uncertainty' : 'Prediction'
 
 		// Extract slide paths from incoming sessions
 		const slidePaths = Object.values(sessions)

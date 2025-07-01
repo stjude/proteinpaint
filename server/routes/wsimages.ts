@@ -4,7 +4,6 @@ import path from 'path'
 import { CookieJar } from 'tough-cookie'
 import { promisify } from 'util'
 import type { PredictionOverlay, RouteApi, WSImagesRequest, WSImagesResponse } from '#types'
-import { PredictionOverlayType } from '#types'
 import { wsImagesPayload } from '#types/checkers'
 import SessionManager from '../src/wsisessions/SessionManager.ts'
 import type { SessionData } from '../src/wsisessions/SessionManager.ts'
@@ -154,7 +153,7 @@ async function getSessionId(
 
 			const overlay: PredictionOverlay = {
 				layerNumber: layerNumber,
-				predictionOverlayType: PredictionOverlayType.PREDICTION
+				predictionOverlayType: 'Prediction'
 			}
 
 			overlays.push(overlay)
@@ -189,7 +188,7 @@ async function getSessionId(
 
 			const overlay: PredictionOverlay = {
 				layerNumber: layerNumber,
-				predictionOverlayType: PredictionOverlayType.UNCERTAINTY
+				predictionOverlayType: 'Uncertainty'
 			}
 
 			overlays.push(overlay)

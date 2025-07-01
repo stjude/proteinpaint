@@ -18,12 +18,7 @@ export type WSImagesResponse = {
 
 export type PredictionOverlay = {
 	layerNumber: string
-	predictionOverlayType: PredictionOverlayType
-}
-
-export enum PredictionOverlayType {
-	PREDICTION = 'Prediction',
-	UNCERTAINTY = 'Uncertainty'
+	predictionOverlayType: string
 }
 
 export const wsImagesPayload: RoutePayload = {
