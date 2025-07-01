@@ -3,7 +3,6 @@ import type {
 	BaseGroupSet,
 	GvValuesQ,
 	GvCustomGsQ,
-	RawGvTerm,
 	RawGvValuesTW,
 	GvValuesTW,
 	RawGvCustomGsTW,
@@ -12,14 +11,13 @@ import type {
 	GvTW,
 	FilterGroup,
 	VocabApi,
-	DtTerm,
 	Filter
 } from '#types'
 import { TwBase, type TwOpts } from './TwBase.ts'
 import { copyMerge } from '#rx'
 import { set_hiddenvalues } from '#termsetting'
-import { dtTerms } from '#shared/common.js'
 import { getWrappedTvslst } from '#filter/filter'
+import { getChildTerms } from '../termsetting/handlers/geneVariant'
 
 export class GvBase extends TwBase {
 	// type, isAtomic, $id are set in ancestor base classes
@@ -70,9 +68,6 @@ export class GvBase extends TwBase {
 		// fill term.groupsetting
 		if (!tw.term.groupsetting) tw.term.groupsetting = { disabled: false }
 
-		// get child dt terms
-		await getChildTerms(tw.term, opts.vocabApi)
-
 		{
 			// apply optional ds-level configs for this specific term
 			const c = opts.vocabApi.termdbConfig.queries.cnv
@@ -117,60 +112,12 @@ export class GvBase extends TwBase {
 				return await GvValues.fill(tw)
 
 			case 'GvCustomGsTW':
-				return await GvCustomGS.fill(tw)
+				return await GvCustomGS.fill(tw, opts)
 
 			default:
 				throw `tw.type='${tw.type}' is not supported by GvBase.fill()`
 		}
 	}
-}
-
-// function to get child dt terms
-// will use these terms to generate a frontend vocab
-export async function getChildTerms(term: RawGvTerm, vocabApi: VocabApi) {
-	if (!vocabApi.termdbConfig?.queries) throw 'termdbConfig.queries is missing'
-	const termdbmclass = vocabApi.termdbConfig.mclass // custom mclass labels from dataset
-	const dtTermsInDs: DtTerm[] = [] // dt terms in dataset
-	const body: any = {}
-	const filter = vocabApi.state?.termfilter?.filter
-	const filter0 = vocabApi.state?.termfilter?.filter0
-	if (filter0) {
-		// TODO: currently adding filter0 to body{}, but should
-		// refactor the input of getCategories() to be a single opts{}
-		// object, which can include .term, .filter, .filter0, and
-		// any other properties
-		body.filter0 = filter0
-	}
-	const categories = await vocabApi.getCategories(term, filter, body)
-	for (const _t of dtTerms) {
-		const t = structuredClone(_t)
-		if (!Object.keys(vocabApi.termdbConfig.queries).includes(t.query)) continue // dt is not in dataset
-		const data = categories.lst.find(x => x.dt == t.dt)
-		if (!data) continue // gene does not have this dt
-		const byOrigin = vocabApi.termdbConfig.assayAvailability?.byDt[t.dt]?.byOrigin
-		let classes
-		if (byOrigin) {
-			// dt has origins in dataset
-			if (!t.origin) continue // dt term does not have origin, so skip
-			if (!Object.keys(byOrigin).includes(t.origin)) throw 'unexpected origin of dt term'
-			classes = data.classes.byOrigin[t.origin]
-		} else {
-			// dt does not have origins in dataset
-			if (t.origin) continue // dt term has origin, so skip
-			classes = data.classes
-		}
-		// filter for only those mutation classes that are in the dataset
-		const values = Object.fromEntries(Object.entries(t.values).filter(([k, _v]) => Object.keys(classes).includes(k)))
-		// add custom mclass labels from dataset
-		for (const k of Object.keys(values)) {
-			const v: any = values[k]
-			if (termdbmclass && Object.keys(termdbmclass).includes(k)) v.label = termdbmclass[k].label
-		}
-		t.values = values
-		t.parentTerm = structuredClone(term)
-		dtTermsInDs.push(t)
-	}
-	term.childTerms = dtTermsInDs
 }
 
 export class GvValues extends GvBase {
@@ -227,7 +174,7 @@ export class GvCustomGS extends GvBase {
 	}
 
 	// See the relevant comments in the GvBase.fill() function above
-	static async fill(tw: RawGvCustomGsTW): Promise<GvCustomGsTW> {
+	static async fill(tw: RawGvCustomGsTW, opts: TwOpts = {}): Promise<GvCustomGsTW> {
 		if (!tw.type) tw.type = 'GvCustomGsTW'
 		else if (tw.type != 'GvCustomGsTW') throw `expecting tw.type='GvCustomGsTW', got '${tw.type}'`
 
@@ -235,7 +182,7 @@ export class GvCustomGS extends GvBase {
 		if (tw.q.type != 'custom-groupset') throw `expecting tw.q.type='custom-groupset', got '${tw.q.type}'`
 
 		// may fill groups
-		mayMakeGroups(tw)
+		await mayMakeGroups(tw, opts.vocabApi)
 
 		const { term, q } = tw
 		if (!q.customset) throw 'missing tw.q.customset'
@@ -245,10 +192,11 @@ export class GvCustomGS extends GvBase {
 	}
 }
 
-export function mayMakeGroups(tw: RawGvCustomGsTW) {
+export async function mayMakeGroups(tw: RawGvCustomGsTW, vocabApi: VocabApi) {
 	if (tw.q.type != 'custom-groupset' || tw.q.customset?.groups.length) return
 	// custom groupset, but customset.groups[] is empty
 	// fill with 2 groups for the first applicable dt term
+	await getChildTerms(tw.term, vocabApi)
 	const dtTerms = tw.term.childTerms
 	if (!dtTerms) throw 'dtTerms is missing'
 	let grp1Class, grp1Name, grp1Value, grp1Tvs, grp1Filter
