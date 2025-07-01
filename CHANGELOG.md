@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Fixes:
+- Fix index.ts import issue
+
 ## 2.133.3
 
 Fixes:
