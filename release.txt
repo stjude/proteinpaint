@@ -1,1 +1,2 @@
-
+Fixes:
+- Fix the sample type missing error when calling getSampleType for a samplelst term
