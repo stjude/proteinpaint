@@ -1,4 +1,4 @@
-import { getChildTerms } from '../tw/geneVariant'
+import { getChildTerms } from '../termsetting/handlers/geneVariant'
 
 /*
 TVS handler for geneVariant term
