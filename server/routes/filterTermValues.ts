@@ -51,7 +51,7 @@ function getList(samplesPerFilter, filtersData, tw) {
 	const sampleValues = Array.from(new Set(data.map(sample => sample[tw.$id]?.value)))
 	for (const value of values) {
 		value.value = value.label
-		const label = value.label.replace(/['"]/g, '') //remove quotes from label, fixes some labels with quotes
+		const label = value.label
 		value.disabled = !sampleValues.includes(label)
 	}
 	values.unshift({ label: '', value: '' })
