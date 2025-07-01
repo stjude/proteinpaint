@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Fixes:
+- distinguish by term.id, instead of term.name, in multi-select term tree menu
+
+
 ## 2.133.5
 
 Fixes:
