@@ -65,6 +65,7 @@ def assign_lesion_colors(lesion_types):
 	available_colors = {k: color_map[k] for k in unique_types if k in color_map}
 	return available_colors
 
+
 def plot_grin2_manhattan(grin_results: dict, 
                         chrom_size: pd.DataFrame,
                         colors: Optional[Dict[str, str]] = None) -> plt.Figure:
@@ -116,9 +117,9 @@ def plot_grin2_manhattan(grin_results: dict,
         - Only points with -log₁₀(q-value) ≥ 0.1 are plotted (q-value ≤ ~0.79)
         - Multiple mutation types at the same gene are offset horizontally for visibility
         - Significance threshold lines help interpret results:
-            * Orange dashed: q = 0.05 (marginally significant)
-            * Dark orange dashed: q = 0.01 (significant)  
-            * Red dashed: q = 0.001 (highly significant)
+            * White dashed lines at q = 0.05, 0.01, 0.001 thresholds
+        - Y-axis is capped at 40 for very high significance values to maintain readability
+        - Alternating grey/white chromosome backgrounds for easy visual separation
     """
     # Default colors
     if colors is None:
@@ -142,9 +143,14 @@ def plot_grin2_manhattan(grin_results: dict,
     chrom_data = {}
     cumulative_pos = 0
     
-    # Calculate cumulative chromosome positions for plotting
+    # Calculate cumulative chromosome positions for plotting (exclude mitochondrial)
     for _, row in chrom_size.iterrows():
         chrom = row['chrom']
+        
+        # Skip mitochondrial chromosome
+        if chrom.replace('chr', '').upper() == 'M':
+            continue
+            
         size = row['size']
         chrom_data[chrom] = {
             'start': cumulative_pos,
@@ -195,6 +201,52 @@ def plot_grin2_manhattan(grin_results: dict,
             plot_data['types'].append(mut_type)
     
     
+    # Set up axes limits
+    ax.set_xlim(0, total_genome_length)
+    
+    # Calculate y-axis limits from data with optional scaling for very high values
+    y_axis_scaled = False
+    if plot_data['y']:
+        max_y = max(plot_data['y'])
+        
+        # If we have extremely high significance values, scale them down for better visualization
+        if max_y > 40:
+            # Scale all y-values so the maximum becomes 36 (leaving 10% buffer room up to ~40)
+            scale_factor = 36 / max_y
+            plot_data['y'] = [y * scale_factor for y in plot_data['y']]
+            scaled_max = max(plot_data['y'])
+            ax.set_ylim(0, scaled_max * 1.1)  # Add 10% buffer to scaled data
+            y_axis_scaled = True
+        else:
+            # Normal case - just add some padding to the top
+            ax.set_ylim(0, max(max_y * 1.1, 5))
+    else:
+        # No data points to plot
+        ax.set_ylim(0, 5)
+
+    # Add chromosome background shading FIRST (before plotting data)
+    # Create alternating pattern: odd chromosomes (1,3,5...) get grey, even (2,4,6...) stay white
+    for i, (_, row) in enumerate(chrom_size.iterrows()):
+        chrom = row['chrom']
+        
+        # Skip mitochondrial chromosome
+        if chrom.replace('chr', '').upper() == 'M':
+            continue
+        
+        # Extract chromosome number for proper alternating pattern
+        chrom_num_str = chrom.replace('chr', '').replace('X', '23').replace('Y', '24')
+        try:
+            chrom_num = int(chrom_num_str)
+        except ValueError:
+            chrom_num = i + 1  # Fallback to index-based numbering
+        
+        # Shade odd-numbered chromosomes with grey (1, 3, 5, 7, ...)
+        if chrom_num % 2 == 1:
+            chrom_start = chrom_data[chrom]['start']
+            chrom_end = chrom_start + chrom_data[chrom]['size']
+            ax.axvspan(chrom_start, chrom_end, alpha=0.15, color='lightgray', 
+                      zorder=0, linewidth=0, edgecolor='none')
+
     # Plot each mutation type separately for better legend control
     for mut_type, _ in mutation_cols:
         # Get indices for this mutation type
@@ -210,58 +262,75 @@ def plot_grin2_manhattan(grin_results: dict,
                       s=8,  # Point size
                       alpha=0.7, 
                       label=mut_type.capitalize(),
-                      edgecolors='none')
-    
-    # Set up axes limits
-    ax.set_xlim(0, total_genome_length)
-    
-    # Calculate y-axis limits from data
-    if plot_data['y']:
-        max_y = max(plot_data['y']) * 1.1
-        ax.set_ylim(0, max(max_y, 5))
-    else:
-        ax.set_ylim(0, 10)
-    
-    # Add chromosome separators and labels using the existing logic
-    chr_positions = []
-    chr_labels = []
-    
-    for _, row in chrom_size.iterrows():
-        chrom = row['chrom']
-        
-        # Add separator line (except for first chromosome)
-        if chrom_data[chrom]['start'] > 0:
-            ax.axvline(x=chrom_data[chrom]['start'], color='gray', linewidth=0.5, alpha=0.7)
-        
-        # Use center position for chromosome label
-        chr_positions.append(chrom_data[chrom]['center'])
-        chr_labels.append(chrom.replace('chr', ''))
-    
-    # Set chromosome labels
-    ax.set_xticks(chr_positions)
-    ax.set_xticklabels(chr_labels, rotation=45, ha='right')
-    plt.subplots_adjust(bottom=0.2)
+                      edgecolors='none',
+                      zorder=3)  # Make sure points are on top
 
-    # Add significance threshold lines
+    # Add significance threshold lines in light gray for better visibility
     significance_lines = [
-        (1.3, '#FFA500'),  # q=0.05
-        (2.0, '#FF6600'),  # q=0.01  
-        (3.0, '#FF0000')   # q=0.001
+        (1.3, '#CCCCCC'),  # q=0.05 - light gray
+        (2.0, '#CCCCCC'),  # q=0.01 - light gray
+        (3.0, '#CCCCCC')   # q=0.001 - light gray
     ]
     
     for threshold, line_color in significance_lines:
         if 0 <= threshold <= ax.get_ylim()[1]:
             ax.axhline(y=threshold, color=line_color, linestyle='--', 
-                      linewidth=1, alpha=0.7, zorder=1)
+                      linewidth=2, alpha=1.0, zorder=2)
+
+    # Add chromosome labels (no vertical separator lines)
+    chr_positions = []
+    chr_labels = []
+    
+    for i, (_, row) in enumerate(chrom_size.iterrows()):
+        chrom = row['chrom']
+        
+        # Skip mitochondrial chromosome
+        if chrom.replace('chr', '').upper() == 'M':
+            continue
+        
+        # Use center position for chromosome label (no vertical lines)
+        chr_positions.append(chrom_data[chrom]['center'])
+        chr_labels.append(chrom.replace('chr', ''))
+    
+    # Set chromosome labels
+    ax.set_xticks(chr_positions)
+    ax.set_xticklabels(chr_labels, rotation=45, ha='center', va='top')
+    ax.tick_params(axis='x', pad=2)
+
     
     # Labels and title
     ax.set_ylabel('-log₁₀(q-value)', fontsize=12)
     ax.set_xlabel('Chromosomes', fontsize=12) 
-    ax.set_title('GRIN2 Analysis - Genome-wide Significance', fontsize=14, pad=20)
-    
-    # Add legend
+    ax.set_title('Genome-Wide Significance', fontsize=14, pad=20, loc='left')
+
+    # Add horizontal legend at the top right, same level as title
     if len(mutation_cols) > 0:
-        ax.legend(loc='upper right', frameon=False, fancybox=True, shadow=False,  framealpha=0.0, markerscale=2)
+        # Create legend labels
+        legend_labels = [mut_type.capitalize() for mut_type, _ in mutation_cols]
+        
+        # Add scaling note to legend if y-axis was scaled
+        if y_axis_scaled:
+            legend_labels.append("Y-axis scaled")
+        
+        # Create legend handles using scatter plot markers (no lines)
+        legend_handles = []
+        for mut_type, _ in mutation_cols:
+            color = colors.get(mut_type, '#888888')
+            legend_handles.append(plt.Line2D([0], [0], marker='o', color='w', 
+                                           markerfacecolor=color, markersize=8, alpha=0.7,
+                                           linestyle='None'))  # Explicitly no line
+        
+        # Add empty handle for scaling note if needed (with small marker)
+        if y_axis_scaled:
+            legend_handles.append(plt.Line2D([0], [0], marker='*', color='w', 
+                                           markerfacecolor='gray', markersize=6, alpha=0.7,
+                                           linestyle='None'))
+        
+        # Position legend horizontally at top right
+        ax.legend(legend_handles, legend_labels, 
+                 bbox_to_anchor=(1.0, 1.02), loc='lower right', 
+                 ncol=len(legend_labels), frameon=False, 
+                 fancybox=False, shadow=False, framealpha=0.0)
     
     # Clean up the plot
     ax.spines['top'].set_visible(False)
