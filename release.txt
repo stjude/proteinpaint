@@ -1,3 +1,2 @@
 Features
-- We now support the report plot that shows an aggregation of plots embedded, according to the dataset configuration for the plot. 
-If specified this plot shows country and site filters. This plot was developed to build the sjcares report.
+- We now support the report plot that shows an aggregation of plots embedded, according to the dataset configuration for the plot. If specified this plot shows country and site filters. This plot was developed to build the sjcares report.
