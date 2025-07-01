@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Fixes:
+- clear all fetched server data when the username has changed in bindProteinPaint()
+
 
 ## 2.133.4
 

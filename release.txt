@@ -1,2 +1,1 @@
-Fixes:
-- clear all fetched server data when the username has changed in bindProteinPaint()
+
