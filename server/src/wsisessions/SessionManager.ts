@@ -6,7 +6,7 @@ import RedisClientHolder from '#src/redis/RedisClientHolder.js'
 import { ShardManager } from '#src/sharding/ShardManager.js'
 import { TileServerShardingAlgorithm } from '#src/sharding/TileServerShardingAlgorithm.js'
 import { TileServerSessionsHandler } from '#src/wsisessions/TileServerSessionsHandler.js'
-import type { PredictionOverlay } from '@sjcrh/proteinpaint-types'
+import type { PredictionOverlay } from '#types'
 
 /**
  *  Represents the TileServer session data object.

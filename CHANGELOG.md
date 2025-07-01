@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Fixes:
+- Fix SessionManager import issue 
 
 ## 2.133.2
 
