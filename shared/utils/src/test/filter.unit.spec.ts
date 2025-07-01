@@ -347,7 +347,6 @@ tape('getCategoricalTermFilter()', t => {
 		`Create filter with the other values provided, therefore filter only by the country value specified.
          This allows to find the facilities for Kenya and build the dropdown with all the facility types found.`
 	)
-	console.log(result3, countryFilter)
 	const countrySiteFilter = {
 		type: 'tvslst',
 		in: true,
