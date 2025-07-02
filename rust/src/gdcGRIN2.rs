@@ -150,7 +150,7 @@ struct InputData {
     maf_options: Option<MafOptions>,
     #[serde(rename = "cnvOptions")]
     cnv_options: Option<CnvOptions>,
-    chromosomes: Option<Vec<String>>,
+    chromosomes: Vec<String>,
 }
 
 // Configuration for different data types
@@ -173,7 +173,7 @@ async fn parse_content(
     loss_threshold: f32,
     seg_length: i32,
     cnv_hyper_mutator: i32,
-    chromosomes: &Option<HashSet<String>>,
+    chromosomes: &HashSet<String>,
     filtered_records: &Arc<Mutex<HashMap<String, FilteredCaseDetails>>>,
     filtered_maf_records: &AtomicUsize,
     filtered_cnv_records: &AtomicUsize,
@@ -340,7 +340,7 @@ async fn process_row(
     gain_threshold: f32,
     loss_threshold: f32,
     seg_length: i32,
-    chromosomes: &Option<HashSet<String>>,
+    chromosomes: &HashSet<String>,
     filtered_records: &Arc<Mutex<HashMap<String, FilteredCaseDetails>>>,
     filtered_maf_records: &AtomicUsize,
     filtered_cnv_records: &AtomicUsize,
@@ -533,18 +533,20 @@ async fn process_row(
         }
     }
 
+    if !out_lst[1].starts_with("chr") {
+        out_lst[1] = format!("chr{}", out_lst[1]);
+    }
+
     // Chromosome filtering
-    if let Some(chrom_set) = chromosomes {
-        if !chrom_set.is_empty() && !chrom_set.contains(&out_lst[1]) {
-            let mut skipped = skipped_chromosomes.lock().await;
-            *skipped.entry(out_lst[1].clone()).or_insert(0) += 1;
-            if data_type == "maf" {
-                filtered_maf_records.fetch_add(1, Ordering::Relaxed);
-            } else if data_type == "cnv" {
-                filtered_cnv_records.fetch_add(1, Ordering::Relaxed);
-            }
-            return Ok(None);
+    if !chromosomes.is_empty() && !chromosomes.contains(&out_lst[1]) {
+        let mut skipped = skipped_chromosomes.lock().await;
+        *skipped.entry(out_lst[1].clone()).or_insert(0) += 1;
+        if data_type == "maf" {
+            filtered_maf_records.fetch_add(1, Ordering::Relaxed);
+        } else if data_type == "cnv" {
+            filtered_cnv_records.fetch_add(1, Ordering::Relaxed);
         }
+        return Ok(None);
     }
 
     // Update counters for included MAF records
@@ -701,7 +703,7 @@ async fn download_data_streaming(
     loss_threshold: f32,
     seg_length: i32,
     cnv_hyper_mutator: i32,
-    chromosomes: &Option<HashSet<String>>,
+    chromosomes: &HashSet<String>,
 ) {
     let data_urls: Vec<(String, String, String)> = data4dl
         .into_iter()
@@ -938,13 +940,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     // Convert Vec<String> to HashSet<String> for faster lookup
-    let chromosomes = Some(
-        input_js
-            .chromosomes
-            .unwrap_or_else(|| vec!["chr1".to_string(), "chr10".to_string()])
-            .into_iter()
-            .collect::<HashSet<String>>(),
-    );
+    let chromosomes = input_js.chromosomes.into_iter().collect::<HashSet<String>>();
 
     // Download data - this will now handle errors gracefully
     download_data_streaming(
