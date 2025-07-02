@@ -10,7 +10,6 @@ import serverconfig from './serverconfig.js'
 import { Readable } from 'stream'
 import { minimatch } from 'minimatch'
 import crypto from 'crypto'
-import nodeFetch from 'node-fetch'
 
 const { tabix, samtools, bcftools, bigBedToBed, bigBedNamedItems, bigBedInfo } = serverconfig
 
@@ -971,7 +970,7 @@ export async function cachedFetch(url, opts = {}, use = {}) {
 				// - In Node 20, it looks like undici (which is used by experimental native fetch in Node 20) may not be performing garbage cleanup
 				// and freeing-up resources like sockets. This issue seems to be fixed in Node 22, which will be active in October 2024.
 				// - In the meantime, replacing ky with node-fetch may be a good enough fix for edge cases of very large, long-running requests.
-				jsonBody = await nodeFetch(url, opts)
+				jsonBody = await fetch(url, opts)
 					.then(async r => {
 						const contentType = r.headers.get('content-type')
 						const payload = contentType == 'application/json' ? await r.json() : await r.text()

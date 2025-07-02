@@ -1553,11 +1553,17 @@ type DtAssayAvailabilityByOrigin = {
 
 type Mds3AssayAvailability = {
 	/** object of key-value pairs. keys are dt values */
-	set?: (size: number) => Promise<void>
 	byDt: {
 		/** each index is a dt value */
 		[index: number]: DtAssayAvailabilityByOrigin | DtAssayAvailability
 	}
+	/**
+	 * assayAvailabilityResponse:
+	 * - for GDC, the /case_ssms API response, to be used by dataset js code to internally set availableVariationData = {ssm, cnv}
+	 *
+	 * returns nothing
+	 */
+	set?: (assayAvailabilityResponse: any) => Promise<void>
 }
 
 // mds legacy; delete when all are migrated to mds3
@@ -2067,9 +2073,26 @@ export type Mds3 = BaseMds & {
 	this is serverside only, not passed to termdbConfig
 	*/
 	mayGetGeneVariantDataParam?: { [key: string]: any }
-	// !!! TODO: improve these type definitions below !!!
-	getHostHeaders?: (q?: any) => any
 	serverconfigFeatures?: any
+	/** 
+		q: parsed server request query + body, merged into req.query
+
+		returns host URL to use for either rest or graphql requests
+	*/
+	getHostHeaders?: (q?: any) => {
+		host: {
+			rest: string
+			graphql: string
+		}
+		headers: {
+			[requestHeaderKey: string]: string | number
+		}
+	}
+	/**
+	 * ds: bootstrapped dataset object
+	 *
+	 * returns dataset-specific info to add to /healthcheck?dslabel=... response
+	 */
 	getHealth?: (ds: any) => {
 		[key: string]: any
 	}
