@@ -15,10 +15,12 @@ a basic plot:
 	id?: dynamically assigned to identify this plot
 }
 
-when nested, a plot has sections with each section an array of plots
+Sometimes a plot may have sections where each section has a name and an array of plots, like in the report plot. 
+An example of such plot is seeing in sjcares. In that case the plot config will look like this:
 {
-	id?: dynamically assigned to identify this nested plot
+	id?: dynamically assigned to identify this plot
 	sections: {
+		name: string
 		plots: {
 			chartType: string
 			... other properties of this child plot
@@ -27,6 +29,7 @@ when nested, a plot has sections with each section an array of plots
 		... other properties of a section
 	}[]
 }
+The state of each plot is added to the appState plots array, so that these plots can be treated as regular plots and be embedded in a parent plot.
 */
 
 // to distinguish from IDs assigned by other code or users
