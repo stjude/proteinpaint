@@ -64,7 +64,7 @@ type GrpEntryWithDom = GrpEntry & {
 	draggables: any
 }
 type GrpSetDom = {
-	menuWrapper: HTMLElement
+	menuWrapper: Selection<HTMLElement, any, any, any>
 	actionDiv: HTMLElement
 	grpsWrapper: HTMLElement
 	includedWrapper: HTMLElement
@@ -242,6 +242,12 @@ export class GroupSettingMethods {
 
 	async main() {
 		try {
+			if (this.tsInstance.category2samplecount instanceof Promise) {
+				this.dom.menuWrapper!.selectAll('*').remove()
+				this.dom.menuWrapper!.append('div').text('Loading...')
+				await this.tsInstance.category2samplecount
+			}
+
 			const input =
 				(this.tsInstance.q.type == 'custom-groupset' && this.tsInstance.q.customset) ||
 				this.tsInstance.category2samplecount ||

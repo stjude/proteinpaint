@@ -1553,6 +1553,7 @@ type DtAssayAvailabilityByOrigin = {
 
 type Mds3AssayAvailability = {
 	/** object of key-value pairs. keys are dt values */
+	set?: (size: number) => Promise<void>
 	byDt: {
 		/** each index is a dt value */
 		[index: number]: DtAssayAvailabilityByOrigin | DtAssayAvailability

@@ -2816,16 +2816,19 @@ async function mayAddDataAvailability(sample2mlst, dtKey, ds, origin, q) {
 		const sampleFilter =
 			!dt.get && q.filter && q.filter.lst.length ? new Set((await get_samples(q.filter, ds)).map(i => i.id)) : null
 
-		for (const sid of dt.yesSamples) {
-			// sample has been assayed
-			// if sample does not have annotated mutation for dt
-			// then it will be annotated as wildtype
-			addDataAvailability(sid, sample2mlst, dtKey, 'WT', dt.origin, sampleFilter)
-		}
-		for (const sid of dt.noSamples) {
-			// sample has not been assayed
-			// annotate the sample as not tested
-			addDataAvailability(sid, sample2mlst, dtKey, 'Blank', dt.origin, sampleFilter)
+		// shorter loop than iterating over initial cache of yesSamples and noSamples for all cases
+		// console.log(2780, 'sample2mlst.size=', sample2mlst.size )
+		for (const sid of sample2mlst) {
+			if (dt.yesSamples.has(sid)) {
+				// sample has been assayed
+				// if sample does not have annotated mutation for dt
+				// then it will be annotated as wildtype
+				addDataAvailability(sid, sample2mlst, dtKey, 'WT', dt.origin, sampleFilter)
+			}
+			if (dt.noSamples.has(sid)) {
+				// sample has not been assayed, annotate the sample as not tested
+				addDataAvailability(sid, sample2mlst, dtKey, 'Blank', dt.origin, sampleFilter)
+			}
 		}
 	}
 }

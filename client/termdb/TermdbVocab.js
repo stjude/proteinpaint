@@ -638,6 +638,8 @@ export class TermdbVocab extends Vocab {
 		}
 
 		if (term.category2samplecount) {
+			if (term.category2samplecount instanceof Promise) await term.category2samplecount
+
 			// grab directly from term and not the server
 			// { categoryKey: count }
 			const l2 = []
