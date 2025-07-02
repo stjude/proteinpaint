@@ -60,7 +60,7 @@ export class Report extends RxComponentInner {
 		for (const section of this.state.config.sections) {
 			const sectionDiv = this.view.dom.plotsDiv.append('div')
 
-			sectionDiv.append('div').style('font-size', '1.2em').style('font-weight', 'bold').text(section.name)
+			sectionDiv.append('div').style('font-size', '1.2em').style('font-weight', 'bold').text(section.name) //header
 			const plotDiv = sectionDiv.append('div').style('margin', '20px')
 
 			for (const plot of section.plots) {
@@ -72,7 +72,7 @@ export class Report extends RxComponentInner {
 	}
 
 	async setPlot(plot, plotDiv) {
-		const header = plotDiv.append('div')
+		const header = plotDiv.append('div').style('font-size', '1.1em')
 		const holder = plotDiv.append('div')
 		const opts = structuredClone(plot)
 		opts.header = header
