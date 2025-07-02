@@ -13,7 +13,7 @@ class MassPlot {
 	reactsTo(action) {
 		if (action.type.includes('cache_termq')) return true
 		if (action.type.endsWith('_group')) return true
-		if (action.type.startsWith('plot_')) return action.id === this.id
+		if (action.type.startsWith('plot_')) return action.id === this.id || action.parentId === this.id
 		if (action.type.startsWith('filter')) return true
 		if (action.type.startsWith('cohort')) return true
 		if (action.type == 'app_refresh') return true
