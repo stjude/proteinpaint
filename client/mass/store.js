@@ -321,11 +321,16 @@ TdbStore.prototype.actions = {
 		} else {
 			delete plot.cutoff
 		}
+
+		// action.parentId may be used in reactsTo() code
+		if (!action.parentId && plot.parentId) action.parentId = plot.parentId
 	},
 
 	plot_delete(action) {
 		const i = this.state.plots.findIndex(p => p.id === action.id)
 		if (i !== -1) this.state.plots.splice(i, 1)
+		// action.parentId may be used in reactsTo() code
+		if (!action.parentId && plot.parentId) action.parentId = plot.parentId
 	},
 
 	plot_nestedEdits(action) {
@@ -336,6 +341,8 @@ TdbStore.prototype.actions = {
 			const obj = edit.nestedKeys.reduce((obj, key) => obj[key], plot)
 			obj[lastKey] = edit.value
 		}
+		// action.parentId may be used in reactsTo() code
+		if (!action.parentId && plot.parentId) action.parentId = plot.parentId
 	},
 
 	// TODO: delete this action? does not seem to be used
