@@ -120,6 +120,8 @@ export type RunGRIN2Request = {
 		/** Hypermutator max cut off for CNVs per case */
 		hyperMutator?: number // Default: 500
 	}
+	/** List of chromosomes to include */
+	chromosomes?: string[]
 }
 
 /** Error entry from failed file downloads */
@@ -133,9 +135,19 @@ export type RustErrorEntry = {
 
 /** Summary information from Rust processing */
 export type RustSummary = {
+	type: 'summary'
 	total_files: number
 	successful_files: number
 	failed_files: number
+	errors: RustErrorEntry[]
+	filtered_records: number
+	filtered_maf_records: number
+	filtered_cnv_records: number
+	included_maf_records: number
+	included_cnv_records: number
+	filtered_records_by_case: Record<string, string[]>
+	hyper_mutator_records: Record<string, string[]>
+	skippedChromosomes: Record<string, number>
 }
 
 /** Structured output from Rust GRIN2 processing */
