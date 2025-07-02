@@ -126,7 +126,7 @@ export default class LabelsRenderer implements IRenderer {
 			label.fusionTooltip.forEach((fusionTooltip: FusionTooltip) => {
 				const [td1, td2] = table.addRow()
 
-				td1.text('Break points')
+				td1.text('Position')
 				td2.append('span').text(
 					` ${fusionTooltip.geneA ? fusionTooltip.geneA : '?'} ${fusionTooltip.chrA}:${fusionTooltip.posA}
 						${fusionTooltip.strandA == '+' ? 'forward' : 'reverse'} > ` +

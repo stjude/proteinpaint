@@ -46,13 +46,13 @@ export default class ChromosomesRenderer implements IRenderer {
 				// Compute how far along this arc segment the angle falls (fraction between 0 and 1)
 				const frac = Math.max(0, Math.min(1, (angle - d.data.startAngle) / (d.data.endAngle - d.data.startAngle)))
 				// Interpolate position along chromosome based on angle
-				const pos = Math.round(d.data.start + frac * d.data.size)
+				const pos = Math.round(frac * d.data.size)
 				// Update tooltip text with chromosome name and position (formatted with commas)
-				menu.d.text(`Chr ${d.data.text}: Position: ${pos.toLocaleString()}`)
+				menu.d.text(`Chr ${d.data.text}: Position: ${pos.toString()}`)
 				// Display tooltip at cursor position
 				menu.show(event.x, event.y)
 			})
-			.on('mouseover', event => {
+			.on('mouseover', (event: MouseEvent) => {
 				// When hovering over an arc, highlight it with an orange border
 				d3.select(event.currentTarget as SVGElement)
 					.attr('stroke', 'orange')

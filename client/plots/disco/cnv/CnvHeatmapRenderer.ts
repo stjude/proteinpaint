@@ -36,7 +36,7 @@ export class CnvHeatmapRenderer {
 			.attr('fill', (d: CnvArc) => this.getColor(d.color, d.value))
 
 			// Hover event: show highlight stroke and tooltip
-			.on('mouseover', (mouseEvent: MouseEvent, arc: CnvArc) => {
+			.on('mouseenter', (mouseEvent: MouseEvent, arc: CnvArc) => {
 				// Add highlight stroke over the hovered arc
 				hoverOverlay
 					.append('path')
@@ -77,7 +77,7 @@ export class CnvHeatmapRenderer {
 			})
 
 			// Cleanup on hover out: remove highlight and hide tooltip
-			.on('mouseout', () => {
+			.on('mouseleave', () => {
 				hoverOverlay.selectAll('*').remove()
 				menu.clear()
 				menu.hide()
