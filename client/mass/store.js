@@ -278,9 +278,9 @@ TdbStore.prototype.actions = {
 		if (plot.sections) {
 			// this is handled for embedder convenience,
 			// ideally app state.plots would already have all the plot entries
-			// instead of having nested plot.sections[] in a session state to be rehydrated;
+			// instead of having nested plot.sections[] with plots per section in a session state to be rehydrated;
 			//
-			// nested state.plots[i].sections[] entries are harder to manage:
+			// nested plot entries are harder to manage:
 			// - store methods will need to look in different places
 			//   to process a dispatched plot_* action
 			// - a plot's `getState()` method will also need to look in different places for the plot config, such as
