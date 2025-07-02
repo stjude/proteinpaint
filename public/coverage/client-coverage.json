@@ -3634,5 +3634,41 @@
       "prev": 0,
       "diff": 0.54
     }
+  },
+  "plots/barchart.events.js": {
+    "lines": {
+      "total": 289,
+      "covered": 1,
+      "skipped": 0,
+      "pct": 0.34
+    },
+    "functions": {
+      "total": 60,
+      "covered": 0,
+      "skipped": 0,
+      "pct": 0
+    },
+    "statements": {
+      "total": 313,
+      "covered": 1,
+      "skipped": 0,
+      "pct": 0.31
+    },
+    "branches": {
+      "total": 374,
+      "covered": 0,
+      "skipped": 0,
+      "pct": 0
+    },
+    "lowestPct": {
+      "curr": 0,
+      "prev": 0,
+      "diff": 0
+    },
+    "averagePct": {
+      "curr": 0.1625,
+      "prev": 0,
+      "diff": 0.1625
+    }
   }
 }
