@@ -67,19 +67,37 @@ async function runGrin2(genomes: any, req: any, res: any) {
 
 	const parsedRequest = req.query as RunGRIN2Request
 
-	// Step 1: Call Rust to process the MAF files and get JSON data (now with streaming)
-	const rustInput = JSON.stringify({
+	// prepare inputs for both rust and python. this allows to handle the logic of deciding allowed chromosomes in one place
+
+	const rustInput = {
 		caseFiles: parsedRequest.caseFiles,
 		mafOptions: parsedRequest.mafOptions,
-		cnvOptions: parsedRequest.cnvOptions
-	})
+		cnvOptions: parsedRequest.cnvOptions,
+		chromosomes: [] as string[]
+	}
+	const pyInput = {
+		genedb: path.join(serverconfig.tpmasterdir, g.genedb.dbfile),
+		chromosomelist: {},
+		lesion: [] as string[]
+	}
+	for (const c in g.majorchr) {
+		// list is short so a small penalty for accessing the flag in the loop
+		if (ds.queries.singleSampleMutation?.discoPlot?.skipChrM) {
+			// skip chrM; this property is set in gdc ds but still assess it to avoid hardcoding the logic, in case code maybe reused for non-gdc ds
+			if (c.toLowerCase() == 'chrm') continue
+		}
+		rustInput.chromosomes.push(c)
+		pyInput.chromosomelist[c] = g.majorchr[c]
+	}
+
+	// Step 1: Call Rust to process the MAF files and get JSON data (now with streaming)
 
 	// Collect output from stream_rust
 	let rustOutput = ''
 	let buffer = '' // For incomplete lines
 
 	const downloadStartTime = Date.now()
-	const streamResult = stream_rust('gdcGRIN2', rustInput, errors => {
+	const streamResult = stream_rust('gdcGRIN2', JSON.stringify(rustInput), errors => {
 		if (errors) {
 			throw new Error(`Rust process failed: ${errors}`)
 		}
@@ -135,12 +153,11 @@ async function runGrin2(genomes: any, req: any, res: any) {
 
 	// Process the rustResult (same logic as before, but rustResult is already parsed)
 	const parsedRustResult = rustResult
-	let dataForPython: any[] = []
 
 	// Extract only successful data for python script
 	if (parsedRustResult.successful_data && Array.isArray(parsedRustResult.successful_data)) {
-		dataForPython = parsedRustResult.successful_data.flat()
-		console.log(`[GRIN2] Extracted ${dataForPython.length} records for python script`)
+		pyInput.lesion = parsedRustResult.successful_data.flat()
+		console.log(`[GRIN2] Extracted ${pyInput.lesion.length} records for python script`)
 		console.log(
 			`[GRIN2] Success: ${parsedRustResult.summary.successful_files}, Failed: ${parsedRustResult.summary.failed_files}`
 		)
@@ -156,20 +173,6 @@ async function runGrin2(genomes: any, req: any, res: any) {
 	// Step 2: Call python script to generate the plot (unchanged)
 
 	// Prepare input for python script - pass the Rust output and the additional properties as input to python
-	const pyInput = {
-		genedb: path.join(serverconfig.tpmasterdir, g.genedb.dbfile),
-		chromosomelist: g.majorchr,
-		lesion: dataForPython // The mutation string from Rust
-	}
-
-	// skip chrm; this property is set in gdc ds but still assess it to avoid hardcoding the logic, in case code maybe reused for non-gdc ds; do it here to avoid having to pass such setting to python
-	if (ds.queries.singleSampleMutation?.discoPlot?.skipChrM) {
-		pyInput.chromosomelist = {}
-		for (const c in g.majorchr) {
-			if (c.toLowerCase() == 'chrm') continue
-			pyInput.chromosomelist[c] = g.majorchr[c]
-		}
-	}
 
 	// Call the python script
 	const grin2AnalysisStart = Date.now()
