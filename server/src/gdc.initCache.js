@@ -227,12 +227,7 @@ async function cacheMappingOnNewRelease(ds, version) {
 
 		await getCasesWithGeneExpression(ds, ref)
 		await getAnalysisTsv2loom4scrna(ds, ref)
-		if (ds.assayAvailability.byDt) {
-			for (const v of Object.values(ds.assayAvailability.byDt)) {
-				// assume that the initial response will be cached in-memory by the dataset js code
-				await v.get(totalCases)
-			}
-		}
+		if (ds.assayAvailability.set) await ds.assayAvailability.set(totalCases)
 	} catch (e) {
 		if (mayCancelStalePendingCache(ds, ref)) return // avoid resetting ds.__* variables that may affect newer data version caching
 		if (isRecoverableError(e)) {
