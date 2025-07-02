@@ -57,16 +57,23 @@ export class Report extends RxComponentInner {
 		this.config = structuredClone(this.state.config)
 		this.settings = this.config.settings.report
 		//Though the plots are read from the dataset and do not change in the future they may be added dynamically so we keep this loop here
-		for (const plot of this.state.plots) {
-			if (this.components.plots[plot.id]) continue
-			await this.setPlot(plot)
+		for (const section of this.state.config.sections) {
+			const sectionDiv = this.view.dom.plotsDiv.append('div')
+
+			sectionDiv.append('div').style('font-size', '1.2em').style('font-weight', 'bold').text(section.name)
+			const plotDiv = sectionDiv.append('div').style('margin', '20px')
+
+			for (const plot of section.plots) {
+				if (this.components.plots[plot.id]) continue
+				await this.setPlot(plot, plotDiv)
+			}
 		}
 		this.fillSites()
 	}
 
-	async setPlot(plot) {
-		const header = this.view.dom.plotsDiv.append('div').style('font-size', '1.2em').style('font-weight', 'bold')
-		const holder = this.view.dom.plotsDiv.append('div')
+	async setPlot(plot, plotDiv) {
+		const header = plotDiv.append('div')
+		const holder = plotDiv.append('div')
 		const opts = structuredClone(plot)
 		opts.header = header
 		opts.holder = holder

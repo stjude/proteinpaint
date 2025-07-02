@@ -20,7 +20,7 @@ export class ReportView {
 			.style('display', 'inline-block')
 			.style('vertical-align', 'top')
 			.style('padding', '20px')
-		const headerDiv = mainDiv.append('div').style('padding', '10px 0px 10px 0px')
+		const headerDiv = mainDiv.append('div').style('padding', '20px 0px 20px 0px')
 		const plotsDiv = mainDiv.append('div')
 
 		this.dom = {

@@ -275,12 +275,12 @@ TdbStore.prototype.actions = {
 			plot.mayAdjustConfig(plot, action.config)
 		}
 		this.state.plots.push(plot)
-		if (plot.plots) {
+		if (plot.sections) {
 			// this is handled for embedder convenience,
 			// ideally app state.plots would already have all the plot entries
-			// instead of having nested plot.plots[] in a session state to be rehydrated;
+			// instead of having nested plot.sections[] in a session state to be rehydrated;
 			//
-			// nested state.plots[i].plots[] entries are harder to manage:
+			// nested state.plots[i].sections[] entries are harder to manage:
 			// - store methods will need to look in different places
 			//   to process a dispatched plot_* action
 			// - a plot's `getState()` method will also need to look in different places for the plot config, such as
@@ -288,19 +288,20 @@ TdbStore.prototype.actions = {
 			//   const config = appState.plots.find(p => p.id === this.id || (p.id === this.parentId && p.plots?.find(p => p.id === this.id)))
 			//    ...
 			// }
-			for (const p of plot.plots) {
-				// by tracking a child plot's parentId, it makes it easier to
-				// - find a plot's config in the app state
-				// - prevent the app from rendering each child plot in it's own sandbox
-				// - prevent counting child plots separately in CHARTS tab
-				p.parentId = plot.id
-				if (!p.id) p.id = getId() // fill in missing child plot id
-				const _ = await import(`../plots/${p.chartType}.js`)
-				const config = await _.getPlotConfig(p, this.app)
-				// Move nested state.plot[i].plots[] into the root state.plots[] array
-				this.state.plots.push(config)
+			for (const section of plot.sections) {
+				for (const p of section.plots) {
+					// by tracking a child plot's parentId, it makes it easier to
+					// - find a plot's config in the app state
+					// - prevent the app from rendering each child plot in it's own sandbox
+					// - prevent counting child plots separately in CHARTS tab
+					p.parentId = plot.id
+					if (!p.id) p.id = getId() // fill in missing child plot id
+					const _ = await import(`../plots/${p.chartType}.js`)
+					const config = await _.getPlotConfig(p, this.app)
+					// Move nested state.plot[i].plots[] into the root state.plots[] array
+					this.state.plots.push(config)
+				}
 			}
-			delete plot.plots // delete, state.plots will be used from now on instead of the nested plot.plots[] entries
 		}
 	},
 

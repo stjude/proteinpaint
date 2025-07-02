@@ -55,6 +55,8 @@ export default function getHandlers(self) {
 		series: {
 			mouseover(event, d) {
 				event.stopPropagation()
+				let percent = (d.seriesTotal / d.chartTotal) * 100
+				percent = percent.toFixed(1)
 				const t1 = self.config.term.term
 				const t2 = self.config.term2 && self.config.term2.term
 				const term1unit = t1.unit
@@ -76,7 +78,8 @@ export default function getHandlers(self) {
 					)
 				}
 				rows.push(
-					`<tr><td style='padding:3px; color:#aaa'>#Individuals</td><td style='padding:3px; text-align:center'>n=${d.total}</td></tr>`
+					`<tr><td style='padding:3px; color:#aaa'>#Individuals</td><td style='padding:3px; text-align:center'>${d.total}</td></tr>`,
+					`<tr><td style='padding:3px; color:#aaa'>percent</td><td style='padding:3px; text-align:center'>${percent}%</td></tr>`
 				)
 
 				//mouse-over p-value and 2x2 table
