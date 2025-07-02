@@ -147,10 +147,6 @@ def plot_grin2_manhattan(grin_results: dict,
     for _, row in chrom_size.iterrows():
         chrom = row['chrom']
         
-        # Skip mitochondrial chromosome
-        if chrom.replace('chr', '').upper() == 'M':
-            continue
-            
         size = row['size']
         chrom_data[chrom] = {
             'start': cumulative_pos,
