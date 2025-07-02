@@ -224,11 +224,6 @@ def plot_grin2_manhattan(grin_results: dict,
     # Create alternating pattern: odd chromosomes (1,3,5...) get grey, even (2,4,6...) stay white
     for i, (_, row) in enumerate(chrom_size.iterrows()):
         chrom = row['chrom']
-        
-        # Skip mitochondrial chromosome
-        if chrom.replace('chr', '').upper() == 'M':
-            continue
-        
         # Extract chromosome number for proper alternating pattern
         chrom_num_str = chrom.replace('chr', '').replace('X', '23').replace('Y', '24')
         try:
@@ -279,11 +274,6 @@ def plot_grin2_manhattan(grin_results: dict,
     
     for i, (_, row) in enumerate(chrom_size.iterrows()):
         chrom = row['chrom']
-        
-        # Skip mitochondrial chromosome
-        if chrom.replace('chr', '').upper() == 'M':
-            continue
-        
         # Use center position for chromosome label (no vertical lines)
         chr_positions.append(chrom_data[chrom]['center'])
         chr_labels.append(chrom.replace('chr', ''))
