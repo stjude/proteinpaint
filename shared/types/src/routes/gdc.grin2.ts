@@ -120,8 +120,6 @@ export type RunGRIN2Request = {
 		/** Hypermutator max cut off for CNVs per case */
 		hyperMutator?: number // Default: 500
 	}
-	/** List of chromosomes to include */
-	chromosomes?: string[]
 }
 
 /** Error entry from failed file downloads */
