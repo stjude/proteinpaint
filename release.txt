@@ -1,2 +1,1 @@
-Features:
-- GDC-GRIN2: Improved plot background visual. Removed chrM from plot. Added y-axis scaling cap to make values easier to see. Center aligned chromosome labels
+

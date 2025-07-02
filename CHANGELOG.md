@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- GDC-GRIN2: Improved plot background visual. Removed chrM from plot. Added y-axis scaling cap to make values easier to see. Center aligned chromosome labels
+
 
 ## 2.134.0
 
