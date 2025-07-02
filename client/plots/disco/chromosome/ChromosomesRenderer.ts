@@ -48,7 +48,7 @@ export default class ChromosomesRenderer implements IRenderer {
 				// Interpolate position along chromosome based on angle
 				const pos = Math.round(frac * d.data.size)
 				// Update tooltip text with chromosome name and position (formatted with commas)
-				menu.d.text(`Chr${d.data.text}:${pos.toString()}`)
+				menu.d.text(`chr${d.data.text}:${pos.toString()}`).style('padding', '5px')
 				// Display tooltip at cursor position
 				menu.show(event.x, event.y)
 			})
@@ -81,7 +81,10 @@ export default class ChromosomesRenderer implements IRenderer {
 			.attr('text-anchor', 'middle')
 			.text((d: d3.PieArcDatum<Chromosome>) => d.data.text)
 			.style('fill', 'white')
+			.style('padding', '500px')
 			//prevents chromosome number from interfering with hover
 			.style('pointer-events', 'none')
+			.style('padding', '500px')
+			
 	}
 }
