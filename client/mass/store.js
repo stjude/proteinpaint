@@ -275,6 +275,9 @@ TdbStore.prototype.actions = {
 			plot.mayAdjustConfig(plot, action.config)
 		}
 		this.state.plots.push(plot)
+		// Parent plots may have child plots, organized in sections to ease the visualization and analysis. For example the sjcares report,
+		//has the sections Demographics, Diagnosis and Stagind with their respective plots. We go over the plots for each section to add them
+		// to the state.plots array, so that they can be treated as regular plots and be embedded in a parent plot
 		if (plot.sections) {
 			// this is handled for embedder convenience,
 			// ideally app state.plots would already have all the plot entries
