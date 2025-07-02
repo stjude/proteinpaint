@@ -2,6 +2,7 @@ import * as d3 from 'd3'
 import type IRenderer from '#plots/disco/IRenderer.ts'
 import type Chromosome from './Chromosome.ts'
 import MenuProvider from '#plots/disco/menu/MenuProvider.ts'
+import { bplen } from '#shared/common.js'
 
 export default class ChromosomesRenderer implements IRenderer {
 	private padAngle: number
@@ -48,7 +49,7 @@ export default class ChromosomesRenderer implements IRenderer {
 				// Interpolate position along chromosome based on angle
 				const pos = Math.round(frac * d.data.size)
 				// Update tooltip text with chromosome name and position (formatted with commas)
-				menu.d.text(`chr${d.data.text}:${pos.toString()}`).style('padding', '5px')
+				menu.d.html(`<span style="font-size:.8em">chr${d.data.text}</span> ${bplen(pos)}`).style('padding', '5px')
 				// Display tooltip at cursor position
 				menu.show(event.x, event.y)
 			})
@@ -85,6 +86,5 @@ export default class ChromosomesRenderer implements IRenderer {
 			//prevents chromosome number from interfering with hover
 			.style('pointer-events', 'none')
 			.style('padding', '500px')
-			
 	}
 }
