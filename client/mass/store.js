@@ -328,6 +328,7 @@ TdbStore.prototype.actions = {
 
 	plot_delete(action) {
 		const i = this.state.plots.findIndex(p => p.id === action.id)
+		const plot = this.state.plots[i]
 		if (i !== -1) this.state.plots.splice(i, 1)
 		// action.parentId may be used in reactsTo() code
 		if (!action.parentId && plot.parentId) action.parentId = plot.parentId
