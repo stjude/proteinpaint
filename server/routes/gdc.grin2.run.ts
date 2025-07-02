@@ -4,15 +4,24 @@ import { stream_rust } from '@sjcrh/proteinpaint-rust'
 import serverconfig from '#src/serverconfig.js'
 import path from 'path'
 import { run_python } from '@sjcrh/proteinpaint-python'
+import { mayLog } from '#src/helpers.ts'
 
 /**
- * Route to run GRIN2 analysis:
- * 1. Call Rust to process MAF & CNV files and get JSON data (streaming files back)
- * 2. Pipe the JSON to python script to run analysis and generate manhattan-like plot
- * 3. Return the plot image to client
-
-
- TODO change console log to mayLog once finished prototyping to avoid excessive log on prod
+ * Main GRIN2 analysis handler
+ * Processes and retrieves MAF and CNV files and relevant mutation information through Rust and performs GRIN2 analysis and generates plots via python
+ *
+ * Data Flow:
+ * 1. Extract caseFiles from req.query (already parsed by middleware)
+ * 2. Pass caseFiles, mafOptions, cnvOptions, and chromosomes to Rust for mutation processing
+ * 3. Parse Rust output to get mutation data and summary of files results
+ *    - Rust outputs JSONL format with data and summary lines
+ * 		- Each line gets output as soon as it is processed to help reduce memory usage
+ *    - Each line is a JSON object with either 'data' or 'summary' type
+ *    - 'data' lines contain mutation data for each case, 'summary' contains overall statistics
+ *    - Rust handles file downloads and retries, returning successful data and errors
+ *    - Rust outputs a summary with total files, successful files, and failed files
+ * 3. Pass Rust mutation output to python for plot generation while we send the file summary to the analysis summary div
+ * 4. Return generated PNG as base64 string, the top gene table as JSON, and the Rust summary stats
  */
 
 export const api: RouteApi = {
@@ -28,18 +37,6 @@ export const api: RouteApi = {
 		}
 	}
 }
-
-/**
- * Main GRIN2 analysis handler
- * Processes MAF files through Rust and generates plots via python
- *
- * Data Flow:
- * 1. Extract caseFiles from req.query (already parsed by middleware)
- * 2. Pass caseFiles and mafOptions to Rust for mutation processing (now streaming)
- * 3. Parse Rust output to get mutation data and summary of files
- * 3. Pass Rust mutation output to python for plot generation while we send the file summary to the div for downloaded files
- * 4. Return generated PNG as base64 string, the top gene table as JSON, and the Rust summary stats
- */
 
 function init({ genomes }) {
 	return async (req: any, res: any): Promise<void> => {
@@ -75,6 +72,7 @@ async function runGrin2(genomes: any, req: any, res: any) {
 		cnvOptions: parsedRequest.cnvOptions,
 		chromosomes: [] as string[]
 	}
+
 	const pyInput = {
 		genedb: path.join(serverconfig.tpmasterdir, g.genedb.dbfile),
 		chromosomelist: {},
@@ -89,6 +87,8 @@ async function runGrin2(genomes: any, req: any, res: any) {
 		rustInput.chromosomes.push(c)
 		pyInput.chromosomelist[c] = g.majorchr[c]
 	}
+
+	console.log('[GRIN2] Running GRIN2 with input:', JSON.stringify(rustInput, null, 2))
 
 	// Step 1: Call Rust to process the MAF files and get JSON data (now with streaming)
 
@@ -125,10 +125,10 @@ async function runGrin2(genomes: any, req: any, res: any) {
 
 					if (data.type === 'summary') {
 						// Only log the final summary
-						console.log(`[GRIN2] Download complete: ${data.successful_files}/${data.total_files} files successful`)
+						mayLog(`[GRIN2] Download complete: ${data.successful_files}/${data.total_files} files successful`)
 
 						if (data.failed_files > 0) {
-							console.log(`[GRIN2] ${data.failed_files} files failed`)
+							mayLog(`[GRIN2] ${data.failed_files} files failed`)
 						}
 					}
 				} catch (_parseError) {
@@ -138,10 +138,10 @@ async function runGrin2(genomes: any, req: any, res: any) {
 		}
 	}
 
-	console.log('[GRIN2] Rust execution completed')
+	mayLog('[GRIN2] Rust execution completed')
 	const downloadTime = Date.now() - downloadStartTime
 	const downloadTimeToPrint = Math.round(downloadTime / 1000)
-	console.log(`[GRIN2] Rust processing took ${downloadTimeToPrint}`)
+	mayLog(`[GRIN2] Rust processing took ${downloadTimeToPrint}`)
 
 	// Parse the JSONL output
 	const rustResult = parseJsonlOutput(rustOutput)
@@ -151,50 +151,46 @@ async function runGrin2(genomes: any, req: any, res: any) {
 		throw new Error('Failed to process MAF files: No result from Rust')
 	}
 
-	// Process the rustResult (same logic as before, but rustResult is already parsed)
+	// Process the rustResult
 	const parsedRustResult = rustResult
 
 	// Extract only successful data for python script
 	if (parsedRustResult.successful_data && Array.isArray(parsedRustResult.successful_data)) {
 		pyInput.lesion = parsedRustResult.successful_data.flat()
-		console.log(`[GRIN2] Extracted ${pyInput.lesion.length} records for python script`)
-		console.log(
+		mayLog(`[GRIN2] Extracted ${pyInput.lesion.length} records for python script`)
+		mayLog(
 			`[GRIN2] Success: ${parsedRustResult.summary.successful_files}, Failed: ${parsedRustResult.summary.failed_files}`
 		)
-		// console.log(`[GRIN2] Filtered Stats Object: ${parsedRustResult.summary}`)
-		// console.log(`[GRIN2] Filtered Stats Object: ${JSON.stringify(parsedRustResult, null, 2)}`);
-		// console.log(`[GRIN2] Filtered MAF Records: ${parsedRustResult.summary.filtered_maf_records}`)
-		// console.log(`[GRIN2] Filtered CNV Records: ${parsedRustResult.summary.filtered_cnv_records}`)
-		// console.log(`[GRIN2] Filtered Total Results: ${parsedRustResult.summary.filtered_records}`)
+		// mayLog(`[GRIN2] Filtered Stats Object: ${parsedRustResult.summary}`)
+		// mayLog(`[GRIN2] Filtered Stats Object: ${JSON.stringify(parsedRustResult, null, 2)}`);
+		// mayLog(`[GRIN2] Filtered MAF Records: ${parsedRustResult.summary.filtered_maf_records}`)
+		// mayLog(`[GRIN2] Filtered CNV Records: ${parsedRustResult.summary.filtered_cnv_records}`)
+		// mayLog(`[GRIN2] Filtered Total Results: ${parsedRustResult.summary.filtered_records}`)
 	} else {
 		throw 'Unexpected Rust result format'
 	}
 
-	// Step 2: Call python script to generate the plot (unchanged)
-
-	// Prepare input for python script - pass the Rust output and the additional properties as input to python
+	// Step 2: Call python script to run GRIN2 and generate the plot
 
 	// Call the python script
 	const grin2AnalysisStart = Date.now()
 	const pyResult = await run_python('gdcGRIN2.py', JSON.stringify(pyInput))
 
-	// console.log(`[GRIN2] python execution completed, result: ${pyResult}`)
-	console.log(`[GRIN2] Python stderr: ${pyResult.stderr}`)
+	// mayLog(`[GRIN2] python execution completed, result: ${pyResult}`)
+	mayLog(`[GRIN2] Python stderr: ${pyResult.stderr}`)
 	const grin2AnalysisTime = Date.now() - grin2AnalysisStart
 	const grin2AnalysisTimeToPrint = Math.round(grin2AnalysisTime / 1000)
-	console.log(`[GRIN2] Python processing took ${grin2AnalysisTimeToPrint}`)
+	mayLog(`[GRIN2] Python processing took ${grin2AnalysisTimeToPrint}`)
 
 	// Parse python result to get image or check for errors
 	const resultData = JSON.parse(pyResult)
 	const pngImg = resultData.png[0]
 	const topGeneTable = resultData.topGeneTable || null
-	const analysisStats = parsedRustResult.summary || {}
 	const totalProcessTime = downloadTimeToPrint + grin2AnalysisTimeToPrint
 	return res.json({
 		pngImg,
 		topGeneTable,
 		rustResult: parsedRustResult,
-		analysisStats: analysisStats,
 		timing: {
 			rustProcessingTime: downloadTimeToPrint,
 			grin2ProcessingTime: grin2AnalysisTimeToPrint,
@@ -213,7 +209,6 @@ function parseJsonlOutput(rustOutput: string): any {
 	const allSuccessfulData: any[] = []
 	let finalSummary: any = null
 	let processedFiles = 0
-	// Maximum records to process
 	const MAX_RECORDS = 100000
 	let totalRecordsProcessed = 0
 	let isCapReached = false
@@ -227,7 +222,7 @@ function parseJsonlOutput(rustOutput: string): any {
 				if (data.type === 'data') {
 					// Check if we've already reached the cap
 					if (isCapReached) {
-						console.log(`[GRIN2] Skipping file ${data.case_id} - record cap of ${MAX_RECORDS} already reached`)
+						mayLog(`[GRIN2] Skipping file ${data.case_id} - record cap of ${MAX_RECORDS} already reached`)
 						continue // Skip processing this file
 					}
 
@@ -249,7 +244,7 @@ function parseJsonlOutput(rustOutput: string): any {
 						recordsProcessedThisFile = remainingCapacity
 						isCapReached = true
 
-						console.log(
+						mayLog(
 							`[GRIN2] Record cap reached! Processing only ${recordsProcessedThisFile} of ${incomingRecords} records from file ${data.case_id}`
 						)
 					}
@@ -258,28 +253,25 @@ function parseJsonlOutput(rustOutput: string): any {
 					processedFiles++
 					allSuccessfulData.push(recordsToProcess)
 					totalRecordsProcessed += recordsProcessedThisFile
-					console.log(totalRecordsProcessed, MAX_RECORDS)
-					console.log(
+					mayLog(
 						`[GRIN2] Processed file ${processedFiles}: ${data.case_id} (${data.data_type}) - ${recordsProcessedThisFile} records`
 					)
-					console.log(`[GRIN2] Total records processed: ${totalRecordsProcessed}/${MAX_RECORDS}`)
+					mayLog(`[GRIN2] Total records processed: ${totalRecordsProcessed}/${MAX_RECORDS}`)
 
 					// Log when cap is reached
 					if (isCapReached) {
-						console.log(
-							`[GRIN2] RECORD CAP REACHED: ${MAX_RECORDS} records processed. Subsequent files will be skipped.`
-						)
+						mayLog(`[GRIN2] RECORD CAP REACHED: ${MAX_RECORDS} records processed. Subsequent files will be skipped.`)
 					}
 				} else if (data.type === 'summary') {
 					// Final summary - all files processed
 					finalSummary = data
-					console.log(`[GRIN2] Download complete: ${data.successful_files}/${data.total_files} files successful`)
+					mayLog(`[GRIN2] Download complete: ${data.successful_files}/${data.total_files} files successful`)
 					if (isCapReached) {
-						console.log(`[GRIN2] Processing stopped due to record cap of ${MAX_RECORDS}`)
-						console.log(`[GRIN2] Total records collected: ${totalRecordsProcessed}`)
+						mayLog(`[GRIN2] Processing stopped due to record cap of ${MAX_RECORDS}`)
+						mayLog(`[GRIN2] Total records collected: ${totalRecordsProcessed}`)
 					}
 					if (data.failed_files > 0) {
-						console.log(`[GRIN2] ${data.failed_files} files failed`)
+						mayLog(`[GRIN2] ${data.failed_files} files failed`)
 					}
 				}
 			} catch (parseError) {
@@ -293,11 +285,12 @@ function parseJsonlOutput(rustOutput: string): any {
 		throw new Error('No summary found in Rust output')
 	}
 
-	// Return same format as the original run_rust result
+	// Return the final result of rust collection and processing
 	return {
 		successful_data: allSuccessfulData,
 		failed_files: finalSummary.errors || [],
 		summary: {
+			type: 'summary',
 			total_files: finalSummary.total_files,
 			successful_files: finalSummary.successful_files,
 			failed_files: finalSummary.failed_files,
@@ -305,9 +298,11 @@ function parseJsonlOutput(rustOutput: string): any {
 			filtered_records: finalSummary.filtered_records || 0,
 			filtered_maf_records: finalSummary.filtered_maf_records || 0,
 			filtered_cnv_records: finalSummary.filtered_cnv_records || 0,
-			filtered_records_by_case: finalSummary.filtered_records_by_case || {},
 			included_maf_records: finalSummary.included_maf_records || 0,
-			included_cnv_records: finalSummary.included_cnv_records || 0
+			included_cnv_records: finalSummary.included_cnv_records || 0,
+			filtered_records_by_case: finalSummary.filtered_records_by_case || {},
+			hyper_mutator_records: finalSummary.hyper_mutator_records || {},
+			skippedChromosomes: finalSummary.skipped_chromosomes || {}
 		}
 	}
 }

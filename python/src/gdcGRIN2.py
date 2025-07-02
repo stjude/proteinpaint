@@ -96,6 +96,8 @@ def plot_grin2_manhattan(grin_results: dict,
         chrom_size (pd.DataFrame): Chromosome size information with columns:
             - 'chrom': Chromosome names (must match those in grin_results)
             - 'size': Chromosome lengths in base pairs
+            Note: Chromosomes will be ordered as they appear in this DataFrame.
+            For proper alternating colors, ensure chromosomes are in desired display order.
             
         colors (Optional[Dict[str, str]]): Color mapping for mutation types.
             Keys should be 'gain', 'loss', 'mutation'. If None, uses defaults:
@@ -111,17 +113,18 @@ def plot_grin2_manhattan(grin_results: dict,
         KeyError: If required columns are missing from input DataFrames
         ValueError: If no valid q-value columns are found in grin_results
         
-        
     Notes:
         - Genes with q-values ≤ 0 or missing values are excluded from plotting
         - Only points with -log₁₀(q-value) ≥ 0.1 are plotted (q-value ≤ ~0.79)
         - Multiple mutation types at the same gene are offset horizontally for visibility
         - Significance threshold lines help interpret results:
-            * White dashed lines at q = 0.05, 0.01, 0.001 thresholds
+            * Light gray dashed lines at q = 0.05, 0.01, 0.001 thresholds
         - Y-axis is capped at 40 for very high significance values to maintain readability
         - Alternating grey/white chromosome backgrounds for easy visual separation
+        - Chromosome ordering follows the order in chrom_size DataFrame (genome-agnostic)
+        - Alternating colors are based on chromosome position in the input order, not chromosome names
     """
-    # Default colors
+    # Default colors for mutation types
     if colors is None:
         colors = {'gain': '#FF4444', 'loss': '#4444FF', 'mutation': '#44AA44'}
     
@@ -138,16 +141,16 @@ def plot_grin2_manhattan(grin_results: dict,
         if q_col in gene_hits.columns:
             mutation_cols.append((mut_type, q_col))
     
-    
     # Collect data for each chromosome to calculate cumulative positions
+    # Use the order from chrom_size DataFrame directly (genome-agnostic)
     chrom_data = {}
     cumulative_pos = 0
     
-    # Calculate cumulative chromosome positions for plotting (exclude mitochondrial)
-    for _, row in chrom_size.iterrows():
+    # Calculate cumulative chromosome positions for plotting
+    for chrom_index, (_, row) in enumerate(chrom_size.iterrows()):
         chrom = row['chrom']
-        
         size = row['size']
+        
         chrom_data[chrom] = {
             'start': cumulative_pos,
             'size': size,
@@ -196,7 +199,6 @@ def plot_grin2_manhattan(grin_results: dict,
             plot_data['colors'].append(colors.get(mut_type, '#888888'))
             plot_data['types'].append(mut_type)
     
-    
     # Set up axes limits
     ax.set_xlim(0, total_genome_length)
     
@@ -221,18 +223,16 @@ def plot_grin2_manhattan(grin_results: dict,
         ax.set_ylim(0, 5)
 
     # Add chromosome background shading FIRST (before plotting data)
-    # Create alternating pattern: odd chromosomes (1,3,5...) get grey, even (2,4,6...) stay white
+    # Create alternating pattern based on chromosome order in input DataFrame
     for i, (_, row) in enumerate(chrom_size.iterrows()):
         chrom = row['chrom']
-        # Extract chromosome number for proper alternating pattern
-        chrom_num_str = chrom.replace('chr', '').replace('X', '23').replace('Y', '24')
-        try:
-            chrom_num = int(chrom_num_str)
-        except ValueError:
-            chrom_num = i + 1  # Fallback to index-based numbering
         
-        # Shade odd-numbered chromosomes with grey (1, 3, 5, 7, ...)
-        if chrom_num % 2 == 1:
+        if chrom not in chrom_data:
+            continue
+            
+        # Shade every other chromosome with grey (0, 2, 4, 6, ...)
+        # Uses simple index-based alternating pattern 
+        if i % 2 == 0:
             chrom_start = chrom_data[chrom]['start']
             chrom_end = chrom_start + chrom_data[chrom]['size']
             ax.axvspan(chrom_start, chrom_end, alpha=0.15, color='lightgray', 
@@ -272,9 +272,12 @@ def plot_grin2_manhattan(grin_results: dict,
     chr_positions = []
     chr_labels = []
     
-    for i, (_, row) in enumerate(chrom_size.iterrows()):
+    for _, row in chrom_size.iterrows():
         chrom = row['chrom']
-        # Use center position for chromosome label (no vertical lines)
+        if chrom not in chrom_data:
+            continue
+            
+        # Use center position for chromosome label
         chr_positions.append(chrom_data[chrom]['center'])
         chr_labels.append(chrom.replace('chr', ''))
     
@@ -283,7 +286,6 @@ def plot_grin2_manhattan(grin_results: dict,
     ax.set_xticklabels(chr_labels, rotation=45, ha='center', va='top')
     ax.tick_params(axis='x', pad=2)
 
-    
     # Labels and title
     ax.set_ylabel('-log₁₀(q-value)', fontsize=12)
     ax.set_xlabel('Chromosomes', fontsize=12) 
@@ -634,32 +636,6 @@ try:
 		write_error(f"Failed to extract gene.hits or sort grin_table: {str(e)}")
 		sys.exit(1)
 
-	# # 6. Generate genomewide plot and encode as Base64
-	# try:
-	# 	# Create plot
-	# 	plt.figure(figsize=(900/110, 600/110), dpi=110)
-	# 	plt.margins(0.02)
-	# 	genomewide_lsn_plot(
-	# 		grin_results,
-	# 		max_log10q=150,
-	# 		lsn_colors=lsn_colors
-	# 	)
-	# 	# Save to BytesIO buffer
-	# 	buffer = BytesIO()
-	# 	plt.savefig(buffer, format="png", bbox_inches="tight")
-	# 	plt.close()
-
-	# 	# Get bytes and encode as base64
-	# 	buffer.seek(0)
-	# 	plot_bytes = buffer.getvalue()
-	# 	base64_string = base64.b64encode(plot_bytes).decode("utf-8")
-	# except Exception as e:
-	# 	write_error(f"Failed to generate genomewide plot: {str(e)}")
-	# 	if os.path.exists(temp_file):
-	# 		os.remove(temp_file)
-	# 	sys.exit(1)
-	# finally:
-	# 	plt.close("all")
 
 	# 6. Generate Manhattan plot and encode as Base64
 	try:

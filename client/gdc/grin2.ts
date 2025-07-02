@@ -67,6 +67,43 @@ function transformRows(rows, columns) {
 	})
 }
 
+function parseSkippedChromosomesData(skippedChromosomes: Record<string, number>): { columns: any[]; rows: any[][] } {
+	const columns = [
+		{ label: 'Chromosome', sortable: true },
+		{ label: 'Count', sortable: true }
+	]
+
+	const rows: TableRowItem[][] = []
+
+	// Sort chromosomes in a logical order (chr1, chr2, ..., chr22, chrX, chrY, chrM)
+	const sortedEntries = Object.entries(skippedChromosomes).sort(([a], [b]) => {
+		// Extract number or special case for sorting
+		const getChromOrder = (chr: string) => {
+			if (chr === 'chrM') return 1000 // Put chrM at the end
+			if (chr === 'chrY') return 999 // Put chrY second to last
+			if (chr === 'chrX') return 998 // Put chrX third to last
+
+			const num = parseInt(chr.replace('chr', ''))
+			return isNaN(num) ? 500 : num // Numeric chromosomes in order, others in middle
+		}
+
+		return getChromOrder(a) - getChromOrder(b)
+	})
+
+	sortedEntries.forEach(([chromosome, count]: [string, number]) => {
+		const row: TableRowItem[] = []
+
+		// Chromosome name
+		row.push({ value: chromosome })
+		// Count of skipped records
+		row.push({ value: count })
+
+		rows.push(row)
+	})
+
+	return { columns, rows }
+}
+
 function parseRecordsByCaseData(recordsByCase: any): { columns: any[]; rows: any[][] } {
 	// Adding columns for detailed filtering stats
 	const columns = [
@@ -1853,7 +1890,7 @@ async function getFilesAndShowTable(obj) {
 			console.log('GRIN2 response:', response)
 
 			if (response.rustResult) {
-				console.log('[GRIN2] Rust result received: ', response)
+				// console.log('[GRIN2] Rust result received: ', response)
 				// console.log('[GRIN2] rustResult received:', response.rustResult)
 				// console.log('[GRIN2] Summary:', response.rustResult.summary)
 				// console.log('[GRIN2] Failed files:', response.rustResult.failed_files)
@@ -1879,12 +1916,12 @@ async function getFilesAndShowTable(obj) {
 				if (parsedRustResult) {
 					// Check if it's the new structured format
 					if (parsedRustResult.successful_data && parsedRustResult.summary) {
-						// // console.log(`[GRIN2] New format detected - Processing ${parsedRustResult.summary.total_files} files`)
+						// console.log(`[GRIN2] New format detected - Processing ${parsedRustResult.summary.total_files} files`)
 						// console.log(
 						// 	`[GRIN2] Success: ${parsedRustResult.summary.successful_files}, Failed: ${parsedRustResult.summary.failed_files}`
 						// )
 
-						// Flatten all successful data arrays into one array - THIS GOES TO R
+						// Flatten all successful data arrays into one array - THIS GOES TO python
 						processedData = parsedRustResult.successful_data.flat()
 
 						console.log(`[GRIN2] parsedRustResult structure:`, parsedRustResult)
@@ -2070,9 +2107,9 @@ async function getFilesAndShowTable(obj) {
 					}
 				})
 
-				// This consolidates both analysisStats and file download stats into one panel
+				// This consolidates both the analysis stats and file download stats into one panel
 				// Create summary statistics panel
-				if (response.analysisStats || (parsedRustResult && parsedRustResult.summary)) {
+				if (parsedRustResult?.summary) {
 					const statsPanel = statsContainer
 						.append('div')
 						.style('background-color', '#f8f9fa')
@@ -2193,10 +2230,10 @@ async function getFilesAndShowTable(obj) {
 
 					// Data Filtering Stats Section (if available)
 					if (
-						response.analysisStats &&
-						(response.analysisStats.filtered_records !== undefined ||
-							response.analysisStats.filtered_maf_records !== undefined ||
-							response.analysisStats.filtered_cnv_records !== undefined)
+						response.rustResult.summary &&
+						(response.rustResult.summary.filtered_records !== undefined ||
+							response.rustResult.summary.filtered_maf_records !== undefined ||
+							response.rustResult.summary.filtered_cnv_records !== undefined)
 					) {
 						const filterStats = statsPanel.append('div').style('margin-bottom', '20px')
 
@@ -2216,18 +2253,18 @@ async function getFilesAndShowTable(obj) {
 							.style('font-size', '13px')
 
 						// Total excluded (filtered) records
-						if (response.analysisStats.filtered_records !== undefined) {
+						if (response.rustResult.summary.filtered_records !== undefined) {
 							filterStatsGrid.append('div').style('color', '#6c757d').text('Total Number of Excluded Records:')
 							filterStatsGrid
 								.append('div')
 								.style('font-weight', 'bold')
 								.style('color', 'black')
-								.text(response.analysisStats.filtered_records.toLocaleString())
+								.text(response.rustResult.summary.filtered_records.toLocaleString())
 						}
 
 						// Total included records in the analysis
-						const mafRecords = response.analysisStats.included_maf_records || 0
-						const cnvRecords = response.analysisStats.included_cnv_records || 0
+						const mafRecords = response.rustResult.summary.included_maf_records || 0
+						const cnvRecords = response.rustResult.summary.included_cnv_records || 0
 						const totalIncludedRecords = mafRecords + cnvRecords
 						filterStatsGrid.append('div').style('color', '#6c757d').text('Total Number of Included Records:')
 						filterStatsGrid
@@ -2237,49 +2274,49 @@ async function getFilesAndShowTable(obj) {
 							.text(totalIncludedRecords.toLocaleString())
 
 						// MAF excluded (filtered) records
-						if (response.analysisStats.filtered_maf_records !== undefined) {
+						if (response.rustResult.summary.filtered_maf_records !== undefined) {
 							filterStatsGrid.append('div').style('color', '#6c757d').text('MAF Records Excluded:')
 							filterStatsGrid
 								.append('div')
 								.style('font-weight', 'bold')
 								.style('color', 'black')
-								.text(response.analysisStats.filtered_maf_records.toLocaleString())
+								.text(response.rustResult.summary.filtered_maf_records.toLocaleString())
 						}
 
 						// MAF included (non-filtered) records
-						if (response.analysisStats.included_maf_records !== undefined) {
+						if (response.rustResult.summary.included_maf_records !== undefined) {
 							filterStatsGrid.append('div').style('color', '#6c757d').text('MAF Records Included:')
 							filterStatsGrid
 								.append('div')
 								.style('font-weight', 'bold')
 								.style('color', 'black')
-								.text(response.analysisStats.included_maf_records.toLocaleString())
+								.text(response.rustResult.summary.included_maf_records.toLocaleString())
 						}
 
 						// CNV excluded (filtered) records
-						if (response.analysisStats.filtered_cnv_records !== undefined) {
+						if (response.rustResult.summary.filtered_cnv_records !== undefined) {
 							filterStatsGrid.append('div').style('color', '#6c757d').text('CNV Records Excluded:')
 							filterStatsGrid
 								.append('div')
 								.style('font-weight', 'bold')
 								.style('color', 'black')
-								.text(response.analysisStats.filtered_cnv_records.toLocaleString())
+								.text(response.rustResult.summary.filtered_cnv_records.toLocaleString())
 						}
 
 						// CNV included (non-filtered) records
-						if (response.analysisStats.included_cnv_records !== undefined) {
+						if (response.rustResult.summary.included_cnv_records !== undefined) {
 							filterStatsGrid.append('div').style('color', '#6c757d').text('CNV Records Included:')
 							filterStatsGrid
 								.append('div')
 								.style('font-weight', 'bold')
 								.style('color', 'black')
-								.text(response.analysisStats.included_cnv_records.toLocaleString())
+								.text(response.rustResult.summary.included_cnv_records.toLocaleString())
 						}
 
 						// Records by case
-						if (response.analysisStats.filtered_records_by_case !== undefined) {
+						if (response.rustResult.summary.filtered_records_by_case !== undefined) {
 							// Parse the records by case data and create table structure
-							const { columns, rows } = parseRecordsByCaseData(response.analysisStats.filtered_records_by_case)
+							const { columns, rows } = parseRecordsByCaseData(response.rustResult.summary.filtered_records_by_case)
 
 							// Create container that spans both columns
 							const recordsByCaseContainer = filterStats
@@ -2323,7 +2360,7 @@ async function getFilesAndShowTable(obj) {
 								.style('font-weight', '500')
 								.text(
 									`View detailed statistics for ${
-										Object.keys(response.analysisStats.filtered_records_by_case).length
+										Object.keys(response.rustResult.summary.filtered_records_by_case).length
 									} cases`
 								)
 
@@ -2372,6 +2409,104 @@ async function getFilesAndShowTable(obj) {
 								.style('color', '#495057')
 								.style('line-height', '1.4')
 								.text('This table shows analysis statistics per case.')
+
+							// Track expanded state and add click handler
+							let isExpanded = false
+							expandableHeader.on('click', function () {
+								isExpanded = !isExpanded
+								if (isExpanded) {
+									expandableContent.style('display', 'block')
+									expandIcon.style('transform', 'rotate(90deg)').text('▼')
+								} else {
+									expandableContent.style('display', 'none')
+									expandIcon.style('transform', 'rotate(0deg)').text('▶')
+								}
+							})
+						}
+
+						// Skipped Chromosomes Section
+						if (
+							response.rustResult.summary.skippedChromosomes !== undefined &&
+							Object.keys(response.rustResult.summary.skippedChromosomes).length > 0
+						) {
+							// Parse the skipped chromosomes data and create table structure
+							const { columns, rows } = parseSkippedChromosomesData(response.rustResult.summary.skippedChromosomes)
+
+							// Create container that spans both columns
+							const skippedChromosomesContainer = filterStats
+								.append('div')
+								.style('grid-column', '1 / -1')
+								.style('margin-top', '15px')
+
+							// Create expandable header
+							const expandableHeader = skippedChromosomesContainer
+								.append('div')
+								.style('display', 'flex')
+								.style('align-items', 'center')
+								.style('gap', '8px')
+								.style('cursor', 'pointer')
+								.style('padding', '8px')
+								.style('border-radius', '4px')
+								.style('transition', 'background-color 0.2s')
+								.style('background-color', 'rgba(255, 152, 0, 0.1)') // Orange theme for skipped chromosomes
+								.style('border', '1px solid rgba(255, 152, 0, 0.2)')
+								.on('mouseenter', function (this: HTMLElement) {
+									select(this).style('background-color', 'rgba(255, 152, 0, 0.15)')
+								})
+								.on('mouseleave', function (this: HTMLElement) {
+									select(this).style('background-color', 'rgba(255, 152, 0, 0.1)')
+								})
+
+							// Expand/collapse icon
+							const expandIcon = expandableHeader
+								.append('span')
+								.style('font-size', '12px')
+								.style('color', '#ff9800')
+								.style('transition', 'transform 0.2s')
+								.text('▶')
+
+							// Header text
+							expandableHeader
+								.append('span')
+								.style('color', '#ff9800')
+								.style('text-decoration', 'underline')
+								.style('font-size', '13px')
+								.style('font-weight', '500')
+								.text('View skipped chromosomes')
+
+							// Create expandable content (hidden by default)
+							const expandableContent = skippedChromosomesContainer
+								.append('div')
+								.style('display', 'none')
+								.style('margin-top', '12px')
+
+							// Create table container
+							const tableContainer = expandableContent
+								.append('div')
+								.style('max-height', '300px')
+								.style('overflow-y', 'auto')
+								.style('border', '1px solid #dee2e6')
+								.style('border-radius', '4px')
+
+							// Render the table using renderTable
+							renderTable({
+								div: tableContainer,
+								columns: columns,
+								rows: rows,
+								showLines: true,
+								striped: true,
+								showHeader: true,
+								maxHeight: '280px',
+								resize: false,
+								header: {
+									allowSort: true,
+									style: {
+										'background-color': '#f8f9fa',
+										'font-weight': 'bold',
+										'border-bottom': '2px solid #dee2e6'
+									}
+								}
+							})
 
 							// Track expanded state and add click handler
 							let isExpanded = false
