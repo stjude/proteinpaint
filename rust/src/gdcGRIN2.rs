@@ -6,14 +6,18 @@
   2. Better timeout handling with retries
   3. More detailed error reporting
   4. Continues processing even when some files fail
+  5. Added chromosome filtering
 
   Input JSON:
     caseFiles
     mafOptions: For SNVindel filtering
+    cnvOptions: For CNV filtering
+    chromosomes: chromosomes will be included:[]
+
   Output mutations as JSON array.
 
   Example of usage:
-    echo '{"caseFiles": {"MP2PRT-PATFJE": {"maf": "26ea7b6f-8bc4-4e83-ace1-2125b493a361"},"MP2PRT-PAPIGD": {"maf": "653d7458-f4af-4328-a1ce-3bbf22a2e347"}, "TCGA-CG-4300": { "cnv":"46372ec2-ff79-4d07-b375-9ba8a12c11f3", "maf":"c09b208d-2e7b-4116-9580-27f20f4c7e67"}},"mafOptions": {"minTotalDepth": 100,"minAltAlleleCount": 20,"hyperMutator":8000,"consequences":["missense_variant","frameshift_variant"]}, "cnvOptions":{"lossThreshold":-1, "gainThreshold": 1.5, "segLength":2000000, "hyperMutator":8000}}' | ./target/release/gdcGRIN2
+    echo '{"caseFiles": {"MP2PRT-PATFJE": {"maf": "26ea7b6f-8bc4-4e83-ace1-2125b493a361"},"MP2PRT-PAPIGD": {"maf": "653d7458-f4af-4328-a1ce-3bbf22a2e347"}, "TCGA-CG-4300": { "cnv":"46372ec2-ff79-4d07-b375-9ba8a12c11f3", "maf":"c09b208d-2e7b-4116-9580-27f20f4c7e67"}},"mafOptions": {"minTotalDepth": 100,"minAltAlleleCount": 20,"hyperMutator":8000,"consequences":["missense_variant","frameshift_variant"]}, "cnvOptions":{"lossThreshold":-1, "gainThreshold": 1.5, "segLength":2000000, "hyperMutator":8000}, "chromosomes":["chr1","chr2","chr3"]}' | ./target/release/gdcGRIN2
 */
 
 use flate2::read::GzDecoder;
@@ -21,7 +25,7 @@ use futures::StreamExt;
 use memchr::memchr;
 use serde::{Deserialize, Serialize};
 use serde_json;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::io::{self, Read};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -134,6 +138,7 @@ struct FinalSummary {
     included_cnv_records: usize,
     filtered_records_by_case: HashMap<String, FilteredCaseDetails>,
     hyper_mutator_records: HashMap<String, Vec<String>>,
+    skipped_chromosomes: HashMap<String, usize>,
 }
 
 // Define the top-level input structure
@@ -145,6 +150,7 @@ struct InputData {
     maf_options: Option<MafOptions>,
     #[serde(rename = "cnvOptions")]
     cnv_options: Option<CnvOptions>,
+    chromosomes: Option<Vec<String>>,
 }
 
 // Configuration for different data types
@@ -167,12 +173,14 @@ async fn parse_content(
     loss_threshold: f32,
     seg_length: i32,
     cnv_hyper_mutator: i32,
+    chromosomes: &Option<HashSet<String>>,
     filtered_records: &Arc<Mutex<HashMap<String, FilteredCaseDetails>>>,
     filtered_maf_records: &AtomicUsize,
     filtered_cnv_records: &AtomicUsize,
     included_maf_records: &AtomicUsize,
     included_cnv_records: &AtomicUsize,
     hyper_mutator_records: &Arc<Mutex<HashMap<String, Vec<String>>>>,
+    skipped_chromosomes: &Arc<Mutex<HashMap<String, usize>>>,
 ) -> Result<Vec<Vec<String>>, (String, String, String)> {
     let config = match data_type {
         "cnv" => DataTypeConfig {
@@ -256,11 +264,13 @@ async fn parse_content(
             gain_threshold,
             loss_threshold,
             seg_length,
+            chromosomes,
             filtered_records,
             filtered_maf_records,
             filtered_cnv_records,
             included_maf_records,
             included_cnv_records,
+            skipped_chromosomes,
         )
         .await?;
 
@@ -330,11 +340,13 @@ async fn process_row(
     gain_threshold: f32,
     loss_threshold: f32,
     seg_length: i32,
+    chromosomes: &Option<HashSet<String>>,
     filtered_records: &Arc<Mutex<HashMap<String, FilteredCaseDetails>>>,
     filtered_maf_records: &AtomicUsize,
     filtered_cnv_records: &AtomicUsize,
     included_maf_records: &AtomicUsize,
     included_cnv_records: &AtomicUsize,
+    skipped_chromosomes: &Arc<Mutex<HashMap<String, usize>>>,
 ) -> Result<Option<Vec<String>>, (String, String, String)> {
     let cont_lst: Vec<String> = line.split("\t").map(|s| s.to_string()).collect();
     let mut out_lst = vec![case_id.to_string()];
@@ -488,10 +500,6 @@ async fn process_row(
         // Keep case_id, chr, start, end, and add "mutation"
         out_lst = out_lst[0..4].to_vec();
         out_lst.push("mutation".to_string());
-
-        // Update counters for included MAF records
-        case_details.maf.total_included += 1;
-        included_maf_records.fetch_add(1, Ordering::Relaxed);
     }
 
     // filter cnvs based on segment length. Default: 0 (no filtering)
@@ -523,6 +531,27 @@ async fn process_row(
             filtered_cnv_records.fetch_add(1, Ordering::Relaxed);
             return Ok(None);
         }
+    }
+
+    // Chromosome filtering
+    if let Some(chrom_set) = chromosomes {
+        if !chrom_set.is_empty() && !chrom_set.contains(&out_lst[1]) {
+            let mut skipped = skipped_chromosomes.lock().await;
+            *skipped.entry(out_lst[1].clone()).or_insert(0) += 1;
+            if data_type == "maf" {
+                filtered_maf_records.fetch_add(1, Ordering::Relaxed);
+            } else if data_type == "cnv" {
+                filtered_cnv_records.fetch_add(1, Ordering::Relaxed);
+            }
+            return Ok(None);
+        }
+    }
+
+    // Update counters for included MAF records
+    if data_type == "maf" {
+        case_details.maf.total_included += 1;
+        included_maf_records.fetch_add(1, Ordering::Relaxed);
+    } else if data_type == "cnv" {
         case_details.cnv.total_included += 1;
         included_cnv_records.fetch_add(1, Ordering::Relaxed);
     }
@@ -672,6 +701,7 @@ async fn download_data_streaming(
     loss_threshold: f32,
     seg_length: i32,
     cnv_hyper_mutator: i32,
+    chromosomes: &Option<HashSet<String>>,
 ) {
     let data_urls: Vec<(String, String, String)> = data4dl
         .into_iter()
@@ -698,6 +728,7 @@ async fn download_data_streaming(
     let hyper_mutator_records = Arc::new(Mutex::new(HashMap::<String, Vec<String>>::new()));
     let included_maf_records = Arc::new(AtomicUsize::new(0));
     let included_cnv_records = Arc::new(AtomicUsize::new(0));
+    let skipped_chromosomes = Arc::new(Mutex::new(HashMap::<String, usize>::new()));
 
     // Only collect errors (successful data is output immediately)
     let errors = Arc::new(Mutex::new(Vec::<ErrorEntry>::new()));
@@ -720,6 +751,7 @@ async fn download_data_streaming(
             let included_maf_records = Arc::clone(&included_maf_records);
             let included_cnv_records = Arc::clone(&included_cnv_records);
             let hyper_mutator_records = Arc::clone(&hyper_mutator_records);
+            let skipped_chromosomes = Arc::clone(&skipped_chromosomes);
             let errors = Arc::clone(&errors);
 
             async move {
@@ -738,12 +770,14 @@ async fn download_data_streaming(
                             loss_threshold,
                             seg_length,
                             cnv_hyper_mutator,
+                            &chromosomes,
                             &filtered_records,
                             &filtered_maf_records,
                             &filtered_cnv_records,
                             &included_maf_records,
                             &included_cnv_records,
                             &hyper_mutator_records,
+                            &skipped_chromosomes,
                         )
                         .await
                         {
@@ -828,6 +862,7 @@ async fn download_data_streaming(
         included_maf_records: included_maf_count,
         included_cnv_records: included_cnv_count,
         hyper_mutator_records: hyper_mutator_records.lock().await.clone(),
+        skipped_chromosomes: skipped_chromosomes.lock().await.clone(),
     };
 
     // Output final summary - Node.js will know processing is complete when it sees this
@@ -902,6 +937,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         None => (0.3, -0.4, 0, 500), // Default values
     };
 
+    // Convert Vec<String> to HashSet<String> for faster lookup
+    let chromosomes = Some(
+        input_js
+            .chromosomes
+            .unwrap_or_else(|| vec!["chr1".to_string(), "chr10".to_string()])
+            .into_iter()
+            .collect::<HashSet<String>>(),
+    );
+
     // Download data - this will now handle errors gracefully
     download_data_streaming(
         case_files,
@@ -914,6 +958,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         loss_threshold,
         seg_length,
         cnv_hyper_mutator,
+        &chromosomes,
     )
     .await;
 
