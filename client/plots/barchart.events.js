@@ -55,7 +55,7 @@ export default function getHandlers(self) {
 		series: {
 			mouseover(event, d) {
 				event.stopPropagation()
-				let percent = (d.seriesTotal / d.chartTotal) * 100
+				let percent = self.config.term2 ? (d.total / d.seriesTotal) * 100 : (d.seriesTotal / d.chartTotal) * 100
 				percent = percent.toFixed(1)
 				const t1 = self.config.term.term
 				const t2 = self.config.term2 && self.config.term2.term
