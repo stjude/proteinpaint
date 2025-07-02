@@ -1,9 +1,33 @@
 import { getStoreInit } from '#rx'
 import { dofetch3 } from '#common/dofetch'
 import { getFilterItemByTag, findParent } from '#filter/filter'
-import { getSamplelstTW, getFilter } from '../mass/groups.js'
+import { getSamplelstTW, getFilter } from './groups.js'
 import { TermTypes } from '#shared/terms.js'
 import { rehydrateFilter } from '../filter/rehydrateFilter.js'
+
+/*
+tmp comment on plot state. later properly define it in typescript
+
+a basic plot:
+{
+	chartType: string
+	... other properties
+	id?: dynamically assigned to identify this plot
+}
+
+when nested, a plot has sections with each section an array of plots
+{
+	id?: dynamically assigned to identify this nested plot
+	sections: {
+		plots: {
+			chartType: string
+			... other properties of this child plot
+			parentId?: dynamically assigned to point to plot.id
+		}[]
+		... other properties of a section
+	}[]
+}
+*/
 
 // to distinguish from IDs assigned by other code or users
 const idPrefix = '_MASS_AUTOID_' + Math.random().toString().slice(-6)
@@ -328,7 +352,6 @@ TdbStore.prototype.actions = {
 
 	plot_delete(action) {
 		const i = this.state.plots.findIndex(p => p.id === action.id)
-		const plot = this.state.plots[i]
 		if (i !== -1) this.state.plots.splice(i, 1)
 		// action.parentId may be used in reactsTo() code
 		if (!action.parentId && plot.parentId) action.parentId = plot.parentId
