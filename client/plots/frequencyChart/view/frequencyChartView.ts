@@ -77,16 +77,16 @@ export class FrequencyChartView extends RunchartView {
 				numericEditMenuVersion: ['continuous']
 			},
 
-			{
-				type: 'term',
-				configKey: 'term0',
-				chartType: 'frequencyChart',
-				usecase: { target: 'frequencyChart', detail: 'term0' },
-				title: 'Term to to divide by categories',
-				label: 'Divide by',
-				vocabApi: this.frequencyChart.app.vocabApi,
-				numericEditMenuVersion: ['discrete']
-			},
+			// {
+			// 	type: 'term',
+			// 	configKey: 'term0',
+			// 	chartType: 'frequencyChart',
+			// 	usecase: { target: 'frequencyChart', detail: 'term0' },
+			// 	title: 'Term to to divide by categories',
+			// 	label: 'Divide by',
+			// 	vocabApi: this.frequencyChart.app.vocabApi,
+			// 	numericEditMenuVersion: ['discrete']
+			// },
 			{
 				label: 'Show cumulative frecuency',
 				boxLabel: '',
