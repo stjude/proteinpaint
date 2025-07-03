@@ -2812,11 +2812,14 @@ async function mayAddDataAvailability(sample2mlst, dtKey, ds, origin, q) {
 }
 
 async function filterSamples4assayAvailability(q, ds) {
+	console.log(2814)
 	if (ds.assayAvailability.useFilter0) {
+		console.log(2815, q.filter0, q.filter?.lst.length)
 		/////////////////////////////
 		// if true, instructs this ds will use both filter and filter0 to get it
 		// TODO solution below uses a hardcoded gdc function and is not generalized
 		if (q.filter0 || q.filter?.lst.length) {
+			console.log(2819)
 			/* only do this query when there is either filter0, or non-empty pp filter
 			gdc getter supports either filter or filter0 or both
 

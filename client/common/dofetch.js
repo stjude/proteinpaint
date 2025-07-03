@@ -1,7 +1,8 @@
 import { deepFreeze } from '#rx'
-import { encode } from '#shared/urljson.js'
+import { encode, getDataName, processResponse, memFetch } from '#shared/index.js'
 import { mayShowAuthUi, mayAddJwtToRequest, includeEmbedder, setDsAuthOk } from './auth.js'
 export * from './auth.js'
+export { processFormData } from '#shared/index.js'
 
 /*
 	path: URL
@@ -62,9 +63,6 @@ export function dofetch(path, arg, opts = null) {
 	}
 }
 
-const cachedServerDataKeys = []
-const maxNumOfServerDataKeys = 360
-
 export function dofetch2(path, init = {}, opts = {}) {
 	/*
 	path "" string URL path
@@ -122,125 +120,12 @@ export function dofetch2(path, init = {}, opts = {}) {
 	*/
 	return mayShowAuthUi(init, url).then(async () => {
 		if (!jwt) mayAddJwtToRequest(init, body, url)
-		const dataName = url + ' | ' + init.method + ' | ' + init.body + ' | ' + init.headers?.authorization
-
-		if (opts.serverData) {
-			let result
-			if (opts.serverData[dataName]) {
-				result = opts.serverData[dataName].clone
-					? await processResponse(opts.serverData[dataName].clone())
-					: structuredClone(opts.serverData[dataName])
-			}
-			if (!result || typeof result != 'object' || result instanceof Promise) {
-				delete opts.serverData[dataName]
-				result = undefined
-			}
-
-			if (!result) {
-				// to-do: support opt.freeze to enforce Object.freeze(data.json())
-				try {
-					const res = await fetch(url, init)
-					result = await processResponse(res.clone())
-					// in case this fetch was cancelled with AbortController.signal,
-					// then the result may be another Promise instead of a data object,
-					// as observed when rapidly changing the gdc cohort filter
-					if (typeof result == 'object' && !(result instanceof Promise)) {
-						// TODO: make decoded caching as default, since storing as a
-						// fetch Response interface can be problematic when the fetch is aborted
-						if (opts.cacheAs == 'decoded') {
-							// should prefer to store results as a deeply frozen object instead of a Response interface,
-							// but must not return the same object to be reused by different requests
-							deepFreeze(result)
-							opts.serverData[dataName] = result
-							result = structuredClone(result)
-						} else {
-							// per https://developer.mozilla.org/en-US/docs/Web/API/Response/clone,
-							// **should not use (.clone) to read very large bodies in parallel** at different speeds,
-							// may also mean(?) to not persist/store the Response for a long time as is being done here
-							opts.serverData[dataName] = res
-						}
-					}
-				} catch (e) {
-					delete opts.serverData[dataName]
-					throw e
-				}
-			}
-			// manage the number of stored keys in serverData
-			const i = cachedServerDataKeys.indexOf(dataName)
-			if (i !== -1) cachedServerDataKeys.splice(i, 1)
-			cachedServerDataKeys.unshift(dataName)
-			if (cachedServerDataKeys.length > maxNumOfServerDataKeys) {
-				const oldestDataname = cachedServerDataKeys.pop()
-				delete opts.serverData[oldestDataname]
-			}
-			return result
-		} else {
+		if (!opts.serverData) {
 			return fetch(url, init).then(processResponse)
+		} else {
+			return await memFetch(url, init, opts)
 		}
 	})
-}
-
-/* 
-r: a native fetch response argument
-
-potentially allow "application/octet-stream" as response type
-in such case it will not try to parse it as json
-also the caller should just call dofetch2() without a serverData{}
-rather than dofetch3
-*/
-async function processResponse(r) {
-	const ct = r.headers.get('content-type') // content type is always present
-	if (!ct) throw `missing response.header['content-type']`
-	if (ct.includes('/json')) {
-		return r.json()
-	}
-	if (ct.includes('/text')) {
-		return r.text()
-	}
-	if (ct.includes('multipart')) {
-		if (ct.startsWith('multipart/form-data')) return processFormData(r)
-		else throw `cannot handle response content-type: '${ct}'`
-	}
-	// call blob() as catch-all
-	// https://developer.mozilla.org/en-US/docs/Web/API/Response
-	return r.blob()
-}
-
-/*
-	expected response format
-	--boundary-text-from-HTTP-headers-content-type
-	header-key1: header-value1
-	header-key2: header-value2
-
-	...json, text, blob, value, etc...
-	--boundary-text-from-HTTP-headers-content-type
-	... same format as previous chunk ...
-
-	--boundary-text-from-HTTP-headers-content-type--
-*/
-
-export async function processFormData(res) {
-	const decoder = new TextDecoder()
-	const data = {}
-	try {
-		const form = await res.formData()
-		// The key of each form entry is a string, and the value is either a string or a Blob.
-		// see https://developer.mozilla.org/en-US/docs/Web/API/FormData/entries
-		for (const [key, value] of form.entries()) {
-			if (value.type) {
-				// value is a Blob
-				data[key] = { headers: { 'content-type': value.type }, body: value }
-			} else {
-				// value is a string, assume to be application/x-jsonlines (one json encoded value per line)
-				// and convert into an array of json-decoded values
-				const body = !value ? [] : value.trim().split('\n').map(JSON.parse)
-				data[key] = { headers: { 'content-type': 'application/json' }, body }
-			}
-		}
-		return data
-	} catch (e) {
-		throw e
-	}
 }
 
 const defaultServerDataCache = {}

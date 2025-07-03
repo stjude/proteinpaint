@@ -53,6 +53,7 @@ export async function get$id(minTwCopy) {
 
 const encoder = new TextEncoder()
 
+// may replace with hash() helper from shared/utils
 export async function digestMessage(message) {
 	const msgUint8 = encoder.encode(message) // encode as (utf-8) Uint8Array
 	const hashBuffer = await crypto.subtle.digest('SHA-1', msgUint8) // hash the message
