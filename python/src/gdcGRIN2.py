@@ -204,15 +204,16 @@ def plot_grin2_manhattan(grin_results: dict,
         
         # If we have extremely high significance values, scale them down for better visualization
         if max_y > 40:
-            # Scale all y-values so the maximum becomes 36 (leaving 10% buffer room up to ~40)
-            scale_factor = 36 / max_y
+            # Scale all y-values so the maximum becomes ~38.83 (leaving 3% buffer room up to 40)
+            target_max = 40 / 1.03  # ~38.83
+            scale_factor = target_max / max_y
             plot_data['y'] = [y * scale_factor for y in plot_data['y']]
             scaled_max = max(plot_data['y'])
-            ax.set_ylim(0, scaled_max * 1.1)  # Add 10% buffer to scaled data
+            ax.set_ylim(0, scaled_max * 1.03)  # Add 3% buffer to scaled data
             y_axis_scaled = True
         else:
             # Normal case - just add some padding to the top
-            ax.set_ylim(0, max(max_y * 1.1, 5))
+            ax.set_ylim(0, max(max_y * 1.03, 5))
     else:
         # No data points to plot
         ax.set_ylim(0, 5)
@@ -293,7 +294,7 @@ def plot_grin2_manhattan(grin_results: dict,
         
         # Add scaling note to legend if y-axis was scaled
         if y_axis_scaled:
-            legend_labels.append("Y-axis scaled")
+            legend_labels.append("Y-axis capped at 40")
         
         # Create legend handles using scatter plot markers (no lines)
         legend_handles = []
