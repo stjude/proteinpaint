@@ -115,18 +115,24 @@ async function getSampleData(q, ds, onlyChildren = false) {
 		} else {
 			// common ds handling, one query per tw
 			if (!q.ds.mayGetGeneVariantData) throw 'not supported by dataset: geneVariant'
+			const promises = []
 			for (const tw of geneVariantTws) {
 				if (tw.term.gene && q.ds.cohort?.termdb?.getGeneAlias) {
 					byTermId[tw.$id] = q.ds.cohort?.termdb?.getGeneAlias(q, tw)
 				}
 
-				const data = await q.ds.mayGetGeneVariantData(tw, q)
+				promises.push(
+					(async () => {
+						const data = await q.ds.mayGetGeneVariantData(tw, q)
 
-				for (const [sampleId, value] of data.entries()) {
-					if (!(sampleId in samples)) samples[sampleId] = { sample: sampleId }
-					samples[sampleId][tw.$id] = value[tw.$id]
-				}
+						for (const [sampleId, value] of data.entries()) {
+							if (!(sampleId in samples)) samples[sampleId] = { sample: sampleId }
+							samples[sampleId][tw.$id] = value[tw.$id]
+						}
+					})()
+				)
 			}
+			await Promise.all(promises)
 		}
 	}
 
