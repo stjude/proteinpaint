@@ -1620,7 +1620,7 @@ dictionary term ids starting with "case." must be trimmed before using as /cases
 
 case_filter variable names can still be "cases.xx"
 */
-async function querySamplesTwlstNotForGeneexpclustering_noGenomicFilter(q, dictTwLst, ds) {
+export async function querySamplesTwlstNotForGeneexpclustering_noGenomicFilter(q, dictTwLst, ds) {
 	const fieldset = new Set()
 	const updatedTwLst = [] // copy of dictTwLst by trimming "case."
 	const termIdMap = new Map() // map of new term id lacking "case." to original term id

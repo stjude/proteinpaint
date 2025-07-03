@@ -2792,30 +2792,11 @@ async function mayAddDataAvailability(sample2mlst, dtKey, ds, origin, q) {
 	} else {
 		dts.push({ ..._dt })
 	}
+
+	// get the list of samples/cases that passed filter
+	const sampleFilter = await filterSamples4assayAvailability(q, ds)
+
 	for (const dt of dts) {
-		if (dt.get) {
-			// get() returns yesSamples and noSamples that passed filter0
-			const t = Date.now()
-			const result = await dt.get({ filter0: q.filter0, filter: q.filter })
-			mayLog(
-				ds.label,
-				'assayAvailability dt:',
-				dtKey,
-				'get() time:',
-				Date.now() - t,
-				'yes',
-				result.yesSamples.size,
-				'no',
-				result.noSamples.size
-			)
-			dt.yesSamples = result.yesSamples
-			dt.noSamples = result.noSamples
-		}
-
-		// get the list of samples/cases that passed filter for dt without get(). dt.get() will handle both filter and filter0
-		const sampleFilter =
-			!dt.get && q.filter && q.filter.lst.length ? new Set((await get_samples(q.filter, ds)).map(i => i.id)) : null
-
 		for (const sid of dt.yesSamples) {
 			// sample has been assayed
 			// if sample does not have annotated mutation for dt
@@ -2828,6 +2809,35 @@ async function mayAddDataAvailability(sample2mlst, dtKey, ds, origin, q) {
 			addDataAvailability(sid, sample2mlst, dtKey, 'Blank', dt.origin, sampleFilter)
 		}
 	}
+}
+
+async function filterSamples4assayAvailability(q, ds) {
+	if (ds.assayAvailability.set) {
+		/////////////////////////////
+		// quick dirty to detect this is gdc ds and use its method
+		if (q.filter0 || q.filter?.lst.length) {
+			/* only do this query when there is either filter0, or non-empty pp filter
+			gdc getter supports either filter or filter0 or both
+
+			TRICKY!! cannot use if(!q.filter){} to decide if no pp filter.
+			client passes blank pp filter with empty array of fitler.lst[]!
+			*/
+			const [byTermId, samples] = await gdc.querySamplesTwlstNotForGeneexpclustering_noGenomicFilter(
+				{ filterObj: q.filter, filter0: q.filter0 },
+				[],
+				ds
+			)
+			const sampleSet = new Set()
+			for (const s of samples) {
+				sampleSet.add(s.sample_id)
+			}
+			return sampleSet
+		}
+		// no filter. do not query and return null to use all samples
+		return null
+	}
+	// not gdc
+	return q.filter && q.filter.lst.length ? new Set((await get_samples(q.filter, ds)).map(i => i.id)) : null
 }
 
 function addDataAvailability(sid, sample2mlst, dtKey, mclass, origin, sampleFilter) {
@@ -3094,7 +3104,18 @@ function mayValidateViewModes(ds) {
 
 async function mayValidateAssayAvailability(ds) {
 	if (!ds.assayAvailability) return
-	// has this setting. cache sample list
+
+	// has this setting. at server launch it should query assay availability status for all samples and cache it
+
+	if (ds.assayAvailability.set) {
+		if (typeof ds.assayAvailability.set != 'function') throw 'ds.assayAvailability.set() is not function'
+		/* has optional setter. this is alterative to term-base definition
+		it will run as part of ds-specific async caching code
+		skip init and validation, with good faith they will be set properly
+		*/
+		return
+	}
+
 	if (ds.assayAvailability.byDt) {
 		for (const key in ds.assayAvailability.byDt) {
 			if (!dt2label[key]) throw 'unknown dt in assayAvailability.byDt: ' + key
@@ -3103,45 +3124,28 @@ async function mayValidateAssayAvailability(ds) {
 			if (dt.byOrigin) {
 				for (const oname in dt.byOrigin) {
 					const sub_dt = dt.byOrigin[oname]
-					if (sub_dt.get) {
-						if (typeof sub_dt.get != 'function') throw 'sub_dt.get specified but is not function'
-						// see comments below
-					} else {
-						if (!sub_dt.yes || !sub_dt.no || !sub_dt.term_id)
-							throw 'ds.assayAvailability.byDt.*.byOrigin requires {term_id, yes{}, no{}}'
-						await getAssayAvailablility(ds, sub_dt)
-						console.log(
-							ds.label + ': assayAvailability',
-							dt2label[key],
-							oname,
-							'yes',
-							sub_dt.yesSamples.size,
-							'no',
-							sub_dt.noSamples.size
-						)
-					}
-				}
-			} else {
-				// not by origin
-				if (dt.get) {
-					if (typeof dt.get != 'function') throw 'dt.get specified but is not function'
-					// using ds-supplied getter, no additional validation
-					// also no need to cache yes/no samples, they will be dynamically returned from getter
-				} else {
-					if (!dt.yes || !dt.no || !dt.term_id)
-						throw 'ds.assayAvailability.byDt requires {term_id, yes{}, no{}} or get()'
-					await getAssayAvailablility(ds, dt)
+					if (!sub_dt.yes || !sub_dt.no || !sub_dt.term_id)
+						throw 'ds.assayAvailability.byDt.*.byOrigin requires {term_id, yes{}, no{}}'
+					await getAssayAvailablility(ds, sub_dt)
 					console.log(
 						ds.label + ': assayAvailability',
 						dt2label[key],
+						oname,
 						'yes',
-						dt.yesSamples.size,
+						sub_dt.yesSamples.size,
 						'no',
-						dt.noSamples.size
+						sub_dt.noSamples.size
 					)
 				}
+			} else {
+				// not by origin
+				if (!dt.yes || !dt.no || !dt.term_id) throw 'ds.assayAvailability.byDt requires {term_id, yes{}, no{}} or get()'
+				await getAssayAvailablility(ds, dt)
+				console.log(ds.label + ': assayAvailability', dt2label[key], 'yes', dt.yesSamples.size, 'no', dt.noSamples.size)
 			}
 		}
+	} else {
+		throw 'unknown setting in ds.assayAvailability{}'
 	}
 }
 
