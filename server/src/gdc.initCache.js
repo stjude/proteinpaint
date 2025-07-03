@@ -227,6 +227,7 @@ async function cacheMappingOnNewRelease(ds, version) {
 
 		await getCasesWithGeneExpression(ds, ref)
 		await getAnalysisTsv2loom4scrna(ds, ref)
+		await setAssayAvailability(ds, ref)
 	} catch (e) {
 		if (mayCancelStalePendingCache(ds, ref)) return // avoid resetting ds.__* variables that may affect newer data version caching
 		if (isRecoverableError(e)) {
@@ -651,4 +652,77 @@ async function getAnalysisTsv2loom4scrna(ds, ref) {
 		if (!hdf5) throw 'aliquot has tsv but missing hdf5'
 		ref.scrnaAnalysis2hdf5.set(tsv, hdf5)
 	}
+}
+
+async function setAssayAvailability(ds, ref) {
+	if (mayCancelStalePendingCache(ds, ref)) return
+	const json = {
+		filters: {},
+		size: 100000, // TODO set limit or not?
+		fields: [
+			'case_id', // only need to report case uuid to match with mayGetGeneVariantData which also uses case uuid
+			'available_variation_data'
+		].join(',')
+	}
+
+	const { host, headers } = ds.getHostHeaders()
+
+	const t0 = Date.now()
+
+	const response = await fetch(joinUrl(host.rest, 'case_ssms'), {
+		method: 'POST',
+		headers,
+		body: JSON.stringify(json),
+		signal: undefined
+	})
+
+	if (!response.ok) throw 'Failed to fetch. Status: ' + response.status
+
+	const re = await response.json()
+
+	if (!Number.isInteger(re.data?.pagination?.total)) throw 're.data.pagination.total is not int'
+	if (!Array.isArray(re.data?.hits)) throw 're.data.hits[] not array'
+
+	const ssmYes = new Set(),
+		ssmNo = new Set(),
+		cnvYes = new Set(),
+		cnvNo = new Set()
+
+	for (const h of re.data.hits) {
+		const caseid = h.case_id
+		if (!caseid) throw 'h.case_id missing'
+		if (!Array.isArray(h.available_variation_data)) throw 'h.available_variation_data[] not array'
+		if (h.available_variation_data.includes('ssm')) {
+			ssmYes.add(caseid)
+		} else {
+			ssmNo.add(caseid)
+		}
+		if (h.available_variation_data.includes('cnv')) {
+			cnvYes.add(caseid)
+		} else {
+			cnvNo.add(caseid)
+		}
+	}
+
+	ds.assayAvailability = {
+		byDt: {
+			1: { yesSamples: ssmYes, noSamples: ssmNo },
+			4: { yesSamples: cnvYes, noSamples: cnvNo }
+		}
+	}
+	console.log(
+		'GDC case_ssms:',
+		Date.now() - t0,
+		'ms,',
+		re.data.pagination.total,
+		'total records,',
+		ssmYes.size,
+		'ssmYes,',
+		ssmNo.size,
+		'ssmNo,',
+		cnvYes.size,
+		'cnvYes,',
+		cnvNo.size,
+		'cnvNo'
+	)
 }
