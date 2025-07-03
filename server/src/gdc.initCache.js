@@ -705,6 +705,7 @@ async function setAssayAvailability(ds, ref) {
 	}
 
 	ds.assayAvailability = {
+		useFilter0: true,
 		byDt: {
 			1: { yesSamples: ssmYes, noSamples: ssmNo },
 			4: { yesSamples: cnvYes, noSamples: cnvNo }
