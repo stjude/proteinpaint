@@ -1,2 +1,1 @@
-Features:
-- GDC-GRIN2: Removed plot filter on insignificant points
+
