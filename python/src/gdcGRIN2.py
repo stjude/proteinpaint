@@ -115,7 +115,6 @@ def plot_grin2_manhattan(grin_results: dict,
         
     Notes:
         - Genes with q-values ≤ 0 or missing values are excluded from plotting
-        - Only points with -log₁₀(q-value) ≥ 0.1 are plotted (q-value ≤ ~0.79)
         - Multiple mutation types at the same gene are offset horizontally for visibility
         - Significance threshold lines help interpret results:
             * Light gray dashed lines at q = 0.05, 0.01, 0.001 thresholds
@@ -185,10 +184,6 @@ def plot_grin2_manhattan(grin_results: dict,
             # Convert q-value to -log10(q-value)
             q_value = gene_row[q_col]
             neg_log10_q = -np.log10(q_value)
-            
-            # Skip if not significant enough to plot
-            if neg_log10_q < 0.1:
-                continue
             
             # Add slight horizontal offset for multiple mutation types at same gene
             offset_factor = {'gain': -0.3, 'loss': 0, 'mutation': 0.3}
