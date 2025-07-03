@@ -227,7 +227,7 @@ async function cacheMappingOnNewRelease(ds, version) {
 
 		await getCasesWithGeneExpression(ds, ref)
 		await getAnalysisTsv2loom4scrna(ds, ref)
-		await setAssayAvailability(ds, ref)
+		await setAssayAvailability(ds, ref, totalCases)
 	} catch (e) {
 		if (mayCancelStalePendingCache(ds, ref)) return // avoid resetting ds.__* variables that may affect newer data version caching
 		if (isRecoverableError(e)) {
@@ -654,11 +654,11 @@ async function getAnalysisTsv2loom4scrna(ds, ref) {
 	}
 }
 
-async function setAssayAvailability(ds, ref) {
+async function setAssayAvailability(ds, ref, size) {
 	if (mayCancelStalePendingCache(ds, ref)) return
 	const json = {
 		filters: {},
-		size: 100000, // TODO set limit or not?
+		size, // must set to all cases since otherwise, GDC API will auto-paginate to a much smaller batch response size
 		fields: [
 			'case_id', // only need to report case uuid to match with mayGetGeneVariantData which also uses case uuid
 			'available_variation_data'
@@ -669,17 +669,14 @@ async function setAssayAvailability(ds, ref) {
 
 	const t0 = Date.now()
 
-	const response = await fetch(joinUrl(host.rest, 'case_ssms'), {
+	const response = await cachedFetch(joinUrl(host.rest, 'case_ssms'), {
 		method: 'POST',
 		headers,
 		body: JSON.stringify(json),
 		signal: undefined
 	})
 
-	if (!response.ok) throw 'Failed to fetch. Status: ' + response.status
-
-	const re = await response.json()
-
+	const re = response.body
 	if (!Number.isInteger(re.data?.pagination?.total)) throw 're.data.pagination.total is not int'
 	if (!Array.isArray(re.data?.hits)) throw 're.data.hits[] not array'
 
