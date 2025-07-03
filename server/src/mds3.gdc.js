@@ -1722,7 +1722,7 @@ async function querySamplesTwlstForGeneexpclustering(q, twLst, ds) {
 	// NOTE: not using ky, until the issue with undici intermittent timeout/socket hangup is
 	// fully resolved, and which hapens only for long-running requests where possibly
 	// garbage collection is not being performed on http socket resources
-	const re = await memFetch(joinUrl(host.rest, 'cases'), {
+	const re = await fetch(joinUrl(host.rest, 'cases'), {
 		method: 'POST',
 		timeout: false,
 		headers,

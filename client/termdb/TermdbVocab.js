@@ -836,8 +836,8 @@ export class TermdbVocab extends Vocab {
 					.map(tw => (tw.term.chr ? `${tw.term.chr}:${tw.term.start}-${tw.term.stop}` : tw.term.name))
 					.sort() // sort the gene names by the default alphanumeric order to improve cache reuse even when terms are resorted
 		const allTerms2update = opts.terms.slice() // make copy of array as it will be truncated to empty. do not modify original
-		const maxNumTerms = opts.terms.length // revert back to 1 to revert to previous behavior
-
+		// TODO: do not hardcode, detect from termdbConfig, if this approach is preferred
+		const maxNumTerms = this.vocab.dslabel === 'GDC' ? opts.terms.length : 1 // revert back to 1 to revert to previous behavior
 		let numResponses = 0
 		if (opts.loadingDiv) opts.loadingDiv.html('Updating data ...')
 

@@ -11,7 +11,6 @@ const maxNumOfServerDataKeys = 1000
 	See the usage note for getDataName() to avoid non-unique request/response. 
 */
 export async function memFetch(url, init, opts = {}) {
-	console.log(12, url)
 	const dataName = await getDataName(url, init)
 	const dataCache = opts.serverData || defaultDataCache
 
@@ -19,7 +18,7 @@ export async function memFetch(url, init, opts = {}) {
 	if (dataCache[dataName]) {
 		result = dataCache[dataName]
 	}
-	if (!result || typeof result != 'object') {
+	if (!result || (typeof result != 'object' && !(result instanceof Promise))) {
 		delete dataCache[dataName]
 		result = undefined
 	}
@@ -27,8 +26,8 @@ export async function memFetch(url, init, opts = {}) {
 	if (!result) {
 		// to-do: support opt.freeze to enforce Object.freeze(data.json())
 		try {
-			dataCache[dataName] = await fetch(url, init).then(async r => {
-				console.log(29, '----  fetch.then() in memFetch  ----', url)
+			// do not await so that this same promise may be reused by all subsequent requests with the same dataName
+			dataCache[dataName] = fetch(url, init).then(async r => {
 				if (!r.ok) throw 'memFetch error ' + r.status
 				dataCache[dataName] = await r.json()
 				return dataCache[dataName]
