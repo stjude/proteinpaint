@@ -100,6 +100,7 @@ struct FilteredMafDetails {
     excluded_by_consequence_type: usize,
     total_processed: usize,
     total_included: usize,
+    skipped_chromosomes: HashMap<String, usize>,
 }
 
 // struct for CNV filter details
@@ -113,6 +114,7 @@ struct FilteredCnvDetails {
     excluded_by_segment_length: usize,
     total_processed: usize,
     total_included: usize,
+    skipped_chromosomes: HashMap<String, usize>,
 }
 
 // struct for per-case filter details
@@ -138,7 +140,6 @@ struct FinalSummary {
     included_cnv_records: usize,
     filtered_records_by_case: HashMap<String, FilteredCaseDetails>,
     hyper_mutator_records: HashMap<String, Vec<String>>,
-    skipped_chromosomes: HashMap<String, usize>,
 }
 
 // Define the top-level input structure
@@ -180,7 +181,6 @@ async fn parse_content(
     included_maf_records: &AtomicUsize,
     included_cnv_records: &AtomicUsize,
     hyper_mutator_records: &Arc<Mutex<HashMap<String, Vec<String>>>>,
-    skipped_chromosomes: &Arc<Mutex<HashMap<String, usize>>>,
 ) -> Result<Vec<Vec<String>>, (String, String, String)> {
     let config = match data_type {
         "cnv" => DataTypeConfig {
@@ -227,9 +227,6 @@ async fn parse_content(
     let mut parsed_data = Vec::new();
     let mut columns_indices: Vec<usize> = Vec::new();
     let mut variant_classification_index: Option<usize> = None;
-    //let mut header_mk: &str = "";
-    //let mut columns = Vec::new();
-
     let mut header: Vec<String> = Vec::new();
 
     for line in lines {
@@ -251,28 +248,49 @@ async fn parse_content(
             continue;
         };
 
-        let row = process_row(
-            line,
-            case_id,
-            data_type,
-            &header,
-            &columns_indices,
-            variant_classification_index,
-            consequences,
-            min_total_depth,
-            min_alt_allele_count,
-            gain_threshold,
-            loss_threshold,
-            seg_length,
-            chromosomes,
-            filtered_records,
-            filtered_maf_records,
-            filtered_cnv_records,
-            included_maf_records,
-            included_cnv_records,
-            skipped_chromosomes,
-        )
-        .await?;
+        let row = match data_type {
+            "maf" => {
+                process_mafline(
+                    line,
+                    case_id,
+                    data_type,
+                    &columns_indices,
+                    variant_classification_index,
+                    consequences,
+                    min_total_depth,
+                    min_alt_allele_count,
+                    chromosomes,
+                    filtered_records,
+                    filtered_maf_records,
+                    included_maf_records,
+                )
+                .await
+            }
+            "cnv" => {
+                process_cnvline(
+                    line,
+                    case_id,
+                    data_type,
+                    &header,
+                    &columns_indices,
+                    gain_threshold,
+                    loss_threshold,
+                    seg_length,
+                    chromosomes,
+                    filtered_records,
+                    filtered_cnv_records,
+                    included_cnv_records,
+                )
+                .await
+            }
+            _ => {
+                return Err((
+                    case_id.to_string(),
+                    data_type.to_string(),
+                    "Invalid data type".to_string(),
+                ));
+            }
+        }?;
 
         if let Some(out_lst) = row {
             parsed_data.push(out_lst);
@@ -326,27 +344,20 @@ fn setup_columns(
     Ok(())
 }
 
-// Process a single row of data
-async fn process_row(
+// Process a single row of MAF file
+async fn process_mafline(
     line: &str,
     case_id: &str,
     data_type: &str,
-    header: &[String],
     columns_indices: &[usize],
     variant_classification_index: Option<usize>,
     consequences: &Option<Vec<String>>,
     min_total_depth: i32,
     min_alt_allele_count: i32,
-    gain_threshold: f32,
-    loss_threshold: f32,
-    seg_length: i32,
     chromosomes: &HashSet<String>,
     filtered_records: &Arc<Mutex<HashMap<String, FilteredCaseDetails>>>,
     filtered_maf_records: &AtomicUsize,
-    filtered_cnv_records: &AtomicUsize,
     included_maf_records: &AtomicUsize,
-    included_cnv_records: &AtomicUsize,
-    skipped_chromosomes: &Arc<Mutex<HashMap<String, usize>>>,
 ) -> Result<Option<Vec<String>>, (String, String, String)> {
     let cont_lst: Vec<String> = line.split("\t").map(|s| s.to_string()).collect();
     let mut out_lst = vec![case_id.to_string()];
@@ -359,51 +370,38 @@ async fn process_row(
             maf: FilteredMafDetails::default(),
             cnv: FilteredCnvDetails::default(),
         });
-
     let case_details = filtered_map.get_mut(case_id).unwrap();
 
     // Track total processed records
-    if data_type == "maf" {
-        case_details.maf.total_processed += 1;
-    } else if data_type == "cnv" {
-        case_details.cnv.total_processed += 1;
-    }
+    case_details.maf.total_processed += 1;
 
     // Handle consequence filtering and counting for MAF files
-    if data_type == "maf" {
-        if let Some(var_class_idx) = variant_classification_index {
-            if var_class_idx < cont_lst.len() {
-                let variant_classification = &cont_lst[var_class_idx];
-                if let Some(consequence_filter) = consequences {
-                    if !consequence_filter.is_empty() {
-                        if consequence_filter.contains(variant_classification) {
-                            // Matched consequence
-                            *case_details
-                                .maf
-                                .matched_consequences
-                                .entry(variant_classification.to_string())
-                                .or_insert(0) += 1;
-                        } else {
-                            // Unmatched consequence
-                            *case_details
-                                .maf
-                                .rejected_consequences
-                                .entry(variant_classification.to_string())
-                                .or_insert(0) += 1;
-                            case_details.maf.excluded_by_consequence_type += 1;
-                            filtered_maf_records.fetch_add(1, Ordering::Relaxed);
-                            return Ok(None);
-                        }
-                    } else {
-                        // Empty filter, count as matched
+
+    if let Some(var_class_idx) = variant_classification_index {
+        if var_class_idx < cont_lst.len() {
+            let variant_classification = &cont_lst[var_class_idx];
+            if let Some(consequence_filter) = consequences {
+                if !consequence_filter.is_empty() {
+                    if consequence_filter.contains(variant_classification) {
+                        // Matched consequence
                         *case_details
                             .maf
                             .matched_consequences
                             .entry(variant_classification.to_string())
                             .or_insert(0) += 1;
+                    } else {
+                        // Unmatched consequence
+                        *case_details
+                            .maf
+                            .rejected_consequences
+                            .entry(variant_classification.to_string())
+                            .or_insert(0) += 1;
+                        case_details.maf.excluded_by_consequence_type += 1;
+                        filtered_maf_records.fetch_add(1, Ordering::Relaxed);
+                        return Ok(None);
                     }
                 } else {
-                    // No filter, count as matched
+                    // Empty filter, count as matched
                     *case_details
                         .maf
                         .matched_consequences
@@ -411,32 +409,142 @@ async fn process_row(
                         .or_insert(0) += 1;
                 }
             } else {
-                case_details.maf.invalid_rows += 1;
-                filtered_maf_records.fetch_add(1, Ordering::Relaxed);
-                return Ok(None);
+                // No filter, count as matched
+                *case_details
+                    .maf
+                    .matched_consequences
+                    .entry(variant_classification.to_string())
+                    .or_insert(0) += 1;
             }
         } else {
             case_details.maf.invalid_rows += 1;
             filtered_maf_records.fetch_add(1, Ordering::Relaxed);
             return Ok(None);
         }
+    } else {
+        case_details.maf.invalid_rows += 1;
+        filtered_maf_records.fetch_add(1, Ordering::Relaxed);
+        return Ok(None);
     }
 
     // Extract relevant columns
     for &x in columns_indices {
         if x >= cont_lst.len() {
-            if data_type == "maf" {
-                case_details.maf.invalid_rows += 1;
-                filtered_maf_records.fetch_add(1, Ordering::Relaxed);
-            } else if data_type == "cnv" {
-                case_details.cnv.invalid_rows += 1;
-                filtered_cnv_records.fetch_add(1, Ordering::Relaxed);
-            }
+            case_details.maf.invalid_rows += 1;
+            filtered_maf_records.fetch_add(1, Ordering::Relaxed);
             return Ok(None); // Invalid row
         }
+        let element = cont_lst[x].to_string();
+        out_lst.push(element);
+    }
 
+    // Additional MAF-specific processing
+    if out_lst.len() < 6 {
+        case_details.maf.invalid_rows += 1;
+        filtered_maf_records.fetch_add(1, Ordering::Relaxed);
+        return Ok(None); // Not enough columns
+    }
+
+    let alle_depth = out_lst[4].parse::<i32>().map_err(|_| {
+        case_details.maf.invalid_rows += 1;
+        filtered_maf_records.fetch_add(1, Ordering::Relaxed);
+        (
+            case_id.to_string(),
+            data_type.to_string(),
+            "Failed to convert t_depth to integer.".to_string(),
+        )
+    })?;
+
+    let alt_count = out_lst[5].parse::<i32>().map_err(|_| {
+        case_details.maf.invalid_rows += 1;
+        filtered_maf_records.fetch_add(1, Ordering::Relaxed);
+        (
+            case_id.to_string(),
+            data_type.to_string(),
+            "Failed to convert t_alt_count to integer.".to_string(),
+        )
+    })?;
+
+    if alle_depth < min_total_depth {
+        case_details.maf.t_depth += 1;
+        case_details.maf.excluded_by_min_depth += 1;
+        filtered_maf_records.fetch_add(1, Ordering::Relaxed);
+        return Ok(None);
+    }
+    if alt_count < min_alt_allele_count {
+        case_details.maf.t_alt_count += 1;
+        case_details.maf.excluded_by_min_alt_count += 1;
+        filtered_maf_records.fetch_add(1, Ordering::Relaxed);
+        return Ok(None);
+    }
+
+    // Keep case_id, chr, start, end, and add "mutation"
+    out_lst = out_lst[0..4].to_vec();
+    out_lst.push("mutation".to_string());
+
+    // adding 'chr' to chromosome if it is not start with 'chr'
+    if !out_lst[1].starts_with("chr") {
+        out_lst[1] = format!("chr{}", out_lst[1]);
+    }
+
+    // Chromosome filtering
+    if !chromosomes.is_empty() && !chromosomes.contains(&out_lst[1]) {
+        *case_details
+            .maf
+            .skipped_chromosomes
+            .entry(out_lst[1].clone())
+            .or_insert(0) += 1;
+        filtered_maf_records.fetch_add(1, Ordering::Relaxed);
+        return Ok(None);
+    }
+
+    // Update counters for included MAF records
+    case_details.maf.total_included += 1;
+    included_maf_records.fetch_add(1, Ordering::Relaxed);
+
+    Ok(Some(out_lst))
+}
+
+// Process a single row of CNV file
+async fn process_cnvline(
+    line: &str,
+    case_id: &str,
+    data_type: &str,
+    header: &[String],
+    columns_indices: &[usize],
+    gain_threshold: f32,
+    loss_threshold: f32,
+    seg_length: i32,
+    chromosomes: &HashSet<String>,
+    filtered_records: &Arc<Mutex<HashMap<String, FilteredCaseDetails>>>,
+    filtered_cnv_records: &AtomicUsize,
+    included_cnv_records: &AtomicUsize,
+) -> Result<Option<Vec<String>>, (String, String, String)> {
+    let cont_lst: Vec<String> = line.split("\t").map(|s| s.to_string()).collect();
+    let mut out_lst = vec![case_id.to_string()];
+
+    // Initialize or update case details
+    let mut filtered_map = filtered_records.lock().await;
+    filtered_map
+        .entry(case_id.to_string())
+        .or_insert_with(|| FilteredCaseDetails {
+            maf: FilteredMafDetails::default(),
+            cnv: FilteredCnvDetails::default(),
+        });
+    let case_details = filtered_map.get_mut(case_id).unwrap();
+
+    // Track total processed records
+    case_details.cnv.total_processed += 1;
+
+    // Extract relevant columns
+    for &x in columns_indices {
+        if x >= cont_lst.len() {
+            case_details.cnv.invalid_rows += 1;
+            filtered_cnv_records.fetch_add(1, Ordering::Relaxed);
+            return Ok(None); // Invalid row
+        }
         let mut element = cont_lst[x].to_string();
-        if data_type == "cnv" && header[x] == "Segment_Mean" {
+        if header[x] == "Segment_Mean" {
             element = process_segment_mean(&element, case_id, data_type, gain_threshold, loss_threshold)?;
             if element.is_empty() {
                 case_details.cnv.segment_mean += 1;
@@ -456,107 +564,54 @@ async fn process_row(
         out_lst.push(element);
     }
 
-    // Additional MAF-specific processing
-    if data_type == "maf" {
-        if out_lst.len() < 6 {
-            case_details.maf.invalid_rows += 1;
-            filtered_maf_records.fetch_add(1, Ordering::Relaxed);
-            return Ok(None); // Not enough columns
-        }
-
-        let alle_depth = out_lst[4].parse::<i32>().map_err(|_| {
-            case_details.maf.invalid_rows += 1;
-            filtered_maf_records.fetch_add(1, Ordering::Relaxed);
-            (
-                case_id.to_string(),
-                data_type.to_string(),
-                "Failed to convert t_depth to integer.".to_string(),
-            )
-        })?;
-
-        let alt_count = out_lst[5].parse::<i32>().map_err(|_| {
-            case_details.maf.invalid_rows += 1;
-            filtered_maf_records.fetch_add(1, Ordering::Relaxed);
-            (
-                case_id.to_string(),
-                data_type.to_string(),
-                "Failed to convert t_alt_count to integer.".to_string(),
-            )
-        })?;
-
-        if alle_depth < min_total_depth {
-            case_details.maf.t_depth += 1;
-            case_details.maf.excluded_by_min_depth += 1;
-            filtered_maf_records.fetch_add(1, Ordering::Relaxed);
-            return Ok(None);
-        }
-        if alt_count < min_alt_allele_count {
-            case_details.maf.t_alt_count += 1;
-            case_details.maf.excluded_by_min_alt_count += 1;
-            filtered_maf_records.fetch_add(1, Ordering::Relaxed);
-            return Ok(None);
-        }
-
-        // Keep case_id, chr, start, end, and add "mutation"
-        out_lst = out_lst[0..4].to_vec();
-        out_lst.push("mutation".to_string());
-    }
-
     // filter cnvs based on segment length. Default: 0 (no filtering)
-    if data_type == "cnv" {
-        // calculate segment length (End_Position - Start_Position)
-        let end_position = out_lst[3].parse::<i32>().map_err(|_| {
-            case_details.cnv.invalid_rows += 1;
-            filtered_cnv_records.fetch_add(1, Ordering::Relaxed);
-            (
-                case_id.to_string(),
-                data_type.to_string(),
-                "Failed to convert End Position of cnv to integer.".to_string(),
-            )
-        })?;
+    // calculate segment length (End_Position - Start_Position)
+    let end_position = out_lst[3].parse::<i32>().map_err(|_| {
+        case_details.cnv.invalid_rows += 1;
+        filtered_cnv_records.fetch_add(1, Ordering::Relaxed);
+        (
+            case_id.to_string(),
+            data_type.to_string(),
+            "Failed to convert End Position of cnv to integer.".to_string(),
+        )
+    })?;
 
-        let start_position = out_lst[2].parse::<i32>().map_err(|_| {
-            case_details.cnv.invalid_rows += 1;
-            filtered_cnv_records.fetch_add(1, Ordering::Relaxed);
-            (
-                case_id.to_string(),
-                data_type.to_string(),
-                "Failed to convert Start Position of cnv to integer.".to_string(),
-            )
-        })?;
-        let cnv_length = end_position - start_position;
-        if seg_length > 0 && cnv_length > seg_length {
-            case_details.cnv.seg_length += 1;
-            case_details.cnv.excluded_by_segment_length += 1;
-            filtered_cnv_records.fetch_add(1, Ordering::Relaxed);
-            return Ok(None);
-        }
+    let start_position = out_lst[2].parse::<i32>().map_err(|_| {
+        case_details.cnv.invalid_rows += 1;
+        filtered_cnv_records.fetch_add(1, Ordering::Relaxed);
+        (
+            case_id.to_string(),
+            data_type.to_string(),
+            "Failed to convert Start Position of cnv to integer.".to_string(),
+        )
+    })?;
+    let cnv_length = end_position - start_position;
+    if seg_length > 0 && cnv_length > seg_length {
+        case_details.cnv.seg_length += 1;
+        case_details.cnv.excluded_by_segment_length += 1;
+        filtered_cnv_records.fetch_add(1, Ordering::Relaxed);
+        return Ok(None);
     }
 
+    // adding 'chr' to chromosome if it is not start with 'chr'
     if !out_lst[1].starts_with("chr") {
         out_lst[1] = format!("chr{}", out_lst[1]);
     }
 
     // Chromosome filtering
     if !chromosomes.is_empty() && !chromosomes.contains(&out_lst[1]) {
-        let mut skipped = skipped_chromosomes.lock().await;
-        *skipped.entry(out_lst[1].clone()).or_insert(0) += 1;
-        if data_type == "maf" {
-            filtered_maf_records.fetch_add(1, Ordering::Relaxed);
-        } else if data_type == "cnv" {
-            filtered_cnv_records.fetch_add(1, Ordering::Relaxed);
-        }
+        *case_details
+            .cnv
+            .skipped_chromosomes
+            .entry(out_lst[1].clone())
+            .or_insert(0) += 1;
+        filtered_cnv_records.fetch_add(1, Ordering::Relaxed);
         return Ok(None);
     }
 
     // Update counters for included MAF records
-    if data_type == "maf" {
-        case_details.maf.total_included += 1;
-        included_maf_records.fetch_add(1, Ordering::Relaxed);
-    } else if data_type == "cnv" {
-        case_details.cnv.total_included += 1;
-        included_cnv_records.fetch_add(1, Ordering::Relaxed);
-    }
+    case_details.cnv.total_included += 1;
+    included_cnv_records.fetch_add(1, Ordering::Relaxed);
 
     Ok(Some(out_lst))
 }
@@ -730,7 +785,6 @@ async fn download_data_streaming(
     let hyper_mutator_records = Arc::new(Mutex::new(HashMap::<String, Vec<String>>::new()));
     let included_maf_records = Arc::new(AtomicUsize::new(0));
     let included_cnv_records = Arc::new(AtomicUsize::new(0));
-    let skipped_chromosomes = Arc::new(Mutex::new(HashMap::<String, usize>::new()));
 
     // Only collect errors (successful data is output immediately)
     let errors = Arc::new(Mutex::new(Vec::<ErrorEntry>::new()));
@@ -753,7 +807,6 @@ async fn download_data_streaming(
             let included_maf_records = Arc::clone(&included_maf_records);
             let included_cnv_records = Arc::clone(&included_cnv_records);
             let hyper_mutator_records = Arc::clone(&hyper_mutator_records);
-            let skipped_chromosomes = Arc::clone(&skipped_chromosomes);
             let errors = Arc::clone(&errors);
 
             async move {
@@ -779,7 +832,6 @@ async fn download_data_streaming(
                             &included_maf_records,
                             &included_cnv_records,
                             &hyper_mutator_records,
-                            &skipped_chromosomes,
                         )
                         .await
                         {
@@ -864,7 +916,6 @@ async fn download_data_streaming(
         included_maf_records: included_maf_count,
         included_cnv_records: included_cnv_count,
         hyper_mutator_records: hyper_mutator_records.lock().await.clone(),
-        skipped_chromosomes: skipped_chromosomes.lock().await.clone(),
     };
 
     // Output final summary - Node.js will know processing is complete when it sees this
