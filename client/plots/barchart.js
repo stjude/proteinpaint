@@ -66,7 +66,6 @@ export class Barchart {
 		)
 		this.controls = {}
 		this.term2toColor = {}
-		await this.setControls(this.getState(appState))
 
 		if (this.opts.bar_click_override) {
 			// will use this as callback to bar click
@@ -77,7 +76,9 @@ export class Barchart {
 		}
 	}
 
-	async setControls(state) {
+	async setControls() {
+		const state = this.state
+		this.dom.controls.selectAll('*').remove()
 		if (this.opts.controls) {
 			this.opts.controls.on('downloadClick.barchart', this.download)
 		} else {
@@ -204,6 +205,7 @@ export class Barchart {
 					boxLabel: 'Yes',
 					getDisplayStyle: plot => (plot.term2 ? 'none' : 'table-row')
 				},
+
 				{
 					label: 'Deduplicate',
 					title: 'Use separate bars samples that has multiple values or belong to multiple groups',
@@ -223,7 +225,14 @@ export class Barchart {
 					//getDisplayStyle: plot => (plot.settings.barchart.colorBars || plot.term2 ? 'none' : 'table-row')
 				}
 			]
-
+			if (state.config.term2)
+				inputs.push({
+					label: 'Show stats table',
+					type: 'checkbox',
+					chartType: 'barchart',
+					settingsKey: 'showStatsTable',
+					boxLabel: 'Yes'
+				})
 			const multipleTestingCorrection = this.app.getState().termdbConfig.multipleTestingCorrection
 			if (multipleTestingCorrection) {
 				// a checkbox to allow users to show or hide asterisks on bars
@@ -306,6 +315,7 @@ export class Barchart {
 				)
 
 			this.toggleLoadingDiv()
+			await this.setControls()
 
 			const reqOpts = this.getDataRequestOpts()
 			await this.getDescrStats()
@@ -892,8 +902,7 @@ function setRenderers(self) {
 		)
 
 		div.select('.pp-sbar-div-chartLengends').selectAll('*').remove()
-
-		if (self.chartsData.tests && self.chartsData.tests[chart.chartId]) {
+		if (self.chartsData.tests && self.chartsData.tests[chart.chartId] && self.config.settings.barchart.showStatsTable) {
 			//chart has pvalues
 			generatePvalueTable(chart, div)
 		}
@@ -926,7 +935,7 @@ function setRenderers(self) {
 			.style('margin', '10px 10px 10px 30px')
 			.style('display', 'none')
 
-		if (self.chartsData.tests && self.chartsData.tests[chart.chartId]) {
+		if (self.chartsData.tests && self.chartsData.tests[chart.chartId] && self.config.settings.barchart.showStatsTable) {
 			//chart has pvalues
 			generatePvalueTable(chart, div)
 		}
@@ -942,7 +951,6 @@ function setRenderers(self) {
 			.style('vertical-align', 'top')
 			.style('text-align', 'center')
 			.append('div')
-
 		// sort term1 categories based on self.chartsData.refs.cols
 		// const cols = self.settings.dedup ?  self.chartsData.refs.cols
 		self.chartsData.tests[chart.chartId].sort(function (a, b) {
@@ -1192,7 +1200,8 @@ export function getDefaultBarSettings(app) {
 		multiTestingCorr: app?.getState()?.termdbConfig?.multipleTestingCorrection?.applyByDefault ? true : false,
 		defaultColor: plotColor,
 		colorBars: false,
-		dedup: false
+		dedup: false,
+		showStatsTable: true
 	}
 }
 
