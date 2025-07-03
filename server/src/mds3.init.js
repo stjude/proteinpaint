@@ -2895,7 +2895,7 @@ export function filterByItem(filter, mlst) {
 	const mlst_tested = mlst.filter(m => {
 		if (tvs.term.dt != m.dt) return false
 		if (tvs.term.origin && tvs.term.origin != m.origin) return false
-		if (m.class == mclass['Blank'].key) return false
+		if (m.class == mclass['Blank'].key && !tvs.includeNotTested) return false
 		return true
 	})
 	let pass, tested

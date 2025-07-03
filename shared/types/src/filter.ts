@@ -55,6 +55,8 @@ export type ConditionTvs = BaseTvs & {
 type GeneVariantTvs = BaseTvs & {
 	term: DtTerm
 	values: { key: string; label: string; value: string }[]
+	/** boolean for including not tested classes (excluded by default) */
+	includeNotTested?: boolean
 }
 
 /*** types supporting Filter type ***/
