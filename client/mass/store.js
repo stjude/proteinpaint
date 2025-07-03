@@ -358,7 +358,8 @@ TdbStore.prototype.actions = {
 		if (i !== -1) {
 			this.state.plots.splice(i, 1)
 			// action.parentId may be used in reactsTo() code
-			if (!action.parentId && this.state.plots[i]?.parentId) action.parentId = plot.parentId
+			const plot = this.state.plots[i]
+			if (!action.parentId && plot?.parentId) action.parentId = plot.parentId
 		}
 	},
 
