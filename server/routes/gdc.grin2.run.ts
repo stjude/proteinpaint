@@ -19,7 +19,7 @@ import { mayLog } from '#src/helpers.ts'
  *    - Each line is a JSON object with either 'data' or 'summary' type
  *    - 'data' lines contain mutation data for each case, 'summary' contains overall statistics
  *    - Rust handles file downloads and retries, returning successful data and errors
- *    - Rust outputs a summary with total files, successful files, and failed files
+ *    - Rust outputs a summary with total files, successful files, failed files, and statistics on filtered records by case
  * 3. Pass Rust mutation output to python for plot generation while we send the file summary to the analysis summary div
  * 4. Return generated PNG as base64 string, the top gene table as JSON, and the Rust summary stats
  */
@@ -88,7 +88,7 @@ async function runGrin2(genomes: any, req: any, res: any) {
 		pyInput.chromosomelist[c] = g.majorchr[c]
 	}
 
-	console.log('[GRIN2] Running GRIN2 with input:', JSON.stringify(rustInput, null, 2))
+	// mayLog('[GRIN2] Running GRIN2 with input:', JSON.stringify(rustInput, null, 2))
 
 	// Step 1: Call Rust to process the MAF files and get JSON data (now with streaming)
 
