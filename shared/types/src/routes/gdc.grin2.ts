@@ -143,9 +143,41 @@ export type RustSummary = {
 	filtered_cnv_records: number
 	included_maf_records: number
 	included_cnv_records: number
-	filtered_records_by_case: Record<string, string[]>
+
+	/** The complex nested structure of the per case object
+	 *  Records filtered by case, with MAF and CNV statistics
+	 */
+	filtered_records_by_case: Record<
+		string,
+		{
+			maf: {
+				matched_consequences: Record<string, any>
+				rejected_consequences: Record<string, any>
+				t_alt_count: number
+				t_depth: number
+				invalid_rows: number
+				excluded_by_min_depth: number
+				excluded_by_min_alt_count: number
+				excluded_by_consequence_type: number
+				total_processed: number
+				total_included: number
+				skipped_chromosomes: Record<string, number>
+			}
+			cnv: {
+				segment_mean: number
+				seg_length: number
+				invalid_rows: number
+				excluded_by_loss_threshold: number
+				excluded_by_gain_threshold: number
+				excluded_by_segment_length: number
+				total_processed: number
+				total_included: number
+				skipped_chromosomes: Record<string, number>
+			}
+		}
+	>
+
 	hyper_mutator_records: Record<string, string[]>
-	skippedChromosomes: Record<string, number>
 }
 
 /** Structured output from Rust GRIN2 processing */

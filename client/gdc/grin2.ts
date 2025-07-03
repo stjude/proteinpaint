@@ -24,6 +24,8 @@ import { mclass, dtsnvindel, class2SOterm, bplen } from '@sjcrh/proteinpaint-sha
 interface TableRowItem {
 	html?: string
 	value?: any
+	rawData?: any
+	dataType?: string
 }
 
 // Default MAF classes for mutation types
@@ -67,43 +69,6 @@ function transformRows(rows, columns) {
 	})
 }
 
-function parseSkippedChromosomesData(skippedChromosomes: Record<string, number>): { columns: any[]; rows: any[][] } {
-	const columns = [
-		{ label: 'Chromosome', sortable: true },
-		{ label: 'Count', sortable: true }
-	]
-
-	const rows: TableRowItem[][] = []
-
-	// Sort chromosomes in a logical order (chr1, chr2, ..., chr22, chrX, chrY, chrM)
-	const sortedEntries = Object.entries(skippedChromosomes).sort(([a], [b]) => {
-		// Extract number or special case for sorting
-		const getChromOrder = (chr: string) => {
-			if (chr === 'chrM') return 1000 // Put chrM at the end
-			if (chr === 'chrY') return 999 // Put chrY second to last
-			if (chr === 'chrX') return 998 // Put chrX third to last
-
-			const num = parseInt(chr.replace('chr', ''))
-			return isNaN(num) ? 500 : num // Numeric chromosomes in order, others in middle
-		}
-
-		return getChromOrder(a) - getChromOrder(b)
-	})
-
-	sortedEntries.forEach(([chromosome, count]: [string, number]) => {
-		const row: TableRowItem[] = []
-
-		// Chromosome name
-		row.push({ value: chromosome })
-		// Count of skipped records
-		row.push({ value: count })
-
-		rows.push(row)
-	})
-
-	return { columns, rows }
-}
-
 function parseRecordsByCaseData(recordsByCase: any): { columns: any[]; rows: any[][] } {
 	// Adding columns for detailed filtering stats
 	const columns = [
@@ -113,10 +78,12 @@ function parseRecordsByCaseData(recordsByCase: any): { columns: any[]; rows: any
 		{ label: 'MAF Excluded by Depth', sortable: true },
 		{ label: 'MAF Excluded by Alt Count', sortable: true },
 		{ label: 'MAF Excluded by Consequence', sortable: true },
+		{ label: 'MAF Skipped Chromosomes', sortable: true },
 		{ label: 'CNV Total Processed', sortable: true },
 		{ label: 'CNV Included', sortable: true },
 		{ label: 'CNV Excluded by Thresholds', sortable: true },
 		{ label: 'CNV Excluded by Length', sortable: true },
+		{ label: 'CNV Skipped Chromosomes', sortable: true },
 		{ label: 'Invalid Rows', sortable: true }
 	]
 
@@ -142,6 +109,7 @@ function parseRecordsByCaseData(recordsByCase: any): { columns: any[]; rows: any
 		let mafExcludedByDepth = 0
 		let mafExcludedByAltCount = 0
 		let mafExcludedByConsequence = 0
+		let mafSkippedChromosomes = 0
 
 		if (parsedData.maf) {
 			mafTotalProcessed = parsedData.maf.total_processed || 0
@@ -149,6 +117,14 @@ function parseRecordsByCaseData(recordsByCase: any): { columns: any[]; rows: any
 			mafExcludedByDepth = parsedData.maf.excluded_by_min_depth || 0
 			mafExcludedByAltCount = parsedData.maf.excluded_by_min_alt_count || 0
 			mafExcludedByConsequence = parsedData.maf.excluded_by_consequence_type || 0
+
+			// Calculate total count from the chromosome object
+			if (parsedData.maf.skipped_chromosomes && typeof parsedData.maf.skipped_chromosomes === 'object') {
+				mafSkippedChromosomes = Object.values(parsedData.maf.skipped_chromosomes).reduce(
+					(sum: number, count: any) => sum + (Number(count) || 0),
+					0
+				)
+			}
 		}
 
 		row.push({ value: mafTotalProcessed })
@@ -156,12 +132,51 @@ function parseRecordsByCaseData(recordsByCase: any): { columns: any[]; rows: any
 		row.push({ value: mafExcludedByDepth })
 		row.push({ value: mafExcludedByAltCount })
 		row.push({ value: mafExcludedByConsequence })
+		if (parsedData.maf?.skipped_chromosomes && Object.keys(parsedData.maf.skipped_chromosomes).length > 0) {
+			const chromosomeEntries = Object.entries(parsedData.maf.skipped_chromosomes)
+			const tableHtml = `
+				<div style="text-align: center;">
+				<table style="border-collapse: collapse; margin: 0 auto; font-size: 11px; border: 1px solid #ddd;">
+					<thead>
+					<tr style="background-color: #f8f9fa;">
+						<th style="border: 1px solid #ddd; padding: 2px 6px;">Chr</th>
+						<th style="border: 1px solid #ddd; padding: 2px 6px;">Count</th>
+					</tr>
+					</thead>
+					<tbody>
+					${chromosomeEntries
+						.map(
+							([chr, count]) =>
+								`<tr>
+						<td style="border: 1px solid #ddd; padding: 2px 6px;">${chr}</td>
+						<td style="border: 1px solid #ddd; padding: 2px 6px; text-align: right;">${count}</td>
+						</tr>`
+						)
+						.join('')}
+					</tbody>
+				</table>
+				</div>
+			`
+			row.push({
+				html: tableHtml,
+				value: mafSkippedChromosomes,
+				rawData: parsedData.maf.skipped_chromosomes,
+				dataType: 'chromosome-details'
+			})
+		} else {
+			row.push({
+				value: mafSkippedChromosomes,
+				rawData: null,
+				dataType: 'chromosome-details'
+			})
+		}
 
 		// CNV Statistics
 		let cnvTotalProcessed = 0
 		let cnvIncluded = 0
 		let cnvExcludedByThresholds = 0
 		let cnvExcludedByLength = 0
+		let cnvSkippedChromosomes = 0
 
 		if (parsedData.cnv) {
 			cnvTotalProcessed = parsedData.cnv.total_processed || 0
@@ -170,12 +185,57 @@ function parseRecordsByCaseData(recordsByCase: any): { columns: any[]; rows: any
 			cnvExcludedByThresholds =
 				(parsedData.cnv.excluded_by_loss_threshold || 0) + (parsedData.cnv.excluded_by_gain_threshold || 0)
 			cnvExcludedByLength = parsedData.cnv.excluded_by_segment_length || 0
+			// Calculate total count from the chromosome object
+			if (parsedData.cnv.skipped_chromosomes && typeof parsedData.cnv.skipped_chromosomes === 'object') {
+				cnvSkippedChromosomes = Object.values(parsedData.cnv.skipped_chromosomes).reduce(
+					(sum: number, count: any) => sum + (Number(count) || 0),
+					0
+				)
+			}
 		}
 
 		row.push({ value: cnvTotalProcessed })
 		row.push({ value: cnvIncluded })
 		row.push({ value: cnvExcludedByThresholds })
 		row.push({ value: cnvExcludedByLength })
+		if (parsedData.cnv?.skipped_chromosomes && Object.keys(parsedData.cnv.skipped_chromosomes).length > 0) {
+			const chromosomeEntries = Object.entries(parsedData.cnv.skipped_chromosomes)
+			const tableHtml = `
+    <div style="text-align: center;">
+      <table style="border-collapse: collapse; margin: 0 auto; font-size: 11px; border: 1px solid #ddd;">
+        <thead>
+          <tr style="background-color: #f8f9fa;">
+            <th style="border: 1px solid #ddd; padding: 2px 6px;">Chr</th>
+            <th style="border: 1px solid #ddd; padding: 2px 6px;">Count</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${chromosomeEntries
+						.map(
+							([chr, count]) =>
+								`<tr>
+              <td style="border: 1px solid #ddd; padding: 2px 6px;">${chr}</td>
+              <td style="border: 1px solid #ddd; padding: 2px 6px; text-align: right;">${count}</td>
+            </tr>`
+						)
+						.join('')}
+        </tbody>
+      </table>
+    </div>
+  `
+			row.push({
+				html: tableHtml,
+				value: cnvSkippedChromosomes,
+				rawData: parsedData.cnv.skipped_chromosomes,
+				dataType: 'chromosome-details'
+			})
+		} else {
+			row.push({
+				value: cnvSkippedChromosomes,
+				rawData: null,
+				dataType: 'chromosome-details'
+			})
+		}
 
 		// Invalid Rows (MAF + CNV combined)
 		let totalInvalidRows = 0
@@ -2409,104 +2469,6 @@ async function getFilesAndShowTable(obj) {
 								.style('color', '#495057')
 								.style('line-height', '1.4')
 								.text('This table shows analysis statistics per case.')
-
-							// Track expanded state and add click handler
-							let isExpanded = false
-							expandableHeader.on('click', function () {
-								isExpanded = !isExpanded
-								if (isExpanded) {
-									expandableContent.style('display', 'block')
-									expandIcon.style('transform', 'rotate(90deg)').text('▼')
-								} else {
-									expandableContent.style('display', 'none')
-									expandIcon.style('transform', 'rotate(0deg)').text('▶')
-								}
-							})
-						}
-
-						// Skipped Chromosomes Section
-						if (
-							response.rustResult.summary.skippedChromosomes !== undefined &&
-							Object.keys(response.rustResult.summary.skippedChromosomes).length > 0
-						) {
-							// Parse the skipped chromosomes data and create table structure
-							const { columns, rows } = parseSkippedChromosomesData(response.rustResult.summary.skippedChromosomes)
-
-							// Create container that spans both columns
-							const skippedChromosomesContainer = filterStats
-								.append('div')
-								.style('grid-column', '1 / -1')
-								.style('margin-top', '15px')
-
-							// Create expandable header
-							const expandableHeader = skippedChromosomesContainer
-								.append('div')
-								.style('display', 'flex')
-								.style('align-items', 'center')
-								.style('gap', '8px')
-								.style('cursor', 'pointer')
-								.style('padding', '8px')
-								.style('border-radius', '4px')
-								.style('transition', 'background-color 0.2s')
-								.style('background-color', 'rgba(255, 152, 0, 0.1)') // Orange theme for skipped chromosomes
-								.style('border', '1px solid rgba(255, 152, 0, 0.2)')
-								.on('mouseenter', function (this: HTMLElement) {
-									select(this).style('background-color', 'rgba(255, 152, 0, 0.15)')
-								})
-								.on('mouseleave', function (this: HTMLElement) {
-									select(this).style('background-color', 'rgba(255, 152, 0, 0.1)')
-								})
-
-							// Expand/collapse icon
-							const expandIcon = expandableHeader
-								.append('span')
-								.style('font-size', '12px')
-								.style('color', '#ff9800')
-								.style('transition', 'transform 0.2s')
-								.text('▶')
-
-							// Header text
-							expandableHeader
-								.append('span')
-								.style('color', '#ff9800')
-								.style('text-decoration', 'underline')
-								.style('font-size', '13px')
-								.style('font-weight', '500')
-								.text('View skipped chromosomes')
-
-							// Create expandable content (hidden by default)
-							const expandableContent = skippedChromosomesContainer
-								.append('div')
-								.style('display', 'none')
-								.style('margin-top', '12px')
-
-							// Create table container
-							const tableContainer = expandableContent
-								.append('div')
-								.style('max-height', '300px')
-								.style('overflow-y', 'auto')
-								.style('border', '1px solid #dee2e6')
-								.style('border-radius', '4px')
-
-							// Render the table using renderTable
-							renderTable({
-								div: tableContainer,
-								columns: columns,
-								rows: rows,
-								showLines: true,
-								striped: true,
-								showHeader: true,
-								maxHeight: '280px',
-								resize: false,
-								header: {
-									allowSort: true,
-									style: {
-										'background-color': '#f8f9fa',
-										'font-weight': 'bold',
-										'border-bottom': '2px solid #dee2e6'
-									}
-								}
-							})
 
 							// Track expanded state and add click handler
 							let isExpanded = false
