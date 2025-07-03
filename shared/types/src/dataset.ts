@@ -1519,19 +1519,6 @@ type MutationSet = {
 }
 
 /** different methods to return samples with assay availability info */
-type DtAssayAvailability = DtAssayAvailabilityGetter | DtAssayAvailabilityTerm
-
-/** using ds-supplied getter */
-type DtAssayAvailabilityGetter = {
-	/** define q
-	returns:
-	{
-		yesSamples: Set() of sample ids
-		noSamples: Set() of sample ids
-	}
-	*/
-	get: (q: any) => any
-}
 /** using dictionary term */
 type DtAssayAvailabilityTerm = {
 	/** id of this assay term for this dt */
@@ -1542,20 +1529,26 @@ type DtAssayAvailabilityTerm = {
 	yes: { value: string[] }
 	/** categories meaning the sample doesn't have this assay */
 	no: { value: string[] }
+	/** dynamically generated cached sample lists on server launch, can also be ds-supplied. each is a Set of sample names*/
+	yesSamples?: Set<string>
+	noSamples?: Set<string>
 }
 
 type DtAssayAvailabilityByOrigin = {
 	byOrigin: {
 		/** each key is an origin value or category */
-		[index: string]: DtAssayAvailability
+		[index: string]: DtAssayAvailabilityTerm
 	}
 }
 
+/** assay availability can be set up as below, during server init it will query by assay dictionary terms to populate yes/no samples for each dt
+or as in gdc, it is entirely setup ad-hoc
+*/
 type Mds3AssayAvailability = {
 	/** object of key-value pairs. keys are dt values */
 	byDt: {
 		/** each index is a dt value */
-		[index: number]: DtAssayAvailabilityByOrigin | DtAssayAvailability
+		[index: number]: DtAssayAvailabilityByOrigin | DtAssayAvailabilityTerm
 	}
 }
 
