@@ -3108,15 +3108,6 @@ async function mayValidateAssayAvailability(ds) {
 
 	// has this setting. at server launch it should query assay availability status for all samples and cache it
 
-	if (ds.assayAvailability.set) {
-		if (typeof ds.assayAvailability.set != 'function') throw 'ds.assayAvailability.set() is not function'
-		/* has optional setter. this is alterative to term-base definition
-		it will run as part of ds-specific async caching code
-		skip init and validation, with good faith they will be set properly
-		*/
-		return
-	}
-
 	if (ds.assayAvailability.byDt) {
 		for (const key in ds.assayAvailability.byDt) {
 			if (!dt2label[key]) throw 'unknown dt in assayAvailability.byDt: ' + key
@@ -3155,13 +3146,9 @@ async function getAssayAvailablility(ds, dt) {
 	// for assay availability from a db term
 	dt.yesSamples = new Set()
 	dt.noSamples = new Set()
-	const sql = `SELECT sample, value
-					FROM anno_categorical
-					WHERE term_id = '${dt.term_id}'`
-	const rows = ds.cohort.db.connection.prepare(sql).all()
-	for (const r of rows) {
-		if (dt.yes.value.includes(r.value)) dt.yesSamples.add(r.sample)
-		else if (dt.no.value.includes(r.value)) dt.noSamples.add(r.sample)
+	for (const [sample, value] of ds.cohort.termdb.q.getAllValues4term(dt.term_id)) {
+		if (dt.yes.value.includes(value)) dt.yesSamples.add(sample)
+		else if (dt.no.value.includes(value)) dt.noSamples.add(sample)
 		//else throw `value of term ${dt.term_id} is invalid`
 	}
 }

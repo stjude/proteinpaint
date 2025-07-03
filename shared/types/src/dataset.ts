@@ -1529,9 +1529,11 @@ type DtAssayAvailabilityTerm = {
 	yes: { value: string[] }
 	/** categories meaning the sample doesn't have this assay */
 	no: { value: string[] }
-	/** dynamically generated cached sample lists on server launch, can also be ds-supplied. each is a Set of sample names*/
-	yesSamples?: Set<string>
-	noSamples?: Set<string>
+	/** dynamically generated cached sample lists on server launch, can also be ds-supplied.
+	each is a Set of sample integer id (non-gdc ds) or sample name (case uuid for gdc)
+	*/
+	yesSamples?: Set<string | number>
+	noSamples?: Set<string | number>
 }
 
 type DtAssayAvailabilityByOrigin = {
