@@ -4,7 +4,7 @@ import Partjson from 'partjson'
 import { format } from 'd3-format'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 import { getData } from './termdb.matrix.js'
-import { mclass, dt2label } from '#shared/common.js'
+import { mclass, dt2label, dtTerms } from '#shared/common.js'
 
 const binLabelFormatter = format('.3r')
 
@@ -246,14 +246,16 @@ function processGeneVariantSamples(map, bins, data, samplesMap, ds, chartid2dtte
 						item.key0 = item.val0 = dt2label[v1.dt]
 					}
 
-					// map chartId to dtTerm
-					// used for listing samples
-					const dtTerm = tw1.term.childTerms.find(t => {
-						if (t.dt != v1.dt) return false
-						if (v1.origin && t.origin != v1.origin) return false
-						return true
-					})
-					chartid2dtterm[item.key0] = dtTerm
+					// map chartId to dtTerm, will be used for listing samples
+					const dtTerm = structuredClone(
+						dtTerms.find(t => {
+							if (t.dt != v1.dt) return false
+							if (v1.origin && t.origin != v1.origin) return false
+							return true
+						})
+					)
+					dtTerm.parentTerm = structuredClone(tw1.term)
+					if (!Object.keys(chartid2dtterm).includes(item.key0)) chartid2dtterm[item.key0] = dtTerm
 
 					item[`key2`] = values[id2] ? values[id2].key : ''
 					item[`val2`] = values[id2] ? values[id2].value : ''

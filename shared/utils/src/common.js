@@ -1242,7 +1242,7 @@ export const CNVClasses = Object.values(mclass)
 	.map(m => m.key)
 
 // dt terms used for filtering variants for geneVariant term
-const _dtTerms = [
+const dtTerms_temp = [
 	{
 		id: 'snvindel',
 		query: 'snvindel',
@@ -1287,11 +1287,10 @@ const _dtTerms = [
 	}
 ]
 // add origin annotations to dt terms
-export const dtTerms = []
-for (const _dtTerm of _dtTerms) {
-	const dtTerm = structuredClone(_dtTerm)
+const dtTerms_temp2 = []
+for (const dtTerm of dtTerms_temp) {
 	dtTerm.name_noOrigin = dtTerm.name // for labeling groups in groupsetting
-	dtTerms.push(dtTerm) // no origin
+	dtTerms_temp2.push(dtTerm) // no origin
 	for (const origin of ['somatic', 'germline']) {
 		// add origins
 		const addOrigin = {
@@ -1299,9 +1298,10 @@ for (const _dtTerm of _dtTerms) {
 			name: `${dtTerm.name} (${origin})`,
 			origin
 		}
-		dtTerms.push(Object.assign({}, dtTerm, addOrigin))
+		dtTerms_temp2.push(Object.assign({}, dtTerm, addOrigin))
 	}
 }
+export const dtTerms = dtTerms_temp2
 
 export const colorScaleMap = {
 	blueWhiteRed: { domain: [0, 0.5, 1], range: ['blue', 'white', 'red'] },

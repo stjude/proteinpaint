@@ -6,6 +6,7 @@ import { rgb } from 'd3-color'
 import { roundValueAuto } from '#shared/roundValue.js'
 import { isNumericTerm } from '#shared/terms.js'
 import { negateTermLabel } from './barchart'
+import { mclass } from '#shared/common.js'
 
 export default function getHandlers(self) {
 	const tip = new Menu({ padding: '5px' })
@@ -606,8 +607,10 @@ async function listSamples(event, self, seriesId, dataId, chartId) {
 			// TODO: handle cases when geneVariant term is term0 or term2
 			const dtTerm = self.chartid2dtterm[chartId]
 			tvs.tvs.term = dtTerm
-			const key = Object.keys(dtTerm.values).find(k => dtTerm.values[k].label == value)
+			// using mclass instead of dtTerm.values to support not tested classes
+			const key = Object.keys(mclass).find(k => mclass[k].label == value)
 			tvs.tvs.values = [{ key }]
+			tvs.tvs.includeNotTested = true // to be able to list not tested samples
 		}
 		return tvs
 	}
