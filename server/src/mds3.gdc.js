@@ -1,4 +1,5 @@
 import * as common from '#shared/common.js'
+import { joinUrl, memFetch } from '#shared/index.js'
 import { compute_bins } from '#shared/termdb.bins.js'
 import ky from 'ky'
 import nodeFetch from 'node-fetch'
@@ -6,7 +7,6 @@ import { combineSamplesById, guessSsmid } from './mds3.variant2samples.js'
 import { filter2GDCfilter } from './mds3.gdc.filter.js'
 import { write_tmpfile } from './utils.js'
 import { mayLog } from './helpers'
-import { joinUrl } from '#shared/joinUrl.js'
 import serverconfig from './serverconfig.js'
 
 const maxCase4geneExpCluster = 1000 // max number of cases allowed for gene exp clustering app; okay just to hardcode in code and not to define in ds
@@ -1649,7 +1649,7 @@ export async function querySamplesTwlstNotForGeneexpclustering_noGenomicFilter(q
 
 	const t1 = Date.now()
 
-	const re = await ky.post(joinUrl(host.rest, 'cases'), { timeout: false, headers, json: param }).json()
+	const re = await memFetch(joinUrl(host.rest, 'cases'), { method: 'POST', headers, body: JSON.stringify(param) })
 
 	mayLog('gdc /cases queries', Date.now() - t1)
 
@@ -1718,10 +1718,11 @@ async function querySamplesTwlstForGeneexpclustering(q, twLst, ds) {
 	}
 
 	const { host, headers } = ds.getHostHeaders(q)
+	console.log(1720, 'will use memFetch')
 	// NOTE: not using ky, until the issue with undici intermittent timeout/socket hangup is
 	// fully resolved, and which hapens only for long-running requests where possibly
 	// garbage collection is not being performed on http socket resources
-	const re = await nodeFetch(joinUrl(host.rest, 'cases'), {
+	const re = await memFetch(joinUrl(host.rest, 'cases'), {
 		method: 'POST',
 		timeout: false,
 		headers,
@@ -1730,7 +1731,8 @@ async function querySamplesTwlstForGeneexpclustering(q, twLst, ds) {
 			fields: fields.join(','),
 			case_filters: filters.content.length ? filters : undefined
 		})
-	}).then(r => r.json())
+	})
+	console.log(1733)
 	if (!Array.isArray(re?.data?.hits)) throw 're.data.hits[] not array'
 
 	const samples = []
