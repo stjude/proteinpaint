@@ -1550,6 +1550,9 @@ type Mds3AssayAvailability = {
 		/** each index is a dt value */
 		[index: number]: DtAssayAvailabilityByOrigin | DtAssayAvailabilityTerm
 	}
+	/** if true, ds will use both filter and filter0 to filter samples (this is a temp quick fix)
+	 */
+	useFilter0?: true
 }
 
 // mds legacy; delete when all are migrated to mds3
