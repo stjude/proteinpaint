@@ -1,5 +1,5 @@
 /*
-  This script downloads cohort maf files from GDC and gracefully handles timeout and other possible errors related to GDC api processing for use by the client file summary div
+  This script can either download cohort maf/cnv files from GDC or read them from local files, with default behavior being to download from GDC. It gracefully handles timeout and other possible errors related to GDC API processing or file reading for use by the client file summary div.
 
   Key improvements:
   1. Graceful error handling - individual file failures don't stop the entire process
@@ -7,6 +7,10 @@
   3. More detailed error reporting
   4. Continues processing even when some files fail
   5. Added chromosome filtering
+  6. Supports reading from local files with --from-file flag
+
+  Command-line arguments:
+  - --from-file: Read data from local files instead of downloading from GDC
 
   Input JSON:
     caseFiles
@@ -18,6 +22,10 @@
 
   Example of usage:
     echo '{"caseFiles": {"MP2PRT-PATFJE": {"maf": "26ea7b6f-8bc4-4e83-ace1-2125b493a361"},"MP2PRT-PAPIGD": {"maf": "653d7458-f4af-4328-a1ce-3bbf22a2e347"}, "TCGA-CG-4300": { "cnv":"46372ec2-ff79-4d07-b375-9ba8a12c11f3", "maf":"c09b208d-2e7b-4116-9580-27f20f4c7e67"}},"mafOptions": {"minTotalDepth": 100,"minAltAlleleCount": 20,"hyperMutator":8000,"consequences":["missense_variant","frameshift_variant"]}, "cnvOptions":{"lossThreshold":-1, "gainThreshold": 1.5, "segLength":2000000, "hyperMutator":8000}, "chromosomes":["chr1","chr2","chr3"]}' | ./target/release/gdcGRIN2
+
+  Example of usage (read from local files):
+    echo '{"caseFiles": {"MP2PRT-PATFJE": {"maf": "26ea7b6f-8bc4-4e83-ace1-2125b493a361"},"MP2PRT-PAPIGD": {"maf": "653d7458-f4af-4328-a1ce-3bbf22a2e347"}, "TCGA-CG-4300": { "cnv":"46372ec2-ff79-4d07-b375-9ba8a12c11f3", "maf":"c09b208d-2e7b-4116-9580-27f20f4c7e67"}},"mafOptions": {"minTotalDepth": 100,"minAltAlleleCount": 20,"hyperMutator":8000,"consequences":["missense_variant","frameshift_variant"]}, "cnvOptions":{"lossThreshold":-1, "gainThreshold": 1.5, "segLength":2000000, "hyperMutator":8000}, "chromosomes":["chr1","chr2","chr3"]}' | ./target/release/gdcGRIN2 --from-file
+
 */
 
 use flate2::read::GzDecoder;
@@ -26,10 +34,11 @@ use memchr::memchr;
 use serde::{Deserialize, Serialize};
 use serde_json;
 use std::collections::{HashMap, HashSet};
+use std::env;
+use std::fs;
 use std::io::{self, Read};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::thread::sleep;
 use std::time::Duration;
 use tokio::io::{AsyncReadExt, BufReader};
 use tokio::sync::Mutex;
@@ -140,6 +149,14 @@ struct FinalSummary {
     included_cnv_records: usize,
     filtered_records_by_case: HashMap<String, FilteredCaseDetails>,
     hyper_mutator_records: HashMap<String, Vec<String>>,
+}
+
+// Enum to hold both SuccessfulFileoutput and FinalSummary
+#[derive(Serialize)]
+#[serde(untagged)]
+enum Output {
+    Data(SuccessfulFileOutput),
+    Summary(FinalSummary),
 }
 
 // Define the top-level input structure
@@ -744,10 +761,9 @@ async fn download_single_file(
     ))
 }
 
-/// Streaming download function
+/// Downloading from GDC
 /// Outputs JSONL format: one JSON object per line
-/// Node.js will read this line-by-line but still wait for completion
-async fn download_data_streaming(
+async fn download_data(
     data4dl: HashMap<String, DataType>,
     host: &str,
     min_total_depth: i32,
@@ -789,6 +805,8 @@ async fn download_data_streaming(
     // Only collect errors (successful data is output immediately)
     let errors = Arc::new(Mutex::new(Vec::<ErrorEntry>::new()));
 
+    let results = Arc::new(Mutex::new(Vec::<Output>::new()));
+
     let download_futures = futures::stream::iter(
         data_urls
             .into_iter()
@@ -808,6 +826,7 @@ async fn download_data_streaming(
             let included_cnv_records = Arc::clone(&included_cnv_records);
             let hyper_mutator_records = Arc::clone(&hyper_mutator_records);
             let errors = Arc::clone(&errors);
+            let results = Arc::clone(&results);
 
             async move {
                 match download_result {
@@ -843,7 +862,8 @@ async fn download_data_streaming(
                                     data_type: data_type.clone(),
                                     data: parsed_data,
                                 };
-
+                                results.lock().await.push(Output::Data(success_output));
+                                /*
                                 // Output this successful result immediately - Node.js will see this in real-time
                                 if let Ok(json) = serde_json::to_string(&success_output) {
                                     println!("{}", json); // IMMEDIATE output to stdout
@@ -853,6 +873,7 @@ async fn download_data_streaming(
                                     // Optional: Add small delay to separate lines
                                     sleep(Duration::from_millis(10));
                                 }
+                                */
 
                                 successful_downloads.fetch_add(1, Ordering::Relaxed);
                             }
@@ -918,8 +939,191 @@ async fn download_data_streaming(
         hyper_mutator_records: hyper_mutator_records.lock().await.clone(),
     };
 
+    // collect all outputs into a single JSON array
+    let mut output = Vec::new();
+    output.extend(results.lock().await.drain(..));
+    output.push(Output::Summary(summary));
+
     // Output final summary - Node.js will know processing is complete when it sees this
-    if let Ok(json) = serde_json::to_string(&summary) {
+    // if let Ok(json) = serde_json::to_string(&summary) {
+    if let Ok(json) = serde_json::to_string(&output) {
+        println!("{}", json);
+        use std::io::Write;
+        let _ = std::io::stdout().flush();
+    }
+}
+
+/// Read data from local file
+async fn localread_data(
+    case_files: HashMap<String, DataType>,
+    min_total_depth: i32,
+    min_alt_allele_count: i32,
+    maf_hyper_mutator: i32,
+    consequences: &Option<Vec<String>>,
+    gain_threshold: f32,
+    loss_threshold: f32,
+    seg_length: i32,
+    cnv_hyper_mutator: i32,
+    chromosomes: &HashSet<String>,
+) {
+    let data_files: Vec<(String, String, String)> = case_files
+        .into_iter()
+        .flat_map(|(case_id, data_types)| {
+            let mut files = Vec::new();
+            if let Some(cnv_file) = &data_types.cnv {
+                files.push((case_id.clone(), "cnv".to_string(), cnv_file.clone()));
+            }
+            if let Some(maf_file) = &data_types.maf {
+                files.push((case_id.clone(), "maf".to_string(), maf_file.clone()));
+            }
+            files
+        })
+        .collect();
+    let total_files = data_files.len();
+
+    // Counters for final summary
+    let successful_reads = Arc::new(AtomicUsize::new(0));
+    let failed_reads = Arc::new(AtomicUsize::new(0));
+    let filtered_maf_records = Arc::new(AtomicUsize::new(0));
+    let filtered_cnv_records = Arc::new(AtomicUsize::new(0));
+    let filtered_records = Arc::new(Mutex::new(HashMap::<String, FilteredCaseDetails>::new()));
+    let hyper_mutator_records = Arc::new(Mutex::new(HashMap::<String, Vec<String>>::new()));
+    let included_maf_records = Arc::new(AtomicUsize::new(0));
+    let included_cnv_records = Arc::new(AtomicUsize::new(0));
+    let errors = Arc::new(Mutex::new(Vec::<ErrorEntry>::new()));
+    let results = Arc::new(Mutex::new(Vec::<Output>::new()));
+
+    // Process files concurrently
+    let read_futures = futures::stream::iter(data_files.into_iter().map(
+        |(case_id, data_type, file_path)| async move {
+            // read the local file
+            match fs::read_to_string(&file_path) {
+                Ok(content) => Ok((case_id, data_type, content)),
+                Err(e) => Err((
+                    case_id,
+                    data_type,
+                    format!("file_read_error: {}", e),
+                    1, // Single attempt for local file readng
+                )),
+            }
+        },
+    ));
+
+    // Process files and output results
+    read_futures
+        .buffer_unordered(3)
+        .for_each(|read_result| {
+            let successful_reads = Arc::clone(&successful_reads);
+            let failed_reads = Arc::clone(&failed_reads);
+            let filtered_maf_records = Arc::clone(&filtered_maf_records);
+            let filtered_cnv_records = Arc::clone(&filtered_cnv_records);
+            let filtered_records = Arc::clone(&filtered_records);
+            let included_maf_records = Arc::clone(&included_maf_records);
+            let included_cnv_records = Arc::clone(&included_cnv_records);
+            let hyper_mutator_records = Arc::clone(&hyper_mutator_records);
+            let errors = Arc::clone(&errors);
+            let results = Arc::clone(&results);
+
+            async move {
+                match read_result {
+                    Ok((case_id, data_type, content)) => {
+                        match parse_content(
+                            &content,
+                            &case_id,
+                            &data_type,
+                            min_total_depth,
+                            min_alt_allele_count,
+                            maf_hyper_mutator,
+                            consequences,
+                            gain_threshold,
+                            loss_threshold,
+                            seg_length,
+                            cnv_hyper_mutator,
+                            chromosomes,
+                            &filtered_records,
+                            &filtered_maf_records,
+                            &filtered_cnv_records,
+                            &included_maf_records,
+                            &included_cnv_records,
+                            &hyper_mutator_records,
+                        )
+                        .await
+                        {
+                            Ok(parsed_data) => {
+                                // SUCCESS: Output immediately as JSONL
+                                let success_output = SuccessfulFileOutput {
+                                    output_type: "data".to_string(),
+                                    case_id: case_id.clone(),
+                                    data_type: data_type.clone(),
+                                    data: parsed_data,
+                                };
+                                results.lock().await.push(Output::Data(success_output));
+                                successful_reads.fetch_add(1, Ordering::Relaxed);
+                            }
+                            Err((cid, dtp, error)) => {
+                                failed_reads.fetch_add(1, Ordering::Relaxed);
+                                let error = ErrorEntry {
+                                    case_id: cid,
+                                    data_type: dtp,
+                                    error_type: "parsing_error".to_string(),
+                                    error_details: error,
+                                    attempts_made: 1,
+                                };
+                                errors.lock().await.push(error);
+                            }
+                        }
+                    }
+                    Err((case_id, data_type, error_details, attempts)) => {
+                        failed_reads.fetch_add(1, Ordering::Relaxed);
+                        let (error_type, clean_details) = if error_details.contains(":") {
+                            let parts: Vec<&str> = error_details.splitn(2, ": ").collect();
+                            (parts[0].to_string(), parts[1].to_string())
+                        } else {
+                            ("unknown_error".to_string(), error_details)
+                        };
+                        let error = ErrorEntry {
+                            case_id,
+                            data_type,
+                            error_type,
+                            error_details: clean_details,
+                            attempts_made: attempts,
+                        };
+                        errors.lock().await.push(error);
+                    }
+                }
+            }
+        })
+        .await;
+    // Output final summary as the last line
+    let success_count = successful_reads.load(Ordering::Relaxed);
+    let failed_count = failed_reads.load(Ordering::Relaxed);
+    let filtered_maf_count = filtered_maf_records.load(Ordering::Relaxed);
+    let filtered_cnv_count = filtered_cnv_records.load(Ordering::Relaxed);
+    let included_maf_count = included_maf_records.load(Ordering::Relaxed);
+    let included_cnv_count = included_cnv_records.load(Ordering::Relaxed);
+
+    let summary = FinalSummary {
+        output_type: "summary".to_string(),
+        total_files,
+        successful_files: success_count,
+        failed_files: failed_count,
+        errors: errors.lock().await.clone(),
+        filtered_records: filtered_maf_count + filtered_cnv_count,
+        filtered_maf_records: filtered_maf_count,
+        filtered_cnv_records: filtered_cnv_count,
+        filtered_records_by_case: filtered_records.lock().await.clone(),
+        included_maf_records: included_maf_count,
+        included_cnv_records: included_cnv_count,
+        hyper_mutator_records: hyper_mutator_records.lock().await.clone(),
+    };
+
+    // Collect all outputs into a single JSON array
+    let mut output = Vec::new();
+    output.extend(results.lock().await.drain(..));
+    output.push(Output::Summary(summary));
+
+    // Output final JSON array
+    if let Ok(json) = serde_json::to_string(&output) {
         println!("{}", json);
         use std::io::Write;
         let _ = std::io::stdout().flush();
@@ -928,6 +1132,9 @@ async fn download_data_streaming(
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let args: Vec<String> = env::args().collect();
+    let from_file = args.contains(&"--from-file".to_string());
+
     const HOST: &str = "https://api.gdc.cancer.gov/data/";
 
     // Read input with timeout
@@ -993,21 +1200,37 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Convert Vec<String> to HashSet<String> for faster lookup
     let chromosomes = input_js.chromosomes.into_iter().collect::<HashSet<String>>();
 
-    // Download data - this will now handle errors gracefully
-    download_data_streaming(
-        case_files,
-        HOST,
-        min_total_depth,
-        min_alt_allele_count,
-        maf_hyper_mutator,
-        &consequences,
-        gain_threshold,
-        loss_threshold,
-        seg_length,
-        cnv_hyper_mutator,
-        &chromosomes,
-    )
-    .await;
+    if from_file {
+        localread_data(
+            case_files,
+            min_total_depth,
+            min_alt_allele_count,
+            maf_hyper_mutator,
+            &consequences,
+            gain_threshold,
+            loss_threshold,
+            seg_length,
+            cnv_hyper_mutator,
+            &chromosomes,
+        )
+        .await;
+    } else {
+        // Download data from GDC- this will now handle errors gracefully
+        download_data(
+            case_files,
+            HOST,
+            min_total_depth,
+            min_alt_allele_count,
+            maf_hyper_mutator,
+            &consequences,
+            gain_threshold,
+            loss_threshold,
+            seg_length,
+            cnv_hyper_mutator,
+            &chromosomes,
+        )
+        .await;
+    }
 
     // Always exit successfully - individual file failures are logged but don't stop the process
     Ok(())
