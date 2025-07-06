@@ -110,6 +110,8 @@ const packfull_cutoff = 400 //the number of items in the view range; below the c
 const onerow_minitemcount = 600 // number of items exceeding this amount will all be rendered in one row
 const returngmdata_maxCount = 50 // max number of items to return data to client
 
+const defaultItemColor = '#2c9c96'
+
 // color for translated codons
 const altcolor = 'rgba(122,103,44,.7)',
 	errcolor = 'red',
@@ -181,7 +183,6 @@ async function do_query(req, genomes) {
 		}
 	}
 
-	const color = req.query.color || '#3D7A4B'
 	const flag_gm = req.query.gmregion || null
 	const gmisoform = req.query.isoform
 	const flag_onerow = req.query.onerow
@@ -254,6 +255,11 @@ async function do_query(req, genomes) {
 
 	const thinpad = Math.ceil(stackheight / 4) - 1
 
+	// one object to collect data from following code and returned to client
+	const result = {
+		category2count: categories ? {} : null // key: item category, value: count. for rendering legend
+	}
+
 	if (flag_onerow || items.length >= onerow_minitemcount) {
 		// render all items in a single row
 		// do not show names
@@ -264,9 +270,7 @@ async function do_query(req, genomes) {
 		if (req.query.devicePixelRatio > 1) ctx.scale(req.query.devicePixelRatio, req.query.devicePixelRatio)
 		const mapisoform = items.length <= 200 ? [] : null
 		for (const item of items) {
-			const fillcolor =
-				categories && item.category && categories[item.category] ? categories[item.category].color : item.color || color
-			ctx.fillStyle = fillcolor
+			ctx.fillStyle = getItemColor(item, req.query, result)
 			for (const _r of item.rglst) {
 				let cumx = 0
 				for (let i = 0; i < _r.idx; i++) {
@@ -313,12 +317,10 @@ async function do_query(req, genomes) {
 				}
 			}
 		}
-		///////////////////////// exit ///////////////////
-		return {
-			src: canvas.toDataURL(),
-			height: stackheight,
-			mapisoform: mapisoform
-		}
+		result.src = canvas.toDataURL()
+		result.height = stackheight
+		result.mapisoform = mapisoform
+		return result ///////////////////////// exit ///////////////////
 	}
 
 	////////// render normally
@@ -535,8 +537,11 @@ async function do_query(req, genomes) {
 			// invisible item
 			continue
 		}
-		const fillcolor =
-			categories && item.category && categories[item.category] ? categories[item.category].color : item.color || color
+		const fillcolor = getItemColor(item, req.query, result)
+
+		// attaches xxx
+		c.fillcolor = fillcolor
+
 		const y = (stackheight + stackspace) * (c.stack - 1)
 		ctx.fillStyle = fillcolor
 		if (item.exon || item.rglst.length > 1) {
@@ -711,26 +716,21 @@ async function do_query(req, genomes) {
 		}
 	}
 
-	const result = {
-		height: finalheight,
-		mapisoform,
-		mapexon,
-		returngmdata
-	}
+	;(result.height = finalheight), (result.mapisoform = mapisoform)
+	result.mapexon = mapexon
+	result.returngmdata = returngmdata
 	if (translateitem.length == 0) {
 		// nothing to be translated
 		result.src = canvas.toDataURL()
-		return result
+		return result ///////////////////////// exit ///////////////////
 	}
-	// have genes to be translated
+
+	// do not exit: have genes to be translated
 	const mapaa = []
 
 	ctx.textAlign = 'center'
 	ctx.textBaseline = 'middle'
 	for (const [i, item] of translateitem.entries()) {
-		// need i
-		const fillcolor =
-			categories && item.category && categories[item.category] ? categories[item.category].color : item.color || color
 		const c = item.canvas
 		const y = (stackheight + stackspace) * (c.stack - 1)
 		item.genomicseq = (await utils.get_fasta(genomeobj, item.chr + ':' + (item.start + 1) + '-' + item.stop))
@@ -887,13 +887,13 @@ async function do_query(req, genomes) {
 			}
 		}
 		if (c.namehover && !req.query.noNameHover) {
-			ctx.font = 'bold ' + fontsize + 'px Arial'
+			ctx.font = 'bold ' + fontsize + 'px Arial' // TODO req query font
 			const x = Math.max(10, c.start + 10)
 			ctx.fillStyle = 'white'
 			ctx.fillRect(x, y, c.namewidth + 10, stackheight)
-			ctx.strokeStyle = fillcolor
+			ctx.strokeStyle = c.fillcolor
 			ctx.strokeRect(x + 1.5, y + 0.5, c.namewidth + 10 - 3, stackheight - 2)
-			ctx.fillStyle = fillcolor
+			ctx.fillStyle = c.fillcolor
 			ctx.fillText(c.namestr, x + c.namewidth / 2 + 5, y + stackheight / 2)
 		}
 	}
@@ -928,6 +928,28 @@ may return additional info for:
 		//name:show.join(' ')+printcoord(item.chr, e[0], e[1])
 		name: show.join(' ')
 	})
+}
+
+/*
+item: {color}
+q {
+	color,
+	categories{}
+}
+result {
+	category2count{}
+}
+*/
+function getItemColor(item, q, result) {
+	let fillcolor = item.color || q.color || defaultItemColor
+	if (q.categories && item.category) {
+		// use given color for known category
+		if (q.categories[item.category]) fillcolor = q.categories[item.category].color
+		// add counter
+		if (!result.category2count[item.category]) result.category2count[item.category] = 0
+		result.category2count[item.category]++
+	}
+	return fillcolor
 }
 
 /*
