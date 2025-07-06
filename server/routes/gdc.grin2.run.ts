@@ -1,6 +1,6 @@
 import type { RunGRIN2Request, RunGRIN2Response, RouteApi } from '#types'
 import { runGRIN2Payload } from '#types/checkers'
-import { stream_rust } from '@sjcrh/proteinpaint-rust'
+import { run_rust } from '@sjcrh/proteinpaint-rust'
 import serverconfig from '#src/serverconfig.js'
 import path from 'path'
 import { run_python } from '@sjcrh/proteinpaint-python'
@@ -90,52 +90,27 @@ async function runGrin2(genomes: any, req: any, res: any) {
 
 	// mayLog('[GRIN2] Running GRIN2 with input:', JSON.stringify(rustInput, null, 2))
 
-	// Step 1: Call Rust to process the MAF files and get JSON data (now with streaming)
-
-	// Collect output from stream_rust
-	let rustOutput = ''
-	let buffer = '' // For incomplete lines
+	// Step 1: Call Rust to process the MAF files and get JSON data
 
 	const downloadStartTime = Date.now()
-	const streamResult = stream_rust('gdcGRIN2', JSON.stringify(rustInput), errors => {
-		if (errors) {
-			throw new Error(`Rust process failed: ${errors}`)
-		}
-	})
+	const rustOutput = await run_rust('gdcGRIN2', JSON.stringify(rustInput))
+	console.log(rustOutput)
 
-	if (!streamResult) {
-		throw new Error('Failed to start Rust streaming process')
-	}
+	try {
+		const rustOutputJS = JSON.parse(rustOutput)
+		for (const data of rustOutputJS) {
+			if (data.type === 'summary') {
+				// Only log the final summary
+				mayLog(`[GRIN2] Download complete: ${data.successful_files}/${data.total_files} files successful`)
 
-	// Collect all chunks from the stream
-	for await (const chunk of streamResult.rustStream) {
-		const chunkStr = chunk.toString()
-		rustOutput += chunkStr
-		buffer += chunkStr
-
-		// Process complete lines to check for summary
-		const lines = buffer.split('\n')
-		buffer = lines.pop() || ''
-
-		for (const line of lines) {
-			const trimmedLine = line.trim()
-			if (trimmedLine) {
-				try {
-					const data = JSON.parse(trimmedLine)
-
-					if (data.type === 'summary') {
-						// Only log the final summary
-						mayLog(`[GRIN2] Download complete: ${data.successful_files}/${data.total_files} files successful`)
-
-						if (data.failed_files > 0) {
-							mayLog(`[GRIN2] ${data.failed_files} files failed`)
-						}
-					}
-				} catch (_parseError) {
-					// Ignore parse errors during real-time processing
+				if (data.failed_files > 0) {
+					mayLog(`[GRIN2] ${data.failed_files} files failed`)
 				}
 			}
 		}
+	} catch (parseError) {
+		console.error('[GRIN2] JSONL parse error:', parseError)
+		console.error('[GRIN2] Problematic line:', runstOutput)
 	}
 
 	mayLog('[GRIN2] Rust execution completed')
@@ -205,7 +180,6 @@ async function runGrin2(genomes: any, req: any, res: any) {
  * Converts streaming JSONL format to the same structure as run_rust
  */
 function parseJsonlOutput(rustOutput: string): any {
-	const lines = rustOutput.trim().split('\n')
 	const allSuccessfulData: any[] = []
 	let finalSummary: any = null
 	let processedFiles = 0
@@ -213,70 +187,59 @@ function parseJsonlOutput(rustOutput: string): any {
 	let totalRecordsProcessed = 0
 	let isCapReached = false
 
-	for (const line of lines) {
-		const trimmedLine = line.trim()
-		if (trimmedLine) {
-			try {
-				const data = JSON.parse(trimmedLine)
+	for (const data of JSON.parse(rustOutput)) {
+		if (data.type === 'data') {
+			if (isCapReached) {
+				mayLog(`[GRIN2] Skipping file ${data.case_id} - record cap of ${MAX_RECORDS} already reached`)
+				continue // Skip processing this file
+			}
 
-				if (data.type === 'data') {
-					// Check if we've already reached the cap
-					if (isCapReached) {
-						mayLog(`[GRIN2] Skipping file ${data.case_id} - record cap of ${MAX_RECORDS} already reached`)
-						continue // Skip processing this file
-					}
+			// Calculate how many records we can still accept
+			const remainingCapacity = MAX_RECORDS - totalRecordsProcessed
+			const incomingRecords = data.data.length
 
-					// Calculate how many records we can still accept
-					const remainingCapacity = MAX_RECORDS - totalRecordsProcessed
-					const incomingRecords = data.data.length
+			// Determine how many records to actually process
+			let recordsToProcess: any[]
+			let recordsProcessedThisFile: number
 
-					// Determine how many records to actually process
-					let recordsToProcess: any[]
-					let recordsProcessedThisFile: number
+			if (incomingRecords <= remainingCapacity) {
+				// We can process all records from this file
+				recordsToProcess = data.data
+				recordsProcessedThisFile = incomingRecords
+			} else {
+				// We can only process part of this file to reach the cap
+				recordsToProcess = data.data.slice(0, remainingCapacity)
+				recordsProcessedThisFile = remainingCapacity
+				isCapReached = true
 
-					if (incomingRecords <= remainingCapacity) {
-						// We can process all records from this file
-						recordsToProcess = data.data
-						recordsProcessedThisFile = incomingRecords
-					} else {
-						// We can only process part of this file to reach the cap
-						recordsToProcess = data.data.slice(0, remainingCapacity)
-						recordsProcessedThisFile = remainingCapacity
-						isCapReached = true
+				mayLog(
+					`[GRIN2] Record cap reached! Processing only ${recordsProcessedThisFile} of ${incomingRecords} records from file ${data.case_id}`
+				)
+			}
 
-						mayLog(
-							`[GRIN2] Record cap reached! Processing only ${recordsProcessedThisFile} of ${incomingRecords} records from file ${data.case_id}`
-						)
-					}
+			// Individual file completed successfully
+			processedFiles++
+			allSuccessfulData.push(recordsToProcess)
+			totalRecordsProcessed += recordsProcessedThisFile
+			mayLog(
+				`[GRIN2] Processed file ${processedFiles}: ${data.case_id} (${data.data_type}) - ${recordsProcessedThisFile} records`
+			)
+			mayLog(`[GRIN2] Total records processed: ${totalRecordsProcessed}/${MAX_RECORDS}`)
 
-					// Individual file completed successfully
-					processedFiles++
-					allSuccessfulData.push(recordsToProcess)
-					totalRecordsProcessed += recordsProcessedThisFile
-					mayLog(
-						`[GRIN2] Processed file ${processedFiles}: ${data.case_id} (${data.data_type}) - ${recordsProcessedThisFile} records`
-					)
-					mayLog(`[GRIN2] Total records processed: ${totalRecordsProcessed}/${MAX_RECORDS}`)
-
-					// Log when cap is reached
-					if (isCapReached) {
-						mayLog(`[GRIN2] RECORD CAP REACHED: ${MAX_RECORDS} records processed. Subsequent files will be skipped.`)
-					}
-				} else if (data.type === 'summary') {
-					// Final summary - all files processed
-					finalSummary = data
-					mayLog(`[GRIN2] Download complete: ${data.successful_files}/${data.total_files} files successful`)
-					if (isCapReached) {
-						mayLog(`[GRIN2] Processing stopped due to record cap of ${MAX_RECORDS}`)
-						mayLog(`[GRIN2] Total records collected: ${totalRecordsProcessed}`)
-					}
-					if (data.failed_files > 0) {
-						mayLog(`[GRIN2] ${data.failed_files} files failed`)
-					}
-				}
-			} catch (parseError) {
-				console.error('[GRIN2] JSONL parse error:', parseError)
-				console.error('[GRIN2] Problematic line:', trimmedLine)
+			// Log when cap is reached
+			if (isCapReached) {
+				mayLog(`[GRIN2] RECORD CAP REACHED: ${MAX_RECORDS} records processed. Subsequent files will be skipped.`)
+			}
+		} else if (data.type === 'summary') {
+			// Final summary - all files processed
+			finalSummary = data
+			mayLog(`[GRIN2] Download complete: ${data.successful_files}/${data.total_files} files successful`)
+			if (isCapReached) {
+				mayLog(`[GRIN2] Processing stopped due to record cap of ${MAX_RECORDS}`)
+				mayLog(`[GRIN2] Total records collected: ${totalRecordsProcessed}`)
+			}
+			if (data.failed_files > 0) {
+				mayLog(`[GRIN2] ${data.failed_files} files failed`)
 			}
 		}
 	}
