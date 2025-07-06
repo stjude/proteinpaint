@@ -287,7 +287,7 @@ function hardlist4block(block, div) {
 			continue
 		}
 		const tr = hardtable.append('tr')
-		const td1 = tr.append('td').style('color', '#aaa').style('font-size', '.7em')
+		const td1 = tr.append('td').style('color', '#555').style('font-size', '.7em')
 		const handle = tr.append('td').attr('class', 'sja_menuoption').text(tkhtmllabel(tk, block))
 		/*
 		const td3 = tr.append('td')

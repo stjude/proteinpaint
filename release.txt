@@ -1,1 +1,2 @@
-
+Fixes:
+- bedj/gencode track item category legend is server generated based on rendered items
