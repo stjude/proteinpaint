@@ -94,7 +94,6 @@ async function runGrin2(genomes: any, req: any, res: any) {
 
 	const downloadStartTime = Date.now()
 	const rustOutput = await run_rust('gdcGRIN2', JSON.stringify(rustInput))
-	console.log(rustOutput)
 
 	try {
 		const rustOutputJS = JSON.parse(rustOutput)
@@ -110,7 +109,7 @@ async function runGrin2(genomes: any, req: any, res: any) {
 		}
 	} catch (parseError) {
 		console.error('[GRIN2] JSONL parse error:', parseError)
-		console.error('[GRIN2] Problematic line:', runstOutput)
+		console.error('[GRIN2] Problematic line:', rustOutput)
 	}
 
 	mayLog('[GRIN2] Rust execution completed')
