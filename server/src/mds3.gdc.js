@@ -1649,7 +1649,11 @@ export async function querySamplesTwlstNotForGeneexpclustering_noGenomicFilter(q
 
 	const t1 = Date.now()
 
-	const re = await memFetch(joinUrl(host.rest, 'cases'), { method: 'POST', headers, body: JSON.stringify(param) })
+	const re = await memFetch(
+		joinUrl(host.rest, 'cases'),
+		{ method: 'POST', headers, body: JSON.stringify(param) } //,
+		//{ q } // this q does not seem to be a request object reference that is shared across all genes, cannot use as a cache key
+	)
 
 	mayLog('gdc /cases queries', Date.now() - t1)
 
@@ -1718,21 +1722,25 @@ async function querySamplesTwlstForGeneexpclustering(q, twLst, ds) {
 	}
 
 	const { host, headers } = ds.getHostHeaders(q)
-	console.log(1720, 'will use memFetch')
+
 	// NOTE: not using ky, until the issue with undici intermittent timeout/socket hangup is
 	// fully resolved, and which hapens only for long-running requests where possibly
 	// garbage collection is not being performed on http socket resources
-	const re = await fetch(joinUrl(host.rest, 'cases'), {
-		method: 'POST',
-		timeout: false,
-		headers,
-		body: JSON.stringify({
-			size: ds.__gdc.casesWithExpData.size,
-			fields: fields.join(','),
-			case_filters: filters.content.length ? filters : undefined
-		})
-	})
-	console.log(1733)
+	const re = await memFetch(
+		joinUrl(host.rest, 'cases'),
+		{
+			method: 'POST',
+			timeout: false,
+			headers,
+			body: JSON.stringify({
+				size: ds.__gdc.casesWithExpData.size,
+				fields: fields.join(','),
+				case_filters: filters.content.length ? filters : undefined
+			})
+		} //,
+		//{ q } // this q does not seem to be a request object reference that is shared across all genes, cannot use as a cache key
+	)
+
 	if (!Array.isArray(re?.data?.hits)) throw 're.data.hits[] not array'
 
 	const samples = []
