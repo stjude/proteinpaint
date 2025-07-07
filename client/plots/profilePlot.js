@@ -206,20 +206,22 @@ export class profilePlot {
 				facilityTW: this.config.facilityTW
 			})
 		this.sites = this.data.sites
-		if (this.settings.sites)
-			for (const site of this.settings.sites) {
-				const siteOption = this.sites.find(s => s.value == site)
-				if (siteOption) siteOption.selected = true //mark selected sites
-			}
-		//select site if only one to show
-		if (!this.settings.site && (this.state.sites?.length == 1 || this.isRadarFacility))
-			this.settings.site = this.data.sites?.[0]?.value
 		this.sites.sort((a, b) => {
 			if (a.label < b.label) return -1
 			if (a.label > b.label) return 1
 			return 0
 		})
 
+		if (!this.settings.site && !this.settings.sites && (this.state.sites?.length == 1 || this.isRadarFacility)) {
+			this.settings.site = this.data.sites?.[0]?.value
+			this.settings.sites = [this.settings.site] //set sites to the single site
+		}
+
+		if (this.settings.sites)
+			for (const site of this.settings.sites) {
+				const siteOption = this.sites.find(s => s.value == site)
+				if (siteOption) siteOption.selected = true //mark selected sites
+			}
 		const chartType = this.type
 		this.dom.controlsDiv.selectAll('*').remove()
 		let inputs = []
@@ -327,8 +329,7 @@ export class profilePlot {
 					type: 'dropdown',
 					chartType,
 					options: this.sites,
-					//settingsKey: 'site',
-					multiple: !this.isRadarFacility,
+					multiple: true,
 					callback: values => {
 						this.setSites(values)
 					}
@@ -414,8 +415,9 @@ export class profilePlot {
 
 	setSites(sites) {
 		if (sites && sites.length == 1) this.settings.site = sites[0] //if only one site selected, set it as the site
-		else this.settings.site = '' //clear site
-		this.settings.sites = sites.map(s => Number(s))
+		this.settings.sites = sites?.map(s => Number(s))
+		if (this.settings.sites.length > 1) this.settings.site = '' //clear site
+		else if (this.settings.sites.length == 1) this.settings.site = this.settings.sites[0] //set site to the single site
 		this.app.dispatch({ type: 'plot_edit', id: this.id, config: this.config })
 	}
 
