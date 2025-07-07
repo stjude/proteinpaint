@@ -44,15 +44,22 @@ export default class ViewModel {
 		this.genesetName = genesetName
 
 		this.width =
-			1.2 *
+		//length multiplier (2) must be great enough to allow canvas to expand beyond 
+		//the expansion of the discoplot. If not, some of the labels will render outside
+		//the canvas and result in cut labels.
+			2 *
 			(this.settings.horizontalPadding +
 				this.settings.rings.labelLinesInnerRadius +
 				this.settings.rings.labelsToLinesDistance)
 		this.height =
-			2 *
+		//heigth multiplier (2.5) must be great enough to allow canvas to expand beyond 
+		//the expansion of the discoplot. If not, some of the labels will render outside
+		//the canvas and result in cut labels.
+			2.5 *
 			(this.settings.rings.labelLinesInnerRadius +
 				this.settings.rings.labelsToLinesDistance +
-				this.settings.verticalPadding)
+				this.settings.verticalPadding +
+				this.settings.label.fontSize * 2)
 
 		this.legendHeight = this.calculateLegendHeight(legend)
 		this.snvDataLength = dataHolder.snvData.length

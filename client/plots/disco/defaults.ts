@@ -2,7 +2,7 @@ import type Settings from './Settings'
 import { copyMerge } from '#rx'
 import { CnvRenderingType } from '#plots/disco/cnv/CnvRenderingType.ts'
 
-export default function discoDefaults(overrides = {}): Settings {
+export default function discoDefaults(overrides: any = {}): Settings {
 	const defaults = {
 		downloadImgName: 'disco.plot',
 
@@ -14,7 +14,9 @@ export default function discoDefaults(overrides = {}): Settings {
 			showPrioritizeGeneLabelsByGeneSets: false,
 			cnvRenderingType: CnvRenderingType.heatmap,
 			cnvPercentile: 90, // 90th percentile for removing outliers
-			cnvCutoffMode: 'percentile'
+			cnvCutoffMode: 'percentile',
+			radius: 300,
+			fusionOpacity: 1
 		},
 
 		rings: {
@@ -74,6 +76,10 @@ export default function discoDefaults(overrides = {}): Settings {
 		menu: {
 			padding: 5
 		}
+	}
+
+	if (overrides?.Disco?.radius > 1000 || overrides?.Disco?.radius < 300) {
+		console.log(`${overrides?.Disco?.radius} is greater or lower than the min and max for the radius`)
 	}
 
 	return copyMerge(defaults, overrides)

@@ -9,13 +9,19 @@ import { table2col } from '#dom/table2col'
 import type CnvTooltip from '#plots/disco/cnv/CnvTooltip.ts'
 
 export default class LabelsRenderer implements IRenderer {
-	private animationDuration: number
-	private geneClickListener: (gene: string, mnames: Array<string>) => void
+       private animationDuration: number
+       private fontSize: number
+       private geneClickListener: (gene: string, mnames: Array<string>) => void
 
-	constructor(animationDuration: number, geneClickListener: (gene: string, mnames: Array<string>) => void) {
-		this.animationDuration = animationDuration
-		this.geneClickListener = geneClickListener
-	}
+       constructor(
+               animationDuration: number,
+               fontSize: number,
+               geneClickListener: (gene: string, mnames: Array<string>) => void
+       ) {
+			this.animationDuration = animationDuration
+			this.fontSize = fontSize
+			this.geneClickListener = geneClickListener
+       }
 
 	render(holder: any, elements: Array<Label>, collisions?: Array<Label>) {
 		const labelsG = holder.append('g')
@@ -39,7 +45,7 @@ export default class LabelsRenderer implements IRenderer {
 					.attr('dy', '.35em')
 					.attr('transform', label.transform)
 					.style('text-anchor', label.textAnchor)
-					.style('font-size', '12px')
+					.style('font-size', `${this.fontSize}px`)
 					.style('fill', label.color)
 					.style('cursor', 'pointer')
 					.text(label.text)
