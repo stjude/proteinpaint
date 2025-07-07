@@ -156,7 +156,7 @@ export async function getChildTerms(term: RawGvTerm, vocabApi: VocabApi) {
 	}
 	const categories = await vocabApi.getCategories(term, filter, body)
 	for (const _t of dtTerms) {
-		const t = structuredClone(_t)
+		const t: any = structuredClone(_t)
 		if (!Object.keys(vocabApi.termdbConfig.queries).includes(t.query)) continue // dt is not in dataset
 		const data = categories.lst.find(x => x.dt == t.dt)
 		if (!data) continue // gene does not have this dt
