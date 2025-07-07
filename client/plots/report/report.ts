@@ -25,6 +25,18 @@ export class Report extends RxComponentInner {
 		this.config = appState.plots.find(p => p.id === this.id)
 		this.view = new ReportView(this)
 		this.components = { plots: {} }
+		const state = this.getState(appState)
+		for (const section of state.config.sections) {
+			const sectionDiv = this.view.dom.plotsDiv.append('div')
+
+			sectionDiv.append('div').style('font-size', '1.2em').style('font-weight', 'bold').text(section.name) //header
+			const plotDiv = sectionDiv.append('div').style('margin', '20px')
+
+			for (const plot of section.plots) {
+				if (this.components.plots[plot.id]) continue
+				await this.setPlot(plot, plotDiv)
+			}
+		}
 	}
 
 	async replaceFilter() {
@@ -56,18 +68,7 @@ export class Report extends RxComponentInner {
 	async main() {
 		this.config = structuredClone(this.state.config)
 		this.settings = this.config.settings.report
-		//Though the plots are read from the dataset and do not change in the future they may be added dynamically so we keep this loop here
-		for (const section of this.state.config.sections) {
-			const sectionDiv = this.view.dom.plotsDiv.append('div')
 
-			sectionDiv.append('div').style('font-size', '1.2em').style('font-weight', 'bold').text(section.name) //header
-			const plotDiv = sectionDiv.append('div').style('margin', '20px')
-
-			for (const plot of section.plots) {
-				if (this.components.plots[plot.id]) continue
-				await this.setPlot(plot, plotDiv)
-			}
-		}
 		this.fillSites()
 	}
 
