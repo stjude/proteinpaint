@@ -5,15 +5,22 @@ import MenuProvider from '#plots/disco/menu/MenuProvider.ts'
 import { bplen } from '#shared/common.js'
 
 export default class ChromosomesRenderer implements IRenderer {
-	private padAngle: number
-	private innerRadius: number
-	private outerRadius: number
+       private padAngle: number
+       private innerRadius: number
+       private outerRadius: number
+       private fontSize: number
 
-	constructor(padAngle: number, innerRadius: number, outerRadius: number) {
-		this.padAngle = padAngle
-		this.innerRadius = innerRadius
-		this.outerRadius = outerRadius
-	}
+       constructor(
+               padAngle: number,
+               innerRadius: number,
+               outerRadius: number,
+               fontSize: number
+       ) {
+               this.padAngle = padAngle
+               this.innerRadius = innerRadius
+               this.outerRadius = outerRadius
+               this.fontSize = fontSize
+       }
 
 	render(holder: any, elements: Array<Chromosome>) {
 		const pie = d3
@@ -78,13 +85,14 @@ export default class ChromosomesRenderer implements IRenderer {
 					d.data.angle > Math.PI ? 'rotate(180)' : ''
 				}`
 			})
-			.attr('dy', '0.35em')
-			.attr('text-anchor', 'middle')
-			.text((d: d3.PieArcDatum<Chromosome>) => d.data.text)
-			.style('fill', 'white')
-			.style('padding', '500px')
-			//prevents chromosome number from interfering with hover
-			.style('pointer-events', 'none')
-			.style('padding', '500px')
+                       .attr('dy', '0.35em')
+                       .attr('text-anchor', 'middle')
+                       .text((d: d3.PieArcDatum<Chromosome>) => d.data.text)
+                       .style('fill', 'white')
+                       .style('font-size', `${this.fontSize}px`)
+                       .style('padding', '500px')
+                       //prevents chromosome number from interfering with hover
+                       .style('pointer-events', 'none')
+                       .style('padding', '500px')
 	}
 }

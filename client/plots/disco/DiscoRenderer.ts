@@ -9,10 +9,10 @@ export class DiscoRenderer {
 	private legendRenderer: LegendRenderer
 	private fusionRenderer: FusionRenderer
 
-	constructor(renders: Map<RingType, IRenderer>, legendRenderer: LegendRenderer) {
+	constructor(renders: Map<RingType, IRenderer>, legendRenderer: LegendRenderer, fusionOpacity: number) {
 		this.renders = renders
 		this.legendRenderer = legendRenderer
-		this.fusionRenderer = new FusionRenderer()
+		this.fusionRenderer = new FusionRenderer(fusionOpacity)
 	}
 
 	render(holder: any, viewModel: ViewModel) {
@@ -42,7 +42,7 @@ export class DiscoRenderer {
 			renderer.render(mainG, elements, collisions)
 		}
 
-		this.fusionRenderer.render(mainG, viewModel.fusions)
+		this.fusionRenderer.render(mainG, viewModel.fusions, viewModel.settings.Disco.fusionOpacity)
 
 		if (viewModel.settings.Disco.centerText) {
 			const chrRingBbox = mainG.select('[data-testid="sjpp_chromosomes_arc_group"]').node().getBBox()

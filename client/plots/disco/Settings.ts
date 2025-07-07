@@ -4,7 +4,11 @@ export default interface Settings {
 
 	downloadImgName: string // file name of downloaded svg
 
-	Disco: {
+    Disco: {
+		/** Global radius controlling ring size */
+		radius?: number
+		/** Opacity of the fusion arcs */
+		fusionOpacity?: number
 		centerText: string
 		cnvCapping: number
 		isOpen: boolean

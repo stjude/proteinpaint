@@ -113,6 +113,33 @@ export default class Disco {
 
 		if (viewModel.cnvMaxValue !== 0 || viewModel.cnvMinValue !== 0) configInputsOptions.push(...cnvConfigInputOptions)
 
+			const dimensionOptions = [
+				{
+					label: 'Radius',
+					title: 'Set the radius of the entire plot, between 300 and 1000 pixels.',
+					type: 'number',
+					chartType: 'Disco',
+					settingsKey: 'radius',
+					debounceInterval: 500,
+					step: 25,
+					min: 300,
+					max: 1000,
+				},
+				{
+					label: 'Fusion opacity',
+					title: 'Adjust opacity of fusion arcs',
+					type: 'number',
+					chartType: 'Disco',
+					settingsKey: 'fusionOpacity',
+					step: 0.01,
+					min: 0,
+					max: 1,
+					debounceInterval: 500
+				}
+			]
+
+		configInputsOptions.push(...dimensionOptions)
+
 		return configInputsOptions
 	}
 
@@ -144,8 +171,9 @@ export default class Disco {
 			const legendRenderer = new LegendRenderer(this.viewModel.cappedCnvMaxAbsValue, settings.label.fontSize)
 
 			const discoRenderer = new DiscoRenderer(
-				this.getRingRenderers(settings, this.viewModel, this.discoInteractions.geneClickListener),
-				legendRenderer
+				this.getRingRenderers(this.viewModel.settings, this.viewModel, this.discoInteractions.geneClickListener),
+				legendRenderer,
+				this.viewModel.settings.Disco.fusionOpacity ?? 1
 			)
 
 			discoRenderer.render(svgDiv, this.viewModel)
@@ -164,9 +192,14 @@ export default class Disco {
 		const chromosomesRenderer = new ChromosomesRenderer(
 			settings.padAngle,
 			settings.rings.chromosomeInnerRadius,
-			settings.rings.chromosomeInnerRadius + settings.rings.chromosomeWidth
+			settings.rings.chromosomeInnerRadius + settings.rings.chromosomeWidth,
+			settings.label.fontSize
 		)
-		const labelsRenderer = new LabelsRenderer(settings.label.animationDuration, geneClickListener)
+		const labelsRenderer = new LabelsRenderer(
+			settings.label.animationDuration,
+			settings.label.fontSize,
+			geneClickListener
+		)
 		const nonExonicSnvRenderer = new NonExonicSnvRenderer(geneClickListener)
 		const snvRenderer = new SnvRenderer(settings.rings.snvRingWidth, geneClickListener)
 		const cnvRenderer =
