@@ -591,7 +591,7 @@ async function listSamples(event, self, seriesId, dataId, chartId) {
 
 	function getTvs(termIndex, value) {
 		const term = termIndex == 0 ? self.config.term0 : termIndex == 1 ? self.config.term : self.config.term2
-		const tvs = {
+		let tvs = {
 			type: 'tvs',
 			tvs: {
 				term: term.term,
@@ -603,14 +603,29 @@ async function listSamples(event, self, seriesId, dataId, chartId) {
 			tvs.tvs.ranges = [bins.find(bin => bin.label == value)]
 		}
 		if (term.term.type == 'geneVariant') {
-			// tvs needs to be that of a child dt term of geneVariant term
-			// TODO: handle cases when geneVariant term is term0 or term2
-			const dtTerm = self.chartid2dtterm[chartId]
-			tvs.tvs.term = dtTerm
-			// using mclass instead of dtTerm.values to support not tested classes
-			const key = Object.keys(mclass).find(k => mclass[k].label == value)
-			tvs.tvs.values = [{ key }]
-			tvs.tvs.includeNotTested = true // to be able to list not tested samples
+			// geneVariant term
+			if (termIndex === 1) {
+				// term1=geneVariant, chart will be divided by dt term
+				// get dt term from selected chart and build tvs
+				const dtTerm = self.chartid2dtterm[chartId]
+				// using mclass here instead of dtTerm.values to
+				// support the not tested class
+				const key = Object.keys(mclass).find(k => mclass[k].label == value)
+				tvs = {
+					type: 'tvs',
+					tvs: {
+						term: dtTerm,
+						values: [{ key }],
+						includeNotTested: true // to be able to list not tested samples
+					}
+				}
+			} else {
+				// term0/2=geneVariant, get dt term from groupsetting
+				const groups = term.q.customset?.groups
+				if (!groups || !Array.isArray(groups)) throw 'groups[] is missing'
+				const group = groups.find(group => group.name == value)
+				tvs = group.filter
+			}
 		}
 		return tvs
 	}
