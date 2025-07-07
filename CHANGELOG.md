@@ -10,6 +10,7 @@ Features:
 
 Fixes:
 - adhoc set gdc assay availability during caching, and support getting cases by filter in runtime
+- bedj/gencode track item category legend is server generated based on rendered items
 
 
 ## 2.134.0
