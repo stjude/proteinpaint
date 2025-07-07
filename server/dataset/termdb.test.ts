@@ -34,7 +34,8 @@ export default function (): Mds3 {
 		isMds3: true,
 		isSupportedChartOverride: {
 			runChart: () => true,
-			frequencyChart: () => true
+			frequencyChart: () => true,
+			report: () => true
 		},
 		cohort: {
 			massNav: {
@@ -137,6 +138,77 @@ export default function (): Mds3 {
 				regression: {
 					settings: {
 						coxDisclaimer: 'This is a test disclaimer for the cox regression analysis.'
+					}
+				},
+				plotConfigByCohort: {
+					default: {
+						report: {
+							sections: [
+								{
+									name: 'Demographics',
+									plots: [
+										{
+											chartType: 'barchart',
+											settings: { barchart: { colorBars: true } },
+
+											term: {
+												id: 'agedx'
+											}
+										},
+										{
+											chartType: 'barchart',
+											term: { id: 'sex' },
+											settings: { barchart: { colorBars: true } }
+										},
+										{
+											chartType: 'barchart',
+											term: { id: 'genetic_race' },
+											settings: { barchart: { colorBars: true } }
+										}
+									]
+								},
+								{
+									name: 'Diagnosis',
+									plots: [
+										{
+											chartType: 'barchart',
+											term: { id: 'diaggrp' },
+											settings: { barchart: { colorBars: true } }
+										}
+									]
+								},
+								{
+									name: 'Treatment',
+									plots: [
+										{
+											chartType: 'barchart',
+											term: { id: 'hrtavg' },
+											settings: { barchart: { colorBars: true } }
+										},
+										{
+											chartType: 'barchart',
+											term: { id: 'aaclassic_5' },
+											settings: { barchart: { colorBars: true } }
+										}
+									]
+								},
+								{
+									name: 'Survival',
+									plots: [
+										{
+											chartType: 'survival',
+											term: { id: 'efs' },
+											term2: { id: 'diaggrp' }
+										},
+										{
+											chartType: 'survival',
+											term: { id: 'os' },
+											term2: { id: 'diaggrp' }
+										}
+									]
+								}
+							]
+						}
 					}
 				}
 			},
