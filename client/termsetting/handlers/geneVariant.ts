@@ -181,6 +181,7 @@ export async function getChildTerms(term: RawGvTerm, vocabApi: VocabApi) {
 		}
 		t.values = values
 		t.parentTerm = structuredClone(term)
+		delete t.parentTerm.childTerms // remove any nested child terms
 		dtTermsInDs.push(t)
 	}
 	term.childTerms = dtTermsInDs
