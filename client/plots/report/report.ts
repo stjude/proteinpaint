@@ -99,6 +99,9 @@ export class Report extends RxComponentInner {
 	}
 
 	async fillSites() {
+		if (!this.config.countryTW || !this.config.siteTW) {
+			return
+		}
 		const site = this.settings[this.config.siteTW.term.id] || ''
 		this.filterTWs = [this.config.countryTW, this.config.siteTW]
 		const filters: any = {}
