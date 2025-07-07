@@ -837,13 +837,12 @@ export class TermdbVocab extends Vocab {
 					.sort() // sort the gene names by the default alphanumeric order to improve cache reuse even when terms are resorted
 		const allTerms2update = opts.terms.slice() // make copy of array as it will be truncated to empty. do not modify original
 		// TODO: do not hardcode, detect from termdbConfig, if this approach is preferred
-		const maxNumTerms = this.vocab.dslabel === 'GDC' ? opts.terms.length : 1 // revert back to 1 to revert to previous behavior
+		const maxNumTerms = opts.terms.length // this.vocab.dslabel === 'GDC' ? opts.terms.length : 1 // revert back to 1 to revert to previous behavior
 		let numResponses = 0
 		if (opts.loadingDiv) opts.loadingDiv.html('Updating data ...')
 
 		while (true) {
 			const copies = getTerms2update(allTerms2update, maxNumTerms) // list of unique terms to update in this round
-			console.log(845, 'TermdbVocab getAnnotatedSampleData() copies.length', copies.length)
 			if (copies.length == 0) break // at the end of list, break loop
 			const init = {
 				headers,

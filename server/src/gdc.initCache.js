@@ -1,6 +1,7 @@
 import ky from 'ky'
 import { isUsableTerm } from '#shared/termdb.usecase.js'
 import serverconfig from './serverconfig.js'
+import { gdcBuildDictionary } from './gdc.buildDictionary.js'
 import { cachedFetch, isRecoverableError } from './utils'
 import { deepEqual } from '#shared/helpers.js'
 import { joinUrl } from '#shared/joinUrl.js'
@@ -84,6 +85,7 @@ async function mayRefreshCache(ds) {
 	try {
 		version = await hasNewVersion(ds)
 		if (!version) return
+		await gdcBuildDictionary(ds)
 		await cacheMappingOnNewRelease(ds, version)
 	} catch (e) {
 		// uncomment to test cancellation of retries and also requires

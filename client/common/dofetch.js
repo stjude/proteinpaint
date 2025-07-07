@@ -1,5 +1,5 @@
 import { deepFreeze } from '#rx'
-import { encode, getDataName, processResponse, memFetch } from '#shared/index.js'
+import { encode, getDataName, processResponse } from '#shared/index.js'
 import { mayShowAuthUi, mayAddJwtToRequest, includeEmbedder, setDsAuthOk } from './auth.js'
 export * from './auth.js'
 export { processFormData } from '#shared/index.js'
@@ -120,12 +120,88 @@ export function dofetch2(path, init = {}, opts = {}) {
 	*/
 	return mayShowAuthUi(init, url).then(async () => {
 		if (!jwt) mayAddJwtToRequest(init, body, url)
-		if (!opts.serverData) {
-			return fetch(url, init).then(processResponse)
+		if (opts.serverData) {
+			return namedFetch(url, init, opts)
 		} else {
-			return await memFetch(url, init, opts)
+			return fetch(url, init).then(processResponse)
 		}
 	})
+}
+
+// key: opts.serverData object
+// value: array of cached dataNames
+const optsServerDataNames = new WeakMap() // do not prevent garbage collection of unneeded opts.serverData in consumer code
+/*
+	namedFetch()
+	- same arguments and behavior as ezFetch() above, except opts.serverData is expected to cache response by computed data name
+	- preserves the caching expectations from 
+	
+	opts{}
+	serverData: optional plain object to store response by dataName (string) keys
+		- if a computed dataName is found as a key in this object, the cached response will be reused to fulfill the fetch
+		- note that the plain object as storage is to support legacy dofetch code
+*/
+export async function namedFetch(url, init, opts = {}) {
+	if (!opts.serverData) throw `use ezFetch() if a fetched response is not meant to be cached`
+	if (typeof opts.serverData != 'object') throw `opts.serverData is not an object`
+
+	let result
+	const dataName = await getDataName(url, init)
+	if (opts.serverData[dataName])
+		result = opts.serverData[dataName].clone
+			? await processResponse(opts.serverData[dataName].clone())
+			: structuredClone(opts.serverData[dataName])
+
+	if (!result || (typeof result != 'object' && !(result instanceof Promise))) {
+		delete opts.serverData[dataName]
+		result = undefined
+	}
+
+	if (!result) {
+		try {
+			const res = await fetch(url, init)
+			result = await processResponse(res.clone())
+			// in case this fetch was cancelled with AbortController.signal,
+			// then the result may be another Promise instead of a data object,
+			// as observed when rapidly changing the gdc cohort filter
+			if (typeof result == 'object' && !(result instanceof Promise)) {
+				// TODO: make decoded caching as default, since storing as a
+				// fetch Response interface can be problematic when the fetch is aborted
+				if (opts.cacheAs == 'decoded') {
+					// should prefer to store results as a deeply frozen object instead of a Response interface,
+					// but must not return the same object to be reused by different requests
+					deepFreeze(result)
+					opts.serverData[dataName] = result
+					result = structuredClone(result)
+				} else {
+					// per https://developer.mozilla.org/en-US/docs/Web/API/Response/clone,
+					// **should not use (.clone) to read very large bodies in parallel** at different speeds,
+					// may also mean(?) to not persist/store the Response for a long time as is being done here
+					opts.serverData[dataName] = res
+				}
+			}
+		} catch (e) {
+			delete opts.serverData[dataName]
+			throw e
+		}
+	}
+
+	// manage opts.serverData cache size
+	if (!optsServerDataNames.has(opts.serverData)) optsServerDataNames.set(opts.serverData, [])
+	const keys = optsServerDataNames.get(opts.serverData)
+	const i = keys.indexOf(dataName)
+	if (i !== 0) {
+		// move this cached response as the most recent entry, by object key
+		const response = opts.serverData[dataName]
+		delete opts.serverData[dataName]
+	}
+	keys.unshift(dataName)
+	const maxKeys = 360
+	while (keys.length > maxKeys) {
+		const oldestDataKey = keys.pop() // delete the dataName from the tracking array
+		delete opts.serverData[oldestDataKey]
+	}
+	return result
 }
 
 const defaultServerDataCache = {}
