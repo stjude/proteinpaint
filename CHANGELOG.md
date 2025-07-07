@@ -8,6 +8,9 @@ Features:
 - GDC-GRIN2: Improved plot background visual. Removed chrM from plot. Added y-axis scaling cap to make values easier to see. Center aligned chromosome labels
 - GDC-GRIN2: Removed plot filter on insignificant points
 
+Fixes:
+- adhoc set gdc assay availability during caching, and support getting cases by filter in runtime
+
 
 ## 2.134.0
 
