@@ -32,7 +32,7 @@ class profileRadarFacility extends profilePlot {
 	async main() {
 		await super.main()
 		await this.setControls()
-		if (!this.settings.site) this.settings.site = this.data.sites?.[0]?.value
+
 		const sites = this.settings.sites || [this.settings.site]
 		this.sampleData = await this.app.vocabApi.getProfileScores({
 			terms: [...this.twLst, this.config.facilityTW], //added facility term to all the plots to get the hospital name

@@ -211,7 +211,9 @@ export class profilePlot {
 				const siteOption = this.sites.find(s => s.value == site)
 				if (siteOption) siteOption.selected = true //mark selected sites
 			}
-		//if (!this.isRadarFacility) this.sites.unshift({ label: '', value: '' })
+		//select site if only one to show
+		if (!this.settings.site && (this.state.sites?.length == 1 || this.isRadarFacility))
+			this.settings.site = this.data.sites?.[0]?.value
 		this.sites.sort((a, b) => {
 			if (a.label < b.label) return -1
 			if (a.label > b.label) return 1
@@ -376,7 +378,10 @@ export class profilePlot {
 	setFilterValue(key, value) {
 		const config = this.config
 		this.settings[key] = value
-		if (!this.isRadarFacility) this.settings.site = '' //always clear site when a filter is changed
+		if (!this.isRadarFacility) {
+			this.settings.site = '' //always clear site when a filter is changed
+			this.settings.sites = null //clear sites
+		}
 		config.filter = this.getFilter()
 		this.app.dispatch({ type: 'plot_edit', id: this.id, config: this.config })
 	}
@@ -395,7 +400,10 @@ export class profilePlot {
 
 	clearFiltersExcept(ids) {
 		for (const tw of this.config.filterTWs) if (!ids.includes(tw.term.id)) this.settings[tw.term.id] = ''
-		if (!this.isRadarFacility) this.settings.site = ''
+		if (!this.isRadarFacility) {
+			this.settings.site = ''
+			this.settings.sites = null //clear sites
+		}
 	}
 
 	setSite(site) {
