@@ -3601,10 +3601,10 @@
   },
   "termsetting/handlers/geneVariant.ts": {
     "lines": {
-      "total": 88,
+      "total": 89,
       "covered": 1,
       "skipped": 0,
-      "pct": 1.13
+      "pct": 1.12
     },
     "functions": {
       "total": 18,
@@ -3613,10 +3613,10 @@
       "pct": 0
     },
     "statements": {
-      "total": 97,
+      "total": 98,
       "covered": 1,
       "skipped": 0,
-      "pct": 1.03
+      "pct": 1.02
     },
     "branches": {
       "total": 39,
@@ -3630,9 +3630,9 @@
       "diff": 0
     },
     "averagePct": {
-      "curr": 0.54,
-      "prev": 0,
-      "diff": 0.54
+      "curr": 0.535,
+      "prev": 0.54,
+      "diff": -0.0050000000000000044
     }
   },
   "plots/barchart.events.js": {
