@@ -20,14 +20,14 @@
 
   Output mutations as JSON array.
     {
-        grin2lesion:[],
+        grin2lesion:str,
         summary:{}
     }
 
   Example of usage:
-    echo '{"caseFiles": {"MP2PRT-PATFJE": {"maf": "26ea7b6f-8bc4-4e83-ace1-2125b493a361"},"MP2PRT-PAPIGD": {"maf": "653d7458-f4af-4328-a1ce-3bbf22a2e347"}, "TCGA-CG-4300": { "cnv":"46372ec2-ff79-4d07-b375-9ba8a12c11f3", "maf":"c09b208d-2e7b-4116-9580-27f20f4c7e67"}},"mafOptions": {"minTotalDepth": 100,"minAltAlleleCount": 20,"hyperMutator":8000,"consequences":["missense_variant","frameshift_variant"]}, "cnvOptions":{"lossThreshold":-1, "gainThreshold": 1.5, "segLength":2000000, "hyperMutator":8000}, "chromosomes":["chr1","chr2","chr3"], "max_record": 100000}' | ./target/release/gdcGRIN2
+    echo '{"caseFiles": {"MP2PRT-PATFJE": {"maf": "26ea7b6f-8bc4-4e83-ace1-2125b493a361"},"MP2PRT-PAPIGD": {"maf": "653d7458-f4af-4328-a1ce-3bbf22a2e347"}, "TCGA-CG-4300": { "cnv":"46372ec2-ff79-4d07-b375-9ba8a12c11f3", "maf":"c09b208d-2e7b-4116-9580-27f20f4c7e67"}},"mafOptions": {"minTotalDepth": 10,"minAltAlleleCount": 2,"hyperMutator":8000,"consequences":["missense_variant","frameshift_variant"]}, "cnvOptions":{"lossThreshold":-0.4, "gainThreshold": 0.3, "segLength":2000000, "hyperMutator":500}, "chromosomes":["chr1","chr2","chr3"], "max_record": 100000}' | ./target/release/gdcGRIN2
   Example of usage (read from local files):
-    echo '{"caseFiles": {"MP2PRT-PATFJE": {"maf": "26ea7b6f-8bc4-4e83-ace1-2125b493a361"},"MP2PRT-PAPIGD": {"maf": "653d7458-f4af-4328-a1ce-3bbf22a2e347"}, "TCGA-CG-4300": { "cnv":"46372ec2-ff79-4d07-b375-9ba8a12c11f3", "maf":"c09b208d-2e7b-4116-9580-27f20f4c7e67"}},"mafOptions": {"minTotalDepth": 100,"minAltAlleleCount": 20,"hyperMutator":8000,"consequences":["missense_variant","frameshift_variant"]}, "cnvOptions":{"lossThreshold":-1, "gainThreshold": 1.5, "segLength":2000000, "hyperMutator":8000}, "chromosomes":["chr1","chr2","chr3"], "max_record": 100000}' | ./target/release/gdcGRIN2 --from-file
+    echo '{"caseFiles": {"MP2PRT-PATFJE": {"maf": "26ea7b6f-8bc4-4e83-ace1-2125b493a361"},"MP2PRT-PAPIGD": {"maf": "653d7458-f4af-4328-a1ce-3bbf22a2e347"}, "TCGA-CG-4300": { "cnv":"46372ec2-ff79-4d07-b375-9ba8a12c11f3", "maf":"c09b208d-2e7b-4116-9580-27f20f4c7e67"}},"mafOptions": {"minTotalDepth": 10,"minAltAlleleCount": 2,"hyperMutator":8000,"consequences":["missense_variant","frameshift_variant"]}, "cnvOptions":{"lossThreshold":-0.4, "gainThreshold": 0.3, "segLength":2000000, "hyperMutator":500}, "chromosomes":["chr1","chr2","chr3"], "max_record": 100000}' | ./target/release/gdcGRIN2 --from-file
 
 */
 
@@ -146,7 +146,7 @@ struct FinalSummary {
 // Enum to hold both SuccessfulFileoutput and FinalSummary
 #[derive(Serialize)]
 struct Output {
-    grin2lesion: Vec<Vec<String>>,
+    grin2lesion: String,
     summary: FinalSummary,
 }
 
@@ -940,10 +940,9 @@ async fn download_data(
         excluded_by_max_record: excluded_by_max_record.lock().await.clone(),
     };
 
-    let output = Output {
-        grin2lesion: all_records.lock().await.drain(..).collect(),
-        summary,
-    };
+    let grin2lesion = serde_json::to_string(&all_records.lock().await.drain(..).collect::<Vec<Vec<String>>>())
+        .unwrap_or_else(|_| "[]".to_string());
+    let output = Output { grin2lesion, summary };
 
     // Output final summary - Node.js will know processing is complete when it sees this
     // if let Ok(json) = serde_json::to_string(&summary) {
@@ -1140,10 +1139,9 @@ async fn localread_data(
         excluded_by_max_record: excluded_by_max_record.lock().await.clone(),
     };
 
-    let output = Output {
-        grin2lesion: all_records.lock().await.drain(..).collect(),
-        summary,
-    };
+    let grin2lesion = serde_json::to_string(&all_records.lock().await.drain(..).collect::<Vec<Vec<String>>>())
+        .unwrap_or_else(|_| "[]".to_string());
+    let output = Output { grin2lesion, summary };
 
     // Output final JSON array
     if let Ok(json) = serde_json::to_string(&output) {
