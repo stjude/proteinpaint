@@ -23,7 +23,8 @@ import {
 	mclassfusionrna,
 	mclasssv,
 	mclasscnvgain,
-	mclasscnvloss
+	mclasscnvloss,
+	dtTerms
 } from '#shared/common.js'
 import { get_samples, get_active_groupset } from './termdb.sql.js'
 import { server_init_db_queries } from './termdb.server.init.ts'
@@ -2742,7 +2743,18 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 		const groupset = get_active_groupset(tw.term, tw.q)
 
 		const data = new Map() // to return
+		const filterByGeneVariant =
+			ds.mayGetGeneVariantDataParam?.postProcessFilter &&
+			q.filter?.lst.find(item => dtTerms.map(t => t.type).includes(item.tvs.term.type))
 		for (const [sample, mlst] of sample2mlst) {
+			if (filterByGeneVariant) {
+				// filter samples by geneVariant/dt term in filter
+				// necessary for gdc, which uses a different filter structure during
+				// data query that is not compatible with filterByTvsLst()
+				// (see filter2GDCfilter() in server/src/mds3.gdc.filter.js)
+				const [pass, tested] = filterByTvsLst(q.filter, mlst)
+				if (!pass) continue
+			}
 			if (groupset) {
 				// groupsetting is active
 				// get the first group of groupset that the sample can be assigned to
@@ -2891,6 +2903,10 @@ export function filterByItem(filter, mlst) {
 	if (filter.type == 'tvslst') return filterByTvsLst(filter, mlst)
 	if (filter.type != 'tvs') throw 'unexpected filter.type'
 	const tvs = filter.tvs
+	if (!dtTerms.map(t => t.type).includes(tvs.term.type)) {
+		// term is not dt term, so sample passes the filter
+		return [true, true]
+	}
 	// get all tested mutations for the dt (and origin) of the filter
 	const mlst_tested = mlst.filter(m => {
 		if (tvs.term.dt != m.dt) return false

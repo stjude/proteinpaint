@@ -1,3 +1,5 @@
+import { dtTerms } from '#shared/common.js'
+
 /*
 f{}
 	filter object
@@ -18,6 +20,11 @@ export function filter2GDCfilter(f) {
 		if (item.type != 'tvs') throw 'filter.lst[] item.type!="tvs"'
 		if (!item.tvs) throw 'item.tvs missing'
 		if (!item.tvs.term) throw 'item.tvs.term missing'
+		if (dtTerms.map(t => t.type).includes(item.tvs.term.type)) {
+			// geneVariant/dt term filtering will be performed during post-processing
+			// (see mayGetGeneVariantData() in server/src/mds3.init.js)
+			continue
+		}
 
 		if (item.tvs.values) {
 			// categorical
