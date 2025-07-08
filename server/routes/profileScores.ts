@@ -44,10 +44,11 @@ async function getScores(query, ds, genome) {
 			terms.push(term.maxScore)
 		}
 	}
+
 	const data = await getData(
 		{
 			terms,
-			filter: query.site ? undefined : query.filter //if site is specified, do not apply the filter that is for the aggregation
+			filter: query.site || !query.isAggregate ? undefined : query.filter //if site is specified, do not apply the filter that is for the aggregation
 		},
 		ds,
 		genome
@@ -68,6 +69,7 @@ async function getScores(query, ds, genome) {
 
 	let sitesSelected: any[] = []
 	if (query.site) sitesSelected = [query.site]
+	else if (!query.isAggregate) sitesSelected = [sites[0].value] //only one site selected
 	else sitesSelected = query.sites
 	const sampleData = sitesSelected?.length == 1 ? data.samples[sitesSelected[0]] : null
 	let samples = Object.values(data.samples)
@@ -79,7 +81,7 @@ async function getScores(query, ds, genome) {
 
 	const hospital = sampleData?.[query.facilityTW.$id]?.value
 
-	return { term2Score, sites, hospital, n: samples.length }
+	return { term2Score, sites, hospital, n: sampleData ? 1 : samples.length }
 }
 
 function getPercentage(d, samples, sampleData) {

@@ -341,7 +341,7 @@ export class profilePlot {
 					terms: [...this.twLst, this.config.facilityTW], //added facility term to all the plots to get the hospital name
 					scoreTerms: this.scoreTerms,
 					filter: this.filter,
-					isAggregate: false,
+					isAggregate: true,
 					site: this.settings.facilitySite,
 					userSites: this.state.sites,
 					facilityTW: this.config.facilityTW
@@ -456,7 +456,9 @@ export class profilePlot {
 			.text(`${title} (n=${this.data.n})`)
 			.attr('transform', `translate(0, -5)`)
 		for (const tw of this.config.filterTWs) this.addFilterLegendItem(tw.term.name, this.settings[tw.term.id])
-		if (this.settings.site) {
+		const hospital = this.data.hospital
+
+		if (hospital) {
 			const label = this.sites.find(s => s.value == this.settings.site).label
 			this.addFilterLegendItem('Facility ID', label)
 			const hospital = this.data.hospital
