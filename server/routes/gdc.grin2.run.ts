@@ -115,7 +115,7 @@ async function runGrin2(genomes: any, req: any, res: any) {
 	mayLog('[GRIN2] Rust execution completed')
 	const downloadTime = Date.now() - downloadStartTime
 	const downloadTimeToPrint = Math.round(downloadTime / 1000)
-	mayLog(`[GRIN2] Rust processing took ${downloadTimeToPrint}`)
+	mayLog(`[GRIN2] Rust processing took ${downloadTimeToPrint} seconds`)
 
 	// Parse the JSONL output
 	const rustResult = parseJsonlOutput(rustOutput)
@@ -131,9 +131,9 @@ async function runGrin2(genomes: any, req: any, res: any) {
 	// Extract only successful data for python script
 	if (parsedRustResult.successful_data && Array.isArray(parsedRustResult.successful_data)) {
 		pyInput.lesion = parsedRustResult.successful_data.flat()
-		mayLog(`[GRIN2] Extracted ${pyInput.lesion.length} records for python script`)
+		mayLog(`[GRIN2] Extracted ${pyInput.lesion.length.toLocaleString()} records for python script`)
 		mayLog(
-			`[GRIN2] Success: ${parsedRustResult.summary.successful_files}, Failed: ${parsedRustResult.summary.failed_files}`
+			`[GRIN2] Success: ${parsedRustResult.summary.successful_files.toLocaleString()}, Failed: ${parsedRustResult.summary.failed_files.toLocaleString()}`
 		)
 		// mayLog(`[GRIN2] Filtered Stats Object: ${parsedRustResult.summary}`)
 		// mayLog(`[GRIN2] Filtered Stats Object: ${JSON.stringify(parsedRustResult, null, 2)}`);
@@ -148,13 +148,13 @@ async function runGrin2(genomes: any, req: any, res: any) {
 
 	// Call the python script
 	const grin2AnalysisStart = Date.now()
-	const pyResult = await run_python('gdcGRIN2.py', JSON.stringify(pyInput))
+	const pyResult = await run_python('grin2PpWrapper.py', JSON.stringify(pyInput))
 
 	// mayLog(`[GRIN2] python execution completed, result: ${pyResult}`)
 	mayLog(`[GRIN2] Python stderr: ${pyResult.stderr}`)
 	const grin2AnalysisTime = Date.now() - grin2AnalysisStart
 	const grin2AnalysisTimeToPrint = Math.round(grin2AnalysisTime / 1000)
-	mayLog(`[GRIN2] Python processing took ${grin2AnalysisTimeToPrint}`)
+	mayLog(`[GRIN2] Python processing took ${grin2AnalysisTimeToPrint} seconds`)
 
 	// Parse python result to get image or check for errors
 	const resultData = JSON.parse(pyResult)
@@ -223,22 +223,28 @@ function parseJsonlOutput(rustOutput: string): any {
 			mayLog(
 				`[GRIN2] Processed file ${processedFiles}: ${data.case_id} (${data.data_type}) - ${recordsProcessedThisFile} records`
 			)
-			mayLog(`[GRIN2] Total records processed: ${totalRecordsProcessed}/${MAX_RECORDS}`)
+			mayLog(
+				`[GRIN2] Total records processed: ${totalRecordsProcessed.toLocaleString()}/${MAX_RECORDS.toLocaleString()}`
+			)
 
 			// Log when cap is reached
 			if (isCapReached) {
-				mayLog(`[GRIN2] RECORD CAP REACHED: ${MAX_RECORDS} records processed. Subsequent files will be skipped.`)
+				mayLog(
+					`[GRIN2] RECORD CAP REACHED: ${MAX_RECORDS.toLocaleString()} records processed. Subsequent files will be skipped.`
+				)
 			}
 		} else if (data.type === 'summary') {
 			// Final summary - all files processed
 			finalSummary = data
-			mayLog(`[GRIN2] Download complete: ${data.successful_files}/${data.total_files} files successful`)
+			mayLog(
+				`[GRIN2] Download complete: ${data.successful_files.toLocaleString()}/${data.total_files.toLocaleString()} files successful`
+			)
 			if (isCapReached) {
-				mayLog(`[GRIN2] Processing stopped due to record cap of ${MAX_RECORDS}`)
-				mayLog(`[GRIN2] Total records collected: ${totalRecordsProcessed}`)
+				mayLog(`[GRIN2] Processing stopped due to record cap of ${MAX_RECORDS.toLocaleString()}`)
+				mayLog(`[GRIN2] Total records collected: ${totalRecordsProcessed.toLocaleString()}`)
 			}
 			if (data.failed_files > 0) {
-				mayLog(`[GRIN2] ${data.failed_files} files failed`)
+				mayLog(`[GRIN2] ${data.failed_files.toLocaleString()} files failed`)
 			}
 		}
 	}

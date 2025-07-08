@@ -1,5 +1,5 @@
 ###################
-# gdcGRIN2         #
+# grin2PpWrapper  #
 ###################
 
 ########
@@ -7,7 +7,7 @@
 ########
 
 """
-# Usage: echo <in_json> | python3 gdcGRIN2.py
+# Usage: echo <in_json> | python3 grin2PpWrapper.py
 
 # in_json: [string] input data in JSON format. Streamed through stdin
 
