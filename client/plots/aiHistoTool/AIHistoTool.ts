@@ -2,12 +2,18 @@ import { RxComponentInner } from '../../types/rx.d'
 import { getCompInit, copyMerge } from '#rx'
 import type { MassState } from '#mass/types/mass'
 import { getDefaultAIHistoToolSettings } from './defaults'
+import { renderTable } from '#dom'
+import { debounce } from 'debounce'
 
 class AIHistoTool extends RxComponentInner {
 	public type = 'AIHistoTool'
 
-	constructor() {
+	constructor(opts: any) {
 		super()
+		this.opts = opts
+		this.dom = {
+			holder: opts.holder
+		}
 	}
 
 	getState(appState: MassState) {
@@ -18,6 +24,55 @@ class AIHistoTool extends RxComponentInner {
 		return {
 			config
 		}
+	}
+
+	init() {
+		const projectDiv = this.dom.holder.append('div').attr('class', 'ai-histo-tool-projects')
+
+		// Render new project input
+		const newProjectDiv = projectDiv.append('div').attr('class', 'sjpp-project-select-new').style('padding', '10px')
+
+		const input = newProjectDiv
+			.append('input')
+			.attr('id', 'sjpp-new-project-name')
+			.attr('display', 'inline-block')
+			.attr('placeholder', 'New project name')
+
+		const button = newProjectDiv
+			.append('button')
+			.text('Create Project')
+			.attr('display', 'inline-block')
+			.property('disabled', true)
+			.on('click', () => {
+				const projectName = input.property('value')
+				console.log('Creating new project:', projectName)
+			})
+
+		input.on('keydown', () => {
+			const debouncer = () => {
+				button.property('disabled', input.property('value').length == 0)
+			}
+			debounce(debouncer, 300)()
+		})
+
+		// Render existing projects
+		const tableDiv = projectDiv.append('div').attr('class', 'sjpp-project-select-table').style('padding', '10px')
+		const rows: any = [[{ value: 'test' }], [{ value: 'test2' }]]
+		const columns = [{ label: 'Project', sortable: true }]
+
+		renderTable({
+			div: tableDiv,
+			rows,
+			header: {
+				allowSort: true
+			},
+			columns,
+			singleMode: true,
+			noButtonCallback: (i: any, node: any) => {
+				console.log('Selected project:', i, node)
+				//TODO: app.dispatch
+			}
+		})
 	}
 
 	main() {
