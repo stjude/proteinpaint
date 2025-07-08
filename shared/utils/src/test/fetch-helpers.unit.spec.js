@@ -1,12 +1,21 @@
-const tape = require('tape')
-const { ezFetch } = require('../fetch-helpers')
+import tape from 'tape'
+import { ezFetch } from '../fetch-helpers.js'
 
 /**************
  test helpers
 ***************/
 
+const root =
+	typeof global !== 'undefined'
+		? global
+		: typeof window !== 'undefined'
+		? window
+		: typeof self !== 'undefined'
+		? self
+		: this
+
 // save to restore global fetch after using mockFetch()
-const nativeFetch = fetch
+const nativeFetch = root.fetch
 
 // Mock fetch for testing
 function mockFetch(response, ok = true, contentType = 'application/json') {
@@ -25,7 +34,7 @@ function mockFetch(response, ok = true, contentType = 'application/json') {
 }
 
 function cleanup() {
-	global.fetch = nativeFetch
+	root.fetch = nativeFetch
 }
 
 /**************
@@ -37,9 +46,26 @@ tape('\n', function (test) {
 	test.end()
 })
 
+tape('init.body handling', async test => {
+	test.teardown(cleanup)
+	root.fetch = (url, init) => {
+		test.equal(url, 'http://api/test?test=abc', 'should encode init.body into URL-params')
+		return mockFetch({ test: 'init.body' })(url, init)
+	}
+	await ezFetch('http://api/test', { body: { test: 'abc' } })
+
+	root.fetch = (url, init) => {
+		test.equal(url, 'http://api/test', 'should not change the url')
+		test.equal(init.body, '{"test":"xyz"}', 'should encode init.body into JSON string')
+		return mockFetch({ test: 'init.body' })(url, init)
+	}
+	await ezFetch('http://api/test', { method: 'POST', body: { test: 'xyz' } })
+	test.end()
+})
+
 tape('json response', async test => {
 	test.teardown(cleanup)
-	global.fetch = mockFetch({ hello: 'world' })
+	root.fetch = mockFetch({ hello: 'world' })
 	const result = await ezFetch('http://api/test')
 	test.deepEqual(result, { hello: 'world' }, 'should returns parsed JSON')
 	test.end()
@@ -47,7 +73,7 @@ tape('json response', async test => {
 
 tape('text response', async test => {
 	test.teardown(cleanup)
-	global.fetch = mockFetch('plain text response', true, 'text/plain')
+	root.fetch = mockFetch('plain text response', true, 'text/plain')
 	const result = await ezFetch('http://api/test')
 	test.equal(result, 'plain text response', 'should return text body')
 	test.end()
@@ -55,7 +81,7 @@ tape('text response', async test => {
 
 tape('error handling', async test => {
 	test.teardown(cleanup)
-	global.fetch = mockFetch({ error: 'Not found' }, false)
+	root.fetch = mockFetch({ error: 'Not found' }, false)
 	const message = 'should throw with response body'
 	try {
 		await ezFetch('http://api/test')
