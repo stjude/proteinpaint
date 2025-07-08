@@ -1,4 +1,5 @@
 import { hash } from './hash.js'
+import { encode } from './urljson.js'
 
 /*
 	ezFetch()
@@ -14,7 +15,9 @@ import { hash } from './hash.js'
 	init{headers?, body?}
 	- first two arguments are same as native fetch
 */
-export async function ezFetch(url, init) {
+export async function ezFetch(_url, init = {}) {
+	const url = mayAdjustRequest(_url, init)
+
 	return fetch(url, init).then(async r => {
 		const response = await processResponse(r)
 		if (!r.ok) {
@@ -24,6 +27,29 @@ export async function ezFetch(url, init) {
 		}
 		return response
 	})
+}
+
+function mayAdjustRequest(url, init) {
+	const method = init.method?.toUpperCase() || 'GET'
+	if (method == 'POST') {
+		if (!init.headers) init.headers = {}
+		if (init.body) {
+			if (!init.headers['content-type']) init.headers['content-type'] = 'application/json'
+			if (init.headers['content-type'].toLowerCase() == 'application/json') {
+				// if consumer code has pre-encoded the body, parse to verify correctness
+				if (typeof init.body == 'string') init.body = JSON.parse(init.body)
+				init.body = JSON.stringify(init.body)
+			}
+		}
+		return url
+	}
+	// default to GET method per native fetch
+	if (init.body) {
+		if (typeof init.body != 'object') throw `init.body should be an object`
+		// init.body should be an object, to be converted to GET URL search parameter strings
+		if (!url.includes('?')) url += '?'
+		return `${url}${encode(init.body)}`
+	}
 }
 
 /* 
