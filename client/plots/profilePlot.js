@@ -23,6 +23,7 @@ export class profilePlot {
 		this.downloadCount = 0
 		this.tip = new Menu({ padding: '4px', offsetX: 10, offsetY: 15 })
 		this.scoreTerms = []
+		this.isRadarFacility = false
 	}
 
 	getState(appState) {
@@ -54,7 +55,6 @@ export class profilePlot {
 	async init(appState) {
 		const config = appState.plots.find(p => p.id === this.id)
 		const state = this.getState(appState)
-		this.isRadarFacility = this.type == 'profileRadarFacility'
 		if (this.opts.header) {
 			let chartName = config.chartType.match(/[A-Z][a-z]+/g)
 			chartName = chartName.join(' ')
@@ -150,6 +150,7 @@ export class profilePlot {
 	}
 
 	async setControls(additionalInputs = []) {
+		const isRadarFacility = this.isRadarFacility
 		const filters = {}
 		for (const tw of this.config.filterTWs) {
 			const filter = getCategoricalTermFilter(this.config.filterTWs, this.settings, tw, this.state.termfilter.filter)
@@ -205,13 +206,13 @@ export class profilePlot {
 				facilityTW: this.config.facilityTW
 			})
 		this.sites = this.data.sites
+		console.log('Profile plot data', this.data)
 		this.sites.sort((a, b) => {
 			if (a.label < b.label) return -1
 			if (a.label > b.label) return 1
 			return 0
 		})
-
-		if (this.isRadarFacility) {
+		if (isRadarFacility) {
 			if (!this.settings.facilitySite) this.settings.facilitySite = this.sites[0]?.value //set the first site as the facility site
 		} else if (!this.settings.site && !this.settings.sites && this.state.sites?.length == 1) {
 			this.settings.site = this.data.sites?.[0]?.value
@@ -225,7 +226,7 @@ export class profilePlot {
 		const chartType = this.type
 		this.dom.controlsDiv.selectAll('*').remove()
 		let inputs = []
-		if (this.state.sites?.length == 1 && !this.isRadarFacility) {
+		if (this.state.sites?.length == 1 && !isRadarFacility) {
 			const dataInput = {
 				label: 'Data',
 				type: 'radio',
@@ -244,7 +245,7 @@ export class profilePlot {
 			}
 			inputs.push(dataInput)
 		}
-		if (isAggregate || this.isRadarFacility) {
+		if (isAggregate || isRadarFacility) {
 			inputs.push(
 				...[
 					{
@@ -336,7 +337,7 @@ export class profilePlot {
 				}
 				inputs.push(sitesInput)
 			}
-			if (this.isRadarFacility) {
+			if (isRadarFacility) {
 				this.sampleData = await this.app.vocabApi.getProfileScores({
 					terms: [...this.twLst, this.config.facilityTW], //added facility term to all the plots to get the hospital name
 					scoreTerms: this.scoreTerms,
@@ -446,18 +447,16 @@ export class profilePlot {
 	}
 
 	addFilterLegend() {
-		if (!this.settings.site) {
-			const hasFilters = this.config.filterTWs.some(tw => this.settings[tw.term.id])
-			const title = hasFilters ? 'Filters' : 'No filter applied'
-			this.filterG
-				.attr('font-size', '0.9em')
-				.append('text')
-				.attr('text-anchor', 'left')
-				.style('font-weight', 'bold')
-				.text(`${title} (n=${this.data.n})`)
-				.attr('transform', `translate(0, -5)`)
-			for (const tw of this.config.filterTWs) this.addFilterLegendItem(tw.term.name, this.settings[tw.term.id])
-		}
+		const hasFilters = this.config.filterTWs.some(tw => this.settings[tw.term.id]) || this.settings.sites?.length > 0
+		const title = hasFilters ? 'Filters' : 'No filter applied'
+		this.filterG
+			.attr('font-size', '0.9em')
+			.append('text')
+			.attr('text-anchor', 'left')
+			.style('font-weight', 'bold')
+			.text(`${title} (n=${this.data.n})`)
+			.attr('transform', `translate(0, -5)`)
+		for (const tw of this.config.filterTWs) this.addFilterLegendItem(tw.term.name, this.settings[tw.term.id])
 		if (this.settings.site) {
 			const label = this.sites.find(s => s.value == this.settings.site).label
 			this.addFilterLegendItem('Facility ID', label)

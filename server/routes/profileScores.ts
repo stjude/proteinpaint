@@ -65,17 +65,10 @@ async function getScores(query, ds, genome) {
 	if (query.userSites) {
 		sites = sites.filter(s => query.userSites.includes(s.label))
 	}
-	let userSite
-	if (query.userSites) {
-		const siteName = query.userSites[0]
-		userSite = ds.sampleName2Id.get(siteName)
-		if (!userSite) {
-			throw `Invalid user site: ${siteName}`
-		}
-	}
+
 	let sitesSelected: any[] = []
-	if (query.site) sitesSelected = [query.site] //query.site
-	else sitesSelected = query.isAggregate ? query.sites : [userSite]
+	if (query.site) sitesSelected = [query.site]
+	else sitesSelected = query.sites
 	const sampleData = sitesSelected?.length == 1 ? data.samples[sitesSelected[0]] : null
 	let samples = Object.values(data.samples)
 	if (sitesSelected?.length > 0) samples = samples.filter((s: any) => sitesSelected.includes(s.sample))
