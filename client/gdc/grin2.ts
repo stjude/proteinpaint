@@ -14,6 +14,15 @@ import { renderTable, sayerror, make_one_checkbox } from '#dom'
 import { select } from 'd3-selection'
 import type { GdcGRIN2listRequest } from '#types'
 import { mclass, dtsnvindel, class2SOterm, bplen } from '@sjcrh/proteinpaint-shared/common.js'
+import {
+	STYLES,
+	applyStyles,
+	createNumberInput,
+	createOptionsTable,
+	createTableHeader,
+	createDataTypeRow,
+	createInfoPanel
+} from './grin2/ui-components'
 
 // ================================================================================
 // TYPE DEFINITIONS, INTERFACES, & DEFAULTS
@@ -735,18 +744,353 @@ function updateDedupStatus(obj, deduplicationStats) {
 	}
 }
 
-// ================================================================================
-// MAIN UI BUILDERS
-// ================================================================================
+/** Main UI Builders */
 
 /**
- * Creates the main data type options table with MAF, CNV, and Fusion sections
- * Builds the primary configuration interface for analysis parameters
- *
- * @param obj - Main application object containing state and UI references
- * @returns void
+ * Creates MAF options content using the new component system
  */
-function makeControls(obj) {
+function createMAFOptionsContent(container: any, obj: any) {
+	container.selectAll('*').remove()
+
+	// Create options grid
+	const optionsGrid = container.append('div')
+	applyStyles(optionsGrid, STYLES.gridTwoColumn)
+	optionsGrid.style('margin-top', '10px')
+
+	// Min Total Depth input
+	createNumberInput(optionsGrid, {
+		label: 'Min Total Depth:',
+		value: obj.mafOptions.minTotalDepth || 10,
+		min: 0,
+		step: 1,
+		width: '80px',
+		labelWidth: '140px',
+		onChange: value => {
+			if (value >= 0) obj.mafOptions.minTotalDepth = value
+		}
+	})
+
+	// Min Mutant Allele Count input
+	createNumberInput(optionsGrid, {
+		label: 'Min Mutant Allele Count:',
+		value: obj.mafOptions.minAltAlleleCount || 2,
+		min: 0,
+		step: 1,
+		width: '80px',
+		labelWidth: '160px',
+		onChange: value => {
+			if (value >= 0) obj.mafOptions.minAltAlleleCount = value
+		}
+	})
+
+	// Consequences section
+	createConsequencesSection(optionsGrid, obj)
+
+	// Hypermutator input
+	createNumberInput(optionsGrid, {
+		label: 'Hypermutator Max Cut Off:',
+		value: obj.mafOptions.hyperMutator || 8000,
+		min: 0,
+		step: 100,
+		width: '70px',
+		labelWidth: '160px',
+		onChange: value => {
+			if (value >= 0) obj.mafOptions.hyperMutator = value
+		}
+	})
+
+	// Workflow type (read-only)
+	createWorkflowSection(optionsGrid)
+
+	// Deduplication status
+	createDeduplicationSection(optionsGrid, obj)
+}
+
+/**
+ * Creates the consequences selection section
+ */
+function createConsequencesSection(optionsGrid: any, obj: any) {
+	const consequencesContainer = optionsGrid
+		.append('div')
+		.style('display', 'flex')
+		.style('align-items', 'flex-start')
+		.style('gap', '8px')
+		.style('grid-column', '1 / -1')
+
+	consequencesContainer
+		.append('label')
+		.style('font-size', '14px')
+		.style('font-weight', '500')
+		.style('min-width', '100px')
+		.style('margin-top', '4px')
+		.text('Consequences:')
+
+	const selectionDiv = consequencesContainer.append('div').style('flex', '1')
+
+	// Checkbox container
+	const checkboxContainer = selectionDiv
+		.append('div')
+		.style('display', 'grid')
+		.style('grid-template-columns', 'repeat(auto-fit, minmax(200px, 1fr))')
+		.style('gap', '8px')
+		.style('margin-bottom', '12px')
+
+	// Create checkboxes for mutation classes
+	createMutationClassCheckboxes(checkboxContainer, obj)
+
+	// Add info panel
+	createInfoPanel(selectionDiv, {
+		title: 'Mutation Types:',
+		content: `Select the types of mutations to include in your analysis.
+              High-impact mutations (missense, nonsense, frameshift) are selected by default.
+              Silent/synonymous mutations are excluded by default as they don't change protein sequence.`
+	})
+}
+
+/**
+ * Creates mutation class checkboxes
+ */
+function createMutationClassCheckboxes(container: any, obj: any) {
+	const seenLabels = new Set()
+
+	for (const cls in mclass) {
+		if (mclass[cls].dt !== dtsnvindel) continue
+		if (skipMAFclasses.includes(cls)) continue
+
+		const labelText = mclass[cls].label
+		if (seenLabels.has(labelText)) continue
+		seenLabels.add(labelText)
+
+		const isDefaultChecked = defaultCheckedClasses.includes(cls)
+		const checkboxDiv = container.append('div')
+
+		make_one_checkbox({
+			holder: checkboxDiv,
+			labeltext: labelText,
+			checked: isDefaultChecked,
+			id: `consequence-${cls}`,
+			divstyle: {
+				'font-size': '13px',
+				margin: '0'
+			},
+			callback: async isChecked => {
+				if (isChecked) {
+					if (!obj.mafOptions.consequences.includes(cls)) {
+						obj.mafOptions.consequences.push(cls)
+					}
+				} else {
+					obj.mafOptions.consequences = obj.mafOptions.consequences.filter(c => c !== cls)
+				}
+			}
+		})
+
+		checkboxDiv.select('label').attr('title', mclass[cls].desc)
+
+		if (isDefaultChecked && !obj.mafOptions.consequences.includes(cls)) {
+			obj.mafOptions.consequences.push(cls)
+		}
+	}
+}
+
+/**
+ * Creates workflow type section (read-only)
+ */
+function createWorkflowSection(optionsGrid: any) {
+	const workflowContainer = optionsGrid.append('div')
+	applyStyles(workflowContainer, STYLES.flexRow)
+	workflowContainer.style('grid-column', '1 / -1')
+
+	const label = workflowContainer.append('label')
+	applyStyles(label, STYLES.label)
+	label.style('min-width', '100px').text('Workflow Type:')
+
+	workflowContainer
+		.append('span')
+		.style('font-size', '14px')
+		.style('color', '#666')
+		.text('Aliquot Ensemble Somatic Variant Merging and Masking')
+}
+
+/**
+ * Creates deduplication status section
+ */
+function createDeduplicationSection(optionsGrid: any, obj: any) {
+	const dedupContainer = optionsGrid.append('div')
+	applyStyles(dedupContainer, STYLES.flexRow)
+	dedupContainer.style('grid-column', '1 / -1')
+
+	const label = dedupContainer.append('label')
+	applyStyles(label, STYLES.label)
+	label.style('min-width', '100px').text('Deduplication:')
+
+	const dedupStatus = dedupContainer
+		.append('span')
+		.attr('id', 'dedup-status')
+		.style('font-size', '14px')
+		.style('color', '#666')
+
+	obj.dedupStatusElement = dedupStatus
+}
+
+/**
+ * Creates CNV options content using the new component system
+ */
+function createCNVOptionsContent(container: any, obj: any) {
+	container.selectAll('*').remove()
+
+	if (!obj.cnvOptions.dataType) {
+		obj.cnvOptions.dataType = 'segment_mean'
+	}
+
+	const optionsGrid = container.append('div')
+	applyStyles(optionsGrid, STYLES.gridTwoColumn)
+	optionsGrid.style('margin-top', '10px')
+
+	// Data Type radio section
+	createDataTypeRadioSection(optionsGrid, obj)
+
+	// Loss Threshold
+	createNumberInput(optionsGrid, {
+		label: 'Loss Threshold:',
+		value: obj.cnvOptions.lossThreshold || -0.4,
+		min: -10,
+		max: 0,
+		step: 0.1,
+		width: '70px',
+		labelWidth: '120px',
+		onChange: value => {
+			if (value <= 0) obj.cnvOptions.lossThreshold = value
+		}
+	})
+
+	// Gain Threshold
+	createNumberInput(optionsGrid, {
+		label: 'Gain Threshold:',
+		value: obj.cnvOptions.gainThreshold || 0.3,
+		min: 0,
+		max: 10,
+		step: 0.1,
+		width: '70px',
+		labelWidth: '120px',
+		onChange: value => {
+			if (value >= 0) obj.cnvOptions.gainThreshold = value
+		}
+	})
+
+	// Hypermutator
+	createNumberInput(optionsGrid, {
+		label: 'Hypermutator Max Cut Off:',
+		value: obj.cnvOptions.hyperMutator || 500,
+		min: 0,
+		step: 100,
+		width: '70px',
+		labelWidth: '160px',
+		onChange: value => {
+			if (value >= 0) obj.cnvOptions.hyperMutator = value
+		}
+	})
+
+	// Segment Length
+	createSegmentLengthSection(optionsGrid, obj)
+
+	// Help section
+	createCNVHelpSection(optionsGrid)
+}
+
+/**
+ * Creates CNV data type radio section
+ */
+function createDataTypeRadioSection(optionsGrid: any, obj: any) {
+	const dataTypeContainer = optionsGrid.append('div')
+	applyStyles(dataTypeContainer, STYLES.flexRow)
+	dataTypeContainer.style('grid-column', '1 / -1')
+
+	const label = dataTypeContainer.append('label')
+	applyStyles(label, STYLES.label)
+	label.style('min-width', '80px').text('Data Type:')
+
+	const radioContainer = dataTypeContainer.append('div')
+	applyStyles(radioContainer, STYLES.flexRow)
+	radioContainer.style('gap', '6px')
+
+	const radio = radioContainer
+		.append('input')
+		.attr('type', 'radio')
+		.attr('id', 'cnv-segment-mean')
+		.attr('name', 'cnv-data-type')
+		.attr('value', 'segment_mean')
+		.property('checked', obj.cnvOptions.dataType === 'segment_mean')
+		.style('margin', '0')
+		.style('cursor', 'pointer')
+
+	radioContainer
+		.append('label')
+		.attr('for', 'cnv-segment-mean')
+		.style('cursor', 'pointer')
+		.style('font-size', '14px')
+		.style('color', '#333')
+		.text('Segment mean')
+
+	radio.on('change', function (this: HTMLInputElement) {
+		if (this.checked) {
+			obj.cnvOptions.dataType = this.value
+		}
+	})
+}
+
+/**
+ * Creates segment length section with unit
+ */
+function createSegmentLengthSection(optionsGrid: any, obj: any) {
+	const segmentContainer = optionsGrid.append('div')
+	applyStyles(segmentContainer, STYLES.flexRow)
+	segmentContainer.style('grid-column', '1 / -1')
+
+	const label = segmentContainer.append('label')
+	applyStyles(label, STYLES.label)
+	label.style('min-width', '140px').text('Segment Length Cutoff:')
+
+	const input = segmentContainer
+		.append('input')
+		.attr('type', 'number')
+		.attr('min', '0')
+		.attr('max', '2000000')
+		.attr('step', '1000')
+		.attr('value', obj.cnvOptions.segLength || 0)
+
+	applyStyles(input, STYLES.numberInput)
+	input.style('width', '100px')
+
+	segmentContainer.append('span').style('font-size', '13px').style('color', '#666').text('bp')
+
+	input.on('input', function (this: HTMLInputElement) {
+		const value = parseInt(this.value, 10)
+		if (!isNaN(value) && value >= 0) {
+			obj.cnvOptions.segLength = value
+		}
+	})
+}
+
+/**
+ * Creates CNV help section
+ */
+function createCNVHelpSection(optionsGrid: any) {
+	const helpContainer = optionsGrid.append('div').style('grid-column', '1 / -1').style('margin-top', '8px')
+
+	createInfoPanel(helpContainer, {
+		title: 'CNV Options:',
+		content: `• Loss Threshold: Log2 ratio for copy number loss (negative values)<br>
+              • Gain Threshold: Log2 ratio for copy number gain (positive values)<br>
+              • Hypermutator Max Cut Off: Maximum number of CNVs per case<br>
+              • Segment Length: Maximum CNV segment size to include (no filter if 0)`
+	})
+}
+
+/**
+ * Main refactored makeControls function
+ */
+function makeControls(obj: any) {
+	// Initialize options if not exists
 	if (!obj.mafOptions) {
 		obj.mafOptions = {
 			minTotalDepth: 10,
@@ -770,696 +1114,89 @@ function makeControls(obj) {
 		fusion: false
 	}
 
-	// Create the main 2-column, 4-row table for data type options
-	const optionsTable = obj.controlDiv
-		.append('table')
-		.style('width', 'auto')
-		.style('border-collapse', 'collapse')
-		.style('margin-top', '10px')
-		.style('border', '1px solid #ddd')
+	// Create main options table
+	const optionsTable = createOptionsTable(obj.controlDiv)
+	createTableHeader(optionsTable, ['Data Type', 'Options'])
 
-	// Create table header
-	const headerRow = optionsTable.append('tr')
+	// MAF row
+	const mafRow = createDataTypeRow(optionsTable, {
+		id: 'maf-checkbox',
+		label: 'MAF (Mutation)',
+		checked: true,
+		onChange: isChecked => {
+			obj.dataTypeStates.maf = isChecked
+			mafRow.optionsContainer.style('display', isChecked ? 'block' : 'none')
+			obj.updateSubmitButtonState?.()
+		},
+		createOptionsContent: container => createMAFOptionsContent(container, obj)
+	})
 
-	headerRow
-		.append('th')
-		.style('width', '200px')
-		.style('padding', '12px')
-		.style('background-color', '#f8f9fa')
-		.style('border', '1px solid #ddd')
-		.style('font-weight', 'bold')
-		.style('text-align', 'left')
-		.text('Data Type')
-
-	headerRow
-		.append('th')
-		.style('padding', '12px')
-		.style('background-color', '#f8f9fa')
-		.style('border', '1px solid #ddd')
-		.style('font-weight', 'bold')
-		.style('text-align', 'left')
-		.text('Options')
-
-	// Row 1: MAF (checked by default, shows all the MAF-related options)
-	const mafRow = optionsTable.append('tr')
-
-	const mafCheckboxCell = mafRow
-		.append('td')
-		.style('padding', '12px')
-		.style('border', '1px solid #ddd')
-		.style('vertical-align', 'top')
-
-	// MAF checkbox and label
-	const mafCheckboxContainer = mafCheckboxCell
-		.append('div')
-		.style('display', 'flex')
-		.style('align-items', 'center')
-		.style('gap', '8px')
-
-	const mafCheckbox = mafCheckboxContainer
-		.append('input')
-		.attr('type', 'checkbox')
-		.attr('id', 'maf-checkbox')
-		.property('checked', true)
-		.style('margin', '0')
-		.style('cursor', 'pointer')
-
-	mafCheckboxContainer
-		.append('label')
-		.attr('for', 'maf-checkbox')
-		.style('cursor', 'pointer')
-		.style('font-weight', '500')
-		.text('MAF (Mutation)')
-
-	const mafOptionsCell = mafRow
-		.append('td')
-		.style('padding', '12px')
-		.style('border', '1px solid #ddd')
-		.style('vertical-align', 'top')
-
-	// MAF options container
-	const mafOptionsContainer = mafOptionsCell.append('div').style('display', 'block')
-	createMAFOptionsContent(mafOptionsContainer, obj)
-
-	// createMAFOptionsContent function using mclass mutation types
-	function createMAFOptionsContent(container, obj) {
-		// Clear any existing content
-		container.selectAll('*').remove()
-
-		// Create a grid layout for MAF options
-		const optionsGrid = container
-			.append('div')
-			.style('display', 'grid')
-			.style('grid-template-columns', 'auto auto')
-			.style('gap', '15px')
-			.style('margin-top', '10px')
-			.style('max-width', 'fit-content')
-
-		// Reusable styles for the row elements
-		const styles = {
-			flexRow: 'display: flex; align-items: center; gap: 8px;',
-			label: 'font-size: 14px; font-weight: 500;',
-			input: 'padding: 4px 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px;'
-		}
-
-		// Row 1: Min Total Depth
-		const depthContainer = optionsGrid.append('div').attr('style', styles.flexRow)
-
-		depthContainer
-			.append('label')
-			.attr('style', styles.label + ' min-width: 140px;')
-			.text('Min Total Depth:')
-
-		const depthInput = depthContainer
-			.append('input')
-			.attr('type', 'number')
-			.attr('min', '0')
-			.attr('step', '1')
-			.attr('value', obj.mafOptions.minTotalDepth || 10)
-			.attr('style', styles.input + ' width: 80px;')
-
-		depthInput.on('input', function (this: HTMLInputElement) {
-			const value = parseInt(this.value, 10)
-			if (!isNaN(value) && value >= 0) {
-				obj.mafOptions.minTotalDepth = value
+	// CNV row
+	const cnvRow = createDataTypeRow(optionsTable, {
+		id: 'cnv-checkbox',
+		label: 'CNV (Copy Number)',
+		checked: true,
+		onChange: isChecked => {
+			obj.dataTypeStates.cnv = isChecked
+			cnvRow.optionsContainer.style('display', isChecked ? 'block' : 'none')
+			if (isChecked) {
+				createCNVOptionsContent(cnvRow.optionsContainer, obj)
 			}
-		})
-
-		// Row 1: Min Mutant Allele Count
-		const alleleContainer = optionsGrid.append('div').attr('style', styles.flexRow)
-
-		alleleContainer
-			.append('label')
-			.attr('style', styles.label + ' min-width: 160px;')
-			.text('Min Mutant Allele Count:')
-
-		const alleleInput = alleleContainer
-			.append('input')
-			.attr('type', 'number')
-			.attr('min', '0')
-			.attr('step', '1')
-			.attr('value', obj.mafOptions.minAltAlleleCount || 2)
-			.attr('style', styles.input + ' width: 80px;')
-
-		alleleInput.on('input', function (this: HTMLInputElement) {
-			const value = parseInt(this.value, 10)
-			if (!isNaN(value) && value >= 0) {
-				obj.mafOptions.minAltAlleleCount = value
-			}
-		})
-
-		// Row 2: Consequences Section
-		const consequencesContainer = optionsGrid
-			.append('div')
-			.attr('style', 'display: flex; align-items: flex-start; gap: 8px; grid-column: 1 / -1;')
-
-		consequencesContainer
-			.append('label')
-			.attr('style', 'font-size: 14px; font-weight: 500; min-width: 100px; margin-top: 4px;')
-			.text('Consequences:')
-
-		// Create consequences selection area
-		const consequencesSelectionDiv = consequencesContainer.append('div').attr('style', 'flex: 1;')
-
-		// Create checkbox container with grid layout
-		const checkboxContainer = consequencesSelectionDiv
-			.append('div')
-			.attr(
-				'style',
-				'display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px; margin-bottom: 12px;'
-			)
-
-		// Create a Set to track already seen labels and prevent duplicates
-		const seenLabels = new Set()
-
-		// Simplified iteration through mclass using checkbox.js
-		for (const cls in mclass) {
-			// Skip if not SNV/indel
-			if (mclass[cls].dt !== dtsnvindel) continue
-			// Skip any classes defined in skipMAFclasses
-			if (skipMAFclasses.includes(cls)) continue
-
-			// Use the mclass label directly
-			const labelText = mclass[cls].label
-
-			// SKIP if we've already seen this exact label (prevents duplicates)
-			if (seenLabels.has(labelText)) {
-				console.log(`Skipping duplicate label: "${labelText}" for class: ${cls}`)
-				continue
-			}
-			seenLabels.add(labelText)
-
-			// Determine if this should be checked by default
-			const isDefaultChecked = defaultCheckedClasses.includes(cls)
-
-			// Create a div for this checkbox to fit in the grid
-			const checkboxDiv = checkboxContainer.append('div')
-
-			// Use the checkbox utility to create the checkbox
-			make_one_checkbox({
-				holder: checkboxDiv,
-				labeltext: labelText,
-				checked: isDefaultChecked,
-				id: `consequence-${cls}`,
-				divstyle: {
-					'font-size': '13px',
-					margin: '0'
-				},
-				callback: async isChecked => {
-					// Handle checkbox change
-					if (isChecked) {
-						if (!obj.mafOptions.consequences.includes(cls)) {
-							obj.mafOptions.consequences.push(cls)
-						}
-					} else {
-						obj.mafOptions.consequences = obj.mafOptions.consequences.filter(c => c !== cls)
-					}
-					console.log(`${labelText} (${cls}): ${isChecked ? 'checked' : 'unchecked'}`)
-				}
-			})
-
-			// Add tooltip with description to the label
-			checkboxDiv.select('label').attr('title', mclass[cls].desc)
-
-			// Initialize the consequences array if this is checked by default
-			if (isDefaultChecked && !obj.mafOptions.consequences.includes(cls)) {
-				obj.mafOptions.consequences.push(cls)
-			}
-		}
-
-		// Add updated helper text
-		consequencesSelectionDiv
-			.append('div')
-			.attr(
-				'style',
-				'margin-top: 8px; padding: 8px; background-color: #f8f9fa; border-radius: 4px; border-left: 3px solid #6c757d; font-size: 12px; color: #495057; line-height: 1.4;'
-			).html(`
-		<strong>Mutation Types:</strong> Select the types of mutations to include in your analysis.
-		High-impact mutations (missense, nonsense, frameshift) are selected by default.
-		Silent/synonymous mutations are excluded by default as they don't change protein sequence.
-	`)
-
-		// Row 3: Hypermutator Max Cut Off
-		const hyperContainer = optionsGrid
-			.append('div')
-			.style('display', 'flex')
-			.style('align-items', 'center')
-			.style('gap', '8px')
-
-		hyperContainer
-			.append('label')
-			.style('font-size', '14px')
-			.style('font-weight', '500')
-			.style('min-width', '160px')
-			.text('Hypermutator Max Cut Off:')
-
-		const hyperInput = hyperContainer
-			.append('input')
-			.attr('type', 'number')
-			.attr('min', '0')
-			.attr('step', '100')
-			.attr('value', obj.mafOptions.hyperMutator || 8000)
-			.style('width', '70px')
-			.style('padding', '4px 8px')
-			.style('border', '1px solid #ccc')
-			.style('border-radius', '4px')
-			.style('font-size', '14px')
-
-		hyperInput.on('input', function (this: HTMLInputElement) {
-			const value = parseInt(this.value, 10)
-			if (!isNaN(value) && value >= 0) {
-				obj.mafOptions.hyperMutator = value
-			}
-		})
-
-		// Row 4: Workflow Type (read-only display)
-		const workflowContainer = optionsGrid
-			.append('div')
-			.style('display', 'flex')
-			.style('align-items', 'center')
-			.style('gap', '8px')
-			.style('grid-column', '1 / -1')
-
-		workflowContainer
-			.append('label')
-			.style('font-size', '14px')
-			.style('font-weight', '500')
-			.style('min-width', '100px')
-			.text('Workflow Type:')
-
-		workflowContainer
-			.append('span')
-			.style('font-size', '14px')
-			.style('color', '#666')
-			.text('Aliquot Ensemble Somatic Variant Merging and Masking')
-
-		// Row 5: Dedup status
-		const dedupContainer = optionsGrid
-			.append('div')
-			.style('display', 'flex')
-			.style('align-items', 'center')
-			.style('gap', '8px')
-			.style('grid-column', '1 / -1')
-
-		dedupContainer
-			.append('label')
-			.style('font-size', '14px')
-			.style('font-weight', '500')
-			.style('min-width', '100px')
-			.text('Deduplication:')
-
-		const dedupStatus = dedupContainer
-			.append('span')
-			.attr('id', 'dedup-status')
-			.style('font-size', '14px')
-			.style('color', '#666')
-
-		obj.dedupStatusElement = dedupStatus
-	}
-
-	// Row 2: CNV options container
-	const cnvRow = optionsTable.append('tr')
-
-	const cnvCheckboxCell = cnvRow
-		.append('td')
-		.style('padding', '12px')
-		.style('border', '1px solid #ddd')
-		.style('vertical-align', 'top')
-
-	const cnvCheckboxContainer = cnvCheckboxCell
-		.append('div')
-		.style('display', 'flex')
-		.style('align-items', 'center')
-		.style('gap', '8px')
-
-	const cnvCheckbox = cnvCheckboxContainer
-		.append('input')
-		.attr('type', 'checkbox')
-		.attr('id', 'cnv-checkbox')
-		.property('checked', true) // Checked by default
-		.style('margin', '0')
-		.style('cursor', 'pointer')
-
-	cnvCheckboxContainer
-		.append('label')
-		.attr('for', 'cnv-checkbox')
-		.style('cursor', 'pointer')
-		.style('font-weight', '500')
-		.text('CNV (Copy Number)')
-
-	const cnvOptionsCell = cnvRow
-		.append('td')
-		.style('padding', '12px')
-		.style('border', '1px solid #ddd')
-		.style('vertical-align', 'top')
-
-	// CNV options container
-	const cnvOptionsContainer = cnvOptionsCell.append('div').style('display', 'block') // Visible by default
-	createCNVOptionsContent(cnvOptionsContainer, obj)
-
-	function createCNVOptionsContent(container, obj) {
-		// Clear any existing content
-		container.selectAll('*').remove()
-
-		// Initialize CNV data type if not exists
-		if (!obj.cnvOptions.dataType) {
-			obj.cnvOptions.dataType = 'segment_mean' // default selection
-		}
-
-		// Create a grid layout for CNV options
-		const optionsGrid = container
-			.append('div')
-			.style('display', 'grid')
-			.style('grid-template-columns', 'auto auto')
-			.style('gap', '15px')
-			.style('margin-top', '10px')
-			.style('max-width', 'fit-content')
-
-		// Row 0: Data Type (spans full width)
-		const dataTypeContainer = optionsGrid
-			.append('div')
-			.style('display', 'flex')
-			.style('align-items', 'center')
-			.style('gap', '8px')
-			.style('grid-column', '1 / -1') // Span full width
-
-		dataTypeContainer
-			.append('label')
-			.style('font-size', '14px')
-			.style('font-weight', '500')
-			.style('min-width', '80px')
-			.text('Data Type:')
-
-		const radioContainer = dataTypeContainer
-			.append('div')
-			.style('display', 'flex')
-			.style('align-items', 'center')
-			.style('gap', '6px')
-
-		const segmentMeanRadio = radioContainer
-			.append('input')
-			.attr('type', 'radio')
-			.attr('id', 'cnv-segment-mean')
-			.attr('name', 'cnv-data-type')
-			.attr('value', 'segment_mean')
-			.property('checked', obj.cnvOptions.dataType === 'segment_mean')
-			.style('margin', '0')
-			.style('cursor', 'pointer')
-
-		radioContainer
-			.append('label')
-			.attr('for', 'cnv-segment-mean')
-			.style('cursor', 'pointer')
-			.style('font-size', '14px')
-			.style('color', '#333')
-			.text('Segment mean')
-
-		// Add change handler for radio button
-		segmentMeanRadio.on('change', function (this: HTMLInputElement) {
-			if (this.checked) {
-				obj.cnvOptions.dataType = this.value
-				console.log('CNV data type updated:', obj.cnvOptions.dataType)
-			}
-		})
-
-		// Row 1: Loss Threshold
-		const lossContainer = optionsGrid
-			.append('div')
-			.style('display', 'flex')
-			.style('align-items', 'center')
-			.style('gap', '8px')
-
-		lossContainer
-			.append('label')
-			.style('font-size', '14px')
-			.style('font-weight', '500')
-			.style('min-width', '120px')
-			.text('Loss Threshold:')
-
-		const lossInput = lossContainer
-			.append('input')
-			.attr('type', 'number')
-			.attr('min', '-10')
-			.attr('max', '0')
-			.attr('step', '0.1')
-			.attr('value', obj.cnvOptions.lossThreshold || -0.4)
-			.style('width', '70px')
-			.style('padding', '4px 8px')
-			.style('border', '1px solid #ccc')
-			.style('border-radius', '4px')
-			.style('font-size', '14px')
-
-		// Add input handler
-		lossInput.on('input', function (this: HTMLInputElement) {
-			const value = parseFloat(this.value)
-			if (!isNaN(value) && value <= 0) {
-				obj.cnvOptions.lossThreshold = value
-			}
-		})
-
-		// Row 1: Gain Threshold
-		const gainContainer = optionsGrid
-			.append('div')
-			.style('display', 'flex')
-			.style('align-items', 'center')
-			.style('gap', '8px')
-
-		gainContainer
-			.append('label')
-			.style('font-size', '14px')
-			.style('font-weight', '500')
-			.style('min-width', '120px')
-			.text('Gain Threshold:')
-
-		const gainInput = gainContainer
-			.append('input')
-			.attr('type', 'number')
-			.attr('min', '0')
-			.attr('max', '10')
-			.attr('step', '0.1')
-			.attr('value', obj.cnvOptions.gainThreshold || 0.3)
-			.style('width', '70px')
-			.style('padding', '4px 8px')
-			.style('border', '1px solid #ccc')
-			.style('border-radius', '4px')
-			.style('font-size', '14px')
-
-		// Add input handler
-		gainInput.on('input', function (this: HTMLInputElement) {
-			const value = parseFloat(this.value)
-			if (!isNaN(value) && value >= 0) {
-				obj.cnvOptions.gainThreshold = value
-			}
-		})
-
-		// Row 2: Hypermutator Max Cut Off for CNV
-		const hyperMutatorContainer = optionsGrid
-			.append('div')
-			.style('display', 'flex')
-			.style('align-items', 'center')
-			.style('gap', '8px')
-
-		hyperMutatorContainer
-			.append('label')
-			.style('font-size', '14px')
-			.style('font-weight', '500')
-			.style('min-width', '160px')
-			.text('Hypermutator Max Cut Off:')
-
-		const hyperMutatorInput = hyperMutatorContainer
-			.append('input')
-			.attr('type', 'number')
-			.attr('min', '0')
-			.attr('step', '100')
-			.attr('value', obj.cnvOptions.hyperMutator || 500)
-			.style('width', '70px')
-			.style('padding', '4px 8px')
-			.style('border', '1px solid #ccc')
-			.style('border-radius', '4px')
-			.style('font-size', '14px')
-
-		// Add input handler
-		hyperMutatorInput.on('input', function (this: HTMLInputElement) {
-			const value = parseInt(this.value, 10)
-			if (!isNaN(value) && value >= 0) {
-				obj.cnvOptions.hyperMutator = value
-			}
-		})
-
-		// Row 3: Segment Length Cutoff (spans full width)
-		const segmentContainer = optionsGrid
-			.append('div')
-			.style('display', 'flex')
-			.style('align-items', 'center')
-			.style('gap', '8px')
-			.style('grid-column', '1 / -1') // Span full width
-
-		segmentContainer
-			.append('label')
-			.style('font-size', '14px')
-			.style('font-weight', '500')
-			.style('min-width', '140px')
-			.text('Segment Length Cutoff:')
-
-		const segmentInput = segmentContainer
-			.append('input')
-			.attr('type', 'number')
-			.attr('min', '0')
-			.attr('max', '2000000')
-			.attr('step', '1000')
-			.attr('value', obj.cnvOptions.segLength || 0)
-			.style('width', '100px')
-			.style('padding', '4px 8px')
-			.style('border', '1px solid #ccc')
-			.style('border-radius', '4px')
-			.style('font-size', '14px')
-
-		// Add input handler
-		segmentInput.on('input', function (this: HTMLInputElement) {
-			const value = parseInt(this.value, 10)
-			if (!isNaN(value) && value >= 0) {
-				obj.cnvOptions.segLength = value
-			}
-		})
-
-		segmentContainer.append('span').style('font-size', '13px').style('color', '#666').text('bp')
-
-		// Row 4: Help/Info section
-		const helpContainer = optionsGrid
-			.append('div')
-			.style('grid-column', '1 / -1')
-			.style('margin-top', '8px')
-			.style('padding', '8px')
-			.style('background-color', '#f8f9fa')
-			.style('border-radius', '4px')
-			.style('border-left', '3px solid #6c757d')
-
-		helpContainer.append('div').style('font-size', '12px').style('color', '#495057').style('line-height', '1.4').html(`
-			<strong>CNV Options:</strong><br>
-			• Loss Threshold: Log2 ratio for copy number loss (negative values)<br>
-			• Gain Threshold: Log2 ratio for copy number gain (positive values)<br>
-			• Hypermutator Max Cut Off: Maximum number of CNVs per case<br>
-			• Segment Length: Maximum CNV segment size to include (no filter if 0)
-		`)
-	}
-
-	// Row 3: Fusion
-	const fusionRow = optionsTable.append('tr')
-
-	const fusionCheckboxCell = fusionRow
-		.append('td')
-		.style('padding', '12px')
-		.style('border', '1px solid #ddd')
-		.style('vertical-align', 'top')
-
-	const fusionCheckboxContainer = fusionCheckboxCell
-		.append('div')
-		.style('display', 'flex')
-		.style('align-items', 'center')
-		.style('gap', '8px')
-
-	const fusionCheckbox = fusionCheckboxContainer
-		.append('input')
-		.attr('type', 'checkbox')
-		.attr('id', 'fusion-checkbox')
-		.property('checked', false)
-		.style('margin', '0')
-		.style('cursor', 'pointer')
-
-	fusionCheckboxContainer
-		.append('label')
-		.attr('for', 'fusion-checkbox')
-		.style('cursor', 'pointer')
-		.style('font-weight', '500')
-		.text('Fusion')
-
-	const fusionOptionsCell = fusionRow
-		.append('td')
-		.style('padding', '12px')
-		.style('border', '1px solid #ddd')
-		.style('vertical-align', 'top')
-
-	// Fusion options container
-	const fusionOptionsContainer = fusionOptionsCell.append('div').style('display', 'none')
-
-	fusionOptionsContainer
-		.append('div')
-		.style('color', '#666')
-		.style('font-style', 'italic')
-		.text('Please login to access RNA fusion data.')
-
-	// Add checkbox change handlers (basic show/hide functionality)
-	mafCheckbox.on('change', function (this: HTMLInputElement) {
-		const isChecked = this.checked
-		obj.dataTypeStates.maf = isChecked
-		mafOptionsContainer.style('display', isChecked ? 'block' : 'none')
-
-		// Update submit button state
-		if (obj.updateSubmitButtonState) {
-			obj.updateSubmitButtonState()
+			obj.updateSubmitButtonState?.()
+		},
+		createOptionsContent: container => createCNVOptionsContent(container, obj)
+	})
+
+	// Fusion row (placeholder)
+	const fusionRow = createDataTypeRow(optionsTable, {
+		id: 'fusion-checkbox',
+		label: 'Fusion',
+		checked: false,
+		onChange: isChecked => {
+			obj.dataTypeStates.fusion = isChecked
+			fusionRow.optionsContainer.style('display', isChecked ? 'block' : 'none')
+			obj.updateSubmitButtonState?.()
+		},
+		createOptionsContent: container => {
+			container
+				.append('div')
+				.style('color', '#666')
+				.style('font-style', 'italic')
+				.text('Please login to access RNA fusion data.')
 		}
 	})
 
-	cnvCheckbox.on('change', function (this: HTMLInputElement) {
-		const isChecked = this.checked
-		obj.dataTypeStates.cnv = isChecked
-		cnvOptionsContainer.style('display', isChecked ? 'block' : 'none')
+	// GRIN2 row (info only)
+	createGRIN2InfoRow(optionsTable)
 
-		// Create CNV options content when checkbox is checked for the first time
-		if (isChecked) {
-			createCNVOptionsContent(cnvOptionsContainer, obj)
-		}
+	// Submit button
+	createSubmitButton(obj)
 
-		// Update submit button state
-		if (obj.updateSubmitButtonState) {
-			obj.updateSubmitButtonState()
-		}
-	})
+	// Store references
+	obj.mafOptionsContainer = mafRow.optionsContainer
+	obj.cnvOptionsContainer = cnvRow.optionsContainer
+	obj.fusionOptionsContainer = fusionRow.optionsContainer
+}
 
-	fusionCheckbox.on('change', function (this: HTMLInputElement) {
-		const isChecked = this.checked
-		obj.dataTypeStates.fusion = isChecked
-		fusionOptionsContainer.style('display', isChecked ? 'block' : 'none')
-
-		// Update submit button state
-		if (obj.updateSubmitButtonState) {
-			obj.updateSubmitButtonState()
-		}
-	})
-
-	// Row 4: GRIN2
+/**
+ * Creates GRIN2 info row
+ */
+function createGRIN2InfoRow(optionsTable: any) {
 	const grin2Row = optionsTable.append('tr')
 
-	const grin2CheckboxCell = grin2Row
-		.append('td')
-		.style('padding', '12px')
-		.style('border', '1px solid #ddd')
-		.style('vertical-align', 'top')
+	const labelCell = grin2Row.append('td')
+	applyStyles(labelCell, STYLES.tableCell)
+	labelCell.append('div').style('font-weight', '500').style('color', '#333').text('GRIN2 Analysis')
 
-	grin2CheckboxCell.append('div').style('font-weight', '500').style('color', '#333').text('GRIN2 Analysis')
+	const optionsCell = grin2Row.append('td')
+	applyStyles(optionsCell, STYLES.tableCell)
+	optionsCell.append('div').style('color', '#666').text('GRIN2 analysis options will be configured here')
+}
 
-	const grin2OptionsCell = grin2Row
-		.append('td')
-		.style('padding', '12px')
-		.style('border', '1px solid #ddd')
-		.style('vertical-align', 'top')
-
-	// GRIN2 options container (hidden by default)
-	const grin2OptionsContainer = grin2OptionsCell.append('div').style('display', 'inline')
-
-	grin2OptionsContainer
-		.append('div')
-		.style('color', '#666')
-		.style('font-style', 'plain')
-		.text('GRIN2 analysis options will be configured here')
-
-	// Add checkbox change handlers (basic show/hide functionality)
-	// Store references for easy access later
-	obj.mafOptionsContainer = mafOptionsContainer
-	obj.cnvOptionsContainer = cnvOptionsContainer
-	obj.fusionOptionsContainer = fusionOptionsContainer
-
-	// Add submit button after the options table
+/**
+ * Creates submit button with state management
+ */
+function createSubmitButton(obj: any) {
 	const submitButtonContainer = obj.controlDiv
 		.append('div')
 		.style('margin-top', '2px')
@@ -1469,49 +1206,31 @@ function makeControls(obj) {
 	const submitButton = submitButtonContainer
 		.append('button')
 		.attr('id', 'submit-options-button')
-		.style('margin', '10px 10px 0 0') // Same margin as table.ts buttons
+		.style('margin', '10px 10px 0 0')
 		.text('Apply Options & Refresh Files')
 
-	// Store submit button reference for easy access
 	obj.submitButton = submitButton
 
-	// Add submit button click handler
 	submitButton.on('click', function (this: HTMLButtonElement) {
 		if (!this.disabled) {
-			// Re-fetch files with current options
 			getFilesAndShowTable(obj)
 		}
 	})
 
-	// Store the update function for use in checkbox handlers
-	obj.updateSubmitButtonState = updateSubmitButtonState
-
-	// Initial button state check
-	updateSubmitButtonState()
-
-	// Function to update submit button state based on checkbox selections
-	function updateSubmitButtonState() {
+	// State management function
+	obj.updateSubmitButtonState = function () {
 		const hasAnyDataTypeSelected = obj.dataTypeStates.maf || obj.dataTypeStates.cnv || obj.dataTypeStates.fusion
 
 		if (hasAnyDataTypeSelected) {
-			// Enable button
 			submitButton.attr('disabled', null).text('Apply Options & Refresh Files')
 		} else {
-			// Disable button
 			submitButton.attr('disabled', true).text('Select at least one data type')
 		}
 	}
 
-	// Store the update function for use in checkbox handlers
-	obj.updateSubmitButtonState = updateSubmitButtonState
-
-	// Initial button state check
-	updateSubmitButtonState()
+	// Initial state check
+	obj.updateSubmitButtonState()
 }
-
-// ================================================================================
-// DATA FETCHING & TABLE MANAGEMENT
-// ================================================================================
 
 /**
  * Fetches available files and renders the selection table
