@@ -178,12 +178,13 @@ export type RustSummary = {
 	>
 
 	hyper_mutator_records: Record<string, string[]>
+	excluded_by_max_record: Record<string, string[]>
 }
 
 /** Structured output from Rust GRIN2 processing */
 export type RustGRIN2Result = {
-	/** Array of successful file data arrays */
-	successful_data: string[][]
+	/** String of successful file data */
+	successful_data: string
 	/** Array of failed file information */
 	failed_files: RustErrorEntry[]
 	/** Summary statistics */

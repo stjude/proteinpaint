@@ -15,7 +15,7 @@
 # {
 #  genedb: gene db file path
 #  chromosomelist={ <key>: <len>, }
-#  lesion: flattened string from the output of gdcGRIN2.rs
+#  lesion: JSON string containing array of lesion data from gdcGRIN2.rs
 # }
 
 # Output JSON:
@@ -597,10 +597,24 @@ try:
 		write_error(f"Failed to read chromosome size file: {str(e)}")
 		sys.exit(1)
 
+	
+		write_error(f"Failed to read lesion data from input JSON: {str(e)}")
+		sys.exit(1)
+
 	# 4. Receive lesion data
 	try:
-		lesion_data = input_data["lesion"]
-		lesion_df = pd.DataFrame(lesion_data, columns=["ID", "chrom", "loc.start", "loc.end", "lsn.type"])
+		lesion_data = input_data["lesion"] 
+		
+		# Parse the JSON string to get the actual array
+		lesion_array = json.loads(lesion_data)
+		
+		# Validate we have data
+		if not lesion_array:
+			write_error("No lesion data provided")
+			sys.exit(1)
+		
+		# Create DataFrame from the parsed array
+		lesion_df = pd.DataFrame(lesion_array, columns=["ID", "chrom", "loc.start", "loc.end", "lsn.type"])
 		lesion_df = lesion_df.astype({
 			"ID": str,
 			"chrom": str,
@@ -610,6 +624,9 @@ try:
 		})
 		lesion_df["chrom"] = lesion_df["chrom"].apply(lambda c: f"chr{c}" if not c.startswith("chr") else c)
 		lsn_colors = assign_lesion_colors(lesion_df["lsn.type"])
+	except json.JSONDecodeError as json_err:
+		write_error(f"Failed to parse lesion JSON: {json_err}")
+		sys.exit(1)
 	except Exception as e:
 		write_error(f"Failed to read lesion data from input JSON: {str(e)}")
 		sys.exit(1)

@@ -12,7 +12,6 @@ Author: PP Team
 import { dofetch3 } from '#common/dofetch'
 import { renderTable, sayerror, make_one_checkbox } from '#dom'
 import { select } from 'd3-selection'
-import { formatElapsedTime } from '@sjcrh/proteinpaint-shared/time.js'
 import type { GdcGRIN2listRequest } from '#types'
 import { mclass, dtsnvindel, class2SOterm, bplen } from '@sjcrh/proteinpaint-shared/common.js'
 
@@ -69,7 +68,10 @@ function transformRows(rows, columns) {
 	})
 }
 
-function parseRecordsByCaseData(recordsByCase: any): { columns: any[]; rows: any[][] } {
+function parseRecordsByCaseData(
+	recordsByCase: any,
+	excludedByMaxRecord: { maf?: string[]; cnv?: string[] } = {}
+): { columns: any[]; rows: any[][] } {
 	// Adding columns for detailed filtering stats
 	const columns = [
 		{ label: 'Case ID', sortable: true },
@@ -79,11 +81,13 @@ function parseRecordsByCaseData(recordsByCase: any): { columns: any[]; rows: any
 		{ label: 'MAF Excluded by Alt Count', sortable: true },
 		{ label: 'MAF Excluded by Consequence', sortable: true },
 		{ label: 'MAF Skipped Chromosomes', sortable: true },
+		{ label: 'MAF Excluded by Records Cap', sortable: true },
 		{ label: 'CNV Total Processed', sortable: true },
 		{ label: 'CNV Included', sortable: true },
 		{ label: 'CNV Excluded by Thresholds', sortable: true },
 		{ label: 'CNV Excluded by Length', sortable: true },
 		{ label: 'CNV Skipped Chromosomes', sortable: true },
+		{ label: 'CNV Excluded by Records Cap', sortable: true },
 		{ label: 'Invalid Rows', sortable: true }
 	]
 
@@ -171,6 +175,16 @@ function parseRecordsByCaseData(recordsByCase: any): { columns: any[]; rows: any
 			})
 		}
 
+		// Check if this case was excluded by max record for MAF
+		const mafExcludedByMax = excludedByMaxRecord.maf?.includes(caseId) ? 'Yes' : 'No'
+		row.push({
+			value: mafExcludedByMax,
+			html:
+				mafExcludedByMax === 'Yes'
+					? `<span style="color: #dc3545; font-weight: bold;">${mafExcludedByMax}</span>`
+					: mafExcludedByMax
+		})
+
 		// CNV Statistics
 		let cnvTotalProcessed = 0
 		let cnvIncluded = 0
@@ -236,6 +250,16 @@ function parseRecordsByCaseData(recordsByCase: any): { columns: any[]; rows: any
 				dataType: 'chromosome-details'
 			})
 		}
+
+		// Check if this case was excluded by max record for CNV
+		const cnvExcludedByMax = excludedByMaxRecord.cnv?.includes(caseId) ? 'Yes' : 'No'
+		row.push({
+			value: cnvExcludedByMax,
+			html:
+				cnvExcludedByMax === 'Yes'
+					? `<span style="color: #dc3545; font-weight: bold;">${cnvExcludedByMax}</span>`
+					: cnvExcludedByMax
+		})
 
 		// Invalid Rows (MAF + CNV combined)
 		let totalInvalidRows = 0
@@ -1940,10 +1964,7 @@ async function getFilesAndShowTable(obj) {
 			// Call the GRIN2 run endpoint with the correctly formatted data
 			// console.log('Sending GRIN2 request:', caseFiles)
 			// console.log('GRIN2 request structure:', JSON.stringify(caseFiles, null, 2))
-			const startTime = Date.now()
 			const response = await dofetch3('gdc/runGRIN2', { body: caseFiles })
-			const elapsedTime = formatElapsedTime(Date.now() - startTime)
-			console.log(`GRIN2 analysis took ${elapsedTime}`)
 			if (!response) throw 'invalid response'
 			if (response.error) throw response.error
 
@@ -1981,8 +2002,8 @@ async function getFilesAndShowTable(obj) {
 						// 	`[GRIN2] Success: ${parsedRustResult.summary.successful_files}, Failed: ${parsedRustResult.summary.failed_files}`
 						// )
 
-						// Flatten all successful data arrays into one array - THIS GOES TO python
-						processedData = parsedRustResult.successful_data.flat()
+						// Successful data goes to python
+						processedData = parsedRustResult.successful_data
 
 						console.log(`[GRIN2] parsedRustResult structure:`, parsedRustResult)
 
@@ -2018,7 +2039,7 @@ async function getFilesAndShowTable(obj) {
 						}
 					}
 
-					console.log(`[GRIN2] Final processed data contains ${processedData.length} records`)
+					console.log(`[GRIN2] Final processed data contains ${processedData.length.toLocaleString()} characters`)
 				}
 			} catch (parseError) {
 				console.error('[GRIN2] Error parsing Rust result:', parseError)
@@ -2376,7 +2397,10 @@ async function getFilesAndShowTable(obj) {
 						// Records by case
 						if (response.rustResult.summary.filtered_records_by_case !== undefined) {
 							// Parse the records by case data and create table structure
-							const { columns, rows } = parseRecordsByCaseData(response.rustResult.summary.filtered_records_by_case)
+							const { columns, rows } = parseRecordsByCaseData(
+								response.rustResult.summary.filtered_records_by_case,
+								response.rustResult.summary.excluded_by_max_record
+							)
 
 							// Create container that spans both columns
 							const recordsByCaseContainer = filterStats
