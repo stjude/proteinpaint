@@ -83,7 +83,7 @@ export class profilePlot {
 		select('.sjpp-output-sandbox-content').on('scroll', event => {
 			if (this.onMouseOut) this.onMouseOut(event)
 		})
-		//this.dom.rightDiv.on('mousemove', event => this.onMouseOver(event))
+		this.dom.rightDiv.on('mousemove', event => this.onMouseOver(event))
 		this.dom.rightDiv.on('mouseleave', event => this.onMouseOut(event))
 		this.dom.rightDiv.on('mouseout', event => this.onMouseOut(event))
 
