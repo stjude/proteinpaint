@@ -25,7 +25,7 @@ test('filterByItem: sample has mutation for dt', t => {
 	const filter = {
 		type: 'tvs',
 		tvs: {
-			term: { dt: 1 },
+			term: { dt: 1, type: 'dtsnvindel' },
 			values: [{ key: 'M' }]
 		}
 	}
@@ -40,7 +40,7 @@ test('filterByItem: sample tested for dt but no mutation', t => {
 	const filter = {
 		type: 'tvs',
 		tvs: {
-			term: { dt: 1 },
+			term: { dt: 1, type: 'dtsnvindel' },
 			values: [{ key: 'M' }]
 		}
 	}
@@ -58,7 +58,7 @@ test('filterByItem: sample not tested for dt', t => {
 	const filter = {
 		type: 'tvs',
 		tvs: {
-			term: { dt: 1 },
+			term: { dt: 1, type: 'dtsnvindel' },
 			values: [{ key: 'M' }]
 		}
 	}
@@ -77,7 +77,7 @@ test('filterByItem: .isnot flag', t => {
 	const filter = {
 		type: 'tvs',
 		tvs: {
-			term: { dt: 1 },
+			term: { dt: 1, type: 'dtsnvindel' },
 			values: [{ key: 'M' }],
 			isnot: true
 		}
@@ -110,7 +110,7 @@ test('filterByItem: mutation origin', t => {
 	const filter = {
 		type: 'tvs',
 		tvs: {
-			term: { dt: 1, origin: 'somatic' },
+			term: { dt: 1, origin: 'somatic', type: 'dtsnvindel' },
 			values: [{ key: 'M' }]
 		}
 	}
@@ -139,7 +139,7 @@ test('filterByItem: continuous CNV', t => {
 	const filter = {
 		type: 'tvs',
 		tvs: {
-			term: { dt: 4 },
+			term: { dt: 4, type: 'dtcnv' },
 			continuousCnv: true,
 			cnvGainCutoff: 0.5,
 			cnvLossCutoff: -0.5,
@@ -221,7 +221,7 @@ test('filterByTvsLst: single tvs', t => {
 		type: 'tvslst',
 		join: 'and',
 		in: true,
-		lst: [{ type: 'tvs', tvs: { term: { dt: 1 }, values: [{ key: 'M' }] } }]
+		lst: [{ type: 'tvs', tvs: { term: { dt: 1, type: 'dtsnvindel' }, values: [{ key: 'M' }] } }]
 	}
 	{
 		const mlst = [{ dt: 1, class: 'M' }]
@@ -250,8 +250,8 @@ test('filterByTvsLst: multiple tvs, AND join', t => {
 		join: 'and',
 		in: true,
 		lst: [
-			{ type: 'tvs', tvs: { term: { dt: 1 }, values: [{ key: 'M' }] } },
-			{ type: 'tvs', tvs: { term: { dt: 4 }, values: [{ key: 'CNV_amp' }] } }
+			{ type: 'tvs', tvs: { term: { dt: 1, type: 'dtsnvindel' }, values: [{ key: 'M' }] } },
+			{ type: 'tvs', tvs: { term: { dt: 4, type: 'dtcnv' }, values: [{ key: 'CNV_amp' }] } }
 		]
 	}
 	{
@@ -290,8 +290,8 @@ test('filterByTvsLst: multiple tvs, OR join', t => {
 		join: 'or',
 		in: true,
 		lst: [
-			{ type: 'tvs', tvs: { term: { dt: 1 }, values: [{ key: 'M' }] } },
-			{ type: 'tvs', tvs: { term: { dt: 4 }, values: [{ key: 'CNV_amp' }] } }
+			{ type: 'tvs', tvs: { term: { dt: 1, type: 'dtsnvindel' }, values: [{ key: 'M' }] } },
+			{ type: 'tvs', tvs: { term: { dt: 4, type: 'dtcnv' }, values: [{ key: 'CNV_amp' }] } }
 		]
 	}
 	{
@@ -347,7 +347,7 @@ test('filterByTvsLst: in=false', t => {
 		type: 'tvslst',
 		join: 'and',
 		in: false,
-		lst: [{ type: 'tvs', tvs: { term: { dt: 1 }, values: [{ key: 'M' }] } }]
+		lst: [{ type: 'tvs', tvs: { term: { dt: 1, type: 'dtsnvindel' }, values: [{ key: 'M' }] } }]
 	}
 	{
 		const mlst = [{ dt: 1, class: 'M' }]
@@ -375,11 +375,11 @@ test('filterByTvsLst: nested tvslst', t => {
 				join: 'or',
 				in: true,
 				lst: [
-					{ type: 'tvs', tvs: { term: { dt: 1, origin: 'somatic' }, values: [{ key: 'M' }] } },
-					{ type: 'tvs', tvs: { term: { dt: 1, origin: 'germline' }, values: [{ key: 'M' }] } }
+					{ type: 'tvs', tvs: { term: { dt: 1, origin: 'somatic', type: 'dtsnvindel' }, values: [{ key: 'M' }] } },
+					{ type: 'tvs', tvs: { term: { dt: 1, origin: 'germline', type: 'dtsnvindel' }, values: [{ key: 'M' }] } }
 				]
 			},
-			{ type: 'tvs', tvs: { term: { dt: 4 }, values: [{ key: 'CNV_amp' }] } }
+			{ type: 'tvs', tvs: { term: { dt: 4, type: 'dtcnv' }, values: [{ key: 'CNV_amp' }] } }
 		]
 	}
 	{
