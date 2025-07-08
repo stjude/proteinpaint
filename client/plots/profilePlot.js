@@ -190,8 +190,7 @@ export class profilePlot {
 				scoreTerms: this.scoreTerms,
 				filter: this.filter,
 				isAggregate,
-				sites: this.isRadarFacility ? null : this.settings.sites,
-				isRadarFacility: this.isRadarFacility,
+				sites: this.settings.sites,
 				userSites: this.state.sites,
 				facilityTW: this.config.facilityTW
 			})
@@ -201,7 +200,7 @@ export class profilePlot {
 				scScoreTerms: this.scScoreTerms,
 				filter: this.filter,
 				isAggregate,
-				sites: this.isRadarFacility ? null : this.settings.sites,
+				sites: this.settings.sites,
 				userSites: this.state.sites,
 				facilityTW: this.config.facilityTW
 			})
@@ -212,11 +211,12 @@ export class profilePlot {
 			return 0
 		})
 
-		if (!this.settings.site && !this.settings.sites && (this.state.sites?.length == 1 || this.isRadarFacility)) {
+		if (this.isRadarFacility) {
+			if (!this.settings.facilitySite) this.settings.facilitySite = this.sites[0]?.value //set the first site as the facility site
+		} else if (!this.settings.site && !this.settings.sites && this.state.sites?.length == 1) {
 			this.settings.site = this.data.sites?.[0]?.value
 			this.settings.sites = [this.settings.site] //set sites to the single site
 		}
-
 		if (this.settings.sites)
 			for (const site of this.settings.sites) {
 				const siteOption = this.sites.find(s => s.value == site)
@@ -251,81 +251,81 @@ export class profilePlot {
 						label: 'Region',
 						type: 'dropdown',
 						chartType,
-						options: this.regions,
 						settingsKey: this.config.regionTW.term.id,
+						options: this.regions,
 						callback: value => this.setRegion(value)
 					},
 					{
 						label: 'Country',
 						type: 'dropdown',
 						chartType,
-						options: this.countries,
 						settingsKey: this.config.countryTW.term.id,
+						options: this.countries,
 						callback: value => this.setFilterValue(this.config.countryTW.term.id, value)
 					},
 					{
 						label: 'Income group',
 						type: 'dropdown',
 						chartType,
-						options: this.incomes,
 						settingsKey: this.config.incomeTW.term.id,
+						options: this.incomes,
 						callback: value => this.setFilterValue(this.config.incomeTW.term.id, value)
 					},
 					{
 						label: 'Facility type',
 						type: 'dropdown',
 						chartType,
-						options: this.types,
 						settingsKey: this.config.typeTW.term.id,
+						options: this.types,
 						callback: value => this.setFilterValue(this.config.typeTW.term.id, value)
 					},
 					{
 						label: this.config.teachingStatusTW.term.name,
 						type: 'dropdown',
 						chartType,
-						options: this.teachingStates,
 						settingsKey: this.config.teachingStatusTW.term.id,
+						options: this.teachingStates,
 						callback: value => this.setFilterValue(this.config.teachingStatusTW.term.id, value)
 					},
 					{
 						label: this.config.referralStatusTW.term.name,
 						type: 'dropdown',
 						chartType,
-						options: this.referralStates,
 						settingsKey: this.config.referralStatusTW.term.id,
+						options: this.referralStates,
 						callback: value => this.setFilterValue(this.config.referralStatusTW.term.id, value)
 					},
 					{
 						label: this.config.fundingSourceTW.term.name,
 						type: 'dropdown',
 						chartType,
-						options: this.fundingSources,
 						settingsKey: this.config.fundingSourceTW.term.id,
+						options: this.fundingSources,
 						callback: value => this.setFilterValue(this.config.fundingSourceTW.term.id, value)
 					},
 					{
 						label: this.config.hospitalVolumeTW.term.name,
 						type: 'dropdown',
 						chartType,
-						options: this.hospitalVolumes,
 						settingsKey: this.config.hospitalVolumeTW.term.id,
+						options: this.hospitalVolumes,
 						callback: value => this.setFilterValue(this.config.hospitalVolumeTW.term.id, value)
 					},
 					{
 						label: this.config.yearOfImplementationTW.term.name,
 						type: 'dropdown',
 						chartType,
-						options: this.yearsOfImplementation,
 						settingsKey: this.config.yearOfImplementationTW.term.id,
+						options: this.yearsOfImplementation,
 						callback: value => this.setFilterValue(this.config.yearOfImplementationTW.term.id, value)
 					}
 				]
 			)
 		}
 		if (this.state.logged) {
-			if ((isAggregate && (this.state.sites?.length > 1 || this.state.user == 'admin')) || this.isRadarFacility) {
+			if (isAggregate && (this.state.sites?.length > 1 || this.state.user == 'admin')) {
 				const sitesInput = {
-					label: 'Site',
+					label: 'Sites',
 					type: 'dropdown',
 					chartType,
 					options: this.sites,
@@ -334,7 +334,30 @@ export class profilePlot {
 						this.setSites(values)
 					}
 				}
-				this.isRadarFacility ? inputs.unshift(sitesInput) : inputs.push(sitesInput)
+				inputs.push(sitesInput)
+			}
+			if (this.isRadarFacility) {
+				this.sampleData = await this.app.vocabApi.getProfileScores({
+					terms: [...this.twLst, this.config.facilityTW], //added facility term to all the plots to get the hospital name
+					scoreTerms: this.scoreTerms,
+					filter: this.filter,
+					isAggregate: false,
+					site: this.settings.facilitySite,
+					userSites: this.state.sites,
+					facilityTW: this.config.facilityTW
+				})
+				this.facilitySites = this.sampleData.sites
+				this.facilitySites.find(s => s.value == this.settings.facilitySite).selected = true //mark selected facility site
+
+				inputs.unshift({
+					label: 'Facility site',
+					type: 'dropdown',
+					chartType,
+					options: this.facilitySites,
+					callback: value => {
+						this.setFacilitySite(value)
+					}
+				})
 			}
 		}
 
@@ -379,10 +402,8 @@ export class profilePlot {
 	setFilterValue(key, value) {
 		const config = this.config
 		this.settings[key] = value
-		if (!this.isRadarFacility) {
-			this.settings.site = '' //always clear site when a filter is changed
-			this.settings.sites = null //clear sites
-		}
+		this.settings.site = '' //always clear site when a filter is changed
+		this.settings.sites = null //clear sites
 		config.filter = this.getFilter()
 		this.app.dispatch({ type: 'plot_edit', id: this.id, config: this.config })
 	}
@@ -401,15 +422,18 @@ export class profilePlot {
 
 	clearFiltersExcept(ids) {
 		for (const tw of this.config.filterTWs) if (!ids.includes(tw.term.id)) this.settings[tw.term.id] = ''
-		if (!this.isRadarFacility) {
-			this.settings.site = ''
-			this.settings.sites = null //clear sites
-		}
+		this.settings.site = ''
+		this.settings.sites = null //clear sites
 	}
 
 	setSite(site) {
 		this.settings.site = site
 		this.settings.sites = null //clear sites
+		this.app.dispatch({ type: 'plot_edit', id: this.id, config: this.config })
+	}
+
+	setFacilitySite(site) {
+		this.settings.facilitySite = site
 		this.app.dispatch({ type: 'plot_edit', id: this.id, config: this.config })
 	}
 
@@ -422,7 +446,7 @@ export class profilePlot {
 	}
 
 	addFilterLegend() {
-		if (!this.settings.site || this.isRadarFacility) {
+		if (!this.settings.site) {
 			const hasFilters = this.config.filterTWs.some(tw => this.settings[tw.term.id])
 			const title = hasFilters ? 'Filters' : 'No filter applied'
 			this.filterG
@@ -434,7 +458,7 @@ export class profilePlot {
 				.attr('transform', `translate(0, -5)`)
 			for (const tw of this.config.filterTWs) this.addFilterLegendItem(tw.term.name, this.settings[tw.term.id])
 		}
-		if (this.settings.site && !this.isRadarFacility) {
+		if (this.settings.site) {
 			const label = this.sites.find(s => s.value == this.settings.site).label
 			this.addFilterLegendItem('Facility ID', label)
 			const hospital = this.data.hospital
