@@ -43,7 +43,7 @@ async function getScoresDict(query, ds, genome) {
 	const data = await getData(
 		{
 			terms,
-			filter: query.filter //if isRadarFacility and site is specified, do not apply the filter
+			filter: query.site || !query.isAggregate ? undefined : query.filter //if isRadarFacility and site is specified, do not apply the filter
 		},
 		ds,
 		genome
@@ -57,20 +57,11 @@ async function getScoresDict(query, ds, genome) {
 		return { label: data.refs.bySampleId[s.sample].label, value: s.sample }
 	})
 
-	//If the user has sites keep only the sites that are visible to the user
-	if (query.userSites) {
-		sites = sites.filter(s => query.userSites.includes(s.label))
-	}
-	let userSite
-	if (query.userSites) {
-		const siteName = query.userSites[0]
-		userSite = ds.sampleName2Id.get(siteName)
-		if (!userSite) {
-			throw `Invalid user site: ${siteName}`
-		}
-	}
-	const site = query.isAggregate ? query.site : userSite
-	const sampleData = data.samples[site] || null
+	let sitesSelected: any[] = []
+	if (query.site) sitesSelected = [query.site]
+	else if (!query.isAggregate) sitesSelected = [sites[0].value] //only one site selected
+	else sitesSelected = query.sites
+	const sampleData = sitesSelected?.length == 1 ? data.samples[sitesSelected[0]] : null
 	const samples = Object.values(data.samples)
 	const term2Score: any = {}
 	for (const d of query.scoreTerms) {
@@ -88,7 +79,7 @@ async function getScoresDict(query, ds, genome) {
 
 	const hospital = sampleData?.[query.facilityTW.$id]?.value
 
-	return { term2Score, sites, hospital, n: samples.length }
+	return { term2Score, sites, hospital, n: sampleData ? 1 : samples.length }
 }
 
 function getDict(key, sample) {
