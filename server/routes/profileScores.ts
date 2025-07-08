@@ -37,7 +37,6 @@ function init({ genomes }) {
 }
 
 async function getScores(query, ds, genome) {
-	const isRadarFacility = query.isRadarFacility
 	const terms: any[] = [query.facilityTW]
 	for (const term of query.scoreTerms) {
 		terms.push(term.score)
@@ -48,7 +47,7 @@ async function getScores(query, ds, genome) {
 	const data = await getData(
 		{
 			terms,
-			filter: isRadarFacility && query.site ? undefined : query.filter //if isRadarFacility and site is specified, do not apply the filter
+			filter: query.site ? undefined : query.filter //if site is specified, do not apply the filter that is for the aggregation
 		},
 		ds,
 		genome
@@ -57,7 +56,6 @@ async function getScores(query, ds, genome) {
 	let sites = lst.map((s: any) => {
 		return { label: data.refs.bySampleId[s.sample].label, value: s.sample }
 	})
-	//The site in the facility radar is not dependent on the other filters
 
 	sites = lst.map((s: any) => {
 		return { label: data.refs.bySampleId[s.sample].label, value: s.sample }
@@ -76,7 +74,7 @@ async function getScores(query, ds, genome) {
 		}
 	}
 	let sitesSelected: any[] = []
-	if (isRadarFacility) sitesSelected = query.sites
+	if (query.site) sitesSelected = [query.site] //query.site
 	else sitesSelected = query.isAggregate ? query.sites : [userSite]
 	const sampleData = sitesSelected?.length == 1 ? data.samples[sitesSelected[0]] : null
 	let samples = Object.values(data.samples)
