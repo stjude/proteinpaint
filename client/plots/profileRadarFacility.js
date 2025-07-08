@@ -11,6 +11,7 @@ class profileRadarFacility extends profilePlot {
 		super()
 		this.type = 'profileRadarFacility'
 		this.radius = 250
+		this.isRadarFacility = true // this is a radar facility plot
 	}
 
 	async init(appState) {

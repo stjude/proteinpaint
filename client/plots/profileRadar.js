@@ -86,8 +86,9 @@ class profileRadar extends profilePlot {
 		this.legendG = this.dom.svg
 			.append('g')
 			.attr('data-testid', 'sjpp-profileRadar-legend')
-			.attr('transform', `translate(${x + 240},${y + 250})`)
-		this.filterG = this.dom.svg.append('g').attr('transform', `translate(${40},${y + 300})`)
+			.attr('transform', `translate(${x + 300},${y + 210})`)
+		this.filterG = this.dom.svg.append('g').attr('transform', `translate(${x + 300},${y + 300})`)
+		this.noteG = this.dom.svg.append('g').attr('transform', `translate(${40},${y + 250})`)
 
 		for (let i = 0; i <= 10; i++) this.addPoligon(i * 10)
 
@@ -190,9 +191,8 @@ class profileRadar extends profilePlot {
 
 		const item2 = `${config.term2.name} ${abbrev}`
 		this.addLegendItem(item2, color2, 1, '5, 5')
-		if (this.state.activeCohort == ABBREV_COHORT)
-			this.addEndUserImpressionNote(this.legendG.append('g').attr('transform', `translate(-50, -15)`))
-		else this.addPOCNote(this.legendG.append('g').attr('transform', `translate(0, -15)`))
+		if (this.state.activeCohort == ABBREV_COHORT) this.addEndUserImpressionNote(this.noteG)
+		else this.addPOCNote(this.noteG)
 		this.addFilterLegend()
 	}
 
