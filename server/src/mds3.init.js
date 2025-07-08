@@ -2743,18 +2743,13 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 		const groupset = get_active_groupset(tw.term, tw.q)
 
 		const data = new Map() // to return
+		// TODO: need to test when geneVariant term is in global filter for gdc
 		const filterByGeneVariant =
 			ds.mayGetGeneVariantDataParam?.postProcessFilter &&
 			q.filter?.lst.find(item => dtTerms.map(t => t.type).includes(item.tvs.term.type))
 		for (const [sample, mlst] of sample2mlst) {
-			if (filterByGeneVariant) {
-				// filter samples by geneVariant/dt term in filter
-				// necessary for gdc, which uses a different filter structure during
-				// data query that is not compatible with filterByTvsLst()
-				// (see filter2GDCfilter() in server/src/mds3.gdc.filter.js)
-				const [pass, tested] = filterByTvsLst(q.filter, mlst)
-				if (!pass) continue
-			}
+			const pass = mayFilterByGeneVariant(q.filter, mlst, filterByGeneVariant)
+			if (!pass) continue
 			if (groupset) {
 				// groupsetting is active
 				// get the first group of groupset that the sample can be assigned to
@@ -2828,7 +2823,16 @@ async function filterSamples4assayAvailability(q, ds) {
 		/////////////////////////////
 		// if true, instructs this ds will use both filter and filter0 to get it
 		// TODO solution below uses a hardcoded gdc function and is not generalized
-		if (q.filter0 || q.filter?.lst.length) {
+		let filterObj
+		if (q.filter) {
+			// remove geneVariant/dt terms from filter as this data will
+			// be filtered during post-processing (see mayFilterByGeneVariant())
+			filterObj = structuredClone(q.filter)
+			filterObj.lst = ds.mayGetGeneVariantDataParam?.postProcessFilter
+				? q.filter.lst.filter(item => !dtTerms.map(t => t.type).includes(item.tvs.term.type))
+				: q.filter.lst
+		}
+		if (q.filter0 || filterObj?.lst.length) {
 			/* only do this query when there is either filter0, or non-empty pp filter
 			gdc getter supports either filter or filter0 or both
 
@@ -2836,7 +2840,7 @@ async function filterSamples4assayAvailability(q, ds) {
 			client passes blank pp filter with empty array of fitler.lst[]!
 			*/
 			const [byTermId, samples] = await gdc.querySamplesTwlstNotForGeneexpclustering_noGenomicFilter(
-				{ filterObj: q.filter, filter0: q.filter0 },
+				{ filterObj, filter0: q.filter0 },
 				[],
 				ds
 			)
@@ -2944,6 +2948,16 @@ export function filterByItem(filter, mlst) {
 		pass = false
 	}
 	return [pass, tested]
+}
+
+// may filter samples by geneVariant/dt terms in filter
+// necessary for gdc, which uses a different filter structure during
+// data query that is not compatible with filterByTvsLst()
+// (see filter2GDCfilter() in server/src/mds3.gdc.filter.js)
+function mayFilterByGeneVariant(filter, mlst, filterByGeneVariant) {
+	if (!filterByGeneVariant) return true
+	const [pass, tested] = filterByTvsLst(filter, mlst)
+	return pass
 }
 
 /*
