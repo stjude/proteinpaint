@@ -604,13 +604,19 @@ async function listSamples(event, self, seriesId, dataId, chartId) {
 		}
 		if (term.term.type == 'geneVariant') {
 			// geneVariant term
+			const termdbmclass = self.app.vocabApi.termdbConfig?.mclass
 			if (termIndex === 1) {
 				// term1=geneVariant, chart will be divided by dt term
 				// get dt term from selected chart and build tvs
 				const dtTerm = self.chartid2dtterm[chartId]
-				// using mclass here instead of dtTerm.values to
-				// support the not tested class
-				const key = Object.keys(mclass).find(k => mclass[k].label == value)
+				let key
+				if (termdbmclass) {
+					// custom mclass labels defined in dataset
+					key = Object.keys(termdbmclass).find(k => termdbmclass[k].label == value)
+				}
+				if (!key) {
+					key = Object.keys(mclass).find(k => mclass[k].label == value)
+				}
 				tvs = {
 					type: 'tvs',
 					tvs: {
