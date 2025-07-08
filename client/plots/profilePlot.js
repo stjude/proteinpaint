@@ -207,9 +207,7 @@ export class profilePlot {
 			})
 		this.sites = this.data.sites
 		this.sites.sort((a, b) => {
-			if (a.label < b.label) return -1
-			if (a.label > b.label) return 1
-			return 0
+			return a.label.localeCompare(b.label)
 		})
 		if (isRadarFacility) {
 			if (!this.settings.facilitySite) this.settings.facilitySite = this.sites[0]?.value //set the first site as the facility site
@@ -347,6 +345,9 @@ export class profilePlot {
 					facilityTW: this.config.facilityTW
 				})
 				this.facilitySites = this.sampleData.sites
+				this.facilitySites.sort((a, b) => {
+					return a.label.localeCompare(b.label)
+				})
 				this.facilitySites.find(s => s.value == this.settings.facilitySite).selected = true //mark selected facility site
 
 				inputs.unshift({
