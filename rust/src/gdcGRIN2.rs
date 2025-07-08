@@ -19,12 +19,15 @@
     chromosomes: chromosomes will be included:[]
 
   Output mutations as JSON array.
+    {
+        grin2lesion:[],
+        summary:{}
+    }
 
   Example of usage:
-    echo '{"caseFiles": {"MP2PRT-PATFJE": {"maf": "26ea7b6f-8bc4-4e83-ace1-2125b493a361"},"MP2PRT-PAPIGD": {"maf": "653d7458-f4af-4328-a1ce-3bbf22a2e347"}, "TCGA-CG-4300": { "cnv":"46372ec2-ff79-4d07-b375-9ba8a12c11f3", "maf":"c09b208d-2e7b-4116-9580-27f20f4c7e67"}},"mafOptions": {"minTotalDepth": 100,"minAltAlleleCount": 20,"hyperMutator":8000,"consequences":["missense_variant","frameshift_variant"]}, "cnvOptions":{"lossThreshold":-1, "gainThreshold": 1.5, "segLength":2000000, "hyperMutator":8000}, "chromosomes":["chr1","chr2","chr3"]}' | ./target/release/gdcGRIN2
-
+    echo '{"caseFiles": {"MP2PRT-PATFJE": {"maf": "26ea7b6f-8bc4-4e83-ace1-2125b493a361"},"MP2PRT-PAPIGD": {"maf": "653d7458-f4af-4328-a1ce-3bbf22a2e347"}, "TCGA-CG-4300": { "cnv":"46372ec2-ff79-4d07-b375-9ba8a12c11f3", "maf":"c09b208d-2e7b-4116-9580-27f20f4c7e67"}},"mafOptions": {"minTotalDepth": 100,"minAltAlleleCount": 20,"hyperMutator":8000,"consequences":["missense_variant","frameshift_variant"]}, "cnvOptions":{"lossThreshold":-1, "gainThreshold": 1.5, "segLength":2000000, "hyperMutator":8000}, "chromosomes":["chr1","chr2","chr3"], "max_record": 100000}' | ./target/release/gdcGRIN2
   Example of usage (read from local files):
-    echo '{"caseFiles": {"MP2PRT-PATFJE": {"maf": "26ea7b6f-8bc4-4e83-ace1-2125b493a361"},"MP2PRT-PAPIGD": {"maf": "653d7458-f4af-4328-a1ce-3bbf22a2e347"}, "TCGA-CG-4300": { "cnv":"46372ec2-ff79-4d07-b375-9ba8a12c11f3", "maf":"c09b208d-2e7b-4116-9580-27f20f4c7e67"}},"mafOptions": {"minTotalDepth": 100,"minAltAlleleCount": 20,"hyperMutator":8000,"consequences":["missense_variant","frameshift_variant"]}, "cnvOptions":{"lossThreshold":-1, "gainThreshold": 1.5, "segLength":2000000, "hyperMutator":8000}, "chromosomes":["chr1","chr2","chr3"]}' | ./target/release/gdcGRIN2 --from-file
+    echo '{"caseFiles": {"MP2PRT-PATFJE": {"maf": "26ea7b6f-8bc4-4e83-ace1-2125b493a361"},"MP2PRT-PAPIGD": {"maf": "653d7458-f4af-4328-a1ce-3bbf22a2e347"}, "TCGA-CG-4300": { "cnv":"46372ec2-ff79-4d07-b375-9ba8a12c11f3", "maf":"c09b208d-2e7b-4116-9580-27f20f4c7e67"}},"mafOptions": {"minTotalDepth": 100,"minAltAlleleCount": 20,"hyperMutator":8000,"consequences":["missense_variant","frameshift_variant"]}, "cnvOptions":{"lossThreshold":-1, "gainThreshold": 1.5, "segLength":2000000, "hyperMutator":8000}, "chromosomes":["chr1","chr2","chr3"], "max_record": 100000}' | ./target/release/gdcGRIN2 --from-file
 
 */
 
@@ -86,16 +89,6 @@ struct CnvOptions {
     hyper_mutator: i32,
 }
 
-// Individual successful file output (JSONL format)
-#[derive(serde::Serialize)]
-struct SuccessfulFileOutput {
-    #[serde(rename = "type")]
-    output_type: String, // Always "data"
-    case_id: String,
-    data_type: String,
-    data: Vec<Vec<String>>,
-}
-
 // struct for MAF filter details
 #[derive(Clone, Serialize, Default)]
 struct FilteredMafDetails {
@@ -136,8 +129,6 @@ struct FilteredCaseDetails {
 // Final summary output (JSONL format)
 #[derive(serde::Serialize)]
 struct FinalSummary {
-    #[serde(rename = "type")]
-    output_type: String, // Always "summary"
     total_files: usize,
     successful_files: usize,
     failed_files: usize,
@@ -149,14 +140,14 @@ struct FinalSummary {
     included_cnv_records: usize,
     filtered_records_by_case: HashMap<String, FilteredCaseDetails>,
     hyper_mutator_records: HashMap<String, Vec<String>>,
+    excluded_by_max_record: HashMap<String, Vec<String>>,
 }
 
 // Enum to hold both SuccessfulFileoutput and FinalSummary
 #[derive(Serialize)]
-#[serde(untagged)]
-enum Output {
-    Data(SuccessfulFileOutput),
-    Summary(FinalSummary),
+struct Output {
+    grin2lesion: Vec<Vec<String>>,
+    summary: FinalSummary,
 }
 
 // Define the top-level input structure
@@ -169,6 +160,7 @@ struct InputData {
     #[serde(rename = "cnvOptions")]
     cnv_options: Option<CnvOptions>,
     chromosomes: Vec<String>,
+    max_record: usize,
 }
 
 // Configuration for different data types
@@ -775,6 +767,7 @@ async fn download_data(
     seg_length: i32,
     cnv_hyper_mutator: i32,
     chromosomes: &HashSet<String>,
+    max_record: usize,
 ) {
     let data_urls: Vec<(String, String, String)> = data4dl
         .into_iter()
@@ -799,13 +792,14 @@ async fn download_data(
     let filtered_cnv_records = Arc::new(AtomicUsize::new(0));
     let filtered_records = Arc::new(Mutex::new(HashMap::<String, FilteredCaseDetails>::new()));
     let hyper_mutator_records = Arc::new(Mutex::new(HashMap::<String, Vec<String>>::new()));
+    let excluded_by_max_record = Arc::new(Mutex::new(HashMap::<String, Vec<String>>::new()));
     let included_maf_records = Arc::new(AtomicUsize::new(0));
     let included_cnv_records = Arc::new(AtomicUsize::new(0));
+    let all_records = Arc::new(Mutex::new(Vec::<Vec<String>>::new()));
+    let data_count = Arc::new(AtomicUsize::new(0));
 
     // Only collect errors (successful data is output immediately)
     let errors = Arc::new(Mutex::new(Vec::<ErrorEntry>::new()));
-
-    let results = Arc::new(Mutex::new(Vec::<Output>::new()));
 
     let download_futures = futures::stream::iter(
         data_urls
@@ -825,10 +819,25 @@ async fn download_data(
             let included_maf_records = Arc::clone(&included_maf_records);
             let included_cnv_records = Arc::clone(&included_cnv_records);
             let hyper_mutator_records = Arc::clone(&hyper_mutator_records);
+            let excluded_by_max_record = Arc::clone(&excluded_by_max_record);
             let errors = Arc::clone(&errors);
-            let results = Arc::clone(&results);
+            let all_records = Arc::clone(&all_records);
+            let data_count = Arc::clone(&data_count);
 
             async move {
+                let current_count = data_count.load(Ordering::Relaxed);
+                if current_count >= max_record {
+                    // Skip processing and mark as excluded by max_record
+                    if let Ok((case_id, data_type, _)) = download_result {
+                        let mut exclud_max_record = excluded_by_max_record.lock().await;
+                        exclud_max_record
+                            .entry(data_type.to_string())
+                            .or_insert_with(Vec::new)
+                            .push(case_id.to_string());
+                        successful_downloads.fetch_add(1, Ordering::Relaxed);
+                    }
+                    return;
+                }
                 match download_result {
                     Ok((case_id, data_type, content)) => {
                         // Try to parse the content
@@ -855,26 +864,18 @@ async fn download_data(
                         .await
                         {
                             Ok(parsed_data) => {
-                                // SUCCESS: Output immediately as JSONL
-                                let success_output = SuccessfulFileOutput {
-                                    output_type: "data".to_string(),
-                                    case_id: case_id.clone(),
-                                    data_type: data_type.clone(),
-                                    data: parsed_data,
-                                };
-                                results.lock().await.push(Output::Data(success_output));
-                                /*
-                                // Output this successful result immediately - Node.js will see this in real-time
-                                if let Ok(json) = serde_json::to_string(&success_output) {
-                                    println!("{}", json); // IMMEDIATE output to stdout
-                                    // Force flush to ensure Node.js sees it immediately
-                                    use std::io::Write;
-                                    let _ = std::io::stdout().flush();
-                                    // Optional: Add small delay to separate lines
-                                    sleep(Duration::from_millis(10));
+                                let remaining = max_record - current_count;
+                                if parsed_data.len() <= remaining {
+                                    data_count.fetch_add(parsed_data.len(), Ordering::Relaxed);
+                                    all_records.lock().await.extend(parsed_data);
+                                } else {
+                                    // Skip file if it would exceed max_record
+                                    let mut exclud_max_record = excluded_by_max_record.lock().await;
+                                    exclud_max_record
+                                        .entry(data_type.to_string())
+                                        .or_insert_with(Vec::new)
+                                        .push(case_id.to_string());
                                 }
-                                */
-
                                 successful_downloads.fetch_add(1, Ordering::Relaxed);
                             }
                             Err((cid, dtp, error)) => {
@@ -925,7 +926,6 @@ async fn download_data(
     let included_cnv_count = included_cnv_records.load(Ordering::Relaxed);
 
     let summary = FinalSummary {
-        output_type: "summary".to_string(),
         total_files,
         successful_files: success_count,
         failed_files: failed_count,
@@ -937,12 +937,13 @@ async fn download_data(
         included_maf_records: included_maf_count,
         included_cnv_records: included_cnv_count,
         hyper_mutator_records: hyper_mutator_records.lock().await.clone(),
+        excluded_by_max_record: excluded_by_max_record.lock().await.clone(),
     };
 
-    // collect all outputs into a single JSON array
-    let mut output = Vec::new();
-    output.extend(results.lock().await.drain(..));
-    output.push(Output::Summary(summary));
+    let output = Output {
+        grin2lesion: all_records.lock().await.drain(..).collect(),
+        summary,
+    };
 
     // Output final summary - Node.js will know processing is complete when it sees this
     // if let Ok(json) = serde_json::to_string(&summary) {
@@ -965,6 +966,7 @@ async fn localread_data(
     seg_length: i32,
     cnv_hyper_mutator: i32,
     chromosomes: &HashSet<String>,
+    max_record: usize,
 ) {
     let data_files: Vec<(String, String, String)> = case_files
         .into_iter()
@@ -988,10 +990,12 @@ async fn localread_data(
     let filtered_cnv_records = Arc::new(AtomicUsize::new(0));
     let filtered_records = Arc::new(Mutex::new(HashMap::<String, FilteredCaseDetails>::new()));
     let hyper_mutator_records = Arc::new(Mutex::new(HashMap::<String, Vec<String>>::new()));
+    let excluded_by_max_record = Arc::new(Mutex::new(HashMap::<String, Vec<String>>::new()));
     let included_maf_records = Arc::new(AtomicUsize::new(0));
     let included_cnv_records = Arc::new(AtomicUsize::new(0));
     let errors = Arc::new(Mutex::new(Vec::<ErrorEntry>::new()));
-    let results = Arc::new(Mutex::new(Vec::<Output>::new()));
+    let all_records = Arc::new(Mutex::new(Vec::<Vec<String>>::new()));
+    let data_count = Arc::new(AtomicUsize::new(0));
 
     // Process files concurrently
     let read_futures = futures::stream::iter(data_files.into_iter().map(
@@ -1021,10 +1025,25 @@ async fn localread_data(
             let included_maf_records = Arc::clone(&included_maf_records);
             let included_cnv_records = Arc::clone(&included_cnv_records);
             let hyper_mutator_records = Arc::clone(&hyper_mutator_records);
+            let excluded_by_max_record = Arc::clone(&excluded_by_max_record);
             let errors = Arc::clone(&errors);
-            let results = Arc::clone(&results);
+            let all_records = Arc::clone(&all_records);
+            let data_count = Arc::clone(&data_count);
 
             async move {
+                let current_count = data_count.load(Ordering::Relaxed);
+                if current_count >= max_record {
+                    // Skip processing and mark as excluded by max_record
+                    if let Ok((case_id, data_type, _)) = read_result {
+                        let mut exclud_max_record = excluded_by_max_record.lock().await;
+                        exclud_max_record
+                            .entry(data_type.to_string())
+                            .or_insert_with(Vec::new)
+                            .push(case_id.to_string());
+                        successful_reads.fetch_add(1, Ordering::Relaxed);
+                    }
+                    return;
+                }
                 match read_result {
                     Ok((case_id, data_type, content)) => {
                         match parse_content(
@@ -1050,14 +1069,18 @@ async fn localread_data(
                         .await
                         {
                             Ok(parsed_data) => {
-                                // SUCCESS: Output immediately as JSONL
-                                let success_output = SuccessfulFileOutput {
-                                    output_type: "data".to_string(),
-                                    case_id: case_id.clone(),
-                                    data_type: data_type.clone(),
-                                    data: parsed_data,
-                                };
-                                results.lock().await.push(Output::Data(success_output));
+                                let remaining = max_record - current_count;
+                                if parsed_data.len() <= remaining {
+                                    data_count.fetch_add(parsed_data.len(), Ordering::Relaxed);
+                                    all_records.lock().await.extend(parsed_data);
+                                } else {
+                                    // Skip file if it would exceed max_record
+                                    let mut exclud_max_record = excluded_by_max_record.lock().await;
+                                    exclud_max_record
+                                        .entry(data_type.to_string())
+                                        .or_insert_with(Vec::new)
+                                        .push(case_id.to_string());
+                                }
                                 successful_reads.fetch_add(1, Ordering::Relaxed);
                             }
                             Err((cid, dtp, error)) => {
@@ -1103,7 +1126,6 @@ async fn localread_data(
     let included_cnv_count = included_cnv_records.load(Ordering::Relaxed);
 
     let summary = FinalSummary {
-        output_type: "summary".to_string(),
         total_files,
         successful_files: success_count,
         failed_files: failed_count,
@@ -1115,12 +1137,13 @@ async fn localread_data(
         included_maf_records: included_maf_count,
         included_cnv_records: included_cnv_count,
         hyper_mutator_records: hyper_mutator_records.lock().await.clone(),
+        excluded_by_max_record: excluded_by_max_record.lock().await.clone(),
     };
 
-    // Collect all outputs into a single JSON array
-    let mut output = Vec::new();
-    output.extend(results.lock().await.drain(..));
-    output.push(Output::Summary(summary));
+    let output = Output {
+        grin2lesion: all_records.lock().await.drain(..).collect(),
+        summary,
+    };
 
     // Output final JSON array
     if let Ok(json) = serde_json::to_string(&output) {
@@ -1174,6 +1197,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     let case_files = input_js.case_files;
+    let max_record: usize = input_js.max_record;
 
     // Set default maf_options
     let (min_total_depth, min_alt_allele_count, maf_hyper_mutator, consequences) = match input_js.maf_options {
@@ -1212,6 +1236,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             seg_length,
             cnv_hyper_mutator,
             &chromosomes,
+            max_record,
         )
         .await;
     } else {
@@ -1228,6 +1253,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             seg_length,
             cnv_hyper_mutator,
             &chromosomes,
+            max_record,
         )
         .await;
     }
