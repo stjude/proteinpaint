@@ -66,7 +66,8 @@ export type TableButton = {
 	/** called when the button is clicked. Receives selected indexes and the button dom object */
 	callback: (idxs: number[], button: any) => void
 	disabled?: (index: number) => boolean
-	button: any
+	/** Attached on render */
+	button?: any
 	/** Called when selecting rows, it would update the button text */
 	onChange?: (idx: number[], button: any) => void
 	/** to customize button style or to assist detection in testing */
