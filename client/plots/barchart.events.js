@@ -546,7 +546,7 @@ async function listSamples(event, self, seriesId, dataId, chartId) {
 	const term2isNumeric = self.config.term2 ? isNumericTerm(self.config.term2.term) : false
 
 	for (const sample of data.lst) {
-		const sampleName = data.refs.bySampleId[Number(sample.sample)].label
+		const sampleName = data.refs.bySampleId[sample.sample].label
 		const row = [{ value: sampleName }]
 		/** Don't show hidden values in the results
 		 * May not be caught in server request for custom variables
