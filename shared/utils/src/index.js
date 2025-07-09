@@ -10,7 +10,6 @@ export * from './filter.js'
 export * from './hash.js'
 export * from './helpers.js'
 export * from './joinUrl.js'
-export * from './mds.termdb.termvaluesetting.js' // deprecated?
 export * from './mds3tk.js'
 export * from './roundValue.js'
 export * from './termdb.bins.js'
