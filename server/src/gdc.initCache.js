@@ -85,7 +85,11 @@ async function mayRefreshCache(ds) {
 	try {
 		version = await hasNewVersion(ds)
 		if (!version) return
-		await gdcBuildDictionary(ds)
+		// on first call, ds.__gdc.doneCaching will be false as expected,
+		// and `gdcBuildDictionary(ds)` would have been called once in mds3.init.js,
+		// so no need to repeat `gdcBuildDictionary(ds)` on the first call;
+		// rebuild the dictionary only after the initial cache and subsequent calls to mayRefreshCache()
+		if (ds.__gdc?.doneCaching) await gdcBuildDictionary(ds)
 		await cacheMappingOnNewRelease(ds, version)
 	} catch (e) {
 		// uncomment to test cancellation of retries and also requires

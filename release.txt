@@ -1,1 +1,2 @@
-
+Fixes:
+- do not block server validation when a dataset encounters a recoverable error

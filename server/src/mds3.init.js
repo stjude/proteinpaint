@@ -129,6 +129,11 @@ export async function init(ds, genome) {
 
 	if (ds.preInit) {
 		const response = await ds.preInit.getStatus(ds).catch(e => {
+			if (e.status == 'recoverableError' && serverconfig.features.mustExitPendingValidation) {
+				if (!ds.init) ds.init = {}
+				ds.init.recoverableError = e.error
+				ds.init.status = 'recoverableError'
+			}
 			throw e
 		})
 		if (response?.status != 'OK') throw response
