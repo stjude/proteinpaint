@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.135.2
 
 Fixes:
 - do not block server validation when a dataset encounters a recoverable error
