@@ -9,7 +9,7 @@ export class DiscoRenderer {
 	private legendRenderer: LegendRenderer
 	private fusionRenderer: FusionRenderer
 
-	constructor(renders: Map<RingType, IRenderer>, legendRenderer: LegendRenderer, fusionOpacity: number) {
+	constructor(renders: Map<RingType, IRenderer>, legendRenderer: LegendRenderer) {
 		this.renders = renders
 		this.legendRenderer = legendRenderer
 		this.fusionRenderer = new FusionRenderer()
