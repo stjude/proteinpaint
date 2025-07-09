@@ -1252,6 +1252,7 @@ async function launchGdcCorrelation(arg, app) {
 		debugmode: arg.debugmode,
 		filter0: arg.filter0
 	}
+	if (arg.opts) p.opts = arg.opts
 	return await _.init(p, app.holder0, app.genomes)
 }
 function launchgdcbamslice(arg, app) {

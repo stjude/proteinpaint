@@ -53,7 +53,8 @@ export async function init(
 				// some way to make gene exp violin/boxplot to use log scale by default, but numeric dict term should not
 			}
 			*/
-		}
+		},
+		app: arg.opts?.app || {}
 	})
 	const api = {
 		update: async (updateArg: UpdateArg) => {
