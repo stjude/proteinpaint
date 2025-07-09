@@ -253,38 +253,38 @@
   },
   "common/dofetch.js": {
     "lines": {
-      "total": 142,
-      "covered": 75,
+      "total": 127,
+      "covered": 66,
       "skipped": 0,
-      "pct": 52.81
+      "pct": 51.96
     },
     "functions": {
-      "total": 11,
-      "covered": 7,
+      "total": 10,
+      "covered": 6,
       "skipped": 0,
-      "pct": 63.63
+      "pct": 60
     },
     "statements": {
-      "total": 153,
-      "covered": 77,
+      "total": 138,
+      "covered": 68,
       "skipped": 0,
-      "pct": 50.32
+      "pct": 49.27
     },
     "branches": {
-      "total": 132,
-      "covered": 52,
+      "total": 123,
+      "covered": 45,
       "skipped": 0,
-      "pct": 39.39
+      "pct": 36.58
     },
     "lowestPct": {
-      "curr": 39.39,
-      "prev": 2.41,
-      "diff": 36.980000000000004
+      "curr": 36.58,
+      "prev": 39.39,
+      "diff": -2.8100000000000023
     },
     "averagePct": {
-      "curr": 51.537499999999994,
-      "prev": 6.22,
-      "diff": 45.317499999999995
+      "curr": 49.4525,
+      "prev": 51.537499999999994,
+      "diff": -2.0849999999999937
     }
   },
   "dom/maxLabelWidth.ts": {
