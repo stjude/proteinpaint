@@ -45,16 +45,11 @@ export default class ViewModel {
 		this.fusions = fusions
 		this.genesetName = genesetName
 
-		let maxLabelSpace = 0
-		try {
-			const tempHolder = select('body').append('div').style('position', 'absolute').style('visibility', 'hidden')
-			const tempSvg = tempHolder.append('svg')
-			const labels = rings.labelsRing?.elementsToDisplay?.map(l => l.text) || []
-			maxLabelSpace = getMaxLabelWidth(tempSvg as any, labels, this.settings.label.fontSize / 16)
-			tempHolder.remove()
-		} catch (e: any) {
-			console.error('Error calculating max label width:', e)
-		}
+		const tempHolder = select('body').append('div').style('position', 'absolute').style('visibility', 'hidden')
+		const tempSvg = tempHolder.append('svg')
+		const labels = rings.labelsRing?.elementsToDisplay?.map(l => l.text) || []
+		const maxLabelSpace = getMaxLabelWidth(tempSvg as any, labels)
+		tempHolder.remove()
 
 		this.width =
 			1.2 *
