@@ -3,6 +3,8 @@ import type Legend from '#plots/disco/legend/Legend.ts'
 import { RingType } from '#plots/disco/ring/RingType.ts'
 import type Arc from '#plots/disco/arc/Arc.ts'
 import type Settings from '#plots/disco/Settings.ts'
+import { select } from 'd3-selection'
+import { getMaxLabelWidth } from '#dom/maxLabelWidth'
 import type Fusion from '#plots/disco/fusion/Fusion.ts'
 import type { DataHolder } from '#plots/disco/data/DataHolder.ts'
 
@@ -43,23 +45,37 @@ export default class ViewModel {
 		this.fusions = fusions
 		this.genesetName = genesetName
 
+		let maxLabelSpace = 0
+		try {
+			const tempHolder = select('body')
+				.append('div')
+				.style('position', 'absolute')
+				.style('visibility', 'hidden')
+			const tempSvg = tempHolder.append('svg')
+			const labels = rings.labelsRing?.elementsToDisplay?.map(l => l.text) || []
+			maxLabelSpace = getMaxLabelWidth(
+				tempSvg as any,
+				labels,
+				this.settings.label.fontSize / 16
+			)
+			tempHolder.remove()
+		} catch (e) {
+			/* ignore measurement errors in non-browser environments */
+		}
+
 		this.width =
-		//length multiplier (2) must be great enough to allow canvas to expand beyond 
-		//the expansion of the discoplot. If not, some of the labels will render outside
-		//the canvas and result in cut labels.
 			2 *
 			(this.settings.horizontalPadding +
 				this.settings.rings.labelLinesInnerRadius +
-				this.settings.rings.labelsToLinesDistance)
+				this.settings.rings.labelsToLinesDistance +
+				maxLabelSpace)
 		this.height =
-		//heigth multiplier (2.5) must be great enough to allow canvas to expand beyond 
-		//the expansion of the discoplot. If not, some of the labels will render outside
-		//the canvas and result in cut labels.
 			2.5 *
 			(this.settings.rings.labelLinesInnerRadius +
 				this.settings.rings.labelsToLinesDistance +
 				this.settings.verticalPadding +
-				this.settings.label.fontSize * 2)
+				this.settings.label.fontSize * 2 +
+				maxLabelSpace)
 
 		this.legendHeight = this.calculateLegendHeight(legend)
 		this.snvDataLength = dataHolder.snvData.length
@@ -102,7 +118,6 @@ export default class ViewModel {
 
 	private calculateLegendHeight(legend: Legend): number {
 		const rawHeight = this.settings.legend.rowHeight
-
 		return rawHeight * legend.legendCount()
 	}
 }
