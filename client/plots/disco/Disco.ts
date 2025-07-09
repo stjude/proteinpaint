@@ -172,8 +172,7 @@ export default class Disco {
 
 			const discoRenderer = new DiscoRenderer(
 				this.getRingRenderers(this.viewModel.settings, this.viewModel, this.discoInteractions.geneClickListener),
-				legendRenderer,
-				this.viewModel.settings.Disco.fusionOpacity ?? 1
+				legendRenderer
 			)
 
 			discoRenderer.render(svgDiv, this.viewModel)
