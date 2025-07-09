@@ -96,47 +96,48 @@ export default class Disco {
 			configInputsOptions.push(...filterMutationsGenesCheckbox)
 		}
 
-		const cnvConfigInputOptions = [
-			{
-				boxLabel: '',
-				label: 'CNV rendering type',
-				type: 'radio',
-				chartType: 'Disco',
-				settingsKey: 'cnvRenderingType',
-				title: 'CNV rendering type',
-				options: [
-					{ label: 'Heatmap', value: CnvRenderingType.heatmap },
-					{ label: 'Bar', value: CnvRenderingType.bar }
-				]
-			}
-		]
-
-		if (viewModel.cnvMaxValue !== 0 || viewModel.cnvMinValue !== 0) configInputsOptions.push(...cnvConfigInputOptions)
-
-			const dimensionOptions = [
+		if (viewModel.cnvMaxValue !== 0 || viewModel.cnvMinValue !== 0) {
+			const cnvConfigInputOptions = [
 				{
-					label: 'Radius',
-					title: 'Set the radius of the entire plot, between 300 and 1000 pixels.',
-					type: 'number',
+					boxLabel: '',
+					label: 'CNV rendering type',
+					type: 'radio',
 					chartType: 'Disco',
-					settingsKey: 'radius',
-					debounceInterval: 500,
-					step: 25,
-					min: 300,
-					max: 1000,
-				},
-				{
-					label: 'Fusion opacity',
-					title: 'Adjust opacity of fusion arcs, between 0 and 1',
-					type: 'number',
-					chartType: 'Disco',
-					settingsKey: 'fusionOpacity',
-					step: 0.01,
-					min: 0,
-					max: 1,
-					debounceInterval: 500
+					settingsKey: 'cnvRenderingType',
+					title: 'CNV rendering type',
+					options: [
+						{ label: 'Heatmap', value: CnvRenderingType.heatmap },
+						{ label: 'Bar', value: CnvRenderingType.bar }
+					]
 				}
 			]
+			configInputsOptions.push(...cnvConfigInputOptions)
+		}
+
+		const dimensionOptions = [
+			{
+				label: 'Radius',
+				title: 'Set the radius of the entire plot, between 300 and 1000 pixels.',
+				type: 'number',
+				chartType: 'Disco',
+				settingsKey: 'radius',
+				debounceInterval: 500,
+				step: 25,
+				min: 300,
+				max: 1000
+			},
+			{
+				label: 'Fusion opacity',
+				title: 'Adjust opacity of fusion arcs, between 0 and 1',
+				type: 'number',
+				chartType: 'Disco',
+				settingsKey: 'fusionOpacity',
+				step: 0.01,
+				min: 0,
+				max: 1,
+				debounceInterval: 500
+			}
+		]
 
 		configInputsOptions.push(...dimensionOptions)
 
