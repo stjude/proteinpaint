@@ -607,6 +607,9 @@ async function parseEmbedThenUrl(arg, app) {
 	if (arg.launchGdcScRNAseq) {
 		return await launchGdcScRNAseq(arg, app)
 	}
+	if (arg.launchGdcCorrelation) {
+		return await launchGdcCorrelation(arg, app)
+	}
 
 	if (arg.parseurl && location.search.length) {
 		/*
@@ -1242,6 +1245,14 @@ async function launchGdcGrin2(arg, app) {
 		callbacks: arg.callbacks || {},
 		debugmode: arg.debugmode
 	})
+}
+async function launchGdcCorrelation(arg, app) {
+	const _ = await import('../gdc/correlation.ts')
+	const p = {
+		debugmode: arg.debugmode,
+		filter0: arg.filter0
+	}
+	return await _.init(p, app.holder0, app.genomes)
 }
 function launchgdcbamslice(arg, app) {
 	return import('../gdc/bam.js').then(p => {
