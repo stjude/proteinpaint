@@ -482,7 +482,7 @@ function mayRetryInit(g, ds, d, e) {
 		}
 		/* end special handling */
 
-		const msg = ds.init.fatalError || ds.init.recoverableError || e?.error || e
+		const msg = ds.init?.fatalError || e?.error || e
 		// optional slack notification will be handled in app.ts
 		throw msg
 	}
