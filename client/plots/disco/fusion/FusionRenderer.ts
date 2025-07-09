@@ -7,13 +7,7 @@ import { table2col } from '#dom/table2col'
 
 // TODO extract constants from this file.
 export default class FusionRenderer {
-	private opacity: number
-
-	constructor(opacity = 1) {
-		this.opacity = opacity
-	}
-
-	render(holder: any, fusions: Array<Fusion>, opacityOverride?: number) {
+	render(holder: any, fusions: Array<Fusion>, opacity = 1) {
 		let radius = 0
 		const fusionsWithTarget = fusions.filter(f => f.target)
 		if (fusionsWithTarget.length > 0) {
@@ -39,7 +33,7 @@ export default class FusionRenderer {
 					fusion.target.positionInChromosome.chromosome
 				)
 			})
-			.style('opacity', opacityOverride ?? this.opacity)
+			.style('opacity', opacity)
 			.on('mouseover', (mouseEvent: MouseEvent, fusion: Fusion) => {
 				const table = table2col({ holder: menu.d })
 				this.createTooltip(table, fusion)

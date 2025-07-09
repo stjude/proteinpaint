@@ -127,7 +127,7 @@ export default class Disco {
 				},
 				{
 					label: 'Fusion opacity',
-					title: 'Adjust opacity of fusion arcs',
+					title: 'Adjust opacity of fusion arcs, between 0 and 1',
 					type: 'number',
 					chartType: 'Disco',
 					settingsKey: 'fusionOpacity',
