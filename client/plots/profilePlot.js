@@ -7,6 +7,24 @@ import { Menu } from '#dom/menu'
 import { icons as icon_functions } from '#dom/control.icons'
 import { getCategoricalTermFilter } from '#shared/filter.js'
 
+/*
+
+The profilePlot is the base class for all the profile plots. It handles the common functionality such as setting controls, fetching data, and initializing the plot elements.
+All the profile plots have the same filters:
+- Region
+- Country
+- Income group
+- Facility type
+- Teaching status
+- Referral status
+- Funding source
+- Hospital volume
+- Year of implementation
+- Sites
+
+The profileRadarFacility adds at the top of these filters the facility select as here we compare a single facility with the average scores of all the facilities aggregated
+*/
+
 const orderedIncomes = ['Low income', 'Lower middle income', 'Upper middle income', 'High income']
 const orderedVolumes = [
 	'Small (1-25 annual newly diagnoses)',
@@ -49,7 +67,7 @@ export class profilePlot {
 	isAggregate() {
 		if (!this.state.logged) return true
 		if (this.settings.isAggregate) return true //marked by the user
-		if (this.state.sites?.length > 1 || this.state.user == 'admin') return true //multiple sites selected
+		if (this.state.sites?.length > 1 || this.state.user == 'admin' || this.isRadarFacility) return true //multiple sites selected
 	}
 
 	async init(appState) {
@@ -211,7 +229,7 @@ export class profilePlot {
 		})
 		if (isRadarFacility) {
 			if (!this.settings.facilitySite) this.settings.facilitySite = this.sites[0]?.value //set the first site as the facility site
-		} else if (!this.settings.site && !this.settings.sites && this.state.sites?.length == 1) {
+		} else if (!this.settings.site && !this.settings.sites && this.state.sites?.length == 1 && !isAggregate) {
 			this.settings.site = this.data.sites?.[0]?.value
 			this.settings.sites = [this.settings.site] //set sites to the single site
 		}
@@ -458,11 +476,9 @@ export class profilePlot {
 			.attr('transform', `translate(0, -5)`)
 		for (const tw of this.config.filterTWs) this.addFilterLegendItem(tw.term.name, this.settings[tw.term.id])
 		const hospital = this.data.hospital
-
-		if (hospital) {
+		if (this.settings.site) {
 			const label = this.sites.find(s => s.value == this.settings.site).label
 			this.addFilterLegendItem('Facility ID', label)
-			const hospital = this.data.hospital
 			this.addFilterLegendItem('Facility', hospital)
 		}
 	}
