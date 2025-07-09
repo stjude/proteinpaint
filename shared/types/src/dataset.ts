@@ -2064,8 +2064,7 @@ export type Mds3 = BaseMds & {
 	this is serverside only, not passed to termdbConfig
 	*/
 	mayGetGeneVariantDataParam?: {
-		/** this flag is assesed by snvindel getter to return ssm by case when it's called in mayGetGeneVariantData() */
-		gdcUseCaseuuid?: boolean
+		[key: string]: any
 		/** this flag determines whether geneVariant data is filtered during post-processing
 		normally, geneVariant data is filtered during data query
 		but the filter structure used by gdc is not compatible with
