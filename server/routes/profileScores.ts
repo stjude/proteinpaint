@@ -40,7 +40,7 @@ async function getScores(query, ds, genome) {
 	const terms: any[] = [query.facilityTW]
 	for (const term of query.scoreTerms) {
 		terms.push(term.score)
-		if (term.maxScore) {
+		if (term.maxScore?.term) {
 			terms.push(term.maxScore)
 		}
 	}
