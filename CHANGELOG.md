@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Fixes:
+- transitive exports in shared/utils/src/index.js should include file extension
+
+
 ## 2.135.0
 
 Features:
