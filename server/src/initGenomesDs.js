@@ -468,6 +468,20 @@ function mayRetryInit(g, ds, d, e) {
 	console.log(`Init error with ${gdlabel}`)
 
 	if (serverconfig.features.mustExitPendingValidation) {
+		/* 
+			start special handling of datasets with recoverable error and active retries
+			!!! during server validation only !!!
+		*/
+		if (ds.init?.recoverableError) {
+			console.log(ds.init)
+			return // do not throw; must not block validation of other datasets and continuing to server startup
+		}
+		if (e?.status == 'recoverableError') {
+			console.log(e)
+			return // do not throw; must not block validation of other datasets and continuing to server startup
+		}
+		/* end special handling */
+
 		const msg = ds.init.fatalError || ds.init.recoverableError || e?.error || e
 		// optional slack notification will be handled in app.ts
 		throw msg
