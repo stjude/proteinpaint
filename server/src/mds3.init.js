@@ -2745,11 +2745,17 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 
 		const data = new Map() // to return
 		// TODO: need to test when geneVariant term is in global filter for gdc
-		const filterByGeneVariant =
-			ds.mayGetGeneVariantDataParam?.postProcessFilter &&
-			q.filter?.lst.find(item => dtTermTypes.has(item.tvs.term.type))
+		let geneVariantFilter
+		if (q.filter) {
+			geneVariantFilter = structuredClone(q.filter)
+			geneVariantFilter.lst = q.filter.lst.filter(item => dtTermTypes.has(item.tvs.term.type))
+		}
 		for (const [sample, mlst] of sample2mlst) {
-			const pass = mayFilterByGeneVariant(q.filter, mlst, filterByGeneVariant)
+			// may filter samples here by geneVariant data
+			// necessary for gdc, which uses a different filter
+			// structure during data query that is not compatible with
+			// geneVariant data filtering (see filter2GDCfilter() in server/src/mds3.gdc.filter.js)
+			const pass = mayFilterByGeneVariant(geneVariantFilter, mlst, ds)
 			if (!pass) continue
 			if (groupset) {
 				// groupsetting is active
@@ -2829,7 +2835,7 @@ async function filterSamples4assayAvailability(q, ds) {
 			// remove geneVariant/dt terms from filter as this data will
 			// be filtered during post-processing (see mayFilterByGeneVariant())
 			filterObj = structuredClone(q.filter)
-			filterObj.lst = ds.mayGetGeneVariantDataParam?.postProcessFilter
+			filterObj.lst = ds.mayGetGeneVariantDataParam?.postProcessDtFilter
 				? q.filter.lst.filter(item => !dtTermTypes.has(item.tvs.term.type))
 				: q.filter.lst
 		}
@@ -2908,10 +2914,7 @@ export function filterByItem(filter, mlst) {
 	if (filter.type == 'tvslst') return filterByTvsLst(filter, mlst)
 	if (filter.type != 'tvs') throw 'unexpected filter.type'
 	const tvs = filter.tvs
-	if (!dtTermTypes.has(tvs.term.type)) {
-		// term is not dt term, so sample passes the filter
-		return [true, true]
-	}
+	if (!dtTermTypes.has(tvs.term.type)) throw 'tvs term is not dt term'
 	// get all tested mutations for the dt (and origin) of the filter
 	const mlst_tested = mlst.filter(m => {
 		if (tvs.term.dt != m.dt) return false
@@ -2951,12 +2954,8 @@ export function filterByItem(filter, mlst) {
 	return [pass, tested]
 }
 
-// may filter samples by geneVariant/dt terms in filter
-// necessary for gdc, which uses a different filter structure during
-// data query that is not compatible with filterByTvsLst()
-// (see filter2GDCfilter() in server/src/mds3.gdc.filter.js)
-function mayFilterByGeneVariant(filter, mlst, filterByGeneVariant) {
-	if (!filterByGeneVariant) return true
+function mayFilterByGeneVariant(filter, mlst, ds) {
+	if (!filter?.lst.length || !ds.mayGetGeneVariantDataParam?.postProcessDtFilter) return true
 	const [pass, tested] = filterByTvsLst(filter, mlst)
 	return pass
 }
