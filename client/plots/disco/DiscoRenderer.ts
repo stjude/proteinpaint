@@ -12,7 +12,7 @@ export class DiscoRenderer {
 	constructor(renders: Map<RingType, IRenderer>, legendRenderer: LegendRenderer, fusionOpacity: number) {
 		this.renders = renders
 		this.legendRenderer = legendRenderer
-		this.fusionRenderer = new FusionRenderer(fusionOpacity)
+		this.fusionRenderer = new FusionRenderer()
 	}
 
 	render(holder: any, viewModel: ViewModel) {
