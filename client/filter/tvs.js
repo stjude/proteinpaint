@@ -2,8 +2,7 @@ import * as rx from '../rx'
 import { select } from 'd3-selection'
 import { Menu } from '../dom/menu'
 import { renderTable } from '../dom/table'
-import { isNumericTerm, isCategoricalTerm } from '#shared/terms.js'
-import { dtTerms } from '#shared/common.js'
+import { isNumericTerm, isCategoricalTerm, dtTermTypes } from '#shared/terms.js'
 
 /*
 ********************** EXPORTED
@@ -162,7 +161,7 @@ function setRenderers(self) {
 			(self.tvs.values && self.tvs.values.length) ||
 			(self.tvs.ranges && self.tvs.ranges.length) ||
 			self.tvs.term.type == 'samplelst' ||
-			dtTerms.map(t => t.type).includes(self.tvs.term.type)
+			dtTermTypes.has(self.tvs.term.type)
 
 		// update the main label
 		one_term_div.select('.term_name_btn').html(self.handler.term_name_gen)
@@ -225,11 +224,7 @@ function setRenderers(self) {
 			const bar_td = `<div style='margin:1px 10px;width:${barWidth}px;height:15px;background-color:#ddd'>`
 			rows.push([{ value: label }, { html: bar_td }])
 			let checked = false
-			if (
-				tvs.term.type == 'categorical' ||
-				tvs.term.type == 'survival' ||
-				dtTerms.map(t => t.type).includes(tvs.term.type)
-			)
+			if (tvs.term.type == 'categorical' || tvs.term.type == 'survival' || dtTermTypes.has(tvs.term.type))
 				checked = tvs.values.find(a => a.key === value.key)
 			else if (tvs.term.type == 'float' || tvs.term.type == 'integer')
 				checked = tvs.ranges.find(a => String(a.value) === value.value.toString())

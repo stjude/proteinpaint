@@ -1,4 +1,4 @@
-import { dtTerms } from '#shared/common.js'
+import { dtTermTypes } from '#shared/terms.js'
 
 /*
 f{}
@@ -20,7 +20,7 @@ export function filter2GDCfilter(f) {
 		if (item.type != 'tvs') throw 'filter.lst[] item.type!="tvs"'
 		if (!item.tvs) throw 'item.tvs missing'
 		if (!item.tvs.term) throw 'item.tvs.term missing'
-		if (dtTerms.map(t => t.type).includes(item.tvs.term.type)) {
+		if (dtTermTypes.has(item.tvs.term.type)) {
 			// geneVariant/dt term filtering will be performed during post-processing
 			// (see mayFilterByGeneVariant() in server/src/mds3.init.js)
 			continue

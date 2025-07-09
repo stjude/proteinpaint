@@ -1,6 +1,5 @@
 import { isDictionaryType, TermTypes, getBin } from '#shared/terms.js'
-import { getParentType, getSampleType } from '#shared/terms.js'
-import { dtTerms } from '#shared/common.js'
+import { getParentType, getSampleType, dtTermTypes } from '#shared/terms.js'
 import { getSnpData } from './termdb.matrix.js'
 import { filterByItem } from './mds3.init.js'
 import { annoNumericTypes } from '#shared/terms.js'
@@ -63,7 +62,7 @@ export async function getFilterCTEs(filter, ds, sampleTypes = new Set(), CTEname
 			f = await get_geneExpression(item.tvs, CTEname_i, ds)
 		} else if (item.tvs.term.type == TermTypes.METABOLITE_INTENSITY) {
 			f = await get_metaboliteIntensity(item.tvs, CTEname_i, ds)
-		} else if (dtTerms.map(t => t.type).includes(item.tvs.term.type)) {
+		} else if (dtTermTypes.has(item.tvs.term.type)) {
 			f = await get_dtTerm(item.tvs, CTEname_i, ds)
 		} else if (
 			item.tvs.term.id &&

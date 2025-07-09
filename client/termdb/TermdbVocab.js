@@ -3,8 +3,7 @@ import { dofetch3 } from '../common/dofetch'
 import { getNormalRoot } from '#filter'
 import { isUsableTerm } from '#shared/termdb.usecase.js'
 import { throwMsgWithFilePathAndFnName } from '../dom/sayerror'
-import { isDictionaryType } from '#shared/terms.js'
-import { dtTerms } from '#shared/common.js'
+import { isDictionaryType, dtTermTypes } from '#shared/terms.js'
 import { getCategoryData } from '../plots/barchart.data'
 
 export class TermdbVocab extends Vocab {
@@ -631,7 +630,7 @@ export class TermdbVocab extends Vocab {
 			return await dofetch3('/termdb', { headers, body })
 		}
 
-		if (dtTerms.map(t => t.type).includes(term.type)) {
+		if (dtTermTypes.has(term.type)) {
 			// dt term, grab categories directly from term
 			const data = getCategoryData({ term })
 			return data
