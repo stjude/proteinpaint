@@ -3670,5 +3670,113 @@
       "prev": 0,
       "diff": 0.1625
     }
+  },
+  "plots/disco/viewmodel/ViewModel.ts": {
+    "lines": {
+      "total": 36,
+      "covered": 25,
+      "skipped": 0,
+      "pct": 69.44
+    },
+    "functions": {
+      "total": 5,
+      "covered": 2,
+      "skipped": 0,
+      "pct": 40
+    },
+    "statements": {
+      "total": 36,
+      "covered": 25,
+      "skipped": 0,
+      "pct": 69.44
+    },
+    "branches": {
+      "total": 21,
+      "covered": 1,
+      "skipped": 0,
+      "pct": 4.76
+    },
+    "lowestPct": {
+      "curr": 4.76,
+      "prev": 0,
+      "diff": 4.76
+    },
+    "averagePct": {
+      "curr": 45.91,
+      "prev": 0,
+      "diff": 45.91
+    }
+  },
+  "plots/disco/viewmodel/ViewModelMapper.ts": {
+    "lines": {
+      "total": 29,
+      "covered": 29,
+      "skipped": 0,
+      "pct": 100
+    },
+    "functions": {
+      "total": 4,
+      "covered": 4,
+      "skipped": 0,
+      "pct": 100
+    },
+    "statements": {
+      "total": 30,
+      "covered": 29,
+      "skipped": 0,
+      "pct": 96.66
+    },
+    "branches": {
+      "total": 6,
+      "covered": 3,
+      "skipped": 0,
+      "pct": 50
+    },
+    "lowestPct": {
+      "curr": 50,
+      "prev": 0,
+      "diff": 50
+    },
+    "averagePct": {
+      "curr": 86.66499999999999,
+      "prev": 0,
+      "diff": 86.66499999999999
+    }
+  },
+  "plots/disco/viewmodel/test/ViewModelMapper.unit.spec.ts": {
+    "lines": {
+      "total": 24,
+      "covered": 24,
+      "skipped": 0,
+      "pct": 100
+    },
+    "functions": {
+      "total": 3,
+      "covered": 3,
+      "skipped": 0,
+      "pct": 100
+    },
+    "statements": {
+      "total": 24,
+      "covered": 24,
+      "skipped": 0,
+      "pct": 100
+    },
+    "branches": {
+      "total": 0,
+      "covered": 0,
+      "skipped": 0,
+      "pct": 100
+    },
+    "lowestPct": {
+      "curr": 100,
+      "prev": 0,
+      "diff": 100
+    },
+    "averagePct": {
+      "curr": 100,
+      "prev": 0,
+      "diff": 100
+    }
   }
 }
