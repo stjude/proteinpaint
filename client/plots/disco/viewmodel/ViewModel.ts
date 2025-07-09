@@ -59,7 +59,7 @@ export default class ViewModel {
 				this.settings.label.fontSize / 16
 			)
 			tempHolder.remove()
-		} catch (e) {
+		} catch {
 			/* ignore measurement errors in non-browser environments */
 		}
 
