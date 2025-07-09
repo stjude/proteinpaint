@@ -538,7 +538,8 @@ async function listSamples(event, self, seriesId, dataId, chartId) {
 	}
 	const opts = {
 		terms,
-		filter: filterJoin([self.state.termfilter.filter, tvslst])
+		filter: filterJoin([self.state.termfilter.filter, tvslst]),
+		filter0: self.state.termfilter.filter0
 	}
 	const data = await self.app.vocabApi.getAnnotatedSampleData(opts)
 	const rows = []
