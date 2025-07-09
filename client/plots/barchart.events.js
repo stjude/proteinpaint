@@ -548,6 +548,13 @@ async function listSamples(event, self, seriesId, dataId, chartId) {
 
 	for (const sample of data.lst) {
 		const sampleName = data.refs.bySampleId[sample.sample].label
+		// if geneVariant groupset is used, need to filter here
+		// to filter by group assignments instead of strictly by mutation status
+		// e.g. if sample has both cnv gain and loss and is assigned to cnv gain
+		// group (due to higher group priority), then the same group assignments
+		// should be used when listing samples
+		const pass = mayFilterGeneVariantGroupset(sample)
+		if (!pass) continue
 		const row = [{ value: sampleName }]
 		/** Don't show hidden values in the results
 		 * May not be caught in server request for custom variables
@@ -592,7 +599,7 @@ async function listSamples(event, self, seriesId, dataId, chartId) {
 
 	function getTvs(termIndex, value) {
 		const term = termIndex == 0 ? self.config.term0 : termIndex == 1 ? self.config.term : self.config.term2
-		let tvs = {
+		const tvs = {
 			type: 'tvs',
 			tvs: {
 				term: term.term,
@@ -602,39 +609,43 @@ async function listSamples(event, self, seriesId, dataId, chartId) {
 		if (isNumericTerm(term.term)) {
 			const bins = self.bins[termIndex]
 			tvs.tvs.ranges = [bins.find(bin => bin.label == value)]
-		}
-		if (term.term.type == 'geneVariant') {
-			// geneVariant term
+		} else if (term.term.type == 'geneVariant' && term.q.type == 'values') {
+			// geneVariant term with q.type='values' (groupsetting is handled mayFilterGeneVariantGroupset())
+			// chart is divided by dt term
+			// get dt term from selected chart and build tvs
 			const termdbmclass = self.app.vocabApi.termdbConfig?.mclass
-			if (termIndex === 1) {
-				// term1=geneVariant, chart will be divided by dt term
-				// get dt term from selected chart and build tvs
-				const dtTerm = self.chartid2dtterm[chartId]
-				let key
-				if (termdbmclass) {
-					// custom mclass labels defined in dataset
-					key = Object.keys(termdbmclass).find(k => termdbmclass[k].label == value)
-				}
-				if (!key) {
-					key = Object.keys(mclass).find(k => mclass[k].label == value)
-				}
-				tvs = {
-					type: 'tvs',
-					tvs: {
-						term: dtTerm,
-						values: [{ key }],
-						includeNotTested: true // to be able to list not tested samples
-					}
-				}
-			} else {
-				// term0/2=geneVariant, get dt term from groupsetting
-				const groups = term.q.customset?.groups
-				if (!groups || !Array.isArray(groups)) throw 'groups[] is missing'
-				const group = groups.find(group => group.name == value)
-				tvs = group.filter
+			const dtTerm = self.chartid2dtterm[chartId]
+			let key
+			if (termdbmclass) {
+				// custom mclass labels defined in dataset
+				key = Object.keys(termdbmclass).find(k => termdbmclass[k].label == value)
 			}
+			if (!key) {
+				key = Object.keys(mclass).find(k => mclass[k].label == value)
+			}
+			tvs.tvs.term = dtTerm
+			;(tvs.tvs.values = [{ key }]), (tvs.tvs.includeNotTested = true) // to be able to list not tested samples
 		}
 		return tvs
+	}
+
+	function mayFilterGeneVariantGroupset(sample) {
+		const termIsGvGs = self.config.term.term.type == 'geneVariant' && self.config.term.q.type == 'custom-groupset'
+		const term2isGvGs = self.config.term2?.term.type == 'geneVariant' && self.config.term2?.q.type == 'custom-groupset'
+		const term0isGvGs = self.config.term0?.term.type == 'geneVariant' && self.config.term0?.q.type == 'custom-groupset'
+		if (termIsGvGs) {
+			const value = sample[self.config.term.$id]?.value
+			if (value != seriesId) return false
+		}
+		if (term2isGvGs) {
+			const value = sample[self.config.term2.$id]?.value
+			if (value != dataId) return false
+		}
+		if (term0isGvGs) {
+			const value = sample[self.config.term0.$id]?.value
+			if (value != chartId) return false
+		}
+		return true
 	}
 }
 
