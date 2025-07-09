@@ -1,1 +1,2 @@
-
+Features:
+GDC-GRIN2: Refactored makeControls in grin2.ts; Modified rsut code to return summary and lesion data all at end instead of streaming; Added support for excluded_max_record output; gdcGRIN2.rs updated to read mutation files from local; Simplified handling of rust output string on run route; Other minor improvements and cleanups
