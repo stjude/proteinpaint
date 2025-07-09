@@ -47,30 +47,23 @@ export default class ViewModel {
 
 		let maxLabelSpace = 0
 		try {
-			const tempHolder = select('body')
-				.append('div')
-				.style('position', 'absolute')
-				.style('visibility', 'hidden')
+			const tempHolder = select('body').append('div').style('position', 'absolute').style('visibility', 'hidden')
 			const tempSvg = tempHolder.append('svg')
 			const labels = rings.labelsRing?.elementsToDisplay?.map(l => l.text) || []
-			maxLabelSpace = getMaxLabelWidth(
-				tempSvg as any,
-				labels,
-				this.settings.label.fontSize / 16
-			)
+			maxLabelSpace = getMaxLabelWidth(tempSvg as any, labels, this.settings.label.fontSize / 16)
 			tempHolder.remove()
-		} catch {
-			/* ignore measurement errors in non-browser environments */
+		} catch (e: any) {
+			console.error('Error calculating max label width:', e)
 		}
 
 		this.width =
-			2 *
+			1.2 *
 			(this.settings.horizontalPadding +
 				this.settings.rings.labelLinesInnerRadius +
 				this.settings.rings.labelsToLinesDistance +
 				maxLabelSpace)
 		this.height =
-			2.5 *
+			2 *
 			(this.settings.rings.labelLinesInnerRadius +
 				this.settings.rings.labelsToLinesDistance +
 				this.settings.verticalPadding +
