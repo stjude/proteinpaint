@@ -47,6 +47,7 @@ import { validate_query_getSampleWSImages } from '#routes/samplewsimages.ts'
 import { validate_query_getWSISamples } from '#routes/wsisamples.ts'
 import { mds3InitNonblocking } from './mds3.init.nonblocking.js'
 import { mayLog } from './helpers'
+import { dtTermTypes } from '#shared/terms.js'
 
 /*
 init
@@ -2746,7 +2747,7 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 		// TODO: need to test when geneVariant term is in global filter for gdc
 		const filterByGeneVariant =
 			ds.mayGetGeneVariantDataParam?.postProcessFilter &&
-			q.filter?.lst.find(item => dtTerms.map(t => t.type).includes(item.tvs.term.type))
+			q.filter?.lst.find(item => dtTermTypes.has(item.tvs.term.type))
 		for (const [sample, mlst] of sample2mlst) {
 			const pass = mayFilterByGeneVariant(q.filter, mlst, filterByGeneVariant)
 			if (!pass) continue
@@ -2829,7 +2830,7 @@ async function filterSamples4assayAvailability(q, ds) {
 			// be filtered during post-processing (see mayFilterByGeneVariant())
 			filterObj = structuredClone(q.filter)
 			filterObj.lst = ds.mayGetGeneVariantDataParam?.postProcessFilter
-				? q.filter.lst.filter(item => !dtTerms.map(t => t.type).includes(item.tvs.term.type))
+				? q.filter.lst.filter(item => !dtTermTypes.has(item.tvs.term.type))
 				: q.filter.lst
 		}
 		if (q.filter0 || filterObj?.lst.length) {
@@ -2907,7 +2908,7 @@ export function filterByItem(filter, mlst) {
 	if (filter.type == 'tvslst') return filterByTvsLst(filter, mlst)
 	if (filter.type != 'tvs') throw 'unexpected filter.type'
 	const tvs = filter.tvs
-	if (!dtTerms.map(t => t.type).includes(tvs.term.type)) {
+	if (!dtTermTypes.has(tvs.term.type)) {
 		// term is not dt term, so sample passes the filter
 		return [true, true]
 	}

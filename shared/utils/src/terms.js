@@ -41,7 +41,7 @@ export const TermTypes = {
 	MULTIVALUE: 'multivalue',
 	DATE: 'date'
 }
-const dtTermTypes = new Set(dtTerms.map(t => t.type))
+export const dtTermTypes = new Set(dtTerms.map(t => t.type))
 for (const dtTermType of dtTermTypes) {
 	TermTypes[dtTermType.toUpperCase()] = dtTermType
 }

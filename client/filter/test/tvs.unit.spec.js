@@ -3,8 +3,7 @@ import { select } from 'd3-selection'
 import { TVSInit, showTvsMenu } from '../tvs'
 import { vocabInit } from '#termdb/vocabulary'
 import { getExample } from '#termdb/test/vocabData'
-import { isDictionaryType } from '#shared/terms.js'
-import { dtTerms } from '#shared/common.js'
+import { isDictionaryType, dtTermTypes } from '#shared/terms.js'
 
 /*
 Tests:
@@ -62,7 +61,7 @@ async function getPillFilterItem(termType) {
 			.sort()
 		item.tvs.ranges = [{ start: values[1], stop: values[2] }]
 	}
-	if (dtTerms.map(t => t.type).includes(termType)) {
+	if (dtTermTypes.has(termType)) {
 		const cnv = vocabApi.termdbConfig.queries.cnv
 		const cnvKeys = Object.keys(cnv)
 		if (termType == 'dtcnv' && (cnvKeys.includes('cnvGainCutoff') || cnvKeys.includes('cnvLossCutoff'))) {
@@ -88,7 +87,7 @@ async function getPillFilterItem(termType) {
 
 function getNonDictTerm(termType) {
 	if (termType == 'geneVariant') return getGeneVariantTerm()
-	if (dtTerms.map(t => t.type).includes(termType)) {
+	if (dtTermTypes.has(termType)) {
 		const geneVariantTerm = getGeneVariantTerm()
 		const dtTerm = geneVariantTerm.childTerms.find(t => t.type == termType)
 		return dtTerm
