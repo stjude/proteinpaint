@@ -10,7 +10,7 @@ import { get_samples } from '#src/termdb.sql.js'
  * Processes user-provided MAF, CNV, and fusion files and performs GRIN2 analysis
  *
  * Data Flow:
- * 1. Extract sampleFiles from request with filtering options
+ * 1. Extract samples via the cohort filter
  * 2. Process and validate file paths
  *    - MAF: TSV with columns like Chromosome, Start_Position, End_Position, etc.
  *    - CNV: SEG format with columns like Chromosome, Start, End, Log2Ratio
