@@ -4,6 +4,7 @@ import path from 'path'
 import { spawn, exec } from 'child_process'
 import { Readable, Transform } from 'stream'
 import { promisify } from 'util'
+import { bin } from 'd3'
 
 const __dirname = import.meta.dirname // set __dirname for consistency with cjs code
 
@@ -14,10 +15,10 @@ const binaryDir = path.join(__dirname, '/target/release/')
 if (!fs.existsSync(binaryDir)) throw `missing rust binary directory='${binaryDir}'`
 if (!fs.readdirSync(binaryDir).length) throw `empty rust binary directory='${binaryDir}'`
 
-export function run_rust(binfile, input_data) {
+export function run_rust(binfile, input_data, args = []) {
 	return new Promise((resolve, reject) => {
 		const binpath = path.join(__dirname, '/target/release/', binfile)
-		const ps = spawn(binpath)
+		const ps = spawn(binpath, args)
 		const stdout = []
 		const stderr = []
 
