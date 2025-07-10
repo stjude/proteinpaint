@@ -51,12 +51,14 @@ export async function init(
 				//{ chartType: 'barchart', term: {id: 'case.demographic.gender'} }, // uncomment for quicker testing
 			]
 		},
-		opts: {
-			app: arg.opts?.app || {}
-			// todo additional customizations
-			// dictionary:{header:'Select a variable to build Correlation Plot'}
-			// some way to make gene exp violin/boxplot to use log scale by default, but numeric dict term should not
-		},
+		opts: Object.assign(
+			{
+				// todo additional customizations
+				// dictionary:{header:'Select a variable to build Correlation Plot'}
+				// some way to make gene exp violin/boxplot to use log scale by default, but numeric dict term should not
+			},
+			arg.opts || {}
+		),
 		app: arg.opts?.app || {}
 	})
 	const api = {
