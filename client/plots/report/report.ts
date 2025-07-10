@@ -28,13 +28,26 @@ export class Report extends RxComponentInner {
 		const state = this.getState(appState)
 		for (const section of state.config.sections) {
 			const sectionDiv = this.view.dom.plotsDiv.append('div')
+			const headerIcon = sectionDiv.append('span').style('margin-right', '10px').style('cursor', 'pointer').text('▼') //icon to toggle the plots
 
-			sectionDiv.append('div').style('font-size', '1.2em').style('font-weight', 'bold').text(section.name) //header
-			const plotDiv = sectionDiv.append('div').style('margin', '20px')
+			sectionDiv
+				.append('div')
+				.style('display', 'inline-block')
+				.style('font-size', '1.2em')
+				.style('margin', '10px 0px')
+				.style('font-weight', 'bold')
+				.text(section.name) //header
+			headerIcon.on('click', () => {
+				const display = plotsDiv.style('display')
+				headerIcon.text(display === 'none' ? '▼' : '▲') //toggle the icon
+				//toggle the display of the plot
+				plotsDiv.style('display', display === 'none' ? 'block' : 'none')
+			})
+			const plotsDiv = sectionDiv.append('div').style('margin', '10px')
 
 			for (const plot of section.plots) {
 				if (this.components.plots[plot.id]) continue
-				await this.setPlot(plot, plotDiv)
+				await this.setPlot(plot, plotsDiv)
 			}
 		}
 	}
@@ -72,9 +85,22 @@ export class Report extends RxComponentInner {
 		this.fillSites()
 	}
 
-	async setPlot(plot, plotDiv) {
-		const header = plotDiv.append('div').style('font-size', '1.1em')
-		const holder = plotDiv.append('div')
+	async setPlot(plot, plotsDiv) {
+		const headerDiv = plotsDiv.append('div')
+		const headerIcon = headerDiv.append('span').style('margin', '10px').style('cursor', 'pointer').text('▼') //icon to toggle the plots
+
+		const header = headerDiv
+			.append('div')
+			.style('display', 'inline-block')
+			.style('font-size', '1.1em')
+			.style('margin-top', '10px')
+		headerIcon.on('click', () => {
+			const display = holder.style('display')
+			headerIcon.text(display === 'none' ? '▼' : '▲') //toggle the icon
+			//toggle the display of the plot
+			holder.style('display', display === 'none' ? 'block' : 'none')
+		})
+		const holder = plotsDiv.append('div')
 		const opts = structuredClone(plot)
 		opts.header = header
 		opts.holder = holder
