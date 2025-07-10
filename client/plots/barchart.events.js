@@ -521,13 +521,17 @@ function handle_click(event, self, chart) {
 }
 
 async function listSamples(event, self, seriesId, dataId, chartId) {
+	const terms = [self.config.term]
 	const tvslst = {
 		type: 'tvslst',
 		in: true,
 		join: 'and',
-		lst: [getTvs(1, seriesId)]
+		lst: []
 	}
-	const terms = [self.config.term]
+	if (self.config.term.term.type != 'geneVariant') {
+		// geneVariant filtering will be handled by mayFilterByGeneVariant()
+		tvslst.lst.push(getTvs(1, seriesId))
+	}
 	if (self.config.term2) {
 		terms.push(self.config.term2)
 		tvslst.lst.push(getTvs(2, dataId))
@@ -548,12 +552,12 @@ async function listSamples(event, self, seriesId, dataId, chartId) {
 
 	for (const sample of data.lst) {
 		const sampleName = data.refs.bySampleId[sample.sample].label
-		// if geneVariant groupset is used, need to filter here
-		// to filter by group assignments instead of strictly by mutation status
+		// must filter by geneVariant term(s) here in order to filter by
+		// group assignments instead of strictly by mutation status
 		// e.g. if sample has both cnv gain and loss and is assigned to cnv gain
 		// group (due to higher group priority), then the same group assignments
 		// should be used when listing samples
-		const pass = mayFilterGeneVariantGroupset(sample)
+		const pass = mayFilterByGeneVariant(sample)
 		if (!pass) continue
 		const row = [{ value: sampleName }]
 		/** Don't show hidden values in the results
@@ -610,7 +614,9 @@ async function listSamples(event, self, seriesId, dataId, chartId) {
 			const bins = self.bins[termIndex]
 			tvs.tvs.ranges = [bins.find(bin => bin.label == value)]
 		} else if (term.term.type == 'geneVariant' && term.q.type == 'values') {
-			// geneVariant term with q.type='values' (groupsetting is handled mayFilterGeneVariantGroupset())
+			throw 'no longer supported in barchart'
+			/*** code below was used to list samples for geneVariant term with q.type='values', but now only geneVariant with groupsetting is used in barchart ***/
+			/*// geneVariant term with q.type='values' (groupsetting is handled mayFilterByGeneVariant())
 			// chart is divided by dt term
 			// get dt term from selected chart and build tvs
 			const termdbmclass = self.app.vocabApi.termdbConfig?.mclass
@@ -624,25 +630,28 @@ async function listSamples(event, self, seriesId, dataId, chartId) {
 				key = Object.keys(mclass).find(k => mclass[k].label == value)
 			}
 			tvs.tvs.term = dtTerm
-			;(tvs.tvs.values = [{ key }]), (tvs.tvs.includeNotTested = true) // to be able to list not tested samples
+			;(tvs.tvs.values = [{ key }]), (tvs.tvs.includeNotTested = true) // to be able to list not tested samples*/
 		}
 		return tvs
 	}
 
-	function mayFilterGeneVariantGroupset(sample) {
-		const termIsGvGs = self.config.term.term.type == 'geneVariant' && self.config.term.q.type == 'custom-groupset'
-		const term2isGvGs = self.config.term2?.term.type == 'geneVariant' && self.config.term2?.q.type == 'custom-groupset'
-		const term0isGvGs = self.config.term0?.term.type == 'geneVariant' && self.config.term0?.q.type == 'custom-groupset'
-		if (termIsGvGs) {
-			const value = sample[self.config.term.$id]?.value
+	function mayFilterByGeneVariant(sample) {
+		if (self.config.term.term.type == 'geneVariant') {
+			const tw = self.config.term
+			if (tw.q.type == 'values') throw 'q.type=values not supported'
+			const value = sample[tw.$id]?.value
 			if (value != seriesId) return false
 		}
-		if (term2isGvGs) {
-			const value = sample[self.config.term2.$id]?.value
+		if (self.config.term2?.term.type == 'geneVariant') {
+			const tw = self.config.term2
+			if (tw.q.type == 'values') throw 'q.type=values not supported'
+			const value = sample[tw.$id]?.value
 			if (value != dataId) return false
 		}
-		if (term0isGvGs) {
-			const value = sample[self.config.term0.$id]?.value
+		if (self.config.term0?.term.type == 'geneVariant') {
+			const tw = self.config.term0
+			if (tw.q.type == 'values') throw 'q.type=values not supported'
+			const value = sample[tw.$id]?.value
 			if (value != chartId) return false
 		}
 		return true
