@@ -1,3 +1,15 @@
+/*
+Module for running rust binaries
+
+Arguments:
+	- <binfile>: [string] name of the rust binary file.
+	- <input_data>: [string|Buffer|ReadableStream] input data for the rust binary.
+	- <args>: [array] arguments for the rust binary (optional).
+
+Input data is streamed into the standard input of the rust binary.
+Standard output of the rust binary is returned.
+*/
+
 // Import necessary modules
 import fs from 'fs'
 import path from 'path'
