@@ -115,7 +115,12 @@ arguments:
 */
 const unannotatedKey = 'Unannotated'
 
-export async function init(ds, genome) {
+/*
+	ds: bootstrapped dataset object
+	genome: bootstrapped genome object
+	totalDsLst: number of datasets to be loaded from all genomes
+*/
+export async function init(ds, genome, totalDsLst = 0) {
 	// optional features/settings supplied by ds, when missing from serverconfig.features{}, are centralized here.
 	// overwrite not allowed! to prevent hard-to-trace error that 2nd ds changes value set by 1st ds etc...
 	for (const k in ds.serverconfigFeatures || {}) {
@@ -176,13 +181,27 @@ export async function init(ds, genome) {
 
 	await mayValidateAssayAvailability(ds)
 	await mayValidateViewModes(ds)
+
+	// uncomment below to manually trigger server crash if there is only 1 dataset;
+	// make sure that serverconfig only has one genome and datasets[] entry,
+	// and that the ds.label below matches that entry
+	// if (ds.label == 'GDC') {ds.init = {status: 'fatalError', fatalError: 'test server crash'}; throw ds.init.fatalError}
+
 	if (ds.cohort?.db?.refresh) throw `!!! ds.cohort.db.refresh has been deprecated !!!`
 
 	// invoke non-blocking initialization steps at the end, after validation is complete,
 	// otherwise it will be difficult to coordinate the handling of errors from either
 	// validation or remaining steps that may include setInterval that runs at the
 	// same time as mayRetryInit() in initGenomesDs.js (avoids race condition)
-	if (ds.init?.hasNonblockingSteps) mds3InitNonblocking(ds)
+	if (ds.init?.hasNonblockingSteps) {
+		// if only one dataset is being loaded by the server,
+		// then await to allow server to crash on fatal error
+		if (totalDsLst > 1) await mds3InitNonblocking(ds)
+		else mds3InitNonblocking(ds)
+	} else {
+		if (!ds.init) ds.init = {}
+		ds.init.status = 'done'
+	}
 }
 
 export function client_copy(ds) {

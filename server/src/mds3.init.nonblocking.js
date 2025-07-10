@@ -36,10 +36,16 @@ export async function mds3InitNonblocking(ds) {
 	const initNonblocking = ds.label == 'GDC' ? gdcInitCache : undefined
 	if (!initNonblocking) return
 
-	initNonblocking(ds)
+	return initNonblocking(ds)
 		.then(() => {
+			// uncomment below to test '--- failed dataset init ... ---' in startup log
+			// ds.init = {status: 'fatalError', fatalError: 'test ds.init.status == fatalError'}
+			// uncomment below to test '--- active retries ... ---' in startup log
+			// ds.init = {status: 'recoverableError', fatalError: 'test ds.init.status == recovarableError'}
+
 			if (ds.init.status == 'nonblocking') {
-				ds.init.status = ds.init.recoverableError ? 'recoverableError' : ds.init.fatalError ? 'fatalError' : 'done'
+				if (ds.init.recoverableError) ds.init.status = 'recoverableError'
+				if (ds.init.fatalError) ds.init.status = 'fatalError'
 			}
 		})
 		.catch(e => {
