@@ -7,11 +7,18 @@ import { Feature } from 'ol'
 import { Polygon } from 'ol/geom'
 import type { Geometry } from 'ol/geom'
 import { Fill, Stroke, Style } from 'ol/style'
+import type { Extent } from 'ol/extent'
 
 export class WSIViewerInteractions {
 	public activePatchColor?: string
 	thumbnailClickListener: (index: number) => void
 	addZoomInEffect: (activeImageExtent: unknown, zoomInPoints: [number, number][], map: OLMap) => void
+	viewerClickListener: (
+		activeImageExtent: Extent | undefined,
+		coordinateX: number,
+		coordinateY: number,
+		map: OLMap
+	) => void
 	addMapKeyDownListener: (
 		holder: any,
 		map: OLMap,
@@ -155,6 +162,18 @@ export class WSIViewerInteractions {
 					}
 				}
 			})
+		}
+
+		this.viewerClickListener = (
+			activeImageExtent: Extent | undefined,
+			coordinateX: number,
+			coordinateY: number,
+			map: OLMap
+		) => {
+			setTimeout(() => {
+				this.addZoomInEffect(activeImageExtent, [[coordinateX, coordinateY]], map)
+				console.log(`Mouse position: ${coordinateX}, ${coordinateY}`)
+			}, 200)
 		}
 	}
 

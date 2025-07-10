@@ -11,12 +11,31 @@ import MousePosition from 'ol/control/MousePosition.js'
 import { format as formatCoordinate } from 'ol/coordinate.js'
 import type { WSImageLayers } from '#plots/wsiviewer/viewModel/WSImageLayers.ts'
 import type Layer from 'ol/layer/Layer'
+import type { Extent } from 'ol/extent'
 
 export class MapRenderer {
 	public wSImageLayers: WSImageLayers
+	private viewerClickListener: (
+		activeImageExtent: Extent | undefined,
+		coordinateX: number,
+		coordinateY: number,
+		map: OLMap
+	) => void
+	private activeImageExtent: Extent | undefined
 
-	constructor(wSImageLayers: WSImageLayers) {
+	constructor(
+		wSImageLayers: WSImageLayers,
+		viewerClickListener: (
+			activeImageExtent: Extent | undefined,
+			coordinateX: number,
+			coordinateY: number,
+			map: OLMap
+		) => void,
+		activeImageExtent: Extent | undefined
+	) {
 		this.wSImageLayers = wSImageLayers
+		this.activeImageExtent = activeImageExtent
+		this.viewerClickListener = viewerClickListener
 	}
 
 	public getMap(): OLMap {
@@ -84,11 +103,10 @@ export class MapRenderer {
 			map.addControl(mousePositionControl)
 
 			// //Console.log the mouse position
-			// map.on('singleclick', function (event) {
-			// 	const coordinate = event.coordinate
-			// 	const flipped = [coordinate[0], -coordinate[1]] // Flip Y if needed
-			// 	console.log(`Mouse position: ${flipped[0]}, ${flipped[1]}`)
-			// })
+			map.on('singleclick', event => {
+				const coordinate = event.coordinate
+				this.viewerClickListener(this.activeImageExtent, coordinate[0], -coordinate[1], map)
+			})
 		}
 
 		const fullscreen = new FullScreen()
