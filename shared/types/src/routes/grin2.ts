@@ -1,6 +1,7 @@
 /** General GRIN2 route
  * This route handles the GRIN2 analysis for any non-GDC data.
- * It processes the incoming data structure and returns the same structured results as GDC-GRIN2.
+ * It processes the incoming data structure via PP's existing filter infrastructure 
+ * and returns the same structured results as GDC-GRIN2.
  * Specifically it will return a sortable table of top mutated genes and
  * a static PNG manhattan-like plot of the -log10(q-value).
  * We allow the user to customize the MAF, CNV, and fusion filtering options.
@@ -10,17 +11,8 @@ import type { RoutePayload } from './routeApi.js'
 
 /** GRIN2 request */
 export type GRIN2Request = {
-	/** Sample files to analyze - maps sample ID to file information */
-	sampleFiles: {
-		[sampleId: string]: {
-			/** Mutation Annotation Format file */
-			maf?: string
-			/** Copy Number Variation file */
-			cnv?: string
-			/** Gene fusion file */
-			fusion?: string
-		}
-	}
+	/** Filter from existing PP infrastructure */
+	filter?: any // Filter object passed to get_samples(filter, ds)
 
 	/** Options for filtering MAF file content */
 	mafOptions?: {
