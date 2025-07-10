@@ -524,6 +524,7 @@ async function updateUI(self) {
 	const tableArg = {
 		div: self.dom.filterTableDiv,
 		columns: [
+			{}, // blank column to add delete button
 			{
 				label: 'NAME',
 				editCallback: async (i, cell) => {
@@ -553,19 +554,11 @@ async function updateUI(self) {
 			{ label: '#SAMPLE' },
 			{ label: 'FILTER' }
 		],
-		columnButtons: [
-			{
-				text: 'Delete',
-				callback: (e, i) => {
-					const group = groups[i]
-					self.app.vocabApi.deleteGroup(group.name)
-				}
-			}
-		],
 		rows: []
 	}
 	for (const g of groups) {
 		tableArg.rows.push([
+			{}, // blank cell to add delete button
 			{ value: g.name }, // to allow click to show <input>
 			{ color: g.color },
 			{ value: 'n=' + (await self.app.vocabApi.getFilteredSampleCount(g.filter)) },
@@ -595,10 +588,22 @@ async function updateUI(self) {
 	}
 
 	renderTable(tableArg)
+
+	// after rendering table, iterate over rows again to fill cells with control elements
 	for (const [i, row] of tableArg.rows.entries()) {
+		// add delete button in 1st cell
+		row[0].__td
+			.text('❌')
+			.style('cursor', 'pointer')
+			.on('click', () => {
+				const group = groups[i]
+				self.app.vocabApi.deleteGroup(group.name)
+			})
+
+		// create fitlter ui in its cell
 		const group = groups[i]
 		filterInit({
-			holder: row[3].__td,
+			holder: row[4].__td,
 			vocabApi: self.app.vocabApi,
 			termdbConfig: self.app.vocabApi.termdbConfig,
 			callback: f => {
