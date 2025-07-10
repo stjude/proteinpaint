@@ -8,10 +8,19 @@ export class Model {
 			genome,
 			dslabel
 		}
-
 		try {
 			const response = await dofetch3('aiHistoList', { body })
 			return response || []
+		} catch (error) {
+			console.error('Error fetching projects:', error)
+			throw error
+		}
+	}
+
+	async updateProject(body: any, method: string): Promise<any> {
+		try {
+			const response = await dofetch3('aiHistoProjectAdmin', { method, body })
+			return response
 		} catch (error) {
 			console.error('Error fetching projects:', error)
 			throw error

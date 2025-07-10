@@ -4,12 +4,14 @@ import type { MassState } from '#mass/types/mass'
 import { getDefaultAIHistoToolSettings } from './defaults'
 import { Model } from './model/Model'
 import { View } from './view/View'
+import { AIHistoInteractions } from './interactions/AIHistoInteractions'
 
 class AIHistoTool extends RxComponentInner {
 	public type = 'AIHistoTool'
 	model: Model
 	projects?: any[]
 	view?: View
+	interactions?: AIHistoInteractions
 
 	constructor(opts: any) {
 		super()
@@ -31,13 +33,15 @@ class AIHistoTool extends RxComponentInner {
 	}
 
 	async init(appState: MassState) {
+		this.interactions = new AIHistoInteractions(this.app, this.id, this.model)
+
 		try {
 			this.projects = await this.model.getProjects(appState.vocab.genome, appState.vocab.dslabel)
 		} catch (e: any) {
 			console.error('Error initializing AIHistoTool:', e)
 			throw e
 		}
-		this.view = new View(this.dom, this.projects)
+		this.view = new View(this.dom, this.projects, this.interactions)
 		this.view.render()
 	}
 

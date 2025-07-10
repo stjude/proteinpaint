@@ -43,7 +43,7 @@ function getProjects(ds: any) {
 	const sql = 'SELECT project.name as value FROM Project'
 
 	try {
-		db.connection = connect_db(db.file, { readonly: false })
+		db.connection = connect_db(db.file, { readonly: false, fileMustExist: true })
 		const rows = db.connection.prepare(sql).all()
 		return rows
 	} catch (e) {
