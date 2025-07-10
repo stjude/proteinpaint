@@ -1000,6 +1000,7 @@ export type DZImages = {
 image file to sample mapping is stored in wsimages table
 */
 export type WSImages = {
+	db: { file: string }
 	// type of the image, e.g. H&E
 	type: string
 
