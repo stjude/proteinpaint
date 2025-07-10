@@ -2,13 +2,14 @@ import { RxComponentInner } from '../../types/rx.d'
 import { getCompInit, copyMerge } from '#rx'
 import type { MassState } from '#mass/types/mass'
 import { getDefaultAIHistoToolSettings } from './defaults'
-// import { renderTable } from '#dom'
-// import { debounce } from 'debounce'
 import { Model } from './model/Model'
+import { View } from './view/View'
 
 class AIHistoTool extends RxComponentInner {
 	public type = 'AIHistoTool'
-	model?: Model
+	model: Model
+	projects?: any[]
+	view?: View
 
 	constructor(opts: any) {
 		super()
@@ -16,6 +17,7 @@ class AIHistoTool extends RxComponentInner {
 		this.dom = {
 			holder: opts.holder
 		}
+		this.model = new Model()
 	}
 
 	getState(appState: MassState) {
@@ -30,59 +32,13 @@ class AIHistoTool extends RxComponentInner {
 
 	async init(appState: MassState) {
 		try {
-			console.log(appState)
-			this.model = new Model()
-			await this.model.getProjects(appState.vocab.genome, appState.vocab.dslabel)
+			this.projects = await this.model.getProjects(appState.vocab.genome, appState.vocab.dslabel)
 		} catch (e: any) {
 			console.error('Error initializing AIHistoTool:', e)
 			throw e
 		}
-		// const projectDiv = this.dom.holder.append('div').attr('class', 'ai-histo-tool-projects')
-
-		// // Render new project input
-		// const newProjectDiv = projectDiv.append('div').attr('class', 'sjpp-project-select-new').style('padding', '10px')
-
-		// const input = newProjectDiv
-		// 	.append('input')
-		// 	.attr('id', 'sjpp-new-project-name')
-		// 	.attr('display', 'inline-block')
-		// 	.attr('placeholder', 'New project name')
-
-		// const button = newProjectDiv
-		// 	.append('button')
-		// 	.text('Create Project')
-		// 	.attr('display', 'inline-block')
-		// 	.property('disabled', true)
-		// 	.on('click', () => {
-		// 		const projectName = input.property('value')
-		// 		console.log('Creating new project:', projectName)
-		// 	})
-
-		// input.on('keydown', () => {
-		// 	const debouncer = () => {
-		// 		button.property('disabled', input.property('value').length == 0)
-		// 	}
-		// 	debounce(debouncer, 300)()
-		// })
-
-		// // Render existing projects
-		// const tableDiv = projectDiv.append('div').attr('class', 'sjpp-project-select-table').style('padding', '10px')
-		// const rows: any = [[{ value: 'test' }], [{ value: 'test2' }]]
-		// const columns = [{ label: 'Project', sortable: true }]
-
-		// renderTable({
-		// 	div: tableDiv,
-		// 	rows,
-		// 	header: {
-		// 		allowSort: true
-		// 	},
-		// 	columns,
-		// 	singleMode: true,
-		// 	noButtonCallback: (i: any, node: any) => {
-		// 		console.log('Selected project:', i, node)
-		// 		//TODO: app.dispatch
-		// 	}
-		// })
+		this.view = new View(this.dom, this.projects)
+		this.view.render()
 	}
 
 	main() {
