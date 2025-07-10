@@ -13,6 +13,7 @@ import {
 } from '#shared/terms.js'
 import { get_bin_label, compute_bins } from '#shared/termdb.bins.js'
 import { trigger_getDefaultBins } from './termdb.getDefaultBins.js'
+import { getCategories } from '../routes/termdb.categories.ts'
 
 /*
 
@@ -52,9 +53,11 @@ Returns:
 export async function getData(q, ds, genome, onlyChildren = false) {
 	try {
 		validateArg(q, ds)
-		// query data and categories concurrently to avoid separate requests
-		// which can be time-consuming for datasets without local db (e.g. GDC)
-		const [data, categories] = await Promise.all([getSampleData(q, ds, onlyChildren), mayGetCategories(q)])
+		const data = await getSampleData(q, ds, onlyChildren)
+		// get categories within same data request to avoid a separate
+		// getCategories() request, which can be time-consuming for
+		// datasets without local db (e.g. GDC)
+		const categories = mayGetCategories(data, q, ds)
 		if (categories) {
 			const byTermId = data.refs.byTermId
 			for (const k of Object.keys(categories)) {
@@ -975,44 +978,26 @@ function applyGeneticModel(tw, effAle, a1, a2) {
 }
 
 // get categories of terms
-// for now only considering categorical terms without .values{}
-// but may expand to other terms later
-async function mayGetCategories(q) {
+// for now only considering geneVariant terms and
+// categorical terms without .values{}
+function mayGetCategories(data, q, ds) {
 	const twLst = []
 	for (const _tw of q.terms) {
 		const tw = structuredClone(_tw)
-		if (!tw.term.id) continue
-		const term = q.ds.cohort.termdb.q.termjsonByOneid(tw.term.id)
-		if (!term) continue
-		if (term.type != 'categorical') continue
-		if (term.values && Object.keys(term.values).length) continue
 		tw.q = {}
-		twLst.push(tw)
+		let term = tw.term
+		if (!term.type) term = q.ds.cohort.termdb.q.termjsonByOneid(tw.term.id)
+		if (term.type == 'geneVariant' || (term.type == 'categorical' && !hasValues(term))) twLst.push(tw)
 	}
 	if (!twLst.length) return
-
-	const [samples, byTermId] = await getSampleData_dictionaryTerms(q, twLst)
-
 	const categories = {}
 	for (const tw of twLst) {
-		const key2count = new Map()
-		// k: category key
-		// v: number of samples
-		for (const sid in samples) {
-			const v = samples[sid][tw.$id]
-			if (!v) continue
-			if (!('key' in v)) continue
-			key2count.set(v.key, 1 + (key2count.get(v.key) || 0))
-		}
-		const lst = []
-		for (const [key, count] of key2count) {
-			lst.push({
-				samplecount: count,
-				key,
-				label: byTermId?.[tw.$id]?.events?.find(e => e.event === key).label || tw.term?.values?.[key]?.label || key
-			})
-		}
-		categories[tw.$id] = lst
+		const [lst, orderedLabels] = getCategories(data, { tw }, ds, tw.$id)
+		categories[tw.$id] = { lst, orderedLabels }
 	}
 	return categories
+}
+
+function hasValues(term) {
+	return term.values && Object.keys(term.values).length
 }

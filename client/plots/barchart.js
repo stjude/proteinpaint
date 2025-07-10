@@ -100,8 +100,8 @@ export class Barchart {
 					defaultQ4fillTW: { geneVariant: { type: 'custom-groupset' } },
 					getBodyParams: () => {
 						const tw = this.config['term']
-						if (!tw) return { skip_samplecounts: true }
-						if (tw.term.samplecounts) return { samplecounts: tw.term.samplecounts }
+						if (!tw) return { skip_categories: true }
+						if (tw.term.categories) return { categories: tw.term.categories }
 						return {}
 					}
 				},
@@ -130,8 +130,8 @@ export class Barchart {
 					},
 					getBodyParams: () => {
 						const tw = this.config['term2']
-						if (!tw) return { skip_samplecounts: true }
-						if (tw.term.samplecounts) return { samplecounts: tw.term.samplecounts }
+						if (!tw) return { skip_categories: true }
+						if (tw.term.categories) return { categories: tw.term.categories }
 						return {}
 					}
 				},
@@ -147,8 +147,8 @@ export class Barchart {
 					defaultQ4fillTW: term0_term2_defaultQ,
 					getBodyParams: () => {
 						const tw = this.config['term0']
-						if (!tw) return { skip_samplecounts: true }
-						if (tw.term.samplecounts) return { samplecounts: tw.term.samplecounts }
+						if (!tw) return { skip_categories: true }
+						if (tw.term.categories) return { categories: tw.term.categories }
 						return {}
 					}
 				},

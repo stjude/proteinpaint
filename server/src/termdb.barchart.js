@@ -124,7 +124,7 @@ export async function barchart_data(q, ds, tdb) {
 			// term1 or term2 is a geneVariant term that is not using groupsetting
 			// data will need to be handled using specialized logic
 			// data from geneVariant term using groupsetting can be handled using regular logic
-			processGeneVariantSamples(map, bins, data, samplesMap, ds, chartid2dtterm)
+			processGeneVariantSamples(map, bins, categories, data, samplesMap, ds, chartid2dtterm)
 		} else {
 			for (let i = 0; i <= 2; i++) {
 				const q = map.get(i)?.q
@@ -200,20 +200,25 @@ export async function barchart_data(q, ds, tdb) {
 
 //used by barchart_data
 //process gene variant data into samplesMap
-function processGeneVariantSamples(map, bins, data, samplesMap, ds, chartid2dtterm) {
+function processGeneVariantSamples(map, bins, categories, data, samplesMap, ds, chartid2dtterm) {
 	bins.push([])
+	categories.push([])
 	let customSampleID = 1
 	const tw1 = map.get(1)
 	const term1 = tw1?.term || null
 	const id1 = tw1?.$id ? tw1.$id : term1?.id && term1?.type != 'geneVariant' ? term1.id : term1?.name
 	if (id1 && data.refs.byTermId[id1]?.bins) bins.push(data.refs.byTermId[id1]?.bins)
 	else bins.push([])
+	if (id1 && data.refs.byTermId[id1]?.categories) categories.push(data.refs.byTermId[id1]?.categories)
+	else categories.push([])
 
 	const tw2 = map.get(2)
 	const term2 = tw2?.term || null
 	const id2 = tw2?.$id ? tw2.$id : term2?.id && term1?.type != 'geneVariant' ? term2.id : term2?.name
 	if (id2 && data.refs.byTermId[id2]?.bins) bins.push(data.refs.byTermId[id2]?.bins)
 	else bins.push([])
+	if (id2 && data.refs.byTermId[id2]?.categories) categories.push(data.refs.byTermId[id2]?.categories)
+	else categories.push([])
 
 	for (const [sampleId, values] of Object.entries(data.samples)) {
 		if (map.get(1)?.term?.type == 'geneVariant') {
