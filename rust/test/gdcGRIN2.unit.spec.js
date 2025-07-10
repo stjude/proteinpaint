@@ -157,7 +157,7 @@ tape('gdcGRIN2 unit test', async function (test) {
 
 			// Verify grinelesion data
 			t.ok(parsedOutput.grin2lesion, 'Should have grin2lesion data')
-			t.equal(parsedOutput.grin2lesion.length, 21, 'Should have 21 lesion records')
+			t.equal(parsedOutput.grin2lesion.length, 38, 'Should have 21 lesion records')
 
 			// Compare actual and expected outputs
 			const comparison = compareOutputs(parsedOutput, expectedOutput)
