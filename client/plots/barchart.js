@@ -97,6 +97,7 @@ export class Barchart {
 					label: renderTerm1Label,
 					vocabApi: this.app.vocabApi,
 					menuOptions: 'edit',
+					defaultQ4fillTW: { geneVariant: { type: 'custom-groupset' } },
 					getBodyParams: () => {
 						const tw = this.config['term']
 						if (!tw) return { skip_samplecounts: true }
