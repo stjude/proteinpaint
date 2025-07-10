@@ -57,7 +57,14 @@ async function trigger_getcategories(
 
 	const data = await getData(arg, ds, genome)
 	if (data.error) throw data.error
+	const [lst, orderedLabels] = getCategories(data, q, ds, $id)
+	res.send({
+		lst,
+		orderedLabels
+	} satisfies CategoriesResponse)
+}
 
+export function getCategories(data, q, ds, $id) {
 	const lst: any[] = []
 	if (q.tw.term.type == 'geneVariant' && q.tw.q.type != 'predefined-groupset' && q.tw.q.type != 'custom-groupset') {
 		// specialized data processing for geneVariant term when
@@ -74,6 +81,7 @@ async function trigger_getcategories(
 		const sampleCountedFor = new Set() // if the sample is counted
 		for (const sampleData of Object.values(samples)) {
 			const key = $id
+			if (!Object.keys(sampleData).includes(key)) continue
 			const values = sampleData[key].values
 			sampleCountedFor.clear()
 			/* values here is an array of result entires, one or more entries for each dt. e.g.
@@ -147,8 +155,5 @@ async function trigger_getcategories(
 	if (orderedLabels.length) {
 		lst.sort((a, b) => orderedLabels.indexOf(a.label) - orderedLabels.indexOf(b.label))
 	}
-	res.send({
-		lst,
-		orderedLabels
-	} satisfies CategoriesResponse)
+	return [lst, orderedLabels]
 }

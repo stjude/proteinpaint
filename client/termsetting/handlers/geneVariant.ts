@@ -30,7 +30,8 @@ export function getHandler(self: GeneVariantTermSettingInstance) {
 		async postMain() {
 			// need to regenerate child dt terms here to update
 			// the terms upon data updates (e.g., filter)
-			await getChildTerms(self.term, self.vocabApi)
+			const body = self.opts.getBodyParams?.() || {}
+			await getChildTerms(self.term, self.vocabApi, body)
 		}
 	}
 }
@@ -143,11 +144,10 @@ function clearGroupset(self) {
 
 // function to get child dt terms
 // will use these terms to generate a frontend vocab
-export async function getChildTerms(term: RawGvTerm, vocabApi: VocabApi) {
+export async function getChildTerms(term: RawGvTerm, vocabApi: VocabApi, body: any = {}) {
 	if (!vocabApi.termdbConfig?.queries) throw 'termdbConfig.queries is missing'
 	const termdbmclass = vocabApi.termdbConfig.mclass // custom mclass labels from dataset
 	const dtTermsInDs: DtTerm[] = [] // dt terms in dataset
-	const body: any = {}
 	const filter = vocabApi.state?.termfilter?.filter
 	const filter0 = vocabApi.state?.termfilter?.filter0
 	if (filter0) {

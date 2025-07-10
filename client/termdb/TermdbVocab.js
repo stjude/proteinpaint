@@ -109,7 +109,7 @@ export class TermdbVocab extends Vocab {
 			}
 		}
 
-		this.mayFillInValues(opts, data.categories)
+		this.mayFillCategories(opts, data.categories)
 
 		return data
 	}
@@ -128,23 +128,17 @@ export class TermdbVocab extends Vocab {
 		t.samplecount[key].samplecount += total
 	}
 
-	// fill in term.values and term.samplecounts with
+	// fill in term.categories with
 	// categories computed from the data
-	mayFillInValues(opts, categories) {
+	mayFillCategories(opts, categories) {
 		if (!categories) return
 		if (!Array.isArray(categories)) throw 'categories is not array'
 		for (const [i, k] of ['term0', 'term', 'term2'].entries()) {
 			const tw = opts[k]
 			if (!tw) continue
-			const clst = categories[i]
-			if (!clst?.length) continue
-			const term = tw.term
-			term.values = {}
-			term.samplecounts = []
-			for (const c of clst) {
-				term.values[c.key] = { label: c.label }
-				term.samplecounts.push({ key: c.key, label: c.label, samplecount: c.samplecount })
-			}
+			const c = categories[i]
+			if (!Object.keys(c).length) continue
+			tw.term.categories = c
 		}
 	}
 
@@ -650,12 +644,12 @@ export class TermdbVocab extends Vocab {
 			return { lst: l2 }
 		}
 
-		if (_body.samplecounts) {
+		if (_body.categories) {
 			// grab directly from body and not server
-			return { lst: _body.samplecounts }
+			return _body.categories
 		}
 
-		if (_body.skip_samplecounts) {
+		if (_body.skip_categories) {
 			// do not query server
 			return { lst: [] }
 		}
