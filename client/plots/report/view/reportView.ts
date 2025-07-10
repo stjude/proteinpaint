@@ -20,8 +20,8 @@ export class ReportView {
 			.style('display', 'inline-block')
 			.style('vertical-align', 'top')
 			.style('padding', '20px')
-		const headerDiv = mainDiv.append('div').style('padding', '20px 0px 20px 0px')
-		const plotsDiv = mainDiv.append('div')
+		const headerDiv = mainDiv.append('div')
+		const plotsDiv = mainDiv.append('div').style('transform', 'scale(0.8)').style('transform-origin', '0 0')
 
 		this.dom = {
 			headerDiv,
@@ -38,6 +38,7 @@ export class ReportView {
 		select('.sjpp-output-sandbox-content').on('scroll', () => this.dom.tooltip.hide())
 
 		if (this.report.config.countryTW) {
+			headerDiv.style('padding', '20px 0px 20px 0px')
 			this.dom.headerDiv.append('label').text('Country: ')
 			const select = this.dom.headerDiv.append('select')
 			select.append('option').attr('value', '').text('')
