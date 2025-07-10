@@ -1,2 +1,2 @@
 Features:
-- Added general GRIN2 run route request/response definitions
+- GRIN2: Added general GRIN2 run route request/response definitions; Made initial run route with TODOs
