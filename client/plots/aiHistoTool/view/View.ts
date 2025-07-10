@@ -1,13 +1,16 @@
 import { renderTable } from '#dom'
 import { debounce } from 'debounce'
+import type { AIHistoInteractions } from '../interactions/AIHistoInteractions'
 
 export class View {
 	dom: any
 	projects: any[]
+	interactions: AIHistoInteractions
 
-	constructor(dom, projects) {
+	constructor(dom: any, projects: any[], interactions: AIHistoInteractions) {
 		this.dom = dom
 		this.projects = projects //returns as [{ value: 'Project1' }, { value: 'Project2' }, ...]
+		this.interactions = interactions
 	}
 
 	render() {
@@ -32,9 +35,20 @@ export class View {
 			.property('disabled', true)
 			.on('click', () => {
 				const projectName = input.property('value')
-				console.log('Creating new project:', projectName)
-				//TODO: new endpoint to create project and app.dispatch
-				//add interaction
+				const notEmpty = projectName.trim().length > 0
+				if (!notEmpty) {
+					//TODO: use say error instead
+					console.warn('Project name cannot be empty')
+					return
+				}
+				const notUnique = this.projects.some((p: any) => p.value === projectName)
+				if (notUnique) {
+					//TODO: use say error instead
+					console.warn(`Project name '${projectName}' already exists`)
+					return
+				}
+				this.interactions.addProject(projectName)
+				//TODO: clear UI and open project select
 			})
 
 		input.on('keydown', () => {
@@ -60,7 +74,23 @@ export class View {
 				allowSort: true
 			},
 			columns,
-			singleMode: true
+			singleMode: true,
+			columnButtons: [
+				{
+					text: 'Edit',
+					callback: (e, i) => {
+						this.interactions.editProject()
+						console.log('TODO', e, i)
+					}
+				},
+				{
+					text: 'Delete',
+					callback: (e, i) => {
+						this.interactions.deleteProject()
+						console.log('TODO', e, i)
+					}
+				}
+			]
 		})
 	}
 }
