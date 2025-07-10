@@ -7,6 +7,7 @@
 // since dynamic import plugin is not yet supported
 export const routeFiles = [
 	import('../routes/aiHistoList.ts'),
+	import('../routes/aiHistoProjectAdmin.ts'),
 	import('../routes/brainImaging.ts'),
 	import('../routes/brainImagingSamples.ts'),
 	import('../routes/burden.ts'),
