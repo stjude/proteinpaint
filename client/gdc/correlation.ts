@@ -46,19 +46,26 @@ export async function init(
 			dslabel: gdcDslabel,
 			termfilter: { filter0: arg.filter0 },
 			nav: { activeTab: 1, header_mode: 'only_buttons' },
-			plots: [{ chartType: 'dictionary' }] // default shows dictionary ui, can change
-			/* todo additional customizations
-			opts:{
-				dictionary:{header:'Select a variable to build Correlation Plot'}
-				// some way to make gene exp violin/boxplot to use log scale by default, but numeric dict term should not
-			}
-			*/
+			plots: [
+				{ chartType: 'dictionary' } // default shows dictionary ui, can change
+				//{ chartType: 'barchart', term: {id: 'case.demographic.gender'} }, // uncomment for quicker testing
+			]
+		},
+		opts: {
+			app: arg.opts?.app || {}
+			// todo additional customizations
+			// dictionary:{header:'Select a variable to build Correlation Plot'}
+			// some way to make gene exp violin/boxplot to use log scale by default, but numeric dict term should not
 		},
 		app: arg.opts?.app || {}
 	})
 	const api = {
 		update: async (updateArg: UpdateArg) => {
-			if (massApi!) return
+			if (!massApi) return
+
+			// NOTE: changes inside the mass app (nav tabs, sandbox, etc) are handled internally
+			// within the mass app instance; only embedder portal-dispatched changes, such as filter0,
+			// should be handled below
 
 			if ('filter0' in updateArg) {
 				massApi.dispatch({
@@ -70,13 +77,15 @@ export async function init(
 						}
 					]
 				})
-			} else {
-				massApi.dispatch({
-					type: 'plot_edit',
-					id: massApi.getState().plots[0].id, // FIXME mass ui can contain multiple plots
-					config: updateArg
-				})
 			}
+			// TODO: handle other portal-dispatched changes
+			// else if (updateArg.) {
+			// 	// massApi.dispatch({
+			// 	// 	type: 'plot_edit',
+			// 	// 	id: massApi.getState().plots[0].id, // FIXME mass ui can contain multiple plots
+			// 	// 	config: updateArg
+			// 	// })
+			// }
 		}
 	}
 

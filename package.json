@@ -41,7 +41,8 @@
     "sethooks": "./utils/hooks/init.sh",
     "getconf": "node -p 'JSON.stringify(require(\"./server/src/serverconfig.js\"),null,\"  \")'",
     "clean": "git add -A; git stash --staged",
-    "doc": "npm run doc --workspace=shared/types"
+    "doc": "npm run doc --workspace=shared/types",
+    "ssl-proxy": "local-ssl-proxy --config ssl-proxy.json --cert localhost.gdc.cancer.gov.pem --key localhost.gdc.cancer.gov.pem"
   },
   "author": "",
   "license": "SEE LICENSE IN ./LICENSE",
