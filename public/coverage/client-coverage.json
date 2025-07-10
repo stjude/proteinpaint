@@ -3061,46 +3061,46 @@
   },
   "plots/barchart.js": {
     "lines": {
-      "total": 442,
-      "covered": 6,
+      "total": 443,
+      "covered": 336,
       "skipped": 0,
-      "pct": 1.35
+      "pct": 75.84
     },
     "functions": {
       "total": 93,
-      "covered": 1,
+      "covered": 76,
       "skipped": 0,
-      "pct": 1.07
+      "pct": 81.72
     },
     "statements": {
-      "total": 498,
-      "covered": 6,
+      "total": 500,
+      "covered": 357,
       "skipped": 0,
-      "pct": 1.2
+      "pct": 71.4
     },
     "branches": {
-      "total": 420,
-      "covered": 1,
+      "total": 422,
+      "covered": 270,
       "skipped": 0,
-      "pct": 0.23
+      "pct": 63.98
     },
     "lowestPct": {
-      "curr": 0.23,
+      "curr": 63.98,
       "prev": 63.28,
-      "diff": -63.050000000000004
+      "diff": 0.6999999999999957
     },
     "averagePct": {
-      "curr": 0.9625,
+      "curr": 73.235,
       "prev": 72.9325,
-      "diff": -71.97
+      "diff": 0.3024999999999949
     }
   },
   "mass/test/barchart.integration.spec.js": {
     "lines": {
-      "total": 513,
-      "covered": 377,
+      "total": 512,
+      "covered": 376,
       "skipped": 0,
-      "pct": 73.48
+      "pct": 73.43
     },
     "functions": {
       "total": 140,
@@ -3109,10 +3109,10 @@
       "pct": 65
     },
     "statements": {
-      "total": 537,
-      "covered": 396,
+      "total": 536,
+      "covered": 395,
       "skipped": 0,
-      "pct": 73.74
+      "pct": 73.69
     },
     "branches": {
       "total": 70,
@@ -3122,13 +3122,13 @@
     },
     "lowestPct": {
       "curr": 57.14,
-      "prev": 0,
-      "diff": 57.14
+      "prev": 57.14,
+      "diff": 0
     },
     "averagePct": {
-      "curr": 67.34,
-      "prev": 0,
-      "diff": 67.34
+      "curr": 67.315,
+      "prev": 67.34,
+      "diff": -0.025000000000005684
     }
   },
   "termdb/vocabulary.js": {
@@ -3158,13 +3158,13 @@
     },
     "lowestPct": {
       "curr": 10,
-      "prev": 0,
-      "diff": 10
+      "prev": 10,
+      "diff": 0
     },
     "averagePct": {
       "curr": 18.1475,
-      "prev": 0,
-      "diff": 18.1475
+      "prev": 18.1475,
+      "diff": 0
     }
   },
   "filter/tvs.dtcnv.categorical.js": {
@@ -3602,73 +3602,73 @@
   "termsetting/handlers/geneVariant.ts": {
     "lines": {
       "total": 89,
-      "covered": 1,
+      "covered": 42,
       "skipped": 0,
-      "pct": 1.12
+      "pct": 47.19
     },
     "functions": {
       "total": 18,
-      "covered": 0,
+      "covered": 8,
       "skipped": 0,
-      "pct": 0
+      "pct": 44.44
     },
     "statements": {
       "total": 98,
-      "covered": 1,
+      "covered": 45,
       "skipped": 0,
-      "pct": 1.02
+      "pct": 45.91
     },
     "branches": {
-      "total": 39,
-      "covered": 0,
+      "total": 42,
+      "covered": 18,
       "skipped": 0,
-      "pct": 0
+      "pct": 42.85
     },
     "lowestPct": {
-      "curr": 0,
+      "curr": 42.85,
       "prev": 0,
-      "diff": 0
+      "diff": 42.85
     },
     "averagePct": {
-      "curr": 0.535,
+      "curr": 45.0975,
       "prev": 0.54,
-      "diff": -0.0050000000000000044
+      "diff": 44.5575
     }
   },
   "plots/barchart.events.js": {
     "lines": {
-      "total": 315,
-      "covered": 1,
+      "total": 312,
+      "covered": 112,
       "skipped": 0,
-      "pct": 0.31
+      "pct": 35.89
     },
     "functions": {
-      "total": 63,
-      "covered": 0,
+      "total": 61,
+      "covered": 26,
       "skipped": 0,
-      "pct": 0
+      "pct": 42.62
     },
     "statements": {
       "total": 343,
-      "covered": 1,
+      "covered": 118,
       "skipped": 0,
-      "pct": 0.29
+      "pct": 34.4
     },
     "branches": {
-      "total": 402,
-      "covered": 0,
+      "total": 400,
+      "covered": 146,
       "skipped": 0,
-      "pct": 0
+      "pct": 36.5
     },
     "lowestPct": {
-      "curr": 0,
+      "curr": 34.4,
       "prev": 0,
-      "diff": 0
+      "diff": 34.4
     },
     "averagePct": {
-      "curr": 0.15,
+      "curr": 37.3525,
       "prev": 0.1625,
-      "diff": -0.012500000000000011
+      "diff": 37.19
     }
   },
   "plots/disco/viewmodel/ViewModel.ts": {
