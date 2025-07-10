@@ -60,6 +60,12 @@ export async function initGenomesDs(serverconfig) {
 	if (!serverconfig.genomes) throw '.genomes[] missing'
 	if (!Array.isArray(serverconfig.genomes)) throw '.genomes[] not array'
 
+	// option to limit the datasets that are loaded, useful for faster ds-specific test iteration
+	const dslabelFilter = serverconfig.features.dslabelFilter
+	// count the number of datasets to be loaded, to be used to
+	// optionally await mds3InitNonblocking() when totalRawDsLst == 1
+	let totalRawDsLst = 0
+
 	/*
 	for genomes declared in serverconfig for this pp instance,
 	load its built in genome javascript file to an in-mem object
@@ -69,7 +75,6 @@ export async function initGenomesDs(serverconfig) {
 	for (const g of serverconfig.genomes) {
 		if (!g.name) throw '.name missing from a genome: ' + JSON.stringify(g)
 		if (!g.file) throw '.file missing from genome ' + g.name
-
 		/*
 			When using a Docker container, the mounted app directory
 			may have an optional genome directory, which if present
@@ -113,6 +118,7 @@ export async function initGenomesDs(serverconfig) {
 		}
 		if (g.datasets) {
 			g2.rawdslst = g.datasets
+			totalRawDsLst += g.datasets.filter(d => !d.skip && (!dslabelFilter || dslabelFilter.includes(d.name))).length
 		}
 		if (g.snp) {
 			// replace snp db
@@ -395,10 +401,6 @@ export async function initGenomesDs(serverconfig) {
 		/*
 		done everything except dataset
 		*/
-
-		// option to limit the datasets that are loaded, useful for faster ds-specific test iteration
-		const dslabelFilter = serverconfig.features.dslabelFilter
-
 		g.datasets = {}
 		for (const d of g.rawdslst) {
 			/*
@@ -448,11 +450,11 @@ export async function initGenomesDs(serverconfig) {
 			try {
 				ds.init.status = 'started'
 				// initial attempt is awaited, so that the server startup logs/CI can summarize status
-				if (ds.isMds3) await mds3_init.init(ds, g)
+				if (ds.isMds3) await mds3_init.init(ds, g, totalRawDsLst)
 				else if (ds.isMds) await mds_init(ds, g, d)
 				else initLegacyDataset(ds, g, serverconfig)
 				// no error bubbled up to be caught, and there are no nonblocking step being performed, init is done
-				if (ds.init.status != 'nonblocking') ds.init.status = 'done'
+				if (ds.init.status == 'started') ds.init.status = 'done'
 			} catch (e) {
 				mayRetryInit(g, ds, d, e)
 			}
@@ -489,7 +491,7 @@ function mayRetryInit(g, ds, d, e) {
 
 	if (e) console.trace(e)
 
-	if (!ds.init.recoverableError && !utils.nonFatalStatus.has(ds.init.status) && !utils.nonFatalStatus.has(e.status)) {
+	if (!ds.init.recoverableError && !utils.nonFatalStatus.has(ds.init.status) && !utils.nonFatalStatus.has(e?.status)) {
 		// forget datasets that did not load or cannot be loaded with retries
 		delete g.datasets[ds.label]
 	}
@@ -523,7 +525,7 @@ function mayRetryInit(g, ds, d, e) {
 			else initLegacyDataset(ds, g, serverconfig)
 			// as long as no error bubbles up to here, the retry is considered successful
 			clearInterval(interval)
-			if (ds.init.status != 'nonblocking') ds.init.status = 'done'
+			if (!ds.init.status) ds.init.status = 'done'
 		} catch (e) {
 			if (ds.init.status != 'recoverableError' && !ds.init.recoverableError && !utils.isRecoverableError(e)) {
 				const msg = `Fatal error on ${gdlabel} retry, stopping retry`
