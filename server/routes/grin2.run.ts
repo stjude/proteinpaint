@@ -12,7 +12,17 @@ import fs from 'fs'
  *
  * Data Flow:
  * 1. Extract sampleFiles from request with filtering options
- * 2. Process and validate file paths
+ * 2. Process and validate files so they have the expected format for python script
+ *    - MAF: TSV with columns like Chromosome, Start_Position, End_Position, etc.
+ *    - CNV: SEG format with columns like Chromosome, Start, End, Log2Ratio
+ *    - Fusion: TSV/CSV with columns like Gene1, Gene2, Breakpoint1, Breakpoint2
+ *    - Each file is processed to extract lesions in the format:
+ *      [ID, chrom, loc.start, loc.end, lsn.type]
+ *        - ID: Unique lesion ID
+ *        - chrom: Chromosome name (e.g., "chr1")
+ *        - loc.start: Start position of the lesion
+ *        - loc.end: End position of the lesion
+ *        - lsn.type: Type of lesion ("mutation", "gain", "loss", "fusion")
  * 3. Read and filter file contents based on mafOptions, cnvOptions, fusionOptions
  * 4. Convert filtered data to lesion format expected by Python script
  * 5. Pass lesion data to Python for GRIN2 statistical analysis and plot generation
@@ -83,7 +93,7 @@ async function runGrin2(genomes: any, req: any, res: any) {
 
 	// Build chromosome list from genome reference
 	for (const c in g.majorchr) {
-		// Skip chrM if needed (following GDC pattern)
+		// Skip chrM if needed
 		if (c.toLowerCase() === 'chrm') continue
 		pyInput.chromosomelist[c] = g.majorchr[c]
 	}
