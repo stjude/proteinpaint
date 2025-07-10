@@ -86,7 +86,11 @@ export default class WSIViewer extends RxComponentInner {
 		const activeImage: TileLayer = wsimageLayers[settings.displayedImageIndex].wsimage
 		const activeImageExtent = activeImage?.getSource()?.getTileGrid()?.getExtent()
 
-		const map = new MapRenderer(wsimageLayers[settings.displayedImageIndex]).getMap()
+		const map = new MapRenderer(
+			wsimageLayers[settings.displayedImageIndex],
+			this.wsiViewerInteractions.viewerClickListener,
+			activeImageExtent
+		).getMap()
 
 		const zoomInPoints = wsimages[settings.displayedImageIndex].zoomInPoints
 
