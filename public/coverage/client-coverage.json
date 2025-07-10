@@ -3086,13 +3086,13 @@
     },
     "lowestPct": {
       "curr": 63.98,
-      "prev": 63.28,
-      "diff": 0.6999999999999957
+      "prev": 63.98,
+      "diff": 0
     },
     "averagePct": {
       "curr": 73.235,
-      "prev": 72.9325,
-      "diff": 0.3024999999999949
+      "prev": 73.235,
+      "diff": 0
     }
   },
   "mass/test/barchart.integration.spec.js": {
@@ -3626,13 +3626,13 @@
     },
     "lowestPct": {
       "curr": 42.85,
-      "prev": 0,
-      "diff": 42.85
+      "prev": 42.85,
+      "diff": 0
     },
     "averagePct": {
       "curr": 45.0975,
-      "prev": 0.54,
-      "diff": 44.5575
+      "prev": 45.0975,
+      "diff": 0
     }
   },
   "plots/barchart.events.js": {
@@ -3662,13 +3662,13 @@
     },
     "lowestPct": {
       "curr": 34.4,
-      "prev": 0,
-      "diff": 34.4
+      "prev": 34.4,
+      "diff": 0
     },
     "averagePct": {
       "curr": 37.3525,
-      "prev": 0.1625,
-      "diff": 37.19
+      "prev": 37.3525,
+      "diff": 0
     }
   },
   "plots/disco/viewmodel/ViewModel.ts": {
