@@ -4,7 +4,6 @@ import path from 'path'
 import { spawn, exec } from 'child_process'
 import { Readable, Transform } from 'stream'
 import { promisify } from 'util'
-import { bin } from 'd3'
 
 const __dirname = import.meta.dirname // set __dirname for consistency with cjs code
 
