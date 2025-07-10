@@ -59,6 +59,12 @@ curl --parallel \
     --next --remote-name-all --continue-at - --create-dirs --output-dir . \
     https://proteinpaint.stjude.org/ppSupport/ppdemo_bam.tar.gz `# This tarball only contains the BAM slices which are shown in http://proteinpaint.stjude.org/bam`
 
+# Ensures index files are newer than data files so tabix won't break
+touch genomes/*.fai genomes/*.gzi
+touch anno/*.tbi
+touch hg19/*.csi
+touch hg38/*.csi
+
 #curl https://proteinpaint.stjude.org/ppSupport/pp.demo.tgz -O
 
 # Releases the "hicFragment/" and "hicTAD/" folders under anno/
