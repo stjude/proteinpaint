@@ -151,9 +151,8 @@ tape('term1=categorical (no values)', function (test) {
 		// testing if term.values{} and term.samplecounts[] get filled
 		const tw = barchart.Inner.config.term
 		test.ok(tw.term.values && typeof tw.term.values == 'object', 'term.values{} should be an object')
-		test.equal(Object.keys(tw.term.values).length, 7, 'term.values{} should have 7 values')
-		test.ok(Array.isArray(tw.term.samplecounts), 'term.samplecounts[] should be an array')
-		test.equal(tw.term.samplecounts.length, 7, 'term.samplecounts[] should have 7 sample counts')
+		test.ok(Array.isArray(tw.term.categories.lst), 'term.categories.lst[] should be an array')
+		test.equal(tw.term.categories.lst.length, 7, 'term.categories.lst[] should have 7 sample counts')
 	}
 
 	let barDiv

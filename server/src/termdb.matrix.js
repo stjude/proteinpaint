@@ -983,8 +983,7 @@ function applyGeneticModel(tw, effAle, a1, a2) {
 function mayGetCategories(data, q, ds) {
 	const twLst = []
 	for (const _tw of q.terms) {
-		const tw = structuredClone(_tw)
-		tw.q = {}
+		const tw = structuredClone({ q: {}, term: _tw.term, $id: _tw.$id })
 		let term = tw.term
 		if (!term.type) term = q.ds.cohort.termdb.q.termjsonByOneid(tw.term.id)
 		if (term.type == 'geneVariant' || (term.type == 'categorical' && !hasValues(term))) twLst.push(tw)
