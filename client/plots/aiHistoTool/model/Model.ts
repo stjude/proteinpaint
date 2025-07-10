@@ -11,8 +11,7 @@ export class Model {
 
 		try {
 			const response = await dofetch3('aiHistoList', { body })
-			console.log('Fetched projects:', response)
-			return response.projects || []
+			return response || []
 		} catch (error) {
 			console.error('Error fetching projects:', error)
 			throw error
