@@ -25,8 +25,8 @@ Tests:
 		graphable()
 	
 	TermdbVocab
-		mayFillInValues: single term
-		mayFillInValues: multiple terms
+		mayFillCategories: single term
+		mayFillCategories: multiple terms
  */
 
 const vocab = getExample()
@@ -487,7 +487,7 @@ tape('\n', function (test) {
 	test.end()
 })
 
-tape('mayFillInValues: single term', test => {
+tape('mayFillCategories: single term', test => {
 	const term = Object.freeze({
 		values: {
 			v1: { label: 'value1' },
@@ -497,7 +497,7 @@ tape('mayFillInValues: single term', test => {
 	})
 	let categories = undefined
 	const opts = { term: { term: structuredClone(term) } }
-	termdbVocabApi.mayFillInValues(opts, categories)
+	termdbVocabApi.mayFillCategories(opts, categories)
 	test.deepEqual(opts.term.term, term, 'opts.term.term should not change when categories is undefined')
 
 	categories = [
@@ -509,7 +509,7 @@ tape('mayFillInValues: single term', test => {
 			{ key: 'v6', label: 'value6', samplecount: 15 }
 		]
 	]
-	termdbVocabApi.mayFillInValues(opts, categories)
+	termdbVocabApi.mayFillCategories(opts, categories)
 	test.deepEqual(opts.term.term, term, 'opts.term.term should not change when term is not in categories')
 
 	categories = [
@@ -521,36 +521,29 @@ tape('mayFillInValues: single term', test => {
 		],
 		[]
 	]
-	termdbVocabApi.mayFillInValues(opts, categories)
-	let expectedValues = {
-		v4: { label: 'value4' },
-		v5: { label: 'value5' },
-		v6: { label: 'value6' }
-	}
-	let expectedSampleCounts = [
+	termdbVocabApi.mayFillCategories(opts, categories)
+	let expectedCategories = [
 		{ key: 'v4', label: 'value4', samplecount: 5 },
 		{ key: 'v5', label: 'value5', samplecount: 10 },
 		{ key: 'v6', label: 'value6', samplecount: 15 }
 	]
-	test.deepEqual(opts.term.term.values, expectedValues, 'term.values should change when term is in categories')
 	test.deepEqual(
-		opts.term.term.samplecounts,
-		expectedSampleCounts,
-		'term.samplecounts should get filled change when term is in categories'
+		opts.term.term.categories,
+		expectedCategories,
+		'term.categories should get filled change when term is in categories'
 	)
 
 	opts.term.term.values = {}
-	termdbVocabApi.mayFillInValues(opts, categories)
-	test.deepEqual(opts.term.term.values, expectedValues, 'term.values should get filled when term is in categories')
+	termdbVocabApi.mayFillCategories(opts, categories)
 	test.deepEqual(
-		opts.term.term.samplecounts,
-		expectedSampleCounts,
-		'term.samplecounts should get filled change when term is in categories'
+		opts.term.term.categories,
+		expectedCategories,
+		'term.categories should get filled change when term is in categories'
 	)
 	test.end()
 })
 
-tape('mayFillInValues: multiple terms', test => {
+tape('mayFillCategories: multiple terms', test => {
 	const term = Object.freeze({
 		values: {
 			v1: { label: 'value1' },
@@ -578,24 +571,18 @@ tape('mayFillInValues: multiple terms', test => {
 		term: { term: structuredClone(term) },
 		term2: { term: structuredClone(term2) }
 	}
-	termdbVocabApi.mayFillInValues(opts, categories)
+	termdbVocabApi.mayFillCategories(opts, categories)
 	test.deepEqual(opts.term.term, term, 'opts.term.term should not change when term is not in categories')
 	test.notDeepEqual(opts.term2.term, term2, 'opts.term.term2 should change when term is in categories')
-	let expectedValues = {
-		v7: { label: 'value7' },
-		v8: { label: 'value8' },
-		v9: { label: 'value9' }
-	}
-	let expectedSampleCounts = [
+	let expectedCategories = [
 		{ key: 'v7', label: 'value7', samplecount: 5 },
 		{ key: 'v8', label: 'value8', samplecount: 10 },
 		{ key: 'v9', label: 'value9', samplecount: 15 }
 	]
-	test.deepEqual(opts.term2.term.values, expectedValues, 'term.values should change when term is in categories')
 	test.deepEqual(
-		opts.term2.term.samplecounts,
-		expectedSampleCounts,
-		'term.samplecounts should get filled change when term is in categories'
+		opts.term2.term.categories,
+		expectedCategories,
+		'term.categories should get filled change when term is in categories'
 	)
 	test.end()
 })

@@ -72,7 +72,8 @@ export function getCategories(data, q, ds, $id) {
 		const samples = data.samples as { [sampleId: string]: any }
 		const dtClassMap = new Map()
 		if (ds.assayAvailability?.byDt) {
-			for (const [dtType, dtValue] of Object.entries(ds.assayAvailability.byDt)) {
+			for (const [dtType, _dtValue] of Object.entries(ds.assayAvailability.byDt)) {
+				const dtValue: any = _dtValue
 				if (dtValue.byOrigin) {
 					dtClassMap.set(parseInt(dtType), { byOrigin: { germline: {}, somatic: {} } })
 				}
