@@ -1,9 +1,12 @@
 import { getPillNameDefault } from '../termsetting'
 import type { GeneVariantTermSettingInstance, RawGvTerm, VocabApi, DtTerm } from '#types'
 import type { PillData } from '../types'
-import { make_radios } from '#dom'
-import { GroupSettingMethods } from './groupsetting.ts'
-import { dtTerms } from '#shared/common.js'
+import { make_radios, renderTable } from '#dom'
+import { dtTerms, getColors } from '#shared/common.js'
+import { filterInit, filterPromptInit, getNormalRoot } from '#filter/filter'
+import { rgb } from 'd3-color'
+
+const colorScale = getColors(5)
 
 // self is the termsetting instance
 export function getHandler(self: GeneVariantTermSettingInstance) {
@@ -49,7 +52,6 @@ async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 		.style('display', 'none')
 		.style('margin', '5px 0px 0px 30px')
 		.style('vertical-align', 'top')
-	const draggablesDiv = div.append('div').style('display', 'none').style('margin-left', '15px')
 	// apply button
 	// must create it at beginning to allow toggling applySpan message
 	const applyRow = div.append('div').style('margin-top', '15px')
@@ -58,7 +60,6 @@ async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 		.style('display', 'inline-block')
 		.text('Apply')
 		.on('click', () => {
-			if (self.groupSettingInstance) self.groupSettingInstance.processDraggables()
 			let validGrpset = false
 			if (self.q.type == 'custom-groupset') {
 				// groupset is assigned
@@ -93,11 +94,10 @@ async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 		],
 		callback: async v => {
 			if (v == 'group') {
-				await makeGroupUI()
+				await makeGroupUI(self, groupsDiv)
 			} else {
 				clearGroupset(self)
 				groupsDiv.style('display', 'none')
-				draggablesDiv.style('display', 'none')
 				applyRow.select('#applySpan').style('display', 'none')
 			}
 		}
@@ -113,26 +113,166 @@ async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 	}
 
 	const selected = radios.inputs.filter(d => d.checked)
-	if (selected.property('value') == 'group') await makeGroupUI()
+	if (selected.property('value') == 'group') await makeGroupUI(self, groupsDiv)
+}
 
-	// make radio buttons for grouping variants
-	async function makeGroupUI() {
-		self.q.type = 'custom-groupset'
-		await makeGroupsetDraggables()
-		applyRow.select('#applySpan').style('display', 'inline')
+// make UI for grouping variants
+async function makeGroupUI(self, div) {
+	div.style('display', 'block')
+	div.selectAll('*').remove()
+
+	// filter table
+	const filterTableDiv = div
+		.append('div')
+		.attr('id', 'filterTableDiv')
+		.style('margin-left', '15px')
+		.style('margin-bottom', '10px')
+	// row of buttons
+	const btnRow = div.append('div').attr('id', 'btnRow')
+	// btn 1: prompt to add new group
+	const addNewGroupBtnHolder = btnRow.append('span').style('margin-right', '20px')
+
+	self.q.type = 'custom-groupset'
+	if (!self.q.customset?.groups) self.q.customset = { groups: [] }
+	const groups = self.q.customset.groups
+
+	// prompt button is an instance to a blank filter, can only make the button after state is filled
+	// but not in instance.init()
+	// create "Add new group" button as needed
+	const filterPrompt = await filterPromptInit({
+		holder: addNewGroupBtnHolder,
+		vocab: {
+			terms: self.term.childTerms,
+			parent_termdbConfig: self.vocabApi.termdbConfig
+		},
+		emptyLabel: 'Add group',
+		//termdbConfig: self.vocabApi.termdbConfig,
+		callback: f => {
+			const filter = getNormalRoot(f)
+			addNewGroup(filter, groups)
+			makeGroupUI(self, div)
+		},
+		debug: self.opts.debug
+	})
+
+	// filterPrompt.main() always empties the filterUiRoot data
+	filterPrompt.main(getMassFilter()) // provide mass filter to limit the term tree
+
+	if (!groups.length) {
+		// no groups, hide table
+		filterTableDiv.style('display', 'none')
+		return
 	}
 
-	// function for making groupset draggables
-	async function makeGroupsetDraggables() {
-		draggablesDiv.style('display', 'inline-block')
-		draggablesDiv.selectAll('*').remove()
-		self.groupSettingInstance = new GroupSettingMethods(self, {
-			type: 'filter',
-			holder: draggablesDiv,
-			hideApply: true
-		})
-		await self.groupSettingInstance.main()
+	// clear table and populate rows
+	filterTableDiv.style('display', '').selectAll('*').remove()
+	const tableArg = {
+		div: filterTableDiv,
+		columns: [
+			{}, // blank column to add delete buttons
+			{
+				label: 'NAME',
+				editCallback: async (i, cell) => {
+					const newName = cell.value
+					const index = groups.findIndex(group => group.name == newName)
+					if (index != -1) {
+						alert(`Group named ${newName} already exists`)
+						makeGroupUI(self, div)
+					} else {
+						groups[i].name = newName
+						makeGroupUI(self, div)
+					}
+				}
+			},
+			{
+				label: 'COLOR',
+				editCallback: async (i, cell) => {
+					groups[i].color = cell.color
+					makeGroupUI(self, div)
+				}
+			},
+			{ label: '#SAMPLE' },
+			{ label: 'FILTER' }
+		],
+		rows: [],
+		striped: false // no alternating row bg color so delete button appears more visible
 	}
+
+	for (const g of groups) {
+		tableArg.rows.push([
+			{}, // blank cell to add delete button
+			{ value: g.name }, // to allow click to show <input>
+			{ color: g.color },
+			{ value: 'n=' + (await self.vocabApi.getFilteredSampleCount(g.filter)) },
+			{} // blank cell to show filter ui
+		])
+	}
+
+	renderTable(tableArg)
+
+	// after rendering table, iterate over rows again to fill cells with control elements
+	for (const [i, row] of tableArg.rows.entries()) {
+		// add delete button in 1st cell
+		row[0].__td
+			.append('div')
+			.attr('class', 'sja_menuoption')
+			.style('padding', '1px 6px')
+			.html('&times;')
+			.on('click', () => {
+				groups.splice(i, 1)
+				makeGroupUI(self, div)
+			})
+
+		// create fitlter ui in its cell
+		const group = groups[i]
+		//console.log('group.filter:', structuredClone(group.filter))
+		filterInit({
+			holder: row[4].__td,
+			vocab: {
+				terms: self.term.childTerms,
+				parent_termdbConfig: self.vocabApi.termdbConfig
+			},
+			//termdbConfig: self.vocabApi.termdbConfig,
+			callback: f => {
+				if (!f || f.lst.length == 0) {
+					// blank filter (user removed last tvs from this filter), delete this element from groups[]
+					const i = groups.findIndex(g => g.name == group.name)
+					groups.splice(i, 1)
+				} else {
+					// update filter
+					group.filter = f
+				}
+				makeGroupUI(self, div)
+			}
+		}).main(group.filter)
+	}
+
+	//applyRow.select('#applySpan').style('display', 'inline')
+}
+
+function addNewGroup(filter, groups) {
+	if (!groups) throw 'groups is missing'
+	const base = 'New group'
+	let name = base
+	for (let i = 0; ; i++) {
+		name = base + (i === 0 ? '' : ' ' + i)
+		if (!groups.find(g => g.name === name)) break
+	}
+	const newGroup = {
+		name,
+		type: 'filter',
+		filter,
+		color: rgb(colorScale(groups.length)).formatHex()
+	}
+	groups.push(newGroup)
+}
+
+function getMassFilter() {
+	if (!self.filter || self.filter.lst.length == 0) {
+		return { type: 'tvslst', in: true, join: '', lst: [] }
+	}
+	const f = getNormalRoot(structuredClone(self.filter)) // strip tag
+	return f
 }
 
 function clearGroupset(self) {
