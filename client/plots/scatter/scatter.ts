@@ -15,6 +15,7 @@ import { controlsInit } from '../controls'
 import { downloadSingleSVG } from '../../common/svg.download.js'
 import { select2Terms } from '#dom/select2Terms'
 import type { MassState } from '../../../client/mass/types/mass.js'
+import { getGlobalTermFilter } from '#shared/filter.js'
 
 export class Scatter extends RxComponentInner {
 	config: any
@@ -61,10 +62,12 @@ export class Scatter extends RxComponentInner {
 			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
 		}
 		const parentConfig: any = appState.plots.find(p => p.id === this.parentId)
+		let termfilter = appState.termfilter
+		if (parentConfig?.filter) termfilter = getGlobalTermFilter(appState, parentConfig.filter)
 
 		return {
 			config,
-			termfilter: parentConfig?.filter ? { filter: parentConfig.filter } : appState.termfilter,
+			termfilter,
 			matrixplots: appState.termdbConfig.matrixplots,
 			vocab: appState.vocab,
 			termdbConfig: appState.termdbConfig,

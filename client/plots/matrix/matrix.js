@@ -15,6 +15,7 @@ import svgLegend from '#dom/svg.legend'
 import { mclass, dt2label, morigin, dtsnvindel, dtcnv } from '#shared/common.js'
 import { select } from 'd3-selection'
 import { sayerror } from '#dom'
+import { getGlobalTermFilter } from '#shared/filter.js'
 
 export class Matrix {
 	constructor(opts) {
@@ -132,11 +133,13 @@ export class Matrix {
 		this.prevFilter0 = this.state?.filter0 // will be used to detect cohort change
 
 		const parentConfig = appState.plots.find(p => p.id === this.parentId)
+		let termfilter = appState.termfilter
+		if (parentConfig?.filter) termfilter = getGlobalTermFilter(appState, parentConfig.filter)
 
 		return {
 			isVisible: true,
 			config,
-			filter: parentConfig?.filter || appState.termfilter.filter,
+			filter: termfilter.filter,
 			filter0, // read-only, invisible filter currently only used for gdc dataset
 			hasVerifiedToken: this.app.vocabApi.hasVerifiedToken(),
 			tokenVerificationMessage: this.app.vocabApi.tokenVerificationMessage,

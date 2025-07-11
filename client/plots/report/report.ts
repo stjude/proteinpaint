@@ -62,7 +62,7 @@ export class Report extends RxComponentInner {
 	}
 
 	getFilter() {
-		return getCategoricalTermFilter(this.config.filterTWs, this.settings, null, this.state.termfilter.filter)
+		return getCategoricalTermFilter(this.config.filterTWs, this.settings, null)
 	}
 
 	getState(appState: any) {

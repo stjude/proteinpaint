@@ -41,9 +41,6 @@ function getList(samplesPerFilter, filtersData, tw) {
 	values.sort((v1: any, v2: any) => v1.label.localeCompare(v2.label))
 	const twSamples = samplesPerFilter[tw.term.id]
 	const data: any[] = []
-	//if(!twSamples)
-	//	data = Object.values(filtersData.samples)
-	//else
 	for (const sample of twSamples) {
 		data.push(filtersData.samples[sample])
 	}

@@ -293,3 +293,8 @@ export function getCategoricalTermFilter(filterTWs, values, tw, globalFilter) {
 			})
 	}
 }
+
+export function getGlobalTermFilter(appState, filter) {
+	if (appState.termfilter.filter) filter = filterJoin([appState.termfilter.filter, filter])
+	return { filter, filter0: appState.termfilter.filter0 }
+}
