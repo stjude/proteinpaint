@@ -137,6 +137,7 @@ tape(`initialization`, async test => {
 			Object.keys(authApi).sort(),
 			[
 				'canDisplaySampleIds',
+				'credEmbedders',
 				'getDsAuth',
 				'getHealth',
 				'getJwtPayload',
