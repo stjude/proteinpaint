@@ -6,6 +6,29 @@ import mm from 'micromatch'
 
 const { isMatch } = mm
 
+const defaultApiMethods = {
+	maySetAuthRoutes, // declared below
+	getJwtPayload, // declared below
+	canDisplaySampleIds: (req, ds) => {
+		if (!ds.cohort.termdb.displaySampleIds) return false
+		return authApi.userCanAccess(req, ds)
+	},
+	// these open-acces, default methods may be replaced by maySetAuthRoutes()
+	getDsAuth: (req = undefined) => [],
+	getNonsensitiveInfo: _ => {
+		forbiddenRoutes: []
+	},
+	userCanAccess: () => true,
+	getRequiredCredForDsEmbedder: (dslabel = undefined, embedder = undefined) => undefined,
+	getPayloadFromHeaderAuth: () => ({}),
+	getHealth: () => undefined,
+	// credentialed embedders, using an array which can be frozen with Object.freeze(), unlike a Set()
+	credEmbedders: []
+}
+
+// these may be overriden within maySetAuthRoutes()
+export const authApi = Object.assign({}, defaultApiMethods)
+
 // serverconfig.dsCredentials
 //
 // DsCredentials = {
@@ -86,6 +109,9 @@ async function validateDsCredentials(creds, serverconfig) {
 		const json = await fs.readFile(creds[key], 'utf8')
 		creds[key] = JSON.parse(json)
 	}
+	// track which domains are allowed to embed proteinpaint with credentials,
+	// to be used by app middleware to set CORS response headers
+	const credEmbedders = new Set()
 
 	for (const dslabel in creds) {
 		// if (dslabel[0] == '#') continue
@@ -100,6 +126,8 @@ async function validateDsCredentials(creds, serverconfig) {
 		for (const serverRoute in ds) {
 			const route = ds[serverRoute]
 			for (const embedderHost in route) {
+				credEmbedders.add(embedderHost)
+
 				// create a copy from the original in case it's shared across different dslabels/routes/embedders,
 				// since additional properties may be added to the object that is specific to a dslabel/route/embedder
 				route[embedderHost] = JSON.parse(JSON.stringify(route[embedderHost]))
@@ -131,6 +159,8 @@ async function validateDsCredentials(creds, serverconfig) {
 			}
 		}
 	}
+
+	return credEmbedders
 }
 
 function mayReshapeDsCredentials(creds) {
@@ -227,7 +257,9 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 		return
 	}
 	try {
-		validateDsCredentials(creds, serverconfig)
+		const credEmbedders = await validateDsCredentials(creds, serverconfig)
+		authApi.credEmbedders.push(...credEmbedders)
+		Object.freeze(authApi.credEmbedders)
 	} catch (e) {
 		throw e
 	}
@@ -828,23 +860,3 @@ function checkIPaddress(req, ip, cred) {
 	if (req.ip != ip && req.ips?.[0] != ip && req.connection?.remoteAddress != ip)
 		throw `Your connection has changed, please refresh your page or sign in again.`
 }
-
-const defaultApiMethods = {
-	maySetAuthRoutes,
-	getJwtPayload,
-	canDisplaySampleIds: (req, ds) => {
-		if (!ds.cohort.termdb.displaySampleIds) return false
-		return authApi.userCanAccess(req, ds)
-	},
-	// these open-acces, default methods may be replaced by maySetAuthRoutes()
-	getDsAuth: (req = undefined) => [],
-	getNonsensitiveInfo: _ => {
-		forbiddenRoutes: []
-	},
-	userCanAccess: () => true,
-	getRequiredCredForDsEmbedder: (dslabel = undefined, embedder = undefined) => undefined,
-	getPayloadFromHeaderAuth: () => ({}),
-	getHealth: () => undefined
-}
-
-export const authApi = Object.assign({}, defaultApiMethods)
