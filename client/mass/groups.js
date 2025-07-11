@@ -524,7 +524,7 @@ async function updateUI(self) {
 	const tableArg = {
 		div: self.dom.filterTableDiv,
 		columns: [
-			{}, // blank column to add delete button
+			{}, // blank column to add delete buttons
 			{
 				label: 'NAME',
 				editCallback: async (i, cell) => {
@@ -554,7 +554,8 @@ async function updateUI(self) {
 			{ label: '#SAMPLE' },
 			{ label: 'FILTER' }
 		],
-		rows: []
+		rows: [],
+		striped: false // no alternating row bg color so delete button appears more visible
 	}
 	for (const g of groups) {
 		tableArg.rows.push([
@@ -593,8 +594,10 @@ async function updateUI(self) {
 	for (const [i, row] of tableArg.rows.entries()) {
 		// add delete button in 1st cell
 		row[0].__td
-			.text('❌')
-			.style('cursor', 'pointer')
+			.append('div')
+			.attr('class', 'sja_menuoption')
+			.style('padding', '1px 6px')
+			.html('&times;')
 			.on('click', () => {
 				const group = groups[i]
 				self.app.vocabApi.deleteGroup(group.name)
