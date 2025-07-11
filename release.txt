@@ -1,2 +1,1 @@
-Fixes:
-- improve appearance of delete button in mass groups table
+

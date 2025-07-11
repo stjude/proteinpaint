@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Fixes:
+- improve appearance of delete button in mass groups table
+
 
 ## 2.135.2
 
