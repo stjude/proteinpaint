@@ -165,7 +165,7 @@ if (serverconfig.debugmode && !serverconfig.binpath.includes('sjcrh/')) {
 
 if (serverconfig.allow_env_overrides) {
 	if (process.env.PP_URL) {
-		serverconfig.URL = process.env.URL
+		serverconfig.URL = process.env.PP_URL
 	}
 
 	if ('PP_BASEPATH' in process.env) {
@@ -184,6 +184,21 @@ if (serverconfig.allow_env_overrides) {
 	if ('PP_BACKEND_ONLY' in process.env) {
 		serverconfig.backend_only = +process.env.PP_BACKEND_ONLY === 1 || process.env.PP_BACKEND_ONLY === 'true'
 	}
+}
+
+// detect or set up whitelisted embedder hostnames to support;
+// historically, the single prod instance at proteinpaint.stjude.org was allowed to be embedded anywhere;
+// with increasing numbers of PP servers supporting different portals, the `allowedEmbedders[]` option
+// improves security for more restrictive prod instances such as GDC, or maybe later,
+// for the survivorship server instance to allow only vizcom as embedder
+if (!serverconfig.allowedEmbedders) {
+	serverconfig.allowedEmbedders = !serverconfig.backend_only
+		? ['*'] // historical default to allow any embedder
+		: serverconfig.URL
+		? [serverconfig.URL.split('://')[1]] // if serverconfig.URL is set for backend_only containers, use it as the default embedder;
+		: [] // otherwise, do not specify a default embedder
+} else if (!Array.isArray(serverconfig.allowedEmbedders)) {
+	throw `serverconfig.allowedEmbedders must be an array`
 }
 
 if (serverconfig.URL?.endsWith('/')) serverconfig.URL = serverconfig.URL.slice(0, -1)

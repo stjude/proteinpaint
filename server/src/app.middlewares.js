@@ -6,8 +6,8 @@ import basicAuth from 'express-basic-auth'
 import compression from 'compression'
 import url from 'url'
 import serverconfig from './serverconfig.js'
-import { authApi } from './auth.js'
 import * as validator from './validator.js'
+import { authApi } from './auth'
 import { decode as urlJsonDecode } from '#shared/urljson.js'
 import jsonwebtoken from 'jsonwebtoken'
 import fs from 'fs'
@@ -16,6 +16,7 @@ import { ReqResCache } from '@sjcrh/augen'
 
 const basepath = serverconfig.basepath || ''
 
+// NOTE: auth middleware is set in auth.js
 export function setAppMiddlewares(app, doneLoading) {
 	app.use(setHeaders)
 
@@ -117,19 +118,6 @@ export function setAppMiddlewares(app, doneLoading) {
 			req.query.__protected__.sessionid = req.cookies.sessionid
 		}
 		Object.freeze(req.query.__protected__)
-
-		res.header(
-			'Access-Control-Allow-Origin',
-			req.get('origin') || req.get('referrer') || req.protocol + '://' + req.get('host').split(':')[0] || '*'
-		)
-		res.header('Access-Control-Allow-Credentials', true)
-
-		if (req.method == 'GET' && (!req.path.includes('.') || req.path.endsWith('proteinpaint.js'))) {
-			// immutable response before expiration, client must revalidate after max-age;
-			// by convention, any path that has a dot will be treated as
-			// a static file and not handled here with cache-control
-			res.header('Cache-control', `immutable,max-age=${serverconfig.responseMaxAge || 1}`)
-		}
 		next()
 	})
 
@@ -154,28 +142,54 @@ function log(req) {
 }
 
 function setHeaders(req, res, next) {
+	// indicates that caching should be unique to each request origin, i.e., include the origin when computing the cache key
 	res.header('Vary', 'Origin')
-	res.header(
-		'Access-Control-Allow-Origin',
-		// TODO: for protected routes, should defer to auth middleware to only set this for authorized embedders
-		req.get('origin') || req.get('referrer') || req.protocol + '://' + req.get('host').split(':')[0] || '*'
-	)
+
+	// limit the allowed request methods for the PP server
 	res.header('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS, HEAD')
-	// embedder sites may use HTTP 2.0 which requires lowercased header key names
-	// must support mixed casing and all lowercased for compatibility
-	res.header(
-		'Access-Control-Allow-Headers',
-		'Origin, X-Requested-With, Content-Type, Accept, Authorization' +
-			', origin, x-requested-with, content-type, accept, authorization' +
-			', X-Auth-Token, X-Ds-Access-Token, X-SjPPDs-Sessionid' +
-			', x-auth-token, x-ds-access-token, x-sjppds-sessionid'
-	)
-	res.header('Access-Control-Allow-Credentials', true)
-	res.header('Document-Policy', 'js-profiling')
+
+	const origin = req.get('origin') || req.get('referrer') || req.protocol + '://' + req.get('host')
+	const getMatchingHost = hostname => hostname == '*' || origin.includes(`://${hostname}`)
+	// detect if the request origin has a matching entry in serverconfig.dsCredentials
+	const credEmbedder = authApi.credEmbedders.find(getMatchingHost)
+	// detect if the request origin is allowed as an embedders
+	// note that serverconfig.js sets [*] as default serverconfig.allowedEmbedders, if not present
+	const matchedHost = serverconfig.allowedEmbedders.find(getMatchingHost)
+
+	if (credEmbedder || matchedHost) {
+		// only set these CORS-related headers for credentialed or allowed embedders
+		const host = matchedHost || credEmbedder
+		res.header('Access-Control-Allow-Origin', host === '*' ? origin : `${req.protocol}://${host}`)
+		// embedder sites may use HTTP 2.0 which requires lowercased header key names
+		// must support mixed casing and all lowercased for compatibility
+		res.header(
+			'Access-Control-Allow-Headers',
+			'Origin, X-Requested-With, Content-Type, Accept, Authorization' +
+				', origin, x-requested-with, content-type, accept, authorization' +
+				', X-Auth-Token, X-Ds-Access-Token, X-SjPPDs-Sessionid' +
+				', x-auth-token, x-ds-access-token, x-sjppds-sessionid'
+		)
+	}
+
+	if (credEmbedder) {
+		// allow credentialed embedders to submit authorization header
+		res.header('Access-Control-Allow-Credentials', true)
+	}
+
+	if (serverconfig.debugmode) {
+		// may allow a browser to execute js code that samples performance; used by Chrome devtools, maybe puppeteer
+		res.header('Document-Policy', 'js-profiling')
+	}
+
+	if (req.method == 'GET' && (!req.path.includes('.') || req.path.endsWith('proteinpaint.js'))) {
+		// immutable response before expiration, client must revalidate after max-age;
+		// by convention, any path that has a dot will be treated as
+		// a static file and not handled here with cache-control
+		res.header('Cache-control', `immutable,max-age=${serverconfig.responseMaxAge || 1}`)
+	}
+
 	if (req.method == 'OPTIONS') {
-		/* TODO: may activate letting auth middleware handle OPTIONS request with authorization/custom headers
-		if (req.headers?.['access-control-request-headers']?.split(',').includes('authorization')) next() // allow auth middleware to handle
-		else*/
+		// req.headers?.['access-control-request-headers'] is addressed by setting Access-Control-Allow-Headers above
 		res.send({ status: 'ok' })
 	} else {
 		next()
