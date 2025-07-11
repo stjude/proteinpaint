@@ -172,8 +172,13 @@ export default class Disco {
 			const legendRenderer = new LegendRenderer(this.viewModel.cappedCnvMaxAbsValue, settings.label.fontSize)
 
 			const discoRenderer = new DiscoRenderer(
+<<<<<<< HEAD
 				this.getRingRenderers(this.viewModel.settings, this.viewModel, this.discoInteractions.geneClickListener),
 				legendRenderer
+=======
+				this.getRingRenderers(settings, this.viewModel, this.discoInteractions.geneClickListener),
+				legendRenderer, this.app.opts.state.args.genome
+>>>>>>> 6729b0116 (Fixed merge errors and added svgraph as a tooltip)
 			)
 
 			discoRenderer.render(svgDiv, this.viewModel)
