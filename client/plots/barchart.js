@@ -11,6 +11,7 @@ import { fillTermWrapper } from '#termsetting'
 import { getColors, mclass, plotColor } from '#shared/common.js'
 import { isNumericTerm } from '#shared/terms.js'
 import { roundValueAuto } from '#shared/roundValue.js'
+import { getGlobalTermFilter } from '#shared/filter.js'
 
 export class Barchart {
 	constructor(opts) {
@@ -286,13 +287,13 @@ export class Barchart {
 			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
 		}
 		const parentConfig = appState.plots.find(p => p.id === this.parentId)
+		let termfilter = appState.termfilter
+		if (parentConfig?.filter) termfilter = getGlobalTermFilter(appState, parentConfig.filter)
 		return {
 			nav: {
 				header_mode: appState.nav.header_mode
 			},
-			termfilter: parentConfig?.filter
-				? { filter: parentConfig.filter, filter0: appState.termfilter.filter0 }
-				: appState.termfilter,
+			termfilter,
 			config: Object.assign({}, config, {
 				settings: {
 					barchart: config.settings.barchart,

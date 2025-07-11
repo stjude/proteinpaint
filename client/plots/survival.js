@@ -17,6 +17,7 @@ import { getSeriesTip } from '#dom/svgSeriesTips'
 import { renderAtRiskG } from '#dom/renderAtRisk'
 import { renderPvalues } from '#dom/renderPvalueTable'
 import { downloadChart } from '#common/svg.download'
+import { getGlobalTermFilter } from '#shared/filter.js'
 
 class TdbSurvival {
 	constructor(opts) {
@@ -207,13 +208,15 @@ class TdbSurvival {
 			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
 		}
 		const parentConfig = appState.plots.find(p => p.id === this.parentId)
+		let termfilter = appState.termfilter
+		if (parentConfig?.filter) termfilter = getGlobalTermFilter(appState, parentConfig.filter)
 
 		return {
 			isVisible: config.term.term.type == 'survival' || (config.term2 && config.term2.term.type == 'survival'),
 			genome: this.app.vocabApi.vocab.genome,
 			dslabel: this.app.vocabApi.vocab.dslabel,
 			activeCohort: appState.activeCohort,
-			termfilter: parentConfig?.filter ? { filter: parentConfig.filter } : appState.termfilter,
+			termfilter,
 
 			config: {
 				term: JSON.parse(JSON.stringify(config.term)),
