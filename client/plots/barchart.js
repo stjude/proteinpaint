@@ -290,7 +290,9 @@ export class Barchart {
 			nav: {
 				header_mode: appState.nav.header_mode
 			},
-			termfilter: parentConfig?.filter ? { filter: parentConfig.filter } : appState.termfilter,
+			termfilter: parentConfig?.filter
+				? { filter: parentConfig.filter, filter0: appState.termfilter.filter0 }
+				: appState.termfilter,
 			config: Object.assign({}, config, {
 				settings: {
 					barchart: config.settings.barchart,
