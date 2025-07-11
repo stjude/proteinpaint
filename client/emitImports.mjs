@@ -30,12 +30,11 @@ export function getCodeText(namePattern = '*.spec.*') {
 		// in dev getCodeText() is called without an argument in client/esbuild.config.mjs and can be more loose
 		if (arguments.length) pattern = '*@(unit|integration).spec.*'
 	}
-	const specs = fs
-		.globSync(`./**/test/${pattern}`, { cwd: __dirname, exclude })
-		.map(file => ({ file, rel: `../${file}` }))
+	const testPattern = `**/test/${pattern}`
+	const specs = fs.globSync(testPattern, { cwd: __dirname, exclude }).map(file => ({ file, rel: `../${file}` }))
 	const sharedUtils = path.join(__dirname, '../shared/utils')
 	const sharedSpecs = fs
-		.globSync(`./**/test/${pattern}`, { cwd: sharedUtils, exclude })
+		.globSync(testPattern, { cwd: sharedUtils, exclude })
 		.map(file => ({ file: `shared/utils/${file}`, rel: `../../shared/utils/${file}` }))
 	specs.push(...sharedSpecs)
 	specs.sort((a, b) => {
