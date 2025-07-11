@@ -9,10 +9,10 @@ export class DiscoRenderer {
 	private legendRenderer: LegendRenderer
 	private fusionRenderer: FusionRenderer
 
-	constructor(renders: Map<RingType, IRenderer>, legendRenderer: LegendRenderer) {
+	constructor(renders: Map<RingType, IRenderer>, legendRenderer: LegendRenderer, genome: any) {
 		this.renders = renders
 		this.legendRenderer = legendRenderer
-		this.fusionRenderer = new FusionRenderer()
+		this.fusionRenderer = new FusionRenderer(genome)
 	}
 
 	render(holder: any, viewModel: ViewModel) {
