@@ -9,39 +9,12 @@ import { read_file, file_is_readable } from '#src/utils.js'
 
 /**
  * General GRIN2 analysis handler
- * Processes user-provided snvindel, CNV, and fusion files and performs GRIN2 analysis
+ * Processes user-provided snvindel, CNV, and fusion filters and performs GRIN2 analysis
  *
  * Data Flow:
  * 1. Extract samples via the cohort filter
  * 2. Process and validate file paths for the JSON files:
  *    - Each sample has a JSON file containing mutation data (mlst array)
- *    - Expected file structure:
- *      - Each sample's JSON file contains an array of mutation entries (mlst)
- *      - Each entry in mlst[] can have various properties like:
- *        - `chromosome` or `chr`: Chromosome name (e.g., "chr1")
- *        - `start` or `position`: Start position of the mutation
- *        - `end` or `stop`: End position of the mutation
- *        - `type`: Type of mutation (e.g., "snv", "indel", "cnv_gain", "cnv_loss", "fusion")
- *        - `log2Ratio`: For CNVs, indicates copy number change
- *        - `fusionType`: For fusions, indicates type (e.g., "gene-gene")
- *        - `confidence`: For fusions, indicates confidence score (0-1)
- *      - Example JSON structure:
- *        ```json
- *        {
- *          [
- *            {
- *              "chromosome": "chr1",
- *              "dna_assay": "wxs",
- *              "start": 123456,
- *              "end": 123789,
- *              "type": "snv",
- *              "log2Ratio": null,
- *              "fusionType": null,
- *              "confidence": null
- *            }
- *          ]
- *        }
- *        ```
  *    - Each file is processed to extract lesions in the format:
  *      [ID, chrom, loc.start, loc.end, lsn.type]
  *        - ID: Unique sample ID
@@ -118,11 +91,24 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 	mayLog('[GRIN2] Processing sample data...')
 	const processingStartTime = Date.now()
 
-	const lesionData = await processSampleData(samples, ds, request)
+	const { lesionData, processingSummary } = await processSampleData(samples, ds, request)
 
 	const processingTime = Date.now() - processingStartTime
 	const processingTimeToPrint = Math.round(processingTime / 1000)
 	mayLog(`[GRIN2] Data processing took ${processingTimeToPrint} seconds`)
+	mayLog(
+		`[GRIN2] Processing summary: ${processingSummary?.successfulSamples ?? 0}/${
+			processingSummary?.totalSamples ?? samples.length
+		} samples processed successfully`
+	)
+
+	if (processingSummary && processingSummary.failedSamples > 0) {
+		mayLog(`[GRIN2] Warning: ${processingSummary.failedSamples} samples failed to process`)
+	}
+
+	if (lesionData.length === 0) {
+		throw new Error('No lesions found after processing all samples. Check filter criteria and input data.')
+	}
 
 	// Step 3: Prepare input for Python script
 	const pyInput = {
@@ -133,8 +119,11 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 
 	// Build chromosome list from genome reference
 	for (const c in g.majorchr) {
-		// Skip chrM if needed
-		if (c.toLowerCase() === 'chrm') continue
+		// List is short so a small penalty for accessing the flag in the loop
+		if (ds.queries.singleSampleMutation?.discoPlot?.skipChrM) {
+			// Skip chrM; this property is set in gdc ds but still assess it to avoid hardcoding the logic, in case code maybe reused for non-gdc ds
+			if (c.toLowerCase() == 'chrm') continue
+		}
 		pyInput.chromosomelist[c] = g.majorchr[c]
 	}
 
@@ -159,7 +148,7 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 	const resultData = JSON.parse(pyResult.stdout)
 
 	// Validate Python script output
-	if (!resultData.png || !Array.isArray(resultData.png) || !resultData.png[0]) {
+	if (!resultData?.png?.[0]) {
 		throw new Error('Invalid Python output: missing PNG data')
 	}
 
@@ -175,7 +164,8 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 			processingTime: processingTimeToPrint,
 			grin2Time: grin2AnalysisTimeToPrint,
 			totalTime: totalTime
-		}
+		},
+		processingSummary: processingSummary
 	}
 
 	return response
@@ -184,11 +174,23 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 /**
  * Process sample data by reading per-sample JSON files and converting to lesion format
  * Each sample has a JSON file containing mutation data (mlst array)
- * Returns array of lesions: [ID, chrom, loc.start, loc.end, lsn.type]
+ * Returns a string array of lesions: [ID, chrom, loc.start, loc.end, lsn.type] and processing summary
  */
-async function processSampleData(samples: any[], ds: any, request: GRIN2Request): Promise<any[]> {
-	const lesions: any[] = []
+async function processSampleData(
+	samples: any[],
+	ds: any,
+	request: GRIN2Request
+): Promise<{ lesionData: string[]; processingSummary: GRIN2Response['processingSummary'] }> {
+	const lesions: string[] = []
 	let lesionId = 1
+
+	// Initialize processing summary
+	const processingSummary: GRIN2Response['processingSummary'] = {
+		totalSamples: samples.length,
+		successfulSamples: 0,
+		failedSamples: 0,
+		failedFiles: []
+	}
 
 	mayLog(`[GRIN2] Processing JSON files for ${samples.length.toLocaleString()} samples`)
 
@@ -221,54 +223,68 @@ async function processSampleData(samples: any[], ds: any, request: GRIN2Request)
 	}
 
 	mayLog(`[GRIN2] Total lesions processed: ${lesions.length.toLocaleString()}`)
-	return lesions
+	return {
+		lesionData: lesions,
+		processingSummary: processingSummary
+	}
 }
 
 /**
  * Process a single sample's mlst array and extract lesions based on filtering options
+ * Iterate through mlst and handle each entry based on its data type (dt)
  */
 async function processSampleMlst(
 	sampleName: string,
 	mlst: any[],
 	startId: number,
 	request: GRIN2Request
-): Promise<any[]> {
+): Promise<string[]> {
 	const lesions: any[] = []
-	let currentId = startId
 
-	// Filter entries in mlst[] based on snvindelOptions (for SNV/indel mutations)
-	if (request.snvindelOptions) {
-		const snvIndelLesions = filterSnvIndelEntries(sampleName, mlst, currentId, request.snvindelOptions)
-		lesions.push(...snvIndelLesions)
-		currentId += snvIndelLesions.length
-	}
+	// Process each entry in mlst based on its data type
+	for (const m of mlst) {
+		switch (m.dt) {
+			case 'snvindel': {
+				// TODO: Replace with actual constant for SNV/indel data type
+				if (!request.snvindelOptions) break // option missing, will skip this
+				const snvIndelLesion = filterAndConvertSnvIndel(sampleName, m, request.snvindelOptions)
+				if (snvIndelLesion) lesions.push(snvIndelLesion)
+				break
+			}
+			case 'cnv': {
+				// TODO: Replace with actual constant for CNV data type
+				if (!request.cnvOptions) break // option missing, will skip this
+				const cnvLesion = filterAndConvertCnv(sampleName, m, request.cnvOptions)
+				if (cnvLesion) lesions.push(cnvLesion)
+				break
+			}
+			case 'fusion': {
+				// TODO: Replace with actual constant for fusion data type
+				if (!request.fusionOptions) break // option missing, will skip this
+				const fusionLesion = filterAndConvertFusion(sampleName, m, request.fusionOptions)
+				if (fusionLesion) lesions.push(fusionLesion)
+				break
+			}
 
-	// Filter entries in mlst[] based on cnvOptions (for copy number variations)
-	if (request.cnvOptions) {
-		const cnvLesions = filterCnvEntries(sampleName, mlst, currentId, request.cnvOptions)
-		lesions.push(...cnvLesions)
-		currentId += cnvLesions.length
-	}
-
-	// Filter entries in mlst[] based on fusionOptions (for structural variants/fusions)
-	if (request.fusionOptions) {
-		const fusionLesions = filterFusionEntries(sampleName, mlst, currentId, request.fusionOptions)
-		lesions.push(...fusionLesions)
-		currentId += fusionLesions.length
+			// Add other data types as needed
+			default:
+				mayLog(`[GRIN2] Unknown data type "${m.dt}" in sample ${sampleName}, skipping entry`)
+				break
+		}
 	}
 
 	return lesions
 }
 
 /**
- * Filter SNV/indel entries from mlst based on snvindelOptions
+ * Filter and convert a single SNV/indel entry to lesion format
+ * Returns lesion array or null if filtered out
  */
-function filterSnvIndelEntries(
+function filterAndConvertSnvIndel(
 	sampleName: string,
-	mlst: any[],
-	startId: number,
+	entry: any,
 	options: GRIN2Request['snvindelOptions']
-): any[] {
+): string[] | null {
 	// Set defaults
 	const opts = {
 		minTotalDepth: options?.minTotalDepth ?? 10,
@@ -278,54 +294,32 @@ function filterSnvIndelEntries(
 		dnaAssay: options?.dnaAssay ?? 'wxs'
 	}
 
-	const lesions: any[] = []
+	// Apply filtering based on options
+	// if (entry.totalDepth && entry.totalDepth < opts.minTotalDepth) return null
+	// if (entry.altAlleleCount && entry.altAlleleCount < opts.minAltAlleleCount) return null
 
-	// Filter mlst entries for SNV/indel mutations
-	let filteredMutations = mlst.filter(entry => {
-		// TODO: Determine how to identify SNV/indel entries in mlst
-		// This depends on the actual structure of mlst entries
-
-		// Apply filtering based on options
-		if (entry.totalDepth && entry.totalDepth < opts.minTotalDepth) return false
-		if (entry.altAlleleCount && entry.altAlleleCount < opts.minAltAlleleCount) return false
-
-		// Apply consequence filter if specified
-		if (opts.consequences.length > 0 && entry.consequence && !opts.consequences.includes(entry.consequence)) {
-			return false
-		}
-
-		return true
-	})
-
-	// Apply hypermutator threshold
-	if (filteredMutations.length > opts.hyperMutator) {
-		mayLog(`[GRIN2] Sample ${sampleName} has ${filteredMutations.length} mutations, applying hypermutator filter`)
-		filteredMutations = filteredMutations.slice(0, opts.hyperMutator)
+	// Apply consequence filter if specified
+	if (opts.consequences.length > 0 && entry.consequence && !opts.consequences.includes(entry.consequence)) {
+		return null
 	}
 
-	// Convert to lesion format: [ID, chrom, loc.start, loc.end, lsn.type]
-	filteredMutations.forEach(entry => {
-		lesions.push([
-			sampleName,
-			normalizeChromosome(entry.chromosome || entry.chr),
-			String(entry.start || entry.position),
-			String(entry.end || entry.position),
-			'mutation'
-		])
-	})
+	// TODO: Implement hypermutator filter at sample level, not individual entry level
 
-	return lesions
+	// Convert to lesion format: [ID, chrom, loc.start, loc.end, lsn.type]
+	return [
+		sampleName,
+		normalizeChromosome(entry.chromosome || entry.chr),
+		String(entry.start || entry.position),
+		String(entry.end || entry.position),
+		'mutation'
+	]
 }
 
 /**
- * Filter CNV entries from mlst based on cnvOptions
+ * Filter and convert a single CNV entry to lesion format
+ * Returns lesion array or null if filtered out
  */
-function filterCnvEntries(
-	sampleName: string,
-	mlst: any[],
-	startId: number,
-	options: GRIN2Request['cnvOptions']
-): any[] {
+function filterAndConvertCnv(sampleName: string, entry: any, options: GRIN2Request['cnvOptions']): string[] | null {
 	// Set defaults
 	const opts = {
 		lossThreshold: options?.lossThreshold ?? -0.4,
@@ -336,57 +330,39 @@ function filterCnvEntries(
 		dnaAssay: options?.dnaAssay ?? 'wxs'
 	}
 
-	const lesions: any[] = []
+	// Must be either gain or loss
+	const isGain = entry.log2Ratio >= opts.gainThreshold
+	const isLoss = entry.log2Ratio <= opts.lossThreshold
+	if (!isGain && !isLoss) return null
 
-	// Filter mlst entries for CNV data
-	let filteredCnvs = mlst.filter(entry => {
-		// TODO: Determine how to identify CNV entries in mlst
-		// This depends on the actual structure of mlst entries
+	// Apply segment length filters
+	// const segmentLength = (entry.end || entry.stop) - (entry.start || entry.begin)
+	// if (opts.maxSegLength > 0 && segmentLength > opts.maxSegLength) return null
+	// if (opts.minSegLength > 0 && segmentLength < opts.minSegLength) return null
 
-		// Must be either gain or loss
-		const isGain = entry.log2Ratio >= opts.gainThreshold
-		const isLoss = entry.log2Ratio <= opts.lossThreshold
-		if (!isGain && !isLoss) return false
-
-		// Apply segment length filters
-		const segmentLength = (entry.end || entry.stop) - (entry.start || entry.begin)
-		if (opts.maxSegLength > 0 && segmentLength > opts.maxSegLength) return false
-		if (opts.minSegLength > 0 && segmentLength < opts.minSegLength) return false
-
-		return true
-	})
-
-	// Apply hypermutator threshold
-	if (filteredCnvs.length > opts.hyperMutator) {
-		mayLog(`[GRIN2] Sample ${sampleName} has ${filteredCnvs.length} CNVs, applying hypermutator filter`)
-		filteredCnvs = filteredCnvs.slice(0, opts.hyperMutator)
-	}
+	// TODO: Implement hypermutator filter at sample level, not individual entry level
 
 	// Convert to lesion format: [ID, chrom, loc.start, loc.end, lsn.type]
-	filteredCnvs.forEach(entry => {
-		const lesionType = entry.log2Ratio >= opts.gainThreshold ? 'gain' : 'loss'
+	const lesionType = entry.log2Ratio >= opts.gainThreshold ? 'gain' : 'loss'
 
-		lesions.push([
-			sampleName,
-			normalizeChromosome(entry.chromosome || entry.chr),
-			String(entry.start || entry.begin),
-			String(entry.end || entry.stop),
-			lesionType
-		])
-	})
-
-	return lesions
+	return [
+		sampleName,
+		normalizeChromosome(entry.chromosome || entry.chr),
+		String(entry.start || entry.begin),
+		String(entry.end || entry.stop),
+		lesionType
+	]
 }
 
 /**
- * Filter fusion entries from mlst based on fusionOptions
+ * Filter and convert a single fusion entry to lesion format
+ * Returns lesion array or null if filtered out
  */
-function filterFusionEntries(
+function filterAndConvertFusion(
 	sampleName: string,
-	mlst: any[],
-	startId: number,
+	entry: any,
 	options: GRIN2Request['fusionOptions']
-): any[] {
+): string[] | null {
 	// Set defaults
 	const opts = {
 		fusionTypes: options?.fusionTypes ?? ['gene-gene', 'gene-intergenic', 'readthrough'],
@@ -394,34 +370,20 @@ function filterFusionEntries(
 		dnaAssay: options?.dnaAssay ?? 'wxs'
 	}
 
-	const lesions: any[] = []
+	// Apply fusion type filter
+	if (entry.fusionType && !opts.fusionTypes.includes(entry.fusionType)) return null
 
-	// Filter mlst entries for fusion/SV data
-	const filteredFusions = mlst.filter(entry => {
-		// TODO: Determine how to identify fusion/SV entries in mlst
-		// This depends on the actual structure of mlst entries
-
-		// Apply fusion type filter
-		if (entry.fusionType && !opts.fusionTypes.includes(entry.fusionType)) return false
-
-		// Apply confidence filter
-		if (entry.confidence && entry.confidence < opts.minConfidence) return false
-
-		return true
-	})
+	// Apply confidence filter
+	if (entry.confidence && entry.confidence < opts.minConfidence) return null
 
 	// Convert to lesion format: [ID, chrom, loc.start, loc.end, lsn.type]
-	filteredFusions.forEach(entry => {
-		lesions.push([
-			sampleName,
-			normalizeChromosome(entry.chromosome || entry.chr),
-			String(entry.start || entry.position),
-			String(entry.end || entry.position),
-			'fusion'
-		])
-	})
-
-	return lesions
+	return [
+		sampleName,
+		normalizeChromosome(entry.chromosome || entry.chr),
+		String(entry.start || entry.position),
+		String(entry.end || entry.position),
+		'fusion'
+	]
 }
 
 /**

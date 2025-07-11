@@ -20,11 +20,11 @@ export type GRIN2Request = {
 	/** Filter from existing PP infrastructure */
 	filter: any // Filter object passed to get_samples(filter, ds)
 
-	/** Options for filtering MAF file content */
+	/** Options for filtering SNV/indel file content */
 	snvindelOptions?: {
-		/** Minimum total depth of returned MAF files */
+		/** Minimum total depth of returned SNV/indel files */
 		minTotalDepth?: number // Default: 10
-		/** Minimum alternate allele count of returned MAF files */
+		/** Minimum alternate allele count of returned SNV/indel files */
 		minAltAlleleCount?: number // Default: 2
 		/** String array of consequence types to include */
 		consequences?: string[]
@@ -98,6 +98,17 @@ export type GRIN2Response = {
 		grin2Time: number
 		/** Total time taken for the entire run */
 		totalTime: number
+	}
+	/** Detailed processing summary */
+	processingSummary?: {
+		totalSamples: number
+		successfulSamples: number
+		failedSamples: number
+		failedFiles: Array<{
+			sampleName: string
+			filePath: string
+			error: string
+		}>
 	}
 }
 
