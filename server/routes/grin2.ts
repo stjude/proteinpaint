@@ -304,12 +304,12 @@ function filterSnvIndelEntries(
 	}
 
 	// Convert to lesion format: [ID, chrom, loc.start, loc.end, lsn.type]
-	filteredMutations.forEach((entry, index) => {
+	filteredMutations.forEach(entry => {
 		lesions.push([
-			startId + index,
+			sampleName,
 			normalizeChromosome(entry.chromosome || entry.chr),
-			entry.start || entry.position,
-			entry.end || entry.position,
+			String(entry.start || entry.position),
+			String(entry.end || entry.position),
 			'mutation'
 		])
 	})
@@ -363,14 +363,14 @@ function filterCnvEntries(
 	}
 
 	// Convert to lesion format: [ID, chrom, loc.start, loc.end, lsn.type]
-	filteredCnvs.forEach((entry, index) => {
+	filteredCnvs.forEach(entry => {
 		const lesionType = entry.log2Ratio >= opts.gainThreshold ? 'gain' : 'loss'
 
 		lesions.push([
-			startId + index,
+			sampleName,
 			normalizeChromosome(entry.chromosome || entry.chr),
-			entry.start || entry.begin,
-			entry.end || entry.stop,
+			String(entry.start || entry.begin),
+			String(entry.end || entry.stop),
 			lesionType
 		])
 	})
@@ -411,12 +411,12 @@ function filterFusionEntries(
 	})
 
 	// Convert to lesion format: [ID, chrom, loc.start, loc.end, lsn.type]
-	filteredFusions.forEach((entry, index) => {
+	filteredFusions.forEach(entry => {
 		lesions.push([
-			startId + index,
+			sampleName,
 			normalizeChromosome(entry.chromosome || entry.chr),
-			entry.start || entry.position,
-			entry.end || entry.position,
+			String(entry.start || entry.position),
+			String(entry.end || entry.position),
 			'fusion'
 		])
 	})
