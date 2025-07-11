@@ -21,6 +21,7 @@ import { downloadChart } from '#common/svg.download'
 class TdbSurvival {
 	constructor(opts) {
 		this.type = 'survival'
+		if (opts?.parentId) this.parentId = opts.parentId
 	}
 
 	async init() {
@@ -205,12 +206,15 @@ class TdbSurvival {
 		if (!config) {
 			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
 		}
+		const parentConfig = appState.plots.find(p => p.id === this.parentId)
+
 		return {
 			isVisible: config.term.term.type == 'survival' || (config.term2 && config.term2.term.type == 'survival'),
 			genome: this.app.vocabApi.vocab.genome,
 			dslabel: this.app.vocabApi.vocab.dslabel,
 			activeCohort: appState.activeCohort,
-			termfilter: appState.termfilter,
+			termfilter: parentConfig?.filter ? { filter: parentConfig.filter } : appState.termfilter,
+
 			config: {
 				term: JSON.parse(JSON.stringify(config.term)),
 				term0: config.term0 ? JSON.parse(JSON.stringify(config.term0)) : null,

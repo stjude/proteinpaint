@@ -48,7 +48,8 @@ function getList(samplesPerFilter, filtersData, tw) {
 		data.push(filtersData.samples[sample])
 	}
 	//select samples with data for that term
-	const sampleValues = Array.from(new Set(data.map(sample => sample[tw.$id]?.value)))
+	const annotations = data.filter(s => s != undefined).map(sample => sample[tw.$id]?.value)
+	const sampleValues = Array.from(new Set(annotations))
 	for (const value of values) {
 		value.value = value.label
 		const label = value.label

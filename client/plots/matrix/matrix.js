@@ -19,6 +19,7 @@ import { sayerror } from '#dom'
 export class Matrix {
 	constructor(opts) {
 		this.type = 'matrix'
+		if (opts?.parentId) this.parentId = opts.parentId
 		this.holderTitle = 'Sample Matrix'
 		this.optionalFeatures = JSON.parse(sessionStorage.getItem('optionalFeatures') || `{}`)?.matrix || []
 		setInteractivity(this)
@@ -129,10 +130,13 @@ export class Matrix {
 		const config = appState.plots.find(p => p.id === this.id)
 		const filter0 = appState.termfilter.filter0
 		this.prevFilter0 = this.state?.filter0 // will be used to detect cohort change
+
+		const parentConfig = appState.plots.find(p => p.id === this.parentId)
+
 		return {
 			isVisible: true,
 			config,
-			filter: appState.termfilter.filter,
+			filter: parentConfig?.filter || appState.termfilter.filter,
 			filter0, // read-only, invisible filter currently only used for gdc dataset
 			hasVerifiedToken: this.app.vocabApi.hasVerifiedToken(),
 			tokenVerificationMessage: this.app.vocabApi.tokenVerificationMessage,
