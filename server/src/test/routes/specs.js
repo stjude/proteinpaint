@@ -1,7 +1,6 @@
 /* these routes are for testing only */
 import fs from 'fs'
 import path from 'path'
-import * as glob from 'glob'
 import { minimatch } from 'minimatch'
 import serverconfig from '../../serverconfig.js'
 
@@ -68,7 +67,7 @@ export function findMatchingSpecs(opts) {
 		const pattern = path.join(dir.abs, specPattern)
 		const specs =
 			getFromCache(pattern) ||
-			glob.sync(pattern, { cwd: path.join(dir.abs, `./**`) }).filter(f => !exclude || !f.includes(exclude))
+			fs.globSync(pattern, { cwd: path.join(dir.abs, `./**`) }).filter(f => !exclude || !f.includes(exclude))
 		specs.sort()
 		if (!specsCache[pattern]) specsCache[pattern] = specs
 		allSpecs.push(...specs.map(file => file.replace(dir.abs + '/', dir.rel)))

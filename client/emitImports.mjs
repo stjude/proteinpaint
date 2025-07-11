@@ -10,7 +10,6 @@
 
 import fs from 'fs'
 import path from 'path'
-import * as glob from 'glob'
 
 const cwd = process.cwd()
 const __dirname = import.meta.dirname
@@ -23,18 +22,20 @@ if (process.argv[2]) {
 export function getCodeText(namePattern = '*.spec.*') {
 	// prevent excessive imports
 	if (!namePattern.includes('.spec.')) throw `namePattern does not include '.spec'`
-	const ignore = ['dist/**', 'node_modules/**']
+	const exclude = ['dist/**', 'node_modules/**']
 	let pattern = namePattern
 	if (namePattern == '*.spec.*') {
-		ignore.push('**/_x_.*')
+		exclude.push('**/_x_.*')
 		// use a more restrictive pattern in command-line or CI where process.argv[2] is always supplied,
 		// in dev getCodeText() is called without an argument in client/esbuild.config.mjs and can be more loose
 		if (arguments.length) pattern = '*@(unit|integration).spec.*'
 	}
-	const specs = glob.sync(`./**/test/${pattern}`, { cwd: __dirname, ignore }).map(file => ({ file, rel: `../${file}` }))
+	const specs = fs
+		.globSync(`./**/test/${pattern}`, { cwd: __dirname, exclude })
+		.map(file => ({ file, rel: `../${file}` }))
 	const sharedUtils = path.join(__dirname, '../shared/utils')
-	const sharedSpecs = glob
-		.sync(`./**/test/${pattern}`, { cwd: sharedUtils, ignore })
+	const sharedSpecs = fs
+		.globSync(`./**/test/${pattern}`, { cwd: sharedUtils, exclude })
 		.map(file => ({ file: `shared/utils/${file}`, rel: `../../shared/utils/${file}` }))
 	specs.push(...sharedSpecs)
 	specs.sort((a, b) => {

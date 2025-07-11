@@ -5,7 +5,6 @@
  The allowed arguments and command-line options are listed in the ARGUMENTS section below  
 */
 
-const glob = require('glob')
 const path = require('path')
 const fs = require('fs')
 const execSync = require('child_process').execSync
@@ -109,7 +108,7 @@ const changedFiles = ex(`git diff --name-only ${opts.refCommit} HEAD`).split('\n
 
 for (const w of rootPkg.workspaces) {
 	if (opts.exclude.find(s => w.includes(s))) continue
-	const paths = glob.sync(`${w}/package.json`, { cwd })
+	const paths = fs.globSync(`${w}/package.json`, { cwd })
 	for (const pkgPath of paths) {
 		const pkgDir = pkgPath.replace('/package.json', '')
 		const hasRelevantChangedFiles = changedFiles.find(f => f.startsWith(pkgDir) && fileAffectsVersion(f)) && true

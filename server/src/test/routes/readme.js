@@ -1,6 +1,5 @@
-const glob = await import('glob')
 import path from 'path'
-import fs from 'fs/promises'
+import fs from 'fs'
 import serverconfig from '../../serverconfig.js'
 
 export default function setRoutes(app, basepath) {
@@ -12,8 +11,8 @@ export default function setRoutes(app, basepath) {
 			if (Object.keys(q).length) {
 				const file = path.join(cwd, q.file)
 				try {
-					if (await fs.stat(file)) {
-						const md = await fs.readFile(file, { encoding: 'utf8' })
+					if (await fs.promises.stat(file)) {
+						const md = await fs.promises.readFile(file, { encoding: 'utf8' })
 						res.header('content-type', 'text/markdown')
 						res.send(md)
 					}
@@ -21,21 +20,21 @@ export default function setRoutes(app, basepath) {
 					res.send({ error: `file='${file}' not found: ` + e })
 				}
 			} else {
-				const ignore = [
+				const exclude = [
 					'**/node_modules*/**/*',
 					'**/package/**/*',
 					'**/tmpbuild/**/*',
 					'**/tmppack/**/*',
 					'node_modules'
 				]
-				const readmes = glob.sync('**/*.md', { cwd, ignore })
+				const readmes = fs.globSync('**/*.md', { cwd, exclude })
 				const superModuleDir = path.join(serverconfig.binpath, '../../.git/modules/proteinpaint')
 				let parentModule = ''
 				try {
-					const stat = await fs.stat(superModuleDir)
+					const stat = await fs.promises.stat(superModuleDir)
 					if (stat) {
 						const root = path.join(serverconfig.binpath, '../..')
-						const addlReadmes = glob.sync('**/*.md', { cwd: root, ignore })
+						const addlReadmes = fs.globSync('**/*.md', { cwd: root, exclude })
 						for (const r of addlReadmes) {
 							if (!r.includes('proteinpaint/') && !readmes.includes(r)) readmes.push(path.join('..', r))
 						}
