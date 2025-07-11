@@ -53,15 +53,16 @@ export class Report extends RxComponentInner {
 	}
 
 	async replaceFilter() {
+		const filter = this.getFilter()
 		this.app.dispatch({
 			type: 'plot_edit',
 			id: this.id,
-			config: { filter: this.getFilter(), settings: { report: this.settings } } //update country and site in the report settings
+			config: { filter, settings: { report: this.settings } } //update country and site in the report settings
 		})
 	}
 
 	getFilter() {
-		return getCategoricalTermFilter(this.filterTWs, this.settings, null, this.state.termfilter.filter)
+		return getCategoricalTermFilter(this.config.filterTWs, this.settings, null, this.state.termfilter.filter)
 	}
 
 	getState(appState: any) {
@@ -82,7 +83,7 @@ export class Report extends RxComponentInner {
 		this.config = structuredClone(this.state.config)
 		this.settings = this.config.settings.report
 
-		this.fillSites()
+		this.fillFilters()
 	}
 
 	async setPlot(plot, plotsDiv) {
@@ -124,28 +125,36 @@ export class Report extends RxComponentInner {
 		}
 	}
 
-	async fillSites() {
-		if (!this.config.countryTW || !this.config.siteTW) {
+	async fillFilters() {
+		if (!this.config.filterTWs) {
 			return
 		}
-		const site = this.settings[this.config.siteTW.term.id] || ''
-		this.filterTWs = [this.config.countryTW, this.config.siteTW]
-		const filters: any = {}
-		for (const tw of this.filterTWs)
-			filters[tw.term.id] = getCategoricalTermFilter(this.filterTWs, this.settings, tw, this.state.termfilter.filter)
-		const sitesData = await this.app.vocabApi.filterTermValues({
-			terms: this.filterTWs,
-			filters
-		})
-		const siteSelect = this.view.dom.siteSelect
-		siteSelect.selectAll('option').remove()
+		let index = 0
+		for (const tw of this.config.filterTWs) {
+			const filterValue = this.settings[tw.term.id] || ''
+			const filters: any = {}
+			for (const tw of this.config.filterTWs)
+				filters[tw.term.id] = getCategoricalTermFilter(
+					this.config.filterTWs,
+					this.settings,
+					tw,
+					this.state.termfilter.filter
+				)
+			const data = await this.app.vocabApi.filterTermValues({
+				terms: this.config.filterTWs,
+				filters
+			})
+			const select = this.view.dom.filterSelects[index]
+			select.selectAll('option').remove()
 
-		for (const siteOption of sitesData[this.config.siteTW.term.id]) {
-			const option = siteSelect.append('option').attr('value', siteOption.value).text(siteOption.label)
-			option.property('disabled', siteOption.disabled)
-			if (siteOption.value === site) {
-				option.attr('selected', 'selected')
+			for (const value of data[tw.term.id]) {
+				const option = select.append('option').attr('value', value.value).text(value.label)
+				option.property('disabled', value.disabled)
+				if (value.value === filterValue) {
+					option.attr('selected', 'selected')
+				}
 			}
+			index++
 		}
 	}
 }
@@ -168,8 +177,8 @@ export async function getPlotConfig(opts, app) {
 	try {
 		const config = app.vocabApi?.termdbConfig?.plotConfigByCohort?.default?.report
 		copyMerge(plot, config, opts)
-		if (plot.countryTW) await fillTermWrapper(plot.countryTW, app.vocabApi)
-		if (plot.siteTW) await fillTermWrapper(plot.siteTW, app.vocabApi)
+		if (plot.filterTWs) for (const tw of plot.filterTWs) await fillTermWrapper(tw, app.vocabApi)
+
 		return plot
 	} catch (e) {
 		console.log(e)
