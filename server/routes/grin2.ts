@@ -5,27 +5,54 @@ import path from 'path'
 import { run_python } from '@sjcrh/proteinpaint-python'
 import { mayLog } from '#src/helpers.ts'
 import { get_samples } from '#src/termdb.sql.js'
+import { read_file, file_is_readable } from '#src/utils.js'
+
 /**
  * General GRIN2 analysis handler
- * Processes user-provided MAF, CNV, and fusion files and performs GRIN2 analysis
+ * Processes user-provided snvindel, CNV, and fusion files and performs GRIN2 analysis
  *
  * Data Flow:
  * 1. Extract samples via the cohort filter
- * 2. Process and validate file paths
- *    - MAF: TSV with columns like Chromosome, Start_Position, End_Position, etc.
- *    - CNV: SEG format with columns like Chromosome, Start, End, Log2Ratio
- *    - Fusion: TSV/CSV with columns like Gene1, Gene2, Breakpoint1, Breakpoint2
+ * 2. Process and validate file paths for the JSON files:
+ *    - Each sample has a JSON file containing mutation data (mlst array)
+ *    - Expected file structure:
+ *      - Each sample's JSON file contains an array of mutation entries (mlst)
+ *      - Each entry in mlst[] can have various properties like:
+ *        - `chromosome` or `chr`: Chromosome name (e.g., "chr1")
+ *        - `start` or `position`: Start position of the mutation
+ *        - `end` or `stop`: End position of the mutation
+ *        - `type`: Type of mutation (e.g., "snv", "indel", "cnv_gain", "cnv_loss", "fusion")
+ *        - `log2Ratio`: For CNVs, indicates copy number change
+ *        - `fusionType`: For fusions, indicates type (e.g., "gene-gene")
+ *        - `confidence`: For fusions, indicates confidence score (0-1)
+ *      - Example JSON structure:
+ *        ```json
+ *        {
+ *          [
+ *            {
+ *              "chromosome": "chr1",
+ *              "dna_assay": "wxs",
+ *              "start": 123456,
+ *              "end": 123789,
+ *              "type": "snv",
+ *              "log2Ratio": null,
+ *              "fusionType": null,
+ *              "confidence": null
+ *            }
+ *          ]
+ *        }
+ *        ```
  *    - Each file is processed to extract lesions in the format:
  *      [ID, chrom, loc.start, loc.end, lsn.type]
- *        - ID: Unique lesion ID
+ *        - ID: Unique sample ID
  *        - chrom: Chromosome name (e.g., "chr1")
  *        - loc.start: Start position of the lesion
  *        - loc.end: End position of the lesion
  *        - lsn.type: Type of lesion ("mutation", "gain", "loss", "fusion")
- * 3. Read and filter file contents based on mafOptions, cnvOptions, fusionOptions
+ * 3. Read and filter file contents based on snvindelOptions, cnvOptions, fusionOptions
  * 4. Convert filtered data to lesion format expected by Python script
  * 5. Pass lesion data to Python for GRIN2 statistical analysis and plot generation
- * 6. Return Manhattan plot as base64 string and top gene table
+ * 6. Return Manhattan plot as base64 string, top gene table, and timing information
  */
 
 export const api: RouteApi = {
@@ -45,7 +72,19 @@ export const api: RouteApi = {
 function init({ genomes }) {
 	return async (req: any, res: any): Promise<void> => {
 		try {
-			await runGrin2(genomes, req, res)
+			const request = req.query as GRIN2Request
+
+			// Get genome and dataset from request parameters
+			const g = genomes[request.genome]
+			if (!g) throw new Error('genome missing')
+
+			const ds = g.datasets?.[request.dslabel]
+			if (!ds) throw new Error('ds missing')
+
+			if (!ds.queries?.singleSampleMutation) throw new Error('singleSampleMutation query missing from dataset')
+
+			const result = await runGrin2(g, ds, request)
+			res.json(result)
 		} catch (e: any) {
 			console.error('[GRIN2] Error stack:', e.stack)
 
@@ -59,30 +98,19 @@ function init({ genomes }) {
 	}
 }
 
-async function runGrin2(genomes: any, req: any, res: any) {
+async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Response> {
 	const startTime = Date.now()
-
-	// Get genome reference (defaulting to hg38)
-	const g = genomes.hg38
-	if (!g) throw new Error('hg38 genome reference missing')
-
-	// Get dataset for cohort filtering
-	const ds = g.datasets.GDC // Whatever dataset is being used (what should I put here?)
-	if (!ds) throw new Error('Dataset missing for cohort filtering')
-
-	const request = req.query as GRIN2Request
 
 	// Step 1: Get samples using cohort infrastructure
 	mayLog('[GRIN2] Getting samples from cohort filter...')
 	const cohortStartTime = Date.now()
 
-	const samples = await get_samples(request.filter || {}, ds)
-	const sampleIds = samples.map(sample => sample.id)
+	const samples = await get_samples(request.filter, ds)
 
 	const cohortTime = Date.now() - cohortStartTime
-	mayLog(`[GRIN2] Retrieved ${sampleIds.length.toLocaleString()} samples in ${Math.round(cohortTime / 1000)} seconds`)
+	mayLog(`[GRIN2] Retrieved ${samples.length.toLocaleString()} samples in ${Math.round(cohortTime / 1000)} seconds`)
 
-	if (sampleIds.length === 0) {
+	if (samples.length === 0) {
 		throw new Error('No samples found matching the provided filter criteria')
 	}
 
@@ -90,7 +118,7 @@ async function runGrin2(genomes: any, req: any, res: any) {
 	mayLog('[GRIN2] Processing sample data...')
 	const processingStartTime = Date.now()
 
-	const lesionData = await processSampleData(sampleIds, ds, request)
+	const lesionData = await processSampleData(samples, ds, request)
 
 	const processingTime = Date.now() - processingStartTime
 	const processingTimeToPrint = Math.round(processingTime / 1000)
@@ -118,7 +146,6 @@ async function runGrin2(genomes: any, req: any, res: any) {
 
 	if (pyResult.stderr?.trim()) {
 		mayLog(`[GRIN2] Python stderr: ${pyResult.stderr}`)
-		// If there's stderr content, it might indicate an error
 		if (pyResult.stderr.includes('ERROR:')) {
 			throw new Error(`Python script error: ${pyResult.stderr}`)
 		}
@@ -151,145 +178,255 @@ async function runGrin2(genomes: any, req: any, res: any) {
 		}
 	}
 
-	res.json(response)
+	return response
 }
 
 /**
- * Process sample data from the cohort and convert to lesion format expected by Python script
- * This will query the dataset for MAF, CNV, and fusion data for the filtered samples
+ * Process sample data by reading per-sample JSON files and converting to lesion format
+ * Each sample has a JSON file containing mutation data (mlst array)
  * Returns array of lesions: [ID, chrom, loc.start, loc.end, lsn.type]
  */
-async function processSampleData(sampleIds: string[], ds: any, request: GRIN2Request): Promise<any[]> {
+async function processSampleData(samples: any[], ds: any, request: GRIN2Request): Promise<any[]> {
 	const lesions: any[] = []
 	let lesionId = 1
 
-	mayLog(`[GRIN2] Processing data for ${sampleIds.length.toLocaleString()} samples`)
+	mayLog(`[GRIN2] Processing JSON files for ${samples.length.toLocaleString()} samples`)
 
-	// TODO: Query dataset for each data type
-	// This will need to be implemented based on how the dataset stores MAF/CNV/fusion data
+	// Process each sample's JSON file
+	for (const sample of samples) {
+		try {
+			// Construct file path using sample.name
+			const filepath = path.join(ds.queries.singleSampleMutation.folder, sample.name)
 
-	// Process MAF data
-	if (ds.queries?.singleSampleMutation) {
-		const mafLesions = await processCohortMafData(sampleIds, ds, lesionId, request.mafOptions)
-		lesions.push(...mafLesions)
-		lesionId += mafLesions.length
-		mayLog(`[GRIN2] Added ${mafLesions.length.toLocaleString()} mutation lesions`)
+			// Check if file is readable
+			await file_is_readable(filepath)
+
+			// Read and parse the JSON file
+			const mlst = JSON.parse(await read_file(filepath))
+
+			// Filter entries in mlst[] based on options and convert to lesion format
+			const sampleLesions = await processSampleMlst(sample.name, mlst, lesionId, request)
+			lesions.push(...sampleLesions)
+			lesionId += sampleLesions.length
+		} catch (error) {
+			mayLog(
+				`[GRIN2] Error processing sample ${sample.name}: ${
+					typeof error === 'object' && error !== null && 'message' in error
+						? (error as { message?: string }).message
+						: String(error)
+				}`
+			)
+			// Continue with other samples instead of failing completely
+		}
 	}
-
-	// Process CNV data
-	if (ds.queries?.singleSampleGenomeQuantification) {
-		const cnvLesions = await processCohortCnvData(sampleIds, ds, lesionId, request.cnvOptions)
-		lesions.push(...cnvLesions)
-		lesionId += cnvLesions.length
-		mayLog(`[GRIN2] Added ${cnvLesions.length.toLocaleString()} CNV lesions`)
-	}
-
-	// Process fusion data
-	if (ds.queries?.singleSampleFusion) {
-		const fusionLesions = await processCohortFusionData(sampleIds, ds, lesionId, request.fusionOptions)
-		lesions.push(...fusionLesions)
-		lesionId += fusionLesions.length
-		mayLog(`[GRIN2] Added ${fusionLesions.length.toLocaleString()} fusion lesions`)
-	}
-	// TODO: Check what the fusion query type is called in the dataset. Just a placeholder here.
 
 	mayLog(`[GRIN2] Total lesions processed: ${lesions.length.toLocaleString()}`)
 	return lesions
 }
 
 /**
- * Process MAF data from dataset for the cohort samples
+ * Process a single sample's mlst array and extract lesions based on filtering options
  */
-async function processCohortMafData(
-	sampleIds: string[],
-	ds: any,
+async function processSampleMlst(
+	sampleName: string,
+	mlst: any[],
 	startId: number,
-	options?: GRIN2Request['mafOptions']
+	request: GRIN2Request
 ): Promise<any[]> {
+	const lesions: any[] = []
+	let currentId = startId
+
+	// Filter entries in mlst[] based on snvindelOptions (for SNV/indel mutations)
+	if (request.snvindelOptions) {
+		const snvIndelLesions = filterSnvIndelEntries(sampleName, mlst, currentId, request.snvindelOptions)
+		lesions.push(...snvIndelLesions)
+		currentId += snvIndelLesions.length
+	}
+
+	// Filter entries in mlst[] based on cnvOptions (for copy number variations)
+	if (request.cnvOptions) {
+		const cnvLesions = filterCnvEntries(sampleName, mlst, currentId, request.cnvOptions)
+		lesions.push(...cnvLesions)
+		currentId += cnvLesions.length
+	}
+
+	// Filter entries in mlst[] based on fusionOptions (for structural variants/fusions)
+	if (request.fusionOptions) {
+		const fusionLesions = filterFusionEntries(sampleName, mlst, currentId, request.fusionOptions)
+		lesions.push(...fusionLesions)
+		currentId += fusionLesions.length
+	}
+
+	return lesions
+}
+
+/**
+ * Filter SNV/indel entries from mlst based on snvindelOptions
+ */
+function filterSnvIndelEntries(
+	sampleName: string,
+	mlst: any[],
+	startId: number,
+	options: GRIN2Request['snvindelOptions']
+): any[] {
 	// Set defaults
 	const opts = {
 		minTotalDepth: options?.minTotalDepth ?? 10,
 		minAltAlleleCount: options?.minAltAlleleCount ?? 2,
 		consequences: options?.consequences ?? [],
-		hyperMutator: options?.hyperMutator ?? 1000
+		hyperMutator: options?.hyperMutator ?? 1000,
+		dnaAssay: options?.dnaAssay ?? 'wxs'
 	}
 
 	const lesions: any[] = []
 
-	// TODO: Implement querying the dataset for mutation data
-	// This will depend on the dataset structure and query methods available
-	// Example structure:
-	// const mutationQuery = {
-	//   sampleIds: sampleIds,
-	//   filters: {
-	//     totalDepth: { $gte: opts.minTotalDepth },
-	//     altAlleleCount: { $gte: opts.minAltAlleleCount }
-	//   }
-	// }
-	// const mutations = await ds.queries.singleSampleMutation.getData(mutationQuery)
+	// Filter mlst entries for SNV/indel mutations
+	let filteredMutations = mlst.filter(entry => {
+		// TODO: Determine how to identify SNV/indel entries in mlst
+		// This depends on the actual structure of mlst entries
 
-	mayLog(`[GRIN2] TODO: Query dataset for MAF data with options:`, opts)
+		// Apply filtering based on options
+		if (entry.totalDepth && entry.totalDepth < opts.minTotalDepth) return false
+		if (entry.altAlleleCount && entry.altAlleleCount < opts.minAltAlleleCount) return false
 
-	// Placeholder - return empty for now
+		// Apply consequence filter if specified
+		if (opts.consequences.length > 0 && entry.consequence && !opts.consequences.includes(entry.consequence)) {
+			return false
+		}
+
+		return true
+	})
+
+	// Apply hypermutator threshold
+	if (filteredMutations.length > opts.hyperMutator) {
+		mayLog(`[GRIN2] Sample ${sampleName} has ${filteredMutations.length} mutations, applying hypermutator filter`)
+		filteredMutations = filteredMutations.slice(0, opts.hyperMutator)
+	}
+
+	// Convert to lesion format: [ID, chrom, loc.start, loc.end, lsn.type]
+	filteredMutations.forEach((entry, index) => {
+		lesions.push([
+			startId + index,
+			normalizeChromosome(entry.chromosome || entry.chr),
+			entry.start || entry.position,
+			entry.end || entry.position,
+			'mutation'
+		])
+	})
+
 	return lesions
 }
 
 /**
- * Process CNV data from dataset for the cohort samples
+ * Filter CNV entries from mlst based on cnvOptions
  */
-async function processCohortCnvData(
-	sampleIds: string[],
-	ds: any,
+function filterCnvEntries(
+	sampleName: string,
+	mlst: any[],
 	startId: number,
-	options?: GRIN2Request['cnvOptions']
-): Promise<any[]> {
+	options: GRIN2Request['cnvOptions']
+): any[] {
 	// Set defaults
 	const opts = {
 		lossThreshold: options?.lossThreshold ?? -0.4,
 		gainThreshold: options?.gainThreshold ?? 0.3,
-		SegmentLength: options?.segLength ?? 0,
-		hyperMutator: options?.hyperMutator ?? 500
+		maxSegLength: options?.maxSegLength ?? 0,
+		minSegLength: options?.minSegLength ?? 0,
+		hyperMutator: options?.hyperMutator ?? 500,
+		dnaAssay: options?.dnaAssay ?? 'wxs'
 	}
 
 	const lesions: any[] = []
 
-	// TODO: Implement querying the dataset for CNV data
-	// This will depend on the dataset structure and query methods available
-	// Example structure:
-	// const cnvQuery = {
-	//   sampleIds: sampleIds,
-	//   filters: {
-	//     log2Ratio: { $lte: opts.lossThreshold, $gte: opts.gainThreshold }
-	//   }
-	// }
-	// const cnvs = await ds.queries.singleSampleGenomeQuantification.getData(cnvQuery)
+	// Filter mlst entries for CNV data
+	let filteredCnvs = mlst.filter(entry => {
+		// TODO: Determine how to identify CNV entries in mlst
+		// This depends on the actual structure of mlst entries
 
-	mayLog(`[GRIN2] TODO: Query dataset for CNV data with options:`, opts)
+		// Must be either gain or loss
+		const isGain = entry.log2Ratio >= opts.gainThreshold
+		const isLoss = entry.log2Ratio <= opts.lossThreshold
+		if (!isGain && !isLoss) return false
 
-	// Placeholder - return empty for now
+		// Apply segment length filters
+		const segmentLength = (entry.end || entry.stop) - (entry.start || entry.begin)
+		if (opts.maxSegLength > 0 && segmentLength > opts.maxSegLength) return false
+		if (opts.minSegLength > 0 && segmentLength < opts.minSegLength) return false
+
+		return true
+	})
+
+	// Apply hypermutator threshold
+	if (filteredCnvs.length > opts.hyperMutator) {
+		mayLog(`[GRIN2] Sample ${sampleName} has ${filteredCnvs.length} CNVs, applying hypermutator filter`)
+		filteredCnvs = filteredCnvs.slice(0, opts.hyperMutator)
+	}
+
+	// Convert to lesion format: [ID, chrom, loc.start, loc.end, lsn.type]
+	filteredCnvs.forEach((entry, index) => {
+		const lesionType = entry.log2Ratio >= opts.gainThreshold ? 'gain' : 'loss'
+
+		lesions.push([
+			startId + index,
+			normalizeChromosome(entry.chromosome || entry.chr),
+			entry.start || entry.begin,
+			entry.end || entry.stop,
+			lesionType
+		])
+	})
+
 	return lesions
 }
 
 /**
- * Process fusion data from dataset for the cohort samples
+ * Filter fusion entries from mlst based on fusionOptions
  */
-async function processCohortFusionData(
-	sampleIds: string[],
-	ds: any,
+function filterFusionEntries(
+	sampleName: string,
+	mlst: any[],
 	startId: number,
-	options?: GRIN2Request['fusionOptions']
-): Promise<any[]> {
+	options: GRIN2Request['fusionOptions']
+): any[] {
 	// Set defaults
 	const opts = {
 		fusionTypes: options?.fusionTypes ?? ['gene-gene', 'gene-intergenic', 'readthrough'],
-		minConfidence: options?.minConfidence ?? 0.7
+		minConfidence: options?.minConfidence ?? 0.7,
+		dnaAssay: options?.dnaAssay ?? 'wxs'
 	}
 
 	const lesions: any[] = []
 
-	// TODO: Implement querying the dataset for fusion data
-	mayLog(`[GRIN2] TODO: Query dataset for fusion data with options:`, opts)
+	// Filter mlst entries for fusion/SV data
+	const filteredFusions = mlst.filter(entry => {
+		// TODO: Determine how to identify fusion/SV entries in mlst
+		// This depends on the actual structure of mlst entries
 
-	// Placeholder - return empty for now
+		// Apply fusion type filter
+		if (entry.fusionType && !opts.fusionTypes.includes(entry.fusionType)) return false
+
+		// Apply confidence filter
+		if (entry.confidence && entry.confidence < opts.minConfidence) return false
+
+		return true
+	})
+
+	// Convert to lesion format: [ID, chrom, loc.start, loc.end, lsn.type]
+	filteredFusions.forEach((entry, index) => {
+		lesions.push([
+			startId + index,
+			normalizeChromosome(entry.chromosome || entry.chr),
+			entry.start || entry.position,
+			entry.end || entry.position,
+			'fusion'
+		])
+	})
+
 	return lesions
+}
+
+/**
+ * Normalize chromosome name to include 'chr' prefix
+ */
+function normalizeChromosome(chrom: string): string {
+	return chrom.startsWith('chr') ? chrom : `chr${chrom}`
 }
