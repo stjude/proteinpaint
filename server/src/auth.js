@@ -259,7 +259,7 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 	try {
 		const credEmbedders = await validateDsCredentials(creds, serverconfig)
 		authApi.credEmbedders.push(...credEmbedders)
-		Object.freeze(authApi.credEmbedders)
+		if (!serverconfig.debugmode || !app.doNotFreezeAuthApi) Object.freeze(authApi.credEmbedders)
 	} catch (e) {
 		throw e
 	}
