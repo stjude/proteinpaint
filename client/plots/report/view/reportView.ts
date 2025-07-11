@@ -36,36 +36,20 @@ export class ReportView {
 		}
 		document.addEventListener('scroll', () => this?.dom?.tooltip?.hide())
 		select('.sjpp-output-sandbox-content').on('scroll', () => this.dom.tooltip.hide())
-
-		if (this.report.config.countryTW) {
+		this.dom.filterSelects = []
+		if (this.report.config.filterTWs) {
 			headerDiv.style('padding', '20px 0px 20px 0px')
-			this.dom.headerDiv.append('label').text('Country: ')
-			const select = this.dom.headerDiv.append('select')
-			select.append('option').attr('value', '').text('')
-			for (const value in this.report.config.countryTW.term.values) {
-				const country = this.report.config.countryTW.term.values[value].label
-				select.append('option').attr('value', country).text(country)
+			for (const tw of this.report.config.filterTWs) {
+				this.dom.headerDiv.append('label').text(` ${tw.term.name}: `)
+				const select = this.dom.headerDiv.append('select')
+				select.append('option').attr('value', '').text('')
 
-				if (this.report.config.settings.report[this.report.config.countryTW.term.id] === country) {
-					select.property('value', country)
-				}
+				select.on('change', async () => {
+					this.report.settings[tw.term.id] = select.node().value
+					this.report.replaceFilter()
+				})
+				this.dom.filterSelects.push(select)
 			}
-			select.on('change', async () => {
-				this.report.settings[this.report.config.siteTW.term.id] = '' // clear site if country is changed
-				this.report.settings[this.report.config.countryTW.term.id] = select.node().value
-				this.report.replaceFilter()
-			})
-			this.dom.countrySelect = select
-		}
-		if (this.report.config.siteTW) {
-			this.dom.headerDiv.append('label').text('Site: ')
-			const select = this.dom.headerDiv.append('select')
-
-			select.on('change', async () => {
-				this.report.settings[this.report.config.siteTW.term.id] = select.node().value
-				await this.report.replaceFilter()
-			})
-			this.dom.siteSelect = select
 		}
 	}
 
