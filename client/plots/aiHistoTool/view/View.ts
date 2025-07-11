@@ -38,6 +38,7 @@ export class View {
 				const notEmpty = projectName.trim().length > 0
 				if (!notEmpty) {
 					//TODO: use say error instead
+					//Shouldn't be necessary because of the debouncer
 					console.warn('Project name cannot be empty')
 					return
 				}
@@ -48,7 +49,7 @@ export class View {
 					return
 				}
 				this.interactions.addProject(projectName)
-				//TODO: clear UI and open project select
+				//TODO: clear UI and open meta data and image selector
 			})
 
 		input.on('keydown', () => {
@@ -68,7 +69,7 @@ export class View {
 		renderTable({
 			div: tableDiv,
 			rows: this.projects.map((p: any) => {
-				return [p]
+				return [{ value: p.value }]
 			}),
 			header: {
 				allowSort: true
@@ -79,15 +80,23 @@ export class View {
 				{
 					text: 'Edit',
 					callback: (e, i) => {
+						//TODO: open wsisamples plot
 						this.interactions.editProject()
 						console.log('TODO', e, i)
 					}
 				},
 				{
 					text: 'Delete',
-					callback: (e, i) => {
-						this.interactions.deleteProject()
-						console.log('TODO', e, i)
+					callback: (_, i) => {
+						const project = this.projects[i]
+						this.interactions.deleteProject(project)
+
+						//Update UI after deletion. Maybe cleaner way to handle this?
+						//Maybe app.dispatch and rerender instead?
+						this.projects.splice(i, 1)
+						//Remove the table from the projectDiv and re-render
+						projectDiv.select('.sjpp-project-select-table').remove()
+						this.renderExistingProjects(projectDiv)
 					}
 				}
 			]
