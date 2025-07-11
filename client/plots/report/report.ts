@@ -53,7 +53,7 @@ export class Report extends RxComponentInner {
 	}
 
 	async replaceFilter() {
-		const filter = this.getFilter()
+		const filter = this.getFilter() //read by child plots
 		this.app.dispatch({
 			type: 'plot_edit',
 			id: this.id,
@@ -70,6 +70,7 @@ export class Report extends RxComponentInner {
 		if (!config) {
 			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
 		}
+
 		return {
 			config,
 			plots: appState.plots.filter(p => p.parentId === this.id), //this property is needed to indicate that child plots need to be added to the appState plots
@@ -82,7 +83,6 @@ export class Report extends RxComponentInner {
 	async main() {
 		this.config = structuredClone(this.state.config)
 		this.settings = this.config.settings.report
-
 		this.fillFilters()
 	}
 
