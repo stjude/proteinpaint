@@ -35,7 +35,7 @@ tape('filterTerms()', async function (test) {
 	}
 
 	{
-		const result = filterTerms(req, ds, terms)
+		const result = filterTerms({ query: { dslabel: 'TermdbTest', embedder: 'http://localhost' } }, ds, terms)
 		test.deepEqual(result, [terms[0]], '1 term left after filtering')
 	}
 
