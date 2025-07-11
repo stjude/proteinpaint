@@ -2449,10 +2449,10 @@
   },
   "mass/groups.js": {
     "lines": {
-      "total": 405,
-      "covered": 145,
+      "total": 406,
+      "covered": 146,
       "skipped": 0,
-      "pct": 35.8
+      "pct": 35.96
     },
     "functions": {
       "total": 73,
@@ -2461,10 +2461,10 @@
       "pct": 26.02
     },
     "statements": {
-      "total": 440,
-      "covered": 152,
+      "total": 441,
+      "covered": 153,
       "skipped": 0,
-      "pct": 34.54
+      "pct": 34.69
     },
     "branches": {
       "total": 194,
@@ -2474,13 +2474,13 @@
     },
     "lowestPct": {
       "curr": 21.13,
-      "prev": 0,
-      "diff": 21.13
+      "prev": 21.13,
+      "diff": 0
     },
     "averagePct": {
-      "curr": 29.372499999999995,
-      "prev": 0,
-      "diff": 29.372499999999995
+      "curr": 29.45,
+      "prev": 29.372499999999995,
+      "diff": 0.07750000000000412
     }
   },
   "filter/test/tvs.integration.spec.js": {
