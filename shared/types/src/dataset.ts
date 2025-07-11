@@ -371,6 +371,33 @@ type SvFusion = {
 }
 
 type SingleSampleMutationQuery = {
+	/**
+	 *      - Each sample's JSON file contains an array of mutation entries (mlst)
+	 *      - Each entry in mlst[] can have various properties like:
+	 *        - `chromosome` or `chr`: Chromosome name (e.g., "chr1")
+	 *        - `start` or `position`: Start position of the mutation
+	 *        - `end` or `stop`: End position of the mutation
+	 *        - `type`: Type of mutation (e.g., "snv", "indel", "cnv_gain", "cnv_loss", "fusion")
+	 *        - `log2Ratio`: For CNVs, indicates copy number change
+	 *        - `fusionType`: For fusions, indicates type (e.g., "gene-gene")
+	 *        - `confidence`: For fusions, indicates confidence score (0-1)
+	 *      - Example JSON structure:
+	 *        ```json
+	 *        {
+	 *          [
+	 *            {
+	 *              "chromosome": "chr1",
+	 *              "dna_assay": "wxs",
+	 *              "start": 123456,
+	 *              "end": 123789,
+	 *              "type": "snv",
+	 *              "log2Ratio": null,
+	 *              "fusionType": null,
+	 *              "confidence": null
+	 *            }
+	 *          ]
+	 *        }
+	 *        ``` */
 	src: 'native' | 'gdcapi' | string
 	/** which property of client mutation object to retrieve sample identifier for
 	 * querying single sample data with */
