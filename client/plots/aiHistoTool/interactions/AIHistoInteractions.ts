@@ -30,11 +30,33 @@ export class AIHistoInteractions {
 		}
 	}
 
-	editProject() {
-		console.log('Editing project')
+	async editProject() {
+		// const body = {
+		// 	genome: this.genome,
+		// 	dslabel: this.dslabel,
+		// 	projectName: projectName
+		// }
+		// try {
+		// 	await this.model.updateProject(body, 'post')
+		// } catch (e) {
+		// 	console.error('Error adding project:', e)
+		// 	throw e
+		// }
 	}
 
-	deleteProject() {
-		console.log('Deleting project')
+	async deleteProject(project: { value: string; id: number }) {
+		const body = {
+			genome: this.genome,
+			dslabel: this.dslabel,
+			projectId: project.id,
+			projectName: project.value //Not needed??
+		}
+
+		try {
+			await this.model.updateProject(body, 'delete')
+		} catch (e) {
+			console.error('Error deleting project:', e)
+			throw e
+		}
 	}
 }
