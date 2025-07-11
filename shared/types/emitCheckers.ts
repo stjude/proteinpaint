@@ -17,14 +17,13 @@
 */
 import fs from 'fs'
 import path from 'path'
-import * as glob from 'glob'
 import { execSync } from 'child_process'
 
 const __dirname = import.meta.dirname
 const routesDir = './src/routes'
 const cwd = path.join(__dirname, routesDir)
 const inputFile = process.argv[2]
-const files = inputFile ? [inputFile.replace(cwd, '')] : glob.sync('*.ts', { cwd })
+const files = inputFile ? [inputFile.replace(cwd, '')] : fs.globSync('*.ts', { cwd })
 const uniquesTypeIds = new Set()
 const transitiveExports: string[] = []
 files.sort()

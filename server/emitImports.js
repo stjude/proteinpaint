@@ -10,7 +10,6 @@
 
 import fs from 'fs'
 import path from 'path'
-import * as glob from 'glob'
 
 const mode = process.argv[2]
 const cwd = process.cwd()
@@ -31,7 +30,7 @@ if (mode == 'dev') {
 		if (__dirname !== cwd) cwds[path.join(cwd, dir)] = '.'
 
 		for (const cwd in cwds) {
-			const files = glob.sync('*.ts', { cwd })
+			const files = fs.globSync('*.ts', { cwd })
 			for (const f of files) {
 				const abspath = `${cwd}/${f}`
 				const dotpath = cwds[cwd]
@@ -53,8 +52,7 @@ if (mode == 'dev') {
 		config.cachedir = path.join(__dirname, 'test/cache')
 		fs.writeFileSync(path.join(__dirname, './serverconfig.json'), JSON.stringify(config, null, '    '))
 	}
-	const ignore = ['node_modules/**']
-	const specs = glob.sync('./**/test/*.unit.spec.*', { cwd: __dirname, ignore })
+	const specs = fs.globSync('./**/test/*.unit.spec.*', { cwd: __dirname, exclude: ['node_modules/**'] })
 	const imports = [comment, ...specs.map(f => `import './${f}'`)]
 	console.log(imports.join('\n'))
 }
