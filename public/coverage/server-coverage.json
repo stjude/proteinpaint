@@ -1,10 +1,10 @@
 {
   "src/serverconfig.js": {
     "lines": {
-      "total": 117,
-      "covered": 68,
+      "total": 120,
+      "covered": 70,
       "skipped": 0,
-      "pct": 58.11
+      "pct": 58.33
     },
     "functions": {
       "total": 4,
@@ -13,62 +13,62 @@
       "pct": 75
     },
     "statements": {
-      "total": 146,
-      "covered": 84,
+      "total": 149,
+      "covered": 85,
       "skipped": 0,
-      "pct": 57.53
+      "pct": 57.04
     },
     "branches": {
-      "total": 145,
-      "covered": 54,
+      "total": 153,
+      "covered": 57,
       "skipped": 0,
-      "pct": 37.24
+      "pct": 37.25
     },
     "lowestPct": {
-      "curr": 37.24,
-      "prev": 36.87,
-      "diff": 0.37000000000000455
+      "curr": 37.25,
+      "prev": 37.24,
+      "diff": 0.00999999999999801
     },
     "averagePct": {
-      "curr": 56.970000000000006,
-      "prev": 56.53,
-      "diff": 0.44000000000000483
+      "curr": 56.904999999999994,
+      "prev": 56.970000000000006,
+      "diff": -0.06500000000001194
     }
   },
   "src/auth.js": {
     "lines": {
-      "total": 377,
-      "covered": 372,
+      "total": 382,
+      "covered": 375,
       "skipped": 0,
-      "pct": 98.67
+      "pct": 98.16
     },
     "functions": {
       "total": 33,
-      "covered": 30,
+      "covered": 25,
       "skipped": 0,
-      "pct": 90.9
+      "pct": 75.75
     },
     "statements": {
-      "total": 435,
-      "covered": 428,
+      "total": 441,
+      "covered": 431,
       "skipped": 0,
-      "pct": 98.39
+      "pct": 97.73
     },
     "branches": {
-      "total": 332,
+      "total": 336,
       "covered": 228,
       "skipped": 0,
-      "pct": 68.67
+      "pct": 67.85
     },
     "lowestPct": {
-      "curr": 68.67,
+      "curr": 67.85,
       "prev": 68.67,
-      "diff": 0
+      "diff": -0.8200000000000074
     },
     "averagePct": {
-      "curr": 89.1575,
+      "curr": 84.8725,
       "prev": 89.1575,
-      "diff": 0
+      "diff": -4.284999999999997
     }
   },
   "src/test/auth.unit.spec.js": {
