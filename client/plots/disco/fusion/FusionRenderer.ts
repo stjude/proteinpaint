@@ -10,17 +10,13 @@ import { dofetch3 } from '#common/dofetch'
 type Genome = any
 
 export default class FusionRenderer {
-<<<<<<< HEAD
-	render(holder: any, fusions: Array<Fusion>, opacity = 1) {
-=======
 	private genome: Genome
 
 	constructor(genome: Genome) {
 		this.genome = genome
 	}
 
-	render(holder: any, fusions: Array<Fusion>) {
->>>>>>> 6729b0116 (Fixed merge errors and added svgraph as a tooltip)
+	render(holder: any, fusions: Array<Fusion>, opacity = 1) {
 		let radius = 0
 		const fusionsWithTarget = fusions.filter(f => f.target)
 		if (fusionsWithTarget.length > 0) {
