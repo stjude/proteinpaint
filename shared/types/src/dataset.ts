@@ -371,38 +371,36 @@ type SvFusion = {
 }
 
 type SingleSampleMutationQuery = {
-	/**
-	 *      - Each sample's JSON file contains an array of mutation entries (mlst)
-	 *      - Each entry in mlst[] can have various properties like:
-	 *        - `chromosome` or `chr`: Chromosome name (e.g., "chr1")
-	 *        - `start` or `position`: Start position of the mutation
-	 *        - `end` or `stop`: End position of the mutation
-	 *        - `type`: Type of mutation (e.g., "snv", "indel", "cnv_gain", "cnv_loss", "fusion")
-	 *        - `log2Ratio`: For CNVs, indicates copy number change
-	 *        - `fusionType`: For fusions, indicates type (e.g., "gene-gene")
-	 *        - `confidence`: For fusions, indicates confidence score (0-1)
-	 *      - Example JSON structure:
-	 *        ```json
-	 *        {
-	 *          [
-	 *            {
-	 *              "chromosome": "chr1",
-	 *              "dna_assay": "wxs",
-	 *              "start": 123456,
-	 *              "end": 123789,
-	 *              "type": "snv",
-	 *              "log2Ratio": null,
-	 *              "fusionType": null,
-	 *              "confidence": null
-	 *            }
-	 *          ]
-	 *        }
-	 *        ``` */
+	/** for native ds, each file should contain a stringified json array with elements below
+	for non-native ds, the getter should return an json array with same structure:
+
+	cnv example entry:
+	             {
+	               "chromosome": "chr1",
+	               "dna_assay": "wxs",
+	               "start": 123456,
+	               "end": 123789,
+	               "type": "snv",
+	               "log2Ratio": null,
+	               "fusionType": null,
+	               "confidence": null
+	             }
+
+	snvindel example entry:
+		TODO add example
+		TODO specify property names for read depth; needed for grin2 filtering
+
+	sv/fusion example entry:
+		TODO add example
+	*/
 	src: 'native' | 'gdcapi' | string
 	/** which property of client mutation object to retrieve sample identifier for
 	 * querying single sample data with */
 	sample_id_key: string
-	/** only required for src=native */
+	/** only required for src=native
+	folder contains a set of files, one file per sample, file named by sample name
+	each file contains a stringified json array of mutation/cnv/sv entries (aka mlst)
+	*/
 	folder?: string
 	/** disco plot will be launched when singleSampleMutation is enabled. supply customization options here */
 	discoPlot?: {
