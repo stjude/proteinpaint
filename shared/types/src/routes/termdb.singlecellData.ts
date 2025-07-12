@@ -20,13 +20,12 @@ export type Plot = {
 	/** name of the plot */
 	name: string
 	/** List of cells with gene expression */
-	expCells?: Cell[]
+	expCells: Cell[]
 	/** List of cells with no gene expression, if no gene provided all cells will be here */
-	noExpCells?: Cell[]
-	/** Column name to color by, e.g Cell type, CNV, Fusion */
-	colorBy: string
+	noExpCells: Cell[]
 	colorColumns: string[]
-	colorMap?: { [key: string]: string }
+	colorBy: string
+	colorMap: any
 }
 
 export type TermdbSingleCellDataRequest = {
@@ -41,14 +40,17 @@ export type TermdbSingleCellDataRequest = {
 	plots: string[]
 	/** Gene name to retrieve expression data for all cells of the given sample, and to overlay on maps */
 	gene?: string
+	/** in each plot, what Column name to color by 
+	key: plot.name, value: column name
+	if missing, use default setting of the plot
+	*/
+	colorBy?: { [key: string]: string }
+	colorMap?: { [key: string]: string }
 }
 
 export type HasdataResponse = {
 	/** List of plots from singlecell experiment of this sample */
 	plots: Plot[]
-
-	/** Terms used to annotate cells */
-	//terms: Term[]
 }
 
 export type NodataResponse = {
