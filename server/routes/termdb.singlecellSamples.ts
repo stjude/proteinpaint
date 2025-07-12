@@ -67,22 +67,32 @@ function init({ genomes }) {
 export async function validate_query_singleCell(ds: any, genome: any) {
 	const q = ds.queries.singleCell as SingleCellQuery
 	if (!q) return
-	if (typeof q.samples.get != 'function') {
-		// add q.samples.get() for native ds. if already present, it is coded in ds e.g. gdc
+
+	// validates all settings of single-cell dataset
+
+	// validate required q.samples{}
+	if (typeof q.samples != 'object') throw 'singleCell.samples{} not object'
+	if (typeof q.samples.get == 'function') {
+		// ds-supplied
+	} else {
+		// add q.samples.get() for native ds
 		validateSamplesNative(q.samples as SingleCellSamples, q.data as SingleCellDataNative, ds)
 	}
 
-	//All the logic below is used by the endpoint in termdb.singlecellData.ts
+	// validate required q.data{}
+	if (typeof q.data != 'object') throw 'singleCell.data{} not object'
 	if (q.data.src == 'gdcapi') {
-		gdc_validate_query_singleCell_data(ds, genome)
+		gdc_validate_query_singleCell_data(ds, genome) // todo change to ds-supplied q.data.get()
 	} else if (q.data.src == 'native') {
 		validateDataNative(q.data as SingleCellDataNative, ds)
 	} else {
 		throw 'unknown singleCell.data.src'
 	}
-	// q.data.get() added
+
+	// validate optional settings below
 
 	if (q.geneExpression) {
+		if (typeof q.geneExpression != 'object') throw 'singleCell.geneExpression not object'
 		if (q.geneExpression.src == 'native') {
 			validateGeneExpressionNative(q.geneExpression as SingleCellGeneExpressionNative)
 		} else if (q.geneExpression.src == 'gdcapi') {
@@ -90,17 +100,15 @@ export async function validate_query_singleCell(ds: any, genome: any) {
 		} else {
 			throw 'unknown singleCell.geneExpression.src'
 		}
-		// q.geneExpression.get() added
 	}
-
 	if (q.DEgenes) {
+		if (typeof q.DEgenes != 'object') throw 'singleCell.DEgenes not object'
 		validate_query_singleCell_DEgenes(ds)
-		// q.DEgenes.get() added
 	}
 
 	if (q.images) {
+		if (typeof q.images != 'object') throw 'singleCell.images not object'
 		validateImages(q.images)
-		// will not add a get()
 	}
 }
 
@@ -157,73 +165,75 @@ function validateDataNative(D: SingleCellDataNative, ds: any) {
 	for (const plot of D.plots) {
 		if (nameSet.has(plot.name)) throw 'duplicate plot.name'
 		nameSet.add(plot.name)
+		if (!plot.folder) throw 'plot.folder missing'
 	}
 
-	D.get = async q => {
+	// caches files contents between requests so each file is only loaded once
+	const file2Lines = {} // key: file path, value: string[]
+
+	D.get = async (q: TermdbSingleCellDataRequest) => {
 		// if sample is int, may convert to string
-		try {
-			const plots = [] as Plot[] // given a sample name, collect every plot data for this sample and return
-			let geneExpMap
-			if (ds.queries.singleCell.geneExpression && q.gene) {
-				geneExpMap = await ds.queries.singleCell.geneExpression.get({ sample: q.sample, gene: q.gene })
-			}
-			const file2Lines = {}
-			for (const plot of D.plots) {
-				if (!q.plots.includes(plot.name)) continue
-				const tsvfile = path.join(
-					serverconfig.tpmasterdir,
-					plot.folder,
-					(q.sample.eID || q.sample.sID) + plot.fileSuffix
-				) //some plots share the same file, just read different columns
-				if (!file2Lines[tsvfile]) {
-					await file_is_readable(tsvfile)
-					file2Lines[tsvfile] = (await read_file(tsvfile)).trim().split('\n')
-				}
-				const colorColumn = plot.colorColumns.find(c => c.name == q.colorBy?.[plot.name]) || plot.colorColumns[0]
-				const lines = file2Lines[tsvfile]
-				// 1st line is header
-				const expCells = [] as Cell[]
-				const noExpCells = [] as Cell[]
-
-				for (let i = 1; i < lines.length; i++) {
-					// each line is a cell
-					const l = lines[i].split('\t')
-					const cellId = lines.length > 3 ? l[0] : undefined,
-						x = Number(l[plot.coordsColumns.x]), // FIXME standardize, or define idx in plot
-						y = Number(l[plot.coordsColumns.y])
-					//if(l.length <= 3) continue //not enough columns
-					const category = l[colorColumn?.index] || ''
-					if (!cellId) throw 'cell id missing'
-					if (!Number.isFinite(x) || !Number.isFinite(y)) throw 'x/y not number'
-					const cell: Cell = { cellId, x, y, category }
-					if (geneExpMap) {
-						if (geneExpMap[cellId] !== undefined) {
-							cell.geneExp = geneExpMap[cellId]
-							expCells.push(cell)
-						} else {
-							noExpCells.push(cell)
-						}
-					} else noExpCells.push(cell)
-				}
-				plots.push({
-					name: plot.name,
-					expCells,
-					noExpCells,
-					colorColumns: plot.colorColumns.map(c => c.name),
-					colorBy: colorColumn?.name,
-					colorMap: colorColumn?.colorMap
-				})
-			}
-			if (plots.length == 0) {
-				// no data available for this sample
-				return { nodata: true }
-			}
-
-			return { plots }
-		} catch (e: any) {
-			if (e.stack) console.log(e.stack)
-			return { error: e.message || e }
+		const plots = [] as Plot[] // given a sample name, collect every plot data for this sample and return
+		let geneExpMap
+		if (ds.queries.singleCell.geneExpression && q.gene) {
+			geneExpMap = await ds.queries.singleCell.geneExpression.get({ sample: q.sample, gene: q.gene })
 		}
+		for (const plot of D.plots) {
+			if (!q.plots.includes(plot.name)) continue
+			//some plots share the same file, just read different columns
+			const tsvfile = path.join(serverconfig.tpmasterdir, plot.folder, (q.sample.eID || q.sample.sID) + plot.fileSuffix)
+			if (!file2Lines[tsvfile]) {
+				await file_is_readable(tsvfile)
+				const text = await read_file(tsvfile)
+				const lines = text.trim().split('\n')
+				let first = true
+				const lines2 = [] as string[][]
+				for (const line of lines) {
+					if (first) {
+						first = false
+						continue
+					}
+					lines2.push(line.split('\t'))
+				}
+				file2Lines[tsvfile] = lines2
+			}
+
+			const colorColumn = plot.colorColumns.find(c => c.name == q.colorBy?.[plot.name]) || plot.colorColumns[0]
+			const expCells = [] as Cell[]
+			const noExpCells = [] as Cell[]
+
+			for (const l of file2Lines[tsvfile]) {
+				const cellId = l[0],
+					x = Number(l[plot.coordsColumns.x]),
+					y = Number(l[plot.coordsColumns.y])
+				const category = l[colorColumn?.index] || ''
+				if (!cellId) throw 'cell id missing'
+				if (!Number.isFinite(x) || !Number.isFinite(y)) throw 'x/y not number'
+				const cell: Cell = { cellId, x, y, category }
+				if (geneExpMap) {
+					if (geneExpMap[cellId] !== undefined) {
+						cell.geneExp = geneExpMap[cellId]
+						expCells.push(cell)
+					} else {
+						noExpCells.push(cell)
+					}
+				} else noExpCells.push(cell)
+			}
+			plots.push({
+				name: plot.name,
+				expCells,
+				noExpCells,
+				colorColumns: plot.colorColumns.map(c => c.name),
+				colorBy: colorColumn?.name,
+				colorMap: colorColumn?.colorMap
+			})
+		}
+		if (plots.length == 0) {
+			// no data available for this sample
+			return { nodata: true }
+		}
+
+		return { plots }
 	}
 }
 

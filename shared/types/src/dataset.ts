@@ -766,24 +766,26 @@ type ColorColumn = {
 
 /** defines a tsne type of plot for cells from one sample */
 type SingleCellPlot = {
-	/** type of the plot, e.g. tsne or umap, also display as plot name on ui */
+	/** value is display as plot name on ui and also used as identifier for a plot, must be unique */
 	name: string
 	/** folder in which per-sample files are stored.
-each file is a tabular text file with all cells (rows) from that sample.
-all files must have same set of columns
-file columns include cell types and x/y coords, as described by other parameters
-*/
+	each file is a tabular text file with all cells (rows) from that sample.
+	all files must have same set of columns:
+	- 1st column is cell barcode
+	- x/y coordinate column number is defined in coordsColumns{x,y} below
+	- additional columns for cell annotations, corresponds to colorColumns
+	*/
 	folder: string
+	/** 0-based column number for x/y coordinate for this plot */
+	coordsColumns: { x: number; y: number }
 	/** optional suffix to locate the file for a sample, via ${folder}/${sampleName}${fileSuffix}
-assumes that file name always start with sample name.
-if not introduce filePrefix
-*/
+	assumes that file name always start with sample name.
+	if not introduce filePrefix
+	*/
 	fileSuffix?: string
 	/** list of columns in tabular text file that define cell categories and can be used to color the cells in the plot. must have categorical values
 	 */
 	colorColumns: ColorColumn[]
-	/** 0-based column number for x/y coordinate for this plot */
-	coordsColumns: { x: number; y: number }
 	/** if true the plot is shown by default. otherwise hidden */
 	selected?: boolean
 }
