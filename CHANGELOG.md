@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- support a serverconfig.allowedEmbedders option to improve access control; improve code layout of auth code
+
 Fixes:
 - improve appearance of delete button in mass groups table
 

@@ -1,2 +1,1 @@
-Features:
-- support a serverconfig.allowedEmbedders option to improve access control; improve code layout of auth code
+
