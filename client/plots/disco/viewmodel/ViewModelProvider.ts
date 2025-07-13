@@ -162,14 +162,15 @@ export default class ViewModelProvider {
 			this.lohArcRing
 		)
 
-		return new ViewModel(
-			this.settings,
-			rings,
-			legend,
-			fusions,
-			dataHolder,
-			this.genesetName,
-			data.filter(i => i.dt == dtsnvindel).length
-		)
-	}
+                return new ViewModel(
+                        this.settings,
+                        rings,
+                        legend,
+                        fusions,
+                        dataHolder,
+                        this.genesetName,
+                        data.filter(i => i.dt == dtsnvindel).length,
+                        dataHolder.invalidDataInfo
+                )
+        }
 }
