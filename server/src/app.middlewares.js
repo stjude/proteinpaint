@@ -148,6 +148,7 @@ function setHeaders(req, res, next) {
 	// limit the allowed request methods for the PP server
 	res.header('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS, HEAD')
 
+	const debugtest = serverconfig.debugmode || serverconfig.defaultgenome == 'hg38-test'
 	const origin = req.get('origin') || req.get('referrer') || req.protocol + '://' + (req.get('host') || '*')
 	const getMatchingHost = hostname => hostname == '*' || origin.includes(`://${hostname}`)
 	// detect if the request origin has a matching entry in serverconfig.dsCredentials
@@ -156,7 +157,7 @@ function setHeaders(req, res, next) {
 	// note that serverconfig.js sets [*] as default serverconfig.allowedEmbedders, if not present
 	const matchedHost = serverconfig.allowedEmbedders.find(getMatchingHost)
 
-	if (credEmbedder || matchedHost || serverconfig.debugmode || serverconfig.defaultgenome == 'hg38-test') {
+	if (credEmbedder || matchedHost || debugtest) {
 		// only set these CORS-related headers for credentialed or allowed embedders
 		const host = matchedHost || credEmbedder
 		res.header('Access-Control-Allow-Origin', host === '*' ? origin : `${req.protocol}://${host}`)
@@ -171,12 +172,12 @@ function setHeaders(req, res, next) {
 		)
 	}
 
-	if (credEmbedder) {
+	if (credEmbedder || debugtest) {
 		// allow credentialed embedders to submit authorization header
 		res.header('Access-Control-Allow-Credentials', true)
 	}
 
-	if (serverconfig.debugmode) {
+	if (debugtest) {
 		// may allow a browser to execute js code that samples performance; used by Chrome devtools, maybe puppeteer
 		res.header('Document-Policy', 'js-profiling')
 	}
