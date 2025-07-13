@@ -91,7 +91,7 @@ async function getTws() {
 ***************/
 
 tape('\n', function (test) {
-	test.pass('-***- tw/TwRouter.integration -***-')
+	test.comment('-***- tw/TwRouter.integration -***-')
 	test.end()
 })
 

@@ -26,7 +26,7 @@ function getHolder() {
 ***************/
 
 tape('\n', test => {
-	test.pass('-***- dom/radiobutton -***-')
+	test.comment('-***- dom/radiobutton -***-')
 	test.end()
 })
 

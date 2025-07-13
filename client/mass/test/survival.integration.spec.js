@@ -36,7 +36,7 @@ const runpp = helpers.getRunPp('mass', {
  test sections
 ***************/
 tape('\n', function (test) {
-	test.pass('-***- plots/survival -***-')
+	test.comment('-***- plots/survival -***-')
 	test.end()
 })
 

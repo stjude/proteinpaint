@@ -71,7 +71,7 @@ const testOpts = {
 ***************/
 
 tape('\n', test => {
-	test.pass('-***- dom/table -***-')
+	test.comment('-***- dom/table -***-')
 	test.end()
 })
 

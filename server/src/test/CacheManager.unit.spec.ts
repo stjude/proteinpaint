@@ -17,7 +17,7 @@ import { CacheManager } from '#src/CacheManager.ts'
 ***************/
 
 tape('\n', async function (test) {
-	test.pass('-***- src/CacheManager -***-')
+	test.comment('-***- src/CacheManager -***-')
 	test.end()
 })
 

@@ -47,7 +47,7 @@ const tabsData = [
 ***************/
 
 tape('\n', test => {
-	test.pass('-***- dom/toggleButtons -***-')
+	test.comment('-***- dom/toggleButtons -***-')
 	test.end()
 })
 

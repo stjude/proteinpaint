@@ -14,7 +14,7 @@ getVariantLabelText()
 */
 
 tape('\n', test => {
-	test.pass('-***- skewer unit -***-')
+	test.comment('-***- skewer unit -***-')
 	test.end()
 })
 

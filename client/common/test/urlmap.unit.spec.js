@@ -10,7 +10,7 @@ import urlmap from '../urlmap'
 ***************/
 
 tape('\n', test => {
-	test.pass('-***- common/urlmap -***-')
+	test.comment('-***- common/urlmap -***-')
 	test.end()
 })
 

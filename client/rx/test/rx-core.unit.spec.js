@@ -84,7 +84,7 @@ class TestPart {
 ***************/
 
 tape('\n', function (test) {
-	test.pass('-***- rx.core -***-')
+	test.comment('-***- rx.core -***-')
 	test.end()
 })
 

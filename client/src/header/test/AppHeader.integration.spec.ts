@@ -44,7 +44,7 @@ function getHeader(opts) {
 ***************/
 
 tape('\n', test => {
-	test.pass('-***- src/header/AppHeader -***-')
+	test.comment('-***- src/header/AppHeader -***-')
 	test.end()
 })
 

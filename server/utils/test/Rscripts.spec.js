@@ -285,7 +285,7 @@ tape('wilcoxon.R', async function (test) {
 */
 
 tape('\n', function (test) {
-	test.pass('-***- R correlation specs -***-')
+	test.comment('-***- R correlation specs -***-')
 	test.end()
 })
 

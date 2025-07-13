@@ -44,7 +44,7 @@ const runppMsigdb = helpers.getRunPp('termdb', {
 ***************/
 
 tape('\n', function (test) {
-	test.pass('-***- termdb/tree -***-')
+	test.comment('-***- termdb/tree -***-')
 	test.end()
 })
 

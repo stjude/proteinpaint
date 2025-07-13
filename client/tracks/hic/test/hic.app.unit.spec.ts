@@ -132,7 +132,7 @@ const mockFragData = {
 }
 
 tape('\n', test => {
-	test.pass('-***- hic app unit tracks/hic -***-')
+	test.comment('-***- hic app unit tracks/hic -***-')
 	test.end()
 })
 /************* General data tests *************/

@@ -18,7 +18,7 @@ Tests:
 ***************/
 
 tape('\n', function (test) {
-	test.pass('-***- termsetting.unit -***-')
+	test.comment('-***- termsetting.unit -***-')
 	test.end()
 })
 

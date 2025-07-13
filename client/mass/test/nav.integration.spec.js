@@ -13,7 +13,7 @@ tests:
 */
 
 tape('\n', function (test) {
-	test.pass('-***- mass/nav -***-')
+	test.comment('-***- mass/nav -***-')
 	test.end()
 })
 

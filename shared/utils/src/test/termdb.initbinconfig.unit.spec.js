@@ -5,7 +5,7 @@ import initBinConfig from '../termdb.initbinconfig'
  Test sections
 ***************/
 tape('\n', function (test) {
-	test.pass('-***- termdb init bin config specs -***-')
+	test.comment('-***- termdb init bin config specs -***-')
 	test.end()
 })
 

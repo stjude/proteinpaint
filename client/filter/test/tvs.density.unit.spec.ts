@@ -66,7 +66,7 @@ function createTestSelf(holder) {
 }
 
 tape('\n', test => {
-	test.pass('-***- filter/tvs.density -***-')
+	test.comment('-***- filter/tvs.density -***-')
 	test.end()
 })
 

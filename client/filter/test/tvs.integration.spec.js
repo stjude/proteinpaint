@@ -104,7 +104,7 @@ async function getVocabApi() {
 ***************/
 
 tape('\n', test => {
-	test.pass('-***- filter/tvs.integration -***-')
+	test.comment('-***- filter/tvs.integration -***-')
 	test.end()
 })
 

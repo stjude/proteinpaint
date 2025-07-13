@@ -10,7 +10,7 @@ import { getDateStrFromNumber, getNumberFromDateStr, getDateFromNumber, getNumbe
  test sections
 ***************/
 tape('\n', function (test) {
-	test.pass('-***- date convert specs -***-')
+	test.comment('-***- date convert specs -***-')
 	test.end()
 })
 

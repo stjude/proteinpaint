@@ -38,7 +38,7 @@ GDC - sunburst
 ***************/
 
 tape('\n', function (test) {
-	test.pass('-***- mds3 -***-')
+	test.comment('-***- mds3 -***-')
 	test.end()
 })
 

@@ -58,7 +58,7 @@ function getTestOpts(_opts, genome = 'hg38-test', dslabel = 'TermdbTest') {
  test sections
 ***************/
 tape('\n', function (test) {
-	test.pass('-***- dom/MultiTermEditUI -***-')
+	test.comment('-***- dom/MultiTermEditUI -***-')
 	test.end()
 })
 

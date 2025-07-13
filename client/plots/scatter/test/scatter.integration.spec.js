@@ -142,7 +142,7 @@ function getHolder() {
  test sections
 ***************/
 tape('\n', function (test) {
-	test.pass('-***- plots/sampleScatter -***-')
+	test.comment('-***- plots/sampleScatter -***-')
 	test.end()
 })
 

@@ -71,7 +71,7 @@ function sleep(ms) {
 ***************/
 
 tape('\n', function (test) {
-	test.pass('-***- rx/recover -***-')
+	test.comment('-***- rx/recover -***-')
 	test.end()
 })
 

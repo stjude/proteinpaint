@@ -573,7 +573,7 @@ const testList = [
 ////////////////////////// tests start
 
 tape('\n', function (test) {
-	test.pass('-***- mass/regression -***-')
+	test.comment('-***- mass/regression -***-')
 	test.end()
 })
 

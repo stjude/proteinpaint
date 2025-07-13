@@ -36,7 +36,7 @@ function tryBin(test, arg, testMssg, expectedErrMssg) {
  test sections
 ***************/
 tape('\n', function (test) {
-	test.pass('-***- termdb.bins specs -***-')
+	test.comment('-***- termdb.bins specs -***-')
 	test.end()
 })
 

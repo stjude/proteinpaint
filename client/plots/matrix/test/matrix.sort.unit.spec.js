@@ -201,7 +201,7 @@ function simpleMatrix(sampleNames, termOrder, rows) {
 ***************/
 
 tape('\n', function (test) {
-	test.pass('-***- plots/matrix.sort -***-')
+	test.comment('-***- plots/matrix.sort -***-')
 	test.end()
 })
 

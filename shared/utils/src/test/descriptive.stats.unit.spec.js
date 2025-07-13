@@ -13,7 +13,7 @@ import { getMean, getVariance, getStdDev, summaryStats } from '../descriptive.st
  test sections
 ***************/
 tape('\n', function (test) {
-	test.pass('-***- #shared/descriptive.stats -***-')
+	test.comment('-***- #shared/descriptive.stats -***-')
 	test.end()
 })
 

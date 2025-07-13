@@ -12,7 +12,7 @@ import { roundValueAuto, roundValue2, decimalPlacesUntilFirstNonZero } from '../
  test sections
 ***************/
 tape('\n', function (test) {
-	test.pass('-***- round value specs -***-')
+	test.comment('-***- round value specs -***-')
 	test.end()
 })
 

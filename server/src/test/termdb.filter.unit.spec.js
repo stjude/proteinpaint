@@ -12,7 +12,7 @@ import { init } from './load.testds.js'
 import { server_init_db_queries } from '../termdb.server.init.ts'
 
 tape('\n', function (test) {
-	test.pass('-***- modules/termdb.filter specs -***-')
+	test.comment('-***- modules/termdb.filter specs -***-')
 	test.end()
 })
 

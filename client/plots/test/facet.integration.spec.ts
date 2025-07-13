@@ -25,7 +25,7 @@ const runpp = helpers.getRunPp('mass', {
 ***************/
 
 tape('\n', test => {
-	test.pass('-***- plots/facet -***-')
+	test.comment('-***- plots/facet -***-')
 	test.end()
 })
 

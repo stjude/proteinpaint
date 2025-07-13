@@ -36,7 +36,7 @@ const runpp = helpers.getRunPp('mass', {
 ***************/
 
 tape('\n', function (test) {
-	test.pass('-***- plots/gsea -***-')
+	test.comment('-***- plots/gsea -***-')
 	test.end()
 })
 

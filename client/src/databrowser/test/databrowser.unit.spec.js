@@ -31,7 +31,7 @@ Tests
 *****************/
 
 tape('\n', function (test) {
-	test.pass('-***- dictionary, phenotree parsing -***-')
+	test.comment('-***- dictionary, phenotree parsing -***-')
 	test.end()
 })
 

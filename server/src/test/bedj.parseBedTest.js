@@ -2,7 +2,7 @@ import tape from 'tape'
 import { parseBedLine } from '../bedj.parseBed'
 
 // tape('\n', function (test) {
-// 	test.pass('-***- server/bedj.parseBed test -***-')
+// 	test.comment('-***- server/bedj.parseBed test -***-')
 // 	test.end()
 // })
 

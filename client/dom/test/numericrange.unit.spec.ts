@@ -57,7 +57,7 @@ function getHolder() {
  test sections
 ***************/
 tape('\n', function (test) {
-	test.pass('-***- numericRangeInput specs -***-')
+	test.comment('-***- numericRangeInput specs -***-')
 	test.end()
 })
 

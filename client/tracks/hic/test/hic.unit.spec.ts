@@ -32,7 +32,7 @@ type Template = {
 }
 
 tape('\n', test => {
-	test.pass('-***- tracks/hic unit-***-')
+	test.comment('-***- tracks/hic unit-***-')
 	test.end()
 })
 

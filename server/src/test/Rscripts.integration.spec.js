@@ -16,7 +16,7 @@ try {
 }
 
 tape('\n', test => {
-	test.pass('-***- R scripts integration specs -***-')
+	test.comment('-***- R scripts integration specs -***-')
 	test.end()
 })
 

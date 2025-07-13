@@ -11,7 +11,10 @@ const text2buf = new TextEncoder()
  test sections
 ***************/
 
-console.log(`-***- common/auth unit -***-`)
+tape('\n', test => {
+	test.comment(`-***- common/auth unit -***-`)
+	test.end()
+})
 
 tape('setDsAuthOk()', async test => {
 	// clear saved tokens by not having 3rd argument

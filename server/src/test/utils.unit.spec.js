@@ -11,7 +11,7 @@ validateRglst
 */
 
 tape('\n', function (test) {
-	test.pass('-***- server/utils specs -***-')
+	test.comment('-***- server/utils specs -***-')
 	test.end()
 })
 

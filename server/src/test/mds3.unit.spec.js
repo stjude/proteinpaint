@@ -9,7 +9,7 @@ guessSsmid()
 */
 
 tape('\n', function (test) {
-	test.pass('-***- mds3 unit tests -***-')
+	test.comment('-***- mds3 unit tests -***-')
 	test.end()
 })
 

@@ -31,7 +31,7 @@ const runpp = helpers.getRunPp('mass', {
 ***************/
 
 tape('\n', function (test) {
-	test.pass('-***- plots/sc/SC -***-')
+	test.comment('-***- plots/sc/SC -***-')
 	test.end()
 })
 

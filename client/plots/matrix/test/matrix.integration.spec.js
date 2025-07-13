@@ -35,7 +35,7 @@ function getGenes() {
  test sections
 ***************/
 tape('\n', function (test) {
-	test.pass('-***- plots/matrix -***-')
+	test.comment('-***- plots/matrix -***-')
 	test.end()
 })
 

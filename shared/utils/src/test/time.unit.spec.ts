@@ -2,7 +2,7 @@ import tape from 'tape'
 import { formatElapsedTime } from '../time'
 
 tape('\n', function (test) {
-	test.pass('-***- formatElapsedTime specs -***-')
+	test.comment('-***- formatElapsedTime specs -***-')
 	test.end()
 })
 

@@ -2,7 +2,7 @@ import tape from 'tape'
 import { filter2GDCfilter } from '../mds3.gdc.filter.js'
 
 tape('\n', function (test) {
-	test.pass('-***- mds3.gdc.filter specs -***-')
+	test.comment('-***- mds3.gdc.filter specs -***-')
 	test.end()
 })
 

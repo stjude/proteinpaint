@@ -3,7 +3,7 @@ import { filterTerms } from '../termdb.server.init.ts'
 import * as authApi from '../auth'
 
 tape('\n', function (test) {
-	test.pass('-***- termdb access control specs -***-')
+	test.comment('-***- termdb access control specs -***-')
 	test.end()
 })
 

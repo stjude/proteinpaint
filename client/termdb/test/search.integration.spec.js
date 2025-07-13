@@ -26,7 +26,7 @@ const runpp = helpers.getRunPp('termdb', {
 ***************/
 
 tape('\n', function (test) {
-	test.pass('-***- termdb/search -***-')
+	test.comment('-***- termdb/search -***-')
 	test.end()
 })
 

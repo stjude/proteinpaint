@@ -4,7 +4,7 @@ import fs from 'fs'
 import path from 'path'
 
 tape('\n', function (test) {
-	test.pass('-***- #shared/ReqResCache specs -***-')
+	test.comment('-***- #shared/ReqResCache specs -***-')
 	test.end()
 })
 

@@ -41,7 +41,7 @@ export function testApi(route, f, checkers) {
 	const { api } = route
 
 	tape('\n', function (test) {
-		test.pass(`-***- ${f} specs -***-`)
+		test.comment(`-***- ${f} specs -***-`)
 		test.end()
 	})
 

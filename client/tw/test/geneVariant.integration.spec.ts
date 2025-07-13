@@ -22,7 +22,7 @@ async function getVocabApi() {
 const vocabApi: any = await getVocabApi()
 
 tape('\n', function (test) {
-	test.pass('-***- tw/geneVariant.integration -***-')
+	test.comment('-***- tw/geneVariant.integration -***-')
 	test.end()
 })
 

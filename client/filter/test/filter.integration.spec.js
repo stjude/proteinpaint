@@ -192,12 +192,12 @@ function gettvs(id, val = '', overrides = {}) {
 ***************/
 
 tape('\n', test => {
-	test.pass('-***- filter/filter.integration -***-')
+	test.comment('-***- filter/filter.integration -***-')
 	test.end()
 })
 
 tape('\n', test => {
-	test.pass('-***- filterInit() tests-***-')
+	test.comment('-***- filterInit() tests-***-')
 	test.end()
 })
 
@@ -1714,7 +1714,7 @@ tape('filterJoin()', test => {
 })
 
 tape('\n', test => {
-	test.pass('-***- filterRxCompInit() tests-***-')
+	test.comment('-***- filterRxCompInit() tests-***-')
 	test.end()
 })
 
@@ -1794,7 +1794,7 @@ tape('Rx filter state inputs', async test => {
 })
 
 tape('\n', test => {
-	test.pass('-***- filterPromptInit() tests-***-')
+	test.comment('-***- filterPromptInit() tests-***-')
 	test.end()
 })
 

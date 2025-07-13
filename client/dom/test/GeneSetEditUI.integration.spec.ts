@@ -50,7 +50,7 @@ function getOpts(_opts, genome = 'hg38-test', dslabel = 'TermdbTest') {
  test sections
 ***************/
 tape('\n', function (test) {
-	test.pass('-***- dom/GeneSetEdit/GeneSetEditUI -***-')
+	test.comment('-***- dom/GeneSetEdit/GeneSetEditUI -***-')
 	test.end()
 })
 

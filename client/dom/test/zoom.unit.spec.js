@@ -13,17 +13,14 @@ Tests:
 **************/
 
 tape('\n', test => {
-	test.pass('-***- dom/zoompan -***-')
+	test.comment('-***- dom/zoompan -***-')
 	test.end()
 })
 
 tape('renders the expected elements', test => {
 	test.timeoutAfter(100)
 	test.plan(3)
-	const holder = select(document.body)
-		.append('div')
-		.style('margin', '20px')
-		.style('padding', '20px')
+	const holder = select(document.body).append('div').style('margin', '20px').style('padding', '20px')
 	let currentCallback
 	const callback = value => currentCallback(value)
 	const zoomApi = zoom({ holder, callback, debug: true, showJumpBtns: true })
@@ -41,10 +38,7 @@ tape('renders the expected elements', test => {
 tape('value synchronization', test => {
 	test.timeoutAfter(100)
 	test.plan(10)
-	const holder = select(document.body)
-		.append('div')
-		.style('margin', '20px')
-		.style('padding', '20px')
+	const holder = select(document.body).append('div').style('margin', '20px').style('padding', '20px')
 	let currentCallback
 	const callback = value => currentCallback(value)
 	const zoomApi = zoom({ holder, callback, debug: true, showJumpBtns: true })

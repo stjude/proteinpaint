@@ -38,7 +38,7 @@ const tabLabels2Find = ['Barchart', 'Violin', 'Boxplot'] //hardcoded data in sum
 ***************/
 
 tape('\n', function (test) {
-	test.pass('-***- plots/summary -***-')
+	test.comment('-***- plots/summary -***-')
 	test.end()
 })
 

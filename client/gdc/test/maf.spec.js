@@ -29,7 +29,7 @@ const femaleCohort = {
 const maleCases = new Set()
 
 tape('\n', function (test) {
-	test.pass('-***- GDC cohort MAF UI -***-')
+	test.comment('-***- GDC cohort MAF UI -***-')
 	test.end()
 })
 

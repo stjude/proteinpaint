@@ -63,7 +63,7 @@ function sleep(ms) {
 ***************/
 
 tape('\n', function (test) {
-	test.pass('-***- server/auth specs -***-')
+	test.comment('-***- server/auth specs -***-')
 	test.end()
 })
 

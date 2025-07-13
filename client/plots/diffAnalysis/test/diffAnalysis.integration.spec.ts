@@ -28,7 +28,7 @@ const runpp = helpers.getRunPp('mass', {
 ***************/
 
 tape('\n', function (test) {
-	test.pass('-***- plots/DiffAnalysis/DifferentialAnalysis -***-')
+	test.comment('-***- plots/DiffAnalysis/DifferentialAnalysis -***-')
 	test.end()
 })
 

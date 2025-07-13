@@ -11,7 +11,7 @@ summarize_mclass()
  test sections
 ***************/
 tape('\n', function (test) {
-	test.pass('-***- mds3tk -***-')
+	test.comment('-***- mds3tk -***-')
 	test.end()
 })
 

@@ -67,7 +67,7 @@ const entities = [
 ]
 
 tape('\n', function (test) {
-	test.pass('-***- GDC BAM slicing UI -***-')
+	test.comment('-***- GDC BAM slicing UI -***-')
 	test.end()
 })
 
