@@ -19,6 +19,8 @@ import fs from 'fs'
 import path from 'path'
 import { execSync } from 'child_process'
 
+process.removeAllListeners('warning')
+
 const __dirname = import.meta.dirname
 const routesDir = './src/routes'
 const cwd = path.join(__dirname, routesDir)

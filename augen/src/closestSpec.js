@@ -5,6 +5,8 @@ import fs from 'fs'
 export const gitProjectRoot = path.join(import.meta.dirname, '../..') // execSync(`git rev-parse --show-toplevel`, { encoding: 'utf8' }).trim()
 export const publicSpecsDir = path.join(gitProjectRoot, 'public/coverage/specs')
 
+process.removeAllListeners('warning')
+
 const ignore = ['dist/**', 'node_modules/**']
 const codeFileExt = new Set(['.js', '.mjs', '.cjs', '.ts'])
 let commitRef

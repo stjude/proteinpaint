@@ -4,6 +4,8 @@ import path from 'path'
 import { minimatch } from 'minimatch'
 import serverconfig from '../../serverconfig.js'
 
+process.removeAllListeners('warning')
+
 export default function setRoutes(app, basepath) {
 	app.get(basepath + '/specs', async (req, res) => {
 		try {
