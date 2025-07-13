@@ -11,6 +11,8 @@ const execSync = require('child_process').execSync
 const semver = require('semver')
 const cwd = process.cwd()
 
+process.removeAllListeners('warning')
+
 // ************
 // * ARGUMENTS
 // ************

@@ -11,6 +11,8 @@
 import fs from 'fs'
 import path from 'path'
 
+process.removeAllListeners('warning')
+
 const mode = process.argv[2]
 const cwd = process.cwd()
 const __dirname = import.meta.dirname

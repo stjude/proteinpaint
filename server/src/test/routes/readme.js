@@ -2,6 +2,8 @@ import path from 'path'
 import fs from 'fs'
 import serverconfig from '../../serverconfig.js'
 
+process.removeAllListeners('warning')
+
 export default function setRoutes(app, basepath) {
 	const cwd = path.join(serverconfig.binpath, '..')
 
