@@ -10,7 +10,7 @@ negateFilter
 */
 
 tape('\n', test => {
-	test.pass('-***- filter/unit -***-')
+	test.comment('-***- filter/unit -***-')
 	test.end()
 })
 

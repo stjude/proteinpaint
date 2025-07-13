@@ -76,7 +76,7 @@ async function getHierClusterApp(_opts = {}) {
 ***************/
 
 tape('\n', function (test) {
-	test.pass('-***- plots/hierCluster.js -***-')
+	test.comment('-***- plots/hierCluster.js -***-')
 	test.end()
 })
 

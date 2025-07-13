@@ -208,7 +208,7 @@ function testTermNameGen(test, handler) {
 */
 
 tape('\n', async test => {
-	test.pass('-***- filter/tvs.unit -***-')
+	test.comment('-***- filter/tvs.unit -***-')
 	test.end()
 })
 

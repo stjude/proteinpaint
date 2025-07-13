@@ -44,7 +44,7 @@ function getTestMenu() {
 ***************/
 
 tape('\n', test => {
-	test.pass('-***- dom/menu -***-')
+	test.comment('-***- dom/menu -***-')
 	test.end()
 })
 

@@ -10,7 +10,7 @@ mayInitCnv()
 */
 
 tape('\n', test => {
-	test.pass('-***- mds3/cnv unit-***-')
+	test.comment('-***- mds3/cnv unit-***-')
 	test.end()
 })
 

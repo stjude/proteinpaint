@@ -51,7 +51,7 @@ function getHolder() {
  test sections
 ***************/
 tape('\n', function (test) {
-	test.pass('-***- plots/frequencyChart -***-')
+	test.comment('-***- plots/frequencyChart -***-')
 	test.end()
 })
 

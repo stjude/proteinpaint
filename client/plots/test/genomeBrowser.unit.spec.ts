@@ -12,7 +12,7 @@ computeBlockModeFlag()
 ***************/
 
 tape('\n', test => {
-	test.pass('-***- plots/genomebrowser -***-')
+	test.comment('-***- plots/genomebrowser -***-')
 	test.end()
 })
 

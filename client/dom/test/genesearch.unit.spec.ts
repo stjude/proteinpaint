@@ -37,7 +37,7 @@ function getSearchBox(holder, opts = {}) {
 ***************/
 
 tape('\n', test => {
-	test.pass('-***- dom/genesearch.unit-***-')
+	test.comment('-***- dom/genesearch.unit-***-')
 	test.end()
 })
 

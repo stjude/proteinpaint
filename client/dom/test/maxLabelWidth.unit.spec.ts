@@ -135,7 +135,7 @@ async function loadTestFont() {
  * Test sections
  **************/
 tape('\n', function (test) {
-	test.pass('-***- utils/maxLabelWidth -***-')
+	test.comment('-***- utils/maxLabelWidth -***-')
 	test.end()
 })
 

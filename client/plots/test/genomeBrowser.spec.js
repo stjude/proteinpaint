@@ -23,7 +23,7 @@ Single group: info
 ********************************************/
 
 tape('\n', function (test) {
-	test.pass('-***- mass/genomeBrowser -***-')
+	test.comment('-***- mass/genomeBrowser -***-')
 	test.end()
 })
 

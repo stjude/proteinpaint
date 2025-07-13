@@ -8,7 +8,7 @@ const handler = new SearchHandler()
 ***************/
 
 tape('\n', function (test) {
-	test.pass('-***- geneVariant search handler -***-')
+	test.comment('-***- geneVariant search handler -***-')
 	test.end()
 })
 

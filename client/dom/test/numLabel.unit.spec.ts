@@ -2,7 +2,7 @@ import tape from 'tape'
 import { niceNumLabels } from '../niceNumLabels'
 
 tape('\n', test => {
-	test.pass('-***- dom/niceNumberLabels -***-')
+	test.comment('-***- dom/niceNumberLabels -***-')
 	test.end()
 })
 

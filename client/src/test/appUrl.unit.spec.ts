@@ -9,7 +9,7 @@ mayGetTkobj: mds3
 */
 
 tape('\n', function (test) {
-	test.pass('-***- app.parseurl.js mayGetTkobj() -***-')
+	test.comment('-***- app.parseurl.js mayGetTkobj() -***-')
 	test.end()
 })
 

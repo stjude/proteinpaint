@@ -14,7 +14,7 @@ function getHolder() {
 }
 
 tape('\n', function (test) {
-	test.pass('-***- databrowser UI -***-')
+	test.comment('-***- databrowser UI -***-')
 	test.end()
 })
 

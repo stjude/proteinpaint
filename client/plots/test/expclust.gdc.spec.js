@@ -12,7 +12,7 @@ gdc laucher with top variably expressed genes, for gliomas
 
 ***************/
 tape('\n', function (test) {
-	test.pass('-***- plots/hierCluster.gdc -***-')
+	test.comment('-***- plots/hierCluster.gdc -***-')
 	test.end()
 })
 

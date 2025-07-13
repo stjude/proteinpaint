@@ -72,7 +72,7 @@ const mockCohort = {
 ***************/
 
 tape('\n', test => {
-	test.pass('-***- mass/about -***-')
+	test.comment('-***- mass/about -***-')
 	test.end()
 })
 

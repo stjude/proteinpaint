@@ -23,7 +23,7 @@ boxplot - geneExpression/geneVariant
 ***********************/
 
 tape('\n', function (test) {
-	test.pass('-***- summary.gdc -***-')
+	test.comment('-***- summary.gdc -***-')
 	test.end()
 })
 

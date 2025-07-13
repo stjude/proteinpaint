@@ -5,13 +5,13 @@ import { DataFetcher } from '../data/DataFetcher.ts'
 import { DetailDataFetcher } from '../data/DetailDataFetcher.ts'
 
 tape('\n', test => {
-	test.pass('-***- hic app integration tracks/hic -***-')
+	test.comment('-***- hic app integration tracks/hic -***-')
 	test.end()
 })
 
-/** Run this file manually. Takes too long to run on CI. 
- * Notes: 
- * - Not able to test DetailDataMapper .getYFragData() and .getXFragData() methods 
+/** Run this file manually. Takes too long to run on CI.
+ * Notes:
+ * - Not able to test DetailDataMapper .getYFragData() and .getXFragData() methods
  * until the reference files are available on CI.
  */
 

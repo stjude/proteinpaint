@@ -32,7 +32,7 @@ const runpp = helpers.getRunPp('mass', {
 ***************/
 
 tape('\n', test => {
-	test.pass('-***- plots/dataDownload -***-')
+	test.comment('-***- plots/dataDownload -***-')
 	test.end()
 })
 

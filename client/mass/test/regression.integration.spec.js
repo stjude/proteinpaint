@@ -18,7 +18,7 @@ TODO:
 */
 
 tape('\n', test => {
-	test.pass('-***- plots/regression -***-')
+	test.comment('-***- plots/regression -***-')
 	test.end()
 })
 
@@ -141,7 +141,7 @@ tape('Linear: continuous outcome = "agedx", cat. independents = "sex" + "genetic
 		}
 
 		const elem = regDom.inputs.node()
-		await detectOne({selector: '.sjpp-vp-violinDiv', elem})
+		await detectOne({ selector: '.sjpp-vp-violinDiv', elem })
 		test.ok(elem.querySelector('.sjpp-vp-violinDiv'), `Should render violin plot for outcome variable`)
 
 		if (test._ok) regression.Inner.app.destroy()

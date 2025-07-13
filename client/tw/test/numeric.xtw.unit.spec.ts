@@ -15,7 +15,7 @@ const vocabApi = vocabInit({ state: { vocab: { genome: 'hg38-test', dslabel: 'Te
 ***************/
 
 tape('\n', function (test) {
-	test.pass('-***- tw/numeric.xtw.unit -***-')
+	test.comment('-***- tw/numeric.xtw.unit -***-')
 	test.end()
 })
 

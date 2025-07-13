@@ -42,7 +42,7 @@ if (!filesExist.dense) {
  * Test sections
  **************/
 tape('\n', function (test) {
-	test.pass('-***- validateHDF5 specs -***-')
+	test.comment('-***- validateHDF5 specs -***-')
 	test.end()
 })
 

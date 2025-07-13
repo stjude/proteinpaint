@@ -27,7 +27,7 @@ const runpp = helpers.getRunPp('termdb', {
 ***************/
 
 tape('\n', function (test) {
-	test.pass('-***- termdb/submenu -***-')
+	test.comment('-***- termdb/submenu -***-')
 	test.end()
 })
 

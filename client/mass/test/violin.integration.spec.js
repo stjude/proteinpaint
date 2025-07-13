@@ -45,7 +45,7 @@ const runpp = getRunPp('mass', {
 ***************/
 
 tape('\n', function (test) {
-	test.pass('-***- plots/violin -***-')
+	test.comment('-***- plots/violin -***-')
 	test.end()
 })
 const open_state = {

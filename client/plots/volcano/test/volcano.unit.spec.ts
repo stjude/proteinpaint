@@ -78,7 +78,7 @@ const mockResponse = {
 ***************/
 
 tape('\n', function (test) {
-	test.pass('-***- plots/volcano/Volcano -***-')
+	test.comment('-***- plots/volcano/Volcano -***-')
 	test.end()
 })
 

@@ -5,7 +5,7 @@ import { isUsableTerm } from '../termdb.usecase.js'
  test sections
 ***************/
 tape('\n', function (test) {
-	test.pass('-***- termdb.usecase specs -***-')
+	test.comment('-***- termdb.usecase specs -***-')
 	test.end()
 })
 

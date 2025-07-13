@@ -36,7 +36,7 @@ function getSandboxOpts(sandbox) {
 ***************/
 
 tape('\n', test => {
-	test.pass('-***- dom/sandbox -***-')
+	test.comment('-***- dom/sandbox -***-')
 	test.end()
 })
 

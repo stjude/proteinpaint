@@ -42,7 +42,7 @@ const eventCallbacks = {
 ***************/
 
 tape('\n', function (test) {
-	test.pass('-***- server/src/cards -***-')
+	test.comment('-***- server/src/cards -***-')
 	test.end()
 })
 

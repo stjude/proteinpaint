@@ -59,7 +59,7 @@ function mockBoxplotData(opts) {
 ***************/
 
 tape('\n', test => {
-	test.pass('-***- dom/boxplot -***-')
+	test.comment('-***- dom/boxplot -***-')
 	test.end()
 })
 

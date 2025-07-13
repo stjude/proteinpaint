@@ -20,7 +20,7 @@ const runpp = helpers.getRunPp('mass', {
 })
 
 tape.skip('\n', function (test) {
-	test.pass('-***- plots/wsiviewer/wsiviewer -***-')
+	test.comment('-***- plots/wsiviewer/wsiviewer -***-')
 	test.end()
 })
 

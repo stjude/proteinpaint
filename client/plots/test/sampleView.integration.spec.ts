@@ -28,7 +28,7 @@ const runpp = helpers.getRunPp('mass', {
 ***************/
 
 tape('\n', function (test) {
-	test.pass('-***- plots/sampleView -***-')
+	test.comment('-***- plots/sampleView -***-')
 	test.end()
 })
 

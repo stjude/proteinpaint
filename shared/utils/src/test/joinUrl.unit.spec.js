@@ -2,7 +2,7 @@ import tape from 'tape'
 import { joinUrl } from '../joinUrl.js'
 
 tape('\n', function (test) {
-	test.pass('-***- #shared/joinUrl -***-')
+	test.comment('-***- #shared/joinUrl -***-')
 	test.end()
 })
 

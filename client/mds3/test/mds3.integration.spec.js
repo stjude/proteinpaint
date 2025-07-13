@@ -40,7 +40,7 @@ this script exports following test methods to share with non-CI test using GDC/c
 */
 
 tape('\n', function (test) {
-	test.pass('-***- mds3 -***-')
+	test.comment('-***- mds3 -***-')
 	test.end()
 })
 

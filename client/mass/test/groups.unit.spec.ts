@@ -114,7 +114,7 @@ function getFilterObj(opts) {
 ***************/
 
 tape('\n', function (test) {
-	test.pass('-***- mass/groups -***-')
+	test.comment('-***- mass/groups -***-')
 	test.end()
 })
 

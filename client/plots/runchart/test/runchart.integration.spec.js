@@ -52,7 +52,7 @@ function getHolder() {
  test sections
 ***************/
 tape('\n', function (test) {
-	test.pass('-***- plots/runchart -***-')
+	test.comment('-***- plots/runchart -***-')
 	test.end()
 })
 

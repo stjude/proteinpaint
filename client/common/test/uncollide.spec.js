@@ -74,7 +74,7 @@ function sleep(ms) {
 ***************/
 
 tape('\n', test => {
-	test.pass('-***- common/uncollide -***-')
+	test.comment('-***- common/uncollide -***-')
 	test.end()
 })
 

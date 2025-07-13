@@ -108,7 +108,7 @@ function getViewModel() {
 }
 
 tape('\n', function (test) {
-	test.pass('-***- plots/boxplot/ViewModel -***-')
+	test.comment('-***- plots/boxplot/ViewModel -***-')
 	test.end()
 })
 

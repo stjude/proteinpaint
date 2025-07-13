@@ -27,7 +27,7 @@ top mutated genes from APOLLO-LUAD, CNV only
 
 ***************/
 tape('\n', function (test) {
-	test.pass('-***- plots/matrix.gdc (aka OncoMatrix) -***-')
+	test.comment('-***- plots/matrix.gdc (aka OncoMatrix) -***-')
 	test.end()
 })
 

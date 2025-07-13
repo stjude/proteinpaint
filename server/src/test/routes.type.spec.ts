@@ -81,7 +81,7 @@ async function testApi(f) {
 		`../../routes/${f}`
 	)
 	tape('\n', function (test) {
-		test.pass(`-***- server/${f} specs -***-`)
+		test.comment(`-***- server/${f} specs -***-`)
 		test.end()
 	})
 

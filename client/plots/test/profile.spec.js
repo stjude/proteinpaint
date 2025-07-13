@@ -22,7 +22,7 @@ function getHolder() {
  test sections
 ***************/
 tape('\n', function (test) {
-	test.pass('-***- plots/profile -***-')
+	test.comment('-***- plots/profile -***-')
 	test.end()
 })
 

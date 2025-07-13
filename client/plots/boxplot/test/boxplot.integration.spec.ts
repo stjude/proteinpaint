@@ -31,7 +31,7 @@ const runpp = helpers.getRunPp('mass', {
 ***************/
 
 tape('\n', function (test) {
-	test.pass('-***- plots/boxplot -***-')
+	test.comment('-***- plots/boxplot -***-')
 	test.end()
 })
 

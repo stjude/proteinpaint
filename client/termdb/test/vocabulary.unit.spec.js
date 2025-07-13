@@ -51,13 +51,13 @@ const termdbVocabApi = await getTermdbVocabApi()
 ***************/
 
 tape('\n', function (test) {
-	test.pass('-***- vocabulary -***-')
+	test.comment('-***- vocabulary -***-')
 	test.end()
 })
 
 /* vocabInit tests */
 tape('\n', function (test) {
-	test.pass('-***- vocabInit Tests (main vocab function)-***-')
+	test.comment('-***- vocabInit Tests (main vocab function)-***-')
 	test.end()
 })
 
@@ -192,7 +192,7 @@ tape('q_to_param()', async test => {
 
 /* FrontendVocab tests */
 tape('\n', function (test) {
-	test.pass('-***- FrontendVocab Tests -***-')
+	test.comment('-***- FrontendVocab Tests -***-')
 	test.end()
 })
 
@@ -483,7 +483,7 @@ tape('graphable()', async test => {
 
 /* TermdbVocab tests */
 tape('\n', function (test) {
-	test.pass('-***- TermdbVocab Tests -***-')
+	test.comment('-***- TermdbVocab Tests -***-')
 	test.end()
 })
 

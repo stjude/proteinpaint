@@ -68,7 +68,7 @@ const pphost = 'http://pp-int-test.stjude.org/' // show links using this host
  Test sections
 ***************/
 tape('\n', function (test) {
-	test.pass('-***- rust indel specs -***-')
+	test.comment('-***- rust indel specs -***-')
 	test.end()
 })
 

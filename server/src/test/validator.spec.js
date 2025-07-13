@@ -11,7 +11,7 @@ function sleep(ms) {
 
 // tests
 tape('\n', test => {
-	test.pass('-***- server/src/validator -***-')
+	test.comment('-***- server/src/validator -***-')
 	test.end()
 })
 

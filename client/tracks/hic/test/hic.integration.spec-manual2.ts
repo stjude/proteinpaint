@@ -29,7 +29,7 @@ async function getGenomes(genome: string) {
 }
 
 tape('\n', test => {
-	test.pass('-***- tracks/hic integration -***-')
+	test.comment('-***- tracks/hic integration -***-')
 	test.end()
 })
 

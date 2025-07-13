@@ -111,7 +111,7 @@ async function getTermdbVocabApi(opts = {}) {
 ***************/
 
 tape('\n', function (test) {
-	test.pass('-***- termdb/vocabulary -***-')
+	test.comment('-***- termdb/vocabulary -***-')
 	test.end()
 })
 
@@ -246,7 +246,7 @@ tape('Missing .state', test => {
 
 /* TermdbVocab tests */
 tape('\n', function (test) {
-	test.pass('-***- TermdbVocab Tests -***-')
+	test.comment('-***- TermdbVocab Tests -***-')
 	test.end()
 })
 
@@ -1160,7 +1160,7 @@ tape('getCohortsData()', async test => {
 
 /* FrontendVocab tests */
 tape('\n', function (test) {
-	test.pass('-***- FrontendVocab Tests -***-')
+	test.comment('-***- FrontendVocab Tests -***-')
 	test.end()
 })
 

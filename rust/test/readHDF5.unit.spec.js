@@ -35,7 +35,7 @@ if (!fs.existsSync(HDF5_FILE)) {
  * Test sections
  **************/
 tape('\n', function (test) {
-	test.pass('-***- readHDF5 specs -***-')
+	test.comment('-***- readHDF5 specs -***-')
 	test.end()
 })
 

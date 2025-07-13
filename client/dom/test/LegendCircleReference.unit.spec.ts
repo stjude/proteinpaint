@@ -13,7 +13,7 @@ function getHolder() {
  test sections
 ***************/
 tape('\n', function (test) {
-	test.pass('-***- dom/LegendCircleReference -***-')
+	test.comment('-***- dom/LegendCircleReference -***-')
 	test.end()
 })
 

@@ -55,7 +55,7 @@ const mockBlock = {
 ***************/
 
 tape('\n', function (test) {
-	test.pass('-***- mds3/customdata.inputui -***-')
+	test.comment('-***- mds3/customdata.inputui -***-')
 	test.end()
 })
 

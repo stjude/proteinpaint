@@ -12,7 +12,7 @@ divideTerms: assigns $id from term.name if id missing
 */
 
 tape('\n', function (test) {
-	test.pass('-***- modules/termdb.matrix specs -***-')
+	test.comment('-***- modules/termdb.matrix specs -***-')
 	test.end()
 })
 

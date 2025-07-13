@@ -42,7 +42,7 @@ function cleanup() {
 ***************/
 
 tape('\n', function (test) {
-	test.pass('-***- #shared/fetch-helpers -***-')
+	test.comment('-***- #shared/fetch-helpers -***-')
 	test.end()
 })
 

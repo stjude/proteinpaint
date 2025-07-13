@@ -45,7 +45,7 @@ async function getSearchBox(holder, opts = {}) {
 ***************/
 
 tape('\n', test => {
-	test.pass('-***- dom/genesearch.integration -***-')
+	test.comment('-***- dom/genesearch.integration -***-')
 	test.end()
 })
 

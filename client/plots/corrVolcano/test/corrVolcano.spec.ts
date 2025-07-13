@@ -33,7 +33,7 @@ const runpp = helpers.getRunPp('mass', {
 ***************/
 
 tape('\n', function (test) {
-	test.pass('-***- plots/correlationVolcano -***-')
+	test.comment('-***- plots/correlationVolcano -***-')
 	test.end()
 })
 

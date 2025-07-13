@@ -62,7 +62,7 @@ function getTermWithGS() {
 ***************/
 
 tape('\n', function (test) {
-	test.pass('-***- tw/categorical.unit -***-')
+	test.comment('-***- tw/categorical.unit -***-')
 	test.end()
 })
 

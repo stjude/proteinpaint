@@ -40,7 +40,7 @@ Tests:
 ***************/
 
 tape('\n', test => {
-	test.pass('-***- plots/barchart -***-')
+	test.comment('-***- plots/barchart -***-')
 	test.end()
 })
 

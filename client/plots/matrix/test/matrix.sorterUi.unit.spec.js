@@ -49,7 +49,7 @@ async function getControls(_opts = {}) {
 ***************/
 
 tape('\n', function (test) {
-	test.pass('-***- plots/matrix.sorterUi -***-')
+	test.comment('-***- plots/matrix.sorterUi -***-')
 	test.end()
 })
 

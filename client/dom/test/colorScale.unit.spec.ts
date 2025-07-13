@@ -50,7 +50,7 @@ function getColorScale(opts) {
 ***************/
 
 tape('\n', test => {
-	test.pass('-***- dom/ColorScale/ColorScale -***-')
+	test.comment('-***- dom/ColorScale/ColorScale -***-')
 	test.end()
 })
 
@@ -609,7 +609,7 @@ Color scale helper functions
 ****************************/
 
 tape('\n', test => {
-	test.pass('-***- dom/ColorScale/helpers -***-')
+	test.comment('-***- dom/ColorScale/helpers -***-')
 	test.end()
 })
 

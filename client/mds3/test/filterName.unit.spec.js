@@ -2,7 +2,7 @@ import tape from 'tape'
 import { getFilterName } from '../filterName'
 
 tape('\n', test => {
-	test.pass('-***- mds3/getFilterName-***-')
+	test.comment('-***- mds3/getFilterName-***-')
 	test.end()
 })
 

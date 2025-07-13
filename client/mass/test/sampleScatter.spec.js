@@ -131,7 +131,7 @@ const groupState = {
  test sections
 ***************/
 tape('\n', function (test) {
-	test.pass('-***- mass/sampleScatter -***-')
+	test.comment('-***- mass/sampleScatter -***-')
 	test.end()
 })
 
