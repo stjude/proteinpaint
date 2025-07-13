@@ -9,6 +9,7 @@ Features:
 
 Fixes:
 - improve appearance of delete button in mass groups table
+- cleanup singlecell route and type def
 
 
 ## 2.135.2
