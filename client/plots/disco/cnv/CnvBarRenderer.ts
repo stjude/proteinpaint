@@ -53,7 +53,7 @@ export default class CnvBarRenderer implements IRenderer {
 				// Add: Copy number change row
 				{
 					const [c1, c2] = table.addRow()
-					c1.text('Copy number change')
+					c1.text('CNV')
 					c2.html(`<span style="background:${cnv.color}">&nbsp;&nbsp;</span> ${cnv.value}`)
 				}
 				// Add: Position row

@@ -56,7 +56,7 @@ export class CnvHeatmapRenderer {
 				// Row 1: Copy number change + colored square
 				{
 					const [c1, c2] = table.addRow()
-					c1.text('Copy number change')
+					c1.text('CNV')
 					//Match the color shown in the tooltip to the heatmap
 					c2.html(
 						`<span style="background:${this.getColor(
