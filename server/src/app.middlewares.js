@@ -156,7 +156,7 @@ function setHeaders(req, res, next) {
 	// note that serverconfig.js sets [*] as default serverconfig.allowedEmbedders, if not present
 	const matchedHost = serverconfig.allowedEmbedders.find(getMatchingHost)
 
-	if (credEmbedder || matchedHost) {
+	if (credEmbedder || matchedHost || serverconfig.debugmode || serverconfig.defaultgenome == 'hg38-test') {
 		// only set these CORS-related headers for credentialed or allowed embedders
 		const host = matchedHost || credEmbedder
 		res.header('Access-Control-Allow-Origin', host === '*' ? origin : `${req.protocol}://${host}`)
