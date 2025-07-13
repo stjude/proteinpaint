@@ -192,11 +192,12 @@ if (serverconfig.allow_env_overrides) {
 // improves security for more restrictive prod instances such as GDC, or maybe later,
 // for the survivorship server instance to allow only vizcom as embedder
 if (!serverconfig.allowedEmbedders) {
-	serverconfig.allowedEmbedders = !serverconfig.backend_only
-		? ['*'] // historical default to allow any embedder
-		: serverconfig.URL
-		? [serverconfig.URL.split('://')[1]] // if serverconfig.URL is set for backend_only containers, use it as the default embedder;
-		: [] // otherwise, do not specify a default embedder
+	serverconfig.allowedEmbedders =
+		!serverconfig.backend_only || serverconfig.debugmode
+			? ['*'] // historical default to allow any embedder
+			: serverconfig.URL
+			? [serverconfig.URL.split('://')[1]] // if serverconfig.URL is set for backend_only containers, use it as the default embedder;
+			: [] // otherwise, do not specify a default embedder
 } else if (!Array.isArray(serverconfig.allowedEmbedders)) {
 	throw `serverconfig.allowedEmbedders must be an array`
 }

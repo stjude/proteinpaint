@@ -148,7 +148,7 @@ function setHeaders(req, res, next) {
 	// limit the allowed request methods for the PP server
 	res.header('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS, HEAD')
 
-	const origin = req.get('origin') || req.get('referrer') || req.protocol + '://' + req.get('host')
+	const origin = req.get('origin') || req.get('referrer') || req.protocol + '://' + (req.get('host') || '*')
 	const getMatchingHost = hostname => hostname == '*' || origin.includes(`://${hostname}`)
 	// detect if the request origin has a matching entry in serverconfig.dsCredentials
 	const credEmbedder = authApi.credEmbedders.find(getMatchingHost)
