@@ -29,10 +29,12 @@ export default class DataMapper {
 	private cnvData: Array<Data> = []
 	private cnvInnerRadius = 0
 
-	private fusionData: Array<Data> = []
-	private fusionRadius = 0
+        private fusionData: Array<Data> = []
+        private fusionRadius = 0
 
-	private hasPrioritizedGenes = false
+        private hasPrioritizedGenes = false
+
+        private invalidEntries: { dataType: string; reason: string }[] = []
 
 	private cnvLossMaxValue = 0
 	private cnvGainMaxValue = 0
@@ -111,26 +113,35 @@ export default class DataMapper {
 	map(data: any) {
 		const dataArray: Array<Data> = []
 
-		data.forEach(dObject => {
-			const index = this.reference.chromosomesOrder.indexOf(dObject.chr)
-			const indexA = this.reference.chromosomesOrder.indexOf(dObject.chrA)
-			const indexB = this.reference.chromosomesOrder.indexOf(dObject.chrB)
+                data.forEach(dObject => {
+                        const index = this.reference.chromosomesOrder.indexOf(dObject.chr)
+                        const indexA = this.reference.chromosomesOrder.indexOf(dObject.chrA)
+                        const indexB = this.reference.chromosomesOrder.indexOf(dObject.chrB)
 
-			if (dObject.dt == dtsnvindel) {
-				if (index != -1 && this.snvData.length < this.settings.snv.maxMutationCount) {
-					this.addData(dObject, dataArray)
-				}
-			} else if (dObject.dt == dtfusionrna || dObject.dt == dtsv) {
-				if (indexA != -1 && indexB != -1) {
-					// show sv/fusion event with valid A/B breakpoints.
-					this.addData(dObject, dataArray)
-				}
-			} else if ([dtcnv, dtloh].includes(Number(dObject.dt))) {
-				this.addData(dObject, dataArray)
-			} else {
-				throw Error('Unknown mutation type!')
-			}
-		})
+                        if (dObject.dt == dtsnvindel) {
+                                if (index != -1 && this.snvData.length < this.settings.snv.maxMutationCount) {
+                                        this.addData(dObject, dataArray)
+                                } else if (index == -1) {
+                                        this.invalidEntries.push({ dataType: 'SNV', reason: `Unknown chr ${dObject.chr}` })
+                                }
+                        } else if (dObject.dt == dtfusionrna || dObject.dt == dtsv) {
+                                if (indexA != -1 && indexB != -1) {
+                                        // show sv/fusion event with valid A/B breakpoints.
+                                        this.addData(dObject, dataArray)
+                                } else {
+                                        this.invalidEntries.push({ dataType: 'Fusion', reason: 'Unknown chr in fusion' })
+                                }
+                        } else if ([dtcnv, dtloh].includes(Number(dObject.dt))) {
+                                const idx = this.reference.chromosomesOrder.indexOf(dObject.chr)
+                                if (dObject.chr && idx != -1) {
+                                        this.addData(dObject, dataArray)
+                                } else {
+                                        this.invalidEntries.push({ dataType: dObject.dt == dtcnv ? 'CNV' : 'LOH', reason: `Unknown chr ${dObject.chr}` })
+                                }
+                        } else {
+                                throw Error('Unknown mutation type!')
+                        }
+                })
 
 		const sortedData = dataArray.sort(this.compareData)
 
@@ -226,8 +237,13 @@ export default class DataMapper {
 			cnvMaxPercentileAbs: this.cnvMaxPercentileAbs,
 
 			lohMaxValue: this.lohMaxValue,
-			lohMinValue: this.lohMinValue
-		}
+                        lohMinValue: this.lohMinValue
+                        ,
+                        invalidDataInfo: {
+                                count: this.invalidEntries.length,
+                                entries: this.invalidEntries
+                        }
+                }
 
 		return dataHolder
 	}
