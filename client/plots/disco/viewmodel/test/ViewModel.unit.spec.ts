@@ -47,7 +47,8 @@ const mockDataHolder = {
 	cnvLossMaxValue: -3,
 	cappedCnvMaxAbsValue: 4,
 	percentileNegative: -2,
-	percentilePositive: 2
+        percentilePositive: 2,
+        invalidDataInfo: { count: 1, entries: [{ dataType: 'SNV', reason: 'Unknown chr' }] }
 } as any
 
 test('\n', function (t) {
@@ -58,7 +59,16 @@ test('\n', function (t) {
 // ───── Test 1: Constructor and field assignments ─────
 
 test('ViewModel initializes with expected values', t => {
-	const viewModel = new ViewModel(settings, mockRings, mockLegend, mockFusions, mockDataHolder, 'GeneSet123', 999)
+      const viewModel = new ViewModel(
+              settings,
+              mockRings,
+              mockLegend,
+              mockFusions,
+              mockDataHolder,
+              'GeneSet123',
+              999,
+              mockDataHolder.invalidDataInfo
+      )
 
 	t.equal(
 		viewModel.snvDataLength,
@@ -89,13 +99,14 @@ test('ViewModel initializes with expected values', t => {
 
 	t.ok(viewModel.width > 0, 'Width is computed and greater than 0')
 	t.ok(viewModel.height > 0, 'Height is computed and greater than 0')
-	t.equal(
-		viewModel.legendHeight,
-		mockLegend.legendCount() * settings.legend.rowHeight,
-		`Legend height should return ${mockLegend.legendCount()} rows × ${settings.legend.rowHeight}px = ${
-			mockLegend.legendCount() * settings.legend.rowHeight
-		}`
-	)
+        t.equal(
+                viewModel.legendHeight,
+                mockLegend.legendCount() * settings.legend.rowHeight,
+                `Legend height should return ${mockLegend.legendCount()} rows × ${settings.legend.rowHeight}px = ${
+                        mockLegend.legendCount() * settings.legend.rowHeight
+                }`
+        )
+        t.equal(viewModel.invalidDataInfo?.count, 1, 'Invalid data info is stored')
 
-	t.end()
+        t.end()
 })

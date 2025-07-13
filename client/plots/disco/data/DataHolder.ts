@@ -33,5 +33,10 @@ export interface DataHolder {
 	cnvMaxPercentileAbs: number
 
 	lohMaxValue?: number
-	lohMinValue?: number
+        lohMinValue?: number
+
+        invalidDataInfo?: {
+                count: number
+                entries: { dataType: string; reason: string }[]
+        }
 }
