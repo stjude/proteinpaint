@@ -2543,7 +2543,7 @@ tape('survival term in continous mode', function (test) {
 			60,
 			`should render the expected number of cell rects`
 		)
-		//if (test._ok) matrix.Inner.app.destroy()
+		if (test._ok) matrix.Inner.app.destroy()
 		test.end()
 	}
 })
@@ -2607,7 +2607,7 @@ tape('survival term in discrete mode', function (test) {
 			60,
 			`should render the expected number of cell rects`
 		)
-		//if (test._ok) matrix.Inner.app.destroy()
+		if (test._ok) matrix.Inner.app.destroy()
 		test.end()
 	}
 })

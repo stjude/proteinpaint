@@ -114,6 +114,8 @@ export class MassAbout {
 	}
 
 	async main() {
+		// do not render unless the cohort tab is active
+		if (this.state.nav.activeTab !== 0) return
 		await this.renderCohortsTable()
 		if (this.opts.selectCohort) {
 			if (this.opts.selectCohort.description) {
