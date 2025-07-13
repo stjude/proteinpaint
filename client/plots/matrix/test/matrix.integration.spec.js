@@ -2475,12 +2475,14 @@ tape('cell brush zoom in', function (test) {
 		}
 		matrix.Inner.zoomWidth = Math.abs(startCell.totalIndex - endCell.totalIndex) * matrix.Inner.dimensions.colw
 
-		matrix.Inner.triggerZoomArea()
-		await sleep(5)
+		matrix.on('postRender.test', () => {
+			matrix.on('postRender.test', null)
+			test.deepEqual(matrix.Inner.settings.matrix.zoomLevel, 4, 'should have the expected zoom level after zoom in')
+			if (test._ok) matrix.Inner.app.destroy()
+			test.end()
+		})
 
-		test.deepEqual(matrix.Inner.settings.matrix.zoomLevel, 4, 'should have the expected zoom level after zoom in')
-		if (test._ok) matrix.Inner.app.destroy()
-		test.end()
+		matrix.Inner.triggerZoomArea()
 	}
 })
 
