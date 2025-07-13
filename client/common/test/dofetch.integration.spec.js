@@ -5,13 +5,14 @@ import { dofetch3 } from '../dofetch.js'
  reusable helper functions
 **************************/
 
-const text2buf = new TextEncoder()
-
 /**************
  test sections
 ***************/
 
-console.log(`-***- common/dofetch integration -***-`)
+tape('\n', test => {
+	test.comment(`-***- common/dofetch integration -***-`)
+	test.end()
+})
 
 tape('processFormData', async test => {
 	const res1 = await dofetch3('/genomes')
