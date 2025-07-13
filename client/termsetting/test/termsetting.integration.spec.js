@@ -478,7 +478,7 @@ tape('Numerical term: fixed bins', async test => {
 
 	await opts.pillMenuClick('Edit')
 	const tip = opts.pill.Inner.dom.tip
-	await sleep(50)
+	await sleep(100)
 	const lines = tip.d.select('.binsize_g').node().querySelectorAll('line')
 	test.equal(lines.length, 8, 'should have 8 lines')
 	// first line should be draggable
@@ -535,7 +535,7 @@ tape('Numerical term: fixed bins', async test => {
 		.querySelectorAll('input')[1]
 	d3s.select(last_bin_custom_radio).property('checked', true)
 	last_bin_custom_radio.dispatchEvent(new Event('change'))
-
+	await sleep(50)
 	const last_bin_input = tip.d.node().querySelectorAll('tr')[2].querySelectorAll('div')[1].querySelectorAll('input')[0]
 
 	last_bin_input.value = 20
@@ -556,7 +556,7 @@ tape('Numerical term: fixed bins', async test => {
 		.find(b => b.innerHTML == 'Apply')
 	apply_btn.click()
 	await opts.pillMenuClick('Edit')
-
+	await sleep(50)
 	test.equal(
 		tip.d.node().querySelectorAll('tr')[0].querySelectorAll('input')[0].value,
 		'5',
