@@ -11,7 +11,10 @@ const text2buf = new TextEncoder()
  test sections
 ***************/
 
-console.log(`-***- common/dofetch unit -***-`)
+tape('\n', test => {
+	test.comment(`-***- common/dofetch unit -***-`)
+	test.end()
+})
 
 tape('processFormData', async test => {
 	const form = new FormData()

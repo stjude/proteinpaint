@@ -478,7 +478,7 @@ tape('Numerical term: fixed bins', async test => {
 
 	await opts.pillMenuClick('Edit')
 	const tip = opts.pill.Inner.dom.tip
-
+	await sleep(50)
 	const lines = tip.d.select('.binsize_g').node().querySelectorAll('line')
 	test.equal(lines.length, 8, 'should have 8 lines')
 	// first line should be draggable
