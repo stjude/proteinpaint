@@ -9,7 +9,7 @@ export class ReportView {
 	constructor(report: Report) {
 		this.opts = report.opts
 		this.report = report
-
+		this.opts.holder.style('transform', 'scale(0.8)').style('transform-origin', '0 0')
 		const leftDiv = this.opts.holder.insert('div').style('display', 'inline-block')
 		const controlsHolder = leftDiv
 			.insert('div')
@@ -21,7 +21,7 @@ export class ReportView {
 			.style('vertical-align', 'top')
 			.style('padding', '20px')
 		const headerDiv = mainDiv.append('div')
-		const plotsDiv = mainDiv.append('div').style('transform', 'scale(0.8)').style('transform-origin', '0 0')
+		const plotsDiv = mainDiv.append('div')
 
 		this.dom = {
 			headerDiv,
