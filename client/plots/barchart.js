@@ -11,7 +11,7 @@ import { fillTermWrapper } from '#termsetting'
 import { getColors, mclass, plotColor } from '#shared/common.js'
 import { isNumericTerm } from '#shared/terms.js'
 import { roundValueAuto } from '#shared/roundValue.js'
-import { getGlobalTermFilter } from '#shared/filter.js'
+import { getCombinedTermFilter } from '../../../client/filter/filter.utils.js'
 
 export class Barchart {
 	constructor(opts) {
@@ -288,7 +288,7 @@ export class Barchart {
 		}
 		const parentConfig = appState.plots.find(p => p.id === this.parentId)
 		let termfilter = appState.termfilter
-		if (parentConfig?.filter) termfilter = getGlobalTermFilter(appState, parentConfig.filter)
+		if (parentConfig?.filter) termfilter = getCombinedTermFilter(appState, parentConfig.filter)
 		return {
 			nav: {
 				header_mode: appState.nav.header_mode

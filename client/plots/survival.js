@@ -17,7 +17,7 @@ import { getSeriesTip } from '#dom/svgSeriesTips'
 import { renderAtRiskG } from '#dom/renderAtRisk'
 import { renderPvalues } from '#dom/renderPvalueTable'
 import { downloadChart } from '#common/svg.download'
-import { getGlobalTermFilter } from '#shared/filter.js'
+import { getCombinedTermFilter } from '../../../client/filter/filter.utils.js'
 
 class TdbSurvival {
 	constructor(opts) {
@@ -209,7 +209,7 @@ class TdbSurvival {
 		}
 		const parentConfig = appState.plots.find(p => p.id === this.parentId)
 		let termfilter = appState.termfilter
-		if (parentConfig?.filter) termfilter = getGlobalTermFilter(appState, parentConfig.filter)
+		if (parentConfig?.filter) termfilter = getCombinedTermFilter(appState, parentConfig.filter)
 
 		return {
 			isVisible: config.term.term.type == 'survival' || (config.term2 && config.term2.term.type == 'survival'),

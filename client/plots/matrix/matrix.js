@@ -15,7 +15,7 @@ import svgLegend from '#dom/svg.legend'
 import { mclass, dt2label, morigin, dtsnvindel, dtcnv } from '#shared/common.js'
 import { select } from 'd3-selection'
 import { sayerror } from '#dom'
-import { getGlobalTermFilter } from '#shared/filter.js'
+import { getCombinedTermFilter } from '../../../client/filter/filter.utils.js'
 
 export class Matrix {
 	constructor(opts) {
@@ -134,7 +134,7 @@ export class Matrix {
 
 		const parentConfig = appState.plots.find(p => p.id === this.parentId)
 		let termfilter = appState.termfilter
-		if (parentConfig?.filter) termfilter = getGlobalTermFilter(appState, parentConfig.filter)
+		if (parentConfig?.filter) termfilter = getCombinedTermFilter(appState, parentConfig.filter)
 
 		return {
 			isVisible: true,
