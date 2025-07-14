@@ -6,6 +6,7 @@ import { run_python } from '@sjcrh/proteinpaint-python'
 import { mayLog } from '#src/helpers.ts'
 import { get_samples } from '#src/termdb.sql.js'
 import { read_file, file_is_readable } from '#src/utils.js'
+import { dtsnvindel, dtcnv, dtfusionrna } from '#shared/common.js'
 
 /**
  * General GRIN2 analysis handler
@@ -22,7 +23,11 @@ import { read_file, file_is_readable } from '#src/utils.js'
  *        - loc.start: Start position of the lesion
  *        - loc.end: End position of the lesion
  *        - lsn.type: Type of lesion ("mutation", "gain", "loss", "fusion")
- * 3. Read and filter file contents based on snvindelOptions, cnvOptions, fusionOptions
+ * 3. Read and filter file contents based on snvindelOptions, cnvOptions, fusionOptions, or svOptions:
+ *    - SNV/indel: Filter by depth, alternate allele count, and consequence types
+ *    - CNV: Filter by copy number thresholds and segment lengths
+ *    - Fusion: Filter by fusion type and confidence score
+ *    - Hypermutator: Apply a maximum mutation count cutoff for highly mutated samples
  * 4. Convert filtered data to lesion format expected by Python script
  * 5. Pass lesion data to Python for GRIN2 statistical analysis and plot generation
  * 6. Return Manhattan plot as base64 string, top gene table, and timing information
@@ -76,11 +81,10 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 
 	// Step 1: Get samples using cohort infrastructure
 	mayLog('[GRIN2] Getting samples from cohort filter...')
-	const cohortStartTime = Date.now()
 
 	const samples = await get_samples(request.filter, ds)
 
-	const cohortTime = Date.now() - cohortStartTime
+	const cohortTime = Date.now() - startTime
 	mayLog(`[GRIN2] Retrieved ${samples.length.toLocaleString()} samples in ${Math.round(cohortTime / 1000)} seconds`)
 
 	if (samples.length === 0) {
@@ -120,7 +124,7 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 	// Build chromosome list from genome reference
 	for (const c in g.majorchr) {
 		// List is short so a small penalty for accessing the flag in the loop
-		if (ds.queries.singleSampleMutation?.discoPlot?.skipChrM) {
+		if (ds.queries.singleSampleMutation.discoPlot?.skipChrM) {
 			// Skip chrM; this property is set in gdc ds but still assess it to avoid hardcoding the logic, in case code maybe reused for non-gdc ds
 			if (c.toLowerCase() == 'chrm') continue
 		}
@@ -218,7 +222,6 @@ async function processSampleData(
 						: String(error)
 				}`
 			)
-			// Continue with other samples instead of failing completely
 		}
 	}
 
@@ -244,28 +247,24 @@ async function processSampleMlst(
 	// Process each entry in mlst based on its data type
 	for (const m of mlst) {
 		switch (m.dt) {
-			case 'snvindel': {
-				// TODO: Replace with actual constant for SNV/indel data type
+			case dtsnvindel: {
 				if (!request.snvindelOptions) break // option missing, will skip this
 				const snvIndelLesion = filterAndConvertSnvIndel(sampleName, m, request.snvindelOptions)
 				if (snvIndelLesion) lesions.push(snvIndelLesion)
 				break
 			}
-			case 'cnv': {
-				// TODO: Replace with actual constant for CNV data type
+			case dtcnv: {
 				if (!request.cnvOptions) break // option missing, will skip this
 				const cnvLesion = filterAndConvertCnv(sampleName, m, request.cnvOptions)
 				if (cnvLesion) lesions.push(cnvLesion)
 				break
 			}
-			case 'fusion': {
-				// TODO: Replace with actual constant for fusion data type
+			case dtfusionrna: {
 				if (!request.fusionOptions) break // option missing, will skip this
 				const fusionLesion = filterAndConvertFusion(sampleName, m, request.fusionOptions)
 				if (fusionLesion) lesions.push(fusionLesion)
 				break
 			}
-
 			// Add other data types as needed
 			default:
 				mayLog(`[GRIN2] Unknown data type "${m.dt}" in sample ${sampleName}, skipping entry`)
@@ -290,8 +289,7 @@ function filterAndConvertSnvIndel(
 		minTotalDepth: options?.minTotalDepth ?? 10,
 		minAltAlleleCount: options?.minAltAlleleCount ?? 2,
 		consequences: options?.consequences ?? [],
-		hyperMutator: options?.hyperMutator ?? 1000,
-		dnaAssay: options?.dnaAssay ?? 'wxs'
+		hyperMutator: options?.hyperMutator ?? 1000
 	}
 
 	// Apply filtering based on options
@@ -326,8 +324,7 @@ function filterAndConvertCnv(sampleName: string, entry: any, options: GRIN2Reque
 		gainThreshold: options?.gainThreshold ?? 0.3,
 		maxSegLength: options?.maxSegLength ?? 0,
 		minSegLength: options?.minSegLength ?? 0,
-		hyperMutator: options?.hyperMutator ?? 500,
-		dnaAssay: options?.dnaAssay ?? 'wxs'
+		hyperMutator: options?.hyperMutator ?? 500
 	}
 
 	// Must be either gain or loss
@@ -366,8 +363,7 @@ function filterAndConvertFusion(
 	// Set defaults
 	const opts = {
 		fusionTypes: options?.fusionTypes ?? ['gene-gene', 'gene-intergenic', 'readthrough'],
-		minConfidence: options?.minConfidence ?? 0.7,
-		dnaAssay: options?.dnaAssay ?? 'wxs'
+		minConfidence: options?.minConfidence ?? 0.7
 	}
 
 	// Apply fusion type filter

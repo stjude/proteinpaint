@@ -4,7 +4,7 @@
  * and returns the same structured results as GDC-GRIN2.
  * Specifically it will return a sortable table of top mutated genes and
  * a static PNG manhattan-like plot of the -log10(q-value).
- * We allow the user to customize the MAF, CNV, and fusion filtering options.
+ * We allow the user to customize the snvindel, CNV, and fusion filtering options.
  */
 
 import type { RoutePayload } from './routeApi.js'
@@ -30,8 +30,6 @@ export type GRIN2Request = {
 		consequences?: string[]
 		/** Maximum mutation count cutoff for highly mutated scenarios */
 		hyperMutator?: number // Default: 1000
-		/** DNA assay type (e.g., 'wxs', 'wgs') */
-		dnaAssay?: string // Default: 'wxs'
 	}
 
 	/** Options for filtering CNV file content */
@@ -46,8 +44,6 @@ export type GRIN2Request = {
 		minSegLength?: number // Default: 0
 		/** Hypermutator max cut off for CNVs per case */
 		hyperMutator?: number // Default: 500
-		/** DNA assay type (e.g., 'wxs', 'wgs') */
-		dnaAssay?: string // Default: 'wxs'
 	}
 
 	/** Options for filtering fusion file content */
@@ -56,8 +52,6 @@ export type GRIN2Request = {
 		fusionTypes?: ('gene-gene' | 'gene-intergenic' | 'readthrough')[]
 		/** Minimum confidence score (0-1) */
 		minConfidence?: number // Default: 0.7
-		/** DNA assay type (e.g., 'wxs', 'wgs') */
-		dnaAssay?: string // Default: 'wxs'
 	}
 }
 

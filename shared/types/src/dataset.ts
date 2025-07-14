@@ -377,21 +377,30 @@ type SingleSampleMutationQuery = {
 	cnv example entry:
 	             {
 	               "chromosome": "chr1",
-	               "dna_assay": "wxs",
 	               "start": 123456,
 	               "end": 123789,
-	               "type": "snv",
-	               "log2Ratio": null,
-	               "fusionType": null,
-	               "confidence": null
+	               "type": "cnv",
+	               "log2Ratio": null
 	             }
 
 	snvindel example entry:
-		TODO add example
+	             {
+	               "chromosome": "chr1",
+	               "start": 123456,
+	               "end": 123789,
+	               "type": "snvindel"
+	             }
 		TODO specify property names for read depth; needed for grin2 filtering
 
-	sv/fusion example entry:
-		TODO add example
+	fusion example entry:
+			     {
+	               "chromosome": "chr1",
+	               "start": 123456,
+	               "end": 123789,
+	               "type": "fusion",
+				   "fusionType": null,
+	               "confidence": null
+	             }
 	*/
 	src: 'native' | 'gdcapi' | string
 	/** which property of client mutation object to retrieve sample identifier for
