@@ -1,19 +1,22 @@
 import type { RoutePayload } from './routeApi.ts'
 
-export type aiHistoProjectAdminRequest = {
-	test: 'to come'
+export type AIHistoProjectAdminRequest = {
+	genome: string
+	dslabel: string
+	projectName: string
+	projectId?: number
 }
 
-export type aiHistoProjectAdminResponse = {
+export type AIHistoProjectAdminResponse = {
 	status: 'ok' | 'error'
 	error?: string
 }
 
 export const aiHistoProjectAdminPayload: RoutePayload = {
 	request: {
-		typeId: 'aiHistoProjectAdminRequest'
+		typeId: 'AIHistoProjectAdminRequest'
 	},
 	response: {
-		typeId: 'aiHistoProjectAdminResponse'
+		typeId: 'AIHistoProjectAdminResponse'
 	}
 }
