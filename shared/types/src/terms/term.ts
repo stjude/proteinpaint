@@ -123,7 +123,7 @@ export type FilterGroup = {
 	name: string
 	type: 'filter'
 	filter: Filter
-	uncomputable: boolean
+	color: string
 }
 
 export type GroupEntry = ValuesGroup | FilterGroup
