@@ -23,7 +23,7 @@ import { dtsnvindel, dtcnv, dtfusionrna } from '#shared/common.js'
  *        - loc.start: Start position of the lesion
  *        - loc.end: End position of the lesion
  *        - lsn.type: Type of lesion ("mutation", "gain", "loss", "fusion")
- * 3. Read and filter file contents based on snvindelOptions, cnvOptions, fusionOptions, or svOptions:
+ * 3. Read and filter file contents based on snvindelOptions, cnvOptions, fusionOptions:
  *    - SNV/indel: Filter by depth, alternate allele count, and consequence types
  *    - CNV: Filter by copy number thresholds and segment lengths
  *    - Fusion: Filter by fusion type and confidence score
