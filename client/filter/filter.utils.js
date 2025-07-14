@@ -216,8 +216,9 @@ export function negateFilter(f0, tag = 'filterUiRoot') {
 	throw 'cannot negate filter'
 }
 
-export function getCombinedTermFilter(appState, filter) {
-	if (!filter) return appState.termfilter
-	if (appState.termfilter.filter) filter = filterJoin([appState.termfilter.filter, filter])
+export function getCombinedTermFilter(appState, reportFilter) {
+	if (!reportFilter) return appState.termfilter
+	let filter = reportFilter
+	if (appState.termfilter.filter) filter = filterJoin([appState.termfilter.filter, reportFilter])
 	return { filter, filter0: appState.termfilter.filter0 }
 }
