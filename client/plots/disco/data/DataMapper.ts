@@ -149,7 +149,7 @@ export default class DataMapper {
                                         ) {
                                                 this.addData(dObject, dataArray)
                                         } else {
-                                                const reasonParts = []
+                                                const reasonParts: string[] = []
                                                 if (!(Number.isFinite(posA) && posA >= 1 && posA <= chrSizeA)) reasonParts.push(`Position ${posA} outside of ${dObject.chrA}`)
                                                 if (!(Number.isFinite(posB) && posB >= 1 && posB <= chrSizeB)) reasonParts.push(`Position ${posB} outside of ${dObject.chrB}`)
                                                 this.invalidEntries.push({ dataType: 'Fusion', reason: reasonParts.join('; ') })
