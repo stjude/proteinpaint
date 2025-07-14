@@ -133,8 +133,7 @@ export class Matrix {
 		this.prevFilter0 = this.state?.filter0 // will be used to detect cohort change
 
 		const parentConfig = appState.plots.find(p => p.id === this.parentId)
-		let termfilter = appState.termfilter
-		if (parentConfig?.filter) termfilter = getCombinedTermFilter(appState, parentConfig.filter)
+		const termfilter = getCombinedTermFilter(appState, parentConfig.filter)
 
 		return {
 			isVisible: true,
