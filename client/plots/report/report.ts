@@ -27,7 +27,7 @@ export class Report extends RxComponentInner {
 		this.components = { plots: {} }
 		const state = this.getState(appState)
 		for (const section of state.config.sections) {
-			const div = this.view.dom.plotsDiv
+			const div = this.view.dom.plotsDiv.append('div')
 
 			const headerIcon = div.append('span').style('margin-right', '10px').style('cursor', 'pointer').text('▼') //icon to toggle the plots
 
@@ -38,24 +38,23 @@ export class Report extends RxComponentInner {
 				.style('margin', '10px 0px')
 				.style('font-weight', 'bold')
 				.text(section.name) //header
-			const sectionDiv = div.append('div')
-			headerIcon.on('click', () => {
-				const display = plotsDiv.style('display')
-				headerIcon.text(display === 'none' ? '▼' : '▲') //toggle the icon
-				//toggle the display of the plot
-				plotsDiv.style('display', display === 'none' ? 'block' : 'none')
-			})
-			const plotsDiv = sectionDiv
+			const sectionDiv = div
 				.append('div')
 				.style('margin', '10px')
 				.style('display', 'flex')
 				.style('flex-direction', 'row')
 				.style('flex-wrap', 'wrap')
 				.style('width', '100vw')
+			headerIcon.on('click', () => {
+				const display = sectionDiv.style('display')
+				headerIcon.text(display === 'none' ? '▼' : '▲') //toggle the icon
+				//toggle the display of the plot
+				sectionDiv.style('display', display === 'none' ? 'block' : 'none')
+			})
 
 			for (const plot of section.plots) {
 				if (this.components.plots[plot.id]) continue
-				await this.setPlot(plot, plotsDiv)
+				await this.setPlot(plot, sectionDiv)
 			}
 		}
 	}
@@ -94,8 +93,8 @@ export class Report extends RxComponentInner {
 		this.fillFilters()
 	}
 
-	async setPlot(plot, plotsDiv) {
-		const plotDiv = plotsDiv.append('div').style('display', 'inline-block').style('margin', '10px')
+	async setPlot(plot, sectionDiv) {
+		const plotDiv = sectionDiv.append('div').style('display', 'inline-block').style('margin', '10px')
 		const headerDiv = plotDiv.append('div')
 		const headerIcon = headerDiv.append('span').style('margin', '10px').style('cursor', 'pointer').text('▼') //icon to toggle the plots
 
