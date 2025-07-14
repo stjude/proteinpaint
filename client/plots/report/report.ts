@@ -49,7 +49,7 @@ export class Report extends RxComponentInner {
 				const display = sectionDiv.style('display')
 				headerIcon.text(display === 'none' ? '▼' : '▲') //toggle the icon
 				//toggle the display of the plot
-				sectionDiv.style('display', display === 'none' ? 'block' : 'none')
+				sectionDiv.style('display', display === 'none' ? 'flex' : 'none')
 			})
 
 			for (const plot of section.plots) {
