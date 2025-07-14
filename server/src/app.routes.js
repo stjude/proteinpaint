@@ -17,6 +17,7 @@ export const routeFiles = [
 	import('../routes/gdc.grin2.list.ts'),
 	import('../routes/gdc.maf.ts'),
 	import('../routes/gdc.mafBuild.ts'),
+	import('../routes/grin2.ts'),
 	import('../routes/termdb.topMutatedGenes.ts'),
 	import('../routes/gene2canonicalisoform.ts'),
 	import('../routes/genelookup.ts'),
