@@ -66,6 +66,6 @@ test('DataMapper.map() skips fusion entries with unknown chromosomes', t => {
         t.equal(result.fusionData.length, 1, 'Only valid fusion with known chromosomes should be included')
         t.equal(result.fusionData[0].geneA, 'ALK', 'Valid fusion geneA should be ALK')
         t.equal(result.fusionData[0].geneB, 'EML4', 'Valid fusion geneB should be EML4')
-        t.equal(result.invalidDataInfo.count, 2, 'Two invalid entries should be recorded')
+		t.equal(result.invalidDataInfo?.count ?? 0, 2, 'Two invalid entries should be recorded')
         t.end()
 })
