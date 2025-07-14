@@ -23,7 +23,7 @@ test('SnvArcsMapper.map() should return an array of SnvArc objects', t => {
 		{
 			dt: dtsnvindel,
 			chr: 'chr1',
-			position: 0,
+			position: 1,
 			gene: 'gene1',
 			class: 'M',
 			mname: 'mname'
@@ -31,7 +31,7 @@ test('SnvArcsMapper.map() should return an array of SnvArc objects', t => {
 		{
 			dt: dtsnvindel,
 			chr: 'chr2',
-			position: 0,
+			position: 1,
 			gene: 'gene2',
 			class: 'M',
 			mname: 'mname'
