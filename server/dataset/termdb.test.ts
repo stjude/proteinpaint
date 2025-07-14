@@ -307,6 +307,39 @@ export default function (): Mds3 {
 				storage_type: 'HDF5',
 				file: 'files/hg38/TermdbTest/TermdbTest.geneCounts.h5'
 			},
+			singleCell: {
+				samples: {
+					sampleColumns: [{ termid: 'Subtype' }],
+					extraSampleTabLabel: 'Subtype'
+				},
+				data: {
+					sameLegend: false,
+					src: 'native',
+					refName: 'B-reference map',
+					plots: [
+						{
+							name: 'scRNA',
+							folder: 'files/hg38/TermdbTest/',
+							fileSuffix: 'umap.tsv',
+							colorColumns: [
+								//{ index: 2, name: 'Sample/B-reference', colorMap: { query: '#f98f93', ref: '#F2F2F2' } },
+								//{
+								//    index: 3,
+								//    name: 'Blast/Non malignant',
+								//    colorMap: { NA: '#aaa', Yes: '#ff3333', No: '#4a8dff' },
+								//    aliases: { NA: 'Reference', No: 'Blast', Yes: 'Non malignant' }
+								//}
+							],
+							coordsColumns: { x: 1, y: 2 },
+							selected: false
+						}
+					]
+				},
+				geneExpression: {
+					src: 'native',
+					folder: 'files/hg38/TermdbTest/'
+				}
+			},
 			WSImages: {
 				type: 'H&E',
 				imageBySampleFolder: 'files/hg38/TermdbTest/wsimages'
