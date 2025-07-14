@@ -2,7 +2,7 @@ import test from 'tape'
 import DataMapper from '#plots/disco/data/DataMapper.ts'
 import Reference from '#plots/disco/chromosome/Reference.ts'
 import discoDefaults from '#plots/disco/defaults.ts'
-import { dtsv } from '#shared/common.js'
+import { dtsv, dtsnvindel } from '#shared/common.js'
 
 /*
 Test:
@@ -67,5 +67,24 @@ test('DataMapper.map() skips fusion entries with unknown chromosomes', t => {
         t.equal(result.fusionData[0].geneA, 'ALK', 'Valid fusion geneA should be ALK')
         t.equal(result.fusionData[0].geneB, 'EML4', 'Valid fusion geneB should be EML4')
 		t.equal(result.invalidDataInfo?.count ?? 0, 2, 'Two invalid entries should be recorded')
+        t.end()
+})
+
+test('DataMapper.map() flags SNV positions outside chromosome size', t => {
+        const mapper = new DataMapper(settings, reference, 'SampleA', [])
+        const outOfRange = [
+                {
+                        dt: dtsnvindel,
+                        chr: 'chr1',
+                        position: 2000,
+                        gene: 'FAKE',
+                        class: 'M',
+                        mname: 'mname'
+                }
+        ]
+        const res = mapper.map(outOfRange)
+        t.equal(res.invalidDataInfo.count, 1, 'One invalid entry should be recorded')
+        t.equal(res.invalidDataInfo.entries[0].reason, 'Position 2000 outside of chr1', 'Reason should mention position outside chromosome')
+        t.equal(res.snvData.length, 0, 'Invalid SNV should be skipped')
         t.end()
 })
