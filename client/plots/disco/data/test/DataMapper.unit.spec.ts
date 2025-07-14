@@ -83,8 +83,8 @@ test('DataMapper.map() flags SNV positions outside chromosome size', t => {
                 }
         ]
         const res = mapper.map(outOfRange)
-        t.equal(res.invalidDataInfo.count, 1, 'One invalid entry should be recorded')
-        t.equal(res.invalidDataInfo.entries[0].reason, 'Position 2000 outside of chr1', 'Reason should mention position outside chromosome')
+        t.equal(res.invalidDataInfo!.count, 1, 'One invalid entry should be recorded')
+		t.equal(res.invalidDataInfo!.entries[0].reason, 'Position 2000 outside of chr1', 'Reason should mention position outside chromosome')
         t.equal(res.snvData.length, 0, 'Invalid SNV should be skipped')
         t.end()
 })
