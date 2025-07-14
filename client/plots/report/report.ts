@@ -27,7 +27,11 @@ export class Report extends RxComponentInner {
 		this.components = { plots: {} }
 		const state = this.getState(appState)
 		for (const section of state.config.sections) {
-			const sectionDiv = this.view.dom.plotsDiv.append('div')
+			const sectionDiv = this.view.dom.plotsDiv
+				.append('div')
+				.style('display', 'flex')
+				.style('flex-direction', 'row')
+				.style('flex-wrap', 'wrap')
 			const headerIcon = sectionDiv.append('span').style('margin-right', '10px').style('cursor', 'pointer').text('▼') //icon to toggle the plots
 
 			sectionDiv
@@ -87,7 +91,12 @@ export class Report extends RxComponentInner {
 	}
 
 	async setPlot(plot, plotsDiv) {
-		const headerDiv = plotsDiv.append('div')
+		const plotDiv = plotsDiv
+			.append('div')
+			.style('display', 'inline-block')
+			.style('vertical-align', 'top')
+			.style('margin', '10px')
+		const headerDiv = plotDiv.append('div')
 		const headerIcon = headerDiv.append('span').style('margin', '10px').style('cursor', 'pointer').text('▼') //icon to toggle the plots
 
 		const header = headerDiv
@@ -101,7 +110,7 @@ export class Report extends RxComponentInner {
 			//toggle the display of the plot
 			holder.style('display', display === 'none' ? 'block' : 'none')
 		})
-		const holder = plotsDiv.append('div')
+		const holder = plotDiv.append('div')
 		const opts = structuredClone(plot)
 		opts.header = header
 		opts.holder = holder

@@ -287,8 +287,7 @@ export class Barchart {
 			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
 		}
 		const parentConfig = appState.plots.find(p => p.id === this.parentId)
-		let termfilter = appState.termfilter
-		if (parentConfig?.filter) termfilter = getCombinedTermFilter(appState, parentConfig.filter)
+		const termfilter = getCombinedTermFilter(appState, parentConfig?.filter)
 		return {
 			nav: {
 				header_mode: appState.nav.header_mode
