@@ -57,6 +57,9 @@ type GeneVariantTvs = BaseTvs & {
 	values: { key: string; label: string; value: string }[]
 	/** boolean for including not tested classes (excluded by default) */
 	includeNotTested?: boolean
+	/** boolean for excluding gene name from pill name (included by default)
+	 * used by geneVariant edit ui to exclude unnecessary gene name */
+	excludeGeneName?: boolean
 }
 
 /*** types supporting Filter type ***/

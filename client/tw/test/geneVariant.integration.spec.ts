@@ -2,7 +2,7 @@ import tape from 'tape'
 import type { GvCustomGsQ, RawGvTW, DtTerm } from '#types'
 import { vocabInit } from '#termdb/vocabulary'
 import { GvBase } from '../geneVariant'
-import { mayMakeGroups } from '../geneVariant.ts'
+import { mayMakeGroups } from '../../termsetting/handlers/geneVariant.ts'
 
 /*************************
  reusable helper functions

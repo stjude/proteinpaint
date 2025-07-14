@@ -8,16 +8,12 @@ import type {
 	RawGvCustomGsTW,
 	GvCustomGsTW,
 	RawGvTW,
-	GvTW,
-	FilterGroup,
-	VocabApi,
-	Filter
+	GvTW
 } from '#types'
 import { TwBase, type TwOpts } from './TwBase.ts'
 import { copyMerge } from '#rx'
 import { set_hiddenvalues } from '#termsetting'
-import { getWrappedTvslst } from '#filter/filter'
-import { getChildTerms } from '../termsetting/handlers/geneVariant'
+import { mayMakeGroups } from '../termsetting/handlers/geneVariant'
 
 export class GvBase extends TwBase {
 	// type, isAtomic, $id are set in ancestor base classes
@@ -190,64 +186,4 @@ export class GvCustomGS extends GvBase {
 		set_hiddenvalues(q, term)
 		return tw as GvCustomGsTW
 	}
-}
-
-export async function mayMakeGroups(tw: RawGvCustomGsTW, vocabApi: VocabApi) {
-	if (tw.q.type != 'custom-groupset' || tw.q.customset?.groups.length) return
-	// custom groupset, but customset.groups[] is empty
-	// fill with 2 groups for the first applicable dt term
-	await getChildTerms(tw.term, vocabApi)
-	const dtTerms = tw.term.childTerms
-	if (!dtTerms) throw 'dtTerms is missing'
-	let grp1Class, grp1Name, grp1Value, grp1Tvs, grp1Filter
-	let grp2Class, grp2Name, grp2Value, grp2Tvs, grp2Filter
-	for (const dtTerm of dtTerms) {
-		const classes = Object.keys(dtTerm.values)
-		if (classes.length < 2) {
-			// fewer than 2 classes, try next dt term
-			continue
-		}
-		// group 1 will be wildtype or first available mutant class
-		grp1Class = classes.includes('WT') ? 'WT' : classes[0]
-		grp1Name = dtTerm.values[grp1Class].label
-		grp1Value = { key: grp1Class, label: grp1Name, value: grp1Class }
-		grp1Tvs = { type: 'tvs', tvs: { term: dtTerm, values: [grp1Value] } }
-		grp1Filter = getWrappedTvslst([grp1Tvs])
-		if (dtTerm.origin) grp1Name += ` (${dtTerm.origin})`
-		// group 2 will be all other classes
-		if (classes.length == 2) {
-			grp2Class = classes.find(c => c != grp1Class)
-			if (!grp2Class) throw 'mutant class cannot be found'
-			grp2Name = dtTerm.values[grp2Class].label
-			grp2Value = { key: grp2Class, label: grp2Name, value: grp2Class }
-			grp2Tvs = { type: 'tvs', tvs: { term: dtTerm, values: [grp2Value] } }
-			if (dtTerm.origin) grp2Name += ` (${dtTerm.origin})`
-		} else {
-			grp2Tvs = { type: 'tvs', tvs: { term: dtTerm, values: [grp1Value], isnot: true } }
-			grp2Name = classes.includes('WT') ? dtTerm.name : `Other ${dtTerm.name}`
-		}
-		grp2Filter = getWrappedTvslst([grp2Tvs])
-		break
-	}
-	// assign filters to groups
-	const grp1: FilterGroup = {
-		name: grp1Name,
-		type: 'filter',
-		uncomputable: false,
-		filter: grp1Filter
-	}
-	const grp2: FilterGroup = {
-		name: grp2Name,
-		type: 'filter',
-		uncomputable: false,
-		filter: grp2Filter
-	}
-	const grp0: FilterGroup = {
-		name: 'Excluded categories',
-		type: 'filter',
-		uncomputable: true,
-		filter: getWrappedTvslst() as Filter
-	}
-	// assign groups to custom groupset
-	tw.q.customset = { groups: [grp0, grp1, grp2] }
 }

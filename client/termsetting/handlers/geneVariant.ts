@@ -1,10 +1,11 @@
 import { getPillNameDefault } from '../termsetting'
-import type { GeneVariantTermSettingInstance, RawGvTerm, VocabApi, DtTerm } from '#types'
+import type { GeneVariantTermSettingInstance, RawGvTerm, RawGvCustomGsTW, VocabApi, DtTerm } from '#types'
 import type { PillData } from '../types'
 import { make_radios, renderTable } from '#dom'
 import { dtTerms, getColors } from '#shared/common.js'
 import { filterInit, filterPromptInit, getNormalRoot } from '#filter/filter'
 import { rgb } from 'd3-color'
+import { getWrappedTvslst } from '#filter/filter'
 
 const colorScale = getColors(5)
 
@@ -18,7 +19,7 @@ export function getHandler(self: GeneVariantTermSettingInstance) {
 		getPillStatus() {
 			let text
 			if (self.q.type == 'custom-groupset') {
-				const n = self.q.customset.groups.filter(group => !group.uncomputable).length
+				const n = self.q.customset.groups.length
 				text = `Divided into ${n} groups`
 			} else {
 				text = 'any variant class'
@@ -156,7 +157,7 @@ async function makeGroupUI(self, div) {
 	})
 
 	// filterPrompt.main() always empties the filterUiRoot data
-	filterPrompt.main(getMassFilter()) // provide mass filter to limit the term tree
+	filterPrompt.main(getMassFilter(self.filter)) // provide mass filter to limit the term tree
 
 	if (!groups.length) {
 		// no groups, hide table
@@ -166,7 +167,7 @@ async function makeGroupUI(self, div) {
 
 	// clear table and populate rows
 	filterTableDiv.style('display', '').selectAll('*').remove()
-	const tableArg = {
+	const tableArg: any = {
 		div: filterTableDiv,
 		columns: [
 			{}, // blank column to add delete buttons
@@ -250,14 +251,17 @@ async function makeGroupUI(self, div) {
 	//applyRow.select('#applySpan').style('display', 'inline')
 }
 
-function addNewGroup(filter, groups) {
+function addNewGroup(filter, groups, name?: string) {
 	if (!groups) throw 'groups is missing'
-	const base = 'New group'
-	let name = base
-	for (let i = 0; ; i++) {
-		name = base + (i === 0 ? '' : ' ' + i)
-		if (!groups.find(g => g.name === name)) break
+	if (!name) {
+		const base = 'New group'
+		name = base
+		for (let i = 0; ; i++) {
+			name = base + (i === 0 ? '' : ' ' + i)
+			if (!groups.find(g => g.name === name)) break
+		}
 	}
+	filter.lst.forEach(item => (item.tvs.excludeGeneName = true)) // no need to show gene name in filter pill
 	const newGroup = {
 		name,
 		type: 'filter',
@@ -267,11 +271,53 @@ function addNewGroup(filter, groups) {
 	groups.push(newGroup)
 }
 
-function getMassFilter() {
-	if (!self.filter || self.filter.lst.length == 0) {
+// fill custom groupset with 2 groups based on the first applicable dt term
+export async function mayMakeGroups(tw: RawGvCustomGsTW, vocabApi: VocabApi) {
+	if (tw.q.type != 'custom-groupset' || tw.q.customset?.groups.length) return
+	tw.q.type = 'custom-groupset'
+	tw.q.customset = { groups: [] }
+	await getChildTerms(tw.term, vocabApi)
+	const dtTerms = tw.term.childTerms
+	if (!dtTerms) throw 'dtTerms is missing'
+	let grp1Class, grp1Name, grp1Value, grp1Tvs, grp1Filter
+	let grp2Class, grp2Name, grp2Value, grp2Tvs, grp2Filter
+	for (const dtTerm of dtTerms) {
+		const classes = Object.keys(dtTerm.values)
+		if (classes.length < 2) {
+			// fewer than 2 classes, try next dt term
+			continue
+		}
+		// group 1 will be wildtype or first available mutant class
+		grp1Class = classes.includes('WT') ? 'WT' : classes[0]
+		grp1Name = dtTerm.values[grp1Class].label
+		grp1Value = { key: grp1Class, label: grp1Name, value: grp1Class }
+		grp1Tvs = { type: 'tvs', tvs: { term: dtTerm, values: [grp1Value] } }
+		grp1Filter = getWrappedTvslst([grp1Tvs])
+		if (dtTerm.origin) grp1Name += ` (${dtTerm.origin})`
+		addNewGroup(grp1Filter, tw.q.customset.groups, grp1Name)
+		// group 2 will be all other classes
+		if (classes.length == 2) {
+			grp2Class = classes.find(c => c != grp1Class)
+			if (!grp2Class) throw 'mutant class cannot be found'
+			grp2Name = dtTerm.values[grp2Class].label
+			grp2Value = { key: grp2Class, label: grp2Name, value: grp2Class }
+			grp2Tvs = { type: 'tvs', tvs: { term: dtTerm, values: [grp2Value] } }
+			if (dtTerm.origin) grp2Name += ` (${dtTerm.origin})`
+		} else {
+			grp2Tvs = { type: 'tvs', tvs: { term: dtTerm, values: [grp1Value], isnot: true } }
+			grp2Name = classes.includes('WT') ? dtTerm.name : `Other ${dtTerm.name}`
+		}
+		grp2Filter = getWrappedTvslst([grp2Tvs])
+		addNewGroup(grp2Filter, tw.q.customset.groups, grp2Name)
+		break
+	}
+}
+
+function getMassFilter(filter) {
+	if (!filter || !filter.lst.length) {
 		return { type: 'tvslst', in: true, join: '', lst: [] }
 	}
-	const f = getNormalRoot(structuredClone(self.filter)) // strip tag
+	const f = getNormalRoot(structuredClone(filter)) // strip tag
 	return f
 }
 
