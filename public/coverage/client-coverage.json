@@ -3778,5 +3778,77 @@
       "prev": 0,
       "diff": 100
     }
+  },
+  "dom/test/sandbox.unit.spec.js": {
+    "lines": {
+      "total": 105,
+      "covered": 105,
+      "skipped": 0,
+      "pct": 100
+    },
+    "functions": {
+      "total": 8,
+      "covered": 8,
+      "skipped": 0,
+      "pct": 100
+    },
+    "statements": {
+      "total": 110,
+      "covered": 110,
+      "skipped": 0,
+      "pct": 100
+    },
+    "branches": {
+      "total": 19,
+      "covered": 14,
+      "skipped": 0,
+      "pct": 73.68
+    },
+    "lowestPct": {
+      "curr": 73.68,
+      "prev": 0,
+      "diff": 73.68
+    },
+    "averagePct": {
+      "curr": 93.42,
+      "prev": 0,
+      "diff": 93.42
+    }
+  },
+  "dom/sandbox.ts": {
+    "lines": {
+      "total": 60,
+      "covered": 46,
+      "skipped": 0,
+      "pct": 76.66
+    },
+    "functions": {
+      "total": 11,
+      "covered": 4,
+      "skipped": 0,
+      "pct": 36.36
+    },
+    "statements": {
+      "total": 61,
+      "covered": 46,
+      "skipped": 0,
+      "pct": 75.4
+    },
+    "branches": {
+      "total": 19,
+      "covered": 15,
+      "skipped": 0,
+      "pct": 78.94
+    },
+    "lowestPct": {
+      "curr": 36.36,
+      "prev": 0,
+      "diff": 36.36
+    },
+    "averagePct": {
+      "curr": 66.84,
+      "prev": 0,
+      "diff": 66.84
+    }
   }
 }
