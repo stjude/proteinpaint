@@ -120,21 +120,64 @@ export default class DataMapper {
 
                         if (dObject.dt == dtsnvindel) {
                                 if (index != -1 && this.snvData.length < this.settings.snv.maxMutationCount) {
-                                        this.addData(dObject, dataArray)
+                                        const pos = dObject.pos ?? dObject.position
+                                        const chrSize = this.reference.chromosomes[index].size
+                                        // ensure position is numeric and within chromosome range
+                                        if (Number.isFinite(pos) && pos >= 1 && pos <= chrSize) {
+                                                this.addData(dObject, dataArray)
+                                        } else {
+                                                this.invalidEntries.push({ dataType: 'SNV', reason: `Position ${pos} outside of ${dObject.chr}` })
+                                        }
                                 } else if (index == -1) {
                                         this.invalidEntries.push({ dataType: 'SNV', reason: `Unknown chr ${dObject.chr}` })
                                 }
                         } else if (dObject.dt == dtfusionrna || dObject.dt == dtsv) {
                                 if (indexA != -1 && indexB != -1) {
                                         // show sv/fusion event with valid A/B breakpoints.
-                                        this.addData(dObject, dataArray)
+                                        const posA = dObject.posA
+                                        const posB = dObject.posB
+                                        const chrSizeA = this.reference.chromosomes[indexA].size
+                                        const chrSizeB = this.reference.chromosomes[indexB].size
+                                        // verify that both breakpoints are numeric and within chromosome ranges
+                                        if (
+                                                Number.isFinite(posA) &&
+                                                Number.isFinite(posB) &&
+                                                posA >= 1 &&
+                                                posA <= chrSizeA &&
+                                                posB >= 1 &&
+                                                posB <= chrSizeB
+                                        ) {
+                                                this.addData(dObject, dataArray)
+                                        } else {
+                                                const reasonParts = []
+                                                if (!(Number.isFinite(posA) && posA >= 1 && posA <= chrSizeA)) reasonParts.push(`Position ${posA} outside of ${dObject.chrA}`)
+                                                if (!(Number.isFinite(posB) && posB >= 1 && posB <= chrSizeB)) reasonParts.push(`Position ${posB} outside of ${dObject.chrB}`)
+                                                this.invalidEntries.push({ dataType: 'Fusion', reason: reasonParts.join('; ') })
+                                        }
                                 } else {
                                         this.invalidEntries.push({ dataType: 'Fusion', reason: 'Unknown chr in fusion' })
                                 }
                         } else if ([dtcnv, dtloh].includes(Number(dObject.dt))) {
                                 const idx = this.reference.chromosomesOrder.indexOf(dObject.chr)
                                 if (dObject.chr && idx != -1) {
-                                        this.addData(dObject, dataArray)
+                                        const chrSize = this.reference.chromosomes[idx].size
+                                        const start = dObject.start
+                                        const stop = dObject.stop
+                                        // validate CNV/LOH segment boundaries are numeric and fall within chromosome range
+                                        if (
+                                                Number.isFinite(start) &&
+                                                Number.isFinite(stop) &&
+                                                start >= 1 &&
+                                                stop <= chrSize &&
+                                                start <= stop
+                                        ) {
+                                                this.addData(dObject, dataArray)
+                                        } else {
+                                                this.invalidEntries.push({
+                                                        dataType: dObject.dt == dtcnv ? 'CNV' : 'LOH',
+                                                        reason: `Position ${start}-${stop} outside of ${dObject.chr}`
+                                                })
+                                        }
                                 } else {
                                         this.invalidEntries.push({ dataType: dObject.dt == dtcnv ? 'CNV' : 'LOH', reason: `Unknown chr ${dObject.chr}` })
                                 }
