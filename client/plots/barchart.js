@@ -11,7 +11,7 @@ import { fillTermWrapper } from '#termsetting'
 import { getColors, mclass, plotColor } from '#shared/common.js'
 import { isNumericTerm } from '#shared/terms.js'
 import { roundValueAuto } from '#shared/roundValue.js'
-import { getCombinedTermFilter } from '../../../client/filter/filter.utils.js'
+import { getCombinedTermFilter } from '#filter'
 
 export class Barchart {
 	constructor(opts) {

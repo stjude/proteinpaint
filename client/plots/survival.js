@@ -17,7 +17,7 @@ import { getSeriesTip } from '#dom/svgSeriesTips'
 import { renderAtRiskG } from '#dom/renderAtRisk'
 import { renderPvalues } from '#dom/renderPvalueTable'
 import { downloadChart } from '#common/svg.download'
-import { getCombinedTermFilter } from '../../../client/filter/filter.utils.js'
+import { getCombinedTermFilter } from '#filter'
 
 class TdbSurvival {
 	constructor(opts) {
