@@ -38,19 +38,20 @@ export class Report extends RxComponentInner {
 				.style('margin', '10px 0px')
 				.style('font-weight', 'bold')
 				.text(section.name) //header
-			const sectionDiv = div
-				.append('div')
-				.style('display', 'inline-block')
-				.style('display', 'flex')
-				.style('flex-direction', 'row')
-				.style('flex-wrap', 'wrap')
+			const sectionDiv = div.append('div')
 			headerIcon.on('click', () => {
 				const display = plotsDiv.style('display')
 				headerIcon.text(display === 'none' ? '▼' : '▲') //toggle the icon
 				//toggle the display of the plot
 				plotsDiv.style('display', display === 'none' ? 'block' : 'none')
 			})
-			const plotsDiv = sectionDiv.append('div').style('margin', '10px')
+			const plotsDiv = sectionDiv
+				.append('div')
+				.style('margin', '10px')
+				.style('display', 'flex')
+				.style('flex-direction', 'row')
+				.style('flex-wrap', 'wrap')
+				.style('width', '100vw')
 
 			for (const plot of section.plots) {
 				if (this.components.plots[plot.id]) continue
@@ -94,11 +95,7 @@ export class Report extends RxComponentInner {
 	}
 
 	async setPlot(plot, plotsDiv) {
-		const plotDiv = plotsDiv
-			.append('div')
-			.style('display', 'inline-block')
-			.style('vertical-align', 'top')
-			.style('margin', '10px')
+		const plotDiv = plotsDiv.append('div').style('display', 'inline-block').style('margin', '10px')
 		const headerDiv = plotDiv.append('div')
 		const headerIcon = headerDiv.append('span').style('margin', '10px').style('cursor', 'pointer').text('▼') //icon to toggle the plots
 
