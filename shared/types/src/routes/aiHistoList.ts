@@ -1,9 +1,8 @@
 import type { RoutePayload } from './routeApi.ts'
 
 export type AIHistoListRequest = {
-	index: number
-	confirmed: boolean
-	class: number | null
+	genome: string
+	dslabel: string
 }
 
 export type AIHistoListResponse = {
