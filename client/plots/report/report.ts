@@ -27,20 +27,23 @@ export class Report extends RxComponentInner {
 		this.components = { plots: {} }
 		const state = this.getState(appState)
 		for (const section of state.config.sections) {
-			const sectionDiv = this.view.dom.plotsDiv
-				.append('div')
-				.style('display', 'flex')
-				.style('flex-direction', 'row')
-				.style('flex-wrap', 'wrap')
-			const headerIcon = sectionDiv.append('span').style('margin-right', '10px').style('cursor', 'pointer').text('▼') //icon to toggle the plots
+			const div = this.view.dom.plotsDiv
 
-			sectionDiv
+			const headerIcon = div.append('span').style('margin-right', '10px').style('cursor', 'pointer').text('▼') //icon to toggle the plots
+
+			div
 				.append('div')
 				.style('display', 'inline-block')
 				.style('font-size', '1.2em')
 				.style('margin', '10px 0px')
 				.style('font-weight', 'bold')
 				.text(section.name) //header
+			const sectionDiv = div
+				.append('div')
+				.style('display', 'inline-block')
+				.style('display', 'flex')
+				.style('flex-direction', 'row')
+				.style('flex-wrap', 'wrap')
 			headerIcon.on('click', () => {
 				const display = plotsDiv.style('display')
 				headerIcon.text(display === 'none' ? '▼' : '▲') //toggle the icon
