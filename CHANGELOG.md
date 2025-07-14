@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.136.0
 
 Features:
 - support a serverconfig.allowedEmbedders option to improve access control; improve code layout of auth code
