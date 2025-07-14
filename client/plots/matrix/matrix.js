@@ -15,7 +15,7 @@ import svgLegend from '#dom/svg.legend'
 import { mclass, dt2label, morigin, dtsnvindel, dtcnv } from '#shared/common.js'
 import { select } from 'd3-selection'
 import { sayerror } from '#dom'
-import { getCombinedTermFilter } from '../../../client/filter/filter.utils.js'
+import { getCombinedTermFilter } from '#filter'
 
 export class Matrix {
 	constructor(opts) {

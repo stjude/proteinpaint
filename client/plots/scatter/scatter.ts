@@ -15,7 +15,7 @@ import { controlsInit } from '../controls'
 import { downloadSingleSVG } from '../../common/svg.download.js'
 import { select2Terms } from '#dom/select2Terms'
 import type { MassState } from '../../../client/mass/types/mass.js'
-import { getCombinedTermFilter } from '../../../client/filter/filter.utils.js'
+import { getCombinedTermFilter } from '#filter'
 
 export class Scatter extends RxComponentInner {
 	config: any
