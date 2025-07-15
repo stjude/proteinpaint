@@ -19,6 +19,7 @@ export default class WSIViewer extends RxComponentInner {
 	private wsiViewerInteractions: WSIViewerInteractions
 
 	private thumbnailsContainer: any
+	private viewModelProvider = new ViewModelProvider()
 
 	constructor(opts: any) {
 		super()
@@ -42,8 +43,7 @@ export default class WSIViewer extends RxComponentInner {
 		const dslabel = state.dslabel || state.vocab.dslabel
 		const sample_id = state.sample_id
 
-		const viewModelProvider = new ViewModelProvider()
-		const viewModel = await viewModelProvider.provide(genome, dslabel, sample_id, buffers.annotationsIdx.get())
+		const viewModel = await this.viewModelProvider.provide(genome, dslabel, sample_id)
 		const wsimages = viewModel.sampleWSImages
 		const wsimageLayers = viewModel.wsimageLayers
 		const wsimageLayersLoadError = viewModel.wsimageLayersLoadError
