@@ -320,7 +320,7 @@ export default function (): Mds3 {
 						{
 							name: 'scRNA',
 							folder: 'files/hg38/TermdbTest/',
-							fileSuffix: 'umap.tsv',
+							fileSuffix: '_umap.txt',
 							colorColumns: [
 								//{ index: 2, name: 'Sample/B-reference', colorMap: { query: '#f98f93', ref: '#F2F2F2' } },
 								{
