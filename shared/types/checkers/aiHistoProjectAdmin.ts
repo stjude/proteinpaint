@@ -4,5 +4,5 @@ import type { AIHistoProjectAdminRequest, AIHistoProjectAdminResponse } from '..
 
 export { aiHistoProjectAdminPayload } from '../src/routes/aiHistoProjectAdmin.ts'
 
-export const validaiHistoProjectAdminRequest = createValidate<AIHistoProjectAdminRequest>()
-export const validaiHistoProjectAdminResponse = createValidate<AIHistoProjectAdminResponse>()
+export const validAIHistoProjectAdminRequest = createValidate<AIHistoProjectAdminRequest>()
+export const validAIHistoProjectAdminResponse = createValidate<AIHistoProjectAdminResponse>()
