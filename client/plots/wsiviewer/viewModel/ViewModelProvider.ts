@@ -10,8 +10,8 @@ import VectorSource from 'ol/source/Vector'
 export class ViewModelProvider {
 	constructor() {}
 
-	async provide(genome: string, dslabel: string, sampleId: string, index: number): Promise<ViewModel> {
-		const data: SampleWSImagesResponse = await this.requestData(genome, dslabel, sampleId, index)
+	async provide(genome: string, dslabel: string, sampleId: string): Promise<ViewModel> {
+		const data: SampleWSImagesResponse = await this.requestData(genome, dslabel, sampleId)
 
 		let wsimageLayers: Array<WSImageLayers> = []
 		let wsimageLayersLoadError: string | undefined = undefined
@@ -25,18 +25,12 @@ export class ViewModelProvider {
 		return new ViewModel(data.sampleWSImages, wsimageLayers, wsimageLayersLoadError)
 	}
 
-	public async requestData(
-		genome: string,
-		dslabel: string,
-		sample_id: string,
-		index: any
-	): Promise<SampleWSImagesResponse> {
+	public async requestData(genome: string, dslabel: string, sample_id: string): Promise<SampleWSImagesResponse> {
 		return await dofetch3('samplewsimages', {
 			body: {
 				genome: genome,
 				dslabel: dslabel,
-				sample_id: sample_id,
-				index
+				sample_id: sample_id
 			}
 		})
 	}
