@@ -28,6 +28,7 @@ export class violinRenderer {
 	render() {
 		this.svg.selectAll('*').remove()
 		this.violinG = this.svg.append('g').attr('transform', `translate(${this.shiftx}, ${this.height / 2 + this.shifty})`)
+		this.brushG = this.svg.append('g').attr('transform', `translate(${this.shiftx}, ${this.shifty})`)
 
 		this.scaleG = this.svg.append('g').attr('transform', `translate(${this.shiftx}, ${this.shifty})`)
 		this.scaleG.call(axisTop(this.axisScaleUI).tickValues(this.axisScaleUI.ticks()))
