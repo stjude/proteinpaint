@@ -71,6 +71,8 @@ type GrpSetDom = {
 	excludedWrapper: HTMLElement
 }
 
+// TODO: can retire support for .type='filter' as this is now handled by
+// makeGroupUI() in client/termsetting/handlers/geneVariant.ts
 export class GroupSettingMethods {
 	tsInstance: TsInstance // termsetting instance
 	opts: Opts //options for groupsetting
