@@ -319,7 +319,7 @@ export default function (): Mds3 {
 					plots: [
 						{
 							name: 'scRNA',
-							folder: 'files/hg38/TermdbTest/',
+							folder: 'files/hg38/TermdbTest/raw',
 							fileSuffix: '_umap.txt',
 							colorColumns: [
 								//{ index: 2, name: 'Sample/B-reference', colorMap: { query: '#f98f93', ref: '#F2F2F2' } },
@@ -337,7 +337,7 @@ export default function (): Mds3 {
 				},
 				geneExpression: {
 					src: 'native',
-					folder: 'files/hg38/TermdbTest/'
+					folder: 'files/hg38/TermdbTest/geneExpHdf5'
 				}
 			},
 			WSImages: {
