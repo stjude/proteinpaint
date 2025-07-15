@@ -803,7 +803,9 @@ type SingleCellPlot = {
 	/** value is display as plot name on ui and also used as identifier for a plot, must be unique */
 	name: string
 	/** folder in which per-sample files are stored.
-	each file is a tabular text file with all cells (rows) from that sample.
+	- each file is a tabular text file with all cells (rows) from that sample. each file is named by the sample and includes optional suffix
+	- folder must only contain per-sample files! files with names that cannot be matched to sample will crash dataset. this improves debugging
+
 	all files must have same set of columns:
 	- 1st column is cell barcode
 	- x/y coordinate column number is defined in coordsColumns{x,y} below

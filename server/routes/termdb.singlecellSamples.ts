@@ -76,7 +76,7 @@ export async function validate_query_singleCell(ds: any, genome: any) {
 		// ds-supplied
 	} else {
 		// add q.samples.get() for native ds
-		validateSamplesNative(q.samples as SingleCellSamples, q.data as SingleCellDataNative, ds)
+		await validateSamplesNative(q.samples as SingleCellSamples, q.data as SingleCellDataNative, ds)
 	}
 
 	// validate required q.data{}
@@ -125,23 +125,19 @@ async function validateSamplesNative(S: SingleCellSamples, D: SingleCellDataNati
 	// v: { sample: string name, tid1:v1, ...} term ids are from S.sampleColumns[]. list of sample objects are returned in getter
 	const samples = new Map()
 	for (const plot of D.plots) {
-		try {
-			for (const fn of await fs.promises.readdir(path.join(serverconfig.tpmasterdir, plot.folder))) {
-				// fn: string file name.
-				let sampleName = fn
-				if (plot.fileSuffix) {
-					if (!fn.endsWith(plot.fileSuffix)) continue // unrecognized file name, ignore
-					sampleName = fn.split(plot.fileSuffix)[0]
-				}
-				if (!sampleName) continue // blank sample name (e.g. file name equals suffix), ignore
-				const sid = ds.cohort.termdb.q.sampleName2id(sampleName)
-				if (sid == undefined) continue // unknown sample name. ignore
-				// is valid sample, add to holder
-				samples.set(sid, { sample: sampleName })
+		for (const fn of await fs.promises.readdir(path.join(serverconfig.tpmasterdir, plot.folder))) {
+			// fn: string file name.
+			let sampleName = fn
+			if (plot.fileSuffix) {
+				if (!fn.endsWith(plot.fileSuffix))
+					throw `singlecell.sample file name ${fn} does not end with required suffix ${plot.fileSuffix}`
+				sampleName = fn.split(plot.fileSuffix)[0]
 			}
-		} catch (e) {
-			console.log('cannot readdir on singleCell.data.plot[].folder', e)
-			// may register as ds init err
+			if (!sampleName) throw `singlecell.sample: cannot derive sample name from file name ${fn}`
+			const sid = ds.cohort.termdb.q.sampleName2id(sampleName)
+			if (sid == undefined) throw `singlecell.sample: unknown sample name ${sampleName}`
+			// is valid sample, add to holder
+			samples.set(sid, { sample: sampleName })
 		}
 	}
 	// samples map populated with samples with sc data
@@ -155,6 +151,7 @@ async function validateSamplesNative(S: SingleCellSamples, D: SingleCellDataNati
 			}
 		}
 	}
+	// FIXME must get q.filter and apply filter to list!!
 	S.get = () => {
 		return { samples: [...samples.values()] as SingleCellSample[] }
 	}
