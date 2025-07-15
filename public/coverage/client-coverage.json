@@ -73,38 +73,38 @@
   },
   "filter/filter.utils.js": {
     "lines": {
-      "total": 84,
-      "covered": 76,
-      "skipped": 0,
-      "pct": 90.47
-    },
-    "functions": {
-      "total": 10,
-      "covered": 9,
-      "skipped": 0,
-      "pct": 90
-    },
-    "statements": {
-      "total": 110,
+      "total": 103,
       "covered": 90,
       "skipped": 0,
-      "pct": 81.81
+      "pct": 87.37
+    },
+    "functions": {
+      "total": 12,
+      "covered": 10,
+      "skipped": 0,
+      "pct": 83.33
+    },
+    "statements": {
+      "total": 132,
+      "covered": 104,
+      "skipped": 0,
+      "pct": 78.78
     },
     "branches": {
-      "total": 88,
-      "covered": 67,
+      "total": 106,
+      "covered": 80,
       "skipped": 0,
-      "pct": 76.13
+      "pct": 75.47
     },
     "lowestPct": {
-      "curr": 76.13,
-      "prev": 0,
-      "diff": 76.13
+      "curr": 75.47,
+      "prev": 76.13,
+      "diff": -0.6599999999999966
     },
     "averagePct": {
-      "curr": 84.60249999999999,
-      "prev": 0,
-      "diff": 84.60249999999999
+      "curr": 81.2375,
+      "prev": 84.60249999999999,
+      "diff": -3.364999999999995
     }
   },
   "filter/test/filter.integration.spec.js": {
