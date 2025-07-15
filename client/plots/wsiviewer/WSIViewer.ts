@@ -6,11 +6,12 @@ import type Settings from '#plots/wsiviewer/Settings.ts'
 import wsiViewerDefaults from '#plots/wsiviewer/defaults.ts'
 import { RxComponentInner } from '../../types/rx.d'
 import 'ol-ext/dist/ol-ext.css'
-import { WSImageRenderer } from '#plots/wsiviewer/view/WSImageRenderer.ts'
+import { WSIAnnotationsRenderer } from '#plots/wsiviewer/view/WSIAnnotationsRenderer.ts'
 import { Buffer } from '#plots/wsiviewer/interactions/Buffer.ts'
 import { ViewModelProvider } from '#plots/wsiviewer/viewModel/ViewModelProvider.ts'
 import { ThumbnailRenderer } from '#plots/wsiviewer/view/ThumbnailRenderer.ts'
 import { MapRenderer } from '#plots/wsiviewer/view/MapRenderer.ts'
+import { MetadataRenderer } from '#plots/wsiviewer/view/MetadataRenderer.ts'
 
 export default class WSIViewer extends RxComponentInner {
 	// following attributes are required by rx
@@ -20,6 +21,9 @@ export default class WSIViewer extends RxComponentInner {
 
 	private thumbnailsContainer: any
 	private viewModelProvider = new ViewModelProvider()
+
+	private thumbnailRenderer = new ThumbnailRenderer()
+	private metadataRenderer = new MetadataRenderer()
 
 	constructor(opts: any) {
 		super()
@@ -58,9 +62,7 @@ export default class WSIViewer extends RxComponentInner {
 			return
 		}
 
-		const thumbnailRenderer = new ThumbnailRenderer()
-
-		this.thumbnailsContainer = thumbnailRenderer.render(
+		this.thumbnailsContainer = this.thumbnailRenderer.render(
 			holder,
 			this.thumbnailsContainer,
 			wsimageLayers.map(wsimageLayers => wsimageLayers.wsimage),
@@ -94,7 +96,9 @@ export default class WSIViewer extends RxComponentInner {
 
 		const zoomInPoints = wsimages[settings.displayedImageIndex].zoomInPoints
 
-		new WSImageRenderer(holder, imageViewData, buffers, this.wsiViewerInteractions, activeImageExtent!, map)
+		new WSIAnnotationsRenderer(holder, imageViewData, buffers, this.wsiViewerInteractions, activeImageExtent!, map)
+
+		this.metadataRenderer.renderMetadata(holder, imageViewData)
 
 		if (zoomInPoints != undefined) {
 			this.wsiViewerInteractions.addZoomInEffect(activeImageExtent, zoomInPoints, map)
