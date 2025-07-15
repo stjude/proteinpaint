@@ -83,11 +83,8 @@ export class Barchart {
 		if (this.opts.controls) {
 			this.opts.controls.on('downloadClick.barchart', this.download)
 		} else {
-			this.dom.holder
-				.attr('class', 'pp-termdb-plot-viz')
-				.style('display', 'inline-block')
-				.style('min-width', '300px')
-				.style('margin-left', '50px')
+			this.dom.holder.attr('class', 'pp-termdb-plot-viz').style('display', 'inline-block').style('min-width', '300px')
+			//.style('margin-left', '10px')
 
 			const inputs = [
 				{
