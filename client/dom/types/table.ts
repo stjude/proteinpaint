@@ -98,7 +98,7 @@ export type TableArgs = {
 	singleMode?: boolean
 	/** true to show no radio buttons. should only use when singleMode=true */
 	noRadioBtn?: boolean
-	/** Shows or hides line column. */
+	/** set to false to hide line numbers */
 	showLines?: boolean
 	/** When active makes the table rows to alternate bg colors */
 	striped?: boolean

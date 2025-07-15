@@ -555,7 +555,8 @@ async function updateUI(self) {
 			{ label: 'FILTER' }
 		],
 		rows: [],
-		striped: false // no alternating row bg color so delete button appears more visible
+		striped: false, // no alternating row bg color so delete button appears more visible
+		showLines: false
 	}
 	for (const g of groups) {
 		tableArg.rows.push([
