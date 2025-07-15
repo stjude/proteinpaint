@@ -77,7 +77,7 @@ export class MapRenderer {
 		return map
 	}
 
-	private addControls(map: OLMap, firstLayer: TileLayer, hasOverlay: boolean) {
+	private addControls(map: OLMap, activeImage: TileLayer, hasOverlay: boolean) {
 		if (hasOverlay) {
 			map.addControl(
 				new LayerSwitcher({
@@ -102,10 +102,18 @@ export class MapRenderer {
 
 			map.addControl(mousePositionControl)
 
-			// //Console.log the mouse position
 			map.on('singleclick', event => {
 				const coordinate = event.coordinate
-				this.viewerClickListener(this.activeImageExtent, coordinate[0], -coordinate[1], map)
+
+				// Calculate tile size and tile origin
+				const tileSize = 512
+
+				// Compute upper-left corner of the tile containing the clicked point
+				const tileX = Math.floor(coordinate[0] / tileSize) * tileSize
+				const tileY = Math.floor(-coordinate[1] / tileSize) * tileSize
+
+				// Call the listener with upper-left corner
+				this.viewerClickListener(this.activeImageExtent, tileX, tileY, map)
 			})
 		}
 
@@ -116,7 +124,7 @@ export class MapRenderer {
 			className: 'ol-overviewmap ol-custom-overviewmap',
 			layers: [
 				new Tile({
-					source: firstLayer.getSource() as TileSource
+					source: activeImage.getSource() as TileSource
 				})
 			]
 		})

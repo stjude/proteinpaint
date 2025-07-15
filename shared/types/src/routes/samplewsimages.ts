@@ -6,7 +6,6 @@ export type SampleWSImagesRequest = {
 	dslabel: string
 	sample_id: string
 	wsimage: string
-	index: number
 }
 
 export type SampleWSImagesResponse = {
