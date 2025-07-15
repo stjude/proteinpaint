@@ -5,7 +5,7 @@ import type OLMap from 'ol/Map.js'
 import type { ImageViewData } from '../viewModel/ViewModel'
 import type { Extent } from 'ol/extent'
 
-export class WSImageRenderer {
+export class WSIAnnotationsRenderer {
 	holder: Elem
 	imageViewData: ImageViewData
 	tablesWrapper: Div
@@ -28,7 +28,6 @@ export class WSImageRenderer {
 
 		holder.select('div[id="annotations-table-wrapper"]').remove()
 		holder.select('div[id="legend-wrapper"]').remove()
-		holder.select('div[id="metadata"]').remove()
 
 		this.tablesWrapper = holder
 			.append('div')
@@ -46,7 +45,6 @@ export class WSImageRenderer {
 		this.renderAnnotationsTable(activeImageExtent, map)
 		this.renderClassesTable()
 		this.renderUncertaintyLegend()
-		this.renderMetadata()
 	}
 
 	private renderAnnotationsTable(activeImageExtent, map: OLMap) {
@@ -157,21 +155,6 @@ export class WSImageRenderer {
 				left: this.imageViewData.uncertainty[0].label,
 				right: this.imageViewData.uncertainty[this.imageViewData.uncertainty.length - 1].label
 			}
-		})
-	}
-
-	//TODO: Need an example for testing
-	private renderMetadata() {
-		if (!this.imageViewData.metadata) return
-		const holderDiv = this.holder.append('div').attr('id', 'metadata')
-
-		const table = table2col({ holder: holderDiv })
-
-		// Create table rows for each key-value pair
-		Object.entries(JSON.parse(this.imageViewData.metadata)).forEach(([key, value]) => {
-			const [c1, c2] = table.addRow()
-			c1.html(key)
-			c2.html(value)
 		})
 	}
 }
