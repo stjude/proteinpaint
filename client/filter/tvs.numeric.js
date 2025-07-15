@@ -182,17 +182,9 @@ async function fillMenu(self, div, tvs) {
 		//}
 	}
 	// add brush_g for tvs brushes
-	self.num_obj.brush_g = self.num_obj.svg
-		.append('g')
-		.attr('transform', `translate(${self.num_obj.plot_size.xpad}, ${self.num_obj.plot_size.ypad})`)
-		.attr('class', 'brush_g')
+	self.num_obj.brush_g = self.vr.brushG.attr('class', 'brush_g')
 
-	const maxvalue = self.num_obj.density_data.maxvalue
-	const minvalue = self.num_obj.density_data.minvalue
-
-	self.num_obj.xscale = scaleLinear()
-		.domain([minvalue, maxvalue])
-		.range([self.num_obj.plot_size.xpad, self.num_obj.plot_size.width + self.num_obj.plot_size.xpad])
+	self.num_obj.xscale = self.vr.axisScale
 
 	self.num_obj.ranges = ranges
 	self.num_obj.brushes = []
