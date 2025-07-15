@@ -66,6 +66,35 @@ export class View {
 		const tableDiv = projectDiv.append('div').attr('class', 'sjpp-project-select-table').style('padding', '10px')
 		const columns = [{ label: 'Project', sortable: true }]
 
+		const columnButtons = [
+			{
+				text: 'Edit',
+				callback: (e, i) => {
+					//TODO: open wsisamples plot
+					this.interactions.editProject()
+					console.log('TODO', e, i)
+				}
+			}
+		]
+
+		//TODO: add once user roles are implemented
+		// if (userInfo.isAdmin) {
+		// 	columnButtons.push({
+		// 			text: 'Delete',
+		// 			callback: (_, i) => {
+		// 				const project = this.projects[i]
+		// 				this.interactions.deleteProject(project)
+
+		// 				//Update UI after deletion. Maybe cleaner way to handle this?
+		// 				//Maybe app.dispatch and rerender instead?
+		// 				this.projects.splice(i, 1)
+		// 				//Remove the table from the projectDiv and re-render
+		// 				projectDiv.select('.sjpp-project-select-table').remove()
+		// 				this.renderExistingProjects(projectDiv)
+		// 			}
+		// 		})
+		// }
+
 		renderTable({
 			div: tableDiv,
 			rows: this.projects.map((p: any) => {
@@ -76,30 +105,7 @@ export class View {
 			},
 			columns,
 			singleMode: true,
-			columnButtons: [
-				{
-					text: 'Edit',
-					callback: (e, i) => {
-						//TODO: open wsisamples plot
-						this.interactions.editProject()
-						console.log('TODO', e, i)
-					}
-				},
-				{
-					text: 'Delete',
-					callback: (_, i) => {
-						const project = this.projects[i]
-						this.interactions.deleteProject(project)
-
-						//Update UI after deletion. Maybe cleaner way to handle this?
-						//Maybe app.dispatch and rerender instead?
-						this.projects.splice(i, 1)
-						//Remove the table from the projectDiv and re-render
-						projectDiv.select('.sjpp-project-select-table').remove()
-						this.renderExistingProjects(projectDiv)
-					}
-				}
-			]
+			columnButtons
 		})
 	}
 }
