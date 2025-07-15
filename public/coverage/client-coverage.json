@@ -3850,5 +3850,113 @@
       "prev": 0,
       "diff": 66.84
     }
+  },
+  "dom/test/genesearch.integration.spec.ts": {
+    "lines": {
+      "total": 87,
+      "covered": 62,
+      "skipped": 0,
+      "pct": 71.26
+    },
+    "functions": {
+      "total": 13,
+      "covered": 12,
+      "skipped": 0,
+      "pct": 92.3
+    },
+    "statements": {
+      "total": 90,
+      "covered": 64,
+      "skipped": 0,
+      "pct": 71.11
+    },
+    "branches": {
+      "total": 11,
+      "covered": 6,
+      "skipped": 0,
+      "pct": 54.54
+    },
+    "lowestPct": {
+      "curr": 54.54,
+      "prev": 0,
+      "diff": 54.54
+    },
+    "averagePct": {
+      "curr": 72.30250000000001,
+      "prev": 0,
+      "diff": 72.30250000000001
+    }
+  },
+  "dom/search.ts": {
+    "lines": {
+      "total": 41,
+      "covered": 2,
+      "skipped": 0,
+      "pct": 4.87
+    },
+    "functions": {
+      "total": 11,
+      "covered": 0,
+      "skipped": 0,
+      "pct": 0
+    },
+    "statements": {
+      "total": 45,
+      "covered": 2,
+      "skipped": 0,
+      "pct": 4.44
+    },
+    "branches": {
+      "total": 32,
+      "covered": 0,
+      "skipped": 0,
+      "pct": 0
+    },
+    "lowestPct": {
+      "curr": 0,
+      "prev": 0,
+      "diff": 0
+    },
+    "averagePct": {
+      "curr": 2.3275,
+      "prev": 0,
+      "diff": 2.3275
+    }
+  },
+  "dom/violinRenderer.js": {
+    "lines": {
+      "total": 32,
+      "covered": 2,
+      "skipped": 0,
+      "pct": 6.25
+    },
+    "functions": {
+      "total": 6,
+      "covered": 0,
+      "skipped": 0,
+      "pct": 0
+    },
+    "statements": {
+      "total": 34,
+      "covered": 2,
+      "skipped": 0,
+      "pct": 5.88
+    },
+    "branches": {
+      "total": 20,
+      "covered": 0,
+      "skipped": 0,
+      "pct": 0
+    },
+    "lowestPct": {
+      "curr": 0,
+      "prev": 0,
+      "diff": 0
+    },
+    "averagePct": {
+      "curr": 3.0324999999999998,
+      "prev": 0,
+      "diff": 3.0324999999999998
+    }
   }
 }
