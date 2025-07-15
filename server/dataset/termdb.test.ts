@@ -309,8 +309,8 @@ export default function (): Mds3 {
 			},
 			singleCell: {
 				samples: {
-					sampleColumns: [{ termid: 'Subtype' }],
-					extraSampleTabLabel: 'Subtype'
+					sampleColumns: [{ termid: 'sex' }],
+					extraSampleTabLabel: 'sex'
 				},
 				data: {
 					sameLegend: false,
