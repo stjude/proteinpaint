@@ -445,6 +445,9 @@ export async function getPlotConfig(opts, app) {
 	}
 	//config.mayAdjustConfig(config)
 
+	// TODO: may do similar thing for custom term
+	if (config.term.term.type == 'geneVariant') config.settings.barchart.colorBars = true
+
 	// may apply term-specific changes to the default object
 	return copyMerge(config, opts)
 }
