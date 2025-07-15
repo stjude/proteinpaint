@@ -18,7 +18,7 @@ Tests:
 	term1=geneVariant with groups
 	term1=categorical, term2=geneVariant
 	term1=geneExp, term2=geneVariant SKIPPED
-	term2=geneExp, term1=geneVariant
+	term1=geneVariant, term2=geneExp
 	term1=geneExp
 	term1=numeric term2=geneExp with default bins
 	term1=geneExp, term2=categorical
@@ -353,7 +353,7 @@ tape('term1=geneVariant with groups', function (test) {
 			plots: [
 				{
 					chartType: 'barchart',
-					term: geneVariantTw
+					term: { term: { type: 'geneVariant', gene: 'TP53' }, q: { type: 'custom-groupset' } }
 				}
 			]
 		},
@@ -381,7 +381,7 @@ tape('term1=categorical, term2=geneVariant', function (test) {
 				{
 					chartType: 'barchart',
 					term: { id: 'diaggrp' },
-					term2: geneVariantTw
+					term2: { term: { type: 'geneVariant', gene: 'TP53' }, q: { type: 'custom-groupset' } }
 				}
 			]
 		},
@@ -408,7 +408,7 @@ tape('term1=geneExp, term2=geneVariant SKIPPED', function (test) {
 			plots: [
 				{
 					chartType: 'summary',
-					term2: geneVariantTw,
+					term2: { term: { type: 'geneVariant', gene: 'TP53' }, q: { type: 'custom-groupset' } },
 					// must set geneExp q.mode=discrete to show barchart, otherwise it will become violin and not trigger provied postRender for barchart
 					term: { term: { type: 'geneExpression', gene: 'TP53' }, q: { mode: 'discrete' } }
 				}
@@ -430,14 +430,14 @@ tape('term1=geneExp, term2=geneVariant SKIPPED', function (test) {
 	}
 })
 
-tape('term2=geneExp, term1=geneVariant', function (test) {
+tape('term1=geneVariant, term2=geneExp', function (test) {
 	test.timeoutAfter(10000)
 	runpp({
 		state: {
 			plots: [
 				{
 					chartType: 'barchart',
-					term: geneVariantTw,
+					term: { term: { type: 'geneVariant', gene: 'TP53' }, q: { type: 'custom-groupset' } },
 					term2: { term: { type: 'geneExpression', gene: 'TP53' } }
 				}
 			]
@@ -2055,313 +2055,6 @@ tape.skip('customized bins', test => {
 // to make or update following config, on the browser build/modify the tw or filter, apply to chart, at Session > Share > Open link, open the session file and locate the record and copy it here:
 // for geneVariant tw, search for string "geneVariant"
 // for filter, search for "termfilter"
-const geneVariantTw = {
-	term: {
-		kind: 'gene',
-		id: 'TP53',
-		gene: 'TP53',
-		name: 'TP53',
-		type: 'geneVariant',
-		groupsetting: { disabled: false },
-		childTerms: [
-			{
-				id: 'snvindel_somatic',
-				query: 'snvindel',
-				name: 'SNV/indel (somatic)',
-				parent_id: null,
-				isleaf: true,
-				type: 'dtsnvindel',
-				dt: 1,
-				values: {
-					M: { label: 'MISSENSE' },
-					F: { label: 'FRAMESHIFT' },
-					WT: { label: 'Wildtype' }
-				},
-				name_noOrigin: 'SNV/indel',
-				origin: 'somatic',
-				parentTerm: {
-					kind: 'gene',
-					id: 'TP53',
-					gene: 'TP53',
-					name: 'TP53',
-					type: 'geneVariant',
-					groupsetting: { disabled: false }
-				}
-			},
-			{
-				id: 'snvindel_germline',
-				query: 'snvindel',
-				name: 'SNV/indel (germline)',
-				parent_id: null,
-				isleaf: true,
-				type: 'dtsnvindel',
-				dt: 1,
-				values: {
-					M: { label: 'MISSENSE' },
-					F: { label: 'FRAMESHIFT' },
-					WT: { label: 'Wildtype' }
-				},
-				name_noOrigin: 'SNV/indel',
-				origin: 'germline',
-				parentTerm: {
-					kind: 'gene',
-					id: 'TP53',
-					gene: 'TP53',
-					name: 'TP53',
-					type: 'geneVariant',
-					groupsetting: { disabled: false }
-				}
-			},
-			{
-				id: 'cnv',
-				query: 'cnv',
-				name: 'CNV',
-				parent_id: null,
-				isleaf: true,
-				type: 'dtcnv',
-				dt: 4,
-				values: {
-					CNV_amp: { label: 'Copy number gain' },
-					WT: { label: 'Wildtype' }
-				},
-				name_noOrigin: 'CNV',
-				parentTerm: {
-					kind: 'gene',
-					id: 'TP53',
-					gene: 'TP53',
-					name: 'TP53',
-					type: 'geneVariant',
-					groupsetting: { disabled: false }
-				}
-			},
-			{
-				id: 'fusion',
-				query: 'svfusion',
-				name: 'Fusion RNA',
-				parent_id: null,
-				isleaf: true,
-				type: 'dtfusion',
-				dt: 2,
-				values: {
-					Fuserna: { label: 'Fusion transcript' },
-					WT: { label: 'Wildtype' }
-				},
-				name_noOrigin: 'Fusion RNA',
-				parentTerm: {
-					kind: 'gene',
-					id: 'TP53',
-					gene: 'TP53',
-					name: 'TP53',
-					type: 'geneVariant',
-					groupsetting: { disabled: false }
-				}
-			}
-		]
-	},
-	q: {
-		isAtomic: true,
-		type: 'custom-groupset',
-		hiddenValues: {},
-		customset: {
-			groups: [
-				{
-					name: 'Excluded categories',
-					type: 'filter',
-					uncomputable: true,
-					filter: { type: 'tvslst', in: true, join: '', lst: [] }
-				},
-				{
-					name: 'SNV/indel',
-					type: 'filter',
-					uncomputable: false,
-					filter: {
-						type: 'tvslst',
-						in: true,
-						join: 'or',
-						lst: [
-							{
-								type: 'tvs',
-								tvs: {
-									term: {
-										id: 'snvindel_somatic',
-										query: 'snvindel',
-										name: 'SNV/indel (somatic)',
-										parent_id: null,
-										isleaf: true,
-										type: 'dtsnvindel',
-										dt: 1,
-										values: {
-											M: { label: 'MISSENSE' },
-											F: { label: 'FRAMESHIFT' },
-											WT: { label: 'Wildtype' }
-										},
-										name_noOrigin: 'SNV/indel',
-										origin: 'somatic',
-										parentTerm: {
-											kind: 'gene',
-											id: 'TP53',
-											gene: 'TP53',
-											name: 'TP53',
-											type: 'geneVariant',
-											groupsetting: { disabled: false }
-										}
-									},
-									values: [
-										{
-											key: 'M',
-											label: 'MISSENSE',
-											value: 'M',
-											bar_width_frac: null
-										},
-										{
-											key: 'F',
-											label: 'FRAMESHIFT',
-											value: 'F',
-											bar_width_frac: null
-										}
-									]
-								}
-							},
-							{
-								type: 'tvs',
-								tvs: {
-									term: {
-										id: 'snvindel_germline',
-										query: 'snvindel',
-										name: 'SNV/indel (germline)',
-										parent_id: null,
-										isleaf: true,
-										type: 'dtsnvindel',
-										dt: 1,
-										values: {
-											M: { label: 'MISSENSE' },
-											F: { label: 'FRAMESHIFT' },
-											WT: { label: 'Wildtype' }
-										},
-										name_noOrigin: 'SNV/indel',
-										origin: 'germline',
-										parentTerm: {
-											kind: 'gene',
-											id: 'TP53',
-											gene: 'TP53',
-											name: 'TP53',
-											type: 'geneVariant',
-											groupsetting: { disabled: false }
-										}
-									},
-									values: [
-										{
-											key: 'M',
-											label: 'MISSENSE',
-											value: 'M',
-											bar_width_frac: null
-										},
-										{
-											key: 'F',
-											label: 'FRAMESHIFT',
-											value: 'F',
-											bar_width_frac: null
-										}
-									]
-								}
-							}
-						]
-					}
-				},
-				{
-					name: 'Wildtype',
-					type: 'filter',
-					uncomputable: false,
-					filter: {
-						type: 'tvslst',
-						in: true,
-						join: 'and',
-						lst: [
-							{
-								type: 'tvs',
-								tvs: {
-									term: {
-										id: 'snvindel_somatic',
-										query: 'snvindel',
-										name: 'SNV/indel (somatic)',
-										parent_id: null,
-										isleaf: true,
-										type: 'dtsnvindel',
-										dt: 1,
-										values: {
-											M: { label: 'MISSENSE' },
-											F: { label: 'FRAMESHIFT' },
-											WT: { label: 'Wildtype' }
-										},
-										name_noOrigin: 'SNV/indel',
-										origin: 'somatic',
-										parentTerm: {
-											kind: 'gene',
-											id: 'TP53',
-											gene: 'TP53',
-											name: 'TP53',
-											type: 'geneVariant',
-											groupsetting: { disabled: false }
-										}
-									},
-									values: [
-										{
-											key: 'WT',
-											label: 'Wildtype',
-											value: 'WT',
-											bar_width_frac: null
-										}
-									]
-								}
-							},
-							{
-								type: 'tvs',
-								tvs: {
-									term: {
-										id: 'snvindel_germline',
-										query: 'snvindel',
-										name: 'SNV/indel (germline)',
-										parent_id: null,
-										isleaf: true,
-										type: 'dtsnvindel',
-										dt: 1,
-										values: {
-											M: { label: 'MISSENSE' },
-											F: { label: 'FRAMESHIFT' },
-											WT: { label: 'Wildtype' }
-										},
-										name_noOrigin: 'SNV/indel',
-										origin: 'germline',
-										parentTerm: {
-											kind: 'gene',
-											id: 'TP53',
-											gene: 'TP53',
-											name: 'TP53',
-											type: 'geneVariant',
-											groupsetting: { disabled: false }
-										}
-									},
-									values: [
-										{
-											key: 'WT',
-											label: 'Wildtype',
-											value: 'WT',
-											bar_width_frac: null
-										}
-									]
-								}
-							}
-						]
-					}
-				}
-			]
-		}
-	},
-	isAtomic: true,
-	type: 'GvCustomGsTW',
-	bins: []
-}
-
 const tp53dtTermFilter = {
 	type: 'tvslst',
 	in: true,
