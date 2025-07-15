@@ -241,6 +241,7 @@ async function makeGroupUI(self, div) {
 					groups.splice(i, 1)
 				} else {
 					// update filter
+					f.lst.forEach(item => (item.tvs.excludeGeneName = true)) // no need to show gene name in filter pill
 					group.filter = f
 				}
 				makeGroupUI(self, div)
@@ -280,7 +281,7 @@ export async function mayMakeGroups(tw: RawGvCustomGsTW, vocabApi: VocabApi) {
 	const dtTerms = tw.term.childTerms
 	if (!dtTerms) throw 'dtTerms is missing'
 	let grp1Class, grp1Name, grp1Value, grp1Tvs, grp1Filter
-	let grp2Class, grp2Name, grp2Value, grp2Tvs, grp2Filter
+	let grp2Name, grp2Tvs, grp2Filter
 	for (const dtTerm of dtTerms) {
 		const classes = Object.keys(dtTerm.values)
 		if (classes.length < 2) {
@@ -289,24 +290,19 @@ export async function mayMakeGroups(tw: RawGvCustomGsTW, vocabApi: VocabApi) {
 		}
 		// group 1 will be wildtype or first available mutant class
 		grp1Class = classes.includes('WT') ? 'WT' : classes[0]
-		grp1Name = dtTerm.values[grp1Class].label
-		grp1Value = { key: grp1Class, label: grp1Name, value: grp1Class }
+		grp1Name = grp1Class == 'WT' ? `${dtTerm.name_noOrigin} Wildtype` : dtTerm.values[grp1Class].label
+		grp1Value = { key: grp1Class, label: grp1Class == 'WT' ? 'Wildtype' : grp1Name, value: grp1Class }
 		grp1Tvs = { type: 'tvs', tvs: { term: dtTerm, values: [grp1Value] } }
 		grp1Filter = getWrappedTvslst([grp1Tvs])
 		if (dtTerm.origin) grp1Name += ` (${dtTerm.origin})`
 		addNewGroup(grp1Filter, tw.q.customset.groups, grp1Name)
 		// group 2 will be all other classes
-		if (classes.length == 2) {
-			grp2Class = classes.find(c => c != grp1Class)
-			if (!grp2Class) throw 'mutant class cannot be found'
-			grp2Name = dtTerm.values[grp2Class].label
-			grp2Value = { key: grp2Class, label: grp2Name, value: grp2Class }
-			grp2Tvs = { type: 'tvs', tvs: { term: dtTerm, values: [grp2Value] } }
-			if (dtTerm.origin) grp2Name += ` (${dtTerm.origin})`
-		} else {
-			grp2Tvs = { type: 'tvs', tvs: { term: dtTerm, values: [grp1Value], isnot: true } }
-			grp2Name = classes.includes('WT') ? dtTerm.name : `Other ${dtTerm.name}`
-		}
+		grp2Tvs = { type: 'tvs', tvs: { term: dtTerm, values: [grp1Value], isnot: true } }
+		grp2Name =
+			grp1Class == 'WT'
+				? `${dtTerm.name_noOrigin} ${dtTerm.dt == 4 ? 'Altered' : 'Mutated'}`
+				: `Other ${dtTerm.name_noOrigin}`
+		if (dtTerm.origin) grp2Name += ` (${dtTerm.origin})`
 		grp2Filter = getWrappedTvslst([grp2Tvs])
 		addNewGroup(grp2Filter, tw.q.customset.groups, grp2Name)
 		break
