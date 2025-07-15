@@ -332,11 +332,13 @@ class TdbSurvival {
 		const config = this.state.config
 		const t2values = copyMerge({}, config.term2?.term?.values || {}, config.term2?.values || {})
 		const values = (this.refs.bins[2] && [this.refs.bins[2]]) || Object.values(t2values)
+		const t2groups = config.term2?.q.customset?.groups
 		this.term2toColor = {}
 		this.colorScale = this.uniqueSeriesIds.size < 11 ? scaleOrdinal(schemeCategory10) : scaleOrdinal(schemeCategory20)
 		const legendItems = []
 		for (const chart of charts) {
 			for (const series of chart.serieses) {
+				let color
 				const v = values.find(
 					v =>
 						v.seriesId === series.seriesId ||
@@ -344,8 +346,13 @@ class TdbSurvival {
 						v.name === series.seriesId ||
 						v.label === series.seriesId
 				)
+				color = v?.color
+				if (!color && t2groups?.length) {
+					const group = t2groups.find(g => g.name == series.seriesId)
+					color = group?.color
+				}
 				const c = {
-					orig: v?.color || (series.seriesId == '' ? this.settings.defaultColor : this.colorScale(series.seriesId))
+					orig: color || (series.seriesId == '' ? this.settings.defaultColor : this.colorScale(series.seriesId))
 				}
 				c.rgb = rgb(c.orig)
 				c.adjusted = c.rgb.toString()
