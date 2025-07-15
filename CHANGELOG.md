@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.137.0
 
 Features:
 - GRIN2: Added general GRIN2 run route request/response definitions; Made initial run route with TODOs
