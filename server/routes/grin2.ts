@@ -82,7 +82,11 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 	// Step 1: Get samples using cohort infrastructure
 	mayLog('[GRIN2] Getting samples from cohort filter...')
 
-	const samples = await get_samples(request.filter, ds)
+	const samples = await get_samples(
+		request.filter,
+		ds,
+		true // must set to true to return sample name to be able to access file. FIXME this can let names revealed to grin2 client, may need to apply access control
+	)
 
 	const cohortTime = Date.now() - startTime
 	mayLog(`[GRIN2] Retrieved ${samples.length.toLocaleString()} samples in ${Math.round(cohortTime / 1000)} seconds`)
@@ -202,7 +206,7 @@ async function processSampleData(
 	for (const sample of samples) {
 		try {
 			// Construct file path using sample.name
-			const filepath = path.join(ds.queries.singleSampleMutation.folder, sample.name)
+			const filepath = path.join(serverconfig.tpmasterdir, ds.queries.singleSampleMutation.folder, sample.name)
 
 			// Check if file is readable
 			await file_is_readable(filepath)
