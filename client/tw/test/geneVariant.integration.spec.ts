@@ -102,11 +102,11 @@ tape('mayMakeGroups: fills groups', async test => {
 		}
 	}
 	await mayMakeGroups(tw, vocabApi)
-	test.equal(tw.q.customset.groups.length, 3, 'Should create 3 groups')
-	const grp1 = tw.q.customset.groups[1]
-	const grp2 = tw.q.customset.groups[2]
-	test.equal(grp1.name, 'Wildtype (somatic)', 'Group 1 name should be Wildtype (somatic)')
-	test.equal(grp2.name, 'SNV/indel (somatic)', 'Group 2 name should be SNV/indel (somatic)')
+	test.equal(tw.q.customset.groups.length, 2, 'Should create 2 groups')
+	const grp1 = tw.q.customset.groups[0]
+	const grp2 = tw.q.customset.groups[1]
+	test.equal(grp1.name, 'SNV/indel Wildtype (somatic)', 'Group 1 should have correct name')
+	test.equal(grp2.name, 'SNV/indel Mutated (somatic)', 'Group 2 should have correct name')
 	test.equal(grp1.filter.lst.length, 1, 'Group 1 filter.lst should have 1 item')
 	test.equal(grp2.filter.lst.length, 1, 'Group 2 filter.lst should have 1 item')
 	const grp1Item = grp1.filter.lst[0]
@@ -121,8 +121,6 @@ tape('mayMakeGroups: fills groups', async test => {
 	test.deepEqual(grp2Value, { key: 'WT', label: 'Wildtype', value: 'WT' }, 'Group 2 value should be a wildtype object')
 	test.false(grp1Item.tvs.isnot, 'Group 1 tvs.isnot should be undefined')
 	test.true(grp2Item.tvs.isnot, 'Group 2 tvs.isnot should be true')
-	const grp0 = tw.q.customset.groups[0]
-	test.true(grp0.uncomputable, 'First group should be uncomputable')
 	test.end()
 })
 
@@ -266,57 +264,8 @@ const customGsQ: GvCustomGsQ = {
 	customset: {
 		groups: [
 			{
-				name: 'Excluded categories',
+				name: 'SNV/indel Wildtype (somatic)',
 				type: 'filter',
-				uncomputable: true,
-				filter: { type: 'tvslst', in: true, join: '', lst: [] }
-			},
-			{
-				name: 'Wildtype (somatic)',
-				type: 'filter',
-				uncomputable: false,
-				filter: {
-					type: 'tvslst',
-					in: true,
-					join: '',
-					lst: [
-						{
-							type: 'tvs',
-							tvs: {
-								term: {
-									id: 'snvindel_somatic',
-									query: 'snvindel',
-									name: 'SNV/indel (somatic)',
-									parent_id: null,
-									isleaf: true,
-									type: 'dtsnvindel',
-									dt: 1,
-									values: {
-										M: { label: 'MISSENSE' },
-										F: { label: 'FRAMESHIFT' },
-										WT: { label: 'Wildtype' }
-									},
-									name_noOrigin: 'SNV/indel',
-									origin: 'somatic',
-									parentTerm: {
-										kind: 'gene',
-										id: 'TP53',
-										gene: 'TP53',
-										name: 'TP53',
-										type: 'geneVariant',
-										groupsetting: { disabled: false }
-									}
-								},
-								values: [{ key: 'WT', label: 'Wildtype', value: 'WT' }]
-							}
-						}
-					]
-				}
-			},
-			{
-				name: 'SNV/indel (somatic)',
-				type: 'filter',
-				uncomputable: false,
 				filter: {
 					type: 'tvslst',
 					in: true,
@@ -350,11 +299,56 @@ const customGsQ: GvCustomGsQ = {
 									}
 								},
 								values: [{ key: 'WT', label: 'Wildtype', value: 'WT' }],
-								isnot: true
+								excludeGeneName: true
 							}
 						}
 					]
-				}
+				},
+				color: '#1b9e77'
+			},
+			{
+				name: 'SNV/indel Mutated (somatic)',
+				type: 'filter',
+				filter: {
+					type: 'tvslst',
+					in: true,
+					join: '',
+					lst: [
+						{
+							type: 'tvs',
+							tvs: {
+								term: {
+									id: 'snvindel_somatic',
+									query: 'snvindel',
+									name: 'SNV/indel (somatic)',
+									parent_id: null,
+									isleaf: true,
+									type: 'dtsnvindel',
+									dt: 1,
+									values: {
+										M: { label: 'MISSENSE' },
+										F: { label: 'FRAMESHIFT' },
+										WT: { label: 'Wildtype' }
+									},
+									name_noOrigin: 'SNV/indel',
+									origin: 'somatic',
+									parentTerm: {
+										kind: 'gene',
+										id: 'TP53',
+										gene: 'TP53',
+										name: 'TP53',
+										type: 'geneVariant',
+										groupsetting: { disabled: false }
+									}
+								},
+								values: [{ key: 'WT', label: 'Wildtype', value: 'WT' }],
+								isnot: true,
+								excludeGeneName: true
+							}
+						}
+					]
+				},
+				color: '#d95f02'
 			}
 		]
 	},
