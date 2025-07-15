@@ -43,22 +43,47 @@ export function getHandler(self: GeneVariantTermSettingInstance) {
 async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 	/* TODO: instead of directly modifying self.q here, should create a separate property on the handler to store pending user
 	configurations (similar to numeric continuous/discrete switching)
-	const handler = self.handlerByType.geneVariant
-	*/
-	const div = _div.append('div').style('padding', '10px')
+	const handler = self.handlerByType.geneVariant */
+	const div = _div.append('div').style('margin', '10px')
 	div.append('div').style('font-size', '1.2rem').text(self.term.name)
 	const optsDiv = div.append('div').style('margin-top', '10px').style('margin-bottom', '1px')
-	const groupsDiv = div
-		.append('div')
-		.style('display', 'none')
-		.style('margin', '5px 0px 0px 30px')
-		.style('vertical-align', 'top')
+	const groupsDiv = div.append('div').style('display', 'none').style('margin', '10px').style('vertical-align', 'top')
+	// radio buttons for whether or not to group samples
+	optsDiv.append('div').style('font-weight', 'bold').text('Group samples')
+	const isGroupset = self.q.type == 'custom-groupset'
+	const radios = make_radios({
+		holder: optsDiv,
+		options: [
+			{ label: 'No sample grouping', value: 'noGroup', checked: !isGroupset },
+			{ label: 'Assign samples to groups', value: 'group', checked: isGroupset }
+		],
+		callback: async v => {
+			if (v == 'group') {
+				await makeGroupUI(self, groupsDiv)
+			} else {
+				clearGroupset(self)
+				groupsDiv.style('display', 'none')
+			}
+		}
+	})
+
+	if (
+		(self.usecase?.detail && ['term', 'term0', 'term2'].includes(self.usecase.detail)) ||
+		self.opts.geneVariantEditMenuOnlyGrp
+	) {
+		// hide option for turning off groupsetting
+		optsDiv.style('display', 'none')
+		groupsDiv.style('margin', '0px')
+	}
+
+	const selected = radios.inputs.filter(d => d.checked)
+	if (selected.property('value') == 'group') await makeGroupUI(self, groupsDiv)
+
 	// apply button
-	// must create it at beginning to allow toggling applySpan message
-	const applyRow = div.append('div').style('margin-top', '15px')
-	applyRow
+	div
+		.append('div')
+		.style('margin-top', '25px')
 		.append('button')
-		.style('display', 'inline-block')
 		.text('Apply')
 		.on('click', () => {
 			let validGrpset = false
@@ -75,46 +100,6 @@ async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 			}
 			self.runCallback()
 		})
-	applyRow
-		.append('span')
-		.attr('id', 'applySpan')
-		.style('display', 'none')
-		.style('padding-left', '15px')
-		.style('opacity', 0.8)
-		.style('font-size', '.8em')
-		.text('Only tested variants are considered')
-
-	// radio buttons for whether or not to group variants
-	optsDiv.append('div').style('font-weight', 'bold').text('Group variants')
-	const isGroupset = self.q.type == 'custom-groupset'
-	const radios = make_radios({
-		holder: optsDiv,
-		options: [
-			{ label: 'No variant grouping', value: 'noGroup', checked: !isGroupset },
-			{ label: 'Assign variants to groups', value: 'group', checked: isGroupset }
-		],
-		callback: async v => {
-			if (v == 'group') {
-				await makeGroupUI(self, groupsDiv)
-			} else {
-				clearGroupset(self)
-				groupsDiv.style('display', 'none')
-				applyRow.select('#applySpan').style('display', 'none')
-			}
-		}
-	})
-
-	if (
-		(self.usecase?.detail && ['term', 'term0', 'term2'].includes(self.usecase.detail)) ||
-		self.opts.geneVariantEditMenuOnlyGrp
-	) {
-		// hide option for turning off groupsetting
-		optsDiv.style('display', 'none')
-		groupsDiv.style('margin-top', '10px')
-	}
-
-	const selected = radios.inputs.filter(d => d.checked)
-	if (selected.property('value') == 'group') await makeGroupUI(self, groupsDiv)
 }
 
 // make UI for grouping variants
@@ -122,16 +107,16 @@ async function makeGroupUI(self, div) {
 	div.style('display', 'block')
 	div.selectAll('*').remove()
 
-	// filter table
-	const filterTableDiv = div
+	// message
+	div
 		.append('div')
-		.attr('id', 'filterTableDiv')
-		.style('margin-left', '15px')
-		.style('margin-bottom', '10px')
-	// row of buttons
-	const btnRow = div.append('div').attr('id', 'btnRow')
-	// btn 1: prompt to add new group
-	const addNewGroupBtnHolder = btnRow.append('span').style('margin-right', '20px')
+		.style('margin', '15px 0px')
+		.text('Group samples by mutation status. Only tested samples are considered.')
+
+	// filter table
+	const filterTableDiv = div.append('div')
+	// add new group button
+	const addNewGroupBtnHolder = div.append('div')
 
 	self.q.type = 'custom-groupset'
 	if (!self.q.customset?.groups) self.q.customset = { groups: [] }
@@ -192,11 +177,12 @@ async function makeGroupUI(self, div) {
 					makeGroupUI(self, div)
 				}
 			},
-			{ label: '#SAMPLE' },
+			//{ label: '#SAMPLE' }, // will re-enable when filtered sample count can be supported for gdc
 			{ label: 'FILTER' }
 		],
 		rows: [],
-		striped: false // no alternating row bg color so delete button appears more visible
+		striped: false, // no alternating row bg color so delete button appears more visible
+		showLines: false
 	}
 
 	for (const g of groups) {
@@ -204,7 +190,7 @@ async function makeGroupUI(self, div) {
 			{}, // blank cell to add delete button
 			{ value: g.name }, // to allow click to show <input>
 			{ color: g.color },
-			{ value: 'n=' + (await self.vocabApi.getFilteredSampleCount(g.filter)) },
+			// { value: 'n=' + (await self.vocabApi.getFilteredSampleCount(g.filter)) }, // will re-enable when filtered sample count can be supported for gdc
 			{} // blank cell to show filter ui
 		])
 	}
@@ -226,9 +212,8 @@ async function makeGroupUI(self, div) {
 
 		// create fitlter ui in its cell
 		const group = groups[i]
-		//console.log('group.filter:', structuredClone(group.filter))
 		filterInit({
-			holder: row[4].__td,
+			holder: row[3].__td,
 			vocab: {
 				terms: self.term.childTerms,
 				parent_termdbConfig: self.vocabApi.termdbConfig
@@ -248,8 +233,6 @@ async function makeGroupUI(self, div) {
 			}
 		}).main(group.filter)
 	}
-
-	//applyRow.select('#applySpan').style('display', 'inline')
 }
 
 function addNewGroup(filter, groups, name?: string) {
@@ -319,9 +302,7 @@ function getMassFilter(filter) {
 
 function clearGroupset(self) {
 	self.q.type = 'values'
-	delete self.q.predefined_groupset_idx
 	delete self.q.customset
-	delete self.groupSettingInstance
 }
 
 // function to get child dt terms
