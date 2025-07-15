@@ -323,12 +323,12 @@ export default function (): Mds3 {
 							fileSuffix: 'umap.tsv',
 							colorColumns: [
 								//{ index: 2, name: 'Sample/B-reference', colorMap: { query: '#f98f93', ref: '#F2F2F2' } },
-								//{
-								//    index: 3,
-								//    name: 'Blast/Non malignant',
-								//    colorMap: { NA: '#aaa', Yes: '#ff3333', No: '#4a8dff' },
-								//    aliases: { NA: 'Reference', No: 'Blast', Yes: 'Non malignant' }
-								//}
+								{
+									index: 3,
+									name: 'Blood',
+									colorMap: { Blood: '#ff3333', Brain: '#4a8dff' },
+									aliases: { NA: 'Reference', No: 'Blast', Yes: 'Non malignant' }
+								}
 							],
 							coordsColumns: { x: 1, y: 2 },
 							selected: false
