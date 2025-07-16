@@ -53,8 +53,9 @@ export default class ViewModel {
 		const maxLabelSpace = getMaxLabelWidth(tempSvg as any, labels)
 		tempHolder.remove()
 
+		//Diameter of the disco and labels usedd to calculate height and with of canvas
 		this.width =
-			1.2 *
+			2 *
 			(this.settings.horizontalPadding +
 				this.settings.rings.labelLinesInnerRadius +
 				this.settings.rings.labelsToLinesDistance +
