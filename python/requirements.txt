@@ -6,3 +6,4 @@
     pyvips
     numba
     xlsxwriter
+    openpyxl==3.1.5

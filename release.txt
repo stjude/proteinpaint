@@ -1,1 +1,2 @@
-
+Features:
+- Added parseRawTable.py to convert .xlsx files into files needed for GATA2 db build. Updated python requirements.txt with new dependency
