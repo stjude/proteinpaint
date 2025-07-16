@@ -16,8 +16,7 @@ const chromosomes = {
 
 const reference = new Reference(settings, chromosomes)
 
-test('CnvArcsMapper.map() should return an array of CnvArc objects', t => {
-	const rawData = [
+const rawData = [
 		{
 			chr: 'chr1',
 			dt: 4,
@@ -52,6 +51,7 @@ test('CnvArcsMapper.map() should return an array of CnvArc objects', t => {
 	)
 	const arcs = cnvArcsMapper.map(data)
 
+test('CnvArcsMapper.map() should return an array of CnvArc objects', t => {
 	t.equal(arcs.length, 2, 'Number of arcs should be equal to the number of data items')
 
 	const arc0 = arcs[0]

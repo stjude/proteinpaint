@@ -2,7 +2,13 @@ import test from 'tape'
 import discoDefaults from '#plots/disco/defaults.ts'
 import Reference from '../Reference'
 
-// Mock settings object used to configure chromosome layout
+/*
+Tests:
+	
+*/
+
+// ───── Mock Settings ─────
+
 const overriders = {
 	padAngle: 0.01,
 	chromosomeInnerRadius: 90,
@@ -17,6 +23,13 @@ const chromosomes = {
 	chr3: 300
 }
 
+// ───── Header ─────
+test('\n', function (t) {
+	t.comment('-***- client/plots/disco/chromosome/reference.ts -***-')
+	t.end()
+})
+
+// ───── Unit Tests ─────
 test('Reference class initializes correctly', t => {
 	const reference = new Reference(settings, chromosomes)
 
