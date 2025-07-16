@@ -313,7 +313,7 @@ export default function (): Mds3 {
 					extraSampleTabLabel: 'sex'
 				},
 				data: {
-					sameLegend: false,
+					sameLegend: true,
 					src: 'native',
 					plots: [
 						{
@@ -321,16 +321,13 @@ export default function (): Mds3 {
 							folder: 'files/hg38/TermdbTest/scrna',
 							fileSuffix: '_umap.txt',
 							colorColumns: [
-								//{ index: 2, name: 'Sample/B-reference', colorMap: { query: '#f98f93', ref: '#F2F2F2' } },
 								{
 									index: 3,
-									name: 'Blood',
-									colorMap: { Blood: '#ff3333', Brain: '#4a8dff' },
-									aliases: { NA: 'Reference', No: 'Blast', Yes: 'Non malignant' }
+									name: 'CellType'
 								}
 							],
 							coordsColumns: { x: 1, y: 2 },
-							selected: false
+							selected: true
 						}
 					]
 				},
