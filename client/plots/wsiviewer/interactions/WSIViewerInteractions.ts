@@ -35,7 +35,7 @@ export class WSIViewerInteractions {
 				type: 'plot_edit',
 				id: opts.id,
 				config: {
-					settings: { displayedImageIndex: index }
+					settings: { displayedImageIndex: index, renderWSIViewer: true }
 				}
 			})
 		}
