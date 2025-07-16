@@ -522,6 +522,7 @@ function setDropdownInput(opts) {
 					}
 				})
 		})
+	if (opts.multiple) self.dom.select.attr('size', opts.options.length > 10 ? 10 : opts.options.length)
 	self.dom.select.style('max-width', '300px')
 	self.dom.select
 		.selectAll('option')
