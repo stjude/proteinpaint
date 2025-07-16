@@ -1,49 +1,34 @@
 import { renderTable } from '#dom'
-import type { Elem, Div } from '../../../types/d3'
 import type { WSIViewerInteractions } from '../interactions/WSIViewerInteractions'
 import type OLMap from 'ol/Map.js'
 import type { ImageViewData } from '../viewModel/ViewModel'
 import type { Extent } from 'ol/extent'
 
 export class WSIAnnotationsRenderer {
-	holder: Elem
-	imageViewData: ImageViewData
-	tablesWrapper: Div
 	buffers: any
 	interactions: WSIViewerInteractions
 
-	constructor(
-		holder: Elem,
-		imageViewData: ImageViewData,
-		buffers: any,
-		wsiinteractions: WSIViewerInteractions,
-		activeImageExtent: Extent,
-		map: OLMap
-	) {
-		this.holder = holder
-		this.imageViewData = imageViewData
+	constructor(buffers: any, wsiinteractions: WSIViewerInteractions) {
 		this.buffers = buffers
 		this.interactions = wsiinteractions
+	}
 
+	render(holder: any, imageViewData: ImageViewData, activeImageExtent: Extent, map: OLMap) {
 		holder.select('div[id="annotations-table-wrapper"]').remove()
 
-		this.tablesWrapper = holder
+		const tablesWrapper = holder
 			.append('div')
 			.attr('id', 'annotations-table-wrapper')
 			.style('display', 'inline-block')
 			.style('padding', '20px')
 
-		this.renderAnnotationsTable(activeImageExtent, map)
-	}
-
-	private renderAnnotationsTable(activeImageExtent, map: OLMap) {
-		if (!this.imageViewData.annotations) return
+		if (!imageViewData.annotations) return
 		const selectedColor = '#fcfc8b'
 
 		renderTable({
-			columns: this.imageViewData.annotations.columns,
-			rows: this.imageViewData.annotations.rows,
-			div: this.tablesWrapper
+			columns: imageViewData.annotations.columns,
+			rows: imageViewData.annotations.rows,
+			div: tablesWrapper
 				.append('div')
 				.attr('id', 'annotations-table')
 				.style('margins', '20px')
@@ -72,8 +57,8 @@ export class WSIAnnotationsRenderer {
 
 						/** Need to update the data source. Otherwise user changes
 						 * disappear on sort. */
-						this.imageViewData.annotations!.rows[rowIdx][4].html = spanHtml
-						this.imageViewData.annotations!.rows[rowIdx][5].value = tmpClass.label
+						imageViewData.annotations!.rows[rowIdx][4].html = spanHtml
+						imageViewData.annotations!.rows[rowIdx][5].value = tmpClass.label
 
 						const predictedClassTd = tr.select('td:nth-child(4)')
 						const colorTd = tr.select('td:nth-child(5)')
@@ -93,7 +78,7 @@ export class WSIAnnotationsRenderer {
 
 				tr.on('click', () => {
 					this.buffers.annotationsIdx.set(rowIdx)
-					const coords = [this.imageViewData.annotations!.rows[rowIdx][1].value] as unknown as [number, number][]
+					const coords = [imageViewData.annotations!.rows[rowIdx][1].value] as unknown as [number, number][]
 					this.interactions.addZoomInEffect(activeImageExtent, coords, map)
 				})
 			}

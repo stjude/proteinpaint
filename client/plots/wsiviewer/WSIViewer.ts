@@ -13,8 +13,9 @@ import { ThumbnailRenderer } from '#plots/wsiviewer/view/ThumbnailRenderer.ts'
 import { MapRenderer } from '#plots/wsiviewer/view/MapRenderer.ts'
 import { MetadataRenderer } from '#plots/wsiviewer/view/MetadataRenderer.ts'
 import { LegendRenderer } from '#plots/wsiviewer/view/LegendRenderer.ts'
+import type OLMap from 'ol/Map'
 
-export default class WSIViewer extends RxComponentInner {
+export class WSIViewer extends RxComponentInner {
 	// following attributes are required by rx
 	private type: string
 
@@ -32,6 +33,17 @@ export default class WSIViewer extends RxComponentInner {
 		this.type = 'WSIViewer'
 		this.opts = opts
 		this.wsiViewerInteractions = new WSIViewerInteractions(this, opts)
+	}
+
+	async init(): Promise<void> {
+		const state = this.app.getState()
+		if (this.opts.header) {
+			//If sandbox is present, add sample id and data type to the header
+			console.log('header', this.opts.header)
+			this.opts.header.html(
+				`${state.sample_id} <span style="font-size:.8em">${state.termdbConfig.queries.WSImages.type} images</span>`
+			)
+		}
 	}
 
 	async main(): Promise<void> {
@@ -64,66 +76,64 @@ export default class WSIViewer extends RxComponentInner {
 			return
 		}
 
-		this.thumbnailsContainer = this.thumbnailRenderer.render(
-			holder,
-			this.thumbnailsContainer,
-			wsimageLayers.map(wsimageLayers => wsimageLayers.wsimage),
-			settings,
-			this.wsiViewerInteractions
-		)
-
-		holder.select('div[id="wsi-viewer"]').remove()
-
-		holder
-			.append('div')
-			.attr('id', 'wsi-viewer')
-			.style('width', settings.imageWidth)
-			.style('height', settings.imageHeight)
-
-		const imageViewData = viewModel.getImageViewData(settings.displayedImageIndex)
-
-		//TODO: Handle this better
-		if (imageViewData.activePatchColor) {
-			this.wsiViewerInteractions.activePatchColor = imageViewData.activePatchColor
-		}
-
 		const activeImage: TileLayer = wsimageLayers[settings.displayedImageIndex].wsimage
 		const activeImageExtent = activeImage?.getSource()?.getTileGrid()?.getExtent()
 
-		const map = new MapRenderer(
-			wsimageLayers[settings.displayedImageIndex],
-			this.wsiViewerInteractions.viewerClickListener,
-			activeImageExtent
-		).getMap()
+		let map: OLMap | undefined = undefined
+		const imageViewData = viewModel.getImageViewData(settings.displayedImageIndex)
 
-		const zoomInPoints = wsimages[settings.displayedImageIndex].zoomInPoints
-
-		new WSIAnnotationsRenderer(holder, imageViewData, buffers, this.wsiViewerInteractions, activeImageExtent!, map)
-
-		this.legendRenderer.render(holder, imageViewData)
-		this.metadataRenderer.renderMetadata(holder, imageViewData)
-
-		if (zoomInPoints != undefined) {
-			this.wsiViewerInteractions.addZoomInEffect(activeImageExtent, zoomInPoints, map)
-			this.wsiViewerInteractions.addMapKeyDownListener(
+		if (settings.renderWSIViewer) {
+			this.thumbnailsContainer = this.thumbnailRenderer.render(
 				holder,
-				map,
-				activeImageExtent,
-				imageViewData.shortcuts,
-				buffers,
-				wsimages[settings.displayedImageIndex]
+				this.thumbnailsContainer,
+				wsimageLayers.map(wsimageLayers => wsimageLayers.wsimage),
+				settings,
+				this.wsiViewerInteractions
 			)
+
+			holder.select('div[id="wsi-viewer"]').remove()
+
+			holder
+				.append('div')
+				.attr('id', 'wsi-viewer')
+				.style('width', settings.imageWidth)
+				.style('height', settings.imageHeight)
+
+			//TODO: Handle this better
+			if (imageViewData.activePatchColor) {
+				this.wsiViewerInteractions.activePatchColor = imageViewData.activePatchColor
+			}
+
+			map = new MapRenderer(
+				wsimageLayers[settings.displayedImageIndex],
+				this.wsiViewerInteractions.viewerClickListener,
+				activeImageExtent
+			).getMap()
 		}
 
-		if (activeImageExtent) {
+		if (settings.renderAnnotationTable && map) {
+			const wsiAnnotationsRenderer = new WSIAnnotationsRenderer(buffers, this.wsiViewerInteractions)
+			wsiAnnotationsRenderer.render(holder, imageViewData, activeImageExtent!, map)
+			this.legendRenderer.render(holder, imageViewData)
+			this.metadataRenderer.renderMetadata(holder, imageViewData)
+
+			const zoomInPoints = wsimages[settings.displayedImageIndex].zoomInPoints
+
+			if (zoomInPoints != undefined) {
+				this.wsiViewerInteractions.addZoomInEffect(activeImageExtent, zoomInPoints, map)
+				this.wsiViewerInteractions.addMapKeyDownListener(
+					holder,
+					map,
+					activeImageExtent,
+					imageViewData.shortcuts,
+					buffers,
+					wsimages[settings.displayedImageIndex]
+				)
+			}
+		}
+
+		if (activeImageExtent && map) {
 			map.getView().fit(activeImageExtent)
-		}
-
-		if (this.opts.header) {
-			//If sandbox is present, add sample id and data type to the header
-			this.opts.header.html(
-				`${state.sample_id} <span style="font-size:.8em">${state.termdbConfig.queries.WSImages.type} images</span>`
-			)
 		}
 	}
 }

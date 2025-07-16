@@ -6,4 +6,6 @@ export default interface Settings {
 	nonActiveThumbnailBorderStyle: string
 	thumbnailWidth: string
 	thumbnailHeight: string
+	renderWSIViewer: boolean
+	renderAnnotationTable: boolean
 }
