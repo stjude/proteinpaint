@@ -20,7 +20,7 @@ const settings = discoDefaults({
 	rings: {}
 })
 
-const chromosomes = { chr1: 1000, chr2: 1000 }
+const chromosomes = { chr1: 1000000, chr2: 100000 }
 const reference = new Reference(settings, chromosomes)
 
 const dataMapper = new DataMapper(settings, reference, 'SampleA', [])
@@ -76,7 +76,8 @@ test('DataMapper.map() flags SNV positions outside chromosome size', t => {
                 {
                         dt: dtsnvindel,
                         chr: 'chr1',
-                        position: 2000,
+						//Exaggerated position outsie chr1,adds entry to invalidDataInfo
+                        position: 9000000000, 
                         gene: 'FAKE',
                         class: 'M',
                         mname: 'mname'
@@ -84,7 +85,7 @@ test('DataMapper.map() flags SNV positions outside chromosome size', t => {
         ]
         const res = mapper.map(outOfRange)
         t.equal(res.invalidDataInfo!.count, 1, 'One invalid entry should be recorded')
-		t.equal(res.invalidDataInfo!.entries[0].reason, 'Position 2000 outside of chr1', 'Reason should mention position outside chromosome')
+		t.equal(res.invalidDataInfo!.entries[0].reason, `Position ${outOfRange[0].position} outside of chr1`, 'Reason should mention position outside chromosome')
         t.equal(res.snvData.length, 0, 'Invalid SNV should be skipped')
         t.end()
 })

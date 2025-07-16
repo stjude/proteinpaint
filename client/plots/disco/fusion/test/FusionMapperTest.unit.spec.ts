@@ -22,7 +22,7 @@ test('FusionMapper.map() should return an array of Fusion objects', t => {
 		{
 			dt: dtfusionrna,
 			chrA: 'chr1',
-			posA: 1,
+			posA: 0,
 			geneA: 'gene1',
 			chrB: 'chr2',
 			posB: 50,
@@ -31,7 +31,7 @@ test('FusionMapper.map() should return an array of Fusion objects', t => {
 		{
 			dt: dtfusionrna,
 			chrA: 'chr2',
-			posA: 1,
+			posA: 0,
 			geneA: 'gene3',
 			chrB: 'chr2',
 			posB: 100,
@@ -43,7 +43,7 @@ test('FusionMapper.map() should return an array of Fusion objects', t => {
 
 	const fusions = fusionMapper.map(dataHolder.fusionData)
 
-	t.equal(fusions.length, 0, 'Number of fusions should be equal to the number of data items')
+	t.equal(fusions.length, 2, 'Number of fusions should be equal to the number of data items')
 	t.equal(fusions[0].source.startAngle, -0.01, 'Start angle for position 0 on chr1 should be 0')
 	t.equal(
 		fusions[0].target.endAngle,

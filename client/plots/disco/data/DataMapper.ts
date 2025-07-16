@@ -123,7 +123,7 @@ export default class DataMapper {
                                         const pos = dObject.pos ?? dObject.position
                                         const chrSize = this.reference.chromosomes[index].size
                                         // ensure position is numeric and within chromosome range
-                                        if (Number.isFinite(pos) && pos >= 1 && pos <= chrSize) {
+                                        if (Number.isFinite(pos) && pos >= 0 && pos <= chrSize) {
                                                 this.addData(dObject, dataArray)
                                         } else {
                                                 this.invalidEntries.push({ dataType: 'SNV', reason: `Position ${pos} outside of ${dObject.chr}` })
@@ -142,16 +142,16 @@ export default class DataMapper {
                                         if (
                                                 Number.isFinite(posA) &&
                                                 Number.isFinite(posB) &&
-                                                posA >= 1 &&
+                                                posA >= 0 &&
                                                 posA <= chrSizeA &&
-                                                posB >= 1 &&
+                                                posB >= 0 &&
                                                 posB <= chrSizeB
                                         ) {
                                                 this.addData(dObject, dataArray)
                                         } else {
                                                 const reasonParts: string[] = []
-                                                if (!(Number.isFinite(posA) && posA >= 1 && posA <= chrSizeA)) reasonParts.push(`Position ${posA} outside of ${dObject.chrA}`)
-                                                if (!(Number.isFinite(posB) && posB >= 1 && posB <= chrSizeB)) reasonParts.push(`Position ${posB} outside of ${dObject.chrB}`)
+                                                if (!(Number.isFinite(posA) && posA >= 0 && posA <= chrSizeA)) reasonParts.push(`Position ${posA} outside of ${dObject.chrA}`)
+                                                if (!(Number.isFinite(posB) && posB >= 0 && posB <= chrSizeB)) reasonParts.push(`Position ${posB} outside of ${dObject.chrB}`)
                                                 this.invalidEntries.push({ dataType: 'Fusion', reason: reasonParts.join('; ') })
                                         }
                                 } else {
@@ -167,10 +167,11 @@ export default class DataMapper {
                                         if (
                                                 Number.isFinite(start) &&
                                                 Number.isFinite(stop) &&
-                                                start >= 1 &&
+                                                start >= 0 &&
                                                 stop <= chrSize &&
                                                 start <= stop
                                         ) {
+											console.log(`meep: start: ${start}, stop: ${stop}, chrSize: ${chrSize}`)
                                                 this.addData(dObject, dataArray)
                                         } else {
                                                 this.invalidEntries.push({

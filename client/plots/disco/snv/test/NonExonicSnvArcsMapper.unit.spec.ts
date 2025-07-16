@@ -36,7 +36,7 @@ test('NonExonicSnvArcsMapper.map() should return expected arc structure', t => {
 		{
 			dt: dtsnvindel,
 			chr: 'chr1',
-			position: 1,
+			position: 0,
 			gene: 'gene1',
 			class: 'M',
 			mname: 'm1'
@@ -44,7 +44,7 @@ test('NonExonicSnvArcsMapper.map() should return expected arc structure', t => {
 		{
 			dt: dtsnvindel,
 			chr: 'chr2',
-			position: 1,
+			position: 0,
 			gene: 'gene2',
 			class: 'M',
 			mname: 'm2'
