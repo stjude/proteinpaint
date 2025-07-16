@@ -10,7 +10,6 @@ specific output files:
 
 import pandas as pd
 import sys
-import os
 from pathlib import Path
 import argparse
 from typing import List, Optional
@@ -218,9 +217,9 @@ def main() -> None:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  python excel_converter.py mutations.xlsx
-  python excel_converter.py data.xls --output-dir ./results
-  python excel_converter.py mutations.xlsx --output-dir /path/to/output
+  python parseRawTable.py mutations.xlsx
+  python parseRawTable.py data.xls --output-dir ./results
+  python parseRawTable.py mutations.xlsx --output-dir /path/to/output
         """
     )
     
