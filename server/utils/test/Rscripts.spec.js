@@ -364,7 +364,7 @@ tape('edge.R limma', async function (test) {
 		control:
 			'2646,2674,2688,2744,2758,2786,2814,2842,2856,2884,2912,2926,2954,2968,2996,3010,3038,3080,3094,3122,3164,3220,3248,3416,3430,3458',
 		data_type: 'do_DE',
-		input_file: serverconfig.binpath + '/test/tp/files/hg38/TermdbTest/TermdbTest.geneCounts.h5',
+		input_file: serverconfig.binpath + '/test/tp/files/hg38/TermdbTest/rnaseq/TermdbTest.geneCounts.h5',
 		cachedir: serverconfig.cachedir,
 		min_count: 10,
 		min_total_count: 15,
@@ -439,7 +439,7 @@ tape('edge.R edgeR', async function (test) {
 		control:
 			'2646,2674,2688,2744,2758,2786,2814,2842,2856,2884,2912,2926,2954,2968,2996,3010,3038,3080,3094,3122,3164,3220,3248,3416,3430,3458',
 		data_type: 'do_DE',
-		input_file: serverconfig.binpath + '/test/tp/files/hg38/TermdbTest/TermdbTest.geneCounts.h5',
+		input_file: serverconfig.binpath + '/test/tp/files/hg38/TermdbTest/rnaseq/TermdbTest.geneCounts.h5',
 		cachedir: serverconfig.cachedir,
 		min_count: 10,
 		min_total_count: 15,
