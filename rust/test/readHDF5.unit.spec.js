@@ -24,7 +24,7 @@ import fs from 'fs'
 import serverconfig from '@sjcrh/proteinpaint-server/src/serverconfig.js'
 
 // Load HDF5 test file
-const HDF5_FILE = path.join(serverconfig.binpath, '/test/tp/files/hg38/TermdbTest/TermdbTest.fpkm.matrix.h5')
+const HDF5_FILE = path.join(serverconfig.binpath, '/test/tp/files/hg38/TermdbTest/fpkm/TermdbTest.fpkm.matrix.h5')
 
 // Verify file exists
 if (!fs.existsSync(HDF5_FILE)) {
