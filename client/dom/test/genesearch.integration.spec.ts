@@ -209,7 +209,7 @@ tape('searchOnly=gene', async test => {
 	})
 
 	// slight wait for the color style to be applied in DOM, not dependent on data request
-	await sleep(10)
+	await sleep(20)
 	test.equal(
 		(searchInput.nextSibling as HTMLElement).style.color,
 		'green',
@@ -262,7 +262,7 @@ tape('searchOnly=gene', async test => {
 	})
 
 	// slight wait for the color style to be applied in DOM, not dependent on data request
-	await sleep(5)
+	await sleep(20)
 	test.equal(
 		(searchInput.nextSibling as HTMLElement).style.color,
 		'green',
