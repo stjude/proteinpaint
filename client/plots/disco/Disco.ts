@@ -19,7 +19,7 @@ import { configUiInit } from '../controls.config'
 import { CnvHeatmapRenderer } from '#plots/disco/cnv/CnvHeatmapRenderer.ts'
 import type ViewModel from '#plots/disco/viewmodel/ViewModel.ts'
 import { CnvRenderingType } from '#plots/disco/cnv/CnvRenderingType.ts'
-import InvalidDataUI from './error/InvalidDataUI.ts'
+import {invaliddataui} from '#dom'
 
 export default class Disco {
 	// following attributes are required by rx
@@ -186,7 +186,7 @@ export default class Disco {
                                 this.viewModel.invalidDataInfo &&
                                 this.viewModel.invalidDataInfo.count > 0
                         ) {
-                                InvalidDataUI.render(this.errorDiv, this.viewModel.invalidDataInfo)
+                                invaliddataui.render(this.errorDiv, this.viewModel.invalidDataInfo)
                         }
                 }
         }
