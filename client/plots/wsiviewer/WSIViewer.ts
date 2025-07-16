@@ -12,6 +12,7 @@ import { ViewModelProvider } from '#plots/wsiviewer/viewModel/ViewModelProvider.
 import { ThumbnailRenderer } from '#plots/wsiviewer/view/ThumbnailRenderer.ts'
 import { MapRenderer } from '#plots/wsiviewer/view/MapRenderer.ts'
 import { MetadataRenderer } from '#plots/wsiviewer/view/MetadataRenderer.ts'
+import { LegendRenderer } from '#plots/wsiviewer/view/LegendRenderer.ts'
 
 export default class WSIViewer extends RxComponentInner {
 	// following attributes are required by rx
@@ -24,6 +25,7 @@ export default class WSIViewer extends RxComponentInner {
 
 	private thumbnailRenderer = new ThumbnailRenderer()
 	private metadataRenderer = new MetadataRenderer()
+	private legendRenderer = new LegendRenderer()
 
 	constructor(opts: any) {
 		super()
@@ -98,6 +100,7 @@ export default class WSIViewer extends RxComponentInner {
 
 		new WSIAnnotationsRenderer(holder, imageViewData, buffers, this.wsiViewerInteractions, activeImageExtent!, map)
 
+		this.legendRenderer.render(holder, imageViewData)
 		this.metadataRenderer.renderMetadata(holder, imageViewData)
 
 		if (zoomInPoints != undefined) {

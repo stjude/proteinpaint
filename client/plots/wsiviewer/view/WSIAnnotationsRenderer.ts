@@ -1,4 +1,4 @@
-import { renderTable, getMaxLabelWidth, ColorScale, table2col } from '#dom'
+import { renderTable } from '#dom'
 import type { Elem, Div } from '../../../types/d3'
 import type { WSIViewerInteractions } from '../interactions/WSIViewerInteractions'
 import type OLMap from 'ol/Map.js'
@@ -11,7 +11,6 @@ export class WSIAnnotationsRenderer {
 	tablesWrapper: Div
 	buffers: any
 	interactions: WSIViewerInteractions
-	legend: Div
 
 	constructor(
 		holder: Elem,
@@ -27,7 +26,6 @@ export class WSIAnnotationsRenderer {
 		this.interactions = wsiinteractions
 
 		holder.select('div[id="annotations-table-wrapper"]').remove()
-		holder.select('div[id="legend-wrapper"]').remove()
 
 		this.tablesWrapper = holder
 			.append('div')
@@ -35,16 +33,7 @@ export class WSIAnnotationsRenderer {
 			.style('display', 'inline-block')
 			.style('padding', '20px')
 
-		this.legend = holder
-			.append('div')
-			.attr('id', 'legend-wrapper')
-			.style('display', 'inline-block')
-			.style('padding', '20px')
-			.style('vertical-align', 'top')
-
 		this.renderAnnotationsTable(activeImageExtent, map)
-		this.renderClassesTable()
-		this.renderUncertaintyLegend()
 	}
 
 	private renderAnnotationsTable(activeImageExtent, map: OLMap) {
@@ -107,53 +96,6 @@ export class WSIAnnotationsRenderer {
 					const coords = [this.imageViewData.annotations!.rows[rowIdx][1].value] as unknown as [number, number][]
 					this.interactions.addZoomInEffect(activeImageExtent, coords, map)
 				})
-			}
-		})
-	}
-
-	private renderClassesTable() {
-		if (!this.imageViewData.classes) return
-
-		renderTable({
-			columns: this.imageViewData.classes.columns,
-			rows: this.imageViewData.classes.rows,
-			div: this.legend
-				.append('div')
-				.attr('id', 'annotations-legend')
-				.style('display', 'inline-block')
-				.style('vertical-align', 'top'),
-			showLines: false
-		})
-	}
-
-	private renderUncertaintyLegend() {
-		if (!this.imageViewData.uncertainty) return
-
-		const svgHolder = this.legend.append('div').attr('id', 'uncertainty-legend').style('margin-top', '20px')
-		const width = 200
-		const height = 50
-		const svg = svgHolder
-			.append('svg')
-			.style('width', width * 1.5)
-			.style('height', height)
-		const title = 'Uncertainty'
-		const titleLth = getMaxLabelWidth(svg as any, [title], 1)
-		svg
-			.append('text')
-			.attr('x', (width * 1.5 - titleLth) / 2) //Center the title
-			.attr('y', 15)
-			.text(title)
-
-		new ColorScale({
-			holder: svg,
-			domain: [0, 1],
-			colors: this.imageViewData.uncertainty.map(u => u.color),
-			position: '25, 25',
-			ticks: 2,
-			barwidth: width,
-			labels: {
-				left: this.imageViewData.uncertainty[0].label,
-				right: this.imageViewData.uncertainty[this.imageViewData.uncertainty.length - 1].label
 			}
 		})
 	}
