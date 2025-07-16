@@ -67,10 +67,11 @@ async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 		}
 	})
 
-	if (
+	const onlyGrp =
 		(self.usecase?.detail && ['term', 'term0', 'term2'].includes(self.usecase.detail)) ||
 		self.opts.geneVariantEditMenuOnlyGrp
-	) {
+	if (onlyGrp) {
+		// only groupsetting is allowed
 		// hide option for turning off groupsetting
 		optsDiv.style('display', 'none')
 		groupsDiv.style('margin', '0px')
@@ -95,7 +96,12 @@ async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 				}
 			}
 			if (!validGrpset) {
-				// groupset is not valid, so clear it
+				// groupset is not valid
+				if (onlyGrp) {
+					// only groupsetting is allowed, so alert user
+					window.alert('Samples must be assigned to at least one group.')
+					return
+				}
 				clearGroupset(self)
 			}
 			self.runCallback()
