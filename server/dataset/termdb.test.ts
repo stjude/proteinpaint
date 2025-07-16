@@ -318,7 +318,7 @@ export default function (): Mds3 {
 					plots: [
 						{
 							name: 'scRNA',
-							folder: 'files/hg38/TermdbTest/scrna',
+							folder: 'files/hg38/TermdbTest/scrna/umap',
 							fileSuffix: '_umap.txt',
 							colorColumns: [
 								{
@@ -333,7 +333,7 @@ export default function (): Mds3 {
 				},
 				geneExpression: {
 					src: 'native',
-					folder: 'files/hg38/TermdbTest/geneExpHdf5'
+					folder: 'files/hg38/TermdbTest/scrna/geneExpHdf5'
 				}
 			},
 			WSImages: {
