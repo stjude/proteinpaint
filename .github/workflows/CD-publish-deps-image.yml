@@ -33,10 +33,6 @@ jobs:
   build:
     needs: check-user-permissions
     runs-on: ubuntu-22.04
-    permissions:
-      contents: read
-      packages: write
-
     outputs:
       updated_rust: ${{ steps.check-rust-changes.outputs.updated_rust }}
     steps:
@@ -88,7 +84,7 @@ jobs:
     if: needs.build.outputs.updated_rust == 'true'
     runs-on: ubuntu-22.04
     permissions:
-      contents: read
+      contents: write
       packages: write
 
     steps:
@@ -115,7 +111,7 @@ jobs:
     runs-on: ubuntu-22.04
 
     permissions:
-      contents: read
+      contents: write
       packages: write
 
     steps:
