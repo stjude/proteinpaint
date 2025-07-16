@@ -298,14 +298,14 @@ export default function (): Mds3 {
 			},
 			geneExpression: {
 				src: 'native',
-				file: 'files/hg38/TermdbTest/TermdbTest.fpkm.matrix.h5'
+				file: 'files/hg38/TermdbTest/fpkm/TermdbTest.fpkm.matrix.h5'
 			},
 			topVariablyExpressedGenes: {
 				src: 'native'
 			},
 			rnaseqGeneCount: {
 				storage_type: 'HDF5',
-				file: 'files/hg38/TermdbTest/TermdbTest.geneCounts.h5'
+				file: 'files/hg38/TermdbTest/rnaseq/TermdbTest.geneCounts.h5'
 			},
 			singleCell: {
 				samples: {
