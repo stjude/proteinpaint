@@ -315,11 +315,10 @@ export default function (): Mds3 {
 				data: {
 					sameLegend: false,
 					src: 'native',
-					refName: 'B-reference map',
 					plots: [
 						{
 							name: 'scRNA',
-							folder: 'files/hg38/TermdbTest/raw',
+							folder: 'files/hg38/TermdbTest/scrna',
 							fileSuffix: '_umap.txt',
 							colorColumns: [
 								//{ index: 2, name: 'Sample/B-reference', colorMap: { query: '#f98f93', ref: '#F2F2F2' } },
