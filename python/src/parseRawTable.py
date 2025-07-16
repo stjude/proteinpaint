@@ -6,15 +6,6 @@ This script reads an Excel file (.xlsx or .xls) containing mutation data and cre
 specific output files:
 1. mutation.txt - mutation data with standardized column names  
 2. gata2Annotation.txt - annotation data in term-value format
-
-Features:
-- Uses pd.ExcelFile() for Excel reading
-- Command-line interface with flexible options
-- Robust error handling and validation
-- Detailed logging of the conversion process
-
-Author: Assistant
-Date: 2025-07-15
 """
 
 import pandas as pd
