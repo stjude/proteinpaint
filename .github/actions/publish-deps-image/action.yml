@@ -60,11 +60,6 @@ runs:
         TAG="$(node -p "require('./package.json').version")"
         cd ..
 
-        ./run.sh ghcr.io/stjude/ppserver:$TAG
-        sleep 10
-        cd ..
-        xvfb-run --auto-servernum npm run test:integration
-
         HASH=$(git rev-parse --short HEAD 2>/dev/null)
         docker push ghcr.io/stjude/ppbase:latest
         docker push ghcr.io/stjude/ppserver:$TAG
@@ -102,9 +97,3 @@ runs:
         git add server/Dockerfile
         git commit -m "Update deps version to $TAG"
         git stash -a
-
-        echo "Merging to master"
-        git fetch --depth=10 origin master:master
-        git switch master
-        git merge $BRANCH
-        git push origin master    

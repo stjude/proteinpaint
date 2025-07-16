@@ -33,7 +33,10 @@ jobs:
   build:
     needs: check-user-permissions
     runs-on: ubuntu-22.04
-    timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: write
+
     outputs:
       updated_rust: ${{ steps.check-rust-changes.outputs.updated_rust }}
     steps:
@@ -87,7 +90,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
         with:
-          token: ${{ secrets.PAT }}
+          token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 10
 
       - name: Download Rust binaries
@@ -99,21 +102,26 @@ jobs:
       - name: Publish docker image
         uses: stjude/proteinpaint/.github/actions/publish-deps-image@master
         with:
-          PAT: ${{ secrets.PAT }}
+          PAT: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_ACTOR: ${{ github.actor }}
 
   docker-without-rust:
     needs: build
     if: needs.build.outputs.updated_rust == 'false'
     runs-on: ubuntu-22.04
+
+    permissions:
+      contents: read
+      packages: write # Needed to publish to GitHub Packages / GHCR
+
     steps:
       - uses: actions/checkout@v3
         with:
-          token: ${{ secrets.PAT }}
+          token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 10
 
       - name: Publish docker image
         uses: stjude/proteinpaint/.github/actions/publish-deps-image@master
         with:
-          PAT: ${{ secrets.PAT }}
+          PAT: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_ACTOR: ${{ github.actor }}
