@@ -22,6 +22,18 @@ tape('various filter situations', async function (test) {
 		test.deepEqual(f, filterNum.gdcfilter, 'numerical filter should be transformed')
 	}
 
+	{
+		// modify existing pp filter by inserting a mock dtTerm-based tvs, this should be ignored in converting to gdc filter
+		filterNum.ppfilter.lst.push({
+			type: 'tvs',
+			tvs: {
+				term: { type: 'dtsnvindel' }
+			}
+		})
+		const f = filter2GDCfilter(filterNum.ppfilter)
+		test.deepEqual(f, filterNum.gdcfilter, 'dtTerm tvs is ignored')
+	}
+
 	test.end()
 })
 
