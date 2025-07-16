@@ -87,6 +87,10 @@ jobs:
     needs: rust-build
     if: needs.build.outputs.updated_rust == 'true'
     runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+      packages: write
+
     steps:
       - uses: actions/checkout@v3
         with:
@@ -112,7 +116,7 @@ jobs:
 
     permissions:
       contents: read
-      packages: write # Needed to publish to GitHub Packages / GHCR
+      packages: write
 
     steps:
       - uses: actions/checkout@v3
