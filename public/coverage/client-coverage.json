@@ -3878,13 +3878,13 @@
     },
     "lowestPct": {
       "curr": 54.54,
-      "prev": 0,
-      "diff": 54.54
+      "prev": 54.54,
+      "diff": 0
     },
     "averagePct": {
       "curr": 72.30250000000001,
-      "prev": 0,
-      "diff": 72.30250000000001
+      "prev": 72.30250000000001,
+      "diff": 0
     }
   },
   "dom/search.ts": {
@@ -3919,8 +3919,8 @@
     },
     "averagePct": {
       "curr": 2.3275,
-      "prev": 0,
-      "diff": 2.3275
+      "prev": 2.3275,
+      "diff": 0
     }
   },
   "dom/violinRenderer.js": {
