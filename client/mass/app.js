@@ -124,7 +124,9 @@ class MassApp {
 				})
 			}
 			this.components.plots = {}
-			await this.api.dispatch()
+			// this.opts.abortSignal may be undefined
+			await this.api.dispatch(null, { abortSignal: this.opts.abortSignal })
+			delete this.opts.abortSignal
 		} catch (e) {
 			this.printError(e)
 			throw e

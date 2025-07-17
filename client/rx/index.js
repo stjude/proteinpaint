@@ -320,8 +320,17 @@ export function getAppApi(self) {
 		type: self.type,
 		opts: self.opts,
 		// action: RxAction
-		async dispatch(action) {
+		// opts: {abortSignal: AbortController.signal} // see https://developer.mozilla.org/en-US/docs/Web/API/AbortController/signal
+		async dispatch(action, opts = {}) {
 			self.bus.emit('preDispatch')
+
+			// opts.option for consumer code to cancel a dispatch,
+			// helps to prevent expensive operations such as unnecessary network requests
+			// that can block embedder portal features when switching to a different tool;
+			// delete self.abortSignal
+			// NOTE: this signal will be used in componentApi.detectStale()
+			if (opts.abortSignal) self.abortSignal = opts.abortSignal
+
 			try {
 				if (middlewares.length) {
 					for (const fxn of middlewares.slice()) {
@@ -336,7 +345,7 @@ export function getAppApi(self) {
 					}
 				}
 
-				// expect store.write() to be debounced and handler rapid succession of dispatches
+				// expect store.write() to be debounced and handle rapid succession of dispatches
 				// replace app.state if there is an action
 				if (action) self.state = await self.store.write(action)
 				latestActionSequenceId = action?.sequenceId
@@ -346,10 +355,12 @@ export function getAppApi(self) {
 				const current = { action, appState: self.state }
 				await notifyComponents(current.action?._notificationRoot_ || self.components, current)
 			} catch (e) {
+				if (self.wasDestroyed) return
 				if (self.bus && latestActionSequenceId == action?.sequenceId) self.bus.emit('error')
 				if (self.printError) self.printError(e)
 				else console.log(e)
 			}
+			//delete self.abortSignal
 			// do not emit a postRender event if the action has become stale
 			if (self.bus && latestActionSequenceId == action?.sequenceId) self.bus.emit('postRender')
 		},
@@ -407,6 +418,29 @@ export function getAppApi(self) {
 		deregister(api) {
 			if (componentsByType[api.type]?.[api.id]) delete componentsByType[api.type][api.id]
 		},
+		cancelDispatch() {
+			for (const name of Object.keys(self.components)) {
+				const component = self.components[name] //; console.log(413, name, component)
+				if (!component) continue
+				if (Array.isArray(component)) {
+					for (const c of component) c.cancelUpdate()
+				} else if (component.hasOwnProperty('cancelUpdate')) {
+					component.cancelUpdate()
+				} else if (component && typeof component == 'object' && !component.main) {
+					for (const subname of Object.keys(component)) {
+						if (typeof component[subname].cancelUpdate == 'function') {
+							component[subname].cancelUpdate()
+						}
+					}
+				}
+			}
+		},
+		getAbortSignal(opts) {
+			console.log(438, 'getAbortSignal', opts.abortSignal, self.abortSignal)
+			if (opts.abortSignal && self.abortSignal) return AbortSignal.any([opts.abortSignal, self.abortSignal])
+			if (opts.abortSignal) return opts.abortSignal
+			if (self.abortSignal) return self.abortSignal
+		},
 		destroy() {
 			// delete references to other objects to make it easier
 			// for automatic garbage collection to find unreferenced objects
@@ -462,6 +496,10 @@ export function getComponentApi(self) {
 	if (!('type' in self)) {
 		throw `The component's type must be set before calling this.getComponentApi(this).`
 	}
+
+	// track abortController instances to optionally cancel active async steps,
+	// for example to cancel matrix data requests when the view is closed
+	const abortControllers = new Set()
 
 	// remember the action.sequenceId that caused the last state change
 	let latestActionSequenceId
@@ -526,6 +564,7 @@ export function getComponentApi(self) {
 				const promises = []
 				let i, promResolve
 				if (opts.abortCtrl) {
+					abortControllers.add(opts.abortCtrl)
 					promises.push(
 						new Promise((resolve, reject) => {
 							promResolve = resolve
@@ -549,6 +588,7 @@ export function getComponentApi(self) {
 				const result = await Promise.race(promises)
 				if (i) clearInterval(i)
 				if (promResolve) promResolve()
+				if (opts.abortCtrl && abortControllers.has(opts.abortCtrl)) abortControllers.delete(opts.abortCtrl)
 				if (latestActionSequenceId !== actionSequenceId) {
 					// another state change has been dispatched between the start and completion of the server request
 					console.warn('aborted state update, the returned data corresponds to a stale action.sequenceId')
@@ -559,6 +599,33 @@ export function getComponentApi(self) {
 			} catch (e) {
 				if (typeof e == 'string' && e.includes('sequenceId')) console.warn(e)
 				throw e
+			}
+		},
+		cancelUpdate() {
+			for (const c of abortControllers.values()) {
+				try {
+					c.abort()
+					abortControllers.delete(c)
+				} catch (e) {
+					// ok to
+					console.warn('unable to cancel fetch: ', e)
+					abortControllers.delete(c)
+				}
+			}
+			if (!self.components) return
+			for (const name of Object.keys(self.components)) {
+				const component = self.components[name]
+				if (Array.isArray(component)) {
+					for (const c of component) c.cancelUpdate()
+				} else if (component.hasOwnProperty('cancelUpdate')) {
+					component.cancelUpdate()
+				} else if (component && typeof component == 'object' && !component.main) {
+					for (const subname of Object.keys(component)) {
+						if (typeof component[subname].cancelUpdate == 'function') {
+							component[subname].cancelUpdate()
+						}
+					}
+				}
 			}
 		},
 		destroy() {
@@ -736,7 +803,7 @@ export async function notifyComponents(components, current) {
 	if (!components) return // allow component-less app
 	const called = []
 
-	for (const name in components) {
+	for (const name of Object.keys(components)) {
 		// when components is array, name will be index
 		const component = components[name]
 		if (Array.isArray(component)) {
@@ -744,8 +811,8 @@ export async function notifyComponents(components, current) {
 		} else if (component.hasOwnProperty('update')) {
 			called.push(component.update(current))
 		} else if (component && typeof component == 'object' && !component.main) {
-			for (const subname in component) {
-				if (component.hasOwnProperty(subname) && typeof component[subname].update == 'function') {
+			for (const subname of Object.keys(component)) {
+				if (typeof component[subname].update == 'function') {
 					called.push(component[subname].update(current))
 				}
 			}
