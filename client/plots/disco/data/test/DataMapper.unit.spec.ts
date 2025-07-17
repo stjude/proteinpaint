@@ -58,7 +58,7 @@ const fusionInput = [
 const result = dataMapper.map(fusionInput)
 
 test('\n', function (t) {
-	t.pass('-***- disco/data/DataMapper -***-')
+	t.comment('-***- disco/data/DataMapper -***-')
 	t.end()
 })
 
