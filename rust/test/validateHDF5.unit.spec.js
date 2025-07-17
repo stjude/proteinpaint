@@ -23,7 +23,10 @@ import fs from 'fs'
 import serverconfig from '@sjcrh/proteinpaint-server/src/serverconfig.js'
 
 // Load the test HDF5 files
-const DENSE_HDF5_FILE = path.join(serverconfig.binpath, '/test/tp/files/hg38/TermdbTest/fpkm/TermdbTest.fpkm.matrix.h5')
+const DENSE_HDF5_FILE = path.join(
+	serverconfig.binpath,
+	'/test/tp/files/hg38/TermdbTest/rnaseq/TermdbTest.fpkm.matrix.h5'
+)
 const SPARSE_HDF5_FILE = path.join(serverconfig.binpath, '/test/tp/files/hg38/TermdbTest/TermdbTest.sparse.matrix.h5')
 const UNKNOWN_HDF5_FILE = path.join(serverconfig.binpath, '/test/tp/files/hg38/TermdbTest/TermdbTest.unknown.matrix.h5')
 
