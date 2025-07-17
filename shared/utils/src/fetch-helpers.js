@@ -159,8 +159,11 @@ export async function memFetch(url, init, opts = {}) {
 			dataCache.set(
 				dataKey,
 				fetch(url, init).then(async r => {
-					if (!r.ok) throw 'memFetch error ' + r.status
 					const response = await processResponse(r)
+					if (!r.ok) {
+						console.log(response)
+						throw 'memFetch error ' + r.status
+					}
 					// to-do: support opt.freeze to enforce deep freeze of data.json()
 					dataCache.set(dataKey, response)
 					return dataCache.get(dataKey)

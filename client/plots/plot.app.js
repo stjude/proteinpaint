@@ -123,10 +123,14 @@ class PlotApp {
 					//reactsTo: action => true, //action.type != 'plot_edit' || action.type == 'app_refresh',
 					maxHistoryLen: 10
 				})
-			console.log(126, this.opts.app.abortSignal)
-			// this.opts.abortSignal may be undefined
-			await this.api.dispatch(null, { abortSignal: this.opts.app.abortSignal })
-			delete this.opts.app?.abortSignal
+
+			if (this.opts.app?.doNotAwaitInitRender) {
+				// do not await to return the instance sooner and allow calling appApi.triggerAbort() before initial render,
+				// instead of waiting for initial data loading and rendering
+				this.api.dispatch()
+			} else {
+				await this.api.dispatch()
+			}
 		} catch (e) {
 			this.printError(e)
 			throw e

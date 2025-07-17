@@ -84,10 +84,8 @@ class GenesetComp {
 
 	async noWait() {
 		const abortCtrl = new AbortController()
-		const signal = this.app.getAbortSignal({ abortSignal: abortCtrl.signal })
-		console.log(87, 'geneset signal', signal)
 		try {
-			const [genes, stale] = await this.api.detectStale(() => this.getGenes({ signal }), {
+			const [genes, stale] = await this.api.detectStale(() => this.getGenes({ signal: abortCtrl.signal }), {
 				abortCtrl
 			})
 			if (stale) return

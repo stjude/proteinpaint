@@ -93,7 +93,7 @@ export async function setData(_data) {
 	const opts = this.currRequestOpts?.matrix || this.getMatrixRequestOpts(this.state)
 	this.numTerms = opts.terms.length
 	const abortCtrl = new AbortController()
-	opts.abortSignal = abortCtrl.signal
+	opts.signal = abortCtrl.signal
 	opts.loadingDiv = this.chartType != 'hierCluster' && this.dom.loadingDiv
 	const [data, stale] = await this.api.detectStale(() => this.app.vocabApi.getAnnotatedSampleData(opts, _data), {
 		abortCtrl

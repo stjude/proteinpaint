@@ -262,7 +262,7 @@ export async function init(arg, holder, genomes) {
 					})
 				}
 			},
-			cancelUpdate: plotAppApi.cancelDispatch
+			triggerAbort: plotAppApi.triggerAbort
 		}
 
 		return api

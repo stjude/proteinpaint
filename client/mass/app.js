@@ -124,9 +124,13 @@ class MassApp {
 				})
 			}
 			this.components.plots = {}
-			// this.opts.abortSignal may be undefined
-			await this.api.dispatch(null, { abortSignal: this.opts.abortSignal })
-			delete this.opts.abortSignal
+			if (this.opts.app?.doNotAwaitInitRender) {
+				// do not await to return the instance sooner and allow calling appApi.triggerAbort() before initial render,
+				// instead of waiting for initial data loading and rendering
+				this.api.dispatch()
+			} else {
+				await this.api.dispatch()
+			}
 		} catch (e) {
 			this.printError(e)
 			throw e
