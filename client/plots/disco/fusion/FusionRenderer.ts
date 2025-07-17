@@ -9,7 +9,6 @@ import type { ClientCopyGenome } from 'types/global.ts'
 
 // dynamically load svgraph when user clicks on a fusion arc
 
-
 export default class FusionRenderer {
 	private genome: ClientCopyGenome
 
@@ -29,18 +28,11 @@ export default class FusionRenderer {
 		const ribbon = d3.ribbon().radius(radius)
 		const ribbons = holder.selectAll('.chord').data(fusions)
 
+		//Used in the fusion elems (i.e. ribbons) mouse and click events
 		const menu = MenuProvider.create()
-		// let pinned = false
-
-		// // Override menu.hide() to unset pinned
-		// const originalHide = menu.hide.bind(menu)
-		// menu.hide = () => {
-		// 	pinned = false
-		// 	return originalHide()
-		// }
-
 		const createTooltip = this.createTooltip.bind(this)
 		const genome = this.genome
+
 		ribbons
 			.enter()
 			.append('path')
@@ -53,34 +45,29 @@ export default class FusionRenderer {
 				)
 			})
 			.style('opacity', opacity)
-			.each(function (this: any, fusion: Fusion) {
+			.each(function (this: any, d: Fusion) {
 				const path = d3.select(this)
+				//Create a new tooltip for each fusion arc
+				//Allows the graph to presist whilst allowing
+				//the user to see tooltips on other elemenets
 				const tip = MenuProvider.create()
 
-				path.on('click', async function (event: MouseEvent, d: unknown) {
-					const fusion = d as Fusion
-					tip.clear()
+				path.on('click', async function (event: MouseEvent) {
+					tip.clear().show(event.x, event.y)
 					const div = tip.d.append('div')
-					tip.show(event.x, event.y)
-					await makeSvgraph(fusion, div, genome)
+					await makeSvgraph(d, div, genome)
 				})
-
-
 			})
-			.on('mouseover', async function (mouseEvent: MouseEvent, d: unknown) {
-				const fusion = d as Fusion
+			.on('mouseover', async function (mouseEvent: MouseEvent, fusion: Fusion) {
+				//TODO: Add note to user "click to see fusion graph"?
 				const table = table2col({ holder: menu.d })
 				createTooltip(table, fusion)
 				menu.show(mouseEvent.x, mouseEvent.y)
 			})
-
 			.on('mouseout', () => {
 				menu.clear()
 				menu.hide()
 			})
-
-
-
 	}
 
 	createTooltip(table: any, fusion: Fusion) {
@@ -99,10 +86,12 @@ export default class FusionRenderer {
 				.append('span')
 				.style('margin-left', '5px')
 				.text(
-					` ${fusion.source.gene || ''} ${positionInChromosomeSource.chromosome}:${positionInChromosomeSource.position
+					` ${fusion.source.gene || ''} ${positionInChromosomeSource.chromosome}:${
+						positionInChromosomeSource.position
 					} ${fusion.source.strand === '+' ? 'forward' : 'reverse'} > ` +
-					` ${fusion.target.gene || ''} ${positionInChromosomeTarget.chromosome}:${positionInChromosomeTarget.position
-					} ${fusion.target.strand === '+' ? 'forward' : 'reverse'} `
+						` ${fusion.target.gene || ''} ${positionInChromosomeTarget.chromosome}:${
+							positionInChromosomeTarget.position
+						} ${fusion.target.strand === '+' ? 'forward' : 'reverse'} `
 				)
 		}
 	}
@@ -123,8 +112,8 @@ async function makeSvgraph(fusion: Fusion, div: any, genome: ClientCopyGenome) {
 		}
 	}
 
-	await getGm(svpair.a, genome.name , fusion.source.gene)
-	await getGm(svpair.b, genome.name , fusion.target.gene)
+	await getGm(svpair.a, genome.name, fusion.source.gene)
+	await getGm(svpair.b, genome.name, fusion.target.gene)
 
 	wait.remove()
 
