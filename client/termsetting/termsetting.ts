@@ -666,6 +666,22 @@ function setInteractivity(self) {
 			} as opt)
 		}
 
+		if (self.term.type == 'geneVariant' && self.term.groupsetting?.lst.length) {
+			// display predefined groupsets of geneVariant term
+			// for quick access
+			for (const [i, groupset] of self.term.groupsetting.lst.entries()) {
+				options.push({
+					label: groupset.name,
+					callback: () => {
+						self.opts.callback!({
+							term: self.term,
+							q: { type: 'predefined-groupset', predefined_groupset_idx: i, isAtomic: true }
+						})
+					}
+				})
+			}
+		}
+
 		// Restored the reuse menu option for now, due to failing integration tests that will require more code changes to fix
 		// Instead of deleting the reuse code, may move the Reuse to the edit menu for recovering saved grouping/bin config
 		// if (minimatch('reuse', self.opts.menuOptions)) {
