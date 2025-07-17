@@ -27,6 +27,7 @@ export class WSIViewer extends RxComponentInner {
 	private thumbnailRenderer = new ThumbnailRenderer()
 	private metadataRenderer = new MetadataRenderer()
 	private legendRenderer = new LegendRenderer()
+	private map: OLMap | undefined = undefined
 
 	constructor(opts: any) {
 		super()
@@ -79,7 +80,6 @@ export class WSIViewer extends RxComponentInner {
 		const activeImage: TileLayer = wsimageLayers[settings.displayedImageIndex].wsimage
 		const activeImageExtent = activeImage?.getSource()?.getTileGrid()?.getExtent()
 
-		let map: OLMap | undefined = undefined
 		const imageViewData = viewModel.getImageViewData(settings.displayedImageIndex)
 
 		if (settings.renderWSIViewer) {
@@ -91,49 +91,41 @@ export class WSIViewer extends RxComponentInner {
 				this.wsiViewerInteractions
 			)
 
-			holder.select('div[id="wsi-viewer"]').remove()
-
-			holder
-				.append('div')
-				.attr('id', 'wsi-viewer')
-				.style('width', settings.imageWidth)
-				.style('height', settings.imageHeight)
+			this.map = new MapRenderer(
+				wsimageLayers[settings.displayedImageIndex],
+				this.wsiViewerInteractions.viewerClickListener,
+				activeImageExtent
+			).render(holder, settings)
 
 			//TODO: Handle this better
 			if (imageViewData.activePatchColor) {
 				this.wsiViewerInteractions.activePatchColor = imageViewData.activePatchColor
 			}
 
-			map = new MapRenderer(
-				wsimageLayers[settings.displayedImageIndex],
-				this.wsiViewerInteractions.viewerClickListener,
-				activeImageExtent
-			).getMap()
+			if (activeImageExtent && this.map) {
+				this.map.getView().fit(activeImageExtent)
+			}
 		}
 
-		if (settings.renderAnnotationTable && map) {
+		if (settings.renderAnnotationTable && this.map) {
 			const wsiAnnotationsRenderer = new WSIAnnotationsRenderer(buffers, this.wsiViewerInteractions)
-			wsiAnnotationsRenderer.render(holder, imageViewData, activeImageExtent!, map)
+			wsiAnnotationsRenderer.render(holder, imageViewData, activeImageExtent!, this.map)
 			this.legendRenderer.render(holder, imageViewData)
 			this.metadataRenderer.renderMetadata(holder, imageViewData)
 
 			const zoomInPoints = wsimages[settings.displayedImageIndex].zoomInPoints
 
 			if (zoomInPoints != undefined) {
-				this.wsiViewerInteractions.addZoomInEffect(activeImageExtent, zoomInPoints, map)
+				this.wsiViewerInteractions.addZoomInEffect(activeImageExtent, zoomInPoints, this.map)
 				this.wsiViewerInteractions.addMapKeyDownListener(
 					holder,
-					map,
+					this.map,
 					activeImageExtent,
 					imageViewData.shortcuts,
 					buffers,
 					wsimages[settings.displayedImageIndex]
 				)
 			}
-		}
-
-		if (activeImageExtent && map) {
-			map.getView().fit(activeImageExtent)
 		}
 	}
 }

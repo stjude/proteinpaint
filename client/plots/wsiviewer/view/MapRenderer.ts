@@ -12,6 +12,7 @@ import { format as formatCoordinate } from 'ol/coordinate.js'
 import type { WSImageLayers } from '#plots/wsiviewer/viewModel/WSImageLayers.ts'
 import type Layer from 'ol/layer/Layer'
 import type { Extent } from 'ol/extent'
+import type Settings from '../Settings'
 
 export class MapRenderer {
 	public wSImageLayers: WSImageLayers
@@ -38,7 +39,15 @@ export class MapRenderer {
 		this.viewerClickListener = viewerClickListener
 	}
 
-	public getMap(): OLMap {
+	public render(holder: any, settings: Settings): OLMap {
+		holder.select('div[id="wsi-viewer"]').remove()
+
+		holder
+			.append('div')
+			.attr('id', 'wsi-viewer')
+			.style('width', settings.imageWidth)
+			.style('height', settings.imageHeight)
+
 		const activeImage: TileLayer = this.wSImageLayers.wsimage
 		const extent = activeImage?.getSource()?.getTileGrid()?.getExtent()
 
