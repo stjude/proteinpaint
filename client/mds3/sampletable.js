@@ -189,25 +189,10 @@ async function make_singleSampleTable(s, arg) {
 			if (tw.term.id in s) {
 				if (Array.isArray(s[tw.term.id])) {
 					cell2.html(value2urlsOrText(s[tw.term.id], tw))
-					/*
-					if (tw.baseURL) {
-						// TODO convert to display value
-						cell2.html(s[tw.term.id].map(i => `<a href=${tw.baseURL + i} target=_blank>${i}</a>`).join('<br>'))
-					} else {
-						cell2.html(s[tw.term.id].join('<br>'))
-					}
-					*/
 				} else {
 					// single value
 					const v = twDisplayValueFromSample(s, tw)
 					cell2.html(value2urlsOrText(v, tw))
-					/*
-					if (tw.baseURL) {
-						cell2.html(`<a href=${tw.baseURL + v} target=_blank>${v}</a>`)
-					} else {
-						cell2.text(v)
-					}
-					*/
 				}
 			}
 		}
