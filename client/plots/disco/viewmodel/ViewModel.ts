@@ -27,8 +27,8 @@ export default class ViewModel {
 	cnvMinValue?: number
 	cappedCnvMaxAbsValue?: number
 	negativePercentile?: number
-        positivePercentile?: number
-        invalidDataInfo?: { count: number; entries: { dataType: string; reason: string }[] }
+    positivePercentile?: number
+    invalidDataInfo?: { count: number; entries: { dataType: string; reason: string }[] }
 
 	constructor(
 		settings: Settings,
@@ -38,8 +38,7 @@ export default class ViewModel {
 		dataHolder: DataHolder,
 		genesetName: string,
 		// TODO do we need this?
-                snvDataLengthAll: number,
-                invalidDataInfo?: { count: number; entries: { dataType: string; reason: string }[] }
+        snvDataLengthAll: number,
         ) {
 		this.settings = settings
 		this.rings = rings
@@ -78,7 +77,7 @@ export default class ViewModel {
 		this.cappedCnvMaxAbsValue = dataHolder.cappedCnvMaxAbsValue
 		this.negativePercentile = dataHolder.percentileNegative
                 this.positivePercentile = dataHolder.percentilePositive
-                this.invalidDataInfo = invalidDataInfo
+                this.invalidDataInfo = dataHolder.invalidDataInfo
         }
 
 	getElements(ringType: RingType): Array<Arc> {

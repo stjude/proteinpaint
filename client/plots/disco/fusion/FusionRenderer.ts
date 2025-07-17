@@ -5,12 +5,13 @@ import MenuProvider from '#plots/disco/menu/MenuProvider.ts'
 import FusionColorProvider from '#plots/disco/fusion/FusionColorProvider.ts'
 import { table2col } from '#dom/table2col'
 import { dofetch3 } from '#common/dofetch'
+import type { ClientCopyGenome } from 'types/global.ts'
 
 // dynamically load svgraph when user clicks on a fusion arc
 type Genome = any
 
 export default class FusionRenderer {
-	private genome: Genome
+	private genome: ClientCopyGenome
 
 	constructor(genome: Genome) {
 		this.genome = genome
@@ -107,7 +108,7 @@ export default class FusionRenderer {
 	}
 }
 
-async function makeSvgraph(fusion: Fusion, div: any, genome: Genome) {
+async function makeSvgraph(fusion: Fusion, div: any, genome: ClientCopyGenome) {
 	const wait = div.append('div').text('Loading...')
 	const svpair = {
 		a: {
@@ -122,8 +123,8 @@ async function makeSvgraph(fusion: Fusion, div: any, genome: Genome) {
 		}
 	}
 
-	await getGm(svpair.a, { genome: { name: genome.name } }, fusion.source.gene)
-	await getGm(svpair.b, { genome: { name: genome.name } }, fusion.target.gene)
+	await getGm(svpair.a, genome.name , fusion.source.gene)
+	await getGm(svpair.b, genome.name , fusion.target.gene)
 
 	wait.remove()
 
@@ -135,9 +136,9 @@ async function makeSvgraph(fusion: Fusion, div: any, genome: Genome) {
 	})
 }
 
-async function getGm(p: any, block: any, name: string) {
+async function getGm(p: any, genome: string, name: string) {
 	const d = await dofetch3('isoformbycoord', {
-		body: { genome: block.genome.name, chr: p.chr, pos: p.position }
+		body: { genome, chr: p.chr, pos: p.position }
 	})
 	if (d.error) throw d.error
 	const u = d.lst.find((i: any) => i.isdefault && name === i.name) || d.lst[0]
