@@ -25,7 +25,7 @@ validatePkgs <- function() {
       # not used in runtime
       next
     }
-    suppressPackageStartupMessages(library(pkg, character.only = TRUE))
+    suppressWarnings({suppressPackageStartupMessages(library(pkg, character.only = TRUE))}) # SuppressWarnings message was added because on addding some other R package (not used by PP) edgeR version was bumped also and started giving warning mesage when this script was run during server startup "package 'edgeR' was built under R version 4.5.1"
   }
 }
 
