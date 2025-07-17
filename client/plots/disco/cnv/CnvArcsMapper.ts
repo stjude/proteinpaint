@@ -121,6 +121,7 @@ export default class CnvArcsMapper {
 				unit: this.cnvUnit,
 				sampleName: [this.sampleName]
 			}
+			
 
 			arcs.push(arc)
 		})
