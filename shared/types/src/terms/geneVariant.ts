@@ -10,12 +10,14 @@ export type GvBaseQ = MinBaseQ & {
 }
 
 type RawGvValuesQ = GvBaseQ & { type?: 'values' }
+type RawGvPredefinedGsQ = GvBaseQ & { type: 'predefined-groupset'; predefined_groupset_idx?: number }
 type RawGvCustomGsQ = GvBaseQ & { type: 'custom-groupset'; customset?: BaseGroupSet }
 
 export type GvValuesQ = GvBaseQ & { type: 'values' }
+export type GvPredefinedGsQ = GvBaseQ & { type: 'predefined-groupset'; predefined_groupset_idx: number }
 export type GvCustomGsQ = GvBaseQ & { type: 'custom-groupset'; customset: BaseGroupSet }
 
-export type GvQ = GvValuesQ | GvCustomGsQ
+export type GvQ = GvValuesQ | GvPredefinedGsQ | GvCustomGsQ
 
 // term types
 type GvBaseTerm = BaseTerm & {
@@ -59,6 +61,12 @@ export type RawGvValuesTW = BaseTW & {
 	q: RawGvValuesQ
 }
 
+export type RawGvPredefinedGsTW = BaseTW & {
+	type?: 'GvPredefinedGsTW'
+	term: RawGvTerm
+	q: RawGvPredefinedGsQ
+}
+
 export type RawGvCustomGsTW = BaseTW & {
 	type?: 'GvCustomGsTW'
 	term: RawGvTerm
@@ -71,14 +79,20 @@ export type GvValuesTW = BaseTW & {
 	q: GvValuesQ
 }
 
+export type GvPredefinedGsTW = BaseTW & {
+	type: 'GvPredefinedGsTW'
+	term: GvTerm
+	q: GvPredefinedGsQ
+}
+
 export type GvCustomGsTW = BaseTW & {
 	type: 'GvCustomGsTW'
 	term: GvTerm
 	q: GvCustomGsQ
 }
 
-export type RawGvTW = RawGvValuesTW | RawGvCustomGsTW
-export type GvTW = GvValuesTW | GvCustomGsTW
+export type RawGvTW = RawGvValuesTW | RawGvPredefinedGsTW | RawGvCustomGsTW
+export type GvTW = GvValuesTW | GvPredefinedGsTW | GvCustomGsTW
 
 // termsetting types
 export type GeneVariantTermSettingInstance = TermSettingInstance & {
