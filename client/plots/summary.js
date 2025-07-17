@@ -356,7 +356,7 @@ function setRenderers(self) {
 export async function getPlotConfig(opts, app) {
 	if (!opts.term) throw 'summary getPlotConfig: opts.term{} missing'
 	try {
-		await fillTermWrapper(opts.term, app.vocabApi, { geneVariant: { type: 'custom-groupset' } })
+		await fillTermWrapper(opts.term, app.vocabApi, { geneVariant: { type: 'predefined-groupset' } })
 		// supply term0_term2_defaultQ if opts.term0/2.bins/q is undefined
 		// e.g. for scatterplot, opts.term2.q.mode='continuous' so will not
 		// want to override with q.mode from term0_term2_defaultQ

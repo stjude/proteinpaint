@@ -1,5 +1,12 @@
 import { getPillNameDefault } from '../termsetting'
-import type { GeneVariantTermSettingInstance, RawGvTerm, RawGvCustomGsTW, VocabApi, DtTerm } from '#types'
+import type {
+	GeneVariantTermSettingInstance,
+	RawGvTerm,
+	RawGvPredefinedGsTW,
+	RawGvCustomGsTW,
+	VocabApi,
+	DtTerm
+} from '#types'
 import type { PillData } from '../types'
 import { make_radios, renderTable } from '#dom'
 import { dtTerms, getColors } from '#shared/common.js'
@@ -124,9 +131,9 @@ async function makeGroupUI(self, div) {
 	// add new group button
 	const addNewGroupBtnHolder = div.append('div')
 
-	self.q.type = 'custom-groupset'
-	if (!self.q.customset?.groups) self.q.customset = { groups: [] }
-	const groups = self.q.customset.groups
+	//self.q.type = 'custom-groupset'
+	//if (!self.q.customset?.groups) self.q.customset = { groups: [] }
+	//const groups = self.q.customset.groups
 
 	// prompt button is an instance to a blank filter, can only make the button after state is filled
 	// but not in instance.init()
@@ -261,11 +268,53 @@ function addNewGroup(filter, groups, name?: string) {
 	groups.push(newGroup)
 }
 
+export async function getPredefinedGroupsets(tw: RawGvPredefinedGsTW, vocabApi: VocabApi) {
+	if (tw.q.type != 'predefined-groupset') throw 'unexpected tw.q.type'
+	// get child dt terms of geneVariant term
+	await getChildTerms(tw.term, vocabApi)
+	if (!tw.term.childTerms?.length) throw 'tw.term.childTerms[] is missing'
+	// get predefined groupsetting
+	tw.term.groupsetting = {
+		disabled: false,
+		lst: tw.term.childTerms.map(dtTerm => {
+			const mutantLabel = dtTerm.dt == 4 ? 'Altered' : 'Mutated'
+			const wildtypeLabel = dtTerm.dt == 4 ? 'Neutral' : 'Wildtype'
+			const group1 = {
+				name: `${dtTerm.name_noOrigin} ${mutantLabel}`,
+				type: 'filter',
+				filter: getWrappedTvslst([
+					{ type: 'tvs', tvs: { term: dtTerm, values: [{ key: 'WT', label: 'Wildtype', value: 'WT' }], isnot: true } }
+				]),
+				color: '#d95f02'
+			}
+			const group2 = {
+				name: `${dtTerm.name_noOrigin} ${wildtypeLabel}`,
+				type: 'filter',
+				filter: getWrappedTvslst([
+					{ type: 'tvs', tvs: { term: dtTerm, values: [{ key: 'WT', label: 'Wildtype', value: 'WT' }] } }
+				]),
+				color: '#1b9e77'
+			}
+			if (dtTerm.origin) {
+				group1.name += ` (${dtTerm.origin})`
+				group2.name += ` (${dtTerm.origin})`
+			}
+			const groupset = {
+				name: `${dtTerm.name_noOrigin}: ${mutantLabel} vs. ${wildtypeLabel}`,
+				groups: [group1, group2]
+			}
+			if (dtTerm.origin) groupset.name += ` (${dtTerm.origin})`
+			return groupset
+		})
+	}
+}
+
 // fill custom groupset with 2 groups based on the first applicable dt term
 export async function mayMakeGroups(tw: RawGvCustomGsTW, vocabApi: VocabApi) {
 	if (tw.q.type != 'custom-groupset' || tw.q.customset?.groups.length) return
 	tw.q.type = 'custom-groupset'
 	tw.q.customset = { groups: [] }
+	// get child dt terms of geneVariant term
 	await getChildTerms(tw.term, vocabApi)
 	const dtTerms = tw.term.childTerms
 	if (!dtTerms) throw 'dtTerms is missing'
