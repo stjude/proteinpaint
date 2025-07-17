@@ -67,7 +67,6 @@ test('ViewModel initializes with expected values', t => {
               mockDataHolder,
               'GeneSet123',
               999,
-              mockDataHolder.invalidDataInfo
       )
 
 	t.equal(
