@@ -320,17 +320,8 @@ export function getAppApi(self) {
 		type: self.type,
 		opts: self.opts,
 		// action: RxAction
-		// opts: {abortSignal: AbortController.signal} // see https://developer.mozilla.org/en-US/docs/Web/API/AbortController/signal
-		async dispatch(action, opts = {}) {
+		async dispatch(action) {
 			self.bus.emit('preDispatch')
-
-			// opts.option for consumer code to cancel a dispatch,
-			// helps to prevent expensive operations such as unnecessary network requests
-			// that can block embedder portal features when switching to a different tool;
-			// delete self.abortSignal
-			// NOTE: this signal will be used in componentApi.detectStale()
-			if (opts.abortSignal) self.abortSignal = opts.abortSignal
-
 			try {
 				if (middlewares.length) {
 					for (const fxn of middlewares.slice()) {
@@ -360,7 +351,6 @@ export function getAppApi(self) {
 				if (self.printError) self.printError(e)
 				else console.log(e)
 			}
-			//delete self.abortSignal
 			// do not emit a postRender event if the action has become stale
 			if (self.bus && latestActionSequenceId == action?.sequenceId) self.bus.emit('postRender')
 		},
@@ -418,28 +408,23 @@ export function getAppApi(self) {
 		deregister(api) {
 			if (componentsByType[api.type]?.[api.id]) delete componentsByType[api.type][api.id]
 		},
-		cancelDispatch() {
+		triggerAbort(reason = '') {
+			if (reason) if (reason) console.info(`triggerAbort()`, reason)
 			for (const name of Object.keys(self.components)) {
-				const component = self.components[name] //; console.log(413, name, component)
+				const component = self.components[name]
 				if (!component) continue
 				if (Array.isArray(component)) {
-					for (const c of component) c.cancelUpdate()
-				} else if (component.hasOwnProperty('cancelUpdate')) {
-					component.cancelUpdate()
+					for (const c of component) c.triggerAbort()
+				} else if (component.hasOwnProperty('triggerAbort')) {
+					component.triggerAbort()
 				} else if (component && typeof component == 'object' && !component.main) {
 					for (const subname of Object.keys(component)) {
-						if (typeof component[subname].cancelUpdate == 'function') {
-							component[subname].cancelUpdate()
+						if (typeof component[subname].triggerAbort == 'function') {
+							component[subname].triggerAbort()
 						}
 					}
 				}
 			}
-		},
-		getAbortSignal(opts) {
-			console.log(438, 'getAbortSignal', opts.abortSignal, self.abortSignal)
-			if (opts.abortSignal && self.abortSignal) return AbortSignal.any([opts.abortSignal, self.abortSignal])
-			if (opts.abortSignal) return opts.abortSignal
-			if (self.abortSignal) return self.abortSignal
 		},
 		destroy() {
 			// delete references to other objects to make it easier
@@ -601,7 +586,8 @@ export function getComponentApi(self) {
 				throw e
 			}
 		},
-		cancelUpdate() {
+		triggerAbort(reason = '') {
+			if (reason) console.info(`triggerAbort()`, reason)
 			for (const c of abortControllers.values()) {
 				try {
 					c.abort()
@@ -616,13 +602,13 @@ export function getComponentApi(self) {
 			for (const name of Object.keys(self.components)) {
 				const component = self.components[name]
 				if (Array.isArray(component)) {
-					for (const c of component) c.cancelUpdate()
-				} else if (component.hasOwnProperty('cancelUpdate')) {
-					component.cancelUpdate()
+					for (const c of component) c.triggerAbort()
+				} else if (component.hasOwnProperty('triggerAbort')) {
+					component.triggerAbort()
 				} else if (component && typeof component == 'object' && !component.main) {
 					for (const subname of Object.keys(component)) {
-						if (typeof component[subname].cancelUpdate == 'function') {
-							component[subname].cancelUpdate()
+						if (typeof component[subname].triggerAbort == 'function') {
+							component[subname].triggerAbort()
 						}
 					}
 				}

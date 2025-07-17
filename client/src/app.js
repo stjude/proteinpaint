@@ -309,9 +309,8 @@ export function bindProteinPaint({ rootElem, initArgs, updateArgs, isStale, hasC
 			if (app.initTimeout) clearTimeout(app.initTimeout)
 
 			app.initTimeout = setTimeout(() => {
+				delete app.initTimeout
 				app.then(() => {
-					if (!app) console.error('missing ppRef.current')
-					//
 					if (!isStale()) app.update(updateArgs)
 				})
 			}, 20)
@@ -320,6 +319,14 @@ export function bindProteinPaint({ rootElem, initArgs, updateArgs, isStale, hasC
 	} else {
 		const pp_holder = rootElem.querySelector('.sja_root_holder')
 		if (pp_holder) pp_holder.remove()
+
+		if (!initArgs.opts) initArgs.opts = {}
+		if (!initArgs.opts.app) initArgs.opts.app = {}
+		// default to not awaiting the initial render to finish, so that the app instance
+		// will be available sooner to allow calling appApi.triggerAbort() during initial render,
+		// as may be needed to cancel unnecessary network requests when PP is embedded in portals
+		// that allow switching to other views
+		if (!Object.keys(initArgs.opts.app).includes('doNotAwaitInitRender')) initArgs.opts.app.doNotAwaitInitArgs = true
 
 		const arg = Object.assign(
 			initArgs,

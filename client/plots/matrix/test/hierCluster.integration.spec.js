@@ -102,6 +102,7 @@ tape('avoid race condition', async test => {
 	// in rx/index.js getStoreApi().write()
 	// !!!
 	test.timeoutAfter(4000)
+	test.plan(3)
 	const { app, hc } = await getHierClusterApp({
 		terms: [
 			{ gene: 'AKT1', type: 'geneExpression' },
@@ -169,8 +170,6 @@ tape('avoid race condition', async test => {
 	)
 	test.equal(hits.size(), 180, 'should have the expected number of matrix cell rects with hits')
 	if (test._ok) app.destroy()
-
-	//test.end()
 })
 
 tape('dendrogram click', async function (test) {
