@@ -29,15 +29,17 @@ export default class FusionRenderer {
 		const ribbons = holder.selectAll('.chord').data(fusions)
 
 		const menu = MenuProvider.create()
-		let pinned = false
+		// let pinned = false
 
-		// Override menu.hide() to unset pinned
-		const originalHide = menu.hide.bind(menu)
-		menu.hide = () => {
-			pinned = false
-			return originalHide()
-		}
+		// // Override menu.hide() to unset pinned
+		// const originalHide = menu.hide.bind(menu)
+		// menu.hide = () => {
+		// 	pinned = false
+		// 	return originalHide()
+		// }
 
+		const createTooltip = this.createTooltip.bind(this)
+		const genome = this.genome
 		ribbons
 			.enter()
 			.append('path')
@@ -50,25 +52,34 @@ export default class FusionRenderer {
 				)
 			})
 			.style('opacity', opacity)
-			.on('mouseover', (mouseEvent: MouseEvent, fusion: Fusion) => {
-				if (pinned) return
+			.each(function (this: any, fusion: Fusion) {
+				const path = d3.select(this)
+				const tip = MenuProvider.create()
+
+				path.on('click', async function (event: MouseEvent, d: unknown) {
+					const fusion = d as Fusion
+					tip.clear()
+					const div = tip.d.append('div')
+					tip.show(event.x, event.y)
+					await makeSvgraph(fusion, div, genome)
+				})
+
+
+			})
+			.on('mouseover', async function (mouseEvent: MouseEvent, d: unknown) {
+				const fusion = d as Fusion
 				const table = table2col({ holder: menu.d })
-				this.createTooltip(table, fusion)
+				createTooltip(table, fusion)
 				menu.show(mouseEvent.x, mouseEvent.y)
 			})
-			.on('click', async (mouseEvent: MouseEvent, fusion: Fusion) => {
-				pinned = true
-				menu.clear()
-				const div = menu.d.append('div')
-				menu.show(mouseEvent.x, mouseEvent.y)
-				await makeSvgraph(fusion, div, this.genome)
-			})
+
 			.on('mouseout', () => {
-				if (!pinned) {
-					menu.clear()
-					menu.hide()
-				}
+				menu.clear()
+				menu.hide()
 			})
+
+
+
 	}
 
 	createTooltip(table: any, fusion: Fusion) {
@@ -87,11 +98,9 @@ export default class FusionRenderer {
 				.append('span')
 				.style('margin-left', '5px')
 				.text(
-					` ${fusion.source.gene || ''} ${positionInChromosomeSource.chromosome}:${
-						positionInChromosomeSource.position
+					` ${fusion.source.gene || ''} ${positionInChromosomeSource.chromosome}:${positionInChromosomeSource.position
 					} ${fusion.source.strand === '+' ? 'forward' : 'reverse'} > ` +
-					` ${fusion.target.gene || ''} ${positionInChromosomeTarget.chromosome}:${
-						positionInChromosomeTarget.position
+					` ${fusion.target.gene || ''} ${positionInChromosomeTarget.chromosome}:${positionInChromosomeTarget.position
 					} ${fusion.target.strand === '+' ? 'forward' : 'reverse'} `
 				)
 		}

@@ -4,6 +4,7 @@ import Reference from '#plots/disco/chromosome/Reference.ts'
 import CnvArcsMapper from '#plots/disco/cnv/CnvArcsMapper.ts'
 import DataMapper from '#plots/disco/data/DataMapper.ts'
 import { CnvRenderingType } from '#plots/disco/cnv/CnvRenderingType.ts'
+import { hg38 } from '../../../../test/testdata/genomes'
 
 const overriders = { padAngle: 0.0 }
 const settings = discoDefaults(overriders)
