@@ -5,7 +5,7 @@ import { hg38 } from '../../../../test/testdata/genomes'
 
 /*
 Tests:
-	
+	- Reference class initializes correctly
 */
 
 // ───── Mock Settings ─────
@@ -20,8 +20,8 @@ const settings = discoDefaults(overriders)
 // Mock chromosome sizes (normally coming from genome data)
 const chromosomes = {
 	chr1: hg38.majorchr.chr1,
-    chr2: hg38.majorchr.chr2,
-    chr3: hg38.majorchr.chr3
+	chr2: hg38.majorchr.chr2,
+	chr3: hg38.majorchr.chr3
 }
 
 // ───── Header ─────
@@ -40,7 +40,7 @@ test('Reference class initializes correctly', t => {
 
 	// Check that totalSize matches the sum of the chromosome sizes
 	const expectedTotalSize = chromosomes.chr1 + chromosomes.chr2 + chromosomes.chr3
-    t.equal(reference.totalSize, expectedTotalSize, 'Total size should match sum of chromosome sizes')
+	t.equal(reference.totalSize, expectedTotalSize, 'Total size should match sum of chromosome sizes')
 	t.equal(reference.totalSize, expectedTotalSize, 'Total size should match sum of chromosome sizes')
 
 	// Verify totalPadAngle is calculated correctly
