@@ -169,8 +169,7 @@ export default class ViewModelProvider {
                         fusions,
                         dataHolder,
                         this.genesetName,
-                        data.filter(i => i.dt == dtsnvindel).length,
-                        dataHolder.invalidDataInfo
+                        data.filter(i => i.dt == dtsnvindel).length
                 )
         }
 }

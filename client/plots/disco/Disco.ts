@@ -19,7 +19,7 @@ import { configUiInit } from '../controls.config'
 import { CnvHeatmapRenderer } from '#plots/disco/cnv/CnvHeatmapRenderer.ts'
 import type ViewModel from '#plots/disco/viewmodel/ViewModel.ts'
 import { CnvRenderingType } from '#plots/disco/cnv/CnvRenderingType.ts'
-import {invaliddataui} from '#dom'
+import { invaliddataui } from '#dom'
 
 export default class Disco {
 	// following attributes are required by rx
@@ -33,9 +33,9 @@ export default class Disco {
 	private discoInteractions: DiscoInteractions
 
 	private stateViewModelMapper?: ViewModelMapper
-        private viewModel?: ViewModel
-        private recreateViewModel = false
-        private errorDiv: any
+	private viewModel?: ViewModel
+	private recreateViewModel = false
+	private errorDiv: any
 
 	constructor(opts: any) {
 		this.type = 'Disco'
@@ -58,9 +58,9 @@ export default class Disco {
 		const config_div = controlsHolder.append('div')
 		const configInputsOptions = this.getConfigInputsOptions(this.viewModel)
 
-                this.features = await multiInit({
-                        topbar: topBarInit({
-                                app: this.app,
+		this.features = await multiInit({
+			topbar: topBarInit({
+				app: this.app,
 				id: this.id,
 				// TODO change the way svg is selected
 				downloadHandler: () =>
@@ -70,17 +70,17 @@ export default class Disco {
 				holder: topbar
 			}),
 
-                        config: configUiInit({
-                                app: this.app,
-                                id: this.id,
-                                holder: config_div,
-                                isOpen: () => this.isOpen,
-                                inputs: configInputsOptions
-                        })
-                })
+			config: configUiInit({
+				app: this.app,
+				id: this.id,
+				holder: config_div,
+				isOpen: () => this.isOpen,
+				inputs: configInputsOptions
+			})
+		})
 
-                this.errorDiv = holder.append('div')
-        }
+		this.errorDiv = holder.append('div')
+	}
 
 	private getConfigInputsOptions(viewModel: ViewModel) {
 		const configInputsOptions: Array<any> = []
@@ -180,16 +180,16 @@ export default class Disco {
 				legendRenderer, this.app.opts.state.args.genome
 			)
 
-                        discoRenderer.render(svgDiv, this.viewModel)
+			discoRenderer.render(svgDiv, this.viewModel)
 
-                        if (
-                                this.viewModel.invalidDataInfo &&
-                                this.viewModel.invalidDataInfo.count > 0
-                        ) {
-                                invaliddataui.render(this.errorDiv, this.viewModel.invalidDataInfo)
-                        }
-                }
-        }
+			if (
+				this.viewModel.invalidDataInfo &&
+				this.viewModel.invalidDataInfo.count > 0
+			) {
+				invaliddataui.render(this.errorDiv, this.viewModel.invalidDataInfo)
+			}
+		}
+	}
 
 	getState(appState: any) {
 		return appState.plots.find(p => p.id === this.id)
