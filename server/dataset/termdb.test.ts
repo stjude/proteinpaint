@@ -151,7 +151,7 @@ export default function (): Mds3 {
 									plots: [
 										{
 											chartType: 'barchart',
-											settings: { barchart: { colorBars: true } },
+											settings: { barchart: { colorBars: true, showPercent: true } },
 
 											term: {
 												id: 'agedx'
@@ -160,12 +160,12 @@ export default function (): Mds3 {
 										{
 											chartType: 'barchart',
 											term: { id: 'sex' },
-											settings: { barchart: { colorBars: true } }
+											settings: { barchart: { colorBars: true, showPercent: true } }
 										},
 										{
 											chartType: 'barchart',
 											term: { id: 'genetic_race' },
-											settings: { barchart: { colorBars: true } }
+											settings: { barchart: { colorBars: true, showPercent: true } }
 										}
 									]
 								},
@@ -175,7 +175,7 @@ export default function (): Mds3 {
 										{
 											chartType: 'barchart',
 											term: { id: 'diaggrp' },
-											settings: { barchart: { colorBars: true } }
+											settings: { barchart: { colorBars: true, showPercent: true } }
 										}
 									]
 								},
@@ -185,12 +185,12 @@ export default function (): Mds3 {
 										{
 											chartType: 'barchart',
 											term: { id: 'hrtavg' },
-											settings: { barchart: { colorBars: true } }
+											settings: { barchart: { colorBars: true, showPercent: true } }
 										},
 										{
 											chartType: 'barchart',
 											term: { id: 'aaclassic_5' },
-											settings: { barchart: { colorBars: true } }
+											settings: { barchart: { colorBars: true, showPercent: true } }
 										}
 									]
 								},

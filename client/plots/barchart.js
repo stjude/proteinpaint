@@ -232,6 +232,14 @@ export class Barchart {
 					settingsKey: 'showStatsTable',
 					boxLabel: 'Yes'
 				})
+			else
+				inputs.push({
+					label: 'Show percent',
+					type: 'checkbox',
+					chartType: 'barchart',
+					settingsKey: 'showPercent',
+					boxLabel: 'Yes'
+				})
 			const multipleTestingCorrection = this.app.getState().termdbConfig.multipleTestingCorrection
 			if (multipleTestingCorrection) {
 				// a checkbox to allow users to show or hide asterisks on bars
@@ -899,6 +907,7 @@ function setRenderers(self) {
 		chart.handlers = self.handlers
 		chart.maxSeriesLogTotal = 0
 		chart.visibleSerieses.forEach(series => self.sortStacking(series, chart, self.chartsData))
+		self.renderers[chart.chartId] = barsRenderer(self, select(this)) //rerender as settings may have changed
 		self.renderers[chart.chartId](chart)
 
 		const div = select(this)
@@ -1207,7 +1216,8 @@ export function getDefaultBarSettings(app) {
 		defaultColor: plotColor,
 		colorBars: false,
 		dedup: false,
-		showStatsTable: true
+		showStatsTable: true,
+		showPercent: false
 	}
 }
 
