@@ -94,6 +94,7 @@ returns:
 const formatter = format('d')
 
 export default function barsRenderer(barsapp, holder) {
+	holder.selectAll('*').remove() // clear holder
 	const hm = {},
 		computed = {}
 	const emptyObj = {} //used to represent any empty cell
@@ -467,8 +468,20 @@ export default function barsRenderer(barsapp, holder) {
 			.delay(hm.delay)
 			.duration(hm.duration)
 			.style('opacity', 1)
-
+		addPercent(g, d)
 		addAsterisks(g)
+	}
+
+	function addPercent(g, d) {
+		if (!barsapp.config.term2 && barsapp.config.settings.barchart.showPercent) {
+			const percent = (d.seriesTotal / d.chartTotal) * 100
+			console.log(`Percent for ${d.dataId} in ${d.seriesId}: ${percent.toFixed(1)}%`)
+			g.append('g')
+				.attr('transform', `translate(${d.x + d.width + 10}, ${d.y + d.height * 0.7})`)
+				.append('text')
+				.style('font-size', '0.9em')
+				.text(`${percent.toFixed(1)}%`)
+		}
 	}
 
 	// add an asterisk to bars with a p-value below cutoff.
