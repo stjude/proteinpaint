@@ -29,12 +29,12 @@ export default class DataMapper {
 	private cnvData: Array<Data> = []
 	private cnvInnerRadius = 0
 
-        private fusionData: Array<Data> = []
-        private fusionRadius = 0
+	private fusionData: Array<Data> = []
+	private fusionRadius = 0
 
-        private hasPrioritizedGenes = false
+	private hasPrioritizedGenes = false
 
-        private invalidEntries: { dataType: string; reason: string }[] = []
+	private invalidEntries: { dataType: string; reason: string }[] = []
 
 	private cnvLossMaxValue = 0
 	private cnvGainMaxValue = 0
@@ -113,79 +113,78 @@ export default class DataMapper {
 	map(data: any) {
 		const dataArray: Array<Data> = []
 
-                data.forEach(dObject => {
-                        const index = this.reference.chromosomesOrder.indexOf(dObject.chr)
-                        const indexA = this.reference.chromosomesOrder.indexOf(dObject.chrA)
-                        const indexB = this.reference.chromosomesOrder.indexOf(dObject.chrB)
+		data.forEach(dObject => {
+			const index = this.reference.chromosomesOrder.indexOf(dObject.chr)
+			const indexA = this.reference.chromosomesOrder.indexOf(dObject.chrA)
+			const indexB = this.reference.chromosomesOrder.indexOf(dObject.chrB)
 
-                        if (dObject.dt == dtsnvindel) {
-                                if (index != -1 && this.snvData.length < this.settings.snv.maxMutationCount) {
-                                        const pos = dObject.pos ?? dObject.position
-                                        const chrSize = this.reference.chromosomes[index].size
-                                        // ensure position is numeric and within chromosome range
-                                        if (Number.isFinite(pos) && pos >= 0 && pos <= chrSize) {
-                                                this.addData(dObject, dataArray)
-                                        } else {
-                                                this.invalidEntries.push({ dataType: 'SNV', reason: `Position ${pos} outside of ${dObject.chr}` })
-                                        }
-                                } else if (index == -1) {
-                                        this.invalidEntries.push({ dataType: 'SNV', reason: `Unknown chr ${dObject.chr}` })
-                                }
-                        } else if (dObject.dt == dtfusionrna || dObject.dt == dtsv) {
-                                if (indexA != -1 && indexB != -1) {
-                                        // show sv/fusion event with valid A/B breakpoints.
-                                        const posA = dObject.posA
-                                        const posB = dObject.posB
-                                        const chrSizeA = this.reference.chromosomes[indexA].size
-                                        const chrSizeB = this.reference.chromosomes[indexB].size
-                                        // verify that both breakpoints are numeric and within chromosome ranges
-                                        if (
-                                                Number.isFinite(posA) &&
-                                                Number.isFinite(posB) &&
-                                                posA >= 0 &&
-                                                posA <= chrSizeA &&
-                                                posB >= 0 &&
-                                                posB <= chrSizeB
-                                        ) {
-                                                this.addData(dObject, dataArray)
-                                        } else {
-                                                const reasonParts: string[] = []
-                                                if (!(Number.isFinite(posA) && posA >= 0 && posA <= chrSizeA)) reasonParts.push(`Position ${posA} outside of ${dObject.chrA}`)
-                                                if (!(Number.isFinite(posB) && posB >= 0 && posB <= chrSizeB)) reasonParts.push(`Position ${posB} outside of ${dObject.chrB}`)
-                                                this.invalidEntries.push({ dataType: 'Fusion', reason: reasonParts.join('; ') })
-                                        }
-                                } else {
-                                        this.invalidEntries.push({ dataType: 'Fusion', reason: 'Unknown chr in fusion' })
-                                }
-                        } else if ([dtcnv, dtloh].includes(Number(dObject.dt))) {
-                                const idx = this.reference.chromosomesOrder.indexOf(dObject.chr)
-                                if (dObject.chr && idx != -1) {
-                                        const chrSize = this.reference.chromosomes[idx].size
-                                        const start = dObject.start
-                                        const stop = dObject.stop
-                                        // validate CNV/LOH segment boundaries are numeric and fall within chromosome range
-                                        if (
-                                                Number.isFinite(start) &&
-                                                Number.isFinite(stop) &&
-                                                start >= 0 &&
-                                                stop <= chrSize &&
-                                                start <= stop
-                                        ) {
-											console.log(`meep: start: ${start}, stop: ${stop}, chrSize: ${chrSize}`)
-                                                this.addData(dObject, dataArray)
-                                        } else {
-                                                this.invalidEntries.push({
-                                                        dataType: dObject.dt == dtcnv ? 'CNV' : 'LOH',
-                                                        reason: `Position ${start}-${stop} outside of ${dObject.chr}`
-                                                })
-                                        }
-                                } else {
-                                        this.invalidEntries.push({ dataType: dObject.dt == dtcnv ? 'CNV' : 'LOH', reason: `Unknown chr ${dObject.chr}` })
-                                }
-                        } else {
-                                throw Error('Unknown mutation type!')
-                        }
-                })
+			if (dObject.dt == dtsnvindel) {
+				if (index != -1 && this.snvData.length < this.settings.snv.maxMutationCount) {
+					const pos = dObject.pos ?? dObject.position
+					const chrSize = this.reference.chromosomes[index].size
+					// ensure position is numeric and within chromosome range
+					if (Number.isFinite(pos) && pos >= 0 && pos <= chrSize) {
+						this.addData(dObject, dataArray)
+					} else {
+						this.invalidEntries.push({ dataType: 'SNV', reason: `Position ${pos} outside of ${dObject.chr}` })
+					}
+				} else if (index == -1) {
+					this.invalidEntries.push({ dataType: 'SNV', reason: `Unknown chr ${dObject.chr}` })
+				}
+			} else if (dObject.dt == dtfusionrna || dObject.dt == dtsv) {
+				if (indexA != -1 && indexB != -1) {
+					// show sv/fusion event with valid A/B breakpoints.
+					const posA = dObject.posA
+					const posB = dObject.posB
+					const chrSizeA = this.reference.chromosomes[indexA].size
+					const chrSizeB = this.reference.chromosomes[indexB].size
+					// verify that both breakpoints are numeric and within chromosome ranges
+					if (
+						Number.isFinite(posA) &&
+						Number.isFinite(posB) &&
+						posA >= 0 &&
+						posA <= chrSizeA &&
+						posB >= 0 &&
+						posB <= chrSizeB
+					) {
+						this.addData(dObject, dataArray)
+					} else {
+						const reasonParts: string[] = []
+						if (!(Number.isFinite(posA) && posA >= 0 && posA <= chrSizeA)) reasonParts.push(`Position ${posA} outside of ${dObject.chrA}`)
+						if (!(Number.isFinite(posB) && posB >= 0 && posB <= chrSizeB)) reasonParts.push(`Position ${posB} outside of ${dObject.chrB}`)
+						this.invalidEntries.push({ dataType: 'Fusion', reason: reasonParts.join('; ') })
+					}
+				} else {
+					this.invalidEntries.push({ dataType: 'Fusion', reason: 'Unknown chr in fusion' })
+				}
+			} else if ([dtcnv, dtloh].includes(Number(dObject.dt))) {
+				const idx = this.reference.chromosomesOrder.indexOf(dObject.chr)
+				if (dObject.chr && idx != -1) {
+					const chrSize = this.reference.chromosomes[idx].size
+					const start = dObject.start
+					const stop = dObject.stop
+					// validate CNV/LOH segment boundaries are numeric and fall within chromosome range
+					if (
+						Number.isFinite(start) &&
+						Number.isFinite(stop) &&
+						start >= 0 &&
+						stop <= chrSize &&
+						start <= stop
+					) {
+						this.addData(dObject, dataArray)
+					} else {
+						this.invalidEntries.push({
+							dataType: dObject.dt == dtcnv ? 'CNV' : 'LOH',
+							reason: `Position ${start}-${stop} outside of ${dObject.chr}`
+						})
+					}
+				} else {
+					this.invalidEntries.push({ dataType: dObject.dt == dtcnv ? 'CNV' : 'LOH', reason: `Unknown chr ${dObject.chr}` })
+				}
+			} else {
+				throw Error('Unknown mutation type!')
+			}
+		})
 
 		const sortedData = dataArray.sort(this.compareData)
 
@@ -281,13 +280,13 @@ export default class DataMapper {
 			cnvMaxPercentileAbs: this.cnvMaxPercentileAbs,
 
 			lohMaxValue: this.lohMaxValue,
-                        lohMinValue: this.lohMinValue
-                        ,
-                        invalidDataInfo: {
-                                count: this.invalidEntries.length,
-                                entries: this.invalidEntries
-                        }
-                }
+			lohMinValue: this.lohMinValue
+			,
+			invalidDataInfo: {
+				count: this.invalidEntries.length,
+				entries: this.invalidEntries
+			}
+		}
 
 		return dataHolder
 	}
@@ -382,7 +381,7 @@ export default class DataMapper {
 	private calculateArcAngle(data: Data) {
 		const currentChromosome =
 			this.reference.chromosomes[
-				this.reference.chromosomesOrder.findIndex(chromosomeOrder => data.chr == chromosomeOrder)
+			this.reference.chromosomesOrder.findIndex(chromosomeOrder => data.chr == chromosomeOrder)
 			]
 
 		const dataAnglePos = Math.floor(data.position / this.bpx)

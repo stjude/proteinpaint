@@ -1,6 +1,7 @@
 import test from 'tape'
 import discoDefaults from '#plots/disco/defaults.ts'
 import Reference from '../Reference'
+import { hg38 } from '../../../../test/testdata/genomes'
 
 /*
 Tests:
@@ -18,9 +19,9 @@ const settings = discoDefaults(overriders)
 
 // Mock chromosome sizes (normally coming from genome data)
 const chromosomes = {
-	chr1: 100,
-	chr2: 200,
-	chr3: 300
+	chr1: hg38.majorchr.chr1,
+    chr2: hg38.majorchr.chr2,
+    chr3: hg38.majorchr.chr3
 }
 
 // ───── Header ─────
@@ -38,7 +39,8 @@ test('Reference class initializes correctly', t => {
 	t.deepEqual(reference.chromosomesOrder, ['chr1', 'chr2', 'chr3'], 'Chromosome order should match input keys')
 
 	// Check that totalSize matches the sum of the chromosome sizes
-	const expectedTotalSize = 100 + 200 + 300
+	const expectedTotalSize = chromosomes.chr1 + chromosomes.chr2 + chromosomes.chr3
+    t.equal(reference.totalSize, expectedTotalSize, 'Total size should match sum of chromosome sizes')
 	t.equal(reference.totalSize, expectedTotalSize, 'Total size should match sum of chromosome sizes')
 
 	// Verify totalPadAngle is calculated correctly
