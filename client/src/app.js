@@ -295,10 +295,11 @@ export function bindProteinPaint({ rootElem, initArgs, updateArgs, isStale, hasC
 	// In prod, this may be detected from a response header or payload property (TODO).
 	if (app) {
 		// an existing app instance should not rerender data that has not been updated
-		if (!updateArgs) return
+		if (!updateArgs) return app
 		if (typeof app.then != 'function') {
 			// the app instance has finished initializing (replaced an instance promise)
 			if (!isStale()) app.update(updateArgs)
+			return app
 		} else {
 			// The app instance has not finished initializing, it's still an unresolved Promise.
 			// In case another state update comes in when there is already
@@ -314,6 +315,7 @@ export function bindProteinPaint({ rootElem, initArgs, updateArgs, isStale, hasC
 					if (!isStale()) app.update(updateArgs)
 				})
 			}, 20)
+			return app
 		}
 	} else {
 		const pp_holder = rootElem.querySelector('.sja_root_holder')

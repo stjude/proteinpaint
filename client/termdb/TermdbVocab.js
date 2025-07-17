@@ -850,7 +850,9 @@ export class TermdbVocab extends Vocab {
 					embedder: window.location.hostname
 				}
 			}
-			if (opts.signal) init.signal = opts.signal // an AbortController.signal to trigger a fetch cancellation
+			// may get opts.signal, app.signal, or both
+			init.signal = this.app.getAbortSignal(opts)
+			console.log(854, init.signal)
 			if (opts.filter0) init.body.filter0 = opts.filter0 // avoid adding "undefined" value
 			if (opts.isHierCluster) init.body.isHierCluster = true // special arg from matrix, just pass along
 			if (

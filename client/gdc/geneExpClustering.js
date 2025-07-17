@@ -261,7 +261,8 @@ export async function init(arg, holder, genomes) {
 						config: _arg
 					})
 				}
-			}
+			},
+			cancelUpdate: plotAppApi.cancelDispatch
 		}
 
 		return api

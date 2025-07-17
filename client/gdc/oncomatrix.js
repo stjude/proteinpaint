@@ -96,6 +96,7 @@ const gdcGenome = 'hg38'
 const gdcDslabel = 'GDC'
 
 export async function init(arg, holder, genomes) {
+	console.log(98, 'oncomatrix init()', arg.opts?.app)
 	const genome = genomes[gdcGenome]
 	try {
 		if (!genome) throw gdcGenome + ' missing'
@@ -331,9 +332,9 @@ export async function init(arg, holder, genomes) {
 						config: arg
 					})
 				}
-			}
+			},
+			cancelUpdate: plotAppApi.cancelDispatch
 		}
-
 		return api
 	} catch (e) {
 		throw e
@@ -347,8 +348,9 @@ async function getGenes(arg, settings, vocabApi) {
 		geneFilter: settings.geneFilter
 	}
 
-	if (arg.filter0) body.filter0 = arg.filter0 // to avoid causing a "null" parameter value for backend
-
+	if (arg.filter0)
+		body.filter0 = arg.filter0 // to avoid causing a "null" parameter value for backend
+	console.log(352, 'getGenes()')
 	const data = await dofetch3('termdb/topMutatedGenes', { body })
 	if (data.error) throw data.error
 	if (!data.genes) return // do not throw and halt. downstream will detect no genes and handle it by showing edit ui
