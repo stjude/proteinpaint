@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Fixes:
+- workaround for mds3 sampletable to show a column of either pmid or doi links
+
 
 ## 2.137.0
 
