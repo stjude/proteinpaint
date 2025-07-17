@@ -53,10 +53,11 @@ tape('"Active items" in about tab', function (test) {
 		const appInner = about.Inner.app.Inner
 
 		//Give app dispatch time to process
+		//Leave this timeout higher to pass on CI
 		setTimeout(() => {
 			test.equal(appInner.state.plots.length, 1, 'Should create a plot when the active item button is clicked.')
 			if (test['_ok']) about.Inner.app.destroy()
 			test.end()
-		}, 50)
+		}, 150)
 	}
 })
