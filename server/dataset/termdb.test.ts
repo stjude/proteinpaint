@@ -298,7 +298,7 @@ export default function (): Mds3 {
 			},
 			geneExpression: {
 				src: 'native',
-				file: 'files/hg38/TermdbTest/fpkm/TermdbTest.fpkm.matrix.h5'
+				file: 'files/hg38/TermdbTest/rnaseq/TermdbTest.fpkm.matrix.h5'
 			},
 			topVariablyExpressedGenes: {
 				src: 'native'
