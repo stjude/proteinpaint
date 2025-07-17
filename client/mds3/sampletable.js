@@ -188,20 +188,26 @@ async function make_singleSampleTable(s, arg) {
 			// TODO: use tw.$id to accomodate non-dictionary terms
 			if (tw.term.id in s) {
 				if (Array.isArray(s[tw.term.id])) {
+					cell2.html(value2urlsOrText(s[tw.term.id], tw))
+					/*
 					if (tw.baseURL) {
 						// TODO convert to display value
 						cell2.html(s[tw.term.id].map(i => `<a href=${tw.baseURL + i} target=_blank>${i}</a>`).join('<br>'))
 					} else {
 						cell2.html(s[tw.term.id].join('<br>'))
 					}
+					*/
 				} else {
 					// single value
 					const v = twDisplayValueFromSample(s, tw)
+					cell2.html(value2urlsOrText(v, tw))
+					/*
 					if (tw.baseURL) {
 						cell2.html(`<a href=${tw.baseURL + v} target=_blank>${v}</a>`)
 					} else {
 						cell2.text(v)
 					}
+					*/
 				}
 			}
 		}
@@ -451,8 +457,9 @@ export async function samples2columnsRows(samples, tk) {
 		if (tk.mds.variant2samples.twLst) {
 			for (const tw of tk.mds.variant2samples.twLst) {
 				const v = twDisplayValueFromSample(sample, tw)
-				if (tw.baseURL) {
-					row.push({ html: `<a href=${tw.baseURL + v} target=_blank>${v}</a>` })
+				const v2 = value2urlsOrText(v, tw)
+				if (tw.baseURL || tw.pmidOrDoi) {
+					row.push({ html: v2 })
 				} else {
 					row.push({ value: v })
 				}
@@ -535,6 +542,36 @@ export async function samples2columnsRows(samples, tk) {
 		rows.push(row)
 	}
 	return [columns, rows]
+}
+
+/*
+v can be:
+	a singular value
+		if build url, return url
+		else, return value as-is
+	an array of values
+		if build url, return urls built for each value, joined by <br>
+		else, return array elements joined by <br>
+*/
+export function value2urlsOrText(v, tw) {
+	if (tw.baseURL) {
+		if (Array.isArray(v)) return v.map(i => `<a href=${tw.baseURL + i} target=_blank>${i}</a>`).join('<br>')
+		return `<a href=${tw.baseURL + v} target=_blank>${v}</a>`
+	}
+	if (tw.pmidOrDoi) {
+		const h = []
+		for (const i of Array.isArray(v) ? v : [v]) {
+			if (i.startsWith('doi: ')) {
+				h.push(`<a href=https://doi.org/${i.slice(5)} target=_blank>${i}</a>`)
+			} else {
+				// must be pmid
+				h.push(`<a href=https://pubmed.ncbi.nlm.nih.gov/${i} target=_blank>${i}</a>`)
+			}
+		}
+		return h.join('<br>')
+	}
+	if (Array.isArray(v)) return v.join('<br>')
+	return v
 }
 
 export function findMbyId(str, tk) {

@@ -1539,7 +1539,16 @@ type PlotConfigByCohort = {
 type Tw = {
 	id: string
 	q: unknown
-	baseURL?: string //Only appears as a quick fix in SAMD9-SAMD9L.hg19?
+	/** quick fix for generating URL links in mds3 tk sample table! adhoc design. may move to tw.term.baseURL and not specific to mds3 tk
+	 */
+	baseURL?: string
+	/** quick fix. such a "publication" term can have values either pmid or doi, need to generate different links
+	cannot use ds-defined callback to compute the link as the links are only generated on client
+	thus this work around for client code to apply the url-building logic
+	a doi value must be defined as "doi: 10.1038/s41408-025-01309-6", beginning with "doi: ", this allows client code to recognize it is doi;
+	otherwise it is treated as pmid and joined to pubmed link as-is
+	*/
+	pmidOrDoi?: true
 }
 
 type Variant2Samples = GdcApi & {

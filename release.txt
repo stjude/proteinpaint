@@ -1,1 +1,2 @@
-
+Fixes:
+- workaround for mds3 sampletable to show a column of either pmid or doi links
