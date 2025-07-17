@@ -8,12 +8,12 @@ import { dofetch3 } from '#common/dofetch'
 import type { ClientCopyGenome } from 'types/global.ts'
 
 // dynamically load svgraph when user clicks on a fusion arc
-type Genome = any
+
 
 export default class FusionRenderer {
 	private genome: ClientCopyGenome
 
-	constructor(genome: Genome) {
+	constructor(genome: ClientCopyGenome) {
 		this.genome = genome
 	}
 
