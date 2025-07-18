@@ -191,6 +191,12 @@ function getChartTypeList(self, state) {
 			config: { chartType: 'report' }
 		},
 		{
+			label: 'Disease Summary',
+			chartType: 'diseaseSummary', //The real chart type is report but we use here the chartType used in isSupportedChartOverride to show this button instead	of report
+			clickTo: self.plotCreate, //when using prepPlot this error was raised: No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this). TOD0: check with Edgar
+			config: { chartType: 'report', name: 'Disease Summary' }
+		},
+		{
 			label: 'Sample View',
 			clickTo: self.prepPlot,
 			chartType: 'sampleView',
@@ -199,12 +205,6 @@ function getChartTypeList(self, state) {
 			}
 		},
 
-		{
-			label: 'Summary Plots',
-			chartType: 'summary',
-			clickTo: self.showTree_select1term,
-			usecase: { target: 'summary', detail: 'term' }
-		},
 		{
 			label: self.getSamplescatterBtnLabel(state),
 			chartType: 'sampleScatter',

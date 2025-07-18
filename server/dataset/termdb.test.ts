@@ -35,7 +35,7 @@ export default function (): Mds3 {
 		isSupportedChartOverride: {
 			runChart: () => true,
 			frequencyChart: () => true,
-			report: () => true
+			diseaseSummary: () => true
 		},
 		cohort: {
 			massNav: {

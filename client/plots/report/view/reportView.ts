@@ -32,7 +32,8 @@ export class ReportView {
 		}
 
 		if (this.dom.header) {
-			this.dom.header.html(this.report.config.name || 'Summary Report')
+			const name = this.report.config.name || 'Summary Report'
+			this.dom.header.html(name)
 		}
 		document.addEventListener('scroll', () => this?.dom?.tooltip?.hide())
 		select('.sjpp-output-sandbox-content').on('scroll', () => this.dom.tooltip.hide())
