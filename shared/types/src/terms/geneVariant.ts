@@ -1,4 +1,13 @@
-import type { MinBaseQ, BaseTerm, TermGroupSetting, BaseTW, TermValues, BaseGroupSet } from '../index.ts'
+import type {
+	MinBaseQ,
+	BaseTerm,
+	PredefinedTermGroupSetting,
+	OtherTermGroupSetting,
+	BaseTW,
+	TermValues,
+	BaseGroupSet,
+	FilterGroup
+} from '../index.ts'
 import type { TermSettingInstance } from '../termsetting.ts'
 
 // q types
@@ -20,10 +29,6 @@ export type GvCustomGsQ = GvBaseQ & { type: 'custom-groupset'; customset: BaseGr
 export type GvQ = GvValuesQ | GvPredefinedGsQ | GvCustomGsQ
 
 // term types
-type GvBaseTerm = BaseTerm & {
-	type: 'geneVariant'
-}
-
 export type GvGene = {
 	kind: 'gene'
 	gene: string
@@ -42,52 +47,66 @@ export type GvCoord = {
 	stop: number
 }
 
-export type RawGvTerm = GvBaseTerm &
-	(GvGene | GvCoord) & {
-		groupsetting?: TermGroupSetting
-		childTerms?: DtTerm[]
-	}
+type GvBaseTerm = BaseTerm & { type: 'geneVariant' } & (GvGene | GvCoord)
 
-export type GvTerm = GvBaseTerm &
-	(GvGene | GvCoord) & {
-		groupsetting: TermGroupSetting
-		childTerms: DtTerm[]
-	}
+export type RawGvPredefinedGsTerm = GvBaseTerm & {
+	groupsetting?: PredefinedTermGroupSetting
+	childTerms?: DtTerm[]
+}
+
+export type RawGvOtherTerm = GvBaseTerm & {
+	groupsetting?: OtherTermGroupSetting
+	childTerms?: DtTerm[]
+}
+
+export type RawGvTerm = RawGvPredefinedGsTerm | RawGvOtherTerm
+
+export type GvPredefinedGsTerm = GvBaseTerm & {
+	groupsetting: PredefinedTermGroupSetting
+	childTerms: DtTerm[]
+}
+
+export type GvOtherTerm = GvBaseTerm & {
+	groupsetting: OtherTermGroupSetting
+	childTerms: DtTerm[]
+}
+
+export type GvTerm = GvPredefinedGsTerm | GvOtherTerm
 
 // tw types
 export type RawGvValuesTW = BaseTW & {
 	type?: 'GvValuesTW'
-	term: RawGvTerm
+	term: RawGvOtherTerm
 	q: RawGvValuesQ
 }
 
 export type RawGvPredefinedGsTW = BaseTW & {
 	type?: 'GvPredefinedGsTW'
-	term: RawGvTerm
+	term: RawGvPredefinedGsTerm
 	q: RawGvPredefinedGsQ
 }
 
 export type RawGvCustomGsTW = BaseTW & {
 	type?: 'GvCustomGsTW'
-	term: RawGvTerm
+	term: RawGvOtherTerm
 	q: RawGvCustomGsQ
 }
 
 export type GvValuesTW = BaseTW & {
 	type: 'GvValuesTW'
-	term: GvTerm
+	term: GvOtherTerm
 	q: GvValuesQ
 }
 
 export type GvPredefinedGsTW = BaseTW & {
 	type: 'GvPredefinedGsTW'
-	term: GvTerm
+	term: GvPredefinedGsTerm
 	q: GvPredefinedGsQ
 }
 
 export type GvCustomGsTW = BaseTW & {
 	type: 'GvCustomGsTW'
-	term: GvTerm
+	term: GvOtherTerm
 	q: GvCustomGsQ
 }
 
@@ -99,7 +118,7 @@ export type GeneVariantTermSettingInstance = TermSettingInstance & {
 	q: GvQ
 	term: GvTerm
 	category2samplecount: any
-	groupSettingInstance?: any
+	groups: FilterGroup[] // will store groups created in edit UI
 }
 
 // miscellaneous types
