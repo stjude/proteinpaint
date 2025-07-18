@@ -13,10 +13,13 @@ export class ProjectAdminRender {
 		this.interactions = interactions
 	}
 
-	/** Renders project administration UI, allowing users to 
+	/** Renders project administration UI, allowing users to
 	 * create new projects or edit existing ones.*/
 	renderProjectAdmin() {
-		const projectDiv = this.dom.holder.append('div').attr('id', 'sjpp-ai-histo-tool-projects').attr('class', 'sjpp-deletable-ai-histo-div')
+		const projectDiv = this.dom.holder
+			.append('div')
+			.attr('id', 'sjpp-ai-histo-tool-projects')
+			.attr('class', 'sjpp-deletable-ai-histo-div')
 		this.renderCreateProject(projectDiv)
 		this.renderProjectSelection(projectDiv)
 	}
@@ -77,26 +80,24 @@ export class ProjectAdminRender {
 					this.interactions.editProject()
 					console.log('TODO', e, i)
 				}
+			},
+			{
+				//TODO: Add logic for admins only once user roles are implemented
+				//Leave here for development
+				text: 'Delete',
+				callback: (_, i) => {
+					const project = this.projects[i]
+					this.interactions.deleteProject(project)
+
+					//Update UI after deletion. Maybe cleaner way to handle this?
+					//Maybe app.dispatch and rerender instead?
+					this.projects.splice(i, 1)
+					//Remove the table from the projectDiv and re-render
+					projectDiv.select('.sjpp-project-select-table').remove()
+					this.renderProjectSelection(projectDiv)
+				}
 			}
 		]
-
-		//TODO: add once user roles are implemented
-		// if (userInfo.isAdmin) {
-		// 	columnButtons.push({
-		// 			text: 'Delete',
-		// 			callback: (_, i) => {
-		// 				const project = this.projects[i]
-		// 				this.interactions.deleteProject(project)
-
-		// 				//Update UI after deletion. Maybe cleaner way to handle this?
-		// 				//Maybe app.dispatch and rerender instead?
-		// 				this.projects.splice(i, 1)
-		// 				//Remove the table from the projectDiv and re-render
-		// 				projectDiv.select('.sjpp-project-select-table').remove()
-		// 				this.renderExistingProjects(projectDiv)
-		// 			}
-		// 		})
-		// }
 
 		renderTable({
 			div: tableDiv,

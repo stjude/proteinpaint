@@ -81,6 +81,7 @@ export function handle_request_closure(genomes) {
 			if (q.for == 'getAllSamples') return get_AllSamples(q, req, res, ds)
 			if (q.for == 'getSamplesByName') return get_AllSamplesByName(q, req, res, ds)
 			if (q.for == 'getDefaultBins') return trigger_getDefaultBins(q, ds, res)
+			if (q.for == 'buildAdHocDictionary') return await tdb.q.buildAdHocDictionary()
 
 			throw "termdb: doesn't know what to do"
 		} catch (e) {
