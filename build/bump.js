@@ -132,7 +132,12 @@ for (const w of rootPkg.workspaces) {
 	const paths = fs.globSync(`${w}/package.json`, { cwd })
 	for (const pkgPath of paths) {
 		const pkgDir = pkgPath.replace('/package.json', '')
-		const hasRelevantChangedFiles = changedFiles.find(f => f.startsWith(pkgDir) && fileAffectsVersion(f)) && true
+		const hasRelevantChangedFiles =
+			changedFiles.findIndex(
+				f =>
+					(f.startsWith(pkgDir) || (f.startsWith('server/test/tp') && pkgDir == 'rust')) && // !!! quick fix !!!
+					fileAffectsVersion(f)
+			) !== -1
 		const pkg = require(path.join(cwd, pkgPath))
 		const wsHashOnRelease = ex(`git rev-parse --verify -q ${opts.refCommit}:"${pkgDir}"`, {
 			handler(e) {
@@ -149,7 +154,9 @@ for (const w of rootPkg.workspaces) {
 			pkgDir,
 			// TODO: should also check for non-empty workspace/release.txt???
 			// so that a package release is created only if there are notable changes
-			selfChanged: wsHashOnRelease != wsHashCurrent && hasRelevantChangedFiles,
+			// !!! also remove the quick fix below for rust code change !!!
+			selfChanged:
+				hasRelevantChangedFiles && (wsHashOnRelease != wsHashCurrent || (pkgDir == 'rust' && hasRelevantChangedFiles)),
 			changedDeps: new Set()
 		}
 	}
@@ -270,6 +277,7 @@ function fileAffectsVersion(f) {
 	// specific patterns to supercede the general not-matched pattern at the end of this function
 	if (f.toUpperCase() === 'requirements.txt') return true
 	if (f.endsWith('pkgs.txt')) return true
+	if (f.includes('tp/files/hg38/TermdbTest')) return true
 
 	// any filename not matching below indicates a relevant file that should cause a workspace package version bump
 	return !f.endsWith('.md') && !f.endsWith('.txt') && !f.endsWith('ignore')
