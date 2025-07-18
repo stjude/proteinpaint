@@ -1,0 +1,4 @@
+untrack/delete this file once a permanent fix for rust dep/unit test is merged to master
+
+see https://github.com/stjude/proteinpaint/pull/3542
+
