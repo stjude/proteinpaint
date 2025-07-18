@@ -666,10 +666,12 @@ function setInteractivity(self) {
 			} as opt)
 		}
 
-		if (self.term.type == 'geneVariant' && self.term.groupsetting?.lst.length) {
+		if (self.term.type == 'geneVariant' && self.q.type == 'predefined-groupset') {
 			// display predefined groupsets of geneVariant term
 			// for quick access
-			for (const [i, groupset] of self.term.groupsetting.lst.entries()) {
+			const groupsets = self.term.groupsetting?.lst
+			if (!groupsets || !groupsets.length) throw 'predefined groupsets not found'
+			for (const [i, groupset] of groupsets.entries()) {
 				options.push({
 					label: groupset.name,
 					callback: () => {

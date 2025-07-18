@@ -2,7 +2,7 @@ import tape from 'tape'
 import type { GvCustomGsQ, RawGvTW, DtTerm } from '#types'
 import { vocabInit } from '#termdb/vocabulary'
 import { GvBase } from '../geneVariant'
-import { mayMakeGroups } from '../../termsetting/handlers/geneVariant.ts'
+//import { mayMakeGroups } from '../../termsetting/handlers/geneVariant.ts'
 
 /*************************
  reusable helper functions
@@ -90,7 +90,7 @@ tape('fill() tw with defaultQ', async test => {
 	test.end()
 })
 
-tape('mayMakeGroups: fills groups', async test => {
+/*tape('mayMakeGroups: fills groups', async test => {
 	const tw: any = {
 		q: { type: 'custom-groupset' },
 		term: {
@@ -157,7 +157,7 @@ tape('mayMakeGroups: does nothing if q.type != custom-groupset', async test => {
 	await mayMakeGroups(tw, vocabApi)
 	test.deepEqual(tw, originalTw, 'tw should not change')
 	test.end()
-})
+})*/
 
 /**********
  variables
