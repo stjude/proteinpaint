@@ -30,7 +30,8 @@ class AIHistoTool extends RxComponentInner {
 			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
 		}
 		return {
-			config
+			config,
+			vocab: appState.vocab
 		}
 	}
 
@@ -48,13 +49,15 @@ class AIHistoTool extends RxComponentInner {
 	}
 
 	main() {
-		const config = structuredClone(this.state.config)
+		const state = structuredClone(this.state)
+		const config = state.config
 		if (config.chartType != this.type) return
 		if (!config.settings.project) return
 
 		this.dom.holder.selectAll('.sjpp-deletable-ai-histo-div').remove()
 
 		if (config.settings.project.type === 'new') {
+			this.model.buildDictionary(state.vocab, this.app)
 			new CreateProjectRender()
 		}
 	}

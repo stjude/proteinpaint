@@ -7,19 +7,23 @@ import serverconfig from './serverconfig.js'
  * API metdata output. These methods build the termdb queries
  * and query mechanisms to support the filter and tvs. */
 export async function makeAIHistoTermdbQueries(ds: Mds3) {
+	const dict = ds?.cohort?.termdb?.dictionary
+	if (!dict?.aiApi) return
 	if (!ds?.cohort?.termdb) return
-	ds.cohort.termdb.q ??= {}
-	const q = ds.cohort.termdb.q
+	/** if q doesn't exist, use empty object */
+	const q = (ds.cohort.termdb.q ||= {})
 
 	/** Build a temp dictionary for the AI histology tool
 	 * from API metadata output. */
-	q.buildAiHistoToolDictionary = async (ds: Mds3) => {
-		if (ds?.cohort?.termdb?.dictionary?.aiApi != true) return
-		const source = ds?.cohort?.termdb?.dictionary?.source?.file
+	q.buildAdHocDictionary = async () => {
+		if (dict?.aiApi != true) return
+		const source = dict?.source?.file
 		if (!source) return
 
 		const csvData = await readSourceFile(source)
 		if (!csvData) return
+
+		console.log('Creating ad hoc dictionary for AI histology tool...')
 
 		const id2term = new Map()
 		const lines = csvData.split('\n').filter(line => line.trim() !== '')
@@ -30,7 +34,12 @@ export async function makeAIHistoTermdbQueries(ds: Mds3) {
 		id2term.forEach(term => {
 			delete term.index
 		}) // Remove index property
+
+		console.log('Ad hoc dictionary created')
+		console.log(id2term)
 	}
+
+	console.log(40, 'q:{}', q)
 }
 
 async function readSourceFile(source: string) {

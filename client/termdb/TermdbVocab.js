@@ -1397,6 +1397,15 @@ export class TermdbVocab extends Vocab {
 		// no need to include the full body in the request payload
 		if (tw.term.id && (!tw.term.type || isDictionaryType(tw.term.type))) tw.term = { id: tw.term.id }
 	}
+
+	async buildAdHocDictionary() {
+		const body = {
+			dslabel: this.vocab.dslabel,
+			genome: this.vocab.genome,
+			for: 'buildAdHocDictionary'
+		}
+		return await dofetch3('termdb', { method: 'GET', body })
+	}
 }
 
 /*
