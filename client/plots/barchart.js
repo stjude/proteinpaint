@@ -654,9 +654,11 @@ export class Barchart {
 
 	getColor(t, label, bins) {
 		if (!t.term) return
-		if (t.q.type == 'custom-groupset') {
-			const groups = t.q.customset.groups
-			const group = groups.find(g => g.name == label)
+		if (t.q.type == 'predefined-groupset' || t.q.type == 'custom-groupset') {
+			const groupset =
+				t.q.type == 'predefined-groupset' ? t.term.groupsetting.lst[t.q.predefined_groupset_idx] : t.q.customset
+			if (!groupset) throw 'groupset is missing'
+			const group = groupset.groups.find(g => g.name == label)
 			if (group?.color) return group.color
 		}
 		if (t.term.values) {
