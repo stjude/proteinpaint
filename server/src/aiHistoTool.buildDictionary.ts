@@ -12,6 +12,7 @@ export async function makeAIHistoTermdbQueries(ds: Mds3) {
 	if (!ds?.cohort?.termdb) return
 	/** if q doesn't exist, use empty object */
 	const q = (ds.cohort.termdb.q ||= {})
+	const id2term = new Map()
 
 	/** Build a temp dictionary for the AI histology tool
 	 * from API metadata output. */
@@ -23,23 +24,38 @@ export async function makeAIHistoTermdbQueries(ds: Mds3) {
 		const csvData = await readSourceFile(source)
 		if (!csvData) return
 
-		console.log('Creating ad hoc dictionary for AI histology tool...')
+		console.log(`Creating ad hoc dictionary for ${ds.label}...`)
 
-		const id2term = new Map()
 		const lines = csvData.split('\n').filter(line => line.trim() !== '')
 
-		makeRootTerms(lines[0], id2term)
+		id2term.set('__root', { id: 'root', name: 'root', __tree_isroot: true })
+
+		makeParentTerms(lines[0], id2term)
 		assignValuesToTerms(id2term, lines.splice(1))
 
 		id2term.forEach(term => {
 			delete term.index
 		}) // Remove index property
-
-		console.log('Ad hoc dictionary created')
-		console.log(id2term)
+		return id2term.size > 1 ? `Ad hoc dictionary for ${ds.label} created` : 'failed to initialize dictionary'
 	}
 
-	console.log(40, 'q:{}', q)
+	//None of the arguments in server/routes/termdb.rootterm are needed
+	q.getRootTerms = async (_, __, ___) => {
+		const terms: any = []
+		for (const term of id2term.values()) {
+			if (term.__tree_isroot) continue
+			if (term?.parent_id == undefined) terms.push(JSON.parse(JSON.stringify(term)))
+		}
+		return terms
+	}
+
+	q.getTermChildren = async (_, id, ___, ____) => {
+		const terms: any = []
+		for (const term of id2term.values()) {
+			if (term.parent_id == id) terms.push(JSON.parse(JSON.stringify(term)))
+		}
+		return terms
+	}
 }
 
 async function readSourceFile(source: string) {
@@ -52,7 +68,7 @@ async function readSourceFile(source: string) {
 	}
 }
 
-function makeRootTerms(header: string, id2term: Map<string, any>) {
+function makeParentTerms(header: string, id2term: Map<string, any>) {
 	const columns = header.split(',')
 
 	for (const [i, col] of columns.entries()) {
@@ -63,7 +79,7 @@ function makeRootTerms(header: string, id2term: Map<string, any>) {
             or phenotree is provided */
 			type: 'categorical',
 			isleaf: false,
-			parent_id: 'root',
+			parent_id: undefined,
 			values: {},
 			child_types_set: new Set(),
 			//will delete later

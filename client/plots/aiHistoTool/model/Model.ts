@@ -30,12 +30,15 @@ export class Model {
 	}
 
 	//TODO: Will need a method to call metadata API, then build dictionary
-	async buildDictionary(vocab: { genome: ClientCopyGenome; dslabel: string }, app: any): Promise<void> {
+	async getTerms(vocab: { genome: ClientCopyGenome; dslabel: string }, app: any): Promise<any> {
 		const body = { dslabel: vocab.dslabel, genome: vocab.genome }
+		const root = { id: '__root', name: 'root', __tree_isroot: true }
 		try {
 			await app.vocabApi.buildAdHocDictionary(body)
+			const terms = await app.vocabApi.getTermChildren(root, [])
+			return terms || []
 		} catch (error) {
-			console.error('Error building dictionary:', error)
+			console.error('Error getting terms:', error)
 			throw error
 		}
 	}
