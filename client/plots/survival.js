@@ -332,7 +332,15 @@ class TdbSurvival {
 		const config = this.state.config
 		const t2values = copyMerge({}, config.term2?.term?.values || {}, config.term2?.values || {})
 		const values = (this.refs.bins[2] && [this.refs.bins[2]]) || Object.values(t2values)
-		const t2groups = config.term2?.q.customset?.groups
+		let t2groups
+		if (config.term2?.q.type == 'predefined-groupset' || config.term2?.q.type == 'custom-groupset') {
+			const groupset =
+				config.term2.q.type == 'predefined-groupset'
+					? config.term2.term.groupsetting.lst[config.term2.q.predefined_groupset_idx]
+					: config.term2.q.customset
+			if (!groupset) throw 'groupset is missing'
+			t2groups = groupset.groups
+		}
 		this.term2toColor = {}
 		this.colorScale = this.uniqueSeriesIds.size < 11 ? scaleOrdinal(schemeCategory10) : scaleOrdinal(schemeCategory20)
 		const legendItems = []
