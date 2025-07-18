@@ -289,10 +289,10 @@
   },
   "src/fetch-helpers.js": {
     "lines": {
-      "total": 89,
+      "total": 91,
       "covered": 41,
       "skipped": 0,
-      "pct": 46.06
+      "pct": 45.05
     },
     "functions": {
       "total": 11,
@@ -301,10 +301,10 @@
       "pct": 36.36
     },
     "statements": {
-      "total": 109,
+      "total": 110,
       "covered": 46,
       "skipped": 0,
-      "pct": 42.2
+      "pct": 41.81
     },
     "branches": {
       "total": 62,
@@ -314,13 +314,13 @@
     },
     "lowestPct": {
       "curr": 36.36,
-      "prev": 0,
-      "diff": 36.36
+      "prev": 36.36,
+      "diff": 0
     },
     "averagePct": {
-      "curr": 40.4275,
-      "prev": 0,
-      "diff": 40.4275
+      "curr": 40.0775,
+      "prev": 40.4275,
+      "diff": -0.3500000000000014
     }
   },
   "src/test/fetch-helpers.unit.spec.js": {
