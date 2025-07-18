@@ -139,18 +139,16 @@ type Groupset = {
 	id?: string // to identify groupset, used by geneVariant term
 } & BaseGroupSet
 
-export type EnabledTermGroupSetting = {
-	disabled?: false | boolean // can remove boolean fallback once common.js is converted to .ts and can declare `disabled: false as const`
-	lst: Groupset[]
+export type PredefinedTermGroupSetting = {
+	disabled: false // groupsetting must be enabled for predefined-groupset
+	lst: Groupset[] // array of groupsets must be defined for predefined-groupset
 }
 
-export type TermGroupSetting =
-	| EnabledTermGroupSetting
-	| {
-			/** disabled=false when groupsetting is not applicable for term (e.g., when term has only two categories) */
-			disabled: true | boolean // can remove boolean fallback once common.js is converted to .ts and can declare `disabled: true as const`
-			lst?: []
-	  }
+export type OtherTermGroupSetting = {
+	disabled: boolean // will be true when term has <= 2 values, otherwise will be false
+}
+
+export type TermGroupSetting = PredefinedTermGroupSetting | OtherTermGroupSetting
 
 /*** types supporting termwrapper ***/
 

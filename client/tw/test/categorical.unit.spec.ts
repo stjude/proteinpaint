@@ -1,5 +1,12 @@
 import tape from 'tape'
-import type { RawCatTW, GroupEntry, TermGroupSetting, CatTWValues, CatTWPredefinedGS, CatTWCustomGS } from '#types'
+import type {
+	RawCatTW,
+	GroupEntry,
+	CatTWValues,
+	CatTWPredefinedGS,
+	CatTWCustomGS,
+	CategoricalPredefinedGsTerm
+} from '#types'
 import { vocabInit } from '#termdb/vocabulary'
 import { termjson } from '../../test/testdata/termjson'
 import { CategoricalBase } from '../categorical'
@@ -45,15 +52,16 @@ function getCustomSet() {
 }
 
 function getTermWithGS() {
-	const term = structuredClone(termjson.diaggrp)
+	const term = structuredClone(termjson.diaggrp) as CategoricalPredefinedGsTerm
 	term.groupsetting = {
+		disabled: false,
 		lst: [
 			{
 				name: 'AAA vs BBB',
 				groups: getCustomSet().groups
 			}
 		]
-	} satisfies TermGroupSetting
+	}
 	return term
 }
 
