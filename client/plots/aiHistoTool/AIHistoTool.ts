@@ -6,6 +6,7 @@ import { Model } from './model/Model'
 import { ProjectAdminRender } from './view/ProjectAdminRender'
 import { AIHistoInteractions } from './interactions/AIHistoInteractions'
 import { CreateProjectRender } from './view/CreateProjectRender'
+import { sayerror } from '#dom'
 
 class AIHistoTool extends RxComponentInner {
 	public type = 'AIHistoTool'
@@ -48,7 +49,7 @@ class AIHistoTool extends RxComponentInner {
 		this.prjtAdminUI.renderProjectAdmin()
 	}
 
-	main() {
+	async main() {
 		const state = structuredClone(this.state)
 		const config = state.config
 		if (config.chartType != this.type) return
@@ -57,8 +58,12 @@ class AIHistoTool extends RxComponentInner {
 		this.dom.holder.selectAll('.sjpp-deletable-ai-histo-div').remove()
 
 		if (config.settings.project.type === 'new') {
-			this.model.buildDictionary(state.vocab, this.app)
-			new CreateProjectRender()
+			const terms = await this.model.getTerms(state.vocab, this.app)
+			if (!terms || terms.length === 0) {
+				sayerror(this.dom.errorDiv, 'No metadata found.')
+				return
+			}
+			new CreateProjectRender(terms, this.dom)
 		}
 	}
 }
