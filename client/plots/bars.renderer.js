@@ -474,13 +474,14 @@ export default function barsRenderer(barsapp, holder) {
 
 	function addPercent(g, d) {
 		if (!barsapp.config.term2 && barsapp.config.settings.barchart.showPercent) {
+			const x = hm.orientation == 'horizontal' ? d.x + d.width + 8 : d.x + 4
+			const y = hm.orientation == 'horizontal' ? d.y + d.height * 0.7 : d.y - 4
 			const percent = (d.seriesTotal / d.chartTotal) * 100
-			console.log(`Percent for ${d.dataId} in ${d.seriesId}: ${percent.toFixed(1)}%`)
 			g.append('g')
-				.attr('transform', `translate(${d.x + d.width + 10}, ${d.y + d.height * 0.7})`)
+				.attr('transform', `translate(${x}, ${y})`)
 				.append('text')
-				.style('font-size', '0.9em')
-				.text(`${percent.toFixed(1)}%`)
+				.style('font-size', '0.8em')
+				.text(`${percent.toFixed(0)}%`)
 		}
 	}
 
