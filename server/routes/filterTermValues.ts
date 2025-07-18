@@ -47,15 +47,16 @@ function getList(samplesPerFilter, filtersData, tw) {
 	//select samples with data for that term
 	const annotations = data.filter(s => s != undefined).map(sample => sample[tw.$id]?.value)
 	const sampleValues = Array.from(new Set(annotations))
+	const filteredValues: any[] = []
 	for (const value of values) {
-		value.value = value.label
-		const label = value.label
-		value.disabled = !sampleValues.includes(label)
+		const label = value.label.replace(/["']/g, '') // remove quotes from the label if found, some datasets have quotes in the labels
+		const disabled = !sampleValues.includes(value.key || value.label) //if the value is not in the sample values, disable it
+		filteredValues.push({ value: value.key || value.label, label, disabled })
 	}
-	values.unshift({ label: '', value: '' })
-	values.sort((a, b) => a.label.localeCompare(b.label))
+	filteredValues.unshift({ label: '', value: '' })
+	filteredValues.sort((a, b) => a.label.localeCompare(b.label))
 
-	return values
+	return filteredValues
 }
 
 async function getFilters(query, ds, genome, res) {
