@@ -7,7 +7,7 @@ import { filterInit, filterPromptInit, getNormalRoot } from '#filter/filter'
 import { rgb } from 'd3-color'
 import { getWrappedTvslst } from '#filter/filter'
 
-const colorScale = getColors(5)
+const colorScale = getColors(2)
 
 // self is the termsetting instance
 export function getHandler(self: GeneVariantTermSettingInstance) {
@@ -18,7 +18,10 @@ export function getHandler(self: GeneVariantTermSettingInstance) {
 
 		getPillStatus() {
 			let text
-			if (self.q.type == 'custom-groupset') {
+			if (self.q.type == 'predefined-groupset') {
+				const groupset = self.term.groupsetting.lst[self.q.predefined_groupset_idx]
+				text = groupset.name
+			} else if (self.q.type == 'custom-groupset') {
 				const n = self.q.customset.groups.length
 				text = `Divided into ${n} groups`
 			} else {
