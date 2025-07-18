@@ -1,8 +1,6 @@
-// import Settings from './Settings'
+import type Settings from './Settings'
 
-export function getDefaultAIHistoToolSettings(overrides = {}) {
-	const defaults: any = {
-		test: true
-	}
+export function getDefaultAIHistoToolSettings(overrides = {}): Settings {
+	const defaults: Settings = {}
 	return Object.assign(defaults, overrides)
 }
