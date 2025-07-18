@@ -16,7 +16,7 @@ import type {
 import { TwBase, type TwOpts } from './TwBase.ts'
 import { copyMerge } from '#rx'
 import { set_hiddenvalues } from '#termsetting'
-import { mayMakeGroups, getPredefinedGroupsets } from '../termsetting/handlers/geneVariant'
+import { getPredefinedGroupsets } from '../termsetting/handlers/geneVariant'
 
 export class GvBase extends TwBase {
 	// type, isAtomic, $id are set in ancestor base classes
@@ -120,7 +120,7 @@ export class GvBase extends TwBase {
 				return await GvPredefinedGS.fill(tw, opts)
 
 			case 'GvCustomGsTW':
-				return await GvCustomGS.fill(tw, opts)
+				return await GvCustomGS.fill(tw)
 
 			default:
 				throw `tw.type='${tw.type}' is not supported by GvBase.fill()`
@@ -222,15 +222,12 @@ export class GvCustomGS extends GvBase {
 	}
 
 	// See the relevant comments in the GvBase.fill() function above
-	static async fill(tw: RawGvCustomGsTW, opts: TwOpts = {}): Promise<GvCustomGsTW> {
+	static async fill(tw: RawGvCustomGsTW): Promise<GvCustomGsTW> {
 		if (!tw.type) tw.type = 'GvCustomGsTW'
 		else if (tw.type != 'GvCustomGsTW') throw `expecting tw.type='GvCustomGsTW', got '${tw.type}'`
 
 		if (tw.term.type != 'geneVariant') throw `expecting tw.term.type='geneVariant', got '${tw.term.type}'`
 		if (tw.q.type != 'custom-groupset') throw `expecting tw.q.type='custom-groupset', got '${tw.q.type}'`
-
-		// may fill groups
-		await mayMakeGroups(tw, opts.vocabApi)
 
 		const { term, q } = tw
 		if (!q.customset) throw 'missing tw.q.customset'
