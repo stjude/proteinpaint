@@ -1,5 +1,6 @@
 import { dofetch3 } from '#common/dofetch'
 import type { AIHistoListRequest, AIHistoProjectAdminRequest } from '#types'
+import type { ClientCopyGenome } from '../../../types/global'
 
 export class Model {
 	constructor() {}
@@ -24,6 +25,17 @@ export class Model {
 			return response
 		} catch (error) {
 			console.error('Error fetching projects:', error)
+			throw error
+		}
+	}
+
+	//TODO: Will need a method to call metadata API, then build dictionary
+	async buildDictionary(vocab: { genome: ClientCopyGenome; dslabel: string }, app: any): Promise<void> {
+		const body = { dslabel: vocab.dslabel, genome: vocab.genome }
+		try {
+			await app.vocabApi.buildAdHocDictionary(body)
+		} catch (error) {
+			console.error('Error building dictionary:', error)
 			throw error
 		}
 	}
