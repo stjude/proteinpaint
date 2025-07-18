@@ -271,7 +271,7 @@ async function getBedgraph(req, res, file, pa) {
 	/* read and plot all bedgraph lines from a locus, without summary
 	pa={minv,maxv,bedgraphdir}
 	 */
-	if (pa.minv == undefined || pa.maxv == undefined) throw 'Y axis scale must be defined for bedgraph track'
+	if (pa.fixminv == undefined || pa.fixmaxv == undefined) throw 'Y axis scale must be defined for bedgraph track'
 	const canvas = createCanvas(
 		req.query.width * req.query.devicePixelRatio,
 		req.query.barheight * req.query.devicePixelRatio
@@ -287,7 +287,7 @@ async function getBedgraph(req, res, file, pa) {
 }
 
 async function bedgraphRegion(req, r, xoff, file, ctx, pa) {
-	const hscale = makeyscale().height(req.query.barheight).min(pa.minv).max(pa.maxv)
+	const hscale = makeyscale().height(req.query.barheight).min(pa.fixminv).max(pa.fixmaxv)
 	const sf = r.width / (r.stop - r.start)
 
 	await utils.get_lines_bigfile({
@@ -309,10 +309,10 @@ async function bedgraphRegion(req, r, xoff, file, ctx, pa) {
 
 			ctx.fillRect(x1, tmp.y, w, tmp.h)
 
-			if (v > pa.maxv) {
+			if (v > pa.fixmaxv) {
 				ctx.fillStyle = req.query.pcolor2
 				ctx.fillRect(x1, 0, w, 2)
-			} else if (v < pa.minv) {
+			} else if (v < pa.fixminv) {
 				ctx.fillStyle = req.query.ncolor2
 				ctx.fillRect(x1, req.query.barheight - 2, w, 2)
 			}
