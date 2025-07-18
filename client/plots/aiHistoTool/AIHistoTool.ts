@@ -3,21 +3,23 @@ import { getCompInit, copyMerge } from '#rx'
 import type { MassState } from '#mass/types/mass'
 import { getDefaultAIHistoToolSettings } from './defaults'
 import { Model } from './model/Model'
-import { View } from './view/View'
+import { ProjectAdminRender } from './view/ProjectAdminRender'
 import { AIHistoInteractions } from './interactions/AIHistoInteractions'
+import { CreateProjectRender } from './view/CreateProjectRender'
 
 class AIHistoTool extends RxComponentInner {
 	public type = 'AIHistoTool'
 	model: Model
 	projects?: any[]
-	view?: View
+	prjtAdminUI?: ProjectAdminRender
 	interactions?: AIHistoInteractions
 
 	constructor(opts: any) {
 		super()
 		this.opts = opts
 		this.dom = {
-			holder: opts.holder
+			holder: opts.holder,
+			errorDiv: opts.holder.append('div').style('padding', '3px').attr('class', 'sjpp-ai-histo-tool-error')
 		}
 		this.model = new Model()
 	}
@@ -41,13 +43,20 @@ class AIHistoTool extends RxComponentInner {
 			console.error('Error initializing AIHistoTool:', e)
 			throw e
 		}
-		this.view = new View(this.dom, this.projects, this.interactions)
-		this.view.render()
+		this.prjtAdminUI = new ProjectAdminRender(this.dom, this.projects, this.interactions)
+		this.prjtAdminUI.renderProjectAdmin()
 	}
 
 	main() {
 		const config = structuredClone(this.state.config)
 		if (config.chartType != this.type) return
+		if (!config.settings.project) return
+
+		this.dom.holder.selectAll('.sjpp-deletable-ai-histo-div').remove()
+
+		if (config.settings.project.type === 'new') {
+			new CreateProjectRender()
+		}
 	}
 }
 

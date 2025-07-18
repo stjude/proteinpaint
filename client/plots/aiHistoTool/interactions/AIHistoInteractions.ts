@@ -19,7 +19,7 @@ export class AIHistoInteractions {
 		const body = {
 			genome: this.genome,
 			dslabel: this.dslabel,
-			projectName: projectName
+			projectName
 		}
 
 		try {
@@ -28,6 +28,19 @@ export class AIHistoInteractions {
 			console.error('Error adding project:', e)
 			throw e
 		}
+
+		await this.app.dispatch({
+			type: 'plot_edit',
+			id: this.id,
+			config: {
+				settings: {
+					project: {
+						name: projectName,
+						type: 'new'
+					}
+				}
+			}
+		})
 	}
 
 	async editProject() {
