@@ -148,6 +148,17 @@ type GdcApi = {
 	gdcapi?: boolean
 }
 
+type AiApi = {
+	/** Represents the configuration for accessing the AI API.
+	 * For now only AI Histo is supported.
+	 */
+	aiApi?: boolean
+	source?: {
+		/** Data source for building the termdb on the fly */
+		file?: string
+	}
+}
+
 type SnvIndelFormat = {
 	[index: string]: {
 		/* has value for a non-GT field indicating the variant 
@@ -1469,7 +1480,8 @@ keep this setting here for reason of:
 
 	//GDC
 	termid2totalsize2?: GdcApi
-	dictionary?: GdcApi
+	/** Do not use a union here. */
+	dictionary?: GdcApi & AiApi
 	allowCaseDetails?: AllowCaseDetails
 	isGeneSetTermdb?: boolean
 	/** Searches the genedb alias list to return the genecode ID */
