@@ -3,7 +3,8 @@ import type {
 	TermValues,
 	GroupSettingQ,
 	ValuesQ,
-	TermGroupSetting,
+	PredefinedTermGroupSetting,
+	OtherTermGroupSetting,
 	BaseTW,
 	PredefinedGroupSettingQ,
 	CustomGroupSettingQ
@@ -22,19 +23,19 @@ import type { TermSettingInstance } from '../termsetting.ts'
 export type RawCatTWValues = BaseTW & {
 	type?: 'CatTWValues'
 	/** must already exist, for dictionary terms, TwRouter.fill() will use mayHydrateDictTwLst() */
-	term: CategoricalTerm
+	term: CategoricalOtherTerm
 	q: RawValuesQ
 }
 
 export type RawCatTWPredefinedGS = BaseTW & {
 	type?: 'CatTWPredefinedGS'
-	term: CategoricalTerm
+	term: CategoricalPredefinedGsTerm
 	q: RawPredefinedGroupsetQ
 }
 
 export type RawCatTWCustomGS = BaseTW & {
 	type?: 'CatTWCustomGS'
-	term: CategoricalTerm
+	term: CategoricalOtherTerm
 	q: RawCustomGroupsetQ
 }
 
@@ -46,11 +47,20 @@ export type CategoricalBaseQ = MinBaseQ & {
 
 export type CategoricalQ = GroupSettingQ | ValuesQ
 
-export type CategoricalTerm = BaseTerm & {
+type BaseCategoricalTerm = BaseTerm & {
 	type: 'categorical'
 	values: TermValues
-	groupsetting: TermGroupSetting
 }
+
+export type CategoricalPredefinedGsTerm = BaseCategoricalTerm & {
+	groupsetting: PredefinedTermGroupSetting
+}
+
+type CategoricalOtherTerm = BaseCategoricalTerm & {
+	groupsetting: OtherTermGroupSetting
+}
+
+export type CategoricalTerm = CategoricalPredefinedGsTerm | CategoricalOtherTerm
 
 /**
  * A categorical term wrapper object
@@ -68,7 +78,7 @@ export type CategoricalTW = BaseTW & {
 
 export type CatTWValues = BaseTW & {
 	//id: string
-	term: CategoricalTerm
+	term: CategoricalOtherTerm
 	q: ValuesQ
 	type: 'CatTWValues'
 	// do not use this boolean flag, defined here only to help illustrate
@@ -79,7 +89,7 @@ export type CatTWValues = BaseTW & {
 
 export type CatTWPredefinedGS = BaseTW & {
 	//id: string
-	term: CategoricalTerm
+	term: CategoricalPredefinedGsTerm
 	q: PredefinedGroupSettingQ
 	type: 'CatTWPredefinedGS'
 	// do not use this boolean flag, defined here only to help illustrate
@@ -90,7 +100,7 @@ export type CatTWPredefinedGS = BaseTW & {
 
 export type CatTWCustomGS = BaseTW & {
 	//id: string
-	term: CategoricalTerm
+	term: CategoricalOtherTerm
 	q: CustomGroupSettingQ
 	type: 'CatTWCustomGS'
 }

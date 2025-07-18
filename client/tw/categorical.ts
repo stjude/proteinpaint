@@ -156,7 +156,7 @@ export class CatPredefinedGS extends CategoricalBase {
 		this.q = tw.q
 		this.#tw = tw
 		Object.defineProperty(this, 'groupset', {
-			value: this.term.groupsetting[this.#tw.q.predefined_groupset_idx]
+			value: this.#tw.term.groupsetting[this.#tw.q.predefined_groupset_idx]
 		})
 		this.#opts = opts
 	}

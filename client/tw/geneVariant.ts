@@ -172,8 +172,8 @@ export class GvPredefinedGS extends GvBase {
 		super(tw, opts)
 		// this.term = tw.term // already set in base class
 		this.q = tw.q
-		Object.defineProperty(this, 'groupset', { value: this.term.groupsetting[this.#tw.q.predefined_groupset_idx] })
 		this.#tw = tw
+		Object.defineProperty(this, 'groupset', { value: this.#tw.term.groupsetting[this.#tw.q.predefined_groupset_idx] })
 		this.#opts = opts
 	}
 
