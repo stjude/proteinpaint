@@ -1,8 +1,8 @@
-import { renderTable } from '#dom'
+import { renderTable, sayerror } from '#dom'
 import { debounce } from 'debounce'
 import type { AIHistoInteractions } from '../interactions/AIHistoInteractions'
 
-export class View {
+export class ProjectAdminRender {
 	dom: any
 	projects: any[]
 	interactions: AIHistoInteractions
@@ -13,13 +13,17 @@ export class View {
 		this.interactions = interactions
 	}
 
-	render() {
-		const projectDiv = this.dom.holder.append('div').attr('class', 'ai-histo-tool-projects')
-		this.renderNewProject(projectDiv)
-		this.renderExistingProjects(projectDiv)
+	/** Renders project administration UI, allowing users to 
+	 * create new projects or edit existing ones.*/
+	renderProjectAdmin() {
+		const projectDiv = this.dom.holder.append('div').attr('id', 'sjpp-ai-histo-tool-projects').attr('class', 'sjpp-deletable-ai-histo-div')
+		this.renderCreateProject(projectDiv)
+		this.renderProjectSelection(projectDiv)
 	}
 
-	renderNewProject(projectDiv) {
+	/** Users submit a new project name before sample
+	 * filtering UI to finalize project creation.*/
+	renderCreateProject(projectDiv) {
 		const newProjectDiv = projectDiv.append('div').attr('class', 'sjpp-project-select-new').style('padding', '10px')
 
 		const input = newProjectDiv
@@ -37,16 +41,12 @@ export class View {
 				const projectName = input.property('value')
 				const notEmpty = projectName.trim().length > 0
 				if (!notEmpty) {
-					//TODO: use say error instead
 					//Shouldn't be necessary because of the debouncer
-					console.warn('Project name cannot be empty')
-					return
+					return sayerror(this.dom.errorDiv, 'Project name cannot be empty')
 				}
 				const notUnique = this.projects.some((p: any) => p.value === projectName)
 				if (notUnique) {
-					//TODO: use say error instead
-					console.warn(`Project name '${projectName}' already exists`)
-					return
+					return sayerror(this.dom.errorDiv, `Project name '${projectName}' already exists`)
 				}
 				this.interactions.addProject(projectName)
 				//TODO: clear UI and open meta data and image selector
@@ -60,7 +60,10 @@ export class View {
 		})
 	}
 
-	renderExistingProjects(projectDiv) {
+	/** Users may select an existing project from a table
+	 * returned for the db to edit or delete, depending
+	 * on user roles.*/
+	renderProjectSelection(projectDiv) {
 		if (!this.projects.length) return
 
 		const tableDiv = projectDiv.append('div').attr('class', 'sjpp-project-select-table').style('padding', '10px')
