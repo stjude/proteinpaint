@@ -2,7 +2,34 @@
 'use strict'
 
 /*
- The allowed arguments and command-line options are listed in the ARGUMENTS section below  
+	This script detects which workspace has relevant code/file changes,
+	with different options on how to emit the results. 
+	NOTE: If the output is missing a changed workspace that is known to have
+	relevant changes, check the logic in `fileAffectsVersion()` or the commit reference.
+
+	USAGE: 
+	run from the pp dir as
+		
+		./build/bump.js <verType> [-o=outputType] [-w] [-x=workspaceNamePattern] [-c=referenceCommit]
+	
+	ARGUMENTS:
+	verType: 
+		see the allowed version types in https://docs.npmjs.com/cli/v8/commands/npm-version
+		e.g., <newversion> | major | minor | patch | premajor | preminor | prepatch | prerelease | from-git
+	
+	-o: one of these output types: 
+		oneline: (default) list of changed workspaces, e.g., "client front server"
+		vline: new version + oneline, may be useful as a commit message e.g., "v2.2.0 client front server"
+		minjson: minimized object copy as JSON
+		detailed: log errors/warnings and detailed object copy as JSON
+	
+	-w: boolean (defaults to false)
+		- if true, update package.json of a changed workspace
+	
+	-x: list of workspace name patterns to exclude from processing, can use multiple -x arguments
+
+	-c: the commit reference to use for git diff
+		- defaults to the version in proteinpaint/package.json
 */
 
 const path = require('path')
@@ -17,8 +44,6 @@ process.removeAllListeners('warning')
 // * ARGUMENTS
 // ************
 
-// see the allowed version types in https://docs.npmjs.com/cli/v8/commands/npm-version
-// e.g., <newversion> | major | minor | patch | premajor | preminor | prepatch | prerelease | from-git
 const verType = process.argv[2]
 if (!verType) {
 	throw `Missing version type argument, must be one of the allowed 'npm version [type]'`
@@ -30,20 +55,14 @@ const rootPkg = require(path.join(cwd, '/package.json'))
 // command-line options, `-${single_letter}=value`
 const defaults = {
 	verType,
-	// -o
+	// -o argument
 	output: 'oneline',
-	// oneline: list of changed workspaces,
-	//          e.g., "client front server"
-	// vline: new version + oneline, may be useful as a commit message
-	//          e.g., "v2.2.0 client front server"
-	// minjson: minimized object copy as JSON
-	// detailed: log errors/warnings and detailed object copy as JSON
-	// -w
-	write: false, // if true, update package.json as needed
-	// -x
-	exclude: [], // list of workspace name patterns to exclude from processing,
-	// -c
-	refCommit: `v${rootPkg.version}^{commit}` // the commit reference to use for git diff
+	// -w argument
+	write: false,
+	// -x argument
+	exclude: [],
+	// -c argument
+	refCommit: `v${rootPkg.version}^{commit}`
 }
 const opts = JSON.parse(JSON.stringify(defaults))
 for (const k of process.argv.slice(3)) {
