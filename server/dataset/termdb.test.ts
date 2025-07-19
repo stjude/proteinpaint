@@ -298,14 +298,43 @@ export default function (): Mds3 {
 			},
 			geneExpression: {
 				src: 'native',
-				file: 'files/hg38/TermdbTest/TermdbTest.fpkm.matrix.h5'
+				file: 'files/hg38/TermdbTest/rnaseq/TermdbTest.fpkm.matrix.h5'
 			},
 			topVariablyExpressedGenes: {
 				src: 'native'
 			},
 			rnaseqGeneCount: {
 				storage_type: 'HDF5',
-				file: 'files/hg38/TermdbTest/TermdbTest.geneCounts.h5'
+				file: 'files/hg38/TermdbTest/rnaseq/TermdbTest.geneCounts.h5'
+			},
+			singleCell: {
+				samples: {
+					sampleColumns: [{ termid: 'sex' }],
+					extraSampleTabLabel: 'sex'
+				},
+				data: {
+					sameLegend: true,
+					src: 'native',
+					plots: [
+						{
+							name: 'scRNA',
+							folder: 'files/hg38/TermdbTest/scrna/umap',
+							fileSuffix: '_umap.txt',
+							colorColumns: [
+								{
+									index: 3,
+									name: 'CellType'
+								}
+							],
+							coordsColumns: { x: 1, y: 2 },
+							selected: true
+						}
+					]
+				},
+				geneExpression: {
+					src: 'native',
+					folder: 'files/hg38/TermdbTest/scrna/geneExpHdf5'
+				}
 			},
 			WSImages: {
 				type: 'H&E',
