@@ -143,14 +143,18 @@ async function validateSamplesNative(S: SingleCellSamples, D: SingleCellDataNati
 	// samples map populated with samples with sc data
 	if (S.sampleColumns) {
 		// has optional terms to show as table columns and annotate samples; pull sample values and assign
-		for (const term of S.sampleColumns) {
-			const s2v = ds.cohort.termdb.q.getAllValues4term(term.termid) // map. k: sampleid, v: term value
+		for (const { termid } of S.sampleColumns) {
+			// get term obj to verify termid
+			const term = ds.cohort.termdb.q.termjsonByOneid(termid)
+			if (!term) throw 'unknown termid from singlecell.samples.sampleColumns[]'
+			const s2v = ds.cohort.termdb.q.getAllValues4term(termid) // map. k: sampleid, v: term value
 			for (const [sid, v] of s2v.entries()) {
 				if (!samples.has(sid)) continue // ignore sample without sc data
-				samples.get(sid)[term.termid] = v
+				samples.get(sid)[termid] = term.values?.[v]?.label || v
 			}
 		}
 	}
+
 	// FIXME must get q.filter and apply filter to list!!
 	S.get = () => {
 		return { samples: [...samples.values()] as SingleCellSample[] }

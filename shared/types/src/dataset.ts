@@ -743,14 +743,13 @@ export type SingleCellGeneExpressionGdc = {
 }
 
 export type SingleCellSamples = {
-	/** if missing refer to the samples as 'sample', this provides override e.g. 'case' */
 	/** logic to decide sample table columns (the one shown on singlecell app ui, displaying a table of samples with sc data)
 	a sample table will always have a sample column, to show sample.sample value
 	- use uiLabels.Sample to customize the name of the first column
 	- the other two properties allow to declare additional columns to be shown in table, that are for display only
 	when sample.experiments[] are used, a last column of experiment id will be auto added
 	*/
-	/** any columns to be added to sample table. each is a term id */
+	/** any columns to be added to sample table. each is a term id, limited to categorical/numeric dictionary terms */
 	sampleColumns?: { termid: string }[]
 	/** used on client but not on ds */
 	experimentColumns?: { label: string }[]
