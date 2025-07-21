@@ -28,4 +28,4 @@ jobs:
           token: ${{ secrets.PAT }}
           repository: stjude/sj-pp
           event-type: test
-          client-payload: 'Test'
+          client-payload: '{"test":"test"}'
