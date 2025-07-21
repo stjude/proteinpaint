@@ -1,6 +1,9 @@
 name: 'Publish Docker Image'
 description: 'Build and publish Docker image to GitHub Container Registry.'
 inputs:
+  PAT:
+    description: 'personal access token'
+    required: true
   TOKEN:
     description: 'github token'
     required: true
@@ -73,7 +76,7 @@ runs:
       uses: peter-evans/repository-dispatch@v2
       if: ${{ !startsWith(github.ref_name, 'release') && !startsWith(github.ref_name, 'prerelease') }}
       with:
-        token: ${{ inputs.TOKEN }}
+        token: ${{ inputs.PAT }}
         repository: stjude/sj-pp
         event-type: version-update
         client-payload: '{"pp_version": "${{ steps.pp-version.outputs.current-version }}", "front_version": "${{ steps.front-version.outputs.current-version }}", "server_version": "${{ steps.server-version.outputs.current-version}}", "docker_version": "${{ steps.docker-publish.outputs.docker_version}}", "branch": "${{ steps.docker-publish.outputs.branch }}"}'

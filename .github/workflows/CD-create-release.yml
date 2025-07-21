@@ -148,6 +148,7 @@ jobs:
       - name: Publish docker image
         uses: stjude/proteinpaint/.github/actions/publish-ppfull-ppserver-image@master
         with:
+          PAT: ${{ secrets.PAT }}
           TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_ACTOR: ${{ github.actor }}
 
@@ -175,5 +176,6 @@ jobs:
       - name: Publish docker image with Rust binaries
         uses: stjude/proteinpaint/.github/actions/publish-ppfull-ppserver-image@master
         with:
+          PAT: ${{ secrets.PAT }}
           TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_ACTOR: ${{ github.actor }}
