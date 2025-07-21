@@ -983,6 +983,12 @@ export function getSamplelstTWFromIds(ids) {
 	return tw
 }
 
+export function getSamplelstFilter(ids) {
+	const tw = getSamplelstTWFromIds(ids)
+	const filter = getFilter(tw)
+	return filter
+}
+
 export function getFilter(samplelstTW) {
 	let i = 0
 	let noEdit = true

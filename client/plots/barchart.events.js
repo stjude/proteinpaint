@@ -6,7 +6,7 @@ import { rgb } from 'd3-color'
 import { roundValueAuto } from '#shared/roundValue.js'
 import { isNumericTerm } from '#shared/terms.js'
 import { negateTermLabel } from './barchart'
-import { mclass } from '#shared/common.js'
+import { getSamplelstFilter } from '../mass/groups.js'
 
 export default function getHandlers(self) {
 	const tip = new Menu({ padding: '5px' })
@@ -603,7 +603,7 @@ async function listSamples(event, self, seriesId, dataId, chartId) {
 
 	function getTvs(termIndex, value) {
 		const term = termIndex == 0 ? self.config.term0 : termIndex == 1 ? self.config.term : self.config.term2
-		const tvs = {
+		let tvs = {
 			type: 'tvs',
 			tvs: {
 				term: term.term,
@@ -613,6 +613,11 @@ async function listSamples(event, self, seriesId, dataId, chartId) {
 		if (isNumericTerm(term.term)) {
 			const bins = self.bins[termIndex]
 			tvs.tvs.ranges = [bins.find(bin => bin.label == value)]
+		} else if (term.term.type == 'samplelst') {
+			const list = term.term.values?.[value]?.list || []
+			const ids = list.map(s => s.sampleId)
+			const tvslst = getSamplelstFilter(ids)
+			tvs = tvslst.lst[0] // tvslst only has the tvs for the samplelst term
 		} else if (term.term.type == 'geneVariant' && term.q.type == 'values') {
 			throw 'no longer supported in barchart'
 			/*** code below was used to list samples for geneVariant term with q.type='values', but now only geneVariant with groupsetting is used in barchart ***/
