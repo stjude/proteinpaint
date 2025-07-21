@@ -57,23 +57,23 @@ export class ViewModelMapper {
 	}
 
 	map(opts: any): ViewModel {
-		let chromosomesOverride = opts.args.chromosomes
+		let selectedChromosomes = opts.args.chromosomes
 
 		const chrSizes = opts.args.genome.majorchr
 		let excludedChromosomes: string[] = []
 
 		if (
-			!chromosomesOverride &&
+			!selectedChromosomes &&
 			Array.isArray(this.settings.Disco.selectedChromosomes) &&
 			this.settings.Disco.selectedChromosomes.length
 		) {
-			chromosomesOverride = {}
+			selectedChromosomes = {}
 			for (const chr of this.settings.Disco.selectedChromosomes) {
-				if (chrSizes[chr]) chromosomesOverride[chr] = chrSizes[chr]
+				if (chrSizes[chr]) selectedChromosomes[chr] = chrSizes[chr]
 			}
 			excludedChromosomes = Object.keys(chrSizes).filter(c => !this.settings.Disco.selectedChromosomes!.includes(c))
-		} else if (chromosomesOverride) {
-			excludedChromosomes = Object.keys(chrSizes).filter(c => !(c in chromosomesOverride))
+		} else if (selectedChromosomes) {
+			excludedChromosomes = Object.keys(chrSizes).filter(c => !(c in selectedChromosomes))
 		}
 
 		const sampleName = opts.args.sampleName
@@ -88,7 +88,7 @@ export class ViewModelMapper {
 
 		this.applyRadius()
 
-		const reference = new Reference(this.settings, chrSizes, chromosomesOverride)
+		const reference = new Reference(this.settings, chrSizes, selectedChromosomes)
 
 		const dataMapper = new DataMapper(this.settings, reference, sampleName, prioritizedGenes, excludedChromosomes)
 
