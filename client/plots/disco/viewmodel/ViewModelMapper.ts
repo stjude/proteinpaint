@@ -62,6 +62,14 @@ export class ViewModelMapper {
 		const chrSizes = opts.args.genome.majorchr
 		let excludedChromosomes: string[] = []
 
+		// Determine which chromosomes should be visualized. When
+		// `selectedChromosomes` is not provided as an argument, fall back
+		// to `settings.Disco.selectedChromosomes` and construct a mapping
+		// of valid chromosomes. Any chromosomes omitted from that list are
+		// considered excluded. If `selectedChromosomes` is given, compute
+		// the excluded set by comparing it to the full list of reference
+		// chromosomes.
+
 		if (
 			!selectedChromosomes &&
 			Array.isArray(this.settings.Disco.selectedChromosomes) &&
