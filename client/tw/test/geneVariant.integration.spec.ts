@@ -1,5 +1,5 @@
 import tape from 'tape'
-import type { GvCustomGsQ, RawGvTW, DtTerm } from '#types'
+import type { GvCustomGsQ, RawGvTW, DtTerm, GvTW } from '#types'
 import { vocabInit } from '#termdb/vocabulary'
 import { GvBase } from '../geneVariant'
 import { getPredefinedGroupsets } from '../../termsetting/handlers/geneVariant.ts'
@@ -119,12 +119,14 @@ tape('fill(): q.type=predefined-groupset', async test => {
 		isAtomic: true,
 		q: { isAtomic: true, type: 'predefined-groupset' }
 	}
-	const fullTw = await GvBase.fill(tw, { vocabApi })
+	const fullTw: GvTW = await GvBase.fill(tw, { vocabApi })
+	if (fullTw.q.type != 'predefined-groupset') throw 'q.type must be predefined-groupset'
 	test.equal(fullTw.type, 'GvPredefinedGsTW', 'should fill in tw.type')
 	test.equal(fullTw.q.predefined_groupset_idx, 0, 'should fill q.predefined_groupset_idx to be 0')
-	test.deepEqual(tw.term.childTerms, childTerms, 'should fill in term.childTerms')
-	test.equal(tw.term.groupsetting.lst.length, 4, 'should get 4 predefined groupsets')
-	for (const groupset of tw.term.groupsetting.lst) {
+	test.deepEqual(fullTw.term.childTerms, childTerms, 'should fill in term.childTerms')
+	if (!fullTw.term.groupsetting.lst) throw 'term.groupsetting.lst is missing'
+	test.equal(fullTw.term.groupsetting.lst.length, 4, 'should get 4 predefined groupsets')
+	for (const groupset of fullTw.term.groupsetting.lst) {
 		testGroupset(groupset, test)
 	}
 	test.end()

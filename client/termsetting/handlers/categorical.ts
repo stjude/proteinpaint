@@ -7,8 +7,7 @@ import type {
 	CategoricalTerm,
 	CategoricalTW,
 	CategoricalTermSettingInstance,
-	VocabApi,
-	PredefinedTermGroupSetting
+	VocabApi
 } from '#types'
 import type { PillData } from '../types'
 import { copyMerge } from '#rx'
@@ -70,10 +69,9 @@ export async function getHandler(self: CategoricalTermSettingInstance) {
 			} else if (q.type == 'predefined-groupset' || q.type == 'custom-groupset') {
 				let groupset: BaseGroupSet
 				if (q.type == 'predefined-groupset') {
-					const groupsetting = t.groupsetting as PredefinedTermGroupSetting
-					if (!groupsetting) throw 'no term.groupsetting'
-					if (!groupsetting.lst?.length) throw 'term.groupsetting.lst is empty'
-					groupset = groupsetting.lst[q.predefined_groupset_idx]
+					if (!t.groupsetting) throw 'no term.groupsetting'
+					if (!t.groupsetting.lst?.length) throw 'term.groupsetting.lst is empty'
+					groupset = t.groupsetting.lst[q.predefined_groupset_idx]
 					if (!groupset) throw 'no groupset entry for groupsetting.lst[predefined_groupset_idx]'
 				} else {
 					groupset = q.customset
@@ -119,9 +117,8 @@ export function setCategoryMethods(self: CategoricalTermSettingInstance) {
 		if (self.q.type == 'predefined-groupset') {
 			if (!Number.isInteger(self.q.predefined_groupset_idx))
 				return { text: 'q.predefined_groupset_idx is not an integer', bgcolor: 'red' }
-			const groupsetting = self.term.groupsetting as PredefinedTermGroupSetting
-			if (!groupsetting?.lst?.length) return { text: 'term.groupsetting is empty', bgcolor: 'red' }
-			const i = groupsetting.lst[self.q.predefined_groupset_idx]
+			if (!self.term.groupsetting?.lst?.length) return { text: 'term.groupsetting is empty', bgcolor: 'red' }
+			const i = self.term.groupsetting.lst[self.q.predefined_groupset_idx]
 			if (!i) return { text: 'term.groupsetting.lst entry is missing', bgcolor: 'red' }
 			return { text: i.name }
 		}
