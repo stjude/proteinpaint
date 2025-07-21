@@ -119,10 +119,11 @@ tape('show() with args', async test => {
 	{
 		//left (x) position
 		const posNum = 50
+		const y = /*testMenu.offsetY +*/ window.scrollY // when running many other tests, the screen would scroll vertically
 		testMenu.show(posNum)
 		test.deepEqual(
 			{ left: testMenu.dnode.style.left, top: testMenu.dnode.style.top },
-			{ left: `${posNum + testMenu.offsetX}px`, top: '' },
+			{ left: `${posNum + testMenu.offsetX}px`, top: y ? `${y}px` : '' },
 			`Should show menu left, under header, shifted by .offsetX = ${testMenu.offsetX}px`
 		)
 	}
@@ -130,22 +131,24 @@ tape('show() with args', async test => {
 	{
 		//top (y) position
 		const posNum = 50
+		const y = posNum + testMenu.offsetY + window.scrollY // when running many other tests, the screen would scroll vertically
 		testMenu.show('', posNum)
 		test.deepEqual(
 			{ left: testMenu.dnode.style.left, top: testMenu.dnode.style.top },
-			{ left: '20px', top: `${posNum + testMenu.offsetY}px` },
-			`Should show menu at the top, above header, shifted by .offsetY = ${testMenu.offsety}px`
+			{ left: '20px', top: `${y}px` },
+			`Should show menu at the top, above header, shifted by .offsetY + window.scrollY = ${y}px`
 		)
 	}
 
 	// left & top (x & y) position
 	{
 		const posNum = 100
+		const y = posNum + testMenu.offsetY + window.scrollY
 		testMenu.show(posNum, posNum)
 		test.deepEqual(
 			{ left: testMenu.dnode.style.left, top: testMenu.dnode.style.top },
-			{ left: `${posNum + testMenu.offsetX}px`, top: `${posNum + testMenu.offsetY}px` },
-			`Should show menu top left corner, over header, shifted by .offsetX = ${testMenu.offsetX}px & .offsetY = ${testMenu.offsetY}px`
+			{ left: `${posNum + testMenu.offsetX}px`, top: `${y}px` },
+			`Should show menu top left corner, over header, shifted by .offsetX = ${testMenu.offsetX}px & .offsetY = ${y}px`
 		)
 	}
 
@@ -155,7 +158,7 @@ tape('show() with args', async test => {
 		testMenu.show(posNum, posNum, false)
 		test.deepEqual(
 			{ left: testMenu.dnode.style.left, top: testMenu.dnode.style.top },
-			{ left: `${posNum}px`, top: `${posNum}px` },
+			{ left: `${posNum}px`, top: `${posNum + window.scrollY}px` },
 			`Should show menu top left corner without .offsetX or .offsetY added to left or top, respectively.`
 		)
 	}

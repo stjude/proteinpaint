@@ -419,13 +419,6 @@ tape('Numerical term: range boundaries', async test => {
 
 	await opts.pill.main(opts.tsData)
 
-	// create enter event to use for inputs of bin edit menu
-	const enter_event = new KeyboardEvent('keyup', {
-		code: 'Enter',
-		key: 'Enter',
-		keyCode: 13
-	})
-
 	const pilldiv = opts.holder.node().querySelectorAll('.ts_pill')[0]
 	await opts.pillMenuClick('Edit')
 	await sleep(1000)
@@ -468,17 +461,9 @@ tape('Numerical term: fixed bins', async test => {
 		}
 	})
 	await opts.pill.main(opts.tsData)
-
-	// create enter event to use for inputs of bin edit menu
-	const enter_event = new KeyboardEvent('keyup', {
-		code: 'Enter',
-		key: 'Enter',
-		keyCode: 13
-	})
-
 	await opts.pillMenuClick('Edit')
 	const tip = opts.pill.Inner.dom.tip
-	await sleep(100)
+	await detectGte({ target: tip.d.node(), selector: '.binsize_g', count: 1 })
 	const lines = tip.d.select('.binsize_g').node().querySelectorAll('line')
 	test.equal(lines.length, 8, 'should have 8 lines')
 	// first line should be draggable
@@ -520,7 +505,7 @@ tape('Numerical term: fixed bins', async test => {
 
 	//trigger 'change' to update bins
 	first_bin_input.dispatchEvent(new Event('change'))
-
+	await sleep(10)
 	test.equal(
 		d3s.select(tip.d.selectAll('tr')._groups[0][1]).selectAll('input')._groups[0][0].value,
 		'7',
@@ -542,7 +527,7 @@ tape('Numerical term: fixed bins', async test => {
 
 	//trigger 'change' to update bins
 	last_bin_input.dispatchEvent(new Event('change'))
-
+	await sleep(50)
 	test.equal(
 		tip.d.node().querySelectorAll('tr')[2].querySelectorAll('div')[1].querySelectorAll('input')[0].value,
 		'20',
