@@ -62,7 +62,7 @@ export class WSIViewer extends RxComponentInner {
 		const dslabel = state.dslabel || state.vocab.dslabel
 		const sample_id = state.sample_id
 
-		const viewModel = await this.viewModelProvider.provide(genome, dslabel, sample_id)
+		const viewModel = await this.viewModelProvider.provide(genome, dslabel, sample_id, settings.sessionsAnnotations)
 		const wsimages = viewModel.sampleWSImages
 		const wsimageLayers = viewModel.wsimageLayers
 		const wsimageLayersLoadError = viewModel.wsimageLayersLoadError
@@ -113,7 +113,7 @@ export class WSIViewer extends RxComponentInner {
 			this.legendRenderer.render(holder, imageViewData)
 			this.metadataRenderer.renderMetadata(holder, imageViewData)
 
-			const zoomInPoints = wsimages[settings.displayedImageIndex].zoomInPoints
+			const zoomInPoints = viewModel.getZoomInPoints(settings.displayedImageIndex)
 
 			if (zoomInPoints != undefined) {
 				this.wsiViewerInteractions.addZoomInEffect(activeImageExtent, zoomInPoints, this.map)
@@ -123,6 +123,11 @@ export class WSIViewer extends RxComponentInner {
 					activeImageExtent,
 					imageViewData.shortcuts,
 					buffers,
+
+					// TODO
+
+					// Continue here with work!!!!
+
 					wsimages[settings.displayedImageIndex]
 				)
 			}

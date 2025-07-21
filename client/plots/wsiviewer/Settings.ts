@@ -1,3 +1,5 @@
+import type { SessionAnnotation } from '#plots/wsiviewer/viewModel/SessionAnnotation.ts'
+
 export default interface Settings {
 	imageWidth: string
 	imageHeight: string
@@ -8,4 +10,6 @@ export default interface Settings {
 	thumbnailHeight: string
 	renderWSIViewer: boolean
 	renderAnnotationTable: boolean
+	activeAnnotation: number
+	sessionsAnnotations: Array<SessionAnnotation>
 }
