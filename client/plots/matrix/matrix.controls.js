@@ -350,9 +350,12 @@ export class MatrixControls {
 			.append('button')
 			//.property('disabled', d => d.disabled)
 			.datum({
-				label: this.parent.chartType == 'hierCluster' ? 'Unclustered Genes' : 'Genes',
-				getCount: () => this.parent.termOrder?.filter(t => t.tw.term.type == 'geneVariant').length || 0,
-				customInputs: this.appendGeneInputs,
+				label: this.parent.chartType == 'hierCluster' ? 'Clustered Genes' : 'Genes',
+				getCount: () =>
+					this.parent.chartType == 'hierCluster'
+						? this.parent.termOrder?.filter(t => t.tw.term.type == TermTypes.GENE_EXPRESSION).length || 0
+						: this.parent.termOrder?.filter(t => t.tw.term.type == 'geneVariant').length || 0,
+				customInputs: this.addGeneInputs,
 				rows: [
 					{
 						label: `Display ${l.Sample} Counts for Gene`,
@@ -1103,6 +1106,12 @@ export class MatrixControls {
 		tr.append('td').text(value)
 	}
 
+	async addGeneInputs(self, app, parent, table) {
+		if (parent.chartType == 'hierCluster' && parent.config.dataType == TermTypes.GENE_EXPRESSION) {
+			self.appendGeneInputs(self, app, parent, table, 'hierCluster')
+		}
+		self.appendGeneInputs(self, app, parent, table)
+	}
 	async appendGeneInputs(self, app, parent, table, geneInputType) {
 		tip.clear()
 		if (!parent.selectedGroup) parent.selectedGroup = 0
@@ -1133,12 +1142,7 @@ export class MatrixControls {
 	}
 
 	addGenesetInput(event, app, parent, tr, geneInputType) {
-		const controlPanelBtn =
-			geneInputType == 'hierCluster'
-				? this.btns.filter(d => d.label == 'Clustering')?.node()
-				: this.btns
-						.filter(d => d.label == (parent.config.chartType == 'hierCluster' ? 'Unclustered Genes' : 'Genes'))
-						?.node()
+		const controlPanelBtn = this.btns.filter(d => d.label.endsWith('Genes'))?.node()
 		const tip = app.tip //new Menu({ padding: '5px' })
 		const tg = parent.config.termgroups
 
@@ -1214,7 +1218,9 @@ export class MatrixControls {
 		//the number of groups in the current matrix that is editable: hiercluster group should not be edited from "Genes" control panel.
 		const numOfEditableGrps = tg.filter(g => g.type != 'hierCluster').length
 
-		tr.append('td').attr('class', 'sja-termdb-config-row-label').html('Gene Set')
+		tr.append('td')
+			.attr('class', 'sja-termdb-config-row-label')
+			.html(geneInputType == 'hierCluster' ? 'Clustered Gene Set' : 'Unclustered Gene Set')
 
 		if (numOfEditableGrps > 0 || geneInputType == 'hierCluster') {
 			const td1 = tr.append('td').style('display', 'block').style('padding', '5px 0px')
@@ -1225,11 +1231,7 @@ export class MatrixControls {
 				.html(numOfEditableGrps > 1 && geneInputType !== 'hierCluster' ? 'Edit Selected Group' : 'Edit Current Group')
 				.on('click', () => {
 					tip.clear()
-					this.setMenuBackBtn(
-						tip.d.append('div').style('padding', '5px'),
-						() => controlPanelBtn.click(),
-						`Back to ${geneInputType !== 'hierCluster' ? 'Genes' : 'Clustering'}`
-					)
+					this.setMenuBackBtn(tip.d.append('div').style('padding', '5px'), () => controlPanelBtn.click(), `Back`)
 					const genesetEdiUiHolder = tip.d.append('div')
 					triggerGenesetEdit(genesetEdiUiHolder)
 				})
