@@ -16,7 +16,8 @@ export default function discoDefaults(overrides: any = {}): Settings {
 			cnvPercentile: 90, // 90th percentile for removing outliers
 			cnvCutoffMode: 'percentile',
 			radius: 300,
-			fusionOpacity: 1
+			fusionOpacity: 1,
+			selectedChromosomes: []
 		},
 
 		rings: {

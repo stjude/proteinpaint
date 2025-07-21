@@ -56,6 +56,7 @@ export default class DataMapper {
 	private snvRingFilter: (data: Data) => boolean
 	private dataObjectMapper: DataObjectMapper
 	private lastInnerRadious: number
+	private excludedChromosomes: string[]
 
 	private snvFilter = (data: Data) => data.dt == dtsnvindel
 	private fusionFilter = (data: Data) => data.dt == dtfusionrna || data.dt == dtsv
@@ -76,10 +77,17 @@ export default class DataMapper {
 		return aPos - bPos
 	}
 
-	constructor(settings: Settings, reference: Reference, sample: string, prioritizedGenes: Array<string> = []) {
+	constructor(
+		settings: Settings,
+		reference: Reference,
+		sample: string,
+		prioritizedGenes: Array<string> = [],
+		excludedChromosomes: string[] = []
+	) {
 		this.settings = settings
 		this.reference = reference
 		this.sample = sample
+		this.excludedChromosomes = excludedChromosomes
 		this.lastInnerRadious = this.settings.rings.chromosomeInnerRadius
 
 		this.gainCapped = this.settings.Disco.cnvCapping
@@ -129,7 +137,9 @@ export default class DataMapper {
 						this.invalidEntries.push({ dataType: 'SNV', reason: `Position ${pos} outside of ${dObject.chr}` })
 					}
 				} else if (index == -1) {
-					this.invalidEntries.push({ dataType: 'SNV', reason: `Unknown chr ${dObject.chr}` })
+					if (!this.excludedChromosomes.includes(dObject.chr)) {
+						this.invalidEntries.push({ dataType: 'SNV', reason: `Unknown chr ${dObject.chr}` })
+					}
 				}
 			} else if (dObject.dt == dtfusionrna || dObject.dt == dtsv) {
 				if (indexA != -1 && indexB != -1) {
@@ -150,12 +160,17 @@ export default class DataMapper {
 						this.addData(dObject, dataArray)
 					} else {
 						const reasonParts: string[] = []
-						if (!(Number.isFinite(posA) && posA >= 0 && posA <= chrSizeA)) reasonParts.push(`Position ${posA} outside of ${dObject.chrA}`)
-						if (!(Number.isFinite(posB) && posB >= 0 && posB <= chrSizeB)) reasonParts.push(`Position ${posB} outside of ${dObject.chrB}`)
+						if (!(Number.isFinite(posA) && posA >= 0 && posA <= chrSizeA))
+							reasonParts.push(`Position ${posA} outside of ${dObject.chrA}`)
+						if (!(Number.isFinite(posB) && posB >= 0 && posB <= chrSizeB))
+							reasonParts.push(`Position ${posB} outside of ${dObject.chrB}`)
 						this.invalidEntries.push({ dataType: 'Fusion', reason: reasonParts.join('; ') })
 					}
 				} else {
-					this.invalidEntries.push({ dataType: 'Fusion', reason: 'Unknown chr in fusion' })
+					const missing: string[] = []
+					if (indexA == -1 && !this.excludedChromosomes.includes(dObject.chrA)) missing.push(dObject.chrA)
+					if (indexB == -1 && !this.excludedChromosomes.includes(dObject.chrB)) missing.push(dObject.chrB)
+					if (missing.length) this.invalidEntries.push({ dataType: 'Fusion', reason: 'Unknown chr in fusion' })
 				}
 			} else if ([dtcnv, dtloh].includes(Number(dObject.dt))) {
 				const idx = this.reference.chromosomesOrder.indexOf(dObject.chr)
@@ -164,13 +179,7 @@ export default class DataMapper {
 					const start = dObject.start
 					const stop = dObject.stop
 					// validate CNV/LOH segment boundaries are numeric and fall within chromosome range
-					if (
-						Number.isFinite(start) &&
-						Number.isFinite(stop) &&
-						start >= 0 &&
-						stop <= chrSize &&
-						start <= stop
-					) {
+					if (Number.isFinite(start) && Number.isFinite(stop) && start >= 0 && stop <= chrSize && start <= stop) {
 						this.addData(dObject, dataArray)
 					} else {
 						this.invalidEntries.push({
@@ -179,7 +188,12 @@ export default class DataMapper {
 						})
 					}
 				} else {
-					this.invalidEntries.push({ dataType: dObject.dt == dtcnv ? 'CNV' : 'LOH', reason: `Unknown chr ${dObject.chr}` })
+					if (!this.excludedChromosomes.includes(dObject.chr)) {
+						this.invalidEntries.push({
+							dataType: dObject.dt == dtcnv ? 'CNV' : 'LOH',
+							reason: `Unknown chr ${dObject.chr}`
+						})
+					}
 				}
 			} else {
 				throw Error('Unknown mutation type!')
@@ -280,8 +294,7 @@ export default class DataMapper {
 			cnvMaxPercentileAbs: this.cnvMaxPercentileAbs,
 
 			lohMaxValue: this.lohMaxValue,
-			lohMinValue: this.lohMinValue
-			,
+			lohMinValue: this.lohMinValue,
 			invalidDataInfo: {
 				count: this.invalidEntries.length,
 				entries: this.invalidEntries
@@ -381,7 +394,7 @@ export default class DataMapper {
 	private calculateArcAngle(data: Data) {
 		const currentChromosome =
 			this.reference.chromosomes[
-			this.reference.chromosomesOrder.findIndex(chromosomeOrder => data.chr == chromosomeOrder)
+				this.reference.chromosomesOrder.findIndex(chromosomeOrder => data.chr == chromosomeOrder)
 			]
 
 		const dataAnglePos = Math.floor(data.position / this.bpx)
