@@ -11,7 +11,9 @@ export default function wsiViewerDefaults(overrides = {}): Settings {
 		thumbnailWidth: '60px',
 		thumbnailHeight: '80px',
 		renderWSIViewer: true,
-		renderAnnotationTable: true
+		renderAnnotationTable: true,
+		activeAnnotation: 0,
+		sessionsAnnotations: []
 	}
 	return copyMerge(defaults, overrides)
 }

@@ -16,22 +16,12 @@ import type Settings from '../Settings'
 
 export class MapRenderer {
 	public wSImageLayers: WSImageLayers
-	private viewerClickListener: (
-		activeImageExtent: Extent | undefined,
-		coordinateX: number,
-		coordinateY: number,
-		map: OLMap
-	) => void
+	private viewerClickListener: (coordinateX: number, coordinateY: number) => void
 	private activeImageExtent: Extent | undefined
 
 	constructor(
 		wSImageLayers: WSImageLayers,
-		viewerClickListener: (
-			activeImageExtent: Extent | undefined,
-			coordinateX: number,
-			coordinateY: number,
-			map: OLMap
-		) => void,
+		viewerClickListener: (coordinateX: number, coordinateY: number) => void,
 		activeImageExtent: Extent | undefined
 	) {
 		this.wSImageLayers = wSImageLayers
@@ -122,7 +112,7 @@ export class MapRenderer {
 				const tileY = Math.floor(-coordinate[1] / tileSize) * tileSize
 
 				// Call the listener with upper-left corner
-				this.viewerClickListener(this.activeImageExtent, tileX, tileY, map)
+				this.viewerClickListener(tileX, tileY)
 			})
 		}
 
