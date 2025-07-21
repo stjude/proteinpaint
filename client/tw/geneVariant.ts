@@ -194,7 +194,7 @@ export class GvPredefinedGS extends GvBase {
 		await getPredefinedGroupsets(tw, opts.vocabApi)
 
 		const { term, q } = tw
-		if (!term.groupsetting?.lst.length) throw 'term.groupsetting.lst[] is empty'
+		if (!term.groupsetting?.lst?.length) throw 'term.groupsetting.lst[] is empty'
 		set_hiddenvalues(q, term)
 		return tw as GvPredefinedGsTW
 	}

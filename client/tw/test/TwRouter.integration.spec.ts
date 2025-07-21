@@ -1,6 +1,6 @@
 import tape from 'tape'
 import { TwRouter } from '../TwRouter.ts'
-import type { GroupEntry, CategoricalPredefinedGsTerm } from '#types'
+import type { GroupEntry, TermGroupSetting } from '#types'
 import type { TermWrapper } from '@sjcrh/proteinpaint-types/updated'
 import { vocabInit } from '#termdb/vocabulary'
 import { termjson } from '../../test/testdata/termjson'
@@ -47,7 +47,7 @@ function getCustomSet() {
 }
 
 function getTermWithGS() {
-	const term = structuredClone(termjson.diaggrp) as CategoricalPredefinedGsTerm
+	const term = structuredClone(termjson.diaggrp)
 	term.groupsetting = {
 		disabled: false,
 		lst: [
@@ -56,7 +56,7 @@ function getTermWithGS() {
 				groups: getCustomSet().groups
 			}
 		]
-	}
+	} satisfies TermGroupSetting
 	return term
 }
 

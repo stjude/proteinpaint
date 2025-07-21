@@ -139,16 +139,10 @@ type Groupset = {
 	id?: string // to identify groupset, used by geneVariant term
 } & BaseGroupSet
 
-export type PredefinedTermGroupSetting = {
-	disabled: false // groupsetting must be enabled for predefined-groupset
-	lst: Groupset[] // array of groupsets must be defined for predefined-groupset
+export type TermGroupSetting = {
+	disabled: boolean // true when term has <= 2 values, otherwise false
+	lst?: Groupset[] // array of predefined groupsets
 }
-
-export type OtherTermGroupSetting = {
-	disabled: boolean // will be true when term has <= 2 values, otherwise will be false
-}
-
-export type TermGroupSetting = PredefinedTermGroupSetting | OtherTermGroupSetting
 
 /*** types supporting termwrapper ***/
 

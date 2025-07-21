@@ -1,12 +1,5 @@
 import { getPillNameDefault } from '../termsetting'
-import type {
-	GeneVariantTermSettingInstance,
-	PredefinedTermGroupSetting,
-	RawGvTerm,
-	RawGvPredefinedGsTW,
-	VocabApi,
-	DtTerm
-} from '#types'
+import type { GeneVariantTermSettingInstance, RawGvTerm, RawGvPredefinedGsTW, VocabApi, DtTerm } from '#types'
 import type { PillData } from '../types'
 import { make_radios, renderTable } from '#dom'
 import { dtTerms, getColors } from '#shared/common.js'
@@ -26,7 +19,8 @@ export function getHandler(self: GeneVariantTermSettingInstance) {
 		getPillStatus() {
 			let text
 			if (self.q.type == 'predefined-groupset') {
-				const groupsetting = self.term.groupsetting as PredefinedTermGroupSetting
+				const groupsetting = self.term.groupsetting
+				if (!groupsetting.lst?.length) throw 'no predefined groupsets found'
 				const groupset = groupsetting.lst[self.q.predefined_groupset_idx]
 				text = groupset.name
 			} else if (self.q.type == 'custom-groupset') {
@@ -138,7 +132,8 @@ async function makeGroupUI(self: GeneVariantTermSettingInstance, div) {
 	if (!self.groups) {
 		let groupset
 		if (self.q.type == 'predefined-groupset') {
-			const groupsetting = self.term.groupsetting as PredefinedTermGroupSetting
+			const groupsetting = self.term.groupsetting
+			if (!groupsetting.lst?.length) throw 'no predefined groupsets found'
 			groupset = groupsetting.lst[self.q.predefined_groupset_idx]
 		} else {
 			groupset = self.q.customset
