@@ -14,8 +14,8 @@ export default class Reference {
 
 	private settings: any
 
-	constructor(settings: any, chromosomes: any, chromosomesOverride?: any) {
-		const chrSizes = chromosomesOverride || chromosomes
+	constructor(settings: any, chromosomes: any, selectedChromosomes?: any) {
+		const chrSizes = selectedChromosomes || chromosomes
 
 		this.settings = settings
 
