@@ -4,6 +4,7 @@ import { to_svg } from '#src/client'
 import { roundValueAuto } from '#shared/roundValue.js'
 import { rgb } from 'd3'
 import { TermTypes } from '#shared/terms.js'
+import { getSamplelstFilter } from '../mass/groups.js'
 
 export function setInteractivity(self) {
 	self.download = () => {
@@ -403,9 +404,10 @@ function createTvsLstValues(term, plot, tvslst, lstIdx) {
 	if (term.term.type === 'condition') {
 		tvslst.lst[lstIdx].tvs.bar_by_grade = term.q.bar_by_grade
 		tvslst.lst[lstIdx].tvs.value_by_max_grade = term.q.value_by_max_grade
-	}
-	if (term.term.type === 'samplelst') {
-		tvslst.lst[lstIdx].tvs.values = term.term.values[plot.label].list
+	} else if (term.term.type === 'samplelst') {
+		const ids = term.term.values[plot.label].list.map(s => s.sampleId)
+		const tvs = getSamplelstFilter(ids).lst[0] // tvslst is an array of 1 tvs
+		tvslst.lst[lstIdx] = tvs
 	}
 }
 
