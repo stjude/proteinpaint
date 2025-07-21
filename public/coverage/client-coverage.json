@@ -2449,38 +2449,38 @@
   },
   "mass/groups.js": {
     "lines": {
-      "total": 406,
-      "covered": 6,
+      "total": 410,
+      "covered": 146,
       "skipped": 0,
-      "pct": 1.47
+      "pct": 35.6
     },
     "functions": {
-      "total": 73,
-      "covered": 0,
+      "total": 74,
+      "covered": 19,
       "skipped": 0,
-      "pct": 0
+      "pct": 25.67
     },
     "statements": {
-      "total": 441,
-      "covered": 6,
+      "total": 445,
+      "covered": 153,
       "skipped": 0,
-      "pct": 1.36
+      "pct": 34.38
     },
     "branches": {
       "total": 194,
-      "covered": 0,
+      "covered": 41,
       "skipped": 0,
-      "pct": 0
+      "pct": 21.13
     },
     "lowestPct": {
-      "curr": 0,
+      "curr": 21.13,
       "prev": 21.13,
-      "diff": -21.13
+      "diff": 0
     },
     "averagePct": {
-      "curr": 0.7075,
+      "curr": 29.195,
       "prev": 29.45,
-      "diff": -28.7425
+      "diff": -0.254999999999999
     }
   },
   "filter/test/tvs.integration.spec.js": {
@@ -3637,38 +3637,38 @@
   },
   "plots/barchart.events.js": {
     "lines": {
-      "total": 312,
-      "covered": 112,
+      "total": 317,
+      "covered": 1,
       "skipped": 0,
-      "pct": 35.89
+      "pct": 0.31
     },
     "functions": {
-      "total": 61,
-      "covered": 26,
+      "total": 62,
+      "covered": 0,
       "skipped": 0,
-      "pct": 42.62
+      "pct": 0
     },
     "statements": {
-      "total": 343,
-      "covered": 118,
+      "total": 348,
+      "covered": 1,
       "skipped": 0,
-      "pct": 34.4
+      "pct": 0.28
     },
     "branches": {
-      "total": 400,
-      "covered": 146,
+      "total": 404,
+      "covered": 0,
       "skipped": 0,
-      "pct": 36.5
+      "pct": 0
     },
     "lowestPct": {
-      "curr": 34.4,
+      "curr": 0,
       "prev": 34.4,
-      "diff": 0
+      "diff": -34.4
     },
     "averagePct": {
-      "curr": 37.3525,
+      "curr": 0.14750000000000002,
       "prev": 37.3525,
-      "diff": 0
+      "diff": -37.205
     }
   },
   "plots/disco/viewmodel/ViewModel.ts": {
