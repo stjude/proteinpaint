@@ -120,8 +120,9 @@ tape('show() with args', async test => {
 		//left (x) position
 		const posNum = 50
 		testMenu.show(posNum)
-		test.ok(
-			testMenu.dnode.style.left == `${posNum + testMenu.offsetX}px` && testMenu.dnode.style.top == '',
+		test.deepEqual(
+			{ left: testMenu.dnode.style.left, top: testMenu.dnode.style.top },
+			{ left: `${posNum + testMenu.offsetX}px`, top: '' },
 			`Should show menu left, under header, shifted by .offsetX = ${testMenu.offsetX}px`
 		)
 	}
@@ -130,8 +131,9 @@ tape('show() with args', async test => {
 		//top (y) position
 		const posNum = 50
 		testMenu.show('', posNum)
-		test.ok(
-			testMenu.dnode.style.left == '20px' && testMenu.dnode.style.top == `${posNum + testMenu.offsetY}px`,
+		test.deepEqual(
+			{ left: testMenu.dnode.style.left, top: testMenu.dnode.style.top },
+			{ left: '20px', top: `${posNum + testMenu.offsetY}px` },
 			`Should show menu at the top, above header, shifted by .offsetY = ${testMenu.offsety}px`
 		)
 	}
@@ -140,9 +142,9 @@ tape('show() with args', async test => {
 	{
 		const posNum = 100
 		testMenu.show(posNum, posNum)
-		test.ok(
-			testMenu.dnode.style.left == `${posNum + testMenu.offsetX}px` &&
-				testMenu.dnode.style.top == `${posNum + testMenu.offsetY}px`,
+		test.deepEqual(
+			{ left: testMenu.dnode.style.left, top: testMenu.dnode.style.top },
+			{ left: `${posNum + testMenu.offsetX}px`, top: `${posNum + testMenu.offsetY}px` },
 			`Should show menu top left corner, over header, shifted by .offsetX = ${testMenu.offsetX}px & .offsetY = ${testMenu.offsetY}px`
 		)
 	}
@@ -151,8 +153,9 @@ tape('show() with args', async test => {
 		const posNum = 100
 		//No shift (i.e. additional 20px)
 		testMenu.show(posNum, posNum, false)
-		test.ok(
-			testMenu.dnode.style.left == `${posNum}px` && testMenu.dnode.style.top == `${posNum}px`,
+		test.deepEqual(
+			{ left: testMenu.dnode.style.left, top: testMenu.dnode.style.top },
+			{ left: `${posNum}px`, top: `${posNum}px` },
 			`Should show menu top left corner without .offsetX or .offsetY added to left or top, respectively.`
 		)
 	}
@@ -167,13 +170,12 @@ tape('show() with args', async test => {
 		const posNum = 200
 		testMenu.d.append('div').text(longText)
 		testMenu.show(posNum, posNum, false)
-		test.ok(
-			testMenu.dnode.style.left == `${posNum + window.scrollX}px` &&
-				testMenu.dnode.style.top == `${posNum + window.scrollY}px`,
+		test.deepEqual(
+			{ left: testMenu.dnode.style.left, top: testMenu.dnode.style.top },
+			{ left: `${posNum + window.scrollX}px`, top: `${posNum + window.scrollY}px` },
 			`Should show menu position with window.scrollX = ${window.scrollX} & window.scrollY = ${window.scrollY}`
 		)
 	}
-
 	testMenu.destroy()
 	test.end()
 })
