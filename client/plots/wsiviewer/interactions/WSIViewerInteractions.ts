@@ -7,18 +7,15 @@ import { Feature } from 'ol'
 import { Polygon } from 'ol/geom'
 import type { Geometry } from 'ol/geom'
 import { Fill, Stroke, Style } from 'ol/style'
-import type { Extent } from 'ol/extent'
+import type Settings from '#plots/wsiviewer/Settings.ts'
+import type { SessionAnnotation } from '#plots/wsiviewer/viewModel/SessionAnnotation.ts'
+import type { WSImage } from '@sjcrh/proteinpaint-types'
 
 export class WSIViewerInteractions {
 	public activePatchColor?: string
 	thumbnailClickListener: (index: number) => void
 	addZoomInEffect: (activeImageExtent: unknown, zoomInPoints: [number, number][], map: OLMap) => void
-	viewerClickListener: (
-		activeImageExtent: Extent | undefined,
-		coordinateX: number,
-		coordinateY: number,
-		map: OLMap
-	) => void
+	viewerClickListener: (coordinateX: number, coordinateY: number) => void
 	addMapKeyDownListener: (
 		holder: any,
 		map: OLMap,
@@ -84,7 +81,7 @@ export class WSIViewerInteractions {
 			activeImageExtent: any,
 			shortcuts: string[] = [],
 			buffers: any,
-			imageData: any
+			imageData: WSImage
 		) => {
 			// Add keydown listener to the holder
 			holder.attr('tabindex', 0)
@@ -133,12 +130,12 @@ export class WSIViewerInteractions {
 						matchingClass = imageData?.classes?.find(c => c.label === annotationsData[currentIndex].class)
 					}
 					const tmpClass =
-						event.code === 'Enter' || matchingClass.label == annotationsData[currentIndex].class
+						event.code === 'Enter' || matchingClass!.label == annotationsData[currentIndex].class
 							? { label: 'Confirmed', color: matchingClass?.color || '' }
-							: { label: matchingClass.label, color: matchingClass.color }
+							: { label: matchingClass!.label, color: matchingClass!.color }
 					buffers.tmpClass.set(tmpClass)
 
-					this.addAnnotation(vectorLayer!, annotationsData, currentIndex, matchingClass.color)
+					this.addAnnotation(vectorLayer!, annotationsData, currentIndex, matchingClass!.color)
 
 					const body = {
 						coordinates: annotationsData[currentIndex].zoomCoordinates, //Original x,y coordinates
@@ -164,16 +161,28 @@ export class WSIViewerInteractions {
 			})
 		}
 
-		this.viewerClickListener = (
-			activeImageExtent: Extent | undefined,
-			coordinateX: number,
-			coordinateY: number,
-			map: OLMap
-		) => {
-			setTimeout(() => {
-				this.addZoomInEffect(activeImageExtent, [[coordinateX, coordinateY]], map)
-				console.log(`Mouse position: ${coordinateX}, ${coordinateY}`)
-			}, 200)
+		this.viewerClickListener = (coordinateX: number, coordinateY: number) => {
+			const state = wsiApp.app.getState()
+			const settings: Settings = state.plots.find(p => p.id === wsiApp.id).settings
+
+			const sessionAnnotation: SessionAnnotation = {
+				zoomCoordinates: [coordinateX, coordinateY],
+				label: '',
+				color: ''
+			}
+
+			const oldAnnotation = settings.sessionsAnnotations
+
+			wsiApp.app.dispatch({
+				type: 'plot_edit',
+				id: wsiApp.id,
+				config: {
+					settings: {
+						renderWSIViewer: false,
+						sessionsAnnotations: [...oldAnnotation, sessionAnnotation]
+					}
+				}
+			})
 		}
 	}
 
@@ -200,6 +209,8 @@ export class WSIViewerInteractions {
 			annotationsData[currentIndex].zoomCoordinates[0],
 			-annotationsData[currentIndex].zoomCoordinates[1]
 		]
+
+		// TODO hardcoded for now.
 		const size = 512
 
 		const squareCoords = [

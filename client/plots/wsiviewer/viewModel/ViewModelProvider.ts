@@ -6,11 +6,17 @@ import Zoomify from 'ol/source/Zoomify'
 import TileLayer from 'ol/layer/Tile'
 import VectorLayer from 'ol/layer/Vector'
 import VectorSource from 'ol/source/Vector'
+import type { SessionAnnotation } from './SessionAnnotation'
 
 export class ViewModelProvider {
 	constructor() {}
 
-	async provide(genome: string, dslabel: string, sampleId: string): Promise<ViewModel> {
+	async provide(
+		genome: string,
+		dslabel: string,
+		sampleId: string,
+		sessionsAnnotations: SessionAnnotation[]
+	): Promise<ViewModel> {
 		const data: SampleWSImagesResponse = await this.requestData(genome, dslabel, sampleId)
 
 		let wsimageLayers: Array<WSImageLayers> = []
@@ -22,7 +28,7 @@ export class ViewModelProvider {
 			wsimageLayersLoadError = `Error loading image layers for sample  ${sampleId}: ${e.message || e}`
 		}
 
-		return new ViewModel(data.sampleWSImages, wsimageLayers, wsimageLayersLoadError)
+		return new ViewModel(data.sampleWSImages, wsimageLayers, wsimageLayersLoadError, sessionsAnnotations)
 	}
 
 	public async requestData(genome: string, dslabel: string, sample_id: string): Promise<SampleWSImagesResponse> {

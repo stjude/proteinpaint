@@ -18,12 +18,19 @@ export type WSImage = {
 	predictionLayers?: Array<string>
 	zoomInPoints?: Array<[number, number]>
 	metadata: string
-	annotationsData?: { zoomCoordinates: [number, number]; type: string; class: string; uncertainty: number }[]
-	classes?: WSIClass[]
+	annotationsData?: Array<Annotation>
+	classes?: Array<WSIClass>
 	/** ds defined uncertainity labels and colors */
 	uncertainty?: any
 	/** Color to highlight active patches */
 	activePatchColor?: string
+}
+
+export type Annotation = {
+	zoomCoordinates: [number, number]
+	type: string
+	class: string
+	uncertainty: number
 }
 
 export const sampleWSImagesPayload: RoutePayload = {
