@@ -47,7 +47,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
         with:
-          token: ${{ secrets.PAT }}
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Fetch All Tags
         run: git fetch --all --tags
@@ -141,21 +141,27 @@ jobs:
     if: needs.publish-npm.outputs.updated_rust == 'false' && github.event.inputs.include == 'npm packages + Docker image'
     needs: publish-npm
     runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+      packages: write
     steps:
       - name: Publish docker image
         uses: stjude/proteinpaint/.github/actions/publish-ppfull-ppserver-image@master
         with:
-          PAT: ${{ secrets.PAT }}
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_ACTOR: ${{ github.actor }}
 
   publish-docker-with-rust-changes:
     if: needs.publish-npm.outputs.updated_rust == 'true' && github.event.inputs.include == 'npm packages + Docker image'
     needs: upload-rust-assets
     runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+      packages: write
     steps:
       - uses: actions/checkout@v3
         with:
-          token: ${{ secrets.PAT }}
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       # Download the Rust binaries built by the rust-build workflow
       - name: Download Rust Binaries
@@ -169,5 +175,5 @@ jobs:
       - name: Publish docker image with Rust binaries
         uses: stjude/proteinpaint/.github/actions/publish-ppfull-ppserver-image@master
         with:
-          PAT: ${{ secrets.PAT }}
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_ACTOR: ${{ github.actor }}
