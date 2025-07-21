@@ -550,7 +550,8 @@ export function value2urlsOrText(v, tw) {
 				h.push(`<a href=https://doi.org/${i.slice(5)} target=_blank>${i}</a>`)
 			} else {
 				// must be pmid
-				h.push(`<a href=https://pubmed.ncbi.nlm.nih.gov/${i} target=_blank>${i}</a>`)
+				// h.push(`<a href=https://pubmed.ncbi.nlm.nih.gov/${i} target=_blank>${i}</a>`)
+				h.push(`<a href="${i}" target="_blank">${i}</a>`)
 			}
 		}
 		return h.join('<br>')
