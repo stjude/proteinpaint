@@ -4,7 +4,7 @@ export default interface Settings {
 
 	downloadImgName: string // file name of downloaded svg
 
-    Disco: {
+	Disco: {
 		/** Global radius controlling ring size */
 		radius?: number
 		/** Opacity of the fusion arcs */
@@ -19,6 +19,8 @@ export default interface Settings {
 		/** auto, fixed, percentile. Used for the numeric inputs dropdown
 		 * for cnv color scales. */
 		cnvCutoffMode: string
+
+		selectedChromosomes?: string[]
 	}
 
 	rings: {

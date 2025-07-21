@@ -36,7 +36,7 @@ export class ViewModelMapper {
 		// a mutable copy so ring dimensions can be adjusted at runtime
 		this.settings = JSON.parse(JSON.stringify(settings))
 		this.discoInteractions = discoInteractions
-    }
+	}
 
 	private applyRadius() {
 		const radius = this.settings.Disco.radius
@@ -56,10 +56,25 @@ export class ViewModelMapper {
 		this.settings.legend.fontSize *= scale
 	}
 
-    map(opts: any): ViewModel {
-		const chromosomesOverride = opts.args.chromosomes
+	map(opts: any): ViewModel {
+		let chromosomesOverride = opts.args.chromosomes
 
 		const chrSizes = opts.args.genome.majorchr
+		let excludedChromosomes: string[] = []
+
+		if (
+			!chromosomesOverride &&
+			Array.isArray(this.settings.Disco.selectedChromosomes) &&
+			this.settings.Disco.selectedChromosomes.length
+		) {
+			chromosomesOverride = {}
+			for (const chr of this.settings.Disco.selectedChromosomes) {
+				if (chrSizes[chr]) chromosomesOverride[chr] = chrSizes[chr]
+			}
+			excludedChromosomes = Object.keys(chrSizes).filter(c => !this.settings.Disco.selectedChromosomes!.includes(c))
+		} else if (chromosomesOverride) {
+			excludedChromosomes = Object.keys(chrSizes).filter(c => !(c in chromosomesOverride))
+		}
 
 		const sampleName = opts.args.sampleName
 
@@ -75,7 +90,7 @@ export class ViewModelMapper {
 
 		const reference = new Reference(this.settings, chrSizes, chromosomesOverride)
 
-		const dataMapper = new DataMapper(this.settings, reference, sampleName, prioritizedGenes)
+		const dataMapper = new DataMapper(this.settings, reference, sampleName, prioritizedGenes, excludedChromosomes)
 
 		return new ViewModelProvider(
 			this.settings,
