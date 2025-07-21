@@ -3,6 +3,7 @@ import type { RenderedPlot } from '../view/RenderedPlot'
 import type { TermWrapper } from '#types'
 import type { AnnotatedSampleData } from '../../../types/termdb'
 import { roundValueAuto } from '#shared/roundValue.js'
+import { getSamplelstFilter } from '../../../mass/groups.js'
 
 export class ListSamples {
 	app: MassAppApi
@@ -68,11 +69,12 @@ export class ListSamples {
 
 	createTvsLstValues(tw: any, tvslst: any, lstIdx: number) {
 		this.createTvsTerm(tw, tvslst)
-		const values =
-			tw.term.type === 'samplelst'
-				? tw.term.values[this.plot.key].list
-				: [{ key: this.plot.seriesId, label: this.plot.key }]
-		tvslst.lst[lstIdx].tvs.values = values
+		if (tw.term.type === 'samplelst') {
+			const key: any = this.plot.seriesId
+			const ids = tw.term.values[key].list.map(s => s.sampleId)
+			const tvs = getSamplelstFilter(ids).lst[0] // tvslst is an array of 1 tvs
+			tvslst.lst[lstIdx] = tvs
+		} else tvslst.lst[lstIdx].tvs.values = [{ key: this.plot.seriesId, label: this.plot.key }]
 
 		if (tw.term.type === 'condition') {
 			Object.assign(tvslst.lst[lstIdx].tvs, {
