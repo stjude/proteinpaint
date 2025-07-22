@@ -108,7 +108,7 @@ jobs:
       - name: Run integration tests
         uses: stjude/proteinpaint/.github/actions/run-integration-tests@master
         with:
-          PAT: ${{ secrets.PAT }}
+          PAT: ${{ secrets.GITHUB_TOKEN }}
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
 
