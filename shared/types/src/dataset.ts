@@ -155,7 +155,9 @@ type AiApi = {
 	aiApi?: boolean
 	source?: {
 		/** Data source for building the termdb on the fly */
-		file?: string
+		file: string
+		/** Column header for sample ids or names */
+		sampleKey: string
 	}
 }
 

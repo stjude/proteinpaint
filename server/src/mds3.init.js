@@ -48,7 +48,7 @@ import { validate_query_getWSISamples } from '#routes/wsisamples.ts'
 import { mds3InitNonblocking } from './mds3.init.nonblocking.js'
 // import { mayLog } from './helpers'
 import { dtTermTypes } from '#shared/terms.js'
-import { makeAIHistoTermdbQueries } from './aiHistoTool.buildDictionary.ts'
+import { makeAdHocDicTermdbQueries } from './buildAdHocDictionary.ts'
 
 /*
 init
@@ -163,7 +163,7 @@ export async function init(ds, genome, totalDsLst = 0) {
 		await validate_query_getSampleImages(ds, genome)
 		await validate_query_getSampleWSImages(ds, genome)
 		await validate_query_getWSISamples(ds, genome)
-		await makeAIHistoTermdbQueries(ds)
+		await makeAdHocDicTermdbQueries(ds)
 		await validate_query_rnaseqGeneCount(ds, genome)
 		await validate_query_singleSampleMutation(ds, genome)
 		await validate_query_singleSampleGenomeQuantification(ds, genome)
