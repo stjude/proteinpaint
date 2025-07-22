@@ -4,7 +4,7 @@ import { getExample } from '../../termdb/test/vocabData'
 import { vocabInit } from '../../termdb/vocabulary'
 import { termjson } from '../../test/testdata/termjson'
 import { termsettingInit } from '#termsetting'
-import { sleep, detectLst, detectGte, whenGone } from '../../test/test.helpers'
+import { sleep, detectLst, detectGte, whenGone, detectOne } from '../../test/test.helpers'
 /*
 Tests:
 	menuOptions
@@ -75,11 +75,14 @@ async function getOpts(_opts = {}, genome = 'hg38-test', dslabel = 'TermdbTest')
 		opts: { state }
 	})
 
+	const vocabApi = vocabInit({ app, state })
+	await vocabApi.getTermdbConfig()
+
 	opts.app = app
 	opts.pill = termsettingInit({
 		holder,
 		vocab,
-		vocabApi: vocabInit({ app, state }),
+		vocabApi,
 		use_bins_less: opts.use_bins_less,
 		menuOptions: opts.menuOptions,
 		disable_ReplaceRemove: opts.disable_ReplaceRemove,
@@ -1327,10 +1330,232 @@ tape('samplelst term', async test => {
 	test.end()
 })
 
-tape.skip('geneVariant term', async test => {
-	test.timeoutAfter(1000)
+tape('geneVariant term', async test => {
+	const opts = await getOpts({
+		tsData: { q: geneVariantQ, term: genVariantTerm }
+	})
 
-	//On hold. A geneVariant term is not in TermdbTest
-
-	test.end()
+	await opts.pill.main(opts.tsData)
+	const pill = opts.holder.select('.ts_pill')
+	// check pill summary text
+	let pillSummary = pill.select('.ts_summary_btn')
+	test.equal(pillSummary.text(), 'SNV/indel: Mutated vs. Wildtype', 'Pill should display SNV/indel predefined groupset')
+	// click pill to check menu options
+	pill.node().click()
+	const tip = opts.pill.Inner.dom.tip
+	let menuOptions = tip.d.selectAll('.sja_menuoption.sja_sharp_border')
+	test.equal(menuOptions.size(), 3, 'Should have 3 menu options')
+	// click edit option to check edit UI
+	const editOptionElem = menuOptions._groups[0][0]
+	const tableElem = await detectOne({
+		elem: tip.d.node(),
+		selector: 'table',
+		async trigger() {
+			editOptionElem.click()
+		}
+	})
+	const table = d3s.select(tableElem)
+	test.equal(table.selectAll('tr').size(), 3, 'Edit table should have 3 rows')
+	// click pill again to display menu options
+	pill.node().click()
+	menuOptions = tip.d.selectAll('.sja_menuoption.sja_sharp_border')
+	// click cnv option to compare cnv mutant vs. wildtype
+	const cnvOptionElem = menuOptions._groups[0][2]
+	cnvOptionElem.click()
+	await sleep(300)
+	pillSummary = pill.select('.ts_summary_btn')
+	test.equal(pillSummary.text(), 'CNV: Altered vs. Neutral', 'Pill should display CNV predefined groupset')
 })
+
+const geneVariantQ = {
+	isAtomic: true,
+	type: 'predefined-groupset',
+	predefined_groupset_idx: 0
+}
+
+const genVariantTerm = {
+	kind: 'gene',
+	id: 'TP53',
+	gene: 'TP53',
+	name: 'TP53',
+	type: 'geneVariant',
+	groupsetting: {
+		disabled: false,
+		lst: [
+			{
+				name: 'SNV/indel: Mutated vs. Wildtype',
+				groups: [
+					{
+						name: 'SNV/indel Mutated',
+						type: 'filter',
+						filter: {
+							type: 'tvslst',
+							in: true,
+							join: '',
+							lst: [
+								{
+									type: 'tvs',
+									tvs: {
+										term: {
+											id: 'snvindel',
+											query: 'snvindel',
+											name: 'SNV/indel',
+											parent_id: null,
+											isleaf: true,
+											type: 'dtsnvindel',
+											dt: 1,
+											values: {
+												M: { label: 'MISSENSE' },
+												F: { label: 'FRAMESHIFT' },
+												WT: { label: 'Wildtype' }
+											},
+											name_noOrigin: 'SNV/indel',
+											parentTerm: {
+												kind: 'gene',
+												id: 'TP53',
+												gene: 'TP53',
+												name: 'TP53',
+												type: 'geneVariant'
+											}
+										},
+										values: [{ key: 'WT', label: 'Wildtype', value: 'WT' }],
+										isnot: true,
+										excludeGeneName: true
+									}
+								}
+							]
+						},
+						color: '#e75480'
+					},
+					{
+						name: 'SNV/indel Wildtype',
+						type: 'filter',
+						filter: {
+							type: 'tvslst',
+							in: true,
+							join: '',
+							lst: [
+								{
+									type: 'tvs',
+									tvs: {
+										term: {
+											id: 'snvindel',
+											query: 'snvindel',
+											name: 'SNV/indel',
+											parent_id: null,
+											isleaf: true,
+											type: 'dtsnvindel',
+											dt: 1,
+											values: {
+												M: { label: 'MISSENSE' },
+												F: { label: 'FRAMESHIFT' },
+												WT: { label: 'Wildtype' }
+											},
+											name_noOrigin: 'SNV/indel',
+											parentTerm: {
+												kind: 'gene',
+												id: 'TP53',
+												gene: 'TP53',
+												name: 'TP53',
+												type: 'geneVariant'
+											}
+										},
+										values: [{ key: 'WT', label: 'Wildtype', value: 'WT' }],
+										excludeGeneName: true
+									}
+								}
+							]
+						},
+						color: '#0000ff'
+					}
+				]
+			},
+			{
+				name: 'CNV: Altered vs. Neutral',
+				groups: [
+					{
+						name: 'CNV Altered',
+						type: 'filter',
+						filter: {
+							type: 'tvslst',
+							in: true,
+							join: '',
+							lst: [
+								{
+									type: 'tvs',
+									tvs: {
+										term: {
+											id: 'cnv',
+											query: 'cnv',
+											name: 'CNV',
+											parent_id: null,
+											isleaf: true,
+											type: 'dtcnv',
+											dt: 4,
+											values: {
+												CNV_amp: { label: 'Copy number gain' },
+												WT: { label: 'Wildtype' }
+											},
+											name_noOrigin: 'CNV',
+											parentTerm: {
+												kind: 'gene',
+												id: 'TP53',
+												gene: 'TP53',
+												name: 'TP53',
+												type: 'geneVariant'
+											}
+										},
+										values: [{ key: 'WT', label: 'Wildtype', value: 'WT' }],
+										isnot: true,
+										excludeGeneName: true
+									}
+								}
+							]
+						},
+						color: '#e75480'
+					},
+					{
+						name: 'CNV Neutral',
+						type: 'filter',
+						filter: {
+							type: 'tvslst',
+							in: true,
+							join: '',
+							lst: [
+								{
+									type: 'tvs',
+									tvs: {
+										term: {
+											id: 'cnv',
+											query: 'cnv',
+											name: 'CNV',
+											parent_id: null,
+											isleaf: true,
+											type: 'dtcnv',
+											dt: 4,
+											values: {
+												CNV_amp: { label: 'Copy number gain' },
+												WT: { label: 'Wildtype' }
+											},
+											name_noOrigin: 'CNV',
+											parentTerm: {
+												kind: 'gene',
+												id: 'TP53',
+												gene: 'TP53',
+												name: 'TP53',
+												type: 'geneVariant'
+											}
+										},
+										values: [{ key: 'WT', label: 'Wildtype', value: 'WT' }],
+										excludeGeneName: true
+									}
+								}
+							]
+						},
+						color: '#0000ff'
+					}
+				]
+			}
+		]
+	}
+}
