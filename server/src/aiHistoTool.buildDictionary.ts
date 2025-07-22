@@ -2,6 +2,7 @@ import type { Mds3 } from '#types'
 import path from 'path'
 import fs from 'fs'
 import serverconfig from './serverconfig.js'
+import { decimalPlacesUntilFirstNonZero } from '#shared/roundValue.js'
 
 /** Termdb for the AI histology tool is created on the fly from
  * API metdata output. These methods build the termdb queries
@@ -34,8 +35,9 @@ export async function makeAIHistoTermdbQueries(ds: Mds3) {
 		assignValuesToTerms(id2term, lines.splice(1))
 
 		id2term.forEach(term => {
+			// Remove unnecessary property
 			delete term.index
-		}) // Remove index property
+		})
 		return id2term.size > 1 ? `Ad hoc dictionary for ${ds.label} created` : 'failed to initialize dictionary'
 	}
 
@@ -78,11 +80,13 @@ function makeParentTerms(header: string, id2term: Map<string, any>) {
 			/* default during development. Should remove after data dictionary 
             or phenotree is provided */
 			type: 'categorical',
-			isleaf: false,
+			isleaf: true,
 			parent_id: undefined,
 			values: {},
-			child_types_set: new Set(),
-			//will delete later
+			included_types: [],
+			child_types: [],
+			__tree_isroot: false,
+			//will delete these later
 			index: i
 		}
 		id2term.set(term.id, term)
@@ -90,7 +94,7 @@ function makeParentTerms(header: string, id2term: Map<string, any>) {
 }
 
 function assignValuesToTerms(id2term: Map<string, any>, lines: string[]) {
-	//Will only assign values to categorical terms
+	//Later, will only assign values to categorical terms
 	const tmpTermValues = new Map()
 	// Create a temporary array to hold the terms based on their index
 	// Avoid mucking up the terms map
@@ -111,15 +115,31 @@ function assignValuesToTerms(id2term: Map<string, any>, lines: string[]) {
 
 	/** Update the type if necessary and assign values to terms */
 	for (const [termid, values] of tmpTermValues.entries()) {
-		const numValuesOnly = [...values].every(v => typeof v === 'string' && /^\d+$/.test(v))
+		if (!id2term.has(termid)) continue
+		const term = id2term.get(termid)
+		const termValues = [...values]
+		//Explicitly checks for numbers, pos and neg integers
+		const numValuesOnly = [...values].every(v => typeof v === 'string' && /^-?\d+$/.test(v))
 		if (numValuesOnly) {
 			//No values are added to numerical terms
-			id2term.get(termid).type = 'integer'
+			assignNumType(term, termValues)
 		} else {
 			/** Return the values in the set as an object with increasing
 			 * indices as keys with the values as labels.*/
-			const termValues = Object.fromEntries([...values].map((v, i) => [String(i), { label: v }]))
-			id2term.get(termid).values = termValues
+			term.values = termValues.map((v, i) => [String(i), { label: v }])
+			term.included_types = ['categorical']
 		}
+	}
+}
+
+function assignNumType(term: any, termValues: any) {
+	const foundDecimals = decimalPlacesUntilFirstNonZero(termValues)
+	if (foundDecimals > 0) {
+		term.type = 'float'
+		term.included_types = ['float']
+	} else {
+		term.type = 'integer'
+		term.included_types = ['integer']
+		term.values = termValues.map((v, i) => [String(i), { label: v }])
 	}
 }
