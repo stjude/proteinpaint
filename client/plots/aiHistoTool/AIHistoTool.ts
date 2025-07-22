@@ -63,7 +63,8 @@ class AIHistoTool extends RxComponentInner {
 				sayerror(this.dom.errorDiv, 'No metadata found.')
 				return
 			}
-			new CreateProjectRender(terms, this.dom)
+			const createProjectRender = new CreateProjectRender(this.dom, this.app)
+			createProjectRender.render()
 		}
 	}
 }
