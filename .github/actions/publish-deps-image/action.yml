@@ -1,8 +1,8 @@
 name: 'Publish Deps Docker Image'
 description: 'Build and publish Deps Docker image to GitHub Container Registry.'
 inputs:
-  PAT:
-    description: 'PAT secret'
+  TOKEN:
+    description: 'Github token'
     required: true
   GITHUB_ACTOR:
     description: 'github_actor'
@@ -16,7 +16,7 @@ runs:
       with:
         registry: ghcr.io
         username: ${{ inputs.GITHUB_ACTOR }}
-        password: ${{ inputs.PAT }}
+        password: ${{ inputs.TOKEN }}
 
     - uses: actions/setup-node@v4
       with:
