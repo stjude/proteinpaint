@@ -1365,6 +1365,7 @@ tape('geneVariant term', async test => {
 	await sleep(300)
 	pillSummary = pill.select('.ts_summary_btn')
 	test.equal(pillSummary.text(), 'CNV: Altered vs. Neutral', 'Pill should display CNV predefined groupset')
+	test.end()
 })
 
 const geneVariantQ = {
