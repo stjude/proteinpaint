@@ -4,16 +4,22 @@ import fs from 'fs'
 import serverconfig from './serverconfig.js'
 import { decimalPlacesUntilFirstNonZero } from '#shared/roundValue.js'
 
+/** Will assign later based on the ds defined sample column header */
+let sampleKeyIdx: number | null = null
+
 /** Termdb for the AI histology tool is created on the fly from
  * API metdata output. These methods build the termdb queries
  * and query mechanisms to support the filter and tvs. */
-export async function makeAIHistoTermdbQueries(ds: Mds3) {
+export async function makeAdHocDicTermdbQueries(ds: Mds3) {
 	const dict = ds?.cohort?.termdb?.dictionary
 	if (!dict?.aiApi) return
 	if (!ds?.cohort?.termdb) return
 	/** if q doesn't exist, use empty object */
 	const q = (ds.cohort.termdb.q ||= {})
 	const id2term = new Map()
+
+	//Defined in the ds. Column header for the sample key
+	const sampleKey = dict?.source?.sampleKey || 'sample_id'
 
 	/** Build a temp dictionary for the AI histology tool
 	 * from API metadata output. */
@@ -31,13 +37,9 @@ export async function makeAIHistoTermdbQueries(ds: Mds3) {
 
 		id2term.set('__root', { id: 'root', name: 'root', __tree_isroot: true })
 
-		makeParentTerms(lines[0], id2term)
+		makeParentTerms(lines[0], id2term, sampleKey)
 		assignValuesToTerms(id2term, lines.splice(1))
 
-		id2term.forEach(term => {
-			// Remove unnecessary property
-			delete term.index
-		})
 		return id2term.size > 1 ? `Ad hoc dictionary for ${ds.label} created` : 'failed to initialize dictionary'
 	}
 
@@ -58,6 +60,35 @@ export async function makeAIHistoTermdbQueries(ds: Mds3) {
 		}
 		return terms
 	}
+
+	/** Read the .csv file and return samples{} for further parsing in termdb/categories */
+	q.getCategoricalTermValues = async (_, termwrappers) => {
+		const source = dict.source!.file
+		const csvData = await readSourceFile(source!)
+		if (!csvData) return [{}, {}]
+
+		const samples: any = {}
+
+		const lines = csvData.split('\n')
+		for (const line of lines.splice(1)) {
+			//skip header
+			const columns = line.split(',')
+			const sample = columns[sampleKeyIdx!]
+
+			for (const tw of termwrappers) {
+				const term = id2term.get(tw.term.id)
+				samples[sample] = {
+					sample: sample,
+					_: {
+						key: columns[term.index].trim(),
+						value: columns[term.index].trim()
+					}
+				}
+			}
+		}
+		//empty obj is byTermId which is only used for the gdc
+		return [samples, {}]
+	}
 }
 
 async function readSourceFile(source: string) {
@@ -70,10 +101,14 @@ async function readSourceFile(source: string) {
 	}
 }
 
-function makeParentTerms(header: string, id2term: Map<string, any>) {
+function makeParentTerms(header: string, id2term: Map<string, any>, sampleKey: string) {
 	const columns = header.split(',')
 
 	for (const [i, col] of columns.entries()) {
+		if (col.trim().toLowerCase() == sampleKey.trim().toLowerCase()) {
+			sampleKeyIdx = i
+		}
+
 		const term = {
 			id: col.trim(),
 			name: col.replace(/[/.]/g, ' ').trim(),
@@ -86,7 +121,8 @@ function makeParentTerms(header: string, id2term: Map<string, any>) {
 			included_types: [],
 			child_types: [],
 			__tree_isroot: false,
-			//will delete these later
+			//This isn't used in the termdb
+			//but makes querying the .csv easier
 			index: i
 		}
 		id2term.set(term.id, term)
@@ -118,16 +154,17 @@ function assignValuesToTerms(id2term: Map<string, any>, lines: string[]) {
 		if (!id2term.has(termid)) continue
 		const term = id2term.get(termid)
 		const termValues = [...values]
-		//Explicitly checks for numbers, pos and neg integers
+		//Explicitly checks for pos and neg numbers
 		const numValuesOnly = [...values].every(v => typeof v === 'string' && /^-?\d+$/.test(v))
-		if (numValuesOnly) {
-			//No values are added to numerical terms
-			assignNumType(term, termValues)
-		} else {
+		/** Sample ids/names are likely numbers but categorical terms */
+		if (!numValuesOnly || term.index == sampleKeyIdx) {
 			/** Return the values in the set as an object with increasing
 			 * indices as keys with the values as labels.*/
-			term.values = termValues.map((v, i) => [String(i), { label: v }])
+			term.values = termValues.map((v, i) => [i, { label: v }])
 			term.included_types = ['categorical']
+		} else {
+			//No values are added to numerical terms
+			assignNumType(term, termValues)
 		}
 	}
 }
@@ -140,6 +177,6 @@ function assignNumType(term: any, termValues: any) {
 	} else {
 		term.type = 'integer'
 		term.included_types = ['integer']
-		term.values = termValues.map((v, i) => [String(i), { label: v }])
+		term.values = termValues.map((v, i) => [i, { label: v }])
 	}
 }
