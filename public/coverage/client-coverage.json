@@ -4174,5 +4174,41 @@
       "prev": 0,
       "diff": 81.48
     }
+  },
+  "plots/boxplot/interactions/ListSamples.ts": {
+    "lines": {
+      "total": 48,
+      "covered": 29,
+      "skipped": 0,
+      "pct": 60.41
+    },
+    "functions": {
+      "total": 13,
+      "covered": 9,
+      "skipped": 0,
+      "pct": 69.23
+    },
+    "statements": {
+      "total": 53,
+      "covered": 30,
+      "skipped": 0,
+      "pct": 56.6
+    },
+    "branches": {
+      "total": 49,
+      "covered": 14,
+      "skipped": 0,
+      "pct": 28.57
+    },
+    "lowestPct": {
+      "curr": 28.57,
+      "prev": 0,
+      "diff": 28.57
+    },
+    "averagePct": {
+      "curr": 53.70249999999999,
+      "prev": 0,
+      "diff": 53.70249999999999
+    }
   }
 }
