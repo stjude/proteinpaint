@@ -20,13 +20,19 @@ Tests:
  reusable helper functions
 **************************/
 
-function getHolder() {
-	return d3s
+function getHolder(styles = {}) {
+	const holder = d3s
 		.select('body')
 		.append('div')
 		.style('border', '1px solid #aaa')
 		.style('padding', '5px')
 		.style('margin', '5px')
+
+	for (const k of Object.keys(styles)) {
+		holder.style(k, styles[k])
+	}
+
+	return holder
 }
 
 const longText =
@@ -123,7 +129,7 @@ tape('show() with args', async test => {
 		testMenu.show(posNum)
 		test.deepEqual(
 			{ left: testMenu.dnode.style.left, top: testMenu.dnode.style.top },
-			{ left: `${posNum + testMenu.offsetX}px`, top: y ? `${y}px` : '' },
+			{ left: `${posNum + testMenu.offsetX}px`, top: '' },
 			`Should show menu left, under header, shifted by .offsetX = ${testMenu.offsetX}px`
 		)
 	}
@@ -195,8 +201,8 @@ tape.skip('onHide() callback', test => {
 
 tape('showunder()', test => {
 	test.timeoutAfter(500)
-
-	const holder = getHolder()
+	// set holder position as fixed relative to viewport, so it's not affected by vertical scroll as other test DOMs are added or removed
+	const holder = getHolder({ position: 'fixed' })
 	const btn = holder.append('button').text('Button')
 	const testMenu = getTestMenu()
 
@@ -213,7 +219,7 @@ tape('showunder()', test => {
 	const btnP = btn.node().getBoundingClientRect()
 	const menuP = testMenu.dnode.getBoundingClientRect()
 	test.equal(btnP.x, menuP.x, `Should show menu with the same style.left value as test element.`)
-	const correctYvalue = btnP.top + btnP.height + window.scrollY + 5
+	const correctYvalue = btnP.top + btnP.height + 5 // window.scrollY is not applicable with fixed holder position
 	test.equal(
 		Math.round(correctYvalue),
 		Math.round(menuP.y),
@@ -229,8 +235,8 @@ tape('showunder()', test => {
 
 tape('showunderoffset()', test => {
 	test.timeoutAfter(500)
-
-	const holder = getHolder()
+	// set holder position as fixed relative to viewport, so it's not affected by vertical scroll as other test DOMs are added or removed
+	const holder = getHolder({ position: 'fixed' })
 	const btn = holder.append('button').text('Button')
 	const testMenu = getTestMenu()
 
@@ -252,7 +258,7 @@ tape('showunderoffset()', test => {
 		Math.round(menuP.x),
 		`Should show menu with the style.left value as test element, offset by ${testMenu.offsetX}px.`
 	)
-	const correctYvalue = btnP.top + btnP.height + window.scrollY + 5
+	const correctYvalue = btnP.top + btnP.height + 5 // window.scrollY is not applicable with fixed holder position
 	test.equal(
 		Math.round(correctYvalue + testMenu.offsetY),
 		Math.round(menuP.y),
