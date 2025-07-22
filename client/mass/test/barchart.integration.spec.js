@@ -353,7 +353,7 @@ tape('term1=geneVariant with groups', function (test) {
 			plots: [
 				{
 					chartType: 'barchart',
-					term: { term: { type: 'geneVariant', gene: 'TP53' }, q: { type: 'custom-groupset' } }
+					term: { term: { type: 'geneVariant', gene: 'TP53' }, q: { type: 'predefined-groupset' } }
 				}
 			]
 		},
@@ -381,7 +381,7 @@ tape('term1=categorical, term2=geneVariant', function (test) {
 				{
 					chartType: 'barchart',
 					term: { id: 'diaggrp' },
-					term2: { term: { type: 'geneVariant', gene: 'TP53' }, q: { type: 'custom-groupset' } }
+					term2: { term: { type: 'geneVariant', gene: 'TP53' }, q: { type: 'predefined-groupset' } }
 				}
 			]
 		},
@@ -408,7 +408,7 @@ tape('term1=geneExp, term2=geneVariant SKIPPED', function (test) {
 			plots: [
 				{
 					chartType: 'summary',
-					term2: { term: { type: 'geneVariant', gene: 'TP53' }, q: { type: 'custom-groupset' } },
+					term2: { term: { type: 'geneVariant', gene: 'TP53' }, q: { type: 'predefined-groupset' } },
 					// must set geneExp q.mode=discrete to show barchart, otherwise it will become violin and not trigger provied postRender for barchart
 					term: { term: { type: 'geneExpression', gene: 'TP53' }, q: { mode: 'discrete' } }
 				}
@@ -437,7 +437,7 @@ tape('term1=geneVariant, term2=geneExp', function (test) {
 			plots: [
 				{
 					chartType: 'barchart',
-					term: { term: { type: 'geneVariant', gene: 'TP53' }, q: { type: 'custom-groupset' } },
+					term: { term: { type: 'geneVariant', gene: 'TP53' }, q: { type: 'predefined-groupset' } },
 					term2: { term: { type: 'geneExpression', gene: 'TP53' } }
 				}
 			]
