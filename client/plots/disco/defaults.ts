@@ -17,7 +17,7 @@ export default function discoDefaults(overrides: any = {}): Settings {
 			cnvCutoffMode: 'percentile',
 			radius: 300,
 			fusionOpacity: 1,
-			selectedChromosomes: []
+			hiddenChromosomes: []
 		},
 
 		rings: {
