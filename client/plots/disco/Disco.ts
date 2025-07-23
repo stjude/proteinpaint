@@ -120,8 +120,8 @@ export default class Disco {
 
 		const genomeChr = this.app.opts.state.args.genome.majorchr
 		const chromosomeConfigOption = {
-			label: 'Chromosomes',
-			title: 'Select chromosomes to display',
+			label: 'Hide chromosomes',
+			title: 'Hide chromosomes in the plot',
 			type: 'multiCheckbox',
 			chartType: 'Disco',
 			settingsKey: 'hiddenChromosomes',
@@ -262,6 +262,6 @@ export async function getPlotConfig(opts: any, app: any) {
 		chartType: 'Disco',
 		subfolder: 'disco',
 		extension: 'ts',
-		settings: discoDefaults(opts.overrides, app)
+		settings: discoDefaults(opts.settings, app)
 	}
 }

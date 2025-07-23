@@ -82,6 +82,7 @@ export type DiscoPlotArgs = {
 	cnvText?: string
 	cnvFile?: string
 	cnvUrl?: string
+	settings?: any
 }
 
 //... more datatypes can be added later
@@ -124,7 +125,8 @@ export async function launch(arg: DiscoPlotArgs, genomeObj: Genome, holder: Sele
 				{
 					chartType: 'Disco',
 					subfolder: 'disco',
-					extension: 'ts'
+					extension: 'ts',
+					settings: arg.settings || {} // use provided settings or empty object
 					/*
 					overrides: {
 						Disco: {
