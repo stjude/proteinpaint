@@ -2,10 +2,10 @@ import type Settings from './Settings'
 import { copyMerge } from '#rx'
 import { CnvRenderingType } from '#plots/disco/cnv/CnvRenderingType.ts'
 
-export default function discoDefaults(overrides: any = {}, app: any): Settings {
+export default function discoDefaults(overrides: any = {}, app?: any): Settings {
 	const hiddenChromosomes: string[] = []
 	//TODO: Change skipChrM into Set to accept multiple chromosomes
-	if (app.vocabApi?.termdbConfig?.queries?.singleSampleMutation?.discoPlot?.skipChrM) {
+	if (app?.vocabApi?.termdbConfig?.queries?.singleSampleMutation?.discoPlot?.skipChrM) {
 		hiddenChromosomes.push('chrM')
 	}
 

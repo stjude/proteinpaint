@@ -603,8 +603,17 @@ function setCheckboxInput(opts) {
 
 /*
 	Use for array of allowed values
+
+	Use opts.style to control the checkboxes layout
+	style: {
+		colNum: number -> number of columns to display
+		gap: number -> gap between columns
+	}
 */
 function setMultiCheckbox(opts) {
+	const numCols = opts.style?.colNum || 2
+	const numRows = Math.ceil(opts.options.length / numCols)
+
 	const self = {
 		dom: {
 			row: opts.holder.style('display', 'table-row'),
@@ -616,8 +625,14 @@ function setMultiCheckbox(opts) {
 			inputTd: opts.holder
 				.append('td')
 				.attr('colspan', opts.colspan || '')
-				.style('padding', '5px')
 				.style('text-align', opts.align || '')
+				.style('padding', '5px')
+				.append('div')
+				.style('display', 'grid')
+				.style('grid-template-columns', `repeat(${numCols}, 1fr)`)
+				.style('grid-template-rows', `repeat(${numRows}, auto)`)
+				.style('grid-auto-flow', 'column')
+				.style('gap', `${opts.style.gap || 5}px`)
 		}
 	}
 
