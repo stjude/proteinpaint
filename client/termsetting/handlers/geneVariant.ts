@@ -282,6 +282,12 @@ export async function getPredefinedGroupsets(tw: RawGvPredefinedGsTW, vocabApi: 
 	await getChildTerms(tw.term, vocabApi)
 	if (!tw.term.childTerms?.length) throw 'tw.term.childTerms[] is missing'
 	// build predefined groupsets based on child dt terms
+	/*tw.term.groupsetting = {
+		disabled: false,
+		lst: tw.term.childTerms.filter(dtTerm => dtTerm.dt == 4).map(dtTerm => {
+		})
+	}*/
+
 	tw.term.groupsetting = {
 		disabled: false,
 		lst: tw.term.childTerms.map(dtTerm => {
@@ -289,7 +295,8 @@ export async function getPredefinedGroupsets(tw: RawGvPredefinedGsTW, vocabApi: 
 			const wildtypeLabel = dtTerm.dt == 4 ? 'Neutral' : 'Wildtype'
 			const groupset = {
 				name: `${dtTerm.name_noOrigin}: ${mutantLabel} vs. ${wildtypeLabel}`,
-				groups: []
+				groups: [],
+				dt: dtTerm.dt
 			}
 			if (dtTerm.origin) groupset.name += ` (${dtTerm.origin})`
 			const grp1Name = `${dtTerm.name_noOrigin} ${dtTerm.origin ? `${mutantLabel} (${dtTerm.origin})` : mutantLabel}`
