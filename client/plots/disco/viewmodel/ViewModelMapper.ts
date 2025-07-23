@@ -60,10 +60,10 @@ export class ViewModelMapper {
 		const chrSizes = opts.args.genome.majorchr
 
 		/** Remove hidden chromosomes */
-		const chromosomeOverride = {}
+		const chromosomesOverride = {}
 		for (const chr of Object.keys(chrSizes)) {
 			if (!this.settings.Disco.hiddenChromosomes.includes(chr)) {
-				chromosomeOverride[chr] = chrSizes[chr]
+				chromosomesOverride[chr] = chrSizes[chr]
 			}
 		}
 
@@ -79,7 +79,7 @@ export class ViewModelMapper {
 
 		this.applyRadius()
 
-		const reference = new Reference(this.settings, chrSizes, chromosomeOverride)
+		const reference = new Reference(this.settings, chrSizes, chromosomesOverride)
 
 		const dataMapper = new DataMapper(this.settings, reference, sampleName, prioritizedGenes)
 
