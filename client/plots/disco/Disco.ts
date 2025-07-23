@@ -120,11 +120,14 @@ export default class Disco {
 
 		const genomeChr = this.app.opts.state.args.genome.majorchr
 		const chromosomeConfigOption = {
-			label: 'Hide chromosomes',
+			label: 'Hidden chromosomes',
 			title: 'Hide chromosomes in the plot',
 			type: 'multiCheckbox',
 			chartType: 'Disco',
 			settingsKey: 'hiddenChromosomes',
+			style: {
+				colNum: 4
+			},
 			options: Object.keys(genomeChr).map(c => ({ label: c, value: c }))
 		}
 
