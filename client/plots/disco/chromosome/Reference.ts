@@ -62,8 +62,8 @@ export default class Reference {
 				startAngle: startAngle,
 				endAngle: endAngle,
 				angle: (startAngle + endAngle) / 2,
-				innerRadius: this.settings.chromosomeInnerRadius,
-				outerRadius: this.settings.chromosomeInnerRadius + this.settings.chromosomeWidth,
+				innerRadius: this.settings.rings.chromosomeInnerRadius,
+				outerRadius: this.settings.rings.chromosomeInnerRadius + this.settings.rings.chromosomeWidth,
 				color: '#AAA',
 				text: this.keysArray[i]
 			}
