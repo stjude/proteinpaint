@@ -16,6 +16,7 @@ const overriders = {
 	chromosomeWidth: 10
 }
 const settings = discoDefaults(overriders)
+const chromosomesOrder = ['chr1', 'chr2']
 
 // Mock chromosome sizes (normally coming from genome data)
 const chromosomes = {
@@ -32,7 +33,7 @@ test('\n', function (t) {
 
 // ───── Unit Tests ─────
 test('Reference class initializes correctly', t => {
-	const reference = new Reference(settings, chromosomes)
+	const reference = new Reference(settings, chromosomesOrder, chromosomes)
 
 	//Check that all chromosome keys are recorded in order
 	t.equal(reference.chromosomesOrder.length, 3, 'should imclude all chromosome keys')
