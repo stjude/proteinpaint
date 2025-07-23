@@ -175,8 +175,10 @@ function getChartTypeList(self, state) {
 			config: { chartType: 'profileForms' }
 		},
 		////////////////////// PROFILE PLOTS END //////////////////////
+		//          rest are general plots applicable to all ds
+
 		{
-			label: 'Data Dictionary',
+			label: 'Data Dictionary', // todo change to Data Variables
 			clickTo: self.prepPlot,
 			chartType: 'dictionary',
 			config: {
@@ -339,6 +341,18 @@ function getChartTypeList(self, state) {
 			chartType: 'correlationVolcano',
 			usecase: { target: 'correlationVolcano', detail: 'numeric' },
 			clickTo: self.showTree_select1term
+		},
+		{
+			label: 'Mutation vs Diagnosis',
+			chartType: 'summarizeMutationDiagnosis', // type names of other similar charts should all begin with `summarize` to indcate they are based on summary plot
+			usecase: { target: 'summarizeMutationDiagnosis' },
+			clickTo: self.loadChartSpecificMenu
+		},
+		{
+			label: 'CNV vs GeneExp',
+			chartType: 'summarizeCnvGeneexp',
+			usecase: { target: 'summarizeCnvGeneexp' },
+			clickTo: self.loadChartSpecificMenu
 		}
 	]
 
