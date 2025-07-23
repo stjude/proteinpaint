@@ -62,7 +62,7 @@ export class ViewModelMapper {
 		/** Remove hidden chromosomes */
 		const chromosomeOverride = {}
 		for (const chr of Object.keys(chrSizes)) {
-			if (!this.settings.Disco.hiddenChromosomes!.includes(chr)) {
+			if (!this.settings.Disco.hiddenChromosomes.includes(chr)) {
 				chromosomeOverride[chr] = chrSizes[chr]
 			}
 		}
