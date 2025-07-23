@@ -1,5 +1,4 @@
 import { select as d3select } from 'd3-selection'
-import 'd3-transition' // so that selection.transition would be defined
 import { get_base_zindex } from '#common/globals'
 
 /*

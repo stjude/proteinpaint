@@ -1,5 +1,6 @@
 import tape from 'tape'
 import * as d3s from 'd3-selection'
+import 'd3-transition' // so that selection.transition would be defined
 import { Menu } from '#dom/menu'
 import { detectStyle } from '../../test/test.helpers.js'
 /**
