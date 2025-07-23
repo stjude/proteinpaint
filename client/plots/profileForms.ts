@@ -74,7 +74,7 @@ export class profileForms extends profilePlot {
 		const shift = 650
 		const shiftTop = 50
 		const width = settings.svgw + shift + 600
-		const svg = rightDiv.style('padding', '10px').append('svg').attr('width', width)
+		const svg = rightDiv.style('padding', '20px').append('svg').attr('width', width)
 		svg
 			.append('defs')
 			.append('pattern')
