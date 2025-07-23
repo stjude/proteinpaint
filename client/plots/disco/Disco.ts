@@ -257,11 +257,11 @@ export const discoInit = getCompInit(Disco)
 
 export const componentInit = discoInit
 
-export async function getPlotConfig(opts: any) {
+export async function getPlotConfig(opts: any, app: any) {
 	return {
 		chartType: 'Disco',
 		subfolder: 'disco',
 		extension: 'ts',
-		settings: discoDefaults(opts.overrides)
+		settings: discoDefaults(opts.overrides, app)
 	}
 }
