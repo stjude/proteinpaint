@@ -659,7 +659,7 @@ function setMultiCheckbox(opts) {
 						config: {
 							settings: {
 								[opts.chartType]: {
-									[opts.settingsKey]: checked
+									[opts.settingsKey]: opts.processInput?.(checked) || checked
 								}
 							}
 						}
@@ -674,7 +674,8 @@ function setMultiCheckbox(opts) {
 	const api = {
 		main(plot) {
 			const values = plot.settings[opts.chartType][opts.settingsKey]
-			self.dom.inputs.property('checked', d => values.includes(d.value))
+			const checkedValues = opts.processInput?.(values) || values
+			self.dom.inputs.property('checked', d => checkedValues.includes(d.value))
 			self.dom.labels.style('display', d => d.getDisplayStyle?.(plot) || '')
 			opts.holder.style('display', opts.getDisplayStyle?.(plot) || 'table-row')
 		}
