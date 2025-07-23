@@ -1,4 +1,4 @@
-FROM debian:bookworm-slim
+FROM debian:12.11-slim
 
 LABEL org.opencontainers.image.source="https://github.com/stjude/proteinpaint" \
     org.opencontainers.image.version="latest"
