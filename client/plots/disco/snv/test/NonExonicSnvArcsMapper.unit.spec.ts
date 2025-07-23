@@ -16,12 +16,13 @@ const overriders = { padAngle: 0.0 }
 const settings = discoDefaults(overriders)
 
 const sampleName = 'Sample'
+const chromosomesOrder = ['chr1', 'chr2']
 const chromosomes = {
 	chr1: 1000,
 	chr2: 1000
 }
 
-const reference = new Reference(settings, chromosomes)
+const reference = new Reference(settings, chromosomesOrder, chromosomes)
 const nonExonicSnvArcsMapper = new NonExonicSnvArcsMapper(10, 10, sampleName, reference)
 
 // ───── Test Banner ─────

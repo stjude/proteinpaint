@@ -24,6 +24,8 @@ const settings = discoDefaults(overriders)
 // Represents the label used to identify the sample (not a data type like `dt`).
 const sampleName = 'sample'
 
+const chromosomesOrder = ['chr1', 'chr2']
+
 // Defines chromosome lengths in base pairs.
 // Each chromosome is assigned 100 units; since a circle spans 0 to 2π,
 // this maps each chromosome to π radians.
@@ -34,7 +36,7 @@ const chromosomes = {
 
 // Initializes a genome reference object with chromosome definitions
 // and logic to convert base pair positions to angles.
-const reference = new Reference(settings, chromosomes)
+const reference = new Reference(settings, chromosomesOrder, chromosomes)
 
 test('LohArcMapper.map() should return an array of LohArc objects', function (t) {
 	const rawData = [

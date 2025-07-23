@@ -1,4 +1,5 @@
 import type Chromosome from './Chromosome.ts'
+import type Settings from '../Settings.ts'
 
 export default class Reference {
 	chromosomes: Array<Chromosome> = []
@@ -12,10 +13,20 @@ export default class Reference {
 	private totalSizeArray: Array<number> = []
 	private chrSizesArray: Array<number> = []
 
-	private settings: any
+	private settings: Settings
 
-	constructor(settings: any, chromosomes: any, selectedChromosomes?: any) {
-		const chrSizes = selectedChromosomes || chromosomes
+	/**
+	 * Creates a Reference object that contains information about chromosomes.
+	 * @param settings State settings
+	 * @param chromosomes Chromosome order. This function formats into an obj with `chr` removed.
+	 * @param chromosomeOverride Obj of chromsome keys and sizes. Filtered to remove hidden chromosomes in settings.
+	 */
+	constructor(
+		settings: Settings,
+		chromosomes: string[] | { [chromosome: string]: number },
+		chromosomeOverride?: { [chromosome: string]: number }
+	) {
+		const chrSizes = chromosomeOverride || chromosomes
 
 		this.settings = settings
 
