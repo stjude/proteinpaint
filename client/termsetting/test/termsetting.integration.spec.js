@@ -474,43 +474,39 @@ tape('Numerical term: fixed bins', async test => {
 
 	// test numeric bin menu
 	test.equal(
-		d3s.select(tip.d.selectAll('tr')._groups[0][0]).selectAll('td')._groups[0][0].innerText,
+		tip.d.node().querySelector('tr').querySelector('td').innerText,
 		'Bin Size',
 		'Should have section for "bin size" edit'
 	)
 	test.equal(
-		d3s.select(tip.d.selectAll('tr')._groups[0][1]).selectAll('td')._groups[0][0].innerText,
+		tip.d.node().querySelectorAll('tr')[1].querySelector('td').innerText,
 		'First Bin Stop',
 		'Should have section for "First bin" edit'
 	)
 	test.equal(
-		d3s.select(tip.d.selectAll('tr')._groups[0][2]).selectAll('td')._groups[0][0].innerText,
+		tip.d.node().querySelectorAll('tr')[2].querySelector('td').innerText,
 		'Last Bin Start',
 		'Should have section for "Last bin" edit'
 	)
 
 	//trigger and test bin_size change
-	const bin_size_input = d3s.select(tip.d.selectAll('tr')._groups[0][0]).selectAll('input')._groups[0][0]
+	const bin_size_input = tip.d.node().querySelector('tr').querySelector('input')
 	bin_size_input.value = 5
 
 	//trigger 'change' to update bins
 	bin_size_input.dispatchEvent(new Event('change'))
-
-	test.equal(
-		d3s.select(tip.d.selectAll('tr')._groups[0][0]).selectAll('input')._groups[0][0].value,
-		'5',
-		'Should change "bin size" from input'
-	)
+	await sleep(10)
+	test.equal(tip.d.node().querySelector('tr').querySelector('input').value, '5', 'Should change "bin size" from input')
 
 	//trigger and test first_bin_change
-	const first_bin_input = d3s.select(tip.d.selectAll('tr')._groups[0][1]).selectAll('input')._groups[0][0]
+	const first_bin_input = tip.d.node().querySelectorAll('tr')[1].querySelector('input')
 	first_bin_input.value = 7
 
 	//trigger 'change' to update bins
 	first_bin_input.dispatchEvent(new Event('change'))
 	await sleep(10)
 	test.equal(
-		d3s.select(tip.d.selectAll('tr')._groups[0][1]).selectAll('input')._groups[0][0].value,
+		tip.d.node().querySelectorAll('tr')[1].querySelector('input').value,
 		'7',
 		'Should change "first bin" from input'
 	)
@@ -521,7 +517,7 @@ tape('Numerical term: fixed bins', async test => {
 		.querySelectorAll('tr')[2]
 		.querySelectorAll('div')[0]
 		.querySelectorAll('input')[1]
-	d3s.select(last_bin_custom_radio).property('checked', true)
+	last_bin_custom_radio.checked = true
 	last_bin_custom_radio.dispatchEvent(new Event('change'))
 	await sleep(50)
 	const last_bin_input = tip.d.node().querySelectorAll('tr')[2].querySelectorAll('div')[1].querySelectorAll('input')[0]
@@ -674,8 +670,8 @@ tape('Numerical term.bins.default.type=custom-bin', async test => {
 	const opts = await getOpts({ tsData: { term: copy, q: binconfig } })
 
 	await opts.pill.main(opts.tsData)
-
 	await opts.pillMenuClick('Edit')
+	await sleep(10)
 	const tip = opts.pill.Inner.dom.tip
 	const lines = tip.d.select('.binsize_g').node().querySelectorAll('line')
 	test.equal(lines.length, 1, 'should have 1 line')
