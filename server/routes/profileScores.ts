@@ -78,8 +78,9 @@ async function getScores(query, ds, genome) {
 	for (const d of query.scoreTerms) {
 		term2Score[d.score.term.id] = getPercentage(d, samples, sampleData)
 	}
-
-	const hospital = sampleData?.[query.facilityTW.$id]?.value
+	const facilityValue = sampleData?.[query.facilityTW.$id]
+	const termValue = query.facilityTW.term.values[facilityValue?.value]
+	const hospital = termValue?.label || termValue?.key
 
 	return { term2Score, sites, hospital, n: sampleData ? 1 : samples.length }
 }
