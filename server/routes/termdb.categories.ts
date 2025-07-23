@@ -36,28 +36,10 @@ function init({ genomes }) {
 	}
 }
 
-function getClientAuthFilterTvs(req: any, ds: any, term) {
-	if (ds.cohort.termdb.getProtectedTermValues) {
-		const { clientAuthResult }: any = authApi.getNonsensitiveInfo(req)
-		const protectedValues = ds.cohort.termdb.getProtectedTermValues(clientAuthResult, term)
-
-		const tvs = {
-			type: 'tvs',
-			tvs: {
-				term,
-				values: protectedValues.map(value => {
-					return { key: value, label: value }
-				})
-			}
-		}
-		return tvs
-	}
-	return null
-}
-
 async function trigger_getcategories(req: any, res: any, ds: any, genome: any) {
 	const q: CategoriesRequest = req.query
-	const authTvs = getClientAuthFilterTvs(req, ds, q.tw.term)
+	const authTvs: any = authApi.getClientAuthFilterTvs(req, ds, q.tw.term)
+	console.log('authTvs', authTvs)
 	let filter: any = q.filter
 	if (!filter) {
 		filter = {
@@ -67,7 +49,7 @@ async function trigger_getcategories(req: any, res: any, ds: any, genome: any) {
 			lst: []
 		}
 	} else filter.join = 'and'
-	filter.lst.push(authTvs)
+	if (authTvs) filter.lst.push(authTvs)
 
 	// only one term per request, so can hardcode a known string tw.$id if missing
 	// and $id is not used in the response payload/metadata

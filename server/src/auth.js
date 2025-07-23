@@ -3,6 +3,7 @@ import path from 'path'
 import jsonwebtoken from 'jsonwebtoken'
 import { sleep } from './utils.js'
 import mm from 'micromatch'
+import { get } from 'http'
 
 const { isMatch } = mm
 
@@ -23,7 +24,8 @@ const defaultApiMethods = {
 	getPayloadFromHeaderAuth: () => ({}),
 	getHealth: () => undefined,
 	// credentialed embedders, using an array which can be frozen with Object.freeze(), unlike a Set()
-	credEmbedders: []
+	credEmbedders: [],
+	getClientAuthFilterTvs: (req, ds, term) => {}
 }
 
 // these may be overriden within maySetAuthRoutes()
@@ -859,4 +861,23 @@ function checkIPaddress(req, ip, cred) {
 	if (!ip) throw `Server error: missing ip address in saved session`
 	if (req.ip != ip && req.ips?.[0] != ip && req.connection?.remoteAddress != ip)
 		throw `Your connection has changed, please refresh your page or sign in again.`
+}
+
+authApi.getClientAuthFilterTvs = function (req, ds, term) {
+	if (ds.cohort.termdb.getProtectedTermValues) {
+		const { clientAuthResult } = authApi.getNonsensitiveInfo(req)
+		const protectedValues = ds.cohort.termdb.getProtectedTermValues(clientAuthResult, term)
+
+		const tvs = {
+			type: 'tvs',
+			tvs: {
+				term,
+				values: protectedValues.map(value => {
+					return { key: value, label: value }
+				})
+			}
+		}
+		return tvs
+	}
+	return null
 }
