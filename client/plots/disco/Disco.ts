@@ -120,15 +120,23 @@ export default class Disco {
 
 		const genomeChr = this.app.opts.state.args.genome.majorchr
 		const chromosomeConfigOption = {
-			label: 'Hidden chromosomes',
-			title: 'Hide chromosomes in the plot',
+			label: 'Chromosomes',
+			title: 'Chromosomes shown in the plot',
 			type: 'multiCheckbox',
 			chartType: 'Disco',
 			settingsKey: 'hiddenChromosomes',
 			style: {
 				colNum: 4
 			},
-			options: Object.keys(genomeChr).map(c => ({ label: c, value: c }))
+			options: Object.keys(genomeChr).map(c => ({ label: c, value: c })),
+			processInput: (values: string[] = []) => {
+				/** Show all chromosomes as checked by default but only
+				 * save to the state hidden (unchecked) chromosomes.
+				 * Allows for easier debugging, reduces user error when
+				 * embedding, and code clarity. */
+				const reverse = Object.keys(genomeChr).filter(c => !values.includes(c))
+				return reverse
+			}
 		}
 
 		configInputsOptions.push(chromosomeConfigOption)
