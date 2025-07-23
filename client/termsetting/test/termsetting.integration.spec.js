@@ -544,7 +544,7 @@ tape('Numerical term: fixed bins', async test => {
 		.find(b => b.innerHTML == 'Apply')
 	apply_btn.click()
 	await opts.pillMenuClick('Edit')
-	await sleep(50)
+	await sleep(100)
 	test.equal(
 		tip.d.node().querySelectorAll('tr')[0].querySelectorAll('input')[0].value,
 		'5',
@@ -636,6 +636,7 @@ tape('Numerical term: float custom bins', async test => {
 	await opts.pill.main(opts.tsData)
 
 	await opts.pillMenuClick('Edit')
+	await sleep(100)
 	const tip = opts.pill.Inner.dom.tip
 	const lines = tip.d.select('.binsize_g').node().querySelectorAll('line')
 	test.equal(lines.length, 2, 'should have 2 lines')
