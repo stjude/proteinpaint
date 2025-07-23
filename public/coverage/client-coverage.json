@@ -4238,13 +4238,13 @@
     },
     "lowestPct": {
       "curr": 37.68,
-      "prev": 0,
-      "diff": 37.68
+      "prev": 37.68,
+      "diff": 0
     },
     "averagePct": {
       "curr": 46.9375,
-      "prev": 0,
-      "diff": 46.9375
+      "prev": 46.9375,
+      "diff": 0
     }
   },
   "dom/test/menu.unit.spec.js": {
@@ -4274,13 +4274,13 @@
     },
     "lowestPct": {
       "curr": 61.53,
-      "prev": 0,
-      "diff": 61.53
+      "prev": 61.53,
+      "diff": 0
     },
     "averagePct": {
       "curr": 75.765,
-      "prev": 0,
-      "diff": 75.765
+      "prev": 75.765,
+      "diff": 0
     }
   }
 }
