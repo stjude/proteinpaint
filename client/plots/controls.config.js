@@ -693,8 +693,7 @@ function setCustomInput(opts) {
 	this is a generalized control wrapper for termsetting pill,
 	intended to eventually replace the more specific term1, overlay, and divide components
 
-	many of the options are mapped to the arguments of termsettingInit(),
-	https://docs.google.com/document/d/13bU1azXD6Jl_1w0SCTc8eCEt42YJtrK4kJ3mdSkxMrU/edit#heading=h.oqjmte1ot0h3
+	many of the options are mapped to the arguments of termsettingInit()
 */
 async function setTermInput(opts) {
 	const self = {

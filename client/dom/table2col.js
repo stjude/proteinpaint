@@ -21,6 +21,7 @@ if need to insert html and other dynamic contents instead of plain text, do this
 arg{}
 	.holder
 	.margin
+	.cellPadding
 */
 export function table2col(arg) {
 	const scrollDiv = arg.holder.append('div').style('max-width', '80vw')
@@ -44,6 +45,10 @@ export function table2col(arg) {
 			const tr = table.append('tr')
 			const td1 = tr.append('td').style('padding', '3px').style('color', '#555')
 			const td2 = tr.append('td')
+			if (arg.cellPadding) {
+				td1.style('padding', arg.cellPadding)
+				td2.style('padding', arg.cellPadding)
+			}
 			if (text1 != undefined) td1.text(text1)
 			if (text2 != undefined) td2.text(text2)
 			return [td1, td2]
