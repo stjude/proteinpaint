@@ -74,6 +74,7 @@ tape('new Menu()', test => {
 	test.end()
 })
 
+// async callback so that tape can end the test on uncaught error
 tape('show(), clear(), and hide(), no args', async test => {
 	test.timeoutAfter(500)
 	//Test basic function collectively to use freely in later tests
@@ -116,6 +117,7 @@ tape.skip('clear() with arg', test => {
 	test.end()
 })
 
+// async callback so that tape can end the test on uncaught error
 tape('show() with args', async test => {
 	test.timeoutAfter(500)
 
@@ -199,7 +201,8 @@ tape.skip('onHide() callback', test => {
 	test.end()
 })
 
-tape('showunder()', test => {
+// async callback so that tape can end the test on uncaught error
+tape('showunder()', async test => {
 	test.timeoutAfter(500)
 	// set holder position as fixed relative to viewport, so it's not affected by vertical scroll as other test DOMs are added or removed
 	const holder = getHolder({ position: 'fixed' })
@@ -233,7 +236,8 @@ tape('showunder()', test => {
 	test.end()
 })
 
-tape('showunderoffset()', test => {
+// async callback so that tape can end the test on uncaught error
+tape('showunderoffset()', async test => {
 	test.timeoutAfter(500)
 	// set holder position as fixed relative to viewport, so it's not affected by vertical scroll as other test DOMs are added or removed
 	const holder = getHolder({ position: 'fixed' })
