@@ -57,31 +57,14 @@ export class ViewModelMapper {
 	}
 
 	map(opts: any): ViewModel {
-		let selectedChromosomes = opts.args.chromosomes
-
 		const chrSizes = opts.args.genome.majorchr
-		let excludedChromosomes: string[] = []
 
-		// Determine which chromosomes should be visualized. When
-		// `selectedChromosomes` is not provided as an argument, fall back
-		// to `settings.Disco.selectedChromosomes` and construct a mapping
-		// of valid chromosomes. Any chromosomes omitted from that list are
-		// considered excluded. If `selectedChromosomes` is given, compute
-		// the excluded set by comparing it to the full list of reference
-		// chromosomes.
-
-		if (
-			!selectedChromosomes &&
-			Array.isArray(this.settings.Disco.selectedChromosomes) &&
-			this.settings.Disco.selectedChromosomes.length
-		) {
-			selectedChromosomes = {}
-			for (const chr of this.settings.Disco.selectedChromosomes) {
-				if (chrSizes[chr]) selectedChromosomes[chr] = chrSizes[chr]
+		/** Remove hidden chromosomes */
+		const chromosomeOverride = {}
+		for (const chr of Object.keys(chrSizes)) {
+			if (!this.settings.Disco.hiddenChromosomes!.includes(chr)) {
+				chromosomeOverride[chr] = chrSizes[chr]
 			}
-			excludedChromosomes = Object.keys(chrSizes).filter(c => !this.settings.Disco.selectedChromosomes!.includes(c))
-		} else if (selectedChromosomes) {
-			excludedChromosomes = Object.keys(chrSizes).filter(c => !(c in selectedChromosomes))
 		}
 
 		const sampleName = opts.args.sampleName
@@ -96,9 +79,9 @@ export class ViewModelMapper {
 
 		this.applyRadius()
 
-		const reference = new Reference(this.settings, chrSizes, selectedChromosomes)
+		const reference = new Reference(this.settings, chrSizes, chromosomeOverride)
 
-		const dataMapper = new DataMapper(this.settings, reference, sampleName, prioritizedGenes, excludedChromosomes)
+		const dataMapper = new DataMapper(this.settings, reference, sampleName, prioritizedGenes)
 
 		return new ViewModelProvider(
 			this.settings,

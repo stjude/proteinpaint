@@ -46,18 +46,7 @@ export default class Disco {
 
 	async init() {
 		const state = this.app.getState()
-		const genomeChrs = Object.keys(this.app.opts.state.args.genome.majorchr)
-		let settings = state.plots.find(p => p.id === this.id).settings
-
-		if (!settings.Disco.selectedChromosomes || !settings.Disco.selectedChromosomes.length) {
-			await this.app.dispatch({
-				type: 'plot_edit',
-				id: this.id,
-				config: { settings: { Disco: { selectedChromosomes: genomeChrs } } }
-			})
-			const updatedState = this.app.getState()
-			settings = updatedState.plots.find(p => p.id === this.id).settings
-		}
+		const settings = state.plots.find(p => p.id === this.id).settings
 
 		this.stateViewModelMapper = new ViewModelMapper(settings, this.discoInteractions)
 		this.viewModel = this.stateViewModelMapper.map(state)
@@ -135,7 +124,7 @@ export default class Disco {
 			title: 'Select chromosomes to display',
 			type: 'multiCheckbox',
 			chartType: 'Disco',
-			settingsKey: 'selectedChromosomes',
+			settingsKey: 'hiddenChromosomes',
 			options: Object.keys(genomeChr).map(c => ({ label: c, value: c }))
 		}
 

@@ -77,17 +77,11 @@ export default class DataMapper {
 		return aPos - bPos
 	}
 
-	constructor(
-		settings: Settings,
-		reference: Reference,
-		sample: string,
-		prioritizedGenes: Array<string> = [],
-		excludedChromosomes: string[] = []
-	) {
+	constructor(settings: Settings, reference: Reference, sample: string, prioritizedGenes: Array<string> = []) {
 		this.settings = settings
 		this.reference = reference
 		this.sample = sample
-		this.excludedChromosomes = excludedChromosomes
+		this.excludedChromosomes = this.settings.Disco.hiddenChromosomes
 		this.lastInnerRadious = this.settings.rings.chromosomeInnerRadius
 
 		this.gainCapped = this.settings.Disco.cnvCapping

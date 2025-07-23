@@ -19,8 +19,8 @@ export default interface Settings {
 		/** auto, fixed, percentile. Used for the numeric inputs dropdown
 		 * for cnv color scales. */
 		cnvCutoffMode: string
-
-		selectedChromosomes?: string[]
+		/** Chromosomes not rendered */
+		hiddenChromosomes: string[]
 	}
 
 	rings: {
