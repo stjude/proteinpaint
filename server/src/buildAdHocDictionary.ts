@@ -3,12 +3,14 @@ import path from 'path'
 import fs from 'fs'
 import serverconfig from './serverconfig.js'
 import { decimalPlacesUntilFirstNonZero } from '#shared/roundValue.js'
+import { summaryStats } from '#shared/descriptive.stats.js'
+import { isUsableTerm } from '#shared/termdb.usecase.js'
 
 /** Will assign later based on the ds defined sample column header */
 let sampleKeyIdx: number | null = null
 
 /** Termdb for the AI histology tool is created on the fly from
- * API metdata output. These methods build the termdb queries
+ * API metdata output (.csv file). These methods build the termdb queries
  * and query mechanisms to support the filter and tvs. */
 export async function makeAdHocDicTermdbQueries(ds: Mds3) {
 	const dict = ds?.cohort?.termdb?.dictionary
@@ -61,8 +63,28 @@ export async function makeAdHocDicTermdbQueries(ds: Mds3) {
 		return terms
 	}
 
+	//cohort(_) and treefilter(__) are not required in this case
+	q.findTermByName = async (searchStr, _, usecase = null, __) => {
+		searchStr = searchStr.toLowerCase() // convert to lowercase
+		// find terms that have term.name containing search string
+		const terms: any[] = []
+		for (const term of id2term.values()) {
+			if (usecase && !isUsableTerm(term, usecase)) continue
+			const name = term.name.toLowerCase()
+			if (name.includes(searchStr)) terms.push(JSON.parse(JSON.stringify(term)))
+		}
+		return terms
+	}
+
+	q.getAncestorIDs = _ => {
+		//At this time, no ancestors in metadata
+		return []
+	}
+
+	q.getAncestorNames = q.getAncestorIDs
+
 	/** Read the .csv file and return samples{} for further parsing in termdb/categories */
-	q.getCategoricalTermValues = async (_, termwrappers) => {
+	q.getAdHocTermValues = async (_, termwrappers) => {
 		const source = dict.source!.file
 		const csvData = await readSourceFile(source!)
 		if (!csvData) return [{}, {}]
@@ -77,11 +99,16 @@ export async function makeAdHocDicTermdbQueries(ds: Mds3) {
 
 			for (const tw of termwrappers) {
 				const term = id2term.get(tw.term.id)
+				if (!term.values) throw `Term ${term.id} has no values defined`
+				//TODO: Use getSamples from termdb.matrix.js??
+				const indexKey = term.type == 'categorical' ? '_' : `${term.id}`
+				const value = columns[term.index].trim()
+				const keyValue = term.type != 'categorical' ? Number(value) : value
 				samples[sample] = {
-					sample: sample,
-					_: {
-						key: columns[term.index].trim(),
-						value: columns[term.index].trim()
+					sample: Number(sample),
+					[indexKey]: {
+						key: keyValue,
+						value: keyValue
 					}
 				}
 			}
@@ -89,6 +116,14 @@ export async function makeAdHocDicTermdbQueries(ds: Mds3) {
 		//empty obj is byTermId which is only used for the gdc
 		return [samples, {}]
 	}
+
+	q.termjsonByOneid = (id: string) => {
+		const term = id2term.get(id)
+		if (term) return JSON.parse(JSON.stringify(term))
+		return null
+	}
+
+	//q.getSupportedChartTypes is defined in the ds for now
 }
 
 async function readSourceFile(source: string) {
@@ -113,11 +148,10 @@ function makeParentTerms(header: string, id2term: Map<string, any>, sampleKey: s
 			id: col.trim(),
 			name: col.replace(/[/.]/g, ' ').trim(),
 			/* default during development. Should remove after data dictionary 
-            or phenotree is provided */
+			or phenotree is provided */
 			type: 'categorical',
 			isleaf: true,
 			parent_id: undefined,
-			values: {},
 			included_types: [],
 			child_types: [],
 			__tree_isroot: false,
@@ -165,6 +199,7 @@ function assignValuesToTerms(id2term: Map<string, any>, lines: string[]) {
 		} else {
 			//No values are added to numerical terms
 			assignNumType(term, termValues)
+			assignDefaultBins(term, termValues)
 		}
 	}
 }
@@ -178,5 +213,52 @@ function assignNumType(term: any, termValues: any) {
 		term.type = 'integer'
 		term.included_types = ['integer']
 		term.values = termValues.map((v, i) => [i, { label: v }])
+	}
+}
+
+function assignDefaultBins(term: any, termValues: any) {
+	const stats = summaryStats(termValues)
+	if (!stats.values || stats.values.length == 0) {
+		term.bins = {}
+		return
+	}
+	const min = stats.values.find(s => s.id === 'min')!.value
+	const max = stats.values.find(s => s.id === 'max')!.value
+
+	if (max <= min) {
+		term.bins = {
+			default: {
+				mode: 'discrete',
+				type: 'regular-bin',
+				bin_size: 1,
+				startinclusive: false,
+				stopinclusive: true,
+				first_bin: {
+					startunbounded: true,
+					stop: 0
+				},
+				last_bin: {
+					start: 1,
+					stopunbounded: true
+				}
+			}
+		}
+		return
+	}
+
+	const defaultInterval = (max - min) / 5
+	const binsize = term.type == 'integer' ? Math.ceil(defaultInterval) : defaultInterval
+	term.bins = {
+		default: {
+			mode: 'discrete',
+			type: 'regular-bin',
+			bin_size: binsize,
+			startinclusive: false,
+			stopinclusive: true,
+			first_bin: {
+				startunbounded: true,
+				stop: min + binsize
+			}
+		}
 	}
 }
