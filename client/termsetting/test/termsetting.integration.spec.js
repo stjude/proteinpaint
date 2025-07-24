@@ -4,7 +4,7 @@ import { getExample } from '../../termdb/test/vocabData'
 import { vocabInit } from '../../termdb/vocabulary'
 import { termjson } from '../../test/testdata/termjson'
 import { termsettingInit } from '#termsetting'
-import { sleep, detectLst, detectGte, whenGone } from '../../test/test.helpers'
+import { sleep, detectLst, detectGte, whenGone, detectOne } from '../../test/test.helpers'
 /*
 Tests:
 	menuOptions
@@ -75,11 +75,14 @@ async function getOpts(_opts = {}, genome = 'hg38-test', dslabel = 'TermdbTest')
 		opts: { state }
 	})
 
+	const vocabApi = vocabInit({ app, state })
+	await vocabApi.getTermdbConfig()
+
 	opts.app = app
 	opts.pill = termsettingInit({
 		holder,
 		vocab,
-		vocabApi: vocabInit({ app, state }),
+		vocabApi,
 		use_bins_less: opts.use_bins_less,
 		menuOptions: opts.menuOptions,
 		disable_ReplaceRemove: opts.disable_ReplaceRemove,
@@ -419,13 +422,6 @@ tape('Numerical term: range boundaries', async test => {
 
 	await opts.pill.main(opts.tsData)
 
-	// create enter event to use for inputs of bin edit menu
-	const enter_event = new KeyboardEvent('keyup', {
-		code: 'Enter',
-		key: 'Enter',
-		keyCode: 13
-	})
-
 	const pilldiv = opts.holder.node().querySelectorAll('.ts_pill')[0]
 	await opts.pillMenuClick('Edit')
 	await sleep(1000)
@@ -468,17 +464,9 @@ tape('Numerical term: fixed bins', async test => {
 		}
 	})
 	await opts.pill.main(opts.tsData)
-
-	// create enter event to use for inputs of bin edit menu
-	const enter_event = new KeyboardEvent('keyup', {
-		code: 'Enter',
-		key: 'Enter',
-		keyCode: 13
-	})
-
 	await opts.pillMenuClick('Edit')
 	const tip = opts.pill.Inner.dom.tip
-	await sleep(100)
+	await detectGte({ target: tip.d.node(), selector: '.binsize_g', count: 1 })
 	const lines = tip.d.select('.binsize_g').node().querySelectorAll('line')
 	test.equal(lines.length, 8, 'should have 8 lines')
 	// first line should be draggable
@@ -486,43 +474,39 @@ tape('Numerical term: fixed bins', async test => {
 
 	// test numeric bin menu
 	test.equal(
-		d3s.select(tip.d.selectAll('tr')._groups[0][0]).selectAll('td')._groups[0][0].innerText,
+		tip.d.node().querySelector('tr').querySelector('td').innerText,
 		'Bin Size',
 		'Should have section for "bin size" edit'
 	)
 	test.equal(
-		d3s.select(tip.d.selectAll('tr')._groups[0][1]).selectAll('td')._groups[0][0].innerText,
+		tip.d.node().querySelectorAll('tr')[1].querySelector('td').innerText,
 		'First Bin Stop',
 		'Should have section for "First bin" edit'
 	)
 	test.equal(
-		d3s.select(tip.d.selectAll('tr')._groups[0][2]).selectAll('td')._groups[0][0].innerText,
+		tip.d.node().querySelectorAll('tr')[2].querySelector('td').innerText,
 		'Last Bin Start',
 		'Should have section for "Last bin" edit'
 	)
 
 	//trigger and test bin_size change
-	const bin_size_input = d3s.select(tip.d.selectAll('tr')._groups[0][0]).selectAll('input')._groups[0][0]
+	const bin_size_input = tip.d.node().querySelector('tr').querySelector('input')
 	bin_size_input.value = 5
 
 	//trigger 'change' to update bins
 	bin_size_input.dispatchEvent(new Event('change'))
-
-	test.equal(
-		d3s.select(tip.d.selectAll('tr')._groups[0][0]).selectAll('input')._groups[0][0].value,
-		'5',
-		'Should change "bin size" from input'
-	)
+	await sleep(10)
+	test.equal(tip.d.node().querySelector('tr').querySelector('input').value, '5', 'Should change "bin size" from input')
 
 	//trigger and test first_bin_change
-	const first_bin_input = d3s.select(tip.d.selectAll('tr')._groups[0][1]).selectAll('input')._groups[0][0]
+	const first_bin_input = tip.d.node().querySelectorAll('tr')[1].querySelector('input')
 	first_bin_input.value = 7
 
 	//trigger 'change' to update bins
 	first_bin_input.dispatchEvent(new Event('change'))
-
+	await sleep(10)
 	test.equal(
-		d3s.select(tip.d.selectAll('tr')._groups[0][1]).selectAll('input')._groups[0][0].value,
+		tip.d.node().querySelectorAll('tr')[1].querySelector('input').value,
 		'7',
 		'Should change "first bin" from input'
 	)
@@ -533,7 +517,7 @@ tape('Numerical term: fixed bins', async test => {
 		.querySelectorAll('tr')[2]
 		.querySelectorAll('div')[0]
 		.querySelectorAll('input')[1]
-	d3s.select(last_bin_custom_radio).property('checked', true)
+	last_bin_custom_radio.checked = true
 	last_bin_custom_radio.dispatchEvent(new Event('change'))
 	await sleep(50)
 	const last_bin_input = tip.d.node().querySelectorAll('tr')[2].querySelectorAll('div')[1].querySelectorAll('input')[0]
@@ -542,7 +526,7 @@ tape('Numerical term: fixed bins', async test => {
 
 	//trigger 'change' to update bins
 	last_bin_input.dispatchEvent(new Event('change'))
-
+	await sleep(50)
 	test.equal(
 		tip.d.node().querySelectorAll('tr')[2].querySelectorAll('div')[1].querySelectorAll('input')[0].value,
 		'20',
@@ -556,7 +540,7 @@ tape('Numerical term: fixed bins', async test => {
 		.find(b => b.innerHTML == 'Apply')
 	apply_btn.click()
 	await opts.pillMenuClick('Edit')
-	await sleep(50)
+	await sleep(100)
 	test.equal(
 		tip.d.node().querySelectorAll('tr')[0].querySelectorAll('input')[0].value,
 		'5',
@@ -648,6 +632,7 @@ tape('Numerical term: float custom bins', async test => {
 	await opts.pill.main(opts.tsData)
 
 	await opts.pillMenuClick('Edit')
+	await sleep(100)
 	const tip = opts.pill.Inner.dom.tip
 	const lines = tip.d.select('.binsize_g').node().querySelectorAll('line')
 	test.equal(lines.length, 2, 'should have 2 lines')
@@ -685,8 +670,8 @@ tape('Numerical term.bins.default.type=custom-bin', async test => {
 	const opts = await getOpts({ tsData: { term: copy, q: binconfig } })
 
 	await opts.pill.main(opts.tsData)
-
 	await opts.pillMenuClick('Edit')
+	await sleep(10)
 	const tip = opts.pill.Inner.dom.tip
 	const lines = tip.d.select('.binsize_g').node().querySelectorAll('line')
 	test.equal(lines.length, 1, 'should have 1 line')
@@ -1342,10 +1327,233 @@ tape('samplelst term', async test => {
 	test.end()
 })
 
-tape.skip('geneVariant term', async test => {
-	test.timeoutAfter(1000)
+tape('geneVariant term', async test => {
+	const opts = await getOpts({
+		tsData: { q: geneVariantQ, term: genVariantTerm }
+	})
 
-	//On hold. A geneVariant term is not in TermdbTest
-
+	await opts.pill.main(opts.tsData)
+	const pill = opts.holder.select('.ts_pill')
+	// check pill summary text
+	let pillSummary = pill.select('.ts_summary_btn')
+	test.equal(pillSummary.text(), 'SNV/indel: Mutated vs. Wildtype', 'Pill should display SNV/indel predefined groupset')
+	// click pill to check menu options
+	pill.node().click()
+	const tip = opts.pill.Inner.dom.tip
+	let menuOptions = tip.d.selectAll('.sja_menuoption.sja_sharp_border')
+	test.equal(menuOptions.size(), 3, 'Should have 3 menu options')
+	// click edit option to check edit UI
+	const editOptionElem = menuOptions._groups[0][0]
+	const tableElem = await detectOne({
+		elem: tip.d.node(),
+		selector: 'table',
+		async trigger() {
+			editOptionElem.click()
+		}
+	})
+	const table = d3s.select(tableElem)
+	test.equal(table.selectAll('tr').size(), 3, 'Edit table should have 3 rows')
+	// click pill again to display menu options
+	pill.node().click()
+	menuOptions = tip.d.selectAll('.sja_menuoption.sja_sharp_border')
+	// click cnv option to compare cnv mutant vs. wildtype
+	const cnvOptionElem = menuOptions._groups[0][2]
+	cnvOptionElem.click()
+	await sleep(300)
+	pillSummary = pill.select('.ts_summary_btn')
+	test.equal(pillSummary.text(), 'CNV: Altered vs. Neutral', 'Pill should display CNV predefined groupset')
 	test.end()
 })
+
+const geneVariantQ = {
+	isAtomic: true,
+	type: 'predefined-groupset',
+	predefined_groupset_idx: 0
+}
+
+const genVariantTerm = {
+	kind: 'gene',
+	id: 'TP53',
+	gene: 'TP53',
+	name: 'TP53',
+	type: 'geneVariant',
+	groupsetting: {
+		disabled: false,
+		lst: [
+			{
+				name: 'SNV/indel: Mutated vs. Wildtype',
+				groups: [
+					{
+						name: 'SNV/indel Mutated',
+						type: 'filter',
+						filter: {
+							type: 'tvslst',
+							in: true,
+							join: '',
+							lst: [
+								{
+									type: 'tvs',
+									tvs: {
+										term: {
+											id: 'snvindel',
+											query: 'snvindel',
+											name: 'SNV/indel',
+											parent_id: null,
+											isleaf: true,
+											type: 'dtsnvindel',
+											dt: 1,
+											values: {
+												M: { label: 'MISSENSE' },
+												F: { label: 'FRAMESHIFT' },
+												WT: { label: 'Wildtype' }
+											},
+											name_noOrigin: 'SNV/indel',
+											parentTerm: {
+												kind: 'gene',
+												id: 'TP53',
+												gene: 'TP53',
+												name: 'TP53',
+												type: 'geneVariant'
+											}
+										},
+										values: [{ key: 'WT', label: 'Wildtype', value: 'WT' }],
+										isnot: true,
+										excludeGeneName: true
+									}
+								}
+							]
+						},
+						color: '#e75480'
+					},
+					{
+						name: 'SNV/indel Wildtype',
+						type: 'filter',
+						filter: {
+							type: 'tvslst',
+							in: true,
+							join: '',
+							lst: [
+								{
+									type: 'tvs',
+									tvs: {
+										term: {
+											id: 'snvindel',
+											query: 'snvindel',
+											name: 'SNV/indel',
+											parent_id: null,
+											isleaf: true,
+											type: 'dtsnvindel',
+											dt: 1,
+											values: {
+												M: { label: 'MISSENSE' },
+												F: { label: 'FRAMESHIFT' },
+												WT: { label: 'Wildtype' }
+											},
+											name_noOrigin: 'SNV/indel',
+											parentTerm: {
+												kind: 'gene',
+												id: 'TP53',
+												gene: 'TP53',
+												name: 'TP53',
+												type: 'geneVariant'
+											}
+										},
+										values: [{ key: 'WT', label: 'Wildtype', value: 'WT' }],
+										excludeGeneName: true
+									}
+								}
+							]
+						},
+						color: '#0000ff'
+					}
+				]
+			},
+			{
+				name: 'CNV: Altered vs. Neutral',
+				groups: [
+					{
+						name: 'CNV Altered',
+						type: 'filter',
+						filter: {
+							type: 'tvslst',
+							in: true,
+							join: '',
+							lst: [
+								{
+									type: 'tvs',
+									tvs: {
+										term: {
+											id: 'cnv',
+											query: 'cnv',
+											name: 'CNV',
+											parent_id: null,
+											isleaf: true,
+											type: 'dtcnv',
+											dt: 4,
+											values: {
+												CNV_amp: { label: 'Copy number gain' },
+												WT: { label: 'Wildtype' }
+											},
+											name_noOrigin: 'CNV',
+											parentTerm: {
+												kind: 'gene',
+												id: 'TP53',
+												gene: 'TP53',
+												name: 'TP53',
+												type: 'geneVariant'
+											}
+										},
+										values: [{ key: 'WT', label: 'Wildtype', value: 'WT' }],
+										isnot: true,
+										excludeGeneName: true
+									}
+								}
+							]
+						},
+						color: '#e75480'
+					},
+					{
+						name: 'CNV Neutral',
+						type: 'filter',
+						filter: {
+							type: 'tvslst',
+							in: true,
+							join: '',
+							lst: [
+								{
+									type: 'tvs',
+									tvs: {
+										term: {
+											id: 'cnv',
+											query: 'cnv',
+											name: 'CNV',
+											parent_id: null,
+											isleaf: true,
+											type: 'dtcnv',
+											dt: 4,
+											values: {
+												CNV_amp: { label: 'Copy number gain' },
+												WT: { label: 'Wildtype' }
+											},
+											name_noOrigin: 'CNV',
+											parentTerm: {
+												kind: 'gene',
+												id: 'TP53',
+												gene: 'TP53',
+												name: 'TP53',
+												type: 'geneVariant'
+											}
+										},
+										values: [{ key: 'WT', label: 'Wildtype', value: 'WT' }],
+										excludeGeneName: true
+									}
+								}
+							]
+						},
+						color: '#0000ff'
+					}
+				]
+			}
+		]
+	}
+}

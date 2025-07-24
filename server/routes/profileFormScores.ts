@@ -37,7 +37,7 @@ function init({ genomes }) {
 }
 
 async function getScoresDict(query, ds, genome) {
-	const terms = [...query.scoreTerms]
+	const terms = [...query.scoreTerms, query.facilityTW]
 	if (query.scScoreTerms) terms.push(...query.scScoreTerms)
 
 	const data = await getData(
@@ -76,8 +76,9 @@ async function getScoresDict(query, ds, genome) {
 			const percents: { [key: string]: number } = getSCPercentsDict(d, samples)
 			term2Score[d.term.id] = percents
 		}
-
-	const hospital = sampleData?.[query.facilityTW.$id]?.value
+	const facilityValue = sampleData?.[query.facilityTW.$id]
+	const termValue = query.facilityTW.term.values[facilityValue?.value]
+	const hospital = termValue?.label || termValue?.key
 
 	return { term2Score, sites, hospital, n: sampleData ? 1 : samples.length }
 }

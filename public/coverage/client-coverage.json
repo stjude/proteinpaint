@@ -4174,5 +4174,113 @@
       "prev": 0,
       "diff": 81.48
     }
+  },
+  "plots/boxplot/interactions/ListSamples.ts": {
+    "lines": {
+      "total": 48,
+      "covered": 29,
+      "skipped": 0,
+      "pct": 60.41
+    },
+    "functions": {
+      "total": 13,
+      "covered": 9,
+      "skipped": 0,
+      "pct": 69.23
+    },
+    "statements": {
+      "total": 53,
+      "covered": 30,
+      "skipped": 0,
+      "pct": 56.6
+    },
+    "branches": {
+      "total": 49,
+      "covered": 14,
+      "skipped": 0,
+      "pct": 28.57
+    },
+    "lowestPct": {
+      "curr": 28.57,
+      "prev": 0,
+      "diff": 28.57
+    },
+    "averagePct": {
+      "curr": 53.70249999999999,
+      "prev": 0,
+      "diff": 53.70249999999999
+    }
+  },
+  "dom/menu.js": {
+    "lines": {
+      "total": 109,
+      "covered": 61,
+      "skipped": 0,
+      "pct": 55.96
+    },
+    "functions": {
+      "total": 17,
+      "covered": 7,
+      "skipped": 0,
+      "pct": 41.17
+    },
+    "statements": {
+      "total": 119,
+      "covered": 63,
+      "skipped": 0,
+      "pct": 52.94
+    },
+    "branches": {
+      "total": 69,
+      "covered": 26,
+      "skipped": 0,
+      "pct": 37.68
+    },
+    "lowestPct": {
+      "curr": 37.68,
+      "prev": 37.68,
+      "diff": 0
+    },
+    "averagePct": {
+      "curr": 46.9375,
+      "prev": 46.9375,
+      "diff": 0
+    }
+  },
+  "dom/test/menu.unit.spec.js": {
+    "lines": {
+      "total": 138,
+      "covered": 113,
+      "skipped": 0,
+      "pct": 81.88
+    },
+    "functions": {
+      "total": 13,
+      "covered": 8,
+      "skipped": 0,
+      "pct": 61.53
+    },
+    "statements": {
+      "total": 138,
+      "covered": 113,
+      "skipped": 0,
+      "pct": 81.88
+    },
+    "branches": {
+      "total": 9,
+      "covered": 7,
+      "skipped": 0,
+      "pct": 77.77
+    },
+    "lowestPct": {
+      "curr": 61.53,
+      "prev": 61.53,
+      "diff": 0
+    },
+    "averagePct": {
+      "curr": 75.765,
+      "prev": 75.765,
+      "diff": 0
+    }
   }
 }

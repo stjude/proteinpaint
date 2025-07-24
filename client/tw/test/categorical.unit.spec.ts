@@ -47,6 +47,7 @@ function getCustomSet() {
 function getTermWithGS() {
 	const term = structuredClone(termjson.diaggrp)
 	term.groupsetting = {
+		disabled: false,
 		lst: [
 			{
 				name: 'AAA vs BBB',

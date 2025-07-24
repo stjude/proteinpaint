@@ -16,7 +16,7 @@ const panel_border_color = '#D3D3D3'
 let i = 0 // track controls "instances" for assigning unambiguous unique input names
 // defaultQ for term0/term2
 export const term0_term2_defaultQ = {
-	[TermTypes.GENE_VARIANT]: { type: 'custom-groupset' },
+	[TermTypes.GENE_VARIANT]: { type: 'predefined-groupset' },
 	[TermTypes.GENE_EXPRESSION]: { mode: 'discrete' },
 	[TermTypes.METABOLITE_INTENSITY]: { mode: 'discrete' }
 }

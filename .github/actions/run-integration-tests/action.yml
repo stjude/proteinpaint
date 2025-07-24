@@ -2,8 +2,8 @@ name: 'Run integration tests'
 description: 'Runs integration tests inside Docker and posts results to Slack'
 
 inputs:
-  PAT:
-    description: 'GitHub Personal Access Token for accessing GHCR'
+  TOKEN:
+    description: 'GitHub Token'
     required: true
 
   SLACK_WEBHOOK_URL:
@@ -47,7 +47,7 @@ runs:
       with:
         registry: ghcr.io
         username: ${{ github.actor }}
-        password: ${{ inputs.PAT }}
+        password: ${{ inputs.TOKEN }}
 
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3

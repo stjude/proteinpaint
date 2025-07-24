@@ -1,25 +1,10 @@
 name: Rust Build
 
 on:
-  workflow_dispatch:
-    inputs:
-      build_secret:
-        type: string
-        description: Build secret
+  workflow_call:
 
 jobs:
-  check-user-permissions:
-      runs-on: ubuntu-22.04
-      steps:
-        - name: Check user permission
-          uses: stjude/proteinpaint/.github/actions/check-user-permissions@master
-          with:
-            BUILD_SECRET: ${{ secrets.BUILD_SECRET }}
-            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-            INPUT_BUILD_SECRET: ${{ github.event.inputs.build_secret }}
-
   build:
-    needs: check-user-permissions
     runs-on: ubuntu-22.04
     container:
       image: ghcr.io/stjude/rust_debian_testing:latest

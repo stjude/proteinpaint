@@ -1,5 +1,6 @@
 import tape from 'tape'
 import * as d3s from 'd3-selection'
+import 'd3-transition' // so that selection.transition would be defined
 import { Menu } from '#dom/menu'
 import { detectStyle } from '../../test/test.helpers.js'
 /**
@@ -20,13 +21,19 @@ Tests:
  reusable helper functions
 **************************/
 
-function getHolder() {
-	return d3s
+function getHolder(styles = {}) {
+	const holder = d3s
 		.select('body')
 		.append('div')
 		.style('border', '1px solid #aaa')
 		.style('padding', '5px')
 		.style('margin', '5px')
+
+	for (const k of Object.keys(styles)) {
+		holder.style(k, styles[k])
+	}
+
+	return holder
 }
 
 const longText =
@@ -68,6 +75,7 @@ tape('new Menu()', test => {
 	test.end()
 })
 
+// async callback so that tape can end the test on uncaught error
 tape('show(), clear(), and hide(), no args', async test => {
 	test.timeoutAfter(500)
 	//Test basic function collectively to use freely in later tests
@@ -110,6 +118,7 @@ tape.skip('clear() with arg', test => {
 	test.end()
 })
 
+// async callback so that tape can end the test on uncaught error
 tape('show() with args', async test => {
 	test.timeoutAfter(500)
 
@@ -119,9 +128,11 @@ tape('show() with args', async test => {
 	{
 		//left (x) position
 		const posNum = 50
+		const y = /*testMenu.offsetY +*/ window.scrollY // when running many other tests, the screen would scroll vertically
 		testMenu.show(posNum)
-		test.ok(
-			testMenu.dnode.style.left == `${posNum + testMenu.offsetX}px` && testMenu.dnode.style.top == '',
+		test.deepEqual(
+			{ left: testMenu.dnode.style.left, top: testMenu.dnode.style.top },
+			{ left: `${posNum + testMenu.offsetX}px`, top: '' },
 			`Should show menu left, under header, shifted by .offsetX = ${testMenu.offsetX}px`
 		)
 	}
@@ -129,21 +140,24 @@ tape('show() with args', async test => {
 	{
 		//top (y) position
 		const posNum = 50
+		const y = posNum + testMenu.offsetY + window.scrollY // when running many other tests, the screen would scroll vertically
 		testMenu.show('', posNum)
-		test.ok(
-			testMenu.dnode.style.left == '20px' && testMenu.dnode.style.top == `${posNum + testMenu.offsetY}px`,
-			`Should show menu at the top, above header, shifted by .offsetY = ${testMenu.offsety}px`
+		test.deepEqual(
+			{ left: testMenu.dnode.style.left, top: testMenu.dnode.style.top },
+			{ left: '20px', top: `${y}px` },
+			`Should show menu at the top, above header, shifted by .offsetY + window.scrollY = ${y}px`
 		)
 	}
 
 	// left & top (x & y) position
 	{
 		const posNum = 100
+		const y = posNum + testMenu.offsetY + window.scrollY
 		testMenu.show(posNum, posNum)
-		test.ok(
-			testMenu.dnode.style.left == `${posNum + testMenu.offsetX}px` &&
-				testMenu.dnode.style.top == `${posNum + testMenu.offsetY}px`,
-			`Should show menu top left corner, over header, shifted by .offsetX = ${testMenu.offsetX}px & .offsetY = ${testMenu.offsetY}px`
+		test.deepEqual(
+			{ left: testMenu.dnode.style.left, top: testMenu.dnode.style.top },
+			{ left: `${posNum + testMenu.offsetX}px`, top: `${y}px` },
+			`Should show menu top left corner, over header, shifted by .offsetX = ${testMenu.offsetX}px & .offsetY = ${y}px`
 		)
 	}
 
@@ -151,8 +165,9 @@ tape('show() with args', async test => {
 		const posNum = 100
 		//No shift (i.e. additional 20px)
 		testMenu.show(posNum, posNum, false)
-		test.ok(
-			testMenu.dnode.style.left == `${posNum}px` && testMenu.dnode.style.top == `${posNum}px`,
+		test.deepEqual(
+			{ left: testMenu.dnode.style.left, top: testMenu.dnode.style.top },
+			{ left: `${posNum}px`, top: `${posNum + window.scrollY}px` },
 			`Should show menu top left corner without .offsetX or .offsetY added to left or top, respectively.`
 		)
 	}
@@ -167,13 +182,12 @@ tape('show() with args', async test => {
 		const posNum = 200
 		testMenu.d.append('div').text(longText)
 		testMenu.show(posNum, posNum, false)
-		test.ok(
-			testMenu.dnode.style.left == `${posNum + window.scrollX}px` &&
-				testMenu.dnode.style.top == `${posNum + window.scrollY}px`,
+		test.deepEqual(
+			{ left: testMenu.dnode.style.left, top: testMenu.dnode.style.top },
+			{ left: `${posNum + window.scrollX}px`, top: `${posNum + window.scrollY}px` },
 			`Should show menu position with window.scrollX = ${window.scrollX} & window.scrollY = ${window.scrollY}`
 		)
 	}
-
 	testMenu.destroy()
 	test.end()
 })
@@ -188,10 +202,11 @@ tape.skip('onHide() callback', test => {
 	test.end()
 })
 
-tape('showunder()', test => {
+// async callback so that tape can end the test on uncaught error
+tape('showunder()', async test => {
 	test.timeoutAfter(500)
-
-	const holder = getHolder()
+	// set holder position as fixed relative to viewport, so it's not affected by vertical scroll as other test DOMs are added or removed
+	const holder = getHolder({ position: 'fixed' })
 	const btn = holder.append('button').text('Button')
 	const testMenu = getTestMenu()
 
@@ -208,7 +223,7 @@ tape('showunder()', test => {
 	const btnP = btn.node().getBoundingClientRect()
 	const menuP = testMenu.dnode.getBoundingClientRect()
 	test.equal(btnP.x, menuP.x, `Should show menu with the same style.left value as test element.`)
-	const correctYvalue = btnP.top + btnP.height + window.scrollY + 5
+	const correctYvalue = btnP.top + btnP.height + 5 // window.scrollY is not applicable with fixed holder position
 	test.equal(
 		Math.round(correctYvalue),
 		Math.round(menuP.y),
@@ -222,10 +237,11 @@ tape('showunder()', test => {
 	test.end()
 })
 
-tape('showunderoffset()', test => {
+// async callback so that tape can end the test on uncaught error
+tape('showunderoffset()', async test => {
 	test.timeoutAfter(500)
-
-	const holder = getHolder()
+	// set holder position as fixed relative to viewport, so it's not affected by vertical scroll as other test DOMs are added or removed
+	const holder = getHolder({ position: 'fixed' })
 	const btn = holder.append('button').text('Button')
 	const testMenu = getTestMenu()
 
@@ -247,7 +263,7 @@ tape('showunderoffset()', test => {
 		Math.round(menuP.x),
 		`Should show menu with the style.left value as test element, offset by ${testMenu.offsetX}px.`
 	)
-	const correctYvalue = btnP.top + btnP.height + window.scrollY + 5
+	const correctYvalue = btnP.top + btnP.height + 5 // window.scrollY is not applicable with fixed holder position
 	test.equal(
 		Math.round(correctYvalue + testMenu.offsetY),
 		Math.round(menuP.y),

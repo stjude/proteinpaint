@@ -1,5 +1,5 @@
 import { getPillNameDefault } from '../termsetting'
-import type { GeneVariantTermSettingInstance, RawGvTerm, RawGvCustomGsTW, VocabApi, DtTerm } from '#types'
+import type { GeneVariantTermSettingInstance, RawGvTerm, RawGvPredefinedGsTW, VocabApi, DtTerm } from '#types'
 import type { PillData } from '../types'
 import { make_radios, renderTable } from '#dom'
 import { dtTerms, getColors } from '#shared/common.js'
@@ -7,7 +7,7 @@ import { filterInit, filterPromptInit, getNormalRoot } from '#filter/filter'
 import { rgb } from 'd3-color'
 import { getWrappedTvslst } from '#filter/filter'
 
-const colorScale = getColors(5)
+const colorScale = getColors(2)
 
 // self is the termsetting instance
 export function getHandler(self: GeneVariantTermSettingInstance) {
@@ -18,7 +18,12 @@ export function getHandler(self: GeneVariantTermSettingInstance) {
 
 		getPillStatus() {
 			let text
-			if (self.q.type == 'custom-groupset') {
+			if (self.q.type == 'predefined-groupset') {
+				const groupsetting = self.term.groupsetting
+				if (!groupsetting.lst?.length) throw 'no predefined groupsets found'
+				const groupset = groupsetting.lst[self.q.predefined_groupset_idx]
+				text = groupset.name
+			} else if (self.q.type == 'custom-groupset') {
 				const n = self.q.customset.groups.length
 				text = `Divided into ${n} groups`
 			} else {
@@ -50,8 +55,8 @@ async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 	const groupsDiv = div.append('div').style('display', 'none').style('margin', '10px').style('vertical-align', 'top')
 	// radio buttons for whether or not to group samples
 	optsDiv.append('div').style('font-weight', 'bold').text('Group samples')
-	const isGroupset = self.q.type == 'custom-groupset'
-	const radios = make_radios({
+	const isGroupset = self.q.type == 'predefined-groupset' || self.q.type == 'custom-groupset'
+	make_radios({
 		holder: optsDiv,
 		options: [
 			{ label: 'No sample grouping', value: 'noGroup', checked: !isGroupset },
@@ -59,6 +64,7 @@ async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 		],
 		callback: async v => {
 			if (v == 'group') {
+				if (self.q.type == 'values') Object.assign(self.q, { type: 'custom-groupset', customset: { groups: [] } })
 				await makeGroupUI(self, groupsDiv)
 			} else {
 				clearGroupset(self)
@@ -66,18 +72,17 @@ async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 			}
 		}
 	})
+	if (isGroupset) await makeGroupUI(self, groupsDiv)
 
 	if (
 		(self.usecase?.detail && ['term', 'term0', 'term2'].includes(self.usecase.detail)) ||
 		self.opts.geneVariantEditMenuOnlyGrp
 	) {
+		// only groupsetting is allowed
 		// hide option for turning off groupsetting
 		optsDiv.style('display', 'none')
 		groupsDiv.style('margin', '0px')
 	}
-
-	const selected = radios.inputs.filter(d => d.checked)
-	if (selected.property('value') == 'group') await makeGroupUI(self, groupsDiv)
 
 	// apply button
 	div
@@ -86,24 +91,26 @@ async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 		.append('button')
 		.text('Apply')
 		.on('click', () => {
-			let validGrpset = false
-			if (self.q.type == 'custom-groupset') {
-				// groupset is assigned
-				if (self.q.customset?.groups.map((group: any) => group.filter?.lst).some(lst => lst.length)) {
-					// filters in groupset are non-empty
-					validGrpset = true
+			if (self.q.type == 'predefined-groupset' || self.q.type == 'custom-groupset') {
+				// groupsetting
+				if (!self.groups?.length) {
+					// no groups created
+					window.alert('Samples must be assigned to at least one group.')
+					return
+				} else {
+					// groups created, assign to custom groupset
+					Object.assign(self.q, { type: 'custom-groupset', customset: { groups: self.groups } })
 				}
-			}
-			if (!validGrpset) {
-				// groupset is not valid, so clear it
-				clearGroupset(self)
+			} else {
+				// no groupsetting
+				if (self.q.type != 'values') throw `q.type must be 'values'`
 			}
 			self.runCallback()
 		})
 }
 
 // make UI for grouping variants
-async function makeGroupUI(self, div) {
+async function makeGroupUI(self: GeneVariantTermSettingInstance, div) {
 	div.style('display', 'block')
 	div.selectAll('*').remove()
 
@@ -111,16 +118,30 @@ async function makeGroupUI(self, div) {
 	div
 		.append('div')
 		.style('margin', '15px 0px')
-		.text('Group samples by mutation status. Only tested samples are considered.')
+		.text(
+			'Group samples by mutation status. Samples are assigned to first possible group. Only tested samples are considered.'
+		)
 
 	// filter table
 	const filterTableDiv = div.append('div')
 	// add new group button
 	const addNewGroupBtnHolder = div.append('div')
 
-	self.q.type = 'custom-groupset'
-	if (!self.q.customset?.groups) self.q.customset = { groups: [] }
-	const groups = self.q.customset.groups
+	// get groups
+	if (self.q.type != 'predefined-groupset' && self.q.type != 'custom-groupset') throw 'unexpected q.type'
+	if (!self.groups) {
+		let groupset
+		if (self.q.type == 'predefined-groupset') {
+			const groupsetting = self.term.groupsetting
+			if (!groupsetting.lst?.length) throw 'no predefined groupsets found'
+			groupset = groupsetting.lst[self.q.predefined_groupset_idx]
+		} else {
+			groupset = self.q.customset
+		}
+		if (!groupset) throw 'groupset is missing'
+		if (!Array.isArray(groupset.groups)) throw 'groupset.groups is not array'
+		self.groups = structuredClone(groupset.groups)
+	}
 
 	// prompt button is an instance to a blank filter, can only make the button after state is filled
 	// but not in instance.init()
@@ -135,7 +156,7 @@ async function makeGroupUI(self, div) {
 		//termdbConfig: self.vocabApi.termdbConfig,
 		callback: f => {
 			const filter = getNormalRoot(f)
-			addNewGroup(filter, groups)
+			addNewGroup(filter, self.groups)
 			makeGroupUI(self, div)
 		},
 		debug: self.opts.debug
@@ -144,7 +165,7 @@ async function makeGroupUI(self, div) {
 	// filterPrompt.main() always empties the filterUiRoot data
 	filterPrompt.main(getMassFilter(self.filter)) // provide mass filter to limit the term tree
 
-	if (!groups.length) {
+	if (!self.groups.length) {
 		// no groups, hide table
 		filterTableDiv.style('display', 'none')
 		return
@@ -160,12 +181,12 @@ async function makeGroupUI(self, div) {
 				label: 'NAME',
 				editCallback: async (i, cell) => {
 					const newName = cell.value
-					const index = groups.findIndex(group => group.name == newName)
+					const index = self.groups.findIndex(group => group.name == newName)
 					if (index != -1) {
 						alert(`Group named ${newName} already exists`)
 						makeGroupUI(self, div)
 					} else {
-						groups[i].name = newName
+						self.groups[i].name = newName
 						makeGroupUI(self, div)
 					}
 				}
@@ -173,7 +194,7 @@ async function makeGroupUI(self, div) {
 			{
 				label: 'COLOR',
 				editCallback: async (i, cell) => {
-					groups[i].color = cell.color
+					self.groups[i].color = cell.color
 					makeGroupUI(self, div)
 				}
 			},
@@ -185,7 +206,7 @@ async function makeGroupUI(self, div) {
 		showLines: false
 	}
 
-	for (const g of groups) {
+	for (const g of self.groups) {
 		tableArg.rows.push([
 			{}, // blank cell to add delete button
 			{ value: g.name }, // to allow click to show <input>
@@ -206,12 +227,12 @@ async function makeGroupUI(self, div) {
 			.style('padding', '1px 6px')
 			.html('&times;')
 			.on('click', () => {
-				groups.splice(i, 1)
+				self.groups.splice(i, 1)
 				makeGroupUI(self, div)
 			})
 
 		// create fitlter ui in its cell
-		const group = groups[i]
+		const group = self.groups[i]
 		filterInit({
 			holder: row[3].__td,
 			vocab: {
@@ -222,8 +243,8 @@ async function makeGroupUI(self, div) {
 			callback: f => {
 				if (!f || f.lst.length == 0) {
 					// blank filter (user removed last tvs from this filter), delete this element from groups[]
-					const i = groups.findIndex(g => g.name == group.name)
-					groups.splice(i, 1)
+					const i = self.groups.findIndex(g => g.name == group.name)
+					self.groups.splice(i, 1)
 				} else {
 					// update filter
 					f.lst.forEach(item => (item.tvs.excludeGeneName = true)) // no need to show gene name in filter pill
@@ -255,40 +276,47 @@ function addNewGroup(filter, groups, name?: string) {
 	groups.push(newGroup)
 }
 
-// fill custom groupset with 2 groups based on the first applicable dt term
-export async function mayMakeGroups(tw: RawGvCustomGsTW, vocabApi: VocabApi) {
-	if (tw.q.type != 'custom-groupset' || tw.q.customset?.groups.length) return
-	tw.q.type = 'custom-groupset'
-	tw.q.customset = { groups: [] }
+export async function getPredefinedGroupsets(tw: RawGvPredefinedGsTW, vocabApi: VocabApi) {
+	if (tw.q.type != 'predefined-groupset') throw 'unexpected tw.q.type'
+	// get child dt terms of geneVariant term
 	await getChildTerms(tw.term, vocabApi)
-	const dtTerms = tw.term.childTerms
-	if (!dtTerms) throw 'dtTerms is missing'
-	let grp1Class, grp1Name, grp1Value, grp1Tvs, grp1Filter
-	let grp2Name, grp2Tvs, grp2Filter
-	for (const dtTerm of dtTerms) {
-		const classes = Object.keys(dtTerm.values)
-		if (classes.length < 2) {
-			// fewer than 2 classes, try next dt term
-			continue
-		}
-		// group 1 will be wildtype or first available mutant class
-		grp1Class = classes.includes('WT') ? 'WT' : classes[0]
-		grp1Name = grp1Class == 'WT' ? `${dtTerm.name_noOrigin} Wildtype` : dtTerm.values[grp1Class].label
-		grp1Value = { key: grp1Class, label: grp1Class == 'WT' ? 'Wildtype' : grp1Name, value: grp1Class }
-		grp1Tvs = { type: 'tvs', tvs: { term: dtTerm, values: [grp1Value] } }
-		grp1Filter = getWrappedTvslst([grp1Tvs])
-		if (dtTerm.origin) grp1Name += ` (${dtTerm.origin})`
-		addNewGroup(grp1Filter, tw.q.customset.groups, grp1Name)
-		// group 2 will be all other classes
-		grp2Tvs = { type: 'tvs', tvs: { term: dtTerm, values: [grp1Value], isnot: true } }
-		grp2Name =
-			grp1Class == 'WT'
-				? `${dtTerm.name_noOrigin} ${dtTerm.dt == 4 ? 'Altered' : 'Mutated'}`
-				: `Other ${dtTerm.name_noOrigin}`
-		if (dtTerm.origin) grp2Name += ` (${dtTerm.origin})`
-		grp2Filter = getWrappedTvslst([grp2Tvs])
-		addNewGroup(grp2Filter, tw.q.customset.groups, grp2Name)
-		break
+	if (!tw.term.childTerms?.length) throw 'tw.term.childTerms[] is missing'
+	// build predefined groupsets based on child dt terms
+	tw.term.groupsetting = {
+		disabled: false,
+		lst: tw.term.childTerms.map(dtTerm => {
+			const mutantLabel = dtTerm.dt == 4 ? 'Altered' : 'Mutated'
+			const wildtypeLabel = dtTerm.dt == 4 ? 'Neutral' : 'Wildtype'
+			const groupset = {
+				name: `${dtTerm.name_noOrigin}: ${mutantLabel} vs. ${wildtypeLabel}`,
+				groups: []
+			}
+			if (dtTerm.origin) groupset.name += ` (${dtTerm.origin})`
+			const grp1Name = `${dtTerm.name_noOrigin} ${dtTerm.origin ? `${mutantLabel} (${dtTerm.origin})` : mutantLabel}`
+			const grp1Filter = getWrappedTvslst([
+				{
+					type: 'tvs',
+					tvs: {
+						term: dtTerm,
+						values: [{ key: 'WT', label: 'Wildtype', value: 'WT' }],
+						isnot: true,
+						excludeGeneName: true
+					}
+				}
+			])
+			addNewGroup(grp1Filter, groupset.groups, grp1Name)
+			const grp2Name = `${dtTerm.name_noOrigin} ${
+				dtTerm.origin ? `${wildtypeLabel} (${dtTerm.origin})` : wildtypeLabel
+			}`
+			const grp2Filter = getWrappedTvslst([
+				{
+					type: 'tvs',
+					tvs: { term: dtTerm, values: [{ key: 'WT', label: 'Wildtype', value: 'WT' }], excludeGeneName: true }
+				}
+			])
+			addNewGroup(grp2Filter, groupset.groups, grp2Name)
+			return groupset
+		})
 	}
 }
 
@@ -302,6 +330,7 @@ function getMassFilter(filter) {
 
 function clearGroupset(self) {
 	self.q.type = 'values'
+	delete self.q.predefined_groupset_idx
 	delete self.q.customset
 }
 
@@ -348,6 +377,7 @@ export async function getChildTerms(term: RawGvTerm, vocabApi: VocabApi, body: a
 		t.values = values
 		t.parentTerm = structuredClone(term)
 		delete t.parentTerm.childTerms // remove any nested child terms
+		delete t.parentTerm.groupsetting // remove nested term groupsetting
 		dtTermsInDs.push(t)
 	}
 	term.childTerms = dtTermsInDs
