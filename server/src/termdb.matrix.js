@@ -511,7 +511,7 @@ export async function getAnnotationRows(q, termWrappers, filter, CTEs, values, t
 				${filter ? ` WHERE sample IN ${filter.CTEname} ` : ''}`
 			return query
 		}).join(`UNION ALL`)}`
-	console.log(interpolateSqlValues(sql, values))
+	//console.log(interpolateSqlValues(sql, values))
 
 	const rows = q.ds.cohort.db.connection.prepare(sql).all(values)
 	return rows

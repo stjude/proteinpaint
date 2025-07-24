@@ -5,6 +5,7 @@ import { format } from 'd3-format'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 import { getData } from './termdb.matrix.js'
 import { mclass, dt2label, dtTerms } from '#shared/common.js'
+import { authApi } from '#src/auth.js'
 
 const binLabelFormatter = format('.3r')
 
@@ -41,7 +42,7 @@ export function handle_request_closure(genomes) {
 			if (!ds.cohort) throw 'ds.cohort missing'
 			const tdb = ds.cohort.termdb
 			if (!tdb) throw 'no termdb for this dataset'
-			const results = await barchart_data(q, ds, tdb)
+			const results = await barchart_data(req, ds, tdb)
 			if (q.term2_q) {
 				//term2 is present
 				//compute pvalues using Fisher's exact/Chi-squared test
@@ -83,11 +84,12 @@ output an object:
 			.dataId=str // key of term2 category, '' if no term2
 			.total=int // size of this term1-term2 combination
 */
-export async function barchart_data(q, ds, tdb) {
+export async function barchart_data(req, ds, tdb) {
 	/* existing code to work with mds2 which only supports backend-termdb
 	as later mds2 will be deprecated and migrated to mds3,
 	there should be no need to check for isMds3 flag
 	*/
+	const q = req.query
 	q.ds = ds
 
 	if (q.ssid) {
@@ -108,7 +110,9 @@ export async function barchart_data(q, ds, tdb) {
 		if (term) map.set(i, term)
 	}
 	const terms = [...map.values()]
-	const data = await getData({ filter: q.filter, filter0: q.filter0, terms }, q.ds, q.genome)
+	const term = ds.cohort.termdb.q.termjsonByOneid(terms[0].term.id)
+	const filter = authApi.getClientAuthCombinedFilter(req, ds, q.filter, term)
+	const data = await getData({ filter, filter0: q.filter0, terms }, q.ds, q.genome)
 	if (data.error) throw data.error
 	const samplesMap = new Map()
 	const bins = []

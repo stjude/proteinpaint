@@ -3,7 +3,6 @@ import path from 'path'
 import jsonwebtoken from 'jsonwebtoken'
 import { sleep } from './utils.js'
 import mm from 'micromatch'
-import { get } from 'http'
 
 const { isMatch } = mm
 
@@ -25,7 +24,7 @@ const defaultApiMethods = {
 	getHealth: () => undefined,
 	// credentialed embedders, using an array which can be frozen with Object.freeze(), unlike a Set()
 	credEmbedders: [],
-	getClientAuthFilterTvs: (req, ds, term) => {}
+	getClientAuthCombinedFilter: (req, ds, filter, term) => {}
 }
 
 // these may be overriden within maySetAuthRoutes()
@@ -863,9 +862,24 @@ function checkIPaddress(req, ip, cred) {
 		throw `Your connection has changed, please refresh your page or sign in again.`
 }
 
-authApi.getClientAuthFilterTvs = function (req, ds, term) {
+authApi.getClientAuthCombinedFilter = function (req, ds, filter, term) {
+	let tvslst
+	if (filter) {
+		tvslst = filter
+		tvslst.join = 'and'
+	} else
+		tvslst = {
+			type: 'tvslst',
+			in: true,
+			join: 'and',
+			lst: []
+		}
 	if (ds.cohort.termdb.getProtectedTermValues) {
 		const { clientAuthResult } = authApi.getNonsensitiveInfo(req)
+		if (!clientAuthResult) {
+			console.log('getClientAuthFilter: no clientAuthResult found in request')
+			return tvslst
+		}
 		const protectedValues = ds.cohort.termdb.getProtectedTermValues(clientAuthResult, term)
 
 		const tvs = {
@@ -877,7 +891,7 @@ authApi.getClientAuthFilterTvs = function (req, ds, term) {
 				})
 			}
 		}
-		return tvs
+		tvslst.lst.push(tvs)
 	}
-	return null
+	return tvslst
 }
