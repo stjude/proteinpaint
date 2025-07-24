@@ -1519,7 +1519,7 @@ keep this setting here for reason of:
 	}
 	//terms  are shown in the dictionary based on term and user role.
 	isTermVisible?: (clientAuthResult: any, id: string) => boolean
-	getProtectedTermValues?: (clientAuthResult: any, term: any) => string[]
+	getAuthorizedTermValues?: (clientAuthResult: any, term: any) => string[]
 }
 
 type SampleType = {

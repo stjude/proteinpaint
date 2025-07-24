@@ -24,7 +24,7 @@ const defaultApiMethods = {
 	getHealth: () => undefined,
 	// credentialed embedders, using an array which can be frozen with Object.freeze(), unlike a Set()
 	credEmbedders: [],
-	getClientAuthCombinedFilter: (req, ds, filter, term) => {}
+	restrictFilterToAuthorizedValues: (req, ds, filter, term) => {}
 }
 
 // these may be overriden within maySetAuthRoutes()
@@ -862,7 +862,7 @@ function checkIPaddress(req, ip, cred) {
 		throw `Your connection has changed, please refresh your page or sign in again.`
 }
 
-authApi.getClientAuthCombinedFilter = function (req, ds, filter, term) {
+authApi.restrictFilterToAuthorizedValues = function (req, ds, filter, term) {
 	let tvslst
 	if (filter) {
 		tvslst = filter
@@ -874,13 +874,13 @@ authApi.getClientAuthCombinedFilter = function (req, ds, filter, term) {
 			join: 'and',
 			lst: []
 		}
-	if (ds.cohort.termdb.getProtectedTermValues) {
+	if (ds.cohort.termdb.getAuthorizedTermValues) {
 		const { clientAuthResult } = authApi.getNonsensitiveInfo(req)
 		if (!clientAuthResult) {
 			console.log('getClientAuthFilter: no clientAuthResult found in request')
 			return tvslst
 		}
-		const protectedValues = ds.cohort.termdb.getProtectedTermValues(clientAuthResult, term)
+		const protectedValues = ds.cohort.termdb.getAuthorizedTermValues(clientAuthResult, term)
 
 		const tvs = {
 			type: 'tvs',
