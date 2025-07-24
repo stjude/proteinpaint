@@ -91,7 +91,7 @@
             }
         },
         {
-            "label": "PNET Fusion Example",
+            "label": "Chromosome subset",
             "urlparam": "?genome=hg19&dslabel=PNET&disco=1&sample=SJBT032239_D1",
             "runargs": {
                 "noheader": true,
@@ -106,11 +106,22 @@
                             "chr1",
                             "chr2",
                             "chr3",
+                            "chr6",
+                            "chr7",
+                            "chr8",
+                            "chr9",
+                            "chr11",
+                            "chr12",
+                            "chr13",
+                            "chr14",
+                            "chr15",
+                            "chr16",
+                            "chr17",
+                            "chr18",
+                            "chr20",
                             "chr20",
                             "chr21",
                             "chr22",
-                            "chr23",
-                            "chr24",
                             "chrX",
                             "chrY",
                             "chrM"
