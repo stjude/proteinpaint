@@ -7,7 +7,7 @@ import { filterInit, filterPromptInit, getNormalRoot } from '#filter/filter'
 import { rgb } from 'd3-color'
 import { getWrappedTvslst } from '#filter/filter'
 
-const colorScale = getColors(3)
+let colorScale = getColors(3)
 
 // self is the termsetting instance
 export function getHandler(self: GeneVariantTermSettingInstance) {
@@ -271,7 +271,7 @@ function addNewGroup(filter, groups, name?: string) {
 		name,
 		type: 'filter',
 		filter,
-		color: rgb(colorScale(groups.length)).formatHex()
+		color: '#000000'
 	}
 	groups.push(newGroup)
 }
@@ -297,13 +297,12 @@ export async function getPredefinedGroupsets(tw: RawGvPredefinedGsTW, vocabApi: 
 	// e.g. if samples are only cnv loss and wildtype for the gene
 	// then only cnv loss and wildtype groups will be included in the groupset
 	function getCnvGroupset(dtTerm) {
-		const groupset = {
+		const groupset: any = {
 			name: `${dtTerm.name_noOrigin}:`,
 			groups: [],
 			dt: dtTerm.dt
 		}
 		// cnv gain group
-		const gainName = `${dtTerm.name_noOrigin} ${dtTerm.origin ? `Gain (${dtTerm.origin})` : 'Gain'}`
 		const gainValues = getValues(cnvGainClasses, dtTerm)
 		if (gainValues.length) {
 			// cnv gain is present in data
@@ -318,11 +317,15 @@ export async function getPredefinedGroupsets(tw: RawGvPredefinedGsTW, vocabApi: 
 					}
 				}
 			])
-			addNewGroup(gainFilter, groupset.groups, gainName)
+			const gainName = `${dtTerm.name_noOrigin} ${dtTerm.origin ? `Gain (${dtTerm.origin})` : 'Gain'}`
+			groupset.groups.push({
+				name: gainName,
+				type: 'filter',
+				filter: gainFilter
+			})
 			groupset.name += ' Gain vs.'
 		}
 		// cnv loss group
-		const lossName = `${dtTerm.name_noOrigin} ${dtTerm.origin ? `Loss (${dtTerm.origin})` : 'Loss'}`
 		const lossValues = getValues(cnvLossClasses, dtTerm)
 		if (lossValues.length) {
 			// cnv loss is present in data
@@ -337,11 +340,15 @@ export async function getPredefinedGroupsets(tw: RawGvPredefinedGsTW, vocabApi: 
 					}
 				}
 			])
-			addNewGroup(lossFilter, groupset.groups, lossName)
+			const lossName = `${dtTerm.name_noOrigin} ${dtTerm.origin ? `Loss (${dtTerm.origin})` : 'Loss'}`
+			groupset.groups.push({
+				name: lossName,
+				type: 'filter',
+				filter: lossFilter
+			})
 			groupset.name += ' Loss vs.'
 		}
 		// cnv wildtype group
-		const wtName = `${dtTerm.name_noOrigin} ${dtTerm.origin ? `Wildtype (${dtTerm.origin})` : 'Wildtype'}`
 		const wtValues = getValues(['WT'], dtTerm)
 		if (wtValues.length) {
 			// wildtype is present in data
@@ -356,17 +363,29 @@ export async function getPredefinedGroupsets(tw: RawGvPredefinedGsTW, vocabApi: 
 					}
 				}
 			])
-			addNewGroup(wtFilter, groupset.groups, wtName)
+			const wtName = `${dtTerm.name_noOrigin} ${dtTerm.origin ? `Wildtype (${dtTerm.origin})` : 'Wildtype'}`
+			groupset.groups.push({
+				name: wtName,
+				type: 'filter',
+				filter: wtFilter
+			})
 			groupset.name += ' Wildtype'
 		}
 		if (dtTerm.origin) groupset.name += ` (${dtTerm.origin})`
+		// set color scale based on number of groups
+		colorScale = getColors(groupset.groups.length)
+		// assign colors to each group
+		for (const group of groupset.groups) {
+			group.color = rgb(colorScale(group.name)).formatHex()
+		}
 		return groupset
 	}
 
 	// function to get non-cnv (e.g. snv/indel, fusion, etc.) groupset
 	// will compare mutant vs. wildtype
 	function getNonCnvGroupset(dtTerm) {
-		const groupset = {
+		colorScale = getColors(2)
+		const groupset: any = {
 			name: `${dtTerm.name_noOrigin}: Mutated vs. Wildtype${dtTerm.origin ? ` (${dtTerm.origin})` : ''}`,
 			groups: [],
 			dt: dtTerm.dt
@@ -384,7 +403,12 @@ export async function getPredefinedGroupsets(tw: RawGvPredefinedGsTW, vocabApi: 
 				}
 			}
 		])
-		addNewGroup(grp1Filter, groupset.groups, grp1Name)
+		groupset.groups.push({
+			name: grp1Name,
+			type: 'filter',
+			filter: grp1Filter,
+			color: rgb(colorScale(grp1Name)).formatHex()
+		})
 		// group 2: wildtype
 		const grp2Name = `${dtTerm.name_noOrigin} ${dtTerm.origin ? `Wildtype (${dtTerm.origin})` : 'Wildtype'}`
 		const grp2Filter = getWrappedTvslst([
@@ -393,7 +417,12 @@ export async function getPredefinedGroupsets(tw: RawGvPredefinedGsTW, vocabApi: 
 				tvs: { term: dtTerm, values: [{ key: 'WT', label: 'Wildtype', value: 'WT' }], excludeGeneName: true }
 			}
 		])
-		addNewGroup(grp2Filter, groupset.groups, grp2Name)
+		groupset.groups.push({
+			name: grp2Name,
+			type: 'filter',
+			filter: grp2Filter,
+			color: rgb(colorScale(grp2Name)).formatHex()
+		})
 		return groupset
 	}
 
