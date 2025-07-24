@@ -38,18 +38,7 @@ function init({ genomes }) {
 
 async function trigger_getcategories(req: any, res: any, ds: any, genome: any) {
 	const q: CategoriesRequest = req.query
-	const authTvs: any = authApi.getClientAuthFilterTvs(req, ds, q.tw.term)
-	console.log('authTvs', authTvs)
-	let filter: any = q.filter
-	if (!filter) {
-		filter = {
-			type: 'tvslst',
-			in: true,
-			join: 'and',
-			lst: []
-		}
-	} else filter.join = 'and'
-	if (authTvs) filter.lst.push(authTvs)
+	const filter: any = authApi.getClientAuthCombinedFilter(req, ds, q.filter, q.tw.term)
 
 	// only one term per request, so can hardcode a known string tw.$id if missing
 	// and $id is not used in the response payload/metadata
