@@ -273,6 +273,6 @@ export async function getPlotConfig(opts: any, app: any) {
 		chartType: 'Disco',
 		subfolder: 'disco',
 		extension: 'ts',
-		settings: discoDefaults(opts.settings, app)
+		settings: discoDefaults(opts.overrides, app)
 	}
 }

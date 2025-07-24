@@ -77,7 +77,9 @@
                     "dslabel": "GDC",
                     "genome": "hg38",
                     "sample_id": "TCGA-BR-4257",
-                    "centerText": "TCGA-BR-4257"
+                    "settings": {
+                        "centerText": "TCGA-BR-4257"
+                    }
                 }
             },
             "testSpec": {
@@ -96,10 +98,24 @@
                 "nobox": true,
                 "genome": "hg19",
                 "disco": {
-                    "dslabel":"PNET",
+                    "dslabel": "PNET",
                     "genome": "hg19",
                     "sample_id": "SJBT032239_D1",
-                    "centerText": "SJBT032239_D1"
+                    "settings": {
+                        "hiddenChromosomes": [
+                            "chr1",
+                            "chr2",
+                            "chr3",
+                            "chr20",
+                            "chr21",
+                            "chr22",
+                            "chr23",
+                            "chr24",
+                            "chrX",
+                            "chrY",
+                            "chrM"
+                        ]
+                    }
                 }
             },
             "testSpec": {

@@ -1568,8 +1568,9 @@ async function launchDisco(arg, app) {
 			state: { genome: genomeObj.name, dslabel: arg.disco.dslabel }
 		})
 		const termdbConfig = await vocabApi.getTermdbConfig()
-		const overrides = { Disco: {} }
-		if (arg.disco?.centerText) overrides.Disco.centerText = arg.disco.centerText
+		/** NOTE: Users should only override the settings in the default
+		 * settings.Disco:{}, not the entire settings:{} object.*/
+		const overrides = { Disco: arg.disco?.settings || {} }
 		await (
 			await import('#plots/plot.disco.js')
 		).default(termdbConfig, arg.disco.dslabel, { sample_id: arg.disco.sample_id }, app.holder, genomeObj, overrides)
