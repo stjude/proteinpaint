@@ -489,7 +489,7 @@ function setDropdownInput(opts) {
 			inputTd: opts.holder.append('td')
 		}
 	}
-
+	let timeoutId // for delayed multiselect change event
 	self.dom.select = self.dom.inputTd
 		.append('select')
 		.attr('aria-labelledby', id)
@@ -497,30 +497,38 @@ function setDropdownInput(opts) {
 		.property('multiple', opts.multiple)
 
 		.on('change', () => {
+			clearTimeout(timeoutId) // clear any previous timeout
 			let value
 			if (opts.multiple) {
-				const options = self.dom.select.node().options
-				const values = []
-				for (const option of options) {
-					if (option.selected) values.push(option.value)
-				}
-				value = values
+				// Set a new timeout to execute the desired logic after 500ms
+				timeoutId = setTimeout(() => {
+					const options = self.dom.select.node().options
+					const values = []
+					for (const option of options) {
+						if (option.selected) values.push(option.value)
+					}
+					value = values
+					callbackOrDispatch(value)
+				}, 1000) // 1000 milliseconds delay
 			} else {
 				value = self.dom.select.property('value')
+				callbackOrDispatch(value)
 			}
-			if (opts.callback) opts.callback(value)
-			else
-				opts.dispatch({
-					type: 'plot_edit',
-					id: opts.id,
-					config: {
-						settings: {
-							[opts.chartType]: {
-								[opts.settingsKey]: value
+			function callbackOrDispatch(value) {
+				if (opts.callback) opts.callback(value)
+				else
+					opts.dispatch({
+						type: 'plot_edit',
+						id: opts.id,
+						config: {
+							settings: {
+								[opts.chartType]: {
+									[opts.settingsKey]: opts.processInput ? opts.processInput(value) : value
+								}
 							}
 						}
-					}
-				})
+					})
+			}
 		})
 	if (opts.multiple) self.dom.select.attr('size', opts.options.length > 10 ? 10 : opts.options.length)
 	self.dom.select.style('max-width', '300px')
