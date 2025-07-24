@@ -2,6 +2,7 @@ import { getCompInit } from '../rx/index.js'
 import { table2col } from '#dom'
 import { dtsnvindel } from '#shared/common.js'
 import { termsettingInit, fillTermWrapper } from '#termsetting'
+import { SearchHandler as geneSearch } from '../termdb/handlers/geneVariant.ts'
 
 /*
 quick access to:
@@ -56,14 +57,12 @@ export async function makeChartBtnMenu(holder, chartsInstance) {
 	{
 		const [td1, td2] = table.addRow()
 		td1.text('Search Gene or Region')
-		const _ = await import('../termdb/handlers/geneVariant.ts')
-		const handler = await new _.SearchHandler()
-		await handler.init({
+		const geneSearchInst = new geneSearch()
+		geneSearchInst.init({
 			holder: td2.append('div'),
 			genomeObj: chartsInstance.app.opts.genome!,
 			callback: async term => {
-				const geneTw = { term, q: { type: 'predefined-groupset' } }
-				await getGeneTw(geneTw, dtsnvindel, chartsInstance.app.vocabApi)
+				const geneTw = await getGeneTw(term, dtsnvindel, chartsInstance.app.vocabApi)
 				const chart = {
 					config: {
 						chartType: 'summary',
@@ -112,10 +111,10 @@ export async function makeChartBtnMenu(holder, chartsInstance) {
 
 /*
 formulate gene variant tw from gene search
-choice is dtterm value
 function is reused for other similar plots
 */
-export async function getGeneTw(tw, dt, vocabApi) {
+export async function getGeneTw(term, dt, vocabApi) {
+	const tw: any = { term, q: { type: 'predefined-groupset' } }
 	await fillTermWrapper(tw, vocabApi)
 	if (!tw.term.groupsetting?.lst?.length) throw 'term.groupsetting.lst[] is empty'
 	if (!Number.isFinite(dt)) throw 'invalid dt'
@@ -123,4 +122,5 @@ export async function getGeneTw(tw, dt, vocabApi) {
 	const i = tw.term.groupsetting.lst.findIndex(groupset => groupset.dt == dt)
 	if (i == -1) throw 'dt not found in groupsets'
 	tw.q.predefined_groupset_idx = i
+	return tw
 }

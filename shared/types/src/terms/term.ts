@@ -136,7 +136,7 @@ type Groupset = {
 	name: string
 	is_grade?: boolean
 	is_subcondition?: boolean
-	id?: string // to identify groupset, used by geneVariant term
+	dt?: number // dt of groupset, used by geneVariant term
 } & BaseGroupSet
 
 export type TermGroupSetting = {

@@ -281,6 +281,7 @@ export async function getPredefinedGroupsets(tw: RawGvPredefinedGsTW, vocabApi: 
 	// get child dt terms of geneVariant term
 	await getChildTerms(tw.term, vocabApi)
 	if (!tw.term.childTerms?.length) throw 'tw.term.childTerms[] is missing'
+	const termdbmclass = vocabApi.termdbConfig.mclass // custom mclass labels from dataset
 	// build predefined groupsets based on child dt terms
 	tw.term.groupsetting = {
 		disabled: false,
@@ -303,11 +304,7 @@ export async function getPredefinedGroupsets(tw: RawGvPredefinedGsTW, vocabApi: 
 		}
 		// cnv gain group
 		const gainName = `${dtTerm.name_noOrigin} ${dtTerm.origin ? `Gain (${dtTerm.origin})` : 'Gain'}`
-		const gainValues = cnvGainClasses
-			.filter(key => Object.keys(dtTerm.values).includes(key))
-			.map(key => {
-				return { key, label: mclass[key].label, value: key }
-			})
+		const gainValues = getValues(cnvGainClasses, dtTerm)
 		if (gainValues.length) {
 			// cnv gain is present in data
 			// add cnv gain group to groupset
@@ -326,11 +323,7 @@ export async function getPredefinedGroupsets(tw: RawGvPredefinedGsTW, vocabApi: 
 		}
 		// cnv loss group
 		const lossName = `${dtTerm.name_noOrigin} ${dtTerm.origin ? `Loss (${dtTerm.origin})` : 'Loss'}`
-		const lossValues = cnvLossClasses
-			.filter(key => Object.keys(dtTerm.values).includes(key))
-			.map(key => {
-				return { key, label: mclass[key].label, value: key }
-			})
+		const lossValues = getValues(cnvLossClasses, dtTerm)
 		if (lossValues.length) {
 			// cnv loss is present in data
 			// add cnv loss group to groupset
@@ -349,11 +342,7 @@ export async function getPredefinedGroupsets(tw: RawGvPredefinedGsTW, vocabApi: 
 		}
 		// cnv wildtype group
 		const wtName = `${dtTerm.name_noOrigin} ${dtTerm.origin ? `Wildtype (${dtTerm.origin})` : 'Wildtype'}`
-		const wtValues = ['WT']
-			.filter(key => Object.keys(dtTerm.values).includes(key))
-			.map(key => {
-				return { key, label: mclass[key].label, value: key }
-			})
+		const wtValues = getValues(['WT'], dtTerm)
 		if (wtValues.length) {
 			// wildtype is present in data
 			// add wildtype group to groupset
@@ -406,6 +395,18 @@ export async function getPredefinedGroupsets(tw: RawGvPredefinedGsTW, vocabApi: 
 		])
 		addNewGroup(grp2Filter, groupset.groups, grp2Name)
 		return groupset
+	}
+
+	// get values for tvs from mutation classes
+	function getValues(classes, dtTerm) {
+		const values = classes
+			.filter(key => Object.keys(dtTerm.values).includes(key))
+			.map(key => {
+				const label =
+					termdbmclass && Object.keys(termdbmclass).includes(key) ? termdbmclass[key].label : mclass[key].label
+				return { key, label, value: key }
+			})
+		return values
 	}
 }
 
