@@ -604,10 +604,12 @@ function setCheckboxInput(opts) {
 /*
 	Use for array of allowed values
 
+	Options are rendered descending in equal sizes down columns. 
+
 	Use opts.style to control the checkboxes layout
 	style: {
-		colNum: number -> number of columns to display
-		gap: number -> gap between columns
+		colNum: number -> number of columns to display. Default is 2
+		gap: number -> gap between columns in px. Default is 5
 	}
 */
 function setMultiCheckbox(opts) {
@@ -627,16 +629,46 @@ function setMultiCheckbox(opts) {
 				.attr('colspan', opts.colspan || '')
 				.style('text-align', opts.align || '')
 				.style('padding', '5px')
-				.append('div')
-				.style('display', 'grid')
-				.style('grid-template-columns', `repeat(${numCols}, 1fr)`)
-				.style('grid-template-rows', `repeat(${numRows}, auto)`)
-				.style('grid-auto-flow', 'column')
-				.style('gap', `${opts.style.gap || 5}px`)
 		}
 	}
 
-	self.dom.labels = self.dom.inputTd
+	/** Check/Uncheck All option appears above all checkboxes */
+	self.dom.selectAllDiv = self.dom.inputTd.append('div').style('padding', '5px 0').append('label')
+
+	self.dom.selectAll = self.dom.selectAllDiv
+		.append('input')
+		.attr('type', 'checkbox')
+		.attr('title', 'Check or uncheck all')
+		.on('change', () => {
+			const checked = self.dom.selectAll.property('checked')
+			self.dom.inputs.property('checked', checked)
+			const values = checked ? opts.options.map(d => d.value) : []
+			opts.dispatch({
+				type: 'plot_edit',
+				id: opts.id,
+				config: {
+					settings: {
+						[opts.chartType]: {
+							[opts.settingsKey]: opts.processInput?.(values) || values
+						}
+					}
+				}
+			})
+		})
+
+	self.dom.selectAllDiv.append('span').text('Check/Uncheck All').style('opacity', 0.65).style('font-size', '0.9em')
+
+	/** Grid layout for options.
+	 * Renders options down columns of equal sizes.*/
+	self.dom.optionsDiv = self.dom.inputTd
+		.append('div')
+		.style('display', 'grid')
+		.style('grid-template-columns', `repeat(${numCols}, 1fr)`)
+		.style('grid-template-rows', `repeat(${numRows}, auto)`)
+		.style('grid-auto-flow', 'column')
+		.style('gap', `${opts.style.gap || 5}px`)
+
+	self.dom.labels = self.dom.optionsDiv
 		.selectAll('label')
 		.data(opts.options)
 		.enter()
@@ -647,6 +679,7 @@ function setMultiCheckbox(opts) {
 			self.dom.input = label
 				.append('input')
 				.attr('type', 'checkbox')
+				.attr('name', d => d.label)
 				.attr('value', d => d.value)
 				.on('change', () => {
 					const checked = []
@@ -675,6 +708,9 @@ function setMultiCheckbox(opts) {
 		main(plot) {
 			const values = plot.settings[opts.chartType][opts.settingsKey]
 			const checkedValues = opts.processInput?.(values) || values
+			/** Appears checked or unchecked if all or none, respectively,
+			 * of the options are checked. */
+			self.dom.selectAll.property('checked', checkedValues.length === opts.options.length)
 			self.dom.inputs.property('checked', d => checkedValues.includes(d.value))
 			self.dom.labels.style('display', d => d.getDisplayStyle?.(plot) || '')
 			opts.holder.style('display', opts.getDisplayStyle?.(plot) || 'table-row')
