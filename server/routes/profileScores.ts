@@ -54,11 +54,8 @@ async function getScores(query, ds, genome) {
 		genome
 	)
 	const lst = Object.values(data.samples)
-	let sites = lst.map((s: any) => {
-		return { label: data.refs.bySampleId[s.sample].label, value: s.sample }
-	})
 
-	sites = lst.map((s: any) => {
+	let sites = lst.map((s: any) => {
 		return { label: data.refs.bySampleId[s.sample].label, value: s.sample }
 	})
 
@@ -78,6 +75,7 @@ async function getScores(query, ds, genome) {
 	for (const d of query.scoreTerms) {
 		term2Score[d.score.term.id] = getPercentage(d, samples, sampleData)
 	}
+
 	const facilityValue = sampleData?.[query.facilityTW.$id]
 	const termValue = query.facilityTW.term.values[facilityValue?.value]
 	const hospital = termValue?.label || termValue?.key
