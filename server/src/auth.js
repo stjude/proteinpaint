@@ -23,7 +23,8 @@ const defaultApiMethods = {
 	getPayloadFromHeaderAuth: () => ({}),
 	getHealth: () => undefined,
 	// credentialed embedders, using an array which can be frozen with Object.freeze(), unlike a Set()
-	credEmbedders: []
+	credEmbedders: [],
+	restrictFilterToAuthorizedValues: (req, ds, filter, term) => {}
 }
 
 // these may be overriden within maySetAuthRoutes()
@@ -859,4 +860,38 @@ function checkIPaddress(req, ip, cred) {
 	if (!ip) throw `Server error: missing ip address in saved session`
 	if (req.ip != ip && req.ips?.[0] != ip && req.connection?.remoteAddress != ip)
 		throw `Your connection has changed, please refresh your page or sign in again.`
+}
+
+authApi.restrictFilterToAuthorizedValues = function (req, ds, filter, term) {
+	let tvslst
+	if (filter) {
+		tvslst = filter
+		tvslst.join = 'and'
+	} else
+		tvslst = {
+			type: 'tvslst',
+			in: true,
+			join: 'and',
+			lst: []
+		}
+	if (ds.cohort.termdb.getAuthorizedTermValues) {
+		const { clientAuthResult } = authApi.getNonsensitiveInfo(req)
+		if (!clientAuthResult) {
+			console.log('getClientAuthFilter: no clientAuthResult found in request')
+			return tvslst
+		}
+		const protectedValues = ds.cohort.termdb.getAuthorizedTermValues(clientAuthResult, term)
+
+		const tvs = {
+			type: 'tvs',
+			tvs: {
+				term,
+				values: protectedValues.map(value => {
+					return { key: value, label: value }
+				})
+			}
+		}
+		tvslst.lst.push(tvs)
+	}
+	return tvslst
 }

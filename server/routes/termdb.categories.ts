@@ -2,6 +2,7 @@ import type { CategoriesRequest, CategoriesResponse, RouteApi } from '#types'
 import { termdbCategoriesPayload } from '#types/checkers'
 import { getOrderedLabels } from '#src/termdb.barchart.js'
 import { getData } from '#src/termdb.matrix.js'
+import { authApi } from '#src/auth.js'
 
 export const api: RouteApi = {
 	endpoint: 'termdb/categories',
@@ -19,7 +20,6 @@ export const api: RouteApi = {
 
 function init({ genomes }) {
 	return async (req: any, res: any): Promise<void> => {
-		const q: CategoriesRequest = req.query
 		try {
 			const g = genomes[req.query.genome]
 			if (!g) throw 'invalid genome name'
@@ -28,7 +28,7 @@ function init({ genomes }) {
 			const tdb = ds.cohort.termdb
 			if (!tdb) throw 'invalid termdb object'
 
-			await trigger_getcategories(q, res, tdb, ds, g) // as getcategoriesResponse
+			await trigger_getcategories(req, res, ds, g) // as getcategoriesResponse
 		} catch (e: any) {
 			res.send({ error: e?.message || e })
 			if (e instanceof Error && e.stack) console.log(e)
@@ -36,19 +36,16 @@ function init({ genomes }) {
 	}
 }
 
-async function trigger_getcategories(
-	q: CategoriesRequest,
-	res: any,
-	tdb: any,
-	ds: { assayAvailability: { byDt: { [s: string]: any } | ArrayLike<any> } },
-	genome: any
-) {
+async function trigger_getcategories(req: any, res: any, ds: any, genome: any) {
+	const q: CategoriesRequest = req.query
+	const filter: any = authApi.restrictFilterToAuthorizedValues(req, ds, q.filter, q.tw.term)
+
 	// only one term per request, so can hardcode a known string tw.$id if missing
 	// and $id is not used in the response payload/metadata
 	if (!q.tw.$id) q.tw.$id = '_'
 	const $id = q.tw.$id
 	const arg = {
-		filter: q.filter,
+		filter,
 		filter0: q.filter0,
 		terms: [q.tw],
 		currentGeneNames: q.currentGeneNames, // optional, from mds3 mayAddGetCategoryArgs()
