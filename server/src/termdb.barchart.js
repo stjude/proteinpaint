@@ -111,7 +111,7 @@ export async function barchart_data(req, ds, tdb) {
 	}
 	const terms = [...map.values()]
 	const term = ds.cohort.termdb.q.termjsonByOneid(terms[0].term.id)
-	const filter = authApi.getClientAuthCombinedFilter(req, ds, q.filter, term)
+	const filter = authApi.restrictFilterToAuthorizedValues(req, ds, q.filter, term)
 	const data = await getData({ filter, filter0: q.filter0, terms }, q.ds, q.genome)
 	if (data.error) throw data.error
 	const samplesMap = new Map()

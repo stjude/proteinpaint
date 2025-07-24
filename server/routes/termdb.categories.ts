@@ -38,7 +38,7 @@ function init({ genomes }) {
 
 async function trigger_getcategories(req: any, res: any, ds: any, genome: any) {
 	const q: CategoriesRequest = req.query
-	const filter: any = authApi.getClientAuthCombinedFilter(req, ds, q.filter, q.tw.term)
+	const filter: any = authApi.restrictFilterToAuthorizedValues(req, ds, q.filter, q.tw.term)
 
 	// only one term per request, so can hardcode a known string tw.$id if missing
 	// and $id is not used in the response payload/metadata
