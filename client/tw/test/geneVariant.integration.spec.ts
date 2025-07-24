@@ -15,8 +15,11 @@ async function getVocabApi() {
 	return vocabApi
 }
 
-// test structure of a groupset
-function testGroupset(groupset, test) {
+function testCnvGroupset(groupset, test) {
+	test.ok(groupset.groups.length, 'groupset should have at least one group')
+}
+
+function testNonCnvGroupset(groupset, test) {
 	test.equal(groupset.groups.length, 2, 'groupset should have 2 groups')
 	const mutGrp = groupset.groups[0]
 	const mutTvs = mutGrp.filter.lst[0].tvs
@@ -127,7 +130,11 @@ tape('fill(): q.type=predefined-groupset', async test => {
 	if (!fullTw.term.groupsetting.lst) throw 'term.groupsetting.lst is missing'
 	test.equal(fullTw.term.groupsetting.lst.length, 4, 'should get 4 predefined groupsets')
 	for (const groupset of fullTw.term.groupsetting.lst) {
-		testGroupset(groupset, test)
+		if (groupset.dt == 4) {
+			testCnvGroupset(groupset, test)
+		} else {
+			testNonCnvGroupset(groupset, test)
+		}
 	}
 	test.end()
 })
@@ -172,7 +179,11 @@ tape('getPredefinedGroupsets: fill groupsets', async test => {
 	test.deepEqual(tw.term.childTerms, childTerms, 'should fill in term.childTerms')
 	test.equal(tw.term.groupsetting.lst.length, 4, 'should get 4 predefined groupsets')
 	for (const groupset of tw.term.groupsetting.lst) {
-		testGroupset(groupset, test)
+		if (groupset.dt == 4) {
+			testCnvGroupset(groupset, test)
+		} else {
+			testNonCnvGroupset(groupset, test)
+		}
 	}
 	test.end()
 })
