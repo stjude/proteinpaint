@@ -120,14 +120,14 @@ function getChartTypeList(self, state) {
 
 	.clickTo:
 		callback to handle the button click event, may use any of the following renderer methods:
-	
-		self.tree_select1term 
-		- will show a term tree to select a term	
-
-		self.prepPlot
-		- dispatch "plot_prep" action to produce a 'initiating' UI of this plot, for user to fill in additional details to launch the plot
+		- self.tree_select1term()
+			will show a term tree to select a term	
+		- self.prepPlot()
+			dispatch "plot_prep" action to produce a 'initiating' UI of this plot,
+			for user to fill in additional details to launch the plot
 			example: regression, table, scatterplot which requires user to select two terms
-		
+		- self.plotCreate()
+
 	.usecase:{}
 		required for clickTo=tree_select1term
 		provide to termdb app
