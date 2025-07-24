@@ -42,7 +42,7 @@ export function handle_request_closure(genomes) {
 			if (!ds.cohort) throw 'ds.cohort missing'
 			const tdb = ds.cohort.termdb
 			if (!tdb) throw 'no termdb for this dataset'
-			const results = await barchart_data(req, ds, tdb)
+			const results = await barchart_data(q, ds, tdb)
 			if (q.term2_q) {
 				//term2 is present
 				//compute pvalues using Fisher's exact/Chi-squared test
@@ -111,7 +111,7 @@ export async function barchart_data(req, ds, tdb) {
 	}
 	const terms = [...map.values()]
 	const term = ds.cohort.termdb.q.termjsonByOneid(terms[0].term.id)
-	const filter = authApi.restrictFilterToAuthorizedValues(req, ds, q.filter, term)
+	const filter = ds.hasProtectedTerms(terms.map(tw => tw.term.id)) ? q.filter : q.origFilter
 	const data = await getData({ filter, filter0: q.filter0, terms }, q.ds, q.genome)
 	if (data.error) throw data.error
 	const samplesMap = new Map()

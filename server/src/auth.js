@@ -3,6 +3,7 @@ import path from 'path'
 import jsonwebtoken from 'jsonwebtoken'
 import { sleep } from './utils.js'
 import mm from 'micromatch'
+import { filterJoin } from '#shared/index.js'
 
 const { isMatch } = mm
 
@@ -368,6 +369,8 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 			// If any activity happens within the harcoded number of milliseconds below,
 			// then update the start time of the active session (account for prolonged user inactivity)
 			if (session.time - time < 900) session.time = time
+			mayExtendFilter(req, ds)
+			const filter = authApi.restrictFilterToAuthorizedValues(req, ds, q.filter, q.tw.term)
 			next()
 		} catch (e) {
 			console.log(e)
@@ -662,6 +665,60 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 		return authHealth.get(app)
 	}
 
+	authApi.restrictFilterToAuthorizedValues = function (req, ds, filter, term) {
+		let tvslst
+		if (filter) {
+			tvslst = filter
+			tvslst.join = 'and'
+		} else {
+			tvslst = {
+				type: 'tvslst',
+				in: true,
+				join: 'and',
+				lst: []
+			}
+		}
+
+		if (ds.cohort.termdb.getAuthorizedTermValues) {
+			const { clientAuthResult } = authApi.getNonsensitiveInfo(req)
+			if (!clientAuthResult) {
+				console.log('getClientAuthFilter: no clientAuthResult found in request')
+				return tvslst
+			}
+			const protectedValues = ds.cohort.termdb.getAuthorizedTermValues(clientAuthResult, term)
+
+			const tvs = {
+				type: 'tvs',
+				tvs: {
+					term,
+					values: protectedValues.map(value => {
+						return { key: value, label: value }
+					})
+				}
+			}
+			tvslst.lst.push(tvs)
+		}
+		return tvslst
+	}
+
+	authApi.mayExtendFilter = function (req, ds) {
+		if (!ds.cohort.termdb.getAuthorizedTermValues) return
+		const q = req.query
+		q.origFilter = q.filter
+
+		const additionalFilter = ds.cohort.termdb.getAdditionalFilter(clientAuthResult)
+		if (!additionalFilter) {
+			// certain roles (from jwt payload) may have access to everything,
+			// do not change q.filter to an extended filter in this case
+			return
+		}
+
+		// default to protecting response data, by extending the filter to limit term-value visibility;
+		// downstream route handler code may loosen the protection by using the q.origFilter,
+		// depending on whether the request includes protected terms or not
+		q.filter = filterJoin([additionalFilter, q.origFilter])
+	}
+
 	// may handle custom auth for testing
 	if (!serverconfig.debugmode || !app.doNotFreezeAuthApi) Object.freeze(authApi)
 }
@@ -860,38 +917,4 @@ function checkIPaddress(req, ip, cred) {
 	if (!ip) throw `Server error: missing ip address in saved session`
 	if (req.ip != ip && req.ips?.[0] != ip && req.connection?.remoteAddress != ip)
 		throw `Your connection has changed, please refresh your page or sign in again.`
-}
-
-authApi.restrictFilterToAuthorizedValues = function (req, ds, filter, term) {
-	let tvslst
-	if (filter) {
-		tvslst = filter
-		tvslst.join = 'and'
-	} else
-		tvslst = {
-			type: 'tvslst',
-			in: true,
-			join: 'and',
-			lst: []
-		}
-	if (ds.cohort.termdb.getAuthorizedTermValues) {
-		const { clientAuthResult } = authApi.getNonsensitiveInfo(req)
-		if (!clientAuthResult) {
-			console.log('getClientAuthFilter: no clientAuthResult found in request')
-			return tvslst
-		}
-		const protectedValues = ds.cohort.termdb.getAuthorizedTermValues(clientAuthResult, term)
-
-		const tvs = {
-			type: 'tvs',
-			tvs: {
-				term,
-				values: protectedValues.map(value => {
-					return { key: value, label: value }
-				})
-			}
-		}
-		tvslst.lst.push(tvs)
-	}
-	return tvslst
 }

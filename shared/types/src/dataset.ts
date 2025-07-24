@@ -1518,8 +1518,8 @@ keep this setting here for reason of:
 		[index: string]: { [index: string]: string }
 	}
 	//terms  are shown in the dictionary based on term and user role.
-	isTermVisible?: (clientAuthResult: any, id: string) => boolean
-	getAuthorizedTermValues?: (clientAuthResult: any, term: any) => string[]
+	hasHiddenTerms?: (clientAuthResult: any, ids: string[] | Set<string>) => boolean
+	getAdditionalFilter?: (clientAuthResult: any, term: any) => Filter | undefined
 }
 
 type SampleType = {

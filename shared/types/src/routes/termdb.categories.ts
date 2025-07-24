@@ -9,6 +9,11 @@ export type CategoriesRequest = {
 	/** termwrapper object */
 	tw: TermWrapper
 	filter?: Filter
+	/* when a dataset requires authentication, the filter may be extended based on clientAuthResult;
+		the server route handler may choose to downgrade to using the origFilter if the payload
+		does not contain protected terms
+	*/
+	origFilter?: Filter
 	filter0?: any
 	/** quick fix only for gdc */
 	currentGeneNames?: string[]
