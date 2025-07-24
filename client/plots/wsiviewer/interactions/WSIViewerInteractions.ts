@@ -9,20 +9,21 @@ import type { Geometry } from 'ol/geom'
 import { Fill, Stroke, Style } from 'ol/style'
 import type Settings from '#plots/wsiviewer/Settings.ts'
 import type { SessionAnnotation } from '#plots/wsiviewer/viewModel/SessionAnnotation.ts'
-import type { WSImage } from '@sjcrh/proteinpaint-types'
+import type { Annotation } from '@sjcrh/proteinpaint-types'
+import type { SessionWSImage } from '#plots/wsiviewer/viewModel/SessionWSImage.ts'
 
 export class WSIViewerInteractions {
 	public activePatchColor?: string
 	thumbnailClickListener: (index: number) => void
-	addZoomInEffect: (activeImageExtent: unknown, zoomInPoints: [number, number][], map: OLMap) => void
+	zoomInEffectListener: (activeImageExtent: unknown, zoomInPoints: [number, number][], map: OLMap) => void
 	viewerClickListener: (coordinateX: number, coordinateY: number) => void
-	addMapKeyDownListener: (
+	setKeyDownListener: (
 		holder: any,
+		sessionWSImage: SessionWSImage,
 		map: OLMap,
 		activeImageExtent: any,
 		shortcuts?: string[],
-		buffers?: any,
-		imageData?: any
+		buffers?: any
 	) => void
 
 	constructor(wsiApp: any, opts: any) {
@@ -36,7 +37,7 @@ export class WSIViewerInteractions {
 				}
 			})
 		}
-		this.addZoomInEffect = (activeImageExtent: unknown, zoomInPoints: [number, number][], map: OLMap) => {
+		this.zoomInEffectListener = (activeImageExtent: unknown, zoomInPoints: [number, number][], map: OLMap) => {
 			setTimeout(() => {
 				if (!activeImageExtent) return
 
@@ -75,19 +76,23 @@ export class WSIViewerInteractions {
 			}, 200)
 		}
 
-		this.addMapKeyDownListener = (
+		this.setKeyDownListener = (
 			holder: any,
+			sessionWSImage: SessionWSImage,
 			map: OLMap,
 			activeImageExtent: any,
 			shortcuts: string[] = [],
-			buffers: any,
-			imageData: WSImage
+			buffers: any
 		) => {
 			// Add keydown listener to the holder
 			holder.attr('tabindex', 0)
 			holder.node()?.focus()
 
-			const annotationsData = imageData?.annotationsData || []
+			const sessionAnnotationsData = sessionWSImage?.sessionsAnnotations || []
+
+			const persistedAnnotationsData = sessionWSImage?.annotationsData || []
+
+			const annotationsData = [...sessionAnnotationsData, ...persistedAnnotationsData]
 
 			holder.on('keydown', async (event: KeyboardEvent) => {
 				let currentIndex = buffers.annotationsIdx.get()
@@ -118,16 +123,16 @@ export class WSIViewerInteractions {
 					const d = debounce(async () => {
 						buffers.annotationsIdx.set(currentIndex)
 						const newZoomInPoints = annotationsData[currentIndex].zoomCoordinates
-						if (newZoomInPoints != undefined) this.addZoomInEffect(activeImageExtent, [newZoomInPoints], map)
+						if (newZoomInPoints != undefined) this.zoomInEffectListener(activeImageExtent, [newZoomInPoints], map)
 					}, 500)
 					d()
 				}
 
 				if (shortcuts.includes(event.code)) {
 					//Update buffer to change table
-					let matchingClass = imageData?.classes?.find(c => c.shortcut === event.code)
+					let matchingClass = sessionWSImage?.classes?.find(c => c.shortcut === event.code)
 					if (!matchingClass) {
-						matchingClass = imageData?.classes?.find(c => c.label === annotationsData[currentIndex].class)
+						matchingClass = sessionWSImage?.classes?.find(c => c.label === annotationsData[currentIndex].class)
 					}
 					const tmpClass =
 						event.code === 'Enter' || matchingClass!.label == annotationsData[currentIndex].class
@@ -149,7 +154,7 @@ export class WSIViewerInteractions {
 					if (nextIdx < annotationsData.length) {
 						buffers.annotationsIdx.set(nextIdx)
 						const coords = [annotationsData[nextIdx].zoomCoordinates] as unknown as [number, number][]
-						this.addZoomInEffect(activeImageExtent, coords, map)
+						this.zoomInEffectListener(activeImageExtent, coords, map)
 					}
 
 					try {
@@ -186,17 +191,7 @@ export class WSIViewerInteractions {
 		}
 	}
 
-	private addAnnotation(
-		vectorLayer: VectorLayer,
-		annotationsData: {
-			zoomCoordinates: [number, number]
-			type: string
-			class: string
-			uncertainty: number
-		}[],
-		currentIndex: number,
-		color: any
-	) {
+	private addAnnotation(vectorLayer: VectorLayer, annotationsData: Annotation[], currentIndex: number, color: any) {
 		const source: VectorSource<Feature<Geometry>> | null = vectorLayer.getSource()
 
 		//Remove any previous feature with the same ID

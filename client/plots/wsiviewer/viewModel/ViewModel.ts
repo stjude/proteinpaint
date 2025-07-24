@@ -1,13 +1,12 @@
-import type { WSImage } from '@sjcrh/proteinpaint-types'
+import type { Annotation, WSImage } from '@sjcrh/proteinpaint-types'
 import type { WSImageLayers } from '#plots/wsiviewer/viewModel/WSImageLayers.ts'
 import type { TableCell } from '#dom'
 import { roundValue } from '#shared/roundValue.js'
-import type { SessionAnnotation } from './SessionAnnotation'
+import type { SessionWSImage } from '#plots/wsiviewer/viewModel/SessionWSImage.ts'
+import type { ImageViewData } from '#plots/wsiviewer/viewModel/ImageViewData.ts'
 
 export class ViewModel {
-	private sessionsAnnotations: SessionAnnotation[]
-
-	public sampleWSImages: WSImage[]
+	public sampleWSImages: SessionWSImage[]
 	public wsimageLayers: Array<WSImageLayers>
 	public wsimageLayersLoadError: string | undefined
 
@@ -17,19 +16,20 @@ export class ViewModel {
 		sampleWSImages: WSImage[],
 		wsimageLayers: WSImageLayers[],
 		wsimageLayersLoadError: string | undefined,
-		sessionsAnnotations: SessionAnnotation[]
+		sessionsAnnotations: Annotation[],
+		displayedImageIndex: number
 	) {
 		this.sampleWSImages = sampleWSImages
+		this.sampleWSImages[displayedImageIndex].sessionsAnnotations = sessionsAnnotations
 		this.wsimageLayers = wsimageLayers
 		this.wsimageLayersLoadError = wsimageLayersLoadError
-		this.sessionsAnnotations = sessionsAnnotations
 		this.imageViewData = index => this.getImageViewData(index)
 	}
 
-	getImageViewData(index: number) {
-		const imageViewData: any = {}
+	getImageViewData(index: number): ImageViewData {
+		const imageViewData: ImageViewData = {}
 		const imageData = this.sampleWSImages[index]
-		this.setAnnonationsTableData(imageViewData, imageData, this.sessionsAnnotations)
+		this.setAnnonationsTableData(imageViewData, imageData)
 		this.setClassData(imageViewData, imageData)
 		if (imageData?.uncertainty) {
 			imageViewData.uncertainty = imageData?.uncertainty
@@ -43,18 +43,18 @@ export class ViewModel {
 	}
 
 	getZoomInPoints(index: number) {
-		const sessionZoomPoints = this.sessionsAnnotations.map(a => a.zoomCoordinates)
+		const sessionZoomPoints = this.sampleWSImages[index].sessionsAnnotations?.map(a => a.zoomCoordinates) || []
 
 		const persistedZoomPoints = this.sampleWSImages[index].zoomInPoints || []
 
 		return [...sessionZoomPoints, ...persistedZoomPoints]
 	}
 
-	setAnnonationsTableData(viewData: any, imageData: WSImage, sessionsAnnotations: SessionAnnotation[]) {
+	setAnnonationsTableData(imageViewData: ImageViewData, imageData: SessionWSImage) {
 		if (!imageData?.annotationsData?.length) return
 
 		// Map session annotations to the same format, starting index at 0
-		const sessionAnnotationRows: any = sessionsAnnotations.map((d, i) => {
+		const sessionAnnotationRows: any = imageData.sessionsAnnotations?.map((d, i) => {
 			return [
 				{ value: i }, // Index
 				{ value: d.zoomCoordinates },
@@ -68,7 +68,7 @@ export class ViewModel {
 		// Original annotations follow, indexing continues from session annotations
 		const annotationsRows: any = imageData.annotationsData!.map((d, i) => {
 			return [
-				{ value: sessionsAnnotations.length + i }, // Continue index
+				{ value: imageData.sessionsAnnotations!.length + i }, // Continue index
 				{ value: d.zoomCoordinates },
 				{ value: roundValue(d.uncertainty, 4) },
 				{ value: d.class },
@@ -89,13 +89,13 @@ export class ViewModel {
 			{ label: 'Annotated Class', sortable: true }
 		]
 
-		viewData.annotations = {
+		imageViewData.annotations = {
 			rows: mergedRows,
 			columns: columns
 		}
 	}
 
-	setClassData(viewData: any, imageData: WSImage) {
+	setClassData(imageViewData: ImageViewData, imageData: WSImage) {
 		if (!imageData?.classes?.length) return
 
 		const shortcuts: string[] = ['Enter']
@@ -112,24 +112,10 @@ export class ViewModel {
 		}
 		const columns = [{ label: 'Class' }, { label: 'Color', align: 'center' }, { label: 'Shortcut', align: 'center' }]
 
-		viewData.classes = {
+		imageViewData.classes = {
 			rows: classRows,
 			columns: columns
 		}
-		viewData.shortcuts = shortcuts
+		imageViewData.shortcuts = shortcuts
 	}
-}
-
-export type ImageViewData = {
-	annotations?: {
-		rows: TableCell[][]
-		columns: { label: string; sortable?: boolean; align?: string }[]
-	}
-	classes?: {
-		rows: TableCell[][]
-		columns: { label: string; sortable?: boolean; align?: string }[]
-	}
-	shortcuts?: string[]
-	uncertainty?: any
-	metadata?: any
 }

@@ -14,6 +14,7 @@ import { MapRenderer } from '#plots/wsiviewer/view/MapRenderer.ts'
 import { MetadataRenderer } from '#plots/wsiviewer/view/MetadataRenderer.ts'
 import { LegendRenderer } from '#plots/wsiviewer/view/LegendRenderer.ts'
 import type OLMap from 'ol/Map'
+import type { ImageViewData } from '#plots/wsiviewer/viewModel/ImageViewData.ts'
 
 export class WSIViewer extends RxComponentInner {
 	// following attributes are required by rx
@@ -62,7 +63,13 @@ export class WSIViewer extends RxComponentInner {
 		const dslabel = state.dslabel || state.vocab.dslabel
 		const sample_id = state.sample_id
 
-		const viewModel = await this.viewModelProvider.provide(genome, dslabel, sample_id, settings.sessionsAnnotations)
+		const viewModel = await this.viewModelProvider.provide(
+			genome,
+			dslabel,
+			sample_id,
+			settings.sessionsAnnotations,
+			settings.displayedImageIndex
+		)
 		const wsimages = viewModel.sampleWSImages
 		const wsimageLayers = viewModel.wsimageLayers
 		const wsimageLayersLoadError = viewModel.wsimageLayersLoadError
@@ -80,7 +87,7 @@ export class WSIViewer extends RxComponentInner {
 		const activeImage: TileLayer = wsimageLayers[settings.displayedImageIndex].wsimage
 		const activeImageExtent = activeImage?.getSource()?.getTileGrid()?.getExtent()
 
-		const imageViewData = viewModel.getImageViewData(settings.displayedImageIndex)
+		const imageViewData: ImageViewData = viewModel.getImageViewData(settings.displayedImageIndex)
 
 		if (settings.renderWSIViewer) {
 			this.thumbnailsContainer = this.thumbnailRenderer.render(
@@ -116,19 +123,14 @@ export class WSIViewer extends RxComponentInner {
 			const zoomInPoints = viewModel.getZoomInPoints(settings.displayedImageIndex)
 
 			if (zoomInPoints != undefined) {
-				this.wsiViewerInteractions.addZoomInEffect(activeImageExtent, zoomInPoints, this.map)
-				this.wsiViewerInteractions.addMapKeyDownListener(
+				this.wsiViewerInteractions.zoomInEffectListener(activeImageExtent, zoomInPoints, this.map)
+				this.wsiViewerInteractions.setKeyDownListener(
 					holder,
+					viewModel.sampleWSImages[settings.displayedImageIndex],
 					this.map,
 					activeImageExtent,
 					imageViewData.shortcuts,
-					buffers,
-
-					// TODO
-
-					// Continue here with work!!!!
-
-					wsimages[settings.displayedImageIndex]
+					buffers
 				)
 			}
 		}

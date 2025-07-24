@@ -1,12 +1,17 @@
 import { dofetch3 } from '#common/dofetch'
-import type { SampleWSImagesResponse, WSImage, WSImagesRequest, WSImagesResponse } from '@sjcrh/proteinpaint-types'
+import type {
+	Annotation,
+	SampleWSImagesResponse,
+	WSImage,
+	WSImagesRequest,
+	WSImagesResponse
+} from '@sjcrh/proteinpaint-types'
 import { ViewModel } from '#plots/wsiviewer/viewModel/ViewModel.ts'
 import type { WSImageLayers } from '#plots/wsiviewer/viewModel/WSImageLayers.ts'
 import Zoomify from 'ol/source/Zoomify'
 import TileLayer from 'ol/layer/Tile'
 import VectorLayer from 'ol/layer/Vector'
 import VectorSource from 'ol/source/Vector'
-import type { SessionAnnotation } from './SessionAnnotation'
 
 export class ViewModelProvider {
 	constructor() {}
@@ -15,7 +20,8 @@ export class ViewModelProvider {
 		genome: string,
 		dslabel: string,
 		sampleId: string,
-		sessionsAnnotations: SessionAnnotation[]
+		sessionsAnnotations: Annotation[],
+		displayedImageIndex: number
 	): Promise<ViewModel> {
 		const data: SampleWSImagesResponse = await this.requestData(genome, dslabel, sampleId)
 
@@ -28,7 +34,13 @@ export class ViewModelProvider {
 			wsimageLayersLoadError = `Error loading image layers for sample  ${sampleId}: ${e.message || e}`
 		}
 
-		return new ViewModel(data.sampleWSImages, wsimageLayers, wsimageLayersLoadError, sessionsAnnotations)
+		return new ViewModel(
+			data.sampleWSImages,
+			wsimageLayers,
+			wsimageLayersLoadError,
+			sessionsAnnotations,
+			displayedImageIndex
+		)
 	}
 
 	public async requestData(genome: string, dslabel: string, sample_id: string): Promise<SampleWSImagesResponse> {
