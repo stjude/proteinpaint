@@ -1,8 +1,8 @@
 import { renderTable } from '#dom'
 import type { WSIViewerInteractions } from '../interactions/WSIViewerInteractions'
 import type OLMap from 'ol/Map.js'
-import type { ImageViewData } from '../viewModel/ViewModel'
 import type { Extent } from 'ol/extent'
+import type { ImageViewData } from '#plots/wsiviewer/viewModel/ImageViewData.ts'
 
 export class WSIAnnotationsRenderer {
 	buffers: any
@@ -79,7 +79,7 @@ export class WSIAnnotationsRenderer {
 				tr.on('click', () => {
 					this.buffers.annotationsIdx.set(rowIdx)
 					const coords = [imageViewData.annotations!.rows[rowIdx][1].value] as unknown as [number, number][]
-					this.interactions.addZoomInEffect(activeImageExtent, coords, map)
+					this.interactions.zoomInEffectListener(activeImageExtent, coords, map)
 				})
 			}
 		})

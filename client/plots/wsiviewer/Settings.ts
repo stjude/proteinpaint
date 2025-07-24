@@ -1,4 +1,4 @@
-import type { SessionAnnotation } from '#plots/wsiviewer/viewModel/SessionAnnotation.ts'
+import type { Annotation } from '@sjcrh/proteinpaint-types'
 
 export default interface Settings {
 	imageWidth: string
@@ -11,5 +11,5 @@ export default interface Settings {
 	renderWSIViewer: boolean
 	renderAnnotationTable: boolean
 	activeAnnotation: number
-	sessionsAnnotations: Array<SessionAnnotation>
+	sessionsAnnotations: Array<Annotation>
 }
