@@ -28,9 +28,9 @@ export type WSImage = {
 
 export type Annotation = {
 	zoomCoordinates: [number, number]
-	type: string
-	class: string
-	uncertainty: number
+	type?: string
+	class?: string
+	uncertainty?: number
 }
 
 export const sampleWSImagesPayload: RoutePayload = {
