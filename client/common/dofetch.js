@@ -190,10 +190,9 @@ export async function namedFetch(url, init, opts = {}) {
 	if (!optsServerDataNames.has(opts.serverData)) optsServerDataNames.set(opts.serverData, [])
 	const keys = optsServerDataNames.get(opts.serverData)
 	const i = keys.indexOf(dataName)
-	if (i !== 0) {
+	if (i > 0) {
 		// move this cached response as the most recent entry, by object key
-		const response = opts.serverData[dataName]
-		delete opts.serverData[dataName]
+		keys.splice(i, 1)
 	}
 	keys.unshift(dataName)
 	const maxKeys = 360
