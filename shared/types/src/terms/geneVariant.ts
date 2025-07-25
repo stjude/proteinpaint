@@ -20,7 +20,7 @@ export type GvCustomGsQ = GvBaseQ & { type: 'custom-groupset'; customset: BaseGr
 export type GvQ = GvValuesQ | GvPredefinedGsQ | GvCustomGsQ
 
 // term types
-export type GvGene = {
+type Gene = {
 	kind: 'gene'
 	gene: string
 	// chr,start,stop should exist together as a separate type called
@@ -31,14 +31,22 @@ export type GvGene = {
 	stop?: number
 }
 
-export type GvCoord = {
+type Coord = {
 	kind: 'coord'
 	chr: string
 	start: number
 	stop: number
 }
 
-type GvBaseTerm = BaseTerm & { type: 'geneVariant' } & (GvGene | GvCoord)
+type GvGeneTerm = BaseTerm & (Gene | Coord)
+
+// including (Gene | Coord) for backwards compatibility
+// with older geneVariant term structure
+type GvBaseTerm = BaseTerm &
+	(Gene | Coord) & {
+		type: 'geneVariant'
+		genes: GvGeneTerm[]
+	}
 
 export type RawGvTerm = GvBaseTerm & {
 	groupsetting?: TermGroupSetting

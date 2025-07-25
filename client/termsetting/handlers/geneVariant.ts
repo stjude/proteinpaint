@@ -468,6 +468,7 @@ export async function getChildTerms(term: RawGvTerm, vocabApi: VocabApi, body: a
 		// any other properties
 		body.filter0 = filter0
 	}
+	// passing term to getCategories() will get categories across all genes in gene set
 	const categories = await vocabApi.getCategories(term, filter, body)
 	for (const _t of dtTerms) {
 		const t: any = structuredClone(_t)
