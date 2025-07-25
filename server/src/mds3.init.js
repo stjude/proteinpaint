@@ -2648,9 +2648,10 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 			dts.push(dtcnv)
 		}
 
-		// retrieve genomic data for each dt
+		// retrieve genomic data for each dt of each gene
 		const termdbmclass = q.ds?.cohort?.termdb?.mclass // custom mclass labels from dataset
-		for (const gene of tw.term.genes || []) {
+		if (!tw.term.genes?.length) throw 'tw.term.genes[] is empty'
+		for (const gene of tw.term.genes) {
 			for (const dt of dts) {
 				let mlst = []
 				switch (dt) {
