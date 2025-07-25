@@ -22,7 +22,13 @@ export class MatrixControls {
 		if (this.parent.setClusteringBtn)
 			this.parent.setClusteringBtn(this.opts.holder, (event, data) => this.callback(event, data))
 		this.setSamplesBtn(s)
-		this.setGenesBtn(s)
+		if (
+			state.termdbConfig?.allowedTermTypes?.includes(TermTypes.GENE_VARIANT) ||
+			state.termdbConfig.queries.snvindel ||
+			(this.parent.chartType == 'hierCluster' && this.parent.config.dataType == TermTypes.GENE_EXPRESSION)
+		) {
+			this.setGenesBtn(s)
+		}
 		if (s.addMutationCNVButtons && this.parent.chartType !== 'hierCluster') {
 			this.setMutationBtn()
 			this.setCNVBtn()
@@ -350,11 +356,16 @@ export class MatrixControls {
 			.append('button')
 			//.property('disabled', d => d.disabled)
 			.datum({
-				label: this.parent.chartType == 'hierCluster' ? 'Clustered Genes' : 'Genes',
+				label:
+					this.parent.chartType == 'hierCluster' && this.parent.config.dataType == TermTypes.GENE_EXPRESSION
+						? 'Hierarchical Cluster Genes'
+						: 'Genes',
 				getCount: () =>
-					this.parent.chartType == 'hierCluster'
-						? this.parent.termOrder?.filter(t => t.tw.term.type == TermTypes.GENE_EXPRESSION).length || 0
-						: this.parent.termOrder?.filter(t => t.tw.term.type == 'geneVariant').length || 0,
+					this.parent.chartType == 'hierCluster' && this.parent.config.dataType == TermTypes.GENE_EXPRESSION
+						? this.parent.termGroups.find(tg => tg.type == 'hierCluster').lst.length || 0
+						: this.parent.termOrder?.filter(
+								t => t.tw.term.type == TermTypes.GENE_VARIANT || t.tw.term.type == TermTypes.GENE_EXPRESSION
+						  ).length || 0,
 				customInputs: this.addGeneInputs,
 				rows: [
 					{
@@ -368,7 +379,10 @@ export class MatrixControls {
 							{ label: 'Absolute', value: 'abs' },
 							{ label: `Percent`, value: 'pct' },
 							{ label: `None`, value: '' }
-						]
+						],
+						getDisplayStyle(plot) {
+							return this.parent.termOrder?.filter(t => t.tw.term.type == 'geneVariant').length ? 'table-row' : 'none'
+						}
 					},
 					// TODO: implement this contol option
 					// {
@@ -388,6 +402,9 @@ export class MatrixControls {
 						options: renderStyleOptions,
 						styles: { padding: '5px 0px', margin: 0 },
 						labelDisplay: 'block',
+						getDisplayStyle(plot) {
+							return this.parent.termOrder?.filter(t => t.tw.term.type == 'geneVariant').length ? 'table-row' : 'none'
+						},
 						callback: this.parent.geneStyleControlCallback
 					},
 					{
@@ -400,7 +417,10 @@ export class MatrixControls {
 							{ label: 'By Input Data Order', value: 'asListed' },
 							{ label: `By ${l.sample} Count`, value: 'sampleCount' }
 						],
-						styles: { padding: 0, 'padding-right': '10px', margin: 0, display: 'inline-block' }
+						styles: { padding: 0, 'padding-right': '10px', margin: 0, display: 'inline-block' },
+						getDisplayStyle(plot) {
+							return this.parent.termOrder?.filter(t => t.tw.term.type == 'geneVariant').length ? 'table-row' : 'none'
+						}
 					}
 				]
 			})
@@ -1110,7 +1130,11 @@ export class MatrixControls {
 		if (parent.chartType == 'hierCluster' && parent.config.dataType == TermTypes.GENE_EXPRESSION) {
 			self.appendGeneInputs(self, app, parent, table, 'hierCluster')
 		}
-		self.appendGeneInputs(self, app, parent, table)
+		if (
+			parent.state?.termdbConfig?.allowedTermTypes?.includes(TermTypes.GENE_VARIANT) ||
+			parent.state.termdbConfig.queries.snvindel
+		)
+			self.appendGeneInputs(self, app, parent, table)
 	}
 	async appendGeneInputs(self, app, parent, table, geneInputType) {
 		tip.clear()
@@ -1137,11 +1161,22 @@ export class MatrixControls {
 				input.main(parent.config)
 			}
 		}
-
-		self.addGenesetInput(event, app, parent, table.append('tr'), geneInputType)
+		let geneInputTr
+		if (geneInputType == 'hierCluster' || parent.chartType !== 'hierCluster') {
+			// Insert the gene set edit UI at the top
+			geneInputTr = table.insert('tr', () => table.select('tr').node())
+		} else {
+			// Insert after first gene set edit UI
+			const secondTr = table.selectAll('tr').nodes()[1] || null
+			// Add visual separator: <hr> row
+			const hrTr = table.insert('tr', () => secondTr)
+			hrTr.append('td').attr('colspan', 2).append('hr').style('border', '1px solid #ccc')
+			geneInputTr = table.insert('tr', () => secondTr)
+		}
+		self.addGenesetInput(app, parent, geneInputTr, geneInputType)
 	}
 
-	addGenesetInput(event, app, parent, tr, geneInputType) {
+	addGenesetInput(app, parent, tr, geneInputType) {
 		const controlPanelBtn = this.btns.filter(d => d.label.endsWith('Genes'))?.node()
 		const tip = app.tip //new Menu({ padding: '5px' })
 		const tg = parent.config.termgroups
@@ -1185,7 +1220,9 @@ export class MatrixControls {
 								type: targetTermType
 							}
 							//if it was present use the previous term, genomic range terms require chr, start and stop fields, found in the original term
-							let tw = group.lst.find(tw => tw.term.name == d.symbol || tw.term.name == d.gene)
+							let tw = group.lst.find(
+								tw => (tw.term.name == d.symbol || tw.term.name == d.gene) && tw.term.type == targetTermType
+							)
 							if (!tw) {
 								tw = { term }
 								await fillTermWrapper(tw, this.opts.app.vocabApi)
@@ -1220,7 +1257,7 @@ export class MatrixControls {
 
 		tr.append('td')
 			.attr('class', 'sja-termdb-config-row-label')
-			.html(geneInputType == 'hierCluster' ? 'Clustered Gene Set' : 'Unclustered Gene Set')
+			.html(geneInputType == 'hierCluster' ? 'Hierarchical Cluster Gene Set' : 'Genomic Alteration Gene Set')
 
 		if (numOfEditableGrps > 0 || geneInputType == 'hierCluster') {
 			const td1 = tr.append('td').style('display', 'block').style('padding', '5px 0px')
@@ -1252,7 +1289,10 @@ export class MatrixControls {
 						geneInputType == 'hierCluster' ? tg.findIndex(g => g.type == 'hierCluster') : tg[0].type == g.type ? 0 : 1,
 					name: g.name,
 					type: g.type,
-					lst: g.lst.filter(tw => tw.term.type.startsWith('gene')).map(tw => ({ name: tw.term.name })),
+					lst:
+						g.type == 'hierCluster'
+							? g.lst.map(tw => ({ name: tw.term.name }))
+							: g.lst.filter(tw => tw.term.type == TermTypes.GENE_VARIANT).map(tw => ({ name: tw.term.name })),
 					mode:
 						g.type == 'hierCluster'
 							? s.dataType // is clustering group, pass dataType
@@ -1278,7 +1318,7 @@ export class MatrixControls {
 			.property('disabled', true)
 			.on('click', () => {
 				tip.clear()
-				this.setMenuBackBtn(tip.d.append('div'), () => controlPanelBtn.click())
+				this.setMenuBackBtn(tip.d.append('div'), () => controlPanelBtn.click(), 'Back')
 				const name = nameInput.property('value')
 				const s = parent.config.settings.hierCluster
 				selectedGroup = {
@@ -1367,14 +1407,14 @@ export class MatrixControls {
 		//const label = grpDiv.append('label')
 		//label.append('span').html('')
 		const firstGrpWithGeneTw = tg.find(g =>
-			g.lst.find(tw => tw.term.type.startsWith('gene') && g.type !== 'hierCluster')
+			g.lst.find(tw => tw.term.type == TermTypes.GENE_VARIANT && g.type !== 'hierCluster')
 		)
 		const groups = tg.map((g, index) => {
 			return {
 				index,
 				name: g.name,
 				type: g.type,
-				lst: g.lst.filter(tw => tw.term.type.startsWith('gene')).map(tw => ({ name: tw.term.name })),
+				lst: g.lst.filter(tw => tw.term.type == TermTypes.GENE_VARIANT).map(tw => ({ name: tw.term.name })),
 				mode: this.parent.state.termdbConfig.queries?.snvindel ? TermTypes.GENE_VARIANT : '',
 				selected: g === firstGrpWithGeneTw
 			}
