@@ -197,12 +197,23 @@ export class Barchart {
 				},
 				{
 					label: 'Multicolor bars',
-					title: 'Color bars using the colors preassigned if available, otherwise generates a color',
+					title: 'Color bars',
 					type: 'checkbox',
 					chartType: 'barchart',
 					settingsKey: 'colorBars',
 					boxLabel: 'Yes',
 					getDisplayStyle: plot => (plot.term2 ? 'none' : 'table-row')
+				},
+				{
+					label: 'Color using',
+					title: 'Color bars using the colors preassigned or generated dynamically',
+					type: 'radio',
+					chartType: 'barchart',
+					settingsKey: 'colorUsing',
+					options: [
+						{ label: 'Preassigned', value: 'preassigned' },
+						{ label: 'Generated', value: 'generated' }
+					]
 				},
 
 				{
@@ -344,9 +355,10 @@ export class Barchart {
 			this.term1toColor = {}
 			this.term2toColor = {} // forget any assigned overlay colors when refreshing a barchart
 			this.updateSettings(this.config)
-
-			const numColors = this.config.term2 ? this.settings.rows?.length : this.settings.cols?.length
-			this.colorScale = getColors(numColors || 0)
+			for (const chart of data.charts) {
+				const numColors = this.config.term2 ? Math.max(chart.serieses.map(s => s.data.length)) : chart.serieses.length
+				chart.colorScale = getColors(numColors)
+			}
 			this.chartsData = this.processData(this.currServerData)
 			this.render()
 		} catch (e) {
@@ -398,7 +410,8 @@ export class Barchart {
 			colw: config.settings.common.barwidth,
 			rowh: config.settings.common.barwidth,
 			colspace: config.settings.common.barspace,
-			rowspace: config.settings.common.barspace
+			rowspace: config.settings.common.barspace,
+			colorUsing: config.settings.barchart.colorUsing
 		}
 
 		/* mayResetHidden() was added before to prevent showing empty chart due to automatic hiding uncomputable categories
@@ -614,7 +627,7 @@ export class Barchart {
 
 	sortStacking(series, chart, chartsData) {
 		this.term1toColor[series.seriesId] = this.settings.colorBars
-			? this.getColor(this.config.term, series.seriesId, this.bins?.[1])
+			? this.getColor(chart, this.config.term, series.seriesId, this.bins?.[1])
 			: this.settings.defaultColor
 
 		series.visibleData.sort(this.overlaySorter)
@@ -633,7 +646,7 @@ export class Barchart {
 			result.chartTotal = chart.visibleTotal
 			result.logTotal = Math.log10(result.total)
 			seriesLogTotal += result.logTotal
-			this.setTerm2Color(result)
+			this.setTerm2Color(chart, result)
 			result.color = this.term2toColor[result.dataId] || this.term1toColor[series.seriesId]
 		}
 		if (seriesLogTotal > chart.maxSeriesLogTotal) {
@@ -642,17 +655,17 @@ export class Barchart {
 		// assign color to hidden data for use in legend
 		for (const result of series.data) {
 			if (result.color) continue
-			this.setTerm2Color(result)
+			this.setTerm2Color(chart, result)
 			result.color = this.term2toColor[result.dataId] || this.term1toColor[series.seriesId]
 		}
 	}
 
-	setTerm2Color(result) {
+	setTerm2Color(chart, result) {
 		if (!this.config.term2) return
-		this.term2toColor[result.dataId] = this.getColor(this.config.term2, result.dataId, this.bins?.[2])
+		this.term2toColor[result.dataId] = this.getColor(chart, this.config.term2, result.dataId, this.bins?.[2])
 	}
 
-	getColor(t, label, bins) {
+	getColor(chart, t, label, bins) {
 		if (!t.term) return
 		if (t.q.type == 'predefined-groupset' || t.q.type == 'custom-groupset') {
 			const groupset =
@@ -661,7 +674,9 @@ export class Barchart {
 			const group = groupset.groups.find(g => g.name == label)
 			if (group?.color) return group.color
 		}
-		if (t.term.values) {
+		//use predefined colors unless colorBars is set to true.
+		// Assigning colors to bars uses a better color scale as the scale considers the categories present, not in all the categories
+		if (t.term.values && this.settings.colorUsing == 'preassigned') {
 			for (const [key, v] of Object.entries(t.term.values)) {
 				if (!v.color) continue
 				if (key === label) return v.color
@@ -672,8 +687,7 @@ export class Barchart {
 		if (bin?.color) return bin.color
 
 		if (t.term.type == 'geneVariant' && t.q.type == 'values') return this.getMutationColor(label)
-
-		return rgb(this.colorScale(label)).toString()
+		return rgb(chart.colorScale(label)).toString()
 	}
 
 	// should move this outside of setTerm2Color(),
@@ -1217,6 +1231,7 @@ export function getDefaultBarSettings(app) {
 		multiTestingCorr: app?.getState()?.termdbConfig?.multipleTestingCorrection?.applyByDefault ? true : false,
 		defaultColor: plotColor,
 		colorBars: false,
+		colorUsing: 'preassigned',
 		dedup: false,
 		showStatsTable: true,
 		showPercent: false
