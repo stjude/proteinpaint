@@ -66,6 +66,9 @@ class MassCharts {
 		// either has >1 premade plots or dynamic scatter. show generic name
 		return 'Sample Scatter'
 	}
+	getReportBtnLabel(state) {
+		return state.termdbConfig.plotConfigByCohort?.default?.report?.name || 'Report'
+	}
 }
 
 export const chartsInit = getCompInit(MassCharts)
@@ -186,7 +189,7 @@ function getChartTypeList(self, state) {
 			}
 		},
 		{
-			label: 'Report',
+			label: self.getReportBtnLabel(state),
 			chartType: 'report',
 
 			clickTo: self.plotCreate, //when using prepPlot this error was raised: No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this). TOD0: check with Edgar
@@ -199,13 +202,6 @@ function getChartTypeList(self, state) {
 			config: {
 				chartType: 'sampleView'
 			}
-		},
-
-		{
-			label: 'Summary Plots',
-			chartType: 'summary',
-			clickTo: self.showTree_select1term,
-			usecase: { target: 'summary', detail: 'term' }
 		},
 		{
 			label: self.getSamplescatterBtnLabel(state),
