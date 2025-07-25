@@ -146,6 +146,7 @@ export async function get_summary_numericcategories(q) {
 		// term does not have special categories
 		return []
 	}
+	if (q.ds.cohort.termdb.q.getSummaryNumericCategories) return q.ds.cohort.termdb.q.getSummaryNumericCategories(term)
 	const annoTable = `anno_${term.type}`
 	if (!annoNumericTypes.has(term.type)) throw `unknown '${annoTable}' table in get_summary_numericcategories()`
 
