@@ -38,7 +38,12 @@ export class GvBase extends TwBase {
 			copyMerge(tw.q, opts.defaultQ)
 		}
 
-		if (!tw.term.genes?.length) throw 'tw.term.genes[] is empty'
+		if (!tw.term.genes?.length) {
+			// support legacy term structure that lacks term.genes[]
+			const gene = structuredClone(tw.term)
+			tw.term.genes = [gene]
+		}
+
 		for (const gene of tw.term.genes) {
 			if (!gene.kind) {
 				// support saved states that don't have term.kind, applied when rehydrating at runtime

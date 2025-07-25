@@ -40,10 +40,13 @@ type Coord = {
 
 type GvGeneTerm = BaseTerm & (Gene | Coord)
 
-type GvBaseTerm = BaseTerm & {
-	type: 'geneVariant'
-	genes: GvGeneTerm[]
-}
+// including (Gene | Coord) for backwards compatibility
+// with older geneVariant term structure
+type GvBaseTerm = BaseTerm &
+	(Gene | Coord) & {
+		type: 'geneVariant'
+		genes: GvGeneTerm[]
+	}
 
 export type RawGvTerm = GvBaseTerm & {
 	groupsetting?: TermGroupSetting
