@@ -66,6 +66,9 @@ class MassCharts {
 		// either has >1 premade plots or dynamic scatter. show generic name
 		return 'Sample Scatter'
 	}
+	getReportBtnLabel(state) {
+		return state.termdbConfig.plotConfigByCohort?.default?.report?.name || 'Report'
+	}
 }
 
 export const chartsInit = getCompInit(MassCharts)
@@ -120,14 +123,14 @@ function getChartTypeList(self, state) {
 
 	.clickTo:
 		callback to handle the button click event, may use any of the following renderer methods:
-	
-		self.tree_select1term 
-		- will show a term tree to select a term	
-
-		self.prepPlot
-		- dispatch "plot_prep" action to produce a 'initiating' UI of this plot, for user to fill in additional details to launch the plot
+		- self.tree_select1term()
+			will show a term tree to select a term	
+		- self.prepPlot()
+			dispatch "plot_prep" action to produce a 'initiating' UI of this plot,
+			for user to fill in additional details to launch the plot
 			example: regression, table, scatterplot which requires user to select two terms
-		
+		- self.plotCreate()
+
 	.usecase:{}
 		required for clickTo=tree_select1term
 		provide to termdb app
@@ -175,8 +178,10 @@ function getChartTypeList(self, state) {
 			config: { chartType: 'profileForms' }
 		},
 		////////////////////// PROFILE PLOTS END //////////////////////
+		//          rest are general plots applicable to all ds
+
 		{
-			label: 'Data Dictionary',
+			label: 'Data Dictionary', // todo change to Data Variables
 			clickTo: self.prepPlot,
 			chartType: 'dictionary',
 			config: {
@@ -184,7 +189,7 @@ function getChartTypeList(self, state) {
 			}
 		},
 		{
-			label: 'Report',
+			label: self.getReportBtnLabel(state),
 			chartType: 'report',
 
 			clickTo: self.plotCreate, //when using prepPlot this error was raised: No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this). TOD0: check with Edgar
@@ -197,13 +202,6 @@ function getChartTypeList(self, state) {
 			config: {
 				chartType: 'sampleView'
 			}
-		},
-
-		{
-			label: 'Summary Plots',
-			chartType: 'summary',
-			clickTo: self.showTree_select1term,
-			usecase: { target: 'summary', detail: 'term' }
 		},
 		{
 			label: self.getSamplescatterBtnLabel(state),
@@ -339,6 +337,18 @@ function getChartTypeList(self, state) {
 			chartType: 'correlationVolcano',
 			usecase: { target: 'correlationVolcano', detail: 'numeric' },
 			clickTo: self.showTree_select1term
+		},
+		{
+			label: 'Mutation vs Diagnosis',
+			chartType: 'summarizeMutationDiagnosis', // type names of other similar charts should all begin with `summarize` to indcate they are based on summary plot
+			usecase: { target: 'summarizeMutationDiagnosis' },
+			clickTo: self.loadChartSpecificMenu
+		},
+		{
+			label: 'CNV vs GeneExp',
+			chartType: 'summarizeCnvGeneexp',
+			usecase: { target: 'summarizeCnvGeneexp' },
+			clickTo: self.loadChartSpecificMenu
 		}
 	]
 

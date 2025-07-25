@@ -1,5 +1,5 @@
 {
-    "ribbonMessage": "Please see our new example using GDC data.",
+    "ribbonMessage": "<br>We're excited to announce new features in the disco!<ul><li>From the burge menu in the upper left hand corner, change the radius (size) of the plot and, if fusion data available, the opacity of the arcs.</li><li>Users may now select which chromosomes to display in the Disco plot. Click on the burger menu to select chromosomes.</li><li>Please also see the new example from the PNET dataset for fusions. Clicking on the fusion launches the gene fusion.</li></ul>",
     "ppcalls": [
         {
             "isUi": true,
@@ -68,7 +68,7 @@
         },
         {
             "label": "GDC Sample Data",
-            "urlparam": "?genome=hg38&dslabel=GDC&disco=1&sample=TCGA-85-7710-01A",
+            "urlparam": "?genome=hg38&dslabel=GDC&disco=1&sample=TCGA-BR-4257",
             "runargs": {
                 "noheader": true,
                 "nobox": true,
@@ -76,8 +76,57 @@
                 "disco": {
                     "dslabel": "GDC",
                     "genome": "hg38",
-                    "sample_id": "TCGA-85-7710-01A",
-                    "centerText": "TCGA-85-7710-01A"
+                    "sample_id": "TCGA-BR-4257",
+                    "settings": {
+                        "centerText": "TCGA-BR-4257"
+                    }
+                }
+            },
+            "testSpec": {
+                "button": 1,
+                "expected": {
+                    "svg": 1,
+                    "g": 2
+                }
+            }
+        },
+        {
+            "label": "Chromosome subset",
+            "urlparam": "?genome=hg19&dslabel=PNET&disco=1&sample=SJBT032239_D1",
+            "runargs": {
+                "noheader": true,
+                "nobox": true,
+                "genome": "hg19",
+                "disco": {
+                    "dslabel": "PNET",
+                    "genome": "hg19",
+                    "sample_id": "SJBT032239_D1",
+                    "settings": {
+                        "hiddenChromosomes": [
+                            "chr1",
+                            "chr2",
+                            "chr3",
+                            "chr6",
+                            "chr7",
+                            "chr8",
+                            "chr9",
+                            "chr11",
+                            "chr12",
+                            "chr13",
+                            "chr14",
+                            "chr15",
+                            "chr16",
+                            "chr17",
+                            "chr18",
+                            "chr20",
+                            "chr20",
+                            "chr21",
+                            "chr22",
+                            "chrX",
+                            "chrY",
+                            "chrM"
+                        ]
+                    }
                 }
             },
             "testSpec": {

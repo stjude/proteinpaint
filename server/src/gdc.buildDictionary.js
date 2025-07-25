@@ -686,7 +686,11 @@ function makeTermdbQueries(ds, id2term) {
 
 	q.getSupportedChartTypes = () => {
 		const supportedChartTypes = {
-			'': ['dictionary'] // to be able to show dictionary chart button at mass ui in correlation plot http://localhost:3000/?gdccorrelation=1
+			'': [
+				'dictionary', // to be able to show dictionary chart button at mass ui in correlation plot http://localhost:3000/?gdccorrelation=1
+				'summarizeMutationDiagnosis',
+				'summarizeCnvGeneexp'
+			]
 		}
 		const numericTypeCount = {}
 		// key: subcohort combinations, comma-joined, as in the subcohort_terms table

@@ -1517,8 +1517,12 @@ keep this setting here for reason of:
 		/** colors for a category multivalues */
 		[index: string]: { [index: string]: string }
 	}
-	//terms  are shown in the dictionary based on term and user role.
+	/** terms are shown in the dictionary based on term and user role.
+	 */
 	isTermVisible?: (clientAuthResult: any, id: string) => boolean
+	/** when ds supports chart types e.g. summarizeMutationDiagnosis, this setting is required to supply a dict term to populate the chart ui
+	 */
+	defaultTw4correlationPlot?: Tw
 }
 
 type SampleType = {
@@ -1538,8 +1542,10 @@ type PlotConfigByCohort = {
 
 /** modified version of termwrapper*/
 type Tw = {
-	id: string
-	q: unknown
+	/** short hand for using either id (dict term) or term{} */
+	id?: string
+	term?: object
+	q: object
 	/** quick fix for generating URL links in mds3 tk sample table! adhoc design. may move to tw.term.baseURL and not specific to mds3 tk
 	 */
 	baseURL?: string

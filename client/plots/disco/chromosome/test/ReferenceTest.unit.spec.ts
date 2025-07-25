@@ -12,10 +12,13 @@ Tests:
 
 const overriders = {
 	padAngle: 0.01,
-	chromosomeInnerRadius: 90,
-	chromosomeWidth: 10
+	rings: {
+		chromosomeInnerRadius: 90,
+		chromosomeWidth: 10
+	}
 }
 const settings = discoDefaults(overriders)
+const chromosomesOrder = ['chr1', 'chr2', 'chr3']
 
 // Mock chromosome sizes (normally coming from genome data)
 const chromosomes = {
@@ -32,7 +35,7 @@ test('\n', function (t) {
 
 // ───── Unit Tests ─────
 test('Reference class initializes correctly', t => {
-	const reference = new Reference(settings, chromosomes)
+	const reference = new Reference(settings, chromosomesOrder, chromosomes)
 
 	//Check that all chromosome keys are recorded in order
 	t.equal(reference.chromosomesOrder.length, 3, 'should imclude all chromosome keys')
@@ -40,7 +43,6 @@ test('Reference class initializes correctly', t => {
 
 	// Check that totalSize matches the sum of the chromosome sizes
 	const expectedTotalSize = chromosomes.chr1 + chromosomes.chr2 + chromosomes.chr3
-	t.equal(reference.totalSize, expectedTotalSize, 'Total size should match sum of chromosome sizes')
 	t.equal(reference.totalSize, expectedTotalSize, 'Total size should match sum of chromosome sizes')
 
 	// Verify totalPadAngle is calculated correctly
@@ -57,9 +59,12 @@ test('Reference class initializes correctly', t => {
 	// Validate the angles and radius properties on each Chromosome
 	reference.chromosomes.forEach((chr, i) => {
 		t.ok(chr.startAngle < chr.endAngle, `Chromosome ${i} startAngle should be less than endAngle`)
-		t.ok(chr.innerRadius === overriders.chromosomeInnerRadius, `Chromosome ${i} inner radius should match setting`)
 		t.ok(
-			chr.outerRadius === overriders.chromosomeInnerRadius + overriders.chromosomeWidth,
+			chr.innerRadius === overriders.rings.chromosomeInnerRadius,
+			`Chromosome ${i} inner radius should match setting`
+		)
+		t.ok(
+			chr.outerRadius === overriders.rings.chromosomeInnerRadius + overriders.rings.chromosomeWidth,
 			`Chromosome ${i} outer radius should match setting`
 		)
 	})

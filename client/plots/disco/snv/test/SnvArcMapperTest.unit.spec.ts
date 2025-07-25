@@ -10,12 +10,13 @@ const settings = discoDefaults(overriders)
 
 // TODO - Fix this test if chr is length 100
 const sampleName = 'Sample'
+const chromosomesOrder = ['chr1', 'chr2']
 const chromosomes = {
 	chr1: 100000,
 	chr2: 100000
 }
 
-const reference = new Reference(settings, chromosomes)
+const reference = new Reference(settings, chromosomesOrder, chromosomes)
 const snvArcsMapper = new SnvArcsMapper(10, 10, sampleName, reference)
 
 test('SnvArcsMapper.map() should return an array of SnvArc objects', t => {

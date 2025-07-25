@@ -12,7 +12,6 @@ import * as mds3_init from './mds3.init.js'
 import { parse_textfilewithheader } from './parse_textfilewithheader.js'
 import { clinsig } from '../dataset/clinvar.ts'
 
-// Global variable (storing things in memory)
 export const genomes = {} // { hg19: {...}, ... }
 
 const features = serverconfig.features
@@ -75,31 +74,39 @@ export async function initGenomesDs(serverconfig) {
 	for (const g of serverconfig.genomes) {
 		if (!g.name) throw '.name missing from a genome: ' + JSON.stringify(g)
 		if (!g.file) throw '.file missing from genome ' + g.name
-		/*
-			When using a Docker container, the mounted app directory
-			may have an optional genome directory, which if present
-			will be symlinked to the app directory and potentially override any
-			similarly named genome js file that are part of the standard
-			Proteinpaint packaged files[] 
-		*/
-		const overrideFile = path.join(process.cwd(), g.file)
-		const genomeFile = fs.existsSync(overrideFile) ? overrideFile : path.join(serverconfig.binpath, g.file)
 
-		/* g is the object from serverconfig.json, for instance-specific customizations of this genome
-		g2 is the standard-issue obj loaded from the js file
-		settings in g will modify g2
-		g2 is registered in the global "genomes"
-		*/
-		const g2module = (await import(genomeFile)).default
-		const g2 = g2module.default || g2module
+		let g2 // genome javascript object imported from script
+		{
+			/*
+				When using a Docker container, the mounted app directory
+				may have an optional genome directory, which if present
+				will be symlinked to the app directory and potentially override any
+				similarly named genome js file that are part of the standard
+				Proteinpaint packaged files[] 
+			*/
+			const overrideFile = path.join(process.cwd(), g.file)
+			const genomeFile = fs.existsSync(overrideFile) ? overrideFile : path.join(serverconfig.binpath, g.file)
+
+			/* g is the object from serverconfig.json, for instance-specific customizations of this genome
+			g2 is the standard-issue obj loaded from the js file
+			settings in g will modify g2
+			g2 is registered in the global "genomes"
+			*/
+			const g2module = (await import(genomeFile)).default
+			g2 = g2module.default || g2module
+		}
+
 		genomes[g.name] = g2
 		g2.label = g.name
 
+		// fasta file
 		if (!g2.genomefile) throw '.genomefile missing from .js file of genome ' + g.name
 		if (g2.genomefile == 'NA') {
 			// not available
 		} else {
+			// should be a valid file path under tp/
 			g2.genomefile = path.join(serverconfig.tpmasterdir, g2.genomefile)
+			await utils.file_is_readable(g2.genomefile)
 		}
 
 		// for testing if gene/isoform/chr/snp names have only allowed characters

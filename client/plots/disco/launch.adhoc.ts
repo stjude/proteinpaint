@@ -41,6 +41,7 @@ type SvEntry = SvEntry4Cols | SvEntry6Cols
 
 type MutationListEntry = SnvEntry | CnvEntry | SvEntry
 
+/** When disco is embedded, the arguments below are nested under arg.disco */
 export type DiscoPlotArgs = {
 	/**optional array of preparsed mutation events, from runpp() */
 	mlst?: MutationListEntry[]
@@ -82,6 +83,7 @@ export type DiscoPlotArgs = {
 	cnvText?: string
 	cnvFile?: string
 	cnvUrl?: string
+	settings?: any
 }
 
 //... more datatypes can be added later
@@ -124,14 +126,10 @@ export async function launch(arg: DiscoPlotArgs, genomeObj: Genome, holder: Sele
 				{
 					chartType: 'Disco',
 					subfolder: 'disco',
-					extension: 'ts'
-					/*
-					overrides: {
-						Disco: {
-							showPrioritizeGeneLabelsByGeneSets: !!genomeObj.geneset
-						}
-					}
-					*/
+					extension: 'ts',
+					/** NOTE: Users should only override the settings in the default
+					 * settings.Disco:{}, not the entire settings:{} object.*/
+					overrides: { Disco: arg?.settings || {} }
 				}
 			]
 		}

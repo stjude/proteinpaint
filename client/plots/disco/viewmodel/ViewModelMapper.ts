@@ -36,7 +36,7 @@ export class ViewModelMapper {
 		// a mutable copy so ring dimensions can be adjusted at runtime
 		this.settings = JSON.parse(JSON.stringify(settings))
 		this.discoInteractions = discoInteractions
-    }
+	}
 
 	private applyRadius() {
 		const radius = this.settings.Disco.radius
@@ -56,10 +56,16 @@ export class ViewModelMapper {
 		this.settings.legend.fontSize *= scale
 	}
 
-    map(opts: any): ViewModel {
-		const chromosomesOverride = opts.args.chromosomes
-
+	map(opts: any): ViewModel {
 		const chrSizes = opts.args.genome.majorchr
+
+		/** Remove hidden chromosomes */
+		const chromosomesOverride = {}
+		for (const chr of Object.keys(chrSizes)) {
+			if (!this.settings.Disco.hiddenChromosomes.includes(chr)) {
+				chromosomesOverride[chr] = chrSizes[chr]
+			}
+		}
 
 		const sampleName = opts.args.sampleName
 

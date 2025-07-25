@@ -489,7 +489,7 @@ function setDropdownInput(opts) {
 			inputTd: opts.holder.append('td')
 		}
 	}
-
+	let timeoutId // for delayed multiselect change event
 	self.dom.select = self.dom.inputTd
 		.append('select')
 		.attr('aria-labelledby', id)
@@ -497,30 +497,38 @@ function setDropdownInput(opts) {
 		.property('multiple', opts.multiple)
 
 		.on('change', () => {
+			clearTimeout(timeoutId) // clear any previous timeout
 			let value
 			if (opts.multiple) {
-				const options = self.dom.select.node().options
-				const values = []
-				for (const option of options) {
-					if (option.selected) values.push(option.value)
-				}
-				value = values
+				// Set a new timeout to execute the desired logic after 500ms
+				timeoutId = setTimeout(() => {
+					const options = self.dom.select.node().options
+					const values = []
+					for (const option of options) {
+						if (option.selected) values.push(option.value)
+					}
+					value = values
+					callbackOrDispatch(value)
+				}, 1000) // 1000 milliseconds delay
 			} else {
 				value = self.dom.select.property('value')
+				callbackOrDispatch(value)
 			}
-			if (opts.callback) opts.callback(value)
-			else
-				opts.dispatch({
-					type: 'plot_edit',
-					id: opts.id,
-					config: {
-						settings: {
-							[opts.chartType]: {
-								[opts.settingsKey]: value
+			function callbackOrDispatch(value) {
+				if (opts.callback) opts.callback(value)
+				else
+					opts.dispatch({
+						type: 'plot_edit',
+						id: opts.id,
+						config: {
+							settings: {
+								[opts.chartType]: {
+									[opts.settingsKey]: opts.processInput ? opts.processInput(value) : value
+								}
 							}
 						}
-					}
-				})
+					})
+			}
 		})
 	if (opts.multiple) self.dom.select.attr('size', opts.options.length > 10 ? 10 : opts.options.length)
 	self.dom.select.style('max-width', '300px')
@@ -603,8 +611,19 @@ function setCheckboxInput(opts) {
 
 /*
 	Use for array of allowed values
+
+	Options are rendered descending in equal sizes down columns. 
+
+	Use opts.style to control the checkboxes layout
+	style: {
+		colNum: number -> number of columns to display. Default is 2
+		gap: number -> gap between columns in px. Default is 5
+	}
 */
 function setMultiCheckbox(opts) {
+	const numCols = opts.style?.colNum || 2
+	const numRows = Math.ceil(opts.options.length / numCols)
+
 	const self = {
 		dom: {
 			row: opts.holder.style('display', 'table-row'),
@@ -616,12 +635,48 @@ function setMultiCheckbox(opts) {
 			inputTd: opts.holder
 				.append('td')
 				.attr('colspan', opts.colspan || '')
-				.style('padding', '5px')
 				.style('text-align', opts.align || '')
+				.style('padding', '5px')
 		}
 	}
 
-	self.dom.labels = self.dom.inputTd
+	/** Check/Uncheck All option appears above all checkboxes */
+	self.dom.selectAllDiv = self.dom.inputTd.append('div').style('padding', '5px 0').append('label')
+
+	self.dom.selectAll = self.dom.selectAllDiv
+		.append('input')
+		.attr('type', 'checkbox')
+		.attr('title', 'Check or uncheck all')
+		.on('change', () => {
+			const checked = self.dom.selectAll.property('checked')
+			self.dom.inputs.property('checked', checked)
+			const values = checked ? opts.options.map(d => d.value) : []
+			opts.dispatch({
+				type: 'plot_edit',
+				id: opts.id,
+				config: {
+					settings: {
+						[opts.chartType]: {
+							[opts.settingsKey]: opts.processInput?.(values) || values
+						}
+					}
+				}
+			})
+		})
+
+	self.dom.selectAllDiv.append('span').text('Check/Uncheck All').style('opacity', 0.65).style('font-size', '0.9em')
+
+	/** Grid layout for options.
+	 * Renders options down columns of equal sizes.*/
+	self.dom.optionsDiv = self.dom.inputTd
+		.append('div')
+		.style('display', 'grid')
+		.style('grid-template-columns', `repeat(${numCols}, 1fr)`)
+		.style('grid-template-rows', `repeat(${numRows}, auto)`)
+		.style('grid-auto-flow', 'column')
+		.style('gap', `${opts.style.gap || 5}px`)
+
+	self.dom.labels = self.dom.optionsDiv
 		.selectAll('label')
 		.data(opts.options)
 		.enter()
@@ -632,6 +687,7 @@ function setMultiCheckbox(opts) {
 			self.dom.input = label
 				.append('input')
 				.attr('type', 'checkbox')
+				.attr('name', d => d.label)
 				.attr('value', d => d.value)
 				.on('change', () => {
 					const checked = []
@@ -644,7 +700,7 @@ function setMultiCheckbox(opts) {
 						config: {
 							settings: {
 								[opts.chartType]: {
-									[opts.settingsKey]: checked
+									[opts.settingsKey]: opts.processInput?.(checked) || checked
 								}
 							}
 						}
@@ -659,7 +715,11 @@ function setMultiCheckbox(opts) {
 	const api = {
 		main(plot) {
 			const values = plot.settings[opts.chartType][opts.settingsKey]
-			self.dom.inputs.property('checked', d => values.includes(d.value))
+			const checkedValues = opts.processInput?.(values) || values
+			/** Appears checked or unchecked if all or none, respectively,
+			 * of the options are checked. */
+			self.dom.selectAll.property('checked', checkedValues.length === opts.options.length)
+			self.dom.inputs.property('checked', d => checkedValues.includes(d.value))
 			self.dom.labels.style('display', d => d.getDisplayStyle?.(plot) || '')
 			opts.holder.style('display', opts.getDisplayStyle?.(plot) || 'table-row')
 		}
@@ -693,8 +753,7 @@ function setCustomInput(opts) {
 	this is a generalized control wrapper for termsetting pill,
 	intended to eventually replace the more specific term1, overlay, and divide components
 
-	many of the options are mapped to the arguments of termsettingInit(),
-	https://docs.google.com/document/d/13bU1azXD6Jl_1w0SCTc8eCEt42YJtrK4kJ3mdSkxMrU/edit#heading=h.oqjmte1ot0h3
+	many of the options are mapped to the arguments of termsettingInit()
 */
 async function setTermInput(opts) {
 	const self = {

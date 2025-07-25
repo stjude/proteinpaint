@@ -2,12 +2,12 @@ import { getPillNameDefault } from '../termsetting'
 import type { GeneVariantTermSettingInstance, RawGvTerm, RawGvPredefinedGsTW, VocabApi, DtTerm } from '#types'
 import type { PillData } from '../types'
 import { make_radios, renderTable } from '#dom'
-import { dtTerms, getColors } from '#shared/common.js'
+import { dtTerms, getColors, cnvGainClasses, cnvLossClasses, mclass, dtcnv } from '#shared/common.js'
 import { filterInit, filterPromptInit, getNormalRoot } from '#filter/filter'
 import { rgb } from 'd3-color'
 import { getWrappedTvslst } from '#filter/filter'
 
-const colorScale = getColors(2)
+let colorScale = getColors(3)
 
 // self is the termsetting instance
 export function getHandler(self: GeneVariantTermSettingInstance) {
@@ -271,7 +271,7 @@ function addNewGroup(filter, groups, name?: string) {
 		name,
 		type: 'filter',
 		filter,
-		color: rgb(colorScale(groups.length)).formatHex()
+		color: '#000000'
 	}
 	groups.push(newGroup)
 }
@@ -281,42 +281,161 @@ export async function getPredefinedGroupsets(tw: RawGvPredefinedGsTW, vocabApi: 
 	// get child dt terms of geneVariant term
 	await getChildTerms(tw.term, vocabApi)
 	if (!tw.term.childTerms?.length) throw 'tw.term.childTerms[] is missing'
+	const termdbmclass = vocabApi.termdbConfig.mclass // custom mclass labels from dataset
 	// build predefined groupsets based on child dt terms
 	tw.term.groupsetting = {
 		disabled: false,
 		lst: tw.term.childTerms.map(dtTerm => {
-			const mutantLabel = dtTerm.dt == 4 ? 'Altered' : 'Mutated'
-			const wildtypeLabel = dtTerm.dt == 4 ? 'Neutral' : 'Wildtype'
-			const groupset = {
-				name: `${dtTerm.name_noOrigin}: ${mutantLabel} vs. ${wildtypeLabel}`,
-				groups: []
-			}
-			if (dtTerm.origin) groupset.name += ` (${dtTerm.origin})`
-			const grp1Name = `${dtTerm.name_noOrigin} ${dtTerm.origin ? `${mutantLabel} (${dtTerm.origin})` : mutantLabel}`
-			const grp1Filter = getWrappedTvslst([
+			const groupset = dtTerm.dt == dtcnv ? getCnvGroupset(dtTerm) : getNonCnvGroupset(dtTerm)
+			return groupset
+		})
+	}
+
+	// function to get cnv groupset
+	// will compare gain vs. loss vs. wildtype groups
+	// only groups present in the data will be included
+	// e.g. if samples are only cnv loss and wildtype for the gene
+	// then only cnv loss and wildtype groups will be included in the groupset
+	function getCnvGroupset(dtTerm) {
+		const groupset: any = {
+			name: `${dtTerm.name_noOrigin}:`,
+			groups: [],
+			dt: dtTerm.dt
+		}
+		// cnv gain group
+		const gainValues = getValues(cnvGainClasses, dtTerm)
+		if (gainValues.length) {
+			// cnv gain is present in data
+			// add cnv gain group to groupset
+			const gainFilter = getWrappedTvslst([
 				{
 					type: 'tvs',
 					tvs: {
 						term: dtTerm,
-						values: [{ key: 'WT', label: 'Wildtype', value: 'WT' }],
-						isnot: true,
+						values: gainValues,
 						excludeGeneName: true
 					}
 				}
 			])
-			addNewGroup(grp1Filter, groupset.groups, grp1Name)
-			const grp2Name = `${dtTerm.name_noOrigin} ${
-				dtTerm.origin ? `${wildtypeLabel} (${dtTerm.origin})` : wildtypeLabel
-			}`
-			const grp2Filter = getWrappedTvslst([
+			const gainName = `${dtTerm.name_noOrigin} ${dtTerm.origin ? `Gain (${dtTerm.origin})` : 'Gain'}`
+			groupset.groups.push({
+				name: gainName,
+				type: 'filter',
+				filter: gainFilter
+			})
+			groupset.name += ' Gain vs.'
+		}
+		// cnv loss group
+		const lossValues = getValues(cnvLossClasses, dtTerm)
+		if (lossValues.length) {
+			// cnv loss is present in data
+			// add cnv loss group to groupset
+			const lossFilter = getWrappedTvslst([
 				{
 					type: 'tvs',
-					tvs: { term: dtTerm, values: [{ key: 'WT', label: 'Wildtype', value: 'WT' }], excludeGeneName: true }
+					tvs: {
+						term: dtTerm,
+						values: lossValues,
+						excludeGeneName: true
+					}
 				}
 			])
-			addNewGroup(grp2Filter, groupset.groups, grp2Name)
-			return groupset
+			const lossName = `${dtTerm.name_noOrigin} ${dtTerm.origin ? `Loss (${dtTerm.origin})` : 'Loss'}`
+			groupset.groups.push({
+				name: lossName,
+				type: 'filter',
+				filter: lossFilter
+			})
+			groupset.name += ' Loss vs.'
+		}
+		// cnv wildtype group
+		const wtValues = getValues(['WT'], dtTerm)
+		if (wtValues.length) {
+			// wildtype is present in data
+			// add wildtype group to groupset
+			const wtFilter = getWrappedTvslst([
+				{
+					type: 'tvs',
+					tvs: {
+						term: dtTerm,
+						values: wtValues,
+						excludeGeneName: true
+					}
+				}
+			])
+			const wtName = `${dtTerm.name_noOrigin} ${dtTerm.origin ? `Wildtype (${dtTerm.origin})` : 'Wildtype'}`
+			groupset.groups.push({
+				name: wtName,
+				type: 'filter',
+				filter: wtFilter
+			})
+			groupset.name += ' Wildtype'
+		}
+		if (dtTerm.origin) groupset.name += ` (${dtTerm.origin})`
+		// set color scale based on number of groups
+		colorScale = getColors(groupset.groups.length)
+		// assign colors to each group
+		for (const group of groupset.groups) {
+			group.color = rgb(colorScale(group.name)).formatHex()
+		}
+		return groupset
+	}
+
+	// function to get non-cnv (e.g. snv/indel, fusion, etc.) groupset
+	// will compare mutant vs. wildtype
+	function getNonCnvGroupset(dtTerm) {
+		colorScale = getColors(2)
+		const groupset: any = {
+			name: `${dtTerm.name_noOrigin}: Mutated vs. Wildtype${dtTerm.origin ? ` (${dtTerm.origin})` : ''}`,
+			groups: [],
+			dt: dtTerm.dt
+		}
+		// group 1: mutant
+		const grp1Name = `${dtTerm.name_noOrigin} ${dtTerm.origin ? `Mutated (${dtTerm.origin})` : 'Mutated'}`
+		const grp1Filter = getWrappedTvslst([
+			{
+				type: 'tvs',
+				tvs: {
+					term: dtTerm,
+					values: [{ key: 'WT', label: 'Wildtype', value: 'WT' }],
+					isnot: true,
+					excludeGeneName: true
+				}
+			}
+		])
+		groupset.groups.push({
+			name: grp1Name,
+			type: 'filter',
+			filter: grp1Filter,
+			color: rgb(colorScale(grp1Name)).formatHex()
 		})
+		// group 2: wildtype
+		const grp2Name = `${dtTerm.name_noOrigin} ${dtTerm.origin ? `Wildtype (${dtTerm.origin})` : 'Wildtype'}`
+		const grp2Filter = getWrappedTvslst([
+			{
+				type: 'tvs',
+				tvs: { term: dtTerm, values: [{ key: 'WT', label: 'Wildtype', value: 'WT' }], excludeGeneName: true }
+			}
+		])
+		groupset.groups.push({
+			name: grp2Name,
+			type: 'filter',
+			filter: grp2Filter,
+			color: rgb(colorScale(grp2Name)).formatHex()
+		})
+		return groupset
+	}
+
+	// get values for tvs from mutation classes
+	function getValues(classes, dtTerm) {
+		const values = classes
+			.filter(key => Object.keys(dtTerm.values).includes(key))
+			.map(key => {
+				const label =
+					termdbmclass && Object.keys(termdbmclass).includes(key) ? termdbmclass[key].label : mclass[key].label
+				return { key, label, value: key }
+			})
+		return values
 	}
 }
 

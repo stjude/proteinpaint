@@ -19,9 +19,9 @@ const settings = discoDefaults({
 	},
 	rings: {}
 })
-
+const chromosomesOrder = ['chr1', 'chr2']
 const chromosomes = { chr1: 1000000, chr2: 100000 }
-const reference = new Reference(settings, chromosomes)
+const reference = new Reference(settings, chromosomesOrder, chromosomes)
 
 const dataMapper = new DataMapper(settings, reference, 'SampleA', [])
 
@@ -63,29 +63,33 @@ test('\n', function (t) {
 })
 
 test('DataMapper.map() skips fusion entries with unknown chromosomes', t => {
-        t.equal(result.fusionData.length, 1, 'Only valid fusion with known chromosomes should be included')
-        t.equal(result.fusionData[0].geneA, 'ALK', 'Valid fusion geneA should be ALK')
-        t.equal(result.fusionData[0].geneB, 'EML4', 'Valid fusion geneB should be EML4')
-		t.equal(result.invalidDataInfo?.count ?? 0, 2, 'Two invalid entries should be recorded')
-        t.end()
+	t.equal(result.fusionData.length, 1, 'Only valid fusion with known chromosomes should be included')
+	t.equal(result.fusionData[0].geneA, 'ALK', 'Valid fusion geneA should be ALK')
+	t.equal(result.fusionData[0].geneB, 'EML4', 'Valid fusion geneB should be EML4')
+	t.equal(result.invalidDataInfo?.count ?? 0, 2, 'Two invalid entries should be recorded')
+	t.end()
 })
 
 test('DataMapper.map() flags SNV positions outside chromosome size', t => {
-        const mapper = new DataMapper(settings, reference, 'SampleA', [])
-        const outOfRange = [
-                {
-                        dt: dtsnvindel,
-                        chr: 'chr1',
-						//Exaggerated position outsie chr1,adds entry to invalidDataInfo
-                        position: 9000000000, 
-                        gene: 'FAKE',
-                        class: 'M',
-                        mname: 'mname'
-                }
-        ]
-        const res = mapper.map(outOfRange)
-        t.equal(res.invalidDataInfo!.count, 1, 'One invalid entry should be recorded')
-		t.equal(res.invalidDataInfo!.entries[0].reason, `Position ${outOfRange[0].position} outside of chr1`, 'Reason should mention position outside chromosome')
-        t.equal(res.snvData.length, 0, 'Invalid SNV should be skipped')
-        t.end()
+	const mapper = new DataMapper(settings, reference, 'SampleA', [])
+	const outOfRange = [
+		{
+			dt: dtsnvindel,
+			chr: 'chr1',
+			//Exaggerated position outsie chr1,adds entry to invalidDataInfo
+			position: 9000000000,
+			gene: 'FAKE',
+			class: 'M',
+			mname: 'mname'
+		}
+	]
+	const res = mapper.map(outOfRange)
+	t.equal(res.invalidDataInfo!.count, 1, 'One invalid entry should be recorded')
+	t.equal(
+		res.invalidDataInfo!.entries[0].reason,
+		`Position ${outOfRange[0].position} outside of chr1`,
+		'Reason should mention position outside chromosome'
+	)
+	t.equal(res.snvData.length, 0, 'Invalid SNV should be skipped')
+	t.end()
 })

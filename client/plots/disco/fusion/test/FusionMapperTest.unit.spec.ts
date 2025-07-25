@@ -9,12 +9,13 @@ const overriders = { padAngle: 0.0 }
 const settings = discoDefaults(overriders)
 
 const sampleName = 'Sample'
+const chromosomesOrder = ['chr1', 'chr2']
 const chromosomes = {
 	chr1: 100,
 	chr2: 100
 }
 
-const reference = new Reference(settings, chromosomes)
+const reference = new Reference(settings, chromosomesOrder, chromosomes)
 const fusionMapper = new FusionMapper(10, sampleName, reference)
 
 test('FusionMapper.map() should return an array of Fusion objects', t => {
