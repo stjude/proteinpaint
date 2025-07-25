@@ -25,7 +25,7 @@ const defaultApiMethods = {
 	getHealth: () => undefined,
 	// credentialed embedders, using an array which can be frozen with Object.freeze(), unlike a Set()
 	credEmbedders: [],
-	restrictFilterToAuthorizedValues: (req, ds, filter, term) => {}
+	mayExtendqFilter: (q, ds, term) => {}
 }
 
 // these may be overriden within maySetAuthRoutes()
@@ -289,6 +289,7 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 				// okay to return an undefined embedder[route]
 				const cred = route[q.embedder] || route['*']
 				if (!cred) return
+				console.log(291, cred.protectedRoutes)
 				if (cred.protectedRoutes?.find(pattern => isMatch(path, pattern))) return cred
 				const protRoutes = _protectedRoutes || protectedRoutes.termdb
 				if (protRoutes.includes(q.for)) return cred
@@ -326,6 +327,7 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 
 		const q = req.query
 		const cred = getRequiredCred(q, req.path)
+		if (req.path.includes('/termdb')) console.log(328, req.path, cred)
 		if (!cred) {
 			next()
 			return
@@ -369,8 +371,6 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 			// If any activity happens within the harcoded number of milliseconds below,
 			// then update the start time of the active session (account for prolonged user inactivity)
 			if (session.time - time < 900) session.time = time
-			mayExtendFilter(req, ds)
-			const filter = authApi.restrictFilterToAuthorizedValues(req, ds, q.filter, q.tw.term)
 			next()
 		} catch (e) {
 			console.log(e)
@@ -571,7 +571,6 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 
 	authApi.getRequiredCredForDsEmbedder = function (dslabel, embedder) {
 		const requiredCred = []
-		let alreadyMatched = false
 		for (const dslabelPattern in creds) {
 			if (!isMatch(dslabel, dslabelPattern)) continue
 			for (const routePattern in creds[dslabelPattern]) {
@@ -665,58 +664,22 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 		return authHealth.get(app)
 	}
 
-	authApi.restrictFilterToAuthorizedValues = function (req, ds, filter, term) {
-		let tvslst
-		if (filter) {
-			tvslst = filter
-			tvslst.join = 'and'
-		} else {
-			tvslst = {
-				type: 'tvslst',
-				in: true,
-				join: 'and',
-				lst: []
-			}
-		}
-
-		if (ds.cohort.termdb.getAuthorizedTermValues) {
-			const { clientAuthResult } = authApi.getNonsensitiveInfo(req)
-			if (!clientAuthResult) {
-				console.log('getClientAuthFilter: no clientAuthResult found in request')
-				return tvslst
-			}
-			const protectedValues = ds.cohort.termdb.getAuthorizedTermValues(clientAuthResult, term)
-
-			const tvs = {
-				type: 'tvs',
-				tvs: {
-					term,
-					values: protectedValues.map(value => {
-						return { key: value, label: value }
-					})
-				}
-			}
-			tvslst.lst.push(tvs)
-		}
-		return tvslst
-	}
-
-	authApi.mayExtendFilter = function (req, ds) {
-		if (!ds.cohort.termdb.getAuthorizedTermValues) return
-		const q = req.query
-		q.origFilter = q.filter
-
-		const additionalFilter = ds.cohort.termdb.getAdditionalFilter(clientAuthResult)
+	authApi.mayExtendqFilter = function (q, ds, terms) {
+		console.log(701, '=== mayExtendqFilter()')
+		if (!ds.cohort.termdb.getAdditionalFilter) return
+		console.log(666, q.__protected__)
+		const additionalFilter = ds.cohort.termdb.getAdditionalFilter(q.__protected__, terms)
+		console.log(667, additionalFilter)
 		if (!additionalFilter) {
 			// certain roles (from jwt payload) may have access to everything,
 			// do not change q.filter to an extended filter in this case
 			return
 		}
-
+		console.log(708, additionalFilter.lst[0].tvs.values)
 		// default to protecting response data, by extending the filter to limit term-value visibility;
 		// downstream route handler code may loosen the protection by using the q.origFilter,
 		// depending on whether the request includes protected terms or not
-		q.filter = filterJoin([additionalFilter, q.origFilter])
+		q.filter = filterJoin([additionalFilter, q.filter])
 	}
 
 	// may handle custom auth for testing

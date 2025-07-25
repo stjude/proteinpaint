@@ -1363,7 +1363,7 @@ if missing, name is value of m[url.namekey], as used in url itself (e.g. snp rsi
 }
 
 /*** type of ds.cohort.termdb{} ***/
-type Termdb = {
+export type Termdb = {
 	/** Terms */
 	termIds?: TermIds
 	/** if true, backend is allowed to send sample names to client in charts */
@@ -1518,7 +1518,7 @@ keep this setting here for reason of:
 		[index: string]: { [index: string]: string }
 	}
 	//terms  are shown in the dictionary based on term and user role.
-	hasHiddenTerms?: (clientAuthResult: any, ids: string[] | Set<string>) => boolean
+	isTermVisible?: (clientAuthResult: any, ids: string) => boolean
 	getAdditionalFilter?: (clientAuthResult: any, term: any) => Filter | undefined
 }
 

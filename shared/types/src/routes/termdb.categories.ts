@@ -19,6 +19,7 @@ export type CategoriesRequest = {
 	currentGeneNames?: string[]
 	/** optional property added by mds3 tk, to limit to cases mutated in this region */
 	rglst?: any
+	__protected__: any
 }
 
 interface Entries {

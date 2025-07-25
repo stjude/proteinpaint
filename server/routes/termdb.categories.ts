@@ -27,7 +27,7 @@ function init({ genomes }) {
 			const tdb = ds.cohort.termdb
 			if (!tdb) throw 'invalid termdb object'
 
-			await trigger_getcategories(req, res, ds, g) // as getcategoriesResponse
+			await trigger_getcategories(req.query, res, ds, g) // as getcategoriesResponse
 		} catch (e: any) {
 			res.send({ error: e?.message || e })
 			if (e instanceof Error && e.stack) console.log(e)
@@ -39,8 +39,9 @@ async function trigger_getcategories(q: CategoriesRequest, res: any, ds: any, ge
 	// only one term per request, so can hardcode a known string tw.$id if missing
 	// and $id is not used in the response payload/metadata
 	if (!q.tw.$id) q.tw.$id = '_'
+	console.log(42, '--- trigger_getcategories')
 	const arg = {
-		filter: ds.hasProtectedTerms([q.tw.term.id]) ? q.filter : q.origFilter,
+		filter: q.filter,
 		filter0: q.filter0,
 		terms: [q.tw],
 		currentGeneNames: q.currentGeneNames, // optional, from mds3 mayAddGetCategoryArgs()
