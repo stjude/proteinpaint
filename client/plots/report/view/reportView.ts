@@ -40,13 +40,17 @@ export class ReportView {
 		if (this.report.config.filterTWs) {
 			headerDiv.style('padding', '20px 0px 20px 0px')
 			for (const tw of this.report.config.filterTWs) {
-				this.dom.headerDiv.append('label').text(` ${tw.term.name}: `)
-				const select = this.dom.headerDiv.append('select')
-				select.append('option').attr('value', '').text('')
+				this.dom.headerDiv.append('label').text(` ${tw.term.name}: `).style('vertical-align', 'top')
+				let timeoutId
+				const select = this.dom.headerDiv.append('select').property('multiple', true).attr('size', '5')
 
 				select.on('change', async () => {
-					this.report.settings[tw.term.id] = select.node().value
-					this.report.replaceFilter()
+					clearTimeout(timeoutId)
+					timeoutId = setTimeout(() => {
+						const values = Array.from(select.node().selectedOptions).map((o: any) => o.value)
+						this.report.settings[tw.term.id] = values
+						this.report.replaceFilter()
+					}, 1000)
 				})
 				this.dom.filterSelects.push(select)
 			}
