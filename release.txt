@@ -1,2 +1,2 @@
 Fixes:
-- hierCluster: remove geneset edit ui from "Clustering panel". Show "* Clustered Genes" as name for the "Genes" panel, and add to it Clustered Gene Set Edit UI and Unclustered Gene Set Edit UI.
+- hierCluster: remove geneset edit ui from "Clustering" panel. Show "* Hierarchical Cluster Genes" as name for the "Genes" button, and add to it Hierarchical Cluster Gene Set Edit UI and Genomic Alteration Gene Set Edit UI.
