@@ -468,41 +468,37 @@ export async function getChildTerms(term: RawGvTerm, vocabApi: VocabApi, body: a
 		// any other properties
 		body.filter0 = filter0
 	}
-	// get union of dt terms in data for all genes of term
-	// TODO: need to also get union of values within each dt term
-	for (const gene of term.genes) {
-		const categories = await vocabApi.getCategories(gene, filter, body)
-		for (const _t of dtTerms) {
-			if (dtTermsInDs.find(t => t.id == _t.id)) continue // dt term already found for another gene
-			const t: any = structuredClone(_t)
-			if (!Object.keys(vocabApi.termdbConfig.queries).includes(t.query)) continue // dt is not in dataset
-			const data = categories.lst.find(x => x.dt == t.dt)
-			if (!data) continue // gene does not have this dt
-			const byOrigin = vocabApi.termdbConfig.assayAvailability?.byDt[t.dt]?.byOrigin
-			let classes
-			if (byOrigin) {
-				// dt has origins in dataset
-				if (!t.origin) continue // dt term does not have origin, so skip
-				if (!Object.keys(byOrigin).includes(t.origin)) throw 'unexpected origin of dt term'
-				classes = data.classes.byOrigin[t.origin]
-			} else {
-				// dt does not have origins in dataset
-				if (t.origin) continue // dt term has origin, so skip
-				classes = data.classes
-			}
-			// filter for only those mutation classes that are in the dataset
-			const values = Object.fromEntries(Object.entries(t.values).filter(([k, _v]) => Object.keys(classes).includes(k)))
-			// add custom mclass labels from dataset
-			for (const k of Object.keys(values)) {
-				const v: any = values[k]
-				if (termdbmclass && Object.keys(termdbmclass).includes(k)) v.label = termdbmclass[k].label
-			}
-			t.values = values
-			t.parentTerm = structuredClone(term)
-			delete t.parentTerm.childTerms // remove any nested child terms
-			delete t.parentTerm.groupsetting // remove nested term groupsetting
-			dtTermsInDs.push(t)
+	// passing term to getCategories() will get categories across all genes in gene set
+	const categories = await vocabApi.getCategories(term, filter, body)
+	for (const _t of dtTerms) {
+		const t: any = structuredClone(_t)
+		if (!Object.keys(vocabApi.termdbConfig.queries).includes(t.query)) continue // dt is not in dataset
+		const data = categories.lst.find(x => x.dt == t.dt)
+		if (!data) continue // gene does not have this dt
+		const byOrigin = vocabApi.termdbConfig.assayAvailability?.byDt[t.dt]?.byOrigin
+		let classes
+		if (byOrigin) {
+			// dt has origins in dataset
+			if (!t.origin) continue // dt term does not have origin, so skip
+			if (!Object.keys(byOrigin).includes(t.origin)) throw 'unexpected origin of dt term'
+			classes = data.classes.byOrigin[t.origin]
+		} else {
+			// dt does not have origins in dataset
+			if (t.origin) continue // dt term has origin, so skip
+			classes = data.classes
 		}
+		// filter for only those mutation classes that are in the dataset
+		const values = Object.fromEntries(Object.entries(t.values).filter(([k, _v]) => Object.keys(classes).includes(k)))
+		// add custom mclass labels from dataset
+		for (const k of Object.keys(values)) {
+			const v: any = values[k]
+			if (termdbmclass && Object.keys(termdbmclass).includes(k)) v.label = termdbmclass[k].label
+		}
+		t.values = values
+		t.parentTerm = structuredClone(term)
+		delete t.parentTerm.childTerms // remove any nested child terms
+		delete t.parentTerm.groupsetting // remove nested term groupsetting
+		dtTermsInDs.push(t)
 	}
 	term.childTerms = dtTermsInDs
 }
