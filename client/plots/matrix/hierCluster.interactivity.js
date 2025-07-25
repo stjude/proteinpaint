@@ -1,7 +1,6 @@
 import { renderTable } from '#dom'
 import { clusterMethodLst, distanceMethodLst } from '#shared/clustering.js'
 import { select } from 'd3-selection'
-import { TermTypes } from '#shared/terms.js'
 
 // Given a clusterId, return all its children clusterIds
 export function getAllChildrenClusterIds(clickedClusterId, left) {
@@ -316,11 +315,19 @@ export function setClusteringBtn(holder, callback) {
 			: dataType == 'numericDictTerm'
 			? 'Terms'
 			: 'Rows'
+	const cluteringButtonLabel =
+		dataType == 'geneExpression'
+			? 'Gene Expression Clustering'
+			: dataType == 'metaboliteIntensity'
+			? 'Metabolite Intensity Clustering'
+			: dataType == 'numericDictTerm'
+			? 'Term Value Clustering'
+			: 'Clustering'
 	holder
 		.append('button')
 		//.property('disabled', d => d.disabled)
 		.datum({
-			label: `Clustering`,
+			label: cluteringButtonLabel,
 			rows: [
 				{
 					label: `Cluster ${cl.Samples}`,
@@ -511,8 +518,5 @@ function updateClusteringControls(self, app, parent, table) {
 				.closest('tr')
 		)
 		colorSchemeControl.style('display', 'none')
-	}
-	if (parent.chartType == 'hierCluster' && parent.config.dataType == TermTypes.GENE_EXPRESSION) {
-		self.appendGeneInputs(self, app, parent, table, 'hierCluster')
 	}
 }
