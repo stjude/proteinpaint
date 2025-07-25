@@ -356,16 +356,11 @@ export class MatrixControls {
 			.append('button')
 			//.property('disabled', d => d.disabled)
 			.datum({
-				label:
-					this.parent.chartType == 'hierCluster' && this.parent.config.dataType == TermTypes.GENE_EXPRESSION
-						? 'Hierarchical Cluster Genes'
-						: 'Genes',
+				label: 'Genes',
 				getCount: () =>
-					this.parent.chartType == 'hierCluster' && this.parent.config.dataType == TermTypes.GENE_EXPRESSION
-						? this.parent.termGroups.find(tg => tg.type == 'hierCluster').lst.length || 0
-						: this.parent.termOrder?.filter(
-								t => t.tw.term.type == TermTypes.GENE_VARIANT || t.tw.term.type == TermTypes.GENE_EXPRESSION
-						  ).length || 0,
+					this.parent.termOrder?.filter(
+						t => t.tw.term.type == TermTypes.GENE_VARIANT || t.tw.term.type == TermTypes.GENE_EXPRESSION
+					).length || 0,
 				customInputs: this.addGeneInputs,
 				rows: [
 					{
@@ -1257,7 +1252,7 @@ export class MatrixControls {
 
 		tr.append('td')
 			.attr('class', 'sja-termdb-config-row-label')
-			.html(geneInputType == 'hierCluster' ? 'Hierarchical Cluster Gene Set' : 'Genomic Alteration Gene Set')
+			.html(geneInputType == 'hierCluster' ? 'Hierarchical Clustering Gene Set' : 'Genomic Alteration Gene Set')
 
 		if (numOfEditableGrps > 0 || geneInputType == 'hierCluster') {
 			const td1 = tr.append('td').style('display', 'block').style('padding', '5px 0px')

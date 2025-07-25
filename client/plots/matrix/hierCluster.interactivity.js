@@ -315,11 +315,19 @@ export function setClusteringBtn(holder, callback) {
 			: dataType == 'numericDictTerm'
 			? 'Terms'
 			: 'Rows'
+	const cluteringButtonLabel =
+		dataType == 'geneExpression'
+			? 'Gene Expression Clustering'
+			: dataType == 'metaboliteIntensity'
+			? 'Metabolite Intensity Clustering'
+			: dataType == 'numericDictTerm'
+			? 'Term Value Clustering'
+			: 'Clustering'
 	holder
 		.append('button')
 		//.property('disabled', d => d.disabled)
 		.datum({
-			label: `Clustering`,
+			label: cluteringButtonLabel,
 			rows: [
 				{
 					label: `Cluster ${cl.Samples}`,
