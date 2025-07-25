@@ -38,29 +38,33 @@ export class GvBase extends TwBase {
 			copyMerge(tw.q, opts.defaultQ)
 		}
 
-		if (!tw.term.kind) {
-			// support saved states that don't have term.kind, applied when rehydrating at runtime
-			const term: any = tw.term
-			if (term.gene || (term.name && !term.chr)) term.kind = 'gene'
-			else if (term.chr) term.kind = 'coord'
-			else throw 'unable to assign geneVariant term.kind'
-		}
-
-		if (tw.term.kind == 'gene') {
-			if (!tw.term.gene) tw.term.gene = tw.term.name
-			if (!tw.term.name) tw.term.name = tw.term.gene
-			if (!tw.term.gene || !tw.term.name) throw 'missing gene/name'
-		} else if (tw.term.kind == 'coord') {
-			if (!tw.term.chr || !Number.isInteger(tw.term.start) || !Number.isInteger(tw.term.stop))
-				throw 'no position specified'
-			if (!tw.term.name) {
-				tw.term.name = `${tw.term.chr}:${tw.term.start + 1}-${tw.term.stop}`
+		if (!tw.term.genes?.length) throw 'tw.term.genes[] is empty'
+		for (const gene of tw.term.genes) {
+			if (!gene.kind) {
+				// support saved states that don't have term.kind, applied when rehydrating at runtime
+				const term: any = gene
+				if (term.gene || (term.name && !term.chr)) term.kind = 'gene'
+				else if (term.chr) term.kind = 'coord'
+				else throw 'unable to assign geneVariant term.kind'
 			}
-		} else {
-			throw 'cannot recognize tw.term.kind'
+
+			if (gene.kind == 'gene') {
+				if (!gene.gene) gene.gene = gene.name
+				if (!gene.name) gene.name = gene.gene
+				if (!gene.gene || !gene.name) throw 'missing gene/name'
+			} else if (gene.kind == 'coord') {
+				if (!gene.chr || !Number.isInteger(gene.start) || !Number.isInteger(gene.stop)) throw 'no position specified'
+				if (!gene.name) {
+					gene.name = `${gene.chr}:${gene.start + 1}-${gene.stop}`
+				}
+			} else {
+				throw 'cannot recognize gene.kind'
+			}
+
+			if (!gene.id) gene.id = gene.name
 		}
 
-		if (!tw.term.id) tw.term.id = tw.term.name
+		tw.term.name = tw.term.genes.map(gene => gene.name).join(', ')
 
 		if (!Object.keys(tw.q).includes('type')) tw.q.type = 'values'
 

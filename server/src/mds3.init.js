@@ -2635,6 +2635,7 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 		// to perform essential query
 
 		const sample2mlst = new Map() // collect genomic query results indexed by sample; key: sample id, value: array
+		const data = new Map() // to return
 		const dts = [] // list of dt values to be queried for this ds
 		if (ds.queries.snvindel) dts.push(dtsnvindel)
 		if (ds.queries.svfusion) dts.push(dtfusionrna)
@@ -2649,165 +2650,166 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 
 		// retrieve genomic data for each dt
 		const termdbmclass = q.ds?.cohort?.termdb?.mclass // custom mclass labels from dataset
-		for (const dt of dts) {
-			let mlst = []
-			switch (dt) {
-				case dtsnvindel:
-					mlst = await getSnvindelByTerm(ds, tw.term, genome, q)
-					break
-				case dtfusionrna:
-				case dtsv:
-					mlst = await getSvfusionByTerm(ds, tw.term, genome, q)
-					break
-				case dtcnv:
-					/******************
-					     tricky!!
-					*******************
-					gdc has both geneCnv and cnv
-					hardcodes that mayGetGeneVariantData() only calls geneCnv but not cnv
-					for gdc, mayGetGeneVariantData() is used for oncomatrix/summary, which should only use gene-level cnv,
-					thus this hardcoded logic suits the need
-					for now only gdc has both geneCnv and cnv, thus this is not an issue for non-gdc ds
+		for (const gene of tw.term.genes || []) {
+			for (const dt of dts) {
+				let mlst = []
+				switch (dt) {
+					case dtsnvindel:
+						mlst = await getSnvindelByTerm(ds, gene, genome, q)
+						break
+					case dtfusionrna:
+					case dtsv:
+						mlst = await getSvfusionByTerm(ds, gene, genome, q)
+						break
+					case dtcnv:
+						/******************
+							 tricky!!
+						*******************
+						gdc has both geneCnv and cnv
+						hardcodes that mayGetGeneVariantData() only calls geneCnv but not cnv
+						for gdc, mayGetGeneVariantData() is used for oncomatrix/summary, which should only use gene-level cnv,
+						thus this hardcoded logic suits the need
+						for now only gdc has both geneCnv and cnv, thus this is not an issue for non-gdc ds
 
-					even later we may have another ds with both, may not make sense to load both here
+						even later we may have another ds with both, may not make sense to load both here
+						*/
+						if (ds.queries.geneCnv) {
+							mlst = await getGenecnvByTerm(ds, gene, genome, q)
+						} else {
+							mlst = await getCnvByTw(ds, { term: gene, q: tw.q }, genome, q)
+						}
+						break
+					default:
+						throw 'unknown dt'
+				}
+
+				if (!mlst) continue // cnv seg query now may return undefined
+
+				//////////////////////////////////////
+				// MUST NOT QUIT when mlst.length==0!
+				//////////////////////////////////////
+				// if ds has assayAvailability, on empty mlst, it should proceed to add wt status to all assayed samples
+
+				for (const m of mlst) {
+					/*
+					m={
+						dt
+						class
+						mname
+						samples:[
+							{
+							sample_id: int or string
+							...
+							},
+						]
+					}
+
+					for official datasets using a sqlite db that contains integer2string sample mapping, "sample_id" is integer id 
+					for gdc dataset not using a sqlite db, no sample integer id is kept on server. "sample_id" is string id
 					*/
-					if (ds.queries.geneCnv) {
-						mlst = await getGenecnvByTerm(ds, tw.term, genome, q)
-					} else {
-						mlst = await getCnvByTw(ds, tw, genome, q)
-					}
-					break
-				default:
-					throw 'unknown dt'
-			}
 
-			if (!mlst) continue // cnv seg query now may return undefined
+					if (!Array.isArray(m.samples)) continue
 
-			//////////////////////////////////////
-			// MUST NOT QUIT when mlst.length==0!
-			//////////////////////////////////////
-			// if ds has assayAvailability, on empty mlst, it should proceed to add wt status to all assayed samples
+					for (const s of m.samples) {
+						// create new m2{} for each mutation in each sample
+						const m2 = {
+							gene: gene.name,
+							isoform: m.isoform,
+							dt: m.dt,
+							chr: gene.chr,
+							class: m.class,
+							mname: m.mname,
+							label: termdbmclass?.[m.class]?.label || mclass[m.class].label
+						}
+						if (m.start) m2.start = m.start
+						if (m.stop) m2.stop = m.stop
+						if (m.pos) m2.pos = m.pos
 
-			for (const m of mlst) {
-				/*
-				m={
-					dt
-					class
-					mname
-					samples:[
-						{
-						sample_id: int or string
-						...
-						},
-					]
-				}
+						if ('value' in m) {
+							// for what?
+							m2.value = m.value
+						}
 
-				for official datasets using a sqlite db that contains integer2string sample mapping, "sample_id" is integer id 
-				for gdc dataset not using a sqlite db, no sample integer id is kept on server. "sample_id" is string id
-				*/
-
-				if (!Array.isArray(m.samples)) continue
-
-				for (const s of m.samples) {
-					// create new m2{} for each mutation in each sample
-					const m2 = {
-						gene: tw.term.name,
-						isoform: m.isoform,
-						dt: m.dt,
-						chr: tw.term.chr,
-						class: m.class,
-						mname: m.mname,
-						label: termdbmclass?.[m.class]?.label || mclass[m.class].label
-					}
-					if (m.start) m2.start = m.start
-					if (m.stop) m2.stop = m.stop
-					if (m.pos) m2.pos = m.pos
-
-					if ('value' in m) {
-						// for what?
-						m2.value = m.value
-					}
-
-					if (s.formatK2v) {
-						// flatten the format values
-						for (const k in s.formatK2v) {
-							if (k == 'origin' && !ds.assayAvailability?.byDt?.[dt]?.byOrigin) {
-								// possible that a dt can have origin
-								// annotations in data file, but not
-								// in ds.assayAvailability{}, because
-								// some data files use fake origin
-								// annotations for compatibility
-								// purposes (see mbmeta CNV data file)
-								continue
+						if (s.formatK2v) {
+							// flatten the format values
+							for (const k in s.formatK2v) {
+								if (k == 'origin' && !ds.assayAvailability?.byDt?.[dt]?.byOrigin) {
+									// possible that a dt can have origin
+									// annotations in data file, but not
+									// in ds.assayAvailability{}, because
+									// some data files use fake origin
+									// annotations for compatibility
+									// purposes (see mbmeta CNV data file)
+									continue
+								}
+								m2[k] = s.formatK2v[k]
 							}
-							m2[k] = s.formatK2v[k]
 						}
-					}
 
-					// can supply dt specific attributes
-					if (m.dt == dtsnvindel) {
-						if (s.GT) {
-							// is sample genotype from snp query
-							m2.value = s.GT
-							m2.key = s.GT
+						// can supply dt specific attributes
+						if (m.dt == dtsnvindel) {
+							if (s.GT) {
+								// is sample genotype from snp query
+								m2.value = s.GT
+								m2.key = s.GT
+							}
+						} else if (m.dt == dtfusionrna || m.dt == dtsv) {
+							m2.pairlst = m.pairlst
 						}
-					} else if (m.dt == dtfusionrna || m.dt == dtsv) {
-						m2.pairlst = m.pairlst
-					}
 
-					if (!sample2mlst.has(s.sample_id)) sample2mlst.set(s.sample_id, [])
-					const lst = sample2mlst.get(s.sample_id)
-					lst.push(m2)
-					sample2mlst.set(s.sample_id, lst)
+						if (!sample2mlst.has(s.sample_id)) sample2mlst.set(s.sample_id, [])
+						const lst = sample2mlst.get(s.sample_id)
+						lst.push(m2)
+						sample2mlst.set(s.sample_id, lst)
+					}
 				}
+
+				await mayAddDataAvailability(sample2mlst, dt, ds, gene, q)
 			}
 
-			await mayAddDataAvailability(sample2mlst, dt, ds, tw.q.origin, q)
-		}
+			const groupset = get_active_groupset(tw.term, tw.q)
 
-		const groupset = get_active_groupset(tw.term, tw.q)
+			// TODO: need to test when geneVariant term is in global filter for gdc
+			let geneVariantFilter
+			if (q.filter) {
+				geneVariantFilter = structuredClone(q.filter)
+				geneVariantFilter.lst = q.filter.lst.filter(item => dtTermTypes.has(item.tvs.term.type))
+			}
+			for (const [sample, mlst] of sample2mlst) {
+				// may filter samples here by geneVariant data
+				// necessary for gdc, which uses a different filter
+				// structure during data query that is not compatible with
+				// geneVariant data filtering (see filter2GDCfilter() in server/src/mds3.gdc.filter.js)
+				const pass = mayFilterByGeneVariant(geneVariantFilter, mlst, ds)
+				if (!pass) continue
+				if (groupset) {
+					// groupsetting is active
+					// get the first group of groupset that the sample can be assigned to
+					// for example: if groups[0] is SNV=M and groups[1] is
+					// CNV=Loss and a sample has both SNV=M and CNV=Loss, then
+					// the sample will be assigned to groups[0]
+					const group = groupset.groups.find(group => {
+						if (group.type != 'filter') throw 'unexpected group.type'
+						const filter = group.filter
+						const [pass, tested] = filterByTvsLst(filter, mlst)
+						return pass
+					})
 
-		const data = new Map() // to return
-		// TODO: need to test when geneVariant term is in global filter for gdc
-		let geneVariantFilter
-		if (q.filter) {
-			geneVariantFilter = structuredClone(q.filter)
-			geneVariantFilter.lst = q.filter.lst.filter(item => dtTermTypes.has(item.tvs.term.type))
-		}
-		for (const [sample, mlst] of sample2mlst) {
-			// may filter samples here by geneVariant data
-			// necessary for gdc, which uses a different filter
-			// structure during data query that is not compatible with
-			// geneVariant data filtering (see filter2GDCfilter() in server/src/mds3.gdc.filter.js)
-			const pass = mayFilterByGeneVariant(geneVariantFilter, mlst, ds)
-			if (!pass) continue
-			if (groupset) {
-				// groupsetting is active
-				// get the first group of groupset that the sample can be assigned to
-				// for example: if groups[0] is SNV=M and groups[1] is
-				// CNV=Loss and a sample has both SNV=M and CNV=Loss, then
-				// the sample will be assigned to groups[0]
-				const group = groupset.groups.find(group => {
-					if (group.type != 'filter') throw 'unexpected group.type'
-					const filter = group.filter
-					const [pass, tested] = filterByTvsLst(filter, mlst)
-					return pass
-				})
+					if (!group || group.uncomputable) continue
 
-				if (!group || group.uncomputable) continue
-
-				// store sample data
-				// key will be the name of the assigned group
-				data.set(sample, {
-					sample,
-					[tw.$id]: { key: group.name, label: group.name, value: group.name, values: mlst }
-				})
-			} else {
-				// groupsetting is not active
-				data.set(sample, {
-					sample,
-					[tw.$id]: { key: tw.term.name, label: tw.term.name, values: mlst }
-				})
+					// store sample data
+					// key will be the name of the assigned group
+					data.set(sample, {
+						sample,
+						[tw.$id]: { key: group.name, label: group.name, value: group.name, values: mlst }
+					})
+				} else {
+					// groupsetting is not active
+					data.set(sample, {
+						sample,
+						[tw.$id]: { key: tw.term.name, label: tw.term.name, values: mlst }
+					})
+				}
 			}
 		}
 
@@ -2815,7 +2817,7 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 	}
 }
 
-async function mayAddDataAvailability(sample2mlst, dtKey, ds, origin, q) {
+async function mayAddDataAvailability(sample2mlst, dtKey, ds, gene, q) {
 	if (!ds.assayAvailability?.byDt) return // this ds is not equipped with assay availability by dt
 	const _dt = ds.assayAvailability.byDt[dtKey]
 	if (!_dt) return // this ds has assay availability but lacks setting for this dt. this is allowed e.g. we only specify availability for cnv but not snvindel.
@@ -2823,7 +2825,6 @@ async function mayAddDataAvailability(sample2mlst, dtKey, ds, origin, q) {
 	const dts = []
 	if (_dt.byOrigin) {
 		for (const o in _dt.byOrigin) {
-			if (origin && origin != o) continue // if specific origin is requested then restrict to that origin
 			const dt = _dt.byOrigin[o]
 			dts.push({ ...dt, origin: o })
 		}
@@ -2839,12 +2840,12 @@ async function mayAddDataAvailability(sample2mlst, dtKey, ds, origin, q) {
 			// sample has been assayed
 			// if sample does not have annotated mutation for dt
 			// then it will be annotated as wildtype
-			addDataAvailability(sid, sample2mlst, dtKey, 'WT', dt.origin, sampleFilter)
+			addDataAvailability(sid, sample2mlst, dtKey, 'WT', dt.origin, sampleFilter, gene)
 		}
 		for (const sid of dt.noSamples) {
 			// sample has not been assayed
 			// annotate the sample as not tested
-			addDataAvailability(sid, sample2mlst, dtKey, 'Blank', dt.origin, sampleFilter)
+			addDataAvailability(sid, sample2mlst, dtKey, 'Blank', dt.origin, sampleFilter, gene)
 		}
 	}
 }
@@ -2888,21 +2889,21 @@ async function filterSamples4assayAvailability(q, ds) {
 	return q.filter && q.filter.lst.length ? new Set((await get_samples(q.filter, ds)).map(i => i.id)) : null
 }
 
-function addDataAvailability(sid, sample2mlst, dtKey, mclass, origin, sampleFilter) {
+function addDataAvailability(sid, sample2mlst, dtKey, mclass, origin, sampleFilter, gene) {
 	if (sampleFilter && !sampleFilter.has(sid)) return
 	if (!sample2mlst.has(sid)) sample2mlst.set(sid, [])
 	const mlst = sample2mlst.get(sid)
 	if (origin) {
-		if (!mlst.some(m => m.dt == dtKey && m.origin == origin)) {
+		if (!mlst.some(m => m.gene == gene.name && m.dt == dtKey && m.origin == origin)) {
 			// sample does not have a mutation with this origin for this dt
 			// sample will be annotated with the given mclass for the given origin
-			mlst.push({ dt: Number(dtKey), class: mclass, origin, _SAMPLEID_: sid })
+			mlst.push({ gene: gene.name, dt: Number(dtKey), class: mclass, origin, _SAMPLEID_: sid })
 		}
 	} else {
-		if (!mlst.some(m => m.dt == dtKey)) {
+		if (!mlst.some(m => m.gene == gene.name && m.dt == dtKey)) {
 			// sample does not have a mutation for this dt
 			// sample will be annotated with the given mclass
-			mlst.push({ dt: Number(dtKey), class: mclass, _SAMPLEID_: sid })
+			mlst.push({ gene: gene.name, dt: Number(dtKey), class: mclass, _SAMPLEID_: sid })
 		}
 	}
 	sample2mlst.set(sid, mlst)
@@ -2954,6 +2955,7 @@ export function filterByItem(filter, mlst) {
 		let sampleHasGenotype
 		if (tvs.continuousCnv) {
 			// continuous cnv data
+			throw 'need to update to support multiple genes'
 			if (tvs.term.dt != dtcnv) throw 'unexpected dt value'
 			const sampleHasMutation = mlst_tested.some(m => {
 				if (!m.value) return false // will also consider value=0 as not mutated
@@ -2965,10 +2967,9 @@ export function filterByItem(filter, mlst) {
 			sampleHasGenotype = tvs.cnvWT ? !sampleHasMutation : sampleHasMutation
 		} else {
 			// categorical mutation data
-			sampleHasGenotype = mlst_tested.some(m => tvs.values.some(v => v.key == m.class))
+			sampleHasGenotype = mlst_tested.some(m => tvs.values.some(v => (tvs.isnot ? v.key != m.class : v.key == m.class)))
 		}
-		// for tvs.isnot=true, negate the sampleHasGenotype boolean
-		pass = tvs.isnot ? !sampleHasGenotype : sampleHasGenotype
+		pass = sampleHasGenotype
 	} else {
 		// sample is not tested for the dt of the filter
 		// so sample does not pass the filter
