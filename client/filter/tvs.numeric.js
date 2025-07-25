@@ -484,7 +484,7 @@ async function showCheckList_numeric(self, tvs, div) {
 	// numerical checkbox for unannotated cats
 	const values = await self.opts.vocabApi.getNumericUncomputableCategories(tvs.term, self.filter)
 	const unannotated_cats = []
-	const lst = values.lst ? values.lst : values
+	const lst = values?.lst || values
 	for (const cat of lst) {
 		const key = 'key' in cat ? cat.key : cat.value
 		if (!('key' in cat)) cat.key = key
