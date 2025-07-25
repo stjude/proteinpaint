@@ -51,7 +51,7 @@ export async function launch() {
 		  - so that a request will be inspected by auth before allowing 
 		    to proceed to any *protected* route handler
 		*/
-		authApi.maySetAuthRoutes(app, basepath, serverconfig)
+		await authApi.maySetAuthRoutes(app, basepath, serverconfig)
 
 		const routes = await Promise.all(routeFiles)
 
