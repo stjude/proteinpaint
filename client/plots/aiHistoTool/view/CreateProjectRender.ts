@@ -14,6 +14,7 @@ export class CreateProjectRender {
 			.append('div')
 			.attr('id', 'sjpp-ai-histo-tool-filter-div')
 			.attr('class', 'sjpp-deletable-ai-histo-div')
+			.style('padding', '10px')
 
 		const filter = filterPromptInit({
 			holder: filterDiv,

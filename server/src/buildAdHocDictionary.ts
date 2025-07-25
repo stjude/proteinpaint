@@ -76,14 +76,15 @@ export async function makeAdHocDicTermdbQueries(ds: Mds3) {
 		return terms
 	}
 
+	/** getAncestorIDs & getAncestorNames are required in some vocab queries */
 	q.getAncestorIDs = _ => {
 		//At this time, no ancestors in metadata
 		return []
 	}
-
 	q.getAncestorNames = q.getAncestorIDs
 
-	/** Read the .csv file and return samples{} for further parsing in termdb/categories */
+	/** Read the .csv file and return [samples{}, byTermId{}] for further
+	 * parsing in termdb/categories. byTermId{} will always be empty */
 	q.getAdHocTermValues = async (_, termwrappers) => {
 		const source = dict.source!.file
 		const csvData = await readSourceFile(source!)
