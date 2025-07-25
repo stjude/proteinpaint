@@ -204,17 +204,6 @@ export class Barchart {
 					boxLabel: 'Yes',
 					getDisplayStyle: plot => (plot.term2 ? 'none' : 'table-row')
 				},
-				{
-					label: 'Color using',
-					title: 'Color bars using the colors preassigned or generated dynamically',
-					type: 'radio',
-					chartType: 'barchart',
-					settingsKey: 'colorUsing',
-					options: [
-						{ label: 'Preassigned', value: 'preassigned' },
-						{ label: 'Generated', value: 'generated' }
-					]
-				},
 
 				{
 					label: 'Deduplicate',
@@ -250,6 +239,18 @@ export class Barchart {
 					chartType: 'barchart',
 					settingsKey: 'showPercent',
 					boxLabel: 'Yes'
+				})
+			if (state.config.settings.barchart.colorBars)
+				inputs.splice(8, 0, {
+					label: 'Color using',
+					title: `Colors bars either using the colors preassigned or generates colors. If there are many categories and only few are present the generated colors will provide more contrast.`,
+					type: 'radio',
+					chartType: 'barchart',
+					settingsKey: 'colorUsing',
+					options: [
+						{ label: 'Preassigned', value: 'preassigned' },
+						{ label: 'Generated', value: 'generated' }
+					]
 				})
 			const multipleTestingCorrection = this.app.getState().termdbConfig.multipleTestingCorrection
 			if (multipleTestingCorrection) {
