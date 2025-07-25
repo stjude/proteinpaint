@@ -92,8 +92,8 @@ export async function makeAdHocDicTermdbQueries(ds: Mds3) {
 		const samples: any = {}
 
 		const lines = csvData.split('\n')
+		//skip header
 		for (const line of lines.splice(1)) {
-			//skip header
 			const columns = line.split(',')
 			const sample = columns[sampleKeyIdx!]
 
@@ -121,6 +121,32 @@ export async function makeAdHocDicTermdbQueries(ds: Mds3) {
 		const term = id2term.get(id)
 		if (term) return JSON.parse(JSON.stringify(term))
 		return null
+	}
+
+	/** Return entries for NumericCategoriesResponse.lst.
+	 * Applies to termdb/numericcategories route */
+	q.getSummaryNumericCategories = async (term): Promise<any[]> => {
+		if (term.type != 'integer' && term.type != 'float') return []
+
+		const source = dict.source!.file
+		const csvData = await readSourceFile(source!)
+		if (!csvData) return []
+
+		const value2sampleCount = new Map<string, any>()
+
+		const lines = csvData.split('\n')
+		//skip header
+		for (const line of lines.splice(1)) {
+			const columns = line.split(',')
+			const value = columns[term.index].trim()
+			if (!value2sampleCount.has(value)) {
+				value2sampleCount.set(value, { value: Number(value), samplecount: 0 })
+			}
+			value2sampleCount.get(value).samplecount++
+		}
+
+		const lst = Array.from(value2sampleCount.values()).sort((a, b) => a.value - b.value)
+		return lst
 	}
 
 	//q.getSupportedChartTypes is defined in the ds for now
@@ -212,7 +238,7 @@ function assignNumType(term: any, termValues: any) {
 	} else {
 		term.type = 'integer'
 		term.included_types = ['integer']
-		term.values = termValues.map((v, i) => [i, { label: v }])
+		term.values = {}
 	}
 }
 
