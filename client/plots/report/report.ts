@@ -139,7 +139,7 @@ export class Report extends RxComponentInner {
 		}
 		let index = 0
 		for (const tw of this.config.filterTWs) {
-			const filterValue = this.settings[tw.term.id] || ''
+			const filterValues = this.settings[tw.term.id] || ''
 			const filters: any = {}
 			for (const tw of this.config.filterTWs)
 				filters[tw.term.id] = getCategoricalTermFilter(
@@ -156,10 +156,13 @@ export class Report extends RxComponentInner {
 			select.selectAll('option').remove()
 
 			for (const value of data[tw.term.id]) {
+				if (value.label == '') continue //skip empty labels
 				const option = select.append('option').attr('value', value.value).text(value.label)
 				option.property('disabled', value.disabled)
-				if (value.value === filterValue) {
-					option.attr('selected', 'selected')
+				for (const filterValue of filterValues) {
+					if (value.value === filterValue) {
+						option.attr('selected', 'selected')
+					}
 				}
 			}
 			index++

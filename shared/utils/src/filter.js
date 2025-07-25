@@ -283,13 +283,25 @@ export function getCategoricalTermFilter(filterTWs, values, tw, globalFilter) {
 
 	function processTW(tw, values, excluded, lst) {
 		const value = values[tw.term.id]
-		if (value && !excluded.includes(tw.term.id))
-			lst.push({
-				type: 'tvs',
-				tvs: {
-					term: tw.term,
-					values: [{ key: value }]
+		if (value && !excluded.includes(tw.term.id)) {
+			if (Array.isArray(value)) {
+				const tvs = {
+					type: 'tvs',
+					tvs: {
+						term: tw.term,
+						values: []
+					}
 				}
-			})
+				for (const item of value) tvs.tvs.values.push({ key: item })
+				lst.push(tvs)
+			} else
+				lst.push({
+					type: 'tvs',
+					tvs: {
+						term: tw.term,
+						values: [{ key: value }]
+					}
+				})
+		}
 	}
 }
