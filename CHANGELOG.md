@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Fixes:
+- hierCluster: remove geneset edit ui from "Clustering" panel. Show "N Genes" as name for the "Genes" button, and add to it Hierarchical Cluster Gene Set Edit UI and Genomic Alteration Gene Set Edit UI.
+
 
 ## 2.137.1
 
