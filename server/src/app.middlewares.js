@@ -113,11 +113,12 @@ export function setAppMiddlewares(app, doneLoading) {
         by doing this, route code is worry-free and no need to pass "req{}" to gdc purpose-specific code doing the API calls
         these *protected* contents are not used in non-gdc code
         */
-		req.query.__protected__ = req.query.dslabel ? authApi.getNonsensitiveInfo(req) : {}
+		const __protected__ = { ignoredTermIds: [] }
+		if (req.query.dslabel) Object.assign(__protected__, authApi.getNonsensitiveInfo(req))
 		if (req.cookies?.sessionid) {
-			req.query.__protected__.sessionid = req.cookies.sessionid
+			__protected__.sessionid = req.cookies.sessionid
 		}
-		Object.freeze(req.query.__protected__)
+		req.query.__protected__ = Object.freeze(__protected__)
 		next()
 	})
 
