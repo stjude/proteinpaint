@@ -52,7 +52,8 @@ async function trigger_getcategories(
 		filter0: q.filter0,
 		terms: [q.tw],
 		currentGeneNames: q.currentGeneNames, // optional, from mds3 mayAddGetCategoryArgs()
-		rglst: q.rglst // optional, from mds3 mayAddGetCategoryArgs()
+		rglst: q.rglst, // optional, from mds3 mayAddGetCategoryArgs()
+		__protected__: q.__protected__
 	}
 
 	const data = await getData(arg, ds, genome)

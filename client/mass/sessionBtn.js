@@ -512,6 +512,7 @@ class MassSessionBtn {
 // may need to edit state based on updated expectations,
 // such as new or deprecated plot settings keys/values
 async function preprocessState(state, app) {
+	delete state.termdbConfig
 	if (state.plots) {
 		const promises = []
 		for (const plot of state.plots) {

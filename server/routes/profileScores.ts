@@ -48,7 +48,8 @@ async function getScores(query, ds, genome) {
 	const data = await getData(
 		{
 			terms,
-			filter: query.site || !query.isAggregate ? undefined : query.filter //if site is specified, do not apply the filter that is for the aggregation
+			filter: query.site || !query.isAggregate ? undefined : query.filter, //if site is specified, do not apply the filter that is for the aggregation
+			__protected__: query.__protected__
 		},
 		ds,
 		genome
