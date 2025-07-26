@@ -246,20 +246,22 @@ export function server_init_db_queries(ds) {
 		const cache = new Map()
 		q.getRootTerms = (req, cohortStr = '') => {
 			const cacheId = cohortStr
-			if (cache.has(cacheId)) return cache.get(cacheId)
-			const tmp = sql.all(cohortStr)
-			let re = tmp.map(i => {
-				const t = JSON.parse(i.jsondata)
-				t.id = i.id
-				t.name = i.name || t.name
-				t.included_types = i.included_types ? i.included_types.split(',') : ['TO-DO-PLACEHOLDER']
-				t.child_types = i.child_types ? i.child_types.split(',') : []
-				return t
-			})
+			let re
+			if (cache.has(cacheId)) re = cache.get(cacheId)
+			else {
+				const tmp = sql.all(cohortStr)
+				re = tmp.map(i => {
+					const t = JSON.parse(i.jsondata)
+					t.id = i.id
+					t.name = i.name || t.name
+					t.included_types = i.included_types ? i.included_types.split(',') : ['TO-DO-PLACEHOLDER']
+					t.child_types = i.child_types ? i.child_types.split(',') : []
+					return t
+				})
+				cache.set(cacheId, re)
+			}
+			// may filter out hidden terms from result, as needed
 			re = filterTerms(req, ds, re)
-			//do not use cache if using login as the visible terms depends on the user
-			if (!ds.cohort.termdb.isTermVisible) cache.set(cacheId, re)
-
 			return re
 		}
 	}
@@ -319,22 +321,24 @@ export function server_init_db_queries(ds) {
 		const cache = new Map()
 		q.getTermChildren = (req, id, cohortStr = '') => {
 			const cacheId = id + ';;' + cohortStr
-			if (cache.has(cacheId)) return cache.get(cacheId)
-			const tmp = sql.all([cohortStr, id])
 			let re: any = undefined
-			if (tmp) {
-				re = tmp.map(i => {
-					const j = JSON.parse(i.jsondata)
-					j.id = i.id
-					j.name = i.name || j.name
-					j.included_types = i.included_types ? i.included_types.split(',') : []
-					j.child_types = i.child_types ? i.child_types.split(',') : []
-					return j
-				})
+			if (cache.has(cacheId)) re = cache.get(cacheId)
+			else {
+				const tmp = sql.all([cohortStr, id])
+				if (tmp) {
+					re = tmp.map(i => {
+						const j = JSON.parse(i.jsondata)
+						j.id = i.id
+						j.name = i.name || j.name
+						j.included_types = i.included_types ? i.included_types.split(',') : []
+						j.child_types = i.child_types ? i.child_types.split(',') : []
+						return j
+					})
+				}
+				cache.set(cacheId, re)
 			}
+			// may filter out hidden terms from result, as needed
 			re = filterTerms(req, ds, re)
-			//do not use cache if using login as the visible terms depends on the user
-			if (!ds.cohort.termdb.isTermVisible) cache.set(cacheId, re)
 			return re
 		}
 	}
@@ -587,9 +591,8 @@ export function server_init_db_queries(ds) {
 // ds computes term visibility in dictionary based on client auth; returns list of visible terms
 // function name is intentionally general but not specific to auth, later might add other term filtering context in here
 export function filterTerms(req, ds, terms) {
-	if (!ds.cohort.termdb.isTermVisible || !terms) return terms
-	const authInfo: any = authApi.getNonsensitiveInfo(req)
-	return terms.filter(term => ds.cohort.termdb.isTermVisible(authInfo?.clientAuthResult, term.id))
+	if (!ds.cohort.termdb.isTermVisible || !terms?.length) return terms
+	return terms.filter(term => ds.cohort.termdb.isTermVisible(req.query.__protected__.clientAuthResult, term.id))
 }
 
 /*
@@ -612,6 +615,7 @@ export function filterTerms(req, ds, terms) {
 
 const defaultCommonCharts: isSupportedChartCallbacks = {
 	dictionary: () => true,
+	summary: () => true,
 	matrix: () => true,
 
 	/*
