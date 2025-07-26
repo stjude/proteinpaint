@@ -1363,7 +1363,7 @@ if missing, name is value of m[url.namekey], as used in url itself (e.g. snp rsi
 }
 
 /*** type of ds.cohort.termdb{} ***/
-type Termdb = {
+export type Termdb = {
 	/** Terms */
 	termIds?: TermIds
 	/** if true, backend is allowed to send sample names to client in charts */
@@ -1517,15 +1517,13 @@ keep this setting here for reason of:
 		/** colors for a category multivalues */
 		[index: string]: { [index: string]: string }
 	}
-	/** terms are shown in the dictionary based on term and user role.
-	 */
-	isTermVisible?: (clientAuthResult: any, id: string) => boolean
-	/** when ds supports chart types e.g. summarizeMutationDiagnosis, this setting is required to supply a dict term to populate the chart ui
-	 */
 	defaultTw4correlationPlot?: {
 		/** key is string as disease/survial etc, value is tw */
 		[index: string]: Tw
 	}
+	//terms  are shown in the dictionary based on term and user role.
+	isTermVisible?: (clientAuthResult: any, ids: string) => boolean
+	getAdditionalFilter?: (clientAuthResult: any, term: any) => undefined | string[] | number[]
 }
 
 type SampleType = {
@@ -1545,10 +1543,8 @@ type PlotConfigByCohort = {
 
 /** modified version of termwrapper*/
 type Tw = {
-	/** short hand for using either id (dict term) or term{} */
-	id?: string
-	term?: object
-	q: object
+	id: string
+	q: unknown
 	/** quick fix for generating URL links in mds3 tk sample table! adhoc design. may move to tw.term.baseURL and not specific to mds3 tk
 	 */
 	baseURL?: string

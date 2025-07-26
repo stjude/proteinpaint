@@ -65,7 +65,8 @@ async function getFilters(query, ds, genome, res) {
 		const samplesPerFilter = await getSamplesPerFilter(query, ds)
 		const filtersData = await getData(
 			{
-				terms: query.terms
+				terms: query.terms,
+				__protected__: query.__protected__
 			},
 			ds,
 			genome
