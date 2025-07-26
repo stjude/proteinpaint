@@ -433,17 +433,6 @@ export async function get_term_cte(q, values, index, filter, termWrapper = null)
 		termq = JSON.parse(decodeURIComponent(termq))
 	}
 
-	let restrictedTermValues
-	if (q.ds.cohort?.termdb?.getRestrictedTermValues) {
-		// NOTES:
-		// - getRestrictedTermValues is expected to throw if q.__protected__ is not set
-		//   CRITICAL TO SET THIS WHEN CALLING getData() in termdb.matrix or other upstream code
-		//
-		// TODO: pass restrictedTermValues to every getCTE() function call below
-		//
-		restrictedTermValues = q.ds.cohort?.termdb?.getRestrictedTermValues(q.__protected__.clientAuthResult, term)
-	}
-
 	const tablename = 'samplekey_' + index
 
 	/*
@@ -463,15 +452,7 @@ export async function get_term_cte(q, values, index, filter, termWrapper = null)
 	let CTE
 	if (term.type == 'categorical') {
 		const groupset = get_active_groupset(term, termq)
-		CTE = await categoricalSql[groupset ? 'groupset' : 'values'].getCTE(
-			tablename,
-			term,
-			q.ds,
-			termq,
-			values,
-			groupset,
-			restrictedTermValues
-		)
+		CTE = await categoricalSql[groupset ? 'groupset' : 'values'].getCTE(tablename, term, q.ds, termq, values, groupset)
 	} else if (isNumericTerm(term)) {
 		const mode = termq.mode == 'spline' ? 'cubicSpline' : termq.mode || 'discrete'
 		// the error is coming from this
