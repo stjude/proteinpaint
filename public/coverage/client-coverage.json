@@ -613,38 +613,38 @@
   },
   "plots/matrix/matrix.controls.js": {
     "lines": {
-      "total": 391,
-      "covered": 75,
+      "total": 406,
+      "covered": 77,
       "skipped": 0,
-      "pct": 19.18
+      "pct": 18.96
     },
     "functions": {
-      "total": 131,
+      "total": 141,
       "covered": 26,
       "skipped": 0,
-      "pct": 19.84
+      "pct": 18.43
     },
     "statements": {
-      "total": 408,
-      "covered": 75,
+      "total": 423,
+      "covered": 77,
       "skipped": 0,
-      "pct": 18.38
+      "pct": 18.2
     },
     "branches": {
-      "total": 346,
+      "total": 373,
       "covered": 37,
       "skipped": 0,
-      "pct": 10.69
+      "pct": 9.91
     },
     "lowestPct": {
-      "curr": 10.69,
-      "prev": 0,
-      "diff": 10.69
+      "curr": 9.91,
+      "prev": 10.69,
+      "diff": -0.7799999999999994
     },
     "averagePct": {
-      "curr": 17.022499999999997,
-      "prev": 0,
-      "diff": 17.022499999999997
+      "curr": 16.375,
+      "prev": 17.022499999999997,
+      "diff": -0.6474999999999973
     }
   },
   "plots/matrix/matrix.data.js": {
@@ -4069,10 +4069,10 @@
   },
   "plots/matrix/hierCluster.interactivity.js": {
     "lines": {
-      "total": 144,
-      "covered": 40,
+      "total": 143,
+      "covered": 41,
       "skipped": 0,
-      "pct": 27.77
+      "pct": 28.67
     },
     "functions": {
       "total": 49,
@@ -4081,26 +4081,26 @@
       "pct": 28.57
     },
     "statements": {
-      "total": 149,
-      "covered": 41,
+      "total": 148,
+      "covered": 42,
       "skipped": 0,
-      "pct": 27.51
+      "pct": 28.37
     },
     "branches": {
-      "total": 109,
-      "covered": 17,
+      "total": 111,
+      "covered": 18,
       "skipped": 0,
-      "pct": 15.59
+      "pct": 16.21
     },
     "lowestPct": {
-      "curr": 15.59,
-      "prev": 0,
-      "diff": 15.59
+      "curr": 16.21,
+      "prev": 15.59,
+      "diff": 0.620000000000001
     },
     "averagePct": {
-      "curr": 24.860000000000003,
-      "prev": 0,
-      "diff": 24.860000000000003
+      "curr": 25.455,
+      "prev": 24.860000000000003,
+      "diff": 0.5949999999999953
     }
   },
   "plots/matrix/hierCluster.js": {
