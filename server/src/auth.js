@@ -3,6 +3,7 @@ import path from 'path'
 import jsonwebtoken from 'jsonwebtoken'
 import { sleep } from './utils.js'
 import mm from 'micromatch'
+import { filterJoin } from '#shared/index.js'
 
 const { isMatch } = mm
 
@@ -23,7 +24,8 @@ const defaultApiMethods = {
 	getPayloadFromHeaderAuth: () => ({}),
 	getHealth: () => undefined,
 	// credentialed embedders, using an array which can be frozen with Object.freeze(), unlike a Set()
-	credEmbedders: []
+	credEmbedders: [],
+	mayExtendqFilter: (q, ds, term) => {}
 }
 
 // these may be overriden within maySetAuthRoutes()
@@ -567,7 +569,6 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 
 	authApi.getRequiredCredForDsEmbedder = function (dslabel, embedder) {
 		const requiredCred = []
-		let alreadyMatched = false
 		for (const dslabelPattern in creds) {
 			if (!isMatch(dslabel, dslabelPattern)) continue
 			for (const routePattern in creds[dslabelPattern]) {
@@ -659,6 +660,31 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 		}
 		authHealth.set(app, { errors })
 		return authHealth.get(app)
+	}
+
+	authApi.mayExtendqFilter = function (q, ds, twArr) {
+		if (!ds.cohort.termdb.getAdditionalFilter) return
+		if (!q.__protected__) throw `missing q.__protected__`
+		// clientAuthResult{}: from authApi.getNonsensitiveInfo()
+		// ignoredTermRestrictions[]: a list of protected term.ids to ignore,
+		//   such as when a server route is expected to aggregate the data
+		//   so that no sample level data will be included in the server response
+		if (!q.__protected__.clientAuthResult || !q.__protected__.ignoredTermIds)
+			throw `missing q.__protected__ clientAuthResult or ignoredTermIds`
+
+		// NOTE: as needed, the server route code must append to q.__protected__ignoredTermRestrictions[],
+		//  since it knows the req.query key names that correspond to terms
+		const termsToCheck = twArr.filter(tw => !q.__protected__.ignoredTermIds.includes(tw.term.id)).map(tw => tw.term)
+		const additionalFilter = ds.cohort.termdb.getAdditionalFilter(q.__protected__.clientAuthResult, termsToCheck)
+		if (!additionalFilter) {
+			// certain roles (from jwt payload) may have access to everything,
+			// do not change q.filter to an extended filter in this case
+			return
+		}
+		// default to protecting response data, by extending the filter to limit term-value visibility;
+		// downstream route handler code may loosen the protection by using the q.origFilter,
+		// depending on whether the request includes protected terms or not
+		q.filter = filterJoin([additionalFilter, q.filter])
 	}
 
 	// may handle custom auth for testing
