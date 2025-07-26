@@ -14,6 +14,7 @@ import {
 import { get_bin_label, compute_bins } from '#shared/termdb.bins.js'
 import { trigger_getDefaultBins } from './termdb.getDefaultBins.js'
 import { getCategories } from '../routes/termdb.categories.ts'
+import { authApi } from '#src/auth.js'
 
 /*
 
@@ -53,6 +54,7 @@ Returns:
 export async function getData(q, ds, genome, onlyChildren = false) {
 	try {
 		validateArg(q, ds)
+		authApi.mayExtendqFilter(q, ds, q.terms)
 		const data = await getSampleData(q, ds, onlyChildren)
 		// get categories within same data request to avoid a separate
 		// getCategories() request, which can be time-consuming for
@@ -81,7 +83,7 @@ function validateArg(q, ds) {
 
 	for (const tw of q.terms) {
 		// TODO clean up
-		if (tw?.term?.type && isDictionaryType(tw.term.type)) {
+		if ((tw?.term?.type && isDictionaryType(tw.term.type)) || (!tw.term?.type && tw.term.id)) {
 			if (!tw.term.name) tw.term = q.ds.cohort.termdb.q.termjsonByOneid(tw.term.id)
 			if (!tw.q) console.log('do something??')
 		}
@@ -91,6 +93,10 @@ function validateArg(q, ds) {
 	}
 	if (q.filter0) {
 		if (typeof q.filter0 == 'string') q.filter0 = JSON.parse(q.filter0)
+	}
+	if (ds.cohort?.termdb?.getRestrictedTermValues) {
+		if (!q.__protected__) throw `missing q.__protected__, must be set upstream of getData()`
+		// also validated in authApi.mayExtendqFilter()
 	}
 }
 

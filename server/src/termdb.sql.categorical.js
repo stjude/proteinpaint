@@ -1,22 +1,16 @@
 import { getUncomputableClause } from './termdb.sql'
 
 export const values = {
-	getCTE(tablename, term, ds, q, values, groupset, restrictedTermValues) {
+	getCTE(tablename, term, ds, q, values) {
 		values.push(term.id)
 		const uncomputable = getUncomputableClause(term, q)
 		values.push(...uncomputable.values)
 		// groupsetting not applied
-		let extraClause = ''
-		if (restrictedTermValues) {
-			// ok for restrictedTermValues to be an empty array, that would mean all values are hidden
-			extraClause = `AND value IN (${restrictedTermValues.map(v => '?').join(',')})`
-			values.push(...restrictedTermValues)
-		}
 		return {
 			sql: `${tablename} AS (
 				SELECT sample,value as key, value as value
 				FROM anno_categorical
-				WHERE term_id=? ${uncomputable.clause} ${extraClause}
+				WHERE term_id=? ${uncomputable.clause}
 			)`,
 			tablename
 		}
@@ -41,24 +35,20 @@ export const groupset = {
 		- a series of "SELECT name, value" statements that are joined by UNION ALL
 		- uncomputable values are not included in the CTE results, EXCEPT IF such values are in a group
 	*/
-	async getCTE(tablename, term, ds, q, values, groupset, restrictedTermValues) {
-		if (restrictedTermValues)
-			throw `TODO: comment this out and verify the handling of restrictedTermValues in groupset.getCTE() below`
+	async getCTE(tablename, term, ds, q, values, groupset) {
 		if (!groupset.groups) throw `.groups[] missing from a group-set, term.id='${term.id}'`
 
 		const categories = []
 		const filters = []
 		for (const g of groupset.groups) {
 			if (g.uncomputable) continue
-			// TODO: test and verify this logic
-			const allowedValues = !restrictedTermValues ? g.values : g.values.filter(v => restrictedTermValues.includes(v))
 			if (g.type == 'values') {
 				categories.push(`SELECT sample, ? as key, value
 					FROM anno_categorical a
 					WHERE term_id=?
-						AND value IN (${allowedValues.map(v => '?').join(',')})
+						AND value IN (${g.values.map(v => '?').join(',')})
 				`)
-				values.push(g.name, term.id, ...allowedValues.map(v => v.key.toString()))
+				values.push(g.name, term.id, ...g.values.map(v => v.key.toString()))
 			} else if (g.type == 'filter') {
 				// TODO: create filter sql for group.type == 'filter'
 				if ('activeCohort' in q.groupsetting && g.filter4activeCohort) {
@@ -69,15 +59,9 @@ export const groupset = {
 					filters.push(filter.filters)
 					values.push(...filter.values.slice(), g.name, g.name)
 
-					let extraClause = ''
-					if (restrictedTermValues) {
-						extraClause = `AND value in $(allowedValues.map(v => '?'))`
-						values.push(...allowedValues)
-					}
-
 					categories.push(
 						`SELECT sample, ? AS key, ? AS value
-						FROM ${filter.CTEname} ${extraClause}`
+						FROM ${filter.CTEname}`
 					)
 				} else {
 					throw `activeCohort error: cannot construct filter statement for group name='${g.name}', term.id=${term.id}`
