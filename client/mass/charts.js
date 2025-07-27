@@ -345,9 +345,21 @@ function getChartTypeList(self, state) {
 			clickTo: self.loadChartSpecificMenu
 		},
 		{
+			label: 'Mutation vs Survival',
+			chartType: 'summarizeMutationSurvival',
+			usecase: { target: 'summarizeMutationSurvival' },
+			clickTo: self.loadChartSpecificMenu
+		},
+		{
 			label: 'CNV vs GeneExp',
 			chartType: 'summarizeCnvGeneexp',
 			usecase: { target: 'summarizeCnvGeneexp' },
+			clickTo: self.loadChartSpecificMenu
+		},
+		{
+			label: 'GeneExp vs Survival',
+			chartType: 'summarizeGeneexpSurvival',
+			usecase: { target: 'summarizeGeneexpSurvival' },
 			clickTo: self.loadChartSpecificMenu
 		}
 	]

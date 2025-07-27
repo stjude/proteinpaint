@@ -15,10 +15,13 @@ it will also not be kept in state, as it only launches summary plot at the end
 */
 
 export async function makeChartBtnMenu(holder, chartsInstance) {
-	// always require a default term and does not allow it to be deleted from pill to simplify ui logic
-	if (!chartsInstance.app.vocabApi.termdbConfig.defaultTw4correlationPlot) throw 'defaultTw4correlationPlot missing'
-	// the variable stores a copy of this tw and will be overwriten by pill update
-	let dictTw = structuredClone(chartsInstance.app.vocabApi.termdbConfig.defaultTw4correlationPlot)
+	let dictTw // the variable stores a copy of ds-supplied default tw and will be overwriten by pill update
+	{
+		// always require a default term and does not allow it to be deleted from pill to simplify ui logic
+		const t = chartsInstance.app.vocabApi.termdbConfig.defaultTw4correlationPlot?.disease
+		if (!t) throw 'defaultTw4correlationPlot missing'
+		dictTw = structuredClone(t)
+	}
 
 	// 2-col table to organize input ui
 	const table = table2col({
@@ -37,27 +40,13 @@ export async function makeChartBtnMenu(holder, chartsInstance) {
 			holder: searchDiv,
 			genomeObj: chartsInstance.app.opts.genome!,
 			callback: async term => {
-				// hardcodes dtsnvindel for it. should change to other dt for related charts
 				waitDiv.text('LOADING ...')
-				try {
-					const chart = {
-						config: {
-							chartType: 'summary',
-							// TODO define sandbox header with gene+term name
-							term: dictTw,
-							term2: await getGeneTw(term, dtsnvindel, chartsInstance.app.vocabApi)
-						}
-					}
-					chartsInstance.plotCreate(chart)
-					// indicate mass chart is loading
-					holder.selectAll('*').remove() // okay to delete for this ui is "single-use" and will be rerendered on clicking chart button again
-					holder.append('div').style('margin', '20px').text('LOADING CHART ...')
-					setTimeout(() => {
-						holder.style('display', 'none')
-					}, 1000)
-				} catch (e: any) {
-					waitDiv.text('Error: ' + (e.message || e))
-				}
+				launchPlot({
+					tw1: dictTw,
+					tw2: await getGeneTw(term, dtsnvindel, chartsInstance.app.vocabApi), // hardcodes dtsnvindel for this chart
+					chartsInstance,
+					holder
+				})
 			}
 		})
 	}
@@ -116,4 +105,27 @@ export async function getGeneTw(term, dt, vocabApi) {
 	if (i == -1) throw 'dt not found in groupsets'
 	tw.q.predefined_groupset_idx = i
 	return tw
+}
+/*
+reused helper to:
+1. dispatch to launch plot
+2. while waiting, display wait message in menu and delay-close menu
+
+assumes that tw1 is dict term, will use its type to set chart type
+*/
+export function launchPlot({ tw1, tw2, chartsInstance, holder }) {
+	const chart = {
+		config: {
+			chartType: tw1?.term?.type == 'survival' ? 'survival' : 'summary',
+			// TODO define sandbox header with gene+term name
+			term: tw1,
+			term2: tw2
+		}
+	}
+	chartsInstance.plotCreate(chart)
+	holder.selectAll('*').remove() // okay to delete; this ui is "single-use" and will be rerendered on clicking chart button again
+	holder.append('div').style('margin', '20px').text('LOADING CHART ...') // indicate mass chart is loading
+	setTimeout(() => {
+		holder.style('display', 'none')
+	}, 1000)
 }

@@ -1522,7 +1522,10 @@ keep this setting here for reason of:
 	isTermVisible?: (clientAuthResult: any, id: string) => boolean
 	/** when ds supports chart types e.g. summarizeMutationDiagnosis, this setting is required to supply a dict term to populate the chart ui
 	 */
-	defaultTw4correlationPlot?: Tw
+	defaultTw4correlationPlot?: {
+		/** key is string as disease/survial etc, value is tw */
+		[index: string]: Tw
+	}
 }
 
 type SampleType = {
