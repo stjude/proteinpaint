@@ -2,7 +2,7 @@ import { table2col, addGeneSearchbox, make_one_checkbox, Menu } from '#dom'
 import { dtcnv } from '#shared/common.js'
 import { SearchHandler as geneSearch } from '../termdb/handlers/geneVariant.ts'
 import { select } from 'd3-selection'
-import { getGeneTw } from './summarizeMutationDiagnosis'
+import { getGeneTw, launchPlot } from './summarizeMutationDiagnosis'
 
 /*
 same design as summarizeMutationDiagnosis.ts
@@ -121,20 +121,11 @@ export async function makeChartBtnMenu(holder, chartsInstance) {
 
 	function launch() {
 		if (!expTw || !cnvTw) throw 'either tw is missing'
-		const chart = {
-			config: {
-				chartType: 'summary',
-				// TODO define sandbox header with gene+term name
-				term: expTw,
-				term2: cnvTw
-			}
-		}
-		chartsInstance.plotCreate(chart)
-		// indicate mass chart is loading
-		holder.selectAll('*').remove() // okay to delete for this ui is "single-use" and will be rerendered on clicking chart button again
-		holder.append('div').style('margin', '20px').text('LOADING CHART ...')
-		setTimeout(() => {
-			holder.style('display', 'none')
-		}, 1000)
+		launchPlot({
+			tw1: expTw,
+			tw2: cnvTw,
+			chartsInstance,
+			holder
+		})
 	}
 }

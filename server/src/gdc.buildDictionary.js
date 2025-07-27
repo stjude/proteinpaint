@@ -689,7 +689,9 @@ function makeTermdbQueries(ds, id2term) {
 			'': [
 				'dictionary', // to be able to show dictionary chart button at mass ui in correlation plot http://localhost:3000/?gdccorrelation=1
 				'summarizeMutationDiagnosis',
-				'summarizeCnvGeneexp'
+				'summarizeCnvGeneexp',
+				'summarizeMutationSurvival',
+				'summarizeGeneexpSurvival'
 			]
 		}
 		const numericTypeCount = {}
