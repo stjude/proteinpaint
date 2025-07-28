@@ -1,1 +1,2 @@
-
+Fixes:
+- Survival plot: when overlaying with a geneExpression term, create a new group "missing data" for the samples have survival data but lack gene expression data. 

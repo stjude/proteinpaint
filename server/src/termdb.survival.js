@@ -1,5 +1,6 @@
 import { getData } from './termdb.matrix'
 import { run_R } from '@sjcrh/proteinpaint-r'
+import { TermTypes } from '#shared/terms.js'
 
 export async function get_survival(q, ds) {
 	try {
@@ -173,7 +174,7 @@ function getSampleArray(data, st) {
 
 function getSeriesKey(ot, d) {
 	const n = ot.name
-	if (ot.type == 'geneVariant') {
+	if (ot.type == TermTypes.GENE_VARIANT) {
 		// TODO: may no longer need this code as geneVariant groupsetting is now performed on client-side
 		if (!d[n] || !d[n].values) return 'Wildtype' // TODO: should require definitive not-tested vs WT data
 		const tested = d[n].values.filter(v => v.class != 'Blank')
@@ -195,8 +196,13 @@ function getSeriesKey(ot, d) {
 		if (d[n].values.length > tested.length) return 'Not tested'
 		// TODO: more helpful message or throw
 		return 'Not sure'
-	} else if (d[ot.name]) return d[ot.name].key
-	else throw `cannot get series key for term='${n}'`
+	} else if (ot.type == TermTypes.GENE_EXPRESSION) {
+		return d[ot.name]?.key || 'Missing data'
+	} else if (d[ot.name]) {
+		return d[ot.name].key
+	} else {
+		throw `cannot get series key for term='${n}'`
+	}
 }
 
 function getOrderedLabels(term, bins = []) {
