@@ -1260,7 +1260,13 @@ export class MatrixControls {
 
 			const editBtn = editGrpDiv
 				.append('button')
-				.html(numOfEditableGrps > 1 && geneInputType !== 'hierCluster' ? 'Edit Selected Group' : 'Edit Current Group')
+				.html(
+					numOfEditableGrps > 1 && geneInputType !== 'hierCluster'
+						? 'Edit Selected Group'
+						: geneInputType == 'hierCluster'
+						? 'Edit Gene Set'
+						: 'Edit Current Group'
+				)
 				.on('click', () => {
 					tip.clear()
 					this.setMenuBackBtn(tip.d.append('div').style('padding', '5px'), () => controlPanelBtn.click(), `Back`)
