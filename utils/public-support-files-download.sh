@@ -1,5 +1,12 @@
 #!/usr/bin/env sh
 
+# NOTE:
+# This script downloads multiple large reference files for ProteinPaint setup.
+# In some environments (e.g., AWS or systems with execution limits),
+# the script execution can time out due to long-running downloads.
+# Please verify your environment's execution time limits and consider using persistent storage
+# (e.g., Amazon EBS, Amazon EFS, or S3) to avoid re-downloading files on subsequent runs.
+
 set -e
 TP_FOLDER="${1:-$PWD}"
 mkdir -pv "$TP_FOLDER"
