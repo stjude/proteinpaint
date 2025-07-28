@@ -1,35 +1,27 @@
 import type { Mds3 } from '#types'
-import serverconfig from '@sjcrh/proteinpaint-server/src/serverconfig.js'
-import * as path from 'path'
-import { existsSync, unlinkSync, symlinkSync, access, constants } from 'fs'
-
-// import { WSISample } from '@sjcrh/proteinpaint-types/routes/wsisamples.js'
 
 /*
 the "test mule" for the type of termdb dataset using server-side sqlite3 db
-follows the mds3 specification
-and is used to power many integration tests
+follows the mds3 specification and is used to power many integration tests
 
-to enable this dataset on your pp instance, have this entry in hg38-test datasets array of your "serverconfig.json":
-
- { "name": "TermdbTest", "jsfile": "./dataset/termdb.test.js" }
-
-files are hosted at specified locations under tp/
-upon loading this script, directories under tp/ are auto-created if missing
-data files already committed in the repo are copied over to tp/ locations for the dataset to work
-
-reason:
+Design rationale:
 - db file is anonymized and unindentifiable
 - allow continuous integration test
 - ensure TermdbTest/db to be fully static and recoverable, to ensure tests work as expected
 
-*/
+To enable this dataset on your pp instance, have this entry in hg38-test datasets array of your "serverconfig.json":
 
-copyDataFilesFromRepo2Tp()
+ { "name": "TermdbTest", "jsfile": "./dataset/termdb.test.js" }
+
+Files are hosted at the specified locations under tp/
+
+NOTE: genome/hg38.test.js uses copyDataFilesFromRepo2Tp() to create <tp>/files/hg38/TermdbTest
+	dir files or symlink, if the <tp> dir is writable
+*/
 
 // export a function to allow reuse of this dataset without causing conflicts
 // for the different use cases in runtime/tests
-export default function (): Mds3 {
+export default async function (): Promise<Mds3> {
 	return {
 		isMds3: true,
 		isSupportedChartOverride: {
@@ -377,30 +369,4 @@ export default function (): Mds3 {
 			}
 		}
 	} satisfies Mds3
-}
-
-function copyDataFilesFromRepo2Tp() {
-	// when running tests in a CI environment, the workflow script should copy
-	// the server/test/tp dir as serverconfig.tpmasterdir, and do not trigger
-	// the symlinks below
-	if (existsSync('/home/root/pp')) return
-	const targetDir = path.join(serverconfig.binpath, 'test/tp/files/hg38/TermdbTest')
-	const datadir = path.join(serverconfig.tpmasterdir, 'files/hg38/TermdbTest')
-
-	// no need to set the symlink when the target TermdbTest dir
-	// already equals the datadir under serverconfig.tpmasterdir
-	if (datadir == `${serverconfig.binpath}/test/tp`) {
-		access(datadir, constants.R_OK | constants.W_OK, err => {
-			if (!err) {
-				try {
-					if (!existsSync(datadir)) unlinkSync(datadir)
-					symlinkSync(targetDir, datadir)
-				} catch (error) {
-					console.warn('Error while coping data files from Repo to Tp: ' + error)
-				}
-			} else {
-				console.warn(`user doesn't have sufficient permissions for `)
-			}
-		})
-	}
 }
