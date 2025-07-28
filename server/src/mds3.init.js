@@ -2621,8 +2621,6 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 		// validate tw
 		if (typeof tw.term != 'object') throw 'tw.term{} is not object'
 		if (tw.term.type != 'geneVariant') throw 'tw.term.type is not geneVariant'
-		if (!tw.term.gene && !(tw.term.chr && Number.isInteger(tw.term.start) && Number.isInteger(tw.term.stop)))
-			throw 'no gene or position specified'
 		if (tw.q.type == 'predefined-groupset' || tw.q.type == 'custom-groupset') {
 			if (tw.q.type == 'predefined-groupset' && !Number.isInteger(tw.q.predefined_groupset_idx))
 				throw 'predefined_groupset_idx is not an integer value'
@@ -2652,6 +2650,8 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 		const termdbmclass = q.ds?.cohort?.termdb?.mclass // custom mclass labels from dataset
 		if (!tw.term.genes?.length) throw 'tw.term.genes[] is empty'
 		for (const gene of tw.term.genes) {
+			if (!gene.gene && !(gene.chr && Number.isInteger(gene.start) && Number.isInteger(gene.stop)))
+				throw 'no gene or position specified'
 			for (const dt of dts) {
 				let mlst = []
 				switch (dt) {
