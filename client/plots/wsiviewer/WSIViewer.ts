@@ -101,7 +101,8 @@ export class WSIViewer extends RxComponentInner {
 			this.map = new MapRenderer(
 				wsimageLayers[settings.displayedImageIndex],
 				this.wsiViewerInteractions.viewerClickListener,
-				activeImageExtent
+				viewModel.sampleWSImages[settings.displayedImageIndex],
+				buffers
 			).render(holder, settings)
 
 			//TODO: Handle this better
