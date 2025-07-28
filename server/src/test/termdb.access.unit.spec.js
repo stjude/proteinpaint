@@ -12,6 +12,7 @@ tape('filterTerms()', async function (test) {
 		//headers:{authorization:'Bearer mock-token'}, // is this needed?
 		query: {
 			// lacking dslabel/embedder somehow did not cause auth.getNonsensitiveInfo to throw
+			__protected__: {}
 		}
 	}
 
@@ -35,7 +36,11 @@ tape('filterTerms()', async function (test) {
 	}
 
 	{
-		const result = filterTerms({ query: { dslabel: 'TermdbTest', embedder: 'http://localhost' } }, ds, terms)
+		const result = filterTerms(
+			{ query: { dslabel: 'TermdbTest', embedder: 'http://localhost', __protected__: {} } },
+			ds,
+			terms
+		)
 		test.deepEqual(result, [terms[0]], '1 term left after filtering')
 	}
 
