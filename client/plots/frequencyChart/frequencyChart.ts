@@ -7,6 +7,7 @@ import { plotColor } from '#shared/common.js'
 import { ScatterInteractivity } from '../scatter/viewmodel/scatterInteractivity.ts'
 import { Runchart } from '../runchart/runchart.ts'
 import { getColors } from '#shared/common.js'
+import { SelectFilters } from '#dom/selectFilters'
 
 export class FrequencyChart extends Runchart {
 	type: string
@@ -20,19 +21,19 @@ export class FrequencyChart extends Runchart {
 	async init(appState) {
 		const state: any = this.getState(appState)
 		this.config = structuredClone(state.config)
-		this.filterTWs = []
-		if (state.config.countryTW) this.filterTWs.push(state.config.countryTW)
-		if (state.config.siteTW) this.filterTWs.push(state.config.siteTW)
 
 		this.view = new FrequencyChartView(this)
 		this.model = new FrequencyChartModel(this)
 		this.vm = new RunchartViewModel(this)
 		this.interactivity = new ScatterInteractivity(this)
+		this.selectFilters = new SelectFilters(this.view.dom.headerDiv, this, this.config)
 	}
 
 	async main() {
 		this.config = structuredClone(this.state.config)
 		this.settings = this.config.settings[this.type]
+		this.selectFilters.fillFilters()
+
 		await this.model.initData()
 		await this.model.processData()
 		this.cat2Color = getColors(this.model.charts.length)
@@ -67,8 +68,8 @@ export async function getPlotConfig(opts, app) {
 		await fillTermWrapper(plot.term, app.vocabApi)
 		if (plot.term0) await fillTermWrapper(plot.term0, app.vocabApi)
 		if (plot.scaleDotTW) await fillTermWrapper(plot.scaleDotTW, app.vocabApi)
-		if (plot.countryTW) await fillTermWrapper(plot.countryTW, app.vocabApi)
-		if (plot.siteTW) await fillTermWrapper(plot.siteTW, app.vocabApi)
+		if (plot.filterTWs) for (const tw of plot.filterTWs) await fillTermWrapper(tw, app.vocabApi)
+
 		return plot
 	} catch (e) {
 		console.log(e)

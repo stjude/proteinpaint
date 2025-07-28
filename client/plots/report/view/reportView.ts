@@ -36,25 +36,6 @@ export class ReportView {
 		}
 		document.addEventListener('scroll', () => this?.dom?.tooltip?.hide())
 		select('.sjpp-output-sandbox-content').on('scroll', () => this.dom.tooltip.hide())
-		this.dom.filterSelects = []
-		if (this.report.config.filterTWs) {
-			headerDiv.style('padding', '20px 0px 20px 0px')
-			for (const tw of this.report.config.filterTWs) {
-				this.dom.headerDiv.append('label').text(` ${tw.term.name}: `).style('vertical-align', 'top')
-				let timeoutId
-				const select = this.dom.headerDiv.append('select').property('multiple', true).attr('size', '5')
-
-				select.on('change', async () => {
-					clearTimeout(timeoutId)
-					timeoutId = setTimeout(() => {
-						const values = Array.from(select.node().selectedOptions).map((o: any) => o.value)
-						this.report.settings[tw.term.id] = values
-						this.report.replaceFilter()
-					}, 1000)
-				})
-				this.dom.filterSelects.push(select)
-			}
-		}
 	}
 
 	getControlInputs() {

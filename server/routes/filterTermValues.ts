@@ -37,7 +37,7 @@ function init({ genomes }) {
 	}
 }
 
-function getList(samplesPerFilter, filtersData, tw) {
+function getList(samplesPerFilter, filtersData, tw, showAll) {
 	const values: any = Object.values(tw.term.values)
 	values.sort((v1: any, v2: any) => v1.label.localeCompare(v2.label))
 	const twSamples = samplesPerFilter[tw.term.id]
@@ -52,6 +52,7 @@ function getList(samplesPerFilter, filtersData, tw) {
 	for (const value of values) {
 		const label = value.label.replace(/["']/g, '') // remove quotes from the label if found, some datasets have quotes in the labels
 		const disabled = !sampleValues.includes(value.key || value.label) //if the value is not in the sample values, disable it
+		if (!showAll && disabled) continue //skip disabled values
 		filteredValues.push({ value: value.key || value.label, label, disabled })
 	}
 	filteredValues.unshift({ label: '', value: '' })
