@@ -10,13 +10,14 @@ import { downloadSingleSVG } from '../../common/svg.download.js'
 import { select2Terms } from '#dom/select2Terms'
 import { Scatter } from '../scatter/scatter.js'
 import { getColors } from '#shared/common.js'
-import { getCategoricalTermFilter } from '#filter'
+import { SelectFilters } from '#dom/selectFilters'
 
 export class Runchart extends Scatter {
 	type: string
 	cat2Color: any
 	runchartvm!: RunchartViewModel
 	filterTWs: any
+	selectFilters: any
 
 	constructor(opts) {
 		super(opts)
@@ -27,19 +28,17 @@ export class Runchart extends Scatter {
 		const state: any = this.getState(appState)
 		this.config = structuredClone(state.config)
 		this.filterTWs = []
-		if (state.config.countryTW) this.filterTWs.push(state.config.countryTW)
-		if (state.config.siteTW) this.filterTWs.push(state.config.siteTW)
-
 		this.view = new RunchartView(this)
 		this.model = new RunchartModel(this)
 		this.vm = new RunchartViewModel(this)
 		this.interactivity = new ScatterInteractivity(this)
+		this.selectFilters = new SelectFilters(this.view.dom.headerDiv, this, this.config)
 	}
 
 	async main() {
 		this.config = structuredClone(this.state.config)
 		this.settings = this.config.settings[this.type]
-
+		this.selectFilters.fillFilters()
 		await this.model.initData()
 		await this.model.processData()
 		this.cat2Color = getColors(this.model.charts.length)
@@ -65,23 +64,6 @@ export class Runchart extends Scatter {
 		this.components.controls.on('downloadClick.scatter', () => {
 			downloadSingleSVG(this.view.dom.svg, 'scatter.svg', this.opts.holder.node())
 		})
-	}
-
-	setCountry(country) {
-		const config: any = this.config
-		this.settings[config.countryTW.term.id] = country
-		this.settings[config.siteTW.term.id] = '' //clear site if country is changed
-		this.app.dispatch({ type: 'plot_edit', id: this.id, config })
-	}
-
-	setFilterValue(key, value) {
-		this.config.filter = this.getFilter()
-		this.settings[key] = value
-		this.app.dispatch({ type: 'plot_edit', id: this.id, config: this.config })
-	}
-
-	getFilter() {
-		return getCategoricalTermFilter(this.filterTWs, this.settings)
 	}
 }
 
@@ -113,8 +95,7 @@ export async function getPlotConfig(opts, app) {
 		await fillTermWrapper(plot.term2, app.vocabApi)
 		if (plot.term0) await fillTermWrapper(plot.term0, app.vocabApi)
 		if (plot.scaleDotTW) await fillTermWrapper(plot.scaleDotTW, app.vocabApi)
-		if (plot.countryTW) await fillTermWrapper(plot.countryTW, app.vocabApi)
-		if (plot.siteTW) await fillTermWrapper(plot.siteTW, app.vocabApi)
+		if (plot.filterTWs) for (const tw of plot.filterTWs) await fillTermWrapper(tw, app.vocabApi)
 
 		return plot
 	} catch (e) {

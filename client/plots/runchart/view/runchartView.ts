@@ -2,7 +2,6 @@ import { fillTermWrapper } from '#termsetting'
 import type { Runchart } from '../runchart.js'
 import { ScatterView } from '../../scatter/view/scatterView.js'
 import { isNumericTerm } from '#shared/terms.js'
-import { getCategoricalTermFilter } from '#filter'
 
 export const minShapeSize = 0.2
 export const maxShapeSize = 6
@@ -14,54 +13,8 @@ export class RunchartView extends ScatterView {
 		this.runchart = runchart
 	}
 
-	async getFilterControlInputs() {
-		if (this.scatter.parentId) return [] // no filter inputs if this is a child plot
-		const terms = this.runchart.filterTWs
-		const filters = {}
-		for (const tw of terms) {
-			filters[tw.term.id] = getCategoricalTermFilter(terms, this.scatter.settings, tw)
-		}
-		//Dictionary with samples applying all the filters but not the one from the current term id
-		const filteredTermValues = await this.runchart.app.vocabApi.filterTermValues({
-			filter: this.scatter.state.termfilter.filter,
-			filters,
-			terms
-		})
-		const inputs: any[] = []
-		if (this.runchart.config.countryTW) {
-			// countries can show all the values
-			const countryValues = Object.values(this.runchart.config.countryTW.term.values)
-			const countries = countryValues.map((v: any) => ({
-				label: v.label,
-				value: v.value || v.label
-			}))
-			countries.sort((a, b) => a.label.localeCompare(b.label))
-			countries.unshift({ label: '', value: '' }) // add empty option
-			inputs.push({
-				label: 'Country',
-				type: 'dropdown',
-				chartType: this.runchart.type,
-				settingsKey: this.runchart.config.countryTW.term.id,
-				options: countries,
-				callback: value => this.runchart.setCountry(value)
-			})
-		}
-		if (this.runchart.config.siteTW) {
-			const sites = filteredTermValues[this.runchart.config.siteTW.term.id]
-			inputs.push({
-				label: 'Site',
-				type: 'dropdown',
-				chartType: this.runchart.type,
-				settingsKey: this.runchart.config.siteTW.term.id,
-				options: sites,
-				callback: value => this.runchart.setFilterValue(this.runchart.config.siteTW.term.id, value)
-			})
-		}
-		return inputs
-	}
-
 	async getControlInputs() {
-		const inputs: any[] = await this.getFilterControlInputs()
+		const inputs: any[] = []
 		const shapeOption = {
 			type: 'term',
 			configKey: 'shapeTW',
