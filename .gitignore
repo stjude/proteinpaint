@@ -15,6 +15,7 @@ dist/*
 
 server/app.js
 server/genome/*.js
+!server/genome/copyDataFilesFromRepo2Tp.js
 server/dataset/*.js
 server/test/*.bundle.js
 server/test/cache/*

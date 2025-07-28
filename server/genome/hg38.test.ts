@@ -1,4 +1,18 @@
 import type { Genome } from '#types'
+import { copyDataFilesFromRepo2Tp } from './copyDataFilesFromRepo2Tp.js'
+
+/*
+The call to copyDataFilesFromRepo2Tp() was moved from dataset/termdb.test.js to here,
+since `TermdbTest/msigdb/db` needs to exist and be loaded as part of genome init,
+before the processing of dataset init in initGenomeDs().
+
+Upon loading this dataset script in the dev environment, if the tp dir is writable then: 
+- directories under tp/ are auto-created if missing
+- data files committed in the repo are copied over to tp/ locations for the dataset to work
+*/
+
+const msigdbSrcPath = 'files/hg38/TermdbTest/msigdb/db'
+await copyDataFilesFromRepo2Tp(msigdbSrcPath)
 
 const genome: Genome = {
 	species: 'human',
@@ -11,7 +25,9 @@ const genome: Genome = {
 		msigdb: {
 			label: 'MSigDB',
 			cohort: {
-				db: { file: 'files/hg38/TermdbTest/msigdb/db' }, // nest file under TermdbTest since the folder is auto symlinked
+				// NOTE: in the dev environment, sjpp/start.js is
+				// nest file under TermdbTest since the folder is auto symlinked
+				db: { file: msigdbSrcPath },
 				termdb: {
 					isGeneSetTermdb: true
 				}
