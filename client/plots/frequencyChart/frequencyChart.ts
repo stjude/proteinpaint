@@ -7,7 +7,7 @@ import { plotColor } from '#shared/common.js'
 import { ScatterInteractivity } from '../scatter/viewmodel/scatterInteractivity.ts'
 import { Runchart } from '../runchart/runchart.ts'
 import { getColors } from '#shared/common.js'
-import { SelectFilters } from '#dom/selectFilters'
+import { CategoryFiltersUI } from '#dom/categoryFiltersUI'
 
 export class FrequencyChart extends Runchart {
 	type: string
@@ -28,7 +28,7 @@ export class FrequencyChart extends Runchart {
 		this.interactivity = new ScatterInteractivity(this)
 		if (!this.parentId)
 			//if you are in the report you dont show filters
-			this.selectFilters = new SelectFilters(this.view.dom.headerDiv, this, this.config)
+			this.selectFilters = new CategoryFiltersUI(this.view.dom.headerDiv, this, this.config)
 	}
 
 	async main() {

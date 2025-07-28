@@ -1,9 +1,9 @@
-import { getCategoricalTermFilter } from '#shared/filter.js'
+import { getCategoricalTermFilter } from '#filter'
 
 /*
  *  component to display a group of select filters in a plot header
  */
-export class SelectFilters {
+export class CategoryFiltersUI {
 	holder: any
 	filterSelects: any[] = []
 	plot: any
@@ -72,7 +72,7 @@ export class SelectFilters {
 	}
 
 	getFilter() {
-		return getCategoricalTermFilter(this.plot.config.filterTWs, this.plot.settings, null)
+		return getCategoricalTermFilter(this.plot.config.filterTWs, this.plot.settings)
 	}
 
 	async replaceFilter() {

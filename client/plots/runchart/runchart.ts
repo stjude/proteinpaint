@@ -10,7 +10,7 @@ import { downloadSingleSVG } from '../../common/svg.download.js'
 import { select2Terms } from '#dom/select2Terms'
 import { Scatter } from '../scatter/scatter.js'
 import { getColors } from '#shared/common.js'
-import { SelectFilters } from '#dom/selectFilters'
+import { CategoryFiltersUI } from '#dom/categoryFiltersUI'
 
 export class Runchart extends Scatter {
 	type: string
@@ -32,7 +32,7 @@ export class Runchart extends Scatter {
 		this.model = new RunchartModel(this)
 		this.vm = new RunchartViewModel(this)
 		this.interactivity = new ScatterInteractivity(this)
-		if (!this.parentId) this.selectFilters = new SelectFilters(this.view.dom.headerDiv, this, this.config)
+		if (!this.parentId) this.selectFilters = new CategoryFiltersUI(this.view.dom.headerDiv, this, this.config)
 	}
 
 	async main() {

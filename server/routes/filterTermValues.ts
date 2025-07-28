@@ -37,6 +37,35 @@ function init({ genomes }) {
 	}
 }
 
+async function getFilters(query, ds, res) {
+	// safe to process this client-submitted query.filterByUserSites flag,
+	// which only affects aggregation levels (not revealed sample-level data),
+	// as performed by this route code, and since query.terms would still
+	// be matched against a dataset's hiddenTermIds[]
+	if (!query.filterByUserSites) authApi.mayAdjustFilter(query, ds, query.terms)
+
+	try {
+		//Dictionary with samples applying all the filters but not the one from the current term id
+		const samplesPerFilter = await getSamplesPerFilter(query, ds)
+		const filtersData = await getData(
+			{
+				terms: query.terms,
+				__protected__: query.__protected__
+			},
+			ds
+		)
+		const tw2List = {}
+		for (const tw of query.terms) {
+			// related to auth: make sure the returned list are not sensitive !!!
+			tw2List[tw.term.id] = getList(samplesPerFilter, filtersData, tw, query.showAll)
+		}
+		res.send({ ...tw2List })
+	} catch (e: any) {
+		console.log(e)
+		res.send({ error: e.message || e })
+	}
+}
+
 function getList(samplesPerFilter, filtersData, tw, showAll) {
 	const values: any = Object.values(tw.term.values)
 	values.sort((v1: any, v2: any) => v1.label.localeCompare(v2.label))
@@ -58,27 +87,4 @@ function getList(samplesPerFilter, filtersData, tw, showAll) {
 	filteredValues.unshift({ label: '', value: '' })
 	filteredValues.sort((a, b) => a.label.localeCompare(b.label))
 	return filteredValues
-}
-
-async function getFilters(query, ds, res) {
-	// safe to process this client-submitted query.filterByUserSites flag,
-	// which only affects aggregation levels (not revealed sample-level data),
-	// as performed by this route code, and since query.terms would still
-	// be matched against a dataset's hiddenTermIds[]
-	if (!query.filterByUserSites) authApi.mayAdjustFilter(query, ds, query.terms)
-
-	try {
-		//Dictionary with samples applying all the filters but not the one from the current term id
-		const samplesPerFilter = await getSamplesPerFilter(query, ds)
-		const filtersData = await getData({ terms: query.terms, __protected__: query.__protected__ }, ds)
-		const tw2List = {}
-		for (const tw of query.terms) {
-			// related to auth: make sure the returned list are not sensitive !!!
-			tw2List[tw.term.id] = getList(samplesPerFilter, filtersData, tw)
-		}
-		res.send({ ...tw2List })
-	} catch (e: any) {
-		console.log(e)
-		res.send({ error: e.message || e })
-	}
 }
