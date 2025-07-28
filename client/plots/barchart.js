@@ -338,7 +338,7 @@ export class Barchart {
 
 			const reqOpts = this.getDataRequestOpts()
 			await this.getDescrStats()
-			await this.setControls()
+			await this.setControls() //needs to be called after getDescrStats() to set hasStats
 
 			const results = await this.app.vocabApi.getNestedChartSeriesData(reqOpts)
 			const data = results.data
@@ -379,6 +379,7 @@ export class Barchart {
 	}
 
 	async getDescrStats() {
+		this.hasStats = false
 		// get descriptive statistics for numerical terms
 		const terms = [this.config.term]
 		if (this.config.term2) terms.push(this.config.term2)
