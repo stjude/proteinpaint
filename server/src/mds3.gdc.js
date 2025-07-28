@@ -705,23 +705,23 @@ async function getCnvFusion4oneCase(opts, ds) {
 		.json()
 	if (!Array.isArray(re.data.hits)) throw 're.data.hits[] not array'
 
-	let snpFile, wgsFile, arribaFile // detect result files from accepted assays
+	// record array of usable files, each: {dt, fid, name}; later .mlst[] will be loaded to each element
+	// this allows identifying availability of multiple files for a data type
+	const useFiles = []
 
 	for (const h of re.data.hits) {
-		//console.log(JSON.stringify(h,null,2))
-
 		if (h.data_format == 'BEDPE') {
 			if (h.experimental_strategy != 'RNA-Seq') continue
 			if (h.analysis?.workflow_type != 'Arriba') continue
 			if (h.data_type != 'Transcript Fusion') continue
-			arribaFile = h.file_id
+			useFiles.push({ dt: common.dtfusionrna, fid: h.file_id, name: 'Arriba', mlst: [] })
 			continue
 		}
 
 		if (h.data_format == 'TXT') {
 			if (h.experimental_strategy == 'Genotyping Array') {
 				if (h.data_type == 'Masked Copy Number Segment' || h.data_type == 'Allele-specific Copy Number Segment') {
-					snpFile = h.file_id
+					useFiles.push({ dt: common.dtcnv, fid: h.file_id, name: h.experimental_strategy, mlst: [] })
 				}
 				continue
 			}
@@ -729,49 +729,49 @@ async function getCnvFusion4oneCase(opts, ds) {
 				// is wgs, no need to check tissue_type, the file is usable
 				if (!h.file_id) continue
 				if (h.data_type != 'Allele-specific Copy Number Segment') continue
-				wgsFile = h.file_id
+				useFiles.push({ dt: common.dtcnv, fid: h.file_id, name: h.experimental_strategy, mlst: [] })
 				continue
 			}
 		}
 	}
 
-	const events = [] // collect cnv and fusion events into one array
-
-	if (wgsFile || snpFile) {
-		//console.log('wgs',wgsFile,'snp',snpFile) // for testing to find out which is used
-
-		// has cnv file based on either wgs or snp array; wgs has priority
-		// do not use headers here since accept should be 'text/plain', not 'application/json'
-		const re = await ky(joinUrl(host.rest, 'data', wgsFile || snpFile), { timeout: false }).text()
-		parseCnvFile(re.trim().split('\n'), events)
-	}
-
-	if (arribaFile) {
-		try {
-			// must use headers to access controlled fusion file
-			const re = await ky(joinUrl(host.rest, 'data', arribaFile), { headers, timeout: false }).text()
-			const lines = re.split('\n')
-			// first line is header
-			// #chrom1 start1  end1    chrom2  start2  end2    name    score   strand1 strand2 strand1(gene/fusion)    strand2(gene/fusion)    site1   site2   type    direction1      direction2      split_reads1    split_reads2    discordant_mates        coverage1       coverage2       closest_genomic_breakpoint1     closest_genomic_breakpoint2     filters fusion_transcript       reading_frame   peptide_sequence        read_identifiers
-			for (let i = 1; i < lines.length; i++) {
-				const l = lines[i].split('\t')
-				const f = {
-					dt: common.dtfusionrna,
-					chrA: l[0],
-					posA: Number(l[1]),
-					chrB: l[3],
-					posB: Number(l[4])
+	for (const aFile of useFiles) {
+		switch (aFile.dt) {
+			case common.dtcnv:
+				// in request, do not use headers here since accept should be 'text/plain', not 'application/json'
+				const re = await ky(joinUrl(host.rest, 'data', aFile.fid), { timeout: false }).text()
+				parseCnvFile(re.trim().split('\n'), aFile.mlst)
+				break
+			case common.dtfusionrna:
+				try {
+					// must use headers to access controlled fusion file
+					const re = await ky(joinUrl(host.rest, 'data', arribaFile), { headers, timeout: false }).text()
+					const lines = re.split('\n')
+					// first line is header
+					// #chrom1 start1  end1    chrom2  start2  end2    name    score   strand1 strand2 strand1(gene/fusion)    strand2(gene/fusion)    site1   site2   type    direction1      direction2      split_reads1    split_reads2    discordant_mates        coverage1       coverage2       closest_genomic_breakpoint1     closest_genomic_breakpoint2     filters fusion_transcript       reading_frame   peptide_sequence        read_identifiers
+					for (let i = 1; i < lines.length; i++) {
+						const l = lines[i].split('\t')
+						const f = {
+							dt: common.dtfusionrna,
+							chrA: l[0],
+							posA: Number(l[1]),
+							chrB: l[3],
+							posB: Number(l[4])
+						}
+						if (!f.chrA || !f.chrB || Number.isNaN(f.posA) || Number.isNaN(f.posB)) continue
+						parseArribaName(f, l[6])
+						aFile.mlst.push(f)
+					}
+				} catch (e) {
+					// no permission to fusion file
 				}
-				if (!f.chrA || !f.chrB || Number.isNaN(f.posA) || Number.isNaN(f.posB)) continue
-				parseArribaName(f, l[6])
-				events.push(f)
-			}
-		} catch (e) {
-			// no permission to fusion file
+				break
+			default:
+				throw 'unknown aFile.dt'
 		}
 	}
 
-	return events
+	return useFiles
 
 	function getFilter(p) {
 		/* p={}
@@ -802,7 +802,7 @@ async function getCnvFusion4oneCase(opts, ds) {
 /*
 cnv files come in different formats. detect by header line
 */
-function parseCnvFile(lines, events) {
+function parseCnvFile(lines, mlst) {
 	switch (lines[0]) {
 		case 'GDC_Aliquot_ID\tChromosome\tStart\tEnd\tNum_Probes\tSegment_Mean':
 		case 'GDC_Aliquot\tChromosome\tStart\tEnd\tNum_Probes\tSegment_Mean':
@@ -821,7 +821,7 @@ function parseCnvFile(lines, events) {
 				}
 				if (Number.isNaN(cnv.start) || Number.isNaN(cnv.stop) || Number.isNaN(cnv.value))
 					throw 'start/stop/value not a number in cnv file: ' + l
-				events.push(cnv)
+				mlst.push(cnv)
 			}
 			return
 		case 'GDC_Aliquot\tChromosome\tStart\tEnd\tCopy_Number\tMajor_Copy_Number\tMinor_Copy_Number':
@@ -840,26 +840,13 @@ function parseCnvFile(lines, events) {
 					value: total
 				}
 				if (!cnv.chr || Number.isNaN(cnv.start) || Number.isNaN(cnv.stop)) continue
-				events.push(cnv)
+				mlst.push(cnv)
 
 				if (total > 0) {
 					// total copy number is >0, detect loh
-					/*
-					if (major + minor != total) continue // data err?
-					if (major == minor) continue // no loh
-					const loh = {
-						dt: common.dtloh,
-						chr: cnv.chr,
-						start: cnv.start,
-						stop: cnv.stop,
-						segmean: Math.abs(major - minor) / total
-					}
-					events.push(loh)
-					*/
-
 					if (minor == 0 && major > 0) {
 						// zhenyu 4/25/23 detect strict one allele loss
-						events.push({
+						mlst.push({
 							dt: common.dtloh,
 							chr: cnv.chr,
 							start: cnv.start,
