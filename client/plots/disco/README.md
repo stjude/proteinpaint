@@ -6,8 +6,6 @@ _//TODO: add description of code architecture_
 ## Calculations
 Rendering calculations for the rings assumes zero-based genomic positioning. Users however are only allowed to input one-based positioning. 
 
-Rendering calculations for the rings assumes zero-based genomic positioning. Users however are only allowed to input one-based positioning.
-
 ## Launching Disco
 `runproteinpaint()` detects an `arg.disco` object and calls `launchDisco()` in
 `client/src/app.js`. The launcher creates a `PlotApp` instance which
