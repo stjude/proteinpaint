@@ -1,13 +1,13 @@
 import { renderTable, sayerror } from '#dom'
 import { debounce } from 'debounce'
-import type { AIHistoInteractions } from '../interactions/AIHistoInteractions'
+import type { AIProjectAdminInteractions } from '../interactions/AIProjectAdminInteractions'
 
 export class ProjectAdminRender {
 	dom: any
 	projects: any[]
-	interactions: AIHistoInteractions
+	interactions: AIProjectAdminInteractions
 
-	constructor(dom: any, projects: any[], interactions: AIHistoInteractions) {
+	constructor(dom: any, projects: any[], interactions: AIProjectAdminInteractions) {
 		this.dom = dom
 		this.projects = projects //returns as [{ value: 'Project1' }, { value: 'Project2' }, ...]
 		this.interactions = interactions
@@ -18,8 +18,8 @@ export class ProjectAdminRender {
 	renderProjectAdmin() {
 		const projectDiv = this.dom.holder
 			.append('div')
-			.attr('id', 'sjpp-ai-histo-tool-projects')
-			.attr('class', 'sjpp-deletable-ai-histo-div')
+			.attr('id', 'sjpp-ai-prjt-admin-projects')
+			.attr('class', 'sjpp-deletable-ai-prjt-admin-div')
 		this.renderCreateProject(projectDiv)
 		this.renderProjectSelection(projectDiv)
 	}
