@@ -26,13 +26,15 @@ export class FrequencyChart extends Runchart {
 		this.model = new FrequencyChartModel(this)
 		this.vm = new RunchartViewModel(this)
 		this.interactivity = new ScatterInteractivity(this)
-		this.selectFilters = new SelectFilters(this.view.dom.headerDiv, this, this.config)
+		if (!this.parentId)
+			//if you are in the report you dont show filters
+			this.selectFilters = new SelectFilters(this.view.dom.headerDiv, this, this.config)
 	}
 
 	async main() {
 		this.config = structuredClone(this.state.config)
 		this.settings = this.config.settings[this.type]
-		this.selectFilters.fillFilters()
+		if (!this.parentId) this.selectFilters.fillFilters()
 
 		await this.model.initData()
 		await this.model.processData()
@@ -68,7 +70,7 @@ export async function getPlotConfig(opts, app) {
 		await fillTermWrapper(plot.term, app.vocabApi)
 		if (plot.term0) await fillTermWrapper(plot.term0, app.vocabApi)
 		if (plot.scaleDotTW) await fillTermWrapper(plot.scaleDotTW, app.vocabApi)
-		if (plot.filterTWs) for (const tw of plot.filterTWs) await fillTermWrapper(tw, app.vocabApi)
+		for (const tw of plot.filterTWs) await fillTermWrapper(tw, app.vocabApi)
 
 		return plot
 	} catch (e) {
