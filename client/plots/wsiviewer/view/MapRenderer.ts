@@ -11,22 +11,39 @@ import MousePosition from 'ol/control/MousePosition.js'
 import { format as formatCoordinate } from 'ol/coordinate.js'
 import type { WSImageLayers } from '#plots/wsiviewer/viewModel/WSImageLayers.ts'
 import type Layer from 'ol/layer/Layer'
-import type { Extent } from 'ol/extent'
 import type Settings from '../Settings'
+import type { SessionWSImage } from '#plots/wsiviewer/viewModel/SessionWSImage.ts'
+import type { Annotation, WSImage } from '@sjcrh/proteinpaint-types'
 
 export class MapRenderer {
 	public wSImageLayers: WSImageLayers
-	private viewerClickListener: (coordinateX: number, coordinateY: number) => void
-	private activeImageExtent: Extent | undefined
+	private viewerClickListener: (
+		coordinateX: number,
+		coordinateY: number,
+		sessionWSImage: SessionWSImage,
+		buffers: any
+	) => void
+	private sessionWSImage: SessionWSImage
+	private buffers: any
 
 	constructor(
 		wSImageLayers: WSImageLayers,
-		viewerClickListener: (coordinateX: number, coordinateY: number) => void,
-		activeImageExtent: Extent | undefined
+		viewerClickListener: {
+			(
+				coordinateX: number,
+				coordinateY: number,
+				sessionWSImage: WSImage & {
+					sessionsAnnotations?: Annotation[] | undefined
+				}
+			): void
+		},
+		sessionWSImage: SessionWSImage,
+		buffers: any
 	) {
 		this.wSImageLayers = wSImageLayers
-		this.activeImageExtent = activeImageExtent
+		this.sessionWSImage = sessionWSImage
 		this.viewerClickListener = viewerClickListener
+		this.buffers = buffers
 	}
 
 	public render(holder: any, settings: Settings): OLMap {
@@ -112,7 +129,7 @@ export class MapRenderer {
 				const tileY = Math.floor(-coordinate[1] / tileSize) * tileSize
 
 				// Call the listener with upper-left corner
-				this.viewerClickListener(tileX, tileY)
+				this.viewerClickListener(tileX, tileY, this.sessionWSImage, this.buffers)
 			})
 		}
 

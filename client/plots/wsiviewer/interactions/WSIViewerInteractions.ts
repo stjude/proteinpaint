@@ -8,7 +8,6 @@ import { Polygon } from 'ol/geom'
 import type { Geometry } from 'ol/geom'
 import { Fill, Stroke, Style } from 'ol/style'
 import type Settings from '#plots/wsiviewer/Settings.ts'
-import type { SessionAnnotation } from '#plots/wsiviewer/viewModel/SessionAnnotation.ts'
 import type { Annotation } from '@sjcrh/proteinpaint-types'
 import type { SessionWSImage } from '#plots/wsiviewer/viewModel/SessionWSImage.ts'
 
@@ -16,7 +15,7 @@ export class WSIViewerInteractions {
 	public activePatchColor?: string
 	thumbnailClickListener: (index: number) => void
 	zoomInEffectListener: (activeImageExtent: unknown, zoomInPoints: [number, number][], map: OLMap) => void
-	viewerClickListener: (coordinateX: number, coordinateY: number) => void
+	viewerClickListener: (coordinateX: number, coordinateY: number, sessionWSImage: SessionWSImage, buffers?: any) => void
 	setKeyDownListener: (
 		holder: any,
 		sessionWSImage: SessionWSImage,
@@ -166,28 +165,53 @@ export class WSIViewerInteractions {
 			})
 		}
 
-		this.viewerClickListener = (coordinateX: number, coordinateY: number) => {
+		this.viewerClickListener = (
+			coordinateX: number,
+			coordinateY: number,
+			sessionWSImage: SessionWSImage,
+			buffers?: any
+		) => {
 			const state = wsiApp.app.getState()
 			const settings: Settings = state.plots.find(p => p.id === wsiApp.id).settings
 
-			const sessionAnnotation: SessionAnnotation = {
-				zoomCoordinates: [coordinateX, coordinateY],
-				label: '',
-				color: ''
-			}
+			const sessionAnnotationsData = sessionWSImage?.sessionsAnnotations || []
+			const persistedAnnotationsData = sessionWSImage?.annotationsData || []
 
-			const oldAnnotation = settings.sessionsAnnotations
+			const annotationsData: Annotation[] = [...sessionAnnotationsData, ...persistedAnnotationsData]
 
-			wsiApp.app.dispatch({
-				type: 'plot_edit',
-				id: wsiApp.id,
-				config: {
-					settings: {
-						renderWSIViewer: false,
-						sessionsAnnotations: [...oldAnnotation, sessionAnnotation]
-					}
-				}
+			const TILE_SIZE = 512
+
+			// Find the index of the annotation where the point is inside its square
+			const selectedAnnotationIndex = annotationsData.findIndex(annotation => {
+				const [x0, y0] = annotation.zoomCoordinates
+				const x1 = x0 + TILE_SIZE
+				const y1 = y0 + TILE_SIZE
+
+				return coordinateX >= x0 && coordinateX < x1 && coordinateY >= y0 && coordinateY < y1
 			})
+
+			if (selectedAnnotationIndex !== -1) {
+				buffers.annotationsIdx.set(selectedAnnotationIndex)
+			} else {
+				const sessionAnnotation: Annotation = {
+					zoomCoordinates: [coordinateX, coordinateY],
+					class: '',
+					uncertainty: 0
+				}
+
+				const oldAnnotation = settings.sessionsAnnotations
+
+				wsiApp.app.dispatch({
+					type: 'plot_edit',
+					id: wsiApp.id,
+					config: {
+						settings: {
+							renderWSIViewer: false,
+							sessionsAnnotations: [sessionAnnotation, ...oldAnnotation]
+						}
+					}
+				})
+			}
 		}
 	}
 
