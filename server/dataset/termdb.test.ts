@@ -21,7 +21,7 @@ NOTE: genome/hg38.test.js uses copyDataFilesFromRepo2Tp() to create <tp>/files/h
 
 // export a function to allow reuse of this dataset without causing conflicts
 // for the different use cases in runtime/tests
-export default async function (): Promise<Mds3> {
+export default function (): Mds3 {
 	return {
 		isMds3: true,
 		isSupportedChartOverride: {

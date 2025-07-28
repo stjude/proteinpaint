@@ -11,8 +11,7 @@ Upon loading this dataset script in the dev environment, if the tp dir is writab
 - data files committed in the repo are copied over to tp/ locations for the dataset to work
 */
 
-const msigdbSrcPath = 'files/hg38/TermdbTest/msigdb/db'
-await copyDataFilesFromRepo2Tp(msigdbSrcPath)
+await copyDataFilesFromRepo2Tp('files/hg38/TermdbTest')
 
 const genome: Genome = {
 	species: 'human',
@@ -27,7 +26,7 @@ const genome: Genome = {
 			cohort: {
 				// NOTE: in the dev environment, sjpp/start.js is
 				// nest file under TermdbTest since the folder is auto symlinked
-				db: { file: msigdbSrcPath },
+				db: { file: 'files/hg38/TermdbTest/msigdb/db' },
 				termdb: {
 					isGeneSetTermdb: true
 				}
