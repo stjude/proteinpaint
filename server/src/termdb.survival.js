@@ -174,29 +174,7 @@ function getSampleArray(data, st) {
 
 function getSeriesKey(ot, d) {
 	const n = ot.name
-	if (ot.type == TermTypes.GENE_VARIANT) {
-		// TODO: may no longer need this code as geneVariant groupsetting is now performed on client-side
-		if (!d[n] || !d[n].values) return 'Wildtype' // TODO: should require definitive not-tested vs WT data
-		const tested = d[n].values.filter(v => v.class != 'Blank')
-
-		/*
-			TODO: ot.q may specify to
-			- filter out any value that has a certain dt or class (similar to the matrix)
-			- what classes to group together (groupsetting)
-
-			NOTE: handle this filtering/value processing per the q object within the getData() function?
-
-			!!! Very simplified series grouping below !!!
-		*/
-		// if a sample is mutated for any test, ignore that is may be wildtype and/or not tested for any other assay
-		if (tested.find(v => v.class != 'WT')) return `${n} Variant`
-		// so far, no variant was found. is the sample specifically marked as wildtype for any test?
-		if (tested.find(v => v.class == 'WT')) return `${n} Wildtype`
-		// not mutant or wildtype, was it marked not tested for any assay?
-		if (d[n].values.length > tested.length) return 'Not tested'
-		// TODO: more helpful message or throw
-		return 'Not sure'
-	} else if (ot.type == TermTypes.GENE_EXPRESSION) {
+	if (ot.type == TermTypes.GENE_EXPRESSION) {
 		return d[ot.name]?.key || 'Missing data'
 	} else if (d[ot.name]) {
 		return d[ot.name].key
