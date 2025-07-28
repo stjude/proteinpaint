@@ -5,14 +5,13 @@ simple filter
 nested filter
 invalid filter term
 */
-
 import tape from 'tape'
 import { getFilterCTEs } from '../termdb.filter.js'
 import { init } from './load.testds.js'
 import { server_init_db_queries } from '../termdb.server.init.ts'
 
 tape('\n', function (test) {
-	test.comment('-***- modules/termdb.filter specs -***-')
+	test.comment('-***- src/termdb.filter specs -***-')
 	test.end()
 })
 
