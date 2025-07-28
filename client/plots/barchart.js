@@ -224,7 +224,7 @@ export class Barchart {
 					//getDisplayStyle: plot => (plot.settings.barchart.colorBars || plot.term2 ? 'none' : 'table-row')
 				}
 			]
-			if (state.config.term2)
+			if (this.hasStats)
 				inputs.push({
 					label: 'Show stats',
 					type: 'checkbox',
@@ -335,10 +335,11 @@ export class Barchart {
 				)
 
 			this.toggleLoadingDiv()
-			await this.setControls()
 
 			const reqOpts = this.getDataRequestOpts()
 			await this.getDescrStats()
+			await this.setControls()
+
 			const results = await this.app.vocabApi.getNestedChartSeriesData(reqOpts)
 			const data = results.data
 			this.sampleType = results.sampleType
@@ -382,11 +383,13 @@ export class Barchart {
 		const terms = [this.config.term]
 		if (this.config.term2) terms.push(this.config.term2)
 		if (this.config.term0) terms.push(this.config.term0)
+
 		for (const t of terms) {
 			if (isNumericTerm(t.term)) {
 				const data = await this.app.vocabApi.getDescrStats(t, this.state.termfilter)
 				if (data.error) throw data.error
 				t.q.descrStats = data.values
+				this.hasStats = true
 			}
 		}
 	}
@@ -412,7 +415,8 @@ export class Barchart {
 			rowh: config.settings.common.barwidth,
 			colspace: config.settings.common.barspace,
 			rowspace: config.settings.common.barspace,
-			colorUsing: config.settings.barchart.colorUsing
+			colorUsing: config.settings.barchart.colorUsing,
+			showStats: config.settings.barchart.showStats
 		}
 
 		/* mayResetHidden() was added before to prevent showing empty chart due to automatic hiding uncomputable categories
