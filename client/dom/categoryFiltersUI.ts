@@ -3,7 +3,7 @@ import { getCategoricalTermFilter } from '#shared/filter.js'
 /*
  *  component to display a group of select filters in a plot header
  */
-export class SelectFilters {
+export class CategoryFiltersUI {
 	holder: any
 	filterSelects: any[] = []
 	plot: any

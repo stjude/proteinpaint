@@ -3,7 +3,7 @@ import { fillTermWrapper } from '#termsetting'
 import { ReportView } from './view/reportView'
 import { RxComponentInner } from '../../types/rx.d'
 import { controlsInit } from '../controls.js'
-import { SelectFilters } from '#dom/selectFilters'
+import { CategoryFiltersUI } from '#dom/categoryFiltersUI'
 
 export class Report extends RxComponentInner {
 	config: any
@@ -25,7 +25,7 @@ export class Report extends RxComponentInner {
 	async init(appState) {
 		this.config = appState.plots.find(p => p.id === this.id)
 		this.view = new ReportView(this)
-		this.selectFilters = new SelectFilters(this.view.dom.headerDiv, this, this.config)
+		this.selectFilters = new CategoryFiltersUI(this.view.dom.headerDiv, this, this.config)
 		this.components = { plots: {} }
 		const state = this.getState(appState)
 		for (const section of state.config.sections) {
