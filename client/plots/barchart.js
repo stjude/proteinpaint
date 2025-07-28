@@ -218,10 +218,10 @@ export class Barchart {
 			]
 			if (state.config.term2)
 				inputs.push({
-					label: 'Show stats table',
+					label: 'Show stats',
 					type: 'checkbox',
 					chartType: 'barchart',
-					settingsKey: 'showStatsTable',
+					settingsKey: 'showStats',
 					boxLabel: 'Yes'
 				})
 			else
@@ -745,7 +745,7 @@ export class Barchart {
 		const headingStyle = 'color: #aaa; font-weight: 400'
 
 		// descriptive statistics
-		if (t1.q.descrStats) {
+		if (t1.q.descrStats && s.showStats) {
 			// term1 has descriptive stats
 			const items = t1.q.descrStats.map(stat => {
 				return {
@@ -758,7 +758,7 @@ export class Barchart {
 			const name = `<span style="${headingStyle}">${title}</span>`
 			legendGrps.push({ name, items })
 		}
-		if (t2?.q.descrStats) {
+		if (t2?.q.descrStats && s.showStats) {
 			// term2 has descriptive stats
 			const items = t2.q.descrStats.map(stat => {
 				return {
@@ -936,7 +936,7 @@ function setRenderers(self) {
 		)
 
 		div.select('.pp-sbar-div-chartLengends').selectAll('*').remove()
-		if (self.chartsData.tests && self.chartsData.tests[chart.chartId] && self.config.settings.barchart.showStatsTable) {
+		if (self.chartsData.tests && self.chartsData.tests[chart.chartId] && self.config.settings.barchart.showStats) {
 			//chart has pvalues
 			generatePvalueTable(chart, div)
 		}
@@ -969,7 +969,7 @@ function setRenderers(self) {
 			.style('margin', '10px 10px 10px 30px')
 			.style('display', 'none')
 
-		if (self.chartsData.tests && self.chartsData.tests[chart.chartId] && self.config.settings.barchart.showStatsTable) {
+		if (self.chartsData.tests && self.chartsData.tests[chart.chartId] && self.config.settings.barchart.showStats) {
 			//chart has pvalues
 			generatePvalueTable(chart, div)
 		}
@@ -1236,7 +1236,7 @@ export function getDefaultBarSettings(app) {
 		colorBars: false,
 		colorUsing: 'all',
 		dedup: false,
-		showStatsTable: true,
+		showStats: true,
 		showPercent: false
 	}
 }
