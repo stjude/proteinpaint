@@ -1,6 +1,6 @@
 import type { Model } from '../model/Model'
 
-export class AIHistoInteractions {
+export class AIProjectAdminInteractions {
 	app: any
 	id: string
 	genome: string

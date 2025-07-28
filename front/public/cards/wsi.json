@@ -36,8 +36,8 @@
                         },
                         "plots": [
                             {
-                                "chartType": "AIHistoTool",
-                                "subfolder": "aiHistoTool",
+                                "chartType": "AIProjectAdmin",
+                                "subfolder": "aiProjectAdmin",
                                 "extension": "ts"
                             }
                         ]

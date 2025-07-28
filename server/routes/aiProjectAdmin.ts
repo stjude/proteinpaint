@@ -1,24 +1,24 @@
 import type { RouteApi } from '#types'
-import { aiHistoProjectAdminPayload } from '#types/checkers'
+import { aiProjectAdminPayload } from '#types/checkers'
 import { connect_db } from '../src/utils.js'
 
-const routePath = 'aiHistoProjectAdmin'
+const routePath = 'aiProjectAdmin'
 export const api: RouteApi = {
 	endpoint: `${routePath}`,
 	methods: {
 		post: {
 			//edit
-			...aiHistoProjectAdminPayload,
+			...aiProjectAdminPayload,
 			init
 		},
 		delete: {
 			//delete
-			...aiHistoProjectAdminPayload,
+			...aiProjectAdminPayload,
 			init
 		},
 		put: {
 			//add
-			...aiHistoProjectAdminPayload,
+			...aiProjectAdminPayload,
 			init
 		}
 	}

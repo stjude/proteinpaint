@@ -12,8 +12,8 @@ export class CreateProjectRender {
 	render() {
 		const filterDiv = this.dom.holder
 			.append('div')
-			.attr('id', 'sjpp-ai-histo-tool-filter-div')
-			.attr('class', 'sjpp-deletable-ai-histo-div')
+			.attr('id', 'sjpp-ai-prjt-admin-filter-div')
+			.attr('class', 'sjpp-deletable-ai-prjt-admin-div')
 			.style('padding', '10px')
 
 		const filter = filterPromptInit({

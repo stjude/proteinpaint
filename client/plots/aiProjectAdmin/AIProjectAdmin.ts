@@ -1,26 +1,26 @@
 import { RxComponentInner } from '../../types/rx.d'
 import { getCompInit, copyMerge } from '#rx'
 import type { MassState } from '#mass/types/mass'
-import { getDefaultAIHistoToolSettings } from './defaults'
+import { getDefaultAIProjectAdminSettings } from './defaults'
 import { Model } from './model/Model'
 import { ProjectAdminRender } from './view/ProjectAdminRender'
-import { AIHistoInteractions } from './interactions/AIHistoInteractions'
+import { AIProjectAdminInteractions } from './interactions/AIProjectAdminInteractions'
 import { CreateProjectRender } from './view/CreateProjectRender'
 import { sayerror } from '#dom'
 
-class AIHistoTool extends RxComponentInner {
-	public type = 'AIHistoTool'
+class AIProjectAdmin extends RxComponentInner {
+	public type = 'AIProjectAdmin'
 	model: Model
 	projects?: any[]
 	prjtAdminUI?: ProjectAdminRender
-	interactions?: AIHistoInteractions
+	interactions?: AIProjectAdminInteractions
 
 	constructor(opts: any) {
 		super()
 		this.opts = opts
 		this.dom = {
 			holder: opts.holder,
-			errorDiv: opts.holder.append('div').style('padding', '3px').attr('class', 'sjpp-ai-histo-tool-error')
+			errorDiv: opts.holder.append('div').style('padding', '3px').attr('class', 'sjpp-ai-prjt-admin-error')
 		}
 		this.model = new Model()
 	}
@@ -37,12 +37,12 @@ class AIHistoTool extends RxComponentInner {
 	}
 
 	async init(appState: MassState) {
-		this.interactions = new AIHistoInteractions(this.app, this.id, this.model)
+		this.interactions = new AIProjectAdminInteractions(this.app, this.id, this.model)
 
 		try {
 			this.projects = await this.model.getProjects(appState.vocab.genome, appState.vocab.dslabel)
 		} catch (e: any) {
-			console.error('Error initializing AIHistoTool:', e)
+			console.error('Error initializing AIProjectAdmin:', e)
 			throw e
 		}
 		this.prjtAdminUI = new ProjectAdminRender(this.dom, this.projects, this.interactions)
@@ -55,7 +55,7 @@ class AIHistoTool extends RxComponentInner {
 		if (config.chartType != this.type) return
 		if (!config.settings.project) return
 
-		this.dom.holder.selectAll('.sjpp-deletable-ai-histo-div').remove()
+		this.dom.holder.selectAll('.sjpp-deletable-ai-prjt-admin-div').remove()
 
 		if (config.settings.project.type === 'new') {
 			const terms = await this.model.getTerms(state.vocab, this.app)
@@ -69,15 +69,15 @@ class AIHistoTool extends RxComponentInner {
 	}
 }
 
-export const aiHistoToolInit = getCompInit(AIHistoTool)
-export const componentInit = aiHistoToolInit
+export const aiProjectAdminInit = getCompInit(AIProjectAdmin)
+export const componentInit = aiProjectAdminInit
 
 export async function getPlotConfig(opts: any) {
 	const config = {
-		chartType: 'AIHistoTool',
-		subfolder: 'aiHistoTool',
+		chartType: 'AIProjectAdmin',
+		subfolder: 'aiProjectAdmin',
 		extension: 'ts',
-		settings: getDefaultAIHistoToolSettings(opts.overrides)
+		settings: getDefaultAIProjectAdminSettings(opts.overrides)
 	}
 
 	return copyMerge(config, opts)
