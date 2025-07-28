@@ -178,7 +178,8 @@ export class profilePlot {
 			filters,
 			// safe to pass because the backend code will still compare terms[] with the the dataset's hiddenTermIds,
 			// it only affects what will be included in the aggregation and does not disable user access authentication
-			filterByUserSites: this.settings.filterByUserSites
+			filterByUserSites: this.settings.filterByUserSites,
+			showAll: true
 		})
 		this.regions = this.filteredTermValues[this.config.regionTW.id]
 		this.countries = this.filteredTermValues[this.config.countryTW.id]
