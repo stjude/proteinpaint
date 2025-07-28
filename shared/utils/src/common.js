@@ -1240,8 +1240,6 @@ export const mutationClasses = Object.values(mclass)
 export const CNVClasses = Object.values(mclass)
 	.filter(m => m.dt == dtcnv)
 	.map(m => m.key)
-export const cnvGainClasses = [mclasscnvgain, mclasscnvAmp]
-export const cnvLossClasses = [mclasscnvloss, mclasscnvHomozygousDel]
 
 // dt terms used for filtering variants for geneVariant term
 const dtTerms_temp = [
