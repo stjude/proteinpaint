@@ -25,9 +25,13 @@ export class ScatterView {
 			.insert('div')
 			.style('display', 'inline-block')
 			.attr('class', 'pp-termdb-plot-controls')
-		const mainDiv = this.opts.holder.insert('div').style('display', 'inline-block').style('vertical-align', 'top')
+
+		const rightDiv = this.opts.holder.insert('div').style('display', 'inline-block').style('vertical-align', 'top')
+		const headerDiv = rightDiv.append('div')
+		const mainDiv = rightDiv.append('div')
 
 		this.dom = {
+			headerDiv,
 			mainDiv,
 			header: this.opts.header,
 			//holder,

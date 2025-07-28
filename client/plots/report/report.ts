@@ -3,7 +3,7 @@ import { fillTermWrapper } from '#termsetting'
 import { ReportView } from './view/reportView'
 import { RxComponentInner } from '../../types/rx.d'
 import { controlsInit } from '../controls.js'
-import { getCategoricalTermFilter } from '#filter'
+import { SelectFilters } from '#dom/selectFilters'
 
 export class Report extends RxComponentInner {
 	config: any
@@ -15,6 +15,7 @@ export class Report extends RxComponentInner {
 	readonly type: string
 	id!: string
 	filterTWs: any[] = []
+	selectFilters: any
 
 	constructor() {
 		super()
@@ -24,6 +25,7 @@ export class Report extends RxComponentInner {
 	async init(appState) {
 		this.config = appState.plots.find(p => p.id === this.id)
 		this.view = new ReportView(this)
+		this.selectFilters = new SelectFilters(this.view.dom.headerDiv, this, this.config)
 		this.components = { plots: {} }
 		const state = this.getState(appState)
 		for (const section of state.config.sections) {
@@ -59,19 +61,6 @@ export class Report extends RxComponentInner {
 		}
 	}
 
-	async replaceFilter() {
-		const filter = this.getFilter() //read by child plots
-		this.app.dispatch({
-			type: 'plot_edit',
-			id: this.id,
-			config: { filter, settings: { report: this.settings } } //update country and site in the report settings
-		})
-	}
-
-	getFilter() {
-		return getCategoricalTermFilter(this.config.filterTWs, this.settings)
-	}
-
 	getState(appState: any) {
 		const config = appState.plots.find(p => p.id === this.id)
 		if (!config) {
@@ -89,7 +78,7 @@ export class Report extends RxComponentInner {
 	async main() {
 		this.config = structuredClone(this.state.config)
 		this.settings = this.config.settings.report
-		this.fillFilters()
+		this.selectFilters.fillFilters()
 	}
 
 	async setPlot(plot, sectionDiv) {
@@ -129,38 +118,6 @@ export class Report extends RxComponentInner {
 				holder: this.view.dom.controlsHolder,
 				inputs
 			})
-		}
-	}
-
-	async fillFilters() {
-		if (!this.config.filterTWs) {
-			return
-		}
-		let index = 0
-		for (const tw of this.config.filterTWs) {
-			const filterValues = this.settings[tw.term.id] || ''
-			const filters: any = {}
-			for (const tw of this.config.filterTWs)
-				filters[tw.term.id] = getCategoricalTermFilter(this.config.filterTWs, this.settings, tw)
-			const data = await this.app.vocabApi.filterTermValues({
-				terms: this.config.filterTWs,
-				filter: this.state.termfilter.filter,
-				filters
-			})
-			const select = this.view.dom.filterSelects[index]
-			select.selectAll('option').remove()
-
-			for (const value of data[tw.term.id]) {
-				if (value.label == '') continue //skip empty labels
-				const option = select.append('option').attr('value', value.value).text(value.label)
-				option.property('disabled', value.disabled)
-				for (const filterValue of filterValues) {
-					if (value.value === filterValue) {
-						option.attr('selected', 'selected')
-					}
-				}
-			}
-			index++
 		}
 	}
 }
