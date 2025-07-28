@@ -214,14 +214,6 @@ export class Barchart {
 					boxLabel: 'Yes',
 					getDisplayStyle: plot =>
 						this.chartsData.charts.find(c => c.serieses.length != c.dedupedSerieses.length) ? 'table-row' : 'none'
-				},
-				{
-					label: 'Default color',
-					title: 'Default color for bars when there is no overlay',
-					type: 'color',
-					chartType: 'barchart',
-					settingsKey: 'defaultColor'
-					//getDisplayStyle: plot => (plot.settings.barchart.colorBars || plot.term2 ? 'none' : 'table-row')
 				}
 			]
 			if (state.config.term2)
@@ -240,18 +232,28 @@ export class Barchart {
 					settingsKey: 'showPercent',
 					boxLabel: 'Yes'
 				})
-			if (state.config.settings.barchart.colorBars)
+			if (state.config.settings.barchart.colorBars && (state.config.term2 || state.config.term0))
 				inputs.splice(8, 0, {
-					label: 'Color using',
-					title: `Colors bars either using the colors preassigned or generates colors. If there are many categories and only few are present the generated colors will provide more contrast.`,
+					label: 'Assign colors to',
+					title: `Colors bars either considering all the categories or the present categories. If there are many categories and only few are present the present choice will provide more contrast.`,
 					type: 'radio',
 					chartType: 'barchart',
 					settingsKey: 'colorUsing',
 					options: [
-						{ label: 'Preassigned', value: 'preassigned' },
-						{ label: 'Generated', value: 'generated' }
+						{ label: 'All values', value: 'all' },
+						{ label: 'Present values', value: 'present' }
 					]
 				})
+			else
+				inputs.splice(8, 0, {
+					label: 'Default color',
+					title: 'Default color for bars when there is no overlay',
+					type: 'color',
+					chartType: 'barchart',
+					settingsKey: 'defaultColor'
+					//getDisplayStyle: plot => (plot.settings.barchart.colorBars || plot.term2 ? 'none' : 'table-row')
+				})
+
 			const multipleTestingCorrection = this.app.getState().termdbConfig.multipleTestingCorrection
 			if (multipleTestingCorrection) {
 				// a checkbox to allow users to show or hide asterisks on bars
@@ -677,7 +679,7 @@ export class Barchart {
 		}
 		//use predefined colors unless colorBars is set to true.
 		// Assigning colors to bars uses a better color scale as the scale considers the categories present, not in all the categories
-		if (t.term.values && this.settings.colorUsing == 'preassigned') {
+		if (t.term.values && this.settings.colorUsing == 'all') {
 			for (const [key, v] of Object.entries(t.term.values)) {
 				if (!v.color) continue
 				if (key === label) return v.color
@@ -1232,7 +1234,7 @@ export function getDefaultBarSettings(app) {
 		multiTestingCorr: app?.getState()?.termdbConfig?.multipleTestingCorrection?.applyByDefault ? true : false,
 		defaultColor: plotColor,
 		colorBars: false,
-		colorUsing: 'preassigned',
+		colorUsing: 'all',
 		dedup: false,
 		showStatsTable: true,
 		showPercent: false
