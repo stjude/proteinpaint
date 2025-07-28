@@ -37,7 +37,10 @@ export class SelectFilters {
 		}
 		let index = 0
 		for (const tw of this.config.filterTWs) {
-			const filterValues = this.plot.settings[tw.term.id] || ''
+			let filterValues = this.plot.settings[tw.term.id] || ''
+			if (!Array.isArray(filterValues))
+				//User may have set a single value
+				filterValues = [filterValues] //ensure filterValues is an array
 			const filters: any = {}
 			for (const tw of this.config.filterTWs)
 				filters[tw.term.id] = getCategoricalTermFilter(
@@ -59,7 +62,7 @@ export class SelectFilters {
 				const option = select.append('option').attr('value', value.value).text(value.label)
 				option.property('disabled', value.disabled)
 				for (const filterValue of filterValues) {
-					if (value.value === filterValue) {
+					if (value.value == filterValue) {
 						option.attr('selected', 'selected')
 					}
 				}
