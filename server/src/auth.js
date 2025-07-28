@@ -545,7 +545,10 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 	*/
 	authApi.getNonsensitiveInfo = function (req) {
 		if (!req.query.dslabel) throw 'req.query.dslabel missing'
-		if (!req.query.embedder) throw 'req.query.embedder missing'
+		if (!req.query.embedder) {
+			req.query.embedder = req.get('host')?.split(':')[0]
+			if (!req.query.embedder) throw 'req.query.embedder missing'
+		}
 
 		const forbiddenRoutes = []
 		const ds = creds[req.query.dslabel] || creds['*']

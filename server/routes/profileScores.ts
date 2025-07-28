@@ -37,6 +37,8 @@ function init({ genomes }) {
 }
 
 async function getScores(query, ds, genome) {
+	query.__protected__.ignoredTermIds.push(query.facilityTW.term.id)
+
 	const terms: any[] = [query.facilityTW]
 	for (const term of query.scoreTerms) {
 		terms.push(term.score)
