@@ -167,7 +167,7 @@ export default function (): Mds3 {
 										{
 											chartType: 'barchart',
 											term: { id: 'diaggrp' },
-											settings: { barchart: { colorBars: true, showPercent: true, colorUsing: 'generated' } }
+											settings: { barchart: { colorBars: true, showPercent: true, colorUsing: 'present' } }
 										}
 									]
 								},
