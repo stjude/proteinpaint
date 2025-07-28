@@ -1,33 +1,105 @@
-import { Menu } from '#dom/menu'
+import { Menu, make_radios } from '#dom'
 import { addGeneSearchbox } from '../../dom/genesearch.ts'
+import { GeneSetEditUI } from '../../dom/GeneSetEdit/GeneSetEditUI'
 
 export class SearchHandler {
+	opts: any
+	dom: any
 	callback: any
 
 	init(opts) {
+		this.opts = opts
+		this.dom = {}
 		this.callback = opts.callback
+		this.dom.radiosDiv = opts.holder.append('div')
+		this.dom.searchDiv = opts.holder.append('div')
+		make_radios({
+			holder: this.dom.radiosDiv,
+			options: [
+				{ label: 'Single Gene', value: 'single', checked: true },
+				{ label: 'Gene Set', value: 'geneset', checked: false }
+			],
+			callback: v => (v == 'single' ? this.searchGene() : this.searchGeneSet())
+		})
+		this.searchGene()
+	}
+
+	searchGene() {
+		this.dom.searchDiv.selectAll('*').remove()
+		this.dom.searchDiv.style('margin-top', '10px')
 		const geneSearch = addGeneSearchbox({
 			tip: new Menu({ padding: '0px' }),
-			genome: opts.genomeObj,
-			row: opts.holder,
+			genome: this.opts.genomeObj,
+			row: this.dom.searchDiv,
 			callback: () => this.selectGene(geneSearch)
+		})
+	}
+
+	searchGeneSet() {
+		this.dom.searchDiv.selectAll('*').remove()
+		this.dom.searchDiv.style('margin-top', '0px')
+		new GeneSetEditUI({
+			holder: this.dom.searchDiv,
+			genome: this.opts.genomeObj,
+			vocabApi: this.opts.app.vocabApi,
+			callback: result => {
+				const genes = result.geneList.map(v => {
+					const name = v.gene
+					const gene = {
+						kind: 'gene',
+						id: name,
+						gene: name,
+						name,
+						type: 'geneVariant'
+					}
+					return gene
+				})
+				const term = {
+					name: genes.map(gene => gene.name).join(', '),
+					genes,
+					type: 'geneVariant'
+				}
+				this.callback(term)
+			}
 		})
 	}
 
 	async selectGene(geneSearch) {
 		if (geneSearch.geneSymbol) {
-			this.callback({
-				kind: 'gene',
-				id: geneSearch.geneSymbol,
-				gene: geneSearch.geneSymbol,
-				name: geneSearch.geneSymbol,
+			const name = geneSearch.geneSymbol
+			const term = {
+				name,
+				genes: [
+					{
+						kind: 'gene',
+						id: name,
+						gene: name,
+						name,
+						type: 'geneVariant'
+					}
+				],
 				type: 'geneVariant'
-			})
+			}
+			this.callback(term)
 		} else if (geneSearch.chr && geneSearch.start && geneSearch.stop) {
 			const { chr, start, stop } = geneSearch
 			// name should be 1-based coordinate
 			const name = `${chr}:${start + 1}-${stop}`
-			this.callback({ kind: 'coord', id: name, chr, start, stop, name, type: 'geneVariant' })
+			const term = {
+				name,
+				genes: [
+					{
+						kind: 'coord',
+						chr,
+						start,
+						stop,
+						name,
+						type: 'geneVariant'
+					}
+				],
+				type: 'geneVariant'
+			}
+			this.callback(term)
 		} else {
 			throw 'no gene or position specified'
 		}
