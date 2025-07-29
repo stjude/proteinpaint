@@ -677,7 +677,10 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 
 		// NOTE: as needed, the server route code must append to q.__protected__ignoredTermRestrictions[],
 		//  since it knows the req.query key names that correspond to terms
-		const termsToCheck = twArr.filter(tw => !q.__protected__.ignoredTermIds.includes(tw.term.id)).map(tw => tw.term)
+		const termsToCheck =
+			twArr === null
+				? null
+				: twArr.filter(tw => !q.__protected__.ignoredTermIds.includes(tw.term.id)).map(tw => tw.term)
 		const additionalFilter = ds.cohort.termdb.getAdditionalFilter(q.__protected__.clientAuthResult, termsToCheck)
 		if (!additionalFilter) {
 			// certain roles (from jwt payload) may have access to everything,
