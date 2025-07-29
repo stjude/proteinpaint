@@ -37,7 +37,7 @@ export async function makeChartBtnMenu(holder, chartsInstance) {
 					tw1: dictTw,
 					tw2: {
 						term: { gene: result.geneSymbol, type: 'geneExpression' },
-						q: { mode: 'binary' }
+						q: { mode: 'discrete' }
 					},
 					chartsInstance,
 					holder
