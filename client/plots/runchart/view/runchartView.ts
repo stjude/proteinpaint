@@ -2,7 +2,7 @@ import { fillTermWrapper } from '#termsetting'
 import type { Runchart } from '../runchart.js'
 import { ScatterView } from '../../scatter/view/scatterView.js'
 import { isNumericTerm } from '#shared/terms.js'
-import { getCategoricalTermFilter } from '#shared/filter.js'
+import { getCategoricalTermFilter } from '#filter'
 
 export const minShapeSize = 0.2
 export const maxShapeSize = 6

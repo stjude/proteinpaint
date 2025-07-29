@@ -1,5 +1,6 @@
 import tape from 'tape'
-import { negateFilter } from '../filter'
+import { negateFilter, getCategoricalTermFilter } from '../filter.js'
+import { termjson } from '../../test/testdata/termjson.js'
 
 /**************
  test sections
@@ -61,4 +62,96 @@ tape('negateFilter', test => {
 	test.throws(() => negateFilter({}), /cannot negate filter/, 'throws')
 
 	test.end()
+})
+
+tape('getCategoricalTermFilter()', t => {
+	const filterTWs = [
+		termjson.Acountry,
+		termjson.AWHO_region,
+		termjson.AIncome_group,
+		termjson.AFC_TypeofFacility,
+		termjson.AFC_TeachingFacility
+	]
+	const countryTW = filterTWs.find(tw => tw.term.id === 'Acountry')
+	const valuesCountry = { Acountry: 'Kenya' }
+	const emptyFilter = { type: 'tvslst', in: true, join: '', lst: [] }
+	const result1 = getCategoricalTermFilter(filterTWs, valuesCountry, countryTW)
+	t.deepEqual(
+		result1,
+		emptyFilter,
+		'Should filter out samples according to all the filter values except for the tw provided, as only one filter is provided and is for the tw passed there is no filter added'
+	)
+
+	const result2 = getCategoricalTermFilter(filterTWs, valuesCountry, null)
+	const countryFilter = {
+		type: 'tvslst',
+		in: true,
+		join: '',
+		lst: [
+			{
+				type: 'tvs',
+				tvs: {
+					term: countryTW.term,
+					values: [
+						{
+							key: 'Kenya'
+						}
+					]
+				}
+			}
+		]
+	}
+	t.deepEqual(
+		result2,
+		countryFilter,
+		'If there is no tw provided build filter with all the terms specified in the values'
+	)
+
+	const valuesCountryType = { Acountry: 'Kenya', AFC_TypeofFacility: 'Cancer Hospital or Institute' }
+	const facilityTypeTW = filterTWs.find(tw => tw.term.id === 'AFC_TypeofFacility')
+	const result3 = getCategoricalTermFilter(filterTWs, valuesCountryType, facilityTypeTW)
+	t.deepEqual(
+		result3,
+		countryFilter,
+		`Create filter with the other values provided, therefore filter only by the country value specified.
+         This allows to find the facilities for Kenya and build the dropdown with all the facility types found.`
+	)
+	const countrySiteFilter = {
+		type: 'tvslst',
+		in: true,
+		join: 'and',
+		lst: [
+			{
+				type: 'tvs',
+				tvs: {
+					term: countryTW.term,
+					values: [
+						{
+							key: 'Kenya'
+						}
+					]
+				}
+			},
+			{
+				type: 'tvs',
+				tvs: {
+					term: facilityTypeTW.term,
+					values: [
+						{
+							key: 'Cancer Hospital or Institute'
+						}
+					]
+				}
+			}
+		]
+	}
+	const result4 = getCategoricalTermFilter(filterTWs, valuesCountryType, null)
+	t.deepEqual(
+		result4,
+		countrySiteFilter,
+		`We want to build the filter with all the filter values provided, as there are values for both country and facility type the filter should include both.
+         terms and values should be the ones specified in the values object.`
+	)
+
+	t.end()
 })

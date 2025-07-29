@@ -1231,6 +1231,7 @@ export class TermdbVocab extends Vocab {
 	async getTopTermsByType(args) {
 		args.genome = this.state.vocab.genome
 		args.dslabel = this.state.vocab.dslabel
+		if (args.filter) args.filter = getNormalRoot(args.filter)
 		return await dofetch3('termdb/getTopTermsByType', { method: 'GET', body: args })
 	}
 
@@ -1335,7 +1336,13 @@ export class TermdbVocab extends Vocab {
 			dslabel: this.vocab.dslabel,
 			...args
 		}
-		return await dofetch3('filterTermValues', { method: 'GET', body })
+		if (body.filter) body.filter = getNormalRoot(body.filter)
+		if (body.terms) {
+			for (const tw of body.terms) {
+				this.mayStripTwProps(tw)
+			}
+		}
+		return await dofetch3('filterTermValues', { body })
 	}
 
 	async getProfileScores(args) {
@@ -1344,7 +1351,17 @@ export class TermdbVocab extends Vocab {
 			dslabel: this.vocab.dslabel,
 			...args
 		}
-		return await dofetch3('profileScores', { method: 'GET', body })
+		if (body.filter) body.filter = getNormalRoot(body.filter)
+		this.mayStripTwProps(body.facilityTW)
+		if (body.scoreTerms) {
+			// replace with a mutable copy
+			body.scoreTerms = structuredClone(body.scoreTerms)
+			for (const t of body.scoreTerms) {
+				this.mayStripTwProps(t.maxScore)
+				this.mayStripTwProps(t.score)
+			}
+		}
+		return await dofetch3('profileScores', { body })
 	}
 
 	async getProfileFormScores(args) {
@@ -1353,7 +1370,29 @@ export class TermdbVocab extends Vocab {
 			dslabel: this.vocab.dslabel,
 			...args
 		}
-		return await dofetch3('profileFormScores', { method: 'GET', body })
+		console.log(1372, body)
+		if (body.filter) body.filter = getNormalRoot(body.filter)
+		if (body.terms) {
+			for (const t of body.terms) {
+				if (t.term.id) t.term = { id: t.term.id }
+			}
+		}
+		return await dofetch3('profileFormScores', { body })
+	}
+
+	// strip some tw properties that
+	// - are not used in the server (relevant to only client-side code),
+	// - may recovered on the server side such as for dictionary terms
+	mayStripTwProps(tw) {
+		if (!tw) return
+		delete tw.type // TODO: may keep this if needed by the backend code
+		delete tw.isAtomic
+		delete tw.hiddenValues
+		delete tw.q.isAtomic
+		delete tw.q.hiddenValues
+		// the full term object may be sql-queried on the server side,
+		// no need to include the full body in the request payload
+		if (tw.term.id && (!tw.term.type || isDictionaryType(tw.term.type))) tw.term = { id: tw.term.id }
 	}
 }
 

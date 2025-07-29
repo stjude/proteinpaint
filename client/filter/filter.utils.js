@@ -156,7 +156,7 @@ export function filterJoin(lst) {
 	if (!Array.isArray(lst)) throw 'filterJoin() arg is not array'
 	if (!lst[0]) return
 	let f = JSON.parse(JSON.stringify(lst[0]))
-	if (lst.length == 1) return f
+	if (lst.length == 1) return getNormalRoot(f) // TODO: are there cases where non-normalize shape is needed from filterJoin()?
 	// more than 1 item, will join
 	if (f.lst.length < 2) {
 		if (f.join !== '') throw 'filter.join must be an empty string "" when filter.lst.length < 2'
@@ -184,7 +184,7 @@ export function filterJoin(lst) {
 	if (f.lst.length == 1 && f.lst[0].type == 'tvs') {
 		f.join = ''
 	}
-	return f
+	return getNormalRoot(f) // TODO: are there cases where non-normalize shape is needed from filterJoin()?
 }
 
 /* make copy of input filter, return negated copy
@@ -221,4 +221,58 @@ export function getCombinedTermFilter(appState, reportFilter) {
 	let filter = reportFilter
 	if (appState.termfilter.filter) filter = filterJoin([appState.termfilter.filter, reportFilter])
 	return { filter, filter0: appState.termfilter.filter0 }
+}
+
+/*
+This function is used where ever you need to build a group of categorical filters related.
+ It builds the filter needed to retrieve a term values after filtering out samples according to the other filters provided.
+ The profile filters, for example, use this function to get the filters needed to call filterTermValues, that populate the dropdowns in the controls.
+ If no tw is provided it returns a filter that is the combination of all the categorical filters provided in the filterTWs array.
+ Input:
+ - filterTWs: list of term wrappers (tw) that are used to filter the samples
+ - values: an object with term ids as keys and the values to filter by
+ - excludedTw: The term wrapper for which the filter is being built. If provided, it will be excluded from the filter.
+ - globalFilter: an optional filter that will be joined with the generated filter
+ Output:
+ - a filter object that can be used to filter term values based on the provided term wrappers and values.
+*/
+export function getCategoricalTermFilter(filterTWs, values, excludedTw, globalFilter) {
+	const lst = []
+	for (const tw of filterTWs) {
+		if (excludedTw && tw.id === excludedTw.id) continue
+		processTW(tw, values, lst)
+	}
+
+	let filter = {
+		type: 'tvslst',
+		in: true,
+		join: lst.length > 1 ? 'and' : '',
+		lst
+	}
+	if (globalFilter?.lst.length > 0) filter = filterJoin([globalFilter, filter])
+	return filter
+}
+
+function processTW(tw, values, lst) {
+	const value = values[tw.term.id]
+	if (value !== undefined) {
+		if (Array.isArray(value)) {
+			const tvs = {
+				type: 'tvs',
+				tvs: {
+					term: tw.term,
+					values: []
+				}
+			}
+			for (const item of value) tvs.tvs.values.push({ key: item })
+			lst.push(tvs)
+		} else
+			lst.push({
+				type: 'tvs',
+				tvs: {
+					term: tw.term,
+					values: [{ key: value }]
+				}
+			})
+	}
 }

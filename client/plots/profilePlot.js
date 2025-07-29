@@ -4,7 +4,7 @@ import { fillTermWrapper, fillTwLst } from '#termsetting'
 import { select } from 'd3-selection'
 import { Menu } from '#dom/menu'
 import { icons as icon_functions } from '#dom/control.icons'
-import { getCategoricalTermFilter } from '#shared/filter.js'
+import { getCategoricalTermFilter } from '#filter'
 
 /*
 
@@ -171,7 +171,6 @@ export class profilePlot {
 		const filters = {}
 		for (const tw of this.config.filterTWs) {
 			const filter = getCategoricalTermFilter(this.config.filterTWs, this.settings, tw, this.state.termfilter.filter)
-
 			if (filter) filters[tw.term.id] = filter
 		}
 		this.filteredTermValues = await this.app.vocabApi.filterTermValues({
