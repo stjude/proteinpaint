@@ -21,7 +21,8 @@ export class MapRenderer {
 		coordinateX: number,
 		coordinateY: number,
 		sessionWSImage: SessionWSImage,
-		buffers: any
+		buffers: any,
+		map: OLMap
 	) => void
 	private sessionWSImage: SessionWSImage
 	private buffers: any
@@ -34,7 +35,9 @@ export class MapRenderer {
 				coordinateY: number,
 				sessionWSImage: WSImage & {
 					sessionsAnnotations?: Annotation[] | undefined
-				}
+				},
+				buffers: any,
+				map: OLMap
 			): void
 		},
 		sessionWSImage: SessionWSImage,
@@ -129,7 +132,7 @@ export class MapRenderer {
 				const tileY = Math.floor(-coordinate[1] / tileSize) * tileSize
 
 				// Call the listener with upper-left corner
-				this.viewerClickListener(tileX, tileY, this.sessionWSImage, this.buffers)
+				this.viewerClickListener(tileX, tileY, this.sessionWSImage, this.buffers, map)
 			})
 		}
 
