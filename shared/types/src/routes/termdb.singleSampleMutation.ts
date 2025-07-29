@@ -20,7 +20,7 @@ type ValidResponse = {
 		on ui, selecting an object will allow to show this data in disco plot
 		each is identified by either nameHtml or name
 	*/
-	alternativeDataByDt: {
+	alternativeDataByDt?: {
 		[index: number]: {
 			/** hyperlink */
 			nameHtml?: string
