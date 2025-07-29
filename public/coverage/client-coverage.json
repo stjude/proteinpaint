@@ -614,9 +614,9 @@
   "plots/matrix/matrix.controls.js": {
     "lines": {
       "total": 406,
-      "covered": 77,
+      "covered": 76,
       "skipped": 0,
-      "pct": 18.96
+      "pct": 18.71
     },
     "functions": {
       "total": 141,
@@ -626,25 +626,25 @@
     },
     "statements": {
       "total": 423,
-      "covered": 77,
+      "covered": 76,
       "skipped": 0,
-      "pct": 18.2
+      "pct": 17.96
     },
     "branches": {
-      "total": 373,
-      "covered": 37,
+      "total": 375,
+      "covered": 40,
       "skipped": 0,
-      "pct": 9.91
+      "pct": 10.66
     },
     "lowestPct": {
-      "curr": 9.91,
+      "curr": 10.66,
       "prev": 10.69,
-      "diff": -0.7799999999999994
+      "diff": -0.02999999999999936
     },
     "averagePct": {
-      "curr": 16.375,
+      "curr": 16.44,
       "prev": 17.022499999999997,
-      "diff": -0.6474999999999973
+      "diff": -0.582499999999996
     }
   },
   "plots/matrix/matrix.data.js": {
