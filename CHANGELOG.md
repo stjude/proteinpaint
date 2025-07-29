@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 Fixes:
 - hierCluster: remove geneset edit ui from "Clustering" panel. Show "N Genes" as name for the "Genes" button, and add to it Hierarchical Cluster Gene Set Edit UI and Genomic Alteration Gene Set Edit UI.
+- Survival plot: when overlaying with a geneExpression term, create a new group "missing data" for the samples have survival data but lack gene expression data.
 
 
 ## 2.137.1
