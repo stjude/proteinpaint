@@ -687,6 +687,7 @@ async function getCnvFusion4oneCase(opts, ds) {
 		'cases.samples.tissue_type', // may not be needed
 		'data_type',
 		'file_id',
+		'file_name',
 		'data_format',
 		'experimental_strategy',
 		'analysis.workflow_type'
@@ -705,23 +706,34 @@ async function getCnvFusion4oneCase(opts, ds) {
 		.json()
 	if (!Array.isArray(re.data.hits)) throw 're.data.hits[] not array'
 
-	// record array of usable files, each: {dt, fid, name}; later .mlst[] will be loaded to each element
-	// this allows identifying availability of multiple files for a data type
-	const useFiles = []
+	// collect usable cnv/fusion files, each: {fid, name, mlst[]}, will be returned to client as-is
+	// this supports multiple files for the same data type
+	const cnvfiles = [],
+		fusionfiles = []
 
 	for (const h of re.data.hits) {
 		if (h.data_format == 'BEDPE') {
 			if (h.experimental_strategy != 'RNA-Seq') continue
 			if (h.analysis?.workflow_type != 'Arriba') continue
 			if (h.data_type != 'Transcript Fusion') continue
-			useFiles.push({ dt: common.dtfusionrna, fid: h.file_id, name: 'Arriba', mlst: [] })
+			try {
+				fusionfiles.push({
+					nameHtml: `<a href=https://portal.gdc.cancer.gov/files/${h.file_id} target=_blank>${h.file_name}</a>`,
+					mlst: await loadArribaFile(host, headers, h.file_id)
+				})
+			} catch (e) {
+				// no permission to fusion file
+			}
 			continue
 		}
 
 		if (h.data_format == 'TXT') {
 			if (h.experimental_strategy == 'Genotyping Array') {
 				if (h.data_type == 'Masked Copy Number Segment' || h.data_type == 'Allele-specific Copy Number Segment') {
-					useFiles.push({ dt: common.dtcnv, fid: h.file_id, name: h.experimental_strategy, mlst: [] })
+					cnvfiles.push({
+						nameHtml: `<a href=https://portal.gdc.cancer.gov/files/${h.file_id} target=_blank>${h.file_name}</a>`,
+						mlst: await loadCnvFile(host, h.file_id)
+					})
 				}
 				continue
 			}
@@ -729,49 +741,19 @@ async function getCnvFusion4oneCase(opts, ds) {
 				// is wgs, no need to check tissue_type, the file is usable
 				if (!h.file_id) continue
 				if (h.data_type != 'Allele-specific Copy Number Segment') continue
-				useFiles.push({ dt: common.dtcnv, fid: h.file_id, name: h.experimental_strategy, mlst: [] })
+				cnvfiles.push({
+					nameHtml: `<a href=https://portal.gdc.cancer.gov/files/${h.file_id} target=_blank>${h.file_name}</a>`,
+					wgsTempFlag: true,
+					mlst: await loadCnvFile(host, h.file_id)
+				})
 				continue
 			}
 		}
 	}
-
-	for (const aFile of useFiles) {
-		switch (aFile.dt) {
-			case common.dtcnv:
-				// in request, do not use headers here since accept should be 'text/plain', not 'application/json'
-				const re = await ky(joinUrl(host.rest, 'data', aFile.fid), { timeout: false }).text()
-				parseCnvFile(re.trim().split('\n'), aFile.mlst)
-				break
-			case common.dtfusionrna:
-				try {
-					// must use headers to access controlled fusion file
-					const re = await ky(joinUrl(host.rest, 'data', arribaFile), { headers, timeout: false }).text()
-					const lines = re.split('\n')
-					// first line is header
-					// #chrom1 start1  end1    chrom2  start2  end2    name    score   strand1 strand2 strand1(gene/fusion)    strand2(gene/fusion)    site1   site2   type    direction1      direction2      split_reads1    split_reads2    discordant_mates        coverage1       coverage2       closest_genomic_breakpoint1     closest_genomic_breakpoint2     filters fusion_transcript       reading_frame   peptide_sequence        read_identifiers
-					for (let i = 1; i < lines.length; i++) {
-						const l = lines[i].split('\t')
-						const f = {
-							dt: common.dtfusionrna,
-							chrA: l[0],
-							posA: Number(l[1]),
-							chrB: l[3],
-							posB: Number(l[4])
-						}
-						if (!f.chrA || !f.chrB || Number.isNaN(f.posA) || Number.isNaN(f.posB)) continue
-						parseArribaName(f, l[6])
-						aFile.mlst.push(f)
-					}
-				} catch (e) {
-					// no permission to fusion file
-				}
-				break
-			default:
-				throw 'unknown aFile.dt'
-		}
-	}
-
-	return useFiles
+	const dt2files = {}
+	if (fusionfiles.length) dt2files[common.dtfusionrna] = fusionfiles
+	if (cnvfiles.length) dt2files[common.dtcnv] = cnvfiles
+	return dt2files
 
 	function getFilter(p) {
 		/* p={}
@@ -802,7 +784,10 @@ async function getCnvFusion4oneCase(opts, ds) {
 /*
 cnv files come in different formats. detect by header line
 */
-function parseCnvFile(lines, mlst) {
+async function loadCnvFile(host, fid) {
+	const re = await ky(joinUrl(host.rest, 'data', fid), { timeout: false }).text()
+	const lines = re.trim().split('\n')
+	const mlst = []
 	switch (lines[0]) {
 		case 'GDC_Aliquot_ID\tChromosome\tStart\tEnd\tNum_Probes\tSegment_Mean':
 		case 'GDC_Aliquot\tChromosome\tStart\tEnd\tNum_Probes\tSegment_Mean':
@@ -823,7 +808,7 @@ function parseCnvFile(lines, mlst) {
 					throw 'start/stop/value not a number in cnv file: ' + l
 				mlst.push(cnv)
 			}
-			return
+			break
 		case 'GDC_Aliquot\tChromosome\tStart\tEnd\tCopy_Number\tMajor_Copy_Number\tMinor_Copy_Number':
 			for (let i = 1; i < lines.length; i++) {
 				const l = lines[i].split('\t')
@@ -860,10 +845,34 @@ function parseCnvFile(lines, mlst) {
 					}
 				}
 			}
-			return
+			break
 		default:
 			throw 'unknown CNV file header line: ' + lines[0]
 	}
+	return mlst
+}
+
+// must use headers to access controlled fusion file
+async function loadArribaFile(host, headers, fid) {
+	const re = await ky(joinUrl(host.rest, 'data', fid), { headers, timeout: false }).text()
+	const lines = re.split('\n')
+	// first line is header
+	// #chrom1 start1  end1    chrom2  start2  end2    name    score   strand1 strand2 strand1(gene/fusion)    strand2(gene/fusion)    site1   site2   type    direction1      direction2      split_reads1    split_reads2    discordant_mates        coverage1       coverage2       closest_genomic_breakpoint1     closest_genomic_breakpoint2     filters fusion_transcript       reading_frame   peptide_sequence        read_identifiers
+	const mlst = []
+	for (let i = 1; i < lines.length; i++) {
+		const l = lines[i].split('\t')
+		const f = {
+			dt: common.dtfusionrna,
+			chrA: l[0],
+			posA: Number(l[1]),
+			chrB: l[3],
+			posB: Number(l[4])
+		}
+		if (!f.chrA || !f.chrB || Number.isNaN(f.posA) || Number.isNaN(f.posB)) continue
+		parseArribaName(f, l[6])
+		mlst.push(f)
+	}
+	return mlst
 }
 
 function parseArribaName(f, str) {
@@ -2242,17 +2251,35 @@ async function getSingleSampleMutations(query, ds, genome) {
 		}
 	}
 
-	{
-		// cnv TODO total
-		try {
-			const tmp = await getCnvFusion4oneCase(query, ds)
-			result.mlst.push(...tmp)
-		} catch (e) {
-			console.log(e)
-			throw e
+	// cnv and fusion are loaded from per-sample text files
+	const dt2files = await getCnvFusion4oneCase(query, ds)
+	const cfs = dt2files[common.dtcnv]
+	if (cfs) {
+		// select a default set of cnvs to insert to mlst so it shows on disco;
+		const usefile = cfs.find(f => f.wgsTempFlag) || cfs[0]
+		result.mlst.push(...usefile.mlst)
+		if (cfs.length == 1) {
+			// just one. data from this file is already added to result.mlst so no need to include this
+			delete dt2files[common.dtcnv]
+		} else {
+			// more than 1 cnv file, send all to client but delete the temporary flag
+			for (const f of cfs) delete f.wgsTempFlag
 		}
 	}
-
+	const ffs = dt2files[common.dtfusionrna]
+	if (ffs) {
+		// just use the first set of fusion data
+		result.mlst.push(...ffs[0].mlst)
+		if (ffs.length == 1) {
+			// just one
+			delete dt2files[common.dtfusionrna]
+		} else {
+			// more than 1. include
+		}
+	}
+	if (Object.keys(dt2files).length) {
+		result.alternativeDataByDt = dt2files
+	}
 	return result
 }
 
