@@ -15,7 +15,13 @@ export class WSIViewerInteractions {
 	public activePatchColor?: string
 	thumbnailClickListener: (index: number) => void
 	zoomInEffectListener: (activeImageExtent: unknown, zoomInPoints: [number, number][], map: OLMap) => void
-	viewerClickListener: (coordinateX: number, coordinateY: number, sessionWSImage: SessionWSImage, buffers?: any) => void
+	viewerClickListener: (
+		coordinateX: number,
+		coordinateY: number,
+		sessionWSImage: SessionWSImage,
+		buffers: any,
+		map: OLMap
+	) => void
 	setKeyDownListener: (
 		holder: any,
 		sessionWSImage: SessionWSImage,
@@ -121,8 +127,9 @@ export class WSIViewerInteractions {
 					//Timeout for when user presses arrows multiple times.
 					const d = debounce(async () => {
 						buffers.annotationsIdx.set(currentIndex)
-						const newZoomInPoints = annotationsData[currentIndex].zoomCoordinates
-						if (newZoomInPoints != undefined) this.zoomInEffectListener(activeImageExtent, [newZoomInPoints], map)
+						//
+						// const newZoomInPoints = annotationsData[currentIndex].zoomCoordinates
+						// if (newZoomInPoints != undefined) this.zoomInEffectListener(activeImageExtent, [newZoomInPoints], map)
 					}, 500)
 					d()
 				}
@@ -169,7 +176,8 @@ export class WSIViewerInteractions {
 			coordinateX: number,
 			coordinateY: number,
 			sessionWSImage: SessionWSImage,
-			buffers?: any
+			buffers: any,
+			map: OLMap
 		) => {
 			const state = wsiApp.app.getState()
 			const settings: Settings = state.plots.find(p => p.id === wsiApp.id).settings
@@ -198,6 +206,52 @@ export class WSIViewerInteractions {
 					class: '',
 					uncertainty: 0
 				}
+
+				const vectorLayer = map
+					.getLayers()
+					.getArray()
+					.find(l => l instanceof VectorLayer)!
+
+				const source: VectorSource<Feature<Geometry>> | null = vectorLayer.getSource()
+
+				const topLeft = [coordinateX, -coordinateY]
+				const size = 512
+				const borderWth = 30
+
+				const borderCoords = [
+					[
+						topLeft,
+						[topLeft[0] + size, topLeft[1]],
+						[topLeft[0] + size, topLeft[1] - size],
+						[topLeft[0], topLeft[1] - size],
+						topLeft
+					],
+					[
+						[topLeft[0] + borderWth, topLeft[1] - borderWth],
+						[topLeft[0] + size - borderWth, topLeft[1] - borderWth],
+						[topLeft[0] + size - borderWth, topLeft[1] - size + borderWth],
+						[topLeft[0] + borderWth, topLeft[1] - size + borderWth],
+						[topLeft[0] + borderWth, topLeft[1] - borderWth]
+					]
+				]
+
+				const border = new Feature({
+					geometry: new Polygon(borderCoords),
+					properties: {
+						isLocked: false
+					}
+				})
+
+				border.setStyle(
+					new Style({
+						fill: new Fill({ color: '#FFA500' }),
+						stroke: new Stroke({ color: '#FFA500', width: 1 })
+					})
+				)
+
+				console.log('source', source)
+
+				source?.addFeature(border)
 
 				const oldAnnotation = settings.sessionsAnnotations
 
