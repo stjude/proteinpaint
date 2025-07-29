@@ -43,11 +43,10 @@ export class ViewModel {
 	}
 
 	getZoomInPoints(index: number) {
-		const sessionZoomPoints = this.sampleWSImages[index].sessionsAnnotations?.map(a => a.zoomCoordinates) || []
-
-		const persistedZoomPoints = this.sampleWSImages[index].zoomInPoints || []
-
-		return [...sessionZoomPoints, ...persistedZoomPoints]
+		const image = this.sampleWSImages[index]
+		const session = image.sessionsAnnotations?.map(a => a.zoomCoordinates) || []
+		const persisted = image.zoomInPoints || []
+		return [...session, ...persisted].slice(0, 1)
 	}
 
 	setAnnonationsTableData(imageViewData: ImageViewData, imageData: SessionWSImage) {
