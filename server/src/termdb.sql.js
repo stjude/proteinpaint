@@ -7,6 +7,7 @@ import { sampleLstSql } from './termdb.sql.samplelst.js'
 import { multivalueCTE } from './termdb.sql.multivalue.js'
 import { boxplot_getvalue } from './utils.js'
 import { DEFAULT_SAMPLE_TYPE, isNumericTerm, annoNumericTypes } from '#shared/terms.js'
+import { authApi } from '#src/auth.js'
 /*
 
 ********************** EXPORTED
@@ -43,13 +44,17 @@ get_label4key
 
 */
 //in the future we may need to pass the sample type when there are more types than root and not root
-export async function get_samples(qfilter, ds, canDisplay = false) {
+export async function get_samples(q, ds, canDisplay = false) {
+	console.log(q)
 	/*
 must have qfilter[]
-as the actual query is embedded in qfilter
+as the actual query is embedded in q.filter
 return an array of sample names passing through the filter
 */
-	const filter = await getFilterCTEs(qfilter, ds) // if qfilter is blank, it returns null
+
+	authApi.mayExtendqFilter(q, ds, null)
+
+	const filter = await getFilterCTEs(q.filter, ds) // if q.filter is blank, it returns null
 	const sql = filter
 		? `WITH ${filter.filters} SELECT sample as id, name FROM ${filter.CTEname} join sampleidmap on sample = sampleidmap.id`
 		: `SELECT id, name FROM sampleidmap`

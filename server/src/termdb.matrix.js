@@ -359,7 +359,7 @@ async function mayGetSampleFilterSet4snplst(q, nonDictTerms) {
 		return
 	}
 	if (!q.filter) return // no filter, allow snplst/snplocus to return data for all samples
-	return new Set((await get_samples(q.filter, q.ds)).map(i => i.id))
+	return new Set((await get_samples(q, q.ds)).map(i => i.id))
 }
 
 export async function getSamplesPerFilterResponse(q, ds, res) {
@@ -372,8 +372,7 @@ export async function getSamplesPerFilter(q, ds) {
 	const samples = {}
 	for (const id in q.filters) {
 		const filter = q.filters[id]
-		// We need to update the filter to contain the user filter when ignoredTermIds includes the site term id!!!
-		const result = (await get_samples(filter, q.ds)).map(i => i.id)
+		const result = (await get_samples({ filter, __protected__: q.__protected__ }, q.ds)).map(i => i.id)
 		samples[id] = Array.from(new Set(result))
 	}
 	return samples
