@@ -176,7 +176,8 @@ export class profilePlot {
 		}
 		this.filteredTermValues = await this.app.vocabApi.filterTermValues({
 			terms: this.config.filterTWs,
-			filters
+			filters,
+			ignoredTermIds: this.settings.filterByUserSites ? [] : [this.config.facilityTW.term.id] //if filterByUserSites is true, do not ignore the facility term filter
 		})
 		this.regions = this.filteredTermValues[this.config.regionTW.id]
 		this.countries = this.filteredTermValues[this.config.countryTW.id]
@@ -210,7 +211,8 @@ export class profilePlot {
 				isAggregate,
 				sites: this.settings.sites,
 				userSites: this.state.sites,
-				facilityTW: this.config.facilityTW
+				facilityTW: this.config.facilityTW,
+				filterByUserSites: this.settings.filterByUserSites
 			})
 		else
 			this.data = await this.app.vocabApi.getProfileFormScores({
@@ -220,7 +222,8 @@ export class profilePlot {
 				isAggregate,
 				sites: this.settings.sites,
 				userSites: this.state.sites,
-				facilityTW: this.config.facilityTW
+				facilityTW: this.config.facilityTW,
+				filterByUserSites: this.settings.filterByUserSites
 			})
 		this.sites = this.data.sites
 		this.sites.sort((a, b) => {
@@ -240,6 +243,13 @@ export class profilePlot {
 		const chartType = this.type
 		this.dom.controlsDiv.selectAll('*').remove()
 		let inputs = []
+		const userSitesFilterInput = {
+			label: 'Use accessible sites only',
+			boxLabel: '',
+			type: 'checkbox',
+			chartType,
+			settingsKey: 'filterByUserSites'
+		}
 		if (this.state.sites?.length == 1 && !isRadarFacility) {
 			const dataInput = {
 				label: 'Data',
@@ -268,7 +278,7 @@ export class profilePlot {
 						chartType,
 						settingsKey: this.config.regionTW.term.id,
 						options: this.regions,
-						callback: value => this.setRegion(value)
+						callback: value => this.setFilterValue(this.config.regionTW.term.id, value)
 					},
 					{
 						label: 'Country',
@@ -350,6 +360,7 @@ export class profilePlot {
 					}
 				}
 				inputs.push(sitesInput)
+				if (this.state.user != 'admin') inputs.unshift(userSitesFilterInput) //add filter by user sites only for non-admin users
 			}
 			if (isRadarFacility) {
 				this.sampleData = await this.app.vocabApi.getProfileScores({
@@ -428,14 +439,6 @@ export class profilePlot {
 
 	getFilter() {
 		return getCategoricalTermFilter(this.config.filterTWs, this.settings, null, this.state.termfilter.filter)
-	}
-
-	setRegion(region) {
-		const config = this.config
-		this.settings[config.regionTW.term.id] = region
-		this.clearFiltersExcept([config.regionTW.term.id])
-		config.filter = this.getFilter()
-		this.app.dispatch({ type: 'plot_edit', id: this.id, config })
 	}
 
 	clearFiltersExcept(ids) {
@@ -633,7 +636,8 @@ export function clearLocalFilters(plot) {
 export function getDefaultProfilePlotSettings() {
 	return {
 		isAggregate: false,
-		showTable: true
+		showTable: true,
+		filterByUserSites: false //if true, the user sites filter is applied
 	}
 }
 

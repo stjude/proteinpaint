@@ -62,6 +62,7 @@ function getList(samplesPerFilter, filtersData, tw) {
 async function getFilters(query, ds, genome, res) {
 	try {
 		//Dictionary with samples applying all the filters but not the one from the current term id
+		if (query.ignoredTermIds) query.__protected__.ignoredTermIds.push(...query.ignoredTermIds)
 		const samplesPerFilter = await getSamplesPerFilter(query, ds)
 		const filtersData = await getData(
 			{
