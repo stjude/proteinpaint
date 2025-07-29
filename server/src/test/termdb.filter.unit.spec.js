@@ -148,7 +148,7 @@ tape('invalid filter term', async function (test) {
 						tvs: {
 							term: {
 								id: 'invalidTerm',
-								name: 'InvalidTerm',
+								//name: 'InvalidTerm', // termdb.filter will query the db if either the term.name or term.type or both is missing
 								type: 'categorical'
 							},
 							values: [

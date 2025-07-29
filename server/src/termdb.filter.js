@@ -24,7 +24,10 @@ export async function getFilterCTEs(filter, ds, sampleTypes = new Set(), CTEname
 	if (!filter) return
 	if (filter.type != 'tvslst') throw 'filter.type is not "tvslst" but: ' + filter.type
 	if (!Array.isArray(filter.lst)) throw 'filter.lst must be an array'
-	if (filter.lst.length == 0) return console.error('filter.lst[] is zero length, see if is an error')
+	if (filter.lst.length == 0) {
+		// an empty filter.lst[] is acceptable and equivalent to having a falsy (null, undefined) filter
+		return
+	}
 	if (filter.lst.length == 1) {
 		// only one element at this level, disregard "join"
 		if (filter.lst[0].type == 'tvslst') throw 'only one element at a level: type should not be "tvslst"'
@@ -32,6 +35,9 @@ export async function getFilterCTEs(filter, ds, sampleTypes = new Set(), CTEname
 		// multiple elements at this level
 		if (filter.join != 'or' && filter.join != 'and')
 			throw 'multiple elements at a level: filter.join must equal either "or" or "and"'
+		if (filter.lst.length == 2 && filter.lst[1].type == 'tvslst' && filter.lst[1].lst.length === 0) {
+			throw 'empty nested filter, please use getNormalRoot() to normalize the filter shape'
+		}
 	}
 	if (!('in' in filter)) filter.in = true // currently not handled by the client
 
@@ -46,6 +52,13 @@ export async function getFilterCTEs(filter, ds, sampleTypes = new Set(), CTEname
 		const sample_type = getSampleType(item.tvs?.term, ds)
 		const parentType = getParentType(sampleTypes, ds)
 		const onlyChildren = sampleTypes.size > 1 && sample_type == parentType
+
+		if (item.tvs?.term?.id && (!item.tvs.term.type || !item.tvs.term.name)) {
+			// handle stripped-down dictionary termwrapper
+			item.tvs.term = ds.cohort.termdb.q.termjsonByOneid(item.tvs.term.id)
+			if (!item.tvs.term) throw `invalid term.id in tvs`
+		}
+
 		const CTEname_i = CTEname + '_' + i
 		let f
 		if (item.type == 'tvslst') {
@@ -64,12 +77,6 @@ export async function getFilterCTEs(filter, ds, sampleTypes = new Set(), CTEname
 			f = await get_metaboliteIntensity(item.tvs, CTEname_i, ds)
 		} else if (dtTermTypes.has(item.tvs.term.type)) {
 			f = await get_dtTerm(item.tvs, CTEname_i, ds)
-		} else if (
-			item.tvs.term.id &&
-			(!item.tvs.term.type || isDictionaryType(item.tvs.term.type)) &&
-			!ds.cohort.termdb.q.termjsonByOneid(item.tvs.term.id)
-		) {
-			throw 'invalid term id in tvs'
 		} else if (item.tvs.term.type == 'categorical') {
 			f = get_categorical(item.tvs, CTEname_i, ds, onlyChildren)
 			// .CTEs: []
@@ -92,7 +99,6 @@ export async function getFilterCTEs(filter, ds, sampleTypes = new Set(), CTEname
 		} else {
 			throw 'unknown term type'
 		}
-
 		thislevelCTEnames.push(f.CTEname)
 		CTEs.push(...f.CTEs)
 		values.push(...f.values)

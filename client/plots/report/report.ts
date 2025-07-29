@@ -3,7 +3,7 @@ import { fillTermWrapper } from '#termsetting'
 import { ReportView } from './view/reportView'
 import { RxComponentInner } from '../../types/rx.d'
 import { controlsInit } from '../controls.js'
-import { getCategoricalTermFilter } from '#shared/filter.js'
+import { getCategoricalTermFilter } from '#filter'
 
 export class Report extends RxComponentInner {
 	config: any
