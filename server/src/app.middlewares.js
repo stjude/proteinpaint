@@ -107,11 +107,19 @@ export function setAppMiddlewares(app, doneLoading) {
 
 		/*
         !!! put this code after logging the request, so these protected info are not logged !!!
-        !! more or less quick fix !!
-        in gdc environment, this will pass sessionid from cookie to req.query
-        to be added to request header where it's querying gdc api
-        by doing this, route code is worry-free and no need to pass "req{}" to gdc purpose-specific code doing the API calls
-        these *protected* contents are not used in non-gdc code
+				
+        __protected__{} are key-values that are added by the server to the request.query payload,
+        to easily pass authentication-related or sensitive information to downstream route handler code 
+        without having to sequentially pass those information as argument to every nested function calls.
+
+        in gdc environment: 
+        - this will pass sessionid from cookie to req.query, to be added to request header where it's querying gdc api
+          by doing this, route code is worry-free and no need to pass "req{}" to gdc purpose-specific code doing the API calls
+        
+        for non-gdc datasets:
+        - these *protected* contents may contain information as extracted from the jwt (authApi.getNonsensitiveInfo()) 
+          and as determined by a server route code that the dataset can use to compute per-user access restrictions/authorizations 
+          when querying data
         */
 		const __protected__ = { ignoredTermIds: [] }
 		if (req.query.dslabel) Object.assign(__protected__, authApi.getNonsensitiveInfo(req))
@@ -128,8 +136,8 @@ export function setAppMiddlewares(app, doneLoading) {
 
 function log(req) {
 	const j = {}
-	for (const k in req.query) {
-		if (k != 'jwt') j[k] = req.query[k]
+	for (const k of Object.keys(req.query)) {
+		if (k != 'jwt' && k !== '__protected__') j[k] = req.query[k]
 	}
 	const pathname = url.parse(req.url).pathname
 	if (pathname.endsWith('.js.map')) return
