@@ -121,7 +121,7 @@ export function setAppMiddlewares(app, doneLoading) {
           and as determined by a server route code that the dataset can use to compute per-user access restrictions/authorizations 
           when querying data
         */
-		const __protected__ = { ignoredTermIds: [] }
+		const __protected__ = { ignoredTermIds: [] } // when provided the filter on these terms will be ignored
 		if (req.query.dslabel) Object.assign(__protected__, authApi.getNonsensitiveInfo(req))
 		if (req.cookies?.sessionid) {
 			__protected__.sessionid = req.cookies.sessionid

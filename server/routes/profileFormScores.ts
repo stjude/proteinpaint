@@ -37,13 +37,15 @@ function init({ genomes }) {
 }
 
 async function getScoresDict(query, ds, genome) {
+	if (!query.filterByUserSites) query.__protected__.ignoredTermIds.push(query.facilityTW.term.id)
 	const terms = [...query.scoreTerms, query.facilityTW]
 	if (query.scScoreTerms) terms.push(...query.scScoreTerms)
 
 	const data = await getData(
 		{
 			terms,
-			filter: query.site || !query.isAggregate ? undefined : query.filter //if isRadarFacility and site is specified, do not apply the filter
+			filter: query.site || !query.isAggregate ? undefined : query.filter, //if isRadarFacility and site is specified, do not apply the filter
+			__protected__: query.__protected__
 		},
 		ds,
 		genome
@@ -56,23 +58,26 @@ async function getScoresDict(query, ds, genome) {
 	sites = lst.map((s: any) => {
 		return { label: data.refs.bySampleId[s.sample].label, value: s.sample }
 	})
+	if (query.userSites) {
+		sites = sites.filter(s => query.userSites.includes(s.label))
+	}
 
 	let sitesSelected: any[] = []
 	if (query.site) sitesSelected = [query.site]
 	else if (!query.isAggregate) sitesSelected = [sites[0].value] //only one site selected
 	else sitesSelected = query.sites
 	const sampleData = sitesSelected?.length == 1 ? data.samples[sitesSelected[0]] : null
-	const samples = Object.values(data.samples)
+	let samples = sampleData ? [sampleData] : Object.values(data.samples)
+	if (sitesSelected?.length > 0) samples = samples.filter((s: any) => sitesSelected.includes(s.sample))
+
 	const term2Score: any = {}
 	for (const d of query.scoreTerms) {
-		const samples = sampleData ? [sampleData] : Object.values(data.samples)
 		const getDictFunc = (sample: any) => getDict(d.$id, sample)
 		const percents: { [key: string]: number } = getPercentsDict(getDictFunc, samples)
 		term2Score[d.term.id] = percents
 	}
 	if (query.scScoreTerms)
 		for (const d of query.scScoreTerms) {
-			const samples = sampleData ? [sampleData] : Object.values(data.samples)
 			const percents: { [key: string]: number } = getSCPercentsDict(d, samples)
 			term2Score[d.term.id] = percents
 		}

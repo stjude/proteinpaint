@@ -372,6 +372,7 @@ export async function getSamplesPerFilter(q, ds) {
 	const samples = {}
 	for (const id in q.filters) {
 		const filter = q.filters[id]
+		// We need to update the filter to contain the user filter when ignoredTermIds includes the site term id!!!
 		const result = (await get_samples(filter, q.ds)).map(i => i.id)
 		samples[id] = Array.from(new Set(result))
 	}
