@@ -217,38 +217,38 @@
   },
   "termsetting/handlers/groupsetting.ts": {
     "lines": {
-      "total": 230,
-      "covered": 98,
+      "total": 228,
+      "covered": 3,
       "skipped": 0,
-      "pct": 42.6
+      "pct": 1.31
     },
     "functions": {
       "total": 60,
-      "covered": 24,
+      "covered": 0,
       "skipped": 0,
-      "pct": 40
+      "pct": 0
     },
     "statements": {
-      "total": 249,
-      "covered": 98,
+      "total": 247,
+      "covered": 3,
       "skipped": 0,
-      "pct": 39.35
+      "pct": 1.21
     },
     "branches": {
-      "total": 144,
-      "covered": 37,
+      "total": 142,
+      "covered": 0,
       "skipped": 0,
-      "pct": 25.69
+      "pct": 0
     },
     "lowestPct": {
-      "curr": 25.69,
-      "prev": 24.34,
-      "diff": 1.3500000000000014
+      "curr": 0,
+      "prev": 25.69,
+      "diff": -25.69
     },
     "averagePct": {
-      "curr": 36.91,
-      "prev": 35.045,
-      "diff": 1.8649999999999949
+      "curr": 0.63,
+      "prev": 36.91,
+      "diff": -36.279999999999994
     }
   },
   "common/dofetch.js": {
@@ -325,38 +325,38 @@
   },
   "termsetting/termsetting.ts": {
     "lines": {
-      "total": 400,
-      "covered": 236,
+      "total": 406,
+      "covered": 213,
       "skipped": 0,
-      "pct": 59
+      "pct": 52.46
     },
     "functions": {
-      "total": 67,
-      "covered": 38,
+      "total": 68,
+      "covered": 32,
       "skipped": 0,
-      "pct": 56.71
+      "pct": 47.05
     },
     "statements": {
-      "total": 469,
-      "covered": 262,
+      "total": 476,
+      "covered": 233,
       "skipped": 0,
-      "pct": 55.86
+      "pct": 48.94
     },
     "branches": {
-      "total": 351,
-      "covered": 165,
+      "total": 359,
+      "covered": 133,
       "skipped": 0,
-      "pct": 47
+      "pct": 37.04
     },
     "lowestPct": {
-      "curr": 47,
-      "prev": 0,
-      "diff": 47
+      "curr": 37.04,
+      "prev": 47,
+      "diff": -9.96
     },
     "averagePct": {
-      "curr": 54.6425,
-      "prev": 0,
-      "diff": 54.6425
+      "curr": 46.372499999999995,
+      "prev": 54.6425,
+      "diff": -8.270000000000003
     }
   },
   "tw/TwRouter.ts": {
@@ -397,38 +397,38 @@
   },
   "tw/geneVariant.ts": {
     "lines": {
-      "total": 68,
-      "covered": 4,
+      "total": 89,
+      "covered": 47,
       "skipped": 0,
-      "pct": 5.88
+      "pct": 52.8
     },
     "functions": {
-      "total": 8,
-      "covered": 0,
-      "skipped": 0,
-      "pct": 0
-    },
-    "statements": {
-      "total": 89,
+      "total": 12,
       "covered": 4,
       "skipped": 0,
-      "pct": 4.49
+      "pct": 33.33
+    },
+    "statements": {
+      "total": 117,
+      "covered": 56,
+      "skipped": 0,
+      "pct": 47.86
     },
     "branches": {
-      "total": 86,
-      "covered": 0,
+      "total": 104,
+      "covered": 48,
       "skipped": 0,
-      "pct": 0
+      "pct": 46.15
     },
     "lowestPct": {
-      "curr": 0,
+      "curr": 33.33,
       "prev": 0,
-      "diff": 0
+      "diff": 33.33
     },
     "averagePct": {
-      "curr": 2.5925000000000002,
-      "prev": 1.7925,
-      "diff": 0.8000000000000003
+      "curr": 45.035000000000004,
+      "prev": 2.5925000000000002,
+      "diff": 42.4425
     }
   },
   "dom/genesearch.ts": {
@@ -3097,38 +3097,38 @@
   },
   "mass/test/barchart.integration.spec.js": {
     "lines": {
-      "total": 512,
-      "covered": 376,
+      "total": 520,
+      "covered": 384,
       "skipped": 0,
-      "pct": 73.43
+      "pct": 73.84
     },
     "functions": {
-      "total": 140,
-      "covered": 91,
+      "total": 142,
+      "covered": 93,
       "skipped": 0,
-      "pct": 65
+      "pct": 65.49
     },
     "statements": {
-      "total": 536,
-      "covered": 395,
+      "total": 545,
+      "covered": 404,
       "skipped": 0,
-      "pct": 73.69
+      "pct": 74.12
     },
     "branches": {
-      "total": 70,
-      "covered": 40,
+      "total": 72,
+      "covered": 41,
       "skipped": 0,
-      "pct": 57.14
+      "pct": 56.94
     },
     "lowestPct": {
-      "curr": 57.14,
+      "curr": 56.94,
       "prev": 57.14,
-      "diff": 0
+      "diff": -0.20000000000000284
     },
     "averagePct": {
-      "curr": 67.315,
+      "curr": 67.5975,
       "prev": 67.34,
-      "diff": -0.025000000000005684
+      "diff": 0.2574999999999932
     }
   },
   "termdb/vocabulary.js": {
@@ -3601,38 +3601,38 @@
   },
   "termsetting/handlers/geneVariant.ts": {
     "lines": {
-      "total": 158,
-      "covered": 2,
+      "total": 194,
+      "covered": 83,
       "skipped": 0,
-      "pct": 1.26
+      "pct": 42.78
     },
     "functions": {
-      "total": 29,
-      "covered": 0,
+      "total": 31,
+      "covered": 12,
       "skipped": 0,
-      "pct": 0
+      "pct": 38.7
     },
     "statements": {
-      "total": 173,
-      "covered": 2,
+      "total": 214,
+      "covered": 86,
       "skipped": 0,
-      "pct": 1.15
+      "pct": 40.18
     },
     "branches": {
-      "total": 84,
-      "covered": 0,
+      "total": 114,
+      "covered": 34,
       "skipped": 0,
-      "pct": 0
+      "pct": 29.82
     },
     "lowestPct": {
-      "curr": 0,
+      "curr": 29.82,
       "prev": 42.85,
-      "diff": -42.85
+      "diff": -13.030000000000001
     },
     "averagePct": {
-      "curr": 0.6025,
+      "curr": 37.87,
       "prev": 45.0975,
-      "diff": -44.495
+      "diff": -7.227499999999999
     }
   },
   "plots/barchart.events.js": {
@@ -4569,6 +4569,186 @@
       "curr": 73.60749999999999,
       "prev": 0,
       "diff": 73.60749999999999
+    }
+  },
+  "termsetting/handlers/categorical.ts": {
+    "lines": {
+      "total": 69,
+      "covered": 34,
+      "skipped": 0,
+      "pct": 49.27
+    },
+    "functions": {
+      "total": 13,
+      "covered": 9,
+      "skipped": 0,
+      "pct": 69.23
+    },
+    "statements": {
+      "total": 87,
+      "covered": 36,
+      "skipped": 0,
+      "pct": 41.37
+    },
+    "branches": {
+      "total": 79,
+      "covered": 23,
+      "skipped": 0,
+      "pct": 29.11
+    },
+    "lowestPct": {
+      "curr": 29.11,
+      "prev": 0,
+      "diff": 29.11
+    },
+    "averagePct": {
+      "curr": 47.245000000000005,
+      "prev": 0,
+      "diff": 47.245000000000005
+    }
+  },
+  "termsetting/handlers/condition.ts": {
+    "lines": {
+      "total": 187,
+      "covered": 25,
+      "skipped": 0,
+      "pct": 13.36
+    },
+    "functions": {
+      "total": 26,
+      "covered": 5,
+      "skipped": 0,
+      "pct": 19.23
+    },
+    "statements": {
+      "total": 205,
+      "covered": 27,
+      "skipped": 0,
+      "pct": 13.17
+    },
+    "branches": {
+      "total": 142,
+      "covered": 23,
+      "skipped": 0,
+      "pct": 16.19
+    },
+    "lowestPct": {
+      "curr": 13.17,
+      "prev": 0,
+      "diff": 13.17
+    },
+    "averagePct": {
+      "curr": 15.4875,
+      "prev": 0,
+      "diff": 15.4875
+    }
+  },
+  "termsetting/handlers/geneExpression.ts": {
+    "lines": {
+      "total": 22,
+      "covered": 20,
+      "skipped": 0,
+      "pct": 90.9
+    },
+    "functions": {
+      "total": 3,
+      "covered": 3,
+      "skipped": 0,
+      "pct": 100
+    },
+    "statements": {
+      "total": 30,
+      "covered": 22,
+      "skipped": 0,
+      "pct": 73.33
+    },
+    "branches": {
+      "total": 27,
+      "covered": 18,
+      "skipped": 0,
+      "pct": 66.66
+    },
+    "lowestPct": {
+      "curr": 66.66,
+      "prev": 0,
+      "diff": 66.66
+    },
+    "averagePct": {
+      "curr": 82.7225,
+      "prev": 0,
+      "diff": 82.7225
+    }
+  },
+  "termsetting/handlers/numeric.toggle.ts": {
+    "lines": {
+      "total": 70,
+      "covered": 20,
+      "skipped": 0,
+      "pct": 28.57
+    },
+    "functions": {
+      "total": 7,
+      "covered": 3,
+      "skipped": 0,
+      "pct": 42.85
+    },
+    "statements": {
+      "total": 79,
+      "covered": 20,
+      "skipped": 0,
+      "pct": 25.31
+    },
+    "branches": {
+      "total": 65,
+      "covered": 12,
+      "skipped": 0,
+      "pct": 18.46
+    },
+    "lowestPct": {
+      "curr": 18.46,
+      "prev": 0,
+      "diff": 18.46
+    },
+    "averagePct": {
+      "curr": 28.7975,
+      "prev": 0,
+      "diff": 28.7975
+    }
+  },
+  "termsetting/handlers/numeric.ts": {
+    "lines": {
+      "total": 17,
+      "covered": 9,
+      "skipped": 0,
+      "pct": 52.94
+    },
+    "functions": {
+      "total": 3,
+      "covered": 2,
+      "skipped": 0,
+      "pct": 66.66
+    },
+    "statements": {
+      "total": 19,
+      "covered": 9,
+      "skipped": 0,
+      "pct": 47.36
+    },
+    "branches": {
+      "total": 16,
+      "covered": 1,
+      "skipped": 0,
+      "pct": 6.25
+    },
+    "lowestPct": {
+      "curr": 6.25,
+      "prev": 0,
+      "diff": 6.25
+    },
+    "averagePct": {
+      "curr": 43.302499999999995,
+      "prev": 0,
+      "diff": 43.302499999999995
     }
   }
 }
