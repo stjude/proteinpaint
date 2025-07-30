@@ -285,16 +285,107 @@ export async function getPredefinedGroupsets(tw: RawGvPredefinedGsTW, vocabApi: 
 	tw.term.groupsetting = {
 		disabled: false,
 		lst: tw.term.childTerms.map(dtTerm => {
-			const groupset = dtTerm.dt == dtcnv ? getCnvGroupset(dtTerm) : getNonCnvGroupset(dtTerm)
+			const groupset = dtTerm.dt == dtcnv ? getCnvGroupset(dtTerm, vocabApi) : getNonCnvGroupset(dtTerm)
 			return groupset
 		})
 	}
 
 	// function to get cnv groupset
-	// will compare cnv categories present in the data
-	function getCnvGroupset(dtTerm) {
+	// will route to appropriate function depending on mode of cnv data
+	function getCnvGroupset(dtTerm, vocabApi) {
+		const cnv = vocabApi.termdbConfig.queries?.cnv
+		if (!cnv) throw 'cnv query is missing'
+		const keys = Object.keys(cnv)
+		const isContinuous = keys.includes('cnvGainCutoff') || keys.includes('cnvLossCutoff')
+		const groupset = isContinuous ? getContCnvGroupset(dtTerm, cnv) : getCatCnvGroupset(dtTerm)
+		return groupset
+	}
+
+	// function to get cnv groupset for continuous cnv data
+	// will compare gain/loss/neutral
+	function getContCnvGroupset(dtTerm, cnv) {
 		const groupset: any = {
-			name: dtTerm.name,
+			name: dtTerm.name + (dtTerm.origin ? ` (${dtTerm.origin})` : ''),
+			dt: dtTerm.dt
+		}
+		const cnvDefault = cnv.cnvCutoffsByGene?.[dtTerm.parentTerm.name] || {
+			cnvMaxLength: cnv.cnvMaxLength,
+			cnvGainCutoff: cnv.cnvGainCutoff,
+			cnvLossCutoff: cnv.cnvLossCutoff
+		}
+		// gain group
+		const gainGroup = {
+			name: `${dtTerm.name_noOrigin} ${dtTerm.origin ? `Gain (${dtTerm.origin})` : 'Gain'}`,
+			type: 'filter',
+			filter: getWrappedTvslst([
+				{
+					type: 'tvs',
+					tvs: {
+						term: dtTerm,
+						values: [],
+						continuousCnv: true,
+						cnvGainCutoff: cnvDefault.cnvGainCutoff,
+						cnvLossCutoff: -99, // set to very low number to get samples with gain events
+						cnvMaxLength: cnvDefault.cnvMaxLength,
+						excludeGeneName: true
+					}
+				}
+			])
+		}
+		// loss group
+		const lossGroup = {
+			name: `${dtTerm.name_noOrigin} ${dtTerm.origin ? `Loss (${dtTerm.origin})` : 'Loss'}`,
+			type: 'filter',
+			filter: getWrappedTvslst([
+				{
+					type: 'tvs',
+					tvs: {
+						term: dtTerm,
+						values: [],
+						continuousCnv: true,
+						cnvGainCutoff: 99, // set to very high number to get samples with loss events
+						cnvLossCutoff: cnvDefault.cnvLossCutoff,
+						cnvMaxLength: cnvDefault.cnvMaxLength,
+						excludeGeneName: true
+					}
+				}
+			])
+		}
+		// neutral group
+		const wtGroup = {
+			name: `${dtTerm.name_noOrigin} ${dtTerm.origin ? `Neutral (${dtTerm.origin})` : 'Neutral'}`,
+			type: 'filter',
+			filter: getWrappedTvslst([
+				{
+					type: 'tvs',
+					tvs: {
+						term: dtTerm,
+						values: [],
+						continuousCnv: true,
+						cnvWT: true,
+						cnvGainCutoff: cnvDefault.cnvGainCutoff,
+						cnvLossCutoff: cnvDefault.cnvLossCutoff,
+						cnvMaxLength: cnvDefault.cnvMaxLength,
+						excludeGeneName: true
+					}
+				}
+			])
+		}
+		groupset.groups = [gainGroup, lossGroup, wtGroup]
+		// set color scale based on number of groups
+		colorScale = getColors(groupset.groups.length)
+		// assign colors to each group
+		for (const group of groupset.groups) {
+			group.color = rgb(colorScale(group.name)).formatHex()
+		}
+		return groupset
+	}
+
+	// function to get cnv groupset for categorical cnv data
+	// will compare cnv categories present in the data
+	function getCatCnvGroupset(dtTerm) {
+		const groupset: any = {
+			name: dtTerm.name + (dtTerm.origin ? ` (${dtTerm.origin})` : ''),
 			groups: [],
 			dt: dtTerm.dt
 		}
@@ -314,7 +405,6 @@ export async function getPredefinedGroupsets(tw: RawGvPredefinedGsTW, vocabApi: 
 			const name = `${dtTerm.name_noOrigin} ${dtTerm.origin ? `${label} (${dtTerm.origin})` : label}`
 			groupset.groups.push({ name, type: 'filter', filter })
 		}
-		if (dtTerm.origin) groupset.name += ` (${dtTerm.origin})`
 		// set color scale based on number of groups
 		colorScale = getColors(groupset.groups.length)
 		// assign colors to each group
