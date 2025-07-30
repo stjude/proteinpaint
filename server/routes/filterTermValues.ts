@@ -1,6 +1,7 @@
 import type { RouteApi } from '#types'
 import { FilterTermValuesPayload } from '#types/checkers'
 import { getData, getSamplesPerFilter } from '../src/termdb.matrix.js'
+import { authApi } from '../src/auth.js'
 
 /*
 Given a set of terms and filters per term, this route returns the list of samples that match each term filter.
@@ -55,11 +56,16 @@ function getList(samplesPerFilter, filtersData, tw) {
 	}
 	filteredValues.unshift({ label: '', value: '' })
 	filteredValues.sort((a, b) => a.label.localeCompare(b.label))
-
 	return filteredValues
 }
 
 async function getFilters(query, ds, genome, res) {
+	// safe to process this client-submitted query.filterByUserSites flag,
+	// which only affects aggregation levels (not revealed sample-level data),
+	// as performed by this route code, and since query.terms would still
+	// be matched against a dataset's hiddenTermIds[]
+	if (!query.filterByUserSites) authApi.mayAdjustFilter(query, ds, query.terms)
+
 	try {
 		//Dictionary with samples applying all the filters but not the one from the current term id
 		const samplesPerFilter = await getSamplesPerFilter(query, ds)
@@ -73,6 +79,7 @@ async function getFilters(query, ds, genome, res) {
 		)
 		const tw2List = {}
 		for (const tw of query.terms) {
+			// related to auth: make sure the returned list are not sensitive !!!
 			tw2List[tw.term.id] = getList(samplesPerFilter, filtersData, tw)
 		}
 		res.send({ ...tw2List })

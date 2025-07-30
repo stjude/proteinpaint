@@ -372,8 +372,7 @@ export async function getSamplesPerFilter(q, ds) {
 	q.ds = ds
 	const samples = {}
 	for (const id in q.filters) {
-		let filter = q.filters[id]
-		if (!q.ignoreUserFilter && q.filter) filter = filterJoin([q.filter, q.filters[id]])
+		const filter = filterJoin([q.filter, q.filters[id]])
 		const result = (await get_samples({ filter, __protected__: q.__protected__ }, q.ds)).map(i => i.id)
 		samples[id] = Array.from(new Set(result))
 	}
