@@ -692,15 +692,11 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 		const authFilter = ds.cohort.termdb.getAdditionalFilter(q.__protected__.clientAuthResult, routeTerms)
 
 		if (!q.filter) q.filter = { type: 'tvslst', join: '', lst: [] }
+		else if (q.filter.type != 'tvslst') throw `invalid q.filter.type != 'tvslst'`
+		else if (!Array.isArray(q.filter.lst)) throw `q.filter.lst[] is not an array`
+		// NOTE: other filter data validation will be done in termdb.filter.js
+
 		const FILTER_TAG = 'termLevelAuthFilter'
-		// IMPORTANT NOTE:
-		// - assume that the auth filter will always added as an entry in the top-level lst[] array,
-		//   even if it's the only entry, to make it much easier to add/replace/remove the auth filter,
-		//   since mayAdjustFilter() may be called more than once within the same route handler call
-		// - having a single-entry lst[] will make the q.filter data shape non-standard,
-		//   but termdb.filter.js code is able to handle this possibility just fine
-		//
-		// check if the q.filter has already been previously adjusted (such as in app.middleware)
 		const i = q.filter.lst.findIndex(f => f.tag === FILTER_TAG)
 		if (!authFilter) {
 			// certain roles (from jwt payload) may have access to everything,
@@ -709,15 +705,26 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 				// remove a previously added auth filter
 				q.filter.lst.splice(i)
 				if (q.filter.lst.length < 2) q.filter.join = ''
+			} else if (q.filter.tag === FILTER_TAG) {
+				// replace a previous authFilter that was set as the q.filter
+				q.filter = { type: 'tvslst', join: '', lst: [] }
 			}
 			// nothing to adjust
 			return
 		} else {
 			authFilter.tag = FILTER_TAG
-			if (i !== -1) q.filter.lst[i] = authFilter // replace the previously added auth filter
-			else if (!q.filter.lst.length)
-				q.filter.lst.push(authFilter) // fill-in as the only lst[] entry, see important note above
-			else q.filter = { type: 'tvslst', join: 'and', lst: [authFilter, q.filter] } // prepend the auth filter
+			// the adjusted filter must have the correct filter shape, for example, avoid an empty nested tvslst
+			if (i !== -1) {
+				if (q.filter.join != 'and') throw `unexpected filter.join != 'and' for a previously added auth filter entry `
+				q.filter.lst[i] = authFilter // replace the previously added auth filter entry
+			} else if (!q.filter.lst.length) q.filter = authFilter // replace an empty root filter
+			else if (q.filter.tag === FILTER_TAG)
+				q.filter = authFilter // replace a previous authFilter that was set as root q.filter
+			else if (q.filter.join != 'or') {
+				// prevent unnecessary filter nesting,  root filter.lst[] with only one entry that is also a tvslst
+				q.filter.lst.push(authFilter) // add to the existing root filter.lst[] array
+				if (q.filter.join == '') q.filter.join = 'and'
+			} else q.filter = { type: 'tvslst', join: 'and', lst: [authFilter, q.filter] } // prepend the auth filter using an 'and' operator
 		}
 	}
 
