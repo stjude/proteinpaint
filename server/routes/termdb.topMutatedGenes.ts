@@ -97,7 +97,7 @@ export function validate_query_getTopMutatedGenes(ds: any) {
 	q.get = async (param: topMutatedGeneRequest) => {
 		let sampleStatement = ''
 		if (param.filter) {
-			const lst = await get_samples(param.filter, ds)
+			const lst = await get_samples(param, ds)
 			if (lst.length == 0) throw 'empty sample filter'
 			sampleStatement = `WHERE sample IN (${lst.map(i => i.id).join(',')})`
 		}

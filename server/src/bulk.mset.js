@@ -51,7 +51,7 @@ export async function mayGetGeneVariantData(tw, q) {
 		// requires that not only q.filter{} is present, but also filter.lst[] is a non-empty array
 		// as client may send filter with blank array of tvs and will break get_samples()
 		//!!! DO NOT USE FOR geneVariant filterCTE constructor
-		filterSamples = [...new Set((await get_samples(q.filter, ds)).map(i => i.id))]
+		filterSamples = [...new Set((await get_samples(q, ds)).map(i => i.id))]
 	}
 
 	for (const flagname in flagset) {

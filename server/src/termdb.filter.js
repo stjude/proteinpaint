@@ -32,7 +32,7 @@ export async function getFilterCTEs(filter, ds, sampleTypes = new Set(), CTEname
 	}
 	if (filter.lst.length == 1) {
 		// only one element at this level, disregard "join"
-		if (filter.lst[0].type == 'tvslst') throw 'only one element at a level: type should not be "tvslst"'
+		//if (filter.lst[0].type == 'tvslst') throw 'only one element at a level: type should not be "tvslst"'
 	} else {
 		// multiple elements at this level
 		if (filter.join != 'or' && filter.join != 'and')

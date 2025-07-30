@@ -83,7 +83,7 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 	mayLog('[GRIN2] Getting samples from cohort filter...')
 
 	const samples = await get_samples(
-		request.filter,
+		request,
 		ds,
 		true // must set to true to return sample name to be able to access file. FIXME this can let names revealed to grin2 client, may need to apply access control
 	)

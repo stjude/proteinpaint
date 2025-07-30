@@ -44,7 +44,7 @@ export async function trigger(q, res, ds) {
 	// optional filter on samples
 	let samplefilterset
 	if (q.filter) {
-		samplefilterset = new Set(await termdbsql.get_samples(q.filter, ds))
+		samplefilterset = new Set(await termdbsql.get_samples(q, ds))
 	}
 
 	const [sample2gt, genotype2sample] = await utils.loadfile_ssid(q.ssid, samplefilterset)
@@ -436,7 +436,7 @@ async function may_subcohortTermtype2samples(ds) {
 		const config = ds.cohort.termdb.phewas.precompute_subcohort2totalsamples[key]
 		if (config.termtype) {
 			for (const type in config.termtype) {
-				config.termtype[type].samples = await termdbsql.get_samples(config.termtype[type].filter, ds)
+				config.termtype[type].samples = await termdbsql.get_samples({ filter: config.termtype[type].filter }, ds)
 			}
 		}
 	}
@@ -858,7 +858,10 @@ only used for precomputing, not for on the fly
 
 	if (ds.cohort.termdb.phewas.samplefilter4termtype) {
 		if (ds.cohort.termdb.phewas.samplefilter4termtype.condition) {
-			const samples = await termdbsql.get_samples(ds.cohort.termdb.phewas.samplefilter4termtype.condition.filter, ds)
+			const samples = await termdbsql.get_samples(
+				{ filter: ds.cohort.termdb.phewas.samplefilter4termtype.condition.filter },
+				ds
+			)
 			if (ds.track && ds.track.vcf && ds.track.vcf.sample2arrayidx) {
 				// must also restrict to vcf samples
 				condition_samples = []

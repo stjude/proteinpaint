@@ -30,7 +30,11 @@ function init({ genomes }) {
 			if (!tdb) throw 'invalid termdb object'
 
 			if (!q.tw.$id) q.tw.$id = '_' // current typing thinks tw$id is undefined. add this to avoid tsc err. delete this line when typing is fixed
-			const data = await getData({ filter: q.filter, filter0: q.filter0, terms: [q.tw] }, ds, genome)
+			const data = await getData(
+				{ filter: q.filter, filter0: q.filter0, terms: [q.tw], __protected__: q.__protected__ },
+				ds,
+				genome
+			)
 			if (data.error) throw data.error
 
 			const values: number[] = []
