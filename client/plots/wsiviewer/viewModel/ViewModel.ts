@@ -26,7 +26,7 @@ export class ViewModel {
 		this.imageViewData = index => this.getImageViewData(index)
 	}
 
-	getImageViewData(index: number): ImageViewData {
+	public getImageViewData(index: number): ImageViewData {
 		const imageViewData: ImageViewData = {}
 		const imageData = this.sampleWSImages[index]
 		this.setAnnonationsTableData(imageViewData, imageData)
@@ -42,14 +42,18 @@ export class ViewModel {
 		return imageViewData
 	}
 
-	getZoomInPoints(index: number) {
+	public getZoomInPoints(index: number) {
 		const image = this.sampleWSImages[index]
 		const session = image.sessionsAnnotations?.map(a => a.zoomCoordinates) || []
 		const persisted = image.zoomInPoints || []
 		return [...session, ...persisted].slice(0, 1)
 	}
 
-	setAnnonationsTableData(imageViewData: ImageViewData, imageData: SessionWSImage) {
+	public setSessionsAnnotations(sessionsAnnotations: Annotation[], displayedImageIndex: number) {
+		this.sampleWSImages[displayedImageIndex].sessionsAnnotations = sessionsAnnotations
+	}
+
+	private setAnnonationsTableData(imageViewData: ImageViewData, imageData: SessionWSImage) {
 		if (!imageData?.annotationsData?.length) return
 
 		// Map session annotations to the same format, starting index at 0
@@ -94,7 +98,7 @@ export class ViewModel {
 		}
 	}
 
-	setClassData(imageViewData: ImageViewData, imageData: WSImage) {
+	private setClassData(imageViewData: ImageViewData, imageData: WSImage) {
 		if (!imageData?.classes?.length) return
 
 		const shortcuts: string[] = ['Enter']
