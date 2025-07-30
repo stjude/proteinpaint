@@ -38,6 +38,7 @@ export async function makeChartBtnMenu(holder, chartsInstance) {
 		const geneSearchInst = new geneSearch() // FIXME allow searching chr17:7666658-7688275
 		geneSearchInst.init({
 			holder: searchDiv,
+			app: chartsInstance.app, // required to supply "opts.app.vocabApi" for the search ui
 			genomeObj: chartsInstance.app.opts.genome!,
 			callback: async term => {
 				waitDiv.text('LOADING ...')
