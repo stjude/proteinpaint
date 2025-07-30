@@ -2264,6 +2264,7 @@ async function getSingleSampleMutations(query, ds, genome) {
 		} else {
 			// more than 1 cnv file, send all to client but delete the temporary flag
 			for (const f of cfs) delete f.wgsTempFlag
+			usefile.inuse = true
 		}
 	}
 	const ffs = dt2files[common.dtfusionrna]
@@ -2275,6 +2276,7 @@ async function getSingleSampleMutations(query, ds, genome) {
 			delete dt2files[common.dtfusionrna]
 		} else {
 			// more than 1. include
+			ffs[0].inuse = true
 		}
 	}
 	if (Object.keys(dt2files).length) {
