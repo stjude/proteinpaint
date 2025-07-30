@@ -80,6 +80,7 @@ export async function makeChartBtnMenu(holder, chartsInstance) {
 		geneSearchInst.init({
 			holder: searchDiv,
 			genomeObj: chartsInstance.app.opts.genome!,
+			app: chartsInstance.app, // required to supply "opts.app.vocabApi" for the search ui
 			callback: async term => {
 				waitDiv.text('LOADING ...')
 				try {
