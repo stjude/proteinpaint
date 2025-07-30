@@ -17,7 +17,7 @@ import { ReqResCache } from '@sjcrh/augen'
 const basepath = serverconfig.basepath || ''
 
 // NOTE: auth middleware is set in auth.js
-export function setAppMiddlewares(app, doneLoading) {
+export function setAppMiddlewares(app, genomes, doneLoading) {
 	app.use(setHeaders)
 
 	if (serverconfig.users) {
@@ -121,12 +121,26 @@ export function setAppMiddlewares(app, doneLoading) {
           and as determined by a server route code that the dataset can use to compute per-user access restrictions/authorizations 
           when querying data
         */
-		const __protected__ = { ignoredTermIds: [] } // when provided the filter on these terms will be ignored
-		if (req.query.dslabel) Object.assign(__protected__, authApi.getNonsensitiveInfo(req))
+		req.query.__protected__ = { ignoredTermIds: [] } // when provided the filter on these terms will be ignored
+		const __protected__ = req.query.__protected__
+		if (req.query.dslabel) {
+			Object.assign(__protected__, authApi.getNonsensitiveInfo(req))
+			if (req.query.genome) {
+				const genome = genomes[req.query.genome]
+				if (!genome) throw 'invalid genome'
+				const ds = genome.datasets[req.query.dslabel]
+				if (!ds) throw 'invalid dslabel'
+				// by not supplying the 3rd argument (routeTwList) to authApi.mayAdjustFilter(),
+				// it will add the stricted additional filter by default for any downstream code from here;
+				// later, any server route or downstream code may call authApi.mayAdjustFilter() again to
+				// loosen the additional filter, to consider fewer tvs terms based on route-specific payloads or aggregation logic
+				if (ds.cohort?.termdb?.getAdditionalFilter) authApi.mayAdjustFilter(req.query, ds)
+			}
+		}
 		if (req.cookies?.sessionid) {
 			__protected__.sessionid = req.cookies.sessionid
 		}
-		req.query.__protected__ = Object.freeze(__protected__)
+		Object.freeze(__protected__)
 		next()
 	})
 

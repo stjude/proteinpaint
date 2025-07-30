@@ -15,6 +15,7 @@ import { get_bin_label, compute_bins } from '#shared/termdb.bins.js'
 import { trigger_getDefaultBins } from './termdb.getDefaultBins.js'
 import { getCategories } from '../routes/termdb.categories.ts'
 import { authApi } from '#src/auth.js'
+import { filterJoin } from '#shared/filter.js'
 
 /*
 
@@ -54,7 +55,7 @@ Returns:
 export async function getData(q, ds, genome, onlyChildren = false) {
 	try {
 		validateArg(q, ds)
-		authApi.mayExtendqFilter(q, ds, q.terms)
+		authApi.mayAdjustFilter(q, ds, q.terms)
 		const data = await getSampleData(q, ds, onlyChildren)
 		// get categories within same data request to avoid a separate
 		// getCategories() request, which can be time-consuming for
@@ -96,7 +97,7 @@ function validateArg(q, ds) {
 	}
 	if (ds.cohort?.termdb?.getRestrictedTermValues) {
 		if (!q.__protected__) throw `missing q.__protected__, must be set upstream of getData()`
-		// also validated in authApi.mayExtendqFilter()
+		// also validated in authApi.mayAdjustFilter()
 	}
 }
 
@@ -371,7 +372,7 @@ export async function getSamplesPerFilter(q, ds) {
 	q.ds = ds
 	const samples = {}
 	for (const id in q.filters) {
-		const filter = q.filters[id]
+		const filter = filterJoin([q.filter, q.filters[id]])
 		const result = (await get_samples({ filter, __protected__: q.__protected__ }, q.ds)).map(i => i.id)
 		samples[id] = Array.from(new Set(result))
 	}

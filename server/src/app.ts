@@ -41,7 +41,7 @@ export async function launch() {
 		console.log('setting app middlewares ...')
 		const app = express()
 		app.disable('x-powered-by')
-		setAppMiddlewares(app, doneLoading)
+		setAppMiddlewares(app, genomes, doneLoading)
 
 		console.log('setting server routes ...')
 		const routeCallbacks = await setOptionalRoutes(app)
