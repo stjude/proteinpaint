@@ -42,7 +42,7 @@ const minimumbinnum_frag = 200 // minimum bin number at frag resolution
 const labyspace = 5
 const insidedomaincolor = '102,102,102'
 const docurl_text =
-	'https://docs.google.com/document/d/1MQ0Z_AD5moDmaSx2tcn7DyVKGp49TS63pO0cceGL_Ns/edit#heading=h.kr6p4w2zhhwq'
+	'https://github.com/stjude/proteinpaint/wiki/Interaction-Tracks:-Hi%E2%80%90C-and-Arc#text-data-copy--paste'
 
 // let hicstraw // loaded on the fly, will result in bundle duplication
 
