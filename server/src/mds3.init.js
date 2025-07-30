@@ -2786,16 +2786,23 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 			if (!pass) continue
 			if (groupset) {
 				// groupsetting is active
-				// get the first group of groupset that the sample can be assigned to
+				// get first group of groupset that sample can be assigned to
 				// for example: if groups[0] is SNV=M and groups[1] is
 				// CNV=Loss and a sample has both SNV=M and CNV=Loss, then
 				// the sample will be assigned to groups[0]
 				const group = groupset.groups.find(group => {
-					// TODO: should iterate through each gene here to determine if filter passes for at least one gene
 					if (group.type != 'filter') throw 'unexpected group.type'
 					const filter = group.filter
-					const [pass, tested] = filterByTvsLst(filter, mlst)
-					return pass
+					const passLst = []
+					// test filter against mutations from each gene separately
+					for (const gene of tw.term.genes) {
+						const geneMlst = mlst.filter(m => m.gene == gene.name)
+						const [pass, tested] = filterByTvsLst(filter, geneMlst)
+						passLst.push(pass)
+					}
+					// samples passes filter if mutations from at least
+					// one gene passes filter
+					return passLst.some(pass => pass)
 				})
 
 				if (!group || group.uncomputable) continue
@@ -2978,19 +2985,12 @@ export function filterByItem(filter, mlst) {
 				}
 			})
 			sampleHasGenotype = tvs.cnvWT ? !sampleHasCnv : sampleHasCnv
-			pass = tvs.isnot ? !sampleHasGenotype : sampleHasGenotype
 		} else {
 			// categorical mutation data
-			sampleHasGenotype = mlst_tested.some(m => {
-				return tvs.values.some(v => {
-					// need to evaluate tvs.isnot here because when multiple genes
-					// are analyzed, a sample may be wildtype for one and mutated
-					// for another, and need to assign that sample to mutated group
-					return tvs.isnot ? v.key != m.class : v.key == m.class
-				})
-			})
-			pass = sampleHasGenotype
+			sampleHasGenotype = mlst_tested.some(m => tvs.values.some(v => v.key == m.class))
 		}
+		if (typeof sampleHasGenotype != 'boolean') throw 'unexpected non-boolean value'
+		pass = tvs.isnot ? !sampleHasGenotype : sampleHasGenotype
 	} else {
 		// sample is not tested for the dt of the filter
 		// so sample does not pass the filter
