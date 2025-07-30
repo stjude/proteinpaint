@@ -90,6 +90,8 @@ export function loadTk(tk: any, block: any) {
 
 			if (tk.bedfile || tk.bedurl) return bedfile_load(tk, block)
 
+			updateNormalizationArray(tk.hic)
+
 			return loadStrawdata(tk, block)
 		})
 		.then(() => {
@@ -378,6 +380,15 @@ function bedfile_load(tk: any, block: any) {
 			}
 		}
 	})
+}
+
+/** Generally NONE is not listed in the hicstraw normalization array.
+ * Include here before loading the hicdata. Fixes issue with the
+ * dropdown not showing NONE when tk.normalizationmethod == NONE. */
+function updateNormalizationArray(hic: any) {
+	if (hic.normalization?.length > 0 && !hic.normalization.includes(defaultnmeth)) {
+		hic.normalization.unshift(defaultnmeth)
+	}
 }
 
 function loadStrawdata(tk: any, block: any): Promise<string | undefined> {
@@ -1016,7 +1027,7 @@ function configPanel(tk: any, block: any) {
 				}
 			}
 		} else {
-			row.append('span').text('NONE')
+			row.append('span').text(defaultnmeth)
 		}
 	}
 
