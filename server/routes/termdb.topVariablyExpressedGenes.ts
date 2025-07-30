@@ -73,7 +73,7 @@ function nativeValidateQuery(ds: any) {
 		const samples = [] as string[]
 		if (q.filter) {
 			// get all samples pasing pp filter, may contain those without exp data
-			const sidlst = await get_samples(q.filter, ds)
+			const sidlst = await get_samples(q, ds)
 			// [{id:int}]
 			// filter for those with exp data from q.samples[]
 			for (const i of sidlst) {

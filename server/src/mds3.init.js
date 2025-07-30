@@ -2895,7 +2895,7 @@ async function filterSamples4assayAvailability(q, ds) {
 		return null
 	}
 	// not gdc
-	return q.filter && q.filter.lst.length ? new Set((await get_samples(q.filter, ds)).map(i => i.id)) : null
+	return q.filter && q.filter.lst.length ? new Set((await get_samples(q, ds)).map(i => i.id)) : null
 }
 
 function addDataAvailability(sid, sample2mlst, dtKey, mclass, origin, sampleFilter, gene) {
