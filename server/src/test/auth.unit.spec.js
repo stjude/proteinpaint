@@ -144,7 +144,7 @@ tape(`initialization`, async test => {
 				'getNonsensitiveInfo',
 				'getPayloadFromHeaderAuth',
 				'getRequiredCredForDsEmbedder',
-				'mayExtendqFilter',
+				'mayAdjustFilter',
 				'maySetAuthRoutes',
 				'userCanAccess'
 			],

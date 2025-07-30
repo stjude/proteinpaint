@@ -615,9 +615,7 @@ export function filterTerms(req, ds, terms) {
 
 const defaultCommonCharts: isSupportedChartCallbacks = {
 	dictionary: () => true,
-	summary: () => true,
 	matrix: () => true,
-
 	/*
 	parent type: regression
 	child types: linear/logistic/cox

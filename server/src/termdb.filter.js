@@ -25,7 +25,9 @@ export async function getFilterCTEs(filter, ds, sampleTypes = new Set(), CTEname
 	if (filter.type != 'tvslst') throw 'filter.type is not "tvslst" but: ' + filter.type
 	if (!Array.isArray(filter.lst)) throw 'filter.lst must be an array'
 	if (filter.lst.length == 0) {
-		// an empty filter.lst[] is acceptable and equivalent to having a falsy (null, undefined) filter
+		// an empty filter.lst[] at the top level is acceptable and equivalent to having a falsy (null, undefined) filter;
+		// a nested filter always has a non-default CTEname value as 4th argument and must not have an empty lst[]
+		if (CTEname != 'f') console.warn('!!! nested filter.lst[] is zero length, see if is an error !!!')
 		return
 	}
 	if (filter.lst.length == 1) {

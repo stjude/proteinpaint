@@ -3,7 +3,6 @@ import path from 'path'
 import jsonwebtoken from 'jsonwebtoken'
 import { sleep } from './utils.js'
 import mm from 'micromatch'
-import { filterJoin } from '#shared/index.js'
 
 const { isMatch } = mm
 
@@ -25,7 +24,7 @@ const defaultApiMethods = {
 	getHealth: () => undefined,
 	// credentialed embedders, using an array which can be frozen with Object.freeze(), unlike a Set()
 	credEmbedders: [],
-	mayExtendqFilter: (q, ds, term) => {}
+	mayAdjustFilter: (q, ds, term) => {}
 }
 
 // these may be overriden within maySetAuthRoutes()
@@ -665,32 +664,56 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 		return authHealth.get(app)
 	}
 
-	authApi.mayExtendqFilter = function (q, ds, twArr) {
+	// q: req.query
+	// ds: dataset object
+	// routeTwLst
+	authApi.mayAdjustFilter = function (q, ds, routeTwLst) {
 		if (!ds.cohort.termdb.getAdditionalFilter) return
 		if (!q.__protected__) throw `missing q.__protected__`
+
 		// clientAuthResult{}: from authApi.getNonsensitiveInfo()
-		// ignoredTermRestrictions[]: a list of protected term.ids to ignore,
+		// ignoredTermIds[]: a list of protected term.ids to ignore,
 		//   such as when a server route is expected to aggregate the data
 		//   so that no sample level data will be included in the server response
 		if (!q.__protected__.clientAuthResult || !q.__protected__.ignoredTermIds)
 			throw `missing q.__protected__ clientAuthResult or ignoredTermIds`
+		// NOTE: as needed, the server route code must append to q.__protected__.ignoredTermIds[],
+		//       since it knows the req.query key names that correspond to terms/termwrappers
 
-		// NOTE: as needed, the server route code must append to q.__protected__ignoredTermRestrictions[],
-		//  since it knows the req.query key names that correspond to terms
-		const termsToCheck =
-			twArr === null
-				? null
-				: twArr.filter(tw => !q.__protected__.ignoredTermIds.includes(tw.term.id)).map(tw => tw.term)
-		const additionalFilter = ds.cohort.termdb.getAdditionalFilter(q.__protected__.clientAuthResult, termsToCheck)
-		if (!additionalFilter) {
+		const routeTerms =
+			routeTwLst === undefined
+				? undefined
+				: routeTwLst.filter(tw => !q.__protected__.ignoredTermIds.includes(tw.term.id)).map(tw => tw.term)
+		const authFilter = ds.cohort.termdb.getAdditionalFilter(q.__protected__.clientAuthResult, routeTerms)
+
+		if (!q.filter) q.filter = { type: 'tvslst', join: '', lst: [] }
+		const FILTER_TAG = 'termLevelAuthFilter'
+		// IMPORTANT NOTE:
+		// - assume that the auth filter will always added as an entry in the top-level lst[] array,
+		//   even if it's the only entry, to make it much easier to add/replace/remove the auth filter,
+		//   since mayAdjustFilter() may be called more than once within the same route handler call
+		// - having a single-entry lst[] will make the q.filter data shape non-standard,
+		//   but termdb.filter.js code is able to handle this possibility just fine
+		//
+		// check if the q.filter has already been previously adjusted (such as in app.middleware)
+		const i = q.filter.lst.findIndex(f => f.tag === FILTER_TAG)
+		if (!authFilter) {
 			// certain roles (from jwt payload) may have access to everything,
-			// do not change q.filter to an extended filter in this case
+			// revert or do not adjust the q.filter in this case
+			if (i !== -1) {
+				// remove a previously added auth filter
+				q.filter.lst.splice(i)
+				if (q.filter.lst.length < 2) q.filter.join = ''
+			}
+			// nothing to adjust
 			return
+		} else {
+			authFilter.tag = FILTER_TAG
+			if (i !== -1) q.filter.lst[i] = authFilter // replace the previously added auth filter
+			else if (!q.filter.lst.length)
+				q.filter.lst.push(authFilter) // fill-in as the only lst[] entry, see important note above
+			else q.filter = { type: 'tvslst', join: 'and', lst: [authFilter, q.filter] } // prepend the auth filter
 		}
-		// default to protecting response data, by extending the filter to limit term-value visibility;
-		// downstream route handler code may loosen the protection by using the q.origFilter,
-		// depending on whether the request includes protected terms or not
-		q.filter = filterJoin([additionalFilter, q.filter])
 	}
 
 	// may handle custom auth for testing
