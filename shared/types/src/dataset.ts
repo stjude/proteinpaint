@@ -1366,6 +1366,12 @@ if missing, name is value of m[url.namekey], as used in url itself (e.g. snp rsi
 export type Termdb = {
 	/** Terms */
 	termIds?: TermIds
+	/**
+	 * The required minimum number of samples with data as queried with getData() or other code,
+	 * in order to minimize the ease of extracting identifiable information from aggregate data
+	 * in server response
+	 */
+	minSampleSizeForFilterCharts?: number
 	/** if true, backend is allowed to send sample names to client in charts */
 	displaySampleIds?: (clientAuthResult: any) => boolean
 	converSampleIds?: boolean

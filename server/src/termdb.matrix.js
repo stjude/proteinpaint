@@ -57,6 +57,27 @@ export async function getData(q, ds, genome, onlyChildren = false) {
 		validateArg(q, ds)
 		authApi.mayAdjustFilter(q, ds, q.terms)
 		const data = await getSampleData(q, ds, onlyChildren)
+
+		// handle the option to require a minimum sample size for data
+		const minSampleSize = ds.cohort.termdb.minSampleSizeForFilterCharts
+		if (minSampleSize) {
+			console.log(60, Object.keys(data.samples))
+			// quick check
+			if (Object.keys(data.samples).length < minSampleSize)
+				throw `less than ${minSampleSize} samples with data for any queried term`
+			// more detailed check
+			const sampleSizeByTermId = new Map()
+			for (const [sid, dataByTermId] of Object.entries(data.samples)) {
+				for (const tid of Object.keys(dataByTermId)) {
+					if (!sampleSizeByTermId.has(tid)) sampleSizeByTermId.set(tid, new Set())
+					sampleSizeByTermId.get(tid).add(sid)
+				}
+			}
+			const counts = [...sampleSizeByTermId.values()].map(v => v.size)
+			if (Math.min(...counts) < minSampleSize)
+				throw `less than ${minSampleSize} samples with data for at least one queried term`
+		}
+
 		// get categories within same data request to avoid a separate
 		// getCategories() request, which can be time-consuming for
 		// datasets without local db (e.g. GDC)
