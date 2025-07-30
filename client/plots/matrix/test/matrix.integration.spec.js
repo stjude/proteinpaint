@@ -1341,8 +1341,16 @@ tape('avoid race condition', function (test) {
 										{
 											$id: 3,
 											term: {
-												gene: 'BCR',
 												name: 'BCR',
+												genes: [
+													{
+														kind: 'gene',
+														id: 'BCR',
+														gene: 'BCR',
+														name: 'BCR',
+														type: 'geneVariant'
+													}
+												],
 												type: 'geneVariant',
 												isleaf: true,
 												groupsetting: { disabled: false }
@@ -2186,9 +2194,7 @@ tape(
 							{
 								name: '',
 								lst: [
-									{ term: { gene: 'TP53', name: 'TP53', type: 'geneVariant', isleaf: true } },
-									{ term: { gene: 'KRAS', name: 'KRAS', type: 'geneVariant', isleaf: true } },
-									{ term: { gene: 'AKT1', name: 'AKT1', type: 'geneVariant', isleaf: true } },
+									...getGenes(),
 									{ id: 'agedx', term: termjson['agedx'] },
 									{ id: 'diaggrp', term: termjson['diaggrp'] },
 									{ id: 'aaclassic_5', term: termjson['aaclassic_5'] }

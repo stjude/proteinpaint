@@ -35,36 +35,7 @@ export class SearchHandler {
 		})
 	}
 
-	searchGeneSet() {
-		this.dom.searchDiv.selectAll('*').remove()
-		this.dom.searchDiv.style('margin-top', '0px')
-		new GeneSetEditUI({
-			holder: this.dom.searchDiv,
-			genome: this.opts.genomeObj,
-			vocabApi: this.opts.app.vocabApi,
-			callback: result => {
-				const genes = result.geneList.map(v => {
-					const name = v.gene
-					const gene = {
-						kind: 'gene',
-						id: name,
-						gene: name,
-						name,
-						type: 'geneVariant'
-					}
-					return gene
-				})
-				const term = {
-					name: genes.map(gene => gene.name).join(', '),
-					genes,
-					type: 'geneVariant'
-				}
-				this.callback(term)
-			}
-		})
-	}
-
-	async selectGene(geneSearch) {
+	selectGene(geneSearch) {
 		if (geneSearch.geneSymbol) {
 			const name = geneSearch.geneSymbol
 			const term = {
@@ -103,5 +74,37 @@ export class SearchHandler {
 		} else {
 			throw 'no gene or position specified'
 		}
+	}
+
+	searchGeneSet() {
+		this.dom.searchDiv.selectAll('*').remove()
+		this.dom.searchDiv.style('margin-top', '0px')
+		new GeneSetEditUI({
+			holder: this.dom.searchDiv,
+			genome: this.opts.genomeObj,
+			vocabApi: this.opts.app.vocabApi,
+			callback: result => this.selectGeneSet(result)
+		})
+	}
+
+	selectGeneSet(result) {
+		const genes = result.geneList.map(v => {
+			if (!v.gene) throw 'gene name not found'
+			const name = v.gene
+			const gene = {
+				kind: 'gene',
+				id: name,
+				gene: name,
+				name,
+				type: 'geneVariant'
+			}
+			return gene
+		})
+		const term = {
+			name: genes.map(gene => gene.name).join(', '),
+			genes,
+			type: 'geneVariant'
+		}
+		this.callback(term)
 	}
 }

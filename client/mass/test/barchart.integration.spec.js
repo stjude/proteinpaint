@@ -16,6 +16,7 @@ Tests:
 	term0=defaultbins, term1=categorical
 	term1=geneVariant no group
 	term1=geneVariant with groups
+	term1=geneVariant gene set with groups
 	term1=categorical, term2=geneVariant
 	term1=geneExp, term2=geneVariant SKIPPED
 	term1=geneVariant, term2=geneExp
@@ -368,6 +369,50 @@ tape('term1=geneVariant with groups', function (test) {
 		const barDiv = barchart.Inner.dom.barDiv
 		const numCharts = barDiv.selectAll('.pp-sbar-div').size()
 		test.true(numCharts == 1, 'Should have 1 chart from gene variant term')
+		if (test._ok) barchart.Inner.app.destroy()
+		test.end()
+	}
+})
+
+tape('term1=geneVariant gene set with groups', function (test) {
+	test.timeoutAfter(3000)
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'barchart',
+					term: {
+						term: {
+							genes: [
+								{
+									kind: 'gene',
+									gene: 'TP53',
+									type: 'geneVariant'
+								},
+								{
+									kind: 'gene',
+									gene: 'KRAS',
+									type: 'geneVariant'
+								}
+							],
+							type: 'geneVariant'
+						},
+						q: { type: 'predefined-groupset' }
+					}
+				}
+			]
+		},
+		barchart: {
+			callbacks: {
+				'postRender.test': testNumCharts
+			}
+		}
+	})
+
+	function testNumCharts(barchart) {
+		const barDiv = barchart.Inner.dom.barDiv
+		const numCharts = barDiv.selectAll('.pp-sbar-div').size()
+		test.true(numCharts == 1, 'Should have 1 chart from gene variant gene set')
 		if (test._ok) barchart.Inner.app.destroy()
 		test.end()
 	}
@@ -2079,10 +2124,16 @@ const tp53dtTermFilter = {
 					name_noOrigin: 'SNV/indel',
 					origin: 'somatic',
 					parentTerm: {
-						kind: 'gene',
-						id: 'TP53',
-						gene: 'TP53',
 						name: 'TP53',
+						genes: [
+							{
+								kind: 'gene',
+								id: 'TP53',
+								gene: 'TP53',
+								name: 'TP53',
+								type: 'geneVariant'
+							}
+						],
 						type: 'geneVariant'
 					}
 				},

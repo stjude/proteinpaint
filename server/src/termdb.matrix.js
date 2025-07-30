@@ -556,9 +556,16 @@ async function mayQueryMutatedSamples(q) {
 		// TODO: use fillTW() here
 		const tw = {
 			term: {
-				kind: 'gene',
-				gene: geneName,
 				name: geneName,
+				genes: [
+					{
+						kind: 'gene',
+						id: geneName,
+						gene: geneName,
+						name: geneName,
+						type: 'geneVariant'
+					}
+				],
 				type: 'geneVariant',
 				groupsetting: { disabled: false }
 			},

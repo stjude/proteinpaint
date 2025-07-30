@@ -1372,10 +1372,16 @@ const geneVariantQ = {
 }
 
 const genVariantTerm = {
-	kind: 'gene',
-	id: 'TP53',
-	gene: 'TP53',
 	name: 'TP53',
+	genes: [
+		{
+			kind: 'gene',
+			id: 'TP53',
+			gene: 'TP53',
+			name: 'TP53',
+			type: 'geneVariant'
+		}
+	],
 	type: 'geneVariant',
 	groupsetting: {
 		disabled: false,
