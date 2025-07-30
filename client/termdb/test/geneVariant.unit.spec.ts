@@ -12,7 +12,7 @@ tape('\n', function (test) {
 	test.end()
 })
 
-tape('selectGene()', async function (test) {
+tape('selectGene()', function (test) {
 	test.timeoutAfter(100)
 	test.plan(5)
 	let search, actualTerm, expectedTerm, message
@@ -25,12 +25,18 @@ tape('selectGene()', async function (test) {
 		geneSymbol: 'TP53',
 		fromWhat: 'TP53'
 	}
-	await handler.selectGene(search)
+	handler.selectGene(search)
 	expectedTerm = {
-		kind: 'gene',
-		id: 'TP53',
-		gene: 'TP53',
 		name: 'TP53',
+		genes: [
+			{
+				kind: 'gene',
+				id: 'TP53',
+				gene: 'TP53',
+				name: 'TP53',
+				type: 'geneVariant'
+			}
+		],
 		type: 'geneVariant'
 	}
 	test.deepEqual(actualTerm, expectedTerm, 'should return correct term when searching by gene symbol')
@@ -41,14 +47,19 @@ tape('selectGene()', async function (test) {
 		stop: 7687538,
 		fromWhat: 'Valid coordinate'
 	}
-	await handler.selectGene(search)
+	handler.selectGene(search)
 	expectedTerm = {
-		kind: 'coord',
-		id: 'chr17:7661779-7687538',
-		chr: 'chr17',
-		start: 7661778,
-		stop: 7687538,
 		name: 'chr17:7661779-7687538',
+		genes: [
+			{
+				kind: 'coord',
+				chr: 'chr17',
+				start: 7661778,
+				stop: 7687538,
+				name: 'chr17:7661779-7687538',
+				type: 'geneVariant'
+			}
+		],
 		type: 'geneVariant'
 	}
 	test.deepEqual(actualTerm, expectedTerm, 'should return correct term when searching by coordinate')
@@ -59,7 +70,7 @@ tape('selectGene()', async function (test) {
 		fromWhat: 'TP53'
 	}
 	message = 'should throw when no gene symbol and no chr'
-	await verifyError(search, message)
+	verifyError(search, message)
 
 	search = {
 		chr: 'chr17',
@@ -67,7 +78,7 @@ tape('selectGene()', async function (test) {
 		fromWhat: 'TP53'
 	}
 	message = 'should throw when no gene symbol and no start'
-	await verifyError(search, message)
+	verifyError(search, message)
 
 	search = {
 		chr: 'chr17',
@@ -75,14 +86,44 @@ tape('selectGene()', async function (test) {
 		fromWhat: 'TP53'
 	}
 	message = 'should throw when no gene symbol and no stop'
-	await verifyError(search, message)
+	verifyError(search, message)
 
-	async function verifyError(search, message) {
+	function verifyError(search, message) {
 		try {
-			await handler.selectGene(search)
+			handler.selectGene(search)
 			test.fail(message)
 		} catch (e: any) {
 			test.pass(`${message}: ${e.message || e}`)
 		}
 	}
+	test.end()
+})
+
+tape('selectGeneSet()', function (test) {
+	let actualTerm
+	handler.callback = term => (actualTerm = term)
+	const result = { geneList: [{ gene: 'CTNNB1' }, { gene: 'TP53' }] }
+	handler.selectGeneSet(result)
+	const expectedTerm = {
+		name: 'CTNNB1, TP53',
+		genes: [
+			{
+				kind: 'gene',
+				id: 'CTNNB1',
+				gene: 'CTNNB1',
+				name: 'CTNNB1',
+				type: 'geneVariant'
+			},
+			{
+				kind: 'gene',
+				id: 'TP53',
+				gene: 'TP53',
+				name: 'TP53',
+				type: 'geneVariant'
+			}
+		],
+		type: 'geneVariant'
+	}
+	test.deepEqual(actualTerm, expectedTerm, 'should return correct term when searching by gene set')
+	test.end()
 })

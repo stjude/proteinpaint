@@ -1,5 +1,5 @@
 import tape from 'tape'
-import type { GvCustomGsQ, RawGvTW, DtTerm, GvTW } from '#types'
+import type { GvTW } from '#types'
 import { vocabInit } from '#termdb/vocabulary'
 import { GvBase } from '../geneVariant'
 import { getPredefinedGroupsets } from '../../termsetting/handlers/geneVariant.ts'
@@ -70,7 +70,7 @@ tape('fill(): invalid tw', async test => {
 })
 
 tape('fill(): no q.type', async test => {
-	const tw: RawGvTW = {
+	const tw: any = {
 		term: {
 			kind: 'gene',
 			id: 'TP53',
@@ -94,7 +94,7 @@ tape('fill(): no q.type', async test => {
 })
 
 tape('fill(): q.type=values', async test => {
-	const tw: RawGvTW = {
+	const tw: any = {
 		term: {
 			kind: 'gene',
 			id: 'TP53',
@@ -111,12 +111,18 @@ tape('fill(): q.type=values', async test => {
 })
 
 tape('fill(): q.type=predefined-groupset', async test => {
-	const tw: RawGvTW = {
+	const tw: any = {
 		term: {
-			kind: 'gene',
-			id: 'TP53',
-			gene: 'TP53',
 			name: 'TP53',
+			genes: [
+				{
+					kind: 'gene',
+					id: 'TP53',
+					gene: 'TP53',
+					name: 'TP53',
+					type: 'geneVariant'
+				}
+			],
 			type: 'geneVariant'
 		},
 		isAtomic: true,
@@ -140,12 +146,18 @@ tape('fill(): q.type=predefined-groupset', async test => {
 })
 
 tape('fill(): q.type=custom-groupset', async test => {
-	const tw: RawGvTW = {
+	const tw: any = {
 		term: {
-			kind: 'gene',
-			id: 'TP53',
-			gene: 'TP53',
 			name: 'TP53',
+			genes: [
+				{
+					kind: 'gene',
+					id: 'TP53',
+					gene: 'TP53',
+					name: 'TP53',
+					type: 'geneVariant'
+				}
+			],
 			type: 'geneVariant'
 		},
 		isAtomic: true,
@@ -160,10 +172,17 @@ tape('fill(): q.type=custom-groupset', async test => {
 tape('getPredefinedGroupsets: fill groupsets', async test => {
 	const tw: any = {
 		term: {
-			type: 'geneVariant',
-			gene: 'TP53',
-			kind: 'gene',
 			name: 'TP53',
+			genes: [
+				{
+					kind: 'gene',
+					id: 'TP53',
+					gene: 'TP53',
+					name: 'TP53',
+					type: 'geneVariant'
+				}
+			],
+			type: 'geneVariant',
 			id: 'TP53',
 			groupsetting: { disabled: false }
 		},
@@ -218,7 +237,7 @@ tape('getPredefinedGroupsets: incorrect tw.q.type', async test => {
  variables
 ***********/
 
-const childTerms: DtTerm[] = [
+const childTerms = [
 	{
 		id: 'snvindel_somatic',
 		query: 'snvindel',
@@ -235,11 +254,18 @@ const childTerms: DtTerm[] = [
 		name_noOrigin: 'SNV/indel',
 		origin: 'somatic',
 		parentTerm: {
-			kind: 'gene',
-			id: 'TP53',
-			gene: 'TP53',
 			name: 'TP53',
-			type: 'geneVariant'
+			genes: [
+				{
+					kind: 'gene',
+					id: 'TP53',
+					gene: 'TP53',
+					name: 'TP53',
+					type: 'geneVariant'
+				}
+			],
+			type: 'geneVariant',
+			id: 'TP53'
 		}
 	},
 	{
@@ -258,11 +284,18 @@ const childTerms: DtTerm[] = [
 		name_noOrigin: 'SNV/indel',
 		origin: 'germline',
 		parentTerm: {
-			kind: 'gene',
-			id: 'TP53',
-			gene: 'TP53',
 			name: 'TP53',
-			type: 'geneVariant'
+			genes: [
+				{
+					kind: 'gene',
+					id: 'TP53',
+					gene: 'TP53',
+					name: 'TP53',
+					type: 'geneVariant'
+				}
+			],
+			type: 'geneVariant',
+			id: 'TP53'
 		}
 	},
 	{
@@ -279,11 +312,18 @@ const childTerms: DtTerm[] = [
 		},
 		name_noOrigin: 'CNV',
 		parentTerm: {
-			kind: 'gene',
-			id: 'TP53',
-			gene: 'TP53',
 			name: 'TP53',
-			type: 'geneVariant'
+			genes: [
+				{
+					kind: 'gene',
+					id: 'TP53',
+					gene: 'TP53',
+					name: 'TP53',
+					type: 'geneVariant'
+				}
+			],
+			type: 'geneVariant',
+			id: 'TP53'
 		}
 	},
 	{
@@ -300,16 +340,23 @@ const childTerms: DtTerm[] = [
 		},
 		name_noOrigin: 'Fusion RNA',
 		parentTerm: {
-			kind: 'gene',
-			id: 'TP53',
-			gene: 'TP53',
 			name: 'TP53',
-			type: 'geneVariant'
+			genes: [
+				{
+					kind: 'gene',
+					id: 'TP53',
+					gene: 'TP53',
+					name: 'TP53',
+					type: 'geneVariant'
+				}
+			],
+			type: 'geneVariant',
+			id: 'TP53'
 		}
 	}
 ]
 
-const customGsQ: GvCustomGsQ = {
+const customGsQ = {
 	isAtomic: true,
 	type: 'custom-groupset',
 	hiddenValues: {},
@@ -342,10 +389,16 @@ const customGsQ: GvCustomGsQ = {
 									name_noOrigin: 'SNV/indel',
 									origin: 'somatic',
 									parentTerm: {
-										kind: 'gene',
-										id: 'TP53',
-										gene: 'TP53',
 										name: 'TP53',
+										genes: [
+											{
+												kind: 'gene',
+												id: 'TP53',
+												gene: 'TP53',
+												name: 'TP53',
+												type: 'geneVariant'
+											}
+										],
 										type: 'geneVariant'
 									}
 								},
@@ -391,10 +444,16 @@ const customGsQ: GvCustomGsQ = {
 									name_noOrigin: 'SNV/indel',
 									origin: 'somatic',
 									parentTerm: {
-										kind: 'gene',
-										id: 'TP53',
-										gene: 'TP53',
 										name: 'TP53',
+										genes: [
+											{
+												kind: 'gene',
+												id: 'TP53',
+												gene: 'TP53',
+												name: 'TP53',
+												type: 'geneVariant'
+											}
+										],
 										type: 'geneVariant'
 									}
 								},
