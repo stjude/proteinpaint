@@ -666,10 +666,15 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 
 	// q: req.query
 	// ds: dataset object
-	// routeTwLst
+	// routeTwLst[]: optional array of route-specific termwrappers
+	//   - if undefined: the ds.getAdditionalFilter() should return it's strictest auth filter
+	//   - if an empty array: no terms should be considered protected by ds.getAdditionalFilter(), so no auth filter
+	//   - if an array with 1+ entries: these are the only terms to be matched against a dataset's hidden terms,
+	//     and the ds should construct an actual or undefined auth filter based on matched terms
 	authApi.mayAdjustFilter = function (q, ds, routeTwLst) {
 		if (!ds.cohort.termdb.getAdditionalFilter) return
 		if (!q.__protected__) throw `missing q.__protected__`
+		if (routeTwLst && !Array.isArray(routeTwLst)) throw `invalid routeTwLst`
 
 		// clientAuthResult{}: from authApi.getNonsensitiveInfo()
 		// ignoredTermIds[]: a list of protected term.ids to ignore,
