@@ -249,8 +249,6 @@ export class WSIViewerInteractions {
 					})
 				)
 
-				console.log('source', source)
-
 				source?.addFeature(border)
 
 				const oldAnnotation = settings.sessionsAnnotations

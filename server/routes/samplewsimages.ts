@@ -1,4 +1,4 @@
-import type { SampleWSImagesRequest, SampleWSImagesResponse, WSImage, RouteApi, Mds3 } from '#types'
+import type { Mds3, RouteApi, SampleWSImagesRequest, SampleWSImagesResponse, WSImage } from '#types'
 import { sampleWSImagesPayload } from '#types/checkers'
 import path from 'path'
 import fs from 'fs'
@@ -80,6 +80,30 @@ function init({ genomes }) {
 						if (zoomInPoints) {
 							wsimage.zoomInPoints = zoomInPoints
 						}
+					}
+
+					if (ds.queries.WSImages.getWSIPredictionPatches) {
+						const predictionsFile = await ds.queries.WSImages.getWSIPredictionPatches(sampleId, wsimage.filename)
+
+						const predictionsFilePath = path.join(
+							serverconfig.tpmasterdir,
+							ds.queries.WSImages.imageBySampleFolder,
+							sampleId,
+							predictionsFile[0]
+						)
+
+						const predictionsData = JSON.parse(fs.readFileSync(predictionsFilePath, 'utf8'))
+
+						wsimage.predictions = predictionsData.features.map((d: any) => {
+							const featClass =
+								ds.queries.WSImages?.classes?.find(f => f.id == d.properties.class)?.label || d.properties.class
+							return {
+								zoomCoordinates: d.properties.zoomCoordinates,
+								type: d.properties.type,
+								uncertainty: d.properties.uncertainty,
+								class: featClass
+							}
+						})
 					}
 				}
 			}

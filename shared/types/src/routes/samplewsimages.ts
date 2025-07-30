@@ -19,6 +19,7 @@ export type WSImage = {
 	zoomInPoints?: Array<[number, number]>
 	metadata: string
 	annotationsData?: Array<Annotation>
+	predictions?: Array<Prediction>
 	classes?: Array<WSIClass>
 	/** ds defined uncertainity labels and colors */
 	uncertainty?: any
@@ -31,6 +32,13 @@ export type Annotation = {
 	type?: string
 	class?: string
 	uncertainty?: number
+}
+
+export type Prediction = {
+	zoomCoordinates: [number, number]
+	type: string
+	class: string
+	uncertainty: number
 }
 
 export const sampleWSImagesPayload: RoutePayload = {
