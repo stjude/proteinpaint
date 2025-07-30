@@ -1,6 +1,4 @@
-import { Menu, make_radios } from '#dom'
-import { addGeneSearchbox } from '../../dom/genesearch.ts'
-import { GeneSetEditUI } from '../../dom/GeneSetEdit/GeneSetEditUI'
+import { Menu, make_radios, addGeneSearchbox, GeneSetEditUI } from '#dom'
 
 export class SearchHandler {
 	opts: any
