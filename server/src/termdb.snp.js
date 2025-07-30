@@ -107,7 +107,7 @@ async function summarizeSamplesFromCache(q, tdb, ds, genome) {
 	let sampleinfilter // list of true/false, same length of tk.samples, to tell if a sample is in use
 	if (q.filter) {
 		// using optional filter
-		const filterSet = new Set((await termdbsql.get_samples(q.filter, ds)).map(i => i.id))
+		const filterSet = new Set((await termdbsql.get_samples({ filter: q.filter }, ds)).map(i => i.id))
 		if (filterSet.size == 0) throw 'no samples from filter'
 		sampleinfilter = tk.samples.map(i => filterSet.has(i.name))
 	} else {

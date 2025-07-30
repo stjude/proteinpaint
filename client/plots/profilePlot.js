@@ -175,7 +175,8 @@ export class profilePlot {
 		}
 		this.filteredTermValues = await this.app.vocabApi.filterTermValues({
 			terms: this.config.filterTWs,
-			filters
+			filters,
+			ignoreUserFilter: !this.settings.filterByUserSites
 		})
 		this.regions = this.filteredTermValues[this.config.regionTW.id]
 		this.countries = this.filteredTermValues[this.config.countryTW.id]

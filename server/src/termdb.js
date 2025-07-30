@@ -140,7 +140,7 @@ async function trigger_getsamples(q, res, ds) {
 
 async function getSampleList(req, q, ds) {
 	const canDisplay = authApi.canDisplaySampleIds(req, ds)
-	const samples = await termdbsql.get_samples(q.filter, ds, canDisplay)
+	const samples = await termdbsql.get_samples(q, ds, canDisplay)
 	return samples
 }
 
@@ -326,7 +326,7 @@ async function get_AllSamplesByName(q, req, res, ds) {
 		q.ds = ds
 		const filteredSamples = ds.cohort.termdb.hasSampleAncestry
 			? await get_samples_ancestry(q.filter, q.ds, true)
-			: await get_samples(q.filter, q.ds, true)
+			: await get_samples(q, q.ds, true)
 		for (const sample of filteredSamples) {
 			const name = ds.sampleId2Name.get(sample.id)
 			const sample_type = ds.sampleId2Type.get(sample.id)
