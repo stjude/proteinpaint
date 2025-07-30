@@ -176,7 +176,9 @@ export class profilePlot {
 		this.filteredTermValues = await this.app.vocabApi.filterTermValues({
 			terms: this.config.filterTWs,
 			filters,
-			ignoreUserFilter: !this.settings.filterByUserSites
+			// safe to pass because the backend code will still compare terms[] with the the dataset's hiddenTermIds,
+			// it only affects what will be included in the aggregation and does not disable user access authentication
+			filterByUserSites: this.settings.filterByUserSites
 		})
 		this.regions = this.filteredTermValues[this.config.regionTW.id]
 		this.countries = this.filteredTermValues[this.config.countryTW.id]
@@ -636,7 +638,7 @@ export function getDefaultProfilePlotSettings() {
 	return {
 		isAggregate: false,
 		showTable: true,
-		filterByUserSites: false //if true, the user sites filter is applied
+		filterByUserSites: false //if true, the aggregation will be limited to the user sites only
 	}
 }
 

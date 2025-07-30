@@ -69,7 +69,7 @@ export class Report extends RxComponentInner {
 	}
 
 	getFilter() {
-		return getCategoricalTermFilter(this.config.filterTWs, this.settings, null)
+		return getCategoricalTermFilter(this.config.filterTWs, this.settings, this.state.termdbConfig.authFilter)
 	}
 
 	getState(appState: any) {
@@ -77,7 +77,6 @@ export class Report extends RxComponentInner {
 		if (!config) {
 			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
 		}
-
 		return {
 			config,
 			plots: appState.plots.filter(p => p.parentId === this.id), //this property is needed to indicate that child plots need to be added to the appState plots
@@ -187,6 +186,7 @@ export async function getPlotConfig(opts, app) {
 
 	try {
 		const config = app.vocabApi?.termdbConfig?.plotConfigByCohort?.default?.report
+		config.filter = app.vocabApi?.termdbConfig?.authFilter
 		copyMerge(plot, config, opts)
 		if (plot.filterTWs) for (const tw of plot.filterTWs) await fillTermWrapper(tw, app.vocabApi)
 
