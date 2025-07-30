@@ -2767,50 +2767,51 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 
 				await mayAddDataAvailability(sample2mlst, dt, ds, gene, q)
 			}
+		}
 
-			const groupset = get_active_groupset(tw.term, tw.q)
+		const groupset = get_active_groupset(tw.term, tw.q)
 
-			// TODO: need to test when geneVariant term is in global filter for gdc
-			let geneVariantFilter
-			if (q.filter) {
-				geneVariantFilter = structuredClone(q.filter)
-				geneVariantFilter.lst = q.filter.lst.filter(item => dtTermTypes.has(item.tvs.term.type))
-			}
-			for (const [sample, mlst] of sample2mlst) {
-				// may filter samples here by geneVariant data
-				// necessary for gdc, which uses a different filter
-				// structure during data query that is not compatible with
-				// geneVariant data filtering (see filter2GDCfilter() in server/src/mds3.gdc.filter.js)
-				const pass = mayFilterByGeneVariant(geneVariantFilter, mlst, ds)
-				if (!pass) continue
-				if (groupset) {
-					// groupsetting is active
-					// get the first group of groupset that the sample can be assigned to
-					// for example: if groups[0] is SNV=M and groups[1] is
-					// CNV=Loss and a sample has both SNV=M and CNV=Loss, then
-					// the sample will be assigned to groups[0]
-					const group = groupset.groups.find(group => {
-						if (group.type != 'filter') throw 'unexpected group.type'
-						const filter = group.filter
-						const [pass, tested] = filterByTvsLst(filter, mlst)
-						return pass
-					})
+		// TODO: need to test when geneVariant term is in global filter for gdc
+		let geneVariantFilter
+		if (q.filter) {
+			geneVariantFilter = structuredClone(q.filter)
+			geneVariantFilter.lst = q.filter.lst.filter(item => dtTermTypes.has(item.tvs.term.type))
+		}
+		for (const [sample, mlst] of sample2mlst) {
+			// may filter samples here by geneVariant data
+			// necessary for gdc, which uses a different filter
+			// structure during data query that is not compatible with
+			// geneVariant data filtering (see filter2GDCfilter() in server/src/mds3.gdc.filter.js)
+			const pass = mayFilterByGeneVariant(geneVariantFilter, mlst, ds)
+			if (!pass) continue
+			if (groupset) {
+				// groupsetting is active
+				// get the first group of groupset that the sample can be assigned to
+				// for example: if groups[0] is SNV=M and groups[1] is
+				// CNV=Loss and a sample has both SNV=M and CNV=Loss, then
+				// the sample will be assigned to groups[0]
+				const group = groupset.groups.find(group => {
+					// TODO: should iterate through each gene here to determine if filter passes for at least one gene
+					if (group.type != 'filter') throw 'unexpected group.type'
+					const filter = group.filter
+					const [pass, tested] = filterByTvsLst(filter, mlst)
+					return pass
+				})
 
-					if (!group || group.uncomputable) continue
+				if (!group || group.uncomputable) continue
 
-					// store sample data
-					// key will be the name of the assigned group
-					data.set(sample, {
-						sample,
-						[tw.$id]: { key: group.name, label: group.name, value: group.name, values: mlst }
-					})
-				} else {
-					// groupsetting is not active
-					data.set(sample, {
-						sample,
-						[tw.$id]: { key: tw.term.name, label: tw.term.name, values: mlst }
-					})
-				}
+				// store sample data
+				// key will be the name of the assigned group
+				data.set(sample, {
+					sample,
+					[tw.$id]: { key: group.name, label: group.name, value: group.name, values: mlst }
+				})
+			} else {
+				// groupsetting is not active
+				data.set(sample, {
+					sample,
+					[tw.$id]: { key: tw.term.name, label: tw.term.name, values: mlst }
+				})
 			}
 		}
 
@@ -2956,21 +2957,40 @@ export function filterByItem(filter, mlst) {
 		let sampleHasGenotype
 		if (tvs.continuousCnv) {
 			// continuous cnv data
-			throw 'need to update to support multiple genes'
 			if (tvs.term.dt != dtcnv) throw 'unexpected dt value'
-			const sampleHasMutation = mlst_tested.some(m => {
-				if (!m.value) return false // will also consider value=0 as not mutated
-				if (m.value > 0 && tvs.cnvGainCutoff && m.value < tvs.cnvGainCutoff) return false
-				if (m.value < 0 && tvs.cnvLossCutoff && m.value > tvs.cnvLossCutoff) return false
-				if (tvs.cnvMaxLength && m.stop - m.start > tvs.cnvMaxLength) return false
-				return true
+			// sample has a cnv if it has either a gain event that meets the
+			// gain cutoff or a loss event that meets the loss cutoff
+			// NOTE: when attempting to only get samples with gain events
+			// (e.g., setting gainCutoff=0.1; lossCutoff=-99), only samples
+			// with gain events will be extracted, but some of these samples
+			// may also have loss events because the gain events still satisfied
+			// the gain cutoff criterion
+			const sampleHasCnv = mlst_tested.some(m => {
+				const cnvLength = m.stop - m.start
+				if (tvs.cnvMaxLength && cnvLength > tvs.cnvMaxLength) return false
+				if (m.value > 0) {
+					// cnv gain
+					return tvs.cnvGainCutoff ? m.value >= tvs.cnvGainCutoff : true
+				}
+				if (m.value < 0) {
+					// cnv loss
+					return tvs.cnvLossCutoff ? m.value <= tvs.cnvLossCutoff : true
+				}
 			})
-			sampleHasGenotype = tvs.cnvWT ? !sampleHasMutation : sampleHasMutation
+			sampleHasGenotype = tvs.cnvWT ? !sampleHasCnv : sampleHasCnv
+			pass = tvs.isnot ? !sampleHasGenotype : sampleHasGenotype
 		} else {
 			// categorical mutation data
-			sampleHasGenotype = mlst_tested.some(m => tvs.values.some(v => (tvs.isnot ? v.key != m.class : v.key == m.class)))
+			sampleHasGenotype = mlst_tested.some(m => {
+				return tvs.values.some(v => {
+					// need to evaluate tvs.isnot here because when multiple genes
+					// are analyzed, a sample may be wildtype for one and mutated
+					// for another, and need to assign that sample to mutated group
+					return tvs.isnot ? v.key != m.class : v.key == m.class
+				})
+			})
+			pass = sampleHasGenotype
 		}
-		pass = sampleHasGenotype
 	} else {
 		// sample is not tested for the dt of the filter
 		// so sample does not pass the filter
