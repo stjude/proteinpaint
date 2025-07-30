@@ -29,6 +29,7 @@ cp -r ../../server/utils server/
 cp ../../test/evalAllSpecCovResults.mjs server/test/
 
 mkdir server/genome
+cp -r ../../server/genome/copyDataFilesFromRepo2Tp.js server/genome
 cp -r ../../server/genome/*.ts server/genome
 npx esbuild "server/genome/*.ts" --platform=node --outdir=server/genome --format=esm
 mkdir server/dataset
