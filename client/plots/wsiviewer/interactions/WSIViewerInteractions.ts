@@ -12,9 +12,13 @@ import type { Annotation } from '@sjcrh/proteinpaint-types'
 import type { SessionWSImage } from '#plots/wsiviewer/viewModel/SessionWSImage.ts'
 
 export class WSIViewerInteractions {
-	public activePatchColor?: string
 	thumbnailClickListener: (index: number) => void
-	zoomInEffectListener: (activeImageExtent: unknown, zoomInPoints: [number, number][], map: OLMap) => void
+	zoomInEffectListener: (
+		activeImageExtent: unknown,
+		zoomInPoints: [number, number][],
+		map: OLMap,
+		activePatchColor: string
+	) => void
 	viewerClickListener: (
 		coordinateX: number,
 		coordinateY: number,
@@ -27,12 +31,12 @@ export class WSIViewerInteractions {
 		sessionWSImage: SessionWSImage,
 		map: OLMap,
 		activeImageExtent: any,
+		activePatchColor: string,
 		shortcuts?: string[],
 		buffers?: any
 	) => void
 
 	constructor(wsiApp: any, opts: any) {
-		this.activePatchColor = '#00e62a'
 		this.thumbnailClickListener = (index: number) => {
 			wsiApp.app.dispatch({
 				type: 'plot_edit',
@@ -42,7 +46,12 @@ export class WSIViewerInteractions {
 				}
 			})
 		}
-		this.zoomInEffectListener = (activeImageExtent: unknown, zoomInPoints: [number, number][], map: OLMap) => {
+		this.zoomInEffectListener = (
+			activeImageExtent: unknown,
+			zoomInPoints: [number, number][],
+			map: OLMap,
+			activePatchColor: string
+		) => {
 			setTimeout(() => {
 				if (!activeImageExtent) return
 
@@ -77,7 +86,7 @@ export class WSIViewerInteractions {
 					.find(l => l instanceof VectorLayer)!
 
 				const zoomCoordinates = [zoomInPoints[0][0], imageHeight - zoomInPoints[0][1]] as [number, number]
-				this.addActiveBorder(vectorLayer as VectorLayer, zoomCoordinates, this.activePatchColor)
+				this.addActiveBorder(vectorLayer as VectorLayer, zoomCoordinates, activePatchColor)
 			}, 200)
 		}
 
@@ -86,6 +95,7 @@ export class WSIViewerInteractions {
 			sessionWSImage: SessionWSImage,
 			map: OLMap,
 			activeImageExtent: any,
+			activePatchColor: string,
 			shortcuts: string[] = [],
 			buffers: any
 		) => {
@@ -160,7 +170,7 @@ export class WSIViewerInteractions {
 					if (nextIdx < annotationsData.length) {
 						buffers.annotationsIdx.set(nextIdx)
 						const coords = [annotationsData[nextIdx].zoomCoordinates] as unknown as [number, number][]
-						this.zoomInEffectListener(activeImageExtent, coords, map)
+						this.zoomInEffectListener(activeImageExtent, coords, map, activePatchColor)
 					}
 
 					try {

@@ -48,7 +48,7 @@ export class WSIAnnotationsRenderer {
 				this.buffers.annotationsIdx.addListener((index: number) => {
 					tr.style('background-color', index === rowIdx ? selectedColor : origColor)
 					const coords = [imageViewData.annotations!.rows[index][1].value] as unknown as [number, number][]
-					this.interactions.zoomInEffectListener(activeImageExtent, coords, map)
+					this.interactions.zoomInEffectListener(activeImageExtent, coords, map, imageViewData.activePatchColor!)
 				})
 
 				tr.style('outline', 'none') //Remove the default outline on click
