@@ -247,19 +247,17 @@ export function getCategoricalTermFilter(filterTWs, values, excludedTw) {
 	// returning null to represent empty filter value since
 	// - tvslst filter bloats the payload and clutters the server log
 	// - undefined value would be left out during JSON-encoding of an object-as-data
-	return !lst.length
-		? null
-		: {
-				type: 'tvslst',
-				in: true,
-				join: lst.length > 1 ? 'and' : '',
-				lst
-		  }
+	return {
+		type: 'tvslst',
+		in: true,
+		join: lst.length > 1 ? 'and' : '',
+		lst
+	}
 }
 
 function processTW(tw, values, lst) {
 	const value = values[tw.term.id]
-	if (value !== undefined) {
+	if (value) {
 		if (Array.isArray(value)) {
 			const tvs = {
 				type: 'tvs',
@@ -268,8 +266,8 @@ function processTW(tw, values, lst) {
 					values: []
 				}
 			}
-			for (const item of value) tvs.tvs.values.push({ key: item })
-			lst.push(tvs)
+			for (const item of value) if (item) tvs.tvs.values.push({ key: item })
+			if (tvs.tvs.values.length) lst.push(tvs)
 		} else
 			lst.push({
 				type: 'tvs',
