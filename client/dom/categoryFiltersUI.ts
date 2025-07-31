@@ -43,12 +43,7 @@ export class CategoryFiltersUI {
 				filterValues = [filterValues] //ensure filterValues is an array
 			const filters: any = {}
 			for (const tw of this.config.filterTWs)
-				filters[tw.term.id] = getCategoricalTermFilter(
-					this.config.filterTWs,
-					this.plot.settings,
-					tw,
-					this.plot.state.termfilter.filter
-				)
+				filters[tw.term.id] = getCategoricalTermFilter(this.config.filterTWs, this.plot.settings, tw)
 			const data = await this.plot.app.vocabApi.filterTermValues({
 				terms: this.config.filterTWs,
 				filters,
