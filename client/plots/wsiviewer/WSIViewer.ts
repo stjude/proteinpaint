@@ -30,7 +30,6 @@ export class WSIViewer extends RxComponentInner {
 	private metadataRenderer = new MetadataRenderer()
 	private legendRenderer = new LegendRenderer()
 	private map: OLMap | undefined = undefined
-	private viewModel: ViewModel | undefined = undefined
 
 	constructor(opts: any) {
 		super()
@@ -65,21 +64,17 @@ export class WSIViewer extends RxComponentInner {
 		const dslabel = state.dslabel || state.vocab.dslabel
 		const sample_id = state.sample_id
 
-		if (!this.viewModel || settings.renderWSIViewer) {
-			this.viewModel = await this.viewModelProvider.provide(
-				genome,
-				dslabel,
-				sample_id,
-				settings.sessionsAnnotations,
-				settings.displayedImageIndex
-			)
-		} else {
-			this.viewModel.setSessionsAnnotations(settings.sessionsAnnotations, settings.displayedImageIndex)
-		}
+		const viewModel: ViewModel = await this.viewModelProvider.provide(
+			genome,
+			dslabel,
+			sample_id,
+			settings.sessionsAnnotations,
+			settings.displayedImageIndex
+		)
 
-		const wsimages = this.viewModel.sampleWSImages
-		const wsimageLayers = this.viewModel.wsimageLayers
-		const wsimageLayersLoadError = this.viewModel.wsimageLayersLoadError
+		const wsimages = viewModel.sampleWSImages
+		const wsimageLayers = viewModel.wsimageLayers
+		const wsimageLayersLoadError = viewModel.wsimageLayersLoadError
 
 		if (wsimages.length === 0) {
 			holder.append('div').style('margin-left', '10px').text('No WSI images.')
@@ -94,7 +89,7 @@ export class WSIViewer extends RxComponentInner {
 		const activeImage: TileLayer = wsimageLayers[settings.displayedImageIndex].wsimage
 		const activeImageExtent = activeImage?.getSource()?.getTileGrid()?.getExtent()
 
-		const imageViewData: ImageViewData = this.viewModel.getImageViewData(settings.displayedImageIndex)
+		const imageViewData: ImageViewData = viewModel.getImageViewData(settings.displayedImageIndex)
 
 		if (settings.renderWSIViewer) {
 			this.thumbnailsContainer = this.thumbnailRenderer.render(
@@ -108,14 +103,9 @@ export class WSIViewer extends RxComponentInner {
 			this.map = new MapRenderer(
 				wsimageLayers[settings.displayedImageIndex],
 				this.wsiViewerInteractions.viewerClickListener,
-				this.viewModel.sampleWSImages[settings.displayedImageIndex],
+				viewModel.sampleWSImages[settings.displayedImageIndex],
 				buffers
 			).render(holder, settings)
-
-			//TODO: Handle this better
-			if (imageViewData.activePatchColor) {
-				this.wsiViewerInteractions.activePatchColor = imageViewData.activePatchColor
-			}
 
 			if (activeImageExtent && this.map) {
 				this.map.getView().fit(activeImageExtent)
@@ -128,15 +118,21 @@ export class WSIViewer extends RxComponentInner {
 			this.legendRenderer.render(holder, imageViewData)
 			this.metadataRenderer.renderMetadata(holder, imageViewData)
 
-			const zoomInPoints = this.viewModel.getZoomInPoints(settings.displayedImageIndex)
+			const initialZoomInCoordinate = viewModel.getInitialZoomInCoordinate(settings.displayedImageIndex)
 
-			if (zoomInPoints != undefined) {
-				this.wsiViewerInteractions.zoomInEffectListener(activeImageExtent, zoomInPoints, this.map)
+			if (initialZoomInCoordinate != undefined) {
+				this.wsiViewerInteractions.zoomInEffectListener(
+					activeImageExtent,
+					initialZoomInCoordinate,
+					this.map,
+					imageViewData.activePatchColor!
+				)
 				this.wsiViewerInteractions.setKeyDownListener(
 					holder,
-					this.viewModel.sampleWSImages[settings.displayedImageIndex],
+					viewModel.sampleWSImages[settings.displayedImageIndex],
 					this.map,
 					activeImageExtent,
+					imageViewData.activePatchColor!,
 					imageViewData.shortcuts,
 					buffers
 				)

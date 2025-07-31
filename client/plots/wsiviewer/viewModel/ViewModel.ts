@@ -42,10 +42,10 @@ export class ViewModel {
 		return imageViewData
 	}
 
-	public getZoomInPoints(index: number) {
+	public getInitialZoomInCoordinate(index: number) {
 		const image = this.sampleWSImages[index]
 		const session = image.sessionsAnnotations?.map(a => a.zoomCoordinates) || []
-		const persisted = image.zoomInPoints || []
+		const persisted = image.annotationsData?.map(a => a.zoomCoordinates) || []
 		return [...session, ...persisted].slice(0, 1)
 	}
 
