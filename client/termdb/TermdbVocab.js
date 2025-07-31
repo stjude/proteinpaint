@@ -1338,6 +1338,7 @@ export class TermdbVocab extends Vocab {
 		}
 		if (body.filter) body.filter = getNormalRoot(body.filter)
 		if (body.terms) {
+			body.terms = structuredClone(body.terms)
 			for (const tw of body.terms) {
 				this.mayStripTwProps(tw)
 			}
@@ -1352,6 +1353,7 @@ export class TermdbVocab extends Vocab {
 			...args
 		}
 		if (body.filter) body.filter = getNormalRoot(body.filter)
+		body.facilityTW = structuredClone(body.facilityTW)
 		this.mayStripTwProps(body.facilityTW)
 		if (body.scoreTerms) {
 			// replace with a mutable copy
@@ -1370,7 +1372,6 @@ export class TermdbVocab extends Vocab {
 			dslabel: this.vocab.dslabel,
 			...args
 		}
-		console.log(1372, body)
 		if (body.filter) body.filter = getNormalRoot(body.filter)
 		if (body.terms) {
 			for (const t of body.terms) {
