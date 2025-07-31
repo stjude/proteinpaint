@@ -11,6 +11,11 @@ export class SearchHandler {
 		this.callback = opts.callback
 		this.dom.radiosDiv = opts.holder.append('div')
 		this.dom.searchDiv = opts.holder.append('div')
+		if (this.opts.app?.opts?.state?.tree?.usecase?.target == 'matrix') {
+			// hide radios in matrix to prevent switching to gene set
+			// because matrix already adds genes one by one to gene set
+			this.dom.radiosDiv.style('display', 'none')
+		}
 		make_radios({
 			holder: this.dom.radiosDiv,
 			options: [
@@ -24,7 +29,7 @@ export class SearchHandler {
 
 	searchGene() {
 		this.dom.searchDiv.selectAll('*').remove()
-		this.dom.searchDiv.style('margin-top', '10px')
+		this.dom.searchDiv.style('margin-top', '5px')
 		const geneSearch = addGeneSearchbox({
 			tip: new Menu({ padding: '0px' }),
 			genome: this.opts.genomeObj,
