@@ -82,11 +82,8 @@ tape('Render TermdbTest runchart plot', function (test) {
 		function testPlot() {
 			const serieG = scatterDiv.select('.sjpcb-scatter-series')
 			const numSymbols = serieG.selectAll('path').size() - 1 // exclude the path connecting the dots
-			test.equal(
-				numSymbols,
-				scatter.Inner.model.charts[0].data.samples.length,
-				`Should be ${scatter.Inner.model.charts[0].data.samples.length}. Rendered ${numSymbols} symbols.`
-			)
+			const expected = scatter.Inner.model.charts[0].data.samples.length
+			test.equal(numSymbols, expected, `Should be ${expected}. Rendered ${numSymbols} symbols.`)
 		}
 
 		function testLegendTitle() {
@@ -397,11 +394,8 @@ tape('Test divide by date', function (test) {
 			const serieG = scatterDiv.select('.sjpcb-scatter-series')
 			const paths = serieG.selectAll('path')
 			const numSymbols = paths.size() - 7 // exclude the line paths for each time frame
-			test.equal(
-				numSymbols,
-				scatter.Inner.model.charts[0].data.samples.length,
-				`Should be ${scatter.Inner.model.charts[0].data.samples.length}. Rendered ${numSymbols} symbols.`
-			)
+			const expected = scatter.Inner.model.charts[0].data.samples.length
+			test.equal(numSymbols, expected, `Should be ${expected}. Rendered ${numSymbols} symbols.`)
 		}
 	}
 })

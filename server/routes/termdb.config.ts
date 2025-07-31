@@ -117,7 +117,6 @@ function make(q, req, res, ds: Mds3WithCohort, genome) {
 	if (tdb.regression) c.regression = tdb.regression
 	if (ds.assayAvailability) c.assayAvailability = ds.assayAvailability
 	if (ds.cohort.correlationVolcano) c.correlationVolcano = ds.cohort.correlationVolcano
-	c.requiredAuth = authApi.getRequiredCredForDsEmbedder(q.dslabel, q.embedder)
 	addRestrictAncestries(c, tdb)
 	addScatterplots(c, ds)
 	addMatrixplots(c, ds)
@@ -129,6 +128,9 @@ function make(q, req, res, ds: Mds3WithCohort, genome) {
 	const info: any = authApi.getNonsensitiveInfo(req) // type any to avoid tsc err
 	c.clientAuthResult = info?.clientAuthResult || {}
 	if (tdb.displaySampleIds) c.displaySampleIds = tdb.displaySampleIds(c.clientAuthResult)
+	// app.middleware.js would have used authApi.mayAdjustFilter() to create an auth-related filter,
+	// note this may be undefined if there is no ds.cohort.termdb.getAdditionalFilter
+	c.authFilter = req.query.filter
 
 	res.send({ termdbConfig: c })
 }

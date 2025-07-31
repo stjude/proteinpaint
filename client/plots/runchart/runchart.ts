@@ -81,7 +81,7 @@ export class Runchart extends Scatter {
 	}
 
 	getFilter() {
-		return getCategoricalTermFilter(this.filterTWs, this.settings, null, this.state.termfilter.filter)
+		return getCategoricalTermFilter(this.filterTWs, this.settings)
 	}
 }
 

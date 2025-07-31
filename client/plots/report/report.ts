@@ -69,7 +69,7 @@ export class Report extends RxComponentInner {
 	}
 
 	getFilter() {
-		return getCategoricalTermFilter(this.config.filterTWs, this.settings, this.state.termdbConfig.authFilter)
+		return getCategoricalTermFilter(this.config.filterTWs, this.settings)
 	}
 
 	getState(appState: any) {
@@ -141,14 +141,10 @@ export class Report extends RxComponentInner {
 			const filterValues = this.settings[tw.term.id] || ''
 			const filters: any = {}
 			for (const tw of this.config.filterTWs)
-				filters[tw.term.id] = getCategoricalTermFilter(
-					this.config.filterTWs,
-					this.settings,
-					tw,
-					this.state.termfilter.filter
-				)
+				filters[tw.term.id] = getCategoricalTermFilter(this.config.filterTWs, this.settings, tw)
 			const data = await this.app.vocabApi.filterTermValues({
 				terms: this.config.filterTWs,
+				filter: this.state.termfilter.filter,
 				filters
 			})
 			const select = this.view.dom.filterSelects[index]
