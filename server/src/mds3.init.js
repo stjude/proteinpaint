@@ -3011,16 +3011,7 @@ also returns isoform accession of the model that's used
 if the model is canonical, the isoform will be usable for screening csq annotation for mutations
 */
 async function mayMapGeneName2coord(term, genome) {
-	if (term.name.startsWith('chr') && term.name.includes(':') && term.name.includes('-')) {
-		// FIXME TODO haphazard guessing if name is coord or gene symbol!! should change to passing whole term obj
-		const [chr, pos] = term.name.split(':')
-		const [start, stop] = pos.split('-').map(Number)
-		term.chr = chr
-		term.start = start
-		term.stop = stop
-	}
 	if (term.chr && Number.isInteger(term.start) && Number.isInteger(term.stop)) return
-
 	// coord missing, fill in chr/start/stop by querying with gene
 	if (!term.gene) throw 'both term.gene and term.chr/start/stop missing'
 	const result = getResult(genome, { input: term.gene, deep: 1 })
