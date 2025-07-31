@@ -25,6 +25,8 @@ export type WSImage = {
 	uncertainty?: any
 	/** Color to highlight active patches */
 	activePatchColor?: string
+	/** Tile size in pixels needed for AI scripts */
+	tileSize?: number
 }
 
 export type Annotation = {
