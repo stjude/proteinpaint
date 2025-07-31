@@ -1329,19 +1329,19 @@ tape('samplelst term', async test => {
 
 tape('geneVariant term', async test => {
 	const opts = await getOpts({
-		tsData: { q: geneVariantQ, term: genVariantTerm }
+		tsData: geneVariantTw
 	})
 
 	await opts.pill.main(opts.tsData)
 	const pill = opts.holder.select('.ts_pill')
 	// check pill summary text
 	let pillSummary = pill.select('.ts_summary_btn')
-	test.equal(pillSummary.text(), 'SNV/indel: Mutated vs. Wildtype', 'Pill should display SNV/indel predefined groupset')
+	test.equal(pillSummary.text(), 'SNV/indel (somatic)', 'Pill should display SNV/indel predefined groupset')
 	// click pill to check menu options
 	pill.node().click()
 	const tip = opts.pill.Inner.dom.tip
 	let menuOptions = tip.d.selectAll('.sja_menuoption.sja_sharp_border')
-	test.equal(menuOptions.size(), 3, 'Should have 3 menu options')
+	test.equal(menuOptions.size(), 5, 'Should have 5 menu options')
 	// click edit option to check edit UI
 	const editOptionElem = menuOptions._groups[0][0]
 	const tableElem = await detectOne({
@@ -1356,210 +1356,458 @@ tape('geneVariant term', async test => {
 	// click pill again to display menu options
 	pill.node().click()
 	menuOptions = tip.d.selectAll('.sja_menuoption.sja_sharp_border')
-	// click cnv option to compare cnv mutant vs. wildtype
-	const cnvOptionElem = menuOptions._groups[0][2]
+	// select cnv groupset
+	const cnvOptionElem = menuOptions._groups[0][3]
 	cnvOptionElem.click()
 	await sleep(300)
 	pillSummary = pill.select('.ts_summary_btn')
-	test.equal(pillSummary.text(), 'CNV: Altered vs. Neutral', 'Pill should display CNV predefined groupset')
+	test.equal(pillSummary.text(), 'CNV', 'Pill should display CNV predefined groupset')
 	test.end()
 })
 
-const geneVariantQ = {
-	isAtomic: true,
-	type: 'predefined-groupset',
-	predefined_groupset_idx: 0
-}
-
-const genVariantTerm = {
-	name: 'TP53',
-	genes: [
-		{
-			kind: 'gene',
-			id: 'TP53',
-			gene: 'TP53',
-			name: 'TP53',
-			type: 'geneVariant'
-		}
-	],
-	type: 'geneVariant',
-	groupsetting: {
-		disabled: false,
-		lst: [
+const geneVariantTw = {
+	term: {
+		name: 'TP53',
+		genes: [
 			{
-				name: 'SNV/indel: Mutated vs. Wildtype',
-				groups: [
-					{
-						name: 'SNV/indel Mutated',
-						type: 'filter',
-						filter: {
-							type: 'tvslst',
-							in: true,
-							join: '',
-							lst: [
-								{
-									type: 'tvs',
-									tvs: {
-										term: {
-											id: 'snvindel',
-											query: 'snvindel',
-											name: 'SNV/indel',
-											parent_id: null,
-											isleaf: true,
-											type: 'dtsnvindel',
-											dt: 1,
-											values: {
-												M: { label: 'MISSENSE' },
-												F: { label: 'FRAMESHIFT' },
-												WT: { label: 'Wildtype' }
-											},
-											name_noOrigin: 'SNV/indel',
-											parentTerm: {
-												kind: 'gene',
-												id: 'TP53',
-												gene: 'TP53',
-												name: 'TP53',
-												type: 'geneVariant'
-											}
-										},
-										values: [{ key: 'WT', label: 'Wildtype', value: 'WT' }],
-										isnot: true,
-										excludeGeneName: true
-									}
-								}
-							]
-						},
-						color: '#e75480'
-					},
-					{
-						name: 'SNV/indel Wildtype',
-						type: 'filter',
-						filter: {
-							type: 'tvslst',
-							in: true,
-							join: '',
-							lst: [
-								{
-									type: 'tvs',
-									tvs: {
-										term: {
-											id: 'snvindel',
-											query: 'snvindel',
-											name: 'SNV/indel',
-											parent_id: null,
-											isleaf: true,
-											type: 'dtsnvindel',
-											dt: 1,
-											values: {
-												M: { label: 'MISSENSE' },
-												F: { label: 'FRAMESHIFT' },
-												WT: { label: 'Wildtype' }
-											},
-											name_noOrigin: 'SNV/indel',
-											parentTerm: {
-												kind: 'gene',
-												id: 'TP53',
-												gene: 'TP53',
-												name: 'TP53',
-												type: 'geneVariant'
-											}
-										},
-										values: [{ key: 'WT', label: 'Wildtype', value: 'WT' }],
-										excludeGeneName: true
-									}
-								}
-							]
-						},
-						color: '#0000ff'
-					}
-				]
-			},
-			{
-				name: 'CNV: Altered vs. Neutral',
-				groups: [
-					{
-						name: 'CNV Altered',
-						type: 'filter',
-						filter: {
-							type: 'tvslst',
-							in: true,
-							join: '',
-							lst: [
-								{
-									type: 'tvs',
-									tvs: {
-										term: {
-											id: 'cnv',
-											query: 'cnv',
-											name: 'CNV',
-											parent_id: null,
-											isleaf: true,
-											type: 'dtcnv',
-											dt: 4,
-											values: {
-												CNV_amp: { label: 'Copy number gain' },
-												WT: { label: 'Wildtype' }
-											},
-											name_noOrigin: 'CNV',
-											parentTerm: {
-												kind: 'gene',
-												id: 'TP53',
-												gene: 'TP53',
-												name: 'TP53',
-												type: 'geneVariant'
-											}
-										},
-										values: [{ key: 'WT', label: 'Wildtype', value: 'WT' }],
-										isnot: true,
-										excludeGeneName: true
-									}
-								}
-							]
-						},
-						color: '#e75480'
-					},
-					{
-						name: 'CNV Neutral',
-						type: 'filter',
-						filter: {
-							type: 'tvslst',
-							in: true,
-							join: '',
-							lst: [
-								{
-									type: 'tvs',
-									tvs: {
-										term: {
-											id: 'cnv',
-											query: 'cnv',
-											name: 'CNV',
-											parent_id: null,
-											isleaf: true,
-											type: 'dtcnv',
-											dt: 4,
-											values: {
-												CNV_amp: { label: 'Copy number gain' },
-												WT: { label: 'Wildtype' }
-											},
-											name_noOrigin: 'CNV',
-											parentTerm: {
-												kind: 'gene',
-												id: 'TP53',
-												gene: 'TP53',
-												name: 'TP53',
-												type: 'geneVariant'
-											}
-										},
-										values: [{ key: 'WT', label: 'Wildtype', value: 'WT' }],
-										excludeGeneName: true
-									}
-								}
-							]
-						},
-						color: '#0000ff'
-					}
-				]
+				kind: 'gene',
+				id: 'TP53',
+				gene: 'TP53',
+				name: 'TP53',
+				type: 'geneVariant'
 			}
-		]
-	}
+		],
+		type: 'geneVariant',
+		id: 'TP53',
+		groupsetting: {
+			disabled: false,
+			lst: [
+				{
+					name: 'SNV/indel (somatic)',
+					groups: [
+						{
+							name: 'SNV/indel Mutated (somatic)',
+							type: 'filter',
+							filter: {
+								type: 'tvslst',
+								in: true,
+								join: '',
+								lst: [
+									{
+										type: 'tvs',
+										tvs: {
+											term: {
+												id: 'snvindel_somatic',
+												query: 'snvindel',
+												name: 'SNV/indel (somatic)',
+												parent_id: null,
+												isleaf: true,
+												type: 'dtsnvindel',
+												dt: 1,
+												values: {
+													M: { label: 'MISSENSE' },
+													F: { label: 'FRAMESHIFT' },
+													WT: { label: 'Wildtype' }
+												},
+												name_noOrigin: 'SNV/indel',
+												origin: 'somatic',
+												parentTerm: {
+													name: 'TP53',
+													genes: [
+														{
+															kind: 'gene',
+															id: 'TP53',
+															gene: 'TP53',
+															name: 'TP53',
+															type: 'geneVariant'
+														}
+													],
+													type: 'geneVariant',
+													id: 'TP53'
+												}
+											},
+											values: [{ key: 'WT', label: 'Wildtype', value: 'WT' }],
+											isnot: true,
+											excludeGeneName: true
+										}
+									}
+								]
+							},
+							color: '#e75480'
+						},
+						{
+							name: 'SNV/indel Wildtype (somatic)',
+							type: 'filter',
+							filter: {
+								type: 'tvslst',
+								in: true,
+								join: '',
+								lst: [
+									{
+										type: 'tvs',
+										tvs: {
+											term: {
+												id: 'snvindel_somatic',
+												query: 'snvindel',
+												name: 'SNV/indel (somatic)',
+												parent_id: null,
+												isleaf: true,
+												type: 'dtsnvindel',
+												dt: 1,
+												values: {
+													M: { label: 'MISSENSE' },
+													F: { label: 'FRAMESHIFT' },
+													WT: { label: 'Wildtype' }
+												},
+												name_noOrigin: 'SNV/indel',
+												origin: 'somatic',
+												parentTerm: {
+													name: 'TP53',
+													genes: [
+														{
+															kind: 'gene',
+															id: 'TP53',
+															gene: 'TP53',
+															name: 'TP53',
+															type: 'geneVariant'
+														}
+													],
+													type: 'geneVariant',
+													id: 'TP53'
+												}
+											},
+											values: [{ key: 'WT', label: 'Wildtype', value: 'WT' }],
+											excludeGeneName: true
+										}
+									}
+								]
+							},
+							color: '#0000ff'
+						}
+					],
+					dt: 1
+				},
+				{
+					name: 'SNV/indel (germline)',
+					groups: [
+						{
+							name: 'SNV/indel Mutated (germline)',
+							type: 'filter',
+							filter: {
+								type: 'tvslst',
+								in: true,
+								join: '',
+								lst: [
+									{
+										type: 'tvs',
+										tvs: {
+											term: {
+												id: 'snvindel_germline',
+												query: 'snvindel',
+												name: 'SNV/indel (germline)',
+												parent_id: null,
+												isleaf: true,
+												type: 'dtsnvindel',
+												dt: 1,
+												values: {
+													M: { label: 'MISSENSE' },
+													F: { label: 'FRAMESHIFT' },
+													WT: { label: 'Wildtype' }
+												},
+												name_noOrigin: 'SNV/indel',
+												origin: 'germline',
+												parentTerm: {
+													name: 'TP53',
+													genes: [
+														{
+															kind: 'gene',
+															id: 'TP53',
+															gene: 'TP53',
+															name: 'TP53',
+															type: 'geneVariant'
+														}
+													],
+													type: 'geneVariant',
+													id: 'TP53'
+												}
+											},
+											values: [{ key: 'WT', label: 'Wildtype', value: 'WT' }],
+											isnot: true,
+											excludeGeneName: true
+										}
+									}
+								]
+							},
+							color: '#e75480'
+						},
+						{
+							name: 'SNV/indel Wildtype (germline)',
+							type: 'filter',
+							filter: {
+								type: 'tvslst',
+								in: true,
+								join: '',
+								lst: [
+									{
+										type: 'tvs',
+										tvs: {
+											term: {
+												id: 'snvindel_germline',
+												query: 'snvindel',
+												name: 'SNV/indel (germline)',
+												parent_id: null,
+												isleaf: true,
+												type: 'dtsnvindel',
+												dt: 1,
+												values: {
+													M: { label: 'MISSENSE' },
+													F: { label: 'FRAMESHIFT' },
+													WT: { label: 'Wildtype' }
+												},
+												name_noOrigin: 'SNV/indel',
+												origin: 'germline',
+												parentTerm: {
+													name: 'TP53',
+													genes: [
+														{
+															kind: 'gene',
+															id: 'TP53',
+															gene: 'TP53',
+															name: 'TP53',
+															type: 'geneVariant'
+														}
+													],
+													type: 'geneVariant',
+													id: 'TP53'
+												}
+											},
+											values: [{ key: 'WT', label: 'Wildtype', value: 'WT' }],
+											excludeGeneName: true
+										}
+									}
+								]
+							},
+							color: '#0000ff'
+						}
+					],
+					dt: 1
+				},
+				{
+					name: 'CNV',
+					groups: [
+						{
+							name: 'CNV Copy number gain',
+							type: 'filter',
+							filter: {
+								type: 'tvslst',
+								in: true,
+								join: '',
+								lst: [
+									{
+										type: 'tvs',
+										tvs: {
+											term: {
+												id: 'cnv',
+												query: 'cnv',
+												name: 'CNV',
+												parent_id: null,
+												isleaf: true,
+												type: 'dtcnv',
+												dt: 4,
+												values: {
+													CNV_amp: { label: 'Copy number gain' },
+													WT: { label: 'Wildtype' }
+												},
+												name_noOrigin: 'CNV',
+												parentTerm: {
+													name: 'TP53',
+													genes: [
+														{
+															kind: 'gene',
+															id: 'TP53',
+															gene: 'TP53',
+															name: 'TP53',
+															type: 'geneVariant'
+														}
+													],
+													type: 'geneVariant',
+													id: 'TP53'
+												}
+											},
+											values: [
+												{
+													key: 'CNV_amp',
+													label: 'Copy number gain',
+													value: 'CNV_amp'
+												}
+											],
+											excludeGeneName: true
+										}
+									}
+								]
+							},
+							color: '#e75480'
+						},
+						{
+							name: 'CNV Wildtype',
+							type: 'filter',
+							filter: {
+								type: 'tvslst',
+								in: true,
+								join: '',
+								lst: [
+									{
+										type: 'tvs',
+										tvs: {
+											term: {
+												id: 'cnv',
+												query: 'cnv',
+												name: 'CNV',
+												parent_id: null,
+												isleaf: true,
+												type: 'dtcnv',
+												dt: 4,
+												values: {
+													CNV_amp: { label: 'Copy number gain' },
+													WT: { label: 'Wildtype' }
+												},
+												name_noOrigin: 'CNV',
+												parentTerm: {
+													name: 'TP53',
+													genes: [
+														{
+															kind: 'gene',
+															id: 'TP53',
+															gene: 'TP53',
+															name: 'TP53',
+															type: 'geneVariant'
+														}
+													],
+													type: 'geneVariant',
+													id: 'TP53'
+												}
+											},
+											values: [{ key: 'WT', label: 'Wildtype', value: 'WT' }],
+											excludeGeneName: true
+										}
+									}
+								]
+							},
+							color: '#0000ff'
+						}
+					],
+					dt: 4
+				},
+				{
+					name: 'Fusion RNA',
+					groups: [
+						{
+							name: 'Fusion RNA Mutated',
+							type: 'filter',
+							filter: {
+								type: 'tvslst',
+								in: true,
+								join: '',
+								lst: [
+									{
+										type: 'tvs',
+										tvs: {
+											term: {
+												id: 'fusion',
+												query: 'svfusion',
+												name: 'Fusion RNA',
+												parent_id: null,
+												isleaf: true,
+												type: 'dtfusion',
+												dt: 2,
+												values: {
+													Fuserna: { label: 'Fusion transcript' },
+													WT: { label: 'Wildtype' }
+												},
+												name_noOrigin: 'Fusion RNA',
+												parentTerm: {
+													name: 'TP53',
+													genes: [
+														{
+															kind: 'gene',
+															id: 'TP53',
+															gene: 'TP53',
+															name: 'TP53',
+															type: 'geneVariant'
+														}
+													],
+													type: 'geneVariant',
+													id: 'TP53'
+												}
+											},
+											values: [{ key: 'WT', label: 'Wildtype', value: 'WT' }],
+											isnot: true,
+											excludeGeneName: true
+										}
+									}
+								]
+							},
+							color: '#e75480'
+						},
+						{
+							name: 'Fusion RNA Wildtype',
+							type: 'filter',
+							filter: {
+								type: 'tvslst',
+								in: true,
+								join: '',
+								lst: [
+									{
+										type: 'tvs',
+										tvs: {
+											term: {
+												id: 'fusion',
+												query: 'svfusion',
+												name: 'Fusion RNA',
+												parent_id: null,
+												isleaf: true,
+												type: 'dtfusion',
+												dt: 2,
+												values: {
+													Fuserna: { label: 'Fusion transcript' },
+													WT: { label: 'Wildtype' }
+												},
+												name_noOrigin: 'Fusion RNA',
+												parentTerm: {
+													name: 'TP53',
+													genes: [
+														{
+															kind: 'gene',
+															id: 'TP53',
+															gene: 'TP53',
+															name: 'TP53',
+															type: 'geneVariant'
+														}
+													],
+													type: 'geneVariant',
+													id: 'TP53'
+												}
+											},
+											values: [{ key: 'WT', label: 'Wildtype', value: 'WT' }],
+											excludeGeneName: true
+										}
+									}
+								]
+							},
+							color: '#0000ff'
+						}
+					],
+					dt: 2
+				}
+			]
+		}
+	},
+	q: {
+		isAtomic: true,
+		type: 'predefined-groupset',
+		predefined_groupset_idx: 0,
+		hiddenValues: {}
+	},
+	isAtomic: true,
+	type: 'GvPredefinedGsTW'
 }
