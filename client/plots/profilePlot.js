@@ -170,11 +170,11 @@ export class profilePlot {
 		const isRadarFacility = this.isRadarFacility
 		const filters = {}
 		for (const tw of this.config.filterTWs) {
-			const filter = getCategoricalTermFilter(this.config.filterTWs, this.settings, tw, this.state.termfilter.filter)
-			if (filter) filters[tw.term.id] = filter
+			filters[tw.term.id] = getCategoricalTermFilter(this.config.filterTWs, this.settings, tw)
 		}
 		this.filteredTermValues = await this.app.vocabApi.filterTermValues({
 			terms: this.config.filterTWs,
+			filter: this.state.termfilter.filter,
 			filters,
 			// safe to pass because the backend code will still compare terms[] with the the dataset's hiddenTermIds,
 			// it only affects what will be included in the aggregation and does not disable user access authentication
@@ -439,7 +439,7 @@ export class profilePlot {
 	}
 
 	getFilter() {
-		return getCategoricalTermFilter(this.config.filterTWs, this.settings, null, this.state.termfilter.filter)
+		return getCategoricalTermFilter(this.config.filterTWs, this.settings, null)
 	}
 
 	clearFiltersExcept(ids) {

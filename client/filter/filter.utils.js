@@ -232,25 +232,29 @@ This function is used where ever you need to build a group of categorical filter
  - filterTWs: list of term wrappers (tw) that are used to filter the samples
  - values: an object with term ids as keys and the values to filter by
  - excludedTw: The term wrapper for which the filter is being built. If provided, it will be excluded from the filter.
- - globalFilter: an optional filter that will be joined with the generated filter
  Output:
  - a filter object that can be used to filter term values based on the provided term wrappers and values.
+
+NOTE: Consumer code should submit the global filter in the request payload, so that the server code
+      can combine it with each of the generated filter here.
 */
-export function getCategoricalTermFilter(filterTWs, values, excludedTw, globalFilter) {
+export function getCategoricalTermFilter(filterTWs, values, excludedTw) {
 	const lst = []
 	for (const tw of filterTWs) {
 		if (excludedTw && tw.id === excludedTw.id) continue
 		processTW(tw, values, lst)
 	}
-
-	let filter = {
-		type: 'tvslst',
-		in: true,
-		join: lst.length > 1 ? 'and' : '',
-		lst
-	}
-	if (globalFilter?.lst.length > 0) filter = filterJoin([globalFilter, filter])
-	return filter
+	// returning null to represent empty filter value since
+	// - tvslst filter bloats the payload and clutters the server log
+	// - undefined value would be left out during JSON-encoding of an object-as-data
+	return !lst.length
+		? null
+		: {
+				type: 'tvslst',
+				in: true,
+				join: lst.length > 1 ? 'and' : '',
+				lst
+		  }
 }
 
 function processTW(tw, values, lst) {

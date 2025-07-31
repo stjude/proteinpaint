@@ -19,12 +19,11 @@ export class RunchartView extends ScatterView {
 		const terms = this.runchart.filterTWs
 		const filters = {}
 		for (const tw of terms) {
-			const filter = getCategoricalTermFilter(terms, this.scatter.settings, tw, this.scatter.state.termfilter.filter)
-			if (filter) filters[tw.term.id] = filter
+			filters[tw.term.id] = getCategoricalTermFilter(terms, this.scatter.settings, tw)
 		}
-
 		//Dictionary with samples applying all the filters but not the one from the current term id
 		const filteredTermValues = await this.runchart.app.vocabApi.filterTermValues({
+			filter: this.scatter.state.termfilter.filter,
 			filters,
 			terms
 		})
