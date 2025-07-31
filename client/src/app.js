@@ -131,6 +131,13 @@ export function runproteinpaint(arg) {
 		.attr('data-ppclientversion', `___current-proteinpaint-client-version___`)
 		.style('font-size', '1em')
 		.style('color', 'black')
+		.on('click', e => {
+			// do not bubble down/bubble up events from elements above/below the holder
+			e.stopPropagation()
+			// in case the holder is wrapped inside a form div, pp buttons should not trigger a submission
+			// clicks on other elements, such as radio inputs, checkboxes, etc, should still work
+			if (e.target.tagName == 'BUTTON') e.preventDefault()
+		})
 
 	app.sandbox_header = arg.sandbox_header || undefined
 
