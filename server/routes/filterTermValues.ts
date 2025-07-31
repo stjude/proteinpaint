@@ -37,29 +37,6 @@ function init({ genomes }) {
 	}
 }
 
-function getList(samplesPerFilter, filtersData, tw, showAll) {
-	const values: any = Object.values(tw.term.values)
-	values.sort((v1: any, v2: any) => v1.label.localeCompare(v2.label))
-	const twSamples = samplesPerFilter[tw.term.id]
-	const data: any[] = []
-	for (const sample of twSamples) {
-		data.push(filtersData.samples[sample])
-	}
-	//select samples with data for that term
-	const annotations = data.filter(s => s != undefined).map(sample => sample[tw.$id]?.value)
-	const sampleValues = Array.from(new Set(annotations))
-	const filteredValues: any[] = []
-	for (const value of values) {
-		const label = value.label.replace(/["']/g, '') // remove quotes from the label if found, some datasets have quotes in the labels
-		const disabled = !sampleValues.includes(value.key || value.label) //if the value is not in the sample values, disable it
-		if (!showAll && disabled) continue //skip disabled values
-		filteredValues.push({ value: value.key || value.label, label, disabled })
-	}
-	filteredValues.unshift({ label: '', value: '' })
-	filteredValues.sort((a, b) => a.label.localeCompare(b.label))
-	return filteredValues
-}
-
 async function getFilters(query, ds, genome, res) {
 	// safe to process this client-submitted query.filterByUserSites flag,
 	// which only affects aggregation levels (not revealed sample-level data),
@@ -81,11 +58,34 @@ async function getFilters(query, ds, genome, res) {
 		const tw2List = {}
 		for (const tw of query.terms) {
 			// related to auth: make sure the returned list are not sensitive !!!
-			tw2List[tw.term.id] = getList(samplesPerFilter, filtersData, tw)
+			tw2List[tw.term.id] = getList(samplesPerFilter, filtersData, tw, query.showAll)
 		}
 		res.send({ ...tw2List })
 	} catch (e: any) {
 		console.log(e)
 		res.send({ error: e.message || e })
 	}
+}
+
+function getList(samplesPerFilter, filtersData, tw, showAll) {
+	const values: any = Object.values(tw.term.values)
+	values.sort((v1: any, v2: any) => v1.label.localeCompare(v2.label))
+	const twSamples = samplesPerFilter[tw.term.id]
+	const data: any[] = []
+	for (const sample of twSamples) {
+		data.push(filtersData.samples[sample])
+	}
+	//select samples with data for that term
+	const annotations = data.filter(s => s != undefined).map(sample => sample[tw.$id]?.value)
+	const sampleValues = Array.from(new Set(annotations))
+	const filteredValues: any[] = []
+	for (const value of values) {
+		const label = value.label.replace(/["']/g, '') // remove quotes from the label if found, some datasets have quotes in the labels
+		const disabled = !sampleValues.includes(value.key || value.label) //if the value is not in the sample values, disable it
+		if (!showAll && disabled) continue //skip disabled values
+		filteredValues.push({ value: value.key || value.label, label, disabled })
+	}
+	filteredValues.unshift({ label: '', value: '' })
+	filteredValues.sort((a, b) => a.label.localeCompare(b.label))
+	return filteredValues
 }
