@@ -384,18 +384,16 @@ tape('Test divide by date', function (test) {
 
 	async function runTests(scatter) {
 		scatter.on('postRender.test', null)
-		const samples = scatter.Inner.model.charts[0].data.samples
-		const scatterDiv = scatter.Inner.model.charts[0].chartDiv
+		const charts = scatter.Inner.model.charts
+		const scatterDiv = scatter.Inner.model.charts[0].chartDiv //The runchart plots all the series in the same scatterDiv
 		testPlot()
 		if (test._ok) scatter.Inner.app.destroy()
 		test.end()
 
 		function testPlot() {
 			const serieG = scatterDiv.select('.sjpcb-scatter-series')
-			const paths = serieG.selectAll('path')
-			const numSymbols = paths.size() - 7 // exclude the line paths for each time frame
-			const expected = scatter.Inner.model.charts[0].data.samples.length
-			test.equal(numSymbols, expected, `Should be ${expected}. Rendered ${numSymbols} symbols.`)
+			const paths = serieG.selectAll('path').nodes().length - serieG.selectAll('path[name="serie"]').nodes().length //counted the paths that are connecting the dots in each serie
+			test.equal(charts.length, paths, `Should be ${charts.length}. Rendered ${paths} series.`)
 		}
 	}
 })
