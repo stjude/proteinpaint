@@ -674,11 +674,14 @@ function setInteractivity(self) {
 			for (const [i, groupset] of groupsets.entries()) {
 				options.push({
 					label: groupset.name,
-					callback: () => {
-						self.opts.callback!({
+					callback: async () => {
+						const tw: TermWrapper = {
+							isAtomic: true,
 							term: self.term,
 							q: { type: 'predefined-groupset', predefined_groupset_idx: i, isAtomic: true }
-						})
+						}
+						await call_fillTW(tw, self.vocabApi)
+						self.opts.callback!(tw)
 					}
 				})
 			}
