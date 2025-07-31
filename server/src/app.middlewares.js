@@ -125,16 +125,21 @@ export function setAppMiddlewares(app, genomes, doneLoading) {
 		const __protected__ = req.query.__protected__
 		if (req.query.dslabel) {
 			Object.assign(__protected__, authApi.getNonsensitiveInfo(req))
-			if (req.query.genome) {
+			if (req.query.genome && req.query.label && req.query.label !== 'msigdb') {
 				const genome = genomes[req.query.genome]
-				if (!genome) throw 'invalid genome'
-				const ds = genome.datasets[req.query.dslabel]
-				if (!ds) throw 'invalid dslabel'
-				// by not supplying the 3rd argument (routeTwList) to authApi.mayAdjustFilter(),
-				// it will add the stricted additional filter by default for any downstream code from here;
-				// later, any server route or downstream code may call authApi.mayAdjustFilter() again to
-				// loosen the additional filter, to consider fewer tvs terms based on route-specific payloads or aggregation logic
-				if (ds.cohort?.termdb?.getAdditionalFilter) authApi.mayAdjustFilter(req.query, ds)
+				try {
+					if (!genome) throw 'invalid genome'
+					const ds = genome.datasets[req.query.dslabel]
+					if (!ds) throw 'invalid dslabel'
+					// by not supplying the 3rd argument (routeTwList) to authApi.mayAdjustFilter(),
+					// it will add the stricted additional filter by default for any downstream code from here;
+					// later, any server route or downstream code may call authApi.mayAdjustFilter() again to
+					// loosen the additional filter, to consider fewer tvs terms based on route-specific payloads or aggregation logic
+					if (ds.cohort?.termdb?.getAdditionalFilter) authApi.mayAdjustFilter(req.query, ds)
+				} catch (error) {
+					res.send({ error })
+					return
+				}
 			}
 		}
 		if (req.cookies?.sessionid) {
