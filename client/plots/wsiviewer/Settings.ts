@@ -10,6 +10,8 @@ export default interface Settings {
 	thumbnailHeight: string
 	renderWSIViewer: boolean
 	renderAnnotationTable: boolean
+	selectedPatchBorderColor: string
+	tileSize: number
 	activeAnnotation: number
 	sessionsAnnotations: Array<Annotation>
 }

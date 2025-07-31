@@ -52,6 +52,9 @@ export class WSIViewerInteractions {
 			map: OLMap,
 			activePatchColor: string
 		) => {
+			const state = wsiApp.app.getState()
+			const settings: Settings = state.plots.find(p => p.id === wsiApp.id).settings
+
 			setTimeout(() => {
 				if (!activeImageExtent) return
 
@@ -86,7 +89,7 @@ export class WSIViewerInteractions {
 					.find(l => l instanceof VectorLayer)!
 
 				const zoomCoordinates = [zoomInPoints[0][0], imageHeight - zoomInPoints[0][1]] as [number, number]
-				this.addActiveBorder(vectorLayer as VectorLayer, zoomCoordinates, activePatchColor)
+				this.addActiveBorder(vectorLayer as VectorLayer, zoomCoordinates, activePatchColor, settings.tileSize)
 			}, 200)
 		}
 
@@ -99,6 +102,9 @@ export class WSIViewerInteractions {
 			shortcuts: string[] = [],
 			buffers: any
 		) => {
+			const state = wsiApp.app.getState()
+			const settings: Settings = state.plots.find(p => p.id === wsiApp.id).settings
+
 			// Add keydown listener to the holder
 			holder.attr('tabindex', 0)
 			holder.node()?.focus()
@@ -156,7 +162,7 @@ export class WSIViewerInteractions {
 							: { label: matchingClass!.label, color: matchingClass!.color }
 					buffers.tmpClass.set(tmpClass)
 
-					this.addAnnotation(vectorLayer!, annotationsData, currentIndex, matchingClass!.color)
+					this.addAnnotation(vectorLayer!, annotationsData, currentIndex, matchingClass!.color, settings.tileSize)
 
 					const body = {
 						coordinates: annotationsData[currentIndex].zoomCoordinates, //Original x,y coordinates
@@ -194,90 +200,61 @@ export class WSIViewerInteractions {
 
 			const sessionAnnotationsData = sessionWSImage?.sessionsAnnotations || []
 			const persistedAnnotationsData = sessionWSImage?.annotationsData || []
-
 			const annotationsData: Annotation[] = [...sessionAnnotationsData, ...persistedAnnotationsData]
 
-			const TILE_SIZE = 512
-
-			// Find the index of the annotation where the point is inside its square
+			// Check if click falls inside an existing annotation
 			const selectedAnnotationIndex = annotationsData.findIndex(annotation => {
 				const [x0, y0] = annotation.zoomCoordinates
-				const x1 = x0 + TILE_SIZE
-				const y1 = y0 + TILE_SIZE
-
+				const x1 = x0 + settings.tileSize
+				const y1 = y0 + settings.tileSize
 				return coordinateX >= x0 && coordinateX < x1 && coordinateY >= y0 && coordinateY < y1
 			})
 
 			if (selectedAnnotationIndex !== -1) {
 				buffers.annotationsIdx.set(selectedAnnotationIndex)
-			} else {
-				const sessionAnnotation: Annotation = {
-					zoomCoordinates: [coordinateX, coordinateY],
-					class: '',
-					uncertainty: 0
-				}
-
-				const vectorLayer = map
-					.getLayers()
-					.getArray()
-					.find(l => l instanceof VectorLayer)!
-
-				const source: VectorSource<Feature<Geometry>> | null = vectorLayer.getSource()
-
-				const topLeft = [coordinateX, -coordinateY]
-				const size = 512
-				const borderWth = 30
-
-				const borderCoords = [
-					[
-						topLeft,
-						[topLeft[0] + size, topLeft[1]],
-						[topLeft[0] + size, topLeft[1] - size],
-						[topLeft[0], topLeft[1] - size],
-						topLeft
-					],
-					[
-						[topLeft[0] + borderWth, topLeft[1] - borderWth],
-						[topLeft[0] + size - borderWth, topLeft[1] - borderWth],
-						[topLeft[0] + size - borderWth, topLeft[1] - size + borderWth],
-						[topLeft[0] + borderWth, topLeft[1] - size + borderWth],
-						[topLeft[0] + borderWth, topLeft[1] - borderWth]
-					]
-				]
-
-				const border = new Feature({
-					geometry: new Polygon(borderCoords),
-					properties: {
-						isLocked: false
-					}
-				})
-
-				border.setStyle(
-					new Style({
-						fill: new Fill({ color: '#FFA500' }),
-						stroke: new Stroke({ color: '#FFA500', width: 1 })
-					})
-				)
-
-				source?.addFeature(border)
-
-				const oldAnnotation = settings.sessionsAnnotations
-
-				wsiApp.app.dispatch({
-					type: 'plot_edit',
-					id: wsiApp.id,
-					config: {
-						settings: {
-							renderWSIViewer: false,
-							sessionsAnnotations: [sessionAnnotation, ...oldAnnotation]
-						}
-					}
-				})
+				return
 			}
+
+			// Create new annotation
+			const sessionAnnotation: Annotation = {
+				zoomCoordinates: [coordinateX, coordinateY],
+				class: '',
+				uncertainty: 0
+			}
+
+			const vectorLayer = map
+				.getLayers()
+				.getArray()
+				.find(l => l instanceof VectorLayer)!
+			const source: VectorSource<Feature<Geometry>> | null = vectorLayer.getSource()
+
+			const topLeft: [number, number] = [coordinateX, -coordinateY]
+			const borderFeature = this.createBorderFeature(topLeft, settings.tileSize, 30, settings.selectedPatchBorderColor)
+
+			source?.addFeature(borderFeature)
+
+			// Update state with new annotation
+			const oldAnnotation = settings.sessionsAnnotations
+			wsiApp.app.dispatch({
+				type: 'plot_edit',
+				id: wsiApp.id,
+				config: {
+					settings: {
+						renderWSIViewer: false,
+						sessionsAnnotations: [sessionAnnotation, ...oldAnnotation]
+					}
+				}
+			})
 		}
 	}
 
-	private addAnnotation(vectorLayer: VectorLayer, annotationsData: Annotation[], currentIndex: number, color: any) {
+	private addAnnotation(
+		vectorLayer: VectorLayer,
+		annotationsData: Annotation[],
+		currentIndex: number,
+		color: any,
+		tileSize: number
+	) {
 		const source: VectorSource<Feature<Geometry>> | null = vectorLayer.getSource()
 
 		//Remove any previous feature with the same ID
@@ -291,15 +268,12 @@ export class WSIViewerInteractions {
 			-annotationsData[currentIndex].zoomCoordinates[1]
 		]
 
-		// TODO hardcoded for now.
-		const size = 512
-
 		const squareCoords = [
 			[
 				topLeft,
-				[topLeft[0] + size, topLeft[1]],
-				[topLeft[0] + size, topLeft[1] - size],
-				[topLeft[0], topLeft[1] - size]
+				[topLeft[0] + tileSize, topLeft[1]],
+				[topLeft[0] + tileSize, topLeft[1] - tileSize],
+				[topLeft[0], topLeft[1] - tileSize]
 			]
 		]
 
@@ -322,52 +296,61 @@ export class WSIViewerInteractions {
 		source?.addFeature(square)
 	}
 
-	private addActiveBorder(vectorLayer: VectorLayer, zoomCoordinates: [number, number], color: any) {
+	private addActiveBorder(vectorLayer: VectorLayer, zoomCoordinates: [number, number], color: any, tileSize: number) {
 		const source: VectorSource<Feature<Geometry>> | null = vectorLayer.getSource()
 
-		//Remove any previous border on the previous index
-		const feature = source?.getFeatureById(`active-border`)
-		if (feature) {
-			source?.removeFeature(feature)
+		// Remove any previous border
+		const existingFeature = source?.getFeatureById('active-border')
+		if (existingFeature) {
+			source?.removeFeature(existingFeature)
 		}
 
-		const topLeft = zoomCoordinates
-		const size = 512
-		const borderWth = 50
+		const feature = this.createBorderFeature(zoomCoordinates, tileSize, 50, color, 'active-border')
+		source?.addFeature(feature)
+	}
 
+	private createBorderFeature(
+		topLeft: [number, number],
+		tileSize: number,
+		borderWidth: number,
+		color: any,
+		featureId?: string
+	): Feature<Geometry> {
 		const borderCoords = [
 			[
 				topLeft,
-				[topLeft[0] + size, topLeft[1]],
-				[topLeft[0] + size, topLeft[1] - size],
-				[topLeft[0], topLeft[1] - size],
+				[topLeft[0] + tileSize, topLeft[1]],
+				[topLeft[0] + tileSize, topLeft[1] - tileSize],
+				[topLeft[0], topLeft[1] - tileSize],
 				topLeft
 			],
 			[
-				[topLeft[0] + borderWth, topLeft[1] - borderWth],
-				[topLeft[0] + size - borderWth, topLeft[1] - borderWth],
-				[topLeft[0] + size - borderWth, topLeft[1] - size + borderWth],
-				[topLeft[0] + borderWth, topLeft[1] - size + borderWth],
-				[topLeft[0] + borderWth, topLeft[1] - borderWth]
+				[topLeft[0] + borderWidth, topLeft[1] - borderWidth],
+				[topLeft[0] + tileSize - borderWidth, topLeft[1] - borderWidth],
+				[topLeft[0] + tileSize - borderWidth, topLeft[1] - tileSize + borderWidth],
+				[topLeft[0] + borderWidth, topLeft[1] - tileSize + borderWidth],
+				[topLeft[0] + borderWidth, topLeft[1] - borderWidth]
 			]
 		]
 
-		const border = new Feature({
+		const feature = new Feature({
 			geometry: new Polygon(borderCoords),
 			properties: {
 				isLocked: false
 			}
 		})
 
-		border.setId(`active-border`)
+		if (featureId) {
+			feature.setId(featureId)
+		}
 
-		border.setStyle(
+		feature.setStyle(
 			new Style({
-				fill: new Fill({ color: color }),
-				stroke: new Stroke({ color: color, width: 2 })
+				fill: new Fill({ color }),
+				stroke: new Stroke({ color, width: 2 })
 			})
 		)
 
-		source?.addFeature(border)
+		return feature
 	}
 }
