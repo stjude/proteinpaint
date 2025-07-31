@@ -11,11 +11,14 @@ export class SearchHandler {
 		this.callback = opts.callback
 		this.dom.radiosDiv = opts.holder.append('div')
 		this.dom.searchDiv = opts.holder.append('div')
+		/*
+		retain ability of adding geneset as row in matrix, in addition to one gene per row
 		if (this.opts.app?.opts?.state?.tree?.usecase?.target == 'matrix') {
 			// hide radios in matrix to prevent switching to gene set
 			// because matrix already adds genes one by one to gene set
 			this.dom.radiosDiv.style('display', 'none')
 		}
+		*/
 		make_radios({
 			holder: this.dom.radiosDiv,
 			options: [
