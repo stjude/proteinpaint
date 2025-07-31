@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.137.3
 
 Fixes:
 - do not bubble down/bubble up events from elements above/below the sja_root_holder
