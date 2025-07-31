@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Fixes:
+- do not bubble down/bubble up events from elements above/below the sja_root_holder
+
 
 ## 2.137.2
 
