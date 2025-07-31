@@ -77,7 +77,7 @@ tape('getCategoricalTermFilter()', t => {
 	const result1 = getCategoricalTermFilter(filterTWs, valuesCountry, countryTW)
 	t.deepEqual(
 		result1,
-		null,
+		{ type: 'tvslst', in: true, join: '', lst: [] },
 		'Should filter out samples according to all the filter values except for the tw provided, as only one filter is provided and is for the tw passed there is no filter added'
 	)
 

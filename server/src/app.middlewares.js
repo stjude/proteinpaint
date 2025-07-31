@@ -125,7 +125,7 @@ export function setAppMiddlewares(app, genomes, doneLoading) {
 		const __protected__ = req.query.__protected__
 		if (req.query.dslabel) {
 			Object.assign(__protected__, authApi.getNonsensitiveInfo(req))
-			if (req.query.genome && req.query.label && req.query.label !== 'msigdb') {
+			if (req.query.genome && req.query.dslabel && req.query.dslabel !== 'msigdb') {
 				const genome = genomes[req.query.genome]
 				try {
 					if (!genome) throw 'invalid genome'
