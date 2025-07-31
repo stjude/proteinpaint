@@ -1011,6 +1011,7 @@ export type WSImages = {
 	activePatchColor?: string
 	predictionColor?: Array<number>
 	annotationsColor?: Array<number>
+	tileSize?: number
 	classes?: WSIClass[]
 	uncertainty?: { color: string; label: string }[]
 
