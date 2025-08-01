@@ -1174,7 +1174,7 @@ function mayApplyBinning(samples, twLst) {
 			for (const s of samples) {
 				const v = s[tw.term.id]
 				if (Number.isFinite(v)) {
-					s[tw.term.id] = getBin(bins, v)
+					s[tw.term.id] = { key: getBin(bins, v), value: v }
 				}
 			}
 		} else if (tw.q.mode == 'continuous') {

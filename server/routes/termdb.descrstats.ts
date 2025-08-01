@@ -39,7 +39,12 @@ function init({ genomes }) {
 			const values: number[] = []
 			for (const key in data.samples) {
 				const sample = data.samples[key]
-				const value = sample[q.tw.$id].value
+				const v = sample[q.tw.$id]
+				if (!v && v !== 0) {
+					// skip undefined values
+					continue
+				}
+				const value = v.value
 				if (q.tw.q.hiddenValues?.[value]) {
 					// skip uncomputable values
 					continue
