@@ -6,6 +6,11 @@ import mm from 'micromatch'
 
 const { isMatch } = mm
 
+// these server routes should not be protected by default,
+// since a user that is not logged should be able to have a way to login,
+// also logout should be supported regardless
+const loginRoutes = new Set(['/dslogin', '/jwt-status', '/dslogout'])
+
 const defaultApiMethods = {
 	maySetAuthRoutes, // declared below
 	getJwtPayload, // declared below
@@ -24,7 +29,8 @@ const defaultApiMethods = {
 	getHealth: () => undefined,
 	// credentialed embedders, using an array which can be frozen with Object.freeze(), unlike a Set()
 	credEmbedders: [],
-	mayAdjustFilter: (q, ds, term) => {}
+	mayAdjustFilter: (q, ds, term) => {},
+	isLoginRoute: path => loginRoutes.has(path)
 }
 
 // these may be overriden within maySetAuthRoutes()
@@ -318,7 +324,7 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 	// credentials and if yes, if there is already a valid session
 	// for a ds label
 	app.use((req, res, next) => {
-		if (req.path == '/dslogin' || req.path == '/jwt-status' || req.path == '/dslogout') {
+		if (loginRoutes.has(req.path)) {
 			next()
 			return
 		}
@@ -735,7 +741,7 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 function getSessionId(req, cred, sessions) {
 	// embedder sites may use HTTP 2.0 which requires lowercased header key names
 	// using all lowercase is compatible for both http 1 and 2
-	if (sessions && req.headers?.authorization && cred?.type !== 'basic') {
+	if (sessions && req.headers?.authorization) {
 		const id = mayAddSessionFromJwt(sessions, req, cred)
 		if (id) return id
 	}
