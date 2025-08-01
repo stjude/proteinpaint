@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- handle a dataset minimum sample size option  before returning data
+
 
 ## 2.137.3
 

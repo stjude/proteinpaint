@@ -1,2 +1,1 @@
-Features:
-- handle a dataset minimum sample size option  before returning data
+
