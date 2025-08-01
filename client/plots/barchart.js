@@ -213,7 +213,7 @@ export class Barchart {
 					settingsKey: 'dedup',
 					boxLabel: 'Yes',
 					getDisplayStyle: plot =>
-						this.chartsData.charts.find(c => c.serieses.length != c.dedupedSerieses.length) ? 'table-row' : 'none'
+						this.chartsData?.charts.find(c => c.serieses.length != c.dedupedSerieses.length) ? 'table-row' : 'none'
 				}
 			]
 			if (this.hasStats)
@@ -343,6 +343,7 @@ export class Barchart {
 			await this.setControls() //needs to be called after getDescrStats() to set hasStats
 
 			const results = await this.app.vocabApi.getNestedChartSeriesData(reqOpts)
+			if (results.error) throw results
 			const data = results.data
 			this.sampleType = results.sampleType
 			this.bins = results.bins
@@ -366,7 +367,9 @@ export class Barchart {
 			this.chartsData = this.processData(this.currServerData)
 			this.render()
 		} catch (e) {
-			throw e
+			this.toggleLoadingDiv('none')
+			this.dom.banner.html(`<span>${e.error || e}</span>`).style('display', 'block')
+			return
 		}
 	}
 
