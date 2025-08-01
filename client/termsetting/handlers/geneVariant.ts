@@ -34,13 +34,6 @@ export function getHandler(self: GeneVariantTermSettingInstance) {
 
 		async showEditMenu(div: Element) {
 			await makeEditMenu(self, div)
-		},
-
-		async postMain() {
-			// need to regenerate child dt terms here to update
-			// the terms upon data updates (e.g., filter)
-			const body = self.opts.getBodyParams?.() || {}
-			await getChildTerms(self.term, self.vocabApi, body)
 		}
 	}
 }
@@ -278,8 +271,6 @@ function addNewGroup(filter, groups, name?: string) {
 
 export async function getPredefinedGroupsets(tw: RawGvPredefinedGsTW, vocabApi: VocabApi) {
 	if (tw.q.type != 'predefined-groupset') throw 'unexpected tw.q.type'
-	// get child dt terms of geneVariant term
-	await getChildTerms(tw.term, vocabApi)
 	if (!tw.term.childTerms?.length) throw 'tw.term.childTerms[] is missing'
 	// build predefined groupsets based on child dt terms
 	tw.term.groupsetting = {
@@ -490,6 +481,10 @@ export async function getChildTerms(term: RawGvTerm, vocabApi: VocabApi, body: a
 		body.filter0 = filter0
 	}
 	// passing term to getCategories() will get categories across all genes in gene set
+	// TODO: getCategories() can be time-consuming for gdc (especially for geneset
+	// input) and really only need categories to filter term.values for mutation
+	// classes that are present in the data. Consider a different approach
+	// for calling getCategories().
 	const categories = await vocabApi.getCategories(term, filter, body)
 	for (const _t of dtTerms) {
 		const t: any = structuredClone(_t)
