@@ -1,4 +1,4 @@
-import type { Annotation, WSImage } from '@sjcrh/proteinpaint-types'
+import type { TileSelection, WSImage } from '@sjcrh/proteinpaint-types'
 import type { WSImageLayers } from '#plots/wsiviewer/viewModel/WSImageLayers.ts'
 import type { TableCell } from '#dom'
 import { roundValue } from '#shared/roundValue.js'
@@ -16,11 +16,11 @@ export class ViewModel {
 		sampleWSImages: WSImage[],
 		wsimageLayers: WSImageLayers[],
 		wsimageLayersLoadError: string | undefined,
-		sessionsAnnotations: Annotation[],
+		sessionsTileSelections: TileSelection[],
 		displayedImageIndex: number
 	) {
 		this.sampleWSImages = sampleWSImages
-		this.sampleWSImages[displayedImageIndex].sessionsAnnotations = sessionsAnnotations
+		this.sampleWSImages[displayedImageIndex].sessionsTileSelections = sessionsTileSelections
 		this.wsimageLayers = wsimageLayers
 		this.wsimageLayersLoadError = wsimageLayersLoadError
 		this.imageViewData = index => this.getImageViewData(index)
@@ -44,20 +44,17 @@ export class ViewModel {
 
 	public getInitialZoomInCoordinate(index: number) {
 		const image = this.sampleWSImages[index]
-		const session = image.sessionsAnnotations?.map(a => a.zoomCoordinates) || []
-		const persisted = image.annotationsData?.map(a => a.zoomCoordinates) || []
-		return [...session, ...persisted].slice(0, 1)
-	}
-
-	public setSessionsAnnotations(sessionsAnnotations: Annotation[], displayedImageIndex: number) {
-		this.sampleWSImages[displayedImageIndex].sessionsAnnotations = sessionsAnnotations
+		const sessionsTileSelections = image.sessionsTileSelections?.map(a => a.zoomCoordinates) || []
+		const predictions = image.predictions?.map(a => a.zoomCoordinates) || []
+		const persistedAnnotations = image.annotationsData?.map(a => a.zoomCoordinates) || []
+		return [...sessionsTileSelections, ...predictions, ...persistedAnnotations].slice(0, 1)
 	}
 
 	private setAnnonationsTableData(imageViewData: ImageViewData, imageData: SessionWSImage) {
 		if (!imageData?.annotationsData?.length) return
 
 		// Map session annotations to the same format, starting index at 0
-		const sessionAnnotationRows: any = imageData.sessionsAnnotations?.map((d, i) => {
+		const sessionsTileSelections: any = imageData.sessionsTileSelections?.map((d, i) => {
 			return [
 				{ value: i }, // Index
 				{ value: d.zoomCoordinates },
@@ -69,9 +66,9 @@ export class ViewModel {
 		})
 
 		// Original annotations follow, indexing continues from session annotations
-		const annotationsRows: any = imageData.annotationsData!.map((d, i) => {
+		const predictionRows: any = imageData.predictions!.map((d, i) => {
 			return [
-				{ value: imageData.sessionsAnnotations!.length + i }, // Continue index
+				{ value: imageData.sessionsTileSelections!.length + i }, // Continue index
 				{ value: d.zoomCoordinates },
 				{ value: roundValue(d.uncertainty, 4) },
 				{ value: d.class },
@@ -80,8 +77,20 @@ export class ViewModel {
 			]
 		})
 
+		// Original annotations follow, indexing continues from session annotations
+		const annotationsRows: any = imageData.annotationsData!.map((d, i) => {
+			return [
+				{ value: imageData.predictions!.length + i }, // Continue index
+				{ value: d.zoomCoordinates },
+				{ value: 0 },
+				{ value: '' },
+				{ html: '' },
+				{ value: d.class }
+			]
+		})
+
 		// Combine: session annotations first
-		const mergedRows = [...sessionAnnotationRows, ...annotationsRows]
+		const mergedRows = [...sessionsTileSelections, ...predictionRows, ...annotationsRows]
 
 		const columns = [
 			{ label: 'Index', sortable: true, align: 'center' },
@@ -92,7 +101,7 @@ export class ViewModel {
 			{ label: 'Annotated Class', sortable: true }
 		]
 
-		imageViewData.annotations = {
+		imageViewData.tilesTable = {
 			rows: mergedRows,
 			columns: columns
 		}
@@ -115,7 +124,7 @@ export class ViewModel {
 		}
 		const columns = [{ label: 'Class' }, { label: 'Color', align: 'center' }, { label: 'Shortcut', align: 'center' }]
 
-		imageViewData.classes = {
+		imageViewData.classesTable = {
 			rows: classRows,
 			columns: columns
 		}

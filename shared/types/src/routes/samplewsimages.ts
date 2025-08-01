@@ -31,9 +31,7 @@ export type WSImage = {
 
 export type Annotation = {
 	zoomCoordinates: [number, number]
-	type?: string
-	class?: string
-	uncertainty?: number
+	class: string
 }
 
 export type Prediction = {
@@ -41,6 +39,11 @@ export type Prediction = {
 	type: string
 	class: string
 	uncertainty: number
+}
+
+export type TileSelection = {
+	zoomCoordinates: [number, number]
+	class?: string
 }
 
 export const sampleWSImagesPayload: RoutePayload = {
