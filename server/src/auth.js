@@ -735,7 +735,7 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 function getSessionId(req, cred, sessions) {
 	// embedder sites may use HTTP 2.0 which requires lowercased header key names
 	// using all lowercase is compatible for both http 1 and 2
-	if (sessions && req.headers?.authorization) {
+	if (sessions && req.headers?.authorization && cred?.type !== 'basic') {
 		const id = mayAddSessionFromJwt(sessions, req, cred)
 		if (id) return id
 	}
