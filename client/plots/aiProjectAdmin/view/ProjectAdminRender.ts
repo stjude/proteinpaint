@@ -47,12 +47,11 @@ export class ProjectAdminRender {
 					//Shouldn't be necessary because of the debouncer
 					return sayerror(this.dom.errorDiv, 'Project name cannot be empty')
 				}
-				const notUnique = this.projects.some((p: any) => p.value === projectName)
+				const notUnique = this.projects.some((p: any) => p.value === projectName.trim())
 				if (notUnique) {
 					return sayerror(this.dom.errorDiv, `Project name '${projectName}' already exists`)
 				}
 				this.interactions.addProject(projectName)
-				//TODO: clear UI and open meta data and image selector
 			})
 
 		input.on('keydown', () => {
