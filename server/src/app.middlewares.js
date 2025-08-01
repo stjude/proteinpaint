@@ -123,7 +123,7 @@ export function setAppMiddlewares(app, genomes, doneLoading) {
         */
 		req.query.__protected__ = { ignoredTermIds: [] } // when provided the filter on these terms will be ignored
 		const __protected__ = req.query.__protected__
-		if (req.query.dslabel) {
+		if (req.query.dslabel && !authApi.isLoginRoute(req.path) && req.path != '/healthcheck') {
 			Object.assign(__protected__, authApi.getNonsensitiveInfo(req))
 			if (req.query.genome && req.query.dslabel && req.query.dslabel !== 'msigdb') {
 				const genome = genomes[req.query.genome]
