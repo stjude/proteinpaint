@@ -676,6 +676,8 @@ export class TermdbVocab extends Vocab {
 			if (data.error) throwMsgWithFilePathAndFnName(data.error)
 			return data
 		} catch (e) {
+			// TODO: should handle this error more gracefully, maybe show only in the termsetting pill;
+			//       right now, this alert pops up even when this data or related pill is not visible
 			window.alert(e.message || e)
 		}
 	}

@@ -58,25 +58,7 @@ export async function getData(q, ds, genome, onlyChildren = false) {
 		authApi.mayAdjustFilter(q, ds, q.terms)
 		const data = await getSampleData(q, ds, onlyChildren)
 
-		// handle the option to require a minimum sample size for data
-		const minSampleSize = ds.cohort.termdb.minSampleSizeForFilterCharts
-		if (minSampleSize) {
-			console.log(60, Object.keys(data.samples))
-			// quick check
-			if (Object.keys(data.samples).length < minSampleSize)
-				throw `less than ${minSampleSize} samples with data for any queried term`
-			// more detailed check
-			const sampleSizeByTermId = new Map()
-			for (const [sid, dataByTermId] of Object.entries(data.samples)) {
-				for (const tid of Object.keys(dataByTermId)) {
-					if (!sampleSizeByTermId.has(tid)) sampleSizeByTermId.set(tid, new Set())
-					sampleSizeByTermId.get(tid).add(sid)
-				}
-			}
-			const counts = [...sampleSizeByTermId.values()].map(v => v.size)
-			if (Math.min(...counts) < minSampleSize)
-				throw `less than ${minSampleSize} samples with data for at least one queried term`
-		}
+		check4MinSampleSize(data, ds)
 
 		// get categories within same data request to avoid a separate
 		// getCategories() request, which can be time-consuming for
@@ -92,7 +74,7 @@ export async function getData(q, ds, genome, onlyChildren = false) {
 		return data
 	} catch (e) {
 		if (e.stack) console.log(e.stack)
-		return { error: e.message || e }
+		return { error: e.message || e, code: e.code } // ok for e.code to be undefined
 	}
 }
 
@@ -900,7 +882,7 @@ monomorphic:
 
 prev comments on this func:
  creates following on the tw{} to divide the snps
- tw.lowAFsnps{} tw.highAFsnps{} tw.monomorphicLst[] tw.snpid2AFstr{}
+ tw.lowAFsnps{} tw.highAFsnp tw.monomorphicLst[] tw.snpid2AFstr{}
  sample data for high-AF snps are kept in sampledata[]
 */
 function categorizeSnpsByAF(tw, snp2sample) {
@@ -1035,4 +1017,27 @@ function mayGetCategories(data, q, ds) {
 
 function hasValues(term) {
 	return term.values && Object.keys(term.values).length
+}
+
+function check4MinSampleSize(data, ds) {
+	// handle the option to require a minimum sample size for data
+	const minSampleSize = ds.cohort.termdb.minSampleSizeForFilterCharts
+	if (!minSampleSize) return
+	// quick check
+	if (Object.keys(data.samples).length < minSampleSize)
+		throw { message: `Less than ${minSampleSize} samples with data for any queried term.`, code: 'ERR_MIN_SAMPLE_SIZE' }
+	// more detailed check
+	const sampleSizeByTermId = new Map()
+	for (const [sid, dataByTermId] of Object.entries(data.samples)) {
+		for (const tid of Object.keys(dataByTermId)) {
+			if (!sampleSizeByTermId.has(tid)) sampleSizeByTermId.set(tid, new Set())
+			sampleSizeByTermId.get(tid).add(sid)
+		}
+	}
+	const counts = [...sampleSizeByTermId.values()].map(v => v.size)
+	if (Math.min(...counts) < minSampleSize)
+		throw {
+			message: `Less than ${minSampleSize} samples with data for at least one queried term.`,
+			code: 'ERR_MIN_SAMPLE_SIZE'
+		}
 }
