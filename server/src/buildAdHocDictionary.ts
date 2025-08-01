@@ -35,12 +35,19 @@ export async function makeAdHocDicTermdbQueries(ds: Mds3) {
 
 		console.log(`Creating ad hoc dictionary for ${ds.label}...`)
 
-		const lines = csvData.split('\n').filter(line => line.trim() !== '')
+		const lines = csvData.split('\n')
 
+		//Check if the first line is empty or has missing col headers
+		const missingHeader = lines[0].split(',').some(c => c.trim() === '')
+		if (missingHeader) throw `Missing header in source file ${source}`
+
+		//Add root term required for termdb queries
 		id2term.set('__root', { id: 'root', name: 'root', __tree_isroot: true })
 
+		//Creates the term object for each header
 		makeParentTerms(lines[0], id2term, sampleKey)
-		assignValuesToTerms(id2term, lines.splice(1))
+		//Assigns term.values, term.type, and, if applicable, term.bins
+		assignAttributesToTerms(id2term, lines.splice(1))
 
 		return id2term.size > 1 ? `Ad hoc dictionary for ${ds.label} created` : 'failed to initialize dictionary'
 	}
@@ -104,7 +111,8 @@ export async function makeAdHocDicTermdbQueries(ds: Mds3) {
 				//TODO: Use getSamples from termdb.matrix.js??
 				const indexKey = term.type == 'categorical' ? '_' : `${term.id}`
 				const value = columns[term.index].trim()
-				const keyValue = term.type != 'categorical' ? Number(value) : value
+				/** If the value == '', return undefined */
+				const keyValue = term.type != 'categorical' ? Number(value) : value || 'undefined'
 				samples[sample] = {
 					sample: Number(sample),
 					[indexKey]: {
@@ -190,7 +198,7 @@ function makeParentTerms(header: string, id2term: Map<string, any>, sampleKey: s
 	}
 }
 
-function assignValuesToTerms(id2term: Map<string, any>, lines: string[]) {
+function assignAttributesToTerms(id2term: Map<string, any>, lines: string[]) {
 	//Later, will only assign values to categorical terms
 	const tmpTermValues = new Map()
 	// Create a temporary array to hold the terms based on their index
@@ -203,10 +211,12 @@ function assignValuesToTerms(id2term: Map<string, any>, lines: string[]) {
 
 		for (const [i, col] of columns.entries()) {
 			const termid = tmpArray.find(term => term.index === i)?.id
+			//'undefined' required for q.getAdHocTermValues()
+			const value = col.trim() !== '' ? col.trim() : 'undefined'
 			if (!tmpTermValues.has(termid)) {
 				tmpTermValues.set(termid, new Set())
 			}
-			tmpTermValues.get(termid).add(col.trim())
+			tmpTermValues.get(termid).add(value)
 		}
 	}
 
