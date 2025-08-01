@@ -1,4 +1,4 @@
-import { filterPromptInit } from '#filter'
+import { filterInit, getNormalRoot } from '#filter'
 
 export class CreateProjectRender {
 	dom: any
@@ -12,20 +12,26 @@ export class CreateProjectRender {
 	render() {
 		const filterDiv = this.dom.holder
 			.append('div')
-			.attr('id', 'sjpp-ai-prjt-admin-filter-div')
 			.attr('class', 'sjpp-deletable-ai-prjt-admin-div')
 			.style('padding', '10px')
 
-		const filter = filterPromptInit({
-			holder: filterDiv,
+		const state = this.app.getState()
+
+		const callback = filter => {
+			//Save somewhere
+			//Will send to server on apply
+			console.log('test:', filter)
+		}
+
+		const filter = filterInit({
+			holder: filterDiv.append('div').attr('id', 'sjpp-ai-prjt-admin-filter-div'),
 			emptyLabel: 'Add fitler',
 			vocabApi: this.app.vocabApi,
 			termdbConfig: this.app.vocabApi.termdbConfig,
-			debug: true,
-			callback: () => {
-				console.log('Filter applied')
-			}
+			callback
 		})
-		filter.main({ type: 'tvslst', join: '', lst: [] })
+
+		const root = getNormalRoot(state.termfilter.filter)
+		filter.main(root)
 	}
 }

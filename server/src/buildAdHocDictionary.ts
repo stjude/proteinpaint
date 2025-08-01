@@ -223,15 +223,22 @@ function assignAttributesToTerms(id2term: Map<string, any>, lines: string[]) {
 	/** Update the type if necessary and assign values to terms */
 	for (const [termid, values] of tmpTermValues.entries()) {
 		if (!id2term.has(termid)) continue
+
 		const term = id2term.get(termid)
+		if (!term.values) term.values = {}
+
 		const termValues = [...values]
+
 		//Explicitly checks for pos and neg numbers
 		const numValuesOnly = [...values].every(v => typeof v === 'string' && /^-?\d+$/.test(v))
 		/** Sample ids/names are likely numbers but categorical terms */
 		if (!numValuesOnly || term.index == sampleKeyIdx) {
 			/** Return the values in the set as an object with increasing
 			 * indices as keys with the values as labels.*/
-			term.values = termValues.map((v, i) => [i, { label: v }])
+			termValues.forEach(v => {
+				term.values[v] = { label: v }
+			})
+
 			term.included_types = ['categorical']
 		} else {
 			//No values are added to numerical terms
