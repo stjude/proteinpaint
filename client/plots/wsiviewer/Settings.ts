@@ -1,4 +1,4 @@
-import type { Annotation } from '@sjcrh/proteinpaint-types'
+import type { TileSelection } from '@sjcrh/proteinpaint-types'
 
 export default interface Settings {
 	imageWidth: string
@@ -13,5 +13,5 @@ export default interface Settings {
 	selectedPatchBorderColor: string
 	tileSize: number
 	activeAnnotation: number
-	sessionsAnnotations: Array<Annotation>
+	sessionsTileSelection: Array<TileSelection>
 }

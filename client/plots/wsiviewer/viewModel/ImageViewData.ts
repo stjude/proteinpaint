@@ -2,11 +2,11 @@ import type { TableCell } from '#dom'
 
 export type ImageViewData = {
 	activePatchColor?: string
-	annotations?: {
+	tilesTable?: {
 		rows: TableCell[][]
 		columns: { label: string; sortable?: boolean; align?: string }[]
 	}
-	classes?: {
+	classesTable?: {
 		rows: TableCell[][]
 		columns: { label: string; sortable?: boolean; align?: string }[]
 	}

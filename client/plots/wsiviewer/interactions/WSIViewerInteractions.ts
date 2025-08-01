@@ -8,7 +8,7 @@ import { Polygon } from 'ol/geom'
 import type { Geometry } from 'ol/geom'
 import { Fill, Stroke, Style } from 'ol/style'
 import type Settings from '#plots/wsiviewer/Settings.ts'
-import type { Annotation } from '@sjcrh/proteinpaint-types'
+import type { TileSelection } from '@sjcrh/proteinpaint-types'
 import type { SessionWSImage } from '#plots/wsiviewer/viewModel/SessionWSImage.ts'
 
 export class WSIViewerInteractions {
@@ -109,7 +109,7 @@ export class WSIViewerInteractions {
 			holder.attr('tabindex', 0)
 			holder.node()?.focus()
 
-			const sessionAnnotationsData = sessionWSImage?.sessionsAnnotations || []
+			const sessionAnnotationsData = sessionWSImage?.sessionsTileSelections || []
 
 			const persistedAnnotationsData = sessionWSImage?.annotationsData || []
 
@@ -198,9 +198,12 @@ export class WSIViewerInteractions {
 			const state = wsiApp.app.getState()
 			const settings: Settings = state.plots.find(p => p.id === wsiApp.id).settings
 
-			const sessionAnnotationsData = sessionWSImage?.sessionsAnnotations || []
+			// Update state with new annotation
+			const currentTileSelection = settings.sessionsTileSelection
+
+			const predictions = sessionWSImage?.predictions || []
 			const persistedAnnotationsData = sessionWSImage?.annotationsData || []
-			const annotationsData: Annotation[] = [...sessionAnnotationsData, ...persistedAnnotationsData]
+			const annotationsData = [...currentTileSelection, ...predictions, ...persistedAnnotationsData]
 
 			// Check if click falls inside an existing annotation
 			const selectedAnnotationIndex = annotationsData.findIndex(annotation => {
@@ -216,10 +219,9 @@ export class WSIViewerInteractions {
 			}
 
 			// Create new annotation
-			const sessionAnnotation: Annotation = {
+			const newTileSelection: TileSelection = {
 				zoomCoordinates: [coordinateX, coordinateY],
-				class: '',
-				uncertainty: 0
+				class: ''
 			}
 
 			const vectorLayer = map
@@ -233,15 +235,13 @@ export class WSIViewerInteractions {
 
 			source?.addFeature(borderFeature)
 
-			// Update state with new annotation
-			const oldAnnotation = settings.sessionsAnnotations
 			wsiApp.app.dispatch({
 				type: 'plot_edit',
 				id: wsiApp.id,
 				config: {
 					settings: {
 						renderWSIViewer: false,
-						sessionsAnnotations: [sessionAnnotation, ...oldAnnotation]
+						sessionsTileSelection: [newTileSelection, ...currentTileSelection]
 					}
 				}
 			})
@@ -250,7 +250,7 @@ export class WSIViewerInteractions {
 
 	private addAnnotation(
 		vectorLayer: VectorLayer,
-		annotationsData: Annotation[],
+		annotationsData: TileSelection[],
 		currentIndex: number,
 		color: any,
 		tileSize: number

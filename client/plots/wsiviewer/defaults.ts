@@ -15,7 +15,7 @@ export default function wsiViewerDefaults(overrides = {}): Settings {
 		selectedPatchBorderColor: '#FFA500',
 		tileSize: 512, // 512px
 		activeAnnotation: 0,
-		sessionsAnnotations: []
+		sessionsTileSelection: []
 	}
 	return copyMerge(defaults, overrides)
 }

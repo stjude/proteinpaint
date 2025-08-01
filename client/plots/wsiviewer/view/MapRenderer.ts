@@ -13,7 +13,6 @@ import type { WSImageLayers } from '#plots/wsiviewer/viewModel/WSImageLayers.ts'
 import type Layer from 'ol/layer/Layer'
 import type Settings from '../Settings'
 import type { SessionWSImage } from '#plots/wsiviewer/viewModel/SessionWSImage.ts'
-import type { Annotation, WSImage } from '@sjcrh/proteinpaint-types'
 
 export class MapRenderer {
 	public wSImageLayers: WSImageLayers
@@ -30,15 +29,7 @@ export class MapRenderer {
 	constructor(
 		wSImageLayers: WSImageLayers,
 		viewerClickListener: {
-			(
-				coordinateX: number,
-				coordinateY: number,
-				sessionWSImage: WSImage & {
-					sessionsAnnotations?: Annotation[] | undefined
-				},
-				buffers: any,
-				map: OLMap
-			): void
+			(coordinateX: number, coordinateY: number, sessionWSImage: SessionWSImage, buffers: any, map: OLMap): void
 		},
 		sessionWSImage: SessionWSImage,
 		buffers: any
