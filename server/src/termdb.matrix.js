@@ -646,6 +646,7 @@ async function getSampleData_dictionaryTerms_v2s(q, termWrappers) {
 			} else if (v != undefined && v != null) {
 				if (typeof v == 'object') {
 					// v is {key,value}, should be for survival term
+					// now also for discrete numeric term to support {key: bin, value: value}
 					s2[$id] = v
 				} else {
 					// v is number/string, should be for non-survival term
