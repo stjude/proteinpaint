@@ -69,9 +69,11 @@ async function getFilters(query, ds, genome, res) {
 	try {
 		//Dictionary with samples applying all the filters but not the one from the current term id
 		const samplesPerFilter = await getSamplesPerFilter(query, ds)
+		console.log(71, '---- after getSamplesPerFilter()', query.filter)
 		const filtersData = await getData(
 			{
 				terms: query.terms,
+				filter: query.filter,
 				__protected__: query.__protected__
 			},
 			ds,

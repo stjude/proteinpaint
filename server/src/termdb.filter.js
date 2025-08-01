@@ -3,6 +3,7 @@ import { getParentType, getSampleType, dtTermTypes } from '#shared/terms.js'
 import { getSnpData } from './termdb.matrix.js'
 import { filterByItem } from './mds3.init.js'
 import { annoNumericTypes } from '#shared/terms.js'
+import { authApi } from './auth.js'
 
 /*
 nested filter documented at:
@@ -20,8 +21,13 @@ One CTE is made for each item of filter.lst[], with name "CTEname_<i>"
 A superCTE is made to cap this level, with name "CTEname"
 
 */
-export async function getFilterCTEs(filter, ds, sampleTypes = new Set(), CTEname = 'f') {
+export async function getFilterCTEs(filter, ds, sampleTypes = new Set(), CTEname = 'f', _rootFilter = null) {
 	if (!filter) return
+	console.log(25, 'getFilterCTEs()', filter, _rootFilter)
+	//
+	const rootFilter = _rootFilter || filter
+	authApi.verifyFilter(ds, filter, rootFilter)
+
 	if (filter.type != 'tvslst') throw 'filter.type is not "tvslst" but: ' + filter.type
 	if (!Array.isArray(filter.lst)) throw 'filter.lst must be an array'
 	if (filter.lst.length == 0) {
@@ -66,7 +72,7 @@ export async function getFilterCTEs(filter, ds, sampleTypes = new Set(), CTEname
 		if (item.type == 'tvslst') {
 			if (item.lst.length == 0) continue // do not process blank list
 
-			f = await getFilterCTEs(item, ds, sampleTypes, CTEname_i)
+			f = await getFilterCTEs(item, ds, sampleTypes, CTEname_i, rootFilter)
 			// .filters: str, the CTE cascade, not used here!
 			// .CTEs: [] list of individual CTE string
 			// .values: []

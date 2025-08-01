@@ -98,8 +98,7 @@ function make(q, req, res, ds: Mds3WithCohort, genome) {
 		defaultChartType: ds.cohort.defaultChartType,
 		invalidTokenErrorHandling: tdb.invalidTokenErrorHandling,
 		colorMap: tdb.colorMap,
-		defaultTw4correlationPlot: tdb.defaultTw4correlationPlot,
-		authFilter: req.query.filter
+		defaultTw4correlationPlot: tdb.defaultTw4correlationPlot
 	}
 	// optional attributes
 	// when missing, the attribute will not be present as "key:undefined"
@@ -128,10 +127,6 @@ function make(q, req, res, ds: Mds3WithCohort, genome) {
 	const info: any = authApi.getNonsensitiveInfo(req) // type any to avoid tsc err
 	c.clientAuthResult = info?.clientAuthResult || {}
 	if (tdb.displaySampleIds) c.displaySampleIds = tdb.displaySampleIds(c.clientAuthResult)
-	// app.middleware.js would have used authApi.mayAdjustFilter() to create an auth-related filter,
-	// note this may be undefined if there is no ds.cohort.termdb.getAdditionalFilter
-	c.authFilter = req.query.filter
-
 	res.send({ termdbConfig: c })
 }
 

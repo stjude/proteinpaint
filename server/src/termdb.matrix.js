@@ -369,11 +369,12 @@ export async function getSamplesPerFilterResponse(q, ds, res) {
 }
 
 export async function getSamplesPerFilter(q, ds) {
+	console.log(371, q.filter)
 	q.ds = ds
 	const samples = {}
 	for (const id in q.filters) {
-		let filter = q.filters[id]
-		if (q.filter) filter = filterJoin([q.filter, q.filters[id]])
+		const filter = q.filter.extend?.(q.filters[id]) || filterJoin([q.filter, q.filters[id]])
+		console.log(375, filter)
 		const result = (await get_samples({ filter, __protected__: q.__protected__ }, q.ds)).map(i => i.id)
 		samples[id] = Array.from(new Set(result))
 	}

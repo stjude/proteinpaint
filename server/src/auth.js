@@ -3,6 +3,7 @@ import path from 'path'
 import jsonwebtoken from 'jsonwebtoken'
 import { sleep } from './utils.js'
 import mm from 'micromatch'
+import { filterJoin } from '#shared/filter.js'
 
 const { isMatch } = mm
 
@@ -690,6 +691,7 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 				? undefined
 				: routeTwLst.filter(tw => !q.__protected__.ignoredTermIds.includes(tw.term.id)).map(tw => tw.term)
 		const authFilter = ds.cohort.termdb.getAdditionalFilter(q.__protected__.clientAuthResult, routeTerms)
+		console.log(693, authFilter)
 
 		if (!q.filter) q.filter = { type: 'tvslst', join: '', lst: [] }
 		else if (q.filter.type != 'tvslst') throw `invalid q.filter.type != 'tvslst'`
@@ -698,34 +700,43 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 
 		const FILTER_TAG = 'termLevelAuthFilter'
 		const i = q.filter.lst.findIndex(f => f.tag === FILTER_TAG)
+		let filterCopy = structuredClone(q.filter) // make a mutable copy
 		if (!authFilter) {
 			// certain roles (from jwt payload) may have access to everything,
 			// revert or do not adjust the q.filter in this case
 			if (i !== -1) {
 				// remove a previously added auth filter
-				q.filter.lst.splice(i)
-				if (q.filter.lst.length < 2) q.filter.join = ''
-			} else if (q.filter.tag === FILTER_TAG) {
+				filterCopy.lst.splice(i)
+				if (filterCopy.lst.length < 2) filterCopy.join = ''
+			} else if (filterCopy.tag === FILTER_TAG) {
 				// replace a previous authFilter that was set as the q.filter
-				q.filter = { type: 'tvslst', join: '', lst: [] }
+				filterCopy = { type: 'tvslst', join: '', lst: [] }
 			}
-			// nothing to adjust
-			return
 		} else {
 			authFilter.tag = FILTER_TAG
 			// the adjusted filter must have the correct filter shape, for example, avoid an empty nested tvslst
 			if (i !== -1) {
-				if (q.filter.join != 'and') throw `unexpected filter.join != 'and' for a previously added auth filter entry `
-				q.filter.lst[i] = authFilter // replace the previously added auth filter entry
-			} else if (!q.filter.lst.length) q.filter = authFilter // replace an empty root filter
-			else if (q.filter.tag === FILTER_TAG)
-				q.filter = authFilter // replace a previous authFilter that was set as root q.filter
-			else if (q.filter.join != 'or') {
+				if (filterCopy.join != 'and') throw `unexpected filter.join != 'and' for a previously added auth filter entry `
+				filterCopy.lst[i] = authFilter // replace the previously added auth filter entry
+			} else if (!filterCopy.lst.length) filterCopy = authFilter // replace an empty root filter
+			else if (filterCopy.tag === FILTER_TAG)
+				filterCopy = authFilter // replace a previous authFilter that was set as root q.filter
+			else if (filterCopy.join != 'or') {
 				// prevent unnecessary filter nesting,  root filter.lst[] with only one entry that is also a tvslst
-				q.filter.lst.push(authFilter) // add to the existing root filter.lst[] array
-				if (q.filter.join == '') q.filter.join = 'and'
-			} else q.filter = { type: 'tvslst', join: 'and', lst: [authFilter, q.filter] } // prepend the auth filter using an 'and' operator
+				filterCopy.lst.push(authFilter) // add to the existing root filter.lst[] array
+				if (filterCopy.join == '') filterCopy.join = 'and'
+			} else filterCopy = { type: 'tvslst', join: 'and', lst: [authFilter, q.filter] } // prepend the auth filter using an 'and' operator
 		}
+		q.filter = new AuthAdjustedFilter(filterCopy)
+	}
+
+	authApi.verifyFilter = function (ds, filter, rootFilter) {
+		if (!ds.cohort.termdb.getAdditionalFilter) return true
+		if (filter instanceof AuthAdjustedFilter) return true
+		if (rootFilter instanceof AuthAdjustedFilter) {
+			return rootFilter.has(filter)
+		}
+		throw `must use authApi.mayAdjustFilter() for the first argument of getFilterCTEs() if there is ds.cohort.termdb.getAdditionalFilter()`
 	}
 
 	// may handle custom auth for testing
@@ -926,4 +937,46 @@ function checkIPaddress(req, ip, cred) {
 	if (!ip) throw `Server error: missing ip address in saved session`
 	if (req.ip != ip && req.ips?.[0] != ip && req.connection?.remoteAddress != ip)
 		throw `Your connection has changed, please refresh your page or sign in again.`
+}
+
+// should not be visible to outside code
+const signature = Date.now() + Math.random()
+
+// do not export this function
+class AuthAdjustedFilter {
+	#signature = signature
+	#descendants = new WeakSet()
+
+	constructor(filter) {
+		this.type = filter.type
+		const keys = Object.keys(filter)
+		if (keys.includes('tvs')) this.tvs = filter.tvs
+		if (keys.includes('lst')) this.lst = filter.lst
+		if (keys.includes('join')) this.join = filter.join
+		if (keys.includes('in')) this.in = filter.in
+		if (keys.includes('tag')) this.tag = filter.tag
+		Object.freeze(this)
+		console.log(957, this)
+	}
+
+	trackDescendants(tvslst) {
+		for (const item of tvslst) {
+			Object.freeze(item)
+			if (item.type == 'tvslst') this.trackDescendants(item.lst)
+			else this.#descendants.add(item)
+		}
+	}
+
+	has(filter) {
+		return this.#descendants.has(filter)
+	}
+
+	extend(filter) {
+		if (!filter?.lst?.length) return this
+		return new AuthAdjustedFilter(filterJoin(this, filter))
+	}
+
+	// verify() {
+	// 	if (this.#signature != signature) throw `Invalid filter signature: req.query.filter must pass through authApi.mayAdjustFilter()`
+	// }
 }

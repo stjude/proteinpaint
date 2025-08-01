@@ -76,6 +76,10 @@ class MassPlot {
 		*/
 	}
 
+	printError(e) {
+		this.dom.errdiv.style('display', '').html(e)
+	}
+
 	destroy() {
 		// the dom.holder itself is not a d3-selection,
 		// so need to specify a destroy function here

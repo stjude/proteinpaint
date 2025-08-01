@@ -172,7 +172,7 @@ export class profilePlot {
 		for (const tw of this.config.filterTWs) {
 			filters[tw.term.id] = getCategoricalTermFilter(this.config.filterTWs, this.settings, tw)
 		}
-		this.filteredTermValues = await this.app.vocabApi.filterTermValues({
+		const result = await this.app.vocabApi.filterTermValues({
 			terms: this.config.filterTWs,
 			filter: this.state.termfilter.filter,
 			filters,
@@ -180,6 +180,8 @@ export class profilePlot {
 			// it only affects what will be included in the aggregation and does not disable user access authentication
 			filterByUserSites: this.settings.filterByUserSites
 		})
+		if (result.error) throw result.error
+		this.filteredTermValues = result
 		this.regions = this.filteredTermValues[this.config.regionTW.id]
 		this.countries = this.filteredTermValues[this.config.countryTW.id]
 		this.incomes = this.filteredTermValues[this.config.incomeTW.id]

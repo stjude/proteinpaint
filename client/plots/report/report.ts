@@ -182,7 +182,6 @@ export async function getPlotConfig(opts, app) {
 
 	try {
 		const config = app.vocabApi?.termdbConfig?.plotConfigByCohort?.default?.report
-		config.filter = app.vocabApi?.termdbConfig?.authFilter
 		copyMerge(plot, config, opts)
 		if (plot.filterTWs) for (const tw of plot.filterTWs) await fillTermWrapper(tw, app.vocabApi)
 
