@@ -22,12 +22,12 @@ export class WSIAnnotationsRenderer {
 			.style('display', 'inline-block')
 			.style('padding', '20px')
 
-		if (!imageViewData.annotations) return
+		if (!imageViewData.tilesTable) return
 		const selectedColor = '#fcfc8b'
 
 		renderTable({
-			columns: imageViewData.annotations.columns,
-			rows: imageViewData.annotations.rows,
+			columns: imageViewData.tilesTable.columns,
+			rows: imageViewData.tilesTable.rows,
 			div: tablesWrapper
 				.append('div')
 				.attr('id', 'annotations-table')
@@ -47,7 +47,7 @@ export class WSIAnnotationsRenderer {
 
 				this.buffers.annotationsIdx.addListener((index: number) => {
 					tr.style('background-color', index === rowIdx ? selectedColor : origColor)
-					const coords = [imageViewData.annotations!.rows[index][1].value] as unknown as [number, number][]
+					const coords = [imageViewData.tilesTable!.rows[index][1].value] as unknown as [number, number][]
 					this.interactions.zoomInEffectListener(activeImageExtent, coords, map, imageViewData.activePatchColor!)
 				})
 
@@ -59,8 +59,8 @@ export class WSIAnnotationsRenderer {
 
 						/** Need to update the data source. Otherwise user changes
 						 * disappear on sort. */
-						imageViewData.annotations!.rows[rowIdx][4].html = spanHtml
-						imageViewData.annotations!.rows[rowIdx][5].value = tmpClass.label
+						imageViewData.tilesTable!.rows[rowIdx][4].html = spanHtml
+						imageViewData.tilesTable!.rows[rowIdx][5].value = tmpClass.label
 
 						const predictedClassTd = tr.select('td:nth-child(4)')
 						const colorTd = tr.select('td:nth-child(5)')

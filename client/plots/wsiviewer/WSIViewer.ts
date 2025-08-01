@@ -68,7 +68,7 @@ export class WSIViewer extends RxComponentInner {
 			genome,
 			dslabel,
 			sample_id,
-			settings.sessionsAnnotations,
+			settings.sessionsTileSelection,
 			settings.displayedImageIndex
 		)
 

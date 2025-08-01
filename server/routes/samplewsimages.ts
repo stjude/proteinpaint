@@ -56,20 +56,21 @@ function init({ genomes }) {
 							throw new Error(`No classes found for WSImage annotations in dataset ${ds.label}`)
 						}
 
-						wsimage.annotationsData = annotationData.features.map((d: any) => {
-							const featClass =
-								ds.queries.WSImages?.classes?.find(f => f.id == d.properties.class)?.label || d.properties.class
-							return {
-								zoomCoordinates: d.properties.zoomCoordinates,
-								type: d.properties.type,
-								uncertainty: d.properties.uncertainty,
-								class: featClass
-							}
-						})
+						wsimage.annotationsData = annotationData.features
+							.map((d: any) => {
+								const featClass =
+									ds.queries.WSImages?.classes?.find(f => f.id == d.properties.class)?.label || d.properties.class
+								return {
+									zoomCoordinates: d.properties.zoomCoordinates,
+									uncertainty: d.properties.uncertainty,
+									class: featClass
+								}
+							})
+							.slice(15, 20)
 
 						wsimage.classes = ds.queries?.WSImages?.classes
 						wsimage.uncertainty = ds.queries?.WSImages?.uncertainty
-						wsimage.activePatchColor = ds.queries?.WSImages?.activePatchColor || '#00e62a'
+						wsimage.activePatchColor = ds.queries?.WSImages?.activePatchColor
 					}
 
 					// TODO remove this after it's verified
@@ -95,16 +96,17 @@ function init({ genomes }) {
 
 						const predictionsData = JSON.parse(fs.readFileSync(predictionsFilePath, 'utf8'))
 
-						wsimage.predictions = predictionsData.features.map((d: any) => {
-							const featClass =
-								ds.queries.WSImages?.classes?.find(f => f.id == d.properties.class)?.label || d.properties.class
-							return {
-								zoomCoordinates: d.properties.zoomCoordinates,
-								type: d.properties.type,
-								uncertainty: d.properties.uncertainty,
-								class: featClass
-							}
-						})
+						wsimage.predictions = predictionsData.features
+							.map((d: any) => {
+								const featClass =
+									ds.queries.WSImages?.classes?.find(f => f.id == d.properties.class)?.label || d.properties.class
+								return {
+									zoomCoordinates: d.properties.zoomCoordinates,
+									uncertainty: d.properties.uncertainty,
+									class: featClass
+								}
+							})
+							.slice(0, 15)
 					}
 				}
 			}

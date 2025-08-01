@@ -1,7 +1,7 @@
 import { dofetch3 } from '#common/dofetch'
 import type {
-	Annotation,
 	SampleWSImagesResponse,
+	TileSelection,
 	WSImage,
 	WSImagesRequest,
 	WSImagesResponse
@@ -20,7 +20,7 @@ export class ViewModelProvider {
 		genome: string,
 		dslabel: string,
 		sampleId: string,
-		sessionsAnnotations: Annotation[],
+		tileSelections: TileSelection[],
 		displayedImageIndex: number
 	): Promise<ViewModel> {
 		const data: SampleWSImagesResponse = await this.requestData(genome, dslabel, sampleId)
@@ -38,7 +38,7 @@ export class ViewModelProvider {
 			data.sampleWSImages,
 			wsimageLayers,
 			wsimageLayersLoadError,
-			sessionsAnnotations,
+			tileSelections,
 			displayedImageIndex
 		)
 	}
