@@ -18,7 +18,6 @@ import { authApi } from '#src/auth.js'
 import { filterJoin } from '#shared/filter.js'
 
 /*
-
 for a list of termwrappers, get the sample annotation data to these terms, by obeying categorization method defined in tw.q{}
 
 this method abstracts away lots of details:
@@ -27,32 +26,22 @@ this method abstracts away lots of details:
 
 
 Inputs:
-
-q{}
-	.filter{}
-	.filter0
-	.terms[]
-		each element is {id=str, term={}, q={}}
-ds{}
-	server-side dataset object
-
-genome{}
-	server-side genome object
-	XXX avoid using this argument!
-	some calling code (barchart) has bug of suppling genome name instead of obj 
-
-onlyChildren
-	true: the term annotates parent samples, the query will return annotations for the children of the samples that have the term
-	false: the term annotates child samples, the query will return annotations for the samples that have the term
+	q{}
+		.filter{}
+		.filter0
+		.terms[] array of tw
+	ds{}
+		server-side dataset object
+	onlyChildren: boolean
+		true: the term annotates parent samples, the query will return annotations for the children of the samples that have the term
+		false: the term annotates child samples, the query will return annotations for the samples that have the term
 
 Returns:
-	- see ValidGetDataResponse type in shared/types/src/termdb.matrix.ts
-	for documentation
-	- please update types in shared/types/src/termdb.matrix.ts if 
-	the return object is changed
+	- see ValidGetDataResponse type in shared/types/src/termdb.matrix.ts for documentation
+	- please update types in shared/types/src/termdb.matrix.ts if the return object is changed
 */
 
-export async function getData(q, ds, genome, onlyChildren = false) {
+export async function getData(q, ds, onlyChildren = false) {
 	try {
 		validateArg(q, ds)
 		authApi.mayAdjustFilter(q, ds, q.terms)

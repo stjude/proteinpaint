@@ -72,7 +72,7 @@ async function getBrainImage(query: BrainImagingRequest, genomes: any, plane: st
 
 		const selectedSampleNames = query.selectedSampleFileNames.map(s => s.split('.nii')[0])
 
-		const data = await getData({ terms }, ds, q.genome)
+		const data = await getData({ terms }, ds)
 
 		/*
 		divideByCat's structure, When no divideByTW given, one fake divideByTwCat 'default' will be used.

@@ -32,15 +32,7 @@ function init({ genomes }) {
 			if (!ds) throw 'invalid ds'
 			const terms = [q.tw]
 			if (q.overlayTw) terms.push(q.overlayTw)
-			const data = await getData(
-				{
-					filter: q.filter,
-					filter0: q.filter0,
-					terms
-				},
-				ds,
-				genome
-			)
+			const data = await getData({ filter: q.filter, filter0: q.filter0, terms, __protected__: q.__protected__ }, ds)
 			if (data.error) throw data.error
 
 			const sampleType = `All ${data.sampleType?.plural_name || 'samples'}`

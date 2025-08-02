@@ -28,7 +28,7 @@ function init({ genomes }) {
 			const tdb = ds.cohort.termdb
 			if (!tdb) throw 'invalid termdb object'
 
-			await trigger_getcategories(q, res, tdb, ds, g) // as getcategoriesResponse
+			await trigger_getcategories(q, res, tdb, ds)
 		} catch (e: any) {
 			res.send({ error: e?.message || e })
 			if (e instanceof Error && e.stack) console.log(e)
@@ -40,8 +40,7 @@ async function trigger_getcategories(
 	q: CategoriesRequest,
 	res: any,
 	tdb: any,
-	ds: { assayAvailability: { byDt: { [s: string]: any } | ArrayLike<any> } },
-	genome: any
+	ds: { assayAvailability: { byDt: { [s: string]: any } | ArrayLike<any> } }
 ) {
 	// only one term per request, so can hardcode a known string tw.$id if missing
 	// and $id is not used in the response payload/metadata
@@ -56,7 +55,7 @@ async function trigger_getcategories(
 		__protected__: q.__protected__
 	}
 
-	const data = await getData(arg, ds, genome)
+	const data = await getData(arg, ds)
 	if (data.error) throw data.error
 	const [lst, orderedLabels] = getCategories(data, q, ds, $id)
 	res.send({

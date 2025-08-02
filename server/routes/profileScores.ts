@@ -27,7 +27,7 @@ function init({ genomes }) {
 			const g = genomes[req.query.genome]
 			if (!g) throw 'invalid genome name'
 			const ds = g.datasets?.[req.query.dslabel]
-			const result: any = await getScores(req.query, ds, g)
+			const result: any = await getScores(req.query, ds)
 			res.send(result)
 		} catch (e: any) {
 			console.log(e)
@@ -36,7 +36,7 @@ function init({ genomes }) {
 	}
 }
 
-async function getScores(query, ds, genome) {
+async function getScores(query, ds) {
 	if (!query.filterByUserSites) query.__protected__.ignoredTermIds.push(query.facilityTW.term.id)
 
 	const terms: any[] = [query.facilityTW]
@@ -53,8 +53,7 @@ async function getScores(query, ds, genome) {
 			filter: query.site || !query.isAggregate ? undefined : query.filter, //if site is specified, do not apply the filter that is for the aggregation
 			__protected__: query.__protected__
 		},
-		ds,
-		genome
+		ds
 	)
 	const lst = Object.values(data.samples)
 

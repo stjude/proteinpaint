@@ -77,7 +77,7 @@ output:
 		each element {category, {shape=int, sampleCount=int} }
 }
 */
-export async function trigger_getSampleScatter(req, q, res, ds, genome) {
+export async function trigger_getSampleScatter(req, q, res, ds) {
 	try {
 		let refSamples = [], // reference samples, those that are not in termdb and only present in prebuilt scatter map
 			cohortSamples, // cohort (or termdb) samples, those are annotated by terms
@@ -92,8 +92,7 @@ export async function trigger_getSampleScatter(req, q, res, ds, genome) {
 		const data = await getData(
 			{ filter: q.filter, filter0: q.filter0, terms, __protected__: q.__protected__ },
 			ds,
-			genome,
-			true
+			true // FIXME 3rd arg hardcoded to true
 		)
 		if (data.error) throw data.error
 		let result

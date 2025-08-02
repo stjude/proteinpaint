@@ -31,7 +31,7 @@ function init({ genomes }) {
 			if (!genome) throw 'invalid genome name'
 			const ds = genome.datasets?.[q.dslabel]
 			if (!ds) throw 'invalid ds'
-			const result = await compute(q, ds, genome)
+			const result = await compute(q, ds)
 			res.send(result)
 		} catch (e: any) {
 			res.send({ error: e?.message || e })
@@ -40,16 +40,16 @@ function init({ genomes }) {
 	}
 }
 
-async function compute(q: CorrelationVolcanoRequest, ds: any, genome: any) {
+async function compute(q: CorrelationVolcanoRequest, ds: any) {
 	const terms = [q.featureTw, ...q.variableTwLst]
 	const data = await getData(
 		{
 			filter: q.filter,
 			filter0: q.filter0,
-			terms
+			terms,
+			__protected__: q.__protected__
 		},
-		ds,
-		genome
+		ds
 	)
 	if (data.error) throw data.error
 

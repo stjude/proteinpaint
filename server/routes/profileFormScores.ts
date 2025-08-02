@@ -27,7 +27,7 @@ function init({ genomes }) {
 			const g = genomes[req.query.genome]
 			if (!g) throw 'invalid genome name'
 			const ds = g.datasets?.[req.query.dslabel]
-			const result: any = await getScoresDict(req.query, ds, g)
+			const result: any = await getScoresDict(req.query, ds)
 			res.send(result)
 		} catch (e: any) {
 			console.log(e)
@@ -36,7 +36,7 @@ function init({ genomes }) {
 	}
 }
 
-async function getScoresDict(query, ds, genome) {
+async function getScoresDict(query, ds) {
 	if (!query.filterByUserSites) query.__protected__.ignoredTermIds.push(query.facilityTW.term.id)
 	const terms = [...query.scoreTerms, query.facilityTW]
 	if (query.scScoreTerms) terms.push(...query.scScoreTerms)
@@ -47,8 +47,7 @@ async function getScoresDict(query, ds, genome) {
 			filter: query.site || !query.isAggregate ? undefined : query.filter, //if isRadarFacility and site is specified, do not apply the filter
 			__protected__: query.__protected__
 		},
-		ds,
-		genome
+		ds
 	)
 	const lst = Object.values(data.samples)
 	let sites = lst.map((s: any) => {

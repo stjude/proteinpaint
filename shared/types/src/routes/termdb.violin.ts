@@ -47,6 +47,7 @@ export type ViolinRequest = {
 	tw: any
 	/** A string representing a unit of measurement (e.g., 'log' for log scale) */
 	unit: string
+	__protected__: any
 }
 
 /** ?? TODO: Needs description */
