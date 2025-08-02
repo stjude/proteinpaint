@@ -3061,38 +3061,38 @@
   },
   "plots/barchart.js": {
     "lines": {
-      "total": 460,
-      "covered": 6,
+      "total": 459,
+      "covered": 351,
       "skipped": 0,
-      "pct": 1.3
+      "pct": 76.47
     },
     "functions": {
       "total": 95,
-      "covered": 1,
+      "covered": 78,
       "skipped": 0,
-      "pct": 1.05
+      "pct": 82.1
     },
     "statements": {
-      "total": 520,
-      "covered": 6,
+      "total": 519,
+      "covered": 373,
       "skipped": 0,
-      "pct": 1.15
+      "pct": 71.86
     },
     "branches": {
-      "total": 443,
-      "covered": 1,
+      "total": 441,
+      "covered": 283,
       "skipped": 0,
-      "pct": 0.22
+      "pct": 64.17
     },
     "lowestPct": {
-      "curr": 0.22,
+      "curr": 64.17,
       "prev": 63.98,
-      "diff": -63.76
+      "diff": 0.19000000000000483
     },
     "averagePct": {
-      "curr": 0.93,
+      "curr": 73.65,
       "prev": 73.235,
-      "diff": -72.30499999999999
+      "diff": 0.41500000000000625
     }
   },
   "mass/test/barchart.integration.spec.js": {
@@ -3115,20 +3115,20 @@
       "pct": 74.12
     },
     "branches": {
-      "total": 72,
-      "covered": 41,
+      "total": 70,
+      "covered": 39,
       "skipped": 0,
-      "pct": 56.94
+      "pct": 55.71
     },
     "lowestPct": {
-      "curr": 56.94,
+      "curr": 55.71,
       "prev": 57.14,
-      "diff": -0.20000000000000284
+      "diff": -1.4299999999999997
     },
     "averagePct": {
-      "curr": 67.5975,
-      "prev": 67.34,
-      "diff": 0.2574999999999932
+      "curr": 67.28999999999999,
+      "prev": 67.5975,
+      "diff": -0.30750000000000455
     }
   },
   "termdb/vocabulary.js": {
