@@ -1735,7 +1735,7 @@ tape('max number of bins: exceeded', test => {
 		const numBars = await detectLst({ elem: barDiv.node(), selector: '.bars-cell-grp', count: 22, matchAs: '>=' })
 		test.equal(numBars.length, 22, 'should still have 22 age bars and not re-render on error')
 		const errorbar = await detectOne({ elem: barchart.Inner.app.Inner.dom.holder.node(), selector: '.sja_errorbar' })
-		test.true(errorbar && errorbar.innerText.includes('max_num_bins_reached'), 'should show a max number of bins error')
+		test.true(errorbar?.innerText.includes('max_num_bins_reached'), 'should show a max number of bins error')
 	}
 })
 

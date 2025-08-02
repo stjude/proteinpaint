@@ -190,7 +190,9 @@ class MassApp {
 	}
 
 	printError(e) {
-		sayerror(this.dom.errdiv || this.opts.holder, 'Error: ' + (e.message || e))
+		const errdiv = e.errdiv || this.dom.errdiv
+		if (errdiv) errdiv.style('display', '').html('').style('background-color', '')
+		sayerror(errdiv || this.opts.holder, 'Error: ' + (e.message || e.error || e))
 		if (e.stack) console.log(e.stack)
 		this.bus.emit('error')
 	}

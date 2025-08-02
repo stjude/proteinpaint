@@ -36,7 +36,7 @@ class MassPlot {
 	}
 
 	async main() {
-		this.dom.errdiv.style('display', 'none')
+		this.dom.errdiv.style('display', 'none').style('background-color', 'rgba(255,100,100,0.2)')
 		if (!this.components) await this.setComponents(this.opts)
 	}
 

@@ -518,11 +518,17 @@ export function getComponentApi(self) {
 					}
 				}
 			}
-			// notify children
-			await notifyComponents(self.components, current)
-			if (self.bus && (!current.action || current.action.sequenceId === latestActionSequenceId))
-				self.bus.emit('postRender')
-			return api
+			try {
+				// notify children
+				await notifyComponents(self.components, current)
+				if (self.bus && (!current.action || current.action.sequenceId === latestActionSequenceId))
+					self.bus.emit('postRender')
+				return api
+			} catch (e) {
+				if (self.printError) self.printError(e)
+				else if (self.dom?.errdiv) throw { message: e.message || e.error || e, errdiv: self.dom?.errdiv }
+				else throw e
+			}
 		},
 		// must not expose self.bus directly since that
 		// will also expose bus.emit() which should only

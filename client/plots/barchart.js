@@ -368,8 +368,7 @@ export class Barchart {
 			this.render()
 		} catch (e) {
 			this.toggleLoadingDiv('none')
-			this.dom.banner.html(`<span>${e.error || e}</span>`).style('display', 'block')
-			return
+			throw e
 		}
 	}
 

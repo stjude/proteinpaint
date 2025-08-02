@@ -63,7 +63,7 @@ class SummaryPlot {
 	}
 
 	async main() {
-		this.dom.errdiv.style('display', 'none')
+		this.dom.errdiv.style('display', 'none').style('background-color', 'rgba(255,100,100,0.2)')
 		this.config = structuredClone(this.state.config)
 		if (!this.components.plots[this.config.childType]) {
 			await this.setComponent(this.config)
@@ -313,8 +313,8 @@ function setRenderers(self) {
 			// Placeholder for recover component
 			self.dom.localRecoverDiv = self.dom.paneTitleDiv.append('div').style('display', 'inline-block')
 		} catch (e) {
-			throw e
-			//self.dom.errdiv.text(e)
+			self.printError(e)
+			//throw e
 		}
 	}
 
