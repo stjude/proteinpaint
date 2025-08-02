@@ -1,1 +1,2 @@
-
+Fixes:
+- lollipop tk on panning will properly render previously expanded data elements and allow clickable

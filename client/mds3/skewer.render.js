@@ -355,7 +355,12 @@ export function skewer_make(tk, block) {
 	if (tk.shapes) {
 		//Returns the kick in the same shape if skewer is not a circle
 		foldedKick = renderShapeKick(ss, ss.selection)
-		foldedKick.attr('transform', d => `translate(0, ${(tk.skewer.pointup ? -1 : 1) * d.maxradius})`)
+		foldedKick.attr(
+			'transform',
+			d =>
+				`translate(0, ${(tk.skewer.pointup ? -1 : 1) * d.maxradius})
+			scale(${d.showmode == modefold ? '1,1' : '0.01,0.01'})`
+		)
 	} else {
 		foldedKick = ss.selection
 			.append('circle')
@@ -630,18 +635,26 @@ export function unfold_glyph(newlst, tk, block) {
 	// set up new items
 	const expanded = new Set() // d.x as key
 	const folded = new Set()
-	let hasfolded = false
 	for (const d of newlst) {
 		if (d.showmode == modeshow) {
 			expanded.add(d.x0)
 		} else {
 			d.showmode = modeshow
 			folded.add(d.x0)
-			hasfolded = true
 			d.y = skewer_sety(d, tk)
 		}
 	}
-	if (hasfolded) {
+
+	if (expanded.size) {
+		/* issue
+		on panning, skewers that were already expanded before, will keep rims hidden
+		this quick fix allows to show rims for such
+		*/
+		const set = tk.skewer.selection.filter(d => expanded.has(d.x0))
+		set.selectAll('.sja_aa_discrim').attr('fill-opacity', 1).attr('stroke-opacity', 1)
+	}
+
+	if (folded.size) {
 		// vertical extending
 		const set = tk.skewer.selection.filter(d => folded.has(d.x0))
 		set
