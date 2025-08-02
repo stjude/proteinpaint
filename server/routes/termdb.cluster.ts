@@ -60,7 +60,7 @@ function init({ genomes }) {
 				// instead of emitting the client-side instructions from the server response and forcing a reload
 				if (q.terms.length < 3)
 					throw `A minimum of three genes is required for clustering. Please refresh this page to clear this error.`
-				result = (await getResult(q, ds, g)) as TermdbClusterResponse
+				result = (await getResult(q, ds)) as TermdbClusterResponse
 			} else {
 				throw 'unknown q.dataType ' + q.dataType
 			}
@@ -75,7 +75,7 @@ function init({ genomes }) {
 	}
 }
 
-async function getResult(q: TermdbClusterRequest, ds: any, genome) {
+async function getResult(q: TermdbClusterRequest, ds: any) {
 	let _q: any = q // may assign adhoc flag, use "any" to avoid tsc err and no need to include the flag in the type doc
 
 	if (q.dataType == TermTypes.GENE_EXPRESSION) {
@@ -87,7 +87,7 @@ async function getResult(q: TermdbClusterRequest, ds: any, genome) {
 	let term2sample2value, byTermId, bySampleId, skippedSexChrGenes
 
 	if (q.dataType == NUMERIC_DICTIONARY_TERM) {
-		;({ term2sample2value, byTermId, bySampleId } = await getNumericDictTermAnnotation(q, ds, genome))
+		;({ term2sample2value, byTermId, bySampleId } = await getNumericDictTermAnnotation(q, ds))
 	} else {
 		;({ term2sample2value, byTermId, bySampleId, skippedSexChrGenes } = await ds.queries[q.dataType].get(_q))
 	}
@@ -135,12 +135,14 @@ async function getResult(q: TermdbClusterRequest, ds: any, genome) {
 	return result
 }
 
-async function getNumericDictTermAnnotation(q, ds, genome) {
+async function getNumericDictTermAnnotation(q, ds) {
 	const getDataArgs = {
+		terms: q.terms.map(term => ({ term, q: { mode: 'continuous' } })),
 		filter: q.filter,
-		terms: q.terms.map(term => ({ term, q: { mode: 'continuous' } }))
+		filter0: q.filter0,
+		__protected__: q.__protected__
 	}
-	const data = await getData(getDataArgs, ds, genome)
+	const data = await getData(getDataArgs, ds)
 
 	const term2sample2value = new Map()
 	for (const [key, sampleData] of Object.entries(data.samples)) {

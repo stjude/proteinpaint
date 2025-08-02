@@ -14,7 +14,7 @@ export type CorrelationVolcanoRequest = {
 	variableTwLst: TermWrapper[]
 	/** correlation method */
 	correlationMethod: 'pearson' | 'spearman'
-	/** add new param */
+	__protected__: any
 }
 
 export type CorrelationVolcanoResponse = {

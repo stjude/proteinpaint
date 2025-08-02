@@ -57,13 +57,13 @@ export function handle_request_closure(genomes) {
 			if (q.getsamples) return await trigger_getsamples(q, res, ds)
 			if (q.getcuminc) return await trigger_getincidence(q, res, ds)
 			if (q.getsurvival) return await trigger_getsurvival(q, res, ds)
-			if (q.getregression) return await trigger_getregression(q, res, ds, genome)
+			if (q.getregression) return res.send(await get_regression(q, ds))
 			if (q.validateSnps) return res.send(await snpValidate(q, tdb, ds, genome))
 			if (q.getvariantfilter) return res.send(ds?.queries?.snvindel?.variant_filter || {})
 			if (q.getLDdata) return await LDoverlay(q, ds, res)
 			if (q.genesetByTermId) return trigger_genesetByTermId(q, res, tdb)
 			if (q.getSampleScatter) q.for = 'scatter'
-			if (q.for == 'scatter') return await trigger_getSampleScatter(req, q, res, ds, genome)
+			if (q.for == 'scatter') return await trigger_getSampleScatter(req, q, res, ds)
 			if (q.getLowessCurve) return await trigger_getLowessCurve(req, q, res)
 
 			if (q.getCohortsData) return await trigger_getCohortsData(q, res, ds)
@@ -239,11 +239,6 @@ async function trigger_getsurvival(q, res, ds) {
 	res.send(data)
 }
 
-async function trigger_getregression(q, res, ds, genome) {
-	const data = await get_regression(q, ds, genome)
-	res.send(data)
-}
-
 function trigger_genesetByTermId(q, res, tdb) {
 	if (!tdb.termMatch2geneSet) throw 'this feature is not enabled'
 	if (typeof q.genesetByTermId != 'string' || q.genesetByTermId.length == 0) throw 'invalid query term id'
@@ -260,7 +255,7 @@ async function get_matrix(q, req, res, ds, genome) {
 		res.send(plot.matrixConfig)
 		return
 	}
-	const data = await getData(q, ds, genome, true)
+	const data = await getData(q, ds, true) // FIXME hardcoded to true
 	if (authApi.canDisplaySampleIds(req, ds)) {
 		if (data.samples)
 			for (const sample of Object.values(data.samples)) {

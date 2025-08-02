@@ -36,7 +36,7 @@ function init({ genomes }) {
 			if (!g) throw 'invalid genome name'
 			const ds = g.datasets?.[q.dslabel]
 			if (!ds) throw 'invalid ds'
-			data = await trigger_getViolinPlotData(q, ds, g)
+			data = await trigger_getViolinPlotData(q, ds)
 		} catch (e: any) {
 			data = { error: e?.message || e }
 			if (e instanceof Error && e.stack) console.log(e)
@@ -45,11 +45,7 @@ function init({ genomes }) {
 	}
 }
 
-export async function trigger_getViolinPlotData(
-	q: ViolinRequest,
-	ds: { [index: string]: any },
-	genome: { [index: string]: any }
-) {
+export async function trigger_getViolinPlotData(q: ViolinRequest, ds: any) {
 	if (typeof q.tw?.term != 'object' || typeof q.tw?.q != 'object') throw 'q.tw not of {term,q}'
 	const term = q.tw.term
 	if (!q.tw.q.mode) q.tw.q.mode = 'continuous'
@@ -59,9 +55,14 @@ export async function trigger_getViolinPlotData(
 	if (q.divideTw) terms.push(q.divideTw)
 
 	const data = await getData(
-		{ terms, filter: q.filter, filter0: q.filter0, currentGeneNames: q.currentGeneNames },
-		ds,
-		genome
+		{
+			terms,
+			filter: q.filter,
+			filter0: q.filter0,
+			currentGeneNames: q.currentGeneNames,
+			__protected__: q.__protected__
+		},
+		ds
 	)
 	const sampleType = `All ${data.sampleType?.plural_name || 'samples'}`
 	if (data.error) throw data.error

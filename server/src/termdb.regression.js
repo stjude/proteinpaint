@@ -84,12 +84,12 @@ const minimumSample = 1
 let stime, etime
 const benchmark = { NodeJS: {}, 'regression.R': {} }
 
-export async function get_regression(q, ds, genome) {
+export async function get_regression(q, ds) {
 	try {
 		parse_q(q, ds)
 
 		stime = new Date().getTime()
-		const sampledata = await getSampleData(q, ds, genome)
+		const sampledata = await getSampleData(q, ds)
 		/* each element is one sample with a key-val map for all its annotations:
 		{sample, id2value:Map( tid => {key,value}) }
 		*/
@@ -1057,10 +1057,10 @@ Returns an array with elemenents:
 			]
 		},
 */
-async function getSampleData(q, ds, genome) {
+async function getSampleData(q, ds) {
 	const q2 = Object.assign({}, q)
 	q2.terms = [q.outcome, ...q.independent]
-	const result = await getData(q2, ds, genome)
+	const result = await getData(q2, ds)
 
 	const filteredSamples = mayProcessSampleByCoxOutcome(q, ds, result.samples) // array of objects, same shape as result.samples{} values
 	const samples = [] // collect reshaped sample objs and return
@@ -1128,203 +1128,6 @@ function mayProcessSampleByCoxOutcome(q, ds, getDataSamples) {
 	}
 	return psamples
 }
-
-/*
-{
-  sample: 100,
-  id2value: Map(2) {
-    'agedx' => { key: 16.975342466, value: 16.975342466 },
-    'aaclassic_5' => { key: '10000 to <15000', value: 14641.991342 }
-  }
-}
-
-async function getSampleData2(q, terms, ds) {
-	// not used
-	// TODO: replace with getData() from termdb.matrix.js
-	// dictionary and non-dictionary terms require different methods for data query
-	const [dictTerms, nonDictTerms] = divideTerms(terms)
-
-	// query data for dictionary terms
-	const samples = await getSampleData_dictionaryTerms(q, dictTerms)
-	// k: sampleid, v: {sample:str, id2value:Map( tid => {key,value}) }
-
-	// next: data from non-dictionary terms are appended to the same "samples" Map
-
-	for (const tw of nonDictTerms) {
-		// for each non dictionary term type
-		// query sample data with its own method and append results to "samples"
-
-		mayAddAncestryPCs(tw, samples, ds)
-
-		if (tw.type == 'snplst' || tw.type == 'snplocus') {
-			// each snp is one indepedent variable
-			await getSampleData_snplstOrLocus(tw, samples)
-		} else if (tw.type == 'geneVariant') {
-			// need $id to get geneVariant data
-			// set to tw.term.id because this is what is used
-			// by makeRinput() to extract sample data
-			// FIXME: this will create a conflict between multiple
-			// terms that have the same gene (e.g., TP53 geneVariant and
-			// TP53 geneExpression). Fine for now because geneExpression
-			// is not yet supported in regression, but need to migrate to
-			// getData() and use computed $id to fully solve this issue.
-			tw.$id = tw.term.id
-			const data = await q.ds.mayGetGeneVariantData(tw, q)
-			// append geneVariant data to samples map
-			for (const [sampleid, value] of data) {
-				if (!samples.has(sampleid)) {
-					// sample not present in samples map
-					// must have been filtered by q.filter
-					continue
-				}
-				const k = value[tw.$id].key
-				const v = value[tw.$id].value
-				samples.get(sampleid).id2value.set(tw.$id, { key: k, value: v })
-			}
-		} else {
-			throw 'unknown type of independent non-dictionary term'
-		}
-	}
-
-	return [...samples.values()]
-}
-
-function mayAddAncestryPCs2(tw, samples, ds) {
-	// not used
-	if (!tw.q.restrictAncestry) return
-	// add sample pc values from tw.q.restrictAncestry.pcs to samples
-	for (const [pcid, s] of tw.q.restrictAncestry.pcs) {
-		for (const [sampleid, pcValue] of s) {
-			if (!samples.has(sampleid)) continue
-			samples.get(sampleid).id2value.set(pcid, { key: pcValue, value: pcValue })
-		}
-	}
-}
-
-//check logic here, why it has another getSampleData_dictionaryTerms? we have to handle parent samples here
-async function getSampleData_dictionaryTerms(q, terms) {
-	// outcome can only be dictionary term so terms array must have at least 1 term
-	const samples = new Map()
-	// k: sample id, v: {sample, id2value:Map( tid => {key,value}) }
-	const sample_types = getSampleTypes(terms, q.ds)
-	const filter = await getFilterCTEs(q.filter, q.ds, sample_types)
-	const sampleTypes = filter?.sampleTypes || sample_types // filter may add sampleTypes
-	// must copy filter.values as its copy may be used in separate SQL statements,
-	// for example get_rows or numeric min-max, and each CTE generator would
-	// have to independently extend its copy of filter values
-	const values = filter ? filter.values.slice() : []
-	const CTEs = await Promise.all(terms.map(async (t, i) => await get_term_cte(q, values, i, filter, t))).catch(
-		console.error
-	)
-	values.push(...terms.map(d => d.term.id || d.term.name))
-
-	const _rows = await getAnnotationRows(q, terms, filter, CTEs, values, sampleTypes, sample_types.size > 1)
-
-	// process rows
-	const rows =
-		q.regressionType == 'cox' && q.outcome.term.type == 'condition'
-			? processCoxConditionOutcomeRows(_rows, q.outcome, q.ds.cohort.termdb.ageEndOffset)
-			: _rows
-	// parse the processed rows
-
-	for (const { sample, term_id, key, value } of rows) {
-		addSample(sample, term_id, key, value)
-	}
-
-	function addSample(sample, term_id, key, value) {
-		const term = terms.find(term => (term.term.id || term.term.name) == term_id)
-		if (!term) throw 'no term found'
-
-		if (!samples.has(sample)) {
-			samples.set(sample, { sample, id2value: new Map() })
-		}
-		if (samples.get(sample).id2value.has(term_id)) {
-			// can duplication happen?
-			throw `duplicate '${term_id}' entry for sample='${sample}'`
-		}
-
-		// if applicable, scale the data
-		samples.get(sample).id2value.set(term_id, {
-			key: term.q.scale ? key / term.q.scale : key,
-			value: term.q.scale ? value / term.q.scale : value
-		})
-	}
-
-	/ drop samples that are missing value for any term
-	as those are ineligible for analysis
-	TODO: is this a duplication of a step in makeRinput()
-	/
-	const deletesamples = new Set()
-	for (const o of samples.values()) {
-		for (const t of terms) {
-			if (!o.id2value.has(t.term.id || t.term.name)) {
-				deletesamples.add(o.sample)
-				break
-			}
-		}
-	}
-	for (const s of deletesamples) {
-		samples.delete(s)
-	}
-
-	return samples
-}
-
-function processCoxConditionOutcomeRows2(rows, outcome, ageEndOffset) {
-	// not used
-	if (!ageEndOffset) throw 'missing age end offset'
-	const prows = []
-	for (const row of rows) {
-		if (row.term_id == outcome.term.id) {
-			// outcome row
-
-			// event: event status code
-			// age_start: age at beginning of follow-up
-			// age_end: age at event or at censoring
-			const event = row.key
-			const { age_start, age_end } = JSON.parse(row.value)
-
-			// discard samples that had events before follow-up
-			if (event == -1) continue
-
-			// for timeScale='age', add a small offset to age_end
-			// to prevent age_end = age_start (which would cause
-			// R to error out)
-			const value = {
-				age_start,
-				age_end: outcome.q.timeScale == 'age' ? age_end + ageEndOffset : age_end
-			}
-
-			prows.push({
-				sample: row.sample,
-				key: event,
-				value,
-				term_id: row.term_id
-			})
-		} else {
-			// not outcome row
-			// no need to process row
-			prows.push(row)
-		}
-	}
-	return prows
-}
-function divideTerms(lst) {
-	// quick fix to divide list of term to two lists
-	// TODO ways to generalize; may use `shared/usecase2termtypes.js` with "regression":{nonDictTypes:['snplst','prs']}
-	// shared between server and client
-	const dict = [],
-		nonDict = []
-	for (const t of lst) {
-		if (isDictionaryType(t.type)) {
-			dict.push(t)
-		} else {
-			nonDict.push(t)
-		}
-	}
-	return [dict, nonDict]
-}
-*/
 
 function replaceTermId(Rinput) {
 	// replace term IDs with custom IDs (to avoid spaces/commas in R)

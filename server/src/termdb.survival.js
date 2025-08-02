@@ -42,9 +42,8 @@ export async function get_survival(q, ds) {
 		// ot: overlay term, the series term
 		const ot = q[`term${survTermIndex == 1 ? 2 : 1}`]
 		const data = await getData(
-			{ terms: twLst, filter: q.filter, filter0: q.filter0 },
+			{ terms: twLst, filter: q.filter, filter0: q.filter0, __protected__: q.__protected__ },
 			ds,
-			q.genome,
 			ifIsOnlyChildren(q, st, ot, ds)
 		)
 		if (data.error) throw data.error

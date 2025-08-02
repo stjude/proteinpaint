@@ -42,8 +42,7 @@ function init({ genomes }) {
 						filter0: q.filter0,
 						terms: terms
 					},
-					ds,
-					genome
+					ds
 				)
 				if (term_results.error) throw term_results.error
 			}
@@ -57,8 +56,7 @@ function init({ genomes }) {
 						filter0: q.filter0,
 						terms: terms2
 					},
-					ds,
-					genome
+					ds
 				)
 				if (term_results2.error) throw term_results2.error
 			}

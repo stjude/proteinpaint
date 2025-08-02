@@ -29,7 +29,7 @@ function init({ genomes }) {
 			const g = genomes[req.query.genome]
 			if (!g) throw 'invalid genome name'
 			const ds = g.datasets?.[req.query.dslabel]
-			getFilters(req.query, ds, g, res)
+			getFilters(req.query, ds, res)
 		} catch (e: any) {
 			console.log(e)
 			res.send({ status: 'error', error: e.message || e })
@@ -59,7 +59,7 @@ function getList(samplesPerFilter, filtersData, tw) {
 	return filteredValues
 }
 
-async function getFilters(query, ds, genome, res) {
+async function getFilters(query, ds, res) {
 	// safe to process this client-submitted query.filterByUserSites flag,
 	// which only affects aggregation levels (not revealed sample-level data),
 	// as performed by this route code, and since query.terms would still
@@ -69,14 +69,7 @@ async function getFilters(query, ds, genome, res) {
 	try {
 		//Dictionary with samples applying all the filters but not the one from the current term id
 		const samplesPerFilter = await getSamplesPerFilter(query, ds)
-		const filtersData = await getData(
-			{
-				terms: query.terms,
-				__protected__: query.__protected__
-			},
-			ds,
-			genome
-		)
+		const filtersData = await getData({ terms: query.terms, __protected__: query.__protected__ }, ds)
 		const tw2List = {}
 		for (const tw of query.terms) {
 			// related to auth: make sure the returned list are not sensitive !!!

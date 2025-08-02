@@ -42,7 +42,11 @@ export async function get_incidence(q, ds) {
 		if (q.term2?.type == 'condition') throw 'overlay term cannot be condition term'
 		if (q.term0?.type == 'condition') throw 'divideBy term cannot be condition term'
 
-		const data = await getData({ terms: twLst, filter: q.filter }, ds, q.genome, true)
+		const data = await getData(
+			{ terms: twLst, filter: q.filter, filter0: q.filter0, __protected__: q.__protected__ },
+			ds,
+			true
+		) // FIXME hardcoded 3rd arg
 		if (data.error) throw data.error
 
 		const results = { data: {} }
