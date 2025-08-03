@@ -2649,7 +2649,9 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 		// retrieve genomic data for each dt of each gene
 		const termdbmclass = q.ds?.cohort?.termdb?.mclass // custom mclass labels from dataset
 		if (!tw.term.genes?.length) throw 'tw.term.genes[] is empty'
-		for (const gene of tw.term.genes) {
+		// query genes concurrently to speed up geneset query
+		await Promise.all(tw.term.genes.map(gene => getGeneMlst(gene)))
+		async function getGeneMlst(gene) {
 			if (!gene.gene && !(gene.chr && Number.isInteger(gene.start) && Number.isInteger(gene.stop)))
 				throw 'no gene or position specified'
 			for (const dt of dts) {
@@ -2769,14 +2771,13 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 			}
 		}
 
-		const groupset = get_active_groupset(tw.term, tw.q)
-
 		// TODO: need to test when geneVariant term is in global filter for gdc
 		let geneVariantFilter
 		if (q.filter) {
 			geneVariantFilter = structuredClone(q.filter)
 			geneVariantFilter.lst = q.filter.lst.filter(item => dtTermTypes.has(item.tvs.term.type))
 		}
+		const groupset = get_active_groupset(tw.term, tw.q)
 		for (const [sample, mlst] of sample2mlst) {
 			// may filter samples here by geneVariant data
 			// necessary for gdc, which uses a different filter
