@@ -27,7 +27,8 @@ export default function (): Mds3 {
 		isSupportedChartOverride: {
 			runChart: () => true,
 			frequencyChart: () => true,
-			report: () => true
+			report: () => true,
+			summarizeMutationDiagnosis: () => true
 		},
 		cohort: {
 			massNav: {
@@ -205,6 +206,9 @@ export default function (): Mds3 {
 							]
 						}
 					}
+				},
+				defaultTw4correlationPlot: {
+					disease: { id: 'diaggrp', q: {} }
 				}
 			},
 			scatterplots: {

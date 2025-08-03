@@ -130,6 +130,7 @@ function getChartTypeList(self, state) {
 			for user to fill in additional details to launch the plot
 			example: regression, table, scatterplot which requires user to select two terms
 		- self.plotCreate()
+			when using prepPlot this error was raised: No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this). TODO consolidate
 
 	.usecase:{}
 		required for clickTo=tree_select1term
@@ -178,10 +179,9 @@ function getChartTypeList(self, state) {
 			config: { chartType: 'profileForms' }
 		},
 		////////////////////// PROFILE PLOTS END //////////////////////
-		//          rest are general plots applicable to all ds
-
+		//       rest are general plots applicable to all ds
 		{
-			label: 'Data Dictionary', // todo change to Data Variables
+			label: 'Data Variables',
 			clickTo: self.prepPlot,
 			chartType: 'dictionary',
 			config: {
@@ -191,8 +191,7 @@ function getChartTypeList(self, state) {
 		{
 			label: self.getReportBtnLabel(state),
 			chartType: 'report',
-
-			clickTo: self.plotCreate, //when using prepPlot this error was raised: No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this). TOD0: check with Edgar
+			clickTo: self.plotCreate,
 			config: { chartType: 'report' }
 		},
 		{
@@ -299,7 +298,7 @@ function getChartTypeList(self, state) {
 		},
 		{
 			label: 'Metabolite Intensity',
-			chartType: 'metaboliteIntensity', // TODO change to metaboliteIntensity
+			chartType: 'metaboliteIntensity',
 			clickTo: self.showTree_selectlst,
 			usecase: { target: 'metaboliteIntensity', detail: 'term' },
 			updateActionBySelectedTerms: (action, termlst) => {
@@ -327,7 +326,6 @@ function getChartTypeList(self, state) {
 			}
 		},
 		{
-			//use the app name defined in dataset file
 			label: state.termdbConfig.numericDictTermCluster?.appName || 'Numeric Dictionary Term cluster',
 			chartType: 'numericDictTermCluster',
 			clickTo: self.loadChartSpecificMenu
@@ -591,16 +589,14 @@ function setRenderers(self) {
 		_.makeChartBtnMenu(self.dom.tip.d, self, chart.chartType)
 	}
 
-	/*
-		dispatch "plot_prep" action to produce a 'initiating' UI of this plot, for user to fill in additional details to launch the plot
-		example: table, scatterplot which requires user to select two terms
-	*/
 	self.prepPlot = function (chart) {
+		self.dom.tip.hide()
 		const action = { type: 'plot_prep', config: chart.config, id: getId() }
 		self.app.dispatch(action)
 	}
 
 	self.plotCreate = function (chart) {
+		self.dom.tip.hide()
 		const action = { type: 'plot_create', config: chart.config, id: getId() }
 		self.app.dispatch(action)
 	}
