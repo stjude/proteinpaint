@@ -1,3 +1,5 @@
+import { getChildTerms } from '../termsetting/handlers/geneVariant'
+
 /*
 TVS handler for geneVariant term
 */
@@ -13,8 +15,10 @@ export const handler = {
 
 async function fillMenu(self, _div, tvs) {
 	const term = structuredClone(tvs.term)
-	if (!term.childTerms?.length) return
-	// generate a frontend vocab using dt terms from the variant filter
+	// get child dt terms
+	await getChildTerms(term, self.opts.vocabApi)
+	if (!term.childTerms?.length) throw 'term.childTerms[] is missing'
+	// generate a frontend vocab using the child dt terms
 	// and render a data dictionary of this vocab
 	const termdb = await import('../termdb/app')
 	termdb.appInit({
