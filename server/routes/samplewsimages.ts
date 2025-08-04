@@ -73,17 +73,6 @@ function init({ genomes }) {
 						wsimage.activePatchColor = ds.queries?.WSImages?.activePatchColor
 					}
 
-					// TODO remove this after it's verified
-					// if (ds.queries.WSImages.getZoomInPoints) {
-					// 	const zoomInPoints: Array<[number, number]> = await ds.queries.WSImages.getZoomInPoints(
-					// 		sampleId,
-					// 		wsimage.filename
-					// 	)
-					// 	if (zoomInPoints) {
-					// 		wsimage.zoomInPoints = zoomInPoints
-					// 	}
-					// }
-
 					if (ds.queries.WSImages.getWSIPredictionPatches) {
 						const predictionsFile = await ds.queries.WSImages.getWSIPredictionPatches(sampleId, wsimage.filename)
 

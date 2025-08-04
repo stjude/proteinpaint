@@ -1023,8 +1023,6 @@ export type WSImages = {
 	getWSIPredictionPatches?: (sampleName: string, wsiImage: string) => Promise<string[]>
 	/**  ds supplied */
 	getWSIAnnotations?: (sampleName: string, wsiImage: string) => Promise<string[]>
-	/** TODO remove this after verified */
-	getZoomInPoints?: (sampleName: string, wsiImage: string) => Promise<Array<[number, number]>>
 	/**  ds supplied */
 	makeGeoJson?: (sampleId: string, wsiImage: string) => void
 	/**  ds supplied */
