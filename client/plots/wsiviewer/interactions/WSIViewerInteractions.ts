@@ -142,9 +142,6 @@ export class WSIViewerInteractions {
 					//Timeout for when user presses arrows multiple times.
 					const d = debounce(async () => {
 						buffers.annotationsIdx.set(currentIndex)
-						//
-						// const newZoomInPoints = annotationsData[currentIndex].zoomCoordinates
-						// if (newZoomInPoints != undefined) this.zoomInEffectListener(activeImageExtent, [newZoomInPoints], map)
 					}, 500)
 					d()
 				}
