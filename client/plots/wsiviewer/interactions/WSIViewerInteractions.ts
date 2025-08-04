@@ -193,12 +193,10 @@ export class WSIViewerInteractions {
 		) => {
 			const state = wsiApp.app.getState()
 			const settings: Settings = state.plots.find(p => p.id === wsiApp.id).settings
-
-			// Update state with new annotation
 			const currentTileSelection = settings.sessionsTileSelection
-
 			const predictions = sessionWSImage?.predictions || []
 			const persistedAnnotationsData = sessionWSImage?.annotationsData || []
+
 			const annotationsData = [...currentTileSelection, ...predictions, ...persistedAnnotationsData]
 
 			// Check if click falls inside an existing annotation
@@ -214,7 +212,7 @@ export class WSIViewerInteractions {
 				return
 			}
 
-			// Create new annotation
+			// Create new tile section
 			const newTileSelection: TileSelection = {
 				zoomCoordinates: [coordinateX, coordinateY],
 				class: ''
