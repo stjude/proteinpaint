@@ -112,11 +112,16 @@ export class WSIViewer extends RxComponentInner {
 			}
 		}
 
-		if (settings.renderAnnotationTable && this.map) {
+		this.metadataRenderer.renderMetadata(holder, imageViewData)
+
+		if (
+			viewModel.sampleWSImages[settings.displayedImageIndex].annotationsData &&
+			settings.renderAnnotationTable &&
+			this.map
+		) {
 			const wsiAnnotationsRenderer = new WSIAnnotationsRenderer(buffers, this.wsiViewerInteractions)
 			wsiAnnotationsRenderer.render(holder, imageViewData, activeImageExtent!, this.map)
 			this.legendRenderer.render(holder, imageViewData)
-			this.metadataRenderer.renderMetadata(holder, imageViewData)
 
 			const initialZoomInCoordinate = viewModel.getInitialZoomInCoordinate(settings.displayedImageIndex)
 

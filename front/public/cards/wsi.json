@@ -5,7 +5,7 @@
             "runargs": {
                 "mass": {
                     "state": {
-                        "dslabel": "AIAHistoLabeler",
+                        "dslabel": "GDC",
                         "genome": "hg38",
                         "nav": {
                             "header_mode": "hidden"
