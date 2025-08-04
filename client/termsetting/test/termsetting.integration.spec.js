@@ -1800,14 +1800,132 @@ const geneVariantTw = {
 					dt: 2
 				}
 			]
-		}
+		},
+		childTerms: [
+			{
+				id: 'snvindel_somatic',
+				query: 'snvindel',
+				name: 'SNV/indel (somatic)',
+				parent_id: null,
+				isleaf: true,
+				type: 'dtsnvindel',
+				dt: 1,
+				values: {
+					M: { label: 'MISSENSE' },
+					F: { label: 'FRAMESHIFT' },
+					WT: { label: 'Wildtype' }
+				},
+				name_noOrigin: 'SNV/indel',
+				origin: 'somatic',
+				parentTerm: {
+					name: 'TP53',
+					genes: [
+						{
+							kind: 'gene',
+							id: 'TP53',
+							gene: 'TP53',
+							name: 'TP53',
+							type: 'geneVariant'
+						}
+					],
+					type: 'geneVariant',
+					id: 'TP53'
+				}
+			},
+			{
+				id: 'snvindel_germline',
+				query: 'snvindel',
+				name: 'SNV/indel (germline)',
+				parent_id: null,
+				isleaf: true,
+				type: 'dtsnvindel',
+				dt: 1,
+				values: {
+					M: { label: 'MISSENSE' },
+					F: { label: 'FRAMESHIFT' },
+					WT: { label: 'Wildtype' }
+				},
+				name_noOrigin: 'SNV/indel',
+				origin: 'germline',
+				parentTerm: {
+					name: 'TP53',
+					genes: [
+						{
+							kind: 'gene',
+							id: 'TP53',
+							gene: 'TP53',
+							name: 'TP53',
+							type: 'geneVariant'
+						}
+					],
+					type: 'geneVariant',
+					id: 'TP53'
+				}
+			},
+			{
+				id: 'cnv',
+				query: 'cnv',
+				name: 'CNV',
+				parent_id: null,
+				isleaf: true,
+				type: 'dtcnv',
+				dt: 4,
+				values: {
+					CNV_amp: { label: 'Copy number gain' },
+					WT: { label: 'Wildtype' }
+				},
+				name_noOrigin: 'CNV',
+				parentTerm: {
+					name: 'TP53',
+					genes: [
+						{
+							kind: 'gene',
+							id: 'TP53',
+							gene: 'TP53',
+							name: 'TP53',
+							type: 'geneVariant'
+						}
+					],
+					type: 'geneVariant',
+					id: 'TP53'
+				}
+			},
+			{
+				id: 'fusion',
+				query: 'svfusion',
+				name: 'Fusion RNA',
+				parent_id: null,
+				isleaf: true,
+				type: 'dtfusion',
+				dt: 2,
+				values: {
+					Fuserna: { label: 'Fusion transcript' },
+					WT: { label: 'Wildtype' }
+				},
+				name_noOrigin: 'Fusion RNA',
+				parentTerm: {
+					name: 'TP53',
+					genes: [
+						{
+							kind: 'gene',
+							id: 'TP53',
+							gene: 'TP53',
+							name: 'TP53',
+							type: 'geneVariant'
+						}
+					],
+					type: 'geneVariant',
+					id: 'TP53'
+				}
+			}
+		]
 	},
+	isAtomic: true,
 	q: {
 		isAtomic: true,
 		type: 'predefined-groupset',
 		predefined_groupset_idx: 0,
 		hiddenValues: {}
 	},
-	isAtomic: true,
 	type: 'GvPredefinedGsTW'
 }
