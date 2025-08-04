@@ -1,1 +1,2 @@
-
+Fixes:
+- clear the plot or summary error div on each component update
