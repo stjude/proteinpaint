@@ -1695,6 +1695,7 @@ tape('max number of bins: exceeded', test => {
 
 	let barDiv
 	async function runTests(barchart) {
+		barchart.on('postRender.test', null)
 		barDiv = barchart.Inner.dom.barDiv
 		testBarCount(barchart)
 		triggerExceedMaxBin(barchart)
@@ -1736,6 +1737,110 @@ tape('max number of bins: exceeded', test => {
 		test.equal(numBars.length, 22, 'should still have 22 age bars and not re-render on error')
 		const errorbar = await detectOne({ elem: barchart.Inner.app.Inner.dom.holder.node(), selector: '.sja_errorbar' })
 		test.true(errorbar?.innerText.includes('max_num_bins_reached'), 'should show a max number of bins error')
+	}
+})
+
+tape('minimum sample size', test => {
+	test.timeoutAfter(3000)
+	const runpp = helpers.getRunPp('mass', {
+		state: {
+			vocab: {
+				dslabel: 'ProtectedTest',
+				genome: 'hg38-test'
+			}
+		},
+		debug: 1
+	})
+
+	runpp({
+		state: {
+			termfilter: {
+				filter: {
+					type: 'tvslst',
+					join: 'and',
+					lst: [
+						{
+							type: 'tvs',
+							tvs: {
+								term: termjson.agedx,
+								ranges: [{ start: 1, startinclusive: true, stop: 3, stopinclusive: true }]
+							}
+						},
+						{
+							type: 'tvs',
+							tvs: {
+								term: termjson.sex,
+								values: [{ key: '1' }]
+							}
+						}
+					]
+				}
+			},
+			nav: {
+				activeTab: 1
+			},
+			plots: [
+				{
+					chartType: 'barchart',
+					term: {
+						term: termjson['diaggrp']
+					}
+				}
+			]
+		},
+		barchart: {
+			callbacks: {
+				'postRender.test': runTests,
+				error: runTests
+			}
+		},
+		debug: 1
+	})
+
+	let barDiv, errDiv
+	async function runTests(barchart) {
+		barchart.on('postRender.test', null).on('error', null)
+		barDiv = barchart.Inner.dom.barDiv
+		errDiv = barchart.Inner.app.Inner.components.plots['diaggrp'].Inner.dom.errdiv
+		testBarCount(0, 'with stricter filter')
+		test.true(errDiv.text().includes('required minimum sample size'), 'should display the expected error message')
+		test.notEqual(errDiv.style('display'), 'none', 'should have a visible red error div')
+		await triggerClearedError(barchart)
+	}
+
+	function testBarCount(expected, testcase) {
+		const numBars = barDiv.selectAll('.bars-cell-grp').size()
+		test.equal(numBars, expected, `should have ${expected} bars ${testcase}`)
+	}
+
+	async function triggerClearedError(barchart) {
+		barchart.on('postRender.test', testClearedError).on('error', testClearedError)
+		await barchart.Inner.app.dispatch({
+			type: 'filter_replace',
+			filter: {
+				type: 'tvslst',
+				join: '',
+				lst: [
+					{
+						type: 'tvs',
+						tvs: {
+							term: termjson.agedx,
+							ranges: [{ start: 1, startinclusive: true, stop: 3, stopinclusive: true }]
+						}
+					}
+				]
+			}
+		})
+	}
+
+	function testClearedError(barchart) {
+		barchart.on('postRender.test', null).on('error', null)
+		testBarCount(3, 'with looser filter')
+		test.equal(errDiv.text(), '', 'should have an empty error message')
+		test.equal(errDiv.style('display'), 'none', 'should have a hidden red error div')
+
+		if (test._ok) barchart.Inner.app.destroy()
+		test.end()
 	}
 })
 
