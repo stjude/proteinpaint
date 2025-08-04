@@ -109,11 +109,10 @@ export class WSIViewerInteractions {
 			holder.attr('tabindex', 0)
 			holder.node()?.focus()
 
-			const sessionAnnotationsData = sessionWSImage?.sessionsTileSelections || []
-
+			const sessionTileSelections = sessionWSImage?.sessionsTileSelections || []
+			const predictions = sessionWSImage?.predictions || []
 			const persistedAnnotationsData = sessionWSImage?.annotationsData || []
-
-			const annotationsData = [...sessionAnnotationsData, ...persistedAnnotationsData]
+			const annotationsData = [...sessionTileSelections, ...predictions, ...persistedAnnotationsData]
 
 			holder.on('keydown', async (event: KeyboardEvent) => {
 				let currentIndex = buffers.annotationsIdx.get()
