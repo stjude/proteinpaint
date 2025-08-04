@@ -104,7 +104,8 @@ export class WSIViewer extends RxComponentInner {
 				wsimageLayers[settings.displayedImageIndex],
 				this.wsiViewerInteractions.viewerClickListener,
 				viewModel.sampleWSImages[settings.displayedImageIndex],
-				buffers
+				buffers,
+				settings
 			).render(holder, settings)
 
 			if (activeImageExtent && this.map) {

@@ -25,6 +25,7 @@ export class MapRenderer {
 	) => void
 	private sessionWSImage: SessionWSImage
 	private buffers: any
+	private settings: Settings
 
 	constructor(
 		wSImageLayers: WSImageLayers,
@@ -32,12 +33,14 @@ export class MapRenderer {
 			(coordinateX: number, coordinateY: number, sessionWSImage: SessionWSImage, buffers: any, map: OLMap): void
 		},
 		sessionWSImage: SessionWSImage,
-		buffers: any
+		buffers: any,
+		settings: Settings
 	) {
 		this.wSImageLayers = wSImageLayers
 		this.sessionWSImage = sessionWSImage
 		this.viewerClickListener = viewerClickListener
 		this.buffers = buffers
+		this.settings = settings
 	}
 
 	public render(holder: any, settings: Settings): OLMap {
@@ -114,10 +117,7 @@ export class MapRenderer {
 
 			map.on('singleclick', event => {
 				const coordinate = event.coordinate
-
-				// Calculate tile size and tile origin
-				const tileSize = 512
-
+				const tileSize = this.settings.tileSize
 				// Compute upper-left corner of the tile containing the clicked point
 				const tileX = Math.floor(coordinate[0] / tileSize) * tileSize
 				const tileY = Math.floor(-coordinate[1] / tileSize) * tileSize
