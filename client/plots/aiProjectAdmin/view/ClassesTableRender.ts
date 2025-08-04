@@ -11,25 +11,42 @@ export class ClassesTableRender {
 	}
 	columns: TableColumn[]
 	rows: TableRow[]
+	/** table.ts updates this.rows and cell values in editCallback
+	 * Save a copy to check for duplicates when editing class names.
+	 */
+	rowsCopy: TableRow[]
 
 	constructor(holder: any, rows?: TableRow[]) {
-		holder.style('padding', '10px')
+		const wrapper = holder.append('div').style('padding', '20px 0px')
+
 		this.dom = {
-			tableDiv: holder.append('div').attr('id', 'sjpp-ai-prjt-admin-classes-table'),
-			btnDiv: holder.append('div')
+			tableDiv: wrapper.append('div').attr('id', 'sjpp-ai-prjt-admin-classes-table'),
+			btnDiv: wrapper.append('div')
 		}
 		this.columns = [
 			{ label: '' }, // Empty for the delete icon
 			{
 				label: 'NAME',
 				editCallback: (rowIdx, cell) => {
-					console.log('Edited row', rowIdx, 'cell:', cell)
+					const newValue = (cell.value as string).trim()
+					const foundSameName = this.rowsCopy.some(r => newValue == r[1].value)
+					if (foundSameName) {
+						alert(`Class name '${cell.value}' already exists`)
+						/** Reset to original value
+						 * renderTable() updates arg.rows and cell value before this callback.
+						 * This resets the value to the original value */
+						cell.value = this.rowsCopy[rowIdx][1].value
+						cell.__td.text(this.rowsCopy[rowIdx][1].value)
+						this.rows = this.rowsCopy
+						return
+					}
 				}
 			},
 			{ label: 'COLOR' }
 		]
-		const colorScale = getColors(4)
+		const colorScale = getColors(5)
 		this.rows = rows || this.setDefaultClasses(colorScale)
+		this.rowsCopy = []
 
 		this.renderTable()
 		this.renderAddClassBtn(colorScale)
@@ -38,6 +55,10 @@ export class ClassesTableRender {
 	renderTable() {
 		this.dom.tableDiv.select('table').remove()
 		if (!this.rows || this.rows.length === 0) return
+
+		// Deep copy to avoid reference issues
+		// Regenerate on every render
+		this.rowsCopy = this.rows.map(r => r.map(c => ({ ...c })))
 
 		renderTable({
 			div: this.dom.tableDiv,
@@ -63,28 +84,39 @@ export class ClassesTableRender {
 		const rows: TableRow[] = []
 
 		for (let i = 0; i < 4; i++) {
-			this.getNewClass(colorScale, i, rows)
+			this.getNewClass(colorScale, rows)
 		}
+
 		return rows
 	}
 
-	getNewClass(colorScale, i, rows) {
+	getNewClass(colorScale: any, rows: TableRow[]) {
+		const getName = (i: number) => `New class ${i == 0 ? '' : i + 1}`
+
+		let i = 0
+		let found = true
+		while (found) {
+			const checkName = getName(i)
+			found = rows.some(r => r[1].value == checkName)
+			if (found) i++
+		}
+
 		rows.push([
 			{ html: `<div class="sja_menuoption">&times;<div>` },
-			{ value: `New class ${i == 0 ? '' : i + 1}` },
+			{ value: getName(i) },
 			{ color: rgb(colorScale(`${i + 1}`)).formatHex() }
 		])
 	}
 
-	renderAddClassBtn(colorScale) {
+	renderAddClassBtn(colorScale: any) {
 		this.dom.btnDiv
 			.append('div')
 			.text('Add Class')
 			.classed('sja_menuoption', true)
 			.style('display', 'inline-block')
+			.style('margin', '10px 0px 0px 0px')
 			.on('click', () => {
-				const i = this.rows.length
-				this.getNewClass(colorScale, i, this.rows)
+				this.getNewClass(colorScale, this.rows)
 				this.renderTable()
 			})
 	}
