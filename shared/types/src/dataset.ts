@@ -1371,7 +1371,7 @@ export type Termdb = {
 	 * in order to minimize the ease of extracting identifiable information from aggregate data
 	 * in server response
 	 */
-	minSampleSizeForFilterCharts?: number
+	hasMinSampleSize?: (count: number, __protected__: any) => boolean
 	/** if true, backend is allowed to send sample names to client in charts */
 	displaySampleIds?: (clientAuthResult: any) => boolean
 	converSampleIds?: boolean
