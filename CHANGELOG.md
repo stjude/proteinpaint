@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.138.1
 
 Fixes:
 - lollipop tk on panning will properly render previously expanded data elements and allow clickable
