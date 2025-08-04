@@ -124,6 +124,7 @@ export async function initGenomesDs(serverconfig) {
 			}
 		}
 		if (g.datasets) {
+			if (g2.mayEditRawDatasetsArray) g2.mayEditRawDatasetsArray(g.datasets)
 			g2.rawdslst = g.datasets
 			totalRawDsLst += g.datasets.filter(d => !d.skip && (!dslabelFilter || dslabelFilter.includes(d.name))).length
 		}
