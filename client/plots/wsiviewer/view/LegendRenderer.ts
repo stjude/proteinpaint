@@ -1,9 +1,9 @@
 import { ColorScale, getMaxLabelWidth, renderTable } from '#dom'
-import type { ImageViewData } from '#plots/wsiviewer/viewModel/ViewModel.ts'
+import type { ImageViewData } from '#plots/wsiviewer/viewModel/ImageViewData.ts'
 
 export class LegendRenderer {
 	render(holder: any, imageViewData: ImageViewData) {
-		if (!imageViewData.classes) return
+		if (!imageViewData.classesTable) return
 		holder.select('div[id="legend-wrapper"]').remove()
 
 		const legendHolder = holder
@@ -14,8 +14,8 @@ export class LegendRenderer {
 			.style('vertical-align', 'top')
 
 		renderTable({
-			columns: imageViewData.classes.columns,
-			rows: imageViewData.classes.rows,
+			columns: imageViewData.classesTable.columns,
+			rows: imageViewData.classesTable.rows,
 			div: legendHolder
 				.append('div')
 				.attr('id', 'annotations-legend')
