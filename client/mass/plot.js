@@ -28,6 +28,7 @@ class MassPlot {
 			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
 		}
 		return {
+			termfilter: appState.termfilter,
 			config,
 			groups: appState.groups,
 			// quick fix to skip history tracking as needed
@@ -36,7 +37,7 @@ class MassPlot {
 	}
 
 	async main() {
-		this.dom.errdiv.style('display', 'none').style('background-color', 'rgba(255,100,100,0.2)')
+		this.dom.errdiv.style('display', 'none').style('background-color', 'rgba(255,100,100,0.2)').html('')
 		if (!this.components) await this.setComponents(this.opts)
 	}
 

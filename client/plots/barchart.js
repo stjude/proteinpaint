@@ -366,8 +366,10 @@ export class Barchart {
 			}
 			this.chartsData = this.processData(this.currServerData)
 			this.render()
+			this.dom.barDiv.style('display', '')
 		} catch (e) {
 			this.toggleLoadingDiv('none')
+			this.dom.barDiv.style('display', 'none')
 			throw e
 		}
 	}
