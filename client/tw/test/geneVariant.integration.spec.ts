@@ -2,7 +2,7 @@ import tape from 'tape'
 import type { GvTW } from '#types'
 import { vocabInit } from '#termdb/vocabulary'
 import { GvBase } from '../geneVariant'
-import { getPredefinedGroupsets } from '../../termsetting/handlers/geneVariant.ts'
+import { getChildTerms, getPredefinedGroupsets } from '../../termsetting/handlers/geneVariant.ts'
 
 /*************************
  reusable helper functions
@@ -194,6 +194,7 @@ tape('getPredefinedGroupsets: fill groupsets', async test => {
 		},
 		type: 'GvPredefinedGsTW'
 	}
+	await getChildTerms(tw.term, vocabApi)
 	await getPredefinedGroupsets(tw, vocabApi)
 	test.deepEqual(tw.term.childTerms, childTerms, 'should fill in term.childTerms')
 	test.equal(tw.term.groupsetting.lst.length, 4, 'should get 4 predefined groupsets')
