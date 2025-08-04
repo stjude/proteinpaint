@@ -1,4 +1,5 @@
 import { filterInit, getNormalRoot } from '#filter'
+import { ClassesTableRender } from './ClassesTableRender'
 
 export class CreateProjectRender {
 	dom: any
@@ -33,5 +34,7 @@ export class CreateProjectRender {
 
 		const root = getNormalRoot(state.termfilter.filter)
 		filter.main(root)
+
+		new ClassesTableRender(this.dom.holder)
 	}
 }
