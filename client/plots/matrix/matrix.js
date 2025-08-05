@@ -16,6 +16,7 @@ import { mclass, dt2label, morigin, dtsnvindel, dtcnv } from '#shared/common.js'
 import { select } from 'd3-selection'
 import { sayerror } from '#dom'
 import { getCombinedTermFilter } from '#filter'
+import { rebaseGroupFilter } from '../../mass/groups.js'
 
 export class Matrix {
 	constructor(opts) {
@@ -149,7 +150,8 @@ export class Matrix {
 			clusterSamples: config.settings.hierCluster?.clusterSamples,
 			clusterRows: config.settings.hierCluster?.clusterRows,
 			zScoreTransformation: config.settings.hierCluster?.zScoreTransformation,
-			nav: appState.nav
+			nav: appState.nav,
+			groups: rebaseGroupFilter(appState)
 		}
 	}
 
