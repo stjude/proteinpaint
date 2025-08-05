@@ -64,7 +64,7 @@ export default function svgLegend(opts) {
 			// d.yOffset should be used instead of settings.svgh ???
 			opts.holder.attr('transform', settings.ontop ? null : `translate(${d.xOffset},${settings.svgh})`)
 		}
-		if (opts.note) {
+		if (opts.note && data.length) {
 			opts.holder
 				.append('text')
 				.style('font-size', '0.8em')
