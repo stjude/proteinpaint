@@ -163,13 +163,8 @@ if (serverconfig.debugmode && !serverconfig.binpath.includes('sjcrh/')) {
 	serverconfig.routeSetters = routeSetters
 
 	const hg38test = serverconfig.genomes.find(g => g.name == 'hg38-test')
-	if (hg38test?.datasets) {
-		const cred = mayUpdateTestDatasets(hg38test.datasets)
-		if (cred) {
-			if (!serverconfig.dsCredentials) serverconfig.dsCredentials = {}
-			serverconfig.dsCredentials.ProtectedTest = cred
-		}
-	}
+	// this internal function must be trusted to only modify test-related serverconfig entries
+	if (hg38test?.datasets) mayUpdateTestDatasets(hg38test.datasets, serverconfig)
 }
 
 if (serverconfig.allow_env_overrides) {
@@ -289,7 +284,13 @@ if (!serverconfig.cache_snpgt) {
 
 export default serverconfig
 
-function mayUpdateTestDatasets(datasets) {
+/*
+	Option to add datasets under hg38-test and also feature flags, dsCredentials
+
+	datasets[]: the raw datasets array from a serverconfig genomes entry
+	serverconfig
+*/
+function mayUpdateTestDatasets(datasets, serverconfig) {
 	const ds = datasets.find(ds => ds.jsfile.includes('/termdb.test.'))
 	if (!ds) return
 	const fileExt = ds.jsfile.split('.').pop()
@@ -298,7 +299,12 @@ function mayUpdateTestDatasets(datasets) {
 		jsfile: `./dataset/protected.test.${fileExt}`
 	})
 
-	return {
+	if (serverconfig.features.dslabelFilter?.includes('TermdbTest')) {
+		serverconfig.features.dslabelFilter.push('ProtectedTest')
+	}
+
+	if (!serverconfig.dsCredentials) serverconfig.dsCredentials = {}
+	serverconfig.dsCredentials.ProtectedTest = {
 		termdb: {
 			'*': {
 				type: 'jwt',
