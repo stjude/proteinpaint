@@ -17,11 +17,9 @@ export class ClassesTableRender {
 	rowsCopy: TableRow[]
 
 	constructor(holder: any, rows?: TableRow[]) {
-		const wrapper = holder.append('div').style('padding', '20px 0px')
-
 		this.dom = {
-			tableDiv: wrapper.append('div').attr('id', 'sjpp-ai-prjt-admin-classes-table'),
-			btnDiv: wrapper.append('div')
+			tableDiv: holder.append('div'),
+			btnDiv: holder.append('div')
 		}
 		this.columns = [
 			{ label: '' }, // Empty for the delete icon
@@ -29,17 +27,17 @@ export class ClassesTableRender {
 				label: 'NAME',
 				editCallback: (rowIdx, cell) => {
 					const newValue = (cell.value as string).trim()
-					const foundSameName = this.rowsCopy.some(r => newValue == r[1].value)
+					const foundSameName = this.rows.some((r, i) => newValue === (r[1].value as string).trim() && i !== rowIdx)
 					if (foundSameName) {
-						alert(`Class name '${cell.value}' already exists`)
+						alert(`Class name '${newValue}' already exists`)
 						/** Reset to original value
 						 * renderTable() updates arg.rows and cell value before this callback.
 						 * This resets the value to the original value */
 						cell.value = this.rowsCopy[rowIdx][1].value
 						cell.__td.text(this.rowsCopy[rowIdx][1].value)
-						this.rows = this.rowsCopy
 						return
 					}
+					this.rowsCopy = this.rows.map(r => r.map(c => ({ ...c })))
 				}
 			},
 			{ label: 'COLOR' }
@@ -91,7 +89,7 @@ export class ClassesTableRender {
 	}
 
 	getNewClass(colorScale: any, rows: TableRow[]) {
-		const getName = (i: number) => `New class ${i == 0 ? '' : i + 1}`
+		const getName = (i: number) => `New class${i == 0 ? '' : ` ${i + 1}`}`
 
 		let i = 0
 		let found = true
