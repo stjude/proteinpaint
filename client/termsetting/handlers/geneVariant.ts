@@ -1,5 +1,5 @@
 import { getPillNameDefault } from '../termsetting'
-import type { GeneVariantTermSettingInstance, RawGvTerm, RawGvPredefinedGsTW, VocabApi, DtTerm } from '#types'
+import type { GeneVariantTermSettingInstance, RawGvTerm, VocabApi } from '#types'
 import type { PillData } from '../types'
 import { make_radios, renderTable } from '#dom'
 import { dtTerms, getColors, dtcnv } from '#shared/common.js'
@@ -224,7 +224,7 @@ async function makeGroupUI(self: GeneVariantTermSettingInstance, div) {
 				makeGroupUI(self, div)
 			})
 
-		// create fitlter ui in its cell
+		// create filter ui in its cell
 		const group = self.groups[i]
 		filterInit({
 			holder: row[3].__td,
@@ -269,13 +269,12 @@ function addNewGroup(filter, groups, name?: string) {
 	groups.push(newGroup)
 }
 
-export async function getPredefinedGroupsets(tw: RawGvPredefinedGsTW, vocabApi: VocabApi) {
-	if (tw.q.type != 'predefined-groupset') throw 'unexpected tw.q.type'
-	if (!tw.term.childTerms?.length) throw 'tw.term.childTerms[] is missing'
+export async function getPredefinedGroupsets(term: RawGvTerm, vocabApi: VocabApi) {
+	if (!term.childTerms?.length) throw 'term.childTerms[] is missing'
 	// build predefined groupsets based on child dt terms
-	tw.term.groupsetting = {
+	term.groupsetting = {
 		disabled: false,
-		lst: tw.term.childTerms.map(dtTerm => {
+		lst: term.childTerms.map(dtTerm => {
 			const groupset = dtTerm.dt == dtcnv ? getCnvGroupset(dtTerm, vocabApi) : getNonCnvGroupset(dtTerm)
 			return groupset
 		})
@@ -466,11 +465,34 @@ function clearGroupset(self) {
 }
 
 // function to get child dt terms
-// will use these terms to generate a frontend vocab
-export async function getChildTerms(term: RawGvTerm, vocabApi: VocabApi, body: any = {}) {
+export function getChildTerms(term, vocabApi: VocabApi) {
 	if (!vocabApi.termdbConfig?.queries) throw 'termdbConfig.queries is missing'
 	const termdbmclass = vocabApi.termdbConfig.mclass // custom mclass labels from dataset
-	const dtTermsInDs: DtTerm[] = [] // dt terms in dataset
+	term.childTerms = [] // dt terms in dataset
+	for (const _t of dtTerms) {
+		const t = structuredClone(_t)
+		if (!Object.keys(vocabApi.termdbConfig.queries).includes(t.query)) continue // dt is not in dataset
+		const byOrigin = vocabApi.termdbConfig.assayAvailability?.byDt[t.dt]?.byOrigin
+		if (byOrigin) {
+			// dt has origins in dataset
+			if (!t.origin) continue // dt term does not have origin, so skip
+			if (!Object.keys(byOrigin).includes(t.origin)) throw 'unexpected origin of dt term'
+		} else {
+			// dt does not have origins in dataset
+			if (t.origin) continue // dt term has origin, so skip
+		}
+		// add custom mclass labels from dataset
+		for (const k of Object.keys(t.values)) {
+			const v = t.values[k]
+			if (termdbmclass && Object.keys(termdbmclass).includes(k)) v.label = termdbmclass[k].label
+		}
+		term.childTerms.push(t)
+	}
+}
+
+// function to update child dt terms based on gene query
+export async function updateChildTerms(term, vocabApi: VocabApi, body: any = {}) {
+	if (!term.childTerms?.length) throw 'term.childTerms[] is empty'
 	const filter = vocabApi.state?.termfilter?.filter
 	const filter0 = vocabApi.state?.termfilter?.filter0
 	if (filter0) {
@@ -481,40 +503,17 @@ export async function getChildTerms(term: RawGvTerm, vocabApi: VocabApi, body: a
 		body.filter0 = filter0
 	}
 	// passing term to getCategories() will get categories across all genes in gene set
-	// TODO: getCategories() can be time-consuming for gdc (especially for geneset
-	// input) and really only need categories to filter term.values for mutation
-	// classes that are present in the data. Consider a different approach
-	// for calling getCategories().
 	const categories = await vocabApi.getCategories(term, filter, body)
-	for (const _t of dtTerms) {
-		const t: any = structuredClone(_t)
-		if (!Object.keys(vocabApi.termdbConfig.queries).includes(t.query)) continue // dt is not in dataset
+	for (const t of term.childTerms) {
 		const data = categories.lst.find(x => x.dt == t.dt)
-		if (!data) continue // gene does not have this dt
+		if (!data) continue
 		const byOrigin = vocabApi.termdbConfig.assayAvailability?.byDt[t.dt]?.byOrigin
-		let classes
-		if (byOrigin) {
-			// dt has origins in dataset
-			if (!t.origin) continue // dt term does not have origin, so skip
-			if (!Object.keys(byOrigin).includes(t.origin)) throw 'unexpected origin of dt term'
-			classes = data.classes.byOrigin[t.origin]
-		} else {
-			// dt does not have origins in dataset
-			if (t.origin) continue // dt term has origin, so skip
-			classes = data.classes
-		}
+		const classes = byOrigin ? data.classes.byOrigin[t.origin] : data.classes
 		// filter for only those mutation classes that are in the dataset
 		const values = Object.fromEntries(Object.entries(t.values).filter(([k, _v]) => Object.keys(classes).includes(k)))
-		// add custom mclass labels from dataset
-		for (const k of Object.keys(values)) {
-			const v: any = values[k]
-			if (termdbmclass && Object.keys(termdbmclass).includes(k)) v.label = termdbmclass[k].label
-		}
 		t.values = values
 		t.parentTerm = structuredClone(term)
 		delete t.parentTerm.childTerms // remove any nested child terms
 		delete t.parentTerm.groupsetting // remove nested term groupsetting
-		dtTermsInDs.push(t)
 	}
-	term.childTerms = dtTermsInDs
 }

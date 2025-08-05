@@ -195,7 +195,7 @@ tape('getPredefinedGroupsets: fill groupsets', async test => {
 		type: 'GvPredefinedGsTW'
 	}
 	await getChildTerms(tw.term, vocabApi)
-	await getPredefinedGroupsets(tw, vocabApi)
+	await getPredefinedGroupsets(tw.term, vocabApi)
 	test.deepEqual(tw.term.childTerms, childTerms, 'should fill in term.childTerms')
 	test.equal(tw.term.groupsetting.lst.length, 4, 'should get 4 predefined groupsets')
 	for (const groupset of tw.term.groupsetting.lst) {
@@ -226,7 +226,7 @@ tape('getPredefinedGroupsets: incorrect tw.q.type', async test => {
 		type: 'GvValuesTW'
 	}
 	try {
-		await getPredefinedGroupsets(tw, vocabApi)
+		await getPredefinedGroupsets(tw.term, vocabApi)
 		test.fail('should throw upon incorrect tw.q.type')
 	} catch (e) {
 		test.equal(e, 'unexpected tw.q.type', 'should throw upon incorrect tw.q.type')
