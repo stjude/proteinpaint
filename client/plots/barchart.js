@@ -224,7 +224,7 @@ export class Barchart {
 					settingsKey: 'showStats',
 					boxLabel: 'Yes'
 				})
-			else
+			if (!this.config.term2)
 				inputs.push({
 					label: 'Show percent',
 					type: 'checkbox',
@@ -385,7 +385,7 @@ export class Barchart {
 	}
 
 	async getDescrStats() {
-		this.hasStats = false
+		this.hasStats = this.config.term2 ? true : false
 		// get descriptive statistics for numerical terms
 		const terms = [this.config.term]
 		if (this.config.term2) terms.push(this.config.term2)
@@ -943,8 +943,13 @@ function setRenderers(self) {
 			'display',
 			self.state.config.settings.barchart.divideOrientation == 'horizontal' ? 'inline-block' : 'block'
 		)
-
-		div.select('.pp-sbar-div-chartLengends').selectAll('*').remove()
+		div
+			.append('div')
+			.attr('class', 'pp-sbar-div-chartLengends')
+			.attr('data-testid', 'sjpcb-bars-chartLengends')
+			.style('vertical-align', 'top')
+			.style('margin', '10px 10px 10px 30px')
+			.style('display', 'none')
 		if (self.chartsData.tests && self.chartsData.tests[chart.chartId] && self.config.settings.barchart.showStats) {
 			//chart has pvalues
 			generatePvalueTable(chart, div)
@@ -977,7 +982,6 @@ function setRenderers(self) {
 			.style('vertical-align', 'top')
 			.style('margin', '10px 10px 10px 30px')
 			.style('display', 'none')
-
 		if (self.chartsData.tests && self.chartsData.tests[chart.chartId] && self.config.settings.barchart.showStats) {
 			//chart has pvalues
 			generatePvalueTable(chart, div)
@@ -1077,7 +1081,6 @@ function setRenderers(self) {
 			.style('font-size', '0.9em')
 
 		const table = holder.append('div').style('font-size', '0.9em')
-
 		renderTable({
 			columns,
 			rows,
