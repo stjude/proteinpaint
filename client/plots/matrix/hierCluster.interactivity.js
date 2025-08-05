@@ -253,13 +253,6 @@ export function showTable4selectedRows(clickedRowNames, rowType) {
 	})
 }
 
-// add the clicked samples into a group
-export async function addGroup(group) {
-	group.plotId = this.id
-	await this.app.vocabApi.addGroup(group)
-	this.dom.tip.hide()
-}
-
 // upon clicking, find the corresponding clicked clusterId from this.hierClusterData.clustering.col.mergedClusters
 export function getClusterFromTopDendrogram(event) {
 	// Need imgBox to find the position of event relative to dendrogram
