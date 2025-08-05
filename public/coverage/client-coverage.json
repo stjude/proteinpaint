@@ -4786,5 +4786,41 @@
       "prev": 0,
       "diff": 57.415
     }
+  },
+  "dom/svg.legend.js": {
+    "lines": {
+      "total": 97,
+      "covered": 55,
+      "skipped": 0,
+      "pct": 56.7
+    },
+    "functions": {
+      "total": 9,
+      "covered": 5,
+      "skipped": 0,
+      "pct": 55.55
+    },
+    "statements": {
+      "total": 103,
+      "covered": 55,
+      "skipped": 0,
+      "pct": 53.39
+    },
+    "branches": {
+      "total": 93,
+      "covered": 37,
+      "skipped": 0,
+      "pct": 39.78
+    },
+    "lowestPct": {
+      "curr": 39.78,
+      "prev": 0,
+      "diff": 39.78
+    },
+    "averagePct": {
+      "curr": 51.355,
+      "prev": 0,
+      "diff": 51.355
+    }
   }
 }
