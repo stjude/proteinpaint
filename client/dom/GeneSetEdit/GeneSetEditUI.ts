@@ -138,7 +138,7 @@ export class GeneSetEditUI {
 		this.origNames = JSON.stringify(this.geneList.map(t => t.gene).sort())
 
 		this.holder.selectAll('*').remove()
-		const div = this.holder.append('div').style('padding', '5px')
+		const div = this.holder.append('div').attr('class', 'sja_genesetinput').style('padding', '5px')
 
 		if (this.titleText) {
 			div.append('div').style('margin-bottom', '10px').html(this.titleText)
