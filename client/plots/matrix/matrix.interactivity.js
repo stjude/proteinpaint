@@ -6,6 +6,7 @@ import { dofetch3 } from '#common/dofetch'
 import { TermTypes, isNumericTerm } from '#shared/terms.js'
 import { mclass, dt2label, dtsnvindel, dtcnv, dtgeneexpression, dtmetaboliteintensity } from '#shared/common.js'
 import { rgb2hex } from '#src/client'
+import { getSamplelstTW, getFilter, addNewGroup } from '../../mass/groups.js'
 
 let inputIndex = 0
 const svgIcons = {
@@ -259,7 +260,7 @@ export function setInteractivity(self) {
 		delete self.imgBox
 		if (self.dom.colBeam) self.dom.colBeam.style('display', 'none')
 		if (self.dom.rowBeam) self.dom.rowBeam.style('display', 'none')
-		self.dom.matrixCellHoverOver.clear()
+		if (self.dom.matrixCellHoverOver) self.dom.matrixCellHoverOver.clear()
 	}
 
 	self.mouseclick = async function (event, data) {
@@ -2626,7 +2627,7 @@ function setZoomPanActions(self) {
 							name: 'Group',
 							items: samples
 						}
-						addGroup(group)
+						self.addGroup(group)
 					}
 				})
 			}
@@ -2679,10 +2680,10 @@ function setZoomPanActions(self) {
 	}
 
 	// add the selected samples into a group
-	const addGroup = async function (group) {
-		group.plotId = self.id
-		await self.app.vocabApi.addGroup(group)
-		self.dom.tip.hide()
+	self.addGroup = async function (group) {
+		const tw = getSamplelstTW([group])
+		const filter = getFilter(tw)
+		addNewGroup(self.app, filter, self.state.groups)
 	}
 	self.triggerZoomArea = function () {
 		if (self.zoomArea) {
