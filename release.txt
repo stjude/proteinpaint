@@ -1,1 +1,2 @@
-
+Fixes:
+- matrix/hierCluster: allow to change color for groups created by brushing cells or clicking dendro
