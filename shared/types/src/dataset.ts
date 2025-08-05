@@ -1370,8 +1370,11 @@ export type Termdb = {
 	 * The required minimum number of samples with data as queried with getData() or other code,
 	 * in order to minimize the ease of extracting identifiable information from aggregate data
 	 * in server response
+	 *
+	 * sampleCount:   the number of samples with matching data from one or more queried terms
+	 * q          :   req.query as processed through app middleware (pre-parsed, may have req.body props, __protectec__, etc)
 	 */
-	hasMinSampleSize?: (count: number, __protected__: any) => boolean
+	hasMinSampleSize?: (sampleCount: number, q: any) => boolean
 	/** if true, backend is allowed to send sample names to client in charts */
 	displaySampleIds?: (clientAuthResult: any) => boolean
 	converSampleIds?: boolean
