@@ -9,7 +9,7 @@ const { isMatch } = mm
 // these server routes should not be protected by default,
 // since a user that is not logged should be able to have a way to login,
 // also logout should be supported regardless
-const loginRoutes = new Set(['/dslogin', '/jwt-status', '/dslogout'])
+const forcedOpenRoutes = new Set(['/dslogin', '/jwt-status', '/dslogout', '/healthcheck'])
 
 const defaultApiMethods = {
 	maySetAuthRoutes, // declared below
@@ -29,8 +29,7 @@ const defaultApiMethods = {
 	getHealth: () => undefined,
 	// credentialed embedders, using an array which can be frozen with Object.freeze(), unlike a Set()
 	credEmbedders: [],
-	mayAdjustFilter: (q, ds, term) => {},
-	isLoginRoute: path => loginRoutes.has(path)
+	mayAdjustFilter: (q, ds, term) => {}
 }
 
 // these may be overriden within maySetAuthRoutes()
@@ -238,7 +237,7 @@ const authRouteByCredType = {
 	- if there are no serverconfig.dsCredentials, will not do anything
 	- will setup a middleware for most requests and the /dslogin route
 */
-async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
+async function maySetAuthRoutes(app, genomes, basepath = '', _serverconfig = null) {
 	const serverconfig = _serverconfig || (await import('./serverconfig.js')).default
 	const sessionTracking = serverconfig.features?.sessionTracking || ''
 	const actionsFile = path.join(serverconfig.cachedir, 'authorizedActions')
@@ -270,6 +269,86 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 	} catch (e) {
 		throw e
 	}
+
+	/* !!! app.use() must be called before route setters and await !!! */
+
+	// "gatekeeper" middleware that checks if a request requires
+	// credentials and if yes, if there is already a valid session
+	// for a ds label
+	app.use((req, res, next) => {
+		req.query.__protected__ = {
+			ignoredTermIds: [], // when provided the filter on these terms will be ignored
+			sessionid: req.cookies.sessionid // may be undefined
+		}
+
+		if (forcedOpenRoutes.has(req.path)) {
+			Object.freeze(req.query.__protected__)
+			next()
+			return
+		}
+
+		try {
+			mayUpdate__protected__(req, res)
+		} catch (e) {
+			res.status(e.status || 401)
+			res.send({ error: e.message || e.error || e })
+			return
+		}
+
+		const q = req.query
+		const cred = getRequiredCred(q, req.path)
+		if (!cred) {
+			next()
+			return
+		}
+
+		let code
+
+		// may configure to avoid in-memory session tracking, to simulate a multi-server process setup
+		if (sessionTracking == 'jwt-only') {
+			console.log('!!! --- CLEARING ALL SESSION DATA TO simulate stateless service --- !!!')
+			sessions = {}
+		}
+
+		try {
+			const id = getSessionId(req, cred, sessions)
+			const session = id && sessions[q.dslabel]?.[id]
+			if (!session) {
+				code = 401
+				throw `unestablished or expired browser session`
+			}
+			//if (!session.email) throw `missing session details: please login again through a supported portal`
+			checkIPaddress(req, session.ip, cred)
+			const time = Date.now()
+			/* !!! TODO: may rethink the following assumption !!!
+				assumes that the payload.datasets list will not change within the maxSessionAge duration
+				including between subsequent checks of jwts, in order to avoid potentially expensive decryption 
+			*/
+			if (time - session.time > maxSessionAge) {
+				const { iat } = getJwtPayload(q, req.headers, cred, session)
+				const elapsedSinceIssue = time - iat
+				if (elapsedSinceIssue > maxSessionAge) {
+					delete sessions[q.dslabel][id]
+					throw 'Please login again to access this feature. (expired session)'
+				}
+				if (elapsedSinceIssue < 300000) {
+					// this request is accompanied by a new jwt
+					session.time = time
+					return
+				}
+			}
+			// TODO: may not to adjust session expiration based on the last active period
+			// If any activity happens within the harcoded number of milliseconds below,
+			// then update the start time of the active session (account for prolonged user inactivity)
+			if (session.time - time < 900) session.time = time
+			next()
+		} catch (e) {
+			console.log(e)
+			const _code = e.code || code
+			if (_code) res.status(_code)
+			res.send(typeof e == 'object' ? e : { error: e })
+		}
+	})
 
 	// runs on every request as part of middleware to inspect request
 	//
@@ -318,70 +397,38 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 		}
 	}
 
-	/* !!! app.use() must be called before route setters and await !!! */
+	/*
+		__protected__{} are key-values that are added by the server to the request.query payload,
+	  to easily pass authentication-related or sensitive information to downstream route handler code 
+	  without having to sequentially pass those information as argument to every nested function calls.
 
-	// "gatekeeper" middleware that checks if a request requires
-	// credentials and if yes, if there is already a valid session
-	// for a ds label
-	app.use((req, res, next) => {
-		if (loginRoutes.has(req.path)) {
-			next()
-			return
-		}
-
-		const q = req.query
-		const cred = getRequiredCred(q, req.path)
-		if (!cred) {
-			next()
-			return
-		}
-		let code
-
-		// may configure to avoid in-memory session tracking, to simulate a multi-server process setup
-		if (sessionTracking == 'jwt-only') {
-			console.log('!!! --- CLEARING ALL SESSION DATA TO simulate stateless service --- !!!')
-			sessions = {}
-		}
-
-		try {
-			const id = getSessionId(req, cred, sessions)
-			const session = id && sessions[q.dslabel]?.[id]
-			if (!session) {
-				code = 401
-				throw `unestablished or expired browser session`
+	  in gdc environment: 
+	  - this will pass sessionid from cookie to req.query, to be added to request header where it's querying gdc api
+	    by doing this, route code is worry-free and no need to pass "req{}" to gdc purpose-specific code doing the API calls
+	  
+	  for non-gdc datasets:
+	  - these *protected* contents may contain information as extracted from the jwt (authApi.getNonsensitiveInfo()) 
+	    and as determined by a server route code that the dataset can use to compute per-user access restrictions/authorizations 
+	    when querying data
+  */
+	function mayUpdate__protected__(req, res) {
+		const __protected__ = req.query.__protected__
+		if (req.query.dslabel) {
+			Object.assign(__protected__, authApi.getNonsensitiveInfo(req))
+			if (req.query.genome && req.query.dslabel && req.query.dslabel !== 'msigdb') {
+				const genome = genomes[req.query.genome]
+				if (!genome) throw 'invalid genome'
+				const ds = genome.datasets[req.query.dslabel]
+				if (!ds) throw 'invalid dslabel'
+				// by not supplying the 3rd argument (routeTwList) to authApi.mayAdjustFilter(),
+				// it will add the stricted additional filter by default for any downstream code from here;
+				// later, any server route or downstream code may call authApi.mayAdjustFilter() again to
+				// loosen the additional filter, to consider fewer tvs terms based on route-specific payloads or aggregation logic
+				authApi.mayAdjustFilter(req.query, ds)
 			}
-			//if (!session.email) throw `missing session details: please login again through a supported portal`
-			checkIPaddress(req, session.ip, cred)
-			const time = Date.now()
-			/* !!! TODO: may rethink the following assumption !!!
-				assumes that the payload.datasets list will not change within the maxSessionAge duration
-				including between subsequent checks of jwts, in order to avoid potentially expensive decryption 
-			*/
-			if (time - session.time > maxSessionAge) {
-				const { iat } = getJwtPayload(q, req.headers, cred, session)
-				const elapsedSinceIssue = time - iat
-				if (elapsedSinceIssue > maxSessionAge) {
-					delete sessions[q.dslabel][id]
-					throw 'Please login again to access this feature. (expired session)'
-				}
-				if (elapsedSinceIssue < 300000) {
-					// this request is accompanied by a new jwt
-					session.time = time
-					return
-				}
-			}
-			// TODO: may not to adjust session expiration based on the last active period
-			// If any activity happens within the harcoded number of milliseconds below,
-			// then update the start time of the active session (account for prolonged user inactivity)
-			if (session.time - time < 900) session.time = time
-			next()
-		} catch (e) {
-			console.log(e)
-			const _code = e.code || code
-			if (_code) res.status(_code)
-			res.send(typeof e == 'object' ? e : { error: e })
 		}
-	})
+		Object.freeze(__protected__)
+	}
 
 	/*** call app.use() before any await lines ***/
 
