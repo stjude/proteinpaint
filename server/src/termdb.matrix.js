@@ -47,7 +47,7 @@ export async function getData(q, ds, onlyChildren = false) {
 		authApi.mayAdjustFilter(q, ds, q.terms)
 		const data = await getSampleData(q, ds, onlyChildren)
 
-		check4MinSampleSize(data, ds, q.__protected__)
+		check4MinSampleSize(data, ds, q)
 
 		// get categories within same data request to avoid a separate
 		// getCategories() request, which can be time-consuming for
@@ -1009,13 +1009,18 @@ function hasValues(term) {
 	return term.values && Object.keys(term.values).length
 }
 
-function check4MinSampleSize(data, ds, __protected__) {
+/*
+	data: return value of getSampleData()
+	ds: dataset object
+	q: req.query
+*/
+function check4MinSampleSize(data, ds, q) {
 	// handle the option to require a minimum sample size for data
 	if (!ds.cohort.termdb.hasMinSampleSize) return
 	// error message
 	const message = `One or more terms has less than the required minimum sample size with data.`
 	// quick check
-	if (!ds.cohort.termdb.hasMinSampleSize(Object.keys(data.samples).length, __protected__))
+	if (!ds.cohort.termdb.hasMinSampleSize(Object.keys(data.samples).length, q.__protected__))
 		throw { message, code: 'ERR_MIN_SAMPLE_SIZE' }
 	// more detailed check
 	const sampleSizeByTermId = new Map()
@@ -1026,6 +1031,5 @@ function check4MinSampleSize(data, ds, __protected__) {
 		}
 	}
 	const counts = [...sampleSizeByTermId.values()].map(v => v.size)
-	if (!ds.cohort.termdb.hasMinSampleSize(Math.min(...counts), __protected__))
-		throw { message, code: 'ERR_MIN_SAMPLE_SIZE' }
+	if (!ds.cohort.termdb.hasMinSampleSize(Math.min(...counts), q)) throw { message, code: 'ERR_MIN_SAMPLE_SIZE' }
 }
