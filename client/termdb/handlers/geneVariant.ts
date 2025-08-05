@@ -1,26 +1,53 @@
 import { Menu, make_radios, addGeneSearchbox, GeneSetEditUI } from '#dom'
+import { getChildTerms } from '../../termsetting/handlers/geneVariant'
 
 export class SearchHandler {
 	opts: any
 	dom: any
+	term: any // tw.term
+	q: any // tw.q
 	callback: any
 
 	init(opts) {
 		this.opts = opts
 		this.dom = {}
+		this.term = { type: 'geneVariant' }
+		this.q = { type: 'predefined-groupset' }
 		this.callback = opts.callback
-		this.dom.radiosDiv = opts.holder.append('div')
+		this.dom.mutationTypeRadiosDiv = opts.holder.append('div').style('margin-bottom', '15px')
+		this.dom.inputTypeRadiosDiv = opts.holder.append('div').style('margin-bottom', '3px')
 		this.dom.searchDiv = opts.holder.append('div')
-		/*
-		retain ability of adding geneset as row in matrix, in addition to one gene per row
-		if (this.opts.app?.opts?.state?.tree?.usecase?.target == 'matrix') {
-			// hide radios in matrix to prevent switching to gene set
-			// because matrix already adds genes one by one to gene set
-			this.dom.radiosDiv.style('display', 'none')
-		}
-		*/
+
+		// create radios for mutation type
+		// get child dt terms
+		getChildTerms(this.term, this.opts.app.vocabApi)
+		this.dom.mutationTypeRadiosDiv
+			.append('div')
+			.style('font-weight', 'bold')
+			.style('margin-bottom', '2px')
+			.text('Mutation type')
+		// build radios based on child dt terms
 		make_radios({
-			holder: this.dom.radiosDiv,
+			holder: this.dom.mutationTypeRadiosDiv,
+			styles: { display: 'inline-block' },
+			options: this.term.childTerms.map((t, i) => {
+				return { label: t.name, value: i, checked: i === 0 }
+			}),
+			callback: i => {
+				this.q.predefined_groupset_idx = i
+			}
+		})
+		this.q.predefined_groupset_idx = 0
+
+		// create radios for type of gene input
+		this.dom.inputTypeRadiosDiv
+			.append('div')
+			.style('font-weight', 'bold')
+			.style('margin-bottom', '2px')
+			.text('Input type')
+		make_radios({
+			holder: this.dom.inputTypeRadiosDiv,
+			styles: { display: 'inline-block' },
 			options: [
 				{ label: 'Single Gene', value: 'single', checked: true },
 				{ label: 'Gene Set', value: 'geneset', checked: false }
@@ -32,7 +59,7 @@ export class SearchHandler {
 
 	searchGene() {
 		this.dom.searchDiv.selectAll('*').remove()
-		this.dom.searchDiv.style('margin-top', '5px')
+		this.dom.inputTypeRadiosDiv.style('margin-bottom', '3px')
 		const geneSearch = addGeneSearchbox({
 			tip: new Menu({ padding: '0px' }),
 			genome: this.opts.genomeObj,
@@ -44,7 +71,7 @@ export class SearchHandler {
 	selectGene(geneSearch) {
 		if (geneSearch.geneSymbol) {
 			const name = geneSearch.geneSymbol
-			const term = {
+			Object.assign(this.term, {
 				name,
 				genes: [
 					{
@@ -56,13 +83,12 @@ export class SearchHandler {
 					}
 				],
 				type: 'geneVariant'
-			}
-			this.callback(term)
+			})
 		} else if (geneSearch.chr && geneSearch.start && geneSearch.stop) {
 			const { chr, start, stop } = geneSearch
 			// name should be 1-based coordinate
 			const name = `${chr}:${start + 1}-${stop}`
-			const term = {
+			Object.assign(this.term, {
 				name,
 				genes: [
 					{
@@ -75,18 +101,18 @@ export class SearchHandler {
 					}
 				],
 				type: 'geneVariant'
-			}
-			this.callback(term)
+			})
 		} else {
 			throw 'no gene or position specified'
 		}
+		this.callback({ term: this.term, q: this.q })
 	}
 
 	searchGeneSet() {
 		this.dom.searchDiv.selectAll('*').remove()
-		this.dom.searchDiv.style('margin-top', '0px')
+		this.dom.inputTypeRadiosDiv.style('margin-bottom', '0px')
 		new GeneSetEditUI({
-			holder: this.dom.searchDiv,
+			holder: this.dom.searchDiv.append('div'),
 			genome: this.opts.genomeObj,
 			vocabApi: this.opts.app.vocabApi,
 			callback: result => this.selectGeneSet(result)
@@ -106,11 +132,11 @@ export class SearchHandler {
 			}
 			return gene
 		})
-		const term = {
+		Object.assign(this.term, {
 			name: genes.map(gene => gene.name).join(', '),
 			genes,
 			type: 'geneVariant'
-		}
-		this.callback(term)
+		})
+		this.callback({ term: this.term, q: this.q })
 	}
 }
