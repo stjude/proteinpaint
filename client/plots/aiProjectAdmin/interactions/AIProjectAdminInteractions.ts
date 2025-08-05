@@ -19,7 +19,9 @@ export class AIProjectAdminInteractions {
 		const body = {
 			genome: this.genome,
 			dslabel: this.dslabel,
-			projectName
+			project: {
+				name: projectName
+			}
 		}
 
 		try {
@@ -43,26 +45,46 @@ export class AIProjectAdminInteractions {
 		})
 	}
 
-	async editProject() {
-		// const body = {
-		// 	genome: this.genome,
-		// 	dslabel: this.dslabel,
-		// 	projectName: projectName
-		// }
-		// try {
-		// 	await this.model.updateProject(body, 'post')
-		// } catch (e) {
-		// 	console.error('Error adding project:', e)
-		// 	throw e
-		// }
+	async editProject(filter: string, classes: any[]) {
+		const config = this.app.getState().plots.find((p: any) => p.id === this.id)
+
+		const project = Object.assign({}, config.settings.project, {
+			type: 'edit',
+			filter: JSON.stringify(filter),
+			classes
+		})
+
+		const body = {
+			genome: this.genome,
+			dslabel: this.dslabel,
+			project
+		}
+		try {
+			await this.model.updateProject(body, 'post')
+		} catch (e) {
+			console.error('Error editing project:', e)
+			throw e
+		}
+
+		await this.app.dispatch({
+			type: 'plot_edit',
+			id: this.id,
+			config: {
+				settings: {
+					project
+				}
+			}
+		})
 	}
 
 	async deleteProject(project: { value: string; id: number }) {
 		const body = {
 			genome: this.genome,
 			dslabel: this.dslabel,
-			projectId: project.id,
-			projectName: project.value //Not needed??
+			project: {
+				name: project.value,
+				id: project.id
+			}
 		}
 
 		try {

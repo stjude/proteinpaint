@@ -2,6 +2,7 @@ import { filterInit, getNormalRoot } from '#filter'
 import { ClassesTableRender } from './ClassesTableRender'
 import type { Elem } from '../../../types/d3'
 import { InvalidDataUI, sayerror } from '#dom'
+import type { AIProjectAdminInteractions } from '../interactions/AIProjectAdminInteractions'
 
 export class CreateProjectRender {
 	dom: {
@@ -10,10 +11,11 @@ export class CreateProjectRender {
 		classDiv: Elem
 	}
 	app: any
+	interactions: AIProjectAdminInteractions
 	filter: any
 	classesTable?: ClassesTableRender
 
-	constructor(dom: any, app: any) {
+	constructor(dom: any, app: any, interactions: AIProjectAdminInteractions) {
 		dom.holder.style('padding', '10px 20px').attr('class', 'sjpp-deletable-ai-prjt-admin-div')
 
 		this.dom = {
@@ -22,6 +24,7 @@ export class CreateProjectRender {
 			classDiv: dom.holder.append('div').attr('id', 'sjpp-ai-prjt-admin-classes-table').style('padding', '20px 0px')
 		}
 		this.app = app
+		this.interactions = interactions
 		this.filter = null
 	}
 
@@ -65,14 +68,20 @@ export class CreateProjectRender {
 					else InvalidDataUI.render(this.dom.errorDiv, invalidInfo)
 					return
 				}
-				//TODO apply filter and classes to project
+
+				this.interactions.editProject(
+					this.filter,
+					this.classesTable!.rows.map(row => {
+						return { label: row[1].value, color: row[2].color }
+					})
+				)
 			})
 	}
 
 	validateInput() {
 		const invalidInfo = {
 			entries: [] as { dataType: string; reason: string }[],
-			errorMsg: 'Please clear all Class errors before applying changes.'
+			errorMsg: 'Please clear all "Data type: Class" errors before applying changes.'
 		}
 
 		//Show user error if no filter is defined.

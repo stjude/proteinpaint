@@ -3,8 +3,12 @@ import type { RoutePayload } from './routeApi.ts'
 export type AIProjectAdminRequest = {
 	genome: string
 	dslabel: string
-	projectName: string
-	projectId?: number
+	project: {
+		name: string
+		id?: number
+		fitler?: string
+		classes?: any[]
+	}
 }
 
 export type AIProjectAdminResponse = {

@@ -20,7 +20,7 @@ class AIProjectAdmin extends RxComponentInner {
 		this.opts = opts
 		this.dom = {
 			holder: opts.holder,
-			errorDiv: opts.holder.append('div').style('padding', '3px').attr('class', 'sjpp-ai-prjt-admin-error')
+			errorDiv: opts.holder.append('div').style('margin', '3px').attr('class', 'sjpp-ai-prjt-admin-error')
 		}
 		this.model = new Model()
 	}
@@ -55,6 +55,8 @@ class AIProjectAdmin extends RxComponentInner {
 		if (config.chartType != this.type) return
 		if (!config.settings.project) return
 
+		if (!this.interactions) throw new Error('AIProjectAdminInteractions not initialized')
+
 		this.dom.holder.selectAll('.sjpp-deletable-ai-prjt-admin-div').remove()
 
 		if (config.settings.project.type === 'new') {
@@ -63,7 +65,7 @@ class AIProjectAdmin extends RxComponentInner {
 				sayerror(this.dom.errorDiv, 'No metadata found.')
 				return
 			}
-			const createProjectRender = new CreateProjectRender(this.dom, this.app)
+			const createProjectRender = new CreateProjectRender(this.dom, this.app, this.interactions)
 			createProjectRender.render()
 		}
 	}
