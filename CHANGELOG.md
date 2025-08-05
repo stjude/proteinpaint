@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 Fixes:
 - clear the plot or summary error div on each component update
+- matrix/hierCluster: allow to change color for groups created by brushing cells or clicking dendro
 
 
 ## 2.138.1
