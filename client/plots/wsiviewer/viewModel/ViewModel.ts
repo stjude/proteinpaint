@@ -80,7 +80,7 @@ export class ViewModel {
 		// Original annotations follow, indexing continues from session annotations
 		const annotationsRows: any = imageData.annotationsData!.map((d, i) => {
 			return [
-				{ value: imageData.predictions!.length + i }, // Continue index
+				{ value: imageData.sessionsTileSelections!.length + imageData.predictions!.length + i }, // Continue index
 				{ value: d.zoomCoordinates },
 				{ value: 0 },
 				{ value: '' },
