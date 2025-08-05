@@ -728,7 +728,7 @@ tape('term1=categorical, term0=gene exp with default bins', function (test) {
 			8,
 			'Should display the correct number of barcharts when a categorical term is overlaid by a gene expression term.'
 		)
-		// if (test._ok) barchart.Inner.app.destroy()
+		if (test._ok) barchart.Inner.app.destroy()
 		test.end()
 	}
 })
@@ -1470,198 +1470,198 @@ tape('numeric exclude range', function (test) {
 	}
 })
 
-tape.skip('numeric filter - only special value', function (test) {
-	test.timeoutAfter(5000)
+// tape.skip('numeric filter - only special value', function (test) {
+// 	test.timeoutAfter(5000)
 
-	runpp({
-		state: {
-			plots: [
-				{
-					chartType: 'barchart',
-					term: { id: 'aaclassic_5' }
-				}
-			],
-			termfilter: {
-				filter: {
-					type: 'tvslst',
-					in: 1,
-					join: '',
-					lst: [
-						{
-							type: 'tvs',
-							tvs: {
-								term: termjson['aaclassic_5'],
-								ranges: [{ value: -8888, label: 'test' }]
-							}
-						}
-					]
-				}
-			}
-		},
-		barchart: {
-			callbacks: {
-				'postRender.test': runNumericValueTests
-			}
-		}
-	})
+// 	runpp({
+// 		state: {
+// 			plots: [
+// 				{
+// 					chartType: 'barchart',
+// 					term: { id: 'aaclassic_5' }
+// 				}
+// 			],
+// 			termfilter: {
+// 				filter: {
+// 					type: 'tvslst',
+// 					in: 1,
+// 					join: '',
+// 					lst: [
+// 						{
+// 							type: 'tvs',
+// 							tvs: {
+// 								term: termjson['aaclassic_5'],
+// 								ranges: [{ value: -8888, label: 'test' }]
+// 							}
+// 						}
+// 					]
+// 				}
+// 			}
+// 		},
+// 		barchart: {
+// 			callbacks: {
+// 				'postRender.test': runNumericValueTests
+// 			}
+// 		}
+// 	})
 
-	function runNumericValueTests(barchart) {
-		helpers
-			.rideInit({ arg: barchart, bus: barchart, eventType: 'postRender.test' })
-			//.run(testNoBar, { wait: 300 })
-			//.use(triggerHiddenLegendClick, { wait: 300 })
-			.run(testHasBar, { wait: 300 })
-			.done(test)
-	}
+// 	function runNumericValueTests(barchart) {
+// 		helpers
+// 			.rideInit({ arg: barchart, bus: barchart, eventType: 'postRender.test' })
+// 			//.run(testNoBar, { wait: 300 })
+// 			//.use(triggerHiddenLegendClick, { wait: 300 })
+// 			.run(testHasBar, { wait: 300 })
+// 			.done(test)
+// 	}
 
-	function testNoBar(barchart) {
-		const barDiv = barchart.Inner.dom.barDiv
-		const numBars = barDiv.selectAll('.bars-cell-grp').size()
-		test.equal(numBars, 0, 'should have 0 bar')
-	}
+// 	function testNoBar(barchart) {
+// 		const barDiv = barchart.Inner.dom.barDiv
+// 		const numBars = barDiv.selectAll('.bars-cell-grp').size()
+// 		test.equal(numBars, 0, 'should have 0 bar')
+// 	}
 
-	function triggerHiddenLegendClick(barchart) {
-		barchart.Inner.dom.legendDiv.node().querySelector('.legend-row').click()
-	}
+// 	function triggerHiddenLegendClick(barchart) {
+// 		barchart.Inner.dom.legendDiv.node().querySelector('.legend-row').click()
+// 	}
 
-	function testHasBar(barchart) {
-		const barDiv = barchart.Inner.dom.barDiv
-		const numBars = barDiv.selectAll('.bars-cell-grp').size()
-		test.equal(
-			numBars,
-			1,
-			'should have 1 bar, forced to be visible on first render to avoid confusion with a blank barchart'
-		)
-	}
-})
+// 	function testHasBar(barchart) {
+// 		const barDiv = barchart.Inner.dom.barDiv
+// 		const numBars = barDiv.selectAll('.bars-cell-grp').size()
+// 		test.equal(
+// 			numBars,
+// 			1,
+// 			'should have 1 bar, forced to be visible on first render to avoid confusion with a blank barchart'
+// 		)
+// 	}
+// })
 
-tape.skip('custom vocab: categorical terms with numeric filter', test => {
-	test.timeoutAfter(3000)
+// tape.skip('custom vocab: categorical terms with numeric filter', test => {
+// 	test.timeoutAfter(3000)
 
-	const custom_runpp = helpers.getRunPp('termdb', {
-		debug: 1,
-		state: {
-			nav: {
-				header_mode: 'search_only'
-			},
-			vocab: vocabData.getExample()
-		}
-	})
+// 	const custom_runpp = helpers.getRunPp('termdb', {
+// 		debug: 1,
+// 		state: {
+// 			nav: {
+// 				header_mode: 'search_only'
+// 			},
+// 			vocab: vocabData.getExample()
+// 		}
+// 	})
 
-	custom_runpp({
-		state: {
-			termfilter: {
-				filter: {
-					type: 'tvslst',
-					join: '',
-					lst: [
-						{
-							type: 'tvs',
-							tvs: {
-								term: vocabData.terms.find(t => t.id == 'd'),
-								ranges: [{ start: 0.1, startinclusive: false, stopunbounded: true }]
-							}
-						}
-					]
-				}
-			},
-			plots: [
-				{
-					chartType: 'barchart',
-					term: {
-						term: vocabData.terms.find(t => t.id == 'c')
-					}
-				}
-			]
-		},
-		barchart: {
-			callbacks: {
-				'postRender.test': runTests
-			}
-		}
-	})
+// 	custom_runpp({
+// 		state: {
+// 			termfilter: {
+// 				filter: {
+// 					type: 'tvslst',
+// 					join: '',
+// 					lst: [
+// 						{
+// 							type: 'tvs',
+// 							tvs: {
+// 								term: vocabData.terms.find(t => t.id == 'd'),
+// 								ranges: [{ start: 0.1, startinclusive: false, stopunbounded: true }]
+// 							}
+// 						}
+// 					]
+// 				}
+// 			},
+// 			plots: [
+// 				{
+// 					chartType: 'barchart',
+// 					term: {
+// 						term: vocabData.terms.find(t => t.id == 'c')
+// 					}
+// 				}
+// 			]
+// 		},
+// 		barchart: {
+// 			callbacks: {
+// 				'postRender.test': runTests
+// 			}
+// 		}
+// 	})
 
-	function runTests(barchart) {
-		barchart.on('postRender.test', null)
-		testBarCount(barchart)
-		if (test._ok) barchart.Inner.app.destroy()
-		test.end()
-	}
+// 	function runTests(barchart) {
+// 		barchart.on('postRender.test', null)
+// 		testBarCount(barchart)
+// 		if (test._ok) barchart.Inner.app.destroy()
+// 		test.end()
+// 	}
 
-	let barDiv
-	function testBarCount(barchart) {
-		barDiv = barchart.Inner.dom.barDiv
-		const numBars = barDiv.selectAll('.bars-cell-grp').size()
-		const numOverlays = barDiv.selectAll('.bars-cell').size()
-		test.equal(numBars, 2, 'should have 2 bars')
-		test.equal(numBars, numOverlays, 'should have equal numbers of bars and overlays')
-	}
-})
+// 	let barDiv
+// 	function testBarCount(barchart) {
+// 		barDiv = barchart.Inner.dom.barDiv
+// 		const numBars = barDiv.selectAll('.bars-cell-grp').size()
+// 		const numOverlays = barDiv.selectAll('.bars-cell').size()
+// 		test.equal(numBars, 2, 'should have 2 bars')
+// 		test.equal(numBars, numOverlays, 'should have equal numbers of bars and overlays')
+// 	}
+// })
 
-tape.skip('custom vocab: numeric terms with categorical filter', test => {
-	test.timeoutAfter(3000)
-	const vocab = vocabData.getExample()
-	const custom_runpp = helpers.getRunPp('termdb', {
-		debug: 1,
-		state: {
-			nav: {
-				header_mode: 'search_only'
-			},
-			vocab
-		}
-	})
+// tape.skip('custom vocab: numeric terms with categorical filter', test => {
+// 	test.timeoutAfter(3000)
+// 	const vocab = vocabData.getExample()
+// 	const custom_runpp = helpers.getRunPp('termdb', {
+// 		debug: 1,
+// 		state: {
+// 			nav: {
+// 				header_mode: 'search_only'
+// 			},
+// 			vocab
+// 		}
+// 	})
 
-	const dterm = vocab.terms.find(t => t.id == 'd')
-	custom_runpp({
-		state: {
-			termfilter: {
-				filter: {
-					type: 'tvslst',
-					join: '',
-					lst: [
-						{
-							type: 'tvs',
-							tvs: {
-								term: vocab.terms.find(t => t.id == 'c'),
-								values: [{ key: 1 }]
-							}
-						}
-					]
-				}
-			},
-			plots: [
-				{
-					chartType: 'barchart',
-					term: {
-						term: dterm,
-						q: dterm.bins.default
-					}
-				}
-			]
-		},
-		barchart: {
-			callbacks: {
-				'postRender.test': runTests
-			}
-		}
-	})
+// 	const dterm = vocab.terms.find(t => t.id == 'd')
+// 	custom_runpp({
+// 		state: {
+// 			termfilter: {
+// 				filter: {
+// 					type: 'tvslst',
+// 					join: '',
+// 					lst: [
+// 						{
+// 							type: 'tvs',
+// 							tvs: {
+// 								term: vocab.terms.find(t => t.id == 'c'),
+// 								values: [{ key: 1 }]
+// 							}
+// 						}
+// 					]
+// 				}
+// 			},
+// 			plots: [
+// 				{
+// 					chartType: 'barchart',
+// 					term: {
+// 						term: dterm,
+// 						q: dterm.bins.default
+// 					}
+// 				}
+// 			]
+// 		},
+// 		barchart: {
+// 			callbacks: {
+// 				'postRender.test': runTests
+// 			}
+// 		}
+// 	})
 
-	function runTests(barchart) {
-		barchart.on('postRender.test', null)
-		testBarCount(barchart)
-		if (test._ok) barchart.Inner.app.destroy()
-		test.end()
-	}
+// 	function runTests(barchart) {
+// 		barchart.on('postRender.test', null)
+// 		testBarCount(barchart)
+// 		if (test._ok) barchart.Inner.app.destroy()
+// 		test.end()
+// 	}
 
-	let barDiv
-	function testBarCount(barchart) {
-		barDiv = barchart.Inner.dom.barDiv
-		const numBars = barDiv.selectAll('.bars-cell-grp').size()
-		const numOverlays = barDiv.selectAll('.bars-cell').size()
-		test.equal(numBars, 5, 'should have 5 bars')
-		test.equal(numBars, numOverlays, 'should have equal numbers of bars and overlays')
-	}
-})
+// 	let barDiv
+// 	function testBarCount(barchart) {
+// 		barDiv = barchart.Inner.dom.barDiv
+// 		const numBars = barDiv.selectAll('.bars-cell-grp').size()
+// 		const numOverlays = barDiv.selectAll('.bars-cell').size()
+// 		test.equal(numBars, 5, 'should have 5 bars')
+// 		test.equal(numBars, numOverlays, 'should have equal numbers of bars and overlays')
+// 	}
+// })
 
 tape('max number of bins: exceeded', test => {
 	test.timeoutAfter(3000)
@@ -1740,7 +1740,7 @@ tape('max number of bins: exceeded', test => {
 	}
 })
 
-tape('minimum sample size', test => {
+tape.only('minimum sample size', test => {
 	test.timeoutAfter(3000)
 	const runpp = helpers.getRunPp('mass', {
 		state: {
@@ -1844,363 +1844,363 @@ tape('minimum sample size', test => {
 	}
 })
 
-tape.skip('no visible series data, no overlay', function (test) {
-	test.timeoutAfter(3000)
+// tape.skip('no visible series data, no overlay', function (test) {
+// 	test.timeoutAfter(3000)
 
-	runpp({
-		state: {
-			nav: {
-				header_mode: 'search_only'
-			},
-			plots: [
-				{
-					chartType: 'barchart',
-					term: {
-						id: 'cisplateq_5'
-					}
-				}
-			]
-		},
-		barchart: {
-			callbacks: {
-				'postRender.test': runTests
-			}
-		}
-	})
+// 	runpp({
+// 		state: {
+// 			nav: {
+// 				header_mode: 'search_only'
+// 			},
+// 			plots: [
+// 				{
+// 					chartType: 'barchart',
+// 					term: {
+// 						id: 'cisplateq_5'
+// 					}
+// 				}
+// 			]
+// 		},
+// 		barchart: {
+// 			callbacks: {
+// 				'postRender.test': runTests
+// 			}
+// 		}
+// 	})
 
-	function runTests(barchart) {
-		barchart.on('postRender.test', null)
+// 	function runTests(barchart) {
+// 		barchart.on('postRender.test', null)
 
-		helpers
-			.rideInit({ arg: barchart, bus: barchart, eventType: 'postRender.test' })
-			.run(testBarCount)
-			.use(triggerHideBar, { wait: 1000 })
-			.to(testEmptyChart, { wait: 100 })
-			.use(triggerUnhideBar, { wait: 1100 })
-			.to(testUnhiddenChart, { wait: 100 })
-			.done(test)
-	}
+// 		helpers
+// 			.rideInit({ arg: barchart, bus: barchart, eventType: 'postRender.test' })
+// 			.run(testBarCount)
+// 			.use(triggerHideBar, { wait: 1000 })
+// 			.to(testEmptyChart, { wait: 100 })
+// 			.use(triggerUnhideBar, { wait: 1100 })
+// 			.to(testUnhiddenChart, { wait: 100 })
+// 			.done(test)
+// 	}
 
-	let barDiv
-	function testBarCount(barchart) {
-		barDiv = barchart.Inner.dom.barDiv
-		const numBars = barDiv.node().querySelectorAll('.bars-cell-grp').length
-		test.equal(
-			numBars,
-			1,
-			'should have 1 visible bar on first render when Object.keys(q.hiddenValues).length > chart.serieses.length'
-		)
-		test.equal(
-			barchart.Inner.dom.banner.style('display'),
-			'none',
-			'should hide the banner when at least one chart is visible'
-		)
-	}
+// 	let barDiv
+// 	function testBarCount(barchart) {
+// 		barDiv = barchart.Inner.dom.barDiv
+// 		const numBars = barDiv.node().querySelectorAll('.bars-cell-grp').length
+// 		test.equal(
+// 			numBars,
+// 			1,
+// 			'should have 1 visible bar on first render when Object.keys(q.hiddenValues).length > chart.serieses.length'
+// 		)
+// 		test.equal(
+// 			barchart.Inner.dom.banner.style('display'),
+// 			'none',
+// 			'should hide the banner when at least one chart is visible'
+// 		)
+// 	}
 
-	function triggerHideBar(barchart) {
-		barDiv
-			.node()
-			.querySelector('.bars-rowlabels text')
-			.dispatchEvent(new Event('click', { bubbles: true }))
-	}
+// 	function triggerHideBar(barchart) {
+// 		barDiv
+// 			.node()
+// 			.querySelector('.bars-rowlabels text')
+// 			.dispatchEvent(new Event('click', { bubbles: true }))
+// 	}
 
-	function testEmptyChart(barchart) {
-		const numBars = barDiv.selectAll('.bars-cell-grp').size()
-		test.equal(numBars, 0, 'should have 0 visible bars when the only visible row label is clicked')
-		test.equal(
-			barchart.Inner.dom.banner.style('display'),
-			'block',
-			'should display a banner when no charts are visible'
-		)
-		test.true(barchart.Inner.dom.banner.text().includes('No visible'), 'should label the banner with no visible data')
-	}
+// 	function testEmptyChart(barchart) {
+// 		const numBars = barDiv.selectAll('.bars-cell-grp').size()
+// 		test.equal(numBars, 0, 'should have 0 visible bars when the only visible row label is clicked')
+// 		test.equal(
+// 			barchart.Inner.dom.banner.style('display'),
+// 			'block',
+// 			'should display a banner when no charts are visible'
+// 		)
+// 		test.true(barchart.Inner.dom.banner.text().includes('No visible'), 'should label the banner with no visible data')
+// 	}
 
-	function triggerUnhideBar(barchart) {
-		barchart.Inner.dom.legendDiv
-			.node()
-			.querySelector('.legend-row')
-			.firstChild.dispatchEvent(new Event('click', { bubbles: true }))
-	}
+// 	function triggerUnhideBar(barchart) {
+// 		barchart.Inner.dom.legendDiv
+// 			.node()
+// 			.querySelector('.legend-row')
+// 			.firstChild.dispatchEvent(new Event('click', { bubbles: true }))
+// 	}
 
-	function testUnhiddenChart(barchart) {
-		const numBars = barDiv.selectAll('.bars-cell-grp').size()
-		test.equal(numBars, 1, 'should have 1 visible bar1 when the hidden row legend is clicked')
-		/*test.equal(
-			barchart.Inner.dom.banner.style("display"),
-			'none',
-			'should hide the banner when the chart is unhidden'
-		)*/
-	}
-})
+// 	function testUnhiddenChart(barchart) {
+// 		const numBars = barDiv.selectAll('.bars-cell-grp').size()
+// 		test.equal(numBars, 1, 'should have 1 visible bar1 when the hidden row legend is clicked')
+// 		/*test.equal(
+// 			barchart.Inner.dom.banner.style("display"),
+// 			'none',
+// 			'should hide the banner when the chart is unhidden'
+// 		)*/
+// 	}
+// })
 
-tape.skip('all hidden + with overlay, legend click', function (test) {
-	test.timeoutAfter(9000)
+// tape.skip('all hidden + with overlay, legend click', function (test) {
+// 	test.timeoutAfter(9000)
 
-	runpp({
-		state: {
-			nav: {
-				header_mode: 'search_only'
-			},
-			plots: [
-				{
-					chartType: 'barchart',
-					term: {
-						id: 'cisplateq_5'
-					},
-					term2: {
-						id: 'sex'
-					}
-				}
-			]
-		},
-		barchart: {
-			callbacks: {
-				'postRender.test': runTests
-			}
-		}
-	})
+// 	runpp({
+// 		state: {
+// 			nav: {
+// 				header_mode: 'search_only'
+// 			},
+// 			plots: [
+// 				{
+// 					chartType: 'barchart',
+// 					term: {
+// 						id: 'cisplateq_5'
+// 					},
+// 					term2: {
+// 						id: 'sex'
+// 					}
+// 				}
+// 			]
+// 		},
+// 		barchart: {
+// 			callbacks: {
+// 				'postRender.test': runTests
+// 			}
+// 		}
+// 	})
 
-	function runTests(barchart) {
-		barchart.on('postRender.test', null)
+// 	function runTests(barchart) {
+// 		barchart.on('postRender.test', null)
 
-		helpers
-			.rideInit({ arg: barchart, bus: barchart, eventType: 'postRender.test' })
-			.run(testBarCount)
-			.run(triggerBarClick)
-			.use(triggerMenuClick, { wait: 1100 })
-			.to(testRemovedOverlayByMenu, { wait: 100 })
-			.use(triggerUnhideOverlay, { wait: 1100 })
-			.to(testUnhiddenOverlay, { wait: 100 })
-			.use(triggerOverlayHideByLegendClick, { wait: 1000 })
-			.to(testhiddenOverlayByLegendClick, { wait: 100 })
-			.done(test)
-	}
+// 		helpers
+// 			.rideInit({ arg: barchart, bus: barchart, eventType: 'postRender.test' })
+// 			.run(testBarCount)
+// 			.run(triggerBarClick)
+// 			.use(triggerMenuClick, { wait: 1100 })
+// 			.to(testRemovedOverlayByMenu, { wait: 100 })
+// 			.use(triggerUnhideOverlay, { wait: 1100 })
+// 			.to(testUnhiddenOverlay, { wait: 100 })
+// 			.use(triggerOverlayHideByLegendClick, { wait: 1000 })
+// 			.to(testhiddenOverlayByLegendClick, { wait: 100 })
+// 			.done(test)
+// 	}
 
-	let barDiv
-	function testBarCount(barchart) {
-		barDiv = barchart.Inner.dom.barDiv
-		const numBars = barDiv.selectAll('.bars-cell-grp').size()
-		test.equal(
-			numBars,
-			1,
-			'should have 1 visible bar on first render when Object.keys(q.hiddenValues).length > chart.serieses.length'
-		)
-		const numOverlays = barDiv.selectAll('.bars-cell').size()
-		test.equal(
-			numOverlays,
-			2,
-			'should have 2 visible overlays on first render when Object.keys(q.hiddenValues).length > chart.serieses.length'
-		)
-		test.equal(
-			barchart.Inner.dom.banner.style('display'),
-			'none',
-			'should hide the banner when at least one chart is visible'
-		)
-	}
+// 	let barDiv
+// 	function testBarCount(barchart) {
+// 		barDiv = barchart.Inner.dom.barDiv
+// 		const numBars = barDiv.selectAll('.bars-cell-grp').size()
+// 		test.equal(
+// 			numBars,
+// 			1,
+// 			'should have 1 visible bar on first render when Object.keys(q.hiddenValues).length > chart.serieses.length'
+// 		)
+// 		const numOverlays = barDiv.selectAll('.bars-cell').size()
+// 		test.equal(
+// 			numOverlays,
+// 			2,
+// 			'should have 2 visible overlays on first render when Object.keys(q.hiddenValues).length > chart.serieses.length'
+// 		)
+// 		test.equal(
+// 			barchart.Inner.dom.banner.style('display'),
+// 			'none',
+// 			'should hide the banner when at least one chart is visible'
+// 		)
+// 	}
 
-	let clickedData
-	function triggerBarClick(barchart) {
-		const elem = barDiv.node().querySelector('.bars-cell').querySelector('rect')
-		elem.dispatchEvent(new Event('click', { bubbles: true }))
-	}
+// 	let clickedData
+// 	function triggerBarClick(barchart) {
+// 		const elem = barDiv.node().querySelector('.bars-cell').querySelector('rect')
+// 		elem.dispatchEvent(new Event('click', { bubbles: true }))
+// 	}
 
-	function triggerMenuClick(barchart) {
-		barchart.Inner.app.tip.d
-			.selectAll('.sja_menuoption')
-			.filter(d => d.label.includes('Hide "Female"'))
-			.node()
-			.dispatchEvent(new Event('click', { bubbles: true }))
-	}
+// 	function triggerMenuClick(barchart) {
+// 		barchart.Inner.app.tip.d
+// 			.selectAll('.sja_menuoption')
+// 			.filter(d => d.label.includes('Hide "Female"'))
+// 			.node()
+// 			.dispatchEvent(new Event('click', { bubbles: true }))
+// 	}
 
-	function testRemovedOverlayByMenu(barchart) {
-		const numBars = barDiv.selectAll('.bars-cell-grp').size()
-		test.equal(numBars, 1, 'should have 1 visible bar after hiding an overlay')
-		const numOverlays = barDiv.selectAll('.bars-cell').size()
-		test.equal(numOverlays, 1, 'should have 1 visible overlay left after hiding an overlay')
-	}
+// 	function testRemovedOverlayByMenu(barchart) {
+// 		const numBars = barDiv.selectAll('.bars-cell-grp').size()
+// 		test.equal(numBars, 1, 'should have 1 visible bar after hiding an overlay')
+// 		const numOverlays = barDiv.selectAll('.bars-cell').size()
+// 		test.equal(numOverlays, 1, 'should have 1 visible overlay left after hiding an overlay')
+// 	}
 
-	function triggerUnhideOverlay(barchart) {
-		barchart.Inner.dom.legendDiv
-			.selectAll('.legend-row')
-			.filter(d => d.dataId == '2')
-			.node()
-			.firstChild.dispatchEvent(new Event('click', { bubbles: true }))
-	}
+// 	function triggerUnhideOverlay(barchart) {
+// 		barchart.Inner.dom.legendDiv
+// 			.selectAll('.legend-row')
+// 			.filter(d => d.dataId == '2')
+// 			.node()
+// 			.firstChild.dispatchEvent(new Event('click', { bubbles: true }))
+// 	}
 
-	function testUnhiddenOverlay(barchart) {
-		const numBars = barDiv.selectAll('.bars-cell-grp').size()
-		test.equal(numBars, 1, 'should have 1 visible bar after unhiding an overlay')
-		const numOverlays = barDiv.selectAll('.bars-cell').size()
-		test.equal(numOverlays, 2, 'should have 2 visible overlays after unhiding an overlay')
-	}
+// 	function testUnhiddenOverlay(barchart) {
+// 		const numBars = barDiv.selectAll('.bars-cell-grp').size()
+// 		test.equal(numBars, 1, 'should have 1 visible bar after unhiding an overlay')
+// 		const numOverlays = barDiv.selectAll('.bars-cell').size()
+// 		test.equal(numOverlays, 2, 'should have 2 visible overlays after unhiding an overlay')
+// 	}
 
-	function triggerOverlayHideByLegendClick(barchart) {
-		barchart.Inner.dom.legendDiv
-			.select('.legend-row')
-			.node()
-			.firstChild.dispatchEvent(new Event('click', { bubbles: true }))
-	}
+// 	function triggerOverlayHideByLegendClick(barchart) {
+// 		barchart.Inner.dom.legendDiv
+// 			.select('.legend-row')
+// 			.node()
+// 			.firstChild.dispatchEvent(new Event('click', { bubbles: true }))
+// 	}
 
-	function testhiddenOverlayByLegendClick(barchart) {
-		const numBars = barDiv.selectAll('.bars-cell-grp').size()
-		test.equal(numBars, 1, 'should have 1 visible bar after hiding an overlay by legend click')
-		const numOverlays = barDiv.selectAll('.bars-cell').size()
-		test.equal(numOverlays, 1, 'should have 1 visible overlays after hiding an overlay by legend click')
-	}
-})
+// 	function testhiddenOverlayByLegendClick(barchart) {
+// 		const numBars = barDiv.selectAll('.bars-cell-grp').size()
+// 		test.equal(numBars, 1, 'should have 1 visible bar after hiding an overlay by legend click')
+// 		const numOverlays = barDiv.selectAll('.bars-cell').size()
+// 		test.equal(numOverlays, 1, 'should have 1 visible overlays after hiding an overlay by legend click')
+// 	}
+// })
 
-tape.skip('unhidden chart and legend', test => {
-	test.timeoutAfter(8000)
+// tape.skip('unhidden chart and legend', test => {
+// 	test.timeoutAfter(8000)
 
-	runpp({
-		state: {
-			nav: {
-				header_mode: 'search_only'
-			},
-			plots: [
-				{
-					chartType: 'barchart',
-					term: {
-						term: termjson['aaclassic_5'],
-						q: {
-							type: 'regular-bin',
-							bin_size: 10000,
-							stopinclusive: true,
-							first_bin: { startunbounded: true, stop: 1, stopinclusive: true, bin: 'first' },
-							numDecimals: 1,
-							last_bin: { start: 30000, bin: 'last', stopunbounded: true },
-							startinclusive: false
-						}
-					}
-				}
-			]
-		},
-		barchart: {
-			callbacks: {
-				'postRender.test': runTests
-			}
-		}
-	})
+// 	runpp({
+// 		state: {
+// 			nav: {
+// 				header_mode: 'search_only'
+// 			},
+// 			plots: [
+// 				{
+// 					chartType: 'barchart',
+// 					term: {
+// 						term: termjson['aaclassic_5'],
+// 						q: {
+// 							type: 'regular-bin',
+// 							bin_size: 10000,
+// 							stopinclusive: true,
+// 							first_bin: { startunbounded: true, stop: 1, stopinclusive: true, bin: 'first' },
+// 							numDecimals: 1,
+// 							last_bin: { start: 30000, bin: 'last', stopunbounded: true },
+// 							startinclusive: false
+// 						}
+// 					}
+// 				}
+// 			]
+// 		},
+// 		barchart: {
+// 			callbacks: {
+// 				'postRender.test': runTests
+// 			}
+// 		}
+// 	})
 
-	async function runTests(barchart) {
-		helpers
-			.rideInit({ arg: barchart, bus: barchart, eventType: 'postRender.test', preserve: true })
-			.run(testVisibleChart)
-			.run(triggerHideChart, 300)
-			.run(testHiddenChart, 300)
-			.run(triggerShowChart, 300)
-			.run(testReshownChart, 300)
-			.done(test)
-	}
+// 	async function runTests(barchart) {
+// 		helpers
+// 			.rideInit({ arg: barchart, bus: barchart, eventType: 'postRender.test', preserve: true })
+// 			.run(testVisibleChart)
+// 			.run(triggerHideChart, 300)
+// 			.run(testHiddenChart, 300)
+// 			.run(triggerShowChart, 300)
+// 			.run(testReshownChart, 300)
+// 			.done(test)
+// 	}
 
-	function testVisibleChart(barchart) {
-		test.notEqual(
-			barchart.Inner.dom.holder.node().style.display,
-			'none',
-			'should start with both visible and not overlapping'
-		)
-	}
+// 	function testVisibleChart(barchart) {
+// 		test.notEqual(
+// 			barchart.Inner.dom.holder.node().style.display,
+// 			'none',
+// 			'should start with both visible and not overlapping'
+// 		)
+// 	}
 
-	function triggerHideChart(barchart) {
-		barchart.Inner.app.dispatch({
-			type: 'plot_hide',
-			id: 'aaclassic_5'
-		})
-	}
+// 	function triggerHideChart(barchart) {
+// 		barchart.Inner.app.dispatch({
+// 			type: 'plot_hide',
+// 			id: 'aaclassic_5'
+// 		})
+// 	}
 
-	function testHiddenChart(barchart) {
-		test.equal(barchart.Inner.dom.holder.node().style.display, 'none', 'should trigger hiding both chart and legend')
-	}
+// 	function testHiddenChart(barchart) {
+// 		test.equal(barchart.Inner.dom.holder.node().style.display, 'none', 'should trigger hiding both chart and legend')
+// 	}
 
-	function triggerShowChart(barchart) {
-		// issue to fix: clicking the view button will cause the stat table
-		// to overlap from the bottom of the chart
-		barchart.Inner.dom.holder.node().parentNode.querySelector('.termview').click()
+// 	function triggerShowChart(barchart) {
+// 		// issue to fix: clicking the view button will cause the stat table
+// 		// to overlap from the bottom of the chart
+// 		barchart.Inner.dom.holder.node().parentNode.querySelector('.termview').click()
 
-		// same result when using dispatch
-		/*barchart.Inner.app.dispatch({
-			type: 'plot_show',
-			id: 'aaclassic_5'
-		})*/
-	}
+// 		// same result when using dispatch
+// 		/*barchart.Inner.app.dispatch({
+// 			type: 'plot_show',
+// 			id: 'aaclassic_5'
+// 		})*/
+// 	}
 
-	function testReshownChart(barchart) {
-		test.true(
-			+barchart.Inner.dom.holder.select('svg').property('height').baseVal.value > 100,
-			'should not have a small barchart svg when reshowing a barchart, not overlap with legend'
-		)
-	}
-})
+// 	function testReshownChart(barchart) {
+// 		test.true(
+// 			+barchart.Inner.dom.holder.select('svg').property('height').baseVal.value > 100,
+// 			'should not have a small barchart svg when reshowing a barchart, not overlap with legend'
+// 		)
+// 	}
+// })
 
-tape.skip('customized bins', test => {
-	test.timeoutAfter(3000)
+// tape.skip('customized bins', test => {
+// 	test.timeoutAfter(3000)
 
-	runpp({
-		state: {
-			nav: {
-				header_mode: 'search_only'
-			},
-			plots: [
-				{
-					chartType: 'barchart',
-					term: {
-						term: termjson['aaclassic_5']
-					}
-				}
-			]
-		},
-		barchart: {
-			callbacks: {
-				'postRender.test': runTests
-			}
-		}
-	})
+// 	runpp({
+// 		state: {
+// 			nav: {
+// 				header_mode: 'search_only'
+// 			},
+// 			plots: [
+// 				{
+// 					chartType: 'barchart',
+// 					term: {
+// 						term: termjson['aaclassic_5']
+// 					}
+// 				}
+// 			]
+// 		},
+// 		barchart: {
+// 			callbacks: {
+// 				'postRender.test': runTests
+// 			}
+// 		}
+// 	})
 
-	async function runTests(barchart) {
-		helpers
-			.rideInit({ arg: barchart, bus: barchart, eventType: 'postRender.test', preserve: true })
-			.run(triggerCustomBins, 400)
-			.run(triggerSearch, 300)
-			// .run(testReversion, 1000)
-			.done(test)
-	}
+// 	async function runTests(barchart) {
+// 		helpers
+// 			.rideInit({ arg: barchart, bus: barchart, eventType: 'postRender.test', preserve: true })
+// 			.run(triggerCustomBins, 400)
+// 			.run(triggerSearch, 300)
+// 			// .run(testReversion, 1000)
+// 			.done(test)
+// 	}
 
-	const q1 = {
-		type: 'regular-bin',
-		bin_size: 10000,
-		stopinclusive: true,
-		first_bin: { startunbounded: true, stop: 1, stopinclusive: true, bin: 'first' },
-		numDecimals: 1,
-		last_bin: { start: 30000, bin: 'last', stopunbounded: true },
-		startinclusive: false
-	}
+// 	const q1 = {
+// 		type: 'regular-bin',
+// 		bin_size: 10000,
+// 		stopinclusive: true,
+// 		first_bin: { startunbounded: true, stop: 1, stopinclusive: true, bin: 'first' },
+// 		numDecimals: 1,
+// 		last_bin: { start: 30000, bin: 'last', stopunbounded: true },
+// 		startinclusive: false
+// 	}
 
-	function triggerCustomBins(barchart) {
-		barchart.Inner.app.dispatch({
-			type: 'plot_edit',
-			id: 'aaclassic_5',
-			config: {
-				term: {
-					id: 'aaclassic_5',
-					term: barchart.Inner.config.term.term,
-					q: q1
-				}
-			}
-		})
-	}
+// 	function triggerCustomBins(barchart) {
+// 		barchart.Inner.app.dispatch({
+// 			type: 'plot_edit',
+// 			id: 'aaclassic_5',
+// 			config: {
+// 				term: {
+// 					id: 'aaclassic_5',
+// 					term: barchart.Inner.config.term.term,
+// 					q: q1
+// 				}
+// 			}
+// 		})
+// 	}
 
-	async function triggerSearch(barchart) {
-		const dom = barchart.Inner.app.getComponents('nav.search').Inner.dom
-		dom.input.property('value', 'Cumulative Alkylating Agents (Cyclophosphamide Equivalent Dose)')
-		dom.input.on('input')()
-		await sleep(500)
-		dom.holder.select('.sja_menuoption').node().dispatchEvent(new Event('click'))
-	}
+// 	async function triggerSearch(barchart) {
+// 		const dom = barchart.Inner.app.getComponents('nav.search').Inner.dom
+// 		dom.input.property('value', 'Cumulative Alkylating Agents (Cyclophosphamide Equivalent Dose)')
+// 		dom.input.on('input')()
+// 		await sleep(500)
+// 		dom.holder.select('.sja_menuoption').node().dispatchEvent(new Event('click'))
+// 	}
 
-	function testReversion(barchart) {
-		test.deepEqual(barchart.Inner.config.term.q, q1, 'should not be reverted when using a searched term')
-	}
-})
+// 	function testReversion(barchart) {
+// 		test.deepEqual(barchart.Inner.config.term.q, q1, 'should not be reverted when using a searched term')
+// 	}
+// })
 
 // to make or update following config, on the browser build/modify the tw or filter, apply to chart, at Session > Share > Open link, open the session file and locate the record and copy it here:
 // for geneVariant tw, search for string "geneVariant"
