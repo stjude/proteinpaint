@@ -161,6 +161,15 @@ if (serverconfig.debugmode && !serverconfig.binpath.includes('sjcrh/')) {
 	// since the serverconfig.binpath prefix may
 	// have been applied to locate optional routeSetter files
 	serverconfig.routeSetters = routeSetters
+
+	const hg38test = serverconfig.genomes.find(g => g.name == 'hg38-test')
+	if (hg38test?.datasets) {
+		const cred = mayUpdateTestDatasets(hg38test.datasets)
+		if (cred) {
+			if (!serverconfig.dsCredentials) serverconfig.dsCredentials = {}
+			serverconfig.dsCredentials.ProtectedTest = cred
+		}
+	}
 }
 
 if (serverconfig.allow_env_overrides) {
@@ -279,3 +288,34 @@ if (!serverconfig.cache_snpgt) {
 }
 
 export default serverconfig
+
+function mayUpdateTestDatasets(datasets) {
+	const ds = datasets.find(ds => ds.jsfile.includes('/termdb.test.'))
+	if (!ds) return
+	const fileExt = ds.jsfile.split('.').pop()
+	datasets.push({
+		name: 'ProtectedTest',
+		jsfile: `./dataset/protected.test.${fileExt}`
+	})
+
+	return {
+		termdb: {
+			'*': {
+				type: 'jwt',
+				secret: 'fake-secret', // pragma: allowlist secret
+				dsnames: [
+					{
+						id: 'ABC',
+						label: 'ABC cohort',
+						role: 'admin',
+						sites: [1, 2, 5]
+					},
+					{
+						id: 'XYZ',
+						label: 'XYZ cohort'
+					}
+				]
+			}
+		}
+	}
+}

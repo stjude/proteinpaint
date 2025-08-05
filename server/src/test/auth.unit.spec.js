@@ -34,12 +34,14 @@ function appInit() {
 			if (!app.routes[route]) app.routes[route] = {}
 			app.routes[route][method] = handler
 		},
+		/* c8 ignore start */
 		get(route, handler) {
 			app.setRoute('get', route, handler)
 		},
 		post(route, handler) {
 			app.setRoute('post', route, handler)
 		},
+		/* c8 ignore stop */
 		all(route, handler) {
 			app.setRoute('get', route, handler)
 			app.setRoute('post', route, handler)
@@ -67,29 +69,80 @@ tape('\n', function (test) {
 	test.end()
 })
 
-tape(`initialization`, async test => {
-	{
-		const app = appInit()
-		await authApi.maySetAuthRoutes(app, '', { debugmode, cachedir })
-		const middlewares = Object.keys(app.middlewares)
-		test.deepEqual(
-			[],
-			middlewares,
-			'should NOT set a global middleware when there are NO dsCredentials in serverconfig'
-		)
-		const routes = Object.keys(app.routes)
-		routes.sort()
-		test.deepEqual([], routes, 'should NOT set the expected routes when there are NO dsCredentials in serverconfig')
-	}
+tape(`initialization, empty credentials`, async test => {
+	const app = appInit()
+	await authApi.maySetAuthRoutes(app, {}, '', { debugmode, cachedir })
+	const middlewares = Object.keys(app.middlewares)
+	test.deepEqual(middlewares, [], 'should NOT set a global middleware when there are NO dsCredentials in serverconfig')
+	const routes = Object.keys(app.routes)
+	routes.sort()
+	test.deepEqual(routes, [], 'should NOT set the expected routes when there are NO dsCredentials in serverconfig')
 
+	test.deepEqual(
+		Object.keys(authApi).sort(),
+		[
+			'canDisplaySampleIds',
+			'credEmbedders',
+			'getDsAuth',
+			'getHealth',
+			'getJwtPayload',
+			'getNonsensitiveInfo',
+			'getPayloadFromHeaderAuth',
+			'getRequiredCredForDsEmbedder',
+			'mayAdjustFilter',
+			'maySetAuthRoutes',
+			'userCanAccess'
+		],
+		'should set the expected methods with an empty dsCredentials'
+	)
+
+	const ds = { cohort: { termdb: { displaySampleIds: () => true } } }
+	const req = {}
+	test.equal(
+		authApi.canDisplaySampleIds(req, ds),
+		true,
+		'should support the cohort.termdb.displaySampleIds() option in the default canDisplaySampleIds()'
+	)
+	test.equal(authApi.userCanAccess(req, ds), true, 'should allow use access by default when there are no credentials')
+	test.deepEqual(
+		authApi.getNonsensitiveInfo(),
+		{ forbiddenRoutes: [] },
+		'should have no forbiddenRoutes when there are no credentials'
+	)
+	const q0 = { filter: { test: 'abc123' } }
+	const q1 = structuredClone(q0)
+	authApi.mayAdjustFilter(q1)
+	test.deepEqual(q1, q0, 'should not change q.filter using the default authApi.mayAdjustFilter()')
+	test.deepEqual(
+		[
+			authApi.getDsAuth(),
+			authApi.getRequiredCredForDsEmbedder(),
+			authApi.getPayloadFromHeaderAuth(),
+			authApi.getHealth()
+		],
+		[[], undefined, {}, undefined],
+		'should get empty values from other default authApi methods'
+	)
+
+	delete ds.cohort.termdb.displaySampleIds
+	test.equal(
+		authApi.canDisplaySampleIds(req, ds),
+		false,
+		'should default to not allowing the display of sample IDs if there is no ds.cohort.termdb.canDisplaySampleIds()'
+	)
+
+	test.end()
+})
+
+tape(`initialization, non-empty credentials`, async test => {
 	{
 		const app = appInit()
 		await authApi.maySetAuthRoutes(app, {}, '', { debugmode, cachedir, dsCredentials: {}, secrets })
 		const middlewares = Object.keys(app.middlewares)
-		test.deepEqual([], middlewares, 'should NOT set a global middleware when dsCredentials is empty')
+		test.deepEqual(middlewares, [], 'should NOT set a global middleware when dsCredentials is empty')
 		const routes = Object.keys(app.routes)
 		routes.sort()
-		test.deepEqual([], routes, 'should NOT set the expected routes when dsCredentials is empty')
+		test.deepEqual(routes, [], 'should NOT set the expected routes when dsCredentials is empty')
 	}
 
 	{
@@ -148,7 +201,7 @@ tape(`initialization`, async test => {
 				'maySetAuthRoutes',
 				'userCanAccess'
 			],
-			'should set the expected methods with an empty dsCredentials'
+			'should set the expected methods with a non-empty dsCredentials'
 		)
 		test.deepEqual(
 			authApi.getDsAuth({ query: { embedder: 'localhost' } }),
@@ -972,9 +1025,11 @@ tape(`/dslogin`, async test => {
 				}
 			}
 
+			/* c8 ignore next */
 			function next() {
 				test.fail(`the middleware should NOT call next() for a non-logged in user`)
 			}
+			/* c8 ignore next */
 
 			await app.middlewares['*'](req, res, next)
 		}
@@ -1012,7 +1067,7 @@ tape(`req.query.filter, __protected__`, async test => {
 					cohort: {
 						termdb: {
 							getAdditionalFilter() {
-								return tvslst
+								return structuredClone(tvslst)
 							}
 						}
 					}
@@ -1040,13 +1095,17 @@ tape(`req.query.filter, __protected__`, async test => {
 		}
 		const res = {
 			send(data) {},
+			/* c8 ignore start */
 			header(key, val) {},
+			/* c8 ignore stop */
 			status(num) {},
 			headers: {}
 		}
 
-		app.middlewares['*'](req, res, () => {})
-		test.deepEqual(req.query.filter, structuredClone(tvslst), 'should set up req.query.filter')
+		app.middlewares['*'](req, res, /* c8 ignore next */ () => {})
+		// since req.filter is empty, it will be replaced (not joined) with a term-level auth filter
+		const expectedFilter = { ...tvslst, tag: 'termLevelAuthFilter' }
+		test.deepEqual(req.query.filter, expectedFilter, 'should set up req.query.filter')
 
 		test.deepEqual(
 			req.query.__protected__,

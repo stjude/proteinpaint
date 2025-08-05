@@ -442,14 +442,4 @@ chrM	16569`,
 	chrUn_KI270394v1	970`
 }
 
-genome.mayEditRawDatasetsArray = datasets => {
-	const ds = datasets.find(ds => ds.jsfile.includes('/termdb.test.'))
-	if (!ds) return
-	const fileExtension = ds.jsfile.split('.').pop()
-	datasets.push({
-		name: 'ProtectedTest',
-		jsfile: `./dataset/protected.test.${fileExtension}`
-	})
-}
-
 export default genome

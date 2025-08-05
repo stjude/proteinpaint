@@ -128,3 +128,45 @@ tape('Data download with terms selected', test => {
 		test.end()
 	}
 })
+
+tape('protected dataset', test => {
+	test.timeoutAfter(3000)
+	const runpp = helpers.getRunPp('mass', {
+		state: {
+			nav: {
+				header_mode: 'hide_search',
+				activeTab: 1
+			},
+			vocab: {
+				dslabel: 'ProtectedTest',
+				genome: 'hg38-test'
+			}
+		},
+		debug: 1
+	})
+
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'dataDownload'
+				}
+			]
+		},
+		dataDownload: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	async function runTests(dataDownload) {
+		dataDownload.on('postRender.test', null)
+		test.true(
+			dataDownload.Inner.dom.titleDiv.text().includes('Requires sign-in'),
+			'should not open by default for protected dataset'
+		)
+		if (test._ok) dataDownload.Inner.app.destroy()
+		test.end()
+	}
+})
