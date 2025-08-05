@@ -1740,7 +1740,7 @@ tape('max number of bins: exceeded', test => {
 	}
 })
 
-tape.only('minimum sample size', test => {
+tape('minimum sample size', test => {
 	test.timeoutAfter(3000)
 	const runpp = helpers.getRunPp('mass', {
 		state: {

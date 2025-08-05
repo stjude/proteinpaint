@@ -121,31 +121,7 @@ export function setAppMiddlewares(app, genomes, doneLoading) {
           and as determined by a server route code that the dataset can use to compute per-user access restrictions/authorizations 
           when querying data
         */
-		req.query.__protected__ = { ignoredTermIds: [] } // when provided the filter on these terms will be ignored
-		const __protected__ = req.query.__protected__
-		if (req.query.dslabel && !authApi.isLoginRoute(req.path) && req.path != '/healthcheck') {
-			Object.assign(__protected__, authApi.getNonsensitiveInfo(req))
-			if (req.query.genome && req.query.dslabel && req.query.dslabel !== 'msigdb') {
-				const genome = genomes[req.query.genome]
-				try {
-					if (!genome) throw 'invalid genome'
-					const ds = genome.datasets[req.query.dslabel]
-					if (!ds) throw 'invalid dslabel'
-					// by not supplying the 3rd argument (routeTwList) to authApi.mayAdjustFilter(),
-					// it will add the stricted additional filter by default for any downstream code from here;
-					// later, any server route or downstream code may call authApi.mayAdjustFilter() again to
-					// loosen the additional filter, to consider fewer tvs terms based on route-specific payloads or aggregation logic
-					if (ds.cohort?.termdb?.getAdditionalFilter) authApi.mayAdjustFilter(req.query, ds)
-				} catch (error) {
-					res.send({ error })
-					return
-				}
-			}
-		}
-		if (req.cookies?.sessionid) {
-			__protected__.sessionid = req.cookies.sessionid
-		}
-		Object.freeze(__protected__)
+
 		next()
 	})
 

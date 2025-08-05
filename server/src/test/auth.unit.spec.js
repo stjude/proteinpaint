@@ -84,7 +84,7 @@ tape(`initialization`, async test => {
 
 	{
 		const app = appInit()
-		await authApi.maySetAuthRoutes(app, '', { debugmode, cachedir, dsCredentials: {}, secrets })
+		await authApi.maySetAuthRoutes(app, {}, '', { debugmode, cachedir, dsCredentials: {}, secrets })
 		const middlewares = Object.keys(app.middlewares)
 		test.deepEqual([], middlewares, 'should NOT set a global middleware when dsCredentials is empty')
 		const routes = Object.keys(app.routes)
@@ -104,18 +104,18 @@ tape(`initialization`, async test => {
 				}
 			}
 		}
-		await authApi.maySetAuthRoutes(app, '', { debugmode, cachedir, dsCredentials, secrets })
+		await authApi.maySetAuthRoutes(app, {}, '', { debugmode, cachedir, dsCredentials, secrets })
 		const middlewares = Object.keys(app.middlewares)
 		test.deepEqual(
-			['*'],
 			middlewares,
+			['*'],
 			'should set a global middleware when there is a non-empty dsCredentials entry in serverconfig'
 		)
 		const routes = Object.keys(app.routes)
 		routes.sort()
 		test.deepEqual(
-			['/authorizedActions', '/dslogin', '/dslogout', '/jwt-status'],
 			routes,
+			['/authorizedActions', '/dslogin', '/dslogout', '/jwt-status'],
 			'should set the expected routes when there is a non-empty dsCredentials entry in serverconfig'
 		)
 	}
@@ -132,7 +132,7 @@ tape(`initialization`, async test => {
 				}
 			}
 		}
-		await authApi.maySetAuthRoutes(app, '', { debugmode, dsCredentials, cachedir })
+		await authApi.maySetAuthRoutes(app, {}, '', { debugmode, dsCredentials, cachedir })
 		test.deepEqual(
 			Object.keys(authApi).sort(),
 			[
@@ -144,7 +144,6 @@ tape(`initialization`, async test => {
 				'getNonsensitiveInfo',
 				'getPayloadFromHeaderAuth',
 				'getRequiredCredForDsEmbedder',
-				'isLoginRoute',
 				'mayAdjustFilter',
 				'maySetAuthRoutes',
 				'userCanAccess'
@@ -205,7 +204,7 @@ tape('legacy reshape', async test => {
 		cachedir
 	}
 
-	await authApi.maySetAuthRoutes(app, '', serverconfig)
+	await authApi.maySetAuthRoutes(app, {}, '', serverconfig)
 	test.deepEqual(
 		JSON.parse(JSON.stringify(dsCredentials)),
 		{
@@ -271,7 +270,7 @@ tape(`auth methods`, async test => {
 		cachedir
 	}
 
-	await authApi.maySetAuthRoutes(app, '', serverconfig)
+	await authApi.maySetAuthRoutes(app, {}, '', serverconfig)
 
 	const req0 = { query: { embedder: 'localhost', dslabel: 'ds100' }, get: () => 'localhost' }
 	test.deepEqual(
@@ -329,7 +328,7 @@ tape(`a valid request`, async test => {
 		cachedir
 	}
 
-	await authApi.maySetAuthRoutes(app, '', serverconfig) //; console.log(app.routes)
+	await authApi.maySetAuthRoutes(app, {}, '', serverconfig) //; console.log(app.routes)
 	{
 		const req = {
 			query: { embedder: 'localhost', dslabel: 'ds0' },
@@ -377,7 +376,7 @@ tape(`mismatched ip address in /jwt-status`, async test => {
 		cachedir
 	}
 
-	await authApi.maySetAuthRoutes(app, '', serverconfig) //; console.log(app.routes)
+	await authApi.maySetAuthRoutes(app, {}, '', serverconfig) //; console.log(app.routes)
 	{
 		const req = {
 			query: { embedder: 'localhost', dslabel: 'ds0' },
@@ -435,7 +434,7 @@ tape(`invalid embedder`, async test => {
 		cachedir
 	}
 
-	await authApi.maySetAuthRoutes(app, '', serverconfig) //; console.log(308, app.routes)
+	await authApi.maySetAuthRoutes(app, {}, '', serverconfig) //; console.log(308, app.routes)
 
 	{
 		const req = {
@@ -491,7 +490,7 @@ tape(`invalid dataset access`, async test => {
 		cachedir
 	}
 
-	await authApi.maySetAuthRoutes(app, '', serverconfig)
+	await authApi.maySetAuthRoutes(app, {}, '', serverconfig)
 	{
 		const req = {
 			query: { embedder: 'localhost', dslabel: 'ds0' },
@@ -546,7 +545,7 @@ tape(`invalid jwt`, async test => {
 		cachedir
 	}
 
-	await authApi.maySetAuthRoutes(app, '', serverconfig) //; console.log(app.routes)
+	await authApi.maySetAuthRoutes(app, {}, '', serverconfig) //; console.log(app.routes)
 
 	{
 		const req = {
@@ -659,7 +658,7 @@ tape(`session handling by the middleware`, async test => {
 	}
 
 	const app = appInit()
-	await authApi.maySetAuthRoutes(app, '', serverconfig)
+	await authApi.maySetAuthRoutes(app, {}, '', serverconfig)
 	{
 		const message = 'should call the next function on a non-protected route'
 		const req = {
@@ -833,7 +832,7 @@ tape(`/dslogin`, async test => {
 	}
 
 	const app = appInit()
-	await authApi.maySetAuthRoutes(app, '', serverconfig)
+	await authApi.maySetAuthRoutes(app, {}, '', serverconfig)
 
 	let cookie
 	/*** valid /dslogin request ***/
@@ -979,5 +978,84 @@ tape(`/dslogin`, async test => {
 
 			await app.middlewares['*'](req, res, next)
 		}
+	}
+})
+
+tape(`req.query.filter, __protected__`, async test => {
+	test.timeoutAfter(500)
+	test.plan(2)
+
+	const app = appInit()
+
+	const serverconfig = {
+		debugmode,
+		dsCredentials: {
+			ds0: {
+				'*': {
+					localhost: {
+						type: 'jwt',
+						secret,
+						dsnames: [{ id: 'ds0', label: 'Dataset 0' }]
+					}
+				}
+			}
+		},
+		cachedir
+	}
+
+	const tvslst = { type: 'tvslst', lst: [{ type: 'tvs', tvs: { term: {}, values: {} } }] }
+
+	const genomes = {
+		test: {
+			datasets: {
+				ds0: {
+					cohort: {
+						termdb: {
+							getAdditionalFilter() {
+								return tvslst
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	await authApi.maySetAuthRoutes(app, genomes, '', serverconfig)
+	authApi.getNonsensitiveInfo = () => {
+		return { clientAuthResult: {} }
+	}
+
+	{
+		const req = {
+			query: { embedder: 'localhost', genome: 'test', dslabel: 'ds0' },
+			headers: {
+				'x-ds-access-token': validToken
+			},
+			ip: '127.0.0.1',
+			path: '/abc',
+			cookies: {
+				sessionid: 'xyz'
+			}
+		}
+		const res = {
+			send(data) {},
+			header(key, val) {},
+			status(num) {},
+			headers: {}
+		}
+
+		app.middlewares['*'](req, res, () => {})
+		test.deepEqual(req.query.filter, structuredClone(tvslst), 'should set up req.query.filter')
+
+		test.deepEqual(
+			req.query.__protected__,
+			{
+				ignoredTermIds: [],
+				sessionid: 'xyz',
+				clientAuthResult: {}
+			},
+			'should set up req.query.__protected__'
+		)
 	}
 })
