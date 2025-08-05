@@ -1,5 +1,4 @@
 import { table2col } from '#dom'
-import { dtsnvindel } from '#shared/common.js'
 import { termsettingInit, fillTermWrapper } from '#termsetting'
 import { SearchHandler as geneSearch } from '../termdb/handlers/geneVariant.ts'
 
@@ -40,16 +39,18 @@ export async function makeChartBtnMenu(holder, chartsInstance) {
 			holder: searchDiv,
 			app: chartsInstance.app, // required to supply "opts.app.vocabApi" for the search ui
 			genomeObj: chartsInstance.app.opts.genome!,
-			callback: async term => {
+			callback: async geneTw => {
 				waitDiv.text('LOADING ...')
+				await fillTermWrapper(geneTw, chartsInstance.app.vocabApi)
 				launchPlot({
 					tw1: dictTw,
-					tw2: await getGeneTw(term, dtsnvindel, chartsInstance.app.vocabApi), // hardcodes dtsnvindel for this chart
+					tw2: geneTw,
 					chartsInstance,
 					holder
 				})
 			}
 		})
+		searchDiv.style('padding', '0px 0px 5px 0px')
 	}
 
 	{
@@ -92,21 +93,6 @@ export async function makeChartBtnMenu(holder, chartsInstance) {
 	}
 }
 
-/*
-formulate gene variant tw from gene search
-function is reused for other similar plots
-*/
-export async function getGeneTw(term, dt, vocabApi) {
-	const tw: any = { term, q: { type: 'predefined-groupset' } }
-	await fillTermWrapper(tw, vocabApi)
-	if (!tw.term.groupsetting?.lst?.length) throw 'term.groupsetting.lst[] is empty'
-	if (!Number.isInteger(dt)) throw 'invalid dt'
-	// get index of groupset corresponding to dt
-	const i = tw.term.groupsetting.lst.findIndex(groupset => groupset.dt == dt)
-	if (i == -1) throw 'dt not found in groupsets'
-	tw.q.predefined_groupset_idx = i
-	return tw
-}
 /*
 reused helper to:
 1. dispatch to launch plot

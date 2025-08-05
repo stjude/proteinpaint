@@ -1,8 +1,7 @@
 import { table2col } from '#dom'
-import { dtsnvindel } from '#shared/common.js'
 import { termsettingInit, fillTermWrapper } from '#termsetting'
 import { SearchHandler as geneSearch } from '../termdb/handlers/geneVariant.ts'
-import { getGeneTw, launchPlot } from './summarizeMutationDiagnosis'
+import { launchPlot } from './summarizeMutationDiagnosis'
 
 /*
 duplicates code from summarizeMutationDiagnosis, with minute changes
@@ -34,16 +33,18 @@ export async function makeChartBtnMenu(holder, chartsInstance) {
 			holder: searchDiv,
 			genomeObj: chartsInstance.app.opts.genome!,
 			app: chartsInstance.app, // required to supply "opts.app.vocabApi" for the search ui
-			callback: async term => {
+			callback: async geneTw => {
 				waitDiv.text('LOADING ...')
+				await fillTermWrapper(geneTw, chartsInstance.app.vocabApi)
 				launchPlot({
 					tw1: dictTw,
-					tw2: await getGeneTw(term, dtsnvindel, chartsInstance.app.vocabApi), // hardcodes dtsnvindel for this chart
+					tw2: geneTw,
 					chartsInstance,
 					holder
 				})
 			}
 		})
+		searchDiv.style('padding', '0px 0px 5px 0px')
 	}
 
 	{

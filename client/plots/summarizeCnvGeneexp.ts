@@ -2,7 +2,8 @@ import { table2col, addGeneSearchbox, make_one_checkbox, Menu } from '#dom'
 import { dtcnv } from '#shared/common.js'
 import { SearchHandler as geneSearch } from '../termdb/handlers/geneVariant.ts'
 import { select } from 'd3-selection'
-import { getGeneTw, launchPlot } from './summarizeMutationDiagnosis'
+import { launchPlot } from './summarizeMutationDiagnosis'
+import { fillTermWrapper } from '#termsetting'
 
 /*
 same design as summarizeMutationDiagnosis.ts
@@ -81,10 +82,11 @@ export async function makeChartBtnMenu(holder, chartsInstance) {
 			holder: searchDiv,
 			genomeObj: chartsInstance.app.opts.genome!,
 			app: chartsInstance.app, // required to supply "opts.app.vocabApi" for the search ui
-			callback: async term => {
+			callback: async tw => {
 				waitDiv.text('LOADING ...')
 				try {
-					cnvTw = await getGeneTw(term, dtcnv, chartsInstance.app.vocabApi)
+					await fillTermWrapper(tw, chartsInstance.app.vocabApi)
+					cnvTw = tw
 					waitDiv.text('')
 					await updateUi()
 				} catch (e: any) {
@@ -106,11 +108,15 @@ export async function makeChartBtnMenu(holder, chartsInstance) {
 	async function updateUi() {
 		if (cnvGeneSameAsExp) {
 			if (expTw) {
-				cnvTw = await getGeneTw(
-					{ gene: expTw.term.gene, type: 'geneVariant', name: expTw.term.gene, kind: 'gene' },
-					dtcnv,
-					chartsInstance.app.vocabApi
-				)
+				cnvTw = {
+					term: { gene: expTw.term.gene, type: 'geneVariant', kind: 'gene' },
+					q: { type: 'predefined-groupset' }
+				}
+				await fillTermWrapper(cnvTw, chartsInstance.app.vocabApi)
+				// get index of groupset corresponding to dtcnv
+				const i = cnvTw.term.groupsetting.lst.findIndex(groupset => groupset.dt == dtcnv)
+				if (i == -1) throw 'dtcnv not found in groupsets'
+				cnvTw.q.predefined_groupset_idx = i
 			}
 		}
 		cnvTableRow.style('display', cnvGeneSameAsExp ? 'none' : '')
