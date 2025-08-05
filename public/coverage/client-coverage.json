@@ -2017,74 +2017,74 @@
   },
   "plots/runchart/runchart.ts": {
     "lines": {
-      "total": 91,
-      "covered": 57,
+      "total": 58,
+      "covered": 10,
       "skipped": 0,
-      "pct": 62.63
+      "pct": 17.24
     },
     "functions": {
-      "total": 16,
-      "covered": 7,
+      "total": 9,
+      "covered": 2,
       "skipped": 0,
-      "pct": 43.75
+      "pct": 22.22
     },
     "statements": {
-      "total": 104,
-      "covered": 62,
+      "total": 66,
+      "covered": 10,
       "skipped": 0,
-      "pct": 59.61
+      "pct": 15.15
     },
     "branches": {
-      "total": 31,
-      "covered": 15,
+      "total": 24,
+      "covered": 0,
       "skipped": 0,
-      "pct": 48.38
+      "pct": 0
     },
     "lowestPct": {
-      "curr": 43.75,
-      "prev": 6.45,
-      "diff": 37.3
+      "curr": 0,
+      "prev": 43.75,
+      "diff": -43.75
     },
     "averagePct": {
-      "curr": 53.5925,
-      "prev": 15.055,
-      "diff": 38.5375
+      "curr": 13.652499999999998,
+      "prev": 53.5925,
+      "diff": -39.940000000000005
     }
   },
   "plots/runchart/view/runchartView.ts": {
     "lines": {
-      "total": 34,
-      "covered": 25,
-      "skipped": 0,
-      "pct": 73.52
-    },
-    "functions": {
-      "total": 7,
-      "covered": 4,
-      "skipped": 0,
-      "pct": 57.14
-    },
-    "statements": {
-      "total": 35,
-      "covered": 25,
-      "skipped": 0,
-      "pct": 71.42
-    },
-    "branches": {
-      "total": 12,
+      "total": 21,
       "covered": 6,
       "skipped": 0,
-      "pct": 50
+      "pct": 28.57
+    },
+    "functions": {
+      "total": 4,
+      "covered": 1,
+      "skipped": 0,
+      "pct": 25
+    },
+    "statements": {
+      "total": 21,
+      "covered": 6,
+      "skipped": 0,
+      "pct": 28.57
+    },
+    "branches": {
+      "total": 6,
+      "covered": 0,
+      "skipped": 0,
+      "pct": 0
     },
     "lowestPct": {
-      "curr": 50,
+      "curr": 0,
       "prev": 50,
-      "diff": 0
+      "diff": -50
     },
     "averagePct": {
-      "curr": 63.019999999999996,
-      "prev": 60.39,
-      "diff": 2.6299999999999955
+      "curr": 20.535,
+      "prev": 63.019999999999996,
+      "diff": -42.485
     }
   },
   "plots/runchart/model/runchartModel.ts": {
@@ -2413,10 +2413,10 @@
   },
   "plots/scatter/view/scatterView.ts": {
     "lines": {
-      "total": 82,
-      "covered": 19,
+      "total": 84,
+      "covered": 21,
       "skipped": 0,
-      "pct": 23.17
+      "pct": 25
     },
     "functions": {
       "total": 12,
@@ -2425,10 +2425,10 @@
       "pct": 25
     },
     "statements": {
-      "total": 89,
-      "covered": 19,
+      "total": 91,
+      "covered": 21,
       "skipped": 0,
-      "pct": 21.34
+      "pct": 23.07
     },
     "branches": {
       "total": 50,
@@ -2438,13 +2438,13 @@
     },
     "lowestPct": {
       "curr": 8,
-      "prev": 6.25,
-      "diff": 1.75
+      "prev": 8,
+      "diff": 0
     },
     "averagePct": {
-      "curr": 19.3775,
-      "prev": 16.815,
-      "diff": 2.5625
+      "curr": 20.2675,
+      "prev": 19.3775,
+      "diff": 0.889999999999997
     }
   },
   "mass/groups.js": {
@@ -3457,10 +3457,10 @@
   },
   "plots/frequencyChart/frequencyChart.ts": {
     "lines": {
-      "total": 42,
-      "covered": 40,
+      "total": 40,
+      "covered": 37,
       "skipped": 0,
-      "pct": 95.23
+      "pct": 92.5
     },
     "functions": {
       "total": 5,
@@ -3469,26 +3469,26 @@
       "pct": 100
     },
     "statements": {
-      "total": 50,
-      "covered": 42,
+      "total": 47,
+      "covered": 39,
       "skipped": 0,
-      "pct": 84
+      "pct": 82.97
     },
     "branches": {
-      "total": 16,
-      "covered": 10,
+      "total": 18,
+      "covered": 13,
       "skipped": 0,
-      "pct": 62.5
+      "pct": 72.22
     },
     "lowestPct": {
-      "curr": 62.5,
-      "prev": 0,
-      "diff": 62.5
+      "curr": 72.22,
+      "prev": 62.5,
+      "diff": 9.719999999999999
     },
     "averagePct": {
-      "curr": 85.4325,
-      "prev": 0,
-      "diff": 85.4325
+      "curr": 86.92250000000001,
+      "prev": 85.4325,
+      "diff": 1.490000000000009
     }
   },
   "plots/frequencyChart/model/frequencyChartModel.ts": {
@@ -3565,10 +3565,10 @@
   },
   "plots/frequencyChart/view/frequencyChartView.ts": {
     "lines": {
-      "total": 21,
-      "covered": 18,
+      "total": 20,
+      "covered": 17,
       "skipped": 0,
-      "pct": 85.71
+      "pct": 85
     },
     "functions": {
       "total": 4,
@@ -3577,10 +3577,10 @@
       "pct": 75
     },
     "statements": {
-      "total": 21,
-      "covered": 18,
+      "total": 20,
+      "covered": 17,
       "skipped": 0,
-      "pct": 85.71
+      "pct": 85
     },
     "branches": {
       "total": 6,
@@ -3590,13 +3590,13 @@
     },
     "lowestPct": {
       "curr": 50,
-      "prev": 0,
-      "diff": 50
+      "prev": 50,
+      "diff": 0
     },
     "averagePct": {
-      "curr": 74.10499999999999,
-      "prev": 0,
-      "diff": 74.10499999999999
+      "curr": 73.75,
+      "prev": 74.10499999999999,
+      "diff": -0.35499999999998977
     }
   },
   "termsetting/handlers/geneVariant.ts": {
