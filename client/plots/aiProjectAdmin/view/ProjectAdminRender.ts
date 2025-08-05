@@ -76,7 +76,7 @@ export class ProjectAdminRender {
 				text: 'Edit',
 				callback: (e, i) => {
 					//TODO: open wsisamples plot
-					this.interactions.editProject()
+					// this.interactions.editProject()
 					console.log('TODO', e, i)
 				}
 			},
