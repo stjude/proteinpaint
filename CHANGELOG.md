@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.138.2
 
 Fixes:
 - clear the plot or summary error div on each component update
