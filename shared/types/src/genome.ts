@@ -116,13 +116,6 @@ export type MinGenome = {
 	majorchr: string
 }
 
-type RawDatasetsEntry = {
-	name: string
-	jsfile: string
-	skip?: boolean
-	/* */
-}
-
 export type Genome = MinGenome & {
 	termdbs?: TermDbs
 	proteindomain?: DbStatement
@@ -133,13 +126,4 @@ export type Genome = MinGenome & {
 	geneset?: GeneSet[]
 	hicdomain?: HicDomain
 	minorchr?: string
-	/* 
-		The genome js file may edit the serverconfig.genomes[*].datasets[] array
-		based on environment, process variables, etc., for example to edit an
-		entry or append another dataset entry in a test environment
-
-		This function must work at runtime when a genome is loaded by initGenomesDs
-		during server validation or startup.
-	 */
-	mayEditRawDatasetsArray?: (datasets: RawDatasetsEntry[]) => void
 }

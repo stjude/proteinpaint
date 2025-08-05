@@ -21,7 +21,7 @@ const defaultApiMethods = {
 	// these open-acces, default methods may be replaced by maySetAuthRoutes()
 	getDsAuth: (req = undefined) => [],
 	getNonsensitiveInfo: _ => {
-		forbiddenRoutes: []
+		return { forbiddenRoutes: [] }
 	},
 	userCanAccess: () => true,
 	getRequiredCredForDsEmbedder: (dslabel = undefined, embedder = undefined) => undefined,
@@ -29,7 +29,7 @@ const defaultApiMethods = {
 	getHealth: () => undefined,
 	// credentialed embedders, using an array which can be frozen with Object.freeze(), unlike a Set()
 	credEmbedders: [],
-	mayAdjustFilter: (q, ds, term) => {}
+	mayAdjustFilter: (_, __, ___) => {}
 }
 
 // these may be overriden within maySetAuthRoutes()
