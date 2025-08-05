@@ -1,8 +1,13 @@
 import { renderTable } from '#dom'
 import { select } from 'd3-selection'
-import type { Div } from '../types/d3'
+import type { Elem } from '../types/d3'
 
-export default class InvalidDataUI {
+export type InvalidDataInfo = {
+	entries: { dataType: string; reason: string }[]
+	errorMsg?: string
+}
+
+export class InvalidDataUI {
 	static defaults = {
 		backgroundColor: '#f8f9fa',
 		borderColor: '#dee2e6',
@@ -13,8 +18,11 @@ export default class InvalidDataUI {
 		margin: '12px'
 	}
 
-	static render(container: Div, invalidInfo: { count: number; entries: { dataType: string; reason: string }[] }) {
-		const expandableContainer = container.append('div').style('margin-top', InvalidDataUI.defaults.margin)
+	static render(container: Elem, invalidInfo: InvalidDataInfo) {
+		const expandableContainer = container
+			.append('div')
+			.style('margin-top', InvalidDataUI.defaults.margin)
+			.attr('id', 'sjpp-invalid-data-ui')
 
 		const expandableHeader = expandableContainer
 			.append('div')
@@ -47,7 +55,7 @@ export default class InvalidDataUI {
 			.style('text-decoration', 'underline')
 			.style('font-size', `${InvalidDataUI.defaults.fontSize + 1}px`)
 			.style('font-weight', '500')
-			.text(`View ${invalidInfo.count} invalid entries`)
+			.text(`View ${invalidInfo.entries.length} invalid entries`)
 
 		const expandableContent = expandableContainer
 			.append('div')
@@ -97,7 +105,7 @@ export default class InvalidDataUI {
 			.style('font-size', `${InvalidDataUI.defaults.fontSize}px`)
 			.style('color', '#495057')
 			.style('line-height', '1.4')
-			.text('Entries listed above were skipped due to invalid or unsupported chromosome information.')
+			.text(invalidInfo.errorMsg || 'Please address the issues above before proceeding.')
 
 		let isExpanded = false
 		expandableHeader.on('click', function () {

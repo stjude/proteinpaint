@@ -290,8 +290,8 @@ export default class DataMapper {
 			lohMaxValue: this.lohMaxValue,
 			lohMinValue: this.lohMinValue,
 			invalidDataInfo: {
-				count: this.invalidEntries.length,
-				entries: this.invalidEntries
+				entries: this.invalidEntries,
+				errorMsg: `Entries listed above were skipped due to invalid or unsupported chromosome information.`
 			}
 		}
 

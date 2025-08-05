@@ -206,7 +206,7 @@ export default class Disco {
 
 			discoRenderer.render(svgDiv, this.viewModel)
 
-			if (this.viewModel.invalidDataInfo && this.viewModel.invalidDataInfo.count > 0) {
+			if (this.viewModel.invalidDataInfo?.entries?.length) {
 				InvalidDataUI.render(this.errorDiv, this.viewModel.invalidDataInfo)
 			}
 		}

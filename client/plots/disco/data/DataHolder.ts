@@ -1,4 +1,5 @@
 import type Data from '#plots/disco/data/Data.ts'
+import type { InvalidDataInfo } from '#dom'
 
 export interface DataHolder {
 	labelData: Array<Data>
@@ -33,10 +34,7 @@ export interface DataHolder {
 	cnvMaxPercentileAbs: number
 
 	lohMaxValue?: number
-        lohMinValue?: number
+	lohMinValue?: number
 
-        invalidDataInfo?: {
-                count: number
-                entries: { dataType: string; reason: string }[]
-        }
+	invalidDataInfo?: InvalidDataInfo
 }
