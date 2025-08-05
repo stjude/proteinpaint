@@ -14,8 +14,9 @@ export class SearchHandler {
 		this.term = { type: 'geneVariant' }
 		this.q = { type: 'predefined-groupset' }
 		this.callback = opts.callback
-		this.dom.mutationTypeRadiosDiv = opts.holder.append('div').style('margin-bottom', '15px')
-		this.dom.inputTypeRadiosDiv = opts.holder.append('div').style('margin-bottom', '3px')
+		opts.holder.style('padding', '5px 5px 10px 25px')
+		this.dom.mutationTypeRadiosDiv = opts.holder.append('div').style('margin-bottom', '5px')
+		this.dom.inputTypeRadiosDiv = opts.holder.append('div')
 		this.dom.searchDiv = opts.holder.append('div')
 
 		// create radios for mutation type
@@ -23,8 +24,9 @@ export class SearchHandler {
 		getChildTerms(this.term, this.opts.app.vocabApi)
 		this.dom.mutationTypeRadiosDiv
 			.append('div')
+			.style('display', 'inline-block')
 			.style('font-weight', 'bold')
-			.style('margin-bottom', '2px')
+			.style('margin-right', '2px')
 			.text('Mutation type')
 		// build radios based on child dt terms
 		make_radios({
@@ -42,8 +44,9 @@ export class SearchHandler {
 		// create radios for type of gene input
 		this.dom.inputTypeRadiosDiv
 			.append('div')
+			.style('display', 'inline-block')
 			.style('font-weight', 'bold')
-			.style('margin-bottom', '2px')
+			.style('margin-right', '2px')
 			.text('Input type')
 		make_radios({
 			holder: this.dom.inputTypeRadiosDiv,
@@ -59,13 +62,14 @@ export class SearchHandler {
 
 	searchGene() {
 		this.dom.searchDiv.selectAll('*').remove()
-		this.dom.inputTypeRadiosDiv.style('margin-bottom', '3px')
+		this.dom.searchDiv.style('margin-top', '10px')
 		const geneSearch = addGeneSearchbox({
 			tip: new Menu({ padding: '0px' }),
 			genome: this.opts.genomeObj,
 			row: this.dom.searchDiv,
 			callback: () => this.selectGene(geneSearch)
 		})
+		this.dom.searchDiv.select('.sja_genesearchinput').style('margin', '0px')
 	}
 
 	selectGene(geneSearch) {
@@ -110,13 +114,14 @@ export class SearchHandler {
 
 	searchGeneSet() {
 		this.dom.searchDiv.selectAll('*').remove()
-		this.dom.inputTypeRadiosDiv.style('margin-bottom', '0px')
+		this.dom.searchDiv.style('margin-top', '0px')
 		new GeneSetEditUI({
 			holder: this.dom.searchDiv.append('div'),
 			genome: this.opts.genomeObj,
 			vocabApi: this.opts.app.vocabApi,
 			callback: result => this.selectGeneSet(result)
 		})
+		this.dom.searchDiv.select('.sja_genesetinput').style('padding', '0px')
 	}
 
 	selectGeneSet(result) {
