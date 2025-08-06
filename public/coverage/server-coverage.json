@@ -37,58 +37,58 @@
   },
   "src/auth.js": {
     "lines": {
-      "total": 382,
-      "covered": 375,
+      "total": 434,
+      "covered": 430,
       "skipped": 0,
-      "pct": 98.16
+      "pct": 99.07
     },
     "functions": {
-      "total": 33,
-      "covered": 25,
+      "total": 39,
+      "covered": 38,
       "skipped": 0,
-      "pct": 75.75
+      "pct": 97.43
     },
     "statements": {
-      "total": 441,
-      "covered": 431,
+      "total": 504,
+      "covered": 499,
       "skipped": 0,
-      "pct": 97.73
+      "pct": 99
     },
     "branches": {
-      "total": 336,
-      "covered": 228,
+      "total": 395,
+      "covered": 269,
       "skipped": 0,
-      "pct": 67.85
+      "pct": 68.1
     },
     "lowestPct": {
-      "curr": 67.85,
+      "curr": 68.1,
       "prev": 68.67,
-      "diff": -0.8200000000000074
+      "diff": -0.5700000000000074
     },
     "averagePct": {
-      "curr": 84.8725,
+      "curr": 90.9,
       "prev": 89.1575,
-      "diff": -4.284999999999997
+      "diff": 1.7425000000000068
     }
   },
   "src/test/auth.unit.spec.js": {
     "lines": {
-      "total": 264,
-      "covered": 240,
+      "total": 294,
+      "covered": 271,
       "skipped": 0,
-      "pct": 90.9
+      "pct": 92.17
     },
     "functions": {
-      "total": 73,
-      "covered": 51,
+      "total": 78,
+      "covered": 56,
       "skipped": 0,
-      "pct": 69.86
+      "pct": 71.79
     },
     "statements": {
-      "total": 273,
-      "covered": 245,
+      "total": 303,
+      "covered": 276,
       "skipped": 0,
-      "pct": 89.74
+      "pct": 91.08
     },
     "branches": {
       "total": 24,
@@ -102,9 +102,9 @@
       "diff": 0
     },
     "averagePct": {
-      "curr": 74.0825,
+      "curr": 75.2175,
       "prev": 74.915,
-      "diff": -0.8325000000000102
+      "diff": 0.3024999999999949
     }
   },
   "src/CacheManager.ts": {
