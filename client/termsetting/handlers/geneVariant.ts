@@ -465,10 +465,14 @@ function clearGroupset(self) {
 }
 
 // function to get child dt terms
-export function getChildTerms(term, vocabApi: VocabApi) {
+// filterClasses is a boolean for whether to filter mutation classes
+// filtering requires a getCategories() request, which can be expensive,
+// so will use this boolean to toggle the request
+export async function getChildTerms(term, vocabApi: VocabApi, filterClasses = true) {
 	if (!vocabApi.termdbConfig?.queries) throw 'termdbConfig.queries is missing'
 	const termdbmclass = vocabApi.termdbConfig.mclass // custom mclass labels from dataset
-	term.childTerms = [] // dt terms in dataset
+	// fill child terms with dt terms present in dataset
+	term.childTerms = []
 	for (const _t of dtTerms) {
 		const t = structuredClone(_t)
 		if (!Object.keys(vocabApi.termdbConfig.queries).includes(t.query)) continue // dt is not in dataset
@@ -488,32 +492,32 @@ export function getChildTerms(term, vocabApi: VocabApi) {
 		}
 		term.childTerms.push(t)
 	}
-}
-
-// function to update child dt terms based on gene query
-export async function updateChildTerms(term, vocabApi: VocabApi, body: any = {}) {
-	if (!term.childTerms?.length) throw 'term.childTerms[] is empty'
-	const filter = vocabApi.state?.termfilter?.filter
-	const filter0 = vocabApi.state?.termfilter?.filter0
-	if (filter0) {
-		// TODO: currently adding filter0 to body{}, but should
-		// refactor the input of getCategories() to be a single opts{}
-		// object, which can include .term, .filter, .filter0, and
-		// any other properties
-		body.filter0 = filter0
-	}
-	// passing term to getCategories() will get categories across all genes in gene set
-	const categories = await vocabApi.getCategories(term, filter, body)
-	for (const t of term.childTerms) {
-		const data = categories.lst.find(x => x.dt == t.dt)
-		if (!data) continue
-		const byOrigin = vocabApi.termdbConfig.assayAvailability?.byDt[t.dt]?.byOrigin
-		const classes = byOrigin ? data.classes.byOrigin[t.origin] : data.classes
-		// filter for only those mutation classes that are in the dataset
-		const values = Object.fromEntries(Object.entries(t.values).filter(([k, _v]) => Object.keys(classes).includes(k)))
-		t.values = values
-		t.parentTerm = structuredClone(term)
-		delete t.parentTerm.childTerms // remove any nested child terms
-		delete t.parentTerm.groupsetting // remove nested term groupsetting
+	if (filterClasses) {
+		// filter mutation classes of dt terms for those present in data
+		if (!term.childTerms?.length) throw 'term.childTerms[] is empty'
+		const filter = vocabApi.state?.termfilter?.filter
+		const filter0 = vocabApi.state?.termfilter?.filter0
+		const body: any = {}
+		if (filter0) {
+			// TODO: currently adding filter0 to body{}, but should
+			// refactor the input of getCategories() to be a single opts{}
+			// object, which can include .term, .filter, .filter0, and
+			// any other properties
+			body.filter0 = filter0
+		}
+		// passing term to getCategories() will get categories across all genes in gene set
+		const categories = await vocabApi.getCategories(term, filter, body)
+		for (const t of term.childTerms) {
+			const data = categories.lst.find(x => x.dt == t.dt)
+			if (!data) continue
+			const byOrigin = vocabApi.termdbConfig.assayAvailability?.byDt[t.dt]?.byOrigin
+			const classes = byOrigin ? data.classes.byOrigin[t.origin] : data.classes
+			// filter for only those mutation classes that are in the dataset
+			const values = Object.fromEntries(Object.entries(t.values).filter(([k, _v]) => Object.keys(classes).includes(k)))
+			t.values = values
+			t.parentTerm = structuredClone(term)
+			delete t.parentTerm.childTerms // remove any nested child terms
+			delete t.parentTerm.groupsetting // remove nested term groupsetting
+		}
 	}
 }

@@ -336,11 +336,24 @@ export class TermTypeSearch {
 					selectedTerms: [...this.state.selectedTerms, term]
 				}
 			})
-		} else
+		} else {
 			this.app.dispatch({
 				type: 'submenu_set',
-				submenu: { term, type: 'tvs' }
+				submenu: {
+					type: 'tvs',
+					term: term.term?.type == 'geneVariant' ? this.getDtTerm(term) : term
+				}
 			})
+		}
+	}
+
+	// get child dt term from geneVariant term to use for tvs
+	getDtTerm(tw) {
+		if (tw.term.type != 'geneVariant') throw 'term.type is not geneVariant'
+		if (tw.q.type != 'predefined-groupset') throw 'q.type must be predefined-groupset'
+		const dtTerm = tw.term.childTerms[tw.q.predefined_groupset_idx]
+		if (!dtTerm) throw 'dtTerm not found'
+		return dtTerm
 	}
 }
 
