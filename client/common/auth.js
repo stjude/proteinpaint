@@ -50,11 +50,14 @@ export function mayAddJwtToRequest(init, body, url) {
 	}
 	if (!dslabel || !jwtByDsRoute[dslabel]) return
 	const h = url.split('//')
-	// TODO: use a more reliable way to detect the url path without host or params, hash
-	const route = (h[1] || h[0])
-		.split('/')
-		.find(p => p != '')
-		.split('?')[0]
+	const postProtocolStr = h[1] || h[0] // handle a url such as '://something.abc'
+	const preQuestionMarkStr = postProtocolStr.split('?')[0]
+	const pathSegments = preQuestionMarkStr.split('/')
+	let route = pathSegments.find(p => p != '' && !p.includes(':') && !p.includes('.'))
+	// TODO: should not have to do this hardcoded mapping, ideally routes that are
+	//       protected together will share the same initial path segment
+	if (route.startsWith('profile') || route == 'filterTermValues') route = 'termdb'
+
 	const jwt = jwtByDsRoute[dslabel][route] || jwtByDsRoute[dslabel]['/**']
 	if (jwt) init.headers.authorization = 'Bearer ' + btoa(jwt)
 }
