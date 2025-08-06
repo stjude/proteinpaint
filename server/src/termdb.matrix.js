@@ -430,6 +430,10 @@ async function getSampleData_dictionaryTerms(q, termWrappers, onlyChildren = fal
 		// ds is not using sqlite db but has v2s method
 		return await getSampleData_dictionaryTerms_v2s(q, termWrappers)
 	}
+	if (q.ds.cohort.termdb.q?.getAdHocTermValues) {
+		//ds is not using sqlite db but has getAdHocTermValues method
+		return await q.ds.cohort.termdb.q?.getAdHocTermValues(q, termWrappers)
+	}
 	throw 'unknown method for dictionary terms'
 }
 

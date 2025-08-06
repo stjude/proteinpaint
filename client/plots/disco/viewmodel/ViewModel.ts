@@ -7,6 +7,7 @@ import { select } from 'd3-selection'
 import { getMaxLabelWidth } from '#dom/maxLabelWidth'
 import type Fusion from '#plots/disco/fusion/Fusion.ts'
 import type { DataHolder } from '#plots/disco/data/DataHolder.ts'
+import type { InvalidDataInfo } from '#dom'
 
 export default class ViewModel {
 	width: number
@@ -27,8 +28,8 @@ export default class ViewModel {
 	cnvMinValue?: number
 	cappedCnvMaxAbsValue?: number
 	negativePercentile?: number
-    positivePercentile?: number
-    invalidDataInfo?: { count: number; entries: { dataType: string; reason: string }[] }
+	positivePercentile?: number
+	invalidDataInfo?: InvalidDataInfo
 
 	constructor(
 		settings: Settings,
@@ -38,8 +39,8 @@ export default class ViewModel {
 		dataHolder: DataHolder,
 		genesetName: string,
 		// TODO do we need this?
-        snvDataLengthAll: number,
-        ) {
+		snvDataLengthAll: number
+	) {
 		this.settings = settings
 		this.rings = rings
 		this.legend = legend
@@ -76,9 +77,9 @@ export default class ViewModel {
 		this.cnvMinValue = dataHolder.cnvLossMaxValue
 		this.cappedCnvMaxAbsValue = dataHolder.cappedCnvMaxAbsValue
 		this.negativePercentile = dataHolder.percentileNegative
-                this.positivePercentile = dataHolder.percentilePositive
-                this.invalidDataInfo = dataHolder.invalidDataInfo
-        }
+		this.positivePercentile = dataHolder.percentilePositive
+		this.invalidDataInfo = dataHolder.invalidDataInfo
+	}
 
 	getElements(ringType: RingType): Array<Arc> {
 		switch (ringType) {

@@ -2,6 +2,7 @@
     "ribbonMessage": "We're excited to announce our new whole slide imaging viewer!",
     "ppcalls": [
         {
+            "label": "Whole Slide Imaging",
             "runargs": {
                 "mass": {
                     "state": {
@@ -14,6 +15,29 @@
                             {
                                 "chartType": "WSISamplesPlot",
                                 "subfolder": "wsisamples",
+                                "extension": "ts"
+                            }
+                        ]
+                    }
+                }
+            }
+        },
+        {
+            "//comment": "This is for testing only. HIDE in production. Remove when no longer needed.",
+            "hidden": true,
+            "label": "AI Histo tool",
+            "runargs": {
+                "mass": {
+                    "state": {
+                        "dslabel": "AIAHistoLabeler",
+                        "genome": "hg38",
+                        "nav": {
+                            "header_mode": "hidden"
+                        },
+                        "plots": [
+                            {
+                                "chartType": "AIProjectAdmin",
+                                "subfolder": "aiProjectAdmin",
                                 "extension": "ts"
                             }
                         ]

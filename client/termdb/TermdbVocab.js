@@ -62,8 +62,8 @@ export class TermdbVocab extends Vocab {
 		if (data.error) throw data.error
 		for (const term of data.lst) {
 			if (term.type == 'integer' || term.type == 'float') {
-				if (term.bins.rounding) term.bins.default.rounding = term.bins.rounding
-				if (term.bins.label_offset && !term.bins.default.label_offset)
+				if (term.bins?.rounding) term.bins.default.rounding = term.bins.rounding
+				if (term.bins?.label_offset && !term.bins?.default?.label_offset)
 					term.bins.default.label_offset = term.bins.label_offset
 			}
 		}
@@ -1396,6 +1396,15 @@ export class TermdbVocab extends Vocab {
 		// the full term object may be sql-queried on the server side,
 		// no need to include the full body in the request payload
 		if (tw.term.id && (!tw.term.type || isDictionaryType(tw.term.type))) tw.term = { id: tw.term.id }
+	}
+
+	async buildAdHocDictionary() {
+		const body = {
+			dslabel: this.vocab.dslabel,
+			genome: this.vocab.genome,
+			for: 'buildAdHocDictionary'
+		}
+		return await dofetch3('termdb', { method: 'GET', body })
 	}
 }
 

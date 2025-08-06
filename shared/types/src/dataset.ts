@@ -148,6 +148,19 @@ type GdcApi = {
 	gdcapi?: boolean
 }
 
+type AiApi = {
+	/** Represents the configuration for accessing the AI API.
+	 * For now only AI Histo is supported.
+	 */
+	aiApi?: boolean
+	source?: {
+		/** Data source for building the termdb on the fly */
+		file: string
+		/** Column header for sample ids or names */
+		sampleKey: string
+	}
+}
+
 type SnvIndelFormat = {
 	[index: string]: {
 		/* has value for a non-GT field indicating the variant 
@@ -1001,6 +1014,7 @@ export type DZImages = {
 image file to sample mapping is stored in wsimages table
 */
 export type WSImages = {
+	db?: { file: string }
 	// type of the image, e.g. H&E
 	type: string
 
@@ -1468,7 +1482,8 @@ keep this setting here for reason of:
 
 	//GDC
 	termid2totalsize2?: GdcApi
-	dictionary?: GdcApi
+	/** Do not use a union here. */
+	dictionary?: GdcApi & AiApi
 	allowCaseDetails?: AllowCaseDetails
 	isGeneSetTermdb?: boolean
 	/** Searches the genedb alias list to return the genecode ID */

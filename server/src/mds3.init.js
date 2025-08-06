@@ -46,8 +46,9 @@ import { validate_query_rnaseqGeneCount } from '#routes/termdb.DE.ts'
 import { validate_query_getSampleWSImages } from '#routes/samplewsimages.ts'
 import { validate_query_getWSISamples } from '#routes/wsisamples.ts'
 import { mds3InitNonblocking } from './mds3.init.nonblocking.js'
-import { mayLog } from './helpers'
+// import { mayLog } from './helpers'
 import { dtTermTypes } from '#shared/terms.js'
+import { makeAdHocDicTermdbQueries } from './buildAdHocDictionary.ts'
 
 /*
 init
@@ -162,6 +163,7 @@ export async function init(ds, genome, totalDsLst = 0) {
 		await validate_query_getSampleImages(ds, genome)
 		await validate_query_getSampleWSImages(ds, genome)
 		await validate_query_getWSISamples(ds, genome)
+		await makeAdHocDicTermdbQueries(ds)
 		await validate_query_rnaseqGeneCount(ds, genome)
 		await validate_query_singleSampleMutation(ds, genome)
 		await validate_query_singleSampleGenomeQuantification(ds, genome)
@@ -264,7 +266,6 @@ export async function validate_termdb(ds) {
 		ds.cohort.termdb = ds.termdb
 		delete ds.termdb
 	}
-
 	if (!ds.cohort) return // this dataset is not equipped with termdb
 
 	const tdb = ds.cohort.termdb
@@ -865,7 +866,7 @@ export async function snvindelByRangeGetter_bcfMaf(ds, genome) {
 	const q = ds.queries.snvindel.byrange
 	/* q{}
 	._tk={}
-        	.file= absolute path to bcf file
+			.file= absolute path to bcf file
 		.maffile= absolute path to maf file
 		.dir=str
 		.nochr=true
