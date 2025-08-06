@@ -7,11 +7,6 @@ import { select } from 'd3-selection'
 a UI to list open-access maf files from current cohort
 let user selects some, for the backend to generate an aggregated maf file and download to user
 
-filter0=str
-	optional, stringified json obj as the cohort filter from gdc ATF
-	simply pass to backend to include in api queries
-callbacks{ postRender() }
-
 obj {} TODO convert to class and declare properties
 
 */
@@ -170,7 +165,7 @@ const mafColumns = [
 	{ column: 'callers', selected: true }
 ]
 
-export async function gdcMAFui({ holder, filter0, callbacks, debugmode = false }) {
+export async function gdcMAFui({ filter0, callbacks, debugmode = false }, holder) {
 	try {
 		if (callbacks) {
 			/* due to src/app.js line 100

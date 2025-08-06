@@ -2287,7 +2287,7 @@ const datatypeOptions = [
  * @param config - Configuration object containing holder, filters, and callbacks
  * @returns Public API object with update method
  */
-export async function gdcGRIN2ui({ holder, filter0, callbacks, debugmode = false }) {
+export async function gdcGRIN2ui({ filter0, callbacks, debugmode = false }, holder) {
 	if (debugmode) {
 		// Debug logic
 	}

@@ -113,16 +113,11 @@ inputValue=str
 Returns:
 	a public API object with callback
 */
-export async function bamsliceui({
-	genomes,
+export async function bamsliceui(
+	{ filter0, hideTokenInput = false, callbacks = {}, stream2download = false, inputValue, debugmode = false },
 	holder,
-	filter0,
-	hideTokenInput = false,
-	callbacks = {},
-	stream2download = false,
-	inputValue,
-	debugmode = false
-}) {
+	genomes
+) {
 	if (callbacks.postRender && typeof callbacks.postRender != 'function') throw 'callbacks.postRender is not function'
 
 	// public api obj to be returned
