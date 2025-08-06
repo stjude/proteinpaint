@@ -73,10 +73,10 @@
   },
   "filter/filter.utils.js": {
     "lines": {
-      "total": 117,
-      "covered": 101,
+      "total": 120,
+      "covered": 104,
       "skipped": 0,
-      "pct": 86.32
+      "pct": 86.66
     },
     "functions": {
       "total": 14,
@@ -85,26 +85,26 @@
       "pct": 85.71
     },
     "statements": {
-      "total": 150,
-      "covered": 116,
+      "total": 155,
+      "covered": 119,
       "skipped": 0,
-      "pct": 77.33
+      "pct": 76.77
     },
     "branches": {
-      "total": 120,
-      "covered": 89,
+      "total": 126,
+      "covered": 92,
       "skipped": 0,
-      "pct": 74.16
+      "pct": 73.01
     },
     "lowestPct": {
-      "curr": 74.16,
+      "curr": 73.01,
       "prev": 76.27,
-      "diff": -2.1099999999999994
+      "diff": -3.259999999999991
     },
     "averagePct": {
-      "curr": 80.88,
+      "curr": 80.5375,
       "prev": 84.60249999999999,
-      "diff": -3.7224999999999966
+      "diff": -4.064999999999998
     }
   },
   "filter/test/filter.integration.spec.js": {
