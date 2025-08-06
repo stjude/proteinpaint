@@ -431,7 +431,7 @@ export class TermdbVocab extends Vocab {
 			genome: this.vocab.genome,
 			dslabel: this.vocab.dslabel,
 			getsamplecount: 1,
-			filter: typeof filterJSON == 'string' ? filterJSON : getNormalRoot(filterJSON)
+			filter: getNormalRoot(filterJSON)
 		}
 		const data = await dofetch3('termdb', { body }, this.opts.fetchOpts)
 		if (!data) throw `missing data`

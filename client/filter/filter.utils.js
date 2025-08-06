@@ -55,7 +55,9 @@ export function getFilterItemByTag(item, tag) {
 */
 export function getNormalRoot(rawFilter) {
 	if (!rawFilter) return getWrappedTvslst([])
-	const filter = JSON.parse(JSON.stringify(rawFilter))
+	// create a copy, as needed, to not modify the original
+	const encoded = typeof rawFilter == 'string' ? rawFilter : JSON.stringify(rawFilter)
+	const filter = JSON.parse(encoded)
 	const processedFilter = normalizeFilter(filter)
 	return processedFilter.type == 'tvslst' ? processedFilter : getWrappedTvslst([processedFilter])
 }
@@ -72,9 +74,11 @@ export function getNormalRoot(rawFilter) {
 	.filter{} the raw filter root or a subnested filter
 */
 function normalizeFilter(filter) {
+	if (typeof filter != 'object') throw `filter must be an object`
 	delete filter.$id
 	delete filter.tag
-	if (filter.type != 'tvslst') return filter
+	if (filter.tyoe == 'tvs') return filter
+	if (filter.type != 'tvslst') throw `filter.type must be either 'tvslst' or 'tvs'`
 
 	const lst = filter.lst
 		// keep non-tvslst entries or tvslst with non-empty lst.length
