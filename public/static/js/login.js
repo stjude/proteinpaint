@@ -29,15 +29,15 @@ function getJwtByDsRoute() {
 	return JSON.parse(jwtByDsRouteStr)
 }
 
-async function login(dataset) {
-	const jwt = await getJwt(dataset)
+async function login(dataset, role = 'public') {
+	const jwt = await getJwt(dataset, role)
 	if (!jwt) return
 	return jwt
 }
 
-async function getJwt(dataset) {
+async function getJwt(dataset, role) {
 	const params = getParams()
-	if (!params.role) params.role = 'public'
+	if (!params.role) params.role = role
 
 	// The fakeTokens allows simulating valid, signed jwt by dataset and role.
 	// It assumes there is only one protected route entry for serverconfig.features.fakeTokens[<dslabel>],
