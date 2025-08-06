@@ -33,9 +33,9 @@ function getHolder() {
 	return holder
 }
 
-function initializeSearchHandler(opts) {
+async function initializeSearchHandler(opts) {
 	const callback = opts.callback || (() => {})
-	handler.init({
+	await handler.init({
 		holder: opts.holder,
 		app: { vocabApi },
 		genomeObj: hg38,
@@ -52,9 +52,9 @@ tape('\n', function (test) {
 	test.end()
 })
 
-tape('Search handler layout', test => {
+tape('Search handler layout', async test => {
 	const holder = getHolder()
-	initializeSearchHandler({ holder })
+	await initializeSearchHandler({ holder })
 	const mutationTypeRadiosDiv = holder.select('#mutationTypeRadiosDiv')
 	test.ok(
 		mutationTypeRadiosDiv.selectAll('input[type="radio"]').size() > 0,
@@ -73,7 +73,7 @@ tape('Single gene input', async test => {
 		tw = _tw
 	}
 	const holder = getHolder()
-	initializeSearchHandler({ holder, callback })
+	await initializeSearchHandler({ holder, callback })
 	const geneSearchInput: any = holder.select('#geneSearchDiv').select('input[type="text"]').node()
 	// gene name input
 	geneSearchInput.value = 'TP53'
@@ -97,7 +97,7 @@ tape('Change mutation type', async test => {
 		tw = _tw
 	}
 	const holder = getHolder()
-	initializeSearchHandler({ holder, callback })
+	await initializeSearchHandler({ holder, callback })
 	const mutationTypeRadiosDiv = holder.select('#mutationTypeRadiosDiv')
 	const mutationTypeRadios = mutationTypeRadiosDiv.selectAll('input[type="radio"]')
 	const thirdRadio: any = mutationTypeRadios.nodes()[2]
@@ -115,7 +115,7 @@ tape('Gene set input', async test => {
 		tw = _tw
 	}
 	const holder = getHolder()
-	initializeSearchHandler({ holder, callback })
+	await initializeSearchHandler({ holder, callback })
 	const inputTypeRadiosDiv = holder.select('#inputTypeRadiosDiv')
 	const inputTypeRadios = inputTypeRadiosDiv.selectAll('input[type="radio"]')
 	const secondRadio: any = inputTypeRadios.nodes()[1]

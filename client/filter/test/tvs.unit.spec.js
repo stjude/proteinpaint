@@ -299,12 +299,10 @@ tape('numeric tvs', async test => {
 
 tape('geneVariant tvs', async test => {
 	try {
-		// gene variant tvs
-		const { pill, filter, item, term } = await getPillFilterItem('geneVariant')
-		await testTvs(test, pill, filter, item, term)
-		// dt tvs
-		for (const dtTerm of term.childTerms) {
-			const { pill, filter, item, term } = await getPillFilterItem(dtTerm.type)
+		// geneVariant tvs is actually tvs of a child dt term
+		// test tvs for each child dt term
+		for (const dtTermType of dtTermTypes) {
+			const { pill, filter, item, term } = await getPillFilterItem(dtTermType)
 			await testTvs(test, pill, filter, item, term)
 		}
 		// dt cnv tvs - continuous cnv data

@@ -26,15 +26,14 @@ export async function makeChartBtnMenu(holder, chartsInstance) {
 	{
 		const [td1, td2] = table.addRow()
 		td1.text('Search Gene or Region')
-		const searchDiv = td2.append('div'),
-			waitDiv = td2.append('div').style('font-size', '.7em').text('Hit ENTER to launch plot.')
+		const searchDiv = td2.append('div')
 		const geneSearchInst = new geneSearch() // FIXME allow searching chr17:7666658-7688275
 		geneSearchInst.init({
 			holder: searchDiv,
 			genomeObj: chartsInstance.app.opts.genome!,
 			app: chartsInstance.app, // required to supply "opts.app.vocabApi" for the search ui
+			msg: 'Hit ENTER to launch plot.',
 			callback: async geneTw => {
-				waitDiv.text('LOADING ...')
 				await fillTermWrapper(geneTw, chartsInstance.app.vocabApi)
 				launchPlot({
 					tw1: dictTw,

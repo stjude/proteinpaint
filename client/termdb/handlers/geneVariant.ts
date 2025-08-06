@@ -8,7 +8,7 @@ export class SearchHandler {
 	q: any // tw.q
 	callback: any
 
-	init(opts) {
+	async init(opts) {
 		this.opts = opts
 		this.dom = {}
 		this.term = { type: 'geneVariant' }
@@ -21,10 +21,16 @@ export class SearchHandler {
 			.style('margin-bottom', '5px')
 		this.dom.inputTypeRadiosDiv = opts.holder.append('div').attr('id', 'inputTypeRadiosDiv')
 		this.dom.searchDiv = opts.holder.append('div').attr('id', 'geneSearchDiv')
+		this.dom.msgDiv = opts.holder
+			.append('div')
+			.style('display', 'none')
+			.style('font-size', '.7em')
+			.style('margin-top', '5px')
+		if (opts.msg) this.dom.msgDiv.style('display', 'block').text(opts.msg)
 
 		// create radios for mutation type
 		// get child dt terms
-		getChildTerms(this.term, this.opts.app.vocabApi)
+		await getChildTerms(this.term, this.opts.app.vocabApi, false)
 		this.dom.mutationTypeRadiosDiv
 			.append('div')
 			.style('display', 'inline-block')
@@ -70,12 +76,12 @@ export class SearchHandler {
 			tip: new Menu({ padding: '0px' }),
 			genome: this.opts.genomeObj,
 			row: this.dom.searchDiv,
-			callback: () => this.selectGene(geneSearch)
+			callback: async () => await this.selectGene(geneSearch)
 		})
 		this.dom.searchDiv.select('.sja_genesearchinput').style('margin', '0px')
 	}
 
-	selectGene(geneSearch) {
+	async selectGene(geneSearch) {
 		if (geneSearch.geneSymbol) {
 			const name = geneSearch.geneSymbol
 			Object.assign(this.term, {
@@ -112,7 +118,7 @@ export class SearchHandler {
 		} else {
 			throw 'no gene or position specified'
 		}
-		this.callback({ term: this.term, q: this.q })
+		await this.runCallback()
 	}
 
 	searchGeneSet() {
@@ -122,12 +128,12 @@ export class SearchHandler {
 			holder: this.dom.searchDiv.append('div'),
 			genome: this.opts.genomeObj,
 			vocabApi: this.opts.app.vocabApi,
-			callback: result => this.selectGeneSet(result)
+			callback: async result => await this.selectGeneSet(result)
 		})
 		this.dom.searchDiv.select('.sja_genesetinput').style('padding', '0px')
 	}
 
-	selectGeneSet(result) {
+	async selectGeneSet(result) {
 		const genes = result.geneList.map(v => {
 			if (!v.gene) throw 'gene name not found'
 			const name = v.gene
@@ -145,6 +151,15 @@ export class SearchHandler {
 			genes,
 			type: 'geneVariant'
 		})
+		await this.runCallback()
+	}
+
+	async runCallback() {
+		this.dom.msgDiv.style('display', 'block').text('LOADING ...')
+		// get child dt terms again now that a gene/geneset has
+		// been selected, mutation classes will be filtered
+		// for those present in the data for that gene/geneset
+		await getChildTerms(this.term, this.opts.app.vocabApi)
 		this.callback({ term: this.term, q: this.q })
 	}
 }
