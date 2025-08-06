@@ -161,7 +161,10 @@ if (serverconfig.debugmode && !serverconfig.binpath.includes('sjcrh/')) {
 	// since the serverconfig.binpath prefix may
 	// have been applied to locate optional routeSetter files
 	serverconfig.routeSetters = routeSetters
+}
 
+if (serverconfig.debugmode) {
+	// should be able to run this in local dev and test environments that use containers
 	const hg38test = serverconfig.genomes.find(g => g.name == 'hg38-test')
 	// this internal function must be trusted to only modify test-related serverconfig entries
 	if (hg38test?.datasets) mayUpdateTestDatasets(hg38test.datasets, serverconfig)
