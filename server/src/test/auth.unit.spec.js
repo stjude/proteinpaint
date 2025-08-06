@@ -343,14 +343,14 @@ tape(`auth methods`, async test => {
 	)
 	test.deepEqual(
 		authApi.getNonsensitiveInfo(req1),
-		{ forbiddenRoutes: ['burden'], clientAuthResult: undefined },
+		{ forbiddenRoutes: ['burden'], clientAuthResult: {} },
 		`should return the expected forbidden routes for a wildcard embedder with cred.type='forbidden'`
 	)
 
 	const req2 = { query: { embedder: 'notlocalhost', dslabel: 'ds100' }, get: () => 'localhost' }
 	test.deepEqual(
 		authApi.getNonsensitiveInfo(req2),
-		{ forbiddenRoutes: [], clientAuthResult: undefined },
+		{ forbiddenRoutes: [], clientAuthResult: {} },
 		`should return the expected forbidden routes for a non-wildcard embedder`
 	)
 	test.deepEqual(
