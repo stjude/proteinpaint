@@ -104,24 +104,6 @@ export function setAppMiddlewares(app, genomes, doneLoading) {
 
 		// log the request before adding protected info
 		log(req)
-
-		/*
-        !!! put this code after logging the request, so these protected info are not logged !!!
-				
-        __protected__{} are key-values that are added by the server to the request.query payload,
-        to easily pass authentication-related or sensitive information to downstream route handler code 
-        without having to sequentially pass those information as argument to every nested function calls.
-
-        in gdc environment: 
-        - this will pass sessionid from cookie to req.query, to be added to request header where it's querying gdc api
-          by doing this, route code is worry-free and no need to pass "req{}" to gdc purpose-specific code doing the API calls
-        
-        for non-gdc datasets:
-        - these *protected* contents may contain information as extracted from the jwt (authApi.getNonsensitiveInfo()) 
-          and as determined by a server route code that the dataset can use to compute per-user access restrictions/authorizations 
-          when querying data
-        */
-
 		next()
 	})
 

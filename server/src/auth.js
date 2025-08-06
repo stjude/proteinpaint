@@ -278,6 +278,8 @@ async function maySetAuthRoutes(app, genomes, basepath = '', _serverconfig = nul
 	app.use((req, res, next) => {
 		req.query.__protected__ = {
 			ignoredTermIds: [], // when provided the filter on these terms will be ignored
+			// NOTE: sessionid is from a domain-based cookie for GDC,
+			//       for SJ sites, the cookie key is determined by dsCredentials entry
 			sessionid: req.cookies.sessionid // may be undefined
 		}
 
@@ -401,6 +403,8 @@ async function maySetAuthRoutes(app, genomes, basepath = '', _serverconfig = nul
 		__protected__{} are key-values that are added by the server to the request.query payload,
 	  to easily pass authentication-related or sensitive information to downstream route handler code 
 	  without having to sequentially pass those information as argument to every nested function calls.
+	  For example, a route hander's `req` argument is frequently not passed, and therefore not accessible, 
+	  when authApi methods that needs it are called.
 
 	  in gdc environment: 
 	  - this will pass sessionid from cookie to req.query, to be added to request header where it's querying gdc api
@@ -425,6 +429,9 @@ async function maySetAuthRoutes(app, genomes, basepath = '', _serverconfig = nul
 				// later, any server route or downstream code may call authApi.mayAdjustFilter() again to
 				// loosen the additional filter, to consider fewer tvs terms based on route-specific payloads or aggregation logic
 				authApi.mayAdjustFilter(req.query, ds)
+
+				// this flag may be used by downstream code that does not have access to req argument or ds object
+				__protected__.userCanAccessDs = authApi.userCanAccess(req, ds)
 			}
 		}
 		Object.freeze(__protected__)

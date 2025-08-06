@@ -1017,10 +1017,10 @@ function hasValues(term) {
 function check4MinSampleSize(data, ds, q) {
 	// handle the option to require a minimum sample size for data
 	if (!ds.cohort.termdb.hasMinSampleSize) return
-	// error message
+	// error message in case of failed check
 	const message = `One or more terms has less than the required minimum sample size with data.`
 	// quick check
-	if (!ds.cohort.termdb.hasMinSampleSize(Object.keys(data.samples).length, q.__protected__))
+	if (!ds.cohort.termdb.hasMinSampleSize(Object.keys(data.samples).length, q))
 		throw { message, code: 'ERR_MIN_SAMPLE_SIZE' }
 	// more detailed check
 	const sampleSizeByTermId = new Map()
