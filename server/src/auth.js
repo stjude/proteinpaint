@@ -625,8 +625,8 @@ async function maySetAuthRoutes(app, genomes, basepath = '', _serverconfig = nul
 			}
 		}
 		const id = getSessionId(req, cred, sessions)
-		const activeSession = sessions[req.query.dslabel]?.[id]
-		return { forbiddenRoutes, clientAuthResult: activeSession?.clientAuthResult }
+		const activeSession = id && sessions[req.query.dslabel]?.[id]
+		return { forbiddenRoutes, clientAuthResult: activeSession?.clientAuthResult || {} }
 	}
 
 	authApi.getRequiredCredForDsEmbedder = function (dslabel, embedder) {
