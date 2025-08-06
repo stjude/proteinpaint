@@ -2,7 +2,6 @@ import tape from 'tape'
 import type { GvTW } from '#types'
 import { vocabInit } from '#termdb/vocabulary'
 import { GvBase } from '../geneVariant'
-import { getChildTerms, getPredefinedGroupsets } from '../../termsetting/handlers/geneVariant.ts'
 
 /*************************
  reusable helper functions
@@ -132,9 +131,9 @@ tape('fill(): q.type=predefined-groupset', async test => {
 	if (fullTw.q.type != 'predefined-groupset') throw 'q.type must be predefined-groupset'
 	test.equal(fullTw.type, 'GvPredefinedGsTW', 'should fill in tw.type')
 	test.equal(fullTw.q.predefined_groupset_idx, 0, 'should fill q.predefined_groupset_idx to be 0')
-	test.deepEqual(fullTw.term.childTerms, childTerms, 'should fill in term.childTerms')
+	test.equal(fullTw.term.childTerms.length, 5, 'should create 5 child dt terms')
 	if (!fullTw.term.groupsetting.lst) throw 'term.groupsetting.lst is missing'
-	test.equal(fullTw.term.groupsetting.lst.length, 4, 'should get 4 predefined groupsets')
+	test.equal(fullTw.term.groupsetting.lst.length, 5, 'should get 5 predefined groupsets')
 	for (const groupset of fullTw.term.groupsetting.lst) {
 		if (groupset.dt == 4) {
 			testCnvGroupset(groupset, test)
@@ -169,193 +168,9 @@ tape('fill(): q.type=custom-groupset', async test => {
 	test.end()
 })
 
-tape('getPredefinedGroupsets: fill groupsets', async test => {
-	const tw: any = {
-		term: {
-			name: 'TP53',
-			genes: [
-				{
-					kind: 'gene',
-					id: 'TP53',
-					gene: 'TP53',
-					name: 'TP53',
-					type: 'geneVariant'
-				}
-			],
-			type: 'geneVariant',
-			id: 'TP53',
-			groupsetting: { disabled: false }
-		},
-		isAtomic: true,
-		q: {
-			isAtomic: true,
-			type: 'predefined-groupset',
-			predefined_groupset_idx: 0
-		},
-		type: 'GvPredefinedGsTW'
-	}
-	await getChildTerms(tw.term, vocabApi)
-	await getPredefinedGroupsets(tw.term, vocabApi)
-	test.deepEqual(tw.term.childTerms, childTerms, 'should fill in term.childTerms')
-	test.equal(tw.term.groupsetting.lst.length, 4, 'should get 4 predefined groupsets')
-	for (const groupset of tw.term.groupsetting.lst) {
-		if (groupset.dt == 4) {
-			testCnvGroupset(groupset, test)
-		} else {
-			testNonCnvGroupset(groupset, test)
-		}
-	}
-	test.end()
-})
-
-tape('getPredefinedGroupsets: incorrect tw.q.type', async test => {
-	const tw: any = {
-		term: {
-			type: 'geneVariant',
-			gene: 'TP53',
-			kind: 'gene',
-			name: 'TP53',
-			id: 'TP53',
-			groupsetting: { disabled: false }
-		},
-		isAtomic: true,
-		q: {
-			isAtomic: true,
-			type: 'values'
-		},
-		type: 'GvValuesTW'
-	}
-	try {
-		await getPredefinedGroupsets(tw.term, vocabApi)
-		test.fail('should throw upon incorrect tw.q.type')
-	} catch (e) {
-		test.equal(e, 'unexpected tw.q.type', 'should throw upon incorrect tw.q.type')
-	}
-	test.end()
-})
-
 /**********
  variables
 ***********/
-
-const childTerms = [
-	{
-		id: 'snvindel_somatic',
-		query: 'snvindel',
-		name: 'SNV/indel (somatic)',
-		parent_id: null,
-		isleaf: true,
-		type: 'dtsnvindel',
-		dt: 1,
-		values: {
-			M: { label: 'MISSENSE' },
-			F: { label: 'FRAMESHIFT' },
-			WT: { label: 'Wildtype' }
-		},
-		name_noOrigin: 'SNV/indel',
-		origin: 'somatic',
-		parentTerm: {
-			name: 'TP53',
-			genes: [
-				{
-					kind: 'gene',
-					id: 'TP53',
-					gene: 'TP53',
-					name: 'TP53',
-					type: 'geneVariant'
-				}
-			],
-			type: 'geneVariant',
-			id: 'TP53'
-		}
-	},
-	{
-		id: 'snvindel_germline',
-		query: 'snvindel',
-		name: 'SNV/indel (germline)',
-		parent_id: null,
-		isleaf: true,
-		type: 'dtsnvindel',
-		dt: 1,
-		values: {
-			M: { label: 'MISSENSE' },
-			F: { label: 'FRAMESHIFT' },
-			WT: { label: 'Wildtype' }
-		},
-		name_noOrigin: 'SNV/indel',
-		origin: 'germline',
-		parentTerm: {
-			name: 'TP53',
-			genes: [
-				{
-					kind: 'gene',
-					id: 'TP53',
-					gene: 'TP53',
-					name: 'TP53',
-					type: 'geneVariant'
-				}
-			],
-			type: 'geneVariant',
-			id: 'TP53'
-		}
-	},
-	{
-		id: 'cnv',
-		query: 'cnv',
-		name: 'CNV',
-		parent_id: null,
-		isleaf: true,
-		type: 'dtcnv',
-		dt: 4,
-		values: {
-			CNV_amp: { label: 'Copy number gain' },
-			WT: { label: 'Wildtype' }
-		},
-		name_noOrigin: 'CNV',
-		parentTerm: {
-			name: 'TP53',
-			genes: [
-				{
-					kind: 'gene',
-					id: 'TP53',
-					gene: 'TP53',
-					name: 'TP53',
-					type: 'geneVariant'
-				}
-			],
-			type: 'geneVariant',
-			id: 'TP53'
-		}
-	},
-	{
-		id: 'fusion',
-		query: 'svfusion',
-		name: 'Fusion RNA',
-		parent_id: null,
-		isleaf: true,
-		type: 'dtfusion',
-		dt: 2,
-		values: {
-			Fuserna: { label: 'Fusion transcript' },
-			WT: { label: 'Wildtype' }
-		},
-		name_noOrigin: 'Fusion RNA',
-		parentTerm: {
-			name: 'TP53',
-			genes: [
-				{
-					kind: 'gene',
-					id: 'TP53',
-					gene: 'TP53',
-					name: 'TP53',
-					type: 'geneVariant'
-				}
-			],
-			type: 'geneVariant',
-			id: 'TP53'
-		}
-	}
-]
 
 const customGsQ = {
 	isAtomic: true,

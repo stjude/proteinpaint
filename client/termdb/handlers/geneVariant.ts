@@ -15,9 +15,12 @@ export class SearchHandler {
 		this.q = { type: 'predefined-groupset' }
 		this.callback = opts.callback
 		opts.holder.style('padding', '5px 5px 10px 25px')
-		this.dom.mutationTypeRadiosDiv = opts.holder.append('div').style('margin-bottom', '5px')
-		this.dom.inputTypeRadiosDiv = opts.holder.append('div')
-		this.dom.searchDiv = opts.holder.append('div')
+		this.dom.mutationTypeRadiosDiv = opts.holder
+			.append('div')
+			.attr('id', 'mutationTypeRadiosDiv')
+			.style('margin-bottom', '5px')
+		this.dom.inputTypeRadiosDiv = opts.holder.append('div').attr('id', 'inputTypeRadiosDiv')
+		this.dom.searchDiv = opts.holder.append('div').attr('id', 'geneSearchDiv')
 
 		// create radios for mutation type
 		// get child dt terms
