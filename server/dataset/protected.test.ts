@@ -1,5 +1,8 @@
 import type { Mds3 } from '#types'
-import termdbTestInit from './termdb.test.ts'
+// on using .js instead of .ts extension when importing termdb.test:
+// - in local dev, `tsx` will automatically find and use the correct file
+// - in container-based CI, the installed @sjrch/proteinpaint-server/dataset has js files only
+import termdbTestInit from './termdb.test.js'
 
 // export a function to allow reuse of this dataset without causing conflicts
 // for the different use cases in runtime/tests
