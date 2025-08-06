@@ -18,6 +18,7 @@ import * as parseurl from './app.parseurl'
 import { init_mdsjson } from './app.mdsjson'
 import urlmap from '#common/urlmap'
 import { Menu, renderSandboxFormDiv, sayerror } from '#dom'
+import { mayLaunchGdcPlotFromRunpp } from '../gdc/launch.ts'
 
 /*
 exports a function runproteinpaint(), referred to as "runpp"
@@ -602,31 +603,6 @@ async function parseEmbedThenUrl(arg, app) {
 		return await launchWsiViewer(arg, app)
 	}
 
-	if (arg.geneSearch4GDCmds3) {
-		/* can generalize by changing to geneSearch4tk:{tkobj}
-		so it's no longer hardcoded for one dataset of one track type
-		*/
-		return await launchGeneSearch4GDCmds3(arg, app)
-	}
-	if (arg.launchGdcMatrix) {
-		return await launchGdcMatrix(arg, app)
-	}
-	if (arg.launchGdcHierCluster) {
-		return await launchGdcHierCluster(arg, app)
-	}
-	if (arg.launchGdcMaf) {
-		return await launchGdcMaf(arg, app)
-	}
-	if (arg.launchGdcGrin2) {
-		return await launchGdcGrin2(arg, app)
-	}
-	if (arg.launchGdcScRNAseq) {
-		return await launchGdcScRNAseq(arg, app)
-	}
-	if (arg.launchGdcCorrelation) {
-		return await launchGdcCorrelation(arg, app)
-	}
-
 	if (arg.parseurl && location.search.length) {
 		/*
 		since jwt token is only passed from arg of runpp()
@@ -664,8 +640,9 @@ async function parseEmbedThenUrl(arg, app) {
 		launchmaftimeline(arg, app)
 	}
 
-	if (arg.gdcbamslice) {
-		return await launchgdcbamslice(arg, app)
+	{
+		const _ = await mayLaunchGdcPlotFromRunpp(arg, app)
+		if (_) return _
 	}
 
 	if (arg.mass) {
@@ -1226,68 +1203,6 @@ async function launchSelectGenomeWithTklst(arg, app) {
 	const _ = await import('./selectGenomeWithTklst')
 	await _.init(arg, app.holder0, app.genomes)
 }
-
-///////////////// gdc launchers ///////////////
-async function launchGeneSearch4GDCmds3(arg, app) {
-	const _ = await import('../gdc/lollipop.js')
-	return await _.init(arg, app.holder0, app.genomes)
-}
-async function launchGdcMatrix(arg, app) {
-	const _ = await import('../gdc/oncomatrix.js')
-	return await _.init(arg, app.holder0, app.genomes)
-}
-async function launchGdcHierCluster(arg, app) {
-	const _ = await import('../gdc/geneExpClustering.js')
-	return await _.init(arg, app.holder0, app.genomes)
-}
-async function launchGdcScRNAseq(arg, app) {
-	const _ = await import('../gdc/singlecell.ts')
-	return await _.init(arg, app.holder0, app.genomes)
-}
-async function launchGdcMaf(arg, app) {
-	const _ = await import('../gdc/maf.js')
-	return await _.gdcMAFui({
-		holder: app.holder0,
-		filter0: arg.filter0,
-		callbacks: arg.callbacks || {},
-		debugmode: arg.debugmode
-	})
-}
-async function launchGdcGrin2(arg, app) {
-	const _ = await import('../gdc/grin2.ts')
-	return await _.gdcGRIN2ui({
-		holder: app.holder0,
-		filter0: arg.filter0,
-		callbacks: arg.callbacks || {},
-		debugmode: arg.debugmode
-	})
-}
-async function launchGdcCorrelation(arg, app) {
-	const _ = await import('../gdc/correlation.ts')
-	const p = {
-		debugmode: arg.debugmode,
-		filter0: arg.filter0
-	}
-	if (arg.opts) p.opts = arg.opts
-	return await _.init(p, app.holder0, app.genomes)
-}
-function launchgdcbamslice(arg, app) {
-	return import('../gdc/bam.js').then(p => {
-		return p.bamsliceui({
-			genomes: app.genomes,
-			holder: app.holder0,
-			hideTokenInput: arg.gdcbamslice.hideTokenInput, // set to true in gdc react wrapper
-			callbacks: arg.gdcbamslice.callbacks || {}, // for testing
-			// react wrapper can supply this optional filter as bam ui is required to only search cases within a cohort user created in Analysis Tools Framework(ATF)
-			filter0: arg.filter0,
-			// react wrapper can set this to true and run it in "download mode", will not visualize file
-			stream2download: arg.gdcbamslice.stream2download,
-			// for testing
-			inputValue: arg.gdcbamslice.inputValue
-		})
-	})
-}
-///////////////// end of gdc launchers ///////////////
 
 function launchmavb(arg, app) {
 	if (arg.mavolcanoplot.uionly) {

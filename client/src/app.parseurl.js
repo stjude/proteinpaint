@@ -7,8 +7,9 @@ import { getSavedToken } from '#common/dofetch'
 import urlmap from '#common/urlmap'
 import { first_genetrack_tolist } from '#common/1stGenetk'
 import { corsMessage } from '#common/embedder-helpers'
-import { sayerror } from '../dom/sayerror'
+import { sayerror } from '#dom'
 import { copyMerge } from '#rx'
+import { mayLaunchGdcPlotFromUrlparam } from '../gdc/launch.ts'
 /*
 ********************** EXPORTED
 parse()
@@ -88,51 +89,7 @@ upon error, throw err message as a string
 		return
 	}
 
-	if (urlp.has('gdcbamslice')) {
-		// for local testing, not used in gdc portal
-		const _ = await import('../gdc/bam.js')
-		_.bamsliceui({
-			genomes: arg.genomes,
-			holder: arg.holder,
-			debugmode: arg.debugmode,
-			stream2download: urlp.has('stream2download') // for testing only, launch the app in "download mode", will not visualize
-		})
-		return
-	}
-
-	if (urlp.has('gdcmaf')) {
-		// for local testing, not used in gdc portal
-		const _ = await import('../gdc/maf.js')
-		const p = {
-			holder: arg.holder,
-			debugmode: arg.debugmode
-		}
-		if (urlp.has('filter0')) p.filter0 = urlp.get('filter0')
-		_.gdcMAFui(p)
-		return
-	}
-
-	if (urlp.has('gdcgrin2')) {
-		// for local testing, not used in gdc portal
-		const _ = await import('../gdc/grin2.ts')
-		const p = {
-			holder: arg.holder,
-			debugmode: arg.debugmode
-		}
-		if (urlp.has('filter0')) p.filter0 = urlp.get('filter0')
-		_.gdcGRIN2ui(p)
-		return
-	}
-	if (urlp.has('gdccorrelation')) {
-		// for local testing, not used in gdc portal
-		const _ = await import('../gdc/correlation.ts')
-		const p = {
-			debugmode: arg.debugmode
-		}
-		if (urlp.has('filter0')) p.filter0 = urlp.get('filter0')
-		_.init(p, arg.holder, arg.genomes)
-		return
-	}
+	if (await mayLaunchGdcPlotFromUrlparam(urlp, arg)) return // gdc plot launched
 
 	if (urlp.has('termdb')) {
 		const value = urlp.get('termdb')
