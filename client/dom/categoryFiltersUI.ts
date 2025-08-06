@@ -17,7 +17,7 @@ export class CategoryFiltersUI {
 		for (const tw of this.plot.config.filterTWs) {
 			this.holder.append('label').text(` ${tw.term.name}: `).style('vertical-align', 'top')
 			let timeoutId
-			const select = this.holder.append('select').property('multiple', true).attr('size', '5')
+			const select = this.holder.append('select').property('multiple', true).style('vertical-align', 'top')
 
 			select.on('change', async () => {
 				clearTimeout(timeoutId)
@@ -51,7 +51,9 @@ export class CategoryFiltersUI {
 			})
 			const select = this.filterSelects[index]
 			select.selectAll('option').remove()
+			const size = data[tw.term.id].length - 1 // -1 to remove the empty value
 
+			select.attr('size', size > 5 ? 5 : size) //show max 5 options at a time
 			for (const value of data[tw.term.id]) {
 				if (value.label == '') continue //skip empty labels
 				const option = select.append('option').attr('value', value.value).text(value.label)
