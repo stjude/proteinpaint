@@ -1112,7 +1112,8 @@ tape(`req.query.filter, __protected__`, async test => {
 			{
 				ignoredTermIds: [],
 				sessionid: 'xyz',
-				clientAuthResult: {}
+				clientAuthResult: {},
+				userCanAccessDs: false
 			},
 			'should set up req.query.__protected__'
 		)
