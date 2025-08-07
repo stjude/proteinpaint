@@ -1621,10 +1621,10 @@
   },
   "common/auth.js": {
     "lines": {
-      "total": 100,
-      "covered": 78,
+      "total": 99,
+      "covered": 77,
       "skipped": 0,
-      "pct": 78
+      "pct": 77.77
     },
     "functions": {
       "total": 17,
@@ -1633,26 +1633,26 @@
       "pct": 70.58
     },
     "statements": {
-      "total": 120,
-      "covered": 85,
+      "total": 118,
+      "covered": 84,
       "skipped": 0,
-      "pct": 70.83
+      "pct": 71.18
     },
     "branches": {
-      "total": 110,
-      "covered": 67,
+      "total": 106,
+      "covered": 64,
       "skipped": 0,
-      "pct": 60.9
+      "pct": 60.37
     },
     "lowestPct": {
-      "curr": 60.9,
-      "prev": 59.22,
-      "diff": 1.6799999999999997
+      "curr": 60.37,
+      "prev": 60.9,
+      "diff": -0.5300000000000011
     },
     "averagePct": {
-      "curr": 70.07749999999999,
-      "prev": 69.3275,
-      "diff": 0.7499999999999858
+      "curr": 69.975,
+      "prev": 70.07749999999999,
+      "diff": -0.10249999999999204
     }
   },
   "common/test/auth.unit.spec.js": {
