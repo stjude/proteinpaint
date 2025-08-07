@@ -141,7 +141,7 @@ export function setRoutes(app, _genomes, serverconfig) {
 	app.post(basepath + '/mdssurvivalplot', handle_mdssurvivalplot(genomes))
 	app.post(basepath + '/fimo', fimo.handle_closure(genomes))
 	app.all(basepath + '/termdb', termdb.handle_request_closure(genomes))
-	app.all(basepath + '/termdb-barsql', termdbbarsql.handle_request_closure(genomes))
+	app.all(basepath + '/termdb/barsql', termdbbarsql.handle_request_closure(genomes))
 	app.post(basepath + '/singlecell', singlecell.handle_singlecell_closure(genomes))
 	app.post(basepath + '/massSession', massSession.save)
 	app.get(basepath + '/massSession', massSession.get)

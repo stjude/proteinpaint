@@ -9,7 +9,7 @@ It allows to fill the filter dropdowns in the profile plots.
 */
 
 export const api: RouteApi = {
-	endpoint: 'filterTermValues',
+	endpoint: 'termdb/filterTermValues',
 	methods: {
 		get: {
 			...FilterTermValuesPayload,

@@ -8,7 +8,7 @@ Given a set of multivalue score terms, a filter, login site info, etc.,
 It allows to build the profile forms based on the number of people who selected an answer to a question/term for a given site/hospital
 */
 export const api: RouteApi = {
-	endpoint: 'profileFormScores',
+	endpoint: 'termdb/profileFormScores',
 	methods: {
 		get: {
 			...ProfileFormScoresPayload,
