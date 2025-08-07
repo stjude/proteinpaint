@@ -65,15 +65,15 @@ export function dofetch(path, arg, opts = null) {
 
 export function dofetch2(path, init = {}, opts = {}) {
 	/*
-	path "" string URL path
+	path"" string URL path
 
-	init {}
+	init{}
 		will be supplied as the second argument to
 		the native fetch api, so the method, headers, body
 		may be optionally supplied in the "init" argument
 		see https://developer.mozilla.org/en-US/docs/Web/API/WindowOrWorkerGlobalScope/fetch
 
-	opts {}
+	opts{}: all other optional arguments that are not related to the native fetch init argument
 		.serverData{}              an object for caching fetch Promise 
 	*/
 	// path should be "path" but not "/path"
