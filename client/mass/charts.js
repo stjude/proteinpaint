@@ -41,7 +41,7 @@ class MassCharts {
 		this.dom.btns.style('display', d => (this.state.currentCohortChartTypes.includes(d.chartType) ? '' : 'none'))
 	}
 
-	getRegressionBtnLabel(state) {
+	getBtnLabel_regression(state) {
 		/* define button label based conditions:
 		if ds allows multiple regression methods, use generic name, click btn will display menu of options
 		if ds allows just one method, directly show method name on button, click btn will show sandbox
@@ -56,7 +56,7 @@ class MassCharts {
 		// only 1 method
 		return `${ms[0] == 'linear' ? 'Linear' : ms[0] == 'cox' ? 'Cox' : 'Logistic'} Regression`
 	}
-	getSamplescatterBtnLabel(state) {
+	getBtnLabel_sampleScatter(state) {
 		// define button label
 		const lst = getCurrentCohortChartTypes(state)
 		if (state.termdbConfig.scatterplots?.length == 1 && !lst.includes('dynamicScatter')) {
@@ -66,8 +66,16 @@ class MassCharts {
 		// either has >1 premade plots or dynamic scatter. show generic name
 		return 'Sample Scatter'
 	}
-	getReportBtnLabel(state) {
+	getBtnLabel_report(state) {
 		return state.termdbConfig.plotConfigByCohort?.default?.report?.name || 'Report'
+	}
+	getBtnLabel_summarizeMutationTerm(state, phrase) {
+		const t = []
+		if (state.termdbConfig.queries.snvindel) t.push('Mutation')
+		if (state.termdbConfig.queries.cnv) t.push('CNV')
+		if (state.termdbConfig.queries.svfusion) t.push('Fusion')
+		// todo customize Diagnosis
+		return `${t.length > 2 ? 'Alterations' : t.join('/')} vs ${phrase}`
 	}
 }
 
@@ -189,7 +197,7 @@ function getChartTypeList(self, state) {
 			}
 		},
 		{
-			label: self.getReportBtnLabel(state),
+			label: self.getBtnLabel_report(state),
 			chartType: 'report',
 			clickTo: self.plotCreate,
 			config: { chartType: 'report' }
@@ -203,7 +211,7 @@ function getChartTypeList(self, state) {
 			}
 		},
 		{
-			label: self.getSamplescatterBtnLabel(state),
+			label: self.getBtnLabel_sampleScatter(state),
 			chartType: 'sampleScatter',
 			clickTo: self.loadChartSpecificMenu
 		},
@@ -233,7 +241,7 @@ function getChartTypeList(self, state) {
 		},
 
 		{
-			label: self.getRegressionBtnLabel(state),
+			label: self.getBtnLabel_regression(state),
 			chartType: 'regression',
 			clickTo: self.loadChartSpecificMenu
 		},
@@ -337,19 +345,19 @@ function getChartTypeList(self, state) {
 			clickTo: self.showTree_select1term
 		},
 		{
-			label: 'Mutation vs Diagnosis',
+			label: self.getBtnLabel_summarizeMutationTerm(state, 'Diagnosis'),
 			chartType: 'summarizeMutationDiagnosis', // type names of other similar charts should all begin with `summarize` to indcate they are based on summary plot
 			usecase: { target: 'summarizeMutationDiagnosis' },
 			clickTo: self.loadChartSpecificMenu
 		},
 		{
-			label: 'Mutation vs Survival',
+			label: self.getBtnLabel_summarizeMutationTerm(state, 'Survival'),
 			chartType: 'summarizeMutationSurvival',
 			usecase: { target: 'summarizeMutationSurvival' },
 			clickTo: self.loadChartSpecificMenu
 		},
 		{
-			label: 'CNV vs GeneExp',
+			label: 'CNV vs GeneExp', // this is limited to cnv, and could be generalized to include snvindel/fusion
 			chartType: 'summarizeCnvGeneexp',
 			usecase: { target: 'summarizeCnvGeneexp' },
 			clickTo: self.loadChartSpecificMenu

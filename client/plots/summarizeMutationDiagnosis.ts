@@ -31,7 +31,7 @@ export async function makeChartBtnMenu(holder, chartsInstance) {
 
 	{
 		const [td1, td2] = table.addRow()
-		td1.text('Search Gene or Region')
+		td1.text('Mutation Variable')
 		const searchDiv = td2.append('div')
 		const geneSearchInst = new geneSearch() // FIXME allow searching chr17:7666658-7688275
 		geneSearchInst.init({

@@ -6,11 +6,8 @@ launches mass ui, to display:
 2) a dictionary plot on bottom, for user to select a term and launch summary plot
 
 todo
-- customize dictionary plot sandbox header text to 'Select variable for correlation plot'
-- survival plot with gdc survival data
-- more chart buttons for typical usecases, each button will show a tailored input ui
-  1. "compare gene exp", tw1 is gene exp, tw2 is anything
-  2. "compare survival", tw1 is survival, tw2 is anything
+- customize sandbox header text
+- summary plot axis label fixes
 */
 
 interface InitArg {
@@ -80,14 +77,6 @@ export async function init(
 					]
 				})
 			}
-			// TODO: handle other portal-dispatched changes
-			// else if (updateArg.) {
-			// 	// massApi.dispatch({
-			// 	// 	type: 'plot_edit',
-			// 	// 	id: massApi.getState().plots[0].id, // FIXME mass ui can contain multiple plots
-			// 	// 	config: updateArg
-			// 	// })
-			// }
 		}
 	}
 
