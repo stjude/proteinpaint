@@ -1,6 +1,6 @@
 {
   "name": "@sjcrh/proteinpaint-client",
-  "version": "2.138.3-2",
+  "version": "2.138.3-3",
   "description": "a genomics visualization tool for exploring a cohort's genotype and phenotype data",
   "type": "module",
   "main": "dist/app.js",
