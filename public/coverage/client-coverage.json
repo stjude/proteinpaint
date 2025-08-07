@@ -3097,38 +3097,38 @@
   },
   "mass/test/barchart.integration.spec.js": {
     "lines": {
-      "total": 520,
-      "covered": 384,
+      "total": 405,
+      "covered": 405,
       "skipped": 0,
-      "pct": 73.84
+      "pct": 100
     },
     "functions": {
-      "total": 142,
-      "covered": 93,
+      "total": 101,
+      "covered": 98,
       "skipped": 0,
-      "pct": 65.49
+      "pct": 97.02
     },
     "statements": {
-      "total": 545,
-      "covered": 404,
+      "total": 430,
+      "covered": 427,
       "skipped": 0,
-      "pct": 74.12
+      "pct": 99.3
     },
     "branches": {
       "total": 70,
-      "covered": 39,
+      "covered": 41,
       "skipped": 0,
-      "pct": 55.71
+      "pct": 58.57
     },
     "lowestPct": {
-      "curr": 55.71,
+      "curr": 58.57,
       "prev": 57.14,
-      "diff": -1.4299999999999997
+      "diff": 1.4299999999999997
     },
     "averagePct": {
-      "curr": 67.28999999999999,
+      "curr": 88.7225,
       "prev": 67.5975,
-      "diff": -0.30750000000000455
+      "diff": 21.125
     }
   },
   "termdb/vocabulary.js": {
