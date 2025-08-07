@@ -1803,7 +1803,7 @@ tape('minimum sample size', test => {
 		barDiv = barchart.Inner.dom.barDiv
 		errDiv = barchart.Inner.app.Inner.components.plots['diaggrp'].Inner.dom.errdiv
 		testBarCount(0, 'with stricter filter')
-		test.true(errDiv.text().includes('required minimum sample size'), 'should display the expected error message')
+		test.true(errDiv.text().includes('has less than 10 samples'), 'should display the expected error message')
 		test.notEqual(errDiv.style('display'), 'none', 'should have a visible red error div')
 		await triggerClearedError(barchart)
 	}
@@ -1820,6 +1820,7 @@ tape('minimum sample size', test => {
 			filter: {
 				type: 'tvslst',
 				join: '',
+				in: true,
 				lst: [
 					{
 						type: 'tvs',

@@ -1023,7 +1023,7 @@ function checkAccessToSampleData(data, ds, q) {
 	if (!ds.cohort.termdb.checkAccessToSampleData) return
 	// quick check
 	const access = ds.cohort.termdb.checkAccessToSampleData(q, { sampleCount: Object.keys(data.samples).length })
-	if (!access.hasAccess)
+	if (!access.canAccess)
 		throw {
 			message: `One or more terms has less than ${access.minSampleSize} samples with data.`,
 			code: 'ERR_MIN_SAMPLE_SIZE'
@@ -1038,7 +1038,7 @@ function checkAccessToSampleData(data, ds, q) {
 	}
 	const counts = [...sampleSizeByTermId.values()].map(v => v.size) // list of sample counts for each and every term
 	const access1 = ds.cohort.termdb.checkAccessToSampleData(q, { sampleCount: Math.min(...counts) })
-	if (!accessDetailed.hasAccess)
+	if (!access1.canAccess)
 		throw {
 			message: `One or more terms has less than ${access1.minSampleSize} samples with data.`,
 			code: 'ERR_MIN_SAMPLE_SIZE'
