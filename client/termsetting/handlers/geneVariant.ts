@@ -2,7 +2,7 @@ import { getPillNameDefault } from '../termsetting'
 import type { GeneVariantTermSettingInstance, RawGvTerm, VocabApi } from '#types'
 import type { PillData } from '../types'
 import { make_radios, renderTable } from '#dom'
-import { dtTerms, getColors, dtcnv } from '#shared/common.js'
+import { dtTerms, getColors, dtcnv, mclass } from '#shared/common.js'
 import { filterInit, filterPromptInit, getNormalRoot } from '#filter/filter'
 import { rgb } from 'd3-color'
 import { getWrappedTvslst } from '#filter/filter'
@@ -393,13 +393,8 @@ export async function getPredefinedGroupsets(term: RawGvTerm, vocabApi: VocabApi
 				}
 			])
 			const name = `${dtTerm.name_noOrigin} ${dtTerm.origin ? `${label} (${dtTerm.origin})` : label}`
-			groupset.groups.push({ name, type: 'filter', filter })
-		}
-		// set color scale based on number of groups
-		colorScale = getColors(groupset.groups.length)
-		// assign colors to each group
-		for (const group of groupset.groups) {
-			group.color = rgb(colorScale(group.name)).formatHex()
+			const color = mclass[key].color
+			groupset.groups.push({ name, type: 'filter', filter, color })
 		}
 		return groupset
 	}
