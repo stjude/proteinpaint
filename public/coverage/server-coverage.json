@@ -67,8 +67,8 @@
     },
     "averagePct": {
       "curr": 90.9,
-      "prev": 89.1575,
-      "diff": 1.7425000000000068
+      "prev": 90.9,
+      "diff": 0
     }
   },
   "src/test/auth.unit.spec.js": {
