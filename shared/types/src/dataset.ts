@@ -1384,10 +1384,12 @@ export type Termdb = {
 	 * in order to minimize the ease of extracting identifiable information from aggregate data
 	 * in server response
 	 *
-	 * sampleCount:   the number of samples with matching data from one or more queried terms
-	 * q          :   req.query as processed through app middleware (pre-parsed, may have req.body props, __protectec__, etc)
+	 * q            :   req.query as processed through app middleware (pre-parsed, may have req.body props, __protectec__, etc)
+	 * {
+	 *   sampleCount:   the number of samples with matching data from one or more queried terms
+	 * }
 	 */
-	hasMinSampleSize?: (sampleCount: number, q: any) => boolean
+	checkAccessToSampleData?: (q: any, data: { sampleCount: number }) => { minSampleSize: number; canAccess: boolean }
 	/** if true, backend is allowed to send sample names to client in charts */
 	displaySampleIds?: (clientAuthResult: any) => boolean
 	converSampleIds?: boolean
