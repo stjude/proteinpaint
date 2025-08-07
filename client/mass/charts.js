@@ -70,6 +70,7 @@ class MassCharts {
 		return state.termdbConfig.plotConfigByCohort?.default?.report?.name || 'Report'
 	}
 	getBtnLabel_summarizeMutationTerm(state, phrase) {
+		if (!state.termdbConfig.queries) return 'Not supported!' // the function always runs for all ds, thus must detect and guard against it; in such case the btn should not be shown
 		const t = []
 		if (state.termdbConfig.queries.snvindel) t.push('Mutation')
 		if (state.termdbConfig.queries.cnv) t.push('CNV')
