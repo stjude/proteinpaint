@@ -1,6 +1,7 @@
 import fs from 'fs'
 import readline from 'readline'
 import path from 'path'
+import { run_rust } from '@sjcrh/proteinpaint-rust'
 import { spawnSync } from 'child_process'
 import { scaleLinear } from 'd3-scale'
 import { createCanvas } from 'canvas'
@@ -46,7 +47,6 @@ import { validate_query_rnaseqGeneCount } from '#routes/termdb.DE.ts'
 import { validate_query_getSampleWSImages } from '#routes/samplewsimages.ts'
 import { validate_query_getWSISamples } from '#routes/wsisamples.ts'
 import { mds3InitNonblocking } from './mds3.init.nonblocking.js'
-// import { mayLog } from './helpers'
 import { dtTermTypes } from '#shared/terms.js'
 import { makeAdHocDicTermdbQueries } from './buildAdHocDictionary.ts'
 
@@ -157,6 +157,7 @@ export async function init(ds, genome, totalDsLst = 0) {
 		await validate_query_cnv(ds, genome)
 		await validate_query_ld(ds, genome)
 		await validate_query_geneExpression(ds, genome)
+		await validate_query_ssGSEA(ds, genome)
 		await validate_query_metaboliteIntensity(ds, genome)
 		await validate_query_getTopTermsByType(ds, genome)
 		await validate_query_getTopMutatedGenes(ds, genome)
@@ -1603,6 +1604,101 @@ async function validate_query_ld(ds, genome) {
 	if (!q.overlay) throw 'ld.overlay{} missing'
 	if (!q.overlay.color_0) throw 'ld.overlay.color_0 missing'
 	if (!q.overlay.color_1) throw 'ld.overlay.color_1 missing'
+}
+async function validate_query_ssGSEA(ds, genome) {
+	const q = ds.queries.ssGSEA
+	if (!q) return
+	try {
+		if (!q.file) throw '.file missing'
+		q.file = path.join(serverconfig.tpmasterdir, q.file)
+		q.samples = []
+		await utils.file_is_readable(q.file) // Validate that the HDF5 file exists
+
+		const tmp = await run_rust('validateHDF5', JSON.stringify({ hdf5_file: q.file }))
+		const vr = JSON.parse(tmp)
+
+		if (vr.status !== 'success') throw vr.message
+		if (!vr.sampleNames?.length) throw 'HDF5 file has no samples, please check file.'
+		for (const sn of vr.sampleNames) {
+			const si = ds.cohort.termdb.q.sampleName2id(sn)
+			if (si == undefined) throw `unknown sample ${sn} from HDF5 ${q.file}`
+			q.samples.push(si)
+		}
+		console.log(`${ds.label}: ssGSEA HDF5 file validated. Format: ${vr.format}, Samples:`, vr.sampleNames.length)
+	} catch (error) {
+		throw `${ds.label}: Failed to validate ssGSEA HDF5 file: ${error}`
+	}
+
+	// HDF5 validation successful, set up the getter function
+	q.get = async param => {
+		const limitSamples = await mayLimitSamples(param, q.samples, ds)
+		if (limitSamples?.size == 0) {
+			// Got 0 sample after filtering, must still return expected structure with no data
+			return { term2sample2value: new Map(), byTermId: {}, bySampleId: {} }
+		}
+
+		// Set up sample IDs and labels
+		const bySampleId = {}
+		const samples = q.samples || []
+		if (limitSamples) {
+			for (const sid of limitSamples) {
+				bySampleId[sid] = { label: ds.cohort.termdb.q.id2sampleName(sid) }
+			}
+		} else {
+			// Use all samples with exp data
+			for (const sid of samples) {
+				bySampleId[sid] = { label: ds.cohort.termdb.q.id2sampleName(sid) }
+			}
+		}
+
+		// Initialize data structure
+		const term2sample2value = new Map()
+		const byTermId = {}
+
+		const genesetNames = param.terms.map(tw => tw.term.id)
+
+		if (genesetNames.length === 0) {
+			console.log('No genesets to query')
+			return { term2sample2value, byTermId }
+		}
+
+		const time1 = Date.now()
+		const geneData = await run_rust('readHDF5', JSON.stringify({ hdf5_file: q.file, gene: genesetNams }))
+		//mayLog('Time taken to run gene query:', formatElapsedTime(Date.now() - time1))
+
+		// Check if we have a multi-gene response (genes field) or single gene response
+		const genesData = geneData.genes || { [genesetNames[0]]: geneData }
+		// Process each gene's data
+		for (const tw of param.terms) {
+			// Get this gene's data from the batch response
+			const geneResult = genesData[tw.term.id]
+			if (!geneResult) {
+				console.warn(`No data found for geneset ${tw.term.id} in the response`)
+				continue
+			}
+
+			// Extract just the samples data
+			const samplesData = geneResult.samples || {}
+
+			// Convert the gene data to the expected format
+			const s2v = {}
+
+			// Process sample data the same way as before
+			for (const [sampleName, value] of Object.entries(samplesData)) {
+				const sampleId = ds.cohort.termdb.q.sampleName2id(sampleName)
+				if (!sampleId) continue
+				if (limitSamples && limitSamples.has(sampleId)) continue
+				s2v[sampleId] = value
+			}
+
+			if (Object.keys(s2v).length) {
+				term2sample2value.set(tw.term.id, s2v)
+			}
+		}
+		if (term2sample2value.size == 0) throw 'No data available for the input.'
+
+		return { term2sample2value, byTermId, bySampleId }
+	}
 }
 
 export async function validate_query_metaboliteIntensity(ds, genome) {
