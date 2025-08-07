@@ -55,14 +55,14 @@ tape('\n', function (test) {
 tape('Search handler layout', async test => {
 	const holder = getHolder()
 	await initializeSearchHandler({ holder })
-	const mutationTypeRadiosDiv = holder.select('#mutationTypeRadiosDiv')
+	const mutationTypeRadiosDiv = holder.select('[data-testid="sjpp-genevariant-mutationTypeRadios"]')
 	test.ok(
 		mutationTypeRadiosDiv.selectAll('input[type="radio"]').size() > 0,
 		'Mutation type radio buttons should be present'
 	)
-	const inputTypeRadiosDiv = holder.select('#inputTypeRadiosDiv')
+	const inputTypeRadiosDiv = holder.select('[data-testid="sjpp-genevariant-genesetTypeRadios"]')
 	test.ok(inputTypeRadiosDiv.selectAll('input[type="radio"]').size() > 0, 'Input type radio buttons should be present')
-	const searchDiv = holder.select('#geneSearchDiv')
+	const searchDiv = holder.select('[data-testid="sjpp-genevariant-geneSearchDiv"]')
 	test.equal(searchDiv.selectAll('input[type="text"]').size(), 1, 'Gene search input should be present')
 	test.end()
 })
@@ -74,7 +74,10 @@ tape('Single gene input', async test => {
 	}
 	const holder = getHolder()
 	await initializeSearchHandler({ holder, callback })
-	const geneSearchInput: any = holder.select('#geneSearchDiv').select('input[type="text"]').node()
+	const geneSearchInput: any = holder
+		.select('[data-testid="sjpp-genevariant-geneSearchDiv"]')
+		.select('input[type="text"]')
+		.node()
 	// gene name input
 	geneSearchInput.value = 'TP53'
 	geneSearchInput.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', code: 'Enter', bubbles: true }))
@@ -98,11 +101,14 @@ tape('Change mutation type', async test => {
 	}
 	const holder = getHolder()
 	await initializeSearchHandler({ holder, callback })
-	const mutationTypeRadiosDiv = holder.select('#mutationTypeRadiosDiv')
+	const mutationTypeRadiosDiv = holder.select('[data-testid="sjpp-genevariant-mutationTypeRadios"]')
 	const mutationTypeRadios = mutationTypeRadiosDiv.selectAll('input[type="radio"]')
 	const thirdRadio: any = mutationTypeRadios.nodes()[2]
 	thirdRadio.click()
-	const geneSearchInput: any = holder.select('#geneSearchDiv').select('input[type="text"]').node()
+	const geneSearchInput: any = holder
+		.select('[data-testid="sjpp-genevariant-geneSearchDiv"]')
+		.select('input[type="text"]')
+		.node()
 	geneSearchInput.value = 'TP53'
 	geneSearchInput.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', code: 'Enter', bubbles: true }))
 	await sleep(100)
@@ -116,16 +122,19 @@ tape('Gene set input', async test => {
 	}
 	const holder = getHolder()
 	await initializeSearchHandler({ holder, callback })
-	const inputTypeRadiosDiv = holder.select('#inputTypeRadiosDiv')
+	const inputTypeRadiosDiv = holder.select('[data-testid="sjpp-genevariant-genesetTypeRadios"]')
 	const inputTypeRadios = inputTypeRadiosDiv.selectAll('input[type="radio"]')
 	const secondRadio: any = inputTypeRadios.nodes()[1]
 	secondRadio.click()
-	const geneSearchInput: any = holder.select('#geneSearchDiv').select('input[type="text"]').node()
+	const geneSearchInput: any = holder
+		.select('[data-testid="sjpp-genevariant-geneSearchDiv"]')
+		.select('input[type="text"]')
+		.node()
 	geneSearchInput.value = 'TP53'
 	geneSearchInput.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', code: 'Enter', bubbles: true }))
 	geneSearchInput.value = 'KRAS'
 	geneSearchInput.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', code: 'Enter', bubbles: true }))
-	const buttons = holder.select('#geneSearchDiv').selectAll('button').nodes()
+	const buttons = holder.select('[data-testid="sjpp-genevariant-geneSearchDiv"]').selectAll('button').nodes()
 	const submitButton: any = buttons.find((btn: any) => btn.textContent.trim() === 'Submit')
 	await sleep(100) // wait until submit button is enabled
 	submitButton.click()

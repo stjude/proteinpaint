@@ -1,4 +1,4 @@
-import { Menu, make_radios, addGeneSearchbox, GeneSetEditUI } from '#dom'
+import { Menu, make_radios, addGeneSearchbox, GeneSetEditUI, table2col } from '#dom'
 import { getChildTerms } from '../../termsetting/handlers/geneVariant'
 
 export class SearchHandler {
@@ -15,12 +15,8 @@ export class SearchHandler {
 		this.q = { type: 'predefined-groupset' }
 		this.callback = opts.callback
 		opts.holder.style('padding', '5px 5px 10px 25px')
-		this.dom.mutationTypeRadiosDiv = opts.holder
-			.append('div')
-			.attr('id', 'mutationTypeRadiosDiv')
-			.style('margin-bottom', '5px')
-		this.dom.inputTypeRadiosDiv = opts.holder.append('div').attr('id', 'inputTypeRadiosDiv')
-		this.dom.searchDiv = opts.holder.append('div').attr('id', 'geneSearchDiv')
+		this.dom.typeSettingDiv = opts.holder.append('div')
+		this.dom.searchDiv = opts.holder.append('div').attr('data-testid', 'sjpp-genevariant-geneSearchDiv')
 		this.dom.msgDiv = opts.holder
 			.append('div')
 			.style('display', 'none')
@@ -28,44 +24,42 @@ export class SearchHandler {
 			.style('margin-top', '5px')
 		if (opts.msg) this.dom.msgDiv.style('display', 'block').text(opts.msg)
 
-		// create radios for mutation type
 		// get child dt terms
 		await getChildTerms(this.term, this.opts.app.vocabApi, false)
-		this.dom.mutationTypeRadiosDiv
-			.append('div')
-			.style('display', 'inline-block')
-			.style('font-weight', 'bold')
-			.style('margin-right', '2px')
-			.text('Mutation type')
-		// build radios based on child dt terms
-		make_radios({
-			holder: this.dom.mutationTypeRadiosDiv,
-			styles: { display: 'inline-block' },
-			options: this.term.childTerms.map((t, i) => {
-				return { label: t.name, value: i, checked: i === 0 }
-			}),
-			callback: i => {
-				this.q.predefined_groupset_idx = i
-			}
-		})
-		this.q.predefined_groupset_idx = 0
 
-		// create radios for type of gene input
-		this.dom.inputTypeRadiosDiv
-			.append('div')
-			.style('display', 'inline-block')
-			.style('font-weight', 'bold')
-			.style('margin-right', '2px')
-			.text('Input type')
-		make_radios({
-			holder: this.dom.inputTypeRadiosDiv,
-			styles: { display: 'inline-block' },
-			options: [
-				{ label: 'Single Gene', value: 'single', checked: true },
-				{ label: 'Gene Set', value: 'geneset', checked: false }
-			],
-			callback: v => (v == 'single' ? this.searchGene() : this.searchGeneSet())
-		})
+		{
+			const table = table2col({ holder: this.dom.typeSettingDiv, margin: '5px 5px 15px 0px' })
+			// create radios for mutation type
+			{
+				const [td1, td2] = table.addRow()
+				td1.text('Mutation Type')
+				make_radios({
+					holder: td2.attr('data-testid', 'sjpp-genevariant-mutationTypeRadios'),
+					styles: { display: 'inline-block' },
+					options: this.term.childTerms.map((t, i) => {
+						return { label: t.name, value: i, checked: i === 0 }
+					}),
+					callback: i => {
+						this.q.predefined_groupset_idx = i
+					}
+				})
+				this.q.predefined_groupset_idx = 0
+			}
+			// create radios for type of gene input
+			{
+				const [td1, td2] = table.addRow()
+				td1.text('Input Type')
+				make_radios({
+					holder: td2.attr('data-testid', 'sjpp-genevariant-genesetTypeRadios'),
+					styles: { display: 'inline-block' },
+					options: [
+						{ label: 'Single Gene', value: 'single', checked: true },
+						{ label: 'Gene Set', value: 'geneset', checked: false }
+					],
+					callback: v => (v == 'single' ? this.searchGene() : this.searchGeneSet())
+				})
+			}
+		}
 		this.searchGene()
 	}
 
