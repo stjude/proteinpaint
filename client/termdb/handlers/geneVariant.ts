@@ -14,7 +14,7 @@ export class SearchHandler {
 		this.term = { type: 'geneVariant' }
 		this.q = { type: 'predefined-groupset' }
 		this.callback = opts.callback
-		opts.holder.style('padding', '5px 5px 10px 25px')
+		opts.holder.style('padding', '5px 10px 10px 25px')
 		this.dom.typeSettingDiv = opts.holder.append('div')
 		this.dom.searchDiv = opts.holder.append('div').attr('data-testid', 'sjpp-genevariant-geneSearchDiv')
 		this.dom.msgDiv = opts.holder
@@ -28,7 +28,7 @@ export class SearchHandler {
 		await getChildTerms(this.term, this.opts.app.vocabApi, false)
 
 		{
-			const table = table2col({ holder: this.dom.typeSettingDiv, margin: '5px 5px 15px 0px' })
+			const table = table2col({ holder: this.dom.typeSettingDiv, margin: '0px 0px 15px 0px' })
 			// create radios for mutation type
 			{
 				const [td1, td2] = table.addRow()
