@@ -40,7 +40,7 @@ function init({ genomes }) {
 function getProjects(ds: any) {
 	if (!ds.queries?.WSImages?.db) return
 	const db = ds.queries.WSImages.db
-	const sql = 'SELECT project.name as value, id FROM Project'
+	const sql = 'SELECT project.name as value, id FROM project'
 
 	try {
 		db.connection = connect_db(db.file, { readonly: false, fileMustExist: true })
