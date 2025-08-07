@@ -8,7 +8,7 @@ It allows to build the profile plots based on the scores
 */
 
 export const api: RouteApi = {
-	endpoint: 'profileScores',
+	endpoint: 'termdb/profileScores',
 	methods: {
 		get: {
 			...ProfileScoresPayload,

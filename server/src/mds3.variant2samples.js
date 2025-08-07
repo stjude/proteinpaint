@@ -848,7 +848,7 @@ each element:
 }
 
 output:
-barchart data as returned by "termdb-barsql" route
+barchart data as returned by "termdb/barsql" route
 */
 function summary2barchart(input, q) {
 	// only convert first, as barchart query should only result in input[] array length=1

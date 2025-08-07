@@ -126,12 +126,21 @@ export async function getPlotConfig(opts, app) {
 	//if (!opts.colorTW) throw 'sampleScatter getPlotConfig: opts.colorTW{} missing'
 	//if (!opts.name && !(opts.term && opts.term2)) throw 'sampleScatter getPlotConfig: missing coordinates input'
 
+	const authFilter = app.vocabApi?.termdbConfig?.authFilter
+	const settings = getDefaultReportSettings()
+	if (authFilter?.lst?.length) {
+		//The authFilter contains a single tvs with the list of sites the user has access to.
+		//As they are preselected here I fill the settings with the sites to show them as selected in the site filter
+		const siteTvs = authFilter.lst[0].tvs
+		const sites = siteTvs?.values?.map(v => v.key)
+		settings[siteTvs.term.id] = sites //set the site filter to the current site
+	}
 	const plot: any = {
 		settings: {
 			controls: {
 				isOpen: false // control panel is hidden by default
 			},
-			report: getDefaultReportSettings(),
+			report: settings,
 			startColor: {}, //dict to store the start color of the gradient for each chart when using continuous color
 			stopColor: {} //dict to store the stop color of the gradient for each chart when using continuous color
 		}
@@ -140,7 +149,7 @@ export async function getPlotConfig(opts, app) {
 	try {
 		const config = app.vocabApi?.termdbConfig?.plotConfigByCohort?.default?.report
 		// the filter should always start with the authFilter, avoids issues with previous filters from previous sessions with different user access
-		opts.filter = app.vocabApi?.termdbConfig?.authFilter
+		opts.filter = authFilter
 		copyMerge(plot, config, opts)
 		if (plot.filterTWs) for (const tw of plot.filterTWs) await fillTermWrapper(tw, app.vocabApi)
 

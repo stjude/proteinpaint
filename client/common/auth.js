@@ -56,7 +56,6 @@ export function mayAddJwtToRequest(init, body, url) {
 	let route = pathSegments.find(p => p != '' && !p.includes(':') && !p.includes('.'))
 	// TODO: should not have to do this hardcoded mapping, ideally routes that are
 	//       protected together will share the same initial path segment
-	if (route.startsWith('profile') || route == 'filterTermValues') route = 'termdb'
 
 	const jwt = jwtByDsRoute[dslabel][route] || jwtByDsRoute[dslabel]['/**']
 	if (jwt) init.headers.authorization = 'Bearer ' + btoa(jwt)

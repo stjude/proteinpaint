@@ -83,7 +83,7 @@ export class TermdbVocab extends Vocab {
             id/term/q
         .filter={}
     Output:
-        a structure from the termdb-barsql route
+        a structure from the termdb/barsql route
     */
 	async getNestedChartSeriesData(opts) {
 		const [route, body] = this.getTdbDataUrl(opts)
@@ -216,7 +216,7 @@ export class TermdbVocab extends Vocab {
 		if (opts.get) body.get = opts.get
 		// end of mds3 parameters
 
-		return [opts.chartType ? 'termdb' : 'termdb-barsql', body]
+		return [opts.chartType ? 'termdb' : 'termdb/barsql', body]
 	}
 
 	/*
@@ -1345,7 +1345,7 @@ export class TermdbVocab extends Vocab {
 				this.mayStripTwProps(tw)
 			}
 		}
-		return await dofetch3('filterTermValues', { body })
+		return await dofetch3('termdb/filterTermValues', { body })
 	}
 
 	async getProfileScores(args) {
@@ -1365,7 +1365,7 @@ export class TermdbVocab extends Vocab {
 				this.mayStripTwProps(t.score)
 			}
 		}
-		return await dofetch3('profileScores', { body })
+		return await dofetch3('termdb/profileScores', { body })
 	}
 
 	async getProfileFormScores(args) {
@@ -1380,7 +1380,7 @@ export class TermdbVocab extends Vocab {
 				if (t.term.id) t.term = { id: t.term.id }
 			}
 		}
-		return await dofetch3('profileFormScores', { body })
+		return await dofetch3('termdb/profileFormScores', { body })
 	}
 
 	// strip some tw properties that
