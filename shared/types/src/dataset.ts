@@ -1380,16 +1380,29 @@ export type Termdb = {
 	/** Terms */
 	termIds?: TermIds
 	/**
-	 * The required minimum number of samples with data as queried with getData() or other code,
+	 * Check for the required minimum number of samples with data as queried with getData() or other code,
 	 * in order to minimize the ease of extracting identifiable information from aggregate data
 	 * in server response
 	 *
 	 * q            :   req.query as processed through app middleware (pre-parsed, may have req.body props, __protectec__, etc)
-	 * {
+	 *
+	 * data{
 	 *   sampleCount:   the number of samples with matching data from one or more queried terms
 	 * }
+	 *
+	 * returns: {minSampleSize, canAccess}, see below
 	 */
-	checkAccessToSampleData?: (q: any, data: { sampleCount: number }) => { minSampleSize: number; canAccess: boolean }
+	checkAccessToSampleData?: (
+		q: any,
+		data: { sampleCount: number }
+	) => {
+		/** the required minimum sample size for the current user,
+		 * may be dependent on login status or other context
+		 * */
+		minSampleSize: number
+		/** whether downstreadm backend code can proceed */
+		canAccess: boolean
+	}
 	/** if true, backend is allowed to send sample names to client in charts */
 	displaySampleIds?: (clientAuthResult: any) => boolean
 	converSampleIds?: boolean

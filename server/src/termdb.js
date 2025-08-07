@@ -55,9 +55,12 @@ export function handle_request_closure(genomes) {
 			if (q.getsamplelist) return res.send(await getSampleList(req, q, ds))
 
 			if (q.getsamples) return await trigger_getsamples(q, res, ds)
-			if (q.getcuminc) return await trigger_getincidence(q, res, ds)
-			if (q.getsurvival) return await trigger_getsurvival(q, res, ds)
-			if (q.getregression) return res.send(await get_regression(q, ds))
+			if (q.getcuminc) q.for = 'cuminc'
+			if (q.for == 'cuminc') return await trigger_getincidence(q, res, ds)
+			if (q.getsurvival) q.for = 'survival'
+			if (q.for == 'survival') return await trigger_getsurvival(q, res, ds)
+			if (q.getregression) q.for = 'regression'
+			if (q.for == 'regression') return res.send(await get_regression(q, ds))
 			if (q.validateSnps) return res.send(await snpValidate(q, tdb, ds, genome))
 			if (q.getvariantfilter) return res.send(ds?.queries?.snvindel?.variant_filter || {})
 			if (q.getLDdata) return await LDoverlay(q, ds, res)
@@ -66,7 +69,6 @@ export function handle_request_closure(genomes) {
 			if (q.for == 'scatter') return await trigger_getSampleScatter(req, q, res, ds)
 			if (q.getLowessCurve) return await trigger_getLowessCurve(req, q, res)
 
-			if (q.getCohortsData) return await trigger_getCohortsData(q, res, ds)
 			if (q.for == 'termTypes') return res.send(await ds.getTermTypes(q))
 			if (q.for == 'matrix') return await get_matrix(q, req, res, ds, genome)
 			if (q.for == 'numericDictTermCluster') return await get_numericDictTermCluster(q, req, res, ds, genome)

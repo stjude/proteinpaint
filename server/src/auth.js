@@ -16,7 +16,7 @@ const defaultApiMethods = {
 	getJwtPayload, // declared below
 	canDisplaySampleIds: (req, ds) => {
 		if (!ds.cohort.termdb.displaySampleIds) return false
-		return authApi.userCanAccess(req, ds)
+		return authApi.userCanAccess(req, ds, protectedRoutes.samples)
 	},
 	// these open-acces, default methods may be replaced by maySetAuthRoutes()
 	getDsAuth: (req = undefined) => [],
@@ -205,10 +205,11 @@ function mayReshapeDsCredentials(creds) {
 	}
 }
 
-// TODO: should create a checker function for each route that may be protected
+// TODO: should create a checker function for each route group that may be protected
 const protectedRoutes = {
 	termdb: ['matrix'],
-	samples: ['singleSampleData', 'getAllSamples', 'scatter', 'convertSampleId', 'getSamplesByName']
+	samples: ['singleSampleData', 'getAllSamples', 'scatter', 'convertSampleId', 'getSamplesByName'],
+	minSampleSize: ['/termdb/barsql', 'matrix', 'cuminc', 'survival', 'regression', 'scatter']
 }
 
 const authRouteByCredType = {
@@ -376,9 +377,8 @@ async function maySetAuthRoutes(app, genomes, basepath = '', _serverconfig = nul
 				const cred = route[q.embedder] || route['*']
 				if (!cred) return
 				if (cred.protectedRoutes?.find(pattern => isMatch(path, pattern))) return cred
-				if (_protectedRoutes === '*') return cred
 				const protRoutes = _protectedRoutes || protectedRoutes.termdb
-				if (protRoutes.includes(q.for)) return cred
+				if (protRoutes.includes(q.for) || protRoutes.find(pattern => isMatch(path, pattern))) return cred
 			} else if (path.startsWith('/burden') && ds0.burden) {
 				// okay to return an undefined embedder[route]
 				return ds0.burden[q.embedder] || ds0.burden['*']
@@ -432,7 +432,7 @@ async function maySetAuthRoutes(app, genomes, basepath = '', _serverconfig = nul
 				authApi.mayAdjustFilter(req.query, ds)
 
 				// this flag may be used by downstream code that does not have access to req argument or ds object
-				__protected__.userCanAccessDs = authApi.userCanAccess(req, ds, '*')
+				__protected__.userCanAccess = authApi.userCanAccess(req, ds, protectedRoutes.minSampleSize)
 			}
 		}
 		Object.freeze(__protected__)
@@ -649,8 +649,8 @@ async function maySetAuthRoutes(app, genomes, basepath = '', _serverconfig = nul
 		return requiredCred.length ? requiredCred : undefined
 	}
 
-	authApi.userCanAccess = function (req, ds, _protectedRoutes) {
-		const cred = getRequiredCred(req.query, req.path, _protectedRoutes || protectedRoutes.samples)
+	authApi.userCanAccess = function (req, ds, protectedRoutes) {
+		const cred = getRequiredCred(req.query, req.path, protectedRoutes)
 		if (!cred) return true
 		// !!! DEPRECATED: for 'basic' auth type, always require a login when runpp() is first called !!!
 		// this causes unnecessary additional logins when links are opened from a 'landing page'
