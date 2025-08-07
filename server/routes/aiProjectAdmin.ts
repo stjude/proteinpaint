@@ -42,7 +42,7 @@ function init({ genomes }) {
 
 			res.status(200).send({
 				status: 'ok',
-				message: `Project ${query.projectName} processed successfully`
+				message: `Project ${query.project.name} processed successfully`
 			})
 		} catch (e: any) {
 			console.warn(e)
@@ -66,14 +66,14 @@ function editProject() {
 }
 
 function deleteProject(connection: any, query: any) {
-	const sql = `DELETE FROM Project WHERE id= ?`
+	const sql = `DELETE FROM project WHERE id= ?`
 	const params = [query.project.id]
 
 	runSQL(connection, sql, params, 'delete')
 }
 
 function addProject(connection: any, query: any) {
-	const sql = `INSERT INTO Project (name) VALUES (?)`
+	const sql = `INSERT INTO project (name) VALUES (?)`
 	const params = [query.project.name]
 
 	runSQL(connection, sql, params, 'add')
