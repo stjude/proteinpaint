@@ -376,6 +376,7 @@ async function maySetAuthRoutes(app, genomes, basepath = '', _serverconfig = nul
 				const cred = route[q.embedder] || route['*']
 				if (!cred) return
 				if (cred.protectedRoutes?.find(pattern => isMatch(path, pattern))) return cred
+				if (_protectedRoutes === '*') return cred
 				const protRoutes = _protectedRoutes || protectedRoutes.termdb
 				if (protRoutes.includes(q.for)) return cred
 			} else if (path.startsWith('/burden') && ds0.burden) {
@@ -431,7 +432,7 @@ async function maySetAuthRoutes(app, genomes, basepath = '', _serverconfig = nul
 				authApi.mayAdjustFilter(req.query, ds)
 
 				// this flag may be used by downstream code that does not have access to req argument or ds object
-				__protected__.userCanAccessDs = authApi.userCanAccess(req, ds)
+				__protected__.userCanAccessDs = authApi.userCanAccess(req, ds, '*')
 			}
 		}
 		Object.freeze(__protected__)
@@ -648,8 +649,8 @@ async function maySetAuthRoutes(app, genomes, basepath = '', _serverconfig = nul
 		return requiredCred.length ? requiredCred : undefined
 	}
 
-	authApi.userCanAccess = function (req, ds) {
-		const cred = getRequiredCred(req.query, req.path, protectedRoutes.samples)
+	authApi.userCanAccess = function (req, ds, _protectedRoutes) {
+		const cred = getRequiredCred(req.query, req.path, _protectedRoutes || protectedRoutes.samples)
 		if (!cred) return true
 		// !!! DEPRECATED: for 'basic' auth type, always require a login when runpp() is first called !!!
 		// this causes unnecessary additional logins when links are opened from a 'landing page'
