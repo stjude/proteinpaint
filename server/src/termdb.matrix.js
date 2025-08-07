@@ -47,7 +47,7 @@ export async function getData(q, ds, onlyChildren = false) {
 		authApi.mayAdjustFilter(q, ds, q.terms)
 		const data = await getSampleData(q, ds, onlyChildren)
 
-		check4MinSampleSize(data, ds, q)
+		checkAccessToSampleData(data, ds, q)
 
 		// get categories within same data request to avoid a separate
 		// getCategories() request, which can be time-consuming for
@@ -1018,14 +1018,16 @@ function hasValues(term) {
 	ds: dataset object
 	q: req.query
 */
-function check4MinSampleSize(data, ds, q) {
+function checkAccessToSampleData(data, ds, q) {
 	// handle the option to require a minimum sample size for data
-	if (!ds.cohort.termdb.hasMinSampleSize) return
-	// error message in case of failed check
-	const message = `One or more terms has less than the required minimum sample size with data.`
+	if (!ds.cohort.termdb.checkAccessToSampleData) return
 	// quick check
-	if (!ds.cohort.termdb.hasMinSampleSize(Object.keys(data.samples).length, q))
-		throw { message, code: 'ERR_MIN_SAMPLE_SIZE' }
+	const access = ds.cohort.termdb.checkAccessToSampleData(q, { sampleCount: Object.keys(data.samples).length })
+	if (!access.hasAccess)
+		throw {
+			message: `One or more terms has less than ${access.minSampleSize} samples with data.`,
+			code: 'ERR_MIN_SAMPLE_SIZE'
+		}
 	// more detailed check
 	const sampleSizeByTermId = new Map()
 	for (const [sid, dataByTermId] of Object.entries(data.samples)) {
@@ -1034,6 +1036,11 @@ function check4MinSampleSize(data, ds, q) {
 			sampleSizeByTermId.get(tid).add(sid)
 		}
 	}
-	const counts = [...sampleSizeByTermId.values()].map(v => v.size)
-	if (!ds.cohort.termdb.hasMinSampleSize(Math.min(...counts), q)) throw { message, code: 'ERR_MIN_SAMPLE_SIZE' }
+	const counts = [...sampleSizeByTermId.values()].map(v => v.size) // list of sample counts for each and every term
+	const access1 = ds.cohort.termdb.checkAccessToSampleData(q, { sampleCount: Math.min(...counts) })
+	if (!accessDetailed.hasAccess)
+		throw {
+			message: `One or more terms has less than ${access1.minSampleSize} samples with data.`,
+			code: 'ERR_MIN_SAMPLE_SIZE'
+		}
 }
