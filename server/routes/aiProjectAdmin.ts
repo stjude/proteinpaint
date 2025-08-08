@@ -36,7 +36,7 @@ function init({ genomes }) {
 
 			db.connection = connect_db(db.file, { readonly: false, fileMustExist: true })
 
-			if (req.method === 'POST') editProject()
+			if (req.method === 'POST') editProject(db.connection, query)
 			if (req.method === 'DELETE') deleteProject(db.connection, query)
 			if (req.method === 'PUT') addProject(db.connection, query)
 
@@ -54,8 +54,10 @@ function init({ genomes }) {
 	}
 }
 
-function editProject() {
-	console.log(58, 'called editProject')
+function editProject(connection: any, query: any) {
+	console.log('Editing project:', connection, query.project)
+	// const sql = `UPDATE project SET name = ? WHERE id= ?`
+	// const params = [query.project.name, query.project.id]
 	// try {
 	// 	const rows = connection.prepare(sql).run(params)
 	// 	return rows
@@ -66,17 +68,26 @@ function editProject() {
 }
 
 function deleteProject(connection: any, query: any) {
-	const sql = `DELETE FROM project WHERE id= ?`
-	const params = [query.project.id]
-
-	runSQL(connection, sql, params, 'delete')
+	// Deletes ** ALL ** project data
+	runSQL(connection, 'DELETE FROM project_annotations WHERE project_id = ?', [query.project.id], 'delete')
+	runSQL(connection, 'DELETE FROM project_classes WHERE project_id = ?', [query.project.id], 'delete')
+	runSQL(connection, 'DELETE FROM project_images WHERE project_id = ?', [query.project.id], 'delete')
+	runSQL(connection, 'DELETE FROM project_users WHERE project_id = ?', [query.project.id], 'delete')
+	runSQL(connection, 'DELETE FROM project WHERE id = ?', [query.project.id], 'delete')
 }
 
 function addProject(connection: any, query: any) {
-	const sql = `INSERT INTO project (name) VALUES (?)`
-	const params = [query.project.name]
+	//Add project record
+	const projectSql = `INSERT INTO project (name, filter) VALUES (?, ?)`
+	const projectParams = [query.project.name, JSON.stringify(query.project.filter)]
+	const rows = runSQL(connection, projectSql, projectParams, 'add')
 
-	runSQL(connection, sql, params, 'add')
+	//Add corresponding project classes
+	const classSql = `INSERT INTO project_classes (project_id, name, color) VALUES (?, ?, ?)`
+	const classParams = query.project.classes.map((c: any) => [rows.lastInsertRowid, c.label, c.color])
+	for (const params of classParams) {
+		runSQL(connection, classSql, params, 'add')
+	}
 }
 
 function runSQL(connection: any, sql: string, params: any[] = [], errorText = 'fetch') {

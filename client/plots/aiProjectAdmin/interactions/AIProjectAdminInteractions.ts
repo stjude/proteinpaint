@@ -15,13 +15,15 @@ export class AIProjectAdminInteractions {
 		this.model = model
 	}
 
-	async addProject(projectName: string) {
+	async addProject(opts) {
+		const config = this.app.getState().plots.find((p: any) => p.id === this.id)
+
+		const projectObject = Object.assign({}, config.settings.project, opts.project)
+
 		const body = {
 			genome: this.genome,
 			dslabel: this.dslabel,
-			project: {
-				name: projectName
-			}
+			project: projectObject
 		}
 
 		try {
@@ -30,19 +32,6 @@ export class AIProjectAdminInteractions {
 			console.error('Error adding project:', e)
 			throw e
 		}
-
-		await this.app.dispatch({
-			type: 'plot_edit',
-			id: this.id,
-			config: {
-				settings: {
-					project: {
-						name: projectName,
-						type: 'new'
-					}
-				}
-			}
-		})
 	}
 
 	async editProject(filter: string, classes: any[]) {
@@ -65,16 +54,7 @@ export class AIProjectAdminInteractions {
 			console.error('Error editing project:', e)
 			throw e
 		}
-
-		await this.app.dispatch({
-			type: 'plot_edit',
-			id: this.id,
-			config: {
-				settings: {
-					project
-				}
-			}
-		})
+		this.appDispatchEdit({ settings: { project } }, config)
 	}
 
 	async deleteProject(project: { value: string; id: number }) {
@@ -93,5 +73,17 @@ export class AIProjectAdminInteractions {
 			console.error('Error deleting project:', e)
 			throw e
 		}
+	}
+
+	async appDispatchEdit(settings: any, config: any = {}) {
+		if (!config?.settings) {
+			config = this.app.getState().plots.find((p: any) => p.id === this.id)
+			if (!config) throw new Error(`No plot with id='${this.id}' found.`)
+		}
+		await this.app.dispatch({
+			type: 'plot_edit',
+			id: this.id,
+			config: Object.assign(settings, config.settings)
+		})
 	}
 }
