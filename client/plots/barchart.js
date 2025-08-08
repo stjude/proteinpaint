@@ -150,16 +150,7 @@ export class Barchart {
 						return {}
 					}
 				},
-				{
-					label: 'Charts layout',
-					type: 'radio',
-					chartType: 'barchart',
-					settingsKey: 'divideOrientation',
-					options: [
-						{ label: 'Vertical', value: 'vertical' },
-						{ label: 'Horizontal', value: 'horizontal' }
-					]
-				},
+
 				{
 					label: 'Bar orientation',
 					type: 'radio',
@@ -253,7 +244,17 @@ export class Barchart {
 					settingsKey: 'defaultColor'
 					//getDisplayStyle: plot => (plot.settings.barchart.colorBars || plot.term2 ? 'none' : 'table-row')
 				})
-
+			if (this.config.term0)
+				inputs.splice(3, 0, {
+					label: 'Charts layout',
+					type: 'radio',
+					chartType: 'barchart',
+					settingsKey: 'divideOrientation',
+					options: [
+						{ label: 'Vertical', value: 'vertical' },
+						{ label: 'Horizontal', value: 'horizontal' }
+					]
+				})
 			const multipleTestingCorrection = this.app.getState().termdbConfig.multipleTestingCorrection
 			if (multipleTestingCorrection) {
 				// a checkbox to allow users to show or hide asterisks on bars
