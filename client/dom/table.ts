@@ -278,6 +278,7 @@ export function renderTable({
 					if (button.dataTestId) {
 						button.button.attr('data-testid', button.dataTestId)
 					}
+					if (button.class) button.button.attr('class', button.class)
 					if ('disabled' in button) button.button.node().disabled = button.disabled!(rowIdx)
 				}
 			}
