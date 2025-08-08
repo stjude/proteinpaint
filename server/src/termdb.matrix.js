@@ -177,7 +177,11 @@ async function getSampleData(q, ds, onlyChildren = false) {
 
 				samples[sampleId][tw.$id] = snp2value
 			}
-		} else if (tw.term.type == TermTypes.GENE_EXPRESSION || tw.term.type == TermTypes.METABOLITE_INTENSITY) {
+		} else if (
+			tw.term.type == TermTypes.GENE_EXPRESSION ||
+			tw.term.type == TermTypes.METABOLITE_INTENSITY ||
+			tw.term.type == TermTypes.SSGSEA
+		) {
 			if (!q.ds.queries?.[tw.term.type]) throw 'not supported by dataset: ' + tw.term.type
 			let lstOfBins // of this tw. only set when q.mode is discrete
 			if (tw.q?.mode == 'discrete' || tw.q?.mode == 'binary') {

@@ -26,6 +26,7 @@ export const NumericModes = {
 export const TermTypes = {
 	GENE_VARIANT: 'geneVariant',
 	GENE_EXPRESSION: 'geneExpression',
+	SSGSEA: 'ssGSEA',
 	CATEGORICAL: 'categorical',
 	INTEGER: 'integer',
 	FLOAT: 'float',
