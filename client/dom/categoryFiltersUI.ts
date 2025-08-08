@@ -10,14 +10,20 @@ export class CategoryFiltersUI {
 	config: any
 
 	constructor(holder: any, plot: any, config: any) {
-		holder.style('padding', '10px')
+		holder
+			.style('padding', '10px')
+			.style('display', 'flex')
+			.style('flex-direction', 'row')
+			.style('flex-wrap', 'wrap')
+			.style('width', '100vw')
 		this.plot = plot
 		this.holder = holder
 		this.config = config
 		for (const tw of this.plot.config.filterTWs) {
-			this.holder.append('label').text(` ${tw.term.name}: `).style('vertical-align', 'top')
+			const div = this.holder.append('div').style('padding', '5px')
+			div.append('label').text(` ${tw.term.name}: `).style('vertical-align', 'top')
 			let timeoutId
-			const select = this.holder.append('select').property('multiple', true).style('vertical-align', 'top')
+			const select = div.append('select').property('multiple', true).style('vertical-align', 'top')
 
 			select.on('change', async () => {
 				clearTimeout(timeoutId)
