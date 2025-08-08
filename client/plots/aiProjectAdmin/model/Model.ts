@@ -1,6 +1,5 @@
 import { dofetch3 } from '#common/dofetch'
 import type { AIProjectListRequest, AIProjectAdminRequest } from '#types'
-import type { ClientCopyGenome } from '../../../types/global'
 
 export class Model {
 	constructor() {}
@@ -30,11 +29,10 @@ export class Model {
 	}
 
 	//TODO: Will need a method to call metadata API, then build dictionary
-	async getTerms(vocab: { genome: ClientCopyGenome; dslabel: string }, app: any): Promise<any> {
-		const body = { dslabel: vocab.dslabel, genome: vocab.genome }
+	async getTerms(app: any): Promise<any> {
 		const root = { id: '__root', name: 'root', __tree_isroot: true }
 		try {
-			await app.vocabApi.buildAdHocDictionary(body)
+			await app.vocabApi.buildAdHocDictionary()
 			const terms = await app.vocabApi.getTermChildren(root, [])
 			return terms || []
 		} catch (error) {

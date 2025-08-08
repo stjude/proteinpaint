@@ -60,7 +60,7 @@ class AIProjectAdmin extends RxComponentInner {
 		this.dom.holder.selectAll('.sjpp-deletable-ai-prjt-admin-div').remove()
 
 		if (config.settings.project.type === 'new') {
-			const terms = await this.model.getTerms(state.vocab, this.app)
+			const terms = await this.model.getTerms(this.app)
 			if (!terms || terms.length === 0) {
 				sayerror(this.dom.errorDiv, 'No metadata found.')
 				return
