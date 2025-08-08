@@ -29,7 +29,8 @@ export const TermTypeGroups = {
 	MUTATION_SIGNATURE: 'Mutation Signature',
 	SNP: 'SNP Genotype',
 	SNP_LIST: 'SNP List',
-	SNP_LOCUS: 'SNP Locus'
+	SNP_LOCUS: 'SNP Locus',
+	SSGSEA: 'Geneset Expression'
 }
 
 export const defaultcolor = rgb('#8AB1D4').darker()

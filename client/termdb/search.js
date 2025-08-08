@@ -1,6 +1,6 @@
 import { getCompInit } from '#rx'
 import { select, selectAll } from 'd3-selection'
-import { sayerror } from '../dom/sayerror.ts'
+import { sayerror } from '#dom'
 import { debounce } from 'debounce'
 import { root_ID } from './tree'
 import { isUsableTerm } from '#shared/termdb.usecase.js'
@@ -133,7 +133,10 @@ function setRenderers(self) {
 
 		if (self.opts.focus != 'off') self.dom.input.node().focus()
 
-		// a holder to contain two side-by-side divs for genes and dictionary term hits
+		/* a holder to contain two side-by-side divs 
+		used to show genes on one side and dictionary term on another, but gene is no longer shown
+		side-by-side holder is commented off but may be reused for new purpose
+		*/
 		self.dom.resultDiv = (self.opts.resultsHolder || self.dom.holder)
 			.append('div')
 			.attr('class', 'sjpp_show_scrollbar')
@@ -144,36 +147,22 @@ function setRenderers(self) {
 			.style('grid-template-columns', 'auto auto')
 
 		// left div to show gene hits
-		const div_gene = self.dom.resultDiv.append('div')
+		//const div_gene = self.dom.resultDiv.append('div')
 		// right div to show term hits
 		const div_term = self.dom.resultDiv.append('div')
 
+		/*
 		self.dom.resultDiv_genes = div_gene
 			.append('div')
 			.style('border-left', 'solid 1px rgb(133,182,225)')
 			.style('margin', '0px 0px 10px 10px')
 			.style('padding-left', '5px')
+			*/
 		self.dom.resultDiv_terms = div_term
 			.append('div')
 			.style('border-left', self.opts.resultsHolder ? '' : 'solid 1px rgb(133,182,225)')
 			.style('margin', '0px 0px 10px 10px')
 			.style('padding-left', '5px')
-	}
-
-	self.getPrompt = state => {
-		/* term search prompt is decided by two factors:
-		TODO geneVariant is no longer supported here
-		1. if the term type exists in allowedTermTypes from the dataset
-		   e.g. if geneVariant type does not exist in the dataset, do not show prompt (and no need to check usecase)
-		2. termdb client app usecase, defines the context for using terms selected from the termdb app
-		   e.g. if the usecase context does not allow geneVariant, even if geneVariant exists in ds, do not show "gene" in prompt
-		*/
-		const mayUseGeneVariant =
-			state.allowedTermTypes.includes('geneVariant') && isUsableTerm({ type: 'geneVariant' }, state.usecase).has('plot')
-
-		if (mayUseGeneVariant) return ' variables or genes' // if true, it should be "variables" but not gene set
-		if (state.isGeneSetTermdb) return ' gene sets'
-		return ' variables'
 	}
 
 	self.noResult = () => {
@@ -198,25 +187,10 @@ function setRenderers(self) {
 		self.clear()
 		self.dom.resultDiv.style('display', 'inline-grid')
 
-		const geneTerms = [],
-			dictTerms = []
-		for (const t of data.lst) {
-			if (t.type == 'geneVariant') {
-				geneTerms.push(t)
-			} else {
-				dictTerms.push(t)
-			}
+		if (data.lst.length) {
+			self.dom.resultDiv_terms.append('table').selectAll().data(data.lst).enter().append('tr').each(self.showTerm)
+			self.dom.resultCntDiv.style('display', 'inline-block').text(`${data.lst.length} results`)
 		}
-
-		if (geneTerms.length) {
-			self.dom.resultDiv_genes.append('table').selectAll().data(geneTerms).enter().append('tr').each(self.showTerm)
-		}
-
-		if (dictTerms.length) {
-			self.dom.resultDiv_terms.append('table').selectAll().data(dictTerms).enter().append('tr').each(self.showTerm)
-		}
-
-		if (data.lst.length > 1) self.dom.resultCntDiv.style('display', 'inline-block').text(`${data.lst.length} results`)
 
 		self.focusableResults = [...self.dom.resultDiv.node().querySelectorAll('.sja_tree_click_term, .sja_menuoption')]
 	}
@@ -248,7 +222,7 @@ function setRenderers(self) {
 					.style('color', 'black')
 					.style('padding', '5px 8px')
 					.style('border-radius', '6px')
-					.style('background-color', term.type == 'geneVariant' ? 'rgba(251,171,96,0.5)' : '#cfe2f3')
+					.style('background-color', '#cfe2f3')
 					.style('margin', '1px 0px')
 					.style('cursor', 'default')
 					.on('click', () => {
@@ -282,9 +256,7 @@ function setRenderers(self) {
 					self.dom.input.property('value', '')
 					const expandedTermIds = [root_ID]
 
-					if (term.type == 'geneVariant' && self.opts.handleGeneVariant) {
-						self.opts.handleGeneVariant(term)
-					} else if (term.type && isNonDictionaryType(term.type)) {
+					if (term.type && isNonDictionaryType(term.type)) {
 						self.app.dispatch({
 							type: 'app_refresh',
 							state: {
@@ -308,12 +280,12 @@ function setRenderers(self) {
 				.on('keyup', self.navInputValueByKeyboard)
 		}
 		tr.append('td')
-			.text(term.type == 'geneVariant' ? 'gene variant' : (term.__ancestorNames || []).join(' > '))
+			.text((term.__ancestorNames || []).join(' > '))
 			.style('opacity', 0.5)
 			.style('font-size', '.7em')
 	}
 	self.clear = () => {
-		self.dom.resultDiv_genes.selectAll('*').remove()
+		//self.dom.resultDiv_genes.selectAll('*').remove()
 		self.dom.resultDiv_terms.selectAll('*').remove()
 		self.dom.resultDiv.style('display', 'none')
 		self.dom.resultCntDiv.style('display', 'none')

@@ -1,4 +1,4 @@
-import { Tabs } from '../dom/toggleButtons'
+import { Tabs } from '#dom'
 import { getCompInit } from '../rx'
 import { TermTypeGroups, TermTypes, typeGroup, numericTypes } from '#shared/terms.js'
 import type { Term } from '#types'

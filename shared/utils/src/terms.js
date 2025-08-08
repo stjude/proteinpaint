@@ -54,8 +54,7 @@ export const TermTypes2Dt = {
 	[TermTypes.METABOLITE_INTENSITY]: dtmetaboliteintensity
 }
 
-//The dataset provides the allowed term types that are then mapped to the term type groups
-//Depending on the dataset types and the use case only certain term type groups/tabs are allowed
+// maps term type to group (as is shown as toggles in search ui)
 export const typeGroup = {
 	[TermTypes.CATEGORICAL]: TermTypeGroups.DICTIONARY_VARIABLES,
 	[TermTypes.CONDITION]: TermTypeGroups.DICTIONARY_VARIABLES,
@@ -68,7 +67,8 @@ export const typeGroup = {
 	[TermTypes.SNP_LIST]: TermTypeGroups.SNP_LIST,
 	[TermTypes.SNP_LOCUS]: TermTypeGroups.SNP_LOCUS,
 	[TermTypes.GENE_EXPRESSION]: TermTypeGroups.GENE_EXPRESSION,
-	[TermTypes.METABOLITE_INTENSITY]: TermTypeGroups.METABOLITE_INTENSITY
+	[TermTypes.METABOLITE_INTENSITY]: TermTypeGroups.METABOLITE_INTENSITY,
+	[TermTypes.SSGSEA]: TermTypeGroups.SSGSEA
 }
 
 const nonDictTypes = new Set([
