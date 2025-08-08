@@ -2792,6 +2792,8 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 				// for example: if groups[0] is SNV=M and groups[1] is
 				// CNV=Loss and a sample has both SNV=M and CNV=Loss, then
 				// the sample will be assigned to groups[0]
+				const values = [] // mlst elements associated with group assignment
+				// e.g. if group is SNV=M and sample mlst consists of M and F, then the M element will be added to values[]
 				const group = groupset.groups.find(group => {
 					if (group.type != 'filter') throw 'unexpected group.type'
 					const filter = group.filter
@@ -2799,7 +2801,7 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 					// test filter against mutations from each gene separately
 					for (const gene of tw.term.genes) {
 						const geneMlst = mlst.filter(m => m.gene == gene.name)
-						const [pass, tested] = filterByTvsLst(filter, geneMlst)
+						const [pass, tested] = filterByTvsLst(filter, geneMlst, values)
 						passLst.push(pass)
 					}
 					// samples passes filter if mutations from at least
@@ -2813,7 +2815,7 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 				// key will be the name of the assigned group
 				data.set(sample, {
 					sample,
-					[tw.$id]: { key: group.name, label: group.name, value: group.name, values: mlst }
+					[tw.$id]: { key: group.name, label: group.name, value: group.name, values }
 				})
 			} else {
 				// groupsetting is not active
@@ -2900,33 +2902,33 @@ async function filterSamples4assayAvailability(q, ds) {
 	return q.filter && q.filter.lst.length ? new Set((await get_samples(q, ds)).map(i => i.id)) : null
 }
 
-function addDataAvailability(sid, sample2mlst, dtKey, mclass, origin, sampleFilter, gene) {
+function addDataAvailability(sid, sample2mlst, dtKey, c, origin, sampleFilter, gene) {
 	if (sampleFilter && !sampleFilter.has(sid)) return
 	if (!sample2mlst.has(sid)) sample2mlst.set(sid, [])
 	const mlst = sample2mlst.get(sid)
 	if (origin) {
 		if (!mlst.some(m => m.gene == gene.name && m.dt == dtKey && m.origin == origin)) {
 			// sample does not have a mutation with this origin for this dt
-			// sample will be annotated with the given mclass for the given origin
-			mlst.push({ gene: gene.name, dt: Number(dtKey), class: mclass, origin, _SAMPLEID_: sid })
+			// sample will be annotated with the given class for the given origin
+			mlst.push({ gene: gene.name, dt: Number(dtKey), class: c, label: mclass[c].label, origin, _SAMPLEID_: sid })
 		}
 	} else {
 		if (!mlst.some(m => m.gene == gene.name && m.dt == dtKey)) {
 			// sample does not have a mutation for this dt
-			// sample will be annotated with the given mclass
-			mlst.push({ gene: gene.name, dt: Number(dtKey), class: mclass, _SAMPLEID_: sid })
+			// sample will be annotated with the given class
+			mlst.push({ gene: gene.name, dt: Number(dtKey), class: c, label: mclass[c].label, _SAMPLEID_: sid })
 		}
 	}
 	sample2mlst.set(sid, mlst)
 }
 
 // function to filter a sample based on its mlst and a tvslst
-export function filterByTvsLst(filter, mlst) {
+export function filterByTvsLst(filter, mlst, values) {
 	if (filter.type != 'tvslst') throw 'unexpected filter.type'
 	const passLst = []
 	const testedLst = []
 	for (const item of filter.lst) {
-		const [pass, tested] = filterByItem(item, mlst)
+		const [pass, tested] = filterByItem(item, mlst, values)
 		passLst.push(pass)
 		testedLst.push(tested)
 	}
@@ -2946,8 +2948,8 @@ export function filterByTvsLst(filter, mlst) {
 }
 
 // function to filter a sample based on its mlst and a filter item
-export function filterByItem(filter, mlst) {
-	if (filter.type == 'tvslst') return filterByTvsLst(filter, mlst)
+export function filterByItem(filter, mlst, values) {
+	if (filter.type == 'tvslst') return filterByTvsLst(filter, mlst, values)
 	if (filter.type != 'tvs') throw 'unexpected filter.type'
 	const tvs = filter.tvs
 	if (!dtTermTypes.has(tvs.term.type)) throw 'tvs term is not dt term'
@@ -2989,10 +2991,17 @@ export function filterByItem(filter, mlst) {
 			sampleHasGenotype = tvs.cnvWT ? !sampleHasCnv : sampleHasCnv
 		} else {
 			// categorical mutation data
-			sampleHasGenotype = mlst_tested.some(m => tvs.values.some(v => v.key == m.class))
+			for (const m of mlst_tested) m.intvs = tvs.values.some(v => v.key == m.class)
+			sampleHasGenotype = mlst_tested.some(m => m.intvs)
 		}
 		if (typeof sampleHasGenotype != 'boolean') throw 'unexpected non-boolean value'
-		pass = tvs.isnot ? !sampleHasGenotype : sampleHasGenotype
+		if (tvs.isnot) {
+			pass = !sampleHasGenotype
+			if (values) values.push(...mlst_tested.filter(m => !m.intvs))
+		} else {
+			pass = sampleHasGenotype
+			if (values) values.push(...mlst_tested.filter(m => m.intvs))
+		}
 	} else {
 		// sample is not tested for the dt of the filter
 		// so sample does not pass the filter

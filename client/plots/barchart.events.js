@@ -528,17 +528,17 @@ async function listSamples(event, self, seriesId, dataId, chartId) {
 		join: 'and',
 		lst: []
 	}
-	if (self.config.term.term.type != 'geneVariant') {
-		// geneVariant filtering will be handled by mayFilterByGeneVariant()
-		tvslst.lst.push(getTvs(1, seriesId))
-	}
+	const tvs = getTvs(1, seriesId)
+	if (tvs) tvslst.lst.push(tvs)
 	if (self.config.term2) {
 		terms.push(self.config.term2)
-		tvslst.lst.push(getTvs(2, dataId))
+		const tvs = getTvs(2, dataId)
+		if (tvs) tvslst.lst.push(tvs)
 	}
 	if (self.config.term0) {
 		terms.push(self.config.term0)
-		tvslst.lst.push(getTvs(0, chartId))
+		const tvs = getTvs(0, chartId)
+		if (tvs) tvslst.lst.push(tvs)
 	}
 	const opts = {
 		terms,
@@ -549,6 +549,8 @@ async function listSamples(event, self, seriesId, dataId, chartId) {
 	const rows = []
 	const termIsNumeric = isNumericTerm(self.config.term.term)
 	const term2isNumeric = self.config.term2 ? isNumericTerm(self.config.term2.term) : false
+	const termIsGv = self.config.term.term.type == 'geneVariant'
+	const term2isGv = self.config.term2?.term.type == 'geneVariant'
 
 	for (const sample of data.lst) {
 		const sampleName = data.refs.bySampleId[sample.sample].label
@@ -568,6 +570,9 @@ async function listSamples(event, self, seriesId, dataId, chartId) {
 		if (termIsNumeric) {
 			const value = sample[self.config.term.$id]?.value
 			row.push({ value: roundValueAuto(value) })
+		} else if (termIsGv) {
+			const value = getGvValue(sample, self.config.term.$id)
+			row.push({ value })
 		}
 		if (self.config.term2) {
 			//Don't show hidden values in the results
@@ -580,14 +585,20 @@ async function listSamples(event, self, seriesId, dataId, chartId) {
 			if (!value) row.push({ value: '' })
 			else {
 				const label = self.config.term2.term.values?.[value.key]?.label
-				value = term2isNumeric ? roundValueAuto(value.value) : label || value.value
+				if (term2isNumeric) {
+					value = roundValueAuto(value.value)
+				} else if (term2isGv) {
+					value = getGvValue(sample, self.config.term2.$id)
+				} else {
+					value = label || value.value
+				}
 				row.push({ value })
 			}
 		}
 		rows.push(row)
 	}
 	const columns = [{ label: 'Sample' }]
-	if (termIsNumeric) columns.push({ label: self.config.term.term.name })
+	if (termIsNumeric || termIsGv) columns.push({ label: self.config.term.term.name })
 	if (self.config.term2) columns.push({ label: self.config.term2.term.name })
 	const menu = new Menu({ padding: '5px' })
 	const div = menu.d.append('div')
@@ -603,6 +614,10 @@ async function listSamples(event, self, seriesId, dataId, chartId) {
 
 	function getTvs(termIndex, value) {
 		const term = termIndex == 0 ? self.config.term0 : termIndex == 1 ? self.config.term : self.config.term2
+		if (term.term.type == 'geneVariant') {
+			// geneVariant filtering will be handled by mayFilterByGeneVariant()
+			return
+		}
 		let tvs = {
 			type: 'tvs',
 			tvs: {
@@ -660,6 +675,18 @@ async function listSamples(event, self, seriesId, dataId, chartId) {
 			if (value != chartId) return false
 		}
 		return true
+	}
+
+	function getGvValue(sample, $id) {
+		const mlst = sample[$id]?.values
+		const value = mlst
+			.map(m => {
+				let label = m.label
+				if (m.mname) label += ` (${m.mname})`
+				return label
+			})
+			.join(', ')
+		return value
 	}
 }
 
