@@ -69,12 +69,14 @@ export class CreateProjectRender {
 					return
 				}
 
-				this.interactions.editProject(
-					this.filter,
-					this.classesTable!.rows.map(row => {
-						return { label: row[1].value, color: row[2].color }
-					})
-				)
+				this.interactions.addProject({
+					project: {
+						filter: this.filter,
+						classes: this.classesTable!.rows.map(row => {
+							return { label: row[1].value, color: row[2].color }
+						})
+					}
+				})
 			})
 	}
 
