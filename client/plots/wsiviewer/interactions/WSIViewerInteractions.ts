@@ -10,6 +10,7 @@ import { Fill, Stroke, Style } from 'ol/style'
 import type Settings from '#plots/wsiviewer/Settings.ts'
 import type { TileSelection } from '@sjcrh/proteinpaint-types'
 import type { SessionWSImage } from '#plots/wsiviewer/viewModel/SessionWSImage.ts'
+import type { SaveWSIAnnotationRequest } from '@sjcrh/proteinpaint-types/routes/saveWSIAnnotation.ts'
 
 export class WSIViewerInteractions {
 	thumbnailClickListener: (index: number) => void
@@ -160,25 +161,26 @@ export class WSIViewerInteractions {
 
 					this.addAnnotation(vectorLayer!, annotationsData, currentIndex, matchingClass!.color, settings.tileSize)
 
-					const body = {
+					const body: SaveWSIAnnotationRequest = {
 						coordinates: annotationsData[currentIndex].zoomCoordinates, //Original x,y coordinates
-						index: buffers.annotationsIdx.get(),
-						confirmed: event.code === 'Enter',
-						class: event.code === 'Enter' ? null : event.code.replace('Digit', '').replace('Key', '')
+						class: 1
 					}
 
-					//Advance to the next table row after annotating
-					const nextIdx = currentIndex + 1
-					if (nextIdx < annotationsData.length) {
-						buffers.annotationsIdx.set(nextIdx)
-						const coords = [annotationsData[nextIdx].zoomCoordinates] as unknown as [number, number][]
-						this.zoomInEffectListener(activeImageExtent, coords, map, activePatchColor)
-					}
+					// index: buffers.annotationsIdx.get(),
+					// confirmed: event.code === 'Enter',
+					// class: event.code === 'Enter' ? null : event.code.replace('Digit', '').replace('Key', '')
 
 					try {
-						await dofetch3('sampleWsiAiApi', { body })
+						await dofetch3('saveWSIAnnotation', { body })
+						//Advance to the next table row after annotating
+						const nextIdx = currentIndex + 1
+						if (nextIdx < annotationsData.length) {
+							buffers.annotationsIdx.set(nextIdx)
+							const coords = [annotationsData[nextIdx].zoomCoordinates] as unknown as [number, number][]
+							this.zoomInEffectListener(activeImageExtent, coords, map, activePatchColor)
+						}
 					} catch (e) {
-						console.error('Error in sampleWsiAiApi request:', e)
+						console.error('Error in saveWSIAnnotation request:', e)
 					}
 				}
 			})
