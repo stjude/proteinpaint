@@ -394,7 +394,6 @@ export class Barchart {
 	}
 
 	async getDescrStats() {
-		this.hasStats = this.config.term2 ? true : false
 		// get descriptive statistics for numerical terms
 		const terms = [this.config.term]
 		if (this.config.term2) terms.push(this.config.term2)
@@ -405,7 +404,6 @@ export class Barchart {
 				const data = await this.app.vocabApi.getDescrStats(t, this.state.termfilter)
 				if (data.error) throw data.error
 				t.q.descrStats = data.values
-				this.hasStats = true
 			}
 		}
 	}
