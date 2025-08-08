@@ -10,6 +10,7 @@ import { gdcBuildDictionary } from './gdc.buildDictionary.js'
 import { validate_variant2samples } from './mds3.variant2samples.js'
 import { ssmIdFieldsSeparator } from '#shared/mds3tk.js'
 import * as utils from './utils.js'
+import { mayLog } from './helpers'
 import { compute_mclass } from './vcf.mclass.js'
 import computePercentile from '#shared/compute.percentile.js'
 import { filterJoin } from '#shared/filter.js'
@@ -1614,7 +1615,7 @@ async function validate_query_ssGSEA(ds, genome) {
 		q.samples = []
 		await utils.file_is_readable(q.file) // Validate that the HDF5 file exists
 
-		const tmp = await run_rust('validateHDF5', JSON.stringify({ hdf5_file: q.file }))
+		const tmp = await run_rust('validateH5', JSON.stringify({ hdf5_file: q.file }))
 		const vr = JSON.parse(tmp)
 
 		if (vr.status !== 'success') throw vr.message
@@ -1663,10 +1664,9 @@ async function validate_query_ssGSEA(ds, genome) {
 		}
 
 		const time1 = Date.now()
-		const geneData = await run_rust('readHDF5', JSON.stringify({ hdf5_file: q.file, gene: genesetNams }))
-		//mayLog('Time taken to run gene query:', formatElapsedTime(Date.now() - time1))
+		const geneData = await run_rust('readH5', JSON.stringify({ hdf5_file: q.file, gene: genesetNams }))
+		mayLog('Time taken to run gene query:', formatElapsedTime(Date.now() - time1))
 
-		// Check if we have a multi-gene response (genes field) or single gene response
 		const genesData = geneData.genes || { [genesetNames[0]]: geneData }
 		// Process each gene's data
 		for (const tw of param.terms) {

@@ -292,40 +292,21 @@ async function get_snp(tvs, CTEname, ds) {
 }
 
 async function get_geneExpression(tvs, CTEname, ds) {
-	const data = await ds.queries.geneExpression.get({ terms: [{ gene: tvs.term.gene }] })
-	const samples = []
-	for (const sampleId in data.term2sample2value.get(tvs.term.gene)) {
-		const values = data.term2sample2value.get(tvs.term.gene)
-		const value = Number(values[sampleId])
-		const filterBin = getBin(tvs.ranges, value)
-		if (filterBin != -1) samples.push(sampleId)
-	}
-
-	let query = `SELECT id as sample
-				FROM sampleidmap
-				WHERE id IN (${samples.map(i => '?').join(', ')})`
-
-	const result = {
-		CTEs: [
-			`
-		  ${CTEname} AS (
-			${query}
-			)`
-		],
-		values: [...samples],
-		CTEname
-	}
-	return result
+	const q = ds.queries?.geneExpression
+	if (!q) throw 'not supported' // guard against request to unsupported data. FIXME may improve filterui to gracefully handle such and avoid showing completely broken mass ui when the request comes from handwrite state or url
+	const data = await q.get({ terms: [{ gene: tvs.term.gene }] })
+	return numericSampleData2tvs(tvs, CTEname, data.term2sample2value.get(tvs.term.gene))
 }
 
 async function get_metaboliteIntensity(tvs, CTEname, ds) {
-	const args = {
-		genome: ds.genome,
-		dslabel: ds.label,
-		terms: [tvs.term]
-	}
-	const data = await ds.queries.metaboliteIntensity.get(args)
+	const q = ds.queries?.metaboliteIntensity
+	if (!q) throw 'not supported'
+	const data = await q.get({ terms: [tvs.term] })
 	const termData = data.term2sample2value.get(tvs.term.name)
+	return numericSampleData2tvs(tvs, CTEname, termData)
+}
+
+function numericSampleData2tvs(tvs, CTEname, termData) {
 	const samples = []
 
 	for (const sample in termData) {
@@ -334,7 +315,7 @@ async function get_metaboliteIntensity(tvs, CTEname, ds) {
 		if (filterBin != -1) samples.push(sample)
 	}
 
-	let query = `SELECT id as sample
+	const query = `SELECT id as sample
 				FROM sampleidmap
 				WHERE id IN (${samples.map(i => '?').join(', ')})`
 

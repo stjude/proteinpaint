@@ -973,6 +973,10 @@ type Mds3Queries = {
 	singleSampleMutation?: SingleSampleMutationQuery
 	NIdata?: NIdataQuery
 	geneExpression?: GeneExpressionQuery
+	ssGSEA?: {
+		/** path to h5 file, matrix of NES scores. rows are msigdb geneset ids, columns are rnaseq samples */
+		file: string
+	}
 	rnaseqGeneCount?: RnaseqGeneCount
 	/** Used to create the top mutated genes UI in the gene
 	 * set edit ui and data requests. */
@@ -981,7 +985,7 @@ type Mds3Queries = {
 	 * set edit ui. Also used for data requests */
 	topVariablyExpressedGenes?: TopVariablyExpressedGenesQuery
 	metaboliteIntensity?: {
-		src: 'native' | 'gdc'
+		src: 'native'
 		file: string
 	}
 	singleCell?: SingleCellQuery
