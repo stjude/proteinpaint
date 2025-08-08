@@ -521,6 +521,7 @@ function handle_click(event, self, chart) {
 }
 
 async function listSamples(event, self, seriesId, dataId, chartId) {
+	// query sample data
 	const terms = [self.config.term]
 	const tvslst = {
 		type: 'tvslst',
@@ -546,12 +547,13 @@ async function listSamples(event, self, seriesId, dataId, chartId) {
 		filter0: self.state.termfilter.filter0
 	}
 	const data = await self.app.vocabApi.getAnnotatedSampleData(opts)
+
+	// fill table rows with sample data
 	const rows = []
 	const termIsNumeric = isNumericTerm(self.config.term.term)
 	const term2isNumeric = self.config.term2 ? isNumericTerm(self.config.term2.term) : false
 	const termIsGv = self.config.term.term.type == 'geneVariant'
 	const term2isGv = self.config.term2?.term.type == 'geneVariant'
-
 	for (const sample of data.lst) {
 		const sampleName = data.refs.bySampleId[sample.sample].label
 		// must filter by geneVariant term(s) here in order to filter by
@@ -571,8 +573,8 @@ async function listSamples(event, self, seriesId, dataId, chartId) {
 			const value = sample[self.config.term.$id]?.value
 			row.push({ value: roundValueAuto(value) })
 		} else if (termIsGv) {
-			const value = getGvValue(sample, self.config.term.$id)
-			row.push({ value })
+			const values = getGvValues(sample, self.config.term)
+			for (const value of values) row.push({ value })
 		}
 		if (self.config.term2) {
 			//Don't show hidden values in the results
@@ -582,24 +584,39 @@ async function listSamples(event, self, seriesId, dataId, chartId) {
 			)
 				continue
 			let value = sample[self.config.term2.$id]
-			if (!value) row.push({ value: '' })
-			else {
+			if (!value) {
+				row.push({ value: '' })
+			} else if (term2isNumeric) {
+				value = roundValueAuto(value.value)
+				row.push({ value })
+			} else if (term2isGv) {
+				const values = getGvValues(sample, self.config.term2)
+				for (const value of values) row.push({ value })
+			} else {
 				const label = self.config.term2.term.values?.[value.key]?.label
-				if (term2isNumeric) {
-					value = roundValueAuto(value.value)
-				} else if (term2isGv) {
-					value = getGvValue(sample, self.config.term2.$id)
-				} else {
-					value = label || value.value
-				}
+				value = label || value.value
 				row.push({ value })
 			}
 		}
 		rows.push(row)
 	}
+
+	// fill table columns with term metadata
 	const columns = [{ label: 'Sample' }]
-	if (termIsNumeric || termIsGv) columns.push({ label: self.config.term.term.name })
-	if (self.config.term2) columns.push({ label: self.config.term2.term.name })
+	if (termIsNumeric) {
+		columns.push({ label: self.config.term.term.name })
+	} else if (termIsGv) {
+		for (const gene of self.config.term.term.genes) columns.push({ label: gene.name })
+	}
+	if (self.config.term2) {
+		if (term2isGv) {
+			for (const gene of self.config.term2.term.genes) columns.push({ label: gene.name })
+		} else {
+			columns.push({ label: self.config.term2.term.name })
+		}
+	}
+
+	// render table
 	const menu = new Menu({ padding: '5px' })
 	const div = menu.d.append('div')
 	renderTable({
@@ -677,16 +694,21 @@ async function listSamples(event, self, seriesId, dataId, chartId) {
 		return true
 	}
 
-	function getGvValue(sample, $id) {
-		const mlst = sample[$id]?.values
-		const value = mlst
-			.map(m => {
-				let label = m.label
-				if (m.mname) label += ` (${m.mname})`
-				return label
-			})
-			.join(', ')
-		return value
+	function getGvValues(sample, tw) {
+		const mlst = sample[tw.$id]?.values
+		const values = []
+		for (const gene of tw.term.genes) {
+			const mlst_gene = mlst.filter(m => m.gene == gene.id)
+			const value = mlst_gene
+				.map(m => {
+					let label = m.label
+					if (m.mname) label += ` (${m.mname})`
+					return label
+				})
+				.join(', ')
+			values.push(value)
+		}
+		return values
 	}
 }
 
