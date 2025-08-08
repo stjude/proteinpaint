@@ -207,7 +207,7 @@ export class Barchart {
 						this.chartsData?.charts.find(c => c.serieses.length != c.dedupedSerieses.length) ? 'table-row' : 'none'
 				}
 			]
-			if (this.hasStats)
+			if (isNumericTerm(this.config.term.term))
 				inputs.push({
 					label: 'Show stats',
 					type: 'checkbox',
@@ -223,8 +223,16 @@ export class Barchart {
 					settingsKey: 'showPercent',
 					boxLabel: 'Yes'
 				})
+			else
+				inputs.push({
+					label: 'Show association tests',
+					type: 'checkbox',
+					chartType: 'barchart',
+					settingsKey: 'showAssociationTests',
+					boxLabel: 'Yes'
+				})
 			if (state.config.settings.barchart.colorBars && (state.config.term2 || state.config.term0))
-				inputs.splice(8, 0, {
+				inputs.splice(7, 0, {
 					label: 'Assign colors to',
 					title: `Colors bars either considering all the categories or the present categories. If there are many categories and only few are present the present choice will provide more contrast.`,
 					type: 'radio',
@@ -236,7 +244,7 @@ export class Barchart {
 					]
 				})
 			else
-				inputs.splice(8, 0, {
+				inputs.splice(7, 0, {
 					label: 'Default color',
 					title: 'Default color for bars when there is no overlay',
 					type: 'color',
@@ -424,7 +432,8 @@ export class Barchart {
 			colspace: config.settings.common.barspace,
 			rowspace: config.settings.common.barspace,
 			colorUsing: config.settings.barchart.colorUsing,
-			showStats: config.settings.barchart.showStats
+			showStats: config.settings.barchart.showStats,
+			showAssociationTests: config.settings.barchart.showAssociationTests
 		}
 
 		/* mayResetHidden() was added before to prevent showing empty chart due to automatic hiding uncomputable categories
@@ -768,7 +777,7 @@ export class Barchart {
 			const name = `<span style="${headingStyle}">${title}</span>`
 			legendGrps.push({ name, items })
 		}
-		if (t2?.q.descrStats && s.showStats) {
+		if (t2?.q.descrStats && s.showAssociationTests) {
 			// term2 has descriptive stats
 			const items = t2.q.descrStats.map(stat => {
 				return {
@@ -951,7 +960,11 @@ function setRenderers(self) {
 			.style('vertical-align', 'top')
 			.style('margin', '10px 10px 10px 30px')
 			.style('display', 'none')
-		if (self.chartsData.tests && self.chartsData.tests[chart.chartId] && self.config.settings.barchart.showStats) {
+		if (
+			self.chartsData.tests &&
+			self.chartsData.tests[chart.chartId] &&
+			self.config.settings.barchart.showAssociationTests
+		) {
 			//chart has pvalues
 			generatePvalueTable(chart, div)
 		}
@@ -983,7 +996,11 @@ function setRenderers(self) {
 			.style('vertical-align', 'top')
 			.style('margin', '10px 10px 10px 30px')
 			.style('display', 'none')
-		if (self.chartsData.tests && self.chartsData.tests[chart.chartId] && self.config.settings.barchart.showStats) {
+		if (
+			self.chartsData.tests &&
+			self.chartsData.tests[chart.chartId] &&
+			self.config.settings.barchart.showAssociationTests
+		) {
 			//chart has pvalues
 			generatePvalueTable(chart, div)
 		}
@@ -1250,6 +1267,7 @@ export function getDefaultBarSettings(app) {
 		colorUsing: 'all',
 		dedup: false,
 		showStats: true,
+		showAssociationTests: true,
 		showPercent: false
 	}
 }
