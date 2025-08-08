@@ -3601,10 +3601,10 @@
   },
   "termsetting/handlers/geneVariant.ts": {
     "lines": {
-      "total": 191,
+      "total": 189,
       "covered": 2,
       "skipped": 0,
-      "pct": 1.04
+      "pct": 1.05
     },
     "functions": {
       "total": 30,
@@ -3613,13 +3613,13 @@
       "pct": 0
     },
     "statements": {
-      "total": 211,
+      "total": 212,
       "covered": 2,
       "skipped": 0,
       "pct": 0.94
     },
     "branches": {
-      "total": 112,
+      "total": 114,
       "covered": 0,
       "skipped": 0,
       "pct": 0
@@ -3630,32 +3630,32 @@
       "diff": -42.85
     },
     "averagePct": {
-      "curr": 0.495,
+      "curr": 0.4975,
       "prev": 45.0975,
-      "diff": -44.6025
+      "diff": -44.599999999999994
     }
   },
   "plots/barchart.events.js": {
     "lines": {
-      "total": 317,
+      "total": 350,
       "covered": 1,
       "skipped": 0,
-      "pct": 0.31
+      "pct": 0.28
     },
     "functions": {
-      "total": 62,
+      "total": 65,
       "covered": 0,
       "skipped": 0,
       "pct": 0
     },
     "statements": {
-      "total": 348,
+      "total": 386,
       "covered": 1,
       "skipped": 0,
-      "pct": 0.28
+      "pct": 0.25
     },
     "branches": {
-      "total": 404,
+      "total": 421,
       "covered": 0,
       "skipped": 0,
       "pct": 0
@@ -3666,9 +3666,9 @@
       "diff": -34.4
     },
     "averagePct": {
-      "curr": 0.14750000000000002,
+      "curr": 0.1325,
       "prev": 37.3525,
-      "diff": -37.205
+      "diff": -37.22
     }
   },
   "plots/disco/viewmodel/ViewModel.ts": {
