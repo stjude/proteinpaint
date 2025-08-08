@@ -307,8 +307,9 @@ function getAllowedTermTypes(ds) {
 		for (const t of ds.cohort.termdb.allowedTermTypes) typeSet.add(t)
 	}
 	// assess other data types and add corresponding term types
-	if (ds?.queries?.geneExpression) typeSet.add(TermTypes.GENE_EXPRESSION)
-	if (ds?.queries?.metaboliteIntensity) typeSet.add(TermTypes.METABOLITE_INTENSITY)
+	if (ds.queries?.geneExpression) typeSet.add(TermTypes.GENE_EXPRESSION)
+	if (ds.queries?.metaboliteIntensity) typeSet.add(TermTypes.METABOLITE_INTENSITY)
+	if (ds.queries?.ssGSEA) typeSet.add(TermTypes.SSGSEA)
 	return [...typeSet]
 }
 
