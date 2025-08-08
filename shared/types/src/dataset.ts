@@ -973,9 +973,13 @@ type Mds3Queries = {
 	singleSampleMutation?: SingleSampleMutationQuery
 	NIdata?: NIdataQuery
 	geneExpression?: GeneExpressionQuery
+	/** single-sample gsea precomputed scores for rnaseq samples, for genesets from geneset db
+	requires genome to be equipped with geneset db
+	*/
 	ssGSEA?: {
 		/** path to h5 file, matrix of NES scores. rows are msigdb geneset ids, columns are rnaseq samples */
 		file: string
+		// in case a genome may have more than 1 geneset dbs, here may specify name of db that this result is based on */
 	}
 	rnaseqGeneCount?: RnaseqGeneCount
 	/** Used to create the top mutated genes UI in the gene

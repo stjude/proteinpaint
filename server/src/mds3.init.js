@@ -1610,6 +1610,7 @@ async function validate_query_ssGSEA(ds, genome) {
 	const q = ds.queries.ssGSEA
 	if (!q) return
 	try {
+		if (!genome.termdbs) throw 'missing genome-level geneset db'
 		if (!q.file) throw '.file missing'
 		q.file = path.join(serverconfig.tpmasterdir, q.file)
 		q.samples = []
