@@ -281,7 +281,10 @@ async function maySetAuthRoutes(app, genomes, basepath = '', _serverconfig = nul
 			ignoredTermIds: [], // when provided the filter on these terms will be ignored
 			// NOTE: sessionid is from a domain-based cookie for GDC,
 			//       for SJ sites, the cookie key is determined by dsCredentials entry
-			sessionid: req.cookies.sessionid // may be undefined
+			sessionid: req.cookies.sessionid, // may be undefined
+			// tracker to detect term-values/categories that fall below min sample size requirement
+			// each entry will an array of [tw.$id, category, requiredMinSampleSize]
+			twValuesUnderMinSampleSize: []
 		}
 
 		if (forcedOpenRoutes.has(req.path)) {
@@ -433,6 +436,20 @@ async function maySetAuthRoutes(app, genomes, basepath = '', _serverconfig = nul
 
 				// this flag may be used by downstream code that does not have access to req argument or ds object
 				__protected__.userCanAccess = authApi.userCanAccess(req, ds, protectedRoutes.minSampleSize)
+
+				if (ds.cohort?.termdb?.checkAccessToSampleData) {
+					const send = res.send
+					res.send = async function (_body) {
+						const body = typeof _body === 'string' ? JSON.parse(_body) : _body
+						if (!body.error && __protected__.twValuesUnderMinSampleSize.length) {
+							const requiredMins = __protected__.twValuesUnderMinSampleSize.map(v => v[2])
+							body._data_warning_ = `Categories with less than ${Math.max(
+								...requiredMins
+							)} sample count have been removed.`
+						}
+						send.call(this, _body)
+					}
+				}
 			}
 		}
 		Object.freeze(__protected__)

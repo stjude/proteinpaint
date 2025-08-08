@@ -17,6 +17,11 @@ export class Vocab {
   	*/
 		this.missingCatValsByTermId = {}
 		const dslabel = this.vocab?.dslabel || this.state?.dslabel
+		this.dofetch3 = async (url, init, opts) => {
+			const payload = await dofetch3(url, init, opts)
+			if (payload._data_warning_) this.app.printWarn(payload._data_warning_)
+			return payload
+		}
 	}
 
 	async main(stateOverride = null) {

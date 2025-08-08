@@ -64,6 +64,16 @@ const runpp = helpers.getRunPp('mass', {
 	debug: 1
 })
 
+const runProtected = helpers.getRunPp('mass', {
+	state: {
+		vocab: {
+			dslabel: 'ProtectedTest',
+			genome: 'hg38-test'
+		}
+	},
+	debug: 1
+})
+
 /**************
  test sections
 ***************/
@@ -1742,17 +1752,8 @@ tape('max number of bins: exceeded', test => {
 
 tape('minimum sample size', test => {
 	test.timeoutAfter(3000)
-	const runpp = helpers.getRunPp('mass', {
-		state: {
-			vocab: {
-				dslabel: 'ProtectedTest',
-				genome: 'hg38-test'
-			}
-		},
-		debug: 1
-	})
 
-	runpp({
+	runProtected({
 		state: {
 			termfilter: {
 				filter: {

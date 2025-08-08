@@ -15,7 +15,9 @@ export default function (): Mds3 {
 	ds.cohort.termdb.checkAccessToSampleData = (_, data) => {
 		return {
 			minSampleSize,
-			canAccess: data.sampleCount >= minSampleSize
+			// TODO: also test by-category / term-value level min sample size,
+			//       below is only for all-terms and by-term
+			canAccess: data.countLevel != 'by-category' ? data.sampleCount >= minSampleSize : true
 		}
 	}
 	return ds

@@ -998,12 +998,13 @@ function mayGetCategories(data, q, ds) {
 		const tw = structuredClone({ q: {}, term: _tw.term, $id: _tw.$id })
 		let term = tw.term
 		if (!term.type) term = q.ds.cohort.termdb.q.termjsonByOneid(tw.term.id)
-		if (term.type == 'geneVariant' || (term.type == 'categorical' && !hasValues(term))) twLst.push(tw)
+		// ??? TODO: improve hasValues() condition to only if there is ds.cohort.termdb.checkAccessToSampleData() ???
+		if (term.type == 'geneVariant' || term.type == 'categorical' /*&& !hasValues(term)*/) twLst.push(tw)
 	}
 	if (!twLst.length) return
 	const categories = {}
 	for (const tw of twLst) {
-		const [lst, orderedLabels] = getCategories(data, { tw }, ds, tw.$id)
+		const [lst, orderedLabels] = getCategories(data, { tw, __protected__: q.__protected__ }, ds, tw.$id)
 		categories[tw.$id] = { lst, orderedLabels }
 	}
 	return categories
@@ -1022,7 +1023,10 @@ function checkAccessToSampleData(data, ds, q) {
 	// handle the option to require a minimum sample size for data
 	if (!ds.cohort.termdb.checkAccessToSampleData) return
 	// quick check
-	const access = ds.cohort.termdb.checkAccessToSampleData(q, { sampleCount: Object.keys(data.samples).length })
+	const access = ds.cohort.termdb.checkAccessToSampleData(q, {
+		sampleCount: Object.keys(data.samples).length,
+		countLevel: 'all-terms'
+	})
 	if (!access.canAccess)
 		throw {
 			message: `One or more terms has less than ${access.minSampleSize} samples with data.`,
@@ -1037,10 +1041,13 @@ function checkAccessToSampleData(data, ds, q) {
 		}
 	}
 	const counts = [...sampleSizeByTermId.values()].map(v => v.size) // list of sample counts for each and every term
-	const access1 = ds.cohort.termdb.checkAccessToSampleData(q, { sampleCount: Math.min(...counts) })
-	if (!access1.canAccess)
+	const termAccess = ds.cohort.termdb.checkAccessToSampleData(q, {
+		sampleCount: Math.min(...counts),
+		countLevel: 'by-term'
+	})
+	if (!termAccess.canAccess)
 		throw {
-			message: `One or more terms has less than ${access1.minSampleSize} samples with data.`,
+			message: `One or more terms has less than ${termAccess.minSampleSize} samples with data.`,
 			code: 'ERR_MIN_SAMPLE_SIZE'
 		}
 }

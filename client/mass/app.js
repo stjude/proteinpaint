@@ -42,8 +42,26 @@ class MassApp {
 			holder: opts.holder, // do not modify holder style
 			topbar: opts.holder.append('div'),
 			errdiv: opts.holder.append('div'),
-			plotDiv: opts.holder.append('div')
+			plotDiv: opts.holder.append('div'),
+			warndiv: opts.holder
+				.append('div')
+				.attr('class', 'sja_mass-app-warn')
+				.style('display', 'none')
+				.style('position', 'fixed')
+				.style('top', '100px')
+				.style('right', '20px')
+				.style('padding', '5px')
+				.style('background-color', 'rgba(255, 191, 0, 0.5)')
+				.style('z-index', 1000)
 		}
+
+		this.dom.warndiv
+			.append('span')
+			.style('margin-right', '5px')
+			.style('cursor', 'default')
+			.html('&#10005;')
+			.on('click', () => this.clearWarn())
+		this.dom.warnText = this.dom.warndiv.append('span')
 
 		// track plots by ID, and assign
 		this.plotIdToSandboxId = {}
@@ -72,6 +90,7 @@ class MassApp {
 				if (event.key == 'Escape') api.tip.hide()
 			})
 			api.printError = e => this.printError(e)
+			api.printWarn = w => this.printWarn(w)
 			const vocab = this.opts.state.vocab
 
 			// TODO: only pass state.genome, dslabel to vocabInit
@@ -138,6 +157,7 @@ class MassApp {
 	}
 
 	async main() {
+		this.clearWarn()
 		await this.api.vocabApi.main()
 		//Do not show the plots below the about tab
 		this.dom.plotDiv?.style(
@@ -195,6 +215,16 @@ class MassApp {
 		sayerror(errdiv || this.opts.holder, 'Error: ' + (e.message || e.error || e))
 		if (e.stack) console.log(e.stack)
 		this.bus.emit('error')
+	}
+
+	printWarn(warning) {
+		this.dom.warnText.text(warning)
+		this.dom.warndiv.style('display', 'block')
+	}
+
+	clearWarn() {
+		this.dom.warnText.text('')
+		this.dom.warndiv.style('display', 'none')
 	}
 }
 

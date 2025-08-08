@@ -66,10 +66,10 @@ async function trigger_getcategories(
 
 export function getCategories(data, q, ds, $id) {
 	const lst: any[] = []
+	const samples = data.samples as { [sampleId: string]: { [term$id: string]: any } }
 	if (q.tw.term.type == 'geneVariant' && q.tw.q.type != 'predefined-groupset' && q.tw.q.type != 'custom-groupset') {
 		// specialized data processing for geneVariant term when
 		// groupsetting is not in use
-		const samples = data.samples as { [sampleId: string]: any }
 		const dtClassMap = new Map()
 		if (ds.assayAvailability?.byDt) {
 			for (const [dtType, _dtValue] of Object.entries(ds.assayAvailability.byDt)) {
@@ -129,7 +129,7 @@ export function getCategories(data, q, ds, $id) {
 		const key2count = new Map()
 		// k: category key
 		// v: number of samples
-		for (const sid in data.samples) {
+		for (const sid in samples) {
 			const v = data.samples[sid][$id]
 			if (!v) continue
 			if (!('key' in v)) continue
@@ -156,5 +156,23 @@ export function getCategories(data, q, ds, $id) {
 	if (orderedLabels.length) {
 		lst.sort((a, b) => orderedLabels.indexOf(a.label) - orderedLabels.indexOf(b.label))
 	}
+
+	if (ds.cohort?.termdb?.checkAccessToSampleData) {
+		for (const [i, v] of lst.slice().entries()) {
+			const access = ds.cohort.termdb.checkAccessToSampleData(q, {
+				sampleCount: v.samplecount,
+				countLevel: 'by-category'
+			})
+			if (access.canAccess) continue
+			lst.splice(i, 1)
+			const j = orderedLabels.findIndex(l => v.label === l)
+			orderedLabels.splice(j, 1)
+			for (const s of Object.values(samples)) {
+				if (s[$id]?.key === v.key) delete s[$id]
+			}
+			q.__protected__.twValuesUnderMinSampleSize.push([$id, v.key, access.minSampleSize])
+		}
+	}
+
 	return [lst, orderedLabels]
 }
