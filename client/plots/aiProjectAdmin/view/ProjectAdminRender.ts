@@ -40,7 +40,7 @@ export class ProjectAdminRender {
 			.text('Create Project')
 			.attr('display', 'inline-block')
 			.property('disabled', true)
-			.on('click', () => {
+			.on('click', async () => {
 				const projectName = input.property('value')
 				const notEmpty = projectName.trim().length > 0
 				if (!notEmpty) {
@@ -51,7 +51,7 @@ export class ProjectAdminRender {
 				if (notUnique) {
 					return sayerror(this.dom.errorDiv, `Project name '${projectName}' already exists`)
 				}
-				this.interactions.addProject(projectName)
+				await this.interactions.appDispatchEdit({ settings: { project: { name: projectName, type: 'new' } } })
 			})
 
 		input.on('keydown', () => {
