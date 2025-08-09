@@ -111,3 +111,11 @@ path="src/gdcGRIN2.rs"
 [[bin]]
 name="cerno"
 path="src/cerno.rs"
+
+[[bin]]
+name="validateH5"
+path="src/validateH5.rs"
+
+[[bin]]
+name="readH5"
+path="src/readH5.rs"
