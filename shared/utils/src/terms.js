@@ -1,4 +1,4 @@
-import { dtgeneexpression, dtmetaboliteintensity, TermTypeGroups, dtTerms } from './common.js'
+import { dtgeneexpression, dtssgsea, dtmetaboliteintensity, TermTypeGroups, dtTerms } from './common.js'
 import { roundValueAuto } from './roundValue.js'
 
 // moved TermTypeGroups to `server/src/common.js`, so now has to re-export
@@ -51,6 +51,7 @@ export const NUMERIC_DICTIONARY_TERM = 'numericDictTerm'
 
 export const TermTypes2Dt = {
 	[TermTypes.GENE_EXPRESSION]: dtgeneexpression,
+	[TermTypes.SSGSEA]: dtssgsea,
 	[TermTypes.METABOLITE_INTENSITY]: dtmetaboliteintensity
 }
 
@@ -67,8 +68,8 @@ export const typeGroup = {
 	[TermTypes.SNP_LIST]: TermTypeGroups.SNP_LIST,
 	[TermTypes.SNP_LOCUS]: TermTypeGroups.SNP_LOCUS,
 	[TermTypes.GENE_EXPRESSION]: TermTypeGroups.GENE_EXPRESSION,
-	[TermTypes.METABOLITE_INTENSITY]: TermTypeGroups.METABOLITE_INTENSITY,
-	[TermTypes.SSGSEA]: TermTypeGroups.SSGSEA
+	[TermTypes.SSGSEA]: TermTypeGroups.SSGSEA,
+	[TermTypes.METABOLITE_INTENSITY]: TermTypeGroups.METABOLITE_INTENSITY
 }
 
 const nonDictTypes = new Set([
@@ -76,6 +77,7 @@ const nonDictTypes = new Set([
 	TermTypes.SNP_LIST,
 	TermTypes.SNP_LOCUS,
 	TermTypes.GENE_EXPRESSION,
+	TermTypes.SSGSEA,
 	TermTypes.GENE_VARIANT,
 	TermTypes.METABOLITE_INTENSITY,
 	TermTypes.SINGLECELL_GENE_EXPRESSION,
@@ -89,6 +91,7 @@ export const numericTypes = new Set([
 	TermTypes.INTEGER,
 	TermTypes.FLOAT,
 	TermTypes.GENE_EXPRESSION,
+	TermTypes.SSGSEA,
 	TermTypes.METABOLITE_INTENSITY,
 	TermTypes.SINGLECELL_GENE_EXPRESSION,
 	TermTypes.DATE
@@ -132,6 +135,8 @@ export function equals(t1, t2) {
 	switch (t1.type) {
 		case TermTypes.GENE_EXPRESSION:
 			return t1.gene == t2.gene
+		case TermTypes.SSGSEA:
+			return t1.id == t2.id
 		case TermTypes.METABOLITE_INTENSITY:
 			return t1.name == t2.name
 		case TermTypes.GENE_VARIANT:
