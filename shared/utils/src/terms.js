@@ -208,6 +208,7 @@ const typeMap = {
 	float: 'Numerical',
 	integer: 'Numerical',
 	geneExpression: 'Gene Expression',
+	ssGSEA: 'Geneset Expression',
 	geneVariant: 'Gene Variant',
 	metaboliteIntensity: 'Metabolite Intensity',
 	multiValue: 'Multi Value',
