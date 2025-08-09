@@ -62,7 +62,8 @@ export const dtnloss = 8
 export const dtcloss = 9
 export const dtloh = 10
 export const dtmetaboliteintensity = 11
-// add new dt value here, and DO NOT change value of existing dt!
+export const dtssgsea = 12
+// add new dt value here. !!!DO NOT change value of existing dt!!!
 
 export const dt2label = {
 	[dtsnvindel]: 'SNV/indel',
