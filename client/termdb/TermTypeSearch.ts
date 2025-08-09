@@ -109,13 +109,14 @@ export class TermTypeSearch {
 
 		const state = this.getState(appState)
 		await this.addTabsAllowed(state)
-		if (this.submit_lst)
+		if (this.submit_lst) {
 			//multiple terms can be selected
 			this.dom.clearbt = this.dom.submitDiv
 				.append('button')
 				.style('margin-left', '5px')
 				.text('Clear')
 				.on('click', () => this.selectTerms([]))
+		}
 
 		if (this.tabs.length == 0) throw 'No term types allowed for this use case'
 		this.app.dispatch({ type: 'set_term_type_group', value: this.tabs[0].termTypeGroup })
