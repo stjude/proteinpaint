@@ -29,7 +29,8 @@ export const TermTypeGroups = {
 	MUTATION_SIGNATURE: 'Mutation Signature',
 	SNP: 'SNP Genotype',
 	SNP_LIST: 'SNP List',
-	SNP_LOCUS: 'SNP Locus'
+	SNP_LOCUS: 'SNP Locus',
+	SSGSEA: 'Geneset Expression'
 }
 
 export const defaultcolor = rgb('#8AB1D4').darker()
@@ -61,7 +62,8 @@ export const dtnloss = 8
 export const dtcloss = 9
 export const dtloh = 10
 export const dtmetaboliteintensity = 11
-// add new dt value here, and DO NOT change value of existing dt!
+export const dtssgsea = 12
+// add new dt value here. !!!DO NOT change value of existing dt!!!
 
 export const dt2label = {
 	[dtsnvindel]: 'SNV/indel',

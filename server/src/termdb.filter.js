@@ -5,9 +5,6 @@ import { filterByItem } from './mds3.init.js'
 import { annoNumericTypes } from '#shared/terms.js'
 
 /*
-nested filter documented at:
-https://docs.google.com/document/d/18Qh52MOnwIRXrcqYR43hB9ezv203y_CtJIjRgDcI42I/edit?pli=1#heading=h.eeqtb17pxcp0
-
 ds: required by get_numerical()
 
 CTEname: Provides the prefix of CTEs at this level (filter.lst[])
@@ -77,6 +74,8 @@ export async function getFilterCTEs(filter, ds, sampleTypes = new Set(), CTEname
 			f = await get_geneExpression(item.tvs, CTEname_i, ds)
 		} else if (item.tvs.term.type == TermTypes.METABOLITE_INTENSITY) {
 			f = await get_metaboliteIntensity(item.tvs, CTEname_i, ds)
+		} else if (item.tvs.term.type == TermTypes.SSGSEA) {
+			f = await get_ssGSEA(item.tvs, CTEname_i, ds)
 		} else if (dtTermTypes.has(item.tvs.term.type)) {
 			f = await get_dtTerm(item.tvs, CTEname_i, ds)
 		} else if (item.tvs.term.type == 'categorical') {
@@ -292,40 +291,25 @@ async function get_snp(tvs, CTEname, ds) {
 }
 
 async function get_geneExpression(tvs, CTEname, ds) {
-	const data = await ds.queries.geneExpression.get({ terms: [{ gene: tvs.term.gene }] })
-	const samples = []
-	for (const sampleId in data.term2sample2value.get(tvs.term.gene)) {
-		const values = data.term2sample2value.get(tvs.term.gene)
-		const value = Number(values[sampleId])
-		const filterBin = getBin(tvs.ranges, value)
-		if (filterBin != -1) samples.push(sampleId)
-	}
-
-	let query = `SELECT id as sample
-				FROM sampleidmap
-				WHERE id IN (${samples.map(i => '?').join(', ')})`
-
-	const result = {
-		CTEs: [
-			`
-		  ${CTEname} AS (
-			${query}
-			)`
-		],
-		values: [...samples],
-		CTEname
-	}
-	return result
+	const q = ds.queries?.geneExpression
+	if (!q) throw 'not supported' // guard against request to unsupported data. FIXME may improve filterui to gracefully handle such and avoid showing completely broken mass ui when the request comes from handwrite state or url
+	const data = await q.get({ terms: [{ gene: tvs.term.gene }] })
+	return numericSampleData2tvs(tvs, CTEname, data.term2sample2value.get(tvs.term.gene))
+}
+async function get_metaboliteIntensity(tvs, CTEname, ds) {
+	const q = ds.queries?.metaboliteIntensity
+	if (!q) throw 'not supported'
+	const data = await q.get({ terms: [tvs.term] })
+	return numericSampleData2tvs(tvs, CTEname, data.term2sample2value.get(tvs.term.name))
+}
+async function get_ssGSEA(tvs, CTEname, ds) {
+	const q = ds.queries?.ssGSEA
+	if (!q) throw 'not supported'
+	const data = await q.get({ terms: [tvs.term] })
+	return numericSampleData2tvs(tvs, CTEname, data.term2sample2value.get(tvs.term.id))
 }
 
-async function get_metaboliteIntensity(tvs, CTEname, ds) {
-	const args = {
-		genome: ds.genome,
-		dslabel: ds.label,
-		terms: [tvs.term]
-	}
-	const data = await ds.queries.metaboliteIntensity.get(args)
-	const termData = data.term2sample2value.get(tvs.term.name)
+function numericSampleData2tvs(tvs, CTEname, termData) {
 	const samples = []
 
 	for (const sample in termData) {
@@ -334,7 +318,7 @@ async function get_metaboliteIntensity(tvs, CTEname, ds) {
 		if (filterBin != -1) samples.push(sample)
 	}
 
-	let query = `SELECT id as sample
+	const query = `SELECT id as sample
 				FROM sampleidmap
 				WHERE id IN (${samples.map(i => '?').join(', ')})`
 
