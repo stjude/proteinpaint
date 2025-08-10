@@ -13,6 +13,8 @@ export async function getHandler(self) {
 
 export async function fillTW(tw: SsGSEATW, vocabApi: VocabApi, defaultQ: NumericQ | null = null) {
 	if (typeof tw.term !== 'object') throw 'tw.term is not an object'
+	if (!tw.term.id) throw 'tw.term.id missing'
+	if (!tw.term.name) tw.term.name = tw.term.id // only apply to native; lack way to auto retrieve
 	if (!tw.q?.mode) tw.q = { mode: 'continuous' } // supply default q if missing
 	if (defaultQ) copyMerge(tw.q, defaultQ) // override if default is given
 	if (tw.q.mode !== 'continuous' && !tw.term.bins) await vocabApi.setTermBins(tw) // see notes in geneExpression.ts

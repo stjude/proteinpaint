@@ -1613,7 +1613,7 @@ async function validate_query_ssGSEA(ds, genome) {
 		if (!genome.termdbs) throw 'missing genome-level geneset db'
 		if (!q.file) throw '.file missing'
 		q.file = path.join(serverconfig.tpmasterdir, q.file)
-		q.samples = []
+		q.samples = [] // array of sample ids
 		await utils.file_is_readable(q.file) // Validate that the HDF5 file exists
 
 		const tmp = await run_rust(
@@ -1621,15 +1621,14 @@ async function validate_query_ssGSEA(ds, genome) {
 			JSON.stringify({ hdf5_file: q.file, row_dataset: 'samples', col_dataset: 'genesets' })
 		) // if possible not to specify row/col. wants a generic h5 file
 		const vr = JSON.parse(tmp)
-
 		if (vr.status !== 'success') throw vr.message
-		if (!vr.sampleNames?.length) throw 'HDF5 file has no samples, please check file.'
-		for (const sn of vr.sampleNames) {
+		if (!Array.isArray(vr.samples)) throw 'HDF5 file has no samples, please check file.'
+		for (const sn of vr.samples) {
 			const si = ds.cohort.termdb.q.sampleName2id(sn)
 			if (si == undefined) throw `unknown sample ${sn} from HDF5 ${q.file}`
 			q.samples.push(si)
 		}
-		console.log(`${ds.label}: ssGSEA HDF5 file validated. Format: ${vr.format}, Samples:`, vr.sampleNames.length)
+		console.log(`${ds.label}: ssGSEA HDF5 file validated. Format: ${vr.format}, Samples:`, vr.samples.length)
 	} catch (error) {
 		throw `${ds.label}: Failed to validate ssGSEA HDF5 file: ${error}`
 	}
@@ -1641,8 +1640,6 @@ async function validate_query_ssGSEA(ds, genome) {
 			// Got 0 sample after filtering, must still return expected structure with no data
 			return { term2sample2value: new Map(), byTermId: {}, bySampleId: {} }
 		}
-
-		// Set up sample IDs and labels
 		const bySampleId = {}
 		const samples = q.samples || []
 		if (limitSamples) {
@@ -1650,17 +1647,14 @@ async function validate_query_ssGSEA(ds, genome) {
 				bySampleId[sid] = { label: ds.cohort.termdb.q.id2sampleName(sid) }
 			}
 		} else {
-			// Use all samples with exp data
 			for (const sid of samples) {
 				bySampleId[sid] = { label: ds.cohort.termdb.q.id2sampleName(sid) }
 			}
 		}
-
-		// Initialize data structure
 		const term2sample2value = new Map()
 		const byTermId = {}
 
-		const genesetNames = param.terms.map(tw => tw.term.id)
+		const genesetNames = param.terms.map(t => t.id)
 
 		if (genesetNames.length === 0) {
 			console.log('No genesets to query')
@@ -1668,38 +1662,30 @@ async function validate_query_ssGSEA(ds, genome) {
 		}
 
 		const time1 = Date.now()
-		const geneData = await run_rust(
+		const tmp = await run_rust(
 			'readH5',
 			JSON.stringify({ hdf5_file: q.file, query: genesetNames, row_dataset: 'samples', col_dataset: 'genesets' })
 		)
-		mayLog('Time taken to run gene query:', formatElapsedTime(Date.now() - time1))
+		const results = JSON.parse(tmp)
+		mayLog('ssGSEA h5 file', Date.now() - time1)
 
-		const genesData = geneData.genes || { [genesetNames[0]]: geneData }
-		// Process each gene's data
-		for (const tw of param.terms) {
-			// Get this gene's data from the batch response
-			const geneResult = genesData[tw.term.id]
-			if (!geneResult) {
-				console.warn(`No data found for geneset ${tw.term.id} in the response`)
+		for (const t of param.terms) {
+			const result = results.query_output[t.id]?.samples
+			if (!result) {
+				console.warn(`No data found for geneset ${t.id} in the response`)
 				continue
 			}
 
-			// Extract just the samples data
-			const samplesData = geneResult.samples || {}
-
-			// Convert the gene data to the expected format
 			const s2v = {}
-
-			// Process sample data the same way as before
-			for (const [sampleName, value] of Object.entries(samplesData)) {
+			for (const sampleName in result) {
 				const sampleId = ds.cohort.termdb.q.sampleName2id(sampleName)
 				if (!sampleId) continue
-				if (limitSamples && limitSamples.has(sampleId)) continue
-				s2v[sampleId] = value
+				if (limitSamples && !limitSamples.has(sampleId)) continue
+				s2v[sampleId] = result[sampleName]
 			}
 
 			if (Object.keys(s2v).length) {
-				term2sample2value.set(tw.term.id, s2v)
+				term2sample2value.set(t.id, s2v)
 			}
 		}
 		if (term2sample2value.size == 0) throw 'No data available for the input.'
