@@ -1405,38 +1405,38 @@
   },
   "termdb/search.js": {
     "lines": {
-      "total": 132,
-      "covered": 96,
+      "total": 115,
+      "covered": 86,
       "skipped": 0,
-      "pct": 72.72
+      "pct": 74.78
     },
     "functions": {
-      "total": 23,
+      "total": 22,
       "covered": 18,
       "skipped": 0,
-      "pct": 78.26
+      "pct": 81.81
     },
     "statements": {
-      "total": 148,
-      "covered": 100,
+      "total": 128,
+      "covered": 89,
       "skipped": 0,
-      "pct": 67.56
+      "pct": 69.53
     },
     "branches": {
-      "total": 115,
-      "covered": 57,
+      "total": 95,
+      "covered": 50,
       "skipped": 0,
-      "pct": 49.56
+      "pct": 52.63
     },
     "lowestPct": {
-      "curr": 49.56,
-      "prev": 0,
-      "diff": 49.56
+      "curr": 52.63,
+      "prev": 49.56,
+      "diff": 3.0700000000000003
     },
     "averagePct": {
-      "curr": 67.025,
-      "prev": 0,
-      "diff": 67.025
+      "curr": 69.6875,
+      "prev": 67.025,
+      "diff": 2.6624999999999943
     }
   },
   "termdb/tree.js": {
