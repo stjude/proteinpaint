@@ -1,6 +1,7 @@
 // syntax:
 // echo '{"hdf5_file":"/path/to/my/local/file.h5", "row_dataset": "samples", "col_dataset": "genesets"}' | ./target/release/validateHDF5
 
+use hdf5::types::VarLenUnicode;
 use hdf5::{File, Result};
 use serde_json::json;
 use std::io;
@@ -51,6 +52,14 @@ pub fn validate_hdf5_file(hdf5_filename: String, row_dataset: &str, col_dataset:
             let matrix_shape = dataset.shape();
             let datatype = dataset.dtype()?;
 
+            // Read row_dataset as VarLenUnicode
+            let row_dataset_data = file.dataset(row_dataset)?;
+            let row_data: Vec<String> = row_dataset_data
+                .read_1d::<VarLenUnicode>()?
+                .iter()
+                .map(|s| s.to_string())
+                .collect();
+
             // Validate matrix data
             let matrix_valid = if matrix_shape.len() == 2 && matrix_shape[0] > 0 && matrix_shape[1] > 0 {
                 // Create a selection for a 1x1 slice at (0,0)
@@ -83,7 +92,8 @@ pub fn validate_hdf5_file(hdf5_filename: String, row_dataset: &str, col_dataset:
                 "matrix_dimensions": {
                     "num_rows": matrix_shape.get(0).unwrap_or(&0),
                     "num_columns": matrix_shape.get(1).unwrap_or(&0)
-                }
+                },
+                row_dataset.to_string(): row_data
             })
         }
         _ => {
