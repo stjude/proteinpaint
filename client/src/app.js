@@ -198,11 +198,15 @@ export function runproteinpaint(arg) {
 			await setAuth({ dsAuth: data.dsAuth, holder: app.holder })
 
 			if (data.commonOverrides || arg.commonOverrides) {
+				const commonOverrides = Object.assign(data.commonOverrides || {}, arg.commonOverrides || {})
 				// NOTE: required or imported code files are only loaded once
 				// and module variables are static so that changes to common key-values will affect all
 				// client-side code that import common.js
 				// TODO??: server-side rendered viz should see client-side arg.commonOverrides ???
-				common.applyOverrides(Object.assign(data.commonOverrides || {}, arg.commonOverrides || {}))
+				common.applyOverrides(commonOverrides)
+				// allow external lib that is loaded from same pp URL host, like sjcharts,
+				// to indirectly recover overrides, without having to pass it through nested functions
+				sessionStorage.setItem('commonOverrides', JSON.stringify(commonOverrides))
 			}
 			// TODO: may import(style-normalize-unscoped.css) here for pp portals
 			//       where is it certain html, body css resets will not conflict with portal styles;
