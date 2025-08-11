@@ -6,6 +6,7 @@ import { fillTermWrapper } from '#termsetting'
 import { setInteractivity } from './violin.interactivity'
 import { plotColor } from '#shared/common.js'
 import { isNumericTerm } from '#shared/terms.js'
+import { getCombinedTermFilter } from '#filter'
 
 /*
 when opts.mode = 'minimal', a minimal violin plot will be rendered that will have a single term and minimal features (i.e. no controls, legend, labels, brushing, transitions, etc.)
@@ -16,6 +17,7 @@ TODO default to unit=log if term enables
 class ViolinPlot {
 	constructor(opts) {
 		this.type = 'violin'
+		if (opts?.parentId) this.parentId = opts.parentId
 	}
 
 	async init(appState) {
@@ -262,7 +264,10 @@ class ViolinPlot {
 
 	reactsTo(action) {
 		if (action.type.startsWith('plot_')) {
-			return action.id === this.id && (!action.config.childType || action.config.childType == this.type)
+			return (
+				(action.id === this.id || action.id == this.parentId) &&
+				(!action.config?.childType || action.config?.childType == this.type)
+			)
 		}
 		return true
 	}
@@ -272,9 +277,10 @@ class ViolinPlot {
 		if (!config) {
 			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
 		}
-
+		const parentConfig = appState.plots.find(p => p.id === this.parentId)
+		const termfilter = getCombinedTermFilter(appState, parentConfig?.filter)
 		return {
-			termfilter: appState.termfilter,
+			termfilter,
 			config,
 			displaySampleIds: appState.termdbConfig.displaySampleIds,
 			hasVerifiedToken: this.app.vocabApi.hasVerifiedToken()
@@ -304,7 +310,6 @@ class ViolinPlot {
 					throw e
 				})
 		])
-
 		if (this.data.error) throw this.data.error
 		/*
 		.min

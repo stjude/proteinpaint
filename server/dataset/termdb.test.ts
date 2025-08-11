@@ -146,11 +146,12 @@ export default function (): Mds3 {
 									name: 'Demographics',
 									plots: [
 										{
-											chartType: 'barchart',
-											settings: { barchart: { colorBars: true, showPercent: true } },
+											chartType: 'violin',
+											settings: { violin: { showStats: false } },
 
 											term: {
-												id: 'agedx'
+												id: 'agedx',
+												q: { mode: 'continuous' }
 											}
 										},
 										{
