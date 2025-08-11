@@ -1,5 +1,6 @@
 import { Menu, renderTable } from '#dom'
 import { dofetch3 } from '../common/dofetch'
+import { mclass } from '#shared/common.js'
 import { newpane, export_data } from '../src/client'
 import { filterJoin, getFilterItemByTag, getNormalRoot, findItemByTermId, normalizeProps } from '#filter'
 import { rgb } from 'd3-color'
@@ -573,8 +574,8 @@ async function listSamples(event, self, seriesId, dataId, chartId) {
 			const value = sample[self.config.term.$id]?.value
 			row.push({ value: roundValueAuto(value) })
 		} else if (termIsGv) {
-			const values = getGvValues(sample, self.config.term)
-			for (const value of values) row.push({ value })
+			const htmls = getGvHtmls(sample, self.config.term)
+			for (const html of htmls) row.push({ html })
 		}
 		if (self.config.term2) {
 			//Don't show hidden values in the results
@@ -590,8 +591,8 @@ async function listSamples(event, self, seriesId, dataId, chartId) {
 				value = roundValueAuto(value.value)
 				row.push({ value })
 			} else if (term2isGv) {
-				const values = getGvValues(sample, self.config.term2)
-				for (const value of values) row.push({ value })
+				const htmls = getGvHtmls(sample, self.config.term2)
+				for (const html of htmls) row.push({ html })
 			} else {
 				const label = self.config.term2.term.values?.[value.key]?.label
 				value = label || value.value
@@ -606,7 +607,7 @@ async function listSamples(event, self, seriesId, dataId, chartId) {
 	if (termIsNumeric) {
 		columns.push({ label: self.config.term.term.name })
 	} else if (termIsGv) {
-		for (const gene of self.config.term.term.genes) columns.push({ label: gene.name })
+		columns.push({ label: seriesId })
 	}
 	if (self.config.term2) {
 		if (term2isGv) {
@@ -694,21 +695,22 @@ async function listSamples(event, self, seriesId, dataId, chartId) {
 		return true
 	}
 
-	function getGvValues(sample, tw) {
+	function getGvHtmls(sample, tw) {
 		const mlst = sample[tw.$id]?.values
-		const values = []
+		const htmls = []
 		for (const gene of tw.term.genes) {
 			const mlst_gene = mlst.filter(m => m.gene == gene.id)
-			const value = mlst_gene
+			const html_gene = mlst_gene
 				.map(m => {
-					let label = m.label
-					if (m.mname) label += ` (${m.mname})`
-					return label
+					const html_m = `<span>${gene.name} ${m.mname}</span><span style="margin-left: 5px; color: ${
+						mclass[m.class].color
+					}; font-size: .8em;">${mclass[m.class].label.toUpperCase()}</span>`
+					return html_m
 				})
-				.join(', ')
-			values.push(value)
+				.join('<br>')
+			htmls.push(html_gene)
 		}
-		return values
+		return htmls
 	}
 }
 
