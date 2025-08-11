@@ -243,8 +243,8 @@ export class Barchart {
 						{ label: 'Present values', value: 'present' }
 					]
 				})
-			else
-				inputs.splice(7, 0, {
+			else if (!state.config.settings.barchart.colorBars)
+				inputs.splice(6, 0, {
 					label: 'Default color',
 					title: 'Default color for bars when there is no overlay',
 					type: 'color',
