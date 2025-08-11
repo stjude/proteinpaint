@@ -17,7 +17,7 @@
 //
 //
 // VLIDATE:
-// output: {"samples": []}
+// output: JSON with {"samples":[]}
 // Usage
 // echo '{"validate":true,"hdf5_file":"matrix.h5"}' | ./target/release/readH5
 
@@ -115,10 +115,6 @@ pub fn validate_hdf5_file(hdf5_filename: String) -> Result<()> {
             };
 
             json!({
-                row_dataset.to_string(): if matrix_valid {row_data} else { Vec::new() }
-            })
-            /*
-            json!({
                 "status": if matrix_valid { "success" } else { "failure" },
                 "message": if matrix_valid {
                     "HDF5 matrix file loaded successfully"
@@ -133,7 +129,6 @@ pub fn validate_hdf5_file(hdf5_filename: String) -> Result<()> {
                 },
                 row_dataset.to_string(): row_data
             })
-            */
         }
         _ => {
             json!({
