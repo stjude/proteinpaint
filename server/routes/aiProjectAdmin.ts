@@ -6,18 +6,23 @@ const routePath = 'aiProjectAdmin'
 export const api: RouteApi = {
 	endpoint: `${routePath}`,
 	methods: {
+		get: {
+			//all requests
+			...aiProjectAdminPayload,
+			init
+		},
 		post: {
-			//edit
+			//'admin' -> edit
 			...aiProjectAdminPayload,
 			init
 		},
 		delete: {
-			//delete
+			//'admin' -> delete
 			...aiProjectAdminPayload,
 			init
 		},
 		put: {
-			//add
+			//'admin' -> add
 			...aiProjectAdminPayload,
 			init
 		}
@@ -28,6 +33,9 @@ function init({ genomes }) {
 	return async (req, res): Promise<void> => {
 		try {
 			const query = req.query
+			if (!query.genome || !query.dslabel) {
+				throw new Error('Genome and dataset label are required for aiProjectAdmin request')
+			}
 			const g = genomes[query.genome]
 			const ds = g.datasets[query.dslabel]
 
@@ -36,14 +44,29 @@ function init({ genomes }) {
 
 			db.connection = connect_db(db.file, { readonly: false, fileMustExist: true })
 
-			if (req.method === 'POST') editProject(db.connection, query)
-			if (req.method === 'DELETE') deleteProject(db.connection, query)
-			if (req.method === 'PUT') addProject(db.connection, query)
+			/** get list of projects from db */
+			if (query.for === 'list') {
+				const projects = getProjects(ds)
+				res.send(projects)
+			}
+			/** update projects in db */
+			if (query.for === 'admin') {
+				if (req.method === 'POST') editProject(db.connection, query)
+				if (req.method === 'DELETE') deleteProject(db.connection, query)
+				if (req.method === 'PUT') addProject(db.connection, query)
 
-			res.status(200).send({
-				status: 'ok',
-				message: `Project ${query.project.name} processed successfully`
-			})
+				res.status(200).send({
+					status: 'ok',
+					message: `Project ${query.project.name} processed successfully`
+				})
+			}
+			/** get selections (i.e. slides) matching the project
+			 * from the ad hoc dictionary. */
+			if (query.for === 'selections') {
+				const q = ds.cohort.termdb.q
+				const samples = await q.getFilteredSamples(query.filter)
+				res.send(samples)
+			}
 		} catch (e: any) {
 			console.warn(e)
 			res.status(500).send({
@@ -51,6 +74,21 @@ function init({ genomes }) {
 				error: e.message || e
 			})
 		}
+	}
+}
+
+function getProjects(ds: any) {
+	if (!ds.queries?.WSImages?.db) return
+	const db = ds.queries.WSImages.db
+	const sql = 'SELECT project.name as value, id FROM project'
+
+	try {
+		db.connection = connect_db(db.file, { readonly: false, fileMustExist: true })
+		const rows = db.connection.prepare(sql).all()
+		return rows
+	} catch (e) {
+		console.error('Error fetching projects:', e)
+		throw new Error('Failed to fetch projects')
 	}
 }
 

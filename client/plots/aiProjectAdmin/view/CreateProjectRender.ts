@@ -1,8 +1,9 @@
 import { filterInit, getNormalRoot } from '#filter'
 import { ClassesTableRender } from './ClassesTableRender'
 import type { Elem } from '../../../types/d3'
-import { InvalidDataUI, sayerror } from '#dom'
+// import { InvalidDataUI, sayerror } from '#dom'
 import type { AIProjectAdminInteractions } from '../interactions/AIProjectAdminInteractions'
+import { SelectorTableRender } from './SelectorTableRender'
 
 export class CreateProjectRender {
 	dom: {
@@ -34,7 +35,7 @@ export class CreateProjectRender {
 		this.renderApplyBtn()
 	}
 
-	renderFilter() {
+	private renderFilter() {
 		const filter = filterInit({
 			holder: this.dom.filterDiv,
 			emptyLabel: 'Add fitler',
@@ -50,7 +51,7 @@ export class CreateProjectRender {
 		filter.main(root)
 	}
 
-	renderApplyBtn() {
+	private renderApplyBtn() {
 		this.dom.classDiv
 			.append('div')
 			.text('Apply')
@@ -63,10 +64,10 @@ export class CreateProjectRender {
 				const invalidInfo = this.validateInput()
 				const numInvalid = invalidInfo.entries?.length
 				if (numInvalid) {
-					//TODO: allow user to ignore filter error on second click
-					if (numInvalid === 1) sayerror(this.dom.errorDiv, invalidInfo.entries[0].reason)
-					else InvalidDataUI.render(this.dom.errorDiv, invalidInfo)
-					return
+					// //TODO: allow user to ignore filter error on second click
+					// if (numInvalid === 1) sayerror(this.dom.errorDiv, invalidInfo.entries[0].reason)
+					// else InvalidDataUI.render(this.dom.errorDiv, invalidInfo)
+					// return
 				}
 
 				this.interactions.addProject({
@@ -77,10 +78,12 @@ export class CreateProjectRender {
 						})
 					}
 				})
+
+				new SelectorTableRender(this.dom, this.app, this.interactions)
 			})
 	}
 
-	validateInput() {
+	private validateInput() {
 		const invalidInfo = {
 			entries: [] as { dataType: string; reason: string }[],
 			errorMsg: 'Please clear all "Data type: Class" errors before applying changes.'

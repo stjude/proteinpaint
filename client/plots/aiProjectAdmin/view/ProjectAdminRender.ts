@@ -67,6 +67,9 @@ export class ProjectAdminRender {
 				if (notUnique) {
 					return showError(`Project name '${projectName}' already exists`)
 				}
+				//Show project name in sandbox header
+				if (this.dom.header) this.dom.header.text(`Project: ${projectName}`)
+
 				//calls main() to trigger CreateProjectRender
 				await this.interactions.appDispatchEdit({ settings: { project: { name: projectName, type: 'new' } } })
 			})

@@ -8,6 +8,9 @@ import { AIProjectAdminInteractions } from './interactions/AIProjectAdminInterac
 import { CreateProjectRender } from './view/CreateProjectRender'
 import { sayerror } from '#dom'
 
+/** This plot supports training AI models.
+ * The UI allows users to create and manage projects. */
+
 class AIProjectAdmin extends RxComponentInner {
 	public type = 'AIProjectAdmin'
 	model: Model
@@ -22,6 +25,8 @@ class AIProjectAdmin extends RxComponentInner {
 			holder: opts.holder,
 			errorDiv: opts.holder.append('div').style('margin', '3px').attr('class', 'sjpp-ai-prjt-admin-error')
 		}
+		if (opts.header) this.dom.header = opts.header
+
 		this.model = new Model()
 	}
 
@@ -32,7 +37,8 @@ class AIProjectAdmin extends RxComponentInner {
 		}
 		return {
 			config,
-			vocab: appState.vocab
+			vocab: appState.vocab,
+			filter: appState.termfilter.filter
 		}
 	}
 
@@ -40,7 +46,7 @@ class AIProjectAdmin extends RxComponentInner {
 		this.interactions = new AIProjectAdminInteractions(this.app, this.id, this.model)
 
 		try {
-			this.projects = await this.model.getProjects(appState.vocab.genome, appState.vocab.dslabel)
+			this.projects = await Model.getProjects(appState.vocab.genome, appState.vocab.dslabel)
 		} catch (e: any) {
 			console.error('Error initializing AIProjectAdmin:', e)
 			throw e

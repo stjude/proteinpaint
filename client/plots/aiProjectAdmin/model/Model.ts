@@ -1,16 +1,15 @@
 import { dofetch3 } from '#common/dofetch'
-import type { AIProjectListRequest, AIProjectAdminRequest } from '#types'
+import type { AIProjectAdminRequest } from '#types'
 
 export class Model {
-	constructor() {}
-
-	async getProjects(genome: string, dslabel: string): Promise<any[]> {
-		const body: AIProjectListRequest = {
+	public static async getProjects(genome: string, dslabel: string): Promise<any[]> {
+		const body: AIProjectAdminRequest = {
 			genome,
-			dslabel
+			dslabel,
+			for: 'list'
 		}
 		try {
-			const response = await dofetch3('aiProjectList', { body })
+			const response = await dofetch3('aiProjectAdmin', { body })
 			return response || []
 		} catch (error) {
 			console.error('Error fetching projects:', error)
@@ -18,7 +17,8 @@ export class Model {
 		}
 	}
 
-	async updateProject(body: AIProjectAdminRequest, method: string): Promise<any> {
+	public static async updateProject(_body: any, method: string): Promise<any> {
+		const body: AIProjectAdminRequest = Object.assign({}, _body, { for: 'admin' })
 		try {
 			const response = await dofetch3('aiProjectAdmin', { method, body })
 			return response

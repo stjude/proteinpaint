@@ -6,7 +6,6 @@
 // must add route file paths below so that esbuild knows exactly what to bundle),
 // since dynamic import plugin is not yet supported
 export const routeFiles = [
-	import('../routes/aiProjectList.ts'),
 	import('../routes/aiProjectAdmin.ts'),
 	import('../routes/brainImaging.ts'),
 	import('../routes/brainImagingSamples.ts'),
