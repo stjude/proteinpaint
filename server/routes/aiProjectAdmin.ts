@@ -28,6 +28,9 @@ function init({ genomes }) {
 	return async (req, res): Promise<void> => {
 		try {
 			const query = req.query
+			if (!query.genome || !query.dslabel) {
+				throw new Error('Genome and dataset label are required for aiProjectAdmin request')
+			}
 			const g = genomes[query.genome]
 			const ds = g.datasets[query.dslabel]
 

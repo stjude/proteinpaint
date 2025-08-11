@@ -17,8 +17,7 @@ export class AIProjectAdminInteractions {
 
 	async addProject(opts) {
 		const config = this.app.getState().plots.find((p: any) => p.id === this.id)
-
-		const projectObject = Object.assign({}, config.settings.project, opts.project)
+		const projectObject = Object.assign({}, config.settings.project, opts.project, opts.project.fitler)
 
 		const body = {
 			genome: this.genome,
@@ -28,8 +27,8 @@ export class AIProjectAdminInteractions {
 
 		try {
 			await this.model.updateProject(body, 'put')
-		} catch (e) {
-			console.error('Error adding project:', e)
+		} catch (e: any) {
+			console.error('Error adding project:', e.message || e)
 			throw e
 		}
 	}
@@ -39,7 +38,7 @@ export class AIProjectAdminInteractions {
 
 		const project = Object.assign({}, config.settings.project, {
 			type: 'edit',
-			filter: JSON.stringify(filter),
+			filter,
 			classes
 		})
 
@@ -50,8 +49,8 @@ export class AIProjectAdminInteractions {
 		}
 		try {
 			await this.model.updateProject(body, 'post')
-		} catch (e) {
-			console.error('Error editing project:', e)
+		} catch (e: any) {
+			console.error('Error editing project:', e.message || e)
 			throw e
 		}
 		this.appDispatchEdit({ settings: { project } }, config)
@@ -69,8 +68,23 @@ export class AIProjectAdminInteractions {
 
 		try {
 			await this.model.updateProject(body, 'delete')
-		} catch (e) {
-			console.error('Error deleting project:', e)
+		} catch (e: any) {
+			console.error('Error deleting project:', e.message || e)
+			throw e
+		}
+	}
+
+	async getSelections(project) {
+		const body = {
+			genome: this.genome,
+			dslabel: this.dslabel,
+			project
+		}
+
+		try {
+			return await this.model.updateProject(body, 'get')
+		} catch (e: any) {
+			console.error('Error getting project selections:', e.message || e)
 			throw e
 		}
 	}
