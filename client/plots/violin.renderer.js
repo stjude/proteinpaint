@@ -129,7 +129,6 @@ export default function setViolinRenderer(self) {
 	}
 
 	self.renderPvalueTable = function () {
-		self.dom.tableHolder.selectAll('*').remove()
 		if (self.data.plots.length === 1) return
 
 		const t1 = self.config.term
@@ -505,8 +504,7 @@ function getLegendGrps(termNum, self) {
 		t1 = self.config.term,
 		t2 = self.config.term2,
 		headingStyle = 'color: #aaa; font-weight: 400'
-
-	addDescriptiveStats(t1, legendGrps, headingStyle, self)
+	if (self.settings.showStats) addDescriptiveStats(t1, legendGrps, headingStyle, self)
 	if (t2?.term.type === 'float' || t2?.q.mode === 'continuous' || t2?.term.type === 'integer')
 		addDescriptiveStats(t2, legendGrps, headingStyle, self)
 

@@ -70,11 +70,10 @@ class ViolinPlot {
 				handlers: {}
 			})
 		}
-		await this.setControls()
 	}
 
 	async setControls() {
-		//this.dom.controls.selectAll('*').remove()
+		this.dom.controls.selectAll('*').remove()
 		this.components = {}
 		if (this.opts.mode == 'minimal') return
 		const inputs = [
@@ -234,9 +233,23 @@ class ViolinPlot {
 				type: 'color',
 				chartType: 'violin',
 				settingsKey: 'defaultColor'
+			},
+			{
+				label: 'Show stats',
+				type: 'checkbox',
+				chartType: 'violin',
+				settingsKey: 'showStats',
+				boxLabel: 'Yes'
 			}
 		]
-
+		if (this.config.term2)
+			inputs.push({
+				label: 'Show association tests',
+				type: 'checkbox',
+				chartType: 'violin',
+				settingsKey: 'showAssociationTests',
+				boxLabel: 'Yes'
+			})
 		this.components.controls = await controlsInit({
 			app: this.app,
 			id: this.id,
@@ -271,6 +284,7 @@ class ViolinPlot {
 	async main() {
 		this.config = structuredClone(this.state.config)
 		this.settings = this.config.settings.violin
+		await this.setControls()
 
 		if (this.config.chartType != this.type && this.config.childType != this.type) return
 		if (this.dom.header)
@@ -308,10 +322,11 @@ class ViolinPlot {
 		setTimeout(
 			() => {
 				this.render()
-				this.renderPvalueTable()
 			},
 			this.opts.mode == 'minimal' ? 0 : 500
 		)
+		this.dom.tableHolder.selectAll('*').remove()
+		if (this.settings.showAssociationTests) this.renderPvalueTable()
 		this.toggleLoadingDiv('none')
 	}
 
@@ -405,7 +420,9 @@ export function getDefaultViolinSettings(app, overrides = {}) {
 		ticks: 15,
 		defaultColor: plotColor,
 		method: 0,
-		orderByMedian: false
+		orderByMedian: false,
+		showStats: true,
+		showAssociationTests: true
 	}
 	return Object.assign(defaults, overrides)
 }
