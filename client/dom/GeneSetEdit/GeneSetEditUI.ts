@@ -209,6 +209,7 @@ export class GeneSetEditUI {
 					text: 'Submit',
 					disabled: !this.geneList?.length,
 					callback: () => {
+						this.api.dom.submitBtn.property('disabled', true).text('Loading...') // to prevent repeated clicking and triggering callback. when this ui is used in geneVariant tw edit, it can keep showing a while after user clicks btn thus this fix is needed
 						this.callback({ geneList: this.geneList })
 					}
 				})
