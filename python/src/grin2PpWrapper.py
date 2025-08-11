@@ -689,6 +689,26 @@ try:
 		"showingTop": num_rows_to_process
 	}
 
+	# Save outputs to files for debugging
+	# try:
+	# 	import datetime
+	# 	timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+		
+	# 	# Save the response JSON to file
+	# 	response_file = f"/tmp/grin2_response_{timestamp}.json"
+	# 	with open(response_file, 'w') as f:
+	# 		json.dump(grin2_response, f, indent=2)
+	# 	print(f"DEBUG: Response saved to {response_file}", file=sys.stderr)
+		
+	# 	# Save the plot image to file
+	# 	plot_file = f"/tmp/grin2_plot_{timestamp}.png"
+	# 	with open(plot_file, 'wb') as f:
+	# 		f.write(base64.b64decode(base64_string))
+	# 	print(f"DEBUG: Plot saved to {plot_file}", file=sys.stderr)
+		
+	# except Exception as debug_error:
+	# 	print(f"DEBUG: Failed to save debug files: {debug_error}", file=sys.stderr)
+
 	# Output JSON
 	print(json.dumps(grin2_response))
 except Exception as e:
