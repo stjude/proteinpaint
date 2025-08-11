@@ -293,6 +293,7 @@ async function maySetAuthRoutes(app, genomes, basepath = '', _serverconfig = nul
 		try {
 			mayUpdate__protected__(req, res)
 		} catch (e) {
+			if (e.stack) console.log(e.stack)
 			res.status(e.status || 401)
 			res.send({ error: e.message || e.error || e })
 			return

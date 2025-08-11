@@ -29,41 +29,36 @@ function init({ genomes }) {
 			const g = genomes[req.query.genome]
 			if (!g) throw 'invalid genome name'
 			const ds = g.datasets?.[req.query.dslabel]
-			getFilters(req.query, ds, res)
+			res.send(await getFilters(req.query, ds))
 		} catch (e: any) {
-			console.log(e)
+			if (e.stack) console.log(e.stack)
 			res.send({ status: 'error', error: e.message || e })
 		}
 	}
 }
 
-async function getFilters(query, ds, res) {
+async function getFilters(query, ds) {
 	// safe to process this client-submitted query.filterByUserSites flag,
 	// which only affects aggregation levels (not revealed sample-level data),
 	// as performed by this route code, and since query.terms would still
 	// be matched against a dataset's hiddenTermIds[]
 	if (!query.filterByUserSites) authApi.mayAdjustFilter(query, ds, query.terms)
 
-	try {
-		//Dictionary with samples applying all the filters but not the one from the current term id
-		const samplesPerFilter = await getSamplesPerFilter(query, ds)
-		const filtersData = await getData(
-			{
-				terms: query.terms,
-				__protected__: query.__protected__
-			},
-			ds
-		)
-		const tw2List = {}
-		for (const tw of query.terms) {
-			// related to auth: make sure the returned list are not sensitive !!!
-			tw2List[tw.term.id] = getList(samplesPerFilter, filtersData, tw, query.showAll)
-		}
-		res.send({ ...tw2List })
-	} catch (e: any) {
-		console.log(e)
-		res.send({ error: e.message || e })
+	//Dictionary with samples applying all the filters but not the one from the current term id
+	const samplesPerFilter = await getSamplesPerFilter(query, ds)
+	const filtersData = await getData(
+		{
+			terms: query.terms,
+			__protected__: query.__protected__
+		},
+		ds
+	)
+	const tw2List = {}
+	for (const tw of query.terms) {
+		// related to auth: make sure the returned list are not sensitive !!!
+		tw2List[tw.term.id] = getList(samplesPerFilter, filtersData, tw, query.showAll)
 	}
+	return { ...tw2List }
 }
 
 function getList(samplesPerFilter, filtersData, tw, showAll) {
