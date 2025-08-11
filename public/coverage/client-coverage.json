@@ -4858,5 +4858,41 @@
       "prev": 0,
       "diff": 91.515
     }
+  },
+  "dom/GeneSetEdit/GeneSetEditUI.ts": {
+    "lines": {
+      "total": 197,
+      "covered": 81,
+      "skipped": 0,
+      "pct": 41.11
+    },
+    "functions": {
+      "total": 46,
+      "covered": 19,
+      "skipped": 0,
+      "pct": 41.3
+    },
+    "statements": {
+      "total": 218,
+      "covered": 84,
+      "skipped": 0,
+      "pct": 38.53
+    },
+    "branches": {
+      "total": 130,
+      "covered": 43,
+      "skipped": 0,
+      "pct": 33.07
+    },
+    "lowestPct": {
+      "curr": 33.07,
+      "prev": 0,
+      "diff": 33.07
+    },
+    "averagePct": {
+      "curr": 38.5025,
+      "prev": 0,
+      "diff": 38.5025
+    }
   }
 }
