@@ -1616,10 +1616,8 @@ async function validate_query_ssGSEA(ds, genome) {
 		q.samples = [] // array of sample ids
 		await utils.file_is_readable(q.file) // Validate that the HDF5 file exists
 
-		const tmp = await run_rust(
-			'validateH5',
-			JSON.stringify({ hdf5_file: q.file, row_dataset: 'samples', col_dataset: 'genesets' })
-		) // if possible not to specify row/col. wants a generic h5 file
+		const tmp = await run_rust('readH5', JSON.stringify({ validate: true, hdf5_file: q.file }))
+
 		const vr = JSON.parse(tmp)
 		if (vr.status !== 'success') throw vr.message
 		if (!Array.isArray(vr.samples)) throw 'HDF5 file has no samples, please check file.'
@@ -1662,10 +1660,7 @@ async function validate_query_ssGSEA(ds, genome) {
 		}
 
 		const time1 = Date.now()
-		const tmp = await run_rust(
-			'readH5',
-			JSON.stringify({ hdf5_file: q.file, query: genesetNames, row_dataset: 'samples', col_dataset: 'genesets' })
-		)
+		const tmp = await run_rust('readH5', JSON.stringify({ hdf5_file: q.file, query: genesetNames }))
 		const results = JSON.parse(tmp)
 		mayLog('ssGSEA h5 file', Date.now() - time1)
 
