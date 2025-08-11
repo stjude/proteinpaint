@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pp0
+  labels:
+    app: nodejs
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nodejs
+  template:
+    metadata:
+      labels:
+        app: nodejs
+    spec:
+      containers:
+        - name: container0
+          image: ghcr.io/stjude/ppserver:version
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 3000
+          volumeMounts:
+            - mountPath: /home/root/pp/tp/
+              name: tp
+            - mountPath: /home/root/pp/app/active/serverconfig.json
+              name: config
+      volumes:
+        - name: tp
+          hostPath:
+            path: /path/to/tp
+            type: Directory
+        - name: config
+          hostPath:
+            path: /path/to/serverconfig.json
+            type: File
