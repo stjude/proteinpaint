@@ -2876,8 +2876,7 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 				// for example: if groups[0] is SNV=M and groups[1] is
 				// CNV=Loss and a sample has both SNV=M and CNV=Loss, then
 				// the sample will be assigned to groups[0]
-				let values = [] // subset of mlst, consists of mutations tested
-				// for dts specified in the group filter
+				let values = [] // subset of mlst, consists of mutations that match the genotype of the group filter
 				const group = groupset.groups.find(group => {
 					if (group.type != 'filter') throw 'unexpected group.type'
 					values = []
@@ -3074,13 +3073,17 @@ export function filterByItem(filter, mlst, values) {
 				}
 			})
 			sampleHasGenotype = tvs.cnvWT ? !sampleHasCnv : sampleHasCnv
+			pass = tvs.isnot ? !sampleHasGenotype : sampleHasGenotype
 		} else {
 			// categorical mutation data
-			sampleHasGenotype = mlst_tested.some(m => tvs.values.some(v => v.key == m.class))
+			// get mutations that match the genotype of the filter
+			const mlst_genotype = mlst_tested.filter(m => {
+				const intvs = tvs.values.some(v => v.key == m.class)
+				return tvs.isnot ? !intvs : intvs
+			})
+			pass = mlst_genotype.length > 0
+			if (values) values.push(...mlst_genotype)
 		}
-		if (typeof sampleHasGenotype != 'boolean') throw 'unexpected non-boolean value'
-		pass = tvs.isnot ? !sampleHasGenotype : sampleHasGenotype
-		if (values) values.push(...mlst_tested)
 	} else {
 		// sample is not tested for the dt of the filter
 		// so sample does not pass the filter

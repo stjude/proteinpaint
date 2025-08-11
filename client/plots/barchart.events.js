@@ -574,8 +574,8 @@ async function listSamples(event, self, seriesId, dataId, chartId) {
 			const value = sample[self.config.term.$id]?.value
 			row.push({ value: roundValueAuto(value) })
 		} else if (termIsGv) {
-			const htmls = getGvHtmls(sample, self.config.term)
-			for (const html of htmls) row.push({ html })
+			const html = getGvHtml(sample, self.config.term)
+			row.push({ html })
 		}
 		if (self.config.term2) {
 			//Don't show hidden values in the results
@@ -591,8 +591,8 @@ async function listSamples(event, self, seriesId, dataId, chartId) {
 				value = roundValueAuto(value.value)
 				row.push({ value })
 			} else if (term2isGv) {
-				const htmls = getGvHtmls(sample, self.config.term2)
-				for (const html of htmls) row.push({ html })
+				const html = getGvHtml(sample, self.config.term2)
+				row.push({ html })
 			} else {
 				const label = self.config.term2.term.values?.[value.key]?.label
 				value = label || value.value
@@ -695,22 +695,26 @@ async function listSamples(event, self, seriesId, dataId, chartId) {
 		return true
 	}
 
-	function getGvHtmls(sample, tw) {
+	// get html string of mutations for a sample
+	function getGvHtml(sample, tw) {
 		const mlst = sample[tw.$id]?.values
-		const htmls = []
+		const html_genes = [] // html of mutations for all genes
 		for (const gene of tw.term.genes) {
 			const mlst_gene = mlst.filter(m => m.gene == gene.id)
 			const html_gene = mlst_gene
 				.map(m => {
-					const html_m = `<span>${gene.name} ${m.mname}</span><span style="margin-left: 5px; color: ${
-						mclass[m.class].color
-					}; font-size: .8em;">${mclass[m.class].label.toUpperCase()}</span>`
+					const html_m = `<span>${gene.name}${
+						m.mname ? ' ' + m.mname : ''
+					}</span><span style="margin-left: 5px; color: ${mclass[m.class].color}; font-size: .8em;">${mclass[
+						m.class
+					].label.toUpperCase()}</span>`
 					return html_m
 				})
 				.join('<br>')
-			htmls.push(html_gene)
+			if (html_gene) html_genes.push(html_gene)
 		}
-		return htmls
+		const html = html_genes.join('<br>')
+		return html
 	}
 }
 
