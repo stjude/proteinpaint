@@ -16,12 +16,16 @@ export class SearchHandler {
 		this.callback = opts.callback
 		opts.holder.style('padding', '5px 10px 10px 25px')
 		this.dom.typeSettingDiv = opts.holder.append('div')
-		this.dom.searchDiv = opts.holder.append('div').attr('data-testid', 'sjpp-genevariant-geneSearchDiv')
+		this.dom.searchDiv = opts.holder
+			.append('div')
+			.attr('data-testid', 'sjpp-genevariant-geneSearchDiv')
+			.style('padding-left', '3px')
 		this.dom.msgDiv = opts.holder
 			.append('div')
 			.style('display', 'none')
 			.style('font-size', '.7em')
 			.style('margin-top', '5px')
+			.style('padding-left', '3px')
 		if (opts.msg) this.dom.msgDiv.style('display', 'block').text(opts.msg)
 
 		// get child dt terms
@@ -126,7 +130,7 @@ export class SearchHandler {
 			vocabApi: this.opts.app.vocabApi,
 			callback: async result => await this.selectGeneSet(result)
 		})
-		this.dom.searchDiv.select('.sja_genesetinput').style('padding', '0px')
+		this.dom.searchDiv.select('.sja_genesetinput').style('padding', '0px').style('margin-top', '-10px')
 	}
 
 	async selectGeneSet(result) {
