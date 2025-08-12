@@ -350,6 +350,13 @@ function getChartTypeList(self, state) {
 			clickTo: self.showTree_select1term
 		},
 		{
+			label: 'GRIN2',
+			chartType: 'grin2',
+			usecase: { target: 'grin2' },
+			config: { chartType: 'grin2' },
+			clickTo: self.prepPlot
+		},
+		{
 			label: self.getBtnLabel_summarizeMutationTerm(state, 'Diagnosis'),
 			chartType: 'summarizeMutationDiagnosis', // type names of other similar charts should all begin with `summarize` to indcate they are based on summary plot
 			usecase: { target: 'summarizeMutationDiagnosis' },
