@@ -79,6 +79,7 @@ export class SearchHandler {
 		if (geneSearch.geneSymbol) {
 			const name = geneSearch.geneSymbol
 			Object.assign(this.term, {
+				id: name,
 				name,
 				genes: [
 					{
@@ -96,6 +97,7 @@ export class SearchHandler {
 			// name should be 1-based coordinate
 			const name = `${chr}:${start + 1}-${stop}`
 			Object.assign(this.term, {
+				id: name,
 				name,
 				genes: [
 					{
@@ -140,8 +142,10 @@ export class SearchHandler {
 			}
 			return gene
 		})
+		const name = genes.map(gene => gene.name).join(', ')
 		Object.assign(this.term, {
-			name: genes.map(gene => gene.name).join(', '),
+			id: name,
+			name,
 			genes,
 			type: 'geneVariant'
 		})
@@ -155,5 +159,6 @@ export class SearchHandler {
 		// for those present in the data for that gene/geneset
 		await getChildTerms(this.term, this.opts.app.vocabApi)
 		this.callback({ term: this.term, q: this.q })
+		this.dom.msgDiv.style('display', 'none')
 	}
 }

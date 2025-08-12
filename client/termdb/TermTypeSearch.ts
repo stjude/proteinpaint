@@ -331,10 +331,11 @@ export class TermTypeSearch {
 	selectTerm(term) {
 		if (this.click_term) this.click_term(term)
 		else if (this.submit_lst) {
+			const t = term.term || term
 			this.app.dispatch({
 				type: 'app_refresh',
 				state: {
-					selectedTerms: [...this.state.selectedTerms, term]
+					selectedTerms: [...this.state.selectedTerms, t]
 				}
 			})
 		} else {
