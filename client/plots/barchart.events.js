@@ -574,8 +574,7 @@ async function listSamples(event, self, seriesId, dataId, chartId) {
 			const value = sample[self.config.term.$id]?.value
 			row.push({ value: roundValueAuto(value) })
 		} else if (termIsGv) {
-			const html = getGvHtml(sample, self.config.term)
-			row.push({ html })
+			addGvValues(sample, self.config.term, row)
 		}
 		if (self.config.term2) {
 			//Don't show hidden values in the results
@@ -591,8 +590,7 @@ async function listSamples(event, self, seriesId, dataId, chartId) {
 				value = roundValueAuto(value.value)
 				row.push({ value })
 			} else if (term2isGv) {
-				const html = getGvHtml(sample, self.config.term2)
-				row.push({ html })
+				addGvValues(sample, self.config.term2, row)
 			} else {
 				const label = self.config.term2.term.values?.[value.key]?.label
 				value = label || value.value
@@ -607,11 +605,19 @@ async function listSamples(event, self, seriesId, dataId, chartId) {
 	if (termIsNumeric) {
 		columns.push({ label: self.config.term.term.name })
 	} else if (termIsGv) {
-		columns.push({ label: seriesId })
+		if (self.config.term.term.genes.length == 1) {
+			columns.push({ label: self.config.term.term.name })
+		} else {
+			columns.push({ label: 'Gene' }, { label: seriesId })
+		}
 	}
 	if (self.config.term2) {
 		if (term2isGv) {
-			for (const gene of self.config.term2.term.genes) columns.push({ label: gene.name })
+			if (self.config.term2.term.genes.length == 1) {
+				columns.push({ label: self.config.term2.term.name })
+			} else {
+				columns.push({ label: 'Gene' }, { label: seriesId })
+			}
 		} else {
 			columns.push({ label: self.config.term2.term.name })
 		}
@@ -695,26 +701,47 @@ async function listSamples(event, self, seriesId, dataId, chartId) {
 		return true
 	}
 
-	// get html string of mutations for a sample
-	function getGvHtml(sample, tw) {
+	// add geneVariant values to row
+	function addGvValues(sample, tw, row) {
 		const mlst = sample[tw.$id]?.values
-		const html_genes = [] // html of mutations for all genes
+		const gene2mlst = new Map()
+		// map each gene to its mutations
 		for (const gene of tw.term.genes) {
 			const mlst_gene = mlst.filter(m => m.gene == gene.id)
-			const html_gene = mlst_gene
-				.map(m => {
-					const html_m = `<span>${gene.name}${
-						m.mname ? ' ' + m.mname : ''
-					}</span><span style="margin-left: 5px; color: ${mclass[m.class].color}; font-size: .8em;">${mclass[
-						m.class
-					].label.toUpperCase()}</span>`
-					return html_m
-				})
-				.join('<br>')
-			if (html_gene) html_genes.push(html_gene)
+			gene2mlst.set(gene.name, mlst_gene)
 		}
-		const html = html_genes.join('<br>')
-		return html
+		if (!gene2mlst.size) throw 'gene2mlst is empty'
+		if (gene2mlst.size == 1) {
+			// single gene, add its mutations to mutation column
+			const entry = gene2mlst.entries().next().value
+			const mlst = entry[1]
+			const htmls = mlst2htmls(mlst)
+			row.push({ html: htmls.join('<br>') })
+		} else {
+			// multiple genes, add each gene to gene column and its
+			// mutations to mutation column
+			const genes = []
+			const htmls = []
+			for (const [gene, mlst] of gene2mlst) {
+				genes.push(...Array(mlst.length).fill(gene))
+				htmls.push(...mlst2htmls(mlst))
+			}
+			row.push({ html: genes.join('<br>') })
+			row.push({ html: htmls.join('<br>') })
+		}
+	}
+
+	function mlst2htmls(mlst) {
+		const htmls = mlst.map(m => {
+			const mname = m.mname || ''
+			const color = mclass[m.class].color
+			const label = mclass[m.class].label.toUpperCase()
+			const html = `<span>${mname}</span><span style="margin-left: ${
+				mname ? '5px' : '0px'
+			}; color: ${color}; font-size: .8em;">${label}</span>`
+			return html
+		})
+		return htmls
 	}
 }
 
