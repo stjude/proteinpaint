@@ -50,14 +50,8 @@ export const api: RouteApi = {
 function init({ genomes }) {
 	return async (req: any, res: any): Promise<void> => {
 		try {
-			// Debug logging
-			console.log('[GRIN2] req.method:', req.method)
-			console.log('[GRIN2] req.body:', req.body)
-			console.log('[GRIN2] req.query:', req.query)
-			console.log('[GRIN2] req.headers:', req.headers)
-
 			const request = req.query as GRIN2Request
-			// const request = req.body as GRIN2Request
+			console.log('[GRIN2] request:', request)
 
 			// Get genome and dataset from request parameters
 			const g = genomes[request.genome]
@@ -82,41 +76,6 @@ function init({ genomes }) {
 		}
 	}
 }
-
-// function init({ genomes }) {
-//     return async (req: any, res: any): Promise<void> => {
-//         try {
-//             // Parse JSON strings back to objects
-//             const request: GRIN2Request = {
-//                 genome: req.query.genome,
-//                 dslabel: req.query.dslabel,
-//                 filter: req.query.filter ? JSON.parse(req.query.filter) : undefined,
-//                 snvindelOptions: req.query.snvindelOptions ? JSON.parse(req.query.snvindelOptions) : undefined,
-//                 cnvOptions: req.query.cnvOptions ? JSON.parse(req.query.cnvOptions) : undefined
-//             }
-
-//             const g = genomes[request.genome]
-//             if (!g) throw new Error('genome missing')
-
-//             const ds = g.datasets?.[request.dslabel]
-//             if (!ds) throw new Error('ds missing')
-
-//             if (!ds.queries?.singleSampleMutation) throw new Error('singleSampleMutation query missing from dataset')
-
-//             const result = await runGrin2(g, ds, request)
-//             res.json(result)
-//         } catch (e: any) {
-//             console.error('[GRIN2] Error stack:', e.stack)
-
-//             const errorResponse: GRIN2Response = {
-//                 status: 'error',
-//                 error: e.message || String(e)
-//             }
-
-//             res.status(500).send(errorResponse)
-//         }
-//     }
-// }
 
 async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Response> {
 	const startTime = Date.now()
@@ -195,7 +154,8 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 	mayLog(`[GRIN2] Python processing took ${grin2AnalysisTimeToPrint} seconds`)
 
 	// Step 5: Parse results and respond
-	const resultData = JSON.parse(pyResult.stdout)
+	//mayLog(`[GRIN2] Full pyResult object:`, pyResult)
+	const resultData = JSON.parse(pyResult)
 
 	// Validate Python script output
 	if (!resultData?.png?.[0]) {
