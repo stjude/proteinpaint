@@ -5,6 +5,7 @@ import type { ClientCopyGenome } from 'types/global'
 import type { BoxPlotSettings } from '../../plots/boxplot/BoxPlotTypes'
 import type { CorrVolcanoSettings } from '#plots/corrVolcano/CorrelationVolcanoTypes.ts'
 import type { VolcanoSettings } from '../../plots/volcano/VolcanoTypes.ts'
+import type { GRIN2Settings } from '#plots/grin2/GRIN2Types.ts'
 //import { TermWrapper } from '#types'
 
 export type MassAppApi = RxAppApi & {
@@ -72,6 +73,7 @@ export type MassState = {
 		allowedTermTypes: string[]
 		displaySampleIds?: (clientAuthResult: any) => boolean
 		correlationVolcano?: any
+		grin2?: any
 		massSessionDuration: number
 		queries?: any
 		requiredAuth?: any
@@ -121,6 +123,7 @@ type PlotSettings = {
 	common?: any
 	controls?: any
 	correlationVolcano?: CorrVolcanoSettings
+	grin2?: GRIN2Settings
 	geneORA?: any
 	gsea?: any
 	sampleScatter?: any
