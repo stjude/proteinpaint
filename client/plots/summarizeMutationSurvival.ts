@@ -19,7 +19,7 @@ export async function makeChartBtnMenu(holder, chartsInstance) {
 	// 2-col table to organize input ui
 	const table = table2col({
 		holder: holder.append('div'),
-		margin: '10px',
+		margin: '0px 10px 10px 10px',
 		cellPadding: '10px'
 	})
 
