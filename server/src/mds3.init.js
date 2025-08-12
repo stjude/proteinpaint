@@ -2731,11 +2731,16 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 			dts.push(dtcnv)
 		}
 
-		// retrieve genomic data for each dt of each gene
-		const termdbmclass = q.ds?.cohort?.termdb?.mclass // custom mclass labels from dataset
-		if (!tw.term.genes?.length) throw 'tw.term.genes[] is empty'
+		// retrieve mutation data for each gene
 		// query genes concurrently to speed up geneset query
-		await Promise.all(tw.term.genes.map(gene => getGeneMlst(gene)))
+		// limit to 50 genes at a time (otherwise gdc query can fail)
+		if (!tw.term.genes?.length) throw 'tw.term.genes[] is empty'
+		const chunkSize = 50
+		for (let i = 0; i < tw.term.genes.length; i += chunkSize) {
+			const genes = tw.term.genes.slice(i, i + chunkSize)
+			await Promise.all(genes.map(gene => getGeneMlst(gene)))
+		}
+		const termdbmclass = q.ds?.cohort?.termdb?.mclass // custom mclass labels from dataset
 		async function getGeneMlst(gene) {
 			if (!gene.gene && !(gene.chr && Number.isInteger(gene.start) && Number.isInteger(gene.stop)))
 				throw 'no gene or position specified'
