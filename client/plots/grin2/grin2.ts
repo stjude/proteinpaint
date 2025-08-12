@@ -4,6 +4,7 @@ import type { BasePlotConfig, MassAppApi, MassState } from '#mass/types/mass'
 import { controlsInit } from '../controls'
 import type { GRIN2Dom, GRIN2Opts, GRIN2Settings } from './GRIN2Types'
 import { Menu } from '#dom'
+import { dofetch3 } from '#common/dofetch'
 
 class GRIN2 extends RxComponentInner {
 	readonly type = 'grin2'
@@ -31,7 +32,7 @@ class GRIN2 extends RxComponentInner {
 		}
 
 		if (opts.header)
-			this.dom.header = opts.header.text('GRIN2 ANALYSIS').style('font-size', '0.7em').style('opacity', 0.6)
+			this.dom.header = opts.header.text('GRIN2 Analysis').style('font-size', '0.7em').style('opacity', 0.6)
 	}
 
 	getState(appState: MassState) {
@@ -52,6 +53,7 @@ class GRIN2 extends RxComponentInner {
 
 	async setControls() {
 		const inputs = [
+			// SNV/Indel controls
 			{
 				label: 'SNV/Indel Min Total Depth',
 				title: 'Minimum total depth for SNV/indel variants',
@@ -71,6 +73,16 @@ class GRIN2 extends RxComponentInner {
 				debounceInterval: 500
 			},
 			{
+				label: 'SNV/Indel Hypermutator Threshold',
+				title: 'Maximum mutation count cutoff for hypermutated samples',
+				type: 'number',
+				chartType: 'grin2',
+				settingsKey: 'snvindelOptions.hyperMutator',
+				min: 1,
+				debounceInterval: 500
+			},
+			// CNV controls
+			{
 				label: 'CNV Loss Threshold',
 				title: 'Log2 ratio threshold for CNV losses',
 				type: 'number',
@@ -88,6 +100,33 @@ class GRIN2 extends RxComponentInner {
 				settingsKey: 'cnvOptions.gainThreshold',
 				min: 0,
 				step: 0.1,
+				debounceInterval: 500
+			},
+			{
+				label: 'CNV Max Segment Length',
+				title: 'Maximum segment length for CNV filtering (0 = no limit)',
+				type: 'number',
+				chartType: 'grin2',
+				settingsKey: 'cnvOptions.maxSegLength',
+				min: 0,
+				debounceInterval: 500
+			},
+			{
+				label: 'CNV Min Segment Length',
+				title: 'Minimum segment length for CNV filtering',
+				type: 'number',
+				chartType: 'grin2',
+				settingsKey: 'cnvOptions.minSegLength',
+				min: 0,
+				debounceInterval: 500
+			},
+			{
+				label: 'CNV Hypermutator Threshold',
+				title: 'Maximum CNV count cutoff for hypermutated samples',
+				type: 'number',
+				chartType: 'grin2',
+				settingsKey: 'cnvOptions.hyperMutator',
+				min: 1,
 				debounceInterval: 500
 			}
 		]
@@ -122,29 +161,24 @@ class GRIN2 extends RxComponentInner {
 				.style('text-align', 'center')
 				.text('Running GRIN2 analysis...')
 
-			// Make request to GRIN2 endpoint
+			// Make request to GRIN2 endpoint - now matches curl command structure
 			const settings = config.settings.grin2
 			const requestData = {
-				genome: this.state.termdbConfig.genome,
-				dslabel: this.state.termdbConfig.title,
-				filter: this.state.termfilter,
+				genome: 'hg38',
+				dslabel:
+					this.state.termdbConfig.dslabel || this.state.termdbConfig.title?.text || this.state.termdbConfig.title,
+				filter: this.state.termfilter.filter || this.state.termfilter,
 				snvindelOptions: settings.snvindelOptions,
 				cnvOptions: settings.cnvOptions
 			}
 
-			console.log('[GRIN2] Frontend requestData:', requestData)
-			console.log('[GRIN2] Full state:', this.state)
-			console.log('[GRIN2] termdbConfig:', this.state.termdbConfig)
-			console.log('[GRIN2] genome:', this.state.termdbConfig.genome)
-			console.log('[GRIN2] config:', this.state.config)
-
-			const response = await fetch('/grin2', {
+			const response = await dofetch3('/grin2', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify(requestData)
 			})
 
-			const result = await response.json()
+			const result = await response
 
 			// Clear loading message
 			this.dom.plot.selectAll('*').remove()
@@ -240,7 +274,7 @@ export const grin2Init = getCompInit(GRIN2)
 export const componentInit = grin2Init
 
 export function getDefaultGRIN2Settings(overrides = {}) {
-	// These need to be dynamic
+	// Updated to match curl command structure exactly
 	const defaults: GRIN2Settings = {
 		snvindelOptions: {
 			minTotalDepth: 10,
