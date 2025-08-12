@@ -41,6 +41,10 @@ class MassCharts {
 		this.dom.btns.style('display', d => (this.state.currentCohortChartTypes.includes(d.chartType) ? '' : 'none'))
 	}
 
+	getBtnLabel_dict(state) {
+		// has "queries" meaning presence of non-dictionary data types, use "Variables" to broaden scope and not limited to just "Dictionary"
+		return state.termdbConfig.queries ? 'Data Variables' : 'Data Dictionary'
+	}
 	getBtnLabel_regression(state) {
 		/* define button label based conditions:
 		if ds allows multiple regression methods, use generic name, click btn will display menu of options
@@ -190,7 +194,7 @@ function getChartTypeList(self, state) {
 		////////////////////// PROFILE PLOTS END //////////////////////
 		//       rest are general plots applicable to all ds
 		{
-			label: 'Data Variables',
+			label: self.getBtnLabel_dict(state),
 			clickTo: self.prepPlot,
 			chartType: 'dictionary',
 			config: {
