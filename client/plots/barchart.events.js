@@ -1,6 +1,6 @@
 import { Menu, renderTable } from '#dom'
 import { dofetch3 } from '../common/dofetch'
-import { mclass } from '#shared/common.js'
+import { mclass, dt2label } from '#shared/common.js'
 import { newpane, export_data } from '../src/client'
 import { filterJoin, getFilterItemByTag, getNormalRoot, findItemByTermId, normalizeProps } from '#filter'
 import { rgb } from 'd3-color'
@@ -574,7 +574,7 @@ async function listSamples(event, self, seriesId, dataId, chartId) {
 			const value = sample[self.config.term.$id]?.value
 			row.push({ value: roundValueAuto(value) })
 		} else if (termIsGv) {
-			addGvValues(sample, self.config.term, row)
+			addGvRowVals(sample, self.config.term, row)
 		}
 		if (self.config.term2) {
 			//Don't show hidden values in the results
@@ -590,7 +590,7 @@ async function listSamples(event, self, seriesId, dataId, chartId) {
 				value = roundValueAuto(value.value)
 				row.push({ value })
 			} else if (term2isGv) {
-				addGvValues(sample, self.config.term2, row)
+				addGvRowVals(sample, self.config.term2, row)
 			} else {
 				const label = self.config.term2.term.values?.[value.key]?.label
 				value = label || value.value
@@ -605,19 +605,11 @@ async function listSamples(event, self, seriesId, dataId, chartId) {
 	if (termIsNumeric) {
 		columns.push({ label: self.config.term.term.name })
 	} else if (termIsGv) {
-		if (self.config.term.term.genes.length == 1) {
-			columns.push({ label: self.config.term.term.name })
-		} else {
-			columns.push({ label: 'Gene' }, { label: seriesId })
-		}
+		addGvCols(self.config.term, columns)
 	}
 	if (self.config.term2) {
 		if (term2isGv) {
-			if (self.config.term2.term.genes.length == 1) {
-				columns.push({ label: self.config.term2.term.name })
-			} else {
-				columns.push({ label: 'Gene' }, { label: seriesId })
-			}
+			addGvCols(self.config.term2, columns)
 		} else {
 			columns.push({ label: self.config.term2.term.name })
 		}
@@ -702,7 +694,7 @@ async function listSamples(event, self, seriesId, dataId, chartId) {
 	}
 
 	// add geneVariant values to row
-	function addGvValues(sample, tw, row) {
+	function addGvRowVals(sample, tw, row) {
 		const mlst = sample[tw.$id]?.values
 		const gene2mlst = new Map()
 		// map each gene to its mutations
@@ -742,6 +734,21 @@ async function listSamples(event, self, seriesId, dataId, chartId) {
 			return html
 		})
 		return htmls
+	}
+
+	// add geneVariant columns
+	function addGvCols(tw, columns) {
+		if (tw.term.genes.length == 1) {
+			columns.push({ label: tw.term.name })
+		} else {
+			columns.push({ label: 'Gene' })
+			if (tw.q.type == 'predefined-groupset') {
+				const groupset = tw.term.groupsetting.lst[tw.q.predefined_groupset_idx]
+				columns.push({ label: dt2label[groupset.dt] })
+			} else {
+				columns.push({ label: seriesId })
+			}
+		}
 	}
 }
 
