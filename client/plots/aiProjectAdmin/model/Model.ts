@@ -20,8 +20,7 @@ export class Model {
 	public static async updateProject(_body: any, method: string): Promise<any> {
 		const body: AIProjectAdminRequest = Object.assign({}, _body, { for: 'admin' })
 		try {
-			const response = await dofetch3('aiProjectAdmin', { method, body })
-			return response
+			return await dofetch3('aiProjectAdmin', { method, body })
 		} catch (error) {
 			console.error('Error fetching projects:', error)
 			throw error

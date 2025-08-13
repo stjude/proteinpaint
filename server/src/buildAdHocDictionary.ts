@@ -9,8 +9,8 @@ import { isUsableTerm } from '#shared/termdb.usecase.js'
 /** Will assign later based on the ds defined sample column header */
 let sampleKeyIdx: number | null = null
 
-/** Termdb for the AI histology tool is created on the fly from
- * API metdata output (.csv file). These methods build the termdb queries
+/** Termdb in memory for ds with constantly changing metadata
+ * (i.e. terms). These methods build the termdb queries
  * and query mechanisms to support the filter and tvs. */
 export async function makeAdHocDicTermdbQueries(ds: Mds3) {
 	const dict = ds?.cohort?.termdb?.dictionary
@@ -158,7 +158,83 @@ export async function makeAdHocDicTermdbQueries(ds: Mds3) {
 		return lst
 	}
 
-	//q.getSupportedChartTypes is defined in the ds for now
+	/** q.getSupportedChartTypes is required and defined in the ds for now.
+	 * Add if needed.*/
+
+	q.getFilteredSamples = async filter => {
+		if (dict?.aiApi != true) return
+		const source = dict?.source?.file
+		if (!source) return
+
+		const csvData = await readSourceFile(source)
+		if (!csvData) return
+
+		const lines = csvData.split('\n')
+		const headers = lines[0].split(',')
+
+		if (!filter.lst || !filter.lst.length) {
+			const matches: string[] = []
+			for (const line of lines.splice(1)) {
+				const cells = line.split(',')
+				matches.push(cells[sampleKeyIdx!])
+			}
+			return matches
+		}
+
+		const filterList = filter.lst
+			.filter(item => {
+				if (item.tvs) return true
+			})
+			.map(item => {
+				return {
+					termid: item.tvs.term.id,
+					type: item.tvs.term.type,
+					filter: item.tvs?.values?.map(item => item.key) || item.tvs?.ranges
+				}
+			})
+
+		const filterColIdxs = !filterList.length
+			? headers.map((_, i) => i)
+			: filterList.map(f => headers.indexOf(f.termid)).filter(i => i !== -1)
+		const filterByHeader = new Map<string, any>(filterList.map(f => [f.termid, f]))
+
+		const matchMap = new Map()
+		for (const line of lines.splice(1)) {
+			if (!line || !line.trim()) continue
+			const cells = line.split(',')
+			for (const colIdx of filterColIdxs) {
+				const value = cells[colIdx].trim()
+				if (!value) continue
+
+				const header = headers[colIdx]
+				const f = filterByHeader.get(header)
+				if (!f) continue
+
+				const match =
+					f.type === 'categorical'
+						? f.filter.includes(value)
+						: (() => {
+								const { min, max } = getDefaultMinAndMax(f.filter[0])
+								return isValueInRange(value, f.filter[0], min, max)
+						  })()
+
+				if (match) {
+					if (matchMap.has(header)) {
+						matchMap.get(header).push(cells[sampleKeyIdx!])
+					} else {
+						matchMap.set(header, [cells[sampleKeyIdx!]])
+					}
+				}
+			}
+		}
+
+		const mapValues = [...matchMap.values()]
+		const matches = mapValues.reduce((acc, arr) => {
+			return acc.filter(val => arr.includes(val))
+		})
+
+		return matches
+	}
 }
 
 async function readSourceFile(source: string) {
@@ -305,4 +381,17 @@ function assignDefaultBins(term: any, termValues: any) {
 			}
 		}
 	}
+}
+
+function getDefaultMinAndMax(range) {
+	const min = range.startunbounded ? -Infinity : range.start
+	const max = range.stopunbounded ? Infinity : range.stop
+	return { min, max }
+}
+
+function isValueInRange(value, range, min, max) {
+	if (value > min && value < max) return true
+	if (range.startinclusive && value == min) return true
+	if (range.stopinclusive && value == max) return true
+	return false
 }

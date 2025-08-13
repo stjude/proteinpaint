@@ -48,9 +48,8 @@ function init({ genomes }) {
 			if (query.for === 'list') {
 				const projects = getProjects(ds)
 				res.send(projects)
-			}
-			/** update projects in db */
-			if (query.for === 'admin') {
+			} else if (query.for === 'admin') {
+				/** update projects in db */
 				if (req.method === 'POST') editProject(db.connection, query)
 				if (req.method === 'DELETE') deleteProject(db.connection, query)
 				if (req.method === 'PUT') addProject(db.connection, query)
@@ -59,13 +58,20 @@ function init({ genomes }) {
 					status: 'ok',
 					message: `Project ${query.project.name} processed successfully`
 				})
-			}
-			/** get selections (i.e. slides) matching the project
-			 * from the ad hoc dictionary. */
-			if (query.for === 'selections') {
+			} else if (query.for === 'images') {
+				/** get selections (i.e. slides) matching the project
+				 * from the ad hoc dictionary. */
 				const q = ds.cohort.termdb.q
-				const samples = await q.getFilteredSamples(query.filter)
-				res.send(samples)
+				const images = await q.getFilteredSamples(query.project.filter)
+				res.status(200).send({
+					status: 'ok',
+					images
+				})
+			} else {
+				res.send({
+					status: 'error',
+					message: 'Invalid request'
+				})
 			}
 		} catch (e: any) {
 			console.warn(e)
@@ -125,6 +131,12 @@ function addProject(connection: any, query: any) {
 	const classParams = query.project.classes.map((c: any) => [rows.lastInsertRowid, c.label, c.color])
 	for (const params of classParams) {
 		runSQL(connection, classSql, params, 'add')
+	}
+	//Add corresponding project images
+	const imagesSql = `INSERT INTO project_images (project_id, image) VALUES (?, ?)`
+	const imagesParams = query.project.images.map((img: any) => [rows.lastInsertRowid, img])
+	for (const params of imagesParams) {
+		runSQL(connection, imagesSql, params, 'add')
 	}
 }
 

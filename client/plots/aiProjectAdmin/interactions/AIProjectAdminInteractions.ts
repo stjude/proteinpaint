@@ -1,5 +1,4 @@
 import { Model } from '../model/Model'
-import { dofetch3 } from '#common/dofetch'
 
 export class AIProjectAdminInteractions {
 	app: any
@@ -25,9 +24,8 @@ export class AIProjectAdminInteractions {
 			dslabel: this.dslabel,
 			project: projectObject
 		}
-
 		try {
-			await Model.updateProject(body, 'put')
+			await Model.updateProject(body, 'PUT')
 		} catch (e: any) {
 			console.error('Error adding project:', e.message || e)
 			throw e
@@ -48,7 +46,7 @@ export class AIProjectAdminInteractions {
 			project
 		}
 		try {
-			await Model.updateProject(body, 'post')
+			await Model.updateProject(body, 'POST')
 		} catch (e: any) {
 			console.error('Error editing project:', e.message || e)
 			throw e
@@ -67,28 +65,16 @@ export class AIProjectAdminInteractions {
 		}
 
 		try {
-			await Model.updateProject(body, 'delete')
+			await Model.updateProject(body, 'DELETE')
 		} catch (e: any) {
 			console.error('Error deleting project:', e.message || e)
 			throw e
 		}
 	}
 
-	async getSelections(project, filter) {
-		const body = {
-			genome: this.genome,
-			dslabel: this.dslabel,
-			project,
-			filter,
-			for: 'selections'
-		}
-
-		try {
-			return await dofetch3('aiProjectAdmin', { method: 'post', body })
-		} catch (e: any) {
-			console.error('Error getting project selections:', e.message || e)
-			throw e
-		}
+	async getImages(filter) {
+		const config = this.getConfig()
+		return await this.app.vocabApi.getAiImages(config.settings.project, filter)
 	}
 
 	public async appDispatchEdit(settings: any, config: any = {}) {

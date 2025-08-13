@@ -58,7 +58,7 @@ export class CreateProjectRender {
 			.classed('sja_menuoption', true)
 			.style('display', 'inline-block')
 			.style('margin-left', '30vw')
-			.on('click', () => {
+			.on('click', async () => {
 				this.dom.errorDiv.selectAll('*').remove() // Clear previous errors
 
 				const invalidInfo = this.validateInput()
@@ -69,17 +69,23 @@ export class CreateProjectRender {
 					// else InvalidDataUI.render(this.dom.errorDiv, invalidInfo)
 					// return
 				}
+				const images = await this.interactions.getImages(this.filter)
+				if (this.filter && (images.status != 'ok' || images.images.length === 0)) {
+					alert('No images match your filter criteria.')
+					return
+				}
 
 				this.interactions.addProject({
 					project: {
 						filter: this.filter,
 						classes: this.classesTable!.rows.map(row => {
 							return { label: row[1].value, color: row[2].color }
-						})
+						}),
+						images: images.images
 					}
 				})
 
-				new SelectorTableRender(this.dom, this.app, this.interactions)
+				new SelectorTableRender(this.dom, this.app, images)
 			})
 	}
 
