@@ -849,35 +849,34 @@ tape('getPercentile() - TermdbVocab directly', async test => {
 
 	const termdbVocabApi = await getTermdbVocabApi()
 
-	let percentile_lst, result, testMsg, filter
-	const testId = 'agedx'
+	let percentile_lst, result, testMsg
 
 	percentile_lst = [10]
-	result = await termdbVocabApi.getPercentile(testId, percentile_lst)
+	result = await termdbVocabApi.getPercentile(termjson['agedx'], percentile_lst)
 	test.equal(result.values[0], 1.52465753425, 'should get correct 10th percentile')
 
 	percentile_lst = [25]
-	result = await termdbVocabApi.getPercentile(testId, percentile_lst)
+	result = await termdbVocabApi.getPercentile(termjson['agedx'], percentile_lst)
 	test.equal(result.values[0], 3.13072460515, 'should get correct 25th percentile')
 
 	percentile_lst = [50]
-	result = await termdbVocabApi.getPercentile(testId, percentile_lst)
+	result = await termdbVocabApi.getPercentile(termjson['agedx'], percentile_lst)
 	test.equal(result.values[0], 8.164619357749999, 'should get correct 50th percentile')
 
 	percentile_lst = [75]
-	result = await termdbVocabApi.getPercentile(testId, percentile_lst)
+	result = await termdbVocabApi.getPercentile(termjson['agedx'], percentile_lst)
 	test.equal(result.values[0], 14.45859001, 'should get correct 75th percentile')
 
 	percentile_lst = [95]
-	result = await termdbVocabApi.getPercentile(testId, percentile_lst)
+	result = await termdbVocabApi.getPercentile(termjson['agedx'], percentile_lst)
 	test.equal(result.values[0], 18.545284078, 'should get correct 95th percentile')
 
 	percentile_lst = [25, 50]
-	result = await termdbVocabApi.getPercentile(testId, percentile_lst)
+	result = await termdbVocabApi.getPercentile(termjson['agedx'], percentile_lst)
 	test.deepEqual(result.values, [3.13072460515, 8.164619357749999], 'should get correct 25th and 50th percentiles')
 
 	percentile_lst = [25, 50, 75]
-	result = await termdbVocabApi.getPercentile(testId, percentile_lst)
+	result = await termdbVocabApi.getPercentile(termjson['agedx'], percentile_lst)
 	test.deepEqual(
 		result.values,
 		[3.13072460515, 8.164619357749999, 14.45859001],
@@ -887,7 +886,7 @@ tape('getPercentile() - TermdbVocab directly', async test => {
 	percentile_lst = ['a']
 	testMsg = `should throw error for non-integer percentiles (only non-integer value = (${percentile_lst}) in array)`
 	try {
-		result = await termdbVocabApi.getPercentile(testId, percentile_lst)
+		result = await termdbVocabApi.getPercentile(termjson['agedx'], percentile_lst)
 		test.fail(testMsg)
 	} catch (e) {
 		test.equal(e, 'non-integer percentiles found', testMsg)
@@ -896,7 +895,7 @@ tape('getPercentile() - TermdbVocab directly', async test => {
 	percentile_lst = [25, 50, 'a']
 	testMsg = `should throw error for non-integer percentiles (non-integer value = (${percentile_lst}) within array)`
 	try {
-		result = await termdbVocabApi.getPercentile(testId, percentile_lst)
+		result = await termdbVocabApi.getPercentile(termjson['agedx'], percentile_lst)
 		test.fail(testMsg)
 	} catch (e) {
 		test.equal(e, 'non-integer percentiles found', testMsg)
@@ -905,7 +904,7 @@ tape('getPercentile() - TermdbVocab directly', async test => {
 	percentile_lst = [120]
 	testMsg = `should throw error for percentiles must be between 1-99 (only incorrect value = (${percentile_lst}) in array)`
 	try {
-		result = await termdbVocabApi.getPercentile(testId, percentile_lst)
+		result = await termdbVocabApi.getPercentile(termjson['agedx'], percentile_lst)
 		test.fail(testMsg)
 	} catch (e) {
 		test.equal(e, 'percentiles must be between 1-99', testMsg)
@@ -914,27 +913,29 @@ tape('getPercentile() - TermdbVocab directly', async test => {
 	percentile_lst = [25, 50, 120]
 	testMsg = `should throw error for percentiles must be between 1-99 (one incorrect value = (${percentile_lst}) within array)`
 	try {
-		result = await termdbVocabApi.getPercentile(testId, percentile_lst)
+		result = await termdbVocabApi.getPercentile(termjson['agedx'], percentile_lst)
 		test.fail(testMsg)
 	} catch (e) {
 		test.equal(e, 'percentiles must be between 1-99', testMsg)
 	}
 
 	percentile_lst = [50]
-	filter = {
-		type: 'tvslst',
-		in: true,
-		lst: [
-			{
-				type: 'tvs',
-				tvs: {
-					term: { id: testId, type: 'float', values: {} },
-					ranges: [{ startunbounded: true, stop: 0.8, stopinclusive: true }]
+	const termfilter = {
+		filter: {
+			type: 'tvslst',
+			in: true,
+			lst: [
+				{
+					type: 'tvs',
+					tvs: {
+						term: { id: 'agedx', type: 'float', values: {} },
+						ranges: [{ startunbounded: true, stop: 0.8, stopinclusive: true }]
+					}
 				}
-			}
-		]
+			]
+		}
 	}
-	result = await termdbVocabApi.getPercentile(testId, percentile_lst, filter)
+	result = await termdbVocabApi.getPercentile(termjson['agedx'], percentile_lst, termfilter)
 	test.equal(result.values[0], 0.03537315665, 'should get correct 50th percentile with numeric filter')
 })
 

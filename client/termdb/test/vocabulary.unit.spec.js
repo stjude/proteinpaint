@@ -65,40 +65,42 @@ tape('getPercentile()', async function (test) {
 	test.timeoutAfter(100)
 	test.plan(13)
 
+	const term = structuredClone(await vocabApi.getterm('d'))
+
 	let percentile_lst, result, testMsg, filter
 
 	percentile_lst = [10]
-	result = await vocabApi.getPercentile('d', percentile_lst)
+	result = await vocabApi.getPercentile(term, percentile_lst)
 	test.equal(result.values[0], 0.07500000000000001, 'should get correct 10th percentile')
 
 	percentile_lst = [25]
-	result = await vocabApi.getPercentile('d', percentile_lst)
+	result = await vocabApi.getPercentile(term, percentile_lst)
 	test.equal(result.values[0], 0.2, 'should get correct 25th percentile')
 
 	percentile_lst = [50]
-	result = await vocabApi.getPercentile('d', percentile_lst)
+	result = await vocabApi.getPercentile(term, percentile_lst)
 	test.equal(result.values[0], 0.45, 'should get correct 50th percentile')
 
 	percentile_lst = [75]
-	result = await vocabApi.getPercentile('d', percentile_lst)
+	result = await vocabApi.getPercentile(term, percentile_lst)
 	test.equal(result.values[0], 0.8, 'should get correct 75th percentile')
 
 	percentile_lst = [95]
-	result = await vocabApi.getPercentile('d', percentile_lst)
+	result = await vocabApi.getPercentile(term, percentile_lst)
 	test.equal(result.values[0], 1.1, 'should get correct 95th percentile')
 
 	percentile_lst = [25, 50]
-	result = await vocabApi.getPercentile('d', percentile_lst)
+	result = await vocabApi.getPercentile(term, percentile_lst)
 	test.deepEqual(result.values, [0.2, 0.45], 'should get correct 25th and 50th percentiles')
 
 	percentile_lst = [25, 50, 75]
-	result = await vocabApi.getPercentile('d', percentile_lst)
+	result = await vocabApi.getPercentile(term, percentile_lst)
 	test.deepEqual(result.values, [0.2, 0.45, 0.8], 'should get correct 25th, 50th, and 75th percentiles')
 
 	percentile_lst = ['a']
 	testMsg = `should throw error for non-integer percentiles (only non-integer value = (${percentile_lst}) in array)`
 	try {
-		result = await vocabApi.getPercentile('d', percentile_lst)
+		result = await vocabApi.getPercentile(term, percentile_lst)
 		test.fail(testMsg)
 	} catch (e) {
 		test.equal(e, 'non-integer percentiles found', testMsg)
@@ -107,7 +109,7 @@ tape('getPercentile()', async function (test) {
 	percentile_lst = [25, 50, 'a']
 	testMsg = `should throw error for non-integer percentiles (non-integer value = (${percentile_lst}) within array)`
 	try {
-		result = await vocabApi.getPercentile('d', percentile_lst)
+		result = await vocabApi.getPercentile(term, percentile_lst)
 		test.fail(testMsg)
 	} catch (e) {
 		test.equal(e, 'non-integer percentiles found', testMsg)
@@ -116,7 +118,7 @@ tape('getPercentile()', async function (test) {
 	percentile_lst = [120]
 	testMsg = `should throw error for percentiles must be between 1-99 (only incorrect value = (${percentile_lst}) in array)`
 	try {
-		result = await vocabApi.getPercentile('d', percentile_lst)
+		result = await vocabApi.getPercentile(term, percentile_lst)
 		test.fail(testMsg)
 	} catch (e) {
 		test.equal(e, 'percentiles must be between 1-99', testMsg)
@@ -125,7 +127,7 @@ tape('getPercentile()', async function (test) {
 	percentile_lst = [25, 50, 120]
 	testMsg = `should throw error for percentiles must be between 1-99 (one incorrect value = (${percentile_lst}) within array)`
 	try {
-		result = await vocabApi.getPercentile('d', percentile_lst)
+		result = await vocabApi.getPercentile(term, percentile_lst)
 		test.fail(testMsg)
 	} catch (e) {
 		test.equal(e, 'percentiles must be between 1-99', testMsg)
@@ -137,7 +139,7 @@ tape('getPercentile()', async function (test) {
 		in: true,
 		lst: [{ type: 'tvs', tvs: { term: { id: 'c', type: 'categorical' }, values: [{ key: 1 }] } }]
 	}
-	result = await vocabApi.getPercentile('d', percentile_lst, filter)
+	result = await vocabApi.getPercentile(term, percentile_lst, filter)
 	test.equal(result.values[0], 0.55, 'should get correct 50th percentile with categorical filter')
 
 	percentile_lst = [50]
@@ -154,7 +156,7 @@ tape('getPercentile()', async function (test) {
 			}
 		]
 	}
-	result = await vocabApi.getPercentile('d', percentile_lst, filter)
+	result = await vocabApi.getPercentile(term, percentile_lst, filter)
 	test.equal(result.values[0], 0.35, 'should get correct 50th percentile with numeric filter')
 })
 
@@ -321,40 +323,42 @@ tape('getPercentile() - FrontendVocab directly', async function (test) {
 	test.timeoutAfter(100)
 	test.plan(13)
 
+	const term = structuredClone(await vocabApi.getterm('d'))
+
 	let percentile_lst, result, testMsg, filter
 
 	percentile_lst = [10]
-	result = await frontendVocabApi.getPercentile('d', percentile_lst)
+	result = await frontendVocabApi.getPercentile(term, percentile_lst)
 	test.equal(result.values[0], 0.07500000000000001, 'should get correct 10th percentile')
 
 	percentile_lst = [25]
-	result = await frontendVocabApi.getPercentile('d', percentile_lst)
+	result = await frontendVocabApi.getPercentile(term, percentile_lst)
 	test.equal(result.values[0], 0.2, 'should get correct 25th percentile')
 
 	percentile_lst = [50]
-	result = await frontendVocabApi.getPercentile('d', percentile_lst)
+	result = await frontendVocabApi.getPercentile(term, percentile_lst)
 	test.equal(result.values[0], 0.45, 'should get correct 50th percentile')
 
 	percentile_lst = [75]
-	result = await frontendVocabApi.getPercentile('d', percentile_lst)
+	result = await frontendVocabApi.getPercentile(term, percentile_lst)
 	test.equal(result.values[0], 0.8, 'should get correct 75th percentile')
 
 	percentile_lst = [95]
-	result = await frontendVocabApi.getPercentile('d', percentile_lst)
+	result = await frontendVocabApi.getPercentile(term, percentile_lst)
 	test.equal(result.values[0], 1.1, 'should get correct 95th percentile')
 
 	percentile_lst = [25, 50]
-	result = await frontendVocabApi.getPercentile('d', percentile_lst)
+	result = await frontendVocabApi.getPercentile(term, percentile_lst)
 	test.deepEqual(result.values, [0.2, 0.45], 'should get correct 25th and 50th percentiles')
 
 	percentile_lst = [25, 50, 75]
-	result = await frontendVocabApi.getPercentile('d', percentile_lst)
+	result = await frontendVocabApi.getPercentile(term, percentile_lst)
 	test.deepEqual(result.values, [0.2, 0.45, 0.8], 'should get correct 25th, 50th, and 75th percentiles')
 
 	percentile_lst = ['a']
 	testMsg = `should throw error for non-integer percentiles (only non-integer value = (${percentile_lst}) in array)`
 	try {
-		result = await frontendVocabApi.getPercentile('d', percentile_lst)
+		result = await frontendVocabApi.getPercentile(term, percentile_lst)
 		test.fail(testMsg)
 	} catch (e) {
 		test.equal(e, 'non-integer percentiles found', testMsg)
@@ -363,7 +367,7 @@ tape('getPercentile() - FrontendVocab directly', async function (test) {
 	percentile_lst = [25, 50, 'a']
 	testMsg = `should throw error for non-integer percentiles (non-integer value = (${percentile_lst}) within array)`
 	try {
-		result = await frontendVocabApi.getPercentile('d', percentile_lst)
+		result = await frontendVocabApi.getPercentile(term, percentile_lst)
 		test.fail(testMsg)
 	} catch (e) {
 		test.equal(e, 'non-integer percentiles found', testMsg)
@@ -375,13 +379,13 @@ tape('getPercentile() - FrontendVocab directly', async function (test) {
 		in: true,
 		lst: [{ type: 'tvs', tvs: { term: { id: 'c', type: 'categorical' }, values: [{ key: 1 }] } }]
 	}
-	result = await frontendVocabApi.getPercentile('d', percentile_lst, filter)
+	result = await frontendVocabApi.getPercentile(term, percentile_lst, filter)
 	test.equal(result.values[0], 0.55, 'should get correct 50th percentile with categorical filter')
 
 	percentile_lst = [120]
 	testMsg = `should throw error for percentiles must be between 1-99 (only incorrect value = (${percentile_lst}) in array)`
 	try {
-		result = await frontendVocabApi.getPercentile('d', percentile_lst)
+		result = await frontendVocabApi.getPercentile(term, percentile_lst)
 		test.fail(testMsg)
 	} catch (e) {
 		test.equal(e, 'percentiles must be between 1-99', testMsg)
@@ -390,7 +394,7 @@ tape('getPercentile() - FrontendVocab directly', async function (test) {
 	percentile_lst = [25, 50, 120]
 	testMsg = `should throw error for percentiles must be between 1-99 (one incorrect value = (${percentile_lst}) within array)`
 	try {
-		result = await frontendVocabApi.getPercentile('d', percentile_lst)
+		result = await frontendVocabApi.getPercentile(term, percentile_lst)
 		test.fail(testMsg)
 	} catch (e) {
 		test.equal(e, 'percentiles must be between 1-99', testMsg)
@@ -410,7 +414,7 @@ tape('getPercentile() - FrontendVocab directly', async function (test) {
 			}
 		]
 	}
-	result = await frontendVocabApi.getPercentile('d', percentile_lst, filter)
+	result = await frontendVocabApi.getPercentile(term, percentile_lst, filter)
 	test.equal(result.values[0], 0.35, 'should get correct 50th percentile with numeric filter')
 })
 

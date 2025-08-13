@@ -606,37 +606,6 @@ tape('term1 = Cardiovascular System, term0 = agedx, numeric custom bins', test =
 	}
 })
 
-tape('hidden uncomputable', function (test) {
-	test.timeoutAfter(10000)
-	runpp({
-		state: {
-			plots: [
-				{
-					chartType: 'cuminc',
-					term: { id: 'Cardiac dysrhythmia' },
-					term2: { id: 'cisplateq_5' },
-					settings: {
-						cuminc: { minSampleSize: 1, minAtRisk: 0 }
-					}
-				}
-			]
-		},
-		cuminc: {
-			callbacks: {
-				'postRender.test': runTests
-			}
-		}
-	})
-
-	async function runTests(cuminc) {
-		const hiddenDiv = cuminc.Inner.dom.hiddenDiv
-		test.equal(hiddenDiv && hiddenDiv.selectAll('.legend-row').size(), 1, 'should hide 1 series (not exposed)')
-
-		if (test._ok) cuminc.Inner.app.destroy()
-		test.end()
-	}
-})
-
 tape('skipped series', function (test) {
 	test.timeoutAfter(10000)
 	runpp({

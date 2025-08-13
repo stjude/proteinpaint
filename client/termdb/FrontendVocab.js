@@ -208,7 +208,7 @@ export class FrontendVocab extends Vocab {
 		}
 	}
 
-	async getPercentile(term_id, percentile_lst, filter) {
+	async getPercentile(term, percentile_lst, filter) {
 		// for a numeric term, convert a percentile to an actual value, with respect to a given filter
 		if (percentile_lst.find(p => !Number.isInteger(p))) throw 'non-integer percentiles found'
 		if (Math.max(...percentile_lst) > 99 || Math.min(...percentile_lst) < 1) throw 'percentiles must be between 1-99'
@@ -223,8 +223,8 @@ export class FrontendVocab extends Vocab {
 			}
 		}
 		for (const sample in samples) {
-			if (!(term_id in this.vocab.sampleannotation[sample])) continue
-			const _v = Number(this.vocab.sampleannotation[sample][term_id])
+			if (!(term.id in this.vocab.sampleannotation[sample])) continue
+			const _v = Number(this.vocab.sampleannotation[sample][term.id])
 			if (!Number.isFinite(_v)) throw 'non-numeric value'
 			values.push(_v)
 		}
