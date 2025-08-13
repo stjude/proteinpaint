@@ -704,14 +704,17 @@ export async function get_crosstabCombinations(twLst, ds, q, nodes) {
 	const id0 = twLst[0].term.id
 	{
 		const tv2counts = await ds.cohort.termdb.termid2totalsize2.get([twLst[0]], dupRequest(q))
-		for (const [v, count] of tv2counts.get(id0)) {
-			const v0 = ds.cohort.termdb.useLower ? v.toLowerCase() : v
-			if (useall) {
-				id2categories.get(id0).add(v0)
-				combinations.push({ count, id0, v0 })
-			} else {
-				if (id2categories.get(id0).has(v0)) {
+		// tv2counts could be an empty Map. must test if id0 exists, to prevent iterating on undefined and crash
+		if (tv2counts.has(id0)) {
+			for (const [v, count] of tv2counts.get(id0)) {
+				const v0 = ds.cohort.termdb.useLower ? v.toLowerCase() : v
+				if (useall) {
+					id2categories.get(id0).add(v0)
 					combinations.push({ count, id0, v0 })
+				} else {
+					if (id2categories.get(id0).has(v0)) {
+						combinations.push({ count, id0, v0 })
+					}
 				}
 			}
 		}
