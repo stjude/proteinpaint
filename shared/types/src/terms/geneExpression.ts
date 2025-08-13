@@ -10,7 +10,10 @@ GeneExpressionTermSettingInstance
 
 */
 
-export type GeneExpressionQ = NumericQ & { dt?: number }
+export type GeneExpressionQ = NumericQ & {
+	dt?: number
+	preferredBins?: string
+}
 
 export type GeneExpressionTW = TermWrapper & {
 	q: GeneExpressionQ
