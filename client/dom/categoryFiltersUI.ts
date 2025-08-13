@@ -5,7 +5,7 @@ import { getCategoricalTermFilter } from '#filter'
  */
 export class CategoryFiltersUI {
 	holder: any
-	filterSelects: any[] = []
+	selectMenus: any[] = []
 	plot: any
 	config: any
 
@@ -20,20 +20,20 @@ export class CategoryFiltersUI {
 		this.holder = holder
 		this.config = config
 		for (const tw of this.plot.config.filterTWs) {
-			const div = this.holder.append('div').style('padding', '5px')
-			div.append('label').text(` ${tw.term.name}: `).style('vertical-align', 'top')
-			let timeoutId
-			const select = div.append('select').property('multiple', true).style('vertical-align', 'top')
+			const div = this.holder.append('div').style('padding', '5px').attr('class', 'dropdown')
 
-			select.on('change', async () => {
-				clearTimeout(timeoutId)
-				timeoutId = setTimeout(() => {
-					const values = Array.from(select.node().selectedOptions).map((o: any) => o.value)
-					this.plot.settings[tw.term.id] = values
-					this.replaceFilter()
-				}, 1000)
-			})
-			this.filterSelects.push(select)
+			div
+				.append('button')
+				.text(` ${tw.term.name}: `)
+				.attr('type', 'button')
+				.attr('id', `dropdown-${tw.term.id}`)
+				.attr('class', 'btn btn-secondary dropdown-toggle')
+				.attr('data-bs-toggle', 'dropdown')
+				.attr('data-bs-auto-close', 'outside')
+				.attr('aria-expanded', 'false')
+			const menu = div.append('div').attr('class', 'dropdown-menu').attr('aria-labelledby', `dropdown-${tw.term.id}`)
+
+			this.selectMenus.push(menu)
 		}
 	}
 
@@ -55,18 +55,39 @@ export class CategoryFiltersUI {
 				filters,
 				showAll: false
 			})
-			const select = this.filterSelects[index]
-			select.selectAll('option').remove()
-			const size = data[tw.term.id].length - 1 // -1 to remove the empty value
+			const selectMenu = this.selectMenus[index]
+			selectMenu.selectAll('*').remove()
 
-			select.attr('size', size > 5 ? 5 : size) //show max 5 options at a time
 			for (const value of data[tw.term.id]) {
 				if (value.label == '') continue //skip empty labels
-				const option = select.append('option').attr('value', value.value).text(value.label)
-				option.property('disabled', value.disabled)
+				const option = selectMenu.append('div').attr('class', 'dropdown-item')
+				const checkbox = option
+					.append('input')
+					.attr('type', 'checkbox')
+					.attr('id', `filter-${tw.term.id}-${value.value}`)
+					.attr('value', value.value)
+				const label = option.append('label').text(value.label).attr('for', `filter-${tw.term.id}-${value.value}`)
+
+				let timeoutId
+
+				option.on('click', async () => {
+					clearTimeout(timeoutId)
+					timeoutId = setTimeout(() => {
+						const chBoxes = selectMenu.selectAll('input[type="checkbox"]')
+						const values = Array.from(chBoxes.nodes())
+							.filter((c: any) => c.checked)
+							.map((c: any) => c.value)
+						this.plot.settings[tw.term.id] = values
+						this.replaceFilter()
+					}, 1000)
+				})
+
+				//option.append('span').text(value.label)
+				checkbox.property('disabled', value.disabled)
+				label.style('color', value.disabled ? 'gray' : '')
 				for (const filterValue of filterValues) {
 					if (value.value == filterValue) {
-						option.attr('selected', 'selected')
+						checkbox.attr('checked', true)
 					}
 				}
 			}
