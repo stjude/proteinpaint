@@ -522,18 +522,19 @@ export class TermdbVocab extends Vocab {
 		return d
 	}
 
-	async getPercentile(term_id, percentile_lst, filter) {
+	async getPercentile(term, percentile_lst, termfilter) {
 		// for a numeric term, convert a percentile to an actual value, with respect to a given filter
 		if (percentile_lst.find(p => !Number.isInteger(p))) throw 'non-integer percentiles found'
 		if (Math.max(...percentile_lst) > 99 || Math.min(...percentile_lst) < 1) throw 'percentiles must be between 1-99'
 		const body = {
 			getpercentile: percentile_lst,
-			tid: term_id,
+			term,
 			genome: this.vocab.genome,
 			dslabel: this.vocab.dslabel
 		}
-		if (filter) {
-			body.filter = getNormalRoot(filter)
+		if (termfilter) {
+			if (termfilter.filter) body.filter = getNormalRoot(termfilter.filter)
+			if (termfilter.filter0) body.filter0 = termfilter.filter0
 		}
 		return await dofetch3('termdb/getpercentile', { body })
 	}

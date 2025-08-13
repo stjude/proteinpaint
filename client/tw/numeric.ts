@@ -182,29 +182,8 @@ export class NumCustomBins extends NumericBase {
 
 		if (tw.q.mode == 'binary' && !tw.q.preferredBins) tw.q.preferredBins = 'median'
 
-		if (tw.q.preferredBins == 'median' && !tw.q.lst?.length) {
-			const result = await opts.vocabApi.getPercentile(tw.term.id, [50])
-			if (!result.values) throw '.values[] missing from vocab.getPercentile()'
-			const median = roundValueAuto(result.values[0])
-
-			if (!isNumeric(median)) throw 'median value not a number'
-			tw.q.type = 'custom-bin'
-			tw.q.lst = [
-				{
-					startunbounded: true,
-					stop: median,
-					stopinclusive: false,
-					label: '<' + median // if label is missing, cuminc will break with "unexpected seriesId", cuminc.js:367
-				} as StartUnboundedBin,
-				{
-					start: median,
-					startinclusive: true,
-					stopunbounded: true,
-					label: '≥' + median
-				} as StopUnboundedBin
-			]
-			delete tw.q.preferredBins
-		} else if (tw.q.type != 'custom-bin') throw `expecting tw.q.type='custom-bin', got '${tw.q.type}'`
+		if (tw.q.preferredBins == 'median' && !tw.q.lst?.length) await fillQWithMedianBin(tw, opts.vocabApi)
+		else if (tw.q.type != 'custom-bin') throw `expecting tw.q.type='custom-bin', got '${tw.q.type}'`
 
 		if (!Array.isArray(tw.q.lst)) mayFillQWithPresetBins(tw)
 
@@ -276,6 +255,30 @@ export class NumSpline extends NumericBase {
 		tw.type = 'NumTWSpline'
 		return tw as NumTWSpline
 	}
+}
+
+export async function fillQWithMedianBin(tw, vocabApi) {
+	const result = await vocabApi.getPercentile(tw.term, [50], vocabApi.state.termfilter)
+	if (!result.values) throw '.values[] missing from vocab.getPercentile()'
+	const median = roundValueAuto(result.values[0])
+
+	if (!isNumeric(median)) throw 'median value not a number'
+	tw.q.type = 'custom-bin'
+	tw.q.lst = [
+		{
+			startunbounded: true,
+			stop: median,
+			stopinclusive: false,
+			label: '<' + median // if label is missing, cuminc will break with "unexpected seriesId", cuminc.js:367
+		} as StartUnboundedBin,
+		{
+			start: median,
+			startinclusive: true,
+			stopunbounded: true,
+			label: '≥' + median
+		} as StopUnboundedBin
+	]
+	delete tw.q.preferredBins
 }
 
 const validPreferredBins = new Set(['default', 'less', 'median'])
