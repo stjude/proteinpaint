@@ -161,7 +161,7 @@ export async function makeAdHocDicTermdbQueries(ds: Mds3) {
 	/** q.getSupportedChartTypes is required and defined in the ds for now.
 	 * Add if needed.*/
 
-	q.getFilteredSamples = async filter => {
+	q.getFilteredSelections = async filter => {
 		if (dict?.aiApi != true) return
 		const source = dict?.source?.file
 		if (!source) return
@@ -172,6 +172,7 @@ export async function makeAdHocDicTermdbQueries(ds: Mds3) {
 		const lines = csvData.split('\n')
 		const headers = lines[0].split(',')
 
+		/** If no filter provided, return all */
 		if (!filter.lst || !filter.lst.length) {
 			const matches: string[] = []
 			for (const line of lines.splice(1)) {
@@ -181,27 +182,49 @@ export async function makeAdHocDicTermdbQueries(ds: Mds3) {
 			return matches
 		}
 
-		const filterList = filter.lst
-			.filter(item => {
-				if (item.tvs) return true
-			})
-			.map(item => {
-				return {
-					termid: item.tvs.term.id,
-					type: item.tvs.term.type,
-					filter: item.tvs?.values?.map(item => item.key) || item.tvs?.ranges
-				}
-			})
+		/** Reduces the filter to only relevant fields so it's easier to work with */
+		function normalizeFilter(tvs: any) {
+			const filter = {
+				termid: tvs.term.id,
+				type: tvs.term.type,
+				isNot: tvs.isnot ?? false
+			}
 
-		const filterColIdxs = !filterList.length
-			? headers.map((_, i) => i)
-			: filterList.map(f => headers.indexOf(f.termid)).filter(i => i !== -1)
+			if (tvs.term.type === 'categorical') {
+				const vals = tvs.values?.map(v => v.key) ?? []
+				return { ...filter, filter: vals }
+			}
+			//for numerical terms, set default ranges for later
+			const ranges = (tvs.ranges ?? []).map(r => {
+				const { min, max } = setDefaultMinAndMax(r)
+				return { ...r, min, max }
+			})
+			return { ...filter, filter: ranges }
+		}
+
+		const filterList = filter.lst.reduce((acc, item) => {
+			if (!item.tvs) return acc
+			acc.push(normalizeFilter(item.tvs))
+			return acc
+		}, [])
+
+		const headerIndex = new Map<string, number>(headers.map((h, i) => [h, i]))
+
+		const filterColIdxs: number[] = []
+		for (const f of filterList) {
+			const idx = headerIndex.get(f.termid)
+			if (idx !== undefined) filterColIdxs.push(idx)
+		}
+
 		const filterByHeader = new Map<string, any>(filterList.map(f => [f.termid, f]))
 
-		const matchMap = new Map()
+		const matchMap = new Map<string, Set<string>>()
+
 		for (const line of lines.splice(1)) {
 			if (!line || !line.trim()) continue
 			const cells = line.split(',')
+
+			//Only check relevant filter columns
 			for (const colIdx of filterColIdxs) {
 				const value = cells[colIdx].trim()
 				if (!value) continue
@@ -210,30 +233,32 @@ export async function makeAdHocDicTermdbQueries(ds: Mds3) {
 				const f = filterByHeader.get(header)
 				if (!f) continue
 
-				const match =
-					f.type === 'categorical'
-						? f.filter.includes(value)
-						: (() => {
-								const { min, max } = getDefaultMinAndMax(f.filter[0])
-								return isValueInRange(value, f.filter[0], min, max)
-						  })()
-
-				if (match) {
-					if (matchMap.has(header)) {
-						matchMap.get(header).push(cells[sampleKeyIdx!])
-					} else {
-						matchMap.set(header, [cells[sampleKeyIdx!]])
-					}
+				if (isMatch(f, value)) {
+					const s = matchMap.get(header)
+					if (s) s.add(cells[sampleKeyIdx!])
+					else matchMap.set(header, new Set([cells[sampleKeyIdx!]]))
 				}
 			}
 		}
 
-		const mapValues = [...matchMap.values()]
-		const matches = mapValues.reduce((acc, arr) => {
-			return acc.filter(val => arr.includes(val))
-		})
+		const matchValues = [...matchMap.values()]
+		if (matchValues.length === 0) return []
 
-		return matches
+		//Start with the smallest set to reduce computing power
+		const smallestSet = matchValues.reduce((acc, curr) => {
+			if (curr.size < acc.size) return curr
+			return acc
+		}, matchValues[0])
+
+		/** Iterate through all filtered match sets to find
+		 * values present in each */
+		const matches = new Set(smallestSet)
+		for (let i = 1; i < matchValues.length; i++) {
+			for (const v of [...matches]) {
+				if (!matchValues[i].has(v)) matches.delete(v)
+			}
+		}
+		return [...matches]
 	}
 }
 
@@ -274,6 +299,8 @@ function makeParentTerms(header: string, id2term: Map<string, any>, sampleKey: s
 	}
 }
 
+/** Metadata does not contain data dictionary information
+ * Add necessary attributes to terms from inference */
 function assignAttributesToTerms(id2term: Map<string, any>, lines: string[]) {
 	//Later, will only assign values to categorical terms
 	const tmpTermValues = new Map()
@@ -383,13 +410,34 @@ function assignDefaultBins(term: any, termValues: any) {
 	}
 }
 
-function getDefaultMinAndMax(range) {
+/** Determine if value matches filter */
+function isMatch(f: any, value: string) {
+	if (f.type === 'categorical') {
+		return f.isNot ? !f.filter.includes(value) : f.filter.includes(value)
+	} else {
+		return (() => {
+			/** Samples/slides/images should only appear once for numerical terms. */
+			let includeValue = false
+			for (const range of f.filter) {
+				// const { min, max } = getDefaultMinAndMax(range)
+				const inRange = isValueInRange(Number(value), range)
+				includeValue = f.isNot ? !inRange : inRange
+				if (includeValue) break
+			}
+			return includeValue
+		})()
+	}
+}
+
+function setDefaultMinAndMax(range: any) {
 	const min = range.startunbounded ? -Infinity : range.start
 	const max = range.stopunbounded ? Infinity : range.stop
 	return { min, max }
 }
 
-function isValueInRange(value, range, min, max) {
+function isValueInRange(value: number, range: any) {
+	const min = range.min
+	const max = range.max
 	if (value > min && value < max) return true
 	if (range.startinclusive && value == min) return true
 	if (range.stopinclusive && value == max) return true

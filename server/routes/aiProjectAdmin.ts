@@ -50,9 +50,12 @@ function init({ genomes }) {
 				res.send(projects)
 			} else if (query.for === 'admin') {
 				/** update projects in db */
-				if (req.method === 'POST') editProject(db.connection, query)
-				if (req.method === 'DELETE') deleteProject(db.connection, query)
-				if (req.method === 'PUT') addProject(db.connection, query)
+				/** If the url is too long, the method will be changed to POST
+				 * in dofetch. Checking if project.type == 'new' ensures the project
+				 * is added to the db.*/
+				if (req.method === 'PUT' || query.project.type === 'new') addProject(db.connection, query)
+				else if (req.method === 'POST') editProject(db.connection, query)
+				else if (req.method === 'DELETE') deleteProject(db.connection, query)
 
 				res.status(200).send({
 					status: 'ok',
@@ -62,7 +65,8 @@ function init({ genomes }) {
 				/** get selections (i.e. slides) matching the project
 				 * from the ad hoc dictionary. */
 				const q = ds.cohort.termdb.q
-				const images = await q.getFilteredSamples(query.project.filter)
+				const images = await q.getFilteredSelections(query.project.filter)
+				/** TODO: Should send list of images to API */
 				res.status(200).send({
 					status: 'ok',
 					images
@@ -100,15 +104,6 @@ function getProjects(ds: any) {
 
 function editProject(connection: any, query: any) {
 	console.log('Editing project:', connection, query.project)
-	// const sql = `UPDATE project SET name = ? WHERE id= ?`
-	// const params = [query.project.name, query.project.id]
-	// try {
-	// 	const rows = connection.prepare(sql).run(params)
-	// 	return rows
-	// } catch (e) {
-	// 	console.error('Error fetching projects:', e)
-	// 	throw new Error('Failed to fetch projects')
-	// }
 }
 
 function deleteProject(connection: any, query: any) {
