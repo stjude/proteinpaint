@@ -73,7 +73,6 @@ export type MassState = {
 		allowedTermTypes: string[]
 		displaySampleIds?: (clientAuthResult: any) => boolean
 		correlationVolcano?: any
-		grin2?: any
 		massSessionDuration: number
 		queries?: any
 		requiredAuth?: any
