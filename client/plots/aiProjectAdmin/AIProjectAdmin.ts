@@ -37,7 +37,8 @@ class AIProjectAdmin extends RxComponentInner {
 		}
 		return {
 			config,
-			vocab: appState.vocab
+			vocab: appState.vocab,
+			filter: appState.termfilter.filter
 		}
 	}
 
@@ -45,7 +46,7 @@ class AIProjectAdmin extends RxComponentInner {
 		this.interactions = new AIProjectAdminInteractions(this.app, this.id, this.model)
 
 		try {
-			this.projects = await this.model.getProjects(appState.vocab.genome, appState.vocab.dslabel)
+			this.projects = await Model.getProjects(appState.vocab.genome, appState.vocab.dslabel)
 		} catch (e: any) {
 			console.error('Error initializing AIProjectAdmin:', e)
 			throw e
