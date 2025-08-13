@@ -1,6 +1,7 @@
-import type { PercentileRequest, PercentileResponse, Filter, RouteApi } from '#types'
+import type { PercentileRequest, PercentileResponse, RouteApi } from '#types'
 import { percentilePayload } from '#types/checkers'
-import * as termdbsql from '#src/termdb.sql.js'
+import { isNumericTerm } from '#shared/terms.js'
+import { getData } from '#src/termdb.matrix.js'
 import computePercentile from '#shared/compute.percentile.js'
 
 export const api: RouteApi = {
@@ -33,38 +34,36 @@ function init({ genomes }) {
 	}
 }
 
-async function trigger_getpercentile(
-	q: { tid: string; getpercentile: number[]; filter: Filter },
-	res: { send: (arg0: { values: number[] }) => void },
-	ds: { cohort: { termdb: { q: { termjsonByOneid: (arg0: any) => any } } } }
-) {
-	const term = ds.cohort.termdb.q.termjsonByOneid(q.tid)
-	if (!term) throw 'invalid termid'
-	if (term.type != 'float' && term.type != 'integer') throw 'not numerical term'
-	const percentile_lst = q.getpercentile
-	const perc_values = [] as number[]
-	const values = [] as number[]
-	const rows = await termdbsql.get_rows_by_one_key({
-		ds,
-		key: q.tid,
-		filter: q.filter ? (typeof q.filter == 'string' ? JSON.parse(q.filter) : q.filter) : null
-	})
-	for (const { value } of rows) {
+async function trigger_getpercentile(q, res, ds) {
+	const term = q.term
+	if (!term) throw 'term is missing'
+	if (!isNumericTerm(term)) throw 'not numeric term'
+	const tw = { $id: '_', term, q: { mode: 'continuous' } }
+	const data = await getData({ filter: q.filter, filter0: q.filter0, terms: [tw], __protected__: q.__protected__ }, ds)
+	if (data.error) throw data.error
+	const values: number[] = []
+	for (const key in data.samples) {
+		const sample = data.samples[key]
+		const v = sample[tw.$id]
+		if (!v?.value) {
+			// skip undefined values
+			continue
+		}
+		const value = v.value
 		if (term.values && term.values[value] && term.values[value].uncomputable) {
 			// skip uncomputable values
 			continue
 		}
-
 		if (term.skip0forPercentile && value == 0) {
 			// quick fix: when the flag is true, will exclude 0 values from percentile computing
 			// to address an issue with computing knots
 			continue
 		}
-
 		values.push(Number(value))
 	}
-
 	// compute percentiles
+	const percentile_lst = q.getpercentile
+	const perc_values: number[] = []
 	for (const percentile of percentile_lst) {
 		const perc_value = computePercentile(values, percentile)
 		perc_values.push(perc_value)

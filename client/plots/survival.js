@@ -19,6 +19,20 @@ import { renderPvalues } from '#dom/renderPvalueTable'
 import { downloadChart } from '#common/svg.download'
 import { getCombinedTermFilter } from '#filter'
 
+const t0_t2_defaultQ = structuredClone(term0_term2_defaultQ)
+Object.assign(t0_t2_defaultQ, {
+	numeric: {
+		mode: 'discrete',
+		type: 'custom-bin',
+		preferredBins: 'median'
+	},
+	geneExpression: {
+		mode: 'discrete',
+		type: 'custom-bin',
+		preferredBins: 'median'
+	}
+})
+
 class TdbSurvival {
 	constructor(opts) {
 		this.type = 'survival'
@@ -106,7 +120,7 @@ class TdbSurvival {
 							label: 'Overlay',
 							vocabApi: this.app.vocabApi,
 							numericEditMenuVersion: ['discrete'],
-							defaultQ4fillTW: term0_term2_defaultQ
+							defaultQ4fillTW: t0_t2_defaultQ
 						},
 						{
 							type: 'term',
@@ -117,7 +131,7 @@ class TdbSurvival {
 							label: 'Divide by',
 							vocabApi: this.app.vocabApi,
 							numericEditMenuVersion: ['discrete'],
-							defaultQ4fillTW: term0_term2_defaultQ
+							defaultQ4fillTW: t0_t2_defaultQ
 						},
 						{
 							label: 'Chart width',
@@ -1217,12 +1231,12 @@ export async function getPlotConfig(opts, app) {
 	if (!opts.term) throw 'survival getPlotConfig: opts.term{} missing'
 	try {
 		await fillTermWrapper(opts.term, app.vocabApi)
-		// supply term0_term2_defaultQ if opts.term0/2.bins/q is undefined
-		// so that term0_term2_defaultQ does not override bins or q from user
+		// supply t0_t2_defaultQ if opts.term0/2.bins/q is undefined
+		// so that t0_t2_defaultQ does not override bins or q from user
 		if (opts.term2)
-			await fillTermWrapper(opts.term2, app.vocabApi, opts.term2.bins || opts.term2.q ? null : term0_term2_defaultQ)
+			await fillTermWrapper(opts.term2, app.vocabApi, opts.term2.bins || opts.term2.q ? null : t0_t2_defaultQ)
 		if (opts.term0)
-			await fillTermWrapper(opts.term0, app.vocabApi, opts.term0.bins || opts.term0.q ? null : term0_term2_defaultQ)
+			await fillTermWrapper(opts.term0, app.vocabApi, opts.term0.bins || opts.term0.q ? null : t0_t2_defaultQ)
 	} catch (e) {
 		throw `${e} [survival getPlotConfig()]`
 	}

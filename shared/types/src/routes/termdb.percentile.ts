@@ -1,5 +1,6 @@
 import type { RoutePayload } from './routeApi.js'
 import type { Filter } from '../filter.ts'
+import type { Term } from '../terms/term.ts'
 
 export type PercentileRequest = {
 	/** a user-defined genome label in the serverconfig.json, hg38, hg19, mm10, etc */
@@ -9,8 +10,9 @@ export type PercentileRequest = {
 	embedder: string
 	getpercentile: number[]
 	/** term id string */
-	tid: string
-	filter: Filter
+	term: Term
+	filter?: Filter
+	filter0?: any
 }
 
 export type PercentileResponse = {
@@ -32,7 +34,7 @@ export const percentilePayload: RoutePayload = {
 					dslabel: 'TermdbTest',
 					embedder: 'localhost',
 					getpercentile: [50],
-					tid: 'agedx',
+					term: { id: 'agedx' },
 					filter: {
 						type: 'tvslst',
 						in: true,

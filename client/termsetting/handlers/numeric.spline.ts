@@ -283,7 +283,7 @@ async function getKnots(self, knot_count: any) {
 }
 
 async function getPercentile2Value(self, percentile_lst: any) {
-	const data = await self.vocabApi.getPercentile(self.term.id, percentile_lst, self.filter)
+	const data = await self.vocabApi.getPercentile(self.term, percentile_lst, self.vocabApi.state?.termfilter)
 	if (data.error || !data.values.length || !data.values.every(v => Number.isFinite(v)))
 		throw 'cannot get median value: ' + (data.error || 'no data')
 	const perc_values = [...new Set(data.values)]
