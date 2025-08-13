@@ -2062,32 +2062,26 @@ async function validate_query_trackLst(ds, genome) {
 	const q = ds.queries.trackLst
 	if (!q) return
 	q.facets = [] // one or more facet tables
-	if (q.jsonFile) {
+	try {
+		if (!q.jsonFile) throw 'jsonFile missing'
 		const f = path.join(serverconfig.tpmasterdir, q.jsonFile)
 		await utils.file_is_readable(f)
-		try {
-			const json = JSON.parse(fs.readFileSync(f, { encoding: 'utf8' }))
-			/*
-			document legacy structure
-			*/
-			if (Array.isArray(json)) {
-				for (const i of json) {
-					if (i.isfacet) {
-						q.facets.push(i)
-					} else {
-						throw 'unknown element of trackLst json[]'
-					}
+		const json = JSON.parse(fs.readFileSync(f, { encoding: 'utf8' }))
+		if (Array.isArray(json)) {
+			for (const i of json) {
+				if (i.isfacet) {
+					q.facets.push(i)
+				} else {
+					throw 'unknown element of trackLst json[]'
 				}
-			} else {
-				throw 'unknown structure of json trackLst file'
 			}
-		} catch (e) {
-			throw 'trackLst error: ' + e
+		} else {
+			throw 'unknown structure of json trackLst file'
 		}
-		delete q.jsonFile
-	} else {
-		throw 'unknown config for queries.trackLst{}'
+	} catch (e) {
+		throw 'trackLst error: ' + e
 	}
+	delete q.jsonFile
 }
 
 async function validate_query_singleSampleGbtk(ds, genome) {
