@@ -37,17 +37,16 @@ export interface GRIN2Settings {
 		gainThreshold: number
 		/** Maximum segment length to include (0 = no filter) */
 		maxSegLength: number
-		/** Minimum segment length to include (0 = no filter) */
-		minSegLength: number
 		/** Hypermutator max cut off for CNVs per case */
 		hyperMutator: number
 	}
 
 	/** Options for filtering fusion file content (optional) */
 	fusionOptions?: {
-		/** Filter by fusion type */
-		fusionTypes: ('gene-gene' | 'gene-intergenic' | 'readthrough')[]
-		/** Minimum confidence score (0-1) */
-		minConfidence: number
+		[key: string]: any
+	}
+	/** Options for general GRIN2 settings (optional) */
+	generalOptions?: {
+		[key: string]: any
 	}
 }
