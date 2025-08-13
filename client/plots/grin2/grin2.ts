@@ -6,6 +6,7 @@ import { Menu } from '#dom'
 import { dofetch3 } from '#common/dofetch'
 import { renderTable, icons } from '#dom'
 import { dtsnvindel, mclass } from '#shared/common.js'
+import { get$id } from '#termsetting'
 
 class GRIN2 extends RxComponentInner {
 	readonly type = 'grin2'
@@ -51,117 +52,54 @@ class GRIN2 extends RxComponentInner {
 		this.createConfigTable()
 	}
 
-	private createMatrixFromGenes(topGeneTable: any) {
-		try {
-			// Check if gene expression data is available
-			const queries = this.app.vocabApi.termdbConfig.queries
-			const hasRnaseqData = !!queries?.rnaseqGeneCount
-
-			// Create message based on whether rnaseq data is available
-			const availabilityMessage = hasRnaseqData
-				? 'This dataset contains RNA-seq gene expression data.'
-				: 'Note: This dataset does not contain RNA-seq gene expression data (rnaseqGeneCount).'
-
-			// Show coming soon message with data availability info
-			const messageDiv = this.dom.plot
-				.append('div')
-				.style('background', '#f8f9fa')
-				.style('border', '1px solid #dee2e6')
-				.style('border-radius', '8px')
-				.style('padding', '20px')
-				.style('margin', '10px 0')
-				.style('text-align', 'center')
-
-			messageDiv
-				.append('h4')
-				.style('color', '#495057')
-				.style('margin', '0 0 10px 0')
-				.text('🔬 Gene Expression Matrix - Coming Soon')
-
-			messageDiv
-				.append('p')
-				.style('color', '#6c757d')
-				.style('margin', '10px 0')
-				.text(
-					`Expression matrix visualization for the ${topGeneTable.rows.length} genes from your GRIN2 analysis is currently under development.`
-				)
-
-			messageDiv
-				.append('div')
-				.style('margin-top', '15px')
-				.style('padding', '10px')
-				.style('background', hasRnaseqData ? '#d4edda' : '#f8d7da')
-				.style('border', `1px solid ${hasRnaseqData ? '#c3e6cb' : '#f5c6cb'}`)
-				.style('border-radius', '4px')
-				.style('color', hasRnaseqData ? '#155724' : '#721c24')
-				.style('font-size', '14px')
-				.text(availabilityMessage)
-
-			// Auto-remove message after 8 seconds
-			setTimeout(() => messageDiv.remove(), 8000)
-		} catch (error) {
-			console.error('Error showing matrix message:', error)
-			// Show error to user in the existing error div
-			this.dom.error
-				.style('padding', '20px')
-				.style('color', 'red')
-				.text(`Error: ${error instanceof Error ? error.message : String(error)}`)
-
-			// Auto-hide error after 5 seconds
-			setTimeout(() => {
-				this.dom.error.style('padding', '0').text('')
-			}, 5000)
-		}
-	}
-
 	private createConfigTable() {
+		// Remove excessive borders and background - keep minimal container
 		const tableDiv = this.dom.controls
 			.append('div')
 			.style('display', 'inline-block')
-			.style('border', '1px solid #ddd')
-			.style('border-radius', '4px')
-			.style('padding', '15px')
-			.style('background', '#fafafa')
-			.style('margin', '10px')
+			.style('padding', '10px')
+			.style('margin', '5px')
 
 		const table = tableDiv.append('table').style('border-collapse', 'collapse').style('width', '100%')
 
 		const queries = this.app.vocabApi.termdbConfig.queries
 		console.log('Queries:', queries)
 
-		// Table headers
+		// Minimalist table headers - subtle borders for separation
 		const headerRow = table.append('tr')
 		headerRow
 			.append('th')
-			.style('background', '#e9e9e9')
+			.style('background', '#f8f8f8')
 			.style('padding', '8px')
 			.style('font-weight', 'bold')
-			.style('border', '1px solid #ddd')
+			.style('border-right', '1px solid #eee')
+			.style('border-bottom', '1px solid #eee')
 			.style('width', '30%')
 			.text('Data Type')
 
 		headerRow
 			.append('th')
-			.style('background', '#e9e9e9')
+			.style('background', '#f8f8f8')
 			.style('padding', '8px')
 			.style('font-weight', 'bold')
-			.style('border', '1px solid #ddd')
+			.style('border-bottom', '1px solid #eee')
 			.style('width', '70%')
 			.text('Options')
 
-		// SNV/INDEL Row
+		// SNV/INDEL Row - subtle borders for separation
 		if (queries.snvindel) {
 			const snvRow = table.append('tr')
 
 			snvRow
 				.append('td')
 				.style('padding', '8px')
-				.style('border', '1px solid #ddd')
 				.style('font-weight', '500')
 				.style('vertical-align', 'top')
+				.style('border-right', '1px solid #eee')
+				.style('border-bottom', '1px solid #eee')
 				.text('SNV/INDEL (Mutation)')
 
-			const optionsCell = snvRow.append('td').style('padding', '8px').style('border', '1px solid #ddd')
+			const optionsCell = snvRow.append('td').style('padding', '8px').style('border-bottom', '1px solid #eee')
 
 			const optionsTable = optionsCell.append('table').style('border-collapse', 'collapse').style('width', '100%')
 
@@ -184,19 +122,20 @@ class GRIN2 extends RxComponentInner {
 			this.createConsequenceCheckboxes(consequenceCell)
 		}
 
-		// CNV Row
+		// CNV Row - subtle borders for separation
 		if (queries.cnv) {
 			const cnvRow = table.append('tr')
 
 			cnvRow
 				.append('td')
 				.style('padding', '8px')
-				.style('border', '1px solid #ddd')
 				.style('font-weight', '500')
 				.style('vertical-align', 'top')
+				.style('border-right', '1px solid #eee')
+				.style('border-bottom', '1px solid #eee')
 				.text('CNV (Copy Number Variation)')
 
-			const optionsCell = cnvRow.append('td').style('padding', '8px').style('border', '1px solid #ddd')
+			const optionsCell = cnvRow.append('td').style('padding', '8px').style('border-bottom', '1px solid #eee')
 
 			const optionsTable = optionsCell.append('table').style('border-collapse', 'collapse').style('width', '100%')
 
@@ -206,61 +145,97 @@ class GRIN2 extends RxComponentInner {
 			this.addOptionRow(optionsTable, 'Hypermutator Threshold', 'cnvOptions.hyperMutator', 500, 1)
 		}
 
-		// Fusion Row (placeholder)
+		// Fusion Row (placeholder) - subtle borders for separation
 		if (queries.svfusion) {
 			const fusionRow = table.append('tr')
 
 			fusionRow
 				.append('td')
 				.style('padding', '8px')
-				.style('border', '1px solid #ddd')
 				.style('font-weight', '500')
 				.style('vertical-align', 'top')
+				.style('border-right', '1px solid #eee')
+				.style('border-bottom', '1px solid #eee')
 				.text('Fusion')
 
 			fusionRow
 				.append('td')
 				.style('padding', '8px')
-				.style('border', '1px solid #ddd')
 				.style('font-style', 'italic')
 				.style('color', '#666')
+				.style('border-bottom', '1px solid #eee')
 				.text('Fusion filtering options to be configured later')
 		}
 
-		// General GRIN2 Row (placeholder)
+		// General GRIN2 Row (placeholder) - subtle borders for separation
 		const generalRow = table.append('tr')
 
 		generalRow
 			.append('td')
 			.style('padding', '8px')
-			.style('border', '1px solid #ddd')
 			.style('font-weight', '500')
 			.style('vertical-align', 'top')
+			.style('border-right', '1px solid #eee')
 			.text('GRIN2')
 
 		generalRow
 			.append('td')
 			.style('padding', '8px')
-			.style('border', '1px solid #ddd')
 			.style('font-style', 'italic')
 			.style('color', '#666')
 			.text('Additional GRIN2 parameters to be configured later')
 
-		// Run Button
+		// Run Button - simplified styling
 		tableDiv
 			.append('div')
 			.style('text-align', 'center')
-			.style('margin-top', '20px')
+			.style('margin-top', '15px')
 			.append('button')
-			.style('padding', '10px 20px')
-			.style('background', '#f0f0f0')
+			.style('padding', '8px 16px')
+			.style('background', '#f8f8f8')
 			.style('color', '#333')
-			.style('border', '1px solid #ccc')
-			.style('border-radius', '4px')
+			.style('border', '1px solid #ddd')
+			.style('border-radius', '3px')
 			.style('cursor', 'pointer')
-			.style('font-size', '16px')
+			.style('font-size', '14px')
 			.text('Run GRIN2')
 			.on('click', () => this.runAnalysis())
+	}
+
+	// Updated addOptionRow method to remove internal borders
+	private addOptionRow(
+		table: any,
+		label: string,
+		settingsPath: string,
+		defaultValue: number,
+		min?: number | null,
+		max?: number | null,
+		step: number = 1
+	) {
+		const row = table.append('tr')
+
+		// Label column - no borders
+		row.append('td').style('padding', '4px 8px').style('font-weight', '400').style('width', '60%').text(label)
+
+		// Input column - no borders
+		const inputCell = row.append('td').style('padding', '4px 8px').style('width', '40%')
+
+		const input = inputCell
+			.append('input')
+			.attr('type', 'number')
+			.attr('value', defaultValue)
+			.attr('step', step)
+			.style('width', '100%')
+			.style('padding', '2px 4px')
+			.style('border', '1px solid #ccc')
+			.style('border-radius', '2px')
+			.style('font-size', '12px')
+
+		if (min !== null && min !== undefined) input.attr('min', min)
+		if (max !== null && max !== undefined) input.attr('max', max)
+
+		// Store reference for value retrieval
+		input.attr('data-settings-path', settingsPath)
 	}
 
 	private createConsequenceCheckboxes(container: any) {
@@ -353,41 +328,6 @@ class GRIN2 extends RxComponentInner {
 			// Reset button styling immediately after click
 			clearAllBtn.style('background', '#f0f0f0').style('color', '#333')
 		})
-	}
-
-	private addOptionRow(
-		table: any,
-		label: string,
-		settingsPath: string,
-		defaultValue: number,
-		min?: number | null,
-		max?: number | null,
-		step: number = 1
-	) {
-		const row = table.append('tr')
-
-		// Label column
-		row.append('td').style('padding', '4px 8px').style('font-weight', '400').style('width', '60%').text(label)
-
-		// Input column
-		const inputCell = row.append('td').style('padding', '4px 8px').style('width', '40%')
-
-		const input = inputCell
-			.append('input')
-			.attr('type', 'number')
-			.attr('value', defaultValue)
-			.attr('step', step)
-			.style('width', '100%')
-			.style('padding', '2px 4px')
-			.style('border', '1px solid #ccc')
-			.style('border-radius', '2px')
-			.style('font-size', '12px')
-
-		if (min !== null && min !== undefined) input.attr('min', min)
-		if (max !== null && max !== undefined) input.attr('max', max)
-
-		// Store reference for value retrieval
-		input.attr('data-settings-path', settingsPath)
 	}
 
 	private addSectionHeader(table: any, title: string) {
@@ -492,66 +432,28 @@ class GRIN2 extends RxComponentInner {
 	}
 
 	private async runAnalysis() {
-		// Get the run button
-		const runButton = this.dom.controls.select('button').node() as HTMLButtonElement
-		const originalButtonText = runButton.textContent
+		// Get the run button more specifically - it's the only button with "Run GRIN2" text
+		const runButton = this.dom.controls
+			.selectAll('button')
+			.filter(function (this: HTMLButtonElement) {
+				return this.textContent?.includes('Run GRIN2')
+			})
+			.node() as HTMLButtonElement
+
+		const originalText = runButton.textContent
 
 		try {
-			// Disable button and show loading state
+			// Disable button with visual feedback
 			runButton.disabled = true
-			runButton.textContent = 'Running Analysis...'
-			runButton.style.background = '#cccccc'
-			runButton.style.cursor = 'not-allowed'
+			runButton.textContent = 'Running GRIN2...'
+			runButton.style.opacity = '0.6'
 
-			// Add overlay to prevent interactions
-			const overlay = this.dom.div
-				.append('div')
-				.style('position', 'absolute')
-				.style('top', '0')
-				.style('left', '0')
-				.style('width', '100%')
-				.style('height', '100%')
-				.style('background', 'rgba(255, 255, 255, 0.8)')
-				.style('z-index', '1000')
-				.style('display', 'flex')
-				.style('align-items', 'center')
-				.style('justify-content', 'center')
-
-			// Add loading spinner
-			overlay
-				.append('div')
-				.style('padding', '20px')
-				.style('background', 'white')
-				.style('border-radius', '8px')
-				.style('box-shadow', '0 4px 6px rgba(0, 0, 0, 0.1)')
-				.style('text-align', 'center').html(`
-				<div style="margin-bottom: 10px;">
-					<div style="border: 3px solid #f3f3f3; border-top: 3px solid #ccc; border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; margin: 0 auto;"></div>
-				</div>
-				<div>Running GRIN2 analysis...</div>
-			`)
-
-			// Add CSS animation for spinner
-			if (!document.getElementById('grin2-spinner-style')) {
-				const style = document.createElement('style')
-				style.id = 'grin2-spinner-style'
-				style.textContent = `
-				@keyframes spin {
-					0% { transform: rotate(0deg); }
-					100% { transform: rotate(360deg); }
-				}
-			`
-				document.head.appendChild(style)
-			}
-
-			// Clear any previous errors and plot content
+			// Clear previous results
 			this.dom.error.style('padding', '0').text('')
 			this.dom.plot.selectAll('*').remove()
 
-			// Get current configuration values
+			// Get configuration and make request
 			const configValues = this.getConfigValues()
-
-			// Make request to GRIN2 endpoint
 			const requestData = {
 				genome: this.app.vocabApi.vocab.genome,
 				dslabel: this.app.vocabApi.vocab.dslabel,
@@ -567,30 +469,20 @@ class GRIN2 extends RxComponentInner {
 
 			const result = await response
 
-			// Remove overlay
-			overlay.remove()
-
 			if (result.status === 'error') {
 				this.dom.error.style('padding', '20px').text(`GRIN2 analysis failed: ${result.error}`)
 				return
 			}
 
-			// Display results
 			this.renderResults(result)
 		} catch (error) {
-			// Remove overlay if it exists
-			this.dom.div.select('div[style*="z-index: 1000"]').remove()
-
 			this.dom.plot.selectAll('*').remove()
-			this.dom.error
-				.style('padding', '20px')
-				.text(`Error running GRIN2 analysis: ${error instanceof Error ? error.message : String(error)}`)
+			this.dom.error.style('padding', '20px').text(`Error: ${error instanceof Error ? error.message : String(error)}`)
 		} finally {
-			// Re-enable button and restore original state
+			// Restore button state
 			runButton.disabled = false
-			runButton.textContent = originalButtonText
-			runButton.style.background = '#f0f0f0'
-			runButton.style.cursor = 'pointer'
+			runButton.textContent = originalText
+			runButton.style.opacity = '1'
 		}
 	}
 
@@ -713,6 +605,59 @@ class GRIN2 extends RxComponentInner {
 				.text(
 					`Analysis completed in ${result.timing.totalTime}s (Processing: ${result.timing.processingTime}s, GRIN2: ${result.timing.grin2Time}s)`
 				)
+		}
+	}
+
+	private createMatrixFromGenes(topGeneTable: any): void {
+		try {
+			// Extract top 20 gene symbols
+			const geneSymbols = topGeneTable.rows
+				.slice(0, 20)
+				.map((row: any) => row[0]?.value)
+				.filter((gene: any) => gene && typeof gene === 'string')
+
+			if (geneSymbols.length === 0) {
+				throw new Error('No valid gene symbols found')
+			}
+
+			// Create termwrappers for mutation data
+			const termwrappers = geneSymbols.map((gene: string) => {
+				const term = {
+					type: 'geneVariant',
+					gene: gene,
+					name: gene
+				}
+
+				// Get minimal copy for $id generation (required parameter)
+				const minTwCopy = this.app.vocabApi.getTwMinCopy({ term })
+
+				return {
+					$id: get$id(minTwCopy), // Now provides the required minTwCopy argument
+					term,
+					q: {}
+				}
+			})
+
+			// Create and dispatch matrix
+			this.app.dispatch({
+				type: 'plot_create',
+				config: {
+					chartType: 'matrix',
+					dataType: 'geneVariant',
+					termgroups: [
+						{
+							name: 'Genomic alterations',
+							lst: termwrappers
+						}
+					]
+				}
+			})
+		} catch (error) {
+			console.error('Error creating matrix from genes:', error)
+			this.dom.error
+				.style('padding', '20px')
+				.style('color', 'red')
+				.text(`Error creating matrix: ${error instanceof Error ? error.message : 'Unknown error'}`)
 		}
 	}
 }
