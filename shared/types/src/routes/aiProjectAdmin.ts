@@ -6,19 +6,21 @@ export type AIProjectAdminRequest = {
 	/** list: get entire list of projects from db
 	 * admin: edit, add, or delete projects from db
 	 */
-	for: 'list' | 'admin' | 'selections'
+	for: 'list' | 'admin' | 'images'
 	/** required for 'project' and 'selection' requests */
 	project?: {
 		name: string
 		id?: number
 		fitler?: string
 		classes?: any[]
+		images?: string[]
 	}
 }
 
 export type AIProjectAdminResponse = {
 	status: 'ok' | 'error'
 	error?: string
+	images?: any[]
 }
 
 export const aiProjectAdminPayload: RoutePayload = {

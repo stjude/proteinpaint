@@ -1407,6 +1407,18 @@ export class TermdbVocab extends Vocab {
 		}
 		return await dofetch3('termdb', { method: 'GET', body })
 	}
+
+	async getAiImages(project, filter) {
+		const body = {
+			genome: this.vocab.genome,
+			dslabel: this.vocab.dslabel,
+			// make a copy of the project object
+			project: Object.assign({}, project, { filter: getNormalRoot(filter) }),
+			for: 'images'
+		}
+
+		return await dofetch3('aiProjectAdmin', { body })
+	}
 }
 
 /*

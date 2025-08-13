@@ -48,24 +48,34 @@ function init({ genomes }) {
 			if (query.for === 'list') {
 				const projects = getProjects(ds)
 				res.send(projects)
-			}
-			/** update projects in db */
-			if (query.for === 'admin') {
-				if (req.method === 'POST') editProject(db.connection, query)
-				if (req.method === 'DELETE') deleteProject(db.connection, query)
-				if (req.method === 'PUT') addProject(db.connection, query)
+			} else if (query.for === 'admin') {
+				/** update projects in db */
+				/** If the url is too long, the method will be changed to POST
+				 * in dofetch. Checking if project.type == 'new' ensures the project
+				 * is added to the db.*/
+				if (req.method === 'PUT' || query.project.type === 'new') addProject(db.connection, query)
+				else if (req.method === 'POST') editProject(db.connection, query)
+				else if (req.method === 'DELETE') deleteProject(db.connection, query)
 
 				res.status(200).send({
 					status: 'ok',
 					message: `Project ${query.project.name} processed successfully`
 				})
-			}
-			/** get selections (i.e. slides) matching the project
-			 * from the ad hoc dictionary. */
-			if (query.for === 'selections') {
+			} else if (query.for === 'images') {
+				/** get selections (i.e. slides) matching the project
+				 * from the ad hoc dictionary. */
 				const q = ds.cohort.termdb.q
-				const samples = await q.getFilteredSamples(query.filter)
-				res.send(samples)
+				const images = await q.getFilteredSelections(query.project.filter)
+				/** TODO: Should send list of images to API */
+				res.status(200).send({
+					status: 'ok',
+					images
+				})
+			} else {
+				res.send({
+					status: 'error',
+					message: 'Invalid request'
+				})
 			}
 		} catch (e: any) {
 			console.warn(e)
@@ -94,15 +104,6 @@ function getProjects(ds: any) {
 
 function editProject(connection: any, query: any) {
 	console.log('Editing project:', connection, query.project)
-	// const sql = `UPDATE project SET name = ? WHERE id= ?`
-	// const params = [query.project.name, query.project.id]
-	// try {
-	// 	const rows = connection.prepare(sql).run(params)
-	// 	return rows
-	// } catch (e) {
-	// 	console.error('Error fetching projects:', e)
-	// 	throw new Error('Failed to fetch projects')
-	// }
 }
 
 function deleteProject(connection: any, query: any) {
@@ -125,6 +126,12 @@ function addProject(connection: any, query: any) {
 	const classParams = query.project.classes.map((c: any) => [rows.lastInsertRowid, c.label, c.color])
 	for (const params of classParams) {
 		runSQL(connection, classSql, params, 'add')
+	}
+	//Add corresponding project images
+	const imagesSql = `INSERT INTO project_images (project_id, image) VALUES (?, ?)`
+	const imagesParams = query.project.images.map((img: any) => [rows.lastInsertRowid, img])
+	for (const params of imagesParams) {
+		runSQL(connection, imagesSql, params, 'add')
 	}
 }
 
