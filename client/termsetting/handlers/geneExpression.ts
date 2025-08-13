@@ -1,4 +1,4 @@
-import type { NumericQ, VocabApi, GeneExpressionTW } from '#types'
+import type { NumericQ, VocabApi, GeneExpressionTW, CustomNumericBinConfig } from '#types'
 import { copyMerge } from '#rx'
 import { fillQWithMedianBin } from '../../tw/numeric'
 
@@ -35,7 +35,10 @@ export async function fillTW(tw: GeneExpressionTW, vocabApi: VocabApi, defaultQ:
 	if (!tw.q?.mode) tw.q = { mode: 'continuous' } // supply default q if missing
 	if (defaultQ) copyMerge(tw.q, defaultQ) // override if default is given
 
-	if (tw.q.preferredBins == 'median' && !tw.q.lst?.length) await fillQWithMedianBin(tw, vocabApi)
+	if (tw.q.preferredBins == 'median') {
+		const q = tw.q as CustomNumericBinConfig
+		if (!q.lst?.length) await fillQWithMedianBin(tw, vocabApi)
+	}
 
 	if (tw.q.mode !== 'continuous' && !tw.term.bins) {
 		/* gene term is missing bin definition, this is expected as it's not valid to apply same bin to genes with vastly different exp range,
