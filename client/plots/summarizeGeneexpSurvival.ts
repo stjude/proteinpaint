@@ -35,10 +35,7 @@ export async function makeChartBtnMenu(holder, chartsInstance) {
 			callback: async () => {
 				launchPlot({
 					tw1: dictTw,
-					tw2: {
-						term: { gene: result.geneSymbol, type: 'geneExpression' },
-						q: { mode: 'discrete' }
-					},
+					tw2: { term: { gene: result.geneSymbol, type: 'geneExpression' } },
 					chartsInstance,
 					holder
 				})
