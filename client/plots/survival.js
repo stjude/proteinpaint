@@ -248,7 +248,7 @@ class TdbSurvival {
 				return
 			}
 
-			if (this.dom.header) this.dom.header.html(this.state.config.term.term.name + ` plot`)
+			this.maySetSandboxHeader()
 			this.toggleLoadingDiv()
 
 			Object.assign(this.settings, this.state.config.settings)
@@ -268,6 +268,17 @@ class TdbSurvival {
 			this.render()
 		} catch (e) {
 			throw e
+		}
+	}
+
+	maySetSandboxHeader() {
+		if (!this.dom.header) return
+		const { term, term2 } = this.state.config
+		const mainTerm = term.term.name
+		if (term2?.term.type == 'geneVariant') {
+			this.dom.header.html(`${term2.term.name} variant vs ${mainTerm}`)
+		} else {
+			this.dom.header.html(`${mainTerm} plot`)
 		}
 	}
 
