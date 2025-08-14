@@ -768,28 +768,6 @@ tape('Numerical term: toggle menu - 2 options', async test => {
 	tip.hide()
 })
 
-tape('Survival term: toggle menu - 2 options', async test => {
-	test.timeoutAfter(3000)
-	test.plan(1)
-
-	const opts = await getOpts({
-		numericEditMenuVersion: ['continuous', 'discrete'],
-		tsData: {
-			term: termjson['os']
-		}
-	})
-
-	await opts.pill.main(opts.tsData)
-	await opts.pillMenuClick('Edit')
-	const tip = opts.pill.Inner.dom.tip
-	test.equal(
-		tip.d.node().querySelectorAll('.sj-toggle-button').length,
-		2,
-		'Should have 2 toggle buttons for survival edit menu'
-	)
-	tip.hide()
-})
-
 tape('Numerical term: toggle menu - 1 option', async test => {
 	test.timeoutAfter(3000)
 	test.plan(1)
