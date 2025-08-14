@@ -40,6 +40,10 @@ export class CategoryFiltersUI {
 				.style('display', 'none')
 				.style('position', 'absolute')
 				.style('z-index', '1000')
+				.on('mouseleave', () => {
+					select.style('display', 'none')
+					button.text(` ${tw.term.name}: ${filterValues.map((o: any) => tw.term.values[o].label || o).join(', ')} ▼`)
+				})
 
 			select.on('mousedown', e => {
 				e.preventDefault() //prevent the select from closing on click
