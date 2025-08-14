@@ -1,3 +1,1 @@
-Features:
-- GRIN2 general route working. UI to be added in next commits
-- GRIN2 general route and plot
+

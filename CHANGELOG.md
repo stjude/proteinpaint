@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- GRIN2 general route working. UI to be added in next commits
+- GRIN2 general route and plot
+
 
 ## 2.138.2
 
