@@ -25,7 +25,7 @@ import { dtsnvindel, dtcnv, dtfusionrna } from '#shared/common.js'
  *        - lsn.type: Type of lesion ("mutation", "gain", "loss", "fusion")
  * 3. Read and filter file contents based on snvindelOptions, cnvOptions, fusionOptions:
  *    - SNV/indel: Filter by depth, alternate allele count, and consequence types
- *    - CNV: Filter by copy number thresholds and segment lengths
+ *    - CNV: Filter by copy number thresholds, and max segment length
  *    - Fusion: Filter by fusion type and confidence score
  *    - Hypermutator: Apply a maximum mutation count cutoff for highly mutated samples
  * 4. Convert filtered data to lesion format expected by Python script
@@ -154,7 +154,7 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 	mayLog(`[GRIN2] Python processing took ${grin2AnalysisTimeToPrint} seconds`)
 
 	// Step 5: Parse results and respond
-	//mayLog(`[GRIN2] Full pyResult object:`, pyResult)
+	mayLog(`[GRIN2] Full pyResult object:`, pyResult)
 	const resultData = JSON.parse(pyResult)
 
 	// Validate Python script output
@@ -202,14 +202,6 @@ async function processSampleData(
 		failedFiles: []
 	}
 
-	// Track data type counts
-	const dataTypeCounts = {
-		[dtsnvindel]: { samples: 0, entries: 0, processedLesions: 0 },
-		[dtcnv]: { samples: 0, entries: 0, processedLesions: 0 },
-		[dtfusionrna]: { samples: 0, entries: 0, processedLesions: 0 },
-		unknown: new Map<string, { samples: Set<string>; entries: number }>()
-	}
-
 	mayLog(`[GRIN2] Processing JSON files for ${samples.length.toLocaleString()} samples`)
 
 	// Process each sample's JSON file
@@ -219,27 +211,9 @@ async function processSampleData(
 			await file_is_readable(filepath)
 			const mlst = JSON.parse(await read_file(filepath))
 
-			const { sampleLesions, sampleDataTypeCounts } = await processSampleMlst(sample.name, mlst, lesionId, request)
+			const { sampleLesions } = await processSampleMlst(sample.name, mlst, lesionId, request)
 			lesions.push(...sampleLesions)
 			lesionId += sampleLesions.length
-
-			// Aggregate counts
-			for (const [dt, counts] of Object.entries(sampleDataTypeCounts.known)) {
-				if (counts.entries > 0) {
-					dataTypeCounts[dt].samples++
-					dataTypeCounts[dt].entries += counts.entries
-					dataTypeCounts[dt].processedLesions += counts.processedLesions
-				}
-			}
-
-			// Handle unknown data types
-			for (const [dt, counts] of sampleDataTypeCounts.unknown) {
-				if (!dataTypeCounts.unknown.has(dt)) {
-					dataTypeCounts.unknown.set(dt, { samples: new Set(), entries: 0 })
-				}
-				dataTypeCounts.unknown.get(dt)!.samples.add(sample.name)
-				dataTypeCounts.unknown.get(dt)!.entries += counts
-			}
 
 			processingSummary.successfulSamples++
 		} catch (error) {
@@ -256,24 +230,6 @@ async function processSampleData(
 		}
 	}
 
-	// Report final counts
-	mayLog(`[GRIN2] === DATA TYPE ANALYSIS SUMMARY ===`)
-	mayLog(
-		`[GRIN2] SNV/Indel (dt=${dtsnvindel}): ${dataTypeCounts[dtsnvindel].samples} samples, ${dataTypeCounts[dtsnvindel].entries} entries, ${dataTypeCounts[dtsnvindel].processedLesions} lesions`
-	)
-	mayLog(
-		`[GRIN2] CNV (dt=${dtcnv}): ${dataTypeCounts[dtcnv].samples} samples, ${dataTypeCounts[dtcnv].entries} entries, ${dataTypeCounts[dtcnv].processedLesions} lesions`
-	)
-	mayLog(
-		`[GRIN2] Fusion (dt=${dtfusionrna}): ${dataTypeCounts[dtfusionrna].samples} samples, ${dataTypeCounts[dtfusionrna].entries} entries, ${dataTypeCounts[dtfusionrna].processedLesions} lesions`
-	)
-
-	if (dataTypeCounts.unknown.size > 0) {
-		mayLog(`[GRIN2] Unknown data types:`)
-		for (const [dt, counts] of dataTypeCounts.unknown) {
-			mayLog(`[GRIN2]   dt="${dt}": ${counts.samples.size} samples, ${counts.entries} entries`)
-		}
-	}
 	mayLog(`[GRIN2] Total lesions processed: ${lesions.length.toLocaleString()}`)
 
 	return {
@@ -289,68 +245,44 @@ async function processSampleMlst(
 	request: GRIN2Request
 ): Promise<{
 	sampleLesions: string[]
-	sampleDataTypeCounts: {
-		known: { [key: string]: { entries: number; processedLesions: number } }
-		unknown: Map<string, number>
-	}
 }> {
 	const lesions: any[] = []
-
-	// Track counts for this sample
-	const sampleDataTypeCounts = {
-		known: {
-			[dtsnvindel]: { entries: 0, processedLesions: 0 },
-			[dtcnv]: { entries: 0, processedLesions: 0 },
-			[dtfusionrna]: { entries: 0, processedLesions: 0 }
-		},
-		unknown: new Map<string, number>()
-	}
 
 	// Process each entry in mlst based on its data type
 	for (const m of mlst) {
 		switch (m.dt) {
 			case dtsnvindel: {
-				sampleDataTypeCounts.known[dtsnvindel].entries++
 				if (!request.snvindelOptions) break
 				const snvIndelLesion = filterAndConvertSnvIndel(sampleName, m, request.snvindelOptions)
 				if (snvIndelLesion) {
 					lesions.push(snvIndelLesion)
-					sampleDataTypeCounts.known[dtsnvindel].processedLesions++
 				}
 				break
 			}
 			case dtcnv: {
-				sampleDataTypeCounts.known[dtcnv].entries++
 				if (!request.cnvOptions) break
 				const cnvLesion = filterAndConvertCnv(sampleName, m, request.cnvOptions)
 				if (cnvLesion) {
 					lesions.push(cnvLesion)
-					sampleDataTypeCounts.known[dtcnv].processedLesions++
 				}
 				break
 			}
 			case dtfusionrna: {
-				sampleDataTypeCounts.known[dtfusionrna].entries++
 				if (!request.fusionOptions) break
 				const fusionLesion = filterAndConvertFusion(sampleName, m, request.fusionOptions)
 				if (fusionLesion) {
 					lesions.push(fusionLesion)
-					sampleDataTypeCounts.known[dtfusionrna].processedLesions++
 				}
 				break
 			}
 			default: {
-				// Track unknown data types
-				const currentCount = sampleDataTypeCounts.unknown.get(m.dt) || 0
-				sampleDataTypeCounts.unknown.set(m.dt, currentCount + 1)
 				break
 			}
 		}
 	}
 
 	return {
-		sampleLesions: lesions,
-		sampleDataTypeCounts
+		sampleLesions: lesions
 	}
 }
 
@@ -359,138 +291,52 @@ function filterAndConvertSnvIndel(
 	entry: any,
 	options: GRIN2Request['snvindelOptions']
 ): string[] | null {
-	const opts = {
-		minTotalDepth: options?.minTotalDepth ?? 10,
-		minAltAlleleCount: options?.minAltAlleleCount ?? 2,
-		consequences: options?.consequences ?? [],
-		hyperMutator: options?.hyperMutator ?? 1000
+	// Check if options and consequences exist for typescript
+	if (!options?.consequences) {
+		return null
 	}
-
 	// Check consequence filtering
-	if (opts.consequences.length > 0 && entry.class && !opts.consequences.includes(entry.class)) {
+	if (options.consequences.length > 0 && entry.class && !options.consequences.includes(entry.class)) {
 		return null
 	}
 
-	// Check required fields - handle multiple possible field names
-	const chromosome = entry.chromosome || entry.chr
-	const position = entry.start || entry.position || entry.pos
-
-	if (!chromosome) {
+	if (!Number.isInteger(entry.pos)) {
 		return null
 	}
 
-	if (position === undefined || position === null || position === 'undefined') {
-		return null
-	}
-
-	// Ensure position is numeric
-	const numPosition = parseInt(String(position))
-	if (isNaN(numPosition)) {
-		return null
-	}
-
-	const endPosition = entry.end || position
-	const numEndPosition = parseInt(String(endPosition))
-	if (isNaN(numEndPosition)) {
-		return null
-	}
-
-	return [sampleName, normalizeChromosome(chromosome), String(numPosition), String(numEndPosition), 'mutation']
+	return [sampleName, entry.chr, entry.pos, entry.pos, 'mutation']
 }
 
 function filterAndConvertCnv(sampleName: string, entry: any, options: GRIN2Request['cnvOptions']): string[] | null {
-	const opts = {
-		lossThreshold: options?.lossThreshold ?? -0.4,
-		gainThreshold: options?.gainThreshold ?? 0.3,
-		maxSegLength: options?.maxSegLength ?? 0,
-		minSegLength: options?.minSegLength ?? 0,
-		hyperMutator: options?.hyperMutator ?? 500
-	}
-
-	// Handle multiple possible field names for log2 ratio
-	const log2Ratio = entry.log2Ratio ?? entry.value ?? entry.ratio
-
-	if (log2Ratio === undefined || log2Ratio === null) {
-		return null
-	}
-
-	// Ensure log2Ratio is numeric
-	const numLog2Ratio = parseFloat(String(log2Ratio))
-	if (isNaN(numLog2Ratio)) {
+	// Must check that options are defined for typescript
+	if (!options || options.gainThreshold === undefined || options.lossThreshold === undefined) {
 		return null
 	}
 
 	// Must be either gain or loss
-	const isGain = numLog2Ratio >= opts.gainThreshold
-	const isLoss = numLog2Ratio <= opts.lossThreshold
-	if (!isGain && !isLoss) {
+	// This determines the lesion type
+	const isGain = entry.value >= options.gainThreshold
+	const isLoss = entry.value <= options.lossThreshold
+	if (!isGain && !isLoss) return null
+	const lesionType = isGain ? 'gain' : 'loss'
+
+	if (!Number.isInteger(entry.start)) {
 		return null
 	}
 
-	// Check required fields
-	const chromosome = entry.chromosome || entry.chr
-	const start = entry.start || entry.begin
-	const end = entry.end || entry.stop
-
-	if (!chromosome) {
+	if (!Number.isInteger(entry.stop)) {
 		return null
 	}
 
-	if (start === undefined || start === null || start === 'undefined') {
-		return null
-	}
-
-	if (end === undefined || end === null || end === 'undefined') {
-		return null
-	}
-
-	// Ensure positions are numeric
-	const numStart = parseInt(String(start))
-	const numEnd = parseInt(String(end))
-
-	if (isNaN(numStart) || isNaN(numEnd)) {
-		return null
-	}
-
-	const lesionType = numLog2Ratio >= opts.gainThreshold ? 'gain' : 'loss'
-	return [sampleName, normalizeChromosome(chromosome), String(numStart), String(numEnd), lesionType]
+	return [sampleName, entry.chr, entry.start, entry.stop, lesionType]
 }
 
-/**
- * Filter and convert a single fusion entry to lesion format
- * Returns lesion array or null if filtered out
- */
 function filterAndConvertFusion(
 	sampleName: string,
 	entry: any,
-	options: GRIN2Request['fusionOptions']
+	_options: GRIN2Request['fusionOptions']
 ): string[] | null {
-	// Set defaults
-	const opts = {
-		fusionTypes: options?.fusionTypes ?? ['gene-gene', 'gene-intergenic', 'readthrough'],
-		minConfidence: options?.minConfidence ?? 0.7
-	}
-
-	// Apply fusion type filter
-	if (entry.fusionType && !opts.fusionTypes.includes(entry.fusionType)) return null
-
-	// Apply confidence filter
-	if (entry.confidence && entry.confidence < opts.minConfidence) return null
-
 	// Convert to lesion format: [ID, chrom, loc.start, loc.end, lsn.type]
-	return [
-		sampleName,
-		normalizeChromosome(entry.chromosome || entry.chr),
-		String(entry.start || entry.position),
-		String(entry.end || entry.position),
-		'fusion'
-	]
-}
-
-/**
- * Normalize chromosome name to include 'chr' prefix
- */
-function normalizeChromosome(chrom: string | undefined): string {
-	if (!chrom) return 'chr?' // Handle undefined case
-	return chrom.startsWith('chr') ? chrom : `chr${chrom}`
+	// Using chrA for the chrom and posA/posB for the start and end locations
+	return [sampleName, entry.chrA, entry.posA, entry.posB, 'fusion']
 }
