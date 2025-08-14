@@ -41,11 +41,12 @@ export class CategoryFiltersUI {
 			select.on('change', async () => {
 				clearTimeout(timeoutId)
 				timeoutId = setTimeout(() => {
-					const values = Array.from(select.node().selectedOptions).map((o: any) => o.value)
+					const selectedOptions = Array.from(select.node().selectedOptions)
+					const values = selectedOptions.map((o: any) => o.value)
 					this.plot.settings[tw.term.id] = values
 					this.replaceFilter()
 					select.style('display', 'none')
-					button.text(` ${tw.term.name} ▼`)
+					button.text(` ${tw.term.name}: ${selectedOptions.map((o: any) => o.label).join(', ')} ▼`)
 				}, 1000)
 			})
 			this.filterSelects.push(select)
