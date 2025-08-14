@@ -65,11 +65,11 @@ function init({ genomes }) {
 				/** get selections (i.e. slides) matching the project
 				 * from the ad hoc dictionary. */
 				const q = ds.cohort.termdb.q
-				const images = await q.getFilteredSelections(query.project.filter)
+				const data = await q.getFilteredImages(query.project.filter)
 				/** TODO: Should send list of images to API */
 				res.status(200).send({
 					status: 'ok',
-					images
+					data
 				})
 			} else {
 				res.send({

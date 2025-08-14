@@ -1,4 +1,7 @@
-import { renderTable, sayerror } from '#dom'
+import {
+	renderTable
+	// sayerror
+} from '#dom'
 import { debounce } from 'debounce'
 import type { AIProjectAdminInteractions } from '../interactions/AIProjectAdminInteractions'
 
@@ -43,30 +46,35 @@ export class ProjectAdminRender {
 			.property('disabled', true)
 			.on('click', async () => {
 				const projectName = input.property('value')
-				const prjtNameLen = projectName.trim().length
 
-				const showError = (msg: string) => {
-					sayerror(this.dom.errorDiv, msg)
-					input.property('value', '')
-					button.property('disabled', true)
+				/** Validation commented out for development.
+				 ***** Uncomment before production **** */
 
-					//Show error for 3 seconds, then remove
-					setTimeout(() => {
-						this.dom.errorDiv.selectAll('*').remove()
-					}, 3000)
-				}
+				// const prjtNameLen = projectName.trim().length
 
-				if (prjtNameLen == 0) {
-					//Shouldn't be necessary because of the debouncer
-					return showError('Project name cannot be empty')
-				}
-				if (prjtNameLen > 50 || prjtNameLen < 3) {
-					return showError('Project name must be between 3 and 50 characters')
-				}
-				const notUnique = this.projects.some((p: any) => p.value === projectName.trim())
-				if (notUnique) {
-					return showError(`Project name '${projectName}' already exists`)
-				}
+				// const showError = (msg: string) => {
+				// 	sayerror(this.dom.errorDiv, msg)
+				// 	input.property('value', '')
+				// 	button.property('disabled', true)
+
+				// 	//Show error for 3 seconds, then remove
+				// 	setTimeout(() => {
+				// 		this.dom.errorDiv.selectAll('*').remove()
+				// 	}, 3000)
+				// }
+
+				// if (prjtNameLen == 0) {
+				// 	//Shouldn't be necessary because of the debouncer
+				// 	return showError('Project name cannot be empty')
+				// }
+				// if (prjtNameLen > 50 || prjtNameLen < 3) {
+				// 	return showError('Project name must be between 3 and 50 characters')
+				// }
+				// const notUnique = this.projects.some((p: any) => p.value === projectName.trim())
+				// if (notUnique) {
+				// 	return showError(`Project name '${projectName}' already exists`)
+				// }
+
 				//Show project name in sandbox header
 				if (this.dom.header) this.dom.header.text(`Project: ${projectName}`)
 

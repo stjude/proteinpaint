@@ -7,6 +7,7 @@ import { SelectorTableRender } from './SelectorTableRender'
 
 export class CreateProjectRender {
 	dom: {
+		holder: Elem
 		errorDiv: Elem
 		filterDiv: Elem
 		classDiv: Elem
@@ -20,6 +21,7 @@ export class CreateProjectRender {
 		dom.holder.style('padding', '10px 20px').attr('class', 'sjpp-deletable-ai-prjt-admin-div')
 
 		this.dom = {
+			holder: dom.holder,
 			errorDiv: dom.errorDiv,
 			filterDiv: dom.holder.append('div').attr('id', 'sjpp-ai-prjt-admin-filter-div'),
 			classDiv: dom.holder.append('div').attr('id', 'sjpp-ai-prjt-admin-classes-table').style('padding', '20px 0px')
@@ -59,18 +61,19 @@ export class CreateProjectRender {
 			.style('display', 'inline-block')
 			.style('margin-left', '30vw')
 			.on('click', async () => {
-				this.dom.errorDiv.selectAll('*').remove() // Clear previous errors
-
 				const invalidInfo = this.validateInput()
 				const numInvalid = invalidInfo.entries?.length
 				if (numInvalid) {
-					// //TODO: allow user to ignore filter error on second click
+					/** Validation commented out for development.
+					 * Uncomment before production
+					 * TODO: allow user to ignore filter error on second click
+					 */
 					// if (numInvalid === 1) sayerror(this.dom.errorDiv, invalidInfo.entries[0].reason)
 					// else InvalidDataUI.render(this.dom.errorDiv, invalidInfo)
 					// return
 				}
-				const images = await this.interactions.getImages(this.filter)
-				if (this.filter && (images.status != 'ok' || images.images.length === 0)) {
+				const selections = await this.interactions.getImages(this.filter)
+				if (this.filter && (selections.status != 'ok' || selections.data.length === 0)) {
 					alert('No images match your filter criteria.')
 					return
 				}
@@ -81,11 +84,12 @@ export class CreateProjectRender {
 						classes: this.classesTable!.rows.map(row => {
 							return { label: row[1].value, color: row[2].color }
 						}),
-						images: images.images
+						images: selections.data.images
 					}
 				})
 
-				new SelectorTableRender(this.dom, this.app, images)
+				this.dom.holder.selectAll('*').remove()
+				new SelectorTableRender(this.dom.holder, this.app, selections.data)
 			})
 	}
 
