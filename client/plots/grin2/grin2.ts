@@ -53,7 +53,6 @@ class GRIN2 extends RxComponentInner {
 	}
 
 	private createConfigTable() {
-		// Remove excessive borders and background - keep minimal container
 		const tableDiv = this.dom.controls
 			.append('div')
 			.style('display', 'inline-block')
@@ -65,7 +64,7 @@ class GRIN2 extends RxComponentInner {
 		const queries = this.app.vocabApi.termdbConfig.queries
 		console.log('Queries:', queries)
 
-		// Minimalist table headers - subtle borders for separation
+		// Minimalist table headers
 		const headerRow = table.append('tr')
 		headerRow
 			.append('th')
@@ -86,7 +85,7 @@ class GRIN2 extends RxComponentInner {
 			.style('width', '70%')
 			.text('Options')
 
-		// SNV/INDEL Row - subtle borders for separation
+		// SNV/INDEL Row
 		if (queries.snvindel) {
 			const snvRow = table.append('tr')
 
@@ -122,7 +121,7 @@ class GRIN2 extends RxComponentInner {
 			this.createConsequenceCheckboxes(consequenceCell)
 		}
 
-		// CNV Row - subtle borders for separation
+		// CNV Row
 		if (queries.cnv) {
 			const cnvRow = table.append('tr')
 
@@ -145,7 +144,7 @@ class GRIN2 extends RxComponentInner {
 			this.addOptionRow(optionsTable, 'Hypermutator Threshold', 'cnvOptions.hyperMutator', 500, 1)
 		}
 
-		// Fusion Row (placeholder) - subtle borders for separation
+		// Fusion Row (placeholder)
 		if (queries.svfusion) {
 			const fusionRow = table.append('tr')
 
@@ -167,7 +166,7 @@ class GRIN2 extends RxComponentInner {
 				.text('Fusion filtering options to be configured later')
 		}
 
-		// General GRIN2 Row (placeholder) - subtle borders for separation
+		// General GRIN2 Row (placeholder)
 		const generalRow = table.append('tr')
 
 		generalRow
@@ -185,7 +184,7 @@ class GRIN2 extends RxComponentInner {
 			.style('color', '#666')
 			.text('Additional GRIN2 parameters to be configured later')
 
-		// Run Button - simplified styling
+		// Run Button
 		tableDiv
 			.append('div')
 			.style('text-align', 'center')
@@ -202,7 +201,6 @@ class GRIN2 extends RxComponentInner {
 			.on('click', () => this.runAnalysis())
 	}
 
-	// Updated addOptionRow method to remove internal borders
 	private addOptionRow(
 		table: any,
 		label: string,
@@ -214,10 +212,10 @@ class GRIN2 extends RxComponentInner {
 	) {
 		const row = table.append('tr')
 
-		// Label column - no borders
+		// Label column
 		row.append('td').style('padding', '4px 8px').style('font-weight', '400').style('width', '60%').text(label)
 
-		// Input column - no borders
+		// Input column
 		const inputCell = row.append('td').style('padding', '4px 8px').style('width', '40%')
 
 		const input = inputCell
@@ -432,7 +430,7 @@ class GRIN2 extends RxComponentInner {
 	}
 
 	private async runAnalysis() {
-		// Get the run button more specifically - it's the only button with "Run GRIN2" text
+		// Get the run button
 		const runButton = this.dom.controls
 			.selectAll('button')
 			.filter(function (this: HTMLButtonElement) {
@@ -608,7 +606,7 @@ class GRIN2 extends RxComponentInner {
 		}
 	}
 
-	private createMatrixFromGenes(topGeneTable: any): void {
+	private async createMatrixFromGenes(topGeneTable: any): Promise<void> {
 		try {
 			// Extract top 20 gene symbols
 			const geneSymbols = topGeneTable.rows
@@ -621,22 +619,24 @@ class GRIN2 extends RxComponentInner {
 			}
 
 			// Create termwrappers for mutation data
-			const termwrappers = geneSymbols.map((gene: string) => {
-				const term = {
-					type: 'geneVariant',
-					gene: gene,
-					name: gene
-				}
+			const termwrappers = await Promise.all(
+				geneSymbols.map(async (gene: string) => {
+					const term = {
+						type: 'geneVariant',
+						gene: gene,
+						name: gene
+					}
 
-				// Get minimal copy for $id generation (required parameter)
-				const minTwCopy = this.app.vocabApi.getTwMinCopy({ term })
+					// Get minimal copy for $id generation (required parameter)
+					const minTwCopy = this.app.vocabApi.getTwMinCopy({ term })
 
-				return {
-					$id: get$id(minTwCopy), // Now provides the required minTwCopy argument
-					term,
-					q: {}
-				}
-			})
+					return {
+						$id: await get$id(minTwCopy), // Await the async get$id call
+						term,
+						q: {}
+					}
+				})
+			)
 
 			// Create and dispatch matrix
 			this.app.dispatch({
