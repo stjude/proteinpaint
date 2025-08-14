@@ -14,6 +14,7 @@ export async function makeChartBtnMenu(holder, chartsInstance) {
 		const t = chartsInstance.app.vocabApi.termdbConfig.defaultTw4correlationPlot?.survival
 		if (!t) throw 'defaultTw4correlationPlot missing'
 		dictTw = structuredClone(t)
+		await fillTermWrapper(dictTw, chartsInstance.app.vocabApi)
 	}
 
 	// 2-col table to organize input ui
