@@ -37,7 +37,6 @@ class MassCharts {
 	}
 
 	main() {
-		//this.dom.holder.style('display', 'block')
 		this.dom.btns.style('display', d => (this.state.currentCohortChartTypes.includes(d.chartType) ? '' : 'none'))
 	}
 
@@ -46,7 +45,7 @@ class MassCharts {
 		return state.termdbConfig.queries ? 'Data Variables' : 'Data Dictionary'
 	}
 	getBtnLabel_regression(state) {
-		/* define button label based conditions:
+		/* define button label based on conditions:
 		if ds allows multiple regression methods, use generic name, click btn will display menu of options
 		if ds allows just one method, directly show method name on button, click btn will show sandbox
 		*/
@@ -352,7 +351,6 @@ function getChartTypeList(self, state) {
 		{
 			label: 'GRIN2',
 			chartType: 'grin2',
-			usecase: { target: 'grin2' },
 			config: { chartType: 'grin2' },
 			clickTo: self.prepPlot
 		},

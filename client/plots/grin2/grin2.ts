@@ -2,9 +2,8 @@ import { getCompInit, copyMerge } from '#rx'
 import { RxComponentInner } from '../../types/rx.d'
 import type { BasePlotConfig, MassAppApi, MassState } from '#mass/types/mass'
 import type { GRIN2Dom, GRIN2Opts, GRIN2Settings } from './GRIN2Types'
-import { Menu } from '#dom'
 import { dofetch3 } from '#common/dofetch'
-import { renderTable, icons } from '#dom'
+import { Menu, renderTable, icons } from '#dom'
 import { dtsnvindel, mclass } from '#shared/common.js'
 import { get$id } from '#termsetting'
 
@@ -62,7 +61,6 @@ class GRIN2 extends RxComponentInner {
 		const table = tableDiv.append('table').style('border-collapse', 'collapse').style('width', '100%')
 
 		const queries = this.app.vocabApi.termdbConfig.queries
-		console.log('Queries:', queries)
 
 		// Minimalist table headers
 		const headerRow = table.append('tr')
