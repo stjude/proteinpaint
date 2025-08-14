@@ -54,7 +54,7 @@ export class CategoryFiltersUI {
 						this.replaceFilter()
 						select.style('display', 'none')
 						button.text(` ${tw.term.name}: ${selectedOptions.map((o: any) => o.label).join(', ')} ▼`)
-					}, 2000)
+					}, 1500)
 				}
 			})
 
