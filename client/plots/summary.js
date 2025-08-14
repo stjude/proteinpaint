@@ -66,6 +66,8 @@ class SummaryPlot {
 	async main() {
 		this.dom.errdiv.style('display', 'none').style('background-color', 'rgba(255,100,100,0.2)').html('')
 		this.config = structuredClone(this.state.config)
+		this.maySetSandboxHeader()
+
 		if (!this.components.plots[this.config.childType]) {
 			await this.setComponent(this.config)
 		}
@@ -83,6 +85,16 @@ class SummaryPlot {
 		const numVisTabs = this.tabsData.filter(d => d.isVisible()).length
 		if (numVisTabs > 1) this.dom.chartToggles.style('display', 'inline-block')
 		else this.dom.chartToggles.style('display', 'none')
+	}
+
+	maySetSandboxHeader() {
+		const { term, term2 } = this.config
+		const mainTerm = term.term.name
+		if (term2?.term.type == 'geneVariant') {
+			this.dom.paneTitleText.html(`${term2.term.name} variant vs ${mainTerm}`)
+		} else {
+			this.dom.paneTitleText.html(mainTerm)
+		}
 	}
 
 	async setComponent(config) {
@@ -156,7 +168,7 @@ function setRenderers(self) {
 				.style('color', '#999')
 				.style('padding-left', '7px')
 
-			self.dom.paneTitleDiv
+			self.dom.paneTitleText = self.dom.paneTitleDiv
 				.append('div')
 				.classed('sjpp-term-header', true)
 				.style('display', 'inline-block')
