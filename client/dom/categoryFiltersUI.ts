@@ -21,9 +21,22 @@ export class CategoryFiltersUI {
 		this.config = config
 		for (const tw of this.plot.config.filterTWs) {
 			const div = this.holder.append('div').style('padding', '5px')
-			div.append('label').text(` ${tw.term.name}: `).style('vertical-align', 'top')
+			const button = div
+				.append('button')
+				.text(` ${tw.term.name} ▼`)
+				.style('vertical-align', 'top')
+				.on('click', () => {
+					const display = select.style('display')
+					button.text(display === 'none' ? ` ${tw.term.name} ▲` : ` ${tw.term.name} ▼`)
+					select.style('display', display === 'none' ? 'block' : 'none')
+				})
 			let timeoutId
-			const select = div.append('select').property('multiple', true).style('vertical-align', 'top')
+			const select = div
+				.append('select')
+				.property('multiple', true)
+				.style('vertical-align', 'top')
+				.style('display', 'none')
+				.style('position', 'absolute')
 
 			select.on('change', async () => {
 				clearTimeout(timeoutId)
@@ -31,6 +44,8 @@ export class CategoryFiltersUI {
 					const values = Array.from(select.node().selectedOptions).map((o: any) => o.value)
 					this.plot.settings[tw.term.id] = values
 					this.replaceFilter()
+					select.style('display', 'none')
+					button.text(` ${tw.term.name} ▼`)
 				}, 1000)
 			})
 			this.filterSelects.push(select)
@@ -59,7 +74,7 @@ export class CategoryFiltersUI {
 			select.selectAll('option').remove()
 			const size = data[tw.term.id].length - 1 // -1 to remove the empty value
 
-			select.attr('size', size > 5 ? 5 : size) //show max 5 options at a time
+			select.attr('size', size)
 			for (const value of data[tw.term.id]) {
 				if (value.label == '') continue //skip empty labels
 				const option = select.append('option').attr('value', value.value).text(value.label)
