@@ -18,7 +18,7 @@ export type GRIN2Request = {
 	dslabel: string
 
 	/** Filter from existing PP infrastructure */
-	filter: any // Filter object passed to get_samples(filter, ds)
+	filter?: any // Filter object passed to get_samples(filter, ds)
 
 	/** Options for filtering SNV/indel file content */
 	snvindelOptions?: {
@@ -40,18 +40,14 @@ export type GRIN2Request = {
 		gainThreshold?: number // Default: 0.3
 		/** Maximum segment length to include (0 = no filter) */
 		maxSegLength?: number // Default: 0
-		/** Minimum segment length to include (0 = no filter) */
-		minSegLength?: number // Default: 0
 		/** Hypermutator max cut off for CNVs per case */
 		hyperMutator?: number // Default: 500
 	}
 
 	/** Options for filtering fusion file content */
 	fusionOptions?: {
-		/** Filter by fusion type */
-		fusionTypes?: ('gene-gene' | 'gene-intergenic' | 'readthrough')[]
-		/** Minimum confidence score (0-1) */
-		minConfidence?: number // Default: 0.7
+		/** Placeholder - fusion filtering options to be implemented */
+		[key: string]: any
 	}
 }
 
