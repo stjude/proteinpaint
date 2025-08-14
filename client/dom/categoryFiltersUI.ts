@@ -39,6 +39,7 @@ export class CategoryFiltersUI {
 				.style('vertical-align', 'top')
 				.style('display', 'none')
 				.style('position', 'absolute')
+				.style('z-index', '1000')
 
 			select.on('mousedown', e => {
 				e.preventDefault() //prevent the select from closing on click
@@ -54,7 +55,7 @@ export class CategoryFiltersUI {
 						this.replaceFilter()
 						select.style('display', 'none')
 						button.text(` ${tw.term.name}: ${selectedOptions.map((o: any) => o.label).join(', ')} ▼`)
-					}, 1500)
+					}, 2000)
 				}
 			})
 
