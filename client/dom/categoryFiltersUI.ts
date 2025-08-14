@@ -20,16 +20,18 @@ export class CategoryFiltersUI {
 		this.holder = holder
 		this.config = config
 		for (const tw of this.plot.config.filterTWs) {
-			const div = this.holder.append('div').style('padding', '5px')
+			const div = this.holder.append('div').style('padding', '10px')
 			const button = div
 				.append('button')
-				.text(` ${tw.term.name} ▼`)
 				.style('vertical-align', 'top')
 				.on('click', () => {
 					const display = select.style('display')
 					button.text(display === 'none' ? ` ${tw.term.name} ▲` : ` ${tw.term.name} ▼`)
 					select.style('display', display === 'none' ? 'block' : 'none')
 				})
+			const filterValues = config?.settings[this.plot.type][tw.term.id] || []
+			button.text(` ${tw.term.name}: ${filterValues.map((o: any) => tw.term.values[o].label || o).join(', ')} ▼`)
+
 			let timeoutId
 			const select = div
 				.append('select')
@@ -38,17 +40,24 @@ export class CategoryFiltersUI {
 				.style('display', 'none')
 				.style('position', 'absolute')
 
-			select.on('change', async () => {
-				clearTimeout(timeoutId)
-				timeoutId = setTimeout(() => {
-					const selectedOptions = Array.from(select.node().selectedOptions)
-					const values = selectedOptions.map((o: any) => o.value)
-					this.plot.settings[tw.term.id] = values
-					this.replaceFilter()
-					select.style('display', 'none')
-					button.text(` ${tw.term.name}: ${selectedOptions.map((o: any) => o.label).join(', ')} ▼`)
-				}, 1000)
+			select.on('mousedown', e => {
+				e.preventDefault() //prevent the select from closing on click
+				const option = e.target
+				if (option.tagName === 'OPTION') {
+					option.selected = !option.selected // Toggle selection
+					clearTimeout(timeoutId)
+
+					timeoutId = setTimeout(() => {
+						const selectedOptions = Array.from(select.node().selectedOptions)
+						const values = selectedOptions.map((o: any) => o.value)
+						this.plot.settings[tw.term.id] = values
+						this.replaceFilter()
+						select.style('display', 'none')
+						button.text(` ${tw.term.name}: ${selectedOptions.map((o: any) => o.label).join(', ')} ▼`)
+					}, 2000)
+				}
 			})
+
 			this.filterSelects.push(select)
 		}
 	}
@@ -59,7 +68,7 @@ export class CategoryFiltersUI {
 		}
 		let index = 0
 		for (const tw of this.config.filterTWs) {
-			let filterValues = this.plot.settings[tw.term.id] || ''
+			let filterValues = this.plot.settings[tw.term.id] || []
 			if (!Array.isArray(filterValues))
 				//User may have set a single value
 				filterValues = [filterValues] //ensure filterValues is an array
