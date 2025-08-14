@@ -52,7 +52,6 @@ export async function makeChartBtnMenu(holder, chartsInstance) {
 		const pillDiv = td2.append('div')
 
 		const pill = await termsettingInit({
-			menuOptions: '{edit,replace}',
 			usecase: { target: 'survival', detail: 'term' }, // limit to survival terms
 			vocabApi: chartsInstance.app.vocabApi,
 			holder: pillDiv,

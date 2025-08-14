@@ -653,12 +653,17 @@ function setInteractivity(self) {
 			}
 		}
 
-		if (self.q && !self.term.groupsetting?.disabled && minimatch('edit', self.opts.menuOptions)) {
+		if (
+			self.q &&
+			!self.term.groupsetting?.disabled &&
+			self.term.type != 'survival' &&
+			minimatch('edit', self.opts.menuOptions)
+		) {
 			// hide edit option for survival term because its showEditMenu() is disabled
 			options.push({
 				label: 'Edit',
 				callback: async div => {
-					if (self.term && isNumericTerm(self.term) && !self.term.bins && self.term.type != 'survival') {
+					if (self.term && isNumericTerm(self.term) && !self.term.bins) {
 						await self.vocabApi.setTermBins({ term: self.term, q: self.q })
 					}
 					self.handler!.showEditMenu(div)
