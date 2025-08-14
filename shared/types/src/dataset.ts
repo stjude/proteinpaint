@@ -1592,7 +1592,7 @@ type Tw = {
 	/** short hand for using either id (dict term) or term{} */
 	id?: string
 	term?: object
-	q: unknown
+	q?: unknown
 	/** quick fix for generating URL links in mds3 tk sample table! adhoc design. may move to tw.term.baseURL and not specific to mds3 tk
 	 */
 	baseURL?: string
