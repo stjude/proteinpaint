@@ -495,11 +495,14 @@ function setDropdownInput(opts) {
 		.attr('aria-labelledby', id)
 		.property('disabled', opts.disabled)
 		.property('multiple', opts.multiple)
+		.on('mousedown', e => {
+			if (!opts.multiple) return
+			e.preventDefault() //prevent default to allow add on click
+			const option = e.target
+			if (option.tagName === 'OPTION') {
+				clearTimeout(timeoutId) // clear any previous timeout
 
-		.on('change', () => {
-			clearTimeout(timeoutId) // clear any previous timeout
-			let value
-			if (opts.multiple) {
+				option.selected = !option.selected // Toggle selection
 				// Set a new timeout to execute the desired logic after 500ms
 				timeoutId = setTimeout(() => {
 					const options = self.dom.select.node().options
@@ -507,29 +510,32 @@ function setDropdownInput(opts) {
 					for (const option of options) {
 						if (option.selected) values.push(option.value)
 					}
-					value = values
+					const value = values
 					callbackOrDispatch(value)
-				}, 1000) // 1000 milliseconds delay
-			} else {
-				value = self.dom.select.property('value')
-				callbackOrDispatch(value)
-			}
-			function callbackOrDispatch(value) {
-				if (opts.callback) opts.callback(value)
-				else
-					opts.dispatch({
-						type: 'plot_edit',
-						id: opts.id,
-						config: {
-							settings: {
-								[opts.chartType]: {
-									[opts.settingsKey]: opts.processInput ? opts.processInput(value) : value
-								}
-							}
-						}
-					})
+				}, 1500) // 1000 milliseconds delay
 			}
 		})
+		.on('change', e => {
+			if (!opts.multiple) {
+				const value = self.dom.select.property('value')
+				callbackOrDispatch(value)
+			}
+		})
+	function callbackOrDispatch(value) {
+		if (opts.callback) opts.callback(value)
+		else
+			opts.dispatch({
+				type: 'plot_edit',
+				id: opts.id,
+				config: {
+					settings: {
+						[opts.chartType]: {
+							[opts.settingsKey]: opts.processInput ? opts.processInput(value) : value
+						}
+					}
+				}
+			})
+	}
 	if (opts.multiple) self.dom.select.attr('size', opts.options.length > 10 ? 10 : opts.options.length)
 	self.dom.select.style('max-width', '300px')
 	self.dom.select
