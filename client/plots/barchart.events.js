@@ -515,8 +515,9 @@ function handle_click(event, self, chart) {
 		.attr('class', 'sja_menuoption')
 		.html(d => d.label)
 		.on('click', async (event, d) => {
-			self.app.tip.hide()
+			event.target.textContent = 'Loading...'
 			await d.callback(self, tvslst)
+			self.app.tip.hide()
 		})
 	self.app.tip.show(event.clientX, event.clientY)
 }
