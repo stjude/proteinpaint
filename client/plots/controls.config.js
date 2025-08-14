@@ -501,8 +501,8 @@ function setDropdownInput(opts) {
 			const option = e.target
 			if (option.tagName === 'OPTION') {
 				clearTimeout(timeoutId) // clear any previous timeout
-
 				option.selected = !option.selected // Toggle selection
+
 				// Set a new timeout to execute the desired logic after 500ms
 				timeoutId = setTimeout(() => {
 					const options = self.dom.select.node().options
@@ -511,31 +511,17 @@ function setDropdownInput(opts) {
 						if (option.selected) values.push(option.value)
 					}
 					const value = values
-					callbackOrDispatch(value)
-				}, 1500) // 1000 milliseconds delay
+					callbackOrDispatch(opts, value)
+				}, 2000) // 2000 milliseconds delay
 			}
 		})
 		.on('change', e => {
 			if (!opts.multiple) {
 				const value = self.dom.select.property('value')
-				callbackOrDispatch(value)
+				callbackOrDispatch(opts, value)
 			}
 		})
-	function callbackOrDispatch(value) {
-		if (opts.callback) opts.callback(value)
-		else
-			opts.dispatch({
-				type: 'plot_edit',
-				id: opts.id,
-				config: {
-					settings: {
-						[opts.chartType]: {
-							[opts.settingsKey]: opts.processInput ? opts.processInput(value) : value
-						}
-					}
-				}
-			})
-	}
+
 	if (opts.multiple) self.dom.select.attr('size', opts.options.length > 10 ? 10 : opts.options.length)
 	self.dom.select.style('max-width', '300px')
 	self.dom.select
@@ -557,6 +543,22 @@ function setDropdownInput(opts) {
 
 	if (opts.debug) api.Inner = self
 	return Object.freeze(api)
+}
+
+function callbackOrDispatch(opts, value) {
+	if (opts.callback) opts.callback(value)
+	else
+		opts.dispatch({
+			type: 'plot_edit',
+			id: opts.id,
+			config: {
+				settings: {
+					[opts.chartType]: {
+						[opts.settingsKey]: opts.processInput ? opts.processInput(value) : value
+					}
+				}
+			}
+		})
 }
 
 function setCheckboxInput(opts) {
