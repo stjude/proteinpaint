@@ -13,6 +13,7 @@ export type SampleWSImagesResponse = {
 }
 
 export type WSImage = {
+	id?: string
 	filename: string
 	overlays?: Array<string>
 	predictionLayers?: Array<string>

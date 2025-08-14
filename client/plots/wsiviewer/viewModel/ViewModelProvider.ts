@@ -21,29 +21,30 @@ export class ViewModelProvider {
 		dslabel: string,
 		sampleId: string,
 		tileSelections: TileSelection[],
-		displayedImageIndex: number
+		displayedImageIndex: number,
+		aiProjectFiles: Array<string> | undefined
+		// aiProjectID: string | undefined = undefined
 	): Promise<ViewModel> {
-		const data: SampleWSImagesResponse = await this.requestData(genome, dslabel, sampleId)
-
 		let wsimageLayers: Array<WSImageLayers> = []
 		let wsimageLayersLoadError: string | undefined = undefined
+		let wsImages: WSImage[] = []
 
-		try {
-			wsimageLayers = await this.getWSImageLayers(genome, dslabel, sampleId, data.sampleWSImages)
-		} catch (e: any) {
-			wsimageLayersLoadError = `Error loading image layers for sample  ${sampleId}: ${e.message || e}`
+		if (!aiProjectFiles) {
+			try {
+				const data: SampleWSImagesResponse = await this.getSampleWSImages(genome, dslabel, sampleId)
+				wsImages = data.sampleWSImages
+				wsimageLayers = await this.getWSImageLayers(genome, dslabel, sampleId, data.sampleWSImages)
+			} catch (e: any) {
+				wsimageLayersLoadError = `Error loading image layers for sample  ${sampleId}: ${e.message || e}`
+			}
+		} else {
+			// const data: any = await this.aiProjectImages(genome, dslabel, aiProjectID, aiProjectFiles)
 		}
 
-		return new ViewModel(
-			data.sampleWSImages,
-			wsimageLayers,
-			wsimageLayersLoadError,
-			tileSelections,
-			displayedImageIndex
-		)
+		return new ViewModel(wsImages, wsimageLayers, wsimageLayersLoadError, tileSelections, displayedImageIndex)
 	}
 
-	public async requestData(genome: string, dslabel: string, sample_id: string): Promise<SampleWSImagesResponse> {
+	public async getSampleWSImages(genome: string, dslabel: string, sample_id: string): Promise<SampleWSImagesResponse> {
 		return await dofetch3('samplewsimages', {
 			body: {
 				genome: genome,
@@ -180,4 +181,13 @@ export class ViewModelProvider {
 		}
 		return layers
 	}
+
+	// private async aiProjectImages(
+	// 	genome: string,
+	// 	dslabel: string,
+	// 	aiProjectID: string | undefined,
+	// 	aiProjectFiles: Array<string>
+	// ) {
+	// 	return undefined
+	// }
 }
