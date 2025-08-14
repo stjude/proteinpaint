@@ -100,7 +100,7 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 	mayLog('[GRIN2] Processing sample data...')
 	const processingStartTime = Date.now()
 
-	const { lesionData, processingSummary } = await processSampleData(samples, ds, request)
+	const { lesions, processingSummary } = await processSampleData(samples, ds, request)
 
 	const processingTime = Date.now() - processingStartTime
 	const processingTimeToPrint = Math.round(processingTime / 1000)
@@ -115,7 +115,7 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 		mayLog(`[GRIN2] Warning: ${processingSummary.failedSamples} samples failed to process`)
 	}
 
-	if (lesionData.length === 0) {
+	if (lesions.length === 0) {
 		throw new Error('No lesions found after processing all samples. Check filter criteria and input data.')
 	}
 
@@ -123,7 +123,7 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 	const pyInput = {
 		genedb: path.join(serverconfig.tpmasterdir, g.genedb.dbfile),
 		chromosomelist: {} as { [key: string]: number },
-		lesion: JSON.stringify(lesionData)
+		lesion: JSON.stringify(lesions)
 	}
 
 	// Build chromosome list from genome reference
@@ -136,7 +136,7 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 		pyInput.chromosomelist[c] = g.majorchr[c]
 	}
 
-	mayLog(`[GRIN2] Prepared ${lesionData.length.toLocaleString()} lesions for analysis`)
+	mayLog(`[GRIN2] Prepared ${lesions.length.toLocaleString()} lesions for analysis`)
 
 	// Step 4: Run GRIN2 analysis via Python
 	const grin2AnalysisStart = Date.now()
@@ -190,7 +190,7 @@ async function processSampleData(
 	samples: any[],
 	ds: any,
 	request: GRIN2Request
-): Promise<{ lesionData: string[]; processingSummary: GRIN2Response['processingSummary'] }> {
+): Promise<{ lesions: string[]; processingSummary: GRIN2Response['processingSummary'] }> {
 	const lesions: string[] = []
 	let lesionId = 1
 
@@ -233,8 +233,8 @@ async function processSampleData(
 	mayLog(`[GRIN2] Total lesions processed: ${lesions.length.toLocaleString()}`)
 
 	return {
-		lesionData: lesions,
-		processingSummary: processingSummary
+		lesions,
+		processingSummary
 	}
 }
 
