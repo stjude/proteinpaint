@@ -1029,7 +1029,10 @@ export type WSImages = {
 	/* path to the folder where sample images are stored
 	required; for both cases where image files are hosted locally, or loaded from remote via ds-supplied getter
 	*/
-	imageBySampleFolder: string
+	imageBySampleFolder?: string
+
+	aiToolImageFolder?: string
+
 	activePatchColor?: string
 	predictionColor?: Array<number>
 	annotationsColor?: Array<number>
@@ -1048,9 +1051,9 @@ export type WSImages = {
 	/**  ds supplied */
 	makeGeoJson?: (sampleId: string, wsiImage: string) => void
 	/**  ds supplied */
-	getWSIPredictionOverlay?: (sampleName: string, wsiImage: string) => Promise<string | undefined>
+	getWSIPredictionOverlay?: (wsiImage: string) => Promise<string | undefined>
 	/**  ds supplied */
-	getWSIUncertaintyOverlay?: (sampleName: string, wsiImage: string) => Promise<string | undefined>
+	getWSIUncertaintyOverlay?: (wsiImage: string) => Promise<string | undefined>
 }
 
 export type WSIClass = { id: number; shortcut: string; label: string; color: string }

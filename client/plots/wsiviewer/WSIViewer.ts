@@ -63,13 +63,15 @@ export class WSIViewer extends RxComponentInner {
 		const genome = state.genome || state.vocab.genome
 		const dslabel = state.dslabel || state.vocab.dslabel
 		const sample_id = state.sample_id
+		const aiProjectWSIIds = state.aiProjectWSIIds
 
 		const viewModel: ViewModel = await this.viewModelProvider.provide(
 			genome,
 			dslabel,
 			sample_id,
 			settings.sessionsTileSelection,
-			settings.displayedImageIndex
+			settings.displayedImageIndex,
+			aiProjectWSIIds
 		)
 
 		const wsimages = viewModel.sampleWSImages
