@@ -241,7 +241,7 @@ class GRIN2 extends RxComponentInner {
 			([key, cls]: [string, any]) => cls.dt === dtsnvindel && key !== 'Blank' && key !== 'WT'
 		)
 
-		// Define default checked consequences (high impact)
+		// Define default checked consequences
 		const defaultChecked = new Set(['M', 'N', 'I', 'L', 'StartLost', 'F', 'D', 'ProteinAltering', 'StopLost'])
 
 		// Create Select All/Clear All controls
