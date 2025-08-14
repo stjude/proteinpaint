@@ -26,7 +26,9 @@ export class CategoryFiltersUI {
 				.style('vertical-align', 'top')
 				.on('click', () => {
 					const display = select.style('display')
-					button.text(display === 'none' ? ` ${tw.term.name} ▲` : ` ${tw.term.name} ▼`)
+					const selectedOptions = Array.from(select.node().selectedOptions)
+					const selection = selectedOptions.map((o: any) => o.text).join(', ')
+					button.text(display === 'none' ? ` ${tw.term.name}: ${selection} ▲` : ` ${tw.term.name}: ${selection} ▼`)
 					select.style('display', display === 'none' ? 'block' : 'none')
 				})
 			const filterValues = config?.settings[this.plot.type][tw.term.id] || []
@@ -42,7 +44,9 @@ export class CategoryFiltersUI {
 				.style('z-index', '1000')
 				.on('mouseleave', () => {
 					select.style('display', 'none')
-					button.text(` ${tw.term.name}: ${filterValues.map((o: any) => tw.term.values[o].label || o).join(', ')} ▼`)
+					const selectedOptions = Array.from(select.node().selectedOptions)
+					const selection = selectedOptions.map((o: any) => o.text).join(', ')
+					button.text(` ${tw.term.name}: ${selection} ▼`)
 				})
 
 			select.on('mousedown', e => {
@@ -51,14 +55,15 @@ export class CategoryFiltersUI {
 				if (option.tagName === 'OPTION') {
 					option.selected = !option.selected // Toggle selection
 					clearTimeout(timeoutId)
-
 					timeoutId = setTimeout(() => {
 						const selectedOptions = Array.from(select.node().selectedOptions)
+						const selection = selectedOptions.map((o: any) => o.text).join(', ')
+
 						const values = selectedOptions.map((o: any) => o.value)
 						this.plot.settings[tw.term.id] = values
 						this.replaceFilter()
 						select.style('display', 'none')
-						button.text(` ${tw.term.name}: ${selectedOptions.map((o: any) => o.label).join(', ')} ▼`)
+						button.text(` ${tw.term.name}: ${selection} ▼`)
 					}, 2000)
 				}
 			})
