@@ -3,8 +3,9 @@ import type { RoutePayload } from './routeApi.js'
 export type WSImagesRequest = {
 	genome: string
 	dslabel: string
-	sampleId: string
-	wsimage: string
+	sampleId?: string
+	wsimage?: string
+	aiProjectWSIId?: string
 }
 
 export type WSImagesResponse = {

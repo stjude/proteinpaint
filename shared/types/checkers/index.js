@@ -1,5 +1,6 @@
 // this file was auto-generated using 'npm run generate' or 'npm run dev' from the shared/types dir
 export * from './aiProjectAdmin.ts'
+export * from './aiProjectSelectedWSImages.ts'
 export * from './brainImaging.ts'
 export * from './brainImagingSamples.ts'
 export * from './burden.ts'

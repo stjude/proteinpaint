@@ -12,7 +12,7 @@ genomeObj={}
 sample_id
 
 */
-export default async function (dslabel, holder, genomeObj, sample_id) {
+export default async function (dslabel, holder, genomeObj, sample_id, aiProjectWSIIds) {
 	const loadingDiv = holder.append('div').style('margin', '20px').text('Loading...')
 
 	try {
@@ -22,7 +22,8 @@ export default async function (dslabel, holder, genomeObj, sample_id) {
 				genome: genomeObj.name,
 				dslabel: dslabel,
 				sample_id: sample_id,
-
+				// TODO - quick fix, remove before merging
+				aiProjectWSIIds: aiProjectWSIIds,
 				plots: [
 					{
 						chartType: 'WSIViewer',
