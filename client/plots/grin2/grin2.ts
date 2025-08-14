@@ -1,15 +1,16 @@
 import { getCompInit, copyMerge } from '#rx'
 import { RxComponentInner } from '../../types/rx.d'
 import type { BasePlotConfig, MassAppApi, MassState } from '#mass/types/mass'
-import type { GRIN2Dom, GRIN2Opts, GRIN2Settings } from './GRIN2Types'
+import type { GRIN2Dom, GRIN2Opts } from './GRIN2Types'
 import { dofetch3 } from '#common/dofetch'
-import { Menu, renderTable, icons } from '#dom'
+import { Menu, renderTable, icons, table2col, make_one_checkbox } from '#dom'
 import { dtsnvindel, mclass } from '#shared/common.js'
 import { get$id } from '#termsetting'
 
 class GRIN2 extends RxComponentInner {
 	readonly type = 'grin2'
 	dom: GRIN2Dom
+	private runButton!: any
 
 	constructor(opts: any) {
 		super()
@@ -41,7 +42,7 @@ class GRIN2 extends RxComponentInner {
 			termfilter: appState.termfilter,
 			config: Object.assign({}, config, {
 				settings: {
-					grin2: config.settings.grin2
+					grin2: config.settings
 				}
 			})
 		}
@@ -58,11 +59,10 @@ class GRIN2 extends RxComponentInner {
 			.style('padding', '10px')
 			.style('margin', '5px')
 
+		// Create manual table structure with headers since it didn't seem like table2col supports headers
 		const table = tableDiv.append('table').style('border-collapse', 'collapse').style('width', '100%')
 
-		const queries = this.app.vocabApi.termdbConfig.queries
-
-		// Minimalist table headers
+		// Add table headers
 		const headerRow = table.append('tr')
 		headerRow
 			.append('th')
@@ -83,7 +83,9 @@ class GRIN2 extends RxComponentInner {
 			.style('width', '70%')
 			.text('Options')
 
-		// SNV/INDEL Row
+		const queries = this.app.vocabApi.termdbConfig.queries
+
+		// SNV/INDEL Section
 		if (queries.snvindel) {
 			const snvRow = table.append('tr')
 
@@ -98,28 +100,23 @@ class GRIN2 extends RxComponentInner {
 
 			const optionsCell = snvRow.append('td').style('padding', '8px').style('border-bottom', '1px solid #eee')
 
-			const optionsTable = optionsCell.append('table').style('border-collapse', 'collapse').style('width', '100%')
+			// Create nested table for options using table2col
+			const optionsTable = table2col({
+				holder: optionsCell.append('div'),
+				cellPadding: '4px'
+			})
 
-			this.addOptionRow(optionsTable, 'Min Total Depth', 'snvindelOptions.minTotalDepth', 10, 1)
-			this.addOptionRow(optionsTable, 'Min Alt Allele Count', 'snvindelOptions.minAltAlleleCount', 2, 1)
-			this.addOptionRow(optionsTable, 'Hypermutator Threshold', 'snvindelOptions.hyperMutator', 1000, 1)
+			this.addOptionRowToTable(optionsTable, 'Min Total Depth', 'snvindelOptions.minTotalDepth', 10, 1)
+			this.addOptionRowToTable(optionsTable, 'Min Alt Allele Count', 'snvindelOptions.minAltAlleleCount', 2, 1)
+			this.addOptionRowToTable(optionsTable, 'Hypermutator Threshold', 'snvindelOptions.hyperMutator', 1000, 1)
 
-			// Consequence checkboxes section
-			const consequenceRow = optionsTable.append('tr')
-			consequenceRow
-				.append('td')
-				.style('padding', '4px 8px')
-				.style('font-weight', '400')
-				.style('vertical-align', 'top')
-				.text('Consequences')
-
-			const consequenceCell = consequenceRow.append('td').style('padding', '4px 8px')
-
-			// Create consequence checkboxes
+			// Consequence checkboxes
+			const [consequenceLabel, consequenceCell] = optionsTable.addRow()
+			consequenceLabel.text('Consequences')
 			this.createConsequenceCheckboxes(consequenceCell)
 		}
 
-		// CNV Row
+		// CNV Section
 		if (queries.cnv) {
 			const cnvRow = table.append('tr')
 
@@ -134,15 +131,18 @@ class GRIN2 extends RxComponentInner {
 
 			const optionsCell = cnvRow.append('td').style('padding', '8px').style('border-bottom', '1px solid #eee')
 
-			const optionsTable = optionsCell.append('table').style('border-collapse', 'collapse').style('width', '100%')
+			const optionsTable = table2col({
+				holder: optionsCell.append('div'),
+				cellPadding: '4px'
+			})
 
-			this.addOptionRow(optionsTable, 'Loss Threshold', 'cnvOptions.lossThreshold', -0.4, null, 0, 0.1)
-			this.addOptionRow(optionsTable, 'Gain Threshold', 'cnvOptions.gainThreshold', 0.3, 0, null, 0.1)
-			this.addOptionRow(optionsTable, 'Max Segment Length', 'cnvOptions.maxSegLength', 0, 0)
-			this.addOptionRow(optionsTable, 'Hypermutator Threshold', 'cnvOptions.hyperMutator', 500, 1)
+			this.addOptionRowToTable(optionsTable, 'Loss Threshold', 'cnvOptions.lossThreshold', -0.4, undefined, 0, 0.1)
+			this.addOptionRowToTable(optionsTable, 'Gain Threshold', 'cnvOptions.gainThreshold', 0.3, 0, undefined, 0.1)
+			this.addOptionRowToTable(optionsTable, 'Max Segment Length', 'cnvOptions.maxSegLength', 0, 0)
+			this.addOptionRowToTable(optionsTable, 'Hypermutator Threshold', 'cnvOptions.hyperMutator', 500, 1)
 		}
 
-		// Fusion Row (placeholder)
+		// Fusion Section (placeholder)
 		if (queries.svfusion) {
 			const fusionRow = table.append('tr')
 
@@ -164,7 +164,7 @@ class GRIN2 extends RxComponentInner {
 				.text('Fusion filtering options to be configured later')
 		}
 
-		// General GRIN2 Row (placeholder)
+		// General GRIN2 Section (placeholder)
 		const generalRow = table.append('tr')
 
 		generalRow
@@ -183,7 +183,7 @@ class GRIN2 extends RxComponentInner {
 			.text('Additional GRIN2 parameters to be configured later')
 
 		// Run Button
-		tableDiv
+		this.runButton = tableDiv
 			.append('div')
 			.style('text-align', 'center')
 			.style('margin-top', '15px')
@@ -199,39 +199,34 @@ class GRIN2 extends RxComponentInner {
 			.on('click', () => this.runAnalysis())
 	}
 
-	private addOptionRow(
+	// Helper method to add option rows to table2col instances
+	private addOptionRowToTable(
 		table: any,
 		label: string,
-		settingsPath: string,
+		configPath: string,
 		defaultValue: number,
 		min?: number | null,
 		max?: number | null,
-		step: number = 1
+		step?: number | null
 	) {
-		const row = table.append('tr')
-
-		// Label column
-		row.append('td').style('padding', '4px 8px').style('font-weight', '400').style('width', '60%').text(label)
-
-		// Input column
-		const inputCell = row.append('td').style('padding', '4px 8px').style('width', '40%')
+		const [labelCell, inputCell] = table.addRow()
+		labelCell.text(label)
 
 		const input = inputCell
 			.append('input')
 			.attr('type', 'number')
 			.attr('value', defaultValue)
-			.attr('step', step)
-			.style('width', '100%')
+			.style('width', '80px')
 			.style('padding', '2px 4px')
-			.style('border', '1px solid #ccc')
+			.style('border', '1px solid #ddd')
 			.style('border-radius', '2px')
-			.style('font-size', '12px')
 
 		if (min !== null && min !== undefined) input.attr('min', min)
 		if (max !== null && max !== undefined) input.attr('max', max)
+		if (step !== null && step !== undefined) input.attr('step', step)
 
-		// Store reference for value retrieval
-		input.attr('data-settings-path', settingsPath)
+		// Store reference for value retrieval using existing pattern
+		input.attr('data-settings-path', configPath)
 	}
 
 	private createConsequenceCheckboxes(container: any) {
@@ -281,47 +276,48 @@ class GRIN2 extends RxComponentInner {
 			.style('background', '#fafafa')
 			.style('border-radius', '3px')
 
-		// Create individual checkboxes
+		// Store checkbox references for bulk operations
+		const checkboxes: any[] = []
+
+		// Create individual checkboxes using make_one_checkbox
 		snvIndelClasses.forEach(([classKey, classInfo]: [string, any]) => {
-			const checkboxDiv = checkboxContainer
-				.append('div')
-				.style('display', 'flex')
-				.style('align-items', 'center')
-				.style('margin-bottom', '2px')
-				.style('font-size', '11px')
+			const checkboxDiv = checkboxContainer.append('div').style('margin-bottom', '2px')
 
-			// Checkbox with data attribute for easy retrieval
-			checkboxDiv
-				.append('input')
-				.attr('type', 'checkbox')
-				.attr('data-consequence', classKey)
-				.property('checked', defaultChecked.has(classKey))
-				.style('margin-right', '4px')
+			const checkbox = make_one_checkbox({
+				holder: checkboxDiv,
+				labeltext: classInfo.label,
+				checked: defaultChecked.has(classKey),
+				id: `consequence-${classKey}`,
+				divstyle: {
+					'font-size': '11px',
+					margin: '0',
+					display: 'flex',
+					'align-items': 'center'
+				},
+				callback: async (_isChecked: boolean) => {
+					// Update data attribute for retrieval in getConfigValues
+					checkbox.attr('data-consequence', classKey)
+				}
+			})
 
-			// Label
-			checkboxDiv
-				.append('label')
-				.style('cursor', 'pointer')
-				.text(classInfo.label)
-				.attr('title', classInfo.desc || classInfo.label)
-				.on('click', function () {
-					// Toggle checkbox when label is clicked
-					const checkbox = checkboxDiv.select('input').node()
-					checkbox.checked = !checkbox.checked
-				})
+			// Set data attribute for config retrieval
+			checkbox.attr('data-consequence', classKey)
+
+			// Set title attribute on the label for tooltip
+			checkboxDiv.select('label').attr('title', classInfo.desc || classInfo.label)
+
+			checkboxes.push(checkbox)
 		})
 
 		// Select All button functionality
 		selectAllBtn.on('click', () => {
-			checkboxContainer.selectAll('input[data-consequence]').property('checked', true)
-			// Reset button styling immediately after click
+			checkboxes.forEach(checkbox => checkbox.property('checked', true))
 			selectAllBtn.style('background', '#f0f0f0').style('color', '#333')
 		})
 
 		// Clear All button functionality
 		clearAllBtn.on('click', () => {
-			checkboxContainer.selectAll('input[data-consequence]').property('checked', false)
-			// Reset button styling immediately after click
+			checkboxes.forEach(checkbox => checkbox.property('checked', false))
 			clearAllBtn.style('background', '#f0f0f0').style('color', '#333')
 		})
 	}
@@ -412,37 +408,24 @@ class GRIN2 extends RxComponentInner {
 			}
 			current[parts[parts.length - 1]] = value
 		})
-
-		// Get checked consequences directly
-		const consequences: string[] = []
-		this.dom.controls.selectAll('input[data-consequence]').each(function (this: HTMLInputElement) {
-			if (this.checked) {
-				consequences.push(this.getAttribute('data-consequence')!)
-			}
-		})
-
-		if (!config.snvindelOptions) config.snvindelOptions = {}
-		config.snvindelOptions.consequences = consequences
+		// Only add consequences if snvindelOptions was already created by getPlotConfig
+		if (config.snvindelOptions) {
+			const consequences: string[] = []
+			this.dom.controls.selectAll('input[data-consequence]').each(function (this: HTMLInputElement) {
+				if (this.checked) {
+					consequences.push(this.getAttribute('data-consequence')!)
+				}
+			})
+			config.snvindelOptions.consequences = consequences
+		}
 
 		return config
 	}
 
 	private async runAnalysis() {
-		// Get the run button
-		const runButton = this.dom.controls
-			.selectAll('button')
-			.filter(function (this: HTMLButtonElement) {
-				return this.textContent?.includes('Run GRIN2')
-			})
-			.node() as HTMLButtonElement
-
-		const originalText = runButton.textContent
-
 		try {
 			// Disable button with visual feedback
-			runButton.disabled = true
-			runButton.textContent = 'Running GRIN2...'
-			runButton.style.opacity = '0.6'
+			this.runButton.property('disabled', true).text('Running GRIN2...').style('opacity', '0.6')
 
 			// Clear previous results
 			this.dom.error.style('padding', '0').text('')
@@ -476,9 +459,7 @@ class GRIN2 extends RxComponentInner {
 			this.dom.error.style('padding', '20px').text(`Error: ${error instanceof Error ? error.message : String(error)}`)
 		} finally {
 			// Restore button state
-			runButton.disabled = false
-			runButton.textContent = originalText
-			runButton.style.opacity = '1'
+			this.runButton.property('disabled', false).text('Run GRIN2').style('opacity', '1')
 		}
 	}
 
@@ -490,10 +471,6 @@ class GRIN2 extends RxComponentInner {
 		// Only initialize the table, don't auto-run analysis
 		const config = structuredClone(this.state.config)
 		if (config.childType != this.type && config.chartType != this.type) return
-
-		// Table is already created in setControls, just ensure plot area is clear
-		this.dom.plot.selectAll('*').remove()
-		this.dom.error.style('padding', '0').text('')
 	}
 
 	private renderResults(result: any) {
@@ -663,32 +640,40 @@ class GRIN2 extends RxComponentInner {
 export const grin2Init = getCompInit(GRIN2)
 export const componentInit = grin2Init
 
-export function getDefaultGRIN2Settings(overrides = {}) {
-	const defaults: GRIN2Settings = {
-		snvindelOptions: {
+export async function getPlotConfig(opts: GRIN2Opts, app: MassAppApi) {
+	const queries = app.vocabApi.termdbConfig.queries
+	const settings: any = { controls: {} }
+
+	// Dynamically add data type options based on availability
+	if (queries?.snvindel) {
+		settings.snvindelOptions = {
 			minTotalDepth: 10,
 			minAltAlleleCount: 2,
 			consequences: [],
 			hyperMutator: 1000
-		},
-		cnvOptions: {
+		}
+	}
+
+	if (queries?.cnv) {
+		settings.cnvOptions = {
 			lossThreshold: -0.4,
 			gainThreshold: 0.3,
 			maxSegLength: 0,
 			hyperMutator: 500
 		}
 	}
-	return Object.assign(defaults, overrides)
-}
 
-export async function getPlotConfig(opts: GRIN2Opts, _app: MassAppApi) {
-	const config = {
-		chartType: 'grin2',
-		settings: {
-			controls: {},
-			grin2: getDefaultGRIN2Settings(opts.overrides || {})
+	if (queries?.svfusion) {
+		settings.fusionOptions = {
+			// Add fusion-specific defaults when needed
 		}
 	}
+
+	const config = {
+		chartType: 'grin2',
+		settings
+	}
+
 	return copyMerge(config, opts)
 }
 
