@@ -19,7 +19,7 @@ import type {
 } from '#types'
 import type { TermSettingOpts, Handler, PillData } from './types'
 import { TermTypes, isDictionaryType, isNumericTerm } from '#shared/terms.js'
-import { TwRouter } from '#tw/TwRouter'
+import { TwRouter, routedTermTypes } from '#tw/TwRouter'
 
 /*
 ********************* EXPORTED
@@ -982,7 +982,6 @@ export async function mayHydrateDictTwLst(twlst: TwLst, vocabApi: VocabApi) {
 }
 
 // add migrated tw fillers here, by term.type
-const routedTermTypes = new Set(['categorical', 'integer', 'float', 'geneVariant'])
 
 async function mayUseTwRouterFill(
 	tw: TermWrapper,
