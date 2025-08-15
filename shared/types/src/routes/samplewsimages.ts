@@ -17,7 +17,7 @@ export type WSImage = {
 	filename: string
 	overlays?: Array<string>
 	predictionLayers?: Array<string>
-	metadata: string
+	metadata?: string
 	annotationsData?: Array<Annotation>
 	predictions?: Array<Prediction>
 	classes?: Array<WSIClass>
