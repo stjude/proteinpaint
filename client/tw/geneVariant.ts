@@ -210,6 +210,11 @@ export class GvPredefinedGS extends GvBase {
 		set_hiddenvalues(q, term)
 		return tw as GvPredefinedGsTW
 	}
+
+	getTitleText() {
+		const gsname = this.term?.groupsetting?.lst?.[this.q.predefined_groupset_idx].name || ''
+		return `${this.term.name} ${gsname}`
+	}
 }
 
 export class GvCustomGS extends GvBase {
