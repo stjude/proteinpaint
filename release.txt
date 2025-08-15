@@ -1,1 +1,2 @@
-
+Fixes:
+- Simplified the GRIN2 UI and route code
