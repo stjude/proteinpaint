@@ -12,6 +12,10 @@ import Zoomify from 'ol/source/Zoomify'
 import TileLayer from 'ol/layer/Tile'
 import VectorLayer from 'ol/layer/Vector'
 import VectorSource from 'ol/source/Vector'
+import type {
+	AiProjectSelectedWSImagesRequest,
+	AiProjectSelectedWSImagesResponse
+} from '@sjcrh/proteinpaint-types/routes/aiProjectSelectedWSImages.ts'
 
 export class ViewModelProvider {
 	constructor() {}
@@ -22,14 +26,14 @@ export class ViewModelProvider {
 		sampleId: string,
 		tileSelections: TileSelection[],
 		displayedImageIndex: number,
-		aiProjectFiles: Array<string> | undefined
-		// aiProjectID: string | undefined = undefined
+		aiProjectID: string | undefined = undefined,
+		aiWSIMageFiles: Array<string> | undefined
 	): Promise<ViewModel> {
 		let wsimageLayers: Array<WSImageLayers> = []
 		let wsimageLayersLoadError: string | undefined = undefined
 		let wsImages: WSImage[] = []
 
-		if (!aiProjectFiles) {
+		if (!aiWSIMageFiles && !aiProjectID) {
 			try {
 				const data: SampleWSImagesResponse = await this.getSampleWSImages(genome, dslabel, sampleId)
 				wsImages = data.sampleWSImages
@@ -38,7 +42,14 @@ export class ViewModelProvider {
 				wsimageLayersLoadError = `Error loading image layers for sample  ${sampleId}: ${e.message || e}`
 			}
 		} else {
-			// const data: any = await this.aiProjectImages(genome, dslabel, aiProjectID, aiProjectFiles)
+			const data: AiProjectSelectedWSImagesResponse = await this.aiProjectImages(
+				genome,
+				dslabel,
+				aiProjectID!,
+				aiWSIMageFiles!
+			)
+			wsImages = data.wsimages
+			wsimageLayers = await this.getWSImageLayers(genome, dslabel, sampleId, data.wsimages)
 		}
 
 		return new ViewModel(wsImages, wsimageLayers, wsimageLayersLoadError, tileSelections, displayedImageIndex)
@@ -69,7 +80,8 @@ export class ViewModelProvider {
 				genome: genome,
 				dslabel: dslabel,
 				sampleId: sampleId,
-				wsimage: wsimages[i].filename
+				wsimage: wsimages[i].filename,
+				aiProjectId: 1
 			}
 
 			const data: WSImagesResponse = await dofetch3('wsimages', { body })
@@ -182,12 +194,20 @@ export class ViewModelProvider {
 		return layers
 	}
 
-	// private async aiProjectImages(
-	// 	genome: string,
-	// 	dslabel: string,
-	// 	aiProjectID: string | undefined,
-	// 	aiProjectFiles: Array<string>
-	// ) {
-	// 	return undefined
-	// }
+	private async aiProjectImages(
+		genome: string,
+		dslabel: string,
+		aiProjectID: string,
+		aiProjectFiles: Array<string>
+	): Promise<AiProjectSelectedWSImagesResponse> {
+		const body: AiProjectSelectedWSImagesRequest = {
+			genome: genome,
+			dslabel: dslabel,
+			projectId: aiProjectID,
+			wsimagesFilenames: aiProjectFiles
+		}
+		return await dofetch3('aiProjectSelectedWSImages', {
+			body: body
+		})
+	}
 }
