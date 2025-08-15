@@ -5,7 +5,7 @@ export type WSImagesRequest = {
 	dslabel: string
 	sampleId?: string
 	wsimage?: string
-	aiProjectWSIId?: string
+	aiProjectId?: number
 }
 
 export type WSImagesResponse = {
