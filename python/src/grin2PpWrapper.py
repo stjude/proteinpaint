@@ -68,7 +68,8 @@ def assign_lesion_colors(lesion_types):
 
 def plot_grin2_manhattan(grin_results: dict, 
                         chrom_size: pd.DataFrame,
-                        colors: Optional[Dict[str, str]] = None) -> plt.Figure:
+                        colors: Optional[Dict[str, str]] = None,
+                        device_pixel_ratio: float = 1.0) -> tuple[plt.Figure, dict]:
     """
     Create a Manhattan plot for GRIN2 genomic analysis results using colored scatter points.
     
@@ -99,15 +100,33 @@ def plot_grin2_manhattan(grin_results: dict,
             Note: Chromosomes will be ordered as they appear in this DataFrame.
             For proper alternating colors, ensure chromosomes are in desired display order.
             
-        colors (Optional[Dict[str, str]]): Color mapping for mutation types.
+                    colors (Optional[Dict[str, str]]): Color mapping for mutation types.
             Keys should be 'gain', 'loss', 'mutation'. If None, uses defaults:
             - 'gain': '#FF4444' (red)  
             - 'loss': '#4444FF' (blue)
             - 'mutation': '#44AA44' (green)
             
+        device_pixel_ratio (float): Device pixel ratio for high-DPI displays.
+            Used to scale the plot DPI. Default is 1.0.
+            Typical values: 1.0 (standard), 2.0 (retina), 3.0 (high-DPI mobile)
+            
     Returns:
-        plt.Figure: Matplotlib figure object containing the Manhattan plot.
-            The figure is ready for saving, displaying, or further customization.
+        tuple[plt.Figure, dict]: A tuple containing:
+            - plt.Figure: Matplotlib figure object containing the Manhattan plot
+            - dict: Plot data dictionary with keys:
+                - 'points': List of point dictionaries with keys:
+                    - 'x': X-coordinate (cumulative genome position)
+                    - 'y': Y-coordinate (-log₁₀(q-value))
+                    - 'color': Color string for the point
+                    - 'type': Mutation type ('gain', 'loss', 'mutation')
+                    - 'gene': Gene name
+                    - 'chrom': Chromosome name
+                    - 'pos': Original chromosome position
+                    - 'q_value': Original q-value
+                - 'chrom_data': Chromosome mapping data
+                - 'y_axis_scaled': Boolean indicating if y-axis was scaled
+                - 'scale_factor': Scale factor applied (if y_axis_scaled is True)
+                - 'total_genome_length': Total cumulative genome length
             
     Raises:
         KeyError: If required columns are missing from input DataFrames
@@ -130,8 +149,12 @@ def plot_grin2_manhattan(grin_results: dict,
     # Extract gene hits data
     gene_hits = grin_results['gene.hits']
     
-    # Set up the plot
-    fig, ax = plt.subplots(figsize=(12, 6), dpi=110)
+    # Calculate DPI based on device pixel ratio (base DPI of 110)
+    base_dpi = 110
+    plot_dpi = int(base_dpi * device_pixel_ratio)
+    
+    # Set up the plot with dynamic DPI
+    fig, ax = plt.subplots(figsize=(12, 6), dpi=plot_dpi)
     
     # Find which mutation type columns exist and have data
     mutation_cols = []
@@ -161,6 +184,8 @@ def plot_grin2_manhattan(grin_results: dict,
     
     # Collect all points to plot
     plot_data = {'x': [], 'y': [], 'colors': [], 'types': []}
+    # Store detailed point information for interactive use
+    point_details = []
     
     # Process each gene
     for _, gene_row in gene_hits.iterrows():
@@ -172,33 +197,61 @@ def plot_grin2_manhattan(grin_results: dict,
             
         # Use the gene's chromosome start position directly
         gene_start = gene_row.get('loc.start', 0)
+        gene_name = gene_row.get('gene', gene_row.get('gene.name', 'Unknown'))
         
         # Map to cumulative genome coordinates for plotting
         x_pos = chrom_data[chrom]['start'] + gene_start
         
         # Add points for each mutation type
         for mut_type, q_col in mutation_cols:
+            # Skip if column doesn't exist, is NaN, or is non-positive
             if q_col not in gene_row or pd.isna(gene_row[q_col]) or gene_row[q_col] <= 0:
                 continue
                 
-            # Convert q-value to -log10(q-value)
+            # Get the q-value
             q_value = gene_row[q_col]
+            
+            # Filter for significant points only (q < 0.05) - STRICT FILTER
+            if q_value >= 0.05:
+                continue
+            
+            # Convert q-value to -log10(q-value)  
             neg_log10_q = -np.log10(q_value)
+            
+            # Double-check: ensure -log10(q) > 1.3 (equivalent to q < 0.05)
+            if neg_log10_q <= 1.3:
+                continue
             
             # Add slight horizontal offset for multiple mutation types at same gene
             offset_factor = {'gain': -0.3, 'loss': 0, 'mutation': 0.3}
             x_offset = offset_factor.get(mut_type, 0) * (total_genome_length * 0.0001)
             
-            plot_data['x'].append(x_pos + x_offset)
+            final_x = x_pos + x_offset
+            color = colors.get(mut_type, '#888888')
+            
+            plot_data['x'].append(final_x)
             plot_data['y'].append(neg_log10_q)
-            plot_data['colors'].append(colors.get(mut_type, '#888888'))
+            plot_data['colors'].append(color)
             plot_data['types'].append(mut_type)
+            
+            # Store detailed point information
+            point_details.append({
+                'x': final_x,
+                'y': neg_log10_q,
+                'color': color,
+                'type': mut_type,
+                'gene': gene_name,
+                'chrom': chrom,
+                'pos': gene_start,
+                'q_value': q_value
+            })
     
     # Set up axes limits
     ax.set_xlim(0, total_genome_length)
     
     # Calculate y-axis limits from data with optional scaling for very high values
     y_axis_scaled = False
+    scale_factor = 1.0
     if plot_data['y']:
         max_y = max(plot_data['y'])
         
@@ -208,6 +261,9 @@ def plot_grin2_manhattan(grin_results: dict,
             target_max = 40
             scale_factor = target_max / max_y
             plot_data['y'] = [y * scale_factor for y in plot_data['y']]
+            # Also update point_details
+            for point in point_details:
+                point['y'] *= scale_factor
             scaled_max = max(plot_data['y'])
             ax.set_ylim(0, scaled_max + 0.15)  # Add a small margin so points don't get clipped
             y_axis_scaled = True
@@ -322,7 +378,50 @@ def plot_grin2_manhattan(grin_results: dict,
     ax.grid(True, alpha=0.3, axis='y')
     
     plt.tight_layout()
-    return fig
+    
+    # Get plot dimensions in pixels
+    fig.canvas.draw()  # Ensure the figure is fully rendered
+    bbox = fig.get_tightbbox(fig.canvas.get_renderer())
+    width_inches, height_inches = bbox.width, bbox.height
+    width_pixels = int(width_inches * plot_dpi)
+    height_pixels = int(height_inches * plot_dpi)
+    
+    # Calculate matplotlib's actual plot area margins
+    # Get the axes position in figure coordinates
+    ax_bbox = ax.get_position()
+    fig_width_inches = fig.get_figwidth()
+    fig_height_inches = fig.get_figheight()
+    
+    # Convert to pixel coordinates
+    left_margin = int(ax_bbox.x0 * fig_width_inches * plot_dpi)
+    bottom_margin = int(ax_bbox.y0 * fig_height_inches * plot_dpi)
+    plot_width_pixels = int(ax_bbox.width * fig_width_inches * plot_dpi)
+    plot_height_pixels = int(ax_bbox.height * fig_height_inches * plot_dpi)
+    
+    # Convert plot coordinates to SVG pixel coordinates
+    for point in point_details:
+        # X coordinate: map from plot data to SVG pixels
+        x_normalized = point['x'] / total_genome_length
+        point['svg_x'] = left_margin + (x_normalized * plot_width_pixels)
+        
+        # Y coordinate: map from plot data to SVG pixels (inverted)
+        max_y_plot = max(plot_data['y']) if plot_data['y'] else 1
+        y_normalized = point['y'] / max_y_plot
+        point['svg_y'] = height_pixels - bottom_margin - (y_normalized * plot_height_pixels)
+    
+    # Prepare the coordinate data for interactive use
+    interactive_data = {
+        'points': point_details,
+        'chrom_data': chrom_data,
+        'y_axis_scaled': y_axis_scaled,
+        'scale_factor': scale_factor,
+        'total_genome_length': total_genome_length,
+        'plot_width': width_pixels,
+        'plot_height': height_pixels,
+        'dpi': plot_dpi
+    }
+    
+    return fig, interactive_data
 
 def sort_grin2_data(data):
 	"""
@@ -652,12 +751,20 @@ try:
 
 	# 6. Generate Manhattan plot and encode as Base64
 	try:
-		# Create the Manhattan plot using our new function
-		fig = plot_grin2_manhattan(grin_results, chrom_size, lsn_colors)
+
+		# Get device pixel ratio from input (default to 2.0 if not provided)
+		device_pixel_ratio = input_data.get("devicePixelRatio", 2.0)
+
+		# Create the Manhattan plot
+		fig, plot_data = plot_grin2_manhattan(grin_results, chrom_size, lsn_colors, device_pixel_ratio)
+
+		# Calculate DPI for saving (same as used in plotting)
+		base_dpi = 110
+		save_dpi = int(base_dpi * device_pixel_ratio)
 		
 		# Save to BytesIO buffer
 		buffer = BytesIO()
-		fig.savefig(buffer, format="png", bbox_inches="tight", dpi=110)
+		fig.savefig(buffer, format="png", bbox_inches="tight", dpi=save_dpi)
 		plt.close(fig)
 
 		# Get bytes and encode as base64
@@ -681,6 +788,7 @@ try:
 	# 8. Prepare response
 	grin2_response = {
 		"png": [base64_string],
+		"plotData": plot_data,
 		"topGeneTable": {
 			"columns": columns,
 			"rows": topgene_table_data

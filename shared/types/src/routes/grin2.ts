@@ -17,6 +17,9 @@ export type GRIN2Request = {
 	/** Dataset label within the genome */
 	dslabel: string
 
+	/** Device pixel ratio for rendering */
+	devicePixelRatio?: number
+
 	/** Filter from existing PP infrastructure */
 	filter?: any // Filter object passed to get_samples(filter, ds)
 
@@ -51,6 +54,36 @@ export type GRIN2Request = {
 	}
 }
 
+/** Simple Interface to store the complex plot data from the python Manhattan plot */
+export interface PlotData {
+	points: Array<{
+		x: number
+		y: number
+		svg_x: number
+		svg_y: number
+		color: string
+		type: string
+		gene: string
+		chrom: string
+		pos: number
+		q_value: number
+	}>
+	chrom_data: Record<
+		string,
+		{
+			start: number
+			size: number
+			center: number
+		}
+	>
+	y_axis_scaled: boolean
+	scale_factor: number
+	total_genome_length: number
+	plot_width: number
+	plot_height: number
+	dpi: number
+}
+
 /**
  * Response for GRIN2 analysis run
  */
@@ -61,6 +94,8 @@ export type GRIN2Response = {
 	error?: string
 	/** Base64-encoded PNG Manhattan plot image */
 	pngImg?: string
+	/** Plot data for the Manhattan plot */
+	plotData?: PlotData
 	/** Download status/info */
 	download?: any
 	/** Sortable table of top genes identified by GRIN2 */
