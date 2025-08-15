@@ -1,17 +1,15 @@
 import { dofetch3 } from '#common/dofetch'
-import type { AIProjectListRequest, AIProjectAdminRequest } from '#types'
-import type { ClientCopyGenome } from '../../../types/global'
+import type { AIProjectAdminRequest, AIProjectAdminResponse } from '#types'
 
 export class Model {
-	constructor() {}
-
-	async getProjects(genome: string, dslabel: string): Promise<any[]> {
-		const body: AIProjectListRequest = {
+	public static async getProjects(genome: string, dslabel: string): Promise<string[]> {
+		const body: AIProjectAdminRequest = {
 			genome,
-			dslabel
+			dslabel,
+			for: 'list'
 		}
 		try {
-			const response = await dofetch3('aiProjectList', { body })
+			const response = await dofetch3('aiProjectAdmin', { body })
 			return response || []
 		} catch (error) {
 			console.error('Error fetching projects:', error)
@@ -19,10 +17,10 @@ export class Model {
 		}
 	}
 
-	async updateProject(body: AIProjectAdminRequest, method: string): Promise<any> {
+	public static async updateProject(_body: any, method: string): Promise<AIProjectAdminResponse> {
+		const body: AIProjectAdminRequest = Object.assign({}, _body, { for: 'admin' })
 		try {
-			const response = await dofetch3('aiProjectAdmin', { method, body })
-			return response
+			return await dofetch3('aiProjectAdmin', { method, body })
 		} catch (error) {
 			console.error('Error fetching projects:', error)
 			throw error
@@ -30,11 +28,10 @@ export class Model {
 	}
 
 	//TODO: Will need a method to call metadata API, then build dictionary
-	async getTerms(vocab: { genome: ClientCopyGenome; dslabel: string }, app: any): Promise<any> {
-		const body = { dslabel: vocab.dslabel, genome: vocab.genome }
+	async getTerms(app: any): Promise<any> {
 		const root = { id: '__root', name: 'root', __tree_isroot: true }
 		try {
-			await app.vocabApi.buildAdHocDictionary(body)
+			await app.vocabApi.buildAdHocDictionary()
 			const terms = await app.vocabApi.getTermChildren(root, [])
 			return terms || []
 		} catch (error) {

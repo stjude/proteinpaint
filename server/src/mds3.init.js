@@ -49,7 +49,7 @@ import { validate_query_getSampleWSImages } from '#routes/samplewsimages.ts'
 import { validate_query_getWSISamples } from '#routes/wsisamples.ts'
 import { mds3InitNonblocking } from './mds3.init.nonblocking.js'
 import { dtTermTypes } from '#shared/terms.js'
-import { makeAdHocDicTermdbQueries } from './buildAdHocDictionary.ts'
+import { makeAdHocDicTermdbQueries } from './adHocDictionary/buildAdHocDictionary.ts'
 
 /*
 init

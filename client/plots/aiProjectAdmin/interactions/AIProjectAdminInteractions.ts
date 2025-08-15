@@ -1,4 +1,5 @@
-import type { Model } from '../model/Model'
+import { Model } from '../model/Model'
+import type { AIProjectAdminResponse } from '#types'
 
 export class AIProjectAdminInteractions {
 	app: any
@@ -15,42 +16,28 @@ export class AIProjectAdminInteractions {
 		this.model = model
 	}
 
-	async addProject(projectName: string) {
+	async addProject(opts) {
+		const config = this.getConfig()
+		const projectObject = Object.assign({}, config.settings.project, opts.project, opts.project.fitler)
+
 		const body = {
 			genome: this.genome,
 			dslabel: this.dslabel,
-			project: {
-				name: projectName
-			}
+			project: projectObject
 		}
-
 		try {
-			await this.model.updateProject(body, 'put')
-		} catch (e) {
-			console.error('Error adding project:', e)
+			await Model.updateProject(body, 'PUT')
+		} catch (e: any) {
+			console.error('Error adding project:', e.message || e)
 			throw e
 		}
-
-		await this.app.dispatch({
-			type: 'plot_edit',
-			id: this.id,
-			config: {
-				settings: {
-					project: {
-						name: projectName,
-						type: 'new'
-					}
-				}
-			}
-		})
 	}
 
-	async editProject(filter: string, classes: any[]) {
-		const config = this.app.getState().plots.find((p: any) => p.id === this.id)
-
+	public async editProject(filter: string, classes: any[]) {
+		const config = this.getConfig()
 		const project = Object.assign({}, config.settings.project, {
 			type: 'edit',
-			filter: JSON.stringify(filter),
+			filter,
 			classes
 		})
 
@@ -60,21 +47,12 @@ export class AIProjectAdminInteractions {
 			project
 		}
 		try {
-			await this.model.updateProject(body, 'post')
-		} catch (e) {
-			console.error('Error editing project:', e)
+			await Model.updateProject(body, 'POST')
+		} catch (e: any) {
+			console.error('Error editing project:', e.message || e)
 			throw e
 		}
-
-		await this.app.dispatch({
-			type: 'plot_edit',
-			id: this.id,
-			config: {
-				settings: {
-					project
-				}
-			}
-		})
+		this.appDispatchEdit({ settings: { project } }, config)
 	}
 
 	async deleteProject(project: { value: string; id: number }) {
@@ -88,10 +66,31 @@ export class AIProjectAdminInteractions {
 		}
 
 		try {
-			await this.model.updateProject(body, 'delete')
-		} catch (e) {
-			console.error('Error deleting project:', e)
+			await Model.updateProject(body, 'DELETE')
+		} catch (e: any) {
+			console.error('Error deleting project:', e.message || e)
 			throw e
 		}
+	}
+
+	async getImages(filter): Promise<AIProjectAdminResponse> {
+		const config = this.getConfig()
+		return await this.app.vocabApi.getAiImages(config.settings.project, filter)
+	}
+
+	public async appDispatchEdit(settings: any, config: any = {}) {
+		if (!config?.settings) {
+			config = this.getConfig()
+			if (!config) throw new Error(`No plot with id='${this.id}' found.`)
+		}
+		await this.app.dispatch({
+			type: 'plot_edit',
+			id: this.id,
+			config: Object.assign(settings, config.settings)
+		})
+	}
+
+	private getConfig() {
+		return this.app.getState().plots.find((p: any) => p.id === this.id)
 	}
 }
