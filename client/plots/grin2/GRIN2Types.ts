@@ -3,8 +3,6 @@ import type { Menu } from '#dom'
 export interface GRIN2Dom {
 	controls: any
 	div: any
-	error: any
-	plot: any
 	tip: Menu
 	header?: any
 }
