@@ -90,7 +90,7 @@ export class profileForms extends profilePlot {
 		this.shift = shift
 		const mainG = svg.append('g').attr('transform', `translate(${shift}, ${shiftTop})`)
 		const gridG = svg.append('g').attr('transform', `translate(${shift}, ${shiftTop})`)
-		this.filterG = svg.append('g').attr('transform', `translate(${shift + settings.svgw + 200}, ${shiftTop})`)
+		this.filterG = svg.append('g').attr('transform', `translate(${shift + settings.svgw + 120}, ${shiftTop})`)
 		const legendG = svg.append('g') //each plot will translate it to the right position
 
 		const xAxisG = svg.append('g').attr('transform', `translate(${shift}, ${shiftTop / 2})`)
@@ -153,11 +153,11 @@ export class profileForms extends profilePlot {
 		const step = 30
 		const height = (this.scoreTerms.length + 2) * step
 		this.dom.svg.attr('height', height + 120)
-		const middle = this.settings.svgw * 0.3 //the middle of the svg as we leave space for the not applicable category at the end
+
 		for (const tw of this.scoreTerms) {
 			if (tw.term.type != 'multivalue') continue
 			const dict = this.getPercentageDict(tw) //get the dict with the counts for each category  for the list of samples
-			this.renderLikertBar(dict, y, 25, tw, middle)
+			this.renderLikertBar(dict, y, 25, tw)
 			y += step
 		}
 		y += step * 2
@@ -166,26 +166,16 @@ export class profileForms extends profilePlot {
 			.domain([0, 100])
 			.range([this.shift, this.shift + width])
 		const posAxisBottom = axisBottom(posScale)
-		const scaleG = this.dom.svg.append('g').attr('transform', `translate(${middle}, ${y})`)
+		const scaleG = this.dom.svg.append('g').attr('transform', `translate(0, ${y})`)
 		posAxisBottom(scaleG)
-		const negScale = d3Linear()
-			.domain([0, -100])
-			.range([this.shift, this.shift - width])
-		const negAxisBottom = axisBottom(negScale)
-		const scaleGNeg = this.dom.svg.append('g').attr('transform', `translate(${middle}, ${y})`)
-		negAxisBottom(scaleGNeg)
 
-		const legendG = this.dom.legendG.attr('transform', `translate(400, ${y + 50})`)
+		const legendG = this.dom.legendG.attr('transform', `translate(200, ${y + 50})`)
 		let x = 0
-		const categories = [
-			...this.activePlot.negativeCategories,
-			...this.activePlot.positiveCategories,
-			...this.activePlot.noAnswerCategories
-		]
-		for (const category of categories) {
+
+		for (const category of this.activePlot.categories) {
 			if (!this.categories.has(category.name)) continue
 			this.drawLegendRect(x, 0, category.name, legendG)
-			x += 150
+			x += 200
 		}
 	}
 
@@ -276,13 +266,14 @@ export class profileForms extends profilePlot {
 		return key == 'Yes' ? this.activePlot.color : key == 'No' ? '#aaa' : `url(#${this.id}_diagonalHatch)`
 	}
 
-	renderLikertBar(dict: { [key: string]: number }, y: number, height: number, tw: any, middle: number) {
+	renderLikertBar(dict: { [key: string]: number }, y: number, height: number, tw: any) {
 		const itemG = this.dom.mainG.append('g')
 		let total = 0
 		for (const key in dict) total += dict[key]
 
 		let x = 0
-		for (const category of this.activePlot.negativeCategories) {
+
+		for (const category of this.activePlot.categories) {
 			const width = this.renderCategory(category, dict, itemG, x, height, total)
 			x += width
 		}
@@ -296,18 +287,7 @@ export class profileForms extends profilePlot {
 			.on('mouseenter', event => this.showText(event, tw.term.name, 80))
 			.on('mouseleave', () => this.tip.hide())
 
-		itemG.attr('transform', `translate(${middle - x}, ${y})`)
-
-		const itemG2 = this.dom.mainG.append('g').attr('transform', `translate(${middle}, ${y})`)
-		x = 0
-		for (const category of this.activePlot.positiveCategories) {
-			const width = this.renderCategory(category, dict, itemG2, x, height, total)
-			x += width
-		}
-		const end = this.settings.svgw + 20
-		const itemG3 = this.dom.mainG.append('g').attr('transform', `translate(${end}, ${y})`)
-		for (const category of this.activePlot.noAnswerCategories)
-			this.renderCategory(category, dict, itemG3, 0, height, total, true) //it will be only one
+		itemG.attr('transform', `translate(0, ${y})`)
 	}
 
 	renderCategory(category, dict, itemG, x, height, total, showPercent = false) {
@@ -415,7 +395,7 @@ export class profileForms extends profilePlot {
 		itemG
 			.append('text')
 			.attr('transform', `translate(${size + 10}, ${y + size})`)
-			.style('font-size', '0.9em')
+			.style('font-size', '0.85em')
 			.text(text)
 	}
 
