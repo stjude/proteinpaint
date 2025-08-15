@@ -153,6 +153,7 @@ export class profileForms extends profilePlot {
 		const step = 30
 		const height = (this.scoreTerms.length + 2) * step
 		this.dom.svg.attr('height', height + 120)
+		this.categories = new Set<string>()
 
 		for (const tw of this.scoreTerms) {
 			if (tw.term.type != 'multivalue') continue
@@ -172,9 +173,8 @@ export class profileForms extends profilePlot {
 		const legendG = this.dom.legendG.attr('transform', `translate(200, ${y + 50})`)
 		let x = 0
 
-		for (const category of this.activePlot.categories) {
-			if (!this.categories.has(category.name)) continue
-			this.drawLegendRect(x, 0, category.name, legendG)
+		for (const category of this.categories) {
+			this.drawLegendRect(x, 0, category, legendG)
 			x += 200
 		}
 	}
@@ -257,7 +257,7 @@ export class profileForms extends profilePlot {
 			const d = path.__data__
 			const menu = this.tip.clear()
 			const percent = roundValueAuto(d.value, true, 1)
-			menu.d.text(`${d.key}: ${percent}%`)
+			menu.d.text(`${d.category}: ${percent}%`)
 			menu.show(event.clientX, event.clientY, true, true)
 		} else this.onMouseOut(event)
 	}
@@ -272,8 +272,12 @@ export class profileForms extends profilePlot {
 		for (const key in dict) total += dict[key]
 
 		let x = 0
-
-		for (const category of this.activePlot.categories) {
+		const keys = Object.keys(tw.term.values)
+			.filter(key => key !== '')
+			.sort((a, b) => Number(a) - Number(b))
+		for (const key of keys) {
+			const category = tw.term.values[key].label
+			this.categories.add(category)
 			const width = this.renderCategory(category, dict, itemG, x, height, total)
 			x += width
 		}
@@ -291,13 +295,14 @@ export class profileForms extends profilePlot {
 	}
 
 	renderCategory(category, dict, itemG, x, height, total, showPercent = false) {
-		const key = category.name
+		const key = category.toUpperCase()
 		const module = this.module
 		const colorMap = this.state.termdbConfig.colorMap
-		const color = this.state.termdbConfig.colorMap[module][key] || colorMap['*'][key]
-		const value = dict[key]
-		if (!value) return 0
-		this.categories.add(category.name)
+		const color = colorMap[module][key] || colorMap['*'][key]
+		const entry: any = Object.entries(dict).find(k => k[0].toUpperCase() == key)
+		if (!entry) return 0
+		const value: number = entry[1]
+		this.categories.add(category)
 
 		const percent = (value / total) * 100
 		const width = (percent / 100) * (this.settings.svgw - 150) //last 100 is for the not applicable category
@@ -310,7 +315,7 @@ export class profileForms extends profilePlot {
 			.attr('stroke-width', 0.5)
 			.attr('stroke-opacity', 0.5)
 			.attr('fill', color)
-			.datum({ key, value: percent })
+			.datum({ category, value: percent })
 			.on('mouseover', event => this.onMouseOver(event))
 		if (showPercent)
 			itemG
@@ -377,9 +382,11 @@ export class profileForms extends profilePlot {
 	}
 
 	drawLegendRect(x, y, text, legendG, isYesNo = false) {
+		const key = text.toUpperCase()
 		const colorMap = this.state.termdbConfig.colorMap
 		const noAnswerColor = isYesNo ? 'url(#' + this.id + '_diagonalHatch)' : colorMap['*'][text]
-		const color = this.state.termdbConfig.colorMap[this.module][text] || noAnswerColor
+		const color = colorMap[this.module][key] || colorMap['*'][key] || noAnswerColor
+
 		const size = 20
 		const itemG = legendG.append('g').attr('transform', `translate(${x}, ${y})`)
 		itemG

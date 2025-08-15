@@ -434,16 +434,26 @@ export function server_init_db_queries(ds) {
 	}
 	{
 		const s = cn.prepare(
-			`select id, name, json_extract(jsondata, '$.plotType') as subtype, json_extract(jsondata, '$.domainDetails') as details from terms where type='multivalue' and parent_id=?`
+			`select id, name, 
+			jsondata
+			from terms where type='multivalue' and parent_id=?`
 		)
 		const cache = new Map()
 		q.get_multivalue_tws = parent_id => {
 			if (cache.has(parent_id)) return cache.get(parent_id)
 			const items = s.all(parent_id)
 			const terms = items.map(item => {
+				const jsondata = JSON.parse(item.jsondata)
 				return {
 					$id: item.id,
-					term: { id: item.id, name: item.name, type: 'multivalue', subtype: item.subtype, details: item.details }
+					term: {
+						id: item.id,
+						name: item.name,
+						type: 'multivalue',
+						subtype: jsondata.plotType,
+						details: jsondata.domainDetails,
+						values: jsondata.values
+					}
 				}
 			})
 			cache.set(parent_id, terms)
