@@ -561,6 +561,34 @@ class GRIN2 extends RxComponentInner {
 			})
 		}
 
+		// Display run stats information
+		if (result.processingSummary) {
+			// Create header with title
+			const headerDiv = this.dom.div
+				.append('div')
+				.style('display', 'flex')
+				.style('align-items', 'center')
+				.style('margin', '10px 0')
+
+			headerDiv.append('h3').style('margin', '0 10px 0 0').text('GRIN2 Processing Summary')
+
+			// Using table2col for processing summary
+			const table = table2col({
+				holder: this.dom.div.append('div'),
+				margin: '10px 0'
+			})
+
+			Object.entries(result.processingSummary).forEach(([key, value]) => {
+				const displayKey = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())
+				const displayValue = Array.isArray(value)
+					? value.join(', ')
+					: typeof value === 'object' && value !== null
+					? JSON.stringify(value)
+					: String(value)
+				table.addRow(displayKey, displayValue)
+			})
+		}
+
 		// Display timing information
 		if (result.timing) {
 			this.dom.div
