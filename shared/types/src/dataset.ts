@@ -1037,7 +1037,6 @@ export type WSImages = {
 	predictionColor?: Array<number>
 	annotationsColor?: Array<number>
 	tileSize?: number
-	classes?: WSIClass[]
 	uncertainty?: { color: string; label: string }[]
 
 	/** either ds supplied or dynamically added on launch with built in logic (retrieve the sample list from the wsimages table) */
@@ -1045,15 +1044,17 @@ export type WSImages = {
 	/** either ds supplied or dynamically added on launch with built in logic */
 	getWSImages?: (sampleName: string) => Promise<WSImage[]>
 	/**  ds supplied */
-	getWSIPredictionPatches?: (sampleName: string, wsiImage: string) => Promise<string[]>
+	getWSIPredictionPatches?: (projectId: string, wsiImage: string) => Promise<string[]>
 	/**  ds supplied */
-	getWSIAnnotations?: (sampleName: string, wsiImage: string) => Promise<string[]>
+	getWSIAnnotations?: (projectId: string, wsiImage: string) => Promise<string[]>
 	/**  ds supplied */
 	makeGeoJson?: (sampleId: string, wsiImage: string) => void
 	/**  ds supplied */
 	getWSIPredictionOverlay?: (wsiImage: string) => Promise<string | undefined>
 	/**  ds supplied */
 	getWSIUncertaintyOverlay?: (wsiImage: string) => Promise<string | undefined>
+	/**  ds supplied */
+	getAnnotationClasses?: (projectId: string) => Promise<WSIClass[] | undefined>
 }
 
 export type WSIClass = { id: number; shortcut: string; label: string; color: string }

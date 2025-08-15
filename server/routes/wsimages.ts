@@ -37,10 +37,10 @@ function init({ genomes }) {
 			if (!ds) throw new Error('Invalid dataset name')
 			const sampleId = wSImagesRequest.sampleId
 			const wsimage = wSImagesRequest.wsimage
-			const aiProjectWSIId = wSImagesRequest.aiProjectWSIId
+			const aiProjectId = wSImagesRequest.aiProjectId
 
-			if ((!sampleId && wsimage) || !aiProjectWSIId) {
-				throw new Error('Invalid parameters: sampleId and wsimage or aiProjectWSIId must be provided')
+			if (!sampleId && (!wsimage || !aiProjectId)) {
+				throw new Error('Invalid parameters: sampleId or both wsimage and aiProjectId must be provided')
 			}
 
 			const cookieJar = new CookieJar()
