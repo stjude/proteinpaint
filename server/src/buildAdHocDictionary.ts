@@ -6,8 +6,8 @@ import { isUsableTerm } from '#shared/termdb.usecase.js'
 import BuildHelpers from './adHocDictionary/BuildHelpers.ts'
 import FilterHelpers from './adHocDictionary/FilterHelpers.ts'
 
-/** Will assign later based on the ds defined sample column header */
-let sampleKeyIdx: number | null = null
+/** Will assign later based on the ds defined image column header */
+let imageKeyIdx: number | null = null
 
 /** Termdb in memory for ds with constantly changing metadata
  * (i.e. terms). These methods build the termdb queries
@@ -20,8 +20,8 @@ export async function makeAdHocDicTermdbQueries(ds: Mds3) {
 	const q = (ds.cohort.termdb.q ||= {})
 	const id2term = new Map()
 
-	//Defined in the ds. Column header for the sample key
-	const sampleKey = dict?.source?.sampleKey || 'sample_id'
+	//Defined in the ds. Column header for the image key
+	const imageKey = dict?.source?.sampleKey || 'image_id'
 
 	/** Build a temp dictionary for the AI histology tool
 	 * from API metadata output. */
@@ -46,11 +46,11 @@ export async function makeAdHocDicTermdbQueries(ds: Mds3) {
 
 		new BuildHelpers()
 		//Creates the term object for each header
-		BuildHelpers.makeParentTerms(lines[0], id2term, sampleKey)
+		BuildHelpers.makeParentTerms(lines[0], id2term, imageKey)
 		//Assigns term.values, term.type, and, if applicable, term.bins
 		BuildHelpers.assignAttributesToTerms(id2term, lines.splice(1))
 
-		sampleKeyIdx = BuildHelpers.sampleKeyIdx
+		imageKeyIdx = BuildHelpers.imageKeyIdx
 
 		return id2term.size > 1 ? `Ad hoc dictionary for ${ds.label} created` : 'failed to initialize dictionary'
 	}
@@ -106,7 +106,7 @@ export async function makeAdHocDicTermdbQueries(ds: Mds3) {
 		//skip header
 		for (const line of lines.splice(1)) {
 			const columns = line.split(',')
-			const sample = columns[sampleKeyIdx!]
+			const sample = columns[imageKeyIdx!]
 
 			for (const tw of termwrappers) {
 				const term = id2term.get(tw.term.id)
@@ -144,27 +144,27 @@ export async function makeAdHocDicTermdbQueries(ds: Mds3) {
 		const csvData = await readSourceFile(source!)
 		if (!csvData) return []
 
-		const value2sampleCount = new Map<string, any>()
+		const value2imageCount = new Map<string, any>()
 
 		const lines = csvData.split('\n')
 		//skip header
 		for (const line of lines.splice(1)) {
 			const columns = line.split(',')
 			const value = columns[term.index].trim()
-			if (!value2sampleCount.has(value)) {
-				value2sampleCount.set(value, { value: Number(value), samplecount: 0 })
+			if (!value2imageCount.has(value)) {
+				value2imageCount.set(value, { value: Number(value), samplecount: 0 })
 			}
-			value2sampleCount.get(value).samplecount++
+			value2imageCount.get(value).samplecount++
 		}
 
-		const lst = Array.from(value2sampleCount.values()).sort((a, b) => a.value - b.value)
+		const lst = Array.from(value2imageCount.values()).sort((a, b) => a.value - b.value)
 		return lst
 	}
 
 	/** q.getSupportedChartTypes is required and defined in the ds for now.
 	 * Add if needed.*/
 
-	q.getFilteredSelections = async filter => {
+	q.getFilteredImages = async filter => {
 		if (dict?.aiApi != true) return
 		const source = dict?.source?.file
 		if (!source) return
@@ -174,23 +174,20 @@ export async function makeAdHocDicTermdbQueries(ds: Mds3) {
 
 		const lines = csvData.split('\n')
 		const headers = lines[0].split(',')
+		const headersMap = new Map(headers.map((h, i) => [h, { idx: i, label: id2term.get(h.trim()).name }]))
 
-		/** If no filter provided, return all */
-		if (!filter.lst || !filter.lst.length) {
-			const matches: string[] = []
-			for (const line of lines.splice(1)) {
-				const cells = line.split(',')
-				matches.push(cells[sampleKeyIdx!])
-			}
-			return matches
-		}
-
-		const headersIdx = new Map(headers.map((h, i) => [h, i]))
-		new FilterHelpers(sampleKeyIdx!, headersIdx)
+		new FilterHelpers(imageKeyIdx!, headersMap)
 
 		const normalized = FilterHelpers.normalizeFilter(filter)
 		const matches = FilterHelpers.getMatches(normalized, lines)
-		return matches
+
+		if (!matches! || matches.length === 0) {
+			console.log('No matches found for filter [src/buildAdHocDictionary.ts getFilteredImages()]')
+			return null
+		}
+
+		const formattedData = FilterHelpers.formatData(matches!)
+		return formattedData
 	}
 }
 

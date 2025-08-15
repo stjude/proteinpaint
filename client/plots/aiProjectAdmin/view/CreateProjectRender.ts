@@ -73,7 +73,7 @@ export class CreateProjectRender {
 					// return
 				}
 				const selections = await this.interactions.getImages(this.filter)
-				if (this.filter && (selections.status != 'ok' || selections.images.length === 0)) {
+				if (this.filter && (selections.status != 'ok' || selections.data.length === 0)) {
 					alert('No images match your filter criteria.')
 					return
 				}
@@ -84,12 +84,12 @@ export class CreateProjectRender {
 						classes: this.classesTable!.rows.map(row => {
 							return { label: row[1].value, color: row[2].color }
 						}),
-						images: selections.images
+						images: selections.data.images
 					}
 				})
 
 				this.dom.holder.selectAll('*').remove()
-				new SelectorTableRender(this.dom.holder, this.app, selections.images)
+				new SelectorTableRender(this.dom.holder, this.app, selections.data)
 			})
 	}
 

@@ -20,7 +20,7 @@ export type AIProjectAdminRequest = {
 export type AIProjectAdminResponse = {
 	status: 'ok' | 'error'
 	error?: string
-	images?: any[]
+	images?: { cols: any[]; rows: any[]; images: string[] }[]
 }
 
 export const aiProjectAdminPayload: RoutePayload = {

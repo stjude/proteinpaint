@@ -4,14 +4,14 @@ import { summaryStats } from '#shared/descriptive.stats.js'
 /** Helper functions for building ad hoc dictionaries.
  * Only used in the build script. */
 export default class BuildHelpers {
-	static sampleKeyIdx: number | null
+	static imageKeyIdx: number | null
 
-	public static makeParentTerms(header: string, id2term: Map<string, any>, sampleKey: string) {
+	public static makeParentTerms(header: string, id2term: Map<string, any>, imageKey: string) {
 		const columns = header.split(',')
 
 		for (const [i, col] of columns.entries()) {
-			if (col.trim().toLowerCase() == sampleKey.trim().toLowerCase()) {
-				this.sampleKeyIdx = i
+			if (col.trim().toLowerCase() == imageKey.trim().toLowerCase()) {
+				this.imageKeyIdx = i
 			}
 
 			const term = {
@@ -67,7 +67,7 @@ export default class BuildHelpers {
 			//Explicitly checks for pos and neg numbers
 			const numValuesOnly = [...values].every(v => typeof v === 'string' && /^-?\d+$/.test(v))
 			/** Sample ids/names are likely numbers but categorical terms */
-			if (!numValuesOnly || term.index == this.sampleKeyIdx!) {
+			if (!numValuesOnly || term.index == this.imageKeyIdx!) {
 				/** Return the values in the set as an object with increasing
 				 * indices as keys with the values as labels.*/
 				termValues.forEach(v => {

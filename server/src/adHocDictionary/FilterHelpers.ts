@@ -1,16 +1,16 @@
 export default class FilterHelpers {
-	static allSamplesSet: Set<string>
+	static allImagesSet: Set<string>
 	static dataRows: string[][]
-	static headersIdxMap: Map<string, number>
-	static sampleKeyIdx: number
+	static headersMap: Map<string, { idx: number; label: string }>
+	static imageKeyIdx: number
 
-	constructor(sampleKeyIdx: number, headersIdx: Map<string, number>) {
-		FilterHelpers.sampleKeyIdx = sampleKeyIdx
-		FilterHelpers.headersIdxMap = headersIdx
+	constructor(imageKeyIdx: number, headersMap: Map<string, { idx: number; label: string }>) {
+		FilterHelpers.imageKeyIdx = imageKeyIdx
+		FilterHelpers.headersMap = headersMap
 	}
 
 	public static normalizeFilter(raw: any) {
-		if (!raw) return null
+		if (!raw || (raw.type == 'tvslst' && !raw?.lst.length)) return null
 
 		if (raw.type === 'tvslst') {
 			return {
@@ -49,30 +49,32 @@ export default class FilterHelpers {
 				}
 			}
 		}
-
 		return null
 	}
 
 	public static getMatches(filter: any, lines: string[]): string[] {
 		FilterHelpers.dataRows = lines.slice(1).map(l => l.split(','))
 
-		FilterHelpers.allSamplesSet = new Set<string>()
-		const samplesIdx = new Map<string, number>()
+		FilterHelpers.allImagesSet = new Set<string>()
+		const imagesIdx = new Map<string, number>()
 
 		FilterHelpers.dataRows.forEach((row, idx) => {
-			FilterHelpers.allSamplesSet.add(row[FilterHelpers.sampleKeyIdx])
-			samplesIdx.set(row[FilterHelpers.sampleKeyIdx], idx)
+			FilterHelpers.allImagesSet.add(row[this.imageKeyIdx])
+			imagesIdx.set(row[this.imageKeyIdx], idx)
 		})
 
-		const matchSamples = [...FilterHelpers.evalNode(filter)]
-
-		const samples: any = []
-		for (const sample of matchSamples) {
-			const idx = samplesIdx.get(sample)
-			if (idx != null) samples.push(FilterHelpers.dataRows[idx])
+		const matchedSamples = filter == null ? [...FilterHelpers.allImagesSet] : [...FilterHelpers.evalNode(filter)]
+		const images: any = []
+		if (!matchedSamples || !matchedSamples.length) {
+			console.log('No matches found for filter [src/adHocDictionary/FilterHelpers.ts getMatches()]')
+			return images
 		}
 
-		return samples
+		for (const image of matchedSamples) {
+			const idx = imagesIdx.get(image)
+			if (idx != null) images.push(FilterHelpers.dataRows[idx])
+		}
+		return images
 	}
 
 	private static evalNode(filter): Set<string> {
@@ -86,7 +88,7 @@ export default class FilterHelpers {
 				acc =
 					g.join === 'or' ? FilterHelpers.joinSampleList(acc, childSets[i]) : FilterHelpers.intersect(acc, childSets[i])
 			}
-			if (g.in === false) acc = FilterHelpers.findOthers(FilterHelpers.allSamplesSet, acc)
+			if (g.in === false) acc = FilterHelpers.findOthers(acc)
 			return acc
 		}
 		return FilterHelpers.evalLeaf(filter)
@@ -103,7 +105,7 @@ export default class FilterHelpers {
 		const cached = leafCache.get(key)
 		if (cached) return cached
 
-		const colIdx = FilterHelpers.headersIdxMap.get(leaf.termid)
+		const colIdx = FilterHelpers.headersMap.get(leaf.termid)
 		if (colIdx == null) {
 			const empty = new Set<string>()
 			leafCache.set(key, empty)
@@ -112,11 +114,11 @@ export default class FilterHelpers {
 
 		const matched = new Set<string>()
 		for (const row of FilterHelpers.dataRows) {
-			const cell = (row[colIdx] ?? '').trim()
-			if (cell && match(leaf, cell)) matched.add(row[this.sampleKeyIdx])
+			const cell = (row[colIdx.idx] ?? '').trim()
+			if (cell && match(leaf, cell)) matched.add(row[this.imageKeyIdx])
 		}
 
-		const result = leaf.isNot ? FilterHelpers.findOthers(FilterHelpers.allSamplesSet, matched) : matched
+		const result = leaf.isNot ? FilterHelpers.findOthers(matched) : matched
 		leafCache.set(key, result)
 		return result
 	}
@@ -134,7 +136,7 @@ export default class FilterHelpers {
 		})
 	}
 
-	/** Find samples present in both sets */
+	/** Find images present in both sets */
 	private static intersect(set1: Set<string>, set2: Set<string>) {
 		const intersectingSamples = new Set<string>()
 		const [smallestSet, largestSet] = set1.size < set2.size ? [set1, set2] : [set2, set1]
@@ -143,17 +145,37 @@ export default class FilterHelpers {
 		return intersectingSamples
 	}
 
-	/** Add together sample sets when join == 'add' */
+	/** Add together image sets when join == 'add' */
 	private static joinSampleList(set1: Set<string>, set2: Set<string>) {
 		const list = new Set<string>(set1)
 		for (const v of set2) list.add(v)
 		return list
 	}
 
-	/** If term is negated, find all other samples */
-	private static findOthers(all: Set<string>, subset: Set<string>) {
-		const otherSamples = new Set<string>(all)
+	/** If term is negated, find all other images */
+	private static findOthers(subset: Set<string>) {
+		const otherSamples = new Set<string>(FilterHelpers.allImagesSet)
 		for (const v of subset) otherSamples.delete(v)
 		return otherSamples
+	}
+
+	public static formatData(matches: string[]) {
+		const cols = [...FilterHelpers.headersMap.values()].map(h => {
+			return { label: h.label }
+		})
+		//Ensure the image ID label appears first
+		cols.unshift(cols.splice(this.imageKeyIdx, 1)[0])
+
+		const rows = matches.map(m => {
+			const row: any = []
+			for (const value of m) {
+				row.push({ value: value.trim() || '' })
+			}
+			//Ensure the image ID appears in first col
+			row.unshift(row.splice(this.imageKeyIdx, 1)[0])
+			return row
+		})
+
+		return { cols, rows, images: matches.map(m => m[this.imageKeyIdx]) }
 	}
 }
