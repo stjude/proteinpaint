@@ -3637,7 +3637,7 @@
   },
   "plots/barchart.events.js": {
     "lines": {
-      "total": 372,
+      "total": 375,
       "covered": 1,
       "skipped": 0,
       "pct": 0.26
@@ -3649,13 +3649,13 @@
       "pct": 0
     },
     "statements": {
-      "total": 404,
+      "total": 408,
       "covered": 1,
       "skipped": 0,
       "pct": 0.24
     },
     "branches": {
-      "total": 431,
+      "total": 433,
       "covered": 0,
       "skipped": 0,
       "pct": 0
