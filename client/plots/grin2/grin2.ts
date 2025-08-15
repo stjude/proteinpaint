@@ -580,11 +580,7 @@ class GRIN2 extends RxComponentInner {
 
 			Object.entries(result.processingSummary).forEach(([key, value]) => {
 				const displayKey = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())
-				const displayValue = Array.isArray(value)
-					? value.join(', ')
-					: typeof value === 'object' && value !== null
-					? JSON.stringify(value)
-					: String(value)
+				const displayValue = Array.isArray(value) ? value.join(', ') : String(value)
 				table.addRow(displayKey, displayValue)
 			})
 		}
