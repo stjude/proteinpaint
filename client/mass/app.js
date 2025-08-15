@@ -189,10 +189,31 @@ class MassApp {
 		}
 	}
 
-	printError(e) {
+	async printError(e) {
 		const errdiv = e.errdiv || this.dom.errdiv
 		if (errdiv) errdiv.style('display', '').html('').style('background-color', '')
-		sayerror(errdiv || this.opts.holder, 'Error: ' + (e.message || e.error || e))
+		let message = `Error: ${e.message || e.error || e}`
+		if (message.includes('Loading chunk') || message.includes('fetch dynamically imported')) {
+			const versionInfo = sessionStorage.getItem('versionInfo')
+			if (versionInfo) {
+				try {
+					const ver = JSON.parse(versionInfo)
+					const health = await fetch('/healthcheck').then(r => r.json())
+					console.log(201, ver, health.versionInfo)
+					if (
+						window.location.hostname.includes('localhost') ||
+						ver.codedate !== health.versionInfo.codedate ||
+						JSON.stringify(ver.deps) !== JSON.stringify(health.versionInfo.deps)
+					) {
+						message = `Please refresh the page - the portal code has been updated. (${message})`
+					}
+				} catch (e) {
+					console.trace(e)
+				}
+			}
+		}
+
+		sayerror(errdiv || this.opts.holder, message)
 		if (e.stack) console.log(e.stack)
 		this.bus.emit('error')
 	}

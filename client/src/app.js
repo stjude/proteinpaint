@@ -197,6 +197,8 @@ export function runproteinpaint(arg) {
 			app.launchDate = data.launchdate
 			await setAuth({ dsAuth: data.dsAuth, holder: app.holder })
 
+			sessionStorage.setItem('versionInfo', JSON.stringify(data.versionInfo))
+
 			if (data.commonOverrides || arg.commonOverrides) {
 				const commonOverrides = Object.assign(data.commonOverrides || {}, arg.commonOverrides || {})
 				// NOTE: required or imported code files are only loaded once

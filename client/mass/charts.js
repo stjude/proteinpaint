@@ -603,8 +603,13 @@ function setRenderers(self) {
 
 	self.loadChartSpecificMenu = async chart => {
 		self.dom.tip.clear()
-		const _ = await import(`../plots/${chart.chartType}.js`)
-		_.makeChartBtnMenu(self.dom.tip.d, self, chart.chartType)
+
+		try {
+			const _ = await import(`../plots/${chart.chartType}.js`)
+			_.makeChartBtnMenu(self.dom.tip.d, self, chart.chartType)
+		} catch (e) {
+			self.app.printError(e)
+		}
 	}
 
 	self.prepPlot = function (chart) {

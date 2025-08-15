@@ -65,6 +65,7 @@ return error message as the service is out
 			headermessage: serverconfig.headermessage,
 			base_zindex: serverconfig.base_zindex,
 			pkgver: versionInfo.pkgver,
+			versionInfo,
 			codedate: versionInfo.codedate, // still useful to know the package build/publish date in the response payload, even if it's not displayed
 			launchdate: versionInfo.launchdate,
 			hasblat,
