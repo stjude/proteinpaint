@@ -69,7 +69,7 @@ export class CreateProjectRender {
 					else InvalidDataUI.render(this.dom.errorDiv, invalidInfo)
 					return
 				}
-				const selections = await this.interactions.getImages(this.filter)
+				const selections: any = await this.interactions.getImages(this.filter)
 				if (this.filter && (selections.status != 'ok' || selections.data.length === 0)) {
 					alert('No images match your filter criteria.')
 					return
