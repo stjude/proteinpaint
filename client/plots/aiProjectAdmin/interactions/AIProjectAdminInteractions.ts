@@ -1,4 +1,5 @@
 import { Model } from '../model/Model'
+import type { AIProjectAdminResponse } from '#types'
 
 export class AIProjectAdminInteractions {
 	app: any
@@ -72,7 +73,7 @@ export class AIProjectAdminInteractions {
 		}
 	}
 
-	async getImages(filter) {
+	async getImages(filter): Promise<AIProjectAdminResponse> {
 		const config = this.getConfig()
 		return await this.app.vocabApi.getAiImages(config.settings.project, filter)
 	}

@@ -1,7 +1,7 @@
 import { filterInit, getNormalRoot } from '#filter'
 import { ClassesTableRender } from './ClassesTableRender'
 import type { Elem } from '../../../types/d3'
-// import { InvalidDataUI, sayerror } from '#dom'
+import { InvalidDataUI, sayerror } from '#dom'
 import type { AIProjectAdminInteractions } from '../interactions/AIProjectAdminInteractions'
 import { SelectorTableRender } from './SelectorTableRender'
 
@@ -64,15 +64,12 @@ export class CreateProjectRender {
 				const invalidInfo = this.validateInput()
 				const numInvalid = invalidInfo.entries?.length
 				if (numInvalid) {
-					/** Validation commented out for development.
-					 * Uncomment before production
-					 * TODO: allow user to ignore filter error on second click
-					 */
-					// if (numInvalid === 1) sayerror(this.dom.errorDiv, invalidInfo.entries[0].reason)
-					// else InvalidDataUI.render(this.dom.errorDiv, invalidInfo)
-					// return
+					/** TODO: allow user to ignore filter error on second click */
+					if (numInvalid === 1) sayerror(this.dom.errorDiv, invalidInfo.entries[0].reason)
+					else InvalidDataUI.render(this.dom.errorDiv, invalidInfo)
+					return
 				}
-				const selections = await this.interactions.getImages(this.filter)
+				const selections: any = await this.interactions.getImages(this.filter)
 				if (this.filter && (selections.status != 'ok' || selections.data.length === 0)) {
 					alert('No images match your filter criteria.')
 					return

@@ -4,21 +4,17 @@ For datasets receiving metadata via api, an ad hoc dictionary can be created on 
 To init, the following must be in the dataset file: 
 ```
 cohort: {
-    {
-        termdb: {
-            dictionary: {
-                aiApi: true,
-                source: {
-                    file: //path,
-                    sampleKey: //matches the col header of the sample key
-                }
+    termdb: {
+        dictionary: {
+            aiApi: true,
+            source: {
+                file: //path,
+                sampleKey: //matches the col header of the sample key
             }
-        }
-        ...
+        }...
     }
 }
 ```
-
 ## Build
 The build helpers create the term objects stored in memory. 
 
