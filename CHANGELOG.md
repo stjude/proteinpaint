@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- Added display of GRIN2 processing stats
+
 
 ## 2.139.1
 
