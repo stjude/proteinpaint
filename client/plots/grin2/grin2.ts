@@ -441,14 +441,12 @@ class GRIN2 extends RxComponentInner {
 				body: JSON.stringify(requestData)
 			})
 
-			const result = await response
-
-			if (result.status === 'error') {
-				this.dom.div.style('padding', '20px').text(`GRIN2 analysis failed: ${result.error}`)
+			if (response.status === 'error') {
+				this.dom.div.style('padding', '20px').text(`GRIN2 analysis failed: ${response.error}`)
 				return
 			}
 
-			this.renderResults(result)
+			this.renderResults(response)
 		} catch (error) {
 			this.dom.div.selectAll('*').remove()
 			this.dom.div.style('padding', '20px').text(`Error: ${error instanceof Error ? error.message : String(error)}`)
