@@ -19,9 +19,9 @@ import type {
 	CustomNumericBinConfig
 } from '#types'
 import { TwBase, type TwOpts } from './TwBase.ts'
-import { copyMerge } from '#rx'
 import { isNumeric } from '#shared/helpers.js'
 import { roundValueAuto } from '#shared/roundValue.js'
+import { copyMerge } from '#rx'
 
 export class NumericBase extends TwBase {
 	// type is set by TwBase constructor
@@ -79,7 +79,6 @@ export class NumericBase extends TwBase {
 				: tw.q.mode == 'spline'
 				? 'NumTWSpline'
 				: tw.type
-
 		/*
 			For each of fill() functions below:
 			1. The `tw` argument must already have a tw.type string value, 
@@ -109,6 +108,11 @@ export class NumericBase extends TwBase {
 			default:
 				throw `tw.type='${tw.type} (q.mode:q.type=${tw.q.mode}:${tw.q.type}' is not supported by NumericBase.fill()`
 		}
+	}
+
+	getTitleText() {
+		if (this.term.type == 'geneExpression') return `${this.term.name} expression`
+		return this.term.name
 	}
 }
 

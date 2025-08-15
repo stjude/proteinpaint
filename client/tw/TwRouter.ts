@@ -1,9 +1,12 @@
 import type { TermWrapper } from '@sjcrh/proteinpaint-types/updated'
 import type { TwOpts, TwBase } from './TwBase'
 import { mayHydrateDictTwLst } from '../termsetting/termsetting.ts'
+// TODO: may convert these to dynamic imports
 import { CategoricalBase, CatValues, CatPredefinedGS, CatCustomGS } from './categorical'
-import { GvBase } from './geneVariant'
+import { GvBase, GvPredefinedGS } from './geneVariant'
 import { NumericBase, NumRegularBin, NumCustomBins, NumCont } from './numeric'
+
+export const routedTermTypes = new Set(['categorical', 'integer', 'float', 'geneVariant', 'geneExpression'])
 
 export type UseCase = {
 	target: string
@@ -37,8 +40,11 @@ export class TwRouter {
 			case 'NumTWCont':
 				return new NumCont(tw, opts)
 
+			case 'GvPredefinedGsTW':
+				return new GvPredefinedGS(tw, opts)
+
 			default:
-				//console.log(57, tw)
+				// console.log(46, tw)
 				throw `unable to init(tw)`
 		}
 	}
@@ -59,6 +65,7 @@ export class TwRouter {
 			}
 			case 'integer':
 			case 'float':
+			case 'geneExpression':
 				return await NumericBase.fill(tw, opts)
 
 			// case 'condition':
