@@ -18,14 +18,10 @@ class GRIN2 extends RxComponentInner {
 		const holder = opts.holder.classed('sjpp-grin2-main', true)
 		const controls = opts.controls ? holder : holder.append('div')
 		const div = holder.append('div').style('padding', '5px').style('display', 'inline-block')
-		const errorDiv = div.append('div').attr('id', 'sjpp-grin2-error').style('opacity', 0.75)
-		const plotDiv = div.append('div').attr('id', 'sjpp-grin2-plot')
 
 		this.dom = {
 			controls: controls.style('display', 'block'),
 			div,
-			error: errorDiv,
-			plot: plotDiv,
 			tip: new Menu({ padding: '' })
 		}
 
@@ -287,7 +283,6 @@ class GRIN2 extends RxComponentInner {
 				holder: checkboxDiv,
 				labeltext: classInfo.label,
 				checked: defaultChecked.has(classKey),
-				id: `consequence-${classKey}`,
 				divstyle: {
 					'font-size': '11px',
 					margin: '0',
@@ -428,8 +423,8 @@ class GRIN2 extends RxComponentInner {
 			this.runButton.property('disabled', true).text('Running GRIN2...').style('opacity', '0.6')
 
 			// Clear previous results
-			this.dom.error.style('padding', '0').text('')
-			this.dom.plot.selectAll('*').remove()
+			this.dom.div.style('padding', '0').text('')
+			this.dom.div.selectAll('*').remove()
 
 			// Get configuration and make request
 			const configValues = this.getConfigValues()
@@ -449,14 +444,14 @@ class GRIN2 extends RxComponentInner {
 			const result = await response
 
 			if (result.status === 'error') {
-				this.dom.error.style('padding', '20px').text(`GRIN2 analysis failed: ${result.error}`)
+				this.dom.div.style('padding', '20px').text(`GRIN2 analysis failed: ${result.error}`)
 				return
 			}
 
 			this.renderResults(result)
 		} catch (error) {
-			this.dom.plot.selectAll('*').remove()
-			this.dom.error.style('padding', '20px').text(`Error: ${error instanceof Error ? error.message : String(error)}`)
+			this.dom.div.selectAll('*').remove()
+			this.dom.div.style('padding', '20px').text(`Error: ${error instanceof Error ? error.message : String(error)}`)
 		} finally {
 			// Restore button state
 			this.runButton.property('disabled', false).text('Run GRIN2').style('opacity', '1')
@@ -476,7 +471,7 @@ class GRIN2 extends RxComponentInner {
 	private renderResults(result: any) {
 		// Display Manhattan plot
 		if (result.pngImg) {
-			const plotContainer = this.dom.plot.append('div').style('text-align', 'left').style('margin', '20px 0')
+			const plotContainer = this.dom.div.append('div').style('text-align', 'left').style('margin', '20px 0')
 
 			// Create header with title and download button
 			const headerDiv = plotContainer
@@ -514,7 +509,7 @@ class GRIN2 extends RxComponentInner {
 		}
 		// Display top genes table
 		if (result.topGeneTable) {
-			const tableContainer = this.dom.plot.append('div').style('margin', '20px 0')
+			const tableContainer = this.dom.div.append('div').style('margin', '20px 0')
 
 			// Create header with title and Matrix button
 			const headerDiv = tableContainer
@@ -570,7 +565,7 @@ class GRIN2 extends RxComponentInner {
 
 		// Display timing information
 		if (result.timing) {
-			this.dom.plot
+			this.dom.div
 				.append('div')
 				.style('margin', '20px 0')
 				.style('font-size', '12px')
@@ -629,7 +624,7 @@ class GRIN2 extends RxComponentInner {
 			})
 		} catch (error) {
 			console.error('Error creating matrix from genes:', error)
-			this.dom.error
+			this.dom.div
 				.style('padding', '20px')
 				.style('color', 'red')
 				.text(`Error creating matrix: ${error instanceof Error ? error.message : 'Unknown error'}`)
