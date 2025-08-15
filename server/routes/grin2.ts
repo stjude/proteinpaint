@@ -123,7 +123,8 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 	const pyInput = {
 		genedb: path.join(serverconfig.tpmasterdir, g.genedb.dbfile),
 		chromosomelist: {} as { [key: string]: number },
-		lesion: JSON.stringify(lesions)
+		lesion: JSON.stringify(lesions),
+		devicePixelRatio: request.devicePixelRatio
 	}
 
 	// Build chromosome list from genome reference
@@ -167,6 +168,7 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 	const response: GRIN2Response = {
 		status: 'success',
 		pngImg: resultData.png[0],
+		plotData: resultData.plotData,
 		topGeneTable: resultData.topGeneTable,
 		totalGenes: resultData.totalGenes,
 		showingTop: resultData.showingTop,
