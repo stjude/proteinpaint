@@ -10,6 +10,7 @@ export default class FilterHelpers {
 		FilterHelpers.headersMap = headersMap
 	}
 
+	/** Mutate the filter object so it's easier to work with */
 	public static normalizeFilter(raw: any) {
 		if (!raw || (raw.type == 'tvslst' && !raw?.lst.length)) return null
 
@@ -53,9 +54,11 @@ export default class FilterHelpers {
 		return null
 	}
 
+	/** Returns list of images matching the filter */
 	public static getMatches(filter: any, lines: string[]): string[] {
 		FilterHelpers.dataRows = lines.slice(1).map(l => l.split(','))
 
+		//TODO: keep FilterHelpers.allImagesSet or use only imagesIdx??
 		FilterHelpers.allImagesSet = new Set<string>()
 		const imagesIdx = new Map<string, number>()
 
@@ -64,14 +67,16 @@ export default class FilterHelpers {
 			imagesIdx.set(row[this.imageKeyIdx], idx)
 		})
 
-		const matchedSamples = filter == null ? [...FilterHelpers.allImagesSet] : [...FilterHelpers.evalNode(filter)]
+		/** If no filter.tvs.lst is provided, return all images
+		 * Otherwise iterate over the filter tree to return matches. */
+		const matchedImages = filter == null ? [...FilterHelpers.allImagesSet] : [...FilterHelpers.evalNode(filter)]
 		const images: any = []
-		if (!matchedSamples || !matchedSamples.length) {
+		if (!matchedImages || !matchedImages.length) {
 			console.log('No matches found for filter [src/adHocDictionary/FilterHelpers.ts getMatches()]')
 			return images
 		}
 
-		for (const image of matchedSamples) {
+		for (const image of matchedImages) {
 			const idx = imagesIdx.get(image)
 			if (idx != null) images.push(FilterHelpers.dataRows[idx])
 		}
@@ -88,7 +93,7 @@ export default class FilterHelpers {
 			let acc = new Set<string>(childSets[0])
 			for (let i = 1; i < childSets.length; i++) {
 				acc =
-					g.join === 'or' ? FilterHelpers.joinSampleList(acc, childSets[i]) : FilterHelpers.intersect(acc, childSets[i])
+					g.join === 'or' ? FilterHelpers.joinImageList(acc, childSets[i]) : FilterHelpers.intersect(acc, childSets[i])
 			}
 			if (g.in === false) acc = FilterHelpers.findOthers(acc)
 			return acc
@@ -126,6 +131,7 @@ export default class FilterHelpers {
 		return result
 	}
 
+	/** Check if image falls within the filter range via default min and max values. */
 	private static defaultIsMatch(leaf, raw: string) {
 		if (leaf.type === 'categorical') {
 			return leaf.filter.includes(raw)
@@ -141,15 +147,15 @@ export default class FilterHelpers {
 
 	/** Find images present in both sets */
 	private static intersect(set1: Set<string>, set2: Set<string>) {
-		const intersectingSamples = new Set<string>()
+		const intersectingImages = new Set<string>()
 		const [smallestSet, largestSet] = set1.size < set2.size ? [set1, set2] : [set2, set1]
 		//Evaluate the smallest to reduce computing power
-		for (const v of smallestSet) if (largestSet.has(v)) intersectingSamples.add(v)
-		return intersectingSamples
+		for (const v of smallestSet) if (largestSet.has(v)) intersectingImages.add(v)
+		return intersectingImages
 	}
 
 	/** Add together image sets when join == 'add' */
-	private static joinSampleList(set1: Set<string>, set2: Set<string>) {
+	private static joinImageList(set1: Set<string>, set2: Set<string>) {
 		const list = new Set<string>(set1)
 		for (const v of set2) list.add(v)
 		return list
@@ -157,9 +163,9 @@ export default class FilterHelpers {
 
 	/** If term is negated, find all other images */
 	private static findOthers(subset: Set<string>) {
-		const otherSamples = new Set<string>(FilterHelpers.allImagesSet)
-		for (const v of subset) otherSamples.delete(v)
-		return otherSamples
+		const otherImages = new Set<string>(FilterHelpers.allImagesSet)
+		for (const v of subset) otherImages.delete(v)
+		return otherImages
 	}
 
 	/** Formats matches into col and rows for table rendering. */
