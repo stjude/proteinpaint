@@ -93,6 +93,11 @@ function setRenderers(self) {
 	}
 
 	self.render = function (data) {
+		if (!data?.terminfo) {
+			// guard against invalid data returned by server
+			self.dom.details.append('div').style('margin-top', '10px').text('No definition found.')
+			return
+		}
 		self.dom.tbody.selectAll('*').remove()
 		if (data.terminfo.src) {
 			for (let s of data.terminfo.src) {
