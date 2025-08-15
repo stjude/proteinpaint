@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.139.1
 
 Fixes:
 - Simplified the GRIN2 UI and route code
