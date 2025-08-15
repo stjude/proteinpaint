@@ -14,32 +14,6 @@ export default function getHandlers(self) {
 	self.dom.tip = tip
 	const s = self.settings
 
-	function barLabelClickHandler(event) {
-		// same handler for row label click in horziontal orientation
-		// or col label click in vertical orientation, since
-		// row/column labels only apply to bars
-		const d = event.target.__data__
-		if (d === undefined) return
-		const termNum = d.type == 'col' ? 'term' : 'term2'
-		const term = self.config.term
-		self.app.dispatch({
-			type: 'plot_edit',
-			id: self.id,
-			config: {
-				term: {
-					//Fix for list samples options not working
-					//after hiding a category
-					$id: term?.$id,
-					id: term.id,
-
-					isAtomic: true,
-					term: term.term,
-					q: getUpdatedQfromClick(d, term, true)
-				}
-			}
-		})
-	}
-
 	return {
 		chart: {
 			title(chart) {
@@ -172,7 +146,9 @@ export default function getHandlers(self) {
 					? self.config.term.values[d.id].label
 					: d
 			},
-			click: barLabelClickHandler,
+			click: self.opts.bar_click_override
+				? (event, d) => self.opts.bar_click_override(getTermValues(d, self))
+				: (event, d) => handle_click(event, self, d),
 			mouseover: event => {
 				event.stopPropagation()
 				tip.show(event.clientX, event.clientY).d.html('Click to hide bar')
@@ -189,7 +165,9 @@ export default function getHandlers(self) {
 					? self.config.term.values[d.id].label
 					: d
 			},
-			click: barLabelClickHandler,
+			click: self.opts.bar_click_override
+				? (event, d) => self.opts.bar_click_override(getTermValues(d, self))
+				: (event, d) => handle_click(event, self, d),
 			mouseover: event => {
 				event.stopPropagation()
 				tip.show(event.clientX, event.clientY).d.html('Click to hide bar')
@@ -426,7 +404,7 @@ function handle_click(event, self, chart) {
 	const options = []
 	if (self.opts.bar_click_opts.includes('hide_bar')) {
 		options.push({
-			label: d.seriesId ? 'Hide "' + seriesLabel + '"' : 'Hide',
+			label: data.seriesId ? 'Hide "' + seriesLabel + '"' : 'Hide',
 			callback: () => {
 				const term = self.config.term
 				self.app.dispatch({
@@ -438,14 +416,14 @@ function handle_click(event, self, chart) {
 							id: term.id,
 							isAtomic: true,
 							term: term.term,
-							q: getUpdatedQfromClick({ id: d.seriesId, type: 'col' }, term, true)
+							q: getUpdatedQfromClick({ id: data.seriesId, type: 'col' }, term, true)
 						}
 					}
 				})
 			}
 		})
 
-		if (d.dataId || d.dataId === 0) {
+		if (data.dataId || data.dataId === 0) {
 			options.push({
 				label: 'Hide "' + dataLabel + '" ' + icon,
 				callback: () => {
@@ -458,7 +436,7 @@ function handle_click(event, self, chart) {
 							term2: {
 								isAtomic: true,
 								term: term2.term,
-								q: getUpdatedQfromClick({ id: d.dataId, type: 'row' }, term2, true)
+								q: getUpdatedQfromClick({ id: data.dataId, type: 'row' }, term2, true)
 							}
 						}
 					})
@@ -480,7 +458,7 @@ function handle_click(event, self, chart) {
 	if (self.config.displaySampleIds) {
 		options.push({
 			label: 'List samples',
-			callback: async () => await listSamples(event, self, d.seriesId, d.dataId, chart.chartId)
+			callback: async () => await listSamples(event, self, data.seriesId, data.dataId, chart.chartId)
 		})
 	}
 
