@@ -2,7 +2,6 @@
 	"ppcalls": [
 		{
 			"label": "Whole Exome",
-			"download": "https://proteinpaint.stjude.org/ppdemo/hg19/bam/bamDemoData.westkit.tar.gz",
 			"urlparam": "?genome=hg19&block=1&position=chr4:55589607-55590007&bamfile=Test%20WES%20BAM,proteinpaint_demo/hg19/bam/kit.exon8.del.bam",
 			"runargs": {
 				"parseurl": true,
@@ -35,7 +34,6 @@
 			"label": "TP53 Deletion (deep sequencing)",
 			"message": "For specific variants, use the <span style='font-family: courier; display: inline-block; opacity: 0.7;font-size:16px;'>variants</span> key. Enter a number that is <em>zero based</em> for the position (i.e. <span style='font-family: courier; display: inline-block; opacity: 0.7; font-size:16px;'>pos</span> value).",
 			"urlparam": "?genome=hg19&block=1&bamfile=TP53_del,proteinpaint_demo/hg19/bam/TP53_del.bam&position=chr17:7578191-7578591&variant=chr17.7578383.AGCAGCGCTCATGGTGGGG.A&bedjfilterbyname=NM_000546",
-			"download": "https://proteinpaint.stjude.org/ppdemo/hg19/bam/bamTP53ExonDelDemo.tar.gz",
 			"runargs": {
 				"parseurl": true,
 				"block": true,
@@ -74,7 +72,6 @@
 		{
 			"label": "CBL Complex Mutation (exome-seq)",
 			"urlparam": "?genome=hg19&block=1&bamfile=SJAML040555_D2%20WES,proteinpaint_demo/hg19/bam/wrong_indel.bam&position=chr4:55589768-55589770&variant=chr4.55589768.CTTACGA.AGGG",
-			"download": "https://proteinpaint.stjude.org/ppdemo/hg19/bam/bamExonMutDemo.tar.gz",
 			"runargs": {
 				"parseurl": true,
 				"block": true,
@@ -113,7 +110,6 @@
 		{
 			"label": "SETD2 Splice Site Insertion (RNA-seq)",
 			"urlparam": "?genome=hg19&block=1&position=chr3:47155260-47155500&hlregion=chr3:47155365-47155365&bamfile=splice_junction_variant,proteinpaint_demo/hg19/bam/splice_junction_variant.bam&variant=chr3.47155366.G.GGGGCT",
-			"download": "https://proteinpaint.stjude.org/ppdemo/hg19/bam/bamSpliceSiteDemo.tar.gz",
 			"runargs": {
 				"parseurl": true,
 				"block": true,
@@ -152,7 +148,6 @@
 		{
 			"label": "Multi-allelic Complex Mutations (RNA-seq)",
 			"message": "In this example, two alternate alleles, CTGACAGGCT and GTTTC, for multi-allelic KIT exonic complex mutations in one tumor are shown. Continue scrolling down to see the second BAM track for GTTTC",
-			"download": "https://proteinpaint.stjude.org/ppdemo/hg19/bam/bamMAMutDemo.tar.gz",
 			"runargs": {
 				"parseurl": true,
 				"block": true,
@@ -221,7 +216,6 @@
 		{
 			"label": "CREBBP Focal Deletion",
 			"urlparam": "?genome=hg19&block=1&bamfile=Focal deletion demo,proteinpaint_demo/hg19/bam/crebbp.bam&position=chr16:3800245-3803429",
-			"download": "https://proteinpaint.stjude.org/ppdemo/hg19/bam/bamExonicDelDemo.tar.gz",
 			"runargs": {
 				"parseurl": true,
 				"block": true,
