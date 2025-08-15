@@ -304,12 +304,33 @@ function filterAndConvertSnvIndel(
 		return null
 	}
 
+	// TODO: implement alleleic total depth and alt allele count filters
+	// TODO: implement hypermutator threshold filter (maybe calculate number of mutations per sample?)
+
 	return [sampleName, entry.chr, entry.pos, entry.pos, 'mutation']
 }
 
 function filterAndConvertCnv(sampleName: string, entry: any, options: GRIN2Request['cnvOptions']): string[] | null {
 	// Must check that options are defined for typescript
-	if (!options || options.gainThreshold === undefined || options.lossThreshold === undefined) {
+	if (
+		!options ||
+		options.gainThreshold === undefined ||
+		options.lossThreshold === undefined ||
+		options.maxSegLength === undefined
+	) {
+		return null
+	}
+
+	if (!Number.isInteger(entry.start)) {
+		return null
+	}
+
+	if (!Number.isInteger(entry.stop)) {
+		return null
+	}
+
+	// Filter max segment length
+	if (options.maxSegLength > 0 && entry.stop - entry.start > options.maxSegLength) {
 		return null
 	}
 
@@ -320,13 +341,7 @@ function filterAndConvertCnv(sampleName: string, entry: any, options: GRIN2Reque
 	if (!isGain && !isLoss) return null
 	const lesionType = isGain ? 'gain' : 'loss'
 
-	if (!Number.isInteger(entry.start)) {
-		return null
-	}
-
-	if (!Number.isInteger(entry.stop)) {
-		return null
-	}
+	// TODO: implement hypermutator threshold filter (maybe calculate number of mutations per sample?)
 
 	return [sampleName, entry.chr, entry.start, entry.stop, lesionType]
 }
