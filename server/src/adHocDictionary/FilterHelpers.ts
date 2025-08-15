@@ -1,3 +1,4 @@
+/** Helper class for filtering from termdb filter*/
 export default class FilterHelpers {
 	static allImagesSet: Set<string>
 	static dataRows: string[][]
@@ -77,6 +78,7 @@ export default class FilterHelpers {
 		return images
 	}
 
+	/** Intersects the filter with the data rows */
 	private static evalNode(filter): Set<string> {
 		if (filter.type === 'tvslst') {
 			const g = filter
@@ -94,6 +96,7 @@ export default class FilterHelpers {
 		return FilterHelpers.evalLeaf(filter)
 	}
 
+	/** Evaluates a leaf node in the filter tree */
 	private static evalLeaf(leaf, isMatch?: (leaf, cellValue: string) => boolean): Set<string> {
 		const match = isMatch ?? FilterHelpers.defaultIsMatch
 
@@ -159,6 +162,7 @@ export default class FilterHelpers {
 		return otherSamples
 	}
 
+	/** Formats matches into col and rows for table rendering. */
 	public static formatData(matches: string[]) {
 		const cols = [...FilterHelpers.headersMap.values()].map(h => {
 			return { label: h.label }
