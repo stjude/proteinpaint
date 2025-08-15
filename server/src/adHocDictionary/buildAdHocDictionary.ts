@@ -1,10 +1,10 @@
 import type { Mds3 } from '#types'
 import path from 'path'
 import fs from 'fs'
-import serverconfig from './serverconfig.js'
+import serverconfig from '../serverconfig.js'
 import { isUsableTerm } from '#shared/termdb.usecase.js'
-import BuildHelpers from './adHocDictionary/BuildHelpers.ts'
-import FilterHelpers from './adHocDictionary/FilterHelpers.ts'
+import BuildHelpers from './BuildHelpers.ts'
+import FilterHelpers from './FilterHelpers.ts'
 
 /** Will assign later based on the ds defined image column header */
 let imageKeyIdx: number | null = null
