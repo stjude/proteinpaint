@@ -469,6 +469,7 @@ class GRIN2 extends RxComponentInner {
 	private renderResults(result: any) {
 		// Display Manhattan plot
 		if (result.pngImg) {
+			console.log('GRIN2 result', result)
 			const plotContainer = this.dom.div.append('div').style('text-align', 'left').style('margin', '20px 0')
 
 			// Create header with title and download button
@@ -498,12 +499,45 @@ class GRIN2 extends RxComponentInner {
 				}
 			})
 
-			plotContainer
-				.append('img')
-				.attr('src', `data:image/png;base64,${result.pngImg}`)
-				.style('max-width', '100%')
-				.style('height', 'auto')
-				.style('border', '1px solid #ccc')
+			const plotData = result.plotData
+
+			console.log('Plot data:', plotData) // Debug: check if data exists
+			console.log('Number of points:', plotData.points.length) // Debug: check point count
+
+			const svg = plotContainer
+				.append('svg')
+				.attr('width', plotData.plot_width)
+				.attr('height', plotData.plot_height)
+				.style('border', '1px solid red') // Debug: make SVG visible
+
+			// Add the matplotlib background image
+			svg
+				.append('image')
+				.attr('xlink:href', `data:image/png;base64,${result.pngImg}`)
+				.attr('width', plotData.plot_width)
+				.attr('height', plotData.plot_height)
+
+			// Add visible interactive points using pre-calculated SVG coordinates
+			const pointsLayer = svg.append('g')
+
+			pointsLayer
+				.selectAll('circle')
+				.data(plotData.points)
+				.enter()
+				.append('circle')
+				.attr('cx', d => d.svg_x) // Use pre-calculated SVG coordinates
+				.attr('cy', d => d.svg_y) // Use pre-calculated SVG coordinates
+				.attr('r', 6)
+				.attr('fill', 'rgba(255, 0, 0, 0.5)') // Semi-transparent red for debugging
+				.attr('stroke', 'black')
+				.attr('stroke-width', 1)
+				.style('cursor', 'pointer')
+				.on('click', function (event, d) {
+					console.log('Clicked gene:', d.gene, d.type, d.q_value)
+					alert(`Clicked: ${d.gene}`) // More obvious feedback
+				})
+
+			console.log('SVG setup complete') // Debug: confirm setup finished
 		}
 		// Display top genes table
 		if (result.topGeneTable) {
