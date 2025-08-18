@@ -26,18 +26,19 @@ export class ViewModelProvider {
 		sampleId: string,
 		tileSelections: TileSelection[],
 		displayedImageIndex: number,
-		aiProjectID: string | undefined = undefined,
+		aiProjectID: number | undefined = undefined,
 		aiWSIMageFiles: Array<string> | undefined
 	): Promise<ViewModel> {
 		let wsimageLayers: Array<WSImageLayers> = []
 		let wsimageLayersLoadError: string | undefined = undefined
 		let wsImages: WSImage[] = []
 
-		if (!aiWSIMageFiles && !aiProjectID) {
+		if (sampleId) {
 			try {
+				console.log('Loading sample WS images for sampleId:', sampleId)
 				const data: SampleWSImagesResponse = await this.getSampleWSImages(genome, dslabel, sampleId)
 				wsImages = data.sampleWSImages
-				wsimageLayers = await this.getWSImageLayers(genome, dslabel, sampleId, data.sampleWSImages)
+				wsimageLayers = await this.getWSImageLayers(genome, dslabel, data.sampleWSImages, sampleId, undefined)
 			} catch (e: any) {
 				wsimageLayersLoadError = `Error loading image layers for sample  ${sampleId}: ${e.message || e}`
 			}
@@ -49,7 +50,7 @@ export class ViewModelProvider {
 				aiWSIMageFiles!
 			)
 			wsImages = data.wsimages
-			wsimageLayers = await this.getWSImageLayers(genome, dslabel, sampleId, data.wsimages)
+			wsimageLayers = await this.getWSImageLayers(genome, dslabel, data.wsimages, undefined, aiProjectID!)
 		}
 
 		return new ViewModel(wsImages, wsimageLayers, wsimageLayersLoadError, tileSelections, displayedImageIndex)
@@ -68,8 +69,9 @@ export class ViewModelProvider {
 	private async getWSImageLayers(
 		genome: string,
 		dslabel: string,
-		sampleId: string,
-		wsimages: WSImage[]
+		wsimages: WSImage[],
+		sampleId: string | undefined,
+		aiProjectID: number | undefined
 	): Promise<WSImageLayers[]> {
 		const layers: Array<WSImageLayers> = []
 
@@ -93,7 +95,12 @@ export class ViewModelProvider {
 			const imgWidth = data.slide_dimensions[0]
 			const imgHeight = data.slide_dimensions[1]
 
-			const queryParams = `wsi_image=${wsimage}&dslabel=${dslabel}&genome=${genome}&sample_id=${sampleId}`
+			let queryParams = `wsi_image=${wsimage}&dslabel=${dslabel}&genome=${genome}`
+			if (sampleId) {
+				queryParams += `&sample_id=${sampleId}`
+			} else if (aiProjectID) {
+				queryParams += `&ai_project_id=${aiProjectID}`
+			}
 
 			const zoomifyUrl = `/tileserver/layer/slide/${data.wsiSessionId}/zoomify/{TileGroup}/{z}-{x}-{y}@1x.jpg?${queryParams}`
 
@@ -119,7 +126,13 @@ export class ViewModelProvider {
 
 			if (data.overlays) {
 				for (const overlay of data.overlays) {
-					const predictionQueryParams = `wsi_image=${wsimage}&dslabel=${dslabel}&genome=${genome}&sample_id=${sampleId}`
+					let predictionQueryParams = `wsi_image=${wsimage}&dslabel=${dslabel}&genome=${genome}`
+					if (sampleId) {
+						predictionQueryParams += `&sample_id=${sampleId}`
+					} else if (aiProjectID) {
+						predictionQueryParams += `&ai_project_id=${aiProjectID}`
+					}
+
 					const zoomifyOverlayLatUrl = `/tileserver/layer/${overlay.layerNumber}/${data.wsiSessionId}/zoomify/{TileGroup}/{z}-{x}-{y}@1x.jpg?${predictionQueryParams}`
 
 					const sourceOverlay = new Zoomify({
@@ -148,7 +161,12 @@ export class ViewModelProvider {
 
 			if (overlays) {
 				for (const overlay of overlays) {
-					const overlayQueryParams = `wsi_image=${overlay}&dslabel=${dslabel}&genome=${genome}&sample_id=${sampleId}`
+					let overlayQueryParams = `wsi_image=${overlay}&dslabel=${dslabel}&genome=${genome}`
+					if (sampleId) {
+						overlayQueryParams += `&sample_id=${sampleId}`
+					} else if (aiProjectID) {
+						overlayQueryParams += `&ai_project_id=${aiProjectID}`
+					}
 
 					const zoomifyOverlayLatUrl = `/tileserver/layer/overlay/${data.wsiSessionId}/zoomify/{TileGroup}/{z}-{x}-{y}@1x.jpg?${overlayQueryParams}`
 
@@ -197,7 +215,7 @@ export class ViewModelProvider {
 	private async aiProjectImages(
 		genome: string,
 		dslabel: string,
-		aiProjectID: string,
+		aiProjectID: number,
 		aiProjectFiles: Array<string>
 	): Promise<AiProjectSelectedWSImagesResponse> {
 		const body: AiProjectSelectedWSImagesRequest = {

@@ -80,13 +80,13 @@ async function getWSImagePath(ds: any, wSImagesRequest: WSImagesRequest) {
 
 	if (!mount) throw new Error('No mount available for TileServer')
 
-	if (wSImagesRequest.sampleId && wSImagesRequest.wsimage) {
+	if (wSImagesRequest.sampleId) {
 		return path.join(
 			`${mount}/${ds.queries.WSImages.imageBySampleFolder}/${wSImagesRequest.sampleId}`,
 			wSImagesRequest.wsimage
 		)
 	} else {
-		return 'some_default_path' // Placeholder for aiProjectWSIId or other logic
+		return path.join(`${mount}/${ds.queries.WSImages.aiToolImageFolder}/`, wSImagesRequest.wsimage)
 	}
 }
 
@@ -144,9 +144,9 @@ async function getSessionId(
 		if (predictionOverlay) {
 			const mount = serverconfig.features?.tileserver?.mount
 
-			const annotationsFilePath = path.join(`${mount}/${ds.queries.WSImages.aiToolImageFolder}/`, predictionOverlay)
+			const overlayFilePath = path.join(`${mount}/${ds.queries.WSImages.aiToolImageFolder}/`, predictionOverlay)
 			const annotationsData = qs.stringify({
-				overlay_path: annotationsFilePath
+				overlay_path: overlayFilePath
 			})
 
 			const layerNumber: string = await ky
@@ -176,14 +176,17 @@ async function getSessionId(
 		if (uncertaintyOverlay) {
 			const mount = serverconfig.features?.tileserver?.mount
 
-			const annotationsFilePath = path.join(`${mount}/${ds.queries.WSImages.imageBySampleFolder}/`, uncertaintyOverlay)
-			const annotationsData = qs.stringify({
-				overlay_path: annotationsFilePath
+			const uncertaintyOverlayFilePath = path.join(
+				`${mount}/${ds.queries.WSImages.aiToolImageFolder}/`,
+				uncertaintyOverlay
+			)
+			const uncertaintyData = qs.stringify({
+				overlay_path: uncertaintyOverlayFilePath
 			})
 
 			const layerNumber: string = await ky
 				.put(`${tileServer.url}/tileserver/overlay`, {
-					body: annotationsData,
+					body: uncertaintyData,
 					timeout: 50000,
 					headers: {
 						'Content-Type': 'application/x-www-form-urlencoded',
@@ -205,7 +208,7 @@ async function getSessionId(
 	const sessionData: SessionData = await sessionManager.setSession(wsimage, sessionId, tileServer, overlays)
 
 	if (ds.queries.WSImages.getWSIPredictionPatches) {
-		const predictionPatches = await ds.queries.WSImages.getWSIPredictionPatches(wsimage)
+		const predictionPatches = await ds.queries.WSImages.getWSIPredictionPatches(1, wsimage)
 
 		if (!predictionPatches) throw new Error('No prediction files found')
 
