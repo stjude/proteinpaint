@@ -71,7 +71,7 @@ function validateQuery(ds: any) {
 				) VALUES (?, ?, ?, ?, ?, ?)
 			`)
 
-			stmt.run(1, 1, `[${annotation.coordinates[0]},${annotation.coordinates[1]}]`, timestamp, 1, 1)
+			stmt.run(1, 1, `[${annotation.coordinates[0]},${annotation.coordinates[1]}]`, timestamp, 1, 1, 1)
 
 			return { status: 'ok' }
 		} catch (error: any) {

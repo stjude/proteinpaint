@@ -224,7 +224,7 @@ export function validateWSIClassesQuery(ds: any) {
 		ORDER BY id
 	`
 
-	ds.queries.WSImages.getProjectClasses = async (projectId: number): Promise<ProjectClass[]> => {
+	ds.queries.WSImages.getAnnotationClasses = async (projectId: number): Promise<ProjectClass[]> => {
 		let connection: Database.Database | undefined
 		try {
 			const dbRelativePath = ds?.queries?.WSImages?.db?.file
