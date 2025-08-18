@@ -4,7 +4,7 @@ import * as helpers from '../../test/front.helpers.js'
 import { sleep, detectLst, detectGte, detectOne } from '../../test/test.helpers.js'
 import { getFilterItemByTag } from '../../filter/filter'
 import * as vocabData from '../../termdb/test/vocabData'
-import { hideCategory } from '../../plots/barchart.events.js'
+import { hideCategory } from '../barchart.events.js'
 
 /*
 TODO cover all combinations
