@@ -1,4 +1,4 @@
-import { dofetch3 } from '#common/dofetch'
+import { dofetch2, dofetch3 } from '#common/dofetch'
 import type { AIProjectAdminRequest, AIProjectAdminResponse } from '#types'
 
 export class Model {
@@ -20,6 +20,11 @@ export class Model {
 	public static async updateProject(_body: any, method: string): Promise<AIProjectAdminResponse> {
 		const body: AIProjectAdminRequest = Object.assign({}, _body, { for: 'admin' })
 		try {
+			if (method == 'PUT' || method == 'DELETE') {
+				/** 3rd argument is for serverData caching.
+				 * Do not cache put or delete requests */
+				return await dofetch2('aiProjectAdmin', { method, body }, {})
+			}
 			return await dofetch3('aiProjectAdmin', { method, body })
 		} catch (error) {
 			console.error('Error fetching projects:', error)

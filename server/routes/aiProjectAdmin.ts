@@ -34,12 +34,12 @@ function init({ genomes }) {
 		try {
 			const query = req.query
 			if (!query.genome || !query.dslabel) {
-				throw new Error('Genome and dataset label are required for aiProjectAdmin request')
+				throw new Error('Genome and dataset label are required for aiProjectAdmin request.')
 			}
 			const g = genomes[query.genome]
 			const ds = g.datasets[query.dslabel]
 
-			if (!ds.queries?.WSImages?.db) return
+			if (!ds.queries?.WSImages?.db) throw new Error('WSImages database not found.')
 			const db = ds.queries.WSImages.db
 
 			db.connection = connect_db(db.file, { readonly: false, fileMustExist: true })
