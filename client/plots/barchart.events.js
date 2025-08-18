@@ -546,6 +546,13 @@ async function listSamples(event, self, seriesId, dataId, chartId) {
 		const pass = mayFilterByGeneVariant(sample)
 		if (!pass) continue
 		const row = [{ value: sampleName }]
+		// add sample url, if applicable
+		{
+			const temp = self.app.vocabApi.termdbConfig?.urlTemplates?.sample
+			if (temp) {
+				row[0].url = temp.base + (sample[temp.namekey] || sample.sample)
+			}
+		}
 		/** Don't show hidden values in the results
 		 * May not be caught in server request for custom variables
 		 * with user supplied keys */
