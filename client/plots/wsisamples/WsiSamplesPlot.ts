@@ -1,7 +1,8 @@
 import { getCompInit } from '#rx'
 import wsiSamplesDefaults from '#plots/wsisamples/defaults.ts'
-import { dofetch3 } from '#src/client'
-import type { WSISample, WSISamplesResponse } from '@sjcrh/proteinpaint-types/routes/wsisamples.ts'
+// import { dofetch3 } from '#src/client'
+// import type { WSISample, WSISamplesResponse } from '@sjcrh/proteinpaint-types/routes/wsisamples.ts'
+import type { WSISample } from '@sjcrh/proteinpaint-types/routes/wsisamples.ts'
 import type Settings from '#plots/wsisamples/Settings.ts'
 import type { TableCell, TableColumn, TableRow } from '#dom'
 import { renderTable } from '#dom'
@@ -124,28 +125,25 @@ export const wsiSamplesPlot = getCompInit(WSISamplesPlot)
 
 export const componentInit = wsiSamplesPlot
 
-export async function getPlotConfig(opts: any, app: any) {
-	const wsimages = await getWSISamples(app)
-
-	console.log(wsimages)
-
+//  app: any
+export async function getPlotConfig(opts: any) {
 	return {
 		chartType: 'WSISamplesPlot',
 		subfolder: 'wsisamples',
 		extension: 'ts',
 		wsimages: [],
 		// TODO revert this
-		// wsimages: wsimages,
+		// wsimages: await getWSISamples(app),
 		settings: wsiSamplesDefaults(opts.overrides)
 	}
 }
 
-async function getWSISamples(app: any): Promise<WSISample[]> {
-	const data: WSISamplesResponse = await dofetch3('wsisamples', {
-		body: {
-			genome: app.opts.state.vocab.genome,
-			dslabel: app.opts.state.vocab.dslabel
-		}
-	})
-	return data.samples
-}
+// async function getWSISamples(app: any): Promise<WSISample[]> {
+// 	const data: WSISamplesResponse = await dofetch3('wsisamples', {
+// 		body: {
+// 			genome: app.opts.state.vocab.genome,
+// 			dslabel: app.opts.state.vocab.dslabel
+// 		}
+// 	})
+// 	return data.samples
+// }

@@ -4,7 +4,7 @@ import type { WSImage } from './samplewsimages.ts'
 export type AiProjectSelectedWSImagesRequest = {
 	genome: string
 	dslabel: string
-	projectId: string
+	projectId: number
 	wsimagesFilenames: Array<string>
 }
 
