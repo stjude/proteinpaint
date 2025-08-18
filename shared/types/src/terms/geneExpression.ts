@@ -1,4 +1,4 @@
-import type { TermWrapper } from './tw.ts'
+import type { TermWrapper } from './updated-types.ts'
 import type { NumericTerm, NumericQ } from './numeric.ts'
 import type { TermSettingInstance } from '../termsetting.ts'
 
@@ -18,6 +18,7 @@ export type GeneExpressionQ = NumericQ & {
 export type GeneExpressionTW = TermWrapper & {
 	q: GeneExpressionQ
 	term: GeneExpressionTerm
+	type: 'NumTWRegularBin' | 'NumTWCustomBin' | 'NumTWCont' | 'NumTWSpline'
 }
 
 export type GeneExpressionTerm = NumericTerm & {
