@@ -45,7 +45,12 @@ export class Barchart {
 				.style('padding', '24px')
 				.style('font-size', '16px')
 				.style('color', '#aaa'),
-			barDiv: holder.append('div'),
+			barDiv: holder
+				.append('div')
+				.style('display', 'flex')
+				.style('flex-direction', 'row')
+				.style('flex-wrap', 'wrap')
+				.style('max-width', '100vw'),
 			legendDiv: holder.append('div').style('margin', '5px 5px 15px 5px')
 		}
 		if (this.dom.header) this.dom.header.html('Barchart')
@@ -252,17 +257,7 @@ export class Barchart {
 					settingsKey: 'defaultColor'
 					//getDisplayStyle: plot => (plot.settings.barchart.colorBars || plot.term2 ? 'none' : 'table-row')
 				})
-			if (this.config.term0)
-				inputs.splice(3, 0, {
-					label: 'Charts layout',
-					type: 'radio',
-					chartType: 'barchart',
-					settingsKey: 'divideOrientation',
-					options: [
-						{ label: 'Vertical', value: 'vertical' },
-						{ label: 'Horizontal', value: 'horizontal' }
-					]
-				})
+
 			const multipleTestingCorrection = this.app.getState().termdbConfig.multipleTestingCorrection
 			if (multipleTestingCorrection) {
 				// a checkbox to allow users to show or hide asterisks on bars
@@ -375,7 +370,7 @@ export class Barchart {
 			}
 			this.chartsData = this.processData(this.currServerData)
 			this.render()
-			this.dom.barDiv.style('display', '')
+			this.dom.barDiv.style('display', 'flex')
 		} catch (e) {
 			this.toggleLoadingDiv('none')
 			this.dom.barDiv.style('display', 'none')
@@ -418,7 +413,6 @@ export class Barchart {
 			term2: config.term2 ? config.term2.term.id : '',
 			unit: config.settings.barchart.unit,
 			orientation: config.settings.barchart.orientation,
-			divideOrientation: config.settings.barchart.divideOrientation,
 			asterisksVisible: config.settings.barchart.asterisksVisible,
 			multiTestingCorr: config.settings.barchart.multiTestingCorr,
 			defaultColor: config.settings.barchart.defaultColor,
@@ -947,10 +941,7 @@ function setRenderers(self) {
 		self.renderers[chart.chartId](chart)
 
 		const div = select(this)
-		div.style(
-			'display',
-			self.state.config.settings.barchart.divideOrientation == 'horizontal' ? 'inline-block' : 'block'
-		)
+		div.style('display', 'inline-block')
 		div
 			.append('div')
 			.attr('class', 'pp-sbar-div-chartLengends')
@@ -971,10 +962,7 @@ function setRenderers(self) {
 	self.addChart = function (chart, i) {
 		const div = select(this)
 			.attr('class', 'pp-sbar-div')
-			.style(
-				'display',
-				self.state.config.settings.barchart.divideOrientation == 'horizontal' ? 'inline-block' : 'block'
-			)
+			.style('display', 'inline-block')
 			.style('padding', '20px')
 			.style('vertical-align', 'top')
 		self.renderers[chart.chartId] = barsRenderer(self, select(this))
@@ -1253,7 +1241,6 @@ function setInteractivity(self) {
 export function getDefaultBarSettings(app) {
 	return {
 		orientation: 'horizontal',
-		divideOrientation: 'horizontal', // maintain horizontal as default charts layout
 		unit: 'abs',
 		overlay: 'none',
 		divideBy: 'none',
