@@ -36,12 +36,19 @@ function init({ genomes }) {
 			const ds = g.datasets[query.dslabel]
 			if (!ds) throw new Error('Invalid dataset name')
 			const sampleId = query.sample_id
-			if (!sampleId) throw new Error('Invalid sample id')
+			const projectId = query.ai_project_id
+			if (!sampleId && !projectId) throw new Error('Either sample_id or project_id must be provided')
 
 			const mount = serverconfig.features?.tileserver?.mount
 			if (!mount) throw new Error('No mount available for TileServer')
 
-			const wsiImagePath = path.join(`${mount}/${ds.queries.WSImages.imageBySampleFolder}/${sampleId}`, wsiImage)
+			let wsiImagePath: string
+
+			if (sampleId) {
+				wsiImagePath = path.join(`${mount}/${ds.queries.WSImages.imageBySampleFolder}/${sampleId}`, wsiImage)
+			} else {
+				wsiImagePath = path.join(`${mount}/${ds.queries.WSImages.aiToolImageFolder}/`, wsiImage)
+			}
 
 			if (!wsiImage) throw new Error('Invalid wsi_image')
 

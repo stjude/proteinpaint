@@ -4,7 +4,7 @@ export type WSImagesRequest = {
 	genome: string
 	dslabel: string
 	sampleId?: string
-	wsimage?: string
+	wsimage: string
 	aiProjectId?: number
 }
 
