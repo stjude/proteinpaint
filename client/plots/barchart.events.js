@@ -513,7 +513,8 @@ async function listSamples(event, self, seriesId, dataId, chartId) {
 	}
 	const tvs = getTvs(1, seriesId)
 	if (tvs) tvslst.lst.push(tvs)
-	if (self.config.term2) {
+	const hasTerm2Data = self.config.term2 && dataId // will be true if user clicks on bar, but not bar label
+	if (hasTerm2Data) {
 		terms.push(self.config.term2)
 		const tvs = getTvs(2, dataId)
 		if (tvs) tvslst.lst.push(tvs)
@@ -564,7 +565,7 @@ async function listSamples(event, self, seriesId, dataId, chartId) {
 		} else if (termIsGv) {
 			addGvRowVals(sample, self.config.term, row)
 		}
-		if (self.config.term2) {
+		if (hasTerm2Data) {
 			//Don't show hidden values in the results
 			if (
 				self.config.term2.q?.hiddenValues &&
@@ -595,7 +596,7 @@ async function listSamples(event, self, seriesId, dataId, chartId) {
 	} else if (termIsGv) {
 		addGvCols(self.config.term, columns)
 	}
-	if (self.config.term2) {
+	if (hasTerm2Data) {
 		if (term2isGv) {
 			addGvCols(self.config.term2, columns)
 		} else {
@@ -666,7 +667,7 @@ async function listSamples(event, self, seriesId, dataId, chartId) {
 			const value = sample[tw.$id]?.value
 			if (value != seriesId) return false
 		}
-		if (self.config.term2?.term.type == 'geneVariant') {
+		if (self.config.term2?.term.type == 'geneVariant' && hasTerm2Data) {
 			const tw = self.config.term2
 			if (tw.q.type == 'values') throw 'q.type=values not supported'
 			const value = sample[tw.$id]?.value
@@ -904,6 +905,7 @@ function getTermValues(d, self) {
 		if (!term) continue
 		const i = term == t1 ? 1 : 2
 		const key = term == t1 ? t1ValId : t2ValId
+		if (!key) continue
 		// const q = term ? term.q : {}
 		const q = term.q //self.currServerData.refs.q[i]
 		const label = !term || !term.term.values ? key : key in term.term.values ? term.term.values[key].label : key
