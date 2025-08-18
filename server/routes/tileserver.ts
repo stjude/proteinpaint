@@ -44,6 +44,7 @@ function init({ genomes }) {
 
 			let wsiImagePath: string
 
+			//  TODO try to simplify this logic here and everywhere else
 			if (sampleId) {
 				wsiImagePath = path.join(`${mount}/${ds.queries.WSImages.imageBySampleFolder}/${sampleId}`, wsiImage)
 			} else {
