@@ -93,7 +93,7 @@ class SummaryPlot extends PlotBase {
 	maySetSandboxHeader() {
 		const { term, term2 } = this.config
 		const mainTerm = term.getTitleText?.() || term.term.name
-		if (term2?.term.type == 'geneVariant') {
+		if (term2?.type) {
 			this.dom.paneTitleText.html(`${term2.getTitleText?.() || term2.term.name} vs ${mainTerm}`)
 		} else {
 			this.dom.paneTitleText.html(mainTerm)

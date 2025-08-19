@@ -252,4 +252,8 @@ export class GvCustomGS extends GvBase {
 		set_hiddenvalues(q, term)
 		return tw as GvCustomGsTW
 	}
+
+	getTitleText() {
+		return `${this.term.name} Custom Groups`
+	}
 }
