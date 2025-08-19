@@ -4,7 +4,7 @@ import { fillTermWrapper, fillTwLst } from '#termsetting'
 import { select } from 'd3-selection'
 import { Menu } from '#dom/menu'
 import { icons as icon_functions } from '#dom/control.icons'
-import { getCategoricalTermFilter } from '#filter'
+import { getCategoricalTermFilter, getCombinedTermFilter } from '#filter'
 
 /*
 
@@ -440,7 +440,9 @@ export class profilePlot {
 	}
 
 	getFilter() {
-		return getCategoricalTermFilter(this.config.filterTWs, this.settings, null)
+		let filter = getCategoricalTermFilter(this.config.filterTWs, this.settings, null)
+		filter = getCombinedTermFilter(this.state, filter)
+		return filter.filter
 	}
 
 	clearFiltersExcept(ids) {
