@@ -1057,7 +1057,7 @@ export type WSImages = {
 	getAnnotationClasses?: (projectId: string) => Promise<WSIClass[] | undefined>
 }
 
-export type WSIClass = { id: number; shortcut: string; label: string; color: string }
+export type WSIClass = { id: number; key_shortcut: string; label: string; color: string }
 
 /*** types supporting Termdb ***/
 

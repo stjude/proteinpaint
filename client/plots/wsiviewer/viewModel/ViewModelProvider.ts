@@ -157,55 +157,69 @@ export class ViewModelProvider {
 				}
 			}
 
-			const overlays = wsimages[i].overlays
-
-			if (overlays) {
-				for (const overlay of overlays) {
-					let overlayQueryParams = `wsi_image=${overlay}&dslabel=${dslabel}&genome=${genome}`
-					if (sampleId) {
-						overlayQueryParams += `&sample_id=${sampleId}`
-					} else if (aiProjectID) {
-						overlayQueryParams += `&ai_project_id=${aiProjectID}`
-					}
-
-					const zoomifyOverlayLatUrl = `/tileserver/layer/overlay/${data.wsiSessionId}/zoomify/{TileGroup}/{z}-{x}-{y}@1x.jpg?${overlayQueryParams}`
-
-					const sourceOverlay = new Zoomify({
-						url: zoomifyOverlayLatUrl,
-						size: [imgWidth, imgHeight],
-						crossOrigin: 'anonymous',
-						zDirection: -1 // Ensure we get a tile with the screen resolution or higher
-					})
-
-					const optionsOverlay = {
-						preview: `/tileserver/layer/overlay/${data.wsiSessionId}/zoomify/TileGroup0/0-0-0@1x.jpg?${overlayQueryParams}`,
-						metadata: wsimages[i].metadata,
-						source: sourceOverlay,
-						title: 'Selected Patches'
-					}
-
-					if (wsiImageLayers.overlays) {
-						wsiImageLayers.overlays.push(new TileLayer(optionsOverlay))
-					} else {
-						wsiImageLayers.overlays = [new TileLayer(optionsOverlay)]
-					}
-
-					const optionsVectorLayer = {
-						source: new VectorSource({
-							features: []
-						}),
-						title: 'Session Annotations'
-					}
-
-					const vectorLayer = new VectorLayer(optionsVectorLayer)
-
-					if (wsiImageLayers.overlays) {
-						wsiImageLayers.overlays.push(vectorLayer)
-					} else {
-						wsiImageLayers.overlays = [vectorLayer]
-					}
-				}
+			const optionsVectorLayer = {
+				source: new VectorSource({
+					features: []
+				}),
+				title: 'Annotations'
 			}
+
+			const vectorLayer = new VectorLayer(optionsVectorLayer)
+
+			if (wsiImageLayers.overlays) {
+				wsiImageLayers.overlays.push(vectorLayer)
+			} else {
+				wsiImageLayers.overlays = [vectorLayer]
+			}
+
+			// TODO render annotations and predictions on the client side
+			// const annotationsAndPredictionsOverlay = wsimages[i].annotationsAndPredictionsOverlay
+			// if (annotationsAndPredictionsOverlay) {
+			// 		let overlayQueryParams = `wsi_image=${annotationsAndPredictionsOverlay}&dslabel=${dslabel}&genome=${genome}`
+			// 		if (sampleId) {
+			// 			overlayQueryParams += `&sample_id=${sampleId}`
+			// 		} else if (aiProjectID) {
+			// 			overlayQueryParams += `&ai_project_id=${aiProjectID}`
+			// 		}
+			//
+			// 		const zoomifyOverlayLatUrl = `/tileserver/layer/overlay/${data.wsiSessionId}/zoomify/{TileGroup}/{z}-{x}-{y}@1x.jpg?${overlayQueryParams}`
+			//
+			// 		const sourceOverlay = new Zoomify({
+			// 			url: zoomifyOverlayLatUrl,
+			// 			size: [imgWidth, imgHeight],
+			// 			crossOrigin: 'anonymous',
+			// 			zDirection: -1 // Ensure we get a tile with the screen resolution or higher
+			// 		})
+			//
+			// 		const optionsOverlay = {
+			// 			preview: `/tileserver/layer/overlay/${data.wsiSessionId}/zoomify/TileGroup0/0-0-0@1x.jpg?${overlayQueryParams}`,
+			// 			metadata: wsimages[i].metadata,
+			// 			source: sourceOverlay,
+			// 			title: 'Selected Patches'
+			// 		}
+			//
+			// 		if (wsiImageLayers.overlays) {
+			// 			wsiImageLayers.overlays.push(new TileLayer(optionsOverlay))
+			// 		} else {
+			// 			wsiImageLayers.overlays = [new TileLayer(optionsOverlay)]
+			// 		}
+			//
+			// 		const optionsVectorLayer = {
+			// 			source: new VectorSource({
+			// 				features: []
+			// 			}),
+			// 			title: 'Session Annotations'
+			// 		}
+			//
+			// 		const vectorLayer = new VectorLayer(optionsVectorLayer)
+			//
+			// 		if (wsiImageLayers.overlays) {
+			// 			wsiImageLayers.overlays.push(vectorLayer)
+			// 		} else {
+			// 			wsiImageLayers.overlays = [vectorLayer]
+			// 		}
+			//
+			// }
 
 			layers.push(wsiImageLayers)
 		}
