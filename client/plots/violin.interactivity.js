@@ -171,7 +171,8 @@ export function setInteractivity(self) {
 		}
 		const opts = {
 			terms: [term],
-			filter
+			filter,
+			filter0: self.state.termfilter.filter0
 		}
 		//getAnnotatedSampleData is used to retrieve sample id's and values (see matrix.js).
 		const data = await self.app.vocabApi.getAnnotatedSampleData(opts)
