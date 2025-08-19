@@ -97,7 +97,8 @@ export class ProjectAdminRender {
 				text: 'Edit',
 				class: 'sja_menuoption',
 				callback: (e, i) => {
-					//TODO: open wsisamples plot
+					/** TODO: open wsisamples plot ||
+					 *  get project details rather than edit the db */
 					// this.interactions.editProject()
 					console.log('TODO', e, i)
 				}

@@ -16,9 +16,9 @@ export class AIProjectAdminInteractions {
 		this.model = model
 	}
 
-	async addProject(opts) {
+	async addProject(opts: { project: any }) {
 		const config = this.getConfig()
-		const projectObject = Object.assign({}, config.settings.project, opts.project, opts.project.fitler)
+		const projectObject = Object.assign({}, config.settings.project, opts.project, opts.project.filter)
 
 		const body = {
 			genome: this.genome,
@@ -33,13 +33,16 @@ export class AIProjectAdminInteractions {
 		}
 	}
 
-	public async editProject(filter: string, classes: any[]) {
+	public async editProject(opts: { project: any }) {
 		const config = this.getConfig()
-		const project = Object.assign({}, config.settings.project, {
-			type: 'edit',
-			filter,
-			classes
-		})
+		const project = Object.assign(
+			{},
+			config.settings.project,
+			{
+				type: 'edit'
+			},
+			opts.project
+		)
 
 		const body = {
 			genome: this.genome,
@@ -73,7 +76,7 @@ export class AIProjectAdminInteractions {
 		}
 	}
 
-	async getImages(filter): Promise<AIProjectAdminResponse> {
+	async getImages(filter: any): Promise<AIProjectAdminResponse> {
 		const config = this.getConfig()
 		return await this.app.vocabApi.getAiImages(config.settings.project, filter)
 	}

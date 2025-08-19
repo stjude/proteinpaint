@@ -46,16 +46,17 @@ function init({ genomes }) {
 
 			/** get list of projects from db */
 			if (query.for === 'list') {
-				const projects = getProjects(ds)
+				const projects = getProjects(db.connection)
 				res.send(projects)
 			} else if (query.for === 'admin') {
 				/** update projects in db */
 				/** If the url is too long, the method will be changed to POST
 				 * in dofetch. Checking if project.type == 'new' ensures the project
 				 * is added to the db.*/
-				if (req.method === 'PUT' || query.project.type === 'new') addProject(db.connection, query)
-				else if (req.method === 'POST') editProject(db.connection, query)
-				else if (req.method === 'DELETE') deleteProject(db.connection, query)
+				if (req.method === 'PUT' || query.project.type === 'new') addProject(db.connection, query.project)
+				else if (req.method === 'POST') editProject(db.connection, query.project)
+				else if (req.method === 'DELETE') deleteProject(db.connection, query.project.id)
+				else throw new Error('Invalid request method for="admin" in aiProjectAdmin route.')
 
 				res.status(200).send({
 					status: 'ok',
@@ -87,14 +88,11 @@ function init({ genomes }) {
 	}
 }
 
-function getProjects(ds: any) {
-	if (!ds.queries?.WSImages?.db) return
-	const db = ds.queries.WSImages.db
+function getProjects(connection) {
 	const sql = 'SELECT project.name as value, id FROM project'
 
 	try {
-		db.connection = connect_db(db.file, { readonly: false, fileMustExist: true })
-		const rows = db.connection.prepare(sql).all()
+		const rows = connection.prepare(sql).all()
 		return rows
 	} catch (e) {
 		console.error('Error fetching projects:', e)
@@ -102,45 +100,102 @@ function getProjects(ds: any) {
 	}
 }
 
-function editProject(connection: any, query: any) {
-	console.log('Editing project:', connection, query.project)
+function editProject(connection: any, project: any) {
+	const stmts: { sql: string; params: any[] }[] = []
+	if (!project.id) {
+		const res = connection.prepare(`SELECT id FROM project WHERE name = ?`).get(project.name)
+		project.id = res.id
+	}
+
+	if (project.images) {
+		stmts.push({
+			sql: `DELETE FROM project_images WHERE project_id = ? AND image NOT IN (${
+				project.images.map(() => '?').join(',') || "''"
+			})`,
+			params: [project.id, ...project.images]
+		})
+		const existingImg = connection.prepare(`SELECT 1 FROM project_images WHERE project_id = ? AND image = ?`)
+		const insertImg = `INSERT INTO project_images (project_id, image) VALUES (?, ?)`
+
+		for (const img of project.images) {
+			const exists = existingImg.get(project.id, img)
+			if (!exists) stmts.push({ sql: insertImg, params: [project.id, img] })
+		}
+	}
+	if (project.filter) {
+		stmts.push({
+			sql: `UPDATE project SET filter = ? WHERE id = ?`,
+			params: [JSON.stringify(project.filter), project.id]
+		})
+	}
+	if (project.classes) {
+		stmts.push({
+			sql: `DELETE FROM project_classes WHERE project_id = ? AND name NOT IN (${
+				project.classes.map(() => '?').join(',') || "''"
+			})`,
+			params: [project.id, ...project.classes.map(c => c.name)]
+		})
+		const existingClasses = connection.prepare(`SELECT 1 FROM project_classes WHERE project_id = ? AND name = ?`)
+		const insertClass = `INSERT INTO project_classes (project_id, name, color) VALUES (?, ?, ?)`
+
+		for (const cls of project.classes) {
+			const exists = existingClasses.get(project.id, cls.name)
+			if (!exists) stmts.push({ sql: insertClass, params: [project.id, cls.name, cls.color] })
+		}
+	}
+	runMultiStmtSQL(connection, stmts, 'add')
 }
 
-function deleteProject(connection: any, query: any) {
+function deleteProject(connection: any, projectId: number) {
+	if (!projectId) throw new Error('Invalid project ID [aiProjectAdmin route deleteProject()]')
 	// Deletes ** ALL ** project data
-	runSQL(connection, 'DELETE FROM project_annotations WHERE project_id = ?', [query.project.id], 'delete')
-	runSQL(connection, 'DELETE FROM project_classes WHERE project_id = ?', [query.project.id], 'delete')
-	runSQL(connection, 'DELETE FROM project_images WHERE project_id = ?', [query.project.id], 'delete')
-	runSQL(connection, 'DELETE FROM project_users WHERE project_id = ?', [query.project.id], 'delete')
-	runSQL(connection, 'DELETE FROM project WHERE id = ?', [query.project.id], 'delete')
+	const stmts = [
+		{ sql: 'DELETE FROM project_annotations WHERE project_id = ?', params: [projectId] },
+		{ sql: 'DELETE FROM project_classes WHERE project_id = ?', params: [projectId] },
+		{ sql: 'DELETE FROM project_images WHERE project_id = ?', params: [projectId] },
+		{ sql: 'DELETE FROM project_users WHERE project_id = ?', params: [projectId] },
+		{ sql: 'DELETE FROM project WHERE id = ?', params: [projectId] }
+	]
+	runMultiStmtSQL(connection, stmts, 'delete')
 }
 
-function addProject(connection: any, query: any) {
+function addProject(connection: any, project: any) {
 	//Add project record
 	const projectSql = `INSERT INTO project (name, filter) VALUES (?, ?)`
-	const projectParams = [query.project.name, JSON.stringify(query.project.filter)]
+	const projectParams = [project.name, JSON.stringify(project.filter)]
 	const rows = runSQL(connection, projectSql, projectParams, 'add')
 
 	//Add corresponding project classes
 	const classSql = `INSERT INTO project_classes (project_id, name, color) VALUES (?, ?, ?)`
-	const classParams = query.project.classes.map((c: any) => [rows.lastInsertRowid, c.label, c.color])
+	const classParams = project.classes.map((c: any) => [rows.lastInsertRowid, c.label, c.color])
 	for (const params of classParams) {
 		runSQL(connection, classSql, params, 'add')
 	}
-	//Add corresponding project images
-	const imagesSql = `INSERT INTO project_images (project_id, image) VALUES (?, ?)`
-	const imagesParams = query.project.images.map((img: any) => [rows.lastInsertRowid, img])
-	for (const params of imagesParams) {
-		runSQL(connection, imagesSql, params, 'add')
-	}
 }
 
+/** Run only one SQL statement at a time */
 function runSQL(connection: any, sql: string, params: any[] = [], errorText = 'fetch') {
 	try {
 		const rows = connection.prepare(sql).run(params)
 		return rows
-	} catch (e) {
-		console.error(`Error executing SQL for ${errorText}:`, e)
+	} catch (e: any) {
+		console.error(`Error executing SQL for ${errorText}: ${e.message || e}`)
+		throw new Error(`Failed to ${errorText} projects`)
+	}
+}
+
+/** Run multiple SQL statements in a transaction */
+function runMultiStmtSQL(connection: any, stmts: { sql: string; params: any[] }[], errorText = 'execute') {
+	const transaction = connection.transaction((batch: typeof stmts) => {
+		for (const { sql, params = [] } of batch) {
+			connection.prepare(sql).run(params)
+		}
+	})
+
+	try {
+		transaction(stmts)
+	} catch (e: any) {
+		console.error(`Error executing transaction for ${errorText}: ${e.message || e}`)
 		throw new Error(`Failed to ${errorText} projects`)
 	}
 }

@@ -11,7 +11,7 @@ export type AIProjectAdminRequest = {
 	project?: {
 		name: string
 		id?: number
-		fitler?: string
+		filter?: string
 		classes?: any[]
 		images?: string[]
 	}
