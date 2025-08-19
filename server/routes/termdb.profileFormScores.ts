@@ -49,7 +49,7 @@ async function getScoresDict(query, ds) {
 		},
 		ds
 	)
-	const lst = Object.values(data.samples)
+	const lst: any[] = Object.values(data.samples)
 	let sites = lst.map((s: any) => {
 		return { label: data.refs.bySampleId[s.sample].label, value: s.sample }
 	})
@@ -59,6 +59,12 @@ async function getScoresDict(query, ds) {
 	})
 	if (query.userSites) {
 		sites = sites.filter(s => query.userSites.includes(s.label))
+		if (lst.length == 1 && !sites.length) {
+			const siteId: number = lst[0].sample
+			const site = data.refs.bySampleId[siteId].label
+			const hospital = query.facilityTW.term.values[site].label
+			throw `The access to the hospital ${hospital} is denied`
+		}
 	}
 
 	let sitesSelected: any[] = []
