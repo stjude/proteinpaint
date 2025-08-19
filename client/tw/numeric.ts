@@ -111,7 +111,7 @@ export class NumericBase extends TwBase {
 	}
 
 	getTitleText() {
-		if (this.term.type == 'geneExpression') return `${this.term.name} expression`
+		if (this.term.type == 'geneExpression') return `${this.term.name} Expression`
 		return this.term.name
 	}
 }

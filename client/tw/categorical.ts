@@ -94,6 +94,10 @@ export class CategoricalBase extends TwBase {
 				throw `tw.type='${tw.type} (q.mode:q.type=${tw.q.mode}:${tw.q.type}' is not supported by CategoricalBase.fill()`
 		}
 	}
+
+	getTitleText() {
+		return this.term.name
+	}
 }
 
 export class CatValues extends CategoricalBase {

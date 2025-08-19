@@ -280,7 +280,7 @@ class TdbSurvival extends PlotBase {
 		if (!this.dom.header) return
 		const { term, term2 } = this.state.config
 		const mainTerm = term.term.name
-		if (term2?.term.type == 'geneVariant') {
+		if (term2?.type) {
 			this.dom.header.html(`${term2.getTitleText?.() || term2.term.name}  vs ${mainTerm}`)
 		} else {
 			this.dom.header.html(`${mainTerm} plot`)
