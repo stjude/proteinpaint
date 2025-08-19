@@ -153,8 +153,6 @@ export function equals(t1, t2) {
 }
 
 export function getBin(lst, value) {
-	value = Math.round(value * 100) / 100 //to keep 2 decimal places
-
 	let bin = lst.findIndex(
 		b => (b.startunbounded && value < b.stop) || (b.startunbounded && b.stopinclusive && value == b.stop)
 	)

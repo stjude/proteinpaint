@@ -25,13 +25,17 @@ export function filter2GDCfilter(f) {
 			// (see mayFilterByGeneVariant() in server/src/mds3.init.js)
 			continue
 		}
+		if (item.tvs.term.type == 'geneExpression') {
+			// geneExpression term filtering will be performed during post-processing (see mayFilterByExpression() in server/src/mds3.gdc.js)
+			continue
+		}
 
 		if (item.tvs.values) {
 			// categorical
 			const f = {
 				op: item.tvs.isnot ? '!=' : 'in',
 				content: {
-					field: mayChangeCase2Cases(item.tvs.term.id),
+					field: mayChangeCase2Cases(item.tvs.term),
 					value: item.tvs.values.map(i => i.key)
 				}
 			}
@@ -43,14 +47,14 @@ export function filter2GDCfilter(f) {
 				if (range.startunbounded) {
 					obj.content.push({
 						op: range.stopinclusive ? (item.tvs.isnot ? '>' : '<=') : item.tvs.isnot ? '>=' : '<',
-						content: { field: mayChangeCase2Cases(item.tvs.term.id), value: range.stop }
+						content: { field: mayChangeCase2Cases(item.tvs.term), value: range.stop }
 					})
 					continue
 				}
 				if (range.stopunbounded) {
 					obj.content.push({
 						op: range.startinclusive ? (item.tvs.isnot ? '<' : '>=') : item.tvs.isnot ? '<=' : '>',
-						content: { field: mayChangeCase2Cases(item.tvs.term.id), value: range.start }
+						content: { field: mayChangeCase2Cases(item.tvs.term), value: range.start }
 					})
 					continue
 				}
@@ -63,7 +67,7 @@ export function filter2GDCfilter(f) {
 								content: [
 									{
 										op: range.startinclusive ? '<' : '<=',
-										content: { field: mayChangeCase2Cases(item.tvs.term.id), value: range.start }
+										content: { field: mayChangeCase2Cases(item.tvs.term), value: range.start }
 									}
 								]
 							},
@@ -72,7 +76,7 @@ export function filter2GDCfilter(f) {
 								content: [
 									{
 										op: range.stopinclusive ? '>' : '>=',
-										content: { field: mayChangeCase2Cases(item.tvs.term.id), value: range.stop }
+										content: { field: mayChangeCase2Cases(item.tvs.term), value: range.stop }
 									}
 								]
 							}
@@ -84,11 +88,11 @@ export function filter2GDCfilter(f) {
 						content: [
 							{
 								op: range.startinclusive ? '>=' : '>',
-								content: { field: mayChangeCase2Cases(item.tvs.term.id), value: range.start }
+								content: { field: mayChangeCase2Cases(item.tvs.term), value: range.start }
 							},
 							{
 								op: range.stopinclusive ? '<=' : '<',
-								content: { field: mayChangeCase2Cases(item.tvs.term.id), value: range.stop }
+								content: { field: mayChangeCase2Cases(item.tvs.term), value: range.stop }
 							}
 						]
 					})
@@ -109,7 +113,8 @@ when a term id begins with "case"
 for the term to be used as a field in filter,
 it must be written as "cases"
 */
-function mayChangeCase2Cases(s) {
+function mayChangeCase2Cases(t) {
+	const s = t.id || t.name
 	const l = s.split('.')
 	if (l[0] == 'case') l[0] = 'cases'
 	return l.join('.')

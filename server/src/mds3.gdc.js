@@ -1,6 +1,7 @@
 import * as common from '#shared/common.js'
 import { joinUrl, memFetch } from '#shared/index.js'
 import { compute_bins } from '#shared/termdb.bins.js'
+import { getBin } from '#shared/terms.js'
 import ky from 'ky'
 import nodeFetch from 'node-fetch'
 import { combineSamplesById, guessSsmid } from './mds3.variant2samples.js'
@@ -48,7 +49,6 @@ querySamples_gdcapi
 	may_add_readdepth
 	may_add_projectAccess
 	mayApplyBinning
-		getBin
 get_termlst2size
 validate_m2csq
 validate_ssm2canonicalisoform
@@ -310,7 +310,8 @@ async function getExpressionData(q, gene_ids, cases4clustering, ensg2symbol, ter
 		arg.case_ids = cases4clustering
 	} else {
 		// not for clustering analysis. do not limit by cases, so that e.g. a gene exp row will show all values in oncomatrix
-		arg.case_filters = makeFilter(q)
+		const f = makeCasesFilter(q)
+		if (f) arg.case_filters = { op: 'and', content: f }
 	}
 
 	const { host, headers } = ds.getHostHeaders(q)
@@ -356,6 +357,11 @@ async function getExpressionData(q, gene_ids, cases4clustering, ensg2symbol, ter
 		bySampleId[c] = { label: s }
 	}
 
+	let geneExprFilter
+	if (q.filter) {
+		geneExprFilter = structuredClone(q.filter)
+		geneExprFilter.lst = q.filter.lst.filter(item => item.tvs.term.type == 'geneExpression')
+	}
 	// each line is data from one gene
 	for (let i = 1; i < lines.length; i++) {
 		const l = lines[i].split('\t')
@@ -370,10 +376,28 @@ async function getExpressionData(q, gene_ids, cases4clustering, ensg2symbol, ter
 				//console.log(ensg, sample, l[j + 1]) continue
 				throw 'non-numeric exp value from gdc'
 			}
-			term2sample2value.get(symbol)[sample] = v
+			const pass = mayFilterByExpression(geneExprFilter, v)
+			if (pass) term2sample2value.get(symbol)[sample] = v
 		}
 	}
 	return bySampleId
+}
+
+// determine if gene expression value passes gene expression filter
+function mayFilterByExpression(filter, value) {
+	if (!filter?.lst.length) return true
+	const pass =
+		filter.join == 'and' ? filter.lst.every(item => inItem(item, value)) : filter.lst.some(item => inItem(item, value))
+	return pass
+	function inItem(item, value) {
+		if (item.type == 'tvslst') return mayFilterByExpression(item, value)
+		const tvs = item.tvs
+		if (tvs.term.type != 'geneExpression') throw 'unexpected term.type'
+		const filterBin = getBin(tvs.ranges, value)
+		const inRange = filterBin != -1
+		const inItem = tvs.isnot ? !inRange : inRange
+		return inItem
+	}
 }
 
 // should only use for gene exp clustering
@@ -1174,7 +1198,10 @@ function mayApplyBinning(samples, twLst) {
 			for (const s of samples) {
 				const v = s[tw.term.id]
 				if (Number.isFinite(v)) {
-					s[tw.term.id] = { key: getBin(bins, v), value: v }
+					const binIdx = getBin(bins, v)
+					const bin = bins[binIdx]
+					if (!bin?.label) throw 'bin.label not defined'
+					s[tw.term.id] = { key: bin.label, value: v }
 				}
 			}
 		} else if (tw.q.mode == 'continuous') {
@@ -1184,23 +1211,6 @@ function mayApplyBinning(samples, twLst) {
 		}
 	}
 	return byTermId
-}
-
-function getBin(bins, v) {
-	for (const b of bins) {
-		if (b.startunbounded) {
-			if (v < b.stop) return b.label
-			if (b.stopinclusive && v == b.stop) return b.label
-		} else if (b.stopunbounded) {
-			if (v > b.start) return b.label
-			if (b.startinclusive && v == b.start) return b.label
-		} else if (
-			(v > b.start || (v === b.start && b.startinclusive)) &&
-			(v < b.stop || (v === b.stop && b.stopinclusive))
-		) {
-			return b.label
-		}
-	}
 }
 
 /* for variant2samples query
@@ -2487,6 +2497,10 @@ function makeCasesFilter(p) {
 	}
 	if (p.filterObj) {
 		const g = filter2GDCfilter(p.filterObj)
+		if (g) lst.push(g)
+	}
+	if (p.filter) {
+		const g = filter2GDCfilter(p.filter)
 		if (g) lst.push(g)
 	}
 	return lst.length ? lst : null
