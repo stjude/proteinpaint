@@ -67,11 +67,19 @@ function validateQuery(ds: any) {
 
 			const stmt = connection.prepare(`
 				INSERT INTO project_annotations (
-					project_id, user_id, coordinates, timestamp, status, class_id
-				) VALUES (?, ?, ?, ?, ?, ?)
+					project_id, user_id, coordinates, timestamp, status, class_id, image_id
+				) VALUES (?, ?, ?, ?, ?, ?, ?)
 			`)
 
-			stmt.run(1, 1, `[${annotation.coordinates[0]},${annotation.coordinates[1]}]`, timestamp, 1, 1, 1)
+			stmt.run(
+				1,
+				1,
+				`[${annotation.coordinates[0]},${annotation.coordinates[1]}]`,
+				timestamp,
+				1,
+				annotation.projectId,
+				annotation.wsimageId
+			)
 
 			return { status: 'ok' }
 		} catch (error: any) {

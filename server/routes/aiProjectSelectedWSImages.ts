@@ -49,13 +49,16 @@ function init({ genomes }) {
 
 					const annotations = await ds.queries.WSImages.getWSIAnnotations(projectId, wsimageFilename)
 
-					if (annotations && annotations.length > 0) {
-						wsimage.annotationsData = annotations
+					wsimage.annotations = annotations
 
-						wsimage.classes = ds.queries?.WSImages?.getAnnotationClasses(projectId)
-						wsimage.uncertainty = ds.queries?.WSImages?.uncertainty
-						wsimage.activePatchColor = ds.queries?.WSImages?.activePatchColor
-					}
+					const classes = await ds.queries.WSImages.getAnnotationClasses(projectId)
+
+					wsimage.classes = classes
+
+					console.log('classes123', wsimage.classes)
+
+					wsimage.uncertainty = ds.queries?.WSImages?.uncertainty
+					wsimage.activePatchColor = ds.queries?.WSImages?.activePatchColor
 
 					if (ds.queries.WSImages.getWSIPredictionPatches) {
 						const predictionsFile = await ds.queries.WSImages.getWSIPredictionPatches(projectId, wsimageFilename)
@@ -133,7 +136,7 @@ export function validateWSIAnnotationsQuery(ds: any) {
 		coordinates: any // stored JSON string like "[x,y]" or JSON array
 		timestamp: string
 		status: number
-		class_name: string | null
+		label: string | null
 	}
 
 	const GET_ANNOTATIONS_SQL = `
@@ -144,7 +147,7 @@ export function validateWSIAnnotationsQuery(ds: any) {
       pa.coordinates,
       pa.timestamp,
       pa.status,
-      pc.name AS class_name
+      pc.label AS label
     FROM project_annotations pa
     INNER JOIN project_images pi
       ON pi.id = pa.image_id
@@ -188,7 +191,7 @@ export function validateWSIAnnotationsQuery(ds: any) {
 
 				return {
 					zoomCoordinates: coords,
-					class: r.class_name ?? ''
+					class: r.label ?? ''
 				}
 			})
 		} catch (error) {
@@ -208,7 +211,7 @@ export function validateWSIClassesQuery(ds: any) {
 	type ProjectClass = {
 		id: number
 		project_id: number
-		name: string
+		label: string
 		color: string
 		key_shortcut: string
 	}
@@ -218,7 +221,7 @@ export function validateWSIClassesQuery(ds: any) {
 	}
 
 	const GET_CLASSES_SQL = `
-		SELECT id, project_id, name, color, key_shortcut
+		SELECT id, project_id, label, color, key_shortcut
 		FROM project_classes
 		WHERE project_id = ?
 		ORDER BY id
