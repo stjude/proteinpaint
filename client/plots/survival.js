@@ -1,4 +1,5 @@
 import { getCompInit, copyMerge } from '../rx'
+import { PlotBase } from './PlotBase.ts'
 import { controlsInit, term0_term2_defaultQ } from './controls'
 import { select } from 'd3-selection'
 import { scaleLinear, scaleOrdinal } from 'd3-scale'
@@ -33,10 +34,12 @@ Object.assign(t0_t2_defaultQ, {
 	}
 })
 
-class TdbSurvival {
+class TdbSurvival extends PlotBase {
 	constructor(opts) {
+		super(opts)
 		this.type = 'survival'
 		if (opts?.parentId) this.parentId = opts.parentId
+		this.configTermKeys = ['term', 'term0', 'term2']
 	}
 
 	async init() {
@@ -232,9 +235,10 @@ class TdbSurvival {
 			termfilter,
 
 			config: {
-				term: JSON.parse(JSON.stringify(config.term)),
-				term0: config.term0 ? JSON.parse(JSON.stringify(config.term0)) : null,
-				term2: config.term2 ? JSON.parse(JSON.stringify(config.term2)) : null,
+				// NOTE: will create mutable copies of tw terms in async main() below
+				term: config.term,
+				term0: config.term0 || null,
+				term2: config.term2 || null,
 				settings: config.settings.survival
 			},
 			termdbConfig: appState.termdbConfig
@@ -248,6 +252,7 @@ class TdbSurvival {
 				return
 			}
 
+			this.state.config = await this.getMutableConfig()
 			this.maySetSandboxHeader()
 			this.toggleLoadingDiv()
 
@@ -276,7 +281,7 @@ class TdbSurvival {
 		const { term, term2 } = this.state.config
 		const mainTerm = term.term.name
 		if (term2?.term.type == 'geneVariant') {
-			this.dom.header.html(`${term2.term.name} variant vs ${mainTerm}`)
+			this.dom.header.html(`${term2.getTitleText?.() || term2.term.name}  vs ${mainTerm}`)
 		} else {
 			this.dom.header.html(`${mainTerm} plot`)
 		}
