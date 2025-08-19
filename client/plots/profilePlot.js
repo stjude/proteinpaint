@@ -227,6 +227,7 @@ export class profilePlot {
 				facilityTW: this.config.facilityTW,
 				filterByUserSites: this.settings.filterByUserSites
 			})
+		if ('error' in this.data) throw this.data.error
 		this.sites = this.data.sites
 		this.sites.sort((a, b) => {
 			return a.label.localeCompare(b.label)
