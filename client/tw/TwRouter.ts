@@ -3,7 +3,7 @@ import type { TwOpts, TwBase } from './TwBase'
 import { mayHydrateDictTwLst } from '../termsetting/termsetting.ts'
 // TODO: may convert these to dynamic imports
 import { CategoricalBase, CatValues, CatPredefinedGS, CatCustomGS } from './categorical.ts'
-import { GvBase, GvPredefinedGS } from './geneVariant.ts'
+import { GvBase, GvPredefinedGS, GvCustomGS } from './geneVariant.ts'
 import { GeneExpBase } from './geneExpression.ts'
 import { NumericBase, NumRegularBin, NumCustomBins, NumCont } from './numeric.ts'
 
@@ -43,6 +43,8 @@ export class TwRouter {
 
 			case 'GvPredefinedGsTW':
 				return new GvPredefinedGS(tw, opts)
+			case 'GvCustomGsTW':
+				return new GvCustomGS(tw, opts)
 
 			default:
 				// console.log(46, tw)
