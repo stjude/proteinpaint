@@ -112,8 +112,8 @@ export class WSIViewerInteractions {
 
 			const sessionTileSelections = sessionWSImage?.sessionsTileSelections || []
 			const predictions = sessionWSImage?.predictions || []
-			const persistedAnnotationsData = sessionWSImage?.annotationsData || []
-			const annotationsData = [...sessionTileSelections, ...predictions, ...persistedAnnotationsData]
+			const annotations = sessionWSImage?.annotations || []
+			const annotationsData = [...sessionTileSelections, ...predictions, ...annotations]
 
 			holder.on('keydown', async (event: KeyboardEvent) => {
 				let currentIndex = buffers.annotationsIdx.get()
@@ -149,7 +149,7 @@ export class WSIViewerInteractions {
 
 				if (shortcuts.includes(event.code)) {
 					//Update buffer to change table
-					let matchingClass = sessionWSImage?.classes?.find(c => c.shortcut === event.code)
+					let matchingClass = sessionWSImage?.classes?.find(c => c.key_shortcut === event.code)
 					if (!matchingClass) {
 						matchingClass = sessionWSImage?.classes?.find(c => c.label === annotationsData[currentIndex].class)
 					}
@@ -162,8 +162,10 @@ export class WSIViewerInteractions {
 					this.addAnnotation(vectorLayer!, annotationsData, currentIndex, matchingClass!.color, settings.tileSize)
 
 					const body: SaveWSIAnnotationRequest = {
-						coordinates: annotationsData[currentIndex].zoomCoordinates, //Original x,y coordinates
-						class: 1
+						coordinates: annotationsData[currentIndex].zoomCoordinates,
+						class: 1,
+						projectId: 1,
+						wsimageId: sessionWSImage.id ? sessionWSImage.id : 1
 					}
 
 					// index: buffers.annotationsIdx.get(),
@@ -197,7 +199,7 @@ export class WSIViewerInteractions {
 			const settings: Settings = state.plots.find(p => p.id === wsiApp.id).settings
 			const currentTileSelection = settings.sessionsTileSelection
 			const predictions = sessionWSImage?.predictions || []
-			const persistedAnnotationsData = sessionWSImage?.annotationsData || []
+			const persistedAnnotationsData = sessionWSImage?.annotations || []
 
 			const annotationsData = [...currentTileSelection, ...predictions, ...persistedAnnotationsData]
 

@@ -77,6 +77,9 @@ export class WSIViewer extends RxComponentInner {
 		)
 
 		const wsimages = viewModel.sampleWSImages
+
+		console.log('wsimages', viewModel.sampleWSImages)
+
 		const wsimageLayers = viewModel.wsimageLayers
 		const wsimageLayersLoadError = viewModel.wsimageLayersLoadError
 
@@ -120,7 +123,7 @@ export class WSIViewer extends RxComponentInner {
 		this.metadataRenderer.renderMetadata(holder, imageViewData)
 
 		if (
-			viewModel.sampleWSImages[settings.displayedImageIndex].annotationsData &&
+			viewModel.sampleWSImages[settings.displayedImageIndex].annotations &&
 			settings.renderAnnotationTable &&
 			this.map
 		) {

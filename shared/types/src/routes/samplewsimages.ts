@@ -13,12 +13,13 @@ export type SampleWSImagesResponse = {
 }
 
 export type WSImage = {
-	id?: string
+	id?: number
 	filename: string
-	overlays?: Array<string>
+	// TODO remove when it's verified
+	annotationsAndPredictionsOverlay?: string
 	predictionLayers?: Array<string>
 	metadata?: string
-	annotationsData?: Array<Annotation>
+	annotations?: Array<Annotation>
 	predictions?: Array<Prediction>
 	classes?: Array<WSIClass>
 	/** ds defined uncertainity labels and colors */
