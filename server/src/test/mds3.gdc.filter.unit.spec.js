@@ -34,6 +34,18 @@ tape('various filter situations', async function (test) {
 		test.deepEqual(f, filterNum.gdcfilter, 'dtTerm tvs is ignored')
 	}
 
+	{
+		// modify existing pp filter by inserting a gene exp tvs, this should be ignored in converting to gdc filter
+		filterNum.ppfilter.lst.push({
+			type: 'tvs',
+			tvs: {
+				term: { type: 'geneExpression' }
+			}
+		})
+		const f = filter2GDCfilter(filterNum.ppfilter)
+		test.deepEqual(f, filterNum.gdcfilter, 'geneExpression tvs is ignored')
+	}
+
 	test.end()
 })
 
