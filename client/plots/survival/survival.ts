@@ -36,16 +36,15 @@ Object.assign(t0_t2_defaultQ, {
 class TdbSurvival extends PlotBase implements RxComponentInner {
 	static type = 'survival'
 
-	// expected RxComponentInner props
+	// expected RxComponentInner props, some are already declared/set in PlotBase
 	type: string
 	parentId?: string
-	id: string
 	dom!: {
 		[index: string]: any
 	}
 	components: { [name: string]: ComponentApi } = {}
 
-	// expected Instance props
+	// expected class-specific props
 	settings: any
 	lineFxn: any
 	pj: any
@@ -54,16 +53,31 @@ class TdbSurvival extends PlotBase implements RxComponentInner {
 	hiddenRenderer: any
 	legendClick = (_, __, ___) => {}
 	download: () => void = () => {}
+	loadingWait = 0
+
+	colorScale: any
 
 	refs: any
 	symbol: any
 	serverData?: any
 	currData?: any
+	legendData?: any
+	hiddenData?: any
+	legendValues: { [name: string]: any } = {}
+	tests?: { [name: string]: any }
+	term2toColor: { [name: string]: { orig: string; rgb: any; adjusted: string; hex: string } } = {}
+
+	uniqueSeriesIds: Set<any> = new Set()
+
+	// TODO: migrate to this.view method
+	render = () => {}
+	getSymbol = (_: number) => {
+		return ''
+	}
 
 	constructor(opts) {
 		super(opts)
 		this.type = 'survival'
-		this.id = opts.id
 		if (opts?.parentId) this.parentId = opts.parentId
 		this.configTermKeys = ['term', 'term0', 'term2']
 		this.settings = Object.assign({}, opts.settings)
@@ -72,8 +86,8 @@ class TdbSurvival extends PlotBase implements RxComponentInner {
 
 		this.lineFxn = line()
 			.curve(curveStepAfter)
-			.x(c => c.scaledX)
-			.y(c => c.scaledY)
+			.x(c => (c as any).scaledX)
+			.y(c => (c as any).scaledY)
 
 		this.legendRenderer = htmlLegend(this.dom.legendDiv, {
 			settings: {
@@ -263,7 +277,7 @@ class TdbSurvival extends PlotBase implements RxComponentInner {
 		const termfilter = getCombinedTermFilter(appState, parentConfig?.filter)
 
 		return {
-			isVisible: config.term.term.type == 'survival' || (config.term2 && config.term2.term.type == 'survival'),
+			isVisible: config.term.term.type == 'survival' || config.term2?.term.type == 'survival',
 			genome: this.app.vocabApi.vocab.genome,
 			dslabel: this.app.vocabApi.vocab.dslabel,
 			activeCohort: appState.activeCohort,
@@ -333,7 +347,7 @@ class TdbSurvival extends PlotBase implements RxComponentInner {
 	}
 
 	getDefaultHidden() {
-		const hidden = []
+		const hidden: any[] = []
 		const term2 = this.state.config.term2
 		if (!term2) return hidden
 		const hiddenValues = term2.q.hiddenValues
@@ -355,10 +369,10 @@ class TdbSurvival extends PlotBase implements RxComponentInner {
 
 	processData(data) {
 		this.uniqueSeriesIds = new Set()
-		const rows = []
+		const rows: any[] = []
 		const estKeys = ['survival', 'lower', 'upper']
 		for (const d of data.case) {
-			const obj = {}
+			const obj: { [name: string]: any } = {}
 			data.keys.forEach((k, i) => {
 				obj[k] = estKeys.includes(k) ? Number(d[i]) : d[i]
 			})
@@ -420,12 +434,10 @@ class TdbSurvival extends PlotBase implements RxComponentInner {
 					const group = t2groups.find(g => g.name == series.seriesId)
 					color = group?.color
 				}
-				const c = {
-					orig: color || (series.seriesId == '' ? this.settings.defaultColor : this.colorScale(series.seriesId))
-				}
-				c.rgb = rgb(c.orig)
-				c.adjusted = c.rgb.toString()
-				c.hex = rgb2hex(c.adjusted)
+				const orig = color || (series.seriesId == '' ? this.settings.defaultColor : this.colorScale(series.seriesId))
+				const _rgb = rgb(orig)
+				const adjusted = _rgb.toString()
+				const c = { orig, rgb: _rgb, adjusted, hex: rgb2hex(adjusted) }
 				this.term2toColor[series.seriesId] = c
 
 				if (!legendItems.find(d => d.seriesId == series.seriesId)) {
@@ -473,8 +485,8 @@ class TdbSurvival extends PlotBase implements RxComponentInner {
 			})
 		}
 
-		if ((!config.term.term.type == 'survival' || config.term2) && legendItems.length) {
-			const termNum = config.term.term.type == 'survival' ? 'term2' : 'term'
+		if ((config.term.term.type == 'survival' || config.term2) && legendItems.length) {
+			const termNum = config.term.term.type == 'survival' && config.term2 ? 'term2' : 'term'
 			this.legendData = [
 				{
 					name: config[termNum].term.name,
@@ -701,7 +713,7 @@ function setRenderers(self) {
 			.style('padding-left', '20px')
 
 		/* eslint-disable */
-		const [mainG, seriesesG, axisG, xAxis, yAxis, xTitle, yTitle, atRiskG, plotRect] = getSvgSubElems(svg, chart)
+		const [mainG, seriesesG, axisG, xAxis, yAxis, xTitle, yTitle, atRiskG, plotRect] = getSvgSubElems(svg)
 		/* eslint-enable */
 		const xOffset = chart.atRiskLabelWidth + s.svgPadding.left
 		mainG.attr('transform', 'translate(' + xOffset + ',' + s.svgPadding.top + ')')
@@ -711,15 +723,15 @@ function setRenderers(self) {
 			.data(chart.visibleSerieses, d => (d && d[0] ? d[0].seriesId : ''))
 
 		serieses.exit().remove()
-		serieses.each(function (series, i) {
-			renderSeries(select(this), chart, series, i, s, s.duration)
+		serieses.each(function (this: HTMLElement, series, i) {
+			renderSeries(select(this), chart, series, i, s)
 		})
 		serieses
 			.enter()
 			.append('g')
 			.attr('class', 'sjpp-survival-series')
-			.each(function (series, i) {
-				renderSeries(select(this), chart, series, i, s, duration)
+			.each(function (this: HTMLElement, series, i) {
+				renderSeries(select(this), chart, series, i, s)
 			})
 
 		renderAxes(xAxis, xTitle, yAxis, yTitle, s, chart)
@@ -812,9 +824,9 @@ function setRenderers(self) {
 				'd',
 				area()
 					.curve(curveStepAfter)
-					.x(c => c.scaledX)
-					.y0(c => c.scaledY[1])
-					.y1(c => c.scaledY[2])(processedData)
+					.x(c => (c as any).scaledX)
+					.y0(c => (c as any).scaledY[1])
+					.y1(c => (c as any).scaledY[2])(processedData)
 			)
 			.style('display', s.ciVisible ? '' : 'none')
 			.style('fill', self.term2toColor[series.seriesId].adjusted)
@@ -931,9 +943,9 @@ function setRenderers(self) {
 			chart.xTickValues = []
 			xTicks = axisBottom(chart.xScale)
 				.ticks(4)
-				.tickFormat(t => {
-					chart.xTickValues.push(t)
-					return t
+				.tickFormat((xval: any) => {
+					chart.xTickValues.push(xval)
+					return xval
 				})
 		}
 
@@ -1135,7 +1147,7 @@ function setInteractivity(self) {
 				c.callback(d)
 			})
 
-			.each(function (d) {
+			.each(function (this: HTMLElement, d) {
 				const div = select(this)
 				if (d.label) div.append('div').style('display', 'inline-block').html(d.label)
 				if (d.setInput)
@@ -1145,7 +1157,7 @@ function setInteractivity(self) {
 					)
 			})
 
-		menu.show(event.clientX, event.clientY)
+		menu.show(x, y)
 	}
 
 	self.adjustValueOrder = (d, increment) => {
@@ -1235,9 +1247,9 @@ export async function getPlotConfig(opts, app) {
 		// supply t0_t2_defaultQ if opts.term0/2.bins/q is undefined
 		// so that t0_t2_defaultQ does not override bins or q from user
 		if (opts.term2)
-			await fillTermWrapper(opts.term2, app.vocabApi, opts.term2.bins || opts.term2.q ? null : t0_t2_defaultQ)
+			await fillTermWrapper(opts.term2, app.vocabApi, opts.term2.bins || opts.term2.q ? undefined : t0_t2_defaultQ)
 		if (opts.term0)
-			await fillTermWrapper(opts.term0, app.vocabApi, opts.term0.bins || opts.term0.q ? null : t0_t2_defaultQ)
+			await fillTermWrapper(opts.term0, app.vocabApi, opts.term0.bins || opts.term0.q ? undefined : t0_t2_defaultQ)
 	} catch (e) {
 		throw `${e} [survival getPlotConfig()]`
 	}

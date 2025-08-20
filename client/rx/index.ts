@@ -459,10 +459,6 @@ export function getAppApi(self) {
 		}
 	}
 
-	// expose tooltip if set, expected to be shared in common
-	// by all components within an app; should use the HOPI
-	// pattern to hide the mutable parts, not checked here
-	if (self.opts.debugName) window[self.opts.debugName] = api
 	if (!self.bus) {
 		if (!self.eventTypes) self.eventTypes = ['preDispatch', 'postInit', 'postRender', 'firstRender', 'error']
 		if (self.customEvents) self.eventTypes.push(...self.customEvents)
@@ -600,7 +596,7 @@ export function getComponentApi(self) {
 		},
 		triggerAbort(reason = '') {
 			if (reason) console.info(`triggerAbort()`, reason)
-			for (const c of abortControllers.values()) {
+			for (const c of (abortControllers as Set<AbortController>).values()) {
 				try {
 					c.abort()
 					abortControllers.delete(c)

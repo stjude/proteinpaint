@@ -16,8 +16,9 @@ export class AppApi {
 	// validateOpts(opts) {
 	// 	if (!opts.app) throw `missing opts.app`
 	// }
-
 	getState() {
 		return {}
 	}
+
+	deregister(_) {}
 }

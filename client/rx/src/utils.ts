@@ -27,7 +27,7 @@ export function deepFreeze(obj) {
 
 export async function notifyComponents(components, current) {
 	if (!components) return // allow component-less app
-	const called = []
+	const called: any[] = []
 
 	for (const name of Object.keys(components)) {
 		// when components is array, name will be index
@@ -111,7 +111,7 @@ export function fromJson(objStr) {
 	return JSON.parse(objStr)
 }
 
-export function toJson(obj = null) {
+export function toJson(this: any, obj = null) {
 	// this method should not be reused when there is
 	// a need to stringify any Set or Map values,
 	// instead declare a class specific toJson() method

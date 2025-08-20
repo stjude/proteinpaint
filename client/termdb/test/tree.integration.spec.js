@@ -319,7 +319,6 @@ tape('rehydrated from saved state', function (test) {
 	test.plan(2)
 
 	runpp({
-		debugName: 'tdb',
 		state: {
 			tree: {
 				expandedTermIds: ['root', 'Cancer-related Variables', 'Diagnosis']
