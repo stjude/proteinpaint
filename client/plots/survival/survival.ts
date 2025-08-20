@@ -1,17 +1,16 @@
-import { getCompInit, copyMerge } from '../rx'
-import { PlotBase } from './PlotBase.ts'
-import { controlsInit, term0_term2_defaultQ } from './controls'
+import { getCompInit, copyMerge, type RxComponentInner, type ComponentApi } from '#rx'
+import { PlotBase } from '#plots/PlotBase.ts'
+import { controlsInit, term0_term2_defaultQ } from '#plots/controls.js'
 import { select } from 'd3-selection'
 import { scaleLinear, scaleOrdinal } from 'd3-scale'
 import { schemeCategory10 } from 'd3-scale-chromatic'
 import { schemeCategory20 } from '#common/legacy-d3-polyfill'
 import { axisLeft, axisBottom } from 'd3-axis'
-import { timeYear } from 'd3-time'
 import { line, area, curveStepAfter } from 'd3-shape'
 import { rgb } from 'd3-color'
 import htmlLegend from '#dom/html.legend'
 import Partjson from 'partjson'
-import { to_svg, rgb2hex } from '#src/client'
+import { rgb2hex } from '#src/client'
 import { fillTermWrapper } from '#termsetting'
 import { Menu } from '#dom/menu'
 import { getSeriesTip } from '#dom/svgSeriesTips'
@@ -34,19 +33,76 @@ Object.assign(t0_t2_defaultQ, {
 	}
 })
 
-class TdbSurvival extends PlotBase {
+class TdbSurvival extends PlotBase implements RxComponentInner {
+	static type = 'survival'
+
+	// expected RxComponentInner props
+	type: string
+	parentId?: string
+	id: string
+	dom!: {
+		[index: string]: any
+	}
+	components: { [name: string]: ComponentApi } = {}
+
+	// expected Instance props
+	settings: any
+	lineFxn: any
+	pj: any
+	activeMenu = false
+	legendRenderer: any
+	hiddenRenderer: any
+	legendClick = (_, __, ___) => {}
+	download: () => void = () => {}
+
+	refs: any
+	symbol: any
+	serverData?: any
+	currData?: any
+
 	constructor(opts) {
 		super(opts)
 		this.type = 'survival'
+		this.id = opts.id
 		if (opts?.parentId) this.parentId = opts.parentId
 		this.configTermKeys = ['term', 'term0', 'term2']
+		this.settings = Object.assign({}, opts.settings)
+		this.dom = this.getDom()
+		this.pj = getPj(this)
+
+		this.lineFxn = line()
+			.curve(curveStepAfter)
+			.x(c => c.scaledX)
+			.y(c => c.scaledY)
+
+		this.legendRenderer = htmlLegend(this.dom.legendDiv, {
+			settings: {
+				legendOrientation: 'vertical'
+			},
+			handlers: {
+				legend: {
+					click: e => this.legendClick(e.target.__data__, e.clientX, e.clientY)
+				}
+			}
+		})
+
+		this.hiddenRenderer = htmlLegend(this.dom.hiddenDiv, {
+			settings: {
+				legendOrientation: 'vertical'
+			},
+			handlers: {
+				legend: {
+					click: e => this.legendClick(e.target.__data__, e.clientX, e.clientY)
+				}
+			}
+		})
 	}
 
-	async init() {
+	getDom() {
 		const opts = this.opts
 		const controls = this.opts.controls ? null : opts.holder.append('div')
 		const holder = opts.controls ? opts.holder : opts.holder.append('div')
-		this.dom = {
+		const dom = {
 			loadingDiv: holder
 				.append('div')
 				.style('position', 'absolute')
@@ -62,39 +118,18 @@ class TdbSurvival extends PlotBase {
 			tip: new Menu({ padding: '5px' }),
 			legendTip: new Menu({ padding: '5px' })
 		}
-		this.dom.tip.onHide = () => {
+
+		dom.tip.onHide = () => {
 			this.activeMenu = false
 		}
-		if (this.dom.header) this.dom.header.html('Survival Plot')
-		// hardcode for now, but may be set as option later
-		this.settings = Object.assign({}, opts.settings)
-		this.pj = getPj(this)
-		this.lineFxn = line()
-			.curve(curveStepAfter)
-			.x(c => c.scaledX)
-			.y(c => c.scaledY)
+
+		if (dom.header) dom.header.html('Survival Plot')
+		return dom
+	}
+
+	async init() {
 		setInteractivity(this)
 		setRenderers(this)
-		this.legendRenderer = htmlLegend(this.dom.legendDiv, {
-			settings: {
-				legendOrientation: 'vertical'
-			},
-			handlers: {
-				legend: {
-					click: e => this.legendClick(e.target.__data__, e.clientX, e.clientY)
-				}
-			}
-		})
-		this.hiddenRenderer = htmlLegend(this.dom.hiddenDiv, {
-			settings: {
-				legendOrientation: 'vertical'
-			},
-			handlers: {
-				legend: {
-					click: e => this.legendClick(e.target.__data__, e.clientX, e.clientY)
-				}
-			}
-		})
 		await this.setControls()
 	}
 
@@ -246,34 +281,30 @@ class TdbSurvival extends PlotBase {
 	}
 
 	async main() {
-		try {
-			if (!this.state.isVisible) {
-				this.dom.holder.style('display', 'none')
-				return
-			}
-
-			this.state.config = await this.getMutableConfig()
-			this.maySetSandboxHeader()
-			this.toggleLoadingDiv()
-
-			Object.assign(this.settings, this.state.config.settings)
-			this.settings.defaultHidden = this.getDefaultHidden()
-			this.settings.hidden = this.settings.customHidden || this.settings.defaultHidden
-			this.settings.xTitleLabel = this.getXtitleLabel()
-			const reqOpts = this.getDataRequestOpts()
-			const data = await this.app.vocabApi.getNestedChartSeriesData(reqOpts)
-			this.toggleLoadingDiv('none')
-			this.serverData = data
-			this.app.vocabApi.syncTermData(this.state.config, data)
-			this.currData = this.processData(data)
-			this.refs = data.refs
-			this.pj.refresh({ data: this.currData })
-			this.setTerm2Color(this.pj.tree.charts)
-			this.symbol = this.getSymbol(7) // hardcode the symbol size for now
-			this.render()
-		} catch (e) {
-			throw e
+		if (!this.state.isVisible) {
+			this.dom.holder.style('display', 'none')
+			return
 		}
+
+		this.state.config = await this.getMutableConfig()
+		this.maySetSandboxHeader()
+		this.toggleLoadingDiv()
+
+		Object.assign(this.settings, this.state.config.settings)
+		this.settings.defaultHidden = this.getDefaultHidden()
+		this.settings.hidden = this.settings.customHidden || this.settings.defaultHidden
+		this.settings.xTitleLabel = this.getXtitleLabel()
+		const reqOpts = this.getDataRequestOpts()
+		const data = await this.app.vocabApi.getNestedChartSeriesData(reqOpts)
+		this.serverData = data
+		this.toggleLoadingDiv('none')
+		this.app.vocabApi.syncTermData(this.state.config, data)
+		this.currData = this.processData(data)
+		this.refs = data.refs
+		this.pj.refresh({ data: this.currData })
+		this.setTerm2Color(this.pj.tree.charts)
+		this.symbol = this.getSymbol(7) // hardcode the symbol size for now
+		this.render()
 	}
 
 	maySetSandboxHeader() {
@@ -290,7 +321,7 @@ class TdbSurvival extends PlotBase {
 	// creates an opts object for the vocabApi.getNestedChartsData()
 	getDataRequestOpts() {
 		const c = this.state.config
-		const opts = {
+		const opts: any = {
 			chartType: 'survival',
 			term: c.term,
 			filter: this.state.termfilter.filter,
@@ -373,7 +404,7 @@ class TdbSurvival extends PlotBase {
 		}
 		this.term2toColor = {}
 		this.colorScale = this.uniqueSeriesIds.size < 11 ? scaleOrdinal(schemeCategory10) : scaleOrdinal(schemeCategory20)
-		const legendItems = []
+		const legendItems: any[] = []
 		for (const chart of charts) {
 			for (const series of chart.serieses) {
 				let color
@@ -731,7 +762,7 @@ function setRenderers(self) {
 		})
 	}
 
-	function getSvgSubElems(svg, chart) {
+	function getSvgSubElems(svg) {
 		let mainG, seriesesG, axisG, xAxis, yAxis, xTitle, yTitle, atRiskG, plotRect, line
 		if (!svg.select('.sjpp-survival-mainG').size()) {
 			mainG = svg.append('g').attr('class', 'sjpp-survival-mainG')
@@ -768,7 +799,7 @@ function setRenderers(self) {
 		return [mainG, seriesesG, axisG, xAxis, yAxis, xTitle, yTitle, atRiskG, plotRect]
 	}
 
-	function renderSeries(g, chart, series, i, s, duration) {
+	function renderSeries(g, chart, series, i, s) {
 		// do not show samples with time to event larger than maxTimeToEvent
 		let processedData = series.data
 		if (s.maxTimeToEvent) {
@@ -854,21 +885,6 @@ function setRenderers(self) {
 
 		const lineData = data.filter((d, i) => i === 0 || d.nevent || i === data.length - 1)
 		const censoredData = data.filter(d => d.ncensor)
-		const subg = g.append('g')
-		/*const circles = subg.selectAll('circle').data(lineData, b => b.x)
-		circles.exit().remove()
-
-		// for mouseover only
-		circles
-			.enter()
-			.append('circle')
-			.attr('r', s.radius)
-			.attr('cx', c => c.scaledX)
-			.attr('cy', c => c.scaledY)
-			.style('opacity', 0)
-			.style('fill', s.fill)
-			.style('fill-opacity', s.fillOpacity)
-			.style('stroke', s.stroke)*/
 
 		const seriesName = data[0].seriesName
 		const color = self.term2toColor[data[0].seriesId].adjusted
@@ -938,7 +954,7 @@ function setRenderers(self) {
 			.call(axisLeft(scaleLinear().domain(chart.yScale.domain()).range(chart.yScale.range())).ticks(5))
 
 		xTitle.select('text, title').remove()
-		const xText = xTitle
+		xTitle
 			.attr(
 				'transform',
 				'translate(' +
@@ -954,7 +970,7 @@ function setRenderers(self) {
 
 		const yTitleLabel = 'Probability of Survival'
 		yTitle.select('text, title').remove()
-		const yText = yTitle
+		yTitle
 			.attr(
 				'transform',
 				'translate(' +
@@ -987,11 +1003,6 @@ function setRenderers(self) {
 }
 
 function setInteractivity(self) {
-	const labels = {
-		survival: 'Survival',
-		lower: 'Lower 95% CI',
-		upper: 'Upper 95% CI'
-	}
 	self.download = function () {
 		if (!self.state) return
 		downloadChart(
@@ -1001,33 +1012,7 @@ function setInteractivity(self) {
 		)
 	}
 
-	self.mouseover = function (event) {
-		const d = event.target.__data__
-		/*if (event.target.tagName == 'circle') {
-			const label = labels[d.seriesName]
-			const x = d.x.toFixed(1)
-			const y = d.y.toPrecision(2)
-			const termNum = self.state.config.term.term.type == 'survival' ? 'term' : 'term2'
-			const xUnit = self.state.config[termNum].term.unit
-			const rows = [
-				`<tr><td colspan=2 style='text-align: center'>${
-					d.seriesLabel ? d.seriesLabel : self.state.config.term.term.name
-				}</td></tr>`,
-				`<tr><td style='padding:3px; color:#aaa'>Time to event:</td><td style='padding:3px; text-align:center'>${x} ${xUnit}</td></tr>`,
-				`<tr><td style='padding:3px; color:#aaa'>${label}:</td><td style='padding:3px; text-align:center'>${100 *
-					y}%</td></tr>`,
-				`<tr><td style='padding:3px; color:#aaa'>At-risk:</td><td style='padding:3px; text-align:center'>${d.nrisk}</td></tr>`
-			]
-			// may also indicate the confidence interval (lower%-upper%) in a new row
-			self.app.tip
-				.show(event.clientX, event.clientY)
-				.d.html(`<table class='sja_simpletable'>${rows.join('\n')}</table>`)
-		} else if (event.target.tagName == 'path' && d && d.seriesId) {
-			self.app.tip.show(event.clientX, event.clientY).d.html(d.seriesLabel ? d.seriesLabel : d.seriesId)
-		} else if (!self.activeMenu) {
-			self.app.tip.hide()
-		}*/
-	}
+	self.mouseover = function () {}
 
 	self.mouseout = function () {
 		if (self.activeMenu) return
@@ -1076,7 +1061,7 @@ function setInteractivity(self) {
 			return
 		}
 
-		const options = []
+		const options: any[] = []
 		options.push({
 			label: 'Hide',
 			callback: () => {
@@ -1350,7 +1335,6 @@ function getPj(self) {
 		},
 		'=': {
 			chartTitle(row) {
-				const s = self.settings
 				if (!row.chartId || row.chartId == '-') {
 					const termNum = self.state.config.term.term.type == 'survival' ? 'term' : 'term2'
 					return self.state.config[termNum].term.name
@@ -1382,9 +1366,8 @@ function getPj(self) {
 			yMax(row) {
 				return row.upper
 			},
-			xScale(row, context) {
+			xScale(_, context) {
 				const s = self.settings
-				const xMin = s.method == 2 ? 0 : context.self.xMin
 				return (
 					scaleLinear()
 						// force x to start at 0 because first data point will always
@@ -1393,17 +1376,16 @@ function getPj(self) {
 						.range([0, s.svgw - s.svgPadding.left - s.svgPadding.right])
 				)
 			},
-			scaledX(row, context) {
+			scaledX(_, context) {
 				return context.context.context.context.parent.xScale(context.self.x)
 			},
-			scaledY(row, context) {
+			scaledY(_, context) {
 				const yScale = context.context.context.context.parent.yScale
 				const s = context.self
 				return [yScale(s.y), yScale(s.lower), yScale(s.upper)]
 			},
-			yScale(row, context) {
+			yScale() {
 				const s = self.settings
-				const yMax = s.scale == 'byChart' ? context.self.yMax : context.root.yMax
 				const domain = [1.05, 0]
 				return scaleLinear()
 					.domain(domain)

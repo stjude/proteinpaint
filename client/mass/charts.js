@@ -3,6 +3,7 @@ import { Menu } from '#dom'
 import { getNormalRoot } from '#filter/filter'
 import { NumericModes, TermTypes } from '#shared/terms.js'
 import { GeneSetEditUI } from '../dom/GeneSetEdit/GeneSetEditUI.ts' // cannot use '#dom/', breaks
+import { importPlot } from '#plots/importPlot.js'
 
 class MassCharts {
 	constructor(opts = {}) {
@@ -121,7 +122,7 @@ function getChartTypeList(self, state) {
 		by calling showTree_select1term() or showTree_selectlst()
 	2. prep chart
 		by calling prepPlot()
-	3. display chart-specific menu by importing from ../plots/<chartType>.js
+	3. display chart-specific menu by importing plot code using importPlot()
 		and call the imported function loadChartSpecificMenu()
 
 	.label:
@@ -603,7 +604,7 @@ function setRenderers(self) {
 
 	self.loadChartSpecificMenu = async chart => {
 		self.dom.tip.clear()
-		const _ = await import(`../plots/${chart.chartType}.js`)
+		const _ = await importPlot(chart.chartType)
 		_.makeChartBtnMenu(self.dom.tip.d, self, chart.chartType)
 	}
 

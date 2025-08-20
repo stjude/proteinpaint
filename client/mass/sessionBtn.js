@@ -4,6 +4,7 @@ import { to_textfile } from '#dom/downloadTextfile'
 import { dofetch3 } from '#common/dofetch'
 import { corsMessage } from '#common/embedder-helpers'
 import { select } from 'd3-selection'
+import { importPlot } from '#plots/importPlot.js'
 
 class MassSessionBtn {
 	constructor() {
@@ -518,7 +519,7 @@ async function preprocessState(state, app) {
 		for (const plot of state.plots) {
 			promises.push(
 				(async () => {
-					const _ = await import(`../plots/${plot.chartType}.js`)
+					const _ = await importPlot(plot.chartType)
 					return await _.getPlotConfig(plot, app)
 				})()
 			)

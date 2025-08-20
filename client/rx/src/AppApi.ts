@@ -1,4 +1,6 @@
 export class AppApi {
+	vocabApi: any
+
 	// opts: any
 	// constructor(opts) {
 	// 	this.opts = opts
@@ -14,4 +16,8 @@ export class AppApi {
 	// validateOpts(opts) {
 	// 	if (!opts.app) throw `missing opts.app`
 	// }
+
+	getState() {
+		return {}
+	}
 }

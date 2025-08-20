@@ -42,8 +42,8 @@ export class Bus {
 		this.events = {}
 		this.defaultArg = api
 		if (callbacks) {
-			for (const eventType in callbacks) {
-				this.on(eventType, callbacks[eventType])
+			for (const [eventType, callback] of Object.entries(callbacks)) {
+				this.on(eventType, callback)
 			}
 		}
 	}
@@ -66,7 +66,7 @@ export class Bus {
 		- optional callback configuration, such as
 		.wait // to delay callback  
 		*/
-		const type = eventType.split('.').shift
+		const type = eventType.split('.').shift()
 		if (!this.eventTypes.includes(type)) {
 			throw `Unknown bus event '${type}' for component ${this.name}`
 		} else if (!callback) {
@@ -96,7 +96,7 @@ export class Bus {
 		- optional delay in calling the callback
 	*/
 		setTimeout(() => {
-			for (const type in this.events) {
+			for (const type of Object.keys(this.events)) {
 				if (eventType == 'postRender' && type.startsWith('firstRender')) {
 					this.events[type](arg || this.defaultArg, error)
 					delete this.events[type]

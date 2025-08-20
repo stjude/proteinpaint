@@ -2,6 +2,7 @@ import { getCompInit, copyMerge } from '#rx'
 import { Menu } from '#dom/menu'
 import { recoverInit } from '../rx/src/recover'
 import { select as d3select } from 'd3-selection'
+import { importPlot } from '#plots/importPlot.js'
 
 class MassPlot {
 	constructor(opts) {
@@ -55,7 +56,8 @@ class MassPlot {
 				maxHistoryLen: 10
 			})
 		}
-		const _ = await import(`../plots/${opts.chartType}.js`)
+		const _ = await importPlot(opts.chartType)
+
 		this.components.chart = await _.componentInit({
 			app: this.app,
 			holder: this.dom.viz,

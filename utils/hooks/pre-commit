@@ -34,7 +34,7 @@ if [[ "$FILES" != "" ]]; then
 	# check for invalid use of .Inner reference
 	echo "checking for forbidden .Inner. usage"
 	set +e
-	PRODINNER=$(echo "$FILES" | xargs grep -lr --exclude=\*.spec\* --exclude=\*dist\/ --exclude=\*test\/ --exclude=\*front.helpers\* --exclude=\*.md "\.Inner\.")
+	PRODINNER=$(echo "$FILES" | xargs grep -lr --exclude=\*ComponentApi.\* --exclude=\*.spec\* --exclude=\*dist\/ --exclude=\*test\/ --exclude=\*front.helpers\* --exclude=\*.md "\.Inner\.")
 	set -e
 	if [[ "$PRODINNER" != "" ]]; then
 		echo "\n--- !!! forbidden use of .Inner. found in: !!! ---"
