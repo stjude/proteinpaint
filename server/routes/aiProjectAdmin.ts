@@ -137,10 +137,10 @@ function editProject(connection: any, project: any) {
 		const multiParams: any = []
 		for (const cls of project.classes) {
 			const exists = existingClasses.get(project.id, cls.name)
-			if (!exists) multiParams.push([project.id, cls.name, cls.color])
+			if (!exists) multiParams.push([project.id, cls.name, cls.color, cls.key_shortcut || ''])
 		}
 		if (multiParams.length > 0) {
-			const insertClass = `INSERT INTO project_classes (project_id, name, color) VALUES (?, ?, ?)`
+			const insertClass = `INSERT INTO project_classes (project_id, name, color, key_shortcut) VALUES (?, ?, ?, ?)`
 			stmts.push({ sql: insertClass, params: multiParams })
 		}
 	}
@@ -167,8 +167,8 @@ function addProject(connection: any, project: any) {
 	const rows = runSQL(connection, projectSql, projectParams, 'add')
 
 	//Add corresponding project classes
-	const classSql = `INSERT INTO project_classes (project_id, name, color) VALUES (?, ?, ?)`
-	const classParams = project.classes.map((c: any) => [rows.lastInsertRowid, c.label, c.color])
+	const classSql = `INSERT INTO project_classes (project_id, name, color, key_shortcut) VALUES (?, ?, ?, ?)`
+	const classParams = project.classes.map((c: any) => [rows.lastInsertRowid, c.label, c.color, c.key_shortcut || ''])
 	for (const params of classParams) {
 		runSQL(connection, classSql, params, 'add')
 	}

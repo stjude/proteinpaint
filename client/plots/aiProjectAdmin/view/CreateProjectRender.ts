@@ -80,8 +80,8 @@ export class CreateProjectRender {
 				this.interactions.addProject({
 					project: {
 						filter: this.filter,
-						classes: this.classesTable!.rows.map(row => {
-							return { label: row[1].value, color: row[2].color }
+						classes: this.classesTable!.rows.map((row, i) => {
+							return { label: row[1].value, color: row[2].color, key_shortcut: `Digit${i}` }
 						})
 					}
 				})

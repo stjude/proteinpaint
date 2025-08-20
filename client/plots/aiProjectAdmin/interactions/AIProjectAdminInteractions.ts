@@ -18,7 +18,7 @@ export class AIProjectAdminInteractions {
 
 	async addProject(opts: { project: any }) {
 		const config = this.getConfig()
-		const projectObject = Object.assign({}, config.settings.project, opts.project, opts.project.filter)
+		const projectObject = Object.assign({}, config.settings.project, opts.project)
 
 		const body = {
 			genome: this.genome,

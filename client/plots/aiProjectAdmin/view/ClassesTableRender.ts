@@ -116,6 +116,10 @@ export class ClassesTableRender {
 			.style('display', 'inline-block')
 			.style('margin', '10px 0px 0px 0px')
 			.on('click', () => {
+				if (this.rows.length >= 9) {
+					alert('Maximum number of classes reached.')
+					return
+				}
 				this.getNewClass(colorScale, this.rows)
 				this.renderTable()
 			})
