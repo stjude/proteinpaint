@@ -1,6 +1,7 @@
 import type { Mclass } from './Mclass.ts'
 import type { WSImage } from './routes/samplewsimages.ts'
 import type { WSISample } from './routes/wsisamples.ts'
+import type { SaveWSIAnnotationRequest } from './routes/saveWSIAnnotation.ts'
 
 /*** General usage types ***/
 type FileObj = {
@@ -1038,6 +1039,9 @@ export type WSImages = {
 	annotationsColor?: Array<number>
 	tileSize?: number
 	uncertainty?: { color: string; label: string }[]
+
+	/** dynamically added on launch with built in logic */
+	saveWSIAnnotation?: (annotation: SaveWSIAnnotationRequest) => Promise<void>
 
 	/** either ds supplied or dynamically added on launch with built in logic (retrieve the sample list from the wsimages table) */
 	getSamples?: () => Promise<Array<WSISample>>
