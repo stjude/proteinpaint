@@ -458,7 +458,10 @@ function handle_click(event, self, chart) {
 	if (self.config.displaySampleIds) {
 		options.push({
 			label: 'List samples',
-			callback: async () => await listSamples(event, self, data.seriesId, data.dataId, chart.chartId)
+			callback: async () => {
+				const arg = getListSamplesArg(event, self, data.seriesId, data.dataId, chart.chartId)
+				await listSamples(arg)
+			}
 		})
 	}
 
@@ -502,8 +505,7 @@ function handle_click(event, self, chart) {
 	self.app.tip.show(event.clientX, event.clientY)
 }
 
-async function listSamples(event, self, seriesId, dataId, chartId) {
-	// query sample data
+function getListSamplesArg(event, self, seriesId, dataId, chartId) {
 	const terms = [self.config.term]
 	const tvslst = {
 		type: 'tvslst',
@@ -524,6 +526,71 @@ async function listSamples(event, self, seriesId, dataId, chartId) {
 		const tvs = getTvs(0, chartId)
 		if (tvs) tvslst.lst.push(tvs)
 	}
+	const arg = {
+		event,
+		self,
+		terms,
+		tvslst,
+		hasTerm2Data
+	}
+	return arg
+
+	function getTvs(termIndex, value) {
+		const term = termIndex == 0 ? self.config.term0 : termIndex == 1 ? self.config.term : self.config.term2
+		if (term.term.type == 'geneVariant') {
+			// geneVariant filtering will be handled by mayFilterByGeneVariant()
+			return
+		}
+		let tvs = {
+			type: 'tvs',
+			tvs: {
+				term: term.term,
+				values: [{ key: value }]
+			}
+		}
+		if (isNumericTerm(term.term)) {
+			const bins = self.bins[termIndex]
+			tvs.tvs.ranges = [bins.find(bin => bin.label == value)]
+		} else if (term.term.type == 'samplelst') {
+			const list = term.term.values?.[value]?.list || []
+			const ids = list.map(s => s.sampleId)
+			const tvslst = getSamplelstFilter(ids)
+			tvs = tvslst.lst[0] // tvslst only has the tvs for the samplelst term
+		} else if (term.term.type == 'geneVariant' && term.q.type == 'values') {
+			throw 'no longer supported in barchart'
+			/*** code below was used to list samples for geneVariant term with q.type='values', but now only geneVariant with groupsetting is used in barchart ***/
+			/*// geneVariant term with q.type='values' (groupsetting is handled mayFilterByGeneVariant())
+			// chart is divided by dt term
+			// get dt term from selected chart and build tvs
+			const termdbmclass = self.app.vocabApi.termdbConfig?.mclass
+			const dtTerm = self.chartid2dtterm[chartId]
+			let key
+			if (termdbmclass) {
+				// custom mclass labels defined in dataset
+				key = Object.keys(termdbmclass).find(k => termdbmclass[k].label == value)
+			}
+			if (!key) {
+				key = Object.keys(mclass).find(k => mclass[k].label == value)
+			}
+			tvs.tvs.term = dtTerm
+			;(tvs.tvs.values = [{ key }]), (tvs.tvs.includeNotTested = true) // to be able to list not tested samples*/
+		}
+		return tvs
+	}
+}
+
+export async function listSamples(arg) {
+	for (const k of Object.keys(arg)) {
+		const param = arg[k]
+		if (['event', 'self', 'terms', 'tvslst'].includes(k)) {
+			if (!param) throw `parameter '${k}' is undefined`
+		} else if (k == 'hasTerm2Data') {
+			if (typeof param != 'boolean') throw 'hasTerm2Data is not boolean'
+		} else {
+			throw `unexpected key '${k}'`
+		}
+	}
+	const { event, self, terms, tvslst, hasTerm2Data } = arg
 	const opts = {
 		terms,
 		filter: filterJoin([self.state.termfilter.filter, tvslst]),
@@ -616,49 +683,6 @@ async function listSamples(event, self, seriesId, dataId, chartId) {
 		resize: true
 	})
 	menu.show(event.clientX, event.clientY, false)
-
-	function getTvs(termIndex, value) {
-		const term = termIndex == 0 ? self.config.term0 : termIndex == 1 ? self.config.term : self.config.term2
-		if (term.term.type == 'geneVariant') {
-			// geneVariant filtering will be handled by mayFilterByGeneVariant()
-			return
-		}
-		let tvs = {
-			type: 'tvs',
-			tvs: {
-				term: term.term,
-				values: [{ key: value }]
-			}
-		}
-		if (isNumericTerm(term.term)) {
-			const bins = self.bins[termIndex]
-			tvs.tvs.ranges = [bins.find(bin => bin.label == value)]
-		} else if (term.term.type == 'samplelst') {
-			const list = term.term.values?.[value]?.list || []
-			const ids = list.map(s => s.sampleId)
-			const tvslst = getSamplelstFilter(ids)
-			tvs = tvslst.lst[0] // tvslst only has the tvs for the samplelst term
-		} else if (term.term.type == 'geneVariant' && term.q.type == 'values') {
-			throw 'no longer supported in barchart'
-			/*** code below was used to list samples for geneVariant term with q.type='values', but now only geneVariant with groupsetting is used in barchart ***/
-			/*// geneVariant term with q.type='values' (groupsetting is handled mayFilterByGeneVariant())
-			// chart is divided by dt term
-			// get dt term from selected chart and build tvs
-			const termdbmclass = self.app.vocabApi.termdbConfig?.mclass
-			const dtTerm = self.chartid2dtterm[chartId]
-			let key
-			if (termdbmclass) {
-				// custom mclass labels defined in dataset
-				key = Object.keys(termdbmclass).find(k => termdbmclass[k].label == value)
-			}
-			if (!key) {
-				key = Object.keys(mclass).find(k => mclass[k].label == value)
-			}
-			tvs.tvs.term = dtTerm
-			;(tvs.tvs.values = [{ key }]), (tvs.tvs.includeNotTested = true) // to be able to list not tested samples*/
-		}
-		return tvs
-	}
 
 	function mayFilterByGeneVariant(sample) {
 		if (self.config.term.term.type == 'geneVariant') {

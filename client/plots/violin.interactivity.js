@@ -1,10 +1,10 @@
 import { filterJoin, getFilterItemByTag } from '#filter'
-import { renderTable, niceNumLabels } from '#dom'
+import { niceNumLabels } from '#dom'
 import { to_svg } from '#src/client'
-import { roundValueAuto } from '#shared/roundValue.js'
 import { rgb } from 'd3'
 import { TermTypes } from '#shared/terms.js'
 import { getSamplelstFilter } from '../mass/groups.js'
+import { listSamples } from './barchart.events.js'
 
 export function setInteractivity(self) {
 	self.download = () => {
@@ -162,21 +162,20 @@ export function setInteractivity(self) {
 
 	self.listSamples = async function (event, t1, t2, plot, start, end) {
 		const tvslst = self.getTvsLst(t1, t2, plot, start, end)
-		const term = t1.q?.mode === 'continuous' ? t1 : t2
-		const filter = {
-			type: 'tvslst',
-			join: 'and',
-			lst: [self.state.termfilter.filter, tvslst],
-			in: true
+		const terms = [t1]
+		let hasTerm2Data
+		if (t2) {
+			hasTerm2Data = true
+			terms.push(t2)
 		}
-		const opts = {
-			terms: [term],
-			filter,
-			filter0: self.state.termfilter.filter0
+		const arg = {
+			event,
+			self,
+			terms,
+			tvslst,
+			hasTerm2Data
 		}
-		//getAnnotatedSampleData is used to retrieve sample id's and values (see matrix.js).
-		const data = await self.app.vocabApi.getAnnotatedSampleData(opts)
-		self.displaySampleIds(event, term, data)
+		await listSamples(arg)
 	}
 
 	self.openSampleView = function (sampleId, sampleName) {
@@ -188,43 +187,6 @@ export function setInteractivity(self) {
 			}
 		})
 		self.app.tip.hide()
-	}
-
-	self.displaySampleIds = function (event, term, data) {
-		self.app.tip.clear()
-		if (!data?.samples) return
-		const sampleIdArr = []
-		for (const [c, k] of Object.entries(data.samples)) {
-			const sampleName = data.refs.bySampleId[c].label
-			sampleIdArr.push([{ value: sampleName }, { value: roundValueAuto(k[term.$id].value) }])
-		}
-
-		const columnButton = {
-			text: 'View',
-			callback: async (event, i) => {
-				const sample = data.lst[i]
-
-				const sampleId = sample.sample
-				const sampleName = sample._ref_.label
-				self.openSampleView(sampleId, sampleName)
-			}
-		}
-		const tableDiv = self.app.tip.d.append('div')
-		const columns = [{ label: 'Sample' }, { label: 'Value' }]
-		const rows = sampleIdArr
-
-		renderTable({
-			rows,
-			columns,
-			columnButtons: [columnButton],
-			div: tableDiv,
-			maxWidth: '30vw',
-			maxHeight: '25vh',
-			resize: true,
-			showLines: true
-		})
-
-		self.app.tip.show(event.clientX, event.clientY)
 	}
 
 	self.labelHideLegendClicking = function (t2, plot) {
