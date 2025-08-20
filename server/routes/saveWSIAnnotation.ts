@@ -1,11 +1,11 @@
-import type { Mds3, RouteApi, SampleWSImagesRequest } from '#types'
+import type { Mds3, RouteApi } from '#types'
 import { saveWSIAnnotationPayload } from '#types/checkers'
 import type { SaveWSIAnnotationRequest } from '@sjcrh/proteinpaint-types/routes/saveWSIAnnotation.js'
-import Database from 'better-sqlite3'
-import path from 'path'
-import serverconfig from '#src/serverconfig.js'
+import { getDbConnection } from '#src/aiHistoDBConnection.ts'
+import type Database from 'better-sqlite3'
 
 const routePath = 'saveWSIAnnotation'
+
 export const api: RouteApi = {
 	endpoint: `${routePath}`,
 	methods: {
@@ -23,70 +23,84 @@ export const api: RouteApi = {
 function init({ genomes }) {
 	return async (req, res): Promise<void> => {
 		try {
-			const annotation: SampleWSImagesRequest = req.query
+			// Accept from query (GET) or body (POST); prefer body if present
+			const annotation: SaveWSIAnnotationRequest = (
+				req.body && Object.keys(req.body).length ? req.body : req.query
+			) as SaveWSIAnnotationRequest
+
+			// these are fixed in your app; adjust if they come from request
 			const g = genomes['hg38']
-			if (!g) throw 'invalid genome name'
+			if (!g) throw new Error('invalid genome name')
 			const ds = g.datasets['AIAHistoLabeler']
-			if (!ds) throw 'invalid dataset name'
-			if (ds.queries.WSImages.saveWSIAnnotation) {
-				await ds.queries.WSImages.saveWSIAnnotation(annotation)
+			if (!ds) throw new Error('invalid dataset name')
+
+			if (typeof ds.queries?.WSImages?.saveWSIAnnotation === 'function') {
+				const result = await ds.queries.WSImages.saveWSIAnnotation(annotation)
+				if (result?.status === 'error') {
+					return res.status(500).send(result)
+				}
 			}
-			res.status(200).send({ testKey: 'completed' })
+
+			res.status(200).send({ status: 'ok' })
 		} catch (e: any) {
 			console.warn(e)
 			res.status(500).send({
 				status: 'error',
-				error: e.message || e
+				error: e?.message || String(e)
 			})
 		}
 	}
 }
 
 export async function validate_query_saveWSIAnnotation(ds: Mds3) {
-	const q = ds.queries?.WSImages?.db
-	if (!q) return
-	validateQuery(ds)
+	// Only attach if not already provided
+	if (typeof ds?.queries?.WSImages?.saveWSIAnnotation === 'function') return
+	const connection = getDbConnection(ds)
+	if (!connection) {
+		// DB file missing
+		return
+	}
+	validateQuery(ds, connection)
 }
 
-function validateQuery(ds: any) {
+function validateQuery(ds: any, connection: Database.Database) {
+	if (!ds.queries) ds.queries = {}
+	if (!ds.queries.WSImages) ds.queries.WSImages = {}
+
 	ds.queries.WSImages.saveWSIAnnotation = async (annotation: SaveWSIAnnotationRequest) => {
 		try {
-			const timestamp = new Date().toISOString() // current UTC time
+			// Build values with sensible defaults
+			const timestamp = new Date().toISOString()
+			const projectId = annotation.projectId
+			const imageId = annotation.wsimageId // expects image row id
+			const coords = JSON.stringify(annotation.coordinates ?? [])
+			const userId = (annotation as any).userId ?? 1
+			const status = (annotation as any).status ?? 1
+			const classId = (annotation as any).classId ?? null
 
-			// Get SQLite DB file path
-			const dbRelativePath = ds.queries?.WSImages?.db?.file
-
-			if (!dbRelativePath) {
-				throw new Error('SQLite database path not found in ds.queries.WSImages.db')
+			// Validate minimal required fields
+			if (projectId == null || imageId == null) {
+				return {
+					status: 'error',
+					error: 'Missing required fields: projectId and wsimageId.'
+				}
 			}
 
-			const dbPath = path.join(serverconfig.tpmasterdir, dbRelativePath)
-
-			// Open connection
-			const connection = new Database(dbPath)
-
-			const stmt = connection.prepare(`
+			const insertSql = `
 				INSERT INTO project_annotations (
 					project_id, user_id, coordinates, timestamp, status, class_id, image_id
 				) VALUES (?, ?, ?, ?, ?, ?, ?)
-			`)
+			`
 
-			stmt.run(
-				1,
-				1,
-				`[${annotation.coordinates[0]},${annotation.coordinates[1]}]`,
-				timestamp,
-				1,
-				annotation.projectId,
-				annotation.wsimageId
-			)
+			const stmt = connection.prepare(insertSql)
+			stmt.run(projectId, userId, coords, timestamp, status, classId, imageId)
 
 			return { status: 'ok' }
 		} catch (error: any) {
 			console.error('Error saving annotation:', error)
 			return {
 				status: 'error',
-				error: error.message || 'Failed to save annotation'
+				error: error?.message || 'Failed to save annotation'
 			}
 		}
 	}
