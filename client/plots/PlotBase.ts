@@ -6,6 +6,7 @@ export class PlotBase {
 	//id: string
 	opts: any
 	app: AppApi
+	id: string
 	state: any
 	// dom: any
 	// config: any
@@ -13,6 +14,7 @@ export class PlotBase {
 
 	constructor(opts) {
 		this.opts = opts
+		this.id = opts.id
 		this.app = opts.app
 	}
 

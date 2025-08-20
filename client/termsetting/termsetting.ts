@@ -906,7 +906,7 @@ function equivalentQs(q0: Q, q1: Q) {
 			}
 		}
 	}
-	return deepEqual(...qlst)
+	return deepEqual(qlst[0], qlst[1])
 }
 
 function getDefaultHandler(self): Handler {

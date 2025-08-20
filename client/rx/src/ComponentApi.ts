@@ -40,7 +40,7 @@ export class ComponentApi {
 	Inner?: RxComponentInner // only in debugmode
 	#latestActionSequenceId: number
 	#abortControllers: Set<AbortController>
-	#bus: Bus
+	#bus?: Bus
 
 	static getInitFxn(__Class__) {
 		return async opts => {
@@ -134,7 +134,7 @@ export class ComponentApi {
 			if (self.bus && (!current.action || current.action.sequenceId === this.#latestActionSequenceId))
 				self.bus.emit('postRender')
 			return this
-		} catch (e) {
+		} catch (e: any) {
 			if (self.printError) self.printError(e)
 			else if (self.dom?.errdiv) throw { message: e.message || e.error || e, errdiv: self.dom?.errdiv }
 			else throw e
