@@ -3061,38 +3061,38 @@
   },
   "plots/barchart.js": {
     "lines": {
-      "total": 464,
-      "covered": 6,
+      "total": 463,
+      "covered": 355,
       "skipped": 0,
-      "pct": 1.29
+      "pct": 76.67
     },
     "functions": {
       "total": 95,
-      "covered": 1,
+      "covered": 78,
       "skipped": 0,
-      "pct": 1.05
+      "pct": 82.1
     },
     "statements": {
-      "total": 524,
-      "covered": 6,
+      "total": 523,
+      "covered": 376,
       "skipped": 0,
-      "pct": 1.14
+      "pct": 71.89
     },
     "branches": {
-      "total": 447,
-      "covered": 1,
+      "total": 441,
+      "covered": 284,
       "skipped": 0,
-      "pct": 0.22
+      "pct": 64.39
     },
     "lowestPct": {
-      "curr": 0.22,
+      "curr": 64.39,
       "prev": 64.17,
-      "diff": -63.95
+      "diff": 0.21999999999999886
     },
     "averagePct": {
-      "curr": 0.9249999999999999,
+      "curr": 73.76249999999999,
       "prev": 73.65,
-      "diff": -72.72500000000001
+      "diff": 0.11249999999998295
     }
   },
   "mass/test/barchart.integration.spec.js": {
