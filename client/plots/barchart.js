@@ -365,7 +365,8 @@ export class Barchart {
 			this.term2toColor = {} // forget any assigned overlay colors when refreshing a barchart
 			this.updateSettings(this.config)
 			for (const chart of data.charts) {
-				const numColors = this.config.term2 ? Math.max(chart.serieses.map(s => s.data.length)) : chart.serieses.length
+				const categoriesPerSerie = chart.serieses.map(s => s.data.length)
+				const numColors = this.config.term2 ? Math.max(...categoriesPerSerie) : chart.serieses.length
 				chart.colorScale = getColors(numColors)
 			}
 			this.chartsData = this.processData(this.currServerData)
