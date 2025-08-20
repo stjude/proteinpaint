@@ -1,7 +1,7 @@
 import tape from 'tape'
-import { termjson } from '../../test/testdata/termjson'
-import * as helpers from '../../test/front.helpers.js'
-import { detectOne, detectGte } from '../../test/test.helpers.js'
+import { termjson } from '#test/testdata/termjson.ts'
+import * as helpers from '#test/front.helpers.js'
+import { detectOne, detectGte } from '#test/test.helpers.js'
 
 /*
 Tests:

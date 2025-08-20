@@ -1,12 +1,20 @@
-// import type {} from '#types'
+import { type AppApi } from '#rx'
 import { TwRouter, routedTermTypes } from '#tw'
 
-export class PlotBase /*implements RxComponentInner*/ {
-	app?: any
-	type?: string
+export class PlotBase {
+	//type: string
+	//id: string
+	opts: any
+	app: AppApi
 	state: any
-	config: any
+	// dom: any
+	// config: any
 	configTermKeys?: string[]
+
+	constructor(opts) {
+		this.opts = opts
+		this.app = opts.app
+	}
 
 	async getMutableConfig() {
 		// TODO: may improve to not require a full copy??
@@ -22,7 +30,7 @@ export class PlotBase /*implements RxComponentInner*/ {
 			if (!value) continue
 			if (Array.isArray(value)) {
 				for (const [i, tw] of value.entries()) {
-					if (routedTermTypes.has(tw.term?.type)) this.config[key][i] = TwRouter.init(tw, opts)
+					if (routedTermTypes.has(tw.term?.type)) config[key][i] = TwRouter.init(tw, opts)
 				}
 			} else if (routedTermTypes.has(value.term?.type)) {
 				config[key] = await TwRouter.initRaw(value, opts)

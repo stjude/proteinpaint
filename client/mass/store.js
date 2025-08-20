@@ -4,6 +4,7 @@ import { getFilterItemByTag, findParent } from '#filter/filter'
 import { getSamplelstTW, getFilter } from './groups.js'
 import { TermTypes } from '#shared/terms.js'
 import { rehydrateFilter } from '../filter/rehydrateFilter.js'
+import { importPlot } from '#plots/importPlot.js'
 
 /*
 tmp comment on plot state. later properly define it in typescript
@@ -123,7 +124,7 @@ class TdbStore {
 			for (const [i, savedPlot] of this.state.plots.entries()) {
 				let plot
 				try {
-					const _ = await import(`../plots/${savedPlot.chartType}.js`)
+					const _ = await importPlot(savedPlot.chartType)
 					// this.state{} is already fully set with initial state, thus okay to pass to getPlotConfig()
 					plot = await _.getPlotConfig(savedPlot, this.app, this.state.activeCohort)
 				} catch (e) {
@@ -285,7 +286,7 @@ TdbStore.prototype.actions = {
 		}
 		if (!action.config) throw '.config{} missing for plot_prep'
 		if (action.config.chartType && Object.keys(action.config).length == 1) {
-			const _ = await import(`../plots/${action.config.chartType}.js`)
+			const _ = await importPlot(action.config.chartType)
 			const config = await _.getPlotConfig(action.config, this.app)
 			action.config = Object.assign(config, action.config)
 		}
@@ -294,7 +295,7 @@ TdbStore.prototype.actions = {
 	},
 
 	async plot_create(action) {
-		const _ = await import(`../plots/${action.config.chartType}.js`)
+		const _ = await importPlot(action.config.chartType)
 		const plot = await _.getPlotConfig(action.config, this.app)
 		if (!('id' in action)) action.id = getId()
 		plot.id = action.id
@@ -326,7 +327,7 @@ TdbStore.prototype.actions = {
 					// - prevent counting child plots separately in CHARTS tab
 					p.parentId = plot.id
 					if (!p.id) p.id = getId() // fill in missing child plot id
-					const _ = await import(`../plots/${p.chartType}.js`)
+					const _ = await importPlot(p.chartType)
 					const config = await _.getPlotConfig(p, this.app)
 					// Move nested state.plot[i].plots[] into the root state.plots[] array
 					this.state.plots.push(config)

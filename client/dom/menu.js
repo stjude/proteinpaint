@@ -115,6 +115,8 @@ export class Menu {
 		// string selector option to limit clear()/removal of elements
 		// so that other elements may persist within tip.d
 		this.clearSelector = arg.clearSelector
+
+		if (arg.onHide) this.onHide = arg.onHide
 	}
 
 	clear() {

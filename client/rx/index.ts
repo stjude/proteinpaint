@@ -1,5 +1,10 @@
-import { deepEqual, deepFreeze, notifyComponents } from './src/utils.ts'
-export { deepEqual, deepFreeze } from './src/utils.ts'
+import { deepEqual, deepFreeze, notifyComponents, copyMerge, fromJson, toJson } from './src/utils.ts'
+import { ComponentApi } from './src/ComponentApi.ts'
+import { Bus } from './src/Bus.ts'
+export * from './src/AppApi.ts'
+export type { RxComponentInner } from './src/ComponentApi.ts'
+export * from './src/ComponentApi.ts'
+export * from './src/utils.ts'
 export { Bus } from './src/Bus.ts'
 
 /*
@@ -103,6 +108,7 @@ export function getStoreInit(_Class_) {
 }
 
 export function getCompInit(_Class_) {
+	if (_Class_.type) return ComponentApi.getInitFxn(_Class_)
 	return getInitPrepFxn(_Class_, prepComponent)
 }
 
@@ -198,15 +204,11 @@ export function getOpts(_opts, instance) {
 */
 export async function multiInit(initPromises) {
 	const components = {}
-	try {
-		await Promise.all(Object.values(initPromises))
-		for (const name in initPromises) {
-			components[name] = await initPromises[name]
-		}
-		return components
-	} catch (e) {
-		throw e
+	await Promise.all(Object.values(initPromises))
+	for (const name in initPromises) {
+		components[name] = await initPromises[name]
 	}
+	return components
 }
 
 /****************
@@ -267,7 +269,7 @@ export function getStoreApi(self) {
 			if (!actions) {
 				throw `no store actions specified`
 			}
-			if (!actions.hasOwnProperty(action.type)) {
+			if (!Object.keys(actions).includes(action.type)) {
 				throw `Action=${action.type} must be declared in an "actions" property of a class.`
 			}
 			if (typeof actions[action.type] !== 'function') {
@@ -282,7 +284,7 @@ export function getStoreApi(self) {
 			// track the #
 			numPromisedWrites += 1
 			let decrement = -1
-			return new Promise((resolve, reject) => {
+			return new Promise(resolve => {
 				const interval = setInterval(() => {
 					numPromisedWrites += decrement
 					decrement = 0
@@ -316,9 +318,8 @@ export function prepApp(self, opts) {
 
 export function getAppApi(self) {
 	// optional registry for component instances
-	const componentsByType = {}
-	const middlewares = []
-	let numExpectedWrites = 0
+	const componentsByType: { [name: string]: any } = {}
+	const middlewares: any[] = []
 	let latestActionSequenceId
 	const api = {
 		type: self.type,
@@ -419,12 +420,14 @@ export function getAppApi(self) {
 				if (!component) continue
 				if (Array.isArray(component)) {
 					for (const c of component) c.triggerAbort()
-				} else if (component.hasOwnProperty('triggerAbort')) {
-					component.triggerAbort()
-				} else if (component && typeof component == 'object' && !component.main) {
-					for (const subname of Object.keys(component)) {
-						if (typeof component[subname].triggerAbort == 'function') {
-							component[subname].triggerAbort()
+				} else if (typeof component == 'object') {
+					if (Object.keys(component).includes('triggerAbort')) {
+						component.triggerAbort()
+					} else if (!component.main) {
+						for (const subname of Object.keys(component)) {
+							if (typeof component[subname].triggerAbort == 'function') {
+								component[subname].triggerAbort()
+							}
 						}
 					}
 				}
@@ -528,7 +531,7 @@ export function getComponentApi(self) {
 				if (self.bus && (!current.action || current.action.sequenceId === latestActionSequenceId))
 					self.bus.emit('postRender')
 				return api
-			} catch (e) {
+			} catch (e: any) {
 				if (self.printError) self.printError(e)
 				else if (self.dom?.errdiv) throw { message: e.message || e.error || e, errdiv: self.dom?.errdiv }
 				else throw e
@@ -552,11 +555,10 @@ export function getComponentApi(self) {
 		// This is an api function so that code that has access to this component api
 		// can also tie-in a function call to the fresheness of the component action.
 		//
-		async detectStale(asyncFxn, opts = {}) {
-			let errMsg = ''
+		async detectStale(asyncFxn, opts: { abortCtrl?: AbortController; wait?: number } = {}) {
 			try {
 				const actionSequenceId = latestActionSequenceId
-				const promises = []
+				const promises: any[] = []
 				let i, promResolve
 				if (opts.abortCtrl) {
 					abortControllers.add(opts.abortCtrl)
@@ -567,7 +569,7 @@ export function getComponentApi(self) {
 								if (actionSequenceId !== latestActionSequenceId) {
 									clearInterval(i)
 									try {
-										opts.abortCtrl.abort()
+										opts.abortCtrl?.abort()
 										throw `stale sequenceId`
 									} catch (e) {
 										reject(e)
@@ -613,7 +615,7 @@ export function getComponentApi(self) {
 				const component = self.components[name]
 				if (Array.isArray(component)) {
 					for (const c of component) c.triggerAbort()
-				} else if (component.hasOwnProperty('triggerAbort')) {
+				} else if (Object.keys(component).includes('triggerAbort')) {
 					component.triggerAbort()
 				} else if (component && typeof component == 'object' && !component.main) {
 					for (const subname of Object.keys(component)) {
@@ -713,79 +715,4 @@ export function getComponents(components, dotSepNames) {
 		if (!component) break
 	}
 	return component
-}
-
-// Store Helpers
-// -------------
-
-/*
-	base: 
-	- either a state object or its JSON-stringified equivalent 
-	- will be over-written by second+ argument,
-	  similar to native Object.assign() overwrite sequence
-
-	args
-	- full or partial state object(s). if base is a string, then
-	  the arg object will be converted to/from JSON to
-	  create a copy for merging
-	- the last argument may be an array of keys to force replacing
-	  an object value instead of extending it
-
-	Merging behavior:
-	- a base value that is an array or non-object will be replaced by matching arg key-value
-	- a base value that is an object will be extended by a matching arg key-value
-	- nested base object values will be extended recursively, instead of being swapped/replaced
-	  at the root level *** EXCEPT IF there is an isAtomic flag on one of these ****
-	  - the source
-	  - target object
-	  - target child object
-	- see index.spec test for copyMerge details
-*/
-export function copyMerge(base, ...args) {
-	const target = typeof base == 'string' ? fromJson(base) : base
-	for (const arg of args) {
-		if (arg) {
-			const source = typeof base == 'string' ? fromJson(toJson(arg)) : arg
-			for (const key in source) {
-				if (
-					!target[key] ||
-					Array.isArray(target[key]) ||
-					typeof target[key] !== 'object' ||
-					source === null ||
-					source === undefined ||
-					source.isAtomic ||
-					target?.isAtomic ||
-					target[key]?.isAtomic
-				)
-					target[key] = source[key]
-				else copyMerge(target[key], source[key])
-			}
-		}
-	}
-	return target
-}
-
-export function fromJson(objStr) {
-	// this method should not be reused when there is
-	// a need to recover any Set or Map values, instead
-	// declare a class specific fromJson() method that has
-	// new Set(arrOfValues) or new Map(arrOfPairedValues)
-	//
-	// also, do not use this when autogenerated IDs
-	// need to be attached to list entries
-	//
-	return JSON.parse(objStr)
-}
-
-export function toJson(obj = null) {
-	// this method should not be reused when there is
-	// a need to stringify any Set or Map values,
-	// instead declare a class specific toJson() method
-	// that converts any Set or Map values to
-	// [...Set] or [...Map] before JSON.stringify()
-	return JSON.stringify(obj ? obj : this.state)
-}
-
-export function sleep(ms) {
-	return new Promise(resolve => setTimeout(resolve, ms))
 }

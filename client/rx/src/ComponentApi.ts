@@ -1,59 +1,104 @@
 import type { AppApi } from './AppApi.ts'
-import { deepEqual, notifyComponents } from './utils.ts'
+import { deepEqual, notifyComponents, copyMerge } from './utils.ts'
 import { Bus } from './Bus.ts'
 
 export interface RxComponentInner {
-	api: any
-	app: any
+	type: string
+	api?: any
+	app: AppApi
 	id: any
+	parentId?: string
+
 	opts: any
 	state: any
+	// should require dom to automate destroy()
 	dom: {
 		[index: string]: any
 	}
-	components: any | any[]
-
-	reactsTo: (action: { type: string; [key: string]: any }) => boolean
+	components?: ComponentApi[] | { [name: string]: ComponentApi }
+	init?: (appState: any) => void
+	reactsTo?: (action: { type: string; [key: string]: any }) => boolean
 	getState: (appState: any) => any
+	hasStatePreMain?: boolean
 	main: (arg?: any) => void
 	mainArg?: any
 	printError?: (any) => void
 	destroy?: () => void
 
-	bus: any
+	bus?: any
 	eventTypes?: string[]
+	customEvents?: string[]
 }
 
 export class ComponentApi {
+	type: string
+	id?: string
 	app: AppApi
 	opts: any
-	id?: string
+
 	#Inner: RxComponentInner
+	Inner?: RxComponentInner // only in debugmode
 	#latestActionSequenceId: number
 	#abortControllers: Set<AbortController>
 	#bus: Bus
 
-	//async init(__Class__, api) {}
+	static getInitFxn(__Class__) {
+		return async opts => {
+			const api = new ComponentApi(opts, __Class__)
+			await api.init()
+			return api
+		}
+	}
 
 	constructor(_opts, __Class__) {
-		const opts = this.validateOpts(_opts)
+		const opts = this.#validateOpts(_opts, __Class__)
 		this.app = opts.app
 		this.opts = opts
 		// the component type + id may be used later to
 		// simplify getting its state from the store
 		this.id = opts.id
-		this.#Inner = new __Class__(opts)
-		this.#Inner.api = this
+		const Inner = new __Class__(opts)
+		this.#Inner = Inner
+		this.type = Inner.type || __Class__.type
+		Inner.opts = opts
+		Inner.id = opts.id
+		Inner.app = opts.app
+		Inner.api = this
+		if (Inner.debug || (Inner.opts && Inner.opts.debug)) this.Inner = Inner
+
+		if (!Inner.eventTypes) Inner.eventTypes = ['preDispatch', 'postInit', 'postRender', 'firstRender', 'error']
+		if (this.#Inner.customEvents) Inner.eventTypes.push(...Inner.customEvents)
+		Inner.bus = new Bus(this, Inner.eventTypes, opts.callbacks)
+
 		this.#latestActionSequenceId = 0
 		this.#abortControllers = new Set()
-		this.#bus = new Bus(this, this.#Inner.eventTypes, opts.callbacks)
 	}
 
-	validateOpts(opts) {
+	#validateOpts(opts, __Class__) {
 		const optKeys = Object.keys(opts)
 		if (!optKeys.includes('app')) throw `missing opts.app`
-		if (!opts.includes('debug')) opts.debug = opts.app.debug ?? opts.app.opts?.debug ?? false
+		if (!optKeys.includes('debug')) opts.debug = opts.app.debug ?? opts.app.opts?.debug ?? false
+		if (__Class__.type && opts.app.opts?.[__Class__.type]) {
+			copyMerge(opts, opts.app.opts[__Class__.type])
+		}
 		return opts
+	}
+
+	async init() {
+		const self = this.#Inner
+		if (!self.init) return
+		await self.init(this.app.getState())
+		// lessen confusing behavior
+		if (self.state && !self.hasStatePreMain) {
+			delete self.state
+			console.warn(
+				`${self.type}: rx deleted this.state after init()` +
+					`to avoid confusing behavior, such as the component not rendering initially ` +
+					`because this.state would not have changed between init() and the first time ` +
+					`main() is called. To skip this warning and retain this.state after init(), ` +
+					`set this.hasStatePreMain = true in the ${self.type} constructor.`
+			)
+		}
 	}
 
 	// current: {action: RxAction, appState}
