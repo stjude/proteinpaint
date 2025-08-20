@@ -1,7 +1,7 @@
-import type {} from '#types'
+// import type {} from '#types'
 import { TwRouter, routedTermTypes } from '#tw'
 
-export class PlotBase {
+export class PlotBase /*implements RxComponentInner*/ {
 	app?: any
 	type?: string
 	state: any
