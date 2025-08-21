@@ -8,9 +8,9 @@ export interface RxComponentInner {
 	app: AppApi
 	id: any
 	parentId?: string
-
 	opts: any
 	state: any
+	debug?: boolean
 	// should require dom to automate destroy()
 	dom: {
 		[index: string]: any
@@ -56,7 +56,7 @@ export class ComponentApi {
 		this.opts = opts
 		// the component type + id may be used later to
 		// simplify getting its state from the store
-		const self = new __Class__(opts)
+		const self: RxComponentInner = new __Class__(opts)
 		self.opts = opts
 		if (!self.id) self.id = opts.id || self.opts?.id
 		self.app = opts.app
