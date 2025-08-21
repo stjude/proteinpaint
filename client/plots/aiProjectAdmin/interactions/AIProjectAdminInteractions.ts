@@ -1,4 +1,4 @@
-import { Model } from '../model/Model'
+import type { ProjectReposity } from '../repo/ProjectReposity'
 import type { AIProjectAdminResponse } from '#types'
 
 export class AIProjectAdminInteractions {
@@ -6,14 +6,14 @@ export class AIProjectAdminInteractions {
 	id: string
 	genome: string
 	dslabel: string
-	model: Model
+	prjtRepo: ProjectReposity
 
-	constructor(app: any, id: string, model: Model) {
+	constructor(app: any, id: string, prjtRepo: ProjectReposity) {
 		this.app = app
 		this.id = id
 		this.genome = app.vocabApi.vocab.genome
 		this.dslabel = app.vocabApi.vocab.dslabel
-		this.model = model
+		this.prjtRepo = prjtRepo
 	}
 
 	async addProject(opts: { project: any }) {
@@ -26,7 +26,7 @@ export class AIProjectAdminInteractions {
 			project: projectObject
 		}
 		try {
-			await Model.updateProject(body, 'PUT')
+			await this.prjtRepo.updateProject(body, 'PUT')
 		} catch (e: any) {
 			console.error('Error adding project:', e.message || e)
 			throw e
@@ -50,7 +50,7 @@ export class AIProjectAdminInteractions {
 			project
 		}
 		try {
-			await Model.updateProject(body, 'POST')
+			await this.prjtRepo.updateProject(body, 'POST')
 		} catch (e: any) {
 			console.error('Error editing project:', e.message || e)
 			throw e
@@ -69,7 +69,7 @@ export class AIProjectAdminInteractions {
 		}
 
 		try {
-			await Model.updateProject(body, 'DELETE')
+			await this.prjtRepo.updateProject(body, 'DELETE')
 		} catch (e: any) {
 			console.error('Error deleting project:', e.message || e)
 			throw e

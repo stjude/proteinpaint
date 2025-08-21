@@ -1,8 +1,8 @@
 import { dofetch2, dofetch3 } from '#common/dofetch'
 import type { AIProjectAdminRequest, AIProjectAdminResponse } from '#types'
 
-export class Model {
-	public static async getProjects(genome: string, dslabel: string): Promise<string[]> {
+export class ProjectReposity {
+	public async getProjects(genome: string, dslabel: string): Promise<string[]> {
 		const body: AIProjectAdminRequest = {
 			genome,
 			dslabel,
@@ -17,7 +17,7 @@ export class Model {
 		}
 	}
 
-	public static async updateProject(_body: any, method: string): Promise<AIProjectAdminResponse> {
+	public async updateProject(_body: any, method: string): Promise<AIProjectAdminResponse> {
 		const body: AIProjectAdminRequest = Object.assign({}, _body, { for: 'admin' })
 		try {
 			if (method == 'PUT' || method == 'DELETE') {
