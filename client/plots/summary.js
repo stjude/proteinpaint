@@ -6,13 +6,12 @@ import { recoverInit } from '../rx/src/recover'
 // import { select } from 'd3-selection'
 import { getDefaultViolinSettings } from './violin.js'
 import { getDefaultBarSettings } from './barchart.js'
-import { getDefaultBoxplotSettings } from './boxplot.js'
-import { getDefaultScatterSettings } from './sampleScatter.js'
+import { getDefaultBoxplotSettings } from './boxplot/BoxPlot.ts'
+import { getDefaultScatterSettings } from './scatter/scatter.js'
 import { Tabs } from '../dom/toggleButtons'
 import { isNumericTerm } from '#shared/terms.js'
 import { term0_term2_defaultQ } from './controls'
-
-//import {  } from ''
+import { importPlot } from './importPlot.js'
 
 class SummaryPlot extends PlotBase {
 	constructor(opts) {
@@ -103,14 +102,7 @@ class SummaryPlot extends PlotBase {
 	async setComponent(config) {
 		// !!! quick fix for rollup to bundle,
 		// will eventually need to move to a subnested folder structure
-		let _
-		if (config.childType == 'barchart') _ = await import(`./barchart.js`)
-		else if (config.childType == 'violin') _ = await import(`./violin.js`)
-		else if (config.childType == 'table') _ = await import(`./table.js`)
-		else if (config.childType == 'boxplot') _ = await import(`./boxplot.js`)
-		else if (config.childType == 'sampleScatter') _ = await import(`./sampleScatter.js`)
-		else throw `unsupported childType='${config.childType}'`
-
+		const _ = await importPlot(config.childType, `unsupported childType='${config.childType}'`)
 		this.dom.plotDivs[config.childType] = this.dom.viz.append('div')
 
 		// assumes only 1 chart per chartType would be rendered in the summary sandbox
