@@ -1,3 +1,5 @@
+// TODO: will replace this type definition with the class
+// in rx/src/AppApi.ts (work-in-progress)
 export type RxAppApi = {
 	type: 'app'
 	deregister: (api2: any) => void
@@ -16,8 +18,14 @@ export type RxAppApi = {
 	save: (action: any) => Promise<void>
 }
 
-/** rx.getComponentInit() will set this.app, this.id, this.opts
- * Combine this pseudoclass with class to avoid type errors */
+// !!!
+//   use RxComponentInner interface from `rx/ComponentApi.ts`
+//   and see survival.ts for example usage
+// !!!
+/** legacy type definition:
+ * rx.getComponentInit() will set this.app, this.id, this.opts
+ * Combine this pseudoclass with class to avoid type errors
+ * */
 export class RxComponentInner {
 	api: any
 	app: any

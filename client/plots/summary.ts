@@ -1,4 +1,4 @@
-import { getCompInit, copyMerge } from '#rx'
+import { getCompInit, copyMerge, type ComponentApi, type RxComponentInner } from '#rx'
 import { PlotBase } from './PlotBase.ts'
 import { Menu } from '#dom/menu'
 import { fillTermWrapper } from '#termsetting'
@@ -13,22 +13,228 @@ import { isNumericTerm } from '#shared/terms.js'
 import { term0_term2_defaultQ } from './controls'
 import { importPlot } from './importPlot.js'
 
-class SummaryPlot extends PlotBase {
-	constructor(opts) {
+class SummaryPlot extends PlotBase implements RxComponentInner {
+	static type = 'summary'
+
+	// expected RxComponentInner props, some are already declared/set in PlotBase
+	api: ComponentApi
+	type: string
+	parentId?: string
+	dom!: {
+		[index: string]: any
+	}
+	components: {
+		[name: string]: ComponentApi | { [name: string]: ComponentApi }
+	} = {}
+
+	// expected class-specific props
+	chartsByType: { [chartType: string]: ComponentApi } = {}
+	configTermKeys = ['term', 'term0', 'term2']
+	config: any
+	tabsData: any[]
+	chartToggles: Tabs
+
+	violinContTerm?: 'term' | 'term2'
+	boxContTerm?: 'term' | 'term2'
+
+	constructor(opts, api) {
 		super(opts)
-		this.type = 'summary'
+		this.api = api // optional to set only if this reference is used within class methods
+		this.type = SummaryPlot.type
+		this.dom = this.getDom(opts)
+		this.tabsData = this.getTabsData()
+		this.chartToggles = new Tabs({ holder: this.dom.chartToggles, tabs: this.tabsData, noContent: true })
 		this.components = {
-			recover: {},
 			plots: {}
 		}
-		this.chartsByType = {}
-		this.configTermKeys = ['term', 'term0', 'term2']
+	}
+
+	getDom(opts) {
+		const holder = opts.holder
+		holder.header.style('padding', 0)
+
+		const paneTitleDiv = holder.header
+			.append('div')
+			.style('display', 'inline-block')
+			.style('color', '#999')
+			.style('padding-left', '7px')
+
+		return {
+			tip: new Menu({ padding: '0px' }),
+			holder,
+			body: holder.body
+				// .style('margin-top', '-1px')
+				.style('white-space', 'nowrap')
+				.style('overflow-x', 'auto'),
+
+			// will hold no data notice or the page title in multichart views
+			errdiv: holder.body
+				.append('div')
+				.style('display', 'none')
+				.style('padding', '5px')
+				.style('background-color', 'rgba(255,100,100,0.2)'),
+
+			// dom.viz will hold the rendered view
+			viz: holder.body.append('div'),
+			plotDivs: {},
+			paneTitleDiv,
+			paneTitleText: paneTitleDiv
+				.append('div')
+				.classed('sjpp-term-header', true)
+				.style('display', 'inline-block')
+				.style('vertical-align', 'sub'),
+			chartToggles: paneTitleDiv.append('div').style('display', 'inline-block').style('margin-left', '10px'),
+			localRecoverDiv: paneTitleDiv.append('div').style('display', 'inline-block')
+		}
+	}
+
+	getTabsData() {
+		const callback = (event, tab) => this.tabClickCallback(event, tab)
+		return [
+			{
+				childType: 'barchart',
+				label: 'Barchart',
+				isVisible: () => true,
+				disabled: () => false,
+				getConfig: async () => {
+					if (!this.config) return
+					const config: any = { id: this.id, childType: 'barchart' }
+					const term = this.config?.term
+					const term2 = this.config?.term2
+					if (term) {
+						const mode = isNumericTerm(term?.term) ? 'discrete' : term?.q.mode || 'discrete'
+						config.term = await this.getWrappedTermCopy(term, mode)
+					}
+
+					if (term2) {
+						const mode = isNumericTerm(term2.term) ? 'discrete' : term2.q.mode || 'discrete'
+						config.term2 = await this.getWrappedTermCopy(term2, mode)
+					}
+					return config
+				},
+				active: true,
+				callback
+			},
+			{
+				childType: 'violin',
+				label: 'Violin',
+				disabled: () => false,
+				isVisible: () => isNumericTerm(this.config?.term?.term) || isNumericTerm(this.config?.term2?.term),
+				getConfig: async () => {
+					const term = this.config?.term
+					const term2 = this.config.term2
+
+					let _term, _term2
+					this.violinContTerm = isNumericTerm(term?.term) ? 'term' : 'term2'
+
+					//If the first term was continuous or is coming as continuous
+					if ((this.violinContTerm && this.violinContTerm === 'term') || term.q?.mode == 'continuous') {
+						// must mean coming from scatter plot
+						_term = await this.getWrappedTermCopy(term, 'continuous')
+						_term2 = await this.getWrappedTermCopy(term2, 'discrete')
+						this.violinContTerm = 'term'
+					}
+					//If the second term was continuous or is coming as continuous
+					else if ((this.violinContTerm && this.violinContTerm === 'term2') || term2?.q?.mode == 'continuous') {
+						// must mean coming from barchart
+						_term = await this.getWrappedTermCopy(term, 'discrete')
+						_term2 = await this.getWrappedTermCopy(term2, 'continuous')
+						this.violinContTerm = 'term2'
+					}
+					//If the second term is coming as discrete from the scatter
+					else if (term2?.q?.mode == 'discrete') {
+						// must mean coming from barchart
+						_term = await this.getWrappedTermCopy(term, 'discrete')
+						_term2 = await this.getWrappedTermCopy(term2, 'continuous')
+						this.violinContTerm = 'term2'
+					}
+					//by default
+					else {
+						_term = await this.getWrappedTermCopy(term, 'continuous')
+						_term2 = await this.getWrappedTermCopy(term2, 'discrete')
+						this.violinContTerm = 'term'
+					}
+					const config = { childType: 'violin', term: _term, term2: _term2 }
+					return config
+				},
+				active: false,
+				callback
+			},
+			{
+				childType: 'boxplot',
+				label: 'Boxplot',
+				disabled: () => false,
+				isVisible: () => isNumericTerm(this.config?.term?.term) || isNumericTerm(this.config?.term2?.term),
+				getConfig: async () => {
+					const _term = this.config?.term
+					const _term2 = this.config.term2
+
+					let termMode = 'continuous',
+						term2Mode = 'discrete'
+					this.boxContTerm = isNumericTerm(_term?.term) ? 'term' : 'term2'
+
+					//If the first term was continuous or is coming as continuous
+					if ((this.boxContTerm && this.boxContTerm === 'term') || _term.q?.mode == 'continuous') {
+						// must mean coming from scatter plot
+						termMode = 'continuous'
+						term2Mode = 'discrete'
+						this.boxContTerm = 'term'
+					}
+					//If the second term was continuous or is coming as continuous
+					else if ((this.boxContTerm && this.boxContTerm === 'term2') || _term2?.q?.mode == 'continuous') {
+						// must mean coming from barchart
+						termMode = 'discrete'
+						term2Mode = 'continuous'
+						this.boxContTerm = 'term2'
+					}
+					//If the second term is coming as discrete from the scatter
+					else if (_term2?.q?.mode == 'discrete') {
+						// must mean coming from barchart
+						termMode = 'discrete'
+						term2Mode = 'continuous'
+						this.boxContTerm = 'term2'
+					}
+
+					const term = await this.getWrappedTermCopy(_term, termMode)
+					const term2 = await this.getWrappedTermCopy(_term2, term2Mode)
+					const config = {
+						childType: 'boxplot',
+						term,
+						term2
+					}
+					return config
+				},
+				active: false,
+				callback
+			},
+			{
+				childType: 'sampleScatter',
+				label: 'Scatter',
+				disabled: () => false,
+				isVisible: () => {
+					return isNumericTerm(this.config?.term.term) && isNumericTerm(this.config?.term2?.term)
+				},
+				getConfig: async () => {
+					const _term = await this.getWrappedTermCopy(this.config?.term, 'continuous')
+					const _term2 = await this.getWrappedTermCopy(this.config?.term2, 'continuous')
+					const config = {
+						childType: 'sampleScatter',
+						term: _term,
+						term2: _term2,
+						groups: [],
+						term0: this.config.term0
+					}
+					return config
+				},
+				active: false,
+				callback
+			}
+		]
 	}
 
 	async init(appState) {
 		const state = this.getState(appState)
 		const config = structuredClone(state.config)
-		setRenderers(this)
 		this.initUi(this.opts, config)
 
 		this.components.recover = await recoverInit({
@@ -50,6 +256,7 @@ class SummaryPlot extends PlotBase {
 		if (action.type.startsWith('filter')) return true
 		if (action.type.startsWith('cohort')) return true
 		if (action.type == 'app_refresh') return true
+		return false
 	}
 
 	getState(appState) {
@@ -72,10 +279,6 @@ class SummaryPlot extends PlotBase {
 
 		if (!this.components.plots[this.config.childType]) {
 			await this.setComponent(this.config)
-		}
-
-		for (const childType in this.components.plots) {
-			const chart = this.components.plots[childType]
 		}
 
 		this.render()
@@ -125,241 +328,49 @@ class SummaryPlot extends PlotBase {
 			delete this.dom[key]
 		}
 	}
-}
 
-export const summaryInit = getCompInit(SummaryPlot)
-export const componentInit = summaryInit
-
-function setRenderers(self) {
-	self.initUi = function (opts, config) {
-		const holder = opts.holder
-		try {
-			self.dom = {
-				tip: new Menu({ padding: '0px' }),
-				holder,
-				body: holder.body
-					// .style('margin-top', '-1px')
-					.style('white-space', 'nowrap')
-					.style('overflow-x', 'auto'),
-
-				// will hold no data notice or the page title in multichart views
-				errdiv: holder.body
-					.append('div')
-					.style('display', 'none')
-					.style('padding', '5px')
-					.style('background-color', 'rgba(255,100,100,0.2)'),
-
-				// dom.viz will hold the rendered view
-				viz: holder.body.append('div'),
-				plotDivs: {}
-			}
-
-			holder.header.style('padding', 0)
-
-			// holder is assumed to be a sandbox, which has a header
-			self.dom.paneTitleDiv = self.dom.holder.header
-				.append('div')
-				.style('display', 'inline-block')
-				.style('color', '#999')
-				.style('padding-left', '7px')
-
-			self.dom.paneTitleText = self.dom.paneTitleDiv
-				.append('div')
-				.classed('sjpp-term-header', true)
-				.style('display', 'inline-block')
-				.style('vertical-align', 'sub')
-				.html(config.term.term.name)
-
-			self.tabsData = [
-				{
-					childType: 'barchart',
-					label: 'Barchart',
-					isVisible: () => true,
-					disabled: d => false,
-					getConfig: async () => {
-						if (!self.config) return
-						const config = { id: self.id, childType: 'barchart' }
-						const term = self.config?.term
-						const term2 = self.config?.term2
-						if (term) {
-							const mode = isNumericTerm(term?.term) ? 'discrete' : term?.q.mode || 'discrete'
-							config.term = await self.getWrappedTermCopy(term, mode)
-						}
-
-						if (term2) {
-							const mode = isNumericTerm(term2.term) ? 'discrete' : term2.q.mode || 'discrete'
-							config.term2 = await self.getWrappedTermCopy(term2, mode)
-						}
-						return config
-					},
-					active: true,
-					callback: self.tabClickCallback
-				},
-				{
-					childType: 'violin',
-					label: 'Violin',
-					disabled: d => false,
-					isVisible: () => isNumericTerm(self.config?.term?.term) || isNumericTerm(self.config?.term2?.term),
-					getConfig: async () => {
-						const term = self.config?.term
-						const term2 = self.config.term2
-
-						let _term, _term2
-						isNumericTerm(term?.term) ? (self.violinContTerm = 'term') : (self.violinContTerm = 'term2')
-
-						//If the first term was continuous or is coming as continuous
-						if ((self.violinContTerm && self.violinContTerm === 'term') || term.q?.mode == 'continuous') {
-							// must mean coming from scatter plot
-							_term = await self.getWrappedTermCopy(term, 'continuous')
-							_term2 = await self.getWrappedTermCopy(term2, 'discrete')
-							self.violinContTerm = 'term'
-						}
-						//If the second term was continuous or is coming as continuous
-						else if ((self.violinContTerm && self.violinContTerm === 'term2') || term2?.q?.mode == 'continuous') {
-							// must mean coming from barchart
-							_term = await self.getWrappedTermCopy(term, 'discrete')
-							_term2 = await self.getWrappedTermCopy(term2, 'continuous')
-							self.violinContTerm = 'term2'
-						}
-						//If the second term is coming as discrete from the scatter
-						else if (term2?.q?.mode == 'discrete') {
-							// must mean coming from barchart
-							_term = await self.getWrappedTermCopy(term, 'discrete')
-							_term2 = await self.getWrappedTermCopy(term2, 'continuous')
-							self.violinContTerm = 'term2'
-						}
-						//by default
-						else {
-							_term = await self.getWrappedTermCopy(term, 'continuous')
-							_term2 = await self.getWrappedTermCopy(term2, 'discrete')
-							self.violinContTerm = 'term'
-						}
-						const config = { childType: 'violin', term: _term, term2: _term2 }
-						return config
-					},
-					active: false,
-					callback: self.tabClickCallback
-				},
-				{
-					childType: 'boxplot',
-					label: 'Boxplot',
-					disabled: d => false,
-					isVisible: () => isNumericTerm(self.config?.term?.term) || isNumericTerm(self.config?.term2?.term),
-					getConfig: async () => {
-						const _term = self.config?.term
-						const _term2 = self.config.term2
-
-						let termMode = 'continuous',
-							term2Mode = 'discrete'
-						self.boxContTerm = isNumericTerm(_term?.term) ? 'term' : 'term2'
-
-						//If the first term was continuous or is coming as continuous
-						if ((self.boxContTerm && self.boxContTerm === 'term') || _term.q?.mode == 'continuous') {
-							// must mean coming from scatter plot
-							termMode = 'continuous'
-							term2Mode = 'discrete'
-							self.boxContTerm = 'term'
-						}
-						//If the second term was continuous or is coming as continuous
-						else if ((self.boxContTerm && self.boxContTerm === 'term2') || _term2?.q?.mode == 'continuous') {
-							// must mean coming from barchart
-							termMode = 'discrete'
-							term2Mode = 'continuous'
-							self.boxContTerm = 'term2'
-						}
-						//If the second term is coming as discrete from the scatter
-						else if (_term2?.q?.mode == 'discrete') {
-							// must mean coming from barchart
-							termMode = 'discrete'
-							term2Mode = 'continuous'
-							self.boxContTerm = 'term2'
-						}
-
-						const term = await self.getWrappedTermCopy(_term, termMode)
-						const term2 = await self.getWrappedTermCopy(_term2, term2Mode)
-						const config = {
-							childType: 'boxplot',
-							term,
-							term2
-						}
-						return config
-					},
-					active: false,
-					callback: self.tabClickCallback
-				},
-				{
-					childType: 'sampleScatter',
-					label: 'Scatter',
-					disabled: d => false,
-					isVisible: () => {
-						return isNumericTerm(self.config?.term.term) && isNumericTerm(self.config?.term2?.term)
-					},
-					getConfig: async () => {
-						const _term = await self.getWrappedTermCopy(self.config?.term, 'continuous')
-						const _term2 = await self.getWrappedTermCopy(self.config?.term2, 'continuous')
-						let config = {
-							childType: 'sampleScatter',
-							term: _term,
-							term2: _term2,
-							groups: [],
-							term0: self.config.term0
-						}
-						return config
-					},
-					active: false,
-					callback: self.tabClickCallback
-				}
-			]
-			self.dom.chartToggles = self.dom.paneTitleDiv
-				.append('div')
-				.style('display', 'inline-block')
-				.style('margin-left', '10px')
-
-			self.chartToggles = new Tabs({ holder: self.dom.chartToggles, tabs: self.tabsData, noContent: true })
-			self.chartToggles.main()
-
-			// Placeholder for recover component
-			self.dom.localRecoverDiv = self.dom.paneTitleDiv.append('div').style('display', 'inline-block')
-		} catch (e) {
-			self.printError(e)
-			//throw e
-		}
+	initUi(opts, config) {
+		this.dom.paneTitleText.html(config.term.term.name)
+		this.chartToggles.main()
 	}
 
-	self.tabClickCallback = async (event, tab) => {
+	async tabClickCallback(event, tab) {
 		if (!tab || !tab.getConfig) return
 		const config = await tab.getConfig()
 		if (config)
-			self.app.dispatch({
+			this.app.dispatch({
 				type: 'plot_edit',
-				id: self.id,
+				id: this.id,
 				config: config
 			})
 	}
 
-	self.getWrappedTermCopy = async function (term, mode) {
+	async getWrappedTermCopy(term, mode) {
 		if (!term) return
 		const tw = structuredClone(term)
 		// TODO: this is not type safe, assumes any q{} can be set to any mode
 		tw.q.mode = mode // {mode, isAtomic: true}
 		// If tw.q is empty/undefined, the default q
 		// will be assigned by fillTw by term type
-		await fillTermWrapper(tw, self.app.vocabApi)
+		await fillTermWrapper(tw, this.app.vocabApi)
 		return tw
 	}
 
-	self.render = function () {
-		for (const childType in self.components.plots) {
-			const chart = self.components.plots[childType]
+	render() {
+		for (const childType of Object.keys(this.components.plots)) {
+			const chart = this.components.plots[childType]
 			// hide non-active charts first, so not to momentarily have two visible charts
-			if (chart.type != self.config.childType) {
-				self.dom.plotDivs[chart.type].style('display', 'none')
+			if (chart.type != this.config.childType) {
+				this.dom.plotDivs[chart.type].style('display', 'none')
 			}
 		}
 
-		self.dom.plotDivs[self.config.childType].style('display', '')
+		this.dom.plotDivs[this.config.childType].style('display', '')
 	}
 }
+
+export const summaryInit = getCompInit(SummaryPlot)
+export const componentInit = summaryInit
 
 export async function getPlotConfig(opts, app) {
 	if (!opts.term) throw 'summary getPlotConfig: opts.term{} missing'
@@ -369,14 +380,22 @@ export async function getPlotConfig(opts, app) {
 		// e.g. for scatterplot, opts.term2.q.mode='continuous' so will not
 		// want to override with q.mode from term0_term2_defaultQ
 		if (opts.term2)
-			await fillTermWrapper(opts.term2, app.vocabApi, opts.term2.bins || opts.term2.q ? null : term0_term2_defaultQ)
+			await fillTermWrapper(
+				opts.term2,
+				app.vocabApi,
+				opts.term2.bins || opts.term2.q ? undefined : term0_term2_defaultQ
+			)
 		if (opts.term0)
-			await fillTermWrapper(opts.term0, app.vocabApi, opts.term0.bins || opts.term0.q ? null : term0_term2_defaultQ)
+			await fillTermWrapper(
+				opts.term0,
+				app.vocabApi,
+				opts.term0.bins || opts.term0.q ? undefined : term0_term2_defaultQ
+			)
 		// dynamic scatterplot is a child type of summary and following args are possible; if present, initialize them
 		if (opts.colorTW) await fillTermWrapper(opts.colorTW, app.vocabApi)
 		if (opts.shapeTW) await fillTermWrapper(opts.shapeTW, app.vocabApi)
 		if (opts.scaleDotTW) await fillTermWrapper(opts.scaleDotTW, app.vocabApi)
-	} catch (e) {
+	} catch (e: any) {
 		if (e.stack) console.log(e.stack)
 		throw `${e} [summary getPlotConfig()]`
 	}
@@ -405,9 +424,9 @@ export async function getPlotConfig(opts, app) {
 
 			boxplot: getDefaultBoxplotSettings(app),
 
-			sampleScatter: getDefaultScatterSettings(app)
+			sampleScatter: getDefaultScatterSettings()
 		},
-		mayAdjustConfig(config, edits = {}) {
+		mayAdjustConfig(config, edits: { childType?: string } = {}) {
 			/*
 				when recovering from state rehydration:
 				- Mass store must call mayAdjustConfig(), if available, since the recovered state

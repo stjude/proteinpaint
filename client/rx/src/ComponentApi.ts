@@ -4,7 +4,7 @@ import { Bus } from './Bus.ts'
 
 export interface RxComponentInner {
 	type: string
-	api?: any
+	api?: ComponentApi
 	app: AppApi
 	id: any
 	parentId?: string
@@ -15,10 +15,10 @@ export interface RxComponentInner {
 	dom: {
 		[index: string]: any
 	}
-	components?: ComponentApi[] | { [name: string]: ComponentApi }
+	components?: ComponentApi[] | { [name: string]: ComponentApi | { [name: string]: ComponentApi } }
 	init?: (appState: any) => void
 	reactsTo?: (action: { type: string; [key: string]: any }) => boolean
-	getState: (appState: any) => any
+	getState?: (appState: any) => any
 	hasStatePreMain?: boolean
 	main: (arg?: any) => void
 	mainArg?: any
@@ -56,9 +56,10 @@ export class ComponentApi {
 		this.opts = opts
 		// the component type + id may be used later to
 		// simplify getting its state from the store
-		const self: RxComponentInner = new __Class__(opts)
+		const self: RxComponentInner = new __Class__(opts, this)
 		self.opts = opts
 		if (!self.id) self.id = opts.id || self.opts?.id
+		if (!self.type) self.type = __Class__.type
 		self.app = opts.app
 		self.api = this
 
@@ -270,4 +271,7 @@ export class ComponentApi {
 		if (self.bus) self.bus.destroy()
 		if (self.api) delete self.api
 	}
+
+	// defaults for optional preApiFreeze addons
+	replaceLastState(_) {}
 }
