@@ -6,18 +6,19 @@ import type { Elem } from '../../../types/d3'
 
 export class ClassesTableRender {
 	dom: {
+		holder: Elem
 		tableDiv: Elem
 		btnDiv: Elem
 	}
 	columns: TableColumn[]
 	rows: TableRow[]
 	/** table.ts updates this.rows and cell values in editCallback
-	 * Save a copy to check for duplicates when editing class names.
-	 */
+	 * Save a copy to check for duplicates when editing class names.*/
 	rowsCopy: TableRow[]
 
 	constructor(holder: any, rows?: TableRow[]) {
 		this.dom = {
+			holder,
 			tableDiv: holder.append('div'),
 			btnDiv: holder.append('div')
 		}
@@ -64,7 +65,8 @@ export class ClassesTableRender {
 			rows: this.rows,
 			striped: false,
 			showLines: false,
-			singleMode: false
+			singleMode: false,
+			resize: true
 		})
 
 		//editCallback only works with changing the value of the cell
@@ -114,6 +116,10 @@ export class ClassesTableRender {
 			.style('display', 'inline-block')
 			.style('margin', '10px 0px 0px 0px')
 			.on('click', () => {
+				if (this.rows.length >= 9) {
+					alert('Maximum number of classes reached.')
+					return
+				}
 				this.getNewClass(colorScale, this.rows)
 				this.renderTable()
 			})

@@ -2,15 +2,18 @@ import { RxComponentInner } from '../../types/rx.d'
 import { getCompInit, copyMerge } from '#rx'
 import type { MassState } from '#mass/types/mass'
 import { getDefaultAIProjectAdminSettings } from './defaults'
-import { Model } from './model/Model'
+import { ProjectReposity } from './repo/ProjectReposity'
 import { ProjectAdminRender } from './view/ProjectAdminRender'
 import { AIProjectAdminInteractions } from './interactions/AIProjectAdminInteractions'
 import { CreateProjectRender } from './view/CreateProjectRender'
 import { sayerror } from '#dom'
 
+/** This plot supports training AI models.
+ * The UI allows users to create and manage projects. */
+
 class AIProjectAdmin extends RxComponentInner {
 	public type = 'AIProjectAdmin'
-	model: Model
+	prjtRepo: ProjectReposity
 	projects?: any[]
 	prjtAdminUI?: ProjectAdminRender
 	interactions?: AIProjectAdminInteractions
@@ -22,7 +25,9 @@ class AIProjectAdmin extends RxComponentInner {
 			holder: opts.holder,
 			errorDiv: opts.holder.append('div').style('margin', '3px').attr('class', 'sjpp-ai-prjt-admin-error')
 		}
-		this.model = new Model()
+		if (opts.header) this.dom.header = opts.header
+
+		this.prjtRepo = new ProjectReposity()
 	}
 
 	getState(appState: MassState) {
@@ -32,15 +37,16 @@ class AIProjectAdmin extends RxComponentInner {
 		}
 		return {
 			config,
-			vocab: appState.vocab
+			vocab: appState.vocab,
+			filter: appState.termfilter.filter
 		}
 	}
 
 	async init(appState: MassState) {
-		this.interactions = new AIProjectAdminInteractions(this.app, this.id, this.model)
+		this.interactions = new AIProjectAdminInteractions(this.app, this.id, this.prjtRepo)
 
 		try {
-			this.projects = await this.model.getProjects(appState.vocab.genome, appState.vocab.dslabel)
+			this.projects = await this.prjtRepo.getProjects(appState.vocab.genome, appState.vocab.dslabel)
 		} catch (e: any) {
 			console.error('Error initializing AIProjectAdmin:', e)
 			throw e
@@ -60,7 +66,7 @@ class AIProjectAdmin extends RxComponentInner {
 		this.dom.holder.selectAll('.sjpp-deletable-ai-prjt-admin-div').remove()
 
 		if (config.settings.project.type === 'new') {
-			const terms = await this.model.getTerms(state.vocab, this.app)
+			const terms = await this.prjtRepo.getTerms(this.app)
 			if (!terms || terms.length === 0) {
 				sayerror(this.dom.errorDiv, 'No metadata found.')
 				return

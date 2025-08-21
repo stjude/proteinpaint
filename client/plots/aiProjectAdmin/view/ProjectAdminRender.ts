@@ -36,22 +36,43 @@ export class ProjectAdminRender {
 			.attr('placeholder', 'New project name')
 
 		const button = newProjectDiv
-			.append('button')
+			.append('div')
 			.text('Create Project')
-			.attr('display', 'inline-block')
+			.classed('sja_menuoption', true)
+			.style('display', 'inline-block')
 			.property('disabled', true)
-			.on('click', () => {
+			.on('click', async () => {
 				const projectName = input.property('value')
-				const notEmpty = projectName.trim().length > 0
-				if (!notEmpty) {
+				const prjtNameLen = projectName.trim().length
+
+				const showError = (msg: string) => {
+					sayerror(this.dom.errorDiv, msg)
+					input.property('value', '')
+					button.property('disabled', true)
+
+					//Show error for 3 seconds, then remove
+					setTimeout(() => {
+						this.dom.errorDiv.selectAll('*').remove()
+					}, 3000)
+				}
+
+				if (prjtNameLen == 0) {
 					//Shouldn't be necessary because of the debouncer
-					return sayerror(this.dom.errorDiv, 'Project name cannot be empty')
+					return showError('Project name cannot be empty')
+				}
+				if (prjtNameLen > 50 || prjtNameLen < 3) {
+					return showError('Project name must be between 3 and 50 characters')
 				}
 				const notUnique = this.projects.some((p: any) => p.value === projectName.trim())
 				if (notUnique) {
-					return sayerror(this.dom.errorDiv, `Project name '${projectName}' already exists`)
+					return showError(`Project name '${projectName}' already exists`)
 				}
-				this.interactions.addProject(projectName)
+
+				//Show project name in sandbox header
+				if (this.dom.header) this.dom.header.text(`Project: ${projectName}`)
+
+				//calls main() to trigger CreateProjectRender
+				await this.interactions.appDispatchEdit({ settings: { project: { name: projectName, type: 'new' } } })
 			})
 
 		input.on('keydown', () => {
@@ -74,8 +95,10 @@ export class ProjectAdminRender {
 		const columnButtons = [
 			{
 				text: 'Edit',
+				class: 'sja_menuoption',
 				callback: (e, i) => {
-					//TODO: open wsisamples plot
+					/** TODO: open wsisamples plot ||
+					 *  get project details rather than edit the db */
 					// this.interactions.editProject()
 					console.log('TODO', e, i)
 				}
@@ -84,6 +107,7 @@ export class ProjectAdminRender {
 				//TODO: Add logic for admins only once user roles are implemented
 				//Leave here for development
 				text: 'Delete',
+				class: 'sja_menuoption',
 				callback: (_, i) => {
 					const project = this.projects[i]
 					this.interactions.deleteProject(project)
