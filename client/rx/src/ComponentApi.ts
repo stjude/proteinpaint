@@ -1,5 +1,5 @@
 import type { AppApi } from './AppApi.ts'
-import { deepEqual, notifyComponents, copyMerge } from './utils.ts'
+import { deepEqual, notifyComponents, copyMerge, getComponents } from './utils.ts'
 import { Bus } from './Bus.ts'
 
 export interface RxComponentInner {
@@ -56,19 +56,22 @@ export class ComponentApi {
 		this.opts = opts
 		// the component type + id may be used later to
 		// simplify getting its state from the store
-		this.id = opts.id
-		const Inner = new __Class__(opts)
-		this.#Inner = Inner
-		this.type = Inner.type || __Class__.type
-		Inner.opts = opts
-		Inner.id = opts.id
-		Inner.app = opts.app
-		Inner.api = this
-		if (Inner.debug || (Inner.opts && Inner.opts.debug)) this.Inner = Inner
+		const self = new __Class__(opts)
+		self.opts = opts
+		if (!self.id) self.id = opts.id || self.opts?.id
+		self.app = opts.app
+		self.api = this
 
-		if (!Inner.eventTypes) Inner.eventTypes = ['preDispatch', 'postInit', 'postRender', 'firstRender', 'error']
-		if (this.#Inner.customEvents) Inner.eventTypes.push(...Inner.customEvents)
-		Inner.bus = new Bus(this, Inner.eventTypes, opts.callbacks)
+		this.#Inner = self
+		this.id = self.id
+		this.type = self.type || __Class__.type
+
+		// make it easy to access the private instance in debug mode, for testing
+		if (self.debug || (self.opts && self.opts.debug)) this.Inner = self
+
+		if (!self.eventTypes) self.eventTypes = ['preDispatch', 'postInit', 'postRender', 'firstRender', 'error']
+		if (self.customEvents) self.eventTypes.push(...self.customEvents)
+		self.bus = new Bus(this, self.eventTypes, opts.callbacks)
 
 		this.#latestActionSequenceId = 0
 		this.#abortControllers = new Set()
@@ -139,6 +142,10 @@ export class ComponentApi {
 			else if (self.dom?.errdiv) throw { message: e.message || e.error || e, errdiv: self.dom?.errdiv }
 			else throw e
 		}
+	}
+
+	getComponents(dotSepNames = '') {
+		return getComponents(this.#Inner.components, dotSepNames)
 	}
 
 	// must not expose self.bus directly since that

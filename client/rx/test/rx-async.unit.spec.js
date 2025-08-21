@@ -69,6 +69,17 @@ class TestPart {
 
 const partInit = rx.getCompInit(TestPart)
 
+class TestPart2 extends TestPart {
+	static type = 'part2'
+
+	constructor(opts) {
+		super(opts)
+		this.type = 'part2'
+	}
+}
+
+const part2Init = rx.getCompInit(TestPart2)
+
 /**************
  test sections
 ***************/
@@ -97,7 +108,7 @@ tape('getStoreInit - async', async function (test) {
 	test.end()
 })
 
-tape('getCompInit - async', async function (test) {
+tape('getCompInit - async, closured and classed', async function (test) {
 	const opts = {
 		app: {
 			opts: {
@@ -106,12 +117,30 @@ tape('getCompInit - async', async function (test) {
 			}
 		}
 	}
-	const part0 = await partInit(opts)
-	test.equal('type' in part0, true, 'should have an api.type property, even if undefined)')
-	test.equal('id' in part0, true, 'should set an api.id property, even if undefined')
-	test.equal(typeof part0.update, 'function', 'should provide an update() method')
-	test.equal(typeof part0.on, 'function', 'should provide an on() method')
-	test.equal(typeof part0.getComponents, 'function', 'should provide a getComponents() method')
+
+	let part0
+	{
+		part0 = await partInit(structuredClone(opts))
+		test.equal('type' in part0, true, 'should have an api.type property, even if undefined)')
+		test.equal('id' in part0, true, 'should set an api.id property, even if undefined')
+		test.equal(typeof part0.update, 'function', 'should provide an update() method')
+		test.equal(typeof part0.on, 'function', 'should provide an on() method')
+		test.equal(typeof part0.getComponents, 'function', 'should provide a getComponents() method')
+	}
+
+	{
+		const part2 = await part2Init(structuredClone(opts))
+		const missingKeys = []
+		for (const key of Object.keys(part0)) {
+			if (part0[key] !== undefined && part2[key] === undefined) missingKeys.push(key)
+		}
+		test.deepEqual(
+			missingKeys,
+			[],
+			`should have the same api properties and methods between closured and classed component api's`
+		)
+	}
+
 	test.end()
 })
 
