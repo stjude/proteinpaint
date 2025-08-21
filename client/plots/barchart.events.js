@@ -513,6 +513,7 @@ function getListSamplesArg(event, self, seriesId, dataId, chartId) {
 		join: 'and',
 		lst: []
 	}
+	let geneVariant
 	const tvs = getTvs(1, seriesId)
 	if (tvs) tvslst.lst.push(tvs)
 	const hasTerm2Data = self.config.term2 && dataId // will be true if user clicks on bar, but not bar label
@@ -531,17 +532,17 @@ function getListSamplesArg(event, self, seriesId, dataId, chartId) {
 		self,
 		terms,
 		tvslst,
-		hasTerm2Data,
-		seriesId,
-		dataId,
-		chartId
+		hasTerm2Data
 	}
+	if (geneVariant) arg.geneVariant = geneVariant
 	return arg
 
 	function getTvs(termIndex, value) {
 		const term = termIndex == 0 ? self.config.term0 : termIndex == 1 ? self.config.term : self.config.term2
 		if (term.term.type == 'geneVariant') {
 			// geneVariant filtering will be handled by mayFilterByGeneVariant()
+			if (!geneVariant) geneVariant = {}
+			geneVariant[`t${termIndex}value`] = value
 			return
 		}
 		let tvs = {
@@ -592,7 +593,7 @@ export async function listSamples(arg) {
 	}
 
 	// query sample data
-	const { event, self, terms, tvslst, hasTerm2Data, seriesId, dataId, chartId } = arg
+	const { event, self, terms, tvslst, hasTerm2Data, geneVariant } = arg
 	const opts = {
 		terms,
 		filter: filterJoin([self.state.termfilter.filter, tvslst]),
@@ -688,23 +689,24 @@ export async function listSamples(arg) {
 	menu.show(event.clientX, event.clientY, false)
 
 	function mayFilterByGeneVariant(sample) {
+		if (!geneVariant || !Object.keys(geneVariant).length) throw 'invalid geneVariant{}'
 		if (self.config.term.term.type == 'geneVariant') {
 			const tw = self.config.term
 			if (tw.q.type == 'values') throw 'q.type=values not supported'
 			const value = sample[tw.$id]?.value
-			if (value != seriesId) return false
+			if (value != geneVariant.t1value) return false
 		}
 		if (self.config.term2?.term.type == 'geneVariant' && hasTerm2Data) {
 			const tw = self.config.term2
 			if (tw.q.type == 'values') throw 'q.type=values not supported'
 			const value = sample[tw.$id]?.value
-			if (value != dataId) return false
+			if (value != geneVariant.t2value) return false
 		}
 		if (self.config.term0?.term.type == 'geneVariant') {
 			const tw = self.config.term0
 			if (tw.q.type == 'values') throw 'q.type=values not supported'
 			const value = sample[tw.$id]?.value
-			if (value != chartId) return false
+			if (value != geneVariant.t0value) return false
 		}
 		return true
 	}
