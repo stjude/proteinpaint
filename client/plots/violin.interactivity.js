@@ -113,10 +113,12 @@ export function setInteractivity(self) {
 			.append('div')
 			.attr('class', 'sja_menuoption')
 			.text(d => d.label)
-			.on('click', (event, d) => {
+			.on('click', async (event, d) => {
+				if (event.target._clicked) return
+				event.target._clicked = true
+				event.target.textContent = 'Loading...'
+				await d.callback()
 				self.app.tip.hide()
-				d.callback()
-				self.dom.tableHolder.style('display', 'none')
 			})
 		//Color picker available in the control panel
 		// self.addEditColorToMenu(plot)
@@ -161,7 +163,23 @@ export function setInteractivity(self) {
 	}
 
 	self.listSamples = async function (event, t1, t2, plot, start, end) {
-		const tvslst = self.getTvsLst(t1, t2, plot, start, end)
+		let tvslst, geneVariant
+		if (t1.term.type == 'geneVariant' || t2.term.type == 'geneVariant') {
+			// geneVariant filtering will be handled separately by
+			// mayFilterByGeneVariant() in client/plots/barchart.events.js
+			geneVariant = {}
+			let violinTw
+			if (t1.term.type == 'geneVariant') {
+				geneVariant.t1value = plot.seriesId
+				violinTw = t2
+			} else {
+				geneVariant.t2value = plot.seriesId
+				violinTw = t1
+			}
+			tvslst = self.getTvsLst(violinTw, null, plot, start, end)
+		} else {
+			tvslst = self.getTvsLst(t1, t2, plot, start, end)
+		}
 		const terms = [t1]
 		let hasTerm2Data
 		if (t2) {
@@ -175,16 +193,7 @@ export function setInteractivity(self) {
 			tvslst,
 			hasTerm2Data
 		}
-		const d = event.target.__data__ || event.target.parentNode.__data__
-		if (d.seriesId) {
-			if (t1.q?.mode == 'continuous') {
-				// term2 is overlay term
-				arg.dataId = d.seriesId
-			} else {
-				// term1 is overlay term
-				arg.seriesId = d.seriesId
-			}
-		}
+		if (geneVariant) arg.geneVariant = geneVariant
 		await listSamples(arg)
 	}
 
@@ -271,13 +280,7 @@ export function setInteractivity(self) {
 		}
 
 		if (t2) {
-			if (t1.term.type == 'geneVariant' || t2.term.type == 'geneVariant') {
-				// do not add geneVariant tvs to tvslst, geneVariant filtering
-				// will be handled by mayFilterByGeneVariant()
-				// in client/plots/barchart.events.js
-				const violinTw = t1.term.type == 'geneVariant' ? t2 : t1
-				self.createTvsLstRanges(violinTw, tvslst, rangeStart, rangeStop, 0)
-			} else if (
+			if (
 				t2.q?.mode === 'continuous' ||
 				((t2.term?.type === 'float' || t2.term?.type === 'integer') && plot.divideTwBins != null)
 			) {
