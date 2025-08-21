@@ -175,6 +175,16 @@ export function setInteractivity(self) {
 			tvslst,
 			hasTerm2Data
 		}
+		const d = event.target.__data__ || event.target.parentNode.__data__
+		if (d.seriesId) {
+			if (t1.q?.mode == 'continuous') {
+				// term2 is overlay term
+				arg.dataId = d.seriesId
+			} else {
+				// term1 is overlay term
+				arg.seriesId = d.seriesId
+			}
+		}
 		await listSamples(arg)
 	}
 
@@ -261,25 +271,18 @@ export function setInteractivity(self) {
 		}
 
 		if (t2) {
-			if (t1.term.type === 'categorical' || t1.term.type === 'condition') {
-				createTvsLstValues(t1, plot, tvslst, 0)
-				self.createTvsLstRanges(t2, tvslst, rangeStart, rangeStop, 1)
+			if (t1.term.type == 'geneVariant' || t2.term.type == 'geneVariant') {
+				// do not add geneVariant tvs to tvslst, geneVariant filtering
+				// will be handled by mayFilterByGeneVariant()
+				// in client/plots/barchart.events.js
+				const violinTw = t1.term.type == 'geneVariant' ? t2 : t1
+				self.createTvsLstRanges(violinTw, tvslst, rangeStart, rangeStop, 0)
 			} else if (
 				t2.q?.mode === 'continuous' ||
 				((t2.term?.type === 'float' || t2.term?.type === 'integer') && plot.divideTwBins != null)
 			) {
-				createTvsTerm(t2, tvslst)
-				tvslst.lst[0].tvs.ranges = [
-					{
-						start: plot.divideTwBins?.start || null,
-						stop: plot.divideTwBins?.stop || null,
-						startinclusive: plot.divideTwBins?.startinclusive || true,
-						stopinclusive: plot.divideTwBins?.stopinclusive || false,
-						startunbounded: plot.divideTwBins?.startunbounded ? plot.divideTwBins?.startunbounded : null,
-						stopunbounded: plot.divideTwBins?.stopunbounded ? plot.divideTwBins?.stopunbounded : null
-					}
-				]
-				self.createTvsLstRanges(t1, tvslst, rangeStart, rangeStop, 1)
+				createTvsLstValues(t1, plot, tvslst, 0)
+				self.createTvsLstRanges(t2, tvslst, rangeStart, rangeStop, 1)
 			} else {
 				createTvsLstValues(t2, plot, tvslst, 0)
 				self.createTvsLstRanges(t1, tvslst, rangeStart, rangeStop, 1)
