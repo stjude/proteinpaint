@@ -45,6 +45,7 @@ class TdbSurvival extends PlotBase implements RxComponentInner {
 	components: { [name: string]: ComponentApi } = {}
 
 	// expected class-specific props
+	configTermKeys = ['term', 'term0', 'term2']
 	settings: any
 	lineFxn: any
 	pj: any
@@ -77,9 +78,8 @@ class TdbSurvival extends PlotBase implements RxComponentInner {
 
 	constructor(opts) {
 		super(opts)
-		this.type = 'survival'
+		this.type = TdbSurvival.type
 		if (opts?.parentId) this.parentId = opts.parentId
-		this.configTermKeys = ['term', 'term0', 'term2']
 		this.settings = Object.assign({}, opts.settings)
 		this.dom = this.getDom()
 		this.pj = getPj(this)
