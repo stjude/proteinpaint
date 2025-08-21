@@ -1,8 +1,9 @@
 import type { RoutePayload } from './routeApi.ts'
 
 export type SaveWSIAnnotationRequest = {
+	userId: number
 	coordinates: [number, number]
-	class: number
+	classId: number
 	projectId: number
 	wsimageId: number
 }

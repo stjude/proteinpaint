@@ -161,9 +161,11 @@ export class WSIViewerInteractions {
 
 					this.addAnnotation(vectorLayer!, annotationsData, currentIndex, matchingClass!.color, settings.tileSize)
 
+					// TODO fix hardcoded values
 					const body: SaveWSIAnnotationRequest = {
+						userId: 1,
 						coordinates: annotationsData[currentIndex].zoomCoordinates,
-						class: 1,
+						classId: 1,
 						projectId: 1,
 						wsimageId: sessionWSImage.id ? sessionWSImage.id : 1
 					}
