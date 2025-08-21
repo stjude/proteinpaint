@@ -22,6 +22,7 @@ export function getDbConnection(ds: any): Database.Database | null {
 		throw new Error(`SQLite database file not found at: ${dbPath}`)
 	}
 
+	// TODO use connect_db?
 	// Open connection once and cache it
 	connection = new Database(dbPath, { fileMustExist: true })
 	connection.pragma('journal_mode = WAL')
