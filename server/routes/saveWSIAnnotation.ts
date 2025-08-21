@@ -74,9 +74,9 @@ function validateQuery(ds: any, connection: Database.Database) {
 			const projectId = annotation.projectId
 			const imageId = annotation.wsimageId // expects image row id
 			const coords = JSON.stringify(annotation.coordinates ?? [])
-			const userId = (annotation as any).userId ?? 1
-			const status = (annotation as any).status ?? 1
-			const classId = (annotation as any).classId ?? null
+			const userId = annotation.userId
+			const status = 1
+			const classId = annotation.classId
 
 			// Validate minimal required fields
 			if (projectId == null || imageId == null) {
