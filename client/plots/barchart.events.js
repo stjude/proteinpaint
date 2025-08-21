@@ -531,7 +531,10 @@ function getListSamplesArg(event, self, seriesId, dataId, chartId) {
 		self,
 		terms,
 		tvslst,
-		hasTerm2Data
+		hasTerm2Data,
+		seriesId,
+		dataId,
+		chartId
 	}
 	return arg
 
@@ -580,21 +583,21 @@ function getListSamplesArg(event, self, seriesId, dataId, chartId) {
 }
 
 export async function listSamples(arg) {
+	// validate arg
 	for (const k of Object.keys(arg)) {
 		const param = arg[k]
 		if (['event', 'self', 'terms', 'tvslst'].includes(k)) {
 			if (!param) throw `parameter '${k}' is undefined`
-		} else if (k == 'hasTerm2Data') {
-			if (typeof param != 'boolean') throw 'hasTerm2Data is not boolean'
-		} else {
-			throw `unexpected key '${k}'`
 		}
 	}
-	const { event, self, terms, tvslst, hasTerm2Data } = arg
+
+	// query sample data
+	const { event, self, terms, tvslst, hasTerm2Data, seriesId, dataId, chartId } = arg
 	const opts = {
 		terms,
 		filter: filterJoin([self.state.termfilter.filter, tvslst]),
-		filter0: self.state.termfilter.filter0
+		filter0: self.state.termfilter.filter0,
+		isSummary: true
 	}
 	const data = await self.app.vocabApi.getAnnotatedSampleData(opts)
 
