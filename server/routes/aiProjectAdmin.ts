@@ -1,6 +1,6 @@
 import type { RouteApi } from '#types'
 import { aiProjectAdminPayload } from '#types/checkers'
-import { connect_db } from '../src/utils.js'
+import { getDbConnection } from '#src/aiHistoDBConnection.js'
 
 const routePath = 'aiProjectAdmin'
 export const api: RouteApi = {
@@ -40,22 +40,21 @@ function init({ genomes }) {
 			const ds = g.datasets[query.dslabel]
 
 			if (!ds.queries?.WSImages?.db) throw new Error('WSImages database not found.')
-			const db = ds.queries.WSImages.db
 
-			db.connection = connect_db(db.file, { readonly: false, fileMustExist: true })
+			const connection = getDbConnection(ds)
 
 			/** get list of projects from db */
 			if (query.for === 'list') {
-				const projects = getProjects(db.connection)
+				const projects = getProjects(connection)
 				res.send(projects)
 			} else if (query.for === 'admin') {
 				/** update projects in db */
 				/** If the url is too long, the method will be changed to POST
 				 * in dofetch. Checking if project.type == 'new' ensures the project
 				 * is added to the db.*/
-				if (req.method === 'PUT' || query.project.type === 'new') addProject(db.connection, query.project)
-				else if (req.method === 'POST') editProject(db.connection, query.project)
-				else if (req.method === 'DELETE') deleteProject(db.connection, query.project.id)
+				if (req.method === 'PUT' || query.project.type === 'new') addProject(connection, query.project)
+				else if (req.method === 'POST') editProject(connection, query.project)
+				else if (req.method === 'DELETE') deleteProject(connection, query.project.id)
 				else throw new Error('Invalid request method for="admin" in aiProjectAdmin route.')
 
 				res.status(200).send({
@@ -167,7 +166,7 @@ function addProject(connection: any, project: any) {
 	const rows = runSQL(connection, projectSql, projectParams, 'add')
 
 	//Add corresponding project classes
-	const classSql = `INSERT INTO project_classes (project_id, name, color, key_shortcut) VALUES (?, ?, ?, ?)`
+	const classSql = `INSERT INTO project_classes (project_id, label, color, key_shortcut) VALUES (?, ?, ?, ?)`
 	const classParams = project.classes.map((c: any) => [rows.lastInsertRowid, c.label, c.color, c.key_shortcut || ''])
 	for (const params of classParams) {
 		runSQL(connection, classSql, params, 'add')
