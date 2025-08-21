@@ -53,7 +53,7 @@ import {
 import { validate_query_getWSISamples } from '#routes/wsisamples.ts'
 import { mds3InitNonblocking } from './mds3.init.nonblocking.js'
 import { dtTermTypes } from '#shared/terms.js'
-import { makeAdHocDicTermdbQueries } from './buildAdHocDictionary.ts'
+import { makeAdHocDicTermdbQueries } from './adHocDictionary/buildAdHocDictionary.ts'
 import { validate_query_saveWSIAnnotation } from '#routes/saveWSIAnnotation.js'
 
 /*
