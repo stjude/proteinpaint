@@ -1,3 +1,29 @@
+/**************
+Utility Classes
+***************/
+
+/******************
+  Detached Helpers
+******************/
+/*
+	Methods to attach directly to an instance
+	inside a class contructor method.
+	
+	This is recommended instead of using 
+	inheritance via "extends", since this "mixin" 
+	approach:
+
+	- makes it clearer which instance method corresponds
+	  to what rx method
+	
+	- it is not susceptible to any class prototype edits
+	  that may affect all instances that inherits from 
+	  the edited class
+
+	- avoids conceptual association of classical
+	  inheritance using the "extends" keyword
+*/
+
 export function deepEqual(x, y) {
 	if (x === y) {
 		return true
@@ -122,4 +148,32 @@ export function toJson(this: any, obj = null) {
 
 export function sleep(ms) {
 	return new Promise(resolve => setTimeout(resolve, ms))
+}
+
+// Component Helpers
+// -----------------
+
+// access the api of an indirectly connected component,
+// for example to subscribe an .on(event, listener) to
+// the event bus of a distant component
+export function getComponents(components, dotSepNames) {
+	if (!dotSepNames) return Object.assign({}, components)
+	// string-based convenient accessor,
+	// so instead of
+	// app.getComponents().controls.getComponents().search,
+	// simply
+	// app.getComponents("controls.search")
+	const names = dotSepNames.split('.')
+	let component = components
+	while (names.length) {
+		let name = names.shift()
+		if (Array.isArray(component)) name = Number(name)
+
+		if (!names.length) component = component[name]
+		else if (component[name] && component[name].components) component = component[name].components
+		else if (component[name] && component[name].getComponents) component = component[name].getComponents()
+		else component = component[name]
+		if (!component) break
+	}
+	return component
 }
