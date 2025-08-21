@@ -1045,10 +1045,10 @@
   },
   "dom/table.ts": {
     "lines": {
-      "total": 289,
+      "total": 290,
       "covered": 187,
       "skipped": 0,
-      "pct": 64.7
+      "pct": 64.48
     },
     "functions": {
       "total": 36,
@@ -1057,26 +1057,26 @@
       "pct": 50
     },
     "statements": {
-      "total": 337,
+      "total": 339,
       "covered": 201,
       "skipped": 0,
-      "pct": 59.64
+      "pct": 59.29
     },
     "branches": {
-      "total": 274,
+      "total": 276,
       "covered": 155,
       "skipped": 0,
-      "pct": 56.56
+      "pct": 56.15
     },
     "lowestPct": {
       "curr": 50,
-      "prev": 0,
-      "diff": 50
+      "prev": 50,
+      "diff": 0
     },
     "averagePct": {
-      "curr": 57.725,
-      "prev": 0,
-      "diff": 57.725
+      "curr": 57.480000000000004,
+      "prev": 57.725,
+      "diff": -0.24499999999999744
     }
   },
   "plots/volcano/Volcano.ts": {
