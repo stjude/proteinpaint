@@ -4,6 +4,7 @@ import { ReportView } from './view/reportView'
 import { RxComponentInner } from '../../types/rx.d'
 import { controlsInit } from '../controls.js'
 import { CategoryFiltersUI } from '#dom/categoryFiltersUI'
+import { importPlot } from '#plots/importPlot.js'
 
 export class Report extends RxComponentInner {
 	config: any
@@ -104,7 +105,7 @@ export class Report extends RxComponentInner {
 		opts.app = this.app
 		opts.parentId = this.id
 		//opts.controls = this.view.dom.controlsHolder
-		const { componentInit } = await import(`../../plots/${opts.chartType}.js`)
+		const { componentInit } = await importPlot(opts.chartType)
 		this.components.plots[opts.id] = await componentInit(opts)
 	}
 
