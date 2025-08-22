@@ -4213,10 +4213,10 @@
   },
   "dom/menu.js": {
     "lines": {
-      "total": 109,
-      "covered": 61,
+      "total": 110,
+      "covered": 62,
       "skipped": 0,
-      "pct": 55.96
+      "pct": 56.36
     },
     "functions": {
       "total": 17,
@@ -4225,26 +4225,26 @@
       "pct": 41.17
     },
     "statements": {
-      "total": 119,
-      "covered": 63,
+      "total": 121,
+      "covered": 64,
       "skipped": 0,
-      "pct": 52.94
+      "pct": 52.89
     },
     "branches": {
-      "total": 69,
-      "covered": 26,
+      "total": 71,
+      "covered": 27,
       "skipped": 0,
-      "pct": 37.68
+      "pct": 38.02
     },
     "lowestPct": {
-      "curr": 37.68,
+      "curr": 38.02,
       "prev": 37.68,
-      "diff": 0
+      "diff": 0.3400000000000034
     },
     "averagePct": {
-      "curr": 46.9375,
+      "curr": 47.11000000000001,
       "prev": 46.9375,
-      "diff": 0
+      "diff": 0.17250000000000654
     }
   },
   "dom/test/menu.unit.spec.js": {
