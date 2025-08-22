@@ -12,7 +12,7 @@ import { ScatterInteractivity, downloadImage } from './viewmodel/scatterInteract
 import { ScatterViewModel2DLarge } from './viewmodel/scatterViewModel2DLarge.js'
 import { ScatterViewModel3D } from './viewmodel/scatterViewModel3D.js'
 import { controlsInit } from '../controls'
-import { downloadSingleSVG } from '../../common/svg.download.js'
+import { downloadSVGsAsPdf } from '../../common/svg.download.js'
 import { select2Terms } from '#dom/select2Terms'
 import type { MassState } from '../../../client/mass/types/mass.js'
 import { getCombinedTermFilter } from '#filter'
@@ -133,11 +133,14 @@ export class Scatter extends RxComponentInner {
 			})
 		}
 		// TODO: handle multiple chart download when there is a divide by term
-		this.components.controls.on('downloadClick.scatter', () => {
+		this.components.controls.on('downloadClick.scatter', async () => {
 			if (this.model.is2DLarge || this.model.is3D) {
 				const url = this.canvas.toDataURL('image/png')
 				downloadImage(url)
-			} else for (const chart of this.charts) downloadSingleSVG(chart.svg, 'scatter.svg', this.opts.holder.node())
+			} else {
+				const svgs = this.model.charts.map(chart => chart.svg.node())
+				downloadSVGsAsPdf(svgs)
+			}
 		})
 	}
 }

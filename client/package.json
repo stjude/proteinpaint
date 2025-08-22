@@ -111,5 +111,9 @@
   ],
   "bugs": {
     "url": "https://github.com/stjude/pp-dist"
+  },
+  "dependencies": {
+    "jspdf": "^3.0.1",
+    "svg2pdf.js": "^2.5.0"
   }
 }
