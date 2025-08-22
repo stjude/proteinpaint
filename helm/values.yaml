@@ -1,0 +1,107 @@
+nameOverride: ""
+fullnameOverride: ""
+
+labels: {}
+annotations: {}
+
+image:
+  repository: ghcr.io/stjude/ppserver
+  tag: "2.138.3-5-04830bbd8"
+  pullPolicy: IfNotPresent
+  pullSecrets: []
+
+replicaCount: 1
+
+serviceAccount:
+  create: true
+  name: ""
+  annotations:
+    eks.amazonaws.com/role-arn: "" # Used for IRSA for the pod to grant access to the bucket with the config files.
+  labels: {}
+
+podLabels:
+  app: protein-paint
+podAnnotations: {}
+
+resources:
+  requests:
+    cpu: "2"
+    memory: "8Gi"
+  limits:
+    cpu: "2"
+    memory: "8Gi"
+
+securityContext: {}
+podSecurityContext: {}
+
+container:
+  name: protein-paint
+  containerPort: 3456
+  command: ["/bin/bash"]
+  args:
+    - "-c"
+    - |
+      cp /home/root/pp/app/active/serverconfig /home/root/pp/app/active/serverconfig.json
+      node --enable-source-maps app-server.mjs
+  env: [] 
+
+mounts:
+  data:
+    enabled: true
+    name: storage-volume
+    mountPath: /home/root/pp/tp/
+    pvcName: protein-paint-pvc
+  config:
+    name: config-volume
+    mountPath: /home/root/pp/app/active/serverconfig
+    subPath: serverconfig.json
+    configMapName: protein-paint-config
+
+extraVolumeMounts: []
+extraVolumes: []
+
+service:
+  type: ClusterIP
+  annotations: {}
+  labels: {}
+
+config:
+  name: protein-paint-config
+  serverConfigFilename: serverconfig.json
+  serverConfig:
+    debugmode: true
+    defaultgenome: "hg38"
+    genomes:
+      - name: "hg19"
+        species: "human"
+        file: "./genome/hg19.js"
+        datasets: []
+      - name: "hg38"
+        species: "human"
+        file: "./genome/hg38.js"
+        datasets: []
+    tpmasterdir: "/home/root/pp/tp/"
+    cachedir: "/home/root/pp/tp/cache"
+    URL: "http://localhost:3456"
+    gfClient: "/home/root/pp/tools/gfClient"
+    port: 3456
+    backend_only: true
+
+probes:
+  enabled: true
+  liveness:
+    initialDelaySeconds: 15
+    periodSeconds: 10
+    timeoutSeconds: 2
+    failureThreshold: 3
+    successThreshold: 1
+  readiness:
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    timeoutSeconds: 2
+    failureThreshold: 3
+    successThreshold: 1
+
+storage:
+  bucketName: "" # Name of bucket that holds the config files, requires S3 mountpoint driver to work
+  region: "us-east-1"
