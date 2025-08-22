@@ -516,8 +516,7 @@ function getListSamplesArg(event, self, seriesId, dataId, chartId) {
 	const geneVariant = {}
 	const tvs = getTvs(1, seriesId, self, geneVariant)
 	if (tvs) tvslst.lst.push(tvs)
-	const hasTerm2Data = self.config.term2 && dataId // will be true if user clicks on bar, but not bar label
-	if (hasTerm2Data) {
+	if (self.config.term2) {
 		terms.push(self.config.term2)
 		const tvs = getTvs(2, dataId, self, geneVariant)
 		if (tvs) tvslst.lst.push(tvs)
@@ -532,13 +531,13 @@ function getListSamplesArg(event, self, seriesId, dataId, chartId) {
 		self,
 		terms,
 		tvslst,
-		hasTerm2Data,
 		geneVariant
 	}
 	return arg
 }
 
 function getTvs(termIndex, value, self, geneVariant) {
+	if (!value) return
 	const term = termIndex == 0 ? self.config.term0 : termIndex == 1 ? self.config.term : self.config.term2
 	if (term.term.type == 'geneVariant') {
 		// geneVariant filtering will be handled by mayFilterByGeneVariant()
@@ -570,13 +569,11 @@ export async function listSamples(arg) {
 	// validate arg
 	for (const k of Object.keys(arg)) {
 		const param = arg[k]
-		if (['event', 'self', 'terms', 'tvslst'].includes(k)) {
-			if (!param) throw `parameter '${k}' is undefined`
-		}
+		if (!param) throw `parameter '${k}' is undefined`
 	}
 
 	// query sample data
-	const { event, self, terms, tvslst, hasTerm2Data, geneVariant } = arg
+	const { event, self, terms, tvslst, geneVariant } = arg
 	const opts = {
 		terms,
 		filter: filterJoin([self.state.termfilter.filter, tvslst]),
@@ -592,50 +589,41 @@ export async function listSamples(arg) {
 	const termIsGv = self.config.term.term.type == 'geneVariant'
 	const term2isGv = self.config.term2?.term.type == 'geneVariant'
 	for (const sample of data.lst) {
+		const pass = mayFilterByGeneVariant(sample)
+		if (!pass) continue
 		const sampleName = data.refs.bySampleId[sample.sample].label
-		if (Object.keys(geneVariant).length) {
-			// geneVariant terms are present
-			// filter samples by geneVariant group assignments
-			const pass = mayFilterByGeneVariant(sample)
-			if (!pass) continue
-		}
 		const row = [{ value: sampleName }]
-		// add sample url, if applicable
-		{
-			const temp = self.app.vocabApi.termdbConfig?.urlTemplates?.sample
-			if (temp) {
-				row[0].url = temp.base + (sample[temp.namekey] || sample.sample)
-			}
+		const urlTemplate = self.app.vocabApi.termdbConfig?.urlTemplates?.sample
+		if (urlTemplate) {
+			// sample url template is defined, use it to format sample name as url
+			row[0].url = urlTemplate.base + (sample[urlTemplate.namekey] || sample.sample)
 		}
+		const t1entry = sample[self.config.term.$id]
+		if (!t1entry) continue
 		/** Don't show hidden values in the results
 		 * May not be caught in server request for custom variables
 		 * with user supplied keys */
-		if (self.config.term.q?.hiddenValues && `${sample[self.config.term.$id].key}` in self.config.term.q.hiddenValues)
-			continue
+		if (self.config.term.q?.hiddenValues && Object.keys(self.config.term.q.hiddenValues).includes(t1entry.key)) continue
 		if (termIsNumeric) {
-			const value = sample[self.config.term.$id]?.value
+			const value = t1entry.value
 			row.push({ value: roundValueAuto(value) })
 		} else if (termIsGv) {
 			addGvRowVals(sample, self.config.term, row)
 		}
-		if (hasTerm2Data) {
+		if (self.config.term2) {
+			const t2entry = sample[self.config.term2.$id]
+			if (!t2entry) continue
 			//Don't show hidden values in the results
-			if (
-				self.config.term2.q?.hiddenValues &&
-				`${sample[self.config.term2.$id].key}` in self.config.term2.q.hiddenValues
-			)
+			if (self.config.term2.q?.hiddenValues && Object.keys(self.config.term2.q.hiddenValues).includes(t2entry.key))
 				continue
-			let value = sample[self.config.term2.$id]
-			if (!value) {
-				row.push({ value: '' })
-			} else if (term2isNumeric) {
-				value = roundValueAuto(value.value)
+			if (term2isNumeric) {
+				const value = roundValueAuto(t2entry.value)
 				row.push({ value })
 			} else if (term2isGv) {
 				addGvRowVals(sample, self.config.term2, row)
 			} else {
-				const label = self.config.term2.term.values?.[value.key]?.label
-				value = label || value.value
+				const label = self.config.term2.term.values?.[t2entry.key]?.label
+				const value = label || t2entry.value
 				row.push({ value })
 			}
 		}
@@ -649,7 +637,7 @@ export async function listSamples(arg) {
 	} else if (termIsGv) {
 		addGvCols(self.config.term, columns)
 	}
-	if (hasTerm2Data) {
+	if (self.config.term2) {
 		if (term2isGv) {
 			addGvCols(self.config.term2, columns)
 		} else {
@@ -670,24 +658,25 @@ export async function listSamples(arg) {
 	})
 	menu.show(event.clientX, event.clientY, false)
 
+	// if geneVariant term is present, filter sample by its geneVariant group assignment
 	function mayFilterByGeneVariant(sample) {
-		if (self.config.term.term.type == 'geneVariant') {
+		if (self.config.term.term.type == 'geneVariant' && geneVariant.t1value) {
 			const tw = self.config.term
 			if (tw.q.type == 'values') throw 'q.type=values not supported'
 			const value = sample[tw.$id]?.value
-			if (!value || value != geneVariant.t1value) return false
+			if (value != geneVariant.t1value) return false
 		}
-		if (self.config.term2?.term.type == 'geneVariant' && hasTerm2Data) {
+		if (self.config.term2?.term.type == 'geneVariant' && geneVariant.t2value) {
 			const tw = self.config.term2
 			if (tw.q.type == 'values') throw 'q.type=values not supported'
 			const value = sample[tw.$id]?.value
-			if (!value || value != geneVariant.t2value) return false
+			if (value != geneVariant.t2value) return false
 		}
-		if (self.config.term0?.term.type == 'geneVariant') {
+		if (self.config.term0?.term.type == 'geneVariant' && geneVariant.t0value) {
 			const tw = self.config.term0
 			if (tw.q.type == 'values') throw 'q.type=values not supported'
 			const value = sample[tw.$id]?.value
-			if (!value || value != geneVariant.t0value) return false
+			if (value != geneVariant.t0value) return false
 		}
 		return true
 	}
