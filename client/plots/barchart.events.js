@@ -589,7 +589,7 @@ export async function listSamples(arg) {
 	const termIsGv = self.config.term.term.type == 'geneVariant'
 	const term2isGv = self.config.term2?.term.type == 'geneVariant'
 	for (const sample of data.lst) {
-		const pass = mayFilterByGeneVariant(sample)
+		const pass = mayFilterByGeneVariant(sample, self, geneVariant)
 		if (!pass) continue
 		const sampleName = data.refs.bySampleId[sample.sample].label
 		const row = [{ value: sampleName }]
@@ -657,85 +657,85 @@ export async function listSamples(arg) {
 		resize: true
 	})
 	menu.show(event.clientX, event.clientY, false)
+}
 
-	// if geneVariant term is present, filter sample by its geneVariant group assignment
-	function mayFilterByGeneVariant(sample) {
-		if (self.config.term.term.type == 'geneVariant' && geneVariant.t1value) {
-			const tw = self.config.term
-			if (tw.q.type == 'values') throw 'q.type=values not supported'
-			const value = sample[tw.$id]?.value
-			if (value != geneVariant.t1value) return false
-		}
-		if (self.config.term2?.term.type == 'geneVariant' && geneVariant.t2value) {
-			const tw = self.config.term2
-			if (tw.q.type == 'values') throw 'q.type=values not supported'
-			const value = sample[tw.$id]?.value
-			if (value != geneVariant.t2value) return false
-		}
-		if (self.config.term0?.term.type == 'geneVariant' && geneVariant.t0value) {
-			const tw = self.config.term0
-			if (tw.q.type == 'values') throw 'q.type=values not supported'
-			const value = sample[tw.$id]?.value
-			if (value != geneVariant.t0value) return false
-		}
-		return true
+// if geneVariant term is present, filter sample by its geneVariant group assignment
+function mayFilterByGeneVariant(sample, self, geneVariant) {
+	if (self.config.term.term.type == 'geneVariant' && geneVariant.t1value) {
+		const tw = self.config.term
+		if (tw.q.type == 'values') throw 'q.type=values not supported'
+		const value = sample[tw.$id]?.value
+		if (value != geneVariant.t1value) return false
 	}
+	if (self.config.term2?.term.type == 'geneVariant' && geneVariant.t2value) {
+		const tw = self.config.term2
+		if (tw.q.type == 'values') throw 'q.type=values not supported'
+		const value = sample[tw.$id]?.value
+		if (value != geneVariant.t2value) return false
+	}
+	if (self.config.term0?.term.type == 'geneVariant' && geneVariant.t0value) {
+		const tw = self.config.term0
+		if (tw.q.type == 'values') throw 'q.type=values not supported'
+		const value = sample[tw.$id]?.value
+		if (value != geneVariant.t0value) return false
+	}
+	return true
+}
 
-	// add geneVariant values to row
-	function addGvRowVals(sample, tw, row) {
-		const mlst = sample[tw.$id]?.values
-		const gene2mlst = new Map()
-		// map each gene to its mutations
-		for (const gene of tw.term.genes) {
-			const mlst_gene = mlst.filter(m => m.gene == gene.id)
-			gene2mlst.set(gene.name, mlst_gene)
+// add geneVariant values to row
+function addGvRowVals(sample, tw, row) {
+	const mlst = sample[tw.$id]?.values
+	const gene2mlst = new Map()
+	// map each gene to its mutations
+	for (const gene of tw.term.genes) {
+		const mlst_gene = mlst.filter(m => m.gene == gene.id)
+		gene2mlst.set(gene.name, mlst_gene)
+	}
+	if (!gene2mlst.size) throw 'gene2mlst is empty'
+	if (gene2mlst.size == 1) {
+		// single gene, add its mutations to mutation column
+		const entry = gene2mlst.entries().next().value
+		const mlst = entry[1]
+		const htmls = mlst2htmls(mlst)
+		row.push({ html: htmls.join('<br>') })
+	} else {
+		// multiple genes, add each gene to gene column and its
+		// mutations to mutation column
+		const genes = []
+		const htmls = []
+		for (const [gene, mlst] of gene2mlst) {
+			genes.push(...Array(mlst.length).fill(gene))
+			htmls.push(...mlst2htmls(mlst))
 		}
-		if (!gene2mlst.size) throw 'gene2mlst is empty'
-		if (gene2mlst.size == 1) {
-			// single gene, add its mutations to mutation column
-			const entry = gene2mlst.entries().next().value
-			const mlst = entry[1]
-			const htmls = mlst2htmls(mlst)
-			row.push({ html: htmls.join('<br>') })
+		row.push({ html: genes.join('<br>') })
+		row.push({ html: htmls.join('<br>') })
+	}
+}
+
+function mlst2htmls(mlst) {
+	const htmls = mlst.map(m => {
+		const mname = m.mname || ''
+		const color = mclass[m.class].color
+		const label = mclass[m.class].label.toUpperCase()
+		const html = `<span>${mname}</span><span style="margin-left: ${
+			mname ? '5px' : '0px'
+		}; color: ${color}; font-size: .8em;">${label}</span>`
+		return html
+	})
+	return htmls
+}
+
+// add geneVariant columns
+function addGvCols(tw, columns) {
+	if (tw.term.genes.length == 1) {
+		columns.push({ label: tw.term.name })
+	} else {
+		columns.push({ label: 'Gene' })
+		if (tw.q.type == 'predefined-groupset') {
+			const groupset = tw.term.groupsetting.lst[tw.q.predefined_groupset_idx]
+			columns.push({ label: dt2label[groupset.dt] })
 		} else {
-			// multiple genes, add each gene to gene column and its
-			// mutations to mutation column
-			const genes = []
-			const htmls = []
-			for (const [gene, mlst] of gene2mlst) {
-				genes.push(...Array(mlst.length).fill(gene))
-				htmls.push(...mlst2htmls(mlst))
-			}
-			row.push({ html: genes.join('<br>') })
-			row.push({ html: htmls.join('<br>') })
-		}
-	}
-
-	function mlst2htmls(mlst) {
-		const htmls = mlst.map(m => {
-			const mname = m.mname || ''
-			const color = mclass[m.class].color
-			const label = mclass[m.class].label.toUpperCase()
-			const html = `<span>${mname}</span><span style="margin-left: ${
-				mname ? '5px' : '0px'
-			}; color: ${color}; font-size: .8em;">${label}</span>`
-			return html
-		})
-		return htmls
-	}
-
-	// add geneVariant columns
-	function addGvCols(tw, columns) {
-		if (tw.term.genes.length == 1) {
-			columns.push({ label: tw.term.name })
-		} else {
-			columns.push({ label: 'Gene' })
-			if (tw.q.type == 'predefined-groupset') {
-				const groupset = tw.term.groupsetting.lst[tw.q.predefined_groupset_idx]
-				columns.push({ label: dt2label[groupset.dt] })
-			} else {
-				columns.push({ label: seriesId })
-			}
+			columns.push({ label: seriesId })
 		}
 	}
 }
