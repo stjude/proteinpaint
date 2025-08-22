@@ -163,11 +163,11 @@ export function setInteractivity(self) {
 	}
 
 	self.listSamples = async function (event, t1, t2, plot, start, end) {
-		let tvslst, geneVariant
-		if (t1.term.type == 'geneVariant' || t2.term.type == 'geneVariant') {
+		let tvslst
+		const geneVariant = {}
+		if (t1.term.type == 'geneVariant' || t2?.term.type == 'geneVariant') {
 			// geneVariant filtering will be handled separately by
 			// mayFilterByGeneVariant() in client/plots/barchart.events.js
-			geneVariant = {}
 			let violinTw
 			if (t1.term.type == 'geneVariant') {
 				geneVariant.t1value = plot.seriesId
@@ -191,9 +191,9 @@ export function setInteractivity(self) {
 			self,
 			terms,
 			tvslst,
-			hasTerm2Data
+			hasTerm2Data,
+			geneVariant
 		}
-		if (geneVariant) arg.geneVariant = geneVariant
 		await listSamples(arg)
 	}
 
