@@ -181,17 +181,12 @@ export function setInteractivity(self) {
 			tvslst = self.getTvsLst(t1, t2, plot, start, end)
 		}
 		const terms = [t1]
-		let hasTerm2Data
-		if (t2) {
-			hasTerm2Data = true
-			terms.push(t2)
-		}
+		if (t2) terms.push(t2)
 		const arg = {
 			event,
 			self,
 			terms,
 			tvslst,
-			hasTerm2Data,
 			geneVariant
 		}
 		await listSamples(arg)
