@@ -3,6 +3,7 @@ import { storeInit } from '#mass/store'
 import { vocabInit } from '#termdb/vocabulary'
 import { recoverInit } from '../rx/src/recover'
 import { sayerror, Menu } from '#dom'
+import { importPlot } from '#plots/importPlot.js'
 
 /*
 the purpose of this wrapper is to allow a mass plot to be used with control options outside of mass app
@@ -157,8 +158,8 @@ class PlotApp {
 				// quick fix to only track the plotDiv for the first plot
 				// TODO: reliably handle the case where a plotApp instance may have multiple plots/holders
 				if (!this.dom.plotDiv) this.dom.plotDiv = holder
-				const _ = await import(`../plots/${plot.chartType}.js`)
-				const plotApi = await _.componentInit({
+				const { componentInit } = await importPlot(plot.chartType)
+				const plotApi = await componentInit({
 					id: plot.id,
 					app: this.api,
 					holder,
