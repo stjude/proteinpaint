@@ -1,5 +1,7 @@
 import { select } from 'd3-selection'
 import { to_svg } from '../src/client'
+import { jsPDF } from 'jspdf'
+import 'svg2pdf.js'
 
 export function downloadSingleSVG(svg, filename, parent) {
 	if (parent) {
@@ -111,4 +113,26 @@ export function downloadChart(mainGsel, svgName, styleParent = null) {
 	})
 
 	to_svg(svg, svgName, { apply_dom_styles: true })
+}
+
+export function downloadSVGsAsPdf(svgs, filename = 'charts.pdf') {
+	const doc = new jsPDF('p', 'pt', 'a4') // Portrait, points, A4 size
+	let item,
+		index = 0
+	for (const svg of svgs) {
+		if (!item)
+			item = doc.svg(svg, { x: 10, y: 30, width: 1000, height: 1000 }).then(() => {
+				doc.addPage()
+			})
+		else
+			item = item
+				.then(() => doc.svg(svg, { x: 10, y: 30, width: 1000, height: 1000 }))
+				.then(() => {
+					doc.addPage()
+				})
+	}
+	item.then(() => {
+		doc.deletePage(svgs.length + 1) // Remove the last empty page
+		doc.save(filename)
+	})
 }
