@@ -3637,38 +3637,38 @@
   },
   "plots/barchart.events.js": {
     "lines": {
-      "total": 374,
-      "covered": 1,
+      "total": 385,
+      "covered": 116,
       "skipped": 0,
-      "pct": 0.26
+      "pct": 30.12
     },
     "functions": {
-      "total": 70,
-      "covered": 0,
+      "total": 71,
+      "covered": 26,
       "skipped": 0,
-      "pct": 0
+      "pct": 36.61
     },
     "statements": {
-      "total": 407,
-      "covered": 1,
+      "total": 423,
+      "covered": 122,
       "skipped": 0,
-      "pct": 0.24
+      "pct": 28.84
     },
     "branches": {
-      "total": 443,
-      "covered": 0,
+      "total": 451,
+      "covered": 150,
       "skipped": 0,
-      "pct": 0
+      "pct": 33.25
     },
     "lowestPct": {
-      "curr": 0,
+      "curr": 28.84,
       "prev": 34.4,
-      "diff": -34.4
+      "diff": -5.559999999999999
     },
     "averagePct": {
-      "curr": 0.125,
+      "curr": 32.205,
       "prev": 37.3525,
-      "diff": -37.2275
+      "diff": -5.147500000000001
     }
   },
   "plots/disco/viewmodel/ViewModel.ts": {
