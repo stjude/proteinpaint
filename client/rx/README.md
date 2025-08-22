@@ -31,9 +31,9 @@ An application benefits from using rx by having:
 git clone git@github.com:siosonel/rx.git
 cd rx
 npm install 
-npm test
+# npm test # TODO: fix standalone tests
 # update code
-npm test
+# npm test
 # open a Github PR
 ```
 

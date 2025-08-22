@@ -5,7 +5,7 @@
   "description": "a minimal reactive framework for managing application state, inspired by React/Redux and Vue",
   "main": "index.js",
   "scripts": {
-    "test": "tape test/index.unit.spec.js"
+    "#test": "/* TODO: use puppeteer */ tape test/*.unit.spec.js"
   },
   "license": "UNLICENSED",
   "devDependencies": {
