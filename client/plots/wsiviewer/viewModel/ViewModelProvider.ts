@@ -17,7 +17,8 @@ import type {
 	AiProjectSelectedWSImagesResponse
 } from '@sjcrh/proteinpaint-types/routes/aiProjectSelectedWSImages.ts'
 import { Feature } from 'ol'
-import type { Geometry, Polygon } from 'ol/geom'
+import type { Geometry } from 'ol/geom'
+import { Polygon } from 'ol/geom'
 import { Fill, Stroke, Style } from 'ol/style'
 
 export class ViewModelProvider {
