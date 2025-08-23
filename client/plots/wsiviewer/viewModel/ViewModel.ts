@@ -108,8 +108,6 @@ export class ViewModel {
 	}
 
 	private setClassData(imageViewData: ImageViewData, imageData: WSImage) {
-		console.log('setClassData', imageData?.classes)
-
 		if (!imageData?.classes?.length) return
 
 		const shortcuts: string[] = ['Enter']

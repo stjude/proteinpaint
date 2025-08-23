@@ -16,6 +16,9 @@ import type {
 	AiProjectSelectedWSImagesRequest,
 	AiProjectSelectedWSImagesResponse
 } from '@sjcrh/proteinpaint-types/routes/aiProjectSelectedWSImages.ts'
+import { Feature } from 'ol'
+import type { Geometry, Polygon } from 'ol/geom'
+import { Fill, Stroke, Style } from 'ol/style'
 
 export class ViewModelProvider {
 	constructor() {}
@@ -35,7 +38,6 @@ export class ViewModelProvider {
 
 		if (sampleId) {
 			try {
-				console.log('Loading sample WS images for sampleId:', sampleId)
 				const data: SampleWSImagesResponse = await this.getSampleWSImages(genome, dslabel, sampleId)
 				wsImages = data.sampleWSImages
 				wsimageLayers = await this.getWSImageLayers(genome, dslabel, data.sampleWSImages, sampleId, undefined)
@@ -157,14 +159,24 @@ export class ViewModelProvider {
 				}
 			}
 
-			const optionsVectorLayer = {
-				source: new VectorSource({
-					features: []
-				}),
-				title: 'Annotations'
+			const annotations = wsimages[i].annotations ?? []
+			const sourceAnnotations = new VectorSource()
+
+			for (const annotation of annotations) {
+				// flip Y as in your original code
+				const topLeft: [number, number] = [annotation.zoomCoordinates[0], -annotation.zoomCoordinates[1]]
+
+				const color = this.getClassColor(wsimages[i], annotation.class)
+				const featureId = `ann-${topLeft[0]}-${topLeft[1]}`
+
+				const borderFeature = this.createSquareFeature(topLeft, 512, color, featureId)
+				sourceAnnotations.addFeature(borderFeature)
 			}
 
-			const vectorLayer = new VectorLayer(optionsVectorLayer)
+			const vectorLayer = new VectorLayer({
+				source: sourceAnnotations,
+				properties: { title: 'Annotations' } // keep a title-like property; OL itself doesn't use 'title'
+			})
 
 			if (wsiImageLayers.overlays) {
 				wsiImageLayers.overlays.push(vectorLayer)
@@ -241,5 +253,46 @@ export class ViewModelProvider {
 		return await dofetch3('aiProjectSelectedWSImages', {
 			body: body
 		})
+	}
+
+	private createSquareFeature(
+		topLeft: [number, number],
+		tileSize: number,
+		color: any,
+		featureId?: string
+	): Feature<Geometry> {
+		const squareCoords = [
+			[
+				topLeft,
+				[topLeft[0] + tileSize, topLeft[1]],
+				[topLeft[0] + tileSize, topLeft[1] - tileSize],
+				[topLeft[0], topLeft[1] - tileSize],
+				topLeft
+			]
+		]
+
+		const feature = new Feature({
+			geometry: new Polygon(squareCoords),
+			properties: {
+				isLocked: false
+			}
+		})
+
+		if (featureId) {
+			feature.setId(featureId)
+		}
+
+		feature.setStyle(
+			new Style({
+				fill: new Fill({ color }),
+				stroke: new Stroke({ color, width: 2 })
+			})
+		)
+
+		return feature
+	}
+
+	private getClassColor(wsImage: WSImage, annotationClass: string): string {
+		return wsImage.classes?.find(wsiCLass => String(wsiCLass.label) === annotationClass)?.color ?? '#FFFFFF' // TODO get the default color from settings
 	}
 }
