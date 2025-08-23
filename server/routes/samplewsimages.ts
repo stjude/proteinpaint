@@ -1,8 +1,6 @@
 import type { Mds3, RouteApi, SampleWSImagesRequest, SampleWSImagesResponse, WSImage } from '#types'
 import { sampleWSImagesPayload } from '#types/checkers'
-import path from 'path'
-import fs from 'fs'
-import serverconfig from '#src/serverconfig.js'
+
 /*
 given a sample, return all whole slide images for specified dataset
 */
@@ -31,84 +29,6 @@ function init({ genomes }) {
 			if (!ds) throw 'invalid dataset name'
 			const sampleId = query.sample_id
 			const wsimages: WSImage[] = await ds.queries.WSImages.getWSImages(sampleId)
-
-			if (ds.queries.WSImages.getWSIAnnotations) {
-				for (const wsimage of wsimages) {
-					if (ds.queries.WSImages.makeGeoJson) {
-						await ds.queries.WSImages.makeGeoJson(sampleId, wsimage)
-					}
-
-					const annotations = await ds.queries.WSImages.getWSIAnnotations(sampleId, wsimage.filename)
-
-					if (annotations && annotations.length > 0) {
-						//Replace with annotations data??
-						wsimage.overlays = annotations
-
-						const annotationFilePath = path.join(
-							serverconfig.tpmasterdir,
-							ds.queries.WSImages.imageBySampleFolder,
-							sampleId,
-							annotations[0]
-						)
-						const annotationData = JSON.parse(fs.readFileSync(annotationFilePath, 'utf8'))
-						//This assumes that classes are always present in the dataset.
-						if (!annotationData.features && !ds.queries.WSImages?.classes?.length) {
-							throw new Error(`No classes found for WSImage annotations in dataset ${ds.label}`)
-						}
-
-						wsimage.annotationsData = annotationData.features
-							.map((d: any) => {
-								const featClass =
-									ds.queries.WSImages?.classes?.find(f => f.id == d.properties.class)?.label || d.properties.class
-								return {
-									zoomCoordinates: d.properties.zoomCoordinates,
-									uncertainty: d.properties.uncertainty,
-									class: featClass
-								}
-							})
-							.slice(15, 20)
-
-						wsimage.classes = ds.queries?.WSImages?.classes
-						wsimage.uncertainty = ds.queries?.WSImages?.uncertainty
-						wsimage.activePatchColor = ds.queries?.WSImages?.activePatchColor
-					}
-
-					if (ds.queries.WSImages.getWSIPredictionPatches) {
-						const predictionsFile = await ds.queries.WSImages.getWSIPredictionPatches(sampleId, wsimage.filename)
-
-						const predictionsFilePath = path.join(
-							serverconfig.tpmasterdir,
-							ds.queries.WSImages.imageBySampleFolder,
-							sampleId,
-							predictionsFile[0]
-						)
-
-						const predictionsData = JSON.parse(fs.readFileSync(predictionsFilePath, 'utf8'))
-
-						wsimage.predictions = predictionsData.features
-							.map((d: any) => {
-								const featClass =
-									ds.queries.WSImages?.classes?.find(f => f.id == d.properties.class)?.label || d.properties.class
-								return {
-									zoomCoordinates: d.properties.zoomCoordinates,
-									uncertainty: d.properties.uncertainty,
-									class: featClass
-								}
-							})
-							.slice(0, 15)
-					}
-				}
-			}
-
-			if (ds.queries.WSImages.getWSIPredictionOverlay) {
-				for (const wsimage of wsimages) {
-					const predictionOverlay = await ds.queries.WSImages.getWSIPredictionOverlay(sampleId, wsimage.filename)
-
-					if (predictionOverlay) {
-						wsimage.predictionLayers = [predictionOverlay]
-					}
-				}
-			}
 
 			res.send({ sampleWSImages: wsimages } satisfies SampleWSImagesResponse)
 		} catch (e: any) {

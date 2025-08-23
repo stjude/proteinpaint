@@ -1,7 +1,8 @@
 import { getCompInit } from '#rx'
 import wsiSamplesDefaults from '#plots/wsisamples/defaults.ts'
-import { dofetch3 } from '#src/client'
-import type { WSISample, WSISamplesResponse } from '@sjcrh/proteinpaint-types/routes/wsisamples.ts'
+// import { dofetch3 } from '#src/client'
+// import type { WSISample, WSISamplesResponse } from '@sjcrh/proteinpaint-types/routes/wsisamples.ts'
+import type { WSISample } from '@sjcrh/proteinpaint-types/routes/wsisamples.ts'
 import type Settings from '#plots/wsisamples/Settings.ts'
 import type { TableCell, TableColumn, TableRow } from '#dom'
 import { renderTable } from '#dom'
@@ -53,6 +54,9 @@ export default class WSISamplesPlot {
 		const rows: TableRow[] = []
 
 		const wsiImages: WSISample[] = plotConfig.wsimages
+
+		if (!wsiImages) return
+
 		wsiImages.forEach((wsiImage: WSISample) => {
 			const row: TableRow = []
 			const tableCell: TableCell = {
@@ -87,33 +91,33 @@ export default class WSISamplesPlot {
 	}
 
 	async main(): Promise<void> {
-		const state = this.app.getState()
-		const plotConfig = state.plots.find(p => p.id === this.id)
-		const settings = plotConfig.settings as Settings
+		// TODO revert comments
+		// const state = this.app.getState()
 
-		const selectedSampleIndex = settings.selectedSampleIndex
+		// const plotConfig = state.plots.find(p => p.id === this.id)
+		// const settings = plotConfig.settings as Settings
+
+		// const selectedSampleIndex = settings.selectedSampleIndex
 
 		const contentDiv = this.opts.holder.select('.wsi-samples-content')
 
-		const wsiImages: WSISample[] = plotConfig.wsimages
+		// const wsiImages: WSISample[] = plotConfig.wsimages
 
-		if (selectedSampleIndex != -1) {
-			// Check if viewer with class wsi-viewer already exists and remove it
-			const existingViewer = contentDiv.select('.wsi-viewer')
-			if (!existingViewer.empty()) {
-				existingViewer.remove()
-			}
-
-			const viewerDiv = contentDiv.append('div').attr('class', 'wsi-viewer').style('width', '100%')
-
-			const wsiViewer = await import('#plots/wsiviewer/plot.wsi.js')
-			wsiViewer.default(
-				this.app.opts.state.vocab.dslabel,
-				viewerDiv,
-				this.app.opts.genome,
-				wsiImages[selectedSampleIndex].sampleId
-			)
+		// if (selectedSampleIndex != -1) {
+		// Check if viewer with class wsi-viewer already exists and remove it
+		const existingViewer = contentDiv.select('.wsi-viewer')
+		if (!existingViewer.empty()) {
+			existingViewer.remove()
 		}
+
+		const viewerDiv = contentDiv.append('div').attr('class', 'wsi-viewer').style('width', '100%')
+
+		const wsiViewer = await import('#plots/wsiviewer/plot.wsi.js')
+		wsiViewer.default(this.app.opts.state.vocab.dslabel, viewerDiv, this.app.opts.genome, null, 1, [
+			'14965.svs',
+			'14970.svs'
+		])
+		// }
 	}
 }
 
@@ -121,22 +125,25 @@ export const wsiSamplesPlot = getCompInit(WSISamplesPlot)
 
 export const componentInit = wsiSamplesPlot
 
-export async function getPlotConfig(opts: any, app: any) {
+//  app: any
+export async function getPlotConfig(opts: any) {
 	return {
 		chartType: 'WSISamplesPlot',
 		subfolder: 'wsisamples',
 		extension: 'ts',
-		wsimages: await getWSISamples(app),
+		wsimages: [],
+		// TODO revert this
+		// wsimages: await getWSISamples(app),
 		settings: wsiSamplesDefaults(opts.overrides)
 	}
 }
 
-async function getWSISamples(app: any): Promise<WSISample[]> {
-	const data: WSISamplesResponse = await dofetch3('wsisamples', {
-		body: {
-			genome: app.opts.state.vocab.genome,
-			dslabel: app.opts.state.vocab.dslabel
-		}
-	})
-	return data.samples
-}
+// async function getWSISamples(app: any): Promise<WSISample[]> {
+// 	const data: WSISamplesResponse = await dofetch3('wsisamples', {
+// 		body: {
+// 			genome: app.opts.state.vocab.genome,
+// 			dslabel: app.opts.state.vocab.dslabel
+// 		}
+// 	})
+// 	return data.samples
+// }
