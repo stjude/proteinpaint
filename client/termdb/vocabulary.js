@@ -39,6 +39,8 @@ export function vocabInit(opts) {
 			vocabApi.parent_termdbConfig = vocab.parent_termdbConfig
 		}
 		return vocabApi
+	} else {
+		throw `unable to initialize vocabApi`
 	}
 }
 

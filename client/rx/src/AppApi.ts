@@ -15,6 +15,7 @@ export interface RxAppInner {
 		[index: string]: any
 	}
 	components: ComponentApi[] | { [name: string]: ComponentApi | { [name: string]: ComponentApi } }
+	preApiFreeze?: (api: AppApi) => Promise<void>
 	init: () => Promise<void>
 	reactsTo?: (action: { type: string; [key: string]: any }) => boolean
 	getState?: (appState: any) => any
@@ -33,6 +34,7 @@ export interface RxAppInner {
 export class AppApi {
 	type = 'app'
 	id: string
+	opts: any
 	vocabApi: any
 	#Inner: RxAppInner
 	Inner?: RxAppInner // only in debugmode
@@ -67,6 +69,7 @@ export class AppApi {
 		this.#Inner = self
 		this.id = self.id
 		this.type = self.type || __Class__.type
+		this.opts = opts
 
 		// make it easy to access the private instance in debug mode, for testing
 		if (self.debug || (self.opts && self.opts.debug)) this.Inner = self
@@ -80,19 +83,8 @@ export class AppApi {
 	}
 
 	async init() {
-		const self = this.#Inner
-		await self.init()
-		// lessen confusing behavior
-		if (self.state && !self.hasStatePreMain) {
-			delete self.state
-			console.warn(
-				`${self.type}: rx deleted this.state after init()` +
-					`to avoid confusing behavior, such as the component not rendering initially ` +
-					`because this.state would not have changed between init() and the first time ` +
-					`main() is called. To skip this warning and retain this.state after init(), ` +
-					`set this.hasStatePreMain = true in the ${self.type} constructor.`
-			)
-		}
+		if (this.#Inner.preApiFreeze) await this.#Inner.preApiFreeze(this)
+		await this.#Inner.init()
 	}
 
 	async dispatch(action?: any) {

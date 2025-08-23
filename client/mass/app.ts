@@ -4,7 +4,7 @@ import { vocabInit } from '#termdb/vocabulary'
 import { navInit } from './nav'
 import { plotInit } from './plot'
 import { summaryInit } from '#plots/summary.js'
-import { PlotBase } from '#plots/PlotBase.ts'
+import { AppBase } from '#plots/AppBase.ts'
 import { sayerror } from '../dom/sayerror.ts'
 import { Menu } from '#dom/menu'
 import { newSandboxDiv } from '../dom/sandbox.ts'
@@ -31,7 +31,7 @@ opts{}
 
 */
 
-class MassApp extends PlotBase implements RxAppInner {
+class MassApp extends AppBase implements RxAppInner {
 	static type = 'app'
 
 	api: AppApi
@@ -72,22 +72,6 @@ class MassApp extends PlotBase implements RxAppInner {
 		this.plotIdToSandboxId = {}
 	}
 
-	validateOpts(o: any = {}) {
-		if (!o.holder) throw `missing opts.holder in the MassApp constructor argument`
-		if (!o.callbacks) o.callbacks = {}
-		if (!o.state.vocab) o.state.vocab = {}
-		if (typeof o.state.vocab != 'object') throw 'opts.state.vocab{} is not an object'
-		if (o.state.genome) {
-			o.state.vocab.genome = o.state.genome
-			delete o.state.genome
-		}
-		if (o.state.dslabel) {
-			o.state.vocab.dslabel = o.state.dslabel
-			delete o.state.dslabel
-		}
-		return o
-	}
-
 	async preApiFreeze(api) {
 		try {
 			api.tip = new Menu({ padding: '5px' })
@@ -103,6 +87,7 @@ class MassApp extends PlotBase implements RxAppInner {
 				fetchOpts: this.opts.fetchOpts,
 				getDatasetAccessToken: this.opts.getDatasetAccessToken
 			})
+
 			api.hasWebGL = function () {
 				//Copied from static/js/WEBGL.js
 				try {
