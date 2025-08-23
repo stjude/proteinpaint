@@ -3482,13 +3482,13 @@
     },
     "lowestPct": {
       "curr": 72.22,
-      "prev": 62.5,
-      "diff": 9.719999999999999
+      "prev": 72.22,
+      "diff": 0
     },
     "averagePct": {
       "curr": 86.92250000000001,
-      "prev": 85.4325,
-      "diff": 1.490000000000009
+      "prev": 86.92250000000001,
+      "diff": 0
     }
   },
   "plots/frequencyChart/model/frequencyChartModel.ts": {
