@@ -34,6 +34,7 @@ opts{}
 class MassApp extends AppBase implements RxAppInner {
 	static type = 'app'
 
+	// expected RxAppInner, some are already declared/set in AppBase
 	api: AppApi
 	type: string
 	parentId?: string
