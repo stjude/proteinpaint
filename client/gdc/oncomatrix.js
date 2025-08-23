@@ -289,8 +289,8 @@ export async function init(arg, holder, genomes) {
 		let matrixApi, genesetCompApi
 
 		const api = {
-			getState: plotAppApi.getState,
-			destroy: plotAppApi.destroy,
+			getState: () => plotAppApi.getState(),
+			destroy: () => plotAppApi.destroy(),
 			update: async arg => {
 				if (!matrixApi) {
 					const plotConfig = plotAppApi.getState().plots.find(p => p.chartType == 'matrix')
