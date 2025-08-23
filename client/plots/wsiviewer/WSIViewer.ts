@@ -42,7 +42,6 @@ export class WSIViewer extends RxComponentInner {
 		const state = this.app.getState()
 		if (this.opts.header) {
 			//If sandbox is present, add sample id and data type to the header
-			console.log('header', this.opts.header)
 			this.opts.header.html(
 				`${state.sample_id} <span style="font-size:.8em">${state.termdbConfig.queries.WSImages.type} images</span>`
 			)
@@ -77,8 +76,6 @@ export class WSIViewer extends RxComponentInner {
 		)
 
 		const wsimages = viewModel.sampleWSImages
-
-		console.log('wsimages', viewModel.sampleWSImages)
 
 		const wsimageLayers = viewModel.wsimageLayers
 		const wsimageLayersLoadError = viewModel.wsimageLayersLoadError
