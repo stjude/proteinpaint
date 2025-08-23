@@ -13,7 +13,7 @@ export class AppBase {
 	}
 
 	validateOpts(o: any = {}) {
-		if (!o.holder) throw `missing opts.holder in the MassApp constructor argument`
+		if (!o.holder) throw `missing opts.holder in the app constructor argument`
 		if (!o.callbacks) o.callbacks = {}
 		if (!o.state.vocab) o.state.vocab = {}
 		if (typeof o.state.vocab != 'object') throw 'opts.state.vocab{} is not an object'
