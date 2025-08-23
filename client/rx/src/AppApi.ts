@@ -15,7 +15,7 @@ export interface RxAppInner {
 		[index: string]: any
 	}
 	components: ComponentApi[] | { [name: string]: ComponentApi | { [name: string]: ComponentApi } }
-	init?: (appState: any) => void
+	init: () => Promise<void>
 	reactsTo?: (action: { type: string; [key: string]: any }) => boolean
 	getState?: (appState: any) => any
 	hasStatePreMain?: boolean
@@ -47,6 +47,14 @@ export class AppApi {
 		}
 	} = {}
 
+	static getInitFxn(__Class__) {
+		return async opts => {
+			const api = new AppApi(opts, __Class__)
+			await api.init()
+			return api
+		}
+	}
+
 	constructor(opts, __Class__) {
 		// the component type + id may be used later to
 		// simplify getting its state from the store
@@ -71,7 +79,23 @@ export class AppApi {
 		this.#abortControllers = new Set()
 	}
 
-	async dispatch(action) {
+	async init() {
+		const self = this.#Inner
+		await self.init()
+		// lessen confusing behavior
+		if (self.state && !self.hasStatePreMain) {
+			delete self.state
+			console.warn(
+				`${self.type}: rx deleted this.state after init()` +
+					`to avoid confusing behavior, such as the component not rendering initially ` +
+					`because this.state would not have changed between init() and the first time ` +
+					`main() is called. To skip this warning and retain this.state after init(), ` +
+					`set this.hasStatePreMain = true in the ${self.type} constructor.`
+			)
+		}
+	}
+
+	async dispatch(action?: any) {
 		const self = this.#Inner
 		self.bus.emit('preDispatch')
 		try {
