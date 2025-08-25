@@ -192,17 +192,14 @@ async function getSampleData(q, ds, onlyChildren = false) {
 				genome: q.ds.genomename,
 				dslabel: q.ds.label,
 				dataType: tw.term.type,
-				terms: [tw.term],
+				terms: [tw],
 				filter: q.filter,
 				filter0: q.filter0
 			}
 			const data = await q.ds.queries[tw.term.type].get(args)
-			const termkey = tw.term.type == TermTypes.SSGSEA ? tw.term.id : tw.term.name
-			for (const sampleId in data.term2sample2value.get(termkey)) {
-				if (!(sampleId in samples)) {
-					samples[sampleId] = { sample: sampleId }
-				}
-				const values = data.term2sample2value.get(termkey)
+			const values = data.term2sample2value.get(tw.$id)
+			for (const sampleId in values) {
+				if (!(sampleId in samples)) samples[sampleId] = { sample: sampleId }
 				const value = Number(values[sampleId])
 				let key = value
 				if (lstOfBins) {

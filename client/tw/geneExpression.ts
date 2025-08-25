@@ -10,7 +10,11 @@ export class GeneExpBase extends TwBase {
 		if (!tw.term.gene) tw.term.gene = tw.term.name
 		if (!tw.term.gene || typeof tw.term.gene != 'string') throw 'geneExpression tw.term.gene must be non-empty string'
 
-		if (!tw.term.name) tw.term.name = tw.term.gene // auto fill if .name is missing
+		if (!tw.term.name) {
+			const unit = opts.vocabApi.termdbConfig.queries.geneExpression?.unit || 'Gene Expression'
+			const name = `${tw.term.gene} ${unit}`
+			tw.term.name = name
+		}
 
 		if (!tw.q?.mode) tw.q = { mode: 'continuous' } // supply default q if missing
 		if (opts.defaultQ) copyMerge(tw.q, opts.defaultQ) // override if default is given
