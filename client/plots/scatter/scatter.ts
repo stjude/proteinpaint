@@ -138,8 +138,12 @@ export class Scatter extends RxComponentInner {
 				const url = this.canvas.toDataURL('image/png')
 				downloadImage(url)
 			} else {
-				const svgs = this.model.charts.map(chart => chart.svg.node())
-				downloadSVGsAsPdf(svgs)
+				const name2svg = {}
+				for (const chart of this.model.charts) {
+					const name = `${this.config.name}${chart.id == 'Default' ? '' : ' ' + chart.id}	`
+					name2svg[name] = chart.svg.node()
+				}
+				downloadSVGsAsPdf(name2svg)
 			}
 		})
 	}
