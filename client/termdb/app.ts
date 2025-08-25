@@ -1,4 +1,5 @@
-import { getAppInit, multiInit } from '#rx'
+import { AppApi, multiInit, type RxAppInner, type ComponentApi } from '#rx'
+import { AppBase } from '#plots/AppBase.ts'
 import { storeInit } from './store'
 import { vocabInit } from './vocabulary'
 import { treeInit } from './tree'
@@ -25,44 +26,33 @@ opts{}
 	getCategoriesArguments{}
 */
 
-class TdbApp {
-	constructor(opts) {
-		this.type = 'app'
-		if (!opts.holder) select('body').append('div')
+class TdbApp extends AppBase implements RxAppInner {
+	static type = 'app'
+	// expected RxAppInner, some are already declared/set in AppBase
+	api: AppApi
+	type = 'app'
+	parentId?: string
+	dom!: {
+		[index: string]: any
+	}
+	components: {
+		[name: string]: ComponentApi | { [name: string]: ComponentApi }
+	} = {}
 
-		// do this in the constructor to have an dom.errdiv
-		// available at any point during initialization
-		const submitDiv = opts.holder
-			.append('div')
-			.style('display', opts.tree?.submit_lst ? '' : 'none')
-			.style('text-align', 'center')
-			.style('margin', '10px 5px')
+	wasDestroyed = false
+	store: any
+	bus!: any
 
-		const submitBtn = submitDiv
-			.append('button')
-			.property('disabled', true)
-			.text(this.noSelectionPrompt)
-			.on('click', () => this.opts.tree?.submit_lst(this.state.selectedTerms))
+	// expected class-specific props
 
-		const topbar = opts.holder.append('div')
-		const termTypeSearchDiv = topbar.append('div').style('display', 'inline-block')
-		const treeDiv = topbar.append('div').style('display', 'inline-block').style('vertical-align', 'top')
-
-		this.dom = {
-			topbar,
-			holder: opts.holder,
-			termTypeSearchDiv,
-			searchDiv: treeDiv.append('div'),
-			treeDiv: treeDiv.append('div'),
-			customTermDiv: treeDiv.append('div').style('margin', '10px'),
-			submitDiv,
-			submitBtn,
-			filterDiv: topbar.append('div').style('display', 'none'),
-			errdiv: opts.holder.append('div'),
-			tip: new Menu({ padding: '5px' })
-		}
+	constructor(opts, api) {
+		super(opts)
+		this.opts = this.validateOpts(this.opts)
+		this.api = api
+		this.dom = this.getDom(this.opts)
 	}
 
+	// override AppBase.validateOpts()
 	validateOpts(o) {
 		if (o.vocabApi) {
 			// verify it is an object returned by vocabInit()
@@ -133,7 +123,48 @@ class TdbApp {
 
 			if (o.tree.disable_terms) o.search.disable_terms = o.tree.disable_terms
 		}
+		if (o.app) {
+			for (const [k, v] of Object.entries(o.app)) {
+				o[k] = v
+			}
+			delete o.app
+		}
 		return o
+	}
+
+	getDom(opts) {
+		if (!opts.holder) select('body').append('div')
+
+		// do this in the constructor to have an dom.errdiv
+		// available at any point during initialization
+		const submitDiv = opts.holder
+			.append('div')
+			.style('display', opts.tree?.submit_lst ? '' : 'none')
+			.style('text-align', 'center')
+			.style('margin', '10px 5px')
+
+		const submitBtn = submitDiv
+			.append('button')
+			.property('disabled', true)
+			.on('click', () => this.opts.tree?.submit_lst(this.state.selectedTerms))
+
+		const topbar = opts.holder.append('div')
+		const termTypeSearchDiv = topbar.append('div').style('display', 'inline-block')
+		const treeDiv = topbar.append('div').style('display', 'inline-block').style('vertical-align', 'top')
+
+		return {
+			topbar,
+			holder: opts.holder,
+			termTypeSearchDiv,
+			searchDiv: treeDiv.append('div'),
+			treeDiv: treeDiv.append('div'),
+			customTermDiv: treeDiv.append('div').style('margin', '10px'),
+			submitDiv,
+			submitBtn,
+			filterDiv: topbar.append('div').style('display', 'none'),
+			errdiv: opts.holder.append('div'),
+			tip: new Menu({ padding: '5px' })
+		}
 	}
 
 	async preApiFreeze(api) {
@@ -160,56 +191,52 @@ class TdbApp {
 		try {
 			this.store = await storeInit({ app: this.api, state: this.opts.state })
 			this.state = await this.store.copyState()
-			await this.setComponents()
+			this.components = await this.getComponents()
 			await this.api.dispatch()
 		} catch (e) {
 			this.printError(e)
 		}
 	}
 
-	async setComponents() {
-		try {
-			const header_mode = this.state.nav?.header_mode
-			const compPromises = {
-				/*
-			 	TODO: may need to handle a cohort filter option as an OPTIONAL component 
-			  filter: filterInit({
-					app: this.api,
-					holder: this.dom.filterDiv
-			  }),
-				***/
-				search: searchInit({
-					app: this.api,
-					holder: this.dom.searchDiv,
-					isVisible: header_mode !== 'hide_search'
-				}),
-				termTypeSearch: TermTypeSearchInit({
-					app: this.api,
-					holder: this.dom.termTypeSearchDiv,
-					topbar: this.dom.topbar,
-					genome: this.opts.vocabApi?.app?.opts?.genome,
-					click_term: this.opts.tree?.click_term,
-					submit_lst: this.opts.tree?.submit_lst,
-					submitDiv: this.dom.submitDiv
-				}),
-				tree: treeInit({
-					app: this.api,
-					holder: this.dom.treeDiv,
-					headerDiv: this.dom.headerDiv,
-					expandAll: header_mode == 'hide_search'
-				})
-			}
-			if (this.opts.tree && this.opts.tree.click_term2select_tvs) {
-				compPromises.submenu = submenuInit({
-					app: this.api,
-					holder: this.dom.holder.append('div').style('display', 'none')
-				})
-			}
-
-			this.components = await multiInit(compPromises)
-		} catch (e) {
-			throw e
+	async getComponents() {
+		const header_mode = this.state.nav?.header_mode
+		const compPromises: { [name: string]: Promise<ComponentApi> } = {
+			/*
+		 	TODO: may need to handle a cohort filter option as an OPTIONAL component 
+		  filter: filterInit({
+				app: this.api,
+				holder: this.dom.filterDiv
+		  }),
+			***/
+			search: searchInit({
+				app: this.api,
+				holder: this.dom.searchDiv,
+				isVisible: header_mode !== 'hide_search'
+			}),
+			termTypeSearch: TermTypeSearchInit({
+				app: this.api,
+				holder: this.dom.termTypeSearchDiv,
+				topbar: this.dom.topbar,
+				genome: this.opts.vocabApi?.app?.opts?.genome,
+				click_term: this.opts.tree?.click_term,
+				submit_lst: this.opts.tree?.submit_lst,
+				submitDiv: this.dom.submitDiv
+			}),
+			tree: treeInit({
+				app: this.api,
+				holder: this.dom.treeDiv,
+				headerDiv: this.dom.headerDiv,
+				expandAll: header_mode == 'hide_search'
+			})
 		}
+		if (this.opts.tree && this.opts.tree.click_term2select_tvs) {
+			compPromises.submenu = submenuInit({
+				app: this.api,
+				holder: this.dom.holder.append('div').style('display', 'none')
+			})
+		}
+
+		return multiInit(compPromises)
 	}
 
 	async main() {
@@ -240,7 +267,7 @@ class TdbApp {
 		if (!Array.isArray(tws) || tws.length == 0) return this.dom.customTermDiv.style('display', 'none')
 
 		// filter for display terms with usecase
-		const useTerms = []
+		const useTerms: any[] = []
 		for (const tw of tws) {
 			const uses = isUsableTerm(tw.term, this.state.tree.usecase, this.state.termdbConfig)
 			if (uses.has('plot')) useTerms.push(tw)
@@ -278,8 +305,4 @@ class TdbApp {
 }
 
 // must use the await keyword when using this appInit()
-export const appInit = getAppInit(TdbApp)
-
-function setInteractivity(self) {
-	// set optional event handlers
-}
+export const appInit = AppApi.getInitFxn(TdbApp)
