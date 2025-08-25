@@ -1652,7 +1652,7 @@ async function validate_query_ssGSEA(ds, genome) {
 		const term2sample2value = new Map()
 		const byTermId = {}
 
-		const genesetNames = param.terms.map(t => t.id)
+		const genesetNames = param.terms.map(tw => tw.term.id)
 
 		if (genesetNames.length === 0) {
 			console.log('No genesets to query')
@@ -1664,10 +1664,10 @@ async function validate_query_ssGSEA(ds, genome) {
 		const results = JSON.parse(tmp)
 		mayLog('ssGSEA h5 file', Date.now() - time1)
 
-		for (const t of param.terms) {
-			const result = results.query_output[t.id]?.samples
+		for (const tw of param.terms) {
+			const result = results.query_output[tw.term.id]?.samples
 			if (!result) {
-				console.warn(`No data found for geneset ${t.id} in the response`)
+				console.warn(`No data found for geneset ${tw.term.id} in the response`)
 				continue
 			}
 
@@ -1680,7 +1680,7 @@ async function validate_query_ssGSEA(ds, genome) {
 			}
 
 			if (Object.keys(s2v).length) {
-				term2sample2value.set(t.id, s2v)
+				term2sample2value.set(tw.$id, s2v)
 			}
 		}
 		if (term2sample2value.size == 0) throw 'No data available for the input.'
@@ -1768,17 +1768,16 @@ async function validateMetaboliteIntensityNative(q, ds, genome) {
 		}
 
 		const term2sample2value = new Map() // k: metabolite name, v: { sampleId : value }
-		for (const m of param.terms) {
-			if (!m) continue
+		for (const tw of param.terms) {
+			if (!tw) continue
 
 			const s2v = {}
-			let metabolite = m.name
+			const metabolite = tw.term.name
 			await utils.get_lines_txtfile({
 				args: [q.file],
 				callback: line => {
 					const l = line.split('\t')
 					if (l[0].toLowerCase() != metabolite.toLowerCase()) return
-					metabolite = l[0]
 					for (let i = 1; i < l.length; i++) {
 						const sampleId = samples[i - 1]
 						if (limitSamples && !limitSamples.has(sampleId)) continue // doing filtering and sample of current column is not used
@@ -1787,13 +1786,14 @@ async function validateMetaboliteIntensityNative(q, ds, genome) {
 						if (Number.isNaN(v)) throw 'exp value not number'
 						s2v[sampleId] = v
 					}
-					if (Object.keys(s2v).length) term2sample2value.set(metabolite, s2v) // only add metabolite if it has data
+					if (Object.keys(s2v).length) term2sample2value.set(tw.$id, s2v) // only add metabolite if it has data
 				}
 			})
 		}
 		// pass blank byTermId to match with expected output structure
 		const byTermId = {}
-		if (term2sample2value.size == 0) throw 'no data available for the input ' + param.terms?.map(g => g.name).join(', ')
+		if (term2sample2value.size == 0)
+			throw 'no data available for the input ' + param.terms?.map(tw => tw.term.name).join(', ')
 		return { term2sample2value, byTermId, bySampleId }
 	}
 }
