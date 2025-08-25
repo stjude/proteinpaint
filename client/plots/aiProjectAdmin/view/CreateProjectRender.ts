@@ -85,9 +85,8 @@ export class CreateProjectRender {
 						})
 					}
 				})
-
 				this.dom.holder.selectAll('*').remove()
-				new SelectorTableRender(this.dom.holder, this.app, this.interactions, selections.data)
+				new SelectorTableRender(this.dom.holder, this.interactions, selections.data)
 			})
 	}
 
