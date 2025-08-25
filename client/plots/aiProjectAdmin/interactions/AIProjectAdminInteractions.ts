@@ -55,7 +55,7 @@ export class AIProjectAdminInteractions {
 			console.error('Error editing project:', e.message || e)
 			throw e
 		}
-		this.appDispatchEdit({ settings: { project } }, config)
+		await this.appDispatchEdit({ settings: { project } }, config)
 	}
 
 	async deleteProject(project: { value: string; id: number }): Promise<void> {
@@ -76,19 +76,28 @@ export class AIProjectAdminInteractions {
 		}
 	}
 
-	async getImages(filter: any): Promise<AIProjectAdminResponse> {
+	async getFilteredImages(filter: any): Promise<AIProjectAdminResponse> {
 		const config = this.getConfig()
-		return await this.app.vocabApi.getAiImages(config.settings.project, filter)
+		return await this.app.vocabApi.getFilteredAiImages(config.settings.project, filter)
 	}
 
-	async launchViewer(holder: any): Promise<void> {
+	//TODO: Remove ? after intergration
+	async launchViewer(holder: any, _images?: string[] | string): Promise<void> {
 		holder.selectAll('.sjpp-deletable-ai-prjt-admin-div').remove()
 
+		let images: any[] = []
+		if (Array.isArray(_images) && _images?.length) {
+			images = _images
+			//Remove after api integration
+		} else if (_images == 'dev') {
+			images = ['14965.svs', '14970.svs']
+		} else {
+			const config = this.getConfig()
+			images = await this.prjtRepo.getImages(this.genome, this.dslabel, config.settings.project)
+		}
+
 		const wsiViewer = await import('#plots/wsiviewer/plot.wsi.js')
-		wsiViewer.default(this.app.opts.state.vocab.dslabel, holder, this.app.opts.genome, null, 1, [
-			'14965.svs',
-			'14970.svs'
-		])
+		wsiViewer.default(this.dslabel, holder, { name: this.genome }, null, 1, images)
 	}
 
 	public async appDispatchEdit(settings: any, config: any = {}): Promise<void> {
@@ -96,6 +105,7 @@ export class AIProjectAdminInteractions {
 			config = this.getConfig()
 			if (!config) throw new Error(`No plot with id='${this.id}' found.`)
 		}
+
 		await this.app.dispatch({
 			type: 'plot_edit',
 			id: this.id,

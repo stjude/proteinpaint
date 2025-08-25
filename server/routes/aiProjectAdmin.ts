@@ -61,7 +61,7 @@ function init({ genomes }) {
 					status: 'ok',
 					message: `Project ${query.project.name} processed successfully`
 				})
-			} else if (query.for === 'images') {
+			} else if (query.for === 'filterImages') {
 				/** get selections (i.e. slides) matching the project
 				 * from the ad hoc dictionary. */
 				const q = ds.cohort.termdb.q
@@ -71,6 +71,9 @@ function init({ genomes }) {
 					status: 'ok',
 					data
 				})
+			} else if (query.for === 'images') {
+				const images = await getImages(connection, query.project)
+				res.send(images)
 			} else {
 				res.send({
 					status: 'error',
@@ -88,7 +91,17 @@ function init({ genomes }) {
 }
 
 function getProjects(connection: any) {
-	const sql = 'SELECT project.name as value, id FROM project'
+	const sql = 'SELECT name, id FROM project'
+	return runSQL(connection, sql)
+}
+
+function getImages(connection: any, project: any) {
+	if (!project.id) {
+		const res = connection.prepare(`SELECT id FROM project WHERE name = ?`).get(project.name)
+		project.id = res.id
+	}
+
+	const sql = `SELECT image_path FROM project_images WHERE project_id = ${project.id}`
 	return runSQL(connection, sql)
 }
 
@@ -180,8 +193,8 @@ function runSQL(connection: any, sql: string, params: any[] = [], errorText = 'f
 		}
 		return connection.prepare(sql).run(params)
 	} catch (e: any) {
-		console.error(`Error executing SQL for ${errorText}: ${e.message || e}`)
-		throw new Error(`Failed to ${errorText} projects`)
+		console.error(`Error executing SQL to ${errorText}: ${e.message || e}`)
+		throw new Error(`Failed to ${errorText} project`)
 	}
 }
 
@@ -201,7 +214,7 @@ function runMultiStmtSQL(connection: any, stmts: { sql: string; params: any[] }[
 	try {
 		transaction(stmts)
 	} catch (e: any) {
-		console.error(`Error executing transaction for ${errorText}: ${e.message || e}`)
-		throw new Error(`Failed to ${errorText} projects`)
+		console.error(`Error executing transaction to ${errorText}: ${e.message || e}`)
+		throw new Error(`Failed to ${errorText} project`)
 	}
 }

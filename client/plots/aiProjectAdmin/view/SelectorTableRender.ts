@@ -60,13 +60,15 @@ export class SelectorTableRender {
 			.style('width', 'fit-content')
 			.style('margin-left', '5vw')
 			.on('click', async () => {
-				this.interactions.editProject({
+				const images = Array.from(this.selectedRows).map((_, i) => this.images.rows[i][0].value)
+				await this.interactions.editProject({
 					project: {
-						images: Array.from(this.selectedRows).map((_, i) => this.images.rows[i][0].value)
+						images
 					}
 				})
 				this.dom.holder.selectAll('*').remove()
-				this.interactions.launchViewer(this.dom.holder)
+				// this.interactions.launchViewer(this.dom.holder, images)
+				this.interactions.launchViewer(this.dom.holder, 'dev')
 			})
 	}
 }
