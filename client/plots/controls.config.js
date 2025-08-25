@@ -50,7 +50,7 @@ class TdbConfigUiInit {
 						this.inputs[obj.settingsKey || obj.configKey] = await initByInput[obj.type](
 							Object.assign({}, obj, {
 								holder: this.dom.table.append('tr'),
-								dispatch,
+								app: this.app,
 								id: this.id,
 								instanceNum: this.instanceNum,
 								debug: this.opts.debug,
@@ -61,7 +61,7 @@ class TdbConfigUiInit {
 				} else if (key in initByInput) {
 					this.inputs[key] = await initByInput[key]({
 						holder: this.dom.table.append('tr'),
-						dispatch,
+						app: this.app,
 						id: this.id,
 						instanceNum: this.instanceNum,
 						debug: this.opts.debug,
@@ -186,7 +186,7 @@ function setNumberInput(opts) {
 			if (input.min && input.min > value) value = input.min
 			if (opts.callback) opts.callback(value)
 			else {
-				opts.dispatch({
+				opts.app.dispatch({
 					type: 'plot_edit',
 					id: opts.id,
 					config: {
@@ -273,7 +273,7 @@ function setMathExprInput(opts) {
 			const number = Number(value)
 			if (isNaN(number)) throw `non-numeric value for ${opts.settingsKey}='${value}'`
 			textByNumber[number] = value
-			opts.dispatch({
+			opts.app.dispatch({
 				type: 'plot_edit',
 				id: opts.id,
 				config: {
@@ -323,7 +323,7 @@ function setTextInput(opts) {
 		.style('width', (opts.width || 100) + 'px')
 		.on('change', () => {
 			const value = self.dom.input.property('value')
-			opts.dispatch({
+			opts.app.dispatch({
 				type: 'plot_edit',
 				id: opts.id,
 				config: {
@@ -371,7 +371,7 @@ function setColorInput(opts) {
 		.attr('aria-labelledby', self.id)
 		.on('change', () => {
 			const value = self.dom.input.property('value')
-			opts.dispatch({
+			opts.app.dispatch({
 				type: 'plot_edit',
 				id: opts.id,
 				config: {
@@ -436,7 +436,7 @@ function setRadioInput(opts) {
 					if (opts.callback) {
 						opts.callback(d.value)
 					} else {
-						opts.dispatch({
+						opts.app.dispatch({
 							type: 'plot_edit',
 							id: opts.id,
 							config: {
@@ -548,7 +548,7 @@ function setDropdownInput(opts) {
 function callbackOrDispatch(opts, value) {
 	if (opts.callback) opts.callback(value)
 	else
-		opts.dispatch({
+		opts.app.dispatch({
 			type: 'plot_edit',
 			id: opts.id,
 			config: {
@@ -590,7 +590,7 @@ function setCheckboxInput(opts) {
 		.on('change', () => {
 			const value = self.dom.input.property('checked')
 			if (opts.callback) opts.callback(value)
-			opts.dispatch({
+			opts.app.dispatch({
 				type: 'plot_edit',
 				id: opts.id,
 				config: {
@@ -659,7 +659,7 @@ function setMultiCheckbox(opts) {
 			const checked = self.dom.selectAll.property('checked')
 			self.dom.inputs.property('checked', checked)
 			const values = checked ? opts.options.map(d => d.value) : []
-			opts.dispatch({
+			opts.app.dispatch({
 				type: 'plot_edit',
 				id: opts.id,
 				config: {
@@ -702,7 +702,7 @@ function setMultiCheckbox(opts) {
 					const value = self.dom.labels.selectAll('input').each(function (d) {
 						if (this.checked) checked.push(d.value)
 					})
-					opts.dispatch({
+					opts.app.dispatch({
 						type: 'plot_edit',
 						id: opts.id,
 						config: {
@@ -808,7 +808,7 @@ async function setTermInput(opts) {
 
 			if (opts.processConfig) opts.processConfig(config) // do the custom config modification inside the processConfig function
 
-			opts.dispatch({
+			opts.app.dispatch({
 				type: 'plot_edit',
 				id: opts.id,
 				config

@@ -16,7 +16,7 @@ export interface RxComponentInner {
 		[index: string]: any
 	}
 	components?: ComponentApi[] | { [name: string]: ComponentApi | { [name: string]: ComponentApi } }
-	init?: (appState: any) => void
+	init?: (appState: any) => Promise<void>
 	reactsTo?: (action: { type: string; [key: string]: any }) => boolean
 	getState?: (appState: any) => any
 	hasStatePreMain?: boolean

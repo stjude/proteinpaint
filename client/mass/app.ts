@@ -1,9 +1,10 @@
-import { getAppInit } from '../rx'
+import { AppApi, type ComponentApi, type RxAppInner } from '../rx'
 import { storeInit } from './store'
 import { vocabInit } from '#termdb/vocabulary'
 import { navInit } from './nav'
 import { plotInit } from './plot'
 import { summaryInit } from '#plots/summary.js'
+import { AppBase } from '#plots/AppBase.ts'
 import { sayerror } from '../dom/sayerror.ts'
 import { Menu } from '#dom/menu'
 import { newSandboxDiv } from '../dom/sandbox.ts'
@@ -30,8 +31,31 @@ opts{}
 
 */
 
-class MassApp {
-	constructor(opts) {
+class MassApp extends AppBase implements RxAppInner {
+	static type = 'app'
+
+	// expected RxAppInner, some are already declared/set in AppBase
+	api: AppApi
+	type: string
+	parentId?: string
+	dom!: {
+		[index: string]: any
+	}
+	components: {
+		[name: string]: ComponentApi | { [name: string]: ComponentApi }
+	} = {}
+
+	wasDestroyed = false
+	store: any
+	plotIdToSandboxId: { [plotId: string]: string }
+	bus!: any
+
+	// expected class-specific props
+
+	constructor(opts, api) {
+		super(opts)
+		this.api = api
+
 		if (opts.addLoginCallback) {
 			opts.addLoginCallback(() => this.api.dispatch({ type: 'app_refresh' }))
 		}
@@ -49,22 +73,6 @@ class MassApp {
 		this.plotIdToSandboxId = {}
 	}
 
-	validateOpts(o = {}) {
-		if (!o.holder) throw `missing opts.holder in the MassApp constructor argument`
-		if (!o.callbacks) o.callbacks = {}
-		if (!o.state.vocab) o.state.vocab = {}
-		if (typeof o.state.vocab != 'object') throw 'opts.state.vocab{} is not an object'
-		if (o.state.genome) {
-			o.state.vocab.genome = o.state.genome
-			delete o.state.genome
-		}
-		if (o.state.dslabel) {
-			o.state.vocab.dslabel = o.state.dslabel
-			delete o.state.dslabel
-		}
-		return o
-	}
-
 	async preApiFreeze(api) {
 		try {
 			api.tip = new Menu({ padding: '5px' })
@@ -72,7 +80,6 @@ class MassApp {
 				if (event.key == 'Escape') api.tip.hide()
 			})
 			api.printError = e => this.printError(e)
-			const vocab = this.opts.state.vocab
 
 			// TODO: only pass state.genome, dslabel to vocabInit
 			api.vocabApi = await vocabInit({
@@ -81,21 +88,23 @@ class MassApp {
 				fetchOpts: this.opts.fetchOpts,
 				getDatasetAccessToken: this.opts.getDatasetAccessToken
 			})
+
 			api.hasWebGL = function () {
 				//Copied from static/js/WEBGL.js
 				try {
-					var canvas = document.createElement('canvas')
+					const canvas = document.createElement('canvas')
 					return !!(
 						window.WebGLRenderingContext &&
 						(canvas.getContext('webgl') || canvas.getContext('experimental-webgl'))
 					)
-				} catch (e) {
+				} catch (_) {
 					return false
 				}
 			}
 			// the vocabApi's vocab may be reprocessed from the original input
 			this.opts.state.vocab = api.vocabApi.vocab
 		} catch (e) {
+			console.log(`preApiFreeze error`, e)
 			throw e
 		}
 	}
@@ -198,20 +207,4 @@ class MassApp {
 	}
 }
 
-export const appInit = getAppInit(MassApp)
-
-function setInteractivity(self) {
-	self.downloadView = id => {
-		const components = this.api.getComponents('plots.' + opts.id)
-		for (const name in self.components) {
-			// the download function in each component will be called,
-			// but should first check inside that function
-			// whether the component view is active before reacting
-			if (typeof self.components[name].download == 'function') {
-				components[name].download()
-			}
-		}
-	}
-
-	self.showTermSrc = showTermSrc
-}
+export const appInit = AppApi.getInitFxn(MassApp)

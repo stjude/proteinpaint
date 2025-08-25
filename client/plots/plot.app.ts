@@ -1,4 +1,5 @@
-import { getAppInit } from '../rx'
+import { AppApi, type RxAppInner, type ComponentApi } from '../rx'
+import { AppBase } from '#plots/AppBase.ts'
 import { storeInit } from '#mass/store'
 import { vocabInit } from '#termdb/vocabulary'
 import { recoverInit } from '../rx/src/recover'
@@ -53,8 +54,25 @@ constructor options (opts)
 	}
 */
 
-class PlotApp {
-	constructor(opts) {
+class PlotApp extends AppBase implements RxAppInner {
+	// expected RxAppInner, some are already declared/set in AppBase
+	api: AppApi
+	type: string
+	parentId?: string
+	dom!: {
+		[index: string]: any
+	}
+	components: {
+		[name: string]: ComponentApi | { [name: string]: ComponentApi }
+	} = {}
+
+	wasDestroyed = false
+	store: any
+	bus!: any
+
+	constructor(opts, api) {
+		super(opts)
+		this.api = api
 		this.type = 'app'
 		// this will create divs in the correct order
 		const controls = opts.violin?.mode == 'minimal' ? null : opts.holder.append('div').style('white-space', 'nowrap')
@@ -67,12 +85,6 @@ class PlotApp {
 			this.dom.plotControls = controls.append('div').style('display', 'inline-block')
 			this.dom.recoverControls = controls.append('div').style('display', 'inline-block')
 		}
-	}
-
-	validateOpts(o = {}) {
-		if (!o.holder) throw `missing opts.holder in the MassApp constructor argument`
-		if (!o.callbacks) o.callbacks = {}
-		return o
 	}
 
 	async preApiFreeze(api) {
@@ -100,6 +112,7 @@ class PlotApp {
 			// the vocabApi's vocab may be reprocessed from the original input
 			this.opts.state.vocab = api.vocabApi.vocab
 		} catch (e) {
+			console.log(`preApiFreeze error`, e)
 			throw e
 		}
 	}
@@ -149,7 +162,7 @@ class PlotApp {
 			}
 		}
 
-		for (const [index, plot] of this.state.plots.entries()) {
+		for (const plot of this.state.plots.values()) {
 			if (!this.components.plots[plot.id]) {
 				const holder = this.opts?.app?.getPlotHolder
 					? this.opts.app.getPlotHolder(plot, this.dom.holder)
@@ -181,20 +194,4 @@ class PlotApp {
 	}
 }
 
-export const appInit = getAppInit(PlotApp)
-
-function setInteractivity(self) {
-	self.downloadView = id => {
-		const components = this.api.getComponents('plots.' + opts.id)
-		for (const name in self.components) {
-			// the download function in each component will be called,
-			// but should first check inside that function
-			// whether the component view is active before reacting
-			if (typeof self.components[name].download == 'function') {
-				components[name].download()
-			}
-		}
-	}
-
-	self.showTermSrc = showTermSrc
-}
+export const appInit = AppApi.getInitFxn(PlotApp)

@@ -15,7 +15,8 @@ export interface RxAppInner {
 		[index: string]: any
 	}
 	components: ComponentApi[] | { [name: string]: ComponentApi | { [name: string]: ComponentApi } }
-	init?: (appState: any) => void
+	preApiFreeze?: (api: AppApi) => Promise<void>
+	init: () => Promise<void>
 	reactsTo?: (action: { type: string; [key: string]: any }) => boolean
 	getState?: (appState: any) => any
 	hasStatePreMain?: boolean
@@ -33,6 +34,7 @@ export interface RxAppInner {
 export class AppApi {
 	type = 'app'
 	id: string
+	opts: any
 	vocabApi: any
 	#Inner: RxAppInner
 	Inner?: RxAppInner // only in debugmode
@@ -47,6 +49,14 @@ export class AppApi {
 		}
 	} = {}
 
+	static getInitFxn(__Class__) {
+		return async opts => {
+			const api = new AppApi(opts, __Class__)
+			await api.init()
+			return api
+		}
+	}
+
 	constructor(opts, __Class__) {
 		// the component type + id may be used later to
 		// simplify getting its state from the store
@@ -59,6 +69,7 @@ export class AppApi {
 		this.#Inner = self
 		this.id = self.id
 		this.type = self.type || __Class__.type
+		this.opts = opts
 
 		// make it easy to access the private instance in debug mode, for testing
 		if (self.debug || (self.opts && self.opts.debug)) this.Inner = self
@@ -71,7 +82,12 @@ export class AppApi {
 		this.#abortControllers = new Set()
 	}
 
-	async dispatch(action) {
+	async init() {
+		if (this.#Inner.preApiFreeze) await this.#Inner.preApiFreeze(this)
+		await this.#Inner.init()
+	}
+
+	async dispatch(action?: any) {
 		const self = this.#Inner
 		self.bus.emit('preDispatch')
 		try {

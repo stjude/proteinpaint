@@ -188,10 +188,9 @@ export function rideInit(opts = {}) {
 			self.resolved
 				.then(() => {
 					test.end()
-					// remove all rendered elements when a test suite passes,
-					// to minimize have memory leaks
 					if (!opts.preserve && test._ok && opts.arg.Inner.app && typeof opts.arg.Inner.app.destroy == 'function') {
-						setTimeout(opts.arg.Inner.app.destroy, 1000)
+						// remove all rendered elements when a test suite passes, to minimize memory leaks
+						opts.arg.Inner.app.destroy()
 					}
 				})
 				.catch(console.log)
