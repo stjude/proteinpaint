@@ -74,17 +74,22 @@ class PlotApp extends AppBase implements RxAppInner {
 		super(opts)
 		this.api = api
 		this.type = 'app'
-		// this will create divs in the correct order
-		const controls = opts.violin?.mode == 'minimal' ? null : opts.holder.append('div').style('white-space', 'nowrap')
-		this.dom = {
+		this.dom = this.getDom(opts)
+	}
+
+	getDom(opts) {
+		// this will create divs in the correct stacking order
+		const dom: { [index: string]: any } = {
 			holder: opts.holder,
 			errdiv: opts.holder.append('div'),
 			plotDiv: opts.holder.append('div')
 		}
+		const controls = opts.violin?.mode == 'minimal' ? null : opts.holder.append('div').style('white-space', 'nowrap')
 		if (controls) {
-			this.dom.plotControls = controls.append('div').style('display', 'inline-block')
-			this.dom.recoverControls = controls.append('div').style('display', 'inline-block')
+			dom.plotControls = controls.append('div').style('display', 'inline-block')
+			dom.recoverControls = controls.append('div').style('display', 'inline-block')
 		}
+		return dom
 	}
 
 	async preApiFreeze(api) {

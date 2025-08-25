@@ -46,7 +46,7 @@ tape('no tree.click_term2select_tvs callback', function (test) {
 	function runTests(app) {
 		test.equal(app.Inner.components.submenu, undefined, 'should not have a submenu')
 		test.end()
-		if (test._ok) setTimeout(app.destroy, 1000)
+		if (test._ok) app.destroy()
 	}
 })
 
@@ -72,7 +72,7 @@ tape('with callback, but no submenu.term', function (test) {
 		test.equal(app.Inner.components.tree.Inner.dom.holder.style('display'), 'block', 'should have a visible tree')
 		test.equal(app.Inner.components.submenu.Inner.dom.holder.style('display'), 'none', 'should have a hidden submenu')
 		test.end()
-		if (test._ok) setTimeout(app.destroy, 1000)
+		if (test._ok) app.destroy()
 	}
 })
 
@@ -98,7 +98,7 @@ tape('with callback and submenu.term', function (test) {
 		test.equal(app.Inner.components.tree.Inner.dom.holder.style('display'), 'none', 'should have a hidden tree')
 		test.equal(app.Inner.components.submenu.Inner.dom.holder.style('display'), 'block', 'should have a visible submenu')
 		test.end()
-		if (test._ok) setTimeout(app.destroy, 1000)
+		if (test._ok) app.destroy()
 	}
 })
 
@@ -124,6 +124,6 @@ tape('with backToSelectionText', function (test) {
 			'« xyz'
 		)
 		test.end()
-		if (test._ok) setTimeout(app.destroy, 1000)
+		if (test._ok) app.destroy()
 	}
 })
