@@ -150,24 +150,24 @@ export function gdc_validate_query_geneExpression(ds, genome) {
 		// 3/25/2025 gdc backend doesn't index gene exp for sex chr genes. thus prevent these genes from showing up in app
 		const skippedSexChrGenes = [],
 			acceptedGenes = []
-		for (const t of q.terms) {
-			if (!t.gene) throw '.gene missing'
-			const tmp = genome.genedb.getjsonbyname.all(t.gene)
+		for (const tw of q.terms) {
+			if (!tw.term.gene) throw '.gene missing'
+			const tmp = genome.genedb.getjsonbyname.all(tw.term.gene)
 			let isSex = false
 			for (const i of tmp) {
 				const g = JSON.parse(i.genemodel)
 				if (g.chr == 'chrX' || g.chr == 'chrY') {
-					skippedSexChrGenes.push(t.gene)
+					skippedSexChrGenes.push(tw.term.gene)
 					isSex = true
 					break
 				}
 			}
-			if (!isSex) acceptedGenes.push(t)
+			if (!isSex) acceptedGenes.push(tw)
 		}
 		//console.log(skippedSexChrGenes, new Date()-t2)
 		// db query and json parse for every gene seems to be fast, at 400ms for 1000 genes. if is performance concern, should add chr column to genes table
 
-		const [ensgLst, ensg2symbol] = await geneExpression_getGenes(acceptedGenes, cases4clustering, genome, ds, q)
+		const [ensgLst, ensg2id] = await geneExpression_getGenes(acceptedGenes, cases4clustering, genome, ds, q)
 
 		if (ensgLst.length == 0) return { term2sample2value, byTermId: {} } // no valid genes
 
@@ -176,12 +176,12 @@ export function gdc_validate_query_geneExpression(ds, genome) {
 
 		const byTermId = {}
 		for (const g of ensgLst) {
-			const geneSymbol = ensg2symbol.get(g)
-			byTermId[geneSymbol] = { gencodeId: g } // store ensemble gene ID in byTermId
-			term2sample2value.set(geneSymbol, new Map())
+			const id = ensg2id.get(g)
+			byTermId[id] = { gencodeId: g }
+			term2sample2value.set(id, new Map())
 		}
 
-		const bySampleId = await getExpressionData(q, ensgLst, cases4clustering, ensg2symbol, term2sample2value, ds)
+		const bySampleId = await getExpressionData(q, ensgLst, cases4clustering, ensg2id, term2sample2value, ds)
 		// returns mapping from uuid to submitter id; since uuid is used in term2sample2value, but need to display submitter id on ui
 
 		const t4 = new Date()
@@ -192,23 +192,23 @@ export function gdc_validate_query_geneExpression(ds, genome) {
 }
 
 /*
-genes: []
-	list of gene coming from client query
+twlst: []
+	list of gene termwrappers coming from client query
 genome:
 	for converting symbol to ensg
 */
-async function geneExpression_getGenes(genes, cases4clustering, genome, ds, q) {
+async function geneExpression_getGenes(twlst, cases4clustering, genome, ds, q) {
 	// convert given gene symbols to ENSG for api query
 	const ensgLst = []
-	// convert ensg back to symbol for using in data structure
-	const ensg2symbol = new Map()
+	// convert ensg back to termwrapper id for use in data structure
+	const ensg2id = new Map()
 
-	for (const g of genes) {
-		const name = g.gene || g.name // TODO should be only g.gene
+	for (const tw of twlst) {
+		const name = tw.term.gene
 		if (typeof name != 'string') continue // TODO report skipped ones
 		if (name.startsWith('ENSG') && name.length == 15) {
 			ensgLst.push(name)
-			ensg2symbol.set(name, name)
+			ensg2id.set(name, tw.$id)
 			continue
 		}
 		const lst = genome.genedb.getAliasByName.all(name)
@@ -216,7 +216,7 @@ async function geneExpression_getGenes(genes, cases4clustering, genome, ds, q) {
 			for (const a of lst) {
 				if (a.alias.startsWith('ENSG')) {
 					ensgLst.push(a.alias)
-					ensg2symbol.set(a.alias, name)
+					ensg2id.set(a.alias, tw.$id)
 					break
 				}
 			}
@@ -225,7 +225,7 @@ async function geneExpression_getGenes(genes, cases4clustering, genome, ds, q) {
 	}
 
 	// TODO: detect when the list has already been screened per Zhenyu's instructions below
-	return [ensgLst, ensg2symbol]
+	return [ensgLst, ensg2id]
 
 	if (!q.forClusteringAnalysis) {
 		// the request is not for clustering analysis. do not perform gene selection step to speed up and use given genes as-is
@@ -295,7 +295,7 @@ export function makeFilter(q) {
 	return f
 }
 
-async function getExpressionData(q, gene_ids, cases4clustering, ensg2symbol, term2sample2value, ds) {
+async function getExpressionData(q, gene_ids, cases4clustering, ensg2id, term2sample2value, ds) {
 	const arg = {
 		gene_ids,
 		format: 'tsv',
@@ -368,8 +368,8 @@ async function getExpressionData(q, gene_ids, cases4clustering, ensg2symbol, ter
 		if (l.length != caseHeader.length + 1) throw 'number of fields in gene line does not equal header'
 		const ensg = l[0]
 		if (!ensg) throw 'ensg l[0] missing from a line'
-		const symbol = ensg2symbol.get(ensg)
-		if (!symbol) throw 'symbol missing for ' + ensg
+		const id = ensg2id.get(ensg)
+		if (!id) throw 'id missing for ' + ensg
 		for (const [j, sample] of caseHeader.entries()) {
 			const v = Number(l[j + 1])
 			if (!Number.isFinite(v)) {
@@ -377,7 +377,7 @@ async function getExpressionData(q, gene_ids, cases4clustering, ensg2symbol, ter
 				throw 'non-numeric exp value from gdc'
 			}
 			const pass = mayFilterByExpression(geneExprFilter, v)
-			if (pass) term2sample2value.get(symbol)[sample] = v
+			if (pass) term2sample2value.get(id)[sample] = v
 		}
 	}
 	return bySampleId

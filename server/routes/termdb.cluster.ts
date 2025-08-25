@@ -366,9 +366,9 @@ async function validateNative(q: GeneExpressionQueryNative, ds: any) {
 
 		// First, collect all gene names
 		const geneNames: string[] = []
-		for (const geneTerm of param.terms) {
-			if (geneTerm.gene) {
-				geneNames.push(geneTerm.gene)
+		for (const tw of param.terms) {
+			if (tw.term.gene) {
+				geneNames.push(tw.term.gene)
 			}
 		}
 
@@ -387,13 +387,13 @@ async function validateNative(q: GeneExpressionQueryNative, ds: any) {
 		// Check if we have a multi-gene response (genes field) or single gene response
 		const genesData = geneData.genes || { [geneNames[0]]: geneData }
 		// Process each gene's data
-		for (const geneTerm of param.terms) {
-			if (!geneTerm.gene) continue
+		for (const tw of param.terms) {
+			if (!tw.term.gene) continue
 
 			// Get this gene's data from the batch response
-			const geneResult = genesData[geneTerm.gene]
+			const geneResult = genesData[tw.term.gene]
 			if (!geneResult) {
-				console.warn(`No data found for gene ${geneTerm.gene} in the response`)
+				console.warn(`No data found for gene ${tw.term.gene} in the response`)
 				continue
 			}
 
@@ -412,11 +412,11 @@ async function validateNative(q: GeneExpressionQueryNative, ds: any) {
 			}
 
 			if (Object.keys(s2v).length) {
-				term2sample2value.set(geneTerm.gene, s2v)
+				term2sample2value.set(tw.$id, s2v)
 			}
 		}
 		if (term2sample2value.size == 0) {
-			throw 'No data available for the input ' + param.terms?.map(g => g.gene).join(', ')
+			throw 'No data available for the input ' + param.terms?.map(tw => tw.term.gene).join(', ')
 		}
 
 		return { term2sample2value, byTermId, bySampleId }

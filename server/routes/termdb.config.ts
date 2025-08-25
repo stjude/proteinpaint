@@ -235,6 +235,10 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome) {
 		}
 	}
 
+	if (q.geneExpression) {
+		q2.geneExpression = { unit: q.geneExpression.unit }
+	}
+
 	if (q.NIdata && serverconfig.features.showBrainImaging) {
 		q2.NIdata = {}
 		for (const k in q.NIdata) {

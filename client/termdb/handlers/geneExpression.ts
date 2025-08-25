@@ -17,7 +17,9 @@ export class SearchHandler {
 	}
 
 	async selectGene(gene) {
+		const unit = this.app.vocabApi.termdbConfig.queries.geneExpression?.unit || 'Gene Expression'
+		const name = `${gene} ${unit}`
 		if (!gene) throw new Error('No gene selected')
-		this.callback({ gene, type: TermTypes.GENE_EXPRESSION, name: gene })
+		this.callback({ gene, name, type: TermTypes.GENE_EXPRESSION })
 	}
 }
