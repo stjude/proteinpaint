@@ -1,19 +1,27 @@
 import { renderTable } from '#dom'
+import type { AIProjectAdminInteractions } from '../interactions/AIProjectAdminInteractions'
+import type { Elem, Div } from '../../../types/d3'
 
 export class SelectorTableRender {
-	dom: any
-	app: any
+	dom: {
+		holder: Elem
+		tableDiv: Div | Elem
+		btnDiv: Div | Elem
+	}
 	images: { rows: any[]; cols: any[] }
-	interactions: any
-	selectedRows: any
+	interactions: AIProjectAdminInteractions
+	selectedRows: Set<number>
 
-	constructor(holder: any, app: any, interactions, images: { rows: any[]; cols: any[] }) {
+	constructor(holder: Elem, interactions: AIProjectAdminInteractions, images: { rows: any[]; cols: any[] }) {
 		this.dom = {
 			holder,
-			tableDiv: holder.append('div').attr('id', 'sjpp-selector-table').style('padding', '10px 0'),
-			btnDiv: holder.append('div').attr('id', 'sjpp-selector-btns')
+			tableDiv: holder
+				.append('div')
+				.attr('class', '.sjpp-deletable-ai-prjt-admin-div')
+				.attr('id', 'sjpp-selector-table')
+				.style('padding', '10px 0'),
+			btnDiv: holder.append('div').attr('class', '.sjpp-deletable-ai-prjt-admin-div').attr('id', 'sjpp-selector-btns')
 		}
-		this.app = app
 		this.images = images
 		this.interactions = interactions
 		/** This is for development
@@ -57,6 +65,8 @@ export class SelectorTableRender {
 						images: Array.from(this.selectedRows).map((_, i) => this.images.rows[i][0].value)
 					}
 				})
+				this.dom.holder.selectAll('*').remove()
+				this.interactions.launchViewer(this.dom.holder)
 			})
 	}
 }

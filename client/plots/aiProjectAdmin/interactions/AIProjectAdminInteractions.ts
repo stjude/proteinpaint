@@ -16,7 +16,7 @@ export class AIProjectAdminInteractions {
 		this.prjtRepo = prjtRepo
 	}
 
-	async addProject(opts: { project: any }) {
+	async addProject(opts: { project: any }): Promise<void> {
 		const config = this.getConfig()
 		const projectObject = Object.assign({}, config.settings.project, opts.project)
 
@@ -33,7 +33,7 @@ export class AIProjectAdminInteractions {
 		}
 	}
 
-	public async editProject(opts: { project: any }) {
+	async editProject(opts: { project: any }): Promise<void> {
 		const config = this.getConfig()
 		const project = Object.assign(
 			{},
@@ -58,7 +58,7 @@ export class AIProjectAdminInteractions {
 		this.appDispatchEdit({ settings: { project } }, config)
 	}
 
-	async deleteProject(project: { value: string; id: number }) {
+	async deleteProject(project: { value: string; id: number }): Promise<void> {
 		const body = {
 			genome: this.genome,
 			dslabel: this.dslabel,
@@ -81,7 +81,17 @@ export class AIProjectAdminInteractions {
 		return await this.app.vocabApi.getAiImages(config.settings.project, filter)
 	}
 
-	public async appDispatchEdit(settings: any, config: any = {}) {
+	async launchViewer(holder: any): Promise<void> {
+		holder.selectAll('.sjpp-deletable-ai-prjt-admin-div').remove()
+
+		const wsiViewer = await import('#plots/wsiviewer/plot.wsi.js')
+		wsiViewer.default(this.app.opts.state.vocab.dslabel, holder, this.app.opts.genome, null, 1, [
+			'14965.svs',
+			'14970.svs'
+		])
+	}
+
+	public async appDispatchEdit(settings: any, config: any = {}): Promise<void> {
 		if (!config?.settings) {
 			config = this.getConfig()
 			if (!config) throw new Error(`No plot with id='${this.id}' found.`)
@@ -93,7 +103,7 @@ export class AIProjectAdminInteractions {
 		})
 	}
 
-	private getConfig() {
+	private getConfig(): any {
 		return this.app.getState().plots.find((p: any) => p.id === this.id)
 	}
 }
