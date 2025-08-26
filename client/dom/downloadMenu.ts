@@ -21,6 +21,7 @@ export class DownloadMenu {
 			.text('SVG')
 			.on('click', () => {
 				for (const [name, svg] of Object.entries(this.name2svg)) downloadSingleSVG(svg, name, this.holder)
+				this.menu.hide()
 			})
 		menuDiv
 			.append('div')
@@ -28,6 +29,7 @@ export class DownloadMenu {
 			.text('PDF')
 			.on('click', () => {
 				downloadSVGsAsPdf(this.name2svg)
+				this.menu.hide()
 			})
 		this.menu.showunder(this.holder)
 	}
