@@ -117,23 +117,29 @@ export function downloadChart(mainGsel, svgName, styleParent = null) {
 }
 
 export function downloadSVGsAsPdf(name2svg, filename = 'charts.pdf') {
-	const doc = new jsPDF('p', 'pt', 'a4') // Portrait, points, A4 size
+	const doc = new jsPDF('l', 'px', 'a4') // landscape, points, A4 size
+	doc.setFontSize(12)
+	const pageWidth = doc.internal.pageSize.getWidth() - 10
+	const pageHeight = doc.internal.pageSize.getHeight() - 10
+
 	let item
 	const entries = Object.entries(name2svg)
 	for (const [name, svg] of entries) {
-		if (!item) item = addSvgToPdf(doc, svg, name)
-		else item = item.then(() => addSvgToPdf(doc, svg, name))
+		if (!item) item = addSvgToPdf(svg, name)
+		else item = item.then(() => addSvgToPdf(svg, name))
 	}
 	item.then(() => {
 		doc.deletePage(entries.length + 1) // Remove the last empty page
 		doc.save(filename)
 	})
-}
 
-function addSvgToPdf(doc, svg, name) {
-	const item = doc.svg(svg, { x: 10, y: 40, width: 1000, height: 1000 }).then(() => {
-		doc.text(name, 10, 20)
-		doc.addPage()
-	})
-	return item
+	function addSvgToPdf(svg, name) {
+		const rect = svg.getBoundingClientRect()
+		svg.setAttribute('viewBox', `0 0 ${rect.width} ${rect.height}`)
+		const item = doc.svg(svg, { x: 15, y: 30, width: pageWidth, height: pageHeight }).then(() => {
+			doc.text(name, 15, 20)
+			doc.addPage()
+		})
+		return item
+	}
 }

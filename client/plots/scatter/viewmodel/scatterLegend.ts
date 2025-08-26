@@ -41,6 +41,7 @@ export class ScatterLegend {
 	getFontSize(legend) {
 		let fontSize = 0.9
 		const top = 20
+		//legend is a Map<string, ScatterLegendItem>
 		if (legend.size > top) {
 			fontSize = Math.min(0.9, top / legend.size)
 			if (fontSize < 0.7) fontSize = 0.7
