@@ -13,6 +13,7 @@ export const routeFiles = [
 	import('../routes/burden.ts'),
 	import('../routes/correlationVolcano.ts'),
 	import('../routes/dataset.ts'),
+	import('../routes/deleteWSIAnnotation.js'),
 	import('../routes/dsdata.ts'),
 	import('../routes/dzimages.ts'),
 	import('../routes/gdc.grin2.run.ts'),

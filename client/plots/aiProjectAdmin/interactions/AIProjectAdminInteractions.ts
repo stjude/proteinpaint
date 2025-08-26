@@ -85,6 +85,8 @@ export class AIProjectAdminInteractions {
 	async launchViewer(holder: any, _images?: string[] | string): Promise<void> {
 		holder.selectAll('.sjpp-deletable-ai-prjt-admin-div').remove()
 
+		const config = this.getConfig()
+
 		let images: any[] = []
 		if (Array.isArray(_images) && _images?.length) {
 			images = _images
@@ -92,12 +94,11 @@ export class AIProjectAdminInteractions {
 		} else if (_images == 'dev') {
 			images = ['14965.svs', '14970.svs']
 		} else {
-			const config = this.getConfig()
 			images = await this.prjtRepo.getImages(this.genome, this.dslabel, config.settings.project)
 		}
 
 		const wsiViewer = await import('#plots/wsiviewer/plot.wsi.js')
-		wsiViewer.default(this.dslabel, holder, { name: this.genome }, null, 1, images)
+		wsiViewer.default(this.dslabel, holder, { name: this.genome }, null, config.settings.project.id, images)
 	}
 
 	public async appDispatchEdit(settings: any, config: any = {}): Promise<void> {
