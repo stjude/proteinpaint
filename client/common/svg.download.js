@@ -1,8 +1,5 @@
 import { select } from 'd3-selection'
 import { to_svg } from '../src/client'
-import { jsPDF } from 'jspdf'
-import 'svg2pdf.js'
-import { add } from 'ol/coordinate'
 
 export function downloadSingleSVG(svg, filename, parent) {
 	if (parent) {
@@ -114,32 +111,4 @@ export function downloadChart(mainGsel, svgName, styleParent = null) {
 	})
 
 	to_svg(svg, svgName, { apply_dom_styles: true })
-}
-
-export function downloadSVGsAsPdf(name2svg, filename = 'charts.pdf') {
-	const doc = new jsPDF('l', 'px', 'a4') // landscape, points, A4 size
-	doc.setFontSize(12)
-	const pageWidth = doc.internal.pageSize.getWidth() - 10
-	const pageHeight = doc.internal.pageSize.getHeight() - 10
-
-	let item
-	const entries = Object.entries(name2svg)
-	for (const [name, svg] of entries) {
-		if (!item) item = addSvgToPdf(svg, name)
-		else item = item.then(() => addSvgToPdf(svg, name))
-	}
-	item.then(() => {
-		doc.deletePage(entries.length + 1) // Remove the last empty page
-		doc.save(filename)
-	})
-
-	function addSvgToPdf(svg, name) {
-		const rect = svg.getBoundingClientRect()
-		svg.setAttribute('viewBox', `0 0 ${rect.width} ${rect.height}`)
-		const item = doc.svg(svg, { x: 15, y: 30, width: pageWidth, height: pageHeight }).then(() => {
-			doc.text(name, 15, 20)
-			doc.addPage()
-		})
-		return item
-	}
 }

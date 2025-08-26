@@ -12,10 +12,10 @@ import { ScatterInteractivity, downloadImage } from './viewmodel/scatterInteract
 import { ScatterViewModel2DLarge } from './viewmodel/scatterViewModel2DLarge.js'
 import { ScatterViewModel3D } from './viewmodel/scatterViewModel3D.js'
 import { controlsInit } from '../controls'
-import { downloadSVGsAsPdf } from '../../common/svg.download.js'
 import { select2Terms } from '#dom/select2Terms'
 import type { MassState } from '../../../client/mass/types/mass.js'
 import { getCombinedTermFilter } from '#filter'
+import { DownloadMenu } from '#dom/downloadMenu'
 
 export class Scatter extends RxComponentInner {
 	config: any
@@ -132,7 +132,7 @@ export class Scatter extends RxComponentInner {
 			})
 		}
 		// TODO: handle multiple chart download when there is a divide by term
-		this.components.controls.on('downloadClick.scatter', async () => {
+		this.components.controls.on('downloadClick.scatter', async holder => {
 			if (this.model.is2DLarge || this.model.is3D) {
 				const url = this.vm.canvas.toDataURL('image/png')
 				downloadImage(url)
@@ -140,9 +140,10 @@ export class Scatter extends RxComponentInner {
 				const name2svg = {}
 				for (const chart of this.model.charts) {
 					const name = `${this.config.name || ''}${chart.id == 'Default' ? '' : ' ' + chart.id}	`
-					name2svg[name] = chart.svg.node()
+					name2svg[name] = chart.svg
 				}
-				downloadSVGsAsPdf(name2svg)
+				const menu = new DownloadMenu(name2svg, holder.node())
+				menu.show()
 			}
 		})
 	}
