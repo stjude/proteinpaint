@@ -24,7 +24,6 @@ export class Scatter extends RxComponentInner {
 	vm!: any
 	interactivity!: ScatterInteractivity
 	components: any
-	canvas: any
 	settings: any
 	charts: any
 	opts: any
@@ -135,12 +134,12 @@ export class Scatter extends RxComponentInner {
 		// TODO: handle multiple chart download when there is a divide by term
 		this.components.controls.on('downloadClick.scatter', async () => {
 			if (this.model.is2DLarge || this.model.is3D) {
-				const url = this.canvas.toDataURL('image/png')
+				const url = this.vm.canvas.toDataURL('image/png')
 				downloadImage(url)
 			} else {
 				const name2svg = {}
 				for (const chart of this.model.charts) {
-					const name = `${this.config.name}${chart.id == 'Default' ? '' : ' ' + chart.id}	`
+					const name = `${this.config.name || ''}${chart.id == 'Default' ? '' : ' ' + chart.id}	`
 					name2svg[name] = chart.svg.node()
 				}
 				downloadSVGsAsPdf(name2svg)
