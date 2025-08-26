@@ -20,7 +20,7 @@ export async function trigger_getDefaultBins(q, ds, res) {
 			if (!ds.queries?.singleCell?.geneExpression) throw 'term type not supported by this dataset'
 			binsCache = ds.queries.singleCell.geneExpression.sample2gene2expressionBins[tw.term.sample]
 			if (!binsCache) binsCache = ds.queries.singleCell.geneExpression.sample2gene2expressionBins[tw.term.sample] = {}
-			else if (binsCache[tw.term.gene]) return res.send(binsCache[tw.term.gene])
+			else if (binsCache[tw.$id]) return res.send(binsCache[tw.$id])
 			const args = {
 				sample: tw.term.sample,
 				gene: tw.term.gene
@@ -38,15 +38,16 @@ export async function trigger_getDefaultBins(q, ds, res) {
 			//binsCache = ds.queries[tw.term.type][`${tw.term.type}2bins`]
 			//if (binsCache[tw.term.name]) return res.send(binsCache[tw.term.name])
 
+			if (!tw.$id) tw.$id = '_'
 			const args = {
 				genome: q.genome,
 				dslabel: q.dslabel,
 				filter: q.filter,
 				filter0: q.filter0,
-				terms: [tw.term]
+				terms: [tw]
 			}
 			const data = await ds.queries[tw.term.type].get(args)
-			const termData = data.term2sample2value.get(tw.term.name)
+			const termData = data.term2sample2value.get(tw.$id)
 			for (const sample in termData) {
 				const value = termData[sample]
 				if (value < min) min = value
@@ -55,7 +56,7 @@ export async function trigger_getDefaultBins(q, ds, res) {
 			}
 		}
 		const binconfig = initBinConfig(lst)
-		if (binsCache) binsCache[tw.term.name] = { default: binconfig, min, max }
+		if (binsCache) binsCache[tw.$id] = { default: binconfig, min, max }
 		res.send({ default: binconfig, min, max })
 	} catch (e) {
 		console.log(e)

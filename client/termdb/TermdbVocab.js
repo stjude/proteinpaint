@@ -1068,9 +1068,9 @@ export class TermdbVocab extends Vocab {
 	// it's safer to separately treat term and q as persisted objects but not tw,
 	// since tw may have been constructed only as an argument for this function
 	// and not as a persisted object elsewhere
-	async setTermBins({ term, q }) {
+	async setTermBins({ $id, term, q }) {
 		//TODO use the PresetNumericBins type for presetBins
-		const presetBins = await this.getDefaultBins({ tw: { term, q } })
+		const presetBins = await this.getDefaultBins({ tw: { $id, term, q } })
 		if ('error' in presetBins) throw presetBins.error
 		// NOTE: if term is frozen, creating an unfrozen copy here will
 		// not propagate changes to the original term
