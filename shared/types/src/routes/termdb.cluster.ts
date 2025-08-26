@@ -3,8 +3,8 @@ import type { ErrorResponse } from './errorResponse.ts'
 import type { Filter } from '../filter.ts'
 import type { Term } from '../terms/term.ts'
 import type { GeneExpressionTW } from '../terms/geneExpression.ts'
-import type { MetaboliteIntensityTerm } from '../terms/metaboliteIntensity.ts'
-import type { NumericDictTerm } from '../terms/numeric.ts'
+import type { MetaboliteIntensityTW } from '../terms/metaboliteIntensity.ts'
+import type { NumericTW } from '../terms/numeric.ts'
 
 export type Gene = {
 	/** gene symbol, required */
@@ -43,7 +43,7 @@ export type TermdbClusterRequestMetabolite = TermdbClusterRequestBase & {
 	/** Data type */
 	dataType: 'metaboliteIntensity'
 	/** List of terms */
-	terms: MetaboliteIntensityTerm[]
+	terms: MetaboliteIntensityTW[]
 	/** perform z-score transformation on values */
 	zScoreTransformation?: string
 }
@@ -52,7 +52,7 @@ export type TermdbClusterRequestNumericDictTerm = TermdbClusterRequestBase & {
 	/** Data type */
 	dataType: 'numericDictTerm'
 	/** List of terms */
-	terms: NumericDictTerm[]
+	terms: NumericTW[]
 	/** perform z-score transformation on values */
 	zScoreTransformation?: string
 }
