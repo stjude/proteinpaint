@@ -127,7 +127,7 @@ export class HierCluster extends Matrix {
 		for (const [i, column] of c.col.order.entries()) {
 			samples[column.name] = { sample: column.name }
 			for (const [j, row] of c.row.order.entries()) {
-				const tw = twlst.find(tw => tw.term.name === row.name || tw.term.id === row.name)
+				const tw = twlst.find(tw => tw.$id === row.name)
 				const value = c.matrix[j][i]
 				samples[column.name][tw.$id] = {
 					key: tw.term.name,
@@ -298,9 +298,9 @@ export class HierCluster extends Matrix {
 
 	*/
 	getClusterRowTermsAsParameter() {
-		const lst = [...this.hcTermGroup.lst.map(tw => tw.term)]
+		const lst = structuredClone(this.hcTermGroup.lst)
 		// this helps caching by having a more consistent URL string
-		lst.sort((a, b) => (a.name < b.name ? -1 : 1))
+		lst.sort((a, b) => (a.term.name < b.term.name ? -1 : 1))
 		return lst
 	}
 }

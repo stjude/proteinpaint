@@ -506,13 +506,12 @@ function setRenderers(self) {
 				const lst = group.lst.filter(tw => tw.term.type != 'geneVariant')
 				const tws = await Promise.all(
 					geneList.map(async d => {
-						const term = {
-							gene: d.symbol || d.gene,
-							name: d.symbol || d.gene,
-							type: 'geneExpression'
-						}
+						const gene = d.symbol || d.gene
+						const unit = app.vocabApi.termdbConfig.queries.geneExpression?.unit || 'Gene Expression'
+						const name = `${gene} ${unit}`
+						const term = { gene, name, type: 'geneExpression' }
 						//if it was present use the previous term, genomic range terms require chr, start and stop fields, found in the original term
-						let tw = group.lst.find(tw => tw.term.name == d.symbol || tw.term.name == d.gene)
+						let tw = group.lst.find(tw => tw.term.name == name)
 						if (!tw) {
 							tw = { term, q: {} }
 						}

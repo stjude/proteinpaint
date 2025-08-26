@@ -2,7 +2,7 @@ import type { RoutePayload } from './routeApi.js'
 import type { ErrorResponse } from './errorResponse.ts'
 import type { Filter } from '../filter.ts'
 import type { Term } from '../terms/term.ts'
-import type { GeneExpressionTerm } from '../terms/geneExpression.ts'
+import type { GeneExpressionTW } from '../terms/geneExpression.ts'
 import type { MetaboliteIntensityTerm } from '../terms/metaboliteIntensity.ts'
 import type { NumericDictTerm } from '../terms/numeric.ts'
 
@@ -34,7 +34,7 @@ export type TermdbClusterRequestGeneExpression = TermdbClusterRequestBase & {
 	/** Data type */
 	dataType: 'geneExpression'
 	/** List of terms */
-	terms: GeneExpressionTerm[]
+	terms: GeneExpressionTW[]
 	/** perform z-score transformation on values */
 	zScoreTransformation?: string
 }
