@@ -721,6 +721,8 @@ export type MetaboliteIntensityQuery = MetaboliteIntensityQueryNative
 export type GeneExpressionQueryGdc = {
 	src: 'gdcapi'
 	geneExpression2bins?: { [index: string]: any }
+	/** gene expression unit (e.g. 'FPKM') */
+	unit?: string
 }
 
 export type GeneExpressionQueryNative = {
@@ -736,6 +738,8 @@ export type GeneExpressionQueryNative = {
 	get?: (param: any) => void
 	/** This dictionary is used to store/cache the default bins calculated for a geneExpression term when initialized in the fillTermWrapper */
 	geneExpression2bins?: { [index: string]: any }
+	/** gene expression unit (e.g. 'FPKM') */
+	unit?: string
 }
 
 export type GeneExpressionQuery = GeneExpressionQueryGdc | GeneExpressionQueryNative

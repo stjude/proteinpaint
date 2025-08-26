@@ -332,13 +332,20 @@ export function setHierClusterCellProps(cell, tw, anno, value, s, t, self, width
 	cell.x = cell.totalIndex * dx + cell.grpIndex * s.colgspace
 	cell.y = height * i
 
-	const groupName = self.config.settings.hierCluster?.termGroupName
-		? self.config.settings.hierCluster?.termGroupName
-		: tw.term.type == 'geneExpression'
-		? 'Expression'
-		: tw.term.type == 'metaboliteIntensity'
-		? 'Intensity'
-		: 'Heatmap color scale'
+	const hierCluster = self.config.settings.hierCluster
+	let groupName
+	if (hierCluster?.termGroupName) {
+		groupName = hierCluster.termGroupName
+	} else if (tw.term.type == 'geneExpression') {
+		groupName = 'Gene Expression'
+		const unit = self.app.vocabApi.termdbConfig.queries?.geneExpression?.unit
+		if (hierCluster?.zScoreTransformation) groupName += ' (Z-score)'
+		else if (unit) groupName += ` (${unit})`
+	} else if (tw.term.type == 'metaboliteIntensity') {
+		groupName = 'Intensity'
+	} else {
+		groupName = 'Heatmap color scale'
+	}
 
 	return {
 		ref: t.ref,
