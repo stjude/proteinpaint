@@ -118,7 +118,7 @@ function helpBtnInit(opts) {
 
 function downloadBtnInit(opts) {
 	const downloadDiv = opts.holder.style('margin-left', '10px')
-	icon_functions['download'](downloadDiv, { handler: opts.callback, title: opts.title || 'Download plot image' })
+	icon_functions['download'](downloadDiv, { handler: opts.callback, title: opts.title })
 
 	const self = {
 		plotTypes: ['summary', 'boxplot', 'scatter', 'brainImaging'],

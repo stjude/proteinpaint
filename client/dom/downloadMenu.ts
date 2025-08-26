@@ -12,7 +12,7 @@ export class DownloadMenu {
 		this.holder = holder
 	}
 
-	show() {
+	show(x, y) {
 		this.menu.clear()
 		const menuDiv = this.menu.d.append('div')
 		menuDiv
@@ -31,7 +31,7 @@ export class DownloadMenu {
 				downloadSVGsAsPdf(this.name2svg)
 				this.menu.hide()
 			})
-		this.menu.showunder(this.holder)
+		this.menu.show(x - 10, y - 10)
 	}
 }
 

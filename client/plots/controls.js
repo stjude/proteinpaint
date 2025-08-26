@@ -43,7 +43,7 @@ class TdbPlotControls {
 					holder: this.dom.topbar,
 					callback: this.toggleVisibility,
 					isOpen: () => this.isOpen,
-					downloadHandler: () => this.bus.emit('downloadClick', this.dom.topbar),
+					downloadHandler: event => this.bus.emit('downloadClick', event),
 					infoHandler: isOpen =>
 						this.app.dispatch({
 							type: 'plot_edit',
