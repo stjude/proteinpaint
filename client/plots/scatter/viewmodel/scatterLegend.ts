@@ -299,7 +299,7 @@ export class ScatterLegend {
 		itemG
 			.append('text')
 			.attr('name', 'sjpp-scatter-legend-label')
-			.attr('font-size', '1.1em')
+			.attr('font-size', '14px')
 			.attr('x', x + 20)
 			.attr('y', y + 4)
 			.text(`${name}, n=${category.sampleCount}`)
