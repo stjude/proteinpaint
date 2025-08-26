@@ -1766,37 +1766,37 @@
   "termdb/submenu.js": {
     "lines": {
       "total": 20,
-      "covered": 3,
+      "covered": 17,
       "skipped": 0,
-      "pct": 15
+      "pct": 85
     },
     "functions": {
       "total": 7,
-      "covered": 0,
+      "covered": 5,
       "skipped": 0,
-      "pct": 0
+      "pct": 71.42
     },
     "statements": {
       "total": 23,
-      "covered": 3,
+      "covered": 18,
       "skipped": 0,
-      "pct": 13.04
+      "pct": 78.26
     },
     "branches": {
       "total": 10,
-      "covered": 0,
+      "covered": 5,
       "skipped": 0,
-      "pct": 0
+      "pct": 50
     },
     "lowestPct": {
-      "curr": 0,
+      "curr": 50,
       "prev": 0,
-      "diff": 0
+      "diff": 50
     },
     "averagePct": {
-      "curr": 7.01,
-      "prev": 0,
-      "diff": 7.01
+      "curr": 71.17,
+      "prev": 7.01,
+      "diff": 64.16
     }
   },
   "dom/toggleButtons.ts": {
@@ -3133,10 +3133,10 @@
   },
   "termdb/vocabulary.js": {
     "lines": {
-      "total": 65,
+      "total": 66,
       "covered": 10,
       "skipped": 0,
-      "pct": 15.38
+      "pct": 15.15
     },
     "functions": {
       "total": 3,
@@ -3145,10 +3145,10 @@
       "pct": 33.33
     },
     "statements": {
-      "total": 72,
+      "total": 73,
       "covered": 10,
       "skipped": 0,
-      "pct": 13.88
+      "pct": 13.69
     },
     "branches": {
       "total": 70,
@@ -3162,9 +3162,9 @@
       "diff": 0
     },
     "averagePct": {
-      "curr": 18.1475,
+      "curr": 18.042499999999997,
       "prev": 18.1475,
-      "diff": 0
+      "diff": -0.10500000000000398
     }
   },
   "filter/tvs.dtcnv.categorical.js": {
@@ -5073,6 +5073,42 @@
       "curr": 5.2075,
       "prev": 0,
       "diff": 5.2075
+    }
+  },
+  "termdb/test/submenu.integration.spec.js": {
+    "lines": {
+      "total": 36,
+      "covered": 36,
+      "skipped": 0,
+      "pct": 100
+    },
+    "functions": {
+      "total": 12,
+      "covered": 9,
+      "skipped": 0,
+      "pct": 75
+    },
+    "statements": {
+      "total": 40,
+      "covered": 40,
+      "skipped": 0,
+      "pct": 100
+    },
+    "branches": {
+      "total": 8,
+      "covered": 4,
+      "skipped": 0,
+      "pct": 50
+    },
+    "lowestPct": {
+      "curr": 50,
+      "prev": 0,
+      "diff": 50
+    },
+    "averagePct": {
+      "curr": 81.25,
+      "prev": 0,
+      "diff": 81.25
     }
   }
 }
