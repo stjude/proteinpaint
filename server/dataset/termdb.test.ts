@@ -301,6 +301,9 @@ export default function (): Mds3 {
 				file: 'files/hg38/TermdbTest/rnaseq/TermdbTest.fpkm.matrix.h5',
 				unit: 'FPKM'
 			},
+			ssGSEA: {
+				file: 'files/hg38/TermdbTest/rnaseq/TermdbTest.ssgsea.h5'
+			},
 			topVariablyExpressedGenes: {
 				src: 'native'
 			},
