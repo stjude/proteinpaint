@@ -132,19 +132,28 @@ export class Scatter extends RxComponentInner {
 		}
 		// TODO: handle multiple chart download when there is a divide by term
 		this.components.controls.on('downloadClick.scatter', async event => {
-			if (this.model.is2DLarge || this.model.is3D) {
-				const url = this.vm.canvas.toDataURL('image/png')
-				downloadImage(url)
-			} else {
-				const name2svg = {}
-				for (const chart of this.model.charts) {
-					const name = `${this.config.name || ''}${chart.id == 'Default' ? '' : ' ' + chart.id}	`
-					name2svg[name] = chart.svg
-				}
-				const menu = new DownloadMenu(name2svg, this.view.dom.controlsHolder.node())
-				menu.show(event.clientX, event.clientY)
-			}
+			this.download(event)
 		})
+	}
+
+	async download(event) {
+		if (this.model.is2DLarge || this.model.is3D) {
+			const url = this.vm.canvas.toDataURL('image/png')
+			downloadImage(url)
+		} else {
+			const name2svg = this.getName2Svg()
+			const menu = new DownloadMenu(name2svg, this.opts.holder.node())
+			menu.show(event.clientX, event.clientY)
+		}
+	}
+
+	getName2Svg() {
+		const name2svg = {}
+		for (const chart of this.model.charts) {
+			const name = `${this.config.name || ''}${chart.id == 'Default' ? '' : ' ' + chart.id}	`
+			name2svg[name] = chart.svg
+		}
+		return name2svg
 	}
 }
 
