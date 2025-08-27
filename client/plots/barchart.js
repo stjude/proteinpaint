@@ -12,6 +12,7 @@ import { getColors, mclass, plotColor } from '#shared/common.js'
 import { isNumericTerm } from '#shared/terms.js'
 import { roundValueAuto } from '#shared/roundValue.js'
 import { getCombinedTermFilter } from '#filter'
+import { DownloadMenu } from '#dom/downloadMenu'
 
 export class Barchart {
 	constructor(opts) {
@@ -349,6 +350,7 @@ export class Barchart {
 			const results = await this.app.vocabApi.getNestedChartSeriesData(reqOpts)
 			if (results.error) throw results
 			const data = results.data
+			this.charts = data.charts
 			this.sampleType = results.sampleType
 			this.bins = results.bins
 			if (results.chartid2dtterm) this.chartid2dtterm = results.chartid2dtterm
@@ -1110,7 +1112,23 @@ function setRenderers(self) {
 function setInteractivity(self) {
 	self.handlers = getHandlers(self)
 
-	self.download = function () {
+	self.getName2Svg = function () {
+		const name2svg = {}
+
+		for (const chart of this.charts) {
+			const name = chart.name
+			name2svg[name] = chart.svg
+		}
+		return name2svg
+	}
+
+	self.download = function (event) {
+		const name2svg = self.getName2Svg()
+		const dm = new DownloadMenu(name2svg, self.opts.holder.node())
+		dm.show(event.clientX, event.clientY)
+	}
+
+	self.download2 = function () {
 		if (!self.state) return
 		// has to be able to handle multichart view
 		const mainGs = []
