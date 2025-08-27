@@ -233,4 +233,9 @@ export class AppApi {
 		if (self.api) delete self.api
 		self.wasDestroyed = true
 	}
+
+	printError(e) {
+		if (this.#Inner.printError) this.#Inner.printError(e)
+		else alert(e)
+	}
 }
