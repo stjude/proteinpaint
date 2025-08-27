@@ -35,8 +35,15 @@ export function parentCorsMessage(res, origin = '') {
 				// URL parameters.
 				setTimeout(() => {
 					try {
+						// If this page was launched from clicking a link outside of a web page (such as from an email),
+						// then there would be no browser history to go back to, this page should be automatically closed.
+						// If there is a page to go back to, assume that it's a page with a table or list of links
+						// for published figures and the user would prefer to go back to that page instead of seeing steps
+						// to manually go back or close the window.
+						// Either way, the recovered session will remain visible in another tab.
+						if (window.history.length > 1) window.history.back()
 						// Works when a shared URL is clicked from the session menu
-						window.close()
+						else window.close()
 					} catch (e) {
 						// the browser prevents the closing of an transitory tab that was opened
 						// by clicking on a bookmarked link or pasting that link directly on the browser
@@ -58,16 +65,18 @@ export function parentCorsMessage(res, origin = '') {
 				`\n- You may have to refresh it.` +
 				`\n- After the session is recovered, this browser window should automatically close.`
 		)
-		document.body.innerHTML = `
-			<div style='margin: 20px; padding: 20px; font-size: 24px'>
-				Please close this browser tab. The recovered session should be visible in another browser tab.
-			</div>
-		`
 		if (ok) {
 			confirmedCorsWindow.push(embedder.origin)
 			localStorage.setItem('confirmedCorsWindow', JSON.stringify(confirmedCorsWindow))
 		}
 	}
+
+	document.body.innerHTML = `
+		<div style='margin: 20px; padding: 20px; font-size: 24px'>
+			The recovered session should be visible in another browser tab.
+			You may go back in your browser history or close this browser tab.
+		</div>
+	`
 
 	setTimeout(() => window.removeEventListener('message', messageListener), 8000)
 	const child = window.open(embedder.href, '_blank')
