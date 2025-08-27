@@ -64,8 +64,8 @@ export async function downloadSVGsAsPdf(name2svg, filename = 'charts.pdf') {
 	function addSvgToPdf(svg, name) {
 		const rect = svg.getBoundingClientRect()
 		svg.setAttribute('viewBox', `0 0 ${rect.width} ${rect.height}`)
-		const width = Math.min(pageWidth, rect.width)
-		const height = Math.min(pageHeight, rect.height)
+		const width = Math.min(pageWidth, rect.width) - 20
+		const height = Math.min(pageHeight, rect.height) - 20
 		const item = doc.svg(svg, { x: 15, y: 30, width, height }).then(() => {
 			doc.text(name, 15, 20)
 			doc.addPage()
