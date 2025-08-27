@@ -29,23 +29,22 @@ export function parentCorsMessage(res, origin = '') {
 			window.removeEventListener('message', messageListener)
 			child.postMessage({ state: res.state }, embedder.origin)
 			if (embedder.origin != window.location.origin) {
-				// An embedder site was opened using an transitory proteinpaint site URL.
-				// Try to close this transitory URL tab since it will not display any viz
-				// and is only used to open the saved embedder URL without imposing PP-related
-				// URL parameters.
 				setTimeout(() => {
+					// The recovered session will remain visible in another tab, regardless of what happens below.
 					try {
-						// If this page was launched from clicking a link outside of a web page (such as from an email),
-						// then there would be no browser history to go back to, this page should be automatically closed.
 						// If there is a page to go back to, assume that it's a page with a table or list of links
 						// for published figures and the user would prefer to go back to that page instead of seeing steps
 						// to manually go back or close the window.
-						// Either way, the recovered session will remain visible in another tab.
 						if (window.history.length > 1) window.history.back()
-						// Works when a shared URL is clicked from the session menu
+						// If this page was launched from clicking a link outside of a web page (such as from an email),
+						// then there would be no browser history to go back to, this page should be automatically closed.
+						// In this case, an embedder site was opened using an transitory proteinpaint site URL.
+						// Try to close this transitory URL tab since it will not display any viz and was only used
+						// to open the saved embedder URL without imposing PP-related URL parameters.
 						else window.close()
+						// The above was also tested to work when a shared URL is clicked from the session menu.
 					} catch (e) {
-						// the browser prevents the closing of an transitory tab that was opened
+						// the browser prevents the closing of a transitory tab that was opened
 						// by clicking on a bookmarked link or pasting that link directly on the browser
 						// address bar. In that case, make another attempt to close the transitory tab
 						console.log(e)
