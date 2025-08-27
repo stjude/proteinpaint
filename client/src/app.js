@@ -19,6 +19,7 @@ import { init_mdsjson } from './app.mdsjson'
 import urlmap from '#common/urlmap'
 import { Menu, renderSandboxFormDiv, sayerror } from '#dom'
 import { mayLaunchGdcPlotFromRunpp } from '../gdc/launch.ts'
+import { childCorsMessage } from '#common/embedder-helpers'
 
 /*
 exports a function runproteinpaint(), referred to as "runpp"
@@ -1359,51 +1360,7 @@ async function launchmass(arg, app) {
 	opts.getDatasetAccessToken = arg.getDatasetAccessToken
 	opts.addLoginCallback = arg.addLoginCallback
 	opts.pkgver = app.pkgver
-	const hostURL = sessionStorage.getItem('hostURL')
-	if (window.opener && hostURL != window.location.origin) {
-		// if this is a child window or tab, refreshing it will need previously hydrated session state,
-		// in case the window.opener has already removed its message listener
-		opts.embeddedSessionState = JSON.parse(sessionStorage.getItem('embeddedSessionState') || `{}`)
-		const messageListener = event => {
-			if (event.origin != window.location.origin && event.origin !== hostURL) return
-			// !!! Potential race-condition
-			// - assumes that the message event from the window.opener will be received
-			//   before the storeInit() is triggered within the storeInit() call in mass/app.js
-			// - low-risk(?) since the postMessage() between browser tabs should be faster than
-			//   the dynamic code loading below and in mass/app
-			// !!!
-			if (event.data.state) {
-				window.removeEventListener('message', messageListener)
-				Object.assign(opts.embeddedSessionState, event.data.state)
-				// see the comment above for when this stored embeddedState may be used
-				sessionStorage.setItem('embeddedSessionState', JSON.stringify(opts.embeddedSessionState))
-			}
-		}
-		window.addEventListener('message', messageListener, false)
-		// limit the time to listen for the window.opener's message
-		setTimeout(() => window.removeEventListener('message', messageListener), 1000)
-		// the window.opener can be either
-		// - an embedder site when clicking on `Open Session`
-		// - a proteinpaint site when clicking on a shared URL link
-		// accessing window.opener.location.origin may emit a CORS-related error,
-		// so safer to send the message twice to cover both possibilities
-		let origin
-		try {
-			if (window.opener.origin) {
-				origin = window.opener.origin
-			} else {
-				origin = hostURL
-			}
-		} catch (e) {
-			origin = hostURL
-		}
-
-		try {
-			window.opener.postMessage('getActiveMassSession', origin)
-		} catch (e) {
-			console.log(e)
-		}
-	}
+	childCorsMessage(opts)
 	const _ = await import('../mass/app')
 	return await _.appInit(opts)
 }
