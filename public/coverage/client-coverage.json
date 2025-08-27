@@ -1430,13 +1430,13 @@
     },
     "lowestPct": {
       "curr": 52.63,
-      "prev": 49.56,
-      "diff": 3.0700000000000003
+      "prev": 52.63,
+      "diff": 0
     },
     "averagePct": {
       "curr": 69.6875,
-      "prev": 67.025,
-      "diff": 2.6624999999999943
+      "prev": 69.6875,
+      "diff": 0
     }
   },
   "termdb/tree.js": {
