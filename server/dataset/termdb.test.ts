@@ -300,6 +300,9 @@ export default function (): Mds3 {
 				src: 'native',
 				file: 'files/hg38/TermdbTest/rnaseq/TermdbTest.fpkm.matrix.h5'
 			},
+			ssGSEA: {
+				file: 'files/hg38/TermdbTest/rnaseq/TermdbTest.ssgsea.h5'
+			},
 			topVariablyExpressedGenes: {
 				src: 'native'
 			},
