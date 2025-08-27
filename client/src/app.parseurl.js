@@ -6,7 +6,7 @@ import * as mdsjson from './app.mdsjson'
 import { getSavedToken } from '#common/dofetch'
 import urlmap from '#common/urlmap'
 import { first_genetrack_tolist } from '#common/1stGenetk'
-import { corsMessage } from '#common/embedder-helpers'
+import { parentCorsMessage, childCorsMessage } from '#common/embedder-helpers'
 import { sayerror } from '#dom'
 import { copyMerge } from '#rx'
 import { mayLaunchGdcPlotFromUrlparam } from '../gdc/launch.ts'
@@ -127,6 +127,8 @@ upon error, throw err message as a string
 			launchDate: arg.app.launchDate
 		}
 		if (!opts.genome) throw 'invalid genome'
+		childCorsMessage(opts)
+
 		const _ = await import('../mass/app')
 		const subapp = await _.appInit(opts)
 		return subapp
@@ -147,6 +149,8 @@ upon error, throw err message as a string
 		} else if (state?.vocab?.genome) {
 			opts.genome = arg.genomes[state.vocab.genome]
 		}
+		childCorsMessage(opts)
+
 		const _ = await import('../mass/app')
 		const subapp = await _.appInit(opts)
 		return subapp
@@ -164,9 +168,8 @@ upon error, throw err message as a string
 			if (d.error) throw d.error
 			if (!d.text) throw 'data.text missing'
 			const state = JSON.parse(d.text)
-
-			if (state.embedder && state.embedder.origin != window.location.origin) {
-				corsMessage({ state })
+			if (state.embedder?.origin != window.location.origin) {
+				parentCorsMessage({ state })
 				return
 			}
 

@@ -2,7 +2,7 @@ import { getCompInit } from '#rx'
 import { Menu } from '#dom/menu'
 import { to_textfile } from '#dom/downloadTextfile'
 import { dofetch3 } from '#common/dofetch'
-import { corsMessage } from '#common/embedder-helpers'
+import { parentCorsMessage } from '#common/embedder-helpers'
 import { select } from 'd3-selection'
 import { importPlot } from '#plots/importPlot.js'
 
@@ -96,11 +96,11 @@ class MassSessionBtn {
 					} else if (window.location.origin == this.hostURL) {
 						window.open(`/?mass-session-id=${id}&src=browser`)
 					} else {
-						if (state.embedder) corsMessage({ state })
+						if (state.embedder) parentCorsMessage({ state })
 						else {
 							const { protocol, host, search, origin, href } = window.location
 							const embedder = { protocol, host, search, origin, href }
-							corsMessage({ state: Object.assign({ embedder }, state) })
+							parentCorsMessage({ state: Object.assign({ embedder }, state) })
 						}
 					}
 					this.dom.tip.hide()
@@ -119,7 +119,7 @@ class MassSessionBtn {
 						window.open(`/?mass-session-id=${id}&src=cred&dslabel=${this.dslabel}&route=${this.route}`)
 					} else {
 						// server-cached sessions should have an state.embedder object, no need to check
-						corsMessage(res)
+						parentCorsMessage(res)
 					}
 					this.dom.tip.hide()
 				}
