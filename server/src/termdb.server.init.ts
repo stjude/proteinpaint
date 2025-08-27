@@ -100,10 +100,8 @@ export function server_init_db_queries(ds) {
 	if (tables.has('term2genes')) {
 		/*
 		this db has optional table that maps term id to gene set, right now only used for msigdb
-		set termMatch2geneSet flag to true for client termdb tree to be aware of it via termdbConfig{}
 		add the getter function
 		*/
-		ds.cohort.termdb.termMatch2geneSet = true
 		const s = cn.prepare('SELECT genes FROM term2genes WHERE id=?')
 		const cache = new Map()
 		q.getGenesetByTermId = id => {
