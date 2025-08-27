@@ -160,6 +160,23 @@ tape('getAppInit - async', async function (test) {
 	test.end()
 })
 
+tape('AppApi.getInitFxn()', async function (test) {
+	const appInit = rx.AppApi.getInitFxn(TestApp)
+	const opts = {
+		app: {},
+		part: {}
+	}
+	const api0 = await appInit(opts)
+	test.equal(typeof api0.dispatch, 'function', 'should provide a dispatch() method')
+	test.equal(typeof api0.save, 'function', 'should provide a save() method')
+	test.equal(typeof api0.getState, 'function', 'should provide a getState() method')
+	test.equal(typeof api0.middle, 'function', 'should provide a middle() method')
+	test.equal(typeof api0.on, 'function', 'should provide an on() method')
+	test.equal(typeof api0.getComponents, 'function', 'should provide a getComponents() method')
+	test.equal(api0.opts, opts, 'should have an opts property')
+	test.end()
+})
+
 tape('detectStale', async function (test) {
 	const opts = {
 		debug: 1,
