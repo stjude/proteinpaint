@@ -114,10 +114,15 @@ class MassApp extends AppBase implements RxAppInner {
 		try {
 			// TODO: may default later to having a debouncer ???
 			const debounceInterval = 'debounceInterval' in this.opts ? this.opts.debounceInterval : 0
-			if (this.opts.embeddedSessionState) {
+			// NOTE: Within the same browser tab, a refresh should load the embedder's intended page
+			// and not the recovered session, to avoid confusing default page load behavior. If a user
+			// wants to see the initial recovered state view in the embedder portal, they would have
+			// to click on a link again. May revisit this approach and reactivate the commented out code below.
+			const embeddedSessionState = this.opts.embeddedSessionState // || JSON.parse(sessionStorage.getItem('embeddedSessionState') || `null`)
+			if (embeddedSessionState) {
 				// may assume session state recovery for an embedder portal
 				// see the comment about potential race-condition in childCorsMessage embedder-helpers.js
-				Object.assign(this.opts.state, this.opts.embeddedSessionState)
+				Object.assign(this.opts.state, embeddedSessionState)
 			}
 			this.store = await storeInit({ app: this.api, state: this.opts.state, debounceInterval })
 			this.state = await this.store.copyState()
