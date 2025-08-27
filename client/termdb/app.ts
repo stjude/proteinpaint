@@ -99,7 +99,7 @@ class TdbApp extends AppBase implements RxAppInner {
 				o.tree.click_term_wrapper = async term => {
 					// this function wraps user-defined click_term, to encapsulate some logic
 
-					if (this.state.termdbConfig.termMatch2geneSet) {
+					if (this.state.termdbConfig.isGeneSetTermdb) {
 						/*
 						the dataset is special-purpose that will map terms to gene sets (e.g. msigdb)
 						do this hardcoded behavior that upon clicking a term, it fetches the list of genes for this term

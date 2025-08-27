@@ -79,7 +79,6 @@ function make(q, req, res, ds: Mds3WithCohort, genome) {
 		supportedChartTypes: tdb.q?.getSupportedChartTypes(req),
 		renamedChartTypes: ds.cohort.renamedChartTypes,
 		allowedTermTypes: getAllowedTermTypes(ds),
-		termMatch2geneSet: tdb.termMatch2geneSet,
 		massSessionDuration: serverconfig.features.massSessionDuration || 30,
 		dataDownloadCatch: tdb.dataDownloadCatch,
 		matrix: tdb.matrix,

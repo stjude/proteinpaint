@@ -1502,17 +1502,17 @@ keep this setting here for reason of:
 	}
 	*/
 	q?: any
-	termMatch2geneSet?: any
 	mclass?: Mclass
 	lollipop?: any
 	hasAncestry?: boolean
+	/** set to true for genome-level geneset db */
+	isGeneSetTermdb?: boolean
 
 	//GDC
 	termid2totalsize2?: GdcApi
 	/** Do not use a union here. */
 	dictionary?: GdcApi & AiApi
 	allowCaseDetails?: AllowCaseDetails
-	isGeneSetTermdb?: boolean
 	/** Searches the genedb alias list to return the genecode ID */
 	getGeneAlias?: (q: any, tw: any) => { gencodeId: any }
 	convertSampleId?: GdcApi

@@ -243,7 +243,7 @@ async function trigger_getsurvival(q, res, ds) {
 }
 
 function trigger_genesetByTermId(q, res, tdb) {
-	if (!tdb.termMatch2geneSet) throw 'this feature is not enabled'
+	if (!tdb.isGeneSetTermdb) throw 'this feature is not enabled'
 	if (typeof q.genesetByTermId != 'string' || q.genesetByTermId.length == 0) throw 'invalid query term id'
 	const geneset = tdb.q.getGenesetByTermId(q.genesetByTermId)
 	res.send(geneset)

@@ -65,7 +65,12 @@ export class TermTypeSearch {
 	types: Array<string>
 	app: any
 	type: string
-	tabs: Array<Dict>
+	tabs: {
+		label: string // required by Tabs
+		termTypeGroup: string // required for comparing
+		contentHolder?: any // added by Tabs
+		callback: (any) => void
+	}[]
 	state: any
 	genomeObj: any
 	handlerByType: Dict
@@ -130,8 +135,8 @@ export class TermTypeSearch {
 			tabs: this.tabs
 		}).main()
 
-		for (const [i] of this.tabs.entries()) {
-			const holder = this.tabs[i].contentHolder.style('padding-left', '20px')
+		for (const t of this.tabs) {
+			const holder = t.contentHolder.style('padding-left', '20px')
 			holder.append('div')
 		}
 	}

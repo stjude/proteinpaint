@@ -82,7 +82,12 @@ class TermSearch {
 			return
 		}
 		this.dom.input.node().value = ''
-		this.dom.input.attr('placeholder', 'Search ' + this.state.termTypeGroup)
+		this.dom.input.attr(
+			'placeholder',
+			'Search ' +
+				// termTypeGroup values cannot cover geneset, thus this check
+				(this.app.vocabApi.termdbConfig.isGeneSetTermdb ? 'Gene Sets' : this.state.termTypeGroup)
+		)
 		this.clear()
 		this.dom.holder.style('display', this.state.isVisible ? 'block' : 'none')
 	}
@@ -168,13 +173,7 @@ function setRenderers(self) {
 	self.noResult = () => {
 		self.clear()
 		self.dom.resultDiv.style('display', 'inline-grid')
-		self.dom.resultDiv_terms
-			.append('div')
-			.style('padding', '3px 3px 3px 0px')
-			.style('opacity', 0.5)
-			.text(
-				'No match' + (self.app.vocabApi.termdbConfig?.queries?.snvindel?.allowSNPs ? '. Press ENTER to search SNP' : '')
-			)
+		self.dom.resultDiv_terms.append('div').style('padding', '3px 3px 3px 0px').style('opacity', 0.5).text('No match')
 	}
 	self.showTerms = data => {
 		// add disabled terms to opts.disable_terms
