@@ -164,6 +164,12 @@ upon error, throw err message as a string
 			if (d.error) throw d.error
 			if (!d.text) throw 'data.text missing'
 			const state = JSON.parse(d.text)
+
+			if (state.embedder && state.embedder.origin != window.location.origin) {
+				corsMessage({ state })
+				return
+			}
+
 			opts = {
 				debug: arg.app.debugmode,
 				holder: arg.holder,
@@ -182,6 +188,12 @@ upon error, throw err message as a string
 			if (d.error) throw d.error
 			if (!d.text) throw 'data.text missing'
 			const state = JSON.parse(d.text)
+
+			if (state.embedder && state.embedder.origin != window.location.origin) {
+				corsMessage({ state })
+				return
+			}
+
 			opts = {
 				debug: arg.app.debugmode,
 				holder: arg.holder,
