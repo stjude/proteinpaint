@@ -125,14 +125,14 @@ export class ScatterTooltip {
 				}
 			}
 		}
-		const level = showCoords ? 4 : 2
+		const level = showCoords ? 4 : 2 //current level after adding the parent categories
 		this.parentCategories = showCoords ? ['y', 'x', ''] : ['']
 		if (this.scatter.config.colorTW)
 			this.addNodes('category', this.scatter.config.colorTW, showCoords ? this.scatter.config.term : '', level)
 		if (this.scatter.config.shapeTW)
-			this.addNodes('shape', this.scatter.config.shapeTW, this.scatter.config.colorTW, level)
+			this.addNodes('shape', this.scatter.config.shapeTW, this.scatter.config.colorTW, level + 1)
 		if (this.scatter.config.scaleDotTW)
-			this.addNodes('scale', this.scatter.config.scaleDotTW, this.scatter.config.shapeTW, level)
+			this.addNodes('scale', this.scatter.config.scaleDotTW, this.scatter.config.shapeTW, level + 2)
 		this.view.dom.tooltip.clear()
 		//Rendering tooltip
 		const div = this.view.dom.tooltip.d.style('padding', '5px')
@@ -305,7 +305,6 @@ export class ScatterTooltip {
 			node.samples.push(sample)
 			if (parent) parent.children.push(node)
 		}
-		level++
 		this.parentCategories.unshift(category)
 	}
 
