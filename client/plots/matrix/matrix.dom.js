@@ -14,7 +14,7 @@ export function setMatrixDom(opts) {
 	const errdiv = holder.append('div').attr('class', 'sja_errorbar').style('display', 'none')
 	const svg = holder
 		.append('svg')
-		.style('margin', '20px 10px')
+		.style('margin', '20px')
 		.style('overflow', 'visible')
 		.on('mousemove.label', this.svgMousemove)
 		.on('mouseup.label', this.svgMouseup)

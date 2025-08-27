@@ -1209,14 +1209,22 @@ export class MatrixControls {
 					const lst = group.lst.filter(tw => tw.term.type != targetTermType)
 					const tws = await Promise.all(
 						geneList.map(async d => {
-							const term = {
-								gene: d.symbol || d.gene,
-								name: d.symbol || d.gene,
-								type: targetTermType
+							let term
+							if (targetTermType == 'geneExpression') {
+								const gene = d.symbol || d.gene
+								const unit = app.vocabApi.termdbConfig.queries.geneExpression?.unit || 'Gene Expression'
+								const name = `${gene} ${unit}`
+								term = { gene, name, type: 'geneExpression' }
+							} else {
+								term = {
+									gene: d.symbol || d.gene,
+									name: d.symbol || d.gene,
+									type: 'geneVariant'
+								}
 							}
 							//if it was present use the previous term, genomic range terms require chr, start and stop fields, found in the original term
 							let tw = group.lst.find(
-								tw => (tw.term.name == d.symbol || tw.term.name == d.gene) && tw.term.type == targetTermType
+								tw => (tw.term.gene == d.symbol || tw.term.gene == d.gene) && tw.term.type == targetTermType
 							)
 							if (!tw) {
 								tw = { term }
@@ -1292,7 +1300,7 @@ export class MatrixControls {
 					type: g.type,
 					lst:
 						g.type == 'hierCluster'
-							? g.lst.map(tw => ({ name: tw.term.name }))
+							? g.lst.map(tw => ({ name: tw.term.gene || tw.term.name }))
 							: g.lst.filter(tw => tw.term.type == TermTypes.GENE_VARIANT).map(tw => ({ name: tw.term.name })),
 					mode:
 						g.type == 'hierCluster'

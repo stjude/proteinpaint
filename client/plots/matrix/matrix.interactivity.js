@@ -152,7 +152,7 @@ export function setInteractivity(self) {
 					{
 						const [c1, c2] = table.addRow()
 						c1.html('Gene')
-						c2.html(d.term.name)
+						c2.html(d.term.gene)
 					}
 					{
 						const colorSquare =

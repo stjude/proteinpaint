@@ -193,7 +193,10 @@ export class TermTypeSearch {
 
 		function renderTerm(this: any, term) {
 			const div = select(this).style('border-radius', '5px')
-			div.insert('div').style('display', 'inline-block').html(term.name)
+			div
+				.insert('div')
+				.style('display', 'inline-block')
+				.html(term.gene || term.name)
 		}
 	}
 
