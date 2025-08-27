@@ -49,9 +49,10 @@ export function parentCorsMessage(res, origin = '') {
 		}
 	}
 	window.addEventListener('message', messageListener, false)
-	setTimeout(() => window.removeEventListener('message', messageListener), 8000)
-	if (embedder.origin != window.location.origin) {
-		confirm(
+
+	const confirmedCorsWindow = JSON.parse(localStorage.getItem('confirmedCorsWindow') || `[]`)
+	if (embedder.origin != window.location.origin && !confirmedCorsWindow.includes(embedder.origin)) {
+		const ok = confirm(
 			`Another window will open to recover the saved session. When the next window opens,` +
 				`\n- You may need to allow popups.` +
 				`\n- You may have to refresh it.` +
@@ -62,7 +63,13 @@ export function parentCorsMessage(res, origin = '') {
 				Please close this browser tab. The recovered session should be visible in another browser tab.
 			</div>
 		`
+		if (ok) {
+			confirmedCorsWindow.push(embedder.origin)
+			localStorage.setItem('confirmedCorsWindow', JSON.stringify(confirmedCorsWindow))
+		}
 	}
+
+	setTimeout(() => window.removeEventListener('message', messageListener), 8000)
 	const child = window.open(embedder.href, '_blank')
 }
 

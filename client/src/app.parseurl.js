@@ -235,7 +235,7 @@ upon error, throw err message as a string
 		}
 		const embedder = res.state?.embedder
 		if (embedder && embedder.origin != window.location.origin) {
-			corsMessage(res)
+			parentCorsMessage(res)
 			return
 		}
 		const opts = {
