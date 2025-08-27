@@ -116,7 +116,7 @@ class MassApp extends AppBase implements RxAppInner {
 			const debounceInterval = 'debounceInterval' in this.opts ? this.opts.debounceInterval : 0
 			if (this.opts.embeddedSessionState) {
 				// may assume session state recovery for an embedder portal
-				// see the comment about potential race-condition in launchmass() in src/app.js
+				// see the comment about potential race-condition in childCorsMessage embedder-helpers.js
 				Object.assign(this.opts.state, this.opts.embeddedSessionState)
 			}
 			this.store = await storeInit({ app: this.api, state: this.opts.state, debounceInterval })

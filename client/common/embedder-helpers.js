@@ -1,3 +1,26 @@
+/*
+	Below are helper functions to securely comply with CORS while also
+	enabling secure data sharing between embedder portal and pp server
+	at different URLs/host domains.
+	
+	Sequence of steps:
+	1. Parent window is opened with a mass-session-<"id" | "file" | "url">
+  2. parent downloads/loads the session state
+  3. if session state has "embedder" key-values, open the embedder origin
+     and listen for when it is ready to receive the state
+
+  4. child window is opened at session state.embedder.href
+  5. before loading mass appInit(), child sends a posts a 'getActiveMassSession' 
+     message to the the parent window
+
+  6. the parent posts the session state as a message for the child window,
+     and the parent can now close
+  
+  7. the child window saves the posted session state into localStorage before
+     calling mass appInit(), which is then retrieved to be used for storeInit()
+     in downstream code
+*/
+
 export function parentCorsMessage(res, origin = '') {
 	const embedder = res.state?.embedder
 	const messageListener = event => {
@@ -36,13 +59,15 @@ export function parentCorsMessage(res, origin = '') {
 		)
 		document.body.innerHTML = `
 			<div style='margin: 20px; padding: 20px; font-size: 24px'>
-				Please close this browser tab. The recovered session should visible in another browser tab.
+				Please close this browser tab. The recovered session should be visible in another browser tab.
 			</div>
 		`
 	}
 	const child = window.open(embedder.href, '_blank')
 }
 
+// TODO: change this function to async, so that it can be awaited before runpp() reaches/calls mass appInit()
+//       this will address the race condition in the comment inside the function below
 export function childCorsMessage(opts) {
 	if (!window.opener) return
 	const hostURL = sessionStorage.getItem('hostURL')
@@ -53,6 +78,7 @@ export function childCorsMessage(opts) {
 	opts.embeddedSessionState = JSON.parse(sessionStorage.getItem('embeddedSessionState') || `{}`)
 	const messageListener = event => {
 		if (event.origin != window.location.origin && event.origin !== hostURL) return
+		//
 		// !!! Potential race-condition
 		// - assumes that the message event from the window.opener will be received
 		//   before the storeInit() is triggered within the storeInit() call in mass/app.js
@@ -87,6 +113,10 @@ export function childCorsMessage(opts) {
 	}
 
 	try {
+		// message the window.opener, aka. parent window at a different URL domain,
+		// that the child window is ready to receive the session state, if available;
+		// this inter-window messaging is meant to address CORS restrictions and
+		// uses the targetWindow argument (origin) to restrict who can listen
 		window.opener.postMessage('getActiveMassSession', origin)
 	} catch (e) {
 		console.log(e)

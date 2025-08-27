@@ -193,7 +193,7 @@ upon error, throw err message as a string
 			const state = JSON.parse(d.text)
 
 			if (state.embedder && state.embedder.origin != window.location.origin) {
-				corsMessage({ state })
+				parentCorsMessage({ state })
 				return
 			}
 
