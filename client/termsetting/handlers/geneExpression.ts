@@ -1,4 +1,4 @@
-import type { NumericQ, VocabApi, GeneExpressionTW, CustomNumericBinConfig } from '#types'
+import type { NumericQ, VocabApi, CustomNumericBinConfig } from '#types'
 import { copyMerge } from '#rx'
 import { fillQWithMedianBin } from '../../tw/numeric'
 
@@ -24,7 +24,7 @@ export async function getHandler(self) {
 	return await _.getHandler(self)
 }
 
-export async function fillTW(tw: GeneExpressionTW, vocabApi: VocabApi, defaultQ: NumericQ | null = null) {
+export async function fillTW(tw, vocabApi: VocabApi, defaultQ: NumericQ | null = null) {
 	if (typeof tw.term !== 'object') throw 'tw.term is not an object'
 	if (!tw.term.gene && !tw.term.name) throw 'no gene or name present'
 	if (!tw.term.gene) tw.term.gene = tw.term.name

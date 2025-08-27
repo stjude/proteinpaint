@@ -1,4 +1,4 @@
-import type { MinBaseQ, BaseTW, TermValues, BaseTerm } from '../index.ts'
+import type { MinBaseQ, BaseTW, TermValues, BaseTerm, GeneExpressionTerm } from '../index.ts'
 
 export type RawRegularBin = Partial<RegularNumericBinConfig> & { preferredBins?: string }
 
@@ -30,31 +30,20 @@ export type RawNumTWSpline = BaseTW & {
 
 export type RawNumTW = RawNumTWCustomBin | RawNumTWRegularBin | RawNumTWCont | RawNumTWSpline
 
-export type NumericTerm = BaseTerm & {
-	id?: string
-	// these concrete term.type values make it clear that only these are numeric,
-	// "categorical", "condition", and other term.types are not included in this union
-	type: 'integer' | 'float' | 'geneExpression' | 'metaboliteIntensity' | 'date' | 'ssGSEA'
-	bins: PresetNumericBins
-	values?: TermValues
-	unit?: string
+export type NumericBaseTerm = BaseTerm & {
 	/** tailored color scale for this term, so that when the term is used for color gradient in scatter, this set of colors will be used by default */
 	continuousColorScale?: { minColor: string; maxColor: string }
-	/*densityNotAvailable?: boolean //Not used?
-	logScale?: string | number
-	max?: number
-	min?: number
-	skip0forPercentile?: boolean
-	valueConversion?: ValueConversion*/
+	unit?: string
 }
 
-export type NumericDictTerm = BaseTerm & {
+export type NumericDictTerm = NumericBaseTerm & {
 	id?: string
 	type: 'integer' | 'float' | 'date'
 	bins: PresetNumericBins
 	values?: TermValues
-	unit?: string
 }
+
+export type NumericTerm = NumericDictTerm | GeneExpressionTerm
 
 export type StartUnboundedBin = {
 	// where possible, assign a concrete value (true) when it is known in advance,
@@ -157,7 +146,7 @@ export type BinaryNumericQ = MinBaseQ & {
 }
 
 export type ContinuousNumericQ = MinBaseQ & {
-	mode: 'continuous'
+	mode?: 'continuous'
 	// TODO: do not use a boolean, convert to a `transform: 'zscore' | ...` option
 	convert2ZScore?: boolean
 	//scale?: string
