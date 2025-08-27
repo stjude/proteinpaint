@@ -38,7 +38,12 @@ export class DownloadMenu {
 export async function downloadSVGsAsPdf(name2svg, filename = 'charts.pdf') {
 	const JSPDF = await import('jspdf')
 	const { jsPDF } = JSPDF
-	await import('svg2pdf.js')
+	/*
+	When imported, the svg2pdf.js module modifies or extends the jsPDF library (which we already imported).
+	The code inside svg2pdf.js adds a new method (.svg()) to the jsPDF object prototype, making that functionality available on all jsPDF instances.
+	Therefore, a simple import 'svg2pdf.js' without curly braces is all that is needed to apply its functionality. 
+	 */
+	await import('svg2pdf.js') // This import extends jsPDF with SVG functionality
 	const doc = new jsPDF('l', 'px', 'a4') // landscape, points, A4 size
 	doc.setFontSize(12)
 	const pageWidth = doc.internal.pageSize.getWidth() - 10
@@ -59,7 +64,9 @@ export async function downloadSVGsAsPdf(name2svg, filename = 'charts.pdf') {
 	function addSvgToPdf(svg, name) {
 		const rect = svg.getBoundingClientRect()
 		svg.setAttribute('viewBox', `0 0 ${rect.width} ${rect.height}`)
-		const item = doc.svg(svg, { x: 15, y: 30, width: pageWidth, height: pageHeight }).then(() => {
+		const width = Math.min(pageWidth, rect.width)
+		const height = Math.min(pageHeight, rect.height)
+		const item = doc.svg(svg, { x: 15, y: 30, width, height }).then(() => {
 			doc.text(name, 15, 20)
 			doc.addPage()
 		})
