@@ -515,19 +515,19 @@ tape('term1 = Cardiovascular System, term0 = agedx, numeric custom bins', test =
 						id: 'agedx',
 						term: {
 							type: 'float',
-							// bins: {
-							// 	default: {
-							// 		type: 'regular-bin',
-							// 		bin_size: 5,
-							// 		startinclusive: true,
-							// 		first_bin: {
-							// 			startunbounded: true,
-							// 			stop: 5
-							// 		},
-							// 		label_offset: 1
-							// 	},
-							// 	label_offset: 1
-							// },
+							bins: {
+								default: {
+									type: 'regular-bin',
+									bin_size: 5,
+									startinclusive: true,
+									first_bin: {
+										startunbounded: true,
+										stop: 5
+									},
+									label_offset: 1
+								},
+								label_offset: 1
+							},
 							name: 'Age (years) at Cancer Diagnosis',
 							id: 'agedx'
 						},
