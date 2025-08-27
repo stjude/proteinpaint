@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Fixes:
+- in Msigdb dictionary tree, the search prompt will say "geneset" but not "dictionary term"
+
 
 ## 2.140.0
 
