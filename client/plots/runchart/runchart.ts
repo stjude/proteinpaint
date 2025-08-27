@@ -6,7 +6,6 @@ import { RunchartView } from './view/runchartView.js'
 import { plotColor } from '#shared/common.js'
 import { ScatterInteractivity } from '../scatter/viewmodel/scatterInteractivity.js'
 import { controlsInit } from '../controls.js'
-import { downloadSingleSVG } from '../../common/svg.download.js'
 import { select2Terms } from '#dom/select2Terms'
 import { Scatter } from '../scatter/scatter.js'
 import { getColors } from '#shared/common.js'
@@ -62,8 +61,8 @@ export class Runchart extends Scatter {
 			})
 		}
 		// TODO: handle multiple chart download when there is a divide by term
-		this.components.controls.on('downloadClick.scatter', () => {
-			downloadSingleSVG(this.view.dom.svg, 'scatter.svg', this.opts.holder.node())
+		this.components.controls.on('downloadClick.scatter', event => {
+			this.download(event)
 		})
 	}
 }
