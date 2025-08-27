@@ -6,7 +6,6 @@ import type { VocabApi } from '#types'
 import { roundValueAuto } from '#shared/roundValue.js'
 import type {
 	NumericQ,
-	NumericTW,
 	DefaultMedianQ,
 	DefaultBinnedQ,
 	DefaultNumericQ,
@@ -135,7 +134,7 @@ export async function getHandler(self) {
 	}
 }
 
-export async function fillTW(tw: NumericTW, vocabApi: VocabApi, defaultQ?: DefaultNumericQ) {
+export async function fillTW(tw, vocabApi: VocabApi, defaultQ?: DefaultNumericQ) {
 	// when missing, defaults mode to discrete
 	//const dq = defaultQ as DefaultNumericQ
 	if (!tw.q.mode && !(defaultQ as DefaultNumericQ)?.mode) (tw.q as NumericQ).mode = 'discrete'

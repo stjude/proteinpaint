@@ -94,7 +94,7 @@ export class NumericBase extends TwBase {
 		*/
 		switch (tw.type) {
 			case 'NumTWRegularBin':
-				return await NumRegularBin.fill(tw)
+				return await NumRegularBin.fill(tw, opts)
 
 			case 'NumTWCustomBin':
 				return await NumCustomBins.fill(tw, opts)
@@ -135,7 +135,7 @@ export class NumRegularBin extends NumericBase {
 	}
 
 	// See the relevant comments in the NumericBase.fill() function above
-	static async fill(tw: RawNumTWRegularBin): Promise<NumTWRegularBin> {
+	static async fill(tw: RawNumTWRegularBin, opts: TwOpts = {}): Promise<NumTWRegularBin> {
 		if (!tw.type) tw.type = 'NumTWRegularBin'
 		else if (tw.type != 'NumTWRegularBin') throw `expecting tw.type='NumTWRegularBin', got '${tw.type}'`
 
@@ -144,6 +144,19 @@ export class NumRegularBin extends NumericBase {
 			throw `expecting tw.q.mode='discrete'|'binary'|'continous', got '${tw.q.mode}'`
 
 		if (tw.q.type && tw.q.type != 'regular-bin') throw `expecting tw.q.type='regular-bin', got '${tw.q.type}'`
+
+		if (!tw.term.bins) {
+			/* non-dictionary term (e.g. gene term) may be missing bin definition, this is expected as it's not valid to apply same bin to genes with vastly different exp range,
+			and not worth it to precompute each gene's default bin with its actual exp data as cohort filter can not be predicted
+			here make a request to determine default bin for this term based on its data
+
+			do not do this when tw.q.mode is continuous:
+			1. it will add significant delay to gene exp clustering, esp for gdc. bins are useless for hiercluster and the request will lock up server
+			2. the way setTermBins works, tw.q.type won't be filled and errors out
+			*/
+			await opts.vocabApi.setTermBins(tw)
+		}
+
 		if (!tw.q.first_bin || !isNumeric(tw.q.bin_size)) mayFillQWithPresetBins(tw)
 
 		if (!isNumeric(tw.q.bin_size)) throw `tw.q.bin_size=${tw.q.bin_size} is not numeric`
@@ -184,6 +197,18 @@ export class NumCustomBins extends NumericBase {
 			throw `expecting tw.q.mode='discrete'|binary|continuous', got '${tw.q.mode}'`
 
 		if (tw.q.mode == 'binary' && !tw.q.preferredBins) tw.q.preferredBins = 'median'
+
+		if (!tw.term.bins) {
+			/* non-dictionary term (e.g. gene term) may be missing bin definition, this is expected as it's not valid to apply same bin to genes with vastly different exp range,
+			and not worth it to precompute each gene's default bin with its actual exp data as cohort filter can not be predicted
+			here make a request to determine default bin for this term based on its data
+
+			do not do this when tw.q.mode is continuous:
+			1. it will add significant delay to gene exp clustering, esp for gdc. bins are useless for hiercluster and the request will lock up server
+			2. the way setTermBins works, tw.q.type won't be filled and errors out
+			*/
+			await opts.vocabApi.setTermBins(tw)
+		}
 
 		if (tw.q.preferredBins == 'median' && !tw.q.lst?.length) await fillQWithMedianBin(tw, opts.vocabApi)
 		else if (tw.q.type != 'custom-bin') throw `expecting tw.q.type='custom-bin', got '${tw.q.type}'`

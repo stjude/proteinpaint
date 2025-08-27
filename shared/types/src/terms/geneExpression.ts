@@ -1,28 +1,18 @@
-import type { TermWrapper } from './updated-types.ts'
-import type { NumericTerm, NumericQ } from './numeric.ts'
+import type { BaseTW, PresetNumericBins, NumericBaseTerm, NumericQ } from '../index.ts'
 import type { TermSettingInstance } from '../termsetting.ts'
 
 /*
 --------EXPORTED--------
-GeneExpressionQ
+GeneExpressionTerm
 GeneExpressionTermWrapper
 GeneExpressionTermSettingInstance
-
 */
 
-export type GeneExpressionQ = NumericQ & {
-	dt?: number
-	preferredBins?: string
-}
-
-export type GeneExpressionTW = TermWrapper & {
-	q: GeneExpressionQ
-	term: GeneExpressionTerm
-	type: 'NumTWRegularBin' | 'NumTWCustomBin' | 'NumTWCont' | 'NumTWSpline'
-}
-
-export type GeneExpressionTerm = NumericTerm & {
+export type GeneExpressionTerm = NumericBaseTerm & {
 	gene: string
+	name: string
+	type: 'geneExpression'
+	bins?: PresetNumericBins
 	// temporarily allowing chr/start/stop to support
 	// legacy fpkm files
 	chr?: string
@@ -30,7 +20,13 @@ export type GeneExpressionTerm = NumericTerm & {
 	stop?: number
 }
 
+export type GeneExpressionTW = BaseTW & {
+	q: NumericQ
+	term: GeneExpressionTerm
+	type: string
+}
+
 export type GeneExpressionTermSettingInstance = TermSettingInstance & {
-	q: GeneExpressionQ
+	q: NumericQ
 	term: GeneExpressionTerm
 }
