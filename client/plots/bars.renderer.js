@@ -118,20 +118,19 @@ export default function barsRenderer(barsapp, holder) {
 		hm.cols = hm.cols.filter(colId => hm.colLabels.find(d => d.id == colId))
 		hm.rows = hm.rows?.filter(d => !hm.exclude.rows.includes(d)) || []
 		const nosvg = !svg
-		if (nosvg) init()
-
+		if (nosvg) init(_chart)
 		const unadjustedColw = hm.colw
 		currserieses = chart.visibleSerieses
 		currserieses.map(setIds)
 		chart.serieses.map(setIds)
 		setDimensions()
-
+		_chart.name = hm.handlers.chart.title(chart)
 		chartTitle
 			.style('width', hm.svgw + 100 + 'px')
 			//.style('font-weight', 600)
 			.style('font-size', '1.1em')
 			.style('margin-bottom', '24px')
-			.html(hm.handlers.chart.title(chart))
+			.html(_chart.name)
 
 		// only set this initially to prevent
 		// jerky svg resize on update
@@ -213,7 +212,7 @@ export default function barsRenderer(barsapp, holder) {
 		)
 	}
 
-	function init() {
+	function init(_chart) {
 		defaults = {
 			geneonrow: hm.geneonrow,
 			nicenames: {},
@@ -268,6 +267,7 @@ export default function barsRenderer(barsapp, holder) {
 				.on('mouseover.tphm2', hm.handlers.svg.mouseover)
 				.on('mouseout.tphm2', hm.handlers.svg.mouseout)
 				.on('click.tphm2', hm.handlers.svg.click)
+			_chart.svg = svg
 		}
 
 		mainG = svg.append('g').attr('class', 'sjpcb-bars-mainG').attr('data-testid', 'sjpcb-bars-mainG')
