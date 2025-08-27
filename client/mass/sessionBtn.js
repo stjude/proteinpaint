@@ -167,11 +167,11 @@ class MassSessionBtn {
 				} else if (window.location.origin == this.hostURL) {
 					window.open(`/?mass-session-id=${sessionName}&src=browser`)
 				} else {
-					if (state.embedder) corsMessage({ state })
+					if (state.embedder) parentCorsMessage({ state })
 					else {
 						const { protocol, host, search, origin, href } = window.location
 						const embedder = { protocol, host, search, origin, href }
-						corsMessage({ state: Object.assign({ embedder }, state) })
+						parentCorsMessage({ state: Object.assign({ embedder }, state) })
 					}
 				}
 				this.dom.tip.hide()
@@ -411,7 +411,7 @@ class MassSessionBtn {
 				//
 				a.on('click', event => {
 					event.preventDefault()
-					corsMessage({ state }, window.location.origin)
+					parentCorsMessage({ state }, window.location.origin)
 					return false
 				})
 			}
