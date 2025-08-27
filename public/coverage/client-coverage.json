@@ -2449,10 +2449,10 @@
   },
   "mass/groups.js": {
     "lines": {
-      "total": 410,
+      "total": 413,
       "covered": 146,
       "skipped": 0,
-      "pct": 35.6
+      "pct": 35.35
     },
     "functions": {
       "total": 74,
@@ -2461,10 +2461,10 @@
       "pct": 25.67
     },
     "statements": {
-      "total": 445,
+      "total": 448,
       "covered": 153,
       "skipped": 0,
-      "pct": 34.38
+      "pct": 34.15
     },
     "branches": {
       "total": 194,
@@ -2478,9 +2478,9 @@
       "diff": 0
     },
     "averagePct": {
-      "curr": 29.195,
+      "curr": 29.075,
       "prev": 29.45,
-      "diff": -0.254999999999999
+      "diff": -0.375
     }
   },
   "filter/test/tvs.integration.spec.js": {
@@ -4933,10 +4933,10 @@
   },
   "tw/numeric.ts": {
     "lines": {
-      "total": 111,
+      "total": 114,
       "covered": 8,
       "skipped": 0,
-      "pct": 7.2
+      "pct": 7.01
     },
     "functions": {
       "total": 17,
@@ -4945,13 +4945,13 @@
       "pct": 5.88
     },
     "statements": {
-      "total": 153,
+      "total": 155,
       "covered": 8,
       "skipped": 0,
-      "pct": 5.22
+      "pct": 5.16
     },
     "branches": {
-      "total": 141,
+      "total": 144,
       "covered": 0,
       "skipped": 0,
       "pct": 0
@@ -4962,9 +4962,9 @@
       "diff": -37.5
     },
     "averagePct": {
-      "curr": 4.575,
+      "curr": 4.5125,
       "prev": 49.32,
-      "diff": -44.745
+      "diff": -44.8075
     }
   },
   "plots/barchart.data.js": {
@@ -5041,10 +5041,10 @@
   },
   "tw/geneExpression.ts": {
     "lines": {
-      "total": 16,
+      "total": 23,
       "covered": 2,
       "skipped": 0,
-      "pct": 12.5
+      "pct": 8.69
     },
     "functions": {
       "total": 1,
@@ -5053,13 +5053,13 @@
       "pct": 0
     },
     "statements": {
-      "total": 24,
+      "total": 30,
       "covered": 2,
       "skipped": 0,
-      "pct": 8.33
+      "pct": 6.66
     },
     "branches": {
-      "total": 34,
+      "total": 39,
       "covered": 0,
       "skipped": 0,
       "pct": 0
@@ -5070,9 +5070,9 @@
       "diff": 0
     },
     "averagePct": {
-      "curr": 5.2075,
-      "prev": 0,
-      "diff": 5.2075
+      "curr": 3.8375,
+      "prev": 5.2075,
+      "diff": -1.3699999999999997
     }
   },
   "termdb/test/submenu.integration.spec.js": {
