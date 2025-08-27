@@ -247,8 +247,8 @@ export class ScatterTooltip {
 					.attr('d', shape)
 					.attr('fill', color)
 					.attr('stroke', '#aaa')
-					.attr('transform', 'translate(0, -2) scale(0.5)')
-				const text = g.append('text').attr('x', 12).attr('y', 6).attr('font-size', '0.9em')
+					.attr('transform', 'translate(0, -4) scale(0.6)')
+				const text = g.append('text').attr('x', 15).attr('y', 6).attr('font-size', '0.9em')
 				text.append('tspan').text(node.value).attr('fill', fontColor)
 			} else td.style('padding', '2px').text(`${node.value}`)
 		}
