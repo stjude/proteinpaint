@@ -136,29 +136,28 @@ export class ScatterTooltip {
 			this.addNodes('scale', this.scatter.config.scaleDotTW, this.scatter.config.shapeTW, level + 2)
 		this.view.dom.tooltip.clear()
 		//Rendering tooltip
-		const div = this.view.dom.tooltip.d.style('padding', '5px')
+		const div = this.view.dom.tooltip.d
 		if (samples.length > 1)
 			div
 				.append('div')
 				.style('color', '#aaa')
-				.style('padding', '3px')
 				.style('font-weight', 'bold')
-				.html(`${samples.length} Samples`)
+				.html(`&nbsp;&nbsp;${samples.length} Samples`)
 		const tableDiv = div.append('div').style('max-height', '500px').style('overflow-y', 'scroll')
 		if (samples.length > 4) tableDiv.attr('class', 'sjpp_show_scrollbar')
 		this.tableDiv = tableDiv
 		const nodes = this.tree.filter(node => (showCoords ? node.level == 1 : node.level == 2))
 		if (showCoords)
 			for (const node of nodes) {
-				if (samples.length > 1) tableDiv.append('div').style('padding', '5px')
+				if (samples.length > 1) tableDiv.append('div').style('padding', '2px')
 				for (const child of node.children) {
-					this.addCategory(child)
+					this.addCategory(child, null)
 				}
 			}
 		else
 			for (const node of nodes) {
-				if (samples.length > 1) tableDiv.append('div').style('padding', '5px')
-				this.addCategory(node)
+				if (samples.length > 1) tableDiv.append('div').style('padding', '2px')
+				this.addCategory(node, null)
 			}
 
 		this.view.dom.tooltip.show(x, y, true, false)
@@ -181,7 +180,7 @@ export class ScatterTooltip {
 		}
 	}
 
-	addCategory(node) {
+	addCategory(node, table) {
 		const samples = this.samples
 		const chart = this.chart
 		const tw = this.getTW(node.category)
@@ -189,7 +188,7 @@ export class ScatterTooltip {
 		const hasDiscoPlot = this.scatter.state.termdbConfig.queries?.singleSampleMutation
 		const hasMetArrayPlot = this.scatter.state.termdbConfig.queries?.singleSampleGenomeQuantification
 		const div = this.tableDiv.append('div')
-		const table = table2col({ holder: div, disableScroll: true, cellPadding: '5px' })
+		if (!table) table = table2col({ holder: div, disableScroll: true, cellPadding: '5px' })
 		const sample = node.samples[0]
 		if (sample.category != 'Ref') {
 			const [tdlabel, td] = table.addRow()
@@ -246,7 +245,7 @@ export class ScatterTooltip {
 			} else td.text(`${node.value}`)
 		}
 
-		for (const child of node.children) if (!child.added) this.addCategory(child)
+		for (const child of node.children) if (!child.added) this.addCategory(child, table)
 		if (node.children.length == 0 && this.displaySample) {
 			for (const sample of node.samples) {
 				if ('info' in sample)
