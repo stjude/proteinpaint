@@ -1,6 +1,7 @@
-import { type AppApi } from '#rx'
+import { type AppApi } from './AppApi'
 
 export class StoreBase {
+	type: string = 'store'
 	app: AppApi
 	//type: string
 	//id: string
@@ -23,6 +24,10 @@ export class StoreBase {
 
 	numPromisedWrites: number = 0
 
+	actions: {
+		[actionType: string]: (action: { type: string; [prop: string]: any }) => void | Promise<void>
+	} = {} // will be overriden by child class
+
 	constructor(opts) {
 		this.opts = this.validateOpts(opts)
 		this.app = this.opts.app
@@ -30,26 +35,6 @@ export class StoreBase {
 	}
 
 	validateOpts(o: any = {}) {
-		if (!o.holder) throw `missing opts.holder in the app constructor argument`
-		if (!o.callbacks) o.callbacks = {}
-		if (o.state) {
-			if (!o.state.vocab) o.state.vocab = {}
-			if (typeof o.state.vocab != 'object') throw 'opts.state.vocab{} is not an object'
-			if (o.state.genome) {
-				o.state.vocab.genome = o.state.genome
-				delete o.state.genome
-			}
-			if (o.state.dslabel) {
-				o.state.vocab.dslabel = o.state.dslabel
-				delete o.state.dslabel
-			}
-		}
-		if (o.app) {
-			for (const [k, v] of Object.entries(o.app)) {
-				o[k] = v
-			}
-			delete o.app
-		}
 		return o
 	}
 

@@ -1,12 +1,10 @@
-import type { AppApi } from './AppApi.ts'
-
 export interface RxStoreInner {
 	type: string
 	api?: StoreApi
-	app: AppApi
 	id: any
 	parentId?: string
 	opts: any
+	defaultState: any
 	state: any
 	debug?: boolean
 	sequenceId: number
@@ -17,12 +15,12 @@ export interface RxStoreInner {
 	fromJson: (s: string) => any
 	toJson: (o: any) => string
 	deepFreeze: (o: any) => void
+	copyMerge: (_, __) => any
 }
 
 export class StoreApi {
 	type: string
 	id?: string
-	app: AppApi
 	opts: any
 
 	#Inner: RxStoreInner
@@ -38,22 +36,22 @@ export class StoreApi {
 
 	constructor(_opts, __Class__) {
 		const opts = this.#validateOpts(_opts, __Class__)
-		this.app = opts.app
-		this.opts = opts
+		//this.app = opts.app
+		//this.opts = opts
 		// the component type + id may be used later to
 		// simplify getting its state from the store
 		const self: RxStoreInner = new __Class__(opts, this)
-		self.opts = opts
+		//self.opts = opts
+		//self.app = opts.app
 		if (!self.id) self.id = opts.id || self.opts?.id
 		if (!self.type) self.type = __Class__.type
-		self.app = opts.app
 		self.api = this
 		this.#Inner = self
 		this.id = self.id
 		this.type = self.type || __Class__.type
 
 		// make it easy to access the private instance in debug mode, for testing
-		if (self.debug || (self.opts && self.opts.debug)) this.Inner = self
+		if (self.debug || self.opts?.debug) this.Inner = self
 	}
 
 	#validateOpts(opts, __Class__) {
@@ -64,8 +62,9 @@ export class StoreApi {
 	}
 
 	async init() {
-		await this.#Inner.init()
+		if (this.#Inner.init) await this.#Inner.init()
 		if (this.#Inner.validateState) this.#Inner.validateState()
+		Object.freeze(this)
 	}
 
 	async write(action) {
