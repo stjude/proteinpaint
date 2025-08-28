@@ -22,6 +22,7 @@ arg{}
 	.holder
 	.margin
 	.cellPadding
+	.disableScroll=true
 */
 export function table2col(arg) {
 	const scrollDiv = arg.holder.append('div').style('max-width', '80vw')
