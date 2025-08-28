@@ -47,11 +47,9 @@ function init({ genomes }) {
 						filename: wsimageFilename
 					}
 
-					const annotations = await ds.queries.WSImages.getWSIAnnotations(projectId, wsimageFilename)
-					wsimage.annotations = annotations
+					wsimage.annotations = await ds.queries.WSImages.getWSIAnnotations(projectId, wsimageFilename)
 
-					const classes = await ds.queries.WSImages.getAnnotationClasses(projectId)
-					wsimage.classes = classes
+					wsimage.classes = await ds.queries.WSImages.getAnnotationClasses(projectId)
 
 					wsimage.uncertainty = ds.queries?.WSImages?.uncertainty
 					wsimage.activePatchColor = ds.queries?.WSImages?.activePatchColor
@@ -62,16 +60,13 @@ function init({ genomes }) {
 
 						if (!mount) throw new Error('No mount available for TileServer')
 
-						console.log('mount', mount)
-						console.log('ds.queries.WSImages.aiToolImageFolder', ds.queries.WSImages.aiToolImageFolder)
-
 						const predictionsFilePath = path.join(mount, ds.queries.WSImages.aiToolImageFolder, predictionsFile[0])
 
 						const predictionsData = JSON.parse(fs.readFileSync(predictionsFilePath, 'utf8'))
 
 						wsimage.predictions = predictionsData.features.map((d: any) => {
-							const featClass =
-								ds.queries.WSImages?.classes?.find(f => f.id == d.properties.class)?.label || d.properties.class
+							const featClass = wsimage.classes?.find(f => f.id == d.properties.class)?.label
+							// TODO handle missing class
 							return {
 								zoomCoordinates: d.properties.zoomCoordinates,
 								uncertainty: d.properties.uncertainty,
