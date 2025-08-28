@@ -311,7 +311,7 @@ async function getExpressionData(q, gene_ids, cases4clustering, ensg2id, term2sa
 	} else {
 		// not for clustering analysis. do not limit by cases, so that e.g. a gene exp row will show all values in oncomatrix
 		const f = makeCasesFilter(q)
-		if (f) arg.case_filters = { op: 'and', content: f }
+		arg.case_filters = { op: 'and', content: f }
 	}
 
 	const { host, headers } = ds.getHostHeaders(q)
@@ -1649,7 +1649,7 @@ export async function querySamplesTwlstNotForGeneexpclustering_noGenomicFilter(q
 	}
 
 	const f = makeCasesFilter(q)
-	if (f) param.case_filters = { op: 'and', content: f }
+	param.case_filters = { op: 'and', content: f }
 
 	const { host, headers } = ds.getHostHeaders(q) // will be reused below
 
@@ -2503,7 +2503,7 @@ function makeCasesFilter(p) {
 		const g = filter2GDCfilter(p.filter)
 		if (g) lst.push(g)
 	}
-	return lst.length ? lst : null
+	return lst
 }
 
 const endpoint2fields = {
