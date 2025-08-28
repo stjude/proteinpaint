@@ -4,7 +4,7 @@ import { roundValueAuto } from '#shared/roundValue.js'
 import { getDateStrFromNumber } from '#shared/terms.js'
 import { rgb } from 'd3-color'
 import type { Scatter } from '../scatter.js'
-import { table2col, table2col } from '#dom'
+import { table2col } from '#dom'
 
 export class ScatterTooltip {
 	scatter: Scatter
