@@ -231,7 +231,14 @@ export function setLabelsAndScales() {
 				}
 			}
 		}
-		t.label = t.tw.label || t.tw.term.gene || t.tw.term.name
+
+		if (t.tw.label) {
+			t.label = t.tw.label
+		} else if (t.grp.type == 'hierCluster') {
+			t.label = t.tw.term.gene || t.tw.term.name
+		} else {
+			t.label = t.tw.term.name
+		}
 		if (t.label.length > s.rowlabelmaxchars) t.label = t.label.slice(0, s.rowlabelmaxchars - 1) + '…'
 		const termGroupName = this.config?.settings.hierCluster?.termGroupName
 		if (s.samplecount4gene && t.tw.term.type.startsWith('gene') && (!termGroupName || t.grp.name !== termGroupName)) {
