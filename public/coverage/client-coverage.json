@@ -2341,10 +2341,10 @@
   },
   "plots/scatter/viewmodel/scatterTooltip.ts": {
     "lines": {
-      "total": 187,
-      "covered": 120,
+      "total": 186,
+      "covered": 119,
       "skipped": 0,
-      "pct": 64.17
+      "pct": 63.97
     },
     "functions": {
       "total": 20,
@@ -2353,10 +2353,10 @@
       "pct": 70
     },
     "statements": {
-      "total": 209,
-      "covered": 125,
+      "total": 208,
+      "covered": 124,
       "skipped": 0,
-      "pct": 59.8
+      "pct": 59.61
     },
     "branches": {
       "total": 152,
@@ -2366,13 +2366,13 @@
     },
     "lowestPct": {
       "curr": 43.42,
-      "prev": 0,
-      "diff": 43.42
+      "prev": 43.42,
+      "diff": 0
     },
     "averagePct": {
-      "curr": 59.34750000000001,
-      "prev": 2.515,
-      "diff": 56.83250000000001
+      "curr": 59.25,
+      "prev": 59.34750000000001,
+      "diff": -0.0975000000000108
     }
   },
   "plots/scatter/viewmodel/scatterViewModel3D.ts": {
