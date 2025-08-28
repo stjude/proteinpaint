@@ -35,7 +35,7 @@ export function table2col(arg) {
 		scrollDiv,
 		table,
 		addRow: (text1, text2) => {
-			if (table.node().offsetHeight > 500) {
+			if (table.node().offsetHeight > 500 && !arg.disableScroll) {
 				scrollDiv
 					.style('height', '450px')
 					.style('resize', 'both')
