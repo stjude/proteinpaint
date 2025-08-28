@@ -22,7 +22,7 @@
 */
 
 export function parentCorsMessage(res, origin = '') {
-	const embedder = res.state?.embedder
+	const embedder = res.state?.embedder || {}
 	const messageListener = event => {
 		if (event.origin !== embedder.origin) return
 		if (event.data == 'getActiveMassSession') {
