@@ -189,7 +189,7 @@ export class ScatterTooltip {
 		const hasDiscoPlot = this.scatter.state.termdbConfig.queries?.singleSampleMutation
 		const hasMetArrayPlot = this.scatter.state.termdbConfig.queries?.singleSampleGenomeQuantification
 		const div = this.tableDiv.append('div')
-		const table = table2col({ holder: div })
+		const table = table2col({ holder: div, disableScroll: true })
 		const sample = node.samples[0]
 		if (sample.category != 'Ref') {
 			const [tdlabel, td] = table.addRow()
