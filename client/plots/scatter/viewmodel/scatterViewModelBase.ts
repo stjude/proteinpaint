@@ -70,7 +70,7 @@ export class ScatterViewModelBase {
 		const scaleHeight = this.scatter.config.scaleDotTW ? 200 : 100
 		this.legendHeight = Math.max(colorLegendSize, chart.shapeLegend.size * 30) + scaleHeight //legend step and header
 
-		const fontSize = this.legendvm.getFontSize(chart)
+		let fontSize = this.legendvm.getFontSize(chart, chart.colorLegend)
 
 		/** Becomes the x offset for the shape legend.
 		 * When in continuous mode, color scale renders with a
@@ -83,10 +83,11 @@ export class ScatterViewModelBase {
 			chart.colorLegendWidth =
 				this.scatter.config?.colorTW?.q.mode == 'continuous'
 					? Math.max(175, labelsWidth)
-					: Math.max(this.legendvm.getLegendLabelWidth(chart, 'color', svg, fontSize), labelsWidth)
+					: Math.max(this.legendvm.getLegendLabelWidth(chart, 'color', svg, `${fontSize}em`), labelsWidth)
 		} else chart.colorLegendWidth = 0
 
-		const shapeWidth = this.legendvm.getLegendLabelWidth(chart, 'shape', svg, fontSize)
+		fontSize = this.legendvm.getFontSize(chart, chart.shapeLegend)
+		const shapeWidth = this.legendvm.getLegendLabelWidth(chart, 'shape', svg, `${fontSize}em`)
 		const width = s.svgw + chart.colorLegendWidth + shapeWidth + 125
 		svg
 
@@ -258,6 +259,7 @@ export class ScatterViewModelBase {
 			.style('fill-opacity', c => this.model.getOpacity(c))
 			.transition()
 			.duration(duration)
+
 		this.mayRenderRegression()
 	}
 

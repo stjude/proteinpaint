@@ -38,8 +38,10 @@ export class ScatterLegend {
 		return width
 	}
 
-	getFontSize(legend) {
+	getFontSize(chart, legend) {
 		let fontSize = 0.9
+		console.log(chart.colorLegend.size, chart.shapeLegend.size)
+		if (chart.colorLegend.size < 10 && chart.shapeLegend.size < 10) return fontSize
 		const top = 20
 		//legend is a Map<string, ScatterLegendItem>
 		if (legend.size > top) {
@@ -53,7 +55,7 @@ export class ScatterLegend {
 		const legendG = chart.legendG
 		legendG.selectAll('*').remove()
 		let offsetX = 0
-		let offsetY = 25
+		let offsetY = 15
 		let legendHeight = 0
 		if (!this.scatter.config.colorTW && !this.scatter.config.shapeTW && !this.scatter.config.colorColumn) {
 			if (this.scatter.config.scaleDotTW) {
@@ -73,7 +75,10 @@ export class ScatterLegend {
 			  }`
 		if (this.model.filterSampleStr) title0 += `, search = ${this.model.filterSampleStr}`
 		legendG.append('text').attr('x', 0).attr('y', offsetY).text(title0).style('font-weight', 'bold')
-		const colorG = legendG.append('g').style('font-size', `${this.getFontSize(chart.colorLegend)}em`)
+		const fontSize = this.getFontSize(chart, chart.colorLegend)
+		const scale = chart.colorLegend.size > 20 || chart.shapeLegend.size > 20 ? 0.5 : 0.7 //if many categories, reduce size
+
+		const colorG = legendG.append('g').style('font-size', `${fontSize}em`)
 		offsetY += step + 10
 		if (this.scatter.config.colorTW || this.scatter.config.colorColumn) {
 			title = `${getTitle(
@@ -91,7 +96,8 @@ export class ScatterLegend {
 					legendG,
 					this.scatter.config.colorTW,
 					'category',
-					chart.colorLegend
+					chart.colorLegend,
+					scale
 				)
 			else {
 				legendG
@@ -187,7 +193,17 @@ export class ScatterLegend {
 						const hidden = this.scatter.config.colorTW?.q.hiddenValues
 							? key in this.scatter.config.colorTW.q.hiddenValues
 							: false
-						const [circleG, itemG] = this.addLegendItem(chart, colorG, category, name, key, offsetX, offsetY, hidden)
+						const [circleG, itemG] = this.addLegendItem(
+							chart,
+							colorG,
+							category,
+							name,
+							key,
+							offsetX,
+							offsetY,
+							scale,
+							hidden
+						)
 						if (!this.scatter.config.colorColumn) {
 							circleG.on('click', e => this.legendInteractivity.onLegendClick(chart, 'colorTW', key, e, category))
 							itemG.on('click', event => this.legendInteractivity.onLegendClick(chart, 'colorTW', key, event, category))
@@ -206,7 +222,7 @@ export class ScatterLegend {
 				const refColorG = legendG.append('g')
 				refColorG
 					.append('path')
-					.attr('transform', () => `translate(${offsetX - 2}, ${offsetY - 5}) scale(0.7)`)
+					.attr('transform', () => `translate(${offsetX - 2}, ${offsetY - 5}) scale(${scale})`)
 					.style('fill', colorRefCategory.color)
 					.attr('d', shapes[0])
 					.style('stroke', rgb(colorRefCategory.color).darker())
@@ -238,10 +254,11 @@ export class ScatterLegend {
 					legendG,
 					this.scatter.config.shapeTW,
 					'shape',
-					chart.shapeLegend
+					chart.shapeLegend,
+					scale
 				)
 			else {
-				const shapeG = legendG.append('g').style('font-size', `${this.getFontSize(chart.shapeLegend)}em`)
+				const shapeG = legendG.append('g').style('font-size', `${this.getFontSize(chart, chart.shapeLegend)}em`)
 
 				legendG.append('text').attr('x', offsetX).attr('y', offsetY).text(title).style('font-weight', 'bold')
 				offsetY += step
@@ -259,7 +276,7 @@ export class ScatterLegend {
 
 					itemG
 						.append('path')
-						.attr('transform', () => `translate(${offsetX}, ${offsetY - 5}) scale(0.8)`)
+						.attr('transform', () => `translate(${offsetX}, ${offsetY - 5}) scale(${scale + 0.1})`) //shapes are a bit smaller than the circle shape
 						.style('pointer-events', 'bounding-box')
 						.style('fill', color)
 						.attr('d', symbol)
@@ -285,12 +302,12 @@ export class ScatterLegend {
 		}
 	}
 
-	addLegendItem(chart, g, category, name, key, x, y, hidden = false) {
+	addLegendItem(chart, g, category, name, key, x, y, scale, hidden = false) {
 		const circleG = g.append('g')
 		circleG
 			.append('path')
 			.attr('d', shapes[0])
-			.attr('transform', `translate(${x - 2}, ${y - 5}) scale(0.7)`)
+			.attr('transform', `translate(${x - 2}, ${y - 5}) scale(${scale})`)
 			.style('fill', category.color)
 			.style('stroke', rgb(category.color).darker())
 		if (!this.scatter.config.colorColumn)
@@ -308,11 +325,11 @@ export class ScatterLegend {
 		return [circleG, itemG]
 	}
 
-	renderGeneVariantLegend(chart, offsetX, offsetY, legendG, tw, cname, map) {
+	renderGeneVariantLegend(chart, offsetX, offsetY, legendG, tw, cname, map, scale) {
 		const step = 125
 		const name = tw.term.name.length > 25 ? tw.term.name.slice(0, 25) + '...' : tw.term.name
 		const title = name
-		const G = legendG.append('g')
+		const G = legendG.append('g').style('font-size', '0.9em')
 
 		G.append('text')
 			.attr('id', 'legendTitle')
@@ -355,7 +372,7 @@ export class ScatterLegend {
 					const index = category.shape % shapes.length
 					itemG
 						.append('path')
-						.attr('transform', () => `translate(${offsetX - step - 2}, ${offsetY - 8}) scale(0.8)`)
+						.attr('transform', () => `translate(${offsetX - step - 2}, ${offsetY - 8}) scale(${scale})`)
 						.style('fill', 'gray')
 						.style('pointer-events', 'bounding-box')
 						.attr('d', shapes[index])
@@ -365,7 +382,7 @@ export class ScatterLegend {
 					itemG
 						.append('path')
 						.attr('d', shapes[0])
-						.attr('transform', `translate(${-2}, ${offsetY - 8}) scale(0.8)`)
+						.attr('transform', `translate(${-2}, ${offsetY - 8}) scale(${scale})`)
 						.style('fill', category.color)
 						.style('stroke', rgb(category.color).darker())
 					itemG.on('click', e => this.legendInteractivity.onLegendClick(chart, 'colorTW', key, e, category))
