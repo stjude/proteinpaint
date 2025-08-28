@@ -38,7 +38,7 @@ export class AppApi {
 	vocabApi: any
 	#Inner: RxAppInner
 	Inner?: RxAppInner // only in debugmode
-	middlewares: any[] = []
+	#middlewares: any[] = []
 	state: any
 
 	#latestActionSequenceId: number
@@ -92,14 +92,14 @@ export class AppApi {
 		const self = this.#Inner
 		self.bus.emit('preDispatch')
 		try {
-			if (this.middlewares.length) {
-				for (const fxn of this.middlewares.slice()) {
+			if (this.#middlewares.length) {
+				for (const fxn of this.#middlewares.slice()) {
 					const result = await fxn(action)
 					if (result) {
 						if (result.cancel) return
 						if (result.error) throw result.error
 						if (result.deactivate) {
-							this.middlewares.splice(this.middlewares.indexOf(fxn), 1)
+							this.#middlewares.splice(this.#middlewares.indexOf(fxn), 1)
 						}
 					}
 				}
@@ -145,21 +145,21 @@ export class AppApi {
 	// fxn: RxAction => void
 	middle(fxn) {
 		/*
-		add middlewares prior to calling dispatch()
+		add #middlewares prior to calling dispatch()
 		
 		fxn(action: RxAction) 
-		- called in the order of being added to middlewares array
+		- called in the order of being added to #middlewares array
 		- must accept an action{} argument
 		- do not return any value to eventually reach dispatch()
 		  - OR -
 		- optionally return an object{}
 			.error: "string" will throw
 			.cancel: true will cancel dispatch
-			.deactivate: true will remove the fxn from the middlewares array
+			.deactivate: true will remove the fxn from the #middlewares array
 		*/
 		if (typeof fxn !== 'function') throw `a middleware must be a function`
-		if (this.middlewares.includes(fxn)) throw `the function is already in the middlewares array`
-		this.middlewares.push(fxn)
+		if (this.#middlewares.includes(fxn)) throw `the function is already in the #middlewares array`
+		this.#middlewares.push(fxn)
 		return this
 	}
 

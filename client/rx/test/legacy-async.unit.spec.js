@@ -1,5 +1,6 @@
 import tape from 'tape'
 import * as rx from '../index.js'
+import * as apiClass from './testInit.ts'
 
 /*************************
  reusable helper functions
@@ -69,17 +70,6 @@ class TestPart {
 
 const partInit = rx.getCompInit(TestPart)
 
-class TestPart2 extends TestPart {
-	static type = 'part2'
-
-	constructor(opts) {
-		super(opts)
-		this.type = 'part2'
-	}
-}
-
-const part2Init = rx.getCompInit(TestPart2)
-
 /**************
  test sections
 ***************/
@@ -105,6 +95,30 @@ tape('getStoreInit - async', async function (test) {
 		'should have the expected initial state'
 	)
 	test.equal(Object.isFrozen(store0), true, 'should produce a frozen api')
+
+	{
+		const opts = {
+			app: {},
+			part: {},
+			debug: true
+		}
+		const store1 = await apiClass.storeInit(opts)
+		const missingKeys = new Set()
+		for (const key of Object.keys(store0)) {
+			if (store0[key] !== undefined && store1[key] === undefined) missingKeys.add(key)
+		}
+		// use for...in to detect inherited props/methods
+		for (const key in store1) {
+			if (key == 'type') continue
+			if (store1[key] !== undefined && store0[key] === undefined) missingKeys.add(key)
+		}
+		test.deepEqual(
+			[...missingKeys],
+			[],
+			`should have the same api properties and methods between closured and classed APP api's`
+		)
+	}
+
 	test.end()
 })
 
@@ -129,13 +143,16 @@ tape('getCompInit - async, closured and classed', async function (test) {
 	}
 
 	{
-		const part2 = await part2Init(structuredClone(opts))
-		const missingKeys = []
+		const part2 = await apiClass.partInit(structuredClone(opts))
+		const missingKeys = new Set()
 		for (const key of Object.keys(part0)) {
-			if (part0[key] !== undefined && part2[key] === undefined) missingKeys.push(key)
+			if (part0[key] !== undefined && part2[key] === undefined) missingKeys.add(key)
+		}
+		for (const key in part2) {
+			if (part2[key] !== undefined && part0[key] === undefined) missingKeys.add(key)
 		}
 		test.deepEqual(
-			missingKeys,
+			[...missingKeys],
 			[],
 			`should have the same api properties and methods between closured and classed component api's`
 		)
@@ -144,7 +161,7 @@ tape('getCompInit - async, closured and classed', async function (test) {
 	test.end()
 })
 
-tape('getAppInit - async', async function (test) {
+tape('getAppInit -  async, closured and classed', async function (test) {
 	const opts = {
 		app: {},
 		part: {}
@@ -157,25 +174,30 @@ tape('getAppInit - async', async function (test) {
 	test.equal(typeof api0.on, 'function', 'should provide an on() method')
 	test.equal(typeof api0.getComponents, 'function', 'should provide a getComponents() method')
 	test.equal(api0.opts, opts, 'should have an opts property')
+
+	{
+		const opts = {
+			app: {},
+			part: {}
+		}
+		const api1 = await apiClass.appInit(opts)
+		const missingKeys = new Set()
+		for (const key of Object.keys(api0)) {
+			if (api0[key] !== undefined && api1[key] === undefined) missingKeys.add(key)
+		}
+		for (const key of Object.keys(api1)) {
+			if (api1[key] !== undefined && api0[key] === undefined) missingKeys.add(key)
+		}
+		test.deepEqual(
+			[...missingKeys],
+			[],
+			`should have the same api properties and methods between closured and classed APP api's`
+		)
+	}
 	test.end()
 })
 
-tape('AppApi.getInitFxn()', async function (test) {
-	const appInit = rx.AppApi.getInitFxn(TestApp)
-	const opts = {
-		app: {},
-		part: {}
-	}
-	const api0 = await appInit(opts)
-	test.equal(typeof api0.dispatch, 'function', 'should provide a dispatch() method')
-	test.equal(typeof api0.save, 'function', 'should provide a save() method')
-	test.equal(typeof api0.getState, 'function', 'should provide a getState() method')
-	test.equal(typeof api0.middle, 'function', 'should provide a middle() method')
-	test.equal(typeof api0.on, 'function', 'should provide an on() method')
-	test.equal(typeof api0.getComponents, 'function', 'should provide a getComponents() method')
-	test.equal(api0.opts, opts, 'should have an opts property')
-	test.end()
-})
+tape('AppApi.getInitFxn()', async function (test) {})
 
 tape('detectStale', async function (test) {
 	const opts = {

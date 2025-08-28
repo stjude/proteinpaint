@@ -16,6 +16,7 @@ export interface RxComponentInner {
 		[index: string]: any
 	}
 	components?: ComponentApi[] | { [name: string]: ComponentApi | { [name: string]: ComponentApi } }
+	preApiFreeze?: (api: ComponentApi) => void
 	init?: (appState: any) => Promise<void>
 	reactsTo?: (action: { type: string; [key: string]: any }) => boolean
 	getState?: (appState: any) => any
@@ -33,8 +34,6 @@ export interface RxComponentInner {
 export class ComponentApi {
 	type: string
 	id?: string
-	app: AppApi
-	opts: any
 
 	#Inner: RxComponentInner
 	Inner?: RxComponentInner // only in debugmode
@@ -52,8 +51,6 @@ export class ComponentApi {
 
 	constructor(_opts, __Class__) {
 		const opts = this.#validateOpts(_opts, __Class__)
-		this.app = opts.app
-		this.opts = opts
 		// the component type + id may be used later to
 		// simplify getting its state from the store
 		const self: RxComponentInner = new __Class__(opts, this)
@@ -90,8 +87,12 @@ export class ComponentApi {
 
 	async init() {
 		const self = this.#Inner
-		if (!self.init) return
-		await self.init(this.app.getState())
+		// an instance may want to add or modify api properties before it is frozen
+		if (self.preApiFreeze) await self.preApiFreeze(this)
+		// freeze the api's properties and methods before exposing
+		Object.freeze(this)
+
+		if (self.init) await self.init(this.#Inner.app.getState())
 		// lessen confusing behavior
 		if (self.state && !self.hasStatePreMain) {
 			delete self.state

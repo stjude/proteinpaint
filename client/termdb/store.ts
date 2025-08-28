@@ -1,5 +1,4 @@
-import { StoreApi, type AppApi, type RxStoreInner } from '#rx'
-import { StoreBase } from '#plots/StoreBase.ts'
+import { StoreApi, StoreBase, type AppApi, type RxStoreInner } from '#rx'
 import { root_ID } from './tree'
 import { getFilterItemByTag, findParent } from '#filter'
 import { isUsableTerm } from '#shared/termdb.usecase.js'
@@ -36,16 +35,17 @@ const defaultState = {
 class TdbStore extends StoreBase implements RxStoreInner {
 	static type = 'store'
 
-	// expected RxStoreInner, some are already declared/set in AppBase
+	// expected RxStoreInner, some are already declared/set in StoreBase
 	app: AppApi
 	api: StoreApi
 	type: string
 
 	// expected class-specific props
-	defaultState: any
 	actions!: {
 		[actionType: string]: (action: { type: string; [prop: string]: any }) => void | Promise<void>
 	}
+
+	defaultState = defaultState
 
 	constructor(opts, api) {
 		super(opts)

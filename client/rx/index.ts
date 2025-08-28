@@ -1,5 +1,6 @@
 export * from './src/AppApi.ts'
 export * from './src/StoreApi.ts'
+export * from './src/StoreBase.ts'
 export * from './src/ComponentApi.ts'
 export * from './src/utils.ts'
 export * from './src/Bus.ts'

@@ -1,5 +1,4 @@
-import { StoreApi, type AppApi, type RxStoreInner } from '#rx'
-import { StoreBase } from '#plots/StoreBase.ts'
+import { StoreApi, StoreBase, type AppApi, type RxStoreInner } from '#rx'
 import { getFilterItemByTag, findParent } from '#filter/filter'
 import { getSamplelstTW, getFilter } from './groups.js'
 import { rehydrateFilter } from '../filter/rehydrateFilter.js'
@@ -91,7 +90,7 @@ class TdbStore extends StoreBase implements RxStoreInner {
 	type: string
 
 	// expected class-specific props
-	defaultState: any
+	defaultState = defaultState
 	actions!: {
 		[actionType: string]: (action: { type: string; [prop: string]: any }) => void | Promise<void>
 	}
