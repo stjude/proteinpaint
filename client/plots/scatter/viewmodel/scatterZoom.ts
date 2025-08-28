@@ -7,7 +7,7 @@ export class ScatterZoom {
 	scatter: Scatter
 	zoomD3: any
 	dragD3: any
-	zoom: number
+	zoom: any
 
 	constructor(scatter: Scatter) {
 		this.scatter = scatter
@@ -20,9 +20,9 @@ export class ScatterZoom {
 			})
 			.on('end', async event => {
 				this.scatter.transform = event.transform
+				this.scatter.zoom = event.transform.k
 				if (this.scatter.settings.saveZoomTransform) this.saveZoomTransform()
 			})
-		this.zoom = 1
 	}
 
 	async saveZoomTransform() {

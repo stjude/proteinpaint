@@ -31,11 +31,13 @@ export class Scatter extends RxComponentInner {
 	readonly type: string
 	transform: any
 	parentId: any
+	zoom: any
 
 	constructor(opts) {
 		super()
 		this.type = 'sampleScatter'
 		this.parentId = opts?.parentId //not working!!!, need to pass opts with the parentId to the component
+		this.zoom = 1
 	}
 
 	async init(appState) {
@@ -43,6 +45,13 @@ export class Scatter extends RxComponentInner {
 		this.view = new ScatterView(this)
 		this.model = new ScatterModel(this)
 		this.interactivity = new ScatterInteractivity(this)
+		if (this.config.transform) {
+			const scaleRegex = /scale\(([^)]+)\)/
+			const match = this.config.transform.match(scaleRegex)
+			if (match) {
+				this.zoom = parseFloat(match[1])
+			}
+		}
 	}
 
 	reactsTo(action) {

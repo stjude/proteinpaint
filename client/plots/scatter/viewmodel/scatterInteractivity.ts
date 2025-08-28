@@ -19,10 +19,10 @@ export class ScatterInteractivity {
 		this.scatter = scatter
 		this.view = scatter.view
 		document.addEventListener('scroll', () => {
-			if (!this.scatter.vm.scatterTooltip.onClick) this.scatter.view.dom.tooltip.hide()
+			if (!this.scatter.vm?.scatterTooltip?.onClick) this.scatter.view.dom.tooltip.hide()
 		})
 		select('.sjpp-output-sandbox-content').on('scroll', () => {
-			if (!this.scatter.vm.scatterTooltip.onClick) this.view.dom.tooltip.hide()
+			if (!this.scatter.vm?.scatterTooltip?.onClick) this.view.dom.tooltip.hide()
 		})
 	}
 

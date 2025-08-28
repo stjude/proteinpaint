@@ -48,7 +48,7 @@ export class ScatterTooltip {
 	showSampleTooltip(s2, x, y, chart) {
 		this.chart = chart
 		this.displaySample = 'sample' in s2
-		const threshold = 5 / this.scatter.vm.scatterZoom.zoom //Threshold should consider the zoom
+		const threshold = 5 / this.scatter.zoom //Threshold should consider the zoom
 		const samples = chart.data.samples.filter(s => {
 			const dist = distance(s.x, s.y, s2.x, s2.y, chart)
 			if (!('sampleId' in s) && (!this.scatter.settings.showRef || this.scatter.settings.refSize == 0)) return false

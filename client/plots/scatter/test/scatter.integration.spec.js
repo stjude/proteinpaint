@@ -388,9 +388,9 @@ tape('Test scale dot', function (test) {
 		const self = scatter.Inner
 		const chart = scatter.Inner.model.charts[0]
 		const dots = self.view.dom.mainDiv.selectAll('.sjpcb-scatter-series > path').nodes()
-		const minSize = (self.settings.minShapeSize * self.vm.scatterZoom.zoom) / 3
+		const minSize = (self.settings.minShapeSize * self.zoom) / 3
 
-		const maxSize = (self.settings.maxShapeSize * self.vm.scatterZoom.zoom) / 3 //original icons are scaled to 0.3
+		const maxSize = (self.settings.maxShapeSize * self.zoom) / 3 //original icons are scaled to 0.3
 
 		test.true(
 			dots.find(dot => dot.getAttribute('transform').includes(`scale(${minSize})`)) != null,

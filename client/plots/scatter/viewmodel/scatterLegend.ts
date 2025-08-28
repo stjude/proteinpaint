@@ -495,7 +495,7 @@ export class ScatterLegend {
 
 		scaleG
 			.append('rect')
-			.attr('width', 110 * this.scatter.vm.scatterZoom.zoom)
+			.attr('width', 110 * this.scatter.zoom)
 			.attr('height', 50)
 			.attr('fill', 'transparent')
 			.on('click', e => {

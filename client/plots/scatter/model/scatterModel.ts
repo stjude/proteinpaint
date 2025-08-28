@@ -167,7 +167,7 @@ export class ScatterModel {
 					this.scatter.settings.maxShapeSize -
 					((c.scale - chart.ranges.scaleMin) / (chart.ranges.scaleMax - chart.ranges.scaleMin)) * range
 		}
-		const zoom = this.is2DLarge ? this.scatter.vm.scatterZoom.zoom : 1 //if not 2d large the whole chart is zoomed
+		const zoom = this.is2DLarge ? this.scatter.zoom : 1 //if not 2d large the whole chart is zoomed
 		scale = (zoom * scale * factor) / 3
 		if (this.filterSampleStr) {
 			if (c.sample?.toLowerCase().includes(this.filterSampleStr.toLowerCase())) scale = scale * 2
