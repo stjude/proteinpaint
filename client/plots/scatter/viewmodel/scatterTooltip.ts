@@ -189,7 +189,7 @@ export class ScatterTooltip {
 		const hasDiscoPlot = this.scatter.state.termdbConfig.queries?.singleSampleMutation
 		const hasMetArrayPlot = this.scatter.state.termdbConfig.queries?.singleSampleGenomeQuantification
 		const div = this.tableDiv.append('div')
-		const table = table2col({ holder: div, disableScroll: true })
+		const table = table2col({ holder: div, disableScroll: true, cellPadding: '5px' })
 		const sample = node.samples[0]
 		if (sample.category != 'Ref') {
 			const [tdlabel, td] = table.addRow()
@@ -243,7 +243,7 @@ export class ScatterTooltip {
 					.attr('transform', 'translate(0, -4) scale(0.6)')
 				const text = g.append('text').attr('x', 15).attr('y', 6).attr('font-size', '0.9em')
 				text.append('tspan').text(node.value).attr('fill', fontColor)
-			} else td.style('padding-right', '5px').text(`${node.value}`)
+			} else td.text(`${node.value}`)
 		}
 
 		for (const child of node.children) if (!child.added) this.addCategory(child)
@@ -257,7 +257,7 @@ export class ScatterTooltip {
 					}
 
 				const [tdlabel, td] = table.addRow()
-				tdlabel.text('Sample').style('padding-right', '5px')
+				tdlabel.text('Sample')
 				td.text(sample.sample)
 				if ('sampleId' in sample && this.onClick) {
 					td.append('button')
