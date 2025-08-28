@@ -242,7 +242,7 @@ export class ScatterTooltip {
 					.attr('transform', 'translate(0, -4) scale(0.6)')
 				const text = g.append('text').attr('x', 15).attr('y', 6).attr('font-size', '0.9em')
 				text.append('tspan').text(node.value).attr('fill', fontColor)
-			} else td.text(`${node.value}`)
+			} else td.style('padding-right', '5px').text(`${node.value}`)
 		}
 
 		for (const child of node.children) if (!child.added) this.addCategory(child)
