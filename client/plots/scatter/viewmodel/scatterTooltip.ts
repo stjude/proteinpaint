@@ -19,6 +19,8 @@ export class ScatterTooltip {
 	searchMenu: any
 	samplesData: any
 	chartDiv: any
+	level: any
+	parentTW: any
 
 	constructor(scatter: Scatter) {
 		this.scatter = scatter
@@ -126,14 +128,13 @@ export class ScatterTooltip {
 				}
 			}
 		}
-		const level = showCoords ? 4 : 2 //current level after adding the parent categories
+		this.level = showCoords ? 4 : 2 //current level after adding the parent categories
 		this.parentCategories = showCoords ? ['y', 'x', ''] : ['']
-		if (this.scatter.config.colorTW)
-			this.addNodes('category', this.scatter.config.colorTW, showCoords ? this.scatter.config.term : '', level)
-		if (this.scatter.config.shapeTW)
-			this.addNodes('shape', this.scatter.config.shapeTW, this.scatter.config.colorTW, level + 1)
-		if (this.scatter.config.scaleDotTW)
-			this.addNodes('scale', this.scatter.config.scaleDotTW, this.scatter.config.shapeTW, level + 2)
+		if (showCoords) this.parentTW = this.scatter.config.term
+		else this.parentTW = null
+		if (this.scatter.config.colorTW) this.addNodes('category', this.scatter.config.colorTW)
+		if (this.scatter.config.shapeTW) this.addNodes('shape', this.scatter.config.shapeTW)
+		if (this.scatter.config.scaleDotTW) this.addNodes('scale', this.scatter.config.scaleDotTW)
 		this.view.dom.tooltip.clear()
 		//Rendering tooltip
 		const div = this.view.dom.tooltip.d
@@ -142,7 +143,7 @@ export class ScatterTooltip {
 				.append('div')
 				.style('color', '#aaa')
 				.style('font-weight', 'bold')
-				.html(`&nbsp;&nbsp;${samples.length} Samples`)
+				.html(`&nbsp;&nbsp;&nbsp;${samples.length} Samples`)
 		const tableDiv = div.append('div').style('max-height', '500px').style('overflow-y', 'scroll')
 		if (samples.length > 4) tableDiv.attr('class', 'sjpp_show_scrollbar')
 		this.tableDiv = tableDiv
@@ -217,6 +218,7 @@ export class ScatterTooltip {
 						const class_info = mclass[id]
 						if (node.value.includes(class_info.label)) {
 							if (rgb(class_info.color).toString() != whiteColor) fontColor = class_info.color
+							node.value = this.getCategoryValue(node.category, sample, tw, true)
 							break
 						}
 					}
@@ -279,25 +281,27 @@ export class ScatterTooltip {
 		}
 	}
 
-	addNodes(category, tw, parentTW, level) {
+	addNodes(category, tw) {
 		for (const sample of this.samples) {
 			const value = this.getCategoryValue(category, sample, tw)
 			let parentId = ''
-			for (const pc of this.parentCategories) parentId += this.getCategoryValue(pc, sample, parentTW)
+			for (const pc of this.parentCategories) parentId += this.getCategoryValue(pc, sample, this.parentTW)
 			const id = value + parentId
 			let node = this.tree.find(item => item.id == id && item.parentId == parentId)
 			const parent = this.tree.find(item => item.id == parentId)
 			if (!node) {
-				node = { id, parentId, samples: [], level, category, children: [], value }
+				node = { id, parentId, samples: [], level: this.level, category, children: [], value }
 				this.tree.push(node)
 			}
 			node.samples.push(sample)
 			if (parent) parent.children.push(node)
 		}
 		this.parentCategories.unshift(category)
+		this.parentTW = tw
+		this.level++
 	}
 
-	getCategoryValue(category, d, tw) {
+	getCategoryValue(category, d, tw, includeMutation = false) {
 		if (category == '') return ''
 		let value = d[category]
 		if (tw?.term.type == 'geneVariant' && tw.q?.type == 'values') {
@@ -306,7 +310,7 @@ export class ScatterTooltip {
 				const class_info = mclass[id]
 				if (mutation == class_info.label) {
 					const mname = d.cat_info[category].find(m => m.class == class_info.key).mname
-					if (mname) value = `${mname} ${value}`
+					if (mname && includeMutation) value = `${mname} ${value}`
 				}
 			}
 		}
