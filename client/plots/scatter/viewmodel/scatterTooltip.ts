@@ -96,7 +96,7 @@ export class ScatterTooltip {
 						parentId: id,
 						samples: [sample],
 						level: 2,
-						category: 'X',
+						category: this.scatter.config.term.term.name,
 						children: [],
 						value: xvalue
 					}
@@ -109,7 +109,7 @@ export class ScatterTooltip {
 						parentId: xvalue,
 						samples: [sample],
 						level: 3,
-						category: 'Y',
+						category: this.scatter.config.term2.term.name,
 						children: [],
 						value: yvalue
 					}
@@ -145,19 +145,18 @@ export class ScatterTooltip {
 				.style('font-weight', 'bold')
 				.html(`${samples.length} Samples`)
 		const tableDiv = div.append('div')
-		if (samples.length > 3) tableDiv.attr('class', 'sjpp_show_scrollbar')
 		this.tableDiv = tableDiv
 		const nodes = this.tree.filter(node => (showCoords ? node.level == 1 : node.level == 2))
 		if (showCoords)
 			for (const node of nodes) {
-				if (samples.length > 1) tableDiv.append('div').style('border-top', '1px solid #aaa')
+				if (samples.length > 1) tableDiv.append('div').style('padding', '5px')
 				for (const child of node.children) {
 					this.addCategory(child)
 				}
 			}
 		else
 			for (const node of nodes) {
-				if (samples.length > 1) tableDiv.append('div').style('border-top', '1px solid #aaa')
+				if (samples.length > 1) tableDiv.append('div').style('padding', '5px')
 				this.addCategory(node)
 			}
 
@@ -190,7 +189,6 @@ export class ScatterTooltip {
 		const hasMetArrayPlot = this.scatter.state.termdbConfig.queries?.singleSampleGenomeQuantification
 		const div = this.tableDiv.append('div')
 		const table = table2col({ holder: div })
-		let row
 		const sample = node.samples[0]
 		if (sample.category != 'Ref') {
 			const [tdlabel, td] = table.addRow()
@@ -223,9 +221,8 @@ export class ScatterTooltip {
 						}
 					}
 					if (this.onClick) {
-						row
-							.append('td')
-							.append('button')
+						td.append('button')
+							.style('float', 'right')
 							.text('Lollipop')
 							.on('click', async () => {
 								await this.scatter.interactivity.openLollipop(label)
@@ -237,7 +234,7 @@ export class ScatterTooltip {
 				const chars = node.value.toString().length
 				const width = chars * 9 + 60
 				const svg = td.append('svg').attr('width', width).attr('height', '25px')
-				const g = svg.append('g').attr('transform', 'translate(10, 14)')
+				const g = svg.append('g').attr('transform', 'translate(0, 14)')
 				g.append('path')
 					.attr('d', shape)
 					.attr('fill', color)
@@ -245,7 +242,7 @@ export class ScatterTooltip {
 					.attr('transform', 'translate(0, -4) scale(0.6)')
 				const text = g.append('text').attr('x', 15).attr('y', 6).attr('font-size', '0.9em')
 				text.append('tspan').text(node.value).attr('fill', fontColor)
-			} else td.style('padding', '2px').text(`${node.value}`)
+			} else td.text(`${node.value}`)
 		}
 
 		for (const child of node.children) if (!child.added) this.addCategory(child)
@@ -263,15 +260,18 @@ export class ScatterTooltip {
 				td.text(sample.sample)
 				if ('sampleId' in sample && this.onClick) {
 					td.append('button')
+						.style('float', 'right')
 						.text('Sample view')
 						.on('click', () => this.scatter.interactivity.openSampleView(sample))
 					if (hasDiscoPlot)
 						td.append('button')
+							.style('float', 'right')
 							.text('Disco')
 							.on('click', async () => this.scatter.interactivity.openDiscoPlot(sample))
 
 					if (hasMetArrayPlot)
 						td.append('button')
+							.style('float', 'right')
 							.text('Met Array')
 							.on('click', async () => this.scatter.interactivity.openMetArray(sample))
 				}
