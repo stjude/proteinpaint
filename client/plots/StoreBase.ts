@@ -65,7 +65,7 @@ export class StoreBase {
 		return JSON.parse(objStr)
 	}
 
-	toJson(this: any, obj = null) {
+	toJson(this: any, obj: any = null) {
 		// this base method should not be reused when there is
 		// a need to stringify any Set or Map values,
 		// instead declare a class specific toJson() method

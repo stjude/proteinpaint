@@ -1,8 +1,8 @@
-import * as rx from '#rx'
+import { StoreApi, type AppApi, type RxStoreInner } from '#rx'
+import { StoreBase } from '#plots/StoreBase.ts'
 import { root_ID } from './tree'
-import { filterJoin, getFilterItemByTag, findItem, findParent } from '#filter'
+import { getFilterItemByTag, findParent } from '#filter'
 import { isUsableTerm } from '#shared/termdb.usecase.js'
-import { TermTypeGroups } from '#shared/terms.js'
 
 // state definition: https://docs.google.com/document/d/1gTPKS9aDoYi4h_KlMBXgrMxZeA_P4GXhWcQdNQs3Yp8/edit#
 
@@ -33,13 +33,26 @@ const defaultState = {
 }
 
 // one store for the whole tdb app
-class TdbStore {
-	constructor(opts) {
+class TdbStore extends StoreBase implements RxStoreInner {
+	static type = 'store'
+
+	// expected RxStoreInner, some are already declared/set in AppBase
+	app: AppApi
+	api: StoreApi
+	type: string
+
+	// expected class-specific props
+	defaultState: any
+	actions!: {
+		[actionType: string]: (action: { type: string; [prop: string]: any }) => void | Promise<void>
+	}
+
+	constructor(opts, api) {
+		super(opts)
 		this.type = 'store'
-		this.defaultState = defaultState
-		// set this.app, .opts, .api, expected store methods,
-		// and the initial non-rehydrated state with overrides
-		rx.prepStore(this, opts)
+		this.app = opts.app
+		this.api = api
+		this.state = this.copyMerge(this.toJson(defaultState), opts.state) // opts.state
 		// use for assigning unique IDs where needed
 		// may be used later to simplify getting component state by type and id
 		this.prevGeneratedId = 0
@@ -60,6 +73,7 @@ class TdbStore {
 				if (!Array.isArray(s.vocab.terms)) throw 'vocab.terms must be an array of objects'
 			}
 		}
+		return opts
 	}
 
 	validateState() {
@@ -129,11 +143,6 @@ class TdbStore {
 		}
 	}
 
-	fromJson(str) {
-		const obj = JSON.parse(str)
-		return obj
-	}
-
 	setId(item) {
 		item.$id = this.prevGeneratedId++
 		if (item.$lst) {
@@ -150,7 +159,7 @@ class TdbStore {
 	constructor prototype
 */
 TdbStore.prototype.actions = {
-	app_refresh(action = {}) {
+	app_refresh(this: TdbStore, action) {
 		// optional action.state{} may be full or partial overrides
 		// to the current state
 		//
@@ -158,9 +167,9 @@ TdbStore.prototype.actions = {
 		// without action.state as the current state at the
 		// initial render is not meant to be modified yet
 		//
-		this.state = this.copyMerge(this.toJson(this.state), action.state ? action.state : {}, this.replaceKeyVals)
+		this.state = this.copyMerge(this.toJson(this.state), action.state ? action.state : {})
 	},
-	cohort_set(action) {
+	cohort_set(this: TdbStore, action) {
 		this.state.activeCohort = action.activeCohort
 		const cohort = this.state.termdbConfig.selectCohort.values[action.activeCohort]
 		const cohortFilter = getFilterItemByTag(this.state.termfilter.filter, 'cohortFilter')
@@ -169,18 +178,18 @@ TdbStore.prototype.actions = {
 			return { key, label: key }
 		})
 	},
-	tree_expand(action) {
+	tree_expand(this: TdbStore, action) {
 		if (this.state.tree.expandedTermIds.includes(action.termId)) return
 		this.state.tree.expandedTermIds.push(action.termId)
 	},
 
-	tree_collapse(action) {
+	tree_collapse(this: TdbStore, action) {
 		const i = this.state.tree.expandedTermIds.indexOf(action.termId)
 		if (i == -1) return
 		this.state.tree.expandedTermIds.splice(i, 1)
 	},
 
-	filter_replace(action) {
+	filter_replace(this: TdbStore, action) {
 		const replacementFilter = action.filter ? action.filter : { type: 'tvslst', join: '', in: 1, lst: [] }
 		if (!action.filter.tag) {
 			this.state.termfilter.filter = replacementFilter
@@ -197,7 +206,7 @@ TdbStore.prototype.actions = {
 		}
 	},
 
-	submenu_set(action) {
+	submenu_set(this: TdbStore, action) {
 		const term = action.submenu && action.submenu.term
 		if (!term) {
 			this.state.submenu = {}
@@ -219,10 +228,10 @@ TdbStore.prototype.actions = {
 		}
 	},
 
-	set_term_type_group({ value }) {
+	set_term_type_group(this: TdbStore, { value }) {
 		this.state.termTypeGroup = value
 	}
 }
 
 // must use the await keyword when using this storeInit()
-export const storeInit = rx.getInitFxn(TdbStore)
+export const storeInit = StoreApi.getInitFxn(TdbStore)

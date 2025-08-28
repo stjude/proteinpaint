@@ -13,6 +13,7 @@ export interface RxStoreInner {
 	numPromisedWrites: number
 
 	init: () => void
+	validateState?: () => void
 	fromJson: (s: string) => any
 	toJson: (o: any) => string
 	deepFreeze: (o: any) => void
@@ -29,8 +30,6 @@ export class StoreApi {
 
 	static getInitFxn(__Class__) {
 		return async opts => {
-			opts.history = []
-			opts.currIndex = 0
 			const api = new StoreApi(opts, __Class__)
 			await api.init()
 			return api
@@ -49,7 +48,6 @@ export class StoreApi {
 		if (!self.type) self.type = __Class__.type
 		self.app = opts.app
 		self.api = this
-
 		this.#Inner = self
 		this.id = self.id
 		this.type = self.type || __Class__.type
@@ -67,6 +65,7 @@ export class StoreApi {
 
 	async init() {
 		await this.#Inner.init()
+		if (this.#Inner.validateState) this.#Inner.validateState()
 	}
 
 	async write(action) {

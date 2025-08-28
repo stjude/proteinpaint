@@ -1,6 +1,8 @@
 // !!! TODO: migrate all rx code to strictly-defined typescript and
 // to use classes (with private #Inner) instead of closures !!!
 import { deepEqual, deepFreeze, notifyComponents, copyMerge, fromJson, toJson, getComponents } from './utils.ts'
+import { AppApi } from './AppApi.ts'
+import { StoreApi } from './StoreApi.ts'
 import { ComponentApi } from './ComponentApi.ts'
 import { Bus } from './Bus.ts'
 
@@ -43,6 +45,7 @@ https://docs.google.com/document/d/1G3LqbtsCEkGw4ABA_VognhjVnUHnsVYAGdXyhYG374M/
 	- Flexibility to use the generated instance outside of the rx framework/notification flow,
 		with or without an coordinating "app"
 */
+// deprecated: use <AppApi | StoreApi | ComponentApi>.getInitFxn
 export function getInitFxn(_Class_) {
 	/*
 		opts
@@ -97,10 +100,12 @@ export function getInitFxn(_Class_) {
 }
 
 export function getAppInit(_Class_) {
+	if (_Class_.type) return AppApi.getInitFxn(_Class_)
 	return getInitPrepFxn(_Class_, prepApp)
 }
 
 export function getStoreInit(_Class_) {
+	if (_Class_.type) return StoreApi.getInitFxn(_Class_)
 	return getInitPrepFxn(_Class_, prepStore)
 }
 
@@ -212,6 +217,7 @@ export async function multiInit(initPromises) {
   API Generators
 *****************/
 
+// deprecated: use StoreApi
 export function prepStore(self, opts) {
 	if (self.validateOpts) self.validateOpts(opts)
 	self.app = opts.app
@@ -250,6 +256,7 @@ type RxAction = {
 }
 */
 
+// deprecated: use StoreApi
 export function getStoreApi(self) {
 	self.history = []
 	self.currIndex = -1
@@ -300,6 +307,7 @@ export function getStoreApi(self) {
 	return api
 }
 
+// deprecated: use AppApi
 export function prepApp(self, opts) {
 	try {
 		if (self.validateOpts) self.validateOpts(opts)
@@ -313,6 +321,7 @@ export function prepApp(self, opts) {
 	}
 }
 
+// deprecated: use AppApi
 export function getAppApi(self) {
 	// optional registry for component instances
 	const componentsByType: { [name: string]: any } = {}
@@ -466,6 +475,7 @@ export function getAppApi(self) {
 	return api
 }
 
+// deprecated: use ComponentApi
 export function prepComponent(self, opts) {
 	if (!opts.app) throw `missing self.opts.app in prepComponent(${self.type})`
 	self.app = opts.app
@@ -477,6 +487,7 @@ export function prepComponent(self, opts) {
 	self.api = getComponentApi(self)
 }
 
+// deprecated: use ComponentApi
 export function getComponentApi(self) {
 	if (!('type' in self)) {
 		throw `The component's type must be set before calling this.getComponentApi(this).`

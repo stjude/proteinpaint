@@ -101,8 +101,7 @@ class TdbStore extends StoreBase implements RxStoreInner {
 		this.app = opts.app
 		this.api = api
 		this.type = 'store'
-		this.defaultState = defaultState
-
+		this.state = this.copyMerge(this.toJson(defaultState), opts.state) // opts.state
 		this.prevGeneratedId = 0
 	}
 
@@ -115,6 +114,7 @@ class TdbStore extends StoreBase implements RxStoreInner {
 		} else {
 			if (!Array.isArray(s.vocab.terms)) throw 'vocab.terms must be an array of objects'
 		}
+		return opts
 	}
 
 	validateState() {
