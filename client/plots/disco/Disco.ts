@@ -20,6 +20,8 @@ import { CnvHeatmapRenderer } from '#plots/disco/cnv/CnvHeatmapRenderer.ts'
 import type ViewModel from '#plots/disco/viewmodel/ViewModel.ts'
 import { CnvRenderingType } from '#plots/disco/cnv/CnvRenderingType.ts'
 import { InvalidDataUI } from '#dom'
+import { renderCnvSourceSelector } from './cnv/CnvSourceSelector.ts'
+import { dtcnv, dtloh } from '#shared/common.js'
 
 export default class Disco {
 	// following attributes are required by rx
@@ -57,6 +59,11 @@ export default class Disco {
 		const topbar = controlsHolder.append('div')
 		const config_div = controlsHolder.append('div')
 		const configInputsOptions = this.getConfigInputsOptions(this.viewModel)
+
+		const altCnv = state.args.alternativeDataByDt?.[dtcnv]
+		if (altCnv?.length > 1) {
+			renderCnvSourceSelector(controlsHolder, altCnv, i => this.onCnvSourceSelect(i))
+		}
 
 		this.features = await multiInit({
 			topbar: topBarInit({
@@ -213,7 +220,10 @@ export default class Disco {
 	}
 
 	getState(appState: any) {
-		return appState.plots.find(p => p.id === this.id)
+		const config = appState.plots.find(p => p.id === this.id)
+		if (!config) return config
+		// include args.data so updates rerender when mutation list changes
+		return { ...config, mlst: appState.args.data }
 	}
 
 	getRingRenderers(
@@ -249,6 +259,23 @@ export default class Disco {
 		renderersMap.set(RingType.LOH, lohRenderer)
 
 		return renderersMap
+	}
+
+	private onCnvSourceSelect(index: number) {
+		const state = this.app.getState()
+		const args = state.args
+		const alt = args.alternativeDataByDt?.[dtcnv]
+		if (!alt) return
+		const altClone = structuredClone(args.alternativeDataByDt)
+		altClone[dtcnv].forEach((d, i) => (d.inuse = i === index))
+		const selected = altClone[dtcnv][index]
+		selected.mlst.forEach((d: any) => (d.position = d.pos))
+		const baseData = args.data.filter((d: any) => d.dt != dtcnv && d.dt != dtloh)
+		const newData = baseData.concat(selected.mlst)
+		this.app.dispatch({
+			type: 'app_refresh',
+			state: { args: { ...args, data: newData, alternativeDataByDt: altClone } }
+		})
 	}
 
 	toggleVisibility(isOpen: boolean) {
