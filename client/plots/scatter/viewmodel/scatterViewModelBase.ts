@@ -68,7 +68,7 @@ export class ScatterViewModelBase {
 		let colorLegendSize = chart.colorLegend.size * step
 		if (chart.colorLegend.get('Ref')?.sampleCount > 0) colorLegendSize += 60
 		const scaleHeight = this.scatter.config.scaleDotTW ? 200 : 100
-		this.legendHeight = Math.max(colorLegendSize, chart.shapeLegend.size * 30) + scaleHeight //legend step and header
+		this.legendHeight = Math.max(colorLegendSize, chart.shapeLegend.size * 25) + scaleHeight //legend step and header
 
 		let fontSize = this.legendvm.getFontSize(chart, chart.colorLegend)
 

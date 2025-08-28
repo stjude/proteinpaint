@@ -75,7 +75,7 @@ export class ScatterLegend {
 		if (this.model.filterSampleStr) title0 += `, search = ${this.model.filterSampleStr}`
 		legendG.append('text').attr('x', 0).attr('y', offsetY).text(title0).style('font-weight', 'bold')
 		const fontSize = this.getFontSize(chart, chart.colorLegend)
-		const scale = chart.colorLegend.size > 20 || chart.shapeLegend.size > 20 ? 0.5 : 0.7 //if many categories, reduce size
+		const scale = chart.colorLegend.size > 20 || chart.shapeLegend.size > 20 ? 0.6 : 0.7 //if many categories, reduce size
 
 		const colorG = legendG.append('g').style('font-size', `${fontSize}em`)
 		offsetY += step + 10
@@ -221,7 +221,7 @@ export class ScatterLegend {
 				const refColorG = legendG.append('g')
 				refColorG
 					.append('path')
-					.attr('transform', () => `translate(${offsetX - 2}, ${offsetY - 5}) scale(${scale})`)
+					.attr('transform', () => `translate(${offsetX - 2}, ${offsetY - 4}) scale(${scale})`)
 					.style('fill', colorRefCategory.color)
 					.attr('d', shapes[0])
 					.style('stroke', rgb(colorRefCategory.color).darker())
@@ -275,7 +275,7 @@ export class ScatterLegend {
 
 					itemG
 						.append('path')
-						.attr('transform', () => `translate(${offsetX}, ${offsetY - 5}) scale(${scale + 0.1})`) //shapes are a bit smaller than the circle shape
+						.attr('transform', () => `translate(${offsetX}, ${offsetY - 4}) scale(${scale + 0.1})`) //shapes are a bit smaller than the circle shape
 						.style('pointer-events', 'bounding-box')
 						.style('fill', color)
 						.attr('d', symbol)
@@ -306,7 +306,7 @@ export class ScatterLegend {
 		circleG
 			.append('path')
 			.attr('d', shapes[0])
-			.attr('transform', `translate(${x - 2}, ${y - 5}) scale(${scale})`)
+			.attr('transform', `translate(${x - 2}, ${y - 4}) scale(${scale})`)
 			.style('fill', category.color)
 			.style('stroke', rgb(category.color).darker())
 		if (!this.scatter.config.colorColumn)
