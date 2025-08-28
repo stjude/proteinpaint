@@ -144,7 +144,8 @@ export class ScatterTooltip {
 				.style('padding', '3px')
 				.style('font-weight', 'bold')
 				.html(`${samples.length} Samples`)
-		const tableDiv = div.append('div')
+		const tableDiv = div.append('div').style('max-height', '500px').style('overflow-y', 'scroll')
+		if (samples.length > 4) tableDiv.attr('class', 'sjpp_show_scrollbar')
 		this.tableDiv = tableDiv
 		const nodes = this.tree.filter(node => (showCoords ? node.level == 1 : node.level == 2))
 		if (showCoords)
@@ -256,7 +257,7 @@ export class ScatterTooltip {
 					}
 
 				const [tdlabel, td] = table.addRow()
-				tdlabel.text('Sample')
+				tdlabel.text('Sample').style('padding-right', '5px')
 				td.text(sample.sample)
 				if ('sampleId' in sample && this.onClick) {
 					td.append('button')
