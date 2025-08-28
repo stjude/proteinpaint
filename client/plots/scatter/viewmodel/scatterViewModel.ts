@@ -106,7 +106,7 @@ export class ScatterViewModel extends ScatterViewModelBase {
 		chart.legendG = chart.legendDiv
 			.append('svg')
 			.attr('width', this.scatter.settings.svgw / 2)
-			.attr('height', this.scatter.settings.svgh)
+			.attr('height', this.scatter.vm.legendHeight)
 			.append('g')
 			.attr('transform', 'translate(20, 20)')
 	}
