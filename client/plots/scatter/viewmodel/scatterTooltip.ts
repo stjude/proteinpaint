@@ -4,6 +4,7 @@ import { roundValueAuto } from '#shared/roundValue.js'
 import { getDateStrFromNumber } from '#shared/terms.js'
 import { rgb } from 'd3-color'
 import type { Scatter } from '../scatter.js'
+import { table2col, table2col } from '#dom'
 
 export class ScatterTooltip {
 	scatter: Scatter
@@ -11,7 +12,7 @@ export class ScatterTooltip {
 	chart: any
 	samples!: any[]
 	tree!: any[]
-	table: any
+	tableDiv: any
 	onClick: boolean
 	displaySample!: boolean
 	parentCategories!: string[]
@@ -143,23 +144,20 @@ export class ScatterTooltip {
 				.style('padding', '3px')
 				.style('font-weight', 'bold')
 				.html(`${samples.length} Samples`)
-		const tableDiv = div.append('div').style('max-height', '400px').style('overflow', 'scroll')
+		const tableDiv = div.append('div')
 		if (samples.length > 3) tableDiv.attr('class', 'sjpp_show_scrollbar')
-
-		this.table = tableDiv.append('table').style('width', '100%')
+		this.tableDiv = tableDiv
 		const nodes = this.tree.filter(node => (showCoords ? node.level == 1 : node.level == 2))
 		if (showCoords)
 			for (const node of nodes) {
-				if (samples.length > 1)
-					this.table.append('tr').append('td').attr('colspan', 3).style('border-top', '1px solid #aaa')
+				if (samples.length > 1) tableDiv.append('div').style('border-top', '1px solid #aaa')
 				for (const child of node.children) {
 					this.addCategory(child)
 				}
 			}
 		else
 			for (const node of nodes) {
-				if (samples.length > 1)
-					this.table.append('tr').append('td').attr('colspan', 3).style('border-top', '1px solid #aaa')
+				if (samples.length > 1) tableDiv.append('div').style('border-top', '1px solid #aaa')
 				this.addCategory(node)
 			}
 
@@ -184,25 +182,22 @@ export class ScatterTooltip {
 	}
 
 	addCategory(node) {
-		const table = this.table
 		const samples = this.samples
 		const chart = this.chart
 		const tw = this.getTW(node.category)
 		node.added = true
 		const hasDiscoPlot = this.scatter.state.termdbConfig.queries?.singleSampleMutation
 		const hasMetArrayPlot = this.scatter.state.termdbConfig.queries?.singleSampleGenomeQuantification
-
+		const div = this.tableDiv.append('div')
+		const table = table2col({ holder: div })
 		let row
 		const sample = node.samples[0]
-
 		if (sample.category != 'Ref') {
-			const row = table.append('tr')
-
+			const [tdlabel, td] = table.addRow()
 			const showIcon = tw != null && (tw == this.scatter.config.colorTW || tw == this.scatter.config.shapeTW)
 			let label = tw ? tw.term.name : node.category
 			if (samples.length > 1 && !this.displaySample) label = label + ` (${node.samples.length})`
-			row.append('td').style('color', '#aaa').text(label)
-			const td = row.append('td')
+			tdlabel.text(label)
 
 			if (showIcon) {
 				const color =
@@ -258,31 +253,25 @@ export class ScatterTooltip {
 			for (const sample of node.samples) {
 				if ('info' in sample)
 					for (const [k, v] of Object.entries(sample.info)) {
-						row = table.append('tr')
-						row.append('td').style('color', '#aaa').text(k)
-						row.append('td').text(v)
+						const [tdlabel, td] = table.addRow()
+						tdlabel.text(k)
+						td.text(v)
 					}
 
-				row = table.append('tr')
-				row.append('td').style('color', '#aaa').text('Sample')
-				row.append('td').style('padding', '2px').text(sample.sample)
+				const [tdlabel, td] = table.addRow()
+				tdlabel.text('Sample')
+				td.text(sample.sample)
 				if ('sampleId' in sample && this.onClick) {
-					row
-						.append('td')
-						.append('button')
+					td.append('button')
 						.text('Sample view')
 						.on('click', () => this.scatter.interactivity.openSampleView(sample))
 					if (hasDiscoPlot)
-						row
-							.append('td')
-							.append('button')
+						td.append('button')
 							.text('Disco')
 							.on('click', async () => this.scatter.interactivity.openDiscoPlot(sample))
 
 					if (hasMetArrayPlot)
-						row
-							.append('td')
-							.append('button')
+						td.append('button')
 							.text('Met Array')
 							.on('click', async () => this.scatter.interactivity.openMetArray(sample))
 				}
