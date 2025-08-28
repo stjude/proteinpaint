@@ -829,10 +829,10 @@
   },
   "plots/matrix/matrix.layout.js": {
     "lines": {
-      "total": 253,
-      "covered": 196,
+      "total": 257,
+      "covered": 198,
       "skipped": 0,
-      "pct": 77.47
+      "pct": 77.04
     },
     "functions": {
       "total": 14,
@@ -841,26 +841,26 @@
       "pct": 64.28
     },
     "statements": {
-      "total": 274,
-      "covered": 210,
+      "total": 278,
+      "covered": 212,
       "skipped": 0,
-      "pct": 76.64
+      "pct": 76.25
     },
     "branches": {
-      "total": 243,
+      "total": 247,
       "covered": 154,
       "skipped": 0,
-      "pct": 63.37
+      "pct": 62.34
     },
     "lowestPct": {
-      "curr": 63.37,
-      "prev": 0,
-      "diff": 63.37
+      "curr": 62.34,
+      "prev": 63.37,
+      "diff": -1.029999999999994
     },
     "averagePct": {
-      "curr": 70.44,
-      "prev": 0,
-      "diff": 70.44
+      "curr": 69.97749999999999,
+      "prev": 70.44,
+      "diff": -0.4625000000000057
     }
   },
   "plots/matrix/matrix.legend.js": {
