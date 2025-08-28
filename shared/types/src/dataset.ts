@@ -753,12 +753,14 @@ export type SingleCellGeneExpressionNative = {
 	get?: (q: any) => any
 	/** cached gene exp bins */
 	sample2gene2expressionBins?: { [sample: string]: { [gene: string]: any } }
+	/** gene expression unit (e.g. 'FPKM') */
 	unit?: string
 }
 
 export type SingleCellGeneExpressionGdc = {
-	unit?: 'string'
 	src: 'gdcapi'
+	/** gene expression unit (e.g. 'FPKM') */
+	unit?: string
 }
 
 export type SingleCellSamples = {
