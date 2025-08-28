@@ -40,7 +40,6 @@ export class ScatterLegend {
 
 	getFontSize(chart, legend) {
 		let fontSize = 0.9
-		console.log(chart.colorLegend.size, chart.shapeLegend.size)
 		if (chart.colorLegend.size < 10 && chart.shapeLegend.size < 10) return fontSize
 		const top = 20
 		//legend is a Map<string, ScatterLegendItem>
