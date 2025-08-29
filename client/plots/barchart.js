@@ -1115,8 +1115,8 @@ function setInteractivity(self) {
 	self.getName2Svg = function () {
 		const name2svg = {}
 
-		for (const chart of this.charts) {
-			const name = chart.name
+		for (const chart of self.charts) {
+			const name = `${this.config.term.term.name}  ${chart.name ? chart.name : ''}`
 			name2svg[name] = chart.svg
 		}
 		return name2svg
