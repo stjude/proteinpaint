@@ -9,7 +9,7 @@ export class ReportView {
 	constructor(report: Report) {
 		this.opts = report.opts
 		this.report = report
-		this.opts.holder.style('transform', 'scale(0.85)').style('transform-origin', '0 0')
+		this.opts.holder.style('transform-origin', '0 0')
 		const leftDiv = this.opts.holder.insert('div').style('display', 'inline-block')
 		const controlsHolder = leftDiv
 			.insert('div')

@@ -51,6 +51,7 @@ export async function downloadSVGsAsPdf(name2svg, filename = 'charts.pdf') {
 
 	let item
 	const entries: any[] = Object.entries(name2svg)
+	let y = 50
 	for (const [name, svgObj] of entries) {
 		const svg = svgObj.node()
 		if (!item) item = addSvgToPdf(svg, name)
@@ -67,9 +68,14 @@ export async function downloadSVGsAsPdf(name2svg, filename = 'charts.pdf') {
 		const ratio = 72 / 96 //convert pixels to pt
 		const width = Math.min(pageWidth, rect.width * ratio) - 20
 		const height = Math.min(pageHeight, rect.height * ratio) - 20
-		const item = doc.svg(svg, { x: 15, y: 30, width, height }).then(() => {
-			doc.text(name, 15, 20)
-			doc.addPage()
+		const item = doc.svg(svg, { x: 15, y, width, height }).then(() => {
+			doc.text(name, 15, y - 10)
+			y = y + height + 50
+
+			if (y + height > pageHeight - 20) {
+				doc.addPage()
+				y = 50
+			}
 		})
 		return item
 	}
