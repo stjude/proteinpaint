@@ -1,5 +1,5 @@
 {
-	"version": "2.138.3-7",
+	"version": "2.140.1",
 	"name": "@sjcrh/proteinpaint-rust",
 	"type": "module",
 	"description": "Rust-based utilities for proteinpaint",
