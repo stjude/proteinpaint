@@ -3,6 +3,7 @@ import type { TermSettingInstance } from '../termsetting.ts'
 
 // q types
 export type GvBaseQ = MinBaseQ & {
+	mode?: 'discrete' // may support 'continuous' for CNV?
 	cnvGainCutoff?: number
 	cnvMaxLength?: number
 	cnvMinAbsValue?: number
@@ -12,6 +13,7 @@ export type GvBaseQ = MinBaseQ & {
 type RawGvValuesQ = GvBaseQ & { type?: 'values' }
 type RawGvPredefinedGsQ = GvBaseQ & { type: 'predefined-groupset'; predefined_groupset_idx?: number }
 type RawGvCustomGsQ = GvBaseQ & { type: 'custom-groupset'; customset?: BaseGroupSet }
+export type RawGvQ = RawGvValuesQ | RawGvPredefinedGsQ | RawGvCustomGsQ
 
 export type GvValuesQ = GvBaseQ & { type: 'values' }
 export type GvPredefinedGsQ = GvBaseQ & { type: 'predefined-groupset'; predefined_groupset_idx: number }

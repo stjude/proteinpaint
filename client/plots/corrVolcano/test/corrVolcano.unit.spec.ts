@@ -2,6 +2,7 @@ import tape from 'tape'
 import * as d3s from 'd3-selection'
 import { ViewModel } from '../viewModel/ViewModel'
 import type { CorrVolcanoSettings } from '../CorrelationVolcanoTypes'
+import type { GeneExpressionTW } from '#types'
 
 /**
  * Tests
@@ -72,6 +73,7 @@ const mockConfig = {
 	id: '1',
 	chartType: 'correlationVolcano',
 	featureTw: {
+		type: 'NumTWCont',
 		$id: 'test$id',
 		term: {
 			id: 'testid',
@@ -80,7 +82,7 @@ const mockConfig = {
 			name: 'KRAS'
 		},
 		q: {}
-	},
+	} satisfies GeneExpressionTW,
 	settings: {
 		correlationVolcano: mockSettings
 	}

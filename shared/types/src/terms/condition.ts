@@ -1,5 +1,5 @@
-import type { BaseTerm, BaseQ, TermValues } from './term.ts'
-import type { TermWrapper } from './tw.ts'
+import type { BaseTerm, BaseQ, TermValues, BaseTW } from './term.ts'
+//import type { TermWrapper } from './tw.ts'
 
 /**
  * @category TW
@@ -37,7 +37,7 @@ export type ConditionTerm = BaseTerm & {
  * @group Termdb
  * @category TW
  */
-export type ConditionTW = TermWrapper & {
+export type ConditionTW = BaseTW & {
 	term: ConditionTerm
 	q: ConditionQ //replace the generic Q with specific condition Q
 }

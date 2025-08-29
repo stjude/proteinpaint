@@ -84,8 +84,6 @@ function addTable(div: any, name: any, group: any, noButtonCallback: any) {
 }
 
 export function fillTW(tw: SampleLstTW) {
-	// quick fix!!
-	if (!tw.q.type) tw.q.type = 'custom-samplelst'
 	/* type = custom-samplelst is not used anywhere else.
 	Code still under development. Delete if never used. */
 	if (!tw.q.groups) tw.q.groups = []
