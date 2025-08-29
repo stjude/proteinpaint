@@ -44,7 +44,7 @@ export async function downloadSVGsAsPdf(name2svg, filename = 'charts.pdf') {
 	Therefore, a simple import 'svg2pdf.js' without curly braces is all that is needed to apply its functionality. 
 	 */
 	await import('svg2pdf.js') // This import extends jsPDF with SVG functionality
-	const doc = new jsPDF('l', 'pt', 'a4') // landscape, points, A4 size
+	const doc = new jsPDF('p', 'pt', 'a4') // landscape, points, A4 size
 	doc.setFontSize(12)
 	const pageWidth = doc.internal.pageSize.getWidth() - 10
 	const pageHeight = doc.internal.pageSize.getHeight() - 10
@@ -69,7 +69,7 @@ export async function downloadSVGsAsPdf(name2svg, filename = 'charts.pdf') {
 		const width = Math.min(pageWidth, rect.width * ratio) - 20
 		const height = Math.min(pageHeight, rect.height * ratio) - 20
 		const item = doc.svg(svg, { x: 15, y, width, height }).then(() => {
-			doc.text(name, 15, y - 10)
+			doc.text(name, 30, y - 10)
 			y = y + height + 50
 
 			if (y + height > pageHeight - 20) {
