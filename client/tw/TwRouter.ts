@@ -6,8 +6,17 @@ import { CategoricalBase, CatValues, CatPredefinedGS, CatCustomGS } from './cate
 import { GvBase, GvPredefinedGS, GvCustomGS } from './geneVariant.ts'
 import { GeneExpBase } from './geneExpression.ts'
 import { NumericBase, NumRegularBin, NumCustomBins, NumCont } from './numeric.ts'
+import { DateBase } from './date.ts'
 
-export const routedTermTypes = new Set(['categorical', 'integer', 'float', 'geneVariant', 'geneExpression'])
+export const routedTermTypes = new Set([
+	'categorical',
+	'integer',
+	'float',
+	'geneVariant',
+	'geneExpression',
+	'date',
+	'metaboliteIntensity'
+])
 
 export type UseCase = {
 	target: string
@@ -82,8 +91,8 @@ export class TwRouter {
 			case 'geneVariant':
 				return await GvBase.fill(tw, opts)
 
-			// case 'geneExpression':
-			// 	return
+			case 'date':
+				return await DateBase.fill(tw, opts)
 
 			default:
 				throw `unrecognized tw.term?.type='${tw.term?.type}'`

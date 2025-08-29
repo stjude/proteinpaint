@@ -38,7 +38,7 @@ export type NumericBaseTerm = BaseTerm & {
 
 export type NumericDictTerm = NumericBaseTerm & {
 	id?: string
-	type: 'integer' | 'float' | 'date'
+	type: 'integer' | 'float' | 'date' | 'metaboliteIntensity'
 	bins: PresetNumericBins
 	values?: TermValues
 }
@@ -100,25 +100,6 @@ export type CustomNumericBinConfig = MinBaseQ & {
 	lst: [NumericBin, ...NumericBin[]]
 	preferredBins?: 'median'
 }
-
-// |
-// {
-// 	type?: 'custom-bin'
-// 	mode?: 'discrete' | 'binary'
-// 	// since ts will allow NumericBin[] to be empty,
-// 	// use this workaround to define a non-empty array
-// 	lst?: [NumericBin, ...NumericBin[]]
-// }
-
-/*export type NumericQ = BaseQ & {
-	// termType: 'float' | 'integer' -- converts to 'numeric'
-	preferredBins?: 'median' | 'less' | 'default'
-	modeBinaryCutoffType: 'normal' | 'percentile'
-	modeBinaryCutoffPercentile?: number
-	knots?: any //[]?
-	scale?: number //0.1 | 0.01 | 0.001
-	rounding: string
-}*/
 
 export type PresetNumericBins = {
 	default: RegularNumericBinConfig | CustomNumericBinConfig
