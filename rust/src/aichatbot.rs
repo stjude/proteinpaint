@@ -1,4 +1,5 @@
-// Syntax: cd .. && cargo build --release && export RUST_BACKTRACE=full && json='{"user_input": "Generate DE plot for men with weight greater than 30lbs vs women less than 20lbs"}' && time echo $json | target/release/aichatbot
+// Syntax: cd .. && cargo build --release && export RUST_BACKTRACE=full && json='{"user_input": "Generate DE plot for men with weight greater than 30lbs vs women less than 20lbs", "dataset_file":"sjpp/proteinpaint/server/test/tp/files/hg38/TermdbTest/TermdbTest_embeddings.txt"}' && time echo $json | target/release/aichatbot
+// Syntax: cd .. && cargo build --release && export RUST_BACKTRACE=full && json='{"user_input": "Show summary plot for sample information", "dataset_file":"sjpp/proteinpaint/server/test/tp/files/hg38/TermdbTest/TermdbTest_embeddings.txt"}' && time echo $json | target/release/aichatbot
 use anyhow::Result;
 use json::JsonValue;
 use rig::agent::AgentBuilder;
@@ -11,8 +12,7 @@ use rig::vector_store::in_memory_store::InMemoryVectorStore;
 use schemars::JsonSchema;
 use serde_json::{Value, json};
 use std::fs::File;
-use std::io;
-use std::io::Read;
+use std::io::{self, BufRead, Read};
 
 #[derive(Debug, JsonSchema)]
 #[allow(dead_code)]
@@ -76,6 +76,13 @@ async fn main() -> Result<()> {
                         None => panic!("user_input field is missing in input json"),
                     }
 
+                    let dataset_file_json: &JsonValue = &json_string["dataset_file"];
+                    let dataset_file: &str;
+                    match dataset_file_json.as_str() {
+                        Some(inp) => dataset_file = inp,
+                        None => panic!("dataset_file field is missing in input json"),
+                    }
+
                     // Initialize Ollama client
                     let ollama_host = "http://0.0.0.0:8000";
                     let ollama_client = ollama::Client::builder()
@@ -89,28 +96,73 @@ async fn main() -> Result<()> {
                     let mut classification: String =
                         classify_query_by_dataset_type(user_input, comp_model.clone(), embedding_model.clone()).await;
                     classification = classification.replace("\"", "");
+                    let final_output;
                     if classification == "dge".to_string() {
-                        extract_search_terms_from_query(user_input, comp_model, embedding_model).await;
+                        let de_result = extract_search_terms_from_query(user_input, comp_model, embedding_model).await;
+                        final_output = format!(
+                            "{{\"{}\":\"{}\",\"{}\":[{}}}",
+                            "chartType",
+                            "dge",
+                            "DE_output",
+                            de_result + &"]"
+                        );
+                    } else if classification == "summary".to_string() {
+                        // The dataset file needs to be read to query what is the summary term for the dataset. This will later be queried directly from the dataset db file.
+                        println!("dataset_file:{}", dataset_file);
+                        let file = File::open(dataset_file).unwrap();
+                        let reader = io::BufReader::new(file);
+
+                        // Iterate through the lines in the file
+                        let mut summary_term: Option<String> = None;
+                        for line in reader.lines() {
+                            let line = line?; // Handle any potential errors
+                            if line.starts_with("summary=") {
+                                //println!("Relevant_line:{}", line); // Print the line if it starts with the prefix
+                                summary_term = Some(line.replace("summary=", ""))
+                            }
+                        }
+
+                        match summary_term {
+                            Some(sum) => {
+                                final_output = extract_summary_information(
+                                    user_input,
+                                    comp_model,
+                                    embedding_model,
+                                    dataset_file,
+                                    &sum,
+                                )
+                                .await;
+                            }
+                            None => {
+                                panic!("summary_term not found")
+                            }
+                        }
                     } else if classification == "hierarchial".to_string() {
                         // Not implemented yet
-                        println!("Hierarchial clustering not supported yet");
+                        final_output = format!("{{\"{}\":\"{}\"}}", "chartType", "hierarchial");
                     } else if classification == "snv_indel".to_string() {
                         // Not implemented yet
-                        println!("snv_indel not supported yet");
+                        final_output = format!("{{\"{}\":\"{}\"}}", "chartType", "snv_indel");
                     } else if classification == "cnv".to_string() {
                         // Not implemented yet
-                        println!("cnv not supported yet");
+                        final_output = format!("{{\"{}\":\"{}\"}}", "chartType", "cnv");
                     } else if classification == "variant_calling".to_string() {
-                        // Not implemented yet
-                        println!("variant_calling is not supported in Proteinpaint");
+                        // Not implemented yet and will never be supported. Need a separate messages for this
+                        final_output = format!("{{\"{}\":\"{}\"}}", "chartType", "variant_calling");
                     } else if classification == "surivial".to_string() {
                         // Not implemented yet
-                        println!("survival not supported yet");
+                        final_output = format!("{{\"{}\":\"{}\"}}", "chartType", "surivial");
                     } else if classification == "none".to_string() {
+                        final_output = format!("{{\"{}\":\"{}\"}}", "chartType", "none");
                         println!("The input query did not match any known features in Proteinpaint");
                     } else {
-                        println!("Unknown output:{}", classification);
+                        final_output = format!(
+                            "{{\"{}\":\"{}\"}}",
+                            "chartType",
+                            "unknown:".to_string() + &classification
+                        );
                     }
+                    println!("final_output:{}", final_output);
                 }
                 Err(error) => println!("Incorrect json:{}", error),
             }
@@ -174,7 +226,7 @@ async fn classify_query_by_dataset_type(
     let result = response.replace("json", "").replace("```", "");
     //println!("result:{}", result);
     let json_value: Value = serde_json::from_str(&result).expect("REASON");
-    println!("Classification result:{}", json_value);
+    //println!("Classification result:{}", json_value);
     json_value["answer"].to_string()
 }
 
@@ -241,6 +293,70 @@ async fn extract_search_terms_from_query(
     let result = response.replace("json", "").replace("```", "");
     //println!("result_groups:{}", result);
     let json_value: Value = serde_json::from_str(&result).expect("REASON");
-    println!("json_value:{}", json_value);
-    json_value["answer"].to_string()
+    //println!("json_value:{}", json_value);
+    json_value.to_string()
+}
+
+async fn extract_summary_information(
+    user_input: &str,
+    comp_model: impl rig::completion::CompletionModel + 'static,
+    embedding_model: impl rig::embeddings::EmbeddingModel + 'static,
+    dataset_file: &str,
+    summary_term: &str,
+) -> String {
+    // Open the file
+    let mut file = File::open(dataset_file).unwrap();
+
+    // Create a string to hold the file contents
+    let mut contents = String::new();
+
+    // Read the file contents into the string
+    file.read_to_string(&mut contents).unwrap();
+
+    // Split the contents by the delimiter "---"
+    let parts: Vec<&str> = contents.split("---").collect();
+
+    // Print the separated parts
+    let mut rag_docs = Vec::<String>::new();
+    for (_i, part) in parts.iter().enumerate() {
+        //println!("Part {}: {}", i + 1, part.trim());
+        rag_docs.push(part.trim().to_string())
+    }
+
+    let rag_docs_length = rag_docs.len();
+    // Create embeddings and add to vector store
+    let embeddings = EmbeddingsBuilder::new(embedding_model.clone())
+        .documents(rag_docs)
+        .expect("Reason1")
+        .build()
+        .await
+        .unwrap();
+
+    // Create vector store
+    let mut vector_store = InMemoryVectorStore::<String>::default();
+    InMemoryVectorStore::add_documents(&mut vector_store, embeddings);
+
+    //let system_prompt = "I am an assistant that figures out the summary term from its respective dataset file. Extract the summary term {summary_term} from user query. The final output must be in the following JSON format {{\"chartType\":\"summary\",\"term\":{{\"id\":\"{{summary_term}}\"}}}}";
+
+    let system_prompt = String::from(
+        "I am an assistant that figures out the summary term from its respective dataset file. Extract the summary term ",
+    ) + &summary_term
+        + &" from user query. The final output must be in the following JSON format {{\"chartType\":\"summary\",\"term\":{{\"id\":\"{{"
+        + &summary_term
+        + "}}\"}}}}";
+    // Create RAG agent
+    let agent = AgentBuilder::new(comp_model)
+        .preamble(&system_prompt)
+        .dynamic_context(rag_docs_length, vector_store.index(embedding_model))
+        .temperature(0.0)
+        .build();
+
+    let response = agent.prompt(user_input).await.expect("Failed to prompt ollama");
+
+    //println!("Ollama: {}", response);
+    let result = response.replace("json", "").replace("```", "");
+    //println!("result:{}", result);
+    let json_value: Value = serde_json::from_str(&result).expect("REASON");
+    //println!("Classification result:{}", json_value);
+    json_value.to_string()
 }
