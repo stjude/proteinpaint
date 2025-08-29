@@ -1,5 +1,3 @@
-import type { NumericQ, NumericTW, VocabApi } from '#types'
-
 /*
 Routes numeric terms to their respective subhandlers. Functions follow the same naming convention as the other handler files and returns the results. 
 
@@ -22,13 +20,8 @@ export async function getHandler(self) {
 	return await _.getHandler(self)
 }
 
-export async function fillTW(tw: NumericTW, vocabApi: VocabApi, defaultQ: NumericQ | null = null) {
-	if (!tw.q.mode) {
-		if (!(defaultQ as null) || (defaultQ as NumericQ).mode) (tw.q as NumericQ).mode = 'discrete'
-	}
-	const subtype = tw.term.type == 'float' || tw.term.type == 'integer' || tw.term.type == 'date' ? 'toggle' : tw.q.mode
-	const _ = await importSubtype(subtype)
-	return await _.fillTW(tw, vocabApi, defaultQ)
+export async function fillTW() {
+	throw `migrate to using client/tw/TwRouter + static class.fill()`
 }
 
 async function importSubtype(subtype: string | undefined) {
