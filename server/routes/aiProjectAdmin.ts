@@ -58,8 +58,12 @@ function init({ genomes }) {
 				else if (req.method === 'DELETE') deleteProject(connection, query.project.id)
 				else throw new Error('Invalid request method for="admin" in aiProjectAdmin route.')
 
+				const projectId =
+					query.project.id || connection.prepare(`SELECT id FROM project WHERE name = ?`).get(query.project.name)
+
 				res.status(200).send({
 					status: 'ok',
+					projectId,
 					message: `Project ${query.project.name} processed successfully`
 				})
 			} else if (query.for === 'filterImages') {

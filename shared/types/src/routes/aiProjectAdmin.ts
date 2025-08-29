@@ -22,6 +22,7 @@ export type AIProjectAdminRequest = {
 export type AIProjectAdminResponse =
 	| {
 			status: 'ok' | 'error'
+			projectId?: number
 			error?: string
 			data?: { cols: any[]; rows: any[]; images: string[] }[]
 	  }
