@@ -1,4 +1,12 @@
-import type { MinBaseQ, BaseTW, TermValues, BaseTerm, GeneExpressionTerm } from '../index.ts'
+import type {
+	MinBaseQ,
+	BaseTW,
+	TermValues,
+	BaseTerm,
+	GeneExpressionTerm,
+	MetaboliteIntensityTerm,
+	DateTerm
+} from '../index.ts'
 
 export type RawRegularBin = Partial<RegularNumericBinConfig> & { preferredBins?: string }
 
@@ -38,12 +46,12 @@ export type NumericBaseTerm = BaseTerm & {
 
 export type NumericDictTerm = NumericBaseTerm & {
 	id?: string
-	type: 'integer' | 'float' | 'date' | 'metaboliteIntensity'
+	type: 'integer' | 'float'
 	bins: PresetNumericBins
 	values?: TermValues
 }
 
-export type NumericTerm = NumericDictTerm | GeneExpressionTerm
+export type NumericTerm = NumericDictTerm | GeneExpressionTerm | MetaboliteIntensityTerm | DateTerm
 
 export type StartUnboundedBin = {
 	// where possible, assign a concrete value (true) when it is known in advance,

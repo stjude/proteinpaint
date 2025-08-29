@@ -20,6 +20,7 @@ export async function getHandler(self) {
 	return await _.getHandler(self)
 }
 
+// this has been deprecated, should use TwRouter instead
 export async function fillTW() {
 	throw `migrate to using client/tw/TwRouter + static class.fill()`
 }

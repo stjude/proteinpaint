@@ -3,7 +3,8 @@ import type { TermSettingInstance } from '../termsetting.ts'
 
 // q types
 export type GvBaseQ = MinBaseQ & {
-	mode?: 'discrete' // may support 'continuous' for CNV?
+	// TODO: may uncomment below if q.mode is required in downstream code
+	// mode?: 'discrete' // may support 'continuous' for CNV?
 	cnvGainCutoff?: number
 	cnvMaxLength?: number
 	cnvMinAbsValue?: number
