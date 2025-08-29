@@ -54,7 +54,7 @@ export class CreateProjectRender {
 	}
 
 	private renderApplyBtn() {
-		this.dom.classDiv
+		const btn = this.dom.classDiv
 			.append('div')
 			.text('Apply')
 			.classed('sja_menuoption', true)
@@ -71,13 +71,15 @@ export class CreateProjectRender {
 				//  else InvalidDataUI.render(this.dom.errorDiv, invalidInfo)
 				// 	return
 				// }
+				btn.attr('disabled', true) //Don't allow multiple clicks
+
 				const selections: any = await this.interactions.getFilteredImages(this.filter)
 				if (this.filter && (selections.status != 'ok' || selections.data.length === 0)) {
 					alert('No images match your filter criteria.')
 					return
 				}
 
-				this.interactions.addProject({
+				await this.interactions.addProject({
 					project: {
 						filter: this.filter,
 						classes: this.classesTable!.rows.map((row, i) => {
