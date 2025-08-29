@@ -613,38 +613,38 @@
   },
   "plots/matrix/matrix.controls.js": {
     "lines": {
-      "total": 406,
+      "total": 412,
       "covered": 76,
       "skipped": 0,
-      "pct": 18.71
+      "pct": 18.44
     },
     "functions": {
-      "total": 141,
+      "total": 142,
       "covered": 26,
       "skipped": 0,
-      "pct": 18.43
+      "pct": 18.3
     },
     "statements": {
-      "total": 423,
+      "total": 429,
       "covered": 76,
       "skipped": 0,
-      "pct": 17.96
+      "pct": 17.71
     },
     "branches": {
-      "total": 375,
+      "total": 383,
       "covered": 40,
       "skipped": 0,
-      "pct": 10.66
+      "pct": 10.44
     },
     "lowestPct": {
-      "curr": 10.66,
+      "curr": 10.44,
       "prev": 10.69,
-      "diff": -0.02999999999999936
+      "diff": -0.25
     },
     "averagePct": {
-      "curr": 16.44,
+      "curr": 16.2225,
       "prev": 17.022499999999997,
-      "diff": -0.582499999999996
+      "diff": -0.7999999999999972
     }
   },
   "plots/matrix/matrix.data.js": {
