@@ -164,6 +164,10 @@ export class Scatter extends RxComponentInner {
 		}
 		return name2svg
 	}
+
+	preApiFreeze(api) {
+		api.getName2Svg = () => this.getName2Svg()
+	}
 }
 
 export async function getPlotConfig(opts, app) {
