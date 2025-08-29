@@ -49,34 +49,23 @@ export async function downloadSVGsAsPdf(name2svg, filename = 'charts.pdf') {
 	const pageWidth = doc.internal.pageSize.getWidth() - 10
 	const pageHeight = doc.internal.pageSize.getHeight() - 10
 
-	let item
 	const entries: any[] = Object.entries(name2svg)
 	let y = 50
+	const ratio = 72 / 96 //convert pixels to pt
+
 	for (const [name, svgObj] of entries) {
 		const svg = svgObj.node()
-		if (!item) item = addSvgToPdf(svg, name)
-		else item = item.then(() => addSvgToPdf(svg, name))
-	}
-	item.then(() => {
-		doc.deletePage(entries.length + 1) // Remove the last empty page
-		doc.save(filename)
-	})
-
-	function addSvgToPdf(svg, name) {
 		const rect = svg.getBoundingClientRect()
 		svg.setAttribute('viewBox', `0 0 ${rect.width} ${rect.height}`)
-		const ratio = 72 / 96 //convert pixels to pt
 		const width = Math.min(pageWidth, rect.width * ratio) - 20
 		const height = Math.min(pageHeight, rect.height * ratio) - 20
-		const item = doc.svg(svg, { x: 15, y, width, height }).then(() => {
-			doc.text(name, 30, y - 10)
-			y = y + height + 50
-
-			if (y + height > pageHeight - 20) {
-				doc.addPage()
-				y = 50
-			}
-		})
-		return item
+		if (y + height > pageHeight - 20) {
+			doc.addPage()
+			y = 50
+		}
+		doc.text(name, 30, y - 20)
+		await doc.svg(svg, { x: 15, y, width, height })
+		y = y + height + 50
 	}
+	doc.save(filename)
 }
