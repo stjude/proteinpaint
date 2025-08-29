@@ -8,8 +8,9 @@ import { Polygon } from 'ol/geom'
 import type { Geometry } from 'ol/geom'
 import { Fill, Stroke, Style } from 'ol/style'
 import type Settings from '#plots/wsiviewer/Settings.ts'
-import type { TileSelection } from '@sjcrh/proteinpaint-types'
+import type { Prediction, TileSelection } from '@sjcrh/proteinpaint-types'
 import type { SessionWSImage } from '#plots/wsiviewer/viewModel/SessionWSImage.ts'
+import type { SaveWSIAnnotationRequest } from '@sjcrh/proteinpaint-types/routes/saveWSIAnnotation.ts'
 
 export class WSIViewerInteractions {
 	thumbnailClickListener: (index: number) => void
@@ -32,6 +33,7 @@ export class WSIViewerInteractions {
 		map: OLMap,
 		activeImageExtent: any,
 		activePatchColor: string,
+		aiProjectID: number,
 		shortcuts?: string[],
 		buffers?: any
 	) => void
@@ -99,6 +101,7 @@ export class WSIViewerInteractions {
 			map: OLMap,
 			activeImageExtent: any,
 			activePatchColor: string,
+			aiProjectID: number,
 			shortcuts: string[] = [],
 			buffers: any
 		) => {
@@ -111,8 +114,8 @@ export class WSIViewerInteractions {
 
 			const sessionTileSelections = sessionWSImage?.sessionsTileSelections || []
 			const predictions = sessionWSImage?.predictions || []
-			const persistedAnnotationsData = sessionWSImage?.annotationsData || []
-			const annotationsData = [...sessionTileSelections, ...predictions, ...persistedAnnotationsData]
+			const annotations = sessionWSImage?.annotations || []
+			const annotationsData = [...sessionTileSelections, ...predictions, ...annotations]
 
 			holder.on('keydown', async (event: KeyboardEvent) => {
 				let currentIndex = buffers.annotationsIdx.get()
@@ -147,10 +150,16 @@ export class WSIViewerInteractions {
 				}
 
 				if (shortcuts.includes(event.code)) {
+					if (event.code === 'Enter' && !(annotationsData[currentIndex] as Prediction).uncertainty) {
+						// in case it's not a prediction, just ignore Enter press
+						return
+					}
+
 					//Update buffer to change table
-					let matchingClass = sessionWSImage?.classes?.find(c => c.shortcut === event.code)
+					let matchingClass = sessionWSImage?.classes?.find(c => c.key_shortcut === event.code)
+
 					if (!matchingClass) {
-						matchingClass = sessionWSImage?.classes?.find(c => c.label === annotationsData[currentIndex].class)
+						matchingClass = sessionWSImage?.classes?.find(c => c.label === predictions[currentIndex].class)
 					}
 					const tmpClass =
 						event.code === 'Enter' || matchingClass!.label == annotationsData[currentIndex].class
@@ -160,25 +169,28 @@ export class WSIViewerInteractions {
 
 					this.addAnnotation(vectorLayer!, annotationsData, currentIndex, matchingClass!.color, settings.tileSize)
 
-					const body = {
-						coordinates: annotationsData[currentIndex].zoomCoordinates, //Original x,y coordinates
-						index: buffers.annotationsIdx.get(),
-						confirmed: event.code === 'Enter',
-						class: event.code === 'Enter' ? null : event.code.replace('Digit', '').replace('Key', '')
-					}
+					const selectedClassId = sessionWSImage?.classes?.find(c => c.key_shortcut === event.code)?.id
 
-					//Advance to the next table row after annotating
-					const nextIdx = currentIndex + 1
-					if (nextIdx < annotationsData.length) {
-						buffers.annotationsIdx.set(nextIdx)
-						const coords = [annotationsData[nextIdx].zoomCoordinates] as unknown as [number, number][]
-						this.zoomInEffectListener(activeImageExtent, coords, map, activePatchColor)
+					// TODO fix hardcoded values
+					const body: SaveWSIAnnotationRequest = {
+						userId: 1,
+						coordinates: annotationsData[currentIndex].zoomCoordinates,
+						classId: selectedClassId!,
+						projectId: aiProjectID,
+						wsimageId: sessionWSImage.id ? sessionWSImage.id : 1
 					}
 
 					try {
-						await dofetch3('sampleWsiAiApi', { body })
+						await dofetch3('saveWSIAnnotation', { body })
+						//Advance to the next table row after annotating
+						const nextIdx = currentIndex + 1
+						if (nextIdx < annotationsData.length) {
+							buffers.annotationsIdx.set(nextIdx)
+							const coords = [annotationsData[nextIdx].zoomCoordinates] as unknown as [number, number][]
+							this.zoomInEffectListener(activeImageExtent, coords, map, activePatchColor)
+						}
 					} catch (e) {
-						console.error('Error in sampleWsiAiApi request:', e)
+						console.error('Error in saveWSIAnnotation request:', e)
 					}
 				}
 			})
@@ -195,7 +207,7 @@ export class WSIViewerInteractions {
 			const settings: Settings = state.plots.find(p => p.id === wsiApp.id).settings
 			const currentTileSelection = settings.sessionsTileSelection
 			const predictions = sessionWSImage?.predictions || []
-			const persistedAnnotationsData = sessionWSImage?.annotationsData || []
+			const persistedAnnotationsData = sessionWSImage?.annotations || []
 
 			const annotationsData = [...currentTileSelection, ...predictions, ...persistedAnnotationsData]
 

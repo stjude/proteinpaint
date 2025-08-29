@@ -7,6 +7,7 @@
 // since dynamic import plugin is not yet supported
 export const routeFiles = [
 	import('../routes/aiProjectAdmin.ts'),
+	import('../routes/aiProjectSelectedWSImages.ts'),
 	import('../routes/brainImaging.ts'),
 	import('../routes/brainImagingSamples.ts'),
 	import('../routes/burden.ts'),
@@ -34,7 +35,7 @@ export const routeFiles = [
 	import('../routes/pdomain.ts'),
 	import('../routes/sampledzimages.ts'),
 	import('../routes/samplewsimages.ts'),
-	import('../routes/sampleWsiAiApi.ts'),
+	import('../routes/saveWSIAnnotation.js'),
 	import('../routes/snp.ts'),
 	import('../routes/termdb.DE.ts'),
 	import('../routes/termdb.boxplot.ts'),
