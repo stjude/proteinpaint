@@ -2,10 +2,10 @@ import type { RouteApi } from '#types'
 import { aiProjectAdminPayload } from '#types/checkers'
 import { getDbConnection } from '#src/aiHistoDBConnection.js'
 import { runSQL, runMultiStmtSQL } from '#src/runSQLHelpers.ts'
+import type Database from 'better-sqlite3'
 
-const routePath = 'aiProjectAdmin'
 export const api: RouteApi = {
-	endpoint: `${routePath}`,
+	endpoint: 'aiProjectAdmin',
 	methods: {
 		get: {
 			//all requests
@@ -42,7 +42,7 @@ function init({ genomes }) {
 
 			if (!ds.queries?.WSImages?.db) throw new Error('WSImages database not found.')
 
-			const connection = getDbConnection(ds)
+			const connection = getDbConnection(ds) as Database.Database
 
 			/** get list of projects from db */
 			if (query.for === 'list') {
@@ -91,14 +91,14 @@ function init({ genomes }) {
 	}
 }
 
-function getProjects(connection: any) {
+function getProjects(connection: Database.Database): Database.RunResult | any[] {
 	const sql = 'SELECT name, id FROM project'
 	return runSQL(connection, sql)
 }
 
-function getImages(connection: any, project: any) {
+function getImages(connection: Database.Database, project: any): Database.RunResult | any[] {
 	if (!project.id) {
-		const res = connection.prepare(`SELECT id FROM project WHERE name = ?`).get(project.name)
+		const res: any = connection.prepare(`SELECT id FROM project WHERE name = ?`).get(project.name)
 		project.id = res.id
 	}
 
@@ -106,10 +106,10 @@ function getImages(connection: any, project: any) {
 	return runSQL(connection, sql)
 }
 
-function editProject(connection: any, project: any) {
+function editProject(connection: Database.Database, project: any): void {
 	const stmts: { sql: string; params: any[] }[] = []
 	if (!project.id) {
-		const res = connection.prepare(`SELECT id FROM project WHERE name = ?`).get(project.name)
+		const res: any = connection.prepare(`SELECT id FROM project WHERE name = ?`).get(project.name)
 		project.id = res.id
 	}
 
@@ -159,7 +159,7 @@ function editProject(connection: any, project: any) {
 	runMultiStmtSQL(connection, stmts, 'add')
 }
 
-function deleteProject(connection: any, projectId: number) {
+function deleteProject(connection: Database.Database, projectId: number): void {
 	if (!projectId) throw new Error('Invalid project ID [aiProjectAdmin route deleteProject()]')
 	// Deletes ** ALL ** project data
 	const stmts = [
@@ -172,16 +172,14 @@ function deleteProject(connection: any, projectId: number) {
 	runMultiStmtSQL(connection, stmts, 'delete')
 }
 
-function addProject(connection: any, project: any) {
+function addProject(connection: Database.Database, project: any): void {
 	//Add project record
 	const projectSql = `INSERT INTO project (name, filter) VALUES (?, ?)`
 	const projectParams = [project.name, JSON.stringify(project.filter)]
-	const rows = runSQL(connection, projectSql, projectParams, 'add')
+	const row = runSQL(connection, projectSql, projectParams, 'add') as Database.RunResult
 
 	//Add corresponding project classes
 	const classSql = `INSERT INTO project_classes (project_id, label, color, key_shortcut) VALUES (?, ?, ?, ?)`
-	const classParams = project.classes.map((c: any) => [rows.lastInsertRowid, c.label, c.color, c.key_shortcut || ''])
-	for (const params of classParams) {
-		runSQL(connection, classSql, params, 'add')
-	}
+	const classParams = project.classes.map((c: any) => [row.lastInsertRowid, c.label, c.color, c.key_shortcut || ''])
+	runMultiStmtSQL(connection, [{ sql: classSql, params: classParams }], 'add')
 }
