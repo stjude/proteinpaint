@@ -51,7 +51,7 @@ export class ViewModel {
 	}
 
 	private setAnnonationsTableData(imageViewData: ImageViewData, imageData: SessionWSImage) {
-		if (!imageData?.annotations?.length) return
+		if (!imageData?.annotations?.length && !imageData?.predictions?.length) return
 
 		// Map session annotations to the same format, starting index at 0
 		const sessionsTileSelections: any = imageData.sessionsTileSelections?.map((d, i) => {
