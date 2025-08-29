@@ -26,8 +26,7 @@
     "#tw/*": "./tw/*.ts",
     "#types": "@sjcrh/proteinpaint-types",
     "#types/*": "@sjcrh/proteinpaint-types/*",
-    "#routes/*": "@sjcrh/proteinpaint-types/routes/*",
-    "#updated-types": "@sjcrh/proteinpaint-types/src/terms/updated-types.ts"
+    "#routes/*": "@sjcrh/proteinpaint-types/routes/*"
   },
   "scripts": {
     "dev": "./dev.sh",

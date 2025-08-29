@@ -1,5 +1,4 @@
-import type { TermWrapper, Q } from '@sjcrh/proteinpaint-types/updated'
-import type { Term } from '#types'
+import type { Term, TermWrapper, Q } from '#types'
 import type { SetCellPropsSignature } from '../plots/matrix/matrix.xtw.ts'
 
 export type TwOpts = {

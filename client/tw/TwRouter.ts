@@ -1,4 +1,4 @@
-import type { TermWrapper } from '@sjcrh/proteinpaint-types/updated'
+import type { TermWrapper } from '#types'
 import type { TwOpts, TwBase } from './TwBase'
 import { mayHydrateDictTwLst } from '../termsetting/termsetting.ts'
 // TODO: may convert these to dynamic imports
