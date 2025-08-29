@@ -7,7 +7,7 @@ import type {
 	AiProjectSelectedWSImagesResponse
 } from '@sjcrh/proteinpaint-types/routes/aiProjectSelectedWSImages.ts'
 import { aiProjectSelectedWSImagesResponsePayload } from '@sjcrh/proteinpaint-types/routes/aiProjectSelectedWSImages.ts'
-import { getDbConnection } from '#src//aiHistoDBConnection.ts'
+import { getDbConnection } from '#src/aiHistoDBConnection.ts'
 import type Database from 'better-sqlite3'
 
 /*
