@@ -1,6 +1,3 @@
-import type { NumericQ, VocabApi, MetaboliteIntensityTW } from '#types'
-import { copyMerge } from '#rx'
-
 /*
 Routes numeric terms to their respective subhandlers. Functions follow the same naming convention as the other handler files and returns the results. 
 
@@ -23,14 +20,9 @@ export async function getHandler(self) {
 	return await _.getHandler(self)
 }
 
-export async function fillTW(tw: MetaboliteIntensityTW, vocabApi: VocabApi, defaultQ: NumericQ | null = null) {
-	if (!tw.q?.mode) tw.q = { mode: 'continuous' }
-	if (defaultQ) copyMerge(tw.q, defaultQ) // override if default is given
-
-	if (tw.q.mode != 'continuous' && !tw.term.bins) {
-		await vocabApi.setTermBins(tw)
-	}
-	return tw
+// this has been deprecated, should use TwRouter instead
+export async function fillTW() {
+	throw `migrate to using client/tw/TwRouter + static class.fill()`
 }
 
 async function importSubtype(subtype: string | undefined) {
