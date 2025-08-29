@@ -1097,7 +1097,8 @@ export class MatrixControls {
 						{},
 						{
 							holder,
-							dispatch: app.dispatch,
+							app,
+							dispatch: action => app.dispatch(action),
 							id: parent.id,
 							debug: this.opts.debug,
 							parent
@@ -1146,6 +1147,7 @@ export class MatrixControls {
 						{},
 						{
 							holder,
+							app,
 							id: parent.id,
 							debug: self.opts.debug,
 							parent
