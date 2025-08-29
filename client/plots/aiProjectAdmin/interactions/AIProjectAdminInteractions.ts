@@ -50,7 +50,8 @@ export class AIProjectAdminInteractions {
 			project
 		}
 		try {
-			await this.prjtRepo.updateProject(body, 'POST')
+			const res = (await this.prjtRepo.updateProject(body, 'POST')) as any
+			if (!project.id) project.id = res.projectId
 		} catch (e: any) {
 			console.error('Error editing project:', e.message || e)
 			throw e
