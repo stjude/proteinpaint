@@ -1128,6 +1128,9 @@ function setInteractivity(self) {
 		dm.show(event.clientX, event.clientY)
 	}
 
+	/** TODO:  Move this function to the downloadMenu component and adapt it to create a single svg from the dictionary name2svg.
+	 * this function will be used from the download menu when selection option to create a single svg from multiple svgs
+	 */
 	self.download2 = function () {
 		if (!self.state) return
 		// has to be able to handle multichart view
