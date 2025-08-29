@@ -1,5 +1,6 @@
-import { select } from 'd3-selection'
 import type { Report } from '../report.ts'
+import { icons as icon_functions } from '#dom/control.icons'
+import { CategoryFiltersUI } from '#dom/categoryFiltersUI'
 
 export class ReportView {
 	opts: any
@@ -19,7 +20,21 @@ export class ReportView {
 			.style('display', 'inline-block')
 			.style('vertical-align', 'top')
 			.style('padding', '20px')
-		const headerDiv = mainDiv.append('div')
+		const headerDiv = mainDiv.append('div').style('padding', '10px')
+		this.report.selectFilters = new CategoryFiltersUI(headerDiv, this.report, this.report.config)
+
+		const downloadDiv = headerDiv
+			.append('div')
+			.style('display', 'inline-block')
+			.style('padding-left', '10px')
+			.style('vertical-align', 'middle')
+		icon_functions['pdf'](downloadDiv, {
+			handler: () => this.report.downloadReport(),
+			title: 'Download the report',
+			width: 20,
+			height: 20
+		})
+
 		const plotsDiv = mainDiv.append('div')
 
 		this.dom = {
@@ -33,8 +48,6 @@ export class ReportView {
 		if (this.dom.header) {
 			this.dom.header.html(this.report.config.name || 'Summary Report')
 		}
-		document.addEventListener('scroll', () => this?.dom?.tooltip?.hide())
-		select('.sjpp-output-sandbox-content').on('scroll', () => this.dom.tooltip.hide())
 	}
 
 	getControlInputs() {
