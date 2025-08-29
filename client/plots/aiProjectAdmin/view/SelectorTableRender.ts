@@ -52,7 +52,7 @@ export class SelectorTableRender {
 	}
 
 	private renderApplyBtn() {
-		this.dom.btnDiv
+		const btn = this.dom.btnDiv
 			.append('div')
 			.text('Apply')
 			.classed('sja_menuoption', true)
@@ -60,6 +60,7 @@ export class SelectorTableRender {
 			.style('width', 'fit-content')
 			.style('margin-left', '5vw')
 			.on('click', async () => {
+				btn.attr('disabled', true) //Don't allow multiple clicks
 				const images = Array.from(this.selectedRows).map((_, i) => this.images.rows[i][0].value)
 				await this.interactions.editProject({
 					project: {
