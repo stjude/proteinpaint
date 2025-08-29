@@ -1,6 +1,4 @@
-import type { TermWrapper } from './tw.ts'
-import type { BaseQ } from './term.ts'
-import type { NumericTerm } from './numeric.ts'
+import type { BaseQ, BaseTW, NumericBaseTerm } from '../index'
 import type { TermSettingInstance } from '../termsetting.ts'
 
 /*
@@ -15,14 +13,18 @@ export type MetaboliteIntensityQ = BaseQ & {
 	mode: 'continuous'
 }
 
-export type MetaboliteIntensityTW = TermWrapper & {
+export type MetaboliteIntensityTW = BaseTW & {
+	type: string // 'NumTWCont'
 	q: MetaboliteIntensityQ
 	term: MetaboliteIntensityTerm
 }
 
-export type MetaboliteIntensityTerm = NumericTerm & {
+export type MetaboliteIntensityTerm = NumericBaseTerm & {
+	name?: string
+	type: 'metaboliteIntensity'
 	metabolite: string
 	bins: any
+	unit?: string
 }
 
 export type MetaboliteIntensityTermSettingInstance = TermSettingInstance & {
