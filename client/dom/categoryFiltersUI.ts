@@ -10,27 +10,18 @@ export class CategoryFiltersUI {
 	config: any
 
 	constructor(holder: any, plot: any, config: any) {
-		holder
-			.style('padding', '10px')
-			.style('display', 'flex')
-			.style('flex-direction', 'row')
-			.style('flex-wrap', 'wrap')
-			.style('width', '100vw')
 		this.plot = plot
-		this.holder = holder
+		this.holder = holder.style('margin', '10px')
 		this.config = config
 		for (const tw of this.plot.config.filterTWs) {
-			const div = this.holder.append('div').style('padding', '10px')
-			const button = div
-				.append('button')
-				.style('vertical-align', 'top')
-				.on('click', () => {
-					const display = select.style('display')
-					const selectedOptions = Array.from(select.node().selectedOptions)
-					const selection = selectedOptions.map((o: any) => o.text).join(', ')
-					button.text(display === 'none' ? ` ${tw.term.name}: ${selection} ▲` : ` ${tw.term.name}: ${selection} ▼`)
-					select.style('display', display === 'none' ? 'block' : 'none')
-				})
+			const div = this.holder.append('div').style('padding', '10px').style('display', 'inline-block')
+			const button = div.append('button').on('click', () => {
+				const display = select.style('display')
+				const selectedOptions = Array.from(select.node().selectedOptions)
+				const selection = selectedOptions.map((o: any) => o.text).join(', ')
+				button.text(display === 'none' ? ` ${tw.term.name}: ${selection} ▲` : ` ${tw.term.name}: ${selection} ▼`)
+				select.style('display', display === 'none' ? 'block' : 'none')
+			})
 			const filterValues = config?.settings[this.plot.type][tw.term.id] || []
 			button.text(` ${tw.term.name}: ${filterValues.map((o: any) => tw.term.values[o].label || o).join(', ')} ▼`)
 

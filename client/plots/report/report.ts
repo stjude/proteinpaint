@@ -3,7 +3,6 @@ import { fillTermWrapper } from '#termsetting'
 import { ReportView } from './view/reportView'
 import { RxComponentInner } from '../../types/rx.d'
 import { controlsInit } from '../controls.js'
-import { CategoryFiltersUI } from '#dom/categoryFiltersUI'
 import { importPlot } from '#plots/importPlot.js'
 
 export class Report extends RxComponentInner {
@@ -26,7 +25,7 @@ export class Report extends RxComponentInner {
 	async init(appState) {
 		this.config = appState.plots.find(p => p.id === this.id)
 		this.view = new ReportView(this)
-		this.selectFilters = new CategoryFiltersUI(this.view.dom.headerDiv, this, this.config)
+
 		this.components = { plots: {} }
 		const state = this.getState(appState)
 		for (const section of state.config.sections) {
@@ -120,6 +119,62 @@ export class Report extends RxComponentInner {
 				inputs
 			})
 		}
+	}
+
+	async downloadReport() {
+		const JSPDF = await import('jspdf')
+		const { jsPDF } = JSPDF
+		/*
+		When imported, the svg2pdf.js module modifies or extends the jsPDF library (which we already imported).
+		The code inside svg2pdf.js adds a new method (.svg()) to the jsPDF object prototype, making that functionality available on all jsPDF instances.
+		Therefore, a simple import 'svg2pdf.js' without curly braces is all that is needed to apply its functionality. 
+		*/
+		await import('svg2pdf.js') // This import extends jsPDF with SVG functionality
+		const doc = new jsPDF('p', 'pt', 'a4') // p for portrait, l for landscape, points, A4 size
+		const pageWidth = doc.internal.pageSize.getWidth() - 10
+		const pageHeight = doc.internal.pageSize.getHeight() - 10
+		const ratio = 72 / 96 //convert pixels to pt
+
+		let y = 40
+		const x = 20
+		doc.setFontSize(12)
+		doc.text(this.config.sections[0].name, x, y)
+		doc.setFontSize(10)
+		for (const section of this.config.sections) {
+			for (const plotConfig of section.plots) {
+				const plot = this.components.plots[plotConfig.id]
+				console.log(plot)
+				if (plot?.getName2Svg) {
+					const name2svg = plot.getName2Svg()
+					const entries: any[] = Object.entries(name2svg)
+
+					for (const [name, svgObj] of entries) {
+						const svg = svgObj.node()
+						const rect = svg.getBoundingClientRect()
+						svg.setAttribute('viewBox', `0 0 ${rect.width} ${rect.height}`)
+						const width = Math.min(pageWidth, rect.width * ratio) - 20
+						const height = Math.min(pageHeight, rect.height * ratio) - 20
+						if (y + height > pageHeight - 20) {
+							doc.addPage()
+							y = 40
+						}
+						if (y == 40) {
+							//new page, add section
+							doc.setFontSize(12)
+							doc.text(section.name, x, 40)
+							doc.setFontSize(10)
+							y += 30
+						}
+						doc.text(name, x, y)
+						y += 20
+						await doc.svg(svg, { x, y, width, height })
+						y = y + height + 30
+					}
+				}
+			}
+		}
+		if (y == 40) doc.deletePage(doc.internal.getNumberOfPages()) //delete last page if nothing added
+		doc.save('report.pdf')
 	}
 }
 
