@@ -38,6 +38,7 @@ export type ConditionTerm = BaseTerm & {
  * @category TW
  */
 export type ConditionTW = BaseTW & {
+	type: 'ConditionTW'
 	term: ConditionTerm
 	q: ConditionQ //replace the generic Q with specific condition Q
 }
