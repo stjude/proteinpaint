@@ -119,8 +119,10 @@ export class WSIViewer extends RxComponentInner {
 
 		this.metadataRenderer.renderMetadata(holder, imageViewData)
 
+		// TODO simplify the if condition
 		if (
-			viewModel.sampleWSImages[settings.displayedImageIndex].annotations &&
+			(viewModel.sampleWSImages[settings.displayedImageIndex].annotations ||
+				viewModel.sampleWSImages[settings.displayedImageIndex].predictions) &&
 			settings.renderAnnotationTable &&
 			this.map
 		) {
@@ -143,6 +145,7 @@ export class WSIViewer extends RxComponentInner {
 					this.map,
 					activeImageExtent,
 					imageViewData.activePatchColor!,
+					aiProjectID,
 					imageViewData.shortcuts,
 					buffers
 				)

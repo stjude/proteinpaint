@@ -8,7 +8,7 @@ import { Polygon } from 'ol/geom'
 import type { Geometry } from 'ol/geom'
 import { Fill, Stroke, Style } from 'ol/style'
 import type Settings from '#plots/wsiviewer/Settings.ts'
-import type { TileSelection } from '@sjcrh/proteinpaint-types'
+import type { Prediction, TileSelection } from '@sjcrh/proteinpaint-types'
 import type { SessionWSImage } from '#plots/wsiviewer/viewModel/SessionWSImage.ts'
 import type { SaveWSIAnnotationRequest } from '@sjcrh/proteinpaint-types/routes/saveWSIAnnotation.ts'
 
@@ -33,6 +33,7 @@ export class WSIViewerInteractions {
 		map: OLMap,
 		activeImageExtent: any,
 		activePatchColor: string,
+		aiProjectID: number,
 		shortcuts?: string[],
 		buffers?: any
 	) => void
@@ -100,6 +101,7 @@ export class WSIViewerInteractions {
 			map: OLMap,
 			activeImageExtent: any,
 			activePatchColor: string,
+			aiProjectID: number,
 			shortcuts: string[] = [],
 			buffers: any
 		) => {
@@ -148,10 +150,16 @@ export class WSIViewerInteractions {
 				}
 
 				if (shortcuts.includes(event.code)) {
+					if (event.code === 'Enter' && !(annotationsData[currentIndex] as Prediction).uncertainty) {
+						// in case it's not a prediction, just ignore Enter press
+						return
+					}
+
 					//Update buffer to change table
 					let matchingClass = sessionWSImage?.classes?.find(c => c.key_shortcut === event.code)
+
 					if (!matchingClass) {
-						matchingClass = sessionWSImage?.classes?.find(c => c.label === annotationsData[currentIndex].class)
+						matchingClass = sessionWSImage?.classes?.find(c => c.label === predictions[currentIndex].class)
 					}
 					const tmpClass =
 						event.code === 'Enter' || matchingClass!.label == annotationsData[currentIndex].class
@@ -161,18 +169,16 @@ export class WSIViewerInteractions {
 
 					this.addAnnotation(vectorLayer!, annotationsData, currentIndex, matchingClass!.color, settings.tileSize)
 
+					const selectedClassId = sessionWSImage?.classes?.find(c => c.key_shortcut === event.code)?.id
+
 					// TODO fix hardcoded values
 					const body: SaveWSIAnnotationRequest = {
 						userId: 1,
 						coordinates: annotationsData[currentIndex].zoomCoordinates,
-						classId: 1,
-						projectId: 1,
+						classId: selectedClassId!,
+						projectId: aiProjectID,
 						wsimageId: sessionWSImage.id ? sessionWSImage.id : 1
 					}
-
-					// index: buffers.annotationsIdx.get(),
-					// confirmed: event.code === 'Enter',
-					// class: event.code === 'Enter' ? null : event.code.replace('Digit', '').replace('Key', '')
 
 					try {
 						await dofetch3('saveWSIAnnotation', { body })
