@@ -1,1 +1,2 @@
-
+Fixes:
+- fix divide-by error by passing app argument to initByInput in matrix.controls
