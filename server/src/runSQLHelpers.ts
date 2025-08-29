@@ -26,12 +26,17 @@ export function runMultiStmtSQL(
 }
 
 /** Run only one SQL statement at a time */
-export function runSQL(connection: Database.Database, sql: string, params: string[] = [], errorText = 'fetch') {
+export function runSQL(
+	connection: Database.Database,
+	sql: string,
+	params: string[] = [],
+	errorText = 'fetch'
+): Database.RunResult | any[] {
 	try {
 		if (!params.length) {
-			return connection.prepare(sql).all()
+			return connection.prepare(sql).all() satisfies any[]
 		}
-		return connection.prepare(sql).run(params)
+		return connection.prepare(sql).run(params) satisfies Database.RunResult
 	} catch (e: any) {
 		console.error(`Error executing SQL for ${errorText}: ${e.message || e}`)
 		throw new Error(`Failed to ${errorText}`)
