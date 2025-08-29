@@ -1,4 +1,4 @@
-import type { TermWrapper, VariableItemEntry } from '#types'
+import type { TermWrapper, VariableItemEntry, NumericTW } from '#types'
 import type { Elem, SvgG, SvgSvg, SvgText } from '../../types/d3.js'
 import type { Menu } from '#dom'
 import type { BasePlotConfig } from '#mass/types/mass'
@@ -39,7 +39,7 @@ export type CorrVolcanoSettings = {
 
 export type CorrVolcanoPlotConfig = BasePlotConfig & {
 	/** Numeric term used to plot */
-	featureTw: TermWrapper
+	featureTw: NumericTW
 }
 
 export type CorrVolcanoDom = {
