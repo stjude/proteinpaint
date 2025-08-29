@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Fixes:
+- fix divide-by error by passing app argument to initByInput in matrix.controls
+
+
 ## 2.140.1
 
 Fixes:
