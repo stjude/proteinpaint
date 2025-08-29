@@ -1,0 +1,8 @@
+The summary shows all the information of all the samples present in TermdbTest. Summary terms for TermdbTest is "diaggrp". If the search query is pertaining to summary chart, return JSON "diaggrp"as the answer. 
+summary=diaggrp
+
+Test user query1: Show me the summary plot for Termdbtest
+Output JSON query1: {"chartType":"summary","term":{"id":"diaggrp"}}
+
+Test user query2: Show summary plot
+Output JSON query1: {"chartType":"summary","term":{"id":"diaggrp"}}
