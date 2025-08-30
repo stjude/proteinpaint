@@ -1,19 +1,6 @@
 import { Tabs } from '#dom'
-import { getPillNameDefault, set_hiddenvalues } from '../termsetting'
-import { copyMerge } from '#rx'
+import { getPillNameDefault } from '../termsetting'
 import type { PillData, HandlerGenerator, Handler } from '../types'
-import type { VocabApi } from '#types'
-import { roundValueAuto } from '#shared/roundValue.js'
-import type {
-	NumericQ,
-	DefaultMedianQ,
-	DefaultBinnedQ,
-	DefaultNumericQ,
-	BinaryNumericQ,
-	StartUnboundedBin,
-	StopUnboundedBin,
-	BinnedNumericQ
-} from '#types'
 
 /*
 ********************** EXPORTED
@@ -25,7 +12,6 @@ getHandler(self)
 fillTW()
 ********************** INTERNAL
 	set_hiddenvalues()
-	valid_binscheme()
 */
 
 type NumericTabCallback = (event: PointerEvent, tab: TabData) => void
@@ -132,89 +118,4 @@ export async function getHandler(self) {
 			}).main()
 		}
 	}
-}
-
-export async function fillTW(tw, vocabApi: VocabApi, defaultQ?: DefaultNumericQ) {
-	// when missing, defaults mode to discrete
-	//const dq = defaultQ as DefaultNumericQ
-	if (!tw.q.mode && !(defaultQ as DefaultNumericQ)?.mode) (tw.q as NumericQ).mode = 'discrete'
-
-	if (tw.q.mode !== 'continuous' && !valid_binscheme(tw.q as BinnedNumericQ)) {
-		/*
-		if q is already initiated, do not overwrite
-		to be tested if can work with partially declared state
-		always copies from .bins.default
-		*/
-		copyMerge(tw.q, tw.term.bins.default)
-	}
-
-	if (defaultQ) {
-		defaultQ.isAtomic = true
-		const dmq = defaultQ as DefaultMedianQ
-		const dbq = defaultQ as DefaultBinnedQ
-		if (dmq.preferredBins == 'median') {
-			const q = dmq
-			/*
-			do following computing to fill the q{} object
-			call vocab method to get median value (without filter)
-			and create custom list of two bins
-			used for cuminc overlay/divideby
-			*/
-			if (!q.type || q.type != 'custom-bin') throw '.type must be custom-bin when .preferredBins=median'
-			const result = await vocabApi.getPercentile(tw.term, [50])
-			if (!result.values) throw '.values[] missing from vocab.getPercentile()'
-			const median = roundValueAuto(result.values[0])
-			if (!Number.isFinite(median)) throw 'median value not a number'
-			const medianQ = JSON.parse(JSON.stringify(defaultQ))
-			delete medianQ.preferredBins
-			tw.q = medianQ as BinaryNumericQ
-			tw.q.lst = [
-				{
-					startunbounded: true,
-					stop: median,
-					stopinclusive: false,
-					label: '<' + median // if label is missing, cuminc will break with "unexpected seriesId", cuminc.js:367
-				} as StartUnboundedBin,
-				{
-					start: median,
-					startinclusive: true,
-					stopunbounded: true,
-					label: '≥' + median
-				} as StopUnboundedBin
-			]
-		} else if (dbq.preferredBins == 'less' || dbq.preferredBins == 'default') {
-			/* this flag is true, use term.bins.less
-			in this case, defaultQ{} is not an actual q{} object
-			*/
-			tw.q = JSON.parse(JSON.stringify(tw.term.bins[dbq.preferredBins]))
-		} else {
-			// defaultQ is an actual q{} object
-			// merge it into tw.q
-			copyMerge(tw.q, defaultQ)
-		}
-	}
-
-	set_hiddenvalues(tw.q, tw.term)
-}
-
-// return false for failed validation
-// TODO this may not be needed as checks are auto-done by ts?
-function valid_binscheme(q: BinnedNumericQ) {
-	/*if (q.mode == 'continuous') { console.log(472, q)
-		// only expect a few keys for now "mode", "scale", "transform" keys for now
-		const supportedKeys = ['mode', 'scale', 'transform']
-		const unsupportedKeys = Object.keys(q).filter(key => supportedKeys.includes(key))
-		if (unsupportedKeys.length) return false 
-		// throw `${JSON.stringify(unsupportedKeys)} not supported for q.mode='continuous'`
-		return true
-	}*/
-
-	if (q.type == 'custom-bin') {
-		if (!Array.isArray(q.lst)) return false
-		return true
-	}
-	if (Number.isFinite(q.bin_size) && q.first_bin) {
-		if (Number.isFinite(q.first_bin.stop)) return true
-	}
-	return false
 }

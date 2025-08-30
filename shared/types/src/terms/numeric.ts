@@ -1,4 +1,12 @@
-import type { MinBaseQ, BaseTW, TermValues, BaseTerm, GeneExpressionTerm } from '../index.ts'
+import type {
+	MinBaseQ,
+	BaseTW,
+	TermValues,
+	BaseTerm,
+	GeneExpressionTerm,
+	MetaboliteIntensityTerm,
+	DateTerm
+} from '../index.ts'
 
 export type RawRegularBin = Partial<RegularNumericBinConfig> & { preferredBins?: string }
 
@@ -38,12 +46,12 @@ export type NumericBaseTerm = BaseTerm & {
 
 export type NumericDictTerm = NumericBaseTerm & {
 	id?: string
-	type: 'integer' | 'float' | 'date'
+	type: 'integer' | 'float'
 	bins: PresetNumericBins
 	values?: TermValues
 }
 
-export type NumericTerm = NumericDictTerm | GeneExpressionTerm
+export type NumericTerm = NumericDictTerm | GeneExpressionTerm | MetaboliteIntensityTerm | DateTerm
 
 export type StartUnboundedBin = {
 	// where possible, assign a concrete value (true) when it is known in advance,
@@ -100,25 +108,6 @@ export type CustomNumericBinConfig = MinBaseQ & {
 	lst: [NumericBin, ...NumericBin[]]
 	preferredBins?: 'median'
 }
-
-// |
-// {
-// 	type?: 'custom-bin'
-// 	mode?: 'discrete' | 'binary'
-// 	// since ts will allow NumericBin[] to be empty,
-// 	// use this workaround to define a non-empty array
-// 	lst?: [NumericBin, ...NumericBin[]]
-// }
-
-/*export type NumericQ = BaseQ & {
-	// termType: 'float' | 'integer' -- converts to 'numeric'
-	preferredBins?: 'median' | 'less' | 'default'
-	modeBinaryCutoffType: 'normal' | 'percentile'
-	modeBinaryCutoffPercentile?: number
-	knots?: any //[]?
-	scale?: number //0.1 | 0.01 | 0.001
-	rounding: string
-}*/
 
 export type PresetNumericBins = {
 	default: RegularNumericBinConfig | CustomNumericBinConfig

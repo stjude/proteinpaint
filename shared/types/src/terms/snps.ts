@@ -72,6 +72,7 @@ export type SnpsTerm = BaseTerm & {
 }
 
 export type SnpsTW = BaseTW & {
+	type: 'SnpsTW'
 	q: SnpsQ
 	term: SnpsTerm
 }

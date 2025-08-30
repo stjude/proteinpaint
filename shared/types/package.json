@@ -7,7 +7,6 @@
   "module": "src/index.ts",
   "exports": {
     ".": "./src/index.ts",
-    "./updated": "./src/terms/updated-types.ts",
     "./routes/*": "./src/routes/*",
     "./checkers": "./dist/index.js"
   },

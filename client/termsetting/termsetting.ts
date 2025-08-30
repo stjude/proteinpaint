@@ -5,6 +5,8 @@ import { minimatch } from 'minimatch'
 import type {
 	CategoricalQ,
 	Q,
+	RawValuesQ,
+	RawGvQ,
 	TermWrapper,
 	TwLst,
 	NumericQ,
@@ -15,7 +17,8 @@ import type {
 	NoTermPromptOptsEntry,
 	Filter,
 	SampleCountsEntry,
-	Term
+	Term,
+	GvPredefinedGsTW
 } from '#types'
 import type { TermSettingOpts, Handler, PillData } from './types'
 import { TermTypes, isDictionaryType, isNumericTerm } from '#shared/terms.js'
@@ -680,7 +683,8 @@ function setInteractivity(self) {
 				options.push({
 					label: groupset.name,
 					callback: async () => {
-						const tw: TermWrapper = {
+						const tw: GvPredefinedGsTW = {
+							type: 'GvPredefinedGsTW',
 							isAtomic: true,
 							term: self.term,
 							q: { type: 'predefined-groupset', predefined_groupset_idx: i, isAtomic: true }
@@ -1079,7 +1083,8 @@ function mayValidateQmode(tw: TermWrapper) {
 	// e.g. to prevent cases such as mode=continuous for categorical term
 }
 
-export function set_hiddenvalues(q: Q, term: Term) {
+// TODO: create and use a RawQ type that combines all raw q types
+export function set_hiddenvalues(q: Q | RawValuesQ | RawGvQ, term: Term) {
 	if (!q.hiddenValues) {
 		q.hiddenValues = {}
 		// by default, fill-in with uncomputable values

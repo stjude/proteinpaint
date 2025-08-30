@@ -1,16 +1,7 @@
 import { GroupSettingMethods } from './groupsetting.ts'
-import { getPillNameDefault, set_hiddenvalues } from '../termsetting.ts'
-import type {
-	BaseGroupSet,
-	GroupEntry,
-	CategoricalQ,
-	CategoricalTerm,
-	CategoricalTW,
-	CategoricalTermSettingInstance,
-	VocabApi
-} from '#types'
+import { getPillNameDefault } from '../termsetting.ts'
+import type { BaseGroupSet, GroupEntry, CategoricalQ, CategoricalTerm, CategoricalTermSettingInstance } from '#types'
 import type { PillData } from '../types'
-import { copyMerge } from '#rx'
 
 /*
 ********************** EXPORTED
@@ -132,26 +123,4 @@ export function setCategoryMethods(self: CategoricalTermSettingInstance) {
 		}
 		return { text: 'Unknown setting for groupsetting', bgcolor: 'red' }
 	}
-}
-
-export function fillTW(tw: CategoricalTW, vocabApi: VocabApi, defaultQ: CategoricalQ | null = null) {
-	if (!Object.keys(tw.q).includes('type')) tw.q.type = 'values' // must fill default q.type if missing
-
-	if (!tw.term.groupsetting) tw.term.groupsetting = { disabled: true }
-
-	if (tw.q.type == 'predefined-groupset') {
-		if (!Number.isInteger(tw.q.predefined_groupset_idx)) throw 'predefined_groupset_idx is not an integer'
-	}
-
-	if (tw.q.type == 'custom-groupset') {
-		if (!tw.q.customset) throw 'invalid customset'
-	}
-
-	if (defaultQ) {
-		defaultQ.isAtomic = true
-		// merge defaultQ into tw.q
-		copyMerge(tw.q, defaultQ)
-	}
-
-	set_hiddenvalues(tw.q, tw.term)
 }

@@ -71,10 +71,6 @@ export type CatTWValues = BaseTW & {
 	term: CategoricalTerm
 	q: ValuesQ
 	type: 'CatTWValues'
-	// do not use this boolean flag, defined here only to help illustrate
-	// in tw/test/fake/app.js why this is type check error prone and
-	// less preferred than a discriminant prop that also works at runtime
-	isCatTWValues?: true
 }
 
 export type CatTWPredefinedGS = BaseTW & {
@@ -82,10 +78,6 @@ export type CatTWPredefinedGS = BaseTW & {
 	term: CategoricalTerm
 	q: PredefinedGroupSettingQ
 	type: 'CatTWPredefinedGS'
-	// do not use this boolean flag, defined here only to help illustrate
-	// in tw/test/fake/app.js why this is type check error prone and
-	// less preferred than a discriminant prop that also works at runtime
-	isCatTWPredefiendGS?: true
 }
 
 export type CatTWCustomGS = BaseTW & {

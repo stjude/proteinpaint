@@ -1,6 +1,6 @@
 import { TwRouter } from '../../TwRouter.ts'
 import type { TwBase } from '../../TwBase.ts'
-import type { TermWrapper } from '@sjcrh/proteinpaint-types/updated'
+import type { TermWrapper } from '#types'
 import type { FakeTw } from './types'
 import { FakeCatValues, FakeCatPredefinedGS, FakeCatCustomGS } from './xtw/categorical.ts'
 import { addons } from './xtw/addons.ts'

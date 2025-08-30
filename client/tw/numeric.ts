@@ -26,7 +26,7 @@ import { copyMerge } from '#rx'
 export class NumericBase extends TwBase {
 	// type is set by TwBase constructor
 	term: NumericTerm
-	static termTypes = new Set(['integer', 'float', 'geneExpression', 'metaboliteIntensity'])
+	static termTypes = new Set(['integer', 'float', 'date', 'geneExpression', 'metaboliteIntensity'])
 
 	constructor(tw: NumTWTypes, opts: TwOpts) {
 		super(tw, opts)
