@@ -27,7 +27,10 @@ Custom data with samples and sample selection
 skewerMode with improper setting and should not break
 Numeric mode custom dataset, with mode change
 Custom bcf with sample
+Custom protein domain
 
+
+*** note ***
 
 this script exports following test methods to share with non-CI test using GDC/clinvar
 - findSingletonMutationTestDiscoCnvPlots
@@ -1262,6 +1265,28 @@ tape('Custom bcf with sample', test => {
 		test.ok(table, 'sample table shown')
 		tk.menutip.d.remove()
 
+		if (test._ok) holder.remove()
+		test.end()
+	}
+})
+
+// this test is not specific for mds3 tk. maybe moved to a "block integration test" later
+tape('Custom protein domain', test => {
+	test.timeoutAfter(3000)
+	const holder = getHolder()
+	runproteinpaint({
+		holder,
+		noheader: true,
+		genome: 'hg38-test',
+		gene: 'NM_000546',
+		geneDomains: { NM_000546: [{ start: 10, stop: 20, name: 'xx', color: 'red' }] },
+		onloadalltk_always
+	})
+	function onloadalltk_always(bb) {
+		delete bb.onloadalltk_always
+		const domain = bb.usegm.pdomains.find(i => i.name == 'xx')
+		test.ok(domain, 'custom domain added')
+		test.equal(domain.color, 'red', 'custom color is kept')
 		if (test._ok) holder.remove()
 		test.end()
 	}
