@@ -34,19 +34,6 @@ export let base_zindex = null
 export const tkt = common.tkt
 export const gmmode = common.gmmode
 
-export const domaincolorlst = [
-	'#8dd3c7',
-	'#bebada',
-	'#fb8072',
-	'#80b1d3',
-	'#E8E89E',
-	'#a6d854',
-	'#fdb462',
-	'#ffd92f',
-	'#e5c494',
-	'#b3b3b3'
-]
-
 export function appear(d, display) {
 	d.style('opacity', 0)
 		.style('display', display || 'block')

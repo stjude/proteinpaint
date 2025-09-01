@@ -753,7 +753,7 @@ async function may_launchGeneView(arg, app) {
 		}
 	}
 	if (arg.gene) {
-		launchgeneview(arg, app)
+		await launchgeneview(arg, app)
 		return true
 	}
 	return false
@@ -930,6 +930,7 @@ async function launchgeneview(arg, app) {
 		mset: arg.mset,
 		tklst: arg.tracks,
 		gmmode: arg.gmmode,
+		geneDomains: arg.geneDomains,
 		mclassOverride: arg.mclassOverride,
 		hide_dsHandles: arg.hide_dsHandles,
 		onloadalltk_always: arg.onloadalltk_always
