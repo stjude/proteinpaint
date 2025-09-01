@@ -25,7 +25,7 @@ export function getDbConnection(ds: any): Database.Database | null {
 	// TODO use connect_db?
 	// Open connection once and cache it
 	connection = new Database(dbPath, { fileMustExist: true })
-	connection.pragma('journal_mode = WAL')
+	connection.pragma('journal_mode = DELETE')
 	connection.pragma('foreign_keys = ON')
 
 	return connection

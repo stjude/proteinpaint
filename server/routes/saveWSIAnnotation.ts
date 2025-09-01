@@ -63,37 +63,53 @@ export async function validate_query_saveWSIAnnotation(ds: Mds3) {
 	validateQuery(ds, connection)
 }
 
-function validateQuery(ds: any, connection: Database.Database) {
+function validateQuery(ds: any, connection: Database) {
 	if (!ds.queries) ds.queries = {}
 	if (!ds.queries.WSImages) ds.queries.WSImages = {}
 
 	ds.queries.WSImages.saveWSIAnnotation = async (annotation: SaveWSIAnnotationRequest) => {
 		try {
-			// Build values with sensible defaults
 			const timestamp = new Date().toISOString()
 			const projectId = annotation.projectId
-			const imageId = annotation.wsimageId // expects image row id
+			const wsimageFilename = annotation.wsimage // expected to exactly match project_images.image_path
 			const coords = JSON.stringify(annotation.coordinates ?? [])
 			const userId = annotation.userId
 			const status = 1
 			const classId = annotation.classId
 
-			// Validate minimal required fields
-			if (projectId == null || imageId == null) {
+			if (projectId == null || wsimageFilename == null) {
 				return {
 					status: 'error',
-					error: 'Missing required fields: projectId and wsimageId.'
+					error: 'Missing required fields: projectId and wsimage.'
 				}
 			}
+
+			const getImageIdSql = `
+				SELECT id
+				FROM project_images
+				WHERE project_id = ?
+				  AND image_path = ?
+				LIMIT 1
+			`
+			const getImageStmt = connection.prepare(getImageIdSql)
+			const imageRow = getImageStmt.get(projectId, wsimageFilename) as { id: number } | undefined
+
+			if (!imageRow?.id) {
+				return {
+					status: 'error',
+					error: `Image not found for project_id=${projectId} and image_path="${wsimageFilename}".`
+				}
+			}
+
+			const imageId = imageRow.id
 
 			const insertSql = `
 				INSERT INTO project_annotations (
 					project_id, user_id, coordinates, timestamp, status, class_id, image_id
 				) VALUES (?, ?, ?, ?, ?, ?, ?)
 			`
-
-			const stmt = connection.prepare(insertSql)
-			stmt.run(projectId, userId, coords, timestamp, status, classId, imageId)
+			const insertStmt = connection.prepare(insertSql)
+			insertStmt.run(projectId, userId, coords, timestamp, status, classId, imageId)
 
 			return { status: 'ok' }
 		} catch (error: any) {
