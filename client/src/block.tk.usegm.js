@@ -1124,7 +1124,7 @@ async function domainlegend(tk, block) {
 			.style('display', 'inline-block')
 			.classed('sja_menuoption', true)
 			.style('font-size', '.8em')
-			.html(displayUI ? '&#9650; add protein domain' : '&#9660; add protein domain')
+			.html(displayUI ? '&#9650; Add protein domain' : '&#9660; add protein domain')
 			.on('click', () => {
 				displayUI = !displayUI
 				proteinDomainUI.style('display', displayUI ? 'block' : 'none')

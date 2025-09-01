@@ -1,10 +1,10 @@
 import { scaleOrdinal } from 'd3-scale'
-import { gmmode, domaincolorlst } from './client'
-import { nt2aa, codon_stop, bplen } from '#shared/common.js'
+import { gmmode } from './client'
+import { nt2aa, codon_stop, bplen, proteinDomainColorScale } from '#shared/common.js'
 import { select } from 'd3-selection'
 import { dofetch3 } from '#common/dofetch'
 import { first_genetrack_tolist } from '#common/1stGenetk'
-import { sayerror } from '../dom/sayerror.ts'
+import { sayerror } from '#dom'
 import { string2snp } from '#common/snp'
 
 /*
@@ -232,14 +232,29 @@ async function step2_getpdomain(arg) {
 	})
 	if (data.error) throw 'error getting protein domain: ' + data.error
 	if (data.lst) {
-		const colorscale = scaleOrdinal().range(domaincolorlst)
+		const s = proteinDomainColorScale() // important to declare color getter outside of loop so that a domain appearing in multiple isoforms can get same color
 		for (const a of data.lst) {
+			if (arg.geneDomains) {
+				// runpp-supplied custom domains, will be applied to all isoforms
+				// defined in https://github.com/stjude/proteinpaint/wiki/Embedding#Gene-view
+				if (!Array.isArray(arg.geneDomains)) throw 'geneDomains not array'
+				for (const b of arg.geneDomains) {
+					if (typeof b != 'object') throw 'element from geneDomains[] not object'
+					// start & stop positions can only be aaposition
+					if (!Number.isInteger(b.start)) throw 'start not integer from geneDomains[]'
+					if (!Number.isInteger(b.stop)) throw 'stop not integer from geneDomains[]'
+					if (b.start > b.stop) throw 'start>stop from geneDomains[]'
+					if (!b.name) b.name = 'Custom domain'
+					a.pdomains.push(b)
+				}
+			}
+
 			for (const m of isoform2gm.get(a.name)) {
 				m.pdomains = a.pdomains
 			}
 			for (const d of a.pdomains) {
 				if (!d.color) {
-					d.color = colorscale(d.name + d.description)
+					d.color = s(d.name + d.description)
 				}
 			}
 		}

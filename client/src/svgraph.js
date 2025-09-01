@@ -6,7 +6,8 @@ import * as client from './client'
 import * as coord from './coord'
 import hm2legend from './hm2.legend'
 import { dofetch3 } from '../common/dofetch'
-import { Menu } from '../dom/menu'
+import { Menu } from '#dom'
+import { proteinDomainColorScale } from '#shared/common.js'
 
 /*
 argument:
@@ -20,7 +21,7 @@ argument:
 			.domain_hidden{}
 */
 
-export default function(arg) {
+export default function (arg) {
 	const outborder = '#ddd'
 	const pairlst = arg.pairlst
 	const genome = arg.genome
@@ -36,10 +37,7 @@ export default function(arg) {
 		.style('margin-top', '5px')
 		.style('padding', '10px 20px')
 		.style('background-color', '#ededed')
-	const domaindiv = tmp
-		.append('div')
-		.style('margin', '10px')
-		.style('display', 'none')
+	const domaindiv = tmp.append('div').style('margin', '10px').style('display', 'none')
 	const colormenu = new Menu({ padding: '10px' })
 
 	function err(m) {
@@ -206,10 +204,10 @@ export default function(arg) {
 		const datalst = await getPdomains(loadlst)
 
 		for (const i of datalst) {
-			const colorscale = scaleOrdinal().range(client.domaincolorlst)
+			const s = proteinDomainColorScale()
 			for (const d of i.pdomains) {
 				if (!d.color) {
-					d.color = colorscale(d.name + d.description)
+					d.color = s(d.name + d.description)
 				}
 			}
 			const n = i.name.toUpperCase()
@@ -221,42 +219,6 @@ export default function(arg) {
 			}
 		}
 		new draw()
-
-		// fetch(
-		// 	new Request(hostURL + '/pdomain', {
-		// 		method: 'POST',
-		// 		body: JSON.stringify({ jwt: jwt, genome: genome.name, isoforms: loadlst })
-		// 	})
-		// )
-		// 	.then(data => {
-		// 		return data.json()
-		// 	})
-		// 	.then(data => {
-		// 		if (data.error) throw { message: 'Error getting protein domain: ' + data.error }
-		// 		for (const i of data.lst) {
-		// 			const colorscale = scaleOrdinal().range(client.domaincolorlst)
-		// 			for (const d of i.pdomains) {
-		// 				if (!d.color) {
-		// 					d.color = colorscale(d.name + d.description)
-		// 				}
-		// 			}
-		// 			const n = i.name.toUpperCase()
-		// 			if (genome.isoformcache.has(n)) {
-		// 				for (const ii of genome.isoformcache.get(n)) {
-		// 					ii.pdomains = i.pdomains
-		// 					ii.domain_hidden = {}
-		// 				}
-		// 			}
-		// 		}
-		// 		new draw()
-		// 	})
-		// 	.catch(e => {
-		// 		err(e.message)
-		// 		if (e.stack) console.log(e.stack)
-		// 	})
-		// 	.then(() => {
-		// 		waitdiv.remove()
-		// 	})
 	}
 
 	async function getPdomains(loadlst) {
@@ -271,90 +233,6 @@ export default function(arg) {
 
 	function draw() {
 		// scaffolds
-		/*
-var scaffoldhash={}
-var id=0
-pairlst.forEach(function(point){
-	if(point.a.gm) {
-		if(!(point.a.gm.isoform in scaffoldhash)) {
-			scaffoldhash[point.a.gm.isoform]={
-				//chr:point.a.chr,
-				gm:point.a.gm,
-				strand:point.a.gm.strand,
-				aalen:point.a.gm.aacount,
-				bodybp:(point.a.gm.stop-point.a.gm.start),
-				id:id++,
-			}
-		}
-		var gm=scaffoldhash[point.a.gm.isoform]
-		if(point.a.atutr3) {
-			gm.utr3bp=point.a.atutr3.total
-		}
-		if(point.a.atutr5) {
-			gm.utr5bp=point.a.atutr5.total
-		}
-		if(point.a.atupstream) {
-			gm.upstream=Math.max( gm.upstream?gm.upstream:0, point.a.atupstream.off)
-		}
-		if(point.a.atdownstream) {
-			gm.downstream=Math.max( gm.downstream ? gm.downstream :0, point.a.atdownstream.off)
-		}
-	} else {
-		if(!(point.a.chr in scaffoldhash)) {
-			scaffoldhash[point.a.chr]={
-				chr:point.a.chr,
-				id:id++
-			}
-		}
-		var chrom=scaffoldhash[point.a.chr]
-		chrom.start=Math.min(chrom.start, point.a.position-1000)
-		chrom.stop=Math.max(chrom.stop,point.a.position+1000)
-	}
-	if(point.b.gm) {
-		if(!(point.b.gm.isoform in scaffoldhash)) {
-			scaffoldhash[point.b.gm.isoform]={
-				//chr:point.b.chr,
-				gm:point.b.gm,
-				strand:point.b.gm.strand,
-				aalen:point.b.gm.aacount,
-				bodybp:(point.b.gm.stop-point.b.gm.start),
-				id:id++,
-			}
-		}
-		var gm=scaffoldhash[point.b.gm.isoform]
-		if(point.b.atutr3) {
-			gm.utr3bp=point.b.atutr3.total
-		}
-		if(point.b.atutr5) {
-			gm.utr5bp=point.b.atutr5.total
-		}
-		if(point.b.atupstream) {
-			gm.upstream=Math.max( gm.upstream?gm.upstream:0, point.b.atupstream.off)
-		}
-		if(point.b.atdownstream) {
-			gm.downstream=Math.max( gm.downstream ? gm.downstream :0, point.b.atdownstream.off)
-		}
-	} else {
-		if(!(point.b.chr in scaffoldhash)) {
-			scaffoldhash[point.b.chr]={
-				chr:point.b.chr,
-				id:id++,
-			}
-		}
-		var chrom=scaffoldhash[point.b.chr]
-		chrom.start=Math.min(chrom.start, point.b.position-1000)
-		chrom.stop=Math.max(chrom.stop,point.b.position+1000)
-	}
-})
-var scaffold=[]
-var scf2id={}
-for(var n in scaffoldhash) {
-	var scf=scaffoldhash[n]
-	scf.nodes=[]
-	scf2id[n]=scf.id
-	scaffold.push(scf)
-}
-*/
 		const scaffold = []
 		let scfid = 0
 		for (let i = 0; i < pairlst.length; i++) {
@@ -651,14 +529,10 @@ console.log(data)
 					.range([0, scf.pxwidth])
 			} else if (scf.nontemplate) {
 				scf.pxwidth = (maxgmpxwidth * scf.aalen) / gmmaxaa
-				scf.scale = scaleLinear()
-					.domain([0, scf.aalen])
-					.range([0, scf.pxwidth])
+				scf.scale = scaleLinear().domain([0, scf.aalen]).range([0, scf.pxwidth])
 			} else {
 				scf.pxwidth = (maxchrpxwidth * (scf.stop - scf.start)) / chrsegml
-				scf.scale = scaleLinear()
-					.domain([scf.start, scf.stop])
-					.range([0, scf.pxwidth])
+				scf.scale = scaleLinear().domain([scf.start, scf.stop]).range([0, scf.pxwidth])
 			}
 			// set relative x for nodes
 			if (scf.nontemplate) {
@@ -730,7 +604,7 @@ console.log(data)
 		// link p domain to scaffold, has to be a better way
 		for (const s of scaffold) {
 			if (s.gm && s.gm.pdomains) {
-				s.gm.pdomains.forEach(function(i) {
+				s.gm.pdomains.forEach(function (i) {
 					i.__scf = s
 				})
 			}
@@ -784,11 +658,7 @@ console.log(data)
 
 		const simulation = d3force.forceSimulation(data.nodes).force('link', d3force.forceLink().links(data.links))
 
-		const scfg = g0
-			.selectAll()
-			.data(scaffold)
-			.enter()
-			.append('g')
+		const scfg = g0.selectAll().data(scaffold).enter().append('g')
 		const link = g0
 			.selectAll()
 			.data(data.links)
@@ -797,11 +667,7 @@ console.log(data)
 			.attr('stroke', 'black')
 			.attr('stroke-dasharray', '3,2')
 		// component - node
-		const node = g0
-			.selectAll()
-			.data(data.nodes)
-			.enter()
-			.append('g')
+		const node = g0.selectAll().data(data.nodes).enter().append('g')
 		const nodelabel = node
 			.filter(d => d.label)
 			// no label for interstitial nodes
@@ -810,7 +676,7 @@ console.log(data)
 			.attr('font-family', client.font)
 			.attr('font-size', nodefontsize)
 			.attr('fill', 'black')
-			.each(function(d) {
+			.each(function (d) {
 				d.labelwidth = this.getBBox().width
 			})
 		const nodelabel2 = node
@@ -820,7 +686,7 @@ console.log(data)
 			.attr('font-family', client.font)
 			.attr('font-size', nodefontsize)
 			.attr('fill', client.colorantisense)
-			.each(function(d) {
+			.each(function (d) {
 				d.labelwidth = Math.max(this.getBBox().width, d.labelwidth)
 			})
 		// node label done, width impacts padding
@@ -998,7 +864,7 @@ chrbar.filter(function(d){return d.pxwidth>d.labelwidth+10})
 			.attr('fill', 'black')
 			.attr('font-size', scffontsize)
 			.attr('dominant-baseline', 'central')
-			.each(function(d) {
+			.each(function (d) {
 				d.chimericlabelw = d.labelwidth = this.getBBox().width
 			})
 
@@ -1069,7 +935,7 @@ chrbar.filter(function(d){return d.pxwidth>d.labelwidth+10})
 				}
 				return 'from ' + d.nodes[0].position + ' bp to ' + d.nodes[1].position + ' bp'
 			})
-			.each(function(d) {
+			.each(function (d) {
 				d.chimericlabelw = Math.max(this.getBBox().width, d.chimericlabelw)
 			})
 		// set19
@@ -1084,7 +950,7 @@ chrbar.filter(function(d){return d.pxwidth>d.labelwidth+10})
 			.attr('font-family', client.font)
 			.attr('text-anchor', 'middle')
 			.attr('dominant-baseline', d => (d.id % 2 == 0 ? 'auto' : 'hanging'))
-			.each(function(d) {
+			.each(function (d) {
 				d.chimericlabelw = Math.max(this.getBBox().width, d.chimericlabelw)
 			})
 		// set20
@@ -1179,12 +1045,7 @@ chrbar.filter(function(d){return d.pxwidth>d.labelwidth+10})
 						.attr('width', descfontsize)
 						.attr('height', descfontsize)
 						.attr('fill', col)
-						.attr(
-							'stroke',
-							d3rgb(col)
-								.darker(2)
-								.toString()
-						)
+						.attr('stroke', d3rgb(col).darker(2).toString())
 					let w
 					dg.append('text')
 						.text(dm.name)
@@ -1193,7 +1054,7 @@ chrbar.filter(function(d){return d.pxwidth>d.labelwidth+10})
 						.attr('font-family', client.font)
 						.attr('font-size', descfontsize)
 						.attr('fill', 'black')
-						.each(function() {
+						.each(function () {
 							w = this.getBBox().width
 						})
 					dg.append('text')
@@ -1682,10 +1543,7 @@ chrbar.filter(function(d){return d.pxwidth>d.labelwidth+10})
 					if (!pdmshown) {
 						pdmshown = true
 						for (const scf of dgmlst) {
-							const d = domaindiv
-								.append('div')
-								.style('margin-bottom', '10px')
-								.style('padding', '10px')
+							const d = domaindiv.append('div').style('margin-bottom', '10px').style('padding', '10px')
 							d.append('div')
 								.style('margin-bottom', '10px')
 								.html(scf.gm.name + ' ' + scf.gm.isoform)
@@ -1763,10 +1621,7 @@ chrbar.filter(function(d){return d.pxwidth>d.labelwidth+10})
 											.style('font-size', '.8em')
 											.html('To change the color of this domain,<br>type in a new color and press ENTER.')
 									})
-								d2.append('span')
-									.text(e.description)
-									.style('font-size', '.7em')
-									.style('color', '#858585')
+								d2.append('span').text(e.description).style('font-size', '.7em').style('color', '#858585')
 							}
 						}
 					}
