@@ -171,16 +171,17 @@ export class WSIViewerInteractions {
 
 					const selectedClassId = sessionWSImage?.classes?.find(c => c.key_shortcut === event.code)?.id
 
-					// TODO fix hardcoded userId and wsimageId
+					// TODO fix hardcoded userId
 					const body: SaveWSIAnnotationRequest = {
 						userId: 1,
 						coordinates: annotationsData[currentIndex].zoomCoordinates,
 						classId: selectedClassId!,
 						projectId: aiProjectID,
-						wsimageId: sessionWSImage.id ? sessionWSImage.id : 1
+						wsimage: sessionWSImage.filename
 					}
 
 					try {
+						// TODO add UI rollback
 						await dofetch3('saveWSIAnnotation', { body })
 						//Advance to the next table row after annotating
 						const nextIdx = currentIndex + 1

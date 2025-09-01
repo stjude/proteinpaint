@@ -5,7 +5,7 @@ export type SaveWSIAnnotationRequest = {
 	coordinates: [number, number]
 	classId: number
 	projectId: number
-	wsimageId: number
+	wsimage: string
 }
 
 export type SaveWSIAnnotationResponse = {
