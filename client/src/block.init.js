@@ -231,34 +231,43 @@ async function step2_getpdomain(arg) {
 		body: JSON.stringify({ genome: arg.genome.name, isoforms: [...isoform2gm.keys()] })
 	})
 	if (data.error) throw 'error getting protein domain: ' + data.error
-	if (data.lst) {
-		const s = proteinDomainColorScale() // important to declare color getter outside of loop so that a domain appearing in multiple isoforms can get same color
-		for (const a of data.lst) {
-			if (arg.geneDomains) {
-				// runpp-supplied custom domains, will be applied to all isoforms
-				// defined in https://github.com/stjude/proteinpaint/wiki/Embedding#Gene-view
-				if (!Array.isArray(arg.geneDomains)) throw 'geneDomains not array'
-				for (const b of arg.geneDomains) {
+	if (!Array.isArray(data.lst)) throw '.lst[] not array'
+	// apply server-returned domains
+	for (const a of data.lst) {
+		for (const m of isoform2gm.get(a.name)) {
+			m.pdomains = a.pdomains
+		}
+	}
+	if (arg.geneDomains) {
+		// runpp-supplied custom domains for specific isoforms https://github.com/stjude/proteinpaint/wiki/Embedding#Gene-view
+		if (typeof arg.geneDomains != 'object') throw 'geneDomains not object'
+		for (const isoform in arg.geneDomains) {
+			const lst = isoform2gm.get(isoform)
+			if (!lst) throw `unknown isoform ${isoform} from geneDomains{}`
+			for (const g of lst) {
+				if (!g.pdomains) g.pdomains = [] // a genemodel may be missing this array (no server-returned domains)
+				if (!Array.isArray(arg.geneDomains[isoform])) throw `geneDomains[${isoform}] not array`
+				for (const b of arg.geneDomains[isoform]) {
 					if (typeof b != 'object') throw 'element from geneDomains[] not object'
-					// start & stop positions can only be aaposition
 					if (!Number.isInteger(b.start)) throw 'start not integer from geneDomains[]'
 					if (!Number.isInteger(b.stop)) throw 'stop not integer from geneDomains[]'
 					if (b.start > b.stop) throw 'start>stop from geneDomains[]'
 					if (!b.name) b.name = 'Custom domain'
-					a.pdomains.push(b)
-				}
-			}
-
-			for (const m of isoform2gm.get(a.name)) {
-				m.pdomains = a.pdomains
-			}
-			for (const d of a.pdomains) {
-				if (!d.color) {
-					d.color = s(d.name + d.description)
+					// g.pdomains is a reference to shared array. the custom domain may have been added before and avoid adding twice
+					if (!g.pdomains.find(a => a.start == b.start && a.stop == b.stop && a.name == b.name)) g.pdomains.push(b)
 				}
 			}
 		}
 	}
+	const s = proteinDomainColorScale() // important to declare color getter outside of loop so that a domain appearing in multiple isoforms can get same color
+	for (const lst of isoform2gm.values()) {
+		for (const g of lst) {
+			for (const d of g.pdomains || []) {
+				if (!d.color) d.color = s(d.name + d.description)
+			}
+		}
+	}
+
 	await step3(arg)
 }
 
