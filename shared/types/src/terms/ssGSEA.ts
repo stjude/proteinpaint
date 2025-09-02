@@ -19,8 +19,7 @@ export type SsGSEATerm = NumericBaseTerm & {
 	/** custom term has list of gene names used for computing score */
 	genes?: string[]
 	name?: string
-	type: 'date'
-	metabolite: string
+	type: 'ssGSEA'
 	bins: PresetNumericBins
 	unit?: string
 }
