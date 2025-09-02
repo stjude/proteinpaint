@@ -1,4 +1,4 @@
-import type { NumericBaseTerm, PresetNumericBins, NumTWTypes, RawNumTW } from '../index.ts'
+import type { NumericBaseTerm, PresetNumericBins, NumTW, RawNumTW } from '../index.ts'
 
 /*
 --------EXPORTED--------
@@ -8,16 +8,19 @@ DateTermSettingInstance
 */
 
 export type DateTerm = NumericBaseTerm & {
-	name?: string
+	name: string
 	type: 'date'
 	bins?: PresetNumericBins
 	unit?: string
 }
 
-export type DateTW = NumTWTypes & { term: DateTerm }
+export type DateTW = NumTW & { term: DateTerm }
 
 type RawDateTerm = {
+	name?: string
 	type: 'date'
+	bins?: PresetNumericBins
+	unit?: string
 }
 
 export type RawDateTW = RawNumTW & { term: RawDateTerm }

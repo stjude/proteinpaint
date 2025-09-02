@@ -209,7 +209,7 @@ export type NumTWSpline = BaseTW & {
 	q: SplineNumericQ
 }
 
-export type NumTWTypes = NumTWRegularBin | NumTWCustomBin | NumTWBinary | NumTWCont | NumTWSpline
+export type NumTW = NumTWRegularBin | NumTWCustomBin | NumTWBinary | NumTWCont | NumTWSpline
 export type NumTWDiscreteTypes = NumTWRegularBin | NumTWCustomBin //| NumTWBinary
 
 export type DefaultMedianQ = {
