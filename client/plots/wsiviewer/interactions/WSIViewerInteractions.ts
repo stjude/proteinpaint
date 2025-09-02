@@ -11,6 +11,7 @@ import type Settings from '#plots/wsiviewer/Settings.ts'
 import type { Prediction, TileSelection } from '@sjcrh/proteinpaint-types'
 import type { SessionWSImage } from '#plots/wsiviewer/viewModel/SessionWSImage.ts'
 import type { SaveWSIAnnotationRequest } from '@sjcrh/proteinpaint-types/routes/saveWSIAnnotation.ts'
+import type { DeleteWSIAnnotationRequest } from '@sjcrh/proteinpaint-types/routes/deleteWSIAnnotation.js'
 
 export class WSIViewerInteractions {
 	thumbnailClickListener: (index: number) => void
@@ -48,6 +49,7 @@ export class WSIViewerInteractions {
 				}
 			})
 		}
+
 		this.zoomInEffectListener = (
 			activeImageExtent: unknown,
 			zoomInPoints: [number, number][],
@@ -140,6 +142,30 @@ export class WSIViewerInteractions {
 					.getArray()
 					.find(l => l instanceof VectorLayer)!
 
+				if (event.key == 'Backspace') {
+					//Delete
+					this.deleteAnnotation(vectorLayer!, currentIndex)
+
+					const body: DeleteWSIAnnotationRequest = {
+						genome: state.vocab.genome,
+						dslabel: state.vocab.dslabel,
+						projectId: state.aiProjectID,
+						annotation: annotationsData[currentIndex],
+						wsimageId: sessionWSImage.id ? sessionWSImage.id : 1 //TODO: Hardcoded for dev
+					}
+					try {
+						await dofetch3('deleteWSIAnnotation', { method: 'DELETE', body })
+					} catch (e: any) {
+						console.error('Error in deleteWSIAnnotation request:', e.message || e)
+					}
+
+					const nextIdx = currentIndex == annotationsData.length ? 0 : currentIndex + 1
+					buffers.annotationsIdx.set(nextIdx)
+					const coords = [annotationsData[nextIdx].zoomCoordinates] as unknown as [number, number][]
+					this.zoomInEffectListener(activeImageExtent, coords, map, activePatchColor)
+					return
+				}
+
 				if (idx !== currentIndex) {
 					//When the index changes, scroll to the new annotation
 					//Timeout for when user presses arrows multiple times.
@@ -193,6 +219,7 @@ export class WSIViewerInteractions {
 					} catch (e) {
 						console.error('Error in saveWSIAnnotation request:', e)
 					}
+					return
 				}
 			})
 		}
@@ -238,7 +265,13 @@ export class WSIViewerInteractions {
 			const source: VectorSource<Feature<Geometry>> | null = vectorLayer.getSource()
 
 			const topLeft: [number, number] = [coordinateX, -coordinateY]
-			const borderFeature = this.createBorderFeature(topLeft, settings.tileSize, 30, settings.selectedPatchBorderColor)
+			const borderFeature = this.createBorderFeature(
+				topLeft,
+				settings.tileSize,
+				30,
+				settings.selectedPatchBorderColor,
+				`prediction-border-${selectedAnnotationIndex}`
+			)
 
 			source?.addFeature(borderFeature)
 
@@ -301,6 +334,27 @@ export class WSIViewerInteractions {
 		)
 
 		source?.addFeature(square)
+	}
+
+	private deleteAnnotation(vectorLayer: VectorLayer, currentIndex: number) {
+		const source: VectorSource<Feature<Geometry>> | null = vectorLayer.getSource()
+
+		//Remove annotated square
+		const annotationFeature = source?.getFeatureById(`annotation-square-${currentIndex}`)
+		if (annotationFeature) {
+			source?.removeFeature(annotationFeature)
+		}
+		// Remove active border
+		const activeBorderFeature = source?.getFeatureById('active-border')
+		if (activeBorderFeature) {
+			source?.removeFeature(activeBorderFeature)
+		}
+		// Remove prediction border
+		const predictionBorderFeature = source?.getFeatureById(`prediction-border-${currentIndex}`)
+		if (predictionBorderFeature) {
+			source?.removeFeature(predictionBorderFeature)
+		}
+		// console.log(annotationFeature, activeBorderFeature, predictionBorderFeature)
 	}
 
 	private addActiveBorder(vectorLayer: VectorLayer, zoomCoordinates: [number, number], color: any, tileSize: number) {

@@ -28,7 +28,7 @@ export async function makeAdHocDicTermdbQueries(ds: Mds3) {
 	q.buildAdHocDictionary = async () => {
 		if (dict?.aiApi != true) return
 		const source = dict?.source?.file
-		if (!source) return
+		if (!source) throw new Error(`Source file: ${source} not found.`)
 
 		const csvData = await readSourceFile(source)
 		if (!csvData) return
@@ -39,7 +39,7 @@ export async function makeAdHocDicTermdbQueries(ds: Mds3) {
 
 		//Check if the first line is empty or has missing col headers
 		const missingHeader = lines[0].split(',').some(c => c.trim() === '')
-		if (missingHeader) throw `Missing header in source file ${source}`
+		if (missingHeader) throw new Error(`Missing header in source file ${source}`)
 
 		//Add root term required for termdb queries
 		id2term.set('__root', { id: 'root', name: 'root', __tree_isroot: true })
@@ -167,7 +167,7 @@ export async function makeAdHocDicTermdbQueries(ds: Mds3) {
 	q.getFilteredImages = async filter => {
 		if (dict?.aiApi != true) return
 		const source = dict?.source?.file
-		if (!source) return
+		if (!source) throw new Error(`Source file: ${source} not found.`)
 
 		const csvData = await readSourceFile(source)
 		if (!csvData) return
@@ -182,7 +182,7 @@ export async function makeAdHocDicTermdbQueries(ds: Mds3) {
 		const matches = FilterHelpers.getMatches(normalized, lines)
 
 		if (!matches! || matches.length === 0) {
-			console.log('No matches found for filter [src/buildAdHocDictionary.ts getFilteredImages()]')
+			console.error('No matches found for filter [src/buildAdHocDictionary.ts getFilteredImages()]')
 			return null
 		}
 
@@ -192,7 +192,7 @@ export async function makeAdHocDicTermdbQueries(ds: Mds3) {
 }
 
 async function readSourceFile(source: string) {
-	const sourceFilePath = path.join(serverconfig.tpmasterdir, source)
+	const sourceFilePath = path.join(serverconfig.features?.tileserver?.mount, source)
 	if (!fs.existsSync(sourceFilePath)) return
 	try {
 		return fs.readFileSync(sourceFilePath, 'utf8')

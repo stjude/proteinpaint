@@ -63,7 +63,7 @@ export class ProjectAdminRender {
 				if (prjtNameLen > 50 || prjtNameLen < 3) {
 					return showError('Project name must be between 3 and 50 characters')
 				}
-				const notUnique = this.projects.some((p: any) => p.value === projectName.trim())
+				const notUnique = this.projects.some((p: any) => p.name === projectName.trim())
 				if (notUnique) {
 					return showError(`Project name '${projectName}' already exists`)
 				}
@@ -96,11 +96,14 @@ export class ProjectAdminRender {
 			{
 				text: 'Edit',
 				class: 'sja_menuoption',
-				callback: (e, i) => {
+				//_ = event, __ = idx
+				callback: async (_, idx) => {
 					/** TODO: open wsisamples plot ||
 					 *  get project details rather than edit the db */
-					// this.interactions.editProject()
-					console.log('TODO', e, i)
+					const project = this.projects[idx]
+					await this.interactions.appDispatchEdit({ settings: { project } })
+					// remove 'dev' for production
+					this.interactions.launchViewer(this.dom.holder, 'dev')
 				}
 			},
 			{
@@ -125,7 +128,7 @@ export class ProjectAdminRender {
 		renderTable({
 			div: tableDiv,
 			rows: this.projects.map((p: any) => {
-				return [{ value: p.value }]
+				return [{ value: p.name }]
 			}),
 			header: {
 				allowSort: true
