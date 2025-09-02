@@ -15,7 +15,8 @@ export const routedTermTypes = new Set([
 	'geneVariant',
 	'geneExpression',
 	'date',
-	'metaboliteIntensity'
+	'metaboliteIntensity',
+	'ssGSEA'
 ])
 
 export type UseCase = {
