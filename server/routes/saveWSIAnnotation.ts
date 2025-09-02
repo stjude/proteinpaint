@@ -63,7 +63,7 @@ export async function validate_query_saveWSIAnnotation(ds: Mds3) {
 	validateQuery(ds, connection)
 }
 
-function validateQuery(ds: any, connection: Database) {
+function validateQuery(ds: any, connection: Database.Database) {
 	if (!ds.queries) ds.queries = {}
 	if (!ds.queries.WSImages) ds.queries.WSImages = {}
 
