@@ -26,7 +26,7 @@ class TdbPlotControls {
 		this.opts = opts
 		this.type = 'plotControls'
 		this.customEvents = ['downloadClick', 'infoClick', 'helpClick']
-		this.isOpen = false
+		this.isOpen = opts.isOpen || false
 		setInteractivity(this)
 		setRenderers(this)
 	}
