@@ -129,17 +129,42 @@ export function renderCnvSourceLegend(
 		onChange(i)
 		menu.style('display', 'none')
 	})
+	const CM_TO_PX = 37.8
 
-	button.on('click', event => {
-		const divNode = svgDiv.node()
-		if (!divNode) return
-		const divRect = divNode.getBoundingClientRect()
-		menu
-			.style('left', `${event.clientX - divRect.left}px`)
-			.style('top', `${event.clientY - divRect.top}px`)
-			.style('display', 'block')
-		event.stopPropagation()
+	const gainLabel = legendG.selectAll<SVGTextElement, any>('text').filter(function () {
+		return this.textContent?.trim() === 'Gain'
 	})
+
+	if (!gainLabel.empty()) {
+		const legendRect = (legendG.node() as SVGGElement).getBoundingClientRect()
+		const gainRect = gainLabel.node()!.getBoundingClientRect()
+		const offsetX = gainRect.right - legendRect.left + CM_TO_PX
+		const offsetY = gainRect.top - legendRect.top
+		g.attr('transform', `translate(${offsetX},${offsetY})`)
+
+		button.on('click', event => {
+			const divNode = svgDiv.node()
+			if (!divNode) return
+			const divRect = divNode.getBoundingClientRect()
+			const currentGainRect = gainLabel.node()!.getBoundingClientRect()
+			menu
+				.style('left', `${currentGainRect.right - divRect.left + CM_TO_PX}px`)
+				.style('top', `${currentGainRect.top - divRect.top}px`)
+				.style('display', 'block')
+			event.stopPropagation()
+		})
+	} else {
+		button.on('click', event => {
+			const divNode = svgDiv.node()
+			if (!divNode) return
+			const divRect = divNode.getBoundingClientRect()
+			menu
+				.style('left', `${event.clientX - divRect.left}px`)
+				.style('top', `${event.clientY - divRect.top}px`)
+				.style('display', 'block')
+			event.stopPropagation()
+		})
+	}
 
 	svgDiv.on('click', () => menu.style('display', 'none'))
 }
