@@ -50,7 +50,7 @@ type TrackCategories = {
 	[index: string]: TrackCategoryEntry | undefined
 }
 
-type Track = {
+export type Track = {
 	__isgene?: boolean
 	translatecoding?: boolean
 	file: string
@@ -64,7 +64,7 @@ type Track = {
 	onerow?: boolean
 }
 
-type DefaultCoord = {
+export type DefaultCoord = {
 	chr: string
 	start: number
 	stop: number
