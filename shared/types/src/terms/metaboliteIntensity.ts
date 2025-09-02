@@ -1,5 +1,4 @@
-import type { BaseTW, NumericBaseTerm, NumericQ, PresetNumericBins } from '../index.ts'
-import type { TermSettingInstance } from '../termsetting.ts'
+import type { NumericBaseTerm, PresetNumericBins, NumTWTypes } from '../index.ts'
 
 /*
 --------EXPORTED--------
@@ -7,12 +6,6 @@ MetaboliteIntensityTermWrapper
 MetaboliteIntensityTermSettingInstance
 
 */
-
-export type MetaboliteIntensityTW = BaseTW & {
-	type: 'NumTWCont'
-	q: NumericQ
-	term: MetaboliteIntensityTerm
-}
 
 export type MetaboliteIntensityTerm = NumericBaseTerm & {
 	name?: string
@@ -22,7 +15,4 @@ export type MetaboliteIntensityTerm = NumericBaseTerm & {
 	unit?: string
 }
 
-export type MetaboliteIntensityTermSettingInstance = TermSettingInstance & {
-	q: NumericQ
-	term: MetaboliteIntensityTerm
-}
+export type MetaboliteIntensityTW = NumTWTypes & { term: MetaboliteIntensityTerm }
