@@ -1,7 +1,7 @@
 import { getCompInit } from '#rx'
 import wsiSamplesDefaults from '#plots/wsisamples/defaults.ts'
 import { dofetch3 } from '#src/client'
-import type { WSISamplesResponse, WSISample } from '@sjcrh/proteinpaint-types/routes/wsisamples.ts'
+import type { WSISample, WSISamplesResponse } from '@sjcrh/proteinpaint-types/routes/wsisamples.ts'
 import type Settings from '#plots/wsisamples/Settings.ts'
 import type { TableCell, TableColumn, TableRow } from '#dom'
 import { renderTable } from '#dom'
@@ -53,9 +53,6 @@ export default class WSISamplesPlot {
 		const rows: TableRow[] = []
 
 		const wsiImages: WSISample[] = plotConfig.wsimages
-
-		if (!wsiImages) return
-
 		wsiImages.forEach((wsiImage: WSISample) => {
 			const row: TableRow = []
 			const tableCell: TableCell = {
@@ -91,13 +88,14 @@ export default class WSISamplesPlot {
 
 	async main(): Promise<void> {
 		const state = this.app.getState()
-
 		const plotConfig = state.plots.find(p => p.id === this.id)
 		const settings = plotConfig.settings as Settings
 
 		const selectedSampleIndex = settings.selectedSampleIndex
 
 		const contentDiv = this.opts.holder.select('.wsi-samples-content')
+
+		const wsiImages: WSISample[] = plotConfig.wsimages
 
 		if (selectedSampleIndex != -1) {
 			// Check if viewer with class wsi-viewer already exists and remove it
@@ -109,7 +107,12 @@ export default class WSISamplesPlot {
 			const viewerDiv = contentDiv.append('div').attr('class', 'wsi-viewer').style('width', '100%')
 
 			const wsiViewer = await import('#plots/wsiviewer/plot.wsi.js')
-			wsiViewer.default(this.app.opts.state.vocab.dslabel, viewerDiv, this.app.opts.genome, selectedSampleIndex)
+			wsiViewer.default(
+				this.app.opts.state.vocab.dslabel,
+				viewerDiv,
+				this.app.opts.genome,
+				wsiImages[selectedSampleIndex].sampleId
+			)
 		}
 	}
 }
@@ -118,7 +121,7 @@ export const wsiSamplesPlot = getCompInit(WSISamplesPlot)
 
 export const componentInit = wsiSamplesPlot
 
-export async function getPlotConfig(opts: any, app: any): Promise<any> {
+export async function getPlotConfig(opts: any, app: any) {
 	return {
 		chartType: 'WSISamplesPlot',
 		subfolder: 'wsisamples',
