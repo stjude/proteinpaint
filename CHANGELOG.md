@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 Fixes:
 - runpp({geneDomains[]}) to supply custom domains
+- corrvol supports ssgsea as featureTw
 
 
 ## 2.140.2
