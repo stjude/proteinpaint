@@ -1,10 +1,10 @@
 import { TwBase, type TwOpts } from './TwBase.ts'
 import { NumRegularBin, NumCustomBins, NumCont, NumSpline } from './numeric.ts'
-import type { RawNumTW } from '#types'
+import type { RawGeneExpTW } from '#types'
 import { copyMerge } from '#rx'
 
 export class GeneExpBase extends TwBase {
-	static async fill(tw: RawNumTW, opts: TwOpts) {
+	static async fill(tw: RawGeneExpTW, opts: TwOpts) {
 		if (tw.term.type != 'geneExpression') throw 'unexpected term.type'
 		if (typeof tw.term !== 'object') throw 'tw.term is not an object'
 		if (!tw.term.gene && !tw.term.name) throw 'no gene or name present'

@@ -1,10 +1,10 @@
 import { TwBase, type TwOpts } from './TwBase.ts'
 import { NumRegularBin, NumCustomBins, NumCont } from './numeric.ts'
-import type { RawNumTW } from '#types'
+import type { RawMetaboliteIntensityTW } from '#types'
 import { copyMerge } from '#rx'
 
 export class MetaboliteIntensityBase extends TwBase {
-	static async fill(tw: RawNumTW, opts: TwOpts) {
+	static async fill(tw: RawMetaboliteIntensityTW, opts: TwOpts) {
 		if (tw.term.type != 'metaboliteIntensity') throw 'unexpected term.type'
 		if (typeof tw.term !== 'object') throw 'tw.term is not an object'
 
