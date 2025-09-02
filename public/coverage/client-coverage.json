@@ -434,37 +434,37 @@
   "dom/genesearch.ts": {
     "lines": {
       "total": 263,
-      "covered": 111,
+      "covered": 22,
       "skipped": 0,
-      "pct": 42.2
+      "pct": 8.36
     },
     "functions": {
       "total": 24,
-      "covered": 11,
+      "covered": 1,
       "skipped": 0,
-      "pct": 45.83
+      "pct": 4.16
     },
     "statements": {
       "total": 288,
-      "covered": 115,
+      "covered": 22,
       "skipped": 0,
-      "pct": 39.93
+      "pct": 7.63
     },
     "branches": {
       "total": 181,
-      "covered": 60,
+      "covered": 11,
       "skipped": 0,
-      "pct": 33.14
+      "pct": 6.07
     },
     "lowestPct": {
-      "curr": 33.14,
+      "curr": 4.16,
       "prev": 33.14,
-      "diff": 0
+      "diff": -28.98
     },
     "averagePct": {
-      "curr": 40.275000000000006,
+      "curr": 6.555,
       "prev": 40.655,
-      "diff": -0.37999999999999545
+      "diff": -34.1
     }
   },
   "plots/matrix/test/matrix.integration.spec.js": {
@@ -3818,37 +3818,37 @@
   "dom/sandbox.ts": {
     "lines": {
       "total": 60,
-      "covered": 46,
+      "covered": 4,
       "skipped": 0,
-      "pct": 76.66
+      "pct": 6.66
     },
     "functions": {
       "total": 11,
-      "covered": 4,
+      "covered": 0,
       "skipped": 0,
-      "pct": 36.36
+      "pct": 0
     },
     "statements": {
       "total": 61,
-      "covered": 46,
+      "covered": 4,
       "skipped": 0,
-      "pct": 75.4
+      "pct": 6.55
     },
     "branches": {
       "total": 19,
-      "covered": 15,
+      "covered": 0,
       "skipped": 0,
-      "pct": 78.94
+      "pct": 0
     },
     "lowestPct": {
-      "curr": 36.36,
-      "prev": 0,
-      "diff": 36.36
+      "curr": 0,
+      "prev": 36.36,
+      "diff": -36.36
     },
     "averagePct": {
-      "curr": 66.84,
-      "prev": 0,
-      "diff": 66.84
+      "curr": 3.3025,
+      "prev": 66.84,
+      "diff": -63.5375
     }
   },
   "dom/test/genesearch.integration.spec.ts": {
@@ -4886,13 +4886,13 @@
     },
     "lowestPct": {
       "curr": 33.07,
-      "prev": 0,
-      "diff": 33.07
+      "prev": 33.07,
+      "diff": 0
     },
     "averagePct": {
       "curr": 38.5025,
-      "prev": 0,
-      "diff": 38.5025
+      "prev": 38.5025,
+      "diff": 0
     }
   },
   "mass/test/cuminc.integration.spec.js": {
