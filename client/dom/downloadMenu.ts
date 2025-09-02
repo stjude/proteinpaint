@@ -1,15 +1,19 @@
 import { Menu } from '#dom/menu'
-import { downloadSingleSVG } from '../common/svg.download.js'
+import { downloadSingleSVG, downloadAggregatedSVG } from '../common/svg.download.js'
 
 export class DownloadMenu {
 	menu: Menu
 	name2svg: any
 	holder: any
+	multipleSVGs: boolean
+	filename: string
 
-	constructor(name2svg, holder) {
+	constructor(name2svg, holder, filename = 'charts') {
 		this.menu = new Menu({ padding: '0px' })
 		this.name2svg = name2svg
 		this.holder = holder
+		this.multipleSVGs = Object.keys(name2svg).length > 1
+		this.filename = filename.replace(/\s/g, '_')
 	}
 
 	show(x, y) {
@@ -18,24 +22,35 @@ export class DownloadMenu {
 		menuDiv
 			.append('div')
 			.attr('class', 'sja_menuoption sja_sharp_border')
-			.text('SVG')
+			.text('PDF')
 			.on('click', () => {
-				for (const [name, svg] of Object.entries(this.name2svg)) downloadSingleSVG(svg, name, this.holder)
+				downloadSVGsAsPdf(this.name2svg, this.filename, this.holder)
 				this.menu.hide()
 			})
 		menuDiv
 			.append('div')
 			.attr('class', 'sja_menuoption sja_sharp_border')
-			.text('PDF')
+			.text('SVG')
 			.on('click', () => {
-				downloadSVGsAsPdf(this.name2svg)
+				downloadAggregatedSVG(this.name2svg, this.filename, this.holder)
 				this.menu.hide()
 			})
+
+		if (this.multipleSVGs)
+			menuDiv
+				.append('div')
+				.attr('class', 'sja_menuoption sja_sharp_border')
+				.text('Multiple SVG')
+				.on('click', () => {
+					for (const [name, svg] of Object.entries(this.name2svg))
+						downloadSingleSVG(svg, name.replace(/\s/g, '_'), this.holder)
+					this.menu.hide()
+				})
 		this.menu.show(x - 20, y - 10)
 	}
 }
 
-export async function downloadSVGsAsPdf(name2svg, filename = 'charts.pdf') {
+export async function downloadSVGsAsPdf(name2svg, filename, parent) {
 	const JSPDF = await import('jspdf')
 	const { jsPDF } = JSPDF
 	/*
@@ -53,9 +68,18 @@ export async function downloadSVGsAsPdf(name2svg, filename = 'charts.pdf') {
 	let y = 50
 	const x = 30
 	const ratio = 72 / 96 //convert pixels to pt
-
+	const styles: any[] = []
+	if (parent) {
+		const svgStyles = window.getComputedStyle(parent)
+		for (const [prop, value] of Object.entries(svgStyles)) {
+			if (prop.startsWith('font')) styles.push({ prop, value })
+		}
+	}
 	for (const [name, svgObj] of entries) {
 		const svg = svgObj.node()
+		for (const style of styles) {
+			svg.style[style.prop] = style.value
+		}
 		const rect = svg.getBoundingClientRect()
 		svg.setAttribute('viewBox', `0 0 ${rect.width} ${rect.height}`)
 		const width = Math.min(pageWidth, rect.width * ratio) - 20
@@ -68,5 +92,5 @@ export async function downloadSVGsAsPdf(name2svg, filename = 'charts.pdf') {
 		await doc.svg(svg, { x, y, width, height })
 		y = y + height + 50
 	}
-	doc.save(filename)
+	doc.save(filename + '.pdf')
 }

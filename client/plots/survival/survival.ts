@@ -55,6 +55,7 @@ class TdbSurvival extends PlotBase implements RxComponentInner {
 	hiddenRenderer: any
 	legendClick = (_, __, ___) => {}
 	download: () => void = () => {}
+	getName2Svg = () => this.getName2Svg()
 	loadingWait = 0
 
 	colorScale: any
@@ -558,7 +559,6 @@ export const componentInit = survivalInit
 function setRenderers(self) {
 	self.render = function () {
 		const data = self.pj.tree.charts || [{ chartId: 'No survival data' }]
-		console.log(data)
 		const chartDivs = self.dom.chartsDiv.selectAll('.pp-survival-chart').data(data, d => d.chartId)
 		chartDivs.exit().remove()
 		chartDivs.each(self.updateCharts)
@@ -730,7 +730,7 @@ function setRenderers(self) {
 		/* eslint-disable */
 		const [mainG, seriesesG, axisG, xAxis, yAxis, xTitle, yTitle, atRiskG, plotRect] = getSvgSubElems(svg)
 		/* eslint-enable */
-		const xOffset = chart.atRiskLabelWidth + s.svgPadding.left + 40 //adding 40 avoids clipping of the svg
+		const xOffset = chart.atRiskLabelWidth + s.svgPadding.left + 70 //adding 70 avoids clipping of the svg when downloading
 		mainG.attr('transform', 'translate(' + xOffset + ',' + s.svgPadding.top + ')')
 
 		const serieses = seriesesG
@@ -1032,7 +1032,8 @@ function setRenderers(self) {
 function setInteractivity(self) {
 	self.download = function (event) {
 		const name2svg = self.getName2Svg()
-		const menu = new DownloadMenu(name2svg, self.opts.holder.node())
+		const node = self.dom.chartsDiv.select('.sjpp-survival-mainG').node() //node to read the style
+		const menu = new DownloadMenu(name2svg, node, self.state.config.term.term.name)
 		menu.show(event.clientX, event.clientY)
 	}
 
@@ -1044,7 +1045,7 @@ function setInteractivity(self) {
 		return name2svg
 	}
 
-	// The logic in downloadChart will be moved to the downloadMenu option to save all charts in an svg
+	// The logic is moved to the downloadMenu
 	self.download2 = function () {
 		if (!self.state) return
 		downloadChart(
