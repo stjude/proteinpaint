@@ -88,15 +88,11 @@ export class AIProjectAdminInteractions {
 
 		const config = this.getConfig()
 
-		let images: any[] = []
-		if (Array.isArray(_images) && _images?.length) {
-			images = _images
-			//Remove after api integration
-		} else if (_images == 'dev') {
-			images = ['14965.svs', '14970.svs']
-		} else {
-			images = await this.prjtRepo.getImages(this.genome, this.dslabel, config.settings.project)
-		}
+		const images: AIProjectAdminResponse = await this.prjtRepo.getImages(
+			this.genome,
+			this.dslabel,
+			config.settings.project
+		)
 
 		const wsiViewer = await import('#plots/wsiviewer/plot.wsi.js')
 		wsiViewer.default(this.dslabel, holder, { name: this.genome }, null, config.settings.project.id, images)

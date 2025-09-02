@@ -18,7 +18,19 @@ export class ProjectReposity {
 	}
 
 	/** Gets the image paths from db */
-	public async getImages(genome: string, dslabel: string, project: any): Promise<string[]> {
+	public async getImages(
+		genome: string,
+		dslabel: string,
+		project: any
+	): Promise<
+		| {
+				status: 'ok' | 'error'
+				projectId?: number
+				error?: string
+				data?: { cols: any[]; rows: any[]; images: string[] }[]
+		  }
+		| string[]
+	> {
 		const body: AIProjectAdminRequest = {
 			genome,
 			dslabel,
@@ -26,7 +38,7 @@ export class ProjectReposity {
 			project
 		}
 		try {
-			const response = await dofetch3('aiProjectAdmin', { body })
+			const response: AIProjectAdminResponse = await dofetch3('aiProjectAdmin', { body })
 			return response || []
 		} catch (error) {
 			console.error('Error fetching images:', error)

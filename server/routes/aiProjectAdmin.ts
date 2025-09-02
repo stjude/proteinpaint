@@ -77,8 +77,12 @@ function init({ genomes }) {
 					data
 				})
 			} else if (query.for === 'images') {
-				const images = await getImages(connection, query.project)
-				res.send(images)
+				const images: Database.RunResult | any[] = getImages(connection, query.project)
+				if (Array.isArray(images)) {
+					res.send(images.map(row => row.image_path))
+				} else {
+					throw new Error('Images are not in expected format')
+				}
 			} else {
 				res.send({
 					status: 'error',
