@@ -41,3 +41,105 @@ export function renderCnvSourceSelector(
 
 	option.append('span').html((d, i) => d.nameHtml || d.name || `Set ${i + 1}`)
 }
+
+/**
+ * Render the CNV source label and a button inside the legend. Clicking the
+ * button will display a small menu with radio buttons to choose among the
+ * available CNV data sets.
+ *
+ * @param svgDiv - div that holds the svg, used as relative container for the menu
+ * @param legendG - legend <g> element to append the label and button to
+ * @param dataSets - list of alternative CNV data sets from the server
+ * @param fontSize - font size used in the legend
+ * @param onChange - callback fired with the index of the selected data set
+ */
+export function renderCnvSourceLegend(
+	svgDiv: Selection<HTMLDivElement, any, any, any>,
+	legendG: Selection<SVGGElement, any, any, any>,
+	dataSets: AlternativeCnvSet[],
+	fontSize: number,
+	onChange: (index: number) => void
+) {
+	if (!dataSets || dataSets.length === 0) return
+
+	legendG.select('g.sjpp-cnv-source').remove()
+	svgDiv.select('div.sjpp-cnv-source-menu').remove()
+
+	const current = dataSets.find(d => d.inuse) || dataSets[0]
+	const g = legendG.insert('g', ':first-child').attr('class', 'sjpp-cnv-source')
+
+	const prefix = g.append('text').attr('font-size', fontSize).text('Source: ')
+	const prefixNode = prefix.node()
+	const prefixWidth = prefixNode ? prefixNode.getBBox().width : 0
+
+	let href: string | undefined
+	let target = '_blank'
+	let linkText = current.name || `Set ${dataSets.indexOf(current) + 1}`
+	if (current.nameHtml) {
+		const parser = new DOMParser()
+		const doc = parser.parseFromString(current.nameHtml, 'text/html')
+		const anchor = doc.querySelector('a')
+		if (anchor) {
+			href = anchor.getAttribute('href') || undefined
+			target = anchor.getAttribute('target') || '_blank'
+			linkText = anchor.textContent || linkText
+		}
+	}
+
+	let linkWidth = 0
+	if (href) {
+		const a = g.append('a').attr('href', href).attr('target', target)
+		const t = a
+			.append('text')
+			.attr('x', prefixWidth)
+			.attr('font-size', fontSize)
+			.text(linkText)
+			.style('fill', '#428bca')
+			.style('text-decoration', 'underline')
+		const node = t.node()
+		linkWidth = node ? node.getBBox().width : 0
+	} else {
+		const t = g.append('text').attr('x', prefixWidth).attr('font-size', fontSize).text(linkText)
+		const node = t.node()
+		linkWidth = node ? node.getBBox().width : 0
+	}
+
+	const labelWidth = prefixWidth + linkWidth
+
+	const button = g
+		.append('text')
+		.attr('x', labelWidth + 5)
+		.attr('font-size', fontSize)
+		.text('[Click to change]')
+		.style('cursor', 'pointer')
+		.style('fill', '#428bca')
+		.style('text-decoration', 'underline')
+
+	const menu = svgDiv
+		.append('div')
+		.classed('sjpp-cnv-source-menu', true)
+		.style('display', 'none')
+		.style('position', 'absolute')
+		.style('background', 'white')
+		.style('border', '1px solid #ccc')
+		.style('padding', '5px')
+		.style('z-index', '10')
+
+	renderCnvSourceSelector(menu, dataSets, i => {
+		onChange(i)
+		menu.style('display', 'none')
+	})
+
+	button.on('click', event => {
+		const divNode = svgDiv.node()
+		if (!divNode) return
+		const divRect = divNode.getBoundingClientRect()
+		menu
+			.style('left', `${event.clientX - divRect.left}px`)
+			.style('top', `${event.clientY - divRect.top}px`)
+			.style('display', 'block')
+		event.stopPropagation()
+	})
+
+	svgDiv.on('click', () => menu.style('display', 'none'))
+}

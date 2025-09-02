@@ -20,7 +20,7 @@ import { CnvHeatmapRenderer } from '#plots/disco/cnv/CnvHeatmapRenderer.ts'
 import type ViewModel from '#plots/disco/viewmodel/ViewModel.ts'
 import { CnvRenderingType } from '#plots/disco/cnv/CnvRenderingType.ts'
 import { InvalidDataUI } from '#dom'
-import { renderCnvSourceSelector } from './cnv/CnvSourceSelector.ts'
+import { renderCnvSourceLegend } from './cnv/CnvSourceSelector.ts'
 import { dtcnv, dtloh } from '#shared/common.js'
 
 export default class Disco {
@@ -59,11 +59,6 @@ export default class Disco {
 		const topbar = controlsHolder.append('div')
 		const config_div = controlsHolder.append('div')
 		const configInputsOptions = this.getConfigInputsOptions(this.viewModel)
-
-		const altCnv = state.args.alternativeDataByDt?.[dtcnv]
-		if (altCnv?.length > 1) {
-			renderCnvSourceSelector(controlsHolder, altCnv, i => this.onCnvSourceSelect(i))
-		}
 
 		this.features = await multiInit({
 			topbar: topBarInit({
@@ -194,7 +189,11 @@ export default class Disco {
 			const holder = this.opts.holder
 			// TODO change this
 			holder.select('div[id="sjpp_disco_plot_holder_div"]').remove()
-			const svgDiv = holder.append('div').attr('id', 'sjpp_disco_plot_holder_div').style('display', 'inline-block')
+			const svgDiv = holder
+				.append('div')
+				.attr('id', 'sjpp_disco_plot_holder_div')
+				.style('display', 'inline-block')
+				.style('position', 'relative')
 
 			// TODO calculate viewModel.filteredSnvDataLength always
 			const appState = this.app.getState()
@@ -212,6 +211,12 @@ export default class Disco {
 			)
 
 			discoRenderer.render(svgDiv, this.viewModel)
+
+			const altCnv = this.app.getState().args.alternativeDataByDt?.[dtcnv]
+			if (altCnv && altCnv.length > 0) {
+				const legendG = svgDiv.select('g[data-testid="sjpp_disco_plot_legend"]')
+				renderCnvSourceLegend(svgDiv, legendG, altCnv, settings.label.fontSize, i => this.onCnvSourceSelect(i))
+			}
 
 			if (this.viewModel.invalidDataInfo?.entries?.length) {
 				InvalidDataUI.render(this.errorDiv, this.viewModel.invalidDataInfo)
