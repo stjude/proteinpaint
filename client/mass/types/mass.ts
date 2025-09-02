@@ -1,7 +1,7 @@
 import type { RxAppApi } from '../../types/rx'
 import type { Menu } from '#dom'
 import type { Elem } from '../../types/d3'
-import type { ClientCopyGenome } from 'types/global'
+import type { ClientGenome } from '../../types/clientGenome'
 import type { BoxPlotSettings } from '../../plots/boxplot/BoxPlotTypes'
 import type { CorrVolcanoSettings } from '#plots/corrVolcano/CorrelationVolcanoTypes.ts'
 import type { VolcanoSettings } from '../../plots/volcano/VolcanoTypes.ts'
@@ -16,7 +16,7 @@ export type MassAppApi = RxAppApi & {
 		/** TODO!! -> {} */
 		callbacks: any
 		debug: boolean
-		genome: ClientCopyGenome
+		genome: ClientGenome
 		holder: Elem
 		/** Current release version. See https://github.com/stjude/proteinpaint/releases */
 		pkgver: string

@@ -4,7 +4,7 @@ import { select } from 'd3-selection'
 import { mclass, dt2color, dt2label } from '#shared/common.js'
 import { TermTypes } from '#shared/terms.js'
 import type { Button, Div, Elem } from '../../types/d3'
-import type { ClientCopyGenome } from '../../types/global'
+import type { ClientGenome } from '../../types/clientGenome'
 import type { GeneArgumentEntry } from '#types'
 import { GenesMenu } from './GenesMenu'
 import { addButton } from './addButton.ts'
@@ -68,7 +68,7 @@ type CustomInputs = {
 
 export type GeneSetEditArg = {
 	holder: Elem
-	genome: ClientCopyGenome
+	genome: ClientGenome
 	/** Optional: If provided, allow to load top variably mutated ('geneVariant') or
 	 * expressed genes ('geneExpression'). If not provided, only allow to add genes manually
 	 * later can be union of multiple mode strings */
@@ -103,7 +103,7 @@ type MenuListEntry = {
 
 export class GeneSetEditUI {
 	holder: Elem
-	genome: ClientCopyGenome
+	genome: ClientGenome
 	callback: (arg: CallbackArg) => void
 	/** termdb */
 	vocabApi: any

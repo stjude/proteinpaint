@@ -5,14 +5,14 @@ import MenuProvider from '#plots/disco/menu/MenuProvider.ts'
 import FusionColorProvider from '#plots/disco/fusion/FusionColorProvider.ts'
 import { table2col } from '#dom/table2col'
 import { dofetch3 } from '#common/dofetch'
-import type { ClientCopyGenome } from 'types/global.ts'
+import type { ClientGenome } from '../../../types/clientGenome.ts'
 
 // dynamically load svgraph when user clicks on a fusion arc
 
 export default class FusionRenderer {
-	private genome: ClientCopyGenome
+	private genome: ClientGenome
 
-	constructor(genome: ClientCopyGenome) {
+	constructor(genome: ClientGenome) {
 		this.genome = genome
 	}
 
@@ -97,7 +97,7 @@ export default class FusionRenderer {
 	}
 }
 
-async function makeSvgraph(fusion: Fusion, div: any, genome: ClientCopyGenome) {
+async function makeSvgraph(fusion: Fusion, div: any, genome: ClientGenome) {
 	const wait = div.append('div').text('Loading...')
 	const svpair = {
 		a: {
