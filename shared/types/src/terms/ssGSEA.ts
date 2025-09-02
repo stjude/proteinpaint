@@ -1,5 +1,5 @@
 import type { TermWrapper } from './tw.ts'
-import type { NumericTerm, NumericQ } from './numeric.ts'
+import type { NumericBaseTerm, NumericQ, PresetNumericBins } from './numeric.ts'
 import type { TermSettingInstance } from '../termsetting.ts'
 
 /*
@@ -13,11 +13,16 @@ export type SsGSEATW = TermWrapper & {
 	term: SsGSEATerm
 }
 
-export type SsGSEATerm = NumericTerm & {
+export type SsGSEATerm = NumericBaseTerm & {
 	/** term.id: geneset db term id for native term, and cache file name for custom term */
 	/** term.name: geneset db term name for native term, and user-defined name for custom term */
 	/** custom term has list of gene names used for computing score */
 	genes?: string[]
+	name?: string
+	type: 'date'
+	metabolite: string
+	bins: PresetNumericBins
+	unit?: string
 }
 
 export type SsGSEATermSettingInstance = TermSettingInstance & {
