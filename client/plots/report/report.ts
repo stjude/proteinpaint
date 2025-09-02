@@ -143,13 +143,22 @@ export class Report extends RxComponentInner {
 		for (const section of this.config.sections) {
 			for (const plotConfig of section.plots) {
 				const plot = this.components.plots[plotConfig.id]
-				console.log(plot)
-				if (plot?.getName2Svg) {
-					const name2svg = plot.getName2Svg()
+				if (plot?.getChartDict) {
+					const name2svg = plot.getChartDict()
 					const entries: any[] = Object.entries(name2svg)
 
-					for (const [name, svgObj] of entries) {
-						const svg = svgObj.node()
+					for (const [name, chart] of entries) {
+						const parent = chart.parent
+						const svg = chart.svg.node().cloneNode(true)
+						if (parent) {
+							const svgStyles = window.getComputedStyle(parent)
+							for (const [prop, value] of Object.entries(svgStyles)) {
+								if (prop.startsWith('font')) {
+									svg.style[prop] = value
+								}
+							}
+						}
+						chart.parent.appendChild(svg) //Added otherwise does not print, will remove later
 						const rect = svg.getBoundingClientRect()
 						svg.setAttribute('viewBox', `0 0 ${rect.width} ${rect.height}`)
 						const width = Math.min(pageWidth, rect.width * ratio) - 20
@@ -169,6 +178,7 @@ export class Report extends RxComponentInner {
 						y += 20
 						await doc.svg(svg, { x, y, width, height })
 						y = y + height + 30
+						chart.parent.removeChild(svg)
 					}
 				}
 			}

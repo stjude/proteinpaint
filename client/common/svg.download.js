@@ -113,29 +113,31 @@ export function downloadChart(mainGsel, svgName, styleParent = null) {
 	to_svg(svg, svgName, { apply_dom_styles: true })
 }
 
-export function downloadAggregatedSVG(name2svg, svgName, parent) {
+export function downloadAggregatedSVG(name2svg, svgName) {
 	const x = 50
 	const svgParent = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
 	const styles = []
-	if (parent) {
-		const svgStyles = window.getComputedStyle(parent)
-		for (const [prop, value] of Object.entries(svgStyles)) {
-			if (prop.startsWith('font')) styles.push({ prop, value })
-		}
-	}
+
 	let y = 20
-	for (const [name, svg] of Object.entries(name2svg)) {
-		for (const style of styles) {
-			svg.style(style.prop, style.value)
-		}
-		const bbox = svg.node().getBoundingClientRect()
+	for (const [name, chart] of Object.entries(name2svg)) {
+		const parent = chart.parent
+		const svg = chart.svg.clone(true)
 		const g = document.createElementNS('http://www.w3.org/2000/svg', 'g')
 		g.setAttribute('transform', `translate(${x}, ${y + 20})`)
-		const title = document.createElementNS('http://www.w3.org/2000/svg', 'text')
-		title.textContent = name
-		const svgNode = svg.node().cloneNode(true)
 
-		svgParent.appendChild(title)
+		if (parent) {
+			const svgStyles = window.getComputedStyle(parent)
+			for (const [prop, value] of Object.entries(svgStyles)) {
+				if (prop.startsWith('font')) g.style[prop] = value
+			}
+		}
+		const bbox = chart.svg.node().getBoundingClientRect()
+		const title = document.createElementNS('http://www.w3.org/2000/svg', 'text')
+
+		title.textContent = name
+		const svgNode = svg.node()
+
+		g.appendChild(title)
 		g.appendChild(svgNode)
 		svgParent.appendChild(g)
 		y += bbox.height + 40

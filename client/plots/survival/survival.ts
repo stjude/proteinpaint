@@ -55,7 +55,7 @@ class TdbSurvival extends PlotBase implements RxComponentInner {
 	hiddenRenderer: any
 	legendClick = (_, __, ___) => {}
 	download: () => void = () => {}
-	getName2Svg = () => this.getName2Svg()
+	getChartDict = () => this.getChartDict()
 	loadingWait = 0
 
 	colorScale: any
@@ -158,7 +158,7 @@ class TdbSurvival extends PlotBase implements RxComponentInner {
 
 	preApiFreeze(api) {
 		api.download = this.download
-		api.getName2Svg = () => this.getName2Svg()
+		api.getChartDict = () => this.getChartDict()
 	}
 
 	async setControls() {
@@ -1031,16 +1031,17 @@ function setRenderers(self) {
 
 function setInteractivity(self) {
 	self.download = function (event) {
-		const name2svg = self.getName2Svg()
-		const node = self.dom.chartsDiv.select('.sjpp-survival-mainG').node() //node to read the style
-		const menu = new DownloadMenu(name2svg, node, self.state.config.term.term.name)
+		const name2svg = self.getChartDict()
+		const menu = new DownloadMenu(name2svg, self.state.config.term.term.name)
 		menu.show(event.clientX, event.clientY)
 	}
 
-	self.getName2Svg = function () {
+	self.getChartDict = function () {
 		const name2svg = {}
+		const node = self.dom.chartsDiv.select('.sjpp-survival-mainG').node() //node to read the style
+
 		for (const chart of self.pj.tree.charts) {
-			name2svg[chart.chartId] = chart.svg
+			name2svg[chart.chartId] = { svg: chart.svg, parent: node }
 		}
 		return name2svg
 	}
