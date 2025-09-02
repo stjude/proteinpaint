@@ -3,7 +3,7 @@ import { NumRegularBin, NumCustomBins, NumCont } from './numeric.ts'
 import type { RawNumTW } from '#types'
 import { copyMerge } from '#rx'
 
-export class MetaboliteIntBase extends TwBase {
+export class MetaboliteIntensityBase extends TwBase {
 	static async fill(tw: RawNumTW, opts: TwOpts) {
 		if (tw.term.type != 'metaboliteIntensity') throw 'unexpected term.type'
 		if (typeof tw.term !== 'object') throw 'tw.term is not an object'

@@ -7,6 +7,8 @@ export class SsGSEABase extends TwBase {
 	static async fill(tw: RawNumTW, opts: TwOpts) {
 		if (tw.term.type != 'ssGSEA') throw 'unexpected term.type'
 		if (typeof tw.term !== 'object') throw 'tw.term is not an object'
+		if (!tw.term.id) throw 'tw.term.id missing'
+		if (!tw.term.name) tw.term.name = tw.term.id // only apply to native; lack way to auto retrieve
 
 		if (opts.defaultQ) copyMerge(tw.q, opts.defaultQ) // override if default is given
 

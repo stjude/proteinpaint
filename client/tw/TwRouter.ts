@@ -7,6 +7,8 @@ import { GvBase, GvPredefinedGS, GvCustomGS } from './geneVariant.ts'
 import { GeneExpBase } from './geneExpression.ts'
 import { NumericBase, NumRegularBin, NumCustomBins, NumCont } from './numeric.ts'
 import { DateBase } from './date.ts'
+import { SsGSEABase } from './ssGSEA.ts'
+import { MetaboliteIntensityBase } from './metaboliteIntensity.ts'
 
 export const routedTermTypes = new Set([
 	'categorical',
@@ -94,6 +96,12 @@ export class TwRouter {
 
 			case 'date':
 				return await DateBase.fill(tw, opts)
+
+			case 'metaboliteIntensity':
+				return await MetaboliteIntensityBase.fill(tw, opts)
+
+			case 'ssGSEA':
+				return await SsGSEABase.fill(tw, opts)
 
 			default:
 				throw `unrecognized tw.term?.type='${tw.term?.type}'`
