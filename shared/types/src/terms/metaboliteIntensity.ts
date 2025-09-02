@@ -1,4 +1,4 @@
-import type { BaseTW, NumericBaseTerm, NumericQ } from '../index'
+import type { BaseTW, NumericBaseTerm, NumericQ, PresetNumericBins } from '../index.ts'
 import type { TermSettingInstance } from '../termsetting.ts'
 
 /*
@@ -9,7 +9,7 @@ MetaboliteIntensityTermSettingInstance
 */
 
 export type MetaboliteIntensityTW = BaseTW & {
-	type: string // 'NumTWCont'
+	type: 'NumTWCont'
 	q: NumericQ
 	term: MetaboliteIntensityTerm
 }
@@ -18,7 +18,7 @@ export type MetaboliteIntensityTerm = NumericBaseTerm & {
 	name?: string
 	type: 'metaboliteIntensity'
 	metabolite: string
-	bins: any
+	bins: PresetNumericBins
 	unit?: string
 }
 

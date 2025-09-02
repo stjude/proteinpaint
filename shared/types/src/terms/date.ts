@@ -1,4 +1,4 @@
-import type { BaseTW, NumericBaseTerm, NumericQ } from '../index.ts'
+import type { BaseTW, NumericBaseTerm, NumericQ, PresetNumericBins } from '../index.ts'
 import type { TermSettingInstance } from '../termsetting.ts'
 
 /*
@@ -12,12 +12,12 @@ export type DateTerm = NumericBaseTerm & {
 	name?: string
 	type: 'date'
 	metabolite: string
-	bins: any
+	bins: PresetNumericBins
 	unit?: string
 }
 
 export type DateTW = BaseTW & {
-	type: string // 'NumTWCont'
+	type: 'NumTWCont'
 	q: NumericQ
 	term: DateTerm
 }
