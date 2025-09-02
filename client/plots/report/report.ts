@@ -159,10 +159,11 @@ export class Report extends RxComponentInner {
 							}
 						}
 						chart.parent.appendChild(svg) //Added otherwise does not print, will remove later
-						const rect = svg.getBoundingClientRect()
-						svg.setAttribute('viewBox', `0 0 ${rect.width} ${rect.height}`)
-						const width = Math.min(pageWidth, rect.width * ratio) - 20
-						const height = Math.min(pageHeight, rect.height * ratio) - 20
+						let width = svg.getAttribute('width')
+						let height = svg.getAttribute('height')
+						svg.setAttribute('viewBox', `0 0 ${width} ${height}`)
+						width = Math.min(pageWidth, width * ratio) - 20
+						height = Math.min(pageHeight, height * ratio) - 20
 						if (y + height > pageHeight - 20) {
 							doc.addPage()
 							y = 40
@@ -177,7 +178,7 @@ export class Report extends RxComponentInner {
 						doc.text(name, x, y)
 						y += 20
 						await doc.svg(svg, { x, y, width, height })
-						y = y + height + 30
+						y = y + height + 40
 						chart.parent.removeChild(svg)
 					}
 				}
