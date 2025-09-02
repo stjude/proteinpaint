@@ -20,7 +20,7 @@ export type SsGSEATerm = NumericBaseTerm & {
 	genes?: string[]
 	name?: string
 	type: 'ssGSEA'
-	bins: PresetNumericBins
+	bins?: PresetNumericBins
 	unit?: string
 }
 
