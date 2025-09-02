@@ -22,7 +22,6 @@ export default async function (dslabel, holder, genomeObj, sample_id, aiProjectI
 				genome: genomeObj.name,
 				dslabel: dslabel,
 				sample_id: sample_id,
-				// TODO - quick fix, remove before merging
 				aiProjectID: aiProjectID,
 				aiWSIMageFiles: aiWSIMageFiles,
 				plots: [
