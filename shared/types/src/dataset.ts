@@ -740,6 +740,8 @@ export type GeneExpressionQueryNative = {
 	geneExpression2bins?: { [index: string]: any }
 	/** gene expression unit (e.g. 'FPKM') */
 	unit?: string
+	/** temporary h5 file format flag */
+	newformat?: boolean
 }
 
 export type GeneExpressionQuery = GeneExpressionQueryGdc | GeneExpressionQueryNative
