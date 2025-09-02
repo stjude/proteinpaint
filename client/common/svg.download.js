@@ -123,7 +123,7 @@ export function downloadAggregatedSVG(name2svg, svgName) {
 		const parent = chart.parent
 		const svg = chart.svg.clone(true)
 		const g = document.createElementNS('http://www.w3.org/2000/svg', 'g')
-		g.setAttribute('transform', `translate(${x}, ${y + 20})`)
+		g.setAttribute('transform', `translate(${x}, ${y})`)
 
 		if (parent) {
 			const svgStyles = window.getComputedStyle(parent)
@@ -131,16 +131,17 @@ export function downloadAggregatedSVG(name2svg, svgName) {
 				if (prop.startsWith('font')) g.style[prop] = value
 			}
 		}
-		const bbox = chart.svg.node().getBoundingClientRect()
 		const title = document.createElementNS('http://www.w3.org/2000/svg', 'text')
-
 		title.textContent = name
-		const svgNode = svg.node()
-
 		g.appendChild(title)
+
+		const svgNode = svg.node()
+		const bbox = svgNode.getBoundingClientRect()
+		svgNode.setAttribute('transform', `translate(${x}, ${30})`)
+
 		g.appendChild(svgNode)
 		svgParent.appendChild(g)
-		y += bbox.height + 40
+		y += bbox.height + 70 //30 from the shift for the label, 40 to add space for new plot
 	}
 	svgParent.setAttribute('height', `${y + 20}`)
 

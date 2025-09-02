@@ -65,7 +65,7 @@ export async function downloadSVGsAsPdf(name2svg, filename) {
 
 	const entries: any[] = Object.entries(name2svg)
 	let y = 50
-	const x = 30
+	const x = 20
 	const ratio = 72 / 96 //convert pixels to pt
 
 	for (const [name, chart] of entries) {
@@ -79,10 +79,11 @@ export async function downloadSVGsAsPdf(name2svg, filename) {
 		}
 		parent.appendChild(svg) //Added otherwise does not print, will remove later
 
-		const rect = svg.getBoundingClientRect()
-		svg.setAttribute('viewBox', `0 0 ${rect.width} ${rect.height}`)
-		const width = Math.min(pageWidth, rect.width * ratio) - 10
-		const height = Math.min(pageHeight, rect.height * ratio) - 10
+		let width = svg.getAttribute('width')
+		let height = svg.getAttribute('height')
+		svg.setAttribute('viewBox', `0 0 ${width} ${height}`)
+		width = Math.min(pageWidth, width * ratio) - 30
+		height = Math.min(pageHeight, height * ratio) - 30
 		if (y + height > pageHeight - 20) {
 			doc.addPage()
 			y = 50
