@@ -2,8 +2,6 @@ import { PlotBase } from './PlotBase.ts'
 import { getCompInit, type ComponentApi, type RxComponentInner } from '#rx'
 import { controlsInit } from './controls'
 
-let instanceNum = 1
-
 class SummaryInputPlot extends PlotBase implements RxComponentInner {
 	static type = 'summaryInput'
 
@@ -26,7 +24,6 @@ class SummaryInputPlot extends PlotBase implements RxComponentInner {
 		this.dom = this.getDom()
 		this.app = opts.app
 		this.id = opts.id
-		this.instanceNum = instanceNum++
 	}
 
 	getDom() {
@@ -34,7 +31,7 @@ class SummaryInputPlot extends PlotBase implements RxComponentInner {
 		const dom = {
 			header: opts.header,
 			holder: opts.holder,
-			controls: opts.holder.append('div') /*.style('margin', '10px 0px')*/,
+			controls: opts.holder.append('div'),
 			submit: opts.holder.append('div').style('margin', '10px')
 		}
 		if (dom.header) dom.header.html('Summary Input')
@@ -60,16 +57,7 @@ class SummaryInputPlot extends PlotBase implements RxComponentInner {
 			}
 		]
 
-		/*const x = await configUiInit({
-            app: this.app,
-            id: this.id,
-            holder: this.dom.controls,
-            isOpen: () => true,
-            tip: this.app.tip,
-            inputs
-        })*/
-
-		const x = await controlsInit({
+		const controls = await controlsInit({
 			app: this.app,
 			id: this.id,
 			holder: this.dom.controls.attr('class', 'pp-termdb-plot-controls').style('display', 'inline-block'),
@@ -78,7 +66,7 @@ class SummaryInputPlot extends PlotBase implements RxComponentInner {
 		})
 
 		const appState = this.app.getState()
-		x.update({ state: this.state, appState })
+		controls.update({ state: this.state, appState })
 
 		this.dom.submit
 			.append('button')
@@ -87,34 +75,36 @@ class SummaryInputPlot extends PlotBase implements RxComponentInner {
 			.style('border-radius', '20px')
 			.style('padding', '10px 15px')
 			.text('Submit')
-			.on('click', () => {})
+			.on('click', () => {
+				const config = structuredClone(this.config)
+				config.chartType = config.term.type == 'survival' ? 'survival' : 'summary'
+				this.app.dispatch({
+					type: 'plot_create',
+					config
+				})
+				this.app.dispatch({
+					type: 'plot_delete',
+					id: this.id
+				})
+			})
+	}
+
+	getState(appState) {
+		const config = appState.plots.find(p => p.id === this.id)
+		if (!config) {
+			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
+		}
+		return {
+			termfilter: appState.termfilter,
+			config,
+			// quick fix to skip history tracking as needed
+			_scope_: appState._scope_
+		}
 	}
 
 	async main() {
-		console.log('main()')
-
-		//this.config = await this.getMutableConfig()
-
-		//const holder = this.dom.holder
-		//holder.append('div').text('This is a test')
-		//const table = table2col({ holder: this.dom.typeSettingDiv, margin: '0px 0px 15px 0px' })
-		//const table = holder.append('table')
-		/*const termrow = table.append('tr')
-        const termLabelTd = termrow.append('td')
-        const termInputTd = termrow.append('td')*/
-
-		/*initByInput['term']({
-            holder: table.append('tr'),
-            label: 'Data variable',
-            app: this.app,
-            id: this.id,
-            instanceNum: this.instanceNum,
-            debug: this.opts.debug,
-            parent: this
-        })*/
+		this.config = await this.getMutableConfig()
 	}
-
-	render() {}
 }
 
 export const summaryInputInit = getCompInit(SummaryInputPlot)
