@@ -1152,8 +1152,8 @@ type Scatterplots = {
 type CorrelationVolcano = {
 	/** fixed feature, is one numeric term */
 	feature: {
-		/** later expand to other types */
-		termType: 'geneExpression'
+		/** array of allowed term types for feature tw */
+		termTypes: string[]
 	}
 	/** list of numeric variables to be compared against fixed feature*/
 	variables: {

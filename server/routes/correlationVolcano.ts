@@ -4,10 +4,9 @@ import { getData } from '../src/termdb.matrix.js'
 import { run_R } from '@sjcrh/proteinpaint-r'
 import { mayLog } from '#src/helpers.ts'
 import { getStdDev } from '#shared/descriptive.stats.js'
-import { formatElapsedTime } from '#shared/time.js'
+
 // to avoid crashing r, an array must meet below; otherwise the variable is skipped
 const minArrayLength = 3 // minimum number of values
-const minSD = 0.05 // minimum standard deviation
 
 export const api: RouteApi = {
 	endpoint: 'termdb/correlationVolcano',
@@ -41,12 +40,14 @@ function init({ genomes }) {
 }
 
 async function compute(q: CorrelationVolcanoRequest, ds: any) {
-	const terms = [q.featureTw, ...q.variableTwLst]
+	if (!q.featureTw.$id) throw 'featureTw.$id missing'
+	if (!ds.cohort.correlationVolcano.feature.termTypes.includes(q.featureTw?.term.type))
+		throw 'unsupported featureTw.term.type'
 	const data = await getData(
 		{
 			filter: q.filter,
 			filter0: q.filter0,
-			terms,
+			terms: [q.featureTw, ...q.variableTwLst],
 			__protected__: q.__protected__
 		},
 		ds
@@ -59,10 +60,11 @@ async function compute(q: CorrelationVolcanoRequest, ds: any) {
 	}
 	// populate with each variable tw
 	for (const sid in data.samples) {
-		const featureValue = q.featureTw.$id === undefined ? undefined : data.samples[sid][q.featureTw.$id]?.value
+		const featureValue = data.samples[sid][q.featureTw.$id]?.value
 		if (!Number.isFinite(featureValue)) continue // missing value. ignore this sample
 		for (const tw of q.variableTwLst) {
-			const variableValue = tw.$id === undefined ? undefined : data.samples[sid][tw.$id]?.value
+			if (!tw.$id) throw 'variableTwLst[].$id missing' // required to avoid tsc err
+			const variableValue = data.samples[sid][tw.$id]?.value
 			if (!Number.isFinite(variableValue)) continue // missing. ignore this from input into tw array
 			vtid2array.get(tw.$id).v1.push(featureValue)
 			vtid2array.get(tw.$id).v2.push(variableValue)
@@ -71,21 +73,18 @@ async function compute(q: CorrelationVolcanoRequest, ds: any) {
 
 	/** To calculate correlation, ensure variables: 
 	 * 1) not less that minimum number of values in each array 
-	 * 2) both vectors have a standard deviation greater than 0.05
-	If not, show term in legend on client*/
-	const [acceptedVariables, skippedVariables] = Array.from(vtid2array.values()).reduce(
-		([accepted, skipped], t) => {
-			//Need enough values to calculate correlation
-			const grterThanOne = t.v1.length > minArrayLength && t.v2.length > minArrayLength
-			//Need enough to variance in data to calculate correlation
-			const significantSD = getStdDev(t.v1) > minSD && getStdDev(t.v2) > minSD
-			const v = grterThanOne && significantSD ? accepted : skipped
-			if (v === accepted) accepted.push(t)
-			if (v === skipped) skipped.push({ tw$id: t.id })
-			return [accepted, skipped]
-		},
-		[[], []] as [{ v1: string; v2: string; id: string }[], { tw$id: string }[]]
-	)
+	 * 2) both vectors have a standard deviation >0
+	If not, show term in legend on client
+	*/
+	const acceptedVariables: { v1: number; v2: number; id: string }[] = [],
+		skippedVariables: { tw$id: string }[] = []
+	for (const [tid, v] of vtid2array) {
+		if (v.v1.length < minArrayLength || v.v2.length < minArrayLength || getStdDev(v.v1) == 0 || getStdDev(v.v2) == 0) {
+			skippedVariables.push({ tw$id: tid })
+			continue
+		}
+		acceptedVariables.push(v)
+	}
 
 	const result: CorrelationVolcanoResponse = { skippedVariables, variableItems: [] }
 
@@ -96,21 +95,19 @@ async function compute(q: CorrelationVolcanoRequest, ds: any) {
 		terms: acceptedVariables
 	}
 
-	//console.log("input:",input)
-	//fs.writeFile('test.txt', JSON.stringify(input), function (err) {
-	//	// For catching input to rust pipeline, in case of an error
-	//	if (err) return console.log(err)
-	//})
+	/*
+	fs.writeFile('test.txt', JSON.stringify(input), function (err) {
+		// For catching input to rust pipeline, in case of an error
+		if (err) return console.log(err)
+	})
+	*/
 
 	const time1 = Date.now()
 	const output = {
 		terms: JSON.parse(await run_R('corr.R', JSON.stringify(input)))
 	}
-	// Format the elapsed time with appropriate units
-	const elapsedMs = Date.now() - time1
-	const formattedTime = formatElapsedTime(elapsedMs)
+	mayLog('Time taken to run correlation analysis:', Date.now() - time1)
 
-	mayLog('Time taken to run correlation analysis:', formattedTime)
 	for (const t of output.terms) {
 		const t2 = {
 			tw$id: t.id,
@@ -129,10 +126,15 @@ export function validate_correlationVolcano(ds: any) {
 	const cv = ds.cohort.correlationVolcano
 	if (!cv) return
 	if (typeof cv.feature != 'object') throw 'cv.feature not obj'
-	if (cv.feature.termType == 'geneExpression') {
-		if (!ds.queries?.geneExpression) throw 'cv.feature.termType=geneExpression not supported by ds'
-	} else {
-		throw 'unknown cv.feature.termType'
+	if (!Array.isArray(cv.feature.termTypes)) throw 'cv.feature.termTypes[] not array'
+	for (const t of cv.feature.termTypes) {
+		if (t == 'geneExpression') {
+			if (!ds.queries?.geneExpression) throw 'geneExpression cv.feature is not supported'
+		} else if (t == 'ssGSEA') {
+			if (!ds.queries?.ssGSEA) throw 'ssGSEA cv.feature is not supported'
+		} else {
+			throw 'unknown cv.feature.termType'
+		}
 	}
 	if (typeof cv.variables != 'object') throw 'cv.variables not obj'
 	if (cv.variables.type == 'dictionaryTerm') {

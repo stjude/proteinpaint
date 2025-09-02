@@ -1,1 +1,2 @@
-
+Fixes:
+- corrvol supports ssgsea as featureTw
