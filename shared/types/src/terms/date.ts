@@ -12,7 +12,7 @@ export type DateTerm = NumericBaseTerm & {
 	name?: string
 	type: 'date'
 	metabolite: string
-	bins: PresetNumericBins
+	bins?: PresetNumericBins
 	unit?: string
 }
 

@@ -18,7 +18,7 @@ export type MetaboliteIntensityTerm = NumericBaseTerm & {
 	name?: string
 	type: 'metaboliteIntensity'
 	metabolite: string
-	bins: PresetNumericBins
+	bins?: PresetNumericBins
 	unit?: string
 }
 
