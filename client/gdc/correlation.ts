@@ -44,7 +44,7 @@ export async function init(
 			termfilter: { filter0: arg.filter0 },
 			nav: { activeTab: 1, header_mode: 'only_buttons' },
 			plots: [
-				{ chartType: 'dictionary' } // default shows dictionary ui, can change
+				{ chartType: 'summaryInput' } // default shows summaryInput ui, can change
 				//{ chartType: 'barchart', term: {id: 'case.demographic.gender'} }, // uncomment for quicker testing
 			]
 		},
