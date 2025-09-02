@@ -202,6 +202,14 @@ function getChartTypeList(self, state) {
 			}
 		},
 		{
+			label: 'Summary Input',
+			clickTo: self.prepPlot,
+			chartType: 'summaryInput',
+			config: {
+				chartType: 'summaryInput'
+			}
+		},
+		{
 			label: self.getBtnLabel_report(state),
 			chartType: 'report',
 			clickTo: self.plotCreate,

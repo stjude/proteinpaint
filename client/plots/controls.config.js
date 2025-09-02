@@ -779,7 +779,7 @@ async function setTermInput(opts) {
 	const pill = await termsettingInit({
 		menuOptions: opts.menuOptions || '*',
 		numericEditMenuVersion: opts.numericEditMenuVersion || ['continuous', 'discrete'],
-		vocabApi: opts.vocabApi,
+		vocabApi: opts.vocabApi || opts.app.vocabApi,
 		vocab: opts.state?.vocab,
 		activeCohort: opts.state?.activeCohort,
 		holder: self.dom.inputTd.append('div'),
