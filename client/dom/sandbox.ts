@@ -1,5 +1,5 @@
 import { icons } from './control.icons'
-import type { ClientCopyGenome } from '../types/global'
+import type { ClientGenome } from '../types/clientGenome'
 import type { Elem } from '../types/d3'
 import type { RenderSandboxForm, NewSandboxOpts, NewSandbox } from './types/sandbox'
 
@@ -18,7 +18,7 @@ renderSandboxFormDiv
 newSandboxDiv
 */
 
-export function renderSandboxFormDiv(holder: Elem, genomes: ClientCopyGenome[]): RenderSandboxForm {
+export function renderSandboxFormDiv(holder: Elem, genomes: ClientGenome[]): RenderSandboxForm {
 	//Classes for unit testing
 	holder.classed('sjpp-sandbox-form', true)
 	const inputdiv = holder

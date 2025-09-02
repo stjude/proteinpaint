@@ -5,12 +5,12 @@ import { addButton } from './addButton.ts'
 import { make_one_checkbox } from '../checkbox.js'
 import { makeRadiosWithContentDivs } from './radioWithContent.ts'
 import { debounce } from 'debounce'
-import type { ClientCopyGenome } from '../../types/global.ts'
+import type { ClientGenome } from '../../types/clientGenome'
 
 type GenesMenuArgs = {
 	/** tip holder for displaying the Menu */
 	tip: Menu
-	genome: ClientCopyGenome
+	genome: ClientGenome
 	/** object sent from the view model
 	 * .param is the defined arg from the dataset
 	 * .input is the element created in addParameter and returned
@@ -27,7 +27,7 @@ type GenesMenuArgs = {
 
 export class GenesMenu {
 	tip: Menu
-	genome: ClientCopyGenome
+	genome: ClientGenome
 	params: { param: GeneArgumentEntry; input?: Elem }[]
 	callback: (f?: number) => void
 	addOptionalParams: ({ param, input }) => void

@@ -2,7 +2,7 @@ import { keyupEnter, gmlst2loci } from '#src/client'
 import { debounce } from 'debounce'
 import { dofetch3 } from '#common/dofetch'
 import { invalidcoord, string2pos } from '#src/coord'
-import type { ClientCopyGenome } from '../types/global'
+import type { ClientGenome } from '../types/clientGenome'
 
 /*
 exports:
@@ -73,7 +73,7 @@ type GeneSearchBoxArg = {
     when missing, just show placeholder */
 	defaultCoord?: ResultArg
 	/** required. client-side genome obj */
-	genome: ClientCopyGenome
+	genome: ClientGenome
 	/** default gene name to fill into search box */
 	geneSymbol?: string
 	/** option to automatically trigger a search when a geneSymbol is specified */
@@ -561,7 +561,7 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 	return result //searchbox
 }
 
-export async function string2variant(v: string, genome: ClientCopyGenome) {
+export async function string2variant(v: string, genome: ClientGenome) {
 	// try to parse as simple variant
 	const variant = string2simpleVariant(v, genome)
 	if (variant) {
@@ -572,7 +572,7 @@ export async function string2variant(v: string, genome: ClientCopyGenome) {
 	return await string2hgvs(v, genome)
 }
 
-function string2simpleVariant(v: string, genome: ClientCopyGenome) {
+function string2simpleVariant(v: string, genome: ClientGenome) {
 	// format: chr.pos.ref.alt
 	// this format has conflict with hgvs e.g. NG_012232.1(NM_004006.2):c.93+1G>T
 	// which is in fact not currently supported by this code
@@ -592,7 +592,7 @@ function string2simpleVariant(v: string, genome: ClientCopyGenome) {
 	}
 }
 
-async function string2hgvs(v: string, genome: ClientCopyGenome) {
+async function string2hgvs(v: string, genome: ClientGenome) {
 	const tmp = v.split(':g.')
 	if (tmp.length != 2) {
 		// only supports "g." linear genomic reference. other ref types are not supported for now
@@ -651,7 +651,7 @@ function hgvs_ins(chr: string, v: string) {
 	}
 }
 
-async function hgvs_del(chr: string, v: string, genome: ClientCopyGenome) {
+async function hgvs_del(chr: string, v: string, genome: ClientGenome) {
 	//chr17:g.7673802delCGCACCTCAAAGCTGTTC
 	const [tmppos, refAllele] = v.split('del')
 	if (refAllele) {
@@ -682,7 +682,7 @@ async function hgvs_del(chr: string, v: string, genome: ClientCopyGenome) {
 	}
 }
 
-async function hgvs_delins(chr: string, v: string, genome: ClientCopyGenome) {
+async function hgvs_delins(chr: string, v: string, genome: ClientGenome) {
 	// chr2:g.119955155_119955159delinsTTTTT
 	const tmp = v.match(/^(\d+)_(\d+)delins([ATCG]+)$/)
 	if (!tmp || tmp.length != 4) {
@@ -703,7 +703,7 @@ async function hgvs_delins(chr: string, v: string, genome: ClientCopyGenome) {
 	}
 }
 
-async function getRefAllele(chr: string, start: number, stop: number, genome: ClientCopyGenome) {
+async function getRefAllele(chr: string, start: number, stop: number, genome: ClientGenome) {
 	const body = {
 		coord: chr + ':' + start + '-' + stop,
 		genome: genome.name

@@ -18,7 +18,7 @@ import { dofetch3 } from '#common/dofetch'
 // obtained from the server.
 //
 // opts{}
-// .genome     see GeneSetArg.ClientCopyGenome
+// .genome     see GeneSetArg.ClientGenome
 // .holder     the DOM element where the geneset edit UI will be rendered
 // .genes[]    an array of strings gene symbols, see Note #2 above
 // .mode       'geneVariant' | 'geneExpression', see dom/GeneSetEdit for details
