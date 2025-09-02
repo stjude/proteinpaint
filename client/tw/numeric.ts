@@ -1,7 +1,7 @@
 import type {
 	NumericTerm,
 	NumericQ,
-	NumTWTypes,
+	NumTW,
 	NumTWRegularBin,
 	NumTWCustomBin,
 	NumTWCont,
@@ -28,12 +28,12 @@ export class NumericBase extends TwBase {
 	term: NumericTerm
 	static termTypes = new Set(['integer', 'float', 'date', 'geneExpression', 'metaboliteIntensity'])
 
-	constructor(tw: NumTWTypes, opts: TwOpts) {
+	constructor(tw: NumTW, opts: TwOpts) {
 		super(tw, opts)
 		this.term = tw.term
 	}
 
-	static async fill(tw: RawNumTW, opts: TwOpts = {}): Promise<NumTWTypes> {
+	static async fill(tw: RawNumTW, opts: TwOpts = {}): Promise<NumTW> {
 		if (!tw.term) throw `missing tw.term, must already be filled in`
 		if (!NumericBase.termTypes.has(tw.term.type)) throw `non-numeric term.type='${tw.term.type}'`
 

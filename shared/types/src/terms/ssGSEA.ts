@@ -1,4 +1,4 @@
-import type { NumericBaseTerm, NumericQ, PresetNumericBins, NumTWTypes, RawNumTW } from './numeric.ts'
+import type { NumericBaseTerm, NumericQ, PresetNumericBins, NumTW, RawNumTW } from './numeric.ts'
 
 /*
 duplicated from geneExpression.ts
@@ -17,7 +17,7 @@ export type SsGSEATerm = NumericBaseTerm & {
 	unit?: string
 }
 
-export type SsGSEATW = NumTWTypes & { term: SsGSEATerm }
+export type SsGSEATW = NumTW & { term: SsGSEATerm }
 
 type RawSsGSEATerm = {
 	type: 'ssGSEA'
