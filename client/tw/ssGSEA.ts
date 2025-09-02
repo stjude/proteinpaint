@@ -1,10 +1,10 @@
 import { TwBase, type TwOpts } from './TwBase.ts'
 import { NumRegularBin, NumCustomBins, NumCont } from './numeric.ts'
-import type { RawNumTW } from '#types'
+import type { RawSsGSEATW } from '#types'
 import { copyMerge } from '#rx'
 
 export class SsGSEABase extends TwBase {
-	static async fill(tw: RawNumTW, opts: TwOpts) {
+	static async fill(tw: RawSsGSEATW, opts: TwOpts) {
 		if (tw.term.type != 'ssGSEA') throw 'unexpected term.type'
 		if (typeof tw.term !== 'object') throw 'tw.term is not an object'
 		if (!tw.term.id) throw 'tw.term.id missing'

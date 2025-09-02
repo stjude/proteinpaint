@@ -1,4 +1,4 @@
-import type { NumericBaseTerm, PresetNumericBins, NumTWTypes } from '../index.ts'
+import type { NumericBaseTerm, PresetNumericBins, NumTWTypes, RawNumTW } from '../index.ts'
 
 /*
 --------EXPORTED--------
@@ -16,3 +16,10 @@ export type MetaboliteIntensityTerm = NumericBaseTerm & {
 }
 
 export type MetaboliteIntensityTW = NumTWTypes & { term: MetaboliteIntensityTerm }
+
+type RawMetabolitIntensityTerm = {
+	type: 'metaboliteIntensity'
+	metabolite: string
+}
+
+export type RawMetaboliteIntensityTW = RawNumTW & { term: RawMetabolitIntensityTerm }

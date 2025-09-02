@@ -1,4 +1,4 @@
-import type { NumericBaseTerm, PresetNumericBins, NumTWTypes } from '../index.ts'
+import type { NumericBaseTerm, PresetNumericBins, NumTWTypes, RawNumTW } from '../index.ts'
 
 /*
 --------EXPORTED--------
@@ -10,9 +10,14 @@ DateTermSettingInstance
 export type DateTerm = NumericBaseTerm & {
 	name?: string
 	type: 'date'
-	metabolite: string
 	bins?: PresetNumericBins
 	unit?: string
 }
 
 export type DateTW = NumTWTypes & { term: DateTerm }
+
+type RawDateTerm = {
+	type: 'date'
+}
+
+export type RawDateTW = RawNumTW & { term: RawDateTerm }

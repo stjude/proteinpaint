@@ -1,4 +1,4 @@
-import type { PresetNumericBins, NumericBaseTerm, NumTWTypes } from '../index.ts'
+import type { PresetNumericBins, NumericBaseTerm, NumTWTypes, RawNumTW } from '../index.ts'
 
 /*
 --------EXPORTED--------
@@ -20,3 +20,19 @@ export type GeneExpressionTerm = NumericBaseTerm & {
 }
 
 export type GeneExpressionTW = NumTWTypes & { term: GeneExpressionTerm }
+
+type RawGeneExpTermByGene = {
+	type: 'geneExpression'
+	gene: 'string'
+}
+
+type RawGeneExpTermByPosition = {
+	type: 'geneExpression'
+	chr: string
+	start: number
+	stop: number
+}
+
+type RawGeneExpTerm = RawGeneExpTermByGene | RawGeneExpTermByPosition
+
+export type RawGeneExpTW = RawNumTW & { term: RawGeneExpTerm }
