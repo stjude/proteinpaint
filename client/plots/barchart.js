@@ -1125,12 +1125,13 @@ function setInteractivity(self) {
 
 	self.download = function (event) {
 		const name2svg = self.getName2Svg()
-		const dm = new DownloadMenu(name2svg, self.opts.holder.node())
+		const node = self.dom.barDiv.select('.sjpcb-bars-mainG').node() //node to read the style
+
+		const dm = new DownloadMenu(name2svg, node, self.config.term.term.name)
 		dm.show(event.clientX, event.clientY)
 	}
 
-	/** TODO:  Move this function to the downloadMenu component and adapt it to create a single svg from the dictionary name2svg.
-	 * this function will be used from the download menu when the corresponding option is selected
+	/** Downloads all charts as a single svg image, now done from the downloadMenu
 	 */
 	self.download2 = function () {
 		if (!self.state) return
