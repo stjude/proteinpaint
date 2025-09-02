@@ -11,7 +11,7 @@ on:
       - '.**ignore'
       - 'docs/**'
   pull_request:
-    types: [ opened, synchronize, reopened, ready_for_review ]
+    types: [ opened, synchronize, reopened]
     paths-ignore:
       - '**.md'
       - '**.txt'
