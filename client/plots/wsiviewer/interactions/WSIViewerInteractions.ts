@@ -133,6 +133,17 @@ export class WSIViewerInteractions {
 					if (currentIndex === 0) return
 					currentIndex -= 1
 				}
+				if (event.key == 'Backspace') {
+					//Delete
+					const body = {
+						genome: state.vocab.genome,
+						dslabel: state.vocab.dslabel,
+						projectId: state.aiProjectID,
+						annotation: annotationsData[buffers.annotationsIdx.get()],
+						wsimageId: sessionWSImage.id ? sessionWSImage.id : 1 //TODO: Hardcoded for dev
+					}
+					await dofetch3('deleteWSIAnnotation', { method: 'DELETE', body })
+				}
 
 				// TODO handle this better
 				const vectorLayer = map

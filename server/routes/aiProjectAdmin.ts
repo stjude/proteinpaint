@@ -1,6 +1,7 @@
 import type { RouteApi } from '#types'
 import { aiProjectAdminPayload } from '#types/checkers'
 import { getDbConnection } from '#src/aiHistoDBConnection.js'
+import { runSQL, runMultiStmtSQL } from '#src/runSQLHelpers.ts'
 
 const routePath = 'aiProjectAdmin'
 export const api: RouteApi = {
@@ -182,39 +183,5 @@ function addProject(connection: any, project: any) {
 	const classParams = project.classes.map((c: any) => [rows.lastInsertRowid, c.label, c.color, c.key_shortcut || ''])
 	for (const params of classParams) {
 		runSQL(connection, classSql, params, 'add')
-	}
-}
-
-/** Run only one SQL statement at a time */
-function runSQL(connection: any, sql: string, params: any[] = [], errorText = 'fetch') {
-	try {
-		if (!params.length) {
-			return connection.prepare(sql).all()
-		}
-		return connection.prepare(sql).run(params)
-	} catch (e: any) {
-		console.error(`Error executing SQL to ${errorText}: ${e.message || e}`)
-		throw new Error(`Failed to ${errorText} project`)
-	}
-}
-
-/** Run multiple SQL statements in a transaction
- * More performant than running .prepare().run() each time */
-function runMultiStmtSQL(connection: any, stmts: { sql: string; params: any[] }[], errorText = 'execute') {
-	const transaction = connection.transaction((batch: typeof stmts) => {
-		for (const { sql, params = [] } of batch) {
-			//Reuse the same prepared statement for memory efficiency
-			const sqlStmt = connection.prepare(sql)
-			for (const item of params) {
-				sqlStmt.run(item)
-			}
-		}
-	})
-
-	try {
-		transaction(stmts)
-	} catch (e: any) {
-		console.error(`Error executing transaction to ${errorText}: ${e.message || e}`)
-		throw new Error(`Failed to ${errorText} project`)
 	}
 }
