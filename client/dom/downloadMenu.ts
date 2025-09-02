@@ -31,7 +31,7 @@ export class DownloadMenu {
 				downloadSVGsAsPdf(this.name2svg)
 				this.menu.hide()
 			})
-		this.menu.show(x - 10, y - 10)
+		this.menu.show(x - 20, y - 10)
 	}
 }
 
@@ -51,6 +51,7 @@ export async function downloadSVGsAsPdf(name2svg, filename = 'charts.pdf') {
 
 	const entries: any[] = Object.entries(name2svg)
 	let y = 50
+	const x = 30
 	const ratio = 72 / 96 //convert pixels to pt
 
 	for (const [name, svgObj] of entries) {
@@ -63,8 +64,8 @@ export async function downloadSVGsAsPdf(name2svg, filename = 'charts.pdf') {
 			doc.addPage()
 			y = 50
 		}
-		doc.text(name, 30, y - 20)
-		await doc.svg(svg, { x: 15, y, width, height })
+		doc.text(name, x + 10, y - 20)
+		await doc.svg(svg, { x, y, width, height })
 		y = y + height + 50
 	}
 	doc.save(filename)

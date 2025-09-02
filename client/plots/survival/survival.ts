@@ -18,6 +18,7 @@ import { renderAtRiskG } from '#dom/renderAtRisk'
 import { renderPvalues } from '#dom/renderPvalueTable'
 import { downloadChart } from '#common/svg.download'
 import { getCombinedTermFilter } from '#filter'
+import { DownloadMenu } from '#dom/downloadMenu'
 
 const t0_t2_defaultQ = structuredClone(term0_term2_defaultQ)
 Object.assign(t0_t2_defaultQ, {
@@ -116,6 +117,13 @@ class TdbSurvival extends PlotBase implements RxComponentInner {
 		const opts = this.opts
 		const controls = this.opts.controls ? null : opts.holder.append('div')
 		const holder = opts.controls ? opts.holder : opts.holder.append('div')
+		const chartsDiv = holder
+			.append('div')
+			.style('margin', '10px')
+			.style('display', 'flex')
+			.style('flex-direction', 'row')
+			.style('flex-wrap', 'wrap')
+			.style('max-width', '100vw')
 		const dom = {
 			loadingDiv: holder
 				.append('div')
@@ -126,7 +134,7 @@ class TdbSurvival extends PlotBase implements RxComponentInner {
 			header: opts.header,
 			controls,
 			holder,
-			chartsDiv: holder.append('div').style('margin', '10px'),
+			chartsDiv,
 			legendDiv: holder.append('div').style('margin', '5px 5px 15px 5px'),
 			hiddenDiv: holder.append('div').style('margin', '5px 5px 15px 5px'),
 			tip: new Menu({ padding: '5px' }),
@@ -145,6 +153,11 @@ class TdbSurvival extends PlotBase implements RxComponentInner {
 		setInteractivity(this)
 		setRenderers(this)
 		await this.setControls()
+	}
+
+	preApiFreeze(api) {
+		api.download = this.download
+		api.getName2Svg = () => this.getName2Svg()
 	}
 
 	async setControls() {
@@ -545,6 +558,7 @@ export const componentInit = survivalInit
 function setRenderers(self) {
 	self.render = function () {
 		const data = self.pj.tree.charts || [{ chartId: 'No survival data' }]
+		console.log(data)
 		const chartDivs = self.dom.chartsDiv.selectAll('.pp-survival-chart').data(data, d => d.chartId)
 		chartDivs.exit().remove()
 		chartDivs.each(self.updateCharts)
@@ -700,6 +714,7 @@ function setRenderers(self) {
 	}
 
 	function renderSVG(svg, chart, s, duration) {
+		chart.svg = svg
 		const extraHeight = s.atRiskVisible
 			? s.axisTitleFontSize + 4 + chart.visibleSerieses.length * 2 * (s.axisTitleFontSize + 4)
 			: 0
@@ -715,7 +730,7 @@ function setRenderers(self) {
 		/* eslint-disable */
 		const [mainG, seriesesG, axisG, xAxis, yAxis, xTitle, yTitle, atRiskG, plotRect] = getSvgSubElems(svg)
 		/* eslint-enable */
-		const xOffset = chart.atRiskLabelWidth + s.svgPadding.left
+		const xOffset = chart.atRiskLabelWidth + s.svgPadding.left + 40 //adding 40 avoids clipping of the svg
 		mainG.attr('transform', 'translate(' + xOffset + ',' + s.svgPadding.top + ')')
 
 		const serieses = seriesesG
@@ -1015,7 +1030,22 @@ function setRenderers(self) {
 }
 
 function setInteractivity(self) {
-	self.download = function () {
+	self.download = function (event) {
+		const name2svg = self.getName2Svg()
+		const menu = new DownloadMenu(name2svg, self.opts.holder.node())
+		menu.show(event.clientX, event.clientY)
+	}
+
+	self.getName2Svg = function () {
+		const name2svg = {}
+		for (const chart of self.pj.tree.charts) {
+			name2svg[chart.chartId] = chart.svg
+		}
+		return name2svg
+	}
+
+	// The logic in downloadChart will be moved to the downloadMenu option to save all charts in an svg
+	self.download2 = function () {
 		if (!self.state) return
 		downloadChart(
 			self.dom.chartsDiv.selectAll('.sjpp-survival-mainG'),
