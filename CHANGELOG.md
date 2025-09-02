@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Fixes:
+- runpp({geneDomains[]}) to supply custom domains
+
+
 ## 2.140.2
 
 Fixes:
