@@ -1,17 +1,10 @@
-import type { TermWrapper } from './tw.ts'
-import type { NumericBaseTerm, NumericQ, PresetNumericBins } from './numeric.ts'
-import type { TermSettingInstance } from '../termsetting.ts'
+import type { NumericBaseTerm, NumericQ, PresetNumericBins, NumTWTypes } from './numeric.ts'
 
 /*
 duplicated from geneExpression.ts
 */
 
 export type SsGSEAQ = NumericQ & { dt?: number }
-
-export type SsGSEATW = TermWrapper & {
-	q: SsGSEAQ
-	term: SsGSEATerm
-}
 
 export type SsGSEATerm = NumericBaseTerm & {
 	/** term.id: geneset db term id for native term, and cache file name for custom term */
@@ -24,7 +17,4 @@ export type SsGSEATerm = NumericBaseTerm & {
 	unit?: string
 }
 
-export type SsGSEATermSettingInstance = TermSettingInstance & {
-	q: SsGSEAQ
-	term: SsGSEATerm
-}
+export type SsGSEATW = NumTWTypes & { term: SsGSEATerm }

@@ -1,5 +1,4 @@
-import type { BaseTW, PresetNumericBins, NumericBaseTerm, NumericQ } from '../index.ts'
-import type { TermSettingInstance } from '../termsetting.ts'
+import type { PresetNumericBins, NumericBaseTerm, NumTWTypes } from '../index.ts'
 
 /*
 --------EXPORTED--------
@@ -20,13 +19,4 @@ export type GeneExpressionTerm = NumericBaseTerm & {
 	stop?: number
 }
 
-export type GeneExpressionTW = BaseTW & {
-	q: NumericQ
-	term: GeneExpressionTerm
-	type: 'NumTWCont'
-}
-
-export type GeneExpressionTermSettingInstance = TermSettingInstance & {
-	q: NumericQ
-	term: GeneExpressionTerm
-}
+export type GeneExpressionTW = NumTWTypes & { term: GeneExpressionTerm }

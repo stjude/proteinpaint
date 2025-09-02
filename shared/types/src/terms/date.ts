@@ -1,5 +1,4 @@
-import type { BaseTW, NumericBaseTerm, NumericQ, PresetNumericBins } from '../index.ts'
-import type { TermSettingInstance } from '../termsetting.ts'
+import type { NumericBaseTerm, PresetNumericBins, NumTWTypes } from '../index.ts'
 
 /*
 --------EXPORTED--------
@@ -16,13 +15,4 @@ export type DateTerm = NumericBaseTerm & {
 	unit?: string
 }
 
-export type DateTW = BaseTW & {
-	type: 'NumTWCont'
-	q: NumericQ
-	term: DateTerm
-}
-
-export type DateTermSettingInstance = TermSettingInstance & {
-	q: NumericQ
-	term: DateTerm
-}
+export type DateTW = NumTWTypes & { term: DateTerm }
