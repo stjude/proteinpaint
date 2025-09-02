@@ -687,7 +687,8 @@ function makeTermdbQueries(ds, id2term) {
 	q.getSupportedChartTypes = () => {
 		const supportedChartTypes = {
 			'': [
-				'dictionary', // to be able to show dictionary chart button at mass ui in correlation plot http://localhost:3000/?gdccorrelation=1
+				// 8/18/2025 no longer shows "dictionary" & "survival" chart buttons, show summaryInput instead
+				'summaryInput',
 				'summarizeMutationDiagnosis',
 				'summarizeCnvGeneexp',
 				'summarizeMutationSurvival',
@@ -707,10 +708,6 @@ function makeTermdbQueries(ds, id2term) {
 				supportedChartTypes[r.cohort] = ['barchart', 'table', 'regression']
 				numericTypeCount[r.cohort] = 0
 			}
-			if (r.type == 'survival' && !supportedChartTypes[r.cohort].includes('survival'))
-				supportedChartTypes[r.cohort].push('survival')
-			if (r.type == 'condition' && !supportedChartTypes[r.cohort].includes('cuminc'))
-				supportedChartTypes[r.cohort].push('cuminc')
 			if (r.type == 'float' || r.type == 'integer') numericTypeCount[r.cohort] += r.samplecount
 		}
 		for (const cohort in numericTypeCount) {
