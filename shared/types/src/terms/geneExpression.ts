@@ -23,7 +23,7 @@ export type GeneExpressionTerm = NumericBaseTerm & {
 export type GeneExpressionTW = BaseTW & {
 	q: NumericQ
 	term: GeneExpressionTerm
-	type: string
+	type: 'NumTWCont'
 }
 
 export type GeneExpressionTermSettingInstance = TermSettingInstance & {
