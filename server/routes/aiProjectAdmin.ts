@@ -101,20 +101,19 @@ function editProject(connection: any, project: any) {
 
 	if (project.images) {
 		stmts.push({
-			sql: `DELETE FROM project_images WHERE project_id = ? AND image NOT IN (${
+			sql: `DELETE FROM project_images WHERE project_id = ? AND image_path NOT IN (${
 				project.images.map(() => '?').join(',') || "''"
 			})`,
 			params: [[project.id, ...project.images]]
 		})
-		const existingImg = connection.prepare(`SELECT 1 FROM project_images WHERE project_id = ? AND image = ?`)
-
+		const existingImg = connection.prepare(`SELECT 1 FROM project_images WHERE project_id = ? AND image_path = ?`)
 		const multiParams: any[] = []
 		for (const img of project.images) {
 			const exists = existingImg.get(project.id, img)
 			if (!exists) multiParams.push([project.id, img])
 		}
 		if (multiParams.length > 0) {
-			const insertImg = `INSERT INTO project_images (project_id, image) VALUES (?, ?)`
+			const insertImg = `INSERT INTO project_images (project_id, image_path) VALUES (?, ?)`
 			stmts.push({ sql: insertImg, params: multiParams })
 		}
 	}
