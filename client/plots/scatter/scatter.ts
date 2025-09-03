@@ -150,13 +150,13 @@ export class Scatter extends RxComponentInner {
 			const url = this.vm.canvas.toDataURL('image/png')
 			downloadImage(url)
 		} else {
-			const name2svg = this.getChartDict()
+			const name2svg = this.getChartImages()
 			const menu = new DownloadMenu(name2svg, 'scatter')
 			menu.show(event.clientX, event.clientY)
 		}
 	}
 
-	getChartDict() {
+	getChartImages() {
 		const name2svg = {}
 		for (const chart of this.model.charts) {
 			const name = `${this.config.name || ''}${chart.id == 'Default' ? '' : ' ' + chart.id}	`
@@ -166,7 +166,7 @@ export class Scatter extends RxComponentInner {
 	}
 
 	preApiFreeze(api) {
-		api.getChartDict = () => this.getChartDict()
+		api.getChartImages = () => this.getChartImages()
 	}
 }
 

@@ -23,7 +23,7 @@ export class Barchart {
 	//freeze the api of this class. don't want embedder functions to modify it.
 	preApiFreeze(api) {
 		api.download = this.download
-		api.getChartDict = () => this.getChartDict()
+		api.getChartImages = () => this.getChartImages()
 	}
 
 	async init(appState) {
@@ -1113,7 +1113,7 @@ function setRenderers(self) {
 function setInteractivity(self) {
 	self.handlers = getHandlers(self)
 
-	self.getChartDict = function () {
+	self.getChartImages = function () {
 		const name2svg = {}
 		const node = self.dom.barDiv.select('.sjpcb-bars-mainG').node() //node to read the style
 
@@ -1125,7 +1125,7 @@ function setInteractivity(self) {
 	}
 
 	self.download = function (event) {
-		const name2svg = self.getChartDict()
+		const name2svg = self.getChartImages()
 		const dm = new DownloadMenu(name2svg, self.config.term.term.name)
 		dm.show(event.clientX, event.clientY)
 	}

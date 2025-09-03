@@ -207,7 +207,7 @@ function setRenderers(self) {
 			.style('display', 'inline-block')
 			.style('float', 'right')
 			.style('font-size', '1.1em')
-			.style('margin-top', '50px')
+			.style('margin', '50px 100px 0 0')
 			.text(massNav?.title?.text) //this line will be executed in update UI to reflect cohort changes
 
 		const tabDiv = header.append('div').style('display', 'none').style('vertical-align', 'bottom')
@@ -237,7 +237,12 @@ function setRenderers(self) {
 			deleteAllDiv: controlsDiv
 				.append('div')
 				.style('display', 'inline-block')
-				.style('padding-top', '4px')
+				.style('padding', '4px')
+				.style('vertical-align', 'middle'),
+			pdfDiv: controlsDiv
+				.append('div')
+				.style('display', 'inline-block')
+				.style('padding', '4px')
 				.style('vertical-align', 'middle'),
 			helpDiv: controlsDiv.append('div').style('display', 'none'),
 			sessionElapsedMessageDiv: controlsDiv.append('div').style('display', 'none'),
@@ -253,6 +258,11 @@ function setRenderers(self) {
 		icon_functions['trash'](self.dom.deleteAllDiv, {
 			handler: self.deletePlots,
 			title: 'Delete all plots. To revert, click Undo button'
+		})
+
+		icon_functions['pdf'](self.dom.pdfDiv, {
+			handler: self.opts.downloadPlots,
+			title: 'Generate a PDF of all the plots opened'
 		})
 
 		if (self.opts.header_mode === 'with_cohortHtmlSelect') {
