@@ -1130,135 +1130,137 @@ function setInteractivity(self) {
 		dm.show(event.clientX, event.clientY)
 	}
 
-	/** Downloads all charts as a single svg image, now done from the downloadMenu
+	/** Downloads all charts as a single svg image, including the legend for each barchart, needs review as it
+	 * has some glitches. The legend rendering may be moved to the same svg and then it will be included in the download or a callback may be provided
+	 * to the downloadMenu to use this download when generating a single svg, once it works well
 	 */
-	self.download2 = function () {
-		if (!self.state) return
-		// has to be able to handle multichart view
-		const mainGs = []
-		const translate = { x: undefined, y: undefined }
-		const titles = []
-		let maxw = 0,
-			maxh = 0,
-			tboxh = 0
-		let prevY = 0,
-			numChartsPerRow = 0
+	// self.download = function () {
+	// 	if (!self.state) return
+	// 	// has to be able to handle multichart view
+	// 	const mainGs = []
+	// 	const translate = { x: undefined, y: undefined }
+	// 	const titles = []
+	// 	let maxw = 0,
+	// 		maxh = 0,
+	// 		tboxh = 0
+	// 	let prevY = 0,
+	// 		numChartsPerRow = 0
 
-		self.dom.barDiv.selectAll('.sjpcb-bars-mainG').each(function () {
-			mainGs.push(this)
-			const bbox = this.getBBox()
-			if (bbox.width > maxw) maxw = bbox.width
-			if (bbox.height > maxh) maxh = bbox.height
-			const divY = Math.round(this.parentNode.parentNode.getBoundingClientRect().y)
-			if (!numChartsPerRow) {
-				prevY = divY
-				numChartsPerRow++
-			} else if (Math.abs(divY - prevY) < 5) {
-				numChartsPerRow++
-			}
-			const xy = select(this)
-				.attr('transform')
-				.split('translate(')[1]
-				.split(')')[0]
-				.split(',')
-				.map(d => +d.trim())
-			if (translate.x === undefined || xy[0] > translate.x) translate.x = +xy[0]
-			if (translate.y === undefined || xy[1] > translate.y) translate.y = +xy[1]
+	// 	self.dom.barDiv.selectAll('.sjpcb-bars-mainG').each(function () {
+	// 		mainGs.push(this)
+	// 		const bbox = this.getBBox()
+	// 		if (bbox.width > maxw) maxw = bbox.width
+	// 		if (bbox.height > maxh) maxh = bbox.height
+	// 		const divY = Math.round(this.parentNode.parentNode.getBoundingClientRect().y)
+	// 		if (!numChartsPerRow) {
+	// 			prevY = divY
+	// 			numChartsPerRow++
+	// 		} else if (Math.abs(divY - prevY) < 5) {
+	// 			numChartsPerRow++
+	// 		}
+	// 		const xy = select(this)
+	// 			.attr('transform')
+	// 			.split('translate(')[1]
+	// 			.split(')')[0]
+	// 			.split(',')
+	// 			.map(d => +d.trim())
+	// 		if (translate.x === undefined || xy[0] > translate.x) translate.x = +xy[0]
+	// 		if (translate.y === undefined || xy[1] > translate.y) translate.y = +xy[1]
 
-			const title = this.parentNode.parentNode.firstChild
-			const tbox = title.getBoundingClientRect()
-			if (tbox.width > maxw) maxw = tbox.width
-			if (tbox.height > tboxh) tboxh = tbox.height
-			titles.push({ text: title.innerText, styles: window.getComputedStyle(title) })
-		})
+	// 		const title = this.parentNode.parentNode.firstChild
+	// 		const tbox = title.getBoundingClientRect()
+	// 		if (tbox.width > maxw) maxw = tbox.width
+	// 		if (tbox.height > tboxh) tboxh = tbox.height
+	// 		titles.push({ text: title.innerText, styles: window.getComputedStyle(title) })
+	// 	})
 
-		// add padding between charts
-		maxw += 30
-		maxh += 30
+	// 	// add padding between charts
+	// 	maxw += 30
+	// 	maxh += 30
 
-		const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+	// 	const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
 
-		const svgSel = select(svg)
-			.style('display', 'block')
-			.style('opacity', 1)
-			.attr('width', numChartsPerRow * maxw)
-			.attr('height', Math.floor(mainGs.length / numChartsPerRow) * maxh)
+	// 	const svgSel = select(svg)
+	// 		.style('display', 'block')
+	// 		.style('opacity', 1)
+	// 		.attr('width', numChartsPerRow * maxw)
+	// 		.attr('height', Math.floor(mainGs.length / numChartsPerRow) * maxh)
 
-		const svgStyles = window.getComputedStyle(document.querySelector('.pp-bars-svg'))
-		for (const prop of svgStyles) {
-			if (prop.startsWith('font')) svgSel.style(prop, svgStyles.getPropertyValue(prop))
-		}
+	// 	const svgStyles = window.getComputedStyle(document.querySelector('.pp-bars-svg'))
+	// 	for (const prop of svgStyles) {
+	// 		if (prop.startsWith('font')) svgSel.style(prop, svgStyles.getPropertyValue(prop))
+	// 	}
 
-		mainGs.forEach((g, i) => {
-			const mainG = g.cloneNode(true)
-			const colNum = i % numChartsPerRow
-			const rowNum = Math.floor(i / numChartsPerRow)
-			const corner = { x: colNum * maxw + translate.x, y: rowNum * maxh + translate.y }
-			const title = select(svg)
-				.append('text')
-				.attr('transform', 'translate(' + corner.x + ',' + corner.y + ')')
-				.text(titles[i].text)
-			for (const prop of titles[i].styles) {
-				if (prop.startsWith('font')) title.style(prop, titles[i].styles.getPropertyValue(prop))
-			}
+	// 	mainGs.forEach((g, i) => {
+	// 		const mainG = g.cloneNode(true)
+	// 		const colNum = i % numChartsPerRow
+	// 		const rowNum = Math.floor(i / numChartsPerRow)
+	// 		const corner = { x: colNum * maxw + translate.x, y: rowNum * maxh + translate.y }
+	// 		const title = select(svg)
+	// 			.append('text')
+	// 			.attr('transform', 'translate(' + corner.x + ',' + corner.y + ')')
+	// 			.text(titles[i].text)
+	// 		for (const prop of titles[i].styles) {
+	// 			if (prop.startsWith('font')) title.style(prop, titles[i].styles.getPropertyValue(prop))
+	// 		}
 
-			select(mainG).attr('transform', 'translate(' + corner.x + ',' + (corner.y + tboxh) + ')')
-			svg.appendChild(mainG)
-		})
+	// 		select(mainG).attr('transform', 'translate(' + corner.x + ',' + (corner.y + tboxh) + ')')
+	// 		svg.appendChild(mainG)
+	// 	})
 
-		// svg + legend must be attached to DOM in order for getBBox() to work within svgLegendRenderer
-		const hiddenDiv = select('body').append('div').style('opacity', 0)
-		hiddenDiv.node().appendChild(svg)
+	// 	// svg + legend must be attached to DOM in order for getBBox() to work within svgLegendRenderer
+	// 	const hiddenDiv = select('body').append('div').style('opacity', 0)
+	// 	hiddenDiv.node().appendChild(svg)
 
-		self.svgLegendRenderer = svgLegend({
-			holder: svgSel.append('g'),
-			rectFillFxn: d => d.color,
-			iconStroke: '#aaa'
-		})
+	// 	self.svgLegendRenderer = svgLegend({
+	// 		holder: svgSel.append('g'),
+	// 		rectFillFxn: d => d.color,
+	// 		iconStroke: '#aaa'
+	// 	})
 
-		const s = self.settings
-		const svg0 = self.dom.barDiv.select('svg').node().getBoundingClientRect()
-		let data = self.getLegendGrps()
-		data.forEach(d => {
-			d.name = d.name.replace(/<[^>]*>?/gm, '')
-			if (d.items) d.items = d.items.filter(c => !c.isHidden)
-		})
-		data = data.filter(d => d.items.length && !d.name.includes('tatistic'))
-		const fontsize = 14
-		self.svgLegendRenderer(data, {
-			settings: Object.assign(
-				{
-					ontop: false,
-					lineh: 25,
-					padx: 5,
-					padleft: 0, //150,
-					padright: 20,
-					padbtm: 30,
-					fontsize,
-					iconh: fontsize - 2,
-					iconw: fontsize - 2,
-					hangleft: 1,
-					linesep: false
-				},
-				{
-					svgw: self.visibleCharts.length * svg0.width,
-					svgh: svg0.height,
-					dimensions: {
-						xOffset: 50
-					},
-					padleft: 50
-				}
-			)
-		})
+	// 	const s = self.settings
+	// 	const svg0 = self.dom.barDiv.select('svg').node().getBoundingClientRect()
+	// 	let data = self.getLegendGrps()
+	// 	data.forEach(d => {
+	// 		d.name = d.name.replace(/<[^>]*>?/gm, '')
+	// 		if (d.items) d.items = d.items.filter(c => !c.isHidden)
+	// 	})
+	// 	data = data.filter(d => d.items.length && !d.name.includes('tatistic'))
+	// 	const fontsize = 14
+	// 	self.svgLegendRenderer(data, {
+	// 		settings: Object.assign(
+	// 			{
+	// 				ontop: false,
+	// 				lineh: 25,
+	// 				padx: 5,
+	// 				padleft: 0, //150,
+	// 				padright: 20,
+	// 				padbtm: 30,
+	// 				fontsize,
+	// 				iconh: fontsize - 2,
+	// 				iconw: fontsize - 2,
+	// 				hangleft: 1,
+	// 				linesep: false
+	// 			},
+	// 			{
+	// 				svgw: self.visibleCharts.length * svg0.width,
+	// 				svgh: svg0.height,
+	// 				dimensions: {
+	// 					xOffset: 50
+	// 				},
+	// 				padleft: 50
+	// 			}
+	// 		)
+	// 	})
 
-		const box = self.dom.legendDiv.node().getBoundingClientRect()
-		select(svg).attr('height', svg0.height + box.height + 30)
-		if (box.width > svg0.width) select(svg).attr('width', box.width)
-		hiddenDiv.remove()
+	// 	const box = self.dom.legendDiv.node().getBoundingClientRect()
+	// 	select(svg).attr('height', svg0.height + box.height + 30)
+	// 	if (box.width > svg0.width) select(svg).attr('width', box.width)
+	// 	hiddenDiv.remove()
 
-		const svg_name = self.config.term.term.name + ' barchart'
-		to_svg(svg, svg_name, { apply_dom_styles: true })
-	}
+	// 	const svg_name = self.config.term.term.name + ' barchart'
+	// 	to_svg(svg, svg_name, { apply_dom_styles: true })
+	// }
 }
 
 export function getDefaultBarSettings(app) {

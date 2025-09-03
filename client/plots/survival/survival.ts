@@ -1046,15 +1046,15 @@ function setInteractivity(self) {
 		return name2svg
 	}
 
-	// The logic is moved to the downloadMenu
-	self.download2 = function () {
-		if (!self.state) return
-		downloadChart(
-			self.dom.chartsDiv.selectAll('.sjpp-survival-mainG'),
-			'Survival_Plot',
-			self.dom.chartsDiv.select('.pp-survival-chart').node()
-		)
-	}
+	// The logic is replaced by the downloadMenu SVG option
+	// self.download = function () {
+	// 	if (!self.state) return
+	// 	downloadChart(
+	// 		self.dom.chartsDiv.selectAll('.sjpp-survival-mainG'),
+	// 		'Survival_Plot',
+	// 		self.dom.chartsDiv.select('.pp-survival-chart').node()
+	// 	)
+	// }
 
 	self.mouseover = function () {}
 
