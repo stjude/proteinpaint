@@ -92,16 +92,7 @@ function nativeValidateQuery(ds: any) {
 				samples.push(n)
 			}
 		}
-
-		// new-format H5 file?
-		let newformat = false
-		if ('newformat' in gE) {
-			newformat = gE.newformat
-		}
-
-		// call rust to compute top genes on these samples
-		const genes = await computeGenes4nativeDs(q, gE.file, samples, newformat)
-		return genes
+		return await computeGenes4nativeDs(q, gE, samples)
 	}
 }
 
@@ -170,14 +161,9 @@ ds can optionally provide overrides, e.g. to account for different exp value met
 	q.arguments = arglst
 }
 
-async function computeGenes4nativeDs(
-	q: TermdbTopVariablyExpressedGenesRequest,
-	matrixFile: string,
-	samples: string[],
-	newformat: boolean
-) {
+async function computeGenes4nativeDs(q: TermdbTopVariablyExpressedGenesRequest, gE: any, samples: string[]) {
 	const input_json = {
-		input_file: matrixFile,
+		input_file: gE.file,
 		samples: samples.join(','),
 		filter_extreme_values: q.filter_extreme_values,
 		num_genes: q.maxGenes,
@@ -190,7 +176,7 @@ async function computeGenes4nativeDs(
 	}
 
 	// Handle new-format H5 file
-	if (newformat) {
+	if (gE.newformat) {
 		input_json['newformat'] = true
 	}
 
