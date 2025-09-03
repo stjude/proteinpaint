@@ -9,6 +9,7 @@ import type { GeneArgumentEntry } from '#types'
 import { GenesMenu } from './GenesMenu'
 import { addButton } from './addButton.ts'
 import { dofetch3 } from '#common/dofetch'
+import { getNormalRoot } from '#filter/filter'
 
 type API = {
 	dom: {
@@ -319,7 +320,8 @@ export class GeneSetEditUI {
 						}
 						// supply filters from app state
 						if (this.vocabApi.state.termfilter) {
-							if (this.vocabApi.state.termfilter.filter) args.filter = this.vocabApi.state.termfilter.filter // pp filter
+							if (this.vocabApi.state.termfilter.filter)
+								args.filter = getNormalRoot(this.vocabApi.state.termfilter.filter) // pp filter
 							if (this.vocabApi.state.termfilter.filter0) args.filter0 = this.vocabApi.state.termfilter.filter0 // gdc filter
 						}
 
