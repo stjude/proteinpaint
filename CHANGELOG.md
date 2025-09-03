@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.142.0
 
 Features:
 - Add custom protein domain example to the additional track features appcard.
