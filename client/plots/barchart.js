@@ -335,7 +335,6 @@ export class Barchart {
 		if (c.chartType != this.type && c.childType != this.type) return
 		try {
 			this.config = structuredClone(c)
-			console.log(this.config)
 			if (!this.currServerData) this.dom.barDiv.style('max-width', window.innerWidth + 'px')
 			this.prevConfig = this.config || {}
 			if (this.dom.header)
