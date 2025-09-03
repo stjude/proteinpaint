@@ -133,7 +133,7 @@ def plot_grin2_manhattan(grin_results: dict,
     # Process each gene
     for _, gene_row in gene_hits.iterrows():
         chrom = gene_row['chrom']
-        gene_name = gene_row.get('gene_name', 'Unknown')
+        gene_name = gene_row.get('gene', 'Unknown')  # Fixed: use 'gene' column
         
         # Skip if chromosome not in coordinate map
         if chrom not in chrom_data:
