@@ -1,0 +1,1067 @@
+// Compile: cd .. && cargo build --release
+// Test: cd .. && export RUST_BACKTRACE=full && time cargo test --  --nocapture (runs all test except those marked as "ignored")
+// Ignored tests: cd .. && export RUST_BACKTRACE=full && cargo test -- --ignored --nocapture
+use async_stream::stream;
+use futures::StreamExt;
+use rig::client::{ClientBuilderError, CompletionClient, EmbeddingsClient, ProviderClient, VerifyClient, VerifyError};
+use rig::completion::{GetTokenUsage, Usage};
+use rig::message::ConvertMessage;
+use rig::streaming::RawStreamingChoice;
+use rig::{
+    Embed, OneOrMany,
+    completion::{self, CompletionError, CompletionRequest},
+    embeddings::{self, EmbeddingError, EmbeddingsBuilder},
+    impl_conversion_traits, message,
+    message::{ImageDetail, Text},
+    streaming,
+};
+use serde::{Deserialize, Serialize};
+use serde_json::{Value, json};
+use std::convert::TryInto;
+use std::time::Duration;
+use std::{convert::TryFrom, str::FromStr};
+use url::Url;
+
+// ---------- Main Client ----------
+
+const MYPROVIDER_API_BASE_URL: &str = "http://10.200.87.133:32580/v2/models/ray_gateway_router/infer";
+
+pub struct ClientBuilder<'a> {
+    base_url: &'a str,
+    http_client: Option<reqwest::Client>,
+}
+
+impl<'a> ClientBuilder<'a> {
+    #[allow(clippy::new_without_default)]
+    pub fn new() -> Self {
+        Self {
+            base_url: MYPROVIDER_API_BASE_URL,
+            http_client: None,
+        }
+    }
+
+    pub fn base_url(mut self, base_url: &'a str) -> Self {
+        println!("base_url:{}", base_url);
+        self.base_url = base_url;
+        self
+    }
+
+    pub fn build(self) -> Result<Client, ClientBuilderError> {
+        let http_client = if let Some(http_client) = self.http_client {
+            http_client
+        } else {
+            reqwest::Client::builder().build()?
+        };
+
+        Ok(Client {
+            base_url: Url::parse(self.base_url).map_err(|_| ClientBuilderError::InvalidProperty("base_url"))?,
+            http_client,
+        })
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct Client {
+    base_url: Url,
+    http_client: reqwest::Client,
+}
+
+impl Default for Client {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Client {
+    pub fn builder() -> ClientBuilder<'static> {
+        ClientBuilder::new()
+    }
+    pub fn new() -> Self {
+        Self::builder().build().expect("Myprovider client should build")
+    }
+
+    pub(crate) fn post(&self, path: &str) -> Result<reqwest::RequestBuilder, url::ParseError> {
+        let url = self.base_url.join(path)?;
+        Ok(self.http_client.post(url))
+    }
+
+    pub(crate) fn get(&self, path: &str) -> Result<reqwest::RequestBuilder, url::ParseError> {
+        let url = self.base_url.join(path)?;
+        Ok(self.http_client.get(url))
+    }
+}
+
+impl ProviderClient for Client {
+    fn from_env() -> Self
+    where
+        Self: Sized,
+    {
+        let api_base = std::env::var("MYPROVIDER_API_BASE_URL").expect("MYPROVIDER_API_BASE_URL not set");
+        Self::builder().base_url(&api_base).build().unwrap()
+    }
+
+    fn from_val(input: rig::client::ProviderValue) -> Self {
+        let rig::client::ProviderValue::Simple(_) = input else {
+            panic!("Incorrect provider value type")
+        };
+
+        Self::new()
+    }
+}
+
+impl CompletionClient for Client {
+    type CompletionModel = CompletionModel;
+
+    fn completion_model(&self, model: &str) -> CompletionModel {
+        CompletionModel::new(self.clone(), model)
+    }
+}
+
+impl EmbeddingsClient for Client {
+    type EmbeddingModel = EmbeddingModel;
+    fn embedding_model(&self, model: &str) -> EmbeddingModel {
+        EmbeddingModel::new(self.clone(), model, 0, self.base_url.to_string())
+    }
+    fn embedding_model_with_ndims(&self, model: &str, ndims: usize) -> EmbeddingModel {
+        EmbeddingModel::new(self.clone(), model, ndims, self.base_url.to_string())
+    }
+    fn embeddings<D: Embed>(&self, model: &str) -> EmbeddingsBuilder<EmbeddingModel, D> {
+        EmbeddingsBuilder::new(self.embedding_model(model))
+    }
+}
+
+impl VerifyClient for Client {
+    async fn verify(&self) -> Result<(), VerifyError> {
+        let response = self.get("api/tags").expect("Failed to build request").send().await?;
+        match response.status() {
+            reqwest::StatusCode::OK => Ok(()),
+            _ => {
+                response.error_for_status()?;
+                Ok(())
+            }
+        }
+    }
+}
+
+impl_conversion_traits!(
+    AsTranscription,
+    AsImageGeneration,
+    AsAudioGeneration for Client
+);
+
+// ---------- API Error and Response Structures ----------
+
+#[derive(Debug, Deserialize)]
+struct ApiErrorResponse {
+    message: String,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(untagged)]
+enum ApiResponse<T> {
+    Ok(T),
+    Err(ApiErrorResponse),
+}
+
+// ---------- Embedding API ----------
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct EmbeddingResponse {
+    pub model: String,
+    pub embeddings: Vec<Vec<f64>>,
+    #[serde(default)]
+    pub total_duration: Option<u32>,
+    #[serde(default)]
+    pub load_duration: Option<u32>,
+    #[serde(default)]
+    pub prompt_eval_count: Option<u32>,
+}
+
+impl From<ApiErrorResponse> for EmbeddingError {
+    fn from(err: ApiErrorResponse) -> Self {
+        EmbeddingError::ProviderError(err.message)
+    }
+}
+
+impl From<ApiResponse<EmbeddingResponse>> for Result<EmbeddingResponse, EmbeddingError> {
+    fn from(value: ApiResponse<EmbeddingResponse>) -> Self {
+        match value {
+            ApiResponse::Ok(response) => Ok(response),
+            ApiResponse::Err(err) => Err(EmbeddingError::ProviderError(err.message)),
+        }
+    }
+}
+
+// ---------- Embedding Model ----------
+
+#[derive(Clone)]
+pub struct EmbeddingModel {
+    base_url: String,
+    client: Client,
+    pub model: String,
+    ndims: usize,
+}
+
+impl EmbeddingModel {
+    pub fn new(client: Client, model: &str, ndims: usize, base_url: String) -> Self {
+        Self {
+            client,
+            model: model.to_owned(),
+            ndims,
+            base_url,
+        }
+    }
+}
+
+impl embeddings::EmbeddingModel for EmbeddingModel {
+    const MAX_DOCUMENTS: usize = 1024;
+    fn ndims(&self) -> usize {
+        self.ndims
+    }
+
+    async fn embed_texts(
+        &self,
+        documents: impl IntoIterator<Item = String>,
+    ) -> Result<Vec<embeddings::Embedding>, EmbeddingError> {
+        let docs: Vec<String> = documents.into_iter().collect();
+
+        let mut embed_vec: Vec<Vec<f64>> = Vec::new();
+        for doc in &docs {
+            let payload = json!({
+                        "inputs": [
+                            {
+                                "model_name": self.model,
+                                "inputs": {"text": doc}
+                            }
+                        ]
+                    }
+            );
+            //println!("payload:{}", payload);
+            //println!("self.base_url:{}", self.base_url);
+            let response = self
+                .client
+                .post(&self.base_url)?
+                .json(&payload)
+                .timeout(Duration::from_secs(2000))
+                .send()
+                .await
+                .map_err(|e| EmbeddingError::ProviderError(e.to_string()))?;
+
+            // Get the headers
+            //let headers: HeaderMap = response.headers().clone();
+
+            //// Get the body as text
+            //let body = response.text().await?;
+
+            //// Print the headers
+            //println!("Headers:");
+            //for (key, value) in headers.iter() {
+            //    println!("{}: {:?}", key, value);
+            //}
+
+            //// Print the body
+            //println!("\nBody:");
+            //println!("{}", body);
+
+            if response.status().is_success() {
+                //println!("response.json:{:?}", response.text().await?);
+                let json_data: Value = serde_json::from_str(&response.text().await?)?;
+                let emb = json_data["outputs"].as_array().unwrap();
+                //.unwrap_or(&vec![serde_json::Value::String(
+                //    "No embeddings found in json output".to_string(),
+                //)]);
+                //println!("emb:{:?}", emb[0]["embeddings"].as_array().unwrap());
+
+                for item in emb[0]["embeddings"].as_array().unwrap() {
+                    let item2 = item.as_array().unwrap();
+                    let mut item3 = Vec::<f64>::new();
+                    for item4 in item2 {
+                        item3.push(item4.as_f64().unwrap())
+                    }
+                    embed_vec.push(item3)
+                }
+            } else {
+                let _ = Err::<String, EmbeddingError>(EmbeddingError::ProviderError(response.text().await.unwrap()));
+            }
+        }
+
+        if embed_vec.len() > 0 {
+            let api_resp = EmbeddingResponse {
+                model: self.model.clone(),
+                embeddings: embed_vec,
+                total_duration: None,
+                load_duration: None,
+                prompt_eval_count: None,
+            };
+
+            //let api_resp: EmbeddingResponse = response
+            //    .json()
+            //    .await
+            //    .map_err(|e| EmbeddingError::ProviderError(e.to_string()))?;
+            if api_resp.embeddings.len() != docs.len() {
+                println!("Number of embeddings:{}", api_resp.embeddings.len());
+                println!("Number of docs:{}", docs.len());
+                return Err(EmbeddingError::ResponseError(
+                    "Number of returned embeddings does not match input".into(),
+                ));
+            }
+            Ok(api_resp
+                .embeddings
+                .into_iter()
+                .zip(docs.into_iter())
+                .map(|(vec, document)| embeddings::Embedding { document, vec })
+                .collect())
+        } else {
+            panic!("No embeddings found") // If no embeddings are found, it should crash earlier. Still adding this panic statement for safety
+        }
+    }
+    //Ok(Vec::<Embedding>::new())
+}
+
+// ---------- Completion API ----------
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CompletionResponse {
+    pub model: String,
+    pub message: Message,
+    pub timestamp: String,
+}
+impl TryFrom<CompletionResponse> for completion::CompletionResponse<CompletionResponse> {
+    type Error = CompletionError;
+    fn try_from(resp: CompletionResponse) -> Result<Self, Self::Error> {
+        match resp.message {
+            // Process only if an assistant message is present.
+            Message::Assistant { content, id } => {
+                //let mut assistant_contents = Vec::new();
+                // Add the assistant's text content if any.
+                //if !content.is_empty() {
+                //    assistant_contents.push(completion::AssistantContent2::text(&content));
+                //}
+
+                let choice = rig::one_or_many::OneOrMany::one(completion::AssistantContent::text(&content));
+                //let prompt_tokens = resp.prompt_eval_count.unwrap_or(0);
+                //let completion_tokens = resp.eval_count.unwrap_or(0);
+
+                let raw_response = CompletionResponse {
+                    model: resp.model,
+                    message: Message::Assistant { content, id },
+                    timestamp: resp.timestamp,
+                };
+
+                Ok(completion::CompletionResponse {
+                    choice,
+                    usage: Usage {
+                        input_tokens: 0,  // Not provided by custom provider
+                        output_tokens: 0, // Not provided by custom provider
+                        total_tokens: 0,  // Not provided by custom provider
+                    },
+                    raw_response,
+                })
+            }
+            _ => Err(CompletionError::ResponseError(
+                "Chat response does not include an assistant message".into(),
+            )),
+        }
+    }
+}
+
+// ---------- Completion Model ----------
+
+#[derive(Clone)]
+pub struct CompletionModel {
+    client: Client,
+    pub model: String,
+}
+
+impl CompletionModel {
+    pub fn new(client: Client, model: &str) -> Self {
+        Self {
+            client,
+            model: model.to_owned(),
+        }
+    }
+
+    fn create_completion_request(&self, completion_request: CompletionRequest) -> Result<Value, CompletionError> {
+        // Build up the order of messages (context, chat_history)
+
+        // Build up the order of messages (context, chat_history)
+        let mut partial_history = vec![];
+        if let Some(docs) = completion_request.normalized_documents() {
+            partial_history.push(docs);
+        }
+        partial_history.extend(completion_request.chat_history);
+
+        // Initialize full history with preamble (or empty if non-existent)
+        let mut full_history: Vec<Message> = completion_request
+            .preamble
+            .map_or_else(Vec::new, |preamble| vec![Message::system(&preamble)]);
+
+        // Convert and extend the rest of the history
+        full_history.extend(
+            partial_history
+                .into_iter()
+                .map(|msg| Message::convert_from_message(msg))
+                .collect::<Result<Vec<Vec<Message>>, _>>()?
+                .into_iter()
+                .flatten()
+                .collect::<Vec<Message>>(),
+        );
+
+        //let mut context: String = "".to_string();
+        //if let Some(docs) = completion_request.normalized_documents() {
+        //    println!("docs:{:?}", docs);
+
+        //    match docs {
+        //        completion::message::Message::User { content: cont } => {
+        //            println!("cont_first:{:?}", cont.first());
+        //            match cont.first() {
+        //                rig::completion::message::UserContent::Document(data) => {
+        //                    //println!("data:{:?}", std::any::type_name_of_val(&data.data));
+        //                    context += &data.data; // Need to get 2nd line, will do that later
+        //                }
+        //                rig::completion::message::UserContent::ToolResult { .. } => todo!(),
+        //                rig::completion::message::UserContent::Text { .. } => todo!(),
+        //                rig::completion::message::UserContent::Image { .. } => todo!(),
+        //                rig::completion::message::UserContent::Audio { .. } => todo!(),
+        //                rig::completion::message::UserContent::Video { .. } => todo!(),
+        //            }
+
+        //            for item in cont.rest() {
+        //                match item {
+        //                    rig::completion::message::UserContent::Document(data) => {
+        //                        //println!("data:{:?}", std::any::type_name_of_val(&data.data));
+        //                        context += &data.data; // Need to get 2nd line, will do that later
+        //                    }
+        //                    rig::completion::message::UserContent::ToolResult { .. } => todo!(),
+        //                    rig::completion::message::UserContent::Text { .. } => todo!(),
+        //                    rig::completion::message::UserContent::Image { .. } => todo!(),
+        //                    rig::completion::message::UserContent::Audio { .. } => todo!(),
+        //                    rig::completion::message::UserContent::Video { .. } => todo!(),
+        //                }
+        //            }
+        //        }
+        //        completion::message::Message::Assistant { .. } => todo!(),
+        //    }
+        //    //partial_history.push(docs);
+        //    //context = docs;
+        //}
+
+        //println!("context:{}", context);
+        //println!(
+        //    "completion_request.chat_history:{:?}",
+        //    std::any::type_name_of_val(&completion_request.chat_history)
+        //);
+        //let question: String = String::from("");
+        //partial_history.extend(completion_request.chat_history);
+
+        //// Initialize full history with preamble (or empty if non-existent)
+        //let mut full_history: Vec<Message> = completion_request
+        //    .preamble
+        //    .map_or_else(Vec::new, |preamble| vec![Message::system(&preamble)]);
+
+        //// Convert and extend the rest of the history
+        //full_history.extend(
+        //    partial_history
+        //        .into_iter()
+        //        .map(|msg| msg.try_into())
+        //        .collect::<Result<Vec<Vec<Message>>, _>>()?
+        //        .into_iter()
+        //        .flatten()
+        //        .collect::<Vec<Message>>(),
+        //);
+
+        //let mut full_history: String = completion_request.preamble.unwrap();
+        //full_history = full_history + &"\n\nContext:{" + &context + &"}\n\n";
+        //println!("full_history:{}", full_history);
+
+        // Convert internal prompt into a provider Message
+        let max_new_tokens: u64;
+        let top_p: f64;
+        if let Some(extra) = completion_request.additional_params {
+            max_new_tokens = extra["max_new_tokens"].as_u64().unwrap();
+            top_p = extra["top_p"].as_f64().unwrap();
+        } else {
+            panic!("max_new_tokens and top_p not found!");
+        };
+
+        let mut request_payload = json!({
+         "inputs":[
+                {
+                    "model_name": self.model,
+                    "inputs": {
+                        "text": full_history,
+                        "max_new_tokens": max_new_tokens,
+                        "temperature": completion_request.temperature,
+                        "top_p": top_p
+                    }
+                }]
+        });
+
+        if !completion_request.tools.is_empty() {
+            println!("completion_request.tools:{:?}", completion_request.tools);
+            request_payload["tools"] = json!(
+                completion_request
+                    .tools
+                    .into_iter()
+                    .map(|tool| tool.into())
+                    .collect::<Vec<ToolDefinition>>()
+            );
+        }
+
+        //tracing::debug!(target: "rig", "Chat mode payload: {}", request_payload);
+        Ok(request_payload)
+    }
+}
+
+// ---------- CompletionModel Implementation ----------
+
+#[derive(Clone, Serialize, Deserialize, Debug)]
+pub struct StreamingCompletionResponse {
+    pub done_reason: Option<String>,
+    pub total_duration: Option<u64>,
+    pub load_duration: Option<u64>,
+    pub prompt_eval_count: Option<u64>,
+    pub prompt_eval_duration: Option<u64>,
+    pub eval_count: Option<u64>,
+    pub eval_duration: Option<u64>,
+}
+
+impl GetTokenUsage for StreamingCompletionResponse {
+    fn token_usage(&self) -> Option<rig::completion::Usage> {
+        let mut usage = rig::completion::Usage::new();
+        let input_tokens = self.prompt_eval_count.unwrap_or_default();
+        let output_tokens = self.eval_count.unwrap_or_default();
+        usage.input_tokens = input_tokens;
+        usage.output_tokens = output_tokens;
+        usage.total_tokens = input_tokens + output_tokens;
+
+        Some(usage)
+    }
+}
+
+impl completion::CompletionModel for CompletionModel {
+    type Response = CompletionResponse;
+    type StreamingResponse = StreamingCompletionResponse;
+
+    async fn completion(
+        &self,
+        completion_request: CompletionRequest,
+    ) -> Result<completion::CompletionResponse<Self::Response>, CompletionError> {
+        let request_payload = self.create_completion_request(completion_request)?;
+
+        let response = self
+            .client
+            .post(&self.client.base_url.to_string())?
+            .json(&request_payload)
+            .send()
+            .await
+            .map_err(|e| CompletionError::ProviderError(e.to_string()))?;
+        println!("response:{:?}", response);
+        if response.status().is_success() {
+            let text = response
+                .text()
+                .await
+                .map_err(|e| CompletionError::ProviderError(e.to_string()))?;
+            let text_json: Value = serde_json::from_str(&text)?;
+            //println!("text:{:?}", text_json);
+            //tracing::debug!(target: "rig", "Myprovider chat response: {}", text);
+            let chat_resp: CompletionResponse = CompletionResponse {
+                model: text_json["model_name"].to_string(),
+                message: Message::Assistant {
+                    id: text_json["id"].to_string(),
+                    content: text_json["outputs"].to_string(),
+                },
+                timestamp: text_json["timestamp"].to_string(),
+            };
+            //println!("chat_resp:{:?}", chat_resp);
+            let conv: completion::CompletionResponse<CompletionResponse> = chat_resp.try_into()?;
+            Ok(conv)
+        } else {
+            let err_text = response
+                .text()
+                .await
+                .map_err(|e| CompletionError::ProviderError(e.to_string()))?;
+            Err(CompletionError::ProviderError(err_text))
+        }
+    }
+
+    async fn stream(
+        &self,
+        request: CompletionRequest,
+    ) -> Result<streaming::StreamingCompletionResponse<Self::StreamingResponse>, CompletionError> {
+        let mut request_payload = self.create_completion_request(request)?;
+        merge_inplace(&mut request_payload, json!({"stream": true}));
+
+        let response = self
+            .client
+            .post("api/chat")?
+            .json(&request_payload)
+            .send()
+            .await
+            .map_err(|e| CompletionError::ProviderError(e.to_string()))?;
+
+        if !response.status().is_success() {
+            let err_text = response
+                .text()
+                .await
+                .map_err(|e| CompletionError::ProviderError(e.to_string()))?;
+            return Err(CompletionError::ProviderError(err_text));
+        }
+
+        let stream = Box::pin(stream! {
+            let mut stream = response.bytes_stream();
+            while let Some(chunk_result) = stream.next().await {
+                let chunk = match chunk_result {
+                    Ok(c) => c,
+                    Err(e) => {
+                        yield Err(CompletionError::from(e));
+                        break;
+                    }
+                };
+
+                let text = match String::from_utf8(chunk.to_vec()) {
+                    Ok(t) => t,
+                    Err(e) => {
+                        yield Err(CompletionError::ResponseError(e.to_string()));
+                        break;
+                    }
+                };
+
+
+                for line in text.lines() {
+                    let line = line.to_string();
+
+                    let Ok(response) = serde_json::from_str::<CompletionResponse>(&line) else {
+                        continue;
+                    };
+
+                    match response.message {
+                        Message::Assistant{ content, .. } => {
+                            if !content.is_empty() {
+                                yield Ok(RawStreamingChoice::Message(content))
+                            }
+                        }
+                        _ => {
+                            continue;
+                        }
+                    }
+
+                    //if response.message {
+                    //    yield Ok(RawStreamingChoice::FinalResponse(StreamingCompletionResponse {
+                    //        total_duration: response.total_duration,
+                    //        load_duration: response.load_duration,
+                    //        prompt_eval_count: response.prompt_eval_count,
+                    //        prompt_eval_duration: response.prompt_eval_duration,
+                    //        eval_count: response.eval_count,
+                    //        eval_duration: response.eval_duration,
+                    //        done_reason: response.done_reason,
+                    //    }));
+                    //}
+                }
+            }
+        });
+
+        Ok(streaming::StreamingCompletionResponse::stream(stream))
+    }
+}
+
+// ---------- Tool Definition Conversion ----------
+
+/// Myprovider-required tool definition format.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct ToolDefinition {
+    #[serde(rename = "type")]
+    pub type_field: String, // Fixed as "function"
+    pub function: completion::ToolDefinition,
+}
+
+/// Convert internal ToolDefinition (from the completion module) into Myprovider's tool definition.
+impl From<rig::completion::ToolDefinition> for ToolDefinition {
+    fn from(tool: rig::completion::ToolDefinition) -> Self {
+        ToolDefinition {
+            type_field: "function".to_owned(),
+            function: completion::ToolDefinition {
+                name: tool.name,
+                description: tool.description,
+                parameters: tool.parameters,
+            },
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
+pub struct ToolCall {
+    // pub id: String,
+    #[serde(default, rename = "type")]
+    pub r#type: ToolType,
+    pub function: Function,
+}
+#[derive(Default, Debug, Serialize, Deserialize, PartialEq, Clone)]
+#[serde(rename_all = "lowercase")]
+pub enum ToolType {
+    #[default]
+    Function,
+}
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
+pub struct Function {
+    pub name: String,
+    pub arguments: Value,
+}
+
+// ---------- Provider Message Definition ----------
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
+#[serde(tag = "role", rename_all = "lowercase")]
+pub enum Message {
+    User {
+        content: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        images: Option<Vec<String>>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        name: Option<String>,
+    },
+    Assistant {
+        #[serde(default)]
+        content: String,
+        #[serde(default)]
+        id: String,
+        //#[serde(skip_serializing_if = "Option::is_none")]
+        //thinking: Option<String>,
+        //#[serde(skip_serializing_if = "Option::is_none")]
+        //images: Option<Vec<String>>,
+        //#[serde(skip_serializing_if = "Option::is_none")]
+        //name: Option<String>,
+        //#[serde(default, deserialize_with = "json_utils::null_or_vec")]
+        //tool_calls: Vec<ToolCall>,
+    },
+    System {
+        content: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        images: Option<Vec<String>>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        name: Option<String>,
+    },
+    #[serde(rename = "tool")]
+    ToolResult {
+        #[serde(rename = "tool_name")]
+        name: String,
+        content: String,
+    },
+}
+
+/// -----------------------------
+/// Provider Message Conversions
+/// -----------------------------
+/// Conversion from an internal Rig message (crate::message::Message) to a provider Message.
+/// (Only User and Assistant variants are supported.)
+impl ConvertMessage for Message {
+    type Error = rig::message::MessageError;
+    fn convert_from_message(internal_msg: message::Message) -> Result<Vec<Self>, Self::Error> {
+        use rig::message::Message as InternalMessage;
+        match internal_msg {
+            InternalMessage::User { content, .. } => {
+                let (tool_results, other_content): (Vec<_>, Vec<_>) = content
+                    .into_iter()
+                    .partition(|content| matches!(content, rig::message::UserContent::ToolResult(_)));
+
+                if !tool_results.is_empty() {
+                    tool_results
+                        .into_iter()
+                        .map(|content| match content {
+                            rig::message::UserContent::ToolResult(rig::message::ToolResult { id, content, .. }) => {
+                                // Ollama expects a single string for tool results, so we concatenate
+                                let content_string = content
+                                    .into_iter()
+                                    .map(|content| match content {
+                                        rig::message::ToolResultContent::Text(text) => text.text,
+                                        _ => "[Non-text content]".to_string(),
+                                    })
+                                    .collect::<Vec<_>>()
+                                    .join("\n");
+
+                                Ok::<_, rig::message::MessageError>(Message::ToolResult {
+                                    name: id,
+                                    content: content_string,
+                                })
+                            }
+                            _ => unreachable!(),
+                        })
+                        .collect::<Result<Vec<_>, _>>()
+                } else {
+                    // Ollama requires separate text content and images array
+                    let (texts, images) =
+                        other_content
+                            .into_iter()
+                            .fold((Vec::new(), Vec::new()), |(mut texts, mut images), content| {
+                                match content {
+                                    rig::message::UserContent::Text(rig::message::Text { text }) => texts.push(text),
+                                    rig::message::UserContent::Image(rig::message::Image { data, .. }) => {
+                                        images.push(data)
+                                    }
+                                    rig::message::UserContent::Document(rig::message::Document { data, .. }) => {
+                                        texts.push(data)
+                                    }
+                                    _ => {} // Audio not supported by Ollama
+                                }
+                                (texts, images)
+                            });
+
+                    Ok(vec![Message::User {
+                        content: texts.join(" "),
+                        images: if images.is_empty() { None } else { Some(images) },
+                        name: None,
+                    }])
+                }
+            }
+            InternalMessage::Assistant { content, .. } => {
+                let mut thinking: Option<String> = None;
+                let (text_content, _tool_calls) =
+                    content
+                        .into_iter()
+                        .fold((Vec::new(), Vec::new()), |(mut texts, mut tools), content| {
+                            match content {
+                                rig::message::AssistantContent::Text(text) => texts.push(text.text),
+                                rig::message::AssistantContent::ToolCall(_tool_call) => tools.push(_tool_call),
+                                rig::message::AssistantContent::Reasoning(rig::message::Reasoning {
+                                    reasoning,
+                                    ..
+                                }) => {
+                                    thinking = Some(reasoning.first().cloned().unwrap_or(String::new()));
+                                }
+                            }
+                            (texts, tools)
+                        });
+
+                // `OneOrMany` ensures at least one `AssistantContent::Text` or `ToolCall` exists,
+                //  so either `content` or `tool_calls` will have some content.
+                #[allow(unreachable_code)]
+                Ok(vec![Message::Assistant {
+                    content: text_content.join(" "),
+                    id: todo!(),
+                }])
+            }
+        }
+    }
+}
+
+/// Conversion from provider Message to a completion message.
+/// This is needed so that responses can be converted back into chat history.
+impl From<Message> for rig::completion::Message {
+    fn from(msg: Message) -> Self {
+        match msg {
+            Message::User { content, .. } => rig::completion::Message::User {
+                content: OneOrMany::one(rig::completion::message::UserContent::Text(Text { text: content })),
+            },
+            Message::Assistant { content, .. } => {
+                let assistant_contents = vec![rig::completion::message::AssistantContent::Text(Text { text: content })];
+                rig::completion::Message::Assistant {
+                    id: None,
+                    content: OneOrMany::many(assistant_contents).unwrap(),
+                }
+            }
+            // System and ToolResult are converted to User message as needed.
+            Message::System { content, .. } => rig::completion::Message::User {
+                content: OneOrMany::one(rig::completion::message::UserContent::Text(Text { text: content })),
+            },
+            Message::ToolResult { name, content } => rig::completion::Message::User {
+                content: OneOrMany::one(message::UserContent::tool_result(
+                    name,
+                    OneOrMany::one(message::ToolResultContent::text(content)),
+                )),
+            },
+        }
+    }
+}
+
+impl Message {
+    /// Constructs a system message.
+    pub fn system(content: &str) -> Self {
+        Message::System {
+            content: content.to_owned(),
+            images: None,
+            name: None,
+        }
+    }
+}
+
+// ---------- Additional Message Types ----------
+
+impl From<rig::message::ToolCall> for ToolCall {
+    fn from(tool_call: rig::message::ToolCall) -> Self {
+        Self {
+            r#type: ToolType::Function,
+            function: Function {
+                name: tool_call.function.name,
+                arguments: tool_call.function.arguments,
+            },
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
+pub struct SystemContent {
+    #[serde(default)]
+    r#type: SystemContentType,
+    text: String,
+}
+
+#[derive(Default, Debug, Serialize, Deserialize, PartialEq, Clone)]
+#[serde(rename_all = "lowercase")]
+pub enum SystemContentType {
+    #[default]
+    Text,
+}
+
+impl From<String> for SystemContent {
+    fn from(s: String) -> Self {
+        SystemContent {
+            r#type: SystemContentType::default(),
+            text: s,
+        }
+    }
+}
+
+impl FromStr for SystemContent {
+    type Err = std::convert::Infallible;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(SystemContent {
+            r#type: SystemContentType::default(),
+            text: s.to_string(),
+        })
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
+pub struct AssistantContent {
+    pub text: String,
+}
+
+impl FromStr for AssistantContent {
+    type Err = std::convert::Infallible;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(AssistantContent { text: s.to_owned() })
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
+#[serde(tag = "type", rename_all = "lowercase")]
+pub enum UserContent {
+    Text { text: String },
+    Image { image_url: ImageUrl },
+    // Audio variant removed as Ollama API does not support audio input.
+}
+
+impl FromStr for UserContent {
+    type Err = std::convert::Infallible;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(UserContent::Text { text: s.to_owned() })
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
+pub struct ImageUrl {
+    pub url: String,
+    #[serde(default)]
+    pub detail: ImageDetail,
+}
+
+// ---------JSON utils functions -----------------------------
+
+pub fn merge_inplace(a: &mut serde_json::Value, b: serde_json::Value) {
+    if let (serde_json::Value::Object(a_map), serde_json::Value::Object(b_map)) = (a, b) {
+        b_map.into_iter().for_each(|(key, value)| {
+            a_map.insert(key, value);
+        });
+    }
+}
+
+// =================================================================
+// Tests
+// =================================================================
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rig::agent::AgentBuilder;
+    use rig::completion::request::Prompt;
+    //use rig::providers::myprovider;
+    use rig::vector_store::in_memory_store::InMemoryVectorStore;
+    //use serde_json::json;
+    use std::fs::File;
+    use std::io::Read;
+
+    // Test deserialization and conversion for the /api/chat endpoint.
+    #[tokio::test]
+    #[ignore]
+    async fn test_myprovider_implementation() {
+        let user_input = "Generate DE plot for men with weight greater than 30lbs vs women less than 20lbs";
+
+        // Initialize Myprovider client
+        let myprovider_host = "http://10.200.87.133:32580/v2/models/ray_gateway_router/infer";
+        let myprovider_client = Client::builder()
+            .base_url(myprovider_host)
+            .build()
+            .expect("myprovider server not found");
+        //let myprovider_client = myprovider::Client::new();
+        let embedding_model = myprovider_client.embedding_model("multi-qa-mpnet-base-dot-v1");
+        let comp_model = myprovider_client.completion_model("llama3.3-70b-instruct-vllm"); // "granite3-dense:latest" "PetrosStav/gemma3-tools:12b" "llama3-groq-tool-use:latest" "PetrosStav/gemma3-tools:12b"
+        let file_path = "/Users/rpaul1/Documents/test/RAG/LangGraph/ai_docs3.txt";
+
+        // Open the file
+        let mut file = File::open(file_path).unwrap();
+
+        // Create a string to hold the file contents
+        let mut contents = String::new();
+
+        // Read the file contents into the string
+        file.read_to_string(&mut contents).unwrap();
+
+        // Split the contents by the delimiter "---"
+        let parts: Vec<&str> = contents.split("---").collect();
+
+        //let schema_json: Value = serde_json::to_value(schemars::schema_for!(OutputJson)).unwrap(); // error handling here
+
+        //let additional = json!({
+        //    "format": schema_json
+        //});
+
+        // Print the separated parts
+        let mut rag_docs = Vec::<String>::new();
+        for (_i, part) in parts.iter().enumerate() {
+            //println!("Part {}: {}", i + 1, part.trim());
+            rag_docs.push(part.trim().to_string())
+        }
+
+        let top_k: usize = 3;
+        // Create embeddings and add to vector store
+        let embeddings = EmbeddingsBuilder::new(embedding_model.clone())
+            .documents(rag_docs)
+            .expect("Reason1")
+            .build()
+            .await
+            .unwrap();
+
+        // Create vector store
+        let mut vector_store = InMemoryVectorStore::<String>::default();
+        InMemoryVectorStore::add_documents(&mut vector_store, embeddings);
+
+        let max_new_tokens: usize = 512;
+        let top_p: f32 = 0.95;
+        let additional = json!({
+                "max_new_tokens": max_new_tokens,
+                "top_p": top_p
+        });
+
+        // Create RAG agent
+        let agent = AgentBuilder::new(comp_model).preamble("Generate classification for the user query into summary, dge, hierarchial, snv_indel, cnv, variant_calling, sv_fusion and none categories. Return output in JSON with ALWAYS a single word answer { \"answer\": \"dge\" }, that is 'summary' for summary plot, 'dge' for differential gene expression, 'hierarchial' for hierarchial clustering, 'snv_indel' for SNV/Indel, 'cnv' for CNV and 'sv_fusion' for SV/fusion, 'variant_calling' for variant calling, 'surivial' for survival data, 'none' for none of the previously described categories. The answer should always be in lower case").dynamic_context(top_k, vector_store.index(embedding_model)).additional_params(additional).temperature(0.01).build();
+
+        let response = agent.prompt(user_input).await.expect("Failed to prompt myprovider");
+
+        //println!("Myprovider: {}", response);
+        let result = response.replace("json", "").replace("```", "");
+        //println!("result:{}", result);
+        let json_value: Value = serde_json::from_str(&result).expect("REASON");
+        println!("json_value:{}", json_value);
+        json_value["answer"].to_string();
+    }
+}
