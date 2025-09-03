@@ -186,6 +186,10 @@ function addProject(connection: Database.Database, project: any): void {
 	const projectParams = [project.name, JSON.stringify(project.filter)]
 	const row = runSQL(connection, projectSql, projectParams, 'add') as Database.RunResult
 
+	const userSql = `INSERT INTO project_users (project_id, email) VALUES (?, ?)`
+	const userParams = [row.lastInsertRowid, 'user@domain.com'] as string[]
+	runSQL(connection, userSql, userParams, 'add')
+
 	//Add corresponding project classes
 	const classSql = `INSERT INTO project_classes (project_id, label, color, key_shortcut) VALUES (?, ?, ?, ?)`
 	const classParams = project.classes.map((c: any) => [row.lastInsertRowid, c.label, c.color, c.key_shortcut || ''])
