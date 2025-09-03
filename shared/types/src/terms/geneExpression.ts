@@ -33,18 +33,4 @@ export type GeneExpressionTerm = NumericBaseTerm & {
 
 export type GeneExpressionTW = NumTW & { term: GeneExpressionTerm }
 
-type RawGeneExpTermByGene = {
-	type: 'geneExpression'
-	gene: 'string'
-}
-
-type RawGeneExpTermByPosition = {
-	type: 'geneExpression'
-	chr: string
-	start: number
-	stop: number
-}
-
-type RawGeneExpTerm = RawGeneExpTermByGene | RawGeneExpTermByPosition
-
-export type RawGeneExpTW = RawNumTW & { term: RawGeneExpTerm }
+export type RawGeneExpTW = RawNumTW & { term: GeneExpressionTerm & { name?: string } }

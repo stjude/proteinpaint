@@ -20,6 +20,9 @@ export type MetaboliteIntensityTW = NumTW & { term: MetaboliteIntensityTerm }
 type RawMetabolitIntensityTerm = {
 	type: 'metaboliteIntensity'
 	metabolite: string
+	name?: string
+	bins?: PresetNumericBins
+	unit?: string
 }
 
 export type RawMetaboliteIntensityTW = RawNumTW & { term: RawMetabolitIntensityTerm }
