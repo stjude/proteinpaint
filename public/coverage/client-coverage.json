@@ -4861,10 +4861,10 @@
   },
   "dom/GeneSetEdit/GeneSetEditUI.ts": {
     "lines": {
-      "total": 197,
+      "total": 198,
       "covered": 81,
       "skipped": 0,
-      "pct": 41.11
+      "pct": 40.9
     },
     "functions": {
       "total": 46,
@@ -4890,9 +4890,9 @@
       "diff": 0
     },
     "averagePct": {
-      "curr": 38.5025,
+      "curr": 38.449999999999996,
       "prev": 38.5025,
-      "diff": 0
+      "diff": -0.05250000000000199
     }
   },
   "mass/test/cuminc.integration.spec.js": {
