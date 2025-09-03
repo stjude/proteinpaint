@@ -11,16 +11,10 @@ export type DateTerm = NumericBaseTerm & {
 	name: string
 	type: 'date'
 	bins?: PresetNumericBins
-	unit?: string
 }
 
 export type DateTW = NumTW & { term: DateTerm }
 
-type RawDateTerm = {
-	name?: string
-	type: 'date'
-	bins?: PresetNumericBins
-	unit?: string
-}
+type RawDateTerm = DateTerm & { name?: string }
 
 export type RawDateTW = RawNumTW & { term: RawDateTerm }

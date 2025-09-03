@@ -19,8 +19,4 @@ export type SsGSEATerm = NumericBaseTerm & {
 
 export type SsGSEATW = NumTW & { term: SsGSEATerm }
 
-type RawSsGSEATerm = {
-	type: 'ssGSEA'
-}
-
-export type RawSsGSEATW = RawNumTW & { term: RawSsGSEATerm }
+export type RawSsGSEATW = RawNumTW & { term: SsGSEATerm }
