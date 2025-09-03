@@ -27,7 +27,12 @@ export class ScatterView {
 
 		const rightDiv = this.opts.holder.insert('div').style('display', 'inline-block').style('vertical-align', 'top')
 		const headerDiv = rightDiv.append('div')
-		const mainDiv = rightDiv.append('div')
+		const mainDiv = rightDiv
+			.append('div')
+			.style('display', 'flex')
+			.style('flex-direction', 'row')
+			.style('flex-wrap', 'wrap')
+			.style('max-width', '100vw')
 
 		this.dom = {
 			headerDiv,
