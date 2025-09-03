@@ -149,9 +149,13 @@ def plot_grin2_manhattan(grin_results: dict,
         for mut_type, q_col in mutation_cols:
             if q_col not in gene_row or pd.isna(gene_row[q_col]) or gene_row[q_col] <= 0:
                 continue
+            
+            # Filter out non-significant genes (q-value > 0.05)
+            q_value = gene_row[q_col]
+            if q_value > 0.05:
+                continue
                 
             # Convert q-value to -log10(q-value)
-            q_value = gene_row[q_col]
             neg_log10_q = -np.log10(q_value)
             
             # Add slight horizontal offset for multiple mutation types at same gene
@@ -222,20 +226,6 @@ def plot_grin2_manhattan(grin_results: dict,
                 ax.axvspan(start_pos, end_pos, facecolor='#f0f0f0', alpha=0.5, zorder=0)
             else:
                 ax.axvspan(start_pos, end_pos, facecolor='#e0e0e0', alpha=0.5, zorder=0)
-    
-    # Add significance threshold lines
-    significance_levels = [0.05, 0.01, 0.001]  # Common q-value thresholds
-    line_styles = ['--', ':', '-']
-    line_colors = ['gray', 'darkgray', 'black']
-    
-    for i, (sig_level, style, color) in enumerate(zip(significance_levels, line_styles, line_colors)):
-        threshold_y = -np.log10(sig_level)
-        # Apply same scaling as data if needed
-        if y_axis_scaled:
-            threshold_y *= scale_factor
-        
-        if threshold_y <= ax.get_ylim()[1]:  # Only show if within plot range
-            ax.axhline(y=threshold_y, color=color, linestyle=style, alpha=0.6, zorder=1)
     
     # Plot the data points
     if plot_data['x']:

@@ -6,6 +6,7 @@ import { dofetch3 } from '#common/dofetch'
 import { Menu, renderTable, icons, table2col, make_one_checkbox } from '#dom'
 import { dtsnvindel, mclass } from '#shared/common.js'
 import { get$id } from '#termsetting'
+import { select } from 'd3-selection'
 
 class GRIN2 extends RxComponentInner {
 	readonly type = 'grin2'
@@ -501,14 +502,25 @@ class GRIN2 extends RxComponentInner {
 
 			const plotData = result.plotData
 
-			console.log('Plot data:', plotData) // Debug: check if data exists
-			console.log('Number of points:', plotData.points.length) // Debug: check point count
+			const geneTooltip = select('body')
+				.append('div')
+				.attr('class', 'manhattan-tooltip')
+				.style('position', 'absolute')
+				.style('visibility', 'hidden')
+				.style('background', 'rgba(0, 0, 0, 0.9)')
+				.style('color', 'white')
+				.style('padding', '8px 12px')
+				.style('border-radius', '6px')
+				.style('font-size', '13px')
+				.style('font-family', 'Arial, sans-serif')
+				.style('box-shadow', '0 2px 8px rgba(0,0,0,0.3)')
+				.style('pointer-events', 'none')
+				.style('z-index', '10000')
+				.style('max-width', '200px')
 
-			const svg = plotContainer
-				.append('svg')
-				.attr('width', plotData.plot_width)
-				.attr('height', plotData.plot_height)
-				.style('border', '1px solid red') // Debug: make SVG visible
+			console.log('Plot data:', plotData)
+			console.log('Number of points:', plotData.points.length)
+			const svg = plotContainer.append('svg').attr('width', plotData.plot_width).attr('height', plotData.plot_height)
 
 			// Add the matplotlib background image
 			svg
@@ -532,12 +544,17 @@ class GRIN2 extends RxComponentInner {
 				.attr('stroke', 'black')
 				.attr('stroke-width', 1)
 				.style('cursor', 'pointer')
-				.on('click', function (event, d) {
-					console.log('Clicked gene:', d.gene, d.type, d.q_value)
-					alert(`Clicked: ${d.gene}`) // More obvious feedback
+				.on('mouseover', function (event, d) {
+					//mayLog('Hovered gene:', d.gene, d.type, d.y)
+					geneTooltip
+						.html(`Gene: ${d.gene}<br>Type: ${d.type}<br>-log10(q-value): ${d.y.toFixed(3)}`)
+						.style('visibility', 'visible')
+						.style('left', `${event.pageX + 10}px`)
+						.style('top', `${event.pageY - 30}px`)
 				})
-
-			console.log('SVG setup complete') // Debug: confirm setup finished
+				.on('mouseout', function () {
+					geneTooltip.style('visibility', 'hidden')
+				})
 		}
 		// Display top genes table
 		if (result.topGeneTable) {
