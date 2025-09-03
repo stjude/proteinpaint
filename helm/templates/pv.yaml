@@ -1,0 +1,24 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: protein-paint-pv
+  labels:
+    {{- include "protein-paint.labels" . | nindent 4 }}
+spec:
+  capacity:
+    storage: 1200Gi
+  accessModes:
+    - ReadWriteMany
+  storageClassName: ""
+  claimRef:
+    namespace: {{ .Release.Namespace }}
+    name: protein-paint-pvc
+  mountOptions:
+    - allow-delete
+    - region {{ .Values.storage.region }}
+  csi:
+    driver: s3.csi.aws.com
+    volumeHandle: protein-paint-pv
+    volumeAttributes:
+      bucketName: {{ .Values.storage.bucketName | quote }}
+      authenticationSource: pod
