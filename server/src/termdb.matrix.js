@@ -469,7 +469,10 @@ export async function getSampleData_dictionaryTerms_termdb(q, termWrappers, only
 			//if ('id' in tw.term) twBy$id[$id] = tw
 			return CTE
 		})
-	).catch(console.error)
+	).catch(err => {
+		console.error(err)
+		throw err
+	})
 
 	// for "samplelst" term, term.id is missing and must use term.name
 	values.push(...termWrappers.map(tw => tw.$id || tw.term.id || tw.term.name))

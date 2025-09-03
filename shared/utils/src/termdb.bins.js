@@ -53,6 +53,9 @@ export default function validate_bins(binconfig) {
 					throw 'a custom last bin must not set a bin.stop value'
 				}
 			} else {
+				if (bin.startunbounded || bin.stopunbounded) {
+					throw 'bin.startunbounded and bin.stopunbounded must not be set for non-first/non-last bins'
+				}
 				if (!isStrictNumeric(bin.start)) throw 'bin.start must be numeric for a non-first bin'
 				if (!isStrictNumeric(bin.stop)) throw 'bin.stop must be numeric for a non-last bin'
 			}
