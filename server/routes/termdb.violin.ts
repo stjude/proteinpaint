@@ -52,6 +52,7 @@ export async function trigger_getViolinPlotData(q: ViolinRequest, ds: any) {
 	if (!isNumericTerm(term) && term.type !== 'survival') throw 'term type is not numeric or survival'
 
 	const terms = [q.tw]
+	if (q.overlayTw) terms.push(q.overlayTw)
 	if (q.divideTw) terms.push(q.divideTw)
 
 	const data = await getData(
@@ -66,23 +67,23 @@ export async function trigger_getViolinPlotData(q: ViolinRequest, ds: any) {
 	)
 	const sampleType = `All ${data.sampleType?.plural_name || 'samples'}`
 	if (data.error) throw data.error
-	//get ordered labels to sort keys in key2values
-	if (q.divideTw && data.refs.byTermId[q.divideTw.$id]) {
-		data.refs.byTermId[q.divideTw.$id].orderedLabels = getOrderedLabels(
-			q.divideTw,
-			data.refs.byTermId[q.divideTw.$id]?.bins,
+	//get ordered labels to sort keys in plot2values
+	if (q.overlayTw && data.refs.byTermId[q.overlayTw.$id]) {
+		data.refs.byTermId[q.overlayTw.$id].orderedLabels = getOrderedLabels(
+			q.overlayTw,
+			data.refs.byTermId[q.overlayTw.$id]?.bins,
 			undefined,
-			q.divideTw.q
+			q.overlayTw.q
 		)
 	}
 
 	if (q.scale) setScaleData(q, data as ValidGetDataResponse, q.tw)
 
 	const valuesObject = divideValues(q, data as ValidGetDataResponse, sampleType)
-	const result = setResponse(valuesObject, data as ValidGetDataResponse, q, sampleType)
+	const result = setResponse(valuesObject, data as ValidGetDataResponse, q)
 
 	// wilcoxon test data to return to client
-	await getWilcoxonData(q.divideTw, result)
+	if (q.overlayTw) await getWilcoxonData(result)
 
 	await createCanvasImg(q, result, ds)
 
@@ -90,29 +91,32 @@ export async function trigger_getViolinPlotData(q: ViolinRequest, ds: any) {
 }
 
 // compute pvalues using wilcoxon rank sum test
-export async function getWilcoxonData(divideTw: TermWrapper, result: { [index: string]: any }) {
-	if (!divideTw) return
-	const numPlots = result.plots.length
-	if (numPlots < 2) return
+export async function getWilcoxonData(result: { [index: string]: any }) {
+	for (const k of Object.keys(result.charts)) {
+		const chart = result.charts[k]
+		const numPlots = chart.plots.length
+		if (numPlots < 2) continue
 
-	const wilcoxInput: { [index: string]: any }[] = []
+		const wilcoxInput: { [index: string]: any }[] = []
 
-	for (let i = 0; i < numPlots; i++) {
-		const group1_id = result.plots[i].label
-		const group1_values = result.plots[i].values
-		for (let j = i + 1; j < numPlots; j++) {
-			const group2_id = result.plots[j].label
-			const group2_values = result.plots[j].values
-			wilcoxInput.push({ group1_id, group1_values, group2_id, group2_values })
+		for (let i = 0; i < numPlots; i++) {
+			const group1_id = chart.plots[i].label
+			const group1_values = chart.plots[i].values
+			for (let j = i + 1; j < numPlots; j++) {
+				const group2_id = chart.plots[j].label
+				const group2_values = chart.plots[j].values
+				wilcoxInput.push({ group1_id, group1_values, group2_id, group2_values })
+			}
 		}
-	}
 
-	const wilcoxOutput = JSON.parse(await run_rust('wilcoxon', JSON.stringify(wilcoxInput)))
-	for (const test of wilcoxOutput) {
-		if (test.pvalue == null || test.pvalue == 'null') {
-			result.pvalues.push([{ value: test.group1_id }, { value: test.group2_id }, { html: 'NA' }])
-		} else {
-			result.pvalues.push([{ value: test.group1_id }, { value: test.group2_id }, { html: test.pvalue.toPrecision(4) }])
+		const wilcoxOutput = JSON.parse(await run_rust('wilcoxon', JSON.stringify(wilcoxInput)))
+		chart.pvalues = []
+		for (const test of wilcoxOutput) {
+			if (test.pvalue == null || test.pvalue == 'null') {
+				chart.pvalues.push([{ value: test.group1_id }, { value: test.group2_id }, { html: 'NA' }])
+			} else {
+				chart.pvalues.push([{ value: test.group1_id }, { value: test.group2_id }, { html: test.pvalue.toPrecision(4) }])
+			}
 		}
 	}
 }
@@ -132,12 +136,20 @@ function setScaleData(q: ViolinRequest, data: ValidGetDataResponse, tw: TermWrap
 }
 
 function divideValues(q: ViolinRequest, data: ValidGetDataResponse, sampleType: string) {
-	const overlayTerm = q.divideTw
+	const overlayTerm = q.overlayTw
+	const divideTerm = q.divideTw
 	const useLog = q.unit == 'log'
 
-	const { absMax, absMin, key2values, uncomputableValues } = parseValues(q, data, sampleType, useLog, overlayTerm)
+	const { absMax, absMin, chart2plot2values, uncomputableValues } = parseValues(
+		q,
+		data,
+		sampleType,
+		useLog,
+		overlayTerm,
+		divideTerm
+	)
 	return {
-		key2values,
+		chart2plot2values,
 		min: absMin,
 		max: absMax,
 		uncomputableValues: sortObj(uncomputableValues)
@@ -148,11 +160,15 @@ function sortObj(object: { [index: string]: any }) {
 	return Object.fromEntries(Object.entries(object).sort(([, a], [, b]) => (a as any) - (b as any)))
 }
 
-export function sortKey2values(data: ValidGetDataResponse, key2values: Map<string, any[]>, overlayTerm?: TermWrapper) {
+export function sortPlot2Values(
+	data: ValidGetDataResponse,
+	plot2values: Map<string, any[]>,
+	overlayTerm?: TermWrapper
+) {
 	const orderedLabels = overlayTerm?.$id ? data.refs.byTermId[overlayTerm.$id]?.keyOrder : undefined
 
-	key2values = new Map(
-		[...key2values].sort(
+	plot2values = new Map(
+		[...plot2values].sort(
 			orderedLabels
 				? (a, b) => orderedLabels.indexOf(a[0]) - orderedLabels.indexOf(b[0])
 				: overlayTerm?.term?.type === 'categorical'
@@ -166,45 +182,41 @@ export function sortKey2values(data: ValidGetDataResponse, key2values: Map<strin
 							.localeCompare(b.toString().replace(/[^a-zA-Z0-9<]/g, ''), undefined, { numeric: true })
 		)
 	)
-	return key2values
+	return plot2values
 }
 
-function setResponse(valuesObject: any, data: ValidGetDataResponse, q: ViolinRequest, sampleType: string) {
-	const overlayTerm = q.divideTw
-	//temp plot type
-	const plots: {
-		label: string
-		values: number[]
-		seriesId?: string
-		plotValueCount: number
-		color?: string
-		divideTwBins?: any
-	}[] = []
+function setResponse(valuesObject: any, data: ValidGetDataResponse, q: ViolinRequest) {
+	const charts: any = {}
+	const overlayTerm = q.overlayTw
+	for (const [chart, plot2values] of valuesObject.chart2plot2values) {
+		//temp plot type
+		const plots: {
+			label: string
+			values: number[]
+			seriesId?: string
+			plotValueCount: number
+			color?: string
+			overlayTwBins?: any
+		}[] = []
 
-	for (const [key, values] of sortKey2values(data, valuesObject.key2values, overlayTerm)) {
-		if (overlayTerm) {
+		for (const [plot, values] of sortPlot2Values(data, plot2values, overlayTerm)) {
 			plots.push({
-				label: overlayTerm?.term?.values?.[key]?.label || key,
+				label: overlayTerm?.term?.values?.[plot]?.label || plot,
 				values,
-				seriesId: key,
+				seriesId: plot,
 				plotValueCount: values?.length,
-				color: overlayTerm?.term?.values?.[key]?.color || null,
-				divideTwBins: isNumericTerm(overlayTerm.term) ? numericBins(overlayTerm, data) : null
-			})
-		} else {
-			plots.push({
-				label: sampleType,
-				values,
-				plotValueCount: values.length
+				color: overlayTerm?.term?.values?.[plot]?.color || null,
+				overlayTwBins: isNumericTerm(overlayTerm?.term) ? numericBins(overlayTerm, data) : null
 			})
 		}
+
+		charts[chart] = { plots }
 	}
 
 	const result = {
 		min: valuesObject.min,
 		max: valuesObject.max,
-		plots,
-		pvalues: [],
+		charts,
 		uncomputableValues: Object.keys(valuesObject.uncomputableValues).length > 0 ? valuesObject.uncomputableValues : null
 	}
 
@@ -222,76 +234,79 @@ async function createCanvasImg(q: ViolinRequest, result: { [index: string]: any 
 
 	const refSize = q.radius * 4
 	//create scale object
-	const plot2Values = {}
-	for (const plot of result.plots) plot2Values[plot.label] = plot.values
-	const densities = await getDensities(plot2Values, result.min, result.max)
+	for (const k of Object.keys(result.charts)) {
+		const chart = result.charts[k]
+		const plot2Values = {}
+		for (const plot of chart.plots) plot2Values[plot.label] = plot.values
+		const densities = await getDensities(plot2Values, result.min, result.max)
 
-	let axisScale
-	const useLog = q.unit == 'log'
-	if (useLog) {
-		axisScale = scaleLog()
-			.base(ds.cohort.termdb.logscaleBase2 ? 2 : 10)
-			.domain([result.min, result.max])
-			.range(q.orientation === 'horizontal' ? [0, q.svgw] : [q.svgw, 0])
-	} else {
-		axisScale = scaleLinear()
-			.domain([result.min, result.max])
-			.range(q.orientation === 'horizontal' ? [0, q.svgw] : [q.svgw, 0])
-	}
-	const [width, height] =
-		q.orientation == 'horizontal'
-			? [q.svgw * q.devicePixelRatio, refSize * q.devicePixelRatio]
-			: [refSize * q.devicePixelRatio, q.svgw * q.devicePixelRatio]
-
-	const scaledRadius = q.radius / q.devicePixelRatio
-	const arcEndAngle = scaledRadius * Math.PI
-
-	for (const plot of result.plots) {
-		// item: { label=str, values=[v1,v2,...] }
-		// set  the plot density
-		plot.density = densities[plot.label]
-		const noDensityRendered = plot.density.densityMax == 0
-		//backend rendering bean/rug plot on top of violin plot based on orientation of chart
-		const canvas = createCanvas(width, height)
-		const ctx = canvas.getContext('2d')
-		const symbolOpacity = noDensityRendered ? 1 : 0.6
-		ctx.strokeStyle = `rgba(0,0,0,${symbolOpacity})`
-		ctx.lineWidth = q.strokeWidth / q.devicePixelRatio
-		ctx.globalAlpha = symbolOpacity
-		// No violin is rendered when the values is less than cutoff
-		//Render in black so the user can see the data
-		ctx.fillStyle = '#ffe6e6' //only applied with rug
-
-		//scaling for sharper image
-		if (q.devicePixelRatio != 1) {
-			ctx.scale(q.devicePixelRatio, q.devicePixelRatio)
+		let axisScale
+		const useLog = q.unit == 'log'
+		if (useLog) {
+			axisScale = scaleLog()
+				.base(ds.cohort.termdb.logscaleBase2 ? 2 : 10)
+				.domain([result.min, result.max])
+				.range(q.orientation === 'horizontal' ? [0, q.svgw] : [q.svgw, 0])
+		} else {
+			axisScale = scaleLinear()
+				.domain([result.min, result.max])
+				.range(q.orientation === 'horizontal' ? [0, q.svgw] : [q.svgw, 0])
 		}
-		if (q.datasymbol === 'rug')
-			plot.values.forEach((i: number) => {
-				ctx.beginPath()
-				if (q.orientation == 'horizontal') {
-					ctx.moveTo(+axisScale(i), 0)
-					ctx.lineTo(+axisScale(i), scaledRadius * 2)
-				} else {
-					ctx.moveTo(0, +axisScale(i))
-					ctx.lineTo(scaledRadius * 2, +axisScale(i))
-				}
-				ctx.stroke()
-			})
-		else if (q.datasymbol === 'bean')
-			plot.values.forEach((i: number) => {
-				ctx.beginPath()
-				if (q.orientation === 'horizontal') ctx.arc(+axisScale(i), q.radius, scaledRadius, 0, arcEndAngle)
-				else ctx.arc(q.radius, +axisScale(i), scaledRadius, 0, arcEndAngle)
-				ctx.fill()
-				ctx.stroke()
-			})
+		const [width, height] =
+			q.orientation == 'horizontal'
+				? [q.svgw * q.devicePixelRatio, refSize * q.devicePixelRatio]
+				: [refSize * q.devicePixelRatio, q.svgw * q.devicePixelRatio]
 
-		plot.src = canvas.toDataURL()
+		const scaledRadius = q.radius / q.devicePixelRatio
+		const arcEndAngle = scaledRadius * Math.PI
 
-		//generate summary stat values
-		plot.summaryStats = summaryStats(plot.values).values
-		//delete plot.values
+		for (const plot of chart.plots) {
+			// item: { label=str, values=[v1,v2,...] }
+			// set  the plot density
+			plot.density = densities[plot.label]
+			const noDensityRendered = plot.density.densityMax == 0
+			//backend rendering bean/rug plot on top of violin plot based on orientation of plot
+			const canvas = createCanvas(width, height)
+			const ctx = canvas.getContext('2d')
+			const symbolOpacity = noDensityRendered ? 1 : 0.6
+			ctx.strokeStyle = `rgba(0,0,0,${symbolOpacity})`
+			ctx.lineWidth = q.strokeWidth / q.devicePixelRatio
+			ctx.globalAlpha = symbolOpacity
+			// No violin is rendered when the values is less than cutoff
+			//Render in black so the user can see the data
+			ctx.fillStyle = '#ffe6e6' //only applied with rug
+
+			//scaling for sharper image
+			if (q.devicePixelRatio != 1) {
+				ctx.scale(q.devicePixelRatio, q.devicePixelRatio)
+			}
+			if (q.datasymbol === 'rug')
+				plot.values.forEach((i: number) => {
+					ctx.beginPath()
+					if (q.orientation == 'horizontal') {
+						ctx.moveTo(+axisScale(i), 0)
+						ctx.lineTo(+axisScale(i), scaledRadius * 2)
+					} else {
+						ctx.moveTo(0, +axisScale(i))
+						ctx.lineTo(scaledRadius * 2, +axisScale(i))
+					}
+					ctx.stroke()
+				})
+			else if (q.datasymbol === 'bean')
+				plot.values.forEach((i: number) => {
+					ctx.beginPath()
+					if (q.orientation === 'horizontal') ctx.arc(+axisScale(i), q.radius, scaledRadius, 0, arcEndAngle)
+					else ctx.arc(q.radius, +axisScale(i), scaledRadius, 0, arcEndAngle)
+					ctx.fill()
+					ctx.stroke()
+				})
+
+			plot.src = canvas.toDataURL()
+
+			//generate summary stat values
+			plot.summaryStats = summaryStats(plot.values).values
+			//delete plot.values
+		}
 	}
 }
 

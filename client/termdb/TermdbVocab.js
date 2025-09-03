@@ -444,10 +444,13 @@ export class TermdbVocab extends Vocab {
 
     arg{}
         .tw main term to create violin/boxplot with
-        .divideTw={}
-            optional termwrapper of 2nd term to divide cohort
+        .overlayTw={}
+            optional termwrapper of 2nd term
             if given, will result in multiple plots, and pvalue computed for each pair of plots
             if missing, will result in one plot
+		.divideTw={}
+			optional termwrapper of term0
+			if given, will result in multiple charts, each of which contains one or more violin plots
         .filter={}
             optional
         .svgw=int
@@ -479,6 +482,7 @@ export class TermdbVocab extends Vocab {
 		// but not have an option to list samples
 		const headers = this.mayGetAuthHeaders('termdb')
 		arg.tw = this.getTwMinCopy(arg.tw)
+		if (arg.overlayTw) arg.overlayTw = this.getTwMinCopy(arg.overlayTw)
 		if (arg.divideTw) arg.divideTw = this.getTwMinCopy(arg.divideTw)
 		const body = Object.assign(
 			{

@@ -43,22 +43,13 @@ class ViolinPlot {
 			controls,
 			violinDiv: holder
 				.append('div')
-				// set attr('class') class when using a constant string value below;
-				// should not set a constant attr('id') value for the violinDiv,
-				// since multiple violin plots in the same view must not share the same ID value
 				.attr('class', 'sjpp-vp-violinDiv')
+				.style('display', 'flex')
+				.style('flex-direction', 'row')
+				.style('flex-wrap', 'wrap')
+				.style('max-width', '100vw')
 				.style('padding-left', this.opts.mode != 'minimal' ? '10px' : '0px'),
-			legendDiv: holder.append('div').classed('sjpp-vp-legend', true).style('padding-left', '5px'),
-
-			tableHolder: this.opts.holder
-				.append('div')
-				.classed('sjpp-tableHolder', true)
-				.style('display', 'inline-block')
-				.style('padding', '10px')
-				.style('vertical-align', 'top')
-				.style('margin-left', '0px')
-				.style('margin-top', '30px')
-				.style('margin-right', '30px')
+			legendDiv: holder.append('div').classed('sjpp-vp-legend', true).style('padding-left', '5px')
 		}
 
 		setViolinRenderer(this)
@@ -95,6 +86,17 @@ class ViolinPlot {
 				usecase: { target: 'violin', detail: 'term2' },
 				title: 'Overlay data',
 				label: 'Overlay',
+				vocabApi: this.app.vocabApi,
+				numericEditMenuVersion: this.opts.numericEditMenuVersion,
+				defaultQ4fillTW: term0_term2_defaultQ
+			},
+			{
+				type: 'term',
+				configKey: 'term0',
+				chartType: 'violin',
+				usecase: { target: 'violin', detail: 'term0' },
+				title: 'Divide by data',
+				label: 'Divide by',
 				vocabApi: this.app.vocabApi,
 				numericEditMenuVersion: this.opts.numericEditMenuVersion,
 				defaultQ4fillTW: term0_term2_defaultQ
@@ -144,7 +146,14 @@ class ViolinPlot {
 					{ label: 'Default', value: false },
 					{ label: 'Median', value: true }
 				],
-				getDisplayStyle: () => (this.data.plots.length > 1 ? '' : 'none')
+				getDisplayStyle: () => {
+					let style = 'none'
+					for (const k of Object.keys(this.data.charts)) {
+						const chart = this.data.charts[k]
+						if (chart.plots.length > 1) style = ''
+					}
+					return style
+				}
 			},
 			{
 				label: 'Symbol size',
@@ -330,8 +339,6 @@ class ViolinPlot {
 			},
 			this.opts.mode == 'minimal' ? 0 : 500
 		)
-		this.dom.tableHolder.selectAll('*').remove()
-		if (this.settings.showAssociationTests) this.renderPvalueTable()
 		this.toggleLoadingDiv('none')
 	}
 
@@ -356,7 +363,7 @@ class ViolinPlot {
 	}
 
 	validateArgs() {
-		const { term, term2, settings } = this.config
+		const { term, term2, term0, settings } = this.config
 		const s = this.settings
 		const arg = {
 			filter: this.state.termfilter.filter,
@@ -377,7 +384,7 @@ class ViolinPlot {
 		if (this.opts.mode == 'minimal') {
 			arg.tw = term
 			// assume a single term for minimal plot
-			if (term2) throw 'only a single term allowed for minimal plot'
+			if (term2 || term0) throw 'only a single term allowed for minimal plot'
 			if (term.q.mode == 'spline') {
 				// term may be cubic spline from regression analysis
 				// render knot values as vertical lines on the plot
@@ -392,13 +399,16 @@ class ViolinPlot {
 			}
 		} else if (isNumericTerm(term.term) && term.q.mode === 'continuous') {
 			arg.tw = term
-			if (term2) arg.divideTw = term2
+			if (term2) arg.overlayTw = term2
 		} else if (isNumericTerm(term2?.term) && term2.q.mode === 'continuous') {
 			arg.tw = term2
-			arg.divideTw = term
+			arg.overlayTw = term
 		} else {
 			throw 'both term1 and term2 are not numeric/continuous'
 		}
+
+		if (term0) arg.divideTw = term0
+
 		return arg
 	}
 }

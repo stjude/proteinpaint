@@ -1,12 +1,12 @@
-import type { BoxPlotRequest, BoxPlotResponse, BoxPlotData, RouteApi, ValidGetDataResponse } from '#types'
+import type { BoxPlotRequest, BoxPlotResponse, /*BoxPlotData, */ RouteApi, ValidGetDataResponse } from '#types'
 import { boxplotPayload } from '#types/checkers'
 import { getData } from '../src/termdb.matrix.js'
-import { boxplot_getvalue } from '../src/utils.js'
-import { sortKey2values } from './termdb.violin.ts'
-import { roundValueAuto } from '#shared/roundValue.js'
-import { getMean, getVariance } from '#shared/descriptive.stats.js'
+//import { boxplot_getvalue } from '../src/utils.js'
+//import { sortKey2values } from './termdb.violin.ts'
+//import { roundValueAuto } from '#shared/roundValue.js'
+//import { getMean, getVariance } from '#shared/descriptive.stats.js'
 
-const minSampleSize = 5 // a group below cutoff will not compute boxplot
+//const minSampleSize = 5 // a group below cutoff will not compute boxplot
 
 export const api: RouteApi = {
 	endpoint: 'termdb/boxplot',
@@ -37,7 +37,7 @@ function init({ genomes }) {
 
 			const sampleType = `All ${data.sampleType?.plural_name || 'samples'}`
 			const overlayTerm = q.overlayTw
-			const { absMin, absMax, key2values, uncomputableValues } = parseValues(
+			const { absMin, absMax, /*key2values, */ uncomputableValues } = parseValues(
 				q,
 				data as ValidGetDataResponse,
 				sampleType,
@@ -46,7 +46,7 @@ function init({ genomes }) {
 			)
 
 			const plots: any = []
-			for (const [key, values] of sortKey2values(data as ValidGetDataResponse, key2values, overlayTerm)) {
+			/*for (const [key, values] of sortKey2values(data as ValidGetDataResponse, key2values, overlayTerm)) {
 				const sortedValues = values.sort((a, b) => a - b)
 
 				const vs = sortedValues.map((v: number) => {
@@ -83,7 +83,7 @@ function init({ genomes }) {
 					plot.boxplot.label = plotLabel
 					plots.push(plot)
 				}
-			}
+			}*/
 
 			if (absMin == null || absMax == null) throw 'absMin or absMax is null [termdb.boxplot init()]'
 
@@ -124,8 +124,8 @@ function setHiddenPlots(term: any, plots: any) {
 	return plots
 }
 
-function setDescrStats(boxplot: BoxPlotData, sortedValues: number[]) {
-	/** Return the total value for legend rendering */
+/*function setDescrStats(boxplot: BoxPlotData, sortedValues: number[]) {
+	// Return the total value for legend rendering
 	if (sortedValues.length < minSampleSize) return [{ id: 'total', label: 'Total', value: sortedValues.length }]
 	//boxplot_getvalue() already returns calculated stats
 	//Format data rather than recalculate
@@ -145,7 +145,7 @@ function setDescrStats(boxplot: BoxPlotData, sortedValues: number[]) {
 		{ id: 'variance', label: 'Variance', value: roundValueAuto(variance, true) },
 		{ id: 'iqr', label: 'Inter-quartile range', value: roundValueAuto(boxplot.iqr, true) }
 	]
-}
+}*/
 
 /** Only return a simplified object for the legend data */
 function setUncomputableValues(values: Record<string, number>) {
@@ -158,9 +158,16 @@ function setUncomputableValues(values: Record<string, number>) {
  * Functions used in both box plot and violin plot routes *
  **********************************************************/
 
-export function parseValues(q: any, data: ValidGetDataResponse, sampleType: string, isLog: boolean, overlayTerm?: any) {
+export function parseValues(
+	q: any,
+	data: ValidGetDataResponse,
+	sampleType: string,
+	isLog: boolean,
+	overlayTerm?: any,
+	divideTerm?: any
+) {
 	/** Map samples to terms */
-	const key2values = new Map()
+	const chart2plot2values = new Map()
 	/** Record uncomputable values not used for plot rendering
 	 * but displayed in the legend */
 	const uncomputableValues = {}
@@ -184,28 +191,40 @@ export function parseValues(q: any, data: ValidGetDataResponse, sampleType: stri
 		/** Only use positive values for log scales */
 		if (isLog && value.value <= 0) continue
 
+		let chart: any = '' // chart containing violin plots
+		let plot: any = sampleType // violin plot
+		if (divideTerm) {
+			if (!val[divideTerm?.$id]) continue
+			const value0 = val[divideTerm.$id]
+			if (divideTerm.term?.values?.[value0.key]?.uncomputable) {
+				/** same as above but for divide term */
+				const label = divideTerm.term.values[value0?.key]?.label
+				uncomputableValues[label] = (uncomputableValues[label] || 0) + 1
+			}
+			chart = value0.key
+		}
 		if (overlayTerm) {
 			if (!val[overlayTerm?.$id]) continue
 			const value2 = val[overlayTerm.$id]
-
 			if (overlayTerm.term?.values?.[value2.key]?.uncomputable) {
-				/** Sample as above but for overlay term */
+				/** same as above but for overlay term */
 				const label = overlayTerm.term.values[value2?.key]?.label
 				uncomputableValues[label] = (uncomputableValues[label] || 0) + 1
 			}
-
-			if (!key2values.has(value2.key)) key2values.set(value2.key, [])
-			key2values.get(value2.key).push(value.value)
-		} else {
-			if (!key2values.has(sampleType)) key2values.set(sampleType, [])
-			key2values.get(sampleType).push(value.value)
+			plot = value2.key
 		}
+
+		if (!chart2plot2values.has(chart)) chart2plot2values.set(chart, new Map())
+		const plot2values = chart2plot2values.get(chart)
+		if (!plot2values.has(plot)) plot2values.set(plot, [])
+		const values = plot2values.get(plot)
+		values.push(value.value)
 
 		if (absMin === null || value.value < absMin) absMin = value.value
 		if (absMax === null || value.value > absMax) absMax = value.value
 	}
 
-	return { absMax, absMin, key2values, uncomputableValues }
+	return { absMax, absMin, chart2plot2values, uncomputableValues }
 }
 
 /** Return bins for filtering and list sample label menu options */

@@ -41,64 +41,80 @@ export default function setViolinRenderer(self) {
 		}
 
 		//filter out hidden values and only keep plots which are not hidden in term2.q.hiddenvalues
-		self.data.plots = self.data.plots.filter(p => !termNum?.q?.hiddenValues?.[p.label || p.seriesId])
-		if (settings.orderByMedian == true) {
-			self.data.plots.sort(
-				(a, b) => a.summaryStats.find(x => x.id === 'median').value - b.summaryStats.find(x => x.id === 'median').value
-			)
-		}
-		this.k2c = getColors(self.data.plots.length)
-		if (self.legendRenderer) self.legendRenderer(getLegendGrps(termNum, self))
-
-		if (self.data.plots.length === 0) {
-			self.dom.violinDiv.html(
-				` <span style="opacity:.6;font-size:1em;margin-left:90px;">No data to render Violin Plot</span>`
-			)
-			self.dom.legendDiv.selectAll('*').remove()
-			self.dom.tableHolder.selectAll('.sjpp-tableHolder')._parents[0].remove()
-			return
-		} else self.dom.violinDiv.select('*').remove()
-
-		// append the svg object to the body of the page
-		self.dom.violinDiv.select('.sjpp-violin-plot').remove()
-
-		const svgData = renderSvg(t1, self, isH, settings)
-		renderScale(t1, t2, settings, isH, svgData, self)
-		let y = 0
-		const thickness = self.settings.plotThickness || self.getAutoThickness()
-		for (const [plotIdx, plot] of self.data.plots.entries()) {
-			//R x values are not the same as the plot values, so we need to use a scale to map them to the plot values
-			// The scale uses half of the plotThickness as the maximum value as the image is symmetrical
-			// Only one half of the image is computed and the other half is mirrored
-			const wScale = scaleLinear()
-				.domain([plot.density.densityMax, plot.density.densityMin])
-				.range([thickness / 2, 0])
-			let areaBuilder
-			//when doing this interpolation, the violin plot will be smoother and some padding may be added
-			//between the plot and the axis
-			if (isH) {
-				areaBuilder = line()
-					.curve(curveBasis)
-					.x(d => svgData.axisScale(d.x0))
-					.y(d => wScale(d.density))
-			} else {
-				areaBuilder = line()
-					.curve(curveBasis)
-					.x(d => wScale(d.density))
-					.y(d => svgData.axisScale(d.x0))
+		self.dom.violinDiv.select('*').remove()
+		for (const chartKey of Object.keys(self.data.charts)) {
+			const chart = self.data.charts[chartKey]
+			const plots = chart.plots.filter(p => !termNum?.q?.hiddenValues?.[p.label || p.seriesId])
+			if (settings.orderByMedian == true) {
+				plots.sort(
+					(a, b) =>
+						a.summaryStats.find(x => x.id === 'median').value - b.summaryStats.find(x => x.id === 'median').value
+				)
 			}
-			//if only one plot pass area builder to calculate the exact height of the plot
-			const { violinG, height } = renderViolinPlot(svgData, plot, isH, wScale, areaBuilder, y, imageOffset)
-			y += height
-			if (self.opts.mode != 'minimal') renderLabels(t1, t2, violinG, plot, isH, settings, tip)
+			this.k2c = getColors(plots.length)
+			if (self.legendRenderer) self.legendRenderer(getLegendGrps(termNum, self))
 
-			if (self.config.term.term.type == TermTypes.SINGLECELL_GENE_EXPRESSION) {
-				// is sc data, disable brushing for now because 1) no use 2) avoid bug of listing cells
-			} else {
-				// enable brushing
-				if (self.opts.mode != 'minimal') renderBrushing(t1, t2, violinG, settings, plot, isH, svgData)
+			const chartDiv = self.dom.violinDiv.append('div').style('padding', '20px')
+			if (plots.length === 0) {
+				chartDiv.html(` <span style="opacity:.6;font-size:1em;margin-left:90px;">No data to render Violin Plot</span>`)
+				return
 			}
-			self.labelHideLegendClicking(t2, plot)
+
+			// append the svg object to the body of the page
+			chartDiv.select('.sjpp-violin-plot').remove()
+
+			// render chart title
+			chartDiv
+				.append('div')
+				.attr('class', 'pp-chart-title')
+				.style('display', chartKey ? 'block' : 'none')
+				.style('text-align', 'center')
+				.style('font-size', '1.1em')
+				.style('margin-bottom', '24px')
+				.html(getChartTitle(chartKey))
+
+			// render chart data
+			const svgData = renderSvg(t1, plots, chartDiv, self, isH, settings)
+			renderScale(t1, t2, settings, isH, svgData, self)
+			let y = 0
+			const thickness = self.settings.plotThickness || self.getAutoThickness()
+			for (const [plotIdx, plot] of plots.entries()) {
+				//R x values are not the same as the plot values, so we need to use a scale to map them to the plot values
+				// The scale uses half of the plotThickness as the maximum value as the image is symmetrical
+				// Only one half of the image is computed and the other half is mirrored
+				const wScale = scaleLinear()
+					.domain([plot.density.densityMax, plot.density.densityMin])
+					.range([thickness / 2, 0])
+				let areaBuilder
+				//when doing this interpolation, the violin plot will be smoother and some padding may be added
+				//between the plot and the axis
+				if (isH) {
+					areaBuilder = line()
+						.curve(curveBasis)
+						.x(d => svgData.axisScale(d.x0))
+						.y(d => wScale(d.density))
+				} else {
+					areaBuilder = line()
+						.curve(curveBasis)
+						.x(d => wScale(d.density))
+						.y(d => svgData.axisScale(d.x0))
+				}
+				//if only one plot pass area builder to calculate the exact height of the plot
+				const { violinG, height } = renderViolinPlot(svgData, plot, isH, wScale, areaBuilder, y, imageOffset)
+				y += height
+				if (self.opts.mode != 'minimal') renderLabels(t1, t2, violinG, plot, isH, settings, tip)
+
+				if (self.config.term.term.type == TermTypes.SINGLECELL_GENE_EXPRESSION) {
+					// is sc data, disable brushing for now because 1) no use 2) avoid bug of listing cells
+				} else {
+					// enable brushing
+					if (self.opts.mode != 'minimal') renderBrushing(t1, t2, violinG, settings, plot, isH, svgData)
+				}
+				self.labelHideLegendClicking(t2, plot)
+			}
+
+			// render p-value table
+			if (self.settings.showAssociationTests) self.renderPvalueTable(chartDiv, chart)
 		}
 	}
 
@@ -118,7 +134,7 @@ export default function setViolinRenderer(self) {
 		}
 	}
 	self.getAutoThickness = function () {
-		if (self.data.plots.length === 1) return 150
+		/*if (self.data.plots.length === 1) */ return 150
 		const count = self.data.plots.length
 		return Math.min(130, Math.max(60, 600 / count)) //clamp between 60 and 130
 	}
@@ -128,15 +144,24 @@ export default function setViolinRenderer(self) {
 		return plotThickness + self.settings.rowSpace
 	}
 
-	self.renderPvalueTable = function () {
-		if (self.data.plots.length === 1) return
+	self.renderPvalueTable = function (chartDiv, chart) {
+		if (!chart.pvalues) return
+		const tableHolder = chartDiv
+			.append('div')
+			.classed('sjpp-tableHolder', true)
+			.style('display', 'inline-block')
+			.style('padding', '10px')
+			.style('vertical-align', 'top')
+			.style('margin-left', '0px')
+			.style('margin-top', '30px')
+			.style('margin-right', '30px')
 
 		const t1 = self.config.term
 		const t2 = self.config.term2
 
 		if (!t2) {
 			// no term2, no table to show
-			self.dom.tableHolder.style('display', 'none')
+			tableHolder.style('display', 'none')
 			return
 		}
 
@@ -149,7 +174,7 @@ export default function setViolinRenderer(self) {
 				: t1
 
 		//hide p-values for categories that are hidden
-		self.data.pvalues = self.data.pvalues.filter(arr => {
+		const pvalues = chart.pvalues.filter(arr => {
 			for (let i = 0; i < arr.length; i++) {
 				if (typeof arr[i].value === 'string') {
 					if (termNum.q?.hiddenValues && arr[i].value in termNum.q.hiddenValues) {
@@ -160,28 +185,35 @@ export default function setViolinRenderer(self) {
 			return true
 		})
 
-		self.dom.tableHolder
+		tableHolder
 			.style('display', 'inline-block')
 			.style('vertical-align', 'top')
 			.append('div')
 			.style('font-weight', 'bold')
-			.text(self.data.pvalues.length > 0 ? "Group comparisons (Wilcoxon's rank sum test)" : '')
+			.text(pvalues.length > 0 ? "Group comparisons (Wilcoxon's rank sum test)" : '')
 
 		const columns = [{ label: 'Group 1' }, { label: 'Group 2' }, { label: 'P-value' }]
-		const rows = self.data.pvalues
+		const rows = pvalues
 		const isH = this.settings.orientation === 'horizontal'
 		const maxHeight = isH
-			? self.getPlotThicknessWithPadding() * this.data.plots.length + 10 //add axes height
+			? self.getPlotThicknessWithPadding() * chart.plots.length + 10 //add axes height
 			: this.settings.svgw + this.config.term.term.name.length
 		renderTable({
 			rows,
 			columns,
-			div: self.dom.tableHolder,
+			div: tableHolder,
 			showLines: false,
 			maxWidth: '27vw',
 			maxHeight: `${maxHeight}px`,
 			resize: true
 		})
+	}
+
+	function getChartTitle(chartKey) {
+		if (!self.config.term0) return chartKey
+		return self.config.term0.term.values && chartKey in self.config.term0.term.values
+			? self.config.term0.term.values[chartKey].label
+			: chartKey
 	}
 
 	function createMargins(labelsize, settings, isH, isMinimal) {
@@ -199,8 +231,8 @@ export default function setViolinRenderer(self) {
 		return margins
 	}
 
-	function renderSvg(t1, self, isH, settings) {
-		const violinDiv = self.dom.violinDiv
+	function renderSvg(t1, plots, chartDiv, self, isH, settings) {
+		const violinDiv = chartDiv
 			.append('div')
 			.style('display', 'inline-block')
 			.style('padding', self.opts.mode != 'minimal' ? '5px' : '0px')
@@ -211,15 +243,14 @@ export default function setViolinRenderer(self) {
 
 		const labelsize = getMaxLabelWidth(
 			violinSvg,
-			self.data.plots.map(plot => `${plot.label}, n=${plot.plotValueCount}`)
+			plots.map(plot => `${plot.label}, n=${plot.plotValueCount}`)
 		)
 
 		const margin = createMargins(labelsize, settings, isH, self.opts.mode == 'minimal')
 		const plotThickness = self.getPlotThicknessWithPadding()
-		const width =
-			margin.left + margin.top + (isH ? settings.svgw : plotThickness * self.data.plots.length + t1.term.name.length)
+		const width = margin.left + margin.top + (isH ? settings.svgw : plotThickness * plots.length + t1.term.name.length)
 		const height =
-			margin.bottom + margin.top + (isH ? plotThickness * self.data.plots.length : settings.svgw + t1.term.name.length)
+			margin.bottom + margin.top + (isH ? plotThickness * plots.length : settings.svgw + t1.term.name.length)
 
 		violinSvg
 			.attr('width', width)

@@ -14,7 +14,9 @@ export type ViolinRequest = {
 	/** A number representing the device's pixel ratio, which may be used for
 	 * rendering quality adjustments */
 	devicePixelRatio: number
-	/** optional tw to divide tw data into multiple violins and show under one axis */
+	/** optional overlay tw, will generate multiple violin plots */
+	overlayTw?: any
+	/** optional divide tw, will generate multiple charts, each of which will contain violin plots */
 	divideTw?: any
 	/** Reference label (i.e. short label) for the ds */
 	dslabel: string
@@ -81,7 +83,7 @@ export type ViolinPlotEntry = {
 	/** Color to render */
 	color: string
 	density: ViolinDensity
-	divideTwBins: any
+	overlayTwBins: any
 	/** Text for label */
 	label: string
 	/** Number of samples/cases/patients/etc. */
