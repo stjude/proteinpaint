@@ -4934,37 +4934,37 @@
   "tw/numeric.ts": {
     "lines": {
       "total": 114,
-      "covered": 29,
+      "covered": 73,
       "skipped": 0,
-      "pct": 25.43
+      "pct": 64.03
     },
     "functions": {
       "total": 17,
-      "covered": 6,
+      "covered": 7,
       "skipped": 0,
-      "pct": 35.29
+      "pct": 41.17
     },
     "statements": {
       "total": 155,
-      "covered": 31,
+      "covered": 84,
       "skipped": 0,
-      "pct": 20
+      "pct": 54.19
     },
     "branches": {
       "total": 144,
-      "covered": 18,
+      "covered": 80,
       "skipped": 0,
-      "pct": 12.5
+      "pct": 55.55
     },
     "lowestPct": {
-      "curr": 12.5,
+      "curr": 41.17,
       "prev": 37.5,
-      "diff": -25
+      "diff": 3.6700000000000017
     },
     "averagePct": {
-      "curr": 23.305,
+      "curr": 53.735,
       "prev": 49.32,
-      "diff": -26.015
+      "diff": 4.414999999999999
     }
   },
   "plots/barchart.data.js": {
@@ -5251,8 +5251,8 @@
     },
     "averagePct": {
       "curr": 5.9625,
-      "prev": 0,
-      "diff": 5.9625
+      "prev": 5.9625,
+      "diff": 0
     }
   },
   "tw/metaboliteIntensity.ts": {
@@ -5287,8 +5287,8 @@
     },
     "averagePct": {
       "curr": 5.9625,
-      "prev": 0,
-      "diff": 5.9625
+      "prev": 5.9625,
+      "diff": 0
     }
   },
   "tw/ssGSEA.ts": {
@@ -5323,8 +5323,8 @@
     },
     "averagePct": {
       "curr": 5.1125,
-      "prev": 0,
-      "diff": 5.1125
+      "prev": 5.1125,
+      "diff": 0
     }
   }
 }
