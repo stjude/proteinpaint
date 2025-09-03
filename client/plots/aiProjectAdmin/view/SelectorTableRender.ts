@@ -1,4 +1,5 @@
 import { renderTable } from '#dom'
+import type { TableColumn, TableRow } from '#dom'
 import type { AIProjectAdminInteractions } from '../interactions/AIProjectAdminInteractions'
 import type { Elem, Div } from '../../../types/d3'
 
@@ -12,7 +13,11 @@ export class SelectorTableRender {
 	interactions: AIProjectAdminInteractions
 	selectedRows: Set<number>
 
-	constructor(holder: Elem, interactions: AIProjectAdminInteractions, images: { rows: any[]; cols: any[] }) {
+	constructor(
+		holder: Elem,
+		interactions: AIProjectAdminInteractions,
+		images: { rows: TableRow[]; cols: TableColumn[] }
+	) {
 		this.dom = {
 			holder,
 			tableDiv: holder
@@ -27,7 +32,13 @@ export class SelectorTableRender {
 		/** This is for development
 		 * eventually the API request will return which rows should be selected.
 		 */
-		this.selectedRows = new Set(this.images.rows.map((_, i) => (i < 50 ? i : -1))) // Select first 50 rows for prototype
+		this.selectedRows = new Set(
+			this.images.rows
+				.filter((_, i) => {
+					if (i < 50) return true
+				})
+				.map((_, i) => i)
+		) // Select first 50 rows for prototype
 
 		this.render()
 	}
@@ -35,10 +46,11 @@ export class SelectorTableRender {
 	private render() {
 		renderTable({
 			div: this.dom.tableDiv,
-			columns: this.images.cols,
+			columns: this.images.cols.map(c => ({ ...c, sortable: true })),
 			rows: this.images.rows,
 			selectedRows: Array.from(this.selectedRows),
 			striped: true,
+			header: { allowSort: true },
 			noButtonCallback: (i, node) => {
 				if (node.checked) {
 					this.selectedRows.add(i)
@@ -60,16 +72,18 @@ export class SelectorTableRender {
 			.style('width', 'fit-content')
 			.style('margin-left', '5vw')
 			.on('click', async () => {
-				btn.attr('disabled', true) //Don't allow multiple clicks
-				const images = Array.from(this.selectedRows).map((_, i) => this.images.rows[i][0].value)
+				if (!this.selectedRows.size) alert(`No rows selected. Please select some rows.`)
+				//Don't allow multiple clicks
+				btn.attr('disabled', true)
+
+				const images = Array.from(this.selectedRows).map(i => `${this.images.rows[i][0].value}.svs`)
 				await this.interactions.editProject({
 					project: {
 						images
 					}
 				})
 				this.dom.holder.selectAll('*').remove()
-				// this.interactions.launchViewer(this.dom.holder, images)
-				this.interactions.launchViewer(this.dom.holder, 'dev')
+				this.interactions.launchViewer(this.dom.holder, images)
 			})
 	}
 }
