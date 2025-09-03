@@ -93,8 +93,14 @@ function nativeValidateQuery(ds: any) {
 			}
 		}
 
+		// new-format H5 file?
+		let newformat = false
+		if ('newformat' in gE) {
+			newformat = gE.newformat
+		}
+
 		// call rust to compute top genes on these samples
-		const genes = await computeGenes4nativeDs(q, gE.file, samples)
+		const genes = await computeGenes4nativeDs(q, gE.file, samples, newformat)
 		return genes
 	}
 }
@@ -164,7 +170,12 @@ ds can optionally provide overrides, e.g. to account for different exp value met
 	q.arguments = arglst
 }
 
-async function computeGenes4nativeDs(q: TermdbTopVariablyExpressedGenesRequest, matrixFile: string, samples: string[]) {
+async function computeGenes4nativeDs(
+	q: TermdbTopVariablyExpressedGenesRequest,
+	matrixFile: string,
+	samples: string[],
+	newformat: boolean
+) {
 	const input_json = {
 		input_file: matrixFile,
 		samples: samples.join(','),
@@ -176,6 +187,11 @@ async function computeGenes4nativeDs(q: TermdbTopVariablyExpressedGenesRequest, 
 	if (q.filter_extreme_values == 1) {
 		input_json['min_count'] = q.min_count
 		input_json['min_total_count'] = q.min_total_count
+	}
+
+	// Handle new-format H5 file
+	if (newformat) {
+		input_json['newformat'] = true
 	}
 
 	const rust_output = await run_rust('topGeneByExpressionVariance', JSON.stringify(input_json))
