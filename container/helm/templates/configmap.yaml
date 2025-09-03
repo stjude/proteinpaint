@@ -1,9 +1,9 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ .Values.config.name | default (printf "%s-config" (include "protein-paint.fullname" .)) }}
+  name: {{ .Values.config.name | default (printf "%s-config" (include "proteinpaint.fullname" .)) }}
   labels:
-    {{- include "protein-paint.labels" . | nindent 4 }}
+    {{- include "proteinpaint.labels" . | nindent 4 }}
 data:
   {{ .Values.config.serverConfigFilename }}: |
     {{- toJson .Values.config.serverConfig | nindent 4 }}

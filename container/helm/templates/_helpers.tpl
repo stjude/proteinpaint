@@ -1,18 +1,18 @@
-{{- define "protein-paint.name" -}}
+{{- define "proteinpaint.name" -}}
 {{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" -}}
 {{- end }}
 
-{{- define "protein-paint.fullname" -}}
+{{- define "proteinpaint.fullname" -}}
 {{- if .Values.fullnameOverride -}}
 {{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" -}}
 {{- else -}}
-{{- printf "%s" (include "protein-paint.name" .) | trunc 63 | trimSuffix "-" -}}
+{{- printf "%s" (include "proteinpaint.name" .) | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
 {{- end }}
 
-{{- define "protein-paint.labels" -}}
+{{- define "proteinpaint.labels" -}}
 helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
-app.kubernetes.io/name: {{ include "protein-paint.name" . }}
+app.kubernetes.io/name: {{ include "proteinpaint.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 app.kubernetes.io/version: {{ .Chart.AppVersion }}
 app.kubernetes.io/managed-by: Helm
@@ -21,15 +21,15 @@ app.kubernetes.io/managed-by: Helm
 {{- end }}
 {{- end }}
 
-{{- define "protein-paint.selectorLabels" -}}
-app.kubernetes.io/name: {{ include "protein-paint.name" . }}
+{{- define "proteinpaint.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "proteinpaint.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
-{{- define "protein-paint.serviceAccountName" -}}
+{{- define "proteinpaint.serviceAccountName" -}}
 {{- if .Values.serviceAccount.name -}}
 {{- .Values.serviceAccount.name -}}
 {{- else -}}
-{{- include "protein-paint.fullname" . }}-sa
+{{- include "proteinpaint.fullname" . }}-sa
 {{- end -}}
 {{- end }}
