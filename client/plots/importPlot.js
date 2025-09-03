@@ -2,11 +2,20 @@ export async function importPlot(chartType, notFoundMessage = '') {
 	// TODO: move to dynamic import of exact plot names here, instead of string-pattern,
 	// so that the bundler does not have to guess code file extension, directory names and letter casing
 	switch (chartType) {
+		case 'AIProjectAdmin':
+			return await import('./aiProjectAdmin/AIProjectAdmin.ts')
+
 		case 'barchart':
 			return await import(`./barchart.js`)
 
 		case 'boxplot':
 			return await import(`./boxplot/BoxPlot.js`)
+
+		case 'correlationVolcano':
+			return await import(`./corrVolcano/CorrelationVolcano.ts`)
+
+		case 'sc':
+			return await import('./sc/SC.ts')
 
 		case 'sampleScatter':
 			return await import(`./scatter/scatter.js`)
@@ -37,6 +46,9 @@ export async function importPlot(chartType, notFoundMessage = '') {
 
 		case 'violin':
 			return await import(`./violin.js`)
+
+		case 'volcano':
+			return await import(`./volcano/Volcano.ts`)
 
 		default:
 			// temporary option to force an error, to bypass the default filename matching
