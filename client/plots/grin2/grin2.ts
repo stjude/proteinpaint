@@ -12,6 +12,9 @@ class GRIN2 extends RxComponentInner {
 	readonly type = 'grin2'
 	dom: GRIN2Dom
 	private runButton!: any
+	readonly borderColor = '#eee'
+	readonly backgroundColor = '#f8f8f8'
+	readonly optionsTextColor = '#666'
 
 	constructor(opts: any) {
 		super()
@@ -63,43 +66,50 @@ class GRIN2 extends RxComponentInner {
 		const headerRow = table.append('tr')
 		headerRow
 			.append('th')
-			.style('background', '#f8f8f8')
+			.style('background', this.backgroundColor)
 			.style('padding', '8px')
 			.style('font-weight', 'bold')
-			.style('border-right', '1px solid #eee')
-			.style('border-bottom', '1px solid #eee')
+			.style('border-right', `1px solid ${this.borderColor}`)
+			.style('border-bottom', `1px solid ${this.borderColor}`)
 			.style('width', '30%')
 			.text('Data Type')
 
 		headerRow
 			.append('th')
-			.style('background', '#f8f8f8')
+			.style('background', this.backgroundColor)
 			.style('padding', '8px')
 			.style('font-weight', 'bold')
-			.style('border-bottom', '1px solid #eee')
+			.style('border-bottom', `1px solid ${this.borderColor}`)
 			.style('width', '70%')
 			.text('Options')
 
 		const queries = this.app.vocabApi.termdbConfig.queries
 
+		// Function to use for adding data types
+		const addDataTypeTd = (tr, text) => {
+			tr.append('td')
+				.style('padding', '8px')
+				.style('font-weight', '500')
+				.style('vertical-align', 'top')
+				.style('border-right', `1px solid ${this.borderColor}`)
+				.style('border-bottom', `1px solid ${this.borderColor}`)
+				.text(text)
+		}
+
+		// For adding options
+		const addOptsTd = tr => {
+			return tr.append('td').style('padding', '8px').style('border-bottom', `1px solid ${this.borderColor}`)
+		}
+
 		// SNV/INDEL Section
 		if (queries.snvindel) {
 			const snvRow = table.append('tr')
 
-			snvRow
-				.append('td')
-				.style('padding', '8px')
-				.style('font-weight', '500')
-				.style('vertical-align', 'top')
-				.style('border-right', '1px solid #eee')
-				.style('border-bottom', '1px solid #eee')
-				.text('SNV/INDEL (Mutation)')
-
-			const optionsCell = snvRow.append('td').style('padding', '8px').style('border-bottom', '1px solid #eee')
+			addDataTypeTd(snvRow, 'SNV/INDEL (Mutation)')
 
 			// Create nested table for options using table2col
 			const optionsTable = table2col({
-				holder: optionsCell.append('div'),
+				holder: addOptsTd(snvRow),
 				cellPadding: '4px'
 			})
 
@@ -117,19 +127,10 @@ class GRIN2 extends RxComponentInner {
 		if (queries.cnv) {
 			const cnvRow = table.append('tr')
 
-			cnvRow
-				.append('td')
-				.style('padding', '8px')
-				.style('font-weight', '500')
-				.style('vertical-align', 'top')
-				.style('border-right', '1px solid #eee')
-				.style('border-bottom', '1px solid #eee')
-				.text('CNV (Copy Number Variation)')
-
-			const optionsCell = cnvRow.append('td').style('padding', '8px').style('border-bottom', '1px solid #eee')
+			addDataTypeTd(cnvRow, 'CNV (Copy Number Variation)')
 
 			const optionsTable = table2col({
-				holder: optionsCell.append('div'),
+				holder: addOptsTd(cnvRow),
 				cellPadding: '4px'
 			})
 
@@ -143,41 +144,18 @@ class GRIN2 extends RxComponentInner {
 		if (queries.svfusion) {
 			const fusionRow = table.append('tr')
 
-			fusionRow
-				.append('td')
-				.style('padding', '8px')
-				.style('font-weight', '500')
-				.style('vertical-align', 'top')
-				.style('border-right', '1px solid #eee')
-				.style('border-bottom', '1px solid #eee')
-				.text('Fusion')
-
-			fusionRow
-				.append('td')
-				.style('padding', '8px')
-				.style('font-style', 'italic')
-				.style('color', '#666')
-				.style('border-bottom', '1px solid #eee')
-				.text('Fusion filtering options to be configured later')
+			addDataTypeTd(fusionRow, 'Fusion (Structural Variation)')
+			const msg = addOptsTd(fusionRow)
+			msg.append('div').style('color', this.optionsTextColor).text('Fusion filtering options to be configured later')
 		}
 
 		// General GRIN2 Section (placeholder)
 		const generalRow = table.append('tr')
 
-		generalRow
-			.append('td')
-			.style('padding', '8px')
-			.style('font-weight', '500')
-			.style('vertical-align', 'top')
-			.style('border-right', '1px solid #eee')
-			.text('GRIN2')
+		addDataTypeTd(generalRow, 'GRIN2')
 
-		generalRow
-			.append('td')
-			.style('padding', '8px')
-			.style('font-style', 'italic')
-			.style('color', '#666')
-			.text('Additional GRIN2 parameters to be configured later')
+		const msg = addOptsTd(generalRow)
+		msg.append('div').style('color', this.optionsTextColor).text('Additional GRIN2 parameters to be configured later')
 
 		// Run Button
 		this.runButton = tableDiv
@@ -318,74 +296,74 @@ class GRIN2 extends RxComponentInner {
 		})
 	}
 
-	private addSectionHeader(table: any, title: string) {
-		const row = table.append('tr')
-		row
-			.append('td')
-			.attr('colspan', '2')
-			.style('background', '#e9e9e9')
-			.style('padding', '8px')
-			.style('font-weight', 'bold')
-			.style('border-bottom', '1px solid #ddd')
-			.text(title)
-	}
+	// private addSectionHeader(table: any, title: string) {
+	// 	const row = table.append('tr')
+	// 	row
+	// 		.append('td')
+	// 		.attr('colspan', '2')
+	// 		.style('background', '#e9e9e9')
+	// 		.style('padding', '8px')
+	// 		.style('font-weight', 'bold')
+	// 		.style('border-bottom', '1px solid #ddd')
+	// 		.text(title)
+	// }
 
-	private addNumberInput(
-		table: any,
-		label: string,
-		settingsPath: string,
-		defaultValue: number,
-		min?: number | null,
-		max?: number | null,
-		step: number = 1
-	) {
-		const row = table.append('tr')
+	// private addNumberInput(
+	// 	table: any,
+	// 	label: string,
+	// 	settingsPath: string,
+	// 	defaultValue: number,
+	// 	min?: number | null,
+	// 	max?: number | null,
+	// 	step: number = 1
+	// ) {
+	// 	const row = table.append('tr')
 
-		// Label column
-		row
-			.append('td')
-			.style('padding', '8px')
-			.style('border-bottom', '1px solid #eee')
-			.style('font-weight', '500')
-			.style('width', '50%')
-			.text(label)
+	// 	// Label column
+	// 	row
+	// 		.append('td')
+	// 		.style('padding', '8px')
+	// 		.style('border-bottom', '1px solid #eee')
+	// 		.style('font-weight', '500')
+	// 		.style('width', '50%')
+	// 		.text(label)
 
-		// Input column
-		const inputCell = row
-			.append('td')
-			.style('padding', '8px')
-			.style('border-bottom', '1px solid #eee')
-			.style('width', '50%')
+	// 	// Input column
+	// 	const inputCell = row
+	// 		.append('td')
+	// 		.style('padding', '8px')
+	// 		.style('border-bottom', '1px solid #eee')
+	// 		.style('width', '50%')
 
-		const input = inputCell
-			.append('input')
-			.attr('type', 'number')
-			.attr('value', defaultValue)
-			.attr('step', step)
-			.style('width', '100%')
-			.style('padding', '4px')
-			.style('border', '1px solid #ccc')
-			.style('border-radius', '2px')
+	// 	const input = inputCell
+	// 		.append('input')
+	// 		.attr('type', 'number')
+	// 		.attr('value', defaultValue)
+	// 		.attr('step', step)
+	// 		.style('width', '100%')
+	// 		.style('padding', '4px')
+	// 		.style('border', '1px solid #ccc')
+	// 		.style('border-radius', '2px')
 
-		if (min !== null && min !== undefined) input.attr('min', min)
-		if (max !== null && max !== undefined) input.attr('max', max)
+	// 	if (min !== null && min !== undefined) input.attr('min', min)
+	// 	if (max !== null && max !== undefined) input.attr('max', max)
 
-		// Store reference for value retrieval
-		input.attr('data-settings-path', settingsPath)
-	}
+	// 	// Store reference for value retrieval
+	// 	input.attr('data-settings-path', settingsPath)
+	// }
 
-	private addPlaceholderText(table: any, text: string) {
-		const row = table.append('tr')
-		row
-			.append('td')
-			.attr('colspan', '2')
-			.style('padding', '8px')
-			.style('border-bottom', '1px solid #eee')
-			.style('font-style', 'italic')
-			.style('color', '#666')
-			.style('text-align', 'center')
-			.text(text)
-	}
+	// private addPlaceholderText(table: any, text: string) {
+	// 	const row = table.append('tr')
+	// 	row
+	// 		.append('td')
+	// 		.attr('colspan', '2')
+	// 		.style('padding', '8px')
+	// 		.style('border-bottom', '1px solid #eee')
+	// 		.style('font-style', 'italic')
+	// 		.style('color', '#666')
+	// 		.style('text-align', 'center')
+	// 		.text(text)
+	// }
 
 	private getConfigValues(): any {
 		const config: any = {}
@@ -443,14 +421,14 @@ class GRIN2 extends RxComponentInner {
 			})
 
 			if (response.status === 'error') {
-				this.dom.div.style('padding', '20px').text(`GRIN2 analysis failed: ${response.error}`)
+				this.app.printError(`GRIN2 analysis failed: ${response.error}`)
 				return
 			}
 
 			this.renderResults(response)
 		} catch (error) {
 			this.dom.div.selectAll('*').remove()
-			this.dom.div.style('padding', '20px').text(`Error: ${error instanceof Error ? error.message : String(error)}`)
+			this.app.printError(`Error: ${error instanceof Error ? error.message : String(error)}`)
 		} finally {
 			// Restore button state
 			this.runButton.property('disabled', false).text('Run GRIN2').style('opacity', '1')
@@ -642,7 +620,7 @@ class GRIN2 extends RxComponentInner {
 				.append('div')
 				.style('margin', '20px 0')
 				.style('font-size', '12px')
-				.style('color', '#666')
+				.style('color', this.optionsTextColor)
 				.text(
 					`Analysis completed in ${result.timing.totalTime}s (Processing: ${result.timing.processingTime}s, GRIN2: ${result.timing.grin2Time}s)`
 				)
@@ -697,10 +675,7 @@ class GRIN2 extends RxComponentInner {
 			})
 		} catch (error) {
 			console.error('Error creating matrix from genes:', error)
-			this.dom.div
-				.style('padding', '20px')
-				.style('color', 'red')
-				.text(`Error creating matrix: ${error instanceof Error ? error.message : 'Unknown error'}`)
+			this.app.printError(`Error creating matrix: ${error instanceof Error ? error.message : 'Unknown error'}`)
 		}
 	}
 }
