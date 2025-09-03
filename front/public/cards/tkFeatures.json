@@ -107,19 +107,58 @@
                             "desc": "Custom description about this mutation"
                         }
                     }
-                   
                 }
             },
-            "buttons":[
+            "buttons": [
                 {
-                    "name":"All Attributes Documentation",
+                    "name": "All Attributes Documentation",
                     "link": "https://github.com/stjude/proteinpaint/wiki/Tracks#attributes-applicable-to-all-track-types"
                 }
             ],
             "testSpec": {
-                "expected": { "rect": 1, "circle": 10 }
+                "expected": {
+                    "rect": 1,
+                    "circle": 10
+                }
+            }
+        },
+        {
+            "label": "Custom protein domains  for specified isoforms",
+            "message": "Add custom protein domains with the <span style='font-family: Courier; opacity: 0.6;'>.geneDomains:{}</span> argument. Custom domains in this example are shown in bright red and blue in the protein view and included in the legend.",
+            "runargs": {
+                "nobox": 1,
+                "noheader": 1,
+                "genome": "hg38",
+                "gene": "TP53",
+                "geneDomains": {
+                    "NM_000546": [
+                        {
+                            "start": 100,
+                            "stop": 200,
+                            "name": "Custom domain",
+                            "color": "red"
+                        },
+                        {
+                            "start": 250,
+                            "stop": 300,
+                            "name": "Custom domain 2",
+                            "color": "blue"
+                        }
+                    ]
+                }
+            },
+            "buttons": [
+                {
+                    "name": "Documentation",
+                    "link": "https://github.com/stjude/proteinpaint/wiki/Embedding#Gene-view"
+                }
+            ],
+            "testSpec": {
+                "expected": {
+                    "image": 2
+                }
             }
         }
     ],
-    "ribbonMessage": "See our newest example about customizing the appearance of mutations with the <span style='font-family: Courier; opacity: 0.6;'>mclassOverride</span> argument. Click on 'Custom mutation colors, labels, and descriptions' to learn more."
+    "ribbonMessage": "See our newest example about adding custom protein domains with the <span style='font-family: Courier; opacity: 0.6;'>.geneDomains{}</span> argument. Click on 'Custom protein domains' to learn more."
 }

@@ -223,7 +223,7 @@
             "description": "ProteinPaint arguments applicable to any track",
             "image": "https://proteinpaint.stjude.org/ppdemo/images/code-square.png",
             "sandboxJson": "tkFeatures",
-            "ribbon": { "text": "updated", "expireDate": "2024-12-01" },
+            "ribbon": { "text": "updated", "expireDate": "2025-10-01" },
             "searchterms": []
         },
         {
