@@ -88,7 +88,7 @@ export class AIProjectAdminInteractions {
 
 		const config = this.getConfig()
 
-		const images: AIProjectAdminResponse = await this.prjtRepo.getImages(
+		const images: AIProjectAdminResponse = await this.prjtRepo.getImagePaths(
 			this.genome,
 			this.dslabel,
 			config.settings.project

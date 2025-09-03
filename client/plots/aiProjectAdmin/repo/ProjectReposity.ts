@@ -18,7 +18,7 @@ export class ProjectReposity {
 	}
 
 	/** Gets the image paths from db */
-	public async getImages(
+	public async getImagePaths(
 		genome: string,
 		dslabel: string,
 		project: any
