@@ -277,7 +277,7 @@ export function setInteractivity(self) {
 		if (t2) {
 			if (
 				t2.q?.mode === 'continuous' ||
-				((t2.term?.type === 'float' || t2.term?.type === 'integer') && plot.divideTwBins != null)
+				((t2.term?.type === 'float' || t2.term?.type === 'integer') && plot.overlayTwBins != null)
 			) {
 				createTvsLstValues(t1, plot, tvslst, 0)
 				self.createTvsLstRanges(t2, tvslst, rangeStart, rangeStop, 1)
@@ -307,17 +307,17 @@ function getAddFilterCallback(t1, t2, self, plot, rangeStart, rangeStop, isBrush
 			}
 		} else if (
 			t2.q?.mode === 'continuous' ||
-			((t2.term?.type === 'float' || t2.term?.type === 'integer') && plot.divideTwBins != null)
+			((t2.term?.type === 'float' || t2.term?.type === 'integer') && plot.overlayTwBins != null)
 		) {
 			createTvsTerm(t2, tvslst)
 			tvslst.lst[0].tvs.ranges = [
 				{
-					start: plot.divideTwBins?.start || null,
-					stop: plot.divideTwBins?.stop || null,
-					startinclusive: plot.divideTwBins?.startinclusive || true,
-					stopinclusive: plot.divideTwBins?.stopinclusive || false,
-					startunbounded: plot.divideTwBins?.startunbounded ? plot.divideTwBins?.startunbounded : null,
-					stopunbounded: plot.divideTwBins?.stopunbounded ? plot.divideTwBins?.stopunbounded : null
+					start: plot.overlayTwBins?.start || null,
+					stop: plot.overlayTwBins?.stop || null,
+					startinclusive: plot.overlayTwBins?.startinclusive || true,
+					stopinclusive: plot.overlayTwBins?.stopinclusive || false,
+					startunbounded: plot.overlayTwBins?.startunbounded ? plot.overlayTwBins?.startunbounded : null,
+					stopunbounded: plot.overlayTwBins?.stopunbounded ? plot.overlayTwBins?.stopunbounded : null
 				}
 			]
 			if (isBrush) {
