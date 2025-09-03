@@ -145,8 +145,8 @@ export class Report extends RxComponentInner {
 			newSection = true
 			for (const plotConfig of section.plots) {
 				const plot = this.components.plots[plotConfig.id]
-				if (plot?.getChartDict) {
-					const name2svg = plot.getChartDict()
+				if (plot?.getChartImages) {
+					const name2svg = plot.getChartImages()
 					const entries: any[] = Object.entries(name2svg)
 
 					for (const [name, chart] of entries) {

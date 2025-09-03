@@ -134,7 +134,10 @@ class MassApp extends AppBase implements RxAppInner {
 					header_mode: this.state && this.state.nav && this.state.nav.header_mode,
 					vocab: this.state.vocab,
 					massSessionDuration: this.state.termdbConfig.massSessionDuration, // this.opts.massSessionDuration
-					pkgver: this.opts.pkgver
+					pkgver: this.opts.pkgver,
+					downloadPlots: () => {
+						console.log(this)
+					}
 				})
 			}
 			this.components.plots = {}

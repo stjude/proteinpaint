@@ -55,7 +55,7 @@ class TdbSurvival extends PlotBase implements RxComponentInner {
 	hiddenRenderer: any
 	legendClick = (_, __, ___) => {}
 	download: () => void = () => {}
-	getChartDict = () => this.getChartDict()
+	getChartImages = () => this.getChartImages()
 	loadingWait = 0
 
 	colorScale: any
@@ -158,7 +158,7 @@ class TdbSurvival extends PlotBase implements RxComponentInner {
 
 	preApiFreeze(api) {
 		api.download = this.download
-		api.getChartDict = () => this.getChartDict()
+		api.getChartImages = () => this.getChartImages()
 	}
 
 	async setControls() {
@@ -1027,12 +1027,12 @@ function setRenderers(self) {
 
 function setInteractivity(self) {
 	self.download = function (event) {
-		const name2svg = self.getChartDict()
+		const name2svg = self.getChartImages()
 		const menu = new DownloadMenu(name2svg, self.state.config.term.term.name)
 		menu.show(event.clientX, event.clientY)
 	}
 
-	self.getChartDict = function () {
+	self.getChartImages = function () {
 		const name2svg = {}
 		const node = self.dom.chartsDiv.select('.sjpp-survival-mainG').node() //node to read the style
 
