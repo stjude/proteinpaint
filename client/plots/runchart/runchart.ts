@@ -26,7 +26,6 @@ export class Runchart extends Scatter {
 	async init(appState) {
 		const state: any = this.getState(appState)
 		this.config = structuredClone(state.config)
-		console.log(this.config)
 		this.filterTWs = []
 		this.view = new RunchartView(this)
 		this.model = new RunchartModel(this)
