@@ -527,8 +527,8 @@ class GRIN2 extends RxComponentInner {
 				.append('circle')
 				.attr('cx', d => d.svg_x) // Use pre-calculated SVG coordinates
 				.attr('cy', d => d.svg_y) // Use pre-calculated SVG coordinates
-				.attr('r', 6)
-				.attr('fill', 'rgba(255, 0, 0, 0.5)') // Semi-transparent red for debugging
+				.attr('r', 8)
+				.attr('fill', d => d.color) // Use color from data
 				.attr('stroke', 'black')
 				.attr('stroke-width', 1)
 				.style('cursor', 'pointer')
