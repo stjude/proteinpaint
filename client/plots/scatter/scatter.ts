@@ -151,7 +151,7 @@ export class Scatter extends RxComponentInner {
 			downloadImage(url)
 		} else {
 			const name2svg = this.getChartDict()
-			const menu = new DownloadMenu(name2svg, 'scatter')
+			const menu = new DownloadMenu(name2svg, this.type)
 			menu.show(event.clientX, event.clientY)
 		}
 	}
