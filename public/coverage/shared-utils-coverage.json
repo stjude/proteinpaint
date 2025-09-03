@@ -394,5 +394,41 @@
       "prev": 0,
       "diff": 19.7825
     }
+  },
+  "src/termdb.bins.js": {
+    "lines": {
+      "total": 193,
+      "covered": 166,
+      "skipped": 0,
+      "pct": 86.01
+    },
+    "functions": {
+      "total": 7,
+      "covered": 6,
+      "skipped": 0,
+      "pct": 85.71
+    },
+    "statements": {
+      "total": 233,
+      "covered": 195,
+      "skipped": 0,
+      "pct": 83.69
+    },
+    "branches": {
+      "total": 293,
+      "covered": 224,
+      "skipped": 0,
+      "pct": 76.45
+    },
+    "lowestPct": {
+      "curr": 76.45,
+      "prev": 0,
+      "diff": 76.45
+    },
+    "averagePct": {
+      "curr": 82.965,
+      "prev": 0,
+      "diff": 82.965
+    }
   }
 }
