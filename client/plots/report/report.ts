@@ -140,6 +140,7 @@ export class Report extends RxComponentInner {
 		doc.setFontSize(12)
 		doc.text(this.config.sections[0].name, x, y)
 		doc.setFontSize(10)
+		let lastSection
 		for (const section of this.config.sections) {
 			for (const plotConfig of section.plots) {
 				const plot = this.components.plots[plotConfig.id]
@@ -168,21 +169,24 @@ export class Report extends RxComponentInner {
 							doc.addPage()
 							y = 40
 						}
-						if (y == 40) {
+						if (y == 40 || section.name !== lastSection) {
 							//new page, add section
 							doc.setFontSize(12)
-							doc.text(section.name, x, 40)
+							doc.text(section.name, x, y)
 							doc.setFontSize(10)
 							y += 30
 						}
-						doc.text(name, x, y)
-						y += 20
+						if (name.trim()) {
+							doc.text(name, x, y)
+							y += 20
+						}
 						await doc.svg(svg, { x, y, width, height })
 						y = y + height + 40
 						chart.parent.removeChild(svg)
 					}
 				}
 			}
+			lastSection = section.name
 		}
 		if (y == 40) doc.deletePage(doc.internal.getNumberOfPages()) //delete last page if nothing added
 		doc.save('report.pdf')
