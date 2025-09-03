@@ -18,6 +18,6 @@ export const deleteWSIAnnotationPayload: RoutePayload = {
 		typeId: 'DeleteWSIAnnotationRequest'
 	},
 	response: {
-		typeId: 'DeleteWSIAnnoationResponse'
+		typeId: 'DeleteWSIAnnotationResponse'
 	}
 }
