@@ -130,7 +130,7 @@ export class Report extends RxComponentInner {
 		Therefore, a simple import 'svg2pdf.js' without curly braces is all that is needed to apply its functionality. 
 		*/
 		await import('svg2pdf.js') // This import extends jsPDF with SVG functionality
-		const doc = new jsPDF('p', 'pt', 'a4') // p for portrait, l for landscape, points, A4 size
+		const doc: any = new jsPDF('p', 'pt', 'a4') // p for portrait, l for landscape, points, A4 size
 		const pageWidth = doc.internal.pageSize.getWidth() - 10
 		const pageHeight = doc.internal.pageSize.getHeight() - 10
 		const ratio = 72 / 96 //convert pixels to pt
