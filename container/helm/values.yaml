@@ -20,7 +20,7 @@ serviceAccount:
   labels: {}
 
 podLabels:
-  app: protein-paint
+  app: proteinpaint
 podAnnotations: {}
 
 resources:
@@ -35,7 +35,7 @@ securityContext: {}
 podSecurityContext: {}
 
 container:
-  name: protein-paint
+  name: proteinpaint
   containerPort: 3456
   command: ["/bin/bash"]
   args:
@@ -50,12 +50,12 @@ mounts:
     enabled: true
     name: storage-volume
     mountPath: /home/root/pp/tp/
-    pvcName: protein-paint-pvc
+    pvcName: proteinpaint-pvc
   config:
     name: config-volume
     mountPath: /home/root/pp/app/active/serverconfig
     subPath: serverconfig.json
-    configMapName: protein-paint-config
+    configMapName: proteinpaint-config
 
 extraVolumeMounts: []
 extraVolumes: []
@@ -66,7 +66,7 @@ service:
   labels: {}
 
 config:
-  name: protein-paint-config
+  name: proteinpaint-config
   serverConfigFilename: serverconfig.json
   serverConfig:
     debugmode: true

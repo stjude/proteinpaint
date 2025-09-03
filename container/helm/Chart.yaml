@@ -1,5 +1,5 @@
 apiVersion: v2
-name: protein-paint
+name: proteinpaint
 description: Helm chart for the Protein Paint app (Deployment + Service + Config + PV/PVC + SA)
 type: application
 version: 0.2.0
