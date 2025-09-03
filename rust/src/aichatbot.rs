@@ -13,6 +13,7 @@ use schemars::JsonSchema;
 use serde_json::{Value, json};
 use std::fs::File;
 use std::io::{self, BufRead, Read};
+mod sjprovider; // Importing custom rig module for invoking SJ GPU server
 
 #[derive(Debug, JsonSchema)]
 #[allow(dead_code)]
@@ -81,6 +82,13 @@ async fn main() -> Result<()> {
                     match dataset_file_json.as_str() {
                         Some(inp) => dataset_file = inp,
                         None => panic!("dataset_file field is missing in input json"),
+                    }
+
+                    let apilink_json: &JsonValue = &json_string["apilink"];
+                    let apilink: &str;
+                    match apilink_json.as_str() {
+                        Some(inp) => apilink = inp,
+                        None => panic!("apilink field is missing in input json"),
                     }
 
                     // Initialize Ollama client
