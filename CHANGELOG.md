@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- Generate report pdf
+- Allow different download options in the plots. Supported in the scatter, runchart, frequencyChart, barchart and survival plots.
+
 Fixes:
 - runpp({geneDomains[]}) to supply custom domains
 - corrvol supports ssgsea as featureTw

@@ -1,3 +1,1 @@
-Features
-- Generate report pdf
-- Allow different download options in the plots. Supported in the scatter, runchart, frequencyChart, barchart and survival plots.
+
