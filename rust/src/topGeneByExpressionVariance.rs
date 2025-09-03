@@ -8,8 +8,12 @@ Various JSON parameters:
    filter_extreme_values: boolean (true/false). When true, this filter according to logic filterbyExpr in edgeR. This basically removes genes that have very low gene counts.
    num_genes: The top num_genes (for e.g 10) that need to be reported in the output.
    rank_type: var/iqr . This parameter decides whether to sort genes using variance or interquartile region. There is an article which states that its better to use interquartile region than variance for selecting genes for clustering https://www.frontiersin.org/articles/10.3389/fgene.2021.632620/full
+   newformat?: bool. Used to support new format HDF5
 
  Example syntax: cd .. && cargo build --release && json='{"samples":"sample1,sample2,sample3","min_count":30,"min_total_count":20,"input_file":"/path/to/input/file.h5","filter_extreme_values":true,"num_genes":100, "rank_type":"var"}' && time echo $json | target/release/gene_variance
+
+ Usage for new format HDF5
+    echo '{"samples":"sample1,sample2,sample3","newformat":true,"min_count":30,"min_total_count":20,"input_file":"/path/to/input/file.h5","filter_extreme_values":true,"num_genes":100, "rank_type":"var"}' | ./target/release/topGeneByExpressionVariance
 */
 #![allow(non_snake_case)]
 use bgzip::BGZFReader;
@@ -30,7 +34,7 @@ use std::io;
 use std::io::Read;
 use std::str::FromStr;
 // use std::time::Instant;
-use hdf5::types::VarLenAscii;
+use hdf5::types::{VarLenAscii, VarLenUnicode};
 use hdf5::{File, Result};
 use ndarray::Dim;
 
@@ -53,10 +57,7 @@ use ndarray::Dim;
 fn input_data_hdf5(
     filename: &String,
     sample_list: &Vec<&str>,
-) -> Result<(
-    Matrix<f64, Dyn, Dyn, VecStorage<f64, Dyn, Dyn>>,
-    Vec<String>,
-)> {
+) -> Result<(Matrix<f64, Dyn, Dyn, VecStorage<f64, Dyn, Dyn>>, Vec<String>)> {
     // let now = Instant::now();
     // eprintln!("Reading HDF5 file: {}", filename);
 
@@ -73,10 +74,7 @@ fn input_data_hdf5(
             //         "file_path": filename
             //     })
             // );
-            return Err(hdf5::Error::Internal(format!(
-                "Failed to open HDF5 file: {}",
-                err
-            )));
+            return Err(hdf5::Error::Internal(format!("Failed to open HDF5 file: {}", err)));
         }
     };
 
@@ -113,10 +111,7 @@ fn input_data_hdf5(
             //         "file_path": filename
             //     })
             // );
-            return Err(hdf5::Error::Internal(format!(
-                "Failed to read gene symbols: {}",
-                err
-            )));
+            return Err(hdf5::Error::Internal(format!("Failed to read gene symbols: {}", err)));
         }
     };
 
@@ -158,10 +153,7 @@ fn input_data_hdf5(
                     "file_path": filename
                 })
             );
-            return Err(hdf5::Error::Internal(format!(
-                "Failed to read sample names: {}",
-                err
-            )));
+            return Err(hdf5::Error::Internal(format!("Failed to read sample names: {}", err)));
         }
     };
 
@@ -205,10 +197,7 @@ fn input_data_hdf5(
             //         "file_path": filename
             //     })
             // );
-            return Err(hdf5::Error::Internal(format!(
-                "Failed to open counts dataset: {}",
-                err
-            )));
+            return Err(hdf5::Error::Internal(format!("Failed to open counts dataset: {}", err)));
         }
     };
 
@@ -225,9 +214,7 @@ fn input_data_hdf5(
         //         "actual_shape": dataset_shape
         //     })
         // );
-        return Err(hdf5::Error::Internal(
-            "Expected a 2D dataset for counts".to_string(),
-        ));
+        return Err(hdf5::Error::Internal("Expected a 2D dataset for counts".to_string()));
     }
 
     // Check dimensions match expected values
@@ -319,14 +306,154 @@ fn input_data_hdf5(
     Ok((dm, gene_names))
 }
 
+// Similar to input_data_hdf5, but specifically for new H5 format
+fn input_data_hdf5_newformat(
+    filename: &String,
+    sample_list: &Vec<&str>,
+) -> Result<(Matrix<f64, Dyn, Dyn, VecStorage<f64, Dyn, Dyn>>, Vec<String>)> {
+    // Open the HDF5 file
+    let file = match File::open(filename) {
+        Ok(f) => f,
+        Err(err) => {
+            return Err(hdf5::Error::Internal(format!("Failed to open HDF5 file: {}", err)));
+        }
+    };
+
+    // Read gene symbols dataset
+    let genes_dataset = match file.dataset("item") {
+        Ok(ds) => ds,
+        Err(err) => {
+            return Err(hdf5::Error::Internal(format!(
+                "Failed to open gene_names dataset: {}",
+                err
+            )));
+        }
+    };
+
+    // Read genes as VarLenAscii
+    let genes_varlen = match genes_dataset.read_1d::<VarLenUnicode>() {
+        Ok(g) => g,
+        Err(err) => {
+            return Err(hdf5::Error::Internal(format!("Failed to read gene symbols: {}", err)));
+        }
+    };
+
+    // Convert to Vec<String> for easier handling
+    let gene_names: Vec<String> = genes_varlen.iter().map(|g| g.to_string()).collect();
+    let num_genes = gene_names.len();
+
+    // Read sample names
+    let samples_dataset = match file.dataset("samples") {
+        Ok(ds) => ds,
+        Err(err) => {
+            println!(
+                "{}",
+                serde_json::json!({
+                    "status": "error",
+                    "message": format!("Failed to open samples dataset: {}", err),
+                    "file_path": filename
+                })
+            );
+            return Err(hdf5::Error::Internal(format!(
+                "Failed to open samples dataset: {}",
+                err
+            )));
+        }
+    };
+
+    // Read samples as VarLenAscii
+    let samples_varlen = match samples_dataset.read_1d::<VarLenUnicode>() {
+        Ok(s) => s,
+        Err(err) => {
+            // eprintln!("Failed to read sample names: {}", err);
+            println!(
+                "{}",
+                serde_json::json!({
+                    "status": "error",
+                    "message": format!("Failed to read sample names: {}", err),
+                    "file_path": filename
+                })
+            );
+            return Err(hdf5::Error::Internal(format!("Failed to read sample names: {}", err)));
+        }
+    };
+
+    // Convert to Vec<String> for easier handling
+    let all_samples: Vec<String> = samples_varlen.iter().map(|s| s.to_string()).collect();
+
+    // Find indices of requested samples
+    let mut column_indices: Vec<usize> = Vec::with_capacity(sample_list.len());
+    for sample in sample_list {
+        if let Some(index) = all_samples.iter().position(|s| s == sample) {
+            column_indices.push(index);
+        } else {
+            return Err(hdf5::Error::Internal(format!(
+                "Sample '{}' not found in the dataset",
+                sample
+            )));
+        }
+    }
+
+    // Read the counts dataset
+    let counts_dataset = match file.dataset("matrix") {
+        Ok(ds) => ds,
+        Err(err) => {
+            return Err(hdf5::Error::Internal(format!("Failed to open counts dataset: {}", err)));
+        }
+    };
+
+    // Get dataset dimensions for validation
+    let dataset_shape = counts_dataset.shape();
+    if dataset_shape.len() != 2 {
+        return Err(hdf5::Error::Internal("Expected a 2D dataset for counts".to_string()));
+    };
+
+    // Check dimensions match expected values
+    if dataset_shape[0] != num_genes {
+        return Err(hdf5::Error::Internal(format!(
+            "Counts dataset first dimension ({}) doesn't match number of genes ({})",
+            dataset_shape[0], num_genes
+        )));
+    };
+
+    if dataset_shape[1] != all_samples.len() {
+        return Err(hdf5::Error::Internal(format!(
+            "Counts dataset second dimension ({}) doesn't match number of samples ({})",
+            dataset_shape[1],
+            all_samples.len()
+        )));
+    };
+
+    // Read the counts dataset
+    let all_counts = match counts_dataset.read::<f64, Dim<[usize; 2]>>() {
+        Ok(data) => data,
+        Err(err) => {
+            return Err(hdf5::Error::Internal(format!(
+                "Failed to read expression data: {}",
+                err
+            )));
+        }
+    };
+
+    let mut input_vector: Vec<f64> = Vec::with_capacity(num_genes * sample_list.len());
+
+    for gene_idx in 0..num_genes {
+        for &col_idx in &column_indices {
+            input_vector.push(all_counts[[gene_idx, col_idx]]);
+        }
+    }
+
+    // Create matrix from the extracted data
+    let dm = DMatrix::from_row_slice(num_genes, sample_list.len(), &input_vector);
+
+    Ok((dm, gene_names))
+}
+
 // The original input_data function for text files is kept as is
 fn input_data(
     filename: &String,
     sample_list: &Vec<&str>,
-) -> (
-    Matrix<f64, Dyn, Dyn, VecStorage<f64, Dyn, Dyn>>,
-    Vec<String>,
-) {
+) -> (Matrix<f64, Dyn, Dyn, VecStorage<f64, Dyn, Dyn>>, Vec<String>) {
     // Build the CSV reader and iterate over each record.
     let mut reader = BGZFReader::new(fs::File::open(filename).unwrap()).unwrap();
     let mut num_lines: usize = 0;
@@ -472,10 +599,7 @@ fn calculate_variance(
         if rank_type == "var" {
             // Calculating variance
             if gene_counts.clone().variance().is_nan() == true {
-            } else if filter_extreme_values == true
-                && keep_cpm_bool == true
-                && keep_total_bool == true
-            {
+            } else if filter_extreme_values == true && keep_cpm_bool == true && keep_total_bool == true {
                 gene_infos.push(GeneInfo {
                     rank_type: gene_counts.variance(),
                     gene_symbol: gene_names[row].clone(),
@@ -490,10 +614,7 @@ fn calculate_variance(
             // Calculating interquartile region
             let mut gene_counts_data = Data::new(gene_counts);
             if gene_counts_data.clone().interquartile_range().is_nan() == true {
-            } else if filter_extreme_values == true
-                && keep_cpm_bool == true
-                && keep_total_bool == true
-            {
+            } else if filter_extreme_values == true && keep_cpm_bool == true && keep_total_bool == true {
                 gene_infos.push(GeneInfo {
                     rank_type: gene_counts_data.interquartile_range(),
                     gene_symbol: gene_names[row].clone(),
@@ -506,11 +627,9 @@ fn calculate_variance(
             }
         }
     }
-    gene_infos.as_mut_slice().sort_by(|a, b| {
-        (a.rank_type)
-            .partial_cmp(&b.rank_type)
-            .unwrap_or(Ordering::Equal)
-    });
+    gene_infos
+        .as_mut_slice()
+        .sort_by(|a, b| (a.rank_type).partial_cmp(&b.rank_type).unwrap_or(Ordering::Equal));
     gene_infos
 }
 
@@ -527,8 +646,7 @@ fn cpm(
     for col in 0..input_matrix.ncols() {
         let norm_factor = column_sums[(0, col)];
         for row in 0..input_matrix.nrows() {
-            output_matrix[(row, col)] =
-                (input_matrix[(row, col)] as f64 * 1000000.0) / norm_factor as f64;
+            output_matrix[(row, col)] = (input_matrix[(row, col)] as f64 * 1000000.0) / norm_factor as f64;
         }
     }
     //println!("output_matrix:{:?}", output_matrix);
@@ -604,6 +722,14 @@ fn main() {
                         file_type = "text".to_string();
                         // eprintln!("Using default text file format (no .h5 extension found)");
                     }
+
+                    // Determine if the H5 file is new format
+                    let new_format: bool = match &json_string {
+                        json::JsonValue::Object(ref obj) => {
+                            obj.get("newformat").and_then(|v| v.as_bool()).map_or(false, |b| b)
+                        }
+                        _ => false,
+                    };
 
                     let rank_type = &json_string["rank_type"] // Value provide must be either "var" or "iqr"
                         .to_owned()
@@ -691,15 +817,25 @@ fn main() {
                     // eprintln!("Reading data from {} file: {}", file_type, file_name);
                     let (input_matrix, gene_names) = if file_type == "hdf5" {
                         // eprintln!("Using HDF5 reader function...");
-                        match input_data_hdf5(&file_name, &samples_list) {
-                            Ok(result) => {
-                                // eprintln!("Successfully read HDF5 data");
-                                result
+                        if new_format {
+                            match input_data_hdf5_newformat(&file_name, &samples_list) {
+                                Ok(result) => result,
+                                Err(err) => {
+                                    eprintln!("ERROR in HDF5 new format reader: {:?}", err);
+                                    return;
+                                }
                             }
-                            Err(err) => {
-                                eprintln!("ERROR in HDF5 reader: {:?}", err);
-                                // Error has already been printed to stdout in JSON format by the function
-                                return;
+                        } else {
+                            match input_data_hdf5(&file_name, &samples_list) {
+                                Ok(result) => {
+                                    // eprintln!("Successfully read HDF5 data");
+                                    result
+                                }
+                                Err(err) => {
+                                    eprintln!("ERROR in HDF5 reader: {:?}", err);
+                                    // Error has already been printed to stdout in JSON format by the function
+                                    return;
+                                }
                             }
                         }
                     } else {
