@@ -20,5 +20,4 @@ export const aiProjectSelectedWSImagesResponsePayload: RoutePayload = {
 	response: {
 		typeId: 'AiProjectSelectedWSImagesResponse'
 	}
-	// examples: []
 }
