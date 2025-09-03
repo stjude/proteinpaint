@@ -49,7 +49,7 @@ function init({ genomes }) {
 
 			const wsiImagePath = await getWSImagePath(ds, wSImagesRequest)
 
-			const session = await getSessionId(ds, cookieJar, getCookieString, setCookie, wsiImagePath)
+			const session = await getSessionId(ds, cookieJar, getCookieString, setCookie, wsiImagePath, aiProjectId)
 
 			const getWsiImageResponse: any = await getWsiImageDimensions(
 				session.imageSessionId,
@@ -95,7 +95,8 @@ async function getSessionId(
 	cookieJar: any,
 	getCookieString: any,
 	setCookie: any,
-	wsimage: string
+	wsimage: string,
+	aiProjectId: number | undefined
 ): Promise<SessionData> {
 	const sessionManager = SessionManager.getInstance()
 
@@ -208,7 +209,7 @@ async function getSessionId(
 	const sessionData: SessionData = await sessionManager.setSession(wsimage, sessionId, tileServer, overlays)
 
 	if (ds.queries.WSImages.getWSIPredictionPatches) {
-		const predictionPatches = await ds.queries.WSImages.getWSIPredictionPatches(1, wsimage)
+		const predictionPatches = await ds.queries.WSImages.getWSIPredictionPatches(aiProjectId, wsimage)
 
 		if (!predictionPatches) throw new Error('No prediction files found')
 
