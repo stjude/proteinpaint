@@ -1,5 +1,5 @@
-// Syntax: cd .. && cargo build --release && export RUST_BACKTRACE=full && json='{"user_input": "Generate DE plot for men with weight greater than 30lbs vs women less than 20lbs", "dataset_file":"sjpp/proteinpaint/server/test/tp/files/hg38/TermdbTest/TermdbTest_embeddings.txt"}' && time echo $json | target/release/aichatbot
-// Syntax: cd .. && cargo build --release && export RUST_BACKTRACE=full && json='{"user_input": "Show summary plot for sample information", "dataset_file":"sjpp/proteinpaint/server/test/tp/files/hg38/TermdbTest/TermdbTest_embeddings.txt"}' && time echo $json | target/release/aichatbot
+// Syntax: cd .. && cargo build --release && export RUST_BACKTRACE=full && json='{"user_input": "Generate DE plot for men with weight greater than 30lbs vs women less than 20lbs", "dataset_file":"sjpp/proteinpaint/server/test/tp/files/hg38/TermdbTest/TermdbTest_embeddings.txt", "apilink": "http://0.0.0.0:8000", "comp_model_name": "gpt-oss:20b", "embedding_model_name": "nomic-embed-text:latest"}' && time echo $json | target/release/aichatbot
+// Syntax: cd .. && cargo build --release && export RUST_BACKTRACE=full && json='{"user_input": "Show summary plot for sample information", "dataset_file":"sjpp/proteinpaint/server/test/tp/files/hg38/TermdbTest/TermdbTest_embeddings.txt", "apilink": "http://0.0.0.0:8000", "comp_model_name": "gpt-oss:20b", "embedding_model_name": "nomic-embed-text:latest"}' && time echo $json | target/release/aichatbot
 use anyhow::Result;
 use json::JsonValue;
 use rig::agent::AgentBuilder;
@@ -91,15 +91,27 @@ async fn main() -> Result<()> {
                         None => panic!("apilink field is missing in input json"),
                     }
 
+                    let comp_model_name_json: &JsonValue = &json_string["comp_model_name"];
+                    let comp_model_name: &str;
+                    match comp_model_name_json.as_str() {
+                        Some(inp) => comp_model_name = inp,
+                        None => panic!("comp_model_name field is missing in input json"),
+                    }
+
+                    let embedding_model_name_json: &JsonValue = &json_string["embedding_model_name"];
+                    let embedding_model_name: &str;
+                    match embedding_model_name_json.as_str() {
+                        Some(inp) => embedding_model_name = inp,
+                        None => panic!("embedding_model_name field is missing in input json"),
+                    }
+
                     // Initialize Ollama client
-                    let ollama_host = "http://0.0.0.0:8000";
                     let ollama_client = ollama::Client::builder()
-                        .base_url(ollama_host)
+                        .base_url(apilink)
                         .build()
                         .expect("Ollama server not found");
-                    //let ollama_client = ollama::Client::new();
-                    let embedding_model = ollama_client.embedding_model("nomic-embed-text:latest");
-                    let comp_model = ollama_client.completion_model("gpt-oss:20b"); // "granite3-dense:latest" "PetrosStav/gemma3-tools:12b" "llama3-groq-tool-use:latest" "PetrosStav/gemma3-tools:12b"
+                    let embedding_model = ollama_client.embedding_model(embedding_model_name);
+                    let comp_model = ollama_client.completion_model(comp_model_name); // "gpt-oss:20b" "granite3-dense:latest" "PetrosStav/gemma3-tools:12b" "llama3-groq-tool-use:latest" "PetrosStav/gemma3-tools:12b"
 
                     let mut classification: String =
                         classify_query_by_dataset_type(user_input, comp_model.clone(), embedding_model.clone()).await;
