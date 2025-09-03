@@ -151,7 +151,7 @@ export class WSIViewerInteractions {
 						dslabel: state.vocab.dslabel,
 						projectId: state.aiProjectID,
 						annotation: annotationsData[currentIndex],
-						wsimageId: sessionWSImage.id ? sessionWSImage.id : 1 //TODO: Hardcoded for dev
+						wsimage: sessionWSImage.filename
 					}
 					try {
 						await dofetch3('deleteWSIAnnotation', { method: 'DELETE', body })

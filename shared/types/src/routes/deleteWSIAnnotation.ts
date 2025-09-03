@@ -5,7 +5,7 @@ export type DeleteWSIAnnotationRequest = {
 	dslabel: string
 	projectId: number
 	annotation: any
-	wsimageId: number
+	wsimage: string
 }
 
 export type DeleteWSIAnnotationResponse = {

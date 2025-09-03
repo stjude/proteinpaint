@@ -47,7 +47,7 @@ function validate_query(genomes: Genome, query: DeleteWSIAnnotationRequest): any
 	if (!query.dslabel) throw new Error('.dslabel is required for deleteWSIAnnotation request.')
 	if (!query.annotation) throw new Error('.annotation:{} is required for deleteWSIAnnotation request.')
 	if (!query.projectId) throw new Error('.projectId is required for deleteWSIAnnotation request.')
-	if (!query.wsimageId) throw new Error('.imageId is required for deleteWSIAnnotation request.')
+	if (!query.wsimage) throw new Error('.wsimage is required for deleteWSIAnnotation request.')
 
 	const g = genomes[query.genome]
 	const ds = g.datasets[query.dslabel]
@@ -61,7 +61,22 @@ function deleteAnnotation(
 	connection: Database.Database,
 	query: DeleteWSIAnnotationRequest
 ): Database.RunResult | any[] {
-	const sql = `DELETE FROM project_annotations WHERE project_id = ? AND coordinates = ? AND image_id = ?`
-	const params = [query.projectId, JSON.stringify(query.annotation.zoomCoordinates), query.wsimageId] as string[]
+	const sql = `
+        DELETE FROM project_annotations
+        WHERE project_id = ?
+          AND coordinates = ?
+          AND image_id = (
+            SELECT id FROM project_images
+            WHERE project_id = ?
+              AND image_path = ?
+        )
+    `
+	const params = [
+		query.projectId,
+		JSON.stringify(query.annotation.zoomCoordinates),
+		query.projectId,
+		query.wsimage // this is the image_path
+	] as string[]
+
 	return runSQL(connection, sql, params, 'delete annotation')
 }
