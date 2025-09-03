@@ -26,6 +26,7 @@ export class Runchart extends Scatter {
 	async init(appState) {
 		const state: any = this.getState(appState)
 		this.config = structuredClone(state.config)
+		console.log(this.config)
 		this.filterTWs = []
 		this.view = new RunchartView(this)
 		this.model = new RunchartModel(this)
@@ -118,7 +119,42 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 		termdbConfig is accessible at chartsInstance.state.termdbConfig{}
 		mass option is accessible at chartsInstance.app.opts{}
 	*/
-	holder.append('div')
+
+	const menuDiv = holder.append('div')
+	for (const plot of chartsInstance.state.termdbConfig?.plotConfigByCohort?.default?.runChart?.plots || []) {
+		const config = structuredClone(plot)
+		menuDiv
+			.append('button')
+			.style('margin', '5px')
+			.style('padding', '10px 15px')
+			.style('border-radius', '20px')
+			.style('border-color', '#ededed')
+			.style('display', 'block')
+			.text(plot.name)
+			.on('click', () => {
+				chartsInstance.app.dispatch({
+					type: 'plot_create',
+					config: {
+						chartType: 'runChart',
+						...config
+					}
+				})
+				chartsInstance.dom.tip.hide()
+			})
+	}
+	menuDiv
+		.append('button')
+		.style('margin', '5px')
+		.style('padding', '10px 15px')
+		.style('border-radius', '20px')
+		.style('border-color', '#ededed')
+		.style('display', 'block')
+		.text('Select terms')
+		.on('click', () => {
+			chartsInstance.dom.tip.clear()
+			select2Terms(chartsInstance.dom.tip, chartsInstance.app, 'runChart', 'date', callback, 'numeric')
+			chartsInstance.dom.tip.show() //re-show the tip after it was cleared
+		})
 	const callback = (xterm, yterm) => {
 		chartsInstance.app.dispatch({
 			type: 'plot_create',
@@ -130,8 +166,6 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 			}
 		})
 	}
-	//the first time should be a date and the second one a numeric non date term
-	select2Terms(chartsInstance.dom.tip, chartsInstance.app, 'runChart', 'date', callback, 'numeric')
 }
 
 export function getDefaultRunChartSettings() {
