@@ -3,7 +3,11 @@ import type { SCInteractions } from '../interactions/SCInteractions'
 import { Menu, addGeneSearchbox } from '#dom'
 
 /** Rendering for the plot buttons that appear below the sample
- * table. */
+ * table.
+ *
+ * TODOs:
+ * - Implement ds specific keys or logic for sample name
+ * */
 export class PlotButtons {
 	plotBtnDom: {
 		promptDiv: Div
@@ -27,7 +31,7 @@ export class PlotButtons {
 
 	update(sample: { [key: string]: any }) {
 		this.sample = sample
-		const name = sample.sample //|| add ds specific keys/logic here
+		const name = sample.sample // add ds specific keys/logic here
 		this.plotBtnDom.selectPrompt.text(` ${name}:`)
 		this.renderChartBtns()
 	}

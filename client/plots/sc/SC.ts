@@ -1,12 +1,12 @@
-import type { BasePlotConfig, MassAppActions, MassState } from '#mass/types/mass'
+import type { BasePlotConfig, MassState } from '#mass/types/mass'
 import type { SCConfigOpts, SCDom, SCState, SCViewerOpts, SampleColumn } from './SCTypes'
 import type { SingleCellSample } from '#types'
-import { RxComponent } from '../../types/rx.d'
-import { getCompInit, copyMerge } from '#rx'
+import { getCompInit, copyMerge, type RxComponent } from '#rx'
 import { SCModel } from './model/SCModel'
 import { SCViewModel } from './viewModel/SCViewModel'
-import { SCView } from './view/SCView'
+import { ChartsSelectionRenderer } from './view/ChartsSelectionRenderer'
 import { SCInteractions } from './interactions/SCInteractions'
+import { PlotBase } from '../PlotBase.ts'
 
 /** App in development. Project being set aside for awhile
  *
@@ -20,7 +20,7 @@ import { SCInteractions } from './interactions/SCInteractions'
  * 			possibly other animation methods
  */
 
-class SCViewer extends RxComponent {
+class SCViewer extends PlotBase implements RxComponent {
 	readonly type = 'sc'
 	components: {
 		plots: { [key: string]: any }
@@ -29,11 +29,11 @@ class SCViewer extends RxComponent {
 	interactions?: SCInteractions
 	samples?: SingleCellSample[]
 	sampleColumns?: SampleColumn[]
-	view?: SCView
+	view?: ChartsSelectionRenderer
 	viewModel?: SCViewModel
 
 	constructor(opts: SCViewerOpts) {
-		super()
+		super(opts)
 		this.components = {
 			plots: {}
 		}
@@ -63,13 +63,14 @@ class SCViewer extends RxComponent {
 		}
 		return {
 			config,
+			subplots: appState.plots.filter(p => p.parentId === this.id),
 			termfilter: appState.termfilter,
 			termdbConfig: appState.termdbConfig,
 			vocab: appState.vocab
 		}
 	}
 
-	reactsTo(action: MassAppActions) {
+	reactsTo(action: any): boolean {
 		if (action.type.includes('cache_termq')) return true
 		if (action.type.startsWith('plot_')) {
 			return action.id === this.id
@@ -77,6 +78,7 @@ class SCViewer extends RxComponent {
 		if (action.type.startsWith('filter')) return true
 		if (action.type.startsWith('cohort')) return true
 		if (action.type == 'app_refresh') return true
+		else return false
 	}
 
 	/** The sample data and table rendering should only occur once */
@@ -104,7 +106,7 @@ class SCViewer extends RxComponent {
 		//Init view model and view
 		this.viewModel = new SCViewModel(this.app, state.config, this.samples!, this.sampleColumns)
 		//Renders the static select btn and table
-		this.view = new SCView(this.interactions, this.dom, this.viewModel.tableData)
+		this.view = new ChartsSelectionRenderer(this.interactions, this.dom, this.viewModel.tableData)
 	}
 
 	/******* Code is a hold over from original design. *******
