@@ -68,7 +68,7 @@ def assign_lesion_colors(lesion_types):
 def plot_grin2_manhattan(grin_results: dict, 
                         chrom_size: pd.DataFrame,
                         colors: Optional[Dict[str, str]] = None,
-						device_pixel_ratio: float = 2.0) -> tuple[plt.Figure, dict]:
+                        device_pixel_ratio: float = 2.0) -> tuple[plt.Figure, dict]:
     """
     Create a Manhattan plot for GRIN2 genomic analysis results using colored scatter points.
     
@@ -84,7 +84,7 @@ def plot_grin2_manhattan(grin_results: dict,
             - 'chrom': Chromosome names
             - 'size': Chromosome lengths in base pairs
         colors (Optional[Dict[str, str]]): Color mapping for mutation types.
-		device_pixel_ratio (float): Device pixel ratio for rendering.
+        device_pixel_ratio (float): Device pixel ratio for rendering.
 
     Returns:
         tuple[plt.Figure, dict]: Matplotlib figure and interactive data dictionary
@@ -97,9 +97,12 @@ def plot_grin2_manhattan(grin_results: dict,
             'mutation': '#44AA44'
         }
 
-    # Set plot DPI
-    plot_dpi = int(110 * device_pixel_ratio)
+    scale_factor = device_pixel_ratio * 0.7
+    base_width = 10 / scale_factor
+    base_height = 5 / scale_factor
 
+    # Set plot DPI - use device pixel ratio
+    plot_dpi = int(110 * min(device_pixel_ratio, 2.5))
     
     # Extract gene.hits data
     gene_hits = grin_results['gene.hits']
@@ -129,9 +132,9 @@ def plot_grin2_manhattan(grin_results: dict,
     
     total_genome_length = cumulative_pos
     
-    # Collect all points to plot
+    # Collect all points to plot (for PNG)
     plot_data = {'x': [], 'y': [], 'colors': [], 'types': []}
-    point_details = []
+    point_details = []  # Only significant points for interactivity
     
     # Process each gene
     for _, gene_row in gene_hits.iterrows():
@@ -151,9 +154,9 @@ def plot_grin2_manhattan(grin_results: dict,
         for mut_type, q_col in mutation_cols:
             if q_col not in gene_row or pd.isna(gene_row[q_col]) or gene_row[q_col] <= 0:
                 continue
-            
+
             q_value = gene_row[q_col]
-                
+            
             # Convert q-value to -log10(q-value)
             neg_log10_q = -np.log10(q_value)
             
@@ -164,32 +167,34 @@ def plot_grin2_manhattan(grin_results: dict,
             final_x = x_pos + x_offset
             color = colors.get(mut_type, '#888888')
             
+            # Add ALL points to plot_data (for PNG visualization)
             plot_data['x'].append(final_x)
             plot_data['y'].append(neg_log10_q)
             plot_data['colors'].append(color)
             plot_data['types'].append(mut_type)
             
-            # Store detailed point information
-            point_details.append({
-                'x': final_x,
-                'y': neg_log10_q,
-                'color': color,
-                'type': mut_type,
-                'gene': gene_name,
-                'chrom': chrom,
-                'pos': gene_start,
-                'q_value': q_value
-            })
+            # Only add significant points (q <= 0.05) to interactive data
+            if q_value <= 0.05:
+                point_details.append({
+                    'x': final_x,
+                    'y': neg_log10_q,
+                    'color': color,
+                    'type': mut_type,
+                    'gene': gene_name,
+                    'chrom': chrom,
+                    'pos': gene_start,
+                    'q_value': q_value
+                })
     
-    # Create the matplotlib figure
-    fig, ax = plt.subplots(1, 1, figsize=(14, 6), dpi=plot_dpi)
+    # Create the matplotlib figure with scaled dimensions
+    fig, ax = plt.subplots(1, 1, figsize=(base_width, base_height), dpi=plot_dpi)
     
     # Set up axes limits
     ax.set_xlim(0, total_genome_length)
     
     # Calculate y-axis limits from data with optional scaling for very high values
     y_axis_scaled = False
-    scale_factor = 1.0
+    scale_factor_y = 1.0
     if plot_data['y']:
         max_y = max(plot_data['y'])
         
@@ -197,11 +202,11 @@ def plot_grin2_manhattan(grin_results: dict,
         if max_y > 40:
             # Scale all y-values so the maximum becomes 40
             target_max = 40
-            scale_factor = target_max / max_y
-            plot_data['y'] = [y * scale_factor for y in plot_data['y']]
+            scale_factor_y = target_max / max_y
+            plot_data['y'] = [y * scale_factor_y for y in plot_data['y']]
             # Also update point_details
             for point in point_details:
-                point['y'] *= scale_factor
+                point['y'] *= scale_factor_y
             scaled_max = max(plot_data['y'])
             ax.set_ylim(0, scaled_max + 0.15)  # Add a small margin so points don't get clipped
             y_axis_scaled = True
@@ -271,7 +276,7 @@ def plot_grin2_manhattan(grin_results: dict,
         
         # Position legend horizontally at top right
         ax.legend(legend_handles, legend_labels, 
-                 bbox_to_anchor=(1.0, 1.02), loc='lower right', 
+                 bbox_to_anchor=(1.0, 0.98), loc='lower right', 
                  ncol=len(legend_labels), frameon=False, 
                  fancybox=False, shadow=False, framealpha=0.0)
     
@@ -290,7 +295,7 @@ def plot_grin2_manhattan(grin_results: dict,
     width_pixels = int(width_inches * plot_dpi)
     height_pixels = int(height_inches * plot_dpi)
 
-    # Transform coordinates using the same DPI as PNG output
+    # Transform coordinates only for significant points
     if len(point_details) > 0:
         plot_coords = np.array([[point['x'], point['y']] for point in point_details])
         
@@ -321,7 +326,7 @@ def plot_grin2_manhattan(grin_results: dict,
         'points': point_details,
         'chrom_data': chrom_data,
         'y_axis_scaled': y_axis_scaled,
-        'scale_factor': scale_factor,
+        'scale_factor': scale_factor_y,
         'total_genome_length': total_genome_length,
         'plot_width': width_pixels,
         'plot_height': height_pixels,
