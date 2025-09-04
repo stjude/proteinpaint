@@ -1,5 +1,7 @@
-// Syntax: cd .. && cargo build --release && export RUST_BACKTRACE=full && json='{"user_input": "Generate DE plot for men with weight greater than 30lbs vs women less than 20lbs", "dataset_file":"sjpp/proteinpaint/server/test/tp/files/hg38/TermdbTest/TermdbTest_embeddings.txt", "apilink": "http://0.0.0.0:8000", "comp_model_name": "gpt-oss:20b", "embedding_model_name": "nomic-embed-text:latest"}' && time echo $json | target/release/aichatbot
-// Syntax: cd .. && cargo build --release && export RUST_BACKTRACE=full && json='{"user_input": "Show summary plot for sample information", "dataset_file":"sjpp/proteinpaint/server/test/tp/files/hg38/TermdbTest/TermdbTest_embeddings.txt", "apilink": "http://0.0.0.0:8000", "comp_model_name": "gpt-oss:20b", "embedding_model_name": "nomic-embed-text:latest"}' && time echo $json | target/release/aichatbot
+// Syntax: cd .. && cargo build --release && export RUST_BACKTRACE=full && json='{"user_input": "Generate DE plot for men with weight greater than 30lbs vs women less than 20lbs", "dataset_file":"sjpp/proteinpaint/server/test/tp/files/hg38/TermdbTest/TermdbTest_embeddings.txt", "apilink": "http://0.0.0.0:8000", "comp_model_name": "gpt-oss:20b", "embedding_model_name": "nomic-embed-text:latest", "llm_backend_name": "ollama"}' && time echo $json | target/release/aichatbot
+// Syntax: cd .. && cargo build --release && export RUST_BACKTRACE=full && json='{"user_input": "Show summary plot for sample information", "dataset_file":"sjpp/proteinpaint/server/test/tp/files/hg38/TermdbTest/TermdbTest_embeddings.txt", "apilink": "http://0.0.0.0:8000", "comp_model_name": "gpt-oss:20b", "embedding_model_name": "nomic-embed-text:latest", "llm_backend_name": "ollama"}' && time echo $json | target/release/aichatbot
+// Syntax: cd .. && cargo build --release && export RUST_BACKTRACE=full && json='{"user_input": "Generate DE plot for men with weight greater than 30lbs vs women less than 20lbs", "dataset_file":"sjpp/proteinpaint/server/test/tp/files/hg38/TermdbTest/TermdbTest_embeddings.txt", "apilink": "http://10.200.87.133:32580/v2/models/ray_gateway_router/infer", "comp_model_name": "llama3.3-70b-instruct-vllm", "embedding_model_name": "multi-qa-mpnet-base-dot-v1", "llm_backend_name": "SJ"}' && time echo $json | target/release/aichatbot
+// Syntax: cd .. && cargo build --release && export RUST_BACKTRACE=full && json='{"user_input": "Show summary plot for sample information", "dataset_file":"sjpp/proteinpaint/server/test/tp/files/hg38/TermdbTest/TermdbTest_embeddings.txt", "apilink": "http://10.200.87.133:32580/v2/models/ray_gateway_router/infer", "comp_model_name": "llama3.3-70b-instruct-vllm", "embedding_model_name": "multi-qa-mpnet-base-dot-v1", "llm_backend_name": "SJ"}' && time echo $json | target/release/aichatbot
 use anyhow::Result;
 use json::JsonValue;
 use rig::agent::AgentBuilder;
@@ -7,13 +9,19 @@ use rig::client::CompletionClient;
 use rig::client::EmbeddingsClient;
 use rig::completion::Prompt;
 use rig::embeddings::builder::EmbeddingsBuilder;
-use rig::providers::ollama;
+//use rig::providers::ollama;
 use rig::vector_store::in_memory_store::InMemoryVectorStore;
 use schemars::JsonSchema;
 use serde_json::{Value, json};
 use std::fs::File;
 use std::io::{self, BufRead, Read};
 mod sjprovider; // Importing custom rig module for invoking SJ GPU server
+
+#[allow(non_camel_case_types)]
+enum llm_backend {
+    Ollama(),
+    Sj(),
+}
 
 #[derive(Debug, JsonSchema)]
 #[allow(dead_code)]
@@ -105,84 +113,47 @@ async fn main() -> Result<()> {
                         None => panic!("embedding_model_name field is missing in input json"),
                     }
 
-                    // Initialize Ollama client
-                    let ollama_client = ollama::Client::builder()
-                        .base_url(apilink)
-                        .build()
-                        .expect("Ollama server not found");
-                    let embedding_model = ollama_client.embedding_model(embedding_model_name);
-                    let comp_model = ollama_client.completion_model(comp_model_name); // "gpt-oss:20b" "granite3-dense:latest" "PetrosStav/gemma3-tools:12b" "llama3-groq-tool-use:latest" "PetrosStav/gemma3-tools:12b"
-
-                    let mut classification: String =
-                        classify_query_by_dataset_type(user_input, comp_model.clone(), embedding_model.clone()).await;
-                    classification = classification.replace("\"", "");
-                    let final_output;
-                    if classification == "dge".to_string() {
-                        let de_result = extract_search_terms_from_query(user_input, comp_model, embedding_model).await;
-                        final_output = format!(
-                            "{{\"{}\":\"{}\",\"{}\":[{}}}",
-                            "chartType",
-                            "dge",
-                            "DE_output",
-                            de_result + &"]"
-                        );
-                    } else if classification == "summary".to_string() {
-                        // The dataset file needs to be read to query what is the summary term for the dataset. This will later be queried directly from the dataset db file.
-                        println!("dataset_file:{}", dataset_file);
-                        let file = File::open(dataset_file).unwrap();
-                        let reader = io::BufReader::new(file);
-
-                        // Iterate through the lines in the file
-                        let mut summary_term: Option<String> = None;
-                        for line in reader.lines() {
-                            let line = line?; // Handle any potential errors
-                            if line.starts_with("summary=") {
-                                //println!("Relevant_line:{}", line); // Print the line if it starts with the prefix
-                                summary_term = Some(line.replace("summary=", ""))
-                            }
-                        }
-
-                        match summary_term {
-                            Some(sum) => {
-                                final_output = extract_summary_information(
-                                    user_input,
-                                    comp_model,
-                                    embedding_model,
-                                    dataset_file,
-                                    &sum,
-                                )
-                                .await;
-                            }
-                            None => {
-                                panic!("summary_term not found")
-                            }
-                        }
-                    } else if classification == "hierarchial".to_string() {
-                        // Not implemented yet
-                        final_output = format!("{{\"{}\":\"{}\"}}", "chartType", "hierarchial");
-                    } else if classification == "snv_indel".to_string() {
-                        // Not implemented yet
-                        final_output = format!("{{\"{}\":\"{}\"}}", "chartType", "snv_indel");
-                    } else if classification == "cnv".to_string() {
-                        // Not implemented yet
-                        final_output = format!("{{\"{}\":\"{}\"}}", "chartType", "cnv");
-                    } else if classification == "variant_calling".to_string() {
-                        // Not implemented yet and will never be supported. Need a separate messages for this
-                        final_output = format!("{{\"{}\":\"{}\"}}", "chartType", "variant_calling");
-                    } else if classification == "surivial".to_string() {
-                        // Not implemented yet
-                        final_output = format!("{{\"{}\":\"{}\"}}", "chartType", "surivial");
-                    } else if classification == "none".to_string() {
-                        final_output = format!("{{\"{}\":\"{}\"}}", "chartType", "none");
-                        println!("The input query did not match any known features in Proteinpaint");
-                    } else {
-                        final_output = format!(
-                            "{{\"{}\":\"{}\"}}",
-                            "chartType",
-                            "unknown:".to_string() + &classification
-                        );
+                    let llm_backend_name_json: &JsonValue = &json_string["llm_backend_name"];
+                    let llm_backend_name: &str;
+                    match llm_backend_name_json.as_str() {
+                        Some(inp) => llm_backend_name = inp,
+                        None => panic!("llm_backend_name field is missing in input json"),
                     }
-                    println!("final_output:{}", final_output);
+
+                    let llm_backend_type: llm_backend;
+                    let mut final_output: Option<String> = None;
+                    //let comp_model;
+                    //let embedding_model;
+                    if llm_backend_name != "ollama" && llm_backend_name != "SJ" {
+                        panic!(
+                            "This code currently supports only Ollama and SJ provider. llm_backend_name must be \"ollama\" or \"SJ\""
+                        );
+                    } else if llm_backend_name == "ollama".to_string() {
+                        llm_backend_type = llm_backend::Ollama();
+                        // Initialize Ollama client
+                        let ollama_client = rig::providers::ollama::Client::builder()
+                            .base_url(apilink)
+                            .build()
+                            .expect("Ollama server not found");
+                        let embedding_model = ollama_client.embedding_model(embedding_model_name);
+                        let comp_model = ollama_client.completion_model(comp_model_name);
+                        final_output =
+                            run_pipeline(user_input, comp_model, embedding_model, llm_backend_type, dataset_file).await;
+                    // "gpt-oss:20b" "granite3-dense:latest" "PetrosStav/gemma3-tools:12b" "llama3-groq-tool-use:latest" "PetrosStav/gemma3-tools:12b"
+                    } else if llm_backend_name == "SJ".to_string() {
+                        llm_backend_type = llm_backend::Sj();
+                        // Initialize Sj provider client
+                        let sj_client = sjprovider::Client::builder()
+                            .base_url(apilink)
+                            .build()
+                            .expect("SJ server not found");
+                        let embedding_model = sj_client.embedding_model(embedding_model_name);
+                        let comp_model = sj_client.completion_model(comp_model_name);
+                        final_output =
+                            run_pipeline(user_input, comp_model, embedding_model, llm_backend_type, dataset_file).await;
+                    }
+
+                    println!("final_output:{:?}", final_output);
                 }
                 Err(error) => println!("Incorrect json:{}", error),
             }
@@ -192,10 +163,89 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
+async fn run_pipeline(
+    user_input: &str,
+    comp_model: impl rig::completion::CompletionModel + 'static,
+    embedding_model: impl rig::embeddings::EmbeddingModel + 'static,
+    llm_backend_type: llm_backend,
+    dataset_file: &str,
+) -> Option<String> {
+    let mut classification: String = classify_query_by_dataset_type(
+        user_input,
+        comp_model.clone(),
+        embedding_model.clone(),
+        llm_backend_type,
+    )
+    .await;
+    classification = classification.replace("\"", "");
+    let final_output;
+    if classification == "dge".to_string() {
+        let de_result = extract_search_terms_from_query(user_input, comp_model, embedding_model).await;
+        final_output = format!(
+            "{{\"{}\":\"{}\",\"{}\":[{}}}",
+            "chartType",
+            "dge",
+            "DE_output",
+            de_result + &"]"
+        );
+    } else if classification == "summary".to_string() {
+        // The dataset file needs to be read to query what is the summary term for the dataset. This will later be queried directly from the dataset db file.
+        println!("dataset_file:{}", dataset_file);
+        let file = File::open(dataset_file).unwrap();
+        let reader = io::BufReader::new(file);
+
+        // Iterate through the lines in the file
+        let mut summary_term: Option<String> = None;
+        for line in reader.lines() {
+            let line = line.unwrap(); // Handle any potential errors
+            if line.starts_with("summary=") {
+                //println!("Relevant_line:{}", line); // Print the line if it starts with the prefix
+                summary_term = Some(line.replace("summary=", ""))
+            }
+        }
+
+        match summary_term {
+            Some(sum) => {
+                final_output =
+                    extract_summary_information(user_input, comp_model, embedding_model, dataset_file, &sum).await;
+            }
+            None => {
+                panic!("summary_term not found")
+            }
+        }
+    } else if classification == "hierarchial".to_string() {
+        // Not implemented yet
+        final_output = format!("{{\"{}\":\"{}\"}}", "chartType", "hierarchial");
+    } else if classification == "snv_indel".to_string() {
+        // Not implemented yet
+        final_output = format!("{{\"{}\":\"{}\"}}", "chartType", "snv_indel");
+    } else if classification == "cnv".to_string() {
+        // Not implemented yet
+        final_output = format!("{{\"{}\":\"{}\"}}", "chartType", "cnv");
+    } else if classification == "variant_calling".to_string() {
+        // Not implemented yet and will never be supported. Need a separate messages for this
+        final_output = format!("{{\"{}\":\"{}\"}}", "chartType", "variant_calling");
+    } else if classification == "surivial".to_string() {
+        // Not implemented yet
+        final_output = format!("{{\"{}\":\"{}\"}}", "chartType", "surivial");
+    } else if classification == "none".to_string() {
+        final_output = format!("{{\"{}\":\"{}\"}}", "chartType", "none");
+        println!("The input query did not match any known features in Proteinpaint");
+    } else {
+        final_output = format!(
+            "{{\"{}\":\"{}\"}}",
+            "chartType",
+            "unknown:".to_string() + &classification
+        );
+    }
+    Some(final_output)
+}
+
 async fn classify_query_by_dataset_type(
     user_input: &str,
     comp_model: impl rig::completion::CompletionModel + 'static,
     embedding_model: impl rig::embeddings::EmbeddingModel + 'static,
+    llm_backend_type: llm_backend,
 ) -> String {
     let file_path = "src/ai_docs3.txt";
 
