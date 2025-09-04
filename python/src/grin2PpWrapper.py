@@ -150,10 +150,7 @@ def plot_grin2_manhattan(grin_results: dict,
             if q_col not in gene_row or pd.isna(gene_row[q_col]) or gene_row[q_col] <= 0:
                 continue
             
-            # Filter out non-significant genes (q-value > 0.05)
             q_value = gene_row[q_col]
-            if q_value > 0.05:
-                continue
                 
             # Convert q-value to -log10(q-value)
             neg_log10_q = -np.log10(q_value)
@@ -284,7 +281,6 @@ def plot_grin2_manhattan(grin_results: dict,
     
     plt.tight_layout()
     
-    # CORRECTED coordinate transformation
     fig.canvas.draw()  # Ensure rendering is complete
 
     # Get exact figure dimensions in pixels (this matches what's saved as PNG)
@@ -297,7 +293,6 @@ def plot_grin2_manhattan(grin_results: dict,
     if len(point_details) > 0:
         plot_coords = np.array([[point['x'], point['y']] for point in point_details])
         
-        # Use data-to-display transformation
         pixel_coords = ax.transData.transform(plot_coords)
         
         # Get the figure and axis bounding boxes in display coordinates
