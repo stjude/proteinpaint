@@ -156,11 +156,6 @@ class TdbSurvival extends PlotBase implements RxComponentInner {
 		await this.setControls()
 	}
 
-	preApiFreeze(api) {
-		api.download = this.download
-		api.getChartImages = () => this.getChartImages()
-	}
-
 	async setControls() {
 		if (this.opts.controls) {
 			this.opts.controls.on('downloadClick.survival', this.download)

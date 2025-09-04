@@ -367,6 +367,14 @@ class SummaryPlot extends PlotBase implements RxComponentInner {
 
 		this.dom.plotDivs[this.config.childType].style('display', '')
 	}
+
+	getChartImages() {
+		const chart = this.components.plots[this.config.childType]
+		if (chart?.getChartImages) {
+			return chart.getChartImages()
+		}
+		return null
+	}
 }
 
 export const summaryInit = getCompInit(SummaryPlot)

@@ -136,7 +136,7 @@ class MassApp extends AppBase implements RxAppInner {
 					massSessionDuration: this.state.termdbConfig.massSessionDuration, // this.opts.massSessionDuration
 					pkgver: this.opts.pkgver,
 					downloadPlots: () => {
-						console.log(this)
+						this.downloadSVGsAsPdf()
 					}
 				})
 			}
@@ -212,6 +212,62 @@ class MassApp extends AppBase implements RxAppInner {
 		sayerror(errdiv || this.opts.holder, 'Error: ' + (e.message || e.error || e))
 		if (e.stack) console.log(e.stack)
 		this.bus.emit('error')
+	}
+
+	async downloadSVGsAsPdf() {
+		const JSPDF = await import('jspdf')
+		const { jsPDF } = JSPDF
+		/*
+		When imported, the svg2pdf.js module modifies or extends the jsPDF library (which we already imported).
+		The code inside svg2pdf.js adds a new method (.svg()) to the jsPDF object prototype, making that functionality available on all jsPDF instances.
+		Therefore, a simple import 'svg2pdf.js' without curly braces is all that is needed to apply its functionality. 
+		*/
+		await import('svg2pdf.js') // This import extends jsPDF with SVG functionality
+		const doc = new jsPDF('portrait', 'pt', 'a4') // p for portrait, l for landscape, points, A4 size
+		doc.setFontSize(12)
+		const pageWidth = doc.internal.pageSize.getWidth() - 10
+		const pageHeight = doc.internal.pageSize.getHeight() - 10
+
+		let y = 50
+		const x = 20
+		const ratio = 72 / 96 //convert pixels to pt
+
+		for (const key in this.components.plots) {
+			const plot = this.components.plots[key]
+			const chart = plot.type == 'plot' ? plot.getComponents('chart') : plot // implies summary plot
+			const chartImages = chart.getChartImages()
+			if (!chartImages) continue
+			const entries: any[] = Object.entries(chartImages)
+
+			for (const [name, chart] of entries) {
+				const parent = chart.parent
+				const svg = chart.svg.node().cloneNode(true) //clone to avoid modifying the original
+				if (parent) {
+					const svgStyles = window.getComputedStyle(parent)
+					for (const [prop, value] of Object.entries(svgStyles)) {
+						if (prop.startsWith('font')) svg.style[prop] = value
+					}
+				}
+				parent.appendChild(svg) //Added otherwise does not print, will remove later
+
+				let width = svg.getAttribute('width')
+				let height = svg.getAttribute('height')
+
+				svg.setAttribute('viewBox', `0 0 ${width} ${height}`)
+				width = Math.min(pageWidth, width * ratio) - 30
+				height = Math.min(pageHeight, height * ratio) - 30
+				if (y + height > pageHeight - 20) {
+					doc.addPage()
+					y = 50
+				}
+
+				doc.text(name.length > 90 ? name.slice(0, 90) + '...' : name, x + 10, y - 20)
+				await doc.svg(svg, { x, y, width, height })
+				y = y + height + 50
+				parent.removeChild(svg)
+			}
+		}
+		doc.save('plots.pdf')
 	}
 }
 

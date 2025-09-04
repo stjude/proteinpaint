@@ -88,7 +88,8 @@ export async function downloadSVGsAsPdf(name2svg, filename) {
 			doc.addPage()
 			y = 50
 		}
-		doc.text(name, x + 10, y - 20)
+		if (name.trim()) doc.text(name.length > 90 ? name.slice(0, 90) + '...' : name, x + 10, y - 20)
+		else y -= 20
 		await doc.svg(svg, { x, y, width, height })
 		y = y + height + 50
 		parent.removeChild(svg)

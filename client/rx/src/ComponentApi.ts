@@ -25,6 +25,7 @@ export interface RxComponentInner {
 	mainArg?: any
 	printError?: (any) => void
 	destroy?: () => void
+	getChartImages?: () => any
 
 	bus?: any
 	eventTypes?: string[]
@@ -275,4 +276,8 @@ export class ComponentApi {
 
 	// defaults for optional preApiFreeze addons
 	replaceLastState(_) {}
+
+	getChart() {
+		return this.#Inner.getChartImages ? this.#Inner.getChartImages() : null
+	}
 }
