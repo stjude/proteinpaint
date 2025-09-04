@@ -7,7 +7,6 @@ export type SCConfig = PlotConfig & {
 	chartType: 'sc'
 	/** TBD: Eventually the config for multiple plots
 	 * will be stored in this array. */
-	subplots: PlotConfig[]
 	/** Common settings and settings for each child component/plot */
 	settings: {
 		sc: SCSettings
@@ -48,6 +47,7 @@ export type SCSettings = {
  * specific to SC chartType. */
 export type SCState = {
 	config: SCConfig
+	subplots: PlotConfig[]
 	termfilter: any //Filter
 	termdbConfig: any
 	vocab: {

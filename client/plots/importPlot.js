@@ -9,10 +9,16 @@ export async function importPlot(chartType, notFoundMessage = '') {
 			return await import(`./barchart.js`)
 
 		case 'boxplot':
-			return await import(`./boxplot/BoxPlot.js`)
+			return await import(`./boxplot/BoxPlot.ts`)
 
 		case 'correlationVolcano':
 			return await import(`./corrVolcano/CorrelationVolcano.ts`)
+
+		case 'differentialAnalysis':
+			return await import(`./diffAnalysis/DifferentialAnalysis.ts`)
+
+		case 'disco':
+			return await import('./disco/Disco.ts')
 
 		case 'sc':
 			return await import('./sc/SC.ts')

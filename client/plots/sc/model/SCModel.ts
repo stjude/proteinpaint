@@ -1,14 +1,15 @@
-import type { MassAppApi } from '#mass/types/mass'
+import type { AppApi } from '#rx'
 import type { SCState } from '../SCTypes'
 import { dofetch3 } from '#common/dofetch'
 
 /** Fetches data for sc app */
 export class SCModel {
-	app: MassAppApi
+	app: AppApi
 	state: SCState
 
-	constructor(app: MassAppApi) {
+	constructor(app: AppApi) {
 		this.app = app
+		//Should only use immutable state attributes (e.g. vocab.genome)
 		this.state = this.app.getState()
 	}
 
