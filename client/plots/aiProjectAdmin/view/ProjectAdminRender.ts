@@ -103,7 +103,7 @@ export class ProjectAdminRender {
 					const project = this.projects[idx]
 					await this.interactions.appDispatchEdit({ settings: { project } })
 					// remove 'dev' for production
-					this.interactions.launchViewer(this.dom.holder, 'dev')
+					this.interactions.launchViewer(this.dom.holder, [])
 				}
 			},
 			{

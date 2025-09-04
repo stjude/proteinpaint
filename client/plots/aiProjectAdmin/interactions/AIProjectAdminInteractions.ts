@@ -82,17 +82,16 @@ export class AIProjectAdminInteractions {
 		return await this.app.vocabApi.getFilteredAiImages(config.settings.project, filter)
 	}
 
-	//TODO: Remove ? after intergration
-	async launchViewer(holder: any, _images?: string[] | string): Promise<void> {
+	async launchViewer(holder: any, _images?: string[]): Promise<void> {
 		holder.selectAll('.sjpp-deletable-ai-prjt-admin-div').remove()
 
 		const config = this.getConfig()
-
-		const images: AIProjectAdminResponse = await this.prjtRepo.getImagePaths(
-			this.genome,
-			this.dslabel,
-			config.settings.project
-		)
+		let images: any = []
+		if (_images && _images.length > 0) {
+			images = _images
+		} else {
+			images = await this.prjtRepo.getImagePaths(this.genome, this.dslabel, config.settings.project)
+		}
 
 		const wsiViewer = await import('#plots/wsiviewer/plot.wsi.js')
 		wsiViewer.default(this.dslabel, holder, { name: this.genome }, null, config.settings.project.id, images)
