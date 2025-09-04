@@ -1,6 +1,6 @@
 import type { Mds3, RouteApi } from '#types'
 import { saveWSIAnnotationPayload } from '#types/checkers'
-import type { SaveWSIAnnotationRequest } from '@sjcrh/proteinpaint-types/routes/saveWSIAnnotation.js'
+import type { SaveWSIAnnotationRequest } from '#types'
 import { getDbConnection } from '#src/aiHistoDBConnection.ts'
 import type Database from 'better-sqlite3'
 

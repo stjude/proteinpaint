@@ -2,11 +2,8 @@ import type { Annotation, Mds3, RouteApi, WSImage } from '#types'
 import path from 'path'
 import fs from 'fs'
 import serverconfig from '#src/serverconfig.js'
-import type {
-	AiProjectSelectedWSImagesRequest,
-	AiProjectSelectedWSImagesResponse
-} from '@sjcrh/proteinpaint-types/routes/aiProjectSelectedWSImages.ts'
-import { aiProjectSelectedWSImagesResponsePayload } from '@sjcrh/proteinpaint-types/routes/aiProjectSelectedWSImages.ts'
+import type { AiProjectSelectedWSImagesRequest, AiProjectSelectedWSImagesResponse } from '#types'
+import { aiProjectSelectedWSImagesResponsePayload } from '#types/checkers'
 import { getDbConnection } from '#src/aiHistoDBConnection.ts'
 import type Database from 'better-sqlite3'
 

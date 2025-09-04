@@ -2,10 +2,7 @@ import type { Genome, RouteApi } from '#types'
 import { deleteWSIAnnotationPayload } from '#types/checkers'
 import { getDbConnection } from '#src/aiHistoDBConnection.ts'
 import { runSQL } from '#src/runSQLHelpers.ts'
-import type {
-	DeleteWSIAnnotationRequest,
-	DeleteWSIAnnotationResponse
-} from '@sjcrh/proteinpaint-types/routes/deleteWSIAnnotation.js'
+import type { DeleteWSIAnnotationRequest, DeleteWSIAnnotationResponse } from '#types'
 import type Database from 'better-sqlite3'
 
 export const api: RouteApi = {
