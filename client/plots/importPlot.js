@@ -22,6 +22,12 @@ export async function importPlot(chartType, notFoundMessage = '') {
 			return await import('./gb/GB.ts')
 			*/
 
+		case 'differentialAnalysis':
+			return await import(`./diffAnalysis/DifferentialAnalysis.ts`)
+
+		case 'disco':
+			return await import('./disco/Disco.ts')
+
 		case 'grin2':
 			return await import('./grin2/grin2')
 

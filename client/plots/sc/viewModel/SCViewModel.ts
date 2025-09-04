@@ -1,4 +1,4 @@
-import type { MassAppApi } from '#mass/types/mass'
+import type { AppApi } from '#rx'
 import type { TableColumn, TableRow } from '#dom'
 import type { SCConfig, SCState, SampleColumn } from '../SCTypes'
 import type { SingleCellSample } from '#types'
@@ -9,11 +9,11 @@ import type { SingleCellSample } from '#types'
  */
 
 export class SCViewModel {
-	app: MassAppApi
+	app: AppApi
 	state: SCState
 	tableData: { rows: TableRow[]; columns: TableColumn[]; selectedRows: number[] }
 
-	constructor(app: MassAppApi, config: SCConfig, samples: SingleCellSample[], sampleColumns?: SampleColumn[]) {
+	constructor(app: AppApi, config: SCConfig, samples: SingleCellSample[], sampleColumns?: SampleColumn[]) {
 		this.app = app
 		this.state = this.app.getState()
 

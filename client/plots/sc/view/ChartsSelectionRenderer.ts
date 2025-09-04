@@ -5,7 +5,7 @@ import { renderTable } from '#dom'
 import { PlotButtons } from './PlotButtons'
 
 /** Renders the sc app */
-export class SCView {
+export class ChartsSelectionRenderer {
 	dom: SCDom
 	plotButtons: PlotButtons
 	//On load, show table
