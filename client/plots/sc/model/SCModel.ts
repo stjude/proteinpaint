@@ -33,7 +33,18 @@ export class SCModel {
 		if (!dsScSamples || !dsScSamples.sampleColumns) return
 		const colsCopy = structuredClone(dsScSamples.sampleColumns)
 		for (const col of colsCopy) {
-			col.label = (await this.app.vocabApi.getterm(col.termid)).name
+			let label = col.termid
+			try {
+				label = (await this.app.vocabApi.getterm(col.termid)).name
+			} catch (e: any) {
+				if (e.message) {
+					//Ignore. if statement to prevent tsc error.
+				}
+				/** Ignore errors and use the termid as the column header.
+				 * this is due to practical constrain that gdc needs to supply
+				 * analysis.workflow_type as 'Library',but this is not a term in gdc dictionary*/
+			}
+			col.label = label
 		}
 		return colsCopy
 	}
