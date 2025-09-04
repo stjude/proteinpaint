@@ -1,11 +1,11 @@
-import type { BaseTW, BaseQ, BaseTerm, GroupSettingQ, TermGroupSetting } from './term.ts'
+import type { BaseTW, MinBaseQ, BaseTerm, GroupSettingQ, TermGroupSetting } from '../index.ts'
 import type { TermSettingInstance } from '../termsetting.ts'
 
 /*
 For term type 'snp'
 */
 
-export type SnpQ = BaseQ & GroupSettingQ
+export type SnpQ = MinBaseQ & GroupSettingQ
 
 export type SnpTerm = BaseTerm & {
 	chr: string

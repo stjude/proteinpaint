@@ -1,4 +1,4 @@
-import type { BaseTW, BaseQ, BaseTerm } from './term.ts'
+import type { BaseTW, MinBaseQ, BaseTerm } from '../index.ts'
 import type { TermSettingInstance, InstanceDom, UseCase } from '../termsetting.ts'
 import type { VocabApi } from '../vocab.ts'
 import type { Tvs, Filter } from '../filter.ts'
@@ -19,7 +19,7 @@ type RestrictAncestry = {
 	tvs: Tvs
 }
 
-export type SnpsQ = BaseQ & {
+export type SnpsQ = MinBaseQ & {
 	// termType: 'snplocus' | 'snplst'
 	//for snplst and snplocus term types
 	AFcutoff: number

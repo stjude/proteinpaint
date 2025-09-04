@@ -1,11 +1,12 @@
-import type { BaseTerm, BaseQ, TermValues, BaseTW } from './term.ts'
+import type { BaseTerm, MinBaseQ, TermValues, BaseTW } from '../index.ts'
 //import type { TermWrapper } from './tw.ts'
 
 /**
  * @category TW
  */
 
-export type ConditionQ = BaseQ & {
+// TODO: should implement the expected property combinations as distinct types
+export type ConditionQ = MinBaseQ & {
 	mode: 'discrete' | 'binary' | 'cuminc' | 'cox'
 	type?: 'values'
 	bar_by_children?: boolean // 'true' if term is not a leaf and has subconditions
