@@ -380,6 +380,7 @@ class GRIN2 extends RxComponentInner {
 		// Display Manhattan plot
 		if (result.pngImg) {
 			console.log('GRIN2 result', result)
+			console.log('GRIN2 sample number', result.plotData.points.length)
 			const plotContainer = this.dom.div.append('div').style('text-align', 'left').style('margin', '20px 0')
 
 			// Create header with title and download button
