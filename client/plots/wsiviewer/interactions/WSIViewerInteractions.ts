@@ -199,6 +199,8 @@ export class WSIViewerInteractions {
 
 					// TODO fix hardcoded userId
 					const body: SaveWSIAnnotationRequest = {
+						genome: state.vocab.genome,
+						dslabel: state.vocab.dslabel,
 						userId: 1,
 						coordinates: annotationsData[currentIndex].zoomCoordinates,
 						classId: selectedClassId!,
@@ -208,7 +210,7 @@ export class WSIViewerInteractions {
 
 					try {
 						// TODO add UI rollback
-						await dofetch3('saveWSIAnnotation', { body })
+						await dofetch3('saveWSIAnnotation', { method: 'POST', body })
 						//Advance to the next table row after annotating
 						const nextIdx = currentIndex + 1
 						if (nextIdx < annotationsData.length) {

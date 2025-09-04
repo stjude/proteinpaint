@@ -9,10 +9,6 @@ const routePath = 'saveWSIAnnotation'
 export const api: RouteApi = {
 	endpoint: `${routePath}`,
 	methods: {
-		get: {
-			...saveWSIAnnotationPayload,
-			init
-		},
 		post: {
 			...saveWSIAnnotationPayload,
 			init
@@ -23,19 +19,18 @@ export const api: RouteApi = {
 function init({ genomes }) {
 	return async (req, res): Promise<void> => {
 		try {
-			// Accept from query (GET) or body (POST); prefer body if present
-			const annotation: SaveWSIAnnotationRequest = (
-				req.body && Object.keys(req.body).length ? req.body : req.query
-			) as SaveWSIAnnotationRequest
+			const query: SaveWSIAnnotationRequest = req.query
+			if (!query.genome) throw new Error('.genome is required for deleteWSIAnnotation request.')
+			if (!query.dslabel) throw new Error('.dslabel is required for deleteWSIAnnotation request.')
 
-			// these are fixed in your app; adjust if they come from request
-			const g = genomes['hg38']
+			const g = genomes[query.genome]
 			if (!g) throw new Error('invalid genome name')
-			const ds = g.datasets['AIAHistoLabeler']
+
+			const ds = g.datasets[query.dslabel]
 			if (!ds) throw new Error('invalid dataset name')
 
 			if (typeof ds.queries?.WSImages?.saveWSIAnnotation === 'function') {
-				const result = await ds.queries.WSImages.saveWSIAnnotation(annotation)
+				const result = await ds.queries.WSImages.saveWSIAnnotation(query)
 				if (result?.status === 'error') {
 					return res.status(500).send(result)
 				}
@@ -53,8 +48,7 @@ function init({ genomes }) {
 }
 
 export async function validate_query_saveWSIAnnotation(ds: Mds3) {
-	// Only attach if not already provided
-	if (typeof ds?.queries?.WSImages?.saveWSIAnnotation === 'function') return
+	if (!ds.queries?.WSImages?.db) return
 	const connection = getDbConnection(ds)
 	if (!connection) {
 		// DB file missing
@@ -64,9 +58,6 @@ export async function validate_query_saveWSIAnnotation(ds: Mds3) {
 }
 
 function validateQuery(ds: any, connection: Database.Database) {
-	if (!ds.queries) ds.queries = {}
-	if (!ds.queries.WSImages) ds.queries.WSImages = {}
-
 	ds.queries.WSImages.saveWSIAnnotation = async (annotation: SaveWSIAnnotationRequest) => {
 		try {
 			const timestamp = new Date().toISOString()

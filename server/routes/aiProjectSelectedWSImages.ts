@@ -98,14 +98,14 @@ function init({ genomes }) {
 }
 
 export async function validate_query_getWSIAnnotations(ds: Mds3) {
-	if (typeof ds.queries?.WSImages?.getWSIAnnotations === 'function') return
+	if (!ds.queries?.WSImages?.db) return
 	const connection = getDbConnection(ds)
 	if (!connection) return
 	validateWSIAnnotationsQuery(ds, connection)
 }
 
 export async function validate_query_getWSIClassesQuery(ds: Mds3) {
-	if (typeof ds.queries?.WSImages?.getAnnotationClasses === 'function') return
+	if (!ds.queries?.WSImages?.db) return
 	const connection = getDbConnection(ds)
 	if (!connection) return
 
@@ -113,8 +113,7 @@ export async function validate_query_getWSIClassesQuery(ds: Mds3) {
 }
 
 export function validateWSIAnnotationsQuery(ds: any, connection: Database.Database) {
-	// Only add if not already provided externally
-	if (typeof ds?.queries?.WSImages?.getWSIAnnotations === 'function') return
+	if (!ds.queries?.WSImages?.db) return
 
 	type AnnotationRow = {
 		id: number

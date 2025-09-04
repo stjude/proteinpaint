@@ -2,6 +2,7 @@ import type { Mclass } from './Mclass.ts'
 import type { WSImage } from './routes/samplewsimages.ts'
 import type { WSISample } from './routes/wsisamples.ts'
 import type { SaveWSIAnnotationRequest } from './routes/saveWSIAnnotation.ts'
+import type { DeleteWSIAnnotationRequest } from './routes/deleteWSIAnnotation.ts'
 
 /*** General usage types ***/
 type FileObj = {
@@ -1052,6 +1053,9 @@ export type WSImages = {
 
 	/** dynamically added on launch with built in logic */
 	saveWSIAnnotation?: (annotation: SaveWSIAnnotationRequest) => Promise<void>
+
+	/** dynamically added on launch with built in logic */
+	deleteWSIAnnotation?: (annotation: DeleteWSIAnnotationRequest) => Promise<void>
 
 	/** either ds supplied or dynamically added on launch with built in logic (retrieve the sample list from the wsimages table) */
 	getSamples?: () => Promise<Array<WSISample>>

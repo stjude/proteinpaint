@@ -1,6 +1,8 @@
 import type { RoutePayload } from './routeApi.ts'
 
 export type SaveWSIAnnotationRequest = {
+	genome: string
+	dslabel: string
 	userId: number
 	coordinates: [number, number]
 	classId: number

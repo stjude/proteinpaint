@@ -55,6 +55,7 @@ import { mds3InitNonblocking } from './mds3.init.nonblocking.js'
 import { dtTermTypes } from '#shared/terms.js'
 import { makeAdHocDicTermdbQueries } from './adHocDictionary/buildAdHocDictionary.ts'
 import { validate_query_saveWSIAnnotation } from '#routes/saveWSIAnnotation.js'
+import { validate_query_deleteWSIAnnotation } from '#routes/deleteWSIAnnotation.js'
 
 /*
 init
@@ -171,6 +172,7 @@ export async function init(ds, genome, totalDsLst = 0) {
 		await validate_query_getWSIAnnotations(ds)
 		await validate_query_getWSIClassesQuery(ds)
 		await validate_query_getSampleWSImages(ds, genome)
+		await validate_query_deleteWSIAnnotation(ds)
 		await validate_query_saveWSIAnnotation(ds)
 		await validate_query_getWSISamples(ds, genome)
 		await makeAdHocDicTermdbQueries(ds)
