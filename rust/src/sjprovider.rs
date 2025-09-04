@@ -1,6 +1,6 @@
 // Compile: cd .. && cargo build --release
 // Test: cd .. && export RUST_BACKTRACE=full && time cargo test --  --nocapture (runs all test except those marked as "ignored")
-// Ignored tests: cd .. && export RUST_BACKTRACE=full && cargo test -- --ignored --nocapture
+// Ignored tests: cd .. && export RUST_BACKTRACE=full && time cargo test -- --ignored --nocapture
 use async_stream::stream;
 use futures::StreamExt;
 use rig::client::{ClientBuilderError, CompletionClient, EmbeddingsClient, ProviderClient, VerifyClient, VerifyError};
