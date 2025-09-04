@@ -6,7 +6,6 @@ import { dofetch3 } from '#common/dofetch'
 import { Menu, renderTable, icons, table2col, make_one_checkbox } from '#dom'
 import { dtsnvindel, mclass } from '#shared/common.js'
 import { get$id } from '#termsetting'
-import { select } from 'd3-selection'
 
 class GRIN2 extends RxComponentInner {
 	readonly type = 'grin2'
@@ -411,24 +410,17 @@ class GRIN2 extends RxComponentInner {
 
 			const plotData = result.plotData
 
-			const geneTooltip = select('body')
-				.append('div')
-				.attr('class', 'manhattan-tooltip')
-				.style('position', 'absolute')
-				.style('visibility', 'hidden')
-				.style('background', 'rgba(0, 0, 0, 0.9)')
-				.style('color', 'white')
-				.style('padding', '8px 12px')
-				.style('border-radius', '6px')
-				.style('font-size', '13px')
-				.style('font-family', 'Arial, sans-serif')
-				.style('box-shadow', '0 2px 8px rgba(0,0,0,0.3)')
-				.style('pointer-events', 'none')
-				.style('z-index', '10000')
-				.style('max-width', '200px')
+			// Create tooltip for the genes
+			const geneTooltip = new Menu({
+				padding: '8px 12px',
+				backgroundColor: `${this.backgroundColor}`,
+				border: `1px solid ${this.borderColor}`,
+				offsetX: 10,
+				offsetY: -30,
+				hideXmute: 5,
+				hideYmute: 5
+			})
 
-			console.log('Plot data:', plotData)
-			console.log('Number of points:', plotData.points.length)
 			const svg = plotContainer.append('svg').attr('width', plotData.plot_width).attr('height', plotData.plot_height)
 
 			// Add the matplotlib background image
@@ -446,23 +438,23 @@ class GRIN2 extends RxComponentInner {
 				.data(plotData.points)
 				.enter()
 				.append('circle')
-				.attr('cx', d => d.svg_x) // Use pre-calculated SVG coordinates
-				.attr('cy', d => d.svg_y) // Use pre-calculated SVG coordinates
+				.attr('cx', d => d.svg_x)
+				.attr('cy', d => d.svg_y)
 				.attr('r', 8)
-				.attr('fill', d => d.color) // Use color from data
+				.attr('fill', d => d.color)
 				.attr('stroke', 'black')
 				.attr('stroke-width', 1)
 				.style('cursor', 'pointer')
 				.on('mouseover', function (event, d) {
-					//mayLog('Hovered gene:', d.gene, d.type, d.y)
 					geneTooltip
+						.clear()
+						.d.append('div')
 						.html(`Gene: ${d.gene}<br>Type: ${d.type}<br>-log10(q-value): ${d.y.toFixed(3)}`)
-						.style('visibility', 'visible')
-						.style('left', `${event.pageX + 10}px`)
-						.style('top', `${event.pageY - 30}px`)
+
+					geneTooltip.show(event.clientX, event.clientY)
 				})
 				.on('mouseout', function () {
-					geneTooltip.style('visibility', 'hidden')
+					geneTooltip.hide()
 				})
 		}
 		// Display top genes table

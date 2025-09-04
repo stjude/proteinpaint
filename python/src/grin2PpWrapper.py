@@ -133,8 +133,7 @@ def plot_grin2_manhattan(grin_results: dict,
     # Process each gene
     for _, gene_row in gene_hits.iterrows():
         chrom = gene_row['chrom']
-        gene_name = gene_row.get('gene', 'Unknown')  # Fixed: use 'gene' column
-        
+        gene_name = gene_row.get('gene', 'Unknown') 
         # Skip if chromosome not in coordinate map
         if chrom not in chrom_data:
             continue
@@ -210,7 +209,6 @@ def plot_grin2_manhattan(grin_results: dict,
         # No data points to plot
         ax.set_ylim(0, 5)
 
-    # Add chromosome background shading FIRST (before plotting data)
     # Create alternating pattern based on chromosome order
     for i, (_, row) in enumerate(chrom_size.iterrows()):
         chrom = row['chrom']
@@ -280,8 +278,8 @@ def plot_grin2_manhattan(grin_results: dict,
     ax.grid(True, alpha=0.3, axis='y')
     
     plt.tight_layout()
-    
-    fig.canvas.draw()  # Ensure rendering is complete
+
+    fig.canvas.draw()  # Ensure rendering is complete for interactive features
 
     # Get exact figure dimensions in pixels (this matches what's saved as PNG)
     bbox = fig.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
