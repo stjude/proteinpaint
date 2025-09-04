@@ -44,12 +44,11 @@ export function table2col(arg) {
 					.attr('class', 'sjpp_show_scrollbar')
 			}
 			const tr = table.append('tr')
-			const td1 = tr.append('td').style('padding', arg.cellPadding).style('color', '#555')
-			const td2 = tr.append('td')
-			if (arg.cellPadding) {
-				td1.style('padding', arg.cellPadding)
-				td2.style('padding', arg.cellPadding)
-			}
+			const td1 = tr
+				.append('td')
+				.style('padding', arg.cellPadding || '3px')
+				.style('color', '#555')
+			const td2 = tr.append('td').style('padding', arg.cellPadding || '3px')
 			if (text1 != undefined) td1.text(text1)
 			if (text2 != undefined) td2.text(text2)
 			return [td1, td2]

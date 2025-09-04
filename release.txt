@@ -1,1 +1,2 @@
-
+Fixes:
+- use common table ui for bam file case/tumor/assay list

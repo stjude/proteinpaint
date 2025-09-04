@@ -627,61 +627,47 @@ export async function bamsliceui(
 						})
 					}
 				}
-				const tableDiv = tip.d
-					.append('div')
-					.style('margin', '10px')
-					.attr('class', 'sjpp_show_scrollbar')
-					.style('height', '300px')
-					.style('resize', 'vertical')
+				const tableDiv = tip.d.append('div')
 				makeTable(tableDiv)
 			})
 
 		// create new table to show list of available cases and bams, based on scoped things (data, assays), allow to click a bam and feed into main ui; skip bams with assay types that are unchecked
 		function makeTable(tableDiv) {
 			tableDiv.selectAll('*').remove()
-			const table = tableDiv.append('table').style('border-spacing', '0px')
-
-			// header row that stays
-			const tr = table
-				.append('tr')
-				.style('position', 'sticky')
-				.style('top', '0px')
-				.style('background-color', 'white')
-				.style('color', '#555')
-			tr.append('td').text('CASE')
-			tr.append('td').text('BAM FILES, SELECT ONE TO VIEW')
-
-			// make tr for each case
+			const rows = []
 			for (const caseName in data.case2files) {
 				// get the list of visible bam files passed assay filter
 				const files = data.case2files[caseName].filter(f => assays.get(f.experimental_strategy).checked)
 				if (files.length == 0) continue // no files for this case due to assay filtering. do not show row
-
-				const tr = table.append('tr').attr('class', 'sja_clb_gray')
-				tr.append('td').style('vertical-align', 'top').style('color', '#555').text(caseName)
-				const td2 = tr.append('td')
 				for (const f of files) {
-					// make a div for each file
 					// f { tissue_type, tumor_descriptor, experimental_strategy, file_size, file_uuid }
-					td2
-						.append('div')
-						.attr('class', 'sja_clbtext')
-						.attr('tabindex', 0)
-						.html(
-							`${f.tissue_type}, ${f.tumor_descriptor == 'Not Applicable' ? '' : f.tumor_descriptor + ', '}${
-								f.experimental_strategy
-							} <span style="font-size:.8em">${f.file_size}</span>`
-						)
-						.on('click', () => {
-							tip.hide()
-							gdcid_input.property('value', f.file_uuid).node().dispatchEvent(new Event('search'))
-						})
-						.on('keyup', event => {
-							if (event.key == 'Enter') event.target.click()
-						})
+					rows.push([
+						{ value: caseName, data: f },
+						{ value: f.tissue_type },
+						{ value: f.tumor_descriptor },
+						{ value: f.experimental_strategy },
+						{ value: f.file_size }
+					])
 				}
 			}
-			table.select('.sja_clbtext')?.node()?.focus() // auto focus on the first bam file
+			renderTable({
+				rows,
+				columns: [
+					{ label: 'Case', sortable: true },
+					{ label: 'Tissue Type', sortable: true },
+					{ label: 'Tumor Descriptor', sortable: true },
+					{ label: 'Assay', sortable: true },
+					{ label: 'File Size' } // barplot doesn't handle well size data range from mb to gb
+				],
+				header: { allowSort: true },
+				div: tableDiv,
+				noButtonCallback: (i, node) => {
+					tip.hide()
+					gdcid_input.property('value', rows[i][0].data.file_uuid).node().dispatchEvent(new Event('search'))
+				},
+				singleMode: true
+			})
+			//table.select('.sja_clbtext')?.node()?.focus() // auto focus on the first bam file
 		}
 	}
 
