@@ -1,39 +1,10 @@
 import tape from 'tape'
 import * as b from '../termdb.bins.js'
 
-/*************************
- reusable helper functions
-**************************/
-
-const get_summary = (() => {
-	const values = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
-	const n = values.length / 100
-	return percentiles => {
-		const summary = {
-			min: Math.min(...values),
-			max: Math.max(...values)
-		}
-
-		const pct = []
-		for (const num of percentiles) {
-			summary['p' + num] = values[Math.floor(num * n)]
-		}
-
-		return summary
-	}
-})()
-
-function tryBin(test, arg, testMssg, expectedErrMssg) {
-	try {
-		b.compute_bins(arg, get_summary)
-		test.fail(testMssg)
-	} catch (e) {
-		test.equal(e, expectedErrMssg, testMssg)
-	}
-}
-
 /**************
  test sections
+
+validate_bins()
 ***************/
 tape('\n', function (test) {
 	test.comment('-***- termdb.bins specs -***-')
@@ -757,3 +728,63 @@ tape('compute_bins() single unique value (3)', function (test) {
 	)
 	test.end()
 })
+
+tape('validate_bins()', function (test) {
+	const bc = {
+		type: 'custom-bin',
+		lst: [
+			{ stop: 3, stopinclusive: false, startunbounded: true, label: '<' + 3 },
+			{ start: 3, stop: 3, startinclusive: true, stopinclusive: true, label: '=' + 3 },
+			{ start: 3, startinclusive: false, stopunbounded: true, label: '>' + 3 }
+		]
+	}
+	test.throws(
+		function () {
+			bc.lst[1].stopunbounded = true
+			b.default(bc)
+		},
+		/bin.startunbounded and bin.stopunbounded must not be set for non-first\/non-last bins/,
+		'throws when middle bin has stopunbounded=true'
+	)
+	test.throws(
+		function () {
+			delete bc.lst[1].stopunbounded
+			bc.lst[1].startunbounded = true
+			b.default(bc)
+		},
+		/bin.startunbounded and bin.stopunbounded must not be set for non-first\/non-last bins/,
+		'throws when middle bin has startunbounded=true'
+	)
+	test.end()
+})
+
+/*************************
+ reusable helper functions
+**************************/
+
+const get_summary = (() => {
+	const values = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+	const n = values.length / 100
+	return percentiles => {
+		const summary = {
+			min: Math.min(...values),
+			max: Math.max(...values)
+		}
+
+		const pct = []
+		for (const num of percentiles) {
+			summary['p' + num] = values[Math.floor(num * n)]
+		}
+
+		return summary
+	}
+})()
+
+function tryBin(test, arg, testMssg, expectedErrMssg) {
+	try {
+		b.compute_bins(arg, get_summary)
+		test.fail(testMssg)
+	} catch (e) {
+		test.equal(e, expectedErrMssg, testMssg)
+	}
+}
