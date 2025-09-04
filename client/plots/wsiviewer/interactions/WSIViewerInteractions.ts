@@ -354,7 +354,6 @@ export class WSIViewerInteractions {
 		if (predictionBorderFeature) {
 			source?.removeFeature(predictionBorderFeature)
 		}
-		// console.log(annotationFeature, activeBorderFeature, predictionBorderFeature)
 	}
 
 	private addActiveBorder(vectorLayer: VectorLayer, zoomCoordinates: [number, number], color: any, tileSize: number) {
