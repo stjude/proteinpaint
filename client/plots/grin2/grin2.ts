@@ -25,7 +25,8 @@ class GRIN2 extends RxComponentInner {
 		this.dom = {
 			controls: controls.style('display', 'block'),
 			div,
-			tip: new Menu({ padding: '' })
+			tip: new Menu({ padding: '' }),
+			geneTip: new Menu({ padding: '' })
 		}
 
 		if (opts.header) this.dom.header = opts.header.text('GRIN2').style('font-size', '0.7em').style('opacity', 0.6)
@@ -410,17 +411,6 @@ class GRIN2 extends RxComponentInner {
 
 			const plotData = result.plotData
 
-			// Create tooltip for the genes
-			const geneTooltip = new Menu({
-				padding: '8px 12px',
-				backgroundColor: `${this.backgroundColor}`,
-				border: `1px solid ${this.borderColor}`,
-				offsetX: 10,
-				offsetY: -30,
-				hideXmute: 5,
-				hideYmute: 5
-			})
-
 			const svg = plotContainer.append('svg').attr('width', plotData.plot_width).attr('height', plotData.plot_height)
 
 			// Add the matplotlib background image
@@ -445,16 +435,16 @@ class GRIN2 extends RxComponentInner {
 				.attr('stroke', 'black')
 				.attr('stroke-width', 1)
 				.style('cursor', 'pointer')
-				.on('mouseover', function (event, d) {
-					geneTooltip
+				.on('mouseover', (event, d) => {
+					this.dom.geneTip
 						.clear()
 						.d.append('div')
 						.html(`Gene: ${d.gene}<br>Type: ${d.type}<br>-log10(q-value): ${d.y.toFixed(3)}`)
 
-					geneTooltip.show(event.clientX, event.clientY)
+					this.dom.geneTip.show(event.clientX, event.clientY)
 				})
-				.on('mouseout', function () {
-					geneTooltip.hide()
+				.on('mouseout', () => {
+					this.dom.geneTip.hide()
 				})
 		}
 		// Display top genes table
