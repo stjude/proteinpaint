@@ -440,7 +440,7 @@ class GRIN2 extends RxComponentInner {
 				.append('circle')
 				.attr('cx', d => d.svg_x)
 				.attr('cy', d => d.svg_y)
-				.attr('r', 8)
+				.attr('r', 16)
 				.attr('fill', d => d.color)
 				.attr('stroke', 'black')
 				.attr('stroke-width', 1)

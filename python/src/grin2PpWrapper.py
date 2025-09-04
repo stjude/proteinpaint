@@ -67,7 +67,8 @@ def assign_lesion_colors(lesion_types):
 
 def plot_grin2_manhattan(grin_results: dict, 
                         chrom_size: pd.DataFrame,
-                        colors: Optional[Dict[str, str]] = None) -> tuple[plt.Figure, dict]:
+                        colors: Optional[Dict[str, str]] = None,
+						device_pixel_ratio: float = 2.0) -> tuple[plt.Figure, dict]:
     """
     Create a Manhattan plot for GRIN2 genomic analysis results using colored scatter points.
     
@@ -83,7 +84,8 @@ def plot_grin2_manhattan(grin_results: dict,
             - 'chrom': Chromosome names
             - 'size': Chromosome lengths in base pairs
         colors (Optional[Dict[str, str]]): Color mapping for mutation types.
-            
+		device_pixel_ratio (float): Device pixel ratio for rendering.
+
     Returns:
         tuple[plt.Figure, dict]: Matplotlib figure and interactive data dictionary
     """
@@ -94,9 +96,10 @@ def plot_grin2_manhattan(grin_results: dict,
             'loss': '#4444FF', 
             'mutation': '#44AA44'
         }
-    
+
     # Set plot DPI
-    plot_dpi = 110
+    plot_dpi = int(110 * device_pixel_ratio)
+
     
     # Extract gene.hits data
     gene_hits = grin_results['gene.hits']
@@ -654,18 +657,22 @@ try:
 
 
 	# 6. Generate Manhattan plot and encode as Base64
+
+	# Get device pixel ratio or set to 2 if not provided	
+	device_pixel_ratio = input_data.get("devicePixelRatio", 2.0)
 	try:
 
 		# Create the Manhattan plot
 		fig, plot_data = plot_grin2_manhattan(
 		grin_results, 
 		chrom_size, 
-		lsn_colors
+		lsn_colors,
+		device_pixel_ratio
 	)
 
 		# Calculate DPI for saving (same as used in plotting)
 		base_dpi = 110
-		save_dpi = int(base_dpi)
+		save_dpi = int(base_dpi * device_pixel_ratio)
 		
 		# Save to BytesIO buffer
 		buffer = BytesIO()
