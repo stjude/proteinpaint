@@ -5,6 +5,7 @@ import { select } from 'd3-selection'
 import { Menu } from '#dom/menu'
 import { icons as icon_functions } from '#dom/control.icons'
 import { getCategoricalTermFilter, getCombinedTermFilter } from '#filter'
+import { DownloadMenu } from '#dom/downloadMenu'
 
 /*
 
@@ -73,11 +74,10 @@ export class profilePlot {
 		const config = appState.plots.find(p => p.id === this.id)
 		const state = this.getState(appState)
 		if (this.opts.header) {
-			let chartName = config.chartType.match(/[A-Z][a-z]+/g)
-			chartName = chartName.join(' ')
-			this.opts.header
-				.style('text-transform', 'capitalize')
-				.text(config.header ? config.header + ` / ${state.user}` : chartName + ` / ${state.user}`)
+			this.chartName = config.chartType.match(/[A-Z][a-z]+/g)
+			this.chartName = this.chartName.join(' ')
+			this.chartName = config.header ? config.header + ` / ${state.user}` : this.chartName + ` / ${state.user}`
+			this.opts.header.style('text-transform', 'capitalize').text(this.chartName)
 		}
 		const div = this.opts.holder.append('div').style('display', 'inline-block')
 		const leftDiv = div.append('div').style('display', 'inline-block').style('vertical-align', 'top')
@@ -105,12 +105,7 @@ export class profilePlot {
 		this.dom.rightDiv.on('mouseout', event => this.onMouseOut(event))
 
 		document.addEventListener('scroll', () => this?.tip?.hide())
-		icon_functions['pdf'](iconsDiv.append('div').style('padding', '0px 5px 15px 5px'), {
-			title: 'Prints page, select Save as PDF in the options to download as a pdf',
-			handler: () => {
-				window.print()
-			}
-		})
+
 		//later on show table for the profileForms
 		if (this.type != 'profileBarchart' && this.type != 'profileForms') {
 			const tableIconDiv = iconsDiv.append('div').style('padding-bottom', '15px')
@@ -157,6 +152,10 @@ export class profilePlot {
 	async showTable(show) {
 		this.settings.showTable = show
 		await this.app.dispatch({ type: 'plot_edit', id: this.id, config: { settings: { [this.type]: this.settings } } })
+	}
+
+	preApiFreeze(api) {
+		api.getChartImages = () => this.getChartImages()
 	}
 
 	async main() {
@@ -552,7 +551,7 @@ export class profilePlot {
 
 	getDownloadFilename() {
 		this.downloadCount++
-		let filename = `${this.type}${this.downloadCount}.svg`
+		let filename = `${this.type}${this.downloadCount}`
 		filename = filename.split(' ').join('_')
 		return filename
 	}
@@ -561,6 +560,16 @@ export class profilePlot {
 		if (!d) return 0
 		const score = this.data.term2Score[d.score.term.id]
 		return score
+	}
+
+	async download(event) {
+		const name2svg = this.getChartImages()
+		const menu = new DownloadMenu(name2svg, this.getDownloadFilename())
+		menu.show(event.clientX, event.clientY)
+	}
+
+	getChartImages() {
+		return { ['']: { svg: this.dom.svg, parent: this.dom.svg.node() } }
 	}
 }
 

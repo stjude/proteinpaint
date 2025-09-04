@@ -12,10 +12,12 @@ import { ScatterInteractivity, downloadImage } from './viewmodel/scatterInteract
 import { ScatterViewModel2DLarge } from './viewmodel/scatterViewModel2DLarge.js'
 import { ScatterViewModel3D } from './viewmodel/scatterViewModel3D.js'
 import { controlsInit } from '../controls'
-import { select2Terms, DownloadMenu } from '#dom'
-import type { MassState } from '../../mass/types/mass.js'
+import { select2Terms } from '#dom/select2Terms'
+import type { MassState } from '../../../client/mass/types/mass.js'
+import { DownloadMenu } from '#dom/downloadMenu'
+import { PlotBase } from '#plots/PlotBase.js'
 
-export class Scatter extends RxComponentInner {
+export class Scatter extends PlotBase implements RxComponentInner {
 	config: any
 	view!: ScatterView
 	model!: ScatterModel
@@ -30,9 +32,11 @@ export class Scatter extends RxComponentInner {
 	transform: any
 	parentId: any
 	zoom: any
+	dom: any
+	api: any
 
 	constructor(opts) {
-		super()
+		super(opts)
 		this.type = 'sampleScatter'
 		this.parentId = opts?.parentId //not working!!!, need to pass opts with the parentId to the component
 		this.zoom = 1
@@ -50,6 +54,7 @@ export class Scatter extends RxComponentInner {
 				this.zoom = parseFloat(match[1])
 			}
 		}
+		this.dom = this.view.dom
 	}
 
 	reactsTo(action) {
@@ -161,10 +166,6 @@ export class Scatter extends RxComponentInner {
 			name2svg[name] = { svg: chart.svg, parent: chart.svg.node() }
 		}
 		return name2svg
-	}
-
-	preApiFreeze(api) {
-		api.getChartImages = () => this.getChartImages()
 	}
 }
 

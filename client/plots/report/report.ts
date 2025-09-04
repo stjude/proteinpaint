@@ -178,7 +178,7 @@ export class Report extends RxComponentInner {
 							y += 30
 						}
 						if (name.trim()) {
-							doc.text(name, x, y)
+							doc.text(name.length > 90 ? name.slice(0, 90) + '...' : name, x, y)
 							y += 20
 						}
 						await doc.svg(svg, { x, y, width, height })
