@@ -26,11 +26,11 @@ import { dtsnvindel, dtcnv, dtfusionrna } from '#shared/common.js'
  * 3. Read and filter file contents based on snvindelOptions, cnvOptions, fusionOptions:
  *    - SNV/indel: Filter by depth, alternate allele count, and consequence types
  *    - CNV: Filter by copy number thresholds, and max segment length
- *    - Fusion: Filter by fusion type and confidence score
+ *    - Fusion: TBD
  *    - Hypermutator: Apply a maximum mutation count cutoff for highly mutated samples
  * 4. Convert filtered data to lesion format expected by Python script
- * 5. Pass lesion data to Python for GRIN2 statistical analysis and plot generation
- * 6. Return Manhattan plot as base64 string, top gene table, and timing information
+ * 5. Pass lesion data and device pixel ratio to Python for GRIN2 statistical analysis and plot generation
+ * 6. Return Manhattan plot as base64 string, top gene table, timing information, and statistically significant results that are displayed as an interactive svg
  */
 
 export const api: RouteApi = {
@@ -240,6 +240,7 @@ async function processSampleData(
 	}
 }
 
+/** Process the MLST data for each sample */
 async function processSampleMlst(
 	sampleName: string,
 	mlst: any[],
