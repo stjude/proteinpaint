@@ -3,7 +3,6 @@ import { fillTwLst } from '#termsetting'
 import * as d3 from 'd3'
 import { profilePlot } from './profilePlot.js'
 import { renderTable } from '../dom/table'
-import { loadFilterTerms } from './profilePlot.js'
 import { getDefaultProfilePlotSettings, ABBREV_COHORT, makeChartBtnMenu, getProfilePlotConfig } from './profilePlot.js'
 
 class profileRadar extends profilePlot {
