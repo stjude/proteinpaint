@@ -1,13 +1,13 @@
-import type { MassAppApi } from '#mass/types/mass'
+import type { AppApi } from '#rx'
 import type { ClientGenome } from '../../../types/clientGenome'
 
 /** Handles the interactivity from the view */
 export class SCInteractions {
-	app: MassAppApi
+	app: AppApi
 	id: string
 	genome: ClientGenome
 
-	constructor(app: MassAppApi, id: string) {
+	constructor(app: AppApi, id: string) {
 		this.app = app
 		this.id = id
 		this.genome = this.app.opts.genome

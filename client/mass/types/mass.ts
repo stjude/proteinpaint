@@ -114,6 +114,7 @@ export type BasePlotConfig = {
 	term?: any //TermWrapper
 	term2?: any //
 	settings: PlotSettings
+	parentId?: string
 }
 
 type PlotSettings = {
@@ -131,9 +132,7 @@ type PlotSettings = {
 }
 
 export type PlotConfig = BasePlotConfig & {
-	term: any
 	term0?: any
-	term2?: any
 }
 
 export type ControlInputEntry = {
