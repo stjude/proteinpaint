@@ -7,7 +7,7 @@ import type {
 	BaseTW,
 	PredefinedGroupSettingQ,
 	CustomGroupSettingQ
-} from './term.ts'
+} from '../index.ts'
 import type { RawValuesQ, RawPredefinedGroupsetQ, RawCustomGroupsetQ, MinBaseQ } from './q.ts'
 import type { TermSettingInstance } from '../termsetting.ts'
 
@@ -89,8 +89,9 @@ export type CatTWCustomGS = BaseTW & {
 
 export type CatTWTypes = CatTWValues | CatTWPredefinedGS | CatTWCustomGS
 
+// TODO: should not need this once TermSettingInstance is replaced with simply using the class as the type
 export type CategoricalTermSettingInstance = TermSettingInstance & {
-	q: CategoricalQ
+	q: CategoricalQ & { mode: 'binary' | 'discrete' }
 	term: CategoricalTerm
 	category2samplecount: any
 	validateGroupsetting: () => { text: string; bgcolor?: string }

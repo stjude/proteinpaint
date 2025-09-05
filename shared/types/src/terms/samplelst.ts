@@ -1,4 +1,4 @@
-import type { BaseTerm, BaseQ } from './term.ts'
+import type { BaseTerm, MinBaseQ } from '../index.ts'
 import type { TermWrapper } from './tw.ts'
 import type { TermSettingInstance } from '../termsetting.ts'
 
@@ -21,7 +21,7 @@ export type SampleLstTermValues = {
 	}
 }
 
-export type SampleLstQ = BaseQ & {
+export type SampleLstQ = MinBaseQ & {
 	groups: SampleLstTermValues
 }
 

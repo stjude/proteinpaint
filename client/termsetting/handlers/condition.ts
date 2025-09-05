@@ -1,7 +1,7 @@
 import { getPillNameDefault, set_hiddenvalues } from '#termsetting'
 import { make_radios, sayerror, throwMsgWithFilePathAndFnName } from '#dom'
 import { copyMerge } from '#rx'
-import type { PillData, ConditionTW, ConditionQ, VocabApi, TermValues } from '#types'
+import type { PillData, RawConditionTW, ConditionQ, VocabApi, TermValues } from '#types'
 
 // grades that can be used for q.breaks, exclude uncomputable ones and 0, thus have to hardcode
 // if needed, can define from termdbConfig
@@ -410,7 +410,7 @@ function getGroups(grades: number[], breaks: number[]) {
 	return groups
 }
 
-export function fillTW(tw: ConditionTW, vocabApi: VocabApi, defaultQ: ConditionQ) {
+export function fillTW(tw: RawConditionTW, vocabApi: VocabApi, defaultQ: ConditionQ) {
 	set_hiddenvalues(tw.q as ConditionQ, tw.term)
 
 	if (defaultQ) {
@@ -421,17 +421,24 @@ export function fillTW(tw: ConditionTW, vocabApi: VocabApi, defaultQ: ConditionQ
 	// assign default if missing
 	if (!Object.keys(tw.q).includes('mode')) tw.q.mode = 'discrete'
 
-	// must set up bar/value flags before quiting for inuse:false
-	if (tw.q.value_by_max_grade || tw.q.value_by_most_recent || tw.q.value_by_computable_grade) {
-		// need any of the three to be set
-	} else {
-		// set a default one
-		tw.q.value_by_max_grade = true
+	if (!tw.q.valueFor) {
+		// TODO: always use discriminant properties and remove the need for boolean flags
+		// that break expectations for mutually-exclusive-values, so that the workarounds
+		// in this code block will not be needed
+		const q = tw.q as any
+		if (!q.bar_by_grade && !q.bar_by_children) q.bar_by_grade = true satisfies boolean
+		;(tw.q as any).valueFor = (tw.q as any).bar_by_children ? 'children' : 'grade'
 	}
-	if (tw.q.bar_by_grade || tw.q.bar_by_children) {
-		//ignore
-	} else {
-		tw.q.bar_by_grade = true
+
+	// must set up bar/value flags before quiting for inuse:false
+	if (tw.q.valueFor == 'grade') {
+		// TODO: replace with tw.q.valueBy or tw.q.restriction
+		if (tw.q.value_by_max_grade || tw.q.value_by_most_recent || tw.q.value_by_computable_grade) {
+			// need any of the three to be set
+		} else {
+			// set a default one
+			tw.q.value_by_max_grade = true
+		}
 	}
 
 	// assign breaks
@@ -443,26 +450,28 @@ export function fillTW(tw: ConditionTW, vocabApi: VocabApi, defaultQ: ConditionQ
 	}
 
 	// assign groups based on breaks
-	if (tw.q.breaks?.length) {
-		if (!tw.term.values) throw 'missing term.values'
-		if (tw.q.mode == 'discrete' || tw.q.mode == 'binary') {
-			// only assign groups to discrete and binary terms
-			// for cuminc and cox terms, groups will be determined in sql query
+	if (tw.q.valueFor == 'grade') {
+		if (tw.q.breaks?.length) {
+			if (!tw.term.values) throw 'missing term.values'
+			if (tw.q.mode == 'discrete' || tw.q.mode == 'binary') {
+				// only assign groups to discrete and binary terms
+				// for cuminc and cox terms, groups will be determined in sql query
 
-			// term.values is treated optional so tsc won't complain
+				// term.values is treated optional so tsc won't complain
 
-			const grades = Object.keys(tw.term.values)
-				.filter(g => (tw.q.mode == 'discrete' ? !tw.term.values?.[g].uncomputable : g))
-				.map(Number)
-				.sort((a, b) => a - b)
+				const grades = Object.keys(tw.term.values)
+					.filter(g => (tw.q.mode == 'discrete' ? !tw.term.values?.[g].uncomputable : g))
+					.map(Number)
+					.sort((a, b) => a - b)
 
-			tw.q.groups = getGroups(grades, tw.q.breaks)
+				tw.q.groups = getGroups(grades, tw.q.breaks)
+			}
 		}
-	}
 
-	// cox time scale
-	if (tw.q.mode == 'cox') {
-		if (!tw.q.timeScale) tw.q.timeScale = 'time'
-		if (!['age', 'time'].includes(tw.q.timeScale)) throw 'invalid q.timeScale'
+		// cox time scale
+		if (tw.q.mode == 'cox') {
+			if (!tw.q.timeScale) tw.q.timeScale = 'time'
+			if (!['age', 'time'].includes(tw.q.timeScale)) throw 'invalid q.timeScale'
+		}
 	}
 }

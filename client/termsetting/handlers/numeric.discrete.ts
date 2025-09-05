@@ -6,7 +6,7 @@ import { get_bin_label, get_bin_range_equation } from '#shared/termdb.bins.js'
 import { make_radios, Tabs, violinRenderer } from '#dom'
 import { getPillNameDefault } from '../termsetting'
 import { convertViolinData } from '#filter/tvs.numeric'
-import type { PillData, RangeEntry, NumericQ } from '#types'
+import type { PillData, NumericBin, NumericQ } from '#types'
 
 /*
 ********************** EXPORTED
@@ -154,49 +154,52 @@ function processCustomBinInputs(self) {
 	const startinclusive = self.dom.boundaryInput.property('value') == 'startinclusive'
 	const stopinclusive = self.dom.boundaryInput.property('value') == 'stopinclusive'
 	const inputs = self.dom.bins_table.node().querySelectorAll('input')
-	let prevBin!: RangeEntry //previous bin
+
 	const inputData = self.dom.customBinBoundaryInput
 		.property('value')
 		.split('\n')
 		.filter((d: any) => d != '' && !isNaN(d))
 
 	const trackBins = new Set(inputData)
+	if (!trackBins.size) return
 	// Fix for when user enters in the same number more than once.
 	// UI will ignore duplicate entries completely.
-	const data: RangeEntry[] = Array.from(trackBins)
+
+	// Type '{ start: number; startinclusive: boolean; stopinclusive: boolean; }[]' is not assignable to type 'NumericBin[]'.
+	// Type '{ start: number; startinclusive: boolean; stopinclusive: boolean; }' is not assignable to type 'NumericBin'.
+	//   Property 'stop' is missing in type '{ start: number; startinclusive: boolean; stopinclusive: boolean; }' but required in type 'FullyBoundedBin'.
+
+	const sortedBins = Array.from(trackBins)
 		.map((d: any) => +d)
 		.sort((a, b) => a - b)
-		.map((d, i) => {
-			const bin = {
-				start: +d,
-				startinclusive,
-				stopinclusive
-			}
-			if (prevBin) {
-				delete prevBin.stopunbounded
-				prevBin.stop = bin.start
-				const label = inputs[i].value
-				prevBin.label = label ? label : get_bin_label(prevBin, self.q, self.term.valueConversion)
-				prevBin.range = get_bin_range_equation(prevBin, self.q)
-			}
-			prevBin = bin
-			return bin
-		})
-	if (data.length == 0) return
-	prevBin.stopunbounded = true
-	const label = inputs[data.length]?.value
-	prevBin.label = label ? label : get_bin_label(prevBin, self.q, self.term.valueConversion)
-	prevBin.range = get_bin_range_equation(prevBin, self.q)
 
-	data.unshift({
-		startunbounded: true,
-		stop: data[0].start,
-		startinclusive,
-		stopinclusive,
-		label: inputs[0].value
-	})
+	const data: NumericBin[] = [
+		// first bin
+		{
+			startunbounded: true,
+			stop: trackBins[0].start,
+			startinclusive: false,
+			stopinclusive,
+			label: inputs[0].value
+		}
+	]
+
 	if (!data[0].label) data[0].label = get_bin_label(data[0], self.q, self.term.valueConversion)
 	if (!data[0].range) data[0].range = get_bin_range_equation(data[0], self.q)
+
+	for (const [i, d] of sortedBins.entries()) {
+		const bin = {
+			start: +d,
+			startinclusive,
+			stopinclusive,
+			stop: trackBins[i + 1]?.start,
+			stopunbounded: i === trackBins.size,
+			label: inputs[i].value,
+			range: ''
+		}
+		if (bin.label === '' || bin.label === undefined) bin.label = get_bin_label(bin, self.q, self.term.valueConversion)
+		if (bin.range === '' || bin.range === undefined) bin.range = get_bin_range_equation(bin, self.q)
+	}
 	return data
 }
 

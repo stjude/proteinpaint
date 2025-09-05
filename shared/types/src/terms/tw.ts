@@ -6,6 +6,21 @@ import type { CatTWTypes, CategoricalQ } from './categorical.ts'
 import type { NumTW, NumericQ } from './numeric.ts'
 import type { GvTW, GvQ } from './geneVariant.ts'
 
+export type BaseTW = {
+	id?: string
+	$id?: string
+	isAtomic?: true
+	// plot-specific customizations that are applied to a tw copy
+	// todo: should rethink these
+	legend?: any
+	settings?: {
+		[key: string]: any
+	}
+	sortSamples?: any
+	minNumSamples?: number
+	valueFilter?: any
+}
+
 export type TermWrapper = CatTWTypes | NumTW | GvTW | ConditionTW | SnpsTW | SnpTW
 
 export type Q = CategoricalQ | NumericQ | GvQ | ConditionQ | SnpsQ | SnpQ | SampleLstQ // | other q

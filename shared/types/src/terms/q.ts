@@ -1,4 +1,5 @@
-import type { HiddenValues, GroupSettingQ, GroupEntry } from './term.ts'
+import type { CategoricalBaseQ } from './categorical.js'
+import type { Filter } from '../filter.js'
 
 // MinBaseQ is BaseQ without .mode and .type
 // MinBaseQ should eventually replace BaseQ because .mode and .type
@@ -35,4 +36,62 @@ export type RawCustomGroupsetQ = MinBaseQ & {
 	}
 	/** deprecated nested object, will be handled by reshapeLegacyTW() in TwRouter */
 	groupsetting?: { inuse?: boolean } & GroupSettingQ
+}
+
+export type HiddenValues = {
+	[index: string]: number
+}
+
+/*** types supporting termwrapper q ***/
+
+export type ValuesQ = CategoricalBaseQ & {
+	type: 'values'
+}
+
+export type PredefinedGroupSettingQ = CategoricalBaseQ & {
+	type: 'predefined-groupset'
+	predefined_groupset_idx: number
+}
+
+export type CustomGroupSettingQ = CategoricalBaseQ & {
+	type: 'custom-groupset'
+	customset: BaseGroupSet
+}
+
+export type FilterQ = MinBaseQ & {
+	type: 'filter'
+}
+
+export type GroupSettingQ = ValuesQ | FilterQ | PredefinedGroupSettingQ | CustomGroupSettingQ
+
+export type ValuesGroup = {
+	name: string
+	type: 'values' | string // can remove boolean fallback once problematic js files are converted to .ts and can declare `type: 'values' as const`
+	values: { key: number | string; label: string }[]
+	uncomputable?: boolean // if true, do not include this group in computations
+}
+
+export type FilterGroup = {
+	name: string
+	type: 'filter'
+	filter: Filter
+	color: string
+}
+
+export type GroupEntry = ValuesGroup | FilterGroup
+
+export type BaseGroupSet = {
+	groups: GroupEntry[]
+}
+
+type Groupset = {
+	name: string
+	is_grade?: boolean
+	is_subcondition?: boolean
+	dt?: number // dt of groupset, used by geneVariant term
+} & BaseGroupSet
+
+export type TermGroupSetting = {
+	disabled: boolean // true when term has <= 2 values, otherwise false
+	lst?: Groupset[] // array of predefined groupsets
 }
