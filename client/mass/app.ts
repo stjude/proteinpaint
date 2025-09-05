@@ -1,4 +1,4 @@
-import { AppApi, type StoreApi, type ComponentApi, type RxAppInner } from '../rx'
+import { AppApi, type StoreApi, type ComponentApi, type RxAppInner } from '#rx'
 import { AppBase } from '#plots/AppBase.ts'
 import { storeInit } from './store'
 import { vocabInit } from '#termdb/vocabulary'

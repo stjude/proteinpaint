@@ -81,7 +81,7 @@ const defaultState = {
 }
 
 // one store for the whole MASS app
-class TdbStore extends StoreBase implements RxStoreInner {
+class MassStore extends StoreBase implements RxStoreInner {
 	static type = 'store'
 
 	// expected RxStoreInner, some are already declared/set in AppBase
@@ -244,11 +244,11 @@ class TdbStore extends StoreBase implements RxStoreInner {
 	supply a literal "actions" object on the 
 	constructor prototype
 */
-TdbStore.prototype.actions = {
-	// Type '{ app_refresh(this: TdbStore, action?: {}): Promise<void>; tab_set(action: any): void; cohort_set(action: any): void; plot_prep(action: any): Promise<void>; ... 13 more ...; delete_group({ name }: { ...; }): void; }' is not assignable to type '(action: { [prop: string]: any; type: string; }) => void | Promise<void>'.
+MassStore.prototype.actions = {
+	// Type '{ app_refresh(this: MassStore, action?: {}): Promise<void>; tab_set(action: any): void; cohort_set(action: any): void; plot_prep(action: any): Promise<void>; ... 13 more ...; delete_group({ name }: { ...; }): void; }' is not assignable to type '(action: { [prop: string]: any; type: string; }) => void | Promise<void>'.
 	// Object literal may only specify known properties, and 'app_refresh' does not exist in type '(action: { [prop: string]: any; type: string; }) => void | Promise<void>'.
 
-	async app_refresh(this: TdbStore, action) {
+	async app_refresh(this: MassStore, action) {
 		// optional action.state{} may be full or partial overrides
 		// to the current state
 		//
@@ -282,10 +282,10 @@ TdbStore.prototype.actions = {
 			}
 		}
 	},
-	tab_set(this: TdbStore, action) {
+	tab_set(this: MassStore, action) {
 		this.state.nav.activeTab = action.activeTab
 	},
-	cohort_set(this: TdbStore, action) {
+	cohort_set(this: MassStore, action) {
 		this.state.activeCohort = action.activeCohort
 		const cohort = this.state.termdbConfig.selectCohort.values[action.activeCohort]
 		const cohortFilter = getFilterItemByTag(this.state.termfilter.filter, 'cohortFilter')
@@ -297,7 +297,7 @@ TdbStore.prototype.actions = {
 
 	// dispatch "plot_prep" action to produce a 'initiating' UI of this plot, for user to fill in additional details to launch the plot
 	// example: table, scatterplot which requires user to select two terms
-	async plot_prep(this: TdbStore, action) {
+	async plot_prep(this: MassStore, action) {
 		const plot = {
 			id: 'id' in action ? action.id : getId()
 		}
@@ -311,7 +311,7 @@ TdbStore.prototype.actions = {
 		this.state.plots.push(plot)
 	},
 
-	async plot_create(this: TdbStore, action) {
+	async plot_create(this: MassStore, action) {
 		const _ = await importPlot(action.config.chartType)
 		const plot = await _.getPlotConfig(action.config, this.app)
 		if (!('id' in action)) action.id = getId()
@@ -353,7 +353,7 @@ TdbStore.prototype.actions = {
 		}
 	},
 
-	plot_edit(this: TdbStore, action) {
+	plot_edit(this: MassStore, action) {
 		const plot = this.state.plots.find(p => p.id === action.id)
 		if (!plot) throw `missing plot id='${action.id}' in store.plot_edit()`
 		this.copyMerge(plot, action.config, action.opts ? action.opts : {})
@@ -371,7 +371,7 @@ TdbStore.prototype.actions = {
 		if (!action.parentId && plot.parentId) action.parentId = plot.parentId
 	},
 
-	plot_delete(this: TdbStore, action) {
+	plot_delete(this: MassStore, action) {
 		const i = this.state.plots.findIndex(p => p.id === action.id)
 		if (i !== -1) {
 			this.state.plots.splice(i, 1)
@@ -381,7 +381,7 @@ TdbStore.prototype.actions = {
 		}
 	},
 
-	plot_nestedEdits(this: TdbStore, action) {
+	plot_nestedEdits(this: MassStore, action) {
 		const plot = this.state.plots.find(p => p.id === action.id)
 		if (!plot) throw `missing plot id='${action.id}' in store.plot_edit_nested`
 		for (const edit of action.edits) {
@@ -394,14 +394,14 @@ TdbStore.prototype.actions = {
 	},
 
 	// TODO: delete this action? does not seem to be used
-	async plot_splice(this: TdbStore, action) {
+	async plot_splice(this: MassStore, action) {
 		for (const a of action.subactions) {
 			// need to await in case the sequence of subactions is relevant
 			await this.actions[a.type].call(this, a)
 		}
 	},
 
-	filter_replace(this: TdbStore, action) {
+	filter_replace(this: MassStore, action) {
 		if ('filter0' in action) {
 			// quick fix since rx.copyMerge() does not work for filter0,
 			// as used in app_refresh() and dispatched from GDC matrixApi.update()
@@ -427,7 +427,7 @@ TdbStore.prototype.actions = {
 		if (this.app.opts.app?.onFilterChange) this.app.opts.app.onFilterChange(this.state.plots)
 	},
 
-	cache_termq(this: TdbStore, { termId, q }) {
+	cache_termq(this: MassStore, { termId, q }) {
 		// TODO: support caching by term.name
 		if (!termId) throw `missing termId for caching custom term.q`
 		if (!q?.reuseId) throw `missing or empty tw.q.reuseId as cache identifier for term='${termId}'`
@@ -445,7 +445,7 @@ TdbStore.prototype.actions = {
 		}
 	},
 
-	uncache_termq(this: TdbStore, { term, q }) {
+	uncache_termq(this: MassStore, { term, q }) {
 		// TODO: support uncaching by term.name
 		if (!term.id) throw `missing term.id for uncaching custom term.q`
 		if (!q.reuseId) throw `missing qname as uncache identifier for term.id='${term.id}'`
@@ -468,16 +468,16 @@ TdbStore.prototype.actions = {
 		}
 	},
 
-	add_customTerm(this: TdbStore, action) {
+	add_customTerm(this: MassStore, action) {
 		this.state.customTerms.push(action.obj)
 	},
 
-	delete_customTerm(this: TdbStore, { name }) {
+	delete_customTerm(this: MassStore, { name }) {
 		const i = this.state.customTerms.findIndex(i => i.name == name)
 		if (i != -1) this.state.customTerms.splice(i, 1)
 	},
 
-	add_group(this: TdbStore, action) {
+	add_group(this: MassStore, action) {
 		if (this.state.nav.header_mode != 'hidden') {
 			const group = action.obj
 			const name = `Group ${this.state.groups.length + 1}`
@@ -500,7 +500,7 @@ TdbStore.prototype.actions = {
 		}
 	},
 
-	rename_group(this: TdbStore, action) {
+	rename_group(this: MassStore, action) {
 		const index = action.index
 		const newName = action.newName
 		if (this.state.nav.header_mode != 'hidden') {
@@ -514,7 +514,7 @@ TdbStore.prototype.actions = {
 		}
 	},
 
-	change_color_group(this: TdbStore, action) {
+	change_color_group(this: MassStore, action) {
 		const index = action.index
 		const newColor = action.newColor
 		if (this.state.nav.header_mode != 'hidden') {
@@ -528,7 +528,7 @@ TdbStore.prototype.actions = {
 		}
 	},
 
-	delete_group(this: TdbStore, { name }) {
+	delete_group(this: MassStore, { name }) {
 		if (this.state.nav.header_mode != 'hidden') {
 			const i = this.state.groups.findIndex(i => i.name == name)
 			if (i != -1) this.state.groups.splice(i, 1)
@@ -559,4 +559,4 @@ const getTwsByChartType = {
 }
 
 // must use the await keyword when using this storeInit()
-export const storeInit = StoreApi.getInitFxn(TdbStore)
+export const storeInit = StoreApi.getInitFxn(MassStore)

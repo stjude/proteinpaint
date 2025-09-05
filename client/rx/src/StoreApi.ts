@@ -9,6 +9,9 @@ export interface RxStoreInner {
 	debug?: boolean
 	sequenceId: number
 	numPromisedWrites: number
+	actions: {
+		[actionType: string]: (action: { type: string; [prop: string]: any }) => void | Promise<void>
+	}
 
 	init: () => void
 	validateState?: () => void
