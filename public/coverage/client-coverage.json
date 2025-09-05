@@ -5326,5 +5326,41 @@
       "prev": 5.1125,
       "diff": 0
     }
+  },
+  "plots/survival/survival.ts": {
+    "lines": {
+      "total": 484,
+      "covered": 359,
+      "skipped": 0,
+      "pct": 74.17
+    },
+    "functions": {
+      "total": 119,
+      "covered": 77,
+      "skipped": 0,
+      "pct": 64.7
+    },
+    "statements": {
+      "total": 516,
+      "covered": 368,
+      "skipped": 0,
+      "pct": 71.31
+    },
+    "branches": {
+      "total": 311,
+      "covered": 175,
+      "skipped": 0,
+      "pct": 56.27
+    },
+    "lowestPct": {
+      "curr": 56.27,
+      "prev": 0,
+      "diff": 56.27
+    },
+    "averagePct": {
+      "curr": 66.6125,
+      "prev": 0,
+      "diff": 66.6125
+    }
   }
 }
