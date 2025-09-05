@@ -165,11 +165,7 @@ class TdbSurvival extends PlotBase implements RxComponentInner {
 		if (this.opts.controls) {
 			this.opts.controls.on('downloadClick.survival', this.download)
 		} else {
-			this.dom.holder
-				.attr('class', 'pp-termdb-plot-viz')
-				.style('display', 'inline-block')
-				.style('min-width', '300px')
-				.style('margin-left', '50px')
+			this.dom.holder.attr('class', 'pp-termdb-plot-viz').style('display', 'inline-block').style('min-width', '300px')
 
 			this.components = {
 				controls: await controlsInit({
@@ -640,7 +636,7 @@ function setRenderers(self) {
 				.append('div')
 				.attr('class', 'pp-survival-chartLegends')
 				.style('vertical-align', 'top')
-				.style('margin', '10px 10px 10px 30px')
+				.style('margin', '10px 10px 10px 80px')
 				.style('display', 'none')
 
 			// p-values legend
