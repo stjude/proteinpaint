@@ -24,10 +24,6 @@ export class StoreBase {
 
 	numPromisedWrites: number = 0
 
-	actions: {
-		[actionType: string]: (action: { type: string; [prop: string]: any }) => void | Promise<void>
-	} = {} // will be overriden by child class
-
 	constructor(opts) {
 		this.opts = this.validateOpts(opts)
 		this.app = this.opts.app
