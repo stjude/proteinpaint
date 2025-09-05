@@ -248,8 +248,7 @@ def plot_grin2_manhattan(grin_results: dict,
 
     # Labels and title
     ax.set_ylabel('-log₁₀(q-value)', fontsize=12)
-    ax.set_xlabel('Chromosomes', fontsize=12) 
-    ax.set_title('Genome-Wide Significance', fontsize=14, pad=20, loc='left')
+    ax.set_xlabel('Chromosomes', fontsize=12)
 
     # Add horizontal legend at the top right, same level as title
     if len(mutation_cols) > 0:
@@ -726,4 +725,3 @@ try:
 except Exception as e:
 	write_error(f"Unexpected error: {str(e)}")
 	sys.exit(1)
-	
