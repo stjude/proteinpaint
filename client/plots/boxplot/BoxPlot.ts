@@ -11,6 +11,7 @@ import { Model } from './model/Model'
 import { ViewModel } from './viewModel/ViewModel'
 import { View } from './view/View'
 import { BoxPlotInteractions } from './interactions/BoxPlotInteractions'
+import { to_svg } from '#src/client'
 
 class TdbBoxplot extends RxComponentInner {
 	readonly type = 'boxplot'
@@ -27,17 +28,20 @@ class TdbBoxplot extends RxComponentInner {
 		const holder = opts.holder.classed('sjpp-boxplot-main', true)
 		const controls = opts.controls ? holder : holder.append('div')
 		const div = holder.append('div').style('padding', '5px')
-		const errorDiv = div.append('div').attr('id', 'sjpp-boxplot-error').style('opacity', 0.75)
-		const svg = div.append('svg').style('display', 'inline-block').attr('id', 'sjpp-boxplot-svg')
+		const errorDiv = div.append('div').attr('class', 'sjpp-boxplot-error').style('opacity', 0.75)
+		const chartsDiv = div
+			.append('div')
+			.attr('class', 'sjpp-boxplot-charts')
+			.style('display', 'flex')
+			.style('flex-direction', 'row')
+			.style('flex-wrap', 'wrap')
+			.style('max-width', '100vw')
 		this.dom = {
 			controls: controls as Elem,
 			div,
 			error: errorDiv,
-			svg,
-			plotTitle: svg.append('text'),
-			axis: svg.append('g'),
-			boxplots: svg.append('g'),
-			legend: div.append('div').attr('id', 'sjpp-boxplot-legend'),
+			charts: chartsDiv,
+			legend: div.append('div').attr('class', 'sjpp-boxplot-legend'),
 			tip: new Menu()
 		}
 		if (opts.header) this.dom.header = opts.header.html('Box plot')
@@ -61,6 +65,17 @@ class TdbBoxplot extends RxComponentInner {
 				usecase: { target: 'boxplot', detail: 'term2' },
 				title: 'Overlay data',
 				label: 'Overlay',
+				vocabApi: this.app.vocabApi,
+				numericEditMenuVersion: this.opts.numericEditMenuVersion || ['continuous', 'discrete'],
+				defaultQ4fillTW: term0_term2_defaultQ
+			},
+			{
+				type: 'term',
+				configKey: 'term0',
+				chartType: 'boxplot',
+				usecase: { target: 'boxplot', detail: 'term0' },
+				title: 'Divide by data',
+				label: 'Divide by',
 				vocabApi: this.app.vocabApi,
 				numericEditMenuVersion: this.opts.numericEditMenuVersion || ['continuous', 'discrete'],
 				defaultQ4fillTW: term0_term2_defaultQ
@@ -167,10 +182,10 @@ class TdbBoxplot extends RxComponentInner {
 		})
 
 		this.components.controls.on('downloadClick.boxplot', () => {
-			this.interactions!.download()
+			this.download()
 		})
 		this.components.controls.on('helpClick.boxplot', () => {
-			this.interactions!.help()
+			this.help()
 		})
 	}
 
@@ -191,7 +206,6 @@ class TdbBoxplot extends RxComponentInner {
 
 	async init() {
 		this.dom.div.style('display', 'inline-block').style('margin', '10px')
-		this.interactions = new BoxPlotInteractions(this.app, this.dom, this.id)
 		try {
 			await this.setControls()
 		} catch (e: any) {
@@ -203,52 +217,105 @@ class TdbBoxplot extends RxComponentInner {
 		try {
 			const config = structuredClone(this.state.config)
 			if (config.childType != this.type && config.chartType != this.type) return
-
-			if (!this.interactions) throw 'Interactions not initialized [box plot main()]'
-
 			const settings = config.settings.boxplot
 			const model = new Model(config, this.state, this.app, settings)
 			const data = await model.getData()
-			if (!data?.plots?.length || data['error']) {
-				this.interactions!.clearDom()
+			if (data.error) throw data.error
+			if (!data.charts || !Object.keys(data.charts).length) {
+				this.clearDom()
 				this.dom.error.style('padding', '20px 20px 20px 60px').text('No visible box plot data to render')
 				return
 			}
-			const maxLabelLgth = getMaxLabelWidth(
-				this.dom.boxplots,
-				data.plots.filter(p => !p.isHidden).map(p => p.boxplot.label)
-			)
-			const viewModel = new ViewModel(config, data, settings, maxLabelLgth, this.useDefaultSettings)
 
-			if (
-				(viewModel.rowSpace !== settings.rowSpace || viewModel.rowHeight !== settings.rowHeight) &&
-				this.useDefaultSettings == true
-			) {
-				/** If the row height or space changed during data processing,
-				 * save the new settings without calling app.dispatch.
-				 * Will show updated value in the controls. */
-				settings.rowSpace = viewModel.rowSpace
-				settings.rowHeight = viewModel.rowHeight
+			this.dom.charts.selectAll('*').remove()
 
-				this.app.save({
-					type: 'plot_edit',
-					id: this.id,
-					config: {
-						settings: {
-							boxplot: {
-								rowSpace: viewModel.rowSpace,
-								rowHeight: viewModel.rowHeight
+			// determine max label length across all charts
+			const labels: any = []
+			const tempsvg = this.dom.charts.append('svg')
+			for (const key of Object.keys(data.charts)) {
+				const chart = data.charts[key]
+				const chartLabels = chart.plots.filter(p => !p.isHidden).map(p => p.boxplot.label)
+				labels.push(...chartLabels)
+			}
+			const maxLabelLgth = getMaxLabelWidth(tempsvg, labels)
+			tempsvg.remove()
+
+			// plot charts
+			for (const key of Object.keys(data.charts)) {
+				const chart = data.charts[key]
+				// setup a dom{} object for the chart
+				const chartDiv = this.dom.charts.append('div')
+				const chartTitle = chartDiv
+					.append('div')
+					.attr('class', 'pp-chart-title')
+					.style('display', config.term0 ? 'block' : 'none')
+					.style('text-align', 'center')
+					.style('font-size', '1.1em')
+					.style('margin-bottom', '24px')
+				const chartSvg = chartDiv.append('svg').attr('class', 'sjpp-boxplot-svg')
+				const chartDom = Object.assign({}, this.dom, {
+					svg: chartSvg,
+					chartTitle,
+					plotTitle: chartSvg.append('text'),
+					axis: chartSvg.append('g'),
+					boxplots: chartSvg.append('g')
+				})
+				// get the view model
+				chart.absMin = data.absMin
+				chart.absMax = data.absMax
+				chart.uncomputableValues = data.uncomputableValues
+				const viewModel = new ViewModel(config, chart, settings, maxLabelLgth, this.useDefaultSettings)
+				if (
+					(viewModel.rowSpace !== settings.rowSpace || viewModel.rowHeight !== settings.rowHeight) &&
+					this.useDefaultSettings == true
+				) {
+					/** If the row height or space changed during data processing,
+					 * save the new settings without calling app.dispatch.
+					 * Will show updated value in the controls. */
+					settings.rowSpace = viewModel.rowSpace
+					settings.rowHeight = viewModel.rowHeight
+
+					this.app.save({
+						type: 'plot_edit',
+						id: this.id,
+						config: {
+							settings: {
+								boxplot: {
+									rowSpace: viewModel.rowSpace,
+									rowHeight: viewModel.rowHeight
+								}
 							}
 						}
-					}
-				})
+					})
+				}
+				// get interactions
+				const interactions = new BoxPlotInteractions(this.app, chartDom, this.id)
+				// plot the view
+				new View(viewModel.viewData, settings, chartDom, this.app, interactions)
 			}
-			new View(viewModel.viewData, settings, this.dom, this.app, this.interactions)
 		} catch (e: any) {
 			if (e instanceof Error) console.error(e.message || e)
 			else if (e.stack) console.log(e.stack)
 			throw e
 		}
+	}
+
+	download() {
+		//May add more options in the future
+		const svg = this.dom.svg.node() as Node
+		const plotConfig = this.app.getState().plots.find((p: BoxPlotConfig) => p.id === this.id)
+		to_svg(svg, `${plotConfig.term.term.name} box plot`, { apply_dom_styles: true })
+	}
+
+	help() {
+		//May add more options in the future
+		window.open('https://github.com/stjude/proteinpaint/wiki/Box-plot')
+	}
+
+	clearDom() {
+		this.dom.error.style('padding', '').text('')
+		this.dom.charts.selectAll('*').remove()
+		this.dom.legend.selectAll('*').remove()
 	}
 }
 
