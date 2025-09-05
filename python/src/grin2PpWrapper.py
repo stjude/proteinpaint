@@ -68,13 +68,15 @@ def assign_lesion_colors(lesion_types):
 def plot_grin2_manhattan(grin_results: dict, 
                         chrom_size: pd.DataFrame,
                         colors: Optional[Dict[str, str]] = None,
+                        plot_width: int = 1000,
+                        plot_height: int = 400,
                         device_pixel_ratio: float = 2.0) -> tuple[plt.Figure, dict]:
     """
     Create a Manhattan plot for GRIN2 genomic analysis results using colored scatter points.
     
     This function generates a genome-wide visualization showing the statistical 
     significance of genomic alterations across all chromosomes. Each point represents 
-      a gene with its significance level (-log₁₀(q-value)) plotted against its chromosome
+    a gene with its significance level (-log₁₀(q-value)) plotted against its chromosome
     start position. Different mutation types (gain, loss, mutation) are shown in different colors.
     
     Args:
@@ -84,6 +86,8 @@ def plot_grin2_manhattan(grin_results: dict,
             - 'chrom': Chromosome names
             - 'size': Chromosome lengths in base pairs
         colors (Optional[Dict[str, str]]): Color mapping for mutation types.
+        plot_width (int): Desired plot width in pixels.
+        plot_height (int): Desired plot height in pixels.
         device_pixel_ratio (float): Device pixel ratio for rendering.
 
     Returns:
@@ -97,12 +101,15 @@ def plot_grin2_manhattan(grin_results: dict,
             'mutation': '#44AA44'
         }
 
-    scale_factor = device_pixel_ratio * 0.7
-    base_width = 10 / scale_factor
-    base_height = 5 / scale_factor
-
-    # Set plot DPI - use device pixel ratio
-    plot_dpi = int(110 * min(device_pixel_ratio, 2.5))
+    # Calculate DPI and figure size
+    # Use higher DPI for device pixel ratio while keeping figure size constant
+    base_dpi = 100
+    plot_dpi = int(base_dpi * device_pixel_ratio)
+    
+    # Convert pixel dimensions to inches at base DPI
+    # This ensures the figure stays the same visual size regardless of DPR
+    fig_width_inches = plot_width / base_dpi
+    fig_height_inches = plot_height / base_dpi
     
     # Extract gene.hits data
     gene_hits = grin_results['gene.hits']
@@ -186,9 +193,9 @@ def plot_grin2_manhattan(grin_results: dict,
                     'q_value': q_value
                 })
     
-    # Create the matplotlib figure with scaled dimensions
-    fig, ax = plt.subplots(1, 1, figsize=(base_width, base_height), dpi=plot_dpi)
-    
+    # Create the matplotlib figure with constant size but high DPI
+    fig, ax = plt.subplots(1, 1, figsize=(fig_width_inches, fig_height_inches), dpi=plot_dpi)
+
     # Set up axes limits
     ax.set_xlim(0, total_genome_length)
     
@@ -230,10 +237,12 @@ def plot_grin2_manhattan(grin_results: dict,
             else:
                 ax.axvspan(start_pos, end_pos, facecolor='#e0e0e0', alpha=0.5, zorder=0)
     
-    # Plot the data points
+    # Plot the data points with size adjusted for DPI
     if plot_data['x']:
+        # Scale point size with device pixel ratio for better visibility
+        point_size = 20 * min(device_pixel_ratio, 2.5)
         ax.scatter(plot_data['x'], plot_data['y'], c=plot_data['colors'], 
-                   s=20, alpha=0.7, edgecolors='none', zorder=2)
+                   s=point_size, alpha=0.7, edgecolors='none', zorder=2)
     
     # Set chromosome positions and labels
     chr_positions = [chrom_data[row['chrom']]['center'] for _, row in chrom_size.iterrows() 
@@ -241,14 +250,17 @@ def plot_grin2_manhattan(grin_results: dict,
     chr_labels = [row['chrom'].replace('chr', '') for _, row in chrom_size.iterrows() 
                   if row['chrom'] in chrom_data]
     
-    # Set chromosome labels
+    # Set chromosome labels with font size scaled for DPI
+    font_size = 12 * min(device_pixel_ratio * 0.8, 2.0)
     ax.set_xticks(chr_positions)
-    ax.set_xticklabels(chr_labels, rotation=45, ha='center', va='top')
+    ax.set_xticklabels(chr_labels, rotation=45, ha='center', va='top', fontsize=font_size)
     ax.tick_params(axis='x', pad=2)
+    ax.tick_params(axis='y', labelsize=font_size)
 
-    # Labels and title
-    ax.set_ylabel('-log₁₀(q-value)', fontsize=12)
-    ax.set_xlabel('Chromosomes', fontsize=12)
+    # Labels and title with scaled font sizes
+    label_font_size = 12 * min(device_pixel_ratio * 0.8, 2.0)
+    ax.set_ylabel('-log₁₀(q-value)', fontsize=label_font_size)
+    ax.set_xlabel('Chromosomes', fontsize=label_font_size)
 
     # Add horizontal legend at the top right, same level as title
     if len(mutation_cols) > 0:
@@ -261,38 +273,39 @@ def plot_grin2_manhattan(grin_results: dict,
         
         # Create legend handles using scatter plot markers (no lines)
         legend_handles = []
+        marker_size = 8 * min(device_pixel_ratio * 0.8, 2.0)
         for mut_type, _ in mutation_cols:
             color = colors.get(mut_type, '#888888')
             legend_handles.append(plt.Line2D([0], [0], marker='o', color='w', 
-                                           markerfacecolor=color, markersize=8, alpha=0.7,
+                                           markerfacecolor=color, markersize=marker_size, alpha=0.7,
                                            linestyle='None'))  # Explicitly no line
         
         # Add empty handle for scaling note if needed (with small marker)
         if y_axis_scaled:
             legend_handles.append(plt.Line2D([0], [0], marker='*', color='w', 
-                                           markerfacecolor='gray', markersize=6, alpha=0.7,
+                                           markerfacecolor='gray', markersize=marker_size*0.75, alpha=0.7,
                                            linestyle='None'))
         
-        # Position legend horizontally at top right
+        # Position legend horizontally at top right with scaled font
+        legend_font_size = 10 * min(device_pixel_ratio * 0.8, 2.0)
         ax.legend(legend_handles, legend_labels, 
                  bbox_to_anchor=(1.0, 0.98), loc='lower right', 
                  ncol=len(legend_labels), frameon=False, 
-                 fancybox=False, shadow=False, framealpha=0.0)
+                 fancybox=False, shadow=False, framealpha=0.0,
+                 fontsize=legend_font_size)
     
     # Clean up the plot
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
     ax.grid(True, alpha=0.3, axis='y')
-    
     plt.tight_layout()
 
     fig.canvas.draw()  # Ensure rendering is complete for interactive features
 
-    # Get exact figure dimensions in pixels (this matches what's saved as PNG)
-    bbox = fig.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
-    width_inches, height_inches = bbox.width, bbox.height
-    width_pixels = int(width_inches * plot_dpi)
-    height_pixels = int(height_inches * plot_dpi)
+    # Calculate final output dimensions (should match requested plot_width x plot_height)
+    # The DPI scaling ensures high resolution while maintaining the target pixel dimensions
+    width_pixels = plot_width
+    height_pixels = plot_height
 
     # Transform coordinates only for significant points
     if len(point_details) > 0:
@@ -304,14 +317,14 @@ def plot_grin2_manhattan(grin_results: dict,
         fig_bbox = fig.get_window_extent()
         ax_bbox = ax.get_window_extent()
         
-        # Calculate scaling factors from display to PNG pixels
+        # Calculate scaling factors from display to target pixel space
         scale_x = width_pixels / fig_bbox.width
         scale_y = height_pixels / fig_bbox.height
         
         # Position-dependent offset correction for perspective distortion
         plot_center_x = width_pixels / 2
         
-        # Transform coordinates to PNG pixel space
+        # Transform coordinates to target pixel space
         for i, point in enumerate(point_details):
             px, py = pixel_coords[i]
             
@@ -331,7 +344,7 @@ def plot_grin2_manhattan(grin_results: dict,
             point['svg_x'] = max(0, min(width_pixels, svg_x))  # Clamp to image bounds
             point['svg_y'] = max(0, min(height_pixels, svg_y))
 
-    # Update interactive_data with corrected dimensions
+    # Update interactive_data with target dimensions
     interactive_data = {
         'points': point_details,
         'chrom_data': chrom_data,
@@ -340,6 +353,7 @@ def plot_grin2_manhattan(grin_results: dict,
         'total_genome_length': total_genome_length,
         'plot_width': width_pixels,
         'plot_height': height_pixels,
+		'device_pixel_ratio': device_pixel_ratio,
         'dpi': plot_dpi
     }
     
@@ -669,23 +683,25 @@ try:
 
 	# 6. Generate Manhattan plot and encode as Base64
 
-	# Get device pixel ratio or set to 2 if not provided	
+	# Get parameters from input, with defaults
 	device_pixel_ratio = input_data.get("devicePixelRatio", 2.0)
-	try:
+	plot_width = input_data.get("plot_width", 1000)
+	plot_height = input_data.get("plot_height", 400)
 
+	try:
 		# Create the Manhattan plot
 		fig, plot_data = plot_grin2_manhattan(
-		grin_results, 
-		chrom_size, 
-		lsn_colors,
-		device_pixel_ratio
-	)
+			grin_results, 
+			chrom_size, 
+			lsn_colors,
+			plot_width,
+			plot_height,
+			device_pixel_ratio
+		)
 
-		# Calculate DPI for saving (same as used in plotting)
-		base_dpi = 110
-		save_dpi = int(base_dpi * device_pixel_ratio)
+		# Save to BytesIO buffer - use the DPI from the plot_data
+		save_dpi = plot_data['dpi']
 		
-		# Save to BytesIO buffer
 		buffer = BytesIO()
 		fig.savefig(buffer, format="png", bbox_inches="tight", dpi=save_dpi)
 		plt.close(fig)

@@ -342,6 +342,9 @@ class GRIN2 extends RxComponentInner {
 				genome: this.app.vocabApi.vocab.genome,
 				dslabel: this.app.vocabApi.vocab.dslabel,
 				filter: this.state.termfilter.filter,
+				plot_width: 1000,
+				plot_height: 400,
+				devicePixelRatio: window.devicePixelRatio,
 				...configValues
 			}
 
