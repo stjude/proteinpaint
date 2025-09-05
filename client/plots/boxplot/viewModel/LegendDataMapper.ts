@@ -23,7 +23,7 @@ export class LegendDataMapper {
 				?.map(p => {
 					const total = p.descrStats.find(d => d.id === 'total')
 					if (!total || !total.value) throw `Missing total value for ${p.key}`
-					return { key: p.key, text: `${p.key}, n=${total.value}`, isHidden: true, isPlot: true }
+					return { key: p.key, text: p.key, n: total.value, isHidden: true, isPlot: true }
 				}) || []
 		if (config.term.term?.values) {
 			const term1Label = config.term2 ? config.term.term.name : 'Other categories'
