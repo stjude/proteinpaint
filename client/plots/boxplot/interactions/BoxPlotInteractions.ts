@@ -3,6 +3,7 @@ import type { MassAppApi } from '#mass/types/mass'
 import type { RenderedPlot } from '../view/RenderedPlot'
 import { ListSamples } from './ListSamples'
 import { filterJoin, getFilterItemByTag } from '#filter'
+import { DownloadMenu } from '#dom/downloadMenu'
 
 export class BoxPlotInteractions {
 	app: MassAppApi
@@ -12,6 +13,22 @@ export class BoxPlotInteractions {
 		this.app = app
 		this.dom = dom
 		this.id = id
+	}
+
+	download(event, data) {
+		const name2svg = {}
+		const node = this.dom.charts.select('.sjpp-boxplot-svg').node() //node to read the style
+		for (const k of Object.keys(data.charts)) {
+			const chart = data.charts[k]
+			name2svg[chart.chartId] = { svg: chart.svg, parent: node }
+		}
+		const menu = new DownloadMenu(name2svg)
+		menu.show(event.clientX, event.clientY)
+	}
+
+	help() {
+		//May add more options in the future
+		window.open('https://github.com/stjude/proteinpaint/wiki/Box-plot')
 	}
 
 	/** Option to add a global filter from the box plot label menu. */
@@ -75,5 +92,11 @@ export class BoxPlotInteractions {
 			id: this.id,
 			config
 		})
+	}
+
+	clearDom() {
+		this.dom.error.style('padding', '').text('')
+		this.dom.charts.selectAll('*').remove()
+		this.dom.legend.selectAll('*').remove()
 	}
 }

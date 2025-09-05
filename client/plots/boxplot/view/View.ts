@@ -9,7 +9,6 @@ import type { BoxPlotInteractions } from '../interactions/BoxPlotInteractions'
 import type { RenderedPlot } from './RenderedPlot'
 import { BoxPlotToolTips } from './BoxPlotToolTips'
 import { BoxPlotLabelMenu } from './BoxPlotLabelMenu'
-import { LegendRenderer } from './LegendRender'
 
 /** Handles all the rendering logic for the boxplot. */
 export class View {
@@ -47,7 +46,6 @@ export class View {
 		this.renderTitle(plotDim, dom)
 		this.renderBoxPlots(dom, data, scale, settings)
 		this.renderAxis(plotDim, dom, scale, settings)
-		if (data.legend) new LegendRenderer(dom.legend, data.legend, this.interactions, plotDim.textColor)
 	}
 
 	renderTitle(plotDim: PlotDimensions, dom: BoxPlotDom) {
