@@ -124,7 +124,9 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 		genedb: path.join(serverconfig.tpmasterdir, g.genedb.dbfile),
 		chromosomelist: {} as { [key: string]: number },
 		lesion: JSON.stringify(lesions),
-		devicePixelRatio: request.devicePixelRatio
+		devicePixelRatio: request.devicePixelRatio,
+		plot_width: request.plot_width,
+		plot_height: request.plot_height
 	}
 
 	// Build chromosome list from genome reference

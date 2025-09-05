@@ -20,6 +20,12 @@ export type GRIN2Request = {
 	/** Device pixel ratio for rendering */
 	devicePixelRatio?: number
 
+	/** Desired plot width in pixels (default: 1000) */
+	plot_width?: number
+
+	/** Desired plot height in pixels (default: 400) */
+	plot_height?: number
+
 	/** Filter from existing PP infrastructure */
 	filter?: any // Filter object passed to get_samples(filter, ds)
 
@@ -55,7 +61,7 @@ export type GRIN2Request = {
 }
 
 /** Simple Interface to store the complex plot data from the python Manhattan plot */
-export interface PlotData {
+interface grin2PlotData {
 	points: Array<{
 		x: number
 		y: number
@@ -81,6 +87,7 @@ export interface PlotData {
 	total_genome_length: number
 	plot_width: number
 	plot_height: number
+	device_pixel_ratio: number
 	dpi: number
 }
 
@@ -95,7 +102,7 @@ export type GRIN2Response = {
 	/** Base64-encoded PNG Manhattan plot image */
 	pngImg?: string
 	/** Plot data for the Manhattan plot */
-	plotData?: PlotData
+	plotData?: grin2PlotData
 	/** Download status/info */
 	download?: any
 	/** Sortable table of top genes identified by GRIN2 */
