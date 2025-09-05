@@ -74,7 +74,7 @@ def plot_grin2_manhattan(grin_results: dict,
     
     This function generates a genome-wide visualization showing the statistical 
     significance of genomic alterations across all chromosomes. Each point represents 
-    a gene with its significance level (-log₁₀(q-value)) plotted against its chromosome
+      a gene with its significance level (-log₁₀(q-value)) plotted against its chromosome
     start position. Different mutation types (gain, loss, mutation) are shown in different colors.
     
     Args:
@@ -309,14 +309,25 @@ def plot_grin2_manhattan(grin_results: dict,
         scale_x = width_pixels / fig_bbox.width
         scale_y = height_pixels / fig_bbox.height
         
+        # Position-dependent offset correction for perspective distortion
+        plot_center_x = width_pixels / 2
+        
         # Transform coordinates to PNG pixel space
         for i, point in enumerate(point_details):
             px, py = pixel_coords[i]
             
-            # Convert from display coordinates to PNG pixel coordinates
-            # px, py are already relative to the figure's display coordinates
-            svg_x = int(round(px * scale_x))
-            svg_y = int(round(height_pixels - (py * scale_y)))  # Flip y-axis
+            # Calculate base pixel position
+            base_x = px * scale_x
+            base_y = height_pixels - (py * scale_y)
+            
+            # Position-dependent offset: negative on left, positive on right
+            # Adjust the multiplier (0.010) to control correction strength
+            distance_from_center = base_x - plot_center_x
+            position_offset = distance_from_center * 0.010  # Try values 0.005-0.015
+            
+            # Apply the position-dependent correction
+            svg_x = int(round(base_x + position_offset))
+            svg_y = int(round(base_y))
             
             point['svg_x'] = max(0, min(width_pixels, svg_x))  # Clamp to image bounds
             point['svg_y'] = max(0, min(height_pixels, svg_y))
@@ -608,10 +619,6 @@ try:
 		write_error(f"Failed to read chromosome size file: {str(e)}")
 		sys.exit(1)
 
-	
-		write_error(f"Failed to read lesion data from input JSON: {str(e)}")
-		sys.exit(1)
-
 	# 4. Receive lesion data
 	try:
 		lesion_data = input_data["lesion"] 
@@ -719,6 +726,4 @@ try:
 except Exception as e:
 	write_error(f"Unexpected error: {str(e)}")
 	sys.exit(1)
-
-
-
+	
