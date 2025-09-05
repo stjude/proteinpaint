@@ -1,7 +1,6 @@
 import type { BoxPlotDom, LegendItemEntry, BoxPlotConfig } from '../BoxPlotTypes'
 import type { MassAppApi } from '#mass/types/mass'
 import type { RenderedPlot } from '../view/RenderedPlot'
-import { to_svg } from '#src/client'
 import { ListSamples } from './ListSamples'
 import { filterJoin, getFilterItemByTag } from '#filter'
 
@@ -13,18 +12,6 @@ export class BoxPlotInteractions {
 		this.app = app
 		this.dom = dom
 		this.id = id
-	}
-
-	download() {
-		//May add more options in the future
-		const svg = this.dom.svg.node() as Node
-		const plotConfig = this.app.getState().plots.find((p: BoxPlotConfig) => p.id === this.id)
-		to_svg(svg, `${plotConfig.term.term.name} box plot`, { apply_dom_styles: true })
-	}
-
-	help() {
-		//May add more options in the future
-		window.open('https://github.com/stjude/proteinpaint/wiki/Box-plot')
 	}
 
 	/** Option to add a global filter from the box plot label menu. */
@@ -88,13 +75,5 @@ export class BoxPlotInteractions {
 			id: this.id,
 			config
 		})
-	}
-
-	clearDom() {
-		this.dom.error.style('padding', '').text('')
-		this.dom.plotTitle.text('')
-		this.dom.axis.selectAll('*').remove()
-		this.dom.boxplots.selectAll('*').remove()
-		this.dom.legend.selectAll('*').remove()
 	}
 }

@@ -67,11 +67,11 @@ export default function setViolinRenderer(self) {
 			chartDiv
 				.append('div')
 				.attr('class', 'pp-chart-title')
-				.style('display', chartKey ? 'block' : 'none')
+				.style('display', chart.chartId ? 'block' : 'none')
 				.style('text-align', 'center')
 				.style('font-size', '1.1em')
 				.style('margin-bottom', '24px')
-				.html(getChartTitle(chartKey))
+				.html(getChartTitle(chart.chartId))
 
 			// render chart data
 			const svgData = renderSvg(t1, plots, chartDiv, self, isH, settings)
@@ -209,11 +209,11 @@ export default function setViolinRenderer(self) {
 		})
 	}
 
-	function getChartTitle(chartKey) {
-		if (!self.config.term0) return chartKey
-		return self.config.term0.term.values && chartKey in self.config.term0.term.values
-			? self.config.term0.term.values[chartKey].label
-			: chartKey
+	function getChartTitle(chartId) {
+		if (!self.config.term0) return chartId
+		return self.config.term0.term.values && chartId in self.config.term0.term.values
+			? self.config.term0.term.values[chartId].label
+			: chartId
 	}
 
 	function createMargins(labelsize, settings, isH, isMinimal) {

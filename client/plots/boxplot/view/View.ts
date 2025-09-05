@@ -29,7 +29,6 @@ export class View {
 		this.interactions = interactions
 		this.settings = settings
 		if (!data || !data.plots.length) return
-		this.interactions.clearDom()
 
 		const plotDim = data.plotDim
 
@@ -52,6 +51,9 @@ export class View {
 	}
 
 	renderTitle(plotDim: PlotDimensions, dom: BoxPlotDom) {
+		//Title of the chart
+		dom.chartTitle.text(plotDim.chartTitle)
+
 		//Title of the plot
 		const transformStr = `translate(${plotDim.title.x}, ${plotDim.title.y})${
 			this.settings.isVertical ? `,rotate(-90)` : ''
