@@ -167,268 +167,275 @@ export class profilePlot {
 	}
 
 	async setControls(additionalInputs = []) {
-		const isRadarFacility = this.isRadarFacility
-		const filters = {}
-		for (const tw of this.config.filterTWs) {
-			filters[tw.term.id] = getCategoricalTermFilter(this.config.filterTWs, this.settings, tw)
-		}
-		this.filteredTermValues = await this.app.vocabApi.filterTermValues({
-			terms: this.config.filterTWs,
-			filter: this.state.termfilter.filter,
-			filters,
-			// safe to pass because the backend code will still compare terms[] with the the dataset's hiddenTermIds,
-			// it only affects what will be included in the aggregation and does not disable user access authentication
-			filterByUserSites: this.settings.filterByUserSites,
-			showAll: true
-		})
-		this.regions = this.filteredTermValues[this.config.regionTW.id]
-		this.countries = this.filteredTermValues[this.config.countryTW.id]
-		this.incomes = this.filteredTermValues[this.config.incomeTW.id]
-		this.teachingStates = this.filteredTermValues[this.config.teachingStatusTW.id]
-		this.referralStates = this.filteredTermValues[this.config.referralStatusTW.id]
-		this.fundingSources = this.filteredTermValues[this.config.fundingSourceTW.id]
-		this.hospitalVolumes = this.filteredTermValues[this.config.hospitalVolumeTW.id]
-		this.yearsOfImplementation = this.filteredTermValues[this.config.yearOfImplementationTW.id]
-
-		this.incomes.sort((elem1, elem2) => {
-			const i1 = orderedIncomes.indexOf(elem1.value)
-			const i2 = orderedIncomes.indexOf(elem2.value)
-			if (i1 < i2) return -1
-			return 1
-		})
-		this.hospitalVolumes.sort((elem1, elem2) => {
-			const i1 = orderedVolumes.indexOf(elem1.value)
-			const i2 = orderedVolumes.indexOf(elem2.value)
-			if (i1 < i2) return -1
-			return 1
-		})
-		this.types = this.filteredTermValues[this.config.typeTW.id]
-		this.filter = this.config.filter || this.getFilter()
-
-		const isAggregate = this.isAggregate()
-		if (this.type != 'profileForms')
-			this.data = await this.app.vocabApi.getProfileScores({
-				scoreTerms: this.scoreTerms,
-				filter: this.filter,
-				isAggregate,
-				sites: this.settings.sites,
-				userSites: this.state.sites,
-				facilityTW: this.config.facilityTW,
-				filterByUserSites: this.settings.filterByUserSites
+		try {
+			const isRadarFacility = this.isRadarFacility
+			const filters = {}
+			for (const tw of this.config.filterTWs) {
+				filters[tw.term.id] = getCategoricalTermFilter(this.config.filterTWs, this.settings, tw)
+			}
+			this.filteredTermValues = await this.app.vocabApi.filterTermValues({
+				terms: this.config.filterTWs,
+				filter: this.state.termfilter.filter,
+				filters,
+				// safe to pass because the backend code will still compare terms[] with the the dataset's hiddenTermIds,
+				// it only affects what will be included in the aggregation and does not disable user access authentication
+				filterByUserSites: this.settings.filterByUserSites,
+				showAll: true
 			})
-		else
-			this.data = await this.app.vocabApi.getProfileFormScores({
-				scoreTerms: this.scoreTerms,
-				scScoreTerms: this.scScoreTerms,
-				filter: this.filter,
-				isAggregate,
-				sites: this.settings.sites,
-				userSites: this.state.sites,
-				facilityTW: this.config.facilityTW,
-				filterByUserSites: this.settings.filterByUserSites
+			this.regions = this.filteredTermValues[this.config.regionTW.id]
+			this.countries = this.filteredTermValues[this.config.countryTW.id]
+			this.incomes = this.filteredTermValues[this.config.incomeTW.id]
+			this.teachingStates = this.filteredTermValues[this.config.teachingStatusTW.id]
+			this.referralStates = this.filteredTermValues[this.config.referralStatusTW.id]
+			this.fundingSources = this.filteredTermValues[this.config.fundingSourceTW.id]
+			this.hospitalVolumes = this.filteredTermValues[this.config.hospitalVolumeTW.id]
+			this.yearsOfImplementation = this.filteredTermValues[this.config.yearOfImplementationTW.id]
+			this.incomes.sort((elem1, elem2) => {
+				const i1 = orderedIncomes.indexOf(elem1.value)
+				const i2 = orderedIncomes.indexOf(elem2.value)
+				if (i1 < i2) return -1
+				return 1
 			})
-		if ('error' in this.data) throw this.data.error
-		this.sites = this.data.sites
-		this.sites.sort((a, b) => {
-			return a.label.localeCompare(b.label)
-		})
-		if (isRadarFacility) {
-			if (!this.settings.facilitySite) this.settings.facilitySite = this.sites[0]?.value //set the first site as the facility site
-		} else if (!this.settings.site && !this.settings.sites && this.state.sites?.length == 1 && !isAggregate) {
-			this.settings.site = this.data.sites?.[0]?.value
-			this.settings.sites = [this.settings.site] //set sites to the single site
-		}
-		if (this.settings.sites)
-			for (const site of this.settings.sites) {
-				const siteOption = this.sites.find(s => s.value == site)
-				if (siteOption) siteOption.selected = true //mark selected sites
-			}
-		const chartType = this.type
-		this.dom.controlsDiv.selectAll('*').remove()
-		let inputs = []
-		const userSitesFilterInput = {
-			label: 'Use accessible sites only',
-			boxLabel: '',
-			type: 'checkbox',
-			chartType,
-			settingsKey: 'filterByUserSites'
-		}
-		if (this.state.sites?.length == 1 && !isRadarFacility) {
-			const dataInput = {
-				label: 'Data',
-				type: 'radio',
-				chartType,
-				settingsKey: 'isAggregate',
-				styles: { display: 'inline-block' },
-				options: [
-					{ label: this.state.site, value: false },
-					{ label: 'Aggregate', value: true }
-				],
-				callback: isAggregate => {
-					this.settings.isAggregate = isAggregate
-					const id = this.sites.find(s => s.label == this.state.site)?.value
-					isAggregate ? this.setSite('') : this.setSite(id)
-				}
-			}
-			inputs.push(dataInput)
-		}
-		if (isAggregate || isRadarFacility) {
-			inputs.push(
-				...[
-					{
-						label: 'Region',
-						type: 'dropdown',
-						chartType,
-						settingsKey: this.config.regionTW.term.id,
-						options: this.regions,
-						callback: value => this.setFilterValue(this.config.regionTW.term.id, value)
-					},
-					{
-						label: 'Country',
-						type: 'dropdown',
-						chartType,
-						settingsKey: this.config.countryTW.term.id,
-						options: this.countries,
-						callback: value => this.setFilterValue(this.config.countryTW.term.id, value)
-					},
-					{
-						label: 'Income group',
-						type: 'dropdown',
-						chartType,
-						settingsKey: this.config.incomeTW.term.id,
-						options: this.incomes,
-						callback: value => this.setFilterValue(this.config.incomeTW.term.id, value)
-					},
-					{
-						label: 'Facility type',
-						type: 'dropdown',
-						chartType,
-						settingsKey: this.config.typeTW.term.id,
-						options: this.types,
-						callback: value => this.setFilterValue(this.config.typeTW.term.id, value)
-					},
-					{
-						label: this.config.teachingStatusTW.term.name,
-						type: 'dropdown',
-						chartType,
-						settingsKey: this.config.teachingStatusTW.term.id,
-						options: this.teachingStates,
-						callback: value => this.setFilterValue(this.config.teachingStatusTW.term.id, value)
-					},
-					{
-						label: this.config.referralStatusTW.term.name,
-						type: 'dropdown',
-						chartType,
-						settingsKey: this.config.referralStatusTW.term.id,
-						options: this.referralStates,
-						callback: value => this.setFilterValue(this.config.referralStatusTW.term.id, value)
-					},
-					{
-						label: this.config.fundingSourceTW.term.name,
-						type: 'dropdown',
-						chartType,
-						settingsKey: this.config.fundingSourceTW.term.id,
-						options: this.fundingSources,
-						callback: value => this.setFilterValue(this.config.fundingSourceTW.term.id, value)
-					},
-					{
-						label: this.config.hospitalVolumeTW.term.name,
-						type: 'dropdown',
-						chartType,
-						settingsKey: this.config.hospitalVolumeTW.term.id,
-						options: this.hospitalVolumes,
-						callback: value => this.setFilterValue(this.config.hospitalVolumeTW.term.id, value)
-					},
-					{
-						label: this.config.yearOfImplementationTW.term.name,
-						type: 'dropdown',
-						chartType,
-						settingsKey: this.config.yearOfImplementationTW.term.id,
-						options: this.yearsOfImplementation,
-						callback: value => this.setFilterValue(this.config.yearOfImplementationTW.term.id, value)
-					}
-				]
-			)
-		}
-		if (this.state.logged) {
-			if (isAggregate && (this.state.sites?.length > 1 || this.state.user == 'admin')) {
-				const sitesInput = {
-					label: 'Sites',
-					type: 'dropdown',
-					chartType,
-					options: this.sites,
-					multiple: true,
-					callback: values => {
-						this.setSites(values)
-					}
-				}
-				inputs.push(sitesInput)
-				if (this.state.user != 'admin') inputs.unshift(userSitesFilterInput) //add filter by user sites only for non-admin users
-			}
-			if (isRadarFacility) {
-				this.sampleData = await this.app.vocabApi.getProfileScores({
-					terms: [...this.twLst, this.config.facilityTW], //added facility term to all the plots to get the hospital name
+			this.hospitalVolumes.sort((elem1, elem2) => {
+				const i1 = orderedVolumes.indexOf(elem1.value)
+				const i2 = orderedVolumes.indexOf(elem2.value)
+				if (i1 < i2) return -1
+				return 1
+			})
+			this.types = this.filteredTermValues[this.config.typeTW.id]
+			this.filter = this.config.filter || this.getFilter()
+
+			const isAggregate = this.isAggregate()
+			if (this.type != 'profileForms')
+				this.data = await this.app.vocabApi.getProfileScores({
 					scoreTerms: this.scoreTerms,
 					filter: this.filter,
-					isAggregate: true,
-					site: this.settings.facilitySite,
+					isAggregate,
+					sites: this.settings.sites,
 					userSites: this.state.sites,
-					facilityTW: this.config.facilityTW
+					facilityTW: this.config.facilityTW,
+					filterByUserSites: this.settings.filterByUserSites
 				})
-				this.facilitySites = this.sampleData.sites
-				this.facilitySites.sort((a, b) => {
-					return a.label.localeCompare(b.label)
+			else
+				this.data = await this.app.vocabApi.getProfileFormScores({
+					scoreTerms: this.scoreTerms,
+					scScoreTerms: this.scScoreTerms,
+					filter: this.filter,
+					isAggregate,
+					sites: this.settings.sites,
+					userSites: this.state.sites,
+					facilityTW: this.config.facilityTW,
+					filterByUserSites: this.settings.filterByUserSites
 				})
-				this.facilitySites.find(s => s.value == this.settings.facilitySite).selected = true //mark selected facility site
 
-				inputs.unshift({
-					label: 'Facility site',
-					type: 'dropdown',
-					chartType,
-					options: this.facilitySites,
-					callback: value => {
-						this.setFacilitySite(value)
-					}
-				})
-			}
-		}
-
-		inputs.unshift(...additionalInputs)
-		this.components = {
-			controls: await controlsInit({
-				app: this.app,
-				id: this.id,
-				holder: this.dom.controlsDiv,
-				inputs,
-				title: 'Filters'
+			if ('error' in this.data) throw this.data.error
+			this.sites = this.data.sites
+			this.sites.sort((a, b) => {
+				return a.label.localeCompare(b.label)
 			})
-		}
-		this.components.controls.on(`downloadClick.${chartType}`, () =>
-			downloadSingleSVG(this.dom.svg, this.getDownloadFilename(), this.dom.holder.node())
-		)
-		this.components.controls.on(`helpClick.${chartType}`, () => {
-			const activeCohort = this.state.activeCohort
-			let link
-			if (activeCohort == ABBREV_COHORT) {
-				if (chartType == 'profileBarchart')
-					link = 'https://global.stjude.org/content/dam/global/en-us/documents/no-index/bar-graph-abbr-profiledash.pdf'
-				else if (chartType == 'profilePolar')
-					link =
-						'https://global.stjude.org/content/dam/global/en-us/documents/no-index/polar-graph-abbr-profiledash.pdf'
-				else if (chartType.startsWith('profileRadar'))
-					link = 'https://global.stjude.org/content/dam/global/en-us/documents/no-index/radar-abbr-profiledash.pdf'
-			} else if (activeCohort == FULL_COHORT) {
-				if (chartType == 'profileBarchart')
-					link = 'https://global.stjude.org/content/dam/global/en-us/documents/no-index/bar-graph-full-profiledash.pdf'
-				else if (chartType == 'profilePolar')
-					link =
-						'https://global.stjude.org/content/dam/global/en-us/documents/no-index/polar-graph-full-profiledash.pdf'
-				else if (chartType.startsWith('profileRadar'))
-					link = 'https://global.stjude.org/content/dam/global/en-us/documents/no-index/radar-full-profiledash.pdf'
+			if (isRadarFacility) {
+				if (!this.settings.facilitySite) this.settings.facilitySite = this.sites[0]?.value //set the first site as the facility site
+			} else if (!this.settings.site && !this.settings.sites && this.state.sites?.length == 1 && !isAggregate) {
+				this.settings.site = this.data.sites?.[0]?.value
+				this.settings.sites = [this.settings.site] //set sites to the single site
 			}
-			if (link) window.open(link)
-		})
-		this.filtersCount = 0
+			if (this.settings.sites)
+				for (const site of this.settings.sites) {
+					const siteOption = this.sites.find(s => s.value == site)
+					if (siteOption) siteOption.selected = true //mark selected sites
+				}
+			const chartType = this.type
+			this.dom.controlsDiv.selectAll('*').remove()
+			let inputs = []
+			const userSitesFilterInput = {
+				label: 'Use accessible sites only',
+				boxLabel: '',
+				type: 'checkbox',
+				chartType,
+				settingsKey: 'filterByUserSites'
+			}
+			if (this.state.sites?.length == 1 && !isRadarFacility) {
+				const dataInput = {
+					label: 'Data',
+					type: 'radio',
+					chartType,
+					settingsKey: 'isAggregate',
+					styles: { display: 'inline-block' },
+					options: [
+						{ label: this.state.site, value: false },
+						{ label: 'Aggregate', value: true }
+					],
+					callback: isAggregate => {
+						this.settings.isAggregate = isAggregate
+						const id = this.sites.find(s => s.label == this.state.site)?.value
+						isAggregate ? this.setSite('') : this.setSite(id)
+					}
+				}
+				inputs.push(dataInput)
+			}
+			if (isAggregate || isRadarFacility) {
+				inputs.push(
+					...[
+						{
+							label: 'Region',
+							type: 'dropdown',
+							chartType,
+							settingsKey: this.config.regionTW.term.id,
+							options: this.regions,
+							callback: value => this.setFilterValue(this.config.regionTW.term.id, value)
+						},
+						{
+							label: 'Country',
+							type: 'dropdown',
+							chartType,
+							settingsKey: this.config.countryTW.term.id,
+							options: this.countries,
+							callback: value => this.setFilterValue(this.config.countryTW.term.id, value)
+						},
+						{
+							label: 'Income group',
+							type: 'dropdown',
+							chartType,
+							settingsKey: this.config.incomeTW.term.id,
+							options: this.incomes,
+							callback: value => this.setFilterValue(this.config.incomeTW.term.id, value)
+						},
+						{
+							label: 'Facility type',
+							type: 'dropdown',
+							chartType,
+							settingsKey: this.config.typeTW.term.id,
+							options: this.types,
+							callback: value => this.setFilterValue(this.config.typeTW.term.id, value)
+						},
+						{
+							label: this.config.teachingStatusTW.term.name,
+							type: 'dropdown',
+							chartType,
+							settingsKey: this.config.teachingStatusTW.term.id,
+							options: this.teachingStates,
+							callback: value => this.setFilterValue(this.config.teachingStatusTW.term.id, value)
+						},
+						{
+							label: this.config.referralStatusTW.term.name,
+							type: 'dropdown',
+							chartType,
+							settingsKey: this.config.referralStatusTW.term.id,
+							options: this.referralStates,
+							callback: value => this.setFilterValue(this.config.referralStatusTW.term.id, value)
+						},
+						{
+							label: this.config.fundingSourceTW.term.name,
+							type: 'dropdown',
+							chartType,
+							settingsKey: this.config.fundingSourceTW.term.id,
+							options: this.fundingSources,
+							callback: value => this.setFilterValue(this.config.fundingSourceTW.term.id, value)
+						},
+						{
+							label: this.config.hospitalVolumeTW.term.name,
+							type: 'dropdown',
+							chartType,
+							settingsKey: this.config.hospitalVolumeTW.term.id,
+							options: this.hospitalVolumes,
+							callback: value => this.setFilterValue(this.config.hospitalVolumeTW.term.id, value)
+						},
+						{
+							label: this.config.yearOfImplementationTW.term.name,
+							type: 'dropdown',
+							chartType,
+							settingsKey: this.config.yearOfImplementationTW.term.id,
+							options: this.yearsOfImplementation,
+							callback: value => this.setFilterValue(this.config.yearOfImplementationTW.term.id, value)
+						}
+					]
+				)
+			}
+			if (this.state.logged) {
+				if (isAggregate && (this.state.sites?.length > 1 || this.state.user == 'admin')) {
+					const sitesInput = {
+						label: 'Sites',
+						type: 'dropdown',
+						chartType,
+						options: this.sites,
+						multiple: true,
+						callback: values => {
+							this.setSites(values)
+						}
+					}
+					inputs.push(sitesInput)
+					if (this.state.user != 'admin') inputs.unshift(userSitesFilterInput) //add filter by user sites only for non-admin users
+				}
+				if (isRadarFacility) {
+					this.sampleData = await this.app.vocabApi.getProfileScores({
+						terms: [...this.twLst, this.config.facilityTW], //added facility term to all the plots to get the hospital name
+						scoreTerms: this.scoreTerms,
+						filter: this.filter,
+						isAggregate: true,
+						site: this.settings.facilitySite,
+						userSites: this.state.sites,
+						facilityTW: this.config.facilityTW
+					})
+					this.facilitySites = this.sampleData.sites
+					this.facilitySites.sort((a, b) => {
+						return a.label.localeCompare(b.label)
+					})
+					this.facilitySites.find(s => s.value == this.settings.facilitySite).selected = true //mark selected facility site
+
+					inputs.unshift({
+						label: 'Facility site',
+						type: 'dropdown',
+						chartType,
+						options: this.facilitySites,
+						callback: value => {
+							this.setFacilitySite(value)
+						}
+					})
+				}
+			}
+
+			inputs.unshift(...additionalInputs)
+			this.components = {
+				controls: await controlsInit({
+					app: this.app,
+					id: this.id,
+					holder: this.dom.controlsDiv,
+					inputs,
+					title: 'Filters'
+				})
+			}
+			this.components.controls.on(`downloadClick.${chartType}`, () =>
+				downloadSingleSVG(this.dom.svg, this.getDownloadFilename(), this.dom.holder.node())
+			)
+			this.components.controls.on(`helpClick.${chartType}`, () => {
+				const activeCohort = this.state.activeCohort
+				let link
+				if (activeCohort == ABBREV_COHORT) {
+					if (chartType == 'profileBarchart')
+						link =
+							'https://global.stjude.org/content/dam/global/en-us/documents/no-index/bar-graph-abbr-profiledash.pdf'
+					else if (chartType == 'profilePolar')
+						link =
+							'https://global.stjude.org/content/dam/global/en-us/documents/no-index/polar-graph-abbr-profiledash.pdf'
+					else if (chartType.startsWith('profileRadar'))
+						link = 'https://global.stjude.org/content/dam/global/en-us/documents/no-index/radar-abbr-profiledash.pdf'
+				} else if (activeCohort == FULL_COHORT) {
+					if (chartType == 'profileBarchart')
+						link =
+							'https://global.stjude.org/content/dam/global/en-us/documents/no-index/bar-graph-full-profiledash.pdf'
+					else if (chartType == 'profilePolar')
+						link =
+							'https://global.stjude.org/content/dam/global/en-us/documents/no-index/polar-graph-full-profiledash.pdf'
+					else if (chartType.startsWith('profileRadar'))
+						link = 'https://global.stjude.org/content/dam/global/en-us/documents/no-index/radar-full-profiledash.pdf'
+				}
+				if (link) window.open(link)
+			})
+			this.filtersCount = 0
+		} catch (e) {
+			console.log(e)
+			throw e
+		}
 	}
 
 	setFilterValue(key, value) {

@@ -1363,7 +1363,7 @@ export class TermdbVocab extends Vocab {
 			// replace with a mutable copy
 			body.scoreTerms = structuredClone(body.scoreTerms)
 			for (const t of body.scoreTerms) {
-				this.mayStripTwProps(t.maxScore)
+				if (typeof t.maxScore != 'number') this.mayStripTwProps(t.maxScore)
 				this.mayStripTwProps(t.score)
 			}
 		}
