@@ -26,11 +26,11 @@ import { dtsnvindel, dtcnv, dtfusionrna } from '#shared/common.js'
  * 3. Read and filter file contents based on snvindelOptions, cnvOptions, fusionOptions:
  *    - SNV/indel: Filter by depth, alternate allele count, and consequence types
  *    - CNV: Filter by copy number thresholds, and max segment length
- *    - Fusion: Filter by fusion type and confidence score
+ *    - Fusion: TBD
  *    - Hypermutator: Apply a maximum mutation count cutoff for highly mutated samples
  * 4. Convert filtered data to lesion format expected by Python script
- * 5. Pass lesion data to Python for GRIN2 statistical analysis and plot generation
- * 6. Return Manhattan plot as base64 string, top gene table, and timing information
+ * 5. Pass lesion data and device pixel ratio to Python for GRIN2 statistical analysis and plot generation
+ * 6. Return Manhattan plot as base64 string, top gene table, timing information, and statistically significant results that are displayed as an interactive svg
  */
 
 export const api: RouteApi = {
@@ -123,7 +123,10 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 	const pyInput = {
 		genedb: path.join(serverconfig.tpmasterdir, g.genedb.dbfile),
 		chromosomelist: {} as { [key: string]: number },
-		lesion: JSON.stringify(lesions)
+		lesion: JSON.stringify(lesions),
+		devicePixelRatio: request.devicePixelRatio,
+		plot_width: request.plot_width,
+		plot_height: request.plot_height
 	}
 
 	// Build chromosome list from genome reference
@@ -167,6 +170,7 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 	const response: GRIN2Response = {
 		status: 'success',
 		pngImg: resultData.png[0],
+		plotData: resultData.plotData,
 		topGeneTable: resultData.topGeneTable,
 		totalGenes: resultData.totalGenes,
 		showingTop: resultData.showingTop,
@@ -238,6 +242,7 @@ async function processSampleData(
 	}
 }
 
+/** Process the MLST data for each sample */
 async function processSampleMlst(
 	sampleName: string,
 	mlst: any[],

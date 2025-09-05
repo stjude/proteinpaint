@@ -4,6 +4,7 @@ export interface GRIN2Dom {
 	controls: any
 	div: any
 	tip: Menu
+	geneTip: Menu
 	header?: any
 }
 
