@@ -26,7 +26,11 @@ function init({ genomes }) {
 			if (!query.projectId) throw new Error('.projectId is required for deleteWSIAnnotation request.')
 			if (!query.wsimage) throw new Error('.wsimage is required for deleteWSIAnnotation request.')
 
-			const ds = genomes.datasets[query.dslabel]
+			const g = genomes[query.genome]
+			if (!g) throw new Error('invalid genome name')
+
+			const ds = g.datasets[query.dslabel]
+			if (!ds) throw new Error('invalid dataset name')
 
 			if (typeof ds.queries?.WSImages?.deleteAnnotation === 'function') {
 				const result = await ds.queries.WSImages.deleteAnnotation(query)
