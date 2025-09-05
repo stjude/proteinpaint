@@ -18,6 +18,7 @@ use std::io::{self, BufRead, Read};
 mod sjprovider; // Importing custom rig module for invoking SJ GPU server
 
 #[allow(non_camel_case_types)]
+#[derive(Debug, Clone)]
 enum llm_backend {
     Ollama(),
     Sj(),
@@ -122,8 +123,10 @@ async fn main() -> Result<()> {
 
                     let llm_backend_type: llm_backend;
                     let mut final_output: Option<String> = None;
-                    //let comp_model;
-                    //let embedding_model;
+                    let temperature: f64 = 0.01;
+                    let max_new_tokens: usize = 512;
+                    let top_p: f32 = 0.95;
+
                     if llm_backend_name != "ollama" && llm_backend_name != "SJ" {
                         panic!(
                             "This code currently supports only Ollama and SJ provider. llm_backend_name must be \"ollama\" or \"SJ\""
@@ -137,8 +140,17 @@ async fn main() -> Result<()> {
                             .expect("Ollama server not found");
                         let embedding_model = ollama_client.embedding_model(embedding_model_name);
                         let comp_model = ollama_client.completion_model(comp_model_name);
-                        final_output =
-                            run_pipeline(user_input, comp_model, embedding_model, llm_backend_type, dataset_file).await;
+                        final_output = run_pipeline(
+                            user_input,
+                            comp_model,
+                            embedding_model,
+                            llm_backend_type,
+                            dataset_file,
+                            temperature,
+                            max_new_tokens,
+                            top_p,
+                        )
+                        .await;
                     // "gpt-oss:20b" "granite3-dense:latest" "PetrosStav/gemma3-tools:12b" "llama3-groq-tool-use:latest" "PetrosStav/gemma3-tools:12b"
                     } else if llm_backend_name == "SJ".to_string() {
                         llm_backend_type = llm_backend::Sj();
@@ -149,8 +161,17 @@ async fn main() -> Result<()> {
                             .expect("SJ server not found");
                         let embedding_model = sj_client.embedding_model(embedding_model_name);
                         let comp_model = sj_client.completion_model(comp_model_name);
-                        final_output =
-                            run_pipeline(user_input, comp_model, embedding_model, llm_backend_type, dataset_file).await;
+                        final_output = run_pipeline(
+                            user_input,
+                            comp_model,
+                            embedding_model,
+                            llm_backend_type,
+                            dataset_file,
+                            temperature,
+                            max_new_tokens,
+                            top_p,
+                        )
+                        .await;
                     }
 
                     println!("final_output:{:?}", final_output);
@@ -169,18 +190,33 @@ async fn run_pipeline(
     embedding_model: impl rig::embeddings::EmbeddingModel + 'static,
     llm_backend_type: llm_backend,
     dataset_file: &str,
+    temperature: f64,
+    max_new_tokens: usize,
+    top_p: f32,
 ) -> Option<String> {
     let mut classification: String = classify_query_by_dataset_type(
         user_input,
         comp_model.clone(),
         embedding_model.clone(),
-        llm_backend_type,
+        &llm_backend_type,
+        temperature,
+        max_new_tokens,
+        top_p,
     )
     .await;
     classification = classification.replace("\"", "");
     let final_output;
     if classification == "dge".to_string() {
-        let de_result = extract_search_terms_from_query(user_input, comp_model, embedding_model).await;
+        let de_result = extract_search_terms_from_query(
+            user_input,
+            comp_model,
+            embedding_model,
+            &llm_backend_type,
+            temperature,
+            max_new_tokens,
+            top_p,
+        )
+        .await;
         final_output = format!(
             "{{\"{}\":\"{}\",\"{}\":[{}}}",
             "chartType",
@@ -206,8 +242,18 @@ async fn run_pipeline(
 
         match summary_term {
             Some(sum) => {
-                final_output =
-                    extract_summary_information(user_input, comp_model, embedding_model, dataset_file, &sum).await;
+                final_output = extract_summary_information(
+                    user_input,
+                    comp_model,
+                    embedding_model,
+                    dataset_file,
+                    &sum,
+                    &llm_backend_type,
+                    temperature,
+                    max_new_tokens,
+                    top_p,
+                )
+                .await;
             }
             None => {
                 panic!("summary_term not found")
@@ -245,7 +291,10 @@ async fn classify_query_by_dataset_type(
     user_input: &str,
     comp_model: impl rig::completion::CompletionModel + 'static,
     embedding_model: impl rig::embeddings::EmbeddingModel + 'static,
-    llm_backend_type: llm_backend,
+    llm_backend_type: &llm_backend,
+    temperature: f64,
+    max_new_tokens: usize,
+    top_p: f32,
 ) -> String {
     let file_path = "src/ai_docs3.txt";
 
@@ -260,12 +309,23 @@ async fn classify_query_by_dataset_type(
 
     // Split the contents by the delimiter "---"
     let parts: Vec<&str> = contents.split("---").collect();
-
     let schema_json: Value = serde_json::to_value(schemars::schema_for!(OutputJson)).unwrap(); // error handling here
 
-    let additional = json!({
-        "format": schema_json
-    });
+    let additional;
+    match llm_backend_type {
+        llm_backend::Ollama() => {
+            additional = json!({
+                    "format": schema_json
+            }
+                );
+        }
+        llm_backend::Sj() => {
+            additional = json!({
+                    "max_new_tokens": max_new_tokens,
+                    "top_p": top_p
+            });
+        }
+    }
 
     // Print the separated parts
     let mut rag_docs = Vec::<String>::new();
@@ -288,7 +348,7 @@ async fn classify_query_by_dataset_type(
     InMemoryVectorStore::add_documents(&mut vector_store, embeddings);
 
     // Create RAG agent
-    let agent = AgentBuilder::new(comp_model).preamble("Generate classification for the user query into summary, dge, hierarchial, snv_indel, cnv, variant_calling, sv_fusion and none categories. Return output in JSON with ALWAYS a single word answer { \"answer\": \"dge\" }, that is 'summary' for summary plot, 'dge' for differential gene expression, 'hierarchial' for hierarchial clustering, 'snv_indel' for SNV/Indel, 'cnv' for CNV and 'sv_fusion' for SV/fusion, 'variant_calling' for variant calling, 'surivial' for survival data, 'none' for none of the previously described categories. The answer should always be in lower case").dynamic_context(rag_docs_length, vector_store.index(embedding_model)).temperature(0.0).additional_params(additional).build();
+    let agent = AgentBuilder::new(comp_model).preamble("Generate classification for the user query into summary, dge, hierarchial, snv_indel, cnv, variant_calling, sv_fusion and none categories. Return output in JSON with ALWAYS a single word answer { \"answer\": \"dge\" }, that is 'summary' for summary plot, 'dge' for differential gene expression, 'hierarchial' for hierarchial clustering, 'snv_indel' for SNV/Indel, 'cnv' for CNV and 'sv_fusion' for SV/fusion, 'variant_calling' for variant calling, 'surivial' for survival data, 'none' for none of the previously described categories. The answer should always be in lower case").dynamic_context(rag_docs_length, vector_store.index(embedding_model)).temperature(temperature).additional_params(additional).build();
 
     let response = agent.prompt(user_input).await.expect("Failed to prompt ollama");
 
@@ -304,6 +364,10 @@ async fn extract_search_terms_from_query(
     user_input: &str,
     comp_model: impl rig::completion::CompletionModel + 'static,
     embedding_model: impl rig::embeddings::EmbeddingModel + 'static,
+    llm_backend_type: &llm_backend,
+    temperature: f64,
+    max_new_tokens: usize,
+    top_p: f32,
 ) -> String {
     let file_path = "src/DE_docs2.txt";
 
@@ -323,9 +387,21 @@ async fn extract_search_terms_from_query(
 
     //println!("DE schema:{}", schema_json);
 
-    let additional = json!({
-        "format": schema_json
-    });
+    let additional;
+    match llm_backend_type {
+        llm_backend::Ollama() => {
+            additional = json!({
+                    "format": schema_json
+            }
+                );
+        }
+        llm_backend::Sj() => {
+            additional = json!({
+                    "max_new_tokens": max_new_tokens,
+                    "top_p": top_p
+            });
+        }
+    }
 
     // Print the separated parts
     let mut rag_docs = Vec::<String>::new();
@@ -353,7 +429,7 @@ async fn extract_search_terms_from_query(
     let agent = AgentBuilder::new(comp_model)
         .preamble(router_instructions)
         .dynamic_context(rag_docs_length, vector_store.index(embedding_model))
-        .temperature(0.0)
+        .temperature(temperature)
         .additional_params(additional)
         .build();
 
@@ -373,6 +449,10 @@ async fn extract_summary_information(
     embedding_model: impl rig::embeddings::EmbeddingModel + 'static,
     dataset_file: &str,
     summary_term: &str,
+    llm_backend_type: &llm_backend,
+    temperature: f64,
+    max_new_tokens: usize,
+    top_p: f32,
 ) -> String {
     // Open the file
     let mut file = File::open(dataset_file).unwrap();
@@ -391,6 +471,19 @@ async fn extract_summary_information(
     for (_i, part) in parts.iter().enumerate() {
         //println!("Part {}: {}", i + 1, part.trim());
         rag_docs.push(part.trim().to_string())
+    }
+
+    let additional;
+    match llm_backend_type {
+        llm_backend::Ollama() => {
+            additional = json!({});
+        }
+        llm_backend::Sj() => {
+            additional = json!({
+                    "max_new_tokens": max_new_tokens,
+                    "top_p": top_p
+            });
+        }
     }
 
     let rag_docs_length = rag_docs.len();
@@ -418,7 +511,8 @@ async fn extract_summary_information(
     let agent = AgentBuilder::new(comp_model)
         .preamble(&system_prompt)
         .dynamic_context(rag_docs_length, vector_store.index(embedding_model))
-        .temperature(0.0)
+        .temperature(temperature)
+        .additional_params(additional)
         .build();
 
     let response = agent.prompt(user_input).await.expect("Failed to prompt ollama");
