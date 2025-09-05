@@ -6,25 +6,27 @@ import { vocabInit } from '#termdb/vocabulary'
  reusable helper functions
 **************************/
 
-const state = {
-	vocab: {
-		genome: 'hg38-test',
-		dslabel: 'TermdbTest'
+async function getStore() {
+	const state = {
+		vocab: {
+			genome: 'hg38-test',
+			dslabel: 'TermdbTest'
+		}
 	}
+
+	const app: any = { state, opts: {} }
+
+	app.vocabApi = await vocabInit({ app, state })
+
+	app.store = await storeInit({
+		debug: true,
+		app,
+		state,
+		vocabApi: app.vocabApi
+	})
+
+	return app.store.Inner
 }
-
-const app: any = { state, opts: {} }
-
-app.vocabApi = await vocabInit({ app, state })
-
-app.store = await storeInit({
-	debug: true,
-	app,
-	state,
-	vocabApi: app.vocabApi
-})
-
-const store = app.store.Inner
 
 /**************
  test sections
@@ -35,6 +37,7 @@ tape('\n', function (test) {
 })
 
 tape('app_refresh()', async test => {
+	const store = await getStore()
 	const filter = {
 		type: 'tvslst',
 		in: false,
