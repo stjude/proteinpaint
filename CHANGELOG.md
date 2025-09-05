@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.142.1
 
 Fixes:
 - use common table ui for bam file case/tumor/assay list
