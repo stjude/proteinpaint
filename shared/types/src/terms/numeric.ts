@@ -63,6 +63,7 @@ export type StartUnboundedBin = {
 	stopinclusive?: boolean
 	stopunbounded?: false
 	label?: string
+	range?: string // alternative bin label
 }
 
 export type StopUnboundedBin = {
@@ -72,6 +73,7 @@ export type StopUnboundedBin = {
 	startunbounded?: false
 	stopinclusive?: false // cannot include an infinite bound
 	label?: string
+	range?: string // alternative bin label
 }
 
 // TODO??? should separate a fully bounded bin by startinclusive, stopinclusive
@@ -84,9 +86,12 @@ export type FullyBoundedBin = {
 	stopinclusive?: boolean
 	stopunbounded?: false
 	label?: string
+	range?: string // alternative bin label
 }
 
 export type NumericBin = StartUnboundedBin | FullyBoundedBin | StopUnboundedBin
+
+export type RangeEntry = NumericBin | { value: number; label: string }
 
 export type RegularNumericBinConfig = MinBaseQ & {
 	type: 'regular-bin' // another concrete value being assigned, instead of `string`

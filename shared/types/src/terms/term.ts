@@ -44,42 +44,10 @@ export type BaseTerm = {
 // NumericTerm includes integer, float, date, geneExpression, metaboliteIntensity, and other non-dict terms
 export type Term = BaseTerm & (NumericTerm | CategoricalTerm | ConditionTerm | SampleLstTerm | SnpsTerm | GvTerm)
 
-/*** types supporting termwrapper ***/
-
-export type BaseTW = {
-	id?: string
-	$id?: string
-	isAtomic?: true
-	// plot-specific customizations that are applied to a tw copy
-	// todo: should rethink these
-	legend?: any
-	settings?: {
-		[key: string]: any
-	}
-	sortSamples?: any
-	minNumSamples?: number
-	valueFilter?: any
-}
-
 /*** types supporting Term types ***/
 
 export type Subconditions = {
 	[index: string | number]: {
 		label: string
 	}
-}
-
-/*** other types ***/
-
-export type RangeEntry = {
-	//Used binconfig.lst[] and in tvs.ranges[]
-	start?: number
-	startunbounded?: boolean
-	startinclusive?: boolean
-	stop?: number
-	stopunbounded?: boolean
-	stopinclusive?: boolean
-	label?: string //for binconfig.lst[]
-	value?: string //for tvs.ranges[]
-	range?: any //No idea what this is
 }

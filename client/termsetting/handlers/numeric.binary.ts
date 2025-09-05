@@ -4,7 +4,7 @@ import { get_bin_label, get_bin_range_equation } from '#shared/termdb.bins.js'
 import { make_one_checkbox, violinRenderer } from '#dom'
 import { getPillNameDefault } from '../termsetting'
 import { convertViolinData } from '#filter/tvs.numeric'
-import type { PillData, RangeEntry } from '#types'
+import type { PillData, NumericBin } from '#types'
 
 /*
 ********************** EXPORTED
@@ -265,27 +265,26 @@ function processCustomBinInputs(self) {
 	const val = self.q.lst![0].stop // should not get value from dom.customBinBoundaryInput as value can be percentile
 	if (!val && val !== 0) throw 'val is undefined'
 
-	const bins = [
+	const bins: NumericBin[] = [
 		{
 			startunbounded: true,
 			stop: Number(val),
-			startinclusive,
+			startinclusive: false,
 			stopinclusive
 		},
 		{
 			start: Number(val),
 			startinclusive,
-			stopinclusive,
+			stopinclusive: false,
 			stopunbounded: true
 		}
 	]
 
-	// assign bin labels
-	bins.forEach((bin: RangeEntry, i: number) => {
+	for (const [i, bin] of bins.entries()) {
 		// may use user assigned labels if not empty string
 		const label = inputDivs[i].value
 		bin.label = label ? label : get_bin_label(bin, self.q)
-	})
+	}
 
 	return bins
 }
