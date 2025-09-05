@@ -440,12 +440,15 @@ class GRIN2 extends PlotBase implements RxComponentInner {
 				.attr('stroke-width', 1)
 				.style('cursor', 'pointer')
 				.on('mouseover', (event, d) => {
-					this.dom.geneTip
-						.clear()
-						.d.append('div')
-						.html(`Gene: ${d.gene}<br>Type: ${d.type}<br>-log10(q-value): ${d.y.toFixed(3)}`)
+					this.dom.geneTip.clear().show(event.clientX, event.clientY)
 
-					this.dom.geneTip.show(event.clientX, event.clientY)
+					const table = table2col({
+						holder: this.dom.geneTip.d.append('div'),
+						margin: '10px'
+					})
+					table.addRow('Gene', d.gene)
+					table.addRow('Type', d.type)
+					table.addRow('-log10(q-value)', d.y.toFixed(3))
 				})
 				.on('mouseout', () => {
 					this.dom.geneTip.hide()
