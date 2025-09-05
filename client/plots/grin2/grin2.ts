@@ -6,6 +6,7 @@ import { Menu, renderTable, icons, table2col, make_one_checkbox } from '#dom'
 import { dtsnvindel, mclass } from '#shared/common.js'
 import { get$id } from '#termsetting'
 import { PlotBase } from '#plots/PlotBase.ts'
+import { to_svg } from '#src/client'
 
 class GRIN2 extends PlotBase implements RxComponentInner {
 	readonly type = 'grin2'
@@ -403,13 +404,10 @@ class GRIN2 extends PlotBase implements RxComponentInner {
 				height: 16,
 				title: 'Download GRIN2 plot',
 				handler: () => {
-					// Create download link for the base64 image
-					const link = document.createElement('a')
-					link.href = `data:image/png;base64,${result.pngImg}`
-					link.download = `grin2_manhattan_plot_${new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5)}.png`
-					document.body.appendChild(link)
-					link.click()
-					document.body.removeChild(link)
+					to_svg(
+						svg.node() as SVGSVGElement,
+						`grin2_manhattan_plot_${new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5)}`
+					)
 				}
 			})
 
@@ -438,7 +436,6 @@ class GRIN2 extends PlotBase implements RxComponentInner {
 				.attr('fill', d => d.color)
 				.attr('stroke', 'black')
 				.attr('stroke-width', 1)
-				.style('cursor', 'pointer')
 				.on('mouseover', (event, d) => {
 					this.dom.geneTip.clear().show(event.clientX, event.clientY)
 
