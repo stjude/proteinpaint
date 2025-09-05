@@ -7,6 +7,7 @@ import type { BaseTerm, MinBaseQ, TermValues, BaseTW } from '../index.ts'
 
 export type ConditionGradeQ = MinBaseQ & {
 	mode: 'discrete' | 'binary' | 'cuminc' | 'cox'
+	valueFor: 'grade'
 	bar_by_grade: true
 	/**
 		Breaks grades into groups
@@ -28,6 +29,7 @@ export type ConditionGradeQ = MinBaseQ & {
 
 export type ConditionChildrenQ = MinBaseQ & {
 	mode: 'discrete'
+	valueFor: 'children'
 	bar_by_children: true
 	groups?: any // TODO: should use a defined type
 }
@@ -61,3 +63,11 @@ export type ConditionTermSettingInstance = TermSettingInstance & {
 	refGrp: any
 }
 */
+
+export type RawConditionTW = ConditionTW & {
+	q: {
+		valueFor?: 'grade' | 'children'
+		bar_by_children?: true
+		bar_by_grade?: true
+	}
+}
