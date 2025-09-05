@@ -65,8 +65,6 @@ export class WSIViewer extends RxComponentInner {
 		const aiProjectID = state.aiProjectID
 		const aiWSIMageFiles = state.aiWSIMageFiles as Array<string>
 
-		console.log('sample_id', sample_id)
-
 		const viewModel: ViewModel = await this.viewModelProvider.provide(
 			genome,
 			dslabel,
