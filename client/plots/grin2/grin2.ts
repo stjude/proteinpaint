@@ -1,13 +1,13 @@
-import { getCompInit, copyMerge } from '#rx'
-import { RxComponentInner } from '../../types/rx.d'
+import { getCompInit, copyMerge, type RxComponentInner } from '#rx'
 import type { BasePlotConfig, MassAppApi, MassState } from '#mass/types/mass'
 import type { GRIN2Dom, GRIN2Opts } from './GRIN2Types'
 import { dofetch3 } from '#common/dofetch'
 import { Menu, renderTable, icons, table2col, make_one_checkbox } from '#dom'
 import { dtsnvindel, mclass } from '#shared/common.js'
 import { get$id } from '#termsetting'
+import { PlotBase } from '#plots/PlotBase.ts'
 
-class GRIN2 extends RxComponentInner {
+class GRIN2 extends PlotBase implements RxComponentInner {
 	readonly type = 'grin2'
 	dom: GRIN2Dom
 	private runButton!: any
@@ -16,7 +16,7 @@ class GRIN2 extends RxComponentInner {
 	readonly optionsTextColor = '#666'
 
 	constructor(opts: any) {
-		super()
+		super(opts)
 		this.opts = opts
 		const holder = opts.holder.classed('sjpp-grin2-main', true)
 		const controls = opts.controls ? holder : holder.append('div')
