@@ -512,6 +512,7 @@ export class TermdbVocab extends Vocab {
 		const headers = this.mayGetAuthHeaders('termdb')
 		arg.tw = this.getTwMinCopy(arg.tw)
 		if (arg.overlayTw) arg.overlayTw = this.getTwMinCopy(arg.overlayTw)
+		if (arg.divideTw) arg.divideTw = this.getTwMinCopy(arg.divideTw)
 		const body = Object.assign(
 			{
 				genome: this.vocab.genome,

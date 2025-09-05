@@ -210,7 +210,7 @@ function setResponse(valuesObject: any, data: ValidGetDataResponse, q: ViolinReq
 			})
 		}
 
-		charts[chart] = { plots }
+		charts[chart] = { chartId: chart, plots }
 	}
 
 	const result = {

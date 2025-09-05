@@ -1,12 +1,12 @@
-import type { BoxPlotRequest, BoxPlotResponse, /*BoxPlotData, */ RouteApi, ValidGetDataResponse } from '#types'
+import type { BoxPlotRequest, BoxPlotResponse, BoxPlotData, RouteApi, ValidGetDataResponse } from '#types'
 import { boxplotPayload } from '#types/checkers'
 import { getData } from '../src/termdb.matrix.js'
-//import { boxplot_getvalue } from '../src/utils.js'
-//import { sortKey2values } from './termdb.violin.ts'
-//import { roundValueAuto } from '#shared/roundValue.js'
-//import { getMean, getVariance } from '#shared/descriptive.stats.js'
+import { boxplot_getvalue } from '../src/utils.js'
+import { sortPlot2Values } from './termdb.violin.ts'
+import { roundValueAuto } from '#shared/roundValue.js'
+import { getMean, getVariance } from '#shared/descriptive.stats.js'
 
-//const minSampleSize = 5 // a group below cutoff will not compute boxplot
+const minSampleSize = 5 // a group below cutoff will not compute boxplot
 
 export const api: RouteApi = {
 	endpoint: 'termdb/boxplot',
@@ -32,72 +32,80 @@ function init({ genomes }) {
 			if (!ds) throw 'invalid ds'
 			const terms = [q.tw]
 			if (q.overlayTw) terms.push(q.overlayTw)
+			if (q.divideTw) terms.push(q.divideTw)
 			const data = await getData({ filter: q.filter, filter0: q.filter0, terms, __protected__: q.__protected__ }, ds)
 			if (data.error) throw data.error
 
 			const sampleType = `All ${data.sampleType?.plural_name || 'samples'}`
 			const overlayTerm = q.overlayTw
-			const { absMin, absMax, /*key2values, */ uncomputableValues } = parseValues(
+			const divideTerm = q.divideTw
+			const { absMin, absMax, chart2plot2values, uncomputableValues } = parseValues(
 				q,
 				data as ValidGetDataResponse,
 				sampleType,
 				q.isLogScale,
-				overlayTerm
+				overlayTerm,
+				divideTerm
 			)
 
-			const plots: any = []
-			/*for (const [key, values] of sortKey2values(data as ValidGetDataResponse, key2values, overlayTerm)) {
-				const sortedValues = values.sort((a, b) => a - b)
+			const charts: any = {}
+			for (const [chart, plot2values] of chart2plot2values) {
+				const plots: any = []
+				for (const [key, values] of sortPlot2Values(data, plot2values, overlayTerm)) {
+					const sortedValues = values.sort((a, b) => a - b)
 
-				const vs = sortedValues.map((v: number) => {
-					const value = { value: v }
-					return value
-				})
+					const vs = sortedValues.map((v: number) => {
+						const value = { value: v }
+						return value
+					})
 
-				const boxplot = boxplot_getvalue(vs)
-				if (!boxplot) throw 'boxplot_getvalue failed [termdb.boxplot init()]'
-				const descrStats = setDescrStats(boxplot as BoxPlotData, sortedValues)
-				const _plot = {
-					boxplot,
-					descrStats
+					const boxplot = boxplot_getvalue(vs)
+					if (!boxplot) throw 'boxplot_getvalue failed [termdb.boxplot init()]'
+					const descrStats = setDescrStats(boxplot as BoxPlotData, sortedValues)
+					const _plot = {
+						boxplot,
+						descrStats
+					}
+
+					//Set rendering properties for the plot
+					if (overlayTerm) {
+						const _key = overlayTerm?.term?.values?.[key]?.label || key
+						const plotLabel = `${_key}, n=${values.length}`
+						const overlayBins = numericBins(overlayTerm, data)
+						const plot = Object.assign(_plot, {
+							color: overlayTerm?.term?.values?.[key]?.color || null,
+							key: _key,
+							overlayBins: overlayBins.has(key) ? overlayBins.get(key) : null,
+							seriesId: key
+						})
+						plot.boxplot.label = plotLabel
+						plots.push(plot)
+					} else {
+						const plotLabel = `${sampleType}, n=${values.length}`
+						const plot = Object.assign(_plot, {
+							key: sampleType
+						})
+						plot.boxplot.label = plotLabel
+						plots.push(plot)
+					}
 				}
 
-				//Set rendering properties for the plot
-				if (overlayTerm) {
-					const _key = overlayTerm?.term?.values?.[key]?.label || key
-					const plotLabel = `${_key}, n=${values.length}`
-					const overlayBins = numericBins(overlayTerm, data)
-					const plot = Object.assign(_plot, {
-						color: overlayTerm?.term?.values?.[key]?.color || null,
-						key: _key,
-						overlayBins: overlayBins.has(key) ? overlayBins.get(key) : null,
-						seriesId: key
-					})
-					plot.boxplot.label = plotLabel
-					plots.push(plot)
-				} else {
-					const plotLabel = `${sampleType}, n=${values.length}`
-					const plot = Object.assign(_plot, {
-						key: sampleType
-					})
-					plot.boxplot.label = plotLabel
-					plots.push(plot)
+				if (absMin == null || absMax == null) throw 'absMin or absMax is null [termdb.boxplot init()]'
+
+				if (q.tw.term?.values) setHiddenPlots(q.tw, plots)
+				if (overlayTerm && overlayTerm.term?.values) setHiddenPlots(overlayTerm, plots)
+
+				if (q.orderByMedian == true) {
+					plots.sort((a, b) => a.boxplot.p50 - b.boxplot.p50)
 				}
-			}*/
 
-			if (absMin == null || absMax == null) throw 'absMin or absMax is null [termdb.boxplot init()]'
-
-			if (q.tw.term?.values) setHiddenPlots(q.tw, plots)
-			if (overlayTerm && overlayTerm.term?.values) setHiddenPlots(overlayTerm, plots)
-
-			if (q.orderByMedian == true) {
-				plots.sort((a, b) => a.boxplot.p50 - b.boxplot.p50)
+				charts[chart] = { chartId: chart, plots }
 			}
 
 			const returnData: BoxPlotResponse = {
 				absMin,
 				absMax,
-				plots,
+				charts,
 				uncomputableValues: setUncomputableValues(uncomputableValues)
 			}
 
@@ -124,7 +132,7 @@ function setHiddenPlots(term: any, plots: any) {
 	return plots
 }
 
-/*function setDescrStats(boxplot: BoxPlotData, sortedValues: number[]) {
+function setDescrStats(boxplot: BoxPlotData, sortedValues: number[]) {
 	// Return the total value for legend rendering
 	if (sortedValues.length < minSampleSize) return [{ id: 'total', label: 'Total', value: sortedValues.length }]
 	//boxplot_getvalue() already returns calculated stats
@@ -145,7 +153,7 @@ function setHiddenPlots(term: any, plots: any) {
 		{ id: 'variance', label: 'Variance', value: roundValueAuto(variance, true) },
 		{ id: 'iqr', label: 'Inter-quartile range', value: roundValueAuto(boxplot.iqr, true) }
 	]
-}*/
+}
 
 /** Only return a simplified object for the legend data */
 function setUncomputableValues(values: Record<string, number>) {
