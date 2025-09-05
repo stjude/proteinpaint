@@ -7,11 +7,13 @@
 // since dynamic import plugin is not yet supported
 export const routeFiles = [
 	import('../routes/aiProjectAdmin.ts'),
+	import('../routes/aiProjectSelectedWSImages.ts'),
 	import('../routes/brainImaging.ts'),
 	import('../routes/brainImagingSamples.ts'),
 	import('../routes/burden.ts'),
 	import('../routes/correlationVolcano.ts'),
 	import('../routes/dataset.ts'),
+	import('../routes/deleteWSIAnnotation.ts'),
 	import('../routes/dsdata.ts'),
 	import('../routes/dzimages.ts'),
 	import('../routes/gdc.grin2.run.ts'),
@@ -34,7 +36,7 @@ export const routeFiles = [
 	import('../routes/pdomain.ts'),
 	import('../routes/sampledzimages.ts'),
 	import('../routes/samplewsimages.ts'),
-	import('../routes/sampleWsiAiApi.ts'),
+	import('../routes/saveWSIAnnotation.ts'),
 	import('../routes/snp.ts'),
 	import('../routes/termdb.DE.ts'),
 	import('../routes/termdb.boxplot.ts'),

@@ -20,7 +20,9 @@ export class ViewModel {
 		displayedImageIndex: number
 	) {
 		this.sampleWSImages = sampleWSImages
-		this.sampleWSImages[displayedImageIndex].sessionsTileSelections = sessionsTileSelections
+		if (this.sampleWSImages[displayedImageIndex]) {
+			this.sampleWSImages[displayedImageIndex].sessionsTileSelections = sessionsTileSelections
+		}
 		this.wsimageLayers = wsimageLayers
 		this.wsimageLayersLoadError = wsimageLayersLoadError
 		this.imageViewData = index => this.getImageViewData(index)
@@ -46,12 +48,12 @@ export class ViewModel {
 		const image = this.sampleWSImages[index]
 		const sessionsTileSelections = image.sessionsTileSelections?.map(a => a.zoomCoordinates) || []
 		const predictions = image.predictions?.map(a => a.zoomCoordinates) || []
-		const persistedAnnotations = image.annotationsData?.map(a => a.zoomCoordinates) || []
+		const persistedAnnotations = image.annotations?.map(a => a.zoomCoordinates) || []
 		return [...sessionsTileSelections, ...predictions, ...persistedAnnotations].slice(0, 1)
 	}
 
 	private setAnnonationsTableData(imageViewData: ImageViewData, imageData: SessionWSImage) {
-		if (!imageData?.annotationsData?.length) return
+		if (!imageData?.annotations?.length && !imageData?.predictions?.length) return
 
 		// Map session annotations to the same format, starting index at 0
 		const sessionsTileSelections: any = imageData.sessionsTileSelections?.map((d, i) => {
@@ -78,7 +80,7 @@ export class ViewModel {
 		})
 
 		// Original annotations follow, indexing continues from session annotations
-		const annotationsRows: any = imageData.annotationsData!.map((d, i) => {
+		const annotationsRows: any = imageData.annotations!.map((d, i) => {
 			return [
 				{ value: imageData.sessionsTileSelections!.length + imageData.predictions!.length + i }, // Continue index
 				{ value: d.zoomCoordinates },
@@ -112,15 +114,16 @@ export class ViewModel {
 
 		const shortcuts: string[] = ['Enter']
 		const classRows: TableCell[][] = []
+
 		for (const c of imageData.classes) {
 			classRows.push([
 				{ value: c.label },
 				{
 					html: `<span style="display:inline-block;width:20px;height:20px;background-color:${c.color};border:grey 1px solid;"></span>`
 				},
-				{ value: c.shortcut.replace('Key', '').replace('Digit', '') }
+				{ value: c.key_shortcut.replace('Key', '').replace('Digit', '') }
 			])
-			shortcuts.push(c.shortcut)
+			shortcuts.push(c.key_shortcut)
 		}
 		const columns = [{ label: 'Class' }, { label: 'Color', align: 'center' }, { label: 'Shortcut', align: 'center' }]
 

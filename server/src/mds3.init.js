@@ -46,10 +46,16 @@ import { validate_query_getTopMutatedGenes } from '#routes/termdb.topMutatedGene
 import { validate_query_getSampleImages } from '#routes/termdb.sampleImages.ts'
 import { validate_query_rnaseqGeneCount } from '#routes/termdb.DE.ts'
 import { validate_query_getSampleWSImages } from '#routes/samplewsimages.ts'
+import {
+	validate_query_getWSIAnnotations,
+	validate_query_getWSIClassesQuery
+} from '#routes/aiProjectSelectedWSImages.ts'
 import { validate_query_getWSISamples } from '#routes/wsisamples.ts'
 import { mds3InitNonblocking } from './mds3.init.nonblocking.js'
 import { dtTermTypes } from '#shared/terms.js'
 import { makeAdHocDicTermdbQueries } from './adHocDictionary/buildAdHocDictionary.ts'
+import { validate_query_saveWSIAnnotation } from '#routes/saveWSIAnnotation.js'
+import { validate_query_deleteWSIAnnotation } from '#routes/deleteWSIAnnotation.js'
 
 /*
 init
@@ -163,7 +169,11 @@ export async function init(ds, genome, totalDsLst = 0) {
 		await validate_query_getTopTermsByType(ds, genome)
 		await validate_query_getTopMutatedGenes(ds, genome)
 		await validate_query_getSampleImages(ds, genome)
+		await validate_query_getWSIAnnotations(ds)
+		await validate_query_getWSIClassesQuery(ds)
 		await validate_query_getSampleWSImages(ds, genome)
+		await validate_query_deleteWSIAnnotation(ds)
+		await validate_query_saveWSIAnnotation(ds)
 		await validate_query_getWSISamples(ds, genome)
 		await makeAdHocDicTermdbQueries(ds)
 		await validate_query_rnaseqGeneCount(ds, genome)

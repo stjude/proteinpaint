@@ -42,7 +42,6 @@ export class WSIViewer extends RxComponentInner {
 		const state = this.app.getState()
 		if (this.opts.header) {
 			//If sandbox is present, add sample id and data type to the header
-			console.log('header', this.opts.header)
 			this.opts.header.html(
 				`${state.sample_id} <span style="font-size:.8em">${state.termdbConfig.queries.WSImages.type} images</span>`
 			)
@@ -63,16 +62,21 @@ export class WSIViewer extends RxComponentInner {
 		const genome = state.genome || state.vocab.genome
 		const dslabel = state.dslabel || state.vocab.dslabel
 		const sample_id = state.sample_id
+		const aiProjectID = state.aiProjectID
+		const aiWSIMageFiles = state.aiWSIMageFiles as Array<string>
 
 		const viewModel: ViewModel = await this.viewModelProvider.provide(
 			genome,
 			dslabel,
 			sample_id,
 			settings.sessionsTileSelection,
-			settings.displayedImageIndex
+			settings.displayedImageIndex,
+			aiProjectID,
+			aiWSIMageFiles
 		)
 
 		const wsimages = viewModel.sampleWSImages
+
 		const wsimageLayers = viewModel.wsimageLayers
 		const wsimageLayersLoadError = viewModel.wsimageLayersLoadError
 
@@ -115,8 +119,10 @@ export class WSIViewer extends RxComponentInner {
 
 		this.metadataRenderer.renderMetadata(holder, imageViewData)
 
+		// TODO simplify the if condition
 		if (
-			viewModel.sampleWSImages[settings.displayedImageIndex].annotationsData &&
+			(viewModel.sampleWSImages[settings.displayedImageIndex].annotations ||
+				viewModel.sampleWSImages[settings.displayedImageIndex].predictions) &&
 			settings.renderAnnotationTable &&
 			this.map
 		) {
@@ -139,6 +145,7 @@ export class WSIViewer extends RxComponentInner {
 					this.map,
 					activeImageExtent,
 					imageViewData.activePatchColor!,
+					aiProjectID,
 					imageViewData.shortcuts,
 					buffers
 				)

@@ -5,8 +5,10 @@ export type AIProjectAdminRequest = {
 	dslabel: string
 	/** list: get entire list of projects from db
 	 * admin: edit, add, or delete projects from db
+	 * filterImages: filter metadata for images
+	 * images: get images for a project
 	 */
-	for: 'list' | 'admin' | 'images'
+	for: 'list' | 'admin' | 'filterImages' | 'images'
 	/** required for 'project' and 'selection' requests */
 	project?: {
 		name: string
@@ -20,6 +22,7 @@ export type AIProjectAdminRequest = {
 export type AIProjectAdminResponse =
 	| {
 			status: 'ok' | 'error'
+			projectId?: number
 			error?: string
 			data?: { cols: any[]; rows: any[]; images: string[] }[]
 	  }

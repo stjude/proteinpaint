@@ -30,27 +30,26 @@ export const api: RouteApi = {
 function init({ genomes }) {
 	return async (req, res): Promise<void> => {
 		try {
-			const query: WSImagesRequest = req.query
-			const g = genomes[query.genome]
+			const wSImagesRequest: WSImagesRequest = req.query
+			const g = genomes[wSImagesRequest.genome]
 			if (!g) throw new Error('Invalid genome name')
-			const ds = g.datasets[query.dslabel]
+			const ds = g.datasets[wSImagesRequest.dslabel]
 			if (!ds) throw new Error('Invalid dataset name')
-			const sampleId = query.sampleId
-			if (!sampleId) throw new Error('Invalid sampleId')
-			const wsimage = query.wsimage
-			if (!wsimage) throw new Error('Invalid wsimage')
+			const sampleId = wSImagesRequest.sampleId
+			const wsimage = wSImagesRequest.wsimage
+			const aiProjectId = wSImagesRequest.aiProjectId
+
+			if (!sampleId && (!wsimage || !aiProjectId)) {
+				throw new Error('Invalid parameters: sampleId or both wsimage and aiProjectId must be provided')
+			}
 
 			const cookieJar = new CookieJar()
 			const setCookie = promisify(cookieJar.setCookie.bind(cookieJar))
 			const getCookieString = promisify(cookieJar.getCookieString.bind(cookieJar))
 
-			const mount = serverconfig.features?.tileserver?.mount
+			const wsiImagePath = await getWSImagePath(ds, wSImagesRequest)
 
-			if (!mount) throw new Error('No mount available for TileServer')
-
-			const wsiImagePath = path.join(`${mount}/${ds.queries.WSImages.imageBySampleFolder}/${sampleId}`, wsimage)
-
-			const session = await getSessionId(ds, sampleId, cookieJar, getCookieString, setCookie, wsiImagePath)
+			const session = await getSessionId(ds, cookieJar, getCookieString, setCookie, wsiImagePath, aiProjectId)
 
 			const getWsiImageResponse: any = await getWsiImageDimensions(
 				session.imageSessionId,
@@ -76,13 +75,28 @@ function init({ genomes }) {
 	}
 }
 
+async function getWSImagePath(ds: any, wSImagesRequest: WSImagesRequest) {
+	const mount = serverconfig.features?.tileserver?.mount
+
+	if (!mount) throw new Error('No mount available for TileServer')
+
+	if (wSImagesRequest.sampleId) {
+		return path.join(
+			`${mount}/${ds.queries.WSImages.imageBySampleFolder}/${wSImagesRequest.sampleId}`,
+			wSImagesRequest.wsimage
+		)
+	} else {
+		return path.join(`${mount}/${ds.queries.WSImages.aiToolImageFolder}/`, wSImagesRequest.wsimage)
+	}
+}
+
 async function getSessionId(
 	ds: any,
-	sampleId: string,
 	cookieJar: any,
 	getCookieString: any,
 	setCookie: any,
-	wsimage: string
+	wsimage: string,
+	aiProjectId: number | undefined
 ): Promise<SessionData> {
 	const sessionManager = SessionManager.getInstance()
 
@@ -126,17 +140,14 @@ async function getSessionId(
 	})
 
 	if (ds.queries.WSImages.getWSIPredictionOverlay) {
-		const predictionOverlay = await ds.queries.WSImages.getWSIPredictionOverlay(sampleId, wsimage)
+		const predictionOverlay = await ds.queries.WSImages.getWSIPredictionOverlay(wsimage)
 
 		if (predictionOverlay) {
 			const mount = serverconfig.features?.tileserver?.mount
 
-			const annotationsFilePath = path.join(
-				`${mount}/${ds.queries.WSImages.imageBySampleFolder}/${sampleId}`,
-				predictionOverlay
-			)
+			const overlayFilePath = path.join(`${mount}/${ds.queries.WSImages.aiToolImageFolder}/`, predictionOverlay)
 			const annotationsData = qs.stringify({
-				overlay_path: annotationsFilePath
+				overlay_path: overlayFilePath
 			})
 
 			const layerNumber: string = await ky
@@ -161,22 +172,22 @@ async function getSessionId(
 	}
 
 	if (ds.queries.WSImages.getWSIUncertaintyOverlay) {
-		const uncertaintyOverlay = await ds.queries.WSImages.getWSIUncertaintyOverlay(sampleId, wsimage)
+		const uncertaintyOverlay = await ds.queries.WSImages.getWSIUncertaintyOverlay(wsimage)
 
 		if (uncertaintyOverlay) {
 			const mount = serverconfig.features?.tileserver?.mount
 
-			const annotationsFilePath = path.join(
-				`${mount}/${ds.queries.WSImages.imageBySampleFolder}/${sampleId}`,
+			const uncertaintyOverlayFilePath = path.join(
+				`${mount}/${ds.queries.WSImages.aiToolImageFolder}/`,
 				uncertaintyOverlay
 			)
-			const annotationsData = qs.stringify({
-				overlay_path: annotationsFilePath
+			const uncertaintyData = qs.stringify({
+				overlay_path: uncertaintyOverlayFilePath
 			})
 
 			const layerNumber: string = await ky
 				.put(`${tileServer.url}/tileserver/overlay`, {
-					body: annotationsData,
+					body: uncertaintyData,
 					timeout: 50000,
 					headers: {
 						'Content-Type': 'application/x-www-form-urlencoded',
@@ -198,7 +209,7 @@ async function getSessionId(
 	const sessionData: SessionData = await sessionManager.setSession(wsimage, sessionId, tileServer, overlays)
 
 	if (ds.queries.WSImages.getWSIPredictionPatches) {
-		const predictionPatches = await ds.queries.WSImages.getWSIPredictionPatches(sampleId, wsimage)
+		const predictionPatches = await ds.queries.WSImages.getWSIPredictionPatches(aiProjectId, wsimage)
 
 		if (!predictionPatches) throw new Error('No prediction files found')
 
@@ -208,10 +219,7 @@ async function getSessionId(
 
 		if (predictionPatches.length > 0) {
 			for (const predictionPatch of predictionPatches) {
-				const predictionFilePath = path.join(
-					`${mount}/${ds.queries.WSImages.imageBySampleFolder}/${sampleId}`,
-					predictionPatch
-				)
+				const predictionFilePath = path.join(`${mount}/${ds.queries.WSImages.aiToolImageFolder}/`, predictionPatch)
 				const predictionsData = qs.stringify({
 					overlay_path: predictionFilePath
 				})

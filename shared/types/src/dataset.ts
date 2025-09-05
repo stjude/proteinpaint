@@ -1,6 +1,8 @@
 import type { Mclass } from './Mclass.ts'
 import type { WSImage } from './routes/samplewsimages.ts'
 import type { WSISample } from './routes/wsisamples.ts'
+import type { SaveWSIAnnotationRequest } from './routes/saveWSIAnnotation.ts'
+import type { DeleteWSIAnnotationRequest } from './routes/deleteWSIAnnotation.ts'
 
 /*** General usage types ***/
 type FileObj = {
@@ -1039,31 +1041,41 @@ export type WSImages = {
 	/* path to the folder where sample images are stored
 	required; for both cases where image files are hosted locally, or loaded from remote via ds-supplied getter
 	*/
-	imageBySampleFolder: string
+	imageBySampleFolder?: string
+
+	aiToolImageFolder?: string
+
 	activePatchColor?: string
 	predictionColor?: Array<number>
 	annotationsColor?: Array<number>
 	tileSize?: number
-	classes?: WSIClass[]
 	uncertainty?: { color: string; label: string }[]
+
+	/** dynamically added on launch with built in logic */
+	saveWSIAnnotation?: (annotation: SaveWSIAnnotationRequest) => Promise<void>
+
+	/** dynamically added on launch with built in logic */
+	deleteWSIAnnotation?: (annotation: DeleteWSIAnnotationRequest) => Promise<void>
 
 	/** either ds supplied or dynamically added on launch with built in logic (retrieve the sample list from the wsimages table) */
 	getSamples?: () => Promise<Array<WSISample>>
 	/** either ds supplied or dynamically added on launch with built in logic */
 	getWSImages?: (sampleName: string) => Promise<WSImage[]>
 	/**  ds supplied */
-	getWSIPredictionPatches?: (sampleName: string, wsiImage: string) => Promise<string[]>
+	getWSIPredictionPatches?: (projectId: string, wsiImage: string) => Promise<string[]>
 	/**  ds supplied */
-	getWSIAnnotations?: (sampleName: string, wsiImage: string) => Promise<string[]>
+	getWSIAnnotations?: (projectId: string, wsiImage: string) => Promise<string[]>
 	/**  ds supplied */
 	makeGeoJson?: (sampleId: string, wsiImage: string) => void
 	/**  ds supplied */
-	getWSIPredictionOverlay?: (sampleName: string, wsiImage: string) => Promise<string | undefined>
+	getWSIPredictionOverlay?: (wsiImage: string) => Promise<string | undefined>
 	/**  ds supplied */
-	getWSIUncertaintyOverlay?: (sampleName: string, wsiImage: string) => Promise<string | undefined>
+	getWSIUncertaintyOverlay?: (wsiImage: string) => Promise<string | undefined>
+	/**  ds supplied */
+	getAnnotationClasses?: (projectId: string) => Promise<WSIClass[] | undefined>
 }
 
-export type WSIClass = { id: number; shortcut: string; label: string; color: string }
+export type WSIClass = { id: number; key_shortcut: string; label: string; color: string }
 
 /*** types supporting Termdb ***/
 
