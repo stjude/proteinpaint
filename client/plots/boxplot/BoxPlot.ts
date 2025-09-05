@@ -11,7 +11,7 @@ import { Model } from './model/Model'
 import { ViewModel } from './viewModel/ViewModel'
 import { View } from './view/View'
 import { BoxPlotInteractions } from './interactions/BoxPlotInteractions'
-import { to_svg } from '#src/client'
+import { LegendRenderer } from './view/LegendRender'
 
 class TdbBoxplot extends RxComponentInner {
 	readonly type = 'boxplot'
@@ -181,11 +181,11 @@ class TdbBoxplot extends RxComponentInner {
 			inputs
 		})
 
-		this.components.controls.on('downloadClick.boxplot', () => {
-			this.download()
+		this.components.controls.on('downloadClick.boxplot', event => {
+			this.interactions!.download(event, this.data)
 		})
 		this.components.controls.on('helpClick.boxplot', () => {
-			this.help()
+			this.interactions!.help()
 		})
 	}
 
@@ -206,6 +206,7 @@ class TdbBoxplot extends RxComponentInner {
 
 	async init() {
 		this.dom.div.style('display', 'inline-block').style('margin', '10px')
+		this.interactions = new BoxPlotInteractions(this.app, this.dom, this.id)
 		try {
 			await this.setControls()
 		} catch (e: any) {
@@ -217,15 +218,19 @@ class TdbBoxplot extends RxComponentInner {
 		try {
 			const config = structuredClone(this.state.config)
 			if (config.childType != this.type && config.chartType != this.type) return
+
+			if (!this.interactions) throw 'Interactions not initialized [box plot main()]'
+
 			const settings = config.settings.boxplot
 			const model = new Model(config, this.state, this.app, settings)
 			const data = await model.getData()
 			if (data.error) throw data.error
 			if (!data.charts || !Object.keys(data.charts).length) {
-				this.clearDom()
+				this.interactions!.clearDom()
 				this.dom.error.style('padding', '20px 20px 20px 60px').text('No visible box plot data to render')
 				return
 			}
+			this.data = data
 
 			this.dom.charts.selectAll('*').remove()
 
@@ -241,6 +246,7 @@ class TdbBoxplot extends RxComponentInner {
 			tempsvg.remove()
 
 			// plot charts
+			const legend: any = [] // legend items across charts
 			for (const key of Object.keys(data.charts)) {
 				const chart = data.charts[key]
 				// setup a dom{} object for the chart
@@ -253,6 +259,7 @@ class TdbBoxplot extends RxComponentInner {
 					.style('font-size', '1.1em')
 					.style('margin-bottom', '24px')
 				const chartSvg = chartDiv.append('svg').attr('class', 'sjpp-boxplot-svg')
+				chart.svg = chartSvg
 				const chartDom = Object.assign({}, this.dom, {
 					svg: chartSvg,
 					chartTitle,
@@ -260,11 +267,15 @@ class TdbBoxplot extends RxComponentInner {
 					axis: chartSvg.append('g'),
 					boxplots: chartSvg.append('g')
 				})
-				// get the view model
+				// get view model of chart
 				chart.absMin = data.absMin
 				chart.absMax = data.absMax
 				chart.uncomputableValues = data.uncomputableValues
 				const viewModel = new ViewModel(config, chart, settings, maxLabelLgth, this.useDefaultSettings)
+				// collect legend items
+				for (const l of viewModel.viewData.legend) {
+					if (!legend.find(x => x.label == l.label)) legend.push(l)
+				}
 				if (
 					(viewModel.rowSpace !== settings.rowSpace || viewModel.rowHeight !== settings.rowHeight) &&
 					this.useDefaultSettings == true
@@ -288,34 +299,18 @@ class TdbBoxplot extends RxComponentInner {
 						}
 					})
 				}
-				// get interactions
-				const interactions = new BoxPlotInteractions(this.app, chartDom, this.id)
-				// plot the view
-				new View(viewModel.viewData, settings, chartDom, this.app, interactions)
+				// render view of chart
+				new View(viewModel.viewData, settings, chartDom, this.app, this.interactions)
 			}
+			// render legend (applies to all charts)
+			this.dom.legend.selectAll('*').remove()
+			const textColor = settings.displayMode == 'dark' ? 'white' : 'black'
+			if (legend.length) new LegendRenderer(this.dom.legend, legend, this.interactions, textColor)
 		} catch (e: any) {
 			if (e instanceof Error) console.error(e.message || e)
 			else if (e.stack) console.log(e.stack)
 			throw e
 		}
-	}
-
-	download() {
-		//May add more options in the future
-		const svg = this.dom.svg.node() as Node
-		const plotConfig = this.app.getState().plots.find((p: BoxPlotConfig) => p.id === this.id)
-		to_svg(svg, `${plotConfig.term.term.name} box plot`, { apply_dom_styles: true })
-	}
-
-	help() {
-		//May add more options in the future
-		window.open('https://github.com/stjude/proteinpaint/wiki/Box-plot')
-	}
-
-	clearDom() {
-		this.dom.error.style('padding', '').text('')
-		this.dom.charts.selectAll('*').remove()
-		this.dom.legend.selectAll('*').remove()
 	}
 }
 
