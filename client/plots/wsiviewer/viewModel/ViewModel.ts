@@ -20,7 +20,9 @@ export class ViewModel {
 		displayedImageIndex: number
 	) {
 		this.sampleWSImages = sampleWSImages
-		this.sampleWSImages[displayedImageIndex].sessionsTileSelections = sessionsTileSelections
+		if (this.sampleWSImages[displayedImageIndex]) {
+			this.sampleWSImages[displayedImageIndex].sessionsTileSelections = sessionsTileSelections
+		}
 		this.wsimageLayers = wsimageLayers
 		this.wsimageLayersLoadError = wsimageLayersLoadError
 		this.imageViewData = index => this.getImageViewData(index)
