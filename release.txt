@@ -1,2 +1,1 @@
-Features:
-- Adding interactive GRIN2 plot
+
