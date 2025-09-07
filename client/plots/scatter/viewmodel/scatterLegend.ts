@@ -322,7 +322,7 @@ export class ScatterLegend {
 
 	addLegendTitle(G, title, x, y, tw) {
 		const _t = G.append('text')
-			.attr('id', 'legendTitle') // may replace id with data-testid to avoid conflict with portal
+			.attr('data-testid', 'legendTitle') // may replace id with data-testid to avoid conflict with portal
 			.attr('x', x)
 			.attr('y', y)
 			.text(title)
@@ -330,7 +330,7 @@ export class ScatterLegend {
 		//.on('click',()=>{}) TODO allow click on text to get edit/replace options for tw
 
 		// when plot has both color & shape and tw is either, since color legend hardcodes circles which may confuse with shape, thus put word "color/shape" at legend title to disambiguate
-		let extraText: string
+		let extraText: any = null
 		if (tw == this.scatter.config.colorTW && this.scatter.config.shapeTW) {
 			extraText = 'COLOR'
 		} else if (tw == this.scatter.config.shapeTW && this.scatter.config.colorTW) {
