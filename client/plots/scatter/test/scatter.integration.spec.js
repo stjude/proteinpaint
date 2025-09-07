@@ -148,7 +148,7 @@ tape('\n', function (test) {
 
 tape('Render TermdbTest scatter plot and open survival and summary', function (test) {
 	test.timeoutAfter(8000)
-	test.plan(4)
+	test.plan(5)
 	const holder = getHolder()
 	runpp({
 		holder, //Fix for test failing because survival & summary sandboxs are not destroyed.
@@ -185,12 +185,16 @@ tape('Render TermdbTest scatter plot and open survival and summary', function (t
 		}
 
 		function testLegendTitle() {
-			if (!scatter.Inner.colorTW) return
-			const legendG = scatterDiv.select('.sjpcb-scatter-legend')
-			test.true(legendG != null, 'Should have a legend')
+			const g = scatterDiv.select('.sjpcb-scatter-legend')
+			test.true(g != null, 'Should have a legend')
+			const texts = g.selectAll('text[data-testid="legendTitle"]')
 			test.true(
-				legendG.select('#legendTitle').text().startsWith(scatter.Inner.config.colorTW.id),
-				`Legend title should start with ${scatter.Inner.config.colorTW.id}`
+				texts._groups[0][0].innerHTML.startsWith(scatter.Inner.config.colorTW.term.name),
+				'colorTW legend title made'
+			)
+			test.true(
+				texts._groups[0][1].innerHTML.startsWith(scatter.Inner.config.shapeTW.term.name),
+				'shapeTW legend title made'
 			)
 		}
 
