@@ -8,6 +8,7 @@ import { ScatterLegendInteractivity } from './scatterLegendInteractivity.js'
 import { minShapeSize, maxShapeSize } from '../view/scatterView.js'
 import type { Scatter } from '../scatter.js'
 import type { ScatterLegendItem } from '../scatterTypes.js'
+
 export class ScatterLegend {
 	scatter: Scatter
 	vm: any
@@ -87,7 +88,7 @@ export class ScatterLegend {
 			)}`
 			const colorRefCategory = chart.colorLegend.get('Ref')
 
-			if (this.scatter.config.colorTW?.term?.type == 'geneVariant' && this.scatter.config.colorTW?.q.type == 'values')
+			if (this.scatter.config.colorTW?.term?.type == 'geneVariant' && this.scatter.config.colorTW?.q.type == 'values') {
 				offsetY = this.renderGeneVariantLegend(
 					chart,
 					offsetX,
@@ -98,14 +99,8 @@ export class ScatterLegend {
 					chart.colorLegend,
 					scale
 				)
-			else {
-				legendG
-					.append('text')
-					.attr('id', 'legendTitle')
-					.attr('x', offsetX)
-					.attr('y', offsetY)
-					.text(title)
-					.style('font-weight', 'bold')
+			} else {
+				this.addLegendTitle(legendG, title, offsetX, offsetY, this.scatter.config.colorTW)
 				offsetY += step
 
 				if (this.scatter.config.colorTW?.q?.mode === 'continuous') {
@@ -245,7 +240,7 @@ export class ScatterLegend {
 			offsetX = chart.colorLegendWidth
 			offsetY = 60
 			title = `${getTitle(this.scatter.config.shapeTW.term.name)}`
-			if (this.scatter.config.shapeTW.term.type == 'geneVariant' && this.scatter.config.shapeTW.q.type == 'values')
+			if (this.scatter.config.shapeTW.term.type == 'geneVariant' && this.scatter.config.shapeTW.q.type == 'values') {
 				this.renderGeneVariantLegend(
 					chart,
 					offsetX,
@@ -256,10 +251,11 @@ export class ScatterLegend {
 					chart.shapeLegend,
 					scale
 				)
-			else {
+			} else {
 				const shapeG = legendG.append('g').style('font-size', `${this.getFontSize(chart, chart.shapeLegend)}em`)
 
-				legendG.append('text').attr('x', offsetX).attr('y', offsetY).text(title).style('font-weight', 'bold')
+				this.addLegendTitle(legendG, title, offsetX, offsetY, this.scatter.config.shapeTW)
+
 				offsetY += step
 				const color = 'gray'
 				for (const [key, shape] of chart.shapeLegend) {
@@ -324,18 +320,34 @@ export class ScatterLegend {
 		return [circleG, itemG]
 	}
 
+	addLegendTitle(G, title, x, y, tw) {
+		const _t = G.append('text')
+			.attr('id', 'legendTitle') // may replace id with data-testid to avoid conflict with portal
+			.attr('x', x)
+			.attr('y', y)
+			.text(title)
+			.style('font-weight', 'bold')
+		//.on('click',()=>{}) TODO allow click on text to get edit/replace options for tw
+
+		// when plot has both color & shape and tw is either, since color legend hardcodes circles which may confuse with shape, thus put word "color/shape" at legend title to disambiguate
+		let extraText: string
+		if (tw == this.scatter.config.colorTW && this.scatter.config.shapeTW) {
+			extraText = 'COLOR'
+		} else if (tw == this.scatter.config.shapeTW && this.scatter.config.colorTW) {
+			extraText = 'SHAPE'
+		}
+		if (extraText) {
+			_t.append('tspan').text(extraText).attr('dx', 7).style('font-weight', 'normal').attr('font-size', '.7em')
+		}
+	}
+
 	renderGeneVariantLegend(chart, offsetX, offsetY, legendG, tw, cname, map, scale) {
 		const step = 125
 		const name = tw.term.name.length > 25 ? tw.term.name.slice(0, 25) + '...' : tw.term.name
 		const title = name
 		const G = legendG.append('g').style('font-size', '0.9em')
 
-		G.append('text')
-			.attr('id', 'legendTitle')
-			.attr('x', offsetX)
-			.attr('y', offsetY)
-			.text(title)
-			.style('font-weight', 'bold')
+		this.addLegendTitle(G, title, offsetX, offsetY, tw)
 
 		offsetX += step
 		const mutations: any = []

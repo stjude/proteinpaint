@@ -219,8 +219,9 @@ export default function (): Mds3 {
 					{
 						name: 'TermdbTest TSNE',
 						dimension: 2,
-						file: 'files/hg38/TermdbTest/tnse.txt',
-						colorTW: { id: 'diaggrp' }
+						file: 'files/hg38/TermdbTest/tsne.txt',
+						colorTW: { id: 'diaggrp' },
+						shapeTW: { id: 'sex' }
 					}
 				]
 			},
