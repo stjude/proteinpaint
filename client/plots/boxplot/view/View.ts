@@ -57,7 +57,7 @@ export class View {
 			this.settings.isVertical ? `,rotate(-90)` : ''
 		}`
 		dom.plotTitle
-			.attr('id', 'sjpp-boxplot-title')
+			.attr('class', 'sjpp-boxplot-title')
 			.style('font-weight', 600)
 			.attr('text-anchor', 'middle')
 			.attr('transform', transformStr)
@@ -79,7 +79,7 @@ export class View {
 		const ticks = scale.ticks()
 		const tickValues = plotDim.axis.values(ticks)
 		dom.axis
-			.attr('id', 'sjpp-boxplot-axis')
+			.attr('class', 'sjpp-boxplot-axis')
 			.attr('transform', `translate(${plotDim.axis.x}, ${plotDim.axis.y})`)
 			.transition()
 			.call(

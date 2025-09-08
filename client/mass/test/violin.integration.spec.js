@@ -87,14 +87,13 @@ tape('render violin plot', function (test) {
 		violin.on('postRender.test', null)
 		const legendDiv = violin.Inner.dom.legendDiv
 		const violinDiv = violin.Inner.dom.violinDiv
-		const violinPvalueDiv = violin.Inner.dom.tableHolder
 		const violinDivControls = violin.Inner.dom.controls
-		const violinDivData = violin.Inner.data.plots
+		const violinDivData = violin.Inner.data.charts
 
 		await testViolinPath(violinDiv) //test if violin path is generated. should be more than 0
 		testPlotTitle(violinDiv, violinDivControls) //test if label in ts-pill is same as title on svg.
 		testDataLength(violinDiv, violinDivData) //test if length of samples is same as shown in plot labels
-		testPvalue(violin, violinPvalueDiv)
+		testPvalue(violin, violinDiv, violinDivData)
 		testDescrStats(violin, legendDiv)
 		if (test._ok) violin.Inner.app.destroy()
 		test.end()
@@ -121,9 +120,10 @@ tape('render violin plot', function (test) {
 
 	function testDataLength(violinDiv, violinDivData) {
 		const axisLabelNodes = violinDiv.selectAll('.sjpp-axislabel').nodes()
-		const plotValueCount1 = violinDivData[0]?.plotValueCount
+		const plots = violinDivData[''].plots
+		const plotValueCount1 = plots[0]?.plotValueCount
 
-		const plotValueCount2 = violinDivData[1]?.plotValueCount
+		const plotValueCount2 = plots[1]?.plotValueCount
 
 		if (plotValueCount1) {
 			test.equal(
@@ -142,9 +142,12 @@ tape('render violin plot', function (test) {
 		}
 	}
 
-	function testPvalue(violin, violinPvalueDiv) {
+	function testPvalue(violin, violinDiv, violinDivData) {
+		const violinPvalueDiv = violinDiv.selectAll('.sjpp-tableHolder')
+		test.equal(violinPvalueDiv.size(), 1, 'Should have 1 p-value table')
+		const pvalues = violinDivData[''].pvalues
 		test.equal(
-			+violin.Inner.data.pvalues[0][2].html,
+			+pvalues[0][2].html,
 			+violinPvalueDiv.node().querySelectorAll('.sjpp_table_item')[5].innerHTML,
 			`p-value of ${+violinPvalueDiv.node().querySelectorAll('.sjpp_table_item')[5].innerHTML} is correct`
 		)
@@ -225,14 +228,14 @@ tape('term1 as numeric and term2 categorical, test median rendering', function (
 		test.ok(median, 'Median exists')
 		test.equal(
 			median.length,
-			violin.Inner.data.plots.length,
+			violin.Inner.data.charts[''].plots.length,
 			'Number of median lines rendered should be/is equal to number of plots rendered'
 		)
 		const medianValues = median.map(({ __data__: { summaryStats } }) => {
 			const { value } = summaryStats.find(c => c.id === 'median')
 			return value
 		})
-		const sumStatsValues = violin.Inner.data.plots.map(({ summaryStats }) => {
+		const sumStatsValues = violin.Inner.data.charts[''].plots.map(({ summaryStats }) => {
 			const { value } = summaryStats.find(c => c.id === 'median')
 			return value
 		})
@@ -240,12 +243,12 @@ tape('term1 as numeric and term2 categorical, test median rendering', function (
 		test.equal(
 			medianValues[0],
 			sumStatsValues[0],
-			`median rendered correctly for plot ${violin.Inner.data.plots[0].label}`
+			`median rendered correctly for plot ${violin.Inner.data.charts[''].plots[0].label}`
 		)
 		test.equal(
 			medianValues[1],
 			sumStatsValues[1],
-			`median rendered correctly for plot ${violin.Inner.data.plots[1].label}`
+			`median rendered correctly for plot ${violin.Inner.data.charts[''].plots[1].label}`
 		)
 	}
 })
@@ -425,7 +428,7 @@ tape('test label clicking, filtering and hovering', function (test) {
 	async function runTests(violin) {
 		violin.on('postRender.test', null)
 		const violinDiv = violin.Inner.dom.violinDiv
-		const violinDivData = violin.Inner.data.plots
+		const violinDivData = violin.Inner.data.charts[''].plots
 		const violinSettings = violin.Inner.config.settings.violin
 
 		await testFiltering(violin, violinSettings, violinDivData) //test filtering by providing tvs.lst object
@@ -541,7 +544,7 @@ tape('test hide option on label clicking', function (test) {
 
 	function testHideOption(violin) {
 		const q = {
-			hiddenValues: { [violin.Inner.data.plots[0].label]: 1 },
+			hiddenValues: { [violin.Inner.data.charts[''].plots[0].label]: 1 },
 			isAtomic: true,
 			type: 'values'
 		}
@@ -767,7 +770,7 @@ tape('term1=numeric, term2=condition', function (test) {
 		test.ok(groups, 'Condition groups exist')
 		test.deepEqual(
 			groups.filter((k, i) => i % 2 == 0).map(k => k.__data__.label),
-			violin.Inner.data.plots.filter(plot => plot.plotValueCount > 5).map(k => k.label),
+			violin.Inner.data.charts[''].plots.filter(plot => plot.plotValueCount > 5).map(k => k.label),
 			'Order of conditional categories in term2 is accurate'
 		)
 	}
@@ -979,7 +982,7 @@ tape('test samplelst term2', function (test) {
 	// TODO test listsamples/hide - callbacks on label clicking and brushing for samplelst
 	async function testGroupsRendering(violin, violinDiv) {
 		await detectGte({ elem: violinDiv.node(), selector: '.sjpp-vp-path', count: 2 })
-		test.equal(violin.Inner.data.plots.length, 2, 'Inner.data.plots[] should be array length of 2')
+		test.equal(violin.Inner.data.charts[''].plots.length, 2, 'plots[] should be array length of 2')
 	}
 })
 
@@ -1031,7 +1034,7 @@ tape('term=agedx, term2=geneExp with regular bins', function (test) {
 		 * one violin plot  */
 		test.equal(
 			numViolinPaths.length / 2,
-			violin.Inner.data.plots.filter(p => p.plotValueCount > 5).length,
+			violin.Inner.data.charts[''].plots.filter(p => p.plotValueCount > 5).length,
 			'Should render the correct number of plots per the default bins for a gene expression term'
 		)
 
@@ -1101,7 +1104,7 @@ tape('term=agedx, term2=geneExp with custom bins', function (test) {
 		const numViolinPaths = await detectGte({ elem: violinDiv.node(), selector: '.sjpp-vp-path' })
 		test.equal(
 			numViolinPaths.length / 2,
-			violin.Inner.data.plots.length,
+			violin.Inner.data.charts[''].plots.length,
 			'Should render the correct number of plots per the custom bins for a gene expression term'
 		)
 
