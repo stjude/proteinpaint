@@ -345,8 +345,8 @@ class GRIN2 extends PlotBase implements RxComponentInner {
 				filter: this.state.termfilter.filter,
 				plot_width: 1000,
 				plot_height: 400,
-				x_axis_space: 0.01,
-				y_axis_space: 0.01,
+				x_axis_space: 0.015,
+				y_axis_space: 0.03,
 				devicePixelRatio: window.devicePixelRatio,
 				...configValues
 			}
